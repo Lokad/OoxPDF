@@ -28,9 +28,7 @@ internal static partial class FontDiscoveryAsyncTests
                 for (int face = 0; face < faces; face++)
                 {
                     var expected = OpenTypeFont.ReadDiscoveryHeaders(font, face);
-                    var actual = OpenTypeFont.IsTrueTypeCollectionHeader(font)
-                        ? OpenTypeFont.ReadCollectionFaceDiscoveryHeaders(result.Bytes, face, result.FileLength)
-                        : OpenTypeFont.ReadDiscoveryHeaders(result.Bytes, face, result.FileLength);
+                    var actual = OpenTypeFont.ReadDiscoveryHeaders(result.Bytes, face, result.FileLength);
                     TestAssert.Equal(expected.FamilyName, actual.FamilyName);
                     TestAssert.True(pool.Reserved >= result.Bytes.LongLength, "Parsing remains inside source ownership.");
                 }

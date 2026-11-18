@@ -19,9 +19,7 @@ internal static partial class FontDiscoveryAsyncTests
             for (int face = 0; face < count; face++)
             {
                 var expected = OpenTypeFont.ReadDiscoveryHeaders(original, face);
-                var actual = OpenTypeFont.IsTrueTypeCollectionHeader(original)
-                    ? OpenTypeFont.ReadCollectionFaceDiscoveryHeaders(result.Bytes, face, result.FileLength)
-                    : OpenTypeFont.ReadDiscoveryHeaders(result.Bytes, face, result.FileLength);
+                var actual = OpenTypeFont.ReadDiscoveryHeaders(result.Bytes, face, result.FileLength);
                 TestAssert.Equal(expected.FamilyName, actual.FamilyName);
                 TestAssert.Equal(expected.WeightClass, actual.WeightClass);
                 TestAssert.Equal(expected.HasMathTable, actual.HasMathTable);

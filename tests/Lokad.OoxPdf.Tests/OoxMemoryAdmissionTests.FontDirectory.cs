@@ -74,7 +74,7 @@ internal static partial class OoxMemoryAdmissionTests
                 TestAssert.True(pool.Reserved > font.Bytes.Length + 128 * 1024,
                     "Significant retained directory storage stays admitted beside the private program.");
                 if (retained == 0) retained = pool.Reserved;
-                else TestAssert.Equal(retained, pool.Reserved); // Extraction scratch has already refunded.
+                else TestAssert.Equal(retained, pool.Reserved);
                 TestAssert.True(source.AsSpan().SequenceEqual(original), "Borrowed font bytes remain unchanged.");
                 GC.KeepAlive(font);
             }
@@ -91,10 +91,7 @@ internal static partial class OoxMemoryAdmissionTests
         {
             bool collection = OpenTypeFont.IsTrueTypeCollectionHeader(source);
             int face = collection ? 16 : 0;
-            OpenTypeFont.FontDiscoveryHeaders Discover(byte[] bytes) => collection
-                ? OpenTypeFont.ReadCollectionFaceDiscoveryHeaders(bytes, 0, null)
-                : OpenTypeFont.ReadDiscoveryHeaders(bytes, 0);
-            var actual = Discover(source);
+            var actual = OpenTypeFont.ReadDiscoveryHeaders(source, 0);
             TestAssert.True(expected.FamilyNames.SequenceEqual(actual.FamilyNames), "In-place and standalone discovery keep the same aliases.");
             TestAssert.Equal(expected.WeightClass, actual.WeightClass);
             TestAssert.Equal(expected.ItalicAngle, actual.ItalicAngle);
@@ -107,7 +104,7 @@ internal static partial class OoxMemoryAdmissionTests
                 if (defect == 2) invalid = invalid[..(face + 40)];
                 if (defect == 3) "bad!"u8.CopyTo(invalid.AsSpan(face));
                 TestAssert.Throws<InvalidDataException>(() => OpenTypeFont.Load(invalid));
-                TestAssert.Throws<InvalidDataException>(() => Discover(invalid));
+                TestAssert.Throws<InvalidDataException>(() => OpenTypeFont.ReadDiscoveryHeaders(invalid, 0));
             }
         }
     }

@@ -190,7 +190,6 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog, IDisposab
                     // Read the prefix covering discovery tables. This can include
                     // unrelated tables between them; trailing program data stays on disk.
                     (byte[] bytes, bool complete, long fileLength) = await ReadDiscoveryBytesAsync(path, false, discovery, cancellationToken).ConfigureAwait(false);
-                    bool isCollection = OpenTypeFont.IsTrueTypeCollectionHeader(bytes);
                     int faceCount = OpenTypeFont.GetCollectionFontCount(bytes);
                     for (int faceIndex = 0; faceIndex < faceCount; faceIndex++)
                     {
@@ -203,11 +202,8 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog, IDisposab
                             OpenTypeFont.FontDiscoveryHeaders headers;
                             try
                             {
-                                // Collections parse each face in place instead of
-                                // repackaging per-face sfnt copies (G02).
-                                headers = isCollection
-                                    ? OpenTypeFont.ReadCollectionFaceDiscoveryHeaders(bytes, faceIndex, complete ? null : fileLength, metadata is null ? null : AdmitMetadata)
-                                    : OpenTypeFont.ReadDiscoveryHeaders(bytes, faceIndex, complete ? null : fileLength, metadata is null ? null : AdmitMetadata);
+                                headers = OpenTypeFont.ReadDiscoveryHeaders(bytes, faceIndex,
+                                    complete ? null : fileLength, metadata is null ? null : AdmitMetadata);
                             }
                             catch (Exception spanEx) when (!complete && spanEx is InvalidDataException or ArgumentOutOfRangeException or IndexOutOfRangeException or OverflowException or ArgumentException)
                             {
@@ -269,8 +265,8 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog, IDisposab
                         void AdmitParsingWork()
                         {
                             if (construction is null) return;
-                            // Validation can materialize maps or a repackaged
-                            // collection face before names are decoded.
+                            // Validation materializes table and glyph metadata
+                            // before names are published.
                             OoxMemory.Resize(construction, checked((metadata?.Bytes ?? 0) + 2L * bytes.LongLength + 128L * 1024),
                                 OoxPdfLimitScope.SharedResource);
                             cancellationToken.ThrowIfCancellationRequested();

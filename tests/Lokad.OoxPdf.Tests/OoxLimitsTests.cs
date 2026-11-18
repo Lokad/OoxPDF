@@ -922,8 +922,9 @@ internal static partial class OoxLimitsTests
         string[] expected = ["FirstFamily", "SecondFamily"];
         for (int i = 0; i < 2; i++)
         {
-            OpenTypeFont.FontDiscoveryHeaders inplace = OpenTypeFont.ReadCollectionFaceDiscoveryHeaders(collection, i, fileLength: null);
-            OpenTypeFont.FontDiscoveryHeaders repackaged = OpenTypeFont.ReadDiscoveryHeaders(collection, i);
+            OpenTypeFont.FontDiscoveryHeaders inplace = OpenTypeFont.ReadDiscoveryHeaders(collection, i);
+            byte[] standalone = OpenTypeFont.Load(collection, i).Bytes.ToArray();
+            OpenTypeFont.FontDiscoveryHeaders repackaged = OpenTypeFont.ReadDiscoveryHeaders(standalone, 0);
             TestAssert.Equal(expected[i], inplace.FamilyName);
             AssertDiscoveryHeadersEqual(repackaged, inplace);
         }
@@ -934,7 +935,7 @@ internal static partial class OoxLimitsTests
         byte[] collection = TestFontBuilder.CreateCollection("FirstFamily", "SecondFamily");
         var truncated = new byte[20];
         Array.Copy(collection, truncated, truncated.Length);
-        TestAssert.Throws<InvalidDataException>(() => OpenTypeFont.ReadCollectionFaceDiscoveryHeaders(truncated, 0, fileLength: null));
+        TestAssert.Throws<InvalidDataException>(() => OpenTypeFont.Load(truncated, 0));
         TestAssert.Throws<InvalidDataException>(() => OpenTypeFont.ReadDiscoveryHeaders(truncated, 0));
     }
 
@@ -977,8 +978,8 @@ internal static partial class OoxLimitsTests
             TestAssert.Equal(collection.Length, span.FileLength);
             for (int i = 0; i < 2; i++)
             {
-                OpenTypeFont.FontDiscoveryHeaders fromSpan = OpenTypeFont.ReadCollectionFaceDiscoveryHeaders(span.Bytes, i, span.FileLength);
-                OpenTypeFont.FontDiscoveryHeaders full = OpenTypeFont.ReadCollectionFaceDiscoveryHeaders(collection, i, fileLength: null);
+                OpenTypeFont.FontDiscoveryHeaders fromSpan = OpenTypeFont.ReadDiscoveryHeaders(span.Bytes, i, span.FileLength);
+                OpenTypeFont.FontDiscoveryHeaders full = OpenTypeFont.ReadDiscoveryHeaders(collection, i);
                 AssertDiscoveryHeadersEqual(full, fromSpan);
             }
         }
