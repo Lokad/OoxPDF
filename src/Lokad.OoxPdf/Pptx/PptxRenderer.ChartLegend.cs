@@ -11,12 +11,14 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static IReadOnlyList<ChartLegendEntry> BuildFillLegendEntries(PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, PptxSceneChartPlot plot, XElement chartElement, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?>? seriesStrokes, int paletteOffset, ChartWorkbookData? workbook, bool reverseOrder = false)
+    private static IReadOnlyList<ChartLegendEntry> BuildFillLegendEntries(PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, PptxSceneChartPlot plot, XElement chartElement, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?>? seriesStrokes, int paletteOffset, ChartWorkbookData? workbook, bool reverseOrder = false, IReadOnlySet<int>? deletedEntries = null)
     {
         IReadOnlyList<ChartSeriesNameRecord> names = ReadSharedChartSeriesNames(plot, workbook);
         var entries = new List<ChartLegendEntry>(names.Count);
         for (int i = 0; i < names.Count; i++)
         {
+            if (deletedEntries?.Contains(i) == true) continue;
+
             ChartSeriesFill fill = chartPalette.SourceSeries is not null
                 ? ChartSeriesColor(theme, colorMap, chartPalette, i, seriesFills, 1d)
                 : i < seriesFills.Count && seriesFills[i] is { } explicitFill

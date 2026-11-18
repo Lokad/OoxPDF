@@ -1395,7 +1395,8 @@ internal sealed record PptxSceneChartLegend(
     PptxSceneChartManualLayout Layout,
     PptxSceneChartShapeStyle ShapeStyle,
     PptxSceneChartTextBodyProperties TextBodyProperties,
-    PptxSceneChartTextStyleOverride TextStyle);
+    PptxSceneChartTextStyleOverride TextStyle,
+    IReadOnlySet<int>? DeletedEntryIndices = null);
 
 internal enum PptxSceneChartLegendPosition
 {

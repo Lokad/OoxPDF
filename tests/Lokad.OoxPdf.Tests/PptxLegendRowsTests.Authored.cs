@@ -1,12 +1,78 @@
+using System.Globalization;
+using System.IO.Compression;
 using System.Security.Cryptography;
+using System.Text.RegularExpressions;
+using System.Xml.Linq;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Ooxml;
+using Lokad.OoxPdf.Pdf;
 using Lokad.OoxPdf.Pptx;
 
 namespace Lokad.OoxPdf.Tests;
 
 internal static partial class PptxLegendRowsTests
 {
+    public static void PptxExplicitSeriesLegendDeletionKeepsThePlottedSeries()
+    {
+        const string fixture = "PointLegends/multiple-series.pptx";
+        string path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", fixture));
+        byte[] source = File.ReadAllBytes(path);
+        TestAssert.Equal("61C8A00DF69BF961D9D8EF808D741415FC890A6DB17166CBC0801E3210720EC5",
+            Convert.ToHexString(SHA256.HashData(source)));
+        XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+
+        PdfPage baseline = Render();
+        Check(baseline, ["Series 1", "Series 2"]);
+        TestAssert.Equal(baseline.Content, Render(Entry(1, "0"), Entry(8, "1")).Content);
+
+        Check(Render(Entry(1, "1")), ["Series 1"]);
+        Check(Render(Entry(0, null)), ["Series 2"]);
+        Check(Render(Entry(0, "true"), Entry(1, "1")), []);
+
+        XElement Entry(int index, string? value) => new(c + "legendEntry",
+            new XElement(c + "idx", new XAttribute("val", index)),
+            new XElement(c + "delete", value is null ? null : new XAttribute("val", value)));
+
+        PdfPage Render(params XElement[] entries)
+        {
+            using var stream = new MemoryStream();
+            stream.Write(source);
+            stream.Position = 0;
+            if (entries.Length > 0)
+            {
+                using var archive = new ZipArchive(stream, ZipArchiveMode.Update, leaveOpen: true);
+                const string part = "ppt/charts/chart1.xml";
+                ZipArchiveEntry chartEntry = archive.GetEntry(part)!;
+                XDocument chart;
+                using (Stream input = chartEntry.Open()) chart = XDocument.Load(input);
+                chart.Root!.Element(c + "chart")!.Element(c + "legend")!
+                    .Element(c + "legendPos")!.AddAfterSelf(entries);
+                chartEntry.Delete();
+                using Stream output = archive.CreateEntry(part).Open();
+                chart.Save(output);
+            }
+
+            stream.Position = 0;
+            using var package = OoxPackage.Open(stream, default);
+            var document = new PptxReader().Read(package, default);
+            return new PptxRenderer(new PortableRenderingTests.PinnedResolver())
+                .RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().Single();
+        }
+
+        static void Check(PdfPage page, string[] expectedNames)
+        {
+            var names = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false,
+                fontResourceFilter: name => name.StartsWith("CL", StringComparison.Ordinal));
+            TestAssert.True(names.Select(show => show.Text).SequenceEqual(expectedNames),
+                "The legend paints precisely the surviving series names in order.");
+            var fills = Regex.Matches(page.Content, @"[-\d.]+ [-\d.]+ ([-\d.]+) ([-\d.]+) re f")
+                .Select(match => (Width: double.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture),
+                    Height: double.Parse(match.Groups[2].Value, CultureInfo.InvariantCulture))).ToArray();
+            TestAssert.Equal(expectedNames.Length, fills.Count(fill => fill.Width is > 3d and < 10d && fill.Width == fill.Height));
+            TestAssert.Equal(12, fills.Count(fill => fill.Width is > 15d and < 100d && fill.Height > 100d));
+        }
+    }
+
     public static void PptxAuthoredPolarLegendKeepsEveryCompleteNameInsideItsClip()
     {
         // This is the unchanged public source whose independent Office export

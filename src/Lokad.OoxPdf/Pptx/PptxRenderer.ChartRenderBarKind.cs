@@ -45,9 +45,9 @@ internal sealed partial class PptxRenderer
                 ChartAxisSource valueAxisSource = ReadChartValueAxesForPlot(sceneChart, barPlot).FirstOrDefault();
                 PptxSceneChartAxis? valueSceneAxis = valueAxisSource.SceneAxis;
                 bool percentStacked = IsPercentStackedChartGrouping(barOptions.Grouping);
-                bool sharedValueAxis = barPlot is not null && HasSharedCartesianChartValueAxis(sceneChart, valueSceneAxis);
+                bool sharedValueAxis = HasSharedCartesianChartValueAxis(sceneChart, valueSceneAxis);
                 ChartValueExtents dataExtents = GetSharedBarChartValueExtents(barPlot, barOptions.Grouping, workbook, plotVisibleOnly);
-                if (sharedValueAxis) dataExtents = GetSharedCartesianChartValueExtents(sceneChart, barPlot!, dataExtents,
+                if (sharedValueAxis) dataExtents = GetSharedCartesianChartValueExtents(sceneChart, barPlot, dataExtents,
                     workbook, plotVisibleOnly, context.CancellationToken);
                 ChartValueExtents valueExtents = ReadCartesianChartValueAxisExtents(sceneChart, valueSceneAxis, dataExtents, percentStacked, ResolveBarValueAxisHeadroom(horizontalBars, percentStacked), PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
                 ChartValueAxisRenderOptions valueAxisOptions = ReadSceneChartValueAxisRenderOptions(valueSceneAxis, valueExtents, percentStacked);
@@ -73,7 +73,19 @@ internal sealed partial class PptxRenderer
                         ? axesStyle with { CategoryAxisRightSide = resolved.AxisHighSide }
                         : axesStyle with { CategoryAxisTopSide = resolved.AxisHighSide };
                 }
-                ChartLegendLayout sourceLegend = ReadSceneChartLegendLayout(sceneChart);
+                IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadSceneSeriesStrokes(barPlot, ChartFilledSeriesInheritedStrokeWidth);
+                IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills = ReadSceneSeriesPointFills(barPlot);
+                IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes = ReadSceneSeriesPointStrokes(barPlot);
+                bool categoryLegend = barSeriesVectors.Count == 1 && sceneChart.Plots.Sum(plot => plot.Series.Count) == 1 &&
+                    (barOptions.VaryColors.Value || barPlot.Series.FirstOrDefault()?.PointStyles.Any(point => point.HasShapeProperties) == true);
+                IReadOnlySet<int>? deletedEntries = categoryLegend ? null : ResolveBarSeriesLegendDeletions(sceneChart, barPlot);
+                var legendEntries = new List<ChartLegendEntry>(categoryLegend
+                    ? BuildBarCategoryLegendEntries(theme, colorMap, barPalette, barPlot, barChart, barSeriesVectors[0], barOptions, seriesFills, seriesStrokes, pointFills, pointStrokes, workbook, plotVisibleOnly)
+                    : BuildFillLegendEntries(theme, colorMap, barPalette, barPlot, barChart, seriesFills, seriesStrokes,
+                        paletteOffset: 0, workbook: workbook, deletedEntries: deletedEntries));
+                ChartLegendLayout sourceLegend = deletedEntries is not null && legendEntries.Count == 0
+                    ? ChartLegendLayout.Hidden
+                    : ReadSceneChartLegendLayout(sceneChart);
                 ChartAxisTitleReserveSides axisTitles = ReadDefaultAxisTitleReserveSides(sceneChart);
                 ChartAxisPlacement? numericPlacement = horizontalBars &&
                     barOptions.Grouping == PptxSceneChartGrouping.Clustered && resolvedCategory is not null &&
@@ -87,14 +99,6 @@ internal sealed partial class PptxRenderer
                     : null;
                 if (numericPlacement is { } numeric)
                     axesStyle = axesStyle with { ValueAxisBottomSide = !numeric.AxisHighSide };
-                IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadSceneSeriesStrokes(barPlot, ChartFilledSeriesInheritedStrokeWidth);
-                IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills = ReadSceneSeriesPointFills(barPlot);
-                IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes = ReadSceneSeriesPointStrokes(barPlot);
-                bool categoryLegend = barSeriesVectors.Count == 1 && sceneChart.Plots.Sum(plot => plot.Series.Count) == 1 &&
-                    (barOptions.VaryColors.Value || barPlot?.Series.FirstOrDefault()?.PointStyles.Any(point => point.HasShapeProperties) == true);
-                var legendEntries = new List<ChartLegendEntry>(categoryLegend
-                    ? BuildBarCategoryLegendEntries(theme, colorMap, barPalette, barPlot, barChart, barSeriesVectors[0], barOptions, seriesFills, seriesStrokes, pointFills, pointStrokes, workbook, plotVisibleOnly)
-                    : BuildFillLegendEntries(theme, colorMap, barPalette, barPlot, barChart, seriesFills, seriesStrokes, paletteOffset: 0, workbook: workbook));
                 int? barStyleId = ReadChartStyleId(chartXml);
                 int legendSeriesOffset = barSeriesCount;
                 // Collect every painted plot before measuring rows. A prepared

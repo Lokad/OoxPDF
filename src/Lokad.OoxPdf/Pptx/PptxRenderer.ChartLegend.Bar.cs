@@ -1,6 +1,7 @@
 using System.Xml.Linq;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Fonts;
+using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
 
 namespace Lokad.OoxPdf.Pptx;
 
@@ -31,6 +32,24 @@ internal sealed partial class PptxRenderer
 
     private static bool UsesMeasuredBarLegend(ChartBarPlotOptions options, PptxSceneChart chart, ChartLegendLayout legend) =>
         UsesAutomaticBarFrame(options, chart, legend) && legend.Visible;
+
+    private static IReadOnlySet<int>? ResolveBarSeriesLegendDeletions(PptxSceneChart chart, PptxSceneChartPlot plot)
+    {
+        if (chart.Legend.DeletedEntryIndices is not { } deletions || chart.Plots.Count != 1) return null;
+
+        // Authored index, plot order and legend slot agree in this case. A
+        // different identity mapping needs evidence before hiding any entry.
+        int slot = 0;
+        foreach (XElement series in plot.Source.Elements(ChartNamespace + "ser"))
+        {
+            if (!PptxSceneBuilder.TryReadChartNonNegativeIndex(series, out int index, out _) || index != slot ||
+                PptxSceneBuilder.ReadChartElementIntWithValue(series, "order").Value != slot)
+                return null;
+            slot++;
+        }
+
+        return deletions;
+    }
 
     private static bool IsLegendBaselineClipped(ChartLegendBox box, double baseline) =>
         baseline - box.ContentDescent < box.ClipY - 0.001d ||

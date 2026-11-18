@@ -131,6 +131,19 @@ internal sealed partial class PptxSceneBuilder
         string position = ReadOptionalChartValueAttribute(legend.Element(ChartNamespace + "legendPos")) ?? "r";
         (bool? overlay, string overlayValue) = ReadOptionalOoxmlBooleanElementWithValue(legend, "overlay");
         (bool? isDeleted, string isDeletedValue) = ReadOptionalOoxmlBooleanElementWithValue(legend, "delete");
+        HashSet<int>? deletedEntryIndices = null;
+        if (isDeleted != true)
+        {
+            foreach (XElement entry in legend.Elements(ChartNamespace + "legendEntry"))
+            {
+                if (IsOoxmlBooleanElementEnabled(entry.Element(ChartNamespace + "delete")) &&
+                    TryReadChartNonNegativeIndex(entry, out int index, out _))
+                {
+                    (deletedEntryIndices ??= []).Add(index);
+                }
+            }
+        }
+
         return new PptxSceneChartLegend(
             ParseChartLegendPosition(position),
             position,
@@ -142,6 +155,7 @@ internal sealed partial class PptxSceneBuilder
             ReadChartManualLayout(legend),
             ReadChartShapeStyle(legend.Element(ChartNamespace + "spPr"), theme, colorMap),
             ReadChartTextBodyProperties(legend),
-            ReadChartTextStyleOverride(legend, theme, colorMap));
+            ReadChartTextStyleOverride(legend, theme, colorMap),
+            deletedEntryIndices);
     }
 }
