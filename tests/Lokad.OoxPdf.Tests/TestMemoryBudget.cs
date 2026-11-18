@@ -17,6 +17,7 @@ internal sealed class TestMemoryBudget(long capacity = 128L * 1024 * 1024,
     public int Requests { get; private set; }
     public int CallerDisposals { get; private set; }
     public Func<long, long, bool>? RefuseChange { get; set; }
+    public Action<IMemoryReservation>? ReservationCreated { get; set; }
 
     public IMemoryScope CreateScope()
     {
@@ -46,6 +47,8 @@ internal sealed class TestMemoryBudget(long capacity = 128L * 1024 * 1024,
             if (scope is not null) scope.Owned += bytes;
             Peak = Math.Max(Peak, Reserved);
             reservation = new Reservation(this, scope, bytes);
+            try { ReservationCreated?.Invoke(reservation); }
+            catch { reservation.Dispose(); throw; }
             return true;
         }
     }

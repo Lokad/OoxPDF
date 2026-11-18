@@ -1,7 +1,7 @@
 using System.Buffers.Binary;
-using System.Diagnostics;
 using System.IO.Compression;
 using System.Text;
+using Lokad.OoxPdf.Docx;
 using Lokad.OoxPdf.Fonts;
 
 namespace Lokad.OoxPdf.Tests;
@@ -23,25 +23,41 @@ internal static partial class DocxMathFractionTests
     private static long ObserveAssemblyPreparation(int count, int structures)
     {
         var budget = new TestMemoryBudget();
-        long retainedBeforeLayout = -1;
-        int assemblyAdmissions = 0;
-        budget.RefuseChange = (_, bytes) =>
+        var initiallyEmpty = new List<IMemoryReservation>();
+        budget.ReservationCreated = reservation =>
         {
-            if (InMathPreparation() && bytes >= (long)count * 8) assemblyAdmissions++;
-            if (!InFirstLayout()) return false;
-            retainedBeforeLayout = budget.Reserved;
-            return true;
+            if (reservation.Bytes == 0) initiallyEmpty.Add(reservation);
         };
+        long retainedAfterLayout = -1;
+        int liveAssemblyGrants = 0;
+        long assemblyCapacity = (long)structures * count * DocxMathGlyphAssembly.PartCapacity;
+        using var cancellation = new CancellationTokenSource();
         using var input = AssemblyMemoryPackage(structures);
         using var output = new MemoryStream();
-        var error = TestAssert.Throws<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(input, output,
-            new OoxPdfOptions { InputKind = OoxPdfInputKind.Docx, FontResolver = new AssemblyMemoryResolver(AssemblyMemoryFont(count)), MemoryBudget = budget }));
-        TestAssert.Equal(OoxPdfLimitKind.MemoryAdmission, error.Kind);
-        TestAssert.True(retainedBeforeLayout > 0 && assemblyAdmissions >= structures,
-            "The real public conversion reaches funded assembly construction and retains its capacity at first layout.");
+        var error = TestAssert.Throws<OperationCanceledException>(() => OoxPdfConverter.Convert(input, output,
+            new OoxPdfOptions
+            {
+                InputKind = OoxPdfInputKind.Docx,
+                FontResolver = new AssemblyMemoryResolver(AssemblyMemoryFont(count)),
+                MemoryBudget = budget,
+                DiagnosticSink = message =>
+                {
+                    if (message.Code != "DOCX_APPROXIMATED_EQUATION") return;
+                    // The public diagnostic accounts for an equation placed in
+                    // the completed layout, before painting/publication.
+                    retainedAfterLayout = budget.Reserved;
+                    liveAssemblyGrants = initiallyEmpty.Count(grant => grant.Bytes == assemblyCapacity);
+                    cancellation.Cancel();
+                    cancellation.Token.ThrowIfCancellationRequested();
+                }
+            }, cancellation.Token));
+        TestAssert.Equal(cancellation.Token, error.CancellationToken);
+        TestAssert.True(retainedAfterLayout > 0 && liveAssemblyGrants == 1,
+            "Placed mathematics must retain its aggregate font-driven assembly grant through layout.");
         TestAssert.Equal(0L, output.Length);
         AssertAssemblyMemoryRefunded(budget);
-        return retainedBeforeLayout;
+        TestAssert.True(initiallyEmpty.All(grant => grant.Bytes == 0), "Operation cleanup refunds every observed grant.");
+        return retainedAfterLayout;
     }
 
     public static void DocxMathAssemblyPreparationRefusalAndCancellationPreservePublication()
@@ -60,7 +76,7 @@ internal static partial class DocxMathFractionTests
                 bool reached = false;
                 budget.RefuseChange = (_, bytes) =>
                 {
-                    if (bytes < (long)ushort.MaxValue * 8 || !InMathPreparation()) return false;
+                    if (bytes != (long)ushort.MaxValue * DocxMathGlyphAssembly.PartCapacity) return false;
                     reached = true;
                     if (!cancel) return true;
                     cancellation.Cancel();
@@ -70,7 +86,12 @@ internal static partial class DocxMathFractionTests
                 File.WriteAllBytes(target, [7, 8, 9]);
                 using var input = new MemoryStream(package.ToArray());
                 using var output = new MemoryStream();
-                var options = new OoxPdfOptions { InputKind = OoxPdfInputKind.Docx, FontResolver = new AssemblyMemoryResolver(font), MemoryBudget = budget };
+                bool layoutReported = false;
+                var options = new OoxPdfOptions
+                {
+                    InputKind = OoxPdfInputKind.Docx, FontResolver = new AssemblyMemoryResolver(font), MemoryBudget = budget,
+                    DiagnosticSink = message => layoutReported |= message.Code == "DOCX_APPROXIMATED_EQUATION"
+                };
                 try
                 {
                     void Convert()
@@ -78,10 +99,10 @@ internal static partial class DocxMathFractionTests
                         if (file) OoxPdfConverter.Convert(source, target, options, cancellation.Token);
                         else OoxPdfConverter.Convert(input, output, options, cancellation.Token);
                     }
-                    if (cancel) TestAssert.Throws<OperationCanceledException>(Convert);
+                    if (cancel) TestAssert.Equal(cancellation.Token, TestAssert.Throws<OperationCanceledException>(Convert).CancellationToken);
                     else TestAssert.Equal(OoxPdfLimitKind.MemoryAdmission,
                         TestAssert.Throws<OoxPdfLimitExceededException>(Convert).Kind);
-                    TestAssert.True(reached, "Refusal/cancellation occurs in assembly preparation, before allocation and page painting.");
+                    TestAssert.True(reached && !layoutReported, "The aggregate assembly request is refused/canceled before placed-equation reporting.");
                     TestAssert.True(File.ReadAllBytes(target).SequenceEqual(new byte[] { 7, 8, 9 }), "Failure preserves the existing destination.");
                     TestAssert.Equal(0L, output.Length);
                     AssertAssemblyMemoryRefunded(budget);
@@ -91,12 +112,6 @@ internal static partial class DocxMathFractionTests
         }
         finally { File.Delete(source); }
     }
-
-    // Caller-side observation of real producer boundaries; no library hooks.
-    private static bool InMathPreparation() => new StackTrace().GetFrames().Any(frame =>
-        frame.GetMethod()?.DeclaringType?.Name == "DocxMathGlyphAssembly");
-    private static bool InFirstLayout() => new StackTrace().GetFrames().Any(frame =>
-        frame.GetMethod()?.Name == "AdmitDocxLayoutPages");
 
     private static void AssertAssemblyMemoryRefunded(TestMemoryBudget budget)
     {
