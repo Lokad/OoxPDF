@@ -72,7 +72,7 @@ internal sealed partial class DocxReader
     {
         var bodyElements = new List<DocxBodyElement>();
         bool mergeDeletedMarks = !DocxMarkupContext.FromMode(markupMode).IncludesDeletions;
-        foreach (var (scopedElement, tableFragments) in EnumerateLogicalTableBlocks(elements, styles, markupMode, cancellationToken))
+        foreach (var (scopedElement, tableFragments, _) in EnumerateLogicalTableBlocks(elements, styles, markupMode, cancellationToken))
         {
             cancellationToken.ThrowIfCancellationRequested();
             XElement element = scopedElement.Element;

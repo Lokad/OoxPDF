@@ -377,7 +377,7 @@ internal sealed partial class DocxReader
         DocxRevisionInfo? inheritedRevision)
     {
         var elements = new List<DocxBodyElement>();
-        foreach (var (scopedChild, tableFragments) in EnumerateLogicalTableBlocks(cell.Elements(), styles, markupMode, cancellationToken, inheritedRevision))
+        foreach (var (scopedChild, tableFragments, _) in EnumerateLogicalTableBlocks(cell.Elements(), styles, markupMode, cancellationToken, inheritedRevision))
         {
             cancellationToken.ThrowIfCancellationRequested();
             XElement child = scopedChild.Element;

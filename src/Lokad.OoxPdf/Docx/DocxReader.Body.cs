@@ -49,7 +49,8 @@ internal sealed partial class DocxReader
         documentSettings = ResolveSingleSectionNoteReferenceSettings(document, documentSettings);
         IReadOnlyDictionary<XElement, DocxNoteReferenceSection> noteSections = ResolveSectionNoteReferenceSettings(document, authoredSettings, documentSettings);
         IEnumerable<XElement> bodyChildren = document.Descendants(WordprocessingNamespace + "body").Elements();
-        foreach (var (scopedElement, tableFragments) in EnumerateLogicalTableBlocks(bodyChildren, styles, markupMode, cancellationToken))
+        foreach (var (scopedElement, tableFragments, leadingBookmarks) in EnumerateLogicalTableBlocks(
+            bodyChildren, styles, markupMode, cancellationToken, readParagraphBookmarks: true))
         {
             cancellationToken.ThrowIfCancellationRequested();
             XElement element = scopedElement.Element;
@@ -90,7 +91,8 @@ internal sealed partial class DocxReader
                 bool hasListMarker = sourceNumbering is { } source && !string.IsNullOrWhiteSpace(source.Definition.Text);
                 if (!hasListMarker && IsRunBreakOnlyParagraph(element, VisiblePageBreak, markupMode))
                 {
-                    DocxParagraph? breakParagraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, tableCellStyle: null, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken);
+                    DocxParagraph? breakParagraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, tableCellStyle: null, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken,
+                        leadingBookmarks: leadingBookmarks);
                     int breakCount = element.Elements().SelectMany(child => EnumerateVisibleRunBreaks(child, VisiblePageBreak, markupMode)).Count();
                     elements.Add(DocxBodyElementFactory.CreatePageBreak(DocxBreakSourceKind.RunBreak, "page", breakParagraph, null, breakCount));
                     XElement? breakParagraphSectionProperties = paragraphProperties?.Element(WordprocessingNamespace + "sectPr");
@@ -104,7 +106,8 @@ internal sealed partial class DocxReader
 
                 if (!hasListMarker && IsRunBreakOnlyParagraph(element, VisibleColumnBreak, markupMode))
                 {
-                    DocxParagraph? breakParagraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, tableCellStyle: null, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken);
+                    DocxParagraph? breakParagraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, tableCellStyle: null, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken,
+                        leadingBookmarks: leadingBookmarks);
                     int breakCount = element.Elements().SelectMany(child => EnumerateVisibleRunBreaks(child, VisibleColumnBreak, markupMode)).Count();
                     elements.Add(DocxBodyElementFactory.CreateManualBreak(DocxBreakSourceKind.RunBreak, "column", breakParagraph, breakCount));
                     XElement? breakParagraphSectionProperties = paragraphProperties?.Element(WordprocessingNamespace + "sectPr");
@@ -121,6 +124,7 @@ internal sealed partial class DocxReader
                     using IEnumerator<XElement>? sourceAnchors = floatingBlocks is null ? null :
                         element.Descendants(WordprocessingDrawingNamespace + "anchor").GetEnumerator();
                     bool matchesSourceAnchors = sourceAnchors is not null;
+                    var bookmarksForFragment = leadingBookmarks;
                     foreach (ParagraphBreakPart part in SplitParagraphAtRunBreaks(element, markupMode,
                         retainEmptyColumnTail: true, isBreak: VisibleBreak, retainFirstLine: hasListMarker))
                     {
@@ -145,7 +149,8 @@ internal sealed partial class DocxReader
                         }
 
                         DocxParagraph? splitParagraph = ReadParagraph(part.Paragraph, styles, numbering, numberingCounters, package, relationships, tableCellStyle: null, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken,
-                            isContinuationFragment: !part.IsFirstFragment);
+                            isContinuationFragment: !part.IsFirstFragment, leadingBookmarks: bookmarksForFragment);
+                        bookmarksForFragment = null;
                         int? blockIndex = null;
                         if (splitParagraph is not null)
                         {
@@ -182,7 +187,8 @@ internal sealed partial class DocxReader
                     continue;
                 }
 
-                DocxParagraph? paragraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, tableCellStyle: null, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken);
+                DocxParagraph? paragraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, tableCellStyle: null, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken,
+                    leadingBookmarks: leadingBookmarks);
                 if (paragraph is not null)
                 {
                     int blockIndex = AppendFlowParagraph(elements, DocxBodyElementFactory.CreateParagraph(paragraph),

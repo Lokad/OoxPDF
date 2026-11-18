@@ -8667,6 +8667,8 @@
     "PortableRenderingComposedInlineFrameReportRetainsRepeatedStaticOwners"
   ],
   "docx-bookmark-ownership": [
+    "=DocxBodyBookmarksFollowTheirPlacedParagraph",
+    "=DocxBodyBookmarksRespectClosedRevisionAndTableBoundaries",
     "DocxComputedSimpleFieldsKeepHyperlinkSourceOwnership",
     "DocxComputedSimpleFieldLinksCoverOnlyTheirResolvedResult",
     "DocxReaderPreservesFieldReferencesStructurally",

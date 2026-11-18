@@ -8,27 +8,56 @@ internal sealed partial class DocxReader
 {
     // Keep original XML/source scopes: grouping must not move or clone paragraphs,
     // drawings, references or revision owners. Only joined tables need a list.
-    private static IEnumerable<(DocxRevisionScopedElement Scope, IReadOnlyList<DocxRevisionScopedElement>? Tables)>
+    private static IEnumerable<(DocxRevisionScopedElement Scope, IReadOnlyList<DocxRevisionScopedElement>? Tables,
+        IReadOnlyList<DocxBookmarkAnchor>? LeadingBookmarks)>
         EnumerateLogicalTableBlocks(IEnumerable<XElement> elements, DocxStyleSet styles,
-            OoxPdfDocxMarkupMode mode, CancellationToken token, DocxRevisionInfo? inheritedRevision = null)
+            OoxPdfDocxMarkupMode mode, CancellationToken token, DocxRevisionInfo? inheritedRevision = null,
+            bool readParagraphBookmarks = false)
     {
+        XName paragraphName = WordprocessingNamespace + "p";
+        XName bookmarkStartName = WordprocessingNamespace + "bookmarkStart";
+        XName bookmarkEndName = WordprocessingNamespace + "bookmarkEnd";
+        XName[] includedNames = [paragraphName, WordprocessingNamespace + "tbl", WordprocessingNamespace + "altChunk"];
+        if (readParagraphBookmarks) includedNames = [.. includedNames, bookmarkStartName, bookmarkEndName];
         DocxRevisionScopedElement? pending = null;
         List<DocxRevisionScopedElement>? tables = null;
-        foreach (var scope in EnumerateRevisionScopedChildren(elements, mode, token,
-            [WordprocessingNamespace + "p", WordprocessingNamespace + "tbl", WordprocessingNamespace + "altChunk"], inheritedRevision))
+        IReadOnlyList<DocxBookmarkAnchor>? pendingBookmarks = null;
+        Dictionary<string, DocxBookmarkAnchor>? bookmarkStarts = null;
+        foreach (var scope in EnumerateRevisionScopedChildren(elements, mode, token, includedNames, inheritedRevision))
         {
             token.ThrowIfCancellationRequested();
+            if (scope.Element.Name == bookmarkStartName)
+            {
+                var anchor = ReadBookmarkAnchor(scope.Element, 0, 0, 0, 0);
+                if (NormalizeDecimalId(anchor.Id) is { Length: > 0 } id && !string.IsNullOrEmpty(anchor.Name))
+                    (bookmarkStarts ??= new(StringComparer.Ordinal)).TryAdd(id, anchor);
+                continue;
+            }
+            if (scope.Element.Name == bookmarkEndName)
+            {
+                if (bookmarkStarts is not null && NormalizeDecimalId((string?)scope.Element.Attribute(WordprocessingNamespace + "id")) is { } id)
+                    bookmarkStarts.Remove(id);
+                continue;
+            }
+
+            // Range markers are transparent to table joining. A bookmark
+            // starting at a table needs a table destination, so it must never
+            // fall through to a later paragraph.
+            var leading = scope.Element.Name == paragraphName && bookmarkStarts is { Count: > 0 }
+                ? bookmarkStarts.Values.ToArray() : null;
+            bookmarkStarts = null;
             if (pending is not null && CanJoinTables(pending.Element, scope.Element, styles))
             {
                 tables ??= [pending];
                 tables.Add(scope);
                 continue;
             }
-            if (pending is not null) yield return (pending, tables);
+            if (pending is not null) yield return (pending, tables, pendingBookmarks);
             pending = scope;
             tables = null;
+            pendingBookmarks = leading;
         }
-        if (pending is not null) yield return (pending, tables);
+        if (pending is not null) yield return (pending, tables, pendingBookmarks);
     }
 
     private static bool CanJoinTables(XElement first, XElement second, DocxStyleSet styles)

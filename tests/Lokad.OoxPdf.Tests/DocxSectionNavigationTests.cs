@@ -133,6 +133,95 @@ internal static class DocxSectionNavigationTests
         });
     }
 
+    public static void DocxBodyBookmarksFollowTheirPlacedParagraph()
+    {
+        foreach (var mode in Modes)
+        {
+            var control = RenderWithBookmarkOutsideParagraph(false, mode);
+            var candidate = RenderWithBookmarkOutsideParagraph(true, mode);
+            TestAssert.Equal(2, candidate.Length);
+            TestAssert.Contains("TARGET PARAGRAPH", Text(candidate[1]));
+            TestAssert.True(control.Select(Text).SequenceEqual(candidate.Select(Text)),
+                "Moving the markers preserves the text on each page.");
+            var destination = candidate[0].Annotations.Single().Destination;
+            TestAssert.True(destination is { PageIndex: 1 }, "The body bookmark follows the target across pageBreakBefore.");
+            TestAssert.Equal(control[0].Annotations.Single().Destination, destination);
+        }
+
+        static PdfPage[] RenderWithBookmarkOutsideParagraph(bool outside, OoxPdfDocxMarkupMode mode)
+        {
+            PdfPage[]? pages = null;
+            WithMutation("bookmark-before", (_, xml) => {
+                (XElement start, XElement end, XElement target) = BookmarkSource(xml);
+                target.ElementsBeforeSelf(W + "p").Last().Remove();
+                target.Element(W + "pPr")?.Remove();
+                target.AddFirst(new XElement(W + "pPr", new XElement(W + "pageBreakBefore")));
+                if (outside) MoveBookmarkOutside(start, end, target);
+            }, path => pages = Render(path, mode));
+            return pages!;
+        }
+    }
+
+    public static void DocxBodyBookmarksRespectClosedRevisionAndTableBoundaries()
+    {
+        WithMutation("bookmark-before", (_, xml) => {
+            (XElement start, XElement end, XElement target) = BookmarkSource(xml);
+            MoveBookmarkOutside(start, end, target);
+            end.SetAttributeValue(W + "id", "00");
+            var insertion = new XElement(W + "ins", new XAttribute(W + "id", "90"), new XAttribute(W + "author", "Public"));
+            target.AddBeforeSelf(insertion);
+            target.Remove();
+            insertion.Add(target);
+            end.AddAfterSelf(Paragraph("FOLLOWING PARAGRAPH"));
+        }, path => {
+            var final = Render(path, OoxPdfDocxMarkupMode.Final);
+            TestAssert.Equal(2, final.Length);
+            TestAssert.True(final[0].Annotations.Single().Destination is { PageIndex: 1 },
+                "Final resolves the bookmark on the visible inserted paragraph.");
+            var original = Render(path, OoxPdfDocxMarkupMode.Original);
+            TestAssert.Equal(2, original.Length);
+            TestAssert.Contains("FOLLOWING PARAGRAPH", Text(original[1]));
+            TestAssert.DoesNotContain("TARGET PARAGRAPH", Text(original[1]));
+            TestAssert.Equal(0, original[0].Annotations.Count);
+        });
+
+        WithMutation("bookmark-before", (_, xml) => {
+            (XElement start, XElement end, XElement target) = BookmarkSource(xml);
+            MoveBookmarkOutside(start, end, target);
+            start.AddBeforeSelf(Table("FIRST ROW"));
+            start.AddAfterSelf(Table("SECOND ROW"));
+        }, path => {
+            var document = DocxTests.ReadDocx(path, OoxPdfDocxMarkupMode.Final);
+            TestAssert.Equal(2, document.Tables.Single().Rows.Count);
+            var pages = Renderer(OoxPdfDocxMarkupMode.Final).RenderPagesAsync(document, null, default)
+                .ToBlockingEnumerable().ToArray();
+            TestAssert.Equal(2, pages.Length);
+            TestAssert.Contains("TARGET PARAGRAPH", Text(pages[1]));
+            TestAssert.Equal(0, pages[0].Annotations.Count);
+        });
+
+        static XElement Table(string caption) => new(W + "tbl",
+            new XElement(W + "tblGrid", new XElement(W + "gridCol", new XAttribute(W + "w", "1440"))),
+            new XElement(W + "tr", new XElement(W + "tc", Paragraph(caption))));
+    }
+
+    private static (XElement Start, XElement End, XElement Target) BookmarkSource(XDocument xml)
+    {
+        XElement start = xml.Descendants(W + "bookmarkStart").Single();
+        return (start, xml.Descendants(W + "bookmarkEnd").Single(), start.Parent!);
+    }
+
+    private static void MoveBookmarkOutside(XElement start, XElement end, XElement target)
+    {
+        start.Remove();
+        end.Remove();
+        target.AddBeforeSelf(start);
+        target.AddAfterSelf(end);
+    }
+
+    private static PdfPage[] Render(string path, OoxPdfDocxMarkupMode mode) =>
+        Renderer(mode).RenderPagesAsync(DocxTests.ReadDocx(path, mode), null, default).ToBlockingEnumerable().ToArray();
+
     private static void CheckFinalTextDestination(string path, OoxPdfDocxMarkupMode mode, bool expectMultiplePages,
         bool exactEndpoint = true)
     {

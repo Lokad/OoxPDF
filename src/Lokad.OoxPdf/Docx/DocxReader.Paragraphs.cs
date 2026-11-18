@@ -24,7 +24,8 @@ internal sealed partial class DocxReader
         OoxPdfDocxMarkupMode markupMode,
         CancellationToken cancellationToken,
         bool retainBalloonParagraphMark = false,
-        bool isContinuationFragment = false)
+        bool isContinuationFragment = false,
+        IReadOnlyList<DocxBookmarkAnchor>? leadingBookmarks = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         XElement? paragraphProperties = paragraph.Element(WordprocessingNamespace + "pPr");
@@ -46,7 +47,7 @@ internal sealed partial class DocxReader
         DocxTextRun? unmarkedListTextStyle = null;
         var images = new List<DocxInlineImage>();
         var equations = new List<DocxEquation>();
-        List<DocxInlineItem>? inlineItems = null;
+        List<DocxInlineItem>? inlineItems = leadingBookmarks is null ? null : [];
         var inlineTextBoxes = new List<DocxInlineTextBox>();
         int hiddenDrawingEquationSourceCount = 0;
         var inlineReferences = new List<DocxInlineReference>();
@@ -56,7 +57,7 @@ internal sealed partial class DocxReader
         var openRevisionRanges = new List<DocxRevisionRangeStart>();
         var fieldReferences = new List<DocxFieldReference>();
         var hyperlinkSpans = new List<DocxHyperlinkSpan>();
-        var bookmarkAnchors = new List<DocxBookmarkAnchor>();
+        List<DocxBookmarkAnchor> bookmarkAnchors = leadingBookmarks is null ? [] : [.. leadingBookmarks];
         var paragraphRevisions = new List<DocxRevisionInfo>();
         var deletedText = new StringBuilder();
         AddRevision(paragraphRevisions, inheritedRevision);
@@ -134,7 +135,8 @@ internal sealed partial class DocxReader
             }
             else if (child.Name == WordprocessingNamespace + "bookmarkStart")
             {
-                AddBookmarkAnchor(child, bookmarkAnchors, sourceRunIndex, runs, GetInlineItemCount());
+                bookmarkAnchors.Add(ReadBookmarkAnchor(child, sourceRunIndex, runs.Count,
+                    RelativeRunTextOffset(runs, sourceRunIndex), GetInlineItemCount()));
                 return false;
             }
             else if (child.Name == WordprocessingNamespace + "bookmarkEnd")
@@ -1257,19 +1259,19 @@ internal sealed partial class DocxReader
 
     }
 
-    private static void AddBookmarkAnchor(
+    private static DocxBookmarkAnchor ReadBookmarkAnchor(
         XElement bookmarkStart,
-        List<DocxBookmarkAnchor> bookmarkAnchors,
         int sourceRunIndex,
-        List<DocxTextRun> runs,
+        int textRunIndex,
+        int textOffset,
         int inlineItemIndex)
     {
-        bookmarkAnchors.Add(new DocxBookmarkAnchor(
+        return new DocxBookmarkAnchor(
             (string?)bookmarkStart.Attribute(WordprocessingNamespace + "id"),
             (string?)bookmarkStart.Attribute(WordprocessingNamespace + "name"),
             sourceRunIndex,
-            runs.Count,
-            RelativeRunTextOffset(runs, sourceRunIndex)) { InlineItemIndex = inlineItemIndex });
+            textRunIndex,
+            textOffset) { InlineItemIndex = inlineItemIndex };
     }
 
     // RV06: comment and bookmark markers sit between runs while consumers resolve offsets
