@@ -98,4 +98,4 @@ not waived by extraction success or green unit tests.
 Office application-view calibration is unfinished. Cached Office exports,
 source-semantic checks, native paint inspection and whole-page image comparisons
 provide different evidence. A passing image score must not hide missing words,
-labels or pictures. Validation procedures are in [development](Development.md).
+labels or pictures.
