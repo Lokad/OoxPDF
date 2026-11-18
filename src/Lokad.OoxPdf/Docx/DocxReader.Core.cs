@@ -374,7 +374,9 @@ internal sealed partial class DocxReader
         foreach (XElement anchor in source.Descendants(WordprocessingDrawingNamespace + "anchor"))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (IsInsideExcludedRevisionContainer(anchor, markupMode))
+            if (IsInsideExcludedRevisionContainer(anchor, markupMode) ||
+                anchor.Ancestors(WordprocessingNamespace + "tr")
+                    .Any(row => !IsIncludedTableRow(row, markupMode, cancellationToken)))
             {
                 continue;
             }

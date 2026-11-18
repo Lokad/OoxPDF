@@ -139,6 +139,49 @@ internal static class DocxHiddenPictureTests
         }
     }
 
+    public static void DocxFloatingPicturesFollowTableRowRevisionVisibility()
+    {
+        const string pictureUri = "https://example.com/revised-row-picture";
+        foreach (string revision in new[] { "del", "ins" })
+        {
+            var parts = Parts(Case("docx-picture-rotated-anchor.docx"));
+            var xml = Xml(parts, "word/document.xml");
+            var pictureRun = PictureRun(xml);
+            var paragraph = pictureRun.Parent!;
+            pictureRun.Descendants(WP + "docPr").Single().Add(
+                new XElement(A + "hlinkClick", new XAttribute(R + "id", "rowPictureLink")));
+            var rels = Xml(parts, "word/_rels/document.xml.rels");
+            rels.Root!.Add(new XElement(PR + "Relationship",
+                new XAttribute("Id", "rowPictureLink"), new XAttribute("Type", R.NamespaceName + "/hyperlink"),
+                new XAttribute("Target", pictureUri), new XAttribute("TargetMode", "External")));
+            var revisedRow = new XElement(W + "tr",
+                new XElement(W + "trPr", new XElement(W + revision, new XAttribute(W + "id", "61"), new XAttribute(W + "author", "Public test"))),
+                new XElement(W + "tc", new XElement(paragraph)));
+            paragraph.ReplaceWith(new XElement(W + "tbl",
+                new XElement(W + "tblPr"),
+                new XElement(W + "tblGrid", new XElement(W + "gridCol", new XAttribute(W + "w", "7000"))),
+                new XElement(W + "tr", new XElement(W + "tc", new XElement(W + "p",
+                    new XElement(W + "r", new XElement(W + "t", "Live owner"))))),
+                revisedRow));
+            Put(parts, "word/document.xml", xml);
+            Put(parts, "word/_rels/document.xml.rels", rels);
+
+            foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.Original, OoxPdfDocxMarkupMode.AllMarkup })
+                WithDocument(parts, mode, document =>
+                {
+                    bool visible = mode == OoxPdfDocxMarkupMode.AllMarkup ||
+                        (mode == OoxPdfDocxMarkupMode.Final ? revision == "ins" : revision == "del");
+                    TestAssert.Equal(visible ? 1 : 0, document.FloatingDrawings.Count);
+                    var page = Render(document, mode).Single();
+                    TestAssert.Equal(visible ? 1 : 0, page.Images.Count);
+                    TestAssert.Equal(visible ? 1 : 0, page.Annotations.Count(link => link.Uri == pictureUri));
+                    string text = DocxPageFootnoteNumberingTests.DecodeText(page);
+                    TestAssert.Contains("Live owner", text);
+                    TestAssert.Equal(visible, text.Contains("Before", StringComparison.Ordinal));
+                });
+        }
+    }
+
     public static void DocxHiddenPicturesAndMasterThemesCancelBeforePublication()
     {
         foreach (string name in new[] { "docx-run-picture-hidden.docx", "pptx-master-themes-distinct.pptx" })
