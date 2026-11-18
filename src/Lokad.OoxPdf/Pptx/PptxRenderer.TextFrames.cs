@@ -549,7 +549,7 @@ internal sealed partial class PptxRenderer
                         continue;
                     }
 
-                    bool usesCenteredShapeAutoFit = HasShapeAutoFit(frame.BodyProperties) &&
+                    bool usesCenteredShapeAutoFit = shapeAutoFit &&
                         paragraphStyle.Alignment == TextAlignment.Center;
                     double wrapTolerance = usesCenteredShapeAutoFit
                         ? PptxTextMetricRules.CoordinateTolerance
@@ -559,16 +559,10 @@ internal sealed partial class PptxRenderer
                         ? PptxTextMetricRules.CoordinateTolerance
                         : bulletText is not null
                         ? PptxTextMetricRules.BulletWrapFitTolerance(fragmentFontSize)
-                        : HasShapeAutoFit(frame.BodyProperties)
+                        : shapeAutoFit
                         ? PptxTextMetricRules.ShapeAutoFitWrapTolerance(fragmentFontSize, effectiveTextWidth)
-                        : !HasNoAutoFit(frame.BodyProperties) ||
-                        IsWordJustifiedAlignment(paragraphStyle.Alignment) ||
-                        paragraphStyle.Alignment == TextAlignment.Distributed
-                        ? PptxTextMetricRules.CoordinateTolerance
                         : PptxTextMetricRules.CoordinateTolerance;
-                    if (isFinalShortWordSegment &&
-                        HasShapeAutoFit(frame.BodyProperties) &&
-                        !usesCenteredShapeAutoFit)
+                    if (isFinalShortWordSegment && shapeAutoFit && !usesCenteredShapeAutoFit)
                     {
                         wrapTolerance = PptxTextMetricRules.FinalWordWrapTolerance(fragmentFontSize, effectiveTextWidth);
                     }
