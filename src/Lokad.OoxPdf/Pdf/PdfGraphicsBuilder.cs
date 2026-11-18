@@ -209,11 +209,7 @@ internal sealed class PdfGraphicsBuilder
     {
         fillAlpha = Math.Clamp(fillAlpha, 0d, 1d);
         strokeAlpha = Math.Clamp(strokeAlpha, 0d, 1d);
-        string resourceName = "GS" +
-            ((int)Math.Round(fillAlpha * 100000d, MidpointRounding.AwayFromZero)).ToString(CultureInfo.InvariantCulture) +
-            "F" +
-            ((int)Math.Round(strokeAlpha * 100000d, MidpointRounding.AwayFromZero)).ToString(CultureInfo.InvariantCulture) +
-            "S";
+        string resourceName = "GS" + AlphaResourceComponent(fillAlpha) + "F" + AlphaResourceComponent(strokeAlpha) + "S";
         if (!extGStateIndex.TryGetValue(resourceName, out _))
         {
             extGStateIndex[resourceName] = extGStates.Count;
@@ -221,6 +217,14 @@ internal sealed class PdfGraphicsBuilder
         }
 
         builder.Append('/').Append(resourceName).AppendLine(" gs");
+    }
+
+    private static string AlphaResourceComponent(double alpha)
+    {
+        // Identity follows the writer's actual decimal rounding. Keep the
+        // existing five-digit name units, and retain raw opacity in the model.
+        decimal emitted = decimal.Parse(PdfDocumentWriter.FormatNumber(alpha), CultureInfo.InvariantCulture);
+        return (emitted * 100000m).ToString("0", CultureInfo.InvariantCulture);
     }
 
     public void Transform(double a, double b, double c, double d, double e, double f)
