@@ -520,10 +520,18 @@ internal static class DocxSectionNavigationTests
         var resolver = new PortableRenderingTests.PinnedResolver(mathFont: true);
         XNamespace wp = OoxNamespaces.WordprocessingDrawingNamespace;
         XNamespace a = "http://schemas.openxmlformats.org/drawingml/2006/main";
-        foreach (var (floating, cell, height) in new[] { (false, false, 72), (false, true, 72), (true, false, 72), (true, false, 34) })
         foreach (var mode in Modes)
         {
-            string context = $"floating={floating}, cell={cell}, height={height}, {mode}";
+            CheckBox(false, false, 72d, mode, clipped: false);
+            CheckBox(false, true, 72d, mode, clipped: false);
+            double partialHeight = CheckBox(true, false, 72d, mode, clipped: false);
+            CheckBox(true, false, partialHeight, mode, clipped: true);
+        }
+
+        double CheckBox(bool floating, bool cell, double height, OoxPdfDocxMarkupMode mode, bool clipped)
+        {
+            double partialHeight = 0d;
+            string context = $"floating={floating}, cell={cell}, height={height:F3}, {mode}";
             WithDocumentMutation(fixture, (parts, xml) =>
             {
                 var body = xml.Descendants(W + "body").Single();
@@ -544,7 +552,7 @@ internal static class DocxSectionNavigationTests
 
                 var outer = box.Ancestors(wp + "inline").First();
                 var extent = outer.Element(wp + "extent")!;
-                extent.SetAttributeValue("cy", height * emuPerPoint);
+                extent.SetAttributeValue("cy", (long)Math.Round(height * emuPerPoint));
                 if (floating)
                 {
                     outer.Name = wp + "anchor";
@@ -583,16 +591,16 @@ internal static class DocxSectionNavigationTests
                 var source = DocxTests.ReadDocx(path, mode);
                 TestAssert.True(DocxBlockTraversal.EnumerateResourceImages(source, default).Any(image => image.ClickTarget == uri),
                     "The reader retained the authored picture target.");
+                double scale = DocxRenderer.ResolveWordCompatiblePrintScale(source, DocxMarkupContext.FromMode(mode, geometry));
                 if (mode == OoxPdfDocxMarkupMode.AllMarkup)
-                    TestAssert.True(DocxRenderer.ResolveWordCompatiblePrintScale(source, DocxMarkupContext.FromMode(mode, geometry)) < 1d,
-                        "The Review control has a printed markup scale: " + context);
+                    TestAssert.True(scale < 1d, "The Review control has a printed markup scale: " + context);
                 var page = new DocxRenderer(resolver, mode, geometry)
                     .RenderPagesAsync(source, null, default).ToBlockingEnumerable().Single();
                 string imagePaint = "/" + page.Images.Single().ResourceName + " Do";
                 var paint = DocxNoteClippingTests.ReadPhysicalPaintFrames(page).Single(frame => frame.Block == imagePaint);
                 var frame = new PdfRectangle(paint.Transform.M31, paint.Transform.M32, paint.Transform.M11, paint.Transform.M22);
                 var links = page.Annotations.Where(link => link.Uri == uri).ToArray();
-                if (height > 34)
+                if (!clipped)
                 {
                     TestAssert.True(frame.X >= paint.Clip.X - .002d && frame.Y >= paint.Clip.Y - .002d &&
                         frame.X + frame.Width <= paint.Clip.X + paint.Clip.Width + .002d &&
@@ -603,6 +611,13 @@ internal static class DocxSectionNavigationTests
                     TestAssert.True(Math.Abs(link.X - frame.X) < .002d && Math.Abs(link.Y - frame.Y) < .002d &&
                         Math.Abs(link.Width - frame.Width) < .002d && Math.Abs(link.Height - frame.Height) < .002d,
                         "The link rectangle matches the emitted image placement: " + context);
+                    if (floating)
+                    {
+                        // Set the authored bottom edge through the picture's center.
+                        // The tall control includes supported equation line heights.
+                        partialHeight = height - (frame.Y + frame.Height / 2d - paint.Clip.Y) / scale;
+                        TestAssert.True(partialHeight > 0d && partialHeight < height, context);
+                    }
                 }
                 else
                 {
@@ -611,6 +626,7 @@ internal static class DocxSectionNavigationTests
                     TestAssert.Equal(0, links.Length);
                 }
             });
+            return partialHeight;
         }
     }
 
