@@ -97,6 +97,59 @@ internal static class DocxGlyphlessAnchorTests
         }
     }
 
+    public static void DocxFloatingPictureLinksFollowPaintedViewports()
+    {
+        const string uri = "https://example.invalid/floating-picture";
+        var parts = ReadParts(CreateDocument());
+        XNamespace wp = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing";
+        XNamespace a = "http://schemas.openxmlformats.org/drawingml/2006/main";
+        XNamespace pic = "http://schemas.openxmlformats.org/drawingml/2006/picture";
+        XNamespace r = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+        XDocument rels = XDocument.Parse(System.Text.Encoding.UTF8.GetString(parts["word/_rels/document.xml.rels"]));
+        rels.Root!.Add(new XElement(rels.Root.Name.Namespace + "Relationship",
+            new XAttribute("Id", "rIdPictureLink"), new XAttribute("Type", r.NamespaceName + "/hyperlink"),
+            new XAttribute("Target", uri), new XAttribute("TargetMode", "External")));
+        parts["word/_rels/document.xml.rels"] = TestFixtures.Utf8(rels.ToString(SaveOptions.DisableFormatting));
+        XDocument xml = XDocument.Parse(System.Text.Encoding.UTF8.GetString(parts["word/document.xml"]));
+        XElement anchor = xml.Descendants(wp + "anchor").Single();
+        anchor.Element(wp + "wrapSquare")!.AddAfterSelf(new XElement(wp + "docPr", new XAttribute("id", "1"), new XAttribute("name", "Linked picture"),
+            new XElement(a + "hlinkClick", new XAttribute(r + "id", "rIdPictureLink"))));
+        XElement horizontal = new(wp + "posOffset", "914400");
+        anchor.Element(wp + "positionH")!.ReplaceWith(new XElement(wp + "positionH", new XAttribute("relativeFrom", "page"), horizontal));
+        anchor.Element(wp + "positionV")!.ReplaceWith(new XElement(wp + "positionV",
+            new XAttribute("relativeFrom", "page"), new XElement(wp + "posOffset", "914400")));
+        XElement transform = new(a + "xfrm", new XElement(a + "ext", new XAttribute("cx", "1828800"), new XAttribute("cy", "914400")));
+        anchor.Descendants(pic + "pic").Single().Add(new XElement(pic + "spPr", transform));
+        foreach (var (rotation, offset, missing, expected) in new (int, int, bool, PdfRectangle?)[]
+        {
+            (0, 914400, false, new PdfRectangle(72d, 648d, 144d, 72d)),
+            (90, 914400, false, new PdfRectangle(108d, 612d, 72d, 144d)),
+            (30, 914400, false, null),
+            (0, 6985000, false, null),
+            (0, 914400, true, null)
+        })
+        {
+            horizontal.Value = offset.ToString(CultureInfo.InvariantCulture);
+            transform.SetAttributeValue("rot", rotation * 60000);
+            parts["word/document.xml"] = TestFixtures.Utf8(xml.ToString(SaveOptions.DisableFormatting));
+            if (missing) parts.Remove("word/media/image1.png");
+
+            PdfPage page = Render(TestFixtures.WriteTempPackage(".docx", parts), new EmptyProgramResolver(),
+                OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Single();
+            TestAssert.Equal(missing ? 0 : 1, page.Images.Count);
+            if (expected is { } frame)
+            {
+                var link = page.Annotations.Single();
+                TestAssert.Equal(uri, link.Uri);
+                TestAssert.Equal(frame, new PdfRectangle(link.X, link.Y, link.Width, link.Height));
+            }
+            else
+            {
+                TestAssert.True(page.Annotations.Count == 0, "A URI requires successful paint and a complete rectangular viewport.");
+            }
+        }
+    }
+
     public static void DocxGlyphlessPictureFilePublishesAndRefundsWithoutFonts()
     {
         string output = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".pdf");

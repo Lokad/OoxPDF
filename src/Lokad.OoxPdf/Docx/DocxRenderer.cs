@@ -1057,6 +1057,8 @@ internal sealed partial class DocxRenderer
             // Vectors and selected previews need the same navigation contract
             // as raster resources; no payload or decode result is copied here.
             var paintedPictures = new HashSet<DocxInlineImage>(ReferenceEqualityComparer.Instance);
+            var pageClip = new PdfRectangle(0d, 0d, layoutPage.Width, layoutPage.Height);
+            List<PdfLinkAnnotation>? floatingPictureLinks = null;
             int pageNumber = pageIndex + 1;
             RenderWordCompatibleMarkupLaneBackground(layoutPage, graphics, markupContext);
             RenderFloatingDrawings(
@@ -1070,7 +1072,7 @@ internal sealed partial class DocxRenderer
                 diagnosticSink,
                 cancellationToken,
                 imageCache, ref imageIndex,
-                layoutPage.Height);
+                pageClip, ref floatingPictureLinks);
             RenderFloatingDrawings(
                 drawingPages.Static.Get(pageIndex).Behind,
                 graphics,
@@ -1082,7 +1084,7 @@ internal sealed partial class DocxRenderer
                 diagnosticSink,
                 cancellationToken,
                 imageCache, ref imageIndex,
-                layoutPage.Height);
+                pageClip, ref floatingPictureLinks);
 
             IReadOnlyList<DocxLayoutItem> staticItems = EnumerateStaticLayoutItems(layoutPage, markupContext).ToArray();
             RenderParagraphBackgrounds(staticItems, graphics, markupContext, cancellationToken);
@@ -1122,9 +1124,9 @@ internal sealed partial class DocxRenderer
             foreach (DocxPlacedRelatedStoryLayout story in layoutPage.PlacedRelatedStories)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                RenderPlacedRelatedStoryDrawings(story, behindDocument: true, graphics, pageImages, fontResources, markupContext, pageNumber, layout.Pages.Count, diagnosticSink, cancellationToken, imageCache, ref imageIndex, layoutPage.Height);
+                RenderPlacedRelatedStoryDrawings(story, behindDocument: true, graphics, pageImages, fontResources, markupContext, pageNumber, layout.Pages.Count, diagnosticSink, cancellationToken, imageCache, ref imageIndex, pageClip, ref floatingPictureLinks);
                 RenderPlacedRelatedStory(story, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, layout.Pages.Count, cancellationToken, imageCache, ref imageIndex, layoutPage.Height, paintedPictures);
-                RenderPlacedRelatedStoryDrawings(story, behindDocument: false, graphics, pageImages, fontResources, markupContext, pageNumber, layout.Pages.Count, diagnosticSink, cancellationToken, imageCache, ref imageIndex, layoutPage.Height);
+                RenderPlacedRelatedStoryDrawings(story, behindDocument: false, graphics, pageImages, fontResources, markupContext, pageNumber, layout.Pages.Count, diagnosticSink, cancellationToken, imageCache, ref imageIndex, pageClip, ref floatingPictureLinks);
             }
 
             RenderFloatingDrawings(
@@ -1138,7 +1140,7 @@ internal sealed partial class DocxRenderer
                 diagnosticSink,
                 cancellationToken,
                 imageCache, ref imageIndex,
-                layoutPage.Height);
+                pageClip, ref floatingPictureLinks);
             RenderFloatingDrawings(
                 drawingPages.Static.Get(pageIndex).Ahead,
                 graphics,
@@ -1150,9 +1152,9 @@ internal sealed partial class DocxRenderer
                 diagnosticSink,
                 cancellationToken,
                 imageCache, ref imageIndex,
-                layoutPage.Height);
+                pageClip, ref floatingPictureLinks);
 
-            IReadOnlyList<PdfLinkAnnotation> annotations = CreateHyperlinkAnnotations(layoutPage, pageIndex, pageNumber, layout.Pages.Count, paintedPictures, staticItems);
+            IReadOnlyList<PdfLinkAnnotation> annotations = CreateHyperlinkAnnotations(layoutPage, pageIndex, pageNumber, layout.Pages.Count, paintedPictures, staticItems, floatingPictureLinks);
             string content = graphics.ToString();
             // RV11: admit the emitted content bytes before yielding, so a small
             // content budget rejects before the writer encodes or stores the page.
@@ -1418,7 +1420,8 @@ internal sealed partial class DocxRenderer
         }
 
         IReadOnlyList<PdfLinkAnnotation> CreateHyperlinkAnnotations(DocxLayoutPage page, int pageIndex, int pageNumber, int pageCount,
-            IReadOnlySet<DocxInlineImage> paintedPictures, IReadOnlyList<DocxLayoutItem> staticItems)
+            IReadOnlySet<DocxInlineImage> paintedPictures, IReadOnlyList<DocxLayoutItem> staticItems,
+            IReadOnlyList<PdfLinkAnnotation>? floatingPictureLinks)
         {
             var annotations = new List<PdfLinkAnnotation>();
             Dictionary<DocxInlineImage, DocxInlineImageLayout?>? linkedPictures = null;
@@ -1667,6 +1670,7 @@ internal sealed partial class DocxRenderer
                 EmitMathLinks(equation.Math, equation.X, equation.BaselineY, equation.Scale, rootMathLink);
             }
             annotations.AddRange(CreateInlinePictureAnnotations(page, pageNumber, staticItems, paintedPictures, markupContext, cancellationToken));
+            if (floatingPictureLinks is not null) annotations.AddRange(floatingPictureLinks);
             annotations.AddRange(CreateNoteReferenceAnnotations(page, pageNumber, pageCount, fontResources,
                 markupContext, noteDestinations, noteSpacingParagraphs, cancellationToken));
             return annotations;

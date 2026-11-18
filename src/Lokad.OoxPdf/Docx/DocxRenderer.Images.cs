@@ -24,10 +24,12 @@ internal sealed partial class DocxRenderer
     private static bool RenderImage(DocxInlineImage image, double x, double y, double width, double height,
         PdfGraphicsBuilder graphics, List<PdfImageResource> pageImages, Action<OoxPdfDiagnostic>? diagnosticSink,
         int pageIndex, CancellationToken cancellationToken, Dictionary<string, PdfImageXObject?> imageCache, ref int imageIndex,
+        out PdfRectangle? axisAlignedFrame,
         DocxPictureLineFrame? lineFrame = null, bool requireLineFrame = false,
         IReadOnlyDictionary<FontRequest, PptxRenderer.SvgTextFont?>? svgTextFonts = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        axisAlignedFrame = null;
         // A zero-area source frame still owns layout advance/height, but has
         // no image paint. Do not emit a singular image transform or resource.
         if (width == 0d || height == 0d) return false;
@@ -46,6 +48,16 @@ internal sealed partial class DocxRenderer
                     PageIndex: pageIndex, Feature: "picture rotation", Fallback: "UnrotatedImage"));
                 rotates = false; paintY = y; paintWidth = width; paintHeight = height;
             }
+        }
+        if (!rotates || image.RotationDegrees % 180d == 0d)
+        {
+            axisAlignedFrame = new PdfRectangle(paintX, paintY, paintWidth, paintHeight);
+        }
+        else if (image.RotationDegrees % 90d == 0d)
+        {
+            // An odd quarter turn swaps the viewport extents at the same center.
+            double offset = (paintWidth - paintHeight) / 2d;
+            axisAlignedFrame = new PdfRectangle(paintX + offset, paintY - offset, paintHeight, paintWidth);
         }
         if (crop.IsEmpty && !hasFlip && !rotates)
         {

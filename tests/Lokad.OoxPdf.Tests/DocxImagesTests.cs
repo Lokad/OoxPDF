@@ -821,7 +821,11 @@ internal static class DocxImagesTests
             ]
         };
         DocxParagraph footnoteParagraph = DocxTests.CreateDocxLayoutParagraph("Footnote anchored image", 10d, 12d);
-        var footnoteImage = new DocxInlineImage(18d, 9d, "image/png", TestFixtures.CreateRgbPng(1, 1, [96, 48, 24]), "/word/media/footnote-anchor.png");
+        const string uri = "https://example.invalid/note-picture";
+        var footnoteImage = new DocxInlineImage(18d, 9d, "image/png", TestFixtures.CreateRgbPng(1, 1, [96, 48, 24]), "/word/media/footnote-anchor.png")
+        {
+            ClickTarget = uri
+        };
         var footnoteDrawing = new DocxFloatingDrawing(
             DistanceTopValue: "0",
             DistanceBottomValue: "0",
@@ -886,6 +890,8 @@ internal static class DocxImagesTests
 
         TestAssert.Equal(1, page.Images.Count);
         TestAssert.Contains("/Im1 Do", page.Content);
+        var link = page.Annotations.Single(annotation => annotation.Uri == uri);
+        TestAssert.Equal((18d, 9d), (link.Width, link.Height));
     }
 
     public static void DocxRelatedStoryLayoutOwnsInlineImages()

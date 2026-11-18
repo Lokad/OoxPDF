@@ -118,7 +118,7 @@ internal sealed partial class DocxRenderer
         {
             if (clipped && image.ClipBounds is { } clip) graphics.ClipRectangle(clip.X, clip.Y, clip.Width, clip.Height);
             if (RenderImage(image.Image, image.X, image.Y, image.Width, image.Height, graphics, pageImages,
-                diagnosticSink, image.PageIndex, cancellationToken, imageCache, ref imageIndex,
+                diagnosticSink, image.PageIndex, cancellationToken, imageCache, ref imageIndex, out _,
                 image.LineFrame, requireLineFrame: true, svgTextFonts: fontResources.SvgTextFonts))
                 paintedPictures?.Add(image.Image);
         }

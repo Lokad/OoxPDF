@@ -20438,6 +20438,7 @@
     "DocxGlyphlessFloatingFramesMatchAnExplicitFontControl",
     "DocxGlyphlessAnchorsFollowBlankSlotsAndPageBreaks",
     "=DocxFloatingImagesFollowTheirEmittedFlowBlocks",
+    "=DocxFloatingPictureLinksFollowPaintedViewports",
     "DocxGlyphlessPictureFilePublishesAndRefundsWithoutFonts",
     "DocxGlyphlessPictureLateCancellationPreservesPublication",
     "DocxReaderPreservesFloatingDrawingWrapTokens",

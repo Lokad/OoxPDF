@@ -234,14 +234,15 @@ internal sealed partial class DocxRenderer
         CancellationToken cancellationToken,
         Dictionary<string, PdfImageXObject?> imageCache,
         ref int imageIndex,
-        double pageHeight)
+        PdfRectangle pageClip,
+        ref List<PdfLinkAnnotation>? pictureLinks)
     {
         // R12: pageDrawings arrives pre-filtered by page/layer and pre-sorted by
         // z-order from the once-per-render page index.
         foreach (DocxFloatingDrawingLayout drawing in pageDrawings)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            RenderFloatingDrawing(drawing, graphics, pageImages, fontResources, markupContext, pageNumber, pageCount, diagnosticSink, cancellationToken, imageCache, ref imageIndex, pageHeight);
+            RenderFloatingDrawing(drawing, graphics, pageImages, fontResources, markupContext, pageNumber, pageCount, diagnosticSink, cancellationToken, imageCache, ref imageIndex, pageClip, ref pictureLinks);
         }
     }
 
@@ -258,7 +259,8 @@ internal sealed partial class DocxRenderer
         CancellationToken cancellationToken,
         Dictionary<string, PdfImageXObject?> imageCache,
         ref int imageIndex,
-        double pageHeight)
+        PdfRectangle pageClip,
+        ref List<PdfLinkAnnotation>? pictureLinks)
     {
         DocxFloatingDrawingLayout[] drawings = story.FloatingDrawings
             .Where(drawing => IsBehindDocument(drawing.Drawing) == behindDocument)
@@ -269,12 +271,13 @@ internal sealed partial class DocxRenderer
             return;
         }
 
+        var storyClip = new PdfRectangle(story.X, story.TopY - story.Height, story.Width, story.Height);
         graphics.SaveState();
-        graphics.ClipRectangle(story.X, story.TopY - story.Height, story.Width, story.Height);
+        graphics.ClipRectangle(storyClip.X, storyClip.Y, storyClip.Width, storyClip.Height);
         foreach (DocxFloatingDrawingLayout drawing in drawings)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            RenderFloatingDrawing(drawing, graphics, pageImages, fontResources, markupContext, pageNumber, pageCount, diagnosticSink, cancellationToken, imageCache, ref imageIndex, pageHeight);
+            RenderFloatingDrawing(drawing, graphics, pageImages, fontResources, markupContext, pageNumber, pageCount, diagnosticSink, cancellationToken, imageCache, ref imageIndex, pageClip, ref pictureLinks, storyClip);
         }
 
         graphics.RestoreState();
@@ -292,7 +295,9 @@ internal sealed partial class DocxRenderer
         CancellationToken cancellationToken,
         Dictionary<string, PdfImageXObject?> imageCache,
         ref int imageIndex,
-        double pageHeight)
+        PdfRectangle pageClip,
+        ref List<PdfLinkAnnotation>? pictureLinks,
+        PdfRectangle? storyClip = null)
     {
         if (drawing.PlacedX is not { } placedX ||
             drawing.PlacedTop is not { } placedTop ||
@@ -304,14 +309,19 @@ internal sealed partial class DocxRenderer
 
         if (drawing.Drawing.Image is { } image)
         {
-            RenderImage(image, placedX, placedTop - height, width, height, graphics, pageImages,
+            bool painted = RenderImage(image, placedX, placedTop - height, width, height, graphics, pageImages,
                 diagnosticSink, drawing.AnchorPageIndex ?? 0, cancellationToken, imageCache, ref imageIndex,
-                svgTextFonts: fontResources.SvgTextFonts);
+                out PdfRectangle? axisAlignedFrame, svgTextFonts: fontResources.SvgTextFonts);
+            if (painted && image.ClickTarget is { } uri && axisAlignedFrame is { } frame &&
+                ContainsPictureFrame(pageClip, frame) && (storyClip is not { } clip || ContainsPictureFrame(clip, frame)))
+            {
+                (pictureLinks ??= []).Add(PdfLinkAnnotation.ToUri(frame.X, frame.Y, frame.Width, frame.Height, uri));
+            }
         }
 
         if (drawing.TextBoxLayout is { } textBoxLayout)
         {
-            RenderFloatingTextBox(drawing, textBoxLayout, placedX, placedTop, width, height, graphics, pageImages, fontResources, markupContext, pageNumber, pageCount, diagnosticSink, cancellationToken, imageCache, ref imageIndex, pageHeight);
+            RenderFloatingTextBox(drawing, textBoxLayout, placedX, placedTop, width, height, graphics, pageImages, fontResources, markupContext, pageNumber, pageCount, diagnosticSink, cancellationToken, imageCache, ref imageIndex, pageClip.Height);
         }
     }
 

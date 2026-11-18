@@ -29,19 +29,20 @@ internal sealed partial class DocxRenderer
             if (image.Image.RotationDegrees != 0d || !paintedPictures.Contains(image.Image))
                 continue;
             var frame = new PdfRectangle(image.X, image.Y, image.Width, image.Height);
-            if (!ContainsFrame(pageClip, frame) || !ContainsFrame(clip, frame) || image.ClipBounds is { } own && !ContainsFrame(own, frame) ||
+            if (!ContainsPictureFrame(pageClip, frame) || !ContainsPictureFrame(clip, frame) ||
+                image.ClipBounds is { } own && !ContainsPictureFrame(own, frame) ||
                 image.LineFrame is { } line && !(frame.Y >= line.Bottom - 1e-6 && frame.Y + frame.Height <= line.Bottom + line.Height + 1e-6))
                 continue;
             yield return image;
         }
-
-        static bool ContainsFrame(PdfRectangle outer, PdfRectangle frame) =>
-            double.IsFinite(outer.X) && double.IsFinite(outer.Y) && double.IsFinite(outer.Width) && double.IsFinite(outer.Height) &&
-            double.IsFinite(frame.X) && double.IsFinite(frame.Y) && double.IsFinite(frame.Width) && double.IsFinite(frame.Height) &&
-            frame.Width > 0d && frame.Height > 0d && outer.Width > 0d && outer.Height > 0d &&
-            frame.X >= outer.X - 1e-6 && frame.Y >= outer.Y - 1e-6 &&
-            frame.X + frame.Width <= outer.X + outer.Width + 1e-6 && frame.Y + frame.Height <= outer.Y + outer.Height + 1e-6;
     }
+
+    private static bool ContainsPictureFrame(PdfRectangle outer, PdfRectangle frame) =>
+        double.IsFinite(outer.X) && double.IsFinite(outer.Y) && double.IsFinite(outer.Width) && double.IsFinite(outer.Height) &&
+        double.IsFinite(frame.X) && double.IsFinite(frame.Y) && double.IsFinite(frame.Width) && double.IsFinite(frame.Height) &&
+        frame.Width > 0d && frame.Height > 0d && outer.Width > 0d && outer.Height > 0d &&
+        frame.X >= outer.X - 1e-6 && frame.Y >= outer.Y - 1e-6 &&
+        frame.X + frame.Width <= outer.X + outer.Width + 1e-6 && frame.Y + frame.Height <= outer.Y + outer.Height + 1e-6;
 
     // Source destinations and URI links borrow the same physical placement.
     // URI links additionally require successful paint and complete visible clips.

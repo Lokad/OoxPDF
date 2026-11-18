@@ -342,7 +342,11 @@ internal static partial class DocxHeaderFooterTests
 
     public static void DocxRendererTreatsStaticHeaderFloatingImagesAsRenderableContent()
     {
-        var headerImage = new DocxInlineImage(72d, 36d, "image/png", TestFixtures.CreateRgbPng(1, 1, [32, 64, 96]), "/word/media/header.png");
+        const string uri = "https://example.invalid/header-picture";
+        var headerImage = new DocxInlineImage(72d, 36d, "image/png", TestFixtures.CreateRgbPng(1, 1, [32, 64, 96]), "/word/media/header.png")
+        {
+            ClickTarget = uri
+        };
         var headerDrawing = new DocxFloatingDrawing(
             DistanceTopValue: "0",
             DistanceBottomValue: "0",
@@ -392,6 +396,9 @@ internal static partial class DocxHeaderFooterTests
 
         TestAssert.Equal(1, page.Images.Count);
         TestAssert.Contains("/Im1 Do", page.Content);
+        var link = page.Annotations.Single();
+        TestAssert.Equal(uri, link.Uri);
+        TestAssert.Equal((72d, 128d, 72d, 36d), (link.X, link.Y, link.Width, link.Height));
     }
 
     public static void DocxLayoutStageSummarizesSelectedStaticHeaderFooterVariants()
