@@ -16,6 +16,9 @@ New-Item -ItemType Directory -Path $tools -Force | Out-Null
 $script = Join-Path $tools 'CompareCompositionPortfolio.ps1'
 Copy-Item -LiteralPath $ComparisonScript -Destination $script
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'ReferenceCache.ps1') -Destination $tools
+foreach ($name in @('CompositionDocxThresholds.json','CompositionPptxThresholds.json')) {
+    Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination $tools
+}
 . (Join-Path $tools 'ReferenceCache.ps1')
 $visualDiff = Join-Path $tools 'comparison-engine.dll'
 Set-Content -LiteralPath $visualDiff -Value 'Synthetic comparison engine A; never executed'
@@ -31,12 +34,12 @@ foreach ($name in $thresholdNames) {
     New-Item -ItemType Directory -Path (Split-Path $target) -Force | Out-Null
     Copy-Item -LiteralPath (Join-Path (Split-Path $PSScriptRoot) $relative) -Destination $target
 }
-function New-Case([string] $Name, [string] $Fault) {
+function New-Case([string] $Name, [string] $Fault, [string] $Mode='final-preserve') {
     $directory = Join-Path $OutputDirectory $Name
     $candidate = Join-Path $directory 'candidate'
     $reference = Join-Path $directory 'reference'
     $rows = @(foreach ($id in @('first', 'second')) {
-        $folder = $id + '-final-preserve'
+        $folder = $id + '-' + $Mode
         $run = Join-Path $candidate $folder
         $source = Join-Path $(if ($Fault.StartsWith('multi-', [StringComparison]::Ordinal) -and $id -eq 'second') {
             Join-Path $directory 'reference-second'
@@ -52,7 +55,7 @@ function New-Case([string] $Name, [string] $Fault) {
             !($Fault -eq 'multi-missing-pin' -and $id -eq 'second')) {
             $log = Join-Path $source 'export.log'
             ('Fake pinned export ' + $id) | Set-Content -LiteralPath $log
-            $pin = @{Id=$id;Mode='final-preserve';InputSha256=('0' * 64);
+            $pin = @{Id=$id;Mode=$Mode;InputSha256=('0' * 64);
                 PdfSha256=(Get-FileHash -LiteralPath $referencePdf).Hash;ExportLogSha256=(Get-FileHash -LiteralPath $log).Hash}
             if ($id -eq 'second') {
                 if ($Fault -eq 'multi-source') { $pin.InputSha256 = '1' * 64 }
@@ -62,7 +65,7 @@ function New-Case([string] $Name, [string] $Fault) {
             }
             $pin | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $source 'source-identity.json')
         }
-        [pscustomobject]@{Id=$id;Mode='final-preserve';HeldOut=$false;
+        [pscustomobject]@{Id=$id;Mode=$Mode;HeldOut=$false;
             InputSha256=('0' * 64);PdfSha256=(Get-FileHash -LiteralPath $pdf).Hash;InspectedPages=1;Severity='Test fixture'}
     })
     if ($Fault -eq 'candidate-hash') { $rows[1].PdfSha256 = '0' * 64 }
@@ -119,6 +122,8 @@ function New-ReuseCache($case) {
                 MeanAbsoluteError=0;ChangedPixelRatioAtThreshold16=0;ForegroundRecall=.5;StructuralSimilarity=1
             });Thresholds=@{minForegroundRecall=.99}}
     })
+    # Historical wire-format reports bind the former visual-case owners. Their
+    # pixel metrics stay reusable after relocation; active limits decide failures.
     @{DocxThresholdSourceSha256=(Get-FileHash (Join-Path $repo ('visual-cases/cases/'+$thresholdNames[0]+'/case.json'))).Hash;
         PptxThresholdSourceSha256=(Get-FileHash (Join-Path $repo ('visual-cases/cases/'+$thresholdNames[1]+'/case.json'))).Hash;
         ComparisonPolicy=(Test-ComparisonPolicyFixture);Rows=$priorRows} | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $cache 'office-comparisons.json')
@@ -143,6 +148,80 @@ if ($report.Rows.Count -ne 2 -or @($report.Rows | Where-Object {
     throw 'Identical comparisons must reuse retained failures without rendering'
 }
 $passed += 'identity-reuse'
+foreach ($control in @('pptx-boundary','pptx-mae','pptx-recall','pptx-changed-pixels')) {
+    $case=New-Case $control 'legacy' 'presentation'
+    $cache=New-ReuseCache $case
+    $path=Join-Path $cache 'office-comparisons.json'
+    $prior=Get-Content $path -Raw | ConvertFrom-Json -AsHashtable
+    foreach ($row in $prior.Rows) {
+        $metric=$row.Metrics[0]
+        $metric.MeanAbsoluteError=1.2;$metric.ForegroundRecall=.90
+        $metric.ChangedPixelRatioAtThreshold16=.025;$metric.StructuralSimilarity=.4
+        switch ($control) {
+            'pptx-mae' {$metric.MeanAbsoluteError=1.21}
+            'pptx-recall' {$metric.ForegroundRecall=.899}
+            'pptx-changed-pixels' {$metric.ChangedPixelRatioAtThreshold16=.026}
+        }
+    }
+    $prior | ConvertTo-Json -Depth 10 | Set-Content $path
+    & $script -CandidateDirectory $case.CandidateDirectory -ReferenceDirectory $case.ReferenceDirectory `
+        -VisualDiffPath $visualDiff -ValidationToolsDirectory $tools -ReuseComparisonDirectory $cache | Out-Null
+    $report=Get-Content (Join-Path $case.CandidateDirectory 'office-comparisons.json') -Raw | ConvertFrom-Json
+    $expected=switch ($control) {
+        'pptx-boundary' {''} 'pptx-mae' {'MeanAbsoluteError'}
+        'pptx-recall' {'ForegroundRecall'} 'pptx-changed-pixels' {'ChangedPixels'}
+    }
+    if (@($report.Rows | Where-Object {
+        !$_.ReusedComparison -or ($_.Failures -join ',') -cne $expected -or
+        $_.Thresholds.minForegroundRecall -ne .90 -or $_.Thresholds.maxMeanAbsoluteError -ne 1.2
+    }).Count -or @(Get-ChildItem $case.Directory -Recurse -Filter '*.called').Count) {
+        throw ('PPTX must retain its own limits without rerendering: '+$control)
+    }
+    $passed+=$control
+}
+foreach ($control in @('unrelated-case-edited','policy-bytes-changed','stricter-policy')) {
+    $case=New-Case $control 'legacy'
+    $cache=New-ReuseCache $case
+    $path=Join-Path $cache 'office-comparisons.json'
+    $prior=Get-Content $path -Raw | ConvertFrom-Json -AsHashtable
+    foreach ($row in $prior.Rows) { $row.Metrics[0].ForegroundRecall=.995; $row.Failures=@() }
+    $prior | ConvertTo-Json -Depth 10 | Set-Content $path
+    $policyPath=Join-Path $tools 'CompositionDocxThresholds.json'
+    $casePath=Join-Path $repo ('visual-cases/cases/'+$thresholdNames[0]+'/case.json')
+    $policyBytes=[IO.File]::ReadAllBytes($policyPath);$caseBytes=[IO.File]::ReadAllBytes($casePath)
+    try {
+        switch ($control) {
+            'unrelated-case-edited' {
+                $unrelated=Get-Content $casePath -Raw | ConvertFrom-Json
+                $unrelated.expected.minForegroundRecall=1
+                $unrelated | ConvertTo-Json -Depth 8 | Set-Content $casePath
+            }
+            'policy-bytes-changed' { [IO.File]::AppendAllText($policyPath,"`n") }
+            'stricter-policy' {
+                $limits=Get-Content $policyPath -Raw | ConvertFrom-Json
+                $limits.minForegroundRecall=.999
+                $limits | ConvertTo-Json | Set-Content $policyPath
+            }
+        }
+        $before=Snapshot $case.ReferenceDirectory
+        & $script -CandidateDirectory $case.CandidateDirectory -ReferenceDirectory $case.ReferenceDirectory `
+            -VisualDiffPath $visualDiff -ValidationToolsDirectory $tools -ReuseComparisonDirectory $cache | Out-Null
+        $report=Get-Content (Join-Path $case.CandidateDirectory 'office-comparisons.json') -Raw | ConvertFrom-Json
+        $expectedRecall=if ($control -eq 'stricter-policy') {.999} else {.99}
+        foreach ($row in $report.Rows) {
+            $expectedFailures=if ($control -eq 'stricter-policy') {'ForegroundRecall'} else {''}
+            if (!$row.ReusedComparison -or ($row.Failures -join ',') -cne $expectedFailures -or
+                $row.Thresholds.minForegroundRecall -ne $expectedRecall) { throw ('Incorrect active threshold ownership: '+$control) }
+        }
+        if ($report.DocxThresholdSourceSha256 -ne (Get-FileHash $policyPath).Hash -or
+            (Snapshot $case.ReferenceDirectory) -cne $before -or
+            @(Get-ChildItem $case.Directory -Recurse -Filter '*.called').Count) { throw ('Policy update rerendered or lost provenance: '+$control) }
+    }
+    finally {
+        [IO.File]::WriteAllBytes($policyPath,$policyBytes);[IO.File]::WriteAllBytes($casePath,$caseBytes)
+    }
+    $passed+=$control
+}
 Copy-Item (Join-Path $PSScriptRoot 'OfficeReferenceCapture.ps1') -Destination $tools
 function New-ImageCase([string] $Name) {
     $case=New-Case $Name 'image'
@@ -269,11 +348,10 @@ foreach ($control in @('cleared-summary','obsolete-failure','blank-reference','d
             $expectedFailures=@('Pagination')
         }
         'threshold-boundary' {
-            $limits=Get-Content (Join-Path $repo ('visual-cases/cases/'+$thresholdNames[0]+'/case.json')) -Raw | ConvertFrom-Json
-            $metric.MeanAbsoluteError=$limits.expected.maxMeanAbsoluteError
-            $metric.ChangedPixelRatioAtThreshold16=$limits.expected.maxChangedPixelRatioAtThreshold16
-            $metric.ForegroundRecall=$limits.expected.minForegroundRecall
-            $metric.StructuralSimilarity=$limits.expected.minStructuralSimilarity
+            $metric.MeanAbsoluteError=.2
+            $metric.ChangedPixelRatioAtThreshold16=.004
+            $metric.ForegroundRecall=.99
+            $metric.StructuralSimilarity=.985
         }
     }
     $prior | ConvertTo-Json -Depth 10 | Set-Content $path

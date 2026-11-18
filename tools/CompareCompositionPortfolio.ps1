@@ -18,11 +18,11 @@ $candidate = (Resolve-Path -LiteralPath $CandidateDirectory).Path
 $references = @($ReferenceDirectory | ForEach-Object { (Resolve-Path -LiteralPath $_).Path } | Select-Object -Unique)
 $outcomes = Get-Content -LiteralPath (Join-Path $candidate 'outcomes.json') -Raw | ConvertFrom-Json
 $repo = Split-Path -Parent $PSScriptRoot
-$docxThresholdSource = Join-Path $repo 'visual-cases/cases/docx-math-normal-fraction-inline-arial-normal/case.json'
-$pptxThresholdSource = Join-Path $repo 'visual-cases/cases/pptx-ladder-11-composite-chart-port/case.json'
+$docxThresholdSource = Join-Path $PSScriptRoot 'CompositionDocxThresholds.json'
+$pptxThresholdSource = Join-Path $PSScriptRoot 'CompositionPptxThresholds.json'
 $thresholds = @{
-    docx=(Get-Content $docxThresholdSource -Raw | ConvertFrom-Json).expected
-    pptx=(Get-Content $pptxThresholdSource -Raw | ConvertFrom-Json).expected
+    docx=(Get-Content $docxThresholdSource -Raw | ConvertFrom-Json)
+    pptx=(Get-Content $pptxThresholdSource -Raw | ConvertFrom-Json)
 }
 $thresholdHashes = @{
     docx=(Get-FileHash $docxThresholdSource).Hash
@@ -93,17 +93,17 @@ function Get-ComparisonFailures([object[]] $Metrics, $Limits, $Outcome, [string]
     return @($failures | Sort-Object -Unique)
 }
 $historical = @()
+# Pixel metrics depend on the bound tools/PDFs/DPI, not the limit-file identity.
+# Reapply the active limits below, retaining source hashes in the new report.
 $cached = @(foreach ($directory in $ReuseComparisonDirectory) {
     $path = Join-Path (Resolve-Path -LiteralPath $directory).Path $reportName
     $report = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
     if ($report.ComparisonPolicy.Schema -eq $comparisonPolicy.Schema -and
         $report.ComparisonPolicy.VisualDiffSha256 -eq $comparisonPolicy.VisualDiffSha256 -and
-        $report.ComparisonPolicy.RasterizerId -eq $comparisonPolicy.RasterizerId -and
-        $report.DocxThresholdSourceSha256 -eq $thresholdHashes.docx -and
-        $report.PptxThresholdSourceSha256 -eq $thresholdHashes.pptx) {
+        $report.ComparisonPolicy.RasterizerId -eq $comparisonPolicy.RasterizerId) {
         foreach ($prior in $report.Rows) { [pscustomobject]@{Path=$path;Row=$prior} }
     }
-    else { $historical += [ordered]@{Path=$path;Sha256=(Get-FileHash -LiteralPath $path).Hash;Reason='Unbound or different comparison policy/thresholds; historical metrics only'} }
+    else { $historical += [ordered]@{Path=$path;Sha256=(Get-FileHash -LiteralPath $path).Hash;Reason='Unbound or different comparison policy; historical metrics only'} }
 })
 $ids = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
 # Validate the complete batch before raster/diff stages create any output. A
@@ -269,6 +269,8 @@ if ((Get-FileHash -LiteralPath $VisualDiffPath).Hash -ne $comparisonPolicy.Visua
     ReferenceKind=$ReferenceKind
     ComparisonPolicy=$comparisonPolicy
     HistoricalComparisonReports=$historical
+    DocxThresholdSource='tools/CompositionDocxThresholds.json'
+    PptxThresholdSource='tools/CompositionPptxThresholds.json'
     DocxThresholdSourceSha256=$thresholdHashes.docx
     PptxThresholdSourceSha256=$thresholdHashes.pptx
     Scope='Existing numerical visual thresholds retained; no claim of complete content or layout fidelity'
