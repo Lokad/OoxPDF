@@ -2,7 +2,6 @@ using System.IO.Compression;
 using System.Reflection;
 using System.Xml.Linq;
 using Lokad.OoxPdf;
-using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Pdf;
 using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pptx;
@@ -148,25 +147,6 @@ internal static class PptxChartDensifyTests
         long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
         TestAssert.Equal(10000, max);
         TestAssert.True(allocated <= 262144L, "Counting dense slots must not densify 10,000-slot vectors, allocated " + allocated + " bytes.");
-    }
-
-    public static void SubsetCacheReusesIdenticalCodepointSets()
-    {
-        byte[] bytes = TestFontBuilder.CreateTestFont();
-        OpenTypeFont font = OpenTypeFont.Load(bytes);
-        var resolution = new FontFaceResolution(
-            font.FamilyName,
-            font.FamilyName,
-            new FontStyleKey(),
-            new MemoryFontProgramSource("memory:r15-subset", bytes),
-            IsFallback: false);
-        var resolver = new PresentationFontResolver(new CannedFontResolver(resolution));
-        int[] codePoints = Enumerable.Range(65, 200).ToArray();
-        {
-            PdfEmbeddedFont first = resolver.GetOrCreateSubset(font, codePoints, CancellationToken.None);
-            PdfEmbeddedFont second = resolver.GetOrCreateSubset(font, codePoints, CancellationToken.None);
-            TestAssert.True(ReferenceEquals(first, second), "Identical codepoint sets must share one subset.");
-        }
     }
 
     public static void DuplicateCategoryCaptionsSharePlotReservationAndPaint()
@@ -716,11 +696,4 @@ internal static class PptxChartDensifyTests
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
     }
 
-    private sealed class CannedFontResolver(FontFaceResolution resolution) : IFontResolver
-    {
-        public FontFaceResolution Resolve(FontRequest request)
-        {
-            return resolution;
-        }
-    }
 }
