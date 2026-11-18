@@ -54,7 +54,14 @@ internal static class TestRunnerTests
         TestAssert.Equal(0, RunCaptured(["--group", "runner-probe", "--skip-slow"], catalog).ExitCode);
         TestAssert.True(calls.SequenceEqual([1, 2]), "Group selection executes only its registered probes.");
         calls.Clear();
-        TestAssert.Equal(0, RunCaptured(["--group", "runner-probe", "--only-slow"], catalog).ExitCode);
+        var noSlow = RunCaptured(["--group", "runner-probe", "--only-slow"], catalog);
+        TestAssert.Equal(1, noSlow.ExitCode);
+        TestAssert.Contains("The speed filter excludes every selected test.", noSlow.Output);
+        TestAssert.Equal(0, RunCaptured(["--group", "runner-probe", "--only-slow", "--list"], catalog).ExitCode);
+        string slowName = nameof(DocxCommentsTests.DocxWordCompatibleMixedBalloonNormalizesExplicitParagraphSpacing);
+        var noFast = RunCaptured(["--test", slowName, "--skip-slow"], catalog);
+        TestAssert.Equal(1, noFast.ExitCode);
+        TestAssert.Contains("The speed filter excludes every selected test.", noFast.Output);
         TestAssert.Equal(0, calls.Count);
         TestAssert.Equal(0, RunCaptured(["--test", first.Method.Name], catalog).ExitCode);
         TestAssert.True(calls.SequenceEqual([1]), "The supported name filter keeps its selection.");
@@ -76,6 +83,19 @@ internal static class TestRunnerTests
             TestAssert.Equal(0, calls.Count);
             TestAssert.Equal(1, RunCaptured(["--skip-slow", "--only-slow"], catalog).ExitCode);
             TestAssert.Equal(0, calls.Count);
+
+            var noSlowExact = RunCaptured(["--test-set", set, "--only-slow"], catalog);
+            TestAssert.Equal(1, noSlowExact.ExitCode);
+            TestAssert.Contains("The speed filter excludes every selected test.", noSlowExact.Output);
+            TestAssert.Equal(0, calls.Count);
+
+            File.WriteAllText(set, JsonSerializer.Serialize(new[] { slowName, second.Method.Name }));
+            TestAssert.Equal(0, RunCaptured(["--test-set", set, "--skip-slow", "--report", report], catalog).ExitCode);
+            TestAssert.True(calls.SequenceEqual([2]), "A mixed exact set executes its one fast method.");
+            using var mixed = JsonDocument.Parse(File.ReadAllText(report));
+            TestAssert.Equal(1, mixed.RootElement.GetProperty("passed").GetInt32());
+            TestAssert.Equal(1, mixed.RootElement.GetProperty("skipped").GetInt32());
+            calls.Clear();
 
             File.WriteAllText(set, JsonSerializer.Serialize(new[] { second.Method.Name, first.Method.Name, second.Method.Name }));
             TestAssert.Equal(0, RunCaptured(["--test-set", set], catalog).ExitCode);

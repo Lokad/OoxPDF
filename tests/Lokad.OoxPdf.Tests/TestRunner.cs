@@ -105,6 +105,12 @@ internal static class TestRunner
             Console.WriteLine("No tests match the requested filter; refusing to report an empty pass.");
             return 1;
         }
+        if (!list && (group is not null || name is not null || exactNames is not null) &&
+            (skipSlow || onlySlow) && selected.All(testCase => IsFilteredBySpeed(SlowTests.Contains(testCase.Action.Method.Name))))
+        {
+            Console.WriteLine("The speed filter excludes every selected test.");
+            return 1;
+        }
 
         var results = new List<TestResult>();
         foreach (TestCase testCase in selected)
@@ -118,7 +124,7 @@ internal static class TestRunner
                 continue;
             }
 
-            if ((skipSlow && isSlow) || (onlySlow && !isSlow))
+            if (IsFilteredBySpeed(isSlow))
             {
                 skipped++;
                 results.Add(new TestResult(testCase.Group, test.Method.Name, "skipped", 0, "slow filter"));
@@ -170,6 +176,8 @@ internal static class TestRunner
         }
 
         return failed == 0 ? 0 : 1;
+
+        bool IsFilteredBySpeed(bool slow) => (skipSlow && slow) || (onlySlow && !slow);
     }
 
     private static Dictionary<string, string?>? ReadOptions(string[] args)
