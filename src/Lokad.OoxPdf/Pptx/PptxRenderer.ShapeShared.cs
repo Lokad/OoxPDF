@@ -86,11 +86,12 @@ internal sealed partial class PptxRenderer
         return preset.StartsWith("dk", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static bool TryReadShapeFontColor(XElement shape, PptxTheme theme, PptxColorMap colorMap, out RgbColor color)
+    private static (RgbColor Color, double Alpha)? ReadShapeFontPaint(XElement shape, PptxTheme theme, PptxColorMap colorMap)
     {
         XElement? fontRef = shape
             .Element(PresentationNamespace + "style")
             ?.Element(DrawingNamespace + "fontRef");
-        return PptxColorResolver.TryReadSolidColor(fontRef, theme, colorMap, out color);
+        return PptxColorResolver.TryReadSolidColorWithAlpha(fontRef, theme, colorMap, out RgbColor color, out double alpha)
+            ? (color, alpha) : null;
     }
 }

@@ -612,6 +612,8 @@
     "XrefTablePointsAtObjectHeaders"
   ],
   "pptx-run-effect-inheritance": [
+    "PptxInheritanceParagraphPaintOutranksShapeFontReference",
+    "PptxInheritanceShapeFontReferenceKeepsOpacityAndOverrides",
     "PptxInheritanceChartTextFillChoicesReachTitlesAndLabels",
     "PptxInheritanceHighlightUsesDirectOrDefaultOwner",
     "PptxInheritanceOutlineRemovalDiffersFromAbsentOrUnsupportedPaint",
@@ -620,6 +622,10 @@
     "PlainShapeFullRunStyleAgrees",
     "SceneFedSpansMatchXmlPathForPlainShape",
     "TableCellTextMatchesShapeText",
+    "PptxSyntheticTextBoxUsesShapeFontRefColor",
+    "PptxSyntheticShapeFontRefColorOverridesDefaultTextStyle",
+    "PptxSyntheticExplicitRunColorOverridesShapeFontRefColor",
+    "PptxSyntheticTextBoxUsesThemeHyperlinkColor",
     "PptxSyntheticTextBoxRendersTextHighlight",
     "PptxSyntheticTextBoxRendersTextOutline",
     "PptxPortableHeadlineHighlightKeepsContentAndSpanGeometry",

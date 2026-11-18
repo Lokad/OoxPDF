@@ -1,12 +1,94 @@
 using System.Xml.Linq;
+using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Ooxml;
+using Lokad.OoxPdf.Pdf;
 using Lokad.OoxPdf.Pptx;
 
 namespace Lokad.OoxPdf.Tests;
 
 internal static partial class PptxInheritanceTests
 {
+    public static void PptxInheritanceParagraphPaintOutranksShapeFontReference()
+    {
+        const string blue = "<a:solidFill><a:srgbClr val=\"0000FF\"/></a:solidFill>";
+        const string red = "<a:solidFill><a:srgbClr val=\"FF0000\"/></a:solidFill>";
+        const string hidden = "<a:noFill/>";
+        string[] paints = [red, "<a:solidFill><a:srgbClr val=\"000000\"/></a:solidFill>", hidden,
+            "<a:solidFill><a:srgbClr val=\"000000\"><a:alpha val=\"0\"/></a:srgbClr></a:solidFill>"];
+        foreach (string paint in paints)
+        {
+            PdfPage control = RenderPaintOwners(blue, "", "", paint);
+            foreach (string fontReference in new[] { "<a:srgbClr val=\"FFFFFF\"/>", "<a:srgbClr val=\"000000\"/>" })
+            {
+                PdfPage actual = RenderPaintOwners(blue, fontReference, paint, "");
+                TestAssert.Equal(control.Content, actual.Content);
+                TestAssert.True(control.ExtGStates.SequenceEqual(actual.ExtGStates), "Moving paint to paragraph defaults keeps its complete opacity.");
+                PdfPage overridden = RenderPaintOwners(blue, fontReference, paint, red);
+                TestAssert.Contains("1 0 0 rg", overridden.Content);
+                TestAssert.Contains("OWNER_PROBE", DocxPageFootnoteNumberingTests.DecodeText(overridden));
+            }
+        }
+        // Presentation defaults remain below the font reference. In particular,
+        // its noFill must not suppress an explicitly visible shape default.
+        foreach (string presentation in new[] { blue, hidden })
+        foreach (string paragraph in new[] { "", "<a:latin typeface=\"DejaVu Sans\"/>", "<a:gradFill/>",
+            "<a:solidFill><a:schemeClr val=\"unknown\"/></a:solidFill>" })
+        {
+            PdfPage page = RenderPaintOwners(presentation, "<a:srgbClr val=\"FF0000\"/>", paragraph, "");
+            TestAssert.Contains("1 0 0 rg", page.Content);
+            TestAssert.Contains("OWNER_PROBE", DocxPageFootnoteNumberingTests.DecodeText(page));
+        }
+    }
+
+    public static void PptxInheritanceShapeFontReferenceKeepsOpacityAndOverrides()
+    {
+        const string red = "<a:solidFill><a:srgbClr val=\"FF0000\"/></a:solidFill>";
+        PdfPage opaqueOverride = RenderPaintOwners("", "", "", red);
+        foreach (var (alpha, expectedAlpha) in new[] { ("<a:alpha val=\"0\"/>", 0d),
+            ("<a:alpha val=\"50000\"/>", .5d), ("<a:alpha val=\"100000\"/>", 1d),
+            ("<a:alpha val=\"50000\"/><a:alphaMod val=\"40000\"/>", .2d) })
+        {
+            string reference = $"<a:srgbClr val=\"000000\">{alpha}</a:srgbClr>";
+            PdfPage control = RenderPaintOwners("", "", "", "<a:solidFill>" + reference + "</a:solidFill>");
+            PdfPage actual = RenderPaintOwners(red, reference, "", "");
+            TestAssert.Equal(control.Content, actual.Content);
+            TestAssert.True(control.ExtGStates.SequenceEqual(actual.ExtGStates), "Font-reference alpha uses the same paint as a direct fill.");
+            if (expectedAlpha == 0d) TestAssert.DoesNotContain(" Tf", actual.Content);
+            else if (expectedAlpha < 1d)
+                TestAssert.True(actual.ExtGStates.Any(state => state.FillAlpha == expectedAlpha), "The independently specified opacity must reach PDF paint.");
+            else TestAssert.Contains("OWNER_PROBE", DocxPageFootnoteNumberingTests.DecodeText(actual));
+            foreach (bool paragraph in new[] { false, true })
+            {
+                PdfPage overridden = RenderPaintOwners("", reference, paragraph ? red : "", paragraph ? "" : red);
+                TestAssert.Equal(opaqueOverride.Content, overridden.Content);
+                TestAssert.True(opaqueOverride.ExtGStates.SequenceEqual(overridden.ExtGStates), "Higher-priority opaque paint replaces inherited alpha.");
+            }
+        }
+    }
+
+    private static PdfPage RenderPaintOwners(string presentation, string fontReference, string paragraph, string direct)
+    {
+        var parts = TextDefaultParts("<a:defRPr sz=\"2400\"><a:latin typeface=\"DejaVu Sans\"/>" + presentation + "</a:defRPr>", "", direct);
+        Edit(parts, "ppt/slides/slide1.xml", xml => {
+            xml.Descendants(P + "graphicFrame").Remove();
+            XElement shape = xml.Descendants(P + "sp").Single();
+            if (fontReference.Length != 0)
+                shape.Element(P + "spPr")!.AddAfterSelf(XElement.Parse($"<p:style xmlns:p='{P}' xmlns:a='{A}'><a:fontRef idx='minor'>{fontReference}</a:fontRef></p:style>"));
+            if (paragraph.Length != 0)
+                shape.Descendants(A + "p").Single().AddFirst(XElement.Parse($"<a:pPr xmlns:a='{A}'><a:defRPr>{paragraph}</a:defRPr></a:pPr>"));
+            shape.Descendants(A + "t").Single().Value = "OWNER_PROBE";
+        });
+        PdfPage? result = null;
+        WithDeck(parts, (document, package) => {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            result = Render(document, package, diagnostics).Single();
+            TestAssert.Equal(0, diagnostics.Count);
+        });
+        PdfContentValidator.ValidatePage(result!, 0, default);
+        return result!;
+    }
+
     public static void PptxInheritanceRunFillChoicesUseTheMoreSpecificLayer()
     {
         foreach (var (higher, lower) in new[] { ("solidFill", "noFill"), ("noFill", "solidFill"), ("gradFill", "solidFill") })

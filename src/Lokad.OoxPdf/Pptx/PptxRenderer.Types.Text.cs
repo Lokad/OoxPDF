@@ -231,7 +231,7 @@ internal sealed partial class PptxRenderer
         double FlowYTop,
         double VerticalOffset,
         PptxTextOrientation Orientation,
-        RgbColor? ShapeFontColor,
+        (RgbColor Color, double Alpha)? ShapeFontPaint,
         IReadOnlyList<PptxTextParagraphModel> Paragraphs);
 
     internal sealed record PptxTableCellTextFrame(

@@ -62,36 +62,18 @@ internal sealed partial class PptxRenderer
 
     private static ResolvedRunTextStyle ResolveRunTextStyle(
         PptxRunStyleCascade cascade,
-        RgbColor? shapeFontColor,
+        (RgbColor Color, double Alpha)? shapeFontPaint,
         PptxTheme theme,
         PptxColorMap colorMap,
         double fontScale,
         PptxSceneTableCellTextStyle tableStyleTextStyle,
         bool disableZeroKerning = false)
     {
-        tableStyleTextStyle = BelowParagraphDefaults(tableStyleTextStyle, cascade.Layers
-            .FirstOrDefault(layer => layer.Kind == PptxRunStyleLayerKind.ParagraphPropertiesDefaultRunProperties)?.Source);
-        return ResolveRunTextStyle(
-            cascade.DirectProperties,
-            cascade.ResolvedDefaultProperties,
-            shapeFontColor,
-            theme,
-            colorMap,
-            fontScale,
-            tableStyleTextStyle,
-            disableZeroKerning);
-    }
-
-    private static ResolvedRunTextStyle ResolveRunTextStyle(
-        XElement? runProperties,
-        XElement? defaultRunProperties,
-        RgbColor? shapeFontColor,
-        PptxTheme theme,
-        PptxColorMap colorMap,
-        double fontScale,
-        PptxSceneTableCellTextStyle tableStyleTextStyle,
-        bool disableZeroKerning = false)
-    {
+        XElement? paragraphDefaults = cascade.Layers
+            .FirstOrDefault(layer => layer.Kind == PptxRunStyleLayerKind.ParagraphPropertiesDefaultRunProperties)?.Source;
+        tableStyleTextStyle = BelowParagraphDefaults(tableStyleTextStyle, paragraphDefaults);
+        XElement? runProperties = cascade.DirectProperties;
+        XElement? defaultRunProperties = cascade.ResolvedDefaultProperties;
         double nominalFontSize = ReadFontSize(runProperties, defaultRunProperties) * fontScale;
         double baselineOffset = ReadBaselineOffset(runProperties, defaultRunProperties, nominalFontSize);
         double fontSize = PptxTextMetricRules.ShouldScaleSuperscriptSubscript(baselineOffset, nominalFontSize)
@@ -122,22 +104,20 @@ internal sealed partial class PptxRenderer
             color = tableTextColor;
             colorSource = PptxRunTextColorSource.TableTextStyle;
         }
-        else if (shapeFontColor is { } fontRefColor)
+        // Authored paragraph paint outranks the shape font reference. Merged
+        // presentation/theme defaults remain below it; keep the source owner.
+        else if (ReadDefaultTextPaint(paragraphDefaults, theme, colorMap) is { } paragraphPaint)
         {
-            color = fontRefColor;
+            (color, alpha, colorSource) = paragraphPaint;
+        }
+        else if (shapeFontPaint is { } fontRefPaint)
+        {
+            (color, alpha) = fontRefPaint;
             colorSource = PptxRunTextColorSource.ShapeFontRef;
         }
-        else if (PptxRunTextAttributeReaders.HasTextNoFill(defaultRunProperties))
+        else if (ReadDefaultTextPaint(defaultRunProperties, theme, colorMap) is { } defaultPaint)
         {
-            color = new RgbColor(0, 0, 0);
-            colorSource = PptxRunTextColorSource.DefaultNoFill;
-            alpha = 0d;
-        }
-        else if (PptxColorResolver.TryReadSolidColorWithAlpha(defaultRunProperties, theme, colorMap, out RgbColor defaultColor, out double defaultAlpha))
-        {
-            color = defaultColor;
-            colorSource = PptxRunTextColorSource.DefaultSolidFill;
-            alpha = defaultAlpha;
+            (color, alpha, colorSource) = defaultPaint;
         }
         else
         {
@@ -200,6 +180,14 @@ internal sealed partial class PptxRenderer
 
             return minimumFontSize <= 0d || fontSize >= minimumFontSize;
         }
+    }
+
+    private static (RgbColor Color, double Alpha, PptxRunTextColorSource Source)? ReadDefaultTextPaint(
+        XElement? properties, PptxTheme theme, PptxColorMap colorMap)
+    {
+        if (HasTextNoFill(properties)) return (default, 0d, PptxRunTextColorSource.DefaultNoFill);
+        return PptxColorResolver.TryReadSolidColorWithAlpha(properties, theme, colorMap, out RgbColor color, out double alpha)
+            ? (color, alpha, PptxRunTextColorSource.DefaultSolidFill) : null;
     }
 
     private static bool TryReadTextOutline(XElement? runProperties, XElement? defaultRunProperties, PptxTheme theme, PptxColorMap colorMap, out TextOutline outline)
