@@ -52,18 +52,8 @@ internal sealed partial class PptxRenderer
             if (coalesced.Count != 0 && CanCoalesceTextSpan(coalesced[^1], span))
             {
                 PptxPositionedTextSpan previous = coalesced[^1];
-                TextRun mergedRun = previous.Run with
-                {
-                    Text = previous.Run.Text + run.Text,
-                    Width = run.X + run.Width - previous.Run.X
-                };
-                coalesced[^1] = previous with
-                {
-                    Run = mergedRun,
-                    EndX = span.EndX,
-                    Atoms = previous.Atoms.Concat(span.Atoms).ToArray(),
-                    GlyphSpan = MergeGlyphSpans(mergedRun, previous.Run, previous.GlyphSpan, run, span.GlyphSpan)
-                };
+                double width = run.X + run.Width - previous.Run.X;
+                coalesced[^1] = MergePositionedSpans(previous, span, width);
             }
             else
             {
@@ -195,18 +185,8 @@ internal sealed partial class PptxRenderer
             if (coalesced.Count > 0 && !PreservesHyperlinkTextOperationBoundary(coalesced[^1], span) && CanCoalesceUnderlineRun(coalesced[^1].Run, span.Run))
             {
                 PptxPositionedTextSpan previous = coalesced[^1];
-                TextRun mergedRun = previous.Run with
-                {
-                    Text = previous.Run.Text + span.Run.Text,
-                    Width = Math.Max(previous.Run.Width, span.Run.X + span.Run.Width - previous.Run.X)
-                };
-                coalesced[^1] = previous with
-                {
-                    Run = mergedRun,
-                    EndX = span.EndX,
-                    Atoms = previous.Atoms.Concat(span.Atoms).ToArray(),
-                    GlyphSpan = MergeGlyphSpans(mergedRun, previous.Run, previous.GlyphSpan, span.Run, span.GlyphSpan)
-                };
+                double width = Math.Max(previous.Run.Width, span.Run.X + span.Run.Width - previous.Run.X);
+                coalesced[^1] = MergePositionedSpans(previous, span, width);
                 continue;
             }
 
@@ -214,6 +194,23 @@ internal sealed partial class PptxRenderer
         }
 
         return coalesced;
+    }
+
+    private static PptxPositionedTextSpan MergePositionedSpans(
+        PptxPositionedTextSpan left, PptxPositionedTextSpan right, double width, bool keepAtoms = true)
+    {
+        TextRun mergedRun = left.Run with
+        {
+            Text = left.Run.Text + right.Run.Text,
+            Width = width
+        };
+        return left with
+        {
+            Run = mergedRun,
+            EndX = right.EndX,
+            Atoms = keepAtoms ? left.Atoms.Concat(right.Atoms).ToArray() : [],
+            GlyphSpan = MergeGlyphSpans(mergedRun, left.Run, left.GlyphSpan, right.Run, right.GlyphSpan)
+        };
     }
 
     private static PptxTextGlyphSpanLayout MergeGlyphSpans(TextRun mergedRun, TextRun leftRun, PptxTextGlyphSpanLayout left, TextRun rightRun, PptxTextGlyphSpanLayout right)

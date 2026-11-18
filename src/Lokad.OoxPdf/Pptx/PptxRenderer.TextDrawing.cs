@@ -886,22 +886,21 @@ internal sealed partial class PptxRenderer
                     continue;
                 }
 
-                // RV01: fallback highlights use the layout span width with diagnosed
-                // constants instead of vanishing.
+                double baselineY = span.LineBox?.BaselineY ?? run.Y + run.BaselineOffset;
+                // Fallback highlights use the positioned advance and fallback font metrics.
                 if (rendered.FallbackFace is not null)
                 {
-                    double baselineY = span.LineBox?.BaselineY ?? run.Y + run.BaselineOffset;
                     FillFallbackHighlight(graphics, run, highlight, baselineY, span.GlyphSpan.NaturalWidth);
                 }
                 else if (rendered.Font is { } highlightEmbedded)
                 {
-                    DrawHighlightSpan(highlightEmbedded, span);
+                    DrawHighlightRectangle(graphics, highlightEmbedded, run, highlight, baselineY, span.GlyphSpan.NaturalWidth);
                 }
             }
 
             IReadOnlyList<PptxPositionedTextSpan> CoalesceHighlightSpans()
             {
-                var coalesced = new List<PptxPositionedTextSpan>(textSpans.Count);
+                var coalesced = new List<PptxPositionedTextSpan>();
                 foreach (PptxPositionedTextSpan span in textSpans)
                 {
                     TextRun run = span.Run;
@@ -913,18 +912,8 @@ internal sealed partial class PptxRenderer
                     if (coalesced.Count != 0 && CanCoalesceTextRun(coalesced[^1].Run, run, true, true))
                     {
                         PptxPositionedTextSpan previous = coalesced[^1];
-                        TextRun mergedRun = previous.Run with
-                        {
-                            Text = previous.Run.Text + run.Text,
-                            Width = run.X + run.Width - previous.Run.X
-                        };
-                        coalesced[^1] = previous with
-                        {
-                            Run = mergedRun,
-                            EndX = span.EndX,
-                            Atoms = previous.Atoms.Concat(span.Atoms).ToArray(),
-                            GlyphSpan = MergeGlyphSpans(mergedRun, previous.Run, previous.GlyphSpan, run, span.GlyphSpan)
-                        };
+                        double width = run.X + run.Width - previous.Run.X;
+                        coalesced[^1] = MergePositionedSpans(previous, span, width, keepAtoms: false);
                     }
                     else
                     {
@@ -933,18 +922,6 @@ internal sealed partial class PptxRenderer
                 }
 
                 return coalesced;
-            }
-
-            void DrawHighlightSpan(PdfEmbeddedFont embedded, PptxPositionedTextSpan span)
-            {
-                TextRun run = span.Run;
-                if (run.HighlightPaint is not { } highlight)
-                {
-                    return;
-                }
-
-                double baselineY = span.LineBox?.BaselineY ?? run.Y + run.BaselineOffset;
-                DrawHighlightRectangle(graphics, embedded, run, highlight, baselineY, span.GlyphSpan.NaturalWidth);
             }
         }
     }
