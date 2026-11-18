@@ -110,10 +110,8 @@ function Invoke-DotnetBuildIfStale {
 
 . (Join-Path $PSScriptRoot "PdfTextGeometry.ps1")
 
-function Get-PdfObjects([string] $PdfPath) {
-    $bytes = [System.IO.File]::ReadAllBytes($PdfPath)
-    $text = [System.Text.Encoding]::Latin1.GetString($bytes)
-    $matches = [regex]::Matches($text, '(?s)(?<number>\d+)\s+(?<generation>\d+)\s+obj\s*(?<body>.*?)\s*endobj')
+function Get-PdfObjects([string] $PdfText) {
+    $matches = [regex]::Matches($PdfText, '(?s)(?<number>\d+)\s+(?<generation>\d+)\s+obj\s*(?<body>.*?)\s*endobj')
     foreach ($match in $matches) {
         [pscustomobject]@{
             Number = [int]$match.Groups["number"].Value
@@ -306,8 +304,8 @@ function Get-PdfAnnotationTargetInfo([string] $Body, [hashtable] $PageByReferenc
     }
 }
 
-function Get-PdfAnnotations([string] $PdfPath) {
-    $objects = @(Get-PdfObjects $PdfPath)
+function Get-PdfAnnotations([string] $PdfText) {
+    $objects = @(Get-PdfObjects $PdfText)
     $pageByReference = Get-PdfPageMap $objects
     $pageByAnnotationObject = @{}
     foreach ($object in $objects) {
@@ -856,10 +854,8 @@ function New-FontResourceSummary($fontResources) {
 
 . (Join-Path $PSScriptRoot "PdfInfo.ps1")
 
-function Get-PdfMediaBoxes([string] $PdfPath) {
-    $bytes = [System.IO.File]::ReadAllBytes($PdfPath)
-    $text = [System.Text.Encoding]::Latin1.GetString($bytes)
-    $matches = [regex]::Matches($text, '(?s)/MediaBox\s*\[(?<box>.*?)\]')
+function Get-PdfMediaBoxes([string] $PdfText) {
+    $matches = [regex]::Matches($PdfText, '(?s)/MediaBox\s*\[(?<box>.*?)\]')
     foreach ($match in $matches) {
         $numbers = @([regex]::Matches($match.Groups["box"].Value, '[-+]?(?:\d+(?:\.\d*)?|\.\d+)') | ForEach-Object {
             [double]::Parse($_.Value, [Globalization.CultureInfo]::InvariantCulture)
@@ -876,6 +872,15 @@ function Get-PdfMediaBoxes([string] $PdfPath) {
             Width = [Math]::Round($numbers[2] - $numbers[0], 6)
             Height = [Math]::Round($numbers[3] - $numbers[1], 6)
         }
+    }
+}
+
+function Get-PdfMarkupFacts([string] $PdfPath) {
+    $pdfText = Read-PdfLatin1Text $PdfPath
+    [pscustomobject]@{
+        Annotations = @(Get-PdfAnnotations $pdfText)
+        PageCount = Get-PdfPageCount $pdfText
+        MediaBoxes = @(Get-PdfMediaBoxes $pdfText)
     }
 }
 
@@ -3548,12 +3553,12 @@ if ((Test-Path -LiteralPath $referenceGraphicsOperations) -and (Test-Path -Liter
     $graphicsVisibleComparisonExitCode = $LASTEXITCODE
 }
 
-$referenceAnnotations = @(Get-PdfAnnotations $referencePdfPath)
-$candidateAnnotations = @(Get-PdfAnnotations $candidatePdf)
-$annotationComparison = @(Compare-RectLists $referenceAnnotations $candidateAnnotations $AnnotationBoundsTolerance)
-$annotationDeltaSummary = New-RectDeltaSummary "annotations" $referenceAnnotations $candidateAnnotations $annotationComparison
-Write-JsonFile (Join-Path $annotationsDir "reference.json") $referenceAnnotations
-Write-JsonFile (Join-Path $annotationsDir "candidate.json") $candidateAnnotations
+$referenceFacts = Get-PdfMarkupFacts $referencePdfPath
+$candidateFacts = Get-PdfMarkupFacts $candidatePdf
+$annotationComparison = @(Compare-RectLists $referenceFacts.Annotations $candidateFacts.Annotations $AnnotationBoundsTolerance)
+$annotationDeltaSummary = New-RectDeltaSummary "annotations" $referenceFacts.Annotations $candidateFacts.Annotations $annotationComparison
+Write-JsonFile (Join-Path $annotationsDir "reference.json") $referenceFacts.Annotations
+Write-JsonFile (Join-Path $annotationsDir "candidate.json") $candidateFacts.Annotations
 Write-JsonFile (Join-Path $annotationsDir "comparison.json") $annotationComparison
 Write-JsonFile (Join-Path $annotationsDir "summary.json") $annotationDeltaSummary
 
@@ -3597,10 +3602,10 @@ else {
     0
 }
 
-$referencePageCount = Get-PdfPageCount $referencePdfPath
-$candidatePageCount = Get-PdfPageCount $candidatePdf
-$referenceMediaBoxes = @(Get-PdfMediaBoxes $referencePdfPath)
-$candidateMediaBoxes = @(Get-PdfMediaBoxes $candidatePdf)
+$referencePageCount = $referenceFacts.PageCount
+$candidatePageCount = $candidateFacts.PageCount
+$referenceMediaBoxes = $referenceFacts.MediaBoxes
+$candidateMediaBoxes = $candidateFacts.MediaBoxes
 $candidateLayoutBodyFrameRects = @(Select-LayoutBodyFrameRects $candidateLayoutSnapshot)
 $candidateLayoutColumnFrameRects = @(Select-LayoutColumnFrameRects $candidateLayoutSnapshot)
 $candidateLayoutMarkupLaneRects = @(Select-LayoutMarkupLaneRects $candidateLayoutSnapshot)
@@ -3934,8 +3939,8 @@ $summary = [ordered]@{
     ConnectorBodyAnchorEndpointDelta = $connectorBodyAnchorEndpointDeltaSummary
     BalloonGraphicDelta = $balloonGraphicDeltaSummary
     BroadBalloonGraphicDelta = $broadBalloonGraphicDeltaSummary
-    ReferenceAnnotationCount = $referenceAnnotations.Count
-    CandidateAnnotationCount = $candidateAnnotations.Count
+    ReferenceAnnotationCount = $referenceFacts.Annotations.Count
+    CandidateAnnotationCount = $candidateFacts.Annotations.Count
     AnnotationDeltaCount = $annotationDeltaCount
     AnnotationDelta = $annotationDeltaSummary
     AnnotationTargetDeltaCount = $annotationDeltaSummary.TargetDeltaCount

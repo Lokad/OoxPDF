@@ -7,13 +7,14 @@ if ($parseErrors.Count) { throw 'Markup comparison script did not parse.' }
 foreach ($function in $ast.FindAll({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] }, $false)) {
     . ([scriptblock]::Create($function.Extent.Text))
 }
+. (Join-Path $PSScriptRoot 'PdfInfo.ps1')
 function Assert-Equal($Expected, $Actual, [string] $Name) {
     if ($Expected -ne $Actual) { throw "$Name expected $Expected; actual $Actual" }
     Write-Host "PASS $Name"
 }
 $output = Join-Path (Split-Path -Parent $PSScriptRoot) ('artifacts/markup-annotation-tests/' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $output -Force | Out-Null
-function New-AnnotationFixture([string] $Name, [int] $Offset, [string] $Target, [switch] $ReversePages) {
+function New-AnnotationFixture([string] $Name, [int] $Offset, [string] $Target, [switch] $ReversePages, [switch] $IncludePageFacts) {
     # Physical object order deliberately differs from logical /Kids order.
     $catalog = $Offset + 1
     $root = $Offset + 2
@@ -25,9 +26,9 @@ function New-AnnotationFixture([string] $Name, [int] $Offset, [string] $Target, 
     $body = @"
 %PDF-1.7
 $catalog 0 obj << /Type /Catalog /Pages $root 0 R >> endobj
-$second 0 obj << /Type /Page /Parent $branch 0 R >> endobj
+$second 0 obj << /Type /Page /Parent $branch 0 R /MediaBox [0 0 612 792] >> endobj
 $root 0 obj << /Type /Pages /Kids [$branch 0 R] /Count 2 >> endobj
-$first 0 obj << /Type /Page /Parent $branch 0 R /Annots [$annotation 0 R] >> endobj
+$first 0 obj << /Type /Page /Parent $branch 0 R /MediaBox [0 0 612 792] /Annots [$annotation 0 R] >> endobj
 $branch 0 obj << /Type /Pages /Kids [$kids] /Count 2 >> endobj
 $annotation 0 obj << /Subtype /Link /Rect [72 600 150 620] $Target >> endobj
 trailer << /Root $catalog 0 R >>
@@ -35,12 +36,17 @@ trailer << /Root $catalog 0 R >>
 "@
     $path = Join-Path $output "$Name.pdf"
     [IO.File]::WriteAllText($path, $body, [Text.Encoding]::ASCII)
-    return @(Get-PdfAnnotations $path)[0]
+    $facts = Get-PdfMarkupFacts $path
+    if ($IncludePageFacts) { return $facts }
+    return $facts.Annotations[0]
 }
 function Compare-Target($Reference, $Candidate, [double] $Tolerance = 1) {
     return @(Compare-RectLists @($Reference) @($Candidate) $Tolerance)[0]
 }
-$reference = New-AnnotationFixture 'reference' 0 '/Dest [30 0 R/XYZ 72 700 0]'
+$referenceFacts = New-AnnotationFixture 'reference' 0 '/Dest [30 0 R/XYZ 72 700 0]' -IncludePageFacts
+Assert-Equal 2 $referenceFacts.PageCount 'Markup facts count both pages of a nested page tree'
+Assert-Equal '612x792|612x792' (($referenceFacts.MediaBoxes | ForEach-Object { "$($_.Width)x$($_.Height)" }) -join '|') 'Markup facts include both media boxes'
+$reference = $referenceFacts.Annotations[0]
 $equivalent = New-AnnotationFixture 'equivalent' 300 '/Dest [330 0 R /XYZ 72.000 +700.0 null]'
 Assert-Equal 'ok' (Compare-Target $reference $equivalent).Status 'Object numbers, whitespace, numeric spelling and inherited zoom do not change a destination'
 Assert-Equal 1 $reference.Page 'Annotation source page follows the page tree, not object order'
@@ -98,11 +104,11 @@ Assert-Equal $true (Compare-Target $action $otherAction).TargetDelta 'Different 
 $cycle = Join-Path $output 'cycle.pdf'
 [IO.File]::WriteAllText($cycle, '1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj 2 0 obj << /Type /Pages /Kids [2 0 R] /Count 1 >> endobj')
 $rejectedCycle = $false
-try { Get-PdfAnnotations $cycle | Out-Null } catch { $rejectedCycle = $_.Exception.Message -like '*repeated PDF page-tree reference*' }
+try { Get-PdfMarkupFacts $cycle | Out-Null } catch { $rejectedCycle = $_.Exception.Message -like '*repeated PDF page-tree reference*' }
 Assert-Equal $true $rejectedCycle 'Cyclic page trees fail without looping'
 $missingTree = Join-Path $output 'missing-tree.pdf'
 [IO.File]::WriteAllText($missingTree, '40 0 obj << /Subtype /Link /Rect [72 600 150 620] /Dest [30 0 R /Fit] >> endobj')
 $rejectedMissingTree = $false
-try { Get-PdfAnnotations $missingTree | Out-Null } catch { $rejectedMissingTree = $_.Exception.Message -like '*page tree is unavailable*' }
+try { Get-PdfMarkupFacts $missingTree | Out-Null } catch { $rejectedMissingTree = $_.Exception.Message -like '*page tree is unavailable*' }
 Assert-Equal $true $rejectedMissingTree 'Unavailable page trees do not produce a silent partial comparison'
 Write-Host 'Markup annotation checks passed.'

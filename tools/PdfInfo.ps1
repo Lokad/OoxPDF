@@ -1,9 +1,9 @@
-# Shared PDF information readers (T04): Get-PdfPageCount counts page objects
-# via a conservative page-type pattern. Dot-source this file instead of
-# copying the function into comparison and check tools.
+# Shared byte-preserving PDF text reader and conservative page count (T04).
 
-function Get-PdfPageCount([string] $PdfPath) {
-    $bytes = [System.IO.File]::ReadAllBytes($PdfPath)
-    $text = [System.Text.Encoding]::Latin1.GetString($bytes)
-    return ([regex]::Matches($text, '/Type\s*/Page\b') | Where-Object { $_.Value -notmatch '/Pages' }).Count
+function Read-PdfLatin1Text([string] $PdfPath) {
+    return [Text.Encoding]::Latin1.GetString([IO.File]::ReadAllBytes($PdfPath))
+}
+
+function Get-PdfPageCount([string] $PdfText) {
+    return [regex]::Matches($PdfText, '/Type\s*/Page\b').Count
 }
