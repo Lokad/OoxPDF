@@ -460,6 +460,7 @@ internal sealed partial class PptxRenderer
             VerticalOverflow = PptxTextVerticalOverflow.Clip,
             VerticalOverflowValue = "clip",
             VerticalOverflowSource = PptxTextBodyPropertySource.TableCellStyle,
+            ClipsHorizontalOverflow = true,
             ExplicitWrapWidth = Math.Max(1d, tableFrame.Width - tableFrame.Insets.Left - tableFrame.Insets.Right)
         };
 

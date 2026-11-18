@@ -69,7 +69,8 @@ internal sealed partial class PptxRenderer
             ExplicitWrapWidth: null)
         {
             AutofitMode = ParseTextAutofitMode(autofitMode),
-            ClipsHorizontalOverflow = string.Equals(horizontalOverflow, "clip", StringComparison.OrdinalIgnoreCase)
+            ClipsHorizontalOverflow = string.Equals(horizontalOverflow, "clip", StringComparison.OrdinalIgnoreCase) ? true :
+                string.Equals(horizontalOverflow, "overflow", StringComparison.OrdinalIgnoreCase) ? false : null
         };
 
         static PptxTextBodyPropertySource MergeTextBodyPropertySources(

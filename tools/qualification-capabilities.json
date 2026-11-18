@@ -498,6 +498,7 @@
     "XrefTablePointsAtObjectHeaders"
   ],
   "pptx-source-text-clip-placement": [
+    "=PptxVerticalClipRetainsExplicitHorizontalOverflowInkAndLinks",
     "PptxOrthogonalTextClipsKeepAuthoredSourceInkAndLinks",
     "BreakRunsAgreeBetweenSceneAndSpans",
     "FieldRunsAgreeBetweenSceneAndSpans",
@@ -7265,6 +7266,7 @@
       "PortableRenderingParallelCellInsetsKeepPaddingContentAndBoxedMath"
   ],
   "pptx-fallback-hyperlinks": [
+      "=PptxVerticalClipRetainsExplicitHorizontalOverflowInkAndLinks",
       "PptxChartTitleExternalHyperlinkEmitsUriAnnotation",
       "PptxChartTitleHyperlinkActionIsDiagnosed",
       "PptxChartTitleMissingRelationshipIsDiagnosed",

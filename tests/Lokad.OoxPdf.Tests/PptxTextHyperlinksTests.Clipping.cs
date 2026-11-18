@@ -69,18 +69,44 @@ internal static partial class PptxTextHyperlinksTests
         }
     }
 
-    private static PdfPage RenderCroppedRunLink(double left, bool clips, string transformAttributes, bool missing, string text = "LONG-LINK")
+    public static void PptxVerticalClipRetainsExplicitHorizontalOverflowInkAndLinks()
+    {
+        const string label = "ABCDEF";
+        foreach (string transform in new[] { "", "rot=\"5400000\"" })
+        {
+            var page = RenderCroppedRunLink(72d, false, transform, missing: false, text: label, clipVertically: true);
+            var glyphs = PortableRenderingTests.ReadPaintedSourceLabel(page, label);
+            TestAssert.Equal(label.Length, glyphs.Count);
+            TestAssert.DoesNotContain("LOWER LINE", DocxPageFootnoteNumberingTests.DecodeText(page));
+            var last = glyphs.Last().Ink;
+            TestAssert.True(page.Annotations.Any(link => link.Uri == "https://example.invalid/cropped" &&
+                last.X >= link.X - .001d && last.Y >= link.Y - .001d &&
+                last.X + last.Width <= link.X + link.Width + .001d &&
+                last.Y + last.Height <= link.Y + link.Height + .001d),
+                "The horizontal overflow carries its visible link through the vertical crop and shape transform.");
+        }
+    }
+
+    private static PdfPage RenderCroppedRunLink(double left, bool clips, string transformAttributes, bool missing,
+        string text = "LONG-LINK", bool clipVertically = false)
     {
         var parts = RunLinkPackageParts(
             """<a:p><a:r><a:rPr sz="1800"><a:hlinkClick r:id="rIdLink"/></a:rPr><a:t>LONG-LINK</a:t></a:r></a:p>""",
             """<Relationship Id="rIdLink" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.invalid/cropped" TargetMode="External"/>""",
-            $"""<a:bodyPr horzOverflow="{(clips ? "clip" : "overflow")}" vertOverflow="overflow" wrap="none" lIns="0" rIns="0" tIns="0" bIns="0"/>""");
+            $"""<a:bodyPr horzOverflow="{(clips ? "clip" : "overflow")}" vertOverflow="{(clipVertically ? "clip" : "overflow")}" wrap="none" lIns="0" rIns="0" tIns="0" bIns="0"/>""");
         var xml = XDocument.Parse(parts["ppt/slides/slide1.xml"]);
         XNamespace a = "http://schemas.openxmlformats.org/drawingml/2006/main";
         var transform = xml.Descendants(a + "xfrm").Single();
         xml.Descendants(a + "t").Single().Value = text;
         transform.Element(a + "off")!.SetAttributeValue("x", (long)(left * 12700d));
         transform.Element(a + "ext")!.SetAttributeValue("cx", 228600);
+        if (clipVertically)
+        {
+            transform.Element(a + "ext")!.SetAttributeValue("cy", 304800);
+            xml.Descendants(a + "p").Single().AddAfterSelf(new XElement(a + "p",
+                new XElement(a + "r", new XElement(a + "rPr", new XAttribute("sz", "1800")),
+                    new XElement(a + "t", "LOWER LINE"))));
+        }
         foreach (var attribute in XElement.Parse("<x " + transformAttributes + "/>").Attributes())
             transform.SetAttributeValue(attribute.Name, attribute.Value);
         parts["ppt/slides/slide1.xml"] = xml.ToString();
