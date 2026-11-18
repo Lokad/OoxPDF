@@ -76,6 +76,22 @@ internal static class TestRunnerTests
             TestAssert.Equal(0, calls.Count);
             TestAssert.Equal(1, RunCaptured(["--skip-slow", "--only-slow"], catalog).ExitCode);
             TestAssert.Equal(0, calls.Count);
+
+            File.WriteAllText(set, JsonSerializer.Serialize(new[] { second.Method.Name, first.Method.Name, second.Method.Name }));
+            TestAssert.Equal(0, RunCaptured(["--test-set", set], catalog).ExitCode);
+            TestAssert.True(calls.SequenceEqual([1, 2]), "Repeated exact requests execute once each in catalogue order.");
+            calls.Clear();
+
+            var ambiguous = RunCaptured(["--test-set", set], [.. catalog, new TestCase("runner-probe", second)]);
+            TestAssert.Equal(1, ambiguous.ExitCode);
+            TestAssert.Contains("Unknown or ambiguous exact test name", ambiguous.Output);
+            TestAssert.Equal(0, calls.Count);
+
+            File.WriteAllText(set, JsonSerializer.Serialize(new[] { first.Method.Name, "NotARegisteredExactMethod" }));
+            var unknown = RunCaptured(["--test-set", set], catalog);
+            TestAssert.Equal(1, unknown.ExitCode);
+            TestAssert.Contains("Unknown or ambiguous exact test name 'NotARegisteredExactMethod'", unknown.Output);
+            TestAssert.Equal(0, calls.Count);
         }
         finally { Directory.Delete(directory, recursive: true); }
     }

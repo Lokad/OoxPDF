@@ -59,9 +59,18 @@ internal static class TestRunner
                     return 1;
                 }
                 exactNames = new HashSet<string>(requested, StringComparer.Ordinal);
+                var registrations = new Dictionary<string, int>(exactNames.Count, StringComparer.Ordinal);
+                foreach (TestCase testCase in testCases)
+                {
+                    string methodName = testCase.Action.Method.Name;
+                    if (exactNames.Contains(methodName))
+                    {
+                        registrations[methodName] = registrations.GetValueOrDefault(methodName) + 1;
+                    }
+                }
                 foreach (string requestedName in exactNames)
                 {
-                    if (testCases.Count(testCase => testCase.Action.Method.Name == requestedName) != 1)
+                    if (registrations.GetValueOrDefault(requestedName) != 1)
                     {
                         Console.WriteLine($"Unknown or ambiguous exact test name '{requestedName}'.");
                         return 1;
