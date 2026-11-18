@@ -95,7 +95,11 @@ internal sealed record DocxFloatingDrawingLayout(
 {
     // The measured body line owning a paragraph-top reference, when resolved.
     public DocxTextLineLayout? AnchorTextLine { get; init; }
+    // Paragraph-relative static drawings can come from either static text path.
+    public DocxStaticAnchorY? StaticAnchorY { get; init; }
 }
+
+internal enum DocxStaticAnchorY { Design, Text }
 
 internal sealed record DocxWrapExclusionFrame(
     double X,
@@ -2500,7 +2504,7 @@ internal sealed partial class DocxLayoutEngine
         return new DocxLayout(
             pagesWithStaticText,
             CreateFloatingDrawingLayouts(document.FloatingDrawings, pagesWithStaticText, textMeasurer, defaultTabStopPoints, paragraphSpacingScale, cancellationToken, unscaledTextMeasurer),
-            CreateStaticFloatingDrawingLayouts(pagesWithStaticText, textMeasurer, defaultTabStopPoints, paragraphSpacingScale, cancellationToken),
+            staticContent.Drawings,
             relatedStoryLayouts,
             staticContent.HeaderContentBottomByPage,
             footerContentTopByPage) { UsesSourceOwnedFootnoteReserve = completeFootnoteAdmission is not null };

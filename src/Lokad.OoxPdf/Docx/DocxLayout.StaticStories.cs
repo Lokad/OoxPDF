@@ -132,7 +132,8 @@ internal sealed partial class DocxLayoutEngine
         return footerContentTop;
     }
 
-    private static (IReadOnlyList<DocxLayoutPage> Pages, IReadOnlyDictionary<int, double> HeaderContentBottomByPage, IReadOnlyDictionary<int, double> FooterContentTopByPage) AddStaticContent(
+    private static (IReadOnlyList<DocxLayoutPage> Pages, IReadOnlyList<DocxFloatingDrawingLayout> Drawings,
+        IReadOnlyDictionary<int, double> HeaderContentBottomByPage, IReadOnlyDictionary<int, double> FooterContentTopByPage) AddStaticContent(
         IReadOnlyList<DocxLayoutPage> pages,
         IDocxTextMeasurer? textMeasurer,
         double defaultTabStopPoints,
@@ -141,9 +142,17 @@ internal sealed partial class DocxLayoutEngine
         CancellationToken cancellationToken,
         IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations = null)
     {
+        var drawings = new List<DocxFloatingDrawingLayout>();
         if (textMeasurer is not IDocxStaticTextMetricsProvider staticMetrics)
         {
-            return (pages, new Dictionary<int, double>(), new Dictionary<int, double>());
+            for (int pageIndex = 0; pageIndex < pages.Count; pageIndex++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                DocxLayoutPage page = pages[pageIndex];
+                AddDrawings(page, pageIndex, true, GetDrawings(page, pageIndex, true), null);
+                AddDrawings(page, pageIndex, false, GetDrawings(page, pageIndex, false), null);
+            }
+            return (pages, drawings, new Dictionary<int, double>(), new Dictionary<int, double>());
         }
 
         IDocxLineMetricsProvider? unscaledLineMetrics =
@@ -168,6 +177,8 @@ internal sealed partial class DocxLayoutEngine
                 page.PageSettings.FooterParagraphsByType,
                 page.PageSettings,
                 pageNumber, page.SectionFirstPageNumber);
+            var headerDrawings = GetDrawings(page, pageIndex, true);
+            var footerDrawings = GetDrawings(page, pageIndex, false);
             DocxStaticStoryLayoutResult headerLayout = CreatePageStaticStoryLayout(
                     page, selectedHeader,
                     page.MarginLeft,
@@ -181,7 +192,7 @@ internal sealed partial class DocxLayoutEngine
                     defaultTabStopPoints,
                     paragraphSpacingScale,
                     unscaledLineMetrics,
-                    cancellationToken, mathEquations, unscaledTextMeasurer);
+                    cancellationToken, mathEquations, unscaledTextMeasurer, SelectAnchoredParagraphs(headerDrawings));
             DocxStaticStoryLayoutResult footerLayout = CreatePageStaticStoryLayout(
                     page, selectedFooter,
                     page.MarginLeft,
@@ -195,7 +206,7 @@ internal sealed partial class DocxLayoutEngine
                     defaultTabStopPoints,
                     paragraphSpacingScale,
                     unscaledLineMetrics,
-                    cancellationToken, mathEquations, unscaledTextMeasurer);
+                    cancellationToken, mathEquations, unscaledTextMeasurer, SelectAnchoredParagraphs(footerDrawings));
             // Stories that laid out no visible content (absent headers, empty selections)
             // displace nothing: their untouched start cursor sits inside the header zone,
             // which would otherwise read as overflow whenever the header distance is
@@ -221,6 +232,8 @@ internal sealed partial class DocxLayoutEngine
                 StaticInlineTextBoxes = headerLayout.InlineTextBoxes.Concat(footerLayout.InlineTextBoxes).ToArray(),
                 StaticFooterFrameTop = footerLayout.PhysicalFooterFrameTop
             };
+            AddDrawings(pagesWithStaticText[pageIndex], pageIndex, true, headerDrawings, headerLayout);
+            AddDrawings(pagesWithStaticText[pageIndex], pageIndex, false, footerDrawings, footerLayout);
         }
 
         var headerContentBottomByPage = new Dictionary<int, double>();
@@ -231,7 +244,29 @@ internal sealed partial class DocxLayoutEngine
             footerContentTopByPage[pageIndex] = footerTopEdges[pageIndex];
         }
 
-        return (pagesWithStaticText, headerContentBottomByPage, footerContentTopByPage);
+        return (pagesWithStaticText, drawings, headerContentBottomByPage, footerContentTopByPage);
+
+        static DocxSelectedStaticDrawings GetDrawings(DocxLayoutPage page, int pageIndex, bool isHeader) =>
+            SelectStaticHeaderFooterDrawings(
+                isHeader ? page.PageSettings.HeaderFloatingDrawingsByType : page.PageSettings.FooterFloatingDrawingsByType,
+                page.PageSettings, pageIndex + 1, page.SectionFirstPageNumber);
+
+        IReadOnlySet<int>? SelectAnchoredParagraphs(DocxSelectedStaticDrawings selected)
+        {
+            HashSet<int>? anchors = null;
+            foreach (var drawing in selected.Drawings)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (drawing.LayoutBlockIndex is int index && IsParagraphRelative(drawing))
+                    (anchors ??= []).Add(index);
+            }
+            return anchors;
+        }
+
+        void AddDrawings(DocxLayoutPage page, int pageIndex, bool isHeader, DocxSelectedStaticDrawings selected,
+            DocxStaticStoryLayoutResult? placedStory) => drawings.AddRange(CreateStaticFloatingDrawingLayouts(
+                selected, DocxStoryId.HeaderOrFooter(isHeader, selected.VariantType), page, pageIndex, pages.Count,
+                textMeasurer, defaultTabStopPoints, paragraphSpacingScale, cancellationToken, placedStory));
     }
 
     private static DocxStaticStoryLayoutResult CreateStaticStoryLayout(
@@ -248,12 +283,14 @@ internal sealed partial class DocxLayoutEngine
         double paragraphSpacingScale,
         IDocxLineMetricsProvider? unscaledLineMetrics,
         CancellationToken cancellationToken,
-        IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations = null)
+        IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations = null,
+        IReadOnlySet<int>? anchoredParagraphs = null)
     {
         var lines = new List<DocxTextLineLayout>();
         var images = new List<DocxInlineImageLayout>();
         var tableRows = new List<DocxTableRowLayout>();
         var boxes = new List<DocxInlineTextBoxLayout>();
+        Dictionary<int, DocxStaticParagraphAnchor>? drawingAnchors = anchoredParagraphs is null ? null : new();
         double cursorY = startY;
         double pendingSpacingAfter = 0d;
         DocxParagraph? previousParagraph = null;
@@ -330,6 +367,7 @@ internal sealed partial class DocxLayoutEngine
             DocxParagraphSpacingProfile spacingProfile = ResolveParagraphSpacingProfile(previousParagraph, paragraph, pendingSpacingAfter, paragraphSpacingScale, resolveContextualContributions: false);
             cursorY -= spacingProfile.AppliedBeforeSpacing;
             pendingSpacingAfter = 0d;
+            double paragraphTop = cursorY;
             if (TryGetStandaloneMath(paragraph, width, paragraphSpacingScale, mathEquations, out var math))
             {
                 lines.Add(CreateStandaloneMathLine(paragraph, math, x, width, cursorY,
@@ -340,6 +378,7 @@ internal sealed partial class DocxLayoutEngine
                     SingleLineHeight = math.LineHeight
                 });
                 cursorY -= math.LineHeight * paragraphSpacingScale;
+                RecordDrawingAnchor();
                 pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
                 previousParagraph = paragraph;
                 paragraphIndex++;
@@ -406,6 +445,7 @@ internal sealed partial class DocxLayoutEngine
                     pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
                     previousParagraph = paragraph;
                     paragraphIndex++;
+                    RecordDrawingAnchor();
                     continue;
                 }
             }
@@ -699,6 +739,13 @@ internal sealed partial class DocxLayoutEngine
             pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
             previousParagraph = paragraph;
             paragraphIndex++;
+            RecordDrawingAnchor();
+
+            void RecordDrawingAnchor()
+            {
+                if (anchoredParagraphs?.Contains(elementIndex) == true)
+                    drawingAnchors!.Add(elementIndex, new(paragraphTop, cursorY));
+            }
         }
 
         bool canAnchorInlineImages = images.All(image => image.Image.SourceRunIndex >= 0) &&
@@ -721,6 +768,13 @@ internal sealed partial class DocxLayoutEngine
             // share this same trailing-cursor anchor. Standalone images and
             // text without resolved metrics retain their separate placement.
             double footerShift = startY - (cursorY - pendingSpacingAfter);
+            if (drawingAnchors is not null)
+                foreach (int owner in drawingAnchors.Keys.ToArray())
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    var frame = drawingAnchors[owner];
+                    drawingAnchors[owner] = new(frame.Top + footerShift, frame.Bottom + footerShift);
+                }
             for (int lineIndex = 0; lineIndex < lines.Count; lineIndex++)
             {
                 lines[lineIndex] = lines[lineIndex] with { BaselineY = lines[lineIndex].BaselineY + footerShift };
@@ -738,7 +792,8 @@ internal sealed partial class DocxLayoutEngine
             }
         }
 
-        return new DocxStaticStoryLayoutResult(lines.ToArray(), images.ToArray(), tableRows.ToArray(), boxes.ToArray(), cursorY, pendingSpacingAfter);
+        return new DocxStaticStoryLayoutResult(lines.ToArray(), images.ToArray(), tableRows.ToArray(), boxes.ToArray(), cursorY, pendingSpacingAfter)
+        { DrawingAnchors = drawingAnchors };
 
         // RV05: ordered inline atoms (static header/footer path). Growth uses the
         // largest per-line advance and baseline displacement, matching the scalar

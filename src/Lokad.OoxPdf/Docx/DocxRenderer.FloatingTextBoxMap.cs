@@ -5,7 +5,7 @@ internal sealed partial class DocxRenderer
     private static DocxLayout ReframeFloatingParagraphTops(DocxLayout layout, DocxMarkupContext context,
         CancellationToken cancellationToken)
     {
-        if (layout.FloatingDrawings.Count == 0 || layout.Pages.Count == 0 ||
+        if ((layout.FloatingDrawings.Count == 0 && layout.StaticFloatingDrawings.Count == 0) || layout.Pages.Count == 0 ||
             !FloatingTextBoxEmissionMap.TryCreate(context, layout.Pages[0].Height, out _)) return layout;
         DocxFloatingDrawingLayout[]? changed = null;
         bool separateHeaders = CanSeparatePlainHeaderOrigins(layout);
@@ -26,14 +26,10 @@ internal sealed partial class DocxRenderer
                 drawing.AnchorPageIndex is not int pageIndex || drawing.VerticalReferenceTop is not double oldTop ||
                 drawing.AnchorBlockVerticalBottom is not double blockBottom || drawing.PlacedTop is not double placedTop)
                 continue;
-            if (contextPage != pageIndex)
-            {
-                pageContext = WithPageTextEmissionOffsets(context, layout, pageIndex, separateHeaders);
-                contextPage = pageIndex;
-            }
-            var frame = new DocxPrintedPageFrame(layout.Pages[pageIndex].Height, pageContext.WordCompatiblePrintScale);
-            double top = frame.UnmapY(line.BaselineY - pageContext.WordCompatibleTextYOffset + printedInset);
-            double bottom = frame.UnmapY(blockBottom - pageContext.WordCompatibleTextYOffset);
+            var offsets = PageContext(pageIndex);
+            var frame = new DocxPrintedPageFrame(layout.Pages[pageIndex].Height, offsets.WordCompatiblePrintScale);
+            double top = frame.UnmapY(line.BaselineY - offsets.WordCompatibleTextYOffset + printedInset);
+            double bottom = frame.UnmapY(blockBottom - offsets.WordCompatibleTextYOffset);
             if (top == oldTop && bottom == drawing.VerticalReferenceBottom) continue;
             changed ??= layout.FloatingDrawings.ToArray();
             changed[index] = drawing with
@@ -42,7 +38,39 @@ internal sealed partial class DocxRenderer
                 PlacedTop = placedTop + top - oldTop
             };
         }
-        return changed is null ? layout : layout with { FloatingDrawings = changed };
+        DocxFloatingDrawingLayout[]? staticChanged = null;
+        for (int index = 0; index < layout.StaticFloatingDrawings.Count; index++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var drawing = layout.StaticFloatingDrawings[index];
+            if (drawing.StaticAnchorY != DocxStaticAnchorY.Text || drawing.AnchorPageIndex is not int pageIndex ||
+                drawing.VerticalReferenceTop is not double textTop || drawing.VerticalReferenceBottom is not double textBottom)
+                continue;
+
+            // Legacy static text already has scaled pitch. Convert its painted
+            // frame to design Y before the common floating painter maps the box.
+            var offsets = PageContext(pageIndex);
+            double staticOffset = offsets.WordCompatibleStaticTextYAdjustmentPoints - ResolveTextEmissionBaselineOffset(offsets);
+            var frame = new DocxPrintedPageFrame(layout.Pages[pageIndex].Height, offsets.WordCompatiblePrintScale);
+            staticChanged ??= layout.StaticFloatingDrawings.ToArray();
+            staticChanged[index] = DocxLayoutEngine.PlaceStaticAnchorInDesignFrame(drawing,
+                frame.UnmapY(textTop + staticOffset), frame.UnmapY(textBottom + staticOffset));
+        }
+        return changed is null && staticChanged is null ? layout : layout with
+        {
+            FloatingDrawings = changed ?? layout.FloatingDrawings,
+            StaticFloatingDrawings = staticChanged ?? layout.StaticFloatingDrawings
+        };
+
+        DocxMarkupContext PageContext(int pageIndex)
+        {
+            if (contextPage != pageIndex)
+            {
+                pageContext = WithPageTextEmissionOffsets(context, layout, pageIndex, separateHeaders);
+                contextPage = pageIndex;
+            }
+            return pageContext;
+        }
     }
 
     // Floating placement stays in design coordinates. On scaled Word-compatible

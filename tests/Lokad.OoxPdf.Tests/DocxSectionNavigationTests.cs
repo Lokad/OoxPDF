@@ -208,6 +208,80 @@ internal static class DocxSectionNavigationTests
     public static void DocxFloatingNoteBoxesKeepInkAndRangeDestinationsInPrintedFrame() =>
         CheckFloatingBoxTableRangeBookmarks(["footnote", "endnote"]);
 
+    public static void DocxParagraphRelativeStaticBoxesFollowTheirSelectedStory()
+    {
+        string fixture = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases",
+            "TableGridOrigins", "Containers", "floating-table-ordered.docx"));
+        var resolver = new PortableRenderingTests.PinnedResolver();
+        XNamespace wp = OoxNamespaces.WordprocessingDrawingNamespace;
+        foreach (string owner in new[] { "header", "footer" })
+        foreach (var mode in Modes)
+        {
+            int offset = owner == "header" ? 15 : -62;
+            string context = owner + "/" + mode;
+            WithDocumentMutation(fixture, (parts, xml) =>
+            {
+                var body = xml.Descendants(W + "body").Single();
+                var final = body.Element(W + "sectPr")!;
+                var first = new XElement(final);
+                first.AddFirst(new XElement(W + "type", new XAttribute(W + "val", "nextPage")));
+                var anchor = body.Descendants(wp + "anchor").Single();
+                anchor.Element(wp + "positionV")!.Element(wp + "posOffset")!.SetValue(offset * 12700);
+                var box = anchor.Descendants(W + "txbxContent").Single();
+                MoveBookmarkOutside(box.Descendants(W + "bookmarkStart").Single(),
+                    box.Descendants(W + "bookmarkEnd").Single(), box.Element(W + "tbl")!);
+                var drawingRun = anchor.Ancestors(W + "r").First();
+                var nestedDrawing = new XElement(drawingRun);
+                nestedDrawing.Descendants(W + "bookmarkStart").Remove();
+                nestedDrawing.Descendants(W + "bookmarkEnd").Remove();
+                nestedDrawing.Descendants(wp + "posOffset").Last().SetValue(100 * 12700);
+                foreach (var text in nestedDrawing.Descendants(W + "t")) text.Value = "NESTED DRAWING LABEL";
+                box.Add(new XElement(W + "p", nestedDrawing));
+                var paragraph = Paragraph("STATIC DRAWING OWNER");
+                paragraph.AddFirst(new XElement(W + "pPr",
+                    new XElement(W + "spacing", new XAttribute(W + "before", "0"), new XAttribute(W + "after", "0")),
+                    new XElement(W + "shd", new XAttribute(W + "fill", "DDEECC"))));
+                paragraph.Add(new XElement(drawingRun));
+                drawingRun.Ancestors(W + "p").First().Remove();
+
+                XName root = W + (owner == "header" ? "hdr" : "ftr");
+                string firstPart = "first-drawing-" + owner;
+                string followingPart = "following-" + owner;
+                first.AddFirst(new XElement(W + (owner + "Reference"), new XAttribute(W + "type", "first"),
+                    new XAttribute(R + "id", firstPart)));
+                first.Add(new XElement(W + "titlePg"));
+                AddStoryPart(parts, firstPart, owner, new XElement(root, Paragraph("STATIC INTRO"), paragraph));
+                final.AddFirst(new XElement(W + (owner + "Reference"), new XAttribute(W + "type", "default"),
+                    new XAttribute(R + "id", followingPart)));
+                AddStoryPart(parts, followingPart, owner, new XElement(root, Paragraph("FOLLOWING STATIC STORY")));
+                final.AddBeforeSelf(Break(), Paragraph("FIRST SECTION CONTINUES"),
+                    new XElement(W + "p", new XElement(W + "pPr", first)), Paragraph("FOLLOWING SECTION"));
+            }, path =>
+            {
+                var geometry = mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout
+                    : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup;
+                var document = DocxTests.ReadDocx(path, mode);
+                var renderer = new DocxRenderer(resolver, mode, geometry);
+                PdfPage[] pages = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
+                TestAssert.Equal(3, pages.Length);
+                DocxInlineCompositionTests.AssertSourceLabelsPaint(pages[0], mode,
+                    ["BOX TABLE NORTH", "BOX TABLE SOUTH"], context);
+                TestAssert.DoesNotContain("NESTED DRAWING LABEL", Text(pages[0]));
+                TestAssert.Equal(1, pages[0].Annotations.Count(link => link.Destination is { PageIndex: 0 }));
+                TestAssert.DoesNotContain("BOX TABLE NORTH", Text(pages[1]));
+                TestAssert.DoesNotContain("BOX TABLE NORTH", Text(pages[2]));
+                TestAssert.Contains("FIRST SECTION CONTINUES", Text(pages[1]));
+                TestAssert.Contains("FOLLOWING STATIC STORY", Text(pages[2]));
+
+                double scale = DocxRenderer.ResolveWordCompatiblePrintScale(document, DocxMarkupContext.FromMode(mode, geometry));
+                var outline = DocxInlineCompositionTests.ReadFloatingOutline(pages[0], 60d * scale, 216d * scale, .02d).Single().Bounds;
+                var fill = DocxParagraphShadingTests.ReadRectangles(pages[0].Content).Single(rect => rect.Color == "DDEECC");
+                TestAssert.True(Math.Abs(outline[1] + outline[3] - fill.Y - fill.Height + offset * scale) < .003d,
+                    "The floating outline must keep its authored offset from the printed owner: " + context);
+            });
+        }
+    }
+
     private static void CheckFloatingBoxTableRangeBookmarks(string[] owners)
     {
         string fixture = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases",

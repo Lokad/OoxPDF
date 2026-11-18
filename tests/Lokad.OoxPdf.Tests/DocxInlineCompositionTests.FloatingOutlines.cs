@@ -164,7 +164,7 @@ internal static partial class DocxInlineCompositionTests
             if (omitOutline) shape.Element(wps + "spPr")!.Element(a + "ln")!.Remove();
         });
 
-    private static IEnumerable<(double[] Bounds, PdfRectangle Clip)> ReadFloatingOutline(PdfPage page, double height,
+    internal static IEnumerable<(double[] Bounds, PdfRectangle Clip)> ReadFloatingOutline(PdfPage page, double height,
         double width = 216d, double tolerance = .001d)
     {
         foreach (var frame in DocxNoteClippingTests.ReadPhysicalPaintFrames(page))

@@ -555,33 +555,8 @@ internal sealed partial class DocxLayoutEngine
         return layouts;
     }
 
-    private static IReadOnlyList<DocxFloatingDrawingLayout> CreateStaticFloatingDrawingLayouts(
-        IReadOnlyList<DocxLayoutPage> pages,
-        IDocxTextMeasurer? textMeasurer,
-        double defaultTabStopPoints,
-        double paragraphSpacingScale,
-        CancellationToken cancellationToken)
-    {
-        var layouts = new List<DocxFloatingDrawingLayout>();
-        for (int pageIndex = 0; pageIndex < pages.Count; pageIndex++)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            DocxLayoutPage page = pages[pageIndex];
-            int pageNumber = pageIndex + 1;
-            DocxSelectedStaticDrawings selectedHeader = SelectStaticHeaderFooterDrawings(
-                page.PageSettings.HeaderFloatingDrawingsByType,
-                page.PageSettings,
-                pageNumber, page.SectionFirstPageNumber);
-            DocxSelectedStaticDrawings selectedFooter = SelectStaticHeaderFooterDrawings(
-                page.PageSettings.FooterFloatingDrawingsByType,
-                page.PageSettings,
-                pageNumber, page.SectionFirstPageNumber);
-            layouts.AddRange(CreateStaticFloatingDrawingLayouts(selectedHeader, DocxStoryId.Header(selectedHeader.VariantType), page, pageIndex, pages.Count, textMeasurer, defaultTabStopPoints, paragraphSpacingScale, cancellationToken));
-            layouts.AddRange(CreateStaticFloatingDrawingLayouts(selectedFooter, DocxStoryId.Footer(selectedFooter.VariantType), page, pageIndex, pages.Count, textMeasurer, defaultTabStopPoints, paragraphSpacingScale, cancellationToken));
-        }
-
-        return layouts;
-    }
+    private static bool IsParagraphRelative(DocxFloatingDrawing drawing) =>
+        string.Equals(drawing.VerticalRelativeFromValue, "paragraph", StringComparison.OrdinalIgnoreCase);
 
     private static IEnumerable<DocxFloatingDrawingLayout> CreateStaticFloatingDrawingLayouts(
         DocxSelectedStaticDrawings selectedDrawings,
@@ -593,11 +568,19 @@ internal sealed partial class DocxLayoutEngine
         double defaultTabStopPoints,
         double paragraphSpacingScale,
         CancellationToken cancellationToken,
-        IDocxTextMeasurer? unscaledTextMeasurer = null)
+        DocxStaticStoryLayoutResult? placedStory)
     {
         foreach (DocxFloatingDrawing drawing in selectedDrawings.Drawings)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            DocxLayoutSourceBlockBounds? sourceBlock = null;
+            DocxStaticAnchorY? anchorY = null;
+            if (IsParagraphRelative(drawing) && drawing.LayoutBlockIndex is int index &&
+                placedStory?.DrawingAnchors is { } anchors && anchors.TryGetValue(index, out var anchor))
+            {
+                sourceBlock = new(pageIndex, pageIndex, null, null, anchor.Top, anchor.Bottom);
+                anchorY = placedStory.DrawingAnchorsUseDesignY ? DocxStaticAnchorY.Design : DocxStaticAnchorY.Text;
+            }
             yield return CreateFloatingDrawingLayout(
                 drawing,
                 page,
@@ -605,15 +588,29 @@ internal sealed partial class DocxLayoutEngine
                 pageEndIndex: pageIndex,
                 anchorPageIndex: pageIndex,
                 anchorColumnIndex: null,
-                sourceBlock: null,
+                sourceBlock: sourceBlock,
                 story: story,
                 pageCount: pageCount,
                 textMeasurer: textMeasurer,
                 defaultTabStopPoints: defaultTabStopPoints,
                 paragraphSpacingScale: paragraphSpacingScale,
-                cancellationToken: cancellationToken,
-                unscaledTextMeasurer: unscaledTextMeasurer);
+                cancellationToken: cancellationToken) with { StaticAnchorY = anchorY };
         }
+    }
+
+    internal static DocxFloatingDrawingLayout PlaceStaticAnchorInDesignFrame(
+        DocxFloatingDrawingLayout drawing, double top, double bottom)
+    {
+        var placement = ResolveVerticalPlacement(new(top, bottom), drawing.ExtentHeightPoints,
+            drawing.Drawing.VerticalAlignValue, drawing.VerticalOffsetPoints);
+        return drawing with
+        {
+            AnchorBlockVerticalTop = top, AnchorBlockVerticalBottom = bottom,
+            VerticalReferenceTop = top, VerticalReferenceBottom = bottom,
+            PlacedTop = placement.Position,
+            WrapExclusionTop = drawing.WrapExclusionTop + (placement.Position - drawing.PlacedTop),
+            StaticAnchorY = DocxStaticAnchorY.Design
+        };
     }
 
     // Office defaults when bodyPr carries no explicit insets: 0.1in sides, 0.05in
@@ -1083,5 +1080,9 @@ internal sealed partial class DocxLayoutEngine
         public double? MappedFooterContentTop { get; init; }
         public double? PhysicalFooterFrameTop { get; init; }
         public double? PhysicalHeaderFrameBottom { get; init; }
+        public IReadOnlyDictionary<int, DocxStaticParagraphAnchor>? DrawingAnchors { get; init; }
+        public bool DrawingAnchorsUseDesignY { get; init; }
     }
+
+    private readonly record struct DocxStaticParagraphAnchor(double Top, double Bottom);
 }

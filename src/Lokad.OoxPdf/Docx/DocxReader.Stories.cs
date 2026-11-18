@@ -125,6 +125,7 @@ internal sealed partial class DocxReader
             {
                 IReadOnlyDictionary<string, OoxRelationship> partRelationships =
                     package.GetRelationshipDictionary(part.Name, cancellationToken);
+                var floatingBlocks = CreateFloatingBlockMap(parsed.Xml);
                 parsed.BodyElements = ReadRelatedStoryBodyElements(
                     parsed.Xml.Root?.Elements() ?? [],
                     styles,
@@ -134,9 +135,21 @@ internal sealed partial class DocxReader
                     partRelationships,
                     storyCache.DocumentSettings,
                     markupMode,
-                    cancellationToken);
-                parsed.Drawings = ReadFloatingDrawings(parsed.Xml, package, partRelationships, styles, numbering,
-                    storyCache.DocumentSettings, markupMode, cancellationToken);
+                    cancellationToken,
+                    floatingBlocks: floatingBlocks);
+                if (floatingBlocks is not null)
+                {
+                    // An anchor inside a box belongs to that box's flow, even
+                    // when the enclosing static paragraph owns the outer drawing.
+                    foreach (var anchor in floatingBlocks.Keys.ToArray())
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        if (anchor.Ancestors(WordprocessingNamespace + "txbxContent").Any())
+                            floatingBlocks.Remove(anchor);
+                    }
+                }
+                parsed.Drawings = floatingBlocks is null ? [] : ReadFloatingDrawings(parsed.Xml, package, partRelationships, styles, numbering,
+                    storyCache.DocumentSettings, markupMode, cancellationToken, floatingBlocks);
             }
 
             string type = (string?)reference.Attribute(WordprocessingNamespace + "type") ?? "default";

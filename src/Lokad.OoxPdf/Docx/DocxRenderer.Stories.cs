@@ -317,7 +317,11 @@ internal sealed partial class DocxRenderer
                 graphics.SaveState();
                 graphics.ClipRectangle(clip.X, clip.Y, clip.Width, clip.Height);
             }
-            bool painted = RenderImage(image, placedX, placedTop - height, width, height, graphics, pageImages,
+            var pictureFrame = drawing.StaticAnchorY is not null &&
+                FloatingTextBoxEmissionMap.TryCreate(markupContext, pageClip.Height, out var pictureMap)
+                ? pictureMap.MapRectangle(placedX, placedTop, width, height)
+                : (X: placedX, Y: placedTop - height, Width: width, Height: height);
+            bool painted = RenderImage(image, pictureFrame.X, pictureFrame.Y, pictureFrame.Width, pictureFrame.Height, graphics, pageImages,
                 diagnosticSink, drawing.AnchorPageIndex ?? 0, cancellationToken, imageCache, ref imageIndex,
                 out PdfRectangle? axisAlignedFrame, svgTextFonts: fontResources.SvgTextFonts);
             if (imageClip is not null) graphics.RestoreState();

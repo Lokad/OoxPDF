@@ -8681,6 +8681,7 @@
     "=DocxStaticBoxTablesResolveRangeBookmarksOnPaintedRows",
     "=DocxFloatingBoxTableRangeBookmarksFollowPaintedRows",
     "=DocxFloatingNoteBoxesKeepInkAndRangeDestinationsInPrintedFrame",
+    "=DocxParagraphRelativeStaticBoxesFollowTheirSelectedStory",
     "=DocxBodyBookmarksFollowTheirPlacedParagraph",
     "=DocxBodyBookmarksRespectClosedRevisionAndTableBoundaries",
     "DocxComputedSimpleFieldsKeepHyperlinkSourceOwnership",
