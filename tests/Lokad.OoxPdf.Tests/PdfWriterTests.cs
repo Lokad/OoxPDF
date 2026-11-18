@@ -370,7 +370,7 @@ internal static partial class PdfWriterTests
     public static void WritesImageBackedTilingPatternResources()
     {
         var graphics = new PdfGraphicsBuilder();
-        var pattern = PdfTilingPattern.OfficeBitmapDiagonalLines(up: true, 47, 133, 106, 191, 191, 191);
+        var pattern = PdfTilingPattern.OfficeBitmapStripeLines(PdfStripePatternKind.UpDiagonal, thin: false, 47, 133, 106, 191, 191, 191);
         graphics.FillRectangleWithTilingPattern(10, 20, 30, 40, pattern);
         var page = new PdfPage(100, 100, graphics.ToString(), [], [], graphics.ExtGStates, graphics.Shadings, graphics.Patterns);
 

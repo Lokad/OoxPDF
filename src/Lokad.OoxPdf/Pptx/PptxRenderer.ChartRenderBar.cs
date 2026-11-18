@@ -1765,8 +1765,12 @@ internal sealed partial class PptxRenderer
         }
 
         RgbColor backgroundColor = fill.BackgroundColor ?? new RgbColor(255, 255, 255);
-        var pattern = PdfTilingPattern.OfficeBitmapDiagonalLines(
-            patternPreset.Contains("UpDiag", StringComparison.OrdinalIgnoreCase),
+        var stripeKind = patternPreset.Contains("UpDiag", StringComparison.OrdinalIgnoreCase)
+            ? PdfStripePatternKind.UpDiagonal
+            : PdfStripePatternKind.DownDiagonal;
+        var pattern = PdfTilingPattern.OfficeBitmapStripeLines(
+            stripeKind,
+            thin: false,
             fill.Color.Red,
             fill.Color.Green,
             fill.Color.Blue,

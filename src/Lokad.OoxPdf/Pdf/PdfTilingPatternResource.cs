@@ -64,48 +64,6 @@ internal sealed class PdfTilingPattern
 
     public string ResourceKey => resourceKey ??= BuildResourceKey();
 
-    public static PdfTilingPattern OfficeBitmapDiagonalLines(
-        bool up,
-        byte foregroundRed,
-        byte foregroundGreen,
-        byte foregroundBlue,
-        byte backgroundRed,
-        byte backgroundGreen,
-        byte backgroundBlue)
-    {
-        const int cellSize = 16;
-        const double matrixScale = 0.375d;
-        const string imageName = "ImPattern";
-
-        byte[] rgb = new byte[cellSize * cellSize * 3];
-        for (int y = 0; y < cellSize; y++)
-        {
-            for (int x = 0; x < cellSize; x++)
-            {
-                int rowOffset = 2 * (y / 2);
-                int diagonal = up
-                    ? PositiveModulo(x + rowOffset, 8)
-                    : PositiveModulo(x - rowOffset, 8);
-                bool foreground = diagonal is 6 or 7;
-                int index = (y * cellSize + x) * 3;
-                rgb[index] = foreground ? foregroundRed : backgroundRed;
-                rgb[index + 1] = foreground ? foregroundGreen : backgroundGreen;
-                rgb[index + 2] = foreground ? foregroundBlue : backgroundBlue;
-            }
-        }
-
-        var image = PdfImageXObject.RgbPng(cellSize, cellSize, rgb, alpha: null);
-        return new PdfTilingPattern(
-            cellSize,
-            cellSize,
-            cellSize,
-            cellSize,
-            new PdfPatternMatrix(matrixScale, 0d, 0d, matrixScale, 0d, 0d),
-            tilingType: 2,
-            "q 16 0 0 16 0 0 cm /" + imageName + " Do Q\n",
-            [new PdfImageResource(imageName, image)]);
-    }
-
     public static PdfTilingPattern OfficeBitmapStripeLines(
         PdfStripePatternKind kind,
         bool thin,
