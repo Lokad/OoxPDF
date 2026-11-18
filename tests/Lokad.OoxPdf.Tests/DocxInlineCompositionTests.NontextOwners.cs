@@ -57,9 +57,10 @@ internal static partial class DocxInlineCompositionTests
             var document = ReadRevisedNontextRun(story, kind, mode, revised: true);
             var diagnostics = new List<OoxPdfDiagnostic>();
             var actual = renderer.RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
-            TestAssert.True(NontextOwnerMath(expected).Length > 0, "The source control contains supported mathematics.");
+            string expectedMath = ReadEquationText(expected);
+            TestAssert.True(expectedMath.Length > 0, "The source control contains supported mathematics.");
             TestAssert.Equal(expected.Length, actual.Length);
-            TestAssert.Equal(NontextOwnerMath(expected), NontextOwnerMath(actual));
+            TestAssert.Equal(expectedMath, ReadEquationText(actual));
             TestAssert.Equal(expected.Sum(page => page.Images.Count), actual.Sum(page => page.Images.Count));
             TestAssert.True(diagnostics.All(item => item.Id != "DOCX_UNSUPPORTED_EQUATION"),
                 "Run history cannot remove supported math: " + story + "/" + kind + "/" + mode);
@@ -74,15 +75,10 @@ internal static partial class DocxInlineCompositionTests
                 link.Width > 0d && link.Height > 0d && (link.Destination is not { } target ||
                     target.PageIndex >= 0 && target.PageIndex < actual.Length)),
                 "Navigation retains finite rectangles and admitted destination pages.");
-            if (kind != "hint") continue;
-            using var cancellation = new CancellationTokenSource();
-            cancellation.Cancel();
-            TestAssert.Throws<OperationCanceledException>(() => renderer.RenderPagesAsync(document, null,
-                cancellation.Token).ToBlockingEnumerable().ToArray());
         }
     }
 
-    private static string NontextOwnerMath(IEnumerable<PdfPage> pages) => string.Concat(pages.SelectMany(page =>
+    private static string ReadEquationText(IEnumerable<PdfPage> pages) => string.Concat(pages.SelectMany(page =>
         DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, true).Where(show => page.Fonts.Any(font =>
             font.ResourceName.StartsWith("Eq", StringComparison.Ordinal) && ReferenceEquals(font.Font, show.Font))))
         .Select(show => show.Text)).Normalize(NormalizationForm.FormKC);

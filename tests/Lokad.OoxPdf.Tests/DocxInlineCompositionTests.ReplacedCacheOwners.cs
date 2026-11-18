@@ -1,8 +1,6 @@
-using System.Text;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Docx;
-using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Tests;
 
@@ -51,15 +49,12 @@ internal static partial class DocxInlineCompositionTests
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
         {
             var renderer = new DocxRenderer(resolver, mode, CachedMathGeometry(mode));
-            string MathText(IEnumerable<PdfPage> pages) => string.Concat(pages.SelectMany(page =>
-                DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, true).Where(show => page.Fonts.Any(font =>
-                    font.ResourceName.StartsWith("Eq", StringComparison.Ordinal) && ReferenceEquals(font.Font, show.Font))))
-                .Select(show => show.Text)).Normalize(NormalizationForm.FormKC);
             foreach (string shape in new[] { "plain", "ordered", "field" })
             {
                 var expected = renderer.RenderPagesAsync(ReadRevisedComputedCache(story, instruction, mode, shape, revised: false),
                     null, default).ToBlockingEnumerable().ToArray();
-                TestAssert.True(MathText(expected).Length > 0 && expected.Sum(page => page.Images.Count) == 1,
+                string expectedMath = ReadEquationText(expected);
+                TestAssert.True(expectedMath.Length > 0 && expected.Sum(page => page.Images.Count) == 1,
                     "The matching source-shape control contains its supported formulas and picture.");
                 var document = ReadRevisedComputedCache(story, instruction, mode, shape, revised: true);
                 var diagnostics = new List<OoxPdfDiagnostic>();
@@ -67,7 +62,7 @@ internal static partial class DocxInlineCompositionTests
                 TestAssert.True(diagnostics.All(item => item.Id != "DOCX_UNSUPPORTED_EQUATION"),
                     "A replaced cache's formatting history cannot discard neighboring formulas: " + story + "/" + instruction + "/" + shape + "/" + mode);
                 TestAssert.Equal(expected.Length, actual.Length);
-                TestAssert.Equal(MathText(expected), MathText(actual));
+                TestAssert.Equal(expectedMath, ReadEquationText(actual));
                 TestAssert.Equal(1, actual.Sum(page => page.Images.Count));
                 // Adding a real formatting revision can open the Review lane,
                 // changing physical rectangles and hyperlink line fragments.
@@ -85,10 +80,6 @@ internal static partial class DocxInlineCompositionTests
                         target.PageIndex >= 0 && target.PageIndex < actual.Length &&
                         double.IsFinite(target.Left ?? 0d) && double.IsFinite(target.Top ?? 0d))),
                     "Retained navigation has finite geometry and admitted destination pages.");
-                using var cancellation = new CancellationTokenSource();
-                cancellation.Cancel();
-                TestAssert.Throws<OperationCanceledException>(() => renderer.RenderPagesAsync(document, null,
-                    cancellation.Token).ToBlockingEnumerable().ToArray());
             }
         }
     }

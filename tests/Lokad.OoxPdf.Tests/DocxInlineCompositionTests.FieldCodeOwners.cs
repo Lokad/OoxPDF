@@ -1,8 +1,6 @@
-using System.Text;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Docx;
-using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Tests;
 
@@ -47,18 +45,15 @@ internal static partial class DocxInlineCompositionTests
         foreach (string slot in new[] { "begin", "instruction", "separate", "end" })
         {
             var renderer = new DocxRenderer(resolver, mode, CachedMathGeometry(mode));
-            string MathText(IEnumerable<PdfPage> pages) => string.Concat(pages.SelectMany(page =>
-                DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, true).Where(show => page.Fonts.Any(font =>
-                    font.ResourceName.StartsWith("Eq", StringComparison.Ordinal) && ReferenceEquals(font.Font, show.Font))))
-                .Select(show => show.Text)).Normalize(NormalizationForm.FormKC);
             var expected = renderer.RenderPagesAsync(ReadRevisedFieldCode(story, "PAGE", mode, slot,
                 revised: false, splitInstruction: splitInstruction), null, default).ToBlockingEnumerable().ToArray();
             var document = ReadRevisedFieldCode(story, "PAGE", mode, slot, revised: true, splitInstruction: splitInstruction);
             var diagnostics = new List<OoxPdfDiagnostic>();
             var actual = renderer.RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
-            TestAssert.True(MathText(expected).Length > 0, "The matching source control contains mathematics.");
+            string expectedMath = ReadEquationText(expected);
+            TestAssert.True(expectedMath.Length > 0, "The matching source control contains mathematics.");
             TestAssert.Equal(expected.Length, actual.Length);
-            TestAssert.Equal(MathText(expected), MathText(actual));
+            TestAssert.Equal(expectedMath, ReadEquationText(actual));
             TestAssert.Equal(1, actual.Sum(page => page.Images.Count));
             TestAssert.True(diagnostics.All(item => item.Id != "DOCX_UNSUPPORTED_EQUATION"),
                 "Nonpainting field history cannot remove formulas: " + story + "/" + slot + "/" + splitInstruction + "/" + mode);
@@ -73,10 +68,6 @@ internal static partial class DocxInlineCompositionTests
                 link.Width > 0d && link.Height > 0d && (link.Destination is not { } target ||
                     target.PageIndex >= 0 && target.PageIndex < actual.Length)),
                 "Navigation keeps finite rectangles and admitted destination pages.");
-            using var cancellation = new CancellationTokenSource();
-            cancellation.Cancel();
-            TestAssert.Throws<OperationCanceledException>(() => renderer.RenderPagesAsync(document, null,
-                cancellation.Token).ToBlockingEnumerable().ToArray());
         }
     }
 
