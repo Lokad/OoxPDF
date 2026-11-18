@@ -4,7 +4,7 @@ using Lokad.OoxPdf.Ooxml;
 
 namespace Lokad.OoxPdf.Tests;
 
-internal static class PptxChartNumberFormatsTests
+internal static partial class PptxChartNumberFormatsTests
 {
     public static void PptxChartNumberRequiredIntegerDigitsPreservePadding()
     {
@@ -118,6 +118,14 @@ internal static class PptxChartNumberFormatsTests
         TestAssert.Equal("2", FormatChartNumber(2d, "?/?"));
         TestAssert.Equal("-1 1/2", FormatChartNumber(-1.5d, "# ?/?"));
         TestAssert.Equal("-1 1/2", FormatChartNumber(-1.5d, "# ?/?;-# ?/?"));
+        foreach (var (value, expected) in new[] {
+            (2147483647d, "2147483647"), (2147483647.5d, "2147483647 1/2"),
+            (2147483647.99d, "2147483648"), (3000000000.5d, "3000000000 1/2"),
+            (1e20, "100000000000000000000") })
+        {
+            TestAssert.Equal(expected, FormatChartNumber(value, "# ?/?"));
+            TestAssert.Equal("-" + expected, FormatChartNumber(-value, "# ?/?"));
+        }
     }
 
     public static void PptxChartNumberAccountingSkipsCushionAndFillRuns()

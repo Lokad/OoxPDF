@@ -170,20 +170,6 @@ internal sealed partial class PptxRenderer
             parts.Add(FormatChartDataLabelValue(point.Y, options, point.YWorkbookPoint ?? point.YPoint, point.YFormatCode));
         }
 
-        string FormatBubbleSizeDataLabelValue(double value, ScatterPoint point, ChartDataLabelOptions options)
-        {
-            if (options.NumberFormatInfo.IsDefined || !string.IsNullOrWhiteSpace(options.NumberFormat))
-            {
-                return FormatChartDataLabelValue(value, options, point.BubbleSizeWorkbookPoint ?? point.BubbleSizePoint, point.BubbleSizeFormatCode);
-            }
-    
-            string formatCode = point.BubbleSizeFormatCode ?? string.Empty;
-            return !string.IsNullOrWhiteSpace(formatCode) &&
-                !string.Equals(formatCode, "General", StringComparison.OrdinalIgnoreCase)
-                ? FormatChartNumber(value, formatCode)
-                : FormatGeneralChartNumber(value);
-        }
-
         double? ResolveBubbleSizeValue()
         {
             return point.BubbleSizeWorkbookPoint?.Value ??
@@ -192,7 +178,8 @@ internal sealed partial class PptxRenderer
 
         if (options.ShowBubbleSize && ResolveBubbleSizeValue() is { } bubbleSize)
         {
-            parts.Add(FormatBubbleSizeDataLabelValue(bubbleSize, point, options));
+            parts.Add(FormatChartDataLabelValue(bubbleSize, options,
+                point.BubbleSizeWorkbookPoint ?? point.BubbleSizePoint, point.BubbleSizeFormatCode));
         }
 
         return string.Join(GetChartDataLabelSeparator(options), parts);

@@ -602,6 +602,7 @@
   ],
   "pptx-chart-number-content": [
     "PptxChartNumber",
+    "PptxScenePreservesChartNumberFormatMetadata",
     "PptxChartDateFallbackPreservesPlotAndLabels",
     "PptxChartAxisDate1904ResolvesFromChartSpace",
     "PptxChartAxisDatesRenderFromParsedDateContext",
@@ -611,6 +612,7 @@
     "XrefTablePointsAtObjectHeaders"
   ],
   "pptx-run-effect-inheritance": [
+    "PptxInheritanceChartTextFillChoicesReachTitlesAndLabels",
     "PptxInheritanceHighlightUsesDirectOrDefaultOwner",
     "PptxInheritanceOutlineRemovalDiffersFromAbsentOrUnsupportedPaint",
     "PptxInheritancePresentationDefaultsReachShapesAndCells",

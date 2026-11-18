@@ -328,7 +328,8 @@ internal sealed partial class PptxRenderer
 
         maxDenominator -= 1;
         double magnitude = Math.Abs(emitValue);
-        int whole = (int)Math.Floor(magnitude);
+        // Only the bounded fractional numerator/denominator fit in Int32.
+        double whole = Math.Floor(magnitude);
         double remainder = magnitude - whole;
         int bestNum = 0;
         int bestDen = 1;
@@ -359,11 +360,11 @@ internal sealed partial class PptxRenderer
         string sign = emitValue < 0d ? "-" : string.Empty;
         if (bestNum == 0)
         {
-            text = sign + whole.ToString(CultureInfo.InvariantCulture);
+            text = sign + whole.ToString("0", numberCulture);
             return true;
         }
 
-        text = sign + (showWhole || whole != 0 ? whole.ToString(numberCulture) + " " : string.Empty)
+        text = sign + (showWhole || whole != 0 ? whole.ToString("0", numberCulture) + " " : string.Empty)
             + bestNum.ToString(numberCulture) + "/" + bestDen.ToString(numberCulture);
         return true;
     }

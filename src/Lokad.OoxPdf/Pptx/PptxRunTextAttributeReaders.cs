@@ -56,6 +56,9 @@ internal static class PptxRunTextAttributeReaders
         return (string?)(runProperties?.Attribute("strike") ?? defaultRunProperties?.Attribute("strike"));
     }
 
+    internal static bool HasTextNoFill(XElement? runProperties) =>
+        runProperties?.Element(OoxNamespaces.DrawingNamespace + "noFill") is not null;
+
     internal static bool HasRunTextFill(XElement? runProperties)
     {
         if (runProperties is null)

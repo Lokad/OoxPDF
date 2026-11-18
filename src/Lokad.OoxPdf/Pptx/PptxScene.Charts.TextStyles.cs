@@ -95,46 +95,7 @@ internal sealed partial class PptxSceneBuilder
     }
 
     internal static PptxSceneChartTextStyleOverride ReadChartTextStyleOverride(XElement? parent, PptxTheme theme, PptxColorMap colorMap)
-    {
-        XElement? defaultRunProperties = ReadChartParagraphDefaultRunProperties(parent);
-        if (defaultRunProperties is null)
-        {
-            return default;
-        }
-
-        string? typeface = (string?)defaultRunProperties.Element(DrawingNamespace + "latin")?.Attribute("typeface") ??
-            (string?)defaultRunProperties.Element(DrawingNamespace + "ea")?.Attribute("typeface") ??
-            (string?)defaultRunProperties.Element(DrawingNamespace + "cs")?.Attribute("typeface");
-        PptxThemeTypefaceResolution typefaceResolution = string.IsNullOrWhiteSpace(typeface)
-            ? default
-            : theme.ResolveTypefaceWithSource(typeface);
-        string? fontFamily = typefaceResolution.Typeface;
-        double? fontSize = defaultRunProperties.Attribute("sz") is { } sizeAttribute &&
-            int.TryParse(sizeAttribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int sizeHundredths) &&
-            sizeHundredths > 0
-                ? sizeHundredths / 100d
-                : null;
-        double? characterSpacing = ReadOptionalChartCharacterSpacing(defaultRunProperties);
-        RgbColor? color = PptxColorResolver.TryReadSolidColorWithAlpha(defaultRunProperties.Element(DrawingNamespace + "solidFill"), theme, colorMap, out RgbColor parsedColor, out double alpha)
-            ? parsedColor
-            : null;
-        bool? bold = ReadOptionalOoxmlBooleanAttribute(defaultRunProperties, "b");
-        bool? italic = ReadOptionalOoxmlBooleanAttribute(defaultRunProperties, "i");
-        bool? underline = ReadChartUnderline(defaultRunProperties);
-        bool? strike = ReadChartStrike(defaultRunProperties);
-        return new PptxSceneChartTextStyleOverride(
-            fontFamily,
-            typefaceResolution.RequestedTypeface,
-            typefaceResolution.RequestedTypeface is null ? null : typefaceResolution.Source,
-            fontSize,
-            characterSpacing,
-            color,
-            color is null ? null : alpha,
-            bold,
-            italic,
-            underline,
-            strike);
-    }
+        => ReadChartTextRunStyle(ReadChartParagraphDefaultRunProperties(parent), theme, colorMap);
 
     internal static PptxSceneChartTextBodyProperties ReadChartTextBodyProperties(XElement? parent)
     {
@@ -177,9 +138,11 @@ internal sealed partial class PptxSceneBuilder
                 ? sizeHundredths / 100d
                 : null;
         double? characterSpacing = ReadOptionalChartCharacterSpacing(runProperties);
-        RgbColor? color = PptxColorResolver.TryReadSolidColorWithAlpha(runProperties.Element(DrawingNamespace + "solidFill"), theme, colorMap, out RgbColor parsedColor, out double alpha)
-            ? parsedColor
-            : null;
+        bool noFill = PptxRunTextAttributeReaders.HasTextNoFill(runProperties);
+        double alpha = 1d;
+        RgbColor? color = noFill ? new RgbColor(0, 0, 0)
+            : PptxColorResolver.TryReadSolidColorWithAlpha(runProperties.Element(DrawingNamespace + "solidFill"), theme, colorMap, out RgbColor parsedColor, out alpha)
+                ? parsedColor : null;
         bool? bold = ReadOptionalOoxmlBooleanAttribute(runProperties, "b");
         bool? italic = ReadOptionalOoxmlBooleanAttribute(runProperties, "i");
         bool? underline = ReadChartUnderline(runProperties);
@@ -191,7 +154,7 @@ internal sealed partial class PptxSceneBuilder
             fontSize,
             characterSpacing,
             color,
-            color is null ? null : alpha,
+            noFill ? 0d : color is null ? null : alpha,
             bold,
             italic,
             underline,

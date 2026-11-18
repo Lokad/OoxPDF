@@ -100,7 +100,7 @@ internal sealed partial class PptxRenderer
         double alpha = 1d;
         RgbColor color;
         PptxRunTextColorSource colorSource;
-        if (HasTextNoFill(runProperties))
+        if (PptxRunTextAttributeReaders.HasTextNoFill(runProperties))
         {
             color = new RgbColor(0, 0, 0);
             colorSource = PptxRunTextColorSource.RunNoFill;
@@ -127,7 +127,7 @@ internal sealed partial class PptxRenderer
             color = fontRefColor;
             colorSource = PptxRunTextColorSource.ShapeFontRef;
         }
-        else if (HasTextNoFill(defaultRunProperties))
+        else if (PptxRunTextAttributeReaders.HasTextNoFill(defaultRunProperties))
         {
             color = new RgbColor(0, 0, 0);
             colorSource = PptxRunTextColorSource.DefaultNoFill;
@@ -200,11 +200,6 @@ internal sealed partial class PptxRenderer
 
             return minimumFontSize <= 0d || fontSize >= minimumFontSize;
         }
-    }
-
-    private static bool HasTextNoFill(XElement? runProperties)
-    {
-        return runProperties?.Element(DrawingNamespace + "noFill") is not null;
     }
 
     private static bool TryReadTextOutline(XElement? runProperties, XElement? defaultRunProperties, PptxTheme theme, PptxColorMap colorMap, out TextOutline outline)
