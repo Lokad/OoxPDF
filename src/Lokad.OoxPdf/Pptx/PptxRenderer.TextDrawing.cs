@@ -336,7 +336,6 @@ internal sealed partial class PptxRenderer
                 string fallbackName = PdfFallbackFont.ResourceNameFor(first.Bold, first.Italic);
                 var fallbackResolution = new FontFaceResolution(first.FamilyName, face.FaceName, new FontStyleKey(first.Bold, first.Italic), new MemoryFontProgramSource("fallback:" + face.FaceName, ReadOnlyMemory<byte>.Empty), IsFallback: true);
                 fonts[group.Key] = new RenderedFont(fallbackName, null, fallbackResolution, false, false, new PdfFallbackFontResource(fallbackName, face));
-                fontResolver.UsedFallbackFaces.Add(face);
                 ReportMissingFontFallback(first.FamilyName, fontResolver, diagnosticSink);
                 continue;
             }
@@ -489,7 +488,6 @@ internal sealed partial class PptxRenderer
             string fallbackName = PdfFallbackFont.ResourceNameFor(key.Bold, key.Italic);
             var fallbackResolution = new FontFaceResolution(key.FamilyName, face.FaceName, new FontStyleKey(key.Bold, key.Italic), new MemoryFontProgramSource("fallback:" + face.FaceName, ReadOnlyMemory<byte>.Empty), IsFallback: true);
             fonts[key] = new RenderedFont(fallbackName, null, fallbackResolution, false, false, new PdfFallbackFontResource(fallbackName, face));
-            fontResolver.UsedFallbackFaces.Add(face);
             ReportMissingFontFallback(key.FamilyName, fontResolver, diagnosticSink);
         }
 

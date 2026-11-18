@@ -174,25 +174,14 @@ internal static class PptxCompositionTests
             "Graceful gradient fallback must not fail the picture node.");
     }
 
-    public static void PruneUnreferencedResourcesDropsOrphans()
+    public static void PruneUnreferencedImagesReturnsRetainedResourcesByIdentity()
     {
-        // Q02: rewound nodes leave inert image/chart-font registrations; only names
-        // referenced by surviving content may serialize.
         var kept = new PdfImageResource("Im1", PdfImageXObject.Jpeg(2, 1, [1, 2, 3], 3, 8));
         var dropped = new PdfImageResource("Im12", PdfImageXObject.Jpeg(2, 1, [4, 5, 6], 3, 8));
         List<PdfImageResource> images = PptxRenderer.PruneUnreferencedImages("q /Im1 Do Q", [kept, dropped]);
 
         TestAssert.Equal(1, images.Count);
         TestAssert.True(ReferenceEquals(kept, images[0]), "Referenced images must survive pruning by identity.");
-
-        OpenTypeFont font = TestFontBuilder.LoadTestFont();
-        PdfEmbeddedFont subset = PdfEmbeddedFont.Create(font, [65], CancellationToken.None);
-        var chartKept = new PdfFontResource("CT1", subset);
-        var chartDropped = new PdfFontResource("CT2", subset);
-        List<PdfFontResource> chartFonts = PptxRenderer.PruneUnreferencedChartFonts("/CT1 12 Tf", [chartKept, chartDropped]);
-
-        TestAssert.Equal(1, chartFonts.Count);
-        TestAssert.True(ReferenceEquals(chartKept, chartFonts[0]), "Referenced chart fonts must survive pruning by identity.");
 
         var all = new List<PdfImageResource> { kept };
         TestAssert.True(ReferenceEquals(all, PptxRenderer.PruneUnreferencedImages("/Im1 Do", all)), "Fully referenced lists must pass through untouched.");

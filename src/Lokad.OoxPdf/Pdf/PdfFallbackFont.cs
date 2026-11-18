@@ -16,6 +16,14 @@ internal sealed partial class PdfFallbackFont
     public static PdfFallbackFont HelveticaOblique { get; } = new("Helvetica-Oblique", bold: false, italic: true);
     public static PdfFallbackFont HelveticaBoldOblique { get; } = new("Helvetica-BoldOblique", bold: true, italic: true);
 
+    private static readonly PdfFallbackFontResource[] StandardResources =
+    [
+        new(ResourceNameFor(false, false), Helvetica),
+        new(ResourceNameFor(true, false), HelveticaBold),
+        new(ResourceNameFor(false, true), HelveticaOblique),
+        new(ResourceNameFor(true, true), HelveticaBoldOblique)
+    ];
+
     private PdfFallbackFont(string faceName, bool bold, bool italic)
     {
         FaceName = faceName;
@@ -37,16 +45,8 @@ internal sealed partial class PdfFallbackFont
         return bold ? (italic ? "FF4" : "FF2") : (italic ? "FF3" : "FF1");
     }
 
-    // Page assembly for conversion-wide fallback use (slides and chart parts share
-    // one resolver): fixed face order keeps output deterministic.
-    public static IReadOnlyList<PdfFallbackFontResource> ToResources(IEnumerable<PdfFallbackFont> faces)
-    {
-        return faces
-            .Distinct()
-            .OrderBy(face => ResourceNameFor(face.Bold, face.Italic), StringComparer.Ordinal)
-            .Select(face => new PdfFallbackFontResource(ResourceNameFor(face.Bold, face.Italic), face))
-            .ToArray();
-    }
+    public static IReadOnlyList<PdfFallbackFontResource> GetUsedResources(IReadOnlySet<string> usedNames) =>
+        StandardResources.Where(resource => usedNames.Contains(resource.ResourceName)).ToArray();
 
     public static PdfFallbackFont ForStyle(bool bold, bool italic)
     {

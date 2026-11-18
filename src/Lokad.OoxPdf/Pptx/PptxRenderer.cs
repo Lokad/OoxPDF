@@ -97,16 +97,27 @@ internal sealed partial class PptxRenderer
             }
             imageIndex = await RenderOrderedSceneNodesAsync(context.SceneSlide.LayoutNodes, context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, linkAnnotations, reportedHyperlinkIds, context.LayoutPartName, context.LayoutColorMap, imageIndex, GroupTransform.Identity, renderPlaceholders: false, cancellationToken: cancellationToken).ConfigureAwait(false);
             imageIndex = await RenderOrderedSceneNodesAsync(context.SceneSlide.SlideNodes, context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, linkAnnotations, reportedHyperlinkIds, context.SlidePartName, context.SlideColorMap, imageIndex, GroupTransform.Identity, renderPlaceholders: true, cancellationToken: cancellationToken).ConfigureAwait(false);
-            // Q02: drop orphan image/chart-font registrations left by rewound nodes so
-            // failed nodes cannot accumulate uncharged serialized resources. Surviving
-            // references are name-based, so pruning unreferenced names keeps them valid.
+            // Drop orphan resources left by rewound nodes. The graphics builder
+            // rolls back emitted font names together with the content.
             string content = graphics.ToString();
             List<PdfImageResource> pageImages = PruneUnreferencedImages(content, orderedImages, context.CancellationToken);
-            List<PdfFontResource> pageChartFonts = PruneUnreferencedChartFonts(content, orderedChartFonts, context.CancellationToken);
+            IReadOnlySet<string> usedFonts = graphics.UsedFontResourceNames;
+            var pageFonts = new List<PdfFontResource>(renderedFonts.Resources);
+            foreach (PdfFontResource font in orderedChartFonts)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (usedFonts.Contains(font.ResourceName))
+                {
+                    pageFonts.Add(font);
+                }
+            }
+            IReadOnlyList<PdfFallbackFontResource> fallbackFonts = PdfFallbackFont.GetUsedResources(usedFonts);
             // RV11: admit the emitted content bytes before yielding, so a small
             // content budget rejects before the writer encodes or stores the page.
             OoxConversionBudget.Current?.ChargePdfContentBytes(content.Length);
-            yield return new PdfPage(context.Document.SlideWidthPoints, context.Document.SlideHeightPoints, content, renderedFonts.Resources.Concat(pageChartFonts).ToArray(), pageImages, graphics.ExtGStates.ToArray(), graphics.Shadings.ToArray(), graphics.Patterns.ToArray(), linkAnnotations, PdfFallbackFont.ToResources(fontResolver.UsedFallbackFaces), graphics.Groups.ToArray(), graphics.ShadingPatterns.ToArray());
+            yield return new PdfPage(context.Document.SlideWidthPoints, context.Document.SlideHeightPoints, content,
+                pageFonts, pageImages, graphics.ExtGStates.ToArray(), graphics.Shadings.ToArray(), graphics.Patterns.ToArray(),
+                linkAnnotations, fallbackFonts, graphics.Groups.ToArray(), graphics.ShadingPatterns.ToArray());
         }
     }
 

@@ -4,7 +4,9 @@ using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Docx;
+using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pdf;
+using Lokad.OoxPdf.Pptx;
 
 namespace Lokad.OoxPdf.Tests;
 
@@ -92,27 +94,67 @@ internal static class FallbackFontMetricsTests
     {
         var shapes = new StringBuilder();
         foreach (var (bold, italic, index) in new[] { (false, false, 0), (true, false, 1), (false, true, 2), (true, true, 3) })
-            shapes.Append(CultureInfo.InvariantCulture, $"""
-                <p:sp><p:spPr><a:xfrm><a:off x="914400" y="{914400 + index * 1143000}"/><a:ext cx="7315200" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
-                <p:txBody><a:bodyPr lIns="0" rIns="0" tIns="0" bIns="0" wrap="none"/><a:lstStyle/><a:p><a:r>
-                <a:rPr sz="2400" spc="100" b="{(bold ? 1 : 0)}" i="{(italic ? 1 : 0)}"><a:latin typeface="Absent"/></a:rPr><a:t>{Prefix} WidthProbe</a:t>
-                </a:r></a:p></p:txBody></p:sp>
-                """);
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string> {
-            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(), ["_rels/.rels"] = PptxTests.PackageRelationship(),
-            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(), ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
-            ["ppt/slides/slide1.xml"] = "<p:sld xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\" xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><p:cSld><p:spTree>" + shapes + "</p:spTree></p:cSld></p:sld>" });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { FontResolver = new MissingTestFontResolver() });
-        string pdf = File.ReadAllText(output, Encoding.Latin1);
-        TestAssert.DoesNotContain("/FontFile2", pdf);
-        var glyphs = ReadGlyphs(pdf).ToArray();
+            shapes.Append(Shape(bold, italic, index));
+
+        XElement contentTypes = XElement.Parse(PptxTests.BasicContentTypes());
+        XElement presentation = XElement.Parse(PptxTests.BasicPresentation());
+        XElement relationships = XElement.Parse(PptxTests.PresentationRelationship());
+        XElement slideIds = presentation.Element(OoxNamespaces.PresentationNamespace + "sldIdLst")!;
+        foreach (int index in new[] { 2, 3 })
+        {
+            string relationshipId = "rId" + index;
+            contentTypes.Add(new XElement(OoxNamespaces.ContentTypesNamespace + "Override",
+                new XAttribute("PartName", $"/ppt/slides/slide{index}.xml"),
+                new XAttribute("ContentType", "application/vnd.openxmlformats-officedocument.presentationml.slide+xml")));
+            slideIds.Add(new XElement(OoxNamespaces.PresentationNamespace + "sldId",
+                new XAttribute("id", 255 + index), new XAttribute(OoxNamespaces.RelationshipsNamespace + "id", relationshipId)));
+            relationships.Add(new XElement(OoxNamespaces.PackageRelationshipsNamespace + "Relationship",
+                new XAttribute("Id", relationshipId), new XAttribute("Type", PptxReader.SlideRelationshipType),
+                new XAttribute("Target", $"slides/slide{index}.xml")));
+        }
+        using var input = TestFixtures.CreateZipPackage(new Dictionary<string, string> {
+            ["[Content_Types].xml"] = contentTypes.ToString(),
+            ["_rels/.rels"] = PptxTests.PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = relationships.ToString(),
+            ["ppt/presentation.xml"] = presentation.ToString(),
+            ["ppt/slides/slide1.xml"] = Slide(shapes.ToString()),
+            ["ppt/slides/slide2.xml"] = Slide(""),
+            ["ppt/slides/slide3.xml"] = Slide(Shape(bold: false, italic: false, index: 0))
+        });
+        using OoxPackage package = OoxPackage.Open(input, default);
+        PptxDocument document = new PptxReader().Read(package, default);
+        PdfPage[] pages = new PptxRenderer(new MissingTestFontResolver())
+            .RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().ToArray();
+        TestAssert.Equal(3, pages.Length);
+        TestAssert.True(pages.All(page => page.Fonts.Count == 0), "Exercise standard-font paint.");
+        for (int index = 0; index < pages.Length; index++)
+            PdfContentValidator.ValidatePage(pages[index], index, default);
+
+        TestAssert.Equal("FF1,FF2,FF3,FF4", string.Join(',', pages[0].FallbackFonts.Select(font => font.ResourceName)));
+        TestAssert.Equal(0, pages[1].FallbackFonts.Count);
+        TestAssert.Equal("FF1", pages[2].FallbackFonts.Single().ResourceName);
+        CheckPrefix(ReadGlyphs(pages[2].Content).Take(Prefix.Length).ToArray(), ReadMetrics("Helvetica"), tracking: 1d);
+
+        var glyphs = ReadGlyphs(pages[0].Content).ToArray();
         foreach (string font in new[] { "FF1", "FF2", "FF3", "FF4" })
         {
             var prefix = glyphs.Where(g => g.Font == font).Take(Prefix.Length).ToArray();
             string face = font == "FF1" ? "Helvetica" : font == "FF2" ? "Helvetica-Bold" : font == "FF3" ? "Helvetica-Oblique" : "Helvetica-BoldOblique";
             CheckPrefix(prefix, ReadMetrics(face), tracking: 1d);
         }
+
+        static string Slide(string content) => $"""
+            <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <p:cSld><p:spTree>{content}</p:spTree></p:cSld>
+            </p:sld>
+            """;
+
+        static string Shape(bool bold, bool italic, int index) => FormattableString.Invariant($"""
+            <p:sp><p:spPr><a:xfrm><a:off x="914400" y="{914400 + index * 1143000}"/><a:ext cx="7315200" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+            <p:txBody><a:bodyPr lIns="0" rIns="0" tIns="0" bIns="0" wrap="none"/><a:lstStyle/><a:p><a:r>
+            <a:rPr sz="2400" spc="100" b="{(bold ? 1 : 0)}" i="{(italic ? 1 : 0)}"><a:latin typeface="Absent"/></a:rPr><a:t>{Prefix} WidthProbe</a:t>
+            </a:r></a:p></p:txBody></p:sp>
+            """);
     }
 
     private static DocxDocument ReadDocx(OoxPdfDocxMarkupMode mode, string prefix, bool bold, bool italic) =>

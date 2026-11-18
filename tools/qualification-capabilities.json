@@ -19625,7 +19625,7 @@
     "PresenceChecksMatchDensifiedResults",
     "PresenceChecksPreserveDenseCaps",
     "PresentationFontResolverLoadsMemoryBackedFontSource",
-    "PruneUnreferencedResourcesDropsOrphans",
+    "PruneUnreferencedImagesReturnsRetainedResourcesByIdentity",
     "RadarBuildSkipsValuelessVectors",
     "RadarDerivedDarkStopPaintsOfficeDarkBase",
     "RadarDerivedDarkStopsMatchOfficeExactly",

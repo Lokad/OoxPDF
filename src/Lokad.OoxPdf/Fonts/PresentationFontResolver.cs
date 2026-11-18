@@ -14,10 +14,6 @@ internal sealed class PresentationFontResolver : IFontResolver
     // so per-slide and per-chart preparation reports each family once.
     public HashSet<string> ReportedMissingFontDiagnostics { get; } = new(StringComparer.Ordinal);
 
-    // RV01: fallback faces used anywhere in the conversion (slides and chart
-    // parts share this resolver), so pages register them without threading lists.
-    public HashSet<PdfFallbackFont> UsedFallbackFaces { get; } = new();
-
     public CancellationToken CancellationToken { get; }
 
     public PresentationFontResolver(IFontResolver? primary, CancellationToken cancellationToken = default)
