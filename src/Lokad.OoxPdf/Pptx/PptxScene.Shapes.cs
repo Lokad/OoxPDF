@@ -53,26 +53,7 @@ internal sealed partial class PptxSceneBuilder
             TryReadInheritedGroupFill(shape, theme, colorMap, out fillColor, out fillAlpha)
                 ? new PptxSceneFillStyle(true, fillColor, fillAlpha)
                 : default;
-        PptxSceneLineStyle line = TryReadShapeLine(shapeProperties, theme, colorMap, lineReference, out RgbColor lineColor, out double lineWidth, out double lineAlpha)
-            ? new PptxSceneLineStyle(
-                true,
-                lineColor,
-                lineWidth,
-                lineAlpha,
-                TryReadPresetDash(shapeProperties, lineWidth, out IReadOnlyList<double> dashPattern) ? dashPattern : [],
-                ReadPresetDashValue(shapeProperties),
-                ReadLineCompound(shapeProperties),
-                ReadLineCompoundValue(shapeProperties),
-                ReadLineCap(shapeProperties) switch
-                {
-                    "rnd" => 1,
-                    "sq" => 2,
-                    _ => null
-                },
-                ReadLineCap(shapeProperties),
-                ReadLineJoin(shapeProperties),
-                ReadLineJoinValue(shapeProperties), true)
-            : default;
+        PptxSceneLineStyle line = ReadShapeLine(shapeProperties, theme, colorMap, lineReference, widthSpecifiedByDefault: true);
         return new PptxSceneShape(
             ReadPresetGeometry(shapeProperties),
             ReadPresetAdjustments(shapeProperties),

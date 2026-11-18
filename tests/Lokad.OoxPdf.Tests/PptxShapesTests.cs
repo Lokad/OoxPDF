@@ -1035,6 +1035,59 @@ internal static partial class PptxShapesTests
         TestAssert.DoesNotContain("72 456.48 m", pdf);
     }
 
+    public static void PptxThemeOutlineMatchesAnEquivalentLocalOutline()
+    {
+        const string slidePart = "ppt/slides/slide1.xml";
+        const string themePart = "ppt/theme/theme1.xml";
+        string fixture = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..",
+            "Cases", "pptx-ladder-06-round-join-rect.pptx"));
+        using var archive = ZipFile.OpenRead(fixture);
+        var parts = new Dictionary<string, byte[]>(StringComparer.Ordinal);
+        foreach (ZipArchiveEntry entry in archive.Entries)
+        {
+            using Stream source = entry.Open();
+            using var copy = new MemoryStream();
+            source.CopyTo(copy);
+            parts.Add(entry.FullName, copy.ToArray());
+        }
+
+        XNamespace p = OoxNamespaces.PresentationNamespace;
+        XNamespace a = OoxNamespaces.DrawingNamespace;
+        XDocument slide = XDocument.Parse(Encoding.UTF8.GetString(parts[slidePart]));
+        XDocument theme = XDocument.Parse(Encoding.UTF8.GetString(parts[themePart]));
+        XElement shape = slide.Descendants(p + "sp").Single();
+        XElement shapeProperties = shape.Element(p + "spPr")!;
+        XElement outline = shapeProperties.Element(a + "ln")!;
+        outline.SetAttributeValue("cap", "rnd");
+        outline.Element(a + "prstDash")!.SetAttributeValue("val", "dash");
+        int lineIndex = (int)shape.Element(p + "style")!.Element(a + "lnRef")!.Attribute("idx")!;
+        theme.Descendants(a + "lnStyleLst").Single().Elements(a + "ln").ElementAt(lineIndex - 1)
+            .ReplaceWith(new XElement(outline));
+        parts[themePart] = TestFixtures.Utf8(theme.ToString(SaveOptions.DisableFormatting));
+
+        byte[] direct = ConvertSlide();
+        outline.Remove();
+        byte[] inherited = ConvertSlide();
+        string pdf = Encoding.ASCII.GetString(inherited);
+        TestAssert.Contains("[96 72 ] 0 d", pdf);
+        TestAssert.Contains("1 J", pdf);
+        TestAssert.Contains("1 j", pdf);
+        TestAssert.True(inherited.AsSpan().SequenceEqual(direct), "The theme reference and the equivalent direct outline paint identically.");
+
+        shapeProperties.Element(a + "noFill")!.AddAfterSelf(new XElement(a + "ln", new XElement(a + "noFill")));
+        string suppressed = Encoding.ASCII.GetString(ConvertSlide());
+        TestAssert.True(!suppressed.Contains("24 w", StringComparison.Ordinal), "A direct noFill suppresses the themed stroke.");
+
+        byte[] ConvertSlide()
+        {
+            parts[slidePart] = TestFixtures.Utf8(slide.ToString(SaveOptions.DisableFormatting));
+            using MemoryStream input = TestFixtures.CreateZipPackage(parts);
+            using var output = new MemoryStream();
+            OoxPdfConverter.Convert(input, output, new OoxPdfOptions { InputKind = OoxPdfInputKind.Pptx });
+            return output.ToArray();
+        }
+    }
+
     public static void PptxSyntheticShapeStrokeDashCapAndJoinRender()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>

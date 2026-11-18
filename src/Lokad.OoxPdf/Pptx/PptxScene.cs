@@ -642,27 +642,7 @@ internal sealed partial class PptxSceneBuilder
         string? svgRelationshipId = ReadSvgPictureRelationshipId(picture);
         string? targetPartName = ResolveRelationshipTarget(relationshipId, relationships);
         XElement? shapeProperties = picture.Element(PresentationNamespace + "spPr");
-        PptxSceneLineStyle line = TryReadShapeLine(shapeProperties, theme, colorMap, default, out RgbColor lineColor, out double lineWidth, out double lineAlpha)
-            ? new PptxSceneLineStyle(
-                true,
-                lineColor,
-                lineWidth,
-                lineAlpha,
-                TryReadPresetDash(shapeProperties, lineWidth, out IReadOnlyList<double> dashPattern) ? dashPattern : [],
-                ReadPresetDashValue(shapeProperties),
-                ReadLineCompound(shapeProperties),
-                ReadLineCompoundValue(shapeProperties),
-                ReadLineCap(shapeProperties) switch
-                {
-                    "rnd" => 1,
-                    "sq" => 2,
-                    _ => null
-                },
-                ReadLineCap(shapeProperties),
-                ReadLineJoin(shapeProperties),
-                ReadLineJoinValue(shapeProperties),
-                IsLineWidthSpecified())
-            : default;
+        PptxSceneLineStyle line = ReadShapeLine(shapeProperties, theme, colorMap, default, widthSpecifiedByDefault: false);
         return new PptxScenePicture(
             relationshipId,
             targetPartName,
@@ -696,13 +676,6 @@ internal sealed partial class PptxSceneBuilder
         {
             return picture.Descendants(PresentationNamespace + "video").Any() ||
                 picture.Descendants(DrawingNamespace + "videoFile").Any();
-        }
-
-        bool IsLineWidthSpecified()
-        {
-            return shapeProperties
-                ?.Element(DrawingNamespace + "ln")
-                ?.Attribute("w") is not null;
         }
     }
 }

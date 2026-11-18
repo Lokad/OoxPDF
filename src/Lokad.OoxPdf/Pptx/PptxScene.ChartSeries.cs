@@ -268,29 +268,11 @@ internal sealed partial class PptxSceneBuilder
             return default(PptxSceneLineStyle) with { NoFill = true };
         }
 
-        if (shapeProperties is null) return default;
-        bool widthSpecified = line?.Attribute("w") is not null;
+        if (line is null) return default;
+        bool widthSpecified = line.Attribute("w") is not null;
         return
-            PptxLineStyleReader.TryReadLineWithAlpha(shapeProperties, theme, colorMap, out RgbColor color, out double lineWidth, out double alpha, fallbackLineWidth: inheritedWidth)
-                ? new PptxSceneLineStyle(
-                    true,
-                    color,
-                    lineWidth,
-                    alpha,
-                    TryReadPresetDash(shapeProperties, lineWidth, out IReadOnlyList<double> dashPattern) ? dashPattern : [],
-                    ReadPresetDashValue(shapeProperties),
-                    ReadLineCompound(shapeProperties),
-                    ReadLineCompoundValue(shapeProperties),
-                    ReadLineCap(shapeProperties) switch
-                    {
-                        "rnd" => 1,
-                        "sq" => 2,
-                        _ => null
-                    },
-                    ReadLineCap(shapeProperties),
-                    ReadLineJoin(shapeProperties),
-                    ReadLineJoinValue(shapeProperties),
-                    widthSpecified)
+            PptxLineStyleReader.TryReadLineWithAlpha(line, theme, colorMap, out RgbColor color, out double lineWidth, out double alpha, fallbackLineWidth: inheritedWidth)
+                ? ReadSceneLineStyle(line, color, lineWidth, alpha, widthSpecified)
                 : widthSpecified ? default(PptxSceneLineStyle) with { Width = lineWidth, WidthSpecified = true } : default;
     }
 

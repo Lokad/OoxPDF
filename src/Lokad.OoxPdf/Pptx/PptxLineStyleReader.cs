@@ -1,8 +1,6 @@
 using System.Globalization;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Ooxml;
-using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
-using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Pptx;
 
@@ -11,7 +9,7 @@ internal static class PptxLineStyleReader
     private const double OfficeDefaultLineWidthPoints = 0.75d;
 
     public static bool TryReadLineWithAlpha(
-        XElement shapeProperties,
+        XElement line,
         PptxTheme theme,
         PptxColorMap colorMap,
         out RgbColor color,
@@ -19,8 +17,7 @@ internal static class PptxLineStyleReader
         out double alpha,
         double? fallbackLineWidth)
     {
-        XElement? line = shapeProperties.Element(DrawingNamespace + "ln");
-        lineWidth = line?.Attribute("w") is { } widthAttribute
+        lineWidth = line.Attribute("w") is { } widthAttribute
             ? OoxUnits.EmuToPoints(long.Parse(widthAttribute.Value, CultureInfo.InvariantCulture))
             : fallbackLineWidth ?? OfficeDefaultLineWidthPoints;
         return PptxColorResolver.TryReadSolidColorWithAlpha(line, theme, colorMap, out color, out alpha);
