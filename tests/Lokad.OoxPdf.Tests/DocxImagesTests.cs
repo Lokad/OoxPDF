@@ -1964,7 +1964,7 @@ internal static class DocxImagesTests
     // The footnote line sits below body text, so the test selects the lowest text line.
     // Headers/footers keep the block path: they use the calibrated static-story metrics
     // and are a separate slice.
-    public static void DocxFootnoteInlineImageEmitsBetweenSurroundingText()
+    public static void DocxFootnoteInlineImageFollowsTextAdvanceAndBaseline()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, byte[]>
         {
@@ -2030,80 +2030,15 @@ internal static class DocxImagesTests
             double baseline = starts.Min(m => double.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture));
             Match[] lineStarts = starts.Where(m => Math.Abs(double.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture) - baseline) < .01d).ToArray();
             AssertInlineImageFollowingText(lineStarts, imagePlacement, "Footnote");
+
+            // The Word 16 control places the image bottom at 85.7 pt and
+            // the text baseline at 85.584 pt.
+            double imageBottom = double.Parse(imagePlacement.Groups[2].Value, CultureInfo.InvariantCulture);
+            TestAssert.True(Math.Abs(imageBottom - baseline) < 0.5d,
+                $"Footnote image bottom {imageBottom} must sit at text baseline {baseline}.");
         }
     }
 
-    // RV05: Office footnote image bottoms sit at the text baseline (Word 16.0
-    // fnimg probe, same-batch reference: image cm bottom 85.7 against footnote
-    // baseline 85.584; the renderer hung a full image height below it).
-    public static void DocxFootnoteInlineImageBottomSitsOnBaseline()
-    {
-        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, byte[]>
-        {
-            ["[Content_Types].xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-                <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-                <Default Extension="xml" ContentType="application/xml"/>
-                <Default Extension="png" ContentType="image/png"/>
-                <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
-                <Override PartName="/word/footnotes.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml"/>
-                </Types>
-                """),
-            ["_rels/.rels"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
-                </Relationships>
-                """),
-            ["word/_rels/document.xml.rels"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                <Relationship Id="rIdFootnotes" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes" Target="footnotes.xml"/>
-                </Relationships>
-                """),
-            ["word/_rels/footnotes.xml.rels"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                <Relationship Id="rIdImage1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/image1.png"/>
-                </Relationships>
-                """),
-            ["word/footnotes.xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
-                            xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
-                            xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
-                            xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"
-                            xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-                  <w:footnote w:id="2"><w:p>
-                      <w:r><w:t>BEFORE</w:t></w:r>
-                      <w:r><w:drawing><wp:inline><wp:extent cx="914400" cy="914400"/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:blipFill><a:blip r:embed="rIdImage1"/></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>
-                      <w:r><w:t>AFTER</w:t></w:r>
-                  </w:p></w:footnote>
-                </w:footnotes>
-                """),
-            ["word/document.xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
-                            xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-                  <w:body>
-                    <w:p><w:r><w:t>Body</w:t></w:r><w:r><w:footnoteReference w:id="2"/></w:r></w:p>
-                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
-                  </w:body>
-                </w:document>
-                """),
-            ["word/media/image1.png"] = TestFixtures.CreateRgbPng(2, 1, [255, 0, 0, 0, 0, 255])
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-        OoxPdfConverter.Convert(input, output);
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        MatchCollection starts = Regex.Matches(pdf, @"1 0 0 1 ([\d.]+) ([\d.]+) Tm");
-        Match imagePlacement = Regex.Match(pdf, @"([\d.]+) ([\d.]+) cm\s*/Im1 Do");
-        TestAssert.True(imagePlacement.Success, "Expected a placed footnote image.");
-        double baselineY = starts.Cast<Match>().Min(m => double.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture));
-        double imageBottomY = double.Parse(imagePlacement.Groups[2].Value, CultureInfo.InvariantCulture);
-        TestAssert.True(Math.Abs(imageBottomY - baselineY) < 0.5, "Footnote image bottom must sit at the text baseline: imageBottom=" + imageBottomY + " baseline=" + baselineY);
-    }
     // RV05: static-story (header) paragraphs place affined images mid-line like body text.
     // The topmost text line is the header line; the body holds an empty paragraph only.
     public static void DocxHeaderInlineImageEmitsBetweenSurroundingText()
