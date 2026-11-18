@@ -42,7 +42,7 @@ internal static partial class DocxMathFractionTests
                 MemoryBudget = budget,
                 DiagnosticSink = message =>
                 {
-                    if (message.Code != "DOCX_APPROXIMATED_EQUATION") return;
+                    if (message.Id != "DOCX_APPROXIMATED_EQUATION") return;
                     // The public diagnostic accounts for an equation placed in
                     // the completed layout, before painting/publication.
                     retainedAfterLayout = budget.Reserved;
@@ -90,7 +90,7 @@ internal static partial class DocxMathFractionTests
                 var options = new OoxPdfOptions
                 {
                     InputKind = OoxPdfInputKind.Docx, FontResolver = new AssemblyMemoryResolver(font), MemoryBudget = budget,
-                    DiagnosticSink = message => layoutReported |= message.Code == "DOCX_APPROXIMATED_EQUATION"
+                    DiagnosticSink = message => layoutReported |= message.Id == "DOCX_APPROXIMATED_EQUATION"
                 };
                 try
                 {
