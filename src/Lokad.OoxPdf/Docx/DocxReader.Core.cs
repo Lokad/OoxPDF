@@ -88,7 +88,8 @@ internal sealed partial class DocxReader
             DocxSectionBreakElement? finalSectionBreak = sectionProperties is null
                 ? null
                 : ReadSectionBreak(sectionProperties, package, internalRelationships, styles, numbering, settings, revisionFilteringMarkupMode, cancellationToken, storyCache, null);
-            IReadOnlyList<DocxBodyElement> bodyElements = ReadBodyElements(document, styles, numbering, package, relationships, settings, documentSettings, revisionFilteringMarkupMode, cancellationToken, storyCache);
+            Dictionary<XElement, int>? floatingBlocks = CreateFloatingBlockMap(document);
+            IReadOnlyList<DocxBodyElement> bodyElements = ReadBodyElements(document, styles, numbering, package, relationships, settings, documentSettings, revisionFilteringMarkupMode, cancellationToken, storyCache, floatingBlocks);
             // An empty final section has a Word paragraph mark even when its
             // paragraph is absent from the XML. Resolve its defaults through
             // the same reader as an authored paragraph; placement decides use.
@@ -106,7 +107,8 @@ internal sealed partial class DocxReader
             IReadOnlyList<DocxParagraph> headers = SelectDefaultHeaderFooterParagraphs(headersByType);
             IReadOnlyList<DocxParagraph> footers = SelectDefaultHeaderFooterParagraphs(footersByType);
             IReadOnlyList<DocxRelatedStory> relatedStories = ReadRelatedStories(package, documentPart.Name, styles, numbering, documentSettings, revisionFilteringMarkupMode, cancellationToken, diagnosticSink, warnedMustUnderstandParts, bodyElements, settings, modelStorage);
-            IReadOnlyList<DocxFloatingDrawing> floatingDrawings = ReadFloatingDrawings(document, package, relationships, styles, numbering, documentSettings, revisionFilteringMarkupMode, cancellationToken);
+            IReadOnlyList<DocxFloatingDrawing> floatingDrawings = floatingBlocks is null ? [] :
+                ReadFloatingDrawings(document, package, relationships, styles, numbering, documentSettings, revisionFilteringMarkupMode, cancellationToken, floatingBlocks);
             cancellationToken.ThrowIfCancellationRequested();
 
             IReadOnlyList<DocxEquationPartSource> ReadEquationParts()
@@ -367,12 +369,13 @@ internal sealed partial class DocxReader
         DocxNumberingSet numbering,
         DocxDocumentSettings? documentSettings,
         OoxPdfDocxMarkupMode markupMode,
-        CancellationToken cancellationToken) =>
+        CancellationToken cancellationToken,
+        IReadOnlyDictionary<XElement, int>? floatingBlocks = null) =>
         ReadFloatingDrawings(document, document.Root?
             .Element(WordprocessingNamespace + "body")?
             .Elements()
             .Where(static block => IsBodyBlockElement(block) || IsRevisionContainer(block)) ?? [],
-            package, relationships, styles, numbering, documentSettings, markupMode, cancellationToken);
+            package, relationships, styles, numbering, documentSettings, markupMode, cancellationToken, floatingBlocks);
 
     private static IReadOnlyList<DocxFloatingDrawing> ReadFloatingDrawings(
         XContainer source,
@@ -383,7 +386,8 @@ internal sealed partial class DocxReader
         DocxNumberingSet numbering,
         DocxDocumentSettings? documentSettings,
         OoxPdfDocxMarkupMode markupMode,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IReadOnlyDictionary<XElement, int>? floatingBlocks)
     {
         cancellationToken.ThrowIfCancellationRequested();
         Dictionary<XElement, int>? paragraphIndexes = null;
@@ -409,6 +413,7 @@ internal sealed partial class DocxReader
                 documentSettings,
                 FindSourceAncestorIndex(anchor, paragraphIndexes),
                 FindSourceAncestorIndex(anchor, blockIndexes),
+                floatingBlocks?.TryGetValue(anchor, out int blockIndex) == true ? blockIndex : null,
                 FindInheritedRevision(anchor, markupMode),
                 markupMode,
                 cancellationToken));
@@ -428,6 +433,11 @@ internal sealed partial class DocxReader
         }
     }
 
+    private static Dictionary<XElement, int>? CreateFloatingBlockMap(XContainer source) =>
+        source.Descendants(WordprocessingDrawingNamespace + "anchor").Any()
+            ? new(ReferenceEqualityComparer.Instance)
+            : null;
+
     private static DocxFloatingDrawing ReadFloatingDrawing(
         XElement anchor,
         OoxPackage package,
@@ -437,6 +447,7 @@ internal sealed partial class DocxReader
         DocxDocumentSettings? documentSettings,
         int? sourceParagraphIndex,
         int? sourceBlockIndex,
+        int? layoutBlockIndex,
         DocxRevisionInfo? revision,
         OoxPdfDocxMarkupMode markupMode,
         CancellationToken cancellationToken)
@@ -502,6 +513,7 @@ internal sealed partial class DocxReader
             TextBoxStrokeWidthEmuValue: textBoxStrokeWidthEmuValue,
             TextBoxStrokeColorHex: textBoxStrokeColorHex)
         {
+            LayoutBlockIndex = layoutBlockIndex,
             Revisions = RevisionList(revision),
             TextBoxBodyElements = textBoxBodyElements
         };

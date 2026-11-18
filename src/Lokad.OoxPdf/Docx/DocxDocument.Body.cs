@@ -39,6 +39,9 @@ internal sealed record DocxFloatingDrawing(
 {
     public IReadOnlyList<DocxRevisionInfo> Revisions { get; init; } = [];
     public IReadOnlyList<DocxBodyElement> TextBoxBodyElements { get; init; } = [];
+    // SourceBlockIndex identifies the authored source. Layout uses the block
+    // published after filtering, splitting and joining.
+    public int? LayoutBlockIndex { get; init; }
 }
 
 // One block-level w:body child in document order. Implementors wrap a single

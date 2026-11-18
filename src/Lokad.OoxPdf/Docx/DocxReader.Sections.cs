@@ -69,9 +69,11 @@ internal sealed partial class DocxReader
         DocxDocumentSettings? documentSettings,
         OoxPdfDocxMarkupMode markupMode,
         CancellationToken cancellationToken,
-        bool retainBalloonParagraphMark = false)
+        bool retainBalloonParagraphMark = false,
+        Dictionary<XElement, int>? floatingBlocks = null)
     {
         var bodyElements = new List<DocxBodyElement>();
+        bool mergeDeletedMarks = !DocxMarkupContext.FromMode(markupMode).IncludesDeletions;
         foreach (var (scopedElement, tableFragments) in EnumerateLogicalTableBlocks(elements, styles, markupMode, cancellationToken))
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -82,7 +84,9 @@ internal sealed partial class DocxReader
                 DocxParagraph? paragraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, tableCellStyle: null, inlineReferenceCounters: null, documentSettings: documentSettings, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken, retainBalloonParagraphMark: retainBalloonParagraphMark);
                 if (paragraph is not null)
                 {
-                    bodyElements.Add(DocxBodyElementFactory.CreateParagraph(paragraph));
+                    int blockIndex = AppendFlowParagraph(bodyElements, DocxBodyElementFactory.CreateParagraph(paragraph),
+                        mergeDeletedMarks, cancellationToken);
+                    BindFloatingDrawingBlocks(element, null, floatingBlocks, blockIndex, cancellationToken);
                 }
             }
             else if (element.Name == WordprocessingNamespace + "tbl")
@@ -90,12 +94,13 @@ internal sealed partial class DocxReader
                 DocxTable? table = ReadTable(scopedElement, styles, numbering, numberingCounters, package, relationships, inlineReferenceCounters: null, documentSettings: documentSettings, markupMode: markupMode, cancellationToken: cancellationToken, fragments: tableFragments);
                 if (table is not null)
                 {
+                    BindFloatingDrawingBlocks(element, tableFragments, floatingBlocks, bodyElements.Count, cancellationToken);
                     bodyElements.Add(DocxBodyElementFactory.CreateTable(table));
                 }
             }
         }
 
-        return NormalizeDeletedParagraphMarkElements(bodyElements, markupMode, cancellationToken);
+        return bodyElements;
     }
 
     private static IReadOnlyList<DocxInlineImage> ReadInlineImages(

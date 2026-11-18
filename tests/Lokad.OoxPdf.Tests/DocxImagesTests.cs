@@ -745,6 +745,8 @@ internal static class DocxImagesTests
         TestAssert.True(originalDocument.FloatingDrawings.Single().Image?.PartName == "/word/media/floating-move-from.png", "Original view should keep moved-from floating drawings.");
         TestAssert.Equal((2, 2), SourceOrdinals(finalDocument.FloatingDrawings.Single()));
         TestAssert.Equal((1, 1), SourceOrdinals(originalDocument.FloatingDrawings.Single()));
+        TestAssert.Equal<int?>(1, finalDocument.FloatingDrawings.Single().LayoutBlockIndex);
+        TestAssert.Equal<int?>(1, originalDocument.FloatingDrawings.Single().LayoutBlockIndex);
         TestAssert.True(allDocument.FloatingDrawings.Select(SourceOrdinals).SequenceEqual(new[] { (1, 1), (2, 2) }),
             "Body revisions preserve source order and block ownership across views.");
         TestAssert.True(allDocument.FloatingDrawings.Any(drawing => drawing.Image?.PartName == "/word/media/floating-move-from.png" && drawing.Revisions.Single().Kind == DocxRevisionKind.MoveFrom), "All-markup should retain moved-from floating drawing provenance.");
@@ -755,6 +757,7 @@ internal static class DocxImagesTests
         TestAssert.True(commentDrawing.ImageRelationshipId == "rIdCommentAnchor" && commentDrawing.Image?.PartName == "/word/media/comment-anchor.png", "Comment story anchored drawings should resolve through comment-part relationships.");
         TestAssert.True(commentDrawing.Revisions.Single().Kind == DocxRevisionKind.MoveTo && commentDrawing.BehindDocumentValue == "1", "Revised behind-document anchored drawings inside comment stories should retain revision and geometry provenance.");
         TestAssert.Equal((1, 0), SourceOrdinals(commentDrawing));
+        TestAssert.Equal<int?>(1, commentDrawing.LayoutBlockIndex);
 
         static (int, int) SourceOrdinals(DocxFloatingDrawing drawing) =>
             (drawing.SourceParagraphIndex ?? -1, drawing.SourceBlockIndex ?? -1);

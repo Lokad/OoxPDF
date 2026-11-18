@@ -481,6 +481,7 @@ internal sealed partial class DocxReader
             }
 
         cancellationToken.ThrowIfCancellationRequested();
+        Dictionary<XElement, int>? floatingBlocks = CreateFloatingBlockMap(story);
         IReadOnlyList<DocxBodyElement> bodyElements = ReadRelatedStoryBodyElements(
             story.Elements(),
             styles,
@@ -493,7 +494,8 @@ internal sealed partial class DocxReader
             cancellationToken,
             retainBalloonParagraphMark: kind == DocxRelatedStoryKind.Comment && markupMode == OoxPdfDocxMarkupMode.AllMarkup &&
                 story.HasElements && story.Elements().All(element => element.Name == WordprocessingNamespace + "p") &&
-                !story.Descendants(WordprocessingNamespace + "drawing").Any() && !story.Descendants(WordprocessingNamespace + "pict").Any());
+                !story.Descendants(WordprocessingNamespace + "drawing").Any() && !story.Descendants(WordprocessingNamespace + "pict").Any(),
+            floatingBlocks: floatingBlocks);
         // Unqualified stories retain their former font plan:
         // unused marks would otherwise shift surviving PDF resource numbers.
         // Existing one-to-four paragraph fallback resources are left intact.
@@ -504,9 +506,9 @@ internal sealed partial class DocxReader
                 ? paragraph with { Paragraph = paragraph.Paragraph with { ParagraphMarkRun = null } }
                 : element).ToArray();
         }
-        IReadOnlyList<DocxFloatingDrawing> floatingDrawings = ReadFloatingDrawings(
+        IReadOnlyList<DocxFloatingDrawing> floatingDrawings = floatingBlocks is null ? [] : ReadFloatingDrawings(
             story, story.Elements().Where(IsBodyBlockElement), package, relationships,
-            styles, numbering, documentSettings, markupMode, cancellationToken);
+            styles, numbering, documentSettings, markupMode, cancellationToken, floatingBlocks);
         string? paragraphId = kind == DocxRelatedStoryKind.Comment ? ReadCommentParagraphId(story) : null;
         DocxCommentThreadMetadata? threadMetadata = paragraphId is not null && commentThreadMetadataByParagraphId is not null && commentThreadMetadataByParagraphId.TryGetValue(paragraphId, out DocxCommentThreadMetadata? metadata)
             ? metadata

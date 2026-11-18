@@ -54,6 +54,49 @@ internal static class DocxGlyphlessAnchorTests
         TestAssert.True(pages.All(p => p.Fonts.Count == 0), "Empty slots do not import a font program.");
     }
 
+    public static void DocxFloatingImagesFollowTheirEmittedFlowBlocks()
+    {
+        var parts = ReadParts(CreateDocument());
+        XNamespace w = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+        string original = System.Text.Encoding.UTF8.GetString(parts["word/document.xml"]);
+        foreach (string source in new[] { "page-break-before", "content-control", "run-break" })
+        {
+            XDocument xml = XDocument.Parse(original);
+            XElement anchor = xml.Descendants(w + "p").Single();
+            XElement authoredBreak = new(w + "br", new XAttribute(w + "type", "page"));
+            if (source == "run-break")
+            {
+                anchor.Element(w + "r")!.AddFirst(new XElement(w + "t", "First page"), authoredBreak);
+            }
+            else
+            {
+                anchor.AddBeforeSelf(new XElement(w + "p", new XElement(w + "r", new XElement(w + "t", "First page"))));
+                if (source == "page-break-before")
+                {
+                    anchor.AddFirst(new XElement(w + "pPr", new XElement(w + "pageBreakBefore")));
+                }
+                else
+                {
+                    anchor.AddBeforeSelf(new XElement(w + "p", new XElement(w + "r", authoredBreak)));
+                    var control = new XElement(w + "sdt", new XElement(w + "sdtPr"),
+                        new XElement(w + "sdtContent", new XElement(anchor)));
+                    anchor.ReplaceWith(control);
+                }
+            }
+
+            parts["word/document.xml"] = TestFixtures.Utf8(xml.ToString(SaveOptions.DisableFormatting));
+            string input = TestFixtures.WriteTempPackage(".docx", parts);
+            foreach (var (mode, geometry) in Views())
+            {
+                PdfPage[] pages = Render(input, new PortableRenderingTests.PinnedResolver(), mode, geometry);
+                TestAssert.True(pages.Length == 2 && pages[0].Images.Count == 0 && pages[1].Images.Count == 1,
+                    source + " must keep the picture on the second page with the owning paragraph.");
+                double[] frame = PaintedFrame(pages[1]);
+                TestAssert.Equal((144d, 72d), (frame[0], frame[1]));
+            }
+        }
+    }
+
     public static void DocxGlyphlessPictureFilePublishesAndRefundsWithoutFonts()
     {
         string output = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".pdf");

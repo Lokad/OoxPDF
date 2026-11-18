@@ -20,7 +20,8 @@ internal sealed partial class DocxReader
         DocxDocumentSettings documentSettings,
         OoxPdfDocxMarkupMode markupMode,
         CancellationToken cancellationToken,
-        RelatedStoryPartCache storyCache)
+        RelatedStoryPartCache storyCache,
+        Dictionary<XElement, int>? floatingBlocks)
     {
             void AddImplicitTerminalTableParagraph(List<DocxBodyElement> elements)
             {
@@ -41,6 +42,7 @@ internal sealed partial class DocxReader
             }
 
         var elements = new List<DocxBodyElement>();
+        bool mergeDeletedMarks = !DocxMarkupContext.FromMode(markupMode).IncludesDeletions;
         var numberingCounters = new DocxNumberingCounters();
         var inlineReferenceCounters = new DocxNoteReferenceCounters();
         DocxDocumentSettings authoredSettings = documentSettings;
@@ -116,6 +118,9 @@ internal sealed partial class DocxReader
 
                 if (hasVisibleBreak)
                 {
+                    using IEnumerator<XElement>? sourceAnchors = floatingBlocks is null ? null :
+                        element.Descendants(WordprocessingDrawingNamespace + "anchor").GetEnumerator();
+                    bool matchesSourceAnchors = sourceAnchors is not null;
                     foreach (ParagraphBreakPart part in SplitParagraphAtRunBreaks(element, markupMode,
                         retainEmptyColumnTail: true, isBreak: VisibleBreak, retainFirstLine: hasListMarker))
                     {
@@ -141,9 +146,30 @@ internal sealed partial class DocxReader
 
                         DocxParagraph? splitParagraph = ReadParagraph(part.Paragraph, styles, numbering, numberingCounters, package, relationships, tableCellStyle: null, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken,
                             isContinuationFragment: !part.IsFirstFragment);
+                        int? blockIndex = null;
                         if (splitParagraph is not null)
                         {
-                            elements.Add(DocxBodyElementFactory.CreateParagraph(AdjustBreakParagraphFragment(splitParagraph, part, sourceNumbering?.Definition.Indent)));
+                            blockIndex = AppendFlowParagraph(elements,
+                                DocxBodyElementFactory.CreateParagraph(AdjustBreakParagraphFragment(splitParagraph, part, sourceNumbering?.Definition.Indent)),
+                                mergeDeletedMarks, cancellationToken);
+                        }
+                        if (matchesSourceAnchors)
+                        {
+                            // The splitter clones the run payloads in source order.
+                            // Match each cloned anchor to its authored XML element.
+                            foreach (XElement clone in part.Paragraph.Descendants(WordprocessingDrawingNamespace + "anchor"))
+                            {
+                                cancellationToken.ThrowIfCancellationRequested();
+                                if (!sourceAnchors!.MoveNext() || !XNode.DeepEquals(sourceAnchors.Current, clone))
+                                {
+                                    matchesSourceAnchors = false;
+                                    break;
+                                }
+                                if (blockIndex is { } index)
+                                {
+                                    floatingBlocks![sourceAnchors.Current] = index;
+                                }
+                            }
                         }
                     }
 
@@ -159,7 +185,9 @@ internal sealed partial class DocxReader
                 DocxParagraph? paragraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, tableCellStyle: null, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken);
                 if (paragraph is not null)
                 {
-                    elements.Add(DocxBodyElementFactory.CreateParagraph(paragraph));
+                    int blockIndex = AppendFlowParagraph(elements, DocxBodyElementFactory.CreateParagraph(paragraph),
+                        mergeDeletedMarks, cancellationToken);
+                    BindFloatingDrawingBlocks(element, null, floatingBlocks, blockIndex, cancellationToken);
                 }
 
                 XElement? sectionProperties = paragraphProperties?.Element(WordprocessingNamespace + "sectPr");
@@ -173,14 +201,56 @@ internal sealed partial class DocxReader
                 DocxTable? table = ReadTable(scopedElement, styles, numbering, numberingCounters, package, relationships, inlineReferenceCounters, documentSettings, markupMode, cancellationToken, tableFragments);
                 if (table is not null)
                 {
+                    BindFloatingDrawingBlocks(element, tableFragments, floatingBlocks, elements.Count, cancellationToken);
                     elements.Add(DocxBodyElementFactory.CreateTable(table));
                 }
             }
         }
 
-        elements = NormalizeDeletedParagraphMarkElements(elements, markupMode, cancellationToken).ToList();
         AddImplicitTerminalTableParagraph(elements);
         return elements;
+    }
+
+    private static void BindFloatingDrawingBlocks(XElement source, IReadOnlyList<DocxRevisionScopedElement>? tableFragments,
+        Dictionary<XElement, int>? floatingBlocks, int blockIndex, CancellationToken cancellationToken)
+    {
+        if (floatingBlocks is null) return;
+        if (tableFragments is null)
+        {
+            Bind(source);
+        }
+        else
+        {
+            foreach (DocxRevisionScopedElement fragment in tableFragments)
+            {
+                Bind(fragment.Element);
+            }
+        }
+
+        void Bind(XElement scope)
+        {
+            foreach (XElement anchor in scope.Descendants(WordprocessingDrawingNamespace + "anchor"))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                floatingBlocks[anchor] = blockIndex;
+            }
+        }
+    }
+
+    private static int AppendFlowParagraph(List<DocxBodyElement> elements, DocxParagraphElement paragraph,
+        bool mergeDeletedMarks, CancellationToken cancellationToken)
+    {
+        if (mergeDeletedMarks && elements.Count > 0 &&
+            elements[^1] is DocxParagraphElement previous && previous.Paragraph.HasDeletedParagraphMark)
+        {
+            elements[^1] = DocxBodyElementFactory.CreateParagraph(
+                MergeParagraphsAcrossDeletedMark(previous.Paragraph, paragraph.Paragraph, cancellationToken));
+        }
+        else
+        {
+            elements.Add(paragraph);
+        }
+        return elements.Count - 1;
     }
 
     private static IReadOnlyList<DocxBodyElement> NormalizeDeletedParagraphMarkElements(
@@ -196,18 +266,14 @@ internal sealed partial class DocxReader
         foreach (DocxBodyElement element in elements)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (element is DocxParagraphElement paragraphElement &&
-                output.Count != 0 &&
-                output[^1] is DocxParagraphElement previousParagraphElement &&
-                previousParagraphElement.Paragraph.HasDeletedParagraphMark)
+            if (element is DocxParagraphElement paragraph)
             {
-                output[^1] = DocxBodyElementFactory.CreateParagraph(MergeParagraphsAcrossDeletedMark(
-                    previousParagraphElement.Paragraph,
-                    paragraphElement.Paragraph, cancellationToken));
-                continue;
+                AppendFlowParagraph(output, paragraph, mergeDeletedMarks: true, cancellationToken);
             }
-
-            output.Add(element);
+            else
+            {
+                output.Add(element);
+            }
         }
 
         return output;

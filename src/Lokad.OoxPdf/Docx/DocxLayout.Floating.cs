@@ -33,7 +33,7 @@ internal sealed partial class DocxLayoutEngine
         return story.FloatingDrawings
             .Select(drawing =>
             {
-                DocxLayoutSourceBlockBounds? sourceBlock = drawing.SourceBlockIndex is { } storyBlockIndex
+                DocxLayoutSourceBlockBounds? sourceBlock = (drawing.LayoutBlockIndex ?? drawing.SourceBlockIndex) is { } storyBlockIndex
                     && sourceBlocks.TryGetValue(storyBlockIndex, out DocxLayoutSourceBlockBounds? storyFound)
                     ? storyFound
                     : null;
@@ -527,7 +527,7 @@ internal sealed partial class DocxLayoutEngine
             cancellationToken.ThrowIfCancellationRequested();
             DocxFloatingDrawing drawing = drawings[i];
             DocxLayoutSourceBlockBounds? sourceBlock = null;
-            if (drawing.SourceBlockIndex is { } blockIndex)
+            if ((drawing.LayoutBlockIndex ?? drawing.SourceBlockIndex) is { } blockIndex)
             {
                 sourceBlocks ??= BuildSourceBlockIndex(pages, cancellationToken);
                 sourceBlocks.TryGetValue(blockIndex, out sourceBlock);
