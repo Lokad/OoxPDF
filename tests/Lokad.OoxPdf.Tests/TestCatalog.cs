@@ -235,7 +235,8 @@ internal static class TestCatalog
         .. FromType("rendering-portable", typeof(PptxChartNegativeInversionTests)),
         .. FromType("pptx-charts", typeof(PptxChartRangeTests)),
         .. FromType("pptx-charts", typeof(PptxChartDensifyTests)),
-        .. FromType("pptx-charts", typeof(PptxChartNumberFormatsTests)),
+        .. FromType(name => name == nameof(PptxChartNumberFormatsTests.PptxChartNumberMetadataKeepsConditionalAxisAndDataLabelContent)
+            ? "rendering-portable" : "pptx-charts", typeof(PptxChartNumberFormatsTests)),
         .. FromType("pptx-charts", typeof(PptxChartPlotOptionsAgreementTests)),
         .. FromType("pptx-typography", typeof(PptxTypographyTests)),
         .. FromType("pptx-typography", typeof(PptxTextSpacingTests)),

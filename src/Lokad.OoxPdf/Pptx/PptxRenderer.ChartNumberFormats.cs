@@ -841,7 +841,7 @@ internal sealed partial class PptxRenderer
         bool anyCondition = false;
         foreach (string section in sections)
         {
-            if (TryParseSectionCondition(section, out _, out _, out _))
+            if (TryParseSectionCondition(section, out _, out _, out _, out _))
             {
                 anyCondition = true;
                 break;
@@ -855,7 +855,7 @@ internal sealed partial class PptxRenderer
 
         for (int i = 0; i < sections.Length; i++)
         {
-            if (!TryParseSectionCondition(sections[i], out string op, out double threshold, out _))
+            if (!TryParseSectionCondition(sections[i], out string op, out double threshold, out _, out _))
             {
                 return i;
             }
@@ -869,34 +869,45 @@ internal sealed partial class PptxRenderer
         return -1;
     }
 
-    private static bool TryParseSectionCondition(string section, out string op, out double threshold, out int prefixLength)
+    private static bool TryParseSectionCondition(string section, out string op, out double threshold, out int offset, out int length)
     {
         op = string.Empty;
         threshold = 0d;
-        prefixLength = 0;
-        if (!section.StartsWith('['))
+        offset = 0;
+        length = 0;
+        // Conditions may follow color/locale metadata. Only leading brackets
+        // describe the section; quoted or escaped brackets remain literal text.
+        for (int start = 0; start < section.Length && section[start] == '[';)
         {
-            return false;
+            int close = section.IndexOf(']', start);
+            if (close < 0) return false;
+            if (TryParseChartNumberCondition(section.AsSpan(start + 1, close - start - 1), out op, out threshold))
+            {
+                offset = start;
+                length = close - start + 1;
+                return true;
+            }
+            start = close + 1;
         }
+        return false;
+    }
 
-        int close = section.IndexOf(']');
-        if (close < 0)
-        {
-            return false;
-        }
-
-        string inner = section.Substring(1, close - 1).Trim();
+    // Selection and diagnostics interpret each bracket's condition identically.
+    private static bool TryParseChartNumberCondition(ReadOnlySpan<char> inner, out string op, out double threshold)
+    {
+        op = string.Empty;
+        threshold = 0d;
+        inner = inner.Trim();
         string[] operators = ["==", ">=", "<=", "<>", ">", "<", "="];
         foreach (string candidate in operators)
         {
             if (inner.StartsWith(candidate, StringComparison.Ordinal))
             {
-                string number = inner.Substring(candidate.Length).Trim();
+                ReadOnlySpan<char> number = inner[candidate.Length..].Trim();
                 if (double.TryParse(number, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double parsed))
                 {
                     op = candidate.Length == 2 && candidate[1] == '=' && candidate[0] != '!' && candidate[0] != '<' && candidate[0] != '>' ? "=" : candidate;
                     threshold = parsed;
-                    prefixLength = close + 1;
                     return true;
                 }
 
@@ -923,8 +934,8 @@ internal sealed partial class PptxRenderer
 
     private static string StripSectionCondition(string section)
     {
-        return TryParseSectionCondition(section, out _, out _, out int prefixLength)
-            ? section.Substring(prefixLength)
+        return TryParseSectionCondition(section, out _, out _, out int offset, out int length)
+            ? section.Remove(offset, length)
             : section;
     }
 
@@ -1223,7 +1234,7 @@ internal sealed partial class PptxRenderer
 
     private static void ClassifyChartNumberFormatBracket(string section, int bracketIndex, int bracketClose, ref List<string>? unsupported)
     {
-        if (TryParseSectionCondition(section.Substring(bracketIndex), out _, out _, out _))
+        if (TryParseChartNumberCondition(section.AsSpan(bracketIndex + 1, bracketClose - bracketIndex - 1), out _, out _))
         {
             return;
         }

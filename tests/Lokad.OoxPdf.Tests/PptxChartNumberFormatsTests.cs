@@ -260,6 +260,63 @@ internal static class PptxChartNumberFormatsTests
         TestAssert.Equal("5", FormatChartNumber(5d, "[=5]0;[=6]0"));
         TestAssert.Equal("", FormatChartNumber(7d, "[=5]0;[=6]0"));
         TestAssert.Equal("2", FormatChartNumber(2d, "[<>5]0;[=5]0"));
+        foreach (var (value, expected) in new[] { (-50d, "-50.0"), (0d, "0.0"), (50d, "50.00") })
+        {
+            const string format = "[Red][<=0]0.0;[Blue][>0]0.00";
+            TestAssert.Equal(expected, FormatChartNumber(value, format));
+            TestAssert.Equal("color", GetUnsupportedChartNumberConstructs(format));
+        }
+        TestAssert.Equal("", FormatChartNumber(25d, "[Red][>=100]0;[Blue][>50]0.0"));
+        TestAssert.Equal("2,5", FormatChartNumber(2.5d, "[Red][$-407][>=0]0.0;0"));
+        TestAssert.Equal("2,5", FormatChartNumber(2.5d, "[Red][>=0][$-407]0.0;0"));
+        TestAssert.Equal("2,5", FormatChartNumber(2.5d, "[$-407][>=0]0.0;0"));
+        TestAssert.Equal("color", GetUnsupportedChartNumberConstructs("[Red][$-407][>=0]0.0;0"));
+        TestAssert.Equal("[>100]5", FormatChartNumber(5d, "\"[>100]\"0;0"));
+    }
+
+    public static void PptxChartNumberMetadataKeepsConditionalAxisAndDataLabelContent()
+    {
+        foreach (bool colorMetadata in new[] { false, true })
+        {
+            // Microsoft documents color before condition. Unsupported color
+            // paint must not change which supported numeric section is used.
+            string format = colorMetadata ? "[Red][<=0]0.0;[Blue][>0]0.00" : "[<=0]0.0;[>0]0.00";
+            string encodedFormat = format.Replace("<", "&lt;", StringComparison.Ordinal);
+            string xml = $$"""
+                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+                  <c:chart><c:plotArea><c:barChart><c:barDir val="col"/><c:grouping val="clustered"/>
+                    <c:ser><c:idx val="0"/><c:order val="0"/>
+                      <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt><c:pt idx="2"><c:v>C</c:v></c:pt></c:strLit></c:cat>
+                      <c:val><c:numLit><c:pt idx="0"><c:v>-50</c:v></c:pt><c:pt idx="1"><c:v>0</c:v></c:pt><c:pt idx="2"><c:v>50</c:v></c:pt></c:numLit></c:val>
+                    </c:ser>
+                    <c:dLbls><c:numFmt formatCode="{{encodedFormat}}" sourceLinked="0"/><c:dLblPos val="outEnd"/><c:showVal val="1"/></c:dLbls>
+                    <c:axId val="10"/><c:axId val="20"/></c:barChart>
+                    <c:catAx><c:axId val="10"/><c:axPos val="b"/><c:crossAx val="20"/></c:catAx>
+                    <c:valAx><c:axId val="20"/><c:scaling><c:min val="-50"/><c:max val="50"/></c:scaling>
+                      <c:axPos val="l"/><c:crossAx val="10"/><c:majorUnit val="50"/>
+                      <c:numFmt formatCode="{{encodedFormat}}" sourceLinked="0"/>
+                    </c:valAx></c:plotArea></c:chart>
+                </c:chartSpace>
+                """;
+            using var input = PptxTests.CreateSingleChartPackageStream(xml);
+            using var package = OoxPackage.Open(input, default);
+            var diagnostics = new List<Lokad.OoxPdf.Diagnostics.OoxPdfDiagnostic>();
+            var page = new PptxRenderer(new PortableRenderingTests.PinnedResolver())
+                .RenderPagesAsync(new PptxReader().Read(package, default), package, diagnostics.Add, default)
+                .ToBlockingEnumerable().Single();
+            foreach (string owner in new[] { "CVA", "CBD" })
+            {
+                var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false,
+                    fontResourceFilter: name => name.StartsWith(owner, StringComparison.Ordinal));
+                TestAssert.Equal("-50.0|0.0|50.00", string.Join("|", shows.Select(show => show.Text)));
+            }
+            TestAssert.Equal(colorMetadata ? 1 : 0, diagnostics.Count);
+            if (colorMetadata)
+            {
+                TestAssert.Equal("PPTX_UNSUPPORTED_CHART_NUMBER_FORMAT", diagnostics.Single().Id);
+                TestAssert.Contains("colors", diagnostics.Single().Message);
+            }
+        }
     }
 
     public static void PptxChartDataLabelDatesHonorChartSpaceDateSystem()
