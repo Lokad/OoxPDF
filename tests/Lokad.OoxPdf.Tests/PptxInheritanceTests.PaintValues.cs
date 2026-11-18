@@ -33,7 +33,7 @@ internal static partial class PptxInheritanceTests
         const string canonical = "<a:srgbClr val=\"404040\"><a:alpha val=\"50000\"/></a:srgbClr>";
         PdfPage expected = RenderTextEffects("", Highlight(canonical));
         TestAssert.True(expected.ExtGStates.Any(state => state.FillAlpha == .5d), "The highlight owns half opacity independently of opaque text.");
-        TestAssert.Contains("0.251 0.251 0.251 rg", expected.Content);
+        TestAssert.Contains("0.251 g", expected.Content);
         TestAssert.Equal(expected.Content, RenderTextEffects("", Highlight(source)).Content);
         foreach (bool paragraphDefault in new[] { false, true })
             TestAssert.Equal(expected.Content, RenderTextEffects(Highlight(source), "", paragraphDefault).Content);
