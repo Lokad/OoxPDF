@@ -289,7 +289,9 @@ internal static class PptxChartNumberFormatsTests
                       <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt><c:pt idx="2"><c:v>C</c:v></c:pt></c:strLit></c:cat>
                       <c:val><c:numLit><c:pt idx="0"><c:v>-50</c:v></c:pt><c:pt idx="1"><c:v>0</c:v></c:pt><c:pt idx="2"><c:v>50</c:v></c:pt></c:numLit></c:val>
                     </c:ser>
-                    <c:dLbls><c:numFmt formatCode="{{encodedFormat}}" sourceLinked="0"/><c:dLblPos val="outEnd"/><c:showVal val="1"/></c:dLbls>
+                    <c:dLbls><c:numFmt formatCode="{{encodedFormat}}" sourceLinked="0"/><c:dLblPos val="outEnd"/>
+                      <c:showLegendKey val="0"/><c:showVal val="1"/><c:showCatName val="0"/><c:showSerName val="0"/><c:showPercent val="0"/>
+                    </c:dLbls>
                     <c:axId val="10"/><c:axId val="20"/></c:barChart>
                     <c:catAx><c:axId val="10"/><c:axPos val="b"/><c:crossAx val="20"/></c:catAx>
                     <c:valAx><c:axId val="20"/><c:scaling><c:min val="-50"/><c:max val="50"/></c:scaling>
