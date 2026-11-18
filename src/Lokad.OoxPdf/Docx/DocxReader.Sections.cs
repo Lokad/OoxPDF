@@ -334,7 +334,7 @@ internal sealed partial class DocxReader
         };
         double ReadCropFraction(string attribute)
         {
-            string? raw = (string?)sourceRectangle?.Attribute(attribute);
+            string? raw = ((string?)sourceRectangle?.Attribute(attribute))?.Trim();
             if (raw is null) return 0d;
             bool percent = raw.EndsWith('%');
             return double.TryParse(percent ? raw[..^1] : raw, NumberStyles.Float, CultureInfo.InvariantCulture, out double value)

@@ -211,7 +211,7 @@ internal static class DocxImagesTests
 
     public static void DocxPictureCropRetainsAuthoredViewportAndPreviewOwnership()
     {
-        foreach (string left in new[] { "25000", "25%" })
+        foreach (string left in new[] { "25000", "25%", " 25% " })
         {
             string input = WriteSvgDocxFixture("<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 120 60\"><rect width=\"120\" height=\"60\" fill=\"green\"/></svg>", crop: $"<a:srcRect l=\"{left}\"/>");
             try
@@ -228,7 +228,7 @@ internal static class DocxImagesTests
 
     public static void DocxPictureCropMapsRasterFallbackAndNegativePadding()
     {
-        foreach ((string left, string mappedWidth) in new[] { ("25000", "192"), ("-25000", "115.2") })
+        foreach ((string left, string mappedWidth) in new[] { ("25000", "192"), ("-25000", "115.2"), (" -25% ", "115.2") })
         {
             string input = WriteSvgDocxFixture("<svg", crop: $"<a:srcRect l=\"{left}\"/>");
             try
