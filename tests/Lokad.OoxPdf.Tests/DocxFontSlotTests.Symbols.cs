@@ -55,7 +55,11 @@ internal static partial class DocxFontSlotTests
         {
             var document = Read(paragraph, "body", mode);
             PdfPage page = SymbolPage(document, new SlotResolver(), mode);
-            TestAssert.Equal(expected, SymbolPaintText(page).Trim());
+            // This short paragraph occupies the left body frame. AllMarkup
+            // also paints author/summary text in the separate right balloon lane.
+            string body = string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true)
+                .Where(show => show.X < document.PageWidthPoints / 2).Select(show => show.Text)).Trim();
+            TestAssert.Equal(expected, body);
             TestAssert.Equal(1, page.Annotations.Count);
             TestAssert.True(page.Annotations[0].Destination is not null, "The symbol retains its visible internal-link owner.");
             PdfContentValidator.ValidatePage(page, 0, default);
