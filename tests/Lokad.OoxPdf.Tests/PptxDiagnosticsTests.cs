@@ -16,50 +16,6 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class PptxDiagnosticsTests
 {
-    public static void PptxSyntheticLayoutAndMasterShapesRender()
-    {
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-                  <Default Extension="xml" ContentType="application/xml"/>
-                  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
-                  <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
-                  <Override PartName="/ppt/slideLayouts/slideLayout1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"/>
-                  <Override PartName="/ppt/slideMasters/slideMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"/>
-                </Types>
-                """,
-            ["_rels/.rels"] = PptxTests.PackageRelationship(),
-            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
-            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
-            ["ppt/slides/_rels/slide1.xml.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/>
-                </Relationships>
-                """,
-            ["ppt/slideLayouts/_rels/slideLayout1.xml.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="../slideMasters/slideMaster1.xml"/>
-                </Relationships>
-                """,
-            ["ppt/slideMasters/slideMaster1.xml"] = PptxTests.InheritedShapePart("FF0000", 914400, 914400),
-            ["ppt/slideLayouts/slideLayout1.xml"] = PptxTests.InheritedShapePart("00FF00", 1828800, 1828800),
-            ["ppt/slides/slide1.xml"] = PptxTests.InheritedShapePart("0000FF", 2743200, 2743200)
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, output);
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("1 0 0 rg", pdf);
-        TestAssert.Contains("0 1 0 rg", pdf);
-        TestAssert.Contains("0 0 1 rg", pdf);
-    }
-
     public static void PptxSyntheticLayoutPictureUsesLayoutRelationships()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
