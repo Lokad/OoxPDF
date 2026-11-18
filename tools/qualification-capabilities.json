@@ -8169,8 +8169,12 @@
     "PptxUnsupportedPngImageEmitsDiagnostic",
     "ImageIdentityUsesFullDigests",
     "ImageContentEqualityIsExact",
-    "DeduplicateImages",
-    "VisualDiffForegroundRecallCoversSparseBlankAndRegionCases"
+    "DeduplicateImages"
+  ],
+  "visualdiff-metrics": [
+    "=VisualDiffCombinedPixelQuotaRejects",
+    "=VisualDiffDefaultQuotaAcceptsSmallPair",
+    "=VisualDiffForegroundRecallCoversSparseBlankAndRegionCases"
   ],
   "jpeg-passthrough": [
     "Jpeg",
