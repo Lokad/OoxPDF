@@ -85,8 +85,9 @@ internal static partial class PptxInheritanceTests
             result = Render(document, package, diagnostics).Single();
             TestAssert.Equal(0, diagnostics.Count);
         });
-        PdfContentValidator.ValidatePage(result!, 0, default);
-        return result!;
+        PdfPage page = result ?? throw new InvalidOperationException("The paint-owner control produced no page.");
+        PdfContentValidator.ValidatePage(page, 0, default);
+        return page;
     }
 
     public static void PptxInheritanceRunFillChoicesUseTheMoreSpecificLayer()
