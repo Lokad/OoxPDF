@@ -22,7 +22,19 @@ $caseFull = (Resolve-Path -LiteralPath $Case).Path
 $caseDirectory = Split-Path -Parent $caseFull
 $manifest = Get-Content -Raw -LiteralPath $caseFull | ConvertFrom-Json
 $runId = if (-not [string]::IsNullOrWhiteSpace($RunId)) { ($RunId -replace '[^A-Za-z0-9_.-]', '-') } else { "{0}-p{1}-{2}" -f (Get-Date -Format "yyyyMMdd-HHmmss-fff"), $PID, ([System.Guid]::NewGuid().ToString("N").Substring(0, 8)) }
+if ($runId -in '.', '..') { throw 'RunId must name a run directory.' }
 $runRoot = Join-Path $repoRoot ("artifacts/visual/{0}/{1}" -f $manifest.id, $runId)
+if (Test-Path -LiteralPath $runRoot) { throw "Visual run directory already exists. Choose a new RunId. $runRoot" }
+[IO.Directory]::CreateDirectory($runRoot) | Out-Null
+# CreateNew also refuses a competing invocation that passed the directory check.
+$runMarker = Join-Path $runRoot '.started'
+try {
+    [IO.File]::Open($runMarker, [IO.FileMode]::CreateNew, [IO.FileAccess]::Write, [IO.FileShare]::None).Dispose()
+}
+catch [IO.IOException] {
+    if (Test-Path -LiteralPath $runMarker) { throw "Visual run directory already exists. Choose a new RunId. $runRoot" }
+    throw
+}
 $referenceDir = Join-Path $runRoot "reference"
 $candidateDir = Join-Path $runRoot "candidate"
 $comparisonDir = Join-Path $runRoot "comparison"

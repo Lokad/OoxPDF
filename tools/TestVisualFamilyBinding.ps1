@@ -118,16 +118,17 @@ foreach($id in @('probe-a','probe-b')) {
         Set-Content (Join-Path $directory 'case.json')
 }
 $inspectionLog=Join-Path $repo 'inspection-calls.jsonl'
+$candidateBaseline = 700
 function dotnet {
     $values=@($args)
     if($values[0] -like '*Lokad.OoxPdf.Cli.dll') {
-        [IO.File]::WriteAllText($values[3],'%PDF-fake candidate')
+        [IO.File]::WriteAllText($values[3],"%PDF-fake candidate baseline $candidateBaseline")
         [IO.File]::WriteAllText($values[5],'[]')
     } elseif($values[0] -like '*Lokad.OoxPdf.VisualDiff.dll') {
         '[{"Page":1,"DimensionsMatch":true,"MeanAbsoluteError":0}]' | Set-Content (Join-Path $values[3] 'metrics.json')
     } elseif($values[0] -like '*Lokad.OoxPdf.PdfInspect.dll') {
         $output=$values[2]
-        $baseline=if($values[1] -like '*output.pdf' -and $output -like '*real-y-shift*') {500} else {700}
+        $baseline=if($values[1] -like '*output.pdf') { $candidateBaseline } else { 700 }
         @(@{PageNumber=1;X=72;Y=$baseline;DecodedText='Visible content'}) | ConvertTo-Json -AsArray | Set-Content (Join-Path $output 'text-operations.json')
         '[{"PageNumber":1,"ResourceName":"F1","Embedded":true,"HasToUnicode":true,"IsSubset":true}]' | Set-Content (Join-Path $output 'font-resources.json')
         @{Inspector=$values[0];InspectorSha256=(Get-FileHash $values[0]).Hash;Output=$output} | ConvertTo-Json -Compress |
@@ -141,6 +142,22 @@ try {
     $before=@(Get-Content $buildLog).Count
     & $realCase -Case $realManifest -CliPath $frozenCli -SkipBuild -RunId 'real-prebuilt' | Out-Null
     if(@(Get-Content $buildLog).Count -ne $before) {throw 'Real prebuilt case requested a build'}
+    $priorRun = Join-Path $repo 'artifacts/visual/probe-a/real-prebuilt'
+    $priorPdf = Join-Path $priorRun 'candidate/output.pdf'
+    $priorReport = Join-Path $priorRun 'run-info.json'
+    $priorPdfHash = (Get-FileHash -LiteralPath $priorPdf).Hash
+    $priorReportHash = (Get-FileHash -LiteralPath $priorReport).Hash
+    $beforeInspection = @(Get-Content $inspectionLog).Count
+    $candidateBaseline = 500
+    $failure = $null
+    try { & $realCase -Case $realManifest -CliPath $frozenCli -SkipBuild -RunId 'real-prebuilt' | Out-Null } catch {$failure=$_.Exception.Message}
+    if ($failure -notlike 'Visual run directory already exists.*' -or
+        (Get-FileHash -LiteralPath $priorPdf).Hash -ne $priorPdfHash -or
+        (Get-FileHash -LiteralPath $priorReport).Hash -ne $priorReportHash -or
+        @(Get-Content $inspectionLog).Count -ne $beforeInspection -or @(Get-Content $buildLog).Count -ne $before) {
+        throw 'The real case reopened an occupied run or modified its evidence'
+    }
+    $candidateBaseline = 700
     & $realCase -Case $realManifest -CliPath $frozenCli -RunId 'real-prepare-once' | Out-Null
     $added=@(Get-Content $buildLog | Select-Object -Skip $before | ConvertFrom-Json)
     if($added.Count -ne 2 -or @($added | Where-Object Description -eq 'PDF inspect').Count -ne 1) {throw 'Real direct case did not prepare inspector once'}
@@ -152,8 +169,10 @@ try {
     & $script -Family probe -CliPath $frozenCli -SkipBuild | Out-Null
     if(@(Get-Content $buildLog).Count -ne $before) {throw 'Real prebuilt family requested a build'}
     $failure=$null
+    $candidateBaseline = 500
     try { & $realCase -Case $realManifest -CliPath $frozenCli -SkipBuild -RunId 'real-y-shift' | Out-Null } catch {$failure=$_.Exception.Message}
     if($failure -ne 'PDF text line-start gate failed.' -or @(Get-Content $buildLog).Count -ne $before) {throw 'The real case did not enforce its manifest Y bound without building'}
+    $candidateBaseline = 700
     Remove-Item -LiteralPath $inspector
     $failure=$null
     try { & $realCase -Case $realManifest -CliPath $frozenCli -SkipBuild -RunId 'real-missing-tool' | Out-Null } catch {$failure=$_.Exception.Message}
@@ -169,7 +188,8 @@ foreach($inspection in $inspections) {
 [ordered]@{Checks=@('List without runtime','Frozen CLI forwarding','Validation-only builds','Runtime identity',
     'Skip all builds','Default builds once','Prebuilt default CLI','All ten inspection capabilities',
     'No unused inspector','Missing prebuilt tool preflight','Real case/inspector forwarding',
-    'Real once-only preparation','Real family reuse','Real missing-tool refusal','Manifest Y bound forwarding','Inspector provenance');
+    'Real once-only preparation','Real family reuse','Real missing-tool refusal','Occupied run refusal and evidence integrity',
+    'Fresh shifted PDF fails the manifest Y bound','Inspector provenance');
     InspectionCapabilities=$inspectionKeys.Count;RealInspectionCalls=$inspections.Count;LibraryBuilds=0;LibraryExecutions=0;OfficeExports=0} |
     ConvertTo-Json | Set-Content (Join-Path $OutputDirectory 'evidence.json')
 Write-Output 'Visual-family and real case/inspector binding checks pass; no actual build, library execution or Office export.'
