@@ -1,4 +1,10 @@
 {
+  "test-temporary-ownership": [
+    "TestTemporaryDirectory",
+    "TestRunnerRejects",
+    "TestRunnerPreservesExactSetsGroupsListingAndReports",
+    "PptxSyntheticChartAxisTickLabelOptionsUsePortableFontSemantics"
+  ],
   "pptx-inspection-visibility": [
     "PptxHiddenObjectsLeaveNoPaintResourcesOrLinks",
     "PptxGlyphEmissionInspectionUsesSceneVisibilityAndMasterAdmission",

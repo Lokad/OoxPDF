@@ -10,6 +10,7 @@ internal static class TestCatalog
     [
         .. FromType("api", typeof(PublicApiTests)),
         .. FromType("api", typeof(TestRunnerTests)),
+        .. FromType("api", typeof(TestTemporaryDirectoryTests)),
         .. FromType("rendering-portable", typeof(PortableRenderingTests)),
         .. FromType("rendering-portable", typeof(PptxScalarCapsTests)),
         .. FromType("rendering-portable", typeof(PptxBreakCompositionTests)),
