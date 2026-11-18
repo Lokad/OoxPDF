@@ -33,6 +33,10 @@ table and supported static-story containers. Bookmarks, links and supported
 revision metadata preserve their owners. This does not promise every composition
 of otherwise supported objects.
 
+Symbol runs retain printable BMP character codes and their declared font.
+Malformed or nonprinting symbol payloads use a diagnosed replacement character;
+font/glyph availability still controls whether the authored symbol can be painted.
+
 Native equations support bounded common OMML: runs, fractions, scripts, roots,
 accents/bars, delimiters, n-ary operators and supported arrays/matrices. Structural
 pieces can use PDF ActualText. Placement, baselines, line breaks, large operators

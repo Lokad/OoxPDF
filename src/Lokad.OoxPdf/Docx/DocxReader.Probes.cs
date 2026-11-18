@@ -60,7 +60,7 @@ internal sealed partial class DocxReader
         void Emit(string id, string feature, string diagnosticPartName = "", string fallback = "Ignored")
         {
             cancellationToken.ThrowIfCancellationRequested();
-            string key = id == "DOCX_UNSUPPORTED_EQUATION" ? id + "\0" + diagnosticPartName : id;
+            string key = id is "DOCX_UNSUPPORTED_EQUATION" or "DOCX_UNSUPPORTED_SYMBOL" ? id + "\0" + diagnosticPartName : id;
             if (!emitted.Add(key))
             {
                 return;
@@ -82,6 +82,15 @@ internal sealed partial class DocxReader
         // Related-story payloads render, so they diagnose with their own part provenance.
         void EmitStaticPayloadDiagnostics(XDocument probeDocument, string probePartName)
         {
+            foreach (XElement symbol in probeDocument.Descendants(WordprocessingNamespace + "sym"))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (symbol.Parent?.Name == WordprocessingNamespace + "r" && !TryReadSymbol(symbol, out _, out _))
+                {
+                    Emit("DOCX_UNSUPPORTED_SYMBOL", "malformed or nonprinting symbol payload", probePartName, "Replacement character");
+                    break;
+                }
+            }
             cancellationToken.ThrowIfCancellationRequested();
             if (HasUnsupportedComplexFields(probeDocument))
             {

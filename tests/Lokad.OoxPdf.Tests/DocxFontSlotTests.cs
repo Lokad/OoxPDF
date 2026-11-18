@@ -1,12 +1,14 @@
 using System.Buffers.Binary;
 using System.Security;
+using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Docx;
 using Lokad.OoxPdf.Fonts;
+using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Tests;
 
-internal static class DocxFontSlotTests
+internal static partial class DocxFontSlotTests
 {
     private const string Properties = "<w:rPr><w:rFonts w:ascii=\"Slot A\" w:hAnsi=\"Slot H\" w:eastAsia=\"Slot E\" w:cs=\"Slot C\"/></w:rPr>";
 
@@ -68,7 +70,8 @@ internal static class DocxFontSlotTests
         }
     }
 
-    private static DocxDocument Read(string paragraph, string container)
+    private static DocxDocument Read(string paragraph, string container,
+        OoxPdfDocxMarkupMode mode = OoxPdfDocxMarkupMode.Final, Action<OoxPdfDiagnostic>? diagnostics = null)
     {
         var entries = new Dictionary<string, string> {
             ["[Content_Types].xml"] = "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/><Default Extension=\"xml\" ContentType=\"application/xml\"/><Override PartName=\"/word/document.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml\"/></Types>",
@@ -85,7 +88,9 @@ internal static class DocxFontSlotTests
             body = "<w:p/>";
         }
         entries["word/document.xml"] = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><w:body>" + body + "<w:sectPr>"+reference+"<w:pgSz w:w=\"12240\" w:h=\"15840\"/><w:pgMar w:top=\"1440\" w:bottom=\"1440\" w:left=\"1440\" w:right=\"1440\" w:header=\"720\" w:footer=\"720\"/></w:sectPr></w:body></w:document>";
-        return DocxTests.ReadDocx(TestFixtures.WriteTempPackage(".docx", entries), OoxPdfDocxMarkupMode.Final);
+        using FileStream stream = File.OpenRead(TestFixtures.WriteTempPackage(".docx", entries));
+        using OoxPackage package = OoxPackage.Open(stream, default);
+        return new DocxReader().Read(package, diagnostics, default, mode);
     }
 
     private sealed class SlotResolver : IFontResolver
@@ -95,7 +100,7 @@ internal static class DocxFontSlotTests
         {
             foreach (var (family, width) in new[] { ("Slot A", 450), ("Slot H", 650), ("Slot E", 1000) }) {
                 byte[] bytes = TestFontBuilder.CreateFontWithFamilyNames((0x0409, family));
-                var groups = new[] { (0x20, 0x9F, 1), (0x0301, 0x0301, 129), (0x03A9, 0x03A9, 126), (0x0416, 0x0416, 127), (0x4E2D, 0x4E2D, 128), (0x1F600, 0x1F600, 130) };
+                var groups = new[] { (0x20, 0x9F, 1), (0x0301, 0x0301, 129), (0x03A9, 0x03A9, 126), (0x0416, 0x0416, 127), (0x4E2D, 0x4E2D, 128), (0xF041, 0xF041, 34), (0x1F600, 0x1F600, 130) };
                 byte[] cmap = new byte[28 + groups.Length*12];
                 BinaryPrimitives.WriteUInt16BigEndian(cmap.AsSpan(2,2), 1);
                 BinaryPrimitives.WriteUInt16BigEndian(cmap.AsSpan(4,2), 3);

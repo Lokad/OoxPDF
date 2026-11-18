@@ -701,7 +701,7 @@ internal sealed partial class DocxReader
 
             if (run.Elements().Any(IsComplexFieldMarkupElement))
             {
-                AddComplexFieldAwareRun(
+                AddOrderedRunContent(
                     run,
                     currentSourceRunIndex,
                     resolvedRun,
@@ -723,9 +723,11 @@ internal sealed partial class DocxReader
                 // Nontext children delimit the text before and after their
                 // source position, even when they share one formatted run.
                 run.Elements().Any(child => IsInlineReferenceElement(child) || child.Annotation<AutomaticNoteStoryMarker>() is not null ||
-                    child.Name == WordprocessingNamespace + "drawing" || child.Name == WordprocessingNamespace + "pict"))
+                    child.Name == WordprocessingNamespace + "drawing" || child.Name == WordprocessingNamespace + "pict" ||
+                    child.Name == WordprocessingNamespace + "sym"))
             {
-                AddOrderedRunTextAndReferences(run, currentSourceRunIndex, resolvedRun, runStyleResolution, revision, effectiveRevisions);
+                AddOrderedRunContent(run, currentSourceRunIndex, resolvedRun, runStyleResolution, revision, effectiveRevisions,
+                    ref currentPageInstructionSeen);
             }
             else if (text.Length != 0)
             {
@@ -937,7 +939,7 @@ internal sealed partial class DocxReader
             (nonRenderingRunOwners ??= []).Add(new(index, revisions));
         }
 
-        void AddComplexFieldAwareRun(
+        void AddOrderedRunContent(
             XElement run,
             int currentSourceRunIndex,
             DocxResolvedRunProperties resolvedRun,
@@ -951,6 +953,8 @@ internal sealed partial class DocxReader
             Dictionary<XElement, (int Offset, int Order)>? positions = null;
             foreach (XElement child in run.Elements())
             {
+                cancellationToken.ThrowIfCancellationRequested();
+                string childText = ReadRunTextChild(child);
                 if (child.Name == WordprocessingNamespace + "fldChar")
                 {
                     ApplyComplexFieldChar(child, currentSourceRunIndex);
@@ -974,15 +978,27 @@ internal sealed partial class DocxReader
                 }
                 else
                 {
-                    string childText = ReadRunTextChild(child);
                     if (childText.Length != 0)
                     {
+                        var childProperties = resolvedRun;
+                        if (child.Name == WordprocessingNamespace + "sym" && TryReadSymbol(child, out string? font, out _))
+                        {
+                            // A symbol selects a font-relative character, not a
+                            // cased text spelling or an inherited font slot.
+                            childProperties = resolvedRun with
+                            {
+                                FontFamily = font,
+                                Fonts = new(font, font, font, font, null, null, null, null),
+                                AllCaps = false,
+                                SmallCaps = false
+                            };
+                        }
                         int markerRunsBefore = runs.Count;
                         AddParagraphDisplayText(
                             childText,
                             currentSourceRunIndex,
                             textOffset,
-                            resolvedRun,
+                            childProperties,
                             runStyleResolution,
                             revision,
                             revisions);
@@ -990,7 +1006,7 @@ internal sealed partial class DocxReader
                     }
                 }
 
-                textOffset += ReadRunTextChild(child).Length;
+                textOffset += childText.Length;
                 childIndex++;
             }
         }
@@ -1199,48 +1215,6 @@ internal sealed partial class DocxReader
             return complexFieldStack
                 .Where(field => field.InResult)
                 .ToArray();
-        }
-
-        void AddOrderedRunTextAndReferences(
-            XElement run,
-            int currentSourceRunIndex,
-            DocxResolvedRunProperties resolvedRun,
-            DocxRunStyleResolution runStyleResolution,
-            DocxRevisionInfo? revision,
-            IReadOnlyList<DocxRevisionInfo> revisions)
-        {
-            int childIndex = 0;
-            int textOffset = 0;
-            Dictionary<XElement, (int Offset, int Order)>? positions = null;
-            foreach (XElement child in run.Elements())
-            {
-                if (IsInlineReferenceElement(child))
-                {
-                    var position = (positions ??= ReadRunInlinePositions(run, cancellationToken))[child];
-                    AddInlineReference(child, currentSourceRunIndex, childIndex, textOffset, resolvedRun, runStyleResolution, emitDisplayRun: true, revision, revisions,
-                        inlineReferences: inlineReferences,
-                        commentRanges: commentRanges,
-                        openCommentRanges: openCommentRanges,
-                        inlineReferenceCounters: inlineReferenceCounters,
-                        documentSettings: documentSettings,
-                        runs: runs, cancellationToken: cancellationToken, sourceDrawingIndex: position.Order);
-                }
-                else
-                {
-                    string childText = ReadRunTextChild(child);
-                    if (childText.Length != 0)
-                    {
-                        int runsBefore = runs.Count;
-                        AddParagraphDisplayText(childText, currentSourceRunIndex, textOffset,
-                            resolvedRun, runStyleResolution, revision, revisions);
-                        RetainAutomaticNoteStoryMarker(child, runsBefore);
-                    }
-
-                    textOffset += childText.Length;
-                }
-
-                childIndex++;
-            }
         }
 
         void RetainAutomaticNoteStoryMarker(XElement child, int runsBefore)
@@ -1827,8 +1801,35 @@ internal sealed partial class DocxReader
         return text.ToString();
     }
 
+    private static bool TryReadSymbol(XElement symbol, [NotNullWhen(true)] out string? font, out char character)
+    {
+        font = (string?)symbol.Attribute(WordprocessingNamespace + "font");
+        ReadOnlySpan<char> code = ((string?)symbol.Attribute(WordprocessingNamespace + "char"))
+            .AsSpan().Trim(" \t\r\n".AsSpan());
+        if (!string.IsNullOrWhiteSpace(font) && code.Length == 4 &&
+            ushort.TryParse(code, NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture, out ushort value) &&
+            Rune.TryCreate(value, out Rune rune) &&
+            Rune.GetUnicodeCategory(rune) is not (UnicodeCategory.Control or UnicodeCategory.Format or
+                UnicodeCategory.LineSeparator or UnicodeCategory.ParagraphSeparator))
+        {
+            character = (char)value;
+            return true;
+        }
+        // An unsupported payload still owns one visible replacement/source slot.
+        // The shared part-level probe diagnoses it; ordinary font recovery owns
+        // unavailable fonts and glyphs for otherwise well-formed symbols.
+        font = null;
+        character = '\uFFFD';
+        return false;
+    }
+
     private static string ReadRunTextChild(XElement child)
     {
+        if (child.Name == WordprocessingNamespace + "sym")
+        {
+            TryReadSymbol(child, out _, out char character);
+            return character.ToString();
+        }
         if (child.Name == WordprocessingNamespace + "t" ||
             child.Name == WordprocessingNamespace + "delText")
         {
