@@ -34,7 +34,6 @@ internal sealed partial class PptxRenderer
         public const double MaximumFontLineBoxMetricRatio = 1.5d;
         public const double MaximumTableAnchorCompressedFontBoxRatio = 1.18d;
         public const double AbsoluteLineBaselineGapFallback = 0.374d;
-        public const double ExplicitLineBaselineGapFallback = 0.234d;
         public const double MinimumLineSpacing = 0.1d;
         public const double MinimumAutofitScale = 0.01d;
         public const double MaximumAutofitScale = 10d;
@@ -603,7 +602,6 @@ internal sealed partial class PptxRenderer
         // times the plot-to-frame reserve within 0.01pt; the legacy 0.23 had no sliced
         // provenance. Different-frame reserves stay unobserved.
         public const double DefaultAxisTitleBandBaselineRatio = 0.338d;
-        public const double DefaultAxisTitleSideBaselineRatio = 0.28d;
         public const double DefaultAxisTitleTopBandBaselineRatio = 0.485d;
         public const double DefaultAxisTitleLeftSideBaselineRatio = 0.50d;
         // Left vertical axis title column: identical 143.81pt on the bar, column, and

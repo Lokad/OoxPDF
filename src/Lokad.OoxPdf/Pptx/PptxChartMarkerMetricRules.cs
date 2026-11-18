@@ -21,7 +21,6 @@ internal static class PptxChartMarkerMetricRules
     public const double UnsetMarkerSize = 5d;
     // Marker rect extents land on a 0.12pt grid with ties down (COM dot/dash ladders:
     // all 20 measured rect dims fit; the ties at 37.5 and 12.5 go to 37 and 12).
-    public const double MarkerExtentQuantum = 0.12d;
     public static double QuantizeMarkerExtent(double value)
     {
         decimal scaled = (decimal)value / 0.12m;
