@@ -74,13 +74,27 @@ internal static class TestTemporaryDirectoryTests
             TestAssert.Equal(0, TestTemporaryDirectory.Run(() =>
             {
                 scratch = Path.GetTempPath();
-                try { Directory.CreateSymbolicLink(Path.Combine(scratch, "alias"), target); linked = true; }
-                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+                PublicApiTests.CreatePublicationLink("Directory", Path.Combine(scratch, "alias"), target);
+                linked = true;
                 return 0;
             }));
-            if (!linked) TestAssert.Skip("Directory symbolic links are unavailable for this account.");
             TestAssert.True(Directory.Exists(scratch), "A linked child must retain the owned scratch directory.");
             TestAssert.Equal("External target", File.ReadAllText(Path.Combine(target, "keep.txt")));
+            string[] names = ["TMP", "TEMP", "TMPDIR"];
+            string?[] previous = names.Select(Environment.GetEnvironmentVariable).ToArray();
+            bool invoked = false;
+            try
+            {
+                foreach (string name in names) Environment.SetEnvironmentVariable(name, Path.Combine(scratch!, "alias"));
+                TestAssert.Throws<IOException>(() => TestTemporaryDirectory.Run(() => { invoked = true; return 0; }));
+            }
+            finally
+            {
+                for (int index = 0; index < names.Length; index++)
+                    Environment.SetEnvironmentVariable(names[index], previous[index]);
+            }
+            TestAssert.True(!invoked, "A linked temporary parent must be refused before test execution.");
+            TestAssert.Equal(1, Directory.GetFileSystemEntries(target).Length);
         }
         finally
         {

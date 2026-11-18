@@ -145,7 +145,7 @@ internal static partial class PublicApiTests
     private static void AssertNoPublicationStaging(string directory) =>
         TestAssert.Equal(0, Directory.GetFiles(directory, "*.tmp-*").Length);
 
-    private static void CreatePublicationLink(string kind, string path, string target)
+    internal static void CreatePublicationLink(string kind, string path, string target)
     {
         if (kind == "Directory" && !OperatingSystem.IsWindows()) { Directory.CreateSymbolicLink(path, target); return; }
         if (kind == "SymbolicLink")
