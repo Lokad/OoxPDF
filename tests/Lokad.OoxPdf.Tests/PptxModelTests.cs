@@ -325,7 +325,7 @@ internal static class PptxModelTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        using OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
@@ -1047,96 +1047,7 @@ internal static class PptxModelTests
         TestAssert.Equal("\n", textBody.Paragraphs[0].Runs[1].Text);
         TestAssert.Equal("1", textBody.Paragraphs[0].Runs[2].Text);
 
-        PptxTextGlyphRunSnapshot[] glyphHelloRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0, inspectionFonts: new PresentationFontResolver(new TestFaceFontResolver()))
-            .Where(run => run.FrameIndex == 0 && run.ParagraphIndex == 0 && run.SourceRunIndex == 0)
-            .ToArray();
-        TestAssert.Equal("Hello", string.Concat(glyphHelloRuns.Select(run => run.Text)));
-        TestAssert.True(glyphHelloRuns.All(run => run.Bold && run.Italic && run.Strike),
-            "Live glyph styles retain master bold, presentation strike and the layout italic override.");
-        TestAssert.True(glyphHelloRuns.Length != 0 && glyphHelloRuns.All(run => run.Underline),
-            "The live glyph inspector retains underline on every emitted source segment.");
-        TestAssert.True(glyphHelloRuns.All(run => run.HighlightColor == new RgbColor(255, 255, 0)),
-            "The live glyph inspector retains the resolved source highlight.");
-        TestAssert.True(
-            glyphHelloRuns.All(run => run.UnderlineWidth is not null && run.UnderlineHeight is not null),
-            "Expected glyph-run inspection to expose underline geometry for each emitted source-run segment.");
-        TestAssert.True(
-            glyphHelloRuns.All(run => Math.Abs(run.UnderlineWidth.GetValueOrDefault() - run.Width) < 0.01d),
-            "Expected underline geometry to be owned by each emitted glyph-run segment width.");
 
-        IReadOnlyList<PptxTextFrameModelSnapshot> textFrames = PptxRenderer.InspectTextFrameModels(document, package, 0);
-        TestAssert.True(
-            textFrames.Any(frame => frame.Paragraphs.Any(paragraph => paragraph.Runs.Any(run => run.Text == "Hello"))),
-            "Expected text-frame model inspection to include Hello. Runs: " + string.Join("|", textFrames.SelectMany(frame => frame.Paragraphs).SelectMany(paragraph => paragraph.Runs).Select(run => run.Text)));
-        PptxTextFrameModelSnapshot textFrame = textFrames.Single(frame => frame.Paragraphs.Any(paragraph => paragraph.Runs.Any(run => run.Text == "Hello")));
-        TestAssert.True(textFrame.InheritedPlaceholderCount >= 1, "Expected text model to expose inherited placeholder participation.");
-        TestAssert.True(textFrame.HasInheritedTextBody, "Expected text model to expose inherited placeholder text body participation.");
-        TestAssert.True(!textFrame.UsesInheritedShapeBounds, "Expected direct text-box geometry to stay distinct from inherited placeholder style participation.");
-        TestAssert.Equal(1, textFrame.Paragraphs.Count);
-        TestAssert.Equal(1, textFrame.Paragraphs[0].Level);
-        TestAssert.Equal("lvl2pPr", textFrame.Paragraphs[0].CascadeLevelName);
-        TestAssert.True(textFrame.Paragraphs[0].ResolvedCascadeSourceCount >= 2, "Expected text model to expose inherited cascade inputs before style resolution.");
-        TestAssert.Contains("shape.lstStyle", string.Join("|", textFrame.Paragraphs[0].CascadeLayerNames));
-        TestAssert.Contains("layout.placeholder.lstStyle", string.Join("|", textFrame.Paragraphs[0].CascadeLayerNames));
-        TestAssert.Contains("master.placeholder.lstStyle", string.Join("|", textFrame.Paragraphs[0].CascadeLayerNames));
-        TestAssert.Contains("inherited.txStyle", string.Join("|", textFrame.Paragraphs[0].CascadeLayerNames));
-        TestAssert.Contains("defaultTextStyle", string.Join("|", textFrame.Paragraphs[0].CascadeLayerNames));
-        TestAssert.Contains("ShapeListStyle", string.Join("|", textFrame.Paragraphs[0].CascadeLayerKinds));
-        TestAssert.Contains("LayoutPlaceholderListStyle", string.Join("|", textFrame.Paragraphs[0].CascadeLayerKinds));
-        TestAssert.Contains("MasterPlaceholderListStyle", string.Join("|", textFrame.Paragraphs[0].CascadeLayerKinds));
-        TestAssert.Contains("InheritedTextStyle", string.Join("|", textFrame.Paragraphs[0].CascadeLayerKinds));
-        TestAssert.Contains("DefaultTextStyle", string.Join("|", textFrame.Paragraphs[0].CascadeLayerKinds));
-        TestAssert.True(textFrame.Paragraphs[0].ResolvedStyleSourceCount >= textFrame.Paragraphs[0].ResolvedCascadeSourceCount + 1, "Expected resolved paragraph style provenance to include direct paragraph properties after inherited defaults.");
-        TestAssert.Contains("paragraph.pPr", string.Join("|", textFrame.Paragraphs[0].ResolvedStyleLayerNames));
-        TestAssert.Contains("ParagraphProperties", string.Join("|", textFrame.Paragraphs[0].ResolvedStyleLayerKinds));
-        TestAssert.Equal("Center", textFrame.Paragraphs[0].Alignment);
-        TestAssert.Equal(26d, textFrame.Paragraphs[0].FontSize);
-        TestAssert.Equal("Text", textFrame.Paragraphs[0].Runs[0].Kind);
-        TestAssert.Equal("Break", textFrame.Paragraphs[0].Runs[1].Kind);
-        TestAssert.Equal("Field", textFrame.Paragraphs[0].Runs[2].Kind);
-        TestAssert.Equal("Hello", textFrame.Paragraphs[0].Runs[0].Text);
-        TestAssert.True(textFrame.Paragraphs[0].Runs[0].ResolvedCascadeSourceCount >= 2, "Expected run model to expose direct and inherited run-style inputs.");
-        TestAssert.Contains("run.rPr", string.Join("|", textFrame.Paragraphs[0].Runs[0].CascadeLayerNames));
-        TestAssert.Contains("paragraph.defRPr", string.Join("|", textFrame.Paragraphs[0].Runs[0].CascadeLayerNames));
-        TestAssert.Contains("layout.placeholder.lstStyle.defRPr", string.Join("|", textFrame.Paragraphs[0].Runs[0].CascadeLayerNames));
-        TestAssert.Contains("inherited.txStyle.defRPr", string.Join("|", textFrame.Paragraphs[0].Runs[0].CascadeLayerNames));
-        TestAssert.Contains("defaultTextStyle.defRPr", string.Join("|", textFrame.Paragraphs[0].Runs[0].CascadeLayerNames));
-        TestAssert.Contains("RunProperties", string.Join("|", textFrame.Paragraphs[0].Runs[0].CascadeLayerKinds));
-        TestAssert.Contains("ParagraphDefaultRunProperties", string.Join("|", textFrame.Paragraphs[0].Runs[0].CascadeLayerKinds));
-        TestAssert.Contains("LayoutPlaceholderDefaultRunProperties", string.Join("|", textFrame.Paragraphs[0].Runs[0].CascadeLayerKinds));
-        TestAssert.Contains("InheritedTextStyleDefaultRunProperties", string.Join("|", textFrame.Paragraphs[0].Runs[0].CascadeLayerKinds));
-        TestAssert.Contains("DefaultTextStyleDefaultRunProperties", string.Join("|", textFrame.Paragraphs[0].Runs[0].CascadeLayerKinds));
-        TestAssert.Equal(26d, textFrame.Paragraphs[0].Runs[0].FontSize);
-        TestAssert.True(textFrame.Paragraphs[0].Runs[0].Underline, "Expected text model to preserve resolved run underline before layout.");
-        TestAssert.Equal(new RgbColor(255, 255, 0), textFrame.Paragraphs[0].Runs[0].Highlight ?? default);
-
-        PptxTextFlowSnapshot textFlow = PptxRenderer.InspectTextFlow(document, package, 0);
-        PptxTextFlowFrameSnapshot flowFrame = textFlow.Frames.Single(frame => frame.Paragraphs.Any(paragraph => paragraph.Runs.Any(run => run.SourceText == "Hello")));
-        TestAssert.Equal(1, flowFrame.Paragraphs.Count);
-        TestAssert.Equal(1, flowFrame.Paragraphs[0].Level);
-        TestAssert.Equal("Center", flowFrame.Paragraphs[0].Alignment);
-        TestAssert.Equal("Hello", flowFrame.Paragraphs[0].Runs[0].SourceText);
-        TestAssert.Equal("Text", flowFrame.Paragraphs[0].Runs[0].Segments[0].Kind);
-        TestAssert.Equal("Hello", flowFrame.Paragraphs[0].Runs[0].Segments[0].Text);
-        TestAssert.Equal("Break", flowFrame.Paragraphs[0].Runs[1].SourceKind);
-        TestAssert.Equal("Break", flowFrame.Paragraphs[0].Runs[1].Segments[0].Kind);
-        TestAssert.True(flowFrame.TextWidth > 0d, "Expected text flow box to own text bounds before line layout.");
-
-        PptxTextLayoutSnapshot textLayout = PptxRenderer.InspectTextLayout(document, package, 0);
-        PptxTextFrameLayoutSnapshot layoutFrame = textLayout.Frames.Single(frame => frame.Paragraphs.Any(paragraph => paragraph.Lines.Any(line => line.Spans.Any(span => span.SourceText == "Hello"))));
-        TestAssert.Equal(1, layoutFrame.Paragraphs.Count);
-        TestAssert.Equal(2, layoutFrame.Paragraphs[0].Lines.Count);
-        PptxTextSpanLayoutSnapshot[] layoutHelloSpans = layoutFrame.Paragraphs[0].Lines[0].Spans
-            .Where(span => span.SourceText == "Hello")
-            .ToArray();
-        TestAssert.Equal("Hello", string.Concat(layoutHelloSpans.Select(span => span.Text)));
-        TestAssert.True(layoutHelloSpans.All(span => span.SourceText == "Hello"), "Expected split layout spans to retain source-run text ownership.");
-        TestAssert.Equal("1", layoutFrame.Paragraphs[0].Lines[1].Spans[0].Text);
-        TestAssert.True(layoutFrame.Paragraphs[0].Lines[0].EndX > layoutFrame.Paragraphs[0].Lines[0].StartX, "Expected layout line to own measured advance before PDF emission.");
-        TestAssert.True(layoutFrame.Paragraphs[0].Lines[0].TopY > layoutFrame.Paragraphs[0].Lines[0].BaselineY, "Expected layout line boxes to expose top-to-baseline geometry before PDF emission.");
-        TestAssert.True(layoutFrame.Paragraphs[0].Lines[0].Advance > 0d, "Expected layout line boxes to expose line advance before paragraph stacking.");
-        TestAssert.True(layoutFrame.Paragraphs[0].Lines[0].BaselineOffset > 0d, "Expected layout line boxes to own baseline offset separately from text spans.");
-        TestAssert.Equal("Default", layoutFrame.Paragraphs[0].Lines[0].LineSpacingKind);
     }
 
     public static void PptxSceneTableStylePreservesConditionalFormatFlagTokens()

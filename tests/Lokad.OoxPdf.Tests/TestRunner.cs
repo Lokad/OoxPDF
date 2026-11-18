@@ -7,7 +7,6 @@ internal static class TestRunner
         // Exhaustive rendering products remain explicit milestone/slow coverage.
         nameof(DocxCommentsTests.DocxWordCompatibleMixedBalloonNormalizesExplicitParagraphSpacing),
         nameof(DocxCommentsTests.DocxWordCompatibleMixedBalloonWrapsParagraphBodiesIndependently),
-        nameof(PptxModelTests.PptxSceneBuilderBuildsResolvedNodeLists),
         nameof(PptxTypographyTests.PptxSyntheticRotatedTextBoxProducesTransform),
         nameof(PptxTypographyTests.PptxSyntheticTextBoxEmbedsFontAndDrawsGlyphs),
         nameof(FontTests.DiscoveryHeadersMatchFullLoadAcrossWindowsFonts)

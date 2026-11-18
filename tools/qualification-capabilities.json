@@ -1,6 +1,6 @@
 {
   "pptx-scene-text-storage": [
-    "PptxSceneBuilderBuildsResolvedNodeLists",
+    "PptxInheritanceLayersRetainLiveRunStylesAndFrames",
     "SceneParagraphRetainsCascadeDefaults",
     "SceneCascadeLayersMatchRendererSnapshot",
     "SceneFedSpansMatchXmlPath",
@@ -7154,7 +7154,7 @@
       "PptxTextGlyphRunInspectionReportsInterGlyphAdjustmentAggregates",
       "PptxNumberedAutofitFramesEmitOfficeCharacterSpacingTextState",
       "PptxNumberedNoAutofitFramesEmitOfficeCharacterSpacingTextState",
-      "PptxSceneBuilderBuildsResolvedNodeLists",
+      "PptxInheritanceLayersRetainLiveRunStylesAndFrames",
       "PortablePptxInspectionUsesTheRenderingFontSource",
       "PortableRenderingPptxPreservesCompositeChartAndText",
       "PptxRunExternalHyperlinkEmitsUriAnnotation"
@@ -7482,7 +7482,6 @@
     "PptxAutomaticTitlePlacement"
   ],
   "pptx-inheritance": [
-    "PptxSceneBuilderBuildsResolvedNodeLists",
       "PptxInheritance",
     "UnstyledRunsInherit",
     "PlainShapeFullRunStyleAgrees",
@@ -7591,7 +7590,7 @@
       "PptxUnsupportedCustomGeometryDiagnosticsUseInheritedSceneState",
       "PptxHiddenMasterShapesStayUnpainted",
       "PptxThemeColorMapResolvesSceneTextAndShapeColors",
-      "PptxSceneBuilderBuildsResolvedNodeLists",
+      "PptxInheritanceLayersRetainLiveRunStylesAndFrames",
       "PptxSyntheticTextBoxResolvesThemeEaAndCsFonts",
       "MustUnderstandUnknownNamespaceWarnsOnceForSharedMaster",
       "SceneParagraphRetainsCascadeDefaults",
@@ -8049,7 +8048,7 @@
       "PptxTextGlyphRunInspectionReportsInterGlyphAdjustmentAggregates",
       "PptxNumberedAutofitFramesEmitOfficeCharacterSpacingTextState",
       "PptxNumberedNoAutofitFramesEmitOfficeCharacterSpacingTextState",
-      "PptxSceneBuilderBuildsResolvedNodeLists",
+      "PptxInheritanceLayersRetainLiveRunStylesAndFrames",
     "PptxEstimatorsSharingResolverReuseLoadedPrograms",
     "PptxSlideRenderLoadsEachFontProgramOnce",
     "PptxSharedResolverDeduplicatesIdenticalSubsets",
