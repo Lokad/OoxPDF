@@ -10,13 +10,8 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxReader
 {
-    // header/footer body and drawing extraction loaded the same parts
-    // separately and repeated across references and sections. One entry per unique
-    // part per Read: XML comes from the shared package cache, body elements and
-    // drawings are each built once, and every referencing type reuses them. Results
-    // are deterministic functions of (part bytes, styles, numbering, document settings, markup mode),
-    // all constant within a Read, so sharing is exact. Diagnostics still fire once
-    // per part via the shared warned-parts set.
+    // Each static part has one parsed entry per document read. Section and
+    // document scopes select their own variants from the shared results.
     private sealed class RelatedStoryPartCache(IMemoryReservation? modelStorage, DocxDocumentSettings documentSettings)
     {
         private readonly Dictionary<string, ParsedRelatedStoryPart> parts = new(StringComparer.OrdinalIgnoreCase);
@@ -51,7 +46,6 @@ internal sealed partial class DocxReader
     {
         public XDocument? Xml;
         public bool MustUnderstandVerdictRendered;
-        public IReadOnlyDictionary<string, OoxRelationship>? Relationships;
         public IReadOnlyList<DocxBodyElement>? BodyElements;
         public IReadOnlyList<DocxFloatingDrawing>? Drawings;
     }
@@ -92,7 +86,9 @@ internal sealed partial class DocxReader
         }
     }
 
-    private static IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> ReadReferencedHeaderFooterBodyElementsByType(
+    private static (
+        IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> BodyElements,
+        IReadOnlyDictionary<string, IReadOnlyList<DocxFloatingDrawing>> FloatingDrawings) ReadReferencedStaticStories(
         XContainer referenceRoot,
         OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships,
@@ -107,6 +103,7 @@ internal sealed partial class DocxReader
         HashSet<string>? warnedParts = null)
     {
         var bodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase);
+        var drawingsByType = new Dictionary<string, IReadOnlyList<DocxFloatingDrawing>>(StringComparer.OrdinalIgnoreCase);
         foreach (var (reference, relationship) in EnumerateReferencedStaticStories(
             referenceRoot, relationships, relationshipType, referenceElementName, cancellationToken))
         {
@@ -124,23 +121,30 @@ internal sealed partial class DocxReader
             }
 
             WarnStoryMustUnderstandOnce(parsed, part.Name, diagnosticSink, warnedParts);
-            parsed.Relationships ??= package.GetRelationships(part.Name, cancellationToken)
-                .ToDictionary(r => r.Id, StringComparer.Ordinal);
-            parsed.BodyElements ??= ReadRelatedStoryBodyElements(
-                parsed.Xml.Root?.Elements() ?? [],
-                styles,
-                numbering,
-                new DocxNumberingCounters(),
-                package,
-                parsed.Relationships,
-                storyCache.DocumentSettings,
-                markupMode,
-                cancellationToken);
+            if (parsed.BodyElements is null || parsed.Drawings is null)
+            {
+                IReadOnlyDictionary<string, OoxRelationship> partRelationships =
+                    package.GetRelationshipDictionary(part.Name, cancellationToken);
+                parsed.BodyElements = ReadRelatedStoryBodyElements(
+                    parsed.Xml.Root?.Elements() ?? [],
+                    styles,
+                    numbering,
+                    new DocxNumberingCounters(),
+                    package,
+                    partRelationships,
+                    storyCache.DocumentSettings,
+                    markupMode,
+                    cancellationToken);
+                parsed.Drawings = ReadFloatingDrawings(parsed.Xml, package, partRelationships, styles, numbering,
+                    storyCache.DocumentSettings, markupMode, cancellationToken);
+            }
+
             string type = (string?)reference.Attribute(WordprocessingNamespace + "type") ?? "default";
             bodyElementsByType[type] = parsed.BodyElements;
+            drawingsByType[type] = parsed.Drawings;
         }
 
-        return bodyElementsByType;
+        return (bodyElementsByType, drawingsByType);
     }
 
     private static IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> ToStaticParagraphsByType(
@@ -150,48 +154,6 @@ internal sealed partial class DocxReader
             pair => pair.Key,
             pair => (IReadOnlyList<DocxParagraph>)DocxBlockTraversal.EnumerateDirectParagraphs(pair.Value).ToArray(),
             StringComparer.OrdinalIgnoreCase);
-    }
-
-    private static IReadOnlyDictionary<string, IReadOnlyList<DocxFloatingDrawing>> ReadReferencedHeaderFooterFloatingDrawingsByType(
-        XContainer referenceRoot,
-        OoxPackage package,
-        IReadOnlyDictionary<string, OoxRelationship> relationships,
-        DocxStyleSet styles,
-        DocxNumberingSet numbering,
-        string relationshipType,
-        string referenceElementName,
-        OoxPdfDocxMarkupMode markupMode,
-        CancellationToken cancellationToken,
-        RelatedStoryPartCache storyCache,
-        Action<OoxPdfDiagnostic>? diagnosticSink = null,
-        HashSet<string>? warnedParts = null)
-    {
-        var drawings = new Dictionary<string, IReadOnlyList<DocxFloatingDrawing>>(StringComparer.OrdinalIgnoreCase);
-        foreach (var (reference, relationship) in EnumerateReferencedStaticStories(
-            referenceRoot, relationships, relationshipType, referenceElementName, cancellationToken))
-        {
-            OoxPart? part = package.GetPart(relationship.ResolvedTarget!);
-            if (part is null)
-            {
-                continue;
-            }
-
-            ParsedRelatedStoryPart parsed = storyCache.GetOrCreate(part.Name);
-            if (parsed.Xml is null)
-            {
-                parsed.Xml = package.LoadXml(part, cancellationToken);
-                storyCache.Admit(parsed.Xml, cancellationToken);
-            }
-
-            WarnStoryMustUnderstandOnce(parsed, part.Name, diagnosticSink, warnedParts);
-            parsed.Relationships ??= package.GetRelationships(part.Name, cancellationToken)
-                .ToDictionary(r => r.Id, StringComparer.Ordinal);
-            parsed.Drawings ??= ReadFloatingDrawings(parsed.Xml, package, parsed.Relationships, styles, numbering, storyCache.DocumentSettings, markupMode, cancellationToken);
-            string type = (string?)reference.Attribute(WordprocessingNamespace + "type") ?? "default";
-            drawings[type] = parsed.Drawings;
-        }
-
-        return drawings;
     }
 
     private static IReadOnlyList<DocxParagraph> SelectDefaultHeaderFooterParagraphs(IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> paragraphsByType)

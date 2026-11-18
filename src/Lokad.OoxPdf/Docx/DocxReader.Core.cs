@@ -98,12 +98,14 @@ internal sealed partial class DocxReader
                 ? ReadParagraph(new XElement(WordprocessingNamespace + "p"), styles, numbering,
                     new DocxNumberingCounters(), package, relationships, null, null, documentSettings,
                     null, revisionFilteringMarkupMode, cancellationToken) : null;
-            IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> headerBodyElementsByType = ReadReferencedHeaderFooterBodyElementsByType(document, package, internalRelationships, styles, numbering, HeaderRelationshipType, "headerReference", revisionFilteringMarkupMode, cancellationToken, storyCache, diagnosticSink, warnedMustUnderstandParts);
-            IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> footerBodyElementsByType = ReadReferencedHeaderFooterBodyElementsByType(document, package, internalRelationships, styles, numbering, FooterRelationshipType, "footerReference", revisionFilteringMarkupMode, cancellationToken, storyCache, diagnosticSink, warnedMustUnderstandParts);
+            var (headerBodyElementsByType, headerDrawingsByType) = ReadReferencedStaticStories(
+                document, package, internalRelationships, styles, numbering, HeaderRelationshipType, "headerReference",
+                revisionFilteringMarkupMode, cancellationToken, storyCache, diagnosticSink, warnedMustUnderstandParts);
+            var (footerBodyElementsByType, footerDrawingsByType) = ReadReferencedStaticStories(
+                document, package, internalRelationships, styles, numbering, FooterRelationshipType, "footerReference",
+                revisionFilteringMarkupMode, cancellationToken, storyCache, diagnosticSink, warnedMustUnderstandParts);
             IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> headersByType = ToStaticParagraphsByType(headerBodyElementsByType);
             IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> footersByType = ToStaticParagraphsByType(footerBodyElementsByType);
-            IReadOnlyDictionary<string, IReadOnlyList<DocxFloatingDrawing>> headerDrawingsByType = ReadReferencedHeaderFooterFloatingDrawingsByType(document, package, internalRelationships, styles, numbering, HeaderRelationshipType, "headerReference", revisionFilteringMarkupMode, cancellationToken, storyCache, diagnosticSink, warnedMustUnderstandParts);
-            IReadOnlyDictionary<string, IReadOnlyList<DocxFloatingDrawing>> footerDrawingsByType = ReadReferencedHeaderFooterFloatingDrawingsByType(document, package, internalRelationships, styles, numbering, FooterRelationshipType, "footerReference", revisionFilteringMarkupMode, cancellationToken, storyCache, diagnosticSink, warnedMustUnderstandParts);
             IReadOnlyList<DocxParagraph> headers = SelectDefaultHeaderFooterParagraphs(headersByType);
             IReadOnlyList<DocxParagraph> footers = SelectDefaultHeaderFooterParagraphs(footersByType);
             IReadOnlyList<DocxRelatedStory> relatedStories = ReadRelatedStories(package, documentPart.Name, styles, numbering, documentSettings, revisionFilteringMarkupMode, cancellationToken, diagnosticSink, warnedMustUnderstandParts, bodyElements, settings, modelStorage);
@@ -135,57 +137,33 @@ internal sealed partial class DocxReader
                 return parts;
             }
 
-            if (pageSize is null)
+            double width = 612d;
+            double height = 792d;
+            double left = 72d;
+            double right = 72d;
+            double top = 72d;
+            double bottom = 72d;
+            if (pageSize is not null)
             {
-                return result = new DocxDocument(
-                    612d,
-                    792d,
-                    72d,
-                    72d,
-                    72d,
-                    72d,
-                    ReadPageSettings(pageSize, pageMargins, sectionProperties, settings, package, internalRelationships, styles, numbering, revisionFilteringMarkupMode, cancellationToken, storyCache),
-                    floatingDrawings,
-                    headers,
-                    footers,
-                    bodyElements,
-                    [],
-                    [])
+                width = OoxUnits.TwipsToPoints(OoxXml.ParseRequiredLong(pageSize, WordprocessingNamespace + "w", "DOCX"));
+                height = OoxUnits.TwipsToPoints(OoxXml.ParseRequiredLong(pageSize, WordprocessingNamespace + "h", "DOCX"));
+                (width, height) = NormalizePageSize(width, height);
+                string? orientation = (string?)pageSize.Attribute(WordprocessingNamespace + "orient");
+                if (orientation?.Equals("landscape", StringComparison.OrdinalIgnoreCase) == true && height > width)
                 {
-                    FontCatalog = fontCatalog,
-                    MainPartName = documentPart.Name,
-                    EquationParts = ReadEquationParts(),
-                    EquationDiagnostics = equationDiagnostics,
-                    StyleCatalog = ToStyleCatalog(styles),
-                    HeaderParagraphsByType = headersByType,
-                    FooterParagraphsByType = footersByType,
-                    HeaderBodyElementsByType = headerBodyElementsByType,
-                    FooterBodyElementsByType = footerBodyElementsByType,
-                    HeaderFloatingDrawingsByType = headerDrawingsByType,
-                    FooterFloatingDrawingsByType = footerDrawingsByType,
-                    RelatedStories = relatedStories,
-                    PackageCommentAnchorIds = commentAnchorInventory.PackageAnchorIds,
-                    HiddenCommentAnchorIds = commentAnchorInventory.HiddenAnchorIds,
-                    Settings = documentSettings,
-                    MarkupMode = markupMode,
-                    FinalSectionBreak = finalSectionBreak,
-                    EmptyFinalSectionParagraph = emptyFinalSectionParagraph
-                };
+                    (width, height) = (height, width);
+                }
+
+                left = ReadMargin(pageMargins, WordprocessingNamespace + "left", left);
+                right = ReadMargin(pageMargins, WordprocessingNamespace + "right", right);
+                top = ReadMargin(pageMargins, WordprocessingNamespace + "top", top);
+                bottom = ReadMargin(pageMargins, WordprocessingNamespace + "bottom", bottom);
             }
 
-            double width = OoxUnits.TwipsToPoints(OoxXml.ParseRequiredLong(pageSize, WordprocessingNamespace + "w", "DOCX"));
-            double height = OoxUnits.TwipsToPoints(OoxXml.ParseRequiredLong(pageSize, WordprocessingNamespace + "h", "DOCX"));
-            (width, height) = NormalizePageSize(width, height);
-            string? orientation = (string?)pageSize.Attribute(WordprocessingNamespace + "orient");
-            if (orientation?.Equals("landscape", StringComparison.OrdinalIgnoreCase) == true && height > width)
-            {
-                (width, height) = (height, width);
-            }
-
-            double left = ReadMargin(pageMargins, WordprocessingNamespace + "left", 72d);
-            double right = ReadMargin(pageMargins, WordprocessingNamespace + "right", 72d);
-            double top = ReadMargin(pageMargins, WordprocessingNamespace + "top", 72d);
-            double bottom = ReadMargin(pageMargins, WordprocessingNamespace + "bottom", 72d);
+            cancellationToken.ThrowIfCancellationRequested();
+            DocxPageSettings pageSettings = finalSectionBreak?.PageSettings ?? ReadPageSettings(
+                null, settings, package, internalRelationships, styles, numbering, revisionFilteringMarkupMode,
+                cancellationToken, storyCache);
             return result = new DocxDocument(
                 width,
                 height,
@@ -193,7 +171,7 @@ internal sealed partial class DocxReader
                 right,
                 top,
                 bottom,
-                ReadPageSettings(pageSize, pageMargins, sectionProperties, settings, package, internalRelationships, styles, numbering, revisionFilteringMarkupMode, cancellationToken, storyCache),
+                pageSettings,
                 floatingDrawings,
                 headers,
                 footers,
@@ -597,19 +575,19 @@ internal sealed partial class DocxReader
     }
 
     private static DocxPageSettings ReadPageSettings(
-        XElement? pageSize,
-        XElement? pageMargins,
         XElement? sectionProperties,
         XDocument? settings,
-        OoxPackage? package,
-        IReadOnlyDictionary<string, OoxRelationship>? relationships,
-        DocxStyleSet? styles,
-        DocxNumberingSet? numbering,
+        OoxPackage package,
+        IReadOnlyDictionary<string, OoxRelationship> relationships,
+        DocxStyleSet styles,
+        DocxNumberingSet numbering,
         OoxPdfDocxMarkupMode markupMode,
         CancellationToken cancellationToken,
         RelatedStoryPartCache storyCache)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        XElement? pageSize = sectionProperties?.Element(WordprocessingNamespace + "pgSz");
+        XElement? pageMargins = sectionProperties?.Element(WordprocessingNamespace + "pgMar");
         XElement? titlePage = sectionProperties?.Element(WordprocessingNamespace + "titlePg");
         // Office A/B (w53 even-pages probe, Word-COM rendered): Word honors the
         // section-level flag; settings.xml stays as a fallback for packages that carry
@@ -641,33 +619,17 @@ internal sealed partial class DocxReader
             FootnoteReferenceSettings = ReadNoteReferenceSettings(sectionProperties?.Element(WordprocessingNamespace + "footnotePr")),
             EndnoteReferenceSettings = ReadNoteReferenceSettings(sectionProperties?.Element(WordprocessingNamespace + "endnotePr"))
         };
-        if (sectionProperties is null || package is null || relationships is null || styles is null || numbering is null)
+        if (sectionProperties is null)
         {
             return pageSettings;
         }
 
-        IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> headerBodyElementsByType = ReadReferencedHeaderFooterBodyElementsByType(
-            sectionProperties,
-            package,
-            relationships,
-            styles,
-            numbering,
-            HeaderRelationshipType,
-            "headerReference",
-            markupMode,
-            cancellationToken,
-            storyCache);
-        IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> footerBodyElementsByType = ReadReferencedHeaderFooterBodyElementsByType(
-            sectionProperties,
-            package,
-            relationships,
-            styles,
-            numbering,
-            FooterRelationshipType,
-            "footerReference",
-            markupMode,
-            cancellationToken,
-            storyCache);
+        var (headerBodyElementsByType, headerDrawingsByType) = ReadReferencedStaticStories(
+            sectionProperties, package, relationships, styles, numbering, HeaderRelationshipType, "headerReference",
+            markupMode, cancellationToken, storyCache);
+        var (footerBodyElementsByType, footerDrawingsByType) = ReadReferencedStaticStories(
+            sectionProperties, package, relationships, styles, numbering, FooterRelationshipType, "footerReference",
+            markupMode, cancellationToken, storyCache);
 
         return pageSettings with
         {
@@ -675,28 +637,8 @@ internal sealed partial class DocxReader
             FooterBodyElementsByType = footerBodyElementsByType,
             HeaderParagraphsByType = ToStaticParagraphsByType(headerBodyElementsByType),
             FooterParagraphsByType = ToStaticParagraphsByType(footerBodyElementsByType),
-            HeaderFloatingDrawingsByType = ReadReferencedHeaderFooterFloatingDrawingsByType(
-                sectionProperties,
-                package,
-                relationships,
-                styles,
-                numbering,
-                HeaderRelationshipType,
-                "headerReference",
-                markupMode,
-                cancellationToken,
-                storyCache),
-            FooterFloatingDrawingsByType = ReadReferencedHeaderFooterFloatingDrawingsByType(
-                sectionProperties,
-                package,
-                relationships,
-                styles,
-                numbering,
-                FooterRelationshipType,
-                "footerReference",
-                markupMode,
-                cancellationToken,
-                storyCache)
+            HeaderFloatingDrawingsByType = headerDrawingsByType,
+            FooterFloatingDrawingsByType = footerDrawingsByType
         };
     }
 

@@ -26,8 +26,6 @@ internal sealed partial class DocxReader
         XElement? columns = sectionProperties.Element(WordprocessingNamespace + "cols");
         return new DocxSectionBreakElement(
             ReadPageSettings(
-                sectionProperties.Element(WordprocessingNamespace + "pgSz"),
-                sectionProperties.Element(WordprocessingNamespace + "pgMar"),
                 sectionProperties,
                 settings,
                 package,

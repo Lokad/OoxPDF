@@ -831,6 +831,8 @@ internal static partial class DocxHeaderFooterTests
                 <?xml version="1.0" encoding="UTF-8"?>
                 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
                   <Relationship Id="rIdHeader1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/>
+                  <Relationship Id="rIdEarlierHeader" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header2.xml"/>
+                  <Relationship Id="rIdMissingHeader" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="missing-header.xml"/>
                 </Relationships>
                 """),
             ["word/_rels/header1.xml.rels"] = TestFixtures.Utf8("""
@@ -847,6 +849,7 @@ internal static partial class DocxHeaderFooterTests
                        xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"
                        xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
                   <w:p>
+                    <w:r><w:t>Selected header</w:t></w:r>
                     <w:r>
                       <w:drawing>
                         <wp:anchor distT="0" distB="0" distL="0" distR="0" behindDoc="1">
@@ -865,6 +868,11 @@ internal static partial class DocxHeaderFooterTests
                   </w:p>
                 </w:hdr>
                 """),
+            ["word/header2.xml"] = TestFixtures.Utf8("""
+                <w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:p><w:r><w:t>Earlier header</w:t></w:r></w:p>
+                </w:hdr>
+                """),
             ["word/document.xml"] = TestFixtures.Utf8("""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
@@ -872,7 +880,9 @@ internal static partial class DocxHeaderFooterTests
                   <w:body>
                     <w:p><w:r><w:t>Body text</w:t></w:r></w:p>
                     <w:sectPr>
+                      <w:headerReference w:type="default" r:id="rIdEarlierHeader"/>
                       <w:headerReference w:type="default" r:id="rIdHeader1"/>
+                      <w:headerReference w:type="default" r:id="rIdMissingHeader"/>
                       <w:pgSz w:w="12240" w:h="15840"/>
                     </w:sectPr>
                   </w:body>
@@ -885,6 +895,10 @@ internal static partial class DocxHeaderFooterTests
         OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
         DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
+        foreach (var paragraphsByType in new[] { document.HeaderParagraphsByType, document.PageSettings.HeaderParagraphsByType })
+        {
+            TestAssert.Equal("Selected header", string.Concat(paragraphsByType["default"].Single().Runs.Select(run => run.Text)));
+        }
         DocxFloatingDrawing drawing = document.HeaderFloatingDrawingsByType["default"].Single();
         TestAssert.Equal(1, document.PageSettings.HeaderFloatingDrawingsByType["default"].Count);
         TestAssert.Equal("rIdHeaderImage1", drawing.ImageRelationshipId ?? string.Empty);
