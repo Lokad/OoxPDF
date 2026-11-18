@@ -56,10 +56,10 @@ internal static partial class PptxInheritanceTests
         // Presentation defaults remain below the font reference. In particular,
         // its noFill must not suppress an explicitly visible shape default.
         foreach (string presentation in new[] { blue, hidden })
-        foreach (string paragraph in new[] { "", "<a:latin typeface=\"DejaVu Sans\"/>", "<a:gradFill/>",
-            "<a:solidFill><a:schemeClr val=\"unknown\"/></a:solidFill>" })
+        foreach (var (paragraph, diagnostic) in new (string, string?)[] { ("", null), ("<a:latin typeface=\"DejaVu Sans\"/>", null),
+            ("<a:gradFill/>", "PPTX_UNSUPPORTED_GRADIENT_FILL"), ("<a:solidFill><a:schemeClr val=\"unknown\"/></a:solidFill>", null) })
         {
-            PdfPage page = RenderPaintOwners(presentation, "<a:srgbClr val=\"FF0000\"/>", paragraph, "");
+            PdfPage page = RenderPaintOwners(presentation, "<a:srgbClr val=\"FF0000\"/>", paragraph, "", diagnostic);
             TestAssert.Contains("1 0 0 rg", page.Content);
             TestAssert.Contains("OWNER_PROBE", DocxPageFootnoteNumberingTests.DecodeText(page));
         }
@@ -91,7 +91,7 @@ internal static partial class PptxInheritanceTests
         }
     }
 
-    private static PdfPage RenderPaintOwners(string presentation, string fontReference, string paragraph, string direct)
+    private static PdfPage RenderPaintOwners(string presentation, string fontReference, string paragraph, string direct, string? expectedDiagnostic = null)
     {
         var parts = TextDefaultParts("<a:defRPr sz=\"2400\"><a:latin typeface=\"DejaVu Sans\"/>" + presentation + "</a:defRPr>", "", direct);
         Edit(parts, "ppt/slides/slide1.xml", xml => {
@@ -107,7 +107,8 @@ internal static partial class PptxInheritanceTests
         WithDeck(parts, (document, package) => {
             var diagnostics = new List<OoxPdfDiagnostic>();
             result = Render(document, package, diagnostics).Single();
-            TestAssert.Equal(0, diagnostics.Count);
+            TestAssert.Equal(expectedDiagnostic is null ? 0 : 1, diagnostics.Count);
+            if (expectedDiagnostic is not null) TestAssert.Equal(expectedDiagnostic, diagnostics.Single().Id);
         });
         PdfPage page = result ?? throw new InvalidOperationException("The paint-owner control produced no page.");
         PdfContentValidator.ValidatePage(page, 0, default);
