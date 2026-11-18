@@ -289,16 +289,33 @@ internal static class PptxCoreTests
             "Cases",
             "pptx-ladder-04-typography-bold-wrap-probe.pptx"));
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        using OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
-        string[] renderedLines = PptxRenderer.InspectTextLayout(document, package, 0)
-            .Frames
-            .SelectMany(frame => frame.Paragraphs)
-            .SelectMany(paragraph => paragraph.Lines)
-            .Select(line => string.Concat(line.Spans.Select(span => span.Text)))
-            .ToArray();
+        string[] ReadLines(IFontResolver resolver) =>
+            PptxRenderer.InspectTextLayout(document, package, 0, inspectionFonts: new PresentationFontResolver(resolver))
+                .Frames
+                .SelectMany(frame => frame.Paragraphs)
+                .SelectMany(paragraph => paragraph.Lines)
+                .Select(line => string.Concat(line.Spans.Select(span => span.Text)))
+                .ToArray();
 
+        string[] portableLines = ReadLines(new PortableRenderingTests.PinnedResolver(mathFont: true));
+        TestAssert.True(portableLines.Length > 1, "The pinned font must wrap the paragraph.");
+        TestAssert.Equal("Quality decisions depend on careful operational planning and reliable daily execution.", string.Concat(portableLines));
+        TestAssert.True(portableLines[..^1].All(line => line.EndsWith(' ')), "Wrapped lines retain their trailing spaces.");
+
+        string fontsDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Fonts);
+        if (fontsDirectory.Length == 0 || !File.Exists(Path.Combine(fontsDirectory, "cambria.ttc")))
+        {
+            return;
+        }
+
+        using var cambriaResolver = new WindowsFontResolver(fontsDirectory);
+        FontFaceResolution cambria = cambriaResolver.Resolve(new FontRequest("Cambria Math", Bold: true));
+        TestAssert.Equal("Cambria Math", cambria.ResolvedFamily);
+        TestAssert.True(cambria.HasMathTable, "The exact wrap uses the installed Cambria Math face.");
+        string[] renderedLines = ReadLines(cambriaResolver);
         TestAssert.Equal(2, renderedLines.Length);
         TestAssert.Equal("Quality decisions depend on careful operational planning and ", renderedLines[0]);
         TestAssert.Equal("reliable daily execution.", renderedLines[1]);
