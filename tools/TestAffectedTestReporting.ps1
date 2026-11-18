@@ -89,7 +89,7 @@ try {
     }
 
     $manifest=Join-Path $root 'union-capabilities.json'
-    @{union=@('ReportAlpha','ReportExplicitSlow')} | ConvertTo-Json | Set-Content -LiteralPath $manifest -Encoding utf8
+    @{union=@('=ReportAlpha','ReportExplicitSlow')} | ConvertTo-Json | Set-Content -LiteralPath $manifest -Encoding utf8
     foreach($case in @('union','group-skip','capability-skip','group-and-capability-skip','unknown-group','slow-only-group','list-only')) {
         $global:ooxPdfAffectedReportFault=$case
         $global:ooxPdfAffectedReportCalls=0
@@ -127,11 +127,15 @@ try {
         $checks+=@{Case=$case;GatePassed=$shouldPass;Error=$caught;RunnerInvocations=$global:ooxPdfAffectedReportCalls}
     }
 
-    # An exact method name is still a substring selector. Preserve its neighbors,
-    # literal punctuation and ordinal casing, and never match across catalogue rows.
+    # Bare selectors keep literal substring matching. The equals prefix requires
+    # ordinal identity with one registered name, even in a mixed selection.
     $selectorCases=@(
         @{Name='selector-overlap';Filters=@('SelectionAlpha','ectionOther','SelectionAlpha');Wanted=@('SelectionAlpha','SelectionAlphaNeighbor','Outer.SelectionAlpha','SelectionOther')},
         @{Name='selector-literal-case';Filters=@('selectionalpha','ITEM','Selection[Literal]');Wanted=@('SelectionAlpha','SelectionAlphaNeighbor','Outer.SelectionAlpha','item','Selection[Literal]')},
+        @{Name='selector-exact-mixed';Filters=@('=SelectionAlpha','ectionOther','=SelectionAlpha','=Selection[Literal]');Wanted=@('SelectionAlpha','SelectionOther','Selection[Literal]')},
+        @{Name='selector-exact-case';Filters=@('=selectionalpha');Wanted=@()},
+        @{Name='selector-exact-prefix';Filters=@('=SelectionAlph');Wanted=@()},
+        @{Name='selector-exact-empty';Filters=@('=');Wanted=@()},
         @{Name='selector-missing';Filters=@('SelectionAlpha','MissingSelection');Wanted=@()},
         @{Name='selector-cross-row';Filters=@("SelectionAlpha`nSelectionAlphaNeighbor");Wanted=@()}
     )

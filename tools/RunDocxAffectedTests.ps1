@@ -94,10 +94,17 @@ if (!$AllDocx -and @($filters | Where-Object { $_ -in @('Docx', 'Balloon', '') }
     throw 'Use capability-specific filters, or explicit -AllDocx for a broader milestone'
 }
 $selected = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+$exactNames = [Collections.Generic.HashSet[string]]::new([string[]]$catalog.Name, [StringComparer]::Ordinal)
 # Search the catalogue in native string code instead of a PowerShell loop over
 # every selector/test pair. Newlines delimit names and cannot occur in a name.
 $catalogNames = [string]::Join("`n", [string[]]$catalog.Name) + "`n"
 foreach ($filter in $filters) {
+    if ($filter.StartsWith('=', [StringComparison]::Ordinal)) {
+        $name = $filter.Substring(1)
+        if (!$exactNames.Contains($name)) { throw ('Empty capability selector: ' + $filter) }
+        $null = $selected.Add($name)
+        continue
+    }
     $found = $false
     $offset = 0
     while (!$filter.Contains("`n") -and

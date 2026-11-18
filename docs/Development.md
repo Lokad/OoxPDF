@@ -38,6 +38,8 @@ they reveal source/layout ownership; helper call counts alone are not correctnes
 The console runner accepts `--group`, `--test`, or `--test-set <file.json>` (an array
 of exact method names). `tools/RunDocxAffectedTests.ps1` selects capabilities from
 `tools/qualification-capabilities.json` and runs each selected method once.
+Use `=MethodName` in the manifest or `-TestFilter` to select one exact,
+case-sensitive name. Bare selectors match case-insensitive substrings.
 `-FastGroup` unions portable groups; declare understood environment skips explicitly.
 Keep runner TMP/TEMP in its ignored artifact directory. The qualification command
 owns a fresh physical temporary leaf and removes it after complete passing results;
