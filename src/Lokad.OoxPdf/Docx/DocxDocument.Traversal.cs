@@ -55,6 +55,33 @@ internal static class DocxBlockTraversal
 
     public static IEnumerable<DocxParagraph> EnumerateResourceParagraphs(DocxDocument document, CancellationToken token)
     {
+        foreach (var paragraph in ResolveResourceContent(document, token).Paragraphs)
+        {
+            token.ThrowIfCancellationRequested();
+            yield return paragraph;
+        }
+    }
+
+    public static IEnumerable<DocxInlineImage> EnumerateResourceImages(DocxDocument document, CancellationToken token)
+    {
+        var (paragraphs, drawings) = ResolveResourceContent(document, token);
+        foreach (var paragraph in paragraphs)
+        {
+            token.ThrowIfCancellationRequested();
+            foreach (var image in paragraph.Images)
+                yield return image;
+        }
+        foreach (var drawing in drawings)
+        {
+            token.ThrowIfCancellationRequested();
+            if (drawing.Image is { } image)
+                yield return image;
+        }
+    }
+
+    private static (IEnumerable<DocxParagraph> Paragraphs, IEnumerable<DocxFloatingDrawing> Drawings)
+        ResolveResourceContent(DocxDocument document, CancellationToken token)
+    {
         var stories = EnumerateStaticStorySources(document, token)
             .Where(story => DocxLayoutEngine.IsStaticStoryVariantEnabled(story.Settings, story.Variant)).ToArray();
         var drawings = document.FloatingDrawings.Concat(stories.SelectMany(story => story.Drawings))
@@ -63,21 +90,8 @@ internal static class DocxBlockTraversal
             .Concat(stories.SelectMany(story => EnumerateBodyParagraphs(story.BodyElements)))
             .Concat(document.RelatedStories.SelectMany(EnumerateBodyParagraphs))
             .Concat(drawings.SelectMany(drawing => EnumerateBodyParagraphs(drawing.TextBoxBodyElements)));
-        foreach (var paragraph in parents.Concat(parents.SelectMany(EnumerateInlineTextBoxParagraphs)))
-        {
-            token.ThrowIfCancellationRequested();
-            yield return paragraph;
-        }
+        return (parents.Concat(parents.SelectMany(EnumerateInlineTextBoxParagraphs)), drawings);
     }
-
-    public static IEnumerable<DocxInlineImage> EnumerateResourceImages(DocxDocument document, CancellationToken token) =>
-        EnumerateResourceParagraphs(document, token).SelectMany(paragraph => paragraph.Images)
-            .Concat(document.FloatingDrawings
-                .Concat(EnumerateStaticStorySources(document, token)
-                    .Where(story => DocxLayoutEngine.IsStaticStoryVariantEnabled(story.Settings, story.Variant))
-                    .SelectMany(story => story.Drawings))
-                .Concat(document.RelatedStories.SelectMany(story => story.FloatingDrawings))
-                .Select(drawing => drawing.Image).OfType<DocxInlineImage>());
 
     private static IEnumerable<DocxFloatingDrawing> EnumerateSourceFloatingDrawings(DocxDocument document)
     {

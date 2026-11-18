@@ -54,6 +54,11 @@ internal static partial class DocxInlineCompositionTests
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
         {
             var source = ActivateInheritedDrawingVariant(ReadInheritedStaticPicture(story, mode), story, variant);
+            var earlier = source.BodyElements.OfType<DocxSectionBreakElement>().Single().PageSettings;
+            var sourceDrawings = story == "header" ? earlier.HeaderFloatingDrawingsByType : earlier.FooterFloatingDrawingsByType;
+            var image = TestAssert.NotNull(sourceDrawings[variant].Single().Image);
+            TestAssert.True(DocxBlockTraversal.EnumerateResourceImages(source, default).Any(resource => ReferenceEquals(resource, image)),
+                "The inherited floating picture remains reachable for resource discovery.");
             var pages = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true), mode, CachedMathGeometry(mode))
                 .RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(3, pages.Length);
