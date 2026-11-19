@@ -21,7 +21,6 @@ internal sealed partial class PdfEmbeddedFont
     {
         Font = font;
         BaseFontName = baseFontName;
-        CodepointSetHash = codepointSetHash;
         UnicodeByOriginalGlyph = unicodeByOriginalGlyph;
         if (subset is not null)
         {
@@ -40,7 +39,7 @@ internal sealed partial class PdfEmbeddedFont
         // ResourceKey is read on every writer lookup (grouping, object
         // numbering, content emission), often in per-rune paths. Cache the key once
         // instead of concatenating a fresh string per access.
-        ResourceKey = BaseFontName + "-U" + CodepointSetHash;
+        ResourceKey = BaseFontName + "-U" + codepointSetHash;
         if (subset is null)
         {
             // Whole fonts have no subset tag. Their display name and Unicode map
@@ -60,11 +59,6 @@ internal sealed partial class PdfEmbeddedFont
     public ReadOnlyMemory<byte> FontProgramBytes => subsetFontBytes is null ? Font.Bytes : subsetFontBytes;
 
     public bool UsesSubsetFontProgram => subsetFontBytes is not null;
-
-    // Subset CIDs belong to the selected glyph mapping. Canonical character
-    // mappings retain their established identity; alternate glyphs also include
-    // glyph-to-Unicode ownership so distinct remaps cannot alias resources.
-    public string CodepointSetHash { get; }
 
     public string ResourceKey { get; }
 
