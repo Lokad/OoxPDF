@@ -109,6 +109,7 @@ internal sealed partial record DocxStructureSnapshot(
                 };
             }
 
+        var relatedStories = new RelatedStoryIndex(document.RelatedStories);
         var blocks = new List<DocxStructureBlockSnapshot>(document.BodyElements.Count);
         var tables = new List<DocxStructureTableSnapshot>();
         var adjacency = new List<DocxStructureTableAdjacencySnapshot>();
@@ -121,16 +122,16 @@ internal sealed partial record DocxStructureSnapshot(
             switch (element)
             {
                 case DocxParagraphElement paragraph:
-                    blocks.Add(FromParagraph(blockIndex, previousKind, nextKind, paragraph.Paragraph, document.RelatedStories));
+                    blocks.Add(FromParagraph(blockIndex, previousKind, nextKind, paragraph.Paragraph, relatedStories));
                     break;
                 case DocxTableElement table:
-                    blocks.Add(FromTable(blockIndex, previousKind, nextKind, table.Table, tableIndex, document.RelatedStories));
+                    blocks.Add(FromTable(blockIndex, previousKind, nextKind, table.Table, tableIndex, relatedStories));
                     tables.Add(ToTableSnapshot(table.Table, tableIndex, blockIndex));
                     adjacency.Add(ToTableAdjacencySnapshot(document.BodyElements, table.Table, tableIndex, blockIndex, previousKind, nextKind));
                     tableIndex++;
                     break;
                 case DocxImplicitParagraphElement implicitParagraph:
-                    blocks.Add(FromImplicitParagraph(blockIndex, previousKind, nextKind, implicitParagraph));
+                    blocks.Add(DocxStructureBlockSnapshot.ForImplicitParagraph(blockIndex, previousKind, nextKind, implicitParagraph));
                     break;
                 case DocxPageBreakElement pageBreak:
                     blocks.Add(FromPageBreak(blockIndex, previousKind, nextKind, pageBreak));
@@ -150,6 +151,7 @@ internal sealed partial record DocxStructureSnapshot(
         DocxParagraph[] allParagraphs = EnumerateParagraphs(document).ToArray();
         DocxRevisionInfo[] documentRevisions = EnumerateDocumentRevisions(document).ToArray();
         DocxStructureCommentStoryAnchorSnapshot[] commentStoryAnchors = ToCommentStoryAnchorSnapshots(document).ToArray();
+        var (inlineReferences, commentRanges) = ToAnnotationSnapshots(document.BodyElements, relatedStories);
         return new DocxStructureSnapshot(
             document.MarkupMode.ToString(),
             document.BodyElements.Count,
@@ -190,15 +192,15 @@ internal sealed partial record DocxStructureSnapshot(
             blocks.Sum(block => block.InternalHyperlinkCount),
             document.FloatingDrawings.Count,
             blocks,
-            ToStorySnapshots(document, blocks),
-            ToInlineReferenceSnapshots(document),
+            ToStorySnapshots(document, blocks, relatedStories),
+            inlineReferences,
             document.FloatingDrawings.Select((drawing, index) => ToFloatingDrawingSnapshot(drawing, index)).ToArray(),
             document.StyleCatalog,
             ToStyleUsages(document),
             ToListUsages(document),
             tables,
             adjacency,
-            ToCommentRangeSnapshots(document),
+            commentRanges,
             ToRevisionRangeSnapshots(document),
             FormattingRevisionCount: CountFormattingRevisions(documentRevisions),
             RunFormattingRevisionCount: CountFormattingRevisions(documentRevisions, DocxRevisionPropertyFamily.Run),
@@ -223,7 +225,8 @@ internal sealed partial record DocxStructureSnapshot(
 
     private static IReadOnlyList<DocxStructureStorySnapshot> ToStorySnapshots(
         DocxDocument document,
-        IReadOnlyList<DocxStructureBlockSnapshot> bodyBlocks)
+        IReadOnlyList<DocxStructureBlockSnapshot> bodyBlocks,
+        RelatedStoryIndex relatedStories)
     {
         DocxParagraph[] bodyParagraphs = DocxBlockTraversal.EnumerateBodyParagraphs(document).ToArray();
         var stories = new List<DocxStructureStorySnapshot>
@@ -267,9 +270,9 @@ internal sealed partial record DocxStructureSnapshot(
                 null)
         };
 
-        AddStaticStories(stories, DocxStoryKind.Header, "document", null, document.HeaderBodyElementsByType, document.HeaderParagraphsByType, document.HeaderFloatingDrawingsByType, document.RelatedStories);
-        AddStaticStories(stories, DocxStoryKind.Footer, "document", null, document.FooterBodyElementsByType, document.FooterParagraphsByType, document.FooterFloatingDrawingsByType, document.RelatedStories);
-        AddRelatedStories(stories, document.RelatedStories);
+        AddStaticStories(stories, DocxStoryKind.Header, "document", null, document.HeaderBodyElementsByType, document.HeaderParagraphsByType, document.HeaderFloatingDrawingsByType, relatedStories);
+        AddStaticStories(stories, DocxStoryKind.Footer, "document", null, document.FooterBodyElementsByType, document.FooterParagraphsByType, document.FooterFloatingDrawingsByType, relatedStories);
+        AddRelatedStories(stories, relatedStories);
         for (int blockIndex = 0; blockIndex < document.BodyElements.Count; blockIndex++)
         {
             if (document.BodyElements[blockIndex] is not DocxSectionBreakElement sectionBreak)
@@ -278,8 +281,8 @@ internal sealed partial record DocxStructureSnapshot(
             }
 
             string scope = "section@" + blockIndex.ToString(CultureInfo.InvariantCulture);
-            AddStaticStories(stories, DocxStoryKind.Header, scope, blockIndex, sectionBreak.PageSettings.HeaderBodyElementsByType, sectionBreak.PageSettings.HeaderParagraphsByType, sectionBreak.PageSettings.HeaderFloatingDrawingsByType, document.RelatedStories);
-            AddStaticStories(stories, DocxStoryKind.Footer, scope, blockIndex, sectionBreak.PageSettings.FooterBodyElementsByType, sectionBreak.PageSettings.FooterParagraphsByType, sectionBreak.PageSettings.FooterFloatingDrawingsByType, document.RelatedStories);
+            AddStaticStories(stories, DocxStoryKind.Header, scope, blockIndex, sectionBreak.PageSettings.HeaderBodyElementsByType, sectionBreak.PageSettings.HeaderParagraphsByType, sectionBreak.PageSettings.HeaderFloatingDrawingsByType, relatedStories);
+            AddStaticStories(stories, DocxStoryKind.Footer, scope, blockIndex, sectionBreak.PageSettings.FooterBodyElementsByType, sectionBreak.PageSettings.FooterParagraphsByType, sectionBreak.PageSettings.FooterFloatingDrawingsByType, relatedStories);
         }
 
         return stories;
@@ -293,7 +296,7 @@ internal sealed partial record DocxStructureSnapshot(
         IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> bodyElementsByType,
         IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> paragraphsByType,
         IReadOnlyDictionary<string, IReadOnlyList<DocxFloatingDrawing>> drawingsByType,
-        IReadOnlyList<DocxRelatedStory> relatedStories)
+        RelatedStoryIndex relatedStories)
     {
         string[] variantTypes = bodyElementsByType.Keys
             .Concat(paragraphsByType.Keys)
@@ -350,12 +353,9 @@ internal sealed partial record DocxStructureSnapshot(
         }
     }
 
-    private static void AddRelatedStories(List<DocxStructureStorySnapshot> stories, IReadOnlyList<DocxRelatedStory> relatedStories)
+    private static void AddRelatedStories(List<DocxStructureStorySnapshot> stories, RelatedStoryIndex relatedStories)
     {
-        foreach (DocxRelatedStory story in relatedStories
-            .OrderBy(story => story.Kind.ToValueString(), StringComparer.Ordinal)
-            .ThenBy(story => story.PartName, StringComparer.Ordinal)
-            .ThenBy(story => story.Id, StringComparer.Ordinal))
+        foreach (DocxRelatedStory story in relatedStories.Ordered)
         {
             DocxParagraph[] paragraphs = DocxBlockTraversal.EnumerateBodyParagraphs(story).ToArray();
             DocxTable[] tables = DocxBlockTraversal.EnumerateBodyTables(story).ToArray();
@@ -400,26 +400,17 @@ internal sealed partial record DocxStructureSnapshot(
         }
     }
 
-    private static IReadOnlyList<DocxStructureInlineReferenceSnapshot> ToInlineReferenceSnapshots(DocxDocument document)
+    private static (IReadOnlyList<DocxStructureInlineReferenceSnapshot> InlineReferences,
+        IReadOnlyList<DocxStructureCommentRangeSnapshot> CommentRanges) ToAnnotationSnapshots(
+        IReadOnlyList<DocxBodyElement> bodyElements, RelatedStoryIndex relatedStories)
     {
-            (int? Index, DocxRelatedStory? Story) ResolveInlineReferenceStory(
-                DocxInlineReference reference,
-                IReadOnlyList<DocxRelatedStory> relatedStories)
-            {
-                return ResolveRelatedStory(reference.Kind, reference.Id, relatedStories);
-            }
-
-        DocxRelatedStory[] relatedStories = document.RelatedStories
-            .OrderBy(story => story.Kind.ToValueString(), StringComparer.Ordinal)
-            .ThenBy(story => story.PartName, StringComparer.Ordinal)
-            .ThenBy(story => story.Id, StringComparer.Ordinal)
-            .ToArray();
         var references = new List<DocxStructureInlineReferenceSnapshot>();
-        foreach ((int blockIndex, string blockKind, int paragraphIndex, DocxParagraph paragraph) in EnumerateBodyReferenceParagraphs(document.BodyElements))
+        var ranges = new List<DocxStructureCommentRangeSnapshot>();
+        foreach ((int blockIndex, string blockKind, int paragraphIndex, DocxParagraph paragraph) in EnumerateBodyReferenceParagraphs(bodyElements))
         {
             foreach (DocxInlineReference reference in paragraph.InlineReferences)
             {
-                (int? storyIndex, DocxRelatedStory? story) = ResolveInlineReferenceStory(reference, relatedStories);
+                (int? storyIndex, DocxRelatedStory? story) = relatedStories.Resolve(reference.Kind, reference.Id);
                 references.Add(new DocxStructureInlineReferenceSnapshot(
                     blockIndex,
                     blockKind,
@@ -441,24 +432,9 @@ internal sealed partial record DocxStructureSnapshot(
                     reference.Revision?.Kind.ToValueString(),
                     reference.Revision?.SourceElement));
             }
-        }
-
-        return references;
-    }
-
-    private static IReadOnlyList<DocxStructureCommentRangeSnapshot> ToCommentRangeSnapshots(DocxDocument document)
-    {
-        DocxRelatedStory[] relatedStories = document.RelatedStories
-            .OrderBy(story => story.Kind.ToValueString(), StringComparer.Ordinal)
-            .ThenBy(story => story.PartName, StringComparer.Ordinal)
-            .ThenBy(story => story.Id, StringComparer.Ordinal)
-            .ToArray();
-        var ranges = new List<DocxStructureCommentRangeSnapshot>();
-        foreach ((int blockIndex, string blockKind, int paragraphIndex, DocxParagraph paragraph) in EnumerateBodyReferenceParagraphs(document.BodyElements))
-        {
             foreach (DocxCommentRange range in paragraph.CommentRanges)
             {
-                (int? storyIndex, DocxRelatedStory? story) = ResolveRelatedStory(DocxRelatedStoryKind.Comment, range.Id, relatedStories);
+                (int? storyIndex, DocxRelatedStory? story) = relatedStories.Resolve(DocxRelatedStoryKind.Comment, range.Id);
                 ranges.Add(new DocxStructureCommentRangeSnapshot(
                     blockIndex,
                     blockKind,
@@ -478,7 +454,7 @@ internal sealed partial record DocxStructureSnapshot(
             }
         }
 
-        return ranges;
+        return (references, ranges);
     }
 
     private static IReadOnlyList<DocxStructureCommentStoryAnchorSnapshot> ToCommentStoryAnchorSnapshots(DocxDocument document)
@@ -619,27 +595,32 @@ internal sealed partial record DocxStructureSnapshot(
         }
     }
 
-    private static (int? Index, DocxRelatedStory? Story) ResolveRelatedStory(
-        DocxRelatedStoryKind kind,
-        string? id,
-        IReadOnlyList<DocxRelatedStory> relatedStories)
+    private sealed class RelatedStoryIndex
     {
-        if (id is null)
-        {
-            return (null, null);
-        }
+        private readonly Dictionary<(DocxRelatedStoryKind Kind, string Id), int> firstIndex = new();
 
-        for (int index = 0; index < relatedStories.Count; index++)
+        public RelatedStoryIndex(IReadOnlyList<DocxRelatedStory> stories)
         {
-            DocxRelatedStory story = relatedStories[index];
-            if (story.Kind == kind &&
-                string.Equals(story.Id, id, StringComparison.Ordinal))
+            Ordered = stories.OrderBy(story => story.Kind.ToValueString(), StringComparer.Ordinal)
+                .ThenBy(story => story.PartName, StringComparer.Ordinal)
+                .ThenBy(story => story.Id, StringComparer.Ordinal)
+                .ToArray();
+            for (int index = 0; index < Ordered.Count; index++)
             {
-                return (index, story);
+                DocxRelatedStory story = Ordered[index];
+                if (story.Id is not null)
+                {
+                    firstIndex.TryAdd((story.Kind, story.Id), index);
+                }
             }
         }
 
-        return (null, null);
+        public IReadOnlyList<DocxRelatedStory> Ordered { get; }
+
+        public (int? Index, DocxRelatedStory? Story) Resolve(DocxRelatedStoryKind kind, string? id) =>
+            id is not null && firstIndex.TryGetValue((kind, id), out int index)
+                ? (index, Ordered[index])
+                : (null, null);
     }
 
     private static IReadOnlyList<DocxStructureStyleUsageSnapshot> ToStyleUsages(DocxDocument document)

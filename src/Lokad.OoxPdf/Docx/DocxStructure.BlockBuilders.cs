@@ -9,7 +9,7 @@ internal sealed partial record DocxStructureSnapshot
         string? previousKind,
         string? nextKind,
         DocxParagraph paragraph,
-        IReadOnlyList<DocxRelatedStory> relatedStories)
+        RelatedStoryIndex relatedStories)
     {
             bool HasVisibleText(DocxParagraph paragraph)
             {
@@ -123,7 +123,7 @@ internal sealed partial record DocxStructureSnapshot
         string? nextKind,
         DocxTable table,
         int tableIndex,
-        IReadOnlyList<DocxRelatedStory> relatedStories)
+        RelatedStoryIndex relatedStories)
     {
         DocxParagraph[] paragraphs = DocxBlockTraversal.EnumerateTableParagraphs(table).ToArray();
         DocxRevisionInfo[] revisions = EnumerateTableRevisions(table).ToArray();
@@ -230,11 +230,6 @@ internal sealed partial record DocxStructureSnapshot
     private static DocxStructureBlockSnapshot FromPageBreak(int blockIndex, string? previousKind, string? nextKind, DocxPageBreakElement pageBreak)
     {
         return DocxStructureBlockSnapshot.ForPageBreak(blockIndex, previousKind, nextKind, pageBreak) with { SourceBreakCount = pageBreak.BreakCount };
-    }
-
-    private static DocxStructureBlockSnapshot FromImplicitParagraph(int blockIndex, string? previousKind, string? nextKind, DocxImplicitParagraphElement implicitParagraph)
-    {
-        return DocxStructureBlockSnapshot.ForImplicitParagraph(blockIndex, previousKind, nextKind, implicitParagraph);
     }
 
     private static DocxStructureBlockSnapshot FromManualBreak(int blockIndex, string? previousKind, string? nextKind, DocxManualBreakElement manualBreak)

@@ -135,17 +135,9 @@ internal sealed partial record DocxStructureSnapshot
         return revisions.Count(revision => revision.PropertyChangeFamily == family);
     }
 
-    private static int ParagraphResolvedInlineReferenceCount(DocxParagraph paragraph, IReadOnlyList<DocxRelatedStory> relatedStories)
+    private static int ParagraphResolvedInlineReferenceCount(DocxParagraph paragraph, RelatedStoryIndex relatedStories)
     {
-            bool InlineReferenceResolves(DocxInlineReference reference, IReadOnlyList<DocxRelatedStory> relatedStories)
-            {
-                return reference.Id is not null &&
-                    relatedStories.Any(story =>
-                        story.Kind == reference.Kind &&
-                        string.Equals(story.Id, reference.Id, StringComparison.Ordinal));
-            }
-
-        return paragraph.InlineReferences.Count(reference => InlineReferenceResolves(reference, relatedStories));
+        return paragraph.InlineReferences.Count(reference => relatedStories.Resolve(reference.Kind, reference.Id).Index.HasValue);
     }
 
     private static int ParagraphFieldReferenceCount(DocxParagraph paragraph)

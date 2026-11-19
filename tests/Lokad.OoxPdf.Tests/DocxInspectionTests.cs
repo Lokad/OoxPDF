@@ -1029,6 +1029,22 @@ internal static partial class DocxInspectionTests
         TestAssert.True(endnoteReferenceSnapshot.SourceRunIndex == 3 && endnoteReferenceSnapshot.TextOffsetInRun == 0, "Endnote reference snapshot should preserve source marker offsets.");
         TestAssert.True(endnoteReferenceSnapshot.ResolvedStoryKind == "Endnote" && endnoteReferenceSnapshot.ResolvedStoryPartName == "/word/endnotes.xml" && endnoteReferenceSnapshot.ResolvedStoryId == "3" && endnoteReferenceSnapshot.ResolvedStoryTextLength == 12, "Endnote reference snapshot should resolve to the endnote story body.");
 
+        var firstComment = commentStory with { PartName = "/word/alternate-comments.xml" };
+        var reusedEndnote = document.RelatedStories.Single(story => story.Kind == DocxRelatedStoryKind.Endnote && story.Id == "3") with { Id = "2" };
+        var orderedSnapshot = DocxStructureSnapshot.FromDocument(document with
+        {
+            RelatedStories = [.. document.RelatedStories, reusedEndnote, firstComment]
+        });
+        var orderedComment = orderedSnapshot.InlineReferences.Single(reference => reference.Kind == "Comment");
+        var orderedRange = orderedSnapshot.CommentRanges!.Single();
+        TestAssert.Equal(firstComment.PartName, orderedComment.ResolvedStoryPartName);
+        TestAssert.Equal<int?>(0, orderedComment.ResolvedStoryIndex);
+        TestAssert.Equal(orderedComment.ResolvedStoryPartName, orderedRange.ResolvedStoryPartName);
+        TestAssert.Equal(orderedComment.ResolvedStoryIndex, orderedRange.ResolvedStoryIndex);
+        var orderedFootnote = orderedSnapshot.InlineReferences.Single(reference => reference.Kind == "Footnote");
+        TestAssert.Equal("/word/footnotes.xml", orderedFootnote.ResolvedStoryPartName);
+        TestAssert.Equal<int?>(5, orderedFootnote.ResolvedStoryIndex);
+
         DocxLayoutSnapshot layoutSnapshot = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectLayout(document);
         TestAssert.Equal(4, layoutSnapshot.RelatedStories.Count);
         DocxRelatedStoryLayoutSnapshot syntheticLayout = layoutSnapshot.RelatedStories.Single(story => story.Kind == "Endnote" && story.Type == "separator");
