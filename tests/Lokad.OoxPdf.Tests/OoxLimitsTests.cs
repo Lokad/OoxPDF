@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.Net;
 using System.Reflection;
 using Lokad.OoxPdf.Diagnostics;
@@ -898,6 +899,22 @@ internal static partial class OoxLimitsTests
         OpenTypeFont.FontDiscoveryHeaders full = OpenTypeFont.ReadDiscoveryHeaders(font, 0);
         OpenTypeFont.FontDiscoveryHeaders fromSpan = OpenTypeFont.ReadDiscoveryHeaders(span, 0);
         AssertDiscoveryHeadersEqual(full, fromSpan);
+
+        // Put hmtx after every other table so the prefix can end inside its last metric.
+        var tables = TestFontBuilder.GetDirectoryEntries(font);
+        int hmtxIndex = tables.FindIndex(table => table.Tag == "hmtx");
+        var hmtx = tables[hmtxIndex];
+        var hhea = tables.Single(table => table.Tag == "hhea");
+        int metricCount = OpenTypeFont.U16(font, hhea.Offset + 34);
+        byte[] trailingMetrics = new byte[font.Length + hmtx.Length];
+        font.CopyTo(trailingMetrics, 0);
+        font.AsSpan(hmtx.Offset, hmtx.Length).CopyTo(trailingMetrics.AsSpan(font.Length));
+        BinaryPrimitives.WriteInt32BigEndian(trailingMetrics.AsSpan(20 + hmtxIndex * 16), font.Length);
+
+        int lastAdvanceEnd = font.Length + metricCount * 4 - 2;
+        AssertDiscoveryHeadersEqual(full, OpenTypeFont.ReadDiscoveryHeaders(trailingMetrics[..lastAdvanceEnd], 0, trailingMetrics.Length));
+        TestAssert.Throws<InvalidDataException>(() => OpenTypeFont.ReadDiscoveryHeaders(
+            trailingMetrics[..(lastAdvanceEnd - 1)], 0, trailingMetrics.Length));
     }
 
     public static void DiscoveryByteBudgetRejectsTruncatedPrefix()

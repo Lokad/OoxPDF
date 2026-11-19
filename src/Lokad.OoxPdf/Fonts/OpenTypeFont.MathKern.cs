@@ -10,13 +10,8 @@ internal sealed partial class OpenTypeFont
     {
         correction = 0;
         if (glyph >= GlyphCount || (uint)corner > 3u || !double.IsFinite(height)) { return false; }
-        if (!tables.TryGetValue("MATH", out TableRecord math)) { return true; }
-        ReadOnlySpan<byte> table = bytes.AsSpan(math.Offset, math.Length);
-        if (table.Length < 10 || U16(table, 0) != 1 || U16(table, 2) != 0) { return false; }
-        int infoOffset = U16(table, 6);
-        if (infoOffset == 0) { return true; }
-        if (infoOffset < 10 || table.Length - infoOffset < 8) { return false; }
-        ReadOnlySpan<byte> info = table.Slice(infoOffset);
+        if (!TryReadMathGlyphInfo(out ReadOnlySpan<byte> info)) { return false; }
+        if (info.IsEmpty) { return true; }
         int kernInfoOffset = U16(info, 6);
         if (kernInfoOffset == 0) { return true; }
         if (kernInfoOffset < 8 || info.Length - kernInfoOffset < 4) { return false; }

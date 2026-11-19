@@ -133,20 +133,7 @@ internal sealed partial class OpenTypeFont
             tables = ReadTableDirectory(bytes, 12, tableCount);
         }
         cancellationToken.ThrowIfCancellationRequested();
-        RequireMinimumLength(tables, "head", 54);
-        RequireMinimumLength(tables, "hhea", 36);
-        RequireMinimumLength(tables, "maxp", 6);
-        RequireMinimumLength(tables, "name", 6);
-        RequireMinimumLength(tables, "OS/2", 78);
-        RequireMinimumLength(tables, "post", 16);
-        RequireMinimumLength(tables, "cmap", 4);
-        RequireHmtxLength(bytes, tables);
-
-        ushort unitsPerEm = ReadUnitsPerEm(bytes, tables);
-        if (unitsPerEm == 0)
-        {
-            throw new InvalidDataException("Font has zero units-per-em.");
-        }
+        (ushort unitsPerEm, ushort horizontalMetricCount) = ReadSfntHeaderMetrics(bytes, tables);
         FontBounds bounds = ReadBounds(bytes, tables);
         ushort glyphCount = ReadGlyphCount(bytes, tables);
         string familyName = ReadFamilyName(bytes, tables);
@@ -165,7 +152,7 @@ internal sealed partial class OpenTypeFont
             cancellationToken.ThrowIfCancellationRequested();
         }
         CmapFormat? cmap = ReadCmap(bytes, tables);
-        ushort[] advances = ReadAdvances(bytes, tables);
+        ushort[] advances = ReadAdvances(bytes, Required(tables, "hmtx"), horizontalMetricCount);
         IReadOnlyDictionary<uint, short> kerningPairs = ReadKerningPairs(bytes, tables, cancellationToken, storage);
         OpenTypeMathScriptStyles mathScripts = tables.ContainsKey("MATH") && tables.TryGetValue("GSUB", out TableRecord gsub)
             ? OpenTypeMathScriptStyles.Read(bytes.AsMemory(gsub.Offset, gsub.Length), cancellationToken)
@@ -388,30 +375,21 @@ internal sealed partial class OpenTypeFont
     {
         try
         {
-        RequireMinimumLength(tables, "head", 54);
-        RequireMinimumLength(tables, "hhea", 36);
-        RequireMinimumLength(tables, "maxp", 6);
-        RequireMinimumLength(tables, "name", 6);
-        RequireMinimumLength(tables, "OS/2", 78);
-        RequireMinimumLength(tables, "post", 16);
-        RequireMinimumLength(tables, "cmap", 4);
-        RequireHmtxLength(bytes, tables);
-
-        ushort unitsPerEm = ReadUnitsPerEm(bytes, tables);
-        if (unitsPerEm == 0)
-        {
-            throw new InvalidDataException("Font has zero units-per-em.");
-        }
+        (_, ushort horizontalMetricCount) = ReadSfntHeaderMetrics(bytes, tables);
         admitMetadata?.Invoke(EstimateDiscoveryNameCapacity(bytes, tables));
         IReadOnlyList<string> familyNames = ReadFamilyNames(bytes, tables);
         Os2Metrics os2 = ReadOs2(bytes, tables);
         PostMetrics post = ReadPost(bytes, tables);
-        // Parsed and discarded: keeps malformed-file rejection identical to Load
-        // without retaining anything beyond the discovery headers.
+        // Preserve the bounds and cmap reads used to reject malformed faces.
         ReadBounds(bytes, tables);
         ReadGlyphCount(bytes, tables);
         ReadCmap(bytes, tables);
-        ReadAdvances(bytes, tables);
+        // A discovery prefix may end before the declared file length.
+        // Check through the last two-byte advance without materializing the array.
+        if (horizontalMetricCount > 0)
+        {
+            _ = bytes.AsSpan(Required(tables, "hmtx").Offset, horizontalMetricCount * 4 - 2);
+        }
         return new FontDiscoveryHeaders(familyNames, os2.WeightClass, post.ItalicAngle, tables.ContainsKey("MATH"));
         }
         catch (InvalidDataException)
@@ -959,21 +937,30 @@ internal sealed partial class OpenTypeFont
         }
     }
 
-    private static void RequireHmtxLength(byte[] bytes, Dictionary<string, TableRecord> tables)
+    private static (ushort UnitsPerEm, ushort HorizontalMetricCount) ReadSfntHeaderMetrics(
+        byte[] bytes, Dictionary<string, TableRecord> tables)
     {
+        RequireMinimumLength(tables, "head", 54);
+        RequireMinimumLength(tables, "hhea", 36);
+        RequireMinimumLength(tables, "maxp", 6);
+        RequireMinimumLength(tables, "name", 6);
+        RequireMinimumLength(tables, "OS/2", 78);
+        RequireMinimumLength(tables, "post", 16);
+        RequireMinimumLength(tables, "cmap", 4);
+
         TableRecord hhea = Required(tables, "hhea");
         TableRecord hmtx = Required(tables, "hmtx");
-        ushort numberOfHMetrics = U16(bytes, hhea.Offset + 34);
-        if ((long)hmtx.Length < (long)numberOfHMetrics * 4L)
+        ushort horizontalMetricCount = U16(bytes, hhea.Offset + 34);
+        if (hmtx.Length < horizontalMetricCount * 4)
         {
             throw new InvalidDataException("Font horizontal metrics table is truncated.");
         }
-    }
-
-    private static ushort ReadUnitsPerEm(byte[] bytes, Dictionary<string, TableRecord> tables)
-    {
-        TableRecord head = Required(tables, "head");
-        return U16(bytes, head.Offset + 18);
+        ushort unitsPerEm = U16(bytes, Required(tables, "head").Offset + 18);
+        if (unitsPerEm == 0)
+        {
+            throw new InvalidDataException("Font has zero units-per-em.");
+        }
+        return (unitsPerEm, horizontalMetricCount);
     }
 
     private static FontBounds ReadBounds(byte[] bytes, Dictionary<string, TableRecord> tables)
@@ -1147,15 +1134,9 @@ internal sealed partial class OpenTypeFont
         };
     }
 
-    private static ushort[] ReadAdvances(byte[] bytes, Dictionary<string, TableRecord> tables)
+    private static ushort[] ReadAdvances(byte[] bytes, TableRecord hmtx, ushort horizontalMetricCount)
     {
-        if (!tables.TryGetValue("hhea", out TableRecord hhea) || !tables.TryGetValue("hmtx", out TableRecord hmtx))
-        {
-            return [];
-        }
-
-        ushort numberOfHMetrics = U16(bytes, hhea.Offset + 34);
-        var advances = new ushort[numberOfHMetrics];
+        var advances = new ushort[horizontalMetricCount];
         for (int i = 0; i < advances.Length; i++)
         {
             advances[i] = U16(bytes, hmtx.Offset + i * 4);

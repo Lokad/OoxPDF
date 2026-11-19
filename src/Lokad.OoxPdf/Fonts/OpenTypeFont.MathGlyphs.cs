@@ -8,13 +8,8 @@ internal sealed partial class OpenTypeFont
     {
         extended = false;
         if (glyph >= GlyphCount) { return false; }
-        if (!tables.TryGetValue("MATH", out TableRecord math)) { return true; }
-        ReadOnlySpan<byte> table = bytes.AsSpan(math.Offset, math.Length);
-        if (table.Length < 10 || U16(table, 0) != 1 || U16(table, 2) != 0) { return false; }
-        int infoOffset = U16(table, 6);
-        if (infoOffset == 0) { return true; }
-        if (infoOffset < 10 || table.Length - infoOffset < 8) { return false; }
-        ReadOnlySpan<byte> info = table.Slice(infoOffset);
+        if (!TryReadMathGlyphInfo(out ReadOnlySpan<byte> info)) { return false; }
+        if (info.IsEmpty) { return true; }
         int coverageOffset = U16(info, 4);
         if (coverageOffset == 0) { return true; }
         if (coverageOffset < 8 || info.Length - coverageOffset < 4 ||
@@ -40,13 +35,8 @@ internal sealed partial class OpenTypeFont
     public bool TryGetMathItalicCorrection(ushort glyph, out short correction)
     {
         correction = 0;
-        if (!tables.TryGetValue("MATH", out TableRecord math)) { return true; }
-        ReadOnlySpan<byte> table = bytes.AsSpan(math.Offset, math.Length);
-        if (table.Length < 10 || U16(table, 0) != 1 || U16(table, 2) != 0) { return false; }
-        int infoOffset = U16(table, 6);
-        if (infoOffset == 0) { return true; }
-        if (infoOffset < 10 || table.Length - infoOffset < 8) { return false; }
-        ReadOnlySpan<byte> info = table.Slice(infoOffset);
+        if (!TryReadMathGlyphInfo(out ReadOnlySpan<byte> info)) { return false; }
+        if (info.IsEmpty) { return true; }
         int italicOffset = U16(info, 0);
         if (italicOffset == 0) { return true; }
         if (italicOffset < 8 || info.Length - italicOffset < 4) { return false; }
@@ -58,6 +48,20 @@ internal sealed partial class OpenTypeFont
         if (index < 0) { return true; }
         if (index >= count) { return false; }
         correction = BinaryPrimitives.ReadInt16BigEndian(italic.Slice(4 + index * 4, 2));
+        return true;
+    }
+
+    // An absent MATH table or optional glyph-info offset yields an empty span.
+    private bool TryReadMathGlyphInfo(out ReadOnlySpan<byte> info)
+    {
+        info = default;
+        if (!tables.TryGetValue("MATH", out TableRecord math)) { return true; }
+        ReadOnlySpan<byte> table = bytes.AsSpan(math.Offset, math.Length);
+        if (table.Length < 10 || U16(table, 0) != 1 || U16(table, 2) != 0) { return false; }
+        int infoOffset = U16(table, 6);
+        if (infoOffset == 0) { return true; }
+        if (infoOffset < 10 || table.Length - infoOffset < 8) { return false; }
+        info = table.Slice(infoOffset);
         return true;
     }
 
