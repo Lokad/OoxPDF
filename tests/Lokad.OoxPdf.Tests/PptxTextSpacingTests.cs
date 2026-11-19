@@ -221,7 +221,9 @@ internal static class PptxTextSpacingTests
 
     public static void PptxWrappedNoBreakClusterKeepsInkAndLinkInNextColumn()
     {
-        const int columnWidth = 285;
+        // The pinned font fits the prefix through the no-break space, so wrapping
+        // the following word must move the already placed token.
+        const int columnWidth = 310;
         const int columnGap = 20;
         const string uri = "https://example.org/points";
         var cases = new[]
