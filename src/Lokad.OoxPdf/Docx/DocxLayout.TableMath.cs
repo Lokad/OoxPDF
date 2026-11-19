@@ -17,15 +17,10 @@ internal sealed partial class DocxLayoutEngine
     }
 
     private static (double Above, double Below) ResolveTableInlineMathExpansion(DocxPreparedMathParagraph math,
-        DocxParagraph paragraph, IReadOnlyList<DocxParagraph> paragraphs, double fontSize, double lineHeight,
-        DocxTableCellLayoutContext context)
+        double fontSize, double lineHeight, bool exactSpacing, double firstInset, double paragraphInset, double scale)
     {
-        double firstInset = ResolveTableCellFirstBaselineInset(paragraphs, context.TextMeasurer);
-        double paragraphInset = DocxLineMetrics.ResolveTableCellBodyBaselineOffset(fontSize, lineHeight,
-            IsExactLineSpacing(paragraph.EffectiveProperties), paragraphs, paragraph, context.TextMeasurer);
-        double inset = firstInset + (paragraphInset - firstInset) * context.ParagraphSpacingScale;
-        return ResolveInlineMathExpansion(math, fontSize, lineHeight, lineHeight, context.ParagraphSpacingScale,
-            IsExactLineSpacing(paragraph.EffectiveProperties), baselineInset: inset);
+        double inset = firstInset + (paragraphInset - firstInset) * scale;
+        return ResolveInlineMathExpansion(math, fontSize, lineHeight, lineHeight, scale, exactSpacing, baselineInset: inset);
     }
 
     private static bool TryGetSinglePreparedMath(DocxParagraph paragraph,

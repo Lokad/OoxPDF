@@ -141,22 +141,42 @@ internal sealed partial class DocxReader
         return columns.ToArray();
     }
 
-    private static double[] CompleteJoinedTableGrid(double[] grid, IReadOnlyList<DocxRevisionScopedElement> rows,
-        OoxPdfDocxMarkupMode mode, CancellationToken token)
+    private readonly record struct DocxTableSourceRow(int FirstColumn, int EndColumn,
+        IReadOnlyList<(DocxRevisionScopedElement Scope, int Span)> Cells);
+
+    private static DocxTableSourceRow ReadTableSourceRow(XElement row, XElement? properties,
+        OoxPdfDocxMarkupMode mode, CancellationToken token, bool joinedGrid = false)
+    {
+        int firstColumn = ReadRowGridBefore(properties);
+        int endColumn = firstColumn;
+        var cells = new List<(DocxRevisionScopedElement Scope, int Span)>();
+        foreach (var scope in EnumerateBookmarkedBlocks(row.Elements(), mode, token,
+            inheritedRevision: null, tableChildName: WordprocessingNamespace + "tc"))
+        {
+            int span = ReadGridSpan(scope.Element.Element(WordprocessingNamespace + "tcPr"));
+            endColumn += span;
+            if (joinedGrid && endColumn > MaxInferredGridColumns) throw JoinedGridLimit();
+            cells.Add((scope, span));
+        }
+        return new(firstColumn, endColumn, cells);
+    }
+
+    private static (double[] Grid, DocxTableSourceRow[] Rows) CompleteJoinedTableGrid(double[] grid,
+        IReadOnlyList<DocxRevisionScopedElement> rows, OoxPdfDocxMarkupMode mode, CancellationToken token)
     {
         int required = grid.Length;
-        foreach (var row in rows)
+        var sourceRows = new DocxTableSourceRow[rows.Count];
+        for (int index = 0; index < sourceRows.Length; index++)
         {
-            int count = ReadRowGridBefore(row.Element.Element(WordprocessingNamespace + "trPr"));
-            foreach (var cell in EnumerateRevisionScopedChildren(row.Element.Elements(), mode, token, [WordprocessingNamespace + "tc"]))
-            {
-                count += ReadGridSpan(cell.Element.Element(WordprocessingNamespace + "tcPr"));
-                if (count > MaxInferredGridColumns) throw JoinedGridLimit();
-            }
-            required = Math.Max(required, count);
+            XElement row = rows[index].Element;
+            DocxTableSourceRow source = ReadTableSourceRow(row, row.Element(WordprocessingNamespace + "trPr"),
+                mode, token, joinedGrid: true);
+            sourceRows[index] = source;
+            required = Math.Max(required, source.EndColumn);
         }
         if (required > MaxInferredGridColumns) throw JoinedGridLimit();
-        return required == grid.Length ? grid : grid.Concat(Enumerable.Repeat(72d, required - grid.Length)).ToArray();
+        double[] completed = required == grid.Length ? grid : grid.Concat(Enumerable.Repeat(72d, required - grid.Length)).ToArray();
+        return (completed, sourceRows);
     }
 
     private static (double[] Columns, int[][] Boundaries) JoinTableGrids(

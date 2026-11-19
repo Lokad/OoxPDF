@@ -68,9 +68,16 @@ internal sealed partial class DocxReader
         bool hasExplicitGrid = parts.Any(part => part.Grid.Length != 0);
         IReadOnlyList<double> columns = parts[0].Grid;
         int[][]? gridMappings = null;
+        DocxTableSourceRow[][]? joinedRows = null;
         if (parts.Length > 1)
         {
-            var grids = parts.Select(part => CompleteJoinedTableGrid(part.Grid, part.Rows, markupMode, cancellationToken)).ToArray();
+            var grids = new double[parts.Length][];
+            joinedRows = new DocxTableSourceRow[parts.Length][];
+            for (int index = 0; index < parts.Length; index++)
+            {
+                (grids[index], joinedRows[index]) = CompleteJoinedTableGrid(parts[index].Grid, parts[index].Rows,
+                    markupMode, cancellationToken);
+            }
             var offsets = parts.Select(part => (ReadDxaWidth(part.Properties?.Element(WordprocessingNamespace + "tblInd"))
                 ?? tableStyle.Table.IndentPoints ?? 0d) - (resolvedTableIndentPoints ?? 0d)).ToArray();
             var joined = JoinTableGrids(grids, offsets, cancellationToken);
@@ -95,9 +102,10 @@ internal sealed partial class DocxReader
             var leadingBookmarks = part.LeadingBookmarks;
             DocxTableCellMargins partMargins = ReadTableStyleCellMargins(part.Properties);
             IReadOnlyList<DocxTableCellBorder> partBorders = ReadTableBorders(part.Properties);
-            foreach (var rowElement in part.Rows)
+            for (int partRowIndex = 0; partRowIndex < part.Rows.Length; partRowIndex++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                var rowElement = part.Rows[partRowIndex];
                 XElement row = rowElement.Element;
                 XElement? rowExceptions = row.Element(WordprocessingNamespace + "tblPrEx");
                 DocxTableLook rowLook = ReadRowTableLook(row, part.Properties);
@@ -110,19 +118,20 @@ internal sealed partial class DocxReader
                 DocxTableCellMargins rowInheritedMargins = rowExceptionMargins.Merge(partMargins.Merge(tableStyle.Cell.Margins));
                 if (sourceIndex != 0) AddRevisions(rowRevisions, ReadPropertyChangeRevisions(part.Properties));
                 var cells = new List<DocxTableCell>();
-                int sourceColumn = ReadRowGridBefore(rowProperties);
+                DocxTableSourceRow sourceRow = joinedRows is null
+                    ? ReadTableSourceRow(row, rowProperties, markupMode, cancellationToken)
+                    : joinedRows[sourceIndex][partRowIndex];
+                int sourceColumn = sourceRow.FirstColumn;
                 int gridBefore = gridMappings is null ? sourceColumn : gridMappings[sourceIndex][sourceColumn];
-                DocxRevisionScopedElement[] cellElements = EnumerateBookmarkedBlocks(row.Elements(), markupMode,
-                    cancellationToken, inheritedRevision: null, tableChildName: WordprocessingNamespace + "tc").ToArray();
+                var cellElements = sourceRow.Cells;
                 ReadOnlyMemory<DocxTableColumnBookmark> columnBookmarks = default;
-                for (int cellIndex = 0; cellIndex < cellElements.Length; cellIndex++)
+                for (int cellIndex = 0; cellIndex < cellElements.Count; cellIndex++)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    var cellSource = cellElements[cellIndex];
+                    var (cellSource, sourceSpan) = cellElements[cellIndex];
                     XElement cell = cellSource.Element;
                     DocxRevisionInfo? inheritedCellRevision = cellSource.Revision ?? rowElement.Revision;
                     XElement? cellProperties = cell.Element(WordprocessingNamespace + "tcPr");
-                    int sourceSpan = ReadGridSpan(cellProperties);
                     int nextSourceColumn = sourceColumn + sourceSpan;
                     if (!columnBookmarks.IsEmpty)
                     {
@@ -135,7 +144,7 @@ internal sealed partial class DocxReader
                     AddRevision(cellRevisions, cellSource.Revision);
                     AddRevisions(cellRevisions, ReadPropertyChangeRevisions(cellProperties));
                     DocxTableCellConditionalFormat? conditionalFormat = ReadTableConditionalFormat(cellProperties);
-                    DocxTableCellStyle conditionalStyle = ResolveTableCellStyle(tableStyle, rowLook, conditionalFormat, rowIndex, cellIndex, rowCount, cellElements.Length, leadingRowEmphasis);
+                    DocxTableCellStyle conditionalStyle = ResolveTableCellStyle(tableStyle, rowLook, conditionalFormat, rowIndex, cellIndex, rowCount, cellElements.Count, leadingRowEmphasis);
                     IReadOnlyList<DocxBodyElement> cellBodyElements = ReadTableCellBodyElements(
                         cellSource,
                         styles,
@@ -193,7 +202,7 @@ internal sealed partial class DocxReader
                         rowIndex,
                         cellIndex,
                         rowCount,
-                        cellElements.Length);
+                        cellElements.Count);
                     DocxTableCellMargins inheritedMargins = rowInheritedMargins.Merge(conditionalStyle.Margins);
                     DocxTableCellMargins margins = ReadTableCellMargins(cellProperties).Merge(inheritedMargins);
                     DocxTableCellMargins styleMargins = tableStyle.Cell.Margins.Merge(conditionalStyle.Margins);

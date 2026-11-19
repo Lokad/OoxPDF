@@ -212,7 +212,11 @@ internal sealed partial class DocxLayoutEngine
                 containsMath |= inlineMath is not null;
                 int lineCount = estimateLines.Length;
                 lineHeight = QuantizeTableCellWrappedLineHeight(lineHeight, lineCount);
-                estimatePlan = CreateMidLinePlan(paragraph, textSpans, estimateLines, firstParagraphWidth, continuationParagraphWidth, DocxLineMetrics.ResolveTableCellBodyBaselineOffset(fontSize, lineHeight, IsExactLineSpacing(paragraph.EffectiveProperties), GetParagraphsFromBodyElements(bodyElements), paragraph, textMeasurer), paragraphSpacingScale, textMeasurer);
+                bool exactSpacing = IsExactLineSpacing(paragraph.EffectiveProperties);
+                double baselineOffset = DocxLineMetrics.ResolveTableCellBodyBaselineOffset(fontSize, lineHeight,
+                    exactSpacing, paragraphs, paragraph, textMeasurer);
+                estimatePlan = CreateMidLinePlan(paragraph, textSpans, estimateLines, firstParagraphWidth,
+                    continuationParagraphWidth, baselineOffset, paragraphSpacingScale, textMeasurer);
                 previousTextFontSize = fontSize;
                 previousTextLineHeight = lineHeight;
                 contentHeight += ResolveListLabelFirstLineExtraLeading(paragraph, fontSize, textMeasurer);
@@ -227,11 +231,13 @@ internal sealed partial class DocxLayoutEngine
                 }
                 for (int estimateLineIndex = 0; estimateLineIndex < estimateLines.Length; estimateLineIndex++)
                 {
-                    double estimateShift = IsExactLineSpacing(paragraph.EffectiveProperties) ? 0d : (estimatePlan?.ShiftAboveHeights[estimateLineIndex] ?? 0d);
+                    double estimateShift = exactSpacing ? 0d : (estimatePlan?.ShiftAboveHeights[estimateLineIndex] ?? 0d);
                     var expansion = inlineMath?.LineIndex == estimateLineIndex
-                        ? ResolveTableInlineMathExpansion(inlineMath.Math, paragraph, GetParagraphsFromBodyElements(bodyElements), fontSize, lineHeight, measureContext)
+                        ? ResolveTableInlineMathExpansion(inlineMath.Math, fontSize, lineHeight, exactSpacing,
+                            ResolveTableCellFirstBaselineInset(paragraphs, textMeasurer), baselineOffset, paragraphSpacingScale)
                         : (Above: 0d, Below: 0d);
-                    contentHeight += lineHeight + Math.Max(estimateShift, expansion.Above) + Math.Max(expansion.Below, IsExactLineSpacing(paragraph.EffectiveProperties) ? 0d : estimatePlan?.ExtraBelow(estimateLineIndex) ?? 0d);
+                    contentHeight += lineHeight + Math.Max(estimateShift, expansion.Above) +
+                        Math.Max(expansion.Below, exactSpacing ? 0d : estimatePlan?.ExtraBelow(estimateLineIndex) ?? 0d);
                     minimumPictureOverlap += ResolveMinimumPictureOverlap(minimumExcess, estimateShift);
                 }
             }
@@ -646,7 +652,12 @@ internal sealed partial class DocxLayoutEngine
                     // totals follow max(hhea-aware inset, image height), so the attach shift rides the
                     // hhea-aware inset like the transition; estimate, image and single-line paths
                     // below use the same form for coherence.
-                    midLinePlan = CreateMidLinePlan(paragraph, textSpans, wrappedLines, ResolveTableCellTextWrapWidth(cell, paragraphWidth), ResolveTableCellTextWrapWidth(cell, continuationParagraphWidth), DocxLineMetrics.ResolveTableCellBodyBaselineOffset(fontSize, lineHeight, IsExactLineSpacing(paragraph.EffectiveProperties), GetParagraphsFromBodyElements(bodyElements), paragraph, measurer), context.ParagraphSpacingScale, measurer);
+                    bool exactSpacing = IsExactLineSpacing(paragraph.EffectiveProperties);
+                    double baselineOffset = DocxLineMetrics.ResolveTableCellBodyBaselineOffset(fontSize, lineHeight,
+                        exactSpacing, paragraphs, paragraph, measurer);
+                    midLinePlan = CreateMidLinePlan(paragraph, textSpans, wrappedLines,
+                        ResolveTableCellTextWrapWidth(cell, paragraphWidth), ResolveTableCellTextWrapWidth(cell, continuationParagraphWidth),
+                        baselineOffset, context.ParagraphSpacingScale, measurer);
                     // RV06 pagination probe (edge-mixedcell, Word 16.0): Office stacks
                     // cell baselines with per-line font-size offsets (12->15 carries
                     // +2.82 at scale 1.0), while the renderer stacks pure line heights
@@ -656,7 +667,7 @@ internal sealed partial class DocxLayoutEngine
                     // Cell first baselines hang off this transition offset (the cell insets
                     // above cancel out of it), so it joins the hhea-ascender opt-in while the
                     // midline image-attach offset below keeps legacy (unprobed for images).
-                    double lineBaselineTransition = (DocxLineMetrics.ResolveTableCellBodyBaselineOffset(fontSize, lineHeight, IsExactLineSpacing(paragraph.EffectiveProperties), GetParagraphsFromBodyElements(bodyElements), paragraph, measurer) - cellFirstBaselineInset) * context.ParagraphSpacingScale;
+                    double lineBaselineTransition = (baselineOffset - cellFirstBaselineInset) * context.ParagraphSpacingScale;
                     for (int lineIndex = 0; lineIndex < wrappedLines.Length; lineIndex++)
                     {
                         DocxWrappedTextLine line = wrappedLines[lineIndex];
@@ -666,14 +677,15 @@ internal sealed partial class DocxLayoutEngine
                         }
 
                         // RV05 calibration (Word 16.0): image top pins to the natural line top.
-                        double extraAbove = IsExactLineSpacing(paragraph.EffectiveProperties) ? 0d : (midLinePlan?.ShiftAboveHeights[lineIndex] ?? 0d);
+                        double extraAbove = exactSpacing ? 0d : (midLinePlan?.ShiftAboveHeights[lineIndex] ?? 0d);
                         context.CancellationToken.ThrowIfCancellationRequested();
                         var mathExpansion = inlineMath?.LineIndex == lineIndex
-                            ? ResolveTableInlineMathExpansion(inlineMath.Math, paragraph, GetParagraphsFromBodyElements(bodyElements), fontSize, lineHeight, context)
+                            ? ResolveTableInlineMathExpansion(inlineMath.Math, fontSize, lineHeight, exactSpacing,
+                                cellFirstBaselineInset, baselineOffset, context.ParagraphSpacingScale)
                             : (Above: 0d, Below: 0d);
                         extraAbove = Math.Max(extraAbove, mathExpansion.Above);
                         double extraBelow = Math.Max(mathExpansion.Below,
-                            IsExactLineSpacing(paragraph.EffectiveProperties) ? 0d : midLinePlan?.ExtraBelow(lineIndex) ?? 0d);
+                            exactSpacing ? 0d : midLinePlan?.ExtraBelow(lineIndex) ?? 0d);
                         cursorY -= extraAbove;
                         double mathWidth = inlineMath?.LineIndex == lineIndex ? inlineMath.Width : 0d;
                         double lineWidth = MeasureTextSpansForLayout(line.Spans, fontSize, measurer, ScaleTabStopPositions(paragraph.EffectiveProperties.TabStops, context.ParagraphSpacingScale), context.DefaultTabStopPoints * context.ParagraphSpacingScale, context.PageNumber) + (midLinePlan?.LineImageWidths[lineIndex] ?? 0d) + mathWidth;
@@ -760,7 +772,7 @@ internal sealed partial class DocxLayoutEngine
                                 lineHeight + extraAbove + extraBelow, context.ParagraphSpacingScale,
                                 lineIndex == wrappedLines.Length - 1 ? spacingProfile.ParagraphAfterSpacing : 0d,
                                 firstLine ? ResolveParagraphShadingBeforeSpacing(previousParagraph, paragraph, spacingProfile) : 0d),
-                            SourceBaselineOffset = IsExactLineSpacing(paragraph.EffectiveProperties) || midLinePlan is null ? 0d :
+                            SourceBaselineOffset = exactSpacing || midLinePlan is null ? 0d :
                                 Math.Max(0d, midLinePlan.SourceShiftAboveHeights[lineIndex] - extraAbove),
                             Math = mathWidth > 0d ? inlineMath?.Math : null, IsInlineMath = mathWidth > 0d,
                             InlineMathOffsetX = mathOffset, MathScale = context.ParagraphSpacingScale,
