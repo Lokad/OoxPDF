@@ -419,8 +419,8 @@ internal static partial class PptxChartNumberFormatsTests
         TestAssert.Equal("500,0%", FormatChartNumber(5d, "[$-407]0.0%"));
         TestAssert.Equal("1,2E+03", FormatChartNumber(1234d, "[$-407]0.0E+00"));
         TestAssert.Equal("\u20AC1.234,56", FormatChartNumber(1234.56d, "[$\u20AC-410]#,##0.00"));
-        TestAssert.Equal("\u00A35", FormatChartNumber(5d, "[$\u00A3-809]0"));
-        TestAssert.Equal("5", FormatChartNumber(5d, "[$-409]0"));
+        TestAssert.Equal("\u00A31.234,56", FormatChartNumber(1234.56d, "[$\u00A3-F400][$-407]#,##0.00"));
+        TestAssert.Equal("5.0", FormatChartNumber(5d, "[$-409][$\u00A3-407]0.0"));
     }
 
     public static void PptxChartNumberGeneralFallbackKeepsFullPrecision()

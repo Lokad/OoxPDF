@@ -57,17 +57,13 @@ internal sealed partial class PptxRenderer
         }
 
         string section = StripSectionCondition(sections[sectionIndex]);
-        string localeCurrency = section.IndexOf("[", StringComparison.Ordinal) >= 0 ? ParseChartNumberLocaleCurrency(section) : string.Empty;
-        // Calibrated [$LCID] brackets render locale decimal/group separators (S04); every other
-        // bracket keeps invariant formatting with its diagnostic.
+        ReadChartNumberLocale(section, out string localeCurrency, out string decimalSeparator, out string groupSeparator);
         CultureInfo numberCulture = CultureInfo.InvariantCulture;
-        if (section.IndexOf("[$", StringComparison.Ordinal) >= 0
-            && TryResolveChartNumberLocaleSeparators(section, out string localeDecimalSeparator, out string localeGroupSeparator)
-            && (localeDecimalSeparator != "." || localeGroupSeparator != ","))
+        if (decimalSeparator != "." || groupSeparator != ",")
         {
             numberCulture = (CultureInfo)CultureInfo.InvariantCulture.Clone();
-            numberCulture.NumberFormat.NumberDecimalSeparator = localeDecimalSeparator;
-            numberCulture.NumberFormat.NumberGroupSeparator = localeGroupSeparator;
+            numberCulture.NumberFormat.NumberDecimalSeparator = decimalSeparator;
+            numberCulture.NumberFormat.NumberGroupSeparator = groupSeparator;
         }
         if (TryFormatDateNumber(section, value, date1904, out string? dateText))
         {
@@ -1373,16 +1369,22 @@ internal sealed partial class PptxRenderer
         };
     }
 
-    // Locale decimal/group separators for calibrated LCIDs (S04; CLDR as independent spec).
-    // System-locale ($-Fxxx) and unlisted LCIDs keep the "locale" diagnostic (open); locale
-    // month/day names stay English (open). Table covers unambiguous decimal/group pairs only
-    // (fr-FR narrow-nbsp and friends stay flagged).
-    private static bool TryResolveChartNumberLocaleSeparators(string section, out string decimalSeparator, out string groupSeparator)
+    // The first currency bracket owns the symbol, even when empty. The first
+    // calibrated LCID owns the separators. Date names remain English.
+    private static void ReadChartNumberLocale(string section, out string currency, out string decimalSeparator, out string groupSeparator)
     {
+        currency = string.Empty;
         decimalSeparator = ".";
         groupSeparator = ",";
+        if (!section.Contains('['))
+        {
+            return;
+        }
+
+        bool findCurrency = true;
+        bool findSeparators = section.Contains("[$", StringComparison.Ordinal);
         bool inQuotes = false;
-        for (int i = 0; i < section.Length; i++)
+        for (int i = 0; i < section.Length && (findCurrency || findSeparators); i++)
         {
             char c = section[i];
             if (!inQuotes && c == '\\' && i + 1 < section.Length)
@@ -1405,20 +1407,23 @@ internal sealed partial class PptxRenderer
             int close = section.IndexOf(']', i);
             if (close < 0)
             {
-                return false;
+                break;
             }
 
             string inner = section.Substring(i + 1, close - i - 1).Trim();
-            if (TryParseChartNumberLocaleId(inner, out int localeId)
+            if (findCurrency && inner.StartsWith('$'))
+            {
+                int dash = inner.IndexOf('-', 1);
+                currency = dash > 1 ? inner.Substring(1, dash - 1) : string.Empty;
+                findCurrency = false;
+            }
+
+            if (findSeparators && TryParseChartNumberLocaleId(inner, out int localeId)
                 && TryGetChartNumberLocaleSeparators(localeId, out decimalSeparator, out groupSeparator))
             {
-                return true;
+                findSeparators = false;
             }
         }
-
-        decimalSeparator = ".";
-        groupSeparator = ",";
-        return false;
     }
 
     private static bool TryParseChartNumberLocaleId(string inner, out int localeId)
@@ -1467,48 +1472,6 @@ internal sealed partial class PptxRenderer
                 groupSeparator = ",";
                 return false;
         }
-    }
-
-    // [$currency-locale] symbol for numeric sections (S04); [$−locale] carries no
-    // symbol. Locale separators and names stay invariant (open).
-    private static string ParseChartNumberLocaleCurrency(string section)
-    {
-        bool inQuotes = false;
-        for (int i = 0; i < section.Length; i++)
-        {
-            char c = section[i];
-            if (!inQuotes && c == '\\' && i + 1 < section.Length)
-            {
-                i++;
-                continue;
-            }
-
-            if (c == '"')
-            {
-                inQuotes = !inQuotes;
-                continue;
-            }
-
-            if (inQuotes || c != '[')
-            {
-                continue;
-            }
-
-            int close = section.IndexOf(']', i);
-            if (close < 0)
-            {
-                return string.Empty;
-            }
-
-            string inner = section.Substring(i + 1, close - i - 1).Trim();
-            if (inner.StartsWith('$'))
-            {
-                int dash = inner.IndexOf('-', 1);
-                return dash > 1 ? inner.Substring(1, dash - 1) : string.Empty;
-            }
-        }
-
-        return string.Empty;
     }
 
 }
