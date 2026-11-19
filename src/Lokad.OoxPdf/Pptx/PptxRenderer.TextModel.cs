@@ -264,18 +264,9 @@ internal sealed partial class PptxRenderer
         double compatibleDefaultLineSpacingFactor = ResolveCompatibleDefaultLineSpacingFactor(bodyProperties);
         double rotationCenterX = x + width / 2d;
         double rotationCenterY = document.SlideHeightPoints - yTop - height / 2d;
-        double flowX = x;
-        double flowYTop = yTop;
-        double flowWidth = width;
-        double flowHeight = height;
-        TextInsets presetTextInsets = ReadPresetTextRectInsets(shape, width, height);
-        if (!presetTextInsets.IsEmpty)
-        {
-            flowX += presetTextInsets.Left;
-            flowYTop += presetTextInsets.Top;
-            flowWidth = Math.Max(1d, flowWidth - presetTextInsets.Left - presetTextInsets.Right);
-            flowHeight = Math.Max(1d, flowHeight - presetTextInsets.Top - presetTextInsets.Bottom);
-        }
+        double orientationRotation = TextOrientationRotationDegrees(orientation);
+        var (flowX, flowYTop, flowWidth, flowHeight) = ResolveTextFlowRectangle(x, yTop, width, height,
+            document.SlideHeightPoints - rotationCenterY, orientationRotation, ReadPresetTextRectInsets(shape, width, height));
 
         double? explicitTextRotationDegrees = bodyProperties.RotationDegrees;
         double textRotationDegrees = explicitTextRotationDegrees ?? bounds.Value.RotationDegrees;
@@ -283,22 +274,10 @@ internal sealed partial class PptxRenderer
         {
             textRotationDegrees = NormalizeRotationDegrees(textRotationDegrees + 180d);
         }
+        textRotationDegrees += orientationRotation;
 
         bool textFlipHorizontal = false;
         bool textFlipVertical = false;
-        if (orientation is PptxTextOrientation.Vertical or
-            PptxTextOrientation.Vertical270 or
-            PptxTextOrientation.EastAsianVertical or
-            PptxTextOrientation.MongolianVertical or
-            PptxTextOrientation.WordArtVertical or
-            PptxTextOrientation.WordArtVerticalRightToLeft)
-        {
-            flowWidth = height;
-            flowHeight = width;
-            flowX = rotationCenterX - flowWidth / 2d;
-            flowYTop = document.SlideHeightPoints - rotationCenterY - flowHeight / 2d;
-            textRotationDegrees += TextOrientationRotationDegrees(orientation);
-        }
 
         // Vertical text wraps and centers against the top/bottom insets: the flow column
         // spans the shape height, so Office measures it with the vertical insets (six Office
@@ -478,27 +457,12 @@ internal sealed partial class PptxRenderer
         double compatibleDefaultLineSpacingFactor = ResolveCompatibleDefaultLineSpacingFactor(bodyProperties);
         double rotationCenterX = x + width / 2d;
         double rotationCenterY = document.SlideHeightPoints - yTop - height / 2d;
-        double flowX = x;
-        double flowYTop = yTop;
-        double flowWidth = width;
-        double flowHeight = height;
-        double? explicitTextRotationDegrees = bodyProperties.RotationDegrees;
-        double textRotationDegrees = explicitTextRotationDegrees ?? 0d;
+        double orientationRotation = TextOrientationRotationDegrees(orientation);
+        var (flowX, flowYTop, flowWidth, flowHeight) = ResolveTextFlowRectangle(x, yTop, width, height,
+            document.SlideHeightPoints - rotationCenterY, orientationRotation);
+        double textRotationDegrees = (bodyProperties.RotationDegrees ?? 0d) + orientationRotation;
         bool textFlipHorizontal = false;
         bool textFlipVertical = false;
-        if (orientation is PptxTextOrientation.Vertical or
-            PptxTextOrientation.Vertical270 or
-            PptxTextOrientation.EastAsianVertical or
-            PptxTextOrientation.MongolianVertical or
-            PptxTextOrientation.WordArtVertical or
-            PptxTextOrientation.WordArtVerticalRightToLeft)
-        {
-            flowWidth = height;
-            flowHeight = width;
-            flowX = rotationCenterX - flowWidth / 2d;
-            flowYTop = document.SlideHeightPoints - rotationCenterY - flowHeight / 2d;
-            textRotationDegrees += TextOrientationRotationDegrees(orientation);
-        }
 
         double textX = flowX + insets.Left;
         double textWidth = Math.Max(1d, flowWidth - insets.Left - insets.Right);
@@ -625,6 +589,22 @@ internal sealed partial class PptxRenderer
             bodyProperties.Orientation == PptxTextOrientation.Horizontal &&
             bodyProperties.ColumnCount == 1 &&
             Math.Abs(textRotationDegrees) < PptxTextMetricRules.CoordinateTolerance;
+    }
+
+    private static (double X, double YTop, double Width, double Height) ResolveTextFlowRectangle(
+        double x, double yTop, double width, double height, double centerYFromTop, double orientationRotation,
+        TextInsets presetInsets = default)
+    {
+        if (orientationRotation != 0d)
+        {
+            return (x + width / 2d - height / 2d, centerYFromTop - width / 2d, height, width);
+        }
+
+        return presetInsets.IsEmpty
+            ? (x, yTop, width, height)
+            : (x + presetInsets.Left, yTop + presetInsets.Top,
+                Math.Max(1d, width - presetInsets.Left - presetInsets.Right),
+                Math.Max(1d, height - presetInsets.Top - presetInsets.Bottom));
     }
 
     private static (double Y, double Height) IntersectVerticalTextClipWithSlide(double y, double height, double slideHeight)
