@@ -45,6 +45,13 @@ $rasterizerId = Get-PortfolioRasterizerId
 $comparisonPolicy = [ordered]@{
     Schema=1;VisualDiffSha256=(Get-FileHash -LiteralPath $VisualDiffPath).Hash;RasterizerId=$rasterizerId
 }
+# Domains of the VisualDiff producer, independent of the active thresholds.
+$metricRanges = [ordered]@{
+    MeanAbsoluteError = @(0, 255)
+    ChangedPixelRatioAtThreshold16 = @(0, 1)
+    ForegroundRecall = @(0, 1)
+    StructuralSimilarity = @(-1, 1)
+}
 function Get-ComparisonFailures([object[]] $Metrics, $Limits, $Outcome, [string] $Id) {
     $incomplete = 'Comparison page metrics incomplete: ' + $Id
     if (!$Metrics.Count) { throw $incomplete }
@@ -72,7 +79,7 @@ function Get-ComparisonFailures([object[]] $Metrics, $Limits, $Outcome, [string]
         if (!$page.ReferenceFile -and !$page.CandidateFile) { throw $incomplete }
         if (!$page.ReferenceFile -or !$page.CandidateFile) { $failures += 'Pagination'; continue }
         if (!$page.DimensionsMatch) { $failures += 'Dimensions' }
-        foreach ($field in @('MeanAbsoluteError','ChangedPixelRatioAtThreshold16','ForegroundRecall','StructuralSimilarity')) {
+        foreach ($field in $metricRanges.Keys) {
             $value = $page.$field
             # VisualDiff emits null pixel metrics for incompatible dimensions,
             # and null recall when the reference has no foreground pixels.
@@ -81,6 +88,9 @@ function Get-ComparisonFailures([object[]] $Metrics, $Limits, $Outcome, [string]
             }
             elseif ($value -isnot [ValueType] -or $value -is [bool] -or ![double]::IsFinite([double]$value)) {
                 throw ($incomplete + ': ' + $field)
+            }
+            elseif ($value -lt $metricRanges[$field][0] -or $value -gt $metricRanges[$field][1]) {
+                throw ('Comparison page metric outside its range: ' + $Id + ' / ' + $field)
             }
         }
         if ($null -ne $page.MeanAbsoluteError -and $page.MeanAbsoluteError -gt $Limits.maxMeanAbsoluteError) { $failures += 'MeanAbsoluteError' }

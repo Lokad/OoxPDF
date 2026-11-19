@@ -302,8 +302,18 @@ foreach ($fault in @('image-as-pdf','changed-image-metadata')) {
     if (!$rejected -or (Snapshot $case.Directory) -cne $before) {throw 'Image reference mismatch mutated comparison stages'}
     $passed+=$fault
 }
-foreach ($fault in @('empty-metrics','missing-metric','null-error','nonfinite-metric','boolean-metric',
-    'missing-page-index','duplicate-page','truncated-pages','wrong-file','nonboolean-dimensions','neither-file')) {
+$outOfRangeMetrics = [ordered]@{
+    'negative-error' = @('MeanAbsoluteError', -4)
+    'error-above-byte-range' = @('MeanAbsoluteError', 256)
+    'negative-changed-ratio' = @('ChangedPixelRatioAtThreshold16', -0.2)
+    'changed-ratio-above-one' = @('ChangedPixelRatioAtThreshold16', 1.01)
+    'negative-recall' = @('ForegroundRecall', -0.01)
+    'recall-above-one' = @('ForegroundRecall', 1.5)
+    'similarity-below-minus-one' = @('StructuralSimilarity', -1.01)
+    'similarity-above-one' = @('StructuralSimilarity', 1.01)
+}
+foreach ($fault in (@('empty-metrics','missing-metric','null-error','nonfinite-metric','boolean-metric',
+    'missing-page-index','duplicate-page','truncated-pages','wrong-file','nonboolean-dimensions','neither-file') + @($outOfRangeMetrics.Keys))) {
     $case = New-Case $fault 'legacy'
     $cache = New-ReuseCache $case
     $path = Join-Path $cache 'office-comparisons.json'
@@ -326,6 +336,7 @@ foreach ($fault in @('empty-metrics','missing-metric','null-error','nonfinite-me
         'wrong-file' { $metric.ReferenceFile='page-002.png' }
         'nonboolean-dimensions' { $metric.DimensionsMatch='true' }
         'neither-file' { $metric.ReferenceFile=$null;$metric.CandidateFile=$null }
+        default { $field, $value = $outOfRangeMetrics[$fault]; $metric[$field] = $value }
     }
     $prior.Rows[1].Failures=@()
     $prior | ConvertTo-Json -Depth 10 | Set-Content $path
@@ -335,7 +346,10 @@ foreach ($fault in @('empty-metrics','missing-metric','null-error','nonfinite-me
             -VisualDiffPath $visualDiff -ValidationToolsDirectory $tools -ReuseComparisonDirectory $cache | Out-Null
     }
     catch {
-        if ($_.Exception.Message -notlike 'Comparison page metrics incomplete: second-final-preserve*') { throw }
+        $expectedError = if ($outOfRangeMetrics.Contains($fault)) {
+            'Comparison page metric outside its range: second-final-preserve / ' + $outOfRangeMetrics[$fault][0]
+        } else { 'Comparison page metrics incomplete: second-final-preserve*' }
+        if ($_.Exception.Message -notlike $expectedError) { throw }
         $rejected=$true
     }
     if (!$rejected -or (Snapshot $case.Directory) -ne $before) {
@@ -344,7 +358,8 @@ foreach ($fault in @('empty-metrics','missing-metric','null-error','nonfinite-me
     $passed+=$fault
 }
 foreach ($control in @('cleared-summary','obsolete-failure','blank-reference','dimension-mismatch',
-    'near-dimensions-with-recall-failure','reference-extra-page','candidate-extra-page','threshold-boundary')) {
+    'near-dimensions-with-recall-failure','reference-extra-page','candidate-extra-page','threshold-boundary',
+    'metric-domain-minima','metric-domain-maxima')) {
     $case=New-Case $control 'legacy'
     $cache=New-ReuseCache $case
     $path=Join-Path $cache 'office-comparisons.json'
@@ -383,6 +398,17 @@ foreach ($control in @('cleared-summary','obsolete-failure','blank-reference','d
             $metric.ChangedPixelRatioAtThreshold16=.004
             $metric.ForegroundRecall=.99
             $metric.StructuralSimilarity=.985
+        }
+        'metric-domain-minima' {
+            $metric.ForegroundRecall=0
+            $metric.StructuralSimilarity=-1
+            $expectedFailures=@('ForegroundRecall','StructuralSimilarity')
+        }
+        'metric-domain-maxima' {
+            $metric.MeanAbsoluteError=255
+            $metric.ChangedPixelRatioAtThreshold16=1
+            $metric.ForegroundRecall=1
+            $expectedFailures=@('ChangedPixels','MeanAbsoluteError')
         }
     }
     $prior | ConvertTo-Json -Depth 10 | Set-Content $path
