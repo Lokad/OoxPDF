@@ -8673,6 +8673,7 @@
     "=DocxFloatingBoxMathSurvivesBodyAndStoryPlacement",
     "=DocxParagraphRelativeStaticBoxesFollowTheirSelectedStory",
     "=DocxStaticCellFloatingBoxesFollowTheirParagraphAndClip",
+    "=DocxStaticCellFloatingBoxLinksKeepVisibleFragments",
     "=DocxBoxedPicturesLinkWithinTheirPaintedViewports",
     "=DocxRotatedInlinePictureLinksFollowPaintedViewports",
     "=DocxRotatedStoryPictureLinksFollowPaintedViewports",

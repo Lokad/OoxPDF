@@ -669,6 +669,93 @@ internal static class DocxSectionNavigationTests
         }
     }
 
+    public static void DocxStaticCellFloatingBoxLinksKeepVisibleFragments()
+    {
+        const string label = "PUBLIC LINK";
+        const string suffix = "Neighboring text";
+        const string uri = "https://example.invalid/visible-cell-box";
+        const string name = "floating-cell-link-header";
+        string fixture = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases",
+            "TableGridOrigins", "Containers", "floating-table-ordered.docx"));
+        var resolver = new PortableRenderingTests.PinnedResolver();
+        XNamespace wp = OoxNamespaces.WordprocessingDrawingNamespace;
+        XNamespace relationships = "http://schemas.openxmlformats.org/package/2006/relationships";
+
+        foreach (var mode in Modes)
+        {
+            var geometry = mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout
+                : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup;
+            var renderer = new DocxRenderer(resolver, mode, geometry);
+            PdfPage fitting = Render(300, 85);
+            var fittingLabel = PortableRenderingTests.ReadPaintedSourceLabel(fitting, label);
+            var fittingSuffix = PortableRenderingTests.ReadPaintedSourceLabel(fitting, suffix);
+            TestAssert.Equal(1, fitting.Annotations.Count(link => link.Uri == uri));
+
+            PdfPage narrow = Render(102, 85);
+            var narrowLabel = PortableRenderingTests.ReadPaintedSourceLabel(narrow, label);
+            TestAssert.True(fittingLabel.SequenceEqual(narrowLabel), "The link's glyphs keep their ink and positions in the narrow cell.");
+            PdfRectangle clip = ReadLabelClip(narrow);
+            TestAssert.True(fittingSuffix.Max(glyph => glyph.Ink.X + glyph.Ink.Width) > clip.X + clip.Width,
+                "The neighboring unlinked prose crosses the narrow cell clip.");
+            var link = narrow.Annotations.SingleOrDefault(annotation => annotation.Uri == uri);
+            TestAssert.True(link.Uri == uri, "The cell's clip must not remove a hyperlink over fully visible text.");
+            TestAssert.True(link.X >= clip.X - .002d && link.Y >= clip.Y - .002d &&
+                link.X + link.Width <= clip.X + clip.Width + .002d && link.Y + link.Height <= clip.Y + clip.Height + .002d,
+                "The restored hyperlink stays inside the printed viewport.");
+
+            PdfPage shortCell = Render(300, 36);
+            TestAssert.True(ReadLabelClip(shortCell).Y > fittingLabel.Max(glyph => glyph.Ink.Y + glyph.Ink.Height),
+                "The short cell clips all of the linked ink.");
+            TestAssert.Equal(0, shortCell.Annotations.Count(annotation => annotation.Uri == uri));
+
+            PdfPage Render(int width, int height)
+            {
+                PdfPage? result = null;
+                WithDocumentMutation(fixture, (parts, document) =>
+                {
+                    var anchor = document.Descendants(wp + "anchor").Single();
+                    anchor.SetAttributeValue("layoutInCell", "1");
+                    anchor.Element(wp + "positionV")!.Element(wp + "posOffset")!.SetValue(30 * 12700);
+                    anchor.Element(wp + "wrapNone")!.ReplaceWith(new XElement(wp + "wrapSquare", new XAttribute("wrapText", "bothSides")));
+                    anchor.Descendants(W + "txbxContent").Single().ReplaceNodes(
+                        new XElement(W + "p",
+                            new XElement(W + "pPr", new XElement(W + "spacing", new XAttribute(W + "before", "0"),
+                                new XAttribute(W + "after", "0"), new XAttribute(W + "line", "300"), new XAttribute(W + "lineRule", "exact"))),
+                            new XElement(W + "hyperlink", new XAttribute(R + "id", "box-uri"),
+                                new XElement(W + "r", new XElement(W + "rPr", new XElement(W + "sz", new XAttribute(W + "val", "24"))),
+                                    new XElement(W + "t", label))),
+                            new XElement(W + "r", new XElement(W + "t", new XAttribute(XNamespace.Xml + "space", "preserve"), " " + suffix))));
+
+                    var owner = Paragraph("CELL OWNER");
+                    owner.AddFirst(new XElement(W + "pPr", new XElement(W + "spacing",
+                        new XAttribute(W + "before", "0"), new XAttribute(W + "after", "0"))));
+                    owner.Add(new XElement(anchor.Ancestors(W + "r").First()));
+                    anchor.Ancestors(W + "p").First().Remove();
+                    int cellWidth = width * 20;
+                    var table = new XElement(W + "tbl",
+                        new XElement(W + "tblPr", new XElement(W + "tblLayout", new XAttribute(W + "type", "fixed"))),
+                        new XElement(W + "tblGrid", new XElement(W + "gridCol", new XAttribute(W + "w", cellWidth))),
+                        new XElement(W + "tr", new XElement(W + "trPr", new XElement(W + "trHeight",
+                            new XAttribute(W + "val", height * 20), new XAttribute(W + "hRule", "exact"))),
+                            new XElement(W + "tc", new XElement(W + "tcPr", new XElement(W + "tcW",
+                                new XAttribute(W + "w", cellWidth), new XAttribute(W + "type", "dxa"))), owner)));
+                    document.Descendants(W + "sectPr").Single().AddFirst(new XElement(W + "headerReference",
+                        new XAttribute(W + "type", "default"), new XAttribute(R + "id", name)));
+                    AddStoryPart(parts, name, "header", new XElement(W + "hdr", table));
+                    parts[$"word/_rels/{name}.xml.rels"] = Encoding.UTF8.GetBytes(new XElement(relationships + "Relationships",
+                        new XElement(relationships + "Relationship", new XAttribute("Id", "box-uri"),
+                            new XAttribute("Type", R.NamespaceName + "/hyperlink"), new XAttribute("Target", uri),
+                            new XAttribute("TargetMode", "External"))).ToString());
+                }, path => result = renderer.RenderPagesAsync(DocxTests.ReadDocx(path, mode), null, default).ToBlockingEnumerable().Single());
+                return result ?? throw new InvalidOperationException("The header fixture must render one page.");
+            }
+        }
+
+        static PdfRectangle ReadLabelClip(PdfPage page) => DocxNoteClippingTests.ReadPhysicalPaintFrames(page)
+            .Single(frame => DocxCommentsTests.ReadEmbeddedGlyphTextShows(new PdfPage(page.Width, page.Height, frame.Block, page.Fonts))
+                .Any(show => show.Text.Trim() == label)).Clip;
+    }
+
     public static void DocxBoxedPicturesLinkWithinTheirPaintedViewports()
     {
         const string uri = "https://example.invalid/boxed-picture";

@@ -1546,6 +1546,10 @@ internal sealed partial class DocxRenderer
                             DocxLineMetrics.MeasureWindowsDescender(font, segment.FontSize);
                         if (!TryResolveLinkClip(clip, fragmentMinX, fragmentMaxX,
                             segment.BaselineY - descent, segment.BaselineY + ascent, out fragmentClip)) continue;
+                        if (font is not null && fragmentClip is { } viewport &&
+                            (viewport.Y > segment.BaselineY - descent ||
+                             viewport.Y + viewport.Height < segment.BaselineY + ascent) &&
+                            !IntersectsVerticalLinkInk(segment, font, viewport, cancellationToken)) continue;
                     }
                     double fragmentTop = usesBodyLineBox
                         ? line.BaselineY - textEmissionBaselineOffset + line.BodyLineBoxBaselineInsetPoints!.Value
@@ -1823,6 +1827,29 @@ internal sealed partial class DocxRenderer
             if (!paint.PreserveFittingPadding || left < bounds.X || right > boundsRight || bottom < bounds.Y || top > boundsTop)
                 clip = bounds;
             return true;
+        }
+
+        static bool IntersectsVerticalLinkInk(DocxTextEmissionSegment segment, OpenTypeFont font,
+            PdfRectangle viewport, CancellationToken token)
+        {
+            // The nominal font box includes blank space above and below its
+            // glyphs. Keep the existing link padding, but require some ink
+            // when the viewport cuts into that box vertically.
+            double scale = DocxTextEmissionPlanner.CreateForEmissionSegment(segment).PdfFontSize / font.UnitsPerEm;
+            double bottom = viewport.Y;
+            double top = bottom + viewport.Height;
+            foreach (Rune rune in segment.Text.EnumerateRunes())
+            {
+                token.ThrowIfCancellationRequested();
+                if (Rune.IsWhiteSpace(rune)) continue;
+                ushort glyph = font.MapCodePoint(rune.Value);
+                if (glyph == 0) continue;
+                if (!font.TryGetGlyphBounds(glyph, out var ink)) return true;
+                if (ink.YMax > ink.YMin && segment.BaselineY + ink.YMax * scale > bottom &&
+                    segment.BaselineY + ink.YMin * scale < top)
+                    return true;
+            }
+            return false;
         }
 
         bool IsHyperlinkSegment(DocxHyperlinkSpan link, int sourceTextRunIndex)

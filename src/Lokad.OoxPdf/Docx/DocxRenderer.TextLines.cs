@@ -239,13 +239,16 @@ internal sealed partial class DocxRenderer
             var lines = paintItems is null ? textBoxLayout.TextLines.Select(frame.PlaceLine) : paintItems.OfType<DocxTextLineLayout>();
             foreach (var placed in lines)
             {
-                if (InsideViewport(placed)) yield return (placed, viewport);
+                // A line can cross the cell clip while its linked fragment
+                // stays visible. Link admission intersects the fragment with
+                // the paint viewport after resolving its text or math bounds.
+                if (clipCellLinks || InsideViewport(placed)) yield return (placed, viewport);
             }
 
             if (paintItems is not null)
             {
                 foreach (var (line, tableClip, _) in EnumerateLinkLinesInItems(paintItems, viewport, context, token, includeDirectLines: false))
-                    if (InsideViewport(line)) yield return (line, tableClip ?? viewport);
+                    yield return (line, tableClip ?? viewport);
                 continue;
             }
 
