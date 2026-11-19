@@ -197,29 +197,31 @@ internal static class PptxTextSpacingTests
 
     public static void PptxWrappedNoBreakClusterKeepsInkAndLinkInNextColumn()
     {
-        // The pinned font fits the prefix through the no-break space, so wrapping
-        // the following word must move the already placed token.
-        const int columnWidth = 310;
+        // With the pinned font, 310pt fits the prefix through the space.
+        // At 297pt the token fits but its no-break space overflows.
         const int columnGap = 20;
         const string uri = "https://example.org/points";
         var cases = new[]
         {
-            (Columns: 2, Overflow: "clip", ManualBreak: false, Linked: false),
-            (Columns: 2, Overflow: "clip", ManualBreak: false, Linked: true),
-            (Columns: 2, Overflow: "clip", ManualBreak: true, Linked: false),
-            (Columns: 2, Overflow: "overflow", ManualBreak: false, Linked: false),
-            (Columns: 1, Overflow: "clip", ManualBreak: false, Linked: false),
+            (Columns: 2, ColumnWidth: 310, Overflow: "clip", ManualBreak: false, Linked: false, Space: "&#x202F;"),
+            (Columns: 2, ColumnWidth: 310, Overflow: "clip", ManualBreak: false, Linked: true, Space: "&#x202F;"),
+            (Columns: 2, ColumnWidth: 310, Overflow: "clip", ManualBreak: true, Linked: false, Space: "&#x202F;"),
+            (Columns: 2, ColumnWidth: 310, Overflow: "overflow", ManualBreak: false, Linked: false, Space: "&#x202F;"),
+            (Columns: 1, ColumnWidth: 310, Overflow: "clip", ManualBreak: false, Linked: false, Space: "&#x202F;"),
+            (Columns: 2, ColumnWidth: 310, Overflow: "clip", ManualBreak: false, Linked: false, Space: "&#xA0;"),
+            (Columns: 2, ColumnWidth: 297, Overflow: "clip", ManualBreak: false, Linked: false, Space: "&#x202F;"),
+            (Columns: 2, ColumnWidth: 297, Overflow: "clip", ManualBreak: false, Linked: true, Space: "&#xA0;"),
         };
 
         string Run(string text, string properties = "") =>
             $"<a:r><a:rPr sz=\"2600\"><a:latin typeface=\"DejaVu Sans\"/>{properties}</a:rPr><a:t>{text}</a:t></a:r>";
 
         var fonts = new PortableRenderingTests.PinnedResolver();
-        foreach (var (columns, overflow, manualBreak, linked) in cases)
+        foreach (var (columns, columnWidth, overflow, manualBreak, linked, space) in cases)
         {
-            string runs = manualBreak ? Run("Alpha beta gamma ") + "<a:br/>" + Run("+2&#x202F;points omega")
-                : linked ? Run("Alpha beta gamma ") + Run("+2", """<a:hlinkClick r:id="points"/>""") + Run("&#x202F;points omega")
-                : Run("Alpha beta gamma +2&#x202F;points omega");
+            string runs = manualBreak ? Run("Alpha beta gamma ") + "<a:br/>" + Run($"+2{space}points omega")
+                : linked ? Run("Alpha beta gamma ") + Run("+2", """<a:hlinkClick r:id="points"/>""") + Run($"{space}points omega")
+                : Run($"Alpha beta gamma +2{space}points omega");
             int width = columns * columnWidth + (columns - 1) * columnGap;
             var entries = new Dictionary<string, string>
             {
@@ -251,9 +253,10 @@ internal static class PptxTextSpacingTests
             var prefix = PortableRenderingTests.ReadPaintedSourceLabel(page, "Alpha beta gamma");
             double columnX = 72 + (columns - 1) * (columnWidth + columnGap);
             TestAssert.True(token[0].Origin.X >= columnX - .002 && token[0].Origin.X < columnX + 12 &&
-                word[0].Origin.X > token[^1].Origin.X && Math.Abs(word[0].Origin.Y - token[0].Origin.Y) < .002 &&
-                (columns == 2 ? prefix[0].Origin.X < columnX : prefix[0].Origin.Y > token[0].Origin.Y),
-                "The wrapped cluster paints on its next line in the destination column.");
+                word[0].Origin.X > token[^1].Origin.X && Math.Abs(word[0].Origin.Y - token[0].Origin.Y) < .002,
+                $"The wrapped cluster paints on its next line for {columnWidth}pt and {space}.");
+            TestAssert.True(prefix.All(glyph => columns == 2 ? glyph.Origin.X < columnX : glyph.Origin.Y > token[0].Origin.Y),
+                $"The preceding words stay on their source line for {columnWidth}pt and {space}.");
             TestAssert.Equal(linked ? 1 : 0, page.Annotations.Count);
             if (linked)
             {

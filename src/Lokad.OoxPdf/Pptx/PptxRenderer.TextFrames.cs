@@ -511,7 +511,10 @@ internal sealed partial class PptxRenderer
                         wrapTolerance = PptxTextMetricRules.FinalWordWrapTolerance(fragmentFontSize, effectiveTextWidth);
                     }
 
-                    bool overflowsLine = allowWrapping &&
+                    // A no-break space extends the current cluster. Check its
+                    // width with the following visible segment so the anchor
+                    // can move with it.
+                    bool overflowsLine = allowWrapping && !isNoBreakHiddenAdvance &&
                         cursorX > paragraphTextX &&
                         cursorX + segmentWidth > columnStartX + effectiveTextWidth + wrapTolerance;
                     if (overflowsLine)
@@ -549,7 +552,9 @@ internal sealed partial class PptxRenderer
                         // line and the whole word fits the line, detach the word tail so the
                         // standard break below emits without it; re-added after the break.
                         List<(PptxTextRunModel? SourceRun, TextRun Run)>? pulledWordSpans = null;
-                        if (flowSegment.Draw &&
+                        // Moving the no-break anchor already chooses the tail
+                        // to carry. The preceding word stays on this line.
+                        if (movedNoBreakSpan is null && flowSegment.Draw &&
                             currentAdvanceText.Length != 0 &&
                             WordContinuesOntoLine(previousAdvanceCodePoint, currentAdvanceText) &&
                             TryFindTrailingWordStart(line.Spans, out int wordStartSpan, out int wordLeadingSpaces) &&
