@@ -77,14 +77,23 @@ internal sealed partial class PptxRenderer
         }
         double titleX = box.X + box.Width * PptxChartMetricRules.TitleXInsetRatio;
         double titleWidth = box.Width * PptxChartMetricRules.TitleWidthRatio;
+        await AddChartTitleLinesAsync(runs, title, titleLines, style, titleX, titleWidth, top,
+            singleLineBaseline, box, fontResolver, titleLinks).ConfigureAwait(false);
+    }
+
+    private static async ValueTask AddChartTitleLinesAsync(List<TextRun> runs, string title,
+        IReadOnlyList<MeasuredChartTitleLine> titleLines, ChartTextStyle style, double x, double width,
+        double top, double? singleLineBaseline, ChartLayoutBox clip, PresentationFontResolver? fontResolver,
+        List<ChartTextRunLink>? titleLinks)
+    {
         double titleHeight = style.FontSize * PptxChartMetricRules.TitleHeightFactor;
         foreach (MeasuredChartTitleLine line in titleLines)
         {
             fontResolver?.CancellationToken.ThrowIfCancellationRequested();
             string lineText = titleLines.Count == 1 ? title : string.Concat(line.Runs.Select(run => run.Text));
-            await AddChartRichTextRunsAsync(runs, line.Runs, lineText.Trim(), titleX,
-                singleLineBaseline ?? top - line.BaselineFromTop, titleWidth, titleHeight,
-                box.X, box.Y, box.Width, box.Height, style, TextAlignment.Center, fontResolver, titleLinks).ConfigureAwait(false);
+            await AddChartRichTextRunsAsync(runs, line.Runs, lineText.Trim(), x,
+                singleLineBaseline ?? top - line.BaselineFromTop, width, titleHeight,
+                clip.X, clip.Y, clip.Width, clip.Height, style, TextAlignment.Center, fontResolver, titleLinks).ConfigureAwait(false);
         }
     }
 
@@ -171,27 +180,32 @@ internal sealed partial class PptxRenderer
         HashSet<string> reportedHyperlinkIds,
         Action<OoxPdfDiagnostic>? diagnosticSink = null)
     {
-        foreach (PptxSceneChartAxis axis in sceneChart.Axes)
+        for (int index = 0; index < sceneChart.Axes.Count; index++)
         {
+            PptxSceneChartAxis axis = sceneChart.Axes[index];
             if (axis.IsDeleted == true ||
                 string.IsNullOrWhiteSpace(axis.Title.Text) ||
-                axis.Title.Layout.HasLayout)
+                axis.Title.Layout.HasLayout ||
+                !IsRenderableDefaultChartAxisTitle(axis.AxisKind, axis.PositionKind))
             {
                 continue;
             }
 
+            if (layout.AxisTitleBands?.Titles.TryGetValue(index, out var band) == true)
+            {
+                await RenderDefaultAxisTitleBandAsync(graphics, sceneChart, axis, band, fontResolver, chartFonts,
+                    context, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false);
+                continue;
+            }
+
             await RenderDefaultChartAxisTitleAsync(
-                theme,
                 graphics,
                 layout,
                 axis.Title.Text,
                 ToChartTextRuns(axis.Title.TextRuns),
-                axis.AxisKind,
                 axis.PositionKind,
                 ToChartShapeStyle(axis.Title.ShapeStyle),
-                ToChartTextStyleOverride(PptxSceneBuilder.ResolveChartElementTextStyleOverride(sceneChart, axis.Title.TextStyle, GetChartAxisStyleRole(axis.AxisKind))),
-                ChartTextStyleOverride.Empty,
-                ToChartTextStyleOverride(axis.Title.TextStyle),
+                ReadDefaultAxisTitleStyle(theme, sceneChart, axis),
                 fontResolver, chartFonts, context, sceneChart, linkAnnotations, reportedHyperlinkIds, diagnosticSink).ConfigureAwait(false);
         }
     }
@@ -221,18 +235,25 @@ internal sealed partial class PptxRenderer
         }
     }
 
+    private static ChartTextStyle ReadDefaultAxisTitleStyle(PptxTheme theme, PptxSceneChart chart, PptxSceneChartAxis axis)
+    {
+        ChartTextStyle style = CreateDefaultChartTextStyle(theme, fallbackFontSize: PptxChartMetricRules.TitleFallbackFontSize);
+        ChartTextStyleOverride title = ToChartTextStyleOverride(axis.Title.TextStyle);
+        style = style.Merge(ToChartTextStyleOverride(PptxSceneBuilder.ResolveChartElementTextStyleOverride(
+            chart, axis.Title.TextStyle, GetChartAxisStyleRole(axis.AxisKind)))).Merge(title);
+        if (title.Bold is null) style = style with { Bold = true };
+        if (title.Color is null) style = style with { Color = new RgbColor(0, 0, 0) };
+        return style;
+    }
+
     private static async ValueTask RenderDefaultChartAxisTitleAsync(
-        PptxTheme theme,
         PdfGraphicsBuilder graphics,
         ChartLayout layout,
-        string? text,
+        string text,
         IReadOnlyList<ChartTextRunOverride> textRuns,
-        PptxSceneChartAxisKind axisKind,
         PptxSceneChartAxisPosition positionKind,
         ChartShapeStyle shapeStyle,
-        ChartTextStyleOverride chartTextStyle,
-        ChartTextStyleOverride chartStyleRoleTextStyle,
-        ChartTextStyleOverride titleTextStyle,
+        ChartTextStyle style,
         PresentationFontResolver fontResolver,
         List<PdfFontResource> chartFonts,
         PptxRenderContext context,
@@ -241,33 +262,10 @@ internal sealed partial class PptxRenderer
         HashSet<string> reportedHyperlinkIds,
         Action<OoxPdfDiagnostic>? diagnosticSink = null)
     {
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return;
-        }
-
-        ChartTextStyle style = CreateDefaultChartTextStyle(theme, fallbackFontSize: PptxChartMetricRules.TitleFallbackFontSize);
-        style = style.Merge(chartTextStyle);
-        style = style.Merge(chartStyleRoleTextStyle);
-        style = style.Merge(titleTextStyle);
-        if (titleTextStyle.Bold is null)
-        {
-            style = style with { Bold = true };
-        }
-
-        if (titleTextStyle.Color is null)
-        {
-            style = style with { Color = new RgbColor(0, 0, 0) };
-        }
         string trimmed = text.Trim();
         double titleHeight = style.FontSize * PptxChartMetricRules.TitleHeightFactor;
         var textMeasurer = new ChartTextMeasurer(fontResolver);
         double textWidth = Math.Max(style.FontSize, (await textMeasurer.MeasureAsync(trimmed, style).ConfigureAwait(false)));
-        if (!IsRenderableDefaultChartAxisTitle(axisKind, positionKind))
-        {
-            return;
-        }
-
         if (positionKind is PptxSceneChartAxisPosition.Bottom or PptxSceneChartAxisPosition.Top)
         {
             await RenderDefaultHorizontalChartAxisTitleAsync(graphics, layout, trimmed, textRuns, style, shapeStyle, titleHeight, textWidth, positionKind, fontResolver, chartFonts, context, chart, linkAnnotations, reportedHyperlinkIds, diagnosticSink).ConfigureAwait(false);
@@ -439,6 +437,14 @@ internal sealed partial class PptxRenderer
             TextAlignment.Left,
             fontResolver,
             axisLinks).ConfigureAwait(false);
+        RotateChartAxisTitle(runs, axisLinks, baselineX, baselineY);
+        RenderedFonts axisFonts = (await RenderChartTextRunsAsync(runs, graphics, chartFonts, "CAT", fontResolver, diagnosticSink).ConfigureAwait(false));
+        await AddChartTextRunHyperlinkAnnotationsAsync(axisLinks, chart, context, axisFonts, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false);
+    }
+
+    private static void RotateChartAxisTitle(List<TextRun> runs, List<ChartTextRunLink>? axisLinks,
+        double pivotX, double pivotY)
+    {
         for (int i = 0; i < runs.Count; i++)
         {
             runs[i] = PlaceInAxisFrame(runs[i]);
@@ -453,16 +459,12 @@ internal sealed partial class PptxRenderer
             }
         }
 
-        RenderedFonts axisFonts = (await RenderChartTextRunsAsync(runs, graphics, chartFonts, "CAT", fontResolver, diagnosticSink).ConfigureAwait(false));
-        await AddChartTextRunHyperlinkAnnotationsAsync(axisLinks, chart, context, axisFonts, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false);
-
-        // Run origins already advance in local title coordinates. Rotating
-        // around the first baseline sends that advance along the axis.
+        // The same physical frame owns all runs and their linked ink.
         TextRun PlaceInAxisFrame(TextRun run) => run with
         {
             RotationDegrees = -90d,
-            RotationCenterX = baselineX,
-            RotationCenterY = baselineY
+            RotationCenterX = pivotX,
+            RotationCenterY = pivotY
         };
     }
 

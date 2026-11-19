@@ -130,6 +130,7 @@ internal sealed partial class PptxRenderer
                 ChartLayout chartLayout = (await GetBarChartLayoutAsync(document, theme, bounds, chartXml, sceneChart, colorMap, barPlot, barChart, barOptions, workbook, plotVisibleOnly, categoryLabels, fontResolver, resolvedCategory, sourceLegend, numericPlacement, context: context,
                     resolvedValueScale: sharedValueAxis || horizontalBars && CanOwnCartesianChartSourceRange(sceneChart, valueSceneAxis)
                         ? (valueExtents, valueAxisOptions.Units) : null).ConfigureAwait(false));
+                chartLayout = await PrepareDefaultAxisTitleBandsAsync(chartLayout, theme, sceneChart, fontResolver).ConfigureAwait(false);
                 ChartTextStyle legendTextStyle = ReadSceneChartLegendTextStyle(theme, sceneChart);
                 chartLayout = await AdmitAutomaticBarRightLegendAsync(chartLayout, sceneChart, legendEntries,
                     legendTextStyle, fontResolver, document.SlideWidthPoints).ConfigureAwait(false);
@@ -175,6 +176,7 @@ internal sealed partial class PptxRenderer
                     ChartLayout resized = await GetBarChartLayoutAsync(document, theme, bounds, chartXml, sceneChart,
                         colorMap, barPlot, barChart, barOptions, workbook, plotVisibleOnly, categoryLabels, fontResolver,
                         resolvedCategory, sourceLegend, numericPlacement, context, scale).ConfigureAwait(false);
+                    resized = ApplyDefaultAxisTitleBands(resized, chartLayout.AxisTitleBands);
                     chartLayout = resized with
                     {
                         PlotBox = resized.PlotBox with { Y = resized.PlotBox.Y + chartLayout.PlotBox.Y - unreservedLayout.PlotBox.Y,

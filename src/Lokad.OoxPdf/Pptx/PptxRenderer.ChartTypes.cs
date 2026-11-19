@@ -331,6 +331,7 @@ internal sealed partial class PptxRenderer
     {
         public ChartCategoryLabelLayout? CategoryLabels { get; init; }
         public double? AutomaticCaptionFittingClearance { get; init; }
+        public DefaultAxisTitleBands? AxisTitleBands { get; init; }
     }
 
     private sealed record ChartCategoryLabelLayout(ChartTextStyle Style, double RotationDegrees, int TickLabelSkip,

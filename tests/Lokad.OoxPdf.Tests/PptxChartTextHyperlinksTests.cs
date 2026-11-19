@@ -160,6 +160,76 @@ internal static partial class PptxChartTextHyperlinksTests
         }
     }
 
+    public static void PptxDefaultAxisTitlesKeepAuthoredLinesInTheirBands()
+    {
+        const string first = "Northwestern Region";
+        const string second = "International Sales";
+        string firstRun = $"""<a:r><a:rPr sz="1800" b="0"/><a:t>{first}</a:t></a:r>""";
+        string secondRun = $"""
+            <a:r><a:rPr sz="1800" b="0"><a:hlinkClick r:id="rIdLink"/></a:rPr><a:t>{second}</a:t></a:r>
+            """;
+        var resolver = new PortableRenderingTests.PinnedResolver();
+        foreach (string side in new[] { "l", "r", "t", "b" })
+        {
+            PdfPage page = Render(side, "<a:br/>");
+            var leading = PortableRenderingTests.ReadPaintedSourceLabel(page, first, fontPrefix: "CAT");
+            var trailing = PortableRenderingTests.ReadPaintedSourceLabel(page, second, fontPrefix: "CAT");
+            PdfLinkAnnotation link = page.Annotations.Single();
+            TestAssert.Equal("https://example.invalid/chart-axis", link.Uri);
+            TestAssert.True(trailing.All(glyph => glyph.Ink.X >= link.X - .02d &&
+                glyph.Ink.X + glyph.Ink.Width <= link.X + link.Width + .02d &&
+                glyph.Ink.Y >= link.Y - .02d && glyph.Ink.Y + glyph.Ink.Height <= link.Y + link.Height + .02d),
+                "The link follows the second line's visible ink.");
+            if (side is "l" or "r")
+                TestAssert.True(leading.Max(glyph => glyph.Ink.X + glyph.Ink.Width) < trailing.Min(glyph => glyph.Ink.X),
+                    "The rotated lines occupy separate cross-axis positions.");
+            else
+                TestAssert.True(trailing.Max(glyph => glyph.Ink.Y + glyph.Ink.Height) < leading.Min(glyph => glyph.Ink.Y),
+                    "The horizontal lines occupy separate baselines.");
+
+            if (side == "r")
+            {
+                var tick = PortableRenderingTests.ReadPaintedSourceLabel(page, "5", fontPrefix: "CVA").Single();
+                TestAssert.True(tick.Ink.X + tick.Ink.Width < leading.Min(glyph => glyph.Ink.X),
+                    "The value ticks stay on the plot side of the caption.");
+                PdfPage paragraphs = Render(side, "</a:p><a:p>");
+                TestAssert.Equal(page.Content, paragraphs.Content);
+                TestAssert.Equal(link, paragraphs.Annotations.Single());
+
+                PdfPage composed = Render(side, "<a:br/>", compose: true);
+                var main = PortableRenderingTests.ReadPaintedSourceLabel(composed, "Budget and Actual", fontPrefix: "CT");
+                var topFirst = PortableRenderingTests.ReadPaintedSourceLabel(composed, "Quarterly Comparison", fontPrefix: "CAT");
+                var topSecond = PortableRenderingTests.ReadPaintedSourceLabel(composed, "For Sales Owners", fontPrefix: "CAT");
+                var right = PortableRenderingTests.ReadPaintedSourceLabel(composed, first, fontPrefix: "CAT");
+                PortableRenderingTests.ReadPaintedSourceLabel(composed, second, fontPrefix: "CAT");
+                TestAssert.True(main.Min(glyph => glyph.Ink.Y) > topFirst.Max(glyph => glyph.Ink.Y + glyph.Ink.Height),
+                    "The main title has its own header above the top-axis caption.");
+                TestAssert.True(topSecond.Max(glyph => glyph.Ink.X + glyph.Ink.Width) < right.Min(glyph => glyph.Ink.X),
+                    "The top and right captions keep separate ink while sharing the chart.");
+            }
+        }
+
+        PdfPage Render(string side, string boundary, bool compose = false)
+        {
+            string source = AxisTitleChart(side, firstRun + boundary + secondRun).Replace(
+                """<c:majorUnit val="5"/><c:tickLblPos val="none"/>""",
+                """<c:majorUnit val="5"/><c:tickLblPos val="nextTo"/>""", StringComparison.Ordinal);
+            if (compose)
+            {
+                source = source.Replace("<c:chart>", "<c:chart>" + Title("Budget and Actual"), StringComparison.Ordinal)
+                    .Replace("""<c:axPos val="b"/><c:crossAx val="20"/><c:tickLblPos val="none"/>""",
+                        """<c:axPos val="t"/><c:crossAx val="20"/><c:tickLblPos val="none"/>""" +
+                        Title("Quarterly Comparison", "For Sales Owners"), StringComparison.Ordinal);
+            }
+            return RenderChartTitlePage("", AxisTitleRelationships, source, resolver).Pages.Single();
+        }
+
+        static string Title(params string[] lines) =>
+            "<c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p>" +
+            string.Join("<a:br/>", lines.Select(text => $"""<a:r><a:rPr sz="1400" b="0"/><a:t>{text}</a:t></a:r>""")) +
+            "</a:p></c:rich></c:tx><c:overlay val=\"0\"/></c:title>";
+    }
+
     public static void PptxManualAxisTitleKeepsAuthoredLinesAndLinkedInk()
     {
         const string north = "<a:r><a:rPr sz=\"1800\" b=\"0\"/><a:t>North</a:t></a:r>";
