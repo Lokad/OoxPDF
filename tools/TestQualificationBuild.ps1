@@ -139,9 +139,11 @@ try {
     & $BuildScript -WorktreeDirectory $worktree -Revision $extended -OutputDirectory $destination -ReuseRuntimeDirectory $seed | Out-Null
     $evidence=Get-Content -LiteralPath ($destination+'.build/evidence.json') -Raw | ConvertFrom-Json
     $arguments=$global:ooxPdfBuildGuardCalls[-1]
-    if ($global:ooxPdfBuildGuardCalls.Count -ne $before+1 -or
+    if ($global:ooxPdfBuildGuardCalls.Count -ne $before+1 -or $arguments[0] -ne 'build' -or
         $arguments[1] -ne (Join-Path $worktree 'tests/Lokad.OoxPdf.Tests/Lokad.OoxPdf.Tests.csproj') -or
+        '--no-restore' -in $arguments -or
         '-p:BuildProjectReferences=false' -notin $arguments -or
+        '-p:ProduceReferenceAssembly=false' -notin $arguments -or
         $evidence.ReusedRuntimeAssets -ne 1 -or $evidence.AddedPublicInputs -ne 1 -or
         (Get-FileHash -LiteralPath (Join-Path $worktree $asset)).Hash -ne $assetHash) {
         throw 'Extended harness rebuilt or changed production, or lost its added-input evidence'

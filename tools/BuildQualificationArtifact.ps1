@@ -102,7 +102,9 @@ foreach ($relative in $projects) {
     $project=Join-Path $source $relative
     $log=Join-Path $logs ($builds.Count.ToString()+'.log')
     # Absolute project arguments make the caller's working directory irrelevant.
-    $options=if ($reuse) {@('--no-restore','-p:BuildProjectReferences=false')} else {@()}
+    # Restore the harness project assets and compile against the pinned
+    # implementation assembly. Fresh worktrees have no reference assembly.
+    $options=if ($reuse) { @('-p:BuildProjectReferences=false','-p:ProduceReferenceAssembly=false') } else { @() }
     & dotnet build $project -c Release -f $Framework --nologo -v minimal @options *> $log
     if ($LASTEXITCODE -ne 0) { throw ('Qualification build failed; inspect '+$log) }
     $builds += [ordered]@{Project=$project;Log=$log;Configuration='Release';Framework=$Framework}
