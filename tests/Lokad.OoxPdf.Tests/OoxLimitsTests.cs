@@ -200,10 +200,15 @@ internal static partial class OoxLimitsTests
 
     public static void ChartHugeSparseIndexThrowsInsteadOfSilentLoss()
     {
-        // A single point at int.MaxValue previously overflowed to an empty dense result (M02).
-        string input = PptxWithChartPtCount(null, [(2147483647, "1")]);
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-        TestAssert.Throws<IOException>(() => OoxPdfConverter.Convert(input, output, new OoxPdfOptions { InputKind = OoxPdfInputKind.Pptx }));
+        foreach (bool oversizedCategory in new[] { false, true })
+        {
+            int valueIndex = oversizedCategory ? 0 : int.MaxValue;
+            int categoryIndex = oversizedCategory ? int.MaxValue : 0;
+            string input = PptxWithChartPtCount(null, [(valueIndex, "1")], [(categoryIndex, "A")]);
+            string output = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName() + ".pdf");
+            IOException error = TestAssert.Throws<IOException>(() => OoxPdfConverter.Convert(input, output, new OoxPdfOptions { InputKind = OoxPdfInputKind.Pptx }));
+            TestAssert.Contains("Chart point index is out of range.", error.Message);
+        }
     }
 
     public static void ChartSmallSparseGapKeepsPositions()
@@ -574,17 +579,23 @@ internal static partial class OoxLimitsTests
             }));
     }
 
-    private static string PptxWithChartPtCount(int? declaredCount, IReadOnlyList<(int Index, string Value)> points)
+    private static string PptxWithChartPtCount(int? declaredCount, IReadOnlyList<(int Index, string Value)> points,
+        IReadOnlyList<(int Index, string Value)>? categories = null)
     {
         string ptCountXml = declaredCount is { } count
             ? "<c:ptCount val=\"" + count.ToString(System.Globalization.CultureInfo.InvariantCulture) + "\"/>"
             : string.Empty;
-        var sb = new System.Text.StringBuilder();
-        foreach ((int index, string value) in points)
+        static string WritePoints(IReadOnlyList<(int Index, string Value)> entries)
         {
-            sb.Append("<c:pt idx=\"" + index.ToString(System.Globalization.CultureInfo.InvariantCulture) + "\"><c:v>" + value + "</c:v></c:pt>");
+            var sb = new System.Text.StringBuilder();
+            foreach ((int index, string value) in entries)
+            {
+                sb.Append("<c:pt idx=\"" + index.ToString(System.Globalization.CultureInfo.InvariantCulture) + "\"><c:v>" + value + "</c:v></c:pt>");
+            }
+            return sb.ToString();
         }
-        string pts = sb.ToString();
+        string pts = WritePoints(points);
+        string categoryPoints = categories is null ? pts : WritePoints(categories);
         return TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
         {
             ["[Content_Types].xml"] = TestFixtures.Utf8(PptxTests.BasicContentTypes()),
@@ -614,7 +625,7 @@ internal static partial class OoxLimitsTests
                   <c:grouping val="standard"/>
                   <c:ser>
                     <c:cat><c:strLit>
-                """ + ptCountXml + pts + """
+                """ + ptCountXml + categoryPoints + """
                     </c:strLit></c:cat>
                     <c:val><c:numLit>
                 """ + ptCountXml + pts + """

@@ -1,10 +1,8 @@
 using System.Globalization;
 using System.Text;
-using System.Xml.Linq;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Ooxml;
-using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
 using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Pptx;
@@ -461,22 +459,23 @@ internal sealed partial class PptxRenderer
 
     private static ChartDataLabelOptions ReadSceneDataLabelOptions(PptxSceneChart sceneChart, PptxSceneChartPlot plot)
     {
-        return ToChartDataLabelOptions(plot.DataLabels, plot.Source,
+        return ToChartDataLabelOptions(plot.DataLabels,
             PptxSceneBuilder.ResolveChartElementTextStyleOverride(sceneChart, default, "dataLabel"),
-            date1904: sceneChart.Options.Date1904 == true);
+            date1904: sceneChart.Options.Date1904 == true,
+            independentPoints: plot.Kind is "pieChart" or "doughnutChart");
     }
 
     private static IReadOnlyList<ChartDataLabelOptions> ReadSceneSeriesDataLabelOptions(PptxSceneChart sceneChart, PptxSceneChartPlot plot)
     {
         PptxSceneChartTextStyleOverride defaults = PptxSceneBuilder.ResolveChartElementTextStyleOverride(sceneChart, default, "dataLabel");
         return plot.Series
-            .Select(series => ToChartDataLabelOptions(series.DataLabels, plot.Source, defaults,
-                date1904: sceneChart.Options.Date1904 == true, seriesScope: true))
+            .Select(series => ToChartDataLabelOptions(series.DataLabels, defaults,
+                date1904: sceneChart.Options.Date1904 == true, independentPoints: true))
             .ToArray();
     }
 
-    private static ChartDataLabelOptions ToChartDataLabelOptions(PptxSceneChartDataLabels labels, XElement chartElement,
-        PptxSceneChartTextStyleOverride defaults, bool date1904 = false, bool seriesScope = false)
+    private static ChartDataLabelOptions ToChartDataLabelOptions(PptxSceneChartDataLabels labels,
+        PptxSceneChartTextStyleOverride defaults, bool date1904, bool independentPoints)
     {
         IReadOnlyDictionary<string, ChartBooleanOption> flags = ToChartDataLabelFlagOptions(labels);
         var containerStyle = PptxSceneBuilder.MergeChartTextStyleOverride(defaults, labels.TextStyle);
@@ -503,13 +502,11 @@ internal sealed partial class PptxRenderer
             flags,
             EmptyChartDataLabelOverrides,
             labels.IsDefined,
-            Date1904: date1904 || ResolveChartSpaceDate1904(chartElement),
+            Date1904: date1904,
             IsDeleted: labels.IsDeleted);
         // A disabled Cartesian component set suppresses its point requests.
         // Deletion hides default labels while retaining defined point scope.
         // Series and sector plots also have independent point-label scope.
-        bool independentPoints = seriesScope || chartElement.Name == ChartNamespace + "pieChart" ||
-            chartElement.Name == ChartNamespace + "doughnutChart";
         return independentPoints || options.HasVisibleContent || labels.IsDeleted == true
             ? options with { Overrides = ToChartDataLabelOverrides(labels.Overrides, defaults, containerStyle) }
             : options;

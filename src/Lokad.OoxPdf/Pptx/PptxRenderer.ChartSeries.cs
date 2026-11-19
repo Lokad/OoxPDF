@@ -574,7 +574,8 @@ internal sealed partial class PptxRenderer
     {
         IReadOnlyList<ChartIndexedNumberPoint> workbookPoints = ReadWorkbookNumberPoints(workbook, source);
         IReadOnlyList<ChartIndexedNumberPoint> points = scenePoints.Select(ToChartIndexedNumberPoint).ToArray();
-        return new ChartIndexedNumberVector(points, pointCount ?? InferPointCount(points), source.Formula, formatCode, source, workbookPoints, plotVisibleOnly);
+        pointCount ??= InferPointCount(points.Count == 0 ? null : points.Max(static point => point.Index));
+        return new ChartIndexedNumberVector(points, pointCount, source.Formula, formatCode, source, workbookPoints, plotVisibleOnly);
     }
 
     private static ChartIndexedNumberPoint ToChartIndexedNumberPoint(PptxSceneChartNumberPoint point)
@@ -601,7 +602,8 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<IReadOnlyList<ChartIndexedTextPoint>> levels = categoryLevels
             .Select(level => level.Select(ToChartIndexedTextPoint).ToArray())
             .ToArray();
-        return new ChartIndexedTextVector(points, pointCount ?? InferPointCount(points), levels, source.Formula, source, workbookPoints, plotVisibleOnly);
+        pointCount ??= InferPointCount(points.Count == 0 ? null : points.Max(static point => point.Index));
+        return new ChartIndexedTextVector(points, pointCount, levels, source.Formula, source, workbookPoints, plotVisibleOnly);
     }
 
     private static ChartIndexedTextPoint ToChartIndexedTextPoint(PptxSceneChartStringPoint point)
@@ -636,60 +638,14 @@ internal sealed partial class PptxRenderer
             .ToArray() ?? [];
     }
 
-    private static int? InferPointCount(IReadOnlyList<ChartIndexedNumberPoint> points)
+    private static int? InferPointCount(int? largestIndex)
     {
-        if (points.Count == 0)
+        if (largestIndex is not int index)
         {
             return null;
         }
 
-        long max = long.MinValue;
-        foreach (ChartIndexedNumberPoint point in points)
-        {
-            max = Math.Max(max, (long)point.Index);
-        }
-
-        long inferred;
-        try
-        {
-            inferred = checked(max + 1);
-        }
-        catch (OverflowException ex)
-        {
-            throw new OoxPdfLimitExceededException("Chart point index overflows.", ex);
-        }
-
-        if (inferred < 0 || inferred > int.MaxValue)
-        {
-            throw new OoxPdfLimitExceededException("Chart point index is out of range.");
-        }
-
-        return (int)inferred;
-    }
-
-    private static int? InferPointCount(IReadOnlyList<ChartIndexedTextPoint> points)
-    {
-        if (points.Count == 0)
-        {
-            return null;
-        }
-
-        long max = long.MinValue;
-        foreach (ChartIndexedTextPoint point in points)
-        {
-            max = Math.Max(max, (long)point.Index);
-        }
-
-        long inferred;
-        try
-        {
-            inferred = checked(max + 1);
-        }
-        catch (OverflowException ex)
-        {
-            throw new OoxPdfLimitExceededException("Chart point index overflows.", ex);
-        }
-
+        long inferred = (long)index + 1;
         if (inferred < 0 || inferred > int.MaxValue)
         {
             throw new OoxPdfLimitExceededException("Chart point index is out of range.");

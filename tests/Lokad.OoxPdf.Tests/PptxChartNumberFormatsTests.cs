@@ -331,35 +331,36 @@ internal static partial class PptxChartNumberFormatsTests
 
     public static void PptxChartDataLabelDatesHonorChartSpaceDateSystem()
     {
-        XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
-        XElement dated = XDocument.Parse("""
-            <?xml version="1.0" encoding="UTF-8"?>
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-              <c:date1904 val="1"/>
-              <c:chart><c:plotArea><c:barChart>
-                <c:dLbls><c:numFmt formatCode="m/d/yy" sourceLinked="0"/><c:showVal val="1"/></c:dLbls>
-              </c:barChart></c:plotArea></c:chart>
-            </c:chartSpace>
-            """).Descendants(c + "barChart").Single();
-        XElement undated = XDocument.Parse("""
-            <?xml version="1.0" encoding="UTF-8"?>
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-              <c:chart><c:plotArea><c:barChart>
-                <c:dLbls><c:numFmt formatCode="m/d/yy" sourceLinked="0"/><c:showVal val="1"/></c:dLbls>
-              </c:barChart></c:plotArea></c:chart>
-            </c:chartSpace>
-            """).Descendants(c + "barChart").Single();
-        System.Reflection.MethodInfo readOptions = typeof(PptxRenderer).GetMethod(
-            "ReadSceneDataLabelOptions",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new System.InvalidOperationException("Expected data-label option resolver.");
-        System.Reflection.MethodInfo formatLabel = typeof(PptxRenderer).GetMethods(System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
-            .Single(m => m.Name == "FormatChartDataLabelValue" && m.GetParameters().Length == 4);
-        PptxSceneChart datedChart = PptxTests.BuildSingleChartScene(dated.Document!.ToString())!;
-        PptxSceneChart undatedChart = PptxTests.BuildSingleChartScene(undated.Document!.ToString())!;
-        object datedOptions = readOptions.Invoke(null, new object?[] { datedChart, datedChart.Plots[0] }) ?? throw new System.InvalidOperationException("Expected dated label options.");
-        object undatedOptions = readOptions.Invoke(null, new object?[] { undatedChart, undatedChart.Plots[0] }) ?? throw new System.InvalidOperationException("Expected undated label options.");
-        TestAssert.Equal("1/1/04", formatLabel.Invoke(null, new object?[] { 0d, datedOptions, null, null }) as string ?? throw new System.InvalidOperationException("Expected formatted dated data label."));
-        TestAssert.Equal("1/0/00", formatLabel.Invoke(null, new object?[] { 0d, undatedOptions, null, null }) as string ?? throw new System.InvalidOperationException("Expected formatted undated data label."));
+        foreach (var (flag, plotDate, seriesDate) in new[]
+        {
+            ("", "3/1/00", "1900-03-02"),
+            ("<c:date1904/>", "3/1/04", "1904-03-03"),
+            ("""<c:date1904 val="1"/>""", "3/1/04", "1904-03-03"),
+            ("""<c:date1904 val="0"/>""", "3/1/00", "1900-03-02"),
+            ("""<c:date1904 val="bogus"/>""", "3/1/00", "1900-03-02")
+        })
+        {
+            string chart = $$"""
+                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+                  {{flag}}<c:chart><c:plotArea><c:barChart>
+                    <c:barDir val="col"/><c:grouping val="clustered"/>
+                    <c:ser><c:idx val="0"/><c:order val="0"/>
+                    <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val>
+                      <c:numLit><c:pt idx="0"><c:v>60</c:v></c:pt></c:numLit>
+                    </c:val></c:ser>
+                    <c:ser><c:idx val="1"/><c:order val="1"/>
+                      <c:dLbls><c:numFmt formatCode="yyyy-mm-dd" sourceLinked="0"/><c:showVal val="1"/></c:dLbls>
+                      <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat>
+                      <c:val><c:numLit><c:pt idx="0"><c:v>62</c:v></c:pt></c:numLit></c:val>
+                    </c:ser>
+                    <c:dLbls><c:numFmt formatCode="m/d/yy" sourceLinked="0"/><c:showVal val="1"/></c:dLbls>
+                  </c:barChart></c:plotArea></c:chart>
+                </c:chartSpace>
+                """;
+            string labels = string.Concat(NumberChartLabels(chart, "CBD"));
+            TestAssert.Contains(plotDate, labels);
+            TestAssert.Contains(seriesDate, labels);
+        }
     }
 
     public static void PptxChartNumberLiteralsEmitAroundValue()

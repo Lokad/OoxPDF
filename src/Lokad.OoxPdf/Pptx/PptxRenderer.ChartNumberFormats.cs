@@ -369,20 +369,6 @@ internal sealed partial class PptxRenderer
         return true;
     }
 
-    private static bool ResolveChartSpaceDate1904(XElement? element)
-    {
-        if (element is null)
-        {
-            return false;
-        }
-
-        XElement? chartSpace = element.Name == ChartNamespace + "chartSpace"
-            ? element
-            : element.Ancestors(ChartNamespace + "chartSpace").FirstOrDefault();
-        XElement? dateElement = chartSpace?.Element(ChartNamespace + "date1904");
-        return dateElement is not null && PptxSceneBuilder.IsOoxmlBooleanElementEnabled(dateElement);
-    }
-
     private enum DateFormatTokenKind
     {
         Year,
