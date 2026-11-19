@@ -98,15 +98,16 @@ if(@(Get-Content $buildLog).Count -ne $before+2) {throw 'A false font flag cause
 
 # Cross the real case -> inspector boundary. Only native executions and Office/
 # raster helpers are stubbed. The real scripts decide preparation and forwarding.
-foreach($name in @('CheckVisualCase.ps1','InspectPdf.ps1','JsonArray.ps1','CompareMath.ps1','PathHelpers.ps1',
+foreach($name in @('CheckVisualCase.ps1','DocxMarkupReference.ps1','InspectPdf.ps1','JsonArray.ps1','CompareMath.ps1','PathHelpers.ps1',
     'PdfTextGeometry.ps1','ComparePdfTextLineStarts.ps1','ComparePdfTextOperations.ps1',
     'ComparePdfGraphicsOperations.ps1','ClassifyPdfChartGraphics.ps1','ClassifyPdfChartText.ps1')) {
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination (Join-Path $repo 'tools') -Force
 }
 @'
-param($InputPath,$OutputDirectory,$Dpi,$CaseId,[switch]$SkipBuild,$Framework)
+param($InputPath,$OutputDirectory,$Dpi,$CaseId,[switch]$SkipBuild,$Framework,[switch]$CacheOnly,[string]$CacheVariant)
 [IO.File]::WriteAllText((Join-Path $OutputDirectory 'reference.pdf'),'%PDF-fake reference')
 [IO.File]::WriteAllText((Join-Path $OutputDirectory 'page-001.png'),'synthetic raster')
+if ($CacheOnly) { [IO.File]::WriteAllText((Join-Path $OutputDirectory 'requested-variant.txt'),$CacheVariant) }
 '@ | Set-Content (Join-Path $repo 'tools/RenderCachedReference.ps1')
 @'
 param($InputPdf,$OutputDirectory,$Dpi,[switch]$SkipBuild,$Framework)
@@ -115,7 +116,7 @@ param($InputPdf,$OutputDirectory,$Dpi,[switch]$SkipBuild,$Framework)
 foreach($id in @('probe-a','probe-b')) {
     $directory=Join-Path $repo "visual-cases/cases/$id"
     [IO.File]::WriteAllText((Join-Path $directory 'input.docx'),'synthetic orchestration input')
-    @{id=$id;kind='docx';input='input.docx';tags=@('approximate');expected=@{
+    @{id=$id;kind='docx';input='input.docx';tags=@('approximate');docxMarkup='all-markup';docxMarkupGeometry='office';expected=@{
         maxTextLineStartDelta=0.15;maxTextLineStartYDelta=0.5;candidateFontsMustBeEmbedded=$true}} | ConvertTo-Json -Depth 4 |
         Set-Content (Join-Path $directory 'case.json')
 }
@@ -150,9 +151,12 @@ $realCase=Join-Path $repo 'tools/CheckVisualCase.ps1'
 $realManifest=Join-Path $repo 'visual-cases/cases/probe-a/case.json'
 try {
     $before=@(Get-Content $buildLog).Count
-    & $realCase -Case $realManifest -CliPath $frozenCli -SkipBuild -RunId 'real-prebuilt' | Out-Null
+    & $realCase -Case $realManifest -CliPath $frozenCli -SkipBuild -CacheOnlyReference -RunId 'real-prebuilt' | Out-Null
     if(@(Get-Content $buildLog).Count -ne $before) {throw 'Real prebuilt case requested a build'}
     $priorRun = Join-Path $repo 'artifacts/visual/probe-a/real-prebuilt'
+    if ([IO.File]::ReadAllText((Join-Path $priorRun 'reference/requested-variant.txt')) -cne 'docxMarkup=all;docxMarkupGeometry=word-compatible') {
+        throw 'The public visual case used raw aliases for the cached reference key'
+    }
     $priorPdf = Join-Path $priorRun 'candidate/output.pdf'
     $priorReport = Join-Path $priorRun 'run-info.json'
     $priorPdfHash = (Get-FileHash -LiteralPath $priorPdf).Hash
@@ -248,7 +252,7 @@ foreach($inspection in $inspections) {
     'Real once-only preparation','Real family reuse','Real missing-tool refusal','Occupied run refusal and evidence integrity',
     'Fresh shifted PDF fails the manifest Y bound','Combined gates inspect each PDF once',
     'Chart classification reuse and independent page scopes','Candidate-only font inspection',
-    'Incomplete inspection refusal','Inspector provenance');
+    'Incomplete inspection refusal','Inspector provenance','Canonical markup cache key');
     InspectionCapabilities=$inspectionKeys.Count;RealInspectionCalls=$inspections.Count;LibraryBuilds=0;LibraryExecutions=0;OfficeExports=0} |
     ConvertTo-Json | Set-Content (Join-Path $OutputDirectory 'evidence.json')
 Write-Output 'Visual-family and real case/inspector binding checks pass; no actual build, library execution or Office export.'

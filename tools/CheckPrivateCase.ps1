@@ -90,10 +90,9 @@ $referenceArgs = @{
     Dpi = $dpi
 }
 if (-not [string]::IsNullOrWhiteSpace($docxMarkup) -or -not [string]::IsNullOrWhiteSpace($docxMarkupGeometry)) {
-    $referenceDocxMarkup = if ([string]::IsNullOrWhiteSpace($docxMarkup)) { "final" } else { $docxMarkup }
-    $referenceDocxMarkupGeometry = if ([string]::IsNullOrWhiteSpace($docxMarkupGeometry)) { "preserve" } else { $docxMarkupGeometry }
+    . (Join-Path $PSScriptRoot "DocxMarkupReference.ps1")
     $referenceArgs.CacheOnly = $true
-    $referenceArgs.CacheVariant = ("docxMarkup={0};docxMarkupGeometry={1}" -f $referenceDocxMarkup, $referenceDocxMarkupGeometry)
+    $referenceArgs.CacheVariant = (Resolve-DocxMarkupReferenceSettings $manifest).Variant
 }
 
 Write-Host "[$((Get-Date).ToString('HH:mm:ss'))] Rendering reference...";

@@ -52,11 +52,12 @@ function Get-ReferenceVariantKeyPart([string] $CacheVariant) {
 
 function Get-ReferenceIdentityKey(
     [string] $InputPath,
-    [string] $CacheVariant)
+    [string] $CacheVariant,
+    [ValidatePattern('^[0-9a-fA-F]{64}$')][string] $InputSha256)
 {
-    $inputHash = (Get-FileHash -LiteralPath $InputPath -Algorithm SHA256).Hash.ToLowerInvariant()
+    if (!$InputSha256) { $InputSha256 = (Get-FileHash -LiteralPath $InputPath -Algorithm SHA256).Hash }
     $extension = [System.IO.Path]::GetExtension($InputPath).TrimStart(".").ToLowerInvariant()
-    "{0}-{1}-{2}{3}" -f $extension, $inputHash.Substring(0, 24), $ReferenceCacheProtocol, (Get-ReferenceVariantKeyPart $CacheVariant)
+    "{0}-{1}-{2}{3}" -f $extension, $InputSha256.Substring(0, 24).ToLowerInvariant(), $ReferenceCacheProtocol, (Get-ReferenceVariantKeyPart $CacheVariant)
 }
 
 function Get-ReferenceCacheRoot {
@@ -319,7 +320,7 @@ function Resolve-ReferenceCacheEntry([string] $InputPath, [int] $DpiValue, [stri
     $inputFull = (Resolve-Path -LiteralPath $InputPath).Path
     $inputHash = (Get-FileHash -LiteralPath $inputFull -Algorithm SHA256).Hash.ToLowerInvariant()
     $cacheRoot = Get-ReferenceCacheRoot
-    $identityKey = Get-ReferenceIdentityKey $inputFull $CacheVariant
+    $identityKey = Get-ReferenceIdentityKey $inputFull $CacheVariant $inputHash
     $cacheDir = Join-Path $cacheRoot $identityKey
     $derivativeName = Get-ReferenceDerivativeName $DpiValue
 
@@ -557,7 +558,7 @@ function Import-ReferenceCacheEntry(
     # atomically, and re-verifies the published entry.
     $inputFull = (Resolve-Path -LiteralPath $InputPath).Path
     $inputHash = (Get-FileHash -LiteralPath $inputFull -Algorithm SHA256).Hash.ToLowerInvariant()
-    $identityKey = Get-ReferenceIdentityKey $inputFull $CacheVariant
+    $identityKey = Get-ReferenceIdentityKey $inputFull $CacheVariant $inputHash
     $derivativeName = Get-ReferenceDerivativeName $DpiValue
     $cacheRoot = Get-ReferenceCacheRoot
     $cacheDir = Join-Path $cacheRoot $identityKey

@@ -30,86 +30,6 @@ $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
 
-function Read-Manifest([string] $Path) {
-    $full = (Resolve-Path -LiteralPath $Path).Path
-    $manifest = Get-Content -Raw -LiteralPath $full | ConvertFrom-Json
-    if ($manifest.kind -ne "docx") {
-        throw "DOCX markup reference gate only supports DOCX cases: $full"
-    }
-
-    if ($manifest.PSObject.Properties.Name -notcontains "docxMarkup" -or [string]::IsNullOrWhiteSpace([string]$manifest.docxMarkup)) {
-        throw "DOCX markup reference gate requires docxMarkup in case: $full"
-    }
-
-    [pscustomobject]@{
-        Id = [string]$manifest.id
-        Path = $full
-        Manifest = $manifest
-    }
-}
-
-function New-PrivateMarkupCaseInfo($Manifest, [string] $Path, [string] $Id, [string] $MarkupMode, [string] $MarkupGeometry) {
-    $syntheticManifest = [pscustomobject]@{
-        id = $Id
-        kind = "docx"
-        input = [string]$Manifest.input
-        docxMarkup = $MarkupMode
-        docxMarkupGeometry = $MarkupGeometry
-    }
-
-    [pscustomobject]@{
-        Id = $Id
-        Path = $Path
-        Manifest = $syntheticManifest
-        DocxMarkupOverride = $MarkupMode
-        DocxMarkupGeometryOverride = $MarkupGeometry
-        PrivateSafe = $true
-    }
-}
-
-function Get-PrivateMarkupCaseId([string] $MarkupMode) {
-    $suffix = if ([string]::IsNullOrWhiteSpace($MarkupMode)) {
-        "mode"
-    }
-    else {
-        $MarkupMode.ToLowerInvariant() -replace "[^a-z0-9]+", "-"
-    }
-
-    $suffix = $suffix.Trim("-")
-    if ([string]::IsNullOrWhiteSpace($suffix)) {
-        $suffix = "mode"
-    }
-
-    "private-docx-markup-{0}" -f $suffix
-}
-
-function Read-PrivateCacheStatusManifests([string] $Path) {
-    $full = (Resolve-Path -LiteralPath $Path).Path
-    $manifest = Get-Content -Raw -LiteralPath $full | ConvertFrom-Json
-    if ($manifest.kind -ne "docx" -or [string]::IsNullOrWhiteSpace([string]$manifest.input)) {
-        throw "Private DOCX markup cache status requires a DOCX private manifest with an input path."
-    }
-
-    if ($manifest.PSObject.Properties.Name -contains "docxMarkup" -and -not [string]::IsNullOrWhiteSpace([string]$manifest.docxMarkup)) {
-        $markupMode = [string]$manifest.docxMarkup
-        $markupGeometry = if ($manifest.PSObject.Properties.Name -contains "docxMarkupGeometry" -and -not [string]::IsNullOrWhiteSpace([string]$manifest.docxMarkupGeometry)) {
-            [string]$manifest.docxMarkupGeometry
-        }
-        else {
-            "preserve"
-        }
-
-        return ,(New-PrivateMarkupCaseInfo $manifest $full (Get-PrivateMarkupCaseId $markupMode) $markupMode $markupGeometry)
-    }
-
-    @(
-        New-PrivateMarkupCaseInfo $manifest $full "private-docx-markup-final" "final" "preserve"
-        New-PrivateMarkupCaseInfo $manifest $full "private-docx-markup-original" "original" "preserve"
-        New-PrivateMarkupCaseInfo $manifest $full "private-docx-markup-simple" "simple" "preserve"
-        New-PrivateMarkupCaseInfo $manifest $full "private-docx-markup-all" "all" "word-compatible"
-    )
-}
-
 . (Join-Path $PSScriptRoot "JsonObject.ps1")
 
 function Get-JsonPropertyValue($Object, [string] $Name) {
@@ -122,99 +42,26 @@ function Get-JsonPropertyValue($Object, [string] $Name) {
 
 . (Join-Path $PSScriptRoot "ReferenceCache.ps1")
 . (Join-Path $PSScriptRoot "PathHelpers.ps1")
+. (Join-Path $PSScriptRoot "DocxMarkupReference.ps1")
 
-
-
-function Get-CaseCacheVariant($CaseInfo) {
-    $docxMarkup = [string]$CaseInfo.Manifest.docxMarkup
-    $docxMarkupGeometry = if ($CaseInfo.Manifest.PSObject.Properties.Name -contains "docxMarkupGeometry" -and -not [string]::IsNullOrWhiteSpace([string]$CaseInfo.Manifest.docxMarkupGeometry)) {
-        [string]$CaseInfo.Manifest.docxMarkupGeometry
-    }
-    else {
-        "preserve"
-    }
-
-    "docxMarkup={0};docxMarkupGeometry={1}" -f $docxMarkup, $docxMarkupGeometry
-}
-
-function New-ReferenceImportCommand($CaseInfo, [int] $DpiValue) {
-    $docxMarkup = [string]$CaseInfo.Manifest.docxMarkup
-    $docxMarkupGeometry = if ($CaseInfo.Manifest.PSObject.Properties.Name -contains "docxMarkupGeometry" -and -not [string]::IsNullOrWhiteSpace([string]$CaseInfo.Manifest.docxMarkupGeometry)) {
-        [string]$CaseInfo.Manifest.docxMarkupGeometry
-    }
-    else {
-        "preserve"
-    }
-    $isPrivateSafe = $CaseInfo.PSObject.Properties.Name -contains "PrivateSafe" -and $CaseInfo.PrivateSafe -eq $true
-    $caseArgument = if ($isPrivateSafe) { "<private-case-manifest>" } else { ConvertTo-RepoPath $CaseInfo.Path }
-    $overrideArguments = if ($isPrivateSafe) {
-        " -DocxMarkup $docxMarkup -DocxMarkupGeometry $docxMarkupGeometry"
-    }
-    else {
-        ""
-    }
-
-    "pwsh tools/ImportDocxMarkupReferenceCache.ps1 -Case $caseArgument -ReferencePdf <trusted-reference-pdf>$overrideArguments -Dpi $DpiValue -Force"
-}
-
-function Get-CacheMetadata([string] $CacheDirectory) {
-    $metadataPath = Join-Path $CacheDirectory "reference-metadata.json"
-    if (-not (Test-Path -LiteralPath $metadataPath)) {
-        return $null
-    }
-
-    Get-Content -Raw -LiteralPath $metadataPath | ConvertFrom-Json
-}
-
-function Get-CaseReferenceCacheStatus($CaseInfo, [int] $DpiValue) {
-    $inputFull = Get-CaseInputPath $CaseInfo
-    $inputHash = (Get-FileHash -LiteralPath $inputFull -Algorithm SHA256).Hash.ToLowerInvariant()
-    $cacheVariant = Get-CaseCacheVariant $CaseInfo
-    $cacheKey = Get-ReferenceIdentityKey $inputFull $cacheVariant
-    $cacheDir = Join-Path (Join-Path $repoRoot "artifacts/reference-cache") $cacheKey
-    $completeMarker = Join-Path $cacheDir "complete.txt"
-    $metadata = Get-CacheMetadata $cacheDir
-    $referencePdfPath = Join-Path $cacheDir "reference.pdf"
-    $derivativeName = Get-ReferenceDerivativeName $DpiValue
-    $derivativeDir = Join-Path (Join-Path $cacheDir "raster") $derivativeName
-    $rasterPageCount = if (Test-Path -LiteralPath $derivativeDir) {
+function Get-CaseReferenceCacheStatus($CaseInfo, [int] $DpiValue, [string] $DerivativeName) {
+    $row = Get-DocxMarkupReferenceStatus $CaseInfo $DpiValue
+    $cacheDir = Join-Path (Get-ReferenceCacheRoot) $row.CacheKey
+    $derivativeDir = Join-Path (Join-Path $cacheDir "raster") $DerivativeName
+    $rasterPageCount = if (Test-Path -LiteralPath $derivativeDir -PathType Container) {
         @(Get-ChildItem -LiteralPath $derivativeDir -Filter "page-*.png" -ErrorAction SilentlyContinue).Count
     }
-    elseif (Test-Path -LiteralPath $cacheDir) {
+    elseif ($row.CacheDirectoryExists) {
         @(Get-ChildItem -LiteralPath $cacheDir -Filter "page-*.png" -ErrorAction SilentlyContinue).Count
     }
     else {
         0
     }
 
-    $entryState = $null
-    if (Test-Path -LiteralPath $cacheDir) {
-        $entryState = (Test-ReferenceIdentityEntry $cacheDir $inputHash $cacheVariant).State
-    }
-    $ready = ($entryState -eq "Complete")
-    $isPrivateSafe = $CaseInfo.PSObject.Properties.Name -contains "PrivateSafe" -and $CaseInfo.PrivateSafe -eq $true
-
-    [pscustomobject]@{
-        Id = $CaseInfo.Id
-        Case = if ($isPrivateSafe) { $CaseInfo.Id } else { ConvertTo-RepoPath $CaseInfo.Path }
-        PrivateSafe = [bool]$isPrivateSafe
-        InputExtension = [System.IO.Path]::GetExtension($inputFull).TrimStart(".").ToLowerInvariant()
-        InputSha256 = $inputHash
-        Dpi = $DpiValue
-        CacheVariant = $cacheVariant
-        CacheKey = $cacheKey
-        ExpectedCacheDirectory = "artifacts/reference-cache/$cacheKey"
-        CacheDirectory = $cacheDir
-        CacheDirectoryExists = Test-Path -LiteralPath $cacheDir
-        CompleteMarkerPresent = Test-Path -LiteralPath $completeMarker
-        ReferencePdfPresent = Test-Path -LiteralPath $referencePdfPath
-        ReferenceMetadataPresent = $null -ne $metadata
-        ReferencePdfSha256 = Get-JsonPropertyValue $metadata "ReferencePdfSha256"
-        RasterPageCount = $rasterPageCount
-        MetadataRasterPageCount = Get-JsonPropertyValue $metadata "RasterPageCount"
-        Ready = $ready
-        MissingImportCommand = if ($ready) { $null } else { New-ReferenceImportCommand $CaseInfo $DpiValue }
-    }
+    $row | Add-Member -NotePropertyName CacheDirectory -NotePropertyValue $cacheDir
+    $row | Add-Member -NotePropertyName RasterPageCount -NotePropertyValue $rasterPageCount
+    $row | Add-Member -NotePropertyName MissingImportCommand -NotePropertyValue $(if (!$row.Ready) { $row.ImportCommand })
+    $row
 }
 
 function Get-CaseComparisonSummary([string] $OutputDirectory) {
@@ -248,41 +95,8 @@ function Get-CaseComparisonSummary([string] $OutputDirectory) {
     }
 }
 
-function Get-DefaultDocxMarkupCases {
-    $caseRoot = Join-Path $repoRoot "visual-cases/cases"
-    Get-ChildItem -LiteralPath $caseRoot -Directory |
-        ForEach-Object {
-            $manifestPath = Join-Path $_.FullName "case.json"
-            if (-not (Test-Path -LiteralPath $manifestPath)) {
-                return
-            }
-
-            $manifest = Get-Content -Raw -LiteralPath $manifestPath | ConvertFrom-Json
-            $tags = @($manifest.tags)
-            if ($manifest.kind -eq "docx" -and $tags -contains "docx-markup" -and
-                $manifest.PSObject.Properties.Name -contains "docxMarkup" -and
-                -not [string]::IsNullOrWhiteSpace([string]$manifest.docxMarkup)) {
-                Read-Manifest $manifestPath
-            }
-        } |
-        Sort-Object Id
-}
-
-$cases = if ($Case.Count -ne 0) {
-    @($Case | ForEach-Object { Read-Manifest $_ })
-}
-else {
-    @(Get-DefaultDocxMarkupCases)
-}
-
-if ($IncludePrivate) {
-    $privatePath = Join-Path $repoRoot $PrivateCase
-    if (-not (Test-Path -LiteralPath $privatePath)) {
-        throw "Private DOCX markup case was requested but does not exist: $privatePath"
-    }
-
-    $cases = @($cases) + @(Read-PrivateCacheStatusManifests $privatePath)
-}
+$privatePath = if ($IncludePrivate) { Join-Path $repoRoot $PrivateCase }
+$cases = @(Get-DocxMarkupReferenceCases $Case $privatePath)
 
 if ($cases.Count -eq 0) {
     throw "No DOCX markup cases were selected."
@@ -290,7 +104,10 @@ if ($cases.Count -eq 0) {
 
 if ($ValidateOnly) {
     Write-Host ("DOCX markup reference gate validation passed for {0} case(s)." -f $cases.Count)
-    $cases | ForEach-Object { Write-Host ("- {0}: {1}" -f $_.Id, $_.Path) }
+    foreach ($caseInfo in $cases) {
+        if ($caseInfo.PrivateSafe) { Write-Host ("- {0}" -f $caseInfo.Id) }
+        else { Write-Host ("- {0}: {1}" -f $caseInfo.Id, $caseInfo.Path) }
+    }
     return
 }
 
@@ -303,7 +120,8 @@ if ($CacheStatusOnly) {
     }
     New-Item -ItemType Directory -Force -Path $outputRootFull | Out-Null
 
-    $results = @($cases | ForEach-Object { Get-CaseReferenceCacheStatus $_ $Dpi })
+    $derivativeName = Get-ReferenceDerivativeName $Dpi
+    $results = @($cases | ForEach-Object { Get-CaseReferenceCacheStatus $_ $Dpi $derivativeName })
     $commandsPath = Join-Path $outputRootFull "missing-import-commands.ps1"
     @(
         "# Import trusted DOCX markup references after controlled external Office export."
@@ -349,9 +167,9 @@ foreach ($caseInfo in $cases) {
         PdfInspectorPath = $PdfInspectorPath
         SkipBuild = [bool]$SkipBuild
     }
-    if ($caseInfo.PSObject.Properties.Name -contains "DocxMarkupOverride") {
-        $arguments.DocxMarkup = [string]$caseInfo.DocxMarkupOverride
-        $arguments.DocxMarkupGeometry = [string]$caseInfo.DocxMarkupGeometryOverride
+    if ($caseInfo.PrivateSafe) {
+        $arguments.DocxMarkup = $caseInfo.Settings.Mode
+        $arguments.DocxMarkupGeometry = $caseInfo.Settings.Geometry
         $arguments.CaseId = [string]$caseInfo.Id
         $arguments.PrivateSafeSummary = $true
     }
@@ -370,7 +188,7 @@ foreach ($caseInfo in $cases) {
     }
     catch {
         $exitCode = 1
-        $errorMessage = if ($caseInfo.PSObject.Properties.Name -contains "PrivateSafe" -and $caseInfo.PrivateSafe -eq $true) {
+        $errorMessage = if ($caseInfo.PrivateSafe) {
             "Private DOCX markup reference comparison failed. See private-safe cache status for expected hashes and cache keys."
         }
         else {
@@ -381,7 +199,7 @@ foreach ($caseInfo in $cases) {
     $comparisonSummary = Get-CaseComparisonSummary $caseOutput
     $results.Add([pscustomobject]@{
         Id = $caseInfo.Id
-        Case = if ($caseInfo.PSObject.Properties.Name -contains "PrivateSafe" -and $caseInfo.PrivateSafe -eq $true) { $caseInfo.Id } else { $caseInfo.Path }
+        Case = if ($caseInfo.PrivateSafe) { $caseInfo.Id } else { $caseInfo.Path }
         OutputDirectory = $caseOutput
         ExitCode = $exitCode
         ErrorMessage = $errorMessage

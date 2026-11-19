@@ -15,7 +15,7 @@ param(
     [string] $DocxMarkup,
 
     [ValidateSet("preserve", "preserve-layout", "preserve-document-layout", "reserve", "reserve-margin", "markup-margin", "reserve-markup-margin", "word", "word-compatible", "word-compatible-all-markup", "office", "office-compatible", "office-compatible-all-markup")]
-    [string] $DocxMarkupGeometry = "preserve",
+    [string] $DocxMarkupGeometry,
 
     [string] $OfficeApp,
 
@@ -30,34 +30,9 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$repoRoot = Split-Path -Parent $PSScriptRoot
-
 . (Join-Path $PSScriptRoot "ReferenceCache.ps1")
 
-function ConvertTo-CanonicalDocxMarkup([string] $Value) {
-    if ([string]::IsNullOrWhiteSpace($Value)) {
-        return $null
-    }
-
-    switch ($Value.ToLowerInvariant()) {
-        "simple-markup" { return "simple" }
-        "all-markup" { return "all" }
-        default { return $Value.ToLowerInvariant() }
-    }
-}
-
-function ConvertTo-CanonicalDocxMarkupGeometry([string] $Value) {
-    if ([string]::IsNullOrWhiteSpace($Value)) {
-        return $null
-    }
-
-    switch ($Value.ToLowerInvariant()) {
-        { $_ -in @("preserve-layout", "preserve-document-layout") } { return "preserve" }
-        { $_ -in @("reserve", "reserve-margin", "markup-margin", "reserve-markup-margin") } { return "reserve-margin" }
-        { $_ -in @("word", "word-compatible-all-markup", "office", "office-compatible", "office-compatible-all-markup") } { return "word-compatible" }
-        default { return $Value.ToLowerInvariant() }
-    }
-}
+. (Join-Path $PSScriptRoot "DocxMarkupReference.ps1")
 
 if (-not [string]::IsNullOrWhiteSpace($ReferencePdf) -and -not [string]::IsNullOrWhiteSpace($ReferenceDirectory)) {
     throw "Use either -ReferencePdf or -ReferenceDirectory, not both."
@@ -75,40 +50,15 @@ if ($manifest.kind -ne "docx") {
 }
 
 $inputFull = (Resolve-Path -LiteralPath (Join-Path $caseDirectory $manifest.input)).Path
-$resolvedDocxMarkup = ConvertTo-CanonicalDocxMarkup $(if (-not [string]::IsNullOrWhiteSpace($DocxMarkup)) {
-        $DocxMarkup
-    }
-    elseif ($manifest.PSObject.Properties.Name -contains "docxMarkup") {
-        [string]$manifest.docxMarkup
-    }
-    else {
-        $null
-    })
-if ([string]::IsNullOrWhiteSpace($resolvedDocxMarkup)) {
-    throw "DOCX markup reference cache import requires docxMarkup in the visual case or -DocxMarkup."
-}
-
-$resolvedDocxMarkupGeometry = ConvertTo-CanonicalDocxMarkupGeometry $(if (-not [string]::IsNullOrWhiteSpace($DocxMarkupGeometry)) {
-        $DocxMarkupGeometry
-    }
-    elseif ($manifest.PSObject.Properties.Name -contains "docxMarkupGeometry") {
-        [string]$manifest.docxMarkupGeometry
-    }
-    else {
-        $null
-    })
-if ([string]::IsNullOrWhiteSpace($resolvedDocxMarkupGeometry)) {
-    $resolvedDocxMarkupGeometry = "preserve"
-}
+$settings = Resolve-DocxMarkupReferenceSettings $manifest $DocxMarkup $DocxMarkupGeometry -RequireMode
 
 $caseId = [string]$manifest.id
-$cacheVariant = "docxMarkup={0};docxMarkupGeometry={1}" -f $resolvedDocxMarkup, $resolvedDocxMarkupGeometry
 Import-ReferenceCacheEntry `
     -InputPath $inputFull `
     -ReferencePdf $ReferencePdf `
     -ReferenceDirectory $ReferenceDirectory `
     -DpiValue $Dpi `
-    -CacheVariant $cacheVariant `
+    -CacheVariant $settings.Variant `
     -CaseId $caseId `
     -Producer @{ Producer = "import"; OfficeApp = $OfficeApp; OfficeVersion = $OfficeVersion; ExportSettings = $ExportSettings } `
     -Force:$Force

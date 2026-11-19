@@ -3299,30 +3299,7 @@ function New-BalloonClassificationSummary(
     }
 }
 
-function ConvertTo-CanonicalDocxMarkup([string] $Value) {
-    if ([string]::IsNullOrWhiteSpace($Value)) {
-        return $null
-    }
-
-    switch ($Value.ToLowerInvariant()) {
-        "simple-markup" { return "simple" }
-        "all-markup" { return "all" }
-        default { return $Value.ToLowerInvariant() }
-    }
-}
-
-function ConvertTo-CanonicalDocxMarkupGeometry([string] $Value) {
-    if ([string]::IsNullOrWhiteSpace($Value)) {
-        return $null
-    }
-
-    switch ($Value.ToLowerInvariant()) {
-        { $_ -in @("preserve-layout", "preserve-document-layout") } { return "preserve" }
-        { $_ -in @("reserve", "reserve-margin", "markup-margin", "reserve-markup-margin") } { return "reserve-margin" }
-        { $_ -in @("word", "word-compatible-all-markup", "office", "office-compatible", "office-compatible-all-markup") } { return "word-compatible" }
-        default { return $Value.ToLowerInvariant() }
-    }
-}
+. (Join-Path $PSScriptRoot "DocxMarkupReference.ps1")
 
 $caseFull = (Resolve-Path -LiteralPath $Case).Path
 $caseDirectory = Split-Path -Parent $caseFull
@@ -3332,31 +3309,9 @@ if ($manifest.kind -ne "docx") {
 }
 
 $inputFull = (Resolve-Path -LiteralPath (Join-Path $caseDirectory $manifest.input)).Path
-$resolvedDocxMarkup = ConvertTo-CanonicalDocxMarkup $(if (-not [string]::IsNullOrWhiteSpace($DocxMarkup)) {
-        $DocxMarkup
-    }
-    elseif ($manifest.PSObject.Properties.Name -contains "docxMarkup") {
-        [string]$manifest.docxMarkup
-    }
-    else {
-        $null
-    })
-if ([string]::IsNullOrWhiteSpace($resolvedDocxMarkup)) {
-    throw "Cached DOCX markup comparison requires docxMarkup in the case or -DocxMarkup."
-}
-
-$resolvedDocxMarkupGeometry = ConvertTo-CanonicalDocxMarkupGeometry $(if (-not [string]::IsNullOrWhiteSpace($DocxMarkupGeometry)) {
-        $DocxMarkupGeometry
-    }
-    elseif ($manifest.PSObject.Properties.Name -contains "docxMarkupGeometry") {
-        [string]$manifest.docxMarkupGeometry
-    }
-    else {
-        $null
-    })
-if ([string]::IsNullOrWhiteSpace($resolvedDocxMarkupGeometry)) {
-    $resolvedDocxMarkupGeometry = "preserve"
-}
+$settings = Resolve-DocxMarkupReferenceSettings $manifest $DocxMarkup $DocxMarkupGeometry -RequireMode
+$resolvedDocxMarkup = $settings.Mode
+$resolvedDocxMarkupGeometry = $settings.Geometry
 
 $resolvedCaseId = if (-not [string]::IsNullOrWhiteSpace($CaseId)) {
     $CaseId
@@ -3406,8 +3361,7 @@ elseif (-not [string]::IsNullOrWhiteSpace($ReferenceDirectory)) {
     Copy-Item -Path (Join-Path $referenceDirectoryFull "*") -Destination $referenceDir -Recurse -Force
 }
 else {
-    $referenceCacheVariant = "docxMarkup={0};docxMarkupGeometry={1}" -f $resolvedDocxMarkup, $resolvedDocxMarkupGeometry
-    & (Join-Path $PSScriptRoot "RenderCachedReference.ps1") -InputPath $inputFull -OutputDirectory $referenceDir -Dpi $Dpi -CacheOnly -CacheVariant $referenceCacheVariant
+    & (Join-Path $PSScriptRoot "RenderCachedReference.ps1") -InputPath $inputFull -OutputDirectory $referenceDir -Dpi $Dpi -CacheOnly -CacheVariant $settings.Variant
 }
 
 $referencePdfPath = Join-Path $referenceDir "reference.pdf"
