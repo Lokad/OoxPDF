@@ -352,220 +352,68 @@ internal static partial class PptxImagesTests
         TestAssert.Contains("/Im1 Do", pdf);
     }
 
+    private const string SolidSvgPicture = """
+        <svg viewBox="0 0 20 10" xmlns="http://www.w3.org/2000/svg">
+          <path d="M0 0 L20 0 L20 10 L0 10 Z" fill="#112233"/>
+        </svg>
+        """;
+
+    private const string SolidSvgPicturePaint =
+        "0.067 0.133 0.2 rg\n72 468 m\n216 468 l\n216 396 l\n72 396 l\nh\nf\n";
+
     public static void PptxSyntheticSvgPictureRendersVectorPath()
     {
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
-        {
-            ["[Content_Types].xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-                  <Default Extension="xml" ContentType="application/xml"/>
-                  <Default Extension="svg" ContentType="image/svg+xml"/>
-                  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
-                  <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
-                </Types>
-                """),
-            ["_rels/.rels"] = TestFixtures.Utf8(PptxTests.PackageRelationship()),
-            ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8(PptxTests.PresentationRelationship()),
-            ["ppt/presentation.xml"] = TestFixtures.Utf8(PptxTests.BasicPresentation()),
-            ["ppt/slides/_rels/slide1.xml.rels"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image1.svg"/>
-                </Relationships>
-                """),
-            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
-                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
-                       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
-                       xmlns:asvg="http://schemas.microsoft.com/office/drawing/2016/SVG/main">
-                  <p:cSld><p:spTree><p:pic>
-                    <p:blipFill><a:blip><a:extLst><a:ext uri="{96DAC541-7B7A-43D3-8B79-37D633B846F1}"><asvg:svgBlip r:embed="rId1"/></a:ext></a:extLst></a:blip></p:blipFill>
-                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
-                  </p:pic></p:spTree></p:cSld>
-                </p:sld>
-                """),
-            ["ppt/media/image1.svg"] = TestFixtures.Utf8("""
-                <svg viewBox="0 0 20 10" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M0 0 L20 0 L20 10 L0 10 Z" fill="#112233"/>
-                </svg>
-                """)
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, output);
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("0.067 0.133 0.2 rg", pdf);
-        TestAssert.Contains(" m", pdf);
-        TestAssert.Contains(" l", pdf);
+        string pdf = RenderSyntheticSvgPicture(SolidSvgPicture);
+        TestAssert.Contains(SolidSvgPicturePaint, pdf);
         TestAssert.DoesNotContain("/Subtype /Image", pdf);
     }
 
-    // RV07: unsupported SVG content must diagnose instead of silently vanishing.
     public static void PptxSyntheticSvgUnsupportedContentEmitsDiagnostic()
     {
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
-        {
-            ["[Content_Types].xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-                  <Default Extension="xml" ContentType="application/xml"/>
-                  <Default Extension="svg" ContentType="image/svg+xml"/>
-                  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
-                  <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
-                </Types>
-                """),
-            ["_rels/.rels"] = TestFixtures.Utf8(PptxTests.PackageRelationship()),
-            ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8(PptxTests.PresentationRelationship()),
-            ["ppt/presentation.xml"] = TestFixtures.Utf8(PptxTests.BasicPresentation()),
-            ["ppt/slides/_rels/slide1.xml.rels"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image1.svg"/>
-                </Relationships>
-                """),
-            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
-                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
-                       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
-                       xmlns:asvg="http://schemas.microsoft.com/office/drawing/2016/SVG/main">
-                  <p:cSld><p:spTree><p:pic>
-                    <p:blipFill><a:blip><a:extLst><a:ext uri="{96DAC541-7B7A-43D3-8B79-37D633B846F1}"><asvg:svgBlip r:embed="rId1"/></a:ext></a:extLst></a:blip></p:blipFill>
-                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
-                  </p:pic></p:spTree></p:cSld>
-                </p:sld>
-                """),
-            ["ppt/media/image1.svg"] = TestFixtures.Utf8("""
-                <svg viewBox="0 0 20 10" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M0 0 L20 0 L20 10 L0 10 Z" fill="#112233"/>
-                  <text x="10" y="5"><textPath href="#unsupported">Hello</textPath></text>
-                  <path d="M0 0 Q10 10 20 0 Z" fill="#778899"/>
-                </svg>
-                """)
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        string svg = SolidSvgPicture.Replace("</svg>", """
+              <text x="10" y="5"><textPath href="#unsupported">Hello</textPath></text>
+              <path d="M0 0 Q10 10 20 0 Z" fill="#778899"/>
+            </svg>
+            """, StringComparison.Ordinal);
         var diagnostics = new List<OoxPdfDiagnostic>();
-        OoxPdfConverter.Convert(input, output, new OoxPdfOptions
-        {
-            InputKind = OoxPdfInputKind.Pptx,
-            DiagnosticSink = diagnostics.Add,
-        });
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("0.067 0.133 0.2 rg", pdf);
+        string pdf = RenderSyntheticSvgPicture(svg, diagnostics: diagnostics);
+        TestAssert.Contains(SolidSvgPicturePaint, pdf);
         TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("text", StringComparison.Ordinal)), "Unsupported SVG element must diagnose.");
         TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("Q", StringComparison.Ordinal)), "Unsupported SVG path command must diagnose.");
     }
 
     public static void PptxSyntheticSvgPictureAppliesSourceCropBeforeScaling()
     {
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
-        {
-            ["[Content_Types].xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-                  <Default Extension="xml" ContentType="application/xml"/>
-                  <Default Extension="svg" ContentType="image/svg+xml"/>
-                  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
-                  <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
-                </Types>
-                """),
-            ["_rels/.rels"] = TestFixtures.Utf8(PptxTests.PackageRelationship()),
-            ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8(PptxTests.PresentationRelationship()),
-            ["ppt/presentation.xml"] = TestFixtures.Utf8(PptxTests.BasicPresentation()),
-            ["ppt/slides/_rels/slide1.xml.rels"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image1.svg"/>
-                </Relationships>
-                """),
-            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
-                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
-                       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
-                       xmlns:asvg="http://schemas.microsoft.com/office/drawing/2016/SVG/main">
-                  <p:cSld><p:spTree><p:pic>
-                    <p:blipFill>
-                      <a:blip><a:extLst><a:ext uri="{96DAC541-7B7A-43D3-8B79-37D633B846F1}"><asvg:svgBlip r:embed="rId1"/></a:ext></a:extLst></a:blip>
-                      <a:srcRect b="50000"/>
-                    </p:blipFill>
-                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
-                  </p:pic></p:spTree></p:cSld>
-                </p:sld>
-                """),
-            ["ppt/media/image1.svg"] = TestFixtures.Utf8("""
-                <svg viewBox="0 0 20 10" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M0 0 L20 0 L20 10 L0 10 Z" fill="#112233"/>
-                </svg>
-                """)
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, output);
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        string pdf = RenderSyntheticSvgPicture(SolidSvgPicture, bottomCrop: 50000);
         TestAssert.Contains("216 324 l", pdf);
         TestAssert.DoesNotContain("216 396 l", pdf);
     }
 
     public static void PptxSyntheticSvgPictureSamplesCompoundPathGradient()
     {
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
-        {
-            ["[Content_Types].xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-                  <Default Extension="xml" ContentType="application/xml"/>
-                  <Default Extension="svg" ContentType="image/svg+xml"/>
-                  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
-                  <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
-                </Types>
-                """),
-            ["_rels/.rels"] = TestFixtures.Utf8(PptxTests.PackageRelationship()),
-            ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8(PptxTests.PresentationRelationship()),
-            ["ppt/presentation.xml"] = TestFixtures.Utf8(PptxTests.BasicPresentation()),
-            ["ppt/slides/_rels/slide1.xml.rels"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image1.svg"/>
-                </Relationships>
-                """),
-            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
-                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
-                       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
-                       xmlns:asvg="http://schemas.microsoft.com/office/drawing/2016/SVG/main">
-                  <p:cSld><p:spTree><p:pic>
-                    <p:blipFill><a:blip><a:extLst><a:ext uri="{96DAC541-7B7A-43D3-8B79-37D633B846F1}"><asvg:svgBlip r:embed="rId1"/></a:ext></a:extLst></a:blip></p:blipFill>
-                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
-                  </p:pic></p:spTree></p:cSld>
-                </p:sld>
-                """),
-            ["ppt/media/image1.svg"] = TestFixtures.Utf8("""
-                <svg viewBox="0 0 100 20" xmlns="http://www.w3.org/2000/svg">
-                  <linearGradient id="g" x1="0" y1="0" x2="100" y2="0" gradientUnits="userSpaceOnUse">
-                    <stop offset="0" stop-color="#FF0000"/>
-                    <stop offset="1" stop-color="#0000FF"/>
-                  </linearGradient>
-                  <path d="M0 0 H20 V20 H0 Z M80 0 H100 V20 H80 Z" fill="url(#g)"/>
-                </svg>
-                """)
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, output);
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        string pdf = RenderSyntheticSvgPicture("""
+            <svg viewBox="0 0 100 20" xmlns="http://www.w3.org/2000/svg">
+              <linearGradient id="g" x1="0" y1="0" x2="100" y2="0" gradientUnits="userSpaceOnUse">
+                <stop offset="0" stop-color="#FF0000"/>
+                <stop offset="1" stop-color="#0000FF"/>
+              </linearGradient>
+              <path d="M0 0 H20 V20 H0 Z M80 0 H100 V20 H80 Z" fill="url(#g)"/>
+            </svg>
+            """);
         TestAssert.Contains("0.988 0 0.012 rg", pdf);
         TestAssert.Contains("0.012 0 0.988 rg", pdf);
+    }
+
+    private static string RenderSyntheticSvgPicture(string svg, int? bottomCrop = null, List<OoxPdfDiagnostic>? diagnostics = null)
+    {
+        using var input = TestFixtures.CreateZipPackage(SvgPictureParts(svg, bottomCrop));
+        using var output = new MemoryStream();
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions
+        {
+            InputKind = OoxPdfInputKind.Pptx,
+            DiagnosticSink = diagnostics is null ? null : diagnostics.Add
+        });
+        return Encoding.ASCII.GetString(output.ToArray()).Replace("\r\n", "\n", StringComparison.Ordinal);
     }
 
     public static void PptxSvgPictureQuarterTurnClipKeepsTheRotatedFootprint()
@@ -656,9 +504,12 @@ internal static partial class PptxImagesTests
         finally { File.Delete(original); if (input.Length > 0) { File.Delete(input); } File.Delete(output); }
     }
 
-    private static string WriteSvgGradientDeck(string svg)
+    private static string WriteSvgGradientDeck(string svg) => TestFixtures.WriteTempPackage(".pptx", SvgPictureParts(svg));
+
+    private static Dictionary<string, byte[]> SvgPictureParts(string svg, int? bottomCrop = null)
     {
-        return TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
+        string crop = bottomCrop is int value ? FormattableString.Invariant($"<a:srcRect b=\"{value}\"/>") : string.Empty;
+        return new()
         {
             ["[Content_Types].xml"] = TestFixtures.Utf8("""
                 <?xml version="1.0" encoding="UTF-8"?>
@@ -679,20 +530,20 @@ internal static partial class PptxImagesTests
                   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image1.svg"/>
                 </Relationships>
                 """),
-            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
+            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8($$"""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
                        xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
                        xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
                        xmlns:asvg="http://schemas.microsoft.com/office/drawing/2016/SVG/main">
                   <p:cSld><p:spTree><p:pic>
-                    <p:blipFill><a:blip><a:extLst><a:ext uri="{96DAC541-7B7A-43D3-8B79-37D633B846F1}"><asvg:svgBlip r:embed="rId1"/></a:ext></a:extLst></a:blip></p:blipFill>
+                    <p:blipFill><a:blip><a:extLst><a:ext uri="{96DAC541-7B7A-43D3-8B79-37D633B846F1}"><asvg:svgBlip r:embed="rId1"/></a:ext></a:extLst></a:blip>{{crop}}</p:blipFill>
                     <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
                   </p:pic></p:spTree></p:cSld>
                 </p:sld>
                 """),
             ["ppt/media/image1.svg"] = TestFixtures.Utf8(svg)
-        });
+        };
     }
 
     // RV07-S1: stretching a picture scales the stroke normal independently
