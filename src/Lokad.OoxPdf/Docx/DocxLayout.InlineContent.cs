@@ -371,6 +371,7 @@ internal sealed partial class DocxLayoutEngine
         {
             token.ThrowIfCancellationRequested();
             int firstFragment = measured.Count;
+            double? literalMathSelectionAscent = null;
             switch (item)
             {
                 case DocxInlineText text when text.Run.EffectiveProperties.Hidden:
@@ -432,6 +433,11 @@ internal sealed partial class DocxLayoutEngine
                         return false;
                     }
                     AddMeasuredMath(item, prepared);
+                    // Literal rows have a selection strut of their own.
+                    // Structured math keeps its established range profile.
+                    if (paragraph.CommentRanges.Count != 0 && !prepared.UsesDisplayStyle &&
+                        prepared.Equation.Content.Children.All(child => child is DocxMathRun))
+                        literalMathSelectionAscent = Math.Max(prepared.BaselineInset, prepared.Box.AboveBaseline) * scale;
                     break;
                 case DocxInlinePicture picture:
                     double imageWidth = picture.Image.WidthPoints * scale, imageHeight = picture.Image.HeightPoints * scale;
@@ -490,7 +496,8 @@ internal sealed partial class DocxLayoutEngine
                     }
                     if (double.IsFinite(left) && double.IsFinite(right))
                         fragment = fragment with { VisibleSourceExtent = new(sourceItemIndex, left * scale, right * scale,
-                            math.Box.AboveBaseline * scale, math.Box.BelowBaseline * scale, IsMath: true) };
+                            math.Box.AboveBaseline * scale, math.Box.BelowBaseline * scale, IsMath: true)
+                            { LiteralMathSelectionAscent = literalMathSelectionAscent } };
                 }
                 else if (fragment.TextBox is { } box)
                     fragment = fragment with { VisibleSourceExtent = new(sourceItemIndex, 0d, box.BoxWidth, box.BoxHeight, 0d) };

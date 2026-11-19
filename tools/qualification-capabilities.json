@@ -3552,6 +3552,7 @@
     "OpenTypeFontLoadObservesCancelledToken"
   ],
   "docx-math-comment-ranges": [
+    "=DocxMixedCommentFillKeepsPictureAndFormulaGeometry",
     "DocxMathComments",
     "DocxMathCommentBoundaries",
     "DocxInlineCompositionComments",

@@ -70,10 +70,13 @@ internal readonly record struct DocxInlineLineFrame(double BaselineInset, double
 internal readonly record struct DocxInlineSourceExtent(int ItemIndex, double StartOffset, double EndOffset,
     double AboveBaseline = 0d, double BelowBaseline = 0d, bool IsMath = false)
 {
+    public double? LiteralMathSelectionAscent { get; init; }
+
     public DocxInlineSourceExtent Scale(double scale) => this with
     {
         StartOffset = StartOffset * scale, EndOffset = EndOffset * scale,
-        AboveBaseline = AboveBaseline * scale, BelowBaseline = BelowBaseline * scale
+        AboveBaseline = AboveBaseline * scale, BelowBaseline = BelowBaseline * scale,
+        LiteralMathSelectionAscent = LiteralMathSelectionAscent * scale
     };
 }
 

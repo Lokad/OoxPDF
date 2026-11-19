@@ -313,7 +313,8 @@ internal sealed partial class DocxRenderer
                     ? new PdfRectangle(sourceBounds.Start, baselineY + textBox.BaselineInset - textBox.Height,
                         sourceBounds.End - sourceBounds.Start, textBox.Height) : null;
                 RenderWordCompatibleCommentRangeMarker(startX, endX, baselineY, graphics, CommentAuthorFillRgb(authorSlot), CommentAuthorStrokeRgb(authorSlot), above, below,
-                    usesExactFrame: DocxInlineLineGeometry.TryGetExactBodyLineBox(line, out _), fillRectangle: fill, glyphRectangle: glyphs);
+                    usesExactFrame: DocxInlineLineGeometry.TryGetExactBodyLineBox(line, out _), fillRectangle: fill, glyphRectangle: glyphs,
+                    selection: (line, range, emissionXOffset), cancellationToken: cancellationToken);
             }
             else if ((range is null || !HasCommentRangeBounds(range)) &&
                 TryResolveWordCompatibleCommentReferenceMarkerBounds(line, reference, emissionXOffset, out startX, out endX))
@@ -522,7 +523,9 @@ internal sealed partial class DocxRenderer
         DocxMarkupBalloonRgb fillRgb,
         DocxMarkupBalloonRgb strokeRgb,
         double objectAbove = 0d, double objectBelow = 0d, bool usesExactFrame = false,
-        PdfRectangle? fillRectangle = null, PdfRectangle? glyphRectangle = null)
+        PdfRectangle? fillRectangle = null, PdfRectangle? glyphRectangle = null,
+        (DocxTextLineLayout Line, DocxCommentRange Range, double EmissionXOffset)? selection = null,
+        CancellationToken cancellationToken = default)
     {
         // Exact source boxes own both expansion and compression. Content-driven
         // inline frames retain the legacy minimum and grow for their visible ink.
@@ -547,7 +550,9 @@ internal sealed partial class DocxRenderer
             baselineY + WordCompatibleAllMarkupCommentRangeFillBaselineYOffsetPoints - bottomExtension,
             Math.Max(0d, endX - startX),
             WordCompatibleAllMarkupCommentRangeFillHeightPoints + topExtension + bottomExtension);
-        graphics.FillRectangle(fill.X, fill.Y, fill.Width, fill.Height);
+        if (selection is not { } source || !TryPaintMixedCommentSelection(graphics, fill, baselineY,
+                source.Line, source.Range, source.EmissionXOffset, cancellationToken))
+            graphics.FillRectangle(fill.X, fill.Y, fill.Width, fill.Height);
         graphics.SetStrokeRgb(strokeRgb.Red, strokeRgb.Green, strokeRgb.Blue);
         graphics.SetFillRgb(strokeRgb.Red, strokeRgb.Green, strokeRgb.Blue);
         if (glyphRectangle is { } glyphs)
@@ -578,6 +583,67 @@ internal sealed partial class DocxRenderer
             topTickY,
             endX,
             topTickY);
+    }
+
+    private static bool TryPaintMixedCommentSelection(PdfGraphicsBuilder graphics, PdfRectangle lineFill,
+        double baselineY, DocxTextLineLayout line, DocxCommentRange range, double emissionXOffset,
+        CancellationToken cancellationToken)
+    {
+        if (line.Story?.Kind != DocxStoryKind.Body || line.InlineFrame is null ||
+            line.SourceParagraph is not { } paragraph || DocxPlainBodyFrame.HasFixedLineFlow(paragraph) ||
+            range.StartInlineItemIndex is not int start || range.EndInlineItemIndex is not int end)
+            return false;
+
+        bool hasOrdinaryContent = false, hasLiteralMath = false;
+        foreach (var extent in line.InlineSourceExtents)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (extent.ItemIndex < start || extent.ItemIndex >= end || extent.EndOffset <= extent.StartOffset)
+                continue;
+            hasOrdinaryContent |= !extent.IsMath;
+            hasLiteralMath |= extent.LiteralMathSelectionAscent is > 0d;
+        }
+        if (!hasOrdinaryContent || !hasLiteralMath) return false;
+
+        // Paint the opaque union once. The enclosing range and its connector
+        // still use the complete line, while the fill follows its fragments.
+        double cursor = lineFill.X;
+        double limit = cursor + lineFill.Width;
+        double origin = line.X + emissionXOffset;
+        DocxInlineSourceExtent? pending = null;
+        foreach (var extent in line.InlineSourceExtents)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (extent.ItemIndex < start || extent.ItemIndex >= end ||
+                extent.LiteralMathSelectionAscent is not > 0d)
+                continue;
+            if (pending is { } previous)
+            {
+                if (previous.ItemIndex == extent.ItemIndex)
+                {
+                    pending = previous with { EndOffset = Math.Max(previous.EndOffset, extent.EndOffset) };
+                    continue;
+                }
+                PaintFormula(previous);
+            }
+            pending = extent;
+        }
+        if (pending is { } final) PaintFormula(final);
+        if (cursor < limit)
+            graphics.FillRectangle(cursor, lineFill.Y, limit - cursor, lineFill.Height);
+        return true;
+
+        void PaintFormula(DocxInlineSourceExtent extent)
+        {
+            double left = Math.Max(cursor, origin + extent.StartOffset);
+            double right = Math.Min(limit, origin + extent.EndOffset);
+            if (right <= left) return;
+            if (left > cursor)
+                graphics.FillRectangle(cursor, lineFill.Y, left - cursor, lineFill.Height);
+            graphics.FillRectangle(left, baselineY - extent.BelowBaseline, right - left,
+                extent.LiteralMathSelectionAscent.GetValueOrDefault() + extent.BelowBaseline);
+            cursor = right;
+        }
     }
 
     private const double CommentGlyphBracketStrokePoints = 0.14d;

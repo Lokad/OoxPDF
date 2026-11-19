@@ -77,11 +77,61 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
-    private static IEnumerable<PdfRectangle> ReadNaturalCommentFillRectangles(string content) => Regex.Matches(content,
-        @"0\.973 0\.863 0\.867 rg\s+(?<x>[-\d.]+) (?<y>[-\d.]+) (?<w>[\d.]+) (?<h>[\d.]+) re f")
-        .Select(match => new PdfRectangle(Value(match, "x"), Value(match, "y"), Value(match, "w"), Value(match, "h")));
+    public static void DocxMixedCommentFillKeepsPictureAndFormulaGeometry()
+    {
+        var resolver = new PortableRenderingTests.PinnedResolver(mathFont: true);
+        foreach (bool split in new[] { false, true })
+        {
+            const OoxPdfDocxMarkupMode mode = OoxPdfDocxMarkupMode.AllMarkup;
+            var document = ReadMutation("Composition/composed-static-cell-report", mode, false, split, (xml, w, m) =>
+            {
+                var body = xml.Root!.Element(w + "body")!;
+                var paragraph = body.Elements(w + "p").Single(p => p.Elements(w + "commentRangeStart").Any() &&
+                    p.Descendants(w + "drawing").Any());
+                body.Elements().Where(element => element != paragraph && element.Name != w + "sectPr").Remove();
+                body.Descendants().Where(element => element.Name == w + "headerReference" ||
+                    element.Name == w + "footerReference").Remove();
+                if (split)
+                {
+                    var math = paragraph.Elements(m + "oMath").Single();
+                    math.AddBeforeSelf(new XElement(w + "bookmarkStart", new XAttribute(w + "id", "7010"),
+                        new XAttribute(w + "name", "SelectedFormula")));
+                    math.AddAfterSelf(new XElement(w + "bookmarkEnd", new XAttribute(w + "id", "7010")));
+                }
+            });
+            var page = new DocxRenderer(resolver, mode, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                .RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
+            var picture = ReadPictureRangeFrame(page);
+            var formula = PortableRenderingTests.ReadPaintedSourceLabel(page, "a+b=c", mathOnly: true);
+            var left = PortableRenderingTests.ReadPaintedSourceLabel(page, "The trend marker");
+            var right = PortableRenderingTests.ReadPaintedSourceLabel(page, "without replacing it.");
+            var fills = ReadNaturalCommentFillRectangles(page.Content).Where(rect => rect.X < 400d).ToArray();
+            var leading = fills.Single(rect => Contains(rect, left[0].Ink) && Contains(rect, picture));
+            var mathFill = fills.Single(rect => formula.All(glyph => Contains(rect, glyph.Ink)));
+            var trailing = fills.Single(rect => Contains(rect, right[0].Ink));
+            TestAssert.True(leading.Height > mathFill.Height + 1d && trailing.Height > mathFill.Height + 1d,
+                "The formula uses its own selection geometry inside the selected prose.");
+            TestAssert.True(Math.Abs(leading.X + leading.Width - mathFill.X) < .003d &&
+                Math.Abs(mathFill.X + mathFill.Width - trailing.X) < .003d,
+                "The source-owned bands meet at the equation without overpainting the entire line.");
+        }
 
-    private static double Value(Match match, string name) => double.Parse(match.Groups[name].Value, CultureInfo.InvariantCulture);
+        static bool Contains(PdfRectangle box, PdfRectangle ink) => ink.X >= box.X - .02d &&
+            ink.X + ink.Width <= box.X + box.Width + .02d && ink.Y >= box.Y - .02d &&
+            ink.Y + ink.Height <= box.Y + box.Height + .02d;
+    }
+
+    private static IEnumerable<PdfRectangle> ReadNaturalCommentFillRectangles(string content)
+    {
+        foreach (Match block in Regex.Matches(content,
+            @"0\.973 0\.863 0\.867 rg\s+(?:(?<x>[-\d.]+) (?<y>[-\d.]+) (?<w>[\d.]+) (?<h>[\d.]+) re f\s*)+"))
+        {
+            for (int index = 0; index < block.Groups["x"].Captures.Count; index++)
+                yield return new PdfRectangle(Value("x", index), Value("y", index), Value("w", index), Value("h", index));
+
+            double Value(string name, int index) => double.Parse(block.Groups[name].Captures[index].Value, CultureInfo.InvariantCulture);
+        }
+    }
 
     private static JsonDocument ReadNaturalCommentFillJson(string name) => JsonDocument.Parse(File.ReadAllText(Path.GetFullPath(
         Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "NaturalCommentFills", name))));
