@@ -3,14 +3,15 @@
 # the text-then-position filter must pair by text, and font-size drift must
 # fail as a delta. No Office/COM or reference cache needed.
 
+[CmdletBinding()]
+param([string] $OutputDirectory)
+
 $ErrorActionPreference = "Stop"
 $PSNativeCommandUseErrorActionPreference = $false
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$scratch = Join-Path $repoRoot "artifacts/emission-compare-probe"
-if (Test-Path -LiteralPath $scratch) {
-    Remove-Item -LiteralPath $scratch -Recurse -Force
-}
-New-Item -ItemType Directory -Force -Path $scratch | Out-Null
+if (!$OutputDirectory) { $OutputDirectory = Join-Path $repoRoot ('artifacts/emission-compare-probe-' + [guid]::NewGuid().ToString('N')) }
+if (Test-Path -LiteralPath $OutputDirectory) { throw 'Use a fresh emission comparison test directory' }
+$scratch = (New-Item -ItemType Directory -Path $OutputDirectory).FullName
 
 function Write-Ops([string] $Name, [object[]] $Ops) {
     $path = Join-Path $scratch ($Name + ".json")

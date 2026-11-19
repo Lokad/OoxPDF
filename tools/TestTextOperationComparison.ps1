@@ -5,18 +5,15 @@
 # reports exactly one missing, and a near-neighbor substitution reports its
 # real delta. No Office/COM or reference cache needed.
 
+[CmdletBinding()]
+param([string] $OutputDirectory)
+
 $ErrorActionPreference = "Stop"
 $PSNativeCommandUseErrorActionPreference = $false
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$scratch = Join-Path $repoRoot "artifacts/text-compare-probe"
-$scratchFullPath = [IO.Path]::GetFullPath($scratch)
-if (!$scratchFullPath.StartsWith((Resolve-Path -LiteralPath $repoRoot).Path + [IO.Path]::DirectorySeparatorChar + 'artifacts' + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
-    throw 'Unexpected comparison-probe cleanup target'
-}
-if (Test-Path -LiteralPath $scratch) {
-    Remove-Item -LiteralPath $scratch -Recurse -Force
-}
-New-Item -ItemType Directory -Force -Path $scratch | Out-Null
+if (!$OutputDirectory) { $OutputDirectory = Join-Path $repoRoot ('artifacts/text-compare-probe-' + [guid]::NewGuid().ToString('N')) }
+if (Test-Path -LiteralPath $OutputDirectory) { throw 'Use a fresh text comparison test directory' }
+$scratch = (New-Item -ItemType Directory -Path $OutputDirectory).FullName
 
 function Write-Ops([string] $Name, [object[]] $Ops) {
     $path = Join-Path $scratch ($Name + ".json")
@@ -127,4 +124,4 @@ Invoke-Case 'blank-line-partly-unknown' @($unknown, (New-MetricOp 13 80 ' ' 3)) 
 if ($failures.Count -ne 0) {
     throw ("Text comparison adversarial checks failed: " + ($failures -join "; "))
 }
-Write-Host "Text comparison adversarial checks passed (28 cases)."
+Write-Host "Text comparison adversarial checks passed."
