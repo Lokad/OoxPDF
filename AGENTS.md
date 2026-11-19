@@ -105,16 +105,16 @@ and default to `net11.0`. Frozen artifacts record one framework each; transfer,
 report joins and derived runtimes use that pinned framework. Historical identities
 without a framework field are net10-only.
 Keep runner TMP/TEMP in its ignored artifact directory. For frozen CLI checks,
-set `OOXPDF_TEST_CLI_ASSEMBLY` to that artifact's CLI. Package checks can use
-`TestPackageSmoke.ps1 -NoBuild -ExpectedLibrarySha256 <qualified hash>`.
+set `OOXPDF_TEST_CLI_ASSEMBLY` to that artifact's CLI. Qualify existing package bytes with
+`tools/TestPackageSmoke.ps1 -PackagePath <nupkg> -Framework <tfm> -ExpectedLibrarySha256 <qualified hash>`.
 Its `-InspectOnly -PackagePath <nupkg> -ExpectedLibrarySha256 <hash>` mode checks
 all declared framework build identities and package docs without build/restore or
 consumer execution. `tools/TestPackageInspection.ps1` covers coherent, mixed and
 single-framework packages with an existing dual-framework package; never builds.
 Package consumers discard build/restore caches on success. Keep inputs, PDFs and
 summaries; retain caches on failure or cleanup refusal.
-Use `-PackagePath <nupkg>` with that hash to consume the same package on another
-platform without rebuilding or repacking the library.
+Reuse the same archive and hash on another platform. For multiple frameworks,
+pass the framework and hash arrays in matching order.
 Unit tests can also be filtered by capability group with `--group`, for example:
 `dotnet run --project tests/Lokad.OoxPdf.Tests -f net11.0 -- --group pptx-typography --skip-slow`.
 
