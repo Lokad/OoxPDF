@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.IO.Compression;
+using System.Numerics;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -64,6 +65,51 @@ internal static class PptxTextLayoutTests
                 TestAssert.Equal(horizontal == "clip", hasHorizontalClip);
             }
             TestAssert.True(DocxTests.CountPdfTextShows(page.Content) > 0, "Horizontal clipping must retain the visible text.");
+        }
+    }
+
+    public static void PptxVerticalShapeClipUsesWritingFrameAxes()
+    {
+        var fonts = new PortableRenderingTests.PinnedResolver();
+        foreach (string orientation in new[] { "vert", "vert270" })
+        foreach (int shapeRotation in new[] { 0, 5400000 })
+        {
+            Vector2[]? overflowOrigins = null;
+            foreach (var (clipWidth, clipHeight) in new[] { (false, false), (true, false), (false, true), (true, true) })
+            {
+                string horizontal = clipWidth ? "clip" : "overflow";
+                string vertical = clipHeight ? "clip" : "overflow";
+                using var input = TestFixtures.CreateZipPackage(new Dictionary<string, string>
+                {
+                    ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
+                    ["_rels/.rels"] = PptxTests.PackageRelationship(),
+                    ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
+                    ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
+                    ["ppt/slides/slide1.xml"] = $$"""
+                        <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                          <p:cSld><p:spTree><p:sp>
+                            <p:spPr><a:xfrm rot="{{shapeRotation}}"><a:off x="914400" y="1905000"/><a:ext cx="1676400" cy="965200"/></a:xfrm><a:prstGeom prst="ellipse"/><a:noFill/></p:spPr>
+                            <p:txBody><a:bodyPr vert="{{orientation}}" horzOverflow="{{horizontal}}" vertOverflow="{{vertical}}"
+                                lIns="63500" rIns="38100" tIns="25400" bIns="63500"><a:noAutofit/></a:bodyPr><a:lstStyle/>
+                              <a:p><a:r><a:rPr sz="1200"><a:latin typeface="Portable"/></a:rPr><a:t>BOX</a:t></a:r></a:p></p:txBody>
+                          </p:sp></p:spTree></p:cSld>
+                        </p:sld>
+                        """
+                });
+                using var package = OoxPackage.Open(input, default);
+                PdfPage page = new PptxRenderer(fonts).RenderPagesAsync(new PptxReader().Read(package, default), package, null, default)
+                    .ToBlockingEnumerable().Single();
+                var painted = PortableRenderingTests.ReadPaintedSourceLabel(page, "BOX");
+                overflowOrigins ??= painted.Select(glyph => glyph.Origin).ToArray();
+                TestAssert.True(painted.Select((glyph, i) => Vector2.Distance(glyph.Origin, overflowOrigins[i])).All(distance => distance < .002f),
+                    $"A fitting label keeps its painted origins for {orientation}, {shapeRotation}, {horizontal}/{vertical}.");
+
+                var paintFrame = DocxNoteClippingTests.ReadPhysicalPaintFrames(page)
+                    .Single(frame => frame.Block.StartsWith("BT", StringComparison.Ordinal));
+                bool swapped = shapeRotation == 0;
+                TestAssert.Equal(swapped ? clipHeight : clipWidth, paintFrame.Clip.Width < page.Width - .01d);
+                TestAssert.Equal(swapped ? clipWidth : clipHeight, paintFrame.Clip.Height < page.Height - .01d);
+            }
         }
     }
 

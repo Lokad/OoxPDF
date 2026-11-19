@@ -48,6 +48,9 @@ internal sealed partial class PptxRenderer
         };
     }
 
+    private static double ShapeWritingModeClipRotation(ShapeBounds bounds, PptxTextOrientation orientation) =>
+        bounds.RotationDegrees % 90d == 0d ? TextOrientationRotationDegrees(orientation) : 0d;
+
     private static double? ParseTextBodyRotationDegrees(string? rotation)
     {
         return rotation is not null &&

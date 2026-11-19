@@ -830,9 +830,20 @@ internal sealed partial class PptxRenderer
         // physical rectangle for rotated text. Resolve that contract here when
         // the transformed crop is still exactly a rectangle. Oblique source
         // clipping retains its existing fallback rather than enlarging a polygon.
-        // This is the container transform. A bodyPr rotation or a vertical
-        // writing mode can rotate glyphs independently of the authored frame.
+        // An explicit bodyPr rotation rotates only the glyphs. A shape's
+        // writing mode exchanges the crop axes as well as the flow axes.
         var bounds = frame.Bounds;
+        if (!frame.TableRowIndex.HasValue)
+        {
+            double writingModeRotation = ShapeWritingModeClipRotation(bounds, frame.Orientation);
+            if (bounds.FlipHorizontal != bounds.FlipVertical)
+            {
+                // The writing-mode turn occurs before the shape reflection.
+                writingModeRotation = -writingModeRotation;
+            }
+
+            bounds = bounds with { RotationDegrees = bounds.RotationDegrees + writingModeRotation };
+        }
         double frameHeight = OoxUnits.EmuToPoints(bounds.Height);
         var matrix = ShapeTransformMatrix(OoxUnits.EmuToPoints(bounds.X),
             document.SlideHeightPoints - OoxUnits.EmuToPoints(bounds.Y) - frameHeight,

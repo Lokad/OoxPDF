@@ -305,11 +305,21 @@ internal sealed partial class PptxRenderer
             // outside the ellipse-inscribed clip). Horizontal placement and clip keep the
             // inscribed rect, which Office matches to 0.03pt. Shapes without preset
             // insets are unaffected (both rects coincide).
-            double clipTextHeight = Math.Max(1d, height - insets.Top - insets.Bottom);
-            (textClipY, textClipHeight) = IntersectVerticalTextClipWithSlide(
-                document.SlideHeightPoints - yTop - insets.Top - clipTextHeight,
-                clipTextHeight,
-                document.SlideHeightPoints);
+            if (ShapeWritingModeClipRotation(bounds.Value, orientation) != 0d)
+            {
+                // Cull baselines in the writing frame. Its clip is projected
+                // to the slide only after placement.
+                textClipHeight = textHeight;
+                textClipY = document.SlideHeightPoints - flowYTop - insets.Top - textClipHeight;
+            }
+            else
+            {
+                double clipTextHeight = Math.Max(1d, height - insets.Top - insets.Bottom);
+                (textClipY, textClipHeight) = IntersectVerticalTextClipWithSlide(
+                    document.SlideHeightPoints - yTop - insets.Top - clipTextHeight,
+                    clipTextHeight,
+                    document.SlideHeightPoints);
+            }
         }
         var shapeFontPaint = ReadShapeFontPaint(shape, theme, colorMap);
         bool useOfficeBaselineFloor = true;

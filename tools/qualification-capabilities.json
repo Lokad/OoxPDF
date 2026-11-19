@@ -8031,6 +8031,7 @@
     "PptxSyntheticEllipsisDropsBaselineOutsideLineAndMarksInline"
   ],
   "horizontal-text-clipping": [
+    "PptxVerticalShapeClipUsesWritingFrameAxes",
     "PptxWrappedNoBreakClusterKeepsInkAndLinkInNextColumn",
     "PptxWrappedNoBreakPhrasePreservesMeasuredAdvances",
     "PptxHorizontalClipPreservesVerticalOverflowInShapesAndCells",
@@ -20246,6 +20247,7 @@
     "XrefTablePointsAtObjectHeaders"
   ],
   "pptx-layout-oracle-portability": [
+    "PptxVerticalShapeClipUsesWritingFrameAxes",
     "PptxSyntheticChartTitleManualBoxDrivesPlacement",
     "PptxSyntheticMiddleAnchorUsesSignedActualSlackWhenWrappedTextOverflows",
     "PptxSyntheticCenteredLogoBoxWrapsDefaultTypefaceText",
