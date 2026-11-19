@@ -35,7 +35,6 @@ internal sealed partial class PptxRenderer
 {
     private const double OfficeTableRowContentExpansionSlackFactor = 1.05d;
     private const double OfficeTableRowSmallPositiveSlackFactor = 1.05d;
-    private const double OfficeTableRowDeclaredHeightSlackFactor = 1.10d;
     private const double OfficeMiddleAnchoredTableCellDefaultTopInsetAdjustment = 0.54d;
     private const double OfficeBottomAnchoredTableCellDefaultBottomInsetAdjustment = 0.6d;
 
@@ -402,22 +401,7 @@ internal sealed partial class PptxRenderer
                 return slackAdjustedRows;
             }
 
-            if (rowHeightSlackFactor > 1d + PptxTextMetricRules.TextStateTolerance &&
-                ShouldKeepDeclaredRowsForSparsePositiveFillSlack(sceneTable))
-            {
-                return rawRowHeights
-                    .Select(height => height * OoxUnits.PointsPerInch / OoxUnits.EmusPerInch)
-                    .ToArray();
-            }
-
             return rowHeights;
-        }
-
-        if (rowHeightSlackFactor <= OfficeTableRowDeclaredHeightSlackFactor)
-        {
-            rowHeights = rawRowHeights
-                .Select(height => height * OoxUnits.PointsPerInch / OoxUnits.EmusPerInch)
-                .ToArray();
         }
 
         double[] minimumHeights = new double[rowHeights.Length];
@@ -496,7 +480,7 @@ internal sealed partial class PptxRenderer
                 return 0d;
             }
 
-            PptxTextFrameModel frame = (await BuildTextFrameModelAsync(tableTextFrame, context.Document, context.Theme, context.SlideNumber, context.InheritedXml, context.FontResolver, context.CancellationToken).ConfigureAwait(false));
+            PptxTextFrameModel frame = await BuildTableCellTextFrameModelAsync(tableTextFrame, context, estimateVerticalOffset: false).ConfigureAwait(false);
             double textHeight = await EstimateTextHeightAsync(frame.Paragraphs, frame.TextWrapWidth, frame.BodyProperties, context.FontResolver, context.CancellationToken).ConfigureAwait(false);
             if (textHeight <= PptxTextMetricRules.TextStateTolerance)
             {
@@ -505,29 +489,6 @@ internal sealed partial class PptxRenderer
 
             return frame.Insets.Top + textHeight + frame.Insets.Bottom;
         }
-    }
-
-    private static bool ShouldKeepDeclaredRowsForSparsePositiveFillSlack(PptxSceneTable sceneTable)
-    {
-        int filledRowCount = 0;
-        for (int rowIndex = 0; rowIndex < sceneTable.Rows.Count; rowIndex++)
-        {
-            bool rowHasFill = sceneTable.Rows[rowIndex].Cells.Any(cell =>
-                !cell.IsMergedContinuation &&
-                (cell.Fill.HasFill || cell.StyleFill.HasFill));
-            if (!rowHasFill)
-            {
-                continue;
-            }
-
-            filledRowCount++;
-            if (filledRowCount > 1)
-            {
-                return false;
-            }
-        }
-
-        return filledRowCount == 1;
     }
 
     private static bool TryDistributeSmallPositiveTableRowSlack(

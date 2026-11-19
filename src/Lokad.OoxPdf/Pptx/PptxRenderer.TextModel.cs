@@ -40,7 +40,7 @@ internal sealed partial class PptxRenderer
         }
 
         return (ReadSceneTableTextFramesAsync(context).GetAwaiter().GetResult())
-            .Select(tableFrame => (BuildTextFrameModelAsync(tableFrame, document, context.Theme, context.DisplayedSlideNumber, context.InheritedXml, context.FontResolver, context.CancellationToken).GetAwaiter().GetResult()))
+            .Select(tableFrame => BuildTableCellTextFrameModelAsync(tableFrame, context).GetAwaiter().GetResult())
             .Select(ToSnapshot)
             .ToArray();
     }
@@ -438,15 +438,12 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static async ValueTask<PptxTextFrameModel> BuildTextFrameModelAsync(
+    private static async ValueTask<PptxTextFrameModel> BuildTableCellTextFrameModelAsync(
         PptxTableCellTextFrame tableFrame,
-        PptxDocument document,
-        PptxTheme theme,
-        long slideNumber,
-        IReadOnlyList<XDocument> placeholderSources,
-        PresentationFontResolver? fontResolver = null,
-        CancellationToken cancellationToken = default)
+        PptxRenderContext context,
+        bool estimateVerticalOffset = true)
     {
+        PptxDocument document = context.Document;
         XElement textBody = tableFrame.TextBody;
         PptxTextBodyProperties baseBodyProperties = ReadTextBodyProperties(textBody, inheritedTextBody: null);
         PptxTextBodyProperties bodyProperties = baseBodyProperties with
@@ -527,10 +524,10 @@ internal sealed partial class PptxRenderer
             textBody,
             textBody,
             inheritedPlaceholders: [],
-            placeholderSources,
-            theme,
+            context.InheritedXml,
+            context.Theme,
             tableFrame.ColorMap,
-            slideNumber,
+            context.DisplayedSlideNumber,
             fontScale,
             lineSpacingScale,
             compatibleLineSpacing,
@@ -538,13 +535,16 @@ internal sealed partial class PptxRenderer
             shapeFontPaint: null,
             tableFrame.TextStyle,
             defaultTextStyle: document.DefaultTextStyle);
-        fontResolver ??= new PresentationFontResolver(await WindowsFontResolver.CreateAsync(cancellationToken).ConfigureAwait(false), cancellationToken);
-        double verticalOffset = bodyProperties.VerticalAnchor switch
+        double verticalOffset = 0d;
+        if (estimateVerticalOffset && bodyProperties.VerticalAnchor is TextVerticalAnchor.Middle or TextVerticalAnchor.Bottom)
         {
-            TextVerticalAnchor.Middle => Math.Max(0d, (textHeight - (await EstimateTextHeightAsync(paragraphs, textWrapWidth, bodyProperties, fontResolver, cancellationToken).ConfigureAwait(false))) / 2d),
-            TextVerticalAnchor.Bottom => Math.Max(0d, textHeight - (await EstimateTextHeightAsync(paragraphs, textWrapWidth, bodyProperties, fontResolver, cancellationToken).ConfigureAwait(false))),
-            _ => 0d
-        };
+            double contentHeight = await EstimateTextHeightAsync(paragraphs, textWrapWidth, bodyProperties, context.FontResolver, context.CancellationToken).ConfigureAwait(false);
+            verticalOffset = Math.Max(0d, textHeight - contentHeight);
+            if (bodyProperties.VerticalAnchor == TextVerticalAnchor.Middle)
+            {
+                verticalOffset /= 2d;
+            }
+        }
 
         return new PptxTextFrameModel(
             textBody,
@@ -552,7 +552,7 @@ internal sealed partial class PptxRenderer
             InheritedTextBody: null,
             InheritedPlaceholderCount: 0,
             UsesInheritedShapeBounds: false,
-            theme,
+            context.Theme,
             bodyProperties,
             bounds,
             tableFrame.RowIndex,

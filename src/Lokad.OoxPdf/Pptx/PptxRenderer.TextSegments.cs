@@ -469,7 +469,7 @@ internal sealed partial class PptxRenderer
     // the frame geometry and downstream layout stay on the existing path.
     internal static async ValueTask<IReadOnlyList<PptxPositionedTextSpan>> BuildSceneFedTableCellTextSpansAsync(PptxTableCellTextFrame tableFrame, PptxRenderContext context)
     {
-        PptxTextFrameModel frameModel = (await BuildTextFrameModelAsync(tableFrame, context.Document, context.Theme, context.DisplayedSlideNumber, context.InheritedXml, context.FontResolver, context.CancellationToken).ConfigureAwait(false));
+        PptxTextFrameModel frameModel = await BuildTableCellTextFrameModelAsync(tableFrame, context).ConfigureAwait(false);
         IReadOnlyList<PptxSceneTextParagraph> cellParagraphs = PptxSceneBuilder.ReadTableCellParagraphs(tableFrame.TextBody, context.InheritedXml, context.Document.DefaultTextStyle);
         IReadOnlyList<PptxTextParagraphModel> fedParagraphs = BuildSceneFedParagraphModels(cellParagraphs, frameModel, context.Theme, tableFrame.ColorMap, context.DisplayedSlideNumber, shapeFontPaint: null, tableFrame.TextStyle);
         var fedFrame = frameModel with { Paragraphs = fedParagraphs };

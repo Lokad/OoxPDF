@@ -7082,6 +7082,7 @@
     "PptxTableGridProduct"
   ],
   "pptx-table-merges-portable": [
+    "PptxSlideNumbersReserveWrappedTableRowsForDisplayedFields",
     "PptxMergedTableNeighborsKeepAllSourceContent",
     "PptxMergedTableColumnsKeepStyleAndLinkOwnership",
     "PptxMergedTableHeightMatchesCompactRecovery",

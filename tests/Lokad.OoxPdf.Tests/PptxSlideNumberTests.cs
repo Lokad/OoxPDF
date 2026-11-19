@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Ooxml;
+using Lokad.OoxPdf.Pdf;
 using Lokad.OoxPdf.Pptx;
 
 namespace Lokad.OoxPdf.Tests;
@@ -48,6 +49,39 @@ internal static class PptxSlideNumberTests
         }, unsupportedLast: true);
     }
 
+    public static void PptxSlideNumbersReserveWrappedTableRowsForDisplayedFields()
+    {
+        PdfPage[] fields = Render(_ => WrappingNumberTable(null));
+        PdfPage[] literals = Render(index => WrappingNumberTable((index + 7).ToString(CultureInfo.InvariantCulture)));
+
+        double ordinaryNextRow = AssertTable(fields[0], "8", 22);
+        double wrappedNextRow = AssertTable(fields[1], "10", 44);
+        TestAssert.True(Math.Abs(ordinaryNextRow - wrappedNextRow - 22d) < .01d,
+            "The added line advances the next row by one line height.");
+        for (int index = 0; index < fields.Length; index++)
+            TestAssert.Equal(literals[index].Content, fields[index].Content);
+
+        static PdfPage[] Render(Func<int, string> tableForSlide)
+        {
+            PdfPage[] pages = [];
+            WithDeck("8", true, (document, package) =>
+            {
+                pages = new PptxRenderer(new PortableRenderingTests.PinnedResolver())
+                    .RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().ToArray();
+            }, tableForSlide: tableForSlide);
+            TestAssert.Equal(2, pages.Length);
+            return pages;
+        }
+
+        static double AssertTable(PdfPage page, string number, int rowHeight)
+        {
+            PortableRenderingTests.ReadPaintedSourceLabel(page, $"Alpha {number} End");
+            var nextRow = PortableRenderingTests.ReadPaintedSourceLabel(page, "Next row");
+            TestAssert.Contains(FormattableString.Invariant($"72 {page.Height - 216 - rowHeight} 114 {rowHeight} re f*"), page.Content);
+            return nextRow[0].Origin.Y;
+        }
+    }
+
     public static void PptxSlideNumbersRetainOrderingAndAbsentListRepair()
     {
         foreach (bool absent in new[] { false, true })
@@ -57,9 +91,14 @@ internal static class PptxSlideNumberTests
                 TestAssert.Equal(absent ? "/ppt/slides/slide1.xml" : "/ppt/slides/slide3.xml", document.Slides[0].PartName);
                 string[] expected = absent ? ["10", "12"] : ["10", "11"];
                 for (int index = 0; index < 2; index++)
-                    TestAssert.True(PptxRenderer.InspectTextFrameModels(document, package, index)
+                {
+                    var fields = PptxRenderer.InspectTextFrameModels(document, package, index)
                         .SelectMany(frame => frame.Paragraphs).SelectMany(paragraph => paragraph.Runs)
-                        .All(run => run.Text == expected[index]), "Fields follow the declared ordering or established absent-list repair order.");
+                        .Where(run => run.Kind == "Field").ToArray();
+                    TestAssert.Equal(3, fields.Length);
+                    TestAssert.True(fields.All(run => run.Text == expected[index]),
+                        "Fields follow the declared ordering or established absent-list repair order.");
+                }
             }, absentList: absent, reorder: !absent);
     }
 
@@ -75,8 +114,34 @@ internal static class PptxSlideNumberTests
         });
     }
 
+    private static string WrappingNumberTable(string? literal)
+    {
+        const string runProperties = """<a:rPr sz="1800"><a:latin typeface="DejaVu Sans"/></a:rPr>""";
+        string number = literal is null
+            ? $$"""<a:fld id="{00000000-0000-0000-0000-000000000001}" type="slidenum">{{runProperties}}<a:t>1</a:t></a:fld>"""
+            : Run(literal);
+        return $$"""
+            <p:graphicFrame><p:xfrm><a:off x="914400" y="2743200"/><a:ext cx="1447800" cy="1524000"/></p:xfrm>
+              <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table"><a:tbl><a:tblPr/>
+                <a:tblGrid><a:gridCol w="1447800"/></a:tblGrid>
+                {{Row(Run("Alpha ") + number + Run(" End"), "CCEECC")}}
+                {{Row(Run("Next row"), "CCCCEE")}}
+              </a:tbl></a:graphicData></a:graphic>
+            </p:graphicFrame>
+            """;
+
+        static string Run(string text) => $"<a:r>{runProperties}<a:t>{text}</a:t></a:r>";
+
+        static string Row(string text, string fill) => $$"""
+            <a:tr h="152400"><a:tc><a:txBody><a:bodyPr wrap="square"/><a:lstStyle/>
+              <a:p><a:pPr><a:lnSpc><a:spcPts val="2200"/></a:lnSpc></a:pPr>{{text}}</a:p></a:txBody>
+              <a:tcPr marL="0" marR="0" marT="0" marB="0"><a:solidFill><a:srgbClr val="{{fill}}"/></a:solidFill></a:tcPr>
+            </a:tc></a:tr>
+            """;
+    }
+
     private static void WithDeck(string first, bool hidden, Action<PptxDocument,OoxPackage> check,
-        bool unsupportedLast = false, bool absentList = false, bool reorder = false)
+        bool unsupportedLast = false, bool absentList = false, bool reorder = false, Func<int, string>? tableForSlide = null)
     {
         const string p = "http://schemas.openxmlformats.org/presentationml/2006/main";
         const string a = "http://schemas.openxmlformats.org/drawingml/2006/main";
@@ -102,7 +167,7 @@ internal static class PptxSlideNumberTests
             ["ppt/slideMasters/slideMaster1.xml"]=Story("sldMaster",Shape())
         };
         for (int i=1;i<=3;i++) {
-            parts["ppt/slides/slide"+i+".xml"]=Story("sld",Shape(i==1,unsupportedLast && i==3)+Table()).Replace("<p:sld ","<p:sld show=\""+(hidden && i==2 ? "0" : "1")+"\" ");
+            parts["ppt/slides/slide"+i+".xml"]=Story("sld",Shape(i==1,unsupportedLast && i==3)+(tableForSlide?.Invoke(i) ?? Table())).Replace("<p:sld ","<p:sld show=\""+(hidden && i==2 ? "0" : "1")+"\" ");
             parts["ppt/slides/_rels/slide"+i+".xml.rels"]=Rels(Rel("layout","slideLayout","../slideLayouts/slideLayout1.xml")+Rel("jump","slide","slide3.xml"));
         }
         string path=TestFixtures.WriteTempPackage(".pptx",parts);
