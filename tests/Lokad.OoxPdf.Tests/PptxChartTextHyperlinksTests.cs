@@ -230,6 +230,34 @@ internal static partial class PptxChartTextHyperlinksTests
             "</a:p></c:rich></c:tx><c:overlay val=\"0\"/></c:title>";
     }
 
+    public static void PptxDefaultBarTopAxisTitleUsesMeasuredInkBand()
+    {
+        const string first = "Above";
+        const string linked = "average";
+        var resolver = new PortableRenderingTests.PinnedResolver();
+        foreach (int size in new[] { 1200, 3200 })
+        {
+            string chart = AxisTitleChart("t", $"""
+                <a:r><a:rPr sz="1200" b="0"/><a:t xml:space="preserve">{first} </a:t></a:r>
+                <a:r><a:rPr sz="{size}" b="0"><a:hlinkClick r:id="rIdLink"/></a:rPr><a:t>{linked}</a:t></a:r>
+                """).Replace("<c:barDir val=\"col\"/>", "<c:barDir val=\"bar\"/>", StringComparison.Ordinal)
+                .Replace("<c:axPos val=\"b\"/><c:crossAx val=\"20\"/>",
+                    "<c:axPos val=\"l\"/><c:crossAx val=\"20\"/>", StringComparison.Ordinal);
+            PdfPage page = RenderChartTitlePage("", AxisTitleRelationships, chart, resolver).Pages.Single();
+            var firstInk = PortableRenderingTests.ReadPaintedSourceLabel(page, first, fontPrefix: "CAT");
+            var linkedInk = PortableRenderingTests.ReadPaintedSourceLabel(page, linked, fontPrefix: "CAT");
+            TestAssert.Equal(firstInk[0].Origin.Y, linkedInk[0].Origin.Y);
+            var link = page.Annotations.Single();
+            TestAssert.Equal("https://example.invalid/chart-axis", link.Uri);
+            TestAssert.True(linkedInk.All(glyph => glyph.Ink.X >= link.X - .02d &&
+                glyph.Ink.X + glyph.Ink.Width <= link.X + link.Width + .02d && glyph.Ink.Y >= link.Y - .02d &&
+                glyph.Ink.Y + glyph.Ink.Height <= link.Y + link.Height + .02d),
+                "The link contains all matching axis-title ink.");
+            TestAssert.True(firstInk.All(glyph => glyph.Ink.X + glyph.Ink.Width < link.X),
+                "The unlinked first run retains its own space.");
+        }
+    }
+
     public static void PptxManualAxisTitleKeepsAuthoredLinesAndLinkedInk()
     {
         const string north = "<a:r><a:rPr sz=\"1800\" b=\"0\"/><a:t>North</a:t></a:r>";

@@ -20,15 +20,23 @@ internal sealed partial class PptxRenderer
         {
             PptxSceneChartAxis axis = chart.Axes[index];
             if (axis.IsDeleted == true || axis.Title.Layout.HasLayout ||
-                string.IsNullOrWhiteSpace(axis.Title.Text) || !axis.Title.HasMultipleTextLines ||
+                string.IsNullOrWhiteSpace(axis.Title.Text) ||
                 !IsRenderableDefaultChartAxisTitle(axis.AxisKind, axis.PositionKind))
             {
                 continue;
             }
 
+            bool multiline = axis.Title.HasMultipleTextLines;
+            if (!multiline && axis.PositionKind is not (PptxSceneChartAxisPosition.Top or PptxSceneChartAxisPosition.Bottom))
+                continue;
+
             ChartTextStyle style = ReadDefaultAxisTitleStyle(theme, chart, axis);
-            var (lines, height) = await MeasureChartRichTextLinesAsync(axis.Title.Text, ToChartTextRuns(axis.Title.TextRuns),
-                style, fontResolver).ConfigureAwait(false);
+            IReadOnlyList<ChartTextRunOverride> runs = ToChartTextRuns(axis.Title.TextRuns);
+            if (!multiline && !await HorizontalAxisTitleWouldClipAsync(layout, axis.PositionKind, axis.Title.Text,
+                    runs, style, fontResolver).ConfigureAwait(false))
+                continue;
+
+            var (lines, height) = await MeasureChartRichTextLinesAsync(axis.Title.Text, runs, style, fontResolver).ConfigureAwait(false);
             (measured ??= []).Add((index, axis.PositionKind, style, lines, height));
         }
 
@@ -118,6 +126,26 @@ internal sealed partial class PptxRenderer
             if (sum <= available) return (first, second);
             double scale = available / sum;
             return (first * scale, second * scale);
+        }
+    }
+
+    private static async ValueTask<bool> HorizontalAxisTitleWouldClipAsync(ChartLayout layout, PptxSceneChartAxisPosition side,
+        string text, IReadOnlyList<ChartTextRunOverride> runs, ChartTextStyle style, PresentationFontResolver fontResolver)
+    {
+        double baseline = ComputeDefaultHorizontalAxisTitleBaselineY(layout, side);
+        var measure = new ChartTextMeasurer(fontResolver);
+        if (runs.Count == 0) return await WouldClipAsync(text.Trim(), style).ConfigureAwait(false);
+
+        foreach (ChartTextRunOverride run in runs)
+            if (await WouldClipAsync(run.Text, style.Merge(run.TextStyle)).ConfigureAwait(false)) return true;
+        return false;
+
+        async ValueTask<bool> WouldClipAsync(string value, ChartTextStyle runStyle)
+        {
+            // Keep established single-line placement when its visible ink fits the chart.
+            var emission = runStyle with { FontSize = OfficePdfTextEmissionProfile.FontSize(runStyle.FontSize) };
+            return await measure.TryMeasureInkBoundsAsync(value, emission).ConfigureAwait(false) is { } ink &&
+                (baseline + ink.Bottom < layout.Frame.Y || baseline + ink.Top > layout.Frame.Y + layout.Frame.Height);
         }
     }
 

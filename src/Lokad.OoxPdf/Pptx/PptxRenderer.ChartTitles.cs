@@ -284,6 +284,18 @@ internal sealed partial class PptxRenderer
         return frameBottomY + bottomReserve * PptxChartMetricRules.DefaultAxisTitleBandBaselineRatio;
     }
 
+    private static double ComputeDefaultHorizontalAxisTitleBaselineY(ChartLayout layout, PptxSceneChartAxisPosition side)
+    {
+        ChartFrameBox frame = layout.Frame;
+        ChartPlotBox plot = layout.PlotBox;
+        if (side == PptxSceneChartAxisPosition.Bottom)
+            return ComputeDefaultBottomAxisTitleBaselineY(frame.Y, plot.Y);
+
+        double plotTop = plot.Y + plot.Height;
+        double topReserve = Math.Max(0d, frame.Y + frame.Height - plot.Y - plot.Height);
+        return plotTop + topReserve * PptxChartMetricRules.DefaultAxisTitleTopBandBaselineRatio;
+    }
+
     private static bool IsRenderableDefaultChartAxisTitle(PptxSceneChartAxisKind axisKind, PptxSceneChartAxisPosition positionKind)
     {
         return positionKind switch
@@ -327,19 +339,9 @@ internal sealed partial class PptxRenderer
         ChartFrameBox frame = layout.Frame;
         ChartPlotBox plotBox = layout.PlotBox;
         double titleX = plotBox.X + plotBox.Width / 2d - textWidth / 2d;
-        double baselineY;
-        double boxY;
-        if (positionKind == PptxSceneChartAxisPosition.Top)
-        {
-            double topReserve = Math.Max(0d, frame.Y + frame.Height - plotBox.Y - plotBox.Height);
-            baselineY = plotBox.Y + plotBox.Height + topReserve * PptxChartMetricRules.DefaultAxisTitleTopBandBaselineRatio;
-            boxY = Math.Max(plotBox.Y + plotBox.Height, baselineY - titleHeight);
-        }
-        else
-        {
-            baselineY = ComputeDefaultBottomAxisTitleBaselineY(frame.Y, plotBox.Y);
-            boxY = Math.Max(frame.Y, baselineY - titleHeight);
-        }
+        double baselineY = ComputeDefaultHorizontalAxisTitleBaselineY(layout, positionKind);
+        double boxBottom = positionKind == PptxSceneChartAxisPosition.Top ? plotBox.Y + plotBox.Height : frame.Y;
+        double boxY = Math.Max(boxBottom, baselineY - titleHeight);
 
         double boxX = Math.Max(frame.X, titleX - style.FontSize * 0.5d);
         double boxWidth = Math.Min(frame.X + frame.Width - boxX, textWidth + style.FontSize);
