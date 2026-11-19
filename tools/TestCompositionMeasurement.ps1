@@ -214,7 +214,11 @@ $textCases = @(
     @{Id='emitted-word-space';Pages=@(1,1,1);Text=@('Retained',' ','source.');Expected='Retained source.';Missing=$false},
     @{Id='absent-word-space';Pages=@(1,1);Text=@('Retained','source.');Expected='Retained source.';Missing=$true},
     @{Id='page-boundary';Pages=@(1,2);Text=@('Retained','source.');Expected='Retainedsource.';Missing=$true},
-    @{Id='numeric-page-order';Pages=@(10,2);Text=@('last','first');Expected='first last';Missing=$false},
+    @{Id='cross-page-spaced-phrase';Pages=@(10,2);Text=@('last','first');Expected='first last';Missing=$true},
+    @{Id='exact-on-later-page';Pages=@(1,2);Text=@('retained source','Retained source');Expected='Retained source';Missing=$false},
+    @{Id='word-prefix';Pages=@(1);Text=@('Retained sourcelike');Expected='Retained source';Missing=$true},
+    @{Id='word-suffix';Pages=@(1);Text=@('unRetained source');Expected='Retained source';Missing=$true},
+    @{Id='label-punctuation';Pages=@(1);Text=@('Footer:12');Expected='Footer:';Missing=$false},
     @{Id='decoded-unicode';Pages=@(1,1,1);Text=@('of',([string][char]0xFB01),'ce');Expected='office';Missing=$false},
     @{Id='missing-word';Pages=@(1,1);Text=@('Retained ','.');Expected='Retained source.';Missing=$true},
     @{Id='empty-inspection';Pages=@();Text=@();Expected='Retained source.';Missing=$true}
