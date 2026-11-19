@@ -11,11 +11,12 @@ internal sealed partial class DocxReader
     private static IEnumerable<(DocxRevisionScopedElement Scope, IReadOnlyList<DocxRevisionScopedElement>? Tables)>
         EnumerateLogicalTableBlocks(IEnumerable<XElement> elements, DocxStyleSet styles,
             OoxPdfDocxMarkupMode mode, CancellationToken token, DocxRevisionInfo? inheritedRevision = null,
-            IReadOnlyList<DocxBookmarkAnchor>? leadingBookmarks = null)
+            IReadOnlyList<DocxBookmarkAnchor>? leadingBookmarks = null, bool readTableColumnBookmarks = false)
     {
         DocxRevisionScopedElement? pending = null;
         List<DocxRevisionScopedElement>? tables = null;
-        foreach (var block in EnumerateBookmarkedBlocks(elements, mode, token, inheritedRevision, leadingBookmarks: leadingBookmarks))
+        foreach (var block in EnumerateBookmarkedBlocks(elements, mode, token, inheritedRevision,
+            leadingBookmarks: leadingBookmarks, readTableColumnBookmarks: readTableColumnBookmarks))
         {
             if (pending is not null && CanJoinTables(pending.Element, block.Element, styles))
             {
@@ -32,7 +33,8 @@ internal sealed partial class DocxReader
 
     private static IEnumerable<DocxRevisionScopedElement> EnumerateBookmarkedBlocks(IEnumerable<XElement> elements,
         OoxPdfDocxMarkupMode mode, CancellationToken token, DocxRevisionInfo? inheritedRevision,
-        XName? tableChildName = null, IReadOnlyList<DocxBookmarkAnchor>? leadingBookmarks = null)
+        XName? tableChildName = null, IReadOnlyList<DocxBookmarkAnchor>? leadingBookmarks = null,
+        bool readTableColumnBookmarks = false)
     {
         XName importedContentName = WordprocessingNamespace + "altChunk";
         XName bookmarkStartName = WordprocessingNamespace + "bookmarkStart";
@@ -41,33 +43,60 @@ internal sealed partial class DocxReader
             ? [tableChildName, bookmarkStartName, bookmarkEndName]
             : [WordprocessingNamespace + "p", WordprocessingNamespace + "tbl", importedContentName, bookmarkStartName, bookmarkEndName];
         // A cell inherits starts at its row boundary before choosing its first block.
-        var bookmarkStarts = leadingBookmarks?.ToDictionary(anchor => NormalizeDecimalId(anchor.Id)!, StringComparer.Ordinal);
+        Dictionary<string, DocxBookmarkAnchor>? bookmarkStarts = null;
+        if (leadingBookmarks is { Count: > 0 })
+        {
+            bookmarkStarts = new(StringComparer.Ordinal);
+            foreach (var bookmark in leadingBookmarks)
+            {
+                token.ThrowIfCancellationRequested();
+                bookmarkStarts.TryAdd(NormalizeDecimalId(bookmark.Id)!, bookmark);
+            }
+        }
+        Dictionary<string, DocxTableColumnBookmark>? columnStarts = null;
         foreach (var scope in EnumerateRevisionScopedChildren(elements, mode, token, includedNames, inheritedRevision))
         {
             token.ThrowIfCancellationRequested();
             if (scope.Element.Name == bookmarkStartName)
             {
-                // Column-scoped starts need the authored grid position.
-                if (tableChildName is not null && (scope.Element.Attribute(WordprocessingNamespace + "colFirst") is not null ||
-                                                  scope.Element.Attribute(WordprocessingNamespace + "colLast") is not null))
-                    continue;
                 var anchor = ReadBookmarkAnchor(scope.Element, 0, 0, 0, 0);
-                if (NormalizeDecimalId(anchor.Id) is { Length: > 0 } id && !string.IsNullOrEmpty(anchor.Name))
-                    (bookmarkStarts ??= new(StringComparer.Ordinal)).TryAdd(id, anchor);
+                if (NormalizeDecimalId(anchor.Id) is not { Length: > 0 } id || string.IsNullOrEmpty(anchor.Name))
+                    continue;
+                XName firstColumn = WordprocessingNamespace + "colFirst";
+                XName lastColumn = WordprocessingNamespace + "colLast";
+                if ((readTableColumnBookmarks || tableChildName is not null) &&
+                    (scope.Element.Attribute(firstColumn) is not null || scope.Element.Attribute(lastColumn) is not null))
+                {
+                    if (readTableColumnBookmarks &&
+                        ReadNonNegativeIntAttribute(scope.Element, firstColumn) is int first &&
+                        ReadNonNegativeIntAttribute(scope.Element, lastColumn) is int last && first <= last)
+                        (columnStarts ??= new(StringComparer.Ordinal)).TryAdd(id, new(anchor, first, last));
+                    continue;
+                }
+                (bookmarkStarts ??= new(StringComparer.Ordinal)).TryAdd(id, anchor);
                 continue;
             }
             if (scope.Element.Name == bookmarkEndName)
             {
-                if (bookmarkStarts is not null && NormalizeDecimalId((string?)scope.Element.Attribute(WordprocessingNamespace + "id")) is { } id)
-                    bookmarkStarts.Remove(id);
+                if ((bookmarkStarts is not null || columnStarts is not null) &&
+                    NormalizeDecimalId((string?)scope.Element.Attribute(WordprocessingNamespace + "id")) is { } id)
+                {
+                    bookmarkStarts?.Remove(id);
+                    columnStarts?.Remove(id);
+                }
                 continue;
             }
 
             // Bind the start before layout, including rows filtered by the selected view.
-            var block = bookmarkStarts is { Count: > 0 } && scope.Element.Name != importedContentName
-                ? scope with { LeadingBookmarks = bookmarkStarts.Values.ToArray() }
+            var block = (bookmarkStarts is { Count: > 0 } || columnStarts is { Count: > 0 }) && scope.Element.Name != importedContentName
+                ? scope with {
+                    LeadingBookmarks = bookmarkStarts is { Count: > 0 } ? bookmarkStarts.Values.ToArray() : null,
+                    LeadingColumnBookmarks = columnStarts is { Count: > 0 }
+                        ? columnStarts.Values.OrderBy(bookmark => bookmark.First).ToArray() : null
+                }
                 : scope;
             bookmarkStarts = null;
+            columnStarts = null;
             yield return block;
         }
     }

@@ -1300,6 +1300,75 @@ internal static class DocxSectionNavigationTests
             new XElement(W + "tblGrid", widths.Select(width => new XElement(W + "gridCol", new XAttribute(W + "w", width)))), row);
     }
 
+    public static void DocxColumnBookmarksFollowTheAuthoredTableGrid()
+    {
+        foreach (var mode in Modes)
+        foreach (bool spanned in new[] { false, true })
+        {
+            PdfPage[] control = RenderColumn("inside", spanned, mode);
+            TestAssert.Equal(2, control.Length);
+            TestAssert.Contains("FIRST CELL", Text(control[1]));
+            TestAssert.Contains("TARGET PARAGRAPH", Text(control[1]));
+            PdfLinkAnnotation expected = control[0].Annotations.Single();
+            TestAssert.True(expected.Destination is { PageIndex: 1, Left: > 100d },
+                "The control bookmark points to the second cell on page two.");
+            foreach (string variant in new[] { "column", "wrapped", "closed", "unoccupied" })
+            {
+                PdfPage[] pages = RenderColumn(variant, spanned, mode);
+                TestAssert.True(control.Select(page => page.Content).SequenceEqual(pages.Select(page => page.Content)),
+                    "A column bookmark preserves the painted page content.");
+                if (variant is "closed" or "unoccupied")
+                    TestAssert.Equal(0, pages[0].Annotations.Count);
+                else
+                    TestAssert.Equal(expected, pages[0].Annotations.Single());
+            }
+        }
+
+        static PdfPage[] RenderColumn(string variant, bool spanned, OoxPdfDocxMarkupMode mode)
+        {
+            PdfPage[] pages = [];
+            WithMutation("bookmark-before", (_, xml) => {
+                (XElement start, XElement end, XElement target) = BookmarkSource(xml);
+                start.Remove();
+                end.Remove();
+                var first = new XElement(W + "tc", Paragraph("FIRST CELL"));
+                var second = new XElement(W + "tc", new XElement(target));
+                var row = new XElement(W + "tr");
+                int gridSize = spanned ? 5 : 2;
+                if (spanned)
+                {
+                    row.Add(new XElement(W + "trPr", new XElement(W + "gridBefore", new XAttribute(W + "val", 1))));
+                    foreach (var cell in new[] { first, second })
+                        cell.AddFirst(new XElement(W + "tcPr", new XElement(W + "gridSpan", new XAttribute(W + "val", 2))));
+                }
+                row.Add(first, second);
+                if (variant == "inside")
+                {
+                    XElement paragraph = second.Element(W + "p")!;
+                    paragraph.Element(W + "r")!.AddBeforeSelf(start);
+                    paragraph.Add(end);
+                }
+                else
+                {
+                    // The start lives in the first cell even when the range
+                    // starts in another authored column of the row.
+                    int column = variant == "unoccupied" ? gridSize : spanned ? 4 : 1;
+                    start.SetAttributeValue(W + "colFirst", column);
+                    start.SetAttributeValue(W + "colLast", column);
+                    first.Element(W + "p")!.AddBeforeSelf(variant == "wrapped"
+                        ? new XElement(W + "sdt", new XElement(W + "sdtContent", start)) : start);
+                    if (variant == "closed") start.AddAfterSelf(end);
+                    else row.Add(end);
+                }
+                target.ReplaceWith(new XElement(W + "tbl",
+                    new XElement(W + "tblPr", new XElement(W + "tblLayout", new XAttribute(W + "type", "fixed"))),
+                    new XElement(W + "tblGrid", Enumerable.Range(0, gridSize)
+                        .Select(_ => new XElement(W + "gridCol", new XAttribute(W + "w", 1600)))), row));
+            }, path => pages = Render(path, mode));
+            return pages;
+        }
+    }
+
     private static (XElement Start, XElement End, XElement Target) BookmarkSource(XDocument xml)
     {
         XElement start = xml.Descendants(W + "bookmarkStart").Single();

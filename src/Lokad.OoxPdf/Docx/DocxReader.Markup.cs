@@ -539,7 +539,10 @@ internal sealed partial class DocxReader
     private sealed record DocxRevisionScopedElement(XElement Element, DocxRevisionInfo? Revision)
     {
         public IReadOnlyList<DocxBookmarkAnchor>? LeadingBookmarks { get; init; }
+        public DocxTableColumnBookmark[]? LeadingColumnBookmarks { get; init; }
     }
+
+    private readonly record struct DocxTableColumnBookmark(DocxBookmarkAnchor Anchor, int First, int Last);
 
     private sealed record DocxCommentRangeStart(string? Id, int SourceRunIndex, int TextOffset)
     {

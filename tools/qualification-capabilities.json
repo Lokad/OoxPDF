@@ -8667,6 +8667,7 @@
     "DocxBlockBookmarksFollowPlacedCellAndStoryParagraphs",
     "=DocxTableRowRangeBookmarksKeepTheirPaintedDestination",
     "=DocxCellBoundaryBookmarksKeepThePaintedCellDestination",
+    "=DocxColumnBookmarksFollowTheAuthoredTableGrid",
     "=DocxBlockBookmarksFollowPaintedTableRowsAcrossStories",
     "=DocxStaticBoxTablesResolveRangeBookmarksOnPaintedRows",
     "=DocxFloatingBoxTableRangeBookmarksFollowPaintedRows",
