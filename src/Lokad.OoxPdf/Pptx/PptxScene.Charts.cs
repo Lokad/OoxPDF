@@ -481,7 +481,6 @@ internal sealed partial class PptxSceneBuilder
             string orientation = ReadChartElementValue(axis.Element(ChartNamespace + "scaling"), "orientation");
             string tickLabelPosition = ReadChartElementValue(axis, "tickLblPos");
             string majorTickMark = ReadChartElementValue(axis, "majorTickMark");
-            string minorTickMark = ReadChartElementValue(axis, "minorTickMark");
             (double? crossesAt, string crossesAtValue) = ReadChartElementDoubleWithValue(axis, "crossesAt");
             (double? minimum, string minimumValue) = ReadChartAxisScalingValueWithValue(axis, "min");
             (double? maximum, string maximumValue) = ReadChartAxisScalingValueWithValue(axis, "max");
@@ -489,9 +488,7 @@ internal sealed partial class PptxSceneBuilder
             (double? minorUnit, string minorUnitValue) = ReadChartAxisUnitValueWithValue(axis, "minorUnit");
             (int? labelOffset, string labelOffsetValue) = ReadChartElementIntWithValue(axis, "lblOffset");
             (int? tickLabelSkip, string tickLabelSkipValue) = ReadChartElementIntWithValue(axis, "tickLblSkip");
-            (int? tickMarkSkip, string tickMarkSkipValue) = ReadChartElementIntWithValue(axis, "tickMarkSkip");
             (bool? isDeleted, string isDeletedValue) = ReadOptionalOoxmlBooleanElementWithValue(axis, "delete");
-            (bool? noMultiLevelLabels, string noMultiLevelLabelsValue) = ReadOptionalOoxmlBooleanElementWithValue(axis, "noMultiLvlLbl");
             XElement? majorGridlines = axis.Element(ChartNamespace + "majorGridlines");
             XElement? minorGridlines = axis.Element(ChartNamespace + "minorGridlines");
             bool hasLogarithmicScale = axis.Element(ChartNamespace + "scaling")?.Element(ChartNamespace + "logBase") is not null;
@@ -519,7 +516,6 @@ internal sealed partial class PptxSceneBuilder
                 IsChartGridlineVisible(majorGridlines),
                 IsChartGridlineVisible(minorGridlines),
                 majorGridlines is not null,
-                minorGridlines is not null,
                 ReadChartAxisLine(axis, theme, colorMap, axisStyleLine),
                 ReadChartGridlineLine(majorGridlines, theme, colorMap, singleLinePlot ? majorStyleLine : default),
                 ReadChartGridlineLine(minorGridlines, theme, colorMap, singleLinePlot && !hasLogarithmicScale ? minorStyleLine : default),
@@ -528,15 +524,10 @@ internal sealed partial class PptxSceneBuilder
                 ReadChartTextStyleOverride(axis, theme, colorMap),
                 tickLabelPosition,
                 majorTickMark,
-                minorTickMark,
                 labelOffset,
                 labelOffsetValue,
                 tickLabelSkip,
                 tickLabelSkipValue,
-                tickMarkSkip,
-                tickMarkSkipValue,
-                noMultiLevelLabels,
-                noMultiLevelLabelsValue,
                 ReadChartAxisNumberFormat(axis),
                 ReadChartNumberFormat(axis),
                 ReadChartTitleElement(axis.Element(ChartNamespace + "title"), theme, colorMap, null, "", null),

@@ -1006,8 +1006,6 @@ internal sealed record PptxSceneChartAxis
 
     public string Orientation { get; }
 
-    public bool IsReversed { get; }
-
     public bool? IsDeleted { get; }
 
     public string IsDeletedValue { get; }
@@ -1038,8 +1036,6 @@ internal sealed record PptxSceneChartAxis
 
     public bool HasMajorGridlineElement { get; }
 
-    public bool HasMinorGridlineElement { get; }
-
     public PptxSceneLineStyle Line { get; }
 
     public PptxSceneLineStyle MajorGridlineLine { get; }
@@ -1062,10 +1058,6 @@ internal sealed record PptxSceneChartAxis
 
     public string MajorTickMark { get; }
 
-    public PptxSceneChartAxisTickMark MinorTickMarkKind { get; }
-
-    public string MinorTickMark { get; }
-
     public int? LabelOffset { get; }
 
     public string LabelOffsetValue { get; }
@@ -1073,14 +1065,6 @@ internal sealed record PptxSceneChartAxis
     public int? TickLabelSkip { get; }
 
     public string TickLabelSkipValue { get; }
-
-    public int? TickMarkSkip { get; }
-
-    public string TickMarkSkipValue { get; }
-
-    public bool? NoMultiLevelLabels { get; }
-
-    public string NoMultiLevelLabelsValue { get; }
 
     public string? NumberFormat { get; }
 
@@ -1103,7 +1087,6 @@ internal sealed record PptxSceneChartAxis
         string crossBetween,
         PptxSceneChartAxisOrientation orientationKind,
         string orientation,
-        bool isReversed,
         bool? isDeleted,
         string isDeletedValue,
         bool hasScaling,
@@ -1118,7 +1101,6 @@ internal sealed record PptxSceneChartAxis
         bool hasMajorGridlines,
         bool hasMinorGridlines,
         bool hasMajorGridlineElement,
-        bool hasMinorGridlineElement,
         PptxSceneLineStyle line,
         PptxSceneLineStyle majorGridlineLine,
         PptxSceneLineStyle minorGridlineLine,
@@ -1129,16 +1111,10 @@ internal sealed record PptxSceneChartAxis
         string tickLabelPosition,
         PptxSceneChartAxisTickMark majorTickMarkKind,
         string majorTickMark,
-        PptxSceneChartAxisTickMark minorTickMarkKind,
-        string minorTickMark,
         int? labelOffset,
         string labelOffsetValue,
         int? tickLabelSkip,
         string tickLabelSkipValue,
-        int? tickMarkSkip,
-        string tickMarkSkipValue,
-        bool? noMultiLevelLabels,
-        string noMultiLevelLabelsValue,
         string? numberFormat,
         PptxSceneChartNumberFormat numberFormatInfo,
         PptxSceneChartTitle title)
@@ -1157,7 +1133,6 @@ internal sealed record PptxSceneChartAxis
         CrossBetween = crossBetween;
         OrientationKind = orientationKind;
         Orientation = orientation;
-        IsReversed = isReversed;
         IsDeleted = isDeleted;
         IsDeletedValue = isDeletedValue;
         HasScaling = hasScaling;
@@ -1172,7 +1147,6 @@ internal sealed record PptxSceneChartAxis
         HasMajorGridlines = hasMajorGridlines;
         HasMinorGridlines = hasMinorGridlines;
         HasMajorGridlineElement = hasMajorGridlineElement;
-        HasMinorGridlineElement = hasMinorGridlineElement;
         Line = line;
         MajorGridlineLine = majorGridlineLine;
         MinorGridlineLine = minorGridlineLine;
@@ -1183,16 +1157,10 @@ internal sealed record PptxSceneChartAxis
         TickLabelPosition = tickLabelPosition;
         MajorTickMarkKind = majorTickMarkKind;
         MajorTickMark = majorTickMark;
-        MinorTickMarkKind = minorTickMarkKind;
-        MinorTickMark = minorTickMark;
         LabelOffset = labelOffset;
         LabelOffsetValue = labelOffsetValue;
         TickLabelSkip = tickLabelSkip;
         TickLabelSkipValue = tickLabelSkipValue;
-        TickMarkSkip = tickMarkSkip;
-        TickMarkSkipValue = tickMarkSkipValue;
-        NoMultiLevelLabels = noMultiLevelLabels;
-        NoMultiLevelLabelsValue = noMultiLevelLabelsValue;
         NumberFormat = numberFormat;
         NumberFormatInfo = numberFormatInfo;
         Title = title;
@@ -1222,7 +1190,6 @@ internal sealed record PptxSceneChartAxis
         bool hasMajorGridlines,
         bool hasMinorGridlines,
         bool hasMajorGridlineElement,
-        bool hasMinorGridlineElement,
         PptxSceneLineStyle line,
         PptxSceneLineStyle majorGridlineLine,
         PptxSceneLineStyle minorGridlineLine,
@@ -1231,15 +1198,10 @@ internal sealed record PptxSceneChartAxis
         PptxSceneChartTextStyleOverride textStyle,
         string tickLabelPosition,
         string majorTickMark,
-        string minorTickMark,
         int? labelOffset,
         string labelOffsetValue,
         int? tickLabelSkip,
         string tickLabelSkipValue,
-        int? tickMarkSkip,
-        string tickMarkSkipValue,
-        bool? noMultiLevelLabels,
-        string noMultiLevelLabelsValue,
         string? numberFormat,
         PptxSceneChartNumberFormat numberFormatInfo,
         PptxSceneChartTitle title,
@@ -1260,7 +1222,6 @@ internal sealed record PptxSceneChartAxis
             crossBetween,
             PptxSceneBuilder.ParseChartAxisOrientation(orientation),
             orientation,
-            PptxSceneBuilder.ParseChartAxisOrientation(orientation) == PptxSceneChartAxisOrientation.MaximumMinimum,
             isDeleted,
             isDeletedValue,
             hasScaling,
@@ -1275,7 +1236,6 @@ internal sealed record PptxSceneChartAxis
             hasMajorGridlines,
             hasMinorGridlines,
             hasMajorGridlineElement,
-            hasMinorGridlineElement,
             line,
             majorGridlineLine,
             minorGridlineLine,
@@ -1286,16 +1246,10 @@ internal sealed record PptxSceneChartAxis
             tickLabelPosition,
             PptxSceneBuilder.ParseChartAxisTickMark(majorTickMark),
             majorTickMark,
-            PptxSceneBuilder.ParseChartAxisTickMark(minorTickMark),
-            minorTickMark,
             labelOffset,
             labelOffsetValue,
             tickLabelSkip,
             tickLabelSkipValue,
-            tickMarkSkip,
-            tickMarkSkipValue,
-            noMultiLevelLabels,
-            noMultiLevelLabelsValue,
             numberFormat,
             numberFormatInfo,
             title) { HasLogarithmicScale = hasLogarithmicScale };

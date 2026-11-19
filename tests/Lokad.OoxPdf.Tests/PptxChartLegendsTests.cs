@@ -1033,7 +1033,6 @@ internal static partial class PptxChartLegendsTests
                   <c:minorUnit val="-1"/>
                   <c:lblOffset val="futureOffset"/>
                   <c:tickLblSkip val="2"/>
-                  <c:tickMarkSkip val="futureTickMarkSkip"/>
                 </c:valAx>
               </c:plotArea></c:chart>
             </c:chartSpace>
@@ -1055,8 +1054,6 @@ internal static partial class PptxChartLegendsTests
         TestAssert.Equal("futureOffset", axis.LabelOffsetValue);
         TestAssert.Equal(2, axis.TickLabelSkip ?? 0);
         TestAssert.Equal("2", axis.TickLabelSkipValue);
-        TestAssert.Equal(null, axis.TickMarkSkip);
-        TestAssert.Equal("futureTickMarkSkip", axis.TickMarkSkipValue);
     }
 
     public static void PptxScenePreservesChartManualLayoutNumericOptionTokens()
