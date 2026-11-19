@@ -686,7 +686,7 @@ internal static class PptxModelTests
         TestAssert.Equal(0.6d, slide.SlideNodes[4].Chart?.PlotAreaStyle.Line.Alpha ?? 0d);
         TestAssert.Equal("barChart", slide.SlideNodes[4].Chart?.Plots[0].Kind ?? string.Empty);
         TestAssert.Equal(PptxSceneChartPlotKind.Bar, slide.SlideNodes[4].Chart?.Plots[0].PlotKind);
-        TestAssert.Equal(1, slide.SlideNodes[4].Chart?.Plots[0].SeriesCount ?? 0);
+        TestAssert.Equal(1, slide.SlideNodes[4].Chart?.Plots[0].Series.Count ?? 0);
         TestAssert.Equal("20", slide.SlideNodes[4].Chart?.Plots[0].AxisIds[1] ?? string.Empty);
         TestAssert.Equal("stacked", slide.SlideNodes[4].Chart?.Plots[0].Grouping ?? string.Empty);
         TestAssert.Equal(PptxSceneChartGrouping.Stacked, slide.SlideNodes[4].Chart?.Plots[0].GroupingKind);

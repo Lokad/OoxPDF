@@ -49,7 +49,12 @@ internal sealed partial class PptxRenderer
                 ChartShapeStyle plotAreaStyle = ToChartShapeStyle(sceneChart.PlotAreaStyle);
                 ChartAxisSource valueAxis = ReadChartValueAxesForPlot(sceneChart, linePlot).FirstOrDefault();
                 bool categoryPointsOnTickMarks = ResolveSceneCategoryAxisLabelsOnTickMarks(valueAxis.SceneAxis);
-                ChartValueExtents valueExtents = ReadCartesianChartValueAxisExtents(sceneChart, valueAxis.SceneAxis, GetSharedLineChartValueExtents(linePlot, lineOptions.Stacked, lineOptions.PercentStacked, workbook, plotVisibleOnly), lineOptions.PercentStacked, useNearMaximumHeadroom: !lineOptions.PercentStacked, nearMaximumHeadroomRatio: PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
+                ChartValueExtents dataExtents = workbook is null
+                    ? GetLineChartValueExtents(lineSeriesVectors, lineOptions.Stacked, lineOptions.PercentStacked)
+                    : GetSharedLineChartValueExtents(linePlot, lineOptions.Stacked, lineOptions.PercentStacked, workbook, plotVisibleOnly);
+                ChartValueExtents valueExtents = ReadCartesianChartValueAxisExtents(sceneChart, valueAxis.SceneAxis, dataExtents,
+                    lineOptions.PercentStacked, useNearMaximumHeadroom: !lineOptions.PercentStacked,
+                    nearMaximumHeadroomRatio: PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
                 ChartValueAxisRenderOptions valueAxisOptions = ReadSceneChartValueAxisRenderOptions(valueAxis.SceneAxis, valueExtents, lineOptions.PercentStacked) with
                 { TickPolicy = ReadCartesianChartAxisTickPolicy(sceneChart, valueAxis.SceneAxis, valueExtents, lineOptions.PercentStacked) };
                 ChartLayout chartLayout = (await GetCartesianChartLayoutAsync(document, theme, bounds, chartXml, sceneChart, colorMap, workbook, plotVisibleOnly, fontResolver, resolvedValueExtents: valueExtents, context: context).ConfigureAwait(false));
@@ -101,7 +106,8 @@ internal sealed partial class PptxRenderer
                 {
                     await RenderChartValueAxisLabelsAsync(theme, graphics, plotBox, chartXml, sceneChart, valueAxis.SceneAxis, valueExtents, valueAxisOptions.Units, valueAxisOptions.Reversed, horizontalBars: false, rightSide: axesStyle.ValueAxisRightSide, axisSideSlot: 0, manualPlotLayoutApplied: false, useTextSizedWidth: false, defaultNumberFormat: lineOptions.PercentStacked ? "0%" : null, fontResolver: fontResolver, chartFonts: fonts, tickPolicy: valueAxisOptions.TickPolicy, context: context).ConfigureAwait(false);
                 }
-                await RenderSecondaryChartValueAxisLabelsAsync(theme, graphics, plotBox, chartXml, sceneChart, GetSharedLineChartValueExtents(linePlot, lineOptions.Stacked, lineOptions.PercentStacked, workbook, plotVisibleOnly), fontResolver, chartFonts: fonts, primarySceneAxis: valueAxis.SceneAxis, context: context).ConfigureAwait(false);
+                await RenderSecondaryChartValueAxisLabelsAsync(theme, graphics, plotBox, chartXml, sceneChart, dataExtents,
+                    fontResolver, chartFonts: fonts, primarySceneAxis: valueAxis.SceneAxis, context: context).ConfigureAwait(false);
                 // Major value tick marks (Office honors out/in/cross at value gridlines).
                 if (axesStyle.ValueAxisVisible)
                 {

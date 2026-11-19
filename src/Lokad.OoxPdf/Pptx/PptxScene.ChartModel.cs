@@ -247,7 +247,6 @@ internal sealed record PptxSceneChartPlot
 
     public string Kind { get; }
 
-    public int SeriesCount { get; }
 
     public IReadOnlyList<string> AxisIds { get; }
 
@@ -308,7 +307,6 @@ internal sealed record PptxSceneChartPlot
     private PptxSceneChartPlot(
         PptxSceneChartPlotKind plotKind,
         string kind,
-        int seriesCount,
         IReadOnlyList<string> axisIds,
         IReadOnlyList<PptxSceneChartSeries> series,
         PptxSceneChartGrouping groupingKind,
@@ -340,7 +338,6 @@ internal sealed record PptxSceneChartPlot
     {
         PlotKind = plotKind;
         Kind = kind;
-        SeriesCount = seriesCount;
         AxisIds = axisIds;
         Series = series;
         GroupingKind = groupingKind;
@@ -374,7 +371,6 @@ internal sealed record PptxSceneChartPlot
     public static PptxSceneChartPlot Defined(
         PptxSceneChartPlotKind plotKind,
         string kind,
-        int seriesCount,
         IReadOnlyList<string> axisIds,
         IReadOnlyList<PptxSceneChartSeries> series,
         string grouping,
@@ -400,7 +396,6 @@ internal sealed record PptxSceneChartPlot
         return new PptxSceneChartPlot(
             plotKind,
             kind,
-            seriesCount,
             axisIds,
             series,
             PptxSceneBuilder.ParseChartGrouping(grouping),

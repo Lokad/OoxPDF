@@ -137,7 +137,6 @@ internal sealed partial class PptxSceneBuilder
             plots.Add(PptxSceneChartPlot.Defined(
                 plotKind,
                 kind,
-                plot.Elements(ChartNamespace + "ser").Count(),
                 axisIds,
                 ReadChartSeries(plot, theme, colorMap, plotKind, markersEnabled == true),
                 grouping,
