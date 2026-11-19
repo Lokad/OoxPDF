@@ -181,7 +181,7 @@ internal sealed partial class DocxReader
         }
     }
 
-    private const double WordListLabelFallbackMaxPoints = 12d;
+    private const double WordListLabelFallbackPoints = 12d;
 
     private static DocxTextRunStyle ResolveListLabelStyle(DocxTextRunStyle levelStyle, XElement? paragraphProperties, DocxStyleSet styles, string? paragraphStyleId, DocxTableCellStyle? tableCellStyle, DocxResolvedRunProperties paragraphMarkRun)
     {
@@ -198,13 +198,8 @@ internal sealed partial class DocxReader
             Italic = levelStyle.Italic ?? paragraphMarkRun.Italic ?? false,
             AllCaps = levelStyle.AllCaps ?? paragraphMarkRun.AllCaps ?? false
         };
-        // Office sizes bullets from the numbering level, then paragraph/table styles (style-less paragraphs
-        // resolve through Normal), then document defaults outright, then unstyled table cells fall back to 12pt,
-        // and otherwise flat 12pt (bullet-chain probes 2026-09-06: style 14pt wins over direct 10/18pt;
-        // docDefaults 8/20pt win over direct body runs; unstyled table cells emit 12pt bullets at direct 9/10/14/18pt;
-        // labsize/nosize probes 2026-09-07: unresolvable style and defaults emit flat 12pt labels at direct 9/14/18pt
-        // for family-less and Symbol lvls alike, so direct size never refines the label;
-        // cells-with-docDefaults untested, cascade order assumed).
+        // Word sizes the label from the numbering level, paragraph mark, inherited
+        // paragraph or cell style, and document defaults. Body run sizes are separate.
         if (levelStyle.FontSize is not null)
         {
             return levelStyle;
@@ -222,26 +217,7 @@ internal sealed partial class DocxReader
             styleSize = paragraphStyle.Run.FontSize ?? styleSize;
         }
 
-        if (styleSize is not null)
-        {
-            return levelStyle with { FontSize = styleSize };
-        }
-
-        if (styles.RunDefaults.FontSize is { } defaultsSize)
-        {
-            return levelStyle with { FontSize = defaultsSize };
-        }
-        // Unstyled table cells fall back to 12pt only when document defaults resolve no size either
-        // (celldef probe 2026-09-07: docDefaults 8pt wins over the cell fallback at direct 9/14pt).
-        if (tableCellStyle is not null)
-        {
-            return levelStyle with { FontSize = WordListLabelFallbackMaxPoints };
-        }
-
-        // No resolvable level, mark, style, cell, or default size: Word falls back to flat 12pt
-        // (labsize/nosize probes 2026-09-07: styles-less and styles-without-size-or-defaults emit 12pt labels
-        // at direct 9/14/18pt for family-less and Symbol lvls alike; direct size never refines the label).
-        return levelStyle with { FontSize = WordListLabelFallbackMaxPoints };
+        return levelStyle with { FontSize = styleSize ?? styles.RunDefaults.FontSize ?? WordListLabelFallbackPoints };
     }
 
     private static string ResolveNumberingLevelText(DocxNumberingLevel definition, string numId,

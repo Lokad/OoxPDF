@@ -399,7 +399,7 @@ internal static partial class DocxNumberingTests
         TestAssert.Equal(8d, document.Paragraphs[1].ListLabel?.Style.FontSize ?? 0d);
     }
 
-    public static void DocxReaderCapsUnsizedListLabelAtTwelvePoints()
+    public static void DocxReaderUsesTwelvePointsForAnUnsizedListLabel()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
         {
