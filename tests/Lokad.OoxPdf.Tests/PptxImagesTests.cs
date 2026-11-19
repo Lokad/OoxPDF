@@ -1945,6 +1945,37 @@ internal static partial class PptxImagesTests
         }
     }
 
+    public static void PptxSvgDiscardedGradientStopsKeepOpacityFallback()
+    {
+        const string opaque = """<stop offset="0" stop-color="#FF0000"/><stop offset="1" stop-color="#0000FF"/>""";
+        const string halfOpacity = """<stop offset="0" stop-color="#FF0000" stop-opacity=".5"/><stop offset="1" stop-color="#0000FF" stop-opacity=".5"/>""";
+        foreach (string kind in new[] { "linearGradient", "radialGradient" })
+        {
+            byte[] expected = RenderSvgOpacityTest(Svg(kind, opaque));
+            foreach (string discarded in new[]
+            {
+                """<stop offset="bad" stop-color="#00FF00" style="stop-opacity:.25"/>""",
+                """<stop offset=".5" stop-color="unknown" style="stop-opacity:.25"/>"""
+            })
+            {
+                var diagnostics = new List<OoxPdfDiagnostic>();
+                byte[] actual = RenderSvgOpacityTest(Svg(kind, halfOpacity + discarded), diagnostics);
+                TestAssert.True(actual.AsSpan().SequenceEqual(expected),
+                    $"{kind} must retain opaque paint when an authored stop prevents numeric alpha admission.");
+                TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" &&
+                    d.Message.Contains("ignores stop-opacity on 3 gradient stops", StringComparison.Ordinal)),
+                    $"{kind} must report the existing opacity fallback for all three stops.");
+            }
+        }
+
+        static string Svg(string kind, string stops) => $$"""
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 50">
+              <defs><{{kind}} id="g">{{stops}}</{{kind}}></defs>
+              <path d="M0 0H100V50H0Z" fill="url(#g)"/>
+            </svg>
+            """;
+    }
+
     public static void PptxSvgZeroOpacityContainersMatchRemovedContent()
     {
         const string blue = "<path d=\"M0 0H100V50H0Z\" fill=\"#0000FF\"/>";

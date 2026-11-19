@@ -234,6 +234,7 @@
     "PptxSyntheticSvgVerticalGradientVariesTopToBottom",
     "PptxSyntheticSvgRadialGradientPaintsSmoothShading",
     "PptxSvgUniformNumericStopOpacityMatchesFillOpacity",
+    "PptxSvgDiscardedGradientStopsKeepOpacityFallback",
     "PptxSvgNumericContainerOpacityIsolatesOverlappingChildren",
     "PptxSvgLinearGradientStrokeRestoresFillMaskAndLaterSolidPaint",
     "PptxSvgRadialOpacityPaintsOnceThroughTheClip",

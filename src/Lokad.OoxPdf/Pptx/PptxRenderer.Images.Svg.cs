@@ -1069,17 +1069,7 @@ internal sealed partial class PptxRenderer
         foreach (XElement gradient in svg.Descendants().Where(element => element.Name.LocalName == "linearGradient"))
         {
             string? id = (string?)gradient.Attribute("id");
-            SvgGradientStop[] stops = gradient
-                .Elements()
-                .Where(element => element.Name.LocalName == "stop")
-                .Select(ReadSvgGradientStop)
-                .Where(stop => !double.IsNaN(stop.Offset))
-                // RV07: a missing stop-color defaults to black (PowerPoint normalizes black
-                // stops by dropping the attribute); present-but-unparseable colors still filter out.
-                .Where(stop => stop.Color is not null || !stop.HasColorAttribute)
-                .Select(stop => new SvgGradientStop(stop.Offset, stop.Color ?? new RgbColor(0, 0, 0), stop.Opacity))
-                .OrderBy(stop => stop.Offset)
-                .ToArray();
+            var (stops, uniformOpacity, hasNumericOpacity) = ReadSvgGradientStops(gradient);
             if (!string.IsNullOrWhiteSpace(id) && stops.Length > 0)
             {
                 // RV07: gradientTransform composes onto the raw vector in its own
@@ -1109,8 +1099,8 @@ internal sealed partial class PptxRenderer
                 }
                 gradients[id] = new SvgGradient(rawX1, rawY1, rawX2, rawY2, stops, linearUserSpace, ReadSvgGradientSpread((string?)gradient.Attribute("spreadMethod")))
                 {
-                    UniformStopOpacity = ReadUniformSvgStopOpacity(gradient),
-                    HasNumericStopOpacity = gradient.Elements().Where(e => e.Name.LocalName == "stop").All(e => ReadNumericSvgStopOpacity(e) is not null),
+                    UniformStopOpacity = uniformOpacity,
+                    HasNumericStopOpacity = hasNumericOpacity,
                     HasIdentityGradientTransform = gradientTransform.IsIdentity
                 };
             }
@@ -1119,11 +1109,33 @@ internal sealed partial class PptxRenderer
         return gradients;
     }
 
-    private static (double Offset, RgbColor? Color, bool HasColorAttribute, double? Opacity) ReadSvgGradientStop(XElement stop)
+    private static (SvgGradientStop[] Stops, double? UniformOpacity, bool HasNumericOpacity) ReadSvgGradientStops(XElement gradient)
     {
-        string? stopColorAttribute = (string?)stop.Attribute("stop-color");
-        RgbColor? stopColor = RgbColor.TryParseCssColor(stopColorAttribute, out RgbColor parsedStopColor) ? parsedStopColor : null;
-        return (ReadSvgOffset((string?)stop.Attribute("offset")), stopColor, !string.IsNullOrWhiteSpace(stopColorAttribute), ReadNumericSvgStopOpacity(stop));
+        var stops = new List<SvgGradientStop>();
+        double? firstNumericOpacity = null;
+        bool hasNumericOpacity = true;
+        bool hasUniformOpacity = true;
+        foreach (XElement stop in gradient.Elements().Where(element => element.Name.LocalName == "stop"))
+        {
+            // Opacity admission considers all authored stops, including those discarded for paint.
+            double? opacity = ReadNumericSvgStopOpacity(stop);
+            hasNumericOpacity &= opacity.HasValue;
+            firstNumericOpacity ??= opacity;
+            hasUniformOpacity &= opacity == firstNumericOpacity;
+
+            double offset = ReadSvgOffset((string?)stop.Attribute("offset"));
+            if (double.IsNaN(offset)) continue;
+            string? colorText = (string?)stop.Attribute("stop-color");
+            if (!RgbColor.TryParseCssColor(colorText, out RgbColor color))
+            {
+                if (!string.IsNullOrWhiteSpace(colorText)) continue;
+                // PowerPoint can serialize a black stop without a stop-color attribute.
+                color = new RgbColor(0, 0, 0);
+            }
+            stops.Add(new SvgGradientStop(offset, color, opacity));
+        }
+        return (stops.OrderBy(stop => stop.Offset).ToArray(),
+            hasNumericOpacity && hasUniformOpacity ? firstNumericOpacity ?? 1d : null, hasNumericOpacity);
     }
 
     private static double ReadSvgOffset(string? value)
@@ -1756,15 +1768,7 @@ internal sealed partial class PptxRenderer
         foreach (XElement gradient in svg.Descendants().Where(element => element.Name.LocalName == "radialGradient"))
         {
             string? id = (string?)gradient.Attribute("id");
-            SvgGradientStop[] stops = gradient
-                .Elements()
-                .Where(element => element.Name.LocalName == "stop")
-                .Select(ReadSvgGradientStop)
-                .Where(stop => !double.IsNaN(stop.Offset))
-                .Where(stop => stop.Color is not null || !stop.HasColorAttribute)
-                .Select(stop => new SvgGradientStop(stop.Offset, stop.Color ?? new RgbColor(0, 0, 0), stop.Opacity))
-                .OrderBy(stop => stop.Offset)
-                .ToArray();
+            var (stops, uniformOpacity, hasNumericOpacity) = ReadSvgGradientStops(gradient);
             if (string.IsNullOrWhiteSpace(id) || stops.Length == 0)
             {
                 continue;
@@ -1809,8 +1813,8 @@ internal sealed partial class PptxRenderer
 
             gradients[id] = new SvgRadialGradient(rawCx, rawCy, rawRadius, fx != cx || fy != cy, stops, userSpace, ReadSvgGradientSpread((string?)gradient.Attribute("spreadMethod")))
             {
-                UniformStopOpacity = ReadUniformSvgStopOpacity(gradient),
-                HasNumericStopOpacity = gradient.Elements().Where(e => e.Name.LocalName == "stop").All(e => ReadNumericSvgStopOpacity(e) is not null),
+                UniformStopOpacity = uniformOpacity,
+                HasNumericStopOpacity = hasNumericOpacity,
                 HasIdentityGradientTransform = gradientTransform.IsIdentity
             };
         }
