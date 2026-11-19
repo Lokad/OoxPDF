@@ -523,7 +523,7 @@ internal static class DocxRevisionsTests
             null,
             "center",
             [new DocxTableCellBorder("top", "single", "000000", "8")],
-            margins) with {PreferredWidthPoints = 42d,PreferredWidthValue = "840",PreferredWidthType = "dxa",GridSpan = 2,GridSpanValue = "2",ConditionalFormat = new DocxTableCellConditionalFormat("100000000000", true, "1", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null),HasVerticalMerge = true,VerticalMergeValue = "restart",NoWrap = true,NoWrapValue = "1",FitText = true,FitTextValue = "1",TextDirectionValue = "tbRl" };
+            margins) with {PreferredWidthPoints = 42d,PreferredWidthValue = "840",PreferredWidthType = "dxa",GridSpan = 2,GridSpanValue = "2",ConditionalFormat = new DocxTableCellConditionalFormat("100000000000", true, null, null, null, null, null, null, null, null, null, null, null),HasVerticalMerge = true,VerticalMergeValue = "restart",NoWrap = true,NoWrapValue = "1",FitText = true,FitTextValue = "1",TextDirectionValue = "tbRl" };
         DocxTable table = new DocxTable(
             null,
             [40d, 40d],

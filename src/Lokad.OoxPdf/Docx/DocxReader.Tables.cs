@@ -618,29 +618,17 @@ internal sealed partial class DocxReader
         return new DocxTableCellConditionalFormat(
             (string?)conditional.Attribute(WordprocessingNamespace + "val"),
             OoxBoolean.ParseOptionalAttribute(conditional, WordprocessingNamespace + "firstRow"),
-            (string?)conditional.Attribute(WordprocessingNamespace + "firstRow"),
             OoxBoolean.ParseOptionalAttribute(conditional, WordprocessingNamespace + "lastRow"),
-            (string?)conditional.Attribute(WordprocessingNamespace + "lastRow"),
             OoxBoolean.ParseOptionalAttribute(conditional, WordprocessingNamespace + "firstColumn"),
-            (string?)conditional.Attribute(WordprocessingNamespace + "firstColumn"),
             OoxBoolean.ParseOptionalAttribute(conditional, WordprocessingNamespace + "lastColumn"),
-            (string?)conditional.Attribute(WordprocessingNamespace + "lastColumn"),
             OoxBoolean.ParseOptionalAttribute(conditional, WordprocessingNamespace + "oddHBand"),
-            (string?)conditional.Attribute(WordprocessingNamespace + "oddHBand"),
             OoxBoolean.ParseOptionalAttribute(conditional, WordprocessingNamespace + "evenHBand"),
-            (string?)conditional.Attribute(WordprocessingNamespace + "evenHBand"),
             OoxBoolean.ParseOptionalAttribute(conditional, WordprocessingNamespace + "oddVBand"),
-            (string?)conditional.Attribute(WordprocessingNamespace + "oddVBand"),
             OoxBoolean.ParseOptionalAttribute(conditional, WordprocessingNamespace + "evenVBand"),
-            (string?)conditional.Attribute(WordprocessingNamespace + "evenVBand"),
             OoxBoolean.ParseOptionalAttribute(conditional, WordprocessingNamespace + "firstRowFirstColumn"),
-            (string?)conditional.Attribute(WordprocessingNamespace + "firstRowFirstColumn"),
             OoxBoolean.ParseOptionalAttribute(conditional, WordprocessingNamespace + "firstRowLastColumn"),
-            (string?)conditional.Attribute(WordprocessingNamespace + "firstRowLastColumn"),
             OoxBoolean.ParseOptionalAttribute(conditional, WordprocessingNamespace + "lastRowFirstColumn"),
-            (string?)conditional.Attribute(WordprocessingNamespace + "lastRowFirstColumn"),
-            OoxBoolean.ParseOptionalAttribute(conditional, WordprocessingNamespace + "lastRowLastColumn"),
-            (string?)conditional.Attribute(WordprocessingNamespace + "lastRowLastColumn"));
+            OoxBoolean.ParseOptionalAttribute(conditional, WordprocessingNamespace + "lastRowLastColumn"));
     }
 
     private static IReadOnlyList<DocxTableCellBorder> ReadBorderElements(XElement? borders)

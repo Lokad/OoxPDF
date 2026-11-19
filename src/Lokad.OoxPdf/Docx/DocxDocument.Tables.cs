@@ -184,29 +184,17 @@ internal sealed record DocxTableCell(
 internal sealed record DocxTableCellConditionalFormat(
     string? Value,
     bool? FirstRow,
-    string? FirstRowValue,
     bool? LastRow,
-    string? LastRowValue,
     bool? FirstColumn,
-    string? FirstColumnValue,
     bool? LastColumn,
-    string? LastColumnValue,
     bool? OddHorizontalBand,
-    string? OddHorizontalBandValue,
     bool? EvenHorizontalBand,
-    string? EvenHorizontalBandValue,
     bool? OddVerticalBand,
-    string? OddVerticalBandValue,
     bool? EvenVerticalBand,
-    string? EvenVerticalBandValue,
     bool? FirstRowFirstColumn,
-    string? FirstRowFirstColumnValue,
     bool? FirstRowLastColumn,
-    string? FirstRowLastColumnValue,
     bool? LastRowFirstColumn,
-    string? LastRowFirstColumnValue,
-    bool? LastRowLastColumn,
-    string? LastRowLastColumnValue)
+    bool? LastRowLastColumn)
 {
     public bool IsDefined =>
         FirstRow is not null ||
