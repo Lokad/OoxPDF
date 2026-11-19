@@ -3918,6 +3918,7 @@
   ],
   "pptx-chart-axis-selection": [
     "PptxChartAxisCaptionsKeepTheirAuthoredOpacity",
+    "PptxScatterAndBubbleHideOnlyAuthoredValueAxisCaptions",
     "PptxChartAxisSelectionKeepsDeclaredOrderAndMissingSources",
     "PptxChartSceneAxesKeepParsedSourcesAndDateContext",
     "PptxChartValueAxisScaleFallbackUsesSceneAuthoritativeAbsence",

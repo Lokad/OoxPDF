@@ -523,6 +523,67 @@ internal static class PptxChartAxesTests
         }
     }
 
+    public static void PptxScatterAndBubbleHideOnlyAuthoredValueAxisCaptions()
+    {
+        foreach (string kind in new[] { "scatter", "bubble" })
+        {
+            string visible = Render(kind, "nextTo", "nextTo");
+            int xCount = CaptionCount(visible, "0.8 0.2 0.333");
+            int yCount = CaptionCount(visible, "0.078 0.4 0.22");
+            TestAssert.True(xCount > 1 && yCount > 1, $"Both {kind} axes must paint their captions in the control.");
+
+            foreach (var (hideX, hideY) in new[] { (true, false), (false, true), (true, true) })
+            {
+                string content = Render(kind, hideX ? "none" : "nextTo", hideY ? "none" : "nextTo");
+                TestAssert.True(CaptionCount(content, "0.8 0.2 0.333") == (hideX ? 0 : xCount),
+                    $"{kind} X caption paint must follow its own tickLblPos.");
+                TestAssert.True(CaptionCount(content, "0.078 0.4 0.22") == (hideY ? 0 : yCount),
+                    $"{kind} Y caption paint must follow its own tickLblPos.");
+                TestAssert.Contains("0 0 1 RG", content); // X tick stroke
+                TestAssert.Contains("0 1 1 RG", content); // Y tick and gridline stroke
+                TestAssert.Contains("0.8 0.133 0 rg", content); // data marks
+            }
+        }
+
+        static int CaptionCount(string content, string color) =>
+            Regex.Matches(content, $@"(?m)^{Regex.Escape(color)} rg\r?\n/CVA\d+ [\d.]+ Tf\r?\n[^\r\n]*\r?\n[^\r\n]* Tm\r?\n[^\r\n]+ TJ\r?$").Count;
+
+        static string Render(string kind, string xLabels, string yLabels)
+        {
+            const string values = """<c:numLit><c:pt idx="0"><c:v>1</c:v></c:pt><c:pt idx="1"><c:v>3</c:v></c:pt></c:numLit>""";
+            string kindOptions = kind == "scatter" ? """<c:scatterStyle val="marker"/>""" : "";
+            string bubbleSizes = kind == "bubble" ? $"<c:bubbleSize>{values}</c:bubbleSize>" : "";
+            string chart = $$"""
+                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <c:chart><c:plotArea><c:{{kind}}Chart>{{kindOptions}}
+                    <c:ser><c:idx val="0"/><c:order val="0"/>
+                      <c:spPr><a:solidFill><a:srgbClr val="CC2200"/></a:solidFill></c:spPr>
+                      <c:xVal>{{values}}</c:xVal><c:yVal>{{values}}</c:yVal>{{bubbleSizes}}
+                    </c:ser>
+                    <c:axId val="1"/><c:axId val="2"/>
+                  </c:{{kind}}Chart>{{Axis(1, "b", xLabels, "CC3355", "0000FF")}}{{Axis(2, "l", yLabels, "146638", "00FFFF")}}
+                  </c:plotArea></c:chart>
+                </c:chartSpace>
+                """;
+            using var stream = PptxTests.CreateSingleChartPackageStream(chart);
+            using var package = OoxPackage.Open(stream, default);
+            var document = new PptxReader().Read(package, default);
+            return new PptxRenderer(new PortableRenderingTests.PinnedResolver())
+                .RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().Single().Content;
+        }
+
+        static string Axis(int id, string side, string labelPosition, string labelColor, string strokeColor) => $$"""
+            <c:valAx><c:axId val="{{id}}"/>
+              <c:scaling><c:max val="4"/><c:min val="0"/></c:scaling><c:axPos val="{{side}}"/>
+              <c:majorGridlines><c:spPr><a:ln><a:solidFill><a:srgbClr val="{{strokeColor}}"/></a:solidFill></a:ln></c:spPr></c:majorGridlines>
+              <c:majorTickMark val="out"/><c:tickLblPos val="{{labelPosition}}"/>
+              <c:txPr><a:bodyPr/><a:p><a:pPr><a:defRPr sz="1200"><a:solidFill><a:srgbClr val="{{labelColor}}"/>
+              </a:solidFill></a:defRPr></a:pPr></a:p></c:txPr>
+              <c:majorUnit val="2"/>
+            </c:valAx>
+            """;
+    }
+
     public static void PptxAutomaticValueLabelsAvoidInkOverlapOnCrowdedFrames()
     {
         foreach (int height in new[] { 72, 216 })
