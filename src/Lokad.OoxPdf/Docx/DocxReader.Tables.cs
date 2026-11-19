@@ -86,6 +86,7 @@ internal sealed partial class DocxReader
             break;
         }
         var rows = new List<DocxTableRow>();
+        bool inHeaderGroup = true;
         int rowIndex = 0;
         for (int sourceIndex = 0; sourceIndex < parts.Length; sourceIndex++)
         {
@@ -232,20 +233,21 @@ internal sealed partial class DocxReader
 
                 if (cells.Count > 0)
                 {
-                    XElement? header = rowProperties?.Element(WordprocessingNamespace + "tblHeader");
-                    DocxTableRowKeep? rowKeep = ResolveTableRowKeep(tableStyle, rowLook, rowProperties, rowIndex, rowCount, leadingRowEmphasis);
+                    DocxTableRowStyle rowStyle = ResolveTableRowStyle(tableStyle, rowLook, rowProperties, rowIndex, rowCount, leadingRowEmphasis);
+                    // Only the contiguous leading group participates in header layout.
+                    inHeaderGroup &= rowStyle.RepeatHeader?.Enabled == true;
                     XElement? rowHeight = rowProperties?.Element(WordprocessingNamespace + "trHeight");
                     DocxTableCellMargins effectiveExceptions = sourceIndex == 0 ? rowExceptionMargins : rowExceptionMargins.Merge(partMargins);
                     rows.Add(new DocxTableRow(
                         cells,
                         ReadTableRowHeight(rowHeight),
-                        ReadOnOff(header) == true,
-                        (string?)header?.Attribute(WordprocessingNamespace + "val"),
+                        inHeaderGroup,
+                        rowStyle.RepeatHeader?.Value,
                         (string?)rowHeight?.Attribute(WordprocessingNamespace + "val"),
                         (string?)rowHeight?.Attribute(WordprocessingNamespace + "hRule"),
                         HasAnyTableCellMargin(effectiveExceptions) ? effectiveExceptions : null,
-                        rowKeep?.Enabled == true,
-                        rowKeep?.Value)
+                        rowStyle.CantSplit?.Enabled == true,
+                        rowStyle.CantSplit?.Value)
                     {
                         Revisions = rowRevisions,
                         GridBefore = gridBefore,

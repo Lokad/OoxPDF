@@ -5,6 +5,17 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class DocxTableStyleInheritanceTests
 {
+    private const string RowProbeSection = """
+        <w:pgSz w:w="6000" w:h="4000"/>
+        <w:pgMar w:top="400" w:bottom="400" w:left="400" w:right="400" w:header="0" w:footer="0"/>
+        """;
+
+    private const string RowProbeDefaults = """
+        <w:docDefaults><w:rPrDefault><w:rPr>
+          <w:rFonts w:ascii="DejaVu Sans" w:hAnsi="DejaVu Sans"/><w:sz w:val="20"/>
+        </w:rPr></w:rPrDefault></w:docDefaults>
+        """;
+
     public static void DocxTableStyleRowKeepControlsPageAdmission()
     {
         const string keep = """<w:trPr><w:cantSplit w:val="1"/></w:trPr>""";
@@ -21,16 +32,6 @@ internal static partial class DocxTableStyleInheritanceTests
         string bandKeep = Region("band1Horz", keep);
         string intro = string.Concat(Enumerable.Range(1, 4).Select(n => Line($"Intro{n}")));
         string row = string.Concat(Enumerable.Range(1, 6).Select(n => Line($"Row{n}")));
-        const string section = """
-            <w:pgSz w:w="6000" w:h="4000"/>
-            <w:pgMar w:top="400" w:bottom="400" w:left="400" w:right="400" w:header="0" w:footer="0"/>
-            """;
-        const string defaults = """
-            <w:docDefaults><w:rPrDefault><w:rPr>
-              <w:rFonts w:ascii="DejaVu Sans" w:hAnsi="DejaVu Sans"/><w:sz w:val="20"/>
-            </w:rPr></w:rPrDefault></w:docDefaults>
-            """;
-
         foreach (var source in new (string Name, string Styles, string? StyleId, string RowProperties, string Look, string? EffectiveToken)[]
         {
             ("direct keep", Style("Probe", ""), "Probe", keep, first, "1"),
@@ -62,37 +63,44 @@ internal static partial class DocxTableStyleInheritanceTests
             foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
             {
                 bool keepTogether = source.EffectiveToken == "1";
-                var document = ReadStyledTableProbe(body, mode, section, defaults + source.Styles);
+                var document = ReadStyledTableProbe(body, mode, RowProbeSection, RowProbeDefaults + source.Styles);
                 var parsed = document.Tables.Single().Rows.Single();
                 TestAssert.True((keepTogether, source.EffectiveToken) == (parsed.CantSplit, parsed.CantSplitValue),
                     $"{source.Name} in {mode} should supply the effective keep setting and its token.");
 
-                var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(), mode,
-                    mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
-                        OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-                PdfPage[] pages = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
+                PdfPage[] pages = RenderStyledTableProbe(document, mode);
                 TestAssert.Equal(2, pages.Length);
                 string pageOne = keepTogether ? "Intro1 Intro2 Intro3 Intro4" : "Intro1 Intro2 Intro3 Intro4 Row1 Row2 Row3 Row4";
                 string pageTwo = keepTogether ? "Row1 Row2 Row3 Row4 Row5 Row6" : "Row5 Row6";
-                string firstPageText = Text(pages[0]);
-                string secondPageText = Text(pages[1]);
+                string firstPageText = ReadRowProbePageText(pages[0]);
+                string secondPageText = ReadRowProbePageText(pages[1]);
                 TestAssert.True(firstPageText == pageOne && secondPageText == pageTwo,
                     $"{source.Name} in {mode} should paint [{pageOne}] and [{pageTwo}], found [{firstPageText}] and [{secondPageText}].");
             }
         }
 
-        static string Text(PdfPage page)
-        {
-            string text = string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false,
-                includeTextTransforms: true).Select(show => show.Text));
-            return string.Join(' ', text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
-        }
         static string Line(string text) =>
             Paragraph(text, """<w:spacing w:before="0" w:after="0" w:line="400" w:lineRule="exact"/>""");
-        static string Region(string name, string content) =>
-            $"""<w:tblStylePr w:type="{name}">{content}</w:tblStylePr>""";
-        static string Child(string content) => Style("Probe", """<w:basedOn w:val="Base"/>""" + content);
-        static string Style(string id, string content, bool isDefault = false) =>
-            $"""<w:style w:type="table" w:styleId="{id}" w:default="{(isDefault ? "1" : "0")}">{content}</w:style>""";
     }
+
+    private static PdfPage[] RenderStyledTableProbe(DocxDocument document, OoxPdfDocxMarkupMode mode) =>
+        new DocxRenderer(new PortableRenderingTests.PinnedResolver(), mode,
+            mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
+                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+            .RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
+
+    private static string ReadRowProbePageText(PdfPage page)
+    {
+        string text = string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false,
+            includeTextTransforms: true).Select(show => show.Text));
+        return string.Join(' ', text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+    }
+
+    private static string Region(string name, string content) =>
+        $"""<w:tblStylePr w:type="{name}">{content}</w:tblStylePr>""";
+
+    private static string Child(string content) => Style("Probe", """<w:basedOn w:val="Base"/>""" + content);
+
+    private static string Style(string id, string content, bool isDefault = false) =>
+        $"""<w:style w:type="table" w:styleId="{id}" w:default="{(isDefault ? "1" : "0")}">{content}</w:style>""";
 }

@@ -7061,6 +7061,7 @@
   ],
   "docx-conditional-table-styles": [
     "=DocxTableStyleRowKeepControlsPageAdmission",
+    "=DocxTableStyleHeaderRowsRepeatOnlyTheLeadingGroup",
     "DocxAdjacentTables",
     "DocxTableLook",
     "DocxTableBandSizesMatchIndependentWordFills",

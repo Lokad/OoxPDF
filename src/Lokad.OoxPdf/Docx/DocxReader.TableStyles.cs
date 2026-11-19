@@ -18,7 +18,7 @@ internal sealed partial class DocxReader
         IReadOnlyDictionary<string, DocxTableConditionalStyle> ConditionalRegions)
     {
         public static DocxTableStyle Empty { get; } = new(null, DocxTableStyleProperties.Empty, DocxTableCellStyle.Empty, [], new Dictionary<string, DocxTableConditionalStyle>());
-        public DocxTableRowKeep? RowKeep { get; init; }
+        public DocxTableRowStyle Row { get; init; }
         public bool UsesTableNormal { get; init; }
         public bool HasCompleteInheritance { get; init; }
         public bool HasDeclaredTableProperties { get; init; }
@@ -29,7 +29,7 @@ internal sealed partial class DocxReader
             foreach ((string region, DocxTableConditionalStyle regionStyle) in other.ConditionalRegions)
             {
                 conditional[region] = conditional.TryGetValue(region, out DocxTableConditionalStyle inherited)
-                    ? new(inherited.Cell.Merge(regionStyle.Cell), regionStyle.RowKeep ?? inherited.RowKeep)
+                    ? new(inherited.Cell.Merge(regionStyle.Cell), inherited.Row.Merge(regionStyle.Row))
                     : regionStyle;
             }
 
@@ -40,15 +40,21 @@ internal sealed partial class DocxReader
                 other.TableBorders.Count == 0 ? TableBorders : other.TableBorders,
                 conditional)
             {
-                RowKeep = other.RowKeep ?? RowKeep,
+                Row = Row.Merge(other.Row),
                 UsesTableNormal = UsesTableNormal || other.UsesTableNormal
             };
         }
     }
 
-    private readonly record struct DocxTableRowKeep(bool Enabled, string? Value);
+    private readonly record struct DocxTableRowFlag(bool Enabled, string? Value);
 
-    private readonly record struct DocxTableConditionalStyle(DocxTableCellStyle Cell, DocxTableRowKeep? RowKeep);
+    private readonly record struct DocxTableRowStyle(DocxTableRowFlag? CantSplit, DocxTableRowFlag? RepeatHeader)
+    {
+        public DocxTableRowStyle Merge(DocxTableRowStyle other) =>
+            new(other.CantSplit ?? CantSplit, other.RepeatHeader ?? RepeatHeader);
+    }
+
+    private readonly record struct DocxTableConditionalStyle(DocxTableCellStyle Cell, DocxTableRowStyle Row);
 
     private sealed record DocxTableStyleProperties(
         string? LayoutValue,
@@ -149,7 +155,7 @@ internal sealed partial class DocxReader
                     ReadTableCellStyle(region.Element(WordprocessingNamespace + "tcPr"),
                         region.Element(WordprocessingNamespace + "pPr"),
                         region.Element(WordprocessingNamespace + "rPr")),
-                    ReadTableRowKeep(region.Element(WordprocessingNamespace + "trPr")));
+                    ReadTableRowStyle(region.Element(WordprocessingNamespace + "trPr")));
             }
         }
 
@@ -167,7 +173,7 @@ internal sealed partial class DocxReader
             ReadTableBorders(tableProperties),
             conditional)
         {
-            RowKeep = ReadTableRowKeep(style.Element(WordprocessingNamespace + "trPr")),
+            Row = ReadTableRowStyle(style.Element(WordprocessingNamespace + "trPr")),
             HasDeclaredTableProperties = tableProperties?.HasElements == true ||
                 style.Element(WordprocessingNamespace + "tcPr")?.HasElements == true || conditional.Count != 0
         };
@@ -285,19 +291,25 @@ internal sealed partial class DocxReader
                 ?.Attribute(WordprocessingNamespace + "val"));
     }
 
-    private static DocxTableRowKeep? ReadTableRowKeep(XElement? rowProperties)
+    private static DocxTableRowStyle ReadTableRowStyle(XElement? rowProperties)
     {
-        XElement? keep = rowProperties?.Element(WordprocessingNamespace + "cantSplit");
-        return keep is null ? null : new(ReadOnOff(keep) == true, (string?)keep.Attribute(WordprocessingNamespace + "val"));
+        return new(ReadFlag("cantSplit"), ReadFlag("tblHeader"));
+
+        DocxTableRowFlag? ReadFlag(string name)
+        {
+            XElement? flag = rowProperties?.Element(WordprocessingNamespace + name);
+            return flag is null ? null : new(ReadOnOff(flag) == true, (string?)flag.Attribute(WordprocessingNamespace + "val"));
+        }
     }
 
-    private static DocxTableRowKeep? ResolveTableRowKeep(DocxTableStyle tableStyle, DocxTableLook tableLook,
+    private static DocxTableRowStyle ResolveTableRowStyle(DocxTableStyle tableStyle, DocxTableLook tableLook,
         XElement? rowProperties, int rowIndex, int rowCount, bool leadingRowEmphasis)
     {
-        DocxTableRowKeep? direct = ReadTableRowKeep(rowProperties);
-        if (direct is not null || tableStyle.ConditionalRegions.Count == 0)
+        DocxTableRowStyle direct = ReadTableRowStyle(rowProperties);
+        DocxTableRowStyle resolved = tableStyle.Row;
+        if (tableStyle.ConditionalRegions.Count == 0)
         {
-            return direct ?? tableStyle.RowKeep;
+            return resolved.Merge(direct);
         }
 
         // Whole-row settings use horizontal bands and row edges. A column
@@ -315,13 +327,11 @@ internal sealed partial class DocxReader
         }
 
         // A leading edge wins ties, matching the cell style cascade.
-        return (firstRow ? RowKeep("firstRow") : null) ??
-            (lastRow ? RowKeep("lastRow") : null) ??
-            (band is not null && tableStyle.Table.RowBandSize is > 0 ? RowKeep(band) : null) ??
-            tableStyle.RowKeep;
-
-        DocxTableRowKeep? RowKeep(string region) =>
-            tableStyle.ConditionalRegions.GetValueOrDefault(region).RowKeep;
+        if (band is not null && tableStyle.Table.RowBandSize is > 0)
+            resolved = resolved.Merge(tableStyle.ConditionalRegions.GetValueOrDefault(band).Row);
+        if (lastRow) resolved = resolved.Merge(tableStyle.ConditionalRegions.GetValueOrDefault("lastRow").Row);
+        if (firstRow) resolved = resolved.Merge(tableStyle.ConditionalRegions.GetValueOrDefault("firstRow").Row);
+        return resolved.Merge(direct);
     }
 
     private static DocxTableCellStyle ResolveTableCellStyle(
