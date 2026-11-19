@@ -1,9 +1,86 @@
 using Lokad.OoxPdf.Docx;
+using Lokad.OoxPdf.Ooxml;
 
 namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxTableKeepContentTests
 {
+    public static void DocxContinuingTableUsesTheActivePageNoteBoundary()
+    {
+        const string word = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+        const string relations = "http://schemas.openxmlformats.org/package/2006/relationships";
+        const string relationType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+        var resolver = new PortableRenderingTests.PinnedResolver();
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        foreach (int noteLines in new[] { 0, 5, 8 })
+        {
+            string reference = noteLines == 0 ? "" : """<w:r><w:footnoteReference w:id="1"/></w:r>""";
+            string note = string.Concat(Enumerable.Range(1, noteLines).Select(index => ParagraphXml($"NOTE LINE {index}")));
+            using var input = TestFixtures.CreateZipPackage(new Dictionary<string, string>
+            {
+                ["[Content_Types].xml"] = """
+                    <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                      <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                      <Default Extension="xml" ContentType="application/xml"/>
+                      <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                      <Override PartName="/word/footnotes.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml"/>
+                    </Types>
+                    """,
+                ["_rels/.rels"] = $"""<Relationships xmlns="{relations}"><Relationship Id="doc" Type="{relationType}/officeDocument" Target="word/document.xml"/></Relationships>""",
+                ["word/_rels/document.xml.rels"] = $"""<Relationships xmlns="{relations}"><Relationship Id="notes" Type="{relationType}/footnotes" Target="footnotes.xml"/></Relationships>""",
+                ["word/footnotes.xml"] = $"""<w:footnotes xmlns:w="{word}"><w:footnote w:id="1">{note}</w:footnote></w:footnotes>""",
+                ["word/document.xml"] = $$"""
+                    <w:document xmlns:w="{{word}}"><w:body>
+                      {{ParagraphXml("PRECEDING OWNER", extraRun: reference)}}
+                      {{ParagraphXml("PRECEDING SPACE", lineHeight: 2400)}}
+                      <w:tbl>
+                        <w:tblPr><w:tblW w:w="7200" w:type="dxa"/><w:tblLayout w:type="fixed"/></w:tblPr>
+                        <w:tblGrid><w:gridCol w:w="7200"/></w:tblGrid>
+                        {{RowXml("ROW ALPHA")}}{{RowXml("ROW BRAVO")}}
+                      </w:tbl>
+                      {{ParagraphXml("FOLLOWING OWNER")}}
+                      <w:sectPr><w:pgSz w:w="12240" w:h="6000"/>
+                        <w:pgMar w:top="480" w:bottom="480" w:left="720" w:right="720" w:header="240" w:footer="240" w:gutter="0"/>
+                      </w:sectPr>
+                    </w:body></w:document>
+                    """
+            });
+            using var package = OoxPackage.Open(input, default);
+            var document = new DocxReader().Read(package, null, default, markupMode: mode);
+            var geometry = mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout
+                : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup;
+            var pages = new DocxRenderer(resolver, mode, geometry)
+                .RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
+
+            TestAssert.Equal(2, pages.Length);
+            string[] pageText = pages.Select(DocxPageFootnoteNumberingTests.DecodeText).ToArray();
+            int alphaPage = noteLines == 0 ? 0 : 1;
+            foreach (var (label, page) in new[] { ("ROW ALPHA", alphaPage), ("ROW BRAVO", 1), ("FOLLOWING OWNER", 1) })
+            {
+                PortableRenderingTests.ReadPaintedSourceLabel(pages[page], label);
+                TestAssert.DoesNotContain(label, pageText[1 - page]);
+            }
+            if (noteLines != 0)
+            {
+                string noteText = string.Join(" ", Enumerable.Range(1, noteLines).Select(index => $"NOTE LINE {index}"));
+                PortableRenderingTests.ReadPaintedSourceLabel(pages[0], noteText);
+                TestAssert.DoesNotContain("NOTE LINE", pageText[1]);
+            }
+        }
+
+        static string ParagraphXml(string text, int lineHeight = 240, string extraRun = "") => $"""
+            <w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="{lineHeight}" w:lineRule="exact"/></w:pPr>
+              <w:r><w:t>{text}</w:t></w:r>{extraRun}
+            </w:p>
+            """;
+        static string RowXml(string text) => $"""
+            <w:tr><w:trPr><w:cantSplit/><w:trHeight w:val="2100" w:hRule="exact"/></w:trPr>
+              <w:tc><w:tcPr><w:tcW w:w="7200" w:type="dxa"/></w:tcPr>{ParagraphXml(text)}</w:tc>
+            </w:tr>
+            """;
+    }
+
     public static void DocxOversizedCellKeepLinesPreservesSourceFrames()
     {
         foreach (var mode in Modes)

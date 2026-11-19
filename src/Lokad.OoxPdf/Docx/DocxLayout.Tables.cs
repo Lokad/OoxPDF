@@ -420,7 +420,7 @@ internal sealed partial class DocxLayoutEngine
 
     private static void LayoutTable(
         DocxTable table,
-        double marginBottom,
+        Func<double> getFrameBottom,
         double continuationContentHeight,
         double maximumPageContentHeight,
         IDocxTextMeasurer? textMeasurer,
@@ -454,10 +454,8 @@ internal sealed partial class DocxLayoutEngine
             IReadOnlyList<double> rowHeights = frame.RowHeights;
             double rowHeight = rowHeights[rowIndex];
             bool nestedMath = HasPreparedNestedTableMath(row, frame.Context.MathEquations, cancellationToken);
-            // The containing body frame already supplies printed capacity;
-            // fragment baseline projection must not scale it a second time.
-            double flowBottom = marginBottom;
-            double remainingPageHeight = Math.Max(0d, cursorY - flowBottom);
+            // Use the active printed frame. Advancing can change note and footer reserves.
+            double remainingPageHeight = Math.Max(0d, cursorY - getFrameBottom());
             double initialGroupHeight = rowIndex == 0 && hasPageContent()
                 ? ResolveInitialTableRowGroupHeight(table, rowHeights, continuationContentHeight, cancellationToken) : rowHeight;
             // Only the additional header extent needs group admission. Ordinary
@@ -468,7 +466,7 @@ internal sealed partial class DocxLayoutEngine
                 frame = resolveFrame();
                 rowHeights = frame.RowHeights;
                 rowHeight = rowHeights[0];
-                remainingPageHeight = Math.Max(0d, cursorY - flowBottom);
+                remainingPageHeight = Math.Max(0d, cursorY - getFrameBottom());
             }
             if (rowIndex == table.Rows.Count - 1 && rowHeight > remainingPageHeight && hasPageContent() &&
                 frame.BoundaryMinimumRowHeights.Count == table.Rows.Count &&
@@ -513,7 +511,7 @@ internal sealed partial class DocxLayoutEngine
                     markBoundaryContent();
                 }
                 rowHeight = rowHeights[rowIndex];
-                remainingPageHeight = Math.Max(0d, cursorY - flowBottom);
+                remainingPageHeight = Math.Max(0d, cursorY - getFrameBottom());
             }
             if (fragmented) continue;
 

@@ -1502,7 +1502,7 @@ internal sealed partial class DocxLayoutEngine
                     return frame;
                 }
 
-                LayoutTable(bodyTable, CurrentTableFrameBottom(), continuationTableHeight, page.Height - page.MarginTop - page.MarginBottom,
+                LayoutTable(bodyTable, CurrentTableFrameBottom, continuationTableHeight, page.Height - page.MarginTop - page.MarginBottom,
                     textMeasurer, defaultTabStopPoints, () => pages.Count + 1, ref currentItems, ref cursorY, ResolveCurrentTableFrame, advanceTableBoundary, hasTableBoundaryContent, MarkTableBoundaryContent, cancellationToken, paragraphSpacingScale, headerSourcePages, new DocxTableCellTextLinesMemo(),
                     reviewFragmentScale: reviewFragmentScale,
                     resolveNoteFragments: noteAdmission is null ? null : (row, fragments) => noteAdmission.TryPlan(row, fragments,
