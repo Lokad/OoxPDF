@@ -1450,26 +1450,7 @@ internal static partial class PortableRenderingTests
         }
     }
 
-    public static void PortableRenderingMathRowKeepsPaintedContentBeforeUnpaintedTail()
-    {
-        foreach (string suffix in new[] { "0", "6", "24", "24-cant-split", "24-tight" })
-        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
-        {
-            var document = DocxTests.ReadDocx(Case("PortableFonts/math-table-boundary-after" + suffix + "-normal.docx"), mode);
-            var pages = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
-                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
-            int expectedPage = suffix.Contains("cant-split", StringComparison.Ordinal) || suffix.Contains("tight", StringComparison.Ordinal) ? 1 : 0;
-            string text = DocxPageFootnoteNumberingTests.DecodeText(pages[expectedPage]).Normalize(NormalizationForm.FormKC);
-            TestAssert.Contains("x+2y", text);
-            TestAssert.Contains("Observed series", text);
-            TestAssert.Equal(1, string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC)
-                .Split("x+2y", StringSplitOptions.None).Length - 1);
-            CheckWrittenPages(pages);
-        }
-    }
-
-    public static void PortableRenderingExplicitAutomaticMathTailKeepsBoundaryPage()
+    public static void PortableRenderingMathRowTailsPreservePaintAndPagination()
     {
         foreach (string suffix in new[] { "0", "6", "24", "24-cant-split", "24-tight" })
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
@@ -1486,11 +1467,17 @@ internal static partial class PortableRenderingTests
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var expected = renderer.RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
             var actual = renderer.RenderPagesAsync(explicitSource, null, default).ToBlockingEnumerable().ToArray();
+            var expectedText = expected.Select(DocxPageFootnoteNumberingTests.DecodeText).ToArray();
+            var actualText = actual.Select(DocxPageFootnoteNumberingTests.DecodeText);
             int expectedPage = suffix.Contains("cant-split", StringComparison.Ordinal) || suffix.Contains("tight", StringComparison.Ordinal) ? 1 : 0;
-            TestAssert.Contains("x+2y", DocxPageFootnoteNumberingTests.DecodeText(actual[expectedPage]).Normalize(NormalizationForm.FormKC));
-            TestAssert.True(expected.Select(DocxPageFootnoteNumberingTests.DecodeText)
-                    .SequenceEqual(actual.Select(DocxPageFootnoteNumberingTests.DecodeText)),
+            string boundaryText = expectedText[expectedPage].Normalize(NormalizationForm.FormKC);
+            TestAssert.Contains("x+2y", boundaryText);
+            TestAssert.Contains("Observed series", boundaryText);
+            TestAssert.Equal(1, string.Concat(expectedText).Normalize(NormalizationForm.FormKC)
+                .Split("x+2y", StringSplitOptions.None).Length - 1);
+            TestAssert.True(expectedText.SequenceEqual(actualText),
                 "Explicit automatic height must retain every paragraph and equation on its original page, including unpainted row tails and tighter/cantSplit fallbacks.");
+            CheckWrittenPages(expected);
             CheckWrittenPages(actual);
         }
     }

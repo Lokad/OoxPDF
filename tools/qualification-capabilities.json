@@ -2417,8 +2417,7 @@
       "DocxOrdinaryMinimumSpacing",
       "DocxMinimumBeforeLeading",
       "DocxContextualMinimum",
-      "DocxMinimumPaintPreservesTextFramesAndBackgrounds",
-      "DocxMinimumHyperlinksKeepVisibleFramesAndTargets",
+      "=DocxMinimumLeadingKeepsPaintAndNavigationFrames",
       "DocxMinimumBookmarksMatchIndependentWordBaselinesAndPageFrames",
       "DocxPrintedMinimum",
       "DocxWrappedFootnoteNumbersKeepUnqualifiedSourceFrames",
@@ -2808,7 +2807,7 @@
     "DocxParagraphShading",
     "DocxPrintedMinimum",
     "DocxMinimumComments",
-    "DocxMinimumPaintPreservesTextFramesAndBackgrounds",
+    "=DocxMinimumLeadingKeepsPaintAndNavigationFrames",
     "DocxMinimumBookmarksMatchIndependentWordBaselinesAndPageFrames",
     "DocxBodyHyperlinkUsesExactLineBoxAcrossFontsAndPrintScale",
     "DocxExactContinuationPrintOriginKeepsItsAuthoredSlot",
@@ -2827,7 +2826,7 @@
     "DocxBodyHyperlinkUsesExactLineBoxAcrossFontsAndPrintScale",
     "DocxRevisionNeutralityRetainsUnownedAndVisibleFallbacks",
     "DocxSimpleScriptPlainFramesRetainShapingAndUnknownTextFallbacks",
-    "DocxMinimumHyperlinksKeepVisibleFramesAndTargets",
+    "=DocxMinimumLeadingKeepsPaintAndNavigationFrames",
     "DocxMinimumBookmarksMatchIndependentWordBaselinesAndPageFrames",
     "DocxMinimumBookmarksKeepSourceMetadataOutOfVisibleFrames",
     "DocxMinimumBodyLineLeadingKeepsCapacityAndParagraphTop",
@@ -2843,7 +2842,6 @@
     "DocxWrappedFootnoteNumbersKeepUnqualifiedSourceFrames",
     "DocxWrappedCalibriKerningRetainsOtherFontsSizesAndLayoutGates",
     "DocxMinimumLeadingUsesLocalSlotsAcrossNeighborsAndSlotGrowth",
-    "DocxMinimumPaintPreservesTextFramesAndBackgrounds",
     "DocxMinimumBodyLineLeading",
     "DocxMinimumBodyFlow",
     "DocxOrdinaryKerning",
@@ -3275,8 +3273,7 @@
     "StagedPageMemory"
   ],
   "docx-automatic-math-row-tail": [
-    "PortableRenderingExplicitAutomaticMathTailKeepsBoundaryPage",
-    "PortableRenderingMathRowKeepsPaintedContentBeforeUnpaintedTail",
+    "=PortableRenderingMathRowTailsPreservePaintAndPagination",
     "DocxInlineCompositionMathTableTailAdmissionMatchesWordBoundaryControls",
     "DocxExplicitAutomaticRowsSharePrintedFragmentFrames",
     "DocxDeclaredKeptRowsRetainTheirAtomicFallback",
@@ -7138,8 +7135,7 @@
       "DocxWrappedCalibriKerningRetainsOtherFontsSizesAndLayoutGates",
       "DocxMinimumLeadingUsesLocalSlotsAcrossNeighborsAndSlotGrowth",
       "DocxMinimumBookmarksMatchIndependentWordBaselinesAndPageFrames",
-      "DocxMinimumHyperlinksKeepVisibleFramesAndTargets",
-      "DocxMinimumPaintPreservesTextFramesAndBackgrounds",
+      "=DocxMinimumLeadingKeepsPaintAndNavigationFrames",
       "DocxMinimumBodyLineLeading",
       "DocxMinimumBodyFlow",
       "DocxOrdinaryKerning",
@@ -7149,12 +7145,11 @@
       "DocxMinimumBeforeLeading"
   ],
   "docx-minimum-paint": [
-      "DocxMinimumPaintPreservesTextFramesAndBackgrounds",
+      "=DocxMinimumLeadingKeepsPaintAndNavigationFrames",
       "DocxOrdinaryKerning",
       "DocxMinimumBodyFlow",
       "DocxMinimumBodyLineLeading",
       "DocxMinimumBookmarksMatchIndependentWordBaselinesAndPageFrames",
-      "DocxMinimumHyperlinksKeepVisibleFramesAndTargets",
       "DocxRevisionNeutralityRetainsUnownedAndVisibleFallbacks",
       "DocxSimpleScriptPlainFramesRetainShapingAndUnknownTextFallbacks"
   ],
@@ -7162,7 +7157,7 @@
       "DocxBodyHyperlinkUsesExactLineBoxAcrossFontsAndPrintScale",
       "DocxRevisionNeutralityRetainsUnownedAndVisibleFallbacks",
       "DocxSimpleScriptPlainFramesRetainShapingAndUnknownTextFallbacks",
-      "DocxMinimumHyperlinksKeepVisibleFramesAndTargets",
+      "=DocxMinimumLeadingKeepsPaintAndNavigationFrames",
       "DocxMinimumBookmarksMatchIndependentWordBaselinesAndPageFrames",
       "DocxMinimumBookmarksKeepSourceMetadataOutOfVisibleFrames",
       "DocxMinimumBodyLineLeadingKeepsCapacityAndParagraphTop",
@@ -9203,7 +9198,7 @@
     "DocxInlineCompositionAutofitMathRespectsAdditionalInlineContent",
     "DocxInlineCompositionMixedObjectsSurviveBodyCellHeaderAndFooterPlacement",
     "PortableRenderingIsolatedFractionPreservesCellTextAndFrame",
-    "PortableRenderingMathRowKeepsPaintedContentBeforeUnpaintedTail"
+    "=PortableRenderingMathRowTailsPreservePaintAndPagination"
   ],
   "docx-natural-cell-paragraph-frame": [
     "DocxTableMathNaturalParagraphFramesMatchIndependentTableOrigins",
@@ -9795,7 +9790,7 @@
     "DocxNativeDisplayAutomaticSpacing",
     "PortableRenderingRepeatedInlineMathPreservesBaselineAndAdvance",
     "PortableRenderingFittingMathPreservesOrdinaryLineAdvance",
-    "PortableRenderingMathRowKeepsPaintedContentBeforeUnpaintedTail",
+    "=PortableRenderingMathRowTailsPreservePaintAndPagination",
     "PortableRenderingNormalNotesPreserveInlineImagesAndMath",
     "PortableRenderingFooterTableAdmissionKeepsBodyAboveTheCompleteFrame"
   ],

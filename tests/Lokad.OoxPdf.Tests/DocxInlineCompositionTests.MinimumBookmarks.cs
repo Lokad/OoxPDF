@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text.Json;
 using Lokad.OoxPdf.Docx;
+using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Tests;
 
@@ -58,7 +59,7 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
-    public static void DocxMinimumPaintPreservesTextFramesAndBackgrounds()
+    public static void DocxMinimumLeadingKeepsPaintAndNavigationFrames()
     {
         foreach (string context in new[] { "ordinary11", "ordinary12" })
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
@@ -66,58 +67,44 @@ internal static partial class DocxInlineCompositionTests
             var renderer = new DocxRenderer(new TestFaceFontResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var control = DocxTests.ReadDocx(NestedMathCasePath($"minimum-navigation-{context}-control.docx"), mode);
-            var before = renderer.RenderPagesAsync(control, null, default).ToBlockingEnumerable().ToArray();
+            var expected = renderer.RenderPagesAsync(control, null, default).ToBlockingEnumerable()
+                .Select(page => ReadFrames(page).ToArray()).ToArray();
+
             foreach (string kind in new[] { "highlight", "shading" })
             {
                 var source = DocxTests.ReadDocx(NestedMathCasePath($"minimum-paint-{context}-{kind}.docx"), mode);
                 TestAssert.True(source.Paragraphs.SelectMany(p => p.Runs).Any(run => kind == "highlight"
                     ? run.HighlightValue == "yellow" : run.ShadingFillHex == "FFFF00"), "The paint control must retain its source background.");
                 var after = renderer.RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
-                TestAssert.Equal(before.Length, after.Length);
-                for (int page = 0; page < before.Length; page++)
-                {
-                    var expected = DocxCommentsTests.ReadEmbeddedGlyphTextShows(before[page], usePageCoordinates: true)
-                        .Select(show => (show.Text, show.X, show.Y)).ToArray();
-                    var actual = DocxCommentsTests.ReadEmbeddedGlyphTextShows(after[page], usePageCoordinates: true)
-                        .Select(show => (show.Text, show.X, show.Y)).ToArray();
-                    TestAssert.True(expected.SequenceEqual(actual), "Background paint must not disable the source's text metrics or minimum-leading placement.");
-                }
+                CheckFrames(after, kind, "Background paint must not disable the source's text metrics or minimum-leading placement.");
                 TestAssert.True(after.Any(page => page.Content.Contains("1 1 0 rg", StringComparison.Ordinal)),
                     "The yellow background must still be painted.");
             }
-        }
-    }
 
-    public static void DocxMinimumHyperlinksKeepVisibleFramesAndTargets()
-    {
-        foreach (string context in new[] { "ordinary11", "ordinary12" })
-        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
-        {
-            var renderer = new DocxRenderer(new TestFaceFontResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
-                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-            var control = DocxTests.ReadDocx(NestedMathCasePath($"minimum-navigation-{context}-control.docx"), mode);
-            var before = renderer.RenderPagesAsync(control, null, default).ToBlockingEnumerable().ToArray();
             foreach (string kind in new[] { "external", "internal" })
             {
                 var source = DocxTests.ReadDocx(NestedMathCasePath($"minimum-navigation-{context}-{kind}.docx"), mode);
                 TestAssert.Equal(1, source.Paragraphs.Sum(p => p.Hyperlinks.Count));
                 var after = renderer.RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
-                TestAssert.Equal(before.Length, after.Length);
-                for (int page = 0; page < before.Length; page++)
-                {
-                    var expected = DocxCommentsTests.ReadEmbeddedGlyphTextShows(before[page], usePageCoordinates: true)
-                        .Select(show => (show.Text, show.X, show.Y)).ToArray();
-                    var actual = DocxCommentsTests.ReadEmbeddedGlyphTextShows(after[page], usePageCoordinates: true)
-                        .Select(show => (show.Text, show.X, show.Y)).ToArray();
-                    TestAssert.True(expected.SequenceEqual(actual),
-                        "Navigation metadata with unchanged run formatting must preserve all paragraph geometry.");
-                }
+                CheckFrames(after, kind, "Navigation metadata with unchanged run formatting must preserve all paragraph geometry.");
                 var link = after.SelectMany(page => page.Annotations).Single();
                 TestAssert.True(link.Width > 0d && link.Height > 0d, "The visible link retains its placed area.");
                 if (kind == "external") TestAssert.Equal("https://example.invalid/minimum-navigation", link.Uri);
                 else TestAssert.Equal(0, link.Destination!.Value.PageIndex);
             }
+
+            void CheckFrames(PdfPage[] after, string kind, string message)
+            {
+                TestAssert.True(expected.Length == after.Length, $"{context}/{mode}/{kind} page count changed.");
+                for (int page = 0; page < after.Length; page++)
+                    TestAssert.True(expected[page].SequenceEqual(ReadFrames(after[page])),
+                        $"{context}/{mode}/{kind} page {page + 1}. {message}");
+            }
         }
+
+        static IEnumerable<(string Text, double X, double Y)> ReadFrames(PdfPage page) =>
+            DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true)
+                .Select(show => (show.Text, show.X, show.Y));
     }
 
     public static void DocxMinimumBookmarksKeepSourceMetadataOutOfVisibleFrames()
