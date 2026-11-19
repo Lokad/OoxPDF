@@ -76,7 +76,6 @@ internal readonly record struct PptxSceneImageRecolor(
 
 internal sealed record PptxSceneTextBody(
     XElement? BodyProperties,
-    XElement? ListStyle,
     bool HasUnsupportedTextOrientation,
     bool HasUnsupportedVerticalOverflow,
     IReadOnlyList<PptxSceneTextParagraph> Paragraphs);

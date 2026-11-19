@@ -596,10 +596,8 @@ internal sealed partial class PptxRenderer
                 double x = frame.X + ResolveMeasuredLeftInset(presetBox.X - frame.X, maxValueLabelWidth);
                 double presetRight = presetBox.X + presetBox.Width;
                 double right = presetRight;
-                XElement? titleLegendPlotElement = categoryPlotElement;
-                if (titleLegendPlotElement is not null)
+                if (categoryPlot is { } titleLegendPlot)
                 {
-                    PptxSceneChartPlot? titleLegendPlot = categoryPlot;
                     IReadOnlyList<ChartSeriesNameRecord> titleLegendSeriesNames = ReadSharedChartSeriesNames(titleLegendPlot, workbook);
                     double titleLegendWidth = (await ResolveRightLegendWidthAsync(titleLegendSeriesNames, legendTextStyle, includeAreaReserve: false, fontResolver, lastCategoryLabelWidth: 0d).ConfigureAwait(false));
                     right = ResolveTitledRightLegendPlotRight(presetRight, frame.X + frame.Width, titleLegendWidth);

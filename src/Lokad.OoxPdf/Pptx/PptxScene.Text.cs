@@ -18,7 +18,6 @@ internal sealed partial class PptxSceneBuilder
         XElement? bodyProperties = textBody.Element(DrawingNamespace + "bodyPr");
         return new PptxSceneTextBody(
             bodyProperties,
-            textBody.Element(DrawingNamespace + "lstStyle"),
             HasUnsupportedTextOrientation(bodyProperties),
             HasUnsupportedTextVerticalOverflow(bodyProperties),
             textBody.Elements(DrawingNamespace + "p").Select(paragraph => ReadParagraph(paragraph, element, textBody, inheritedPlaceholderShapes, placeholderSources, defaultTextStyle)).ToArray());
