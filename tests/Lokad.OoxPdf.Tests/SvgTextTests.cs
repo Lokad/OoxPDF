@@ -113,7 +113,12 @@ internal static partial class SvgTextTests
                     using var input = File.OpenRead(path);
                     using var output = new MemoryStream();
                     var diagnostics = new List<OoxPdfDiagnostic>();
-                    OoxPdfConverter.Convert(input, output, new OoxPdfOptions { FontResolver = resolver, DiagnosticSink = diagnostics.Add });
+                    OoxPdfConverter.Convert(input, output, new OoxPdfOptions
+                    {
+                        InputKind = docx ? OoxPdfInputKind.Docx : OoxPdfInputKind.Pptx,
+                        FontResolver = resolver,
+                        DiagnosticSink = diagnostics.Add
+                    });
                     TestAssert.True(!diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT"), "These SVG transforms are supported.");
                     return output.ToArray();
                 }
