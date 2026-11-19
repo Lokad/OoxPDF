@@ -1192,10 +1192,10 @@ internal sealed partial class DocxLayoutEngine
             FinishPage();
         }
 
-        void ApplySectionAfterBreak(int elementIndex)
+        void ApplySectionAfterBreak(DocxEffectiveSectionSettings section)
         {
             sectionFirstPageNumber = pages.Count + 1;
-            activeSectionSettings = FindSectionSettingsAtOrAfter(document.BodyElements, elementIndex + 1, sectionSettingsByElementIndex) ?? finalSectionSettings;
+            activeSectionSettings = section;
             page = ResolveSectionGeometry(document, activeSectionSettings, reserveMarkupMargin, retuneReserveToPrintScale, reservePrintScale, pages.Count + 1);
             activeColumnIndex = 0;
             ApplyActiveColumnFrame();
@@ -1325,30 +1325,46 @@ internal sealed partial class DocxLayoutEngine
             {
                 DocxSectionBreakElement boundary = sectionBreak;
                 bool admitBoundary = false;
+                bool advanceSectionColumn = false;
+                DocxEffectiveSectionSettings? following = null;
                 // Following-section source ownership does not depend on the
                 // paragraph's inline content. The extra continuous-footnote
                 // admission below retains its separately qualified eligibility.
-                if (useSourceSectionStarts && page.ColumnFrames.Count == 1 &&
-                    (sectionBreak.TypeValue is null or DocxSectionBreakType.NextPage or DocxSectionBreakType.Continuous) &&
+                if (document.FinalSectionBreak is not null &&
                     document.BodyElements.Skip(elementIndex + 1).Any(e => e is not DocxSectionBreakElement))
                 {
-                    DocxEffectiveSectionSettings following = FindSectionSettingsAtOrAfter(document.BodyElements, elementIndex + 1, sectionSettingsByElementIndex) ?? finalSectionSettings;
+                    following = FindSectionSettingsAtOrAfter(document.BodyElements, elementIndex + 1, sectionSettingsByElementIndex) ?? finalSectionSettings;
                     DocxSectionBreakType? followingType = DocxSectionBreakTypeExtensions.FromValue(following.SectionProperties.BreakTypeValue);
-                    DocxPageGeometry nextGeometry = ResolveSectionGeometry(document, following, reserveMarkupMargin, retuneReserveToPrintScale, reservePrintScale, pages.Count + 1);
-                    admitBoundary = (followingType is null or DocxSectionBreakType.NextPage or DocxSectionBreakType.Continuous) &&
-                        nextGeometry.ColumnFrames.Count == 1 && !HasStaticSectionContent(sectionBreak.PageSettings) &&
-                        !HasStaticSectionContent(following.PageSettings) &&
-                        Math.Abs(nextGeometry.Width - page.Width) < 0.001d && Math.Abs(nextGeometry.Height - page.Height) < 0.001d &&
-                        Math.Abs(nextGeometry.MarginLeft - page.MarginLeft) < 0.001d && Math.Abs(nextGeometry.MarginRight - page.MarginRight) < 0.001d &&
-                        Math.Abs(nextGeometry.MarginTop - page.MarginTop) < 0.001d && Math.Abs(nextGeometry.MarginBottom - page.MarginBottom) < 0.001d;
-                    if (admitBoundary)
+                    if (followingType == DocxSectionBreakType.NextColumn || sectionBreak.TypeValue == DocxSectionBreakType.NextColumn)
                     {
-                        // sectPr closes the preceding section; its type describes how
-                        // that section started. The following section owns this boundary.
                         boundary = sectionBreak with { TypeValue = followingType };
+                        if (followingType == DocxSectionBreakType.NextColumn && useSourceSectionStarts &&
+                            activeColumnIndex + 1 < page.ColumnFrames.Count)
+                        {
+                            DocxPageGeometry nextGeometry = ResolveSectionGeometry(document, following, reserveMarkupMargin,
+                                retuneReserveToPrintScale, reservePrintScale, pages.Count + 1);
+                            advanceSectionColumn = CanShareSectionColumn(page, nextGeometry);
+                        }
+                    }
+                    else if (useSourceSectionStarts && page.ColumnFrames.Count == 1 &&
+                        (sectionBreak.TypeValue is null or DocxSectionBreakType.NextPage or DocxSectionBreakType.Continuous) &&
+                        (followingType is null or DocxSectionBreakType.NextPage or DocxSectionBreakType.Continuous))
+                    {
+                        DocxPageGeometry nextGeometry = ResolveSectionGeometry(document, following, reserveMarkupMargin,
+                            retuneReserveToPrintScale, reservePrintScale, pages.Count + 1);
+                        admitBoundary = nextGeometry.ColumnFrames.Count == 1 &&
+                            !HasStaticSectionContent(sectionBreak.PageSettings) && !HasStaticSectionContent(following.PageSettings) &&
+                            HasMatchingSectionPageBox(page, nextGeometry);
+                        if (admitBoundary)
+                        {
+                            boundary = sectionBreak with { TypeValue = followingType };
+                        }
                     }
                 }
+
+                bool startsColumnSection = following is not null && boundary.TypeValue == DocxSectionBreakType.NextColumn;
                 bool startsNewPage = ShouldStartNewPageForSectionBreak(boundary) ||
+                    (startsColumnSection && !advanceSectionColumn) ||
                     (useSimpleSectionFootnoteAdmission && admitBoundary && IsContinuousSectionBreak(boundary) &&
                      (sectionBreak.PageSettings.FootnoteReferenceSettings.PositionValue is null or "pageBottom") &&
                      HasCurrentSectionFootnoteMarkers(elementIndex));
@@ -1362,9 +1378,18 @@ internal sealed partial class DocxLayoutEngine
                     FinishPage();
                 }
 
-                if (startsNewPage || (IsContinuousSectionBreak(boundary) && !HasPageContent()))
+                if (advanceSectionColumn)
                 {
-                    ApplySectionAfterBreak(elementIndex);
+                    // The current page owns its existing frame. Later pages use
+                    // the section that begins in the next column.
+                    AdvanceColumnOrPage();
+                    activeSectionSettings = following!;
+                    sectionFirstPageNumber = pages.Count + 1;
+                }
+                else if (startsNewPage || (IsContinuousSectionBreak(boundary) && !HasPageContent()))
+                {
+                    ApplySectionAfterBreak(following ??
+                        FindSectionSettingsAtOrAfter(document.BodyElements, elementIndex + 1, sectionSettingsByElementIndex) ?? finalSectionSettings);
                 }
 
                 pendingSpacingAfter = 0d;

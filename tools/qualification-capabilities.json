@@ -1426,6 +1426,7 @@
     "DocxFontSlotsKeepSourceOffsetsAndLinkRevisionOwnership"
   ],
   "docx-section-start-ownership": [
+    "DocxNextColumnSectionStartsKeepTextInItsColumnAndPage",
     "DocxSectionStartsKeepPictureAndTableContentOnOwnedPages",
     "DocxSectionStartsKeepCommentAndMixedContentOnOwnedPages",
     "DocxSectionStartOwnershipKeepsNoteAndFrameAdmissionFallbacks",

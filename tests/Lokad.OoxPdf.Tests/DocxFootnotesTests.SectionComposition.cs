@@ -14,6 +14,64 @@ internal static partial class DocxFootnotesTests
     public static void DocxSectionStartsKeepCommentAndMixedContentOnOwnedPages() =>
         CheckComposedSectionStarts(["comment", "mixed"]);
 
+    public static void DocxNextColumnSectionStartsKeepTextInItsColumnAndPage()
+    {
+        XNamespace w = NoteWord;
+        const string first = "FIRST SECTION WORDS";
+        const string second = "SECOND SECTION WORDS";
+        const string third = "THIRD SECTION WORDS";
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var samePage = Render(afterColumns: 2, lastColumn: false, addNextPage: false);
+            TestAssert.Equal(1, samePage.Length);
+            var firstGlyphs = Find(samePage[0], first);
+            var secondGlyphs = Find(samePage[0], second);
+            TestAssert.True(secondGlyphs.X - firstGlyphs.X > 150d, "The following section starts in the next column.");
+            TestAssert.True(Math.Abs(secondGlyphs.Y - firstGlyphs.Y) < 0.01d, "The next column starts at the shared top.");
+            TestAssert.Equal(1, samePage[0].Images.Count);
+
+            var nextPage = Render(afterColumns: 2, lastColumn: false, addNextPage: true);
+            TestAssert.Equal(2, nextPage.Length);
+            TestAssert.Equal(secondGlyphs.X, Find(nextPage[0], second).X);
+            TestAssert.Equal(firstGlyphs.X, Find(nextPage[1], third).X);
+
+            foreach (var (afterColumns, lastColumn) in new[] { (2, true), (1, false) })
+            {
+                var paged = Render(afterColumns, lastColumn, addNextPage: false);
+                TestAssert.Equal(2, paged.Length);
+                TestAssert.Equal(lastColumn ? secondGlyphs.X : firstGlyphs.X, Find(paged[0], first).X);
+                TestAssert.Equal(firstGlyphs.X, Find(paged[1], second).X);
+                TestAssert.Equal(1, paged.Sum(page => page.Images.Count));
+            }
+
+            PdfPage[] Render(int afterColumns, bool lastColumn, bool addNextPage)
+            {
+                DocxDocument source = ReadComposedSections("nextPage", "nextColumn", "picture", mode, editBody: body =>
+                {
+                    XElement closingSection = body.Descendants(w + "sectPr").First();
+                    XElement finalSection = body.Element(w + "sectPr")!;
+                    closingSection.Add(Columns(2));
+                    finalSection.Add(Columns(afterColumns));
+                    if (lastColumn)
+                    {
+                        body.Descendants(w + "r").First().AddFirst(new XElement(w + "br", new XAttribute(w + "type", "column")));
+                    }
+                    if (addNextPage)
+                    {
+                        body.Elements(w + "p").Last().AddFirst(new XElement(w + "pPr", new XElement(finalSection)));
+                        finalSection.Element(w + "type")!.SetAttributeValue(w + "val", "nextPage");
+                        finalSection.AddBeforeSelf(new XElement(w + "p", new XElement(w + "r", new XElement(w + "t", third))));
+                    }
+                });
+                return SectionCompositionRenderer(mode).RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
+            }
+        }
+
+        XElement Columns(int count) => new(w + "cols", new XAttribute(w + "num", count), new XAttribute(w + "space", 720));
+        static (string Text, double Size, double X, double Y) Find(PdfPage page, string label) =>
+            PhysicalSectionGlyphs(page).Single(glyphs => glyphs.Text == label);
+    }
+
     private static void CheckComposedSectionStarts(string[] contents)
     {
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
@@ -85,7 +143,7 @@ internal static partial class DocxFootnotesTests
             : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
 
     private static DocxDocument ReadComposedSections(string? first, string? following, string content,
-        OoxPdfDocxMarkupMode mode, bool notes = false, string? fallback = null)
+        OoxPdfDocxMarkupMode mode, bool notes = false, string? fallback = null, Action<XElement>? editBody = null)
     {
         XNamespace w = NoteWord;
         XNamespace rel = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
@@ -152,6 +210,7 @@ internal static partial class DocxFootnotesTests
             firstSection.AddFirst(new XElement(w + "headerReference", new XAttribute(w + "type", "default"), new XAttribute(rel + "id", "rHeader")));
             AddPart("header.xml", "header", "rHeader", Encoding.UTF8.GetBytes(new XElement(w + "hdr", Paragraph("PUBLIC HEADER")).ToString()));
         }
+        editBody?.Invoke(body);
         parts["[Content_Types].xml"] = Encoding.UTF8.GetBytes(types.ToString());
         parts["_rels/.rels"] = Encoding.UTF8.GetBytes(new XElement(pr + "Relationships", new XElement(pr + "Relationship",
             new XAttribute("Id", "rDocument"), new XAttribute("Type", rel.NamespaceName + "/officeDocument"), new XAttribute("Target", "word/document.xml"))).ToString());

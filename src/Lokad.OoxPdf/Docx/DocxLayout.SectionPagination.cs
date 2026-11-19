@@ -25,6 +25,18 @@ internal sealed partial class DocxLayoutEngine
         paragraph.Revisions.Count == 0 && !DocxInlineContent.HasContentRevisionRanges(paragraph) &&
         !paragraph.HasDeletedParagraphMark && paragraph.DeletedText.Length == 0 && paragraph.ListLabel is null;
 
+    private static bool CanShareSectionColumn(DocxPageGeometry current, DocxPageGeometry next) =>
+        HasMatchingSectionPageBox(current, next) &&
+        current.ColumnFrames.SequenceEqual(next.ColumnFrames) &&
+        !HasStaticSectionContent(current.PageSettings) && !HasStaticSectionContent(next.PageSettings) &&
+        current.PageSettings.FootnoteReferenceSettings == next.PageSettings.FootnoteReferenceSettings &&
+        current.PageSettings.EndnoteReferenceSettings == next.PageSettings.EndnoteReferenceSettings;
+
+    private static bool HasMatchingSectionPageBox(DocxPageGeometry current, DocxPageGeometry next) =>
+        Math.Abs(next.Width - current.Width) < 0.001d && Math.Abs(next.Height - current.Height) < 0.001d &&
+        Math.Abs(next.MarginLeft - current.MarginLeft) < 0.001d && Math.Abs(next.MarginRight - current.MarginRight) < 0.001d &&
+        Math.Abs(next.MarginTop - current.MarginTop) < 0.001d && Math.Abs(next.MarginBottom - current.MarginBottom) < 0.001d;
+
     private static bool HasStaticSectionContent(DocxPageSettings settings) =>
         settings.HeaderParagraphsByType.Keys.Concat(settings.FooterParagraphsByType.Keys)
             .Concat(settings.HeaderBodyElementsByType.Keys).Concat(settings.FooterBodyElementsByType.Keys)
