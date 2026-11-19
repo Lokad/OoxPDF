@@ -836,13 +836,17 @@ internal sealed partial class PptxRenderer
         if (!frame.TableRowIndex.HasValue)
         {
             double writingModeRotation = ShapeWritingModeClipRotation(bounds, frame.Orientation);
-            if (bounds.FlipHorizontal != bounds.FlipVertical)
+            if (writingModeRotation != 0d)
             {
-                // The writing-mode turn occurs before the shape reflection.
-                writingModeRotation = -writingModeRotation;
+                // The writing frame shares the default text rotation and keeps its
+                // inset edges in reading order even when the shape is reflected.
+                bounds = bounds with
+                {
+                    RotationDegrees = DefaultShapeTextRotationDegrees(bounds) + writingModeRotation,
+                    FlipHorizontal = false,
+                    FlipVertical = false
+                };
             }
-
-            bounds = bounds with { RotationDegrees = bounds.RotationDegrees + writingModeRotation };
         }
         double frameHeight = OoxUnits.EmuToPoints(bounds.Height);
         var matrix = ShapeTransformMatrix(OoxUnits.EmuToPoints(bounds.X),

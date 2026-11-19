@@ -268,13 +268,7 @@ internal sealed partial class PptxRenderer
         var (flowX, flowYTop, flowWidth, flowHeight) = ResolveTextFlowRectangle(x, yTop, width, height,
             document.SlideHeightPoints - rotationCenterY, orientationRotation, ReadPresetTextRectInsets(shape, width, height));
 
-        double? explicitTextRotationDegrees = bodyProperties.RotationDegrees;
-        double textRotationDegrees = explicitTextRotationDegrees ?? bounds.Value.RotationDegrees;
-        if (explicitTextRotationDegrees is null && bounds.Value.FlipHorizontal != bounds.Value.FlipVertical)
-        {
-            textRotationDegrees = NormalizeRotationDegrees(textRotationDegrees + 180d);
-        }
-        textRotationDegrees += orientationRotation;
+        double textRotationDegrees = (bodyProperties.RotationDegrees ?? DefaultShapeTextRotationDegrees(bounds.Value)) + orientationRotation;
 
         bool textFlipHorizontal = false;
         bool textFlipVertical = false;

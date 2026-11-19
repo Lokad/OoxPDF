@@ -72,7 +72,8 @@ internal static class PptxTextLayoutTests
     {
         var fonts = new PortableRenderingTests.PinnedResolver();
         foreach (string orientation in new[] { "vert", "vert270" })
-        foreach (int shapeRotation in new[] { 0, 5400000 })
+        foreach (int shapeRotation in new[] { 0, 5400000, 10800000, 16200000 })
+        foreach (var (flipHorizontal, flipVertical) in new[] { (0, 0), (1, 0), (0, 1), (1, 1) })
         {
             Vector2[]? overflowOrigins = null;
             foreach (var (clipWidth, clipHeight) in new[] { (false, false), (true, false), (false, true), (true, true) })
@@ -88,7 +89,7 @@ internal static class PptxTextLayoutTests
                     ["ppt/slides/slide1.xml"] = $$"""
                         <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
                           <p:cSld><p:spTree><p:sp>
-                            <p:spPr><a:xfrm rot="{{shapeRotation}}"><a:off x="914400" y="1905000"/><a:ext cx="1676400" cy="965200"/></a:xfrm><a:prstGeom prst="ellipse"/><a:noFill/></p:spPr>
+                            <p:spPr><a:xfrm rot="{{shapeRotation}}" flipH="{{flipHorizontal}}" flipV="{{flipVertical}}"><a:off x="914400" y="1905000"/><a:ext cx="1676400" cy="965200"/></a:xfrm><a:prstGeom prst="ellipse"/><a:noFill/></p:spPr>
                             <p:txBody><a:bodyPr vert="{{orientation}}" horzOverflow="{{horizontal}}" vertOverflow="{{vertical}}"
                                 lIns="63500" rIns="38100" tIns="25400" bIns="63500"><a:noAutofit/></a:bodyPr><a:lstStyle/>
                               <a:p><a:r><a:rPr sz="1200"><a:latin typeface="Portable"/></a:rPr><a:t>BOX</a:t></a:r></a:p></p:txBody>
@@ -102,11 +103,11 @@ internal static class PptxTextLayoutTests
                 var painted = PortableRenderingTests.ReadPaintedSourceLabel(page, "BOX");
                 overflowOrigins ??= painted.Select(glyph => glyph.Origin).ToArray();
                 TestAssert.True(painted.Select((glyph, i) => Vector2.Distance(glyph.Origin, overflowOrigins[i])).All(distance => distance < .002f),
-                    $"A fitting label keeps its painted origins for {orientation}, {shapeRotation}, {horizontal}/{vertical}.");
+                    $"A fitting label keeps its painted origins for {orientation}, {shapeRotation}, flips {flipHorizontal}/{flipVertical}, {horizontal}/{vertical}.");
 
                 var paintFrame = DocxNoteClippingTests.ReadPhysicalPaintFrames(page)
                     .Single(frame => frame.Block.StartsWith("BT", StringComparison.Ordinal));
-                bool swapped = shapeRotation == 0;
+                bool swapped = shapeRotation % 10800000 == 0;
                 TestAssert.Equal(swapped ? clipHeight : clipWidth, paintFrame.Clip.Width < page.Width - .01d);
                 TestAssert.Equal(swapped ? clipWidth : clipHeight, paintFrame.Clip.Height < page.Height - .01d);
             }
