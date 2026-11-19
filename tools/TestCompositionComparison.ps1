@@ -16,7 +16,7 @@ New-Item -ItemType Directory -Path $tools -Force | Out-Null
 $script = Join-Path $tools 'CompareCompositionPortfolio.ps1'
 Copy-Item -LiteralPath $ComparisonScript -Destination $script
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'ReferenceCache.ps1') -Destination $tools
-foreach ($name in @('CompositionDocxThresholds.json','CompositionPptxThresholds.json')) {
+foreach ($name in @('CompositionReferenceIdentity.ps1','CompositionDocxThresholds.json','CompositionPptxThresholds.json')) {
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination $tools
 }
 . (Join-Path $tools 'ReferenceCache.ps1')
@@ -51,17 +51,25 @@ function New-Case([string] $Name, [string] $Fault, [string] $Mode='final-preserv
             ('Fake reference ' + $id) | Set-Content -LiteralPath (Join-Path $source 'reference.pdf')
         }
         $referencePdf = Join-Path $source 'reference.pdf'
-        if ((Test-Path -LiteralPath $referencePdf) -and $Fault -ne 'legacy' -and
-            !($Fault -eq 'multi-missing-pin' -and $id -eq 'second')) {
+        if ((Test-Path -LiteralPath $referencePdf) -and
+            !($Fault -in @('bare-reference','multi-missing-pin') -and $id -eq 'second')) {
             $log = Join-Path $source 'export.log'
-            ('Fake pinned export ' + $id) | Set-Content -LiteralPath $log
+            $settings = if ($Mode -eq 'presentation') { 'Fake PowerPoint export' }
+                elseif ($Mode -eq 'all-word-compatible' -and !($Fault -eq 'wrong-review-view' -and $id -eq 'second')) {
+                    'ExportSettings: Word/16.0 ShowRevisions=True RevisionsView=0 MarkupMode=2 RevisionsMode=2 ShowComments=True ShowFormatChanges=True ShowInsertionsAndDeletions=True RejectAll=False'
+                } else {
+                    'ExportSettings: Word/16.0 ShowRevisions=False RevisionsView=0 MarkupMode=0 RevisionsMode=0 ShowComments=False ShowFormatChanges=False ShowInsertionsAndDeletions=False RejectAll=False'
+                }
+            Set-Content -LiteralPath $log -Value $settings
             $pin = @{Id=$id;Mode=$Mode;InputSha256=('0' * 64);
-                PdfSha256=(Get-FileHash -LiteralPath $referencePdf).Hash;ExportLogSha256=(Get-FileHash -LiteralPath $log).Hash}
+                PdfSha256=(Get-FileHash -LiteralPath $referencePdf).Hash}
+            if ($Fault -ne 'legacy') { $pin.ExportLogSha256 = (Get-FileHash -LiteralPath $log).Hash }
             if ($id -eq 'second') {
                 if ($Fault -eq 'multi-source') { $pin.InputSha256 = '1' * 64 }
                 if ($Fault -eq 'multi-mode') { $pin.Mode = 'all-word-compatible' }
                 if ($Fault -eq 'multi-reference-hash') { $pin.PdfSha256 = '1' * 64 }
                 if ($Fault -eq 'multi-log') { 'Changed after pinning' | Add-Content -LiteralPath $log }
+                if ($Fault -eq 'missing-view-log') { Remove-Item -LiteralPath $log }
             }
             $pin | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $source 'source-identity.json')
         }
@@ -148,6 +156,29 @@ if ($report.Rows.Count -ne 2 -or @($report.Rows | Where-Object {
     throw 'Identical comparisons must reuse retained failures without rendering'
 }
 $passed += 'identity-reuse'
+foreach ($fault in @('wrong-review-view', 'bare-reference', 'missing-view-log')) {
+    $case = New-Case $fault $fault 'all-word-compatible'
+    $cache = New-ReuseCache $case
+    $before = Snapshot $case.Directory
+    $expected = switch ($fault) {
+        'wrong-review-view' { 'Reference Office view differs: second-all-word-compatible / ShowRevisions' }
+        'bare-reference' { 'Reference identity missing: second-all-word-compatible' }
+        'missing-view-log' { 'Reference Office view is unverified: second-all-word-compatible' }
+    }
+    $rejected = $false
+    try {
+        & $script -CandidateDirectory $case.CandidateDirectory -ReferenceDirectory $case.ReferenceDirectory `
+            -VisualDiffPath $visualDiff -ValidationToolsDirectory $tools -ReuseComparisonDirectory $cache | Out-Null
+    }
+    catch { if ($_.Exception.Message -cne $expected) { throw }; $rejected = $true }
+    if (!$rejected -or (Snapshot $case.Directory) -cne $before) {
+        throw ('Reference provenance must be verified before metrics reuse: ' + $fault)
+    }
+    $passed += $fault
+}
+if (@($report.Rows | Where-Object { !$_.ReferenceExportLogSha256 }).Count) {
+    throw 'Legacy Word references must publish the verified export log hash'
+}
 foreach ($control in @('pptx-boundary','pptx-mae','pptx-recall','pptx-changed-pixels')) {
     $case=New-Case $control 'legacy' 'presentation'
     $cache=New-ReuseCache $case

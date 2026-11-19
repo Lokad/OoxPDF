@@ -12,6 +12,7 @@ $scripts=Join-Path $repo 'tools'
 New-Item -ItemType Directory -Path $scripts -Force | Out-Null
 $script=Join-Path $scripts 'ExportCompositionReferences.ps1'
 Copy-Item -LiteralPath $ExportScript -Destination $script
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'CompositionReferenceIdentity.ps1') -Destination $scripts
 @'
 param($InputDocx,$OutputPdf,[bool]$ShowRevisions,$RevisionsView,$MarkupMode,$RevisionsMode,[bool]$ShowComments,[bool]$ShowFormatChanges,[bool]$ShowInsertionsAndDeletions,[switch]$RejectAll)
 Add-Content -LiteralPath (Join-Path $PSScriptRoot 'calls.txt') $InputDocx

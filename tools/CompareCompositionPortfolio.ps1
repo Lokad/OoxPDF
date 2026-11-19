@@ -12,12 +12,12 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'ReferenceCache.ps1')
+. (Join-Path $PSScriptRoot 'CompositionReferenceIdentity.ps1')
 if ($ReferenceKind -eq 'OfficeImage') { . (Join-Path $PSScriptRoot 'OfficeReferenceCapture.ps1') }
 $reportName=if ($ReferenceKind -eq 'OfficeImage') {'office-image-comparisons.json'} else {'office-comparisons.json'}
 $candidate = (Resolve-Path -LiteralPath $CandidateDirectory).Path
 $references = @($ReferenceDirectory | ForEach-Object { (Resolve-Path -LiteralPath $_).Path } | Select-Object -Unique)
 $outcomes = Get-Content -LiteralPath (Join-Path $candidate 'outcomes.json') -Raw | ConvertFrom-Json
-$repo = Split-Path -Parent $PSScriptRoot
 $docxThresholdSource = Join-Path $PSScriptRoot 'CompositionDocxThresholds.json'
 $pptxThresholdSource = Join-Path $PSScriptRoot 'CompositionPptxThresholds.json'
 $thresholds = @{
@@ -117,44 +117,18 @@ $jobs = @(foreach ($row in $outcomes.Rows) {
     $sources = @(foreach ($directory in $references) {
         $source = Join-Path $directory $id
         if (!(Test-Path -LiteralPath $source)) { continue }
-        $referencePdf = Join-Path $source 'reference.pdf'
-        if (!(Test-Path -LiteralPath $referencePdf -PathType Leaf)) { throw ('Reference PDF missing: ' + $id) }
-        $referenceHash = (Get-FileHash -LiteralPath $referencePdf).Hash
-        $identity = Join-Path $source 'source-identity.json'
-        $identityHash = $null; $exportLog = $null; $exportLogHash = $null
-        $imagePath=$null; $imageHash=''; $dpi=144; $calibration='PDF-backed bootstrap'
-        # Existing single-directory bare PDF comparisons remain usable. Selecting
-        # across caches requires a pin, so stale or conflicting source/mode
-        # entries cannot silently win by directory order.
-        if ($references.Count -gt 1 -or (Test-Path -LiteralPath $identity)) {
-            if (!(Test-Path -LiteralPath $identity -PathType Leaf)) { throw ('Reference identity missing: ' + $id) }
-            $pin = Get-Content -LiteralPath $identity -Raw | ConvertFrom-Json
-            $kind=if ($pin.ReferenceKind) {$pin.ReferenceKind} else {'OfficePdf'}
-            if ($kind -ne $ReferenceKind) { throw ('Reference kind differs: '+$id) }
-            if ($pin.Id -cne $row.Id -or $pin.Mode -cne $row.Mode -or
-                $pin.InputSha256 -ne $row.InputSha256 -or $pin.PdfSha256 -ne $referenceHash) {
-                throw ('Reference identity differs: ' + $id)
-            }
-            $identityHash = (Get-FileHash -LiteralPath $identity).Hash
-            if ($ReferenceKind -eq 'OfficeImage') {
-                $image=Test-OfficeImageReference $source $row.InputSha256
-                $imagePath=Join-Path $source 'reference-image-metadata.json'
-                $imageHash=(Get-FileHash $imagePath).Hash
-                if ($imageHash -ne $pin.ImageMetadataSha256) { throw ('Image reference metadata differs: '+$id) }
-                $dpi=[int]$image.Dpi; $calibration=$image.CalibrationStatus
-            }
-            if ($pin.ExportLogSha256) {
-                $exportLog = Join-Path $source 'export.log'
-                if (!(Test-Path -LiteralPath $exportLog -PathType Leaf) -or
-                    (Get-FileHash -LiteralPath $exportLog).Hash -ne $pin.ExportLogSha256) {
-                    throw ('Reference export provenance differs: ' + $id)
-                }
-                $exportLogHash = $pin.ExportLogSha256
-            }
+        $reference = Read-CompositionReference $source $row.Id $row.Mode $row.InputSha256 $ReferenceKind
+        $imagePath = $null; $imageHash = ''; $dpi = 144; $calibration = 'PDF-backed bootstrap'
+        if ($ReferenceKind -eq 'OfficeImage') {
+            $image = Test-OfficeImageReference $source $row.InputSha256
+            $imagePath = Join-Path $source 'reference-image-metadata.json'
+            $imageHash = (Get-FileHash -LiteralPath $imagePath).Hash
+            if ($imageHash -ne $reference.Pin.ImageMetadataSha256) { throw ('Image reference metadata differs: ' + $id) }
+            $dpi = [int]$image.Dpi; $calibration = $image.CalibrationStatus
         }
-        elseif ($ReferenceKind -eq 'OfficeImage') { throw ('Image reference identity missing: '+$id) }
-        [pscustomobject]@{Source=$source;Pdf=$referencePdf;Hash=$referenceHash;
-            Identity=$identity;IdentityHash=$identityHash;ExportLog=$exportLog;ExportLogHash=$exportLogHash;
+        [pscustomobject]@{Source=$source;Pdf=$reference.Pdf;Hash=$reference.Hash;
+            Identity=$reference.Identity;IdentityHash=$reference.IdentityHash;
+            ExportLog=$reference.ExportLog;ExportLogHash=$reference.ExportLogHash;
             ImagePath=$imagePath;ImageHash=$imageHash;Dpi=$dpi;Calibration=$calibration}
     })
     if (!$sources.Count) { throw ('Reference missing: ' + $id) }
@@ -227,7 +201,7 @@ foreach ($job in $jobs) {
     $reuse = @($job.Reuse); $diff = $job.Diff
     if ((Get-FileHash -LiteralPath $pdf).Hash -ne $row.PdfSha256 -or
         (Get-FileHash -LiteralPath $referencePdf).Hash -ne $referenceHash) { throw ('Comparison input changed: ' + $id) }
-    if ($job.IdentityHash -and (Get-FileHash -LiteralPath $job.Identity).Hash -ne $job.IdentityHash -or
+    if ((Get-FileHash -LiteralPath $job.Identity).Hash -ne $job.IdentityHash -or
         $job.ExportLogHash -and (Get-FileHash -LiteralPath $job.ExportLog).Hash -ne $job.ExportLogHash) {
         throw ('Comparison reference provenance changed: ' + $id)
     }
@@ -260,6 +234,10 @@ foreach ($job in $jobs) {
     }
     if ((Get-FileHash -LiteralPath $pdf).Hash -ne $row.PdfSha256 -or
         (Get-FileHash -LiteralPath $referencePdf).Hash -ne $referenceHash) { throw ('Comparison input changed: ' + $id) }
+    if ((Get-FileHash -LiteralPath $job.Identity).Hash -ne $job.IdentityHash -or
+        $job.ExportLogHash -and (Get-FileHash -LiteralPath $job.ExportLog).Hash -ne $job.ExportLogHash) {
+        throw ('Comparison reference provenance changed: ' + $id)
+    }
     Write-Output ($id + ': ' + ($failures | Sort-Object -Unique) -join ', ')
 }
 if ((Get-FileHash -LiteralPath $VisualDiffPath).Hash -ne $comparisonPolicy.VisualDiffSha256 -or
