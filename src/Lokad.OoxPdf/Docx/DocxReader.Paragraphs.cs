@@ -702,7 +702,14 @@ internal sealed partial class DocxReader
                 RetainNonRenderingRunOwner(currentSourceRunIndex, effectiveRevisions);
             }
 
-            if (run.Elements().Any(IsComplexFieldMarkupElement))
+            bool hasComplexFieldMarkup = run.Elements().Any(IsComplexFieldMarkupElement);
+            HashSet<XElement>? fieldPictureChildren = null;
+            // Pictures retain the run's visibility and their authored position
+            // relative to any field end or separator within the same run.
+            IReadOnlyList<DocxInlineImage> parsedPictures = resolvedRun.Hidden == true ? [] :
+                ReadInlineImages(run, package, relationships, revision, currentSourceRunIndex, cancellationToken,
+                    hasComplexFieldMarkup ? RecordPictureChild : null);
+            if (hasComplexFieldMarkup)
             {
                 AddOrderedRunContent(
                     run,
@@ -711,8 +718,9 @@ internal sealed partial class DocxReader
                     runStyleResolution,
                     revision,
                     effectiveRevisions,
-                    ref currentPageInstructionSeen);
-                PublishRun();
+                    ref currentPageInstructionSeen,
+                    fieldPictureChildren);
+                PublishRun(parsedPictures);
                 return;
             }
 
@@ -756,9 +764,16 @@ internal sealed partial class DocxReader
                     runs: runs);
             }
 
-            PublishRun();
+            if (parsedPictures.Count != 0) RecordComplexFieldResult();
+            PublishRun(parsedPictures);
 
-            void PublishRun()
+            void RecordPictureChild(XElement source)
+            {
+                XElement child = source.AncestorsAndSelf().First(element => element.Parent == run);
+                (fieldPictureChildren ??= []).Add(child);
+            }
+
+            void PublishRun(IReadOnlyList<DocxInlineImage> pictures)
             {
                 if (inlineReferences.Count > firstReference &&
                     inlineReferences.Skip(firstReference).Any(reference => reference.CustomMarkText is not null))
@@ -775,24 +790,17 @@ internal sealed partial class DocxReader
                             owners[(marker.SourceRunIndex, marker.SourceTextOffsetInRun)] = marked;
                         }
                 }
-                // Pictures share their source run's resolved visibility. Keep
-                // the paragraph/source index even when that run paints nothing.
-                if (resolvedRun.Hidden != true)
+                if (pictures.Count != 0)
                 {
-                    var parsed = ReadInlineImages(run, package, relationships, revision, currentSourceRunIndex, cancellationToken);
-                    if (parsed.Count != 0)
+                    if (revision?.Kind != DocxRevisionKind.Insertion) images.AddRange(pictures);
+                    else
                     {
-                        RecordComplexFieldResult();
-                        if (revision?.Kind != DocxRevisionKind.Insertion) images.AddRange(parsed);
-                        else
+                        var style = runs.Count > firstRun ? runs[firstRun] : CreateResolvedTextRun(string.Empty,
+                            resolvedRun, runStyleResolution, false, currentSourceRunIndex, 0, revision, effectiveRevisions);
+                        foreach (var image in pictures)
                         {
-                            var style = runs.Count > firstRun ? runs[firstRun] : CreateResolvedTextRun(string.Empty,
-                                resolvedRun, runStyleResolution, false, currentSourceRunIndex, 0, revision, effectiveRevisions);
-                            foreach (var image in parsed)
-                            {
-                                cancellationToken.ThrowIfCancellationRequested();
-                                images.Add(image with { SourceRunStyle = style });
-                            }
+                            cancellationToken.ThrowIfCancellationRequested();
+                            images.Add(image with { SourceRunStyle = style });
                         }
                     }
                 }
@@ -949,7 +957,8 @@ internal sealed partial class DocxReader
             DocxRunStyleResolution runStyleResolution,
             DocxRevisionInfo? revision,
             IReadOnlyList<DocxRevisionInfo> revisions,
-            ref bool currentPageInstructionSeen)
+            ref bool currentPageInstructionSeen,
+            IReadOnlySet<XElement>? fieldPictureChildren = null)
         {
             int childIndex = 0;
             int textOffset = 0;
@@ -957,6 +966,7 @@ internal sealed partial class DocxReader
             foreach (XElement child in run.Elements())
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                if (fieldPictureChildren?.Contains(child) == true) RecordComplexFieldResult();
                 string childText = ReadRunTextChild(child);
                 if (child.Name == WordprocessingNamespace + "fldChar")
                 {

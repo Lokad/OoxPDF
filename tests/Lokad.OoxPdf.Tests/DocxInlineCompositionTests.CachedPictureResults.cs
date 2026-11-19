@@ -94,6 +94,33 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
+    public static void DocxCachedPictureResultsUseExactPackedFieldBoundaries()
+    {
+        foreach (bool vml in new[] { false, true })
+        foreach (bool computed in new[] { false, true })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var split = PictureResultParagraph(ReadPictureResult("body", vml, complex: true, mode, computed: computed));
+            var packed = PictureResultParagraph(ReadPictureResult("body", vml, complex: true, mode, computed: computed,
+                packPictureInCache: true));
+            var following = PictureResultParagraph(ReadPictureResult("body", vml, complex: true, mode, computed: computed,
+                packPictureInCache: false));
+            var splitField = split.FieldReferences.Single();
+            var packedField = packed.FieldReferences.Single();
+            var followingField = following.FieldReferences.Single();
+            TestAssert.True(splitField.HasCachedResult && packedField.HasCachedResult,
+                "A picture between the separator and end belongs to the cache in either run form.");
+            TestAssert.Equal(!computed, packedField.RendersCachedResult);
+            TestAssert.True(!followingField.HasCachedResult && !followingField.RendersCachedResult,
+                "A picture after the end stays outside the cache even at the same text offset.");
+            TestAssert.Equal(computed, packedField.UsesPlaceholder);
+            TestAssert.Equal(computed, followingField.UsesPlaceholder);
+            TestAssert.Equal(split.Equations.Count, packed.Equations.Count);
+            TestAssert.Equal(1, packed.InlineContent!.OfType<DocxInlinePicture>().Count());
+            TestAssert.Equal(1, following.InlineContent!.OfType<DocxInlinePicture>().Count());
+        }
+    }
+
     public static void DocxCachedPictureResultsMatchIndependentWordContentAndOrigins()
     {
         if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent picture/math origins use installed Windows fonts.");
@@ -123,7 +150,7 @@ internal static partial class DocxInlineCompositionTests
     }
 
     private static DocxDocument ReadPictureResult(string story, bool vml, bool complex, OoxPdfDocxMarkupMode mode,
-        bool baseline = false, bool nested = false, bool computed = false) =>
+        bool baseline = false, bool nested = false, bool computed = false, bool? packPictureInCache = null) =>
         ReadMutation("CompositionProbes/math-composition-unnumbered" + (story == "body" ? "" : "-" + story), mode, true, true,
             (xml, w, _) =>
             {
@@ -144,6 +171,14 @@ internal static partial class DocxInlineCompositionTests
                 if (baseline && !nested) return;
                 var content = baseline ? [new XElement(run)]
                     : CachedMathField(w, new XElement(run), complex, computed ? "PAGE" : "REF StoredPicture", locked: !computed);
+                if (packPictureInCache is bool inside)
+                {
+                    var controls = content.Where(item => item.Name == w + "r").SelectMany(item => item.Elements()).ToArray();
+                    var picture = run.Elements().Where(child => child.Name == w + "drawing" || child.Name == w + "pict");
+                    content = [new XElement(w + "r", inside
+                        ? controls[..^1].Concat(picture).Append(controls[^1])
+                        : controls.Concat(picture))];
+                }
                 if (nested)
                 {
                     var link = new XElement(w + "hyperlink", new XAttribute(w + "anchor", "PublicCalculation"), content);

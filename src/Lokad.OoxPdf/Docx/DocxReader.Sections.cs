@@ -106,7 +106,8 @@ internal sealed partial class DocxReader
         XElement run,
         OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships,
-        DocxRevisionInfo? revision, int sourceRunIndex = -1, CancellationToken cancellationToken = default)
+        DocxRevisionInfo? revision, int sourceRunIndex = -1, CancellationToken cancellationToken = default,
+        Action<XElement>? recordSource = null)
     {
         var images = new List<DocxInlineImage>();
         Dictionary<XElement, (int Offset, int Order)>? positions = null;
@@ -118,9 +119,7 @@ internal sealed partial class DocxReader
                 continue;
             }
 
-            var position = GetPosition(inline);
-            images.Add(image with { SourceRunIndex = sourceRunIndex,
-                SourceTextOffsetInRun = position.Offset, SourceOrderInRun = position.Order });
+            AddImage(inline, image);
         }
 
         foreach (XElement shape in EnumerateRunOwnedDrawings(run, VmlNamespace + "shape", cancellationToken))
@@ -131,16 +130,17 @@ internal sealed partial class DocxReader
                 continue;
             }
 
-            var position = GetPosition(shape);
-            images.Add(image with { SourceRunIndex = sourceRunIndex,
-                SourceTextOffsetInRun = position.Offset, SourceOrderInRun = position.Order });
+            AddImage(shape, image);
         }
 
         return images;
 
-        (int Offset, int Order) GetPosition(XElement target)
+        void AddImage(XElement source, DocxInlineImage image)
         {
-            return (positions ??= ReadRunInlinePositions(run, cancellationToken))[target];
+            var position = (positions ??= ReadRunInlinePositions(run, cancellationToken))[source];
+            images.Add(image with { SourceRunIndex = sourceRunIndex,
+                SourceTextOffsetInRun = position.Offset, SourceOrderInRun = position.Order });
+            recordSource?.Invoke(source);
         }
     }
 
