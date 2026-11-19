@@ -156,7 +156,23 @@ jobs:
       - name: Content tokenization checks
         run: pwsh -NoProfile -File tools/TestPdfContentTokenization.ps1 -InspectorPath $env:OOXPDF_TEST_PDF_INSPECTOR
       - name: Composition source audit checks
-        run: python -B tools/TestCompositionSourceAudit.py
+        run: |
+          $python = 'python3'
+          if ($IsWindows) {
+            python -m venv artifacts/ci-tmp/native-content
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            $python = (Resolve-Path artifacts/ci-tmp/native-content/Scripts/python.exe).Path
+            & $python -m pip install --disable-pip-version-check --no-cache-dir --only-binary=:all: --no-deps PyMuPDF==1.28.2 fonttools==4.66.1
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+          & $python -B tools/TestCompositionSourceAudit.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if ($IsWindows) {
+            & $python -B tools/TestPdfInk.py
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            & $python -B tools/TestInlineFrameGeometry.py --output-directory artifacts/ci-tests/inline-frame-geometry
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
       - name: Composition comparison orchestration checks
         run: |
           pwsh -NoProfile -File tools/TestCompositionMeasurement.ps1
