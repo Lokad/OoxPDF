@@ -37,9 +37,6 @@ internal sealed partial class DocxRenderer
     private static bool OwnsUnmergedPictureCell(DocxTableCellLayout cell) =>
         cell.VisualOwnership == DocxTableCellVisualOwnership.OwnCell && !cell.Cell.HasVerticalMerge;
 
-    private static bool OwnsNormalNotePictures(DocxRelatedStory story) =>
-        story.IsNormalStoryType && story.Kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote;
-
     private static IEnumerable<PdfLinkAnnotation> CreateInlinePictureAnnotations(DocxLayoutPage page, int pageNumber, IReadOnlyList<DocxLayoutItem> staticItems,
         IReadOnlySet<DocxInlineImage> paintedPictures,
         DocxMarkupContext context, CancellationToken token)
@@ -109,7 +106,7 @@ internal sealed partial class DocxRenderer
         foreach (var story in page.PlacedRelatedStories)
         {
             token.ThrowIfCancellationRequested();
-            if (!OwnsNormalNotePictures(story.StoryLayout.Story)) continue;
+            if (!IsNormalNoteStory(story.StoryLayout.Story)) continue;
             var (mapped, map, clip, tableClip) = ResolvePlacedStoryPaintFrame(story, context, page.Height);
             foreach (var image in story.InlineImages)
             {

@@ -84,7 +84,7 @@ internal sealed partial class DocxRenderer
     private static IEnumerable<(DocxTextLineLayout Line, DocxStoryId Owner, LinkPaintViewport? Viewport)> EnumerateRenderedPageLineSources(
         DocxLayoutPage page, IEnumerable<DocxFloatingDrawingLayout> floatingDrawings,
         DocxMarkupContext markupContext, double pageHeight, IReadOnlyList<DocxLayoutItem>? staticPaintItems = null,
-        int pageNumber = 0, CancellationToken token = default)
+        IReadOnlyList<PlacedNoteTableFrame?>? noteTables = null, CancellationToken token = default)
     {
         FloatingTextBoxEmissionMap? map = TryCreateFloatingTextBoxEmissionMap(markupContext, pageHeight);
         bool clipCellLinks = staticPaintItems is not null;
@@ -103,19 +103,17 @@ internal sealed partial class DocxRenderer
         {
             foreach (var line in EnumerateBodyTextLines(page)) yield return (line, DocxStoryId.Body(), null);
         }
-        foreach (var story in page.PlacedRelatedStories)
+        for (int index = 0; index < page.PlacedRelatedStories.Count; index++)
         {
+            var story = page.PlacedRelatedStories[index];
             var owner = DocxStoryId.Related(story.StoryLayout.Story.Kind);
-            bool clipStoryTable = clipCellLinks && story.TableRows.Count != 0 && story.StoryLayout.Story.IsNormalStoryType &&
-                story.StoryLayout.Story.Kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote;
-            foreach (var line in EnumerateMappedPlacedNoteStoryTextLines(story, map, includeTableRows: !clipStoryTable))
+            var noteTable = noteTables?[index];
+            foreach (var line in EnumerateMappedPlacedNoteStoryTextLines(story, map, includeTableRows: noteTable is null))
                 yield return (line, owner, null);
-            if (clipStoryTable)
+            if (noteTable is { } frame)
             {
-                var (mapped, storyMap, _, tableClip) = ResolvePlacedStoryPaintFrame(story, markupContext, pageHeight);
-                var items = PlaceRelatedStoryItems(story, story.TextLines, mapped ? storyMap : null, pageNumber, token);
-                foreach (var (line, clip, _) in EnumerateLinkLinesInItems(items, tableClip, markupContext, token, includeDirectLines: false))
-                    yield return (line, owner, new(clip ?? tableClip, PreserveFittingPadding: true));
+                foreach (var (line, clip, _) in EnumerateLinkLinesInItems(frame.Items, frame.Clip, markupContext, token, includeDirectLines: false))
+                    yield return (line, owner, new(clip ?? frame.Clip, PreserveFittingPadding: true));
             }
         }
         foreach (var line in EnumerateInlineTextBoxTextLines(page, includeTableRows: !clipCellLinks))

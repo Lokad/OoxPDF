@@ -1120,11 +1120,18 @@ internal sealed partial class DocxRenderer
                 construction,
                 cancellationToken);
 
-            foreach (DocxPlacedRelatedStoryLayout story in layoutPage.PlacedRelatedStories)
+            PlacedNoteTableFrame?[]? noteTables = null;
+            for (int storyIndex = 0; storyIndex < layoutPage.PlacedRelatedStories.Count; storyIndex++)
             {
+                var story = layoutPage.PlacedRelatedStories[storyIndex];
                 cancellationToken.ThrowIfCancellationRequested();
                 RenderPlacedRelatedStoryDrawings(story, behindDocument: true, graphics, pageImages, fontResources, markupContext, pageNumber, layout.Pages.Count, diagnosticSink, cancellationToken, imageCache, ref imageIndex, navigation);
-                RenderPlacedRelatedStory(story, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, layout.Pages.Count, cancellationToken, imageCache, ref imageIndex, navigation);
+                if (RenderPlacedRelatedStory(story, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, layout.Pages.Count,
+                    cancellationToken, imageCache, ref imageIndex, navigation) is { } noteTable)
+                {
+                    noteTables ??= new PlacedNoteTableFrame?[layoutPage.PlacedRelatedStories.Count];
+                    noteTables[storyIndex] = noteTable;
+                }
                 RenderPlacedRelatedStoryDrawings(story, behindDocument: false, graphics, pageImages, fontResources, markupContext, pageNumber, layout.Pages.Count, diagnosticSink, cancellationToken, imageCache, ref imageIndex, navigation);
             }
 
@@ -1154,7 +1161,7 @@ internal sealed partial class DocxRenderer
                 navigation);
 
             IReadOnlyList<PdfLinkAnnotation> annotations = CreateHyperlinkAnnotations(
-                layoutPage, pageIndex, pageNumber, layout.Pages.Count, navigation.InlinePictures, staticItems, navigation.DrawingUris);
+                layoutPage, pageIndex, pageNumber, layout.Pages.Count, navigation.InlinePictures, staticItems, noteTables, navigation.DrawingUris);
             string content = graphics.ToString();
             // RV11: admit the emitted content bytes before yielding, so a small
             // content budget rejects before the writer encodes or stores the page.
@@ -1424,7 +1431,7 @@ internal sealed partial class DocxRenderer
 
         IReadOnlyList<PdfLinkAnnotation> CreateHyperlinkAnnotations(DocxLayoutPage page, int pageIndex, int pageNumber, int pageCount,
             IReadOnlySet<DocxInlineImage> paintedPictures, IReadOnlyList<DocxLayoutItem> staticItems,
-            IReadOnlyList<PdfLinkAnnotation> drawingUris)
+            IReadOnlyList<PlacedNoteTableFrame?>? noteTables, IReadOnlyList<PdfLinkAnnotation> drawingUris)
         {
             var annotations = new List<PdfLinkAnnotation>();
             Dictionary<DocxInlineImage, DocxInlineImageLayout?>? linkedPictures = null;
@@ -1448,7 +1455,7 @@ internal sealed partial class DocxRenderer
             bool previousUsesBodyLineBox = false;
             var paper = new PdfRectangle(0d, 0d, page.Width, page.Height);
             foreach (var (line, _, paintViewport) in EnumerateRenderedPageLineSources(page,
-                drawingPages.PageAll(pageIndex), markupContext, page.Height, staticItems, pageNumber, cancellationToken))
+                drawingPages.PageAll(pageIndex), markupContext, page.Height, staticItems, noteTables, cancellationToken))
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 LinkPaintViewport? clip = paintViewport is { } source

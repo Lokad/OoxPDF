@@ -14,6 +14,11 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxRenderer
 {
+    private readonly record struct PlacedNoteTableFrame(IReadOnlyList<DocxLayoutItem> Items, PdfRectangle Clip);
+
+    private static bool IsNormalNoteStory(DocxRelatedStory story) =>
+        story.IsNormalStoryType && story.Kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote;
+
     private static PdfRectangle ResolvePlacedStoryDesignClip(DocxPlacedRelatedStoryLayout story) =>
         new(story.X, story.TopY - story.Height, story.Width, story.Height);
 
@@ -90,7 +95,7 @@ internal sealed partial class DocxRenderer
         }
     }
 
-    private static void RenderPlacedRelatedStory(
+    private static PlacedNoteTableFrame? RenderPlacedRelatedStory(
         DocxPlacedRelatedStoryLayout story,
         PdfGraphicsBuilder graphics,
         List<PdfImageResource> pageImages,
@@ -110,9 +115,10 @@ internal sealed partial class DocxRenderer
         // the body-shift path. Complete fitting table subtrees join this map;
         // their unsupported ownership/overflow cases retain the legacy frame.
         var (mapStory, storyMap, clip, tableClip) = ResolvePlacedStoryPaintFrame(story, markupContext, navigation.Viewport.Height);
+        bool normalNote = IsNormalNoteStory(story.StoryLayout.Story);
         var storyNavigation = navigation with
         {
-            AllowsRotatedInlineUris = navigation.AllowsRotatedInlineUris && OwnsNormalNotePictures(story.StoryLayout.Story)
+            AllowsRotatedInlineUris = navigation.AllowsRotatedInlineUris && normalNote
         };
         if (story.SeparatorY is { } separatorY)
         {
@@ -132,17 +138,24 @@ internal sealed partial class DocxRenderer
         // at emission (layout keeps them so placement boxes stay Office-true); endnotes only,
         // footnotes keep legacy behavior until separately probed.
         bool suppressSeparatorText = story.StoryLayout.Story.Kind == DocxRelatedStoryKind.Endnote && story.StoryLayout.Story.Type == DocxRelatedStoryType.Separator;
-        System.Collections.Generic.IEnumerable<DocxTextLineLayout> storyTextLines = suppressSeparatorText ? story.TextLines.Select(line => RewriteSeparatorTextLineAsMarkSpace(line, story, fontResources)) : story.TextLines;
-        var items = PlaceRelatedStoryItems(story, storyTextLines, mapStory ? storyMap : null, pageNumber, cancellationToken);
+        IEnumerable<DocxTextLineLayout> storyTextLines = suppressSeparatorText
+            ? story.TextLines.Select(line => RewriteSeparatorTextLineAsMarkSpace(line, story, fontResources))
+            : story.TextLines;
+        var items = (mapStory ? storyTextLines.Select(line => storyMap.PrecompensateLine(line, 0d, 0d)) : storyTextLines)
+            .Cast<DocxLayoutItem>()
+            .Concat(mapStory ? story.InlineImages.Select(image => storyMap.PrecompensateImage(image, pageNumber)) : story.InlineImages)
+            .Concat(story.TableRows.Select(row => ResolvePlacedStoryTablePaintFrame(story, row, mapStory ? storyMap : null, cancellationToken)))
+            .OrderByDescending(ResolveLayoutItemTop)
+            .ToArray();
         RenderParagraphBackgrounds(items, graphics, markupContext, cancellationToken);
-        for (int itemIndex = 0; itemIndex < items.Count; itemIndex++)
+        for (int itemIndex = 0; itemIndex < items.Length; itemIndex++)
         {
             cancellationToken.ThrowIfCancellationRequested();
             DocxLayoutItem item = items[itemIndex];
             bool tableViewport = item is DocxTableRowLayout && tableClip != clip;
             if (tableViewport) SetClip(tableClip);
             DocxTableRowLayout? previousRow = itemIndex > 0 ? items[itemIndex - 1] as DocxTableRowLayout : null;
-            DocxTableRowLayout? nextRow = itemIndex + 1 < items.Count ? items[itemIndex + 1] as DocxTableRowLayout : null;
+            DocxTableRowLayout? nextRow = itemIndex + 1 < items.Length ? items[itemIndex + 1] as DocxTableRowLayout : null;
             if (diagnosticSink is not null && item is DocxTableRowLayout row &&
                 story.StoryLayout.Story.Kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote &&
                 HasClippedNoteTableContent(row, tableClip, ResolveTextEmissionBaselineOffset(markupContext), cancellationToken))
@@ -156,6 +169,10 @@ internal sealed partial class DocxRenderer
 
         graphics.RestoreState();
 
+        // Text and images between rows matter to fragment adjacency. Pass the
+        // ordered paint list to this page's annotation pass.
+        return normalNote && story.TableRows.Count != 0 ? new(items, tableClip) : null;
+
         void SetClip(PdfRectangle viewport)
         {
             // PDF clips intersect. Restore the surrounding state before
@@ -165,15 +182,6 @@ internal sealed partial class DocxRenderer
             graphics.ClipRectangle(viewport.X, viewport.Y, viewport.Width, viewport.Height);
         }
     }
-
-    private static IReadOnlyList<DocxLayoutItem> PlaceRelatedStoryItems(DocxPlacedRelatedStoryLayout story,
-        IEnumerable<DocxTextLineLayout> lines, FloatingTextBoxEmissionMap? map, int pageNumber, CancellationToken token) =>
-        (map is { } lineMap ? lines.Select(line => lineMap.PrecompensateLine(line, 0d, 0d)) : lines)
-        .Cast<DocxLayoutItem>()
-        .Concat(map is { } imageMap ? story.InlineImages.Select(image => imageMap.PrecompensateImage(image, pageNumber)) : story.InlineImages)
-        .Concat(story.TableRows.Select(row => ResolvePlacedStoryTablePaintFrame(story, row, map, token)))
-        .OrderByDescending(ResolveLayoutItemTop)
-        .ToArray();
 
     private static bool HasClippedNoteTableContent(DocxTableRowLayout row, PdfRectangle clip,
         double baselineOffset, CancellationToken token)
