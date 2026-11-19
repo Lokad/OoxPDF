@@ -578,7 +578,8 @@ internal sealed partial class PptxRenderer
     {
         return runs.Count == 0
             ? []
-            : runs.Select(run => new ChartTextRunOverride(run.Text, ToChartTextStyleOverride(run.TextStyle), HyperlinkClickId: run.HyperlinkClickId, HyperlinkClickAction: run.HyperlinkClickAction)).ToArray();
+            : runs.Select(run => new ChartTextRunOverride(run.Text, ToChartTextStyleOverride(run.TextStyle),
+                run.HyperlinkClickId, run.HyperlinkClickAction, run.LineIndex)).ToArray();
     }
 
     private static IReadOnlyDictionary<string, ChartBooleanOption> ToChartDataLabelFlagOptions(PptxSceneChartDataLabels labels)

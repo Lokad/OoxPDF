@@ -322,15 +322,28 @@ internal sealed partial class PptxSceneBuilder
         }
 
         string richText = string.Concat(EnumerateChartRichRuns(text?.Element(ChartNamespace + "rich"))
-            .Select(run => (string?)run.Element(DrawingNamespace + "t")));
+            .Select(source => (string?)source.Run.Element(DrawingNamespace + "t")));
         return string.IsNullOrWhiteSpace(richText) ? null : richText;
     }
 
-    // Cached fields carry authored text/style just like ordinary runs. Plain
-    // text and styled fragments visit those same owners in source order.
-    private static IEnumerable<XElement> EnumerateChartRichRuns(XElement? rich) =>
-        rich?.Elements(DrawingNamespace + "p").Elements().Where(element =>
-            element.Name == DrawingNamespace + "r" || element.Name == DrawingNamespace + "fld") ?? [];
+    // Runs and cached fields share the authored line and paragraph order.
+    private static IEnumerable<(XElement Run, int LineIndex)> EnumerateChartRichRuns(XElement? rich)
+    {
+        if (rich is null) yield break;
+
+        int lineIndex = 0;
+        foreach (XElement paragraph in rich.Elements(DrawingNamespace + "p"))
+        {
+            foreach (XElement element in paragraph.Elements())
+            {
+                if (element.Name == DrawingNamespace + "br")
+                    lineIndex++;
+                else if (element.Name == DrawingNamespace + "r" || element.Name == DrawingNamespace + "fld")
+                    yield return (element, lineIndex);
+            }
+            lineIndex++;
+        }
+    }
 
     private static string? ReadChartHyperlinkClickId(XElement? runProperties)
     {
@@ -361,7 +374,7 @@ internal sealed partial class PptxSceneBuilder
         }
 
         var runs = new List<PptxSceneChartTextRun>();
-        foreach (XElement run in EnumerateChartRichRuns(rich))
+        foreach (var (run, lineIndex) in EnumerateChartRichRuns(rich))
         {
             string runText = run.Element(DrawingNamespace + "t")?.Value ?? string.Empty;
             if (runText.Length == 0)
@@ -379,7 +392,8 @@ internal sealed partial class PptxSceneBuilder
             PptxSceneChartTextStyleOverride style = MergeChartTextStyleOverride(
                 ReadChartTextRunStyle(paragraphProperties, theme, colorMap),
                 ReadChartTextRunStyle(runProperties, theme, colorMap));
-            runs.Add(new PptxSceneChartTextRun(runText, style, HyperlinkClickId: ReadChartHyperlinkClickId(runProperties), HyperlinkClickAction: ReadChartHyperlinkClickAction(runProperties)));
+            runs.Add(new PptxSceneChartTextRun(runText, style, ReadChartHyperlinkClickId(runProperties),
+                ReadChartHyperlinkClickAction(runProperties), lineIndex));
         }
 
         return runs;

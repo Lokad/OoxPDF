@@ -155,7 +155,7 @@ internal sealed partial class PptxRenderer
         // The automatic placement frame owns measured title and legend space.
         if (automatic && !string.IsNullOrWhiteSpace(layout.Title) && chart.Title.Overlay != true)
         {
-            var title = await MeasureChartTitleLineAsync(theme, chart, resolver).ConfigureAwait(false);
+            var title = await MeasureChartTitleAsync(theme, chart, resolver).ConfigureAwait(false);
             double reserve = Math.Min(Math.Max(0d, layout.PlotBox.Height - 1d),
                 PptxChartMetricRules.ChartContentFrameInset + 2d * PptxChartMetricRules.ChartTitleLinePadding + title.Height);
             layout = layout with

@@ -34,42 +34,33 @@ internal sealed partial class PptxRenderer
             titleManualLayoutApplied = true;
         }
 
-        ChartTextStyle style = ReadChartTitleTextStyle(theme, sceneChart);
-        double fontSize = style.FontSize;
-        double baselineY;
+        var (style, titleLines, measuredHeight) = await MeasureChartTitleAsync(theme, sceneChart, fontResolver).ConfigureAwait(false);
+        // Automatic titles start at the chart header. A manual title keeps its
+        // first-line anchor when the measured block fits at that position.
+        double top = frame.Y + frame.Height - PptxChartMetricRules.ChartContentFrameInset -
+            PptxChartMetricRules.ChartTitleLinePadding;
+        double? singleLineBaseline = null;
         if (titleManualLayoutApplied)
         {
-            baselineY = y + height * PptxChartMetricRules.TitleBaselineYRatio;
-        }
-        else
-        {
-            // Automatic titles belong to the chart frame, independently of plot
-            // placement, legend space or chart family. Measure the painted runs.
-            var line = await MeasureChartTitleLineAsync(theme, sceneChart, fontResolver).ConfigureAwait(false);
-            baselineY = frame.Y + frame.Height - PptxChartMetricRules.ChartContentFrameInset -
-                PptxChartMetricRules.ChartTitleLinePadding - line.Ascent;
+            double anchor = y + height * PptxChartMetricRules.TitleBaselineYRatio;
+            if (sceneChart.Title.HasMultipleTextLines)
+                top = Math.Min(y + height, Math.Max(y + measuredHeight, anchor + titleLines[0].BaselineFromTop));
+            else
+                singleLineBaseline = anchor;
         }
         double titleX = x + width * PptxChartMetricRules.TitleXInsetRatio;
         double titleWidth = width * PptxChartMetricRules.TitleWidthRatio;
-        double titleHeight = fontSize * PptxChartMetricRules.TitleHeightFactor;
+        double titleHeight = style.FontSize * PptxChartMetricRules.TitleHeightFactor;
         var runs = new List<TextRun>();
         List<ChartTextRunLink>? titleLinks = sceneChart.Relationships is null ? null : new List<ChartTextRunLink>();
-        await AddChartRichTextRunsAsync(
-            runs,
-            ReadChartTitleTextRuns(sceneChart),
-            title.Trim(),
-            titleX,
-            baselineY,
-            titleWidth,
-            titleHeight,
-            x,
-            y,
-            width,
-            height,
-            style,
-            TextAlignment.Center,
-            fontResolver,
-            titleLinks).ConfigureAwait(false);
+        foreach (MeasuredChartTitleLine line in titleLines)
+        {
+            fontResolver.CancellationToken.ThrowIfCancellationRequested();
+            string lineText = titleLines.Count == 1 ? title : string.Concat(line.Runs.Select(run => run.Text));
+            await AddChartRichTextRunsAsync(runs, line.Runs, lineText.Trim(), titleX,
+                singleLineBaseline ?? top - line.BaselineFromTop, titleWidth, titleHeight,
+                x, y, width, height, style, TextAlignment.Center, fontResolver, titleLinks).ConfigureAwait(false);
+        }
         ChartShapeStyle titleShape = ToChartShapeStyle(sceneChart.Title.ShapeStyle);
         if (!titleShape.IsEmpty)
         {
@@ -596,7 +587,7 @@ internal sealed partial class PptxRenderer
         double reserve = numericClearance;
         if (!string.IsNullOrWhiteSpace(chart.Title.Text) && chart.Title.Overlay != true)
         {
-            var title = await MeasureChartTitleLineAsync(theme, chart, resolver).ConfigureAwait(false);
+            var title = await MeasureChartTitleAsync(theme, chart, resolver).ConfigureAwait(false);
             reserve += PptxChartMetricRules.ChartContentFrameInset +
                 2d * PptxChartMetricRules.ChartTitleLinePadding + title.Height;
         }
@@ -624,27 +615,46 @@ internal sealed partial class PptxRenderer
         return 2d * CartesianAxisEndClearance(lineHeight) - numericClearance;
     }
 
-    private static async ValueTask<(double Ascent, double Height)> MeasureChartTitleLineAsync(
+    private readonly record struct MeasuredChartTitleLine(IReadOnlyList<ChartTextRunOverride> Runs, double BaselineFromTop);
+
+    private static async ValueTask<(ChartTextStyle Style, IReadOnlyList<MeasuredChartTitleLine> Lines, double Height)> MeasureChartTitleAsync(
         PptxTheme theme, PptxSceneChart sceneChart, PresentationFontResolver? resolver)
     {
         ChartTextStyle style = ReadChartTitleTextStyle(theme, sceneChart);
         var measure = new ChartTextMeasurer(resolver);
-        double ascent = 0d, height = 0d;
-        bool hasRuns = false;
-        foreach (ChartTextRunOverride run in ReadChartTitleTextRuns(sceneChart))
-        {
-            if (string.IsNullOrEmpty(run.Text)) { continue; }
-            var line = await measure.MeasureTextLineBoxAsync(run.Text, style.Merge(run.TextStyle)).ConfigureAwait(false);
-            ascent = Math.Max(ascent, line.Ascent);
-            height = Math.Max(height, line.Height);
-            hasRuns = true;
-        }
-        if (!hasRuns)
+        var runs = ReadChartTitleTextRuns(sceneChart);
+        if (runs.Count == 0)
         {
             var line = await measure.MeasureTextLineBoxAsync(sceneChart.Title.Text ?? string.Empty, style).ConfigureAwait(false);
-            return (line.Ascent, line.Height);
+            return (style, [new([], line.Ascent)], line.Height);
         }
-        return (ascent, height);
+
+        var lines = new List<MeasuredChartTitleLine>();
+        double height = 0d;
+        double? emptyLineHeight = null;
+        int nextLine = 0;
+        bool hasLineBreaks = sceneChart.Title.HasMultipleTextLines;
+        foreach (var line in runs.GroupBy(run => run.LineIndex))
+        {
+            if (line.Key > nextLine)
+            {
+                emptyLineHeight ??= (await measure.MeasureLineBoxAsync(style, horizontalHeader: true).ConfigureAwait(false)).Height;
+                height += (line.Key - nextLine) * emptyLineHeight.Value;
+            }
+            double ascent = 0d, descent = 0d, lineHeight = 0d;
+            foreach (ChartTextRunOverride run in line)
+            {
+                resolver?.CancellationToken.ThrowIfCancellationRequested();
+                var metrics = await measure.MeasureTextLineBoxAsync(run.Text, style.Merge(run.TextStyle)).ConfigureAwait(false);
+                ascent = Math.Max(ascent, metrics.Ascent);
+                descent = Math.Max(descent, metrics.Height - metrics.Ascent);
+                lineHeight = Math.Max(lineHeight, metrics.Height);
+            }
+            lines.Add(new(line.ToArray(), height + ascent));
+            height += hasLineBreaks ? ascent + descent : lineHeight;
+            nextLine = line.Key + 1;
+        }
+        return (style, lines, height);
     }
 
     private static ChartTextStyle ReadChartTitleTextStyle(PptxTheme theme, PptxSceneChart sceneChart)

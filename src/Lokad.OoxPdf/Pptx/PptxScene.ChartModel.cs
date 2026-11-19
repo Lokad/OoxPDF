@@ -718,7 +718,8 @@ internal sealed record PptxSceneChartTextRun(
     string Text,
     PptxSceneChartTextStyleOverride TextStyle,
     string? HyperlinkClickId = null,
-    string? HyperlinkClickAction = null);
+    string? HyperlinkClickAction = null,
+    int LineIndex = 0);
 
 internal enum PptxSceneChartDataLabelPosition
 {
@@ -1320,7 +1321,10 @@ internal sealed record PptxSceneChartTitle(
     PptxSceneChartManualLayout Layout,
     PptxSceneChartShapeStyle ShapeStyle,
     PptxSceneChartTextBodyProperties TextBodyProperties,
-    PptxSceneChartTextStyleOverride TextStyle);
+    PptxSceneChartTextStyleOverride TextStyle)
+{
+    public bool HasMultipleTextLines => TextRuns.Count != 0 && TextRuns[^1].LineIndex > 0;
+}
 
 internal sealed record PptxSceneChartLegend(
     PptxSceneChartLegendPosition PositionKind,

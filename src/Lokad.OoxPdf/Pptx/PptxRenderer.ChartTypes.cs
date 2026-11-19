@@ -488,7 +488,8 @@ internal sealed partial class PptxRenderer
         public static ChartDataLabelLeaderLines Empty { get; } = new(IsDefined: false, Stroke: null);
     }
 
-    private readonly record struct ChartTextRunOverride(string Text, ChartTextStyleOverride TextStyle, string? HyperlinkClickId = null, string? HyperlinkClickAction = null);
+    private readonly record struct ChartTextRunOverride(string Text, ChartTextStyleOverride TextStyle,
+        string? HyperlinkClickId = null, string? HyperlinkClickAction = null, int LineIndex = 0);
 
     private readonly record struct ChartTextRunLink(TextRun Run, string? RelationshipId, string? Action);
 
