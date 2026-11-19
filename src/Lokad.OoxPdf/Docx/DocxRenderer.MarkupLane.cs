@@ -277,17 +277,32 @@ internal sealed partial class DocxRenderer
     {
         DocxOccupiedLineBox? fillLineBox = TryResolveBodyCommentLineBoxes(line, paragraph, fontResources,
             markupContext, cancellationToken, out var measuredBox, out var textLineBox) ? measuredBox : null;
+        double emissionXOffset = ResolveTextEmissionXOffset(markupContext);
+        double baselineY = line.BaselineY - ResolveTextEmissionBaselineOffset(markupContext);
         foreach (DocxInlineReference reference in paragraph.InlineReferences.Where(reference => reference.Kind == DocxRelatedStoryKind.Comment))
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (!markupContext.IsCommentMarkupVisible(paragraph, reference)) continue;
             DocxCommentRange? range = paragraph.CommentRanges.FirstOrDefault(range =>
                 string.Equals(range.Id, reference.Id, StringComparison.Ordinal));
+            if (range is not null && TryResolveFractionNumeratorCommentPoint(line, range, out double pointX))
+            {
+                // Word prints a point at a numerator-only annotation of an
+                // inline fraction. The brackets still follow its vertical frame.
+                var (above, below) = DocxInlineLineGeometry.VerticalExtents(line);
+                double center = pointX + emissionXOffset;
+                int authorSlot = ResolveCommentAuthorSlot(markupContext.CommentAuthorPaletteSlots, reference.Id);
+                DocxMarkupBalloonRgb stroke = CommentAuthorStrokeRgb(authorSlot);
+                graphics.SetStrokeRgb(stroke.Red, stroke.Green, stroke.Blue);
+                PaintWordCompatibleCommentGlyphBrackets(graphics, new PdfRectangle(
+                    center - CommentGlyphBracketStrokePoints, baselineY - below,
+                    2d * CommentGlyphBracketStrokePoints, above + below));
+                continue;
+            }
             if (range is not null &&
-                TryResolveWordCompatibleCommentRangeBounds(line, range, ResolveTextEmissionXOffset(markupContext),
+                TryResolveWordCompatibleCommentRangeBounds(line, range, emissionXOffset,
                     out double startX, out double endX, out var sourceBounds))
             {
-                double baselineY = line.BaselineY - ResolveTextEmissionBaselineOffset(markupContext);
                 int authorSlot = ResolveCommentAuthorSlot(markupContext.CommentAuthorPaletteSlots, reference.Id);
                 var (above, below) = DocxInlineLineGeometry.VerticalExtents(line);
                 PdfRectangle? fill = fillLineBox is { } box && double.IsFinite(sourceBounds.Start) &&
@@ -301,9 +316,8 @@ internal sealed partial class DocxRenderer
                     usesExactFrame: DocxInlineLineGeometry.TryGetExactBodyLineBox(line, out _), fillRectangle: fill, glyphRectangle: glyphs);
             }
             else if ((range is null || !HasCommentRangeBounds(range)) &&
-                TryResolveWordCompatibleCommentReferenceMarkerBounds(line, reference, ResolveTextEmissionXOffset(markupContext), out startX, out endX))
+                TryResolveWordCompatibleCommentReferenceMarkerBounds(line, reference, emissionXOffset, out startX, out endX))
             {
-                double baselineY = line.BaselineY - ResolveTextEmissionBaselineOffset(markupContext);
                 int authorSlot = ResolveCommentAuthorSlot(markupContext.CommentAuthorPaletteSlots, reference.Id);
                 RenderWordCompatibleCommentRangeMarker(startX, endX, baselineY, graphics, CommentAuthorFillRgb(authorSlot), CommentAuthorStrokeRgb(authorSlot));
             }
@@ -538,19 +552,7 @@ internal sealed partial class DocxRenderer
         graphics.SetFillRgb(strokeRgb.Red, strokeRgb.Green, strokeRgb.Blue);
         if (glyphRectangle is { } glyphs)
         {
-            // Word's prose brackets keep a physical stroke across print scales.
-            // Their natural font box and source endpoints do not inherit the
-            // selection's authored spacing or the legacy object-marker offsets.
-            const double stroke = 0.14d;
-            double left = glyphs.X, right = glyphs.X + glyphs.Width;
-            double bottom = glyphs.Y, top = glyphs.Y + glyphs.Height;
-            graphics.SetLineWidth(stroke);
-            graphics.StrokeLine(left + stroke, bottom - stroke, left, bottom);
-            graphics.StrokeLine(left, bottom, left, top);
-            graphics.StrokeLine(left, top, left + 2d * stroke, top + 2d * stroke);
-            graphics.StrokeLine(right - stroke, bottom - stroke, right, bottom);
-            graphics.StrokeLine(right, bottom, right, top);
-            graphics.StrokeLine(right, top, right - 2d * stroke, top + 2d * stroke);
+            PaintWordCompatibleCommentGlyphBrackets(graphics, glyphs);
             return;
         }
         graphics.SetLineWidth(WordCompatibleAllMarkupCommentRangeStrokeWidthPoints);
@@ -576,6 +578,23 @@ internal sealed partial class DocxRenderer
             topTickY,
             endX,
             topTickY);
+    }
+
+    private const double CommentGlyphBracketStrokePoints = 0.14d;
+
+    private static void PaintWordCompatibleCommentGlyphBrackets(PdfGraphicsBuilder graphics, PdfRectangle bounds)
+    {
+        // The measured glyph or object frame and a physical stroke own the brackets.
+        const double stroke = CommentGlyphBracketStrokePoints;
+        double left = bounds.X, right = bounds.X + bounds.Width;
+        double bottom = bounds.Y, top = bounds.Y + bounds.Height;
+        graphics.SetLineWidth(stroke);
+        graphics.StrokeLine(left + stroke, bottom - stroke, left, bottom);
+        graphics.StrokeLine(left, bottom, left, top);
+        graphics.StrokeLine(left, top, left + 2d * stroke, top + 2d * stroke);
+        graphics.StrokeLine(right - stroke, bottom - stroke, right, bottom);
+        graphics.StrokeLine(right, bottom, right, top);
+        graphics.StrokeLine(right, top, right - 2d * stroke, top + 2d * stroke);
     }
 
     private static bool ShouldDrawCommentMarkerLabel(DocxMarkupContext markupContext)

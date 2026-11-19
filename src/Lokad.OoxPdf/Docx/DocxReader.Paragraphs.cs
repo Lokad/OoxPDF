@@ -438,9 +438,8 @@ internal sealed partial class DocxReader
                             { InlineItemIndex = inlineItems!.Count, MathSource = bookmark }),
                     readCommentBoundary: sourceEquation.RemoveDeletedText ? null : boundary =>
                     {
-                        // Comment geometry already follows ordered inline items.
-                        // A mathematical subrange owns its containing equation's
-                        // occupied frame; exact argument highlighting is approximate.
+                        // Keep the equation item as the frame owner, even when
+                        // the marker itself belongs to a fraction argument.
                         if (boundary.Name.LocalName == "commentRangeStart")
                             AddCommentRangeStart(boundary, openCommentRanges, sourceRunIndex, runs, inlineItems!.Count);
                         else
@@ -1314,7 +1313,12 @@ internal sealed partial class DocxReader
         openCommentRanges.Add(new DocxCommentRangeStart(
             NormalizeDecimalId((string?)rangeStart.Attribute(WordprocessingNamespace + "id")),
             sourceRunIndex,
-            RelativeRunTextOffset(runs, sourceRunIndex)) { InlineItemIndex = inlineItemIndex });
+            RelativeRunTextOffset(runs, sourceRunIndex))
+        {
+            InlineItemIndex = inlineItemIndex,
+            FractionNumerator = rangeStart.Parent is { } parent && parent.Name == MathNamespace + "num" &&
+                parent.Parent?.Name == MathNamespace + "f" ? parent : null
+        });
     }
 
     private static void AddCommentRangeEnd(
@@ -1340,7 +1344,12 @@ internal sealed partial class DocxReader
             sourceRunIndex,
             RelativeRunTextOffset(runs, sourceRunIndex),
             ReferenceSourceRunIndex: null,
-            ReferenceTextOffset: null) { StartInlineItemIndex = start?.InlineItemIndex, EndInlineItemIndex = inlineItemIndex });
+            ReferenceTextOffset: null)
+        {
+            StartInlineItemIndex = start?.InlineItemIndex,
+            EndInlineItemIndex = inlineItemIndex,
+            InFractionNumerator = start?.FractionNumerator is { } numerator && ReferenceEquals(numerator, rangeEnd.Parent)
+        });
     }
 
     private static void AddRevisionMarker(

@@ -179,6 +179,7 @@ internal sealed record DocxCommentRange(
 {
     public int? StartInlineItemIndex { get; init; }
     public int? EndInlineItemIndex { get; init; }
+    public bool InFractionNumerator { get; init; }
 }
 
 internal sealed record DocxRevisionRange(

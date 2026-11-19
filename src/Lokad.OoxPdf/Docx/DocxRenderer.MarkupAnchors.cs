@@ -204,12 +204,14 @@ internal sealed partial class DocxRenderer
             string.Equals(range.Id, reference.Id, StringComparison.Ordinal));
         if (range is not null)
         {
-            if (UsesWordCompatibleAllMarkupTextProfile(markupContext) &&
-                TryResolveCommentRangeEndAnchor(line, anchorTextLines, paragraph, range, true,
-                    out DocxTextLineLayout anchorLine, out double wordCompatibleRangeEndX))
+            if (UsesWordCompatibleAllMarkupTextProfile(markupContext))
             {
-                return wordCompatibleRangeEndX + ResolveTextEmissionXOffset(markupContext) -
-                    WordCompatibleAllMarkupConnectorBodyAnchorInsetPoints;
+                if (TryResolveFractionNumeratorCommentPoint(line, range, out double pointX))
+                    return pointX + ResolveTextEmissionXOffset(markupContext);
+                if (TryResolveCommentRangeEndAnchor(line, anchorTextLines, paragraph, range, true,
+                    out _, out double wordCompatibleRangeEndX))
+                    return wordCompatibleRangeEndX + ResolveTextEmissionXOffset(markupContext) -
+                        WordCompatibleAllMarkupConnectorBodyAnchorInsetPoints;
             }
 
             if (TryResolveSourceOffsetAnchorX(line, range.StartSourceRunIndex, range.StartTextOffset, out double startX))
@@ -224,6 +226,25 @@ internal sealed partial class DocxRenderer
         }
 
         return ResolveInlineReferenceAnchorX(line, reference) + ResolveTextEmissionXOffset(markupContext);
+    }
+
+    private static bool TryResolveFractionNumeratorCommentPoint(DocxTextLineLayout line, DocxCommentRange range, out double x)
+    {
+        x = 0d;
+        // A standalone inline fraction has a measured leading edge owned by
+        // the whole fraction. Compound equations need argument-local geometry.
+        if (!range.InFractionNumerator || range.StartInlineItemIndex is not int sourceIndex ||
+            line.SourceParagraph?.InlineContent is not { } items || sourceIndex < 0 || sourceIndex >= items.Count ||
+            items[sourceIndex] is not DocxInlineEquation { Equation.Content.Children: [DocxMathFraction] })
+            return false;
+
+        foreach (var extent in line.InlineSourceExtents)
+        {
+            if (extent.ItemIndex != sourceIndex || !extent.IsMath || extent.EndOffset <= extent.StartOffset) continue;
+            x = line.X + extent.StartOffset;
+            return double.IsFinite(x);
+        }
+        return false;
     }
 
     private static IEnumerable<DocxTextLineLayout> EnumerateCommentAnchorSearchLines(

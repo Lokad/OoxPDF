@@ -544,6 +544,7 @@ internal sealed partial class DocxReader
     private sealed record DocxCommentRangeStart(string? Id, int SourceRunIndex, int TextOffset)
     {
         public int? InlineItemIndex { get; init; }
+        public XElement? FractionNumerator { get; init; }
     }
 
     private sealed record DocxRevisionRangeStart(
