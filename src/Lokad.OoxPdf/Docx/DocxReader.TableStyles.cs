@@ -149,7 +149,9 @@ internal sealed partial class DocxReader
         foreach (XElement region in style.Elements(WordprocessingNamespace + "tblStylePr"))
         {
             string? type = (string?)region.Attribute(WordprocessingNamespace + "type");
-            if (type is not null)
+            // Word discards wholeTable declarations. They also must not trigger
+            // the source-order restriction on inheriting table properties.
+            if (type is not (null or "wholeTable"))
             {
                 conditional[type] = new(
                     ReadTableCellStyle(region.Element(WordprocessingNamespace + "tcPr"),

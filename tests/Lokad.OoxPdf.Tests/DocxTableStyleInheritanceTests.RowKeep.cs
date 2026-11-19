@@ -30,13 +30,20 @@ internal static partial class DocxTableStyleInheritanceTests
         string firstKeep = Region("firstRow", keep);
         string lastKeep = Region("lastRow", keep);
         string bandKeep = Region("band1Horz", keep);
+        const string shading = """<w:tcPr><w:shd w:val="clear" w:fill="AABBCC"/></w:tcPr>""";
+        string ignoredWholeTable = Region("wholeTable", shading);
+        string baseKeep = Style("Base", keep);
         string intro = string.Concat(Enumerable.Range(1, 4).Select(n => Line($"Intro{n}")));
         string row = string.Concat(Enumerable.Range(1, 6).Select(n => Line($"Row{n}")));
         foreach (var source in new (string Name, string Styles, string? StyleId, string RowProperties, string Look, string? EffectiveToken)[]
         {
             ("direct keep", Style("Probe", ""), "Probe", keep, first, "1"),
             ("named keep", Style("Probe", keep), "Probe", "", first, "1"),
-            ("inherited keep", Style("Base", keep) + Child(""), "Probe", "", first, "1"),
+            ("inherited keep", baseKeep + Child(""), "Probe", "", first, "1"),
+            ("forward parent with empty child", Child("") + baseKeep, "Probe", "", first, "1"),
+            ("forward parent with ignored whole-table condition", Child(ignoredWholeTable) + baseKeep, "Probe", "", first, "1"),
+            ("earlier parent with ignored whole-table condition", baseKeep + Child(ignoredWholeTable), "Probe", "", first, "1"),
+            ("forward parent with active row condition", Child(ignoredWholeTable + Region("firstRow", shading)) + baseKeep, "Probe", "", first, null),
             ("default keep", Style("Probe", keep, isDefault: true), null, "", first, "1"),
             ("conditional keep", Style("Probe", split + firstKeep), "Probe", "", first, "1"),
             ("inherited conditional keep", Style("Base", firstKeep) +
@@ -48,7 +55,7 @@ internal static partial class DocxTableStyleInheritanceTests
             ("disabled condition", Style("Probe", firstKeep), "Probe", "", noFirst, null),
             ("explicit row membership", Style("Probe", firstKeep), "Probe", noFirstRow, first, null),
             ("cell condition", Style("Probe", Region("firstCol", keep)), "Probe", "", first, null),
-            ("child overrides base keep", Style("Base", keep) + Child(split), "Probe", "", first, "0"),
+            ("child overrides base keep", baseKeep + Child(split), "Probe", "", first, "0"),
             ("direct override", Style("Probe", firstKeep), "Probe", split, first, "0"),
             ("no keep", Style("Probe", ""), "Probe", "", first, null)
         })
