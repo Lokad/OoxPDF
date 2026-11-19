@@ -8,10 +8,13 @@ param(
     [ValidateSet('Both','Final','Review')] [string] $DocxPreset = 'Both'
 )
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'CompositionOutcomes.ps1')
 $output = [IO.Path]::GetFullPath($OutputDirectory)
 if (Test-Path -LiteralPath $output) { throw 'A fresh joined portfolio directory is required' }
+$manifestBytes = [IO.File]::ReadAllBytes((Resolve-Path -LiteralPath $Manifest).Path)
+$documents = ConvertFrom-Json -AsHashtable -InputObject ([Text.Encoding]::UTF8.GetString($manifestBytes).TrimStart([char]0xFEFF))
 $cases = @{}
-foreach ($case in @(Get-Content -LiteralPath $Manifest -Raw | ConvertFrom-Json)) {
+foreach ($case in @($documents)) {
     if ($case.Id -cnotmatch '^[a-z0-9]+(?:-[a-z0-9]+)*$' -or $cases.ContainsKey($case.Id)) { throw 'Invalid or duplicate manifest ID' }
     $cases[$case.Id] = $case
 }
@@ -34,35 +37,55 @@ foreach ($directory in $SourceDirectory) {
     $used = $false
     foreach ($row in $report.Rows) {
         if (!$cases.ContainsKey($row.Id)) { continue }
-        if ($row.Mode -notin @('final-preserve','all-word-compatible','presentation')) { throw 'Unknown outcome mode' }
-        if ($row.Mode -ne 'presentation' -and $DocxPreset -ne 'Both' -and
-            $row.Mode -ne $(if ($DocxPreset -eq 'Final') {'final-preserve'} else {'all-word-compatible'})) { continue }
-        if ($row.InputSha256 -ne $cases[$row.Id].Sha256) { throw ('Input identity differs: ' + $row.Id) }
+        $case = $cases[$row.Id]
+        $key = $row.Id + '-' + $row.Mode
+        if ($row.Mode -cnotin (Get-PortfolioModes $case 'Both')) { throw ('Outcome mode does not match the input format: ' + $key) }
+        if ($row.Mode -cnotin (Get-PortfolioModes $case $DocxPreset)) { continue }
+        if ($row.Id -cne $case.Id -or $row.InputSha256 -ne $case.Sha256) { throw ('Input identity differs: ' + $row.Id) }
         $identity = @($report.LibrarySha256,$report.CliSha256,$report.InspectorSha256)
         if (@($identity | Where-Object { !$_ }).Count) { throw 'Source runtime identities are incomplete' }
         if ($null -eq $runtime) { $runtime = $identity }
         elseif (@(Compare-Object $runtime $identity -SyncWindow 0).Count) { throw 'Join outcomes from one frozen runtime and inspector' }
-        $key = $row.Id + '-' + $row.Mode
         $run = Join-Path $source $key
         if ($jobs.Contains($key)) {
             throw ('Conflicting duplicate outcome; select one source report: ' + $key)
         }
-        $copies = @()
-        foreach ($name in $files) {
-            $path = Join-Path $run $name
-            if (Test-Path -LiteralPath $path -PathType Leaf) {
-                $copies += [pscustomobject]@{Name=$name;Path=$path;Hash=(Get-FileHash -LiteralPath $path).Hash}
-            }
-        }
-        $pdf = $copies | Where-Object Name -CEQ 'candidate.pdf'
-        if (!$pdf -or $pdf.Hash -cne $row.PdfSha256) { throw ('Candidate identity differs: ' + $key) }
-        if (!($copies.Name -contains 'inspect.log')) { throw ('Inspection log is missing: ' + $key) }
-        $operations = $copies | Where-Object Name -CEQ 'inspect/text-operations.json'
+        $textPath = Join-Path $run 'inspect/text-operations.json'
         if (!$row.TextOperationsSha256) {
             throw ('Text inspection identity is missing; reinspect the candidate PDF: ' + $key)
         }
-        if (!$operations -or $operations.Hash -cne $row.TextOperationsSha256) {
-            throw ('Candidate text inspection differs: ' + $key)
+        if (!(Test-Path -LiteralPath $textPath -PathType Leaf)) { throw ('Candidate text inspection is missing: ' + $key) }
+        $textInspection = Read-PortfolioTextOperations $textPath $key
+        if ($textInspection.Hash -cne $row.TextOperationsSha256) { throw ('Candidate text inspection differs: ' + $key) }
+        $expectations = Get-PortfolioContentExpectations $case $row.Mode
+        $missing = @(Get-MissingPortfolioText $textInspection.Operations $expectations.Text)
+        if ($row.MissingExpectedText -isnot [Array] -or
+            ![Linq.Enumerable]::SequenceEqual[string]([string[]]$row.MissingExpectedText, [string[]]$missing, [StringComparer]::Ordinal) -or
+            $row.ExpectedSourceEquations -ne $expectations.Equations -or $row.HeldOut -ne $case.HeldOut) {
+            throw ('Content expectations differ; reinspect the candidate under the requested manifest: ' + $key)
+        }
+        $diagnosticsPath = Join-Path $run 'diagnostics.json'
+        if (!(Test-Path -LiteralPath $diagnosticsPath -PathType Leaf)) { throw ('Candidate diagnostics are missing: ' + $key) }
+        $diagnosticsHash = Get-VerifiedDiagnosticsHash $diagnosticsPath $row.Diagnostics $key
+        if ($row.IgnoredEquationDiagnostics -ne (Get-PortfolioIgnoredEquationCount $row.Diagnostics)) {
+            throw ('Retained equation diagnostic count differs: ' + $key)
+        }
+        $copies = @(foreach ($name in $files) {
+            $path = Join-Path $run $name
+            if (Test-Path -LiteralPath $path -PathType Leaf) {
+                $hash = switch ($name) {
+                    'inspect/text-operations.json' { $textInspection.Hash }
+                    'diagnostics.json' { $diagnosticsHash }
+                    default { (Get-FileHash -LiteralPath $path).Hash }
+                }
+                [pscustomobject]@{Name=$name;Path=$path;Hash=$hash}
+            }
+        })
+        $pdf = $copies | Where-Object Name -CEQ 'candidate.pdf'
+        if (!$pdf -or $pdf.Hash -cne $row.PdfSha256) { throw ('Candidate identity differs: ' + $key) }
+        if (!($copies.Name -contains 'inspect.log')) { throw ('Inspection log is missing: ' + $key) }
+        if ('inspect/text-operations.json' -cnotin $copies.Name -or 'diagnostics.json' -cnotin $copies.Name) {
+            throw ('Candidate inspection or diagnostics disappeared: ' + $key)
         }
         $jobs[$key] = [pscustomobject]@{Row=$row;Source=$source;Copies=$copies;Report=$reportPath;ReportHash=$reportHash}
         $used = $true
@@ -70,11 +93,7 @@ foreach ($directory in $SourceDirectory) {
     if ($used) { $reports += $reportPath }
 }
 foreach ($case in $cases.Values) {
-    $modes = if ($case.Input.EndsWith('.docx',[StringComparison]::OrdinalIgnoreCase)) {
-        if ($DocxPreset -eq 'Both') { @('final-preserve','all-word-compatible') }
-        elseif ($DocxPreset -eq 'Final') { @('final-preserve') } else { @('all-word-compatible') }
-    } else { @('presentation') }
-    foreach ($mode in $modes) {
+    foreach ($mode in (Get-PortfolioModes $case $DocxPreset)) {
         if (!$jobs.Contains($case.Id+'-'+$mode)) { throw ('Measured outcome is missing: ' + $case.Id+'/'+$mode) }
     }
 }
@@ -98,7 +117,7 @@ foreach ($key in $jobs.Keys) {
 }
 [ordered]@{
     LibrarySha256=$runtime[0];CliSha256=$runtime[1];InspectorSha256=$runtime[2]
-    ManifestSha256=(Get-FileHash -LiteralPath $Manifest).Hash;Rebuilt=$false;DocxPreset=$DocxPreset
+    ManifestSha256=[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($manifestBytes));Rebuilt=$false;DocxPreset=$DocxPreset
     InspectionMode='SummariesOnly';NewConversions=0;SourceReports=$reports
     MeasurementScope='Joined prior measured outcomes; original classifications/provenance retained. No new conversion or content/visual pass.'
     Rows=$rows

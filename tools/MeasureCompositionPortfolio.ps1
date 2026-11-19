@@ -10,8 +10,9 @@ param(
     [string] $ReuseCandidateDirectory
 )
 $ErrorActionPreference = 'Stop'
-. (Join-Path $PSScriptRoot 'PdfTextGeometry.ps1')
+. (Join-Path $PSScriptRoot 'CompositionOutcomes.ps1')
 $measurementScriptHash = (Get-FileHash -LiteralPath $PSCommandPath).Hash
+$outcomeHelperHash = (Get-FileHash -LiteralPath (Join-Path $PSScriptRoot 'CompositionOutcomes.ps1')).Hash
 $textAssemblyHash = (Get-FileHash -LiteralPath (Join-Path $PSScriptRoot 'PdfTextGeometry.ps1')).Hash
 $repo = Split-Path -Parent $PSScriptRoot
 $cli = (Resolve-Path -LiteralPath $CliPath).Path
@@ -24,37 +25,14 @@ if (Test-Path -LiteralPath $OutputDirectory) { throw 'A fresh portfolio output d
 # Resolve every input before any conversion or output publication. A late stale
 # path must not invalidate an otherwise completed batch of expensive conversions.
 $ids = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
-$jobs = @(foreach ($document in @(Get-Content -LiteralPath $Manifest -Raw | ConvertFrom-Json)) {
+$manifestBytes = [IO.File]::ReadAllBytes((Resolve-Path -LiteralPath $Manifest).Path)
+$documents = ConvertFrom-Json -AsHashtable -InputObject ([Text.Encoding]::UTF8.GetString($manifestBytes).TrimStart([char]0xFEFF))
+$jobs = @(foreach ($document in @($documents)) {
     if (!$ids.Add($document.Id)) { throw ('Duplicate portfolio ID: ' + $document.Id) }
     $inputPath = (Resolve-Path -LiteralPath (Join-Path $repo $document.Input)).Path
     if ((Get-FileHash -LiteralPath $inputPath).Hash -ne $document.Sha256) { throw ('Portfolio input differs: ' + $document.Id) }
     [pscustomobject]@{Document=$document;InputPath=$inputPath}
 })
-function Get-PortfolioModes($Document) {
-    if (!$Document.Input.EndsWith('.docx', [StringComparison]::OrdinalIgnoreCase)) { return @('presentation') }
-    if ($DocxPreset -eq 'Final') { return @('final-preserve') }
-    if ($DocxPreset -eq 'Review') { return @('all-word-compatible') }
-    return @('final-preserve','all-word-compatible')
-}
-function Get-VerifiedDiagnosticsHash([string] $Path, $Outcome, [string] $Id) {
-    $retained = $Outcome.PSObject.Properties['Diagnostics']
-    if (!$retained -or $retained.Value -isnot [Array]) { throw ('Retained diagnostics are missing or not an array: ' + $Id) }
-    # Compare semantic JSON values, but pin the exact bytes read in that check.
-    # This accepts formatting/property-order differences without trusting a stale
-    # sidecar or hashing a different file version after parsing it.
-    $bytes = [IO.File]::ReadAllBytes($Path)
-    $text = [Text.Encoding]::UTF8.GetString($bytes)
-    if ($text.Length -and $text[0] -eq [char]0xFEFF) { $text = $text.Substring(1) }
-    try {
-        $actual = [Text.Json.Nodes.JsonNode]::Parse($text)
-        $expected = [Text.Json.Nodes.JsonNode]::Parse((ConvertTo-Json -InputObject $retained.Value -Depth 12 -Compress))
-    }
-    catch { throw ('Reused diagnostics are invalid: ' + $Id) }
-    if ($actual -isnot [Text.Json.Nodes.JsonArray] -or ![Text.Json.Nodes.JsonNode]::DeepEquals($actual, $expected)) {
-        throw ('Reused diagnostics differ from the retained outcome: ' + $Id)
-    }
-    return [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($bytes))
-}
 $priorByKey = @{}
 $priorDiagnosticsHashes = @{}
 $priorPath = $null
@@ -74,7 +52,7 @@ if ($ReuseCandidateDirectory) {
     }
     # Verify the complete selected batch before copying PDFs or inspecting any.
     foreach ($job in $jobs) {
-        foreach ($mode in @(Get-PortfolioModes $job.Document)) {
+        foreach ($mode in @(Get-PortfolioModes $job.Document $DocxPreset)) {
             $key = $job.Document.Id + '-' + $mode
             $row = $priorByKey[$key]
             if (!$row -or $row.InputSha256 -ne $job.Document.Sha256) { throw ('Reused input differs: ' + $key) }
@@ -87,7 +65,7 @@ if ($ReuseCandidateDirectory) {
             if ((Get-FileHash -LiteralPath (Join-Path $source 'candidate.pdf')).Hash -ne $row.PdfSha256) {
                 throw ('Reused PDF differs: ' + $key)
             }
-            $priorDiagnosticsHashes[$key] = Get-VerifiedDiagnosticsHash -Path (Join-Path $source 'diagnostics.json') -Outcome $row -Id $key
+            $priorDiagnosticsHashes[$key] = Get-VerifiedDiagnosticsHash -Path (Join-Path $source 'diagnostics.json') -Diagnostics $row.Diagnostics -Id $key
         }
     }
 }
@@ -96,19 +74,14 @@ $output = (Resolve-Path -LiteralPath $OutputDirectory).Path
 $rows = @()
 $conversions = 0
 $reusedCandidates = 0
-function Normalize-Text([string] $Text) {
-    [regex]::Replace($Text.Normalize([Text.NormalizationForm]::FormKC), '\s+', ' ').Trim()
-}
 foreach ($job in $jobs) {
     $document = $job.Document
     $inputPath = $job.InputPath
     # Retain identity checks in case a source changes after preflight.
     if ((Get-FileHash -LiteralPath $inputPath).Hash -ne $document.Sha256) { throw ('Portfolio input differs: ' + $document.Id) }
-    $modes = @(Get-PortfolioModes $document)
+    $modes = @(Get-PortfolioModes $document $DocxPreset)
     foreach ($mode in $modes) {
-        $modeExpected = if ($document.ExpectedByMode) { $document.ExpectedByMode.PSObject.Properties[$mode].Value } else { $null }
-        $expectedText = if ($modeExpected -and $modeExpected.PSObject.Properties['ExpectedText']) { @($modeExpected.ExpectedText) } else { @($document.ExpectedText) }
-        $expectedEquations = if ($modeExpected -and $modeExpected.PSObject.Properties['ExpectedEquationCount']) { $modeExpected.ExpectedEquationCount } else { $document.ExpectedEquationCount }
+        $expectations = Get-PortfolioContentExpectations $document $mode
         $run = Join-Path $output ($document.Id + '-' + $mode)
         New-Item -ItemType Directory -Path $run | Out-Null
         $pdf = Join-Path $run 'candidate.pdf'
@@ -154,18 +127,14 @@ foreach ($job in $jobs) {
         if (!(Test-Path -LiteralPath $textReport -PathType Leaf)) {
             throw ('Portfolio inspection did not publish text operations: ' + $document.Id + '/' + $mode)
         }
-        $operationsBytes = [IO.File]::ReadAllBytes($textReport)
-        $operations = ConvertFrom-Json -NoEnumerate -InputObject ([Text.Encoding]::UTF8.GetString($operationsBytes).TrimStart([char]0xFEFF))
-        if ($operations -isnot [Array]) { throw ('Invalid portfolio text operations: ' + $document.Id + '/' + $mode) }
-        $operationsHash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($operationsBytes))
+        $textInspection = Read-PortfolioTextOperations $textReport ($document.Id + '/' + $mode)
         if ((Get-FileHash -LiteralPath $pdf).Hash -ne $pdfHash) {
             throw ('Candidate PDF changed during inspection: ' + $document.Id + '/' + $mode)
         }
         # Page objects count image-only and blank pages even with an empty text report.
         $pageCount = @(Get-Content -LiteralPath (Join-Path $run 'inspect.log') | Where-Object { $_ -match '^\d+ \d+ obj: page$' }).Count
         if ($pageCount -lt 1) { throw ('No inspected PDF pages: ' + $document.Id) }
-        $text = Normalize-Text (Join-DecodedPdfTextPages $operations)
-        $missing = @($expectedText | Where-Object { !$text.Contains((Normalize-Text $_), [StringComparison]::Ordinal) })
+        $missing = @(Get-MissingPortfolioText $textInspection.Operations $expectations.Text)
         if ($ReuseCandidateDirectory) {
             if ((Get-FileHash -LiteralPath $diagnosticsPath).Hash -ne $priorDiagnosticsHashes[$key] -or
                 (Get-FileHash -LiteralPath (Join-Path $source 'diagnostics.json')).Hash -ne $priorDiagnosticsHashes[$key] -or
@@ -175,13 +144,13 @@ foreach ($job in $jobs) {
             $diagnostics = @($priorRow.Diagnostics)
         }
         else { $diagnostics = @(Get-Content -LiteralPath $diagnosticsPath -Raw | ConvertFrom-Json) }
-        $ignoredMath = @($diagnostics | Where-Object { $_.Id -eq 'DOCX_UNSUPPORTED_EQUATION' }).Count
+        $ignoredMath = Get-PortfolioIgnoredEquationCount $diagnostics
         $rows += [ordered]@{
             Id=$document.Id;Mode=$mode;HeldOut=$document.HeldOut;InputSha256=$document.Sha256
-            PdfSha256=$pdfHash;TextOperationsSha256=$operationsHash;ColdProcessElapsedMs=$elapsedMs
+            PdfSha256=$pdfHash;TextOperationsSha256=$textInspection.Hash;ColdProcessElapsedMs=$elapsedMs
             MissingExpectedText=$missing;IgnoredEquationDiagnostics=$ignoredMath
-            ExpectedSourceEquations=$expectedEquations
-            MathematicalTextOperations=@($operations | Where-Object Font -Like 'Eq*').Count
+            ExpectedSourceEquations=$expectations.Equations
+            MathematicalTextOperations=@($textInspection.Operations | Where-Object Font -Like 'Eq*').Count
             InspectedPages=$pageCount
             Diagnostics=$diagnostics;VisualStatus='Pending independent Office comparison; no visual pass claimed'
             Severity=if ($missing.Count -or $ignoredMath) {'Content blocker'} else {'Needs geometry and visual review'}
@@ -192,9 +161,9 @@ foreach ($job in $jobs) {
     }
 }
 [ordered]@{
-    MeasurementScriptSha256=$measurementScriptHash;TextAssemblyHelperSha256=$textAssemblyHash
+    MeasurementScriptSha256=$measurementScriptHash;OutcomeHelperSha256=$outcomeHelperHash;TextAssemblyHelperSha256=$textAssemblyHash
     LibrarySha256=$libraryHash;CliSha256=$cliHash;InspectorSha256=$inspectorHash
-    ManifestSha256=(Get-FileHash -LiteralPath $Manifest).Hash;Rebuilt=$false;DocxPreset=$DocxPreset
+    ManifestSha256=[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($manifestBytes));Rebuilt=$false;DocxPreset=$DocxPreset
     InspectionMode=if ($IncludeRawStreams) {'SummariesAndRawStreams'} else {'SummariesOnly'}
     Conversions=$conversions;ReusedCandidates=$reusedCandidates
     ReusedOutcomes=$priorPath;ReusedOutcomesSha256=$priorHash

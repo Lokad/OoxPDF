@@ -7,7 +7,9 @@ if (Test-Path -LiteralPath $OutputDirectory) { throw 'Use a fresh test directory
 New-Item -ItemType Directory -Path $OutputDirectory | Out-Null
 $root = (Resolve-Path -LiteralPath $OutputDirectory).Path
 $manifest = Join-Path $root 'manifest.json'
-@(@{Id='one';Input='one.docx';Sha256=('A'*64)},@{Id='two';Input='two.docx';Sha256=('B'*64)}) |
+$cases = @(@{Id='one';Input='one.docx';Sha256=('A'*64);ExpectedText=@('retained raw flag');ExpectedEquationCount=0},
+           @{Id='two';Input='two.docx';Sha256=('B'*64);ExpectedText=@('retained raw flag');ExpectedEquationCount=0})
+$cases |
     ConvertTo-Json | Set-Content -LiteralPath $manifest
 $sources = @()
 $rejections = @()
@@ -25,7 +27,7 @@ foreach ($id in @('one','two')) {
         @{Id=$id;Mode='all-word-compatible';InputSha256=$(if ($id -eq 'one') {'A'*64} else {'B'*64});
           PdfSha256=(Get-FileHash (Join-Path $run 'candidate.pdf')).Hash;
           TextOperationsSha256=(Get-FileHash (Join-Path $run 'inspect/text-operations.json')).Hash;
-          MissingExpectedText=@('retained raw flag')}
+          MissingExpectedText=@('retained raw flag');ExpectedSourceEquations=0;Diagnostics=@();IgnoredEquationDiagnostics=0}
     )} | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $source 'outcomes.json')
     $sources += $source
 }
@@ -73,6 +75,27 @@ try {
     $legacy | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $report
     Reject 'legacy-text-inspection' 'reinspect the candidate PDF'
     [IO.File]::WriteAllBytes($report, $bytes)
+    $sidecar = Join-Path $sources[1] 'two-all-word-compatible/diagnostics.json'
+    [IO.File]::WriteAllText($sidecar, '[{"Id":"DOCX_UNSUPPORTED_EQUATION"}]')
+    Reject 'stale-diagnostics' 'Reused diagnostics differ from the retained outcome'
+    [IO.File]::WriteAllText($sidecar, ' [ ] ')
+    $changedManifest = Join-Path $root 'changed-manifest.json'
+    $caseOverride = $cases[1].Clone()
+    $caseOverride.ExpectedByMode = @{'all-word-compatible'=@{ExpectedText=@('new required phrase')}}
+    @($cases[0],$caseOverride) | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $changedManifest
+    Reject 'changed-text-expectations' 'Content expectations differ' $sources $changedManifest
+    $caseOverride.ExpectedByMode = @{'all-word-compatible'=@{ExpectedEquationCount=7}}
+    @($cases[0],$caseOverride) | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $changedManifest
+    Reject 'changed-equation-expectation' 'Content expectations differ' $sources $changedManifest
+    $subsetManifest = Join-Path $root 'review-subset-manifest.json'
+    $caseOverride.ExpectedText = @('different Final phrase')
+    $caseOverride.ExpectedByMode = @{'all-word-compatible'=@{ExpectedText=@('retained raw flag')}}
+    $caseOverride | ConvertTo-Json -AsArray -Depth 6 | Set-Content -LiteralPath $subsetManifest
+    Join 'review-subset' $sources $subsetManifest
+    $subset = Get-Content -LiteralPath (Join-Path $root 'review-subset/outcomes.json') -Raw | ConvertFrom-Json
+    if ($subset.Rows.Count -ne 1 -or $subset.Rows[0].Id -cne 'two' -or $subset.ManifestSha256 -cne (Get-FileHash -LiteralPath $subsetManifest).Hash) {
+        throw 'The requested Review expectation or subset identity differs'
+    }
     $changed = Get-Content -LiteralPath $report -Raw | ConvertFrom-Json
     $changed.LibrarySha256 = 'F'*64
     $changed | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $report
@@ -97,9 +120,10 @@ try {
     Reject 'identical-distinct-reports' 'Conflicting duplicate outcome' @($sources[0],$sources[1],$duplicate)
     $duplicateReport = Join-Path $duplicate 'outcomes.json'
     $duplicateData = Get-Content -LiteralPath $duplicateReport -Raw | ConvertFrom-Json -AsHashtable
-    $duplicateData.Rows[0].MissingExpectedText = @('content blocker')
+    $duplicateData.Rows[0].Diagnostics = @(@{Id='DOCX_UNSUPPORTED_EQUATION'})
     $duplicateData.Rows[0].IgnoredEquationDiagnostics = 1
     $duplicateData.Rows[0].Severity = 'Content blocker'
+    [IO.File]::WriteAllText((Join-Path $duplicate 'two-all-word-compatible/diagnostics.json'), '[{"Id":"DOCX_UNSUPPORTED_EQUATION"}]')
     $duplicateData | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $duplicateReport
     Reject 'equal-pdf-clear-first' 'Conflicting duplicate outcome' @($sources[0],$sources[1],$duplicate)
     Reject 'equal-pdf-blocker-first' 'Conflicting duplicate outcome' @($sources[0],$duplicate,$sources[1])
@@ -139,7 +163,9 @@ try {
     $finalOnly = Get-Content -LiteralPath (Join-Path $root 'final/outcomes.json') -Raw | ConvertFrom-Json
     if ($finalOnly.Rows.Count -ne 2 -or @($finalOnly.Rows | Where-Object Mode -NE 'final-preserve').Count) { throw 'Final selection differs' }
     $presentationManifest = Join-Path $root 'presentation-manifest.json'
-    @(@{Id='one';Input='one.pptx';Sha256=('A'*64)}) | ConvertTo-Json -AsArray | Set-Content -LiteralPath $presentationManifest
+    $presentationCase = $cases[0].Clone()
+    $presentationCase.Input = 'one.pptx'
+    $presentationCase | ConvertTo-Json -AsArray | Set-Content -LiteralPath $presentationManifest
     $presentationSource = Join-Path $root 'presentation-source'
     Copy-Item -LiteralPath $sources[0] -Destination $presentationSource -Recurse
     $presentationData = Get-Content -LiteralPath (Join-Path $presentationSource 'outcomes.json') -Raw | ConvertFrom-Json -AsHashtable
@@ -150,6 +176,13 @@ try {
     Join 'presentation' @($presentationSource) $presentationManifest
     $presentation = Get-Content -LiteralPath (Join-Path $root 'presentation/outcomes.json') -Raw | ConvertFrom-Json
     if ($presentation.Rows.Count -ne 1 -or $presentation.Rows[0].Mode -ne 'presentation') { throw 'Presentation selection differs' }
+    $docxData = Get-Content -LiteralPath (Join-Path $sources[0] 'outcomes.json') -Raw | ConvertFrom-Json -AsHashtable
+    $docxData.Rows += $presentationData.Rows[0]
+    $docxData | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $presentationSource 'outcomes.json')
+    Reject 'pptx-mode-on-docx' 'Outcome mode does not match the input format' @($presentationSource,$sources[1])
+    $docxData.Rows = @($presentationData.Rows[0],$docxData.Rows[1])
+    $docxData | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $presentationSource 'outcomes.json')
+    Reject 'unselected-docx-mode-on-pptx' 'Outcome mode does not match the input format' @($presentationSource) $presentationManifest
 }
 finally { Remove-Item Function:\dotnet }
 [ordered]@{Rejections=$rejections;Builds=0;Conversions=0;RunnerInvocations=0} |

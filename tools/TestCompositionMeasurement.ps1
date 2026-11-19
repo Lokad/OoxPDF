@@ -14,7 +14,9 @@ $tools = Join-Path $repo 'tools'
 New-Item -ItemType Directory -Path $tools -Force | Out-Null
 $script = Join-Path $tools 'MeasureCompositionPortfolio.ps1'
 Copy-Item -LiteralPath $MeasurementScript -Destination $script
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'PdfTextGeometry.ps1') -Destination (Join-Path $tools 'PdfTextGeometry.ps1')
+foreach ($dependency in @('CompositionOutcomes.ps1','PdfTextGeometry.ps1')) {
+    Copy-Item -LiteralPath (Join-Path $PSScriptRoot $dependency) -Destination (Join-Path $tools $dependency)
+}
 $cli = Join-Path $repo 'candidate.dll'
 $inspector = Join-Path $repo 'inspector.dll'
 foreach ($file in @($cli, $inspector, (Join-Path $repo 'Lokad.OoxPdf.dll'))) {
