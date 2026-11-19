@@ -59,13 +59,18 @@ internal static class DocxMathParagraphPolicy
 
     // Inline boxes own independent child stories. Prepare their direct children
     // independently of whether the enclosing paragraph contains mathematics.
+    // Note tables use the same inline box placement as other table cells.
     // Nested boxes retain their existing staged placement paths.
     public static IEnumerable<DocxParagraph> EnumerateInlineBoxPreparationCandidates(DocxDocument document, CancellationToken token)
     {
         var parents = DocxBlockTraversal.EnumerateBodyParagraphs(document)
             .Concat(DocxBlockTraversal.EnumerateStaticStorySources(document, token)
                 .Where(story => DocxLayoutEngine.IsStaticStoryVariantEnabled(story.Settings, story.Variant))
-                .SelectMany(story => DocxBlockTraversal.EnumerateBodyParagraphs(story.BodyElements)));
+                .SelectMany(story => DocxBlockTraversal.EnumerateBodyParagraphs(story.BodyElements)))
+            .Concat(document.RelatedStories
+                .Where(story => story.IsNormalStoryType && story.Kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote)
+                .SelectMany(story => story.BodyElements.OfType<DocxTableElement>())
+                .SelectMany(table => EnumerateSupportedTableParagraphs(table.Table, token)));
         var seen = new HashSet<DocxParagraph>(ReferenceEqualityComparer.Instance);
         foreach (var parent in parents)
         {

@@ -17424,6 +17424,7 @@
     "PortableRenderingTableGridOriginsPreserveMixedInlineContent"
   ],
   "docx-inline-box-math": [
+    "=DocxNoteTableInlineBoxesKeepTheirEquationAndProse",
     "DocxComputedFieldBoxes",
     "DocxIgnoredInlineBoxesKeepMeasuredSiblingSourceIndices",
     "DocxInlineBoxFallbackRetainsInvalidFrameAndOwnerGuards",
