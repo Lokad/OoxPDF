@@ -873,188 +873,86 @@ internal static partial class DocxFootnotesTests
 
     public static void DocxLayoutWrapsDocumentEndEndnoteUsingFinalSectionPageWidth()
     {
-        DocxPageSettings wideFirstSection = new(
-            "12240",
-            "12000",
-            null,
-            "1440",
-            "1440",
-            "1440",
-            "1440",
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null);
-        DocxPageSettings narrowFinalSection = new(
-            "4400",
-            "6000",
-            null,
-            "200",
-            "200",
-            "200",
-            "200",
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null);
-        DocxParagraph anchor = DocxTests.CreateDocxLayoutParagraph("Narrow document-end endnote marker", 10d, 12d) with
-        {
-            InlineReferences =
-            [
-                new DocxInlineReference(
-                    DocxRelatedStoryKind.Endnote,
-                    "25",
-                    CustomMarkFollowsValue: null,
-                    DisplayText: "1",
-                    SourceRunIndex: 0,
-                    RunChildIndex: 1,
-                    TextOffsetInRun: 7)
-            ]
-        };
-        DocxParagraph endnoteParagraph = DocxTests.CreateDocxLayoutParagraph("alpha beta gamma delta epsilon zeta eta theta", 10d, 12d);
-        var endnoteStory = new DocxRelatedStory(
-            DocxRelatedStoryKind.Endnote,
-            "/word/endnotes.xml",
-            "25",
-            [new DocxParagraphElement(endnoteParagraph)],
-            [],
-            [], null);
-        var document = new DocxDocument(
-            612d,
-            792d,
-            72d,
-            72d,
-            72d,
-            72d,
-            narrowFinalSection,
-            [],
-            [],
-            [],
-            [
-                new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Wide first section", 10d, 12d)),
-                new DocxSectionBreakElement(wideFirstSection, DocxSectionBreakType.NextPage, null, null, null, []),
-                new DocxParagraphElement(anchor)
-            ],
-            [],
-            [])
-        {
-            RelatedStories = [endnoteStory]
-        };
-
-        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
-        DocxPlacedRelatedStoryLayout placedStory = layout.Pages
-            .SelectMany(page => page.PlacedRelatedStories)
-            .Single(story => story.StoryLayout.Story.Id == "25");
-        DocxTextLineLayout[] lines = placedStory.TextLines.ToArray();
-
-        TestAssert.Equal(-1, placedStory.SourceBlockIndex);
-        TestAssert.True(Math.Abs(placedStory.Width - 200d) < 0.001d, "The document-end endnote should inherit the final section body width.");
-        TestAssert.True(lines.Length >= 2, "Document-end endnotes should wrap using the target page width, not the first section width.");
-        TestAssert.True(lines.All(line => line.Width <= placedStory.Width + 0.001d), "Document-end endnote lines should not exceed the final section body width.");
+        var (pageIndex, note) = LayoutEndnoteAcrossSectionWidths("docEnd");
+        TestAssert.Equal(1, pageIndex);
+        TestAssert.Equal(-1, note.SourceBlockIndex);
+        TestAssert.Equal(200d, note.Width);
+        TestAssert.Equal(2, note.TextLines.Count);
+        TestAssert.True(note.TextLines.All(line => line.Width <= note.Width), "Note lines must fit the final section.");
     }
 
     public static void DocxLayoutWrapsSectEndEndnoteUsingOwningSectionPageWidth()
     {
-        DocxPageSettings wideFirstSection = new(
-            "12240",
-            "12000",
-            null,
-            "1440",
-            "1440",
-            "1440",
-            "1440",
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null);
-        DocxPageSettings narrowFinalSection = new(
-            "4400",
-            "6000",
-            null,
-            "200",
-            "200",
-            "200",
-            "200",
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null)
+        var (pageIndex, note) = LayoutEndnoteAcrossSectionWidths("sectEnd");
+        TestAssert.Equal(0, pageIndex);
+        TestAssert.Equal(0, note.SourceBlockIndex);
+        TestAssert.Equal(468d, note.Width);
+        TestAssert.Equal(1, note.TextLines.Count);
+        TestAssert.True(note.TextLines[0].Width > 200d, "The line must be longer than the final section's body width.");
+    }
+
+    private static (int PageIndex, DocxPlacedRelatedStoryLayout Note) LayoutEndnoteAcrossSectionWidths(string position)
+    {
+        var wideFirstSection = DocxPageSettings.Empty with
         {
-            EndnoteReferenceSettings = DocxNoteReferenceSettings.Empty with { PositionValue = "sectEnd" }
+            WidthValue = "12240",
+            HeightValue = "12000",
+            MarginTopValue = "1440",
+            MarginRightValue = "1440",
+            MarginBottomValue = "1440",
+            MarginLeftValue = "1440"
         };
-        DocxParagraph anchor = DocxTests.CreateDocxLayoutParagraph("Narrow section-end endnote marker", 10d, 12d) with
+        var narrowFinalSection = wideFirstSection with
+        {
+            WidthValue = "4400",
+            HeightValue = "6000",
+            MarginRightValue = "200",
+            MarginLeftValue = "200"
+        };
+        const string noteId = "25";
+        var anchor = DocxTests.CreateDocxLayoutParagraph("First section marker", 10d, 12d) with
         {
             InlineReferences =
             [
                 new DocxInlineReference(
-                    DocxRelatedStoryKind.Endnote,
-                    "26",
-                    CustomMarkFollowsValue: null,
-                    DisplayText: "1",
-                    SourceRunIndex: 0,
-                    RunChildIndex: 1,
-                    TextOffsetInRun: 7)
+                    DocxRelatedStoryKind.Endnote, noteId, CustomMarkFollowsValue: null,
+                    DisplayText: "1", SourceRunIndex: 0, RunChildIndex: 1, TextOffsetInRun: 7)
             ]
         };
-        DocxParagraph endnoteParagraph = DocxTests.CreateDocxLayoutParagraph("alpha beta gamma delta epsilon zeta eta theta", 10d, 12d);
-        var endnoteStory = new DocxRelatedStory(
-            DocxRelatedStoryKind.Endnote,
-            "/word/endnotes.xml",
-            "26",
-            [new DocxParagraphElement(endnoteParagraph)],
-            [],
-            [], null);
+        DocxParagraph noteText = DocxTests.CreateDocxLayoutParagraph(
+            "alpha beta gamma delta epsilon zeta eta theta", 10d, 12d);
+        DocxParagraph finalText = DocxTests.CreateDocxLayoutParagraph("Final section", 10d, 12d);
+        var note = new DocxRelatedStory(
+            DocxRelatedStoryKind.Endnote, "/word/endnotes.xml", noteId,
+            [new DocxParagraphElement(noteText)], [], [], null);
         var document = new DocxDocument(
-            612d,
-            792d,
-            72d,
-            72d,
-            72d,
-            72d,
+            612d, 792d, 72d, 72d, 72d, 72d,
             narrowFinalSection,
-            [],
-            [],
-            [],
+            [], [], [],
             [
-                new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Wide first section", 10d, 12d)),
+                new DocxParagraphElement(anchor),
                 new DocxSectionBreakElement(wideFirstSection, DocxSectionBreakType.NextPage, null, null, null, []),
-                new DocxParagraphElement(anchor)
+                new DocxParagraphElement(finalText)
             ],
-            [],
+            [anchor, finalText],
             [])
         {
-            RelatedStories = [endnoteStory]
+            RelatedStories = [note]
+        };
+        document = document with
+        {
+            Settings = document.Settings with
+            {
+                EndnoteReferenceSettings = document.Settings.EndnoteReferenceSettings with { PositionValue = position }
+            }
         };
 
-        document = document with { Settings = document.Settings with { EndnoteReferenceSettings =
-            document.Settings.EndnoteReferenceSettings with { PositionValue = "sectEnd" } } };
-
-        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
-        DocxPlacedRelatedStoryLayout placedStory = layout.Pages
-            .SelectMany(page => page.PlacedRelatedStories)
-            .Single(story => story.StoryLayout.Story.Id == "26");
-        DocxTextLineLayout[] lines = placedStory.TextLines.ToArray();
-
-        TestAssert.Equal(2, placedStory.SourceBlockIndex);
-        TestAssert.True(Math.Abs(placedStory.Width - 200d) < 0.001d, "The section-end endnote should inherit the owning section body width.");
-        TestAssert.True(lines.Length >= 2, "Section-end endnotes should wrap using the target section width, not the first section width.");
-        TestAssert.True(lines.All(line => line.Width <= placedStory.Width + 0.001d), "Section-end endnote lines should not exceed the owning section body width.");
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+        TestAssert.Equal(2, layout.Pages.Count);
+        return layout.Pages
+            .SelectMany((page, pageIndex) => page.PlacedRelatedStories.Select(story => (PageIndex: pageIndex, Note: story)))
+            .Single(placement => placement.Note.StoryLayout.Story.Id == noteId);
     }
 
     public static void DocxLayoutKeepsSectEndEndnoteOverflowPageBeforeFollowingSection()
