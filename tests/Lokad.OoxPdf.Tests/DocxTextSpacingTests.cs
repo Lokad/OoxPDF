@@ -1583,7 +1583,7 @@ internal static class DocxTextSpacingTests
                 DocxParagraphKeepRules.Empty, null)
             {
                 BookmarkAnchors = [new DocxBookmarkAnchor("1", "Target", 0, 0, 0)],
-                Hyperlinks = [new DocxHyperlinkSpan(null, "Target", null, null, null, null, null, 0, 1, 0, 1, 1)]
+                Hyperlinks = [new DocxHyperlinkSpan(null, "Target", null, null, null, 0, 1, 0, 1, 1)]
             };
             DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(paragraph)], []);
             var renderer = new DocxRenderer(new WindowsExtentsFontResolver(useTypographicMetrics, gap),
@@ -1615,7 +1615,7 @@ internal static class DocxTextSpacingTests
                 DocxParagraphKeepRules.Empty, null)
             {
                 BookmarkAnchors = [new DocxBookmarkAnchor("1", "Target", 0, 0, 0)],
-                Hyperlinks = [new DocxHyperlinkSpan(null, "Target", null, null, null, null, null, 0, 1, 0, 1, 1)]
+                Hyperlinks = [new DocxHyperlinkSpan(null, "Target", null, null, null, 0, 1, 0, 1, 1)]
             };
             DocxDocument document = source with
             {

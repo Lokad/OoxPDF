@@ -219,8 +219,6 @@ internal sealed record DocxFieldReference(
 internal sealed record DocxHyperlinkSpan(
     string? RelationshipId,
     string? Anchor,
-    string? Tooltip,
-    string? HistoryValue,
     string? Target,
     string? TargetMode,
     string? ResolvedTarget,

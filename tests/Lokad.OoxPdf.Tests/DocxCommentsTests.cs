@@ -250,7 +250,7 @@ internal static partial class DocxCommentsTests
         DocxParagraph body = source.Paragraphs[0] with
         {
             BookmarkAnchors = [new DocxBookmarkAnchor("1", "BodyTarget", 0, 0, 0)],
-            Hyperlinks = [new DocxHyperlinkSpan(null, "BodyTarget", null, null, null, null, null, 0, 1, 0, 3, 1)]
+            Hyperlinks = [new DocxHyperlinkSpan(null, "BodyTarget", null, null, null, 0, 1, 0, 3, 1)]
         };
         DocxDocument withHeader = source with
         {

@@ -515,8 +515,8 @@ internal static class DocxTablesTests
         {
             Hyperlinks =
             [
-                new DocxHyperlinkSpan("rIdExt", null, null, null, "https://example.invalid/", "External", null, 0, 1, 0, 1, 8),
-                new DocxHyperlinkSpan(null, "Bookmark", null, null, null, null, null, 1, 1, 1, 1, 8)
+                new DocxHyperlinkSpan("rIdExt", null, "https://example.invalid/", "External", null, 0, 1, 0, 1, 8),
+                new DocxHyperlinkSpan(null, "Bookmark", null, null, null, 1, 1, 1, 1, 8)
             ]
         };
         var table = new DocxTable(
@@ -566,7 +566,7 @@ internal static class DocxTablesTests
         {
             Hyperlinks =
             [
-                new DocxHyperlinkSpan("rIdCell", null, null, null, "https://example.invalid/cell", "External", null, 1, 1, 1, 1, 4)
+                new DocxHyperlinkSpan("rIdCell", null, "https://example.invalid/cell", "External", null, 1, 1, 1, 1, 4)
             ]
         };
         var table = new DocxTable(
@@ -657,7 +657,7 @@ internal static class DocxTablesTests
         {
             Hyperlinks =
             [
-                new DocxHyperlinkSpan("rIdCell", null, null, null, "https://example.invalid/cell-word-compatible", "External", null, 1, 1, 1, 1, linkText.Length)
+                new DocxHyperlinkSpan("rIdCell", null, "https://example.invalid/cell-word-compatible", "External", null, 1, 1, 1, 1, linkText.Length)
             ]
         };
         var table = new DocxTable(
@@ -728,7 +728,7 @@ internal static class DocxTablesTests
         {
             Hyperlinks =
             [
-                new DocxHyperlinkSpan("rIdSplitCell", null, null, null, "https://example.invalid/split-cell", "External", null, 1, 1, 1, 1, 4)
+                new DocxHyperlinkSpan("rIdSplitCell", null, "https://example.invalid/split-cell", "External", null, 1, 1, 1, 1, 4)
             ]
         };
         var cell = new DocxTableCell(string.Empty, [before, after], null, null, null, null, [], DocxTableCellMargins.Empty)
@@ -776,7 +776,7 @@ internal static class DocxTablesTests
         {
             Hyperlinks =
             [
-                new DocxHyperlinkSpan(null, "CellBookmarkTarget", null, null, null, null, null, 1, 1, 1, 1, 6)
+                new DocxHyperlinkSpan(null, "CellBookmarkTarget", null, null, null, 1, 1, 1, 1, 6)
             ]
         };
         DocxParagraph targetParagraph = DocxTests.CreateDocxLayoutParagraph("Bookmark target", 10d, 12d) with

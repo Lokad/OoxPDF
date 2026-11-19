@@ -2667,7 +2667,7 @@ internal static partial class DocxInlineCompositionTests
             var source = ReadMutation(fixture, mode, true, false);
             var link = DocxTests.CreateDocxLayoutParagraph("Jump to calculation", 11d, 14d) with
             {
-                Hyperlinks = [new DocxHyperlinkSpan(null, "PublicCalculation", null, null, null, null, null, 0, 1, 0, 1, 19)]
+                Hyperlinks = [new DocxHyperlinkSpan(null, "PublicCalculation", null, null, null, 0, 1, 0, 1, 19)]
             };
             var document = source with { BodyElements = [new DocxParagraphElement(link), .. source.BodyElements] };
             var renderer = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final

@@ -25,7 +25,7 @@ internal static class DocxHyperlinksTests
                 new DocxParagraphSpacing(null, null, null, null, null, null, null, "exact", null),
                 DocxParagraphKeepRules.Empty, null)
             {
-                Hyperlinks = [new DocxHyperlinkSpan(null, null, null, null, "https://example.invalid/line-box", "External", null, 0, 1, 0, 1, 4)]
+                Hyperlinks = [new DocxHyperlinkSpan(null, null, "https://example.invalid/line-box", "External", null, 0, 1, 0, 1, 4)]
             };
             DocxDocument document = source with
             {
@@ -59,7 +59,7 @@ internal static class DocxHyperlinksTests
                 new DocxParagraphSpacing(null, null, null, null, null, null, "240", "auto", null),
                 DocxParagraphKeepRules.Empty, null)
             {
-                Hyperlinks = [new DocxHyperlinkSpan(null, null, null, null, "https://example.invalid/auto-box", "External", null, 1, 1, 1, 1, 4)]
+                Hyperlinks = [new DocxHyperlinkSpan(null, null, "https://example.invalid/auto-box", "External", null, 1, 1, 1, 1, 4)]
             };
             DocxDocument isolated = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(paragraph)], []);
             PdfLinkAnnotation isolatedBox = renderer.RenderPagesAsync(isolated, null, CancellationToken.None).ToBlockingEnumerable().Single().Annotations.Single();
@@ -97,7 +97,7 @@ internal static class DocxHyperlinksTests
             new DocxParagraphSpacing(null, null, null, null, null, null, "240", "auto", null),
             DocxParagraphKeepRules.Empty, null)
         {
-            Hyperlinks = [new DocxHyperlinkSpan(null, null, null, null, "https://example.invalid/table-boundary", "External", null, 0, 1, 0, 1, 4)]
+            Hyperlinks = [new DocxHyperlinkSpan(null, null, "https://example.invalid/table-boundary", "External", null, 0, 1, 0, 1, 4)]
         };
         var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
         DocxDocument isolated = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(paragraph)], []);
@@ -143,7 +143,7 @@ internal static class DocxHyperlinksTests
         {
             Hyperlinks =
             [
-                new DocxHyperlinkSpan("rIdLink", null, null, null, "https://example.invalid/docx", "External", null, 1, 1, 1, 1, 4)
+                new DocxHyperlinkSpan("rIdLink", null, "https://example.invalid/docx", "External", null, 1, 1, 1, 1, 4)
             ]
         };
         DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(paragraph)], []);
@@ -186,7 +186,7 @@ internal static class DocxHyperlinksTests
         {
             Hyperlinks =
             [
-                new DocxHyperlinkSpan("rIdLink", null, null, null, "https://example.invalid/source-run", "External", null, 42, 1, 1, 1, 4)
+                new DocxHyperlinkSpan("rIdLink", null, "https://example.invalid/source-run", "External", null, 42, 1, 1, 1, 4)
             ]
         };
         DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(paragraph)], []);
@@ -223,7 +223,7 @@ internal static class DocxHyperlinksTests
         {
             Hyperlinks =
             [
-                new DocxHyperlinkSpan("rIdLink", null, null, null, "https://example.invalid/docx", "External", null, 1, 1, 1, 1, linkText.Length)
+                new DocxHyperlinkSpan("rIdLink", null, "https://example.invalid/docx", "External", null, 1, 1, 1, 1, linkText.Length)
             ]
         };
         DocxDocument document = new(
@@ -287,7 +287,7 @@ internal static class DocxHyperlinksTests
         {
             Hyperlinks =
             [
-                new DocxHyperlinkSpan("rIdTextBoxLink", null, null, null, "https://example.invalid/textbox-word-compatible", "External", null, 1, 1, 1, 1, linkText.Length)
+                new DocxHyperlinkSpan("rIdTextBoxLink", null, "https://example.invalid/textbox-word-compatible", "External", null, 1, 1, 1, 1, linkText.Length)
             ]
         };
         DocxFloatingDrawing drawing = DocxTests.CreateFloatingTextBoxDrawing([new DocxParagraphElement(textBoxParagraph)]);
@@ -354,7 +354,7 @@ internal static class DocxHyperlinksTests
         {
             Hyperlinks =
             [
-                new DocxHyperlinkSpan("rIdStaticTextBoxLink", null, null, null, "https://example.invalid/static-textbox-word-compatible", "External", null, 1, 1, 1, 1, linkText.Length)
+                new DocxHyperlinkSpan("rIdStaticTextBoxLink", null, "https://example.invalid/static-textbox-word-compatible", "External", null, 1, 1, 1, 1, linkText.Length)
             ]
         };
         // The oracle compares one emitted segment with its annotation. Leave room
@@ -420,7 +420,7 @@ internal static class DocxHyperlinksTests
         {
             Hyperlinks =
             [
-                new DocxHyperlinkSpan(null, "Bookmark", null, null, null, null, null, 0, 1, 0, 1, 8)
+                new DocxHyperlinkSpan(null, "Bookmark", null, null, null, 0, 1, 0, 1, 8)
             ]
         };
         DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(paragraph)], []);
@@ -434,7 +434,7 @@ internal static class DocxHyperlinksTests
     {
         DocxParagraph link = DocxTests.CreateDocxLayoutParagraph("Jump", 12d, 14d) with
         {
-            Hyperlinks = [new DocxHyperlinkSpan(null, "Target", null, null, null, null, null, 0, 1, 0, 1, 4)]
+            Hyperlinks = [new DocxHyperlinkSpan(null, "Target", null, null, null, 0, 1, 0, 1, 4)]
         };
         foreach ((DocxTextAlignment alignment, double indent) in new[]
         {
@@ -461,7 +461,7 @@ internal static class DocxHyperlinksTests
     {
         DocxParagraph link = DocxTests.CreateDocxLayoutParagraph("Jump", 12d, 14d) with
         {
-            Hyperlinks = [new DocxHyperlinkSpan(null, "Target", null, null, null, null, null, 0, 1, 0, 1, 4)]
+            Hyperlinks = [new DocxHyperlinkSpan(null, "Target", null, null, null, 0, 1, 0, 1, 4)]
         };
         DocxParagraph target = DocxTests.CreateDocxLayoutParagraph("Public bookmark target", 12d, 14d) with
         {
@@ -485,7 +485,7 @@ internal static class DocxHyperlinksTests
                 new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null),
                 new DocxParagraphElement(target with
                 {
-                    Hyperlinks = [new DocxHyperlinkSpan(null, "Target", null, null, null, null, null, 0, 1, 0, 1, "Public bookmark target".Length)]
+                    Hyperlinks = [new DocxHyperlinkSpan(null, "Target", null, null, null, 0, 1, 0, 1, "Public bookmark target".Length)]
                 })]
         };
         var reviewRenderer = new DocxRenderer(new MapFontResolver([], "Fallback"), OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
@@ -570,7 +570,7 @@ internal static class DocxHyperlinksTests
         {
             Hyperlinks =
             [
-                new DocxHyperlinkSpan(null, "BookmarkTarget", null, null, null, null, null, 1, 1, 1, 1, 6)
+                new DocxHyperlinkSpan(null, "BookmarkTarget", null, null, null, 1, 1, 1, 1, 6)
             ]
         };
         DocxParagraph targetParagraph = DocxTests.CreateDocxLayoutParagraph("Target text", 10d, 12d) with
@@ -616,7 +616,7 @@ internal static class DocxHyperlinksTests
         {
             Hyperlinks =
             [
-                new DocxHyperlinkSpan(null, "SparseBookmarkTarget", null, null, null, null, null, 1, 1, 1, 1, 6)
+                new DocxHyperlinkSpan(null, "SparseBookmarkTarget", null, null, null, 1, 1, 1, 1, 6)
             ]
         };
         var targetRuns = new[]
@@ -683,7 +683,7 @@ internal static class DocxHyperlinksTests
         {
             Hyperlinks =
             [
-                new DocxHyperlinkSpan(null, "OffsetBookmarkTarget", null, null, null, null, null, 1, 1, 1, 1, 6)
+                new DocxHyperlinkSpan(null, "OffsetBookmarkTarget", null, null, null, 1, 1, 1, 1, 6)
             ]
         };
         DocxTextRun targetRun = new("Before Target", 10d, null, false, false, false, null, null)
@@ -760,7 +760,7 @@ internal static class DocxHyperlinksTests
         {
             Hyperlinks =
             [
-                new DocxHyperlinkSpan("rIdFootnoteLink", null, null, null, "https://example.invalid/footnote", "External", null, 1, 1, 1, 1, 4)
+                new DocxHyperlinkSpan("rIdFootnoteLink", null, "https://example.invalid/footnote", "External", null, 1, 1, 1, 1, 4)
             ]
         };
         var footnoteStory = new DocxRelatedStory(
@@ -822,7 +822,7 @@ internal static class DocxHyperlinksTests
         {
             Hyperlinks =
             [
-                new DocxHyperlinkSpan("rIdEndnoteLink", null, null, null, "https://example.invalid/endnote", "External", null, 1, 1, 1, 1, 4)
+                new DocxHyperlinkSpan("rIdEndnoteLink", null, "https://example.invalid/endnote", "External", null, 1, 1, 1, 1, 4)
             ]
         };
         var endnoteStory = new DocxRelatedStory(
@@ -868,7 +868,7 @@ internal static class DocxHyperlinksTests
         {
             Hyperlinks =
             [
-                new DocxHyperlinkSpan(null, "FootnoteBookmarkTarget", null, null, null, null, null, 1, 1, 1, 1, 15)
+                new DocxHyperlinkSpan(null, "FootnoteBookmarkTarget", null, null, null, 1, 1, 1, 1, 15)
             ]
         };
         DocxParagraph markerParagraph = DocxTests.CreateDocxLayoutParagraph("Body note marker", 10d, 12d) with
@@ -938,7 +938,7 @@ internal static class DocxHyperlinksTests
         {
             Hyperlinks =
             [
-                new DocxHyperlinkSpan(null, "EndnoteBookmarkTarget", null, null, null, null, null, 1, 1, 1, 1, 14)
+                new DocxHyperlinkSpan(null, "EndnoteBookmarkTarget", null, null, null, 1, 1, 1, 1, 14)
             ]
         };
         DocxParagraph markerParagraph = DocxTests.CreateDocxLayoutParagraph("Body note marker", 10d, 12d) with
@@ -1010,7 +1010,7 @@ internal static class DocxHyperlinksTests
         {
             Hyperlinks =
             [
-                new DocxHyperlinkSpan("rIdTextBox", null, null, null, "https://example.invalid/textbox", "External", null, 1, 1, 1, 1, 4)
+                new DocxHyperlinkSpan("rIdTextBox", null, "https://example.invalid/textbox", "External", null, 1, 1, 1, 1, 4)
             ]
         };
         DocxFloatingDrawing floatingDrawing = DocxTests.CreateFloatingTextBoxDrawing([new DocxParagraphElement(textBoxParagraph)]);
@@ -1060,7 +1060,7 @@ internal static class DocxHyperlinksTests
         {
             Hyperlinks =
             [
-                new DocxHyperlinkSpan("rIdStaticTextBox", null, null, null, "https://example.invalid/static-textbox", "External", null, 1, 1, 1, 1, 4)
+                new DocxHyperlinkSpan("rIdStaticTextBox", null, "https://example.invalid/static-textbox", "External", null, 1, 1, 1, 1, 4)
             ]
         };
         DocxFloatingDrawing headerDrawing = DocxTests.CreateFloatingTextBoxDrawing([new DocxParagraphElement(textBoxParagraph)]);
@@ -1116,7 +1116,7 @@ internal static class DocxHyperlinksTests
         {
             Hyperlinks =
             [
-                new DocxHyperlinkSpan(null, "TextBoxBookmarkTarget", null, null, null, null, null, 1, 1, 1, 1, 14)
+                new DocxHyperlinkSpan(null, "TextBoxBookmarkTarget", null, null, null, 1, 1, 1, 1, 14)
             ]
         };
         DocxParagraph targetParagraph = DocxTests.CreateDocxLayoutParagraph("Bookmark target", 10d, 12d) with
@@ -1173,7 +1173,7 @@ internal static class DocxHyperlinksTests
         {
             Hyperlinks =
             [
-                new DocxHyperlinkSpan(null, "StaticTextBoxBookmarkTarget", null, null, null, null, null, 1, 1, 1, 1, 13)
+                new DocxHyperlinkSpan(null, "StaticTextBoxBookmarkTarget", null, null, null, 1, 1, 1, 1, 13)
             ]
         };
         DocxParagraph targetParagraph = DocxTests.CreateDocxLayoutParagraph("Bookmark target", 10d, 12d) with
@@ -1237,7 +1237,7 @@ internal static class DocxHyperlinksTests
         {
             Hyperlinks =
             [
-                new DocxHyperlinkSpan(null, "StaticBookmarkTarget", null, null, null, null, null, 1, 1, 1, 1, 4)
+                new DocxHyperlinkSpan(null, "StaticBookmarkTarget", null, null, null, 1, 1, 1, 1, 4)
             ]
         };
         DocxParagraph target = DocxTests.CreateDocxLayoutParagraph("Body target", 10d, 12d) with
@@ -1332,7 +1332,7 @@ internal static class DocxHyperlinksTests
             DocxParagraphKeepRules.Empty,
             null)
         {
-            Hyperlinks = [new DocxHyperlinkSpan("rIdLink", null, null, null, "https://example.invalid/docx", "External", null, startRun, runCount, startRun, runCount, textLength)]
+            Hyperlinks = [new DocxHyperlinkSpan("rIdLink", null, "https://example.invalid/docx", "External", null, startRun, runCount, startRun, runCount, textLength)]
         };
     }
 }

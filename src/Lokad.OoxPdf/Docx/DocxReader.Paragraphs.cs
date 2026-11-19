@@ -1463,8 +1463,6 @@ internal sealed partial class DocxReader
         var span = new DocxHyperlinkSpan(
             relationshipId,
             (string?)hyperlink.Attribute(WordprocessingNamespace + "anchor"),
-            (string?)hyperlink.Attribute(WordprocessingNamespace + "tooltip"),
-            (string?)hyperlink.Attribute(WordprocessingNamespace + "history"),
             relationship?.Target,
             relationship?.TargetMode,
             relationship?.ResolvedTarget,
