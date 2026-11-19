@@ -133,13 +133,7 @@ internal sealed partial class DocxRenderer
         // footnotes keep legacy behavior until separately probed.
         bool suppressSeparatorText = story.StoryLayout.Story.Kind == DocxRelatedStoryKind.Endnote && story.StoryLayout.Story.Type == DocxRelatedStoryType.Separator;
         System.Collections.Generic.IEnumerable<DocxTextLineLayout> storyTextLines = suppressSeparatorText ? story.TextLines.Select(line => RewriteSeparatorTextLineAsMarkSpace(line, story, fontResources)) : story.TextLines;
-        IReadOnlyList<DocxLayoutItem> items = (mapStory ? storyTextLines.Select(line => storyMap.PrecompensateLine(line, 0d, 0d)) : storyTextLines)
-            .Cast<DocxLayoutItem>()
-            .Concat(mapStory ? story.InlineImages.Select(image => storyMap.PrecompensateImage(image, pageNumber)) : story.InlineImages)
-            .Concat(story.TableRows.Select(row => ResolvePlacedStoryTablePaintFrame(
-                story, row, mapStory ? storyMap : null, cancellationToken)))
-            .OrderByDescending(ResolveLayoutItemTop)
-            .ToArray();
+        var items = PlaceRelatedStoryItems(story, storyTextLines, mapStory ? storyMap : null, pageNumber, cancellationToken);
         RenderParagraphBackgrounds(items, graphics, markupContext, cancellationToken);
         for (int itemIndex = 0; itemIndex < items.Count; itemIndex++)
         {
@@ -171,6 +165,15 @@ internal sealed partial class DocxRenderer
             graphics.ClipRectangle(viewport.X, viewport.Y, viewport.Width, viewport.Height);
         }
     }
+
+    private static IReadOnlyList<DocxLayoutItem> PlaceRelatedStoryItems(DocxPlacedRelatedStoryLayout story,
+        IEnumerable<DocxTextLineLayout> lines, FloatingTextBoxEmissionMap? map, int pageNumber, CancellationToken token) =>
+        (map is { } lineMap ? lines.Select(line => lineMap.PrecompensateLine(line, 0d, 0d)) : lines)
+        .Cast<DocxLayoutItem>()
+        .Concat(map is { } imageMap ? story.InlineImages.Select(image => imageMap.PrecompensateImage(image, pageNumber)) : story.InlineImages)
+        .Concat(story.TableRows.Select(row => ResolvePlacedStoryTablePaintFrame(story, row, map, token)))
+        .OrderByDescending(ResolveLayoutItemTop)
+        .ToArray();
 
     private static bool HasClippedNoteTableContent(DocxTableRowLayout row, PdfRectangle clip,
         double baselineOffset, CancellationToken token)

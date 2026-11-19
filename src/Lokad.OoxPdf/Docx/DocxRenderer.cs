@@ -1448,7 +1448,7 @@ internal sealed partial class DocxRenderer
             bool previousUsesBodyLineBox = false;
             var paper = new PdfRectangle(0d, 0d, page.Width, page.Height);
             foreach (var (line, _, paintViewport) in EnumerateRenderedPageLineSources(page,
-                drawingPages.PageAll(pageIndex), markupContext, page.Height, clipCellLinks: true, token: cancellationToken))
+                drawingPages.PageAll(pageIndex), markupContext, page.Height, staticItems, pageNumber, cancellationToken))
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 LinkPaintViewport? clip = paintViewport is { } source

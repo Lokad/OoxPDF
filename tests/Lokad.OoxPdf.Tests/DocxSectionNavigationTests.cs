@@ -219,11 +219,19 @@ internal static class DocxSectionNavigationTests
 
     public static void DocxBodyTableHyperlinksFollowCellAndAncestorClips()
     {
-        CheckTableAndBoxLinkClips(tableDepth: 1, inBody: true);
-        CheckTableAndBoxLinkClips(tableDepth: 2, inBody: true);
+        CheckTableAndBoxLinkClips(tableDepth: 1, "body");
+        CheckTableAndBoxLinkClips(tableDepth: 2, "body");
     }
 
-    private static void CheckTableAndBoxLinkClips(int tableDepth, bool inBody = false)
+    public static void DocxStoryTableHyperlinksFollowPrintedCellClips()
+    {
+        foreach (string story in new[] { "header", "footer", "footnote", "endnote" })
+            CheckTableAndBoxLinkClips(tableDepth: 1, story);
+    }
+
+    public static void DocxInlineBoxTableHyperlinksFollowPrintedCellClips() => CheckTableAndBoxLinkClips(tableDepth: 1, "inline");
+
+    private static void CheckTableAndBoxLinkClips(int tableDepth, string placement = "floating")
     {
         const string prose = "PUBLIC PROSE TARGET";
         const string proseUri = "https://example.invalid/box-link/prose";
@@ -233,11 +241,12 @@ internal static class DocxSectionNavigationTests
         var resolver = new PortableRenderingTests.PinnedResolver(mathFont: true);
         XNamespace wp = OoxNamespaces.WordprocessingDrawingNamespace;
         XNamespace m = "http://schemas.openxmlformats.org/officeDocument/2006/math";
+        bool inNote = placement is "footnote" or "endnote";
         foreach (var mode in Modes)
         {
-            string context = $"{mode}, table depth {tableDepth}, body placement {inBody}";
+            string context = $"{mode}, table depth {tableDepth}, {placement}";
             double scale = 1d;
-            double fullHeight = inBody ? 140d : 100d;
+            double fullHeight = placement == "floating" ? 100d : 140d;
             PdfPage tall = Render(fullHeight);
             var (baseline, tallClip) = FindProseFrame(tall);
             var fullLink = tall.Annotations.Single(link => link.Uri == proseUri);
@@ -245,12 +254,12 @@ internal static class DocxSectionNavigationTests
 
             // Cut the source clip through the uppercase linked glyphs. The
             // positive case should keep an actionable rectangle inside it.
-            double partialHeight = fullHeight - (baseline + 4d * scale - tallClip.Y) / scale;
+            double partialHeight = fullHeight - (baseline + 4d * scale - tallClip.Y) / (inNote ? 1d : scale);
             TestAssert.True(partialHeight > 16d && partialHeight < fullHeight, context);
             PdfPage partial = Render(partialHeight);
-            var (_, partialClip) = FindProseFrame(partial);
+            var (partialBaseline, partialClip) = FindProseFrame(partial);
             var partialLink = partial.Annotations.Single(link => link.Uri == proseUri);
-            TestAssert.True(fullLink.Y < partialClip.Y && partialLink.Height < fullLink.Height &&
+            TestAssert.True(partialBaseline < partialClip.Y && partialLink.Height < fullLink.Height &&
                 Math.Abs(partialLink.Y - partialClip.Y) < .002d &&
                 partialLink.Y + partialLink.Height <= partialClip.Y + partialClip.Height + .002d, context);
             TestAssert.Equal(0, partial.Annotations.Count(link => link.Uri == mathUri));
@@ -279,10 +288,10 @@ internal static class DocxSectionNavigationTests
                     ];
                     if (tableDepth == 2) content = [ExactHeightTable(fullHeight, content), new XElement(W + "p")];
                     if (tableDepth != 0) content = [ExactHeightTable(height, content), Paragraph("PUBLIC AFTER TABLE")];
-                    if (inBody) anchor.Ancestors(W + "p").First().ReplaceWith(content);
-                    else anchor.Descendants(W + "txbxContent").Single().ReplaceNodes(content);
-                    const string relsName = "word/_rels/document.xml.rels";
-                    var rels = XDocument.Parse(Encoding.UTF8.GetString(parts[relsName]));
+                    string relsName = PlaceContent(parts, document, anchor, content);
+                    XNamespace relNamespace = "http://schemas.openxmlformats.org/package/2006/relationships";
+                    var rels = parts.TryGetValue(relsName, out var existing)
+                        ? XDocument.Parse(Encoding.UTF8.GetString(existing)) : new XDocument(new XElement(relNamespace + "Relationships"));
                     foreach (var (id, uri) in new[] { ("rIdBoxProse", proseUri), ("rIdBoxMath", mathUri) })
                         rels.Root!.Add(new XElement(rels.Root.Name.Namespace + "Relationship", new XAttribute("Id", id),
                             new XAttribute("Type", R.NamespaceName + "/hyperlink"), new XAttribute("Target", uri),
@@ -299,6 +308,44 @@ internal static class DocxSectionNavigationTests
                         .RenderPagesAsync(story, null, default).ToBlockingEnumerable().Single();
                 });
                 return result ?? throw new InvalidOperationException("The mutated document was not rendered.");
+            }
+        }
+
+        string PlaceContent(Dictionary<string, byte[]> parts, XDocument document, XElement anchor, XElement[] content)
+        {
+            var paragraph = anchor.Ancestors(W + "p").First();
+            switch (placement)
+            {
+                case "floating":
+                case "inline":
+                    if (placement == "inline")
+                    {
+                        anchor.Name = wp + "inline";
+                        anchor.Elements().Where(element => element.Name.LocalName is "simplePos" or "positionH" or "positionV" or "wrapNone").Remove();
+                    }
+                    anchor.Descendants(W + "txbxContent").Single().ReplaceNodes(content);
+                    return "word/_rels/document.xml.rels";
+                case "body":
+                    paragraph.ReplaceWith(content);
+                    return "word/_rels/document.xml.rels";
+                default:
+                    string name = "link-clip-" + placement;
+                    if (inNote)
+                    {
+                        paragraph.ReplaceWith(new XElement(W + "p", new XElement(W + "r",
+                            new XElement(W + (placement + "Reference"), new XAttribute(W + "id", 1)))));
+                        AddStoryPart(parts, name, placement + "s", new XElement(W + (placement + "s"),
+                            new XElement(W + placement, new XAttribute(W + "id", 1), content)));
+                    }
+                    else
+                    {
+                        paragraph.Remove();
+                        var section = document.Descendants(W + "sectPr").Single();
+                        section.AddFirst(new XElement(W + (placement + "Reference"),
+                            new XAttribute(W + "type", "default"), new XAttribute(R + "id", name)));
+                        AddStoryPart(parts, name, placement, new XElement(W + (placement == "header" ? "hdr" : "ftr"), content));
+                    }
+                    return "word/_rels/" + name + ".xml.rels";
             }
         }
 

@@ -83,13 +83,20 @@ internal sealed partial class DocxRenderer
     // story kind cannot replace the header/footer/note that owns its print frame.
     private static IEnumerable<(DocxTextLineLayout Line, DocxStoryId Owner, LinkPaintViewport? Viewport)> EnumerateRenderedPageLineSources(
         DocxLayoutPage page, IEnumerable<DocxFloatingDrawingLayout> floatingDrawings,
-        DocxMarkupContext markupContext, double pageHeight, bool clipCellLinks = false, CancellationToken token = default)
+        DocxMarkupContext markupContext, double pageHeight, IReadOnlyList<DocxLayoutItem>? staticPaintItems = null,
+        int pageNumber = 0, CancellationToken token = default)
     {
         FloatingTextBoxEmissionMap? map = TryCreateFloatingTextBoxEmissionMap(markupContext, pageHeight);
-        foreach (var source in EnumerateStaticLineSources(page, true, markupContext)) yield return (source.Line, source.Owner, null);
-        if (clipCellLinks)
+        bool clipCellLinks = staticPaintItems is not null;
+        foreach (var source in EnumerateStaticLineSources(page, true, markupContext, includeTableRows: !clipCellLinks))
+            yield return (source.Line, source.Owner, null);
+        if (staticPaintItems is not null)
         {
-            foreach (var (line, clip) in EnumerateLinkLinesInItems(page.Items, null, markupContext, token))
+            foreach (var source in EnumerateInlineTextBoxTableLinkLines(staticPaintItems, markupContext, token))
+                yield return source;
+            foreach (var (line, clip, owner) in EnumerateLinkLinesInItems(staticPaintItems, null, markupContext, token, includeDirectLines: false))
+                yield return (line, owner ?? DocxStoryId.Body(), clip is { } bounds ? new(bounds, PreserveFittingPadding: true) : null);
+            foreach (var (line, clip, _) in EnumerateLinkLinesInItems(page.Items, null, markupContext, token))
                 yield return (line, DocxStoryId.Body(), clip is { } bounds ? new(bounds, PreserveFittingPadding: true) : null);
         }
         else
@@ -97,9 +104,25 @@ internal sealed partial class DocxRenderer
             foreach (var line in EnumerateBodyTextLines(page)) yield return (line, DocxStoryId.Body(), null);
         }
         foreach (var story in page.PlacedRelatedStories)
-            foreach (var line in EnumerateMappedPlacedNoteStoryTextLines(story, map))
-                yield return (line, DocxStoryId.Related(story.StoryLayout.Story.Kind), null);
-        foreach (var line in EnumerateInlineTextBoxTextLines(page)) yield return (line, DocxStoryId.Body(), null);
+        {
+            var owner = DocxStoryId.Related(story.StoryLayout.Story.Kind);
+            bool clipStoryTable = clipCellLinks && story.TableRows.Count != 0 && story.StoryLayout.Story.IsNormalStoryType &&
+                story.StoryLayout.Story.Kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote;
+            foreach (var line in EnumerateMappedPlacedNoteStoryTextLines(story, map, includeTableRows: !clipStoryTable))
+                yield return (line, owner, null);
+            if (clipStoryTable)
+            {
+                var (mapped, storyMap, _, tableClip) = ResolvePlacedStoryPaintFrame(story, markupContext, pageHeight);
+                var items = PlaceRelatedStoryItems(story, story.TextLines, mapped ? storyMap : null, pageNumber, token);
+                foreach (var (line, clip, _) in EnumerateLinkLinesInItems(items, tableClip, markupContext, token, includeDirectLines: false))
+                    yield return (line, owner, new(clip ?? tableClip, PreserveFittingPadding: true));
+            }
+        }
+        foreach (var line in EnumerateInlineTextBoxTextLines(page, includeTableRows: !clipCellLinks))
+            yield return (line, DocxStoryId.Body(), null);
+        if (clipCellLinks)
+            foreach (var source in EnumerateInlineTextBoxTableLinkLines(page.Items, markupContext, token))
+                yield return source;
         foreach (var drawing in floatingDrawings)
             foreach (var (line, clip) in EnumerateMappedFloatingDrawingTextBoxTextLines([drawing], markupContext, pageHeight,
                 clipCellLinks: clipCellLinks, token: token))
@@ -111,6 +134,21 @@ internal sealed partial class DocxRenderer
             foreach (var (line, clip) in EnumerateMappedFloatingDrawingTextBoxTextLines(story.FloatingDrawings, markupContext,
                 pageHeight, storyClip, clipCellLinks, token))
                 yield return (line, DocxStoryId.Related(story.StoryLayout.Story.Kind), new(clip));
+        }
+    }
+
+    private static IEnumerable<(DocxTextLineLayout Line, DocxStoryId Owner, LinkPaintViewport? Viewport)> EnumerateInlineTextBoxTableLinkLines(
+        IReadOnlyList<DocxLayoutItem> items, DocxMarkupContext context, CancellationToken token)
+    {
+        foreach (var item in items)
+        {
+            token.ThrowIfCancellationRequested();
+            if (item is not DocxInlineTextBoxLayout { TableRows.Count: > 0 } box) continue;
+            var (x, top) = ResolveInlineTextBoxPaintOrigin(box, context);
+            var viewport = new PdfRectangle(x, top - box.BoxHeight, box.BoxWidth, box.BoxHeight);
+            var boxItems = GetInlineTextBoxPaintItems(box, context);
+            foreach (var (line, clip, _) in EnumerateLinkLinesInItems(boxItems, viewport, context, token, includeDirectLines: false))
+                yield return (line, box.Story ?? DocxStoryId.Body(), new(clip ?? viewport, PreserveFittingPadding: true));
         }
     }
 
@@ -208,7 +246,7 @@ internal sealed partial class DocxRenderer
 
             if (paintItems is not null)
             {
-                foreach (var (line, tableClip) in EnumerateLinkLinesInItems(paintItems, viewport, context, token, includeDirectLines: false))
+                foreach (var (line, tableClip, _) in EnumerateLinkLinesInItems(paintItems, viewport, context, token, includeDirectLines: false))
                     if (InsideViewport(line)) yield return (line, tableClip ?? viewport);
                 continue;
             }
@@ -236,26 +274,27 @@ internal sealed partial class DocxRenderer
 
     // Link sources use the same placed rows, fragment admission and cell
     // viewports as paint. Keep every ancestor clip for nested content.
-    private static IEnumerable<(DocxTextLineLayout Line, PdfRectangle? Clip)> EnumerateLinkLinesInItems(
+    private static IEnumerable<(DocxTextLineLayout Line, PdfRectangle? Clip, DocxStoryId? Owner)> EnumerateLinkLinesInItems(
         IReadOnlyList<DocxLayoutItem> items, PdfRectangle? viewport, DocxMarkupContext context, CancellationToken token,
         bool includeDirectLines = true)
     {
         double xOffset = ResolveTextEmissionXOffset(context);
         double yOffset = ResolveTextEmissionBaselineOffset(context);
-        return Enumerate(items, viewport, includeDirectLines);
+        return Enumerate(items, viewport, includeDirectLines, null);
 
-        IEnumerable<(DocxTextLineLayout Line, PdfRectangle? Clip)> Enumerate(
-            IReadOnlyList<DocxLayoutItem> current, PdfRectangle? parent, bool includeLines)
+        IEnumerable<(DocxTextLineLayout Line, PdfRectangle? Clip, DocxStoryId? Owner)> Enumerate(
+            IReadOnlyList<DocxLayoutItem> current, PdfRectangle? parent, bool includeLines, DocxStoryId? owner)
         {
             for (int index = 0; index < current.Count; index++)
             {
                 token.ThrowIfCancellationRequested();
                 if (includeLines && current[index] is DocxTextLineLayout direct)
                 {
-                    yield return (direct, parent);
+                    yield return (direct, parent, owner ?? direct.Story);
                     continue;
                 }
                 if (current[index] is not DocxTableRowLayout row) continue;
+                var rowOwner = owner ?? row.Story;
                 var previous = index > 0 ? current[index - 1] as DocxTableRowLayout : null;
                 if (!IsAdjacentTableRow(previous, row)) previous = null;
                 var geometry = ResolveTablePaintGeometry(row, xOffset, yOffset);
@@ -267,8 +306,8 @@ internal sealed partial class DocxRenderer
                     var clip = ResolveTableCellContentClip(geometry, geometry.Cells[cellIndex]);
                     var cellFrame = new PdfRectangle(clip.X, clip.Y, clip.Width, clip.Height);
                     var cellViewport = parent is { } enclosing ? IntersectPaintViewports(enclosing, cellFrame) : cellFrame;
-                    foreach (var line in cell.TextLines) yield return (line, cellViewport);
-                    foreach (var nested in Enumerate(cell.NestedRows, cellViewport, includeLines: false)) yield return nested;
+                    foreach (var line in cell.TextLines) yield return (line, cellViewport, rowOwner);
+                    foreach (var nested in Enumerate(cell.NestedRows, cellViewport, includeLines: false, rowOwner)) yield return nested;
                     foreach (var box in cell.InlineTextBoxes)
                     {
                         token.ThrowIfCancellationRequested();
@@ -276,8 +315,8 @@ internal sealed partial class DocxRenderer
                         var boxViewport = IntersectPaintViewports(cellViewport,
                             new PdfRectangle(x, top - box.BoxHeight, box.BoxWidth, box.BoxHeight));
                         var boxItems = GetInlineTextBoxPaintItems(box, context);
-                        foreach (var line in boxItems.OfType<DocxTextLineLayout>()) yield return (line, boxViewport);
-                        foreach (var nested in Enumerate(boxItems, boxViewport, includeLines: false)) yield return nested;
+                        foreach (var line in boxItems.OfType<DocxTextLineLayout>()) yield return (line, boxViewport, rowOwner);
+                        foreach (var nested in Enumerate(boxItems, boxViewport, includeLines: false, rowOwner)) yield return nested;
                     }
                 }
             }
@@ -309,7 +348,7 @@ internal sealed partial class DocxRenderer
         page.PlacedRelatedStories.SelectMany(story => EnumerateMappedPlacedNoteStoryTextLines(story, map));
 
     private static IEnumerable<DocxTextLineLayout> EnumerateMappedPlacedNoteStoryTextLines(
-        DocxPlacedRelatedStoryLayout story, FloatingTextBoxEmissionMap? map)
+        DocxPlacedRelatedStoryLayout story, FloatingTextBoxEmissionMap? map, bool includeTableRows = true)
     {
         FloatingTextBoxEmissionMap? storyMap = null;
         if (map is { } availableMap &&
@@ -317,6 +356,7 @@ internal sealed partial class DocxRenderer
             storyMap = availableMap;
         foreach (DocxTextLineLayout line in story.TextLines)
             yield return storyMap is { } lineMap ? lineMap.PrecompensateLine(line, 0d, 0d) : line;
+        if (!includeTableRows) yield break;
         foreach (DocxTableRowLayout row in story.TableRows)
             foreach (DocxTextLineLayout cellLine in EnumerateTableRowTextLines(row))
                 yield return storyMap is { } cellMap ? cellMap.PrecompensateLine(cellLine, 0d, 0d) : cellLine;
@@ -324,7 +364,7 @@ internal sealed partial class DocxRenderer
 
     // Inline-textbox content lives in absolute flow space (placed at layout time), so
     // anchor/snapshot/link consumers take box lines directly with the body offsets.
-    private static IEnumerable<DocxTextLineLayout> EnumerateInlineTextBoxTextLines(DocxLayoutPage page)
+    private static IEnumerable<DocxTextLineLayout> EnumerateInlineTextBoxTextLines(DocxLayoutPage page, bool includeTableRows = true)
     {
         foreach (DocxLayoutItem item in page.Items)
         {
@@ -338,6 +378,7 @@ internal sealed partial class DocxRenderer
                 yield return line;
             }
 
+            if (!includeTableRows) continue;
             foreach (DocxTableRowLayout row in box.TableRows)
             {
                 foreach (DocxTextLineLayout cellLine in EnumerateTableRowTextLines(row))
@@ -448,7 +489,7 @@ internal sealed partial class DocxRenderer
         EnumerateStaticLineSources(page, includeTextBoxes, markupContext).Select(source => source.Line);
 
     private static IEnumerable<(DocxTextLineLayout Line, DocxStoryId Owner)> EnumerateStaticLineSources(
-        DocxLayoutPage page, bool includeTextBoxes, DocxMarkupContext? markupContext)
+        DocxLayoutPage page, bool includeTextBoxes, DocxMarkupContext? markupContext, bool includeTableRows = true)
     {
         foreach (DocxTextLineLayout line in page.StaticTextLines)
             yield return (AdjustStaticTextLine(line, markupContext), line.Story ?? DocxStoryId.Body());
@@ -457,9 +498,11 @@ internal sealed partial class DocxRenderer
             {
                 var owner = box.Story ?? DocxStoryId.Body();
                 foreach (var line in box.TextLines) yield return (AdjustStaticTextLine(line, markupContext), owner);
+                if (!includeTableRows) continue;
                 foreach (var row in box.TableRows)
                     foreach (var line in EnumerateTableRowTextLines(row)) yield return (AdjustStaticTextLine(line, markupContext), owner);
             }
+        if (!includeTableRows) yield break;
         foreach (DocxTableRowLayout row in page.StaticTableRows)
             foreach (DocxTextLineLayout line in EnumerateTableRowTextLines(row))
                 yield return (line.StaticStoryUsesPhysicalY ? AdjustStaticTextLine(line, markupContext) : line,
