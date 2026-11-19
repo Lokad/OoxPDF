@@ -133,11 +133,11 @@ internal static partial class PptxChartTextHyperlinksTests
         foreach (string side in new[] { "l", "r" })
         {
             PdfPage single = RenderChartTitlePage("", null, AxisTitleChart(side, """
-                <a:r><a:rPr sz="1800"/><a:t>Value Axis</a:t></a:r>
+                <a:r><a:rPr sz="1800" b="0"/><a:t>Value Axis</a:t></a:r>
                 """), resolver).Pages.Single();
             PdfPage split = RenderChartTitlePage("", AxisTitleRelationships, AxisTitleChart(side, """
-                <a:r><a:rPr sz="1800"/><a:t>Value </a:t></a:r>
-                <a:r><a:rPr sz="1800"><a:hlinkClick r:id="rIdLink"/></a:rPr><a:t>Axis</a:t></a:r>
+                <a:r><a:rPr sz="1800" b="0"/><a:t>Value </a:t></a:r>
+                <a:r><a:rPr sz="1800" b="0"><a:hlinkClick r:id="rIdLink"/></a:rPr><a:t>Axis</a:t></a:r>
                 """), resolver).Pages.Single();
 
             var expected = PortableRenderingTests.ReadPaintedSourceLabel(single, "Value Axis", fontPrefix: "CAT");
