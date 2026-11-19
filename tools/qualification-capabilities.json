@@ -7060,6 +7060,7 @@
     "PortableRenderingNoteTableCompositionKeepsContentAndDestinations"
   ],
   "docx-conditional-table-styles": [
+    "=DocxTableStyleRowKeepControlsPageAdmission",
     "DocxAdjacentTables",
     "DocxTableLook",
     "DocxTableBandSizesMatchIndependentWordFills",

@@ -81,19 +81,10 @@ internal static partial class DocxTableStyleInheritanceTests
     private static string Paragraph(string text, string properties = "") =>
         "<w:p><w:pPr>" + properties + "</w:pPr><w:r><w:t>" + text + "</w:t></w:r></w:p>";
 
-    private static DocxDocument ReadParagraphStyleProbe(string body, OoxPdfDocxMarkupMode mode)
-    {
-        const string word = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
-        const string relationships = "http://schemas.openxmlformats.org/package/2006/relationships";
-        const string office = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
-        using var input = TestFixtures.CreateZipPackage(new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/><Default Extension=\"xml\" ContentType=\"application/xml\"/><Override PartName=\"/word/document.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml\"/><Override PartName=\"/word/styles.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml\"/></Types>",
-            ["_rels/.rels"] = $"<Relationships xmlns=\"{relationships}\"><Relationship Id=\"main\" Type=\"{office}/officeDocument\" Target=\"word/document.xml\"/></Relationships>",
-            ["word/_rels/document.xml.rels"] = $"<Relationships xmlns=\"{relationships}\"><Relationship Id=\"styles\" Type=\"{office}/styles\" Target=\"styles.xml\"/></Relationships>",
-            ["word/document.xml"] = $"<w:document xmlns:w=\"{word}\"><w:body>{body}<w:sectPr><w:pgSz w:w=\"12240\" w:h=\"15840\"/><w:pgMar w:top=\"1440\" w:bottom=\"1440\" w:left=\"1440\" w:right=\"1440\"/></w:sectPr></w:body></w:document>",
-            ["word/styles.xml"] = $$"""
-                <w:styles xmlns:w="{{word}}">
+    private static DocxDocument ReadParagraphStyleProbe(string body, OoxPdfDocxMarkupMode mode) =>
+        ReadStyledTableProbe(body, mode,
+            """<w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:bottom="1440" w:left="1440" w:right="1440"/>""",
+            """
                   <w:docDefaults>
                     <w:rPrDefault><w:rPr><w:rFonts w:ascii="DejaVu Sans" w:hAnsi="DejaVu Sans"/><w:sz w:val="24"/></w:rPr></w:rPrDefault>
                     <w:pPrDefault><w:pPr><w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/></w:pPr></w:pPrDefault>
@@ -109,8 +100,20 @@ internal static partial class DocxTableStyleInheritanceTests
                   <w:style w:type="paragraph" w:styleId="Child"><w:basedOn w:val="Parent"/>
                     <w:pPr><w:ind w:left="360"/><w:spacing w:after="120"/></w:pPr>
                   </w:style>
-                </w:styles>
-                """
+            """);
+
+    private static DocxDocument ReadStyledTableProbe(string body, OoxPdfDocxMarkupMode mode, string section, string styles)
+    {
+        const string word = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+        const string relationships = "http://schemas.openxmlformats.org/package/2006/relationships";
+        const string office = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+        using var input = TestFixtures.CreateZipPackage(new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/><Default Extension=\"xml\" ContentType=\"application/xml\"/><Override PartName=\"/word/document.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml\"/><Override PartName=\"/word/styles.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml\"/></Types>",
+            ["_rels/.rels"] = $"<Relationships xmlns=\"{relationships}\"><Relationship Id=\"main\" Type=\"{office}/officeDocument\" Target=\"word/document.xml\"/></Relationships>",
+            ["word/_rels/document.xml.rels"] = $"<Relationships xmlns=\"{relationships}\"><Relationship Id=\"styles\" Type=\"{office}/styles\" Target=\"styles.xml\"/></Relationships>",
+            ["word/document.xml"] = $"<w:document xmlns:w=\"{word}\"><w:body>{body}<w:sectPr>{section}</w:sectPr></w:body></w:document>",
+            ["word/styles.xml"] = $"<w:styles xmlns:w=\"{word}\">{styles}</w:styles>"
         });
         using var package = OoxPackage.Open(input, default);
         return new DocxReader().Read(package, null, default, mode);

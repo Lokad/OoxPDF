@@ -121,7 +121,7 @@ internal sealed partial class DocxReader
                     var cellRevisions = new List<DocxRevisionInfo>();
                     AddRevision(cellRevisions, cellElements[cellIndex].Revision);
                     AddRevisions(cellRevisions, ReadPropertyChangeRevisions(cellProperties));
-                    DocxTableCellConditionalFormat? conditionalFormat = ReadTableCellConditionalFormat(cellProperties);
+                    DocxTableCellConditionalFormat? conditionalFormat = ReadTableConditionalFormat(cellProperties);
                     DocxTableCellStyle conditionalStyle = ResolveTableCellStyle(tableStyle, rowLook, conditionalFormat, rowIndex, cellIndex, rowCount, cellElements.Length, leadingRowEmphasis);
                     IReadOnlyList<DocxBodyElement> cellBodyElements = ReadTableCellBodyElements(
                         cell,
@@ -233,7 +233,7 @@ internal sealed partial class DocxReader
                 if (cells.Count > 0)
                 {
                     XElement? header = rowProperties?.Element(WordprocessingNamespace + "tblHeader");
-                    XElement? cantSplit = rowProperties?.Element(WordprocessingNamespace + "cantSplit");
+                    DocxTableRowKeep? rowKeep = ResolveTableRowKeep(tableStyle, rowLook, rowProperties, rowIndex, rowCount, leadingRowEmphasis);
                     XElement? rowHeight = rowProperties?.Element(WordprocessingNamespace + "trHeight");
                     DocxTableCellMargins effectiveExceptions = sourceIndex == 0 ? rowExceptionMargins : rowExceptionMargins.Merge(partMargins);
                     rows.Add(new DocxTableRow(
@@ -244,8 +244,8 @@ internal sealed partial class DocxReader
                         (string?)rowHeight?.Attribute(WordprocessingNamespace + "val"),
                         (string?)rowHeight?.Attribute(WordprocessingNamespace + "hRule"),
                         HasAnyTableCellMargin(effectiveExceptions) ? effectiveExceptions : null,
-                        ReadOnOff(cantSplit) == true,
-                        (string?)cantSplit?.Attribute(WordprocessingNamespace + "val"))
+                        rowKeep?.Enabled == true,
+                        rowKeep?.Value)
                     {
                         Revisions = rowRevisions,
                         GridBefore = gridBefore,
@@ -607,9 +607,9 @@ internal sealed partial class DocxReader
         return parsed;
     }
 
-    private static DocxTableCellConditionalFormat? ReadTableCellConditionalFormat(XElement? cellProperties)
+    private static DocxTableCellConditionalFormat? ReadTableConditionalFormat(XElement? properties)
     {
-        XElement? conditional = cellProperties?.Element(WordprocessingNamespace + "cnfStyle");
+        XElement? conditional = properties?.Element(WordprocessingNamespace + "cnfStyle");
         if (conditional is null)
         {
             return null;

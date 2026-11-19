@@ -15,20 +15,21 @@ internal sealed partial class DocxReader
         DocxTableStyleProperties Table,
         DocxTableCellStyle Cell,
         IReadOnlyList<DocxTableCellBorder> TableBorders,
-        IReadOnlyDictionary<string, DocxTableCellStyle> ConditionalRegions)
+        IReadOnlyDictionary<string, DocxTableConditionalStyle> ConditionalRegions)
     {
-        public static DocxTableStyle Empty { get; } = new(null, DocxTableStyleProperties.Empty, DocxTableCellStyle.Empty, [], new Dictionary<string, DocxTableCellStyle>());
+        public static DocxTableStyle Empty { get; } = new(null, DocxTableStyleProperties.Empty, DocxTableCellStyle.Empty, [], new Dictionary<string, DocxTableConditionalStyle>());
+        public DocxTableRowKeep? RowKeep { get; init; }
         public bool UsesTableNormal { get; init; }
         public bool HasCompleteInheritance { get; init; }
         public bool HasDeclaredTableProperties { get; init; }
 
         public DocxTableStyle Merge(DocxTableStyle other)
         {
-            var conditional = new Dictionary<string, DocxTableCellStyle>(ConditionalRegions, StringComparer.Ordinal);
-            foreach ((string region, DocxTableCellStyle regionStyle) in other.ConditionalRegions)
+            var conditional = new Dictionary<string, DocxTableConditionalStyle>(ConditionalRegions, StringComparer.Ordinal);
+            foreach ((string region, DocxTableConditionalStyle regionStyle) in other.ConditionalRegions)
             {
-                conditional[region] = conditional.TryGetValue(region, out DocxTableCellStyle? inherited)
-                    ? inherited.Merge(regionStyle)
+                conditional[region] = conditional.TryGetValue(region, out DocxTableConditionalStyle inherited)
+                    ? new(inherited.Cell.Merge(regionStyle.Cell), regionStyle.RowKeep ?? inherited.RowKeep)
                     : regionStyle;
             }
 
@@ -37,9 +38,17 @@ internal sealed partial class DocxReader
                 Table.Merge(other.Table),
                 Cell.Merge(other.Cell),
                 other.TableBorders.Count == 0 ? TableBorders : other.TableBorders,
-                conditional) { UsesTableNormal = UsesTableNormal || other.UsesTableNormal };
+                conditional)
+            {
+                RowKeep = other.RowKeep ?? RowKeep,
+                UsesTableNormal = UsesTableNormal || other.UsesTableNormal
+            };
         }
     }
+
+    private readonly record struct DocxTableRowKeep(bool Enabled, string? Value);
+
+    private readonly record struct DocxTableConditionalStyle(DocxTableCellStyle Cell, DocxTableRowKeep? RowKeep);
 
     private sealed record DocxTableStyleProperties(
         string? LayoutValue,
@@ -130,16 +139,17 @@ internal sealed partial class DocxReader
             };
         }
 
-        var conditional = new Dictionary<string, DocxTableCellStyle>(StringComparer.Ordinal);
+        var conditional = new Dictionary<string, DocxTableConditionalStyle>(StringComparer.Ordinal);
         foreach (XElement region in style.Elements(WordprocessingNamespace + "tblStylePr"))
         {
             string? type = (string?)region.Attribute(WordprocessingNamespace + "type");
             if (type is not null)
             {
-                conditional[type] = ReadTableCellStyle(
-                    region.Element(WordprocessingNamespace + "tcPr"),
-                    region.Element(WordprocessingNamespace + "pPr"),
-                    region.Element(WordprocessingNamespace + "rPr"));
+                conditional[type] = new(
+                    ReadTableCellStyle(region.Element(WordprocessingNamespace + "tcPr"),
+                        region.Element(WordprocessingNamespace + "pPr"),
+                        region.Element(WordprocessingNamespace + "rPr")),
+                    ReadTableRowKeep(region.Element(WordprocessingNamespace + "trPr")));
             }
         }
 
@@ -157,6 +167,7 @@ internal sealed partial class DocxReader
             ReadTableBorders(tableProperties),
             conditional)
         {
+            RowKeep = ReadTableRowKeep(style.Element(WordprocessingNamespace + "trPr")),
             HasDeclaredTableProperties = tableProperties?.HasElements == true ||
                 style.Element(WordprocessingNamespace + "tcPr")?.HasElements == true || conditional.Count != 0
         };
@@ -274,6 +285,45 @@ internal sealed partial class DocxReader
                 ?.Attribute(WordprocessingNamespace + "val"));
     }
 
+    private static DocxTableRowKeep? ReadTableRowKeep(XElement? rowProperties)
+    {
+        XElement? keep = rowProperties?.Element(WordprocessingNamespace + "cantSplit");
+        return keep is null ? null : new(ReadOnOff(keep) == true, (string?)keep.Attribute(WordprocessingNamespace + "val"));
+    }
+
+    private static DocxTableRowKeep? ResolveTableRowKeep(DocxTableStyle tableStyle, DocxTableLook tableLook,
+        XElement? rowProperties, int rowIndex, int rowCount, bool leadingRowEmphasis)
+    {
+        DocxTableRowKeep? direct = ReadTableRowKeep(rowProperties);
+        if (direct is not null || tableStyle.ConditionalRegions.Count == 0)
+        {
+            return direct ?? tableStyle.RowKeep;
+        }
+
+        // Whole-row settings use horizontal bands and row edges. A column
+        // or corner style has no independent row to admit at a page break.
+        var (firstRow, lastRow, band) = GetTableRowStylePosition(tableLook, tableStyle.Table.RowBandSize,
+            rowIndex, rowCount, tableStyle.ConditionalRegions.ContainsKey("firstRow"),
+            tableStyle.ConditionalRegions.ContainsKey("lastRow"), leadingRowEmphasis);
+        var format = ReadTableConditionalFormat(rowProperties);
+        if (format is { IsDefined: true })
+        {
+            firstRow = format.FirstRow == true;
+            lastRow = format.LastRow == true;
+            band = format.EvenHorizontalBand == true ? "band2Horz" :
+                format.OddHorizontalBand == true ? "band1Horz" : null;
+        }
+
+        // A leading edge wins ties, matching the cell style cascade.
+        return (firstRow ? RowKeep("firstRow") : null) ??
+            (lastRow ? RowKeep("lastRow") : null) ??
+            (band is not null && tableStyle.Table.RowBandSize is > 0 ? RowKeep(band) : null) ??
+            tableStyle.RowKeep;
+
+        DocxTableRowKeep? RowKeep(string region) =>
+            tableStyle.ConditionalRegions.GetValueOrDefault(region).RowKeep;
+    }
+
     private static DocxTableCellStyle ResolveTableCellStyle(
         DocxTableStyle tableStyle,
         DocxTableLook tableLook,
@@ -297,9 +347,9 @@ internal sealed partial class DocxReader
             {
                 continue;
             }
-            if (tableStyle.ConditionalRegions.TryGetValue(region, out DocxTableCellStyle? style))
+            if (tableStyle.ConditionalRegions.TryGetValue(region, out DocxTableConditionalStyle style))
             {
-                resolved = resolved.Merge(style);
+                resolved = resolved.Merge(style.Cell);
             }
         }
 
@@ -335,38 +385,45 @@ internal sealed partial class DocxReader
         bool hasLastColRegion,
         bool leadingRowEmphasis)
     {
-        bool firstRow = tableLook.FirstRow != false;
-        bool lastRow = tableLook.LastRow == true;
+        var (firstRow, lastRow, horizontalBandRegion) = GetTableRowStylePosition(tableLook, rowBandSize,
+            rowIndex, rowCount, hasFirstRowRegion, hasLastRowRegion, leadingRowEmphasis);
         // Absent tblLook enables first-column emphasis in Word (band probe 2026-09-06: no-look col0 takes firstCol, matching firstRow).
         bool firstColumn = tableLook.FirstColumn != false;
         bool lastColumn = tableLook.LastColumn == true;
-        bool horizontalBand = tableLook.NoHorizontalBand != true;
         // Absent tblLook disables vertical banding in Word (band probe 2026-09-06: no-look vert-only style paints no fills), matching unchecked Banded Columns; horizontal banding stays on by default.
         bool verticalBand = tableLook.NoVerticalBand == false;
 
         // Banding skips an emphasized header row/column only along its own axis when the style defines the matching edge region (band probes 2026-09-06: probe4B header row unshaded, probe5B/probe6/probe10 headers take the edge region, probe11 header row still takes cross-axis bands); otherwise bands start at row0/col0 (probes 7/8T1). Edge regions yield after bands so they win same-property ties.
-        bool excludeLeadingRow = leadingRowEmphasis && hasFirstRowRegion;
         bool excludeLeadingColumn = firstColumn && hasFirstColRegion;
-        bool edgeRow = excludeLeadingRow && rowIndex == 0;
-        bool edgeLastRow = lastRow && rowIndex == rowCount - 1 && hasLastRowRegion;
         bool edgeCol = excludeLeadingColumn && cellIndex == 0;
         bool edgeLastCol = lastColumn && cellIndex == cellCount - 1 && hasLastColRegion;
 
         string? verticalBandRegion = ResolveBandRegion(cellIndex, columnBandSize ?? 1, "band1Vert", "band2Vert", excludeLeading: excludeLeadingColumn);
-        string? horizontalBandRegion = ResolveBandRegion(rowIndex, rowBandSize ?? 1, "band1Horz", "band2Horz", excludeLeading: excludeLeadingRow);
         return EnumerateTableStyleRegions(
-            oddHorizontalBand: horizontalBand && !edgeRow && !edgeLastRow && horizontalBandRegion == "band1Horz",
-            evenHorizontalBand: horizontalBand && !edgeRow && !edgeLastRow && horizontalBandRegion == "band2Horz",
+            oddHorizontalBand: horizontalBandRegion == "band1Horz",
+            evenHorizontalBand: horizontalBandRegion == "band2Horz",
             oddVerticalBand: verticalBand && !edgeCol && !edgeLastCol && verticalBandRegion == "band1Vert",
             evenVerticalBand: verticalBand && !edgeCol && !edgeLastCol && verticalBandRegion == "band2Vert",
             firstColumn: firstColumn && cellIndex == 0,
             lastColumn: lastColumn && cellIndex == cellCount - 1,
-            firstRow: firstRow && rowIndex == 0,
-            lastRow: lastRow && rowIndex == rowCount - 1,
-            firstRowFirstColumn: firstRow && firstColumn && rowIndex == 0 && cellIndex == 0,
-            firstRowLastColumn: firstRow && lastColumn && rowIndex == 0 && cellIndex == cellCount - 1,
-            lastRowFirstColumn: lastRow && firstColumn && rowIndex == rowCount - 1 && cellIndex == 0,
-            lastRowLastColumn: lastRow && lastColumn && rowIndex == rowCount - 1 && cellIndex == cellCount - 1);
+            firstRow: firstRow,
+            lastRow: lastRow,
+            firstRowFirstColumn: firstRow && firstColumn && cellIndex == 0,
+            firstRowLastColumn: firstRow && lastColumn && cellIndex == cellCount - 1,
+            lastRowFirstColumn: lastRow && firstColumn && cellIndex == 0,
+            lastRowLastColumn: lastRow && lastColumn && cellIndex == cellCount - 1);
+    }
+
+    private static (bool First, bool Last, string? Band) GetTableRowStylePosition(DocxTableLook tableLook,
+        int? rowBandSize, int rowIndex, int rowCount, bool hasFirstRowRegion, bool hasLastRowRegion, bool leadingRowEmphasis)
+    {
+        bool firstRow = tableLook.FirstRow != false && rowIndex == 0;
+        bool lastRow = tableLook.LastRow == true && rowIndex == rowCount - 1;
+        bool excludeLeading = leadingRowEmphasis && hasFirstRowRegion;
+        string? band = tableLook.NoHorizontalBand == true || (lastRow && hasLastRowRegion)
+            ? null
+            : ResolveBandRegion(rowIndex, rowBandSize ?? 1, "band1Horz", "band2Horz", excludeLeading);
+        return (firstRow, lastRow, band);
     }
 
     private static IEnumerable<string> EnumerateTableStyleRegions(
