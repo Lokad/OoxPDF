@@ -264,7 +264,8 @@ class AuditFrameworkBindingTests(unittest.TestCase):
                 (run / 'inspect').mkdir(parents=True)
                 pdf = run / 'candidate.pdf'
                 pdf.write_bytes(b'%PDF-cached-control')
-                (run / 'inspect/text-operations.json').write_text('[]', encoding='utf-8')
+                operations = run / 'inspect/text-operations.json'
+                operations.write_text('[]', encoding='utf-8')
                 reference = references / 'control-presentation/reference.pdf'
                 reference.parent.mkdir()
                 reference.write_bytes(pdf.read_bytes())
@@ -276,6 +277,7 @@ class AuditFrameworkBindingTests(unittest.TestCase):
                                                                     OperationsSha256=sha(ops))), encoding='utf-8')
                 (cache / 'inspect.log').write_text('2 0 obj: pages\n3 0 obj: page\n', encoding='utf-8')
                 row = dict(Id='control', Mode='presentation', InputSha256=sha(source), PdfSha256=sha(pdf),
+                           TextOperationsSha256=sha(operations),
                            InspectedPages=1, IgnoredEquationDiagnostics=0)
                 (candidate / 'outcomes.json').write_text(json.dumps(dict(LibrarySha256=sha(library), ManifestSha256=sha(manifest),
                                                                        InspectorSha256=sha(inspector), Rows=[row])), encoding='utf-8')
@@ -291,6 +293,23 @@ class AuditFrameworkBindingTests(unittest.TestCase):
                 report = json.loads(output.read_text(encoding='utf-8'))
                 self.assertEqual(selected, report.get('Framework', 'net10.0'))
                 self.assertEqual(0, report['LibraryBuilds'])
+                if framework == 'net11.0':
+                    # A report from another PDF, even with valid operations,
+                    # cannot replace a pinned, legitimately empty inspection.
+                    arguments[-3] = str(root / 'refused.json')
+                    operations.write_text('[{"DecodedText":"Another PDF"}]', encoding='utf-8')
+                    result = subprocess.run(arguments, capture_output=True, text=True)
+                    self.assertEqual(1, result.returncode)
+                    self.assertIn('Candidate text inspection differs', result.stderr)
+                    self.assertFalse((root / 'refused.json').exists())
+                    outcomes = candidate / 'outcomes.json'
+                    legacy = json.loads(outcomes.read_text(encoding='utf-8'))
+                    del legacy['Rows'][0]['TextOperationsSha256']
+                    outcomes.write_text(json.dumps(legacy), encoding='utf-8')
+                    result = subprocess.run(arguments, capture_output=True, text=True)
+                    self.assertEqual(1, result.returncode)
+                    self.assertIn('reinspect the candidate PDF', result.stderr)
+                    self.assertFalse((root / 'refused.json').exists())
                 # Never borrow another installed target when the selected asset changes.
                 library.write_bytes(b'wrong-selected-asset')
                 result = subprocess.run(arguments, capture_output=True, text=True)

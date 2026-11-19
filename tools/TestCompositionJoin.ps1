@@ -23,7 +23,9 @@ foreach ($id in @('one','two')) {
     [IO.File]::WriteAllText((Join-Path $run 'office-diff/metrics.json'), 'metrics remain at their original path')
     [ordered]@{LibrarySha256=('C'*64);CliSha256=('D'*64);InspectorSha256=('E'*64);Rows=@(
         @{Id=$id;Mode='all-word-compatible';InputSha256=$(if ($id -eq 'one') {'A'*64} else {'B'*64});
-          PdfSha256=(Get-FileHash (Join-Path $run 'candidate.pdf')).Hash;MissingExpectedText=@('retained raw flag')}
+          PdfSha256=(Get-FileHash (Join-Path $run 'candidate.pdf')).Hash;
+          TextOperationsSha256=(Get-FileHash (Join-Path $run 'inspect/text-operations.json')).Hash;
+          MissingExpectedText=@('retained raw flag')}
     )} | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $source 'outcomes.json')
     $sources += $source
 }
@@ -50,6 +52,9 @@ try {
         if (Test-Path -LiteralPath (Join-Path $run 'raster')) { throw 'A raster tree was copied' }
         if (Test-Path -LiteralPath (Join-Path $run 'office-diff')) { throw 'A comparison tree was copied' }
         if (!$row.JoinedFrom.ReportSha256 -or $row.MissingExpectedText[0] -ne 'retained raw flag') { throw 'Provenance or original classification lost' }
+        if ($row.TextOperationsSha256 -cne (Get-FileHash (Join-Path $run 'inspect/text-operations.json')).Hash) {
+            throw 'Joined text inspection is not pinned'
+        }
     }
     $original = Join-Path $sources[0] 'one-all-word-compatible/candidate.pdf'
     $hash = (Get-FileHash -LiteralPath $original).Hash
@@ -58,6 +63,16 @@ try {
     Reject 'missing' 'Measured outcome is missing' @($sources[0])
     $report = Join-Path $sources[1] 'outcomes.json'
     $bytes = [IO.File]::ReadAllBytes($report)
+    $textReport = Join-Path $sources[1] 'two-all-word-compatible/inspect/text-operations.json'
+    $textBytes = [IO.File]::ReadAllBytes($textReport)
+    [IO.File]::WriteAllText($textReport, '[{"DecodedText":"Other PDF"}]')
+    Reject 'stale-text-inspection' 'Candidate text inspection differs'
+    [IO.File]::WriteAllBytes($textReport, $textBytes)
+    $legacy = Get-Content -LiteralPath $report -Raw | ConvertFrom-Json -AsHashtable
+    $legacy.Rows[0].Remove('TextOperationsSha256')
+    $legacy | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $report
+    Reject 'legacy-text-inspection' 'reinspect the candidate PDF'
+    [IO.File]::WriteAllBytes($report, $bytes)
     $changed = Get-Content -LiteralPath $report -Raw | ConvertFrom-Json
     $changed.LibrarySha256 = 'F'*64
     $changed | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $report

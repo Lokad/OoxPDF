@@ -28,7 +28,9 @@ foreach ($directory in $SourceDirectory) {
     # Repeating a source selection is harmless. Distinct reports must not claim
     # the same outcome: equal PDF bytes do not establish equal classifications.
     if (!$seenReports.Add($reportPath)) { continue }
-    $report = Get-Content -LiteralPath $reportPath -Raw | ConvertFrom-Json -AsHashtable
+    $reportBytes = [IO.File]::ReadAllBytes($reportPath)
+    $report = ConvertFrom-Json -AsHashtable -InputObject ([Text.Encoding]::UTF8.GetString($reportBytes).TrimStart([char]0xFEFF))
+    $reportHash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($reportBytes))
     $used = $false
     foreach ($row in $report.Rows) {
         if (!$cases.ContainsKey($row.Id)) { continue }
@@ -42,7 +44,6 @@ foreach ($directory in $SourceDirectory) {
         elseif (@(Compare-Object $runtime $identity -SyncWindow 0).Count) { throw 'Join outcomes from one frozen runtime and inspector' }
         $key = $row.Id + '-' + $row.Mode
         $run = Join-Path $source $key
-        if ((Get-FileHash -LiteralPath (Join-Path $run 'candidate.pdf')).Hash -ne $row.PdfSha256) { throw ('Candidate identity differs: ' + $key) }
         if ($jobs.Contains($key)) {
             throw ('Conflicting duplicate outcome; select one source report: ' + $key)
         }
@@ -53,8 +54,17 @@ foreach ($directory in $SourceDirectory) {
                 $copies += [pscustomobject]@{Name=$name;Path=$path;Hash=(Get-FileHash -LiteralPath $path).Hash}
             }
         }
+        $pdf = $copies | Where-Object Name -CEQ 'candidate.pdf'
+        if (!$pdf -or $pdf.Hash -cne $row.PdfSha256) { throw ('Candidate identity differs: ' + $key) }
         if (!($copies.Name -contains 'inspect.log')) { throw ('Inspection log is missing: ' + $key) }
-        $jobs[$key] = [pscustomobject]@{Row=$row;Source=$source;Copies=$copies;Report=$reportPath;ReportHash=(Get-FileHash -LiteralPath $reportPath).Hash}
+        $operations = $copies | Where-Object Name -CEQ 'inspect/text-operations.json'
+        if (!$row.TextOperationsSha256) {
+            throw ('Text inspection identity is missing; reinspect the candidate PDF: ' + $key)
+        }
+        if (!$operations -or $operations.Hash -cne $row.TextOperationsSha256) {
+            throw ('Candidate text inspection differs: ' + $key)
+        }
+        $jobs[$key] = [pscustomobject]@{Row=$row;Source=$source;Copies=$copies;Report=$reportPath;ReportHash=$reportHash}
         $used = $true
     }
     if ($used) { $reports += $reportPath }

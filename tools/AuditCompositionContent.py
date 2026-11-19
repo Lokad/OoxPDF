@@ -333,10 +333,22 @@ def main():
         folder = identifier + "-" + mode
         run = candidate / folder
         pdf, reference = run / "candidate.pdf", reference_pdfs[identifier, mode]
-        if sha(pdf) != outcome["PdfSha256"] or comparison["CandidatePdfSha256"] != sha(pdf) or comparison["ReferencePdfSha256"] != sha(reference):
+        pdf_hash, reference_hash = sha(pdf), sha(reference)
+        if pdf_hash != outcome["PdfSha256"] or comparison["CandidatePdfSha256"] != pdf_hash or comparison["ReferencePdfSha256"] != reference_hash:
             raise ValueError("Comparison PDF identities differ")
         operations_path = run / "inspect/text-operations.json"
-        operations = read(operations_path)
+        operations_pin = outcome.get("TextOperationsSha256")
+        if not operations_pin:
+            raise ValueError("Text inspection identity is missing; reinspect the candidate PDF: " + folder)
+        if not operations_path.is_file():
+            raise ValueError("Candidate text inspection is missing: " + folder)
+        operations_bytes = operations_path.read_bytes()
+        operations_hash = hashlib.sha256(operations_bytes).hexdigest().upper()
+        if operations_hash != operations_pin:
+            raise ValueError("Candidate text inspection differs: " + folder)
+        operations = json.loads(operations_bytes.decode("utf-8-sig"))
+        if not isinstance(operations, list):
+            raise ValueError("Invalid candidate text operations: " + folder)
         office, office_ops_hash, pages, office_log_hash = inspect_reference(reference, inspector, args.cache.resolve())
         candidate_words = words(operation_text(operations))
         office_words = words(operation_text(office))
@@ -352,9 +364,9 @@ def main():
                                                            if item["Font"].startswith("Eq"))))
         observed_math = Counter({expression: math_stream.count(expression) for expression in expressions})
         rows.append({"Id": identifier, "Mode": mode, "HeldOut": case["HeldOut"], "InputSha256": sha(source),
-                     "CandidatePdfSha256": sha(pdf), "ReferencePdfSha256": sha(reference),
+                     "CandidatePdfSha256": pdf_hash, "ReferencePdfSha256": reference_hash,
                      "ReferenceSourceDirectory": str(reference.parent),
-                     "CandidateOperationsSha256": sha(operations_path), "ReferenceOperationsSha256": office_ops_hash,
+                     "CandidateOperationsSha256": operations_hash, "ReferenceOperationsSha256": office_ops_hash,
                      "ReferenceInspectionLogSha256": office_log_hash,
                      "ReferencePages": pages, "CandidatePages": outcome["InspectedPages"],
                      "SourceProseTokens": sum(prose.values()), "SourceParts": parts,

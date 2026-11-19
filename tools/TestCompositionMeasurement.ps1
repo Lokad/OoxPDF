@@ -23,7 +23,7 @@ foreach ($file in @($cli, $inspector, (Join-Path $repo 'Lokad.OoxPdf.dll'))) {
 $calls = [Collections.Generic.List[object]]::new()
 $inspectionOnly = $false
 $inspectionOperations = @([pscustomobject]@{PageNumber=1;Font='Body';DecodedText='Retained source.'})
-$mutation = [pscustomobject]@{CopyPath=$null;InspectionSource=$null;InspectionDestination=$false}
+$mutation = [pscustomobject]@{CopyPath=$null;InspectionSource=$null;InspectionDestination=$false;OmitTextOperations=$false;ChangePdf=$false}
 function Copy-Item {
     param([string] $LiteralPath, [string] $Destination)
     if ($mutation.CopyPath -and [IO.Path]::GetFullPath($LiteralPath) -eq [IO.Path]::GetFullPath($mutation.CopyPath)) {
@@ -46,10 +46,14 @@ function dotnet {
             $mutation.InspectionDestination = $false
         }
         New-Item -ItemType Directory -Path $args[2] | Out-Null
-        $inspectionOperations | ConvertTo-Json -AsArray |
-            Set-Content -LiteralPath (Join-Path $args[2] 'text-operations.json')
+        if (!$mutation.OmitTextOperations) {
+            ConvertTo-Json -InputObject $inspectionOperations |
+                Set-Content -LiteralPath (Join-Path $args[2] 'text-operations.json')
+        }
+        if ($mutation.ChangePdf) { [IO.File]::WriteAllText($args[1], 'PDF changed during inspection') }
         $global:LASTEXITCODE = 0
-        foreach ($page in @($inspectionOperations.PageNumber | Sort-Object -Unique)) {
+        $pages = if ($inspectionOperations.Count) { $inspectionOperations.PageNumber | Sort-Object -Unique } else { 1 }
+        foreach ($page in $pages) {
             Write-Output ($page.ToString() + ' 0 obj: page')
         }
         return
@@ -185,6 +189,10 @@ foreach ($fault in @('runtime', 'input', 'pdf', 'missing', 'duplicate',
         throw 'Successful reinspection must preserve all candidates and original provenance without conversion'
     }
     foreach ($row in $report.Rows) {
+        $inspection = Join-Path $output ($row.Id + '-' + $row.Mode + '/inspect/text-operations.json')
+        if ($row.TextOperationsSha256 -cne (Get-FileHash -LiteralPath $inspection).Hash) {
+            throw 'Measured text inspection is not pinned'
+        }
         if ($row.ColdProcessElapsedMs -ne 123d -or $row.MissingExpectedText.Count -ne 0 -or
             $row.PdfSha256 -ne (Get-FileHash -LiteralPath (Join-Path $prior ($row.Id + '-' + $row.Mode + '/candidate.pdf'))).Hash) {
             throw 'Reinspection changed candidate identity/timing or lost content'
@@ -206,7 +214,8 @@ $textCases = @(
     @{Id='page-boundary';Pages=@(1,2);Text=@('Retained','source.');Expected='Retainedsource.';Missing=$true},
     @{Id='numeric-page-order';Pages=@(10,2);Text=@('last','first');Expected='first last';Missing=$false},
     @{Id='decoded-unicode';Pages=@(1,1,1);Text=@('of',([string][char]0xFB01),'ce');Expected='office';Missing=$false},
-    @{Id='missing-word';Pages=@(1,1);Text=@('Retained ','.');Expected='Retained source.';Missing=$true}
+    @{Id='missing-word';Pages=@(1,1);Text=@('Retained ','.');Expected='Retained source.';Missing=$true},
+    @{Id='empty-inspection';Pages=@();Text=@();Expected='Retained source.';Missing=$true}
 )
 foreach ($textCase in $textCases) {
     $inspectionOperations = @(for ($index=0; $index -lt $textCase.Text.Count; $index++) {
@@ -233,6 +242,18 @@ foreach ($textCase in $textCases) {
         if (($row.Severity -eq 'Content blocker') -ne $textCase.Missing) {
             throw ('Text-screen classification differs: ' + $textCase.Id)
         }
+    }
+}
+foreach ($fault in @('OmitTextOperations', 'ChangePdf')) {
+    $mutation.$fault = $true
+    $output = Join-Path $OutputDirectory $fault
+    $failure = $null
+    try { & $script -CliPath $cli -InspectorPath $inspector -Manifest $manifest -OutputDirectory $output -ReuseCandidateDirectory $prior | Out-Null }
+    catch { $failure = $_ }
+    finally { $mutation.$fault = $false }
+    $expected = if ($fault -eq 'OmitTextOperations') { '*did not publish text operations*' } else { '*PDF changed during inspection*' }
+    if (!$failure -or "$failure" -notlike $expected -or (Test-Path -LiteralPath (Join-Path $output 'outcomes.json'))) {
+        throw ('Unexpected inspection result: ' + $fault + '; failure=' + $failure)
     }
 }
 Write-Output "Measurement/reinspection passes: $preflightRejects invalid caches reject before output/work, $lateRejects late changes reject before report publication, $validReuses valid diagnostic batches and $($textCases.Count) text-assembly controls reuse without conversion. No .NET processes or library builds."

@@ -90,8 +90,10 @@ calibrate Office application view; record view/zoom/markup settings separately.
 `MeasureCompositionPortfolio.ps1` measures frozen outcomes;
 `CompareCompositionPortfolio.ps1` compares pinned Office references;
 `AuditCompositionContent.py` and `ScreenPdfInk.py` provide bounded independent
-content/ink checks. Composition limits live in `tools/CompositionDocxThresholds.json`
-and `tools/CompositionPptxThresholds.json`; reports record their identities and
+content/ink checks. Reinspect older PDFs with `-ReuseCandidateDirectory` when
+their outcome rows lack a text-inspection hash. Composition limits live in
+`tools/CompositionDocxThresholds.json` and `tools/CompositionPptxThresholds.json`.
+Reports record their identities and
 reapply current limits to reused pixel metrics. Reports distinguish omissions,
 pagination/overlap, significant
 geometry, cosmetic differences and unknowns. [Capabilities](Capabilities.md) lists

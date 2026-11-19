@@ -124,8 +124,7 @@ foreach ($job in $jobs) {
                 (Get-FileHash -LiteralPath (Join-Path $source 'diagnostics.json')).Hash -ne $priorDiagnosticsHashes[$key]) {
                 throw ('Reused diagnostics changed during copying: ' + $key)
             }
-            if ((Get-FileHash -LiteralPath $pdf).Hash -ne $priorRow.PdfSha256 -or
-                (Get-FileHash -LiteralPath $priorPath).Hash -ne $priorHash) { throw 'Reused candidate changed during inspection' }
+            if ((Get-FileHash -LiteralPath $priorPath).Hash -ne $priorHash) { throw 'Reused outcome report changed' }
             $elapsedMs = $priorRow.ColdProcessElapsedMs
             $reusedCandidates++
         }
@@ -140,6 +139,10 @@ foreach ($job in $jobs) {
             $elapsedMs = $timer.Elapsed.TotalMilliseconds
             $conversions++
         }
+        $pdfHash = (Get-FileHash -LiteralPath $pdf).Hash
+        if ($ReuseCandidateDirectory -and $pdfHash -ne $priorRow.PdfSha256) {
+            throw ('Reused PDF differs: ' + $key)
+        }
         $inspect = Join-Path $run 'inspect'
         # Text/graphics summaries suffice for routine content and geometry gates.
         # Dump decoded font/image streams only for a focused byte-level audit.
@@ -147,10 +150,18 @@ foreach ($job in $jobs) {
         if (!$IncludeRawStreams) { $inspectArguments += '--text-only' }
         dotnet $inspector @inspectArguments *> (Join-Path $run 'inspect.log')
         if ($LASTEXITCODE -ne 0) { throw ('Portfolio inspection failed: ' + $document.Id) }
-        # The inspector omits its text report when a PDF contains no text.
-        # Page objects still identify image-only and blank pages independently.
         $textReport = Join-Path $inspect 'text-operations.json'
-        $operations = if (Test-Path -LiteralPath $textReport) { @(Get-Content -LiteralPath $textReport -Raw | ConvertFrom-Json) } else { @() }
+        if (!(Test-Path -LiteralPath $textReport -PathType Leaf)) {
+            throw ('Portfolio inspection did not publish text operations: ' + $document.Id + '/' + $mode)
+        }
+        $operationsBytes = [IO.File]::ReadAllBytes($textReport)
+        $operations = ConvertFrom-Json -NoEnumerate -InputObject ([Text.Encoding]::UTF8.GetString($operationsBytes).TrimStart([char]0xFEFF))
+        if ($operations -isnot [Array]) { throw ('Invalid portfolio text operations: ' + $document.Id + '/' + $mode) }
+        $operationsHash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($operationsBytes))
+        if ((Get-FileHash -LiteralPath $pdf).Hash -ne $pdfHash) {
+            throw ('Candidate PDF changed during inspection: ' + $document.Id + '/' + $mode)
+        }
+        # Page objects count image-only and blank pages even with an empty text report.
         $pageCount = @(Get-Content -LiteralPath (Join-Path $run 'inspect.log') | Where-Object { $_ -match '^\d+ \d+ obj: page$' }).Count
         if ($pageCount -lt 1) { throw ('No inspected PDF pages: ' + $document.Id) }
         $text = Normalize-Text (Join-DecodedPdfTextPages $operations)
@@ -167,7 +178,7 @@ foreach ($job in $jobs) {
         $ignoredMath = @($diagnostics | Where-Object { $_.Id -eq 'DOCX_UNSUPPORTED_EQUATION' }).Count
         $rows += [ordered]@{
             Id=$document.Id;Mode=$mode;HeldOut=$document.HeldOut;InputSha256=$document.Sha256
-            PdfSha256=(Get-FileHash -LiteralPath $pdf).Hash;ColdProcessElapsedMs=$elapsedMs
+            PdfSha256=$pdfHash;TextOperationsSha256=$operationsHash;ColdProcessElapsedMs=$elapsedMs
             MissingExpectedText=$missing;IgnoredEquationDiagnostics=$ignoredMath
             ExpectedSourceEquations=$expectedEquations
             MathematicalTextOperations=@($operations | Where-Object Font -Like 'Eq*').Count
