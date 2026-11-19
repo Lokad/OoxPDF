@@ -239,6 +239,7 @@ internal sealed partial class PptxRenderer
         double valueAxisLabelWidth = captions.SlotWidth;
         double sideGap = captions.SideGap;
         var runs = new List<TextRun>(tickValues.Count);
+        ChartTextStyle emissionStyle = style with { FontSize = OfficePdfTextEmissionProfile.FontSize(style.FontSize) };
         foreach (double value in tickValues)
         {
             string label = FormatSceneChartAxisLabel(value, sceneAxis, sceneChart.Options.Date1904 == true, defaultNumberFormat);
@@ -282,6 +283,16 @@ internal sealed partial class PptxRenderer
             double labelWidth = Math.Max(1d, width);
             double clipY = horizontalBars ? y : plotBox.Y - height;
             double clipHeight = horizontalBars ? height : plotBox.Height + height * PptxChartMetricRules.ValueAxisVerticalClipExtraHeightFactor;
+            if (horizontalBars)
+            {
+                // The horizontal label position is its baseline. Rounded digits
+                // and formatted suffixes can carry ink below it.
+                var ink = await textMeasurer.TryMeasureInkBoundsAsync(label, emissionStyle).ConfigureAwait(false);
+                double descent = ink is { } bounds ? Math.Max(0d, -bounds.Bottom)
+                    : (await textMeasurer.MeasureLineBoxAsync(emissionStyle).ConfigureAwait(false)).Descent;
+                clipY -= descent;
+                clipHeight += descent;
+            }
             runs.Add(new TextRun(
                 label,
                 x,
@@ -321,7 +332,6 @@ internal sealed partial class PptxRenderer
             // inner placement, just as equivalent declared intervals do.
             // Grid/scale ownership remains with the existing axis calculation.
             var ink = new List<(int Index, double Bottom, double Top)>();
-            ChartTextStyle emissionStyle = style with { FontSize = OfficePdfTextEmissionProfile.FontSize(style.FontSize) };
             for (int index = 0; index < runs.Count; index++)
             {
                 if (await textMeasurer.TryMeasureInkBoundsAsync(runs[index].Text, emissionStyle).ConfigureAwait(false) is not { } bounds)

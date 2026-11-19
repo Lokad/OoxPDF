@@ -725,18 +725,25 @@ internal static partial class PptxChartsTests
         TestAssert.Contains("0 0 720 540 re W* n", page.Content);
     }
 
+    public static void PptxHorizontalValueAxisKeepsFormattedDescenders()
+    {
+        PdfPage page = RenderHorizontalValueAxisProbe(showLabels: true, numberFormat: "0&quot; g&quot;");
+        AssertHorizontalValueTicks(page, 10, "0 g", "5 g", "10 g", "15 g", "20 g", "25 g",
+            "30 g", "35 g", "40 g", "45 g", "50 g");
+    }
+
     private static void AssertHorizontalValueTicks(PdfPage page, int gridlineCount, params string[] expectedLabels)
     {
         TestAssert.True(Regex.IsMatch(page.Content,
             @"(?:[0-9.]+ [0-9.]+ m\s+[0-9.]+ [0-9.]+ l\s+){" + gridlineCount + "}S"),
             $"Expected {gridlineCount} major gridline segments, excluding the zero crossing.");
-        TestAssert.Equal(string.Join(" ", expectedLabels),
-            string.Join(" ", ReadHorizontalValueAxisCaptions(page).Select(caption => caption.Text)));
+        string[] labels = ReadHorizontalValueAxisCaptions(page).Select(caption => caption.Text).ToArray();
+        TestAssert.True(expectedLabels.SequenceEqual(labels), "Unexpected axis labels: " + string.Join(", ", labels));
         if (expectedLabels.Length > 0)
         {
             string text = string.Concat(expectedLabels);
             var glyphs = PortableRenderingTests.ReadPaintedSourceLabel(page, text, fontPrefix: "CVA");
-            TestAssert.Equal(text.Length, glyphs.Count);
+            TestAssert.Equal(text.Count(c => !char.IsWhiteSpace(c)), glyphs.Count);
         }
     }
 
@@ -744,12 +751,14 @@ internal static partial class PptxChartsTests
         DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true,
             fontResourceFilter: name => name.StartsWith("CVA", StringComparison.Ordinal));
 
-    private static PdfPage RenderHorizontalValueAxisProbe(bool showLabels, bool manualPlot = false, bool fitSlide = true)
+    private static PdfPage RenderHorizontalValueAxisProbe(bool showLabels, bool manualPlot = false, bool fitSlide = true,
+        string? numberFormat = null)
     {
         string presentation = PptxTests.BasicPresentation();
         if (fitSlide)
             presentation = presentation.Replace("<p:sldSz cx=\"9144000\"", "<p:sldSz cx=\"10668000\"", StringComparison.Ordinal);
         string labelPosition = showLabels ? "" : """<c:tickLblPos val="none"/>""";
+        string format = numberFormat is null ? "" : $"""<c:numFmt formatCode="{numberFormat}" sourceLinked="0"/>""";
         string plotLayout = manualPlot
             ? """<c:layout><c:manualLayout><c:xMode val="factor"/><c:yMode val="factor"/><c:wMode val="factor"/><c:hMode val="factor"/><c:x val="0.18"/><c:y val="0.14"/><c:w val="0.62"/><c:h val="0.68"/></c:manualLayout></c:layout>"""
             : "";
@@ -795,7 +804,7 @@ internal static partial class PptxChartsTests
                     <c:axId val="1"/><c:axPos val="l"/><c:crossAx val="2"/>
                   </c:catAx>
                   <c:valAx>
-                    <c:axId val="2"/><c:axPos val="b"/><c:scaling/><c:majorGridlines/>{{labelPosition}}<c:crossAx val="1"/><c:crosses val="autoZero"/>
+                    <c:axId val="2"/><c:axPos val="b"/><c:scaling/>{{format}}<c:majorGridlines/>{{labelPosition}}<c:crossAx val="1"/><c:crosses val="autoZero"/>
                   </c:valAx>
                   </c:plotArea></c:chart>
                 </c:chartSpace>

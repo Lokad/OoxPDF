@@ -6099,6 +6099,7 @@
     "PptxSyntheticChartHorizontalValueAxisVisibleLabelsWithoutManualBoxUseOfficeDenseTicks",
     "PptxSyntheticChartHorizontalValueAxisVisibleLabelsWithManualBoxUseOfficeSparseTicks",
     "PptxHorizontalValueAxisKeepsOffSlideMaximumBeyondPageClip",
+    "PptxHorizontalValueAxisKeepsFormattedDescenders",
     "PptxSyntheticChartValueAxisReversedOrientationMovesBarDataLabels",
     "PptxSyntheticChartValueAxisReversedOrientationMovesHorizontalBarsAndLabels",
     "PptxSyntheticChartValueAxisReversedOrientationInvertsLineGeometry",
@@ -20210,7 +20211,8 @@
     "PptxSyntheticChartHorizontalValueAxisAutoUnitUsesOfficeDenseTicks",
     "PptxSyntheticChartHorizontalValueAxisVisibleLabelsWithoutManualBoxUseOfficeDenseTicks",
     "PptxSyntheticChartHorizontalValueAxisVisibleLabelsWithManualBoxUseOfficeSparseTicks",
-    "PptxHorizontalValueAxisKeepsOffSlideMaximumBeyondPageClip"
+    "PptxHorizontalValueAxisKeepsOffSlideMaximumBeyondPageClip",
+    "PptxHorizontalValueAxisKeepsFormattedDescenders"
   ],
   "pptx-centered-horizontal-labels": [
     "PptxCenteredHorizontalLabelFramesFollowPaintedBars",
