@@ -3118,10 +3118,9 @@ internal static partial class DocxCommentsTests
         }
     }
 
-    private static void AssertMixedBalloonSpacing(string? beforeAuto, string? afterAuto, string? beforeLines, string? afterLines,
-        string value, int spacingKind, int bodyKind, double rightMargin)
+    private static DocxDocument CreateMixedBalloonSpacingDocument(
+        DocxParagraphSpacing firstSpacing, DocxParagraphSpacing secondSpacing, string tail, bool hasThird, double rightMargin)
     {
-        string tail = bodyKind == 1 ? new string('m', 80) + " ending." : "control.";
         DocxParagraph anchor = DocxTests.CreateCommentMarkerParagraph("Body anchor", "1") with
         {
             Runs = [new DocxTextRun("Body anchor", 12d, null, false, false, false, null, "AnchorFace")]
@@ -3131,13 +3130,13 @@ internal static partial class DocxCommentsTests
             LineSpacingPoints = null,
             Runs = [new DocxTextRun("Review table", 12d, null, false, false, false, null, "CommentFace")],
             ParagraphMarkRun = new DocxTextRun(" ", 18d, null, false, false, false, null, "AnchorFace"),
-            Spacing = DocxParagraphSpacing.Empty with { AfterValue = spacingKind != 1 ? value : null, BeforeAutoSpacingValue = beforeAuto, AfterAutoSpacingValue = afterAuto, BeforeLinesValue = beforeLines, AfterLinesValue = afterLines }
+            Spacing = firstSpacing
         };
         DocxParagraph second = first with
         {
             Runs = [new DocxTextRun(tail, 12d, null, false, false, false, null, "OtherCommentFace")],
             ParagraphMarkRun = first.ParagraphMarkRun! with { FontFamily = "CommentFace", FontSize = 36d },
-            Spacing = DocxParagraphSpacing.Empty with { BeforeValue = spacingKind != 0 ? value : null }
+            Spacing = secondSpacing
         };
         DocxParagraph third = first with
         {
@@ -3145,21 +3144,40 @@ internal static partial class DocxCommentsTests
             ParagraphMarkRun = first.ParagraphMarkRun! with { FontSize = 24d },
             Spacing = DocxParagraphSpacing.Empty
         };
-        DocxBodyElement[] elements = bodyKind == 2
+        DocxBodyElement[] elements = hasThird
             ? [new DocxParagraphElement(first), new DocxParagraphElement(second), new DocxParagraphElement(third)]
             : [new DocxParagraphElement(first), new DocxParagraphElement(second)];
         DocxRelatedStory story = new(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1", elements, [], [], null)
         {
             CommentMetadata = new DocxCommentMetadata("Reviewer", "RV", null, null, null, null, null)
         };
-        DocxDocument document = new(612d, 792d, 72d, rightMargin, 72d, 72d, DocxPageSettings.Empty,
+        return new DocxDocument(612d, 792d, 72d, rightMargin, 72d, 72d, DocxPageSettings.Empty,
             [], [], [], [new DocxParagraphElement(anchor)], [], [])
         {
             RelatedStories = [story], MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
-        var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodyLineGap: 450, bodySpaceAdvance: 123,
+    }
+
+    private static DocxRenderer CreateMixedBalloonSpacingRenderer() =>
+        new(new BalloonTypefaceFontResolver(bodyLineGap: 450, bodySpaceAdvance: 123,
             bodyDescender: -50, bodyAscender: 500), OoxPdfDocxMarkupMode.AllMarkup,
             OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+
+    private static void AssertMixedBalloonSpacing(string? beforeAuto, string? afterAuto, string? beforeLines, string? afterLines,
+        string value, int spacingKind, int bodyKind, double rightMargin)
+    {
+        string tail = bodyKind == 1 ? new string('m', 80) + " ending." : "control.";
+        DocxParagraphSpacing firstSpacing = DocxParagraphSpacing.Empty with
+        {
+            AfterValue = spacingKind != 1 ? value : null,
+            BeforeAutoSpacingValue = beforeAuto,
+            AfterAutoSpacingValue = afterAuto,
+            BeforeLinesValue = beforeLines,
+            AfterLinesValue = afterLines
+        };
+        DocxParagraphSpacing secondSpacing = DocxParagraphSpacing.Empty with { BeforeValue = spacingKind != 0 ? value : null };
+        DocxDocument document = CreateMixedBalloonSpacingDocument(firstSpacing, secondSpacing, tail, bodyKind == 2, rightMargin);
+        var renderer = CreateMixedBalloonSpacingRenderer();
         var balloon = renderer.InspectMarkupBalloons(document).Single();
         var paintedPage = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
         var shows = ReadEmbeddedGlyphTextShows(paintedPage)
@@ -3209,34 +3227,39 @@ internal static partial class DocxCommentsTests
         }
         TestAssert.True(marks.All(mark => Math.Abs(mark.Size - size) < 0.001d), "Spaces and marks retain nominal balloon size.");
         AssertBalloonContainsPaintedFontBoxes(balloon, paintedPage);
-        if (value == "120" && spacingKind == 0 && bodyKind == 0)
+    }
+
+    private static void AssertMixedBalloonSpacingFallback()
+    {
+        var invalidSpacing = new List<DocxParagraphSpacing>
         {
-            var invalidSpacing = new List<DocxParagraphSpacing>
-            {
-                DocxParagraphSpacing.Empty with { BeforeLinesValue = "400" },
-                DocxParagraphSpacing.Empty with { AfterLinesValue = "400" },
-                DocxParagraphSpacing.Empty with { BeforeAutoSpacingValue = "invalid" },
-                DocxParagraphSpacing.Empty with { AfterAutoSpacingValue = "invalid" },
-                DocxParagraphSpacing.Empty with { LineValue = "480" },
-                DocxParagraphSpacing.Empty with { LineRuleValue = "exact" },
-                DocxParagraphSpacing.Empty with { ContextualSpacing = true },
-                DocxParagraphSpacing.Empty with { ContextualSpacing = false }
-            };
-            foreach (string invalid in new[] { "-120", "invalid", "4294967296", " 120", "+120", "120pt", "" })
-            {
-                invalidSpacing.Add(DocxParagraphSpacing.Empty with { BeforeValue = invalid });
-                invalidSpacing.Add(DocxParagraphSpacing.Empty with { AfterValue = invalid });
-            }
-            foreach (DocxParagraphSpacing spacing in invalidSpacing)
-            {
-                DocxDocument guarded = document with { RelatedStories = [story with { BodyElements = [new DocxParagraphElement(first with { Spacing = spacing }), new DocxParagraphElement(second)] }] };
-                var guardedBalloon = renderer.InspectMarkupBalloons(guarded).Single();
-                var guardedShows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(guarded, null, CancellationToken.None).ToBlockingEnumerable().Single())
-                    .Where(show => show.X >= guardedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
-                TestAssert.True(double.IsFinite(guardedBalloon.Height) && guardedShows.Length > 0 &&
-                    guardedShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
-                    "Line, unqualified automatic, contextual, malformed, signed and oversized-integer spacing retain finite complete fallback.");
-            }
+            DocxParagraphSpacing.Empty with { BeforeLinesValue = "400" },
+            DocxParagraphSpacing.Empty with { AfterLinesValue = "400" },
+            DocxParagraphSpacing.Empty with { BeforeAutoSpacingValue = "invalid" },
+            DocxParagraphSpacing.Empty with { AfterAutoSpacingValue = "invalid" },
+            DocxParagraphSpacing.Empty with { LineValue = "480" },
+            DocxParagraphSpacing.Empty with { LineRuleValue = "exact" },
+            DocxParagraphSpacing.Empty with { ContextualSpacing = true },
+            DocxParagraphSpacing.Empty with { ContextualSpacing = false }
+        };
+        foreach (string invalid in new[] { "-120", "invalid", "4294967296", " 120", "+120", "120pt", "" })
+        {
+            invalidSpacing.Add(DocxParagraphSpacing.Empty with { BeforeValue = invalid });
+            invalidSpacing.Add(DocxParagraphSpacing.Empty with { AfterValue = invalid });
+        }
+        foreach (double rightMargin in new[] { 72d, 144d, 207d })
+        foreach (DocxParagraphSpacing spacing in invalidSpacing)
+        {
+            DocxDocument guarded = CreateMixedBalloonSpacingDocument(
+                spacing, DocxParagraphSpacing.Empty, "control.", hasThird: false, rightMargin);
+            var renderer = CreateMixedBalloonSpacingRenderer();
+            var guardedBalloon = renderer.InspectMarkupBalloons(guarded).Single();
+            var guardedShows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(guarded, null, CancellationToken.None).ToBlockingEnumerable().Single())
+                .Where(show => show.X >= guardedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
+            TestAssert.True(double.IsFinite(guardedBalloon.Height) && guardedShows.Length > 0 &&
+                guardedShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
+                "Line, unqualified automatic, contextual, malformed, signed and oversized-integer spacing retain finite complete fallback. "
+                + $"Right margin {rightMargin}, spacing {spacing}.");
         }
     }
 

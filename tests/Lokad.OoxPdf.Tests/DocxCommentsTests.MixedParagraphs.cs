@@ -1652,6 +1652,7 @@ internal static partial class DocxCommentsTests
 
     public static void DocxWordCompatibleMixedBalloonWrapsParagraphBodiesIndependently()
     {
+        var boundaries = BalloonParagraphBodyBoundaryCases().ToHashSet();
         foreach (bool hasFourth in new[] { false, true })
         foreach (bool hasThird in new[] { false, true })
         foreach (bool wrappedFourth in new[] { false, true })
@@ -1670,22 +1671,40 @@ internal static partial class DocxCommentsTests
             if (hasFourth && (!hasThird || !(wrappedFirst || wrappedSecond || wrappedThird))) { continue; }
             if (!hasThird && wrappedThird) { continue; }
             if (!wrappedFirst && !wrappedSecond && !wrappedThird) { continue; }
-            AssertIndependentBalloonParagraphBodies(hasFourth, hasThird, wrappedFourth, wrappedThird, wrappedFirst, wrappedSecond, supplementary, zeroFirst, prefixDescender, prefixGap, length, firstMarkFace, rightMargin);
+            var test = new BalloonParagraphBodyCase(hasFourth, hasThird, wrappedFourth, wrappedThird,
+                wrappedFirst, wrappedSecond, supplementary, zeroFirst, prefixDescender, prefixGap, length,
+                firstMarkFace, rightMargin);
+            if (!boundaries.Contains(test)) test.AssertLayout();
         }
     }
 
     public static void DocxWordCompatibleMixedBalloonParagraphBodyBoundaries()
+    {
+        foreach (var test in BalloonParagraphBodyBoundaryCases()) test.AssertLayout();
+    }
+
+    private static IEnumerable<BalloonParagraphBodyCase> BalloonParagraphBodyBoundaryCases()
     {
         for (int mask = 1; mask < 8; mask++)
         foreach (bool supplementary in new[] { false, true })
         foreach (double rightMargin in new[] { 72d, 144d, 207d })
         {
             bool fourth = (mask & 1) != 0;
-            AssertIndependentBalloonParagraphBodies(fourth, fourth || (mask & 4) != 0, fourth && mask == 3,
+            yield return new BalloonParagraphBodyCase(fourth, fourth || (mask & 4) != 0, fourth && mask == 3,
                 (mask & 4) != 0, (mask & 1) != 0, (mask & 2) != 0, supplementary, (mask & 2) != 0,
                 (short)(mask % 2 == 0 ? -50 : -350), (short)(mask % 3 == 0 ? 0 : 450), mask % 2 == 0 ? 32 : 80,
                 mask % 2 == 0 ? "AnchorFace" : "CommentFace", rightMargin);
         }
+    }
+
+    private readonly record struct BalloonParagraphBodyCase(
+        bool HasFourth, bool HasThird, bool WrappedFourth, bool WrappedThird, bool WrappedFirst, bool WrappedSecond,
+        bool Supplementary, bool ZeroFirst, short PrefixDescender, short PrefixGap, int Length, string FirstMarkFace,
+        double RightMargin)
+    {
+        public void AssertLayout() => AssertIndependentBalloonParagraphBodies(
+            HasFourth, HasThird, WrappedFourth, WrappedThird, WrappedFirst, WrappedSecond, Supplementary,
+            ZeroFirst, PrefixDescender, PrefixGap, Length, FirstMarkFace, RightMargin);
     }
 
     public static void DocxWordCompatibleMixedBalloonKeepsLeadingFittingParagraphsAndWrapsFourth()
@@ -1866,6 +1885,7 @@ internal static partial class DocxCommentsTests
 
     public static void DocxWordCompatibleMixedBalloonNormalizesExplicitParagraphSpacing()
     {
+        var boundaries = BalloonSpacingBoundaryCases().ToHashSet();
         foreach (string? beforeAuto in new string?[] { null, "1", "0", "true", "false", "on", "off" })
         foreach (string? afterAuto in new string?[] { null, "1", "0", "true", "false", "on", "off" })
         foreach (string? beforeLines in new string?[] { null, "100", "200", "300" })
@@ -1875,11 +1895,19 @@ internal static partial class DocxCommentsTests
         foreach (int bodyKind in new[] { 0, 1, 2 })
         foreach (double rightMargin in new[] { 72d, 144d, 207d })
         {
-            AssertMixedBalloonSpacing(beforeAuto, afterAuto, beforeLines, afterLines, value, spacingKind, bodyKind, rightMargin);
+            var test = new BalloonSpacingCase(beforeAuto, afterAuto, beforeLines, afterLines, value,
+                spacingKind, bodyKind, rightMargin);
+            if (!boundaries.Contains(test)) test.AssertLayout();
         }
     }
 
     public static void DocxWordCompatibleMixedBalloonSpacingBoundaries()
+    {
+        foreach (var test in BalloonSpacingBoundaryCases()) test.AssertLayout();
+        AssertMixedBalloonSpacingFallback();
+    }
+
+    private static IEnumerable<BalloonSpacingCase> BalloonSpacingBoundaryCases()
     {
         string?[] automatic = [null, "1", "0", "true", "false", "on", "off"];
         string?[] lines = [null, "100", "200", "300"];
@@ -1889,10 +1917,18 @@ internal static partial class DocxCommentsTests
         foreach (int bodyKind in new[] { 0, 1, 2 })
         foreach (double rightMargin in new[] { 72d, 144d, 207d })
         {
-            AssertMixedBalloonSpacing(automatic[index % 7], automatic[(index + 3) % 7],
+            yield return new BalloonSpacingCase(automatic[index % 7], automatic[(index + 3) % 7],
                 lines[index % 4], lines[(index + 1) % 4], points[index % 4], spacingKind, bodyKind, rightMargin);
             index++;
         }
+    }
+
+    private readonly record struct BalloonSpacingCase(
+        string? BeforeAuto, string? AfterAuto, string? BeforeLines, string? AfterLines, string Value,
+        int SpacingKind, int BodyKind, double RightMargin)
+    {
+        public void AssertLayout() => AssertMixedBalloonSpacing(BeforeAuto, AfterAuto, BeforeLines, AfterLines,
+            Value, SpacingKind, BodyKind, RightMargin);
     }
 
     public static void DocxWordCompatibleMixedBalloonKeepsTwoFittingParagraphsAndTheirMarks()
