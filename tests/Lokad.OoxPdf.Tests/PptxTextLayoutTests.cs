@@ -281,15 +281,9 @@ internal static class PptxTextLayoutTests
         TestAssert.True(Math.Abs(lines[1].Advance - 10.8d) < 0.01d, "Expected default line advance to use the visible run font size.");
     }
 
-    public static void PptxSyntheticTransformedVerticalTextDoesNotDropPreclipBaselines()
+    public static void PptxStackedVerticalAutoFitPaintsCompleteLabelAtAuthoredSize()
     {
-        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
-        if (!File.Exists(arial))
-        {
-            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
-        }
-
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        using var input = TestFixtures.CreateZipPackage(new Dictionary<string, string>
         {
             ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
             ["_rels/.rels"] = PptxTests.PackageRelationship(),
@@ -302,21 +296,24 @@ internal static class PptxTextLayoutTests
                     <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="365760"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
                     <p:txBody>
                       <a:bodyPr vert="mongolianVert" wrap="square" tIns="0" bIns="0"><a:spAutoFit/></a:bodyPr><a:lstStyle/>
-                      <a:p><a:r><a:rPr sz="2400"><a:latin typeface="Arial"/></a:rPr><a:t>VERTICAL STACKED TEXT</a:t></a:r></a:p>
+                      <a:p><a:r><a:rPr sz="2400"><a:latin typeface="Portable"/></a:rPr><a:t>VERTICAL STACKED TEXT</a:t></a:r></a:p>
                     </p:txBody>
                   </p:sp></p:spTree></p:cSld>
                 </p:sld>
                 """
         });
 
-        using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
-        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
+        using var package = OoxPackage.Open(input, default);
+        var document = new PptxReader().Read(package, default);
+        var fonts = new PortableRenderingTests.PinnedResolver();
+        var layout = PptxRenderer.InspectTextLayout(document, package, 0, inspectionFonts: new PresentationFontResolver(fonts));
+        var lines = layout.Frames.SelectMany(frame => frame.Paragraphs).SelectMany(paragraph => paragraph.Lines).ToArray();
+        TestAssert.True(lines.Length > 1, "Stacked vertical text uses multiple layout chunks.");
+        TestAssert.True(lines.All(line => Math.Abs(line.MaxFontSize - 24d) < .01d), "Autofit keeps the authored 24pt size in layout.");
 
-        string emittedText = string.Concat(PptxRenderer.InspectTextGlyphRuns(document, package, 0).Select(run => run.Text));
-
-        TestAssert.Contains("VERTIC", emittedText);
-        TestAssert.Contains("TEXT", emittedText);
+        PdfPage page = new PptxRenderer(fonts).RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().Single();
+        var label = PortableRenderingTests.ReadPaintedSourceLabel(page, "VERTICAL STACKED TEXT");
+        TestAssert.True(label.All(glyph => Math.Abs(glyph.Size - 24d) < .01d), "The complete label paints at the authored size.");
     }
 
     public static void PptxSyntheticHorizontalShapeAutoFitPreservesFontSizeWhenHeightOverflows()
