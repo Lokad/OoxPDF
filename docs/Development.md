@@ -93,7 +93,10 @@ calibrate Office application view; record view/zoom/markup settings separately.
 `-InspectorPath <qualified.dll>` to count PDF pages without rebuilding or
 rasterizing reused comparisons.
 `AuditCompositionContent.py` and `ScreenPdfInk.py` provide bounded independent
-content/ink checks. Portfolio joins check the selected modes and content
+content and ink checks. Use `AuditCompositionContent.py --screen-pictures` with
+PyMuPDF at portfolio milestones. It checks authored PNG colors and the named
+SVG fill in rendered regions against pinned Office PDFs. Unsupported witnesses
+stay unverified. Portfolio joins check the selected modes and content
 expectations against the pinned text operations and verify the diagnostic
 sidecars. Reinspect existing PDFs with `-ReuseCandidateDirectory` when a join
 reports changed expectations or a missing text-inspection hash. Composition limits live in

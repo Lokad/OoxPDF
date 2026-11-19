@@ -1,4 +1,4 @@
-"""Adversarial controls for cached-result source auditing; no rendering/builds."""
+"""Source audit controls, with optional native picture checks on small synthetic PDFs."""
 import sys
 import json
 import subprocess
@@ -8,7 +8,8 @@ from xml.etree import ElementTree as E
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory, gettempdir
-from AuditCompositionContent import inspect_reference, unresolved_fields, validate_outcome_modes, resolve_reference, sha, operation_text, words
+from AuditCompositionContent import (inspect_reference, operation_text, resolve_reference, screen_picture_ink,
+                                     sha, unresolved_fields, validate_outcome_modes, words)
 
 W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'
 
@@ -81,6 +82,71 @@ class OperationTextTests(unittest.TestCase):
         self.assertEqual('rate', operation_text([left,self.operation('ate',x=110.90532)]))
         self.assertEqual('r ate', operation_text([left,self.operation('ate',x=110.90732)]))
         self.assertEqual('r ate', operation_text([left,self.operation('ate',x=110.90332,y=73.503)]))
+
+class PictureInkTests(unittest.TestCase):
+    def setUp(self):
+        try:
+            import pymupdf
+        except ModuleNotFoundError:
+            self.skipTest('PyMuPDF is needed for picture witnesses')
+        self.fitz = pymupdf
+        temporary = TemporaryDirectory(prefix='ooxpdf-picture-audit-')
+        self.addCleanup(temporary.cleanup)
+        self.root = Path(temporary.name)
+        self.source = self.root / 'source.docx'
+        self.png = pymupdf.Pixmap(pymupdf.csRGB, 2, 1, bytes([47, 128, 237, 39, 174, 96]), False).tobytes('png')
+
+    def write_source(self, svg=False):
+        with ZipFile(self.source, 'w') as archive:
+            archive.writestr('word/media/picture.png', self.png)
+            if svg:
+                archive.writestr('word/media/drawing.svg', '<svg/>')
+                archive.writestr('word/media/drawing.png', self.png)
+
+    def write_pdf(self, name, pictures):
+        path = self.root / (name + '.pdf')
+        with self.fitz.open() as doc:
+            for kind in pictures:
+                page = doc.new_page(width=100, height=100)
+                rect = self.fitz.Rect(10, 10, 70, 40)
+                if kind in ('png', 'clipped'):
+                    page.insert_image(rect, stream=self.png)
+                elif kind == 'svg':
+                    page.draw_rect(rect, color=None, fill=(0., 170 / 255, 102 / 255))
+                if kind == 'clipped':
+                    xref, = page.get_contents()
+                    doc.update_stream(xref, b'q 80 0 10 10 re W n\n' + doc.xref_stream(xref) + b'\nQ')
+            doc.save(path)
+        return path
+
+    def test_removed_and_fully_clipped_pngs_lose_their_visible_witness(self):
+        self.write_source()
+        expected = {'ExpectedInlineImageCount': 1}
+        reference = self.write_pdf('office', ['png'])
+        for kind, status in [('png', 'Picture witnesses present'), ('none', 'Missing picture ink'),
+                             ('clipped', 'Missing picture ink')]:
+            with self.subTest(kind=kind):
+                candidate = self.write_pdf(kind, [kind])
+                if kind == 'clipped':
+                    with self.fitz.open(candidate) as pdf:
+                        self.assertEqual(1, len(pdf[0].get_images()))
+                result = screen_picture_ink(self.source, candidate, reference, expected, self.fitz)
+                self.assertEqual(status, result['Status'])
+
+    def test_repeated_static_svg_witnesses_follow_their_reference_pages(self):
+        self.write_source(svg=True)
+        expected = {'ExpectedInlineImageCount': 2, 'SvgWitnessColor': [0, 170, 102]}
+        reference = self.write_pdf('office', ['png', 'svg', 'svg', 'none'])
+        for name, pictures, status in [
+            ('same', ['png', 'svg', 'svg'], 'Picture witnesses present'),
+            ('omit-copy', ['png', 'svg', 'none'], 'Missing picture ink'),
+            ('moved-copy', ['png', 'svg', 'none', 'svg'], 'Picture page counts differ'),
+        ]:
+            with self.subTest(name=name):
+                candidate = self.write_pdf(name, pictures)
+                result = screen_picture_ink(self.source, candidate, reference, expected, self.fitz)
+                self.assertEqual(status, result['Status'])
+
 
 def document(content):
     return E.fromstring(f'<w:document xmlns:w="{W}"><w:body>{content}</w:body></w:document>')

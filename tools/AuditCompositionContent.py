@@ -1,4 +1,4 @@
-"""Screen the pinned public portfolio for missing prose and simple math content.
+"""Screen the pinned public portfolio for missing prose, simple math and optional picture ink.
 
 Uses existing PDF inspections, never converts documents or builds the library.
 Token presence is not a test of reading order, glyph ink, clipping or placement.
@@ -101,6 +101,72 @@ def operation_text(operations):
 
 def deficits(expected, actual):
     return dict(sorted((expected - actual).items()))
+
+
+def screen_picture_ink(source, candidate, reference, case, fitz):
+    """Screen the public portfolio's opaque two-color PNGs and named SVG fill."""
+    source_count = case.get("ExpectedInlineImageCount")
+    if source_count is None:
+        return {"Status": "No picture expectation"}
+    svg_color = tuple(case.get("SvgWitnessColor", ()))
+    expected = {"Png": source_count - bool(svg_color), "Svg": int(bool(svg_color))}
+    with ZipFile(source) as package:
+        media = [Path(name) for name in package.namelist() if name.startswith("word/media/") and not name.endswith("/")]
+        svg_stems = {part.stem for part in media if part.suffix == ".svg"}
+        # The paired raster preview is a fallback for the same authored SVG.
+        rasters = {package.read(part.as_posix()) for part in media
+                   if part.suffix == ".png" and part.stem not in svg_stems}
+    if (expected["Png"] < 0 or any(part.suffix not in {".png", ".svg"} for part in media)
+            or len(svg_stems) != expected["Svg"] or len(rasters) != int(expected["Png"] > 0)):
+        return {"Status": "Unverified source pictures", "ExpectedSourcePictures": source_count}
+
+    palette = set()
+    if rasters:
+        raster = fitz.Pixmap(next(iter(rasters)))
+        if raster.colorspace is None or raster.colorspace.n != 3:
+            return {"Status": "Unverified PNG color space", "ExpectedSourcePictures": source_count}
+        samples = raster.samples
+        palette = set(zip(samples[0::raster.n], samples[1::raster.n], samples[2::raster.n]))
+        if len(palette) != 2 or (raster.alpha and any(value != 255 for value in samples[3::4])):
+            return {"Status": "Unverified PNG palette", "ExpectedSourcePictures": source_count}
+
+    def count_regions(page, bounds, colors):
+        count = 0
+        for box in {tuple(box) for box in bounds}:
+            rect = fitz.Rect(box) & page.rect
+            if rect.is_empty or not rect.is_valid:
+                continue
+            bitmap = page.get_pixmap(matrix=fitz.Matrix(3, 3), clip=rect,
+                                     colorspace=fitz.csRGB, annots=False)
+            samples = iter(bitmap.samples)
+            count += colors.issubset(zip(samples, samples, samples))
+        return count
+
+    def scan(path):
+        counts = {}
+        with fitz.open(path) as pdf:
+            for page in pdf:
+                pngs = count_regions(page, (image["bbox"] for image in page.get_image_info()), palette) if palette else 0
+                paths = (drawing["rect"] for drawing in page.get_drawings() if drawing["fill"] and
+                         tuple(round(channel * 255) for channel in drawing["fill"]) == svg_color) if svg_color else ()
+                svgs = count_regions(page, paths, {svg_color}) if svg_color else 0
+                if pngs or svgs:
+                    counts[page.number + 1] = {"Png": pngs, "Svg": svgs}
+        return counts
+
+    office, actual = scan(reference), scan(candidate)
+    office_totals = {kind: sum(page[kind] for page in office.values()) for kind in expected}
+    actual_totals = {kind: sum(page[kind] for page in actual.values()) for kind in expected}
+    if any(office_totals[kind] < expected[kind] for kind in expected):
+        status = "Unverified Office picture witnesses"
+    elif any(actual_totals[kind] < office_totals[kind] for kind in expected):
+        status = "Missing picture ink"
+    elif actual != office:
+        status = "Picture page counts differ"
+    else:
+        status = "Picture witnesses present"
+    return {"Status": status, "ExpectedSourcePictures": source_count, "OfficeByPage": office,
+            "CandidateByPage": actual, "PngColors": sorted(palette), "SvgColor": svg_color}
 
 
 def unresolved_fields(root):
@@ -273,7 +339,11 @@ def main():
                         help="Public fixture manifest relative to the input root")
     parser.add_argument("--input-root", type=Path,
                         help="Optional clean tracked public inputs; reuse the frozen runtime without rebuilding")
+    parser.add_argument("--screen-pictures", action="store_true",
+                        help="Use PyMuPDF to screen the curated public PNG/SVG picture witnesses")
     args = parser.parse_args()
+    if args.screen_pictures:
+        import pymupdf
     artifact, candidate = args.artifact.resolve(), args.candidate.resolve()
     references = [directory.resolve(strict=True) for directory in args.references]
     if any(not directory.is_dir() for directory in references):
@@ -363,6 +433,10 @@ def main():
         math_stream = re.sub(r"\s+", "", normalize("".join(item.get("DecodedText") or "" for item in operations
                                                            if item["Font"].startswith("Eq"))))
         observed_math = Counter({expression: math_stream.count(expression) for expression in expressions})
+        pictures = screen_picture_ink(source, pdf, reference, case, pymupdf) if args.screen_pictures else {
+            "Status": "Unverified" if "ExpectedInlineImageCount" in case else "No picture expectation"}
+        if args.screen_pictures and (sha(pdf) != pdf_hash or sha(reference) != reference_hash):
+            raise ValueError("PDF identities changed during picture screening: " + folder)
         rows.append({"Id": identifier, "Mode": mode, "HeldOut": case["HeldOut"], "InputSha256": sha(source),
                      "CandidatePdfSha256": pdf_hash, "ReferencePdfSha256": reference_hash,
                      "ReferenceSourceDirectory": str(reference.parent),
@@ -375,17 +449,19 @@ def main():
                      "OfficeTokensMissingCandidate": deficits(office_words, candidate_words),
                      "OfficeTokensMissingCandidateByPage": page_deficits,
                      "ExpectedSimpleMath": dict(expressions), "ObservedSimpleMath": dict(observed_math),
-                     "MissingSimpleMath": deficits(expressions, observed_math),
+                     "MissingSimpleMath": deficits(expressions, observed_math), "PictureInk": pictures,
                      "IgnoredEquationDiagnostics": outcome["IgnoredEquationDiagnostics"],
                      "UnresolvedSourceFeatures": unresolved, "VisualGateFailures": comparison["Failures"]})
     if sha(library) != pin["LibrarySha256"] or sha(inspector) != inspector_hash:
         raise ValueError("Audit runtime changed")
-    report = {"Scope": "Public portfolio prose-token and simple-math presence screen; not reading order, ink, images, clipping or geometry proof",
+    report = {"Scope": "Public portfolio prose-token and simple-math screen with optional curated picture ink. Reading order, complete clipping and exact geometry require separate evidence.",
               "ToolSha256": sha(Path(__file__)),
+              "OutcomesSha256": sha(candidate / "outcomes.json"), "ComparisonsSha256": sha(candidate / "office-comparisons.json"),
               "FrozenRevision": pin["Revision"], "Framework": framework,
               "LibrarySha256": pin["LibrarySha256"], "InspectorSha256": inspector_hash,
               "ManifestSha256": sha(manifest), "Conversions": 0, "LibraryBuilds": 0,
               "ReferenceDirectories": [str(directory) for directory in references],
+              "PictureScreenPyMuPDF": pymupdf.VersionBind if args.screen_pictures else None,
               "InputRoot": str(inputs), "InputRevision": input_revision,
               "Rows": rows}
     if args.output.exists():
@@ -394,7 +470,9 @@ def main():
     args.output.write_text(json.dumps(report, indent=2, ensure_ascii=True) + "\n", encoding="utf-8")
     failed = sum(bool(row["SourceTokensMissingOffice"] or row["SourceTokensMissingCandidate"] or
                       row["OfficeTokensMissingCandidate"] or row["OfficeTokensMissingCandidateByPage"] or row["MissingSimpleMath"] or row["UnresolvedSourceFeatures"] or
-                      row["IgnoredEquationDiagnostics"] or row["ReferencePages"] != row["CandidatePages"]) for row in rows)
+                      row["IgnoredEquationDiagnostics"] or row["ReferencePages"] != row["CandidatePages"] or
+                      (args.screen_pictures and row["PictureInk"]["Status"] not in
+                       {"Picture witnesses present", "No picture expectation"})) for row in rows)
     print(f"{len(rows)} mode outcomes; {failed} deficit/unresolved screens. No conversions or library builds.")
     return 1 if failed else 0
 
