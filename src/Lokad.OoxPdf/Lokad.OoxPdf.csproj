@@ -37,7 +37,4 @@
                    ..\..\docs\Usage.md" Pack="true" PackagePath="docs/" Visible="false" />
     <None Include="..\..\icon.png" Pack="true" PackagePath="\" Visible="false" />
   </ItemGroup>
-  <ItemGroup>
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="10.0.401" PrivateAssets="All" />
-  </ItemGroup>
 </Project>
