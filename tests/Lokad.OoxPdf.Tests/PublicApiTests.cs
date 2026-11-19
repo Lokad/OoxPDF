@@ -933,35 +933,6 @@ internal static partial class PublicApiTests
         }
     }
 
-    public static void DiagnosticCollectorBoundsSamplesWithTotals()
-    {
-        // Q02: retained samples are bounded while occurrence totals keep counting.
-        var collector = new DiagnosticCollector();
-        for (int i = 0; i < DiagnosticCollector.MaxRetainedDiagnostics + 100; i++)
-        {
-            collector.Add(new OoxPdfDiagnostic(
-                "PPTX_NODE_RENDER_FAILED",
-                OoxPdfSeverity.Warning,
-                "node failed",
-                PartName: "slide1",
-                SlideIndex: 1,
-                PageIndex: null,
-                Feature: "Picture",
-                Fallback: "Ignored"));
-        }
-
-        TestAssert.Equal(DiagnosticCollector.MaxRetainedDiagnostics, collector.Diagnostics.Count);
-        TestAssert.Equal(100, collector.DroppedCount);
-        TestAssert.Equal(
-            DiagnosticCollector.MaxRetainedDiagnostics + 100,
-            collector.OccurrenceCounts["PPTX_NODE_RENDER_FAILED"]);
-
-        IReadOnlyList<OoxPdfDiagnostic> serialized = collector.DiagnosticsWithOverflow();
-        TestAssert.Equal(DiagnosticCollector.MaxRetainedDiagnostics + 1, serialized.Count);
-        TestAssert.Equal("DIAGNOSTIC_OVERFLOW", serialized[^1].Id);
-        TestAssert.Equal(OoxPdfSeverity.Error, serialized[^1].Severity);
-    }
-
     public static void ConvertPptxObservesCancellationAfterWorkBegins()
     {
         // Q01/Q02: cancellation during PPTX conversion work aborts the conversion

@@ -73,7 +73,11 @@ static int Run(string[] args)
         return 2;
     }
 
-    var collector = new DiagnosticCollector();
+    DiagnosticCollector? collector = diagnosticsPath is null ? null : new();
+    bool sawWarningOrError = false;
+    Action<OoxPdfDiagnostic>? diagnosticSink = collector is not null ? collector.Add
+        : strict ? diagnostic => sawWarningOrError |= diagnostic.Severity is OoxPdfSeverity.Warning or OoxPdfSeverity.Error
+        : null;
 
     try
     {
@@ -103,26 +107,26 @@ static int Run(string[] args)
         {
             DocxMarkupMode = docxMarkupMode,
             DocxMarkupGeometryMode = docxMarkupGeometryMode,
-            DiagnosticSink = collector.Add
+            DiagnosticSink = diagnosticSink
         });
 
         try
         {
-            WriteDiagnostics(diagnosticsPath, collector.DiagnosticsWithOverflow());
+            if (collector is not null) WriteDiagnostics(diagnosticsPath!, collector.DiagnosticsWithOverflow());
         }
         catch (Exception diagEx) when (diagEx is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
         {
             Console.Error.WriteLine(diagEx.Message);
             return 1;
         }
-        return strict && collector.HasWarningsOrErrors ? 3 : 0;
+        return strict && (collector?.HasWarningsOrErrors ?? sawWarningOrError) ? 3 : 0;
     }
     catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException or FormatException or OverflowException or InvalidDataException)
     {
-        collector.Add(new OoxPdfDiagnostic("OOXML_CONVERSION_FAILED", OoxPdfSeverity.Error, ex.Message, PartName: null, SlideIndex: null, PageIndex: null, Feature: null, Fallback: null));
+        collector?.Add(new OoxPdfDiagnostic("OOXML_CONVERSION_FAILED", OoxPdfSeverity.Error, ex.Message, PartName: null, SlideIndex: null, PageIndex: null, Feature: null, Fallback: null));
         try
         {
-            WriteDiagnostics(diagnosticsPath, collector.DiagnosticsWithOverflow());
+            if (collector is not null) WriteDiagnostics(diagnosticsPath!, collector.DiagnosticsWithOverflow());
         }
         catch (Exception diagEx) when (diagEx is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
         {
@@ -203,13 +207,8 @@ static bool PathsConflict(string first, string second, bool readFirst = false)
     }
 }
 
-static void WriteDiagnostics(string? diagnosticsPath, IReadOnlyList<OoxPdfDiagnostic> diagnostics)
+static void WriteDiagnostics(string diagnosticsPath, IReadOnlyList<OoxPdfDiagnostic> diagnostics)
 {
-    if (diagnosticsPath is null)
-    {
-        return;
-    }
-
     diagnosticsPath = Path.GetFullPath(diagnosticsPath);
     string? directory = Path.GetDirectoryName(diagnosticsPath);
     if (!string.IsNullOrEmpty(directory))

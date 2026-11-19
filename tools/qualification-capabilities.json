@@ -18338,7 +18338,7 @@
     "DocxInlineCompositionNoteTablesRetainComplexCellAndStoryFallbacks"
   ],
   "library-observer-outcomes": [
-    "OverflowPreservesErrorSeverity",
+    "DiagnosticCollectorBoundsSamplesWithTotals",
     "ThrowingSummaryCallbackLeavesFileDestinationUntouched",
     "ThrowingSummaryCallbackLeavesStreamOutputEmpty",
     "FilePublicationFailureCleansStaging",
@@ -18346,8 +18346,7 @@
     "RecoverableDiagnosticExceptionsLeaveStreamEmpty",
     "DiagnosticCancellationPreservesCallerToken",
     "DiagnosticCallbacksCanRunNestedConversionsWithoutAffectingRecovery",
-    "FinalSummaryCancellationPreventsPublication",
-    "InfoOnlyOverflowRemainsInformational"
+    "FinalSummaryCancellationPreventsPublication"
   ],
   "docx-balloon-focused": [
     "DocxWordCompatibleMixedBalloonParagraphBodyBoundaries",

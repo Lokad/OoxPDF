@@ -52,6 +52,17 @@ internal static class CliTests
 
         TestAssert.Equal(3, result.ExitCode);
         TestAssert.Contains("DOCX_UNSUPPORTED_OLE_OBJECT", File.ReadAllText(diagnostics));
+
+        byte[] expectedPdf = File.ReadAllBytes(output);
+        var strictOnly = RunCli("convert", input, output, "--strict");
+        TestAssert.Equal(3, strictOnly.ExitCode);
+        TestAssert.True(expectedPdf.AsSpan().SequenceEqual(File.ReadAllBytes(output)),
+            "Strict exit handling must preserve the PDF without diagnostic samples.");
+
+        var plain = RunCli("convert", input, output);
+        TestAssert.Equal(0, plain.ExitCode);
+        TestAssert.True(expectedPdf.AsSpan().SequenceEqual(File.ReadAllBytes(output)),
+            "Conversion without a diagnostic observer must preserve the PDF.");
     }
 
     public static void CliStrictCommentWarningsFollowTheSelectedView()

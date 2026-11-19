@@ -7,40 +7,41 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DiagnosticOutcomeTests
 {
-    public static void OverflowPreservesErrorSeverity()
+    public static void DiagnosticCollectorBoundsSamplesWithTotals()
     {
-        foreach (OoxPdfSeverity severity in new[] { OoxPdfSeverity.Warning, OoxPdfSeverity.Error })
+        const int capacity = DiagnosticCollector.MaxRetainedDiagnostics;
+        foreach (var (retainedSeverity, droppedSeverity) in new[]
+        {
+            (OoxPdfSeverity.Info, OoxPdfSeverity.Info),
+            (OoxPdfSeverity.Info, OoxPdfSeverity.Warning),
+            (OoxPdfSeverity.Info, OoxPdfSeverity.Error),
+            (OoxPdfSeverity.Warning, OoxPdfSeverity.Info),
+        })
         {
             var collector = new DiagnosticCollector();
-            for (int i = 0; i < DiagnosticCollector.MaxRetainedDiagnostics; i++)
-            {
-                collector.Add(new OoxPdfDiagnostic("INFO", OoxPdfSeverity.Info, "probe"));
-            }
+            var retained = new OoxPdfDiagnostic("RETAINED", retainedSeverity, "retained sample");
+            for (int i = 0; i < capacity; i++) collector.Add(retained);
 
-            TestAssert.True(!collector.HasWarningsOrErrors, "Info-only samples must not report warnings or errors.");
-            collector.Add(new OoxPdfDiagnostic("SEVERITY", severity, "probe"));
+            TestAssert.Equal(capacity, collector.DiagnosticsWithOverflow().Count);
+            TestAssert.Equal(0, collector.DroppedCount);
+            TestAssert.Equal(retainedSeverity != OoxPdfSeverity.Info, collector.HasWarningsOrErrors);
+
+            collector.Add(new OoxPdfDiagnostic("DROPPED", droppedSeverity, "first discarded sample"));
             TestAssert.Equal(1, collector.DroppedCount);
-            TestAssert.Equal(1, collector.OccurrenceCounts["SEVERITY"]);
-            TestAssert.True(collector.HasWarningsOrErrors, "A dropped warning/error must still affect CLI strict mode.");
-            TestAssert.Equal(OoxPdfSeverity.Error, collector.DiagnosticsWithOverflow()[^1].Severity);
-        }
-    }
+            for (int i = 0; i < 99; i++) collector.Add(retained);
 
-    public static void InfoOnlyOverflowRemainsInformational()
-    {
-        var collector = new DiagnosticCollector();
-        for (int i = 0; i <= DiagnosticCollector.MaxRetainedDiagnostics; i++)
-        {
-            collector.Add(new OoxPdfDiagnostic("INFO", OoxPdfSeverity.Info, "probe"));
+            bool observedSeverity = retainedSeverity != OoxPdfSeverity.Info || droppedSeverity != OoxPdfSeverity.Info;
+            TestAssert.Equal(observedSeverity, collector.HasWarningsOrErrors);
+            TestAssert.Equal(capacity, collector.Diagnostics.Count);
+            TestAssert.True(collector.Diagnostics.All(item => item == retained), "Discarded entries must not replace retained samples.");
+            TestAssert.Equal(100, collector.DroppedCount);
+            TestAssert.Equal(capacity + 99, collector.OccurrenceCounts["RETAINED"]);
+            TestAssert.Equal(1, collector.OccurrenceCounts["DROPPED"]);
+            var serialized = collector.DiagnosticsWithOverflow();
+            TestAssert.Equal(capacity + 1, serialized.Count);
+            TestAssert.Equal("DIAGNOSTIC_OVERFLOW", serialized[^1].Id);
+            TestAssert.Equal(observedSeverity ? OoxPdfSeverity.Error : OoxPdfSeverity.Info, serialized[^1].Severity);
         }
-
-        TestAssert.Equal(DiagnosticCollector.MaxRetainedDiagnostics, collector.Diagnostics.Count);
-        TestAssert.Equal(1, collector.DroppedCount);
-        TestAssert.Equal(DiagnosticCollector.MaxRetainedDiagnostics + 1, collector.OccurrenceCounts["INFO"]);
-        TestAssert.True(!collector.HasWarningsOrErrors, "Losing informational samples must remain informational.");
-        OoxPdfDiagnostic overflow = collector.DiagnosticsWithOverflow()[^1];
-        TestAssert.Equal("DIAGNOSTIC_OVERFLOW", overflow.Id);
-        TestAssert.Equal(OoxPdfSeverity.Info, overflow.Severity);
     }
 
     public static void ThrowingSummaryCallbackLeavesFileDestinationUntouched()
