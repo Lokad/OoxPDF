@@ -223,7 +223,7 @@ internal sealed partial class PptxRenderer
 
     private static PptxTextGlyphSpanLayoutSnapshot ToSnapshot(PptxTextGlyphSpanLayout span)
     {
-        PptxInterGlyphAdjustmentSummary adjustments = SummarizeInterGlyphAdjustments(span.Glyphs);
+        PptxInterGlyphAdjustmentSummary adjustments = SummarizeInterGlyphAdjustments(span.Glyphs, static glyph => glyph.AdjustmentBefore);
         return new PptxTextGlyphSpanLayoutSnapshot(
             span.Text,
             span.Typeface,
@@ -241,7 +241,8 @@ internal sealed partial class PptxRenderer
             span.Glyphs.Select(ToSnapshot).ToArray());
     }
 
-    private static PptxInterGlyphAdjustmentSummary SummarizeInterGlyphAdjustments(IReadOnlyList<PptxTextGlyphLayout> glyphs)
+    private static PptxInterGlyphAdjustmentSummary SummarizeInterGlyphAdjustments<TGlyph>(
+        IReadOnlyList<TGlyph> glyphs, Func<TGlyph, double> getAdjustment)
     {
         int count = 0;
         double sum = 0d;
@@ -250,7 +251,7 @@ internal sealed partial class PptxRenderer
 
         for (int index = 1; index < glyphs.Count; index++)
         {
-            double adjustment = glyphs[index].AdjustmentBefore;
+            double adjustment = getAdjustment(glyphs[index]);
             if (count == 0)
             {
                 min = adjustment;
@@ -338,7 +339,7 @@ internal sealed partial class PptxRenderer
                 TextDecorationRectangle? strikeRectangle = run.Strike && TryGetStrikeRectangle(snapshotEmbedded, glyphRun, out TextDecorationRectangle strike)
                     ? strike
                     : null;
-                PptxInterGlyphAdjustmentSummary adjustments = SummarizeTextInterGlyphAdjustments(glyphRun.Glyphs);
+                PptxInterGlyphAdjustmentSummary adjustments = SummarizeInterGlyphAdjustments(glyphRun.Glyphs, static glyph => glyph.AdjustmentBefore);
 
                 glyphRuns.Add(new PptxTextGlyphRunSnapshot(
                     run.Text,
@@ -455,35 +456,5 @@ internal sealed partial class PptxRenderer
         }
 
         return glyphRuns;
-    }
-
-    private static PptxInterGlyphAdjustmentSummary SummarizeTextInterGlyphAdjustments(IReadOnlyList<TextGlyphAtom> glyphs)
-    {
-        int count = 0;
-        double sum = 0d;
-        double min = 0d;
-        double max = 0d;
-
-        for (int index = 1; index < glyphs.Count; index++)
-        {
-            double adjustment = glyphs[index].AdjustmentBefore;
-            if (count == 0)
-            {
-                min = adjustment;
-                max = adjustment;
-            }
-            else
-            {
-                min = Math.Min(min, adjustment);
-                max = Math.Max(max, adjustment);
-            }
-
-            sum += adjustment;
-            count++;
-        }
-
-        return count == 0
-            ? default
-            : new PptxInterGlyphAdjustmentSummary(count, sum, min, max, sum / count);
     }
 }
