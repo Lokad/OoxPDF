@@ -153,8 +153,6 @@ internal static partial class DocxInlineCompositionTests
         var replay = Place(40d, 80d, 260d, 2, memo);
         TestAssert.Equal(childCalls, measurer.Calls);
         var fresh = Place(40d, 80d, 260d, 2, null);
-        TestAssert.Equal(1, memo.Hits);
-        TestAssert.Equal(1, memo.Misses);
         var firstBox = first.Boxes.Single(); var replayBox = replay.Boxes.Single(); var freshBox = fresh.Boxes.Single();
         TestAssert.Equal(firstBox.BoxX + 30d, replayBox.BoxX);
         TestAssert.Equal(firstBox.BoxTop + 120d, replayBox.BoxTop);

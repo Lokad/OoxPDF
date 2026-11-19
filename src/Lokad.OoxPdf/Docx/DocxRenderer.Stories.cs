@@ -357,7 +357,7 @@ internal sealed partial class DocxRenderer
     {
         public DocxTextLineLayout PlaceLine(DocxTextLineLayout line) => Map is { } map
             ? map.PrecompensateLine(line, X, Top)
-            : TranslateTextLine(line, X, Top);
+            : line.Translate(X, Top);
 
         public DocxTableRowLayout PlaceRow(DocxTableRowLayout row)
         {
@@ -596,18 +596,6 @@ internal sealed partial class DocxRenderer
             DocxTableRowLayout row => row.Y + row.Height,
             DocxInlineTextBoxLayout box => box.BoxTop,
             _ => 0d
-        };
-    }
-
-    private static DocxTextLineLayout TranslateTextLine(DocxTextLineLayout line, double deltaX, double deltaY)
-    {
-        return line with
-        {
-            X = line.X + deltaX,
-            BaselineY = line.BaselineY + deltaY,
-            Segments = line.Segments
-                .Select(segment => segment with { X = segment.X + deltaX })
-                .ToArray()
         };
     }
 

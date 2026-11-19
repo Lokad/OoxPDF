@@ -2514,24 +2514,13 @@ internal sealed partial class DocxLayoutEngine
 
     private static IReadOnlyList<DocxTextLineLayout> ShiftTextLines(IReadOnlyList<DocxTextLineLayout> lines, double deltaY, double deltaX)
     {
-        return lines
-            .Select(line => line with
-            {
-                X = line.X + deltaX,
-                BaselineY = line.BaselineY + deltaY,
-                Segments = line.Segments
-                    .Select(segment => segment with { X = segment.X + deltaX })
-                    .ToArray()
-            })
-            .ToArray();
+        return lines.Select(line => line.Translate(deltaX, deltaY)).ToArray();
     }
 
     private static IReadOnlyList<DocxInlineImageLayout> ShiftInlineImages(IReadOnlyList<DocxInlineImageLayout> images,
         double deltaY, double deltaX, int? pageIndex = null)
     {
-        return images
-            .Select(image => image.Translate(deltaX, deltaY) with { PageIndex = pageIndex ?? image.PageIndex })
-            .ToArray();
+        return images.Select(image => image.Translate(deltaX, deltaY, pageIndex)).ToArray();
     }
 
     private static IReadOnlyList<DocxFloatingDrawingLayout> ShiftFloatingDrawings(

@@ -3808,10 +3808,10 @@ internal static class DocxTableCellsTests
             DocxLayoutEngine.LayoutTableCellContent(cell, 10d, y, 60d, height, 0d, measurer, 36d, 1, 2, 1d, cache);
 
         var first = Place(70d, 20d, memo);
+        var measurement = ReadCachedLines();
         var replay = Place(10d, 60d, memo);
         var fresh = Place(10d, 60d, null);
-        TestAssert.Equal(1, memo.Hits);
-        TestAssert.Equal(1, memo.Misses);
+        TestAssert.True(ReferenceEquals(measurement, ReadCachedLines()), "Changing a split cell's height and origin reuses its measured lines.");
         TestAssert.Equal(8, first.Lines.Count);
         TestAssert.Equal(fresh.Height, replay.Height);
         var anchor = replay.Anchors.Single();
@@ -3827,6 +3827,13 @@ internal static class DocxTableCellsTests
             TestAssert.True(Math.Abs(expected.X - actual.X) < 1e-9 && Math.Abs(expected.BaselineY - actual.BaselineY) < 1e-9,
                 "Cached split-cell placement must equal fresh geometry at its new origin.");
             TestAssert.True(expected.Segments.SequenceEqual(actual.Segments), "Cached split-cell segments must equal fresh segments.");
+        }
+
+        IReadOnlyList<DocxTextLineLayout> ReadCachedLines()
+        {
+            TestAssert.True(memo.TryGetRelativeLines(cell, 60d, measurer, 36d, 0d, 1d, 1, 2,
+                DocxCounterDependencies.None, out var lines, out _, out _, out _, out _), "The split cell has a stored measurement.");
+            return lines;
         }
     }
 

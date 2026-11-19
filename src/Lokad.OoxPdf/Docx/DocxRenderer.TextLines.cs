@@ -483,7 +483,7 @@ internal sealed partial class DocxRenderer
         double adjustment = line.StaticStoryUsesPhysicalY
             ? markupContext?.WordCompatibleTextYOffset ?? 0d
             : markupContext?.WordCompatibleStaticTextYAdjustmentPoints ?? 0d;
-        return adjustment == 0d ? line : TranslateTextLine(line, 0d, adjustment);
+        return line.Translate(0d, adjustment);
     }
 
     private static IEnumerable<DocxTextLineLayout> EnumerateStaticTextLines(DocxLayoutPage page, bool includeTextBoxes, DocxMarkupContext? markupContext = null) =>
@@ -542,14 +542,14 @@ internal sealed partial class DocxRenderer
 
         foreach (DocxTextLineLayout line in textBoxLayout.TextLines)
         {
-            yield return TranslateTextLine(line, placedX, placedTop);
+            yield return line.Translate(placedX, placedTop);
         }
 
         foreach (DocxTableRowLayout row in textBoxLayout.TableRows)
         {
             foreach (DocxTextLineLayout cellLine in EnumerateTableRowTextLines(row))
             {
-                yield return TranslateTextLine(cellLine, placedX, placedTop);
+                yield return cellLine.Translate(placedX, placedTop);
             }
         }
     }
@@ -594,7 +594,7 @@ internal sealed partial class DocxRenderer
         {
             Y = cell.Y + deltaY,
             TextLines = cell.TextLines
-                .Select(line => TranslateTextLine(line, 0d, deltaY))
+                .Select(line => line.Translate(0d, deltaY))
                 .ToArray(),
             InlineImages = cell.InlineImages
                 .Select(image => image.Translate(0d, deltaY))

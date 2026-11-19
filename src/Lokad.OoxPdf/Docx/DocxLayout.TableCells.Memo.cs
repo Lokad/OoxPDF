@@ -12,19 +12,13 @@ namespace Lokad.OoxPdf.Docx;
 // stays within one table-layout pass; math/story context remains owned by that pass.
 // Each source/geometry key retains only its current counter inputs. Keeping all
 // prior PAGE values would retain a full cell measurement for every fragment.
-// Vertical-alignment
-// shifts stay outside the memo: every
-// caller applies its own height-dependent shift to the shared unshifted lines.
+// Callers apply height-dependent vertical alignment after replay.
 // Cell identity is explicit reference identity: equal-valued distinct cell instances
 // must not share entries.
 internal sealed partial class DocxLayoutEngine
 {
     internal sealed class DocxTableCellTextLinesMemo
     {
-        public long Hits { get; private set; }
-
-        public long Misses { get; private set; }
-
         private readonly Dictionary<MemoKey, StoredLines> entries = new();
 
         public bool TryGetRelativeLines(
@@ -50,7 +44,6 @@ internal sealed partial class DocxLayoutEngine
                 out StoredLines? stored) && stored is not null &&
                 stored.CounterInputs == ResolveCounterInputs(pageNumber, pageCount, dependencies))
             {
-                Hits++;
                 relativeLines = stored.Lines;
                 relativePlacedImages = stored.PlacedImages;
                 relativePlacedBoxes = stored.PlacedBoxes;
@@ -60,7 +53,6 @@ internal sealed partial class DocxLayoutEngine
                 return true;
             }
 
-            Misses++;
             relativeLines = [];
             relativePlacedImages = [];
             relativePlacedBoxes = [];
@@ -89,8 +81,8 @@ internal sealed partial class DocxLayoutEngine
             double nestedPageHeight = 0d,
             IReadOnlyList<DocxPlacedDrawingAnchor>? absoluteAnchors = null)
         {
-            IReadOnlyList<DocxTextLineLayout> relative = ToRelativeLines(absoluteLines, originX, originY);
-            IReadOnlyList<DocxInlineImageLayout> relativePlaced = ToRelativeImages(absolutePlacedImages, originX, originY);
+            IReadOnlyList<DocxTextLineLayout> relative = ShiftTextLines(absoluteLines, -originY, -originX);
+            IReadOnlyList<DocxInlineImageLayout> relativePlaced = ShiftInlineImages(absolutePlacedImages, -originY, -originX);
             var relativeBoxes = absolutePlacedBoxes.Select(box => ShiftInlineTextBox(box, -originY, -originX)).ToArray();
             var relativeRows = ShiftTableRows(absoluteNestedRows, -originY, -originX);
             entries[new MemoKey(cell, cellWidth, measurer, defaultTabStopPoints, rowTopPadding, paragraphSpacingScale, nestedPageHeight)] =
@@ -103,65 +95,6 @@ internal sealed partial class DocxLayoutEngine
             int? pageNumber, int? pageCount, DocxCounterDependencies dependencies) =>
             ((dependencies & DocxCounterDependencies.PageNumber) != 0 ? pageNumber : null,
              (dependencies & DocxCounterDependencies.PageCount) != 0 ? pageCount : null);
-
-        internal static IReadOnlyList<DocxTextLineLayout> ToRelativeLines(
-            IReadOnlyList<DocxTextLineLayout> lines,
-            double originX,
-            double originY)
-        {
-            var relative = new List<DocxTextLineLayout>(lines.Count);
-            foreach (DocxTextLineLayout line in lines)
-            {
-                relative.Add(ShiftLine(line, -originX, -originY));
-            }
-
-            return relative;
-        }
-
-        internal static IReadOnlyList<DocxTextLineLayout> ShiftLines(
-            IReadOnlyList<DocxTextLineLayout> lines,
-            double deltaX,
-            double deltaY)
-        {
-            if (deltaX == 0d && deltaY == 0d)
-            {
-                return lines;
-            }
-
-            var shifted = new List<DocxTextLineLayout>(lines.Count);
-            foreach (DocxTextLineLayout line in lines)
-            {
-                shifted.Add(ShiftLine(line, deltaX, deltaY));
-            }
-
-            return shifted;
-        }
-
-        private static DocxTextLineLayout ShiftLine(DocxTextLineLayout line, double deltaX, double deltaY)
-        {
-            return line with
-            {
-                X = line.X + deltaX,
-                BaselineY = line.BaselineY + deltaY,
-                Segments = ShiftSegments(line.Segments, deltaX)
-            };
-        }
-
-        private static IReadOnlyList<DocxTextSegmentLayout> ShiftSegments(IReadOnlyList<DocxTextSegmentLayout> segments, double deltaX)
-        {
-            if (deltaX == 0d)
-            {
-                return segments;
-            }
-
-            var shifted = new List<DocxTextSegmentLayout>(segments.Count);
-            foreach (DocxTextSegmentLayout segment in segments)
-            {
-                shifted.Add(segment with { X = segment.X + deltaX });
-            }
-
-            return shifted;
-        }
 
         private readonly struct MemoKey : IEquatable<MemoKey>
         {
@@ -235,22 +168,6 @@ internal sealed partial class DocxLayoutEngine
             public double UsedHeight { get; } = usedHeight;
             public IReadOnlyList<DocxTableRowLayout> NestedRows { get; } = nestedRows;
             public IReadOnlyList<DocxPlacedDrawingAnchor> DrawingAnchors { get; } = drawingAnchors;
-        }
-
-        // RV05: placed mid-line images relativize exactly like lines so memo hits
-        // shift them back with the same origin.
-        internal static IReadOnlyList<DocxInlineImageLayout> ToRelativeImages(
-            IReadOnlyList<DocxInlineImageLayout> images,
-            double originX,
-            double originY)
-        {
-            var relative = new List<DocxInlineImageLayout>(images.Count);
-            foreach (DocxInlineImageLayout image in images)
-            {
-                relative.Add(image.Translate(-originX, -originY));
-            }
-
-            return relative;
         }
     }
 }

@@ -1,4 +1,3 @@
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using Lokad.OoxPdf.Docx;
 
@@ -6,39 +5,29 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxCellMemoTests
 {
-    public static void MemoReturnsHitForSameKey()
-    {
-        var cell = new DocxTableCell("sample", [], null, null, null, null, [], DocxTableCellMargins.Empty);
-        var memo = new DocxLayoutEngine.DocxTableCellTextLinesMemo();
-        var line = MakeLine("sample", 10d, 20d, 12d);
-        memo.StoreRelativeLines(cell, 80d, null, 36d, 0d, 1d, null, null, DocxCounterDependencies.None, new[] { line }, Array.Empty<DocxInlineImageLayout>(), Array.Empty<DocxInlineTextBoxLayout>(), 10d, 20d, 30d, []);
-        bool hit = memo.TryGetRelativeLines(cell, 80d, null, 36d, 0d, 1d, null, null, DocxCounterDependencies.None, out var relative, out _, out _, out double usedHeight, out _);
-        TestAssert.True(hit, "Same key must hit.");
-        TestAssert.Equal(1, memo.Hits);
-        TestAssert.Equal(0, memo.Misses);
-        TestAssert.Equal(30d, usedHeight);
-        TestAssert.Equal(1, relative.Count);
-        TestAssert.Equal(0d, relative[0].X);
-        TestAssert.Equal(0d, relative[0].BaselineY);
-        var replayed = DocxLayoutEngine.DocxTableCellTextLinesMemo.ShiftLines(relative, 10d, 20d);
-        TestAssert.Equal(10d, replayed[0].X);
-        TestAssert.Equal(20d, replayed[0].BaselineY);
-        TestAssert.Equal(12d - 10d + 10d, replayed[0].Segments[0].X);
-    }
-
     public static void MemoReplaysAtChangedOrigin()
     {
         var cell = new DocxTableCell("sample", [], null, null, null, null, [], DocxTableCellMargins.Empty);
         var memo = new DocxLayoutEngine.DocxTableCellTextLinesMemo();
         var line = MakeLine("sample", 10d, 20d, 12d);
-        memo.StoreRelativeLines(cell, 80d, null, 36d, 0d, 1d, null, null, DocxCounterDependencies.None, new[] { line }, Array.Empty<DocxInlineImageLayout>(), Array.Empty<DocxInlineTextBoxLayout>(), 10d, 20d, 30d, []);
+        memo.StoreRelativeLines(cell, 80d, null, 36d, 0d, 1d, null, null, DocxCounterDependencies.None,
+            [line], [], [], 10d, 20d, 30d, []);
         bool hit = memo.TryGetRelativeLines(cell, 80d, null, 36d, 0d, 1d, null, null, DocxCounterDependencies.None, out var relative, out _, out _, out double usedHeight, out _);
         TestAssert.True(hit, "Same key must hit for origin replay.");
         TestAssert.Equal(30d, usedHeight);
-        var replayed = DocxLayoutEngine.DocxTableCellTextLinesMemo.ShiftLines(relative, 30d, 40d);
-        TestAssert.Equal(30d, replayed[0].X);
-        TestAssert.Equal(40d, replayed[0].BaselineY);
-        TestAssert.Equal(32d, replayed[0].Segments[0].X);
+        DocxTextLineLayout stored = relative.Single();
+        TestAssert.Equal(0d, stored.X);
+        TestAssert.Equal(0d, stored.BaselineY);
+        TestAssert.Equal(2d, stored.Segments.Single().X);
+        TestAssert.True(ReferenceEquals(stored, stored.Translate(0d, 0d)), "A zero translation can reuse the measured line.");
+        var original = stored.Translate(10d, 20d);
+        TestAssert.Equal(10d, original.X);
+        TestAssert.Equal(20d, original.BaselineY);
+        TestAssert.Equal(12d, original.Segments.Single().X);
+        var moved = stored.Translate(30d, 40d);
+        TestAssert.Equal(30d, moved.X);
+        TestAssert.Equal(40d, moved.BaselineY);
+        TestAssert.Equal(32d, moved.Segments.Single().X);
     }
 
     public static void MemoDistinguishesReferenceIdentity()
@@ -52,11 +41,8 @@ internal static class DocxCellMemoTests
         memo.StoreRelativeLines(cell, 80d, null, 36d, 0d, 1d, null, null, DocxCounterDependencies.None, new[] { line }, Array.Empty<DocxInlineImageLayout>(), Array.Empty<DocxInlineTextBoxLayout>(), 10d, 20d, 30d, []);
         bool cloneHit = memo.TryGetRelativeLines(clone, 80d, null, 36d, 0d, 1d, null, null, DocxCounterDependencies.None, out _, out _, out _, out _, out _);
         TestAssert.True(!cloneHit, "Equal-valued distinct cell must not hit reference-identity memo.");
-        TestAssert.Equal(0, memo.Hits);
-        TestAssert.Equal(1, memo.Misses);
         bool sameHit = memo.TryGetRelativeLines(cell, 80d, null, 36d, 0d, 1d, null, null, DocxCounterDependencies.None, out _, out _, out _, out _, out _);
         TestAssert.True(sameHit, "Same reference must hit.");
-        TestAssert.Equal(1, memo.Hits);
     }
 
     public static void MemoTiersPageStaticVsDynamic()
@@ -98,21 +84,22 @@ internal static class DocxCellMemoTests
             long calls = measurer.Calls;
             var moved = PlaceCounterCell(cell, measurer, memo, kind == DocxFieldKind.Page ? 1 : 2,
                 kind == DocxFieldKind.Page ? 13 : 12, x: 30d, y: 40d, height: 280d);
-            TestAssert.True(calls != 0 && measurer.Calls == calls && memo.Hits == 1,
+            TestAssert.True(calls != 0 && measurer.Calls == calls,
                 kind + ": an unrelated page input must reuse measured source lines.");
             TestAssert.Equal(kind == DocxFieldKind.Page ? "1" : "12", moved.Lines.Single().Text);
             TestAssert.True(Math.Abs(moved.Lines[0].X - first.Lines[0].X - 20d) < .000001d &&
                 Math.Abs(moved.Lines[0].BaselineY - first.Lines[0].BaselineY - 60d) < .000001d,
                 "Memo reuse applies the caller's current origin/height.");
             var changed = PlaceCounterCell(cell, measurer, memo, 2, 13);
-            TestAssert.True(measurer.Calls > calls && memo.Misses == 2, "Changing the owned input must remeasure.");
+            TestAssert.True(measurer.Calls > calls, "Changing the owned input must remeasure.");
             TestAssert.Equal(kind == DocxFieldKind.Page ? "2" : "13", changed.Lines.Single().Text);
             TestAssert.Equal(kind == DocxFieldKind.Page ? "1" : "12", first.Lines.Single().Text);
             TestAssert.Equal(DocxFieldText.Placeholder(kind), run.Text);
             using var cancellation = new CancellationTokenSource();
             cancellation.Cancel();
+            long callsBeforeCancellation = measurer.Calls;
             TestAssert.Throws<OperationCanceledException>(() => PlaceCounterCell(cell, measurer, memo, 2, 13, token: cancellation.Token));
-            TestAssert.Equal(1, memo.Hits);
+            TestAssert.Equal(callsBeforeCancellation, measurer.Calls);
         }
     }
 
@@ -172,7 +159,7 @@ internal static class DocxCellMemoTests
         var first = PlaceCounterCell(cell, measurer, memo, 1, 12, width: 320d, math: math);
         long calls = measurer.Calls;
         var moved = PlaceCounterCell(cell, measurer, memo, 2, 12, x: 30d, y: 40d, height: 280d, width: 320d, math: math);
-        TestAssert.True(calls != 0 && calls == measurer.Calls && memo.Hits == 1,
+        TestAssert.True(calls != 0 && calls == measurer.Calls,
             "NUMPAGES-only child content can reuse its source frame on another page.");
         var box = moved.Boxes.Single();
         TestAssert.Equal("12", string.Concat(box.TextLines.SelectMany(line => line.Segments)
@@ -194,7 +181,6 @@ internal static class DocxCellMemoTests
             long calls = measurer.Calls;
             var moved = PlaceCounterCell(cell, measurer, memo, 2, 2, x: 30d, y: 40d);
             TestAssert.Equal(calls, measurer.Calls);
-            TestAssert.Equal(1, memo.Hits);
             var fresh = PlaceCounterCell(cell, measurer, new(), 2, 2, x: 30d, y: 40d);
             var before = first.Rows.Single(); var after = moved.Rows.Single(); var expected = fresh.Rows.Single();
             TestAssert.True(Math.Abs(after.Y - before.Y - 20d) < .000001d &&
@@ -206,9 +192,9 @@ internal static class DocxCellMemoTests
                 "Fresh and cached nested placement agree at the caller's origin: " + alignment);
             // A changed nested admission height is a distinct measurement;
             // unlike ordinary text it cannot silently reuse the prior frame.
-            long misses = memo.Misses;
+            long callsBeforeHeightChange = measurer.Calls;
             _ = PlaceCounterCell(cell, measurer, memo, 2, 2, height: 280d);
-            TestAssert.True(memo.Misses > misses, "Changing nested admission height must remeasure its containing cell.");
+            TestAssert.True(measurer.Calls > callsBeforeHeightChange, "Changing nested admission height must remeasure its containing cell.");
             using var cancellation = new CancellationTokenSource(); cancellation.Cancel();
             TestAssert.Throws<OperationCanceledException>(() => PlaceCounterCell(cell, measurer, memo, 2, 2, token: cancellation.Token));
         }
@@ -242,20 +228,16 @@ internal static class DocxCellMemoTests
     private static DocxTextLineLayout MakeLine(string text, double x, double baselineY, double segmentX)
     {
         var run = new DocxTextRun(text, 12d, null, false, false, false, null, null);
-        ConstructorInfo segCtor = typeof(DocxTextSegmentLayout).GetConstructors().Single();
-        object?[] segArgs = segCtor.GetParameters().Select(p => p.ParameterType.IsValueType ? Activator.CreateInstance(p.ParameterType) : null).ToArray();
-        segArgs[0] = text;
-        segArgs[1] = run;
-        segArgs[2] = segmentX;
-        var segment = (DocxTextSegmentLayout)segCtor.Invoke(segArgs);
-        ConstructorInfo lineCtor = typeof(DocxTextLineLayout).GetConstructors().Single();
-        object?[] lineArgs = lineCtor.GetParameters().Select(p => p.ParameterType.IsValueType ? Activator.CreateInstance(p.ParameterType) : null).ToArray();
-        lineArgs[0] = text;
-        lineArgs[1] = run;
-        lineArgs[3] = x;
-        lineArgs[4] = baselineY;
-        lineArgs[6] = new[] { segment };
-        return (DocxTextLineLayout)lineCtor.Invoke(lineArgs);
+        var segment = new DocxTextSegmentLayout(text, run, segmentX, Width: 0d, FontSize: null, BaselineOffsetY: 0d,
+            PdfCharacterSpacing: 0d, PdfCharacterSpacingSource: DocxTextStateCharacterSpacingSource.None,
+            CompensatePdfCharacterSpacing: false, SourceTextRunIndex: 0, SourceTextOffsetInRun: 0, Role: DocxTextSegmentRole.Text);
+        return new DocxTextLineLayout(text, run, FontSize: 12d, X: x, BaselineY: baselineY, Width: 0d, Segments: [segment],
+            SourceBlockIndex: null, SourceParagraphIndex: null, SourceLineIndex: null, Story: null, LineHeight: null,
+            AppliedBeforeSpacing: null, IsFirstParagraphLine: null, EndsWithIntraTokenBreak: false, SingleLineHeight: null,
+            ListLabelSingleLineHeight: null, BodyWindowsLineHeight: null, ListLabelWindowsLineHeight: null,
+            EffectiveLineSpacingFactor: null, LineSpacingFactorFloorApplied: null, PendingAfterSpacing: null,
+            ParagraphBeforeSpacing: null, ParagraphAfterSpacing: null, ContextualSpacingSuppressed: null,
+            SourceParagraph: null, LineHeightSource: null, EmitsTerminalParagraphMark: false);
     }
 
     private sealed class CountingMeasurer : IDocxTextMeasurer

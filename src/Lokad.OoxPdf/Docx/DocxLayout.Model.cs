@@ -127,6 +127,20 @@ internal sealed record DocxTextLineLayout(
     // Relative source-frame geometry survives translations. The first print
     // origin maps the source baseline while subsequent flow uses printed sizes.
     public double SourceBaselineOffset { get; init; }
+
+    public DocxTextLineLayout Translate(double deltaX, double deltaY)
+    {
+        if (deltaX == 0d && deltaY == 0d) return this;
+
+        return this with
+        {
+            X = X + deltaX,
+            BaselineY = BaselineY + deltaY,
+            Segments = deltaX == 0d
+                ? Segments
+                : Segments.Select(segment => segment with { X = segment.X + deltaX }).ToArray()
+        };
+    }
 }
 
 internal readonly record struct DocxOccupiedLineBox(double Height, double BaselineInset);
@@ -198,15 +212,16 @@ internal sealed record DocxInlineImageLayout(
         ClipBounds = new(X, Y, Width, Math.Min(Height, Math.Max(0d, aboveBaseline)))
     };
 
-    public DocxInlineImageLayout Translate(double deltaX, double deltaY) => this with
+    public DocxInlineImageLayout Translate(double deltaX, double deltaY, int? pageIndex = null) => this with
     {
         X = X + deltaX, Y = Y + deltaY,
+        PageIndex = pageIndex ?? PageIndex,
         ClipBounds = ClipBounds is { } clip ? clip with { X = clip.X + deltaX, Y = clip.Y + deltaY } : null,
         LineFrame = LineFrame is { } line ? line with { Bottom = line.Bottom + deltaY } : null
     };
 
     public DocxInlineImageLayout Relocate(double x, double y, int? pageIndex = null) =>
-        Translate(x - X, y - Y) with { PageIndex = pageIndex ?? PageIndex };
+        Translate(x - X, y - Y, pageIndex);
 }
 
 internal readonly record struct DocxPictureLineFrame(double Bottom, double Height)

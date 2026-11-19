@@ -370,8 +370,8 @@ internal sealed partial class DocxLayoutEngine
                 ShiftTableRows(nestedRows, -verticalOffset, 0d), usedHeight, DocxPlacedDrawingAnchor.TranslateY(anchors, -verticalOffset));
     }
 
-    private static (List<DocxTextLineLayout> Lines, double UsedHeight, List<DocxInlineImageLayout> PlacedImages,
-        List<DocxInlineTextBoxLayout> PlacedBoxes, IReadOnlyList<DocxTableRowLayout> NestedRows,
+    private static (IReadOnlyList<DocxTextLineLayout> Lines, double UsedHeight, IReadOnlyList<DocxInlineImageLayout> PlacedImages,
+        IReadOnlyList<DocxInlineTextBoxLayout> PlacedBoxes, IReadOnlyList<DocxTableRowLayout> NestedRows,
         IReadOnlyList<DocxPlacedDrawingAnchor> DrawingAnchors) ComputeTableCellContent(
         DocxTableCell cell,
         double cellX,
@@ -404,9 +404,9 @@ internal sealed partial class DocxLayoutEngine
                 out var cachedRelative, out var cachedPlaced, out var cachedBoxes, out double cachedUsedHeight,
                 out var cachedRows, nestedPageHeight, anchors))
         {
-            return (new List<DocxTextLineLayout>(DocxTableCellTextLinesMemo.ShiftLines(cachedRelative, originX, originY)), cachedUsedHeight,
-                new List<DocxInlineImageLayout>(ShiftInlineImages(cachedPlaced, originY, originX, pageIndex)),
-                cachedBoxes.Select(box => ShiftInlineTextBox(box, originY, originX, pageIndex)).ToList(),
+            return (ShiftTextLines(cachedRelative, originY, originX), cachedUsedHeight,
+                ShiftInlineImages(cachedPlaced, originY, originX, pageIndex),
+                cachedBoxes.Select(box => ShiftInlineTextBox(box, originY, originX, pageIndex)).ToArray(),
                 ShiftTableRows(cachedRows, originY, originX, pageIndex), DocxPlacedDrawingAnchor.TranslateY(anchors ?? [], originY));
         }
 
