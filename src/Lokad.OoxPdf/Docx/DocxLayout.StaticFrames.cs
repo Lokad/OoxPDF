@@ -351,7 +351,12 @@ internal sealed partial class DocxLayoutEngine
         IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations, CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
-        if (!paragraph.InlineTextBoxes.All(box => TryGetInlineBoxFrameWidth(box, width, token, out _))) return false;
+        foreach (var box in paragraph.InlineTextBoxes)
+        {
+            token.ThrowIfCancellationRequested();
+            if (!TryReadInlineBoxExtent(box, out double boxWidth, out _) ||
+                boxWidth > width || !HasUsableInlineBoxContentWidth(box, boxWidth)) return false;
+        }
         // Legacy box-only models may lack a parsed ordered view. Mixed parsed
         // paragraphs use the same source ownership as body and cell containers.
         if (paragraph.InlineTextBoxes.Count != 0 && paragraph.Equations.Count == 0 &&
@@ -387,13 +392,8 @@ internal sealed partial class DocxLayoutEngine
     // The box owns a resolved frame even when its child story needs the existing
     // legacy fallback. Child-content support must not veto its prepared siblings.
     // Callers validate revision/source ownership independently of this geometry.
-    private static bool TryGetInlineBoxFrameWidth(DocxInlineTextBox box, double available,
-        CancellationToken token, out double width)
+    private static bool HasUsableInlineBoxContentWidth(DocxInlineTextBox box, double width)
     {
-        token.ThrowIfCancellationRequested();
-        width = ReadEmuPoints(box.ExtentCxValue) ?? 0d;
-        if (!double.IsFinite(width) || width <= 0d || width > available ||
-            ReadEmuPoints(box.ExtentCyValue) is not > 0d || box.BodyElements.Count == 0) return false;
         ResolveInlineTextBoxContentInsets(box, out double left, out _, out double right, out _);
         return width - left - right > 0d;
     }

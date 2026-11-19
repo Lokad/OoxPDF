@@ -62,15 +62,14 @@ internal sealed partial class DocxLayoutEngine
         return false;
     }
 
-    private static double ResolveCellInlineTextBoxTuckTop(
-        double previousBaselineY,
+    private static double ResolveCellInlineTextBoxTuckDistance(
         double previousFontSize,
         double spacingBefore,
         double paragraphSpacingScale)
     {
         double tuck = paragraphSpacingScale * (CellInlineTextBoxTuckSlope * previousFontSize + CellInlineTextBoxTuckInterceptPoints);
         double excess = Math.Max(0d, spacingBefore - CellInlineTextBoxTuckDefaultAfterPoints * paragraphSpacingScale);
-        return previousBaselineY - tuck - excess;
+        return tuck + excess;
     }
 
     private readonly record struct DocxTableCellContentHeight(double FullHeight, double MinimumPictureOverlap)
@@ -275,9 +274,9 @@ internal sealed partial class DocxLayoutEngine
                     paragraph.Images.Count == 0 &&
                     !currentHasVisibleText)
                 {
-                    double tuck = paragraphSpacingScale * (CellInlineTextBoxTuckSlope * previousTextFontSize + CellInlineTextBoxTuckInterceptPoints);
-                    double excess = Math.Max(0d, spacingProfile.AppliedBeforeSpacing - CellInlineTextBoxTuckDefaultAfterPoints * paragraphSpacingScale);
-                    boxContribution += tuck + excess - (previousTextLineHeight + spacingProfile.AppliedBeforeSpacing);
+                    double tuckDistance = ResolveCellInlineTextBoxTuckDistance(previousTextFontSize,
+                        spacingProfile.AppliedBeforeSpacing, paragraphSpacingScale);
+                    boxContribution += tuckDistance - (previousTextLineHeight + spacingProfile.AppliedBeforeSpacing);
                     tuckApplied = true;
                 }
 
@@ -882,13 +881,15 @@ internal sealed partial class DocxLayoutEngine
                 double boxParagraphX = cellX + paddingLeft + GetParagraphStartOffset(paragraph, context.ParagraphSpacingScale);
                 double boxParagraphWidth = Math.Max(1d, textWidth - GetParagraphStartOffset(paragraph, context.ParagraphSpacingScale) - GetParagraphRightInset(paragraph, context.ParagraphSpacingScale));
                 double boxTop = cursorY;
-                if (!tuckApplied &&
+                bool tuckThisBox = !tuckApplied &&
                     previousParagraphHasText &&
                     paragraph.Images.Count == 0 &&
-                    !currentHasVisibleText)
+                    !currentHasVisibleText;
+                if (tuckThisBox)
                 {
-                    boxTop = ResolveCellInlineTextBoxTuckTop(previousTextBaselineY, previousTextFontSize, spacingProfile.AppliedBeforeSpacing, context.ParagraphSpacingScale);
-                    tuckApplied = true;
+                    double tuckDistance = ResolveCellInlineTextBoxTuckDistance(previousTextFontSize,
+                        spacingProfile.AppliedBeforeSpacing, context.ParagraphSpacingScale);
+                    boxTop = previousTextBaselineY - tuckDistance;
                 }
 
                 DocxInlineTextBoxLayout? textBoxLayout = CreateInlineTextBoxLayout(
@@ -910,6 +911,7 @@ internal sealed partial class DocxLayoutEngine
                     continue;
                 }
 
+                tuckApplied |= tuckThisBox;
                 placedBoxes.Add(textBoxLayout);
                 cursorY = boxTop - textBoxLayout.BoxHeight;
             }

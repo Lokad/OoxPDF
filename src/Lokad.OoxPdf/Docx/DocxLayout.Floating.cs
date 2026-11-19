@@ -713,14 +713,7 @@ internal sealed partial class DocxLayoutEngine
         IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations = null,
         int? pageCount = null)
     {
-        double? extentWidth = ReadEmuPoints(textBox.ExtentCxValue);
-        double? extentHeight = ReadEmuPoints(textBox.ExtentCyValue);
-        if (textMeasurer is null ||
-            textBox.BodyElements.Count == 0 ||
-            extentWidth is not { } fileWidth ||
-            fileWidth <= 0d ||
-            extentHeight is not { } fileHeight ||
-            fileHeight <= 0d)
+        if (textMeasurer is null || !TryReadInlineBoxExtent(textBox, out double fileWidth, out double fileHeight))
         {
             return null;
         }
@@ -774,6 +767,13 @@ internal sealed partial class DocxLayoutEngine
             SourceParagraphIndex: sourceParagraphIndex,
             Story: null) { PrintScale = paragraphSpacingScale };
     }
+    private static bool TryReadInlineBoxExtent(DocxInlineTextBox box, out double width, out double height)
+    {
+        width = ReadEmuPoints(box.ExtentCxValue) ?? 0d;
+        height = ReadEmuPoints(box.ExtentCyValue) ?? 0d;
+        return width > 0d && height > 0d && box.BodyElements.Count != 0;
+    }
+
     private static double ReadInsetEmuPoints(string? value, long defaultEmu)
     {
         return ReadEmuPoints(value) ?? OoxUnits.EmuToPoints(defaultEmu);

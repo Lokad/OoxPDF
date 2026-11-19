@@ -285,6 +285,7 @@ internal sealed partial class DocxLayoutEngine
                 DocxFieldText.CanResolve(kind, pageNumber, pageCount));
         var items = paragraph.InlineContent;
         bool retainPreparedContent = allowStaticFallback;
+        bool omittedInlineBox = false;
         // Captured ordinary pictures share wrapping across containers.
         // Prepared math/boxes and reconstructed owners retain their eligibility.
         bool ordinaryStaticContent = allowStaticFallback && paragraph.InlineTextBoxes.Count == 0;
@@ -447,7 +448,12 @@ internal sealed partial class DocxLayoutEngine
                     // The skipped item owns no fabricated frame; later items
                     // still carry their original source indices and geometry.
                     if (!includeInlineTextBoxes) break;
-                    if (!TryGetInlineBoxFrameWidth(box.Box, double.MaxValue, token, out double boxWidth) ||
+                    if (!TryReadInlineBoxExtent(box.Box, out double boxWidth, out _))
+                    {
+                        omittedInlineBox = true;
+                        break;
+                    }
+                    if (!HasUsableInlineBoxContentWidth(box.Box, boxWidth) ||
                         !double.IsFinite(boxWidth * scale)) return false;
                     var boxDependencies = DocxFieldText.GetDependencies(box.Box.BodyElements, token);
                     if (!DocxFieldText.HasInputs(boxDependencies, pageNumber, pageCount)) return false;
@@ -493,9 +499,9 @@ internal sealed partial class DocxLayoutEngine
             sourceItemIndex++;
         }
         token.ThrowIfCancellationRequested();
-        // With no supported measured neighbor, an unprepared equation keeps
-        // the established paragraph fallback rather than a new empty frame.
-        if (paragraph.Equations.Count != 0 && measured.Count == 0) return false;
+        // Keep the established fallback when an omitted box or equation leaves
+        // no supported measured neighbor to own the line.
+        if (measured.Count == 0 && (omittedInlineBox || paragraph.Equations.Count != 0)) return false;
         if ((ordinaryContent || ordinaryStaticContent) && DocxPlainBodyFrame.HasFixedLineFlow(paragraph))
         {
             bool followingText = false;

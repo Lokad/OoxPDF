@@ -17424,6 +17424,7 @@
   "docx-inline-box-math": [
     "DocxComputedFieldBoxes",
     "PortableRenderingJustifiedInlineBoxChildKeepsPreparedParentContent",
+    "PortableRenderingUnplacedCellBoxesPreserveSiblingAndFollowingContent",
     "DocxCellTextBoxAfterTextHonorsSpacingExcess",
     "DocxCellTextBoxAfterTextTuckGrowsWithFontSize",
     "DocxCellTextBoxAfterTextTucksToBaseline",
