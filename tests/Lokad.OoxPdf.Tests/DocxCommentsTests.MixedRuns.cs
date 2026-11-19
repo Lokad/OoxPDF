@@ -1786,43 +1786,50 @@ internal static partial class DocxCommentsTests
         }
     }
 
-    public static void DocxWordCompatibleMixedBalloonSplitsOverwidePrefixWordInItsSourceFace()
+    public static void DocxWordCompatibleMixedBalloonSplitsOverwidePrefixesAndPreservesFallbackInk()
     {
-        foreach (bool supplementary in new[] { false, true })
+        const string shortTail = "ok. end.";
+        string ordinaryWord = new('a', 72);
+        string supplementaryWord = string.Concat(Enumerable.Repeat("a\U0001F600", 36));
+        string[] tails =
+        [
+            shortTail,
+            "ok. " + ordinaryWord + " ending.",
+            ordinaryWord + " ending.",
+            "ok. " + supplementaryWord + " ending.",
+            supplementaryWord + " ending."
+        ];
+
+        foreach (string suffix in new[] { "", ",", ":", ";" })
         foreach (short prefixGap in new short[] { 0, 450 })
         foreach (int prefixLength in new[] { 80, 120 })
         foreach (double rightMargin in new[] { 72d, 144d, 207d })
         {
-            string prefix = new string('a', prefixLength);
-            string word = supplementary ? string.Concat(Enumerable.Repeat("a\U0001F600", 36)) : new string('a', 72);
-            foreach (string tail in new[] { "ok. end.", "ok. " + word + " ending.", word + " ending." })
+            string prefix = new string('a', prefixLength) + suffix;
+            DocxParagraph anchor = DocxTests.CreateCommentMarkerParagraph("Body anchor", "1") with
             {
-                DocxParagraph anchor = DocxTests.CreateCommentMarkerParagraph("Body anchor", "1") with
-                {
-                    Runs = [new DocxTextRun("Body anchor", 12d, null, false, false, false, null, "AnchorFace")]
-                };
-                DocxParagraph comment = DocxTests.CreateDocxLayoutParagraph(prefix + tail, 12d, 14d) with
-                {
-                    Runs = [new DocxTextRun(prefix, 12d, null, false, false, false, null, "CommentFace"),
-                        new DocxTextRun(tail, 12d, null, false, false, false, null, "OtherCommentFace")],
-                    ParagraphMarkRun = new DocxTextRun(" ", 18d, null, false, false, false, null, "AnchorFace")
-                };
-                DocxRelatedStory story = new(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1",
-                    [new DocxParagraphElement(comment)], [], [], null)
-                {
-                    CommentMetadata = new DocxCommentMetadata("Reviewer", "RV", null, null, null, null, null)
-                };
-                DocxDocument document = new(612d, 792d, 72d, rightMargin, 72d, 72d, DocxPageSettings.Empty,
-                    [], [], [], [new DocxParagraphElement(anchor)], [], [])
-                {
-                    RelatedStories = [story], MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
-                };
-                var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodyLineGap: prefixGap, bodySpaceAdvance: 1800,
-                    bodyDescender: -350, bodyAscender: 500), OoxPdfDocxMarkupMode.AllMarkup,
-                    OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-                var balloon = renderer.InspectMarkupBalloons(document).Single();
-                var shows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single())
-                    .Where(show => show.X >= balloon.X && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
+                Runs = [new DocxTextRun("Body anchor", 12d, null, false, false, false, null, "AnchorFace")]
+            };
+            DocxParagraph comment = DocxTests.CreateDocxLayoutParagraph("", 12d, 14d) with
+            {
+                Runs = [new DocxTextRun(prefix, 12d, null, false, false, false, null, "CommentFace"),
+                    new DocxTextRun("", 12d, null, false, false, false, null, "OtherCommentFace")],
+                ParagraphMarkRun = new DocxTextRun(" ", 18d, null, false, false, false, null, "AnchorFace")
+            };
+            DocxRelatedStory story = new(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1",
+                [new DocxParagraphElement(comment)], [], [], null)
+            {
+                CommentMetadata = new DocxCommentMetadata("Reviewer", "RV", null, null, null, null, IsResolved: null)
+            };
+            DocxDocument document = new(612d, 792d, 72d, rightMargin, 72d, 72d, DocxPageSettings.Empty,
+                [], [], [], [new DocxParagraphElement(anchor)], [], [])
+            {
+                MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+            };
+
+            foreach (string tail in tails)
+            {
+                var (balloon, shows) = Observe(prefix, tail);
                 var prefixRows = shows.Where(show => !string.IsNullOrWhiteSpace(show.Text) &&
                     show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 700).ToArray();
                 var tailRows = shows.Where(show => !string.IsNullOrWhiteSpace(show.Text) &&
@@ -1830,7 +1837,8 @@ internal static partial class DocxCommentsTests
                 TestAssert.True(prefixRows.Length >= 3, "Ordinary prefix words must wrap in their prepared face.");
                 TestAssert.True(tailRows.Length >= 1, "The mixed row must retain its prepared tail face.");
                 TestAssert.Equal(prefix + tail + " ", string.Concat(shows.Select(show => show.Text)));
-                TestAssert.True(prefixRows.All(row => row.Text.All(character => character == 'a')), "Prefix hard breaks must not invent separators.");
+                TestAssert.True(prefixRows.All(row => row.Text.All(character => character == 'a' || suffix.Length != 0 && character == suffix[0])),
+                    "Prefix hard breaks must not invent separators.");
                 double size = tailRows[0].Size;
                 double prefixPitch = 0.85d + prefixGap / 1000d;
                 double incomingPitch = 0.35d + Math.Max(0.5d + prefixGap / 1000d, 0.8d);
@@ -1856,185 +1864,56 @@ internal static partial class DocxCommentsTests
                 TestAssert.True(Math.Abs(shows[^1].Size - size) < 0.001d, "The terminal mark keeps nominal balloon size.");
                 TestAssert.True(Math.Abs(balloon.Height - (12.61d + prefixRows[0].Y - tailRows[^1].Y)) < 0.02d,
                     "Height includes prefix-only, incoming mixed, outgoing mixed and tail-only steps.");
-
-                foreach (short firstAdvance in new short[] { 0, 32700 })
-                {
-                    DocxParagraph guardedComment = comment with
-                    {
-                        Runs = [comment.Runs[0], comment.Runs[1] with { Text = "a" + new string('b', 72) + " ending." }]
-                    };
-                    DocxDocument guarded = document with
-                    {
-                        RelatedStories = [story with { BodyElements = [new DocxParagraphElement(guardedComment)] }]
-                    };
-                    var guardedRenderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodyLineGap: prefixGap,
-                        bodySpaceAdvance: 1800, bodyDescender: -350, bodyAscender: 500, tailFirstAdvance: firstAdvance),
-                        OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-                    var guardedBalloon = guardedRenderer.InspectMarkupBalloons(guarded).Single();
-                    var guardedShows = ReadEmbeddedGlyphTextShows(guardedRenderer.RenderPagesAsync(guarded, null, CancellationToken.None).ToBlockingEnumerable().Single())
-                        .Where(show => show.X >= guardedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) &&
-                            !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
-                    TestAssert.True(guardedShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
-                        "A zero-width or oversized first scalar retains the complete fallback path.");
-                }
-                if (tail == "ok. end.")
-                {
-                    foreach ((string guardedPrefix, short? firstAdvance) in new (string, short?)[]
-                    {
-                        ("a" + new string('b', prefixLength), 0),
-                        ("a" + new string('b', prefixLength), 32700),
-                        (prefix + ";;", null),
-                        (prefix + "\U0001F600", null)
-                    })
-                    {
-                        DocxParagraph guardedComment = comment with
-                        {
-                            Runs = [comment.Runs[0] with { Text = guardedPrefix }, comment.Runs[1]]
-                        };
-                        DocxDocument guarded = document with
-                        {
-                            RelatedStories = [story with { BodyElements = [new DocxParagraphElement(guardedComment)] }]
-                        };
-                        var guardedRenderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodyLineGap: prefixGap,
-                            bodySpaceAdvance: 1800, bodyDescender: -350, bodyAscender: 500, bodyFirstAdvance: firstAdvance),
-                            OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-                        var guardedBalloon = guardedRenderer.InspectMarkupBalloons(guarded).Single();
-                        var guardedShows = ReadEmbeddedGlyphTextShows(guardedRenderer.RenderPagesAsync(guarded, null, CancellationToken.None).ToBlockingEnumerable().Single())
-                            .Where(show => show.X >= guardedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) &&
-                                !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
-                        TestAssert.True(guardedShows.Length > 0 && guardedShows.All(show =>
-                            show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
-                            "A zero-width or oversized first prefix glyph, punctuation or non-ASCII prefix retains the complete fallback path.");
-                    }
-                }
             }
-        }
-    }
 
-    public static void DocxWordCompatibleMixedBalloonSplitsOverwideTerminalPunctuationPrefixWord()
-    {
-        foreach (char punctuation in new[] { ',', ':', ';' })
-        foreach (bool supplementary in new[] { false, true })
-        foreach (short prefixGap in new short[] { 0, 450 })
-        foreach (int prefixLength in new[] { 80, 120 })
-        foreach (double rightMargin in new[] { 72d, 144d, 207d })
-        {
-            string prefix = new string('a', prefixLength) + punctuation;
-            string word = supplementary ? string.Concat(Enumerable.Repeat("a\U0001F600", 36)) : new string('a', 72);
-            foreach (string tail in new[] { "ok. end.", "ok. " + word + " ending.", word + " ending." })
+            string guardedTail = "a" + new string('b', 72) + " ending.";
+            foreach (short firstAdvance in new short[] { 0, 32700 })
             {
-                DocxParagraph anchor = DocxTests.CreateCommentMarkerParagraph("Body anchor", "1") with
-                {
-                    Runs = [new DocxTextRun("Body anchor", 12d, null, false, false, false, null, "AnchorFace")]
-                };
-                DocxParagraph comment = DocxTests.CreateDocxLayoutParagraph(prefix + tail, 12d, 14d) with
-                {
-                    Runs = [new DocxTextRun(prefix, 12d, null, false, false, false, null, "CommentFace"),
-                        new DocxTextRun(tail, 12d, null, false, false, false, null, "OtherCommentFace")],
-                    ParagraphMarkRun = new DocxTextRun(" ", 18d, null, false, false, false, null, "AnchorFace")
-                };
-                DocxRelatedStory story = new(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1",
-                    [new DocxParagraphElement(comment)], [], [], null)
-                {
-                    CommentMetadata = new DocxCommentMetadata("Reviewer", "RV", null, null, null, null, null)
-                };
-                DocxDocument document = new(612d, 792d, 72d, rightMargin, 72d, 72d, DocxPageSettings.Empty,
-                    [], [], [], [new DocxParagraphElement(anchor)], [], [])
-                {
-                    RelatedStories = [story], MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
-                };
-                var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodyLineGap: prefixGap, bodySpaceAdvance: 1800,
-                    bodyDescender: -350, bodyAscender: 500), OoxPdfDocxMarkupMode.AllMarkup,
-                    OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-                var balloon = renderer.InspectMarkupBalloons(document).Single();
-                var shows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single())
-                    .Where(show => show.X >= balloon.X && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
-                var prefixRows = shows.Where(show => !string.IsNullOrWhiteSpace(show.Text) &&
-                    show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 700).ToArray();
-                var tailRows = shows.Where(show => !string.IsNullOrWhiteSpace(show.Text) &&
-                    show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('a')) == 900).ToArray();
-                TestAssert.True(prefixRows.Length >= 3, "Ordinary prefix words must wrap in their prepared face.");
-                TestAssert.True(tailRows.Length >= 1, "The mixed row must retain its prepared tail face.");
-                TestAssert.Equal(prefix + tail + " ", string.Concat(shows.Select(show => show.Text)));
-                TestAssert.True(prefixRows.All(row => row.Text.All(character => character == 'a' || character == punctuation)), "Prefix hard breaks must not invent separators.");
-                double size = tailRows[0].Size;
-                double prefixPitch = 0.85d + prefixGap / 1000d;
-                double incomingPitch = 0.35d + Math.Max(0.5d + prefixGap / 1000d, 0.8d);
-                for (int i = 1; i < prefixRows.Length; i++)
-                {
-                    TestAssert.True(Math.Abs(prefixRows[i - 1].Y - prefixRows[i].Y -
-                        (i == prefixRows.Length - 1 ? incomingPitch : prefixPitch) * size) < 0.02d,
-                        "Prefix-only rows and the incoming mixed row use their distinct metrics.");
-                }
-                TestAssert.True(Math.Abs(prefixRows[^1].Y - tailRows[0].Y) < 0.001d, "The tail joins the final prefix row.");
-                double tailX = prefixRows[^1].X + prefixRows[^1].Font.MeasureTextPoints(prefixRows[^1].Text, size);
-                TestAssert.True(Math.Abs(tailRows[0].X - tailX) < 0.04d, "Joined tail position uses the final prefix advance.");
-                for (int i = 1; i < tailRows.Length; i++)
-                {
-                    TestAssert.True(Math.Abs(tailRows[i - 1].Y - tailRows[i].Y - (i == 1 ? 1.15d : 1d) * size) < 0.02d,
-                        "The outgoing mixed step uses both descents; later rows use the tail face alone.");
-                }
-                TestAssert.True(prefixRows.Concat(tailRows).All(show =>
-                    show.X + show.Font.MeasureTextPoints(show.Text.TrimEnd(), size) <= balloon.X + balloon.Width + 0.02d),
-                    "Visible words must stay inside the balloon.");
-                TestAssert.Equal(" ", shows[^1].Text);
-                TestAssert.Equal(500, (int)shows[^1].Font.Font.GetAdvanceWidth(shows[^1].Font.Font.MapCodePoint(' ')));
-                TestAssert.True(Math.Abs(shows[^1].Size - size) < 0.001d, "The terminal mark keeps nominal balloon size.");
-                TestAssert.True(Math.Abs(balloon.Height - (12.61d + prefixRows[0].Y - tailRows[^1].Y)) < 0.02d,
-                    "Height includes prefix-only, incoming mixed, outgoing mixed and tail-only steps.");
+                var (_, shows) = Observe(prefix, guardedTail, tailFirstAdvance: firstAdvance);
+                var ink = shows.Where(show => !string.IsNullOrWhiteSpace(show.Text)).ToArray();
+                TestAssert.True(ink.Length > 0 && ink.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
+                    "A zero-width or oversized first tail scalar must emit the fallback body.");
+                TestAssert.Equal(RemoveWhitespace(prefix + guardedTail), RemoveWhitespace(string.Concat(shows.Select(show => show.Text))));
+            }
 
-                foreach (short firstAdvance in new short[] { 0, 32700 })
+            string otherPrefix = "a" + new string('b', prefixLength) + suffix;
+            foreach ((string guardedPrefix, short? firstAdvance) in new (string, short?)[]
+            {
+                (otherPrefix, 0),
+                (otherPrefix, 32700),
+                (prefix + (suffix.Length == 0 ? ";;" : ","), null),
+                (prefix + "\U0001F600", null)
+            })
+            {
+                var (_, shows) = Observe(guardedPrefix, shortTail, prefixFirstAdvance: firstAdvance);
+                var ink = shows.Where(show => !string.IsNullOrWhiteSpace(show.Text)).ToArray();
+                TestAssert.True(ink.Length > 0 && ink.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
+                    "A zero-width or oversized first prefix glyph, punctuation or non-ASCII prefix retains the fallback body.");
+            }
+
+            (DocxMarkupBalloonPlacementSnapshot Balloon, (PdfEmbeddedFont Font, string Text, double Size, double X, double Y)[] Shows)
+                Observe(string observedPrefix, string observedTail, short? prefixFirstAdvance = null, short? tailFirstAdvance = null)
+            {
+                var observedComment = comment with
                 {
-                    DocxParagraph guardedComment = comment with
-                    {
-                        Runs = [comment.Runs[0], comment.Runs[1] with { Text = "a" + new string('b', 72) + " ending." }]
-                    };
-                    DocxDocument guarded = document with
-                    {
-                        RelatedStories = [story with { BodyElements = [new DocxParagraphElement(guardedComment)] }]
-                    };
-                    var guardedRenderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodyLineGap: prefixGap,
-                        bodySpaceAdvance: 1800, bodyDescender: -350, bodyAscender: 500, tailFirstAdvance: firstAdvance),
-                        OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-                    var guardedBalloon = guardedRenderer.InspectMarkupBalloons(guarded).Single();
-                    var guardedShows = ReadEmbeddedGlyphTextShows(guardedRenderer.RenderPagesAsync(guarded, null, CancellationToken.None).ToBlockingEnumerable().Single())
-                        .Where(show => show.X >= guardedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) &&
-                            !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
-                    TestAssert.True(guardedShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
-                        "A zero-width or oversized first scalar retains the complete fallback path.");
-                }
-                if (tail == "ok. end.")
+                    Runs = [comment.Runs[0] with { Text = observedPrefix }, comment.Runs[1] with { Text = observedTail }]
+                };
+                var observedDocument = document with
                 {
-                    foreach ((string guardedPrefix, short? firstAdvance) in new (string, short?)[]
-                    {
-                        ("a" + new string('b', prefixLength) + punctuation, 0),
-                        ("a" + new string('b', prefixLength) + punctuation, 32700),
-                        (prefix + ",", null),
-                        (prefix + "\U0001F600", null)
-                    })
-                    {
-                        DocxParagraph guardedComment = comment with
-                        {
-                            Runs = [comment.Runs[0] with { Text = guardedPrefix }, comment.Runs[1]]
-                        };
-                        DocxDocument guarded = document with
-                        {
-                            RelatedStories = [story with { BodyElements = [new DocxParagraphElement(guardedComment)] }]
-                        };
-                        var guardedRenderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodyLineGap: prefixGap,
-                            bodySpaceAdvance: 1800, bodyDescender: -350, bodyAscender: 500, bodyFirstAdvance: firstAdvance),
-                            OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-                        var guardedBalloon = guardedRenderer.InspectMarkupBalloons(guarded).Single();
-                        var guardedShows = ReadEmbeddedGlyphTextShows(guardedRenderer.RenderPagesAsync(guarded, null, CancellationToken.None).ToBlockingEnumerable().Single())
-                            .Where(show => show.X >= guardedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) &&
-                                !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
-                        TestAssert.True(guardedShows.Length > 0 && guardedShows.All(show =>
-                            show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
-                            "A zero-width or oversized first prefix glyph, punctuation or non-ASCII prefix retains the complete fallback path.");
-                    }
-                }
+                    RelatedStories = [story with { BodyElements = [new DocxParagraphElement(observedComment)] }]
+                };
+                var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodyLineGap: prefixGap,
+                    bodySpaceAdvance: 1800, bodyDescender: -350, bodyAscender: 500,
+                    bodyFirstAdvance: prefixFirstAdvance, tailFirstAdvance: tailFirstAdvance),
+                    OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+                var balloon = renderer.InspectMarkupBalloons(observedDocument).Single();
+                var shows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(observedDocument, null, CancellationToken.None).ToBlockingEnumerable().Single())
+                    .Where(show => show.X >= balloon.X && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
+                return (balloon, shows);
             }
         }
+
+        static string RemoveWhitespace(string text) => string.Concat(text.Where(character => !char.IsWhiteSpace(character)));
     }
 
     public static void DocxWordCompatibleMixedBalloonSplitsFirstTailWordAfterWrappedPrefix()
