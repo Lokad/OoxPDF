@@ -17423,6 +17423,8 @@
   ],
   "docx-inline-box-math": [
     "DocxComputedFieldBoxes",
+    "DocxIgnoredInlineBoxesKeepMeasuredSiblingSourceIndices",
+    "DocxInlineBoxFallbackRetainsInvalidFrameAndOwnerGuards",
     "PortableRenderingJustifiedInlineBoxChildKeepsPreparedParentContent",
     "PortableRenderingUnplacedCellBoxesPreserveSiblingAndFollowingContent",
     "DocxCellTextBoxAfterTextHonorsSpacingExcess",
