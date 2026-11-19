@@ -8,6 +8,7 @@ using System.Xml.Linq;
 using Lokad.OoxPdf;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Fonts;
+using Lokad.OoxPdf.Imaging;
 using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pdf;
 using Lokad.OoxPdf.Pptx;
@@ -3706,27 +3707,39 @@ internal static partial class PptxChartsTests
         TestAssert.DoesNotContain("/CAT", pdf);
     }
 
-    public static void PptxSyntheticTransparentChartTitleUsesGlyphOutlinePaths()
+    public static void PptxSyntheticTransparentChartTitleUsesGlyphOutlinePaths() =>
+        CheckTransparentChartTitle(richRun: false);
+
+    public static void PptxSyntheticTransparentChartTitleRichRunUsesGlyphOutlinePaths() =>
+        CheckTransparentChartTitle(richRun: true);
+
+    private static void CheckTransparentChartTitle(bool richRun)
     {
-        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
-        if (!File.Exists(arial))
+        if (!OperatingSystem.IsWindows())
         {
-            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
+            TestAssert.Skip("The pinned PDFium validation binary is Windows-only.");
         }
 
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
+        const string blue = "<a:solidFill><a:srgbClr val=\"336699\"><a:alpha val=\"{0}\"/></a:srgbClr></a:solidFill>";
+        const string font = "<a:latin typeface=\"DejaVu Sans\"/>";
+        int opacity = richRun ? 35000 : 45000;
+        string blueFill = string.Format(CultureInfo.InvariantCulture, blue, opacity);
+        string runProperties = richRun ? $"""<a:rPr sz="1600">{blueFill}{font}</a:rPr>""" : "";
+        string defaultFill = richRun ? """<a:solidFill><a:srgbClr val="111111"/></a:solidFill>""" : blueFill;
+        string title = richRun ? "Run Alpha" : "Alpha Title";
+        using MemoryStream source = TestFixtures.CreateZipPackage(new Dictionary<string, string>
         {
-            ["[Content_Types].xml"] = TestFixtures.Utf8(PptxTests.BasicContentTypes()),
-            ["_rels/.rels"] = TestFixtures.Utf8(PptxTests.PackageRelationship()),
-            ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8(PptxTests.PresentationRelationship()),
-            ["ppt/presentation.xml"] = TestFixtures.Utf8(PptxTests.BasicPresentation()),
-            ["ppt/slides/_rels/slide1.xml.rels"] = TestFixtures.Utf8("""
+            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
+            ["_rels/.rels"] = PptxTests.PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
+            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
+            ["ppt/slides/_rels/slide1.xml.rels"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
                   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
                 </Relationships>
-                """),
-            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
+                """,
+            ["ppt/slides/slide1.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
                        xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
@@ -3739,16 +3752,16 @@ internal static partial class PptxChartsTests
                     </p:graphicFrame>
                   </p:spTree></p:cSld>
                 </p:sld>
-                """),
-            ["ppt/charts/chart1.xml"] = TestFixtures.Utf8("""
+                """,
+            ["ppt/charts/chart1.xml"] = $$"""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
                               xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
                   <c:chart>
                     <c:title>
-                      <c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>Alpha Title</a:t></a:r></a:p></c:rich></c:tx>
+                      <c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r>{{runProperties}}<a:t>{{title}}</a:t></a:r></a:p></c:rich></c:tx>
                       <c:layout><c:manualLayout><c:x val="0.15"/><c:y val="0.15"/><c:w val="0.7"/><c:h val="0.2"/></c:manualLayout></c:layout>
-                      <c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1600"><a:solidFill><a:srgbClr val="336699"><a:alpha val="45000"/></a:srgbClr></a:solidFill><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr>
+                      <c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1600">{{defaultFill}}{{font}}</a:defRPr></a:pPr></a:p></c:txPr>
                     </c:title>
                     <c:plotArea>
                       <c:lineChart>
@@ -3757,86 +3770,72 @@ internal static partial class PptxChartsTests
                     </c:plotArea>
                   </c:chart>
                 </c:chartSpace>
-                """)
+                """
         });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
 
-        OoxPdfConverter.Convert(input, output);
+        using var package = OoxPackage.Open(source, default);
+        PptxDocument document = new PptxReader().Read(package, default);
+        if (richRun)
+        {
+            PptxScene scene = new PptxSceneBuilder().Build(document, package, default);
+            PptxSceneChart chart = scene.Slides[0].SlideNodes.Select(node => node.Chart).OfType<PptxSceneChart>().Single();
+            TestAssert.Equal(0.35d, chart.Title.TextRuns.Single().TextStyle.Alpha ?? 0d);
+        }
 
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("GS45000F100000S", pdf);
-        TestAssert.Contains(" c", pdf);
-        TestAssert.Contains("f", pdf);
+        PdfPage page = new PptxRenderer(new PortableRenderingTests.PinnedResolver())
+            .RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().Single();
+        string paint = $"/GS{opacity}F100000S gs";
+        int paintStart = page.Content.IndexOf(paint, StringComparison.Ordinal);
+        TestAssert.True(paintStart >= 0 && page.Content.LastIndexOf(paint, StringComparison.Ordinal) == paintStart,
+            "Expected one title paint group at the authored opacity.");
+        int paintEnd = page.Content.IndexOf("\nQ", paintStart, StringComparison.Ordinal);
+        TestAssert.True(paintEnd > paintStart, "Expected the title paint to restore its graphics state.");
+        string outlines = page.Content[paintStart..paintEnd];
+        TestAssert.Contains("0.2 0.4 0.6 rg", outlines);
+        TestAssert.Contains(" c", outlines);
+        TestAssert.Contains("\nf", outlines);
+
+        // Keep the same outline and color operators in both pages. The second
+        // page clips that group to a point far away from the title.
+        PdfPage clipped = page with { Content = page.Content.Insert(paintStart, "0 0 1 1 re W n\n") };
+        string directory = Directory.CreateTempSubdirectory("chart-title-").FullName;
+        string pdf = Path.Combine(directory, "title.pdf");
+        using (FileStream output = File.Create(pdf))
+        {
+            PdfDocumentWriter.WriteStagedAsync(output, AsyncEnumerable.ToAsyncEnumerable<PdfPage>([page, clipped]),
+                new OoxConversionLimits(), null, default).GetAwaiter().GetResult();
+        }
+        ToolBudgetTests.RasterizePdfAt144Dpi(pdf, directory);
+        int visible = CountTitleInk(Path.Combine(directory, "page-001.png"), opacity / 100000d);
+        int hidden = CountTitleInk(Path.Combine(directory, "page-002.png"), opacity / 100000d);
+        TestAssert.True(visible >= 50, $"Expected solid title ink at the authored opacity. Found {visible} pixels.");
+        TestAssert.Equal(0, hidden);
     }
 
-    public static void PptxSyntheticTransparentChartTitleRichRunUsesGlyphOutlinePaths()
+    private static int CountTitleInk(string path, double alpha)
     {
-        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
-        if (!File.Exists(arial))
+        using DecodedPixels image = PngImage.ReadOwned(File.ReadAllBytes(path));
+        byte[] rgb = image.Rgb;
+        // Fixture title box begins 0.15 of the way into a 288x216pt chart at (72,72).
+        // At 144 DPI this region contains the title and excludes the chart frame.
+        TestAssert.True(image.Width >= 640 && image.Height >= 300, "Unexpected raster page geometry.");
+        int red = CompositeOnWhite(51), green = CompositeOnWhite(102), blue = CompositeOnWhite(153);
+        int count = 0;
+        for (int y = 180; y < 300; y++)
         {
-            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
+            for (int x = 220; x < 640; x++)
+            {
+                int pixel = 3 * (y * image.Width + x);
+                if (Math.Abs(rgb[pixel] - red) <= 3 && Math.Abs(rgb[pixel + 1] - green) <= 3 &&
+                    Math.Abs(rgb[pixel + 2] - blue) <= 3)
+                {
+                    count++;
+                }
+            }
         }
+        return count;
 
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
-        {
-            ["[Content_Types].xml"] = TestFixtures.Utf8(PptxTests.BasicContentTypes()),
-            ["_rels/.rels"] = TestFixtures.Utf8(PptxTests.PackageRelationship()),
-            ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8(PptxTests.PresentationRelationship()),
-            ["ppt/presentation.xml"] = TestFixtures.Utf8(PptxTests.BasicPresentation()),
-            ["ppt/slides/_rels/slide1.xml.rels"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
-                </Relationships>
-                """),
-            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
-                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
-                       xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
-                       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-                  <p:cSld><p:spTree>
-                    <p:graphicFrame>
-                      <p:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="2743200"/></p:xfrm>
-                      <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic>
-                    </p:graphicFrame>
-                  </p:spTree></p:cSld>
-                </p:sld>
-                """),
-            ["ppt/charts/chart1.xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
-                              xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <c:chart>
-                    <c:title>
-                      <c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="1600"><a:solidFill><a:srgbClr val="336699"><a:alpha val="35000"/></a:srgbClr></a:solidFill><a:latin typeface="Arial"/></a:rPr><a:t>Run Alpha</a:t></a:r></a:p></c:rich></c:tx>
-                      <c:layout><c:manualLayout><c:x val="0.15"/><c:y val="0.15"/><c:w val="0.7"/><c:h val="0.2"/></c:manualLayout></c:layout>
-                      <c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1600"><a:solidFill><a:srgbClr val="111111"/></a:solidFill><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr>
-                    </c:title>
-                    <c:plotArea>
-                      <c:lineChart>
-                        <c:ser><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt></c:numLit></c:val></c:ser>
-                      </c:lineChart>
-                    </c:plotArea>
-                  </c:chart>
-                </c:chartSpace>
-                """)
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, output);
-
-        OoxPackage package = OoxPackage.Open(input, CancellationToken.None);
-        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
-        PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
-        PptxSceneChart chart = scene.Slides[0].SlideNodes.Select(node => node.Chart).First(chartNode => chartNode is not null)!;
-        TestAssert.Equal(0.35d, chart.Title.TextRuns[0].TextStyle.Alpha ?? 0d);
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("GS35000F100000S", pdf);
-        TestAssert.Contains("0.2 0.4 0.6 rg", pdf);
-        TestAssert.Contains(" c", pdf);
-        TestAssert.Contains("f", pdf);
+        int CompositeOnWhite(int channel) => (int)Math.Round(255 - (255 - channel) * alpha);
     }
 
     public static void PptxSyntheticChartStyleTitleDefaultsDriveChartTitleRendering()

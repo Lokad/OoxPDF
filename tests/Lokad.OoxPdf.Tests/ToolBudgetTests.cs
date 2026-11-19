@@ -269,6 +269,12 @@ internal static class ToolBudgetTests
         return path;
     }
 
+    internal static void RasterizePdfAt144Dpi(string input, string outputDirectory)
+    {
+        ToolResult result = RunTool(RasterizerAssemblyPath.Value, input, outputDirectory, "144");
+        TestAssert.True(result.ExitCode == 0, $"PDFium validation failed. {result.Output}{result.Error}");
+    }
+
     private static ToolResult RunTool(string assemblyPath, params string[] args)
     {
         var start = new ProcessStartInfo("dotnet")
