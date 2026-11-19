@@ -33,26 +33,7 @@ if ($OutputPath -and (Test-Path -LiteralPath $OutputPath)) { throw 'Select a fre
 
 . (Join-Path $PSScriptRoot "PdfTextGeometry.ps1")
 
-function TextX($op) {
-    if ($UseEffectiveMatrix -and $op.EffectiveX -ne $null) {
-        return [double]$op.EffectiveX
-    }
-
-    return [double]$op.X
-}
-
-function TextY($op) {
-    if ($UseEffectiveMatrix -and $op.EffectiveY -ne $null) {
-        return [double]$op.EffectiveY
-    }
-
-    return [double]$op.Y
-}
-
-function TextAdvanceX($op) {
-    $scale = if ($UseEffectiveMatrix -and $null -ne $op.EffectiveA) { [double]$op.EffectiveA } else { 1d }
-    return [double]$op.EmittedAdvancePoints * $scale
-}
+$effective = $UseEffectiveMatrix.IsPresent
 
 function TextFontSize($op) {
     if (!$UseEffectiveMatrix -or $null -eq $op.EffectiveA -or $null -eq $op.EffectiveB -or
@@ -79,58 +60,11 @@ function TextContent($op) {
     return [string]$op.Payload
 }
 
-function Merge-SameLineOperations($Operations) {
-    $ordered = @($Operations | Sort-Object -Property @{ Expression = { [int]$_.PageNumber }; Ascending = $true }, @{ Expression = { TextY $_ }; Ascending = $true })
-    $banded = New-Object System.Collections.Generic.List[object]
-    $bandIndex = -1
-    $bandPage = $null
-    $bandY = 0d
-    foreach ($op in $ordered) {
-        # Keep the former 0.1pt grouping scale without rounding-edge splits.
-        # Anchor each band once: small successive shifts cannot chain lines.
-        if ($bandIndex -lt 0 -or $op.PageNumber -ne $bandPage -or [Math]::Abs((TextY $op) - $bandY) -gt 0.1d) {
-            $bandIndex++
-            $bandPage = $op.PageNumber
-            $bandY = TextY $op
-        }
-        $banded.Add([pscustomobject]@{ Band=$bandIndex; Operation=$op })
-    }
-    $sorted = @($banded | Sort-Object Band, @{ Expression = { TextX $_.Operation }; Ascending = $true })
-    $merged = New-Object System.Collections.Generic.List[object]
-    $current = $null
-    $currentLineKey = $null
-    $currentEndX = 0d
-    foreach ($entry in $sorted) {
-        $op = $entry.Operation
-        $lineKey = $entry.Band
-        $opEndX = (TextX $op) + (TextAdvanceX $op)
-        if ($null -ne $current -and $currentLineKey -eq $lineKey -and ((TextX $op) - $currentEndX) -le 1d) {
-            $current.DecodedText = if ($null -eq $current.DecodedText -or $null -eq $op.DecodedText) { $null } else { [string]$current.DecodedText + [string]$op.DecodedText }
-            $current.Payload = [string]$current.Payload + [string]$op.Payload
-            $current.EmittedAdvancePoints = [double]$current.EmittedAdvancePoints + [double]$op.EmittedAdvancePoints
-            $current.NaturalWidthPoints = [double]$current.NaturalWidthPoints + [double]$op.NaturalWidthPoints
-            $current.AdjustmentTotalPoints = [double]$current.AdjustmentTotalPoints + [double]$op.AdjustmentTotalPoints
-            $current.NetSpacingGapTotalPoints = [double]$current.NetSpacingGapTotalPoints + [double]$op.NetSpacingGapTotalPoints
-            $current.CharacterSpacingGapTotalPoints = [double]$current.CharacterSpacingGapTotalPoints + [double]$op.CharacterSpacingGapTotalPoints
-            $current.DecodedRuneCount = [int]$current.DecodedRuneCount + [int]$op.DecodedRuneCount
-            $current.TextChunkCount = [int]$current.TextChunkCount + [int]$op.TextChunkCount
-            $currentEndX = [Math]::Max($currentEndX, $opEndX)
-            continue
-        }
-        if ($null -ne $current) { $merged.Add($current) }
-        $current = $op.PSObject.Copy()
-        if ($current.PSObject.Properties.Name -notcontains "DecodedText") { $current | Add-Member -NotePropertyName DecodedText -NotePropertyValue $null }
-        $currentLineKey = $lineKey
-        $currentEndX = $opEndX
-    }
-    if ($null -ne $current) { $merged.Add($current) }
-    return $merged.ToArray()
-}
 $referenceOps = Read-JsonArray $Reference
 $candidateOps = Read-JsonArray $Candidate
 if ($MergeSameLineOperations) {
-    $referenceOps = Merge-SameLineOperations $referenceOps
-    $candidateOps = Merge-SameLineOperations $candidateOps
+    $referenceOps = Merge-PdfSameLineOperations $referenceOps -UseEffectiveMatrix:$UseEffectiveMatrix
+    $candidateOps = Merge-PdfSameLineOperations $candidateOps -UseEffectiveMatrix:$UseEffectiveMatrix
 }
 if ($IgnoreWhitespaceOnlyLines) {
     if (-not $MergeSameLineOperations) { throw '-IgnoreWhitespaceOnlyLines requires -MergeSameLineOperations to preserve inline spacing.' }
@@ -155,8 +89,8 @@ if ($MatchByPosition) {
             $candidateRef = $unmatched[$j]
             if ($candidateRef.PageNumber -ne $cand.PageNumber) { continue }
             if ($RequireSameText -and (TextContent $candidateRef) -cne (TextContent $cand)) { continue }
-            $score = [Math]::Abs((TextY $cand) - (TextY $candidateRef)) * 1000d +
-                [Math]::Abs((TextX $cand) - (TextX $candidateRef))
+            $score = [Math]::Abs((Get-PdfTextOperationY $cand $effective) - (Get-PdfTextOperationY $candidateRef $effective)) * 1000d +
+                [Math]::Abs((Get-PdfTextOperationX $cand $effective) - (Get-PdfTextOperationX $candidateRef $effective))
             if ($score -lt $bestScore) {
                 $bestScore = $score
                 $bestIndex = $j
@@ -212,10 +146,10 @@ foreach ($pair in $pairs) {
     $cand = $pair.Candidate
     if ($null -eq $ref -or $null -eq $cand) {
         $failures++
-        $refX = if ($null -eq $ref) { $null } else { TextX $ref }
-        $candX = if ($null -eq $cand) { $null } else { TextX $cand }
-        $refY = if ($null -eq $ref) { $null } else { TextY $ref }
-        $candY = if ($null -eq $cand) { $null } else { TextY $cand }
+        $refX = if ($null -eq $ref) { $null } else { Get-PdfTextOperationX $ref $effective }
+        $candX = if ($null -eq $cand) { $null } else { Get-PdfTextOperationX $cand $effective }
+        $refY = if ($null -eq $ref) { $null } else { Get-PdfTextOperationY $ref $effective }
+        $candY = if ($null -eq $cand) { $null } else { Get-PdfTextOperationY $cand $effective }
         $refTc = if ($null -eq $ref) { $null } else { TextCharacterSpacing $ref }
         $candTc = if ($null -eq $cand) { $null } else { TextCharacterSpacing $cand }
         $refPayload = if ($null -eq $ref) { $null } else { $ref.Payload }
@@ -249,10 +183,10 @@ foreach ($pair in $pairs) {
         continue
     }
 
-    $refX = TextX $ref
-    $candX = TextX $cand
-    $refY = TextY $ref
-    $candY = TextY $cand
+    $refX = Get-PdfTextOperationX $ref $effective
+    $candX = Get-PdfTextOperationX $cand $effective
+    $refY = Get-PdfTextOperationY $ref $effective
+    $candY = Get-PdfTextOperationY $cand $effective
     $deltaX = Delta -left $refX -right $candX
     $deltaY = Delta -left $refY -right $candY
     $refSize = TextFontSize $ref
