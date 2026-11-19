@@ -62,28 +62,11 @@ function StableTextHash([string]$text) {
     return [Convert]::ToHexString($hash).Substring(0, 16)
 }
 
-function Find-PlotBox($structures) {
-    $priority = @(
-        "GridlineAxisPlotBoxCandidate",
-        "AxisPairPlotBoxCandidate",
-        "PlotBoxCandidate",
-        "PolarPlotBoxCandidate",
-        "PlotAreaClipBoxCandidate"
-    )
-    foreach ($kind in $priority) {
-        $matches = @($structures | Where-Object { $_.Kind -eq $kind } | Sort-Object -Property PageNumber, MinY, MinX)
-        if ($matches.Count -gt 0) {
-            return $matches[0]
-        }
-    }
-
-    return $null
-}
-
 function Find-PlotBoxes($structures) {
     $priority = @(
         "GridlineAxisPlotBoxCandidate",
         "AxisPairPlotBoxCandidate",
+        "CrossingAxisPlotBoxCandidate",
         "PlotBoxCandidate",
         "PolarPlotBoxCandidate",
         "PlotAreaClipBoxCandidate"
@@ -91,11 +74,10 @@ function Find-PlotBoxes($structures) {
     foreach ($kind in $priority) {
         $matches = @($structures | Where-Object { $_.Kind -eq $kind } | Sort-Object -Property PageNumber, MinY, MinX)
         if ($matches.Count -gt 0) {
-            return ,$matches
+            return $matches
         }
     }
 
-    return ,@()
 }
 
 function Distance-ToBox([double]$x, [double]$y, $box) {
@@ -118,27 +100,26 @@ function Distance-ToBox([double]$x, [double]$y, $box) {
     return [Math]::Sqrt($dx * $dx + $dy * $dy)
 }
 
-function Find-NearestPlotBox($op, $plotBoxes) {
-    if ($null -eq $plotBoxes -or $plotBoxes.Count -eq 0) {
-        return $null
-    }
-
-    $x = TextX $op
-    $y = TextY $op
+function Find-NearestChart([double]$x, [double]$y, $charts) {
     $best = $null
     $bestScore = [double]::PositiveInfinity
-    foreach ($plotBox in $plotBoxes) {
-        $score = Distance-ToBox $x $y $plotBox
+    $ambiguous = $false
+    foreach ($chart in $charts) {
+        $score = Distance-ToBox $x $y $chart.PlotBox
         if ($score -lt $bestScore) {
             $bestScore = $score
-            $best = $plotBox
+            $best = $chart
+            $ambiguous = $false
+        }
+        elseif ($score -eq $bestScore -and $best.PlotBox.RegionIndex -ne $chart.PlotBox.RegionIndex) {
+            $ambiguous = $true
         }
     }
 
-    return $best
+    if (-not $ambiguous) { return $best }
 }
 
-function Has-LegendSwatch($op, $structures, $plotBox, [bool]$isPolarChart = $false) {
+function Has-LegendSwatch($op, $structures, [bool]$isPolarChart = $false) {
     $x = TextX $op
     $y = TextY $op
     $fontSize = if ($op.FontSize -ne $null) { [double]$op.FontSize } else { 0d }
@@ -394,11 +375,13 @@ function Classify-RadarText($op, $radarGeometry, [double]$tolerance) {
     return $null
 }
 
-function Classify-Text($op, $plotBox, $structures, $polarNumericLabels, [double]$tolerance) {
-    if ($null -eq $plotBox) {
+function Classify-Text($op, $chart, [double]$tolerance) {
+    if ($null -eq $chart) {
         return "ChartText"
     }
 
+    $plotBox = $chart.PlotBox
+    $structures = $chart.Structures
     $x = TextX $op
     $y = TextY $op
     $minX = [double]$plotBox.MinX
@@ -413,17 +396,17 @@ function Classify-Text($op, $plotBox, $structures, $polarNumericLabels, [double]
         return "ChartTitleText"
     }
 
-    $radarKind = Classify-RadarText $op (Find-RadarSpokeGeometry $structures) $tolerance
+    $radarKind = Classify-RadarText $op $chart.RadarGeometry $tolerance
     if ($null -ne $radarKind) {
         return $radarKind
     }
 
-    $isPolarChart = Is-PolarChart $plotBox $structures
+    $isPolarChart = $chart.IsPolar
     $hasLegendSwatch = ($isPolarChart -or -not ($insideX -and $insideY)) -and
-        (Has-LegendSwatch $op $structures $plotBox $isPolarChart)
+        (Has-LegendSwatch $op $structures $isPolarChart)
     if ($hasLegendSwatch) {
         if ($isPolarChart -and
-            (Contains-NumericLabelSignal (TextValue $op) -or Has-NearbyNumericLabel $op $polarNumericLabels)) {
+            (Contains-NumericLabelSignal (TextValue $op) -or Has-NearbyNumericLabel $op $chart.NumericLabels)) {
             return "DataLabelText"
         }
 
@@ -434,7 +417,7 @@ function Classify-Text($op, $plotBox, $structures, $polarNumericLabels, [double]
         return "DataLabelText"
     }
 
-    $horizontalValueAxisChart = Is-HorizontalValueAxisChart $structures
+    $horizontalValueAxisChart = $chart.IsHorizontalValueAxis
     if (Looks-LikeAxisTitle $op $plotBox $tolerance $horizontalValueAxisChart) {
         return "AxisTitleText"
     }
@@ -504,44 +487,58 @@ foreach ($pageGroup in @($allTextOps | Group-Object -Property PageNumber)) {
     $textOps = @($pageGroup.Group)
     $pageNumberValue = $textOps[0].PageNumber
     $structures = @($allStructures | Where-Object { $_.PageNumber -eq $pageNumberValue })
-    $plotBoxes = Find-PlotBoxes $structures
-    $plotBox = if ($plotBoxes.Count -gt 0) { $plotBoxes[0] } else { Find-PlotBox $structures }
-    $isPolarChart = Is-PolarChart $plotBox $structures
-    $polarNumericLabels = if ($isPolarChart) {
-        @($textOps | Where-Object { Is-NumericText (TextValue $_) })
-    }
-    else {
-        @()
-    }
-    foreach ($op in $textOps) {
-        $text = TextValue $op
-        if ([string]::IsNullOrWhiteSpace($text)) {
-            continue
+    $charts = @(foreach ($region in ($structures | Group-Object -Property RegionIndex)) {
+        $plotBoxes = @(Find-PlotBoxes $region.Group)
+        if ($plotBoxes.Count -eq 0) { continue }
+        if ($null -ne $plotBoxes[0].RegionIndex) {
+            # Bounds variants for one known region describe the same chart.
+            $plotBoxes = @($plotBoxes[0])
         }
+        $radarGeometry = Find-RadarSpokeGeometry $region.Group
+        $isHorizontalValueAxis = Is-HorizontalValueAxisChart $region.Group
+        foreach ($plotBox in $plotBoxes) {
+            [pscustomobject]@{
+                PlotBox = $plotBox
+                Structures = $region.Group
+                RadarGeometry = $radarGeometry
+                IsHorizontalValueAxis = $isHorizontalValueAxis
+                IsPolar = Is-PolarChart $plotBox $region.Group
+                NumericLabels = [System.Collections.Generic.List[object]]::new()
+            }
+        }
+    })
+    $indexedCharts = @($charts | Where-Object { $null -ne $_.PlotBox.RegionIndex })
+    if ($indexedCharts.Count -gt 0) { $charts = $indexedCharts }
+
+    $labels = @(foreach ($op in $textOps) {
+        $text = TextValue $op
+        if ([string]::IsNullOrWhiteSpace($text)) { continue }
 
         $x = TextX $op
         $y = TextY $op
+        $chart = Find-NearestChart $x $y $charts
+        if ($chart.IsPolar -and (Is-NumericText $text)) { $chart.NumericLabels.Add($op) }
+        [pscustomobject]@{ Operation = $op; Text = $text; X = $x; Y = $y; Chart = $chart }
+    })
+    foreach ($label in $labels) {
+        $op = $label.Operation
         $fontSize = if ($op.FontSize -ne $null) { [double]$op.FontSize } else { 0d }
-        $textPlotBox = Find-NearestPlotBox $op $plotBoxes
-        if ($null -eq $textPlotBox) {
-            $textPlotBox = $plotBox
-        }
         $classified.Add([pscustomobject]@{
-            Kind = Classify-Text $op $textPlotBox $structures $polarNumericLabels $PlotTolerance
-            RegionIndex = if ($null -eq $textPlotBox -or $textPlotBox.RegionIndex -eq $null) { $null } else { $textPlotBox.RegionIndex }
+            Kind = Classify-Text $op $label.Chart $PlotTolerance
+            RegionIndex = $label.Chart.PlotBox.RegionIndex
             PageNumber = $op.PageNumber
             SourceKind = "Text"
             SourceOperator = $op.Operator
-            TextLength = $text.Length
-            TextHash = StableTextHash $text
-            MinX = Round $x
-            MinY = Round $y
-            MaxX = Round $x
-            MaxY = Round $y
+            TextLength = $label.Text.Length
+            TextHash = StableTextHash $label.Text
+            MinX = Round $label.X
+            MinY = Round $label.Y
+            MaxX = Round $label.X
+            MaxY = Round $label.Y
             Width = 0d
             Height = 0d
-            CenterX = Round $x
-            CenterY = Round $y
+            CenterX = Round $label.X
+            CenterY = Round $label.Y
             LineWidth = 0d
             Font = $op.Font
             FontSize = Round $fontSize

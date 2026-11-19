@@ -150,6 +150,47 @@ Compare-JsonFile 'text page-2 filter' (Join-Path $scratch 'text-page-two-out.jso
 $withoutPlot = Invoke-Classifier $textTool 'text-without-own-plot' @(On-Page @($textList[0]) 3) $joinedTextArgs
 Assert-Kinds 'text does not borrow another page plot' @($withoutPlot) @('ChartText')
 
+$crossingGraphics = Invoke-Classifier $gfxTool 'gfx-crossing-only' @(
+    (New-Graphic 'Stroke' 100 100 100 300),
+    (New-Graphic 'Stroke' 100 275 300 275)
+)
+if (@($crossingGraphics | Where-Object Kind -like '*PlotBoxCandidate').Kind -cne 'CrossingAxisPlotBoxCandidate') {
+    throw 'Crossing-axis control must produce only the crossing plot bounds.'
+}
+$crossingTick = Invoke-Classifier $textTool 'text-crossing-only' @((New-Text 70 150 '10')) `
+    @('-ChartStructures', (Join-Path $scratch 'gfx-crossing-only-out.json'))
+Assert-Kinds 'crossing-axis tick' @($crossingTick) @('ValueAxisTickLabel')
+if ($crossingTick.RegionIndex -ne 0) { throw 'The crossing-axis tick must belong to the graphics region.' }
+
+$left = @{ PageNumber = 1; Kind = 'AxisPairPlotBoxCandidate'; RegionIndex = 0; MinX = 100; MinY = 100; MaxX = 300; MaxY = 300 }
+$right = @{ PageNumber = 1; Kind = 'PolarPlotBoxCandidate'; RegionIndex = 1; MinX = 350; MinY = 100; MaxX = 550; MaxY = 300 }
+$swatch = @{ PageNumber = 1; Kind = 'MarkerCandidate'; RegionIndex = 1; MinX = 328; MinY = 156; MaxX = 332; MaxY = 164 }
+$mixedStructures = Join-Path $scratch 'mixed-regions.json'
+ConvertTo-Json -InputObject @($left, $right, $swatch) | Set-Content -LiteralPath $mixedStructures -Encoding UTF8
+$mixedLabels = @(Invoke-Classifier $textTool 'text-mixed-regions' @(
+    (New-Text 70 150 '10'), (New-Text 315 160 '20'), (New-Text 325 270 'Ambiguous'),
+    (New-Text 337 160 'North'), (New-Text 460 150 '40%')
+) @('-ChartStructures', $mixedStructures) | Sort-Object MinX)
+$mixedKinds = @($mixedLabels | ForEach-Object { "$($_.Kind):$($_.RegionIndex)" }) -join ','
+if ($mixedKinds -cne 'ValueAxisTickLabel:0,RightSideText:0,ChartText:,LegendText:1,DataLabelText:1') {
+    throw "Mixed chart regions borrowed neighboring bounds or label cues: $mixedKinds"
+}
+Write-Host 'PASS: mixed chart regions retain their own axes, legend and numeric labels'
+
+$bar = $right.Clone()
+$bar.Kind = 'AxisPairPlotBoxCandidate'
+$gridlines = $right.Clone()
+$gridlines.Kind = 'VerticalGridlineGroupCandidate'
+$cartesianStructures = Join-Path $scratch 'cartesian-regions.json'
+ConvertTo-Json -InputObject @($left, $bar, $gridlines) | Set-Content -LiteralPath $cartesianStructures -Encoding UTF8
+$cartesianLabels = @(Invoke-Classifier $textTool 'text-cartesian-regions' @((New-Text 70 150 '10'), (New-Text 340 150 'West')) `
+    @('-ChartStructures', $cartesianStructures) | Sort-Object MinX)
+$cartesianKinds = @($cartesianLabels | ForEach-Object { "$($_.Kind):$($_.RegionIndex)" }) -join ','
+if ($cartesianKinds -cne 'ValueAxisTickLabel:0,CategoryAxisTickLabel:1') {
+    throw "Cartesian chart regions borrowed a neighboring axis direction: $cartesianKinds"
+}
+Write-Host 'PASS: Cartesian chart regions retain their own axis directions'
+
 $moved = @($gfxList) + @(On-Page $gfxList 2 600)
 Invoke-Classifier $gfxTool 'gfx-moved-page-two' $moved | Out-Null
 $compareLog = Join-Path $scratch 'moved-page-two-comparison.log'
