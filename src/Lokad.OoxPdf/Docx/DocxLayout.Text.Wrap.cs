@@ -12,7 +12,9 @@ internal sealed partial class DocxLayoutEngine
 {
     // Insets and scaled advances can reach the same boundary through different
     // floating-point sums. Ignore arithmetic roundoff, not visible overflow.
-    private static bool FitsLineWidth(double measured, double available) => measured <= available + 0.0000001d;
+    private const double LineWidthTolerance = 0.0000001d;
+
+    private static bool FitsLineWidth(double measured, double available) => measured <= available + LineWidthTolerance;
 
     // RV05: image-driven breaking. Character offset of an affined image in the concatenated
     // paragraph text, shared by wrapping and mid-line placement.
@@ -812,7 +814,7 @@ internal sealed partial class DocxLayoutEngine
         out double averageCharWidth)
     {
         if (chainAverages.TryGetValue(token.Start + token.Length, out averageCharWidth) &&
-            averageCharWidth * token.Length > maxWidth)
+            averageCharWidth * token.Length > maxWidth + LineWidthTolerance)
         {
             return true;
         }

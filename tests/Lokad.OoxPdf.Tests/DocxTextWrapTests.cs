@@ -1319,26 +1319,32 @@ internal static class DocxTextWrapTests
 
     public static void PreferredWrapKeepsDiscretionaryHyphensHiddenWithinFitTolerance()
     {
-        const string token = "ab\u00ADc\u00ADd";
-        var spans = SingleSpan(token);
+        const string word = "ab\u00ADc\u00ADd";
         var measurer = new ProfilingMeasurer((_, text) => text.Sum(character => character == '\u00AD' ? 1.5d : 1d));
         foreach (bool allowOverwide in new[] { false, true })
+        foreach (string prefix in new[] { "", "x " })
         {
+            // The prefix forces the word to be measured against the shorter
+            // remaining width before it is retried on an empty line.
+            string text = prefix + word;
+            var spans = SingleSpan(text);
+            int wordLine = prefix.Length == 0 ? 0 : 1;
             foreach (double width in new[] { 4d, 4d - 5e-8 })
             {
-                var fitting = WrapSpansWithWidths(token, spans, _ => width, allowOverwide, measurer);
-                TestAssert.Equal(1, fitting.Count);
-                TestAssert.Equal("abcd", fitting[0].Text);
-                TestAssert.Equal(0, fitting[0].SourceTextStart);
-                TestAssert.True(!fitting[0].EndsWithIntraTokenBreak, "A fitting word must keep both discretionary hyphens hidden.");
+                var fitting = WrapSpansWithWidths(text, spans, _ => width, allowOverwide, measurer);
+                TestAssert.Equal(wordLine + 1, fitting.Count);
+                if (wordLine > 0) TestAssert.Equal(prefix, fitting[0].Text);
+                TestAssert.Equal("abcd", fitting[wordLine].Text);
+                TestAssert.Equal(prefix.Length, fitting[wordLine].SourceTextStart);
+                TestAssert.True(!fitting[wordLine].EndsWithIntraTokenBreak, "A fitting word must keep both discretionary hyphens hidden.");
             }
 
-            var narrow = WrapSpansWithWidths(token, spans, _ => 4d - 2e-7, allowOverwide, measurer);
-            TestAssert.Equal(2, narrow.Count);
-            TestAssert.Equal("ab\u00AD", narrow[0].Text);
-            TestAssert.True(narrow[0].EndsWithIntraTokenBreak, "An overwide word must retain its fitting discretionary break.");
-            TestAssert.Equal("cd", narrow[1].Text);
-            TestAssert.Equal(3, narrow[1].SourceTextStart);
+            var narrow = WrapSpansWithWidths(text, spans, _ => 4d - 2e-7, allowOverwide, measurer);
+            TestAssert.Equal(wordLine + 2, narrow.Count);
+            TestAssert.Equal("ab\u00AD", narrow[wordLine].Text);
+            TestAssert.True(narrow[wordLine].EndsWithIntraTokenBreak, "An overwide word must retain its fitting discretionary break.");
+            TestAssert.Equal("cd", narrow[wordLine + 1].Text);
+            TestAssert.Equal(prefix.Length + 3, narrow[wordLine + 1].SourceTextStart);
         }
     }
 
