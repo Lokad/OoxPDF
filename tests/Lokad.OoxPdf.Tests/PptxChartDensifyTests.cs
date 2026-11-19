@@ -79,31 +79,10 @@ internal static class PptxChartDensifyTests
 
     public static void CountRenderableSeriesSkipsDensifyAllocation()
     {
-        Type vectorType = NumberVectorType();
-        Type pointType = NumberPointType();
-        Array series = Array.CreateInstance(vectorType, 3);
-        series.SetValue(BuildNumberVector(vectorType, pointType, [(0, 1d)], null), 0);
-        series.SetValue(BuildNumberVector(vectorType, pointType, [], null), 1);
-        series.SetValue(BuildNumberVector(vectorType, pointType, [], 10000), 2);
+        var series = CreateSparseCountProbe();
         MethodInfo count = typeof(PptxRenderer).GetMethod("CountRenderableSeries", BindingFlags.NonPublic | BindingFlags.Static)
             ?? throw new InvalidOperationException("Expected count helper.");
-        GC.Collect();
-        GC.WaitForPendingFinalizers();
-        GC.Collect();
-        long before = GC.GetAllocatedBytesForCurrentThread();
-        int renderable;
-        try
-        {
-            renderable = (int)count.Invoke(null, [series])!;
-        }
-        catch (TargetInvocationException ex)
-        {
-            throw ex.InnerException ?? ex;
-        }
-
-        long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
-        TestAssert.Equal(1, renderable);
-        TestAssert.True(allocated <= 262144L, $"Counting renderable series must not densify 10,000-slot vectors, allocated {allocated} bytes.");
+        AssertSparseCount(() => (int)count.Invoke(null, [series])!, 1, "Series presence");
     }
 
     public static void SparseMaxDenseCountMatchesDensifiedMax()
@@ -133,20 +112,28 @@ internal static class PptxChartDensifyTests
 
     public static void MaxDenseCountSkipsDensifyAllocation()
     {
-        Type vectorType = NumberVectorType();
-        Type pointType = NumberPointType();
-        Array series = Array.CreateInstance(vectorType, 3);
-        series.SetValue(BuildNumberVector(vectorType, pointType, [(0, 1d)], null), 0);
-        series.SetValue(BuildNumberVector(vectorType, pointType, [], null), 1);
-        series.SetValue(BuildNumberVector(vectorType, pointType, [], 10000), 2);
-        GC.Collect();
-        GC.WaitForPendingFinalizers();
-        GC.Collect();
+        var series = CreateSparseCountProbe();
+        AssertSparseCount(() => InvokeMaxDensePointCount(series), PptxRenderer.MaxChartDensePoints, "Slot count");
+    }
+
+    // A single dense array at the supported limit exceeds the allocation
+    // tolerance. The sparse counts only need the declared slots and the one point.
+    private static PptxRenderer.ChartIndexedNumberVector[] CreateSparseCountProbe() =>
+    [
+        new([new(0, default, 1d, "1", true, default)], null, null, null, default, [], false),
+        new([], null, null, null, default, [], false),
+        new([], PptxRenderer.MaxChartDensePoints, null, null, default, [], false)
+    ];
+
+    private static void AssertSparseCount(Func<int> count, int expected, string operation)
+    {
+        _ = count(); // Warm the reflection call before measuring.
         long before = GC.GetAllocatedBytesForCurrentThread();
-        int max = InvokeMaxDensePointCount(series);
+        int result = count();
         long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
-        TestAssert.Equal(10000, max);
-        TestAssert.True(allocated <= 262144L, "Counting dense slots must not densify 10,000-slot vectors, allocated " + allocated + " bytes.");
+        TestAssert.Equal(expected, result);
+        TestAssert.True(allocated <= 256L * 1024L,
+            $"{operation} allocated {allocated} bytes with a sparse {PptxRenderer.MaxChartDensePoints}-slot vector.");
     }
 
     public static void DuplicateCategoryCaptionsSharePlotReservationAndPaint()
