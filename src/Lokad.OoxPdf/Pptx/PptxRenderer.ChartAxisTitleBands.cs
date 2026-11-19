@@ -6,7 +6,7 @@ namespace Lokad.OoxPdf.Pptx;
 internal sealed partial class PptxRenderer
 {
     private sealed record DefaultAxisTitleBand(ChartLayoutBox Box, ChartTextStyle Style,
-        IReadOnlyList<MeasuredChartTitleLine> Lines, double Height);
+        IReadOnlyList<MeasuredChartTextLine> Lines, double Height);
 
     private sealed record DefaultAxisTitleBands(ChartFrameBox Body, bool FitBody,
         IReadOnlyDictionary<int, DefaultAxisTitleBand> Titles);
@@ -15,7 +15,7 @@ internal sealed partial class PptxRenderer
         ChartLayout layout, PptxTheme theme, PptxSceneChart chart, PresentationFontResolver fontResolver)
     {
         List<(int Index, PptxSceneChartAxisPosition Side, ChartTextStyle Style,
-            IReadOnlyList<MeasuredChartTitleLine> Lines, double Height)>? measured = null;
+            IReadOnlyList<MeasuredChartTextLine> Lines, double Height)>? measured = null;
         for (int index = 0; index < chart.Axes.Count; index++)
         {
             PptxSceneChartAxis axis = chart.Axes[index];
@@ -27,7 +27,7 @@ internal sealed partial class PptxRenderer
             }
 
             ChartTextStyle style = ReadDefaultAxisTitleStyle(theme, chart, axis);
-            var (lines, height) = await MeasureChartTitleLinesAsync(axis.Title.Text, ToChartTextRuns(axis.Title.TextRuns),
+            var (lines, height) = await MeasureChartRichTextLinesAsync(axis.Title.Text, ToChartTextRuns(axis.Title.TextRuns),
                 style, fontResolver).ConfigureAwait(false);
             (measured ??= []).Add((index, axis.PositionKind, style, lines, height));
         }

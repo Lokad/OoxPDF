@@ -257,9 +257,25 @@ internal sealed partial class PptxRenderer
     private static async ValueTask AddChartLabelRunsAsync(List<TextRun> runs, string text, ChartDataLabelOptions options, double x, double y, double width, double height, ChartPlotBox plotBox, ChartTextStyle style, TextAlignment alignment, PresentationFontResolver? fontResolver, List<ChartTextRunLink>? labelLinks, double descent = 0d)
     {
         ChartLayoutBox clipBox = ResolveDataLabelTextClipBox(plotBox, x, y - descent, width, height);
-        await AddChartRichTextRunsAsync(runs, options.CustomTextRuns, text, x, y, width, height,
-            clipBox.X, clipBox.Y, clipBox.Width, clipBox.Height, style, alignment, fontResolver,
-            labelLinks, admitTextOverflow: true).ConfigureAwait(false);
+        IReadOnlyList<ChartTextRunOverride> richRuns = options.CustomTextRuns;
+        if (richRuns.Count == 0 || richRuns[^1].LineIndex == 0)
+        {
+            await AddChartRichTextRunsAsync(runs, richRuns, text, x, y, width, height,
+                clipBox.X, clipBox.Y, clipBox.Width, clipBox.Height, style, alignment, fontResolver,
+                labelLinks, admitTextOverflow: true).ConfigureAwait(false);
+            return;
+        }
+
+        var (lines, _) = await MeasureChartRichTextLinesAsync(text, richRuns, style, fontResolver).ConfigureAwait(false);
+        // Keep the label's existing first baseline and place each authored row below it.
+        double top = y + lines[0].Ascent;
+        foreach (MeasuredChartTextLine line in lines)
+        {
+            string lineText = string.Concat(line.Runs.Select(run => run.Text));
+            await AddChartRichTextRunsAsync(runs, line.Runs, lineText, x, top - line.BaselineFromTop, width, height,
+                clipBox.X, clipBox.Y, clipBox.Width, clipBox.Height, style, alignment, fontResolver,
+                labelLinks, admitTextOverflow: true).ConfigureAwait(false);
+        }
     }
 
     private static ChartLayoutBox ResolveDataLabelTextClipBox(ChartPlotBox plotBox, double x, double y, double width, double height)

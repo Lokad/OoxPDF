@@ -40,6 +40,64 @@ internal static partial class PptxChartLabelDefaultsTests
             PortableRenderingTests.ReadPaintedSourceLabel(offPage, "gjpqy | 0", fontPrefix: "CLD"));
     }
 
+    public static void PptxRichDataLabelsKeepAuthoredLinesAndLinkedInk()
+    {
+        const string firstText = "Quarterly";
+        const string secondText = "Open Backlog";
+        const string uri = "https://example.invalid/chart-label/second-line";
+        XNamespace a = "http://schemas.openxmlformats.org/drawingml/2006/main";
+        XNamespace r = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+        var (_, plot) = Source("", """
+            <c:dLbls><c:dLbl><c:idx val="0"/><c:layout><c:manualLayout><c:xMode val="edge"/><c:yMode val="edge"/>
+              <c:x val="0.78"/><c:y val="0.38"/><c:w val="0.21"/><c:h val="0.25"/></c:manualLayout></c:layout></c:dLbl>
+              <c:showVal val="0"/><c:showSerName val="0"/><c:showCatName val="0"/><c:showLegendKey val="0"/>
+              <c:showPercent val="0"/><c:showBubbleSize val="0"/></c:dLbls>
+            """);
+        plot.AddFirst(new XElement(C + "barDir", new XAttribute("val", "bar")));
+        var parts = new Dictionary<string, byte[]>
+        {
+            ["ppt/charts/_rels/chart1.xml.rels"] = TestFixtures.Utf8($$"""
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="second" Type="{{r}}/hyperlink" Target="{{uri}}" TargetMode="External"/>
+                </Relationships>
+                """)
+        };
+        var resolver = new PortableRenderingTests.PinnedResolver(mathFont: false);
+
+        PdfPage Render(bool separateParagraphs)
+        {
+            XDocument chart = new(plot.Document!);
+            var first = new XElement(a + "r", new XElement(a + "rPr", new XAttribute("sz", 1600)), new XElement(a + "t", firstText));
+            var second = new XElement(a + "fld", new XAttribute("id", "{A0412345-89AB-4123-9123-123456789ABC}"),
+                new XAttribute("type", "custom"), new XElement(a + "rPr", new XAttribute("sz", 1500),
+                    new XElement(a + "hlinkClick", new XAttribute(r + "id", "second"))), new XElement(a + "t", secondText));
+            var rich = new XElement(C + "rich", new XElement(a + "bodyPr"));
+            if (separateParagraphs)
+                rich.Add(new XElement(a + "p", first), new XElement(a + "p", second));
+            else
+                rich.Add(new XElement(a + "p", first, new XElement(a + "br"), second));
+            chart.Descendants(C + "dLbl").Single().Add(new XElement(C + "tx", rich));
+            return RenderChartPage(chart, parts, resolver);
+        }
+
+        PdfPage broken = Render(separateParagraphs: false);
+        PdfPage paragraphs = Render(separateParagraphs: true);
+        TestAssert.Equal(broken.Content, paragraphs.Content);
+        var firstGlyphs = PortableRenderingTests.ReadPaintedSourceLabel(broken, firstText, fontPrefix: "CLD");
+        var secondGlyphs = PortableRenderingTests.ReadPaintedSourceLabel(broken, secondText, fontPrefix: "CLD");
+        TestAssert.True(firstGlyphs[0].Origin.Y - secondGlyphs[0].Origin.Y > 10d,
+            "Both authored label lines paint on distinct baselines.");
+        var link = broken.Annotations.Single();
+        TestAssert.Equal(link, paragraphs.Annotations.Single());
+        TestAssert.Equal(uri, link.Uri);
+        TestAssert.True(secondGlyphs.All(glyph => glyph.Ink.X >= link.X - .002d &&
+            glyph.Ink.X + glyph.Ink.Width <= link.X + link.Width + .002d &&
+            glyph.Ink.Y >= link.Y - .002d && glyph.Ink.Y + glyph.Ink.Height <= link.Y + link.Height + .002d),
+            "The cached field's hyperlink covers the complete second line.");
+        TestAssert.True(firstGlyphs.All(glyph => glyph.Ink.Y >= link.Y + link.Height - .002d),
+            "The second line's hyperlink does not cover the first line.");
+    }
+
     private static PdfPage RenderInkLabels(int minimum, bool mathFont, bool rich,
         bool manualTitle = false, bool offPage = false)
     {

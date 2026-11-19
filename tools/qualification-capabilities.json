@@ -140,6 +140,7 @@
   "pptx-label-ink": [
     "PptxDataLabelInkSurvivesFontsRichRunsAndRangeMinima",
     "PptxDataLabelInkPreservesManualTitleAndPageClips",
+    "PptxRichDataLabelsKeepAuthoredLinesAndLinkedInk",
     "PptxSyntheticBarChartsRenderNativeCharts",
     "PptxChartTextConversionUsesCustomFontResolver",
     "PptxChartCoverageSplitsKeepMeasuredAlignmentTrackingAndStyle",

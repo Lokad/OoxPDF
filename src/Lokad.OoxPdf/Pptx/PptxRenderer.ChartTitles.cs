@@ -58,7 +58,7 @@ internal sealed partial class PptxRenderer
     }
 
     private static async ValueTask AddMeasuredChartTitleRunsAsync(List<TextRun> runs, string title,
-        IReadOnlyList<MeasuredChartTitleLine> titleLines, double measuredHeight, ChartLayoutBox box,
+        IReadOnlyList<MeasuredChartTextLine> titleLines, double measuredHeight, ChartLayoutBox box,
         bool manualLayout, ChartTextStyle style, PresentationFontResolver? fontResolver, List<ChartTextRunLink>? titleLinks)
     {
         // A manual title keeps its first-line anchor if the line block fits.
@@ -82,12 +82,12 @@ internal sealed partial class PptxRenderer
     }
 
     private static async ValueTask AddChartTitleLinesAsync(List<TextRun> runs, string title,
-        IReadOnlyList<MeasuredChartTitleLine> titleLines, ChartTextStyle style, double x, double width,
+        IReadOnlyList<MeasuredChartTextLine> titleLines, ChartTextStyle style, double x, double width,
         double top, double? singleLineBaseline, ChartLayoutBox clip, PresentationFontResolver? fontResolver,
         List<ChartTextRunLink>? titleLinks)
     {
         double titleHeight = style.FontSize * PptxChartMetricRules.TitleHeightFactor;
-        foreach (MeasuredChartTitleLine line in titleLines)
+        foreach (MeasuredChartTextLine line in titleLines)
         {
             fontResolver?.CancellationToken.ThrowIfCancellationRequested();
             string lineText = titleLines.Count == 1 ? title : string.Concat(line.Runs.Select(run => run.Text));
@@ -500,7 +500,7 @@ internal sealed partial class PptxRenderer
         RenderChartShapeStyle(graphics, titleBox.X, titleBox.Y, titleBox.Width, titleBox.Height, shapeStyle);
         var runs = new List<TextRun>();
         List<ChartTextRunLink>? axisLinks = chart?.Relationships is null ? null : new List<ChartTextRunLink>();
-        var (titleLines, measuredHeight) = await MeasureChartTitleLinesAsync(text, textRuns, style, fontResolver).ConfigureAwait(false);
+        var (titleLines, measuredHeight) = await MeasureChartRichTextLinesAsync(text, textRuns, style, fontResolver).ConfigureAwait(false);
         await AddMeasuredChartTitleRunsAsync(runs, text, titleLines, measuredHeight, titleBox,
             manualLayout: true, style, fontResolver, axisLinks).ConfigureAwait(false);
         RenderedFonts axisFonts = (await RenderChartTextRunsAsync(runs, graphics, chartFonts, "CAT", fontResolver, diagnosticSink).ConfigureAwait(false));
@@ -604,28 +604,29 @@ internal sealed partial class PptxRenderer
         return 2d * CartesianAxisEndClearance(lineHeight) - numericClearance;
     }
 
-    private readonly record struct MeasuredChartTitleLine(IReadOnlyList<ChartTextRunOverride> Runs, double BaselineFromTop);
+    private readonly record struct MeasuredChartTextLine(
+        IReadOnlyList<ChartTextRunOverride> Runs, double BaselineFromTop, double Ascent);
 
-    private static async ValueTask<(ChartTextStyle Style, IReadOnlyList<MeasuredChartTitleLine> Lines, double Height)> MeasureChartTitleAsync(
+    private static async ValueTask<(ChartTextStyle Style, IReadOnlyList<MeasuredChartTextLine> Lines, double Height)> MeasureChartTitleAsync(
         PptxTheme theme, PptxSceneChart sceneChart, PresentationFontResolver? resolver)
     {
         ChartTextStyle style = ReadChartTitleTextStyle(theme, sceneChart);
-        var (lines, height) = await MeasureChartTitleLinesAsync(sceneChart.Title.Text ?? string.Empty,
+        var (lines, height) = await MeasureChartRichTextLinesAsync(sceneChart.Title.Text ?? string.Empty,
             ReadChartTitleTextRuns(sceneChart), style, resolver).ConfigureAwait(false);
         return (style, lines, height);
     }
 
-    private static async ValueTask<(IReadOnlyList<MeasuredChartTitleLine> Lines, double Height)> MeasureChartTitleLinesAsync(
+    private static async ValueTask<(IReadOnlyList<MeasuredChartTextLine> Lines, double Height)> MeasureChartRichTextLinesAsync(
         string text, IReadOnlyList<ChartTextRunOverride> runs, ChartTextStyle style, PresentationFontResolver? resolver)
     {
         var measure = new ChartTextMeasurer(resolver);
         if (runs.Count == 0)
         {
             var line = await measure.MeasureTextLineBoxAsync(text, style).ConfigureAwait(false);
-            return ([new([], line.Ascent)], line.Height);
+            return ([new([], line.Ascent, line.Ascent)], line.Height);
         }
 
-        var lines = new List<MeasuredChartTitleLine>();
+        var lines = new List<MeasuredChartTextLine>();
         double height = 0d;
         double? emptyLineHeight = null;
         int nextLine = 0;
@@ -646,7 +647,7 @@ internal sealed partial class PptxRenderer
                 descent = Math.Max(descent, metrics.Height - metrics.Ascent);
                 lineHeight = Math.Max(lineHeight, metrics.Height);
             }
-            lines.Add(new(line.ToArray(), height + ascent));
+            lines.Add(new(line.ToArray(), height + ascent, ascent));
             height += hasLineBreaks ? ascent + descent : lineHeight;
             nextLine = line.Key + 1;
         }
