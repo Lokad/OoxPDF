@@ -154,7 +154,7 @@ jobs:
       - name: Emission comparison adversarial checks
         run: pwsh -NoProfile -File tools/TestPptxEmissionComparison.ps1
       - name: Content tokenization checks
-        run: pwsh -NoProfile -File tools/TestPdfContentTokenization.ps1
+        run: pwsh -NoProfile -File tools/TestPdfContentTokenization.ps1 -InspectorPath $env:OOXPDF_TEST_PDF_INSPECTOR
       - name: Composition source audit checks
         run: python -B tools/TestCompositionSourceAudit.py
       - name: Composition comparison orchestration checks

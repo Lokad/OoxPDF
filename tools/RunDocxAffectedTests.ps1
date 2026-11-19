@@ -94,6 +94,11 @@ if (!$AllDocx -and @($filters | Where-Object { $_ -in @('Docx', 'Balloon', '') }
     throw 'Use capability-specific filters, or explicit -AllDocx for a broader milestone'
 }
 $selected = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+if ($AllDocx) {
+    # Retain the name selectors for neighboring tests in shared groups.
+    $docxMembers = @($catalog | Where-Object { $_.Group.StartsWith('docx-', [StringComparison]::Ordinal) })
+    foreach ($test in $docxMembers) { $null = $selected.Add($test.Name) }
+}
 $exactNames = [Collections.Generic.HashSet[string]]::new([string[]]$catalog.Name, [StringComparer]::Ordinal)
 # Search the catalogue in native string code instead of a PowerShell loop over
 # every selector/test pair. Newlines delimit names and cannot occur in a name.
@@ -143,6 +148,9 @@ $inventory = [ordered]@{
     SelectionSha256 = (Get-FileHash -LiteralPath $selectionPath).Hash
     TemporaryDirectory = $temporaryDirectory
     ExpectedSkips = @($ExpectedSkip | Sort-Object -Unique)
+}
+if ($AllDocx) {
+    $inventory.DocxGroups = @($docxMembers.Group | Sort-Object -Unique)
 }
 if ($Capability) {
     $inventory.Capabilities = $Capability

@@ -18,6 +18,9 @@ function dotnet {
         'FAST selection SelectionOther';'FAST selection Selection[Literal]';'FAST selection SelectionL'
         'FAST selection item';'FAST selection İtemNeighbor'
         'FAST cli CliFixture'
+        'FAST docx-tables ReplayCellMemo';'SLOW docx-text WrapEmergencyToken'
+        'FAST docx-tables DocxTableControl';'FAST rendering-portable PortableRenderingSharedControl'
+        'FAST rendering-portable BalloonSharedControl';'FAST pptx-typography LayoutSlide'
         $global:LASTEXITCODE=0;return
     }
     $global:ooxPdfAffectedReportCalls++
@@ -130,6 +133,21 @@ try {
             }
         }
         $checks+=@{Case=$case;GatePassed=$shouldPass;Error=$caught;RunnerInvocations=$global:ooxPdfAffectedReportCalls}
+    }
+
+    foreach($case in @('milestone-list','milestone-run')) {
+        $global:ooxPdfAffectedReportFault=''
+        $global:ooxPdfAffectedReportCalls=0
+        $output=Join-Path $root $case
+        $listOnly=$case -eq 'milestone-list'
+        & (Join-Path $PSScriptRoot 'RunDocxAffectedTests.ps1') -RunnerPath $runner -OutputDirectory $output -AllDocx -ListOnly:$listOnly *> (Join-Path $root ($case+'.log'))
+        $actual=@(Get-Content -LiteralPath (Join-Path $output 'selected-methods.json') -Raw | ConvertFrom-Json)
+        $wanted=@('ReplayCellMemo','WrapEmergencyToken','DocxTableControl','PortableRenderingSharedControl','BalloonSharedControl')
+        if ($actual.Count -ne $wanted.Count -or @(Compare-Object $wanted $actual -CaseSensitive).Count -or
+            $global:ooxPdfAffectedReportCalls -ne [int]!$listOnly) {
+            throw 'DOCX milestones must include the registered groups and shared neighbors once'
+        }
+        $checks+=@{Case=$case;SelectedMethods=$actual;RunnerInvocations=$global:ooxPdfAffectedReportCalls}
     }
 
     # Bare selectors keep literal substring matching. The equals prefix requires
