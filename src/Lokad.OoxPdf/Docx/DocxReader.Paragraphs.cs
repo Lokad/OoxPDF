@@ -851,12 +851,15 @@ internal sealed partial class DocxReader
                     foreach (var content in box.Elements(WordprocessingNamespace + "txbxContent"))
                     {
                         bool first = true;
-                        foreach (var nestedParagraph in content.Elements(WordprocessingNamespace + "p"))
+                        foreach (var nested in EnumerateRevisionScopedChildren(content.Elements(), markupMode,
+                            cancellationToken, [WordprocessingNamespace + "p"], revision))
                         {
-                            cancellationToken.ThrowIfCancellationRequested();
                             if (!first) AddParagraphRun(new XElement(WordprocessingNamespace + "r", new XElement(WordprocessingNamespace + "br")), ref pageInstructionSeen, revision);
                             first = false;
+                            var nestedParagraph = nested.Element;
                             var properties = nestedParagraph.Element(WordprocessingNamespace + "pPr");
+                            if (nested.Revision is { } nestedRevision && nestedRevision != revision && !paragraphRevisions.Contains(nestedRevision))
+                                paragraphRevisions.Add(nestedRevision);
                             AddRevisions(paragraphRevisions, ReadPropertyChangeRevisions(properties));
                             string? outerStyle = paragraphStyleId;
                             var outerCellStyle = tableCellStyle;
@@ -868,7 +871,7 @@ internal sealed partial class DocxReader
                                 paragraphStyleId = ReadEffectiveParagraphStyleId(properties, styles);
                                 tableCellStyle = null;
                                 foreach (var item in nestedParagraph.Elements())
-                                    if (item.Name != WordprocessingNamespace + "pPr") AddInlineContainerChild(item, revision);
+                                    if (item.Name != WordprocessingNamespace + "pPr") AddInlineContainerChild(item, nested.Revision);
                             }
                             finally
                             {

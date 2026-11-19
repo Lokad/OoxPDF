@@ -1,6 +1,7 @@
 using System.Xml.Linq;
 using Lokad.OoxPdf.Docx;
 using Lokad.OoxPdf.Ooxml;
+using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Tests;
 
@@ -65,6 +66,50 @@ internal static class DocxVmlTextBoxTests
         });
     }
 
+    public static void DocxVmlTextBoxesKeepBlockWrappedParagraphsAndNavigation()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            XElement[] paragraphs = [
+                new(W + "p", Text("STORED TERMS "),
+                    new XElement(W + "hyperlink", new XAttribute(W + "anchor", "Target"), Text("REFERENCE LINK"))),
+                new(W + "p", Text("SECOND PARAGRAPH "), Picture(), Text(" AFTER PICTURE"))
+            ];
+            XElement[][] variants = [
+                paragraphs,
+                [new(W + "sdt", new XElement(W + "sdtPr", new XElement(W + "id", new XAttribute(W + "val", 123))),
+                    new XElement(W + "sdtContent", paragraphs))],
+                [new(W + "customXml", new XAttribute(W + "uri", "urn:ooxpdf:terms"),
+                    new XAttribute(W + "element", "terms"), paragraphs)]
+            ];
+            PdfPage? baseline = null;
+            foreach (var blocks in variants)
+            {
+                var paragraph = new XElement(W + "p", Text("BEFORE BOX "), Box(blocks),
+                    new XElement(W + "bookmarkStart", new XAttribute(W + "id", 1), new XAttribute(W + "name", "Target")),
+                    Text(" AFTER BOX"), new XElement(W + "bookmarkEnd", new XAttribute(W + "id", 1)));
+                With(paragraph, mode, null, document =>
+                {
+                    PdfPage page = Render(document, mode).Single();
+                    const string expected = "BEFORE BOX STORED TERMS REFERENCE LINK SECOND PARAGRAPH AFTER PICTURE AFTER BOX";
+                    string text = DocxPageFootnoteNumberingTests.DecodeText(page);
+                    TestAssert.Equal(expected.Replace(" ", ""), string.Concat(text.Where(character => !char.IsWhiteSpace(character))));
+                    TestAssert.Equal(1, page.Images.Count);
+                    var link = page.Annotations.Single();
+                    TestAssert.True(link.IsDestination, "The stored link must resolve the surrounding bookmark.");
+                    TestAssert.Equal(0, link.Destination!.Value.PageIndex);
+                    TestAssert.True(link.Width > 0 && link.Height > 0, "The stored link must have a visible source rectangle.");
+                    if (baseline is { } direct)
+                    {
+                        TestAssert.Equal(direct.Content, page.Content);
+                        TestAssert.Equal(direct.Annotations.Single(), link);
+                    }
+                    else baseline = page;
+                });
+            }
+        }
+    }
+
     public static void DocxVmlTextBoxesShareDynamicAndLockedFieldResults()
     {
         var inner = new XElement(W + "p", Text("PAGE:"),
@@ -91,9 +136,9 @@ internal static class DocxVmlTextBoxTests
     private static XElement Text(string text, XElement? properties = null) => new(W + "r", properties,
         new XElement(W + "t", new XAttribute(XNamespace.Xml + "space", "preserve"), text));
 
-    private static XElement Box(params XElement[] paragraphs) => new(W + "r", new XElement(W + "pict",
+    private static XElement Box(params XElement[] blocks) => new(W + "r", new XElement(W + "pict",
         new XElement(V + "shape", new XAttribute("id", "box"), new XAttribute("style", "width:300pt;height:100pt"),
-            new XElement(V + "textbox", new XElement(W + "txbxContent", paragraphs)))));
+            new XElement(V + "textbox", new XElement(W + "txbxContent", blocks)))));
 
     private static XElement Style(string id, int halfPoints, string color) => new(W + "style",
         new XAttribute(W + "type", "paragraph"), new XAttribute(W + "styleId", id), new XElement(W + "rPr",
@@ -127,7 +172,7 @@ internal static class DocxVmlTextBoxTests
         TestAssert.Equal(original, xml.ToString());
     }
 
-    private static IReadOnlyList<Lokad.OoxPdf.Pdf.PdfPage> Render(DocxDocument document, OoxPdfDocxMarkupMode mode) =>
+    private static IReadOnlyList<PdfPage> Render(DocxDocument document, OoxPdfDocxMarkupMode mode) =>
         new DocxRenderer(new PortableRenderingTests.PinnedResolver(), mode, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
 

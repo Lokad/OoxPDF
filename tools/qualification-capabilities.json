@@ -45,6 +45,7 @@
     "DocxFieldInstructionUnclosedCountersKeepOrderedSourceFallback",
     "DocxVmlTextBoxesShareHiddenAndRevisionSelection",
     "DocxVmlTextBoxesKeepPicturesBetweenSurroundingRunText",
+    "DocxVmlTextBoxesKeepBlockWrappedParagraphsAndNavigation",
     "DocxVmlTextBoxesOwnInnerStylesWithoutLeakingToSiblings",
     "DocxVmlTextBoxesShareDynamicAndLockedFieldResults",
     "DocxInlineHiddenBreaksKeepFittingWordsAndComposedObjects",
