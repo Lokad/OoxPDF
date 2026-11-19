@@ -8045,6 +8045,7 @@
     "PptxSyntheticEllipsisDropsBaselineOutsideLineAndMarksInline"
   ],
   "horizontal-text-clipping": [
+    "PptxWrappedNoBreakClusterKeepsInkAndLinkInNextColumn",
     "PptxHorizontalClipPreservesVerticalOverflowInShapesAndCells",
     "PptxSyntheticTextBoxOverflowColumnsUseSlideClip",
     "PptxSyntheticTextManualBreaksStayInActiveOverflowColumn",
@@ -20231,6 +20232,7 @@
     "PptxLineLabelsReserveAuthoredMarkerExtentInEachPosition"
   ],
   "pptx-text-oracle-portability": [
+    "PptxWrappedNoBreakClusterKeepsInkAndLinkInNextColumn",
     "PptxSyntheticTextBoxNoBreakSpaceKeepsWrappedClusterTogether",
     "PptxSyntheticEllipseTextUsesPresetTextRectangle",
     "PptxHorizontalClipPreservesVerticalOverflowInShapesAndCells",

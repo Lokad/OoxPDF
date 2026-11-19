@@ -516,7 +516,6 @@ internal sealed partial class PptxRenderer
                         cursorX + segmentWidth > columnStartX + effectiveTextWidth + wrapTolerance;
                     if (overflowsLine)
                     {
-                        bool movedNoBreakCluster = false;
                         PptxTextSpanLayout? movedNoBreakSpan = null;
                         string movedNoBreakAdvanceText = string.Empty;
                         if (flowSegment.Draw &&
@@ -526,7 +525,6 @@ internal sealed partial class PptxRenderer
                             line.Spans[^1].Equals(noBreakAnchorSpan) &&
                             line.TryRemoveLastSpan(out PptxTextSpanLayout? removedNoBreakSpan))
                         {
-                            movedNoBreakCluster = true;
                             movedNoBreakSpan = removedNoBreakSpan;
                             movedNoBreakAdvanceText = pendingNoBreakAdvanceText;
                             cursorX = line.EndX;
@@ -579,9 +577,15 @@ internal sealed partial class PptxRenderer
                         pendingVisibleLeadingAdjustment = 0d;
                         noBreakAnchorSpan = null;
                         pendingNoBreakAdvanceText = string.Empty;
-                        if (movedNoBreakCluster && movedNoBreakSpan is not null)
+                        if (movedNoBreakSpan is not null)
                         {
-                            TextRun movedRun = movedNoBreakSpan.Run with { X = cursorX, Y = cursorY };
+                            TextRun movedRun = movedNoBreakSpan.Run with
+                            {
+                                X = cursorX,
+                                Y = cursorY,
+                                ClipX = columnClipX,
+                                ClipWidth = columnClipWidth
+                            };
                             double movedEndX = cursorX + movedRun.Width;
                             maxFontSize = Math.Max(maxFontSize, movedRun.FontSize);
                             line.Add(
@@ -602,7 +606,7 @@ internal sealed partial class PptxRenderer
                             previousAdvanceCodePoint = LastCodePoint(movedNoBreakAdvanceText);
                         }
 
-                                                if (pulledWordSpans is not null)
+                        if (pulledWordSpans is not null)
                         {
                             foreach ((PptxTextRunModel? wordSource, TextRun wordRun) in pulledWordSpans)
                             {
@@ -621,7 +625,7 @@ internal sealed partial class PptxRenderer
                             }
                         }
 
-currentSegment = currentSegment.TrimStart();
+                        currentSegment = currentSegment.TrimStart();
                         currentAdvanceText = currentAdvanceText.TrimStart();
                         segmentIntrinsicWidth = advanceEstimator.Measure(currentAdvanceText, fragmentFontSize, runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, runStyle.KerningEnabled);
                         segmentBoundaryAdjustment = MeasureFlowSegmentBoundaryAdjustment(advanceEstimator, currentAdvanceText, previousAdvanceCodePoint, fragmentFontSize, new TextAdvanceOptions(runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, runStyle.KerningEnabled));
