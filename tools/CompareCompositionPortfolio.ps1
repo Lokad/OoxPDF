@@ -8,7 +8,8 @@ param(
     [string] $ValidationToolsDirectory = $PSScriptRoot,
     [string[]] $ReuseComparisonDirectory = @(),
     [ValidateSet('OfficePdf','OfficeImage')] [string] $ReferenceKind = 'OfficePdf',
-    [string] $RasterizerPath
+    [string] $RasterizerPath,
+    [string] $InspectorPath
 )
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'ReferenceCache.ps1')
@@ -30,6 +31,19 @@ $thresholdHashes = @{
     pptx=(Get-FileHash $pptxThresholdSource).Hash
 }
 $VisualDiffPath = (Resolve-Path -LiteralPath $VisualDiffPath).Path
+$inspectorDll = if ($InspectorPath) { (Resolve-Path -LiteralPath $InspectorPath).Path }
+    else { Join-Path $ValidationToolsDirectory "Lokad.OoxPdf.PdfInspect/bin/Debug/$Framework/Lokad.OoxPdf.PdfInspect.dll" }
+$inspectorHash = if (Test-Path -LiteralPath $inspectorDll -PathType Leaf) { (Get-FileHash -LiteralPath $inspectorDll).Hash }
+$inspectedPageCounts = @{}
+function Get-PortfolioPdfPageCount([string] $Pdf, [string] $PdfHash) {
+    if (!$inspectedPageCounts.ContainsKey($PdfHash)) {
+        if (!$inspectorHash) { throw 'PDF inspector is missing. Supply an existing build with -InspectorPath.' }
+        $pageCount = @(dotnet $inspectorDll $Pdf --text-only | Where-Object { $_ -match '^\d+ \d+ obj: page$' }).Count
+        if ($LASTEXITCODE -ne 0 -or !$pageCount) { throw ('Could not inspect portfolio PDF pages: ' + $Pdf) }
+        $inspectedPageCounts[$PdfHash] = $pageCount
+    }
+    return $inspectedPageCounts[$PdfHash]
+}
 $rasterizerDll = if ($RasterizerPath) {(Resolve-Path -LiteralPath $RasterizerPath).Path}
     else {Join-Path $ValidationToolsDirectory "Lokad.OoxPdf.PdfiumRasterizer/bin/Debug/$Framework/Lokad.OoxPdf.PdfiumRasterizer.dll"}
 function Get-PortfolioRasterizerId {
@@ -53,7 +67,7 @@ $metricRanges = [ordered]@{
     ForegroundRecall = @(0, 1)
     StructuralSimilarity = @(-1, 1)
 }
-function Get-ComparisonFailures([object[]] $Metrics, $Limits, $Outcome, [string] $Id) {
+function Get-ComparisonFailures([object[]] $Metrics, $Limits, [int] $CandidatePageCount, [int] $ReferencePageCount, [string] $Id) {
     $incomplete = 'Comparison page metrics incomplete: ' + $Id
     if (!$Metrics.Count) { throw $incomplete }
     $failures = @(); $candidatePages = 0; $referencePages = 0
@@ -109,8 +123,7 @@ function Get-ComparisonFailures([object[]] $Metrics, $Limits, $Outcome, [string]
         elseif ($page.ForegroundRecall -lt $Limits.minForegroundRecall) { $failures += 'ForegroundRecall' }
         if ($null -ne $page.StructuralSimilarity -and $Limits.minStructuralSimilarity -and $page.StructuralSimilarity -lt $Limits.minStructuralSimilarity) { $failures += 'StructuralSimilarity' }
     }
-    if (!$candidatePages -or !$referencePages -or
-        ($null -ne $Outcome.InspectedPages -and $candidatePages -ne $Outcome.InspectedPages)) { throw $incomplete }
+    if ($candidatePages -ne $CandidatePageCount -or $referencePages -ne $ReferencePageCount) { throw $incomplete }
     return @($failures | Sort-Object -Unique)
 }
 $historical = @()
@@ -139,24 +152,32 @@ $jobs = @(foreach ($row in $outcomes.Rows) {
         $source = Join-Path $directory $id
         if (!(Test-Path -LiteralPath $source)) { continue }
         $reference = Read-CompositionReference $source $row.Id $row.Mode $row.InputSha256 $ReferenceKind
-        $imagePath = $null; $imageHash = ''; $dpi = 144; $calibration = 'PDF-backed bootstrap'
+        $imagePath = $null; $imageHash = ''; $imagePages = 0; $dpi = 144; $calibration = 'PDF-backed bootstrap'
         if ($ReferenceKind -eq 'OfficeImage') {
             $image = Test-OfficeImageReference $source $row.InputSha256
             $imagePath = Join-Path $source 'reference-image-metadata.json'
             $imageHash = (Get-FileHash -LiteralPath $imagePath).Hash
             if ($imageHash -ne $reference.Pin.ImageMetadataSha256) { throw ('Image reference metadata differs: ' + $id) }
+            $imagePages = @($image.Capture.Pages).Count
             $dpi = [int]$image.Dpi; $calibration = $image.CalibrationStatus
         }
         [pscustomobject]@{Source=$source;Pdf=$reference.Pdf;Hash=$reference.Hash;
             Identity=$reference.Identity;IdentityHash=$reference.IdentityHash;
             ExportLog=$reference.ExportLog;ExportLogHash=$reference.ExportLogHash;
-            ImagePath=$imagePath;ImageHash=$imageHash;Dpi=$dpi;Calibration=$calibration}
+            ImagePath=$imagePath;ImageHash=$imageHash;ImagePages=$imagePages;Dpi=$dpi;Calibration=$calibration}
     })
     if (!$sources.Count) { throw ('Reference missing: ' + $id) }
     if (@($sources.Hash | Select-Object -Unique).Count -ne 1) { throw ('Conflicting references: ' + $id) }
     if (@($sources.ImageHash | Select-Object -Unique).Count -ne 1) { throw ('Conflicting image references: '+$id) }
     $selected = $sources[0]
     $source = $selected.Source; $referencePdf = $selected.Pdf; $referenceHash = $selected.Hash
+    $candidatePageCount = $row.InspectedPages
+    if ($null -eq $candidatePageCount) { $candidatePageCount = Get-PortfolioPdfPageCount $pdf $row.PdfSha256 }
+    if (($candidatePageCount -isnot [int] -and $candidatePageCount -isnot [long]) -or $candidatePageCount -lt 1) {
+        throw ('Comparison page metrics incomplete: ' + $id + ' / candidate page count')
+    }
+    $referencePageCount = if ($ReferenceKind -eq 'OfficeImage') { $selected.ImagePages }
+        else { Get-PortfolioPdfPageCount $referencePdf $referenceHash }
     $reuse = @($cached | Where-Object {
         $_.Row.Id -eq $row.Id -and $_.Row.Mode -eq $row.Mode -and
         $_.Row.CandidatePdfSha256 -eq $row.PdfSha256 -and $_.Row.ReferencePdfSha256 -eq $referenceHash -and
@@ -165,13 +186,14 @@ $jobs = @(foreach ($row in $outcomes.Rows) {
     } | Select-Object -First 1)
     $limits = if ($row.Mode -eq 'presentation') {$thresholds.pptx} else {$thresholds.docx}
     $reuseFailures = @(if ($reuse.Count) {
-        Get-ComparisonFailures -Metrics @($reuse[0].Row.Metrics) -Limits $limits -Outcome $row -Id $id
+        Get-ComparisonFailures @($reuse[0].Row.Metrics) $limits $candidatePageCount $referencePageCount $id
     })
     $diff = Join-Path $run $(if ($ReferenceKind -eq 'OfficeImage') {'office-image-diff'} else {'office-diff'})
     if (!$reuse.Count -and (Test-Path -LiteralPath $diff)) { throw ('Comparison already exists: ' + $id) }
     [pscustomobject]@{Row=$row;Id=$id;Run=$run;Source=$source;Pdf=$pdf;
         ReferencePdf=$referencePdf;ReferenceHash=$referenceHash;Identity=$selected.Identity;IdentityHash=$selected.IdentityHash;
         ExportLog=$selected.ExportLog;ExportLogHash=$selected.ExportLogHash;Reuse=$reuse;ReuseFailures=$reuseFailures;Limits=$limits;Diff=$diff;
+        CandidatePageCount=$candidatePageCount;ReferencePageCount=$referencePageCount;
         ImagePath=$selected.ImagePath;ImageHash=$selected.ImageHash;Dpi=$selected.Dpi;Calibration=$selected.Calibration}
 })
 # Match the reference cache's PDF/DPI/tool/page-hash convention. Legacy raster
@@ -248,7 +270,7 @@ foreach ($job in $jobs) {
     if ($LASTEXITCODE -ne 0) { throw ('Visual comparison failed: ' + $id) }
     $metrics = @(Get-Content (Join-Path $diff 'metrics.json') -Raw | ConvertFrom-Json)
     $limits = $job.Limits
-    $failures = @(Get-ComparisonFailures -Metrics $metrics -Limits $limits -Outcome $row -Id $id)
+    $failures = @(Get-ComparisonFailures $metrics $limits $job.CandidatePageCount $job.ReferencePageCount $id)
     $rows += [ordered]@{Id=$row.Id;Mode=$row.Mode;HeldOut=$row.HeldOut;CandidatePdfSha256=$row.PdfSha256;ReferencePdfSha256=$referenceHash;ReferenceSourceDirectory=$source;ReferenceIdentitySha256=$job.IdentityHash;ReferenceExportLogSha256=$job.ExportLogHash;ReferenceKind=$ReferenceKind;ReferenceImageMetadataSha256=$job.ImageHash;ReferenceCalibrationStatus=$job.Calibration;RasterDpi=$job.Dpi;Failures=@($failures | Sort-Object -Unique);Metrics=$metrics;Thresholds=$limits;ContentSeverity=$contentSeverity}
     if ($ReferenceKind -eq 'OfficeImage') {
         if ((Get-FileHash $job.ImagePath).Hash -ne $job.ImageHash) { throw ('Image reference metadata changed: '+$id) }
@@ -263,11 +285,15 @@ foreach ($job in $jobs) {
     Write-Output ($id + ': ' + ($failures | Sort-Object -Unique) -join ', ')
 }
 if ((Get-FileHash -LiteralPath $VisualDiffPath).Hash -ne $comparisonPolicy.VisualDiffSha256 -or
-    (Get-PortfolioRasterizerId) -ne $comparisonPolicy.RasterizerId) { throw 'Comparison tools changed during the batch; retained attempts are not a qualified report' }
+    (Get-PortfolioRasterizerId) -ne $comparisonPolicy.RasterizerId -or
+    ($inspectedPageCounts.Count -and (Get-FileHash -LiteralPath $inspectorDll).Hash -ne $inspectorHash)) {
+    throw 'Comparison tools changed during the batch; retained attempts are not a qualified report'
+}
 [ordered]@{
     CandidateLibrarySha256=$outcomes.LibrarySha256
     ReferenceKind=$ReferenceKind
     ComparisonPolicy=$comparisonPolicy
+    PageCountInspectorSha256=if ($inspectedPageCounts.Count) { $inspectorHash }
     HistoricalComparisonReports=$historical
     DocxThresholdSource='tools/CompositionDocxThresholds.json'
     PptxThresholdSource='tools/CompositionPptxThresholds.json'

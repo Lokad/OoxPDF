@@ -23,6 +23,10 @@ foreach ($name in @('CompositionReferenceIdentity.ps1','CompositionOutcomes.ps1'
 . (Join-Path $tools 'ReferenceCache.ps1')
 $visualDiff = Join-Path $tools 'comparison-engine.dll'
 Set-Content -LiteralPath $visualDiff -Value 'Synthetic comparison engine A; never executed'
+$inspectorDirectory = Join-Path $tools 'Lokad.OoxPdf.PdfInspect/bin/Debug/net11.0'
+New-Item -ItemType Directory -Path $inspectorDirectory | Out-Null
+$inspector = Join-Path $inspectorDirectory 'Lokad.OoxPdf.PdfInspect.dll'
+Set-Content -LiteralPath $inspector -Value 'Synthetic PDF inspector; never executed'
 @'
 param($InputPdf, $OutputDirectory, $Dpi, [switch]$SkipBuild)
 'Unexpected raster stage' | Set-Content -LiteralPath ($OutputDirectory + '.called')
@@ -35,7 +39,7 @@ foreach ($name in $thresholdNames) {
     New-Item -ItemType Directory -Path (Split-Path $target) -Force | Out-Null
     Copy-Item -LiteralPath (Join-Path (Split-Path $PSScriptRoot) $relative) -Destination $target
 }
-function New-Case([string] $Name, [string] $Fault, [string] $Mode='final-preserve') {
+function New-Case([string] $Name, [string] $Fault, [string] $Mode='final-preserve', [switch] $ExtraReferencePage) {
     $directory = Join-Path $OutputDirectory $Name
     $candidate = Join-Path $directory 'candidate'
     $reference = Join-Path $directory 'reference'
@@ -50,6 +54,9 @@ function New-Case([string] $Name, [string] $Fault, [string] $Mode='final-preserv
         ('Fake candidate ' + $id) | Set-Content -LiteralPath $pdf
         if ($Fault -ne 'missing-reference' -or $id -ne 'second') {
             ('Fake reference ' + $id) | Set-Content -LiteralPath (Join-Path $source 'reference.pdf')
+            if ($ExtraReferencePage -and $id -eq 'second') {
+                Add-Content -LiteralPath (Join-Path $source 'reference.pdf') 'two pages'
+            }
         }
         $referencePdf = Join-Path $source 'reference.pdf'
         if ((Test-Path -LiteralPath $referencePdf) -and
@@ -91,6 +98,15 @@ function New-Case([string] $Name, [string] $Fault, [string] $Mode='final-preserv
 function Snapshot([string] $Directory) {
     return @(Get-ChildItem -LiteralPath $Directory -Recurse -File | Sort-Object FullName |
         ForEach-Object { $_.FullName + ':' + (Get-FileHash -LiteralPath $_.FullName).Hash }) -join "`n"
+}
+function Write-ControlPdfInspection([string] $Pdf) {
+    $count = if ([IO.File]::ReadAllText($Pdf).Contains('two pages')) { 2 } else { 1 }
+    for ($i=1; $i -le $count; $i++) { Write-Output "$i 0 obj: page" }
+    $global:LASTEXITCODE = 0
+}
+function dotnet {
+    if ($args[0] -ne $inspector -or $args[2] -ne '--text-only') { throw 'Unexpected tool invocation during comparison preflight' }
+    Write-ControlPdfInspection $args[1]
 }
 $passed = @()
 foreach ($fault in @('missing-reference', 'candidate-hash', 'existing-comparison', 'duplicate')) {
@@ -280,16 +296,21 @@ foreach ($control in @('unrelated-case-edited','policy-bytes-changed','stricter-
     $passed+=$control
 }
 Copy-Item (Join-Path $PSScriptRoot 'OfficeReferenceCapture.ps1') -Destination $tools
-function New-ImageCase([string] $Name) {
+function New-ImageCase([string] $Name, [switch] $ExtraReferencePage) {
     $case=New-Case $Name 'image'
     foreach ($row in $case.Rows) {
         $source=Join-Path $case.ReferenceDirectory ($row.Id+'-'+$row.Mode)
         $png=[Convert]::FromBase64String('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a9WQAAAAASUVORK5CYII=')
-        [IO.File]::WriteAllBytes((Join-Path $source 'page-001.png'),$png)
+        $count = if ($ExtraReferencePage -and $row.Id -eq 'second') { 2 } else { 1 }
+        $pages = @(for ($index=1; $index -le $count; $index++) {
+            $name = 'page-{0:000}.png' -f $index
+            $path = Join-Path $source $name
+            [IO.File]::WriteAllBytes($path,$png)
+            @{Page=$index;File=$name;Width=1;Height=1;WidthPoints=0.5;HeightPoints=0.5;Sha256=(Get-FileHash $path).Hash}
+        })
         @{Schema=1;ReferenceKind='OfficeImage';InputSha256=$row.InputSha256;OfficeBuild='control';Dpi=144;
             CalibrationStatus='Uncalibrated';SecondaryPdfSha256=(Get-FileHash (Join-Path $source 'reference.pdf')).Hash;
-            Capture=@{Method='managed control';Pages=@(@{Page=1;File='page-001.png';Width=1;Height=1;
-                WidthPoints=0.5;HeightPoints=0.5;Sha256=(Get-FileHash (Join-Path $source 'page-001.png')).Hash})}} |
+            Capture=@{Method='managed control';Pages=$pages}} |
             ConvertTo-Json -Depth 8 | Set-Content (Join-Path $source 'reference-image-metadata.json')
         $identity=Join-Path $source 'source-identity.json'
         $pin=Get-Content $identity -Raw | ConvertFrom-Json -AsHashtable
@@ -314,6 +335,33 @@ if ($report.ReferenceKind -ne 'OfficeImage' -or @($report.Rows | Where-Object {
     $_.ReferenceCalibrationStatus -ne 'Uncalibrated'
 }).Count -or @(Get-ChildItem $case.Directory -Recurse -Filter '*.called').Count) {throw 'Image reuse lost provenance, failures or calibration status'}
 $passed+='image-identity-reuse'
+$case = New-ImageCase 'image-reference-extra-page' -ExtraReferencePage
+$priorPath = Join-Path $case.Cache 'office-image-comparisons.json'
+$prior = Get-Content -LiteralPath $priorPath -Raw | ConvertFrom-Json -AsHashtable
+$metric = $prior.Rows[1].Metrics[0]
+$metric.ForegroundRecall = 1
+$prior.Rows[1].Metrics = @($metric, @{
+    Page=2;ReferenceFile='page-002.png';CandidateFile=$null;DimensionsMatch=$false
+    MeanAbsoluteError=$null;ChangedPixelRatioAtThreshold16=$null;ForegroundRecall=$null;StructuralSimilarity=$null
+})
+$imageArguments = @{ReferenceKind='OfficeImage';CandidateDirectory=$case.CandidateDirectory;ReferenceDirectory=$case.ReferenceDirectory
+    VisualDiffPath=$visualDiff;ValidationToolsDirectory=$tools;ReuseComparisonDirectory=$case.Cache}
+$prior | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $priorPath
+& $script @imageArguments | Out-Null
+$report = Get-Content -LiteralPath (Join-Path $case.CandidateDirectory 'office-image-comparisons.json') -Raw | ConvertFrom-Json
+if (($report.Rows[1].Failures -join ',') -cne 'Pagination') { throw 'Complete reuse must retain the extra reference image failure' }
+$passed += 'image-reference-extra-page'
+$prior.Rows[1].Metrics = @($metric)
+$prior | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $priorPath
+$before = Snapshot $case.Directory
+$rejected = $false
+try { & $script @imageArguments | Out-Null }
+catch {
+    if ($_.Exception.Message -cne 'Comparison page metrics incomplete: second-final-preserve') { throw }
+    $rejected = $true
+}
+if (!$rejected -or (Snapshot $case.Directory) -cne $before) { throw 'Truncated image metrics must refuse before publication' }
+$passed += 'image-reference-truncated-pages'
 foreach ($fault in @('image-as-pdf','changed-image-metadata')) {
     $case=New-ImageCase $fault
     $arguments=@{}
@@ -339,9 +387,9 @@ $outOfRangeMetrics = [ordered]@{
     'similarity-above-one' = @('StructuralSimilarity', 1.01)
 }
 foreach ($fault in (@('empty-metrics','missing-metric','null-error','nonfinite-metric','boolean-metric',
-    'missing-page-index','duplicate-page','truncated-pages','wrong-file','nonboolean-dimensions','neither-file',
+    'missing-page-index','duplicate-page','truncated-pages','truncated-reference-pages','wrong-file','nonboolean-dimensions','neither-file',
     'recall-contradicts-foreground') + @($outOfRangeMetrics.Keys))) {
-    $case = New-Case $fault 'legacy'
+    $case = New-Case $fault 'legacy' -ExtraReferencePage:($fault -eq 'truncated-reference-pages')
     $cache = New-ReuseCache $case
     $path = Join-Path $cache 'office-comparisons.json'
     $prior = Get-Content $path -Raw | ConvertFrom-Json -AsHashtable
@@ -360,6 +408,7 @@ foreach ($fault in (@('empty-metrics','missing-metric','null-error','nonfinite-m
             $outcomes.Rows[1].InspectedPages=2
             $outcomes | ConvertTo-Json -Depth 6 | Set-Content $outcomesPath
         }
+        'truncated-reference-pages' { $metric.ForegroundRecall=1 }
         'wrong-file' { $metric.ReferenceFile='page-002.png' }
         'nonboolean-dimensions' { $metric.DimensionsMatch='true' }
         'neither-file' { $metric.ReferenceFile=$null;$metric.CandidateFile=$null }
@@ -388,9 +437,9 @@ foreach ($fault in (@('empty-metrics','missing-metric','null-error','nonfinite-m
     $passed+=$fault
 }
 foreach ($control in @('cleared-summary','obsolete-failure','blank-reference','unverified-recall','zero-recall','dimension-mismatch',
-    'near-dimensions-with-recall-failure','reference-extra-page','candidate-extra-page','threshold-boundary',
+    'near-dimensions-with-recall-failure','reference-extra-page','candidate-extra-page','legacy-missing-page-count','threshold-boundary',
     'metric-domain-minima','metric-domain-maxima')) {
-    $case=New-Case $control 'legacy'
+    $case=New-Case $control 'legacy' -ExtraReferencePage:($control -eq 'reference-extra-page')
     $cache=New-ReuseCache $case
     $path=Join-Path $cache 'office-comparisons.json'
     $prior=Get-Content $path -Raw | ConvertFrom-Json -AsHashtable
@@ -424,6 +473,13 @@ foreach ($control in @('cleared-summary','obsolete-failure','blank-reference','u
             }
             $prior.Rows[1].Metrics=@($metric,$extra)
             $expectedFailures=@('Pagination')
+        }
+        'legacy-missing-page-count' {
+            $outcomesPath = Join-Path $case.CandidateDirectory 'outcomes.json'
+            $outcomes = Get-Content -LiteralPath $outcomesPath -Raw | ConvertFrom-Json -AsHashtable
+            $outcomes.Rows[1].Remove('InspectedPages')
+            $outcomes | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $outcomesPath
+            $expectedFailures=@('ForegroundRecall')
         }
         'threshold-boundary' {
             $metric.MeanAbsoluteError=.2
@@ -519,6 +575,10 @@ $global:LASTEXITCODE=0
 '@ | Set-Content -LiteralPath (Join-Path $tools 'RasterizePdf.ps1')
 $comparisonProbeState=@{DiffCalls=0;AfterDiff=$null;BlankReference=$false}
 function dotnet {
+    if ($args[0] -eq $inspector) {
+        Write-ControlPdfInspection $args[1]
+        return
+    }
     $comparisonProbeState.DiffCalls++
     $reference=$args[1];$candidate=$args[2];$diff=$args[3]
     New-Item -ItemType Directory -Path $diff | Out-Null

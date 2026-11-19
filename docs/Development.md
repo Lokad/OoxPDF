@@ -88,8 +88,10 @@ Office references, producer/input/font identities and raw thresholds. Reuse
 comparisons only with verified matching identities. PDF/image exports do not
 calibrate Office application view; record view/zoom/markup settings separately.
 
-`MeasureCompositionPortfolio.ps1` measures frozen outcomes;
-`CompareCompositionPortfolio.ps1` compares pinned Office references;
+`MeasureCompositionPortfolio.ps1` measures frozen outcomes.
+`CompareCompositionPortfolio.ps1` compares pinned Office references. Use
+`-InspectorPath <qualified.dll>` to count PDF pages without rebuilding or
+rasterizing reused comparisons.
 `AuditCompositionContent.py` and `ScreenPdfInk.py` provide bounded independent
 content/ink checks. Portfolio joins check the selected modes and content
 expectations against the pinned text operations and verify the diagnostic
