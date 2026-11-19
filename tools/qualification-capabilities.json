@@ -8424,6 +8424,7 @@
     "EmergencyWrapLargeAllocationScalesLinearly",
     "EmergencyWrapMixedWidthFittingTailNeedsNoBreak",
     "PreferredWrapMixedWidthFittingTailNeedsNoBreak",
+    "PreferredWrapKeepsDiscretionaryHyphensHiddenWithinFitTolerance",
     "WrapFirstContinuationWidthsPinStarts",
     "JustifiedParagraphLineStartsArePinned",
     "EmergencyWrapOpportunityIndexPreservesBreaks"
@@ -9869,6 +9870,7 @@
     "EmergencyWrapLargeAllocationScalesLinearly",
     "EmergencyWrapMixedWidthFittingTailNeedsNoBreak",
     "PreferredWrapMixedWidthFittingTailNeedsNoBreak",
+    "PreferredWrapKeepsDiscretionaryHyphensHiddenWithinFitTolerance",
     "WrapFirstContinuationWidthsPinStarts",
     "JustifiedParagraphLineStartsArePinned",
     "EmergencyWrapOpportunityIndexPreservesBreaks",
