@@ -8666,6 +8666,7 @@
   "docx-bookmark-ownership": [
     "DocxBlockBookmarksFollowPlacedCellAndStoryParagraphs",
     "=DocxTableRowRangeBookmarksKeepTheirPaintedDestination",
+    "=DocxCellBoundaryBookmarksKeepThePaintedCellDestination",
     "=DocxBlockBookmarksFollowPaintedTableRowsAcrossStories",
     "=DocxStaticBoxTablesResolveRangeBookmarksOnPaintedRows",
     "=DocxFloatingBoxTableRangeBookmarksFollowPaintedRows",

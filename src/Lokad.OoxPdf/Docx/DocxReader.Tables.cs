@@ -63,7 +63,7 @@ internal sealed partial class DocxReader
             Grid: ReadTableGrid(fragment.Element, cancellationToken),
             fragment.LeadingBookmarks,
             Rows: EnumerateBookmarkedBlocks(fragment.Element.Elements(), markupMode, cancellationToken,
-                fragment.Revision == inheritedRevision ? null : fragment.Revision, tableRows: true)
+                fragment.Revision == inheritedRevision ? null : fragment.Revision, tableChildName: WordprocessingNamespace + "tr")
                 .Where(row => IsIncludedTableRow(row.Element, markupMode, cancellationToken)).ToArray())).ToArray();
         bool hasExplicitGrid = parts.Any(part => part.Grid.Length != 0);
         IReadOnlyList<double> columns = parts[0].Grid;
@@ -112,20 +112,22 @@ internal sealed partial class DocxReader
                 var cells = new List<DocxTableCell>();
                 int sourceColumn = ReadRowGridBefore(rowProperties);
                 int gridBefore = gridMappings is null ? sourceColumn : gridMappings[sourceIndex][sourceColumn];
-                DocxRevisionScopedElement[] cellElements = EnumerateRevisionScopedChildren(row.Elements(), markupMode, cancellationToken, [WordprocessingNamespace + "tc"]).ToArray();
+                DocxRevisionScopedElement[] cellElements = EnumerateBookmarkedBlocks(row.Elements(), markupMode,
+                    cancellationToken, inheritedRevision: null, tableChildName: WordprocessingNamespace + "tc").ToArray();
                 for (int cellIndex = 0; cellIndex < cellElements.Length; cellIndex++)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    XElement cell = cellElements[cellIndex].Element;
-                    DocxRevisionInfo? inheritedCellRevision = cellElements[cellIndex].Revision ?? rowElement.Revision;
+                    var cellSource = cellElements[cellIndex];
+                    XElement cell = cellSource.Element;
+                    DocxRevisionInfo? inheritedCellRevision = cellSource.Revision ?? rowElement.Revision;
                     XElement? cellProperties = cell.Element(WordprocessingNamespace + "tcPr");
                     var cellRevisions = new List<DocxRevisionInfo>();
-                    AddRevision(cellRevisions, cellElements[cellIndex].Revision);
+                    AddRevision(cellRevisions, cellSource.Revision);
                     AddRevisions(cellRevisions, ReadPropertyChangeRevisions(cellProperties));
                     DocxTableCellConditionalFormat? conditionalFormat = ReadTableConditionalFormat(cellProperties);
                     DocxTableCellStyle conditionalStyle = ResolveTableCellStyle(tableStyle, rowLook, conditionalFormat, rowIndex, cellIndex, rowCount, cellElements.Length, leadingRowEmphasis);
                     IReadOnlyList<DocxBodyElement> cellBodyElements = ReadTableCellBodyElements(
-                        cell,
+                        cellSource,
                         styles,
                         numbering,
                         numberingCounters,
@@ -372,7 +374,7 @@ internal sealed partial class DocxReader
     }
 
     private static IReadOnlyList<DocxBodyElement> ReadTableCellBodyElements(
-        XElement cell,
+        DocxRevisionScopedElement cell,
         DocxStyleSet styles,
         DocxNumberingSet numbering,
         DocxNumberingCounters numberingCounters,
@@ -386,7 +388,8 @@ internal sealed partial class DocxReader
         DocxRevisionInfo? inheritedRevision)
     {
         var elements = new List<DocxBodyElement>();
-        foreach (var (scopedChild, tableFragments) in EnumerateLogicalTableBlocks(cell.Elements(), styles, markupMode, cancellationToken, inheritedRevision))
+        foreach (var (scopedChild, tableFragments) in EnumerateLogicalTableBlocks(cell.Element.Elements(), styles, markupMode,
+            cancellationToken, inheritedRevision, cell.LeadingBookmarks))
         {
             cancellationToken.ThrowIfCancellationRequested();
             XElement child = scopedChild.Element;

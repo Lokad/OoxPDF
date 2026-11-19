@@ -1228,6 +1228,78 @@ internal static class DocxSectionNavigationTests
             new XElement(W + "tblGrid", new XElement(W + "gridCol", new XAttribute(W + "w", "3000"))), children);
     }
 
+    public static void DocxCellBoundaryBookmarksKeepThePaintedCellDestination()
+    {
+        foreach (var mode in Modes)
+        {
+            foreach (bool nested in new[] { false, true })
+            {
+                PdfPage[] control = RenderCell("inside", nested, mode);
+                TestAssert.Equal(2, control.Length);
+                TestAssert.Contains("NEIGHBOR CELL", Text(control[1]));
+                TestAssert.Contains("TARGET PARAGRAPH", Text(control[1]));
+                var neighbor = DocxParagraphShadingTests.ReadRectangles(control[1].Content).Single(rect => rect.Color == "CC9944");
+                PdfLinkAnnotation link = control[0].Annotations.Single();
+                TestAssert.True(link.Destination is { PageIndex: 1, Left: { } x } && x > neighbor.X + neighbor.Width / 2d,
+                    "The destination is in the second cell on page two.");
+
+                foreach (string placement in new[] { "around-cell", "wrapped-cell" })
+                {
+                    PdfPage[] pages = RenderCell(placement, nested, mode);
+                    TestAssert.True(control.Select(page => page.Content).SequenceEqual(pages.Select(page => page.Content)),
+                        "The bookmark placement preserves the painted pages.");
+                    TestAssert.Equal(link, pages[0].Annotations.Single());
+                }
+            }
+
+            PdfPage[] closed = RenderCell("closed-range", nested: false, mode);
+            TestAssert.Equal(2, closed.Length);
+            TestAssert.Contains("TARGET PARAGRAPH", Text(closed[1]));
+            TestAssert.Equal(0, closed[0].Annotations.Count);
+        }
+
+        static PdfPage[] RenderCell(string placement, bool nested, OoxPdfDocxMarkupMode mode)
+        {
+            PdfPage[] pages = [];
+            WithMutation("bookmark-before", (_, xml) => {
+                (XElement start, XElement end, XElement target) = BookmarkSource(xml);
+                start.Remove();
+                end.Remove();
+                var block = new XElement(target);
+                if (nested)
+                    block = Table(new XElement(W + "tr", new XElement(W + "tc", block)), "1600");
+                var cell = new XElement(W + "tc", block);
+                if (nested) cell.Add(Paragraph(string.Empty));
+                var row = new XElement(W + "tr", new XElement(W + "tc",
+                    new XElement(W + "tcPr", new XElement(W + "shd", new XAttribute(W + "fill", "CC9944"))),
+                    Paragraph("NEIGHBOR CELL")));
+                switch (placement)
+                {
+                    case "inside":
+                        block.AddBeforeSelf(start);
+                        block.AddAfterSelf(end);
+                        row.Add(cell);
+                        break;
+                    case "wrapped-cell":
+                        row.Add(new XElement(W + "sdt", new XElement(W + "sdtContent", start, cell, end)));
+                        break;
+                    case "closed-range":
+                        row.Add(start, end, cell);
+                        break;
+                    default:
+                        row.Add(start, cell, end);
+                        break;
+                }
+                target.ReplaceWith(Table(row, "2000", "4400"));
+            }, path => pages = Render(path, mode));
+            return pages;
+        }
+
+        static XElement Table(XElement row, params string[] widths) => new(W + "tbl",
+            new XElement(W + "tblPr", new XElement(W + "tblLayout", new XAttribute(W + "type", "fixed"))),
+            new XElement(W + "tblGrid", widths.Select(width => new XElement(W + "gridCol", new XAttribute(W + "w", width)))), row);
+    }
+
     private static (XElement Start, XElement End, XElement Target) BookmarkSource(XDocument xml)
     {
         XElement start = xml.Descendants(W + "bookmarkStart").Single();

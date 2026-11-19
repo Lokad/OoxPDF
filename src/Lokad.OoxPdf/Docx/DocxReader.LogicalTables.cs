@@ -10,11 +10,12 @@ internal sealed partial class DocxReader
     // drawings, references or revision owners. Only joined tables need a list.
     private static IEnumerable<(DocxRevisionScopedElement Scope, IReadOnlyList<DocxRevisionScopedElement>? Tables)>
         EnumerateLogicalTableBlocks(IEnumerable<XElement> elements, DocxStyleSet styles,
-            OoxPdfDocxMarkupMode mode, CancellationToken token, DocxRevisionInfo? inheritedRevision = null)
+            OoxPdfDocxMarkupMode mode, CancellationToken token, DocxRevisionInfo? inheritedRevision = null,
+            IReadOnlyList<DocxBookmarkAnchor>? leadingBookmarks = null)
     {
         DocxRevisionScopedElement? pending = null;
         List<DocxRevisionScopedElement>? tables = null;
-        foreach (var block in EnumerateBookmarkedBlocks(elements, mode, token, inheritedRevision))
+        foreach (var block in EnumerateBookmarkedBlocks(elements, mode, token, inheritedRevision, leadingBookmarks: leadingBookmarks))
         {
             if (pending is not null && CanJoinTables(pending.Element, block.Element, styles))
             {
@@ -30,23 +31,25 @@ internal sealed partial class DocxReader
     }
 
     private static IEnumerable<DocxRevisionScopedElement> EnumerateBookmarkedBlocks(IEnumerable<XElement> elements,
-        OoxPdfDocxMarkupMode mode, CancellationToken token, DocxRevisionInfo? inheritedRevision, bool tableRows = false)
+        OoxPdfDocxMarkupMode mode, CancellationToken token, DocxRevisionInfo? inheritedRevision,
+        XName? tableChildName = null, IReadOnlyList<DocxBookmarkAnchor>? leadingBookmarks = null)
     {
         XName importedContentName = WordprocessingNamespace + "altChunk";
         XName bookmarkStartName = WordprocessingNamespace + "bookmarkStart";
         XName bookmarkEndName = WordprocessingNamespace + "bookmarkEnd";
-        XName[] includedNames = tableRows
-            ? [WordprocessingNamespace + "tr", bookmarkStartName, bookmarkEndName]
+        XName[] includedNames = tableChildName is not null
+            ? [tableChildName, bookmarkStartName, bookmarkEndName]
             : [WordprocessingNamespace + "p", WordprocessingNamespace + "tbl", importedContentName, bookmarkStartName, bookmarkEndName];
-        Dictionary<string, DocxBookmarkAnchor>? bookmarkStarts = null;
+        // A cell inherits starts at its row boundary before choosing its first block.
+        var bookmarkStarts = leadingBookmarks?.ToDictionary(anchor => NormalizeDecimalId(anchor.Id)!, StringComparer.Ordinal);
         foreach (var scope in EnumerateRevisionScopedChildren(elements, mode, token, includedNames, inheritedRevision))
         {
             token.ThrowIfCancellationRequested();
             if (scope.Element.Name == bookmarkStartName)
             {
-                // Column-scoped ranges need a cell destination.
-                if (tableRows && (scope.Element.Attribute(WordprocessingNamespace + "colFirst") is not null ||
-                                  scope.Element.Attribute(WordprocessingNamespace + "colLast") is not null))
+                // Column-scoped starts need the authored grid position.
+                if (tableChildName is not null && (scope.Element.Attribute(WordprocessingNamespace + "colFirst") is not null ||
+                                                  scope.Element.Attribute(WordprocessingNamespace + "colLast") is not null))
                     continue;
                 var anchor = ReadBookmarkAnchor(scope.Element, 0, 0, 0, 0);
                 if (NormalizeDecimalId(anchor.Id) is { Length: > 0 } id && !string.IsNullOrEmpty(anchor.Name))
