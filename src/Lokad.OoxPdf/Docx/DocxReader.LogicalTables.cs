@@ -12,13 +12,31 @@ internal sealed partial class DocxReader
         EnumerateLogicalTableBlocks(IEnumerable<XElement> elements, DocxStyleSet styles,
             OoxPdfDocxMarkupMode mode, CancellationToken token, DocxRevisionInfo? inheritedRevision = null)
     {
+        DocxRevisionScopedElement? pending = null;
+        List<DocxRevisionScopedElement>? tables = null;
+        foreach (var block in EnumerateBookmarkedBlocks(elements, mode, token, inheritedRevision))
+        {
+            if (pending is not null && CanJoinTables(pending.Element, block.Element, styles))
+            {
+                tables ??= [pending];
+                tables.Add(block);
+                continue;
+            }
+            if (pending is not null) yield return (pending, tables);
+            pending = block;
+            tables = null;
+        }
+        if (pending is not null) yield return (pending, tables);
+    }
+
+    private static IEnumerable<DocxRevisionScopedElement> EnumerateBookmarkedBlocks(IEnumerable<XElement> elements,
+        OoxPdfDocxMarkupMode mode, CancellationToken token, DocxRevisionInfo? inheritedRevision)
+    {
         XName paragraphName = WordprocessingNamespace + "p";
         XName tableName = WordprocessingNamespace + "tbl";
         XName bookmarkStartName = WordprocessingNamespace + "bookmarkStart";
         XName bookmarkEndName = WordprocessingNamespace + "bookmarkEnd";
         XName[] includedNames = [paragraphName, tableName, WordprocessingNamespace + "altChunk", bookmarkStartName, bookmarkEndName];
-        DocxRevisionScopedElement? pending = null;
-        List<DocxRevisionScopedElement>? tables = null;
         Dictionary<string, DocxBookmarkAnchor>? bookmarkStarts = null;
         foreach (var scope in EnumerateRevisionScopedChildren(elements, mode, token, includedNames, inheritedRevision))
         {
@@ -37,23 +55,14 @@ internal sealed partial class DocxReader
                 continue;
             }
 
-            // Bind each table bookmark before joining authored fragments.
+            // Bind the start to its authored block before layout or table joining.
             var block = bookmarkStarts is { Count: > 0 } &&
                 (scope.Element.Name == paragraphName || scope.Element.Name == tableName)
                 ? scope with { LeadingBookmarks = bookmarkStarts.Values.ToArray() }
                 : scope;
             bookmarkStarts = null;
-            if (pending is not null && CanJoinTables(pending.Element, block.Element, styles))
-            {
-                tables ??= [pending];
-                tables.Add(block);
-                continue;
-            }
-            if (pending is not null) yield return (pending, tables);
-            pending = block;
-            tables = null;
+            yield return block;
         }
-        if (pending is not null) yield return (pending, tables);
     }
 
     private static bool CanJoinTables(XElement first, XElement second, DocxStyleSet styles)

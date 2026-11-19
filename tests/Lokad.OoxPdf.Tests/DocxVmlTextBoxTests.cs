@@ -122,6 +122,48 @@ internal static class DocxVmlTextBoxTests
         });
     }
 
+    public static void DocxVmlTextBoxesKeepBlockBookmarkDestinations()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            PdfPage? baseline = null;
+            foreach (string placement in new[] { "inline", "block", "wrapped", "closed", "skipped-table" })
+            {
+                var start = new XElement(W + "bookmarkStart", new XAttribute(W + "id", 1), new XAttribute(W + "name", "BoxTarget"));
+                var end = new XElement(W + "bookmarkEnd", new XAttribute(W + "id", 1));
+                var target = new XElement(W + "p", Text("TARGET "), Picture(), Text(" AFTER"));
+                XElement[] blocks = placement switch
+                {
+                    "inline" => [new(W + "p", start, target.Elements(), end)],
+                    "block" => [start, target, end],
+                    "wrapped" => [new(W + "sdt", new XElement(W + "sdtContent", start, target, end))],
+                    "closed" => [start, end, target],
+                    _ => [start, new(W + "tbl", new XElement(W + "tr", new XElement(W + "tc",
+                        new XElement(W + "p", Text("TABLE"))))), target, end]
+                };
+                var paragraph = new XElement(W + "p", Box([new(W + "p", Text("FIRST")), .. blocks]),
+                    new XElement(W + "hyperlink", new XAttribute(W + "anchor", "BoxTarget"), Text(" JUMP")));
+                With(paragraph, mode, null, document =>
+                {
+                    var page = Render(document, mode).Single();
+                    TestAssert.Equal(1, page.Images.Count);
+                    if (baseline is { } direct) TestAssert.Equal(direct.Content, page.Content);
+                    else baseline = page;
+                    if (placement is "closed" or "skipped-table")
+                    {
+                        TestAssert.Equal(0, page.Annotations.Count);
+                    }
+                    else
+                    {
+                        var link = page.Annotations.Single();
+                        TestAssert.True(link.IsDestination, "The link must reach the placed second paragraph.");
+                        TestAssert.Equal(baseline.Value.Annotations.Single(), link);
+                    }
+                });
+            }
+        }
+    }
+
     public static void DocxVmlHiddenDrawingRunSuppressesItsTextAndPictures()
     {
         var box = Box(new XElement(W + "p", Text("HIDDEN"), Picture()));

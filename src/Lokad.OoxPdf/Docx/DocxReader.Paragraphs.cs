@@ -851,11 +851,23 @@ internal sealed partial class DocxReader
                     foreach (var content in box.Elements(WordprocessingNamespace + "txbxContent"))
                     {
                         bool first = true;
-                        foreach (var nested in EnumerateRevisionScopedChildren(content.Elements(), markupMode,
-                            cancellationToken, [WordprocessingNamespace + "p"], revision))
+                        foreach (var nested in EnumerateBookmarkedBlocks(content.Elements(), markupMode, cancellationToken, revision))
                         {
+                            if (nested.Element.Name != WordprocessingNamespace + "p") continue;
                             if (!first) AddParagraphRun(new XElement(WordprocessingNamespace + "r", new XElement(WordprocessingNamespace + "br")), ref pageInstructionSeen, revision);
                             first = false;
+                            if (nested.LeadingBookmarks is { } leading)
+                            {
+                                // The paragraph now starts within the enclosing flow.
+                                int textOffset = RelativeRunTextOffset(runs, sourceRunIndex);
+                                int inlineIndex = GetInlineItemCount();
+                                foreach (var anchor in leading)
+                                {
+                                    cancellationToken.ThrowIfCancellationRequested();
+                                    bookmarkAnchors.Add(anchor with { SourceRunIndex = sourceRunIndex,
+                                        TextRunIndex = runs.Count, TextOffset = textOffset, InlineItemIndex = inlineIndex });
+                                }
+                            }
                             var nestedParagraph = nested.Element;
                             var properties = nestedParagraph.Element(WordprocessingNamespace + "pPr");
                             if (nested.Revision is { } nestedRevision && nestedRevision != revision && !paragraphRevisions.Contains(nestedRevision))
