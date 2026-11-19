@@ -86,8 +86,6 @@ validation tools, including the PDFium rasterizer, remain outside the library.
 - `tools/ComparePdfTextLineStarts.ps1`: compare PDF text line starts (helper used by CheckVisualCase).
 - `tools/RenderCachedReference.ps1`: render cached Office reference PDFs (helper for cache-only gates).
 - `tools/SummarizePdfGraphicsOperations.ps1`: summarize PDF graphics-operation rollups across runs.
-- `tools/SummarizeChartDataLabelLayout.ps1`: summarize chart data-label layout across runs.
-- `tools/SummarizeChartStructureDeltas.ps1`: summarize chart graphics-structure deltas per case/kind.
 - `tools/SummarizePptxTextEmissionBranchFamily.ps1`: summarize PPTX text-emission branch-family reports.
 - `tools/SummarizePptxTextStateDeltas.ps1`: summarize PPTX text-state deltas across runs.
 - `tools/SummarizePptxFontEmissionHeightScan.ps1`: scan PPTX font-emission heights across runs.

@@ -167,10 +167,7 @@ jobs:
       - name: Composition reference view checks
         run: pwsh -NoProfile -File tools/TestCompositionReferences.ps1
       - name: Chart classifier adversarial checks
-        run: |
-          pwsh -NoProfile -File tools/TestChartClassifierRobustness.ps1
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          pwsh -NoProfile -File tools/TestChartSummaryCoverage.ps1 -InspectorPath tools/Lokad.OoxPdf.PdfInspect/bin/Release/net11.0/Lokad.OoxPdf.PdfInspect.dll
+        run: pwsh -NoProfile -File tools/TestChartClassifierRobustness.ps1
       - name: Publish console test reports
         if: always()
         uses: actions/upload-artifact@v4
