@@ -21557,6 +21557,8 @@
   ],
   "svg-text-labels": [
     "SvgLabelsRetainEveryGlyphInDocxAndPptxPictures",
+    "SvgTransformFormsPreservePicturePlacement",
+    "SvgGradientTransformListsMatchExplicitMatrices",
     "SvgLabelsShareInheritedFontSizeColorAndMeasuredAnchors",
     "SvgLabelTransformsUseThePictureCoordinateSystem",
     "SvgLabelOpacityGroupsRemainVectorOnlyAndKeepUnsupportedSiblingsExplicit",

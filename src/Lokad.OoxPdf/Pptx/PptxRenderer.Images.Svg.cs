@@ -2537,9 +2537,8 @@ internal sealed partial class PptxRenderer
     [GeneratedRegex(@"[A-Za-z]+|[-+]?(?:\d*\.\d+|\d+)(?:[eE][-+]?\d+)?|[(),]", RegexOptions.CultureInvariant)]
     private static partial Regex SvgTransformTokenRegex();
 
-    // RV07: affine SVG transform lists shared by bounds and emission. translate,
-    // scale, rotate, skew, and matrix compose left to right; anything else fails
-    // so the path diagnoses instead of drawing untransformed.
+    // Affine transforms are shared by bounds and paint. The first transform
+    // in a list establishes the outer coordinate system, like a parent group.
     private readonly record struct SvgTransform(double M11, double M12, double M21, double M22, double OffsetX, double OffsetY)
     {
         public static SvgTransform Identity => new SvgTransform(1d, 0d, 0d, 1d, 0d, 0d);
@@ -2587,7 +2586,7 @@ internal sealed partial class PptxRenderer
                 return false;
             }
 
-            accumulated = SvgTransform.Compose(next, accumulated);
+            accumulated = SvgTransform.Compose(accumulated, next);
         }
 
         transform = accumulated;
@@ -2768,7 +2767,7 @@ internal sealed partial class PptxRenderer
                 return false;
             }
 
-            transform = SvgTransform.Compose(ancestorTransform, transform);
+            transform = SvgTransform.Compose(transform, ancestorTransform);
         }
 
         if (!TryParseSvgTransformList((string?)path.Attribute("transform"), out SvgTransform local))
@@ -2777,7 +2776,7 @@ internal sealed partial class PptxRenderer
             return false;
         }
 
-        transform = SvgTransform.Compose(local, transform);
+        transform = SvgTransform.Compose(transform, local);
         // RV07: entries composed past double range cannot map; the path is
         // omitted like an unparseable transform instead of throwing downstream.
         if (!double.IsFinite(transform.M11) || !double.IsFinite(transform.M12) || !double.IsFinite(transform.M21) || !double.IsFinite(transform.M22) || !double.IsFinite(transform.OffsetX) || !double.IsFinite(transform.OffsetY))

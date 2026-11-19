@@ -69,8 +69,6 @@ internal static partial class SvgTextTests
 
     public static void SvgLabelTransformsUseThePictureCoordinateSystem()
     {
-        // An explicit matrix isolates glyph/picture axes from the existing
-        // path painter's separately unqualified compound-list ordering.
         const string transform = "matrix(0.965925826 0.258819045 -0.258819045 0.965925826 5 7)";
         string text = "<text x=\"20\" y=\"80\" font-size=\"24\" fill=\"#112233\">I</text>";
         var group = Paint(Svg("<g transform=\"" + transform + "\">" + text + "</g>"));
@@ -86,8 +84,78 @@ internal static partial class SvgTextTests
         TestAssert.Equal(0, group.StateDepth);
         TestAssert.Equal(1, LabelPaths(group.ToString()));
         const string compound = "translate(5 7) rotate(15)";
-        TestAssert.Equal(Paint(Svg("<g transform=\"" + compound + "\">" + text + "</g>")).ToString(),
-            Paint(Svg(text.Replace("<text ", "<text transform=\"" + compound + "\" ", StringComparison.Ordinal))).ToString());
+        TestAssert.Equal(group.ToString(), Paint(Svg("<g transform=\"" + compound + "\">" + text + "</g>")).ToString());
+        TestAssert.Equal(group.ToString(), Paint(Svg(text.Replace("<text ", "<text transform=\"" + compound + "\" ", StringComparison.Ordinal))).ToString());
+    }
+
+    public static void SvgTransformFormsPreservePicturePlacement()
+    {
+        const string translation = """transform="translate(160 10)" """;
+        const string scale = """transform="scale(3 2)" """;
+        const string sibling = """<rect x="1" y="1" width="5" height="5" fill="#0055ff"/>""";
+        string Shape(string transform = "") => $"<rect x=\"5\" y=\"10\" width=\"10\" height=\"10\" fill=\"#ff00aa\" {transform}/>";
+        string matrix = Shape("""transform="matrix(3 0 0 2 160 10)" """);
+        var placements = new (string Name, string Source)[]
+        {
+            ("list", Shape("""transform="translate(160 10) scale(3 2)" """)),
+            ("nested groups", $"<g {translation}><g {scale}>{Shape()}</g></g>"),
+            ("group and local", $"<g {translation}>{Shape(scale)}</g>")
+        };
+
+        foreach (bool docx in new[] { true, false })
+        {
+            var resolver = new PortableRenderingTests.PinnedResolver();
+            byte[] Render(string source)
+            {
+                string path = Input(docx, Svg(source + sibling));
+                try
+                {
+                    using var input = File.OpenRead(path);
+                    using var output = new MemoryStream();
+                    var diagnostics = new List<OoxPdfDiagnostic>();
+                    OoxPdfConverter.Convert(input, output, new OoxPdfOptions { FontResolver = resolver, DiagnosticSink = diagnostics.Add });
+                    TestAssert.True(!diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT"), "These SVG transforms are supported.");
+                    return output.ToArray();
+                }
+                finally { File.Delete(path); }
+            }
+            byte[] expected = Render(matrix);
+            string pdf = Encoding.ASCII.GetString(expected);
+            TestAssert.Contains("1 0 0.667 rg", pdf);
+            TestAssert.Contains("0 0.333 1 rg", pdf);
+            foreach (var (name, source) in placements)
+            {
+                TestAssert.True(Render(source).AsSpan().SequenceEqual(expected),
+                    $"{(docx ? "DOCX" : "PPTX")}: a transform {name} must preserve the matrix control's full picture and sibling.");
+            }
+        }
+    }
+
+    public static void SvgGradientTransformListsMatchExplicitMatrices()
+    {
+        foreach (var (gradient, geometry) in new[]
+        {
+            ("linearGradient", """x1="0" y1="0" x2="60" y2="0" """),
+            ("radialGradient", """cx="15" cy="30" r="20" """)
+        })
+        {
+            string Definition(string transform) => Svg($"""
+                <defs><{gradient} id="g" gradientUnits="userSpaceOnUse" {geometry} gradientTransform="{transform}">
+                  <stop offset="0" stop-color="red"/><stop offset="1" stop-color="blue"/>
+                </{gradient}></defs>
+                <rect width="250" height="130" fill="url(#g)"/>
+                """);
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var expected = Paint(Definition("matrix(2 0 0 2 40 10)"), diagnostics);
+            var actual = Paint(Definition("translate(40 10) scale(2)"), diagnostics);
+            TestAssert.Equal(0, diagnostics.Count);
+            TestAssert.True(expected.Shadings.Count > 0 || expected.ToString().Contains(" rg", StringComparison.Ordinal),
+                "The reference must paint gradient colors or publish a shading.");
+            AssertEquivalentSvgPaint(expected, actual, gradient);
+            TestAssert.True(expected.Shadings.Select(resource => resource.Shading.ResourceKey)
+                .SequenceEqual(actual.Shadings.Select(resource => resource.Shading.ResourceKey)),
+                $"{gradient}: native shading coordinates follow the same transform order as sampled paint.");
+        }
     }
 
     public static void SvgLabelOpacityGroupsRemainVectorOnlyAndKeepUnsupportedSiblingsExplicit()
