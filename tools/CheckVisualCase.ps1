@@ -19,6 +19,7 @@ $pdfInspectorProject = Join-Path $repoRoot 'tools/Lokad.OoxPdf.PdfInspect/Lokad.
 $pdfInspectorDll = Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfInspect/bin/Debug/$Framework/Lokad.OoxPdf.PdfInspect.dll"
 $caseFull = (Resolve-Path -LiteralPath $Case).Path
 $caseDirectory = Split-Path -Parent $caseFull
+$caseSha256 = (Get-FileHash -LiteralPath $caseFull).Hash
 $manifest = Get-Content -Raw -LiteralPath $caseFull | ConvertFrom-Json
 $runId = if (-not [string]::IsNullOrWhiteSpace($RunId)) { ($RunId -replace '[^A-Za-z0-9_.-]', '-') } else { "{0}-p{1}-{2}" -f (Get-Date -Format "yyyyMMdd-HHmmss-fff"), $PID, ([System.Guid]::NewGuid().ToString("N").Substring(0, 8)) }
 if ($runId -in '.', '..') { throw 'RunId must name a run directory.' }
@@ -89,6 +90,7 @@ function Get-ComparisonChartGraphics([string] $Side, [hashtable] $Options, [stri
 
 $inputPath = Join-Path $caseDirectory $manifest.input
 $inputFull = (Resolve-Path -LiteralPath $inputPath).Path
+$inputSha256 = (Get-FileHash -LiteralPath $inputFull).Hash
 $candidatePdf = Join-Path $candidateDir "output.pdf"
 $diagnostics = Join-Path $candidateDir "diagnostics.json"
 $dpi = if ($manifest.dpi -ne $null) { [int]$manifest.dpi } else { 144 }
@@ -106,7 +108,7 @@ else {
     $explicitLibrary = Join-Path (Split-Path -Parent $cliDll) 'Lokad.OoxPdf.dll'
     [ordered]@{CliDll=$cliDll;CliSha256=(Get-FileHash -LiteralPath $cliDll).Hash;
         LibraryDll=$explicitLibrary;LibrarySha256=(Get-FileHash -LiteralPath $explicitLibrary).Hash;
-        InputSha256=(Get-FileHash -LiteralPath $inputFull).Hash;CaseSha256=(Get-FileHash -LiteralPath $caseFull).Hash;
+        InputSha256=$inputSha256;CaseSha256=$caseSha256;
         BuildRequested=$false} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $buildInfoDir 'explicit-cli.json') -Encoding utf8
 }
 $candidateArgs = @("convert", $inputFull, $candidatePdf, "--diagnostics", $diagnostics)
@@ -163,6 +165,57 @@ $metricsPath = Join-Path $comparisonDir "metrics.json"
 $metrics = Get-Content -Raw -LiteralPath $metricsPath | ConvertFrom-Json
 $referencePages = @(Get-ChildItem -LiteralPath $referenceDir -Filter "page-*.png")
 $candidatePages = @(Get-ChildItem -LiteralPath $candidateDir -Filter "page-*.png")
+
+# Bind the measurements even when a later visual or content gate fails.
+if ((Get-FileHash -LiteralPath $inputFull).Hash -ne $inputSha256 -or
+    (Get-FileHash -LiteralPath $caseFull).Hash -ne $caseSha256) {
+    throw "Source or case manifest changed during the visual run."
+}
+$runInfo = [ordered]@{
+    Schema = "ooxpdf-visual-run-info/1"
+    RunId = $runId
+    CaseId = $manifest.id
+    Kind = $manifest.kind
+    Input = $inputFull.Substring($repoRoot.Length).TrimStart("\", "/").Replace("\", "/")
+    InputSha256 = $inputSha256
+    CaseSha256 = $caseSha256
+    ReferencePdfSha256 = (Get-FileHash -LiteralPath (Join-Path $referenceDir "reference.pdf")).Hash
+    PdfiumPinSha256 = (Get-FileHash -LiteralPath (Join-Path $PSScriptRoot "vendor/pdfium/win-x64/pdfium.sha256")).Hash
+    Dpi = $dpi
+    DocxMarkup = $docxMarkup
+    DocxMarkupGeometry = $docxMarkupGeometry
+    CliDll = $cliDll
+    CliSha256 = if (Test-Path -LiteralPath $cliDll) { (Get-FileHash -LiteralPath $cliDll -Algorithm SHA256).Hash.ToLowerInvariant() } else { $null }
+    LibraryDll = $null
+    VisualDiffDll = $visualDiffDll
+    VisualDiffSha256 = if (Test-Path -LiteralPath $visualDiffDll) { (Get-FileHash -LiteralPath $visualDiffDll -Algorithm SHA256).Hash.ToLowerInvariant() } else { $null }
+    RasterizerDll = $null
+    GitCommit = $null
+    GitDirty = $null
+    GeneratedAtUtc = [DateTime]::UtcNow.ToString("O", [Globalization.CultureInfo]::InvariantCulture)
+}
+$libraryDll = Join-Path (Split-Path -Parent $cliDll) "Lokad.OoxPdf.dll"
+if (Test-Path -LiteralPath $libraryDll) {
+    $runInfo.LibraryDll = $libraryDll
+    $runInfo.LibrarySha256 = (Get-FileHash -LiteralPath $libraryDll -Algorithm SHA256).Hash.ToLowerInvariant()
+}
+
+$rasterizerDll = Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfiumRasterizer/bin/Debug/$Framework/Lokad.OoxPdf.PdfiumRasterizer.dll"
+if (Test-Path -LiteralPath $rasterizerDll) {
+    $runInfo.RasterizerDll = $rasterizerDll
+    $runInfo.RasterizerSha256 = (Get-FileHash -LiteralPath $rasterizerDll -Algorithm SHA256).Hash.ToLowerInvariant()
+}
+
+if (Test-Path -LiteralPath (Join-Path $repoRoot '.git')) {
+    try {
+        $runInfo.GitCommit = (& git -C $repoRoot rev-parse HEAD 2>$null | Select-Object -First 1).Trim()
+        $runInfo.GitDirty = [bool](& git --no-optional-locks -C $repoRoot status --short 2>$null | Select-Object -First 1)
+    }
+    catch {
+    }
+}
+
+$runInfo | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $runRoot "run-info.json") -Encoding UTF8
 
 if ($manifest.expected.pageCountMustMatch -eq $true -and $referencePages.Count -ne $candidatePages.Count) {
     throw "Page count mismatch. Reference: $($referencePages.Count). Candidate: $($candidatePages.Count)."
@@ -717,45 +770,5 @@ Agent rating: <0-5>
 <The smallest renderer improvement likely to improve this case.>
 "@
 
-$runInfo = [ordered]@{
-    Schema = "ooxpdf-visual-run-info/1"
-    RunId = $runId
-    CaseId = $manifest.id
-    Kind = $manifest.kind
-    Input = $inputFull.Substring($repoRoot.Length).TrimStart("\", "/").Replace("\", "/")
-    InputSha256 = (Get-FileHash -LiteralPath $inputFull -Algorithm SHA256).Hash.ToLowerInvariant()
-    Dpi = $dpi
-    DocxMarkup = $docxMarkup
-    DocxMarkupGeometry = $docxMarkupGeometry
-    CliDll = $cliDll
-    CliSha256 = if (Test-Path -LiteralPath $cliDll) { (Get-FileHash -LiteralPath $cliDll -Algorithm SHA256).Hash.ToLowerInvariant() } else { $null }
-    LibraryDll = $null
-    VisualDiffDll = $visualDiffDll
-    VisualDiffSha256 = if (Test-Path -LiteralPath $visualDiffDll) { (Get-FileHash -LiteralPath $visualDiffDll -Algorithm SHA256).Hash.ToLowerInvariant() } else { $null }
-    RasterizerDll = $null
-    GitCommit = $null
-    GitDirty = $null
-    GeneratedAtUtc = [DateTime]::UtcNow.ToString("O", [Globalization.CultureInfo]::InvariantCulture)
-}
-$libraryDll = Join-Path (Split-Path -Parent $cliDll) "Lokad.OoxPdf.dll"
-if (Test-Path -LiteralPath $libraryDll) {
-    $runInfo.LibraryDll = $libraryDll
-    $runInfo.LibrarySha256 = (Get-FileHash -LiteralPath $libraryDll -Algorithm SHA256).Hash.ToLowerInvariant()
-}
-
-$rasterizerDll = Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfiumRasterizer/bin/Debug/$Framework/Lokad.OoxPdf.PdfiumRasterizer.dll"
-if (Test-Path -LiteralPath $rasterizerDll) {
-    $runInfo.RasterizerDll = $rasterizerDll
-    $runInfo.RasterizerSha256 = (Get-FileHash -LiteralPath $rasterizerDll -Algorithm SHA256).Hash.ToLowerInvariant()
-}
-
-try {
-    $runInfo.GitCommit = (& git -C $repoRoot rev-parse HEAD 2>$null | Select-Object -First 1).Trim()
-    $runInfo.GitDirty = [bool](& git -C $repoRoot status --short 2>$null | Select-Object -First 1)
-}
-catch {
-}
-
-$runInfo | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $runRoot "run-info.json") -Encoding UTF8
 Set-Content -LiteralPath (Join-Path $runRoot "assessment.md") -Value $assessment
 Write-Host "Visual case artifacts: $runRoot"

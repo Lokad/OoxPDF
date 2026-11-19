@@ -35,21 +35,84 @@ foreach ($value in @($null,'not-measured','NaN','Infinity')) {
     $id=if ($null -eq $value) {'null'} else {$value}
     $cases.Add(@{Id=('invalid-mae-'+$id);Before=$baseline;After=$after;Accept=$false})
 }
+$bound=$baseline.Clone()
+$bound.kind='docx'
+$bound.docxMarkup='all'
+$bound.docxMarkupGeometry='word-compatible'
+$bound.dpi=144
+$bound.caseSha256='A'*64
+$bound.inputSha256='B'*64
+$bound.referencePdfSha256='C'*64
+$bound.visualDiffSha256='D'*64
+$bound.rasterizerSha256='E'*64
+$bound.pdfiumPinSha256='F'*64
+$bound.requiredStructuralSimilarity=.995
+$bound.requiredForegroundColorHistogramCorrelation=.98
+$cases.Add(@{Id='bound-different-runtime';Before=$bound;After=$bound;Bound=$true;Accept=$true})
+$changes=@{
+    caseSha256=('1'*64); inputSha256=('2'*64); referencePdfSha256=('3'*64)
+    visualDiffSha256=('4'*64); rasterizerSha256=('5'*64); pdfiumPinSha256=('6'*64)
+    dpi=96; docxMarkup='final'; docxMarkupGeometry='preserve'
+    requiredStructuralSimilarity=.990; requiredForegroundColorHistogramCorrelation=.97; requiredForegroundRecall=.89
+}
+foreach ($field in $changes.Keys | Sort-Object) {
+    $after=$bound.Clone()
+    $after[$field]=$changes[$field]
+    $cases.Add(@{Id="different-$field";Before=$bound;After=$after;Bound=$true;Accept=$false;ErrorLike="*differs from current $field*"})
+}
+$unbound=$bound.Clone()
+$unbound.Remove('referencePdfSha256')
+$cases.Add(@{Id='missing-bound-reference';Before=$bound;After=$unbound;Bound=$true;Accept=$false;ErrorLike='*missing or invalid referencePdfSha256*'})
+$cases.Add(@{Id='mixed-schemas';Before=$bound;After=$bound;Bound=$true;LegacyBaseline=$true;Accept=$false;ErrorLike='*both must record the comparison inputs*'})
+foreach ($count in @(1.25, $true, 0, 2147483648)) {
+    $after=$bound.Clone()
+    $after.pageCount=$count
+    $cases.Add(@{Id="non-page-count-$count";Before=$bound;After=$after;Bound=$true;Accept=$false;ErrorLike='*incomplete measurement*'})
+}
+$added=$bound.Clone()
+$added.id='new-case'
+$cases.Add(@{Id='complete-addition';Before=$bound;After=@($bound,$added);Bound=$true;Accept=$true})
+$incomplete=$added.Clone()
+$incomplete.Remove('minStructuralSimilarity')
+$cases.Add(@{Id='incomplete-addition';Before=$bound;After=@($bound,$incomplete);Bound=$true;Accept=$false;ErrorLike='*incomplete measurement*'})
+$twoPages=$bound.Clone()
+$twoPages.pageCount=2
+$cases.Add(@{Id='different-page-count';Before=$bound;After=$twoPages;Bound=$true;Accept=$false;ErrorLike='*visual report regression*'})
+$metricRegressions=@{minStructuralSimilarity=.99;minForegroundColorHistogramCorrelation=.97;
+    maxMeanAbsoluteError=.03;maxChangedPixelRatioAtThreshold16=.01}
+foreach ($field in $metricRegressions.Keys | Sort-Object) {
+    $after=$bound.Clone()
+    $after[$field]=$metricRegressions[$field]
+    $cases.Add(@{Id="worse-$field";Before=$bound;After=$after;Bound=$true;Accept=$false;ErrorLike='*visual report regression*'})
+}
+
 $results=@()
 foreach ($case in $cases) {
     $folder=Join-Path $root $case.Id
     New-Item -ItemType Directory -Path $folder | Out-Null
     foreach ($side in @('Before','After')) {
-        @{family='synthetic';cases=@($case[$side])} | ConvertTo-Json -Depth 6 |
+        $report=@{family='synthetic';cases=@($case[$side])}
+        if ($case.Bound -and ($side -eq 'After' -or !$case.LegacyBaseline)) {
+            $report.schema='ooxpdf-visual-family-report/1'
+            $report.librarySha256=if ($side -eq 'Before') {'7'*64} else {'8'*64}
+        }
+        $report | ConvertTo-Json -Depth 6 |
             Set-Content -LiteralPath (Join-Path $folder ($side+'.json')) -Encoding utf8
     }
+    $log=Join-Path $folder 'comparison.log'
     $errorText=$null
     try {
-        & (Join-Path $PSScriptRoot 'CompareVisualReports.ps1') -Baseline (Join-Path $folder 'Before.json') -Current (Join-Path $folder 'After.json') *> (Join-Path $folder 'comparison.log')
+        & (Join-Path $PSScriptRoot 'CompareVisualReports.ps1') -Baseline (Join-Path $folder 'Before.json') -Current (Join-Path $folder 'After.json') *> $log
     }
     catch { $errorText=$_.Exception.Message }
     $accepted=$null -eq $errorText
     if ($accepted -ne $case.Accept) { throw ($case.Id+': unexpected comparison result; '+$errorText) }
+    if ($case.ErrorLike -and $errorText -notlike $case.ErrorLike) {
+        throw ($case.Id+': unexpected refusal; '+$errorText)
+    }
+    if ($accepted -and ((Get-Content -LiteralPath $log -Raw) -match 'Historical visual comparison') -ne !$case.Bound) {
+        throw ($case.Id+': historical comparison status differs')
+    }
     $results+=@{Id=$case.Id;Accepted=$accepted;Expected=$case.Accept;Error=$errorText}
 }
 @{Checks=$results;Builds=0;Conversions=0;OfficeExports=0;ThresholdsChanged=$false} | ConvertTo-Json -Depth 6 |

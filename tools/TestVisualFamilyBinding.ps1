@@ -22,6 +22,13 @@ param($Case, $RunId, [switch]$SkipBuild, $CliPath, [switch]$CacheOnlyReference, 
 @{Case=$Case;RunId=$RunId;SkipBuild=[bool]$SkipBuild;CliPath=$CliPath;CacheOnlyReference=[bool]$CacheOnlyReference} |
     ConvertTo-Json -Compress | Add-Content (Join-Path (Split-Path $PSScriptRoot) 'cases.jsonl')
 if (!$SkipBuild -or !(Test-Path -LiteralPath $CliPath)) { throw 'Family did not bind an existing CLI without per-case builds' }
+$id=(Get-Content -LiteralPath $Case -Raw | ConvertFrom-Json).id
+$run=Join-Path (Split-Path $PSScriptRoot) "artifacts/visual/$id/$RunId"
+New-Item -ItemType Directory -Path $run -Force | Out-Null
+@{RunId=$RunId;CaseId=$id;CaseSha256=(Get-FileHash -LiteralPath $Case).Hash;
+    CliSha256=(Get-FileHash -LiteralPath $CliPath).Hash;
+    LibrarySha256=(Get-FileHash -LiteralPath (Join-Path (Split-Path $CliPath) 'Lokad.OoxPdf.dll')).Hash} |
+    ConvertTo-Json | Set-Content -LiteralPath (Join-Path $run 'run-info.json')
 '@ | Set-Content (Join-Path $repo 'tools/CheckVisualCase.ps1')
 New-Item -ItemType Directory -Path (Join-Path $repo 'visual-cases/families') -Force | Out-Null
 '{"casePatterns":["probe-*"]}' | Set-Content (Join-Path $repo 'visual-cases/families/probe.json')
@@ -103,6 +110,9 @@ foreach($name in @('CheckVisualCase.ps1','DocxMarkupReference.ps1','InspectPdf.p
     'ComparePdfGraphicsOperations.ps1','ClassifyPdfChartGraphics.ps1','ClassifyPdfChartText.ps1')) {
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination (Join-Path $repo 'tools') -Force
 }
+$vendor=Join-Path $repo 'tools/vendor/pdfium/win-x64'
+New-Item -ItemType Directory -Path $vendor -Force | Out-Null
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'vendor/pdfium/win-x64/pdfium.sha256') -Destination $vendor
 @'
 param($InputPath,$OutputDirectory,$Dpi,$CaseId,[switch]$SkipBuild,$Framework,[switch]$CacheOnly,[string]$CacheVariant)
 [IO.File]::WriteAllText((Join-Path $OutputDirectory 'reference.pdf'),'%PDF-fake reference')
@@ -129,7 +139,8 @@ function dotnet {
         [IO.File]::WriteAllText($values[3],"%PDF-fake candidate baseline $candidateBaseline")
         [IO.File]::WriteAllText($values[5],'[]')
     } elseif($values[0] -like '*Lokad.OoxPdf.VisualDiff.dll') {
-        '[{"Page":1,"DimensionsMatch":true,"MeanAbsoluteError":0}]' | Set-Content (Join-Path $values[3] 'metrics.json')
+        '[{"Page":1,"DimensionsMatch":true,"MeanAbsoluteError":0,"ChangedPixelRatioAtThreshold16":0,"StructuralSimilarity":1,"ForegroundColorHistogramCorrelation":1}]' |
+            Set-Content (Join-Path $values[3] 'metrics.json')
     } elseif($values[0] -like '*Lokad.OoxPdf.PdfInspect.dll') {
         $output=$values[2]
         $baseline=if($values[1] -like '*output.pdf') { $candidateBaseline } else { 700 }
@@ -182,10 +193,39 @@ try {
     $before=@(Get-Content $buildLog).Count
     & $script -Family probe -CliPath $frozenCli -SkipBuild | Out-Null
     if(@(Get-Content $buildLog).Count -ne $before) {throw 'Real prebuilt family requested a build'}
+    $reportPath=Join-Path $repo 'artifacts/visual/reports/probe.json'
+    $bound=Get-Content -LiteralPath $reportPath -Raw | ConvertFrom-Json
+    if ($bound.schema -cne 'ooxpdf-visual-family-report/1' -or $bound.cases.Count -ne 2) {
+        throw 'The real family did not publish a versioned comparison identity'
+    }
+    foreach ($row in $bound.cases) {
+        $run=Join-Path $repo $row.runPath
+        $caseDir=Join-Path $repo "visual-cases/cases/$($row.id)"
+        $reference=Join-Path $run 'reference/reference.pdf'
+        $info=Get-Content -LiteralPath (Join-Path $run 'run-info.json') -Raw | ConvertFrom-Json
+        if ($row.inputSha256 -ne (Get-FileHash -LiteralPath (Join-Path $caseDir 'input.docx')).Hash -or
+            $row.caseSha256 -ne (Get-FileHash -LiteralPath (Join-Path $caseDir 'case.json')).Hash -or
+            $row.referencePdfSha256 -ne (Get-FileHash -LiteralPath $reference).Hash -or
+            $row.dpi -ne 144 -or $row.docxMarkup -cne 'all-markup' -or $row.docxMarkupGeometry -cne 'office' -or
+            $row.visualDiffSha256 -ne (Get-FileHash -LiteralPath $info.VisualDiffDll).Hash -or
+            $row.rasterizerSha256 -ne (Get-FileHash -LiteralPath $info.RasterizerDll).Hash -or
+            $row.pdfiumPinSha256 -ne (Get-FileHash -LiteralPath (Join-Path $vendor 'pdfium.sha256')).Hash) {
+            throw 'The family row did not identify the actual comparison inputs'
+        }
+        if ($null -ne $info.GitCommit -or $null -ne $info.GitDirty) {
+            throw 'The synthetic repository inherited an enclosing checkout identity'
+        }
+    }
+    & (Join-Path $PSScriptRoot 'CompareVisualReports.ps1') -Baseline $reportPath -Current $reportPath | Out-Null
     $failure=$null
     $candidateBaseline = 500
     try { & $realCase -Case $realManifest -CliPath $frozenCli -SkipBuild -RunId 'real-y-shift' | Out-Null } catch {$failure=$_.Exception.Message}
     if($failure -ne 'PDF text line-start gate failed.' -or @(Get-Content $buildLog).Count -ne $before) {throw 'The real case did not enforce its manifest Y bound without building'}
+    $failedRun=Join-Path $repo 'artifacts/visual/probe-a/real-y-shift'
+    $failedInfo=Get-Content -LiteralPath (Join-Path $failedRun 'run-info.json') -Raw | ConvertFrom-Json
+    if ($failedInfo.ReferencePdfSha256 -ne (Get-FileHash -LiteralPath (Join-Path $failedRun 'reference/reference.pdf')).Hash) {
+        throw 'The measured case lost its comparison identity on a gate failure'
+    }
     $candidateBaseline = 700
     $combined = Get-Content -Raw -LiteralPath $realManifest | ConvertFrom-Json -AsHashtable
     $combined.expected.maxTextOperationPositionDelta = 0
@@ -252,7 +292,8 @@ foreach($inspection in $inspections) {
     'Real once-only preparation','Real family reuse','Real missing-tool refusal','Occupied run refusal and evidence integrity',
     'Fresh shifted PDF fails the manifest Y bound','Combined gates inspect each PDF once',
     'Chart classification reuse and independent page scopes','Candidate-only font inspection',
-    'Incomplete inspection refusal','Inspector provenance','Canonical markup cache key');
+    'Incomplete inspection refusal','Inspector provenance','Canonical markup cache key',
+    'Bound visual report identity','Measured failure identity','Synthetic repository isolation');
     InspectionCapabilities=$inspectionKeys.Count;RealInspectionCalls=$inspections.Count;LibraryBuilds=0;LibraryExecutions=0;OfficeExports=0} |
     ConvertTo-Json | Set-Content (Join-Path $OutputDirectory 'evidence.json')
 Write-Output 'Visual-family and real case/inspector binding checks pass; no actual build, library execution or Office export.'

@@ -124,9 +124,19 @@ function New-ReportRow($case, [bool]$passed, [string]$errorMessage, [string]$exp
     $caseManifestPath = Join-Path $case.FullName "case.json"
     $caseManifest = Get-Content -Raw -LiteralPath $caseManifestPath | ConvertFrom-Json
     $latestRun = if (-not [string]::IsNullOrWhiteSpace($explicitRunRoot) -and (Test-Path -LiteralPath $explicitRunRoot)) { Get-Item -LiteralPath $explicitRunRoot } else { $null }
+    $runInfo = $null
     $metrics = @()
     $diagnostics = @()
     if ($latestRun -ne $null) {
+        $runInfoPath = Join-Path $latestRun.FullName "run-info.json"
+        if (Test-Path -LiteralPath $runInfoPath) {
+            $runInfo = Get-Content -Raw -LiteralPath $runInfoPath | ConvertFrom-Json
+            if ($runInfo.RunId -cne $latestRun.Name -or $runInfo.CaseId -cne $caseManifest.id -or
+                $runInfo.CaseSha256 -ne (Get-FileHash -LiteralPath $caseManifestPath).Hash -or
+                $runInfo.CliSha256 -ne $cliHash -or $runInfo.LibrarySha256 -ne $libraryHash) {
+                throw "Visual case identity changed during the family run. $($caseManifest.id)"
+            }
+        }
         $metricsPath = Join-Path $latestRun.FullName "comparison/metrics.json"
         if (Test-Path -LiteralPath $metricsPath) {
             $metrics = @(Get-Content -Raw -LiteralPath $metricsPath | ConvertFrom-Json)
@@ -139,6 +149,9 @@ function New-ReportRow($case, [bool]$passed, [string]$errorMessage, [string]$exp
                 $diagnostics = @(ConvertFrom-Json -InputObject $diagnosticsJson)
             }
         }
+    }
+    if ($passed -and $null -eq $runInfo) {
+        throw "Passing case '$($caseManifest.id)' did not record its visual run identity."
     }
 
     $maeValues = @($metrics | Where-Object { $_.MeanAbsoluteError -ne $null } | ForEach-Object { [double]$_.MeanAbsoluteError })
@@ -173,6 +186,14 @@ function New-ReportRow($case, [bool]$passed, [string]$errorMessage, [string]$exp
         id = $caseManifest.id
         family = $Family
         kind = $caseManifest.kind
+        caseSha256 = $runInfo.CaseSha256
+        inputSha256 = $runInfo.InputSha256
+        referencePdfSha256 = $runInfo.ReferencePdfSha256
+        visualDiffSha256 = $runInfo.VisualDiffSha256
+        rasterizerSha256 = $runInfo.RasterizerSha256
+        pdfiumPinSha256 = $runInfo.PdfiumPinSha256
+        dpi = $runInfo.Dpi
+        docxMarkupGeometry = $runInfo.DocxMarkupGeometry
         docxMarkup = if ($caseManifest.kind -eq "docx") {
             if ($caseManifest.PSObject.Properties.Name -contains "docxMarkup" -and -not [string]::IsNullOrWhiteSpace([string]$caseManifest.docxMarkup)) {
                 [string]$caseManifest.docxMarkup
@@ -348,6 +369,7 @@ if ((Get-FileHash -LiteralPath $CliPath).Hash -ne $cliHash -or
 New-Item -ItemType Directory -Force -Path $reportRoot | Out-Null
 $runId = "{0}-p{1}-{2}" -f (Get-Date -Format "yyyyMMdd-HHmmss-fff"), $PID, ([System.Guid]::NewGuid().ToString("N").Substring(0, 8))
 $report = [pscustomobject]@{
+    schema = "ooxpdf-visual-family-report/1"
     family = $Family
     cliPath = $CliPath
     cliSha256 = $cliHash
