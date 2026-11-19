@@ -35,32 +35,10 @@ internal sealed partial class PptxRenderer
         }
 
         var (style, titleLines, measuredHeight) = await MeasureChartTitleAsync(theme, sceneChart, fontResolver).ConfigureAwait(false);
-        // Automatic titles start at the chart header. A manual title keeps its
-        // first-line anchor when the measured block fits at that position.
-        double top = frame.Y + frame.Height - PptxChartMetricRules.ChartContentFrameInset -
-            PptxChartMetricRules.ChartTitleLinePadding;
-        double? singleLineBaseline = null;
-        if (titleManualLayoutApplied)
-        {
-            double anchor = y + height * PptxChartMetricRules.TitleBaselineYRatio;
-            if (sceneChart.Title.HasMultipleTextLines)
-                top = Math.Min(y + height, Math.Max(y + measuredHeight, anchor + titleLines[0].BaselineFromTop));
-            else
-                singleLineBaseline = anchor;
-        }
-        double titleX = x + width * PptxChartMetricRules.TitleXInsetRatio;
-        double titleWidth = width * PptxChartMetricRules.TitleWidthRatio;
-        double titleHeight = style.FontSize * PptxChartMetricRules.TitleHeightFactor;
         var runs = new List<TextRun>();
         List<ChartTextRunLink>? titleLinks = sceneChart.Relationships is null ? null : new List<ChartTextRunLink>();
-        foreach (MeasuredChartTitleLine line in titleLines)
-        {
-            fontResolver.CancellationToken.ThrowIfCancellationRequested();
-            string lineText = titleLines.Count == 1 ? title : string.Concat(line.Runs.Select(run => run.Text));
-            await AddChartRichTextRunsAsync(runs, line.Runs, lineText.Trim(), titleX,
-                singleLineBaseline ?? top - line.BaselineFromTop, titleWidth, titleHeight,
-                x, y, width, height, style, TextAlignment.Center, fontResolver, titleLinks).ConfigureAwait(false);
-        }
+        await AddMeasuredChartTitleRunsAsync(runs, title, titleLines, measuredHeight,
+            new ChartLayoutBox(x, y, width, height), titleManualLayoutApplied, style, fontResolver, titleLinks).ConfigureAwait(false);
         ChartShapeStyle titleShape = ToChartShapeStyle(sceneChart.Title.ShapeStyle);
         if (!titleShape.IsEmpty)
         {
@@ -76,6 +54,37 @@ internal sealed partial class PptxRenderer
             {
                 await AddChartTextRunHyperlinkAnnotationAsync(titleLink, sceneChart.Relationships, context, sceneChart.TargetPartName, linkAnnotations, reportedHyperlinkIds, titleFonts.Fonts).ConfigureAwait(false);
             }
+        }
+    }
+
+    private static async ValueTask AddMeasuredChartTitleRunsAsync(List<TextRun> runs, string title,
+        IReadOnlyList<MeasuredChartTitleLine> titleLines, double measuredHeight, ChartLayoutBox box,
+        bool manualLayout, ChartTextStyle style, PresentationFontResolver? fontResolver, List<ChartTextRunLink>? titleLinks)
+    {
+        // A manual title keeps its first-line anchor if the line block fits.
+        // An automatic chart title starts at the chart header.
+        double top = box.Y + box.Height - PptxChartMetricRules.ChartContentFrameInset -
+            PptxChartMetricRules.ChartTitleLinePadding;
+        double? singleLineBaseline = null;
+        if (manualLayout)
+        {
+            double anchor = box.Y + box.Height * PptxChartMetricRules.TitleBaselineYRatio;
+            var first = titleLines[0];
+            if (titleLines.Count > 1 || first.Runs.Count > 0 && first.Runs[0].LineIndex > 0)
+                top = Math.Min(box.Y + box.Height, Math.Max(box.Y + measuredHeight, anchor + first.BaselineFromTop));
+            else
+                singleLineBaseline = anchor;
+        }
+        double titleX = box.X + box.Width * PptxChartMetricRules.TitleXInsetRatio;
+        double titleWidth = box.Width * PptxChartMetricRules.TitleWidthRatio;
+        double titleHeight = style.FontSize * PptxChartMetricRules.TitleHeightFactor;
+        foreach (MeasuredChartTitleLine line in titleLines)
+        {
+            fontResolver?.CancellationToken.ThrowIfCancellationRequested();
+            string lineText = titleLines.Count == 1 ? title : string.Concat(line.Runs.Select(run => run.Text));
+            await AddChartRichTextRunsAsync(runs, line.Runs, lineText.Trim(), titleX,
+                singleLineBaseline ?? top - line.BaselineFromTop, titleWidth, titleHeight,
+                box.X, box.Y, box.Width, box.Height, style, TextAlignment.Center, fontResolver, titleLinks).ConfigureAwait(false);
         }
     }
 
@@ -487,26 +496,11 @@ internal sealed partial class PptxRenderer
         style = style.Merge(chartStyleRoleTextStyle);
         style = style.Merge(titleTextStyle);
         RenderChartShapeStyle(graphics, titleBox.X, titleBox.Y, titleBox.Width, titleBox.Height, shapeStyle);
-        double titleHeight = style.FontSize * PptxChartMetricRules.TitleHeightFactor;
-        double baselineY = titleBox.Y + titleBox.Height * PptxChartMetricRules.TitleBaselineYRatio;
         var runs = new List<TextRun>();
         List<ChartTextRunLink>? axisLinks = chart?.Relationships is null ? null : new List<ChartTextRunLink>();
-        await AddChartRichTextRunsAsync(
-            runs,
-            textRuns,
-            text.Trim(),
-            titleBox.X + titleBox.Width * PptxChartMetricRules.TitleXInsetRatio,
-            baselineY,
-            titleBox.Width * PptxChartMetricRules.TitleWidthRatio,
-            titleHeight,
-            titleBox.X,
-            titleBox.Y,
-            titleBox.Width,
-            titleBox.Height,
-            style,
-            TextAlignment.Center,
-            fontResolver,
-            axisLinks).ConfigureAwait(false);
+        var (titleLines, measuredHeight) = await MeasureChartTitleLinesAsync(text, textRuns, style, fontResolver).ConfigureAwait(false);
+        await AddMeasuredChartTitleRunsAsync(runs, text, titleLines, measuredHeight, titleBox,
+            manualLayout: true, style, fontResolver, axisLinks).ConfigureAwait(false);
         RenderedFonts axisFonts = (await RenderChartTextRunsAsync(runs, graphics, chartFonts, "CAT", fontResolver, diagnosticSink).ConfigureAwait(false));
         await AddChartTextRunHyperlinkAnnotationsAsync(axisLinks, chart, context, axisFonts, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false);
     }
@@ -614,19 +608,26 @@ internal sealed partial class PptxRenderer
         PptxTheme theme, PptxSceneChart sceneChart, PresentationFontResolver? resolver)
     {
         ChartTextStyle style = ReadChartTitleTextStyle(theme, sceneChart);
+        var (lines, height) = await MeasureChartTitleLinesAsync(sceneChart.Title.Text ?? string.Empty,
+            ReadChartTitleTextRuns(sceneChart), style, resolver).ConfigureAwait(false);
+        return (style, lines, height);
+    }
+
+    private static async ValueTask<(IReadOnlyList<MeasuredChartTitleLine> Lines, double Height)> MeasureChartTitleLinesAsync(
+        string text, IReadOnlyList<ChartTextRunOverride> runs, ChartTextStyle style, PresentationFontResolver? resolver)
+    {
         var measure = new ChartTextMeasurer(resolver);
-        var runs = ReadChartTitleTextRuns(sceneChart);
         if (runs.Count == 0)
         {
-            var line = await measure.MeasureTextLineBoxAsync(sceneChart.Title.Text ?? string.Empty, style).ConfigureAwait(false);
-            return (style, [new([], line.Ascent)], line.Height);
+            var line = await measure.MeasureTextLineBoxAsync(text, style).ConfigureAwait(false);
+            return ([new([], line.Ascent)], line.Height);
         }
 
         var lines = new List<MeasuredChartTitleLine>();
         double height = 0d;
         double? emptyLineHeight = null;
         int nextLine = 0;
-        bool hasLineBreaks = sceneChart.Title.HasMultipleTextLines;
+        bool hasLineBreaks = runs[^1].LineIndex > 0;
         foreach (var line in runs.GroupBy(run => run.LineIndex))
         {
             if (line.Key > nextLine)
@@ -647,7 +648,7 @@ internal sealed partial class PptxRenderer
             height += hasLineBreaks ? ascent + descent : lineHeight;
             nextLine = line.Key + 1;
         }
-        return (style, lines, height);
+        return (lines, height);
     }
 
     private static ChartTextStyle ReadChartTitleTextStyle(PptxTheme theme, PptxSceneChart sceneChart)

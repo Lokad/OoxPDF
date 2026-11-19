@@ -7165,6 +7165,7 @@
       "DocxMinimumBodyFlowRichAndCombiningSourcesKeepFallback"
   ],
   "pptx-chart-titles": [
+      "=PptxManualAxisTitleKeepsAuthoredLinesAndLinkedInk",
       "=PptxRotatedAxisTitleRunsSharePaintAndNavigationFrame",
       "=PortableRenderingRichChartTitleKeepsAuthoredLinesAndTheirLinks",
       "PptxInferredTitleDefaultsMatchIndependentOfficeSizes",

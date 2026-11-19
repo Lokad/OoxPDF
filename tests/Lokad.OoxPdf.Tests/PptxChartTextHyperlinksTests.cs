@@ -160,13 +160,44 @@ internal static partial class PptxChartTextHyperlinksTests
         }
     }
 
+    public static void PptxManualAxisTitleKeepsAuthoredLinesAndLinkedInk()
+    {
+        const string north = "<a:r><a:rPr sz=\"1800\" b=\"0\"/><a:t>North</a:t></a:r>";
+        const string sales = """
+            <a:fld id="{77777777-7777-7777-7777-777777777777}" type="datetime">
+              <a:rPr sz="1800" b="0"><a:hlinkClick r:id="rIdLink"/></a:rPr><a:t>Sales</a:t>
+            </a:fld>
+            """;
+        const string layout = """
+            <c:layout><c:manualLayout><c:x val="0.36"/><c:y val="0.12"/>
+              <c:wMode val="factor"/><c:hMode val="factor"/><c:w val="0.25"/><c:h val="0.3"/>
+            </c:manualLayout></c:layout>
+            """;
+        var resolver = new PortableRenderingTests.PinnedResolver();
+        PdfPage inlineBreak = Render("<a:br/>");
+        var first = PortableRenderingTests.ReadPaintedSourceLabel(inlineBreak, "North", fontPrefix: "CAT");
+        var second = PortableRenderingTests.ReadPaintedSourceLabel(inlineBreak, "Sales", fontPrefix: "CAT");
+        TestAssert.True(first[0].Origin.Y > second[0].Origin.Y + 10d, "Each authored line keeps its own baseline in the manual box.");
+        PdfLinkAnnotation link = inlineBreak.Annotations.Single();
+        TestAssert.Equal("https://example.invalid/chart-axis", link.Uri);
+        TestAssert.True(link.Y <= second[0].Origin.Y && link.Y + link.Height < first[0].Origin.Y,
+            "The cached field link follows the second line.");
+
+        PdfPage paragraphBreak = Render("</a:p><a:p>");
+        TestAssert.Equal(inlineBreak.Content, paragraphBreak.Content);
+        TestAssert.Equal(link, paragraphBreak.Annotations.Single());
+
+        PdfPage Render(string boundary) =>
+            RenderChartTitlePage("", AxisTitleRelationships, AxisTitleChart("l", north + boundary + sales, layout), resolver).Pages.Single();
+    }
+
     private const string AxisTitleRelationships = """
         <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
           <Relationship Id="rIdLink" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.invalid/chart-axis" TargetMode="External"/>
         </Relationships>
         """;
 
-    private static string AxisTitleChart(string side, string runs) => $$"""
+    private static string AxisTitleChart(string side, string runs, string layout = "") => $$"""
         <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
           <c:chart>
             <c:plotArea>
@@ -184,7 +215,7 @@ internal static partial class PptxChartTextHyperlinksTests
               <c:catAx><c:axId val="10"/><c:axPos val="b"/><c:crossAx val="20"/><c:tickLblPos val="none"/></c:catAx>
               <c:valAx><c:axId val="20"/><c:axPos val="{{side}}"/><c:scaling><c:min val="0"/><c:max val="5"/></c:scaling>
                 <c:crossAx val="10"/><c:majorUnit val="5"/><c:tickLblPos val="none"/>
-                <c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p>{{runs}}</a:p></c:rich></c:tx><c:overlay val="0"/></c:title>
+                <c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p>{{runs}}</a:p></c:rich></c:tx>{{layout}}<c:overlay val="0"/></c:title>
               </c:valAx>
             </c:plotArea>
           </c:chart>
