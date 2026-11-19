@@ -20226,8 +20226,7 @@
   "docx-minimum-background": [
     "DocxMinimumBodyLineLeading",
     "DocxMinimumBodyFlowCancellationStopsMinimumPlacement",
-    "DocxParagraphShadingAfterSpacingFollowsAdjacentShadedContent",
-    "DocxParagraphShadingBeforeSpacingFollowsPlacedContainerBoundaries",
+    "DocxParagraphShadingSpacingFollowsPlacedContainerBoundaries",
     "DocxParagraphShadingChangesPaintWithoutChangingTextGeometry",
     "DocxParagraphShadingUsesSourceIndentsAndFragmentLineBoxes",
     "StreamLengthsMatchPayloads",

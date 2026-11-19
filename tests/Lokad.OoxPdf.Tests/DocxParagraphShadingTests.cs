@@ -108,13 +108,21 @@ internal static partial class DocxParagraphShadingTests
         }
     }
 
-    public static void DocxParagraphShadingAfterSpacingFollowsAdjacentShadedContent()
+    public static void DocxParagraphShadingSpacingFollowsPlacedContainerBoundaries()
     {
-        using var oracle = JsonDocument.Parse(File.ReadAllText(Path.Combine(Cases, "spacing-office.json")));
-        foreach (var control in oracle.RootElement.GetProperty("Controls").EnumerateArray())
+        using var afterOracle = JsonDocument.Parse(File.ReadAllText(Path.Combine(Cases, "spacing-office.json")));
+        using var beforeOracle = JsonDocument.Parse(File.ReadAllText(Path.Combine(Cases, "before-office.json")));
+        var controls = afterOracle.RootElement.GetProperty("Controls").EnumerateArray().Select(control => (Control: control, Before: false))
+            .Concat(beforeOracle.RootElement.GetProperty("Controls").EnumerateArray().Select(control => (Control: control, Before: true)));
+        foreach (var source in controls.GroupBy(entry => entry.Control.GetProperty("Input").GetString()!, StringComparer.Ordinal))
         {
-            string input = Path.Combine(Cases, control.GetProperty("Input").GetString()!);
-            TestAssert.Equal(control.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(input))));
+            string input = Path.Combine(Cases, source.Key);
+            string inputHash = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(input)));
+            foreach (var (control, _) in source)
+            {
+                TestAssert.Equal(control.GetProperty("InputSha256").GetString(), inputHash);
+            }
+
             var document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final);
             var layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
                 .Create(document, new DocxTests.FamilyWidthTextMeasurer(), default);
@@ -122,48 +130,40 @@ internal static partial class DocxParagraphShadingTests
                 .Concat(page.StaticTextLines)
                 .Concat(page.Items.OfType<DocxTableRowLayout>().SelectMany(row => row.Cells).SelectMany(cell => cell.TextLines)))
                 .ToArray();
+            foreach (var (control, before) in source)
             foreach (var sample in control.GetProperty("Samples").EnumerateArray())
             {
-                string label = sample.GetProperty("Label").GetString()!;
-                var line = lines.Single(line => line.Text.Trim() == label);
-                TestAssert.True(line.ParagraphShadingFrame is not null && line.LineHeight is not null,
-                    "The placed line retains its paragraph paint frame: " + label);
-                double paintedAfter = line.ParagraphShadingFrame!.Value.Height - line.LineHeight!.Value;
-                TestAssert.True(Math.Abs(paintedAfter - sample.GetProperty("PaintedAfterSpacing").GetDouble()) < .001d,
-                    "Word paints after-spacing only towards an adjacent shaded paragraph in the same container: " + label);
+                if (before)
+                    CheckShadedBeforeSpacing(sample, lines);
+                else
+                    CheckShadedAfterSpacing(sample, lines);
             }
         }
     }
 
-    public static void DocxParagraphShadingBeforeSpacingFollowsPlacedContainerBoundaries()
+    private static void CheckShadedAfterSpacing(JsonElement sample, IReadOnlyList<DocxTextLineLayout> lines)
     {
-        using var oracle = JsonDocument.Parse(File.ReadAllText(Path.Combine(Cases, "before-office.json")));
-        foreach (var control in oracle.RootElement.GetProperty("Controls").EnumerateArray())
+        string label = sample.GetProperty("Label").GetString()!;
+        var line = lines.Single(line => line.Text.Trim() == label);
+        TestAssert.True(line.ParagraphShadingFrame is not null && line.LineHeight is not null,
+            "The placed line retains its paragraph paint frame: " + label);
+        double paintedAfter = line.ParagraphShadingFrame!.Value.Height - line.LineHeight!.Value;
+        TestAssert.True(Math.Abs(paintedAfter - sample.GetProperty("PaintedAfterSpacing").GetDouble()) < .001d,
+            "Word paints after-spacing only towards an adjacent shaded paragraph in the same container: " + label);
+    }
+
+    private static void CheckShadedBeforeSpacing(JsonElement sample, IReadOnlyList<DocxTextLineLayout> lines)
+    {
+        string label = sample.GetProperty("Label").GetString()!;
+        var first = lines.Single(line => line.SourceLineIndex == 0 && line.Text.TrimStart().StartsWith(label, StringComparison.Ordinal));
+        foreach (var line in lines.Where(line => ReferenceEquals(line.SourceParagraph, first.SourceParagraph)))
         {
-            string input = Path.Combine(Cases, control.GetProperty("Input").GetString()!);
-            TestAssert.Equal(control.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(input))));
-            var document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final);
-            var layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-                .Create(document, new DocxTests.FamilyWidthTextMeasurer(), default);
-            var lines = layout.Pages.SelectMany(page => page.Items.OfType<DocxTextLineLayout>()
-                .Concat(page.StaticTextLines)
-                .Concat(page.Items.OfType<DocxTableRowLayout>().SelectMany(row => row.Cells).SelectMany(cell => cell.TextLines)))
-                .ToArray();
-            foreach (var sample in control.GetProperty("Samples").EnumerateArray())
-            {
-                string label = sample.GetProperty("Label").GetString()!;
-                var first = lines.Single(line => line.SourceLineIndex == 0 && line.Text.TrimStart().StartsWith(label, StringComparison.Ordinal));
-                var paragraphLines = lines.Where(line => ReferenceEquals(line.SourceParagraph, first.SourceParagraph)).ToArray();
-                foreach (var line in paragraphLines)
-                {
-                    double expected = ReferenceEquals(line, first) ? sample.GetProperty("PaintedBeforeSpacing").GetDouble() : 0d;
-                    TestAssert.True(line.ParagraphShadingFrame is not null && line.LineHeight is not null,
-                        "Each supported source line retains its paragraph background: " + label);
-                    double extra = line.ParagraphShadingFrame!.Value.Height - line.LineHeight!.Value;
-                    TestAssert.True(Math.Abs(extra - expected) < .001d,
-                        "Only the first placed line joins excess spacing to a shaded predecessor in the same container: " + label);
-                }
-            }
+            double expected = ReferenceEquals(line, first) ? sample.GetProperty("PaintedBeforeSpacing").GetDouble() : 0d;
+            TestAssert.True(line.ParagraphShadingFrame is not null && line.LineHeight is not null,
+                "Each supported source line retains its paragraph background: " + label);
+            double extra = line.ParagraphShadingFrame!.Value.Height - line.LineHeight!.Value;
+            TestAssert.True(Math.Abs(extra - expected) < .001d,
+                "Only the first placed line joins excess spacing to a shaded predecessor in the same container: " + label);
         }
     }
 

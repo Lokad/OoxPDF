@@ -307,49 +307,10 @@ internal sealed partial record DocxStructureSnapshot(
         foreach (string variantType in variantTypes)
         {
             IReadOnlyList<DocxBodyElement> bodyElements = DocxBlockTraversal.GetStaticStoryBodyElements(variantType, bodyElementsByType, paragraphsByType);
-            DocxParagraph[] paragraphs = DocxBlockTraversal.EnumerateBodyParagraphs(bodyElements).ToArray();
-            int directParagraphCount = bodyElements.OfType<DocxParagraphElement>().Count();
-            int tableCount = DocxBlockTraversal.EnumerateBodyTables(bodyElements).Count();
-            IReadOnlyList<DocxFloatingDrawing> drawings = drawingsByType.TryGetValue(variantType, out IReadOnlyList<DocxFloatingDrawing>? drawingList)
-                ? drawingList
-                : [];
-            stories.Add(new DocxStructureStorySnapshot(
-                kind.ToKindString(),
-                scope,
-                sectionBreakBlockIndex,
-                variantType,
-                bodyElements.Count,
-                directParagraphCount,
-                tableCount,
-                paragraphs.Sum(TextLength),
-                paragraphs.Sum(CountRevisions),
-                paragraphs.Sum(paragraph => CountRevisions(paragraph, DocxRevisionKind.Insertion)),
-                paragraphs.Sum(paragraph => CountRevisions(paragraph, DocxRevisionKind.Deletion)),
-                paragraphs.Sum(paragraph => CountRevisions(paragraph, DocxRevisionKind.MoveFrom)),
-                paragraphs.Sum(paragraph => CountRevisions(paragraph, DocxRevisionKind.MoveTo)),
-                paragraphs.Sum(CountOtherRevisions),
-                paragraphs.Sum(paragraph => paragraph.Images.Count),
-                paragraphs.Sum(ParagraphInlineReferenceCount),
-                paragraphs.Sum(paragraph => paragraph.InlineReferences.Count(reference => reference.Kind == DocxRelatedStoryKind.Comment)),
-                paragraphs.Sum(paragraph => ParagraphResolvedInlineReferenceCount(paragraph, relatedStories)),
-                paragraphs.Sum(ParagraphFieldReferenceCount),
-                paragraphs.Sum(ParagraphComplexFieldReferenceCount),
-                paragraphs.Sum(ParagraphCachedResultFieldReferenceCount),
-                paragraphs.Sum(ParagraphRenderedCachedResultFieldReferenceCount),
-                paragraphs.Sum(ParagraphPlaceholderFieldReferenceCount),
-                paragraphs.Sum(ParagraphNestedFieldReferenceCount),
-                paragraphs.Sum(ParagraphBookmarkAnchorCount),
-                paragraphs.Sum(ParagraphHyperlinkCount),
-                paragraphs.Sum(ParagraphExternalHyperlinkCount),
-                paragraphs.Sum(ParagraphInternalHyperlinkCount),
-                drawings.Count,
-                false,
-                false,
-                false,
-                null,
-                null,
-                null,
-                null));
+            int drawingCount = drawingsByType.TryGetValue(variantType, out var drawings) ? drawings.Count : 0;
+            stories.Add(CreateParagraphStorySnapshot(kind.ToKindString(), scope, sectionBreakBlockIndex, variantType,
+                bodyElements, DocxBlockTraversal.EnumerateBodyParagraphs(bodyElements),
+                DocxBlockTraversal.EnumerateBodyTables(bodyElements).Count(), drawingCount, relatedStories));
         }
     }
 
@@ -357,47 +318,63 @@ internal sealed partial record DocxStructureSnapshot(
     {
         foreach (DocxRelatedStory story in relatedStories.Ordered)
         {
-            DocxParagraph[] paragraphs = DocxBlockTraversal.EnumerateBodyParagraphs(story).ToArray();
-            DocxTable[] tables = DocxBlockTraversal.EnumerateBodyTables(story).ToArray();
-            int directParagraphCount = story.BodyElements.OfType<DocxParagraphElement>().Count();
-            stories.Add(new DocxStructureStorySnapshot(
-                story.Kind.ToValueString(),
-                story.PartName,
-                null,
-                story.Id,
-                story.BodyElements.Count,
-                directParagraphCount,
-                tables.Length,
-                paragraphs.Sum(TextLength),
-                paragraphs.Sum(CountRevisions),
-                paragraphs.Sum(paragraph => CountRevisions(paragraph, DocxRevisionKind.Insertion)),
-                paragraphs.Sum(paragraph => CountRevisions(paragraph, DocxRevisionKind.Deletion)),
-                paragraphs.Sum(paragraph => CountRevisions(paragraph, DocxRevisionKind.MoveFrom)),
-                paragraphs.Sum(paragraph => CountRevisions(paragraph, DocxRevisionKind.MoveTo)),
-                paragraphs.Sum(CountOtherRevisions),
-                paragraphs.Sum(paragraph => paragraph.Images.Count),
-                paragraphs.Sum(ParagraphInlineReferenceCount),
-                paragraphs.Sum(paragraph => paragraph.InlineReferences.Count(reference => reference.Kind == DocxRelatedStoryKind.Comment)),
-                paragraphs.Sum(paragraph => ParagraphResolvedInlineReferenceCount(paragraph, relatedStories)),
-                paragraphs.Sum(ParagraphFieldReferenceCount),
-                paragraphs.Sum(ParagraphComplexFieldReferenceCount),
-                paragraphs.Sum(ParagraphCachedResultFieldReferenceCount),
-                paragraphs.Sum(ParagraphRenderedCachedResultFieldReferenceCount),
-                paragraphs.Sum(ParagraphPlaceholderFieldReferenceCount),
-                paragraphs.Sum(ParagraphNestedFieldReferenceCount),
-                paragraphs.Sum(ParagraphBookmarkAnchorCount),
-                paragraphs.Sum(ParagraphHyperlinkCount),
-                paragraphs.Sum(ParagraphExternalHyperlinkCount),
-                paragraphs.Sum(ParagraphInternalHyperlinkCount),
-                story.FloatingDrawings.Count,
-                HasCommentAuthor: !string.IsNullOrWhiteSpace(story.CommentMetadata?.Author),
-                HasCommentInitials: !string.IsNullOrWhiteSpace(story.CommentMetadata?.Initials),
-                HasCommentDate: !string.IsNullOrWhiteSpace(story.CommentMetadata?.Date),
-                CommentParagraphId: story.CommentMetadata?.ParagraphId,
-                CommentParentParagraphId: story.CommentMetadata?.ParentParagraphId,
-                CommentParentId: story.CommentMetadata?.ParentCommentId,
-                CommentResolved: story.CommentMetadata?.IsResolved));
+            stories.Add(CreateParagraphStorySnapshot(story.Kind.ToValueString(), story.PartName, null, story.Id,
+                story.BodyElements, DocxBlockTraversal.EnumerateBodyParagraphs(story),
+                DocxBlockTraversal.EnumerateBodyTables(story).Count(), story.FloatingDrawings.Count,
+                relatedStories, story.CommentMetadata));
         }
+    }
+
+    private static DocxStructureStorySnapshot CreateParagraphStorySnapshot(
+        string kind,
+        string scope,
+        int? sectionBreakBlockIndex,
+        string? variantType,
+        IReadOnlyList<DocxBodyElement> bodyElements,
+        IEnumerable<DocxParagraph> sourceParagraphs,
+        int tableCount,
+        int drawingCount,
+        RelatedStoryIndex relatedStories,
+        DocxCommentMetadata? comment = null)
+    {
+        DocxParagraph[] paragraphs = sourceParagraphs.ToArray();
+        return new DocxStructureStorySnapshot(
+            kind,
+            scope,
+            sectionBreakBlockIndex,
+            variantType,
+            bodyElements.Count,
+            bodyElements.OfType<DocxParagraphElement>().Count(),
+            tableCount,
+            paragraphs.Sum(TextLength),
+            paragraphs.Sum(CountRevisions),
+            paragraphs.Sum(paragraph => CountRevisions(paragraph, DocxRevisionKind.Insertion)),
+            paragraphs.Sum(paragraph => CountRevisions(paragraph, DocxRevisionKind.Deletion)),
+            paragraphs.Sum(paragraph => CountRevisions(paragraph, DocxRevisionKind.MoveFrom)),
+            paragraphs.Sum(paragraph => CountRevisions(paragraph, DocxRevisionKind.MoveTo)),
+            paragraphs.Sum(CountOtherRevisions),
+            paragraphs.Sum(paragraph => paragraph.Images.Count),
+            paragraphs.Sum(ParagraphInlineReferenceCount),
+            paragraphs.Sum(paragraph => paragraph.InlineReferences.Count(reference => reference.Kind == DocxRelatedStoryKind.Comment)),
+            paragraphs.Sum(paragraph => ParagraphResolvedInlineReferenceCount(paragraph, relatedStories)),
+            paragraphs.Sum(ParagraphFieldReferenceCount),
+            paragraphs.Sum(ParagraphComplexFieldReferenceCount),
+            paragraphs.Sum(ParagraphCachedResultFieldReferenceCount),
+            paragraphs.Sum(ParagraphRenderedCachedResultFieldReferenceCount),
+            paragraphs.Sum(ParagraphPlaceholderFieldReferenceCount),
+            paragraphs.Sum(ParagraphNestedFieldReferenceCount),
+            paragraphs.Sum(ParagraphBookmarkAnchorCount),
+            paragraphs.Sum(ParagraphHyperlinkCount),
+            paragraphs.Sum(ParagraphExternalHyperlinkCount),
+            paragraphs.Sum(ParagraphInternalHyperlinkCount),
+            drawingCount,
+            HasCommentAuthor: !string.IsNullOrWhiteSpace(comment?.Author),
+            HasCommentInitials: !string.IsNullOrWhiteSpace(comment?.Initials),
+            HasCommentDate: !string.IsNullOrWhiteSpace(comment?.Date),
+            CommentParagraphId: comment?.ParagraphId,
+            CommentParentParagraphId: comment?.ParentParagraphId,
+            CommentParentId: comment?.ParentCommentId,
+            CommentResolved: comment?.IsResolved);
     }
 
     private static (IReadOnlyList<DocxStructureInlineReferenceSnapshot> InlineReferences,
