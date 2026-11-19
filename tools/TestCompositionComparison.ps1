@@ -313,7 +313,8 @@ $outOfRangeMetrics = [ordered]@{
     'similarity-above-one' = @('StructuralSimilarity', 1.01)
 }
 foreach ($fault in (@('empty-metrics','missing-metric','null-error','nonfinite-metric','boolean-metric',
-    'missing-page-index','duplicate-page','truncated-pages','wrong-file','nonboolean-dimensions','neither-file') + @($outOfRangeMetrics.Keys))) {
+    'missing-page-index','duplicate-page','truncated-pages','wrong-file','nonboolean-dimensions','neither-file',
+    'recall-contradicts-foreground') + @($outOfRangeMetrics.Keys))) {
     $case = New-Case $fault 'legacy'
     $cache = New-ReuseCache $case
     $path = Join-Path $cache 'office-comparisons.json'
@@ -336,6 +337,7 @@ foreach ($fault in (@('empty-metrics','missing-metric','null-error','nonfinite-m
         'wrong-file' { $metric.ReferenceFile='page-002.png' }
         'nonboolean-dimensions' { $metric.DimensionsMatch='true' }
         'neither-file' { $metric.ReferenceFile=$null;$metric.CandidateFile=$null }
+        'recall-contradicts-foreground' { $metric.ReferenceForegroundPixels=1; $metric.ForegroundRecall=$null }
         default { $field, $value = $outOfRangeMetrics[$fault]; $metric[$field] = $value }
     }
     $prior.Rows[1].Failures=@()
@@ -348,6 +350,8 @@ foreach ($fault in (@('empty-metrics','missing-metric','null-error','nonfinite-m
     catch {
         $expectedError = if ($outOfRangeMetrics.Contains($fault)) {
             'Comparison page metric outside its range: second-final-preserve / ' + $outOfRangeMetrics[$fault][0]
+        } elseif ($fault -eq 'recall-contradicts-foreground') {
+            'Comparison page recall disagrees with reference foreground pixels: second-final-preserve'
         } else { 'Comparison page metrics incomplete: second-final-preserve*' }
         if ($_.Exception.Message -notlike $expectedError) { throw }
         $rejected=$true
@@ -357,7 +361,7 @@ foreach ($fault in (@('empty-metrics','missing-metric','null-error','nonfinite-m
     }
     $passed+=$fault
 }
-foreach ($control in @('cleared-summary','obsolete-failure','blank-reference','dimension-mismatch',
+foreach ($control in @('cleared-summary','obsolete-failure','blank-reference','unverified-recall','zero-recall','dimension-mismatch',
     'near-dimensions-with-recall-failure','reference-extra-page','candidate-extra-page','threshold-boundary',
     'metric-domain-minima','metric-domain-maxima')) {
     $case=New-Case $control 'legacy'
@@ -371,7 +375,9 @@ foreach ($control in @('cleared-summary','obsolete-failure','blank-reference','d
     switch ($control) {
         'cleared-summary' { $expectedFailures=@('ForegroundRecall') }
         'obsolete-failure' { $prior.Rows[1].Failures=@('MeanAbsoluteError');$metric.ForegroundRecall=1 }
-        'blank-reference' { $metric.ForegroundRecall=$null }
+        'blank-reference' { $metric.ForegroundRecall=$null; $metric.ReferenceForegroundPixels=0 }
+        'unverified-recall' { $metric.ForegroundRecall=$null; $expectedFailures=@('ForegroundRecallUnverified') }
+        'zero-recall' { $metric.ForegroundRecall=0; $metric.ReferenceForegroundPixels=10; $expectedFailures=@('ForegroundRecall') }
         'dimension-mismatch' {
             $metric.DimensionsMatch=$false
             foreach ($field in @('MeanAbsoluteError','ChangedPixelRatioAtThreshold16','ForegroundRecall','StructuralSimilarity')) { $metric[$field]=$null }
@@ -485,7 +491,7 @@ $count=if ([IO.File]::ReadAllText($InputPdf).Contains('two pages')) {2} else {1}
 for ($i=1;$i -le $count;$i++) { [IO.File]::WriteAllText((Join-Path $OutputDirectory ('page-{0:000}.png' -f $i)),('owned page '+$i)) }
 $global:LASTEXITCODE=0
 '@ | Set-Content -LiteralPath (Join-Path $tools 'RasterizePdf.ps1')
-$comparisonProbeState=@{DiffCalls=0;AfterDiff=$null}
+$comparisonProbeState=@{DiffCalls=0;AfterDiff=$null;BlankReference=$false}
 function dotnet {
     $comparisonProbeState.DiffCalls++
     $reference=$args[1];$candidate=$args[2];$diff=$args[3]
@@ -495,7 +501,9 @@ function dotnet {
         @{Page=[int]([IO.Path]::GetFileNameWithoutExtension($name).Substring(5));
           ReferenceFile=$(if (Test-Path (Join-Path $reference $name)) {$name} else {$null});
           CandidateFile=$(if (Test-Path (Join-Path $candidate $name)) {$name} else {$null});
-          DimensionsMatch=$true;MeanAbsoluteError=0;ChangedPixelRatioAtThreshold16=0;ForegroundRecall=1;StructuralSimilarity=1}
+          DimensionsMatch=$true;MeanAbsoluteError=0;ChangedPixelRatioAtThreshold16=0;StructuralSimilarity=1
+          ForegroundRecall=$(if (!$comparisonProbeState.BlankReference) {1})
+          ReferenceForegroundPixels=$(if ($comparisonProbeState.BlankReference) {0} else {10})}
     })
     ConvertTo-Json -InputObject $metrics -Depth 5 | Set-Content (Join-Path $diff 'metrics.json')
     if ($comparisonProbeState.AfterDiff) { & $comparisonProbeState.AfterDiff }
@@ -568,7 +576,16 @@ try {
         $passed+=('tool-change-during-'+$control)
     }
     $baseline=New-Case 'complete-raster-baseline' 'legacy'
-    & $script -CandidateDirectory $baseline.CandidateDirectory -ReferenceDirectory $baseline.ReferenceDirectory -VisualDiffPath $visualDiff -ValidationToolsDirectory $tools | Out-Null
+    $comparisonProbeState.BlankReference=$true
+    try {
+        & $script -CandidateDirectory $baseline.CandidateDirectory -ReferenceDirectory $baseline.ReferenceDirectory -VisualDiffPath $visualDiff -ValidationToolsDirectory $tools | Out-Null
+    }
+    finally { $comparisonProbeState.BlankReference=$false }
+    $report=Get-Content (Join-Path $baseline.CandidateDirectory 'office-comparisons.json') -Raw | ConvertFrom-Json
+    if ($report.Rows.Count -ne 2 -or @($report.Rows | Where-Object {
+        $_.Failures.Count -or $_.ReusedComparison -or $_.Metrics[0].ReferenceForegroundPixels -ne 0 -or $null -ne $_.Metrics[0].ForegroundRecall
+    }).Count) { throw 'Fresh zero-foreground metrics must pass with inapplicable recall' }
+    $passed+='fresh-blank-reference'
     foreach ($id in @('first','second')) {
         # Preserve the completed attempt while testing derivative reuse separately
         # from the existing-comparison refusal. All paths belong to this fixture.

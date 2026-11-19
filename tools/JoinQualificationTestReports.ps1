@@ -81,6 +81,14 @@ $sources=@();$methodAttempts=0
 foreach ($attempt in $attempts) {
     $reportHash=(Get-FileHash -LiteralPath $attempt.Report).Hash
     $report=Get-Content -LiteralPath $attempt.Report -Raw | ConvertFrom-Json
+    $pin=$pins[$attempt.Artifact]
+    if ($report.provenance.LibrarySha256 -isnot [string] -or $report.provenance.TestAssemblySha256 -isnot [string]) {
+        throw 'A source report requires producing assembly evidence. Use the bound affected-tests.json report.'
+    }
+    if ($report.provenance.LibrarySha256 -ne $pin.LibrarySha256 -or
+        $report.provenance.TestAssemblySha256 -ne $pin.TestAssemblySha256) {
+        throw 'Source report producing assemblies differ from the declared artifact'
+    }
     $seen=[Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
     $counts=@{passed=0;failed=0;skipped=0}
     foreach ($test in @($report.tests)) {
@@ -96,8 +104,8 @@ foreach ($attempt in $attempts) {
         foreach ($property in $test.PSObject.Properties) { $row[$property.Name]=$property.Value }
         $row.SourceReport=$attempt.Report
         $row.SourceReportSha256=$reportHash
-        $row.SourceRevision=$pins[$attempt.Artifact].Revision
-        $row.SourceTestAssemblySha256=$pins[$attempt.Artifact].TestAssemblySha256
+        $row.SourceRevision=$pin.Revision
+        $row.SourceTestAssemblySha256=$pin.TestAssemblySha256
         $rows[$test.name]=$row
     }
     if (!$seen.Count) { throw 'A source report must contain at least one test method' }
@@ -105,7 +113,7 @@ foreach ($attempt in $attempts) {
         if ($counts[$outcome] -ne $report.$outcome) { throw 'Report totals differ from method outcomes' }
     }
     if ((Get-FileHash -LiteralPath $attempt.Report).Hash -ne $reportHash) { throw 'A source report changed during the join' }
-    $sources += [ordered]@{Report=(Pin $attempt.Report);ArtifactIdentity=(Pin (Join-Path $attempt.Artifact 'identity.json'));
+    $sources += [ordered]@{Report=[ordered]@{Path=$attempt.Report;Sha256=$reportHash};ArtifactIdentity=(Pin (Join-Path $attempt.Artifact 'identity.json'));
         Repair=$attempt.Repair;Counts=$counts}
 }
 if ($rows.Count -ne $expected.Count -or @($expected | Where-Object {!$rows.ContainsKey($_)}).Count) {

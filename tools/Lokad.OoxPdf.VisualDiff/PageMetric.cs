@@ -15,4 +15,5 @@ internal sealed record PageMetric(
     double? StructuralSimilarity,
     double? ForegroundColorHistogramCorrelation,
     double? ForegroundRecall,
+    int? ReferenceForegroundPixels,
     bool DimensionsMatch);

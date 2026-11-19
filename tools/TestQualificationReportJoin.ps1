@@ -17,6 +17,11 @@ function Write-Text([string] $Path,[string] $Text) {
     [IO.File]::WriteAllText($Path,$Text,[Text.UTF8Encoding]::new($false))
 }
 function Write-Json([string] $Path,$Value) { Write-Text $Path ($Value | ConvertTo-Json -Depth 12) }
+function Write-BoundReport([string] $Name,$Report,[string] $Artifact='after') {
+    $pin=Get-Content -LiteralPath (Join-Path $repo "artifacts/$Artifact/identity.json") -Raw | ConvertFrom-Json
+    $Report.provenance=@{LibrarySha256=$pin.LibrarySha256;TestAssemblySha256=$pin.TestAssemblySha256}
+    Write-Json (Join-Path $root $Name) $Report
+}
 function Invoke-Git([string[]] $Arguments) {
     $value=@(& git -C $repo @Arguments 2>&1)
     if ($LASTEXITCODE -ne 0) { throw ($value -join "\n") }
@@ -52,10 +57,10 @@ foreach ($id in @('before','after')) {
         LibrarySha256=$assets[$library];TestAssemblySha256=$assets[$tests]
     }
 }
-Write-Json (Join-Path $root 'initial.json') @{passed=1;failed=1;skipped=0;tests=@(
+Write-BoundReport 'initial.json' @{passed=1;failed=1;skipped=0;tests=@(
     @{name='Unchanged';outcome='passed';group='fixture';milliseconds=1;detail=''},
-    @{name='Corrected';outcome='failed';group='fixture';milliseconds=1;detail='retained failure'})}
-Write-Json (Join-Path $root 'repair.json') @{passed=2;failed=0;skipped=0;tests=@(
+    @{name='Corrected';outcome='failed';group='fixture';milliseconds=1;detail='retained failure'})} 'before'
+Write-BoundReport 'repair.json' @{passed=2;failed=0;skipped=0;tests=@(
     @{name='Corrected';outcome='passed';group='fixture';milliseconds=1;detail=''},
     @{name='Neighbor';outcome='passed';group='fixture';milliseconds=1;detail=''})}
 Write-Json (Join-Path $root 'selection.json') @('Unchanged','Corrected','Neighbor')
@@ -84,6 +89,25 @@ function Reject([string] $Name,[string] $Pattern) {
     if (!$caught -or $caught -notmatch $Pattern -or (Test-Path -LiteralPath $path)) { throw ('Missing pre-publication rejection: '+$Name+' / '+$caught) }
     $script:rejections += $Name
 }
+$repairPath=Join-Path $root 'repair.json'
+foreach ($fault in @('missing-provenance','wrong-harness','wrong-library')) {
+    $report=Get-Content -LiteralPath $repairPath -Raw | ConvertFrom-Json -AsHashtable
+    switch ($fault) {
+        'missing-provenance' { $report.Remove('provenance') }
+        'wrong-harness' {
+            $original=Get-Content -LiteralPath (Join-Path $root 'initial.json') -Raw | ConvertFrom-Json
+            $report.provenance.TestAssemblySha256=$original.provenance.TestAssemblySha256
+        }
+        'wrong-library' { $report.provenance.LibrarySha256='F'*64 }
+    }
+    $name=$fault+'-source.json'
+    Write-Json (Join-Path $root $name) $report
+    $config.Repairs[0].Report=$name
+    Write-Json $manifest $config
+    $pattern=if ($fault -eq 'missing-provenance') {'requires producing assembly evidence'} else {'producing assemblies differ'}
+    Reject $fault $pattern
+}
+$config.Repairs[0].Report='repair.json'
 # A final artifact may be stored separately, but its harness must have been run.
 Write-Text (Join-Path $repo 'tests/observer.txt') 'unrun final harness'
 $null=Invoke-Git @('add','tests/observer.txt');$null=Invoke-Git @('commit','--quiet','-m','unrun test repair')
@@ -100,7 +124,7 @@ Reject 'untested-final-harness' 'Final artifact test assembly differs'
 $config.FinalArtifact='repo/artifacts/before';Write-Json $manifest $config
 Reject 'earlier-final-harness' 'Final artifact test assembly differs'
 # An empty final report must not stand in for execution of the new harness.
-Write-Json (Join-Path $root 'empty-final.json') @{passed=0;failed=0;skipped=0;tests=@()}
+Write-BoundReport 'empty-final.json' @{passed=0;failed=0;skipped=0;tests=@()} 'unrun-final'
 $config.FinalArtifact='repo/artifacts/unrun-final'
 $config.Repairs+=@{Artifact='repo/artifacts/unrun-final';Report='empty-final.json'}
 Write-Json $manifest $config
@@ -120,11 +144,11 @@ if ($copyResult.TestAssemblySha256 -ne $result.TestAssemblySha256 -or $copyResul
     throw 'Equivalent final copies must preserve tested identity and earlier-pass provenance'
 }
 # A method first failing during a repair must also finish with a real pass.
-Write-Json (Join-Path $root 'repair-failed.json') @{passed=1;failed=1;skipped=0;tests=@(
+Write-BoundReport 'repair-failed.json' @{passed=1;failed=1;skipped=0;tests=@(
     @{name='Corrected';outcome='passed'},@{name='Neighbor';outcome='failed';detail='failure during repair'})}
-Write-Json (Join-Path $root 'repair-skipped.json') @{passed=0;failed=0;skipped=1;tests=@(
+Write-BoundReport 'repair-skipped.json' @{passed=0;failed=0;skipped=1;tests=@(
     @{name='Neighbor';outcome='skipped';detail='cannot hide a repair failure'})}
-Write-Json (Join-Path $root 'repair-passed.json') @{passed=1;failed=0;skipped=0;tests=@(
+Write-BoundReport 'repair-passed.json' @{passed=1;failed=0;skipped=0;tests=@(
     @{name='Neighbor';outcome='passed'})}
 $config.Repairs=@(@{Artifact='repo/artifacts/after';Report='repair-failed.json'},
     @{Artifact='repo/artifacts/after';Report='repair-skipped.json'})
@@ -159,7 +183,7 @@ $config.CorrectedMethods=@('Corrected','Neighbor');Write-Json $manifest $config
 Write-Json (Join-Path $root 'selection.json') @('Corrected','Neighbor')
 Reject 'dropped-method' 'exact selection'
 Write-Json (Join-Path $root 'selection.json') @('Unchanged','Corrected','Neighbor')
-Write-Json (Join-Path $root 'repair.json') @{passed=1;failed=0;skipped=1;tests=@(
+Write-BoundReport 'repair.json' @{passed=1;failed=0;skipped=1;tests=@(
     @{name='Corrected';outcome='skipped';group='fixture';milliseconds=0;detail='cannot hide failure'},
     @{name='Neighbor';outcome='passed';group='fixture';milliseconds=1;detail=''})}
 Reject 'failure-replaced-by-skip' 'failed check remains'

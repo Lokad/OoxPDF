@@ -198,6 +198,7 @@ static PageMetric MeasurePage(int page, string? referenceFile, string? candidate
         StructuralSimilarity: pixelMetric?.StructuralSimilarity,
         ForegroundColorHistogramCorrelation: pixelMetric?.ForegroundColorHistogramCorrelation,
         ForegroundRecall: pixelMetric?.ForegroundRecall,
+        ReferenceForegroundPixels: pixelMetric?.ReferenceForegroundPixels,
         DimensionsMatch: dimensionsMatch);
 }
 
@@ -292,7 +293,8 @@ static PixelMetric MeasurePixelsInRegion(PngImage reference, PngImage candidate,
         changed32 / (double)pixelCount,
         ComputeStructuralSimilarity(pixelCount, referenceLumaSum, candidateLumaSum, referenceLumaSquaredSum, candidateLumaSquaredSum, lumaProductSum),
         ComputeHistogramCorrelation(referenceHistogram, candidateHistogram, referenceForeground, candidateForeground, pixelCount),
-        foregroundRecall);
+        foregroundRecall,
+        referenceForeground);
 }
 
 static IEnumerable<RegionMetric> MeasureRegions(IReadOnlyList<RegionSpec> specs, string[] referenceFiles, string[] candidateFiles)

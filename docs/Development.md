@@ -52,7 +52,8 @@ Build an explicit committed linked worktree once with
 `tools/BuildQualificationArtifact.ps1`. Reuse its CLI, inspector and test assembly
 for a coherent batch. Harness-only repairs can reuse unchanged production bytes;
 added public fixtures enter a new snapshot, while modified/deleted existing inputs
-are refused. Report joins require identical complete input identities.
+are refused. Report joins require identical complete input identities and
+affected reports that identify the declared frozen library and test assembly.
 
 Use focused affected methods/neighbors during changes. Batch broad Windows/Ubuntu,
 framework and package checks at meaningful milestones. Transfer qualified assets
@@ -96,7 +97,8 @@ sidecars. Reinspect existing PDFs with `-ReuseCandidateDirectory` when a join
 reports changed expectations or a missing text-inspection hash. Composition limits live in
 `tools/CompositionDocxThresholds.json` and `tools/CompositionPptxThresholds.json`.
 Reports record their identities and
-reapply current limits to reused pixel metrics. Reports distinguish omissions,
+reapply current limits to reused pixel metrics. Null recall on a matched page
+requires a measured zero reference foreground count. Reports distinguish omissions,
 pagination/overlap, significant
 geometry, cosmetic differences and unknowns. [Capabilities](Capabilities.md) lists
 current limitations; development evidence and experiment history stay in ignored

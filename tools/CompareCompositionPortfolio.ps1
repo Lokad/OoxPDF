@@ -81,8 +81,7 @@ function Get-ComparisonFailures([object[]] $Metrics, $Limits, $Outcome, [string]
         if (!$page.DimensionsMatch) { $failures += 'Dimensions' }
         foreach ($field in $metricRanges.Keys) {
             $value = $page.$field
-            # VisualDiff emits null pixel metrics for incompatible dimensions,
-            # and null recall when the reference has no foreground pixels.
+            # Incompatible dimensions can suppress all pixel metrics.
             if ($null -eq $value) {
                 if ($page.DimensionsMatch -and $field -ne 'ForegroundRecall') { throw ($incomplete + ': ' + $field) }
             }
@@ -95,7 +94,18 @@ function Get-ComparisonFailures([object[]] $Metrics, $Limits, $Outcome, [string]
         }
         if ($null -ne $page.MeanAbsoluteError -and $page.MeanAbsoluteError -gt $Limits.maxMeanAbsoluteError) { $failures += 'MeanAbsoluteError' }
         if ($null -ne $page.ChangedPixelRatioAtThreshold16 -and $page.ChangedPixelRatioAtThreshold16 -gt $Limits.maxChangedPixelRatioAtThreshold16) { $failures += 'ChangedPixels' }
-        if ($null -ne $page.ForegroundRecall -and $page.ForegroundRecall -lt $Limits.minForegroundRecall) { $failures += 'ForegroundRecall' }
+        $foreground = $page.ReferenceForegroundPixels
+        if ($null -ne $foreground -and
+            (($foreground -isnot [int] -and $foreground -isnot [long]) -or $foreground -lt 0 -or
+            (($foreground -eq 0) -ne ($null -eq $page.ForegroundRecall)))) {
+            throw ('Comparison page recall disagrees with reference foreground pixels: ' + $Id)
+        }
+        if ($null -eq $page.ForegroundRecall) {
+            # Older metrics can omit the count. A matched page requires evidence
+            # of zero reference foreground pixels to leave recall inapplicable.
+            if ($page.DimensionsMatch -and $null -eq $foreground) { $failures += 'ForegroundRecallUnverified' }
+        }
+        elseif ($page.ForegroundRecall -lt $Limits.minForegroundRecall) { $failures += 'ForegroundRecall' }
         if ($null -ne $page.StructuralSimilarity -and $Limits.minStructuralSimilarity -and $page.StructuralSimilarity -lt $Limits.minStructuralSimilarity) { $failures += 'StructuralSimilarity' }
     }
     if (!$candidatePages -or !$referencePages -or
