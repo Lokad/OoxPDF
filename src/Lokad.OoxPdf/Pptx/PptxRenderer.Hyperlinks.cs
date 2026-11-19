@@ -49,6 +49,13 @@ internal sealed partial class PptxRenderer
                 ShapeTransformMatrix(x, y, width, height, mapped));
             (x, y, width, height) = (frame.X, frame.Y, frame.Width, frame.Height);
         }
+
+        if (node.Kind == PptxSceneNodeKind.Picture &&
+            !TryIntersectWithSlideBounds(x, y, width, height, context.Document, out x, out y, out width, out height))
+        {
+            return;
+        }
+
         string partName = sourcePartName ?? context.SlidePartName;
         string? relationshipId = node.HyperlinkClick.RelationshipId;
         if (string.IsNullOrEmpty(relationshipId))

@@ -331,7 +331,7 @@ internal static class PptxHyperlinksTests
 
     public static void PptxPictureHyperlinkEmitsUriAnnotation()
     {
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
+        var parts = new Dictionary<string, byte[]>
         {
             ["[Content_Types].xml"] = TestFixtures.Utf8("""
                 <?xml version="1.0" encoding="UTF-8"?>
@@ -339,6 +339,7 @@ internal static class PptxHyperlinksTests
                   <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
                   <Default Extension="xml" ContentType="application/xml"/>
                   <Default Extension="png" ContentType="image/png"/>
+                  <Default Extension="svg" ContentType="image/svg+xml"/>
                   <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
                   <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
                 </Types>
@@ -364,16 +365,75 @@ internal static class PptxHyperlinksTests
                 </p:sld>
                 """),
             ["ppt/media/image1.png"] = TestFixtures.CreateRgbPng(1, 1, [255, 0, 0])
-        });
+        };
 
-        (IReadOnlyList<PdfPage> pages, _) = RenderSlidePages(input);
-
-        PdfLinkAnnotation annotation = pages.Single().Annotations.Single();
+        (PdfPage page, _) = Render();
+        TestAssert.Equal(1, page.Images.Count);
+        PdfLinkAnnotation annotation = page.Annotations.Single();
         TestAssert.Equal("https://example.invalid/picture", annotation.Uri);
         TestAssert.Equal(72d, annotation.X);
         TestAssert.Equal(396d, annotation.Y);
         TestAssert.Equal(144d, annotation.Width);
         TestAssert.Equal(72d, annotation.Height);
+
+        const string slidePart = "ppt/slides/slide1.xml";
+        string slide = Encoding.UTF8.GetString(parts[slidePart]);
+        foreach (int left in new[] { 700, 740 })
+        {
+            var moved = new Dictionary<string, byte[]>(parts)
+            {
+                [slidePart] = TestFixtures.Utf8(slide.Replace("x=\"914400\"", $"x=\"{left * 12700}\"", StringComparison.Ordinal))
+            };
+            (PdfPage clipped, _) = Render(moved);
+            if (left < page.Width)
+            {
+                TestAssert.Equal(1, clipped.Images.Count);
+                PdfLinkAnnotation visible = clipped.Annotations.Single();
+                TestAssert.Equal(annotation.Uri, visible.Uri);
+                TestAssert.Equal((double)left, visible.X);
+                TestAssert.Equal(page.Width - left, visible.Width);
+            }
+            else
+            {
+                TestAssert.Equal(0, clipped.Images.Count);
+                TestAssert.Equal(0, clipped.Annotations.Count);
+            }
+        }
+
+        var missing = new Dictionary<string, byte[]>(parts);
+        missing.Remove("ppt/media/image1.png");
+        (PdfPage omitted, List<OoxPdfDiagnostic> missingDiagnostics) = Render(missing);
+        TestAssert.Equal("IMAGE_MISSING_PART", missingDiagnostics.Single().Id);
+        TestAssert.Equal(0, omitted.Images.Count);
+        TestAssert.Equal(0, omitted.Annotations.Count);
+
+        const string relationships = "ppt/slides/_rels/slide1.xml.rels";
+        var vector = new Dictionary<string, byte[]>(missing)
+        {
+            [relationships] = TestFixtures.Utf8(Encoding.UTF8.GetString(parts[relationships])
+                .Replace("image1.png", "picture.svg", StringComparison.Ordinal)),
+            ["ppt/media/picture.svg"] = TestFixtures.Utf8("""<svg xmlns="http://www.w3.org/2000/svg"/>""")
+        };
+        (PdfPage invalid, List<OoxPdfDiagnostic> vectorDiagnostics) = Render(vector);
+        TestAssert.Equal("SVG_UNSUPPORTED_CONTENT", vectorDiagnostics.Single().Id);
+        TestAssert.Equal(0, invalid.Annotations.Count);
+
+        vector["ppt/media/picture.svg"] = TestFixtures.Utf8("""
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10">
+              <rect width="10" height="10" fill="#ff0000"/>
+            </svg>
+            """);
+        (PdfPage painted, List<OoxPdfDiagnostic> paintedDiagnostics) = Render(vector);
+        TestAssert.Equal(0, paintedDiagnostics.Count);
+        TestAssert.Contains("1 0 0 rg", painted.Content);
+        TestAssert.Equal(annotation, painted.Annotations.Single());
+
+        (PdfPage Page, List<OoxPdfDiagnostic> Diagnostics) Render(Dictionary<string, byte[]>? edited = null)
+        {
+            string input = TestFixtures.WriteTempPackage(".pptx", edited ?? parts);
+            var (pages, diagnostics) = RenderSlidePages(input);
+            return (pages.Single(), diagnostics);
+        }
     }
     public static void PptxNodeHyperlinkMissingRelationshipAggregatesPerSlide()
     {

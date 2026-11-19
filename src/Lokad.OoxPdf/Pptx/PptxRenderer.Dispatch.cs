@@ -286,15 +286,17 @@ internal sealed partial class PptxRenderer
                 AddNodeHyperlinkAnnotation(node, context, sourcePartName, transform, linkAnnotations, reportedHyperlinkIds);
                 break;
             case PptxSceneNodeKind.Picture:
-                RenderPicture(
+                if (TryRenderPicture(
                     node,
                     context,
                     graphics,
                     transform,
                     images,
                     ref imageIndex,
-                    sourcePartName);
-                AddNodeHyperlinkAnnotation(node, context, sourcePartName, transform, linkAnnotations, reportedHyperlinkIds);
+                    sourcePartName))
+                {
+                    AddNodeHyperlinkAnnotation(node, context, sourcePartName, transform, linkAnnotations, reportedHyperlinkIds);
+                }
                 break;
             case PptxSceneNodeKind.Table:
                 BeginSlideNodeClip(context, graphics);

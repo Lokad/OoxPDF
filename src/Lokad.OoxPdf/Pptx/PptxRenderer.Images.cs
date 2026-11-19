@@ -11,7 +11,7 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static void RenderPicture(
+    private static bool TryRenderPicture(
         PptxSceneNode picture,
         PptxRenderContext context,
         PdfGraphicsBuilder graphics,
@@ -22,7 +22,7 @@ internal sealed partial class PptxRenderer
     {
         if (picture.Picture is null || picture.Bounds is null)
         {
-            return;
+            return false;
         }
 
         if (picture.Picture.TargetPartName is null)
@@ -32,10 +32,10 @@ internal sealed partial class PptxRenderer
                 "Picture image relationship could not be resolved and the image was ignored.",
                 sourcePartName ?? context.SlidePartName, SlideIndex: context.SlideNumber,
                 Feature: "image", Fallback: "Ignored"));
-            return;
+            return false;
         }
 
-        RenderPicture(
+        return TryRenderPicture(
             context.Document,
             graphics,
             context.DiagnosticSink,
@@ -57,7 +57,7 @@ internal sealed partial class PptxRenderer
             context.CancellationToken, context.SvgTextFonts);
     }
 
-    private static void RenderPicture(
+    private static bool TryRenderPicture(
         PptxDocument document,
         PdfGraphicsBuilder graphics,
         Action<OoxPdfDiagnostic>? diagnosticSink,
@@ -91,7 +91,7 @@ internal sealed partial class PptxRenderer
                 SlideIndex: slideIndex,
                 Feature: "image",
                 Fallback: "Ignored"));
-            return;
+            return false;
         }
 
         string preset = geometry.Preset;
@@ -116,16 +116,16 @@ internal sealed partial class PptxRenderer
             if (recolor.Kind != PptxSceneImageRecolorKind.None && alpha > 0d)
                 ReportUnsupportedImageRecolor(diagnosticSink, targetPartName, slideIndex,
                     "PPTX image recolor cannot be applied to embedded SVG; its original vector colors are retained.");
-            RenderSvgPicture(graphics, document, transformedBounds, imageResource.Bytes, crop, fillRect, diagnosticSink, slideIndex, targetPartName, cancellationToken, preset, geometry.PresetAdjustments, svgTextFonts, alpha);
+            bool rendered = TryRenderSvgPicture(graphics, document, transformedBounds, imageResource.Bytes, crop, fillRect, diagnosticSink, slideIndex, targetPartName, cancellationToken, preset, geometry.PresetAdjustments, svgTextFonts, alpha);
             StrokePictureFrame(document, graphics, transformedBounds, x, y, width, height, line, hasTransform, preset, geometry.PresetAdjustments);
-            return;
+            return rendered || line.HasLine;
         }
 
         PdfImageXObject? image = PrepareRasterPicture(imageResource, recolor, imageCache,
             diagnosticSink, slideIndex, cancellationToken, ref crop);
         if (image is null)
         {
-            return;
+            return false;
         }
 
         string name = "Im" + index++;
@@ -161,7 +161,7 @@ internal sealed partial class PptxRenderer
                 graphics.RestoreState();
             }
 
-            return;
+            return false;
         }
 
         // Source crop/fill controls image sampling. The authored mask belongs
@@ -193,6 +193,7 @@ internal sealed partial class PptxRenderer
         images.Add(new PdfImageResource(name, image));
 
         StrokePictureFrame(document, graphics, transformedBounds, x, y, width, height, line, hasTransform, preset, geometry.PresetAdjustments);
+        return true;
     }
 
     private static void RenderPictureOuterShadow(
