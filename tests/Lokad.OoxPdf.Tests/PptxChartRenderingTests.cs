@@ -1725,10 +1725,8 @@ internal static class PptxChartRenderingTests
         TestAssert.Contains("/Sh4 sh", pdf);
         TestAssert.DoesNotContain("0.082 0.376 0.51 rg", pdf);
     }
-    // RV04: style-18 line series stroke the raw theme base instead of the 97.5%
-    // unstyled luminance tint (Office emits the raw base on the polyline; markers
-    // stay off so the series stroke is the only candidate RG operator).
-    public static void LineStyle18StrokeUsesRawBase()
+    // Office uses the raw theme base and a 5pt stroke for style-18 series without markers.
+    public static void LineStyle18UsesRawFivePointSeriesStroke()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", ThemedBarChartPackage("""
             <?xml version="1.0" encoding="UTF-8"?>
@@ -1749,29 +1747,6 @@ internal static class PptxChartRenderingTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0.082 0.376 0.51 RG", pdf);
         TestAssert.DoesNotContain("0.078 0.369 0.498 RG", pdf);
-    }
-    // RV04: style-18 unstyled line series stroke at 5pt instead of the 2.25pt
-    // default (Office emits 5 w on the style-18 polyline; markers stay off so the
-    // series stroke is the only wide operator).
-    public static void LineStyle18StrokesFivePointSeriesLine()
-    {
-        string input = TestFixtures.WriteTempPackage(".pptx", ThemedBarChartPackage("""
-            <?xml version="1.0" encoding="UTF-8"?>
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:style val="18"/><c:chart><c:plotArea><c:lineChart>
-              <c:grouping val="standard"/>
-              <c:varyColors val="0"/>
-              <c:marker val="0"/>
-              <c:ser>
-                <c:tx><c:strLit><c:pt idx="0"><c:v>Demand</c:v></c:pt></c:strLit></c:tx>
-                <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
-                <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt></c:numLit></c:val>
-              </c:ser>
-              <c:axId val="10"/><c:axId val="20"/>
-            </c:lineChart><c:catAx><c:axId val="10"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="b"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:catAx><c:valAx><c:axId val="20"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="l"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:valAx></c:plotArea></c:chart></c:chartSpace>
-            """));
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-        OoxPdfConverter.Convert(input, output);
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.True(Regex.IsMatch(pdf, @"^5 w\r?$", RegexOptions.Multiline), "Expected a 5pt style-18 series stroke.");
         TestAssert.DoesNotContain("2.25 w", pdf);
     }
@@ -1800,11 +1775,8 @@ internal static class PptxChartRenderingTests
         TestAssert.True(Regex.IsMatch(pdf, @"^2 w\r?$", RegexOptions.Multiline), "Expected the explicit 2pt series stroke to survive style 18.");
         TestAssert.True(!Regex.IsMatch(pdf, @"^5 w\r?$", RegexOptions.Multiline), "The explicit width must win over the style-18 5pt default.");
     }
-    // RV04: style-18 line charts draw gallery markers even without marker markup
-    // (Office draws auto diamond/square markers at 12.96pt with raw-base outlines;
-    // the square series pins the 12.96pt geometry through its outline rectangle;
-    // fills are gradient shadings pinned by LineStyle18MarkersPaintGradientFills).
-    public static void LineStyle18DrawsForcedGalleryMarkers()
+    // Office paints style-18 automatic gallery markers with 12.96pt geometry and axial gradient fills.
+    public static void LineStyle18DrawsGradientGalleryMarkers()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", ThemedBarChartPackage("""
             <?xml version="1.0" encoding="UTF-8"?>
@@ -1828,33 +1800,6 @@ internal static class PptxChartRenderingTests
         OoxPdfConverter.Convert(input, output);
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("12.96 12.96 re", pdf);
-    }
-    // RV04: style-18 markers fill with per-marker axial gradients instead of flat
-    // solids (Office paints a PatternType-2 axial shading over each marker; the two
-    // series pin four shading uses with no flat series fills left).
-    public static void LineStyle18MarkersPaintGradientFills()
-    {
-        string input = TestFixtures.WriteTempPackage(".pptx", ThemedBarChartPackage("""
-            <?xml version="1.0" encoding="UTF-8"?>
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:style val="18"/><c:chart><c:plotArea><c:lineChart>
-              <c:grouping val="standard"/>
-              <c:varyColors val="0"/>
-              <c:ser>
-                <c:tx><c:strLit><c:pt idx="0"><c:v>Demand</c:v></c:pt></c:strLit></c:tx>
-                <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
-                <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt></c:numLit></c:val>
-              </c:ser>
-              <c:ser>
-                <c:tx><c:strLit><c:pt idx="0"><c:v>Supply</c:v></c:pt></c:strLit></c:tx>
-                <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
-                <c:val><c:numLit><c:pt idx="0"><c:v>1</c:v></c:pt><c:pt idx="1"><c:v>3</c:v></c:pt></c:numLit></c:val>
-              </c:ser>
-              <c:axId val="10"/><c:axId val="20"/>
-            </c:lineChart><c:catAx><c:axId val="10"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="b"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:catAx><c:valAx><c:axId val="20"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="l"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:valAx></c:plotArea></c:chart></c:chartSpace>
-            """));
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-        OoxPdfConverter.Convert(input, output);
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Equal(4, Regex.Matches(pdf, "/Sh\\d+ sh").Count);
         TestAssert.Contains("ShadingType 2", pdf);
         TestAssert.DoesNotContain("0.082 0.376 0.51 rg", pdf);
@@ -2612,10 +2557,8 @@ internal static class PptxChartRenderingTests
         TestAssert.True(Math.Abs((jx - e1) / dx1 - 2d / 9d) < 0.02, "double-span joint two ninths");
         TestAssert.True(Math.Abs((s2 - jx) / dx2 - 2d / 3d) < 0.02, "trailing joint two thirds");
     }
-    // RV04: style-18 explicit dots gradient-fill like circles (Office paints dot
-    // shadings with the shared table; dot geometry stays an ellipse pending the
-    // marker-shape slice, and stars keep flat fills until the asterisk slice).
-    public static void LineStyle18ExplicitDotPaintsGradient()
+    // Office paints explicit style-18 dots as short gradient-filled rectangles.
+    public static void LineStyle18PaintsGradientFilledDotRectangle()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", ThemedBarChartPackage("""
             <?xml version="1.0" encoding="UTF-8"?>
@@ -2637,6 +2580,7 @@ internal static class PptxChartRenderingTests
         TestAssert.Equal(2, Regex.Matches(pdf, @"/Sh\d+ sh").Count);
         TestAssert.Contains("ShadingType 2", pdf);
         TestAssert.DoesNotContain("0.082 0.376 0.51 rg", pdf);
+        TestAssert.Contains("4.44 1.8 re", pdf);
     }
     // RV04: style-18 legend circles gradient-fill like plot circles (Office
     // gradient-fills the explicit size-9 legend circle key; one series pins two
@@ -2731,30 +2675,6 @@ internal static class PptxChartRenderingTests
             }
         }
         TestAssert.True(hasNinePointVertical, "Expected a 9pt vertical asterisk diameter.");
-    }
-    // RV04: style-18 dots render as filled rects anchored at the data point
-    // (Office paints s/2 by s/5 rectangles starting at the point with vertically
-    // centered height; the size-9 rect pins the rule).
-    public static void LineStyle18ExplicitDotRendersRect()
-    {
-        string input = TestFixtures.WriteTempPackage(".pptx", ThemedBarChartPackage("""
-            <?xml version="1.0" encoding="UTF-8"?>
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:style val="18"/><c:chart><c:plotArea><c:lineChart>
-              <c:grouping val="standard"/>
-              <c:varyColors val="0"/>
-              <c:ser>
-                <c:tx><c:strLit><c:pt idx="0"><c:v>Demand</c:v></c:pt></c:strLit></c:tx>
-                <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
-                <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt></c:numLit></c:val>
-                <c:marker><c:symbol val="dot"/><c:size val="9"/></c:marker>
-              </c:ser>
-              <c:axId val="10"/><c:axId val="20"/>
-            </c:lineChart><c:catAx><c:axId val="10"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="b"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:catAx><c:valAx><c:axId val="20"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="l"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:valAx></c:plotArea></c:chart></c:chartSpace>
-            """));
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-        OoxPdfConverter.Convert(input, output);
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("4.44 1.8 re", pdf);
     }
 
     // RV04: style-18 dashes render as filled gradient bars (Office paints size-wide
