@@ -262,10 +262,27 @@ internal sealed partial class PptxRenderer
             }
             bool allowStrokePattern = Math.Abs(bounds.RotationDegrees) <= 0.001d && !bounds.FlipHorizontal && !bounds.FlipVertical;
             SvgStroke stroke = ReadSvgStroke(element, out SvgStrokeFailure strokeFailure, out bool invalidStrokePresentation, out bool hasVectorEffect, out bool nonScalingStroke, gradients, allowStrokePattern, hasFill);
+            List<SvgPathCommand>? gradientCommands = null;
+            SvgPathBounds gradientBounds = default;
+            bool hasGradientBounds = false;
+            bool gradientControlsMappable = false;
+            if (radial is not null || paint.Gradient is not null || stroke.Gradient is not null)
+            {
+                var (commands, complete) = ParseSvgPathData(data);
+                gradientCommands = TransformSvgCommands(commands, transform);
+                if (complete && TryReadSvgPathBounds(gradientCommands, out gradientBounds, out SvgPathBounds controlBounds))
+                {
+                    hasGradientBounds = true;
+                    gradientControlsMappable = AreSvgGradientBoundsMappable(controlBounds, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY);
+                }
+            }
             PdfShadingPattern? strokePattern = null;
             if (stroke.Gradient is { } strokeGradient)
             {
-                strokePattern = TryReadSvgStrokePattern(data, strokeGradient, transform, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY);
+                if (gradientControlsMappable)
+                {
+                    strokePattern = TryReadSvgStrokePattern(gradientBounds, strokeGradient, transform, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY);
+                }
                 if (strokePattern is null)
                 {
                     stroke = default;
@@ -351,14 +368,14 @@ internal sealed partial class PptxRenderer
                     focalRadialGradients++;
                 }
                 bool varyingAlphaAdmitted = false;
-                if (TryReadSvgPathBounds(data, transform, out SvgPathBounds radialBounds))
+                if (hasGradientBounds)
                 {
-                    if (!TryRenderSvgRadialGradientPath(graphics, data, radialGradient, transform, evenOddFill, paint.Opacity, radialBounds, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY, isolation.Count < PdfTransparencyGroup.MaxDepth, out varyingAlphaAdmitted, AdmitSamples, cancellationToken))
+                    if (!gradientControlsMappable || !TryRenderSvgRadialGradientPath(graphics, gradientCommands!, radialGradient, transform, evenOddFill, paint.Opacity, gradientBounds, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY, isolation.Count < PdfTransparencyGroup.MaxDepth, out varyingAlphaAdmitted, AdmitSamples, cancellationToken))
                     {
                         nonFiniteGradientPaths++;
                     }
                     if (stroke.Color is { } radialStrokeColor
-                        && !TryPaintSvgStrokePath(graphics, data, transform, radialStrokeColor, strokeWidthPoints, stroke.Opacity, stroke.LineCap, stroke.LineJoin, dashPoints, dashPhasePoints, stroke.MiterLimit, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY)
+                        && !TryPaintSvgStrokePath(graphics, data, transform, radialStrokeColor, strokeWidthPoints, stroke.Opacity, stroke.LineCap, stroke.LineJoin, dashPoints, dashPhasePoints, stroke.MiterLimit, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY, parsedCommands: gradientCommands)
                         && badCommand is null)
                     {
                         unreadablePaths++;
@@ -376,14 +393,14 @@ internal sealed partial class PptxRenderer
             else if (paint.Gradient is { } gradient)
             {
                 bool varyingAlphaAdmitted = false;
-                if (TryReadSvgPathBounds(data, transform, out SvgPathBounds pathBounds))
+                if (hasGradientBounds)
                 {
-                    if (!TryRenderSvgGradientPath(graphics, data, gradient, transform, evenOddFill, paint.Opacity, pathBounds, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY, isolation.Count < PdfTransparencyGroup.MaxDepth, out varyingAlphaAdmitted, AdmitSamples, cancellationToken))
+                    if (!gradientControlsMappable || !TryRenderSvgGradientPath(graphics, gradientCommands!, gradient, transform, evenOddFill, paint.Opacity, gradientBounds, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY, isolation.Count < PdfTransparencyGroup.MaxDepth, out varyingAlphaAdmitted, AdmitSamples, cancellationToken))
                     {
                         nonFiniteGradientPaths++;
                     }
                     if (stroke.Color is { } gradientStrokeColor
-                        && !TryPaintSvgStrokePath(graphics, data, transform, gradientStrokeColor, strokeWidthPoints, stroke.Opacity, stroke.LineCap, stroke.LineJoin, dashPoints, dashPhasePoints, stroke.MiterLimit, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY)
+                        && !TryPaintSvgStrokePath(graphics, data, transform, gradientStrokeColor, strokeWidthPoints, stroke.Opacity, stroke.LineCap, stroke.LineJoin, dashPoints, dashPhasePoints, stroke.MiterLimit, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY, parsedCommands: gradientCommands)
                         && badCommand is null)
                     {
                         unreadablePaths++;
@@ -430,7 +447,7 @@ internal sealed partial class PptxRenderer
                     {
                         graphics.SetMiterLimit(stroke.MiterLimit);
                     }
-                    if (TryAppendSvgPath(graphics, data, transform, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY, strokeViewport))
+                    if (TryAppendSvgPath(graphics, data, transform, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY, strokeViewport, gradientCommands))
                     {
                         if (evenOddFill)
                         {
@@ -456,7 +473,7 @@ internal sealed partial class PptxRenderer
                     }
 
                     graphics.SetFillRgb(color.Red, color.Green, color.Blue);
-                    if (TryAppendSvgPath(graphics, data, transform, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY))
+                    if (TryAppendSvgPath(graphics, data, transform, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY, parsedCommands: gradientCommands))
                     {
                         if (evenOddFill)
                         {
@@ -480,7 +497,7 @@ internal sealed partial class PptxRenderer
             }
             else if (stroke.Color is { } strokeOnlyColor)
             {
-                if (!TryPaintSvgStrokePath(graphics, data, transform, strokeOnlyColor, strokeWidthPoints, stroke.Opacity, stroke.LineCap, stroke.LineJoin, dashPoints, dashPhasePoints, stroke.MiterLimit, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY)
+                if (!TryPaintSvgStrokePath(graphics, data, transform, strokeOnlyColor, strokeWidthPoints, stroke.Opacity, stroke.LineCap, stroke.LineJoin, dashPoints, dashPhasePoints, stroke.MiterLimit, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY, parsedCommands: gradientCommands)
                     && badCommand is null)
                 {
                     unreadablePaths++;
@@ -488,7 +505,7 @@ internal sealed partial class PptxRenderer
             }
             if (strokePattern is not null && stroke.Gradient is not null)
             {
-                if (!TryPaintSvgStrokePath(graphics, data, transform, default, strokeWidthPoints, stroke.Opacity, stroke.LineCap, stroke.LineJoin, dashPoints, dashPhasePoints, stroke.MiterLimit, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY, strokePattern)
+                if (!TryPaintSvgStrokePath(graphics, data, transform, default, strokeWidthPoints, stroke.Opacity, stroke.LineCap, stroke.LineJoin, dashPoints, dashPhasePoints, stroke.MiterLimit, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY, strokePattern, gradientCommands)
                     && badCommand is null)
                 {
                     unreadablePaths++;
@@ -808,7 +825,7 @@ internal sealed partial class PptxRenderer
 
     private static bool TryRenderSvgGradientPath(
         PdfGraphicsBuilder graphics,
-        string data,
+        IReadOnlyList<SvgPathCommand> commands,
         SvgGradient gradient,
         SvgTransform transform,
         bool evenOddFill,
@@ -867,7 +884,7 @@ internal sealed partial class PptxRenderer
             return false;
         }
         graphics.SaveState();
-        if (!TryAppendSvgPath(graphics, data, transform, minX, minY, imageX, imageY, imageHeight, scaleX, scaleY))
+        if (!TryAppendSvgPath(graphics, commands, minX, minY, imageX, imageY, imageHeight, scaleX, scaleY))
         {
             graphics.RestoreState();
             return false;
@@ -1017,11 +1034,10 @@ internal sealed partial class PptxRenderer
             && double.IsFinite(imageY + imageHeight - (bounds.MinY - minY) * scaleY) && double.IsFinite(imageY + imageHeight - (bounds.MaxY - minY) * scaleY);
     }
 
-    private static PdfShadingPattern? TryReadSvgStrokePattern(string data, SvgGradient gradient, SvgTransform transform,
+    private static PdfShadingPattern? TryReadSvgStrokePattern(SvgPathBounds bounds, SvgGradient gradient, SvgTransform transform,
         double minX, double minY, double imageX, double imageY, double imageHeight, double scaleX, double scaleY)
     {
-        if (!TryReadSvgPathBounds(data, transform, out SvgPathBounds bounds)
-            || !AreSvgGradientBoundsMappable(bounds, minX, minY, imageX, imageY, imageHeight, scaleX, scaleY)) { return null; }
+        if (!AreSvgGradientBoundsMappable(bounds, minX, minY, imageX, imageY, imageHeight, scaleX, scaleY)) { return null; }
         (double x1, double y1) = gradient.IsUserSpace ? transform.Apply(gradient.X1, gradient.Y1)
             : (bounds.MinX + gradient.X1 * (bounds.MaxX - bounds.MinX), bounds.MinY + gradient.Y1 * (bounds.MaxY - bounds.MinY));
         (double x2, double y2) = gradient.IsUserSpace ? transform.Apply(gradient.X2, gradient.Y2)
@@ -1568,7 +1584,7 @@ internal sealed partial class PptxRenderer
         double second = Math.Sqrt((a - d) * (a - d) + (b + c) * (b + c));
         return largest * ((first + second) / 2d);
     }
-    private static bool TryPaintSvgStrokePath(PdfGraphicsBuilder graphics, string data, SvgTransform transform, RgbColor color, double widthPoints, double opacity, int lineCap, int lineJoin, double[]? dashPoints, double dashPhasePoints, double miterLimit, double minX, double minY, double imageX, double imageY, double imageHeight, double scaleX, double scaleY, PdfShadingPattern? shadingPattern = null)
+    private static bool TryPaintSvgStrokePath(PdfGraphicsBuilder graphics, string data, SvgTransform transform, RgbColor color, double widthPoints, double opacity, int lineCap, int lineJoin, double[]? dashPoints, double dashPhasePoints, double miterLimit, double minX, double minY, double imageX, double imageY, double imageHeight, double scaleX, double scaleY, PdfShadingPattern? shadingPattern = null, IReadOnlyList<SvgPathCommand>? parsedCommands = null)
     {
         graphics.SaveState();
         SvgTransform? strokeViewport = ApplySvgStrokeViewport(graphics, imageX, imageY, imageHeight, scaleX, scaleY);
@@ -1603,7 +1619,7 @@ internal sealed partial class PptxRenderer
         {
             graphics.SetMiterLimit(miterLimit);
         }
-        bool painted = TryAppendSvgPath(graphics, data, transform, minX, minY, imageX, imageY, imageHeight, scaleX, scaleY, strokeViewport);
+        bool painted = TryAppendSvgPath(graphics, data, transform, minX, minY, imageX, imageY, imageHeight, scaleX, scaleY, strokeViewport, parsedCommands);
         if (painted)
         {
             graphics.StrokeCurrentPath();
@@ -1820,7 +1836,7 @@ internal sealed partial class PptxRenderer
         }
         return gradients;
     }
-    private static bool TryRenderSvgRadialGradientPath(PdfGraphicsBuilder graphics, string data, SvgRadialGradient radial, SvgTransform transform, bool evenOddFill, double opacity, SvgPathBounds pathBounds, double minX, double minY, double imageX, double imageY, double imageHeight, double scaleX, double scaleY, bool allowAlphaMask, out bool varyingAlphaAdmitted, Action<int> admitSamples, CancellationToken cancellationToken)
+    private static bool TryRenderSvgRadialGradientPath(PdfGraphicsBuilder graphics, IReadOnlyList<SvgPathCommand> commands, SvgRadialGradient radial, SvgTransform transform, bool evenOddFill, double opacity, SvgPathBounds pathBounds, double minX, double minY, double imageX, double imageY, double imageHeight, double scaleX, double scaleY, bool allowAlphaMask, out bool varyingAlphaAdmitted, Action<int> admitSamples, CancellationToken cancellationToken)
     {
         varyingAlphaAdmitted = false;
         double pathWidth = Math.Max(0.001d, pathBounds.MaxX - pathBounds.MinX);
@@ -1851,7 +1867,7 @@ internal sealed partial class PptxRenderer
             return false;
         }
         graphics.SaveState();
-        if (!TryAppendSvgPath(graphics, data, transform, minX, minY, imageX, imageY, imageHeight, scaleX, scaleY))
+        if (!TryAppendSvgPath(graphics, commands, minX, minY, imageX, imageY, imageHeight, scaleX, scaleY))
         {
             graphics.RestoreState();
             return false;
@@ -1894,7 +1910,7 @@ internal sealed partial class PptxRenderer
             // Pad extends the final stop through the clipped shape beyond the outer ring.
             RgbColor outerColor = SampleSvgRadialStops(radial.Stops, 1d, radial.Spread);
             graphics.SetFillRgb(outerColor.Red, outerColor.Green, outerColor.Blue);
-            if (TryAppendSvgPath(graphics, data, transform, minX, minY, imageX, imageY, imageHeight, scaleX, scaleY))
+            if (TryAppendSvgPath(graphics, commands, minX, minY, imageX, imageY, imageHeight, scaleX, scaleY))
             {
                 graphics.FillCurrentPath();
             }
@@ -2155,12 +2171,11 @@ internal sealed partial class PptxRenderer
         return (commands, true);
     }
 
-    private static bool TryReadSvgPathBounds(string data, SvgTransform transform, out SvgPathBounds bounds)
+    private static bool TryReadSvgPathBounds(IReadOnlyList<SvgPathCommand> commands, out SvgPathBounds bounds, out SvgPathBounds controlBounds)
     {
-        (List<SvgPathCommand> commands, bool complete) = ParseSvgPathData(data);
-        commands = TransformSvgCommands(commands, transform);
         bounds = default;
-        if (!complete || commands.Count == 0)
+        controlBounds = default;
+        if (commands.Count == 0)
         {
             return false;
         }
@@ -2173,6 +2188,10 @@ internal sealed partial class PptxRenderer
         double minY = double.PositiveInfinity;
         double maxX = double.NegativeInfinity;
         double maxY = double.NegativeInfinity;
+        double minControlX = double.PositiveInfinity;
+        double minControlY = double.PositiveInfinity;
+        double maxControlX = double.NegativeInfinity;
+        double maxControlY = double.NegativeInfinity;
 
         void Include(double x, double y)
         {
@@ -2207,12 +2226,20 @@ internal sealed partial class PptxRenderer
                     Include(currentX, currentY);
                     break;
                 case 'C':
-                    Include(pathCommand.Arguments[0], pathCommand.Arguments[1]);
-                    Include(pathCommand.Arguments[2], pathCommand.Arguments[3]);
+                {
+                    double[] points = pathCommand.Arguments;
+                    var (curveMinX, curveMaxX) = GetSvgCubicExtent(currentX, points[0], points[2], points[4]);
+                    var (curveMinY, curveMaxY) = GetSvgCubicExtent(currentY, points[1], points[3], points[5]);
+                    Include(curveMinX, curveMinY);
+                    Include(curveMaxX, curveMaxY);
+                    minControlX = Math.Min(minControlX, Math.Min(points[0], points[2]));
+                    minControlY = Math.Min(minControlY, Math.Min(points[1], points[3]));
+                    maxControlX = Math.Max(maxControlX, Math.Max(points[0], points[2]));
+                    maxControlY = Math.Max(maxControlY, Math.Max(points[1], points[3]));
                     currentX = pathCommand.Arguments[4];
                     currentY = pathCommand.Arguments[5];
-                    Include(currentX, currentY);
                     break;
+                }
                 case 'Z':
                     currentX = startX;
                     currentY = startY;
@@ -2223,7 +2250,12 @@ internal sealed partial class PptxRenderer
             }
         }
 
-        if (double.IsInfinity(minX) || double.IsInfinity(minY) || double.IsInfinity(maxX) || double.IsInfinity(maxY))
+        // The PDF still emits the control points. Keep their existing finite
+        // mapping check separate from the gradient's painted extent.
+        controlBounds = new SvgPathBounds(Math.Min(minX, minControlX), Math.Min(minY, minControlY),
+            Math.Max(maxX, maxControlX), Math.Max(maxY, maxControlY));
+        if (double.IsInfinity(controlBounds.MinX) || double.IsInfinity(controlBounds.MinY) ||
+            double.IsInfinity(controlBounds.MaxX) || double.IsInfinity(controlBounds.MaxY))
         {
             bounds = default;
             return false;
@@ -2233,9 +2265,57 @@ internal sealed partial class PptxRenderer
         return true;
     }
 
-    private static bool TryAppendSvgPath(PdfGraphicsBuilder graphics, string data, SvgTransform transform, double minX, double minY, double imageX, double imageY, double imageHeight, double scaleX, double scaleY, SvgTransform? strokeViewport = null)
+    private static (double Min, double Max) GetSvgCubicExtent(double start, double first, double second, double end)
     {
-        List<SvgPathCommand> commands = TransformSvgCommands(ParseSvgPathData(data).Commands, transform);
+        double min = Math.Min(start, end);
+        double max = Math.Max(start, end);
+        double hullMin = Math.Min(min, Math.Min(first, second));
+        double hullMax = Math.Max(max, Math.Max(first, second));
+        if ((min == hullMin && max == hullMax) || !double.IsFinite(hullMin) || !double.IsFinite(hullMax))
+        {
+            return (hullMin, hullMax);
+        }
+
+        // Solve the derivative on normalized coordinates so differences and
+        // the discriminant remain finite for large authored curves.
+        double scale = Math.Max(Math.Abs(hullMin), Math.Abs(hullMax));
+        double p0 = start / scale, p1 = first / scale, p2 = second / scale, p3 = end / scale;
+        double d0 = p1 - p0, d1 = p2 - p1, d2 = p3 - p2;
+        double a = d0 - 2d * d1 + d2;
+        double b = 2d * (d1 - d0);
+        if (a == 0d)
+        {
+            if (b != 0d) IncludeAt(-d0 / b);
+        }
+        else
+        {
+            double discriminant = b * b - 4d * a * d0;
+            if (discriminant > 0d)
+            {
+                // Recover the smaller root without cancellation in the numerator.
+                double q = -0.5d * (b + Math.CopySign(Math.Sqrt(discriminant), b));
+                IncludeAt(q / a);
+                IncludeAt(d0 / q);
+            }
+        }
+        return (min, max);
+
+        void IncludeAt(double t)
+        {
+            if (t <= 0d || t >= 1d) return;
+            double u = 1d - t;
+            double normalized = u * u * u * p0 + 3d * u * u * t * p1 + 3d * u * t * t * p2 + t * t * t * p3;
+            double value = Math.Clamp(normalized, -1d, 1d) * scale;
+            min = Math.Min(min, value);
+            max = Math.Max(max, value);
+        }
+    }
+
+    private static bool TryAppendSvgPath(PdfGraphicsBuilder graphics, string data, SvgTransform transform, double minX, double minY, double imageX, double imageY, double imageHeight, double scaleX, double scaleY, SvgTransform? strokeViewport = null, IReadOnlyList<SvgPathCommand>? parsedCommands = null) =>
+        TryAppendSvgPath(graphics, parsedCommands ?? TransformSvgCommands(ParseSvgPathData(data).Commands, transform), minX, minY, imageX, imageY, imageHeight, scaleX, scaleY, strokeViewport);
+
+    private static bool TryAppendSvgPath(PdfGraphicsBuilder graphics, IReadOnlyList<SvgPathCommand> commands, double minX, double minY, double imageX, double imageY, double imageHeight, double scaleX, double scaleY, SvgTransform? strokeViewport = null)
+    {
         double currentX = 0d;
         double currentY = 0d;
         double startX = 0d;

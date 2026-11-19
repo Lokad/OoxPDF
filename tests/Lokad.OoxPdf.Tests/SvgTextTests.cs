@@ -193,6 +193,45 @@ internal static partial class SvgTextTests
         }
     }
 
+    public static void SvgBezierGradientBoundsMatchExplicitUserCoordinates()
+    {
+        const string arch = "M10 70 C30 -10 70 -10 90 70 L90 90 H10 Z";
+        const string asymmetric = "M10 80 C30 53 70 53 90 161 L90 180 H10 Z";
+        const string boxLinear = """x1=".5" x2=".5" y1="0" y2="1" """;
+        const string userLinear = """x1="50" x2="50" y1="10" y2="90" """;
+        foreach (var (path, kind, box, user, paint) in new[]
+        {
+            // The arch reaches its upper edge at t=.5. The asymmetric curve
+            // has a quadratic derivative and reaches its upper edge at t=1/3.
+            (arch, "linearGradient", boxLinear, userLinear, """fill="url(#g)" """),
+            (asymmetric, "linearGradient", boxLinear, """x1="50" x2="50" y1="65" y2="180" """, """fill="url(#g)" """),
+            (arch, "radialGradient", """cx=".5" cy=".5" r=".5" """, """cx="50" cy="50" r="40" """, """fill="url(#g)" """),
+            (arch, "linearGradient", boxLinear, userLinear, """fill="none" stroke="url(#g)" stroke-width="6" """)
+        })
+        {
+            string Definition(string units, string geometry) => Svg($"""
+                <defs><{kind} id="g" gradientUnits="{units}" {geometry}>
+                  <stop offset="0" stop-color="red"/><stop offset="1" stop-color="blue"/>
+                </{kind}></defs>
+                <path d="{path}" {paint}/>
+                """);
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            PdfGraphicsBuilder expected = Paint(Definition("userSpaceOnUse", user), diagnostics);
+            PdfGraphicsBuilder actual = Paint(Definition("objectBoundingBox", box), diagnostics);
+            TestAssert.Equal(0, diagnostics.Count);
+            TestAssert.Contains(" c", actual.ToString());
+            TestAssert.True(actual.Shadings.Count > 0 || actual.ShadingPatterns.Count > 0 ||
+                actual.ToString().Contains(" rg", StringComparison.Ordinal), "The path must paint its gradient.");
+            AssertEquivalentSvgPaint(expected, actual, $"{kind} {paint}");
+            TestAssert.True(expected.Shadings.Select(resource => resource.Shading.ResourceKey)
+                .SequenceEqual(actual.Shadings.Select(resource => resource.Shading.ResourceKey)),
+                "Matching curve extents must publish the same shading coordinates.");
+            TestAssert.True(expected.ShadingPatterns.Select(resource => resource.Pattern.ResourceKey)
+                .SequenceEqual(actual.ShadingPatterns.Select(resource => resource.Pattern.ResourceKey)),
+                "Matching curve extents must publish the same pattern projection.");
+        }
+    }
+
     public static void SvgLabelOpacityGroupsRemainVectorOnlyAndKeepUnsupportedSiblingsExplicit()
     {
         var diagnostics = new List<OoxPdfDiagnostic>();
