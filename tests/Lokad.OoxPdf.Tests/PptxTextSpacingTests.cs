@@ -16,119 +16,95 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class PptxTextSpacingTests
 {
+    private const string TabStops = """<a:tabLst><a:tab pos="1828800"/></a:tabLst>""";
+    private const string ExplicitTabStop = "<a:pPr>" + TabStops + "</a:pPr>";
+    private const string TabbedText = "A\tB";
+
     public static void PptxSyntheticTextBoxHonorsTabCharacters()
     {
-        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
-        if (!File.Exists(arial))
-        {
-            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
-        }
+        var page = RenderTabProbe(ExplicitTabStop + TabProbeRun(TabbedText));
+        AssertTabPosition(page, 216d);
 
-        string slideXml = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <p:cSld><p:spTree><p:sp>
-                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
-                    <p:txBody>
-                      <a:bodyPr lIns="0" rIns="0" tIns="0" bIns="0"/><a:lstStyle/>
-                      <a:p><a:pPr><a:tabLst><a:tab pos="1828800"/></a:tabLst></a:pPr><a:r><a:rPr sz="1800"><a:latin typeface="Arial"/></a:rPr><a:t>A{TAB}B</a:t></a:r></a:p>
-                    </p:txBody>
-                  </p:sp></p:spTree></p:cSld>
-                </p:sld>
-                """.Replace("{TAB}", "\t", StringComparison.Ordinal);
-
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
-            ["_rels/.rels"] = PptxTests.PackageRelationship(),
-            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
-            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
-            ["ppt/slides/slide1.xml"] = slideXml
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, output);
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.True(pdf.Contains(" TJ", StringComparison.Ordinal) || pdf.Contains("> Tj", StringComparison.Ordinal), "Expected body text to be drawn as PDF text.");
-        PptxTests.AssertContainsTextMatrixAtX(pdf, 216d);
+        // A matrix at the tab stop can belong to another glyph.
+        var decoy = RenderTabProbe(TabProbeRun("A"), leftEmu: 2743200);
+        var decoyGlyph = PortableRenderingTests.ReadPaintedSourceLabel(decoy, "A").Single();
+        TestAssert.True(Math.Abs(decoyGlyph.Origin.X - 216d) < .002d, "The decoy occupies the expected B position.");
+        TestAssert.Throws<InvalidOperationException>(() => AssertTabPosition(decoy, 216d));
     }
 
     public static void PptxSyntheticTextBoxUsesDefaultTabStops()
     {
-        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
-        if (!File.Exists(arial))
-        {
-            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
-        }
+        var page = RenderTabProbe(TabProbeRun(TabbedText));
+        AssertTabPosition(page, 144d);
+    }
 
-        string slideXml = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <p:cSld><p:spTree><p:sp>
-                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
-                    <p:txBody>
-                      <a:bodyPr lIns="0" rIns="0" tIns="0" bIns="0"/><a:lstStyle/>
-                      <a:p><a:r><a:rPr sz="1800"><a:latin typeface="Arial"/></a:rPr><a:t>A{TAB}B</a:t></a:r></a:p>
-                    </p:txBody>
-                  </p:sp></p:spTree></p:cSld>
-                </p:sld>
-                """.Replace("{TAB}", "\t", StringComparison.Ordinal);
+    public static void PptxSyntheticTextBoxIgnoresStandaloneExplicitTabStops()
+    {
+        string before = ExplicitTabStop + TabProbeRun("A");
+        string after = TabProbeRun("B");
+        var expected = PortableRenderingTests.ReadPaintedSourceLabel(RenderTabProbe(before + after), "AB");
+        var actual = PortableRenderingTests.ReadPaintedSourceLabel(RenderTabProbe(before + "<a:tab/>" + after), "AB");
 
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
-            ["_rels/.rels"] = PptxTests.PackageRelationship(),
-            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
-            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
-            ["ppt/slides/slide1.xml"] = slideXml
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, output);
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.True(pdf.Contains(" TJ", StringComparison.Ordinal) || pdf.Contains("> Tj", StringComparison.Ordinal), "Expected body text to be drawn as PDF text.");
-        PptxTests.AssertContainsTextMatrixAtX(pdf, 144d);
+        TestAssert.Equal(2, expected.Count);
+        TestAssert.Equal(2, actual.Count);
+        TestAssert.True(actual[1].Origin.X > actual[0].Origin.X &&
+            actual[0].Origin == expected[0].Origin && actual[1].Origin == expected[1].Origin,
+            "A standalone tab leaves both glyphs at their no-tab origins.");
     }
 
     public static void PptxTextModelInheritsListStyleTabStops()
     {
-        string slideXml = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <p:cSld><p:spTree><p:sp>
-                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
-                    <p:txBody>
-                      <a:bodyPr lIns="0" rIns="0" tIns="0" bIns="0"/>
-                      <a:lstStyle>
-                        <a:lvl1pPr><a:tabLst><a:tab pos="1828800"/></a:tabLst></a:lvl1pPr>
-                      </a:lstStyle>
-                      <a:p><a:pPr/><a:r><a:rPr sz="1800"><a:latin typeface="Arial"/></a:rPr><a:t>A{TAB}B</a:t></a:r></a:p>
-                    </p:txBody>
-                  </p:sp></p:spTree></p:cSld>
-                </p:sld>
-                """.Replace("{TAB}", "\t", StringComparison.Ordinal);
+        using var input = CreateTabProbe("<a:pPr/>" + TabProbeRun(TabbedText),
+            "<a:lstStyle><a:lvl1pPr>" + TabStops + "</a:lvl1pPr></a:lstStyle>");
+        using var package = OoxPackage.Open(input, default);
+        var document = new PptxReader().Read(package, default);
+        var paragraph = PptxRenderer.InspectTextFrameModels(document, package, 0).Single().Paragraphs.Single();
 
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        TestAssert.Equal(1, paragraph.TabStops.Count);
+        TestAssert.Equal(144d, paragraph.TabStops[0]);
+    }
+
+    private static void AssertTabPosition(PdfPage page, double expectedX)
+    {
+        var glyphs = PortableRenderingTests.ReadPaintedSourceLabel(page, "AB");
+        TestAssert.Equal(2, glyphs.Count);
+        TestAssert.True(Math.Abs(glyphs[0].Origin.X - 72d) < .002d &&
+            Math.Abs(glyphs[1].Origin.X - expectedX) < .002d &&
+            Math.Abs(glyphs[0].Origin.Y - glyphs[1].Origin.Y) < .002d,
+            $"A and B paint on one baseline, with B at X={expectedX}pt.");
+    }
+
+    private static PdfPage RenderTabProbe(string paragraph, int leftEmu = 914400)
+    {
+        using var input = CreateTabProbe(paragraph, leftEmu: leftEmu);
+        using var package = OoxPackage.Open(input, default);
+        var document = new PptxReader().Read(package, default);
+        return new PptxRenderer(new PortableRenderingTests.PinnedResolver())
+            .RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().Single();
+    }
+
+    private static string TabProbeRun(string text) =>
+        $"""<a:r><a:rPr sz="1800"><a:latin typeface="DejaVu Sans"/></a:rPr><a:t>{text}</a:t></a:r>""";
+
+    private static MemoryStream CreateTabProbe(string paragraph, string listStyle = "<a:lstStyle/>", int leftEmu = 914400) =>
+        TestFixtures.CreateZipPackage(new Dictionary<string, string>
         {
             ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
             ["_rels/.rels"] = PptxTests.PackageRelationship(),
             ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
             ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
-            ["ppt/slides/slide1.xml"] = slideXml
+            ["ppt/slides/slide1.xml"] = $$"""
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr><a:xfrm><a:off x="{{leftEmu}}" y="914400"/><a:ext cx="3657600" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody>
+                      <a:bodyPr lIns="0" rIns="0" tIns="0" bIns="0"/>{{listStyle}}
+                      <a:p>{{paragraph}}</a:p>
+                    </p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """
         });
-
-        using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
-        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
-
-        PptxTextFrameModelSnapshot frame = PptxRenderer.InspectTextFrameModels(document, package, 0).Single();
-        PptxTextParagraphModelSnapshot paragraph = frame.Paragraphs.Single();
-
-        TestAssert.Equal(1, paragraph.TabStops.Count);
-        TestAssert.Equal(144d, paragraph.TabStops[0]);
-    }
 
     public static void PptxSyntheticTextBoxTreatsNarrowNoBreakSpaceAsHiddenAdvance()
     {
