@@ -136,6 +136,25 @@ internal static partial class SvgTextTests
         }
     }
 
+    public static void SvgRootOverflowClipsThePictureViewport()
+    {
+        const string clip = "0 0 400 160 re W n";
+        const string shape = """<rect x="370" y="70" width="125" height="40" fill="#ff00ff"/>""";
+        PdfGraphicsBuilder Render(string attributes) =>
+            Paint(Svg(shape).Replace("viewBox=", attributes + " viewBox=", StringComparison.Ordinal));
+
+        PdfGraphicsBuilder clipped = Render("overflow=\"hidden\"");
+        string content = clipped.ToString();
+        int clipIndex = content.IndexOf(clip, StringComparison.Ordinal);
+        int paintIndex = content.IndexOf("1 0 1 rg", StringComparison.Ordinal);
+        TestAssert.True(clipIndex >= 0 && paintIndex > clipIndex, "The image viewport must clip authored geometry before it paints.");
+        TestAssert.Equal(content, Render("overflow=\"visible\" style=\"overflow: scroll\"").ToString());
+        string visible = Render("overflow=\"hidden\" style=\"overflow: visible\"").ToString();
+        TestAssert.Equal(Paint(Svg(shape)).ToString(), visible);
+        TestAssert.DoesNotContain(clip, visible);
+        Write(Page(clipped));
+    }
+
     public static void SvgGradientTransformListsMatchExplicitMatrices()
     {
         foreach (var (gradient, geometry) in new[]

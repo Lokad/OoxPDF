@@ -133,7 +133,12 @@ internal sealed partial class PptxRenderer
         if (picturePreset != "rect")
             ClipToPresetShape(graphics, null, picturePreset, x, y, width, height, pictureAdjustments);
 
-        if (!crop.IsEmpty || Math.Abs(bounds.RotationDegrees) > 0.001d || bounds.FlipHorizontal || bounds.FlipVertical)
+        string? overflow = svg.Root is { } outerSvg
+            ? ReadSvgPresentationAttribute(outerSvg, ReadSvgStyleDeclarations(outerSvg), "overflow")?.Trim()
+            : null;
+        if (!crop.IsEmpty || Math.Abs(bounds.RotationDegrees) > 0.001d || bounds.FlipHorizontal || bounds.FlipVertical ||
+            string.Equals(overflow, "hidden", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(overflow, "scroll", StringComparison.OrdinalIgnoreCase))
         {
             // The viewport rotates with the picture, matching the raster path.
             graphics.ClipRectangle(imageX, imageY, imageWidth, imageHeight);
