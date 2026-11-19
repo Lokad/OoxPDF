@@ -85,8 +85,6 @@ validation tools, including the PDFium rasterizer, remain outside the library.
 - `tools/InspectDocx.ps1`: dump DOCX layout/mode inspection JSON; accepts InspectorPath/SkipBuild and an expected library hash.
 - `tools/ComparePdfTextLineStarts.ps1`: compare PDF text line starts (helper used by CheckVisualCase).
 - `tools/RenderCachedReference.ps1`: render cached Office reference PDFs (helper for cache-only gates).
-- `tools/CompareDocxLayoutPdfFlow.ps1`: compare a DOCX layout snapshot against PDF text flow for one run directory.
-- `tools/SummarizeDocxRowBoundary.ps1`: summarize DOCX table row-boundary/page-break behavior for one run.
 - `tools/SummarizePdfGraphicsOperations.ps1`: summarize PDF graphics-operation rollups across runs.
 - `tools/SummarizeChartDataLabelLayout.ps1`: summarize chart data-label layout across runs.
 - `tools/SummarizeChartStructureDeltas.ps1`: summarize chart graphics-structure deltas per case/kind.
