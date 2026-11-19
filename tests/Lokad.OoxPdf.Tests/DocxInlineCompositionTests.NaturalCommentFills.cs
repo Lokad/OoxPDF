@@ -83,7 +83,7 @@ internal static partial class DocxInlineCompositionTests
         foreach (bool split in new[] { false, true })
         {
             const OoxPdfDocxMarkupMode mode = OoxPdfDocxMarkupMode.AllMarkup;
-            var document = ReadMutation("Composition/composed-static-cell-report", mode, false, split, (xml, w, m) =>
+            var document = ReadMutation("Composition/composed-static-cell-report", mode, false, false, (xml, w, m) =>
             {
                 var body = xml.Root!.Element(w + "body")!;
                 var paragraph = body.Elements(w + "p").Single(p => p.Elements(w + "commentRangeStart").Any() &&
@@ -91,9 +91,16 @@ internal static partial class DocxInlineCompositionTests
                 body.Elements().Where(element => element != paragraph && element.Name != w + "sectPr").Remove();
                 body.Descendants().Where(element => element.Name == w + "headerReference" ||
                     element.Name == w + "footerReference").Remove();
+                var math = paragraph.Elements(m + "oMath").Single();
+                // Keep a following word on the selected line with portable fonts.
+                math.ElementsAfterSelf(w + "r").First().Element(w + "t")!.Value = " ends.";
                 if (split)
                 {
-                    var math = paragraph.Elements(m + "oMath").Single();
+                    var run = paragraph.Element(w + "hyperlink")!.Element(w + "r")!;
+                    var continuation = new XElement(run);
+                    run.Element(w + "t")!.Value = "The trend ";
+                    continuation.Element(w + "t")!.Value = "marker ";
+                    run.AddAfterSelf(continuation);
                     math.AddBeforeSelf(new XElement(w + "bookmarkStart", new XAttribute(w + "id", "7010"),
                         new XAttribute(w + "name", "SelectedFormula")));
                     math.AddAfterSelf(new XElement(w + "bookmarkEnd", new XAttribute(w + "id", "7010")));
@@ -104,7 +111,7 @@ internal static partial class DocxInlineCompositionTests
             var picture = ReadPictureRangeFrame(page);
             var formula = PortableRenderingTests.ReadPaintedSourceLabel(page, "a+b=c", mathOnly: true);
             var left = PortableRenderingTests.ReadPaintedSourceLabel(page, "The trend marker");
-            var right = PortableRenderingTests.ReadPaintedSourceLabel(page, "without replacing it.");
+            var right = PortableRenderingTests.ReadPaintedSourceLabel(page, "ends.");
             var fills = ReadNaturalCommentFillRectangles(page.Content).Where(rect => rect.X < 400d).ToArray();
             var leading = fills.Single(rect => Contains(rect, left[0].Ink) && Contains(rect, picture));
             var mathFill = fills.Single(rect => formula.All(glyph => Contains(rect, glyph.Ink)));
