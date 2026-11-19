@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Fonts;
@@ -186,19 +185,13 @@ internal sealed partial class PptxRenderer
             EndX = Math.Max(EndX, x);
         }
 
-        public bool TryRemoveLastSpan([NotNullWhen(true)] out PptxTextSpanLayout? span)
+        public List<PptxTextSpanLayout> RemoveTail(int startSpan)
         {
-            if (Spans.Count == 0)
-            {
-                span = null;
-                return false;
-            }
-
-            int lastIndex = Spans.Count - 1;
-            span = Spans[lastIndex];
-            Spans.RemoveAt(lastIndex);
+            int count = Spans.Count - startSpan;
+            var tail = Spans.GetRange(startSpan, count);
+            Spans.RemoveRange(startSpan, count);
             EndX = Spans.Count == 0 ? startX : Spans.Max(item => item.EndX);
-            return true;
+            return tail;
         }
 
         public void Reset(double startX)

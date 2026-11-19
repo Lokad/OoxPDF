@@ -8032,6 +8032,7 @@
   ],
   "horizontal-text-clipping": [
     "PptxWrappedNoBreakClusterKeepsInkAndLinkInNextColumn",
+    "PptxWrappedNoBreakPhrasePreservesMeasuredAdvances",
     "PptxHorizontalClipPreservesVerticalOverflowInShapesAndCells",
     "PptxSyntheticTextBoxOverflowColumnsUseSlideClip",
     "PptxSyntheticTextManualBreaksStayInActiveOverflowColumn",
@@ -20216,6 +20217,7 @@
   ],
   "pptx-text-oracle-portability": [
     "PptxWrappedNoBreakClusterKeepsInkAndLinkInNextColumn",
+    "PptxWrappedNoBreakPhrasePreservesMeasuredAdvances",
     "PptxSyntheticTextBoxNoBreakSpaceKeepsWrappedClusterTogether",
     "PptxSyntheticEllipseTextUsesPresetTextRectangle",
     "PptxHorizontalClipPreservesVerticalOverflowInShapesAndCells",

@@ -199,8 +199,6 @@ internal static class PptxTextSpacingTests
     {
         // With the pinned font, 310pt fits the prefix through the space.
         // At 297pt the token fits but its no-break space overflows.
-        const int columnGap = 20;
-        const string uri = "https://example.org/points";
         var cases = new[]
         {
             (Columns: 2, ColumnWidth: 310, Overflow: "clip", ManualBreak: false, Linked: false, Space: "&#x202F;"),
@@ -213,45 +211,17 @@ internal static class PptxTextSpacingTests
             (Columns: 2, ColumnWidth: 297, Overflow: "clip", ManualBreak: false, Linked: true, Space: "&#xA0;"),
         };
 
-        string Run(string text, string properties = "") =>
-            $"<a:r><a:rPr sz=\"2600\"><a:latin typeface=\"DejaVu Sans\"/>{properties}</a:rPr><a:t>{text}</a:t></a:r>";
-
         var fonts = new PortableRenderingTests.PinnedResolver();
         foreach (var (columns, columnWidth, overflow, manualBreak, linked, space) in cases)
         {
-            string runs = manualBreak ? Run("Alpha beta gamma ") + "<a:br/>" + Run($"+2{space}points omega")
-                : linked ? Run("Alpha beta gamma ") + Run("+2", """<a:hlinkClick r:id="points"/>""") + Run($"{space}points omega")
-                : Run($"Alpha beta gamma +2{space}points omega");
-            int width = columns * columnWidth + (columns - 1) * columnGap;
-            var entries = new Dictionary<string, string>
-            {
-                ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
-                ["_rels/.rels"] = PptxTests.PackageRelationship(),
-                ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
-                ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
-                ["ppt/slides/slide1.xml"] = $$"""
-                    <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-                      <p:cSld><p:spTree><p:sp>
-                        <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="{{width * 12700}}" cy="482600"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
-                        <p:txBody><a:bodyPr numCol="{{columns}}" spcCol="{{columnGap * 12700}}" horzOverflow="{{overflow}}" vertOverflow="overflow"
-                            lIns="0" rIns="0" tIns="0" bIns="0"><a:noAutofit/></a:bodyPr><a:lstStyle/><a:p>{{runs}}</a:p></p:txBody>
-                      </p:sp></p:spTree></p:cSld>
-                    </p:sld>
-                    """,
-                ["ppt/slides/_rels/slide1.xml.rels"] = $$"""
-                    <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                      <Relationship Id="points" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="{{uri}}" TargetMode="External"/>
-                    </Relationships>
-                    """,
-            };
-            using var input = TestFixtures.CreateZipPackage(entries);
-            using var package = OoxPackage.Open(input, default);
-            var page = new PptxRenderer(fonts).RenderPagesAsync(new PptxReader().Read(package, default), package, null, default)
-                .ToBlockingEnumerable().Single();
+            string runs = manualBreak ? NoBreakRun("Alpha beta gamma ") + "<a:br/>" + NoBreakRun($"+2{space}points omega")
+                : linked ? NoBreakRun("Alpha beta gamma ") + NoBreakRun("+2", """<a:hlinkClick r:id="points"/>""") + NoBreakRun($"{space}points omega")
+                : NoBreakRun($"Alpha beta gamma +2{space}points omega");
+            var page = RenderNoBreakTextBox(runs, columns, columnWidth, overflow, fonts);
             var token = PortableRenderingTests.ReadPaintedSourceLabel(page, "+2");
             var word = PortableRenderingTests.ReadPaintedSourceLabel(page, "points");
             var prefix = PortableRenderingTests.ReadPaintedSourceLabel(page, "Alpha beta gamma");
-            double columnX = 72 + (columns - 1) * (columnWidth + columnGap);
+            double columnX = 72 + (columns - 1) * (columnWidth + NoBreakColumnGap);
             TestAssert.True(token[0].Origin.X >= columnX - .002 && token[0].Origin.X < columnX + 12 &&
                 word[0].Origin.X > token[^1].Origin.X && Math.Abs(word[0].Origin.Y - token[0].Origin.Y) < .002,
                 $"The wrapped cluster paints on its next line for {columnWidth}pt and {space}.");
@@ -261,12 +231,111 @@ internal static class PptxTextSpacingTests
             if (linked)
             {
                 var link = page.Annotations.Single();
-                TestAssert.Equal(uri, link.Uri);
+                TestAssert.Equal(NoBreakLinkUri, link.Uri);
                 TestAssert.True(link.X >= columnX - .002 && token.All(glyph =>
                     glyph.Ink.X >= link.X - .002 && glyph.Ink.X + glyph.Ink.Width <= link.X + link.Width + .002),
                     "The moved token's link covers its horizontal ink in the destination column.");
             }
         }
+    }
+
+    public static void PptxWrappedNoBreakPhrasePreservesMeasuredAdvances()
+    {
+        var fonts = new PortableRenderingTests.PinnedResolver();
+        string linkedToken = NoBreakRun("+2", """<a:hlinkClick r:id="points"/>""");
+        string prefix = NoBreakRun("Alpha beta ");
+        // The first line fits through "points". At the narrower width the
+        // following word can require a third line and trigger column balancing.
+        string phrase = prefix + linkedToken + NoBreakRun("&#xA0;po") + NoBreakRun("ints&#x202F;total omega");
+        foreach (int width in new[] { 286, 310 })
+        {
+            var chain = RenderNoBreakTextBox(phrase, 2, width, "clip", fonts);
+            var alpha = PortableRenderingTests.ReadPaintedSourceLabel(chain, "Alpha beta");
+            var token = PortableRenderingTests.ReadPaintedSourceLabel(chain, "+2");
+            var points = PortableRenderingTests.ReadPaintedSourceLabel(chain, "points");
+            var total = PortableRenderingTests.ReadPaintedSourceLabel(chain, "total");
+            PortableRenderingTests.ReadPaintedSourceLabel(chain, "omega");
+            double secondColumnX = 72 + width + NoBreakColumnGap;
+            bool inSecondColumn = token[0].Origin.X >= secondColumnX - .002;
+            TestAssert.True(alpha[^1].Origin.X < secondColumnX &&
+                (inSecondColumn || alpha[0].Origin.Y > token[0].Origin.Y) &&
+                points[0].Origin.X > token[^1].Origin.X && total[0].Origin.X > points[^1].Origin.X &&
+                Math.Abs(token[0].Origin.Y - points[0].Origin.Y) < .002 &&
+                Math.Abs(token[0].Origin.Y - total[0].Origin.Y) < .002,
+                $"The phrase must paint together on the following line at {width}pt. Origins: {token[0].Origin}, {points[0].Origin}, {total[0].Origin}.");
+            TestAssert.True(width != 310 || inSecondColumn, "The two-line witness must move to the next column.");
+            var link = chain.Annotations.Single();
+            TestAssert.Equal(NoBreakLinkUri, link.Uri);
+            TestAssert.True(token.All(glyph => glyph.Ink.X >= link.X - .002 &&
+                glyph.Ink.X + glyph.Ink.Width <= link.X + link.Width + .002),
+                "The destination link must cover its painted token.");
+        }
+
+        prefix = NoBreakRun("Alpha beta gamma ");
+        string firstSpace = NoBreakRun("&#xA0;", size: 3000);
+        string secondSpace = NoBreakRun("&#x202F;");
+        double wrappedSingle = SpaceAdvance(297, firstSpace, wraps: true);
+        double wrappedPair = SpaceAdvance(297, firstSpace + secondSpace, wraps: true);
+        double unwrappedSingle = SpaceAdvance(450, firstSpace, wraps: false);
+        double unwrappedPair = SpaceAdvance(450, firstSpace + secondSpace, wraps: false);
+        TestAssert.True(unwrappedPair > unwrappedSingle + 2d,
+            "Adding the narrow space increases the independently measured advance.");
+        TestAssert.True(Math.Abs(wrappedSingle - unwrappedSingle) < .002 &&
+            Math.Abs(wrappedPair - unwrappedPair) < .002,
+            "Column moves preserve both advances in their authored run styles.");
+
+        double SpaceAdvance(int width, string spaces, bool wraps)
+        {
+            // The control starts the token at the line origin so both
+            // placements have the same preceding kerning context.
+            string runs = (wraps ? prefix : string.Empty) + NoBreakRun("+2") + spaces + NoBreakRun("points omega");
+            var page = RenderNoBreakTextBox(runs,
+                2, width, "clip", fonts);
+            var left = PortableRenderingTests.ReadPaintedSourceLabel(page, "+2");
+            var right = PortableRenderingTests.ReadPaintedSourceLabel(page, "points");
+            double secondColumnX = 72 + width + NoBreakColumnGap;
+            TestAssert.True((left[0].Origin.X >= secondColumnX - .002) == wraps &&
+                (right[0].Origin.X >= secondColumnX - .002) == wraps &&
+                Math.Abs(left[0].Origin.Y - right[0].Origin.Y) < .002,
+                $"Both words stay on the expected line at {width}pt.");
+            return right[0].Origin.X - left[0].Origin.X;
+        }
+    }
+
+    private const int NoBreakColumnGap = 20;
+    private const string NoBreakLinkUri = "https://example.org/points";
+
+    private static string NoBreakRun(string text, string properties = "", int size = 2600) =>
+        $"<a:r><a:rPr sz=\"{size}\"><a:latin typeface=\"DejaVu Sans\"/>{properties}</a:rPr><a:t>{text}</a:t></a:r>";
+
+    private static PdfPage RenderNoBreakTextBox(string runs, int columns, int columnWidth, string overflow, IFontResolver fonts)
+    {
+        int width = columns * columnWidth + (columns - 1) * NoBreakColumnGap;
+        var entries = new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
+            ["_rels/.rels"] = PptxTests.PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
+            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = $$"""
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="{{width * 12700}}" cy="482600"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody><a:bodyPr numCol="{{columns}}" spcCol="{{NoBreakColumnGap * 12700}}" horzOverflow="{{overflow}}" vertOverflow="overflow"
+                        lIns="0" rIns="0" tIns="0" bIns="0"><a:noAutofit/></a:bodyPr><a:lstStyle/><a:p>{{runs}}</a:p></p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """,
+            ["ppt/slides/_rels/slide1.xml.rels"] = $$"""
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="points" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="{{NoBreakLinkUri}}" TargetMode="External"/>
+                </Relationships>
+                """,
+        };
+        using var input = TestFixtures.CreateZipPackage(entries);
+        using var package = OoxPackage.Open(input, default);
+        return new PptxRenderer(fonts).RenderPagesAsync(new PptxReader().Read(package, default), package, null, default)
+            .ToBlockingEnumerable().Single();
     }
 
     public static void PptxSyntheticTextBoxTreatsNoBreakSpaceAsHiddenRegularSpaceAdvance()
