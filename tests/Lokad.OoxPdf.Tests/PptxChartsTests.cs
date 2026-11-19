@@ -2106,21 +2106,6 @@ internal static partial class PptxChartsTests
         TestAssert.True(Math.Abs(narrowLabels - 20.16d) < 0.01d, "Fitting labels must keep the preset floor. Got " + narrowLabels);
     }
 
-    public static void PptxSyntheticChartPieLabelAnglesMirrorSlices()
-    {
-        var renderer = typeof(PptxRenderer);
-        var flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static;
-        var startMethod = renderer.GetMethod("GetPieDataLabelStartAngle", flags);
-        var midMethod = renderer.GetMethod("GetPieDataLabelMidpointAngle", flags);
-        TestAssert.True(startMethod is not null && midMethod is not null, "Expected pie label angle helpers to remain inspectable by the Office evidence guard.");
-
-        double start = (double)startMethod!.Invoke(null, [0d])!;
-        double mid = (double)midMethod!.Invoke(null, [start, 48d, 100d])!;
-
-        TestAssert.True(Math.Abs(start - Math.PI / 2d) < 0.000001d, "Labels should start at the top like slices. Got " + start);
-        TestAssert.True(Math.Abs(mid - 0.02d * Math.PI) < 0.000001d, "48-share label mid should follow start-minus-half-share. Got " + mid);
-    }
-
     public static void PptxSyntheticChartPieRadiusBaseUsesPlotHeight()
     {
         var renderer = typeof(PptxRenderer);

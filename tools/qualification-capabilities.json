@@ -2296,6 +2296,7 @@
   ],
   "pptx-horizontal-polar-frame": [
       "PptxSyntheticHorizontalLegendPackingGaps",
+      "PptxPolarLabelsKeepTheirWedgesWhenEarlierLabelsAreDeleted",
       "PptxPieSideFramesRetainIndependentOfficeExtentsAndPairedOffsets",
       "PptxPieSideSlotsFollowContentAndRetainCompleteLabels",
       "PptxUnfitPieSideSlotsRetainDiagnosedPlacementFallback",
@@ -19340,7 +19341,7 @@
     "PptxSyntheticChartMeasuredRightReserveKeepsPresetFloor",
     "PptxSyntheticChartNoTitleRightLegendLeftInsetKeepsOfficePadding",
     "PptxSyntheticChartPieArcKeepsMathConvention",
-    "PptxSyntheticChartPieLabelAnglesMirrorSlices",
+    "PptxPolarLabelsKeepTheirWedgesWhenEarlierLabelsAreDeleted",
     "PptxSyntheticChartPieRadiusBaseUsesPlotHeight",
     "PptxSyntheticChartRightLegendReserveKeepsOfficeTail",
     "PptxSyntheticChartScatterAxisNearMaximumKeepsOfficeHeadroom",

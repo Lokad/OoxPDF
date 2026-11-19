@@ -10,29 +10,9 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    // Start angle for pie data labels in math convention (y-up): top, shifted clockwise
-    // by the first-slice angle, exactly like the slice loop.
-    private static double GetPieDataLabelStartAngle(double firstSliceAngle)
+    private static async ValueTask RenderPieDataLabelsAsync(PptxTheme theme, PptxColorMap colorMap, PdfGraphicsBuilder graphics, ChartColorPalette chartPalette, ChartPolarLayout layout, ChartPlotBox placementBox, IReadOnlyList<ChartIndexedPieSlice> slices, double total, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, IReadOnlyDictionary<int, double> pointExplosions, double holeSize, double firstSliceAngle, string? valueFormatCode, ChartDataLabelOptions labelOptions, ChartIndexedTextVector categoryLabels, IReadOnlyList<ChartSeriesNameRecord> seriesNames, PresentationFontResolver? fontResolver, List<PdfFontResource> chartFonts, PptxRenderContext context, PptxSceneChart? chart, List<PdfLinkAnnotation> linkAnnotations, HashSet<string> reportedHyperlinkIds, Action<OoxPdfDiagnostic>? diagnosticSink = null)
     {
-        return Math.PI / 2d - firstSliceAngle * Math.PI / 180d;
-    }
-
-    // Midpoint angle for a pie data label: start minus half the clockwise share, mirroring
-    // the slice loop exactly.
-    private static double GetPieDataLabelMidpointAngle(double startAngleRadians, double sliceValue, double total)
-    {
-        return startAngleRadians - sliceValue / total * Math.PI;
-    }
-
-    private static async ValueTask RenderPieDataLabelsAsync(PptxTheme theme, PptxColorMap colorMap, PdfGraphicsBuilder graphics, ChartColorPalette chartPalette, ChartPolarLayout layout, ChartPlotBox placementBox, IReadOnlyList<ChartIndexedPieSlice> slices, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, IReadOnlyDictionary<int, double> pointExplosions, double holeSize, double firstSliceAngle, string? valueFormatCode, ChartDataLabelOptions labelOptions, ChartIndexedTextVector categoryLabels, IReadOnlyList<ChartSeriesNameRecord> seriesNames, PresentationFontResolver? fontResolver, List<PdfFontResource> chartFonts, PptxRenderContext context, PptxSceneChart? chart, List<PdfLinkAnnotation> linkAnnotations, HashSet<string> reportedHyperlinkIds, Action<OoxPdfDiagnostic>? diagnosticSink = null)
-    {
-        if (!labelOptions.HasVisibleText || slices.Count == 0)
-        {
-            return;
-        }
-
-        double total = slices.Sum(slice => slice.Value);
-        if (total <= 0d)
+        if (!labelOptions.HasVisibleText || total <= 0d)
         {
             return;
         }
@@ -45,12 +25,11 @@ internal sealed partial class PptxRenderer
         var paints = new List<PolarLabelPaint>(slices.Count);
         List<ChartTextRunLink>? labelLinks = chart?.Relationships is null ? null : new List<ChartTextRunLink>();
         Dictionary<int, string> categoryLabelIndex = BuildCategoryLabelIndex(categoryLabels);
-        double angle = GetPieDataLabelStartAngle(firstSliceAngle);
         // Office draws leader lines only for same-side narrow manual pie labels (the
         // box center sits on the wedge half and the box fits 85.3pt): one leader on
         // the base probes (Gamma/West), two on rotated small-factor probes
         // (Beta+Gamma), none when the same-side box runs wide (graded/long-Gamma).
-        foreach (ChartIndexedPieSlice slice in slices)
+        foreach (var (slice, _, _, mid) in EnumeratePieSliceAngles(slices, total, firstSliceAngle))
         {
             ChartDataLabelOptions effectiveOptions = ResolveChartDataLabelOptions(labelOptions, slice.Index);
             if (!effectiveOptions.HasVisibleText)
@@ -61,8 +40,6 @@ internal sealed partial class PptxRenderer
             ChartTextStyle style = ResolveChartDataLabelTextStyle(theme, colorMap, effectiveOptions);
             double fontSize = style.FontSize;
             double labelHeight = fontSize * PptxChartMetricRules.PieDataLabelHeightFactor;
-            double sweep = -slice.Value / total * Math.PI * 2d;
-            double mid = GetPieDataLabelMidpointAngle(angle, slice.Value, total);
             double explosion = pointExplosions.TryGetValue(slice.Index, out double offset) ? Math.Clamp(offset, 0d, 1d) * geometry.Radius * PptxChartMetricRules.PieExplosionLabelRadiusRatio : 0d;
             double labelX = geometry.CenterX + Math.Cos(mid) * (labelRadius + explosion) - labelWidth / 2d;
             double labelY = geometry.CenterY + Math.Sin(mid) * (labelRadius + explosion) - labelHeight / 2d;
@@ -228,7 +205,6 @@ internal sealed partial class PptxRenderer
                     effectiveOptions.Layout.HasGeometryValues, runStart, runs.Count - runStart,
                     linkStart, (labelLinks?.Count ?? 0) - linkStart, leader));
             }
-            angle += sweep;
         }
         double[] offsets = await PlacePolarLabelRowsAsync(paints, runs, placementBox, fontResolver, context).ConfigureAwait(false);
         for (int index = 0; index < paints.Count; index++)

@@ -7,6 +7,56 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class PptxLegendRowsTests
 {
+    public static void PptxPolarLabelsKeepTheirWedgesWhenEarlierLabelsAreDeleted()
+    {
+        string[] names = ["Fir", "Oak", "Elm", "Ash"];
+        const string flags = "<c:showVal val=\"0\"/><c:showCatName val=\"1\"/><c:showSerName val=\"0\"/>" +
+            "<c:showPercent val=\"0\"/><c:showBubbleSize val=\"0\"/><c:showLegendKey val=\"0\"/>";
+        const string coordinate = @"(-?\d+(?:\.\d+)?)";
+        var wedgePath = new Regex($@"(?m)^{coordinate} {coordinate} m\r?\n[^\r\n]+ c\r?\n(?:[^\r\n]+ [cl]\r?\n)*h\r?\nf\*");
+        foreach (string kind in new[] { "pie", "doughnut" })
+        {
+            PdfPage RenderLabels(string pointOverride) => Render(576, 12, names.Length, overlay: true,
+                kind: kind, categoryLegend: true, categoryNames: names, firstSliceAngle: 30,
+                dataLabels: $"<c:dLbls>{pointOverride}{flags}</c:dLbls>").Page;
+
+            PdfPage original = RenderLabels("");
+            Match[] wedges = wedgePath.Matches(original.Content).ToArray();
+            TestAssert.Equal(names.Length, wedges.Length);
+            Vector2[] starts = wedges.Select(match => new Vector2(
+                float.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture),
+                float.Parse(match.Groups[2].Value, CultureInfo.InvariantCulture))).ToArray();
+            Vector2 center = (starts[0] + starts[2]) / 2;
+            Vector2 firstRadius = Vector2.Normalize(starts[0] - center);
+            // 30 degrees clockwise from the top in PDF coordinates.
+            TestAssert.True(Math.Abs(firstRadius.X - .5d) < .001d && Math.Abs(firstRadius.Y - Math.Sqrt(3d) / 2) < .001d,
+                $"{kind}: the painted first wedge follows the authored rotation.");
+
+            var originalInk = new List<(string Text, PdfRectangle Ink)>();
+            AssertPolarLabelGlyphInk(original, kind, originalInk);
+            TestAssert.Equal(names.Length, originalInk.Count);
+            for (int index = 0; index < names.Length; index++)
+            {
+                PdfRectangle ink = originalInk.Single(show => show.Text == names[index]).Ink;
+                Vector2 inkCenter = new((float)(ink.X + ink.Width / 2), (float)(ink.Y + ink.Height / 2));
+                Vector2 midpoint = (starts[index] + starts[(index + 1) % starts.Length]) / 2 - center;
+                TestAssert.True(Vector2.Dot(Vector2.Normalize(inkCenter - center), Vector2.Normalize(midpoint)) > .99f,
+                    $"{kind}: {names[index]} belongs near the midpoint of its own painted wedge.");
+            }
+
+            foreach (int deleted in new[] { 0, 1, 3 })
+            {
+                PdfPage edited = RenderLabels($"<c:dLbl><c:idx val=\"{deleted}\"/><c:delete val=\"1\"/></c:dLbl>");
+                TestAssert.True(wedges.Select(match => match.Value).SequenceEqual(wedgePath.Matches(edited.Content).Select(match => match.Value)),
+                    $"{kind}: deleting label {deleted} preserves all wedge paths.");
+                var editedInk = new List<(string Text, PdfRectangle Ink)>();
+                AssertPolarLabelGlyphInk(edited, $"{kind}/delete {deleted}", editedInk);
+                TestAssert.True(originalInk.Where(show => show.Text != names[deleted]).SequenceEqual(editedInk),
+                    $"{kind}: deleting label {deleted} preserves the other labels' full ink and positions.");
+            }
+        }
+    }
+
     public static void PptxPolarDataLabelsRetainWholeAndRichTextInk()
     {
         const string layout = "<c:layout><c:manualLayout><c:xMode val=\"factor\"/><c:yMode val=\"factor\"/>" +

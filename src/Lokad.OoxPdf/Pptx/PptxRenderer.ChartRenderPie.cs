@@ -38,14 +38,21 @@ internal sealed partial class PptxRenderer
             .ToArray();
     }
 
-    private static void RenderPieChart(PdfGraphicsBuilder graphics, PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, ChartPolarLayout layout, IReadOnlyList<ChartIndexedPieSlice> slices, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, IReadOnlyDictionary<int, ChartSeriesStroke> pointStrokes, IReadOnlyDictionary<int, double> pointExplosions, double firstSliceAngle)
+    private static IEnumerable<(ChartIndexedPieSlice Slice, double Start, double Sweep, double Midpoint)> EnumeratePieSliceAngles(
+        IReadOnlyList<ChartIndexedPieSlice> slices, double total, double firstSliceAngle)
     {
-        RenderPieOrDoughnutSlices(graphics, theme, colorMap, chartPalette, layout, slices, pointFills, pointStrokes, pointExplosions, holeSize: 0d, firstSliceAngle);
+        // Advance clockwise from the authored start for every painted wedge.
+        double start = Math.PI / 2d - firstSliceAngle * Math.PI / 180d;
+        foreach (ChartIndexedPieSlice slice in slices)
+        {
+            double sweep = -slice.Value / total * Math.PI * 2d;
+            yield return (slice, start, sweep, start + sweep / 2d);
+            start += sweep;
+        }
     }
 
-    private static void RenderPieOrDoughnutSlices(PdfGraphicsBuilder graphics, PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, ChartPolarLayout layout, IReadOnlyList<ChartIndexedPieSlice> slices, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, IReadOnlyDictionary<int, ChartSeriesStroke> pointStrokes, IReadOnlyDictionary<int, double> pointExplosions, double holeSize, double firstSliceAngle)
+    private static void RenderPieOrDoughnutSlices(PdfGraphicsBuilder graphics, PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, ChartPolarLayout layout, IReadOnlyList<ChartIndexedPieSlice> slices, double total, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, IReadOnlyDictionary<int, ChartSeriesStroke> pointStrokes, IReadOnlyDictionary<int, double> pointExplosions, double holeSize, double firstSliceAngle)
     {
-        double total = slices.Sum(slice => slice.Value);
         if (total <= 0d)
         {
             return;
@@ -53,15 +60,11 @@ internal sealed partial class PptxRenderer
 
         ChartPolarGeometry geometry = layout.Geometry;
         double innerRadius = geometry.Radius * Math.Clamp(holeSize, 0d, 0.95d);
-        double angle = Math.PI / 2d - firstSliceAngle * Math.PI / 180d;
-
-        foreach (ChartIndexedPieSlice slice in slices)
+        foreach (var (slice, start, sweep, midpoint) in EnumeratePieSliceAngles(slices, total, firstSliceAngle))
         {
-            double sweep = -slice.Value / total * Math.PI * 2d;
-            double midpointAngle = angle + sweep / 2d;
             double explosionOffset = pointExplosions.TryGetValue(slice.Index, out double explosion) ? geometry.Radius * explosion : 0d;
-            double sliceCenterX = geometry.CenterX + Math.Cos(midpointAngle) * explosionOffset;
-            double sliceCenterY = geometry.CenterY + Math.Sin(midpointAngle) * explosionOffset;
+            double sliceCenterX = geometry.CenterX + Math.Cos(midpoint) * explosionOffset;
+            double sliceCenterY = geometry.CenterY + Math.Sin(midpoint) * explosionOffset;
             ChartSeriesFill fill = pointFills.TryGetValue(slice.Index, out ChartSeriesFill explicitFill)
                 ? explicitFill
                 : new ChartSeriesFill(ChartPalette(chartPalette, theme, colorMap, slice.Index, slices.Count), 1d, null, null);
@@ -72,7 +75,7 @@ internal sealed partial class PptxRenderer
             }
 
             graphics.SetFillRgb(fill.Color.Red, fill.Color.Green, fill.Color.Blue);
-            AppendPieOrDoughnutSlicePath(graphics, sliceCenterX, sliceCenterY, geometry.Radius, innerRadius, angle, sweep);
+            AppendPieOrDoughnutSlicePath(graphics, sliceCenterX, sliceCenterY, geometry.Radius, innerRadius, start, sweep);
             graphics.FillCurrentPathEvenOdd();
             if (fill.Alpha < 1d)
             {
@@ -88,15 +91,13 @@ internal sealed partial class PptxRenderer
                 }
 
                 SetChartStroke(graphics, stroke);
-                AppendPieOrDoughnutSlicePath(graphics, sliceCenterX, sliceCenterY, geometry.Radius, innerRadius, angle, sweep);
+                AppendPieOrDoughnutSlicePath(graphics, sliceCenterX, sliceCenterY, geometry.Radius, innerRadius, start, sweep);
                 graphics.StrokeCurrentPath();
                 if (stroke.Alpha < 1d)
                 {
                     graphics.RestoreState();
                 }
             }
-
-            angle += sweep;
         }
     }
 
@@ -142,11 +143,6 @@ internal sealed partial class PptxRenderer
                 -segmentSweep * 180d / Math.PI,
                 moveToStart && segment == 0);
         }
-    }
-
-    private static void RenderDoughnutChart(PdfGraphicsBuilder graphics, PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, ChartPolarLayout layout, IReadOnlyList<ChartIndexedPieSlice> slices, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, IReadOnlyDictionary<int, ChartSeriesStroke> pointStrokes, IReadOnlyDictionary<int, double> pointExplosions, double holeSize, double firstSliceAngle)
-    {
-        RenderPieOrDoughnutSlices(graphics, theme, colorMap, chartPalette, layout, slices, pointFills, pointStrokes, pointExplosions, holeSize, firstSliceAngle);
     }
 
     private static void EmitChartDiagnostic(Action<OoxPdfDiagnostic>? diagnosticSink, string id, OoxPdfSeverity severity, string message, string? partName, int slideIndex, string fallback)

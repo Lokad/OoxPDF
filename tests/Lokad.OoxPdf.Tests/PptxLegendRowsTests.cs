@@ -150,7 +150,7 @@ internal static partial class PptxLegendRowsTests
         return baselines.Count;
     }
 
-    private static (PdfPage Page, List<OoxPdfDiagnostic> Diagnostics) Render(int width, double size, int count, bool overlay, string legendMetadata = "", string kind = "line", int height = 360, bool categoryLegend = false, string[]? categoryNames = null, string plotLayout = "", string legendPosition = "b", IFontResolver? resolver = null, string seriesOptions = "", string dataLabels = "", string? chartRelationships = null)
+    private static (PdfPage Page, List<OoxPdfDiagnostic> Diagnostics) Render(int width, double size, int count, bool overlay, string legendMetadata = "", string kind = "line", int height = 360, bool categoryLegend = false, string[]? categoryNames = null, string plotLayout = "", string legendPosition = "b", IFontResolver? resolver = null, string seriesOptions = "", string dataLabels = "", string? chartRelationships = null, int? firstSliceAngle = null)
     {
         int fontHundredths = (int)Math.Round(size * 100d);
         string series = string.Concat(Enumerable.Range(1, count).Select(i => $$"""
@@ -170,6 +170,7 @@ internal static partial class PptxLegendRowsTests
         bool bar = !polar && kind != "line";
         bool horizontal = kind == "bar";
         string plot = polar ? kind + "Chart" : bar ? "barChart" : "lineChart";
+        string rotation = firstSliceAngle is { } degrees ? $"<c:firstSliceAng val=\"{degrees}\"/>" : "";
         string axes = polar ? "" : $$"""
                 <c:catAx><c:axId val="1"/><c:axPos val="{{(horizontal ? "l" : "b")}}"/><c:crossAx val="2"/>{{(categoryLegend ? "<c:tickLblPos val=\"none\"/>" : "")}}</c:catAx>
                 <c:valAx><c:axId val="2"/><c:scaling><c:min val="0"/><c:max val="5"/></c:scaling><c:axPos val="{{(horizontal ? "b" : "l")}}"/><c:crossAx val="1"/><c:majorGridlines/></c:valAx>
@@ -177,7 +178,7 @@ internal static partial class PptxLegendRowsTests
         string chart = $$"""
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
               <c:chart><c:autoTitleDeleted val="1"/><c:plotArea>{{plotLayout}}<c:{{plot}}>{{(bar ? "<c:barDir val=\"" + (horizontal ? "bar" : "col") + "\"/>" : "")}}{{(polar ? "" : "<c:grouping val=\"" + (bar ? "clustered" : "standard") + "\"/>")}}
-                <c:varyColors val="{{(categoryLegend ? 1 : 0)}}"/>{{series}}{{dataLabels}}{{(polar ? "" : "<c:axId val=\"1\"/><c:axId val=\"2\"/>")}}</c:{{plot}}>
+                <c:varyColors val="{{(categoryLegend ? 1 : 0)}}"/>{{series}}{{dataLabels}}{{(polar ? rotation : "<c:axId val=\"1\"/><c:axId val=\"2\"/>")}}</c:{{plot}}>
                 {{axes}}
               </c:plotArea><c:legend>{{legendMetadata}}<c:legendPos val="{{legendPosition}}"/><c:overlay val="{{(overlay ? 1 : 0)}}"/>
                 <c:txPr><a:bodyPr/><a:p><a:pPr><a:defRPr sz="{{fontHundredths}}"/></a:pPr></a:p></c:txPr>
