@@ -251,40 +251,12 @@ internal sealed partial class PptxRenderer
                 PptxTextRunModel modelRun = flowRun.Source;
                 if (modelRun.Kind == PptxTextRunKind.Break)
                 {
-                    double lineFontSize = ResolveLineFontSize(maxFontSize, flowRun.Style.FontSize);
-                    bool leadingManualBreak = line.Spans.Count == 0;
-                    bool useManualBreakFallback = (leadingManualBreak || !shapeAutoFit) && !frame.BodyProperties.CompatibleLineSpacing;
-                    AddClippedParagraphLine(lineLayouts, line, CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, lineFontSize, line, advanceEstimator, frame.UseOfficeBaselineFloor), paragraphStyle.Alignment, columnStartX, effectiveTextWidth, justify: false, distribute: false, advanceEstimator, cullOutOfFrameLines, cursorY, frame.TextClipY, frame.TextClipHeight, suppressNoWrapDistribution);
-                    double lineAdvance = useManualBreakFallback ? ReadManualBreakLineAdvance(paragraphStyle.LineSpacing, lineFontSize) : ReadLineAdvance(paragraphStyle.LineSpacing, lineFontSize);
-                    cursorLineTop -= lineAdvance;
-                    MoveToNextColumnIfNeeded(ref cursorLineTop, ref columnIndex, ref columnStartX, ref linesInCurrentColumn, flowFrame.Box.CursorTop, frame.TextX, columnWidth, frame.ColumnSpacing, frame.ColumnCount, flowFrame.Box, frame.BodyProperties.VerticalOverflow, columnBreakMode, lineAdvance, lineBalanceTarget, lineBalanceStartColumn, linePlaced: true);
-                    columnClipX = clipsColumnsIndividually ? columnStartX : frame.TextClipX;
-                    columnClipWidth = clipsColumnsIndividually ? columnWidth : frame.TextClipWidth;
-                    paragraphTextX = bulletText is null
-                        ? columnStartX + PptxTextMetricRules.ClampNonNegative(paragraphStyle.Indent.MarginLeft + paragraphStyle.Indent.Hanging)
-                        : columnStartX + PptxTextMetricRules.ClampNonNegative(paragraphStyle.Indent.MarginLeft);
-                    cursorY = double.NaN;
-                    afterManualLineBreak = true;
-                    afterLeadingManualLineBreak = useManualBreakFallback;
-                    cursorX = paragraphTextX;
-                    line.Reset(paragraphTextX);
-                    maxFontSize = 0d;
-                    previousAdvanceCodePoint = null;
-                    pendingVisibleLeadingAdjustment = 0d;
-                    noBreakAnchorSpan = null;
-                    pendingNoBreakAdvanceText = string.Empty;
+                    CommitManualBreak(flowRun.Style.FontSize);
                     continue;
                 }
 
                 ResolvedRunTextStyle runStyle = flowRun.Style;
-                if (double.IsNaN(cursorY))
-                {
-                    cursorY = cursorLineTop - (afterLeadingManualLineBreak
-                        ? ManualBreakBaselineOffset(runStyle.NominalFontSize, paragraphStyle.LineSpacing, useExplicitMultipleBaselineOffset)
-                        : LineBaselineOffset(runStyle.NominalFontSize, paragraphStyle.LineSpacing, runStyle, advanceEstimator, frame.UseOfficeBaselineFloor, useExplicitMultipleBaselineOffset));
-                    afterManualLineBreak = false;
-                    afterLeadingManualLineBreak = false;
-                }
+                ResumeAfterManualBreak(runStyle);
 
                 if (bulletPending && bulletText is not null)
                 {
@@ -360,39 +332,11 @@ internal sealed partial class PptxRenderer
                 {
                     if (flowSegment.Kind == PptxTextFlowSegmentKind.Break)
                     {
-                        double lineFontSize = ResolveLineFontSize(maxFontSize, runStyle.FontSize);
-                        bool leadingManualBreak = line.Spans.Count == 0;
-                        bool useManualBreakFallback = (leadingManualBreak || !shapeAutoFit) && !frame.BodyProperties.CompatibleLineSpacing;
-                        AddClippedParagraphLine(lineLayouts, line, CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, lineFontSize, line, advanceEstimator, frame.UseOfficeBaselineFloor), paragraphStyle.Alignment, columnStartX, effectiveTextWidth, justify: false, distribute: false, advanceEstimator, cullOutOfFrameLines, cursorY, frame.TextClipY, frame.TextClipHeight, suppressNoWrapDistribution);
-                        double lineAdvance = useManualBreakFallback ? ReadManualBreakLineAdvance(paragraphStyle.LineSpacing, lineFontSize) : ReadLineAdvance(paragraphStyle.LineSpacing, lineFontSize);
-                        cursorLineTop -= lineAdvance;
-                        MoveToNextColumnIfNeeded(ref cursorLineTop, ref columnIndex, ref columnStartX, ref linesInCurrentColumn, flowFrame.Box.CursorTop, frame.TextX, columnWidth, frame.ColumnSpacing, frame.ColumnCount, flowFrame.Box, frame.BodyProperties.VerticalOverflow, columnBreakMode, lineAdvance, lineBalanceTarget, lineBalanceStartColumn, linePlaced: true);
-                        columnClipX = clipsColumnsIndividually ? columnStartX : frame.TextClipX;
-                        columnClipWidth = clipsColumnsIndividually ? columnWidth : frame.TextClipWidth;
-                        paragraphTextX = bulletText is null
-                            ? columnStartX + PptxTextMetricRules.ClampNonNegative(paragraphStyle.Indent.MarginLeft + paragraphStyle.Indent.Hanging)
-                            : columnStartX + PptxTextMetricRules.ClampNonNegative(paragraphStyle.Indent.MarginLeft);
-                        cursorY = double.NaN;
-                        afterManualLineBreak = true;
-                        afterLeadingManualLineBreak = useManualBreakFallback;
-                        cursorX = paragraphTextX;
-                        line.Reset(paragraphTextX);
-                        maxFontSize = 0d;
-                        previousAdvanceCodePoint = null;
-                        pendingVisibleLeadingAdjustment = 0d;
-                        noBreakAnchorSpan = null;
-                        pendingNoBreakAdvanceText = string.Empty;
+                        CommitManualBreak(runStyle.FontSize);
                         continue;
                     }
 
-                    if (double.IsNaN(cursorY))
-                    {
-                        cursorY = cursorLineTop - (afterLeadingManualLineBreak
-                            ? ManualBreakBaselineOffset(runStyle.NominalFontSize, paragraphStyle.LineSpacing, useExplicitMultipleBaselineOffset)
-                            : LineBaselineOffset(runStyle.NominalFontSize, paragraphStyle.LineSpacing, runStyle, advanceEstimator, frame.UseOfficeBaselineFloor, useExplicitMultipleBaselineOffset));
-                        afterManualLineBreak = false;
-                        afterLeadingManualLineBreak = false;
-                    }
+                    ResumeAfterManualBreak(runStyle);
 
                     if (flowSegment.Kind == PptxTextFlowSegmentKind.Tab)
                     {
@@ -741,6 +685,50 @@ currentSegment = currentSegment.TrimStart();
             MoveToNextColumnIfNeeded(ref cursorLineTop, ref columnIndex, ref columnStartX, ref linesInCurrentColumn, flowFrame.Box.CursorTop, frame.TextX, columnWidth, frame.ColumnSpacing, frame.ColumnCount, flowFrame.Box, frame.BodyProperties.VerticalOverflow, columnBreakMode, paragraphAdvance, lineBalanceTarget, lineBalanceStartColumn, linePlaced: true);
             hasPlacedParagraph = true;
             paragraphLayouts.Add(new PptxTextParagraphLayout(paragraph, lineLayouts));
+
+            void CommitManualBreak(double breakFontSize)
+            {
+                double lineFontSize = ResolveLineFontSize(maxFontSize, breakFontSize);
+                bool leadingManualBreak = line.Spans.Count == 0;
+                bool useManualBreakFallback = (leadingManualBreak || !shapeAutoFit) && !frame.BodyProperties.CompatibleLineSpacing;
+                AddClippedParagraphLine(lineLayouts, line,
+                    CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, lineFontSize, line, advanceEstimator, frame.UseOfficeBaselineFloor),
+                    paragraphStyle.Alignment, columnStartX, effectiveTextWidth, justify: false, distribute: false,
+                    advanceEstimator, cullOutOfFrameLines, cursorY, frame.TextClipY, frame.TextClipHeight, suppressNoWrapDistribution);
+                double lineAdvance = useManualBreakFallback
+                    ? ReadManualBreakLineAdvance(paragraphStyle.LineSpacing, lineFontSize)
+                    : ReadLineAdvance(paragraphStyle.LineSpacing, lineFontSize);
+                cursorLineTop -= lineAdvance;
+                MoveToNextColumnIfNeeded(ref cursorLineTop, ref columnIndex, ref columnStartX, ref linesInCurrentColumn,
+                    flowFrame.Box.CursorTop, frame.TextX, columnWidth, frame.ColumnSpacing, frame.ColumnCount, flowFrame.Box,
+                    frame.BodyProperties.VerticalOverflow, columnBreakMode, lineAdvance, lineBalanceTarget, lineBalanceStartColumn, linePlaced: true);
+                columnClipX = clipsColumnsIndividually ? columnStartX : frame.TextClipX;
+                columnClipWidth = clipsColumnsIndividually ? columnWidth : frame.TextClipWidth;
+                paragraphTextX = bulletText is null
+                    ? columnStartX + PptxTextMetricRules.ClampNonNegative(paragraphStyle.Indent.MarginLeft + paragraphStyle.Indent.Hanging)
+                    : columnStartX + PptxTextMetricRules.ClampNonNegative(paragraphStyle.Indent.MarginLeft);
+                cursorY = double.NaN;
+                afterManualLineBreak = true;
+                afterLeadingManualLineBreak = useManualBreakFallback;
+                cursorX = paragraphTextX;
+                line.Reset(paragraphTextX);
+                maxFontSize = 0d;
+                previousAdvanceCodePoint = null;
+                pendingVisibleLeadingAdjustment = 0d;
+                noBreakAnchorSpan = null;
+                pendingNoBreakAdvanceText = string.Empty;
+            }
+
+            void ResumeAfterManualBreak(ResolvedRunTextStyle runStyle)
+            {
+                if (!double.IsNaN(cursorY)) return;
+
+                cursorY = cursorLineTop - (afterLeadingManualLineBreak
+                    ? ManualBreakBaselineOffset(runStyle.NominalFontSize, paragraphStyle.LineSpacing, useExplicitMultipleBaselineOffset)
+                    : LineBaselineOffset(runStyle.NominalFontSize, paragraphStyle.LineSpacing, runStyle, advanceEstimator, frame.UseOfficeBaselineFloor, useExplicitMultipleBaselineOffset));
+                afterManualLineBreak = false;
+                afterLeadingManualLineBreak = false;
+            }
         }
 
         return new PptxTextFrameLayout(frame, paragraphLayouts);
