@@ -3505,16 +3505,8 @@ internal static partial class PptxImagesTests
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
         {
-            ["[Content_Types].xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-                  <Default Extension="xml" ContentType="application/xml"/>
-                  <Default Extension="png" ContentType="image/png"/>
-                  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
-                  <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
-                </Types>
-                """),
+            ["[Content_Types].xml"] = TestFixtures.Utf8(PptxTests.BasicContentTypes().Replace("</Types>",
+                "<Default Extension=\"png\" ContentType=\"image/png\"/></Types>", StringComparison.Ordinal)),
             ["_rels/.rels"] = TestFixtures.Utf8(PptxTests.PackageRelationship()),
             ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8(PptxTests.PresentationRelationship()),
             ["ppt/presentation.xml"] = TestFixtures.Utf8(PptxTests.BasicPresentation()),
@@ -3528,20 +3520,21 @@ internal static partial class PptxImagesTests
                 <?xml version="1.0" encoding="UTF-8"?>
                 <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
                   <p:cSld><p:spTree><p:pic>
-                    <p:blipFill><a:blip r:embed="rId1"><a:duotone><a:srgbClr val="000000"/><a:prstClr val="white"/></a:duotone></a:blip></p:blipFill>
+                    <p:blipFill><a:blip r:embed="rId1"><a:duotone><a:srgbClr val="FF0000"/><a:prstClr val="white"/></a:duotone></a:blip></p:blipFill>
                     <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="914400" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
                   </p:pic></p:spTree></p:cSld>
                 </p:sld>
                 """),
-            ["ppt/media/image1.png"] = TestFixtures.CreateRgbPng(1, 1, [128, 128, 128])
+            ["ppt/media/image1.png"] = TestFixtures.CreateRgbPng(2, 1, [255, 0, 0, 0, 0, 255])
         });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        string output = Path.ChangeExtension(input, ".pdf");
         var diagnostics = new List<OoxPdfDiagnostic>();
 
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
 
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("/Subtype /Image", pdf);
+        byte[] rgb = PptxTests.ReadPdfDeviceRgbImageStreams(output, width: 2, height: 1).Single();
+        TestAssert.True(rgb.AsSpan().SequenceEqual(new byte[] { 255, 54, 54, 255, 18, 18 }),
+            "The PDF image samples should map each source luminance through the authored red-to-white palette.");
         TestAssert.True(diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_IMAGE_RECOLOR"), "Supported PNG duotone recolor should not emit unsupported diagnostics.");
     }
 
@@ -3611,7 +3604,8 @@ internal static partial class PptxImagesTests
             d.Fallback == "Original image" &&
             d.Message.Contains("duotone", StringComparison.Ordinal) &&
             d.Message.Contains("image/jpeg", StringComparison.Ordinal) &&
-            d.Message.Contains("baseline DCT", StringComparison.Ordinal)), "JPEG duotone recolor should keep a public diagnostic until a structural JPEG/PDF recolor path exists.");
+            d.Message.Contains("baseline DCT", StringComparison.Ordinal)),
+            "The JPEG header-only control should preserve its original image and report the recolor fallback.");
     }
 
     public static void PptxSyntheticBaselineJpegPictureAppliesDuotoneRecolor()
