@@ -73,7 +73,6 @@ validation tools, including the PDFium rasterizer, remain outside the library.
 - `tools/InspectPptxText.ps1`: inspect PPTX glyph layout/emission; `-FontDirectory` binds explicit fonts, text is omitted by default.
 - `tools/ComparePdfTextOperations.ps1`: compare inspected PDF text matrices and spacing.
 - `tools/ComparePptxTextEmission.ps1`: compare Office PDF text operations to candidate PPTX glyph-run emission.
-- `tools/SummarizePptxFontEmissionProbe.ps1`: join public-safe PPTX textbox geometry with Office text-operation font sizes.
 - `tools/ComparePdfGraphicsOperations.ps1`: compare inspected PDF path/clip/stroke/fill geometry.
 - `tools/ClassifyPdfChartGraphics.ps1`: classify inspected PDF graphics operations into chart-like structures.
 - `tools/ClassifyPdfChartText.ps1`: classify inspected PDF text operations relative to derived chart plot boxes.
@@ -88,7 +87,6 @@ validation tools, including the PDFium rasterizer, remain outside the library.
 - `tools/SummarizePdfGraphicsOperations.ps1`: summarize PDF graphics-operation rollups across runs.
 - `tools/SummarizePptxTextEmissionBranchFamily.ps1`: summarize PPTX text-emission branch-family reports.
 - `tools/SummarizePptxTextStateDeltas.ps1`: summarize PPTX text-state deltas across runs.
-- `tools/SummarizePptxFontEmissionHeightScan.ps1`: scan PPTX font-emission heights across runs.
 - `tools/NewChartProbeFixtures.ps1`: generate chart probe fixtures (doughnut/sparse/labels/axis-titles/legends).
 - `tools/NewTypographyProbeFixtures.ps1`: generate typography probe fixtures.
 - `tools/NewDocxMarkupCommentFixtures.ps1`: generate DOCX markup comment fixtures.
