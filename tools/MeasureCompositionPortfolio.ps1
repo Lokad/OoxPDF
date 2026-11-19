@@ -153,7 +153,7 @@ foreach ($job in $jobs) {
             MathematicalTextOperations=@($textInspection.Operations | Where-Object Font -Like 'Eq*').Count
             InspectedPages=$pageCount
             Diagnostics=$diagnostics;VisualStatus='Pending independent Office comparison; no visual pass claimed'
-            Severity=if ($missing.Count -or $ignoredMath) {'Content blocker'} else {'Needs geometry and visual review'}
+            Severity=Get-PortfolioContentSeverity $missing $ignoredMath
         }
         if ((Get-FileHash -LiteralPath $library).Hash -ne $libraryHash -or
             (Get-FileHash -LiteralPath $cli).Hash -ne $cliHash -or

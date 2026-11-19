@@ -27,7 +27,8 @@ foreach ($id in @('one','two')) {
         @{Id=$id;Mode='all-word-compatible';InputSha256=$(if ($id -eq 'one') {'A'*64} else {'B'*64});
           PdfSha256=(Get-FileHash (Join-Path $run 'candidate.pdf')).Hash;
           TextOperationsSha256=(Get-FileHash (Join-Path $run 'inspect/text-operations.json')).Hash;
-          MissingExpectedText=@('retained raw flag');ExpectedSourceEquations=0;Diagnostics=@();IgnoredEquationDiagnostics=0}
+          MissingExpectedText=@('retained raw flag');ExpectedSourceEquations=0;Diagnostics=@();IgnoredEquationDiagnostics=0;
+          Severity='Needs geometry and visual review'}
     )} | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $source 'outcomes.json')
     $sources += $source
 }
@@ -54,6 +55,7 @@ try {
         if (Test-Path -LiteralPath (Join-Path $run 'raster')) { throw 'A raster tree was copied' }
         if (Test-Path -LiteralPath (Join-Path $run 'office-diff')) { throw 'A comparison tree was copied' }
         if (!$row.JoinedFrom.ReportSha256 -or $row.MissingExpectedText[0] -ne 'retained raw flag') { throw 'Provenance or original classification lost' }
+        if ($row.Severity -cne 'Content blocker') { throw 'Joined severity must follow the verified missing text' }
         if ($row.TextOperationsSha256 -cne (Get-FileHash (Join-Path $run 'inspect/text-operations.json')).Hash) {
             throw 'Joined text inspection is not pinned'
         }

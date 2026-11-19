@@ -34,6 +34,18 @@ function Get-PortfolioIgnoredEquationCount($Diagnostics) {
     @($Diagnostics | Where-Object { $_.Id -eq 'DOCX_UNSUPPORTED_EQUATION' }).Count
 }
 
+function Get-PortfolioContentSeverity($MissingExpectedText, $IgnoredEquationDiagnostics) {
+    $hasTextCheck = $MissingExpectedText -is [array] -and
+        !@($MissingExpectedText | Where-Object { $_ -isnot [string] }).Count
+    $hasEquationCheck = ($IgnoredEquationDiagnostics -is [int] -or $IgnoredEquationDiagnostics -is [long]) -and
+        $IgnoredEquationDiagnostics -ge 0
+    if (($hasTextCheck -and $MissingExpectedText.Count) -or ($hasEquationCheck -and $IgnoredEquationDiagnostics)) {
+        return 'Content blocker'
+    }
+    if ($hasTextCheck -and $hasEquationCheck) { return 'Needs geometry and visual review' }
+    return 'Content evidence incomplete'
+}
+
 function Get-VerifiedDiagnosticsHash([string] $Path, $Diagnostics, [string] $Id) {
     if ($Diagnostics -isnot [Array]) { throw ('Retained diagnostics are missing or not an array: ' + $Id) }
     # Compare semantic data and pin the same sidecar bytes. Formatting and property order can differ.

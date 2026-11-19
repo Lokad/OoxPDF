@@ -67,9 +67,13 @@ foreach ($directory in $SourceDirectory) {
         $diagnosticsPath = Join-Path $run 'diagnostics.json'
         if (!(Test-Path -LiteralPath $diagnosticsPath -PathType Leaf)) { throw ('Candidate diagnostics are missing: ' + $key) }
         $diagnosticsHash = Get-VerifiedDiagnosticsHash $diagnosticsPath $row.Diagnostics $key
-        if ($row.IgnoredEquationDiagnostics -ne (Get-PortfolioIgnoredEquationCount $row.Diagnostics)) {
+        $ignoredMath = Get-PortfolioIgnoredEquationCount $row.Diagnostics
+        if ($row.IgnoredEquationDiagnostics -ne $ignoredMath) {
             throw ('Retained equation diagnostic count differs: ' + $key)
         }
+        $row.MissingExpectedText = $missing
+        $row.IgnoredEquationDiagnostics = $ignoredMath
+        $row.Severity = Get-PortfolioContentSeverity $missing $ignoredMath
         $copies = @(foreach ($name in $files) {
             $path = Join-Path $run $name
             if (Test-Path -LiteralPath $path -PathType Leaf) {
@@ -119,7 +123,7 @@ foreach ($key in $jobs.Keys) {
     LibrarySha256=$runtime[0];CliSha256=$runtime[1];InspectorSha256=$runtime[2]
     ManifestSha256=[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($manifestBytes));Rebuilt=$false;DocxPreset=$DocxPreset
     InspectionMode='SummariesOnly';NewConversions=0;SourceReports=$reports
-    MeasurementScope='Joined prior measured outcomes; original classifications/provenance retained. No new conversion or content/visual pass.'
+    MeasurementScope='Joined prior measured outcomes. Summary severity derives from verified content observations. No new conversion or visual pass.'
     Rows=$rows
 } | ConvertTo-Json -Depth 18 | Set-Content -LiteralPath (Join-Path $output 'outcomes.json') -Encoding utf8
 Write-Output "$($rows.Count) outcomes joined with independent PDFs/summaries; no build, conversion, raster or comparison replay."

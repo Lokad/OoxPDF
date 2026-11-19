@@ -16,7 +16,8 @@ New-Item -ItemType Directory -Path $tools -Force | Out-Null
 $script = Join-Path $tools 'CompareCompositionPortfolio.ps1'
 Copy-Item -LiteralPath $ComparisonScript -Destination $script
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'ReferenceCache.ps1') -Destination $tools
-foreach ($name in @('CompositionReferenceIdentity.ps1','CompositionDocxThresholds.json','CompositionPptxThresholds.json')) {
+foreach ($name in @('CompositionReferenceIdentity.ps1','CompositionOutcomes.ps1','PdfTextGeometry.ps1',
+    'CompositionDocxThresholds.json','CompositionPptxThresholds.json')) {
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination $tools
 }
 . (Join-Path $tools 'ReferenceCache.ps1')
@@ -151,11 +152,36 @@ $cache = New-ReuseCache $case
     -VisualDiffPath $visualDiff -ValidationToolsDirectory $tools -ReuseComparisonDirectory $cache | Out-Null
 $report = Get-Content -LiteralPath (Join-Path $case.CandidateDirectory 'office-comparisons.json') -Raw | ConvertFrom-Json
 if ($report.Rows.Count -ne 2 -or @($report.Rows | Where-Object {
-    !$_.ReusedComparison -or $_.Failures.Count -ne 1 -or $_.Failures[0] -ne 'ForegroundRecall'
+    !$_.ReusedComparison -or $_.Failures.Count -ne 1 -or $_.Failures[0] -ne 'ForegroundRecall' -or
+    $_.ContentSeverity -cne 'Content evidence incomplete'
 }).Count -or @(Get-ChildItem -LiteralPath $case.Directory -Recurse -Filter '*.called').Count) {
     throw 'Identical comparisons must reuse retained failures without rendering'
 }
 $passed += 'identity-reuse'
+$case = New-Case 'reused-content-severity' 'legacy'
+$cache = New-ReuseCache $case
+$priorPath = Join-Path $cache 'office-comparisons.json'
+$prior = Get-Content $priorPath -Raw | ConvertFrom-Json -AsHashtable
+foreach ($row in $prior.Rows) {
+    $row.Metrics[0].ForegroundRecall = 1
+    $row.ContentSeverity = 'Needs geometry and visual review'
+}
+$prior | ConvertTo-Json -Depth 10 | Set-Content $priorPath
+$outcomePath = Join-Path $case.CandidateDirectory 'outcomes.json'
+$outcomes = Get-Content $outcomePath -Raw | ConvertFrom-Json -AsHashtable
+$outcomes.Rows[0].MissingExpectedText = @('Required phrase')
+$outcomes.Rows[0].Severity = 'Needs geometry and visual review'
+$outcomes.Rows[1].MissingExpectedText = @()
+$outcomes.Rows[1].IgnoredEquationDiagnostics = 1
+$outcomes.Rows[1].Remove('Severity')
+$outcomes | ConvertTo-Json -Depth 6 | Set-Content $outcomePath
+& $script -CandidateDirectory $case.CandidateDirectory -ReferenceDirectory $case.ReferenceDirectory `
+    -VisualDiffPath $visualDiff -ValidationToolsDirectory $tools -ReuseComparisonDirectory $cache | Out-Null
+$report = Get-Content (Join-Path $case.CandidateDirectory 'office-comparisons.json') -Raw | ConvertFrom-Json
+if ($report.Rows.Count -ne 2 -or @($report.Rows | Where-Object {
+    !$_.ReusedComparison -or $_.Failures.Count -or $_.ContentSeverity -cne 'Content blocker'
+}).Count) { throw 'Reused visual passes must retain missing-text and ignored-equation blockers' }
+$passed += 'reused-content-severity'
 foreach ($fault in @('wrong-review-view', 'bare-reference', 'missing-view-log')) {
     $case = New-Case $fault $fault 'all-word-compatible'
     $cache = New-ReuseCache $case
@@ -576,6 +602,16 @@ try {
         $passed+=('tool-change-during-'+$control)
     }
     $baseline=New-Case 'complete-raster-baseline' 'legacy'
+    $outcomePath = Join-Path $baseline.CandidateDirectory 'outcomes.json'
+    $outcomes = Get-Content $outcomePath -Raw | ConvertFrom-Json -AsHashtable
+    foreach ($row in $outcomes.Rows) {
+        $row.MissingExpectedText = @()
+        $row.IgnoredEquationDiagnostics = 0
+        $row.Severity = 'Content blocker'
+    }
+    $outcomes.Rows[0].MissingExpectedText = @('Required phrase')
+    $outcomes.Rows[0].Severity = 'Needs geometry and visual review'
+    $outcomes | ConvertTo-Json -Depth 6 | Set-Content $outcomePath
     $comparisonProbeState.BlankReference=$true
     try {
         & $script -CandidateDirectory $baseline.CandidateDirectory -ReferenceDirectory $baseline.ReferenceDirectory -VisualDiffPath $visualDiff -ValidationToolsDirectory $tools | Out-Null
@@ -585,6 +621,10 @@ try {
     if ($report.Rows.Count -ne 2 -or @($report.Rows | Where-Object {
         $_.Failures.Count -or $_.ReusedComparison -or $_.Metrics[0].ReferenceForegroundPixels -ne 0 -or $null -ne $_.Metrics[0].ForegroundRecall
     }).Count) { throw 'Fresh zero-foreground metrics must pass with inapplicable recall' }
+    if ($report.Rows[0].ContentSeverity -cne 'Content blocker' -or
+        $report.Rows[1].ContentSeverity -cne 'Needs geometry and visual review') {
+        throw 'Fresh comparison content severity must follow the observations'
+    }
     $passed+='fresh-blank-reference'
     foreach ($id in @('first','second')) {
         # Preserve the completed attempt while testing derivative reuse separately

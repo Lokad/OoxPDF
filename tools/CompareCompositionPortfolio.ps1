@@ -13,6 +13,7 @@ param(
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'ReferenceCache.ps1')
 . (Join-Path $PSScriptRoot 'CompositionReferenceIdentity.ps1')
+. (Join-Path $PSScriptRoot 'CompositionOutcomes.ps1')
 if ($ReferenceKind -eq 'OfficeImage') { . (Join-Path $PSScriptRoot 'OfficeReferenceCapture.ps1') }
 $reportName=if ($ReferenceKind -eq 'OfficeImage') {'office-image-comparisons.json'} else {'office-comparisons.json'}
 $candidate = (Resolve-Path -LiteralPath $CandidateDirectory).Path
@@ -219,6 +220,7 @@ foreach ($job in $jobs) {
     $row = $job.Row; $id = $job.Id; $run = $job.Run; $source = $job.Source
     $pdf = $job.Pdf; $referencePdf = $job.ReferencePdf; $referenceHash = $job.ReferenceHash
     $reuse = @($job.Reuse); $diff = $job.Diff
+    $contentSeverity = Get-PortfolioContentSeverity $row.MissingExpectedText $row.IgnoredEquationDiagnostics
     if ((Get-FileHash -LiteralPath $pdf).Hash -ne $row.PdfSha256 -or
         (Get-FileHash -LiteralPath $referencePdf).Hash -ne $referenceHash) { throw ('Comparison input changed: ' + $id) }
     if ((Get-FileHash -LiteralPath $job.Identity).Hash -ne $job.IdentityHash -or
@@ -233,7 +235,7 @@ foreach ($job in $jobs) {
             ReferenceKind=$ReferenceKind;ReferenceImageMetadataSha256=$job.ImageHash;ReferenceCalibrationStatus=$job.Calibration;
             RasterDpi=$job.Dpi;
             Failures=$job.ReuseFailures;Metrics=$prior.Metrics;Thresholds=$job.Limits;
-            ContentSeverity=$row.Severity;ReusedComparison=$reuse[0].Path;
+            ContentSeverity=$contentSeverity;ReusedComparison=$reuse[0].Path;
             ReusedComparisonSha256=(Get-FileHash $reuse[0].Path).Hash}
         Write-Output ($id + ': reused identical PDFs, comparison policy and threshold sources')
         continue
@@ -247,7 +249,7 @@ foreach ($job in $jobs) {
     $metrics = @(Get-Content (Join-Path $diff 'metrics.json') -Raw | ConvertFrom-Json)
     $limits = $job.Limits
     $failures = @(Get-ComparisonFailures -Metrics $metrics -Limits $limits -Outcome $row -Id $id)
-    $rows += [ordered]@{Id=$row.Id;Mode=$row.Mode;HeldOut=$row.HeldOut;CandidatePdfSha256=$row.PdfSha256;ReferencePdfSha256=$referenceHash;ReferenceSourceDirectory=$source;ReferenceIdentitySha256=$job.IdentityHash;ReferenceExportLogSha256=$job.ExportLogHash;ReferenceKind=$ReferenceKind;ReferenceImageMetadataSha256=$job.ImageHash;ReferenceCalibrationStatus=$job.Calibration;RasterDpi=$job.Dpi;Failures=@($failures | Sort-Object -Unique);Metrics=$metrics;Thresholds=$limits;ContentSeverity=$row.Severity}
+    $rows += [ordered]@{Id=$row.Id;Mode=$row.Mode;HeldOut=$row.HeldOut;CandidatePdfSha256=$row.PdfSha256;ReferencePdfSha256=$referenceHash;ReferenceSourceDirectory=$source;ReferenceIdentitySha256=$job.IdentityHash;ReferenceExportLogSha256=$job.ExportLogHash;ReferenceKind=$ReferenceKind;ReferenceImageMetadataSha256=$job.ImageHash;ReferenceCalibrationStatus=$job.Calibration;RasterDpi=$job.Dpi;Failures=@($failures | Sort-Object -Unique);Metrics=$metrics;Thresholds=$limits;ContentSeverity=$contentSeverity}
     if ($ReferenceKind -eq 'OfficeImage') {
         if ((Get-FileHash $job.ImagePath).Hash -ne $job.ImageHash) { throw ('Image reference metadata changed: '+$id) }
         $null=Test-OfficeImageReference $source $row.InputSha256
