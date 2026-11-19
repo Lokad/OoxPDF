@@ -49,11 +49,17 @@ internal static partial class PptxChartLabelDefaultsTests
         XNamespace r = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
         var (_, plot) = Source("", """
             <c:dLbls><c:dLbl><c:idx val="0"/><c:layout><c:manualLayout><c:xMode val="edge"/><c:yMode val="edge"/>
-              <c:x val="0.78"/><c:y val="0.38"/><c:w val="0.21"/><c:h val="0.25"/></c:manualLayout></c:layout></c:dLbl>
+              <c:x val="0.65"/><c:y val="0.38"/><c:w val="0.28"/><c:h val="0.25"/></c:manualLayout></c:layout></c:dLbl>
               <c:showVal val="0"/><c:showSerName val="0"/><c:showCatName val="0"/><c:showLegendKey val="0"/>
               <c:showPercent val="0"/><c:showBubbleSize val="0"/></c:dLbls>
             """);
         plot.AddFirst(new XElement(C + "barDir", new XAttribute("val", "bar")));
+        plot.Add(new XElement(C + "axId", new XAttribute("val", 1)), new XElement(C + "axId", new XAttribute("val", 2)));
+        plot.Parent!.Add(XElement.Parse($$"""
+            <c:catAx xmlns:c="{{C}}"><c:axId val="1"/><c:axPos val="l"/><c:crossAx val="2"/><c:tickLblPos val="none"/></c:catAx>
+            """), XElement.Parse($$"""
+            <c:valAx xmlns:c="{{C}}"><c:axId val="2"/><c:axPos val="b"/><c:crossAx val="1"/><c:tickLblPos val="none"/></c:valAx>
+            """));
         var parts = new Dictionary<string, byte[]>
         {
             ["ppt/charts/_rels/chart1.xml.rels"] = TestFixtures.Utf8($$"""
@@ -83,8 +89,8 @@ internal static partial class PptxChartLabelDefaultsTests
         PdfPage broken = Render(separateParagraphs: false);
         PdfPage paragraphs = Render(separateParagraphs: true);
         TestAssert.Equal(broken.Content, paragraphs.Content);
-        var firstGlyphs = PortableRenderingTests.ReadPaintedSourceLabel(broken, firstText, fontPrefix: "CLD");
-        var secondGlyphs = PortableRenderingTests.ReadPaintedSourceLabel(broken, secondText, fontPrefix: "CLD");
+        var firstGlyphs = PortableRenderingTests.ReadPaintedSourceLabel(broken, firstText, fontPrefix: "CBD");
+        var secondGlyphs = PortableRenderingTests.ReadPaintedSourceLabel(broken, secondText, fontPrefix: "CBD");
         TestAssert.True(firstGlyphs[0].Origin.Y - secondGlyphs[0].Origin.Y > 10d,
             "Both authored label lines paint on distinct baselines.");
         var link = broken.Annotations.Single();
