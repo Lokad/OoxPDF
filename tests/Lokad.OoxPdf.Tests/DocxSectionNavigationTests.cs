@@ -209,15 +209,21 @@ internal static class DocxSectionNavigationTests
     public static void DocxFloatingNoteBoxesKeepInkAndRangeDestinationsInPrintedFrame() =>
         CheckFloatingBoxTableRangeBookmarks(["footnote", "endnote"]);
 
-    public static void DocxFloatingBoxHyperlinksFollowThePrintedClip() => CheckFloatingBoxLinkClips(tableDepth: 0);
+    public static void DocxFloatingBoxHyperlinksFollowThePrintedClip() => CheckTableAndBoxLinkClips(tableDepth: 0);
 
     public static void DocxFloatingBoxTableHyperlinksFollowCellAndAncestorClips()
     {
-        CheckFloatingBoxLinkClips(tableDepth: 1);
-        CheckFloatingBoxLinkClips(tableDepth: 2);
+        CheckTableAndBoxLinkClips(tableDepth: 1);
+        CheckTableAndBoxLinkClips(tableDepth: 2);
     }
 
-    private static void CheckFloatingBoxLinkClips(int tableDepth)
+    public static void DocxBodyTableHyperlinksFollowCellAndAncestorClips()
+    {
+        CheckTableAndBoxLinkClips(tableDepth: 1, inBody: true);
+        CheckTableAndBoxLinkClips(tableDepth: 2, inBody: true);
+    }
+
+    private static void CheckTableAndBoxLinkClips(int tableDepth, bool inBody = false)
     {
         const string prose = "PUBLIC PROSE TARGET";
         const string proseUri = "https://example.invalid/box-link/prose";
@@ -229,17 +235,18 @@ internal static class DocxSectionNavigationTests
         XNamespace m = "http://schemas.openxmlformats.org/officeDocument/2006/math";
         foreach (var mode in Modes)
         {
-            string context = $"{mode}, table depth {tableDepth}";
+            string context = $"{mode}, table depth {tableDepth}, body placement {inBody}";
             double scale = 1d;
-            PdfPage tall = Render(100d);
+            double fullHeight = inBody ? 140d : 100d;
+            PdfPage tall = Render(fullHeight);
             var (baseline, tallClip) = FindProseFrame(tall);
             var fullLink = tall.Annotations.Single(link => link.Uri == proseUri);
-            TestAssert.Equal(1, tall.Annotations.Count(link => link.Uri == mathUri));
+            TestAssert.True(tall.Annotations.Count(link => link.Uri == mathUri) == 1, "The fitting math link is visible: " + context);
 
             // Cut the source clip through the uppercase linked glyphs. The
             // positive case should keep an actionable rectangle inside it.
-            double partialHeight = 100d - (baseline + 4d * scale - tallClip.Y) / scale;
-            TestAssert.True(partialHeight > 16d && partialHeight < 100d, context);
+            double partialHeight = fullHeight - (baseline + 4d * scale - tallClip.Y) / scale;
+            TestAssert.True(partialHeight > 16d && partialHeight < fullHeight, context);
             PdfPage partial = Render(partialHeight);
             var (_, partialClip) = FindProseFrame(partial);
             var partialLink = partial.Annotations.Single(link => link.Uri == proseUri);
@@ -270,9 +277,10 @@ internal static class DocxSectionNavigationTests
                         new XElement(W + "p", Link("rIdBoxProse", new XElement(W + "r", new XElement(W + "t", prose)))),
                         new XElement(W + "p", fraction)
                     ];
-                    if (tableDepth == 2) content = [ExactHeightTable(100d, content), new XElement(W + "p")];
+                    if (tableDepth == 2) content = [ExactHeightTable(fullHeight, content), new XElement(W + "p")];
                     if (tableDepth != 0) content = [ExactHeightTable(height, content), Paragraph("PUBLIC AFTER TABLE")];
-                    anchor.Descendants(W + "txbxContent").Single().ReplaceNodes(content);
+                    if (inBody) anchor.Ancestors(W + "p").First().ReplaceWith(content);
+                    else anchor.Descendants(W + "txbxContent").Single().ReplaceNodes(content);
                     const string relsName = "word/_rels/document.xml.rels";
                     var rels = XDocument.Parse(Encoding.UTF8.GetString(parts[relsName]));
                     foreach (var (id, uri) in new[] { ("rIdBoxProse", proseUri), ("rIdBoxMath", mathUri) })

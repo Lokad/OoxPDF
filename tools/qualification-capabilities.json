@@ -8679,6 +8679,7 @@
     "=DocxFloatingNoteBoxesKeepInkAndRangeDestinationsInPrintedFrame",
     "=DocxFloatingBoxHyperlinksFollowThePrintedClip",
     "=DocxFloatingBoxTableHyperlinksFollowCellAndAncestorClips",
+    "=DocxBodyTableHyperlinksFollowCellAndAncestorClips",
     "=DocxSplitNotesKeepFloatingBoxesWithTheirSourceLines",
     "=DocxFloatingBoxMathSurvivesBodyAndStoryPlacement",
     "=DocxParagraphRelativeStaticBoxesFollowTheirSelectedStory",
