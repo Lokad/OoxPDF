@@ -3917,6 +3917,7 @@
     "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "pptx-chart-axis-selection": [
+    "PptxChartAxisCaptionsKeepTheirAuthoredOpacity",
     "PptxChartAxisSelectionKeepsDeclaredOrderAndMissingSources",
     "PptxChartSceneAxesKeepParsedSourcesAndDateContext",
     "PptxChartValueAxisScaleFallbackUsesSceneAuthoritativeAbsence",

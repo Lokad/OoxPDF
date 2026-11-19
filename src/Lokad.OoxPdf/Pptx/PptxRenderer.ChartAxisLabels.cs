@@ -28,7 +28,6 @@ internal sealed partial class PptxRenderer
 
         ChartTextStyle style = prepared?.Style ?? ReadSceneChartTextStyle(theme, sceneChart, sceneAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
         double fontSize = style.FontSize;
-        RgbColor color = style.Color;
         double labelOffsetScale = ResolveSceneCategoryAxisLabelOffsetScale(sceneAxis);
         int tickLabelSkip = prepared?.TickLabelSkip ?? ResolveSceneCategoryAxisTickLabelSkip(sceneAxis);
         double widestCategoryLabel = 0d;
@@ -119,7 +118,7 @@ internal sealed partial class PptxRenderer
                     double clipBottom = pivotY + Math.Min(-anchorAdvance * sin, (part.Width - anchorAdvance) * sin) - rotated.Descent * cos;
                     TextRun rotatedRun = CreateChartTextRun(part.Text, localX, pivotY, part.Width, rotated.LineHeight,
                         clipLeft, clipBottom, Math.Max(1d, clipRight - clipLeft), extent,
-                        style with { Alpha = 1d }, TextAlignment.Left, kerningEnabled: false);
+                        style, TextAlignment.Left, kerningEnabled: false);
                     runs.Add(rotatedRun with { RotationDegrees = rotated.RotationDegrees, RotationCenterX = pivotX, RotationCenterY = pivotY });
                 }
                 continue;
@@ -155,34 +154,10 @@ internal sealed partial class PptxRenderer
             }
 
             double labelWidth = Math.Max(1d, width);
-            TextRun run = new TextRun(
-                label,
-                x,
-                y,
-                labelWidth,
-                height,
-                x,
-                y - height * PptxChartMetricRules.AxisLabelClipTopOffsetFactor,
-                labelWidth,
-                height * PptxChartMetricRules.AxisLabelClipHeightFactor,
-                fontSize,
-                style.CharacterSpacing,
-                0d,
-                color,
-                1d,
-                null,
-                Bold: style.Bold,
-                Italic: style.Italic,
-                Underline: style.Underline,
-                Strike: style.Strike,
-                KerningEnabled: false,
-                alignment,
-                FontFamily: style.FontFamily,
-                RotationDegrees: 0d,
-                RotationCenterX: 0d,
-                RotationCenterY: 0d,
-                FlipHorizontal: false,
-                FlipVertical: false, PreventCoalesce: false, Outline: null, StrictClip: false);
+            TextRun run = CreateChartTextRun(label, x, y, labelWidth, height,
+                x, y - height * PptxChartMetricRules.AxisLabelClipTopOffsetFactor,
+                labelWidth, height * PptxChartMetricRules.AxisLabelClipHeightFactor,
+                style, alignment, kerningEnabled: false);
             if (prepared is not null && prepared.Labels.TryGetValue(i, out var parts))
             {
                 for (int lineIndex = 0; lineIndex < parts.Length; lineIndex++)
@@ -230,7 +205,6 @@ internal sealed partial class PptxRenderer
         ChartTextStyle style = ReadSceneChartTextStyle(theme, sceneChart, sceneAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
         double fontSize = style.FontSize;
         double height = fontSize * PptxChartMetricRules.AxisLabelHeightFactor;
-        RgbColor color = style.Color;
         var textMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
         double autoTickTargetCount = GetValueAxisAutoTickTargetCount(horizontalBars, valueAxisLabelsVisible: true, manualPlotLayoutApplied);
         var captions = await MeasureChartValueAxisCaptionsAsync(textMeasurer, style, new(sceneAxis, sceneChart.Options.Date1904 == true), extents,
@@ -293,34 +267,8 @@ internal sealed partial class PptxRenderer
                 clipY -= descent;
                 clipHeight += descent;
             }
-            runs.Add(new TextRun(
-                label,
-                x,
-                y,
-                labelWidth,
-                height,
-                x,
-                clipY,
-                labelWidth,
-                clipHeight,
-                fontSize,
-                style.CharacterSpacing,
-                0d,
-                color,
-                1d,
-                null,
-                Bold: style.Bold,
-                Italic: style.Italic,
-                Underline: style.Underline,
-                Strike: style.Strike,
-                KerningEnabled: false,
-                alignment,
-                FontFamily: style.FontFamily,
-                RotationDegrees: 0d,
-                RotationCenterX: 0d,
-                RotationCenterY: 0d,
-                FlipHorizontal: false,
-                FlipVertical: false, PreventCoalesce: false, Outline: null, StrictClip: false));
+            runs.Add(CreateChartTextRun(label, x, y, labelWidth, height,
+                x, clipY, labelWidth, clipHeight, style, alignment, kerningEnabled: false));
         }
 
         if (!horizontalBars && (axisUnits.MajorUnit is null ||

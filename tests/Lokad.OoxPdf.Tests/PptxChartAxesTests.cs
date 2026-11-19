@@ -470,6 +470,59 @@ internal static class PptxChartAxesTests
         }
     }
 
+    public static void PptxChartAxisCaptionsKeepTheirAuthoredOpacity()
+    {
+        foreach (var (direction, rotation) in new[] { ("bar", 0), ("col", -2700000) })
+        {
+            PdfPage translucent = Render(direction, rotation, 50000, 25000);
+            AssertOutlineOpacity(translucent, "0.8 0.2 0.333", .5d);
+            AssertOutlineOpacity(translucent, "0.078 0.4 0.22", .25d);
+
+            PdfPage transparent = Render(direction, rotation, 0, 0);
+            AssertOutlineOpacity(transparent, "0.8 0.2 0.333", 0d);
+            AssertOutlineOpacity(transparent, "0.078 0.4 0.22", 0d);
+        }
+
+        static void AssertOutlineOpacity(PdfPage page, string color, double alpha)
+        {
+            PdfExtGStateResource state = page.ExtGStates.SingleOrDefault(resource => resource.FillAlpha == alpha);
+            TestAssert.True(state.ResourceName is not null, "The authored caption opacity must reach PDF paint.");
+            string content = page.Content.Replace("\r\n", "\n", StringComparison.Ordinal);
+            string paint = $"/{state.ResourceName} gs\n{color} rg\n";
+            TestAssert.True(Regex.IsMatch(content, Regex.Escape(paint) + @"[-\d.]+ [-\d.]+ m\n"),
+                "The alpha resource must apply to the colored caption outline.");
+        }
+
+        static PdfPage Render(string direction, int rotation, int categoryAlpha, int valueAlpha)
+        {
+            string chart = FormattableString.Invariant($$"""
+                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <c:chart><c:plotArea><c:barChart><c:barDir val="{{direction}}"/>
+                    <c:ser><c:cat><c:strLit><c:pt idx="0"><c:v>Alpha</c:v></c:pt><c:pt idx="1"><c:v>Beta</c:v></c:pt></c:strLit></c:cat>
+                      <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt></c:numLit></c:val></c:ser>
+                    <c:axId val="1"/><c:axId val="2"/>
+                  </c:barChart>
+                  <c:catAx><c:axId val="1"/><c:axPos val="b"/><c:tickLblPos val="nextTo"/>
+                    <c:txPr><a:bodyPr rot="{{rotation}}"/><a:p><a:pPr><a:defRPr sz="1200"><a:solidFill>
+                      <a:srgbClr val="CC3355"><a:alpha val="{{categoryAlpha}}"/></a:srgbClr>
+                    </a:solidFill></a:defRPr></a:pPr></a:p></c:txPr>
+                  </c:catAx>
+                  <c:valAx><c:axId val="2"/><c:axPos val="l"/><c:tickLblPos val="nextTo"/>
+                    <c:scaling><c:min val="0"/><c:max val="4"/></c:scaling><c:majorUnit val="2"/>
+                    <c:txPr><a:bodyPr/><a:p><a:pPr><a:defRPr sz="1200"><a:solidFill>
+                      <a:srgbClr val="146638"><a:alpha val="{{valueAlpha}}"/></a:srgbClr>
+                    </a:solidFill></a:defRPr></a:pPr></a:p></c:txPr>
+                  </c:valAx></c:plotArea></c:chart>
+                </c:chartSpace>
+                """);
+            using var stream = PptxTests.CreateSingleChartPackageStream(chart);
+            using var package = OoxPackage.Open(stream, default);
+            var document = new PptxReader().Read(package, default);
+            return new PptxRenderer(new PortableRenderingTests.PinnedResolver())
+                .RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().Single();
+        }
+    }
+
     public static void PptxAutomaticValueLabelsAvoidInkOverlapOnCrowdedFrames()
     {
         foreach (int height in new[] { 72, 216 })
