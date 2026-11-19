@@ -264,8 +264,7 @@ internal readonly record struct PptxScenePatternFill(
     bool HasUnsupportedPattern,
     string Preset,
     RgbColor Foreground,
-    RgbColor Background,
-    double Alpha);
+    RgbColor Background);
 
 internal readonly record struct PptxSceneShapePictureFill(
     bool HasPicture,

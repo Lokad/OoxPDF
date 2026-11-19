@@ -64,7 +64,7 @@ internal sealed partial class PptxSceneBuilder
                 bubbleSizePointCountValue,
                 ReadChartSeriesNumberFormatCode(seriesElement, "bubbleSize"),
                 ReadChartSeriesFill(seriesElement, theme, colorMap),
-                ReadChartSeriesPatternFill(seriesElement, theme, colorMap),
+                ReadChartPatternFill(shapeProperties, theme, colorMap),
                 ReadChartSeriesLine(seriesElement, theme, colorMap),
                 ReadChartEffects(shapeProperties),
                 seriesMarker,
@@ -114,11 +114,6 @@ internal sealed partial class PptxSceneBuilder
         return ReadChartLine(series.Element(ChartNamespace + "spPr"), theme, colorMap);
     }
 
-    private static PptxScenePatternFill ReadChartSeriesPatternFill(XElement series, PptxTheme theme, PptxColorMap colorMap)
-    {
-        return ReadChartPatternFill(series.Element(ChartNamespace + "spPr"), theme, colorMap);
-    }
-
     private static PptxScenePatternFill ReadChartPatternFill(XElement? shapeProperties, PptxTheme theme, PptxColorMap colorMap)
     {
         XElement? patternFill = shapeProperties?.Element(DrawingNamespace + "pattFill");
@@ -127,20 +122,7 @@ internal sealed partial class PptxSceneBuilder
             return default;
         }
 
-        RgbColor foreground = PptxColorResolver.TryReadSolidColorWithAlpha(patternFill.Element(DrawingNamespace + "fgClr"), theme, colorMap, out RgbColor foregroundColor, out _)
-            ? foregroundColor
-            : new RgbColor(0, 0, 0);
-        RgbColor background = PptxColorResolver.TryReadSolidColorWithAlpha(patternFill.Element(DrawingNamespace + "bgClr"), theme, colorMap, out RgbColor backgroundColor, out _)
-            ? backgroundColor
-            : new RgbColor(255, 255, 255);
-        return new PptxScenePatternFill(
-            HasPattern: true,
-            HasPatternSource: true,
-            HasUnsupportedPattern: false,
-            Preset: (string?)patternFill.Attribute("prst") ?? "pct50",
-            Foreground: foreground,
-            Background: background,
-            Alpha: 1d);
+        return ReadPatternFill(patternFill, (string?)patternFill.Attribute("prst") ?? "pct50", theme, colorMap);
     }
 
     private static PptxSceneChartMarker ReadChartMarker(XElement series, PptxTheme theme, PptxColorMap colorMap, PptxSceneChartPlotKind plotKind, bool chartMarkersEnabled, int seriesIndex)
@@ -208,7 +190,7 @@ internal sealed partial class PptxSceneBuilder
                 index,
                 indexValue,
                 ReadChartPointFill(shapeProperties, theme, colorMap),
-                ReadChartPointPatternFill(shapeProperties, theme, colorMap),
+                ReadChartPatternFill(shapeProperties, theme, colorMap),
                 ReadChartLine(shapeProperties, theme, colorMap),
                 ReadChartEffects(shapeProperties),
                 explosion,
@@ -253,11 +235,6 @@ internal sealed partial class PptxSceneBuilder
         return PptxColorResolver.TryReadSolidColorWithAlpha(shapeProperties, theme, colorMap, out RgbColor color, out double alpha)
             ? new PptxSceneFillStyle(true, color, alpha)
             : default;
-    }
-
-    private static PptxScenePatternFill ReadChartPointPatternFill(XElement? shapeProperties, PptxTheme theme, PptxColorMap colorMap)
-    {
-        return ReadChartPatternFill(shapeProperties, theme, colorMap);
     }
 
     private static PptxSceneLineStyle ReadChartLine(XElement? shapeProperties, PptxTheme theme, PptxColorMap colorMap, double? inheritedWidth = null)

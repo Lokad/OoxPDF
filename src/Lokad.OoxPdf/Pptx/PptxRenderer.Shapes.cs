@@ -93,7 +93,7 @@ internal sealed partial class PptxRenderer
             shape.Shape.CustomGeometry,
             shape.Shape.Fill,
             ToGradientFill(shape.Shape.GradientFill),
-            ToShapePatternFill(shape.Shape.PatternFill),
+            shape.Shape.PatternFill,
             ToShapePictureFill(shape.Shape.PictureFill),
             ToGlow(shape.Shape.Glow),
             ToOuterShadow(shape.Shape.OuterShadow),
@@ -120,7 +120,7 @@ internal sealed partial class PptxRenderer
         PptxSceneCustomGeometry? customGeometryOverride,
         PptxSceneFillStyle fillStyle,
         GradientFill? gradientFillOverride,
-        ShapePatternFill? patternFillOverride,
+        PptxScenePatternFill patternFill,
         ShapePictureFill? pictureFillOverride,
         Glow? glowOverride,
         OuterShadow? outerShadowOverride,
@@ -149,9 +149,6 @@ internal sealed partial class PptxRenderer
         double fillAlpha = fillStyle.Alpha;
         bool hasFill = fillStyle.HasFill;
         GradientFill? gradientFill = gradientFillOverride;
-        bool hasPatternFill = patternFillOverride is not null;
-        ShapePatternFill patternFill;
-        patternFill = patternFillOverride ?? default;
         RgbColor stroke = line.Color;
         double lineWidth = line.Width;
         double strokeAlpha = line.Alpha;
@@ -483,23 +480,11 @@ internal sealed partial class PptxRenderer
 
             images?.Add(new PdfImageResource(pictureFillName, pictureFillImage));
         }
-        else if (hasPatternFill)
+        else if (patternFill.HasPattern)
         {
-            bool transparentFill = patternFill.Alpha < 0.999d;
-            if (transparentFill)
-            {
-                graphics.SaveState();
-                graphics.SetAlpha(patternFill.Alpha, 1d);
-            }
-
             graphics.SetFillRgb(patternFill.Background.Red, patternFill.Background.Green, patternFill.Background.Blue);
             DrawPresetFill(graphics, shapeProperties, preset, x, y, width, height, presetAdjustmentsOverride);
             StrokeShapePatternFill(graphics, shapeProperties, preset, x, y, width, height, patternFill, presetAdjustmentsOverride);
-
-            if (transparentFill)
-            {
-                graphics.RestoreState();
-            }
         }
         else if (hasFill)
         {

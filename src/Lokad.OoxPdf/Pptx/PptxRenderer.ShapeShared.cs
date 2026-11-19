@@ -45,7 +45,7 @@ internal sealed partial class PptxRenderer
         double y,
         double width,
         double height,
-        ShapePatternFill fill,
+        PptxScenePatternFill fill,
         IReadOnlyDictionary<string, double>? presetAdjustmentsOverride)
     {
         if (width <= 0d || height <= 0d)
@@ -72,13 +72,6 @@ internal sealed partial class PptxRenderer
         }
 
         graphics.RestoreState();
-    }
-
-    private static bool IsSupportedDiagonalPatternFill(string? preset)
-    {
-        return preset is not null &&
-            (preset.Contains("UpDiag", StringComparison.OrdinalIgnoreCase) ||
-             preset.Contains("DnDiag", StringComparison.OrdinalIgnoreCase));
     }
 
     private static bool IsDarkDiagonalPatternFill(string preset)

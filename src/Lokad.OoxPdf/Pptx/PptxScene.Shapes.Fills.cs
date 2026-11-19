@@ -67,37 +67,34 @@ internal sealed partial class PptxSceneBuilder
 
     private static PptxScenePatternFill ReadShapePatternFill(XElement? shapeProperties, PptxTheme theme, PptxColorMap colorMap)
     {
-        TryReadShapePatternFill(shapeProperties, theme, colorMap, out PptxScenePatternFill fill);
-        return fill;
-    }
-
-    private static bool TryReadShapePatternFill(XElement? shapeProperties, PptxTheme theme, PptxColorMap colorMap, out PptxScenePatternFill fill)
-    {
         XElement? patternFill = shapeProperties?.Element(DrawingNamespace + "pattFill");
-        string? preset = (string?)patternFill?.Attribute("prst");
         if (patternFill is null)
         {
-            fill = default;
-            return false;
+            return default;
         }
 
+        string? preset = (string?)patternFill.Attribute("prst");
         if (preset is null || !IsSupportedDiagonalPatternFill(preset))
         {
-            fill = new PptxScenePatternFill(false, true, true, preset ?? string.Empty, default, default, 1d);
-            return false;
+            return new PptxScenePatternFill(false, true, true, preset ?? string.Empty, default, default);
         }
 
+        return ReadPatternFill(patternFill, preset, theme, colorMap);
+    }
+
+    private static PptxScenePatternFill ReadPatternFill(
+        XElement patternFill, string preset, PptxTheme theme, PptxColorMap colorMap)
+    {
         RgbColor foreground = PptxColorResolver.TryReadSolidColorWithAlpha(patternFill.Element(DrawingNamespace + "fgClr"), theme, colorMap, out RgbColor foregroundColor, out _)
             ? foregroundColor
             : new RgbColor(0, 0, 0);
         RgbColor background = PptxColorResolver.TryReadSolidColorWithAlpha(patternFill.Element(DrawingNamespace + "bgClr"), theme, colorMap, out RgbColor backgroundColor, out _)
             ? backgroundColor
             : new RgbColor(255, 255, 255);
-        fill = new PptxScenePatternFill(true, true, false, preset, foreground, background, 1d);
-        return true;
+        return new PptxScenePatternFill(true, true, false, preset, foreground, background);
     }
 
-    private static bool IsSupportedDiagonalPatternFill(string? preset)
+    internal static bool IsSupportedDiagonalPatternFill(string? preset)
     {
         return preset is not null &&
             (preset.Contains("UpDiag", StringComparison.OrdinalIgnoreCase) ||

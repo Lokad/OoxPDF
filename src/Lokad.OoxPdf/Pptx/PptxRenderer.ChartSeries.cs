@@ -825,7 +825,7 @@ internal sealed partial class PptxRenderer
         }
 
         return patternFill.HasPattern
-            ? new ChartSeriesFill(patternFill.Foreground, patternFill.Alpha, patternFill.Preset, patternFill.Background)
+            ? new ChartSeriesFill(patternFill.Foreground, 1d, patternFill.Preset, patternFill.Background)
             : null;
     }
 

@@ -10,13 +10,6 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static ShapePatternFill? ToShapePatternFill(PptxScenePatternFill fill)
-    {
-        return fill.HasPattern
-            ? new ShapePatternFill(fill.Preset, fill.Foreground, fill.Background, fill.Alpha)
-            : null;
-    }
-
     private static GradientFill? ToGradientFill(PptxSceneGradientFill fill)
     {
         return fill.HasGradient
@@ -517,7 +510,6 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct FillRect(double Left, double Top, double Right, double Bottom);
 
-    private readonly record struct ShapePatternFill(string Preset, RgbColor Foreground, RgbColor Background, double Alpha);
 
     private readonly record struct ShapePictureFill(
         string RelationshipId,
