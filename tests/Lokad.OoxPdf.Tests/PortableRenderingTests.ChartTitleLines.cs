@@ -63,8 +63,9 @@ internal static partial class PortableRenderingTests
         {
             var north = ReadPaintedSourceLabel(page, "North", fontPrefix: "CT");
             var sales = ReadPaintedSourceLabel(page, "Sales", fontPrefix: "CT");
+            // The 600dpi export font grid retains 18pt and emits 16pt as 15.96pt.
             TestAssert.True(north.All(glyph => Math.Abs(glyph.Size - 18d) < .001) &&
-                sales.All(glyph => Math.Abs(glyph.Size - 16d) < .001), "Both lines preserve their own run style.");
+                sales.All(glyph => Math.Abs(glyph.Size - 15.96d) < .001), "Both lines preserve their own run style.");
             PdfLinkAnnotation link = page.Annotations.Single();
             TestAssert.Equal("https://example.invalid/sales", link.Uri);
             TestAssert.True(link.Y <= sales[0].Origin.Y && link.Y + link.Height > sales[0].Origin.Y,
