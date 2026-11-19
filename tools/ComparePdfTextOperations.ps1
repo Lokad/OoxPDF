@@ -35,17 +35,6 @@ if ($OutputPath -and (Test-Path -LiteralPath $OutputPath)) { throw 'Select a fre
 
 $effective = $UseEffectiveMatrix.IsPresent
 
-function TextFontSize($op) {
-    if (!$UseEffectiveMatrix -or $null -eq $op.EffectiveA -or $null -eq $op.EffectiveB -or
-        $null -eq $op.EffectiveC -or $null -eq $op.EffectiveD) { return [double]$op.FontSize }
-    $a = [double]$op.EffectiveA; $b = [double]$op.EffectiveB
-    $c = [double]$op.EffectiveC; $d = [double]$op.EffectiveD
-    $baselineLength = [Math]::Sqrt($a*$a + $b*$b)
-    if ($baselineLength -eq 0d) { return [double]::NaN }
-    # Perpendicular em height excludes shear and handles rotated baselines.
-    return [double]$op.FontSize * [Math]::Abs($a*$d - $b*$c) / $baselineLength
-}
-
 function TextCharacterSpacing($op) {
     if (!$UseEffectiveMatrix -or $null -eq $op.EffectiveA -or $null -eq $op.EffectiveB) { return [double]$op.CharacterSpacing }
     $a = [double]$op.EffectiveA; $b = [double]$op.EffectiveB
@@ -161,8 +150,8 @@ foreach ($pair in $pairs) {
             Status = "missing"
             RefPage = if ($null -eq $ref) { $null } else { $ref.PageNumber }
             CandPage = if ($null -eq $cand) { $null } else { $cand.PageNumber }
-            RefFontSize = if ($null -eq $ref) { $null } else { TextFontSize $ref }
-            CandFontSize = if ($null -eq $cand) { $null } else { TextFontSize $cand }
+            RefFontSize = if ($null -eq $ref) { $null } else { [double](Get-PdfTextOperationFontSize $ref $effective) }
+            CandFontSize = if ($null -eq $cand) { $null } else { [double](Get-PdfTextOperationFontSize $cand $effective) }
             RefRawFontSize = if ($null -eq $ref) { $null } else { $ref.FontSize }
             CandRawFontSize = if ($null -eq $cand) { $null } else { $cand.FontSize }
             DeltaFontSize = $null
@@ -189,8 +178,8 @@ foreach ($pair in $pairs) {
     $candY = Get-PdfTextOperationY $cand $effective
     $deltaX = Delta -left $refX -right $candX
     $deltaY = Delta -left $refY -right $candY
-    $refSize = TextFontSize $ref
-    $candSize = TextFontSize $cand
+    $refSize = [double](Get-PdfTextOperationFontSize $ref $effective)
+    $candSize = [double](Get-PdfTextOperationFontSize $cand $effective)
     $refTc = TextCharacterSpacing $ref
     $candTc = TextCharacterSpacing $cand
     $deltaSize = Delta -left $refSize -right $candSize

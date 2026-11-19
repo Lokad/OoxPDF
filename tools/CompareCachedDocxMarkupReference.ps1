@@ -2119,7 +2119,17 @@ function New-TextGateDeltaSummary($ReferenceTextOperations, $CandidateTextOperat
         $candidateFontSize = Get-DoubleMetric $candidateItem @("FontSize")
         [void](Update-MaxDelta ([ref]$maxBaselineDelta) $referenceBaseline $candidateBaseline)
         [void](Update-MaxDelta ([ref]$maxXDelta) $referenceX $candidateX)
-        [void](Update-MaxDelta ([ref]$maxFontSizeDelta) $referenceFontSize $candidateFontSize)
+        $referenceHeight = Get-PdfTextOperationFontSize $referenceItem $true
+        $candidateHeight = Get-PdfTextOperationFontSize $candidateItem $true
+        if ($null -ne $referenceHeight -and $null -ne $candidateHeight) {
+            if ([double]::IsFinite($referenceHeight) -and [double]::IsFinite($candidateHeight)) {
+                [void](Update-MaxDelta ([ref]$maxFontSizeDelta) $referenceHeight $candidateHeight)
+            }
+            else {
+                $maxFontSizeDelta = [double]::PositiveInfinity
+            }
+        }
+        # Retain raw operand ratios for the emission and print-scale diagnostics.
         if ($null -ne $referenceFontSize -and $null -ne $candidateFontSize -and [double]$candidateFontSize -gt 0d) {
             $fontSizeRatios.Add([double]$referenceFontSize / [double]$candidateFontSize) | Out-Null
         }

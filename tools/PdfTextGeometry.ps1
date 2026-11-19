@@ -18,6 +18,23 @@ function Join-DecodedPdfTextPages($Operations) {
     $pages = @($Operations | Group-Object { $_.PageNumber } | Sort-Object { [int]$_.Name })
     ($pages | ForEach-Object { ($_.Group | ForEach-Object { $_.DecodedText }) -join '' }) -join "`n"
 }
+
+function Get-PdfTextOperationFontSize($Operation, [bool] $UseEffectiveMatrix) {
+    if ($null -eq $Operation.FontSize) { return $null }
+    $fontSize = [double]$Operation.FontSize
+    if (!$UseEffectiveMatrix -or $null -eq $Operation.EffectiveA -or $null -eq $Operation.EffectiveB -or
+        $null -eq $Operation.EffectiveC -or $null -eq $Operation.EffectiveD) { return $fontSize }
+
+    $a = [double]$Operation.EffectiveA
+    $b = [double]$Operation.EffectiveB
+    $c = [double]$Operation.EffectiveC
+    $d = [double]$Operation.EffectiveD
+    $baselineLength = [Math]::Sqrt($a*$a + $b*$b)
+    if ($baselineLength -eq 0d) { return [double]::NaN }
+    # Perpendicular em height excludes shear and handles rotated baselines.
+    return $fontSize * [Math]::Abs($a*$d - $b*$c) / $baselineLength
+}
+
 function Get-PdfTextOperationX($Operation, [bool] $UseEffectiveMatrix) {
     if ($UseEffectiveMatrix -and $null -ne $Operation.EffectiveX) {
         return [double]$Operation.EffectiveX
