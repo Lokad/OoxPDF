@@ -500,66 +500,84 @@ internal static class DocxTableCellsTests
     public static void DocxTableMixedHeightGridAutomaticSlotsMatchIndependentWord()
     {
         var full = new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer());
+        var margins = DocxTableCellMargins.Empty with { TopPoints = 6d, BottomPoints = 12d };
         foreach (string alignment in new[] { "center", "bottom" })
         foreach (string? automaticRule in new string?[] { null, "auto" })
-        foreach (string declaredRule in new[] { "exact", "atLeast" })
-        foreach (int automaticIndex in new[] { 0, 1 })
         foreach (string pattern in new[] { "min-single", "min", "auto,min-single,auto" })
         {
-            var margins = DocxTableCellMargins.Empty with { TopPoints = 6d, BottomPoints = 12d };
-            var heights = new (double? Height, string? Rule)[2];
-            heights[automaticIndex] = (automaticRule is null ? null : 320d, automaticRule);
-            heights[1 - automaticIndex] = (180d, declaredRule);
             var uniform = CreateParagraphMinimumLayout(pattern, full, rowRule: automaticRule,
                 verticalAlignment: alignment, cellMargins: margins, rowCount: 2, columnCount: 2, borderSize: "8");
-            var mixed = CreateParagraphMinimumLayout(pattern, full, verticalAlignment: alignment,
-                cellMargins: margins, rowCount: 2, columnCount: 2, borderSize: "8", rowHeightRules: heights);
-            var expected = uniform.Pages[0].Items.OfType<DocxTableRowLayout>().ElementAt(automaticIndex);
-            var actual = mixed.Pages[0].Items.OfType<DocxTableRowLayout>().ElementAt(automaticIndex);
-            TestAssert.Equal(expected.Height, actual.Height);
-            for (int c = 0; c < 2; c++)
-            for (int i = 0; i < actual.Cells[c].TextLines.Count; i++)
-                TestAssert.True(Math.Abs((expected.Cells[c].TextLines[i].BaselineY - expected.Y) -
-                    (actual.Cells[c].TextLines[i].BaselineY - actual.Y)) < .000001d,
-                    "An automatic row keeps its independently qualified minimum slots beside a declared-height row.");
+            var uniformRows = uniform.Pages[0].Items.OfType<DocxTableRowLayout>().ToArray();
+            foreach (string declaredRule in new[] { "exact", "atLeast" })
+            foreach (int automaticIndex in new[] { 0, 1 })
+            {
+                var heights = new (double? Height, string? Rule)[2];
+                heights[automaticIndex] = (automaticRule is null ? null : 320d, automaticRule);
+                heights[1 - automaticIndex] = (180d, declaredRule);
+                var mixed = CreateParagraphMinimumLayout(pattern, full, verticalAlignment: alignment,
+                    cellMargins: margins, rowCount: 2, columnCount: 2, borderSize: "8", rowHeightRules: heights);
+                var expected = uniformRows[automaticIndex];
+                var actual = mixed.Pages[0].Items.OfType<DocxTableRowLayout>().ElementAt(automaticIndex);
+                TestAssert.Equal(expected.Height, actual.Height);
+                for (int c = 0; c < 2; c++)
+                {
+                    var expectedLines = expected.Cells[c].TextLines;
+                    var actualLines = actual.Cells[c].TextLines;
+                    TestAssert.Equal(expectedLines.Count, actualLines.Count);
+                    for (int i = 0; i < expectedLines.Count; i++)
+                    {
+                        TestAssert.Equal(expectedLines[i].Text, actualLines[i].Text);
+                        TestAssert.True(Math.Abs((expectedLines[i].BaselineY - expected.Y) -
+                            (actualLines[i].BaselineY - actual.Y)) < .000001d,
+                            "An automatic row keeps its independently qualified minimum slots beside a declared-height row.");
+                    }
+                }
+            }
         }
     }
 
     public static void DocxTableMixedHeightGridRetainsDeclaredSlotsAndFollowingFlow()
     {
         var full = new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer());
+        var margins = DocxTableCellMargins.Empty with { TopPoints = 6d, BottomPoints = 12d };
         foreach (string alignment in new[] { "center", "bottom" })
-        foreach (string declaredRule in new[] { "exact", "atLeast" })
-        foreach (int automaticIndex in new[] { 0, 1 })
         foreach (double minimum in new[] { 12d, 14d, 24d })
         {
-            var margins = DocxTableCellMargins.Empty with { TopPoints = 6d, BottomPoints = 12d };
-            var heights = new (double? Height, string? Rule)[2];
-            heights[automaticIndex] = (null, null); heights[1 - automaticIndex] = (180d, declaredRule);
             var uniform = CreateParagraphMinimumLayout("min-single", full, verticalAlignment: alignment,
                 cellMargins: margins, rowCount: 2, columnCount: 2, minimumSpacing: minimum, borderSize: "8");
-            var declared = CreateParagraphMinimumLayout("min-single", full, rowHeight: 180d, rowRule: declaredRule,
-                verticalAlignment: alignment, cellMargins: margins, rowCount: 2, columnCount: 2,
-                minimumSpacing: minimum, borderSize: "8");
-            var mixed = CreateParagraphMinimumLayout("min-single", full, verticalAlignment: alignment,
-                cellMargins: margins, rowCount: 2, columnCount: 2, minimumSpacing: minimum,
-                borderSize: "8", rowHeightRules: heights);
-            var before = declared.Pages[0].Items.OfType<DocxTableRowLayout>().ElementAt(1 - automaticIndex);
-            var after = mixed.Pages[0].Items.OfType<DocxTableRowLayout>().ElementAt(1 - automaticIndex);
-            TestAssert.Equal(before.Height, after.Height);
-            for (int c = 0; c < 2; c++)
+            double uniformHeight = uniform.Pages[0].Items.OfType<DocxTableRowLayout>().Sum(row => row.Height);
+            double uniformFollowing = uniform.Pages[0].Items.OfType<DocxTextLineLayout>().Single().BaselineY;
+            foreach (string declaredRule in new[] { "exact", "atLeast" })
             {
-                var first = before.Cells[c].TextLines.Single(); var last = after.Cells[c].TextLines.Single();
-                TestAssert.True(Math.Abs((first.BaselineY - before.Y) - (last.BaselineY - after.Y)) < .000001d,
-                    "Declared rows retain their existing aligned minimum and natural-floor slots.");
-                TestAssert.Equal(first.BodyLineBoxBaselineInsetPoints, last.BodyLineBoxBaselineInsetPoints);
+                var declared = CreateParagraphMinimumLayout("min-single", full, rowHeight: 180d, rowRule: declaredRule,
+                    verticalAlignment: alignment, cellMargins: margins, rowCount: 2, columnCount: 2,
+                    minimumSpacing: minimum, borderSize: "8");
+                var declaredRows = declared.Pages[0].Items.OfType<DocxTableRowLayout>().ToArray();
+                foreach (int automaticIndex in new[] { 0, 1 })
+                {
+                    var heights = new (double? Height, string? Rule)[2];
+                    heights[1 - automaticIndex] = (180d, declaredRule);
+                    var mixed = CreateParagraphMinimumLayout("min-single", full, verticalAlignment: alignment,
+                        cellMargins: margins, rowCount: 2, columnCount: 2, minimumSpacing: minimum,
+                        borderSize: "8", rowHeightRules: heights);
+                    var before = declaredRows[1 - automaticIndex];
+                    var after = mixed.Pages[0].Items.OfType<DocxTableRowLayout>().ElementAt(1 - automaticIndex);
+                    TestAssert.Equal(before.Height, after.Height);
+                    for (int c = 0; c < 2; c++)
+                    {
+                        var expected = before.Cells[c].TextLines.Single();
+                        var actual = after.Cells[c].TextLines.Single();
+                        TestAssert.Equal(expected.Text, actual.Text);
+                        TestAssert.True(Math.Abs((expected.BaselineY - before.Y) - (actual.BaselineY - after.Y)) < .000001d,
+                            "Declared rows retain their existing aligned minimum and natural-floor slots.");
+                        TestAssert.Equal(expected.BodyLineBoxBaselineInsetPoints, actual.BodyLineBoxBaselineInsetPoints);
+                    }
+                    double extraHeight = mixed.Pages[0].Items.OfType<DocxTableRowLayout>().Sum(row => row.Height) - uniformHeight;
+                    double followingDelta = uniformFollowing - mixed.Pages[0].Items.OfType<DocxTextLineLayout>().Single().BaselineY;
+                    TestAssert.True(Math.Abs(extraHeight - followingDelta) < .000001d,
+                        "Following body flow advances only by the measured mixed-row height difference.");
+                }
             }
-            double extraHeight = mixed.Pages[0].Items.OfType<DocxTableRowLayout>().Sum(r => r.Height) -
-                uniform.Pages[0].Items.OfType<DocxTableRowLayout>().Sum(r => r.Height);
-            double followingDelta = uniform.Pages[0].Items.OfType<DocxTextLineLayout>().Single().BaselineY -
-                mixed.Pages[0].Items.OfType<DocxTextLineLayout>().Single().BaselineY;
-            TestAssert.True(Math.Abs(extraHeight - followingDelta) < .000001d,
-                "Following body flow advances only by the measured mixed-row height difference.");
         }
     }
 
