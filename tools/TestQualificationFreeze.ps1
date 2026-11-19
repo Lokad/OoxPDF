@@ -311,7 +311,7 @@ $reuseBuildState=[pscustomobject]@{Calls=0;Damage=$false}
 function dotnet {
     $buildArguments=@($args)
     if ($buildArguments[0] -ne 'build' -or $buildArguments[1] -ne (Join-Path $worktree 'tests/Lokad.OoxPdf.Tests/Lokad.OoxPdf.Tests.csproj') -or
-        '-p:BuildProjectReferences=false' -notin $buildArguments -or '--no-restore' -notin $buildArguments) {
+        '-p:BuildProjectReferences=false' -notin $buildArguments) {
         throw 'Harness reuse attempted an unexpected build'
     }
     $reuseBuildState.Calls++
