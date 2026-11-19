@@ -42,14 +42,16 @@ internal sealed partial class PptxRenderer
             // diagnostic) instead of overflowing long math, wrapping offsets, or
             // carrying NaN into layout. Long differences widen to double before
             // scaling so the subtraction itself cannot wrap; every narrowing cast is
-            // range-checked and every long sum runs checked. In-range inputs follow
-            // the exact legacy rounding order, so rendered output is unchanged.
+            // range-checked and every long sum runs checked. In-range coordinates
+            // follow the existing rounding order.
             if (!double.IsFinite(RotationDegrees) || !double.IsFinite(ScaleX) || !double.IsFinite(ScaleY))
             {
                 throw new InvalidDataException("Group transform scale or rotation is not finite.");
             }
 
-            double rotationSum = bounds.RotationDegrees + RotationDegrees;
+            // Reflecting one axis reverses the child's turn before the group rotates.
+            double childRotation = FlipHorizontal != FlipVertical ? -bounds.RotationDegrees : bounds.RotationDegrees;
+            double rotationSum = childRotation + RotationDegrees;
             if (!double.IsFinite(rotationSum))
             {
                 throw new InvalidDataException("Group transform rotation is not finite.");

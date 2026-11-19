@@ -29,6 +29,51 @@ internal static class PptxAffineGeometryTests
         AssertFrame(new PdfRectangle(321, 266, 30, 240), annotation);
     }
 
+    public static void PptxReflectedGroupPaintMatchesFlattenedTriangle()
+    {
+        // The 90-degree outer turn takes the reflected leaf center around (216,174).
+        // An odd number of reflected axes reverses the 90-degree leaf turn.
+        foreach (var sample in new[] {
+            (FlipH: 1, FlipV: 0, X: 176, Y: 189, Angle: 0),
+            (FlipH: 0, FlipV: 1, X: 136, Y: 129, Angle: 0),
+            (FlipH: 0, FlipV: 0, X: 176, Y: 129, Angle: 180),
+            (FlipH: 1, FlipV: 1, X: 136, Y: 189, Angle: 180)
+        })
+        {
+            string child = Triangle(90, 85, 90);
+            string grouped = Group(3, 36, 54, 360, 240, 90, sample.FlipH, sample.FlipV, child);
+            string flat = Triangle(sample.X, sample.Y, sample.Angle, sample.FlipH, sample.FlipV);
+            AssertSameTriangle(flat, grouped);
+        }
+
+        // Inner vertical reflection and turn place the leaf center at (155,95)
+        // in the outer group. The outer horizontal reflection places it at (241,149)
+        // on the slide and reverses the inner turn.
+        string inner = Group(4, 60, 45, 240, 160, 90, 0, 1, Triangle(30, 40, 0));
+        AssertSameTriangle(Triangle(181, 134, 270, 1, 1), Group(3, 36, 54, 360, 240, 0, 1, 0, inner));
+
+        static void AssertSameTriangle(string flat, string grouped)
+        {
+            PdfPage expected = RenderLinkPage(flat);
+            PdfPage actual = RenderLinkPage(grouped);
+            TestAssert.Contains("0.855 0.463 0.165 rg", expected.Content);
+            TestAssert.Equal(expected.Content, actual.Content);
+            TestAssert.Equal(expected.Annotations.Single(), actual.Annotations.Single());
+        }
+
+        static string Triangle(int x, int y, int angle, int flipH = 0, int flipV = 0) => $$"""
+            <p:sp><p:nvSpPr><p:cNvPr id="2" name="Linked triangle"><a:hlinkClick r:id="link"/></p:cNvPr><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+              <p:spPr><a:xfrm rot="{{angle * 60000}}" flipH="{{flipH}}" flipV="{{flipV}}"><a:off x="{{x * 12700}}" y="{{y * 12700}}"/><a:ext cx="1524000" cy="381000"/></a:xfrm>
+              <a:prstGeom prst="rtTriangle"><a:avLst/></a:prstGeom><a:solidFill><a:srgbClr val="DA762A"/></a:solidFill><a:ln><a:noFill/></a:ln></p:spPr></p:sp>
+            """;
+
+        static string Group(int id, int x, int y, int width, int height, int angle, int flipH, int flipV, string child) => $$"""
+            <p:grpSp><p:nvGrpSpPr><p:cNvPr id="{{id}}" name="Group"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+              <p:grpSpPr><a:xfrm rot="{{angle * 60000}}" flipH="{{flipH}}" flipV="{{flipV}}"><a:off x="{{x * 12700}}" y="{{y * 12700}}"/><a:ext cx="{{width * 12700}}" cy="{{height * 12700}}"/>
+              <a:chOff x="0" y="0"/><a:chExt cx="{{width * 12700}}" cy="{{height * 12700}}"/></a:xfrm></p:grpSpPr>{{child}}</p:grpSp>
+            """;
+    }
+
     public static void PptxUnrotatedFramePaintersKeepLinkFallback()
     {
         foreach (bool chart in new[] { false, true })
