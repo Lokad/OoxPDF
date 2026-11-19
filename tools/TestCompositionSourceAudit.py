@@ -109,13 +109,22 @@ class PictureInkTests(unittest.TestCase):
             for kind in pictures:
                 page = doc.new_page(width=100, height=100)
                 rect = self.fitz.Rect(10, 10, 70, 40)
-                if kind in ('png', 'clipped'):
+                if kind in ('png', 'clipped', 'covered', 'corner-overlap', 'rotated'):
                     page.insert_image(rect, stream=self.png)
                 elif kind == 'svg':
                     page.draw_rect(rect, color=None, fill=(0., 170 / 255, 102 / 255))
                 if kind == 'clipped':
                     xref, = page.get_contents()
                     doc.update_stream(xref, b'q 80 0 10 10 re W n\n' + doc.xref_stream(xref) + b'\nQ')
+                if kind in ('covered', 'cover-alone'):
+                    page.draw_rect(rect, color=None, fill=(1, 1, 1))
+                    for top, fill in [(12, (47, 128, 237)), (25, (39, 174, 96))]:
+                        page.draw_rect(self.fitz.Rect(12, top, 18, top + 6), color=None,
+                                       fill=tuple(channel / 255 for channel in fill))
+                if kind == 'corner-overlap':
+                    page.draw_rect(self.fitz.Rect(10, 10, 20, 20), color=None, fill=(1, 1, 1))
+                if kind == 'rotated':
+                    page.set_rotation(90)
             doc.save(path)
         return path
 
@@ -132,6 +141,29 @@ class PictureInkTests(unittest.TestCase):
                         self.assertEqual(1, len(pdf[0].get_images()))
                 result = screen_picture_ink(self.source, candidate, reference, expected, self.fitz)
                 self.assertEqual(status, result['Status'])
+
+    def test_foreground_paint_cannot_supply_png_witness_colors(self):
+        self.write_source()
+        expected = {'ExpectedInlineImageCount': 1}
+        reference = self.write_pdf('office', ['png'])
+        covered = self.write_pdf('covered', ['covered'])
+        cover_alone = self.write_pdf('cover-alone', ['cover-alone'])
+        with self.fitz.open(covered) as candidate, self.fitz.open(cover_alone) as without_picture:
+            self.assertEqual(1, len(candidate[0].get_image_info()))
+            self.assertEqual(candidate[0].get_pixmap().samples, without_picture[0].get_pixmap().samples)
+        result = screen_picture_ink(self.source, covered, reference, expected, self.fitz)
+        self.assertEqual('Unverified candidate picture witnesses', result['Status'])
+        self.assertEqual({}, result['CandidateByPage'])
+        self.assertEqual({1: 1}, result['UnverifiedCandidatePngsByPage'])
+        self.assertEqual('Missing picture ink',
+                         screen_picture_ink(self.source, cover_alone, reference, expected, self.fitz)['Status'])
+        self.assertEqual('Unverified Office picture witnesses',
+                         screen_picture_ink(self.source, reference, covered, expected, self.fitz)['Status'])
+        for kind in ('corner-overlap', 'rotated'):
+            with self.subTest(kind=kind):
+                candidate = self.write_pdf(kind, [kind])
+                self.assertEqual('Picture witnesses present',
+                                 screen_picture_ink(self.source, candidate, reference, expected, self.fitz)['Status'])
 
     def test_repeated_static_svg_witnesses_follow_their_reference_pages(self):
         self.write_source(svg=True)

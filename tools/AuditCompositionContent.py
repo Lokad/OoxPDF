@@ -130,35 +130,73 @@ def screen_picture_ink(source, candidate, reference, case, fitz):
         if len(palette) != 2 or (raster.alpha and any(value != 255 for value in samples[3::4])):
             return {"Status": "Unverified PNG palette", "ExpectedSourcePictures": source_count}
 
+    scale = fitz.Matrix(3, 3)
+
+    def render_region(page, rect):
+        return page.get_pixmap(matrix=scale, clip=rect, colorspace=fitz.csRGB, annots=False)
+
+    def has_colors(bitmap, colors):
+        samples = iter(bitmap.samples)
+        return colors.issubset(zip(samples, samples, samples))
+
     def count_regions(page, bounds, colors):
         count = 0
         for box in {tuple(box) for box in bounds}:
             rect = fitz.Rect(box) & page.rect
             if rect.is_empty or not rect.is_valid:
                 continue
-            bitmap = page.get_pixmap(matrix=fitz.Matrix(3, 3), clip=rect,
-                                     colorspace=fitz.csRGB, annots=False)
-            samples = iter(bitmap.samples)
-            count += colors.issubset(zip(samples, samples, samples))
+            count += has_colors(render_region(page, rect), colors)
         return count
 
+    def count_pngs(page):
+        # The paint log supplies the order of the image and any foreground paint.
+        # Bounds are conservative. An obscured witness may remain unverified.
+        rotation = page.rotation_matrix
+        paint = [(kind, fitz.Rect(box) * rotation) for kind, box in page.get_bboxlog()
+                 if kind != "ignore-text"]
+        images = {tuple(box): index for index, (kind, box) in enumerate(paint) if kind == "fill-image"}
+        neutral = next((value, value, value) for value in range(3) if (value, value, value) not in palette)
+        visible = uncertain = 0
+        for box, index in images.items():
+            rect = fitz.Rect(box) & page.rect
+            if rect.is_empty or not rect.is_valid:
+                continue
+            bitmap = render_region(page, rect)
+            if not has_colors(bitmap, palette):
+                continue
+            covered = False
+            for _, later in paint[index + 1:]:
+                overlap = rect & later
+                if not overlap.is_empty:
+                    covered |= bitmap.set_rect((overlap * scale).irect, neutral)
+            if covered and not has_colors(bitmap, palette):
+                uncertain += 1
+            else:
+                visible += 1
+        return visible, uncertain
+
     def scan(path):
-        counts = {}
+        counts, uncertain_pngs = {}, {}
         with fitz.open(path) as pdf:
             for page in pdf:
-                pngs = count_regions(page, (image["bbox"] for image in page.get_image_info()), palette) if palette else 0
+                pngs, uncertain = count_pngs(page) if palette else (0, 0)
                 paths = (drawing["rect"] for drawing in page.get_drawings() if drawing["fill"] and
                          tuple(round(channel * 255) for channel in drawing["fill"]) == svg_color) if svg_color else ()
                 svgs = count_regions(page, paths, {svg_color}) if svg_color else 0
                 if pngs or svgs:
                     counts[page.number + 1] = {"Png": pngs, "Svg": svgs}
-        return counts
+                if uncertain:
+                    uncertain_pngs[page.number + 1] = uncertain
+        return counts, uncertain_pngs
 
-    office, actual = scan(reference), scan(candidate)
+    office, uncertain_office = scan(reference)
+    actual, uncertain_candidate = scan(candidate)
     office_totals = {kind: sum(page[kind] for page in office.values()) for kind in expected}
     actual_totals = {kind: sum(page[kind] for page in actual.values()) for kind in expected}
-    if any(office_totals[kind] < expected[kind] for kind in expected):
+    if uncertain_office or any(office_totals[kind] < expected[kind] for kind in expected):
         status = "Unverified Office picture witnesses"
+    elif uncertain_candidate:
+        status = "Unverified candidate picture witnesses"
     elif any(actual_totals[kind] < office_totals[kind] for kind in expected):
         status = "Missing picture ink"
     elif actual != office:
@@ -166,7 +204,9 @@ def screen_picture_ink(source, candidate, reference, case, fitz):
     else:
         status = "Picture witnesses present"
     return {"Status": status, "ExpectedSourcePictures": source_count, "OfficeByPage": office,
-            "CandidateByPage": actual, "PngColors": sorted(palette), "SvgColor": svg_color}
+            "CandidateByPage": actual, "UnverifiedOfficePngsByPage": uncertain_office,
+            "UnverifiedCandidatePngsByPage": uncertain_candidate, "PngColors": sorted(palette),
+            "SvgColor": svg_color}
 
 
 def unresolved_fields(root):
