@@ -275,6 +275,7 @@ internal static class DiagnosticOutcomeTests
         {
             string input = Path.Combine(directory, "missing-picture.pptx");
             File.Copy(FindCase("pptx-images.pptx"), input);
+            File.SetAttributes(input, File.GetAttributes(input) & ~FileAttributes.ReadOnly);
             using (ZipArchive package = ZipFile.Open(input, ZipArchiveMode.Update))
             {
                 ZipArchiveEntry image = package.Entries.First(entry => entry.FullName.StartsWith("ppt/media/", StringComparison.Ordinal));
