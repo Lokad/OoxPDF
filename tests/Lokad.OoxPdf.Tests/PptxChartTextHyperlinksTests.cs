@@ -114,35 +114,9 @@ internal static partial class PptxChartTextHyperlinksTests
         foreach (IFontResolver? resolver in new IFontResolver?[] { null, new MissingTestFontResolver() })
         {
             (IReadOnlyList<PdfPage> pages, List<OoxPdfDiagnostic> diagnostics) = RenderChartTitlePage(
-                "",
-                """
-                    <?xml version="1.0" encoding="UTF-8"?>
-                    <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                      <Relationship Id="rIdLink" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.invalid/chart-axis" TargetMode="External"/>
-                    </Relationships>
-                    """,
-                """
-                    <?xml version="1.0" encoding="UTF-8"?>
-                    <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-                      <c:chart>
-                        <c:plotArea>
-                          <c:barChart>
-                            <c:barDir val="col"/>
-                            <c:grouping val="clustered"/>
-                            <c:ser>
-                              <c:idx val="0"/><c:order val="0"/>
-                              <c:tx><c:strLit><c:pt idx="0"><c:v>Series</c:v></c:pt></c:strLit></c:tx>
-                              <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat>
-                              <c:val><c:numLit><c:pt idx="0"><c:v>4</c:v></c:pt></c:numLit></c:val>
-                            </c:ser>
-                            <c:axId val="10"/><c:axId val="20"/>
-                          </c:barChart>
-                          <c:catAx><c:axId val="10"/><c:axPos val="b"/><c:crossAx val="20"/><c:tickLblPos val="none"/></c:catAx>
-                          <c:valAx><c:axId val="20"/><c:axPos val="l"/><c:scaling><c:min val="0"/><c:max val="5"/></c:scaling><c:crossAx val="10"/><c:majorUnit val="5"/><c:tickLblPos val="none"/><c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr><a:hlinkClick r:id="rIdLink"/></a:rPr><a:t>Y axis</a:t></a:r></a:p></c:rich></c:tx><c:overlay val="0"/></c:title></c:valAx>
-                        </c:plotArea>
-                      </c:chart>
-                    </c:chartSpace>
-                    """, fontResolver: resolver);
+                "", AxisTitleRelationships, AxisTitleChart("l", """
+                    <a:r><a:rPr><a:hlinkClick r:id="rIdLink"/></a:rPr><a:t>Y axis</a:t></a:r>
+                    """), fontResolver: resolver);
 
             PdfLinkAnnotation annotation = pages.Single().Annotations.Single();
             TestAssert.Equal("https://example.invalid/chart-axis", annotation.Uri);
@@ -152,6 +126,70 @@ internal static partial class PptxChartTextHyperlinksTests
             TestAssert.True(diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_HYPERLINK" && d.Id != "PPTX_UNSUPPORTED_HYPERLINK_ACTION"), "A resolvable chart axis title hyperlink should not emit hyperlink diagnostics.");
         }
     }
+
+    public static void PptxRotatedAxisTitleRunsSharePaintAndNavigationFrame()
+    {
+        var resolver = new PortableRenderingTests.PinnedResolver();
+        foreach (string side in new[] { "l", "r" })
+        {
+            PdfPage single = RenderChartTitlePage("", null, AxisTitleChart(side, """
+                <a:r><a:rPr sz="1800"/><a:t>Value Axis</a:t></a:r>
+                """), resolver).Pages.Single();
+            PdfPage split = RenderChartTitlePage("", AxisTitleRelationships, AxisTitleChart(side, """
+                <a:r><a:rPr sz="1800"/><a:t>Value </a:t></a:r>
+                <a:r><a:rPr sz="1800"><a:hlinkClick r:id="rIdLink"/></a:rPr><a:t>Axis</a:t></a:r>
+                """), resolver).Pages.Single();
+
+            var expected = PortableRenderingTests.ReadPaintedSourceLabel(single, "Value Axis", fontPrefix: "CAT");
+            var actual = PortableRenderingTests.ReadPaintedSourceLabel(split, "Value Axis", fontPrefix: "CAT");
+            TestAssert.Equal(9, actual.Count);
+            foreach (var (before, after) in expected.Zip(actual))
+            {
+                TestAssert.True(Math.Abs(before.Origin.X - after.Origin.X) < .002d &&
+                    Math.Abs(before.Origin.Y - after.Origin.Y) < .08d,
+                    $"Splitting the title preserves each glyph's position along the {side} axis.");
+            }
+
+            PdfLinkAnnotation link = split.Annotations.Single();
+            TestAssert.Equal("https://example.invalid/chart-axis", link.Uri);
+            TestAssert.True(actual.Skip(5).All(glyph => glyph.Ink.X >= link.X - .01d &&
+                glyph.Ink.X + glyph.Ink.Width <= link.X + link.Width + .01d && glyph.Ink.Y >= link.Y - .01d &&
+                glyph.Ink.Y + glyph.Ink.Height <= link.Y + link.Height + .01d), "The annotation covers the rotated second run.");
+            TestAssert.True(actual.Take(5).All(glyph => glyph.Ink.Y + glyph.Ink.Height < link.Y),
+                "The link excludes the first run.");
+        }
+    }
+
+    private const string AxisTitleRelationships = """
+        <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+          <Relationship Id="rIdLink" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.invalid/chart-axis" TargetMode="External"/>
+        </Relationships>
+        """;
+
+    private static string AxisTitleChart(string side, string runs) => $$"""
+        <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+          <c:chart>
+            <c:plotArea>
+              <c:barChart>
+                <c:barDir val="col"/>
+                <c:grouping val="clustered"/>
+                <c:ser>
+                  <c:idx val="0"/><c:order val="0"/>
+                  <c:tx><c:strLit><c:pt idx="0"><c:v>Series</c:v></c:pt></c:strLit></c:tx>
+                  <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat>
+                  <c:val><c:numLit><c:pt idx="0"><c:v>4</c:v></c:pt></c:numLit></c:val>
+                </c:ser>
+                <c:axId val="10"/><c:axId val="20"/>
+              </c:barChart>
+              <c:catAx><c:axId val="10"/><c:axPos val="b"/><c:crossAx val="20"/><c:tickLblPos val="none"/></c:catAx>
+              <c:valAx><c:axId val="20"/><c:axPos val="{{side}}"/><c:scaling><c:min val="0"/><c:max val="5"/></c:scaling>
+                <c:crossAx val="10"/><c:majorUnit val="5"/><c:tickLblPos val="none"/>
+                <c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p>{{runs}}</a:p></c:rich></c:tx><c:overlay val="0"/></c:title>
+              </c:valAx>
+            </c:plotArea>
+          </c:chart>
+        </c:chartSpace>
+        """;
 
     public static void PptxChartDataLabelCustomTextHyperlinkEmitsUriAnnotation()
     {

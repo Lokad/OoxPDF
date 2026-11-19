@@ -430,16 +430,9 @@ internal sealed partial class PptxRenderer
             TextAlignment.Left,
             fontResolver,
             axisLinks).ConfigureAwait(false);
-        double rotation = -90d;
         for (int i = 0; i < runs.Count; i++)
         {
-            TextRun run = runs[i];
-            runs[i] = run with
-            {
-                RotationDegrees = rotation,
-                RotationCenterX = run.X,
-                RotationCenterY = run.Y
-            };
+            runs[i] = PlaceInAxisFrame(runs[i]);
         }
 
         if (axisLinks is not null)
@@ -447,21 +440,21 @@ internal sealed partial class PptxRenderer
             for (int linkIndex = 0; linkIndex < axisLinks.Count; linkIndex++)
             {
                 ChartTextRunLink axisLink = axisLinks[linkIndex];
-                TextRun linkedRun = axisLink.Run;
-                axisLinks[linkIndex] = axisLink with
-                {
-                    Run = linkedRun with
-                    {
-                        RotationDegrees = rotation,
-                        RotationCenterX = linkedRun.X,
-                        RotationCenterY = linkedRun.Y
-                    }
-                };
+                axisLinks[linkIndex] = axisLink with { Run = PlaceInAxisFrame(axisLink.Run) };
             }
         }
 
         RenderedFonts axisFonts = (await RenderChartTextRunsAsync(runs, graphics, chartFonts, "CAT", fontResolver, diagnosticSink).ConfigureAwait(false));
         await AddChartTextRunHyperlinkAnnotationsAsync(axisLinks, chart, context, axisFonts, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false);
+
+        // Run origins already advance in local title coordinates. Rotating
+        // around the first baseline sends that advance along the axis.
+        TextRun PlaceInAxisFrame(TextRun run) => run with
+        {
+            RotationDegrees = -90d,
+            RotationCenterX = baselineX,
+            RotationCenterY = baselineY
+        };
     }
 
     private static async ValueTask RenderManualChartAxisTitleAsync(
