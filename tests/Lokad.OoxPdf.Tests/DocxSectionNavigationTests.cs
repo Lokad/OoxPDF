@@ -1127,7 +1127,7 @@ internal static class DocxSectionNavigationTests
         }
     }
 
-    public static void DocxBodyBookmarksRespectClosedRevisionAndTableBoundaries()
+    public static void DocxBodyBookmarksRespectClosedRevisionBoundaries()
     {
         WithMutation("bookmark-before", (_, xml) => {
             (XElement start, XElement end, XElement target) = BookmarkSource(xml);
@@ -1149,41 +1149,83 @@ internal static class DocxSectionNavigationTests
             TestAssert.DoesNotContain("TARGET PARAGRAPH", Text(original[1]));
             TestAssert.Equal(0, original[0].Annotations.Count);
         });
+    }
 
+    public static void DocxTableRowRangeBookmarksKeepTheirPaintedDestination()
+    {
         foreach (var mode in Modes)
-        WithMutation("bookmark-before", (_, xml) => {
-            (XElement start, XElement end, XElement target) = BookmarkSource(xml);
-            target.ElementsBeforeSelf(W + "p").Last().Remove();
-            MoveBookmarkOutside(start, end, target);
-            start.AddBeforeSelf(Table("FIRST ROW"));
-            start.AddAfterSelf(Table("SECOND ROW"));
-            end.Remove();
-            target.AddBeforeSelf(end);
-            XElement section = xml.Descendants(W + "sectPr").Single();
-            section.Element(W + "pgSz")!.SetAttributeValue(W + "w", "10000");
-            section.Element(W + "pgSz")!.SetAttributeValue(W + "h", "8000");
-            foreach (string side in new[] { "top", "bottom", "left", "right" })
-                section.Element(W + "pgMar")!.SetAttributeValue(W + side, "800");
-        }, path => {
-            var document = DocxTests.ReadDocx(path, mode);
-            TestAssert.Equal(2, document.Tables.Single().Rows.Count);
-            var pages = Renderer(mode).RenderPagesAsync(document, null, default)
-                .ToBlockingEnumerable().ToArray();
-            TestAssert.Equal(2, pages.Length);
-            TestAssert.Contains("FIRST ROW", Text(pages[0]));
-            TestAssert.DoesNotContain("SECOND ROW", Text(pages[0]));
-            TestAssert.Contains("SECOND ROW", Text(pages[1]));
-            var destination = pages[0].Annotations.Single().Destination;
-            TestAssert.True(destination is { PageIndex: 1, Left: > 0d, Top: > 0d } && destination.Value.Top <= pages[1].Height,
-                "The joined result retains the start of the second authored table on its own page.");
-        });
+        {
+            PdfPage[] expected = RenderVariant("joined-tables", mode);
+            TestAssert.Equal(2, expected.Length);
+            TestAssert.Contains("FIRST ROW", Text(expected[0]));
+            TestAssert.DoesNotContain("SECOND ROW", Text(expected[0]));
+            TestAssert.Contains("SECOND ROW", Text(expected[1]));
+            PdfLinkAnnotation link = expected[0].Annotations.Single();
+            TestAssert.True(link.Destination is { PageIndex: 1, Left: > 0d, Top: > 0d } destination &&
+                destination.Top <= expected[1].Height, "The target row starts on page two.");
 
-        static XElement Table(string caption) => new(W + "tbl",
-            new XElement(W + "tblPr", new XElement(W + "tblLayout", new XAttribute(W + "type", "fixed"))),
-            new XElement(W + "tblGrid", new XElement(W + "gridCol", new XAttribute(W + "w", "3000"))),
-            new XElement(W + "tr", new XElement(W + "trPr", new XElement(W + "cantSplit"),
+            foreach (string variant in new[] { "row-range", "wrapped-row-range", "closed-range" })
+            {
+                PdfPage[] pages = RenderVariant(variant, mode);
+                TestAssert.Equal(expected.Length, pages.Length);
+                for (int pageIndex = 0; pageIndex < pages.Length; pageIndex++)
+                    TestAssert.Equal(expected[pageIndex].Content, pages[pageIndex].Content);
+                if (variant == "closed-range")
+                    TestAssert.Equal(0, pages[0].Annotations.Count);
+                else
+                    TestAssert.Equal(link, pages[0].Annotations.Single());
+            }
+        }
+
+        var final = RenderVariant("deleted-row", OoxPdfDocxMarkupMode.Final);
+        TestAssert.Equal(0, final[0].Annotations.Count);
+        TestAssert.DoesNotContain("SECOND ROW", string.Concat(final.Select(Text)));
+
+        static PdfPage[] RenderVariant(string variant, OoxPdfDocxMarkupMode mode)
+        {
+            PdfPage[] pages = [];
+            WithMutation("bookmark-before", (_, xml) => {
+                (XElement start, XElement end, XElement target) = BookmarkSource(xml);
+                target.ElementsBeforeSelf(W + "p").Last().Remove();
+                start.Remove();
+                end.Remove();
+                XElement first = Row("FIRST ROW");
+                XElement second = Row("SECOND ROW");
+                if (variant == "joined-tables")
+                    target.AddBeforeSelf(Table(first), start, Table(second), end);
+                else if (variant == "wrapped-row-range")
+                    target.AddBeforeSelf(Table(first, new XElement(W + "sdt",
+                        new XElement(W + "sdtContent", start, second, end))));
+                else if (variant == "closed-range")
+                    target.AddBeforeSelf(Table(first, start, end, second));
+                else
+                {
+                    if (variant == "deleted-row")
+                        second.Element(W + "trPr")!.Add(new XElement(W + "del",
+                            new XAttribute(W + "id", "99"), new XAttribute(W + "author", "Public")));
+                    target.AddBeforeSelf(Table(first, start, second, end));
+                }
+                XElement section = xml.Descendants(W + "sectPr").Single();
+                section.Element(W + "pgSz")!.SetAttributeValue(W + "w", "10000");
+                section.Element(W + "pgSz")!.SetAttributeValue(W + "h", "8000");
+                foreach (string side in new[] { "top", "bottom", "left", "right" })
+                    section.Element(W + "pgMar")!.SetAttributeValue(W + side, "800");
+            }, path => {
+                var document = DocxTests.ReadDocx(path, mode);
+                TestAssert.Equal(variant == "deleted-row" ? 1 : 2, document.Tables.Single().Rows.Count);
+                pages = Renderer(mode).RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
+            });
+            return pages;
+        }
+
+        static XElement Row(string caption) => new(W + "tr",
+            new XElement(W + "trPr", new XElement(W + "cantSplit"),
                 new XElement(W + "trHeight", new XAttribute(W + "val", "4400"), new XAttribute(W + "hRule", "exact"))),
-                new XElement(W + "tc", Paragraph(caption))));
+            new XElement(W + "tc", Paragraph(caption)));
+
+        static XElement Table(params XElement[] children) => new(W + "tbl",
+            new XElement(W + "tblPr", new XElement(W + "tblLayout", new XAttribute(W + "type", "fixed"))),
+            new XElement(W + "tblGrid", new XElement(W + "gridCol", new XAttribute(W + "w", "3000"))), children);
     }
 
     private static (XElement Start, XElement End, XElement Target) BookmarkSource(XDocument xml)

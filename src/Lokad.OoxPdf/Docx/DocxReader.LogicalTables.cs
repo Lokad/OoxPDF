@@ -30,19 +30,24 @@ internal sealed partial class DocxReader
     }
 
     private static IEnumerable<DocxRevisionScopedElement> EnumerateBookmarkedBlocks(IEnumerable<XElement> elements,
-        OoxPdfDocxMarkupMode mode, CancellationToken token, DocxRevisionInfo? inheritedRevision)
+        OoxPdfDocxMarkupMode mode, CancellationToken token, DocxRevisionInfo? inheritedRevision, bool tableRows = false)
     {
-        XName paragraphName = WordprocessingNamespace + "p";
-        XName tableName = WordprocessingNamespace + "tbl";
+        XName importedContentName = WordprocessingNamespace + "altChunk";
         XName bookmarkStartName = WordprocessingNamespace + "bookmarkStart";
         XName bookmarkEndName = WordprocessingNamespace + "bookmarkEnd";
-        XName[] includedNames = [paragraphName, tableName, WordprocessingNamespace + "altChunk", bookmarkStartName, bookmarkEndName];
+        XName[] includedNames = tableRows
+            ? [WordprocessingNamespace + "tr", bookmarkStartName, bookmarkEndName]
+            : [WordprocessingNamespace + "p", WordprocessingNamespace + "tbl", importedContentName, bookmarkStartName, bookmarkEndName];
         Dictionary<string, DocxBookmarkAnchor>? bookmarkStarts = null;
         foreach (var scope in EnumerateRevisionScopedChildren(elements, mode, token, includedNames, inheritedRevision))
         {
             token.ThrowIfCancellationRequested();
             if (scope.Element.Name == bookmarkStartName)
             {
+                // Column-scoped ranges need a cell destination.
+                if (tableRows && (scope.Element.Attribute(WordprocessingNamespace + "colFirst") is not null ||
+                                  scope.Element.Attribute(WordprocessingNamespace + "colLast") is not null))
+                    continue;
                 var anchor = ReadBookmarkAnchor(scope.Element, 0, 0, 0, 0);
                 if (NormalizeDecimalId(anchor.Id) is { Length: > 0 } id && !string.IsNullOrEmpty(anchor.Name))
                     (bookmarkStarts ??= new(StringComparer.Ordinal)).TryAdd(id, anchor);
@@ -55,9 +60,8 @@ internal sealed partial class DocxReader
                 continue;
             }
 
-            // Bind the start to its authored block before layout or table joining.
-            var block = bookmarkStarts is { Count: > 0 } &&
-                (scope.Element.Name == paragraphName || scope.Element.Name == tableName)
+            // Bind the start before layout, including rows filtered by the selected view.
+            var block = bookmarkStarts is { Count: > 0 } && scope.Element.Name != importedContentName
                 ? scope with { LeadingBookmarks = bookmarkStarts.Values.ToArray() }
                 : scope;
             bookmarkStarts = null;

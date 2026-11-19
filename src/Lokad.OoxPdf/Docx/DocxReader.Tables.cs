@@ -62,8 +62,8 @@ internal sealed partial class DocxReader
             Properties: fragment.Element.Element(WordprocessingNamespace + "tblPr"),
             Grid: ReadTableGrid(fragment.Element, cancellationToken),
             fragment.LeadingBookmarks,
-            Rows: EnumerateRevisionScopedChildren(fragment.Element.Elements(), markupMode, cancellationToken,
-                [WordprocessingNamespace + "tr"], fragment.Revision == inheritedRevision ? null : fragment.Revision)
+            Rows: EnumerateBookmarkedBlocks(fragment.Element.Elements(), markupMode, cancellationToken,
+                fragment.Revision == inheritedRevision ? null : fragment.Revision, tableRows: true)
                 .Where(row => IsIncludedTableRow(row.Element, markupMode, cancellationToken)).ToArray())).ToArray();
         bool hasExplicitGrid = parts.Any(part => part.Grid.Length != 0);
         IReadOnlyList<double> columns = parts[0].Grid;
@@ -238,6 +238,9 @@ internal sealed partial class DocxReader
                     inHeaderGroup &= rowStyle.RepeatHeader?.Enabled == true;
                     XElement? rowHeight = rowProperties?.Element(WordprocessingNamespace + "trHeight");
                     DocxTableCellMargins effectiveExceptions = sourceIndex == 0 ? rowExceptionMargins : rowExceptionMargins.Merge(partMargins);
+                    var bookmarks = leadingBookmarks ?? rowElement.LeadingBookmarks;
+                    if (leadingBookmarks is not null && rowElement.LeadingBookmarks is { } rowBookmarks)
+                        bookmarks = [.. leadingBookmarks, .. rowBookmarks];
                     rows.Add(new DocxTableRow(
                         cells,
                         ReadTableRowHeight(rowHeight),
@@ -251,7 +254,7 @@ internal sealed partial class DocxReader
                     {
                         Revisions = rowRevisions,
                         GridBefore = gridBefore,
-                        BookmarkAnchors = leadingBookmarks
+                        BookmarkAnchors = bookmarks
                     });
                     leadingBookmarks = null;
                 }

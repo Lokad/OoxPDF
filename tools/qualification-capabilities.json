@@ -8665,6 +8665,7 @@
   ],
   "docx-bookmark-ownership": [
     "DocxBlockBookmarksFollowPlacedCellAndStoryParagraphs",
+    "=DocxTableRowRangeBookmarksKeepTheirPaintedDestination",
     "=DocxBlockBookmarksFollowPaintedTableRowsAcrossStories",
     "=DocxStaticBoxTablesResolveRangeBookmarksOnPaintedRows",
     "=DocxFloatingBoxTableRangeBookmarksFollowPaintedRows",
@@ -8683,7 +8684,7 @@
     "=DocxRotatedInlinePictureLinksFollowPaintedViewports",
     "=DocxRotatedStoryPictureLinksFollowPaintedViewports",
     "=DocxBodyBookmarksFollowTheirPlacedParagraph",
-    "=DocxBodyBookmarksRespectClosedRevisionAndTableBoundaries",
+    "=DocxBodyBookmarksRespectClosedRevisionBoundaries",
     "DocxComputedSimpleFieldsKeepHyperlinkSourceOwnership",
     "DocxComputedSimpleFieldLinksCoverOnlyTheirResolvedResult",
     "DocxReaderPreservesFieldReferencesStructurally",
