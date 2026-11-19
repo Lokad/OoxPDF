@@ -27,7 +27,7 @@ internal sealed partial class PptxRenderer
         List<PdfLinkAnnotation> linkAnnotations,
         HashSet<string> reportedHyperlinkIds)
     {
-        PptxSceneChartPlot? piePlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Pie, 0);
+        PptxSceneChartPlot? piePlot = ReadFirstSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Pie);
         if (piePlot is not null)
         {
             XElement pieChart = piePlot.Source;
@@ -109,7 +109,7 @@ internal sealed partial class PptxRenderer
         List<PdfLinkAnnotation> linkAnnotations,
         HashSet<string> reportedHyperlinkIds)
     {
-        PptxSceneChartPlot? doughnutPlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Doughnut, 0);
+        PptxSceneChartPlot? doughnutPlot = ReadFirstSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Doughnut);
         if (doughnutPlot is not null)
         {
             XElement doughnutChart = doughnutPlot.Source;

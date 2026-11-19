@@ -247,10 +247,6 @@ internal sealed record PptxSceneChartPlot
 
     public string Kind { get; }
 
-    public int PlotAreaIndex { get; }
-
-    public int KindIndex { get; }
-
     public int SeriesCount { get; }
 
     public IReadOnlyList<string> AxisIds { get; }
@@ -312,8 +308,6 @@ internal sealed record PptxSceneChartPlot
     private PptxSceneChartPlot(
         PptxSceneChartPlotKind plotKind,
         string kind,
-        int plotAreaIndex,
-        int kindIndex,
         int seriesCount,
         IReadOnlyList<string> axisIds,
         IReadOnlyList<PptxSceneChartSeries> series,
@@ -346,8 +340,6 @@ internal sealed record PptxSceneChartPlot
     {
         PlotKind = plotKind;
         Kind = kind;
-        PlotAreaIndex = plotAreaIndex;
-        KindIndex = kindIndex;
         SeriesCount = seriesCount;
         AxisIds = axisIds;
         Series = series;
@@ -380,9 +372,8 @@ internal sealed record PptxSceneChartPlot
     }
 
     public static PptxSceneChartPlot Defined(
+        PptxSceneChartPlotKind plotKind,
         string kind,
-        int plotAreaIndex,
-        int kindIndex,
         int seriesCount,
         IReadOnlyList<string> axisIds,
         IReadOnlyList<PptxSceneChartSeries> series,
@@ -407,10 +398,8 @@ internal sealed record PptxSceneChartPlot
     {
         var bubbleScale = PptxSceneBuilder.ReadChartElementDoubleWithValue(source, "bubbleScale");
         return new PptxSceneChartPlot(
-            PptxSceneBuilder.ParseChartPlotKind(kind),
+            plotKind,
             kind,
-            plotAreaIndex,
-            kindIndex,
             seriesCount,
             axisIds,
             series,

@@ -28,7 +28,7 @@ internal sealed partial class PptxRenderer
         List<PdfLinkAnnotation> linkAnnotations,
         HashSet<string> reportedHyperlinkIds)
     {
-        PptxSceneChartPlot? areaPlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Area, 0);
+        PptxSceneChartPlot? areaPlot = ReadFirstSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Area);
         if (areaPlot is not null)
         {
             XElement areaChart = areaPlot.Source;

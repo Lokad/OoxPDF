@@ -398,7 +398,7 @@ internal sealed partial class PptxRenderer
         // Scatter and composed/unsupported layouts keep the existing fallback.
         PptxSceneChartPlotKind categoryPlotKind = sceneChart.Plots.Count == 1 && sceneChart.Plots[0].PlotKind == PptxSceneChartPlotKind.Area
             ? PptxSceneChartPlotKind.Area : PptxSceneChartPlotKind.Line;
-        PptxSceneChartPlot? categoryPlot = ReadSceneChartPlot(sceneChart, categoryPlotKind, 0);
+        PptxSceneChartPlot? categoryPlot = ReadFirstSceneChartPlot(sceneChart, categoryPlotKind);
         XElement? categoryPlotElement = categoryPlot?.Source;
         bool canMeasureCategoryPlot = categoryPlotElement is not null && resolvedValueExtents is not null;
         double? categoryLabelOffsetAdjustment = null;
@@ -660,9 +660,9 @@ internal sealed partial class PptxRenderer
 
     private static async ValueTask<ChartPlotBox> GetCartesianNoTitleRightLegendPlotBoxAsync(ChartFrameBox frame, PptxTheme theme, XDocument chartXml, PptxSceneChart sceneChart, ChartWorkbookData? workbook, bool plotVisibleOnly, PresentationFontResolver? fontResolver, ChartTextStyle legendTextStyle, double? scatterXTickTargetCount, PptxRenderContext? context = null)
     {
-        PptxSceneChartPlot? plot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Line, 0)
-            ?? ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Area, 0)
-            ?? ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Scatter, 0);
+        PptxSceneChartPlot? plot = ReadFirstSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Line)
+            ?? ReadFirstSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Area)
+            ?? ReadFirstSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Scatter);
         if (plot is null)
             return GetChartPlotBoxPreset(frame, ChartPlotBoxPreset.LineNoTitleRightLegend);
         XElement plotElement = plot.Source;

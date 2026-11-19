@@ -398,8 +398,7 @@ internal static class PptxChartPlotOptionsAgreementTests
 
     public static void ScenePlotsCorrespondToXmlPlotElementsAcrossFixtures()
     {
-        // Every plotArea chart child keeps one scene owner, its source element,
-        // order and per-kind index. Read the qualified fixture snapshot.
+        // Every plotArea chart child keeps one scene owner in source order.
         string cases = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases"));
         int charts = 0;
         int plots = 0;
@@ -433,14 +432,6 @@ internal static class PptxChartPlotOptionsAgreementTests
                     {
                         TestAssert.Equal(elements[i].Name.LocalName, chart.Plots[i].Kind);
                         TestAssert.True(ReferenceEquals(elements[i], chart.Plots[i].Source), "Scene plot must wrap the plotArea child element itself.");
-                    }
-
-                    var seen = new Dictionary<string, int>(StringComparer.Ordinal);
-                    foreach (PptxSceneChartPlot plot in chart.Plots)
-                    {
-                        int expected = seen.TryGetValue(plot.Kind, out int n) ? n : 0;
-                        seen[plot.Kind] = expected + 1;
-                        TestAssert.Equal(expected, plot.KindIndex);
                     }
 
                     plots += elements.Count;

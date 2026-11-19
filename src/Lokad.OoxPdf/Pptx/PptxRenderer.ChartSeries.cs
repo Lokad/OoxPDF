@@ -171,13 +171,8 @@ internal sealed partial class PptxRenderer
         }
 
 
-    private static PptxSceneChartPlot? ReadSceneChartPlot(PptxSceneChart? chart, PptxSceneChartPlotKind kind, int index)
-    {
-        return chart?
-            .Plots
-            .Where(plot => plot.PlotKind == kind && plot.KindIndex == index)
-            .FirstOrDefault();
-    }
+    internal static PptxSceneChartPlot? ReadFirstSceneChartPlot(PptxSceneChart? chart, PptxSceneChartPlotKind kind) =>
+        chart?.Plots.FirstOrDefault(plot => plot.PlotKind == kind);
 
     private static bool IsSupportedNativeChartPlot(PptxSceneChartPlotKind kind) => kind is
         PptxSceneChartPlotKind.Area or PptxSceneChartPlotKind.Bar or PptxSceneChartPlotKind.Bubble or
@@ -188,7 +183,7 @@ internal sealed partial class PptxRenderer
         series.ValuePoints.Any(point => point.Value is not null) ||
         series.XValuePoints.Any(point => point.Value is not null) && series.YValuePoints.Any(point => point.Value is not null);
 
-    private static IReadOnlyList<PptxSceneChartPlot> ReadSceneChartPlots(PptxSceneChart? chart, PptxSceneChartPlotKind kind)
+    internal static IReadOnlyList<PptxSceneChartPlot> ReadSceneChartPlots(PptxSceneChart? chart, PptxSceneChartPlotKind kind)
     {
         return chart?.Plots
             .Where(plot => plot.PlotKind == kind)

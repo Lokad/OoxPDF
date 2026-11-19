@@ -115,12 +115,9 @@ internal sealed partial class PptxSceneBuilder
         }
 
         var plots = new List<PptxSceneChartPlot>();
-        var kindIndexes = new Dictionary<string, int>(StringComparer.Ordinal);
         foreach (XElement plot in plotArea.Elements().Where(element => element.Name.Namespace == ChartNamespace && element.Name.LocalName.EndsWith("Chart", StringComparison.Ordinal)))
         {
             string kind = plot.Name.LocalName;
-            int kindIndex = kindIndexes.TryGetValue(kind, out int nextKindIndex) ? nextKindIndex : 0;
-            kindIndexes[kind] = kindIndex + 1;
             string grouping = ReadChartElementValue(plot, "grouping");
             string barDirection = ReadChartElementValue(plot, "barDir");
             string scatterStyle = ReadChartElementValue(plot, "scatterStyle");
@@ -138,9 +135,8 @@ internal sealed partial class PptxSceneBuilder
                 .Where(value => value.Length != 0)
                 .ToArray();
             plots.Add(PptxSceneChartPlot.Defined(
+                plotKind,
                 kind,
-                plots.Count,
-                kindIndex,
                 plot.Elements(ChartNamespace + "ser").Count(),
                 axisIds,
                 ReadChartSeries(plot, theme, colorMap, plotKind, markersEnabled == true),

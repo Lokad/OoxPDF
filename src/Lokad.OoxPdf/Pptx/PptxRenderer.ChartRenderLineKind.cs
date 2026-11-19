@@ -28,7 +28,7 @@ internal sealed partial class PptxRenderer
         List<PdfLinkAnnotation> linkAnnotations,
         HashSet<string> reportedHyperlinkIds)
     {
-        PptxSceneChartPlot? linePlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Line, 0);
+        PptxSceneChartPlot? linePlot = ReadFirstSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Line);
         if (linePlot is not null)
         {
             XElement lineChart = linePlot.Source;
