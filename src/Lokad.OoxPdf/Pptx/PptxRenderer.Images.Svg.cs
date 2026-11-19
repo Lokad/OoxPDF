@@ -35,7 +35,7 @@ internal sealed partial class PptxRenderer
         {
             graphics.ClipRectangle(x, y, width, height);
             return RenderSvgPictureCore(graphics, x, y, width, height, default, bytes, default, default,
-                pageSink, 0, partName, cancellationToken, textFonts: textFonts);
+                pageSink, 0, partName, cancellationToken, textFonts: textFonts, hasViewportClip: true);
         }
         finally { graphics.RestoreState(); }
     }
@@ -44,7 +44,7 @@ internal sealed partial class PptxRenderer
         ShapeBounds bounds, byte[] bytes, CropRect crop, FillRect fillRect, Action<OoxPdfDiagnostic>? diagnosticSink,
         int slideIndex, string? partName, CancellationToken cancellationToken,
         string picturePreset = "rect", IReadOnlyDictionary<string, double>? pictureAdjustments = null,
-        IReadOnlyDictionary<FontRequest, SvgTextFont?>? textFonts = null, double pictureOpacity = 1d)
+        IReadOnlyDictionary<FontRequest, SvgTextFont?>? textFonts = null, double pictureOpacity = 1d, bool hasViewportClip = false)
     {
         cancellationToken.ThrowIfCancellationRequested();
         // Coarse render-local DOM, gradient/path models and working headroom.
@@ -133,7 +133,7 @@ internal sealed partial class PptxRenderer
         if (picturePreset != "rect")
             ClipToPresetShape(graphics, null, picturePreset, x, y, width, height, pictureAdjustments);
 
-        string? overflow = svg.Root is { } outerSvg
+        string? overflow = !hasViewportClip && svg.Root is { } outerSvg
             ? ReadSvgPresentationAttribute(outerSvg, ReadSvgStyleDeclarations(outerSvg), "overflow")?.Trim()
             : null;
         if (!crop.IsEmpty || Math.Abs(bounds.RotationDegrees) > 0.001d || bounds.FlipHorizontal || bounds.FlipVertical ||

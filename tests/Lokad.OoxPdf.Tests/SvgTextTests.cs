@@ -138,21 +138,32 @@ internal static partial class SvgTextTests
 
     public static void SvgRootOverflowClipsThePictureViewport()
     {
-        const string clip = "0 0 400 160 re W n";
         const string shape = """<rect x="370" y="70" width="125" height="40" fill="#ff00ff"/>""";
-        PdfGraphicsBuilder Render(string attributes) =>
-            Paint(Svg(shape).Replace("viewBox=", attributes + " viewBox=", StringComparison.Ordinal));
+        string Render(string attributes)
+        {
+            string svg = Svg(shape).Replace("viewBox=", attributes + " viewBox=", StringComparison.Ordinal);
+            string path = Input(docx: false, svg);
+            try
+            {
+                using OoxPackage package = OoxPackage.Open(path, default);
+                var renderer = new PptxRenderer(new PortableRenderingTests.PinnedResolver());
+                return renderer.RenderPagesAsync(new PptxReader().Read(package, default), package, null, default)
+                    .ToBlockingEnumerable().Single().Content;
+            }
+            finally { File.Delete(path); }
+        }
 
-        PdfGraphicsBuilder clipped = Render("overflow=\"hidden\"");
-        string content = clipped.ToString();
-        int clipIndex = content.IndexOf(clip, StringComparison.Ordinal);
-        int paintIndex = content.IndexOf("1 0 1 rg", StringComparison.Ordinal);
-        TestAssert.True(clipIndex >= 0 && paintIndex > clipIndex, "The image viewport must clip authored geometry before it paints.");
-        TestAssert.Equal(content, Render("overflow=\"visible\" style=\"overflow: scroll\"").ToString());
-        string visible = Render("overflow=\"hidden\" style=\"overflow: visible\"").ToString();
-        TestAssert.Equal(Paint(Svg(shape)).ToString(), visible);
-        TestAssert.DoesNotContain(clip, visible);
-        Write(Page(clipped));
+        string visible = Render("overflow=\"hidden\" style=\"overflow: visible\"");
+        string clipped = Render("overflow=\"hidden\"");
+        string[] visibleLines = visible.Split('\n');
+        string clip = clipped.Split('\n').SingleOrDefault(line =>
+            line.TrimEnd().EndsWith(" re W n", StringComparison.Ordinal) && !visibleLines.Contains(line)) ?? "";
+        int clipIndex = clipped.IndexOf(clip, StringComparison.Ordinal);
+        int paintIndex = clipped.IndexOf("1 0 1 rg", StringComparison.Ordinal);
+        TestAssert.True(clip.Length > 0 && paintIndex > clipIndex, "The image viewport must clip authored geometry before it paints.");
+        TestAssert.Equal(visible, clipped.Remove(clipIndex, clip.Length + 1));
+        TestAssert.Equal(clipped, Render("overflow=\"visible\" style=\"overflow: scroll\""));
+        TestAssert.Equal(visible, Render(""));
     }
 
     public static void SvgGradientTransformListsMatchExplicitMatrices()
