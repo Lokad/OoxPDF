@@ -1743,31 +1743,15 @@ internal static partial class PptxChartLegendsTests
 
     public static void PptxChartHorizontalLegendEntryWidthIncludesOfficePadding()
     {
-        Type textStyleType = typeof(PptxRenderer).GetNestedType(
-            "ChartTextStyle",
-            System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart text style.");
-        Type textMeasurerType = typeof(PptxRenderer).GetNestedType(
-            "ChartTextMeasurer",
-            System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart text measurer.");
-        object style = Activator.CreateInstance(textStyleType, ["Arial", 9d, 0d, new RgbColor(0, 0, 0), 1d, false, false, false, false, null, null]) ?? throw new InvalidOperationException("Expected chart text style.");
-        object textMeasurer = Activator.CreateInstance(textMeasurerType, [null]) ?? throw new InvalidOperationException("Expected chart text measurer.");
-        System.Reflection.MethodInfo measure = textMeasurerType.GetMethod(
-            "MeasureAsync",
-            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance,
-            binder: null,
-            [typeof(string), textStyleType],
-            modifiers: null) ?? throw new InvalidOperationException("Expected chart text measurement method.");
         System.Reflection.MethodInfo entryWidth = typeof(PptxRenderer).GetMethod(
             "GetPackedHorizontalLegendEntryWidth",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected horizontal legend entry width helper.");
 
-        string label = "Series";
-        double markerSize = 4.95d;
-        double measuredText = ((ValueTask<double>)measure.Invoke(textMeasurer, [label, style])!).GetAwaiter().GetResult();
-        // Caller-supplied gaps compose additively (office values now resolve per size/content upstream).
-        double markerTextGap = 3d;
-        double officePackedLegendEntryPadding = 8d;
-        double width = (double)(entryWidth.Invoke(null, [label, style, textMeasurer, markerSize, markerTextGap, officePackedLegendEntryPadding]) ?? 0d);
+        const double measuredText = 24d;
+        const double markerSize = 4.95d;
+        const double markerTextGap = 3d;
+        const double officePackedLegendEntryPadding = 8d;
+        double width = (double)entryWidth.Invoke(null, [measuredText, markerSize, markerTextGap, officePackedLegendEntryPadding])!;
 
         TestAssert.Equal(Math.Round(markerTextGap + officePackedLegendEntryPadding, 2), Math.Round(width - markerSize - measuredText, 2));
     }

@@ -6331,6 +6331,7 @@
     "=PptxTopCartesianLegendsWrapEveryFittingName",
     "=PptxTopCartesianLegendSingleRowsPaintCompleteGlyphs",
     "=PptxAutomaticHorizontalLegendsKeepFallbackNamesInsideTheirClip",
+    "=PptxChartHorizontalLegendEntryWidthIncludesOfficePadding",
     "=PptxExplicitSeriesLegendDeletionKeepsThePlottedSeries",
     "PptxAuthoredPolarLegendKeepsEveryCompleteNameInsideItsClip",
     "PptxPolarHorizontalRowsKeepEveryNameInsideTheirClip",
