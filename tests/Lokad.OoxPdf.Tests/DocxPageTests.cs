@@ -1106,6 +1106,10 @@ internal static class DocxPageTests
                 "<w:r><w:lastRenderedPageBreak/></w:r>" +
                     run.Replace("</w:r>", "<w:lastRenderedPageBreak/></w:r>", StringComparison.Ordinal)
             ];
+            if (mode == OoxPdfDocxMarkupMode.Original)
+            {
+                variants = [.. variants, "<w:ins w:id=\"29\" w:author=\"Public probe\"><w:r><w:t>Excluded</w:t></w:r></w:ins>" + run];
+            }
             DocxLayout expected = Layout(ReadBreakMetadataDocument(run, mode));
             var expectedLines = Lines(expected);
             TestAssert.Equal(2, expected.Pages.Count);
@@ -1121,7 +1125,7 @@ internal static class DocxPageTests
                 DocxLayout actual = Layout(document);
                 TestAssert.Equal(expected.Pages.Count, actual.Pages.Count);
                 TestAssert.True(expectedLines.SequenceEqual(Lines(actual)),
-                    "Adding metadata must preserve every prose fragment's page, advance and baseline in Final/Review, including column pitch.");
+                    "Adding nonprinting content must preserve every prose fragment's page, advance and baseline, including column pitch.");
             }
 
             DocxLayout Layout(DocxDocument document) => new DocxLayoutEngine(geometry)

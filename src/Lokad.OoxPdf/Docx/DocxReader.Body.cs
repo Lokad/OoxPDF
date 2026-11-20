@@ -123,7 +123,7 @@ internal sealed partial class DocxReader
                 if (hasVisibleBreak)
                 {
                     using IEnumerator<XElement>? sourceAnchors = floatingBlocks is null ? null :
-                        element.Descendants(WordprocessingDrawingNamespace + "anchor").GetEnumerator();
+                        EnumerateSplitFloatingAnchors(element).GetEnumerator();
                     bool matchesSourceAnchors = sourceAnchors is not null;
                     var bookmarksForFragment = leadingBookmarks;
                     foreach (ParagraphBreakPart part in SplitParagraphAtRunBreaks(element, markupMode,
@@ -163,7 +163,7 @@ internal sealed partial class DocxReader
                         {
                             // The splitter clones the run payloads in source order.
                             // Match each cloned anchor to its authored XML element.
-                            foreach (XElement clone in part.Paragraph.Descendants(WordprocessingDrawingNamespace + "anchor"))
+                            foreach (XElement clone in EnumerateSplitFloatingAnchors(part.Paragraph))
                             {
                                 cancellationToken.ThrowIfCancellationRequested();
                                 if (!sourceAnchors!.MoveNext() || !XNode.DeepEquals(sourceAnchors.Current, clone))
@@ -216,6 +216,16 @@ internal sealed partial class DocxReader
 
         AddImplicitTerminalTableParagraph(elements);
         return elements;
+
+        IEnumerable<XElement> EnumerateSplitFloatingAnchors(XElement paragraph)
+        {
+            foreach (XElement anchor in paragraph.Descendants(WordprocessingDrawingNamespace + "anchor"))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (markupMode != OoxPdfDocxMarkupMode.Original || !IsInsideExcludedRevisionContainer(anchor, markupMode))
+                    yield return anchor;
+            }
+        }
     }
 
     private static void BindFloatingDrawingBlocks(XElement source, IReadOnlyList<DocxRevisionScopedElement>? tableFragments,
@@ -544,7 +554,7 @@ internal sealed partial class DocxReader
             startsAfterBreak = false;
         }
 
-        foreach (XElement child in EnumerateBreakSplitChildren(paragraph))
+        foreach (XElement child in EnumerateBreakSplitChildren(paragraph, markupMode))
         {
             if (child.Name == WordprocessingNamespace + "pPr")
             {
@@ -602,7 +612,7 @@ internal sealed partial class DocxReader
             flushOwnerAndParagraph(endsBeforeBreak);
         }
 
-        foreach (XElement containerChild in EnumerateBreakSplitChildren(sourceContainer))
+        foreach (XElement containerChild in EnumerateBreakSplitChildren(sourceContainer, markupMode))
         {
             if (containerChild.Name != WordprocessingNamespace + "r")
             {
@@ -624,12 +634,12 @@ internal sealed partial class DocxReader
         AddContainerPart(ownerChildren, sourceContainer, containerChildren);
     }
 
-    private static IEnumerable<XElement> EnumerateBreakSplitChildren(XElement owner) =>
-        DocxSourceXml.StoredChildren(owner).Where(child => HasBreakSplitPayload(child));
+    private static IEnumerable<XElement> EnumerateBreakSplitChildren(XElement owner, OoxPdfDocxMarkupMode markupMode) =>
+        DocxSourceXml.StoredChildren(owner).Where(child => HasBreakSplitPayload(child, markupMode));
 
     // Revisions need stored payload too, but their authored runs can own revision
     // state without visible text. Fields and annotation boundaries remain owners.
-    private static bool HasBreakSplitPayload(XElement child, bool preserveRevisionRuns = false)
+    private static bool HasBreakSplitPayload(XElement child, OoxPdfDocxMarkupMode markupMode, bool preserveRevisionRuns = false)
     {
         if (child.Name == WordprocessingNamespace + "r")
         {
@@ -637,9 +647,14 @@ internal sealed partial class DocxReader
         }
 
         bool isRevision = IsRevisionContainer(child);
+        // Original excludes unselected insertions and moves even from measurement.
+        // Other modes can need excluded deletions for math and table sizing.
+        if (isRevision && markupMode == OoxPdfDocxMarkupMode.Original && !IsIncludedRevisionContainer(child, markupMode))
+            return false;
+
         if (isRevision || DocxSourceXml.IsTransparentInlineContainer(child) || child.Name == WordprocessingNamespace + "hyperlink")
         {
-            return DocxSourceXml.StoredChildren(child).Any(nested => HasBreakSplitPayload(nested, preserveRevisionRuns || isRevision));
+            return DocxSourceXml.StoredChildren(child).Any(nested => HasBreakSplitPayload(nested, markupMode, preserveRevisionRuns || isRevision));
         }
 
         return !DocxSourceXml.IsNonPrintingMarker(child);
@@ -746,7 +761,7 @@ internal sealed partial class DocxReader
                 child.Name == WordprocessingNamespace + "br" && isBreak(child));
         }
 
-        if (!HasBreakSplitPayload(element) ||
+        if (!HasBreakSplitPayload(element, markupMode) ||
             element.Name == WordprocessingNamespace + "bookmarkStart" ||
             element.Name == WordprocessingNamespace + "bookmarkEnd" ||
             element.Name == WordprocessingNamespace + "commentRangeStart" ||

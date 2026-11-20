@@ -130,11 +130,11 @@ internal static partial class DocxInlineCompositionTests
 
     public static void DocxInlineMetadataLeadingBreaksKeepBookmarkOnThePaintedTarget()
     {
-        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupMode.Original })
         foreach (string type in new[] { "page", "column" })
         {
-            var geometry = mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
-                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup;
+            var geometry = mode == OoxPdfDocxMarkupMode.AllMarkup ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup :
+                OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout;
             var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(), mode, geometry);
             PdfPage[] control = Render("direct");
             int targetPage = type == "page" ? 1 : 0;
@@ -145,15 +145,24 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.Contains("AUTHORED AFTER BREAK", string.Concat(
                 DocxCommentsTests.ReadEmbeddedGlyphTextShows(control[targetPage]).Select(show => show.Text)));
 
+            if (mode == OoxPdfDocxMarkupMode.Original)
+            {
+                CheckNonprinting(Render("excluded-insertion"));
+                CheckNonprinting(Render("excluded-move", includeDrawings: true));
+                PdfPage[] deletion = Render("selected-deletion", retainLeadingFragment: true);
+                TestAssert.Contains("VISIBLE DELETION", string.Concat(
+                    DocxCommentsTests.ReadEmbeddedGlyphTextShows(deletion[0]).Select(show => show.Text)));
+                TestAssert.True(deletion[0].Annotations.Single().Destination is { PageIndex: 0, Left: < 200d },
+                    "Original retains the pre-break fragment of a visible deletion.");
+                continue;
+            }
+
             foreach (string wrapper in new[] { "sdt", "customXml", "smartTag", "nested", "proof", "permission",
                 "run-hint", "preceding-hint", "nested-preceding-hint", "adjacent-sdt-hint",
                 "adjacent-custom-xml-hint", "nested-adjacent-hint", "adjacent-hyperlink-hint",
                 "nested-hyperlink-hint", "empty-revision", "editing-only-revision" })
             {
-                PdfPage[] pages = Render(wrapper);
-                TestAssert.True(control.Select(page => page.Content).SequenceEqual(pages.Select(page => page.Content)),
-                    "Nonprinting metadata preserves the authored pagination and paint.");
-                TestAssert.Equal(link, pages[0].Annotations.Single());
+                CheckNonprinting(Render(wrapper));
             }
 
             PdfPage[] field = Render("page-field-hint", retainLeadingFragment: true);
@@ -180,7 +189,14 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.True(revisionRun[0].Annotations.Single().Destination is { PageIndex: 0, Left: < 200d },
                 "An authored run retains its explicit revision owner.");
 
-            PdfPage[] Render(string wrapper, bool retainLeadingFragment = false)
+            void CheckNonprinting(PdfPage[] pages)
+            {
+                TestAssert.True(control.Select(page => page.Content).SequenceEqual(pages.Select(page => page.Content)),
+                    "Nonprinting content preserves the authored pagination and paint.");
+                TestAssert.Equal(link, pages[0].Annotations.Single());
+            }
+
+            PdfPage[] Render(string wrapper, bool retainLeadingFragment = false, bool includeDrawings = false)
             {
                 var document = ReadMutation("Composition/report", mode, false, false, (xml, w, _) =>
                 {
@@ -194,11 +210,14 @@ internal static partial class DocxInlineCompositionTests
 
                     var run = new XElement(w + "r", new XElement(w + "br", new XAttribute(w + "type", type)),
                         new XElement(w + "t", "AUTHORED AFTER BREAK"));
+                    XElement FloatingDrawing(int height) => new(w + "drawing",
+                        new XElement(OoxNamespaces.WordprocessingDrawingNamespace + "anchor", new XAttribute("relativeHeight", height)));
+                    if (includeDrawings) run.Add(FloatingDrawing(2));
                     XElement Hint() => new(w + "lastRenderedPageBreak");
                     XElement HintRun() => new(w + "r", Hint());
                     XElement Link(params XElement[] items) => new(w + "hyperlink",
                         new XAttribute(w + "anchor", "destination"), items);
-                    XElement Insertion(params XElement[] items) => new(w + "ins",
+                    XElement Revision(string kind, params XElement[] items) => new(w + kind,
                         new XAttribute(w + "id", 71), new XAttribute(w + "author", "Public probe"), items);
                     XElement ContentControl(params XElement[] items) => new(w + "sdt",
                         new XElement(w + "sdtPr", new XElement(w + "alias", new XAttribute(w + "val", "Break probe"))),
@@ -219,11 +238,16 @@ internal static partial class DocxInlineCompositionTests
                         "nested-adjacent-hint" => [ContentControl(Metadata("smartTag", HintRun()), run)],
                         "adjacent-hyperlink-hint" => [Link(HintRun()), run],
                         "nested-hyperlink-hint" => [ContentControl(Link(HintRun())), run],
-                        "empty-revision" => [Insertion(), run],
-                        "editing-only-revision" => [Insertion(ContentControl(
+                        "empty-revision" => [Revision("ins"), run],
+                        "editing-only-revision" => [Revision("ins", ContentControl(
                             new XElement(w + "proofErr", new XAttribute(w + "type", "spellStart")))), run],
-                        "visible-revision" => [Insertion(new XElement(w + "r", new XElement(w + "t", "VISIBLE REVISION"))), run],
-                        "empty-revision-run" => [Insertion(ContentControl(new XElement(w + "r"))), run],
+                        "visible-revision" => [Revision("ins", new XElement(w + "r", new XElement(w + "t", "VISIBLE REVISION"))), run],
+                        "empty-revision-run" => [Revision("ins", ContentControl(new XElement(w + "r"))), run],
+                        "excluded-insertion" => [Revision("ins", new XElement(w + "r", new XElement(w + "t", "EXCLUDED INSERTION"))), run],
+                        "excluded-move" => [ContentControl(Revision("moveTo", new XElement(w + "r",
+                            new XElement(w + "t", "EXCLUDED MOVE"), new XElement(w + "br", new XAttribute(w + "type", type)),
+                            FloatingDrawing(1)))), run],
+                        "selected-deletion" => [Revision("del", new XElement(w + "r", new XElement(w + "delText", "VISIBLE DELETION"))), run],
                         "page-field-hint" => [new XElement(w + "fldSimple", new XAttribute(w + "instr", "PAGE"), HintRun()), run],
                         "visible-hyperlink-hint" => [Link(new XElement(w + "r", Hint(), new XElement(w + "t", "VISIBLE BEFORE BREAK"))), run],
                         "sdt" => [ContentControl(run)],
@@ -244,6 +268,12 @@ internal static partial class DocxInlineCompositionTests
                         section);
                 });
                 TestAssert.Equal(retainLeadingFragment ? 4 : 3, document.BodyElements.Count);
+                if (includeDrawings)
+                {
+                    DocxFloatingDrawing drawing = document.FloatingDrawings.Single();
+                    TestAssert.Equal("2", drawing.RelativeHeightValue);
+                    TestAssert.Equal((int?)2, drawing.LayoutBlockIndex);
+                }
                 return renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
             }
         }
