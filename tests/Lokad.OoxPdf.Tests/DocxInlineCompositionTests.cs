@@ -1894,8 +1894,7 @@ internal static partial class DocxInlineCompositionTests
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
                 .RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
             string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
-            foreach (string glyph in new[] { "α", "+", "β", "=", "γ" })
-                TestAssert.Equal(1, text.Split(glyph, StringSplitOptions.None).Length - 1);
+            TestAssert.Equal("α+β=γ", PortableRenderingTests.ReadWrappedLiteralGlyphs(pages));
             TestAssert.Contains("Following prose.", text);
             TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"), "Placement and source annotations cannot remove the broken literal.");
         }
@@ -2181,8 +2180,7 @@ internal static partial class DocxInlineCompositionTests
             var diagnostics = new List<OoxPdfDiagnostic>();
             var pages = renderer.RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
             string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
-            foreach (string glyph in new[] { "α", "+", "β", "=", "γ" })
-                TestAssert.Equal(1, text.Split(glyph, StringSplitOptions.None).Length - 1);
+            TestAssert.Equal("α+β=γ", PortableRenderingTests.ReadWrappedLiteralGlyphs(pages));
             TestAssert.Contains("Following prose.", text);
             TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"), "A bookmark and run splitting cannot remove the broken literal.");
             TestAssert.Equal(2, renderer.InspectLayout(document).Pages.Single().Items.Count(item => item.Kind == "TextLine" && item.SourceBlockIndex == 0));

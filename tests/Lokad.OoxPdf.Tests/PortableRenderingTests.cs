@@ -1378,8 +1378,7 @@ internal static partial class PortableRenderingTests
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
                 .RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
             string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
-            foreach (string glyph in new[] { "α", "+", "β", "=", "γ" })
-                TestAssert.Equal(1, text.Split(glyph, StringSplitOptions.None).Length - 1);
+            TestAssert.Equal("α+β=γ", ReadWrappedLiteralGlyphs(pages));
             TestAssert.Contains("Following prose.", text);
             CheckWrittenPages(pages);
         }
@@ -1395,13 +1394,32 @@ internal static partial class PortableRenderingTests
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
                 .RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
             string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
-            foreach (string glyph in new[] { "α", "+", "β", "=", "γ" })
-                TestAssert.Equal(1, text.Split(glyph, StringSplitOptions.None).Length - 1);
+            TestAssert.Equal("α+β=γ", ReadWrappedLiteralGlyphs(pages));
             TestAssert.Contains("Before", text);
             TestAssert.Contains("Following prose.", text);
             CheckWrittenPages(pages);
         }
+
+        // Swapping the terms preserves every symbol count. Check the changed
+        // sequence through the same emitted-glyph decoder as the controls.
+        const OoxPdfDocxMarkupMode final = OoxPdfDocxMarkupMode.Final;
+        var swapped = DocxInlineCompositionTests.ReadMutation("PortableFonts/math-literal-inline-break-default-upright",
+            final, bookmark: false, split: false, change: (xml, _, math) =>
+            {
+                var terms = xml.Descendants(math + "t").ToArray();
+                TestAssert.Equal("α+β=γ", string.Concat(terms.Select(term => term.Value)));
+                (terms[2].Value, terms[4].Value) = (terms[4].Value, terms[2].Value);
+            });
+        var swappedPages = new DocxRenderer(new PinnedResolver(), final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .RenderPagesAsync(swapped, null, default).ToBlockingEnumerable().ToArray();
+        TestAssert.Equal("α+γ=β", ReadWrappedLiteralGlyphs(swappedPages));
     }
+
+    internal static string ReadWrappedLiteralGlyphs(IEnumerable<PdfPage> pages) =>
+        string.Concat(pages.SelectMany(page => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page,
+            usePageCoordinates: false, honorActualText: false,
+            fontResourceFilter: name => name.StartsWith("Eq", StringComparison.Ordinal))).Select(show => show.Text))
+            .Normalize(NormalizationForm.FormKC);
 
     public static void PortableRenderingNumberedMathPreservesFourStoryContent()
     {
