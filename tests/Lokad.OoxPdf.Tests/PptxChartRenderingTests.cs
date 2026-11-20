@@ -3520,7 +3520,9 @@ internal static class PptxChartRenderingTests
             ["ppt/charts/_rels/chart1.xml.rels"] = TestFixtures.Utf8("""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.microsoft.com/office/2011/relationships/chartColorStyle" Target="colors1.xml"/>
+                  <Relationship Id="rId0" Type="http://schemas.microsoft.com/office/2011/relationships/chartColorStyle" Target="https://example.com/colors.xml" TargetMode="External"/>
+                  <Relationship Id="rId2" Type="http://schemas.microsoft.com/office/2011/relationships/chartColorStyle" Target="colors1.xml"/>
+                  <Relationship Id="rId1" Type="http://schemas.microsoft.com/office/2011/relationships/chartColorStyle" Target="missing-colors.xml"/>
                 </Relationships>
                 """),
             ["ppt/charts/colors1.xml"] = TestFixtures.Utf8("""
@@ -3540,6 +3542,7 @@ internal static class PptxChartRenderingTests
             ?? throw new InvalidOperationException("Expected chart scene.");
         PptxSceneNodeSnapshot snapshot = PptxRenderer.InspectScene(document, package).Slides[0].SlideNodes[0];
 
+        TestAssert.Equal("/ppt/charts/colors1.xml", chart.ColorStyle.PartName);
         TestAssert.Equal(1, chart.ColorStyle.VariationCount);
         TestAssert.Equal(3, chart.ColorStyle.Declarations.Count);
         TestAssert.Equal(2, chart.ColorStyle.RootDeclarations.Count);

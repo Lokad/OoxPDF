@@ -33,23 +33,22 @@ internal sealed partial class PptxSceneBuilder
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
+            IReadOnlyDictionary<string, OoxRelationship> chartRelationships = chartPart is null
+                ? new Dictionary<string, OoxRelationship>(StringComparer.Ordinal)
+                : package.GetRelationshipDictionary(chartPart.Name, cancellationToken);
             PptxSceneChartExternalData externalData = chartPart is null
                 ? default
-                : ReadChartExternalData(package, chartPart.Name, chartXml, cancellationToken);
+                : ReadChartExternalData(package, chartRelationships, chartXml, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
             PptxSceneChartColorStyle colorStyle = chartPart is null
                 ? PptxSceneChartColorStyle.Undefined(null)
-                : ReadChartColorStyle(package, chartPart.Name, theme, colorMap, cancellationToken);
+                : ReadChartColorStyle(package, chartRelationships, theme, colorMap, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
             PptxSceneChartStyle stylePart = chartPart is null
                 ? PptxSceneChartStyle.Undefined(null)
-                : ReadChartStylePart(package, chartPart.Name, theme, colorMap, cancellationToken);
+                : ReadChartStylePart(package, chartRelationships, theme, colorMap, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
             IReadOnlyList<PptxSceneChartPlot> plots = ReadChartPlots(chartXml, theme, colorMap);
-            cancellationToken.ThrowIfCancellationRequested();
-            IReadOnlyDictionary<string, OoxRelationship> chartRelationships = chartPart is null
-                ? new Dictionary<string, OoxRelationship>(StringComparer.Ordinal)
-                : package.GetRelationships(chartPart.Name, cancellationToken).ToDictionary(relationship => relationship.Id, StringComparer.Ordinal);
             cancellationToken.ThrowIfCancellationRequested();
             IReadOnlyList<PptxSceneChartAxis> axes = ReadChartAxes(chartXml, theme, colorMap, stylePart, plots);
             return result = new PptxSceneChart(

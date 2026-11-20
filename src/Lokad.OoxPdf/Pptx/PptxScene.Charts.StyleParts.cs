@@ -7,7 +7,11 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxSceneBuilder
 {
-    private static PptxSceneChartExternalData ReadChartExternalData(OoxPackage package, string chartPartName, XDocument? chartXml, CancellationToken cancellationToken)
+    private static PptxSceneChartExternalData ReadChartExternalData(
+        OoxPackage package,
+        IReadOnlyDictionary<string, OoxRelationship> relationships,
+        XDocument? chartXml,
+        CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         XElement? externalData = chartXml?.Root?.Element(ChartNamespace + "externalData");
@@ -18,13 +22,11 @@ internal sealed partial class PptxSceneBuilder
 
         string? relationshipId = (string?)externalData.Attribute(RelationshipsNamespace + "id");
         string? targetPartName = null;
-        if (!string.IsNullOrWhiteSpace(relationshipId))
+        if (!string.IsNullOrWhiteSpace(relationshipId) &&
+            relationships.TryGetValue(relationshipId, out OoxRelationship? relationship) &&
+            !relationship.IsExternal && relationship.Type == ChartExternalDataPackageRelationshipType)
         {
-            targetPartName = package.GetRelationships(chartPartName, cancellationToken)
-                .FirstOrDefault(relationship => !relationship.IsExternal &&
-                    relationship.Id == relationshipId &&
-                    relationship.Type == ChartExternalDataPackageRelationshipType)
-                ?.ResolvedTarget;
+            targetPartName = relationship.ResolvedTarget;
         }
 
         (bool? autoUpdate, string autoUpdateValue) = ReadOptionalOoxmlBooleanElementWithValue(externalData, "autoUpdate");
@@ -36,10 +38,15 @@ internal sealed partial class PptxSceneBuilder
             autoUpdateValue);
     }
 
-    private static PptxSceneChartColorStyle ReadChartColorStyle(OoxPackage package, string chartPartName, PptxTheme theme, PptxColorMap colorMap, CancellationToken cancellationToken)
+    private static PptxSceneChartColorStyle ReadChartColorStyle(
+        OoxPackage package,
+        IReadOnlyDictionary<string, OoxRelationship> relationships,
+        PptxTheme theme,
+        PptxColorMap colorMap,
+        CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        OoxRelationship? colorRelationship = package.GetRelationships(chartPartName, cancellationToken)
+        OoxRelationship? colorRelationship = relationships.Values
             .FirstOrDefault(relationship => !relationship.IsExternal &&
                 relationship.Type == ChartColorStyleRelationshipType &&
                 relationship.ResolvedTarget is not null);
@@ -133,10 +140,15 @@ internal sealed partial class PptxSceneBuilder
         return element.Name.LocalName == "variation";
     }
 
-    private static PptxSceneChartStyle ReadChartStylePart(OoxPackage package, string chartPartName, PptxTheme theme, PptxColorMap colorMap, CancellationToken cancellationToken)
+    private static PptxSceneChartStyle ReadChartStylePart(
+        OoxPackage package,
+        IReadOnlyDictionary<string, OoxRelationship> relationships,
+        PptxTheme theme,
+        PptxColorMap colorMap,
+        CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        OoxRelationship? styleRelationship = package.GetRelationships(chartPartName, cancellationToken)
+        OoxRelationship? styleRelationship = relationships.Values
             .FirstOrDefault(relationship => !relationship.IsExternal &&
                 relationship.Type == ChartStyleRelationshipType &&
                 relationship.ResolvedTarget is not null);
