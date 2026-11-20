@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Docx;
 using Lokad.OoxPdf.Fonts;
@@ -61,6 +62,20 @@ internal static partial class DocxInlineCompositionTests
         TestAssert.Equal(1, children.Sum(paragraph => paragraph.Images.Count));
         TestAssert.True(children.SelectMany(paragraph => paragraph.Images).All(image => image.SourceRunIndex >= 0),
             "An image retains its child run position instead of being duplicated at the outer box's extent.");
+
+        var mixed = ReadMutation("InlineBoxMath/inline-box-mixed-source-report", OoxPdfDocxMarkupMode.Final, false, false,
+            (xml, w, _) =>
+            {
+                XElement outer = xml.Descendants(w + "drawing").Single(drawing => drawing.Descendants(w + "txbxContent").Any());
+                outer.AddBeforeSelf(new XElement(outer.Descendants(w + "drawing").Single()));
+            });
+        var sharedRunOwner = DocxBlockTraversal.EnumerateBodyParagraphs(mixed).Single(p => p.InlineTextBoxes.Count != 0);
+        var picture = sharedRunOwner.Images.Single();
+        var box = sharedRunOwner.InlineTextBoxes.Single();
+        TestAssert.Equal(picture.SourceRunIndex, box.SourceRunIndex);
+        TestAssert.Equal(picture.SourceTextOffsetInRun, box.SourceTextOffsetInRun);
+        TestAssert.Equal(picture.SourceOrderInRun + 1, box.SourceOrderInRun);
+        TestAssert.Equal(1, DocxBlockTraversal.EnumerateBodyParagraphs(box.BodyElements).Sum(p => p.Images.Count));
     }
 
     [Flags]

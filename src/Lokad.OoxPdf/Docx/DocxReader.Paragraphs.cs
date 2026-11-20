@@ -544,12 +544,11 @@ internal sealed partial class DocxReader
                     cancellationToken.ThrowIfCancellationRequested();
                     bool hidden = ResolveRunProperties(resultRun.Element(WordprocessingNamespace + "rPr"),
                         paragraphStyleId, ReadCharacterStyleId(resultRun), styles, tableCellStyle?.Run, out _).Hidden == true;
-                    var boxes = ReadRunTextBoxes(resultRun, fieldSourceRunIndex, hidden, revision);
+                    RunDrawings stored = ReadRunDrawings(resultRun, fieldSourceRunIndex, hidden, revision);
                     if (!hidden)
                     {
                         var drawings = new List<DocxInlineItem>();
-                        DocxInlineContent.AppendRun(drawings, [], ReadInlineImages(resultRun, package, relationships,
-                            revision, fieldSourceRunIndex, cancellationToken), cancellationToken, boxes);
+                        DocxInlineContent.AppendRun(drawings, [], stored.Pictures, cancellationToken, stored.TextBoxes);
                         foreach (var drawing in drawings)
                         {
                             cancellationToken.ThrowIfCancellationRequested();
@@ -698,10 +697,14 @@ internal sealed partial class DocxReader
                 RetainNonRenderingRunOwner(currentSourceRunIndex, runRevisions);
                 return;
             }
-            IReadOnlyList<DocxInlineTextBox> runBoxes = ReadRunTextBoxes(run, currentSourceRunIndex, resolvedRun.Hidden == true, revision);
-            if (runBoxes.Count != 0) EnsureInlineContent();
+            // Record authored picture children before processing field boundaries.
+            bool hasComplexFieldMarkup = run.Elements().Any(IsComplexFieldMarkupElement);
+            HashSet<XElement>? fieldPictureChildren = null;
+            RunDrawings runDrawings = ReadRunDrawings(run, currentSourceRunIndex, resolvedRun.Hidden == true, revision,
+                hasComplexFieldMarkup ? RecordPictureChild : null);
+            if (runDrawings.TextBoxes.Count != 0) EnsureInlineContent();
             sourceRunIndex++;
-            inlineTextBoxes.AddRange(runBoxes);
+            inlineTextBoxes.AddRange(runDrawings.TextBoxes);
             CaptureUnmarkedListTextStyle(text, resolvedRun, runStyleResolution, currentSourceRunIndex, revision);
             resolvedRun = ApplyMarkupRevisionStyle(resolvedRun, revision, markupMode);
             // Content revisions need a painted or known nonprinting source.
@@ -715,13 +718,6 @@ internal sealed partial class DocxReader
                 RetainNonRenderingRunOwner(currentSourceRunIndex, effectiveRevisions);
             }
 
-            bool hasComplexFieldMarkup = run.Elements().Any(IsComplexFieldMarkupElement);
-            HashSet<XElement>? fieldPictureChildren = null;
-            // Pictures retain the run's visibility and their authored position
-            // relative to any field end or separator within the same run.
-            IReadOnlyList<DocxInlineImage> parsedPictures = resolvedRun.Hidden == true ? [] :
-                ReadInlineImages(run, package, relationships, revision, currentSourceRunIndex, cancellationToken,
-                    hasComplexFieldMarkup ? RecordPictureChild : null);
             if (hasComplexFieldMarkup)
             {
                 AddOrderedRunContent(
@@ -732,8 +728,9 @@ internal sealed partial class DocxReader
                     revision,
                     effectiveRevisions,
                     ref currentPageInstructionSeen,
+                    runDrawings.Positions,
                     fieldPictureChildren);
-                PublishRun(parsedPictures);
+                PublishRun(runDrawings.Pictures);
                 return;
             }
 
@@ -751,7 +748,7 @@ internal sealed partial class DocxReader
                     child.Name == WordprocessingNamespace + "sym"))
             {
                 AddOrderedRunContent(run, currentSourceRunIndex, resolvedRun, runStyleResolution, revision, effectiveRevisions,
-                    ref currentPageInstructionSeen);
+                    ref currentPageInstructionSeen, runDrawings.Positions);
             }
             else if (text.Length != 0)
             {
@@ -777,8 +774,8 @@ internal sealed partial class DocxReader
                     runs: runs);
             }
 
-            if (parsedPictures.Count != 0) RecordComplexFieldResult();
-            PublishRun(parsedPictures);
+            if (runDrawings.Pictures.Count != 0) RecordComplexFieldResult();
+            PublishRun(runDrawings.Pictures);
 
             void RecordPictureChild(XElement source)
             {
@@ -825,15 +822,16 @@ internal sealed partial class DocxReader
             }
         }
 
-        IReadOnlyList<DocxInlineTextBox> ReadRunTextBoxes(XElement run, int index, bool hidden, DocxRevisionInfo? revision)
+        RunDrawings ReadRunDrawings(XElement run, int index, bool hidden, DocxRevisionInfo? revision,
+            Action<XElement>? recordPictureSource = null)
         {
-            if (!hidden) return ReadInlineTextBoxes(run, styles, numbering, documentSettings, package, relationships,
-                markupMode, revision, cancellationToken, index);
+            if (!hidden) return ReadInlineDrawings(run, styles, numbering, documentSettings, package, relationships,
+                markupMode, revision, cancellationToken, index, recordPictureSource);
             foreach (var inline in EnumerateRunOwnedDrawings(run, WordprocessingDrawingNamespace + "inline", cancellationToken))
                 hiddenDrawingEquationSourceCount += CountSelectedEquationSources(inline, markupMode, cancellationToken, out _);
             foreach (var textBox in EnumerateRunOwnedDrawings(run, VmlNamespace + "textbox", cancellationToken))
                 hiddenDrawingEquationSourceCount += CountSelectedEquationSources(textBox, markupMode, cancellationToken, out _);
-            return [];
+            return new RunDrawings([], [], null);
         }
 
         bool TryAddVmlTextBoxRun(XElement run, DocxRevisionInfo? revision)
@@ -986,11 +984,11 @@ internal sealed partial class DocxReader
             DocxRevisionInfo? revision,
             IReadOnlyList<DocxRevisionInfo> revisions,
             ref bool currentPageInstructionSeen,
+            IReadOnlyDictionary<XElement, (int Offset, int Order)>? positions,
             IReadOnlySet<XElement>? fieldPictureChildren = null)
         {
             int childIndex = 0;
             int textOffset = 0;
-            Dictionary<XElement, (int Offset, int Order)>? positions = null;
             foreach (XElement child in run.Elements())
             {
                 cancellationToken.ThrowIfCancellationRequested();

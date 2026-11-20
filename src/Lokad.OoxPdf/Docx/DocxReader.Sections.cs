@@ -102,73 +102,14 @@ internal sealed partial class DocxReader
         return bodyElements;
     }
 
-    private static IReadOnlyList<DocxInlineImage> ReadInlineImages(
-        XElement run,
-        OoxPackage package,
-        IReadOnlyDictionary<string, OoxRelationship> relationships,
-        DocxRevisionInfo? revision, int sourceRunIndex = -1, CancellationToken cancellationToken = default,
-        Action<XElement>? recordSource = null)
-    {
-        var images = new List<DocxInlineImage>();
-        Dictionary<XElement, (int Offset, int Order)>? positions = null;
-        foreach (XElement inline in EnumerateRunOwnedDrawings(run, WordprocessingDrawingNamespace + "inline", cancellationToken))
-        {
-            DocxInlineImage? image = ReadDrawingImage(inline, package, relationships, revision, cancellationToken);
-            if (image is null)
-            {
-                continue;
-            }
-
-            AddImage(inline, image);
-        }
-
-        foreach (XElement shape in EnumerateRunOwnedDrawings(run, VmlNamespace + "shape", cancellationToken))
-        {
-            DocxInlineImage? image = ReadVmlInlineImage(shape, package, relationships, revision);
-            if (image is null)
-            {
-                continue;
-            }
-
-            AddImage(shape, image);
-        }
-
-        return images;
-
-        void AddImage(XElement source, DocxInlineImage image)
-        {
-            var position = (positions ??= ReadRunInlinePositions(run, cancellationToken))[source];
-            images.Add(image with { SourceRunIndex = sourceRunIndex,
-                SourceTextOffsetInRun = position.Offset, SourceOrderInRun = position.Order });
-            recordSource?.Invoke(source);
-        }
-    }
-
-    private static Dictionary<XElement, (int Offset, int Order)> ReadRunInlinePositions(
-        XElement run, CancellationToken token)
-    {
-        var positions = new Dictionary<XElement, (int Offset, int Order)>();
-        int textOffset = 0, order = 0;
-        foreach (XElement child in run.Elements())
-        {
-            token.ThrowIfCancellationRequested();
-            if (child.Name == WordprocessingNamespace + "instrText" ||
-                ResolveInlineReferenceKind(child) is not null)
-                positions[child] = (textOffset, order);
-            foreach (XElement source in child.DescendantsAndSelf())
-            {
-                token.ThrowIfCancellationRequested();
-                if (source.Name == WordprocessingDrawingNamespace + "inline" || source.Name == VmlNamespace + "shape")
-                    positions[source] = (textOffset, order++);
-            }
-            textOffset += ReadRunTextChild(child).Length;
-        }
-        return positions;
-    }
+    private readonly record struct RunDrawings(
+        IReadOnlyList<DocxInlineImage> Pictures,
+        IReadOnlyList<DocxInlineTextBox> TextBoxes,
+        IReadOnlyDictionary<XElement, (int Offset, int Order)>? Positions);
 
     // Inline DrawingML textboxes retain the same drawing order as pictures.
     // Layout can consume the measured frame or keep the existing block fallback.
-    private static IReadOnlyList<DocxInlineTextBox> ReadInlineTextBoxes(
+    private static RunDrawings ReadInlineDrawings(
         XElement run,
         DocxStyleSet styles,
         DocxNumberingSet numbering,
@@ -178,15 +119,18 @@ internal sealed partial class DocxReader
         OoxPdfDocxMarkupMode markupMode,
         DocxRevisionInfo? revision,
         CancellationToken cancellationToken,
-        int sourceRunIndex)
+        int sourceRunIndex,
+        Action<XElement>? recordSource)
     {
-        var textBoxes = new List<DocxInlineTextBox>();
+        List<DocxInlineImage>? images = null;
+        List<DocxInlineTextBox>? textBoxes = null;
         Dictionary<XElement, (int Offset, int Order)>? positions = null;
         foreach (XElement inline in EnumerateRunOwnedDrawings(run, WordprocessingDrawingNamespace + "inline", cancellationToken))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (ReadDrawingImage(inline, package, relationships, revision, cancellationToken) is not null)
+            if (ReadDrawingImage(inline, package, relationships, revision, cancellationToken) is { } image)
             {
+                AddImage(inline, image);
                 continue;
             }
 
@@ -207,7 +151,7 @@ internal sealed partial class DocxReader
                 .FirstOrDefault(element => element.Attribute("w") is not null);
             string? textBoxStrokeWidthEmuValue = (string?)textBoxOutline?.Attribute("w");
             var position = (positions ??= ReadRunInlinePositions(run, cancellationToken))[inline];
-            textBoxes.Add(new DocxInlineTextBox(
+            (textBoxes ??= []).Add(new DocxInlineTextBox(
                 (string?)extent?.Attribute("cx"),
                 (string?)extent?.Attribute("cy"),
                 (string?)textBoxBodyProperties?.Attribute("lIns"),
@@ -234,7 +178,48 @@ internal sealed partial class DocxReader
             });
         }
 
-        return textBoxes;
+        foreach (XElement shape in EnumerateRunOwnedDrawings(run, VmlNamespace + "shape", cancellationToken))
+        {
+            DocxInlineImage? image = ReadVmlInlineImage(shape, package, relationships, revision);
+            if (image is null)
+            {
+                continue;
+            }
+
+            AddImage(shape, image);
+        }
+
+        return new RunDrawings(images is null ? [] : images, textBoxes is null ? [] : textBoxes, positions);
+
+        void AddImage(XElement source, DocxInlineImage image)
+        {
+            var position = (positions ??= ReadRunInlinePositions(run, cancellationToken))[source];
+            (images ??= []).Add(image with { SourceRunIndex = sourceRunIndex,
+                SourceTextOffsetInRun = position.Offset, SourceOrderInRun = position.Order });
+            recordSource?.Invoke(source);
+        }
+    }
+
+    private static Dictionary<XElement, (int Offset, int Order)> ReadRunInlinePositions(
+        XElement run, CancellationToken token)
+    {
+        var positions = new Dictionary<XElement, (int Offset, int Order)>();
+        int textOffset = 0, order = 0;
+        foreach (XElement child in run.Elements())
+        {
+            token.ThrowIfCancellationRequested();
+            if (child.Name == WordprocessingNamespace + "instrText" ||
+                ResolveInlineReferenceKind(child) is not null)
+                positions[child] = (textOffset, order);
+            foreach (XElement source in child.DescendantsAndSelf())
+            {
+                token.ThrowIfCancellationRequested();
+                if (source.Name == WordprocessingDrawingNamespace + "inline" || source.Name == VmlNamespace + "shape")
+                    positions[source] = (textOffset, order++);
+            }
+            textOffset += ReadRunTextChild(child).Length;
+        }
+        return positions;
     }
 
     private static DocxInlineImage? ReadDrawingImage(
