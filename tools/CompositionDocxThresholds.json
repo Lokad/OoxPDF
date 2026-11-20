@@ -1,8 +1,4 @@
 {
-  "minAgentRating": 3,
-  "pageCountMustMatch": true,
-  "dimensionsMustMatch": true,
-  "diagnosticsMustBeEmpty": false,
   "maxMeanAbsoluteError": 0.2,
   "maxChangedPixelRatioAtThreshold16": 0.004,
   "minStructuralSimilarity": 0.985,

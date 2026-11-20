@@ -223,6 +223,13 @@ if (@($report.Rows | Where-Object { !$_.ReferenceExportLogSha256 }).Count) {
 }
 foreach ($control in @('pptx-boundary','pptx-mae','pptx-recall','pptx-changed-pixels')) {
     $case=New-Case $control 'legacy' 'presentation'
+    $outcomePath = Join-Path $case.CandidateDirectory 'outcomes.json'
+    if ($control -eq 'pptx-boundary') {
+        $measured = Get-Content -LiteralPath $outcomePath -Raw | ConvertFrom-Json -AsHashtable
+        $measured.Rows[1].Diagnostics = @(@{Id='PPTX_UNSUPPORTED_CALLOUT';Severity='Warning'})
+        $measured | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $outcomePath
+    }
+    $outcomeHash = (Get-FileHash -LiteralPath $outcomePath).Hash
     $cache=New-ReuseCache $case
     $path=Join-Path $cache 'office-comparisons.json'
     $prior=Get-Content $path -Raw | ConvertFrom-Json -AsHashtable
@@ -246,8 +253,10 @@ foreach ($control in @('pptx-boundary','pptx-mae','pptx-recall','pptx-changed-pi
     }
     if (@($report.Rows | Where-Object {
         !$_.ReusedComparison -or ($_.Failures -join ',') -cne $expected -or
-        $_.Thresholds.minForegroundRecall -ne .90 -or $_.Thresholds.maxMeanAbsoluteError -ne 1.2
-    }).Count -or @(Get-ChildItem $case.Directory -Recurse -Filter '*.called').Count) {
+        $_.Thresholds.minForegroundRecall -ne .90 -or $_.Thresholds.maxMeanAbsoluteError -ne 1.2 -or
+        (($_.Thresholds.PSObject.Properties.Name | Sort-Object) -join ',') -cne 'maxChangedPixelRatioAtThreshold16,maxMeanAbsoluteError,minForegroundRecall'
+    }).Count -or (Get-FileHash -LiteralPath $outcomePath).Hash -ne $outcomeHash -or
+        @(Get-ChildItem $case.Directory -Recurse -Filter '*.called').Count) {
         throw ('PPTX must retain its own limits without rerendering: '+$control)
     }
     $passed+=$control
@@ -284,7 +293,10 @@ foreach ($control in @('unrelated-case-edited','policy-bytes-changed','stricter-
         foreach ($row in $report.Rows) {
             $expectedFailures=if ($control -eq 'stricter-policy') {'ForegroundRecall'} else {''}
             if (!$row.ReusedComparison -or ($row.Failures -join ',') -cne $expectedFailures -or
-                $row.Thresholds.minForegroundRecall -ne $expectedRecall) { throw ('Incorrect active threshold ownership: '+$control) }
+                $row.Thresholds.minForegroundRecall -ne $expectedRecall -or
+                (($row.Thresholds.PSObject.Properties.Name | Sort-Object) -join ',') -cne 'maxChangedPixelRatioAtThreshold16,maxMeanAbsoluteError,minForegroundRecall,minStructuralSimilarity') {
+                throw ('Incorrect active threshold ownership: '+$control)
+            }
         }
         if ($report.DocxThresholdSourceSha256 -ne (Get-FileHash $policyPath).Hash -or
             (Snapshot $case.ReferenceDirectory) -cne $before -or

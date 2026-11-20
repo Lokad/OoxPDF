@@ -259,7 +259,7 @@ foreach ($job in $jobs) {
             Failures=$job.ReuseFailures;Metrics=$prior.Metrics;Thresholds=$job.Limits;
             ContentSeverity=$contentSeverity;ReusedComparison=$reuse[0].Path;
             ReusedComparisonSha256=(Get-FileHash $reuse[0].Path).Hash}
-        Write-Output ($id + ': reused identical PDFs, comparison policy and threshold sources')
+        Write-Output ($id + ': reused pixel metrics and applied current thresholds')
         continue
     }
     $rasterFolder=if ($job.Dpi -eq 144) {'portfolio-raster'} else {'portfolio-raster-dpi'+$job.Dpi}
@@ -299,6 +299,6 @@ if ((Get-FileHash -LiteralPath $VisualDiffPath).Hash -ne $comparisonPolicy.Visua
     PptxThresholdSource='tools/CompositionPptxThresholds.json'
     DocxThresholdSourceSha256=$thresholdHashes.docx
     PptxThresholdSourceSha256=$thresholdHashes.pptx
-    Scope='Existing numerical visual thresholds retained; no claim of complete content or layout fidelity'
+    Scope='Visual metrics and separate content findings. Review conversion diagnostics in the measured outcomes.'
     Rows=$rows
 } | ConvertTo-Json -Depth 14 | Set-Content (Join-Path $candidate $reportName) -Encoding utf8

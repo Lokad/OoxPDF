@@ -106,13 +106,13 @@ SVG fill in rendered regions against pinned Office PDFs. Unsupported witnesses
 stay unverified. Portfolio joins check the selected modes and content
 expectations against the pinned text operations and verify the diagnostic
 sidecars. Reinspect existing PDFs with `-ReuseCandidateDirectory` when a join
-reports changed expectations or a missing text-inspection hash. Composition limits live in
+reports changed expectations or a missing text-inspection hash. Numerical visual limits live in
 `tools/CompositionDocxThresholds.json` and `tools/CompositionPptxThresholds.json`.
-Reports record their identities and
-reapply current limits to reused pixel metrics. Null recall on a matched page
-requires a measured zero reference foreground count. Reports distinguish omissions,
-pagination/overlap, significant
-geometry, cosmetic differences and unknowns. [Capabilities](Capabilities.md) lists
+Comparisons always check page counts and page dimensions. Reports record the limit
+file identities and apply current limits to reused pixel metrics. Null recall on
+a matched page requires a measured zero reference foreground count. Review the
+conversion diagnostics in the measured outcomes alongside visual and content
+findings. [Capabilities](Capabilities.md) lists
 current limitations; development evidence and experiment history stay in ignored
 artifacts or Git, rather than public reference pages.
 
