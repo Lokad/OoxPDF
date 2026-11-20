@@ -966,7 +966,13 @@ internal static partial class PptxChartsTests
             double bottomReserve = 7d + size * (0.22d + 1.35d * 1.18d);
             double topReserve = 5d + size * 1.1d / 2d; // The fake source declares Windows ascent 900 and descent 200 in a 1000-unit em.
             AssertLineLayoutClip(FormattableString.Invariant($"{left:0.###} {252d + bottomReserve:0.###} {plotWidth:0.###} {216d - bottomReserve - topReserve:0.###} re W* n"), pdf);
+            if (size == 18 && width == 360 && maximum == 100)
+                AssertLineLayoutClip("122.06 291.634 298.94 161.466 re W* n", pdf);
         }
+
+        // The same face declares 1000 typographic units versus 1100 Windows units.
+        string typographic = RenderLegendlessLineLayoutProbe(18, 360, 100, typographicMetrics: true);
+        AssertLineLayoutClip("122.06 291.634 298.94 162.366 re W* n", typographic);
 
         // Source holes retain their index/blank semantics while sharing the same plot box.
         foreach (string blank in new[] { "gap", "zero", "span" })
@@ -1011,15 +1017,6 @@ internal static partial class PptxChartsTests
         string tiny = RenderLegendlessLineLayoutProbe(24, 24, 1000);
         TestAssert.True(Regex.IsMatch(tiny, @"74\.88 286\.56 18\.24 [\d.]+ re W\* n"),
             "A narrow unmeasured side strip retains a positive fallback plot width.");
-    }
-
-    public static void PptxLegendlessLinePlotUsesSelectedFontLineBox()
-    {
-        string windows = RenderLegendlessLineLayoutProbe(18, 360, 100);
-        string typographic = RenderLegendlessLineLayoutProbe(18, 360, 100, typographicMetrics: true);
-        AssertLineLayoutClip("122.06 291.634 298.94 161.466 re W* n", windows);
-        // The same source face declares 1000 typographic units versus 1100 Windows units.
-        AssertLineLayoutClip("122.06 291.634 298.94 162.366 re W* n", typographic);
     }
 
     private static void AssertLineLayoutClip(string expected, string pdf)
@@ -1347,6 +1344,9 @@ internal static partial class PptxChartsTests
                 TestAssert.Equal("262.96", label.Groups["y"].Value);
             }
         }
+
+        string typographic = RenderLegendlessLineLayoutProbe(18, 360, 100, categoryLabelOffset: 200, typographicMetrics: true);
+        AssertLineLayoutClip("122.06 296.134 298.94 157.866 re W* n", typographic);
     }
 
     public static void PptxLineCategoryOffsetsShareVerticalGeometryAcrossAxisSides()
@@ -1369,14 +1369,6 @@ internal static partial class PptxChartsTests
             TestAssert.True(first.SequenceEqual(second),
                 "The category offset and baseline belong to the category axis, independently of the numeric axis side.");
         }
-    }
-
-    public static void PptxLegendlessLinePlotCategoryOffsetUsesSelectedCategoryMetric()
-    {
-        string windows = RenderLegendlessLineLayoutProbe(18, 360, 100, categoryLabelOffset: 200);
-        string typographic = RenderLegendlessLineLayoutProbe(18, 360, 100, categoryLabelOffset: 200, typographicMetrics: true);
-        AssertLineLayoutClip("122.06 296.584 298.94 156.516 re W* n", windows);
-        AssertLineLayoutClip("122.06 296.134 298.94 157.866 re W* n", typographic);
     }
 
     public static void PptxLegendlessLinePlotCategoryOffsetRetainsSourceLayoutFallbacks()
