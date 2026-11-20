@@ -97,4 +97,15 @@ Assert-Equal 'failed' (New-MarkupTextWitnessGate $separateCells @('APPROVE Table
 $spacedTail = New-Op 470 650 'X' 7
 Assert-Equal 'passed' (New-MarkupTextWitnessGate @($laneText[0], $laneText[1], $spacedTail) @('APPROVEX')).Status 'A small same-line split retains the authored text'
 Assert-Equal 'skipped' (New-MarkupTextWitnessGate $substituted @()).Status 'A case without an authored witness reports skipped coverage'
+$lane = [pscustomobject]@{ Page=1; MinX=400d; MaxX=500d; MinY=600d; MaxY=680d }
+$partitions = @(Get-TextComparisonPartitions @($reference[0], $laneText[0], $laneText[1]) @($reference[0]) @($lane) @())
+Assert-Equal 2 $partitions.Count 'A lane without matching candidate text stays in the partition set'
+Assert-Equal 0 $partitions[1].Candidate.Count 'An absent side contributes zero operations'
+$gateByLane = New-PartitionedTextGateDeltaSummary $partitions 3 1
+$driftByLane = New-TextOperationDriftSummary $partitions 3 1
+Assert-Equal 1 $gateByLane.Partitions[1].ReferenceOperationCount 'The lane gate measures one merged line'
+Assert-Equal 3 $driftByLane.ReferenceOperationCount 'The drift report retains the raw operator count'
+Assert-Equal 1 $driftByLane.OperationPairCount 'The absent candidate lane supplies no raw pairs'
+$noLanes = @(Get-TextComparisonPartitions $reference $candidate @() @())
+Assert-Equal 0 (New-PartitionedTextGateDeltaSummary $noLanes $reference.Count $candidate.Count).OperationCountDelta 'No lane preserves the whole-page merged gate'
 Write-Host 'Markup text geometry checks passed.'

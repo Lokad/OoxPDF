@@ -2345,43 +2345,23 @@ function Select-TopTextDriftRows($Rows, [string] $Metric, [int] $Limit) {
         Select-Object -First $Limit)
 }
 
-function New-TextOperationDriftSummary(
-    $ReferenceTextOperations,
-    $CandidateTextOperations,
-    $ReferenceMarkupLaneRects,
-    $CandidateMarkupLaneRects,
-    [int] $Limit = 10)
-{
-    $referenceRows = if (@($ReferenceMarkupLaneRects).Count -eq 0 -and @($CandidateMarkupLaneRects).Count -eq 0) {
-        @(Sort-TextOperationsForGate $ReferenceTextOperations | ForEach-Object { [pscustomobject]@{ Key = "all"; Operation = $_ } })
-    }
-    else {
-        @(New-TextOperationPartitionRows $ReferenceTextOperations $ReferenceMarkupLaneRects)
-    }
-    $candidateRows = if (@($ReferenceMarkupLaneRects).Count -eq 0 -and @($CandidateMarkupLaneRects).Count -eq 0) {
-        @(Sort-TextOperationsForGate $CandidateTextOperations | ForEach-Object { [pscustomobject]@{ Key = "all"; Operation = $_ } })
-    }
-    else {
-        @(New-TextOperationPartitionRows $CandidateTextOperations $CandidateMarkupLaneRects)
-    }
-    $keys = @(@($referenceRows | ForEach-Object { $_.Key }) + @($candidateRows | ForEach-Object { $_.Key }) | Sort-Object -Unique)
+function New-TextOperationDriftSummary($Partitions, [int] $ReferenceCount, [int] $CandidateCount, [int] $Limit = 10) {
     $pairs = New-Object System.Collections.Generic.List[object]
     $globalIndex = 0
-    foreach ($rawKey in $keys) {
-        $key = [string]$rawKey
-        $referenceItems = @(Sort-TextOperationsForGate (@($referenceRows | Where-Object { $_.Key -eq $key } | ForEach-Object { $_.Operation })))
-        $candidateItems = @(Sort-TextOperationsForGate (@($candidateRows | Where-Object { $_.Key -eq $key } | ForEach-Object { $_.Operation })))
+    foreach ($partition in $Partitions) {
+        $referenceItems = @(Sort-TextOperationsForGate $partition.Reference)
+        $candidateItems = @(Sort-TextOperationsForGate $partition.Candidate)
         $pairCount = [Math]::Min($referenceItems.Count, $candidateItems.Count)
         for ($i = 0; $i -lt $pairCount; $i++) {
-            $pairs.Add((New-TextOperationDriftPair $globalIndex $key $referenceItems[$i] $candidateItems[$i])) | Out-Null
+            $pairs.Add((New-TextOperationDriftPair $globalIndex $partition.Key $referenceItems[$i] $candidateItems[$i])) | Out-Null
             $globalIndex++
         }
     }
 
     [pscustomobject]@{
-        ReferenceOperationCount = @($ReferenceTextOperations).Count
-        CandidateOperationCount = @($CandidateTextOperations).Count
-        OperationCountDelta = [Math]::Abs(@($CandidateTextOperations).Count - @($ReferenceTextOperations).Count)
+        ReferenceOperationCount = $ReferenceCount
+        CandidateOperationCount = $CandidateCount
+        OperationCountDelta = [Math]::Abs($CandidateCount - $ReferenceCount)
         OperationPairCount = $pairs.Count
         TopXDeltaPairs = Select-TopTextDriftRows $pairs "AbsXDelta" $Limit
         TopBaselineDeltaPairs = Select-TopTextDriftRows $pairs "AbsBaselineDelta" $Limit
@@ -2428,11 +2408,18 @@ function Get-TextGatePartitionKey($Operation, $MarkupLaneRects) {
     return "body:$page"
 }
 
-function New-TextOperationPartitionRows($Operations, $MarkupLaneRects) {
-    foreach ($operation in @($Operations)) {
+function Get-TextComparisonPartitions($Reference, $Candidate, $ReferenceLanes, $CandidateLanes) {
+    if ($ReferenceLanes.Count -eq 0 -and $CandidateLanes.Count -eq 0) {
+        return [pscustomobject]@{ Key = "all"; Reference = $Reference; Candidate = $Candidate }
+    }
+
+    $referenceGroups = ($Reference | Group-Object { Get-TextGatePartitionKey $_ $ReferenceLanes } -AsHashTable -AsString) ?? @{}
+    $candidateGroups = ($Candidate | Group-Object { Get-TextGatePartitionKey $_ $CandidateLanes } -AsHashTable -AsString) ?? @{}
+    foreach ($key in @(@($referenceGroups.Keys) + @($candidateGroups.Keys) | Sort-Object -Unique)) {
         [pscustomobject]@{
-            Key = Get-TextGatePartitionKey $operation $MarkupLaneRects
-            Operation = $operation
+            Key = $key
+            Reference = @($referenceGroups[$key] ?? @())
+            Candidate = @($candidateGroups[$key] ?? @())
         }
     }
 }
@@ -2464,34 +2451,23 @@ function Get-SummarySumMetric($Summaries, [string] $Name) {
     return [int](($values | Measure-Object -Sum).Sum)
 }
 
-function New-PartitionedTextGateDeltaSummary(
-    $ReferenceTextOperations,
-    $CandidateTextOperations,
-    $ReferenceMarkupLaneRects,
-    $CandidateMarkupLaneRects)
-{
-    if (@($ReferenceMarkupLaneRects).Count -eq 0 -and @($CandidateMarkupLaneRects).Count -eq 0) {
-        return New-TextGateDeltaSummary $ReferenceTextOperations $CandidateTextOperations
+function New-PartitionedTextGateDeltaSummary($Partitions, [int] $ReferenceCount, [int] $CandidateCount) {
+    if ($Partitions.Count -eq 1 -and $Partitions[0].Key -eq "all") {
+        return New-TextGateDeltaSummary $Partitions[0].Reference $Partitions[0].Candidate
     }
 
-    $referenceRows = @(New-TextOperationPartitionRows $ReferenceTextOperations $ReferenceMarkupLaneRects)
-    $candidateRows = @(New-TextOperationPartitionRows $CandidateTextOperations $CandidateMarkupLaneRects)
-    $keys = @(@($referenceRows | ForEach-Object { $_.Key }) + @($candidateRows | ForEach-Object { $_.Key }) | Sort-Object -Unique)
     $partitionSummaries = @(
-        foreach ($rawKey in $keys) {
-            $key = [string]$rawKey
-            $referenceItems = @($referenceRows | Where-Object { $_.Key -eq $key } | ForEach-Object { $_.Operation })
-            $candidateItems = @($candidateRows | Where-Object { $_.Key -eq $key } | ForEach-Object { $_.Operation })
-            $summary = New-TextGateDeltaSummary $referenceItems $candidateItems
-            $summary | Add-Member -NotePropertyName Partition -NotePropertyValue $key -Force
+        foreach ($partition in $Partitions) {
+            $summary = New-TextGateDeltaSummary $partition.Reference $partition.Candidate
+            $summary | Add-Member -NotePropertyName Partition -NotePropertyValue $partition.Key -Force
             $summary
         }
     )
 
     [pscustomobject]@{
-        ReferenceOperationCount = @($ReferenceTextOperations).Count
-        CandidateOperationCount = @($CandidateTextOperations).Count
-        OperationCountDelta = [Math]::Abs(@($CandidateTextOperations).Count - @($ReferenceTextOperations).Count)
+        ReferenceOperationCount = $ReferenceCount
+        CandidateOperationCount = $CandidateCount
+        OperationCountDelta = [Math]::Abs($CandidateCount - $ReferenceCount)
         OperationPairCount = Get-SummarySumMetric $partitionSummaries "OperationPairCount"
         MaxBaselineDelta = Get-SummaryMaxMetric $partitionSummaries "MaxBaselineDelta"
         MaxXDelta = Get-SummaryMaxMetric $partitionSummaries "MaxXDelta"
@@ -3642,16 +3618,9 @@ $markupMarginDeltaSummary = New-PointBoundsDeltaSummary "markup-margin" $referen
     $x = Get-OperationX $op
     $null -ne $x -and ($x -gt 420d -or $x -lt 120d)
 }
-$textGateDeltaSummary = New-PartitionedTextGateDeltaSummary `
-    -ReferenceTextOperations $referenceTextOperationItems `
-    -CandidateTextOperations $candidateTextOperationItems `
-    -ReferenceMarkupLaneRects $referenceMarkupLaneRects `
-    -CandidateMarkupLaneRects $candidateLayoutMarkupLaneRects
-$textOperationDriftSummary = New-TextOperationDriftSummary `
-    -ReferenceTextOperations $referenceTextOperationItems `
-    -CandidateTextOperations $candidateTextOperationItems `
-    -ReferenceMarkupLaneRects $referenceMarkupLaneRects `
-    -CandidateMarkupLaneRects $candidateLayoutMarkupLaneRects
+$textPartitions = @(Get-TextComparisonPartitions $referenceTextOperationItems $candidateTextOperationItems $referenceMarkupLaneRects $candidateLayoutMarkupLaneRects)
+$textGateDeltaSummary = New-PartitionedTextGateDeltaSummary $textPartitions $referenceTextOperationItems.Count $candidateTextOperationItems.Count
+$textOperationDriftSummary = New-TextOperationDriftSummary $textPartitions $referenceTextOperationItems.Count $candidateTextOperationItems.Count
 $mediaBoxDeltaSummary = New-MediaBoxDeltaSummary $referenceMediaBoxes $candidateMediaBoxes
 $pageFlowDeltaSummary = New-PageFlowDeltaSummary `
     -ReferenceTextOperations $referenceTextOperationItems `
@@ -3707,23 +3676,23 @@ Write-JsonFile (Join-Path $geometryDir "markup-lane-horizontal-summary.json") $m
 Write-JsonFile (Join-Path $geometryDir "body-frame-lane-edge-comparison.json") $bodyFrameLaneEdgeComparison
 Write-JsonFile (Join-Path $geometryDir "body-frame-lane-edge-summary.json") $bodyFrameLaneEdgeDeltaSummary
 Write-JsonFile (Join-Path $balloonsDir "classification-summary.json") $balloonClassificationSummary
-Write-JsonFile (Join-Path $balloonsDir "collision-summary.json") $balloonClassificationSummary
 Write-JsonFile (Join-Path $comparisonDir "font-resource-summary.json") $fontResourceSummary
-Write-JsonFile (Join-Path $comparisonDir "graphics-operation-count-summary.json") ([pscustomobject]@{
-        ReferenceGraphicsOperationCount = $referenceGraphicsOperationItems.Count
-        CandidateGraphicsOperationCount = $candidateGraphicsOperationItems.Count
-        GraphicsOperationCountDelta = [Math]::Abs($candidateGraphicsOperationItems.Count - $referenceGraphicsOperationItems.Count)
-        ReferenceVisibleGraphicsOperationCount = $referenceVisibleGraphicsOperationItems.Count
-        CandidateVisibleGraphicsOperationCount = $candidateVisibleGraphicsOperationItems.Count
-        VisibleGraphicsOperationCountDelta = [Math]::Abs($candidateVisibleGraphicsOperationItems.Count - $referenceVisibleGraphicsOperationItems.Count)
-        ReferenceClipGraphicsOperationCount = @($referenceGraphicsOperationItems | Where-Object { $_.Kind -eq "Clip" }).Count
-        CandidateClipGraphicsOperationCount = @($candidateGraphicsOperationItems | Where-Object { $_.Kind -eq "Clip" }).Count
-        ClipGraphicsOperationCountDelta = [Math]::Abs(
-            @($candidateGraphicsOperationItems | Where-Object { $_.Kind -eq "Clip" }).Count -
-            @($referenceGraphicsOperationItems | Where-Object { $_.Kind -eq "Clip" }).Count)
-        GraphicsComparisonExitCode = $graphicsComparisonExitCode
-        GraphicsVisibleComparisonExitCode = $graphicsVisibleComparisonExitCode
-    })
+$referenceClipCount = @($referenceGraphicsOperationItems | Where-Object { $_.Kind -eq "Clip" }).Count
+$candidateClipCount = @($candidateGraphicsOperationItems | Where-Object { $_.Kind -eq "Clip" }).Count
+$graphicsOperationCounts = [ordered]@{
+    ReferenceGraphicsOperationCount = $referenceGraphicsOperationItems.Count
+    CandidateGraphicsOperationCount = $candidateGraphicsOperationItems.Count
+    GraphicsOperationCountDelta = [Math]::Abs($candidateGraphicsOperationItems.Count - $referenceGraphicsOperationItems.Count)
+    ReferenceVisibleGraphicsOperationCount = $referenceVisibleGraphicsOperationItems.Count
+    CandidateVisibleGraphicsOperationCount = $candidateVisibleGraphicsOperationItems.Count
+    VisibleGraphicsOperationCountDelta = [Math]::Abs($candidateVisibleGraphicsOperationItems.Count - $referenceVisibleGraphicsOperationItems.Count)
+    ReferenceClipGraphicsOperationCount = $referenceClipCount
+    CandidateClipGraphicsOperationCount = $candidateClipCount
+    ClipGraphicsOperationCountDelta = [Math]::Abs($candidateClipCount - $referenceClipCount)
+    GraphicsComparisonExitCode = $graphicsComparisonExitCode
+    GraphicsVisibleComparisonExitCode = $graphicsVisibleComparisonExitCode
+}
+Write-JsonFile (Join-Path $comparisonDir "graphics-operation-count-summary.json") $graphicsOperationCounts
 
 $rasterRegionSpecs = @()
 $rasterRegionMetrics = @()
@@ -3842,19 +3811,7 @@ $summary = [ordered]@{
     MarkupTextWitnessCount = $markupTextPhrases.Count
     MarkupTextWitnessStatus = $markupTextWitnessGate.Status
     MissingMarkupTextWitnessCount = $markupTextWitnessGate.Actual
-    GraphicsComparisonExitCode = $graphicsComparisonExitCode
-    GraphicsVisibleComparisonExitCode = $graphicsVisibleComparisonExitCode
-    ReferenceGraphicsOperationCount = $referenceGraphicsOperationItems.Count
-    CandidateGraphicsOperationCount = $candidateGraphicsOperationItems.Count
-    GraphicsOperationCountDelta = [Math]::Abs($candidateGraphicsOperationItems.Count - $referenceGraphicsOperationItems.Count)
-    ReferenceVisibleGraphicsOperationCount = $referenceVisibleGraphicsOperationItems.Count
-    CandidateVisibleGraphicsOperationCount = $candidateVisibleGraphicsOperationItems.Count
-    VisibleGraphicsOperationCountDelta = [Math]::Abs($candidateVisibleGraphicsOperationItems.Count - $referenceVisibleGraphicsOperationItems.Count)
-    ReferenceClipGraphicsOperationCount = @($referenceGraphicsOperationItems | Where-Object { $_.Kind -eq "Clip" }).Count
-    CandidateClipGraphicsOperationCount = @($candidateGraphicsOperationItems | Where-Object { $_.Kind -eq "Clip" }).Count
-    ClipGraphicsOperationCountDelta = [Math]::Abs(
-        @($candidateGraphicsOperationItems | Where-Object { $_.Kind -eq "Clip" }).Count -
-        @($referenceGraphicsOperationItems | Where-Object { $_.Kind -eq "Clip" }).Count)
+} + $graphicsOperationCounts + [ordered]@{
     GateFailureCount = $gateSummary.FailureCount
     GateFailures = $gateSummary.Failures
     CurrentBlockingGatePhase = $gateSummary.CurrentBlockingPhase
