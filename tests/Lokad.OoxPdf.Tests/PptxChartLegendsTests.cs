@@ -569,7 +569,7 @@ internal static partial class PptxChartLegendsTests
 
     public static void PptxSyntheticPieChartManualPlotBoxUsesPolarPath()
     {
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
+        using var input = TestFixtures.CreateZipPackage(new Dictionary<string, byte[]>
         {
             ["[Content_Types].xml"] = TestFixtures.Utf8(PptxTests.BasicContentTypes()),
             ["_rels/.rels"] = TestFixtures.Utf8(PptxTests.PackageRelationship()),
@@ -607,14 +607,16 @@ internal static partial class PptxChartLegendsTests
                 </c:chartSpace>
                 """)
         });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, output);
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains(" f", pdf);
-        TestAssert.DoesNotContain("204.48 364.32 m", pdf);
-        TestAssert.DoesNotContain("204.48 290.88 l", pdf);
+        string content = PptxTests.RenderSingleSlideContent(input);
+        // The manual plot gives this single slice a center of (201.6, 392.4) and a 54pt radius.
+        Match slice = Regex.Match(content, @"(?m)^201\.6 446\.4 m\s+(?<arcs>(?:[^\r\n]+ c\s+)+)201\.6 392\.4 l\s+h\s+f\*?(?:\s|$)");
+        TestAssert.True(slice.Success, "The manual plot must paint a closed pie slice around its authored center.");
+        string arcs = slice.Groups["arcs"].Value;
+        TestAssert.Contains(" 255.6 392.4 c", arcs);
+        TestAssert.Contains(" 201.6 338.4 c", arcs);
+        TestAssert.Contains(" 147.6 392.4 c", arcs);
+        TestAssert.DoesNotContain("204.48 364.32 m", content);
+        TestAssert.DoesNotContain("204.48 290.88 l", content);
     }
 
     public static void PptxSyntheticBarChartOverlayLegendDoesNotReservePlotSpace()

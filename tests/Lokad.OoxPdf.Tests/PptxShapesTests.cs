@@ -943,65 +943,45 @@ internal static partial class PptxShapesTests
         TestAssert.DoesNotContain("194.912", pdf);
     }
 
-    public static void PptxSyntheticPresetArcStealthTailUsesFilledOutline()
+    public static void PptxSyntheticPresetArcStealthTailUsesFilledOutline() =>
+        CheckPresetArcStealthTail(
+            """<a:gd name="adj1" fmla="val 16200000"/><a:gd name="adj2" fmla="val 19500000"/>""",
+            flipVertical: true, expectedTip: "185.841 461.297");
+
+    public static void PptxSyntheticPresetArcUsesOfficeDefaultAdjustments() =>
+        CheckPresetArcStealthTail(guides: "", flipVertical: false, expectedTip: "216 432");
+
+    private static void CheckPresetArcStealthTail(string guides, bool flipVertical, string expectedTip)
     {
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        string flip = flipVertical ? " flipV=\"1\"" : "";
+        using var input = TestFixtures.CreateZipPackage(new Dictionary<string, string>
         {
             ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
             ["_rels/.rels"] = PptxTests.PackageRelationship(),
             ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
             ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
-            ["ppt/slides/slide1.xml"] = """
+            ["ppt/slides/slide1.xml"] = $$"""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
                   <p:cSld><p:spTree><p:sp>
                     <p:spPr>
-                      <a:xfrm flipV="1"><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="914400"/></a:xfrm>
-                      <a:prstGeom prst="arc"><a:avLst><a:gd name="adj1" fmla="val 16200000"/><a:gd name="adj2" fmla="val 19500000"/></a:avLst></a:prstGeom>
+                      <a:xfrm{{flip}}><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="914400"/></a:xfrm>
+                      <a:prstGeom prst="arc"><a:avLst>{{guides}}</a:avLst></a:prstGeom>
                       <a:ln w="19050"><a:solidFill><a:srgbClr val="444444"/></a:solidFill><a:tailEnd type="stealth"/></a:ln>
                     </p:spPr>
                   </p:sp></p:spTree></p:cSld>
                 </p:sld>
                 """
         });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, output);
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains(" f", pdf);
-        TestAssert.DoesNotContain(" S", pdf);
-    }
-
-    public static void PptxSyntheticPresetArcUsesOfficeDefaultAdjustments()
-    {
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
-            ["_rels/.rels"] = PptxTests.PackageRelationship(),
-            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
-            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
-            ["ppt/slides/slide1.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <p:cSld><p:spTree><p:sp>
-                    <p:spPr>
-                      <a:xfrm><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="914400"/></a:xfrm>
-                      <a:prstGeom prst="arc"><a:avLst/></a:prstGeom>
-                      <a:ln w="19050"><a:solidFill><a:srgbClr val="444444"/></a:solidFill><a:tailEnd type="stealth"/></a:ln>
-                    </p:spPr>
-                  </p:sp></p:spTree></p:cSld>
-                </p:sld>
-                """
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, output);
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains(" f", pdf);
-        TestAssert.DoesNotContain("216 432 m 216", pdf);
-        TestAssert.DoesNotContain(" S", pdf);
+        string content = PptxTests.RenderSingleSlideContent(input);
+        // The ellipse starts at its top midpoint, with half the 1.5pt line width on either side.
+        // The second closed contour is the four-vertex stealth tail at the end angle.
+        const string line = @"[-\d.]+ [-\d.]+ l\s+";
+        string outline = $@"(?m)^0\.267 g\s+144 468\.75 m\s+(?:{line})+144 467\.25 l\s+144 468\.75 l\s+h\s+"
+            + $@"{Regex.Escape(expectedTip)} m\s+(?:{line}){{3}}h\s+f\*?(?:\s|$)";
+        TestAssert.True(Regex.IsMatch(content, outline),
+            $"Expected the filled arc band and the stealth tail with tip at {expectedTip}.");
+        TestAssert.True(!Regex.IsMatch(content, @"(?:^|\s)[Ss](?:\s|$)"), "The arc and tail share one filled outline.");
     }
 
     public static void PptxSyntheticShapeRoundRectHonorsAdjustment()

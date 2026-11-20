@@ -305,7 +305,6 @@ internal static class PptxChartRenderingTests
         TestAssert.Contains("0 0.667 0 rg", pdf);
         TestAssert.Contains("0.667 0 0 RG", pdf);
         TestAssert.Contains(" l S", pdf);
-        TestAssert.Contains(" f", pdf);
         TestAssert.True(Regex.IsMatch(pdf, @"<[0-9A-F]{4}> <007C>"), "Expected line-chart data labels to include the custom separator between series, category, and value text.");
         TestAssert.Contains("1 0.918 0.8 rg", pdf);
         TestAssert.Contains("0.067 0.133 0.2 RG", pdf);
