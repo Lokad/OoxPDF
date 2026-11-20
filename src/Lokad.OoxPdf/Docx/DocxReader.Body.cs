@@ -772,11 +772,6 @@ internal sealed partial class DocxReader
         return IsPageBreak(breakElement) || IsColumnBreak(breakElement);
     }
 
-    private static bool IsVisibleRunContainer(XElement element)
-    {
-        return IsVisibleRunContainer(element, OoxPdfDocxMarkupMode.Final);
-    }
-
     private static bool IsVisibleRunContainer(XElement element, OoxPdfDocxMarkupMode markupMode)
     {
         return DocxSourceXml.IsTransparentInlineContainer(element) || element.Name == WordprocessingNamespace + "fldSimple" ||

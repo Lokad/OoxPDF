@@ -15,6 +15,7 @@ internal sealed partial class DocxReader
         XDocument document,
         string partName,
         IReadOnlyDictionary<string, OoxRelationship> relationships,
+        DocxStyleSet resolvedStyles,
         DocxMarkupContext markupContext,
         OoxPdfDocxMarkupMode revisionFilteringMarkupMode,
         int bodyEquationSourceCount,
@@ -217,14 +218,20 @@ internal sealed partial class DocxReader
                 "Approximated");
         }
 
+        bool hasUnsupportedColumnBreak = document.Descendants(WordprocessingNamespace + "br").Any(breakElement =>
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return IsUnsupportedColumnBreak(breakElement, revisionFilteringMarkupMode);
+        });
         cancellationToken.ThrowIfCancellationRequested();
-        if (HasUnsupportedMultiColumnSection(document))
+        if (HasUnsupportedMultiColumnSection(document, resolvedStyles, revisionFilteringMarkupMode,
+            hasUnsupportedColumnBreak, cancellationToken))
         {
             Emit("DOCX_UNSUPPORTED_MULTI_COLUMN", "multi-column balancing or in-flow section columns", diagnosticPartName: "", fallback: "Sequential flow uses the available column frames");
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        if (document.Descendants(WordprocessingNamespace + "br").Any(IsUnsupportedColumnBreak))
+        if (hasUnsupportedColumnBreak)
         {
             Emit("DOCX_UNSUPPORTED_MANUAL_BREAK", "unsupported manual column break container", diagnosticPartName: "", fallback: "Visible body column breaks are supported");
         }
@@ -550,7 +557,8 @@ internal sealed partial class DocxReader
             !typeValue.Equals("evenPage", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static bool HasUnsupportedMultiColumnSection(XDocument document)
+    private static bool HasUnsupportedMultiColumnSection(XDocument document, DocxStyleSet styles,
+        OoxPdfDocxMarkupMode markupMode, bool hasUnsupportedColumnBreak, CancellationToken cancellationToken)
     {
             bool IsMultiColumnDeclaration(XElement columns)
             {
@@ -563,21 +571,13 @@ internal sealed partial class DocxReader
             .Descendants(WordprocessingNamespace + "cols")
             .Where(IsMultiColumnDeclaration)
             .ToArray();
-        if (multiColumnDeclarations.Length == 0)
-        {
-            return false;
-        }
-
-        if (document.Descendants(WordprocessingNamespace + "br").Any(IsUnsupportedColumnBreak))
-        {
-            return true;
-        }
-
-        return !IsSupportedExplicitFinalSectionColumnFlow(document, multiColumnDeclarations);
+        return multiColumnDeclarations.Length != 0 &&
+            (hasUnsupportedColumnBreak ||
+                !IsSupportedExplicitFinalSectionColumnFlow(document, multiColumnDeclarations, styles, markupMode, cancellationToken));
     }
 
-
-    private static bool IsSupportedExplicitFinalSectionColumnFlow(XDocument document, IReadOnlyList<XElement> multiColumnDeclarations)
+    private static bool IsSupportedExplicitFinalSectionColumnFlow(XDocument document, IReadOnlyList<XElement> multiColumnDeclarations,
+        DocxStyleSet styles, OoxPdfDocxMarkupMode markupMode, CancellationToken cancellationToken)
     {
         XElement? body = document.Root?.Element(WordprocessingNamespace + "body");
         XElement? finalSectionProperties = body?.Element(WordprocessingNamespace + "sectPr");
@@ -593,14 +593,21 @@ internal sealed partial class DocxReader
         int columnCount = (int)OoxXml.ParseRequiredLong(finalColumns, WordprocessingNamespace + "num", "column count");
         int supportedColumnBreaks = body
             .Elements(WordprocessingNamespace + "p")
-            .SelectMany(paragraph => paragraph.Descendants(WordprocessingNamespace + "br"))
-            .Count(breakElement => IsColumnBreak(breakElement) && !IsUnsupportedColumnBreak(breakElement));
+            .SelectMany(paragraph => paragraph.Elements())
+            .SelectMany(child => EnumerateVisibleRunBreaks(child, VisibleColumnBreak, markupMode))
+            .Count();
         return supportedColumnBreaks == columnCount - 1;
+
+        bool VisibleColumnBreak(XElement source)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return IsColumnBreak(source) && !IsHiddenHardRunBreak(source, styles, null);
+        }
     }
 
-    private static bool IsUnsupportedColumnBreak(XElement breakElement)
+    private static bool IsUnsupportedColumnBreak(XElement breakElement, OoxPdfDocxMarkupMode markupMode)
     {
-        if (!IsColumnBreak(breakElement))
+        if (!IsColumnBreak(breakElement) || IsInsideExcludedRevisionContainer(breakElement, markupMode))
         {
             return false;
         }
@@ -621,7 +628,7 @@ internal sealed partial class DocxReader
         XElement? visibleOwner = breakElement
             .AncestorsAndSelf()
             .TakeWhile(element => element != paragraph)
-            .FirstOrDefault(element => element.Name == WordprocessingNamespace + "r" || IsVisibleRunContainer(element));
+            .FirstOrDefault(element => element.Name == WordprocessingNamespace + "r" || IsVisibleRunContainer(element, markupMode));
         return visibleOwner is null;
     }
 

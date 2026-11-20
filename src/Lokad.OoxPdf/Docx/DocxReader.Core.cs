@@ -49,7 +49,9 @@ internal sealed partial class DocxReader
                     else { diagnosticSink?.Invoke(diagnostic); }
                 };
             }
-            EmitUnsupportedFeatureDiagnostics(package, document, documentPart.Name, relationships, markupContext, revisionFilteringMarkupMode, equationSourceCount, featureSink, warnedMustUnderstandParts, cancellationToken);
+            DocxStyleSet styles = LoadStyles(package, documentPart.Name, cancellationToken, modelStorage);
+            EmitUnsupportedFeatureDiagnostics(package, document, documentPart.Name, relationships, styles, markupContext,
+                revisionFilteringMarkupMode, equationSourceCount, featureSink, warnedMustUnderstandParts, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
 
             // Current sections belong to the body or a paragraph's properties.
@@ -62,7 +64,6 @@ internal sealed partial class DocxReader
             XElement? pageMargins = sectionProperties?.Element(WordprocessingNamespace + "pgMar");
 
             DocxFontCatalog fontCatalog = LoadFontCatalog(package, documentPart.Name, cancellationToken, diagnosticSink, warnedMustUnderstandParts, modelStorage);
-            DocxStyleSet styles = LoadStyles(package, documentPart.Name, cancellationToken, diagnosticSink, warnedMustUnderstandParts, modelStorage);
             DocxNumberingSet numbering = LoadNumbering(package, documentPart.Name, fontCatalog, cancellationToken, diagnosticSink, warnedMustUnderstandParts, modelStorage);
             cancellationToken.ThrowIfCancellationRequested();
             // one related-story cache per Read, shared by document headers/footers,

@@ -10,10 +10,11 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxReader
 {
-    private static DocxStyleSet LoadStyles(OoxPackage package, string documentPartName, CancellationToken cancellationToken, Action<OoxPdfDiagnostic>? diagnosticSink, HashSet<string> warnedParts, IMemoryReservation? modelStorage = null)
+    private static DocxStyleSet LoadStyles(OoxPackage package, string documentPartName, CancellationToken cancellationToken, IMemoryReservation? modelStorage)
     {
+        // The feature preflight diagnoses the same cached style part in source order.
         XDocument? stylesXml = LoadRelatedXmlPart(package, documentPartName, StylesRelationshipType,
-            out _, cancellationToken, diagnosticSink, warnedParts, modelStorage);
+            out _, cancellationToken, modelStorage: modelStorage);
         if (stylesXml is null) return DocxStyleSet.Empty;
         XElement? runDefaultOwner = stylesXml
             .Root?

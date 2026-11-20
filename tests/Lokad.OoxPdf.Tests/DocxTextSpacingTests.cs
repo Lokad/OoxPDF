@@ -1122,9 +1122,28 @@ internal static class DocxTextSpacingTests
 
     public static void DocxSupportedColumnBreakOnlyParagraphDoesNotEmitUnsupportedManualBreakDiagnostic()
     {
-        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        const string columnBreak = "<w:br w:type='column'/>";
+        const string visibleRun = "<w:r>" + columnBreak + "</w:r>";
+        const string movedRun = "<w:moveTo w:id='70' w:author='Public probe'>" + visibleRun + "</w:moveTo>";
+        var final = OoxPdfDocxMarkupMode.Final;
+        var original = OoxPdfDocxMarkupMode.Original;
+        (string Name, string Prefix, OoxPdfDocxMarkupMode Mode, int Columns, int VisibleBreaks, bool MultiColumnWarning, bool ManualBreakWarning)[] cases =
+        [
+            ("direct", "", final, 2, 1, false, false),
+            ("excluded move", movedRun, original, 2, 1, false, false),
+            ("selected move", movedRun, final, 2, 2, true, false),
+            ("direct hidden", "<w:r><w:rPr><w:vanish/></w:rPr>" + columnBreak + "</w:r>", final, 2, 1, false, false),
+            ("inherited hidden", "<w:r><w:rPr><w:rStyle w:val='HiddenDerived'/></w:rPr>" + columnBreak + "</w:r>", final, 2, 1, false, false),
+            ("visible override", "<w:r><w:rPr><w:rStyle w:val='HiddenDerived'/><w:vanish w:val='0'/></w:rPr>" + columnBreak + "</w:r>", final, 2, 2, true, false),
+            ("unsupported container", columnBreak, final, 2, 1, true, true),
+            ("different section", "", final, 3, 1, true, false)
+        ];
+
+        foreach (var test in cases)
         {
-            ["[Content_Types].xml"] = """
+            using var input = TestFixtures.CreateZipPackage(new Dictionary<string, string>
+            {
+                ["[Content_Types].xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
                   <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
@@ -1132,38 +1151,49 @@ internal static class DocxTextSpacingTests
                   <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
                 </Types>
                 """,
-            ["_rels/.rels"] = """
+                ["_rels/.rels"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
                   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
                 </Relationships>
                 """,
-            ["word/document.xml"] = """
+                ["word/_rels/document.xml.rels"] = """
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="styles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+                </Relationships>
+                """,
+                ["word/styles.xml"] = """
+                <w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:style w:type="character" w:styleId="HiddenBase"><w:rPr><w:vanish/></w:rPr></w:style>
+                  <w:style w:type="character" w:styleId="HiddenDerived"><w:basedOn w:val="HiddenBase"/></w:style>
+                </w:styles>
+                """,
+                ["word/document.xml"] = $$"""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
                   <w:body>
                     <w:p><w:r><w:t>Left column</w:t></w:r></w:p>
-                    <w:p><w:r><w:br w:type="column"/></w:r></w:p>
+                    <w:p>{{test.Prefix}}{{visibleRun}}</w:p>
                     <w:p><w:r><w:t>Right column</w:t></w:r></w:p>
                     <w:sectPr>
                       <w:pgSz w:w="12240" w:h="15840"/>
-                      <w:cols w:num="2"/>
+                      <w:cols w:num="{{test.Columns}}"/>
                     </w:sectPr>
                   </w:body>
                 </w:document>
                 """
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-        var diagnostics = new List<OoxPdfDiagnostic>();
-
-        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
-
-        TestAssert.True(!diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_MANUAL_BREAK"), "Break-only column paragraphs should be modeled as supported manual-break blocks, not stale unsupported manual-break diagnostics.");
-        TestAssert.True(!diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_MULTI_COLUMN"), "Explicit break-only final-section column flow should not emit the stale blanket multi-column diagnostic.");
-
-        using FileStream stream = File.OpenRead(input);
-        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
-        TestAssert.Equal(1, document.BodyElements.OfType<DocxManualBreakElement>().Count(element => element.Value == "column"));
+            });
+            using var package = OoxPackage.Open(input, default);
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            DocxDocument document = new DocxReader().Read(package, diagnostics.Add, default, test.Mode);
+            int visibleBreaks = document.BodyElements.OfType<DocxManualBreakElement>()
+                .Where(element => element.Value == "column").Sum(element => element.BreakCount);
+            TestAssert.True(visibleBreaks == test.VisibleBreaks, "Unexpected visible column break count for " + test.Name);
+            TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_MANUAL_BREAK") == test.ManualBreakWarning,
+                "Unexpected manual break diagnostic for " + test.Name);
+            TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_MULTI_COLUMN") == test.MultiColumnWarning,
+                "Unexpected multi-column diagnostic for " + test.Name);
+        }
     }
 
     public static void DocxMarkupFinalViewMergesDeletedParagraphMarksAndKeepsSpans()
