@@ -63,7 +63,8 @@ internal sealed partial class DocxReader
             Grid: ReadTableGrid(fragment.Element, cancellationToken),
             LeadingBookmarks: ReferenceEquals(fragment.Element, table) ? source.LeadingBookmarks : fragment.LeadingBookmarks,
             Rows: EnumerateBookmarkedBlocks(fragment.Element.Elements(), markupMode, cancellationToken,
-                fragment.Revision == inheritedRevision ? null : fragment.Revision, tableChildName: WordprocessingNamespace + "tr")
+                fragment.Revision == inheritedRevision ? null : fragment.Revision,
+                tableChildName: WordprocessingNamespace + "tr", readTableColumnBookmarks: true)
                 .Where(row => IsIncludedTableRow(row.Element, markupMode, cancellationToken)).ToArray())).ToArray();
         bool hasExplicitGrid = parts.Any(part => part.Grid.Length != 0);
         IReadOnlyList<double> columns = parts[0].Grid;
@@ -133,6 +134,8 @@ internal sealed partial class DocxReader
                     DocxRevisionInfo? inheritedCellRevision = cellSource.Revision ?? rowElement.Revision;
                     XElement? cellProperties = cell.Element(WordprocessingNamespace + "tcPr");
                     int nextSourceColumn = sourceColumn + sourceSpan;
+                    if (cellIndex == 0 && rowElement.LeadingColumnBookmarks is { } rowColumnBookmarks)
+                        cellSource = cellSource with { LeadingColumnBookmarks = rowColumnBookmarks };
                     if (!columnBookmarks.IsEmpty)
                     {
                         var bookmarksForCell = BindColumnBookmarks(cellSource.LeadingBookmarks, ref columnBookmarks,
@@ -431,12 +434,13 @@ internal sealed partial class DocxReader
         columnBookmarks = default;
         bool firstBlock = true;
         foreach (var (block, tableFragments) in EnumerateLogicalTableBlocks(cell.Element.Elements(), styles, markupMode,
-            cancellationToken, inheritedRevision, cell.LeadingBookmarks, readTableColumnBookmarks: firstCellColumns is not null))
+            cancellationToken, inheritedRevision, cell.LeadingBookmarks, readTableColumnBookmarks: firstCellColumns is not null,
+            leadingColumnBookmarks: cell.LeadingColumnBookmarks))
         {
             cancellationToken.ThrowIfCancellationRequested();
             var scopedChild = block;
-            // A column bookmark originates before the first block of the first
-            // cell, but the destination can belong to a later cell in this row.
+            // Column starts entering the first block can target a later cell
+            // of the same source-grid row.
             if (firstBlock && firstCellColumns is { } columns && block.LeadingColumnBookmarks is { } starts)
             {
                 columnBookmarks = starts;

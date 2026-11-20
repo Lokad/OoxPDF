@@ -1312,12 +1312,13 @@ internal static class DocxSectionNavigationTests
             PdfLinkAnnotation expected = control[0].Annotations.Single();
             TestAssert.True(expected.Destination is { PageIndex: 1, Left: > 100d },
                 "The control bookmark points to the second cell on page two.");
-            foreach (string variant in new[] { "column", "wrapped", "closed", "unoccupied" })
+            foreach (string variant in new[] { "column", "wrapped", "closed", "unoccupied",
+                         "row-boundary", "row-boundary-closed", "row-boundary-closed-in-cell" })
             {
                 PdfPage[] pages = RenderColumn(variant, spanned, mode);
                 TestAssert.True(control.Select(page => page.Content).SequenceEqual(pages.Select(page => page.Content)),
                     "A column bookmark preserves the painted page content.");
-                if (variant is "closed" or "unoccupied")
+                if (variant is "closed" or "unoccupied" or "row-boundary-closed" or "row-boundary-closed-in-cell")
                     TestAssert.Equal(0, pages[0].Annotations.Count);
                 else
                     TestAssert.Equal(expected, pages[0].Annotations.Single());
@@ -1342,6 +1343,10 @@ internal static class DocxSectionNavigationTests
                         cell.AddFirst(new XElement(W + "tcPr", new XElement(W + "gridSpan", new XAttribute(W + "val", 2))));
                 }
                 row.Add(first, second);
+                var table = new XElement(W + "tbl",
+                    new XElement(W + "tblPr", new XElement(W + "tblLayout", new XAttribute(W + "type", "fixed"))),
+                    new XElement(W + "tblGrid", Enumerable.Range(0, gridSize)
+                        .Select(_ => new XElement(W + "gridCol", new XAttribute(W + "w", 1600)))), row);
                 if (variant == "inside")
                 {
                     XElement paragraph = second.Element(W + "p")!;
@@ -1350,20 +1355,25 @@ internal static class DocxSectionNavigationTests
                 }
                 else
                 {
-                    // The start lives in the first cell even when the range
-                    // starts in another authored column of the row.
                     int column = variant == "unoccupied" ? gridSize : spanned ? 4 : 1;
                     start.SetAttributeValue(W + "colFirst", column);
                     start.SetAttributeValue(W + "colLast", column);
-                    first.Element(W + "p")!.AddBeforeSelf(variant == "wrapped"
-                        ? new XElement(W + "sdt", new XElement(W + "sdtContent", start)) : start);
-                    if (variant == "closed") start.AddAfterSelf(end);
-                    else row.Add(end);
+                    if (variant.StartsWith("row-boundary", StringComparison.Ordinal))
+                    {
+                        row.AddBeforeSelf(start);
+                        if (variant == "row-boundary-closed") start.AddAfterSelf(end);
+                        else if (variant == "row-boundary-closed-in-cell") first.Element(W + "p")!.AddBeforeSelf(end);
+                        else row.AddAfterSelf(end);
+                    }
+                    else
+                    {
+                        first.Element(W + "p")!.AddBeforeSelf(variant == "wrapped"
+                            ? new XElement(W + "sdt", new XElement(W + "sdtContent", start)) : start);
+                        if (variant == "closed") start.AddAfterSelf(end);
+                        else row.Add(end);
+                    }
                 }
-                target.ReplaceWith(new XElement(W + "tbl",
-                    new XElement(W + "tblPr", new XElement(W + "tblLayout", new XAttribute(W + "type", "fixed"))),
-                    new XElement(W + "tblGrid", Enumerable.Range(0, gridSize)
-                        .Select(_ => new XElement(W + "gridCol", new XAttribute(W + "w", 1600)))), row));
+                target.ReplaceWith(table);
             }, path => pages = Render(path, mode));
             return pages;
         }

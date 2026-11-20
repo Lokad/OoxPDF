@@ -11,12 +11,14 @@ internal sealed partial class DocxReader
     private static IEnumerable<(DocxRevisionScopedElement Scope, IReadOnlyList<DocxRevisionScopedElement>? Tables)>
         EnumerateLogicalTableBlocks(IEnumerable<XElement> elements, DocxStyleSet styles,
             OoxPdfDocxMarkupMode mode, CancellationToken token, DocxRevisionInfo? inheritedRevision = null,
-            IReadOnlyList<DocxBookmarkAnchor>? leadingBookmarks = null, bool readTableColumnBookmarks = false)
+            IReadOnlyList<DocxBookmarkAnchor>? leadingBookmarks = null, bool readTableColumnBookmarks = false,
+            DocxTableColumnBookmark[]? leadingColumnBookmarks = null)
     {
         DocxRevisionScopedElement? pending = null;
         List<DocxRevisionScopedElement>? tables = null;
         foreach (var block in EnumerateBookmarkedBlocks(elements, mode, token, inheritedRevision,
-            leadingBookmarks: leadingBookmarks, readTableColumnBookmarks: readTableColumnBookmarks))
+            leadingBookmarks: leadingBookmarks, readTableColumnBookmarks: readTableColumnBookmarks,
+            leadingColumnBookmarks: leadingColumnBookmarks))
         {
             if (pending is not null && CanJoinTables(pending.Element, block.Element, styles))
             {
@@ -34,7 +36,7 @@ internal sealed partial class DocxReader
     private static IEnumerable<DocxRevisionScopedElement> EnumerateBookmarkedBlocks(IEnumerable<XElement> elements,
         OoxPdfDocxMarkupMode mode, CancellationToken token, DocxRevisionInfo? inheritedRevision,
         XName? tableChildName = null, IReadOnlyList<DocxBookmarkAnchor>? leadingBookmarks = null,
-        bool readTableColumnBookmarks = false)
+        bool readTableColumnBookmarks = false, DocxTableColumnBookmark[]? leadingColumnBookmarks = null)
     {
         XName importedContentName = WordprocessingNamespace + "altChunk";
         XName bookmarkStartName = WordprocessingNamespace + "bookmarkStart";
@@ -54,6 +56,15 @@ internal sealed partial class DocxReader
             }
         }
         Dictionary<string, DocxTableColumnBookmark>? columnStarts = null;
+        if (leadingColumnBookmarks is { Length: > 0 })
+        {
+            columnStarts = new(StringComparer.Ordinal);
+            foreach (var bookmark in leadingColumnBookmarks)
+            {
+                token.ThrowIfCancellationRequested();
+                columnStarts.TryAdd(NormalizeDecimalId(bookmark.Anchor.Id)!, bookmark);
+            }
+        }
         foreach (var scope in EnumerateRevisionScopedChildren(elements, mode, token, includedNames, inheritedRevision))
         {
             token.ThrowIfCancellationRequested();
