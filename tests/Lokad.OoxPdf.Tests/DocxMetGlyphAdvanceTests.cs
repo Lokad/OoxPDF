@@ -4,6 +4,7 @@ using System.Xml.Linq;
 using Lokad.OoxPdf.Docx;
 using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Pdf;
+using static Lokad.OoxPdf.Tests.DocxElevenPointFixture;
 
 namespace Lokad.OoxPdf.Tests;
 
@@ -20,7 +21,7 @@ internal static class DocxMetGlyphAdvanceTests
             double actual = 1.220d * 11.04d - adjustment * 11.04d / 1000d;
             Near(.600d * 11d - .050d * 11d + .620d * 11.04d + spacing, actual, "Actual TJ uses logical A/pair advances and keeps the final B physical width.");
         }
-        var style = DocxNominalGlyphAdvanceTests.Read(false).Paragraphs[0].Runs.First(r => r.Text.Any(char.IsLetter))
+        var style = Read(false).Paragraphs[0].Runs.First(r => r.Text.Any(char.IsLetter))
             with { Text = "AB", FontFamily = "Calibri", FontSize = 11, PairKerningEnabled = true, UseLogicalSizeForPdfAdvances = true };
         var plan = DocxTextEmissionPlanner.Create(style, 11, 0, false, DocxTextStateCharacterSpacingSource.None);
         var profile = DocxTextEmissionPlanner.MeasureAdvanceProfile("AB", embedded, 1.170d * 11d, plan);
@@ -33,12 +34,12 @@ internal static class DocxMetGlyphAdvanceTests
     {
         foreach (string threshold in new[] { "2", "20", "22", "24" })
         {
-            var source = DocxNominalGlyphAdvanceTests.Read(true, (xml, _) =>
+            var source = Read(true, (xml, _) =>
             {
-                foreach (var rp in xml.Root!.Element(Word + "body")!.Elements(Word + "p").SelectMany(p => p.Descendants(Word + "rPr")))
+                foreach (var rp in Body(xml).SelectMany(p => p.Descendants(Word + "rPr")))
                     rp.Add(new XElement(Word + "kern", new XAttribute(Word + "val", threshold)));
             });
-            TestAssert.True(DocxPlainFootnoteKerning.TryCreateDocument(source, DocxNominalGlyphAdvanceTests.Layout(source), out var adjusted, out _), "Complete source-owned frame qualifies the diagnostic clone.");
+            TestAssert.True(DocxPlainFootnoteKerning.TryCreateDocument(source, Layout(source), out var adjusted, out _), "Complete source-owned frame qualifies the diagnostic clone.");
             var body = adjusted.Paragraphs.SelectMany(p => p.Runs).Where(r => r.Text.Length != 0 && r.VerticalAlignment == DocxRunVerticalAlignment.Baseline).ToArray();
             bool met = threshold != "24";
             TestAssert.True(body.All(r => r.UseLogicalSizeForPdfAdvances && r.PairKerningEnabled == met), "Logical advances retain the authored positive-threshold pair policy.");
@@ -50,17 +51,17 @@ internal static class DocxMetGlyphAdvanceTests
 
     public static void DocxMetGlyphAdvanceRetainsCompleteOwnerPagesAndActualTargets()
     {
-        var source = DocxNominalGlyphAdvanceTests.Read(true, (xml, _) =>
+        var source = Read(true, (xml, _) =>
         {
-            foreach (var rp in xml.Root!.Element(Word + "body")!.Elements(Word + "p").SelectMany(p => p.Descendants(Word + "rPr")))
+            foreach (var rp in Body(xml).SelectMany(p => p.Descendants(Word + "rPr")))
                 rp.Add(new XElement(Word + "kern", new XAttribute(Word + "val", "22")));
         });
-        var old = DocxNominalGlyphAdvanceTests.Layout(source);
+        var old = Layout(source);
         TestAssert.True(DocxPlainFootnoteKerning.TryCreateDocument(source, old, out var adjusted, out var owners), "Every complete note has one exact source owner.");
-        var current = DocxNominalGlyphAdvanceTests.Layout(adjusted);
+        var current = Layout(adjusted);
         TestAssert.Equal(old.Pages.Count, current.Pages.Count);
         TestAssert.True(DocxPageFootnoteNumbering.HasStablePages(adjusted, current, owners), "Each complete note retains its source owner's page.");
-        var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        var renderer = Renderer(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
         var pages = renderer.RenderPagesAsync(source, null, CancellationToken.None).ToBlockingEnumerable().ToArray();
         TestAssert.Equal(4, pages.Sum(p => p.Annotations.Count));
         for (int i = 0; i < pages.Length; i++) TestAssert.True(pages[i].Annotations.All(a => a.Destination!.Value.PageIndex == i), "Actual destinations retain the complete owned page.");
@@ -70,9 +71,9 @@ internal static class DocxMetGlyphAdvanceTests
     {
         foreach (string family in new[] { "Calibri", "Arial" })
         {
-            var source = DocxNominalGlyphAdvanceTests.Read(false, (xml, _) =>
+            var source = Read(false, (xml, _) =>
             {
-                foreach (var rp in xml.Root!.Element(Word + "body")!.Elements(Word + "p").SelectMany(p => p.Descendants(Word + "rPr")))
+                foreach (var rp in Body(xml).SelectMany(p => p.Descendants(Word + "rPr")))
                 {
                     var fonts = rp.Element(Word + "rFonts");
                     if (fonts is null) { fonts = new XElement(Word + "rFonts"); rp.AddFirst(fonts); }
@@ -81,30 +82,29 @@ internal static class DocxMetGlyphAdvanceTests
                 }
             });
             TestAssert.True(DocxPlainElevenPointBody.HasQualifiedTypography(source), "The excluded met face retains accepted 11pt source typography.");
-            var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var renderer = Renderer(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var word = renderer.InspectTextEmission(source);
             TestAssert.True(word.Lines.SelectMany(l => l.Segments).Any(s => s.AdvanceProfile.NominalAdvanceAdjustmentTotal < 0),
                 "Authored baseline advances are independent of a font-specific body-layout correction.");
-            TestAssert.True(!DocxPlainFootnoteKerning.TryCreateDocument(source, DocxNominalGlyphAdvanceTests.Layout(source),
+            TestAssert.True(!DocxPlainFootnoteKerning.TryCreateDocument(source, Layout(source),
                 out var unchanged, out _) && ReferenceEquals(source, unchanged),
                 "The separately qualified ordinary met-frame admission stays unchanged.");
             TestAssert.True(source.Paragraphs.SelectMany(p => p.Runs).All(r => !r.UseLogicalSizeForPdfAdvances && r.PairKerningEnabled), "The excluded source retains its metadata and pair policy.");
         }
 
-        var mixed = DocxNominalGlyphAdvanceTests.Read(true, (xml, _) =>
+        var mixed = Read(true, (xml, _) =>
         {
-            var properties = xml.Root!.Element(Word + "body")!.Elements(Word + "p").SelectMany(p => p.Descendants(Word + "rPr")).ToArray();
+            var properties = Body(xml).SelectMany(p => p.Descendants(Word + "rPr")).ToArray();
             foreach (var rp in properties) rp.Add(new XElement(Word + "kern", new XAttribute(Word + "val", "22")));
             properties[0].Element(Word + "kern")!.SetAttributeValue(Word + "val", "20");
         });
         TestAssert.True(DocxPlainElevenPointBody.HasQualifiedTypography(mixed), "Mixed positive thresholds retain accepted source typography.");
-        var mixedRenderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        var mixedRenderer = Renderer(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
         TestAssert.True(mixedRenderer.InspectTextEmission(mixed).Lines.SelectMany(l => l.Segments).Any(s => s.AdvanceProfile.NominalAdvanceAdjustmentTotal < 0),
             "Mixed thresholds resolve per source run without changing the complete-note admission policy.");
-        TestAssert.True(DocxPlainFootnoteKerning.TryCreateDocument(mixed, DocxNominalGlyphAdvanceTests.Layout(mixed), out var mixedAdjusted, out _), "Existing complete-note policy still applies.");
+        TestAssert.True(DocxPlainFootnoteKerning.TryCreateDocument(mixed, Layout(mixed), out var mixedAdjusted, out _), "Existing complete-note policy still applies.");
         TestAssert.True(mixedAdjusted.Paragraphs.SelectMany(p => p.Runs).Where(r => r.VerticalAlignment == DocxRunVerticalAlignment.Superscript).All(r => r.PairKerningEnabled), "Mixed thresholds retain the accepted source-owned marker pair policy.");
     }
 
-    private static readonly XNamespace Word = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
     private static void Near(double expected, double actual, string message) => TestAssert.True(Math.Abs(expected - actual) < .00001d, message);
 }

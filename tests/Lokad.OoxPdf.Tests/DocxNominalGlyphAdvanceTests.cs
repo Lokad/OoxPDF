@@ -1,11 +1,11 @@
 using System.Globalization;
-using System.IO.Compression;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Docx;
 using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Pdf;
+using static Lokad.OoxPdf.Tests.DocxElevenPointFixture;
 
 namespace Lokad.OoxPdf.Tests;
 
@@ -128,61 +128,5 @@ internal static class DocxNominalGlyphAdvanceTests
             for (int i = 0; i < pages.Length; i++) TestAssert.True(pages[i].Annotations.All(a => a.Destination!.Value.PageIndex == i), "Actual link destinations remain on the owned page.");
         }
     }
-    private static readonly XNamespace Word = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
-    private static XElement[] Body(XDocument xml) => xml.Root!.Element(Word + "body")!.Elements(Word + "p").ToArray();
-    private static XElement Spacing(XElement p) => p.Element(Word + "pPr")!.Element(Word + "spacing")!;
-    private static DocxTextLineLayout[] Lines(DocxLayout layout) => layout.Pages.SelectMany(p => p.Items).OfType<DocxTextLineLayout>().ToArray();
-    private static DocxRenderer Renderer(OoxPdfDocxMarkupGeometryMode mode) => new(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup, mode);
     private static void Near(double expected, double actual, string message) => TestAssert.True(Math.Abs(expected - actual) < .00001d, message);
-    private static void AddStyle(XDocument styles, string id, bool isDefault = false)
-    {
-        var style = new XElement(Word + "style", new XAttribute(Word + "type", "paragraph"), new XAttribute(Word + "styleId", id), new XElement(Word + "name", new XAttribute(Word + "val", id)));
-        if (isDefault) style.SetAttributeValue(Word + "default", "1");
-        styles.Root!.Add(style);
-    }
-    internal static DocxLayout Layout(DocxDocument document)
-    {
-        var resolver = new TestFaceFontResolver();
-        var measurer = DocxFontPlanTextMeasurer.CreateAsync(DocxFontPlan.Create(document, resolver, CancellationToken.None), resolver.Resolve(new FontRequest("Calibri", false, false)), CancellationToken.None, resolver).GetAwaiter().GetResult();
-        return new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, measurer, CancellationToken.None);
-    }
-    internal static DocxDocument Read(bool notes, Action<XDocument, XDocument>? modify = null, bool removeStyles = false)
-    {
-        string input = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", notes ? "note-marked-minimum-line-20.docx" : "ordinary-minimum-line-20.docx"));
-        var parts = new Dictionary<string, string>();
-        using (var zip = ZipFile.OpenRead(input))
-            foreach (var entry in zip.Entries) { using var reader = new StreamReader(entry.Open()); parts[entry.FullName] = reader.ReadToEnd(); }
-        var xml = XDocument.Parse(parts["word/document.xml"]); var styles = XDocument.Parse(parts["word/styles.xml"]);
-        foreach (var p in Body(xml))
-        {
-            foreach (var run in p.Elements(Word + "r"))
-            {
-                var rp = run.Element(Word + "rPr");
-                if (rp is null) { rp = new XElement(Word + "rPr"); run.AddFirst(rp); }
-                var size = rp.Element(Word + "sz");
-                if (size is null) { size = new XElement(Word + "sz"); rp.Add(size); }
-                size.SetAttributeValue(Word + "val", "22");
-                if (run.Element(Word + "t") is { } text) text.Value += " AB.";
-            }
-            Spacing(p).SetAttributeValue(Word + "before", "80"); Spacing(p).SetAttributeValue(Word + "after", "80");
-            p.Element(Word + "pPr")!.Add(new XElement(Word + "contextualSpacing"));
-        }
-        modify?.Invoke(xml, styles);
-        parts["word/document.xml"] = xml.ToString(); parts["word/styles.xml"] = styles.ToString();
-        if (notes)
-        {
-            var footnotes = XDocument.Parse(parts["word/footnotes.xml"]);
-            foreach (var p in footnotes.Descendants(Word + "p"))
-            {
-                var pr = p.Element(Word + "pPr"); if (pr is null) { pr = new XElement(Word + "pPr"); p.AddFirst(pr); }
-                var sp = pr.Element(Word + "spacing"); if (sp is null) { sp = new XElement(Word + "spacing"); pr.Add(sp); }
-                sp.SetAttributeValue(Word + "before", "0");
-                pr.Add(new XElement(Word + "contextualSpacing", new XAttribute(Word + "val", "0")));
-            }
-            parts["word/footnotes.xml"] = footnotes.ToString();
-        }
-        if (removeStyles) parts.Remove("word/styles.xml");
-        string temporary = TestFixtures.WriteTempPackage(".docx", parts);
-        try { return DocxTests.ReadDocx(temporary, OoxPdfDocxMarkupMode.AllMarkup); } finally { File.Delete(temporary); }
-    }
 }
