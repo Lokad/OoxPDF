@@ -66,6 +66,46 @@ internal static class DocxFieldInstructionTests
         }
     }
 
+    public static void DocxComputedOuterFieldsSuppressNestedCountersInTheirReplacedResult()
+    {
+        var resolver = new PortableRenderingTests.PinnedResolver();
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        foreach (bool simple in new[] { false, true })
+        foreach (bool acrossBreak in new[] { false, true })
+        {
+            var source = new List<XElement> { Run("Before ") };
+            source.AddRange(Field([" PAGE "], null, end: false));
+            source.Add(Run("91"));
+            if (acrossBreak)
+                source.Add(new XElement(W + "r", new XElement(W + "br", new XAttribute(W + "type", "page"))));
+            if (simple)
+                source.Add(new XElement(W + "fldSimple", new XAttribute(W + "instr", " NUMPAGES "), Run("73")));
+            else
+                source.AddRange(Field([" NUMPAGES "], "73"));
+            source.Add(new XElement(W + "r", new XElement(W + "fldChar", new XAttribute(W + "fldCharType", "end"))));
+            source.Add(Run(" after 42"));
+
+            DocxDocument document = Read(source.ToArray(), mode);
+            TestAssert.Equal("Before {PAGE} after 42", string.Concat(document.Paragraphs.SelectMany(p => p.Runs).Select(run => run.Text)));
+            var fields = document.Paragraphs.SelectMany(p => p.FieldReferences).ToArray();
+            TestAssert.True(fields.Single(field => field.Kind == DocxFieldKind.Page) is { UsesPlaceholder: true, HasCachedResult: true },
+                "The computed outer field owns one replacement.");
+            TestAssert.True(fields.Single(field => field.Kind == DocxFieldKind.NumPages) is { UsesPlaceholder: false, HasCachedResult: true, RendersCachedResult: false },
+                "The nested field retains its source and neither a generated nor a stored value paints.");
+
+            var geometry = mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout
+                : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup;
+            var pages = new DocxRenderer(resolver, mode, geometry).RenderPagesAsync(document, null, default)
+                .ToBlockingEnumerable()
+                .Select(page => string.Concat(DocxPageFootnoteNumberingTests.DecodeText(page).Where(character => !char.IsWhiteSpace(character))))
+                .ToArray();
+            TestAssert.Equal(acrossBreak ? 2 : 1, pages.Length);
+            TestAssert.Equal(acrossBreak ? "Before1" : "Before1after42", pages[0]);
+            if (acrossBreak)
+                TestAssert.Equal("after42", pages[1]);
+        }
+    }
+
     public static void DocxFieldInstructionSplittingPreservesCompleteOpcodesAndCachedValues()
     {
         foreach (var mode in Modes)

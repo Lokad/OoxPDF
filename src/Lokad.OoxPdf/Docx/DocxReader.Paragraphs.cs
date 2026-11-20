@@ -552,7 +552,8 @@ internal sealed partial class DocxReader
                 // Bare computed values inherit their instruction's paragraph-style
                 // formatting, rather than stale cached-result formatting. Explicit
                 // MERGEFORMAT and unqualified switches keep the cached-style fallback.
-                if (ownsCounter)
+                bool publishesCounter = ownsCounter && !HasReplacingFieldResult(complexFieldStack.Count);
+                if (publishesCounter)
                 {
                     XElement? formattingRun = null;
                     if (!UsesDefaultDynamicFieldFormatting(instruction, kind))
@@ -626,7 +627,7 @@ internal sealed partial class DocxReader
                         fieldTextLengthStart,
                         hasCachedResult,
                         rendersCachedResult: false,
-                        usesPlaceholder: true, hasSeparate: false, nestingDepth: 0, instructionRunCount: 0, resultRunCount: 0,
+                        usesPlaceholder: publishesCounter, hasSeparate: false, nestingDepth: 0, instructionRunCount: 0, resultRunCount: 0,
                         fieldReferences: fieldReferences,
                         runs: runs);
                 }
@@ -1304,6 +1305,8 @@ internal sealed partial class DocxReader
         void EmitPendingFieldPlaceholder(DocxComplexFieldState field, int currentSourceRunIndex, int offset = 0, int order = 0)
         {
             if (field.PendingPlaceholder is not { } pending) return;
+            field.PendingPlaceholder = null;
+            if (HasReplacingFieldResult(field.NestingDepth)) return;
             if (pending.SourceRunIndex < 0)
             {
                 pending = pending with
@@ -1316,10 +1319,21 @@ internal sealed partial class DocxReader
             }
             field.EnsureTextSpan(runs.Count, runs.Sum(run => run.Text.Length));
             runs.Add(pending);
-            field.PendingPlaceholder = null;
             field.ResultRunCount++;
             field.PlaceholderEmitted = true;
             pageInstructionSeen = true;
+        }
+
+        // Computed results own their replacement text, including nested counters.
+        // Stored fields and the separate drawing path retain their existing owners.
+        bool HasReplacingFieldResult(int ancestorCount)
+        {
+            for (int index = ancestorCount - 1; index >= 0; index--)
+            {
+                if (complexFieldStack[index] is { InResult: true, PlaceholderEmitted: true })
+                    return true;
+            }
+            return false;
         }
 
         void RecordComplexFieldResult()
