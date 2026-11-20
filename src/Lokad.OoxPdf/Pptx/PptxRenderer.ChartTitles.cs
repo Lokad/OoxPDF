@@ -162,8 +162,6 @@ internal sealed partial class PptxRenderer
                 axis.Title.Layout,
                 ToChartShapeStyle(axis.Title.ShapeStyle),
                 ToChartTextStyleOverride(PptxSceneBuilder.ResolveChartElementTextStyleOverride(sceneChart, axis.Title.TextStyle, GetChartAxisStyleRole(axis.AxisKind))),
-                ChartTextStyleOverride.Empty,
-                ChartTextStyleOverride.Empty,
                 fontResolver, chartFonts, context, sceneChart, linkAnnotations, reportedHyperlinkIds, diagnosticSink).ConfigureAwait(false);
         }
     }
@@ -232,9 +230,9 @@ internal sealed partial class PptxRenderer
     private static ChartTextStyle ReadDefaultAxisTitleStyle(PptxTheme theme, PptxSceneChart chart, PptxSceneChartAxis axis)
     {
         ChartTextStyle style = CreateDefaultChartTextStyle(theme, fallbackFontSize: PptxChartMetricRules.TitleFallbackFontSize);
-        ChartTextStyleOverride title = ToChartTextStyleOverride(axis.Title.TextStyle);
+        PptxSceneChartTextStyleOverride title = axis.Title.TextStyle;
         style = style.Merge(ToChartTextStyleOverride(PptxSceneBuilder.ResolveChartElementTextStyleOverride(
-            chart, axis.Title.TextStyle, GetChartAxisStyleRole(axis.AxisKind)))).Merge(title);
+            chart, title, GetChartAxisStyleRole(axis.AxisKind))));
         if (title.Bold is null) style = style with { Bold = true };
         if (title.Color is null) style = style with { Color = new RgbColor(0, 0, 0) };
         return style;
@@ -486,9 +484,7 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<ChartTextRunOverride> textRuns,
         PptxSceneChartManualLayout layout,
         ChartShapeStyle shapeStyle,
-        ChartTextStyleOverride chartTextStyle,
-        ChartTextStyleOverride chartStyleRoleTextStyle,
-        ChartTextStyleOverride titleTextStyle,
+        ChartTextStyleOverride resolvedStyle,
         PresentationFontResolver? fontResolver,
         List<PdfFontResource> chartFonts,
         PptxRenderContext context,
@@ -503,10 +499,8 @@ internal sealed partial class PptxRenderer
             return;
         }
 
-        ChartTextStyle style = CreateDefaultChartTextStyle(theme, fallbackFontSize: PptxChartMetricRules.TitleFallbackFontSize);
-        style = style.Merge(chartTextStyle);
-        style = style.Merge(chartStyleRoleTextStyle);
-        style = style.Merge(titleTextStyle);
+        ChartTextStyle style = CreateDefaultChartTextStyle(theme, fallbackFontSize: PptxChartMetricRules.TitleFallbackFontSize)
+            .Merge(resolvedStyle);
         RenderChartShapeStyle(graphics, titleBox.X, titleBox.Y, titleBox.Width, titleBox.Height, shapeStyle);
         var runs = new List<TextRun>();
         List<ChartTextRunLink>? axisLinks = chart?.Relationships is null ? null : new List<ChartTextRunLink>();
