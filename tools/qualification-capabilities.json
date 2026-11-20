@@ -4491,6 +4491,7 @@
   ],
   "docx-explicit-page-events": [
     "DocxExplicitPageBreaksRetainEventsAndSingleMarkAdmission",
+    "=DocxInlineMetadataLeadingBreaksKeepBookmarkOnThePaintedTarget",
     "DocxRepeatedPageBreaksRetainLayoutPageLimit",
     "PortableRenderingPageBreaksKeepMathPicturesAndNavigation",
     "DocxBreakOnlyMetadataPreservesParagraphFrames",
@@ -4523,6 +4524,7 @@
   ],
   "docx-repeated-column-breaks": [
     "DocxRepeatedColumnBreaksKeepEventsAndOneParagraphMark",
+    "=DocxInlineMetadataLeadingBreaksKeepBookmarkOnThePaintedTarget",
     "DocxBreakOnlyMetadataPreservesParagraphFrames",
     "DocxBreakOnlyMetadataDoesNotHidePayloadOrMisplacedProperties",
     "DocxReaderPromotesRunPageBreakOnlyParagraph",
@@ -8658,6 +8660,7 @@
   ],
   "docx-inline-metadata-wrappers": [
     "DocxInlineMetadataWrappers",
+    "=DocxInlineMetadataLeadingBreaksKeepBookmarkOnThePaintedTarget",
     "PortableRenderingInlineMetadataWrappersRetainParentFrames",
     "DocxComplexFieldWithCachedResultInsideInlineContentControlDoesNotEmitUnsupportedDiagnostic",
     "DocxComplexFieldSpanningInlineContentControlUsesCachedResult",

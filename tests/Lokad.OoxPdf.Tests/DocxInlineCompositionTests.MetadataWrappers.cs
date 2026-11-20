@@ -3,6 +3,7 @@ using System.Xml.Linq;
 using Lokad.OoxPdf.Docx;
 using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Ooxml;
+using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Tests;
 
@@ -117,6 +118,70 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.True(type == "page" ? document.BodyElements[1] is DocxPageBreakElement : document.BodyElements[1] is DocxManualBreakElement,
                 "A hard break inside metadata remains an explicit body boundary.");
             TestAssert.Equal("After", string.Concat(((DocxParagraphElement)document.BodyElements[2]).Paragraph.Runs.Select(run => run.Text)));
+        }
+    }
+
+    public static void DocxInlineMetadataLeadingBreaksKeepBookmarkOnThePaintedTarget()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        foreach (string type in new[] { "page", "column" })
+        {
+            var geometry = mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
+                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup;
+            var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(), mode, geometry);
+            PdfPage[] control = Render("direct");
+            int targetPage = type == "page" ? 1 : 0;
+            var link = control[0].Annotations.Single();
+            TestAssert.Equal(targetPage + 1, control.Length);
+            TestAssert.True(link.Destination is { } destination && destination.PageIndex == targetPage &&
+                (type == "page" || destination.Left > 200d), "The direct bookmark reaches the continuation page or column.");
+            TestAssert.Contains("AUTHORED AFTER BREAK", string.Concat(
+                DocxCommentsTests.ReadEmbeddedGlyphTextShows(control[targetPage]).Select(show => show.Text)));
+
+            foreach (string wrapper in new[] { "sdt", "customXml", "smartTag", "nested" })
+            {
+                PdfPage[] pages = Render(wrapper);
+                TestAssert.True(control.Select(page => page.Content).SequenceEqual(pages.Select(page => page.Content)),
+                    "Wrapper properties preserve the authored pagination and paint.");
+                TestAssert.Equal(link, pages[0].Annotations.Single());
+            }
+
+            PdfPage[] Render(string wrapper)
+            {
+                var document = ReadMutation("Composition/report", mode, false, false, (xml, w, _) =>
+                {
+                    var body = xml.Root!.Element(w + "body")!;
+                    var section = new XElement(body.Element(w + "sectPr")!);
+                    if (type == "column")
+                    {
+                        section.SetElementValue(w + "cols", null);
+                        section.Add(new XElement(w + "cols", new XAttribute(w + "num", 2)));
+                    }
+
+                    var run = new XElement(w + "r", new XElement(w + "br", new XAttribute(w + "type", type)),
+                        new XElement(w + "t", "AUTHORED AFTER BREAK"));
+                    XElement ContentControl(XElement item) => new(w + "sdt",
+                        new XElement(w + "sdtPr", new XElement(w + "alias", new XAttribute(w + "val", "Break probe"))),
+                        new XElement(w + "sdtContent", item));
+                    XElement Metadata(string kind, XElement item) => MetadataWrapper(w, kind, new XElement(w + (kind + "Pr")), item);
+                    XElement content = wrapper switch
+                    {
+                        "direct" => run,
+                        "sdt" => ContentControl(run),
+                        "nested" => ContentControl(Metadata("customXml", Metadata("smartTag", run))),
+                        _ => Metadata(wrapper, run)
+                    };
+                    body.ReplaceNodes(
+                        new XElement(w + "p", new XElement(w + "hyperlink", new XAttribute(w + "anchor", "destination"),
+                            new XElement(w + "r", new XElement(w + "t", "JUMP TO BREAK DESTINATION")))),
+                        new XElement(w + "bookmarkStart", new XAttribute(w + "id", 131), new XAttribute(w + "name", "destination")),
+                        new XElement(w + "p", content),
+                        new XElement(w + "bookmarkEnd", new XAttribute(w + "id", 131)),
+                        section);
+                });
+                TestAssert.Equal(3, document.BodyElements.Count);
+                return renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
+            }
         }
     }
 

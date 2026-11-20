@@ -634,7 +634,9 @@ internal sealed partial class DocxReader
             flushOwnerAndParagraph(endsBeforeBreak);
         }
 
-        foreach (XElement containerChild in sourceContainer.Elements())
+        // The same stored children supplied the break candidates. Properties
+        // alone must not create a paragraph fragment before a leading break.
+        foreach (XElement containerChild in DocxSourceXml.StoredChildren(sourceContainer))
         {
             if (containerChild.Name != WordprocessingNamespace + "r")
             {
