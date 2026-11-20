@@ -29,9 +29,14 @@ internal static class PptxRunTextAttributeReaders
 
     internal static double ReadCharacterSpacing(XElement? runProperties, XElement? defaultRunProperties)
     {
-        return (runProperties?.Attribute("spc") ?? defaultRunProperties?.Attribute("spc")) is { } spacing
-            ? int.Parse(spacing.Value, CultureInfo.InvariantCulture) / 100d
-            : 0d;
+        return ReadOptionalCharacterSpacing(runProperties) ?? ReadOptionalCharacterSpacing(defaultRunProperties) ?? 0d;
+    }
+
+    internal static double? ReadOptionalCharacterSpacing(XElement? runProperties)
+    {
+        return int.TryParse((string?)runProperties?.Attribute("spc"), NumberStyles.Integer, CultureInfo.InvariantCulture, out int spacing)
+            ? spacing / 100d
+            : null;
     }
 
     internal static double ReadBaselineOffset(XElement? runProperties, XElement? defaultRunProperties, double fontSize)

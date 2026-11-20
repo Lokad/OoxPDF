@@ -137,7 +137,7 @@ internal sealed partial class PptxSceneBuilder
             sizeHundredths > 0
                 ? sizeHundredths / 100d
                 : null;
-        double? characterSpacing = ReadOptionalChartCharacterSpacing(runProperties);
+        double? characterSpacing = PptxRunTextAttributeReaders.ReadOptionalCharacterSpacing(runProperties);
         bool noFill = PptxRunTextAttributeReaders.HasTextNoFill(runProperties);
         double alpha = 1d;
         RgbColor? color = noFill ? new RgbColor(0, 0, 0)

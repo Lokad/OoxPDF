@@ -79,6 +79,8 @@
     "PptxInheritanceParagraphPaintOutranksShapeFontReference"
   ],
   "pptx-scene-text-storage": [
+    "=PptxInvalidParagraphLevelsKeepShapeAndCellContent",
+    "=PptxInvalidCharacterSpacingKeepsInheritedSpacingAndContent",
     "PptxInheritanceLayersRetainLiveRunStylesAndFrames",
     "SceneParagraphRetainsCascadeDefaults",
     "SceneCascadeLayersMatchRendererSnapshot",

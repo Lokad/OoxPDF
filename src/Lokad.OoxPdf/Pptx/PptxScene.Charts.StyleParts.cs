@@ -342,7 +342,7 @@ internal sealed partial class PptxSceneBuilder
             sizeHundredths > 0
                 ? sizeHundredths / 100d
                 : null;
-        double? characterSpacing = ReadOptionalChartCharacterSpacing(defaultRunProperties);
+        double? characterSpacing = PptxRunTextAttributeReaders.ReadOptionalCharacterSpacing(defaultRunProperties);
         RgbColor? color = PptxColorResolver.TryReadSolidColorWithAlpha(defaultRunProperties?.Element(DrawingNamespace + "solidFill"), theme, colorMap, out RgbColor parsedColor, out double alpha) ||
             PptxColorResolver.TryReadSolidColorWithAlpha(fontReference, theme, colorMap, out parsedColor, out alpha)
                 ? parsedColor

@@ -641,10 +641,8 @@ internal sealed partial class PptxRenderer
         foreach (XElement paragraph in textBody.Elements(DrawingNamespace + "p"))
         {
             XElement? paragraphProperties = paragraph.Element(DrawingNamespace + "pPr");
-            int paragraphLevel = paragraphProperties?.Attribute("lvl") is { } levelAttribute
-                ? int.Parse(levelAttribute.Value, CultureInfo.InvariantCulture)
-                : 0;
-            string levelName = $"lvl{Math.Clamp(paragraphLevel + 1, 1, 9).ToString(CultureInfo.InvariantCulture)}pPr";
+            int paragraphLevel = PptxTextStyleInheritance.ReadParagraphLevel(paragraphProperties);
+            string levelName = PptxTextStyleInheritance.ParagraphLevelName(paragraphLevel);
             PptxParagraphStyleCascade cascade = BuildParagraphStyleCascade(levelName);
             XElement? defaultParagraphProperties = cascade.ResolveDefaultProperties();
             PptxParagraphStyleCascade resolvedStyleCascade = BuildResolvedParagraphStyleCascade(cascade, paragraphProperties);
@@ -745,7 +743,7 @@ internal sealed partial class PptxRenderer
 
             XElement paragraph = sceneParagraph.Source;
             XElement? paragraphProperties = sceneParagraph.Properties;
-            string levelName = "lvl" + Math.Clamp(sceneParagraph.Level + 1, 1, 9).ToString(CultureInfo.InvariantCulture) + "pPr";
+            string levelName = PptxTextStyleInheritance.ParagraphLevelName(sceneParagraph.Level);
             var cascade = new PptxParagraphStyleCascade(
                 levelName,
                 sceneParagraph.CascadeLayers.Select(layer => new PptxParagraphStyleLayer(layer.Name, SceneCascadeLayerKind(layer.Kind), layer.Source)).ToList());

@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Xml.Linq;
 using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
 
@@ -51,10 +50,8 @@ internal sealed partial class PptxSceneBuilder
         XElement? defaultTextStyle)
     {
         XElement? properties = paragraph.Element(DrawingNamespace + "pPr");
-        int level = properties?.Attribute("lvl") is { } levelAttribute
-            ? int.Parse(levelAttribute.Value, CultureInfo.InvariantCulture)
-            : 0;
-        string levelName = "lvl" + Math.Clamp(level + 1, 1, 9).ToString(CultureInfo.InvariantCulture) + "pPr";
+        int level = PptxTextStyleInheritance.ReadParagraphLevel(properties);
+        string levelName = PptxTextStyleInheritance.ParagraphLevelName(level);
         var cascadeLayers = new List<PptxSceneCascadeLayer>
         {
             new("shape.lstStyle", "ShapeListStyle", textBody.Element(DrawingNamespace + "lstStyle")?.Element(DrawingNamespace + levelName)),
@@ -110,13 +107,4 @@ internal sealed partial class PptxSceneBuilder
 
         return null;
     }
-
-    private static double? ReadOptionalChartCharacterSpacing(XElement? runProperties)
-    {
-        return runProperties?.Attribute("spc") is { } spacing &&
-            int.TryParse(spacing.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int spacingHundredths)
-                ? spacingHundredths / 100d
-                : null;
-    }
-
 }

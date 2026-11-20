@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Ooxml;
 using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
@@ -6,6 +7,11 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal static class PptxTextStyleInheritance
 {
+    public static int ReadParagraphLevel(XElement? paragraphProperties) =>
+        OoxXml.ReadOptionalInt(paragraphProperties, "lvl", 0);
+
+    public static string ParagraphLevelName(int level) =>
+        "lvl" + (Math.Clamp(level, 0, 8) + 1).ToString(CultureInfo.InvariantCulture) + "pPr";
 
     public static XElement? FindInheritedTextStyle(XElement shape, IReadOnlyList<XDocument> placeholderSources, string levelName)
     {
