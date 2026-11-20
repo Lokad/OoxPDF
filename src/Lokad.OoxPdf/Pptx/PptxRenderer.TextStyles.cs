@@ -75,6 +75,7 @@ internal sealed partial class PptxRenderer
         tableStyleTextStyle = BelowParagraphDefaults(tableStyleTextStyle, paragraphDefaults);
         XElement? runProperties = cascade.DirectProperties;
         XElement? defaultRunProperties = cascade.ResolvedDefaultProperties;
+        PptxSceneHyperlinkClick hyperlink = PptxSceneBuilder.ReadHyperlinkClick(runProperties);
         double nominalFontSize = ReadFontSize(runProperties, defaultRunProperties) * fontScale;
         double baselineOffset = ReadBaselineOffset(runProperties, defaultRunProperties, nominalFontSize);
         double fontSize = PptxTextMetricRules.ShouldScaleSuperscriptSubscript(baselineOffset, nominalFontSize)
@@ -89,7 +90,7 @@ internal sealed partial class PptxRenderer
             colorSource = PptxRunTextColorSource.RunNoFill;
             alpha = 0d;
         }
-        else if (HasHyperlinkClick(runProperties) && theme.TryResolveColor("hlink", colorMap, out RgbColor hyperlinkColor))
+        else if (hyperlink.IsDefined && theme.TryResolveColor("hlink", colorMap, out RgbColor hyperlinkColor))
         {
             color = hyperlinkColor;
             colorSource = PptxRunTextColorSource.ThemeHyperlink;
@@ -132,12 +133,11 @@ internal sealed partial class PptxRenderer
             (runProperties?.Attribute("b") is null && OoxXml.ParseOptionalBool(defaultRunProperties, "b"));
         bool italic = OoxXml.ParseOptionalBool(runProperties, "i") ||
             (runProperties?.Attribute("i") is null && OoxXml.ParseOptionalBool(defaultRunProperties, "i"));
-        bool hasHyperlinkClick = HasHyperlinkClick(runProperties);
         string? underlineValue = ReadUnderlineValue(runProperties, defaultRunProperties);
         string? strikeValue = ReadStrikeValue(runProperties, defaultRunProperties);
         string? capsValue = ReadTextCapsValue(runProperties, defaultRunProperties);
         bool underline = underlineValue is null
-            ? hasHyperlinkClick
+            ? hyperlink.IsDefined
             : !underlineValue.Equals("none", StringComparison.OrdinalIgnoreCase);
 
         return new ResolvedRunTextStyle(
@@ -150,13 +150,13 @@ internal sealed partial class PptxRenderer
             alpha,
             TryReadTextOutline(runProperties, defaultRunProperties, theme, colorMap, out TextOutline outline) ? outline : null,
             ReadHighlightPaint(runProperties, defaultRunProperties, theme, colorMap),
-            hasHyperlinkClick,
-            ReadHyperlinkClickId(runProperties),
-            ReadHyperlinkClickAction(runProperties),
+            hyperlink.IsDefined,
+            hyperlink.RelationshipId,
+            hyperlink.Action,
             bold,
             italic,
             underline,
-            underlineValue ?? (hasHyperlinkClick ? "sng" : null),
+            underlineValue ?? (hyperlink.IsDefined ? "sng" : null),
             IsStrikeEnabled(strikeValue),
             strikeValue,
             capsValue,
@@ -221,25 +221,6 @@ internal sealed partial class PptxRenderer
 
         outline = new TextOutline(color, alpha, PptxTextMetricRules.TextOutlineWidth(width));
         return true;
-    }
-
-    private static bool HasHyperlinkClick(XElement? runProperties)
-    {
-        return runProperties?.Element(DrawingNamespace + "hlinkClick") is not null;
-    }
-
-    private static string? ReadHyperlinkClickId(XElement? runProperties)
-    {
-        return (string?)runProperties
-            ?.Element(DrawingNamespace + "hlinkClick")
-            ?.Attribute(RelationshipsNamespace + "id");
-    }
-
-    private static string? ReadHyperlinkClickAction(XElement? runProperties)
-    {
-        return (string?)runProperties
-            ?.Element(DrawingNamespace + "hlinkClick")
-            ?.Attribute("action");
     }
 
     private static PptxThemeTypefaceResolution ReadRunTypeface(XElement? runProperties, XElement? defaultRunProperties, PptxTheme theme)

@@ -554,9 +554,9 @@ internal sealed partial class PptxSceneBuilder
         return (string?)nonVisualProperties?.Attribute("name") ?? string.Empty;
     }
 
-    private static PptxSceneHyperlinkClick ReadHyperlinkClick(XElement? nonVisualProperties)
+    internal static PptxSceneHyperlinkClick ReadHyperlinkClick(XElement? properties)
     {
-        XElement? hyperlink = nonVisualProperties?.Element(DrawingNamespace + "hlinkClick");
+        XElement? hyperlink = properties?.Element(DrawingNamespace + "hlinkClick");
         if (hyperlink is null)
         {
             return default;
