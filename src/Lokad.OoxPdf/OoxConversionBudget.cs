@@ -115,8 +115,8 @@ internal sealed class OoxConversionBudget
 internal readonly record struct OoxConversionTotals(long PdfPages, long PdfContentBytes, long PdfOutputBytes,
     long PdfFontBytes, long PdfImageBytes, long PageContentSpilledBytes)
 {
-    public OoxPdfDiagnostic ToSummaryDiagnostic(int pageCount) => new(
+    public OoxPdfDiagnostic ToSummaryDiagnostic() => new(
         "CONVERSION_RESOURCE_SUMMARY", OoxPdfSeverity.Info, FormattableString.Invariant(
-            $"Conversion output totals: pages={pageCount}; pdfPages={PdfPages}; pdfContentBytes={PdfContentBytes}; pdfOutputBytes={PdfOutputBytes}; pdfFontBytes={PdfFontBytes}; pdfImageBytes={PdfImageBytes}; pageContentSpilledBytes={PageContentSpilledBytes}."),
+            $"Conversion output totals: pages={PdfPages}; pdfPages={PdfPages}; pdfContentBytes={PdfContentBytes}; pdfOutputBytes={PdfOutputBytes}; pdfFontBytes={PdfFontBytes}; pdfImageBytes={PdfImageBytes}; pageContentSpilledBytes={PageContentSpilledBytes}."),
         PartName: null, SlideIndex: null, PageIndex: null, Feature: null, Fallback: null);
 }

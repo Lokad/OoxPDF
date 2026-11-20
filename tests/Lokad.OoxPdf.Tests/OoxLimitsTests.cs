@@ -501,49 +501,6 @@ internal static partial class OoxLimitsTests
         TestAssert.True(quiet.All(d => d.Id != "CONVERSION_RESOURCE_SUMMARY"), "Summary must stay off by default.");
     }
 
-    public static void ConversionResourceSummaryIncludesWriterStageOnFilePath()
-    {
-        // R22: the file path snapshots after serialization into its staging file
-        // (still before the atomic move), so writer-stage fields are nonzero.
-        string input = DocxWithInlinePng();
-        var diagnostics = new List<OoxPdfDiagnostic>();
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-        OoxPdfConverter.Convert(input, output, new OoxPdfOptions
-        {
-            InputKind = OoxPdfInputKind.Docx,
-            ReportResourceUsage = true,
-            DiagnosticSink = diagnostics.Add,
-        });
-        OoxPdfDiagnostic summary = diagnostics.Single(d => d.Id == "CONVERSION_RESOURCE_SUMMARY");
-        TestAssert.Contains("pdfPages=1", summary.Message);
-        TestAssert.Contains("pdfContentBytes=", summary.Message);
-        TestAssert.Contains("pdfOutputBytes=", summary.Message);
-        TestAssert.True(!summary.Message.Contains("pdfContentBytes=0", StringComparison.Ordinal), "Writer content bytes must be reported, got: " + summary.Message);
-        TestAssert.True(!summary.Message.Contains("pdfOutputBytes=0", StringComparison.Ordinal), "Writer output bytes must be reported, got: " + summary.Message);
-    }
-
-    public static void ConversionResourceSummaryReportsRenderStageOnStreamPath()
-    {
-        // R06.2: pages/content admit during rendering, so the pre-write stream
-        // snapshot reports render-stage fields while output (still post-snapshot)
-        // stays zero. The R20 guarantee is unchanged: a throwing observer still
-        // leaves stream output untouched because the summary precedes serialization.
-        string input = DocxWithInlinePng();
-        var diagnostics = new List<OoxPdfDiagnostic>();
-        using FileStream inputStream = File.OpenRead(input);
-        using var outputStream = new MemoryStream();
-        OoxPdfConverter.Convert(inputStream, outputStream, new OoxPdfOptions
-        {
-            InputKind = OoxPdfInputKind.Docx,
-            ReportResourceUsage = true,
-            DiagnosticSink = diagnostics.Add,
-        });
-        OoxPdfDiagnostic summary = diagnostics.Single(d => d.Id == "CONVERSION_RESOURCE_SUMMARY");
-        TestAssert.Contains("pdfPages=1", summary.Message);
-        TestAssert.True(!summary.Message.Contains("pdfContentBytes=0", StringComparison.Ordinal), "Render-stage content bytes must be reported, got: " + summary.Message);
-        TestAssert.Contains("pdfOutputBytes=0", summary.Message);
-    }
-
     public static void SerializedFontImageBytesReportedOnFilePath()
     {
         // R19: the completed typed snapshot reports serialized font/image bytes on

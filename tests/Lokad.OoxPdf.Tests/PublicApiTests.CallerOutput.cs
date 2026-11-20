@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Text.RegularExpressions;
 using Lokad.OoxPdf.Diagnostics;
 
 namespace Lokad.OoxPdf.Tests;
@@ -90,19 +92,25 @@ internal static partial class PublicApiTests
                         TestAssert.Equal(OoxPdfSeverity.Info, diagnostic.Severity);
                         TestAssert.True(diagnostic.PartName is null && diagnostic.SlideIndex is null && diagnostic.PageIndex is null && diagnostic.Feature is null && diagnostic.Fallback is null,
                             "The conversion summary retains its conversion-wide provenance.");
-                        long count = long.Parse(System.Text.RegularExpressions.Regex.Match(diagnostic.Message, @"pdfOutputBytes=(\d+);").Groups[1].Value,
-                            System.Globalization.CultureInfo.InvariantCulture);
+                        var totals = Regex.Match(diagnostic.Message,
+                            @"\AConversion output totals: pages=1; pdfPages=1; pdfContentBytes=(?<content>[0-9]+); pdfOutputBytes=(?<output>[0-9]+); pdfFontBytes=(?<font>[0-9]+); pdfImageBytes=0; pageContentSpilledBytes=0\.\z");
+                        TestAssert.True(totals.Success, "Unexpected resource summary: " + diagnostic.Message);
+                        long ReadTotal(string name) => long.Parse(totals.Groups[name].Value, CultureInfo.InvariantCulture);
+                        TestAssert.True(ReadTotal("content") > 0, "Both routes report rendered content bytes.");
                         if (file)
                         {
                             TestAssert.Equal("previous", File.ReadAllText(outputPath));
                             string staged = Directory.GetFiles(directory, "output.pdf.tmp-*").Single();
-                            TestAssert.Equal(new FileInfo(staged).Length, count);
-                            TestAssert.True(count > 0, "File totals describe completed staging before publication.");
+                            TestAssert.Equal(new FileInfo(staged).Length, ReadTotal("output"));
+                            TestAssert.True(ReadTotal("output") > 0 && ReadTotal("font") > 0,
+                                "File totals describe completed staging before publication.");
                             TestAssert.Equal(0L, pool.Reserved);
                         }
                         else
                         {
-                            TestAssert.Equal(0L, output.Length); TestAssert.Equal(0L, count);
+                            TestAssert.Equal(0L, output.Length);
+                            TestAssert.Equal(0L, ReadTotal("output"));
+                            TestAssert.Equal(0L, ReadTotal("font"));
                             TestAssert.True(pool.Reserved > 0, "A zero serialized-output total does not imply zero retained conversion memory.");
                         }
                     }};

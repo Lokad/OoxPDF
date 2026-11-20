@@ -18,10 +18,10 @@ public sealed class OoxConversionLimits
     public long MaxOutputBytesPerConversion { get; init; } = 2_147_483_648;
 
     /// <summary>
-    /// Maximum uncompressed embedded-font program and ToUnicode payload bytes per
-    /// conversion, before PDF stream compression (default 268435456). Excludes PDF
-    /// dictionaries and Standard-14 font ToUnicode maps. Use MaxOutputBytesPerConversion
-    /// to bound the complete serialized PDF.
+    /// Maximum uncompressed embedded-font program, ToUnicode and CID-to-glyph map
+    /// payload bytes per conversion (default 268435456). Excludes PDF dictionaries
+    /// and Standard-14 font ToUnicode maps. Use MaxOutputBytesPerConversion to bound
+    /// the complete serialized PDF.
     /// </summary>
     public long MaxPdfFontBytesPerConversion { get; init; } = 268_435_456;
 

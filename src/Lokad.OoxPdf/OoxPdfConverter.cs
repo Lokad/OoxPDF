@@ -136,16 +136,9 @@ public static class OoxPdfConverter
         cancellationToken.ThrowIfCancellationRequested();
         Action<OoxPdfDiagnostic>? diagnosticSink = ProtectDiagnosticSink(options.DiagnosticSink);
 
-        // one explicitly scoped conversion budget per Convert call.
-        // Totals are snapshotted before publication; the summary below emits before the
-        // atomic move succeeds, so a throwing observer fails the conversion while the
-        // pre-existing destination is still untouched (R20).
-        // R06.1: the conversion scope stays open through serialization so page and
-        // content budgets bind the renderers (R06.2) and each output chunk is admitted against
-        // the output budget before its write; totals snapshot after serialization so
-        // the summary reports writer-stage fields, still before the atomic move (R20).
+        // Keep the conversion scope through serialization. File totals include
+        // the completed staging write and are reported before atomic publication.
         OoxConversionTotals totals;
-        int pageCount;
         string? outputDirectory = Path.GetDirectoryName(outputPath);
         if (!string.IsNullOrEmpty(outputDirectory))
         {
@@ -181,11 +174,10 @@ public static class OoxPdfConverter
                     }
                 }
                 totals = scope.Budget.Totals;
-                pageCount = checked((int)totals.PdfPages);
             }
 
             cancellationToken.ThrowIfCancellationRequested();
-            ReportResourceUsage(options, diagnosticSink, totals, pageCount);
+            ReportResourceUsage(options, diagnosticSink, totals);
             cancellationToken.ThrowIfCancellationRequested();
             File.Move(stagingPath, outputPath, overwrite: true);
         }
@@ -251,7 +243,6 @@ public static class OoxPdfConverter
 
         OoxPdfInputKind inputKind = RequireExplicitInputKind(options.InputKind);
         Action<OoxPdfDiagnostic>? diagnosticSink = ProtectDiagnosticSink(options.DiagnosticSink);
-        OoxConversionTotals totals;
         // Stage before reporting: a failing summary observer leaves the stream empty.
         // Serialization still admits output chunks incrementally; later failures may
         // leave a prefix in the caller-owned output stream.
@@ -260,16 +251,12 @@ public static class OoxPdfConverter
             using (OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(options.ConversionLimits, options.MemoryBudget))
             {
                 using OoxPackage package = await OoxPackage.OpenAsync(input, cancellationToken).ConfigureAwait(false);
-                // R06.3: produce (drain, spill, blank) first so the totals snapshot and the
-                // observer report still precede serialization, preserving the stream rules;
-                // emission follows from staging.
                 PdfStagedDocument staged = await PdfDocumentWriter.ProduceStagedPagesAsync(PreparePagesAsync(package, inputKind, options, diagnosticSink, cancellationToken),
                     options.ConversionLimits ?? new OoxConversionLimits(), diagnosticSink, cancellationToken, options.TemporaryStorage).ConfigureAwait(false);
                 try
                 {
-                    totals = scope.Budget.Totals;
                     cancellationToken.ThrowIfCancellationRequested();
-                    ReportResourceUsage(options, diagnosticSink, totals, checked((int)scope.Budget.PdfPages));
+                    ReportResourceUsage(options, diagnosticSink, scope.Budget.Totals);
                     await PdfDocumentWriter.EmitStagedAsync(output, staged, cancellationToken, options.FixedCreationDate).ConfigureAwait(false);
                 }
                 catch (Exception failure)
@@ -306,11 +293,11 @@ public static class OoxPdfConverter
         };
     }
 
-    private static void ReportResourceUsage(OoxPdfOptions options, Action<OoxPdfDiagnostic>? diagnosticSink, OoxConversionTotals totals, int pageCount)
+    private static void ReportResourceUsage(OoxPdfOptions options, Action<OoxPdfDiagnostic>? diagnosticSink, OoxConversionTotals totals)
     {
         if (options.ReportResourceUsage)
         {
-            diagnosticSink?.Invoke(totals.ToSummaryDiagnostic(pageCount));
+            diagnosticSink?.Invoke(totals.ToSummaryDiagnostic());
         }
     }
 
