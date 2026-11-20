@@ -155,14 +155,17 @@ internal sealed partial class DocxReader
     private readonly record struct DocxTableSourceRow(int FirstColumn, int EndColumn,
         IReadOnlyList<(DocxRevisionScopedElement Scope, int Span)> Cells);
 
-    private static DocxTableSourceRow ReadTableSourceRow(XElement row, XElement? properties,
+    private static DocxTableSourceRow ReadTableSourceRow(DocxRevisionScopedElement row, XElement? properties,
         OoxPdfDocxMarkupMode mode, CancellationToken token, bool joinedGrid = false)
     {
         int firstColumn = ReadRowGridBefore(properties);
         int endColumn = firstColumn;
         var cells = new List<(DocxRevisionScopedElement Scope, int Span)>();
-        foreach (var scope in EnumerateBookmarkedBlocks(row.Elements(), mode, token,
-            inheritedRevision: null, tableChildName: WordprocessingNamespace + "tc"))
+        // A table-level start enters the row before its own markers. Match
+        // those markers before the first cell resolves the source columns.
+        foreach (var scope in EnumerateBookmarkedBlocks(row.Element.Elements(), mode, token,
+            inheritedRevision: null, tableChildName: WordprocessingNamespace + "tc",
+            readTableColumnBookmarks: true, leadingColumnBookmarks: row.LeadingColumnBookmarks))
         {
             int span = ReadGridSpan(scope.Element.Element(WordprocessingNamespace + "tcPr"));
             endColumn += span;
@@ -179,8 +182,8 @@ internal sealed partial class DocxReader
         var sourceRows = new DocxTableSourceRow[rows.Count];
         for (int index = 0; index < sourceRows.Length; index++)
         {
-            XElement row = rows[index].Element;
-            DocxTableSourceRow source = ReadTableSourceRow(row, row.Element(WordprocessingNamespace + "trPr"),
+            var row = rows[index];
+            DocxTableSourceRow source = ReadTableSourceRow(row, row.Element.Element(WordprocessingNamespace + "trPr"),
                 mode, token, joinedGrid: true);
             sourceRows[index] = source;
             required = Math.Max(required, source.EndColumn);

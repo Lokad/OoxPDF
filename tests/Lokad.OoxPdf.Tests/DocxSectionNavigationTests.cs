@@ -1313,12 +1313,14 @@ internal static class DocxSectionNavigationTests
             TestAssert.True(expected.Destination is { PageIndex: 1, Left: > 100d },
                 "The control bookmark points to the second cell on page two.");
             foreach (string variant in new[] { "column", "wrapped", "closed", "unoccupied",
-                         "row-boundary", "row-boundary-closed", "row-boundary-closed-in-cell" })
+                         "row-boundary", "row-boundary-closed", "row-boundary-closed-in-cell",
+                         "row-boundary-closed-before-cell", "inside-row", "inside-row-closed" })
             {
                 PdfPage[] pages = RenderColumn(variant, spanned, mode);
                 TestAssert.True(control.Select(page => page.Content).SequenceEqual(pages.Select(page => page.Content)),
                     "A column bookmark preserves the painted page content.");
-                if (variant is "closed" or "unoccupied" or "row-boundary-closed" or "row-boundary-closed-in-cell")
+                if (variant is "closed" or "unoccupied" or "row-boundary-closed" or "row-boundary-closed-in-cell"
+                    or "row-boundary-closed-before-cell" or "inside-row-closed")
                     TestAssert.Equal(0, pages[0].Annotations.Count);
                 else
                     TestAssert.Equal(expected, pages[0].Annotations.Single());
@@ -1362,7 +1364,14 @@ internal static class DocxSectionNavigationTests
                     {
                         row.AddBeforeSelf(start);
                         if (variant == "row-boundary-closed") start.AddAfterSelf(end);
+                        else if (variant == "row-boundary-closed-before-cell") first.AddBeforeSelf(end);
                         else if (variant == "row-boundary-closed-in-cell") first.Element(W + "p")!.AddBeforeSelf(end);
+                        else row.AddAfterSelf(end);
+                    }
+                    else if (variant is "inside-row" or "inside-row-closed")
+                    {
+                        first.AddBeforeSelf(start);
+                        if (variant == "inside-row-closed") start.AddAfterSelf(end);
                         else row.AddAfterSelf(end);
                     }
                     else

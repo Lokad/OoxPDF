@@ -120,7 +120,7 @@ internal sealed partial class DocxReader
                 if (sourceIndex != 0) AddRevisions(rowRevisions, ReadPropertyChangeRevisions(part.Properties));
                 var cells = new List<DocxTableCell>();
                 DocxTableSourceRow sourceRow = joinedRows is null
-                    ? ReadTableSourceRow(row, rowProperties, markupMode, cancellationToken)
+                    ? ReadTableSourceRow(rowElement, rowProperties, markupMode, cancellationToken)
                     : joinedRows[sourceIndex][partRowIndex];
                 int sourceColumn = sourceRow.FirstColumn;
                 int gridBefore = gridMappings is null ? sourceColumn : gridMappings[sourceIndex][sourceColumn];
@@ -134,8 +134,6 @@ internal sealed partial class DocxReader
                     DocxRevisionInfo? inheritedCellRevision = cellSource.Revision ?? rowElement.Revision;
                     XElement? cellProperties = cell.Element(WordprocessingNamespace + "tcPr");
                     int nextSourceColumn = sourceColumn + sourceSpan;
-                    if (cellIndex == 0 && rowElement.LeadingColumnBookmarks is { } rowColumnBookmarks)
-                        cellSource = cellSource with { LeadingColumnBookmarks = rowColumnBookmarks };
                     if (!columnBookmarks.IsEmpty)
                     {
                         var bookmarksForCell = BindColumnBookmarks(cellSource.LeadingBookmarks, ref columnBookmarks,
