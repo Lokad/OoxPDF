@@ -23,7 +23,10 @@ param(
     [string] $CliPath,
     [string] $DocxInspectorPath,
     [string] $PdfInspectorPath,
-    [switch] $SkipBuild
+    [switch] $SkipBuild,
+    [ValidateSet('net10.0','net11.0')] [string] $Framework = 'net11.0',
+    [string] $RasterizerPath,
+    [string] $VisualDiffPath
 )
 
 $ErrorActionPreference = "Stop"
@@ -122,7 +125,7 @@ if ($CacheStatusOnly) {
     }
     New-Item -ItemType Directory -Force -Path $outputRootFull | Out-Null
 
-    $derivativeName = Get-ReferenceDerivativeName $Dpi
+    $derivativeName = Get-ReferenceDerivativeName $Dpi (Get-RasterizerId $RasterizerPath)
     $results = @($cases | ForEach-Object { Get-CaseReferenceCacheStatus $_ $Dpi $derivativeName })
     $commandsPath = Join-Path $outputRootFull "missing-import-commands.ps1"
     @(
@@ -167,6 +170,9 @@ foreach ($caseInfo in $cases) {
         CliPath = $CliPath
         DocxInspectorPath = $DocxInspectorPath
         PdfInspectorPath = $PdfInspectorPath
+        Framework = $Framework
+        RasterizerPath = $RasterizerPath
+        VisualDiffPath = $VisualDiffPath
         SkipBuild = [bool]$SkipBuild
     }
     if ($caseInfo.PrivateSafe) {

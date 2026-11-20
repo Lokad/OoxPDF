@@ -88,7 +88,7 @@ function Use-ReferenceCacheLock([string] $IdentityKey, [scriptblock] $Action) {
     }
 }
 
-function Get-RasterizerId {
+function Get-RasterizerId([string] $RasterizerPath) {
     $repoRoot = Split-Path -Parent $PSScriptRoot
     $projectDir = Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfiumRasterizer"
     $sources = @(Get-ChildItem -LiteralPath $projectDir -Recurse -Include *.cs, *.csproj -ErrorAction SilentlyContinue |
@@ -111,6 +111,11 @@ function Get-RasterizerId {
             [System.Text.Encoding]::UTF8.GetBytes("no-pdfium-dll")
         }
 
+        if ($RasterizerPath) {
+            $assemblyHash = (Get-FileHash -LiteralPath $RasterizerPath -Algorithm SHA256).Hash
+            $assemblyBytes = [System.Text.Encoding]::ASCII.GetBytes($assemblyHash)
+            $hasher.TransformBlock($assemblyBytes, 0, $assemblyBytes.Length, $null, 0) | Out-Null
+        }
         $hasher.TransformFinalBlock($pdfiumBytes, 0, $pdfiumBytes.Length) | Out-Null
         return ([System.BitConverter]::ToString($hasher.Hash) -replace "-", "").ToLowerInvariant().Substring(0, 12)
     }
@@ -119,8 +124,9 @@ function Get-RasterizerId {
     }
 }
 
-function Get-ReferenceDerivativeName([int] $DpiValue) {
-    return "dpi{0}-{1}" -f $DpiValue, (Get-RasterizerId).Substring(0, 8)
+function Get-ReferenceDerivativeName([int] $DpiValue, [string] $RasterizerId) {
+    if (!$RasterizerId) { $RasterizerId = Get-RasterizerId }
+    return "dpi{0}-{1}" -f $DpiValue, $RasterizerId.Substring(0, 8)
 }
 
 function Read-ReferenceMetadata([string] $CacheDir) {
@@ -335,13 +341,13 @@ function Find-PreV1LegacyEntry([string] $InputPath, [int] $DpiValue, [string] $C
     return $null
 }
 
-function Resolve-ReferenceCacheEntry([string] $InputPath, [int] $DpiValue, [string] $CacheVariant) {
+function Resolve-ReferenceCacheEntry([string] $InputPath, [int] $DpiValue, [string] $CacheVariant, [string] $DerivativeName) {
     $inputFull = (Resolve-Path -LiteralPath $InputPath).Path
     $inputHash = (Get-FileHash -LiteralPath $inputFull -Algorithm SHA256).Hash.ToLowerInvariant()
     $cacheRoot = Get-ReferenceCacheRoot
     $identityKey = Get-ReferenceIdentityKey $inputFull $CacheVariant $inputHash
     $cacheDir = Join-Path $cacheRoot $identityKey
-    $derivativeName = Get-ReferenceDerivativeName $DpiValue
+    if (!$DerivativeName) { $DerivativeName = Get-ReferenceDerivativeName $DpiValue }
 
     if (Test-Path -LiteralPath $cacheDir) {
         $entry = Test-ReferenceIdentityEntry $cacheDir $inputHash $CacheVariant

@@ -1,6 +1,5 @@
 using System.Buffers.Binary;
 using System.IO.Compression;
-using System.Text;
 
 namespace Lokad.OoxPdf.VisualDiff;
 
@@ -26,83 +25,82 @@ internal sealed class PngImage
 
     public byte[] Rgba { get; }
 
-    // R21: header-only dimensions so the paired quota can be enforced before
-    // either RGBA buffer exists. Rejects the same malformed headers as Load.
-    public static (int Width, int Height) ReadDimensions(string path)
+    private const int HeaderLength = 8 + 8 + 13 + 4;
+    private const long MaxPngInputBytes = 512L * 1024L * 1024L;
+
+    public static (PngImage? Reference, PngImage? Candidate) LoadPair(
+        string? referencePath, string? candidatePath, long maxCombinedPixels)
     {
-        byte[] bytes;
-        try
+        using FileStream? reference = referencePath is null ? null : File.OpenRead(referencePath);
+        using FileStream? candidate = candidatePath is null ? null : File.OpenRead(candidatePath);
+        Header referenceHeader = reference is null ? default : ReadHeader(reference);
+        Header candidateHeader = candidate is null ? default : ReadHeader(candidate);
+
+        // Admit the pair from IHDR before buffering the compressed data or decoding pixels.
+        long combined = (long)referenceHeader.Width * referenceHeader.Height +
+            (long)candidateHeader.Width * candidateHeader.Height;
+        if (reference is not null && candidate is not null && combined > maxCombinedPixels)
         {
-            bytes = File.ReadAllBytes(path);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            throw new InvalidDataException($"Cannot read PNG input '{path}': {ex.Message}", ex);
+            throw new InvalidDataException($"PNG pair pixel count {combined} exceeds the maximum of {maxCombinedPixels} (--max-combined-pixels).");
         }
 
-        if (bytes.Length < Signature.Length || !bytes.AsSpan(0, Signature.Length).SequenceEqual(Signature))
-        {
-            throw new InvalidDataException("File is not a PNG image.");
-        }
-
-        if (bytes.Length < Signature.Length + 8 + 13)
-        {
-            throw new InvalidDataException("PNG chunk header is truncated.");
-        }
-
-        int length = BinaryPrimitives.ReadInt32BigEndian(bytes.AsSpan(Signature.Length, 4));
-        string type = Encoding.ASCII.GetString(bytes, Signature.Length + 4, 4);
-        if (length != 13 || !string.Equals(type, "IHDR", StringComparison.Ordinal))
-        {
-            throw new InvalidDataException("PNG image header is missing.");
-        }
-
-        ReadOnlySpan<byte> data = bytes.AsSpan(Signature.Length + 8, 13);
-        int width = BinaryPrimitives.ReadInt32BigEndian(data[..4]);
-        int height = BinaryPrimitives.ReadInt32BigEndian(data.Slice(4, 4));
-        int bitDepth = data[8];
-        int colorType = data[9];
-        byte interlace = data[12];
-        if (width <= 0 || height <= 0 || width > MaxDimension || height > MaxDimension)
-        {
-            throw new InvalidDataException($"PNG dimensions are out of range: {width}x{height}.");
-        }
-
-        if (!IsSupportedFormat(bitDepth, colorType) || interlace != 0)
-        {
-            throw new NotSupportedException("Only non-interlaced grayscale, indexed, truecolor, and truecolor-alpha PNGs with common bit depths are supported.");
-        }
-
-        return (width, height);
+        return (reference is null ? null : Load(reference, referenceHeader),
+            candidate is null ? null : Load(candidate, candidateHeader));
     }
 
-    public static PngImage Load(string path)
+    private static Header ReadHeader(FileStream input)
     {
-        // fail fast on absurd inputs before buffering the whole file.
-        // Legitimate rasterizer/diff PNGs fit well under this (67M pixels cap).
-        const long MaxPngInputBytes = 512L * 1024L * 1024L;
-        if (new FileInfo(path).Length > MaxPngInputBytes)
+        long length = input.Length;
+        if (length > MaxPngInputBytes)
         {
             throw new InvalidDataException($"PNG input exceeds the maximum inspectable size of {MaxPngInputBytes} bytes.");
         }
 
-        byte[] bytes = File.ReadAllBytes(path);
-        if (bytes.Length < Signature.Length || !bytes.AsSpan(0, Signature.Length).SequenceEqual(Signature))
+        Span<byte> header = stackalloc byte[HeaderLength];
+        int read = input.ReadAtLeast(header, HeaderLength, false);
+        if (read < Signature.Length || !header[..Signature.Length].SequenceEqual(Signature))
         {
             throw new InvalidDataException("File is not a PNG image.");
         }
+        if (length < HeaderLength || read < HeaderLength)
+        {
+            throw new InvalidDataException("PNG chunk header is truncated.");
+        }
+        if (BinaryPrimitives.ReadInt32BigEndian(header[8..12]) != 13 || !header[12..16].SequenceEqual("IHDR"u8))
+        {
+            throw new InvalidDataException("PNG image header is missing.");
+        }
 
-        int width = 0;
-        int height = 0;
-        int bitDepth = 0;
-        int colorType = 0;
-        var idat = new MemoryStream();
+        int width = BinaryPrimitives.ReadInt32BigEndian(header[16..20]);
+        int height = BinaryPrimitives.ReadInt32BigEndian(header[20..24]);
+        int bitDepth = header[24];
+        int colorType = header[25];
+        if (width <= 0 || height <= 0 || width > MaxDimension || height > MaxDimension)
+        {
+            throw new InvalidDataException($"PNG dimensions are out of range: {width}x{height}.");
+        }
+        long pixelCount = (long)width * height;
+        if (pixelCount > MaxPixels)
+        {
+            throw new InvalidDataException($"PNG pixel count {pixelCount} exceeds the maximum of {MaxPixels}.");
+        }
+        if (!IsSupportedFormat(bitDepth, colorType) || header[28] != 0)
+        {
+            throw new NotSupportedException("Only non-interlaced grayscale, indexed, truecolor, and truecolor-alpha PNGs with common bit depths are supported.");
+        }
+
+        return new Header(width, height, bitDepth, colorType, (int)(length - HeaderLength));
+    }
+
+    private static PngImage Load(Stream input, Header header)
+    {
+        var bytes = new byte[header.RemainingBytes];
+        input.ReadExactly(bytes);
+        using var idat = new MemoryStream();
         byte[]? palette = null;
         byte[]? transparency = null;
 
-        // chunk framing is untrusted. Bounds-check every slice so truncated
-        // files fail with InvalidDataException instead of runtime slicing errors.
-        int offset = Signature.Length;
+        int offset = 0;
         while (offset < bytes.Length)
         {
             if (offset + 8 > bytes.Length)
@@ -116,65 +114,40 @@ internal sealed class PngImage
                 throw new InvalidDataException("PNG chunk extends beyond the end of the data.");
             }
 
-            offset += 4;
-            string type = Encoding.ASCII.GetString(bytes, offset, 4);
-            offset += 4;
+            ReadOnlySpan<byte> type = bytes.AsSpan(offset + 4, 4);
+            offset += 8;
             ReadOnlySpan<byte> data = bytes.AsSpan(offset, length);
             offset += length + 4;
 
-            if (type == "IHDR")
+            if (type.SequenceEqual("IHDR"u8))
             {
-                width = BinaryPrimitives.ReadInt32BigEndian(data[..4]);
-                height = BinaryPrimitives.ReadInt32BigEndian(data.Slice(4, 4));
-                bitDepth = data[8];
-                colorType = data[9];
-                byte interlace = data[12];
-                if (!IsSupportedFormat(bitDepth, colorType) || interlace != 0)
-                {
-                    throw new NotSupportedException("Only non-interlaced grayscale, indexed, truecolor, and truecolor-alpha PNGs with common bit depths are supported.");
-                }
+                throw new InvalidDataException("PNG contains more than one image header.");
             }
-            else if (type == "PLTE")
+            if (type.SequenceEqual("PLTE"u8))
             {
                 palette = data.ToArray();
             }
-            else if (type == "tRNS")
+            else if (type.SequenceEqual("tRNS"u8))
             {
                 transparency = data.ToArray();
             }
-            else if (type == "IDAT")
+            else if (type.SequenceEqual("IDAT"u8))
             {
                 idat.Write(data);
             }
-            else if (type == "IEND")
+            else if (type.SequenceEqual("IEND"u8))
             {
                 break;
             }
         }
 
-        if (width <= 0 || height <= 0 || width > MaxDimension || height > MaxDimension)
-        {
-            throw new InvalidDataException($"PNG dimensions are out of range: {width}x{height}.");
-        }
-
-        long pixelCount;
-        try
-        {
-            pixelCount = checked((long)width * height);
-        }
-        catch (OverflowException ex)
-        {
-            throw new InvalidDataException("PNG dimensions overflow.", ex);
-        }
-
-        if (pixelCount > MaxPixels)
-        {
-            throw new InvalidDataException($"PNG pixel count {pixelCount} exceeds the maximum of {MaxPixels}.");
-        }
-
-        byte[] decompressed = Inflate(idat.ToArray(), width, height, colorType == 6 ? 32 : colorType == 2 ? 24 : bitDepth);
-        return new PngImage(width, height, DecodeScanlines(decompressed, width, height, bitDepth, colorType, palette, transparency));
+        int bitsPerPixel = header.ColorType == 6 ? 32 : header.ColorType == 2 ? 24 : header.BitDepth;
+        byte[] decompressed = Inflate(idat.ToArray(), header.Width, header.Height, bitsPerPixel);
+        return new PngImage(header.Width, header.Height,
+            DecodeScanlines(decompressed, header.Width, header.Height, header.BitDepth, header.ColorType, palette, transparency));
     }
+
+    private readonly record struct Header(int Width, int Height, int BitDepth, int ColorType, int RemainingBytes);
 
     private static bool IsSupportedFormat(int bitDepth, int colorType)
     {

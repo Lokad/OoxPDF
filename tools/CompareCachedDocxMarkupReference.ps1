@@ -69,7 +69,9 @@ param(
     [string] $CliPath,
     [string] $DocxInspectorPath,
     [string] $PdfInspectorPath,
-    [switch] $SkipBuild
+    [switch] $SkipBuild,
+    [string] $RasterizerPath,
+    [string] $VisualDiffPath
 )
 
 $ErrorActionPreference = "Stop"
@@ -3332,12 +3334,13 @@ elseif (-not [string]::IsNullOrWhiteSpace($ReferenceDirectory)) {
 
     Copy-Item -Path (Join-Path $referenceDirectoryFull "*") -Destination $referenceDir -Recurse -Force
 }
-elseif ($SkipRasterDiff) {
+elseif ($SkipRasterDiff -or $ValidateOnly) {
     . (Join-Path $PSScriptRoot 'ReferenceCache.ps1')
     Copy-VerifiedCachedReferencePdf $inputFull $referenceDir $settings.Variant
 }
 else {
-    & (Join-Path $PSScriptRoot "RenderCachedReference.ps1") -InputPath $inputFull -OutputDirectory $referenceDir -Dpi $Dpi -CacheOnly -CacheVariant $settings.Variant
+    & (Join-Path $PSScriptRoot "RenderCachedReference.ps1") -Framework $Framework -InputPath $inputFull -OutputDirectory $referenceDir -Dpi $Dpi -CacheOnly -CacheVariant $settings.Variant -RasterizerPath $RasterizerPath -SkipBuild:$SkipBuild
+    $referenceRasterDir = $referenceDir
 }
 
 $referencePdfPath = Join-Path $referenceDir "reference.pdf"
@@ -3391,30 +3394,6 @@ if ($LASTEXITCODE -ne 0) {
 & (Join-Path $PSScriptRoot "InspectPdf.ps1") -Framework $Framework -InputPdf $candidatePdf -OutputDirectory $candidatePdfInspect -InspectorPath $PdfInspectorPath -SkipBuild:$SkipBuild | Out-Null
 if ($LASTEXITCODE -ne 0) {
     throw "Candidate PDF inspection failed with exit code $LASTEXITCODE."
-}
-
-$visualMetrics = @()
-if (-not $SkipRasterDiff) {
-    & (Join-Path $PSScriptRoot "RasterizePdf.ps1") -Framework $Framework -InputPdf $referencePdfPath -OutputDirectory $referenceRasterDir -Dpi $Dpi -SkipBuild:$SkipBuild | Out-Null
-    if ($LASTEXITCODE -ne 0) {
-        throw "Reference PDF rasterization failed with exit code $LASTEXITCODE."
-    }
-
-    & (Join-Path $PSScriptRoot "RasterizePdf.ps1") -Framework $Framework -InputPdf $candidatePdf -OutputDirectory $candidateRasterDir -Dpi $Dpi -SkipBuild:$SkipBuild | Out-Null
-    if ($LASTEXITCODE -ne 0) {
-        throw "Candidate PDF rasterization failed with exit code $LASTEXITCODE."
-    }
-
-    $visualDiffProject = Join-Path $repoRoot "tools/Lokad.OoxPdf.VisualDiff/Lokad.OoxPdf.VisualDiff.csproj"
-    $visualDiffDll = Join-Path $repoRoot "tools/Lokad.OoxPdf.VisualDiff/bin/Debug/$Framework/Lokad.OoxPdf.VisualDiff.dll"
-    Invoke-DotnetBuildIfStale -Project $visualDiffProject -OutputDll $visualDiffDll -Description "VisualDiff" -RecordPath (Join-Path $runRoot 'visual-diff-build-info.json')
-    dotnet $visualDiffDll $referenceRasterDir $candidateRasterDir $visualDiffDir | Out-Null
-    if ($LASTEXITCODE -ne 0) {
-        throw "VisualDiff failed with exit code $LASTEXITCODE."
-    }
-
-    $readVisualMetrics = Read-JsonArrayIfExists (Join-Path $visualDiffDir "metrics.json")
-    $visualMetrics = @($readVisualMetrics)
 }
 
 $referenceTextOperations = Join-Path $referencePdfInspect "text-operations.json"
@@ -3536,6 +3515,57 @@ $referencePageCount = $referenceFacts.PageCount
 $candidatePageCount = $candidateFacts.PageCount
 $referenceMediaBoxes = $referenceFacts.MediaBoxes
 $candidateMediaBoxes = $candidateFacts.MediaBoxes
+
+$visualMetrics = @()
+$rasterRegionMetrics = @()
+$rasterRegionSummary = @()
+if (-not $SkipRasterDiff) {
+    $rasterArguments = @{ Framework = $Framework; Dpi = $Dpi; SkipBuild = [bool]$SkipBuild; RasterizerPath = $RasterizerPath }
+    $rasterize = Join-Path $PSScriptRoot "RasterizePdf.ps1"
+    if ($referenceRasterDir -ne $referenceDir) {
+        & $rasterize -InputPdf $referencePdfPath -OutputDirectory $referenceRasterDir @rasterArguments | Out-Null
+    }
+    & $rasterize -InputPdf $candidatePdf -OutputDirectory $candidateRasterDir @rasterArguments | Out-Null
+
+    $rasterRegionSpecs = @(New-RasterRegionSpecs `
+            -ReferencePageCount $referencePageCount `
+            -CandidatePageCount $candidatePageCount `
+            -MediaBoxes $referenceMediaBoxes `
+            -ReferenceGraphicsOperations $referenceGraphicsOperationItems `
+            -CandidateGraphicsOperations $candidateGraphicsOperationItems `
+            -CandidateBalloons $candidateBalloons)
+    $rasterRegionSpecPath = Join-Path $comparisonDir "raster-region-specs.json"
+    Write-JsonFile $rasterRegionSpecPath $rasterRegionSpecs
+
+    $visualDiffBuildInfo = Join-Path $runRoot 'visual-diff-build-info.json'
+    if ($VisualDiffPath) {
+        $visualDiffDll = (Resolve-Path -LiteralPath $VisualDiffPath).Path
+    }
+    else {
+        $visualDiffProject = Join-Path $repoRoot "tools/Lokad.OoxPdf.VisualDiff/Lokad.OoxPdf.VisualDiff.csproj"
+        $visualDiffDll = Join-Path $repoRoot "tools/Lokad.OoxPdf.VisualDiff/bin/Debug/$Framework/Lokad.OoxPdf.VisualDiff.dll"
+        Invoke-DotnetBuildIfStale -Project $visualDiffProject -OutputDll $visualDiffDll -Description "VisualDiff" -RecordPath $visualDiffBuildInfo
+    }
+    $visualDiffHash = (Get-FileHash -LiteralPath $visualDiffDll).Hash
+    if ($VisualDiffPath -or $SkipBuild) {
+        Write-JsonFile $visualDiffBuildInfo @{ OutputDll = $visualDiffDll; OutputSha256 = $visualDiffHash; BuildRequested = $false }
+    }
+    $diffArguments = @($referenceRasterDir, $candidateRasterDir, $visualDiffDir)
+    if ($rasterRegionSpecs.Count) { $diffArguments += $rasterRegionSpecPath }
+    dotnet $visualDiffDll @diffArguments | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "VisualDiff failed with exit code $LASTEXITCODE." }
+    if ((Get-FileHash -LiteralPath $visualDiffDll).Hash -ne $visualDiffHash) { throw 'VisualDiff changed during execution.' }
+
+    $readVisualMetrics = Read-JsonArrayIfExists (Join-Path $visualDiffDir "metrics.json")
+    $visualMetrics = @($readVisualMetrics)
+    if ($rasterRegionSpecs.Count) {
+        $readRasterRegionMetrics = Read-JsonArrayIfExists (Join-Path $visualDiffDir "region-metrics.json")
+        $rasterRegionMetrics = @($readRasterRegionMetrics)
+        $rasterRegionSummary = @(New-RasterRegionMetricSummary $rasterRegionMetrics)
+    }
+}
+Write-JsonFile (Join-Path $comparisonDir "raster-region-summary.json") $rasterRegionSummary
+
 $candidateLayoutBodyFrameRects = @(Select-LayoutBodyFrameRects $candidateLayoutSnapshot)
 $candidateLayoutColumnFrameRects = @(Select-LayoutColumnFrameRects $candidateLayoutSnapshot)
 $candidateLayoutMarkupLaneRects = @(Select-LayoutMarkupLaneRects $candidateLayoutSnapshot)
@@ -3705,32 +3735,6 @@ $graphicsOperationCounts = [ordered]@{
     GraphicsVisibleComparisonExitCode = $graphicsVisibleComparisonExitCode
 }
 Write-JsonFile (Join-Path $comparisonDir "graphics-operation-count-summary.json") $graphicsOperationCounts
-
-$rasterRegionSpecs = @()
-$rasterRegionMetrics = @()
-$rasterRegionSummary = @()
-if (-not $SkipRasterDiff) {
-    $rasterRegionSpecs = @(New-RasterRegionSpecs `
-            -ReferencePageCount $referencePageCount `
-            -CandidatePageCount $candidatePageCount `
-            -MediaBoxes $referenceMediaBoxes `
-            -ReferenceGraphicsOperations $referenceGraphicsOperationItems `
-            -CandidateGraphicsOperations $candidateGraphicsOperationItems `
-            -CandidateBalloons $candidateBalloons)
-    $rasterRegionSpecPath = Join-Path $comparisonDir "raster-region-specs.json"
-    Write-JsonFile $rasterRegionSpecPath $rasterRegionSpecs
-    if ($rasterRegionSpecs.Count -ne 0) {
-        dotnet $visualDiffDll $referenceRasterDir $candidateRasterDir $visualDiffDir $rasterRegionSpecPath | Out-Null
-        if ($LASTEXITCODE -ne 0) {
-            throw "VisualDiff region comparison failed with exit code $LASTEXITCODE."
-        }
-
-                $readRasterRegionMetrics = Read-JsonArrayIfExists (Join-Path $visualDiffDir "region-metrics.json")
-        $rasterRegionMetrics = @($readRasterRegionMetrics)
-        $rasterRegionSummary = @(New-RasterRegionMetricSummary $rasterRegionMetrics)
-    }
-}
-Write-JsonFile (Join-Path $comparisonDir "raster-region-summary.json") $rasterRegionSummary
 
 $annotationDeltaCount = @($annotationComparison | Where-Object { $_.Status -ne "ok" }).Count
 $balloonDeltaCount = @($balloonComparison | Where-Object { $_.Status -ne "ok" }).Count

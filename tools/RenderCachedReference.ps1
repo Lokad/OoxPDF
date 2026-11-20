@@ -25,7 +25,9 @@ param(
 
     [switch] $SkipBuild,
 
-    [int] $RenderTimeoutSeconds = 600
+    [int] $RenderTimeoutSeconds = 600,
+
+    [string] $RasterizerPath
 )
 
 $ErrorActionPreference = "Stop"
@@ -33,6 +35,13 @@ $ErrorActionPreference = "Stop"
 . (Join-Path $PSScriptRoot "ReferenceCache.ps1")
 
 $inputFull = (Resolve-Path -LiteralPath $InputPath).Path
+$rasterArguments = @{ Framework = $Framework; Dpi = $Dpi; SkipBuild = [bool]$SkipBuild }
+if ($RasterizerPath) {
+    $RasterizerPath = (Resolve-Path -LiteralPath $RasterizerPath).Path
+    $rasterArguments.RasterizerPath = $RasterizerPath
+}
+$rasterizerId = Get-RasterizerId $RasterizerPath
+$derivativeName = Get-ReferenceDerivativeName $Dpi $rasterizerId
 $isDocxMarkupVariant = [IO.Path]::GetExtension($inputFull) -eq '.docx' -and $CacheVariant -match '(^|;)docxMarkup='
 if ((Test-Path -LiteralPath $OutputDirectory -PathType Container) -and
     @(Get-ChildItem -LiteralPath $OutputDirectory -Filter '*.png' -File).Count) {
@@ -57,7 +66,7 @@ function New-CacheMissMessage($resolution) {
 
 $identityKey = Get-ReferenceIdentityKey $inputFull $CacheVariant
 $resolution = Use-ReferenceCacheLock $identityKey {
-    $entry = Resolve-ReferenceCacheEntry $inputFull $Dpi $CacheVariant
+    $entry = Resolve-ReferenceCacheEntry $inputFull $Dpi $CacheVariant $derivativeName
     if ($entry.IdentityKey -cne $identityKey) {
         throw 'Reference input changed during cache lookup'
     }
@@ -65,8 +74,9 @@ $resolution = Use-ReferenceCacheLock $identityKey {
 
     # Another reader must resolve the new entry after adoption completes.
     Write-Host ("Reference cache legacy entry ($($entry.Reason)): $($entry.CacheDirectory)")
-    Move-LegacyReferenceEntry $entry.CacheDirectory (Join-Path (Get-ReferenceCacheRoot) $identityKey) $inputFull $Dpi $entry.DerivativeName $CacheVariant $CaseId
-    Resolve-ReferenceCacheEntry $inputFull $Dpi $CacheVariant
+    $legacyDerivativeName = if ($RasterizerPath) { Get-ReferenceDerivativeName $Dpi } else { $derivativeName }
+    Move-LegacyReferenceEntry $entry.CacheDirectory (Join-Path (Get-ReferenceCacheRoot) $identityKey) $inputFull $Dpi $legacyDerivativeName $CacheVariant $CaseId
+    Resolve-ReferenceCacheEntry $inputFull $Dpi $CacheVariant $derivativeName
 }
 
 if ($resolution.Outcome -eq "Corrupt") {
@@ -101,7 +111,7 @@ if ($resolution.Outcome -eq "Miss") {
         $staging = Join-Path (Get-ReferenceCacheRoot) ("_render-" + [System.Guid]::NewGuid().ToString("N"))
         New-Item -ItemType Directory -Force -Path $staging | Out-Null
         try {
-            & $renderReference -Framework $Framework -InputPath $inputFull -OutputDirectory $staging -Dpi $Dpi -TimeoutSeconds $RenderTimeoutSeconds -SkipBuild:$SkipBuild
+            & $renderReference -InputPath $inputFull -OutputDirectory $staging -TimeoutSeconds $RenderTimeoutSeconds @rasterArguments
             $workerStatus = $null
             $workerStatusPath = Join-Path $staging "reference-worker-status.json"
             if (Test-Path -LiteralPath $workerStatusPath) {
@@ -122,13 +132,12 @@ if ($resolution.Outcome -eq "Miss") {
                 ExportSettings = $(if ($null -ne $workerStatus) { [string]$workerStatus.ExportSettings } else { "" })
             } $null
             Publish-ReferenceStagedDirectory $staging $resolution.CacheDirectory
-            $derivativeName = Get-ReferenceDerivativeName $Dpi
             $derivativeDir = Join-Path (Join-Path $resolution.CacheDirectory "raster") $derivativeName
             New-Item -ItemType Directory -Force -Path $derivativeDir | Out-Null
             foreach ($page in @(Get-ChildItem -LiteralPath $resolution.CacheDirectory -Filter "page-*.png" | Sort-Object Name)) {
                 Move-Item -LiteralPath $page.FullName -Destination (Join-Path $derivativeDir $page.Name) -Force
             }
-            Add-ReferenceDerivativeRecord $resolution.CacheDirectory $derivativeName $Dpi (Get-RasterizerId)
+            Add-ReferenceDerivativeRecord $resolution.CacheDirectory $derivativeName $Dpi $rasterizerId
         }
         finally {
             if (Test-Path -LiteralPath $staging) {
@@ -136,7 +145,7 @@ if ($resolution.Outcome -eq "Miss") {
             }
         }
     }
-    $resolution = Resolve-ReferenceCacheEntry $inputFull $Dpi $CacheVariant
+    $resolution = Resolve-ReferenceCacheEntry $inputFull $Dpi $CacheVariant $derivativeName
     if ($resolution.Outcome -ne "Hit") {
         throw "Reference render completed but the cache entry failed verification: $($resolution.Reason)"
     }
@@ -166,13 +175,13 @@ if ($derivative.State -eq "Missing") {
         }
         New-Item -ItemType Directory -Force -Path $staging | Out-Null
         try {
-            & (Join-Path $PSScriptRoot 'RasterizePdf.ps1') -Framework $Framework -InputPdf (Join-Path $resolution.CacheDirectory 'reference.pdf') -OutputDirectory $staging -Dpi $Dpi -SkipBuild:$SkipBuild
+            & (Join-Path $PSScriptRoot 'RasterizePdf.ps1') -InputPdf (Join-Path $resolution.CacheDirectory 'reference.pdf') -OutputDirectory $staging @rasterArguments
             if (!(Get-ReferenceRasterPages $staging).Count) { throw 'Rasterizer produced no pages' }
             # Retain interrupted derivatives as evidence, never mix their pages
             # into a fresh run. Only complete pages receive a completion record.
             if (Test-Path -LiteralPath $derivativeDir) { [IO.Directory]::Move($derivativeDir, $previous) }
             [IO.Directory]::Move($staging, $derivativeDir)
-            Add-ReferenceDerivativeRecord $resolution.CacheDirectory $resolution.DerivativeName $Dpi (Get-RasterizerId)
+            Add-ReferenceDerivativeRecord $resolution.CacheDirectory $resolution.DerivativeName $Dpi $rasterizerId
         }
         finally { if (Test-Path -LiteralPath $staging) { Remove-Item -LiteralPath $staging -Recurse -Force } }
     }

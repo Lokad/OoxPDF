@@ -12,8 +12,12 @@ foreach ($name in @('ReferenceCache.ps1','RenderCachedReference.ps1','ImportOffi
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination $tools
 }
 @'
-param($InputPdf,$OutputDirectory,$Dpi,[switch]$SkipBuild)
+param($InputPdf,$OutputDirectory,$Dpi,[switch]$SkipBuild,$Framework,$RasterizerPath)
 New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
+if ($RasterizerPath) {
+    @{ Framework = $Framework; SkipBuild = [bool]$SkipBuild; Dpi = $Dpi; RasterizerPath = $RasterizerPath } |
+        ConvertTo-Json -Compress | Add-Content -LiteralPath (Join-Path $PSScriptRoot 'frozen-raster-calls.jsonl')
+}
 [IO.File]::WriteAllText((Join-Path $OutputDirectory 'page-001.png'),'Synthetic fresh raster')
 if (Test-Path -LiteralPath (Join-Path $PSScriptRoot 'fail-raster')) { throw 'Intentional interrupted raster' }
 '@ | Set-Content -LiteralPath (Join-Path $tools 'RasterizePdf.ps1') -Encoding utf8
@@ -96,6 +100,33 @@ foreach ($fault in @('Dpi','RasterizerId','PdfSha256','PageCount','RecordedName'
     [IO.File]::WriteAllBytes($metadataPath,$goodMetadata)
 }
 Assert-State 'restored-control' 'Complete'
+
+$frozenLog = Join-Path $tools 'frozen-raster-calls.jsonl'
+foreach ($framework in @('net10.0', 'net11.0')) {
+    $rasterizer = Join-Path $root ("frozen-$framework.dll")
+    [IO.File]::WriteAllText($rasterizer, "Frozen rasterizer $framework")
+    $frozenId = Get-RasterizerId $rasterizer
+    $frozenDerivative = Get-ReferenceDerivativeName 144 $frozenId
+    if ($frozenDerivative -ceq $name -or (Test-ReferenceDerivative $cache $frozenDerivative $pdfHash).State -ne 'Missing') {
+        throw 'An explicit rasterizer reused an unrelated derivative.'
+    }
+    $previousCalls = if (Test-Path -LiteralPath $frozenLog) { @(Get-Content -LiteralPath $frozenLog).Count } else { 0 }
+    $cold = Join-Path $root "$framework-cold"
+    $warm = Join-Path $root "$framework-warm"
+    foreach ($output in @($cold, $warm)) {
+        & (Join-Path $tools 'RenderCachedReference.ps1') -Framework $framework -InputPath $inputFile -OutputDirectory $output -CacheOnly -SkipBuild -RasterizerPath $rasterizer | Out-Null
+    }
+    $calls = @(Get-Content -LiteralPath $frozenLog | ForEach-Object { ConvertFrom-Json -InputObject $_ })
+    if ($calls.Count -ne $previousCalls + 1 -or $calls[-1].Framework -cne $framework -or
+        $calls[-1].RasterizerPath -cne $rasterizer -or !$calls[-1].SkipBuild -or $calls[-1].Dpi -ne 144 -or
+        (Test-ReferenceDerivative $cache $frozenDerivative $pdfHash).State -ne 'Complete' -or
+        (Get-FileHash -LiteralPath (Join-Path $cold 'page-001.png')).Hash -ne
+            (Get-FileHash -LiteralPath (Join-Path $warm 'page-001.png')).Hash) {
+        throw 'Frozen cold or warm cache lost the rasterizer binding.'
+    }
+    $checks += "frozen-$framework-cold-and-warm"
+}
+$goodMetadata=[IO.File]::ReadAllBytes($metadataPath)
 $legacy=Get-Content $metadataPath -Raw | ConvertFrom-Json
 $legacy.Derivatives.$name.RasterizerId='legacy-'+(Get-RasterizerId).Substring(0,8)
 $legacy | ConvertTo-Json -Depth 8 | Set-Content $metadataPath -Encoding utf8

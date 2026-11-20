@@ -89,6 +89,10 @@ bounded coverage, particularly masks/blends, oblique/CFF/Type1 text and occlusio
 For cached DOCX markup comparisons, supply selected authored phrases in
 `expected.markupTextPhrases`. The report checks their decoded text for the
 case's declared markup view and shows whether that check ran. Verify ink separately.
+For a frozen raster comparison, pass `-RasterizerPath` and `-VisualDiffPath`
+alongside the pinned CLI and inspectors. The cached reference derivative uses
+the supplied rasterizer's identity, and one comparison produces both page and
+region metrics.
 With `-SkipRasterDiff`, cached markup comparisons use the verified reference
 PDF and its metadata directly. Legacy entries need a trusted re-import for this path.
 

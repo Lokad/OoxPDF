@@ -62,28 +62,34 @@ string[] referenceFiles = Directory.GetFiles(referenceDirectory, "*.png").Order(
 string[] candidateFiles = Directory.GetFiles(candidateDirectory, "*.png").Order(StringComparer.OrdinalIgnoreCase).ToArray();
 int pageCount = Math.Max(referenceFiles.Length, candidateFiles.Length);
 
+var jsonOptions = new JsonSerializerOptions { WriteIndented = true };
+var regionsByPage = regionSpecsPath is null ? null :
+    (JsonSerializer.Deserialize<RegionSpec[]>(File.ReadAllText(regionSpecsPath), jsonOptions) ?? []).ToLookup(spec => spec.Page);
 var metrics = new List<PageMetric>();
+var regionMetrics = new List<RegionMetric>();
 try
 {
     for (int i = 0; i < pageCount; i++)
     {
         string? referenceFile = i < referenceFiles.Length ? referenceFiles[i] : null;
         string? candidateFile = i < candidateFiles.Length ? candidateFiles[i] : null;
-        metrics.Add(MeasurePage(i + 1, referenceFile, candidateFile, maxCombinedPixels));
+        var (reference, candidate) = PngImage.LoadPair(referenceFile, candidateFile, maxCombinedPixels);
+        metrics.Add(MeasurePage(i + 1, referenceFile, candidateFile, reference, candidate));
+        if (regionsByPage is not null && reference is not null && candidate is not null)
+        {
+            regionMetrics.AddRange(MeasureRegions(regionsByPage[i + 1], reference, candidate));
+        }
     }
 }
-catch (InvalidDataException ex)
+catch (Exception ex) when (ex is InvalidDataException or IOException or UnauthorizedAccessException or NotSupportedException)
 {
     Console.Error.WriteLine($"Cannot compare PNGs: {ex.Message}");
     return 1;
 }
 
-var jsonOptions = new JsonSerializerOptions { WriteIndented = true };
 File.WriteAllText(Path.Combine(outputDirectory, "metrics.json"), JsonSerializer.Serialize(metrics, jsonOptions));
-if (regionSpecsPath is not null)
+if (regionsByPage is not null)
 {
-    RegionSpec[] regionSpecs = JsonSerializer.Deserialize<RegionSpec[]>(File.ReadAllText(regionSpecsPath), jsonOptions) ?? [];
-    RegionMetric[] regionMetrics = MeasureRegions(regionSpecs, referenceFiles, candidateFiles).ToArray();
     File.WriteAllText(Path.Combine(outputDirectory, "region-metrics.json"), JsonSerializer.Serialize(regionMetrics, jsonOptions));
 }
 
@@ -93,29 +99,6 @@ Console.WriteLine($"Wrote {metrics.Count} visual comparison entries to {outputDi
 // tool peaks are recorded separately from converter peaks.
 Console.WriteLine($"Tool peak working set: {System.Diagnostics.Process.GetCurrentProcess().PeakWorkingSet64} bytes.");
 return 0;
-
-// R21: bound the paired working set (both RGBA buffers plus compare scratch) from
-// header dimensions before decoding either image. Per-image file/pixel caps still
-// apply inside Load; this additionally bounds what large pairs may jointly retain.
-static void CheckCombinedPixelQuota(string referenceFile, string candidateFile, long maxCombinedPixels)
-{
-    (int referenceWidth, int referenceHeight) = PngImage.ReadDimensions(referenceFile);
-    (int candidateWidth, int candidateHeight) = PngImage.ReadDimensions(candidateFile);
-    long combined;
-    try
-    {
-        combined = checked((long)referenceWidth * referenceHeight + (long)candidateWidth * candidateHeight);
-    }
-    catch (OverflowException ex)
-    {
-        throw new InvalidDataException("PNG pair dimensions overflow.", ex);
-    }
-
-    if (combined > maxCombinedPixels)
-    {
-        throw new InvalidDataException($"PNG pair pixel count {combined} exceeds the maximum of {maxCombinedPixels} (--max-combined-pixels).");
-    }
-}
 
 static string BuildIndexHtml(IReadOnlyList<PageMetric> metrics, string referenceDirectory, string candidateDirectory, string outputDirectory)
 {
@@ -159,15 +142,8 @@ static void AppendImage(StringBuilder html, string title, string? fileName, stri
     html.AppendLine("\"></div>");
 }
 
-static PageMetric MeasurePage(int page, string? referenceFile, string? candidateFile, long maxCombinedPixels)
+static PageMetric MeasurePage(int page, string? referenceFile, string? candidateFile, PngImage? reference, PngImage? candidate)
 {
-    if (referenceFile is not null && candidateFile is not null)
-    {
-        CheckCombinedPixelQuota(referenceFile, candidateFile, maxCombinedPixels);
-    }
-
-    PngImage? reference = referenceFile is null ? null : PngImage.Load(referenceFile);
-    PngImage? candidate = candidateFile is null ? null : PngImage.Load(candidateFile);
     bool dimensionsMatch = reference is not null
         && candidate is not null
         && reference.Width == candidate.Width
@@ -297,31 +273,11 @@ static PixelMetric MeasurePixelsInRegion(PngImage reference, PngImage candidate,
         referenceForeground);
 }
 
-static IEnumerable<RegionMetric> MeasureRegions(IReadOnlyList<RegionSpec> specs, string[] referenceFiles, string[] candidateFiles)
+static IEnumerable<RegionMetric> MeasureRegions(IEnumerable<RegionSpec> specs, PngImage reference, PngImage candidate)
 {
-    var referenceCache = new Dictionary<int, PngImage>();
-    var candidateCache = new Dictionary<int, PngImage>();
-    foreach (RegionSpec spec in specs.OrderBy(spec => spec.Page).ThenBy(spec => spec.Region, StringComparer.Ordinal))
+    bool dimensionsMatch = reference.Width == candidate.Width && reference.Height == candidate.Height;
+    foreach (RegionSpec spec in specs.OrderBy(spec => spec.Region, StringComparer.Ordinal))
     {
-        int pageIndex = spec.Page - 1;
-        if (pageIndex < 0 || pageIndex >= referenceFiles.Length || pageIndex >= candidateFiles.Length)
-        {
-            continue;
-        }
-
-        if (!referenceCache.TryGetValue(pageIndex, out PngImage? reference))
-        {
-            reference = PngImage.Load(referenceFiles[pageIndex]);
-            referenceCache[pageIndex] = reference;
-        }
-
-        if (!candidateCache.TryGetValue(pageIndex, out PngImage? candidate))
-        {
-            candidate = PngImage.Load(candidateFiles[pageIndex]);
-            candidateCache[pageIndex] = candidate;
-        }
-
-        bool dimensionsMatch = reference.Width == candidate.Width && reference.Height == candidate.Height;
         ResolvedRegion? region = ResolveRegion(spec, Math.Min(reference.Width, candidate.Width), Math.Min(reference.Height, candidate.Height));
         if (region is null)
         {

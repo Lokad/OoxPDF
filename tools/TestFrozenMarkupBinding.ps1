@@ -15,7 +15,7 @@ throw 'Frozen binding requested an unexpected build'
 $inputFile=Join-Path $repoRoot 'input.docx'
 [IO.File]::WriteAllText($inputFile,'fake public input')
 $runtime=@{}
-foreach ($name in @('cli','docx','pptx','pdf')) {
+foreach ($name in @('cli','docx','pptx','pdf','rasterizer','visualDiff')) {
     $directory=Join-Path $repoRoot ('frozen/'+$name)
     New-Item -ItemType Directory -Force $directory | Out-Null
     $runtime[$name]=Join-Path $directory 'probe.dll'
@@ -80,7 +80,7 @@ try { . $binding } catch { if (!$_.Exception.Message.Contains('differs from the 
 if (!$rejected) { throw 'Cached comparison accepted a different library' }
 foreach ($script in @('CompareCachedDocxMarkupReference.ps1','RunDocxMarkupReferenceGate.ps1')) {
     $parameters=(Get-Command (Join-Path $PSScriptRoot $script)).Parameters
-    foreach ($name in @('CliPath','DocxInspectorPath','PdfInspectorPath','SkipBuild')) {
+    foreach ($name in @('CliPath','DocxInspectorPath','PdfInspectorPath','SkipBuild','Framework','RasterizerPath','VisualDiffPath')) {
         if (!$parameters.ContainsKey($name)) { throw ('Missing forwarded runtime option: '+$script+'/'+$name) }
     }
 }
@@ -88,9 +88,12 @@ $gateSource=Get-Content (Join-Path $PSScriptRoot 'RunDocxMarkupReferenceGate.ps1
 $start=$gateSource.IndexOf('    $arguments = @{')
 $end=$gateSource.IndexOf("`n    }",$start)+6
 $caseInfo=@{Path=$inputFile};$caseOutput=Join-Path $repoRoot 'forwarded';$Dpi=144;$PdfInspectorPath=$runtime.pdf
+$Framework='net10.0';$RasterizerPath=$runtime.rasterizer;$VisualDiffPath=$runtime.visualDiff
 . ([scriptblock]::Create($gateSource.Substring($start,$end-$start)))
 if ($arguments.CliPath -ne $CliPath -or $arguments.DocxInspectorPath -ne $DocxInspectorPath -or
-    $arguments.PdfInspectorPath -ne $PdfInspectorPath -or !$arguments.SkipBuild) { throw 'Gate dropped frozen runtime arguments' }
+    $arguments.PdfInspectorPath -ne $PdfInspectorPath -or !$arguments.SkipBuild -or
+    $arguments.Framework -cne $Framework -or $arguments.RasterizerPath -ne $RasterizerPath -or
+    $arguments.VisualDiffPath -ne $VisualDiffPath) { throw 'Gate dropped frozen runtime arguments' }
 @{Checks=@('Frozen DOCX inspection','Frozen PPTX inspection','Frozen PDF inspection','Inspector identity records',
     'Wrong library refused before execution','Changed inspector refused','Cached CLI identity',
     'Unpaired CLI refused','Cached library mismatch refused','Gate runtime parameters');Builds=0;LibraryExecutions=0;OfficeExports=0} |
