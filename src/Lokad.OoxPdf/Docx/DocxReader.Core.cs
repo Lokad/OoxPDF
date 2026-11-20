@@ -559,9 +559,7 @@ internal sealed partial class DocxReader
             ReadTwipsAttribute(pageMargins, WordprocessingNamespace + "header"),
             ReadTwipsAttribute(pageMargins, WordprocessingNamespace + "footer"),
             ReadOnOff(titlePage),
-            (string?)titlePage?.Attribute(WordprocessingNamespace + "val"),
-            ReadOnOff(evenAndOddHeaders),
-            (string?)evenAndOddHeaders?.Attribute(WordprocessingNamespace + "val"))
+            ReadOnOff(evenAndOddHeaders))
         {
             GutterDistancePoints = ReadTwipsAttribute(pageMargins, WordprocessingNamespace + "gutter"),
             GutterDistanceValue = (string?)pageMargins?.Attribute(WordprocessingNamespace + "gutter"),

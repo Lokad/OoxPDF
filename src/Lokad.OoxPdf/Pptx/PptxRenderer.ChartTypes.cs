@@ -565,11 +565,9 @@ internal sealed partial class PptxRenderer
     }
 
     private readonly record struct ChartPolarLayout(
-        ChartPolarKind Kind,
         ChartPlotBox PlotBox,
         ChartPolarGeometry Geometry,
-        double ExplosionReserve,
-        bool HasLegend);
+        double ExplosionReserve);
 
     private enum ChartRadarStyle
     {

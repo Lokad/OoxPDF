@@ -273,11 +273,9 @@ internal sealed partial class PptxRenderer
         double explosionReserve = pointExplosions.Count == 0 ? 0d : pointExplosions.Values.Max();
         bool hasLegend = legend.Visible && !legend.Overlay;
         return new ChartPolarLayout(
-            kind,
             plotBox,
             GetPieOrDoughnutGeometry(),
-            explosionReserve,
-            hasLegend);
+            explosionReserve);
 
         ChartPolarGeometry GetPieOrDoughnutGeometry()
         {

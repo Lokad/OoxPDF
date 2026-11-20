@@ -47,11 +47,9 @@ internal sealed record DocxPageSettings(
     double? HeaderDistancePoints,
     double? FooterDistancePoints,
     bool? TitlePage,
-    string? TitlePageValue,
-    bool? EvenAndOddHeaders,
-    string? EvenAndOddHeadersValue)
+    bool? EvenAndOddHeaders)
 {
-    public static DocxPageSettings Empty { get; } = new(null, null, null, null, null, null, null, null, null, null, null, null, null);
+    public static DocxPageSettings Empty { get; } = new(null, null, null, null, null, null, null, null, null, null, null);
 
     internal static (double Width, double Height) NormalizeDimensions(double width, double height, string? orientation)
     {
