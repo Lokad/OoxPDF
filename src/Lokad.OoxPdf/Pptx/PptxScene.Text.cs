@@ -81,18 +81,6 @@ internal sealed partial class PptxSceneBuilder
             paragraph);
     }
 
-    // Cell paragraphs retain the same source/cascade contract as shape paragraphs;
-    // the renderer resolves table-style defaults along with the live text style.
-    internal static IReadOnlyList<PptxSceneTextParagraph> ReadTableCellParagraphs(
-        XElement textBody,
-        IReadOnlyList<XDocument> placeholderSources,
-        XElement? defaultTextStyle)
-    {
-        return textBody.Elements(DrawingNamespace + "p")
-            .Select(paragraph => ReadParagraph(paragraph, textBody, textBody, [], placeholderSources, defaultTextStyle))
-            .ToArray();
-    }
-
     private static PptxSceneTextRun? ReadRun(XElement element)
     {
         if (element.Name == DrawingNamespace + "r" || element.Name == DrawingNamespace + "fld")

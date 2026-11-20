@@ -294,78 +294,31 @@ internal static class PptxSceneTextAgreementTests
 
     public static void TableCellSpansPreserveSourceContentAndDeclaredFrame()
     {
-        // Check content against its source and placement against the supplied
-        // cell frame. Independent Office style controls live in PptxTableDefaultTests.
         string input = Path.Combine(Directory.GetCurrentDirectory(), "tests", "Lokad.OoxPdf.Tests", "Cases", "pptx-ladder-10-table-style-text.pptx");
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        using OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
-        PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
-        MethodInfo frameMethod = typeof(PptxRenderer).GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
-            .Single(candidate => candidate.Name == "BuildTableCellTextFrame" && candidate.GetParameters().Length == 15);
-        MethodInfo contextMethod = typeof(PptxRenderer).GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
-            .Single(candidate => candidate.Name == "TryLoadRenderContext");
-        object? context;
-        try
-        {
-            object?[] arguments = [document, package, 0, new Dictionary<string, PdfImageXObject?>(), null, CancellationToken.None];
-            arguments = [.. arguments, .. contextMethod.GetParameters().Skip(arguments.Length).Select(parameter => parameter.DefaultValue)];
-            context = contextMethod.Invoke(null, arguments);
-        }
-        catch (TargetInvocationException ex)
-        {
-            throw ex.InnerException ?? ex;
-        }
+        var fonts = new PresentationFontResolver(new PortableRenderingTests.PinnedResolver());
+        var cells = PptxRenderer.InspectTextGlyphRuns(document, package, 0, inspectionFonts: fonts)
+            .Where(run => run.TableRowIndex.HasValue)
+            .GroupBy(run => (run.TableRowIndex, run.TableColumnIndex))
+            .ToDictionary(group => group.Key, group => group.ToArray());
 
-        TestAssert.True(context is PptxRenderContext, "Expected a render context for the table fixture.");
-        var portableContext = ((PptxRenderContext)context!) with
+        // The authored grid has two 216pt cells starting at x=72pt and a 72pt row.
+        TestAssert.Equal(2, cells.Count);
+        foreach (var (column, left, text) in new[] { (0, 72d, "Head"), (1, 288d, "Body") })
         {
-            FontResolver = new PresentationFontResolver(new PortableRenderingTests.PinnedResolver())
-        };
-        int comparedSpans = 0;
-        foreach (PptxSceneNode node in scene.Slides[0].SlideNodes)
-        {
-            if (node.Kind != PptxSceneNodeKind.Table || node.Table is null)
+            PptxTextGlyphRunSnapshot[] runs = cells[(0, column)];
+            TestAssert.Equal(text, string.Concat(runs.Select(run => run.Text)));
+            foreach (PptxTextGlyphRunSnapshot run in runs)
             {
-                continue;
-            }
-
-            foreach (PptxSceneTableCell cell in node.Table.Rows.SelectMany(row => row.Cells))
-            {
-                if (cell.LayoutTextBody is null && cell.TextBody is null)
-                {
-                    continue;
-                }
-
-                object? frame;
-                try
-                {
-                    frame = frameMethod.Invoke(null, new object?[] { cell, 0, 0, 1, 1, 100d, 100d, 100d, 1d, 72d, 72d, 200d, 100d, PptxColorMap.Default, cell.StyleText });
-                }
-                catch (TargetInvocationException ex)
-                {
-                    throw ex.InnerException ?? ex;
-                }
-
-                if (frame is not PptxRenderer.PptxTableCellTextFrame tableFrame)
-                {
-                    continue;
-                }
-
-                IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> spans = PptxRenderer.BuildSceneFedTableCellTextSpansAsync(tableFrame, portableContext).GetAwaiter().GetResult();
-                string sourceText = string.Concat(tableFrame.TextBody.Descendants(DrawingNamespace + "t").Select(text => text.Value));
-                TestAssert.Equal(sourceText, string.Concat(spans.Select(span => span.Run.Text)));
-                comparedSpans += spans.Count;
-                foreach (var span in spans)
-                {
-                    TestAssert.True(span.Run.X >= 72d && span.Run.X + span.Run.Width <= 272d,
-                        "Cell text must stay inside the supplied horizontal frame.");
-                    TestAssert.True(span.Run.Y >= 72d && span.Run.Y <= 172d,
-                        "Cell baselines must stay inside the supplied vertical frame.");
-                }
+                TestAssert.True(run.X >= left && run.X + run.Width <= left + 216d,
+                    "Cell text must stay within its authored horizontal frame.");
+                TestAssert.True(run.BaselineY >= document.SlideHeightPoints - 144d &&
+                    run.BaselineY <= document.SlideHeightPoints - 72d,
+                    "Cell baselines must stay within the authored row.");
             }
         }
-        TestAssert.True(comparedSpans > 0, "Expected table cells to exercise fed-path spans.");
     }
 
     public static void PlainShapeRunTextAndStyleAgree()

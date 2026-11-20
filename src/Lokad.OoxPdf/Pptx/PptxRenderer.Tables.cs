@@ -51,6 +51,8 @@ internal sealed partial class PptxRenderer
 
     internal readonly record struct TableCellFill(double X, double Y, double Width, double Height, RgbColor Color, double Alpha);
 
+    private readonly record struct TableCellTextMeasurement(IReadOnlyList<PptxTextParagraphModel> Paragraphs, double Height);
+
     internal sealed record TableDefaultGrid(
         double X,
         double YTop,
@@ -246,8 +248,6 @@ internal sealed partial class PptxRenderer
 
         double declaredTableHeight = rawRowHeights.Sum() * OoxUnits.PointsPerInch / OoxUnits.EmusPerInch;
         double tableHeightSlackFactor = frameHeight / Math.Max(PptxTextMetricRules.TextStateTolerance, declaredTableHeight);
-        double[] rowHeights = (await ResolveTableRowHeightsAsync(context, table, rawColumnWidths, rawRowHeights, columnScale, frameHeight, colorMap).ConfigureAwait(false));
-
         // bound row/column products before allocating dense border grids.
         // Declared grid columns and rows can both be numerous while actual cells
         // are sparse; their product is not bounded by XML element count.
@@ -270,6 +270,7 @@ internal sealed partial class PptxRenderer
                 "PPTX table grid exceeds the maximum supported cell count of " + MaxTableGridSegments + ".");
         }
 
+        var (rowHeights, textMeasurements) = await ResolveTableRowHeightsAsync(context, table, rawColumnWidths, rawRowHeights, columnScale, frameHeight, colorMap).ConfigureAwait(false);
         double yTop = frameTop;
         var rowTops = new double[rows.Count + 1];
         var skippedVerticalGridSegments = new bool[rawColumnWidths.Count + 1, rows.Count];
@@ -344,7 +345,15 @@ internal sealed partial class PptxRenderer
                     .Skip(rowIndex)
                     .Take(rowSpan)
                     .Sum() * OoxUnits.PointsPerInch / OoxUnits.EmusPerInch;
-                await AddTableCellTextSpansAsync(context, sceneCell, rowIndex, columnIndex, rowSpan, columnSpan, declaredRowHeight, declaredRowSpanHeight, declaredTableHeight, tableHeightSlackFactor, cellX, cellBottom, columnWidth, cellHeight, textSpans, textFrames, colorMap, sceneCell.StyleText).ConfigureAwait(false);
+                if (BuildTableCellTextFrame(sceneCell, rowIndex, columnIndex, rowSpan, columnSpan, declaredRowHeight, declaredRowSpanHeight,
+                    declaredTableHeight, tableHeightSlackFactor, cellX, cellBottom, columnWidth, cellHeight, colorMap, sceneCell.StyleText) is { } tableTextFrame)
+                {
+                    textFrames.Add(tableTextFrame);
+                    TableCellTextMeasurement? measured = textMeasurements is not null &&
+                        textMeasurements.Remove(tableTextFrame.TextBody, out TableCellTextMeasurement cellMeasurement) ? cellMeasurement : null;
+                    PptxTextFrameModel model = await BuildTableCellTextFrameModelAsync(tableTextFrame, context, measurement: measured).ConfigureAwait(false);
+                    textSpans.AddRange(await BuildTableCellTextSpansAsync(model, context).ConfigureAwait(false));
+                }
                 cellX += columnWidth;
                 nextColumn = columnIndex + columnSpan;
             }
@@ -380,7 +389,7 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static async ValueTask<double[]> ResolveTableRowHeightsAsync(
+    private static async ValueTask<(double[] Heights, Dictionary<XElement, TableCellTextMeasurement>? TextMeasurements)> ResolveTableRowHeightsAsync(
         PptxRenderContext context,
         PptxSceneTable sceneTable,
         IReadOnlyList<double> rawColumnWidths,
@@ -398,12 +407,14 @@ internal sealed partial class PptxRenderer
         {
             if (TryDistributeSmallPositiveTableRowSlack(rawRowHeights, frameHeight, rowHeightSlackFactor, out double[] slackAdjustedRows))
             {
-                return slackAdjustedRows;
+                return (slackAdjustedRows, null);
             }
 
-            return rowHeights;
+            return (rowHeights, null);
         }
 
+        // Row sizing and placement use the same text source, style and wrap width.
+        var textMeasurements = new Dictionary<XElement, TableCellTextMeasurement>();
         double[] minimumHeights = new double[rowHeights.Length];
         for (int rowIndex = 0; rowIndex < sceneTable.Rows.Count; rowIndex++)
         {
@@ -450,7 +461,7 @@ internal sealed partial class PptxRenderer
         double minimumTotal = minimumHeights.Sum();
         if (minimumTotal > frameHeight + PptxTextMetricRules.TextStateTolerance)
         {
-            return minimumHeights;
+            return (minimumHeights, textMeasurements);
         }
 
         double overflow = rowHeights.Sum() - frameHeight;
@@ -470,7 +481,7 @@ internal sealed partial class PptxRenderer
             }
         }
 
-        return rowHeights;
+        return (rowHeights, textMeasurements);
 
         async ValueTask<double> EstimateTableCellMinimumHeightAsync(PptxSceneTableCell sceneCell, double width, PptxSceneTableCellTextStyle tableStyleTextStyle)
         {
@@ -482,6 +493,7 @@ internal sealed partial class PptxRenderer
 
             PptxTextFrameModel frame = await BuildTableCellTextFrameModelAsync(tableTextFrame, context, estimateVerticalOffset: false).ConfigureAwait(false);
             double textHeight = await EstimateTextHeightAsync(frame.Paragraphs, frame.TextWrapWidth, frame.BodyProperties, context.FontResolver, context.CancellationToken).ConfigureAwait(false);
+            textMeasurements.Add(frame.TextBody, new TableCellTextMeasurement(frame.Paragraphs, textHeight));
             if (textHeight <= PptxTextMetricRules.TextStateTolerance)
             {
                 return 0d;
@@ -579,36 +591,6 @@ internal sealed partial class PptxRenderer
                 layout.X + layout.Width,
                 layout.YTop);
         }
-    }
-
-    private static async ValueTask AddTableCellTextSpansAsync(
-        PptxRenderContext context,
-        PptxSceneTableCell sceneCell,
-        int rowIndex,
-        int columnIndex,
-        int rowSpan,
-        int columnSpan,
-        double declaredRowHeight,
-        double declaredRowSpanHeight,
-        double declaredTableHeight,
-        double tableHeightSlackFactor,
-        double x,
-        double y,
-        double width,
-        double height,
-        List<PptxPositionedTextSpan> spans,
-        List<PptxTableCellTextFrame> textFrames,
-        PptxColorMap colorMap,
-        PptxSceneTableCellTextStyle tableStyleTextStyle)
-    {
-        PptxTableCellTextFrame? tableTextFrame = BuildTableCellTextFrame(sceneCell, rowIndex, columnIndex, rowSpan, columnSpan, declaredRowHeight, declaredRowSpanHeight, declaredTableHeight, tableHeightSlackFactor, x, y, width, height, colorMap, tableStyleTextStyle);
-        if (tableTextFrame is null)
-        {
-            return;
-        }
-
-        textFrames.Add(tableTextFrame);
-        spans.AddRange((await BuildSceneFedTableCellTextSpansAsync(tableTextFrame, context).ConfigureAwait(false)));
     }
 
     private static PptxTableCellTextFrame? BuildTableCellTextFrame(PptxSceneTableCell sceneCell, int rowIndex, int columnIndex, int rowSpan, int columnSpan, double declaredRowHeight, double declaredRowSpanHeight, double declaredTableHeight, double tableHeightSlackFactor, double x, double y, double width, double height, PptxColorMap colorMap, PptxSceneTableCellTextStyle tableStyleTextStyle)

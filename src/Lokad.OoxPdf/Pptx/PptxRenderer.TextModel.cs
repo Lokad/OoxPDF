@@ -424,7 +424,8 @@ internal sealed partial class PptxRenderer
     private static async ValueTask<PptxTextFrameModel> BuildTableCellTextFrameModelAsync(
         PptxTableCellTextFrame tableFrame,
         PptxRenderContext context,
-        bool estimateVerticalOffset = true)
+        bool estimateVerticalOffset = true,
+        TableCellTextMeasurement? measurement = null)
     {
         PptxDocument document = context.Document;
         XElement textBody = tableFrame.TextBody;
@@ -488,7 +489,7 @@ internal sealed partial class PptxRenderer
                 document.SlideHeightPoints);
         }
 
-        IReadOnlyList<PptxTextParagraphModel> paragraphs = BuildParagraphModels(
+        IReadOnlyList<PptxTextParagraphModel> paragraphs = measurement?.Paragraphs ?? BuildParagraphModels(
             textBody,
             textBody,
             inheritedPlaceholders: [],
@@ -506,7 +507,8 @@ internal sealed partial class PptxRenderer
         double verticalOffset = 0d;
         if (estimateVerticalOffset && bodyProperties.VerticalAnchor is TextVerticalAnchor.Middle or TextVerticalAnchor.Bottom)
         {
-            double contentHeight = await EstimateTextHeightAsync(paragraphs, textWrapWidth, bodyProperties, context.FontResolver, context.CancellationToken).ConfigureAwait(false);
+            double contentHeight = measurement?.Height ??
+                await EstimateTextHeightAsync(paragraphs, textWrapWidth, bodyProperties, context.FontResolver, context.CancellationToken).ConfigureAwait(false);
             verticalOffset = Math.Max(0d, textHeight - contentHeight);
             if (bodyProperties.VerticalAnchor == TextVerticalAnchor.Middle)
             {
@@ -646,7 +648,7 @@ internal sealed partial class PptxRenderer
             PptxParagraphStyleCascade cascade = BuildParagraphStyleCascade(levelName);
             XElement? defaultParagraphProperties = cascade.ResolveDefaultProperties();
             PptxParagraphStyleCascade resolvedStyleCascade = BuildResolvedParagraphStyleCascade(cascade, paragraphProperties);
-            XElement? effectiveParagraphProperties = resolvedStyleCascade.ResolveDefaultProperties();
+            XElement? effectiveParagraphProperties = paragraphProperties is null ? defaultParagraphProperties : resolvedStyleCascade.ResolveDefaultProperties();
             ResolvedParagraphTextStyle paragraphStyle = ResolveParagraphTextStyle(paragraph, paragraphProperties, effectiveParagraphProperties, fontScale, lineSpacingScale, compatibleLineSpacing, compatibleDefaultLineSpacingFactor);
             PptxParagraphBulletModel bullet = BuildParagraphBulletModel(effectiveParagraphProperties, theme, colorMap);
             IReadOnlyList<PptxTextRunModel> runs = BuildRunModels(paragraph, paragraphStyle, resolvedStyleCascade,
@@ -665,7 +667,6 @@ internal sealed partial class PptxRenderer
                 runs.Count > 0,
                 runs.Any(run => run.Kind == PptxTextRunKind.Break || TextContainsManualLineBreak(run.Text)),
                 paragraphStyle.FontSize,
-                defaultParagraphProperties,
                 paragraphLevel,
                 cascade,
                 resolvedStyleCascade,
@@ -749,7 +750,7 @@ internal sealed partial class PptxRenderer
                 sceneParagraph.CascadeLayers.Select(layer => new PptxParagraphStyleLayer(layer.Name, SceneCascadeLayerKind(layer.Kind), layer.Source)).ToList());
             XElement? defaultParagraphProperties = cascade.ResolveDefaultProperties();
             PptxParagraphStyleCascade resolvedStyleCascade = BuildResolvedParagraphStyleCascade(cascade, paragraphProperties);
-            XElement? effectiveParagraphProperties = resolvedStyleCascade.ResolveDefaultProperties();
+            XElement? effectiveParagraphProperties = paragraphProperties is null ? defaultParagraphProperties : resolvedStyleCascade.ResolveDefaultProperties();
             ResolvedParagraphTextStyle paragraphStyle = ResolveParagraphTextStyle(paragraph, paragraphProperties, effectiveParagraphProperties, frameModel.FontScale, frameModel.LineSpacingScale, frameModel.BodyProperties.CompatibleLineSpacing, ResolveCompatibleDefaultLineSpacingFactor(frameModel.BodyProperties));
             PptxParagraphBulletModel bullet = BuildParagraphBulletModel(effectiveParagraphProperties, theme, colorMap);
             IReadOnlyList<PptxTextRunModel> runs = BuildRunModels(paragraph, paragraphStyle, resolvedStyleCascade, shapeFontPaint, theme, colorMap, frameModel.FontScale, slideNumber, tableStyleTextStyle,
@@ -768,7 +769,6 @@ internal sealed partial class PptxRenderer
                 runs.Count > 0,
                 runs.Any(run => run.Kind == PptxTextRunKind.Break || TextContainsManualLineBreak(run.Text)),
                 paragraphStyle.FontSize,
-                defaultParagraphProperties,
                 sceneParagraph.Level,
                 cascade,
                 resolvedStyleCascade,

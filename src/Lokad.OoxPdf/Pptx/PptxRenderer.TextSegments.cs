@@ -375,8 +375,7 @@ internal sealed partial class PptxRenderer
 
     // Mongolian vertical Latin runs as a horizontal left-to-right row of clockwise-spun glyphs
     // (Office emits per-run 0 -1 1 0 text matrices). The layout engine stacks vertical text downward
-    // under a shared pivot, so remap those spans to per-run clockwise matrices here. Tables never
-    // reach this path (table cells use BuildSceneFedTableCellTextSpansAsync below).
+    // under a shared pivot, so remap those shape spans to per-run clockwise matrices here.
     // Single-sample calibration on pptx-ladder-04-vertical-text-port: row starts at shape X plus
     // 6.15pt with a self-calibrating pitch (median nonzero run-Y step, 28.8pt on the fixture).
     private const double MongolianVerticalRowStartInset = 6.15d;
@@ -465,15 +464,10 @@ internal sealed partial class PptxRenderer
         return gaps[(gaps.Count - 1) / 2];
     }
 
-    // R14-deeper: table cells resolve paragraphs through the shared scene readers;
-    // the frame geometry and downstream layout stay on the existing path.
-    internal static async ValueTask<IReadOnlyList<PptxPositionedTextSpan>> BuildSceneFedTableCellTextSpansAsync(PptxTableCellTextFrame tableFrame, PptxRenderContext context)
+    private static async ValueTask<IReadOnlyList<PptxPositionedTextSpan>> BuildTableCellTextSpansAsync(PptxTextFrameModel frame, PptxRenderContext context)
     {
-        PptxTextFrameModel frameModel = await BuildTableCellTextFrameModelAsync(tableFrame, context).ConfigureAwait(false);
-        IReadOnlyList<PptxSceneTextParagraph> cellParagraphs = PptxSceneBuilder.ReadTableCellParagraphs(tableFrame.TextBody, context.InheritedXml, context.Document.DefaultTextStyle);
-        IReadOnlyList<PptxTextParagraphModel> fedParagraphs = BuildSceneFedParagraphModels(cellParagraphs, frameModel, context.Theme, tableFrame.ColorMap, context.DisplayedSlideNumber, shapeFontPaint: null, tableFrame.TextStyle);
-        var fedFrame = frameModel with { Paragraphs = fedParagraphs };
-        PptxTextFrameLayout layout = (await BuildTextFrameLayoutAsync(fedFrame, context.Document, new TextAdvanceEstimator(context.FontResolver, context.CancellationToken)).ConfigureAwait(false));
+        PptxTextFrameLayout layout = await BuildTextFrameLayoutAsync(frame, context.Document,
+            new TextAdvanceEstimator(context.FontResolver, context.CancellationToken)).ConfigureAwait(false);
         return await FlattenTextLayoutToSpansAsync(new PptxTextLayoutModel(new[] { layout }), context.FontResolver, context.Document).ConfigureAwait(false);
     }
 
