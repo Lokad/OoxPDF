@@ -15,7 +15,8 @@ internal sealed partial class DocxReader
         OoxPackage package,
         Action<OoxPdfDiagnostic>? diagnosticSink,
         CancellationToken cancellationToken,
-        OoxPdfDocxMarkupMode markupMode)
+        OoxPdfDocxMarkupMode markupMode,
+        bool includeStyleCatalog = false)
     {
             OoxPart FindDocumentPart(OoxPackage package, CancellationToken cancellationToken)
             {
@@ -181,7 +182,7 @@ internal sealed partial class DocxReader
                 MainPartName = documentPart.Name,
                 EquationParts = ReadEquationParts(),
                 EquationDiagnostics = equationDiagnostics,
-                StyleCatalog = ToStyleCatalog(styles),
+                StyleCatalog = includeStyleCatalog ? ToStyleCatalog(styles) : DocxStyleCatalog.Empty,
                 HeaderParagraphsByType = headersByType,
                 FooterParagraphsByType = footersByType,
                 HeaderBodyElementsByType = headerBodyElementsByType,

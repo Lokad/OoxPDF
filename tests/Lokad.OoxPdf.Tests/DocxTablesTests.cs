@@ -1667,7 +1667,7 @@ internal static class DocxTablesTests
 
         using FileStream stream = File.OpenRead(input);
         OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
-        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final, includeStyleCatalog: true);
 
         DocxTableCell firstHeader = document.Tables[0].Rows[0].Cells[0];
         DocxTableCell firstBody = document.Tables[0].Rows[1].Cells[0];

@@ -13,7 +13,7 @@ internal static partial class DocxInlineCompositionTests
         using var golden = ReadRunDefaultGolden();
         foreach (var row in golden.RootElement.GetProperty("Rows").EnumerateArray())
         {
-            var document = ReadRunDefaultSource(row);
+            var document = ReadRunDefaultSource(row, includeStyleCatalog: true);
             var runs = DocxBlockTraversal.EnumerateSourceParagraphs(document).SelectMany(paragraph => paragraph.Runs)
                 .Where(run => run.Text.Contains("Public ", StringComparison.Ordinal)).ToArray();
             TestAssert.Equal(6, runs.Select(run => run.Text.Trim()).Distinct().Count());
@@ -89,10 +89,10 @@ internal static partial class DocxInlineCompositionTests
     private static OoxPdfDocxMarkupMode RunDefaultMode(JsonElement row) =>
         row.GetProperty("Mode").GetString() == "final-preserve" ? OoxPdfDocxMarkupMode.Final : OoxPdfDocxMarkupMode.AllMarkup;
 
-    private static DocxDocument ReadRunDefaultSource(JsonElement row)
+    private static DocxDocument ReadRunDefaultSource(JsonElement row, bool includeStyleCatalog = false)
     {
         string input = Path.Combine(RunDefaultCaseFolder(), row.GetProperty("Id").GetString()! + ".docx");
         TestAssert.Equal(row.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(input))));
-        return DocxTests.ReadDocx(input, RunDefaultMode(row));
+        return DocxTests.ReadDocx(input, RunDefaultMode(row), includeStyleCatalog);
     }
 }

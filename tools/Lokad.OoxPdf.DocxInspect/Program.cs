@@ -48,7 +48,7 @@ Directory.CreateDirectory(outputDirectory);
 
 using FileStream stream = File.OpenRead(inputPath);
 using OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
-DocxDocument document = new DocxReader().Read(package, diagnosticSink: null, CancellationToken.None, markupMode: markupMode);
+DocxDocument document = new DocxReader().Read(package, diagnosticSink: null, CancellationToken.None, markupMode, includeStyleCatalog: true);
 var renderer = new DocxRenderer(fontResolver: null, markupMode: markupMode, markupGeometryMode: markupGeometryMode);
 
 var options = new JsonSerializerOptions

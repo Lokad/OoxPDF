@@ -299,10 +299,10 @@ internal static class DocxTests
         return ReadDocx(input, mode).Paragraphs.Single();
     }
 
-    internal static DocxDocument ReadDocx(string input, OoxPdfDocxMarkupMode mode)
+    internal static DocxDocument ReadDocx(string input, OoxPdfDocxMarkupMode mode, bool includeStyleCatalog = false)
     {
         using FileStream stream = File.OpenRead(input);
-        return new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, markupMode: mode);
+        return new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, mode, includeStyleCatalog);
     }
 
     internal static DocxTable ReadSingleTable(string input, OoxPdfDocxMarkupMode mode)

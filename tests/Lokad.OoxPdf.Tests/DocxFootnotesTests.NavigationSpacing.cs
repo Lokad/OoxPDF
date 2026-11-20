@@ -642,7 +642,7 @@ internal static partial class DocxFootnotesTests
     {
         foreach (string mode in new[] { "no-paragraph-styles", "off" })
         {
-            DocxDocument source = ReadDefaultContextualStyleFixture("footnote", "Normal", true, true, true, mode);
+            DocxDocument source = ReadDefaultContextualStyleFixture("footnote", "Normal", true, true, true, mode, includeStyleCatalog: true);
             TestAssert.Equal("Normal", source.Paragraphs[0].StyleId!);
             TestAssert.True(source.Paragraphs[1].StyleId is null && source.Paragraphs[1].StyleResolution.StyleId is null,
                 "Application-default identity does not invent an authored style.");
@@ -758,7 +758,7 @@ internal static partial class DocxFootnotesTests
     }
 
     private static DocxDocument ReadDefaultContextualStyleFixture(string kind, string defaultId,
-        bool explicitPrevious, bool previousFlag, bool currentFlag, string variant = "ordinary") =>
+        bool explicitPrevious, bool previousFlag, bool currentFlag, string variant = "ordinary", bool includeStyleCatalog = false) =>
         ReadSectionNumberingFixture(kind, (xml, _, parts) =>
         {
             XDocument styles = XDocument.Parse(parts["word/styles.xml"]);
@@ -799,7 +799,7 @@ internal static partial class DocxFootnotesTests
             if (variant == "no-paragraph-styles")
                 styles.Root.Elements(NoteWord + "style").Where(s => (string?)s.Attribute(NoteWord + "type") == "paragraph").Remove();
             parts["word/styles.xml"] = styles.ToString();
-        });
+        }, includeStyleCatalog: includeStyleCatalog);
 
     public static void DocxCurrentContextualMultilineNoteBeforeSpacingOwnsSectionFirstGaps()
     {

@@ -413,7 +413,7 @@ internal static partial class DocxTextTests
 
         using FileStream stream = File.OpenRead(input);
         OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
-        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final, includeStyleCatalog: true);
 
         DocxParagraph paragraph = document.Paragraphs.Single();
         DocxTextRun run = paragraph.Runs.Single();
@@ -746,7 +746,10 @@ internal static partial class DocxTextTests
 
         using FileStream stream = File.OpenRead(input);
         OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
-        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final, includeStyleCatalog: true);
+        DocxStyleDefinitionSummary characterStyle = document.StyleCatalog.CharacterStyles.Single();
+        TestAssert.Equal("Emphasis", characterStyle.StyleId);
+        TestAssert.True(characterStyle.HasRunProperties, "The inspector catalog retains authored character style details.");
 
         DocxTextRun run = document.Paragraphs.Single().Runs.Single();
         TestAssert.Equal("Paragraph Sans", run.FontFamily ?? string.Empty);
@@ -830,6 +833,8 @@ internal static partial class DocxTextTests
         using FileStream stream = File.OpenRead(input);
         OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
         DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
+        TestAssert.True(ReferenceEquals(DocxStyleCatalog.Empty, document.StyleCatalog),
+            "Ordinary reads leave the inspector-only catalog empty.");
 
         DocxTextRun run = document.Paragraphs.Single().Runs.Single();
         TestAssert.Equal("Base Sans", run.FontFamily ?? string.Empty);
