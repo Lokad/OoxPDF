@@ -57,7 +57,8 @@ metadata. An observer exception aborts conversion.
 | `OOXML_` | Package, relationships, XML and dialect handling |
 | `DOCX_`, `PPTX_` | Format-specific omissions or approximations |
 | `FONT_` | Substitution, coverage, parsing and unsupported outlines |
-| `IMAGE_` | Missing, malformed or unsupported pictures/SVG |
+| `IMAGE_` | Missing, malformed or unsupported image inputs |
+| `SVG_` | SVG parsing and unsupported SVG graphics, text or presentation |
 | `PDF_` | PDF generation |
 | `CONVERSION_` | Optional resource summary |
 
