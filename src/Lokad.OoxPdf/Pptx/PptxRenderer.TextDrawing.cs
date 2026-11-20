@@ -601,7 +601,7 @@ internal sealed partial class PptxRenderer
     private static void DrawTextRunsWithFonts(IReadOnlyList<TextRun> textRuns, PdfGraphicsBuilder graphics, IReadOnlyDictionary<FontRequest, RenderedFont> fonts, CancellationToken cancellationToken)
     {
         DrawHighlightRunsWithFonts();
-        textRuns = CoalesceAdjacentTextRuns(textRuns, compareHighlight: false);
+        textRuns = CoalesceAdjacentTextRuns(textRuns, highlightsOnly: false);
         textRuns = CoalesceUnderlineRuns(textRuns);
         foreach (TextRun run in textRuns)
         {
@@ -609,156 +609,40 @@ internal sealed partial class PptxRenderer
             {
                 if (rendered.FallbackFace is { } fallback)
                 {
-                    DrawFallbackWrappedRun(fallback, run);
+                    DrawFallbackWrappedText(graphics, fallback, run, cancellationToken);
                 }
                 else if (rendered.Font is { } embedded)
                 {
-                    DrawWrappedRun(rendered.ResourceName, embedded, run, rendered.SyntheticBold, rendered.SyntheticItalic);
-                }
-            }
-        }
-
-        void DrawWrappedRun(string resourceName, PdfEmbeddedFont embedded, TextRun run, bool syntheticBold, bool syntheticItalic)
-        {
-            graphics.SaveState();
-            PrepareTextPaint(graphics, run);
-            TextGlyphRun? glyphRun = BuildTextGlyphRun(resourceName, embedded, run, syntheticBold, syntheticItalic);
-            if (glyphRun is not null)
-            {
-                bool needsTextAlpha = run.Alpha < 1d - PptxTextMetricRules.TextStateTolerance ||
-                    (run.Outline is { } runOutline && runOutline.Alpha < 1d - PptxTextMetricRules.TextStateTolerance);
-                if (needsTextAlpha)
-                {
                     graphics.SaveState();
-                    graphics.SetAlpha(run.Alpha, run.Outline?.Alpha ?? 1d);
-                }
-
-                DrawGlyphText(graphics, glyphRun);
-
-                if (run.Underline)
-                {
-                    graphics.SetFillRgb(run.Color.Red, run.Color.Green, run.Color.Blue);
-                    if (TryGetUnderlineRectangle(embedded, glyphRun, out TextDecorationRectangle underline))
-                    {
-                        FillTextDecorationRectangleEvenOdd(graphics, underline);
-                    }
-                }
-
-                if (run.Strike)
-                {
-                    graphics.SetFillRgb(run.Color.Red, run.Color.Green, run.Color.Blue);
-                    if (TryGetStrikeRectangle(embedded, glyphRun, out TextDecorationRectangle strike))
-                    {
-                        FillTextDecorationRectangleEvenOdd(graphics, strike);
-                    }
-                }
-
-                if (needsTextAlpha)
-                {
+                    PrepareTextPaint(graphics, run);
+                    DrawEmbeddedGlyphs(graphics, BuildTextGlyphRun(rendered.ResourceName, embedded, run,
+                        rendered.SyntheticBold, rendered.SyntheticItalic));
                     graphics.RestoreState();
                 }
             }
-
-            graphics.RestoreState();
-        }
-
-        // Fallback glyphs use face metrics within the allocated label width,
-        // with WinAnsi question-mark substitution for unencodable runes.
-        void DrawFallbackWrappedRun(PdfFallbackFontResource fallback, TextRun run)
-        {
-            graphics.SaveState();
-            PrepareTextPaint(graphics, run);
-            double baselineY = run.Y + run.BaselineOffset;
-            if (run.Text.Length != 0 && BaselineIntersectsClip(run, baselineY))
-            {
-                bool needsTextAlpha = run.Alpha < 1d - PptxTextMetricRules.TextStateTolerance ||
-                    (run.Outline is { } runOutline && runOutline.Alpha < 1d - PptxTextMetricRules.TextStateTolerance);
-                if (needsTextAlpha)
-                {
-                    graphics.SaveState();
-                    graphics.SetAlpha(run.Alpha, run.Outline?.Alpha ?? 1d);
-                }
-
-                double pdfFontSize = OfficePdfTextEmissionProfile.FontSize(run.FontSize);
-                var glyphs = fallback.Font.PositionGlyphs(run.Text, run.X, baselineY, run.FontSize,
-                    run.CharacterSpacing, run.Width, cancellationToken);
-
-                graphics.DrawFallbackText(fallback.ResourceName, pdfFontSize, run.Color.Red, run.Color.Green, run.Color.Blue, glyphs);
-                if (run.Underline || run.Strike)
-                {
-                    graphics.SetFillRgb(run.Color.Red, run.Color.Green, run.Color.Blue);
-                    FillFallbackTextDecoration(graphics, run.X, baselineY, run.Width, pdfFontSize, run.Underline, run.Strike);
-                }
-
-                if (needsTextAlpha)
-                {
-                    graphics.RestoreState();
-                }
-            }
-
-            graphics.RestoreState();
         }
 
         void DrawHighlightRunsWithFonts()
         {
-            foreach (TextRun run in CoalesceHighlightRuns())
+            foreach (TextRun run in CoalesceAdjacentTextRuns(textRuns, highlightsOnly: true))
             {
                 if (run.HighlightPaint is not { } highlight || !fonts.TryGetValue(FontRequestForRun(run), out RenderedFont rendered))
                 {
                     continue;
                 }
 
+                double baselineY = run.Y + run.BaselineOffset;
                 // RV01: fallback highlights use the measured run width with diagnosed
                 // constants instead of vanishing.
                 if (rendered.FallbackFace is not null)
                 {
-                    double baselineY = run.Y + run.BaselineOffset;
                     FillFallbackHighlight(graphics, run, highlight, baselineY, run.Width);
                 }
                 else if (rendered.Font is { } highlightEmbedded)
                 {
-                    DrawHighlightRun(highlightEmbedded, run);
+                    double lineWidth = MeasureRenderedText(highlightEmbedded, run.Text, run.FontSize, run.CharacterSpacing, run.KerningEnabled);
+                    DrawHighlightRectangle(graphics, highlightEmbedded, run, highlight, baselineY, lineWidth);
                 }
-            }
-
-            IReadOnlyList<TextRun> CoalesceHighlightRuns()
-            {
-                var coalesced = new List<TextRun>(textRuns.Count);
-                foreach (TextRun run in textRuns)
-                {
-                    if (run.Text.Length == 0 || run.HighlightPaint is null)
-                    {
-                        continue;
-                    }
-
-                    if (coalesced.Count != 0 && CanCoalesceTextRun(coalesced[^1], run, true, true))
-                    {
-                        TextRun previous = coalesced[^1];
-                        coalesced[^1] = previous with
-                        {
-                            Text = previous.Text + run.Text,
-                            Width = run.X + run.Width - previous.X
-                        };
-                    }
-                    else
-                    {
-                        coalesced.Add(run);
-                    }
-                }
-
-                return coalesced;
-            }
-
-            void DrawHighlightRun(PdfEmbeddedFont embedded, TextRun run)
-            {
-                if (run.HighlightPaint is not { } highlight)
-                {
-                    return;
-                }
-
-                double baselineY = run.Y + run.BaselineOffset;
-                double lineWidth = MeasureRenderedText(embedded, run.Text, run.FontSize, run.CharacterSpacing, run.KerningEnabled);
-                DrawHighlightRectangle(graphics, embedded, run, highlight, baselineY, lineWidth);
             }
         }
     }
@@ -779,99 +663,20 @@ internal sealed partial class PptxRenderer
                 {
                     if (rendered.FallbackFace is { } fallback)
                     {
-                        DrawFallbackWrappedSpan(fallback, emissionSpan);
+                        DrawFallbackWrappedText(graphics, fallback, run, cancellationToken);
                         hyperlinkScope?.CollectEmissionSpan(emissionSpan, null);
                     }
                     else if (rendered.Font is { } embedded)
                     {
-                        DrawWrappedSpan(rendered.ResourceName, embedded, emissionSpan, rendered.SyntheticBold, rendered.SyntheticItalic);
+                        graphics.SaveState();
+                        PrepareTextPaint(graphics, run);
+                        DrawEmbeddedGlyphs(graphics, BuildTextGlyphRun(rendered.ResourceName, embedded, emissionSpan,
+                            rendered.SyntheticBold, rendered.SyntheticItalic));
+                        graphics.RestoreState();
                         hyperlinkScope?.CollectEmissionSpan(emissionSpan, embedded);
                     }
                 }
             }
-        }
-
-        // Fallback glyphs use the same face metrics within the allocated span
-        // width, with WinAnsi question-mark substitution for unencodable runes.
-        void DrawFallbackWrappedSpan(PdfFallbackFontResource fallback, PptxPositionedTextSpan span)
-        {
-            TextRun run = span.Run;
-            graphics.SaveState();
-            PrepareTextPaint(graphics, run);
-            double baselineY = run.Y + run.BaselineOffset;
-            if (run.Text.Length != 0 && BaselineIntersectsClip(run, baselineY))
-            {
-                bool needsTextAlpha = run.Alpha < 1d - PptxTextMetricRules.TextStateTolerance ||
-                    (run.Outline is { } runOutline && runOutline.Alpha < 1d - PptxTextMetricRules.TextStateTolerance);
-                if (needsTextAlpha)
-                {
-                    graphics.SaveState();
-                    graphics.SetAlpha(run.Alpha, run.Outline?.Alpha ?? 1d);
-                }
-
-                double pdfFontSize = OfficePdfTextEmissionProfile.FontSize(run.FontSize);
-                var glyphs = fallback.Font.PositionGlyphs(run.Text, run.X, baselineY, run.FontSize,
-                    run.CharacterSpacing, run.Width, cancellationToken);
-
-                graphics.DrawFallbackText(fallback.ResourceName, pdfFontSize, run.Color.Red, run.Color.Green, run.Color.Blue, glyphs);
-                if (run.Underline || run.Strike)
-                {
-                    graphics.SetFillRgb(run.Color.Red, run.Color.Green, run.Color.Blue);
-                    FillFallbackTextDecoration(graphics, run.X, baselineY, run.Width, pdfFontSize, run.Underline, run.Strike);
-                }
-
-                if (needsTextAlpha)
-                {
-                    graphics.RestoreState();
-                }
-            }
-
-            graphics.RestoreState();
-        }
-
-        void DrawWrappedSpan(string resourceName, PdfEmbeddedFont embedded, PptxPositionedTextSpan span, bool syntheticBold, bool syntheticItalic)
-        {
-            TextRun run = span.Run;
-            graphics.SaveState();
-            PrepareTextPaint(graphics, run);
-            TextGlyphRun? glyphRun = BuildTextGlyphRun(resourceName, embedded, span, syntheticBold, syntheticItalic);
-            if (glyphRun is not null)
-            {
-                bool needsTextAlpha = run.Alpha < 1d - PptxTextMetricRules.TextStateTolerance ||
-                    (run.Outline is { } runOutline && runOutline.Alpha < 1d - PptxTextMetricRules.TextStateTolerance);
-                if (needsTextAlpha)
-                {
-                    graphics.SaveState();
-                    graphics.SetAlpha(run.Alpha, run.Outline?.Alpha ?? 1d);
-                }
-
-                DrawGlyphText(graphics, glyphRun);
-
-                if (run.Underline)
-                {
-                    graphics.SetFillRgb(run.Color.Red, run.Color.Green, run.Color.Blue);
-                    if (TryGetUnderlineRectangle(embedded, glyphRun, out TextDecorationRectangle underline))
-                    {
-                        FillTextDecorationRectangleEvenOdd(graphics, underline);
-                    }
-                }
-
-                if (run.Strike)
-                {
-                    graphics.SetFillRgb(run.Color.Red, run.Color.Green, run.Color.Blue);
-                    if (TryGetStrikeRectangle(embedded, glyphRun, out TextDecorationRectangle strike))
-                    {
-                        FillTextDecorationRectangleEvenOdd(graphics, strike);
-                    }
-                }
-
-                if (needsTextAlpha)
-                {
-                    graphics.RestoreState();
-                }
-            }
-
-            graphics.RestoreState();
         }
 
         void DrawHighlightSpansWithFonts()
@@ -922,6 +727,82 @@ internal sealed partial class PptxRenderer
                 return coalesced;
             }
         }
+    }
+
+    private static void DrawEmbeddedGlyphs(PdfGraphicsBuilder graphics, TextGlyphRun? glyphRun)
+    {
+        if (glyphRun is null)
+        {
+            return;
+        }
+
+        TextRun run = glyphRun.Source;
+        bool alphaApplied = BeginTextAlpha(graphics, run);
+        DrawGlyphText(graphics, glyphRun);
+
+        if (run.Underline)
+        {
+            graphics.SetFillRgb(run.Color.Red, run.Color.Green, run.Color.Blue);
+            if (TryGetUnderlineRectangle(glyphRun.Font, glyphRun, out TextDecorationRectangle underline))
+            {
+                FillTextDecorationRectangleEvenOdd(graphics, underline);
+            }
+        }
+
+        if (run.Strike)
+        {
+            graphics.SetFillRgb(run.Color.Red, run.Color.Green, run.Color.Blue);
+            if (TryGetStrikeRectangle(glyphRun.Font, glyphRun, out TextDecorationRectangle strike))
+            {
+                FillTextDecorationRectangleEvenOdd(graphics, strike);
+            }
+        }
+
+        if (alphaApplied)
+        {
+            graphics.RestoreState();
+        }
+    }
+
+    private static void DrawFallbackWrappedText(PdfGraphicsBuilder graphics, PdfFallbackFontResource fallback, TextRun run,
+        CancellationToken cancellationToken)
+    {
+        graphics.SaveState();
+        PrepareTextPaint(graphics, run);
+        double baselineY = run.Y + run.BaselineOffset;
+        if (run.Text.Length != 0 && BaselineIntersectsClip(run, baselineY))
+        {
+            bool alphaApplied = BeginTextAlpha(graphics, run);
+            double pdfFontSize = OfficePdfTextEmissionProfile.FontSize(run.FontSize);
+            var glyphs = fallback.Font.PositionGlyphs(run.Text, run.X, baselineY, run.FontSize,
+                run.CharacterSpacing, run.Width, cancellationToken);
+            graphics.DrawFallbackText(fallback.ResourceName, pdfFontSize, run.Color.Red, run.Color.Green, run.Color.Blue, glyphs);
+            if (run.Underline || run.Strike)
+            {
+                graphics.SetFillRgb(run.Color.Red, run.Color.Green, run.Color.Blue);
+                FillFallbackTextDecoration(graphics, run.X, baselineY, run.Width, pdfFontSize, run.Underline, run.Strike);
+            }
+
+            if (alphaApplied)
+            {
+                graphics.RestoreState();
+            }
+        }
+
+        graphics.RestoreState();
+    }
+
+    private static bool BeginTextAlpha(PdfGraphicsBuilder graphics, TextRun run)
+    {
+        bool needsTextAlpha = run.Alpha < 1d - PptxTextMetricRules.TextStateTolerance ||
+            (run.Outline is { } outline && outline.Alpha < 1d - PptxTextMetricRules.TextStateTolerance);
+        if (needsTextAlpha)
+        {
+            graphics.SaveState();
+            graphics.SetAlpha(run.Alpha, run.Outline?.Alpha ?? 1d);
+        }
+
+        return needsTextAlpha;
     }
 
     private static FontRequest FontRequestForRun(TextRun run)
@@ -980,7 +861,7 @@ internal sealed partial class PptxRenderer
         };
         double pdfFontSize = OfficePdfTextEmissionProfile.FontSize(run.FontSize);
         double pdfCharacterSpacing = run.CharacterSpacing;
-        string? positioningArray = EncodeGlyphPositioningArray(embedded, glyphs, run.FontSize, pdfFontSize, pdfCharacterSpacing, forcePositioningArray: true);
+        string? positioningArray = EncodeGlyphPositioningArray(embedded, glyphs, run.FontSize, pdfFontSize, pdfCharacterSpacing);
         return new TextGlyphRun(run, resourceName, embedded, glyphHex, positioningArray, glyphs, x, baselineY, lineWidth, pdfFontSize, pdfCharacterSpacing, syntheticBold, syntheticItalic);
 
         IReadOnlyList<TextGlyphAtom> BuildTextGlyphAtoms()
@@ -1045,7 +926,7 @@ internal sealed partial class PptxRenderer
         double pdfFontSize = OfficePdfTextEmissionProfile.FontSize(run.FontSize);
         double pdfCharacterSpacing = span.PdfCharacterSpacingOverride
             ?? span.GlyphSpan.CharacterSpacing;
-        string? positioningArray = EncodeGlyphPositioningArray(embedded, span.GlyphSpan, pdfFontSize, pdfCharacterSpacing, forcePositioningArray: true);
+        string? positioningArray = EncodeGlyphPositioningArray(embedded, span.GlyphSpan, pdfFontSize, pdfCharacterSpacing);
         IReadOnlyList<TextGlyphAtom> glyphs = span.GlyphSpan.Glyphs
             .Select(glyph => new TextGlyphAtom(glyph.CodePoint, glyph.Typeface, glyph.TypefaceResolutionSource, glyph.GlyphId, glyph.Advance, glyph.AdjustmentBefore))
             .ToArray();
@@ -1097,14 +978,13 @@ internal sealed partial class PptxRenderer
         return builder.ToString();
     }
 
-    private static string? EncodeGlyphPositioningArray(PdfEmbeddedFont embedded, PptxTextGlyphSpanLayout span, double pdfFontSize, double pdfCharacterSpacing, bool forcePositioningArray)
+    private static string? EncodeGlyphPositioningArray(PdfEmbeddedFont embedded, PptxTextGlyphSpanLayout span, double pdfFontSize, double pdfCharacterSpacing)
     {
         if (span.Glyphs.Count == 0)
         {
             return null;
         }
 
-        bool hasPositioning = false;
         var builder = new StringBuilder("[");
         for (int i = 0; i < span.Glyphs.Count; i++)
         {
@@ -1118,17 +998,8 @@ internal sealed partial class PptxRenderer
             if (i > 0)
             {
                 PptxTextGlyphLayout previousGlyph = span.Glyphs[i - 1];
-                double adjustmentBefore = PdfTextAdjustmentBefore(
-                    glyph.AdjustmentBefore - pdfCharacterSpacing,
-                    previousGlyph.Advance,
-                    span.FontSize,
-                    pdfFontSize);
-                double adjustment = pdfFontSize <= 0d ? 0d : -adjustmentBefore * 1000d / pdfFontSize;
-                if (Math.Abs(adjustment) > PptxTextMetricRules.TextStateTolerance)
-                {
-                    builder.Append(' ').Append(adjustment.ToString("0.###", CultureInfo.InvariantCulture)).Append(' ');
-                    hasPositioning = true;
-                }
+                AppendPositioningAdjustment(builder, glyph.AdjustmentBefore - pdfCharacterSpacing,
+                    previousGlyph.Advance, span.FontSize, pdfFontSize);
             }
 
             if (embedded.TryGetEncodedCid(glyph.GlyphId, glyph.CodePoint, out ushort cid))
@@ -1138,17 +1009,16 @@ internal sealed partial class PptxRenderer
         }
 
         builder.Append(']');
-        return hasPositioning || forcePositioningArray ? builder.ToString() : null;
+        return builder.ToString();
     }
 
-    private static string? EncodeGlyphPositioningArray(PdfEmbeddedFont embedded, IReadOnlyList<TextGlyphAtom> glyphs, double layoutFontSize, double pdfFontSize, double characterSpacing, bool forcePositioningArray)
+    private static string? EncodeGlyphPositioningArray(PdfEmbeddedFont embedded, IReadOnlyList<TextGlyphAtom> glyphs, double layoutFontSize, double pdfFontSize, double characterSpacing)
     {
         if (glyphs.Count == 0)
         {
             return null;
         }
 
-        bool hasPositioning = false;
         var builder = new StringBuilder("[");
         for (int i = 0; i < glyphs.Count; i++)
         {
@@ -1156,17 +1026,8 @@ internal sealed partial class PptxRenderer
             if (i > 0)
             {
                 TextGlyphAtom previousGlyph = glyphs[i - 1];
-                double adjustmentBefore = PdfTextAdjustmentBefore(
-                    glyph.AdjustmentBefore - characterSpacing,
-                    previousGlyph.Advance,
-                    layoutFontSize,
-                    pdfFontSize);
-                double adjustment = pdfFontSize <= 0d ? 0d : -adjustmentBefore * 1000d / pdfFontSize;
-                if (Math.Abs(adjustment) > PptxTextMetricRules.TextStateTolerance)
-                {
-                    builder.Append(' ').Append(adjustment.ToString("0.###", CultureInfo.InvariantCulture)).Append(' ');
-                    hasPositioning = true;
-                }
+                AppendPositioningAdjustment(builder, glyph.AdjustmentBefore - characterSpacing,
+                    previousGlyph.Advance, layoutFontSize, pdfFontSize);
             }
 
             if (embedded.TryGetEncodedCid(glyph.GlyphId, glyph.CodePoint, out ushort cid))
@@ -1176,7 +1037,18 @@ internal sealed partial class PptxRenderer
         }
 
         builder.Append(']');
-        return hasPositioning || forcePositioningArray ? builder.ToString() : null;
+        return builder.ToString();
+    }
+
+    private static void AppendPositioningAdjustment(StringBuilder builder, double layoutAdjustmentBefore,
+        double previousLayoutAdvance, double layoutFontSize, double pdfFontSize)
+    {
+        double adjustmentBefore = PdfTextAdjustmentBefore(layoutAdjustmentBefore, previousLayoutAdvance, layoutFontSize, pdfFontSize);
+        double adjustment = pdfFontSize <= 0d ? 0d : -adjustmentBefore * 1000d / pdfFontSize;
+        if (Math.Abs(adjustment) > PptxTextMetricRules.TextStateTolerance)
+        {
+            builder.Append(' ').Append(adjustment.ToString("0.###", CultureInfo.InvariantCulture)).Append(' ');
+        }
     }
 
     private static double PdfTextAdjustmentBefore(double layoutAdjustmentBefore, double previousLayoutAdvance, double layoutFontSize, double pdfFontSize)

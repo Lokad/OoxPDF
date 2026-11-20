@@ -10,17 +10,17 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static IReadOnlyList<TextRun> CoalesceAdjacentTextRuns(IReadOnlyList<TextRun> textRuns, bool compareHighlight)
+    private static IReadOnlyList<TextRun> CoalesceAdjacentTextRuns(IReadOnlyList<TextRun> textRuns, bool highlightsOnly)
     {
         var coalesced = new List<TextRun>(textRuns.Count);
         foreach (TextRun run in textRuns)
         {
-            if (run.Text.Length == 0)
+            if (run.Text.Length == 0 || (highlightsOnly && run.HighlightPaint is null))
             {
                 continue;
             }
 
-            if (coalesced.Count != 0 && CanCoalesceTextRun(coalesced[^1], run, compareHighlight, true))
+            if (coalesced.Count != 0 && CanCoalesceTextRun(coalesced[^1], run, highlightsOnly, preserveHighlightBoundary: true))
             {
                 TextRun previous = coalesced[^1];
                 coalesced[^1] = previous with
