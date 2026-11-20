@@ -50,16 +50,38 @@ internal static class PptxColorResolver
         XElement? colorContainer = element?.Name == DrawingNamespace + "solidFill"
             ? element
             : solidFill ?? element;
-        alpha = ReadAlpha(colorContainer);
+        return TryReadColorWithAlpha(colorContainer, declaration: null, theme, colorMap, placeholderColorContainer, out color, out alpha);
+    }
 
-        XElement? srgbColor = colorContainer?.Element(DrawingNamespace + "srgbClr");
+    public static bool TryReadColorDeclarationWithAlpha(
+        XElement declaration,
+        PptxTheme theme,
+        PptxColorMap colorMap,
+        out RgbColor color,
+        out double alpha)
+    {
+        return TryReadColorWithAlpha(colorContainer: null, declaration, theme, colorMap, placeholderColorContainer: null, out color, out alpha);
+    }
+
+    private static bool TryReadColorWithAlpha(
+        XElement? colorContainer,
+        XElement? declaration,
+        PptxTheme theme,
+        PptxColorMap colorMap,
+        XElement? placeholderColorContainer,
+        out RgbColor color,
+        out double alpha)
+    {
+        alpha = ReadAlpha(declaration ?? colorContainer);
+
+        XElement? srgbColor = FindColor(DrawingNamespace + "srgbClr");
         if (RgbColor.TryParse((string?)srgbColor?.Attribute("val"), out color))
         {
             color = ApplyColorTransforms(srgbColor, color);
             return true;
         }
 
-        XElement? schemeColorElement = colorContainer?.Element(DrawingNamespace + "schemeClr");
+        XElement? schemeColorElement = FindColor(DrawingNamespace + "schemeClr");
         string? schemeColor = (string?)schemeColorElement?.Attribute("val");
         if (schemeColor == "phClr" &&
             placeholderColorContainer is not null &&
@@ -76,7 +98,7 @@ internal static class PptxColorResolver
             return true;
         }
 
-        XElement? systemColor = colorContainer?.Element(DrawingNamespace + "sysClr");
+        XElement? systemColor = FindColor(DrawingNamespace + "sysClr");
         string? systemHex = (string?)systemColor?.Attribute("lastClr") ?? (string?)systemColor?.Attribute("val");
         if (RgbColor.TryParse(systemHex, out color))
         {
@@ -84,14 +106,14 @@ internal static class PptxColorResolver
             return true;
         }
 
-        XElement? presetColor = colorContainer?.Element(DrawingNamespace + "prstClr");
+        XElement? presetColor = FindColor(DrawingNamespace + "prstClr");
         if (PptxPresetColors.TryResolve((string?)presetColor?.Attribute("val"), out color))
         {
             color = ApplyColorTransforms(presetColor, color);
             return true;
         }
 
-        XElement? scRgbColor = colorContainer?.Element(DrawingNamespace + "scrgbClr");
+        XElement? scRgbColor = FindColor(DrawingNamespace + "scrgbClr");
         if (scRgbColor is not null)
         {
             color = new RgbColor(
@@ -102,7 +124,7 @@ internal static class PptxColorResolver
             return true;
         }
 
-        XElement? hslColor = colorContainer?.Element(DrawingNamespace + "hslClr");
+        XElement? hslColor = FindColor(DrawingNamespace + "hslClr");
         if (hslColor is not null)
         {
             color = ReadHslColor(hslColor);
@@ -111,6 +133,16 @@ internal static class PptxColorResolver
         }
 
         return false;
+
+        XElement? FindColor(XName name)
+        {
+            if (declaration is null)
+            {
+                return colorContainer?.Element(name);
+            }
+
+            return declaration.Name == name ? declaration : null;
+        }
     }
 
     public static double ReadAlpha(XElement? colorContainer)

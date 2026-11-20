@@ -117,8 +117,6 @@ internal readonly record struct PptxSceneChartColorStyle
 
     public IReadOnlyList<PptxSceneChartColorVariation> Variations { get; }
 
-    public XDocument? ColorStyleXml { get; }
-
     private PptxSceneChartColorStyle(
         bool isDefined,
         string? partName,
@@ -128,8 +126,7 @@ internal readonly record struct PptxSceneChartColorStyle
         int variationCount,
         IReadOnlyList<PptxSceneChartColorDeclaration> declarations,
         IReadOnlyList<PptxSceneChartColorDeclaration> rootDeclarations,
-        IReadOnlyList<PptxSceneChartColorVariation> variations,
-        XDocument? colorStyleXml)
+        IReadOnlyList<PptxSceneChartColorVariation> variations)
     {
         IsDefined = isDefined;
         PartName = partName;
@@ -140,12 +137,11 @@ internal readonly record struct PptxSceneChartColorStyle
         Declarations = declarations;
         RootDeclarations = rootDeclarations;
         Variations = variations;
-        ColorStyleXml = colorStyleXml;
     }
 
     public static PptxSceneChartColorStyle Undefined(string? partName)
     {
-        return new PptxSceneChartColorStyle(false, partName, string.Empty, string.Empty, [], 0, [], [], [], null);
+        return new PptxSceneChartColorStyle(false, partName, string.Empty, string.Empty, [], 0, [], [], []);
     }
 
     public static PptxSceneChartColorStyle Defined(
@@ -156,11 +152,10 @@ internal readonly record struct PptxSceneChartColorStyle
         int variationCount,
         IReadOnlyList<PptxSceneChartColorDeclaration> declarations,
         IReadOnlyList<PptxSceneChartColorDeclaration> rootDeclarations,
-        IReadOnlyList<PptxSceneChartColorVariation> variations,
-        XDocument? colorStyleXml)
+        IReadOnlyList<PptxSceneChartColorVariation> variations)
     {
         ArgumentNullException.ThrowIfNull(partName);
-        return new PptxSceneChartColorStyle(true, partName, method, id, colors, variationCount, declarations, rootDeclarations, variations, colorStyleXml);
+        return new PptxSceneChartColorStyle(true, partName, method, id, colors, variationCount, declarations, rootDeclarations, variations);
     }
 }
 
@@ -186,38 +181,33 @@ internal sealed record PptxSceneChartStyle
 
     public string Id { get; }
 
-    public XDocument? StyleXml { get; }
-
     public IReadOnlyList<PptxSceneChartStyleEntry> Entries { get; }
 
     private PptxSceneChartStyle(
         bool isDefined,
         string? partName,
         string id,
-        XDocument? styleXml,
         IReadOnlyList<PptxSceneChartStyleEntry> entries)
     {
         IsDefined = isDefined;
         PartName = partName;
         Id = id;
-        StyleXml = styleXml;
         Entries = entries;
     }
 
     public static PptxSceneChartStyle Undefined(string? partName)
     {
-        return new PptxSceneChartStyle(false, partName, string.Empty, null, []);
+        return new PptxSceneChartStyle(false, partName, string.Empty, []);
     }
 
     public static PptxSceneChartStyle Defined(
         string partName,
         string id,
-        XDocument? styleXml,
         IReadOnlyList<PptxSceneChartStyleEntry> entries)
     {
         ArgumentNullException.ThrowIfNull(partName);
         ArgumentNullException.ThrowIfNull(entries);
-        return new PptxSceneChartStyle(true, partName, id, styleXml, entries);
+        return new PptxSceneChartStyle(true, partName, id, entries);
     }
 }
 

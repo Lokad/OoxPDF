@@ -3532,7 +3532,7 @@ internal static class PptxChartRenderingTests
                   <a:srgbClr val="FF00CC"/>
                   <a:schemeClr val="accent1"/>
                   <cs:variation>
-                    <a:srgbClr val="112233"/>
+                    <a:srgbClr val="112233"><a:alpha val="50000"/><a:alphaMod val="50000"/><a:alphaOff val="2500"/></a:srgbClr>
                   </cs:variation>
                 </cs:colorStyle>
                 """)
@@ -3561,6 +3561,8 @@ internal static class PptxChartRenderingTests
         TestAssert.Equal(1, chart.ColorStyle.Variations[0].Declarations.Count);
         TestAssert.Equal("112233", chart.ColorStyle.Variations[0].Declarations[0].Value);
         TestAssert.Equal(new RgbColor(17, 34, 51), chart.ColorStyle.Variations[0].Colors[0]);
+        TestAssert.True(Math.Abs(chart.ColorStyle.Declarations[2].Alpha - 0.275d) < 0.000001d,
+            "Direct color declarations must apply alpha transforms in source order.");
         TestAssert.True(chart.ColorStyle.Declarations[0].IsResolved, "Expected direct RGB color-style declaration to resolve.");
         TestAssert.True(!chart.ColorStyle.Declarations[1].IsResolved, "Expected unresolved scheme color-style declaration to remain observable.");
         TestAssert.Equal(1, chart.ColorStyle.Colors.Count);

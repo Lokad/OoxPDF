@@ -202,8 +202,7 @@ internal sealed partial class PptxSceneBuilder
             return preset is "black" or "white";
         }
 
-        XElement wrapper = new(DrawingNamespace + "solidFill", new XElement(colorElement));
-        return PptxColorResolver.TryReadSolidColorWithAlpha(wrapper, theme, colorMap, out color, out _);
+        return PptxColorResolver.TryReadColorDeclarationWithAlpha(colorElement, theme, colorMap, out color, out _);
     }
 
     private static PptxSceneRect ReadPercentageRectangle(XElement element)

@@ -30,12 +30,12 @@ internal static class PptxModelTests
         TestAssert.Equal(0, undefinedColor.Colors.Count);
         PptxSceneChartColorStyle targetedColor = PptxSceneChartColorStyle.Undefined("/ppt/colors.xml");
         TestAssert.Equal("/ppt/colors.xml", targetedColor.PartName);
-        TestAssert.Throws<ArgumentNullException>(() => PptxSceneChartColorStyle.Defined(null!, string.Empty, string.Empty, [], 0, [], [], [], null));
+        TestAssert.Throws<ArgumentNullException>(() => PptxSceneChartColorStyle.Defined(null!, string.Empty, string.Empty, [], 0, [], [], []));
 
         PptxSceneChartStyle undefinedStyle = PptxSceneChartStyle.Undefined(null);
         TestAssert.True(!undefinedStyle.IsDefined, "Undefined style part must clear the flag.");
         TestAssert.Equal(0, undefinedStyle.Entries.Count);
-        TestAssert.Throws<ArgumentNullException>(() => PptxSceneChartStyle.Defined(null!, string.Empty, null, []));
+        TestAssert.Throws<ArgumentNullException>(() => PptxSceneChartStyle.Defined(null!, string.Empty, []));
     }
 
     public static void PptxSceneNodeFactoriesRejectInvalidCombinations()
@@ -541,8 +541,6 @@ internal static class PptxModelTests
         TestAssert.Equal("srgbClr", slide.SlideNodes[4].Chart?.ColorStyle.Declarations[0].Kind ?? string.Empty);
         TestAssert.Equal("010203", slide.SlideNodes[4].Chart?.ColorStyle.Declarations[0].Value ?? string.Empty);
         TestAssert.True(slide.SlideNodes[4].Chart?.ColorStyle.Declarations[0].IsResolved == true, "Expected typed chart color-style declaration resolution state.");
-        TestAssert.True(slide.SlideNodes[4].Chart?.ColorStyle.ColorStyleXml is not null, "Expected chart color-style XML ownership in the scene model.");
-        TestAssert.Equal("10", (string?)slide.SlideNodes[4].Chart?.ColorStyle.ColorStyleXml?.Root?.Attribute("id") ?? string.Empty);
         TestAssert.True(slideSnapshot.SlideNodes[4].HasChartColorStyle, "Expected scene inspection to expose chart color-style ownership without XML contents.");
         TestAssert.Equal("/ppt/charts/colors1.xml", slideSnapshot.SlideNodes[4].ChartColorStylePartName);
         TestAssert.Equal("cycle", slideSnapshot.SlideNodes[4].ChartColorStyleMethod);
@@ -556,7 +554,6 @@ internal static class PptxModelTests
         TestAssert.True(slide.SlideNodes[4].Chart?.StylePart.IsDefined == true, "Expected chart style-part ownership in the scene model.");
         TestAssert.Equal("/ppt/charts/style1.xml", slide.SlideNodes[4].Chart?.StylePart.PartName ?? string.Empty);
         TestAssert.Equal("10", slide.SlideNodes[4].Chart?.StylePart.Id ?? string.Empty);
-        TestAssert.True(slide.SlideNodes[4].Chart?.StylePart.StyleXml is not null, "Expected chart style XML ownership in the scene model.");
         TestAssert.True(slideSnapshot.SlideNodes[4].HasChartStylePart, "Expected scene inspection to expose chart style-part ownership without XML contents.");
         TestAssert.Equal("/ppt/charts/style1.xml", slideSnapshot.SlideNodes[4].ChartStylePartName);
         TestAssert.Equal("10", slideSnapshot.SlideNodes[4].ChartStylePartId);

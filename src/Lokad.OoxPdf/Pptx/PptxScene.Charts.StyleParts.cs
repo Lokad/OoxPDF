@@ -71,8 +71,7 @@ internal sealed partial class PptxSceneBuilder
             variations.Count,
             declarations,
             rootDeclarations,
-            variations,
-            document);
+            variations);
     }
 
     private static IReadOnlyList<PptxSceneChartColorDeclaration> ReadChartColorStyleRootDeclarations(XDocument document, PptxTheme theme, PptxColorMap colorMap, CancellationToken cancellationToken)
@@ -119,8 +118,7 @@ internal sealed partial class PptxSceneBuilder
     private static PptxSceneChartColorDeclaration ReadChartColorStyleDeclaration(XElement colorElement, PptxTheme theme, PptxColorMap colorMap, int? variationIndex, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var wrapper = new XElement(DrawingNamespace + "solidFill", new XElement(colorElement));
-        bool isResolved = PptxColorResolver.TryReadSolidColorWithAlpha(wrapper, theme, colorMap, out RgbColor color, out double alpha);
+        bool isResolved = PptxColorResolver.TryReadColorDeclarationWithAlpha(colorElement, theme, colorMap, out RgbColor color, out double alpha);
         return new PptxSceneChartColorDeclaration(
             colorElement.Name.LocalName,
             (string?)colorElement.Attribute("val") ?? string.Empty,
@@ -157,7 +155,6 @@ internal sealed partial class PptxSceneBuilder
         return PptxSceneChartStyle.Defined(
             stylePart.Name,
             (string?)document.Root?.Attribute("id") ?? string.Empty,
-            document,
             ReadChartStyleEntries(document, theme, colorMap));
     }
 
