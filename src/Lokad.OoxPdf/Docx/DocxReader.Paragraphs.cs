@@ -26,7 +26,7 @@ internal sealed partial class DocxReader
         bool retainBalloonParagraphMark = false,
         bool isContinuationFragment = false,
         IReadOnlyList<DocxBookmarkAnchor>? leadingBookmarks = null,
-        Action<string>? recordBookmarkEnd = null)
+        DocxCellBookmarkScope? cellBookmarks = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         XElement? paragraphProperties = paragraph.Element(WordprocessingNamespace + "pPr");
@@ -136,15 +136,25 @@ internal sealed partial class DocxReader
             }
             else if (child.Name == WordprocessingNamespace + "bookmarkStart")
             {
-                bookmarkAnchors.Add(ReadBookmarkAnchor(child, sourceRunIndex, runs.Count,
-                    RelativeRunTextOffset(runs, sourceRunIndex), GetInlineItemCount()));
+                var anchor = ReadBookmarkAnchor(child, sourceRunIndex, runs.Count,
+                    RelativeRunTextOffset(runs, sourceRunIndex), GetInlineItemCount());
+                if (cellBookmarks is { } scope &&
+                    ReadTableColumnBookmark(child, anchor) is { } bookmark && bookmark.First >= scope.EndColumn &&
+                    NormalizeDecimalId(anchor.Id) is { Length: > 0 } && !string.IsNullOrEmpty(anchor.Name))
+                {
+                    scope.Defer(bookmark with { Anchor = ReadBookmarkAnchor(child, 0, 0, 0, 0) });
+                }
+                else
+                {
+                    bookmarkAnchors.Add(anchor);
+                }
                 return false;
             }
             else if (child.Name == WordprocessingNamespace + "bookmarkEnd")
             {
-                if (recordBookmarkEnd is not null &&
+                if (cellBookmarks is { } scope &&
                     NormalizeDecimalId((string?)child.Attribute(WordprocessingNamespace + "id")) is { } id)
-                    recordBookmarkEnd(id);
+                    scope.RecordEnd(id);
                 return false;
             }
             else if (child.Name == WordprocessingNamespace + "fldSimple")

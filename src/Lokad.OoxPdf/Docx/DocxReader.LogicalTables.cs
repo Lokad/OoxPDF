@@ -12,13 +12,15 @@ internal sealed partial class DocxReader
         EnumerateLogicalTableBlocks(IEnumerable<XElement> elements, DocxStyleSet styles,
             OoxPdfDocxMarkupMode mode, CancellationToken token, DocxRevisionInfo? inheritedRevision = null,
             IReadOnlyList<DocxBookmarkAnchor>? leadingBookmarks = null, bool readTableColumnBookmarks = false,
-            DocxTableColumnBookmark[]? leadingColumnBookmarks = null, Action<string>? recordBookmarkEnd = null)
+            DocxTableColumnBookmark[]? leadingColumnBookmarks = null, Action<string>? recordBookmarkEnd = null,
+            Action<DocxTableColumnBookmark[]>? recordTrailingColumnBookmarks = null)
     {
         DocxRevisionScopedElement? pending = null;
         List<DocxRevisionScopedElement>? tables = null;
         foreach (var block in EnumerateBookmarkedBlocks(elements, mode, token, inheritedRevision,
             leadingBookmarks: leadingBookmarks, readTableColumnBookmarks: readTableColumnBookmarks,
-            leadingColumnBookmarks: leadingColumnBookmarks, recordBookmarkEnd: recordBookmarkEnd))
+            leadingColumnBookmarks: leadingColumnBookmarks, recordBookmarkEnd: recordBookmarkEnd,
+            recordTrailingColumnBookmarks: recordTrailingColumnBookmarks))
         {
             if (pending is not null && CanJoinTables(pending.Element, block.Element, styles))
             {
@@ -37,7 +39,7 @@ internal sealed partial class DocxReader
         OoxPdfDocxMarkupMode mode, CancellationToken token, DocxRevisionInfo? inheritedRevision,
         XName? tableChildName = null, IReadOnlyList<DocxBookmarkAnchor>? leadingBookmarks = null,
         bool readTableColumnBookmarks = false, DocxTableColumnBookmark[]? leadingColumnBookmarks = null,
-        Action<string>? recordBookmarkEnd = null)
+        Action<string>? recordBookmarkEnd = null, Action<DocxTableColumnBookmark[]>? recordTrailingColumnBookmarks = null)
     {
         XName importedContentName = WordprocessingNamespace + "altChunk";
         XName bookmarkStartName = WordprocessingNamespace + "bookmarkStart";
@@ -79,9 +81,8 @@ internal sealed partial class DocxReader
                 if (readTableColumnBookmarks &&
                     (scope.Element.Attribute(firstColumn) is not null || scope.Element.Attribute(lastColumn) is not null))
                 {
-                    if (ReadNonNegativeIntAttribute(scope.Element, firstColumn) is int first &&
-                        ReadNonNegativeIntAttribute(scope.Element, lastColumn) is int last && first <= last)
-                        (columnStarts ??= new(StringComparer.Ordinal)).TryAdd(id, new(anchor, first, last));
+                    if (ReadTableColumnBookmark(scope.Element, anchor) is { } bookmark)
+                        (columnStarts ??= new(StringComparer.Ordinal)).TryAdd(id, bookmark);
                     continue;
                 }
                 (bookmarkStarts ??= new(StringComparer.Ordinal)).TryAdd(id, anchor);
@@ -111,6 +112,16 @@ internal sealed partial class DocxReader
             columnStarts = null;
             yield return block;
         }
+
+        if (columnStarts is { Count: > 0 })
+            recordTrailingColumnBookmarks?.Invoke(columnStarts.Values.ToArray());
+    }
+
+    private static DocxTableColumnBookmark? ReadTableColumnBookmark(XElement source, DocxBookmarkAnchor anchor)
+    {
+        return ReadNonNegativeIntAttribute(source, WordprocessingNamespace + "colFirst") is int first &&
+            ReadNonNegativeIntAttribute(source, WordprocessingNamespace + "colLast") is int last && first <= last
+            ? new DocxTableColumnBookmark(anchor, first, last) : null;
     }
 
     private static bool CanJoinTables(XElement first, XElement second, DocxStyleSet styles)

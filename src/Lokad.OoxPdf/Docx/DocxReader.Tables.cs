@@ -427,6 +427,9 @@ internal sealed partial class DocxReader
         return result ?? leadingBookmarks;
     }
 
+    private readonly record struct DocxCellBookmarkScope(int EndColumn, Action<DocxTableColumnBookmark> Defer,
+        Action<string> RecordEnd);
+
     private static IReadOnlyList<DocxBodyElement> ReadTableCellBodyElements(
         DocxRevisionScopedElement cell,
         DocxStyleSet styles,
@@ -445,9 +448,14 @@ internal sealed partial class DocxReader
         Action<string> recordBookmarkEnd)
     {
         var elements = new List<DocxBodyElement>();
+        List<DocxTableColumnBookmark>? deferred = null;
+        DocxTableColumnBookmark[]? trailing = null;
+        void Defer(DocxTableColumnBookmark bookmark) => (deferred ??= []).Add(bookmark);
+        var bookmarkScope = new DocxCellBookmarkScope(cellColumns.End, Defer, recordBookmarkEnd);
         foreach (var (block, tableFragments) in EnumerateLogicalTableBlocks(cell.Element.Elements(), styles, markupMode,
             cancellationToken, inheritedRevision, cell.LeadingBookmarks, readTableColumnBookmarks: true,
-            leadingColumnBookmarks: cell.LeadingColumnBookmarks, recordBookmarkEnd: recordBookmarkEnd))
+            leadingColumnBookmarks: cell.LeadingColumnBookmarks, recordBookmarkEnd: recordBookmarkEnd,
+            recordTrailingColumnBookmarks: starts => trailing = starts))
         {
             cancellationToken.ThrowIfCancellationRequested();
             var scopedChild = block;
@@ -460,13 +468,8 @@ internal sealed partial class DocxReader
                     cellColumns.Start, cellColumns.End, cancellationToken);
                 if (!ReferenceEquals(cellBookmarks, block.LeadingBookmarks))
                     scopedChild = block with { LeadingBookmarks = cellBookmarks };
-                if (columnBookmarks.IsEmpty)
-                    columnBookmarks = pending;
-                else if (!pending.IsEmpty)
-                {
-                    DocxTableColumnBookmark[] combined = [.. columnBookmarks.Span, .. pending.Span];
-                    columnBookmarks = combined.OrderBy(bookmark => bookmark.First).ToArray();
-                }
+                foreach (var bookmark in pending.Span)
+                    Defer(bookmark);
             }
             XElement child = scopedChild.Element;
             DocxRevisionInfo? childRevision = scopedChild.Revision ?? inheritedRevision;
@@ -522,7 +525,7 @@ internal sealed partial class DocxReader
                             cancellationToken: cancellationToken,
                             isContinuationFragment: !part.IsFirstFragment,
                             leadingBookmarks: leadingBookmarks,
-                            recordBookmarkEnd: columnBookmarks.IsEmpty ? null : recordBookmarkEnd);
+                            cellBookmarks: bookmarkScope);
                         leadingBookmarks = null;
                         if (splitParagraph is not null)
                         {
@@ -547,7 +550,7 @@ internal sealed partial class DocxReader
                     markupMode: markupMode,
                     cancellationToken: cancellationToken,
                     leadingBookmarks: leadingBookmarks,
-                    recordBookmarkEnd: columnBookmarks.IsEmpty ? null : recordBookmarkEnd);
+                    cellBookmarks: bookmarkScope);
                 if (parsed is not null)
                 {
                     elements.Add(DocxBodyElementFactory.CreateParagraph(parsed));
@@ -563,6 +566,22 @@ internal sealed partial class DocxReader
             }
         }
 
+        // A trailing start has no following block in this cell. Later cells can
+        // still intersect its interval, subject to the same end-marker checks.
+        if (trailing is not null)
+        {
+            foreach (var bookmark in trailing)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (bookmark.First >= cellColumns.End)
+                    Defer(bookmark);
+            }
+        }
+        if (deferred is not null)
+        {
+            DocxTableColumnBookmark[] combined = [.. columnBookmarks.Span, .. deferred];
+            columnBookmarks = combined.OrderBy(bookmark => bookmark.First).ToArray();
+        }
         return NormalizeDeletedParagraphMarkElements(elements, markupMode, cancellationToken);
     }
 
