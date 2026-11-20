@@ -18366,6 +18366,9 @@
     "FinalSummaryCancellationPreventsPublication"
   ],
   "docx-balloon-focused": [
+    "=DocxWordCompatibleMixedBalloonKeepsSeparatedTailAfterTerminalPunctuation",
+    "=DocxWordCompatibleMixedBalloonRetainsTwoLeadingTailSpaces",
+    "=DocxWordCompatibleMixedBalloonPreservesCompletePunctuationAndSpacingFallback",
     "DocxWordCompatibleMixedBalloonParagraphBodyBoundaries",
     "DocxWordCompatibleMixedBalloonSpacingBoundaries",
     "DocxWordCompatibleBalloonSpacingTokensAreIndependent",
