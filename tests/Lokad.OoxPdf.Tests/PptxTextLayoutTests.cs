@@ -1084,44 +1084,11 @@ internal static class PptxTextLayoutTests
 
     public static void PptxSyntheticTextBoxOverflowColumnsUseSlideClip()
     {
-        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
-        if (!File.Exists(arial))
-        {
-            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
-        }
-
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
-            ["_rels/.rels"] = PptxTests.PackageRelationship(),
-            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
-            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
-            ["ppt/slides/slide1.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <p:cSld><p:spTree><p:sp>
-                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="5486400" cy="685800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
-                    <p:txBody>
-                      <a:bodyPr numCol="3" spcCol="144000" lIns="0" rIns="0" tIns="0" bIns="0" vertOverflow="overflow"/>
-                      <a:lstStyle/>
-                      <a:p><a:r><a:rPr sz="1800"><a:latin typeface="Arial"/></a:rPr><a:t>One two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen</a:t></a:r></a:p>
-                    </p:txBody>
-                  </p:sp></p:spTree></p:cSld>
-                </p:sld>
-                """
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, output);
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("0 0 720 540 re W* n", pdf);
-        TestAssert.True(
-            !pdf.Contains("72 414 135.78 54 re W* n", StringComparison.Ordinal),
-            "Expected multi-column text with overflow enabled to keep Office's slide-wide text clip instead of clipping to the first column.");
-        TestAssert.True(
-            !pdf.Contains("219.78 414 135.78 54 re W* n", StringComparison.Ordinal),
-            "Expected multi-column text with overflow enabled to keep Office's slide-wide text clip instead of clipping to the second column.");
+        const string label = "One two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen";
+        PdfPage page = PaintSlideClipCase(label, 1800,
+            """<a:off x="914400" y="914400"/><a:ext cx="5486400" cy="685800"/>""",
+            """<a:bodyPr numCol="3" spcCol="144000" lIns="0" rIns="0" tIns="0" bIns="0" vertOverflow="overflow"/>""");
+        AssertSlideClipPaintsLabel(page, label);
     }
 
     public static void PptxSyntheticTextManualBreaksStayInActiveOverflowColumn()
@@ -1566,37 +1533,11 @@ internal static class PptxTextLayoutTests
 
     public static void PptxSyntheticTextBoxAllowsVerticalOverflowByDefault()
     {
-        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
-        if (!File.Exists(arial))
-        {
-            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
-        }
-
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
-            ["_rels/.rels"] = PptxTests.PackageRelationship(),
-            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
-            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
-            ["ppt/slides/slide1.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <p:cSld><p:spTree><p:sp>
-                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="914400" cy="457200"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
-                    <p:txBody>
-                      <a:bodyPr lIns="0" rIns="0" tIns="0" bIns="0"/><a:lstStyle/>
-                      <a:p><a:r><a:rPr sz="4800"/><a:t>Overflow</a:t></a:r></a:p>
-                    </p:txBody>
-                  </p:sp></p:spTree></p:cSld>
-                </p:sld>
-                """
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, output);
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("0 0 720 540 re W* n", pdf);
+        const string label = "Overflow";
+        PdfPage page = PaintSlideClipCase(label, 4800,
+            """<a:off x="914400" y="914400"/><a:ext cx="914400" cy="457200"/>""",
+            """<a:bodyPr lIns="0" rIns="0" tIns="0" bIns="0"/>""");
+        AssertSlideClipPaintsLabel(page, label);
     }
 
     public static void PptxSyntheticTextBoxOverflowKeepsOffSlidePdfStructure()
@@ -1640,110 +1581,88 @@ internal static class PptxTextLayoutTests
 
     public static void PptxSyntheticNoAutoFitTextBoxUsesSlideWidthTextClip()
     {
-        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
-        if (!File.Exists(arial))
+        const string label = "No autofit text wraps with Office slide clip.";
+        PdfPage page = PaintSlideClipCase(label, 2400, AutofitTextBoxFrame,
+            """<a:bodyPr lIns="0" rIns="0" tIns="0" bIns="0" vertOverflow="overflow"><a:noAutofit/></a:bodyPr>""",
+            textBox: true);
+        AssertSlideClipPaintsLabel(page, label);
+
+        // Retain the background's identical clip in the negative controls.
+        const string slideClip = "0 0 720 540 re W* n";
+        int endOfBackground = page.Content.IndexOf("\nQ", StringComparison.Ordinal);
+        TestAssert.True(endOfBackground >= 0, "The background has its own graphics state.");
+        string background = page.Content[..(endOfBackground + 2)];
+        TestAssert.Contains(slideClip, background);
+        var missingText = TestAssert.Throws<InvalidOperationException>(() =>
+            AssertSlideClipPaintsLabel(page with { Content = background }, label));
+        TestAssert.Contains("Each complete source label paints once", missingText.Message);
+
+        string textPaint = page.Content[(endOfBackground + 2)..];
+        TestAssert.Contains(slideClip, textPaint);
+        foreach (string replacement in new[] { "0 0 719 540 re W* n", "" })
         {
-            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
+            var wrongClip = TestAssert.Throws<InvalidOperationException>(() => AssertSlideClipPaintsLabel(
+                page with { Content = background + textPaint.Replace(slideClip, replacement, StringComparison.Ordinal) },
+                label));
+            TestAssert.Contains("Source text must use the required clip", wrongClip.Message);
         }
-
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
-            ["_rels/.rels"] = PptxTests.PackageRelationship(),
-            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
-            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
-            ["ppt/slides/slide1.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <p:cSld><p:spTree><p:sp>
-                    <p:nvSpPr><p:cNvPr id="2" name="TextBox"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
-                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="457200"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
-                    <p:txBody>
-                      <a:bodyPr lIns="0" rIns="0" tIns="0" bIns="0" vertOverflow="overflow"><a:noAutofit/></a:bodyPr><a:lstStyle/>
-                      <a:p><a:r><a:rPr sz="2400"/><a:t>No autofit text wraps with Office slide clip.</a:t></a:r></a:p>
-                    </p:txBody>
-                  </p:sp></p:spTree></p:cSld>
-                </p:sld>
-                """
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, output);
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("0 0 720 540 re W* n", pdf);
     }
 
     public static void PptxSyntheticShapeAutoFitTextBoxUsesSlideWidthTextClip()
     {
-        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
-        if (!File.Exists(arial))
-        {
-            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
-        }
-
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
-            ["_rels/.rels"] = PptxTests.PackageRelationship(),
-            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
-            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
-            ["ppt/slides/slide1.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <p:cSld><p:spTree><p:sp>
-                    <p:nvSpPr><p:cNvPr id="2" name="TextBox"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
-                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="457200"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
-                    <p:txBody>
-                      <a:bodyPr lIns="0" rIns="0" tIns="0" bIns="0" vertOverflow="overflow"><a:spAutoFit/></a:bodyPr><a:lstStyle/>
-                      <a:p><a:r><a:rPr sz="2400"/><a:t>Shape autofit text wraps with Office slide clip.</a:t></a:r></a:p>
-                    </p:txBody>
-                  </p:sp></p:spTree></p:cSld>
-                </p:sld>
-                """
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, output);
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("0 0 720 540 re W* n", pdf);
+        const string label = "Shape autofit text wraps with Office slide clip.";
+        PdfPage page = PaintSlideClipCase(label, 2400, AutofitTextBoxFrame,
+            """<a:bodyPr lIns="0" rIns="0" tIns="0" bIns="0" vertOverflow="overflow"><a:spAutoFit/></a:bodyPr>""",
+            textBox: true);
+        AssertSlideClipPaintsLabel(page, label);
     }
 
     public static void PptxSyntheticPlainShapeTextUsesSlideWidthTextClip()
     {
-        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
-        if (!File.Exists(arial))
-        {
-            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
-        }
+        const string label = "Plain shape text uses Office slide clip.";
+        PdfPage page = PaintSlideClipCase(label, 1800,
+            """<a:off x="0" y="304800"/><a:ext cx="2550000" cy="276000"/>""",
+            """<a:bodyPr rtlCol="0" anchor="ctr"/>""");
+        AssertSlideClipPaintsLabel(page, label);
+    }
 
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+    private const string AutofitTextBoxFrame = """<a:off x="914400" y="914400"/><a:ext cx="1828800" cy="457200"/>""";
+
+    private static PdfPage PaintSlideClipCase(string label, int fontSize, string bounds, string bodyProperties, bool textBox = false)
+    {
+        string nonVisualProperties = textBox ? """<p:cNvSpPr txBox="1"/>""" : "<p:cNvSpPr/>";
+        using MemoryStream input = TestFixtures.CreateZipPackage(new Dictionary<string, string>
         {
             ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
             ["_rels/.rels"] = PptxTests.PackageRelationship(),
             ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
             ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
-            ["ppt/slides/slide1.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
+            ["ppt/slides/slide1.xml"] = $$"""
                 <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
                   <p:cSld><p:spTree><p:sp>
-                    <p:nvSpPr><p:cNvPr id="2" name="Shape"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
-                    <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="2550000" cy="276000"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:nvSpPr><p:cNvPr id="2" name="Text"/>{{nonVisualProperties}}<p:nvPr/></p:nvSpPr>
+                    <p:spPr><a:xfrm>{{bounds}}</a:xfrm><a:prstGeom prst="rect"/></p:spPr>
                     <p:txBody>
-                      <a:bodyPr rtlCol="0" anchor="ctr"/><a:lstStyle/>
-                      <a:p><a:r><a:rPr sz="1800"/><a:t>Plain shape text uses Office slide clip.</a:t></a:r></a:p>
+                      {{bodyProperties}}<a:lstStyle/>
+                      <a:p><a:r><a:rPr sz="{{fontSize}}"><a:latin typeface="Portable"/></a:rPr><a:t>{{label}}</a:t></a:r></a:p>
                     </p:txBody>
                   </p:sp></p:spTree></p:cSld>
                 </p:sld>
                 """
         });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        using OoxPackage package = OoxPackage.Open(input, default);
+        PptxDocument document = new PptxReader().Read(package, default);
+        return new PptxRenderer(new PortableRenderingTests.PinnedResolver()).RenderPagesAsync(document, package, null, default)
+            .ToBlockingEnumerable().Single();
+    }
 
-        OoxPdfConverter.Convert(input, output);
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("0 0 720 540 re W* n", pdf);
+    private static void AssertSlideClipPaintsLabel(PdfPage page, string label)
+    {
+        // Give inspection a wider initial clip so the intrinsic page bounds
+        // cannot stand in for the explicit clip on the text paint operations.
+        var inspectionPage = new PdfPage(page.Width + 1d, page.Height + 1d, page.Content, page.Fonts, page.Images, page.ExtGStates);
+        PortableRenderingTests.ReadPaintedSourceLabel(inspectionPage, label,
+            requiredClip: new PdfRectangle(0d, 0d, page.Width, page.Height));
     }
 
     public static void PptxAlignmentValuesKeepDistinctOfficeTextDistributionModes()

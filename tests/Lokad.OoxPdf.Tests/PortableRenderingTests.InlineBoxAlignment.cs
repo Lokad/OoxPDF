@@ -264,7 +264,7 @@ internal static partial class PortableRenderingTests
             "The equivalent single-line alignment keeps its source origin and physical font size.");
 
     internal static IReadOnlyList<(Vector2 Origin, double Size, PdfRectangle Ink)> ReadPaintedSourceLabel(PdfPage page,
-        string label, bool mathOnly = false, string? fontPrefix = null)
+        string label, bool mathOnly = false, string? fontPrefix = null, PdfRectangle? requiredClip = null)
     {
         // Match source characters across text-show boundaries, then check their
         // font ink against each physical paint frame. Existing readers own PDF syntax.
@@ -317,6 +317,8 @@ internal static partial class PortableRenderingTests
         int covered = start;
         foreach (var character in characters.Where(c => c.Offset >= start && c.Offset < start + wanted.Length))
         {
+            if (requiredClip is { } clip)
+                TestAssert.True(character.Clip == clip, "Source text must use the required clip: " + label);
             TestAssert.True(character.VisiblePaint is true,
                 "Every source glyph must have known visible fill paint: " + label);
             // A normalized UTF-16 span can belong to one supplementary scalar
