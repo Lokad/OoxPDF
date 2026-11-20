@@ -1,33 +1,28 @@
 namespace Lokad.OoxPdf.Docx;
 
 internal sealed record DocxDocumentSettings(
-    string? CharacterSpacingControlValue,
-    string? DefaultTabStopValue,
     double? DefaultTabStopPoints,
     DocxRevisionViewSettings RevisionViewSettings,
     DocxNoteReferenceSettings FootnoteReferenceSettings,
     DocxNoteReferenceSettings EndnoteReferenceSettings,
     string? MirrorMarginsValue,
     bool? MirrorMargins,
-    IReadOnlyList<DocxCompatSetting> CompatSettings)
+    bool HasCompatibilityMode)
 {
     public string? MathFontFamily { get; init; }
     public string? MathParagraphAlignmentValue { get; init; }
     public DocxMathLimitSettings MathLimitSettings { get; init; } = DocxMathLimitSettings.Empty;
-    public static DocxDocumentSettings Empty { get; } = new(null, null, null, DocxRevisionViewSettings.Empty,
-        DocxNoteReferenceSettings.Empty, DocxNoteReferenceSettings.Empty, null, null, []);
+    public static DocxDocumentSettings Empty { get; } = new(null, DocxRevisionViewSettings.Empty,
+        DocxNoteReferenceSettings.Empty, DocxNoteReferenceSettings.Empty, null, null, HasCompatibilityMode: false);
 }
 
 internal sealed record DocxRevisionViewSettings(
-    string? MarkupValue,
     bool? ShowMarkup,
-    string? CommentsValue,
     bool? ShowComments,
-    string? InsertionsAndDeletionsValue,
     bool? ShowInsertionsAndDeletions,
     bool? ShowFormatting)
 {
-    public static DocxRevisionViewSettings Empty { get; } = new(null, null, null, null, null, null, null);
+    public static DocxRevisionViewSettings Empty { get; } = new(null, null, null, null);
 }
 
 internal sealed record DocxNoteReferenceSettings(
@@ -40,11 +35,6 @@ internal sealed record DocxNoteReferenceSettings(
     public static DocxNoteReferenceSettings Empty { get; } = new(null, null, null, null, null);
     internal bool HasKnownNumberRestart => NumberRestartValue is null or "continuous" or "eachSect" or "eachPage";
 }
-
-internal sealed record DocxCompatSetting(
-    string? Name,
-    string? Uri,
-    string? Value);
 
 internal sealed record DocxPageSettings(
     string? WidthValue,

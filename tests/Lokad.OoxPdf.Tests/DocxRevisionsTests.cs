@@ -1684,7 +1684,6 @@ internal static class DocxRevisionsTests
         {
             RevisionViewSettings = DocxRevisionViewSettings.Empty with
             {
-                CommentsValue = "0",
                 ShowComments = false
             }
         };
@@ -1692,7 +1691,6 @@ internal static class DocxRevisionsTests
         {
             RevisionViewSettings = DocxRevisionViewSettings.Empty with
             {
-                InsertionsAndDeletionsValue = "0",
                 ShowInsertionsAndDeletions = false
             }
         };
@@ -1700,7 +1698,6 @@ internal static class DocxRevisionsTests
         {
             RevisionViewSettings = DocxRevisionViewSettings.Empty with
             {
-                MarkupValue = "0",
                 ShowMarkup = false
             }
         };
@@ -1722,7 +1719,6 @@ internal static class DocxRevisionsTests
             {
                 RevisionViewSettings = DocxRevisionViewSettings.Empty with
                 {
-                    CommentsValue = "0",
                     ShowComments = false
                 }
             }
@@ -1733,7 +1729,6 @@ internal static class DocxRevisionsTests
             {
                 RevisionViewSettings = DocxRevisionViewSettings.Empty with
                 {
-                    InsertionsAndDeletionsValue = "0",
                     ShowInsertionsAndDeletions = false
                 }
             }
@@ -1744,7 +1739,6 @@ internal static class DocxRevisionsTests
             {
                 RevisionViewSettings = DocxRevisionViewSettings.Empty with
                 {
-                    MarkupValue = "0",
                     ShowMarkup = false
                 }
             }

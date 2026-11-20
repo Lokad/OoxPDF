@@ -209,38 +209,28 @@ internal sealed partial class DocxReader
             return DocxDocumentSettings.Empty;
         }
 
-        XElement? characterSpacingControl = root.Element(WordprocessingNamespace + "characterSpacingControl");
         XElement? defaultTabStop = root.Element(WordprocessingNamespace + "defaultTabStop");
         XElement? revisionView = root.Element(WordprocessingNamespace + "revisionView");
         XElement? mirrorMargins = root.Element(WordprocessingNamespace + "mirrorMargins");
         DocxNoteReferenceSettings footnoteReferenceSettings = ReadNoteReferenceSettings(root.Element(WordprocessingNamespace + "footnotePr"));
         DocxNoteReferenceSettings endnoteReferenceSettings = ReadNoteReferenceSettings(root.Element(WordprocessingNamespace + "endnotePr"));
-        IReadOnlyList<DocxCompatSetting> compatSettings = root
-            .Element(WordprocessingNamespace + "compat")?
+        bool hasCompatibilityMode = root.Element(WordprocessingNamespace + "compat")?
             .Elements(WordprocessingNamespace + "compatSetting")
-            .Select(setting => new DocxCompatSetting(
-                (string?)setting.Attribute(WordprocessingNamespace + "name"),
-                (string?)setting.Attribute(WordprocessingNamespace + "uri"),
-                (string?)setting.Attribute(WordprocessingNamespace + "val")))
-            .ToArray() ?? [];
+            .Any(setting => string.Equals((string?)setting.Attribute(WordprocessingNamespace + "name"),
+                "compatibilityMode", StringComparison.Ordinal)) == true;
 
         return new DocxDocumentSettings(
-            (string?)characterSpacingControl?.Attribute(WordprocessingNamespace + "val"),
-            (string?)defaultTabStop?.Attribute(WordprocessingNamespace + "val"),
             ReadTwipsAttribute(defaultTabStop, WordprocessingNamespace + "val"),
             new DocxRevisionViewSettings(
-                (string?)revisionView?.Attribute(WordprocessingNamespace + "markup"),
                 OoxBoolean.ParseOptionalAttribute(revisionView, WordprocessingNamespace + "markup"),
-                (string?)revisionView?.Attribute(WordprocessingNamespace + "comments"),
                 OoxBoolean.ParseOptionalAttribute(revisionView, WordprocessingNamespace + "comments"),
-                (string?)revisionView?.Attribute(WordprocessingNamespace + "insDel"),
                 OoxBoolean.ParseOptionalAttribute(revisionView, WordprocessingNamespace + "insDel"),
                 OoxBoolean.ParseOptionalAttribute(revisionView, WordprocessingNamespace + "formatting")),
             footnoteReferenceSettings,
             endnoteReferenceSettings,
             (string?)mirrorMargins?.Attribute(WordprocessingNamespace + "val"),
             ReadOnOff(mirrorMargins),
-            compatSettings)
+            hasCompatibilityMode)
         {
             MathFontFamily = (string?)root.Element(MathNamespace + "mathPr")?.Element(MathNamespace + "mathFont")?.Attribute(MathNamespace + "val"),
             MathParagraphAlignmentValue = (string?)root.Element(MathNamespace + "mathPr")?.Element(MathNamespace + "defJc")?.Attribute(MathNamespace + "val"),

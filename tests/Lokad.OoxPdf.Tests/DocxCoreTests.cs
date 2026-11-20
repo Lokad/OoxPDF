@@ -398,7 +398,8 @@ internal static class DocxCoreTests
 
     public static void DocxReaderPreservesDocumentSettingsCompatibilityFacts()
     {
-        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        const string compatibilityMode = """<w:compatSetting w:name="compatibilityMode" w:uri="http://schemas.microsoft.com/office/word" w:val="15"/>""";
+        var entries = new Dictionary<string, string>
         {
             ["[Content_Types].xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
@@ -421,7 +422,7 @@ internal static class DocxCoreTests
                   <Relationship Id="rIdSettings" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/>
                 </Relationships>
                 """,
-            ["word/settings.xml"] = """
+            ["word/settings.xml"] = $$"""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
                   <w:defaultTabStop w:val="720"/>
@@ -440,7 +441,7 @@ internal static class DocxCoreTests
                     <w:numStart w:val="2"/>
                   </w:endnotePr>
                   <w:compat>
-                    <w:compatSetting w:name="compatibilityMode" w:uri="http://schemas.microsoft.com/office/word" w:val="15"/>
+                    {{compatibilityMode}}
                   </w:compat>
                 </w:settings>
                 """,
@@ -449,26 +450,21 @@ internal static class DocxCoreTests
                 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
                   <w:body>
                     <w:p><w:r><w:t>Settings</w:t><w:commentReference w:id="1"/></w:r></w:p>
+                    <w:tbl><w:tr><w:tc><w:p><w:r><w:t>Grid</w:t></w:r></w:p></w:tc></w:tr></w:tbl>
                     <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
                   </w:body>
                 </w:document>
                 """
-        });
+        };
 
-        using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
         var diagnostics = new List<OoxPdfDiagnostic>();
-        DocxDocument document = new DocxReader().Read(package, diagnostics.Add, CancellationToken.None, OoxPdfDocxMarkupMode.AllMarkup);
+        DocxDocument document = Read(diagnostics.Add);
 
         TestAssert.True(!diagnostics.Any(diagnostic => diagnostic.Feature == "comments"),
             "Resolved document settings suppress comment printing and its warning even in an AllMarkup request.");
 
-        TestAssert.Equal("doNotCompress", document.Settings.CharacterSpacingControlValue ?? string.Empty);
-        TestAssert.Equal("720", document.Settings.DefaultTabStopValue ?? string.Empty);
         TestAssert.Equal(36d, document.Settings.DefaultTabStopPoints ?? 0d);
-        TestAssert.Equal("1", document.Settings.RevisionViewSettings.MarkupValue ?? string.Empty);
         TestAssert.True(document.Settings.RevisionViewSettings.ShowMarkup == true, "revisionView markup=1 should opt in.");
-        TestAssert.Equal("0", document.Settings.RevisionViewSettings.CommentsValue ?? string.Empty);
         TestAssert.True(document.Settings.RevisionViewSettings.ShowComments == false, "revisionView comments=0 should opt out.");
         TestAssert.True(document.Settings.RevisionViewSettings.ShowInsertionsAndDeletions == true, "revisionView insDel=1 should opt in.");
         TestAssert.True(document.Settings.RevisionViewSettings.ShowFormatting == false, "revisionView formatting=0 should opt out.");
@@ -481,9 +477,34 @@ internal static class DocxCoreTests
         TestAssert.Equal("docEnd", document.Settings.EndnoteReferenceSettings.PositionValue ?? string.Empty);
         TestAssert.Equal("upperLetter", document.Settings.EndnoteReferenceSettings.NumberFormatValue ?? string.Empty);
         TestAssert.Equal(2, document.Settings.EndnoteReferenceSettings.NumberStart ?? 0);
-        DocxCompatSetting compat = document.Settings.CompatSettings.Single();
-        TestAssert.Equal("compatibilityMode", compat.Name ?? string.Empty);
-        TestAssert.Equal("15", compat.Value ?? string.Empty);
+        CheckTableGrid(document, true);
+
+        const string nameOnly = """<w:compatSetting w:name="compatibilityMode"/>""";
+        string originalSettings = entries["word/settings.xml"];
+        foreach (var (setting, expectLegacyGrid) in new[]
+        {
+            (string.Empty, false),
+            ("""<w:compatSetting w:name="CompatibilityMode" w:val="15"/>""", false),
+            (nameOnly, true),
+            ("""<w:compatSetting w:name="compatibilityMode" w:uri="urn:alternate" w:val="unknown"/>""" + nameOnly, true)
+        })
+        {
+            entries["word/settings.xml"] = originalSettings.Replace(compatibilityMode, setting, StringComparison.Ordinal);
+            CheckTableGrid(Read(), expectLegacyGrid);
+        }
+
+        DocxDocument Read(Action<OoxPdfDiagnostic>? sink = null)
+        {
+            using MemoryStream stream = TestFixtures.CreateZipPackage(entries);
+            using OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+            return new DocxReader().Read(package, sink, CancellationToken.None, OoxPdfDocxMarkupMode.AllMarkup);
+        }
+
+        static void CheckTableGrid(DocxDocument document, bool expectLegacyGrid)
+        {
+            TestAssert.Equal(expectLegacyGrid, document.Settings.HasCompatibilityMode);
+            TestAssert.Equal(expectLegacyGrid, document.BodyElements.OfType<DocxTableElement>().Single().Table.UseLegacyTableGrid);
+        }
     }
 
     public static void DocxReaderAppliesAutoLineSpacingAsTwoHundredFortieths()

@@ -56,7 +56,7 @@ internal sealed partial class DocxReader
         // alignment); without it the grid sits at the origin (modern) or pins text via
         // style margins (w72/m12, see PinTextToMargin below). Any stated mode counts
         // (survey: only 15 occurs in the wild).
-        bool useLegacyTableGrid = documentSettings is not null && documentSettings.CompatSettings.Any(setting => string.Equals(setting.Name, "compatibilityMode", StringComparison.Ordinal));
+        bool useLegacyTableGrid = documentSettings?.HasCompatibilityMode == true;
         double? resolvedTableIndentPoints = tableIndent is not null ? ReadDxaWidth(tableIndent) : tableStyle.Table.IndentPoints;
         var parts = (fragments ?? [source]).Select(fragment => (
             Properties: fragment.Element.Element(WordprocessingNamespace + "tblPr"),
