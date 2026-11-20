@@ -90,6 +90,8 @@ internal static partial class DocxColumnAdmissionTests
             var source = Read(input, review);
             var original = Renderer(review, new PortableRenderingTests.PinnedResolver()).RenderPagesAsync(source, null, default)
                 .ToBlockingEnumerable().ToArray();
+            var originalCharacters = Characters(original).Select(c => (c.Character, c.Page, c.Y, c.Size)).ToArray();
+            var beforeLines = FrameLines(Layout(source)).ToArray();
             foreach (bool navigation in new[] { false, true })
             {
                 var changed = Read(input, review, xml =>
@@ -119,10 +121,9 @@ internal static partial class DocxColumnAdmissionTests
                 TestAssert.Equal(original.Length, pages.Length);
                 // Text-show chunks can split at source-run boundaries. Their
                 // starts do not describe the X of every decoded character.
-                TestAssert.True(Characters(original).Select(c => (c.Character, c.Page, c.Y, c.Size))
+                TestAssert.True(originalCharacters
                     .SequenceEqual(Characters(pages).Select(c => (c.Character, c.Page, c.Y, c.Size))),
                     "Source-preserving transformations retain text, pages, baselines and sizes.");
-                var beforeLines = FrameLines(Layout(source)).ToArray();
                 var afterLines = FrameLines(Layout(changed)).ToArray();
                 TestAssert.Equal(beforeLines.Length, afterLines.Length);
                 foreach (var pair in beforeLines.Zip(afterLines))
@@ -132,7 +133,7 @@ internal static partial class DocxColumnAdmissionTests
                         Math.Abs(pair.First.Line.Width - pair.Second.Line.Width) < .00001d,
                         "Run splitting and navigation preserve measured line geometry.");
                 if (!navigation) continue;
-                var target = FrameLines(Layout(changed)).First(line => line.Line.SourceBlockIndex == 4 && line.Line.SourceLineIndex == 0);
+                var target = afterLines.First(line => line.Line.SourceBlockIndex == 4 && line.Line.SourceLineIndex == 0);
                 var destinations = pages.SelectMany(page => page.Annotations).Where(a => a.Destination is not null).ToArray();
                 TestAssert.True(destinations.Length > 1, "Both the source jump and wrapped target link remain clickable.");
                 foreach (var annotation in destinations)
