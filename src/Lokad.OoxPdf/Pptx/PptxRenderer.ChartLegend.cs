@@ -505,9 +505,13 @@ internal sealed partial class PptxRenderer
             : horizontal && layout.PositionKind == PptxSceneChartLegendPosition.Bottom &&
                 entries.All(entry => entry.Stroke is not null && entry.Fill is null)
                 ? PptxChartMetricRules.LegendBottomStrokeMarkerWidth : markerSize;
-        // Fill-swatch side keys share the resolved 4.66pt Office text gap (area, doughnut
-        // and bubble branches per the helper evidence note).
-        double textGap = ResolveSideLegendTextGap(placement, useDoughnutRightAnchor, useDoughnutLeftAnchor, sideStrokeLegend, fontSize, layout.Overlay);
+        bool bottomLegend = layout.PositionKind == PptxSceneChartLegendPosition.Bottom;
+        double horizontalTextGap = ComputeHorizontalLegendTextGap(fontSize, bottomLegend);
+        // Automatic horizontal rows use their packed gap for the painted text
+        // origin. Authored top boxes keep their existing origin policy.
+        double textGap = horizontal && (bottomLegend || !layout.Layout.HasGeometryValues)
+            ? horizontalTextGap
+            : ResolveSideLegendTextGap(placement, useDoughnutRightAnchor, useDoughnutLeftAnchor, sideStrokeLegend, fontSize, layout.Overlay);
         double GetSideLegendContentWidth()
         {
             double contentWidth = entries.Count == 0
@@ -518,13 +522,7 @@ internal sealed partial class PptxRenderer
             return useDoughnutRightAnchor ? contentWidth : Math.Max(style.FontSize * PptxChartMetricRules.LegendSideFillMinimumWidthFactor, contentWidth);
         }
 
-        bool bottomLegend = layout.PositionKind == PptxSceneChartLegendPosition.Bottom;
-        double horizontalTextGap = ComputeHorizontalLegendTextGap(fontSize, bottomLegend);
         double horizontalEntryPadding = ResolveHorizontalLegendInterEntryGap(entries, style, textMeasurer, bottomLegend);
-        if (horizontal && bottomLegend)
-        {
-            textGap = horizontalTextGap;
-        }
 
         double GetPackedHorizontalLegendWidth()
         {

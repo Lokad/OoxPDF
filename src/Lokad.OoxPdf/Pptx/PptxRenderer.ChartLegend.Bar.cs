@@ -226,7 +226,7 @@ internal sealed partial class PptxRenderer
             // Leave a complete first row inside the frame, including overlays
             // whose plot can extend past the old top legend's baseline.
             double firstBaseline = Math.Min(box.FirstY, layout.Frame.Y + layout.Frame.Height - box.LineHeight);
-            box = box with { FirstY = firstBaseline, ClipY = firstBaseline, TextGap = gap };
+            box = box with { FirstY = firstBaseline, ClipY = firstBaseline };
         }
 
         if (!measuredFillGrid && measuredBand && rows.Count > 1 && widths.Max() <= availableWidth + padding)

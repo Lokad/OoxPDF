@@ -16,27 +16,41 @@ internal static partial class PptxLegendRowsTests
 
     public static void PptxTopCartesianLegendsWrapEveryFittingName()
     {
-        string[] expected = Enumerable.Range(1, 6).Select(i => $"North West Region {i}").ToArray();
         foreach (string kind in new[] { "line", "area" })
         foreach (bool overlay in new[] { false, true })
         {
-            var result = Render(288, 12, expected.Length, overlay, kind: kind, legendPosition: "t");
-            var names = DocxCommentsTests.ReadEmbeddedGlyphTextShows(result.Page, usePageCoordinates: false,
-                fontResourceFilter: name => name.StartsWith("CL", StringComparison.Ordinal)).ToArray();
-            string actual = string.Concat(names.Select(name => name.Text));
-            TestAssert.True(string.Concat(expected).Equals(actual, StringComparison.Ordinal),
-                $"{kind}, overlay={overlay}, legend: {actual}");
-            TestAssert.True(CheckCompleteNamesInFrame(result.Page, 288, expected.Length) > 1,
+            TestAssert.True(CheckCartesianTopLegend(288, 12, kind, overlay) > 1,
                 "Long names use multiple rows inside the authored top-legend chart frame.");
-            var legendClips = Regex.Matches(result.Page.Content,
-                    @"(?m)^([-\d.]+) ([-\d.]+) ([-\d.]+) ([-\d.]+) re W\*? n\r?\nBT\r?\n[^\r\n]+\r?\n/CL\d+ ")
-                .Select(match => match.Groups.Cast<Group>().Skip(1)
-                    .Select(group => double.Parse(group.Value, CultureInfo.InvariantCulture)).ToArray())
-                .DistinctBy(rect => (rect[0], rect[1], rect[2], rect[3])).ToArray();
-            AssertLegendTextInsideClip(names, legendClips.Single());
-            TestAssert.True(!result.Diagnostics.Any(item => item.Message.Contains("overflowing entries", StringComparison.Ordinal)),
-                "Every wrapped row fits the available legend height.");
         }
+    }
+
+    public static void PptxTopCartesianLegendSingleRowsPaintCompleteGlyphs()
+    {
+        foreach (string kind in new[] { "line", "area" })
+        foreach (bool overlay in new[] { false, true })
+        {
+            TestAssert.Equal(1, CheckCartesianTopLegend(840, 8, kind, overlay));
+        }
+    }
+
+    private static int CheckCartesianTopLegend(int width, int fontSize, string kind, bool overlay)
+    {
+        string[] expected = Enumerable.Range(1, 6).Select(i => $"North West Region {i}").ToArray();
+        var result = Render(width, fontSize, expected.Length, overlay, kind: kind, legendPosition: "t");
+        var names = DocxCommentsTests.ReadEmbeddedGlyphTextShows(result.Page, usePageCoordinates: false,
+            fontResourceFilter: name => name.StartsWith("CL", StringComparison.Ordinal)).ToArray();
+        string actual = string.Concat(names.Select(name => name.Text));
+        TestAssert.True(string.Concat(expected).Equals(actual, StringComparison.Ordinal),
+            $"{kind}, overlay={overlay}, legend: {actual}");
+        var legendClips = Regex.Matches(result.Page.Content,
+                @"(?m)^([-\d.]+) ([-\d.]+) ([-\d.]+) ([-\d.]+) re W\*? n\r?\nBT\r?\n[^\r\n]+\r?\n/CL\d+ ")
+            .Select(match => match.Groups.Cast<Group>().Skip(1)
+                .Select(group => double.Parse(group.Value, CultureInfo.InvariantCulture)).ToArray())
+            .DistinctBy(rect => (rect[0], rect[1], rect[2], rect[3])).ToArray();
+        AssertLegendTextInsideClip(names, legendClips.Single());
+        TestAssert.True(!result.Diagnostics.Any(item => item.Message.Contains("overflowing entries", StringComparison.Ordinal)),
+            "Every row fits the available legend height.");
+        return CheckCompleteNamesInFrame(result.Page, width, expected.Length);
     }
 
     public static void PptxCrowdedLegendsPreservePlotSpaceAndDiagnoseUnadmittedRows()

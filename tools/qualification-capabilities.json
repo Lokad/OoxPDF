@@ -6329,6 +6329,7 @@
   ],
   "pptx-legend-rows": [
     "=PptxTopCartesianLegendsWrapEveryFittingName",
+    "=PptxTopCartesianLegendSingleRowsPaintCompleteGlyphs",
     "=PptxExplicitSeriesLegendDeletionKeepsThePlottedSeries",
     "PptxAuthoredPolarLegendKeepsEveryCompleteNameInsideItsClip",
     "PptxPolarHorizontalRowsKeepEveryNameInsideTheirClip",
