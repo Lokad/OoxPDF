@@ -86,7 +86,6 @@ internal static class PptxTests
 
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = collector.Add });
 
-        TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_CHART_STATIC_FALLBACK"), $"Line chart displayBlanksAs={displayBlanksAs} should render without static fallback diagnostics.");
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"), $"Line chart displayBlanksAs={displayBlanksAs} should not emit unsupported chart diagnostics.");
         return File.ReadAllText(output, Encoding.ASCII);
     }

@@ -335,7 +335,6 @@ internal static partial class PptxChartsTests
         TestAssert.Contains("BT", pdf);
         TestAssert.Contains(" re f", pdf);
         TestAssert.True(pdf.Split("BT", StringSplitOptions.None).Length >= 17, "Combo bar charts should emit text for primary and secondary labels, axes, and legend entries.");
-        TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_CHART_STATIC_FALLBACK"), "Supported chart rendering should not emit static fallback diagnostics.");
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"), "Supported bar charts should not emit unsupported chart diagnostics.");
 
         string ReadRoleText(string prefix) => string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, false,

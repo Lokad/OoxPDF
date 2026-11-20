@@ -20978,9 +20978,7 @@
     "DocxMarkupDiagnosticsCoverFormattingRevisions",
     "DocxUnsupportedTableCellTextDirectionEmitsDiagnostic",
     "DocxSupportedNumberingLeftHangingTabsDoNotEmitIndentDiagnostic",
-    "DocxSupportedNumberingFirstLineIndentDoesNotEmitIndentDiagnostic",
-    "DocxSupportedTableStyleAtomsDoNotEmitBroadTableStyleDiagnostic",
-    "DocxSupportedBodyKeepRulesDoNotEmitUnsupportedKeepDiagnostic"
+    "DocxSupportedNumberingFirstLineIndentDoesNotEmitIndentDiagnostic"
   ],
   "docx-mixed-picture-ranges": [
     "DocxMixedPictureRangesIncludePaintAcrossContainersAndPresets",

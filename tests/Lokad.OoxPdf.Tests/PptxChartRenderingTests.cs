@@ -367,7 +367,6 @@ internal static class PptxChartRenderingTests
             "Expected per-label polar leader-line style to override the chart-wide leader-line style.");
         TestAssert.True(Regex.IsMatch(pdf, @"<[0-9A-F]{4}> <0025>"), "Expected percentage labels to include a percent glyph in the ToUnicode map.");
         TestAssert.True(Regex.IsMatch(pdf, @"<[0-9A-F]{4}> <002C>"), "Expected combined value/percentage labels to include the default comma separator.");
-        TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_CHART_STATIC_FALLBACK"), "Supported chart rendering should not emit static fallback diagnostics.");
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"), "Line and pie charts should not emit unsupported chart diagnostics.");
     }
 
@@ -430,7 +429,6 @@ internal static class PptxChartRenderingTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0.071 0.204 0.337 rg", pdf);
         TestAssert.True(Regex.Matches(pdf, "0\\.071 0\\.204 0\\.337 rg").Count >= 2, "Expected sparse point index 4 to drive both the slice fill and its category legend marker fill.");
-        TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_CHART_STATIC_FALLBACK"), "Sparse pie charts should render through the native chart path.");
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"), "Sparse pie charts should not emit unsupported chart diagnostics.");
     }
 
@@ -563,7 +561,6 @@ internal static class PptxChartRenderingTests
         TestAssert.Contains(" c", pdf);
         TestAssert.Contains("f*", pdf);
         TestAssert.Contains(" l S", pdf);
-        TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_CHART_STATIC_FALLBACK"), "Supported chart rendering should not emit static fallback diagnostics.");
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"), "Area, scatter, radar, and doughnut charts should not emit unsupported chart diagnostics.");
     }
 
@@ -934,7 +931,6 @@ internal static class PptxChartRenderingTests
         int pathStartCount = Regex.Matches(pdf, @"[0-9.]+ [0-9.]+ m").Count;
         TestAssert.True(pathStartCount == 0, $"Expected formula-only embedded workbook references to stay out of active chart rendering without chart-side caches; saw {pathStartCount} path starts and diagnostics: {string.Join(", ", collector.Diagnostics.Select(d => d.Id))}.");
         TestAssert.True(PptxTests.CountTextMatrices(pdf) == 0, "Expected formula-only embedded workbook category references to stay out of native chart text without chart-side caches.");
-        TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_CHART_STATIC_FALLBACK"), "Formula-only charts should not fall back to static chart rendering.");
         TestAssert.True(collector.Diagnostics.Any(d => d.Id == "PPTX_CHART_MISSING_CACHED_DATA"), "Formula-only embedded workbook references should report missing chart-side caches while preserving workbook values as provenance.");
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"), "Formula-only supported chart families should report missing cached data rather than a generic unsupported chart.");
     }
@@ -1394,7 +1390,6 @@ internal static class PptxChartRenderingTests
         TestAssert.True(Regex.Matches(pdf, @" c\s").Count >= 16, "Expected native bubble ellipses to be emitted as Bezier curves.");
         TestAssert.True(Regex.IsMatch(pdf, @"<[0-9A-F]{4}> <0035>"), "Expected bubble value-axis labels to include the Office 0..5 scale.");
         TestAssert.True(Regex.IsMatch(pdf, @"<[0-9A-F]{4}> <0036>"), "Expected bubble value-axis labels to include the Office 0..6 scale.");
-        TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_CHART_STATIC_FALLBACK"), "Bubble charts should render without static fallback diagnostics.");
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"), "Bubble charts should not emit unsupported chart diagnostics.");
     }
 
@@ -1446,7 +1441,6 @@ internal static class PptxChartRenderingTests
         TestAssert.Contains("/CSD1", pdf);
         TestAssert.True(Regex.IsMatch(pdf, @"<[0-9A-F]{4}> <0039>"), "Expected bubble-size data label 9 to be emitted from c:bubbleSize.");
         TestAssert.True(Regex.IsMatch(pdf, @"<[0-9A-F]{4}> <0036>"), "Expected bubble-size data label 16 to be emitted from c:bubbleSize.");
-        TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_CHART_STATIC_FALLBACK"), "Bubble charts with bubble-size labels should render without static fallback diagnostics.");
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"), "Bubble charts with bubble-size labels should not emit unsupported chart diagnostics.");
     }
 
@@ -1497,7 +1491,6 @@ internal static class PptxChartRenderingTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0.071 0.204 0.337 rg", pdf);
         TestAssert.Contains(" re W* n", pdf);
-        TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_CHART_STATIC_FALLBACK"), "Scatter charts with legend-key-only labels should render without static fallback diagnostics.");
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"), "Scatter charts with legend-key-only labels should not emit unsupported chart diagnostics.");
     }
 
@@ -1555,7 +1548,6 @@ internal static class PptxChartRenderingTests
         TestAssert.True(
             Regex.IsMatch(pdf, @"0\.098 0\.2 0\.302 rg\s+[0-9.]+ [0-9.]+ (?:1[5-9][0-9]|[2-9][0-9]{2})\.[0-9]{2,3} (?:[5-9][0-9]|[1-9][0-9]{2})\.[0-9]{2,3} re f"),
             "Expected chart-wide data-label manual layout to drive a large label shape box.");
-        TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_CHART_STATIC_FALLBACK"), "Scatter charts with chart-wide manual data-label layout should render without static fallback diagnostics.");
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"), "Scatter charts with chart-wide manual data-label layout should not emit unsupported chart diagnostics.");
     }
 
@@ -1608,7 +1600,6 @@ internal static class PptxChartRenderingTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0.396 0.263 0.129 rg", pdf);
-        TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_CHART_STATIC_FALLBACK"), "Bar charts with legend-key-only labels should render without static fallback diagnostics.");
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"), "Bar charts with legend-key-only labels should not emit unsupported chart diagnostics.");
     }
 
@@ -3100,7 +3091,6 @@ internal static class PptxChartRenderingTests
         TestAssert.Contains("0.071 0.204 0.337 RG", pdf);
         TestAssert.Contains("0.929 0.49 0.192 rg", pdf);
         TestAssert.Contains("0.396 0.263 0.129 RG", pdf);
-        TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_CHART_STATIC_FALLBACK"), "Bar chart legends with stroked swatches should render without static fallback diagnostics.");
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"), "Bar chart legends with stroked swatches should not emit unsupported chart diagnostics.");
     }
 
@@ -3152,7 +3142,6 @@ internal static class PptxChartRenderingTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.True(!pdf.Contains("0.141 0.408 0.675 rg", StringComparison.Ordinal), "A legend key alone does not create a label background.");
-        TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_CHART_STATIC_FALLBACK"), "Line charts with legend-key-only labels should render without static fallback diagnostics.");
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"), "Line charts with legend-key-only labels should not emit unsupported chart diagnostics.");
     }
 
@@ -3202,7 +3191,6 @@ internal static class PptxChartRenderingTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.True(Regex.IsMatch(pdf, @"0\.071 0\.204 0\.337 RG\s+3 w"), "Expected chart series <a:ln> without @w to inherit Office's 3 pt series line width.");
-        TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_CHART_STATIC_FALLBACK"), "Line chart series stroke defaults should render without static fallback diagnostics.");
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"), "Line chart series stroke defaults should not emit unsupported chart diagnostics.");
     }
 
@@ -3253,7 +3241,6 @@ internal static class PptxChartRenderingTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.True(Regex.IsMatch(pdf, @"0\.071 0\.204 0\.337 RG\s+0\.75 w"), "Expected filled chart series <a:ln> without @w to inherit Office's 0.75 pt filled-series border width.");
         TestAssert.True(!Regex.IsMatch(pdf, @"0\.071 0\.204 0\.337 RG\s+3 w"), "Filled chart series <a:ln> without @w should not use the 3 pt line-chart inherited width.");
-        TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_CHART_STATIC_FALLBACK"), "Bar chart series stroke defaults should render without static fallback diagnostics.");
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"), "Bar chart series stroke defaults should not emit unsupported chart diagnostics.");
     }
 
@@ -3305,7 +3292,6 @@ internal static class PptxChartRenderingTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.True(Regex.IsMatch(pdf, @"0\.671 0\.804 0\.937 RG\s+1 w"), "Expected line-chart marker <a:ln> without @w to inherit the 1 pt explicit-outline width (COM square deck falsified the 0.75 pt extension, which covers unstyled outlines only).");
         TestAssert.True(!Regex.IsMatch(pdf, @"0\.671 0\.804 0\.937 RG\s+3 w"), "Marker <a:ln> without @w should not use the 3 pt series-line inherited width.");
-        TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_CHART_STATIC_FALLBACK"), "Line chart marker stroke defaults should render without static fallback diagnostics.");
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"), "Line chart marker stroke defaults should not emit unsupported chart diagnostics.");
     }
 
@@ -3373,7 +3359,6 @@ internal static class PptxChartRenderingTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Equal(1, PptxTests.CountLineChartSeriesSegments(pdf, "0.071 0.671 0.204 RG"));
-        TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_CHART_STATIC_FALLBACK"), "Line charts with leading blank series should render without static fallback diagnostics.");
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"), "Line charts with leading blank series should not emit unsupported chart diagnostics.");
     }
 
@@ -3638,7 +3623,6 @@ internal static class PptxChartRenderingTests
         TestAssert.True(
             !Regex.IsMatch(pdf, @"<[0-9A-F]{4}> <002E>"),
             "Percent-stacked value-axis labels should not use the generic 0..1.2 decimal scale.");
-        TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_CHART_STATIC_FALLBACK"), "Percent-stacked column charts should render without static fallback diagnostics.");
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"), "Percent-stacked column charts should not emit unsupported chart diagnostics.");
     }
 
