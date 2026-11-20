@@ -58,10 +58,10 @@ internal static partial class PptxHorizontalFrameTests
 
     public static void PptxHorizontalLegendsReserveTheirOwnMeasuredRows()
     {
+        var plain = Render(360, 12, 12, "none");
         foreach (int fontSize in new[] { 8, 12, 18 })
         foreach (bool categories in new[] { false, true })
         {
-            var plain = Render(360, 12, 12, "none");
             var top = Render(360, 12, 12, "t", legendSize: fontSize, categoryLegend: categories);
             var bottom = Render(360, 12, 12, "b", legendSize: fontSize, categoryLegend: categories);
             TestAssert.True(Math.Abs(top.Bottom - plain.Bottom) < 0.01 && Math.Abs(bottom.Top - plain.Top) < 0.01,

@@ -4320,7 +4320,7 @@
   ],
   "pptx-on-tick-columns": [
     "PptxOnTickColumnsKeepSourceClustersAndGaps",
-    "PptxOnTickColumnLabelsAndLinksFollowPaintedClusters",
+    "PptxOnTickColumnLinksFollowPaintedClusters",
     "PptxColumnIntervalsShareOfficeSourceMinimums",
     "PptxColumnIntervalsSurviveStackingAndAuthoredPlotPlacement",
     "PptxColumnTicksAndBothGridKindsUseTheLabelIntervals",

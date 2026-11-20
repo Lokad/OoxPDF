@@ -15,17 +15,33 @@ internal static partial class PptxColumnIntervalTests
             var after = RenderAdmission(row, caseDirectory: ColumnDirectionCases,
                 editChart: chart => SetColumnCrossBetween(chart, "midCat"));
             var a = AdmissionBounds(before); var b = AdmissionBounds(after);
+            var labels = row.GetProperty("Source").TryGetProperty("Keys", out _) ? null :
+                DocxCommentsTests.ReadEmbeddedGlyphTextShows(after, usePageCoordinates: false,
+                    fontResourceFilter: name => name.StartsWith("CBD", StringComparison.Ordinal)).ToArray();
+            int visibleLabelCount = 0;
             int count = row.GetProperty("Bars").EnumerateArray().Max(bar => bar.GetProperty("Index").GetInt32()) + 1;
             foreach (var expected in row.GetProperty("Bars").EnumerateArray())
             {
                 double[] oldBar = ColumnDirectionBar(before, expected), bar = ColumnDirectionBar(after, expected);
+                double center = bar[0] + bar[2] / 2d;
                 double oldRatio = (oldBar[0] + oldBar[2] / 2d - a.Left) / (a.Right - a.Left);
-                double ratio = (bar[0] + bar[2] / 2d - b.Left) / (b.Right - b.Left);
+                double ratio = (center - b.Left) / (b.Right - b.Left);
                 double scale = (double)count / (count - 1);
                 TestAssert.True(Math.Abs(ratio - (oldRatio - .5d / count) * scale) < .00005d &&
                     Math.Abs(bar[2] / (b.Right - b.Left) - oldBar[2] / (a.Right - a.Left) * scale) < .00005d,
                     row.GetProperty("Id").GetString() + ": endpoint slots preserve source clusters, sparse indices, overlap, gap and point paint.");
+
+                if (labels is not null && center >= b.Left - .003d && center <= b.Right + .003d)
+                {
+                    string value = expected.GetProperty("Value").GetInt32().ToString(CultureInfo.InvariantCulture);
+                    var label = labels.Single(show => show.Text == value);
+                    double labelCenter = label.X + label.Font.MeasureTextPoints(label.Text, label.Size) / 2d;
+                    TestAssert.True(Math.Abs(labelCenter - center) < .02d,
+                        "On-tick labels follow the source bar including intra-cluster reflection and sparse points.");
+                    visibleLabelCount++;
+                }
             }
+            if (labels is not null) TestAssert.Equal(visibleLabelCount, labels.Length);
         }
 
         foreach (var row in oracle.RootElement.GetProperty("Rows").EnumerateArray().Where(row =>
@@ -47,33 +63,9 @@ internal static partial class PptxColumnIntervalTests
         }
     }
 
-    public static void PptxOnTickColumnLabelsAndLinksFollowPaintedClusters()
+    public static void PptxOnTickColumnLinksFollowPaintedClusters()
     {
         using var oracle = ColumnDirectionOracle();
-        foreach (var row in oracle.RootElement.GetProperty("Rows").EnumerateArray().Where(row =>
-            !row.GetProperty("Source").TryGetProperty("Keys", out _)))
-        {
-            var page = RenderAdmission(row, caseDirectory: ColumnDirectionCases,
-                editChart: chart => SetColumnCrossBetween(chart, "midCat"));
-            var labels = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false,
-                fontResourceFilter: name => name.StartsWith("CBD", StringComparison.Ordinal)).ToArray();
-            var plot = AdmissionBounds(page);
-            var visible = row.GetProperty("Bars").EnumerateArray().Where(expected =>
-            {
-                double[] bar = ColumnDirectionBar(page, expected);
-                double center = bar[0] + bar[2] / 2d;
-                return center >= plot.Left - .003d && center <= plot.Right + .003d;
-            }).ToArray();
-            TestAssert.Equal(visible.Length, labels.Length);
-            foreach (var expected in visible)
-            {
-                double[] bar = ColumnDirectionBar(page, expected);
-                string value = expected.GetProperty("Value").GetInt32().ToString(CultureInfo.InvariantCulture);
-                var label = labels.Single(show => show.Text == value);
-                TestAssert.True(Math.Abs(label.X + label.Font.MeasureTextPoints(label.Text, label.Size) / 2d - bar[0] - bar[2] / 2d) < .02d,
-                    "On-tick labels follow the source bar including intra-cluster reflection and sparse points.");
-            }
-        }
         var linked = oracle.RootElement.GetProperty("Rows").EnumerateArray().Single(row =>
             row.GetProperty("Id").GetString() == "column-reversed-three-explicit");
         var linkedPage = RenderAdmission(linked, link: true, caseDirectory: ColumnDirectionCases, editChart: chart =>
