@@ -150,12 +150,7 @@ internal sealed partial class DocxReader
             {
                 width = OoxUnits.TwipsToPoints(OoxXml.ParseRequiredLong(pageSize, WordprocessingNamespace + "w", "DOCX"));
                 height = OoxUnits.TwipsToPoints(OoxXml.ParseRequiredLong(pageSize, WordprocessingNamespace + "h", "DOCX"));
-                (width, height) = NormalizePageSize(width, height);
-                string? orientation = (string?)pageSize.Attribute(WordprocessingNamespace + "orient");
-                if (orientation?.Equals("landscape", StringComparison.OrdinalIgnoreCase) == true && height > width)
-                {
-                    (width, height) = (height, width);
-                }
+                (width, height) = DocxPageSettings.NormalizeDimensions(width, height, (string?)pageSize.Attribute(WordprocessingNamespace + "orient"));
 
                 left = ReadMargin(pageMargins, WordprocessingNamespace + "left", left);
                 right = ReadMargin(pageMargins, WordprocessingNamespace + "right", right);
@@ -646,16 +641,6 @@ internal sealed partial class DocxReader
             HeaderFloatingDrawingsByType = headerDrawingsByType,
             FooterFloatingDrawingsByType = footerDrawingsByType
         };
-    }
-
-    private static (double Width, double Height) NormalizePageSize(double width, double height)
-    {
-        if (Math.Abs(width - 595d) < 0.01d && Math.Abs(height - 842d) < 0.01d)
-        {
-            return (594.96d, 842.04d);
-        }
-
-        return (width, height);
     }
 
     private static XDocument? LoadRelatedXmlPart(OoxPackage package, string documentPartName, string relationshipType, out string? relatedPartName, CancellationToken cancellationToken, Action<OoxPdfDiagnostic>? diagnosticSink = null, HashSet<string>? warnedParts = null, IMemoryReservation? modelStorage = null)

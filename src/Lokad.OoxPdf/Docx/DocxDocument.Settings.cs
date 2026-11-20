@@ -81,6 +81,17 @@ internal sealed record DocxPageSettings(
 {
     public static DocxPageSettings Empty { get; } = new(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
 
+    internal static (double Width, double Height) NormalizeDimensions(double width, double height, string? orientation)
+    {
+        if (Math.Abs(width - 595d) < 0.01d && Math.Abs(height - 842d) < 0.01d)
+        {
+            (width, height) = (594.96d, 842.04d);
+        }
+
+        return orientation?.Equals("landscape", StringComparison.OrdinalIgnoreCase) == true && height > width
+            ? (height, width) : (width, height);
+    }
+
     public double? DocGridLinePitchPoints { get; init; }
     public string? DocGridLinePitchValue { get; init; }
     public double? GutterDistancePoints { get; init; }

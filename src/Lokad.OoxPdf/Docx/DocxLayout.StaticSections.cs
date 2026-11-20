@@ -276,11 +276,7 @@ internal sealed partial class DocxLayoutEngine
         DocxPageSettings effectiveSettings = section.PageSettings;
         double width = ReadTwipsValue(effectiveSettings.WidthValue, document.PageWidthPoints);
         double height = ReadTwipsValue(effectiveSettings.HeightValue, document.PageHeightPoints);
-        (width, height) = NormalizePageSize(width, height);
-        if (effectiveSettings.OrientationValue?.Equals("landscape", StringComparison.OrdinalIgnoreCase) == true && height > width)
-        {
-            (width, height) = (height, width);
-        }
+        (width, height) = DocxPageSettings.NormalizeDimensions(width, height, effectiveSettings.OrientationValue);
 
         double marginLeft = ReadTwipsValue(effectiveSettings.MarginLeftValue, document.MarginLeftPoints);
         double marginRight = ReadTwipsValue(effectiveSettings.MarginRightValue, document.MarginRightPoints);
@@ -456,16 +452,6 @@ internal sealed partial class DocxLayoutEngine
         return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int result)
             ? result
             : null;
-    }
-
-    private static (double Width, double Height) NormalizePageSize(double width, double height)
-    {
-        if (Math.Abs(width - 595d) < 0.01d && Math.Abs(height - 842d) < 0.01d)
-        {
-            return (594.96d, 842.04d);
-        }
-
-        return (width, height);
     }
 
     private static bool ShouldStartNewPageForSectionBreak(DocxSectionBreakElement sectionBreak)
