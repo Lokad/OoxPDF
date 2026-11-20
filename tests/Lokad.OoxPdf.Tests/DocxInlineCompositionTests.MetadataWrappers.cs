@@ -138,7 +138,8 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.Contains("AUTHORED AFTER BREAK", string.Concat(
                 DocxCommentsTests.ReadEmbeddedGlyphTextShows(control[targetPage]).Select(show => show.Text)));
 
-            foreach (string wrapper in new[] { "sdt", "customXml", "smartTag", "nested", "proof", "permission" })
+            foreach (string wrapper in new[] { "sdt", "customXml", "smartTag", "nested", "proof", "permission",
+                "run-hint", "preceding-hint", "nested-preceding-hint" })
             {
                 PdfPage[] pages = Render(wrapper);
                 TestAssert.True(control.Select(page => page.Content).SequenceEqual(pages.Select(page => page.Content)),
@@ -160,13 +161,22 @@ internal static partial class DocxInlineCompositionTests
 
                     var run = new XElement(w + "r", new XElement(w + "br", new XAttribute(w + "type", type)),
                         new XElement(w + "t", "AUTHORED AFTER BREAK"));
+                    XElement Hint() => new(w + "lastRenderedPageBreak");
+                    XElement HintRun() => new(w + "r", Hint());
                     XElement ContentControl(params XElement[] items) => new(w + "sdt",
                         new XElement(w + "sdtPr", new XElement(w + "alias", new XAttribute(w + "val", "Break probe"))),
                         new XElement(w + "sdtContent", items));
                     XElement Metadata(string kind, XElement item) => MetadataWrapper(w, kind, new XElement(w + (kind + "Pr")), item);
+                    if (wrapper == "run-hint")
+                    {
+                        run.AddFirst(Hint());
+                    }
                     XElement[] content = wrapper switch
                     {
-                        "direct" => [run],
+                        "direct" or "run-hint" => [run],
+                        "preceding-hint" => [HintRun(), run],
+                        "nested-preceding-hint" => [ContentControl(MetadataWrapper(w, "customXml",
+                            new XElement(w + "customXmlPr"), HintRun(), run))],
                         "sdt" => [ContentControl(run)],
                         "nested" => [ContentControl(Metadata("customXml", Metadata("smartTag", run)))],
                         "proof" => [new XElement(w + "proofErr", new XAttribute(w + "type", "spellStart")),

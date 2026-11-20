@@ -562,39 +562,7 @@ internal sealed partial class DocxReader
                 continue;
             }
 
-            XElement? runProperties = child.Element(WordprocessingNamespace + "rPr");
-            var runChildren = new List<XElement>();
-            if (runProperties is not null)
-            {
-                runChildren.Add(new XElement(runProperties));
-            }
-
-            foreach (XElement runChild in child.Elements())
-            {
-                if (runChild.Name == WordprocessingNamespace + "rPr")
-                {
-                    continue;
-                }
-
-                if (runChild.Name == WordprocessingNamespace + "br" && isBreak(runChild))
-                {
-                    AddRunPart(currentChildren, runProperties, runChildren);
-                    AddParagraphPart(endsBeforeBreak: true);
-                    parts.Add(new ParagraphBreakPart(null, (string?)runChild.Attribute(WordprocessingNamespace + "type"), false, false));
-                    startsAfterBreak = true;
-                    runChildren.Clear();
-                    if (runProperties is not null)
-                    {
-                        runChildren.Add(new XElement(runProperties));
-                    }
-
-                    continue;
-                }
-
-                runChildren.Add(new XElement(runChild));
-            }
-
-            AddRunPart(currentChildren, runProperties, runChildren);
+            SplitRunAtBreaks(child, currentChildren, AddParagraphPart, parts, ref startsAfterBreak, isBreak);
         }
 
         AddParagraphPart(endsBeforeBreak: false);
@@ -650,39 +618,7 @@ internal sealed partial class DocxReader
                 continue;
             }
 
-            XElement? runProperties = containerChild.Element(WordprocessingNamespace + "rPr");
-            var runChildren = new List<XElement>();
-            if (runProperties is not null)
-            {
-                runChildren.Add(new XElement(runProperties));
-            }
-
-            foreach (XElement runChild in containerChild.Elements())
-            {
-                if (runChild.Name == WordprocessingNamespace + "rPr")
-                {
-                    continue;
-                }
-
-                if (runChild.Name == WordprocessingNamespace + "br" && isBreak(runChild))
-                {
-                    AddRunPart(containerChildren, runProperties, runChildren);
-                    FlushThisContainerAndParagraph(true);
-                    parts.Add(new ParagraphBreakPart(null, (string?)runChild.Attribute(WordprocessingNamespace + "type"), false, false));
-                    startsAfterBreak = true;
-                    runChildren.Clear();
-                    if (runProperties is not null)
-                    {
-                        runChildren.Add(new XElement(runProperties));
-                    }
-
-                    continue;
-                }
-
-                runChildren.Add(new XElement(runChild));
-            }
-
-            AddRunPart(containerChildren, runProperties, runChildren);
+            SplitRunAtBreaks(containerChild, containerChildren, FlushThisContainerAndParagraph, parts, ref startsAfterBreak, isBreak);
         }
 
         AddContainerPart(ownerChildren, sourceContainer, containerChildren);
@@ -706,22 +642,44 @@ internal sealed partial class DocxReader
         containerChildren.Clear();
     }
 
-    private static void AddRunPart(List<XElement> paragraphChildren, XElement? runProperties, List<XElement> runChildren)
+    private static void SplitRunAtBreaks(XElement run, List<XElement> ownerChildren,
+        Action<bool> flushOwnerAndParagraph, List<ParagraphBreakPart> parts, ref bool startsAfterBreak,
+        Func<XElement, bool> isBreak)
     {
-        int contentOffset = runProperties is null ? 0 : 1;
-        if (runChildren.Count <= contentOffset)
+        XElement? properties = run.Element(WordprocessingNamespace + "rPr");
+        var content = new List<XElement>();
+
+        void AddRunPart()
         {
-            return;
+            if (content.Count != 0)
+            {
+                // Adding attached children clones them, keeping the source run intact.
+                ownerChildren.Add(new XElement(run.Name, properties, content));
+                content.Clear();
+            }
         }
 
-        paragraphChildren.Add(new XElement(WordprocessingNamespace + "r", runChildren.Select(child => new XElement(child))));
-        runChildren.Clear();
-        if (runProperties is not null)
+        foreach (XElement child in EnumerateBreakSplitRunChildren(run))
         {
-            runChildren.Add(new XElement(runProperties));
+            if (child.Name != WordprocessingNamespace + "br" || !isBreak(child))
+            {
+                content.Add(child);
+                continue;
+            }
+
+            AddRunPart();
+            flushOwnerAndParagraph(true);
+            parts.Add(new ParagraphBreakPart(null, (string?)child.Attribute(WordprocessingNamespace + "type"), false, false));
+            startsAfterBreak = true;
         }
+        AddRunPart();
     }
 
+    // The cached position has no run payload and cannot create a fragment before
+    // an authored break.
+    private static IEnumerable<XElement> EnumerateBreakSplitRunChildren(XElement run) =>
+        run.Elements().Where(child => child.Name != WordprocessingNamespace + "rPr" &&
+            !DocxSourceXml.IsLastRenderedPageBreakHint(child));
 
     private static bool IsHiddenRunBreak(XElement source, DocxStyleSet styles, DocxTableCellStyle? tableStyle)
     {
@@ -768,8 +726,7 @@ internal sealed partial class DocxReader
     {
         if (element.Name == WordprocessingNamespace + "r")
         {
-            return element.Elements().All(child =>
-                child.Name == WordprocessingNamespace + "rPr" ||
+            return EnumerateBreakSplitRunChildren(element).All(child =>
                 child.Name == WordprocessingNamespace + "br" && isBreak(child));
         }
 

@@ -1105,7 +1105,9 @@ internal static class DocxPageTests
                 "<w:customXml w:element=\"PublicBreak\"><w:customXmlPr/>" + run + "</w:customXml>",
                 "<w:smartTag><w:smartTagPr/>" + permissions + "</w:smartTag>",
                 "<w:sdt><w:sdtPr/><w:sdtContent><w:customXml><w:customXmlPr/>" + permissions + "</w:customXml></w:sdtContent><w:sdtEndPr/></w:sdt>",
-                "<w:bookmarkStart w:id=\"28\" w:name=\"Break\"/><w:proofErr w:type=\"spellStart\"/>" + run + "<w:bookmarkEnd w:id=\"28\"/>"
+                "<w:bookmarkStart w:id=\"28\" w:name=\"Break\"/><w:proofErr w:type=\"spellStart\"/>" + run + "<w:bookmarkEnd w:id=\"28\"/>",
+                "<w:r><w:lastRenderedPageBreak/></w:r>" +
+                    run.Replace("</w:r>", "<w:lastRenderedPageBreak/></w:r>", StringComparison.Ordinal)
             ];
             DocxLayout expected = Layout(ReadBreakMetadataDocument(run, mode));
             var expectedLines = Lines(expected);
@@ -1141,6 +1143,9 @@ internal static class DocxPageTests
         foreach (string metadata in new[] {
             "<w:permStart w:id=\"28\"><w:r><w:t>Payload</w:t></w:r></w:permStart>",
             "<w:proofErr>Payload</w:proofErr>",
+            "<w:lastRenderedPageBreak/>",
+            "<w:r><w:lastRenderedPageBreak w:future=\"1\"/></w:r>",
+            "<w:r><w:lastRenderedPageBreak><w:t>Payload</w:t></w:lastRenderedPageBreak></w:r>",
             "<w:customXmlPr/>", "<w:smartTagPr/>", "<w:sdtPr/>", "<w:sdtEndPr/>" })
         {
             DocxDocument document = ReadBreakMetadataDocument(metadata + run, OoxPdfDocxMarkupMode.Final);
