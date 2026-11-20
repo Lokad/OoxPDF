@@ -71,19 +71,12 @@ foreach ($case in $cases) {
     if ($LASTEXITCODE -ne 0) { throw "Conversion failed for $($case.InputPath)." }
     & (Join-Path $repoRoot "tools/InspectPdf.ps1") -Framework $Framework -InputPdf $pdf -OutputDirectory $inspectDir -TextOnly -InspectorPath $inspectorDll -SkipBuild
     $ops = Get-Content -Raw -LiteralPath (Join-Path $inspectDir "text-operations.json") | ConvertFrom-Json
-    $fullText = (Get-DecodedPdfTextFragments $ops) -join "`n"
-    $cursor = 0
-    $missing = 0
-    foreach ($expected in $case.Expected) {
-        $found = $fullText.IndexOf($expected, $cursor, [StringComparison]::Ordinal)
-        if ($found -lt 0) {
-            $missing++
-            Write-Host "[$($case.Name)] MISSING: $expected"
-        }
-        else { $cursor = $found + $expected.Length }
+    $missing = @(Get-MissingOrderedPdfTextPhrases $ops $case.Expected)
+    foreach ($expected in $missing) {
+        Write-Host "[$($case.Name)] MISSING: $expected"
     }
-    $failures += $missing
-    if ($missing -eq 0) { Write-Host "[$($case.Name)] ok" }
+    $failures += $missing.Count
+    if ($missing.Count -eq 0) { Write-Host "[$($case.Name)] ok" }
 }
 if ($failures -ne 0) { throw "$failures expected string(s) missing from extracted text." }
 Write-Host "Text-content gate passed for $($cases.Count) case(s)."

@@ -9,7 +9,15 @@
   "expected": {
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
-    "markupTextPhrases": ["Commented table cell", "Table-cell comment body."]
+    "markupTextPhrases": [
+      "Table left",
+      "Commented table cell",
+      "Table right",
+      "Second row left",
+      "Second row center",
+      "Second row right",
+      "Table-cell comment body."
+    ]
   },
   "allowedUnsupportedFeatures": []
 }

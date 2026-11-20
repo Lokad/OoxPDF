@@ -98,6 +98,19 @@ $spacedTail = New-Op 470 650 'X' 7
 Assert-Equal 'passed' (New-MarkupTextWitnessGate @($laneText[0], $laneText[1], $spacedTail) @('APPROVEX')).Status 'A small same-line split retains the authored text'
 Assert-Equal 'skipped' (New-MarkupTextWitnessGate $substituted @()).Status 'A case without an authored witness reports skipped coverage'
 $lane = [pscustomobject]@{ Page=1; MinX=400d; MaxX=500d; MinY=600d; MaxY=680d }
+$cells = @(
+    [pscustomobject]@{ SourceOwnership='OwnCell'; SourceFragmentCount=1; CandidateClip=@{ Page=1; X=75d; Y=640d; Width=100d; Height=30d } }
+    [pscustomobject]@{ SourceOwnership='OwnCell'; SourceFragmentCount=1; CandidateClip=@{ Page=1; X=75d; Y=610d; Width=100d; Height=30d } }
+)
+$rowText = @((New-Op 100 660 'AP' 10), (New-Op 80 648 'PROVE' 30),
+    (New-Op 100 630 'Next row' 40), (New-Op 72 610 ' ' 4), (New-Op 432 650 'Comment' 40))
+Assert-Equal 'passed' (New-MarkupTextWitnessGate $rowText @('APPROVE','Next row','Comment') $cells @($lane)).Status 'Wrapped text stays whole within its cell and across rows keeps its boundaries'
+Assert-Equal 'failed' (New-MarkupTextWitnessGate $rowText @('APPROVENext row') $cells @($lane)).Status 'Different rows cannot supply a joined phrase'
+Assert-Equal 'failed' (New-MarkupTextWitnessGate $rowText @('Next row Comment') $cells @($lane)).Status 'A positioning space cannot join a cell to the markup lane'
+$regions = @(Get-MarkupTextWitnessRegions @($cells[0],$cells[0]) @())
+Assert-Equal $null (Get-PdfTextFragmentRegion $rowText[0] $regions) 'Overlapping ownership stays unresolved'
+$cells[0].SourceFragmentCount = 2
+Assert-Equal 1 @(Get-MarkupTextWitnessRegions $cells @()).Count 'Fragmented cells do not supply boundaries'
 $partitions = @(Get-TextComparisonPartitions @($reference[0], $laneText[0], $laneText[1]) @($reference[0]) @($lane) @())
 Assert-Equal 2 $partitions.Count 'A lane without matching candidate text stays in the partition set'
 Assert-Equal 0 $partitions[1].Candidate.Count 'An absent side contributes zero operations'

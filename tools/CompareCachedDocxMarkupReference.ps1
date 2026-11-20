@@ -2689,8 +2689,20 @@ function New-GateResult([string] $Name, [string] $Category, $Actual, $Limit, [st
     }
 }
 
-function New-MarkupTextWitnessGate($Operations, [string[]] $Phrases) {
-    $missing = if ($Phrases.Count) { @(Get-MissingPdfTextPhrases $Operations $Phrases).Count }
+function Get-MarkupTextWitnessRegions($SourceCells, $MarkupLaneRects) {
+    $MarkupLaneRects
+    foreach ($cell in $SourceCells) {
+        $clip = $cell.CandidateClip
+        if (!$clip -or $cell.SourceOwnership -ne 'OwnCell' -or $cell.SourceFragmentCount -ne 1) { continue }
+        New-LayoutRect $clip.Page 'candidate-table-cell-clip' $clip.X $clip.Y ($clip.X + $clip.Width) ($clip.Y + $clip.Height)
+    }
+}
+
+function New-MarkupTextWitnessGate($Operations, [string[]] $Phrases, $SourceCells, $MarkupLaneRects) {
+    $missing = if ($Phrases.Count) {
+        $regions = @(Get-MarkupTextWitnessRegions $SourceCells $MarkupLaneRects)
+        @(Get-MissingPdfTextPhrases $Operations $Phrases $regions).Count
+    }
     New-GateResult 'authored-text-phrase-missing-count' 'content' $missing 0 'phrases'
 }
 
@@ -3734,7 +3746,8 @@ $rasterRegionDeltaCount = if ($SkipRasterDiff) { $null } else { Get-RasterRegion
 $rasterRegionDimensionMismatchCount = if ($SkipRasterDiff) { $null } else { Get-SummarySumMetric $rasterRegionSummary "DimensionMismatchCount" }
 $maxRasterRegionMeanAbsoluteError = if ($SkipRasterDiff) { $null } else { Get-SummaryMaxMetric $rasterRegionSummary "MaxMeanAbsoluteError" }
 $maxRasterRegionChangedPixelRatioAtThreshold16 = if ($SkipRasterDiff) { $null } else { Get-SummaryMaxMetric $rasterRegionSummary "MaxChangedPixelRatioAtThreshold16" }
-$markupTextWitnessGate = New-MarkupTextWitnessGate $candidateTextOperationItems $markupTextPhrases
+$markupTextWitnessGate = New-MarkupTextWitnessGate $candidateTextOperationItems $markupTextPhrases `
+    $sourceCellGeometry.Cells $candidateLayoutMarkupLaneRects
 $gateSummary = New-GateSummary @(
     $markupTextWitnessGate
     New-GateResult "page-count-delta" "pagination" ([Math]::Abs($candidatePageCount - $referencePageCount)) $MaxPageCountDelta "pages"
