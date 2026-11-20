@@ -98,8 +98,7 @@ internal readonly record struct PptxSceneTableCell(
     XElement? TextBody,
     XElement? LayoutTextBody,
     bool HasUnsupportedTextOrientation,
-    bool HasUnsupportedVerticalOverflow,
-    int LeadingEmptyTextParagraphCount);
+    bool HasUnsupportedVerticalOverflow);
 
 internal readonly record struct PptxSceneTableCellTextStyle(RgbColor? Color, bool Bold);
 

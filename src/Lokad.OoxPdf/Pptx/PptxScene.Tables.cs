@@ -134,7 +134,6 @@ internal sealed partial class PptxSceneBuilder
         (PptxSceneTableCellVerticalAnchor verticalAnchor, string? verticalAnchorValue, PptxSceneTableCellVerticalAnchorSource verticalAnchorSource) = ReadTableCellVerticalAnchorInfo(cell);
         XElement? textBody = cell.Element(DrawingNamespace + "txBody");
         XElement? bodyProperties = textBody?.Element(DrawingNamespace + "bodyPr");
-        int leadingEmptyParagraphCount = CountLeadingEmptyTableCellTextParagraphs();
         return new PptxSceneTableCell(
             columnIndex,
             ReadTableCellColumnSpan(cell),
@@ -154,53 +153,42 @@ internal sealed partial class PptxSceneBuilder
                 : PptxTableStyleResolver.ReadCellFill(tableStyle, rowIndex, columnIndex, rowCount, columnCount, theme, colorMap),
             PptxTableStyleResolver.ReadCellTextStyle(tableStyle, rowIndex, columnIndex, rowCount, columnCount, theme, colorMap),
             textBody,
-            BuildTableCellLayoutTextBody(),
+            TrimLeadingEmptyTableCellParagraphs(textBody),
             HasUnsupportedTextOrientation(bodyProperties),
-            HasUnsupportedTextVerticalOverflow(bodyProperties),
-            leadingEmptyParagraphCount);
+            HasUnsupportedTextVerticalOverflow(bodyProperties));
+    }
 
-        XElement? BuildTableCellLayoutTextBody()
+    private static XElement? TrimLeadingEmptyTableCellParagraphs(XElement? textBody)
+    {
+        if (textBody is null)
         {
-            if (textBody is null)
-            {
-                return null;
-            }
-
-            var textBodyCopy = new XElement(textBody.Name, textBody.Attributes(), textBody.Elements().Select(element => new XElement(element)));
-            foreach (XElement paragraph in textBodyCopy.Elements(DrawingNamespace + "p").Take(leadingEmptyParagraphCount).ToArray())
-            {
-                paragraph.Remove();
-            }
-
-            return textBodyCopy;
+            return null;
         }
 
-        int CountLeadingEmptyTableCellTextParagraphs()
+        XName paragraphName = DrawingNamespace + "p";
+        XElement? firstContent = textBody.Elements(paragraphName).FirstOrDefault(ParagraphHasVisibleTextContent);
+        // Layout treats this XML as read-only. Entirely empty cells keep their
+        // paragraph formatting, and ordinary cells can share the source body.
+        if (firstContent is null || ReferenceEquals(firstContent, textBody.Element(paragraphName)))
         {
-            if (textBody is null)
-            {
-                return 0;
-            }
-
-            XElement[] paragraphs = textBody.Elements(DrawingNamespace + "p").ToArray();
-            if (!paragraphs.Any(ParagraphHasVisibleTextContent))
-            {
-                return 0;
-            }
-
-            int count = 0;
-            foreach (XElement paragraph in paragraphs)
-            {
-                if (ParagraphHasVisibleTextContent(paragraph))
-                {
-                    return count;
-                }
-
-                count++;
-            }
-
-            return 0;
+            return textBody;
         }
+
+        var trimmed = new XElement(textBody.Name, textBody.Attributes());
+        bool leading = true;
+        foreach (XElement element in textBody.Elements())
+        {
+            if (ReferenceEquals(element, firstContent))
+            {
+                leading = false;
+            }
+            if (!leading || element.Name != paragraphName)
+            {
+                // LINQ to XML copies children that already have a parent.
+                trimmed.Add(element);
+            }
+        }
+        return trimmed;
     }
 
     private static bool ParagraphHasVisibleTextContent(XElement paragraph)

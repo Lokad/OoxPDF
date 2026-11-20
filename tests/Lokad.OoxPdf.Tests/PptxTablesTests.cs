@@ -978,6 +978,44 @@ internal static class PptxTablesTests
         TestAssert.DoesNotContain("72 427.314 144 40.686 re f", pdf);
     }
 
+    public static void PptxTableCellLayoutReusesSourceAndTrimsOnlyLeadingEmptyParagraphs()
+    {
+        XNamespace a = "http://schemas.openxmlformats.org/drawingml/2006/main";
+        XElement emptyParagraph = new(a + "p", new XElement(a + "endParaRPr", new XAttribute("sz", "1200")));
+        var empty = new XElement(a + "txBody", new XElement(a + "bodyPr"), emptyParagraph, emptyParagraph);
+        var ordinary = new XElement(a + "txBody", new XElement(a + "bodyPr"),
+            new XElement(a + "p", new XElement(a + "r", new XElement(a + "t", "Ordinary text"))), emptyParagraph);
+        foreach (XElement source in new[] { ordinary, empty })
+        {
+            PptxSceneTableCell cell = ReadCell(source);
+            TestAssert.True(ReferenceEquals(cell.TextBody, cell.LayoutTextBody),
+                "Ordinary and entirely empty cells should share their untrimmed source body.");
+        }
+
+        foreach (XElement content in new[]
+        {
+            new XElement(a + "r", new XElement(a + "t", "Retained text")),
+            new XElement(a + "fld", new XAttribute("type", "slidenum"), new XElement(a + "t", "3")),
+            new XElement(a + "br")
+        })
+        {
+            var effective = new XElement(a + "txBody", new XElement(a + "bodyPr"),
+                new XElement(a + "p", content), emptyParagraph);
+            var source = new XElement(effective);
+            source.Element(a + "p")!.AddBeforeSelf(emptyParagraph);
+
+            PptxSceneTableCell cell = ReadCell(source);
+            TestAssert.True(XElement.DeepEquals(effective, cell.LayoutTextBody),
+                $"Layout should retain the {content.Name.LocalName} paragraph and its trailing paragraph.");
+            TestAssert.True(ReferenceEquals(source, cell.TextBody) &&
+                XElement.DeepEquals(emptyParagraph, source.Elements(a + "p").First()),
+                "Trimming the layout view must preserve the authored leading paragraph.");
+        }
+
+        PptxSceneTableCell ReadCell(XElement body) => PptxSceneBuilder.ReadTableCell(
+            new XElement(a + "tc", body), PptxTheme.Empty, PptxColorMap.Default, default, 0, 0, 1, 1);
+    }
+
     public static void PptxSyntheticTableIgnoresLeadingEmptyCellParagraph()
     {
         string cambria = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc");
@@ -1017,18 +1055,6 @@ internal static class PptxTablesTests
                 """
         });
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        using (FileStream stream = File.OpenRead(input))
-        {
-            OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
-            PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
-            PptxSceneTableCell cell = new PptxSceneBuilder().Build(document, package, CancellationToken.None).Slides[0].SlideNodes[0].Table?.Rows[0].Cells[0]
-                ?? throw new InvalidOperationException("Expected table cell scene node.");
-
-            TestAssert.Equal(1, cell.LeadingEmptyTextParagraphCount);
-            TestAssert.Equal(2, cell.TextBody?.Elements(XName.Get("p", "http://schemas.openxmlformats.org/drawingml/2006/main")).Count() ?? 0);
-            TestAssert.Equal(1, cell.LayoutTextBody?.Elements(XName.Get("p", "http://schemas.openxmlformats.org/drawingml/2006/main")).Count() ?? 0);
-        }
 
         OoxPdfConverter.Convert(input, output);
 
