@@ -545,11 +545,21 @@ internal static class DocxTablesMarkupTests
         TestAssert.True(tableSnapshot.StoryKind == "Header" && tableSnapshot.StoryVariantType == "default" && tableSnapshot.RowCount == 1 && tableSnapshot.LaidOutRowCount == 1, "Static header tables should participate in table-level ownership snapshots without colliding with body table ordinals.");
     }
 
-    public static void DocxLayoutStageResolvesStaticHeaderTablePageFieldsPerPage()
+    public static void DocxLayoutStageResolvesStaticHeaderTableCountersPerPage()
     {
         DocxParagraph headerCellParagraph = DocxTests.CreateDocxLayoutParagraph("Header {PAGE}", 10d, 10d);
+        DocxTextRun pageRun = headerCellParagraph.Runs.Single();
+        headerCellParagraph = headerCellParagraph with
+        {
+            Runs =
+            [
+                pageRun,
+                pageRun with { Text = " of ", FieldKind = null },
+                pageRun with { Text = "{NUMPAGES}", FieldKind = DocxFieldKind.NumPages }
+            ]
+        };
         DocxTableCell headerCell = new([headerCellParagraph], null, null, null, null, [], DocxTableCellMargins.Empty);
-        DocxTable headerTable = new(null, [80d], [new DocxTableRow([headerCell], 18d)]);
+        DocxTable headerTable = new(null, [100d], [new DocxTableRow([headerCell], 18d)]);
         DocxParagraph firstBody = DocxTests.CreateDocxLayoutParagraph("First", 10d, 10d);
         DocxParagraph secondBody = DocxTests.CreateDocxLayoutParagraph("Second", 10d, 10d);
         DocxPageSettings settings = DocxPageSettings.Empty with
@@ -577,44 +587,8 @@ internal static class DocxTablesMarkupTests
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
 
         TestAssert.Equal(2, layout.Pages.Count);
-        TestAssert.Equal("Header 1", layout.Pages[0].StaticTableRows.Single().Cells.Single().TextLines.Single().Text);
-        TestAssert.Equal("Header 2", layout.Pages[1].StaticTableRows.Single().Cells.Single().TextLines.Single().Text);
-    }
-
-    public static void DocxLayoutStageResolvesStaticHeaderTableNumPagesFieldFromPageCount()
-    {
-        DocxParagraph headerCellParagraph = DocxTests.CreateDocxLayoutParagraph("Total {NUMPAGES}", 10d, 10d);
-        DocxTableCell headerCell = new([headerCellParagraph], null, null, null, null, [], DocxTableCellMargins.Empty);
-        DocxTable headerTable = new(null, [80d], [new DocxTableRow([headerCell], 18d)]);
-        DocxParagraph firstBody = DocxTests.CreateDocxLayoutParagraph("First", 10d, 10d);
-        DocxParagraph secondBody = DocxTests.CreateDocxLayoutParagraph("Second", 10d, 10d);
-        DocxPageSettings settings = DocxPageSettings.Empty with
-        {
-            HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["default"] = [new DocxTableElement(headerTable)]
-            }
-        };
-        DocxDocument document = new(
-            200d,
-            200d,
-            10d,
-            10d,
-            20d,
-            20d,
-            settings,
-            [],
-            [],
-            [],
-            [new DocxParagraphElement(firstBody), new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null), new DocxParagraphElement(secondBody)],
-            [firstBody, secondBody],
-            [headerTable]);
-
-        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
-
-        TestAssert.Equal(2, layout.Pages.Count);
-        TestAssert.Equal("Total 2", layout.Pages[0].StaticTableRows.Single().Cells.Single().TextLines.Single().Text);
-        TestAssert.Equal("Total 2", layout.Pages[1].StaticTableRows.Single().Cells.Single().TextLines.Single().Text);
+        TestAssert.Equal("Header 1 of 2", layout.Pages[0].StaticTableRows.Single().Cells.Single().TextLines.Single().Text);
+        TestAssert.Equal("Header 2 of 2", layout.Pages[1].StaticTableRows.Single().Cells.Single().TextLines.Single().Text);
     }
 
     public static void DocxReaderPreservesStaticHeaderTablesAsBodyElements()
