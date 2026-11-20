@@ -2,7 +2,6 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
-using System.Text.RegularExpressions;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Imaging;
@@ -52,70 +51,6 @@ internal sealed partial class DocxRenderer
             : normalized[..Math.Max(0, maxLength - 3)] + "...";
     }
 
-    private static string[] WrapWordCompatibleBalloonBody(
-        string text,
-        PdfEmbeddedFont embedded,
-        double fontSize,
-        double firstLineWidth,
-        double continuationWidth)
-    {
-        string normalized = Regex.Replace(text.Trim(), @"\s+", " ");
-        if (normalized.Length == 0)
-        {
-            return [];
-        }
-
-        string[] words = normalized.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        var lines = new List<string>();
-        string firstLine = ConsumeBalloonWords(0, firstLineWidth, reserveBreakSpace: true, out int nextWordIndex);
-        if (nextWordIndex >= words.Length)
-        {
-            return [firstLine];
-        }
-
-        // RV06: Word-compatible balloons render full comment text across as many
-        // continuation rows as needed instead of truncating after the second row.
-        lines.Add(firstLine + " ");
-        while (nextWordIndex < words.Length)
-        {
-            lines.Add(ConsumeBalloonWords(nextWordIndex, continuationWidth, reserveBreakSpace: false, out nextWordIndex));
-        }
-
-        return lines.ToArray();
-
-        string ConsumeBalloonWords(int startIndex, double maxWidth, bool reserveBreakSpace, out int nextWordIndex)
-        {
-            string line = string.Empty;
-            int index = startIndex;
-            for (; index < words.Length; index++)
-            {
-                string candidate = line.Length == 0
-                    ? words[index]
-                    : line + " " + words[index];
-                // First-row admission retains its qualified break-space reserve.
-                // Continuations break on visible words; their emitted separator
-                // may extend into the trailing inset, in its own source face.
-                string measured = reserveBreakSpace && index + 1 < words.Length ? candidate + " " : candidate;
-                if (line.Length != 0 &&
-                    embedded.MeasureTextPoints(measured, fontSize) > maxWidth)
-                {
-                    break;
-                }
-
-                line = candidate;
-            }
-
-            if (line.Length == 0 && startIndex < words.Length)
-            {
-                line = FitWordCompatibleBalloonLine(words[startIndex], maxWidth, embedded, fontSize);
-                index = startIndex + 1;
-            }
-
-            nextWordIndex = index;
-            return line;
-        }
-    }
-
     // Single source for the Word-compatible balloon body wrap shared by text
     // rendering and row-derived balloon heights: the title plus the first body
     // words share the top row, and an overflowing body continues below it.
@@ -130,48 +65,6 @@ internal sealed partial class DocxRenderer
         double rightEdge = balloonWidth - 0.5d;
         firstLineWidth = Math.Max(0d, rightEdge - bodyFirstLineX - WordCompatibleAllMarkupBalloonBodyFirstLineTrailingPadPoints);
         continuationWidth = Math.Max(0d, balloonWidth - 2d * WordCompatibleAllMarkupBalloonTextInsetDesignPoints * printScale);
-    }
-
-    private static int CountWordCompatibleBalloonTextRows(
-        string body,
-        PdfEmbeddedFont bodyEmbedded,
-        double fontSize,
-        double firstLineWidth,
-        double continuationWidth)
-    {
-        if (string.IsNullOrWhiteSpace(body))
-        {
-            return 1;
-        }
-
-        string[] lines = WrapWordCompatibleBalloonBody(body, bodyEmbedded, fontSize, firstLineWidth, continuationWidth);
-        return lines.Length == 0 ? 1 : lines.Length;
-    }
-
-    private static string FitWordCompatibleBalloonLine(
-        string text,
-        double maxWidth,
-        PdfEmbeddedFont embedded,
-        double fontSize)
-    {
-        if (text.Length == 0 ||
-            maxWidth <= 0d ||
-            embedded.MeasureTextPoints(text, fontSize) <= maxWidth)
-        {
-            return text;
-        }
-
-        const string suffix = "...";
-        for (int length = Math.Max(0, text.Length - 1); length >= 0; length--)
-        {
-            string candidate = text[..length].TrimEnd() + suffix;
-            if (embedded.MeasureTextPoints(candidate, fontSize) <= maxWidth)
-            {
-                return candidate;
-            }
-        }
-
-        return suffix;
     }
 
     private static void DrawBalloonText(

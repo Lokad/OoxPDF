@@ -1194,9 +1194,7 @@ internal sealed partial class DocxRenderer
                 DocxMarkupTwoFaceRows? twoFaceRows = singleRowParts ? null :
                     ResolveWordCompatibleTwoFaceRows(candidate.WordCompatibleBodyParts, fontSize, firstLineWidth, continuationWidth, cancellationToken);
                 int rows = singleRowParts ? 1 : twoFaceRows?.PrintedRows ??
-                    (candidate.WordCompatibleBodyLineHeightEm is not null && candidate.WordCompatibleBodyParts is null
-                        ? Math.Max(1, WrapUniformBalloonWords(body, bodyEmbedded, fontSize, firstLineWidth, continuationWidth, cancellationToken).Length)
-                        : CountWordCompatibleBalloonTextRows(body, bodyEmbedded, fontSize, firstLineWidth, continuationWidth));
+                    Math.Max(1, WrapUniformBalloonWords(body, bodyEmbedded, fontSize, firstLineWidth, continuationWidth, cancellationToken).Length);
                 double lineGap = ResolveWordCompatibleBalloonLineGap(twoFaceRows?.TailLineHeightEm ?? candidate.WordCompatibleBodyLineHeightEm, fontSize);
                 double continuationsHeight = (rows - 1) * lineGap;
                 if (twoFaceRows?.PrefixLines is { } prefixLines)
@@ -1723,50 +1721,9 @@ internal sealed partial class DocxRenderer
         // mark resource belongs only to the admitted single/two-face branches.
         DocxRunFontResource terminalResource = placement.WordCompatibleBodyParts is null
             ? placement.WordCompatibleTerminalResource ?? bodyResource : bodyResource;
-        if (placement.WordCompatibleBodyLineHeightEm is not null && placement.WordCompatibleBodyParts is null)
-        {
-            var rows = WrapUniformBalloonWords(body, bodyResource.Embedded, fontSize, firstLineWidth, continuationWidth, cancellationToken);
-            RenderUniformBalloonRows(rows, placement, graphics, bodyResource, terminalResource,
-                bodyFirstLineX, textX, firstBaselineY, lineGap, fontSize, cancellationToken);
-            return;
-        }
-        string[] lines = WrapWordCompatibleBalloonBody(body, bodyResource.Embedded, fontSize, firstLineWidth, continuationWidth);
-        if (lines.Length == 0)
-        {
-            return;
-        }
-
-        DrawBalloonText(graphics, bodyResource, lines[0], bodyFirstLineX, firstBaselineY, fontSize, placement.BodyRgb.Red, placement.BodyRgb.Green, placement.BodyRgb.Blue);
-        if (lines.Length == 1)
-        {
-            DrawBalloonText(graphics, terminalResource, " ", bodyFirstLineX + bodyResource.Embedded.MeasureTextPoints(lines[0], fontSize), firstBaselineY, fontSize, placement.BodyRgb.Red, placement.BodyRgb.Green, placement.BodyRgb.Blue);
-            return;
-        }
-
-        for (int lineIndex = 1; lineIndex < lines.Length; lineIndex++)
-        {
-            double continuationBaselineY = firstBaselineY - lineIndex * lineGap;
-            DrawBalloonText(
-                graphics,
-                bodyResource,
-                lines[lineIndex],
-                textX,
-                continuationBaselineY,
-                fontSize,
-                placement.BodyRgb.Red,
-                placement.BodyRgb.Green,
-                placement.BodyRgb.Blue);
-            DrawBalloonText(
-                graphics,
-                lineIndex == lines.Length - 1 ? terminalResource : bodyResource,
-                " ",
-                textX + bodyResource.Embedded.MeasureTextPoints(lines[lineIndex], fontSize),
-                continuationBaselineY,
-                fontSize,
-                placement.BodyRgb.Red,
-                placement.BodyRgb.Green,
-                placement.BodyRgb.Blue);
-        }
+        var rows = WrapUniformBalloonWords(body, bodyResource.Embedded, fontSize, firstLineWidth, continuationWidth, cancellationToken);
+        RenderUniformBalloonRows(rows, placement, graphics, bodyResource, terminalResource,
+            bodyFirstLineX, textX, firstBaselineY, lineGap, fontSize, cancellationToken);
     }
 
     private static double ResolveWordCompatibleBalloonLineGap(double? bodyLineHeightEm, double fontSize)

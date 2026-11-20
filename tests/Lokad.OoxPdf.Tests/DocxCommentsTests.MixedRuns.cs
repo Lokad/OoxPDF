@@ -128,7 +128,8 @@ internal static partial class DocxCommentsTests
             TestAssert.True(Math.Abs(balloon.Height - (12.61d + tailRows[0].Y - tailRows[^1].Y)) < 0.02d,
                 "Height must include the joined word's source-face fragments.");
 
-            DocxParagraph composed = comment with { Runs = [comment.Runs[0] with { Text = "Review table," }, comment.Runs[1]] };
+            const string composedPrefix = "Review table,";
+            DocxParagraph composed = comment with { Runs = [comment.Runs[0] with { Text = composedPrefix }, comment.Runs[1]] };
             DocxDocument fallback = document with { RelatedStories = [story with { BodyElements = [new DocxParagraphElement(composed)] }] };
             var fallbackBalloon = renderer.InspectMarkupBalloons(fallback).Single();
             var fallbackShows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(fallback, null, CancellationToken.None).ToBlockingEnumerable().Single())
@@ -136,7 +137,14 @@ internal static partial class DocxCommentsTests
                     !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
             TestAssert.True(fallbackShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
                 "A punctuated multi-word prefix retains the complete fallback path.");
+            TestAssert.Equal(RemoveWhitespace(composedPrefix + tail),
+                RemoveWhitespace(string.Concat(fallbackShows.Select(show => show.Text))));
+            TestAssert.True(fallbackShows.All(show =>
+                show.X + show.Font.MeasureTextPoints(show.Text.TrimEnd(), show.Size) <= fallbackBalloon.X + fallbackBalloon.Width + 0.02d),
+                "Overwide fallback words must stay inside the balloon.");
         }
+
+        static string RemoveWhitespace(string text) => string.Concat(text.Where(character => !char.IsWhiteSpace(character)));
     }
 
     public static void DocxWordCompatibleMixedBalloonSeparatesFirstFontTransitionFromTailPitch()
