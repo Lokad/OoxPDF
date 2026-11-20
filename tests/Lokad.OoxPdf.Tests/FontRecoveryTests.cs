@@ -48,12 +48,16 @@ internal static class FontRecoveryTests
     public static void FontResolutionKeepsOrdinaryPptxIoRecovery()
     {
         WithInput(OoxPdfInputKind.Pptx, (path, _) => {
+            byte[]? ordinary = null;
             foreach (Exception? failure in new Exception?[] { null, new IOException("unavailable font") }) {
                 var resolver = new OneFailureResolver(failure);
                 using FileStream input = File.OpenRead(path);
                 using var output = new MemoryStream();
                 OoxPdfConverter.Convert(input, output, new OoxPdfOptions { InputKind=OoxPdfInputKind.Pptx, FontResolver=resolver });
-                TestAssert.True(Encoding.ASCII.GetString(output.ToArray(), 0, 5) == "%PDF-", "Ordinary font I/O still permits the existing fallback.");
+                byte[] pdf = output.ToArray();
+                TestAssert.True(Encoding.ASCII.GetString(pdf, 0, 5) == "%PDF-", "Ordinary font I/O permits recovery.");
+                ordinary ??= pdf;
+                TestAssert.True(ordinary.AsSpan().SequenceEqual(pdf), "The recovered font has the same measurement and paint as the available font.");
                 TestAssert.True(resolver.Calls > 1, "Recovery must continue resolving usable paint fonts.");
             }
         });

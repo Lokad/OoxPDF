@@ -412,7 +412,8 @@ internal sealed partial class PptxRenderer
         {
             // Baselines and empty paragraphs need the selected face even when
             // there are no drawable glyphs. Fallback candidates stay demand-driven.
-            await LoadFontAsync(ResolveFontResolution(PptxFontFallbackRules.ResolveDefaultLatinTypeface(familyName), bold, italic)).ConfigureAwait(false);
+            string typeface = PptxFontFallbackRules.ResolveDefaultLatinTypeface(familyName);
+            await LoadFontAsync(ResolveFontResolution(typeface, bold, italic, retryRecoverableFailure: true)).ConfigureAwait(false);
             foreach (Rune rune in text.EnumerateRunes())
                 await ResolveGlyphFontAsync(familyName, bold, italic, rune.Value).ConfigureAwait(false);
         }
@@ -444,7 +445,7 @@ internal sealed partial class PptxRenderer
             return LoadFont(ResolveFontResolution(familyName, bold, italic));
         }
 
-        private FontFaceResolution? ResolveFontResolution(string familyName, bool bold, bool italic)
+        private FontFaceResolution? ResolveFontResolution(string familyName, bool bold, bool italic, bool retryRecoverableFailure = false)
         {
             cancellationToken.ThrowIfCancellationRequested();
             string key = familyName + "\u001f" + bold.ToString(CultureInfo.InvariantCulture) + "\u001f" + italic.ToString(CultureInfo.InvariantCulture);
@@ -453,18 +454,30 @@ internal sealed partial class PptxRenderer
                 return cached;
             }
 
-            try
+            var request = new FontRequest(familyName, bold, italic);
+            cached = TryResolveFontResolution(request);
+            // Recover the requested face before measuring. A fixed frame may have only one layout pass.
+            if (cached is null && retryRecoverableFailure)
             {
-                cached = resolver.Resolve(new FontRequest(familyName, bold, italic));
-            }
-            catch (Exception ex) when (ex is not OoxPdfLimitExceededException &&
-                (ex is IOException or InvalidDataException or NotSupportedException or ArgumentOutOfRangeException))
-            {
-                cached = null;
+                cancellationToken.ThrowIfCancellationRequested();
+                cached = TryResolveFontResolution(request);
             }
 
             resolutions[key] = cached;
             return cached;
+        }
+
+        private FontFaceResolution? TryResolveFontResolution(FontRequest request)
+        {
+            try
+            {
+                return resolver.Resolve(request);
+            }
+            catch (Exception ex) when (ex is not OoxPdfLimitExceededException &&
+                (ex is IOException or InvalidDataException or NotSupportedException or ArgumentOutOfRangeException))
+            {
+                return null;
+            }
         }
 
         private OpenTypeFont? LoadFont(FontFaceResolution? resolution)
