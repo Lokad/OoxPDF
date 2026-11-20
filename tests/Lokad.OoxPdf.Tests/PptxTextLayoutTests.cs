@@ -963,20 +963,10 @@ internal static class PptxTextLayoutTests
                 </p:sld>
                 """
         });
-        using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
-        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
-
-        int[] columnCounts = PptxRenderer.InspectTextLayout(document, package, 0)
-            .Frames
-            .SelectMany(frame => frame.Paragraphs)
-            .SelectMany(paragraph => paragraph.Lines)
-            .GroupBy(line => Math.Round(line.StartX, 2))
-            .OrderBy(group => group.Key)
-            .Select(group => group.Count())
-            .ToArray();
-
+        string[][] columns = ReadOverflowColumnLines(input);
+        int[] columnCounts = columns.Select(column => column.Length).ToArray();
         TestAssert.True(columnCounts.SequenceEqual([24, 24, 22]), "Expected Office-like overflow column balance. Counts: " + string.Join(", ", columnCounts));
+        TestAssert.Equal(text, string.Join(' ', columns.SelectMany(column => column)));
     }
 
     public static void PptxSyntheticNoAutoFitTextOverflowColumnsBalanceEvenContinuedParagraph()
@@ -1017,20 +1007,32 @@ internal static class PptxTextLayoutTests
                 </p:sld>
                 """
         });
+        string[][] columns = ReadOverflowColumnLines(input);
+        int[] columnCounts = columns.Select(column => column.Length).ToArray();
+        TestAssert.True(columnCounts.SequenceEqual([22, 23, 21]), "Expected the continued paragraph to move one line from the final column into the penultimate column. Counts: " + string.Join(", ", columnCounts));
+        (int First, int Count)[] expectedColumns = [(1, 22), (23, 23), (46, 21)];
+        for (int column = 0; column < expectedColumns.Length; column++)
+        {
+            var (first, count) = expectedColumns[column];
+            var expectedLines = Enumerable.Range(first, count)
+                .Select(number => "Line " + number.ToString("00", CultureInfo.InvariantCulture));
+            TestAssert.Equal(string.Join("\n", expectedLines), string.Join("\n", columns[column]));
+        }
+    }
+
+    private static string[][] ReadOverflowColumnLines(string input)
+    {
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        using OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
-        int[] columnCounts = PptxRenderer.InspectTextLayout(document, package, 0)
-            .Frames
-            .SelectMany(frame => frame.Paragraphs)
-            .SelectMany(paragraphLayout => paragraphLayout.Lines)
+        return PptxRenderer.InspectTextLayout(document, package, 0)
+            .Frames.Single().Paragraphs
+            .SelectMany(paragraph => paragraph.Lines)
             .GroupBy(line => Math.Round(line.StartX, 2))
             .OrderBy(group => group.Key)
-            .Select(group => group.Count())
+            .Select(group => group.Select(line => string.Concat(line.Spans.Select(span => span.Text)).Trim()).ToArray())
             .ToArray();
-
-        TestAssert.True(columnCounts.SequenceEqual([22, 23, 21]), "Expected the continued paragraph to move one line from the final column into the penultimate column. Counts: " + string.Join(", ", columnCounts));
     }
 
     public static void PptxSyntheticTextBoxOverflowColumnsReserveNormalLineAdvance()

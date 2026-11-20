@@ -14,14 +14,10 @@ internal sealed partial class PptxRenderer
     private static async ValueTask<PptxTextFrameLayout> BuildTextFrameLayoutAsync(PptxTextFlowFrame flowFrame, PptxDocument document, TextAdvanceEstimator advanceEstimator, bool allowWrapping)
     {
         PptxTextFrameLayout layout = (await BuildTextFrameLayoutAsync(flowFrame, document, advanceEstimator, allowWrapping, PptxTextColumnBreakMode.StrictFit, 0, 0).ConfigureAwait(false));
-        if (TryResolveOfficeOverflowColumnLineBalance(layout, out int lineBalanceTarget, out int lineBalanceStartColumn))
-        {
-            return (await BuildTextFrameLayoutAsync(flowFrame, document, advanceEstimator, allowWrapping, PptxTextColumnBreakMode.LineCountBalance, lineBalanceTarget, lineBalanceStartColumn).ConfigureAwait(false));
-        }
-
-        return ShouldUseOfficeOverflowColumnBalance(layout)
-            ? (await BuildTextFrameLayoutAsync(flowFrame, document, advanceEstimator, allowWrapping, PptxTextColumnBreakMode.OverflowBalance, 0, 0).ConfigureAwait(false))
-            : layout;
+        var (mode, lineBalanceTarget, lineBalanceStartColumn) = ResolveOverflowColumnBalance(layout);
+        return mode == PptxTextColumnBreakMode.StrictFit
+            ? layout
+            : await BuildTextFrameLayoutAsync(flowFrame, document, advanceEstimator, allowWrapping, mode, lineBalanceTarget, lineBalanceStartColumn).ConfigureAwait(false);
     }
 
     // RV03: word glue across run seams. A segment continues the current word

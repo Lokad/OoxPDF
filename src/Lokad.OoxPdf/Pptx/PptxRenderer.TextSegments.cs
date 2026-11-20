@@ -39,158 +39,58 @@ internal sealed class PptxTextSpanMemoKeyComparer : IEqualityComparer<PptxTextSp
 
 internal sealed partial class PptxRenderer
 {
-    private static bool ShouldUseOfficeOverflowColumnBalance(PptxTextFrameLayout layout)
+    private static (PptxTextColumnBreakMode Mode, int Target, int StartColumn) ResolveOverflowColumnBalance(PptxTextFrameLayout layout)
     {
-        if (!TryReadOverflowColumnLineCounts(layout, out PptxTextLineLayout[] lines, out int[] counts))
-        {
-            return false;
-        }
-
         PptxTextFrameModel frame = layout.Model;
-        if (lines.Length % frame.ColumnCount != 0)
+        if (frame.ColumnCount <= 1 || frame.BodyProperties.VerticalOverflow != PptxTextVerticalOverflow.Overflow)
         {
-            return false;
+            return (PptxTextColumnBreakMode.StrictFit, 0, 0);
         }
 
-        int target = lines.Length / frame.ColumnCount;
-        return counts.Take(frame.ColumnCount - 1).All(count => count == target - 1) &&
-            counts[^1] == target + frame.ColumnCount - 1;
-    }
-
-    private static bool TryResolveOfficeOverflowColumnLineBalance(PptxTextFrameLayout layout, out int lineBalanceTarget, out int lineBalanceStartColumn)
-    {
-        lineBalanceTarget = 0;
-        lineBalanceStartColumn = 0;
-        if (!TryReadOverflowColumnLineCounts(layout, out PptxTextLineLayout[] lines, out int[] counts))
+        var columns = layout.Paragraphs
+            .SelectMany((paragraph, paragraphIndex) => paragraph.Lines.Select(line => (line.StartX, ParagraphIndex: paragraphIndex)))
+            .GroupBy(item => Math.Round(item.StartX, 2))
+            .OrderBy(group => group.Key)
+            .ToArray();
+        if (columns.Length != frame.ColumnCount)
         {
-            return false;
+            return (PptxTextColumnBreakMode.StrictFit, 0, 0);
         }
 
-        PptxTextFrameModel frame = layout.Model;
-        int balancedFloor = lines.Length / frame.ColumnCount;
-        int balancedCeiling = (int)Math.Ceiling((double)lines.Length / frame.ColumnCount);
+        int[] counts = columns.Select(column => column.Count()).ToArray();
+        int lineCount = counts.Sum();
+        int balancedFloor = lineCount / frame.ColumnCount;
+        int balancedCeiling = (int)Math.Ceiling((double)lineCount / frame.ColumnCount);
         if (counts.Take(frame.ColumnCount - 1).All(count => count < balancedFloor) &&
             counts[^1] >= balancedCeiling + frame.ColumnCount)
         {
-            lineBalanceTarget = balancedCeiling;
-            return true;
+            return (PptxTextColumnBreakMode.LineCountBalance, balancedCeiling, 0);
         }
 
-        if (ShouldResolveTrailingOverflowColumnBalance(layout, counts, balancedFloor))
-        {
-            lineBalanceTarget = balancedFloor;
-            lineBalanceStartColumn = 1;
-            return true;
-        }
-
-        if (ShouldResolveOverflowColumnBalanceAcrossContinuedParagraph(layout, lines.Length, counts, balancedCeiling))
-        {
-            lineBalanceTarget = balancedCeiling;
-            return true;
-        }
-
-        if (ShouldResolveEvenOverflowColumnBalanceAcrossContinuedParagraph(layout, counts, balancedFloor))
-        {
-            lineBalanceTarget = balancedFloor + 1;
-            lineBalanceStartColumn = 1;
-            return true;
-        }
-
-        return false;
-    }
-
-    private static bool ShouldResolveTrailingOverflowColumnBalance(PptxTextFrameLayout layout, int[] counts, int balancedFloor)
-    {
-        PptxTextFrameModel frame = layout.Model;
-        return frame.ColumnCount >= 3 &&
-            counts[0] >= balancedFloor &&
+        if (frame.ColumnCount >= 3 && counts[0] >= balancedFloor &&
             counts.Skip(1).Take(frame.ColumnCount - 2).Any(count => count < balancedFloor) &&
-            counts[^1] > balancedFloor;
-    }
-
-    private static bool ShouldResolveOverflowColumnBalanceAcrossContinuedParagraph(PptxTextFrameLayout layout, int lineCount, int[] counts, int balancedCeiling)
-    {
-        PptxTextFrameModel frame = layout.Model;
-        if (lineCount % frame.ColumnCount != frame.ColumnCount - 1 ||
-            counts[^1] != balancedCeiling ||
-            counts.Take(frame.ColumnCount - 1).Sum() != balancedCeiling * (frame.ColumnCount - 1) - 1 ||
-            counts[^2] != balancedCeiling - 1)
+            counts[^1] > balancedFloor)
         {
-            return false;
+            return (PptxTextColumnBreakMode.LineCountBalance, balancedFloor, 1);
         }
 
-        var columns = layout.Paragraphs
-            .SelectMany((paragraph, paragraphIndex) => paragraph.Lines.Select(line => new
-            {
-                Line = line,
-                ParagraphIndex = paragraphIndex
-            }))
-            .GroupBy(item => Math.Round(item.Line.StartX, 2))
-            .OrderBy(group => group.Key)
-            .Select(group => group.ToArray())
-            .ToArray();
-        if (columns.Length != frame.ColumnCount || columns[^2].Length == 0 || columns[^1].Length == 0)
+        bool unevenCounts = lineCount % frame.ColumnCount == frame.ColumnCount - 1 &&
+            counts[^1] == balancedCeiling &&
+            lineCount - counts[^1] == balancedCeiling * (frame.ColumnCount - 1) - 1 &&
+            counts[^2] == balancedCeiling - 1;
+        bool evenCounts = frame.ColumnCount >= 3 && counts.All(count => count == balancedFloor);
+        if ((unevenCounts || evenCounts) &&
+            columns[^2].Last().ParagraphIndex == columns[^1].First().ParagraphIndex)
         {
-            return false;
+            return unevenCounts
+                ? (PptxTextColumnBreakMode.LineCountBalance, balancedCeiling, 0)
+                : (PptxTextColumnBreakMode.LineCountBalance, balancedFloor + 1, 1);
         }
 
-        return columns[^2][^1].ParagraphIndex == columns[^1][0].ParagraphIndex;
-    }
-
-    private static bool ShouldResolveEvenOverflowColumnBalanceAcrossContinuedParagraph(PptxTextFrameLayout layout, int[] counts, int balancedFloor)
-    {
-        PptxTextFrameModel frame = layout.Model;
-        if (frame.ColumnCount < 3 ||
-            counts.Any(count => count != balancedFloor))
-        {
-            return false;
-        }
-
-        var columns = layout.Paragraphs
-            .SelectMany((paragraph, paragraphIndex) => paragraph.Lines.Select(line => new
-            {
-                Line = line,
-                ParagraphIndex = paragraphIndex
-            }))
-            .GroupBy(item => Math.Round(item.Line.StartX, 2))
-            .OrderBy(group => group.Key)
-            .Select(group => group.ToArray())
-            .ToArray();
-        if (columns.Length != frame.ColumnCount || columns[^2].Length == 0 || columns[^1].Length == 0)
-        {
-            return false;
-        }
-
-        return columns[^2][^1].ParagraphIndex == columns[^1][0].ParagraphIndex;
-    }
-
-    private static bool TryReadOverflowColumnLineCounts(PptxTextFrameLayout layout, out PptxTextLineLayout[] lines, out int[] counts)
-    {
-        PptxTextFrameModel frame = layout.Model;
-        lines = [];
-        counts = [];
-        if (frame.ColumnCount <= 1 || frame.BodyProperties.VerticalOverflow != PptxTextVerticalOverflow.Overflow)
-        {
-            return false;
-        }
-
-        lines = layout.Paragraphs.SelectMany(paragraph => paragraph.Lines).ToArray();
-        if (lines.Length == 0)
-        {
-            return false;
-        }
-
-        counts = lines
-            .GroupBy(line => Math.Round(line.StartX, 2))
-            .OrderBy(group => group.Key)
-            .Select(group => group.Count())
-            .ToArray();
-        if (counts.Length != frame.ColumnCount)
-        {
-            return false;
-        }
-
-        return true;
+        bool overflowBalance = lineCount % frame.ColumnCount == 0 &&
+            counts.Take(frame.ColumnCount - 1).All(count => count == balancedFloor - 1) &&
+            counts[^1] == balancedFloor + frame.ColumnCount - 1;
+        return (overflowBalance ? PptxTextColumnBreakMode.OverflowBalance : PptxTextColumnBreakMode.StrictFit, 0, 0);
     }
 
     private static int CountLeadingSpaces(string text)
