@@ -8,7 +8,9 @@ if (Test-Path -LiteralPath $OutputDirectory) { throw 'Use a fresh test directory
 $root=[IO.Path]::GetFullPath($OutputDirectory)
 $tools=Join-Path $root 'tools'
 New-Item -ItemType Directory -Path $tools -Force | Out-Null
-foreach ($name in @('ReferenceCache.ps1','RenderCachedReference.ps1')) { Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination $tools }
+foreach ($name in @('ReferenceCache.ps1','RenderCachedReference.ps1','ImportOfficeReferenceCache.ps1')) {
+    Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination $tools
+}
 @'
 param($InputPdf,$OutputDirectory,$Dpi,[switch]$SkipBuild)
 New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
@@ -124,5 +126,69 @@ New-Item -ItemType Directory -Path $fresh | Out-Null
 if (@(Get-ChildItem $fresh -Filter '*.png' -File).Count -ne 1 -or
     [IO.File]::ReadAllText((Join-Path $fresh 'caller.txt')) -ne 'Retain caller text') { throw 'Fresh served reference page set differs' }
 $checks+='fresh-served-page-set'
+
+$render=Join-Path $tools 'RenderCachedReference.ps1'
+$incompleteInput=Join-Path $root 'incomplete.docx'
+[IO.File]::WriteAllText($incompleteInput,'Unpublished reference input')
+$incompleteDir=Join-Path (Get-ReferenceCacheRoot) (Get-ReferenceIdentityKey $incompleteInput '')
+New-Item -ItemType Directory -Path $incompleteDir | Out-Null
+Copy-Item -LiteralPath $sourcePdf -Destination (Join-Path $incompleteDir 'reference.pdf')
+$miss=$null
+try { & $render -InputPath $incompleteInput -OutputDirectory (Join-Path $root 'incomplete-hit') -CacheOnly -SkipBuild | Out-Null }
+catch { $miss=$_.Exception.Message }
+if (!$miss -or !$miss.Contains('Reference cache miss') -or !$miss.Contains('RenderCachedReference.ps1')) {
+    throw 'An incomplete reference must produce an actionable cache-only miss'
+}
+$checks+='incomplete-entry-is-an-actionable-miss'
+
+$secondDpi=Join-Path $root 'second-dpi'
+& $render -InputPath $inputFile -OutputDirectory $secondDpi -Dpi 72 -CacheOnly -SkipBuild *> ($secondDpi+'.log')
+if ((Test-ReferenceDerivative $cache (Get-ReferenceDerivativeName 72) $pdfHash).State -cne 'Complete' -or
+    (Test-ReferenceDerivative $cache $name $pdfHash).State -cne 'Complete') { throw 'DPI derivatives did not coexist' }
+$checks+='second-dpi-reuses-pdf'
+
+$legacyInput=Join-Path $root 'legacy.docx'
+[IO.File]::WriteAllText($legacyInput,'Unique flat-cache input')
+$legacyDir=Join-Path (Get-ReferenceCacheRoot) (Get-ReferenceCacheKey $legacyInput 144 '')
+New-Item -ItemType Directory -Path $legacyDir | Out-Null
+Copy-Item -LiteralPath $sourcePdf -Destination (Join-Path $legacyDir 'reference.pdf')
+Copy-Item -LiteralPath $page -Destination (Join-Path $legacyDir 'page-001.png')
+[IO.File]::WriteAllText((Join-Path $legacyDir 'complete.txt'),"input=$legacyInput`ndpi=144`nvariant=`n")
+$servedLegacy=Join-Path $root 'adopted'
+& $render -InputPath $legacyInput -OutputDirectory $servedLegacy -CaseId 'legacy-control' -CacheOnly -SkipBuild *> ($servedLegacy+'.log')
+$adopted=Resolve-ReferenceCacheEntry $legacyInput 144 ''
+if ((Test-Path -LiteralPath $legacyDir) -or $adopted.Outcome -cne 'Hit' -or $adopted.Derivative.State -cne 'Complete' -or
+    $adopted.Metadata.Producer -cne 'legacy-adopted' -or $adopted.Metadata.CaseId -cne 'legacy-control' -or
+    (Get-FileHash -LiteralPath (Join-Path $servedLegacy 'reference.pdf')).Hash.ToLowerInvariant() -cne $pdfHash) { throw 'Flat reference adoption lost bytes or provenance' }
+$checks+='flat-entry-adoption'
+
+$raceInput=Join-Path $root 'race.docx'
+[IO.File]::WriteAllText($raceInput,'Concurrent reference input')
+$import=Join-Path $tools 'ImportOfficeReferenceCache.ps1'
+$sources=@(foreach ($publisher in @('first','second')) {
+    $directory=(New-Item -ItemType Directory -Path (Join-Path $root $publisher)).FullName
+    [IO.File]::WriteAllText((Join-Path $directory 'reference.pdf'),"%PDF-Synthetic $publisher publisher")
+    [IO.File]::WriteAllText((Join-Path $directory 'page-001.png'),"Synthetic $publisher derivative")
+    $directory
+})
+$published=@($sources | ForEach-Object -Parallel {
+    $ErrorActionPreference='Stop'
+    & $using:import -InputPath $using:raceInput -ReferenceDirectory $_ -Dpi 144 -CaseId (Split-Path -Leaf $_) -Force
+} -ThrottleLimit 2 -TimeoutSeconds 20)
+$winner=Resolve-ReferenceCacheEntry $raceInput 144 ''
+if ($published.Count -ne 2 -or @($published | Where-Object { $_ -cne $winner.CacheDirectory }).Count -or
+    $winner.Outcome -cne 'Hit' -or $winner.Derivative.State -cne 'Complete' -or
+    $winner.Metadata.Producer -cne 'import' -or $winner.Metadata.CaseId -cnotin @('first','second') -or
+    @(Get-ChildItem -LiteralPath (Get-ReferenceCacheRoot) -Directory -Filter '_import-*').Count) { throw 'Concurrent imports did not converge on one complete entry' }
+$source=Join-Path $root $winner.Metadata.CaseId
+$served=Join-Path $root 'race-served'
+& $render -InputPath $raceInput -OutputDirectory $served -CacheOnly -SkipBuild *> ($served+'.log')
+foreach ($file in @('reference.pdf','page-001.png')) {
+    if ((Get-FileHash -LiteralPath (Join-Path $served $file)).Hash -cne (Get-FileHash -LiteralPath (Join-Path $source $file)).Hash) {
+        throw "Concurrent cache provenance selected a mixed pair for $file"
+    }
+}
+$checks+='concurrent-import-publishes-one-pair'
+
 @{Checks=$checks;Builds=0;OfficeExports=0;SyntheticOnly=$true;ReferencePdfPreserved=$true} | ConvertTo-Json -Depth 4 | Set-Content (Join-Path $root 'evidence.json') -Encoding utf8
 "Reference derivative: $($checks.Count) checks pass; no build or Office export."

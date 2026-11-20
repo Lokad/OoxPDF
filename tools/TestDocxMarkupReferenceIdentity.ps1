@@ -85,6 +85,20 @@ try {
         $checks += "generated-import-and-cached-lookup-$($row.Id)"
     }
     $word = $public | Where-Object Id -CEQ 'word'
+    $missingVariant='docxMarkup=original;docxMarkupGeometry=preserve'
+    $wordInput=Join-Path (Split-Path -Parent $word.Case) 'synthetic.docx'
+    foreach ($cacheOnly in @($true,$false)) {
+        $miss=$null
+        try {
+            & ./tools/RenderCachedReference.ps1 -InputPath $wordInput -OutputDirectory (Join-Path $root "missing-variant-$cacheOnly") `
+                -CacheVariant $missingVariant -CacheOnly:$cacheOnly -SkipBuild | Out-Null
+        } catch { $miss=$_.Exception.Message }
+        if (!$miss -or $miss -notlike '*explicit markup view settings*') {
+            throw 'A missing markup variant must require explicit export before any worker launch'
+        }
+    }
+    $checks += 'missing-variant-refuses-inherited-word-view'
+
     $overridePath = & ./tools/ImportDocxMarkupReferenceCache.ps1 -Case $word.Case -ReferencePdf 'reference example.pdf' -DocxMarkup 'simple-markup' -DocxMarkupGeometry 'reserve-markup-margin'
     $override = Read-Json (Join-Path $overridePath 'reference-metadata.json')
     if ($override.CacheVariant -cne 'docxMarkup=simple;docxMarkupGeometry=reserve-margin' -or $override.IdentityKey -ceq $word.CacheKey) {

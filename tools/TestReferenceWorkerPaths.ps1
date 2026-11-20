@@ -10,9 +10,10 @@ $worker=Join-Path $root 'worker.ps1'
 param($InputPath,$WorkDirectory,[int]$Dpi,$ProgressLog,$StatusPath,[switch]$SkipBuild)
 $ErrorActionPreference='Stop'
 if ($args.Count) {throw 'Unexpected unbound arguments'}
-Add-Content -LiteralPath $ProgressLog -Value 'stage:export'
 'fake worker stdout'; [Console]::Error.WriteLine('fake worker stderr')
 $mode=[IO.Path]::GetFileNameWithoutExtension($InputPath)
+if ($mode -eq 'hang-before-stage') {Start-Sleep -Seconds 60}
+Add-Content -LiteralPath $ProgressLog -Value 'stage:export'
 if ($mode -eq 'hang') {Start-Sleep -Seconds 60}
 if ($mode -eq 'no-status') {exit 1}
 if ($mode -in @('export-failed','failed-reused','hang-with-status')) {
@@ -37,13 +38,14 @@ $sentinelStart.UseShellExecute=$false;$sentinelStart.CreateNoWindow=$true
 foreach($arg in @('-NoProfile','-Command','Start-Sleep -Seconds 60')) {$sentinelStart.ArgumentList.Add($arg)}
 $sentinel=[Diagnostics.Process]::Start($sentinelStart)
 try {
-    foreach($id in @('plain','spaced-input','spaced-output','spaced-worker','all-spaced','prebuilt','unavailable','hang','export-failed','failed-reused','no-status','hang-with-status','bad-pdf')) {
+    $timeoutCases=@('hang','hang-with-status','hang-before-stage')
+    foreach($id in @('plain','spaced-input','spaced-output','spaced-worker','all-spaced','prebuilt','unavailable','export-failed','failed-reused','no-status','bad-pdf') + $timeoutCases) {
         $inputName=if($id -in @('spaced-input','all-spaced')) {'input ''quoted'' é.pdf'} else {$id+'.pdf'}
         $inputFile=Join-Path $root $inputName
         [IO.File]::WriteAllText($inputFile,'%PDF-Synthetic supervisor probe, not a fidelity reference')
         $output=Join-Path $root $(if($id -in @('spaced-output','all-spaced')) {$id+' output with spaces'} else {$id+'-output'})
         $selected=if($id -in @('spaced-worker','all-spaced')) {$spacedWorker} else {$worker}
-        $timeout=if($id -in @('hang','hang-with-status')) {2} else {20}
+        $timeout=if($id -in $timeoutCases) {2} else {20}
         New-Item -ItemType Directory -Path $output | Out-Null
         $retained=Join-Path $output 'retained-evidence.txt'
         [IO.File]::WriteAllText($retained,'independent evidence survives')
@@ -55,9 +57,13 @@ try {
         try { & (Join-Path $PSScriptRoot 'RenderReference.ps1') -InputPath $inputFile -OutputDirectory $output -WorkerScript $selected -Dpi 123 -TimeoutSeconds $timeout -SkipBuild:($id -eq 'prebuilt') *> (Join-Path $root ($id+'.log')) }
         catch {$errorText=$_.Exception.Message}
         $status=Get-Content (Join-Path $output 'reference-status.json') -Raw | ConvertFrom-Json
-        $expected=if($id -in @('hang','hang-with-status')) {'timeout'} elseif($id -eq 'unavailable') {'unavailable'} elseif($id -in @('export-failed','failed-reused','no-status','bad-pdf')) {'export-failed'} else {'ok'}
+        $expected=if($id -in $timeoutCases) {'timeout'} elseif($id -eq 'unavailable') {'unavailable'} elseif($id -in @('export-failed','failed-reused','no-status','bad-pdf')) {'export-failed'} else {'ok'}
         if($status.Status -ne $expected -or (($expected -eq 'ok') -eq ($null -ne $errorText))) {throw ($id+': unexpected supervisor outcome '+$errorText)}
-        if ($id -in @('hang','no-status')) {
+        if ($id -in $timeoutCases) {
+            $expectedStage=if ($id -eq 'hang-before-stage') {'starting'} else {'export'}
+            if ($status.Stage -cne $expectedStage) { throw ($id+': unexpected timeout stage '+$status.Stage) }
+        }
+        if ($id -in @('hang','no-status','hang-before-stage')) {
             if (Test-Path -LiteralPath $snapshot) {throw ($id+': stale worker metadata survived')}
         } else {
             $raw=Get-Content -LiteralPath $snapshot -Raw | ConvertFrom-Json
@@ -76,7 +82,7 @@ try {
             if([IO.File]::ReadAllText((Join-Path $output ('reference-worker-'+$name+'.log'))) -notlike ('*fake worker '+$name+'*')) {throw 'Worker log was lost'}
         }
         if($sentinel.HasExited) {throw 'Supervisor terminated an unrelated owned control process'}
-        $checks+=@{Id=$id;Status=$status.Status;Error=$errorText;CurrentWorkerMetadata=(Test-Path -LiteralPath $snapshot);UnrelatedEvidenceRetained=$true;OwnedWorkerDirectoryRemoved=$true}
+        $checks+=@{Id=$id;Status=$status.Status;Stage=$status.Stage;Error=$errorText;CurrentWorkerMetadata=(Test-Path -LiteralPath $snapshot);UnrelatedEvidenceRetained=$true;OwnedWorkerDirectoryRemoved=$true}
     }
 }
 finally {if(!$sentinel.HasExited) {$sentinel.Kill();$null=$sentinel.WaitForExit(5000)};$sentinel.Dispose()}
