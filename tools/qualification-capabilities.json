@@ -2229,6 +2229,7 @@
   ],
   "docx-picture-placement": [
     "=DocxDrawingSelectsLastPlacementWithinEachDrawing",
+    "=DocxComputedFieldPicturesFollowCachedRevisions",
     "DocxFloatingPicturesFollowTableRowRevisionVisibility",
     "DocxPictureOnlyNotesShareAuthoredAspectRatioFitting",
     "DocxUnpositionedStaticPicturesShareBoundedFitAndOwners",
@@ -2995,6 +2996,7 @@
     "PortableRenderingCustomNotesPreserveMathContentAndFirstGlyphLinks"
   ],
   "docx-field-picture-order": [
+    "=DocxComputedFieldPicturesFollowCachedRevisions",
     "DocxComputedFieldsKeepAtomicOrderBesideRunDrawings",
     "DocxComputedFieldPictureRunBoundariesPreserveVisibleContent",
     "DocxComputedSimpleFieldsKeepHyperlinkSourceOwnership",

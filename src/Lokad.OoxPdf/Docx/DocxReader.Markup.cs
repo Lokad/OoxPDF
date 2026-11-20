@@ -85,7 +85,8 @@ internal sealed partial class DocxReader
         OoxPdfDocxMarkupMode markupMode,
         CancellationToken cancellationToken,
         XName[] includedNames,
-        DocxRevisionInfo? inheritedRevision = null)
+        DocxRevisionInfo? inheritedRevision = null,
+        bool inlineContent = false)
     {
         cancellationToken.ThrowIfCancellationRequested();
         foreach (XElement element in elements)
@@ -97,24 +98,11 @@ internal sealed partial class DocxReader
                 continue;
             }
 
-            if (element.Name == WordprocessingNamespace + "sdt")
+            if (DocxSourceXml.IsTransparentInlineContainer(element) &&
+                (inlineContent || element.Name != WordprocessingNamespace + "smartTag"))
             {
-                foreach (XElement content in element.Elements(WordprocessingNamespace + "sdtContent"))
-                {
-                    foreach (DocxRevisionScopedElement child in EnumerateRevisionScopedChildren(content.Elements(), markupMode, cancellationToken, includedNames, inheritedRevision))
-                    {
-                        yield return child;
-                    }
-                }
-
-                continue;
-            }
-
-            // Structured/custom XML metadata preserves the current revision and
-            // actual block, row or cell source owner.
-            if (element.Name == WordprocessingNamespace + "sdtContent" || element.Name == WordprocessingNamespace + "customXml")
-            {
-                foreach (DocxRevisionScopedElement child in EnumerateRevisionScopedChildren(element.Elements(), markupMode, cancellationToken, includedNames, inheritedRevision))
+                foreach (DocxRevisionScopedElement child in EnumerateRevisionScopedChildren(
+                    DocxSourceXml.StoredChildren(element), markupMode, cancellationToken, includedNames, inheritedRevision, inlineContent))
                 {
                     yield return child;
                 }
@@ -128,7 +116,8 @@ internal sealed partial class DocxReader
             }
 
             DocxRevisionInfo? revision = CreateRevisionInfo(element) ?? inheritedRevision;
-            foreach (DocxRevisionScopedElement child in EnumerateRevisionScopedChildren(element.Elements(), markupMode, cancellationToken, includedNames, revision))
+            foreach (DocxRevisionScopedElement child in EnumerateRevisionScopedChildren(
+                element.Elements(), markupMode, cancellationToken, includedNames, revision, inlineContent))
             {
                 yield return child;
             }

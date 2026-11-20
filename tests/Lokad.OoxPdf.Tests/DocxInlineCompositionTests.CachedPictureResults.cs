@@ -121,6 +121,48 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
+    public static void DocxComputedFieldPicturesFollowCachedRevisions()
+    {
+        var resolver = new PortableRenderingTests.PinnedResolver(mathFont: true);
+        foreach (bool vml in new[] { false, true })
+        foreach (bool complex in new[] { false, true })
+        foreach (string revision in new[] { "ins", "del" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupMode.Original })
+        {
+            var document = ReadPictureResult("body", vml, complex, mode, computed: true, pictureRevision: revision);
+            var paragraph = DocxBlockTraversal.EnumerateBodyParagraphs(document.BodyElements)
+                .Single(p => p.FieldReferences.Any(field => field.Kind == DocxFieldKind.Page));
+            bool includePicture = mode == OoxPdfDocxMarkupMode.AllMarkup ||
+                (revision == "ins" ? mode == OoxPdfDocxMarkupMode.Final : mode == OoxPdfDocxMarkupMode.Original);
+            TestAssert.Equal(includePicture ? 1 : 0, paragraph.Images.Count);
+            TestAssert.True(paragraph.FieldReferences.Single().UsesPlaceholder &&
+                paragraph.Runs.Single(run => run.FieldKind == DocxFieldKind.Page).Revision is null,
+                "The computed page number retains the field's own source, independent of its picture.");
+            if (includePicture)
+            {
+                var picture = paragraph.Images.Single();
+                TestAssert.Equal(revision == "ins" ? DocxRevisionKind.Insertion : DocxRevisionKind.Deletion,
+                    picture.Revisions.Single().Kind);
+                if (revision == "ins")
+                    TestAssert.True(picture.SourceRunStyle is not null, "The inserted picture retains its Review paint owner.");
+            }
+
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var page = new DocxRenderer(resolver, mode, CachedMathGeometry(mode))
+                .RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().Single();
+            TestAssert.Equal(includePicture ? 1 : 0, page.Images.Count);
+            foreach (var image in page.Images)
+                TestAssert.Contains("/" + image.ResourceName + " Do", page.Content);
+            var mathFonts = page.Fonts.Where(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal))
+                .Select(font => font.Font).ToHashSet();
+            string math = string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, true)
+                .Where(show => mathFonts.Contains(show.Font)).Select(show => show.Text)).Normalize(NormalizationForm.FormKC);
+            TestAssert.Equal("ratetimeratetime", math);
+            TestAssert.True(diagnostics.All(item => item.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                "A revised picture must keep its neighboring equations eligible to paint.");
+        }
+    }
+
     public static void DocxCachedPictureResultsMatchIndependentWordContentAndOrigins()
     {
         if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent picture/math origins use installed Windows fonts.");
@@ -150,7 +192,8 @@ internal static partial class DocxInlineCompositionTests
     }
 
     private static DocxDocument ReadPictureResult(string story, bool vml, bool complex, OoxPdfDocxMarkupMode mode,
-        bool baseline = false, bool nested = false, bool computed = false, bool? packPictureInCache = null) =>
+        bool baseline = false, bool nested = false, bool computed = false, bool? packPictureInCache = null,
+        string? pictureRevision = null) =>
         ReadMutation("CompositionProbes/math-composition-unnumbered" + (story == "body" ? "" : "-" + story), mode, true, true,
             (xml, w, _) =>
             {
@@ -169,8 +212,12 @@ internal static partial class DocxInlineCompositionTests
                         new XElement(v + "imagedata", new XAttribute(r + "id", drawing.Descendants(a + "blip").Single().Attribute(r + "embed")!.Value)))));
                 }
                 if (baseline && !nested) return;
-                var content = baseline ? [new XElement(run)]
-                    : CachedMathField(w, new XElement(run), complex, computed ? "PAGE" : "REF StoredPicture", locked: !computed);
+                XElement cachedPicture = new(run);
+                if (pictureRevision is not null)
+                    cachedPicture = new XElement(w + pictureRevision, new XAttribute(w + "id", "31"),
+                        new XAttribute(w + "author", "Cached picture"), cachedPicture);
+                var content = baseline ? [cachedPicture]
+                    : CachedMathField(w, cachedPicture, complex, computed ? "PAGE" : "REF StoredPicture", locked: !computed);
                 if (packPictureInCache is bool inside)
                 {
                     var controls = content.Where(item => item.Name == w + "r").SelectMany(item => item.Elements()).ToArray();

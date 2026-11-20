@@ -15,17 +15,6 @@ internal static class DocxSourceXml
         IsInlineMetadataContainer(element) || element.Name == WordprocessingNamespace + "sdt" ||
         element.Name == WordprocessingNamespace + "sdtContent";
 
-    public static IEnumerable<XElement> StoredRuns(XElement source, CancellationToken token)
-    {
-        foreach (XElement child in StoredChildren(source))
-        {
-            token.ThrowIfCancellationRequested();
-            if (child.Name == WordprocessingNamespace + "r") yield return child;
-            else if (IsTransparentInlineContainer(child))
-                foreach (XElement run in StoredRuns(child, token)) yield return run;
-        }
-    }
-
     // Editing boundaries and stored math pagination positions have no payload.
     // Content-bearing, unknown and misplaced children retain their source owner.
     public static bool IsNonPrintingMarker(XElement element) =>

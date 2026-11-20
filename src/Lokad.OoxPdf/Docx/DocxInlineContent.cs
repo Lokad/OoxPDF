@@ -420,18 +420,20 @@ internal static class DocxInlineContent
                 foreach (var item in owner.Revisions)
                 { token.ThrowIfCancellationRequested(); remaining.Remove(item); }
             }
-        // A picture-only run retains its resolved source owner even without
-        // printable text. Consume only that actual image's insertion metadata;
-        // aggregate or value-equal revisions cannot invent ownership.
+        // A placed picture can own deleted content without emitting text.
+        // Insertions additionally need the authored run style for Review ink.
+        // The remaining set binds both kinds by revision reference identity.
         if (images is not null)
             foreach (var image in images)
             {
                 token.ThrowIfCancellationRequested();
-                if (image.SourceRunStyle is not { } owner || owner.SourceRunIndex != image.SourceRunIndex) continue;
+                if (image.SourceRunIndex < 0) continue;
                 foreach (var revision in image.Revisions)
                 {
                     token.ThrowIfCancellationRequested();
-                    if (revision.Kind == DocxRevisionKind.Insertion &&
+                    if (revision.Kind == DocxRevisionKind.Deletion ||
+                        revision.Kind == DocxRevisionKind.Insertion &&
+                        image.SourceRunStyle is { } owner && owner.SourceRunIndex == image.SourceRunIndex &&
                         (ReferenceEquals(owner.Revision, revision) || owner.Revisions.Any(item => ReferenceEquals(item, revision))))
                         remaining.Remove(revision);
                 }
