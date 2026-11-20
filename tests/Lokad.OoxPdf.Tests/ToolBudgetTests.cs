@@ -38,7 +38,9 @@ internal static class ToolBudgetTests
         var assembly = System.Reflection.Assembly.LoadFrom(InspectAssemblyPath.Value);
         var type = assembly.GetType("PdfToUnicodeMap") ?? throw new InvalidOperationException("Missing inspector CMap decoder.");
         var parse = type.GetMethod("Parse") ?? throw new InvalidOperationException("Missing inspector CMap parser.");
-        return (IReadOnlyDictionary<int, string>)(parse.Invoke(null, [cmap]) ?? throw new InvalidOperationException("Missing decoded CMap."));
+        object map = parse.Invoke(null, [cmap]) ?? throw new InvalidOperationException("Missing decoded CMap.");
+        var entries = type.GetProperty("Entries")?.GetValue(map);
+        return entries as IReadOnlyDictionary<int, string> ?? throw new InvalidOperationException("Missing decoded CMap entries.");
     }
 
     public static void InspectAggregateDecodedBudgetSkipsBeyondQuota()
