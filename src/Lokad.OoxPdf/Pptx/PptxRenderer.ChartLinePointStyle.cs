@@ -1,6 +1,3 @@
-using System.Xml.Linq;
-using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
-
 namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
@@ -72,7 +69,7 @@ internal sealed partial class PptxRenderer
     }
 
     private static IReadOnlyList<ChartLegendEntry> BuildLinePointLegendEntries(
-        PptxSceneChartPlot plot, XElement xml, ChartWorkbookData? workbook, bool plotVisibleOnly,
+        PptxSceneChartPlot plot, ChartWorkbookData? workbook, bool plotVisibleOnly,
         int count, int? styleId, Func<int, int, ChartLineAppearance> appearance)
     {
         IReadOnlyList<ChartIndexedTextPoint?> labels = ReadSharedCategoryLabels(plot, workbook, plotVisibleOnly);

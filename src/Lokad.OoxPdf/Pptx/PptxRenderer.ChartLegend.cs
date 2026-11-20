@@ -49,7 +49,7 @@ internal sealed partial class PptxRenderer
         return entries;
     }
 
-    private static IReadOnlyList<ChartLegendEntry> BuildCategoryFillLegendEntries(PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, PptxSceneChartPlot plot, XElement chartElement, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, ChartWorkbookData? workbook, bool plotVisibleOnly, int valuePointCount = 0, Func<int, ChartSeriesFill>? resolveFill = null, Func<int, ChartSeriesStroke?>? resolveStroke = null)
+    private static IReadOnlyList<ChartLegendEntry> BuildCategoryFillLegendEntries(PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, PptxSceneChartPlot plot, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, ChartWorkbookData? workbook, bool plotVisibleOnly, int valuePointCount = 0, Func<int, ChartSeriesFill>? resolveFill = null, Func<int, ChartSeriesStroke?>? resolveStroke = null)
     {
         IReadOnlyList<ChartIndexedTextPoint> points = ReadSharedCategoryLabels(plot, workbook, plotVisibleOnly)
             .OfType<ChartIndexedTextPoint>()
@@ -97,7 +97,7 @@ internal sealed partial class PptxRenderer
         return chartStyleId == 18 || chartStyleId == 118 || chartStyleId == 26 || chartStyleId == 126;
     }
 
-    private static IReadOnlyList<ChartLegendEntry> BuildStrokeLegendEntries(PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, PptxSceneChartPlot plot, XElement chartElement, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle>? markerStyles, bool reverseOrder, ChartWorkbookData? workbook, IReadOnlyList<bool>? seriesLineHidden = null, int? chartStyleId = null)
+    private static IReadOnlyList<ChartLegendEntry> BuildStrokeLegendEntries(PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, PptxSceneChartPlot plot, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle>? markerStyles, bool reverseOrder, ChartWorkbookData? workbook, IReadOnlyList<bool>? seriesLineHidden = null, int? chartStyleId = null)
     {
         IReadOnlyList<ChartSeriesNameRecord> names = ReadSharedChartSeriesNames(plot, workbook);
         var entries = new List<ChartLegendEntry>(names.Count);

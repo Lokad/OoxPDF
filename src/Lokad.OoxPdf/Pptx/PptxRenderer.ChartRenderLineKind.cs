@@ -31,7 +31,6 @@ internal sealed partial class PptxRenderer
         PptxSceneChartPlot? linePlot = ReadFirstSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Line);
         if (linePlot is not null)
         {
-            XElement lineChart = linePlot.Source;
             IReadOnlyList<ChartIndexedNumberVector> lineSeriesVectors = ReadSharedChartSeriesVectors(linePlot, workbook, plotVisibleOnly);
             if (CountRenderableSeries(lineSeriesVectors) != 0)
             {
@@ -61,8 +60,8 @@ internal sealed partial class PptxRenderer
                 chartLayout = await PrepareDefaultAxisTitleBandsAsync(chartLayout, theme, sceneChart, fontResolver).ConfigureAwait(false);
                 bool pointLegend = sceneChart.Plots.Count == 1 && sourceSeries.Count == 1 && pointAppearance is not null;
                 IReadOnlyList<ChartLegendEntry> legendEntries = pointLegend && pointAppearance is not null
-                    ? BuildLinePointLegendEntries(linePlot, lineChart, workbook, plotVisibleOnly, lineSeriesVectors[0].DensePointCount(), ReadChartStyleId(chartXml), pointAppearance)
-                    : BuildLineSeriesLegendEntries(linePlot, lineChart, workbook, seriesAppearance, sourceSeries, themeLineWidth, lineOptions.Stacked, ReadChartStyleId(chartXml));
+                    ? BuildLinePointLegendEntries(linePlot, workbook, plotVisibleOnly, lineSeriesVectors[0].DensePointCount(), ReadChartStyleId(chartXml), pointAppearance)
+                    : BuildLineSeriesLegendEntries(linePlot, workbook, seriesAppearance, sourceSeries, themeLineWidth, lineOptions.Stacked, ReadChartStyleId(chartXml));
                 ChartTextStyle legendTextStyle = ReadSceneChartLegendTextStyle(theme, sceneChart);
                 ChartLegendBox? preparedLegendBox;
                 (chartLayout, preparedLegendBox) = await PrepareCartesianHorizontalLegendAsync(chartLayout,

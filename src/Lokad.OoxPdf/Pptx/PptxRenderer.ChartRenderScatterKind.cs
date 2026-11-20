@@ -81,7 +81,7 @@ internal sealed partial class PptxRenderer
                 await RenderDefaultChartAxisTitlesAsync(theme, graphics, chartLayout, sceneChart, fontResolver, fonts, context, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false);
                 RenderScatterBubbleMajorTicks(graphics, theme, chartXml, sceneChart, plotBox, xValueAxis, yValueAxis, xExtents, yExtents, xAxisOptions, yAxisOptions, xPlacement, yPlacement, context: context);
                 double scatterLegendLeadExtra = 0.5d * (await MeasureScatterLegendEndLabelWidthAsync(theme, sceneChart, chartXml, scatterPlot, scatterChart, workbook, plotVisibleOnly, fontResolver, xTickTargetCount, context: context).ConfigureAwait(false));
-                await RenderChartLegendAsync(graphics, chartLayout.Frame, plotBox, BuildStrokeLegendEntries(theme, colorMap, chartPalette, scatterPlot, scatterChart, seriesStrokes, markerStyles, reverseOrder: false, workbook: workbook, seriesLineHidden: seriesLineHidden), chartLayout.Legend, ReadSceneChartLegendTextStyle(theme, sceneChart), fontResolver, ChartLegendPlacement.Default, chartFonts: fonts, legendLeadExtra: scatterLegendLeadExtra, scatterLegend: true).ConfigureAwait(false);
+                await RenderChartLegendAsync(graphics, chartLayout.Frame, plotBox, BuildStrokeLegendEntries(theme, colorMap, chartPalette, scatterPlot, seriesStrokes, markerStyles, reverseOrder: false, workbook: workbook, seriesLineHidden: seriesLineHidden), chartLayout.Legend, ReadSceneChartLegendTextStyle(theme, sceneChart), fontResolver, ChartLegendPlacement.Default, chartFonts: fonts, legendLeadExtra: scatterLegendLeadExtra, scatterLegend: true).ConfigureAwait(false);
                 return true;
             }
         }

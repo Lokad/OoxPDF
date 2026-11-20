@@ -80,7 +80,7 @@ internal sealed partial class PptxRenderer
                     (barOptions.VaryColors.Value || barPlot.Series.FirstOrDefault()?.PointStyles.Any(point => point.HasShapeProperties) == true);
                 IReadOnlySet<int>? deletedEntries = categoryLegend ? null : ResolveBarSeriesLegendDeletions(sceneChart, barPlot);
                 var legendEntries = new List<ChartLegendEntry>(categoryLegend
-                    ? BuildBarCategoryLegendEntries(theme, colorMap, barPalette, barPlot, barChart, barSeriesVectors[0], barOptions, seriesFills, seriesStrokes, pointFills, pointStrokes, workbook, plotVisibleOnly)
+                    ? BuildBarCategoryLegendEntries(theme, colorMap, barPalette, barPlot, barSeriesVectors[0], barOptions, seriesFills, seriesStrokes, pointFills, pointStrokes, workbook, plotVisibleOnly)
                     : BuildFillLegendEntries(theme, colorMap, barPalette, barPlot, barChart, seriesFills, seriesStrokes,
                         paletteOffset: 0, workbook: workbook, deletedEntries: deletedEntries));
                 ChartLegendLayout sourceLegend = deletedEntries is not null && legendEntries.Count == 0
@@ -118,12 +118,11 @@ internal sealed partial class PptxRenderer
                 foreach (PptxSceneChartPlot plot in ReadSceneChartPlots(sceneChart, PptxSceneChartPlotKind.Line))
                 {
                     context.CancellationToken.ThrowIfCancellationRequested();
-                    XElement element = plot.Source;
                     if (CountRenderableSeries(ReadSharedChartSeriesVectors(plot, workbook, plotVisibleOnly)) == 0) continue;
                     var options = ReadSceneChartLineOptions(sceneChart, plot, PptxSceneChartGrouping.Standard);
                     var strokes = ReadSceneSeriesStrokes(plot, ResolveLineKindInheritedStrokeWidth(barStyleId));
                     var markers = ReadSceneMarkerStyles(plot);
-                    legendEntries.AddRange(BuildStrokeLegendEntries(theme, colorMap, chartPalette, plot, element,
+                    legendEntries.AddRange(BuildStrokeLegendEntries(theme, colorMap, chartPalette, plot,
                         strokes, markers, reverseOrder: options.Stacked, workbook: workbook, chartStyleId: barStyleId));
                 }
                 IReadOnlyList<ChartIndexedTextPoint?> categoryLabels = ReadSharedCategoryLabels(barPlot, workbook, plotVisibleOnly);
