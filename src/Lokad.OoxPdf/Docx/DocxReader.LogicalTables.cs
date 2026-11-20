@@ -36,7 +36,8 @@ internal sealed partial class DocxReader
     private static IEnumerable<DocxRevisionScopedElement> EnumerateBookmarkedBlocks(IEnumerable<XElement> elements,
         OoxPdfDocxMarkupMode mode, CancellationToken token, DocxRevisionInfo? inheritedRevision,
         XName? tableChildName = null, IReadOnlyList<DocxBookmarkAnchor>? leadingBookmarks = null,
-        bool readTableColumnBookmarks = false, DocxTableColumnBookmark[]? leadingColumnBookmarks = null)
+        bool readTableColumnBookmarks = false, DocxTableColumnBookmark[]? leadingColumnBookmarks = null,
+        Action<string>? recordBookmarkEnd = null)
     {
         XName importedContentName = WordprocessingNamespace + "altChunk";
         XName bookmarkStartName = WordprocessingNamespace + "bookmarkStart";
@@ -89,11 +90,12 @@ internal sealed partial class DocxReader
             }
             if (scope.Element.Name == bookmarkEndName)
             {
-                if ((bookmarkStarts is not null || columnStarts is not null) &&
+                if ((bookmarkStarts is not null || columnStarts is not null || recordBookmarkEnd is not null) &&
                     NormalizeDecimalId((string?)scope.Element.Attribute(WordprocessingNamespace + "id")) is { } id)
                 {
                     bookmarkStarts?.Remove(id);
                     columnStarts?.Remove(id);
+                    recordBookmarkEnd?.Invoke(id);
                 }
                 continue;
             }
@@ -153,7 +155,8 @@ internal sealed partial class DocxReader
     }
 
     private readonly record struct DocxTableSourceRow(int FirstColumn, int EndColumn,
-        IReadOnlyList<(DocxRevisionScopedElement Scope, int Span)> Cells);
+        IReadOnlyList<(DocxRevisionScopedElement Scope, int Span)> Cells,
+        IReadOnlyDictionary<string, int>? BookmarkEndBoundaries);
 
     private static DocxTableSourceRow ReadTableSourceRow(DocxRevisionScopedElement row, XElement? properties,
         OoxPdfDocxMarkupMode mode, CancellationToken token, bool joinedGrid = false)
@@ -161,18 +164,19 @@ internal sealed partial class DocxReader
         int firstColumn = ReadRowGridBefore(properties);
         int endColumn = firstColumn;
         var cells = new List<(DocxRevisionScopedElement Scope, int Span)>();
-        // A table-level start enters the row before its own markers. Match
-        // those markers before the first cell resolves the source columns.
+        Dictionary<string, int>? bookmarkEndBoundaries = null;
+        // Retain row-scope ends for column intervals still pending after an earlier cell.
         foreach (var scope in EnumerateBookmarkedBlocks(row.Element.Elements(), mode, token,
             inheritedRevision: null, tableChildName: WordprocessingNamespace + "tc",
-            readTableColumnBookmarks: true, leadingColumnBookmarks: row.LeadingColumnBookmarks))
+            readTableColumnBookmarks: true, leadingColumnBookmarks: row.LeadingColumnBookmarks,
+            recordBookmarkEnd: id => (bookmarkEndBoundaries ??= new(StringComparer.Ordinal)).TryAdd(id, cells.Count)))
         {
             int span = ReadGridSpan(scope.Element.Element(WordprocessingNamespace + "tcPr"));
             endColumn += span;
             if (joinedGrid && endColumn > MaxInferredGridColumns) throw JoinedGridLimit();
             cells.Add((scope, span));
         }
-        return new(firstColumn, endColumn, cells);
+        return new(firstColumn, endColumn, cells, bookmarkEndBoundaries);
     }
 
     private static (double[] Grid, DocxTableSourceRow[] Rows) CompleteJoinedTableGrid(double[] grid,

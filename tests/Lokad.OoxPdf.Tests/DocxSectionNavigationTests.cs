@@ -1314,16 +1314,29 @@ internal static class DocxSectionNavigationTests
                 "The control bookmark points to the second cell on page two.");
             foreach (string variant in new[] { "column", "wrapped", "closed", "unoccupied",
                          "row-boundary", "row-boundary-closed", "row-boundary-closed-in-cell",
-                         "row-boundary-closed-before-cell", "inside-row", "inside-row-closed" })
+                         "row-boundary-closed-before-cell", "inside-row", "inside-row-closed",
+                         "between-cell-start", "between-cell-end" })
             {
                 PdfPage[] pages = RenderColumn(variant, spanned, mode);
                 TestAssert.True(control.Select(page => page.Content).SequenceEqual(pages.Select(page => page.Content)),
                     "A column bookmark preserves the painted page content.");
                 if (variant is "closed" or "unoccupied" or "row-boundary-closed" or "row-boundary-closed-in-cell"
-                    or "row-boundary-closed-before-cell" or "inside-row-closed")
+                    or "row-boundary-closed-before-cell" or "inside-row-closed" or "between-cell-end")
                     TestAssert.Equal(0, pages[0].Annotations.Count);
                 else
                     TestAssert.Equal(expected, pages[0].Annotations.Single());
+            }
+
+            if (!spanned)
+            {
+                var pages = RenderColumn("between-cell-multiple", spanned, mode);
+                TestAssert.Contains("THIRD CELL", Text(pages[1]));
+                var links = pages[0].Annotations;
+                TestAssert.Equal(3, links.Count);
+                TestAssert.True(links[2].Destination is { PageIndex: 1, Left: > 200d },
+                    "The ordinary bookmark points to the third cell.");
+                TestAssert.Equal(links[2].Destination, links[0].Destination);
+                TestAssert.Equal(links[2].Destination, links[1].Destination);
             }
         }
 
@@ -1337,7 +1350,7 @@ internal static class DocxSectionNavigationTests
                 var first = new XElement(W + "tc", Paragraph("FIRST CELL"));
                 var second = new XElement(W + "tc", new XElement(target));
                 var row = new XElement(W + "tr");
-                int gridSize = spanned ? 5 : 2;
+                int gridSize = variant == "between-cell-multiple" ? 3 : spanned ? 5 : 2;
                 if (spanned)
                 {
                     row.Add(new XElement(W + "trPr", new XElement(W + "gridBefore", new XAttribute(W + "val", 1))));
@@ -1349,7 +1362,29 @@ internal static class DocxSectionNavigationTests
                     new XElement(W + "tblPr", new XElement(W + "tblLayout", new XAttribute(W + "type", "fixed"))),
                     new XElement(W + "tblGrid", Enumerable.Range(0, gridSize)
                         .Select(_ => new XElement(W + "gridCol", new XAttribute(W + "w", 1600)))), row);
-                if (variant == "inside")
+                if (variant == "between-cell-multiple")
+                {
+                    var third = Paragraph("THIRD CELL");
+                    third.AddFirst(new XElement(W + "bookmarkStart",
+                        new XAttribute(W + "id", 12), new XAttribute(W + "name", "OrdinaryThird")));
+                    third.Add(new XElement(W + "bookmarkEnd", new XAttribute(W + "id", 12)));
+                    row.Add(new XElement(W + "tc", third));
+                    start.SetAttributeValue(W + "colFirst", 2);
+                    start.SetAttributeValue(W + "colLast", 2);
+                    first.AddBeforeSelf(start);
+                    var another = new XElement(start);
+                    another.SetAttributeValue(W + "id", 11);
+                    another.SetAttributeValue(W + "name", "LaterThird");
+                    second.AddBeforeSelf(another);
+                    row.Add(end, new XElement(W + "bookmarkEnd", new XAttribute(W + "id", 11)));
+                    var sourceLink = xml.Descendants(W + "hyperlink").Single();
+                    var laterLink = new XElement(sourceLink);
+                    var ordinaryLink = new XElement(sourceLink);
+                    laterLink.SetAttributeValue(W + "anchor", "LaterThird");
+                    ordinaryLink.SetAttributeValue(W + "anchor", "OrdinaryThird");
+                    sourceLink.AddAfterSelf(laterLink, ordinaryLink);
+                }
+                else if (variant == "inside")
                 {
                     XElement paragraph = second.Element(W + "p")!;
                     paragraph.Element(W + "r")!.AddBeforeSelf(start);
@@ -1360,7 +1395,17 @@ internal static class DocxSectionNavigationTests
                     int column = variant == "unoccupied" ? gridSize : spanned ? 4 : 1;
                     start.SetAttributeValue(W + "colFirst", column);
                     start.SetAttributeValue(W + "colLast", column);
-                    if (variant.StartsWith("row-boundary", StringComparison.Ordinal))
+                    if (variant == "between-cell-start")
+                    {
+                        second.AddBeforeSelf(start);
+                        row.AddAfterSelf(end);
+                    }
+                    else if (variant == "between-cell-end")
+                    {
+                        row.AddBeforeSelf(start);
+                        second.AddBeforeSelf(end);
+                    }
+                    else if (variant.StartsWith("row-boundary", StringComparison.Ordinal))
                     {
                         row.AddBeforeSelf(start);
                         if (variant == "row-boundary-closed") start.AddAfterSelf(end);
