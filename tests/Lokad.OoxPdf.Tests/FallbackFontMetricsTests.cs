@@ -177,9 +177,9 @@ internal static class FallbackFontMetricsTests
             .ToDictionary(m => m.Groups[2].Value, m => int.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture));
     }
 
-    private readonly record struct Glyph(string Font, double Size, double X, double Y, byte Code);
+    internal readonly record struct Glyph(string Font, double Size, double X, double Y, byte Code);
 
-    private static IEnumerable<Glyph> ReadGlyphs(string content)
+    internal static IEnumerable<Glyph> ReadGlyphs(string content)
     {
         foreach (Match region in Regex.Matches(content, @"BT(.*?)ET", RegexOptions.Singleline))
         {

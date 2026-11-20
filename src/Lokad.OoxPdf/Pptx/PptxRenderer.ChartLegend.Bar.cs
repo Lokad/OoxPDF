@@ -149,11 +149,11 @@ internal sealed partial class PptxRenderer
         for (int i = 0; i < entries.Count; i++)
         {
             context.CancellationToken.ThrowIfCancellationRequested();
-            widths[i] = GetPackedHorizontalLegendEntryWidth(entries[i].Name, style, measure, box.MarkerWidth, gap, padding);
+            double textAdvance = measure.Measure(entries[i].Name, style);
+            widths[i] = GetPackedHorizontalLegendEntryWidth(textAdvance, box.MarkerWidth, gap, padding);
             if (measuredFillGrid)
             {
-                double advance = measure.Measure(entries[i].Name, style) + box.MarkerWidth;
-                double naturalCell = advance + box.MarkerSize;
+                double naturalCell = textAdvance + box.MarkerWidth + box.MarkerSize;
                 naturalWidth += naturalCell;
                 widestNaturalCell = Math.Max(widestNaturalCell, naturalCell);
             }

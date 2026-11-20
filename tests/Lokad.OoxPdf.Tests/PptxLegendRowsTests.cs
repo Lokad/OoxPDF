@@ -33,6 +33,47 @@ internal static partial class PptxLegendRowsTests
         }
     }
 
+    public static void PptxAutomaticHorizontalLegendsKeepFallbackNamesInsideTheirClip()
+    {
+        foreach (string kind in new[] { "line", "area" })
+        foreach (bool overlay in new[] { false, true })
+        {
+            CheckFallbackLegendNames(840, 8, kind, overlay, "t", wraps: false);
+        }
+        CheckFallbackLegendNames(288, 10, "area", true, "t", wraps: true);
+        CheckFallbackLegendNames(288, 10, "line", false, "b", wraps: true);
+    }
+
+    private static void CheckFallbackLegendNames(int width, int size, string kind, bool overlay, string position, bool wraps)
+    {
+        var (page, _) = Render(width, size, 6, overlay, kind: kind, height: 420,
+            legendPosition: position, resolver: new MissingTestFontResolver());
+        TestAssert.Equal(0, page.Fonts.Count);
+        var names = new List<string>();
+        var baselines = new HashSet<double>();
+        foreach (Match match in Regex.Matches(page.Content,
+            @"(?m)^([-\d.]+) [-\d.]+ ([-\d.]+) [-\d.]+ re W\*? n\r?\n(BT(?s:.*?)ET)"))
+        {
+            var glyphs = FallbackFontMetricsTests.ReadGlyphs(match.Groups[3].Value).ToArray();
+            string text = new(glyphs.Select(glyph => (char)glyph.Code).ToArray());
+            if (!text.StartsWith("North West Region ", StringComparison.Ordinal)) continue;
+            names.Add(text);
+            baselines.Add(glyphs[0].Y);
+            double left = double.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture);
+            double right = left + double.Parse(match.Groups[2].Value, CultureInfo.InvariantCulture);
+            foreach (var glyph in glyphs)
+            {
+                TestAssert.Equal("FF1", glyph.Font);
+                double advance = PdfFallbackFont.Helvetica.MeasureAdvanceEm(glyph.Code) * size / PdfFallbackFont.UnitsPerEm;
+                TestAssert.True(glyph.X >= left - 0.01d && glyph.X + advance <= right + 0.01d,
+                    $"{kind} {position} overlay={overlay} label '{text}' has glyph '{(char)glyph.Code}' beyond its horizontal clip.");
+            }
+        }
+
+        TestAssert.Equal(string.Join('|', Enumerable.Range(1, 6).Select(i => $"North West Region {i}")), string.Join('|', names));
+        TestAssert.Equal(wraps, baselines.Count > 1);
+    }
+
     private static int CheckCartesianTopLegend(int width, int fontSize, string kind, bool overlay)
     {
         string[] expected = Enumerable.Range(1, 6).Select(i => $"North West Region {i}").ToArray();

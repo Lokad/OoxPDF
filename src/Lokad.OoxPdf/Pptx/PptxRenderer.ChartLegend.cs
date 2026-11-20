@@ -253,6 +253,7 @@ internal sealed partial class PptxRenderer
         RenderChartShapeStyle(graphics, legendBox.X, legendBox.ClipY, legendBox.Width, legendBox.ClipHeight, layout.ShapeStyle);
 
         bool packEntries = legendBox.Horizontal && legendBox.EntryFrames is null;
+        bool automaticHorizontal = legendBox.Horizontal && !layout.Layout.HasGeometryValues;
         bool bottomLegend = layout.PositionKind == PptxSceneChartLegendPosition.Bottom;
         double textGap = packEntries ? ComputeHorizontalLegendTextGap(style.FontSize, bottomLegend) : 0d;
         double entryPadding = packEntries ? ResolveHorizontalLegendInterEntryGap(entries, style, textMeasurer, bottomLegend) : 0d;
@@ -264,9 +265,10 @@ internal sealed partial class PptxRenderer
             ChartLegendEntryFrame? entryFrame = legendBox.EntryFrames is { } frames ? frames[i] : null;
             double entryX = entryFrame?.X ?? nextEntryX;
             double entryWidth = entryFrame?.Width ?? legendBox.Width;
+            double textAdvance = packEntries || automaticHorizontal ? textMeasurer.Measure(entry.Name, style) : 0d;
             if (packEntries)
             {
-                entryWidth = GetPackedHorizontalLegendEntryWidth(entry.Name, style, textMeasurer, legendBox.MarkerWidth, textGap, entryPadding);
+                entryWidth = GetPackedHorizontalLegendEntryWidth(textAdvance, legendBox.MarkerWidth, textGap, entryPadding);
                 nextEntryX += entryWidth;
             }
             double y = ResolveLegendEntryBaseline(admissionBox, i);
@@ -348,11 +350,15 @@ internal sealed partial class PptxRenderer
                 }
             }
 
+            // The entry stride includes padding or an equal-cell allocation. The
+            // text run only owns the advance measured for its name.
+            double textWidth = automaticHorizontal ? textAdvance :
+                Math.Max(1d, entryWidth - legendBox.MarkerWidth - legendBox.TextGap);
             runs.Add(new TextRun(
                 entry.Name,
                 entryX + legendBox.MarkerWidth + legendBox.TextGap,
                 y,
-                Math.Max(1d, entryWidth - legendBox.MarkerWidth - legendBox.TextGap),
+                textWidth,
                 legendBox.LineHeight,
                 legendBox.X,
                 legendBox.ClipY,
@@ -529,7 +535,7 @@ internal sealed partial class PptxRenderer
             double packedWidth = 0d;
             foreach (ChartLegendEntry entry in entries)
             {
-                packedWidth += GetPackedHorizontalLegendEntryWidth(entry.Name, style, textMeasurer, markerWidth, horizontalTextGap, horizontalEntryPadding);
+                packedWidth += GetPackedHorizontalLegendEntryWidth(textMeasurer.Measure(entry.Name, style), markerWidth, horizontalTextGap, horizontalEntryPadding);
             }
 
             // Office rows carry no trailing padding after the last entry (botleg block
@@ -721,9 +727,9 @@ internal sealed partial class PptxRenderer
         return entries.Count < 2 ? 0d : Math.Max(0d, maxAdvance - minAdvance);
     }
 
-    private static double GetPackedHorizontalLegendEntryWidth(string name, ChartTextStyle style, ChartTextMeasurer textMeasurer, double markerWidth, double textGap, double entryPadding)
+    private static double GetPackedHorizontalLegendEntryWidth(double textAdvance, double markerWidth, double textGap, double entryPadding)
     {
-        return markerWidth + textGap + textMeasurer.Measure(name, style) + entryPadding;
+        return markerWidth + textGap + textAdvance + entryPadding;
     }
 
     private static bool IsOoxmlTrue(string? value)
