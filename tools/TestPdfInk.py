@@ -97,10 +97,60 @@ class PdfInkTests(unittest.TestCase):
         page.insert_text((20, 50), "A", fontname="helv", fontsize=24)
         document.save(self.pdf)
         document.close()
-        result = analyze_pdf(self.pdf)
+        result = analyze_pdf(self.pdf, text_witnesses=[(1, "A")])
         self.assertEqual(0, result["GlyphsMeasured"])
         self.assertEqual("UnavailableEmbeddedTrueTypeProgram",
                          result["UnmeasuredTextTraces"][0]["Reason"])
+        self.assertEqual("Unverified", result["TextWitnesses"][0]["Status"])
+        self.assertEqual("UnavailableEmbeddedTrueTypeProgram", result["TextWitnesses"][0]["Reason"])
+
+    def test_named_text_witness_requires_ink_for_the_complete_phrase(self):
+        for name, render_mode, clip, status in (
+                ("visible", 0, None, "UnclippedInk"),
+                ("absent", None, None, "NoMatchingPaintSpan"),
+                ("invisible", 3, None, "NoMatchingPaintSpan"),
+                ("clipped", 0, b"0 0 80 160 re W n", "Clipped")):
+            with self.subTest(name=name), fitz.open() as document:
+                page = document.new_page(width=220, height=160)
+                if render_mode is not None:
+                    page.insert_font(fontname="F1", fontfile=FONT_DIRECTORY / "DejaVuSans.ttf")
+                    page.insert_text((20, 50), "Source text", fontname="F1", fontsize=20,
+                                     render_mode=render_mode)
+                    if clip:
+                        contents = page.get_contents()[0]
+                        document.update_stream(contents, b"q\n" + clip + b"\n" +
+                                               document.xref_stream(contents) + b"\nQ\n")
+                pdf = self.root / (name + ".pdf")
+                document.save(pdf, deflate=True)
+                output = self.root / (name + ".json")
+                command = [sys.executable, str(ROOT / "tools/ScreenPdfInk.py"), "--pdf", str(pdf),
+                           "--expected-pdf-sha256", hashlib.sha256(pdf.read_bytes()).hexdigest(),
+                           "--text-witness", "1", "Source text", "--output", str(output)]
+                run = subprocess.run(command, capture_output=True, text=True)
+                self.assertEqual(0 if name == "visible" else 1, run.returncode, run.stderr)
+                matched = json.loads(output.read_text())["Rows"][0]["TextWitnesses"]
+                self.assertEqual([status], [match["Status"] for match in matched])
+                if name == "visible":
+                    result = analyze_pdf(pdf, text_witnesses=[(1, "Source tex"), (2, "Source text")])
+                    self.assertEqual(["NoMatchingPaintSpan", "NoMatchingPaintSpan"],
+                                     [match["Status"] for match in result["TextWitnesses"]])
+
+    def test_named_witness_in_zero_alpha_group_remains_unverified(self):
+        with fitz.open() as source, fitz.open() as document:
+            source_page = source.new_page(width=220, height=160)
+            source_page.insert_font(fontname="F1", fontfile=FONT_DIRECTORY / "DejaVuSans.ttf")
+            source_page.insert_text((20, 50), "Source text", fontname="F1", fontsize=20)
+            page = document.new_page(width=220, height=160)
+            form = page.show_pdf_page(page.rect, source, 0)
+            document.xref_set_key(form, "Group", "<< /S /Transparency /I true /K false >>")
+            resources = int(document.xref_get_key(page.xref, "Resources")[1].split()[0])
+            document.xref_set_key(resources, "ExtGState", "<< /Hidden << /ca 0 /CA 0 >> >>")
+            contents, = page.get_contents()
+            document.update_stream(contents, b"q /Hidden gs\n" + document.xref_stream(contents) + b"\nQ\n")
+            document.save(self.pdf)
+        witness, = analyze_pdf(self.pdf, text_witnesses=[(1, "Source text")])["TextWitnesses"]
+        self.assertEqual("Unverified", witness["Status"])
+        self.assertEqual("TransparencyGroup", witness["Reason"])
 
     def test_manifest_selection_and_library_identity(self):
         target = self.root / "probe-final-preserve"

@@ -110,7 +110,15 @@ rasterizing reused comparisons.
 content and ink checks. Use `AuditCompositionContent.py --screen-pictures` with
 PyMuPDF at portfolio milestones. It checks authored PNG colors and the named
 SVG fill in rendered regions against pinned Office PDFs. Unsupported witnesses
-stay unverified. Portfolio joins check the selected modes and content
+stay unverified. Use `ScreenPdfInk.py --pdf <pdf> --expected-pdf-sha256 <hash>
+--text-witness 1 "Authored heading" --output <report.json>` for selected
+phrases in an embedded TrueType paint span. Repeat `--text-witness` for more
+page and phrase pairs. The report retains missing paint spans, clipped
+glyphs and unresolved states. An unmet witness gives a nonzero exit status.
+Use this alongside decoded-text checks and raster review for occlusion,
+complex paint or text spread across multiple spans.
+
+Portfolio joins check the selected modes and content
 expectations against the pinned text operations and verify the diagnostic
 sidecars. Reinspect existing PDFs with `-ReuseCandidateDirectory` when a join
 reports changed expectations or a missing text-inspection hash. Numerical visual limits live in

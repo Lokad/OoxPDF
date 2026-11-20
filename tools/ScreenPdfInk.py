@@ -11,6 +11,7 @@ import hashlib
 import io
 import json
 from pathlib import Path
+import unicodedata
 import xml.etree.ElementTree as ET
 
 import fontTools
@@ -91,7 +92,37 @@ def rectangle_clip(node):
                      max(p.x for p in points), max(p.y for p in points))
 
 
-def analyze_pdf(path, expected_sha256=None, include_trace_bounds=False):
+def text_witness_matches(span, witnesses):
+    """Find exact phrases inside one native paint span, with word boundaries."""
+    if not witnesses:
+        return
+    characters = [glyph.attrib.get("unicode") or "\ufffd" for glyph in span]
+    text = "".join(characters)
+    glyph_indexes = [index for index, value in enumerate(characters) for _ in value]
+
+    def word(character):
+        category = unicodedata.category(character)
+        return category[0] in "LMN" or category == "Pc" or character == "\ufffd"
+
+    for witness in witnesses:
+        phrase = witness["Text"]
+        start = text.find(phrase)
+        while start >= 0:
+            end = start + len(phrase)
+            if (not (start > 0 and word(phrase[0]) and word(text[start - 1]))
+                    and not (end < len(text) and word(phrase[-1]) and word(text[end]))):
+                yield witness, {glyph_indexes[i] for i in range(start, end) if not text[i].isspace()}
+            start = text.find(phrase, start + 1)
+
+
+def record_witness_paint(witness, status, paint, identity, reason=None):
+    # Favor a complete paint, then an unresolved match that may still qualify.
+    states = ("NoMatchingPaintSpan", "Clipped", "Unverified", "UnclippedInk")
+    if states.index(status) > states.index(witness["Status"]):
+        witness.update(Status=status, Paint=paint, FontProgramSha256=identity, Reason=reason)
+
+
+def analyze_pdf(path, expected_sha256=None, include_trace_bounds=False, text_witnesses=()):
     path = Path(path)
     digest = sha256(path.read_bytes())
     if expected_sha256 and digest != expected_sha256.upper():
@@ -100,9 +131,14 @@ def analyze_pdf(path, expected_sha256=None, include_trace_bounds=False):
               "UnmeasuredTextTraces": [], "InklessGlyphs": 0, "Pages": []}
     if include_trace_bounds:
         result["TraceInkBounds"] = []
+    witnesses = [{"Page": page, "Text": text, "Status": "NoMatchingPaintSpan"}
+                 for page, text in text_witnesses]
+    if witnesses:
+        result["TextWitnesses"] = witnesses
     document = fitz.open(path)
     try:
         for page in document:
+            page_witnesses = [witness for witness in witnesses if witness["Page"] == page.number + 1]
             device = FontPaints()
             fitz.mupdf.fz_run_page(page.this, device, fitz.mupdf.FzMatrix(1, 0, 0, 1, 0, 0),
                                   fitz.mupdf.FzCookie())
@@ -135,11 +171,15 @@ def analyze_pdf(path, expected_sha256=None, include_trace_bounds=False):
             event_index = 0
             names = {}
 
-            def visit(parent):
+            def visit(parent, unverified_composite=False):
                 nonlocal event_index
                 for node in parent:
                     if node.tag in ("group", "layer", "trace", "structure", "metatext"):
-                        visit(node)
+                        group_uncertain = node.tag == "group" and (
+                            float(node.attrib.get("alpha", "1")) != 1
+                            or node.attrib.get("blendmode", "Normal") != "Normal"
+                            or node.attrib.get("knockout", "0") != "0")
+                        visit(node, unverified_composite or group_uncertain)
                         continue
                     if node.tag.startswith("clip_"):
                         rectangle = rectangle_clip(node)
@@ -181,17 +221,25 @@ def analyze_pdf(path, expected_sha256=None, include_trace_bounds=False):
                                   "StrokedText" if kind == "stroke_text" else
                                   "TransparentPaint" if float(node.attrib.get("alpha", "1")) <= 0 else
                                   "UnavailableEmbeddedTrueTypeProgram" if font is None else None)
+                        matches = list(text_witness_matches(span, page_witnesses))
+                        if matches and unverified_composite:
+                            for witness, _ in matches:
+                                record_witness_paint(witness, "Unverified", event_index, identity, "TransparencyGroup")
+                            matches = []
                         if reason:
                             if any(g.attrib.get("unicode", "").strip() for g in span):
                                 result["UnmeasuredTextTraces"].append(
                                     {"Page": page.number + 1, "Paint": event_index,
                                      "FontProgramSha256": identity, "Reason": reason})
+                            for witness, _ in matches:
+                                record_witness_paint(witness, "Unverified", event_index, identity, reason)
                             continue
                         order = font.getGlyphOrder()
                         units = font["head"].unitsPerEm
                         a, b, c, d = [float(x) for x in span.attrib["trm"].split()]
                         cut = []
                         trace_ink = None
+                        witness_ink = set() if matches else None
                         for index, glyph_node in enumerate(span):
                             character = glyph_node.attrib.get("unicode", "")
                             if not character or character.isspace():
@@ -209,12 +257,23 @@ def analyze_pdf(path, expected_sha256=None, include_trace_bounds=False):
                                                        float(glyph_node.attrib["y"])) * matrix
                             ink = transform_box((glyph.xMin, glyph.yMin, glyph.xMax, glyph.yMax),
                                                 glyph_matrix)
+                            if witness_ink is not None and not ink.is_empty:
+                                witness_ink.add(index)
                             if include_trace_bounds:
                                 trace_ink = ink if trace_ink is None else trace_ink | ink
                             if (ink.x0 < clip.x0 - .01 or ink.y0 < clip.y0 - .01 or
                                     ink.x1 > clip.x1 + .01 or ink.y1 > clip.y1 + .01):
                                 cut.append({"Index": index, "Character": character, "GlyphId": glyph_id,
                                             "Ink": list(ink), "FullyHidden": (ink & clip).is_empty})
+                        if matches:
+                            clipped_indexes = {glyph["Index"] for glyph in cut}
+                            for witness, indexes in matches:
+                                if not indexes or not indexes.issubset(witness_ink):
+                                    record_witness_paint(witness, "Unverified", event_index, identity, "UnmeasuredGlyphInk")
+                                elif indexes & clipped_indexes:
+                                    record_witness_paint(witness, "Clipped", event_index, identity)
+                                else:
+                                    record_witness_paint(witness, "UnclippedInk", event_index, identity)
                         if include_trace_bounds and trace_ink is not None:
                             result["TraceInkBounds"].append(
                                 {"Page": page.number + 1, "Paint": event_index,
@@ -248,14 +307,24 @@ def main():
     parser.add_argument("--expected-pdf-sha256")
     parser.add_argument("--expected-library-sha256")
     parser.add_argument("--manifest", type=Path, help="Select the IDs of an existing document manifest")
+    parser.add_argument("--text-witness", action="append", nargs=2, metavar=("PAGE", "PHRASE"),
+                        help="Require one native span with the exact phrase and measured unclipped glyph ink")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     if args.output.exists():
         parser.error("Preserve existing evidence; use a fresh output file")
+    witnesses = []
+    if args.text_witness:
+        if not (args.pdf and args.expected_pdf_sha256):
+            parser.error("--text-witness requires --pdf and --expected-pdf-sha256")
+        for page, phrase in args.text_witness:
+            if not page.isascii() or not page.isdecimal() or int(page) < 1 or not phrase.strip():
+                parser.error("Each text witness requires a positive page number and a nonempty phrase")
+            witnesses.append((int(page), phrase))
     if args.pdf:
         if args.manifest or args.expected_library_sha256:
             parser.error("Manifest/library identities require --outcomes")
-        rows = [analyze_pdf(args.pdf, args.expected_pdf_sha256)]
+        rows = [analyze_pdf(args.pdf, args.expected_pdf_sha256, text_witnesses=witnesses)]
         inputs = {"Pdf": str(args.pdf)}
     else:
         if args.expected_pdf_sha256:
@@ -295,7 +364,12 @@ def main():
     print(f"{len(rows)} PDFs screened; {sum(x['GlyphsMeasured'] for x in rows)} glyphs measured; "
           f"{sum(len(x['ClippedTextTraces']) for x in rows)} clipped traces; "
           f"{sum(len(x['UnmeasuredTextTraces']) for x in rows)} unknown traces.")
+    unmet = sum(row["Status"] != "UnclippedInk" for row in rows[0].get("TextWitnesses", ()))
+    if unmet:
+        print(f"{unmet} of {len(witnesses)} text witnesses did not qualify.")
+        return 1
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
