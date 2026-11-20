@@ -1095,6 +1095,8 @@ internal static class DocxPageTests
         {
             string run = "<w:r><w:br w:type=\"" + breakType + "\"/></w:r>";
             string permissions = "<w:permStart w:id=\"28\" w:edGrp=\"everyone\"/>" + run + "<w:permEnd w:id=\"28\"/>";
+            const string moveRange = "<w:moveToRangeStart w:id=\"37\" w:name=\"PublicRange\" w:author=\"Public probe\"/>" +
+                "<w:moveToRangeEnd w:id=\"37\"/>";
             string[] variants = [
                 permissions,
                 "<w:customXml w:element=\"PublicBreak\"><w:customXmlPr/>" + run + "</w:customXml>",
@@ -1105,7 +1107,9 @@ internal static class DocxPageTests
                 "<w:r><w:rPr><w:vanish/></w:rPr><w:br w:type=\"" + breakType + "\"/></w:r>" + run,
                 "<w:bookmarkStart w:id=\"28\" w:name=\"Break\"/><w:proofErr w:type=\"spellStart\"/>" + run + "<w:bookmarkEnd w:id=\"28\"/>",
                 "<w:r><w:lastRenderedPageBreak/></w:r>" +
-                    run.Replace("</w:r>", "<w:lastRenderedPageBreak/></w:r>", StringComparison.Ordinal)
+                    run.Replace("</w:r>", "<w:lastRenderedPageBreak/></w:r>", StringComparison.Ordinal),
+                moveRange + run,
+                "<w:sdt><w:sdtContent>" + run + moveRange + "</w:sdtContent></w:sdt>"
             ];
             if (mode == OoxPdfDocxMarkupMode.Original)
             {
@@ -1119,10 +1123,21 @@ internal static class DocxPageTests
             {
                 DocxDocument document = ReadBreakMetadataDocument(variant, mode);
                 TestAssert.Equal(3, document.BodyElements.Count);
-                TestAssert.True(breakType == "page"
-                    ? document.BodyElements[1] is DocxPageBreakElement { BreakParagraph: not null }
-                    : document.BodyElements[1] is DocxManualBreakElement { BreakParagraph: not null },
-                    "Nonprinting metadata must retain the authored break paragraph, not add empty paragraphs around a split break.");
+                DocxParagraph? breakParagraph = document.BodyElements[1] switch
+                {
+                    DocxPageBreakElement page when breakType == "page" => page.BreakParagraph,
+                    DocxManualBreakElement column when breakType == "column" => column.BreakParagraph,
+                    _ => null
+                };
+                TestAssert.True(breakParagraph is not null, "Nonprinting metadata retains the authored break paragraph.");
+                if (variant.Contains("moveToRangeStart", StringComparison.Ordinal))
+                {
+                    DocxRevisionRange range = breakParagraph!.RevisionRanges.Single();
+                    TestAssert.Equal("37", range.Id);
+                    TestAssert.Equal("PublicRange", range.Name);
+                    TestAssert.True(!range.HasContentSource && range.StartSourceRunIndex is not null,
+                        "A closed range stays on the break paragraph and retains its source boundaries.");
+                }
                 DocxLayout actual = Layout(document);
                 TestAssert.Equal(expected.Pages.Count, actual.Pages.Count);
                 TestAssert.True(expectedLines.SequenceEqual(Lines(actual)),
@@ -1142,6 +1157,9 @@ internal static class DocxPageTests
     public static void DocxBreakOnlyMetadataDoesNotHidePayloadOrMisplacedProperties()
     {
         const string run = "<w:r><w:br w:type=\"page\"/></w:r>";
+        const string moveStart = "<w:moveToRangeStart w:id=\"37\" w:name=\"PublicRange\"/>";
+        const string moveEnd = "<w:moveToRangeEnd w:id=\"37\"/>";
+        const string crossingRange = moveStart + run + moveEnd;
         foreach (string metadata in new[] {
             "<w:permStart w:id=\"28\"><w:r><w:t>Payload</w:t></w:r></w:permStart>",
             "<w:proofErr>Payload</w:proofErr>",
@@ -1149,10 +1167,15 @@ internal static class DocxPageTests
             "<w:r><w:lastRenderedPageBreak w:future=\"1\"/></w:r>",
             "<w:r><w:lastRenderedPageBreak><w:t>Payload</w:t></w:lastRenderedPageBreak></w:r>",
             "<w:customXml><w:r><w:lastRenderedPageBreak w:future=\"1\"/></w:r></w:customXml>",
-            "<w:customXmlPr/>", "<w:smartTagPr/>", "<w:sdtPr/>", "<w:sdtEndPr/>" })
+            "<w:customXmlPr/>", "<w:smartTagPr/>", "<w:sdtPr/>", "<w:sdtEndPr/>",
+            moveStart, crossingRange,
+            moveStart + "<w:moveToRangeEnd w:id=\"38\"/>",
+            "<w:moveToRangeStart w:id=\"37\"><w:future/></w:moveToRangeStart>" + moveEnd })
         {
             DocxDocument document = ReadBreakMetadataDocument(metadata + run, OoxPdfDocxMarkupMode.Final);
-            TestAssert.True(document.BodyElements.OfType<DocxPageBreakElement>().Single().BreakParagraph is null,
+            var breaks = document.BodyElements.OfType<DocxPageBreakElement>().ToArray();
+            TestAssert.Equal(metadata == crossingRange ? 2 : 1, breaks.Length);
+            TestAssert.True(breaks.All(page => page.BreakParagraph is null),
                 "Payload-bearing markers and properties outside their actual owner must retain the ordinary paragraph fallback.");
             TestAssert.True(document.BodyElements.OfType<DocxParagraphElement>().Count() > 2,
                 "Unrecognized source content must not be discarded by break-only promotion.");
