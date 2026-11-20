@@ -1232,6 +1232,63 @@ internal static class DocxPageTests
         }
     }
 
+    public static void DocxComplexCounterCacheStaysReplacedAcrossHardBreaks()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.Original, OoxPdfDocxMarkupMode.AllMarkup })
+        foreach (string kind in new[] { "page", "column" })
+        {
+            int columns = kind == "page" ? 1 : 2;
+            string hardBreak = "<w:r><w:br w:type=\"" + kind + "\"/></w:r>";
+            string following = Text("77") + Text("FOLLOWING");
+            var geometry = mode == OoxPdfDocxMarkupMode.AllMarkup ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup :
+                OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout;
+            var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(), mode, geometry);
+
+            foreach (string opcode in new[] { "PAGE", "NUMPAGES" })
+            {
+                string field = Start(opcode);
+                foreach (string suffix in new[] { following, string.Empty })
+                {
+                    var direct = Render(field + End() + hardBreak + suffix);
+                    var split = Render(field + hardBreak + Text("STALE CACHE") + End() + suffix);
+                    TestAssert.True(direct.Pages.SequenceEqual(split.Pages),
+                        "Carried cache text must leave the computed value, explicit break and following frames intact.");
+                    var reference = split.Fields.Single();
+                    TestAssert.True(reference.UsesPlaceholder && reference.HasCachedResult && !reference.RendersCachedResult,
+                        "The first fragment owns both the counter and the fact that its result had a cache.");
+                }
+
+                string nested = Start("PAGEREF") + hardBreak + Text("NESTED CACHE") + End() + Text("OUTER CACHE") + End();
+                var afterNested = Render(field + nested + following);
+                var directAfterNested = Render(field + End() + hardBreak + following);
+                TestAssert.True(directAfterNested.Pages.SequenceEqual(afterNested.Pages),
+                    "The inner end token must leave the computed outer result active until its own end.");
+            }
+
+            foreach (string start in new[] { Start("PAGE", locked: true), Start("PAGEREF") })
+            {
+                var cached = Render(start + Text("FIRST CACHE") + hardBreak + Text("SECOND CACHE") + End() + following);
+                string text = string.Concat(cached.Text).Replace(" ", string.Empty, StringComparison.Ordinal);
+                TestAssert.Contains("FIRSTCACHESECONDCACHE77FOLLOWING", text);
+            }
+
+            (string[] Pages, string[] Text, DocxFieldReference[] Fields) Render(string content)
+            {
+                DocxDocument document = ReadBreakMetadataDocument(content, mode, columns);
+                PdfPage[] pages = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
+                return (pages.Select(page => page.Content).ToArray(),
+                    pages.SelectMany(DocxCommentsTests.ReadEmbeddedGlyphTextShows).Select(show => show.Text).ToArray(),
+                    document.Paragraphs.SelectMany(paragraph => paragraph.FieldReferences).ToArray());
+            }
+        }
+
+        static string Text(string text) => "<w:r><w:t>" + text + "</w:t></w:r>";
+        static string End() => "<w:r><w:fldChar w:fldCharType=\"end\"/></w:r>";
+        static string Start(string opcode, bool locked = false) =>
+            "<w:r><w:fldChar w:fldCharType=\"begin\"" + (locked ? " w:fldLock=\"1\"" : string.Empty) +
+            "/></w:r><w:r><w:instrText> " + opcode + " </w:instrText></w:r><w:r><w:fldChar w:fldCharType=\"separate\"/></w:r>";
+    }
+
     public static void DocxRepeatedColumnBreaksKeepEventsAndOneParagraphMark()
     {
         foreach (int columns in new[] { 1, 2, 3 })

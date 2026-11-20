@@ -72,6 +72,16 @@ internal sealed partial class DocxReader
         public DocxTextRun? PendingPlaceholder { get; set; }
         public int InstructionRunCount { get; set; }
         public int ResultRunCount { get; set; }
+        public bool FromPreviousFragment { get; set; }
+        public (List<DocxFieldReference> References, int Index)? CounterReference { get; set; }
+
+        public void RecordCachedResult()
+        {
+            if (HasCachedResult) return;
+            HasCachedResult = true;
+            if (CounterReference is { } owner)
+                owner.References[owner.Index] = owner.References[owner.Index] with { HasCachedResult = true };
+        }
 
         public void EnsureTextSpan(int textRunIndex, int textLengthStart)
         {

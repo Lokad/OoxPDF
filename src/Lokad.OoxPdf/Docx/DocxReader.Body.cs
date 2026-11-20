@@ -126,9 +126,27 @@ internal sealed partial class DocxReader
                         EnumerateSplitFloatingAnchors(element).GetEnumerator();
                     bool matchesSourceAnchors = sourceAnchors is not null;
                     var bookmarksForFragment = leadingBookmarks;
-                    foreach (ParagraphBreakPart part in SplitParagraphAtRunBreaks(element, markupMode, VisibleBreak,
-                        HiddenBreak, retainEmptyColumnTail: true, retainFirstLine: hasListMarker))
+                    var parts = SplitParagraphAtRunBreaks(element, markupMode, VisibleBreak,
+                        HiddenBreak, retainEmptyColumnTail: true, retainFirstLine: hasListMarker);
+                    var splitFields = new List<DocxComplexFieldState>();
+                    var paragraphs = new DocxParagraph?[parts.Count];
+                    // Finish the field results before publishing any fragment. An
+                    // earlier counter's metadata can depend on its later cache.
+                    for (int i = 0; i < parts.Count; i++)
                     {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        ParagraphBreakPart part = parts[i];
+                        if (part.Paragraph is null) continue;
+                        bool retainColumnMark = !part.EndsBeforeBreak && i > 0 &&
+                            string.Equals(parts[i - 1].BreakValue, "column", StringComparison.OrdinalIgnoreCase);
+                        paragraphs[i] = ReadParagraph(part.Paragraph, styles, numbering, numberingCounters, package, relationships, tableCellStyle: null, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken,
+                            isContinuationFragment: !part.IsFirstFragment, leadingBookmarks: bookmarksForFragment,
+                            splitFields: splitFields, retainEmptyColumnMark: retainColumnMark);
+                        bookmarksForFragment = null;
+                    }
+                    for (int i = 0; i < parts.Count; i++)
+                    {
+                        ParagraphBreakPart part = parts[i];
                         cancellationToken.ThrowIfCancellationRequested();
                         if (part.BreakValue is not null)
                         {
@@ -149,11 +167,8 @@ internal sealed partial class DocxReader
                             continue;
                         }
 
-                        DocxParagraph? splitParagraph = ReadParagraph(part.Paragraph, styles, numbering, numberingCounters, package, relationships, tableCellStyle: null, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken,
-                            isContinuationFragment: !part.IsFirstFragment, leadingBookmarks: bookmarksForFragment);
-                        bookmarksForFragment = null;
                         int? blockIndex = null;
-                        if (splitParagraph is not null)
+                        if (paragraphs[i] is { } splitParagraph)
                         {
                             blockIndex = AppendFlowParagraph(elements,
                                 DocxBodyElementFactory.CreateParagraph(AdjustBreakParagraphFragment(splitParagraph, part, sourceNumbering?.Definition.Indent)),

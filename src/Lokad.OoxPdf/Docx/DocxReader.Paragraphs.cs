@@ -26,7 +26,9 @@ internal sealed partial class DocxReader
         bool retainBalloonParagraphMark = false,
         bool isContinuationFragment = false,
         IReadOnlyList<DocxBookmarkAnchor>? leadingBookmarks = null,
-        DocxCellBookmarkScope? cellBookmarks = null)
+        DocxCellBookmarkScope? cellBookmarks = null,
+        List<DocxComplexFieldState>? splitFields = null,
+        bool retainEmptyColumnMark = false)
     {
         cancellationToken.ThrowIfCancellationRequested();
         XElement? paragraphProperties = paragraph.Element(WordprocessingNamespace + "pPr");
@@ -79,7 +81,8 @@ internal sealed partial class DocxReader
         bool hasDeletedParagraphMark = paragraphMarkRevisions.Any(revision => revision.Kind == DocxRevisionKind.Deletion && revision.SourceElement == "del");
         AddRevisions(paragraphRevisions, paragraphMarkRevisions);
         bool pageInstructionSeen = false;
-        var complexFieldStack = new List<DocxComplexFieldState>();
+        var complexFieldStack = splitFields ?? new List<DocxComplexFieldState>();
+        bool startsInsideComputedResult = complexFieldStack.Any(IsComputedResult);
         int sourceRunIndex = 0;
         long contentSourcePosition = 0;
         HashSet<DocxRevisionInfo>? nonPrintingRangeMarkers = null;
@@ -237,6 +240,18 @@ internal sealed partial class DocxReader
         }
 
         FinalizeOpenComplexFields();
+
+        if (startsInsideComputedResult && !retainEmptyColumnMark &&
+            runs.Count == 0 && images.Count == 0 && equations.Count == 0 && inlineTextBoxes.Count == 0 &&
+            hiddenDrawingEquationSourceCount == 0 && deletedText.Length == 0 &&
+            bookmarkAnchors.Count == 0 && hyperlinkSpans.Count == 0 && fieldReferences.Count == 0 &&
+            commentRanges.Count == 0 && openCommentRanges.Count == 0 && inlineReferences.Count == 0 &&
+            revisionRanges.Count == 0 && openRevisionRanges.Count == 0 && paragraphRevisions.Count == 0)
+        {
+            // A page-break continuation containing only a replaced cache and
+            // its closing markers does not supply another line of content.
+            return null;
+        }
 
         // Pilcrow (paragraph-mark) size through the style cascade, excluding direct run
         // formatting. Row-end and break-spill spaces resolve at pilcrow size in Word
@@ -969,7 +984,7 @@ internal sealed partial class DocxReader
                 int activeFieldTextLengthStart = runs.Sum(run => run.Text.Length);
                 foreach (DocxComplexFieldState field in resultFields)
                 {
-                    field.HasCachedResult = true;
+                    field.RecordCachedResult();
                     field.EnsureTextSpan(activeFieldTextRunIndex, activeFieldTextLengthStart);
                 }
             }
@@ -1119,16 +1134,21 @@ internal sealed partial class DocxReader
                 // A completed page field no longer owns following authored
                 // spaces or numbers. Nested page results keep their own cache.
                 pageInstructionSeen = complexFieldStack.Any(active => active.PlaceholderEmitted);
-                AddComplexFieldReference(field, null, null);
+                if (!field.FromPreviousFragment) AddComplexFieldReference(field, null, null);
             }
         }
+
+        static bool IsComputedResult(DocxComplexFieldState field) => field.InResult && field.PlaceholderEmitted;
 
         void FinalizeOpenComplexFields()
         {
             int firstRun = runs.Count;
+            bool retainResultScope = splitFields is not null && complexFieldStack.Any(IsComputedResult) &&
+                complexFieldStack.All(field => field.InResult);
             for (int fieldIndex = complexFieldStack.Count - 1; fieldIndex >= 0; fieldIndex--)
             {
                 DocxComplexFieldState field = complexFieldStack[fieldIndex];
+                if (field.FromPreviousFragment) continue;
                 EmitPendingFieldPlaceholder(field);
                 string instruction = field.Instruction.ToString();
                 string? placeholder = ResolveFieldPlaceholder(instruction, field.IsLocked);
@@ -1138,9 +1158,21 @@ internal sealed partial class DocxReader
                 }
 
                 AddComplexFieldReference(field, instruction, placeholder);
+                if (retainResultScope && IsComputedResult(field) && !field.HasCachedResult)
+                    field.CounterReference = (fieldReferences, fieldReferences.Count - 1);
             }
 
-            complexFieldStack.Clear();
+            if (retainResultScope)
+            {
+                // Other open levels still balance their end tokens. Only an
+                // already emitted counter causes cached text to be replaced.
+                foreach (DocxComplexFieldState field in complexFieldStack)
+                    field.FromPreviousFragment = true;
+            }
+            else
+            {
+                complexFieldStack.Clear();
+            }
             PublishInlineRunItems(firstRun, images.Count);
         }
 
@@ -1266,7 +1298,7 @@ internal sealed partial class DocxReader
             foreach (var field in complexFieldStack)
             {
                 if (!field.InResult) continue;
-                field.HasCachedResult = true;
+                field.RecordCachedResult();
                 // Computed counters keep their existing replacement owner.
                 if (!field.PlaceholderEmitted) field.RendersCachedResult = true;
             }

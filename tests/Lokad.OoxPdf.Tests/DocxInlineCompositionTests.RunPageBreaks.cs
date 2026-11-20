@@ -11,6 +11,7 @@ internal static partial class DocxInlineCompositionTests
     public static void DocxSplitComputedFieldKeepsCachedPictureAfterHardBreak()
     {
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        foreach (bool complexField in new[] { false, true })
         {
             var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(), mode, CachedMathGeometry(mode));
             PdfPage[] expected = Render(splitField: false);
@@ -28,14 +29,28 @@ internal static partial class DocxInlineCompositionTests
                     XElement body = xml.Root!.Element(w + "body")!;
                     var picture = new XElement(body.Descendants(w + "drawing").Single());
                     var pageBreak = new XElement(w + "br", new XAttribute(w + "type", "page"));
-                    var field = new XElement(w + "fldSimple", new XAttribute(w + "instr", "PAGE"));
-                    var paragraph = new XElement(w + "p", field);
-                    if (splitField)
-                        field.Add(new XElement(w + "r", new XElement(w + "t", "31"), pageBreak, picture, new XElement(w + "t", "32")));
+                    var paragraph = new XElement(w + "p");
+                    if (complexField)
+                    {
+                        paragraph.Add(Marker("begin"), new XElement(w + "r", new XElement(w + "instrText", " PAGE ")), Marker("separate"));
+                        if (splitField)
+                            paragraph.Add(new XElement(w + "r", pageBreak, picture, new XElement(w + "t", "32")), Marker("end"));
+                        else
+                            paragraph.Add(Marker("end"), new XElement(w + "r", pageBreak, picture));
+                    }
                     else
-                        paragraph.Add(new XElement(w + "r", pageBreak, picture));
+                    {
+                        var field = new XElement(w + "fldSimple", new XAttribute(w + "instr", "PAGE"));
+                        paragraph.Add(field);
+                        if (splitField)
+                            field.Add(new XElement(w + "r", new XElement(w + "t", "31"), pageBreak, picture, new XElement(w + "t", "32")));
+                        else
+                            paragraph.Add(new XElement(w + "r", pageBreak, picture));
+                    }
                     body.ReplaceNodes(paragraph, new XElement(w + "p", new XElement(w + "r", new XElement(w + "t", "AFTER PICTURE"))),
                         new XElement(w + "sectPr"));
+
+                    XElement Marker(string kind) => new(w + "r", new XElement(w + "fldChar", new XAttribute(w + "fldCharType", kind)));
                 });
                 var counter = document.Paragraphs.SelectMany(paragraph => paragraph.FieldReferences).Single();
                 TestAssert.Equal(DocxFieldKind.Page, counter.Kind);
