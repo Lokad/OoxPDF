@@ -857,8 +857,6 @@ internal sealed record PptxSceneChartAxis
 
     public double? CrossesAt { get; }
 
-    public string CrossesAtValue { get; }
-
     public PptxSceneChartAxisCrossBetween CrossBetweenKind { get; }
 
     public string CrossBetween { get; }
@@ -868,8 +866,6 @@ internal sealed record PptxSceneChartAxis
     public string Orientation { get; }
 
     public bool? IsDeleted { get; }
-
-    public string IsDeletedValue { get; }
 
     public bool HasScaling { get; }
 
@@ -888,8 +884,6 @@ internal sealed record PptxSceneChartAxis
     public string MajorUnitValue { get; }
 
     public double? MinorUnit { get; }
-
-    public string MinorUnitValue { get; }
 
     public bool HasMajorGridlines { get; }
 
@@ -921,8 +915,6 @@ internal sealed record PptxSceneChartAxis
 
     public int? LabelOffset { get; }
 
-    public string LabelOffsetValue { get; }
-
     public int? TickLabelSkip { get; }
 
     public string TickLabelSkipValue { get; }
@@ -943,13 +935,11 @@ internal sealed record PptxSceneChartAxis
         PptxSceneChartAxisCrosses crossesKind,
         string crosses,
         double? crossesAt,
-        string crossesAtValue,
         PptxSceneChartAxisCrossBetween crossBetweenKind,
         string crossBetween,
         PptxSceneChartAxisOrientation orientationKind,
         string orientation,
         bool? isDeleted,
-        string isDeletedValue,
         bool hasScaling,
         double? minimum,
         string minimumValue,
@@ -958,7 +948,6 @@ internal sealed record PptxSceneChartAxis
         double? majorUnit,
         string majorUnitValue,
         double? minorUnit,
-        string minorUnitValue,
         bool hasMajorGridlines,
         bool hasMinorGridlines,
         bool hasMajorGridlineElement,
@@ -973,7 +962,6 @@ internal sealed record PptxSceneChartAxis
         PptxSceneChartAxisTickMark majorTickMarkKind,
         string majorTickMark,
         int? labelOffset,
-        string labelOffsetValue,
         int? tickLabelSkip,
         string tickLabelSkipValue,
         string? numberFormat,
@@ -989,13 +977,11 @@ internal sealed record PptxSceneChartAxis
         CrossesKind = crossesKind;
         Crosses = crosses;
         CrossesAt = crossesAt;
-        CrossesAtValue = crossesAtValue;
         CrossBetweenKind = crossBetweenKind;
         CrossBetween = crossBetween;
         OrientationKind = orientationKind;
         Orientation = orientation;
         IsDeleted = isDeleted;
-        IsDeletedValue = isDeletedValue;
         HasScaling = hasScaling;
         Minimum = minimum;
         MinimumValue = minimumValue;
@@ -1004,7 +990,6 @@ internal sealed record PptxSceneChartAxis
         MajorUnit = majorUnit;
         MajorUnitValue = majorUnitValue;
         MinorUnit = minorUnit;
-        MinorUnitValue = minorUnitValue;
         HasMajorGridlines = hasMajorGridlines;
         HasMinorGridlines = hasMinorGridlines;
         HasMajorGridlineElement = hasMajorGridlineElement;
@@ -1019,7 +1004,6 @@ internal sealed record PptxSceneChartAxis
         MajorTickMarkKind = majorTickMarkKind;
         MajorTickMark = majorTickMark;
         LabelOffset = labelOffset;
-        LabelOffsetValue = labelOffsetValue;
         TickLabelSkip = tickLabelSkip;
         TickLabelSkipValue = tickLabelSkipValue;
         NumberFormat = numberFormat;
@@ -1034,11 +1018,9 @@ internal sealed record PptxSceneChartAxis
         string crossAxisId,
         string crosses,
         double? crossesAt,
-        string crossesAtValue,
         string crossBetween,
         string orientation,
         bool? isDeleted,
-        string isDeletedValue,
         bool hasScaling,
         double? minimum,
         string minimumValue,
@@ -1047,7 +1029,6 @@ internal sealed record PptxSceneChartAxis
         double? majorUnit,
         string majorUnitValue,
         double? minorUnit,
-        string minorUnitValue,
         bool hasMajorGridlines,
         bool hasMinorGridlines,
         bool hasMajorGridlineElement,
@@ -1060,7 +1041,6 @@ internal sealed record PptxSceneChartAxis
         string tickLabelPosition,
         string majorTickMark,
         int? labelOffset,
-        string labelOffsetValue,
         int? tickLabelSkip,
         string tickLabelSkipValue,
         string? numberFormat,
@@ -1078,13 +1058,11 @@ internal sealed record PptxSceneChartAxis
             PptxSceneBuilder.ParseChartAxisCrosses(crosses),
             crosses,
             crossesAt,
-            crossesAtValue,
             PptxSceneBuilder.ParseChartAxisCrossBetween(crossBetween),
             crossBetween,
             PptxSceneBuilder.ParseChartAxisOrientation(orientation),
             orientation,
             isDeleted,
-            isDeletedValue,
             hasScaling,
             minimum,
             minimumValue,
@@ -1093,7 +1071,6 @@ internal sealed record PptxSceneChartAxis
             majorUnit,
             majorUnitValue,
             minorUnit,
-            minorUnitValue,
             hasMajorGridlines,
             hasMinorGridlines,
             hasMajorGridlineElement,
@@ -1108,7 +1085,6 @@ internal sealed record PptxSceneChartAxis
             PptxSceneBuilder.ParseChartAxisTickMark(majorTickMark),
             majorTickMark,
             labelOffset,
-            labelOffsetValue,
             tickLabelSkip,
             tickLabelSkipValue,
             numberFormat,

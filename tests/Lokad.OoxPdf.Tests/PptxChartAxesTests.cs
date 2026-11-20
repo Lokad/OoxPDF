@@ -1785,7 +1785,6 @@ internal static class PptxChartAxesTests
         PptxSceneChartAxis valueAxis = chart.Axes.First(axis => axis.AxisKind == PptxSceneChartAxisKind.Value);
         TestAssert.Equal(PptxSceneChartAxisCrosses.Maximum, valueAxis.CrossesKind);
         TestAssert.True(valueAxis.CrossesAt is null, "Expected unparseable scene crossesAt to stay distinct from an authored value.");
-        TestAssert.Equal("futureCross", valueAxis.CrossesAtValue);
 
         XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
         XElement alternateSource = XDocument.Parse("""

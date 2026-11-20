@@ -450,14 +450,14 @@ internal sealed partial class PptxSceneBuilder
             string orientation = ReadChartElementValue(axis.Element(ChartNamespace + "scaling"), "orientation");
             string tickLabelPosition = ReadChartElementValue(axis, "tickLblPos");
             string majorTickMark = ReadChartElementValue(axis, "majorTickMark");
-            (double? crossesAt, string crossesAtValue) = ReadChartElementDoubleWithValue(axis, "crossesAt");
+            double? crossesAt = ReadChartElementDoubleWithValue(axis, "crossesAt").Value;
             (double? minimum, string minimumValue) = ReadChartAxisScalingValueWithValue(axis, "min");
             (double? maximum, string maximumValue) = ReadChartAxisScalingValueWithValue(axis, "max");
             (double? majorUnit, string majorUnitValue) = ReadChartAxisUnitValueWithValue(axis, "majorUnit");
-            (double? minorUnit, string minorUnitValue) = ReadChartAxisUnitValueWithValue(axis, "minorUnit");
-            (int? labelOffset, string labelOffsetValue) = ReadChartElementIntWithValue(axis, "lblOffset");
+            double? minorUnit = ReadChartAxisUnitValueWithValue(axis, "minorUnit").Value;
+            int? labelOffset = ReadChartElementIntWithValue(axis, "lblOffset").Value;
             (int? tickLabelSkip, string tickLabelSkipValue) = ReadChartElementIntWithValue(axis, "tickLblSkip");
-            (bool? isDeleted, string isDeletedValue) = ReadOptionalOoxmlBooleanElementWithValue(axis, "delete");
+            bool? isDeleted = ReadOptionalOoxmlBooleanElementWithValue(axis, "delete").Value;
             XElement? majorGridlines = axis.Element(ChartNamespace + "majorGridlines");
             XElement? minorGridlines = axis.Element(ChartNamespace + "minorGridlines");
             bool hasLogarithmicScale = axis.Element(ChartNamespace + "scaling")?.Element(ChartNamespace + "logBase") is not null;
@@ -468,11 +468,9 @@ internal sealed partial class PptxSceneBuilder
                 ReadChartElementValue(axis, "crossAx"),
                 crosses,
                 crossesAt,
-                crossesAtValue,
                 crossBetween,
                 orientation,
                 isDeleted,
-                isDeletedValue,
                 axis.Element(ChartNamespace + "scaling") is not null,
                 minimum,
                 minimumValue,
@@ -481,7 +479,6 @@ internal sealed partial class PptxSceneBuilder
                 majorUnit,
                 majorUnitValue,
                 minorUnit,
-                minorUnitValue,
                 IsChartGridlineVisible(majorGridlines),
                 IsChartGridlineVisible(minorGridlines),
                 majorGridlines is not null,
@@ -494,7 +491,6 @@ internal sealed partial class PptxSceneBuilder
                 tickLabelPosition,
                 majorTickMark,
                 labelOffset,
-                labelOffsetValue,
                 tickLabelSkip,
                 tickLabelSkipValue,
                 ReadChartAxisNumberFormat(axis),
