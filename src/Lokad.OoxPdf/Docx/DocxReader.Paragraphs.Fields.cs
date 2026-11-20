@@ -1,4 +1,5 @@
 using System.Xml.Linq;
+using Lokad.OoxPdf.Ooxml;
 using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
 
 namespace Lokad.OoxPdf.Docx;
@@ -10,6 +11,10 @@ internal sealed partial class DocxReader
     private static string? ResolveFieldPlaceholder(string? instruction, bool isLocked = false,
         bool requireOpcodeTerminator = false)
         => isLocked ? null : DocxFieldText.Placeholder(ResolveFieldKind(instruction, requireOpcodeTerminator));
+
+    private static string? ResolveSimpleFieldPlaceholder(XElement field, DocxFieldKind kind) =>
+        OoxBoolean.IsTrue((string?)field.Attribute(WordprocessingNamespace + "fldLock"))
+            ? null : DocxFieldText.Placeholder(kind);
 
     private static bool UsesDefaultDynamicFieldFormatting(string? instruction, DocxFieldKind kind) => kind switch
     {

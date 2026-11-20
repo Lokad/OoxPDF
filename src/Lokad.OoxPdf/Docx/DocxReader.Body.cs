@@ -90,7 +90,7 @@ internal sealed partial class DocxReader
                 var sourceNumbering = hasVisibleBreak ? ResolveParagraphNumbering(paragraphProperties, resolvedParagraph,
                     paragraphStyleId, styles, numbering, cancellationToken) : null;
                 bool hasListMarker = sourceNumbering is { } source && !string.IsNullOrWhiteSpace(source.Definition.Text);
-                if (!hasListMarker && IsRunBreakOnlyParagraph(element, VisiblePageBreak, HiddenBreak, markupMode, retainClosedMoveRanges: true))
+                if (!hasListMarker && IsRunBreakOnlyParagraph(element, VisiblePageBreak, HiddenBreak, markupMode, keepsBreakParagraph: true))
                 {
                     DocxParagraph? breakParagraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, tableCellStyle: null, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken,
                         leadingBookmarks: leadingBookmarks);
@@ -105,7 +105,7 @@ internal sealed partial class DocxReader
                     continue;
                 }
 
-                if (!hasListMarker && IsRunBreakOnlyParagraph(element, VisibleColumnBreak, HiddenBreak, markupMode, retainClosedMoveRanges: true))
+                if (!hasListMarker && IsRunBreakOnlyParagraph(element, VisibleColumnBreak, HiddenBreak, markupMode, keepsBreakParagraph: true))
                 {
                     DocxParagraph? breakParagraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, tableCellStyle: null, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken,
                         leadingBookmarks: leadingBookmarks);
@@ -789,7 +789,7 @@ internal sealed partial class DocxReader
     }
 
     private static bool IsRunBreakOnlyParagraph(XElement paragraph, Func<XElement, bool> isBreak, Func<XElement, bool> isHiddenBreak,
-        OoxPdfDocxMarkupMode markupMode, bool retainClosedMoveRanges = false)
+        OoxPdfDocxMarkupMode markupMode, bool keepsBreakParagraph = false)
     {
         bool hasBreak = paragraph
             .Elements()
@@ -803,7 +803,7 @@ internal sealed partial class DocxReader
         foreach (XElement child in paragraph.Elements())
         {
             if (child.Name != WordprocessingNamespace + "pPr" &&
-                !IsBreakOnlyInlineElement(child, isBreak, isHiddenBreak, markupMode, retainClosedMoveRanges, ref openMoveRanges))
+                !IsBreakOnlyInlineElement(child, isBreak, isHiddenBreak, markupMode, keepsBreakParagraph, ref openMoveRanges))
                 return false;
         }
         return openMoveRanges is not { Count: > 0 };
@@ -825,7 +825,7 @@ internal sealed partial class DocxReader
     }
 
     private static bool IsBreakOnlyInlineElement(XElement element, Func<XElement, bool> isBreak, Func<XElement, bool> isHiddenBreak,
-        OoxPdfDocxMarkupMode markupMode, bool retainClosedMoveRanges, ref HashSet<(DocxRevisionKind Kind, string Id)>? openMoveRanges)
+        OoxPdfDocxMarkupMode markupMode, bool keepsBreakParagraph, ref HashSet<(DocxRevisionKind Kind, string Id)>? openMoveRanges)
     {
         if (element.Name == WordprocessingNamespace + "r")
         {
@@ -848,15 +848,20 @@ internal sealed partial class DocxReader
         }
 
         // Body breaks own a source paragraph. Cell spill breaks do not.
-        if (retainClosedMoveRanges && IsRevisionMarkerElement(element))
+        if (keepsBreakParagraph && IsRevisionMarkerElement(element))
             return TrackNonPrintingMoveRangeBoundary(element, ref openMoveRanges);
+
+        // An unlocked counter supplies its own text even with an empty stored result.
+        if (keepsBreakParagraph && element.Name == WordprocessingNamespace + "fldSimple" &&
+            ResolveSimpleFieldPlaceholder(element, ResolveFieldKind((string?)element.Attribute(WordprocessingNamespace + "instr"))) is not null)
+            return false;
 
         if (!IsVisibleRunContainer(element, markupMode))
             return false;
 
         foreach (XElement child in DocxSourceXml.StoredChildren(element))
         {
-            if (!IsBreakOnlyInlineElement(child, isBreak, isHiddenBreak, markupMode, retainClosedMoveRanges, ref openMoveRanges))
+            if (!IsBreakOnlyInlineElement(child, isBreak, isHiddenBreak, markupMode, keepsBreakParagraph, ref openMoveRanges))
                 return false;
         }
         return true;

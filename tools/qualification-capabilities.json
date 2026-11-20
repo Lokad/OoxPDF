@@ -2121,6 +2121,7 @@
     "PortableRenderingPageBreaksKeepMathPicturesAndNavigation"
   ],
   "docx-break-continuation-insets": [
+    "=DocxGeneratedCountersPaintBeforeHardBreaks",
     "DocxRunBreakFragmentsKeepContinuationInsets",
     "DocxRunBreakContinuationPaintKeepsSourceInsetsAndWords",
     "DocxNumberedRunBreaksConsumeOneSourceCounterEvent",
@@ -4499,6 +4500,7 @@
     "XrefTablePointsAtObjectHeaders"
   ],
   "docx-explicit-page-events": [
+    "=DocxGeneratedCountersPaintBeforeHardBreaks",
     "DocxExplicitPageBreaksRetainEventsAndSingleMarkAdmission",
     "=DocxInlineMetadataLeadingBreaksKeepBookmarkOnThePaintedTarget",
     "DocxRepeatedPageBreaksRetainLayoutPageLimit",
@@ -9451,6 +9453,7 @@
     "DocxWordCompatibleAllMarkupUsesOfficeRevisionDecorationColor"
   ],
   "docx-inline-cached-fields": [
+    "=DocxGeneratedCountersPaintBeforeHardBreaks",
     "DocxInlineCompositionCachedFieldsPublishResolvedSourceItems",
     "DocxInlineCompositionCachedFieldsRetainRunSplittingAndFallbacks",
     "DocxInlineCompositionCachedFieldsMatchIndependentWordOffsets",
@@ -17856,6 +17859,7 @@
     "PortableRenderingInactiveNoteTemplatesPreserveSourceNumberingAndOrigins"
   ],
   "docx-dynamic-field-format": [
+    "=DocxGeneratedCountersPaintBeforeHardBreaks",
     "DocxInlineCompositionStaticPageFieldsRequireActualPageInputs",
     "DocxInlineCompositionPageFieldCacheEndsWithItsOwner",
     "DocxInlineCompositionStaticPageFieldsMatchIndependentWordFrames",

@@ -1182,6 +1182,41 @@ internal static class DocxPageTests
         }
     }
 
+    public static void DocxGeneratedCountersPaintBeforeHardBreaks()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.Original, OoxPdfDocxMarkupMode.AllMarkup })
+        foreach (string kind in new[] { "page", "column" })
+        {
+            int pageCount = kind == "page" ? 2 : 1;
+            int columns = kind == "page" ? 1 : 2;
+            string run = "<w:r><w:br w:type=\"" + kind + "\"/></w:r>";
+            var geometry = mode == OoxPdfDocxMarkupMode.AllMarkup ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup :
+                OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout;
+            var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(), mode, geometry);
+            string[][] direct = Render("");
+            string[][] locked = Render("<w:fldSimple w:instr=\"PAGE\" w:fldLock=\"1\"/>");
+            TestAssert.Equal(pageCount, direct.Length);
+            TestAssert.Equal(direct.Length, locked.Length);
+            TestAssert.True(direct.Zip(locked).All(pair => pair.First.SequenceEqual(pair.Second)),
+                "A locked empty result stays blank in the same page and column flow.");
+
+            foreach (var (opcode, correct) in new[] { ("PAGE", "1"), ("NUMPAGES", pageCount.ToString(CultureInfo.InvariantCulture)) })
+            {
+                string[][] pages = Render("<w:sdt><w:sdtContent><w:fldSimple w:instr=\"" + opcode + "\"/></w:sdtContent></w:sdt>");
+                TestAssert.Equal(pageCount, pages.Length);
+                TestAssert.Equal(1, pages[0].Count(text => text.Trim() == correct));
+                TestAssert.Contains("AFTERBREAK", string.Concat(pages[^1]).Replace(" ", string.Empty, StringComparison.Ordinal));
+            }
+
+            string[][] Render(string content)
+            {
+                DocxDocument document = ReadBreakMetadataDocument(content + run, mode, columns);
+                return renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().Select(page =>
+                    DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).Select(show => show.Text).ToArray()).ToArray();
+            }
+        }
+    }
+
     public static void DocxRepeatedColumnBreaksKeepEventsAndOneParagraphMark()
     {
         foreach (int columns in new[] { 1, 2, 3 })

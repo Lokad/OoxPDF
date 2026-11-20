@@ -516,8 +516,7 @@ internal sealed partial class DocxReader
         {
             string? instruction = (string?)field.Attribute(WordprocessingNamespace + "instr");
             DocxFieldKind kind = ResolveFieldKind(instruction);
-            string? placeholder = ResolveFieldPlaceholder(instruction,
-                OoxBoolean.IsTrue((string?)field.Attribute(WordprocessingNamespace + "fldLock")));
+            string? placeholder = ResolveSimpleFieldPlaceholder(field, kind);
             int fieldSourceRunIndex = sourceRunIndex;
             int fieldTextRunIndex = runs.Count;
             int fieldImageIndex = images.Count;
