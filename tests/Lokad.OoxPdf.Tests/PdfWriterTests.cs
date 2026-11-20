@@ -1064,14 +1064,18 @@ internal static partial class PdfWriterTests
 
     // RV19: emitting from a disposed staged document must fail loudly instead of
     // silently reading the disposed store.
-    public static void DisposedStagedDocumentCannotEmit()
+    public static void DisposedStagedDocumentCannotEmit() =>
+        DisposedStagedDocumentCannotEmitAsync().GetAwaiter().GetResult();
+
+    private static async Task DisposedStagedDocumentCannotEmitAsync()
     {
-        PdfStagedDocument staged = PdfDocumentWriter.ProduceStagedPagesAsync(AsyncEnumerable.ToAsyncEnumerable<PdfPage>(
+        await using PdfStagedDocument staged = await PdfDocumentWriter.ProduceStagedPagesAsync(AsyncEnumerable.ToAsyncEnumerable<PdfPage>(
             [new PdfPage(612d, 792d, "0 g")]), new OoxConversionLimits(),
             diagnosticSink: null,
-            CancellationToken.None, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
-        staged.Dispose();
+            CancellationToken.None, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath()));
+        await staged.DisposeAsync();
         using var stream = new MemoryStream();
-        TestAssert.Throws<ObjectDisposedException>(() => { PdfDocumentWriter.EmitStagedAsync(stream, staged, CancellationToken.None).GetAwaiter().GetResult(); });
+        TestAssert.Throws<ObjectDisposedException>(() => PdfDocumentWriter.EmitStagedAsync(stream, staged, CancellationToken.None).GetAwaiter().GetResult());
+        TestAssert.Equal(0L, stream.Length);
     }
 }

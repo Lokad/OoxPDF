@@ -748,32 +748,32 @@ internal static class OoxResourceGuaranteeTests
         TestAssert.Throws<ArgumentException>(() => PdfDocumentWriter.WriteStagedAsync(output, AsyncEnumerable.ToAsyncEnumerable<PdfPage>(Array.Empty<PdfPage>()), new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult());
     }
 
-    public static void PageContentStagingRoundTripsAndCleansTemp()
+    public static void PageContentStagingRoundTripsAndCleansTemp() =>
+        PageContentStagingRoundTripsAndCleansTempAsync().GetAwaiter().GetResult();
+
+    private static async Task PageContentStagingRoundTripsAndCleansTempAsync()
     {
-        // R06.3: store-level proof. Memory mode round-trips; past the window the
-        // store escalates to a temp file preserving order, accounts spilled bytes,
-        // and deletes the temp on dispose.
-        using var staging = new PdfPageContentStaging(10, diagnosticSink: null, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath()));
+        string directory = Path.Combine(Path.GetTempPath(), "ooxpdf-staging-" + Guid.NewGuid().ToString("N"));
+        await using var staging = new PdfPageContentStaging(10, diagnosticSink: null, temporaryStorage: new OoxPdfFileTemporaryStorage(directory));
         staging.BeginPage(CancellationToken.None);
-        staging.AppendPageBytesAsync(new byte[] { 1, 2, 3 }, 0, 3, CancellationToken.None).GetAwaiter().GetResult();
-        staging.EndPageAsync(CancellationToken.None).GetAwaiter().GetResult();
-        TestAssert.Equal(false, staging.UsesTemporaryStorage);
+        await staging.AppendPageBytesAsync(new byte[] { 1, 2, 3 }, 0, 3, CancellationToken.None);
+        await staging.EndPageAsync(CancellationToken.None);
+        TestAssert.True(!Directory.Exists(directory), "Resident content must not open temporary storage.");
         staging.BeginPage(CancellationToken.None);
-        staging.AppendPageBytesAsync(new byte[] { 4, 5, 6, 7, 8, 9, 10, 11 }, 0, 8, CancellationToken.None).GetAwaiter().GetResult();
-        staging.EndPageAsync(CancellationToken.None).GetAwaiter().GetResult();
-        TestAssert.Equal(true, staging.UsesTemporaryStorage);
-        string? path = (typeof(PdfPageContentStaging).GetField("spillStream", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(staging) as FileStream)?.Name;
-        TestAssert.True(path is not null, "Escalation must create a temp file.");
+        await staging.AppendPageBytesAsync(new byte[] { 4, 5, 6, 7, 8, 9, 10, 11 }, 0, 8, CancellationToken.None);
+        await staging.EndPageAsync(CancellationToken.None);
+        TestAssert.Equal(1, Directory.GetFiles(directory).Length);
         byte[] firstPage = new byte[3];
-        TestAssert.Equal(firstPage.Length, staging.ReadPageBytesAsync(0, firstPage, 0, 0, firstPage.Length, CancellationToken.None).GetAwaiter().GetResult());
+        TestAssert.Equal(firstPage.Length, await staging.ReadPageBytesAsync(0, firstPage, 0, 0, firstPage.Length, CancellationToken.None));
         TestAssert.True(firstPage.SequenceEqual(new byte[] { 1, 2, 3 }), "First page must round-trip.");
         byte[] secondPage = new byte[8];
-        TestAssert.Equal(secondPage.Length, staging.ReadPageBytesAsync(1, secondPage, 0, 0, secondPage.Length, CancellationToken.None).GetAwaiter().GetResult());
+        TestAssert.Equal(secondPage.Length, await staging.ReadPageBytesAsync(1, secondPage, 0, 0, secondPage.Length, CancellationToken.None));
         TestAssert.True(secondPage.SequenceEqual(new byte[] { 4, 5, 6, 7, 8, 9, 10, 11 }), "Second page must round-trip.");
         TestAssert.Equal(2, staging.Count);
         TestAssert.Equal(11L, staging.SpilledBytes);
-        staging.Dispose();
-        TestAssert.True(!File.Exists(path), "Spill temp must be deleted on dispose.");
+        await staging.DisposeAsync();
+        TestAssert.Equal(0, Directory.GetFiles(directory).Length);
+        Directory.Delete(directory);
     }
 
     // RV11-P1: with a 1 KiB resident window, emitting N/2N/4N single-page
@@ -799,7 +799,10 @@ internal static class OoxResourceGuaranteeTests
 
     // RV11-P1: spilled pages must support bounded partial reads that
     // reassemble exactly, in memory and file modes, with cancellation.
-    public static void SpilledPagePartialReadsReassemble()
+    public static void SpilledPagePartialReadsReassemble() =>
+        SpilledPagePartialReadsReassembleAsync().GetAwaiter().GetResult();
+
+    private static async Task SpilledPagePartialReadsReassembleAsync()
     {
         byte[] first = new byte[] { 1, 2, 3 };
         byte[] second = new byte[300];
@@ -811,24 +814,24 @@ internal static class OoxResourceGuaranteeTests
         byte[] expected = first.Concat(second).ToArray();
         foreach (long window in new[] { 1L, 100000L })
         {
-            using var staging = new PdfPageContentStaging(window, diagnosticSink: null, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath()));
+            await using var staging = new PdfPageContentStaging(window, diagnosticSink: null, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath()));
             staging.BeginPage(CancellationToken.None);
-            staging.AppendPageBytesAsync(first, 0, first.Length, CancellationToken.None).GetAwaiter().GetResult();
-            staging.AppendPageBytesAsync(second, 0, second.Length, CancellationToken.None).GetAwaiter().GetResult();
-            staging.EndPageAsync(CancellationToken.None).GetAwaiter().GetResult();
-            TestAssert.Equal(expected.Length, staging.GetPageLengthAsync(0, CancellationToken.None).GetAwaiter().GetResult());
+            await staging.AppendPageBytesAsync(first, 0, first.Length, CancellationToken.None);
+            await staging.AppendPageBytesAsync(second, 0, second.Length, CancellationToken.None);
+            await staging.EndPageAsync(CancellationToken.None);
+            TestAssert.Equal(expected.Length, await staging.GetPageLengthAsync(0, CancellationToken.None));
             var reassembled = new List<byte>();
             byte[] buffer = new byte[7];
             int offset = 0;
             int read;
-            while ((read = staging.ReadPageBytesAsync(0, buffer, 0, offset, buffer.Length, CancellationToken.None).GetAwaiter().GetResult()) > 0)
+            while ((read = await staging.ReadPageBytesAsync(0, buffer, 0, offset, buffer.Length, CancellationToken.None)) > 0)
             {
                 reassembled.AddRange(buffer.Take(read));
                 offset += read;
             }
 
             TestAssert.True(expected.SequenceEqual(reassembled), "Partial reads must reassemble the page exactly.");
-            TestAssert.Equal(0, staging.ReadPageBytesAsync(0, buffer, 0, expected.Length, buffer.Length, CancellationToken.None).GetAwaiter().GetResult());
+            TestAssert.Equal(0, await staging.ReadPageBytesAsync(0, buffer, 0, expected.Length, buffer.Length, CancellationToken.None));
             using var cancelled = new CancellationTokenSource();
             cancelled.Cancel();
             TestAssert.Throws<OperationCanceledException>(() => staging.ReadPageBytesAsync(0, buffer, 0, 0, buffer.Length, cancelled.Token).GetAwaiter().GetResult());
@@ -837,7 +840,10 @@ internal static class OoxResourceGuaranteeTests
 
     // RV11-P1: chunked production (odd splits, empty appends, empty pages)
     // must match whole-page appends byte for byte, in both backing modes.
-    public static void ChunkedPageProductionMatchesWholePage()
+    public static void ChunkedPageProductionMatchesWholePage() =>
+        ChunkedPageProductionMatchesWholePageAsync().GetAwaiter().GetResult();
+
+    private static async Task ChunkedPageProductionMatchesWholePageAsync()
     {
         byte[] payload = new byte[1000];
         for (int i = 0; i < payload.Length; i++)
@@ -847,13 +853,13 @@ internal static class OoxResourceGuaranteeTests
 
         foreach (long window in new[] { 10L, 100000L })
         {
-            using var whole = new PdfPageContentStaging(window, diagnosticSink: null, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath()));
+            await using var whole = new PdfPageContentStaging(window, diagnosticSink: null, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath()));
             whole.BeginPage(CancellationToken.None);
-            whole.AppendPageBytesAsync(payload, 0, payload.Length, CancellationToken.None).GetAwaiter().GetResult();
-            whole.EndPageAsync(CancellationToken.None).GetAwaiter().GetResult();
-            using var chunked = new PdfPageContentStaging(window, diagnosticSink: null, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath()));
+            await whole.AppendPageBytesAsync(payload, 0, payload.Length, CancellationToken.None);
+            await whole.EndPageAsync(CancellationToken.None);
+            await using var chunked = new PdfPageContentStaging(window, diagnosticSink: null, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath()));
             chunked.BeginPage(CancellationToken.None);
-            chunked.AppendPageBytesAsync(payload, 0, 0, CancellationToken.None).GetAwaiter().GetResult();
+            await chunked.AppendPageBytesAsync(payload, 0, 0, CancellationToken.None);
             int offset = 0;
             foreach (int size in new[] { 1, 2, 3, 5, 8, 13, 21, 34, 55, 89 })
             {
@@ -863,87 +869,104 @@ internal static class OoxResourceGuaranteeTests
                     break;
                 }
 
-                chunked.AppendPageBytesAsync(payload, offset, take, CancellationToken.None).GetAwaiter().GetResult();
+                await chunked.AppendPageBytesAsync(payload, offset, take, CancellationToken.None);
                 offset += take;
             }
 
             if (offset < payload.Length)
             {
-                chunked.AppendPageBytesAsync(payload, offset, payload.Length - offset, CancellationToken.None).GetAwaiter().GetResult();
+                await chunked.AppendPageBytesAsync(payload, offset, payload.Length - offset, CancellationToken.None);
             }
 
-            chunked.EndPageAsync(CancellationToken.None).GetAwaiter().GetResult();
+            await chunked.EndPageAsync(CancellationToken.None);
             chunked.BeginPage(CancellationToken.None);
-            chunked.EndPageAsync(CancellationToken.None).GetAwaiter().GetResult();
+            await chunked.EndPageAsync(CancellationToken.None);
             whole.BeginPage(CancellationToken.None);
-            whole.EndPageAsync(CancellationToken.None).GetAwaiter().GetResult();
+            await whole.EndPageAsync(CancellationToken.None);
             byte[] wholeBytes = new byte[payload.Length];
             byte[] chunkedBytes = new byte[payload.Length];
-            TestAssert.Equal(payload.Length, whole.ReadPageBytesAsync(0, wholeBytes, 0, 0, payload.Length, CancellationToken.None).GetAwaiter().GetResult());
-            TestAssert.Equal(payload.Length, chunked.ReadPageBytesAsync(0, chunkedBytes, 0, 0, payload.Length, CancellationToken.None).GetAwaiter().GetResult());
+            TestAssert.Equal(payload.Length, await whole.ReadPageBytesAsync(0, wholeBytes, 0, 0, payload.Length, CancellationToken.None));
+            TestAssert.Equal(payload.Length, await chunked.ReadPageBytesAsync(0, chunkedBytes, 0, 0, payload.Length, CancellationToken.None));
             TestAssert.True(payload.SequenceEqual(wholeBytes) && payload.SequenceEqual(chunkedBytes), "Both production paths must match the source bytes.");
-            TestAssert.Equal(0, chunked.GetPageLengthAsync(1, CancellationToken.None).GetAwaiter().GetResult());
+            TestAssert.Equal(0, await chunked.GetPageLengthAsync(1, CancellationToken.None));
             TestAssert.Equal(whole.Count, chunked.Count);
         }
     }
 
     // RV11-P1: exact window boundaries. A page that fits stays resident; one
     // byte more escalates to the temp file.
-    public static void WindowBoundariesStayMemoryOrSpill()
+    public static void WindowBoundariesStayMemoryOrSpill() =>
+        WindowBoundariesStayMemoryOrSpillAsync().GetAwaiter().GetResult();
+
+    private static async Task WindowBoundariesStayMemoryOrSpillAsync()
     {
-        using var fitting = new PdfPageContentStaging(10, diagnosticSink: null, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath()));
+        string directory = Path.Combine(Path.GetTempPath(), "ooxpdf-staging-window-" + Guid.NewGuid().ToString("N"));
+        var backing = new OoxPdfFileTemporaryStorage(directory);
+        await using var fitting = new PdfPageContentStaging(10, diagnosticSink: null, temporaryStorage: backing);
         fitting.BeginPage(CancellationToken.None);
-        fitting.AppendPageBytesAsync(new byte[10], 0, 10, CancellationToken.None).GetAwaiter().GetResult();
-        fitting.EndPageAsync(CancellationToken.None).GetAwaiter().GetResult();
-        TestAssert.Equal(false, fitting.UsesTemporaryStorage);
+        await fitting.AppendPageBytesAsync(new byte[10], 0, 10, CancellationToken.None);
+        await fitting.EndPageAsync(CancellationToken.None);
+        TestAssert.True(!Directory.Exists(directory), "A page that fits must stay resident.");
         byte[] fittingBytes = new byte[10];
-        TestAssert.Equal(10, fitting.ReadPageBytesAsync(0, fittingBytes, 0, 0, 10, CancellationToken.None).GetAwaiter().GetResult());
+        TestAssert.Equal(10, await fitting.ReadPageBytesAsync(0, fittingBytes, 0, 0, 10, CancellationToken.None));
         TestAssert.True(fittingBytes.SequenceEqual(new byte[10]), "Page must round-trip.");
-        using var overflowing = new PdfPageContentStaging(10, diagnosticSink: null, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath()));
+        await using var overflowing = new PdfPageContentStaging(10, diagnosticSink: null, temporaryStorage: backing);
         overflowing.BeginPage(CancellationToken.None);
-        overflowing.AppendPageBytesAsync(new byte[11], 0, 11, CancellationToken.None).GetAwaiter().GetResult();
-        overflowing.EndPageAsync(CancellationToken.None).GetAwaiter().GetResult();
-        TestAssert.Equal(true, overflowing.UsesTemporaryStorage);
+        await overflowing.AppendPageBytesAsync(new byte[11], 0, 11, CancellationToken.None);
+        await overflowing.EndPageAsync(CancellationToken.None);
+        TestAssert.Equal(1, Directory.GetFiles(directory).Length);
         byte[] overflowingBytes = new byte[11];
-        TestAssert.Equal(11, overflowing.ReadPageBytesAsync(0, overflowingBytes, 0, 0, 11, CancellationToken.None).GetAwaiter().GetResult());
+        TestAssert.Equal(11, await overflowing.ReadPageBytesAsync(0, overflowingBytes, 0, 0, 11, CancellationToken.None));
         TestAssert.True(overflowingBytes.SequenceEqual(new byte[11]), "Page must round-trip.");
+        await overflowing.DisposeAsync();
+        Directory.Delete(directory);
     }
 
     // RV11-P1: unpaired production or reads during an open page fail loudly
     // instead of silently misaligning page indexes.
-    public static void UnpairedStagingCallsFailLoudly()
+    public static void UnpairedStagingCallsFailLoudly() =>
+        UnpairedStagingCallsFailLoudlyAsync().GetAwaiter().GetResult();
+
+    private static async Task UnpairedStagingCallsFailLoudlyAsync()
     {
-        using var staging = new PdfPageContentStaging(100000, diagnosticSink: null, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath()));
+        await using var staging = new PdfPageContentStaging(100000, diagnosticSink: null, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath()));
         TestAssert.Throws<InvalidOperationException>(() => staging.AppendPageBytesAsync(new byte[1], 0, 1, CancellationToken.None).GetAwaiter().GetResult());
         TestAssert.Throws<InvalidOperationException>(() => staging.EndPageAsync(CancellationToken.None).GetAwaiter().GetResult());
         staging.BeginPage(CancellationToken.None);
         TestAssert.Throws<InvalidOperationException>(() => staging.BeginPage(CancellationToken.None));
         TestAssert.Throws<InvalidOperationException>(() => staging.GetPageLengthAsync(0, CancellationToken.None).GetAwaiter().GetResult());
-        staging.EndPageAsync(CancellationToken.None).GetAwaiter().GetResult();
+        await staging.EndPageAsync(CancellationToken.None);
         TestAssert.Throws<InvalidOperationException>(() => staging.EndPageAsync(CancellationToken.None).GetAwaiter().GetResult());
     }
 
     // RV11-P1: a throwing spill observer propagates its own failure and the
     // owned temp still vanishes with the staging.
-    public static void ThrowingSpillObserverPropagatesAndCleansTemp()
+    public static void ThrowingSpillObserverPropagatesAndCleansTemp() =>
+        ThrowingSpillObserverPropagatesAndCleansTempAsync().GetAwaiter().GetResult();
+
+    private static async Task ThrowingSpillObserverPropagatesAndCleansTempAsync()
     {
-        static void ThrowingSink(OoxPdfDiagnostic diagnostic) => throw new InvalidOperationException("observer boom");
-        using var staging = new PdfPageContentStaging(10, ThrowingSink, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath()));
+        string directory = Path.Combine(Path.GetTempPath(), "ooxpdf-staging-observer-" + Guid.NewGuid().ToString("N"));
+        var failure = new InvalidOperationException("observer boom");
+        await using var staging = new PdfPageContentStaging(10, _ => throw failure, temporaryStorage: new OoxPdfFileTemporaryStorage(directory));
         staging.BeginPage(CancellationToken.None);
-        staging.AppendPageBytesAsync(new byte[] { 1, 2, 3 }, 0, 3, CancellationToken.None).GetAwaiter().GetResult();
-        staging.EndPageAsync(CancellationToken.None).GetAwaiter().GetResult();
+        await staging.AppendPageBytesAsync(new byte[] { 1, 2, 3 }, 0, 3, CancellationToken.None);
+        await staging.EndPageAsync(CancellationToken.None);
         staging.BeginPage(CancellationToken.None);
         InvalidOperationException thrown = TestAssert.Throws<InvalidOperationException>(() => staging.AppendPageBytesAsync(new byte[100], 0, 100, CancellationToken.None).GetAwaiter().GetResult());
-        TestAssert.Equal("observer boom", thrown.Message);
-        string? path = (typeof(PdfPageContentStaging).GetField("spillStream", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(staging) as FileStream)?.Name;
-        TestAssert.True(path is not null, "Escalation must have created a temp file.");
-        staging.Dispose();
-        TestAssert.True(!File.Exists(path), "Spill temp must be deleted on dispose.");
+        TestAssert.Equal(failure, thrown);
+        TestAssert.Equal(1, Directory.GetFiles(directory).Length);
+        await staging.DisposeAsync();
+        TestAssert.Equal(0, Directory.GetFiles(directory).Length);
+        Directory.Delete(directory);
     }
 
     // RV11-P1: chunked ASCII encoding is byte-identical to whole-string
     // encoding, including non-ASCII replacements straddling chunk edges.
-    public static void ChunkedAsciiEncodingMatchesWholeString()
+    public static void ChunkedAsciiEncodingMatchesWholeString() =>
+        ChunkedAsciiEncodingMatchesWholeStringAsync().GetAwaiter().GetResult();
+
+    private static async Task ChunkedAsciiEncodingMatchesWholeStringAsync()
     {
         char[] chars = new string((char)97, 200000).ToCharArray();
         chars[65534] = (char)233;
@@ -952,15 +975,15 @@ internal static class OoxResourceGuaranteeTests
         chars[199999] = (char)200;
         string content = new string(chars);
         byte[] expected = Encoding.ASCII.GetBytes(content);
-        using var staging = new PdfPageContentStaging(100000000, diagnosticSink: null, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath()));
+        await using var staging = new PdfPageContentStaging(100000000, diagnosticSink: null, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath()));
         staging.BeginPage(CancellationToken.None);
         MethodInfo encode = typeof(PdfDocumentWriter).GetMethod("AppendEncodedPageContentAsync", BindingFlags.NonPublic | BindingFlags.Static)
             ?? throw new InvalidOperationException("Expected the live bounded encoding helper.");
-        ((ValueTask)encode.Invoke(null, [staging, content, CancellationToken.None])!).GetAwaiter().GetResult();
+        await (ValueTask)encode.Invoke(null, [staging, content, CancellationToken.None])!;
 
-        staging.EndPageAsync(CancellationToken.None).GetAwaiter().GetResult();
+        await staging.EndPageAsync(CancellationToken.None);
         byte[] observed = new byte[expected.Length];
-        TestAssert.Equal(expected.Length, staging.ReadPageBytesAsync(0, observed, 0, 0, observed.Length, CancellationToken.None).GetAwaiter().GetResult());
+        TestAssert.Equal(expected.Length, await staging.ReadPageBytesAsync(0, observed, 0, 0, observed.Length, CancellationToken.None));
         TestAssert.True(expected.SequenceEqual(observed), "Chunked encoding must match whole-string encoding.");
     }
 

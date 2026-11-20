@@ -198,7 +198,6 @@ internal sealed class PdfDocumentWriter
     {
         ArgumentNullException.ThrowIfNull(stream);
         ArgumentNullException.ThrowIfNull(staged);
-        staged.ThrowIfDisposed();
         IReadOnlyList<PdfPage> pages = staged.Pages;
         PdfPageContentStaging staging = staged.Staging;
         if (staging.Count != pages.Count + staged.GroupEntries.Count || staged.PageEntries.Count != pages.Count)

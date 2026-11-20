@@ -1,10 +1,7 @@
 namespace Lokad.OoxPdf.Pdf;
 
-// RV19: owning staged-document contract (RV11 seam). Descriptors and their
-// content store travel as one value so emission cannot pair pages with the
-// wrong store, and disposed documents fail loudly instead of reading a
-// disposed store. Only ProduceStagedPages creates instances.
-internal sealed class PdfStagedDocument : IDisposable, IAsyncDisposable
+// A staged document owns its page descriptors and backing store through emission.
+internal sealed class PdfStagedDocument : IAsyncDisposable
 {
     private readonly PdfPageContentStaging staging;
 
@@ -21,7 +18,11 @@ internal sealed class PdfStagedDocument : IDisposable, IAsyncDisposable
     private IReadOnlyList<PdfPage> pages;
     public IReadOnlyList<PdfPage> Pages
     {
-        get { ThrowIfDisposed(); return pages; }
+        get
+        {
+            ObjectDisposedException.ThrowIf(disposed, this);
+            return pages;
+        }
     }
 
     internal IReadOnlyList<int> PageEntries { get; private set; }
@@ -36,13 +37,6 @@ internal sealed class PdfStagedDocument : IDisposable, IAsyncDisposable
             return staging;
         }
     }
-
-    public void ThrowIfDisposed()
-    {
-        ObjectDisposedException.ThrowIf(disposed, this);
-    }
-
-    public void Dispose() => DisposeAsync().GetAwaiter().GetResult();
 
     public async ValueTask DisposeAsync()
     {

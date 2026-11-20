@@ -338,15 +338,19 @@ internal static partial class OoxMemoryAdmissionTests
         TestAssert.Equal(0L, pool.Reserved);
     }
 
-    public static void StagedDocumentAndContentStoreReleaseOwnedReferencesOnDispose()
+    public static void StagedDocumentAndContentStoreReleaseOwnedReferencesOnDispose() =>
+        StagedDocumentAndContentStoreReleaseOwnedReferencesOnDisposeAsync().GetAwaiter().GetResult();
+
+    private static async Task StagedDocumentAndContentStoreReleaseOwnedReferencesOnDisposeAsync()
     {
         var page = new PdfPage(100d, 100d, "q\nQ\n");
-        var staged = PdfDocumentWriter.ProduceStagedPagesAsync(AsyncEnumerable.ToAsyncEnumerable<PdfPage>([page]), new(), null, default, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
+        await using var staged = await PdfDocumentWriter.ProduceStagedPagesAsync(AsyncEnumerable.ToAsyncEnumerable<PdfPage>([page]), new(), null, default, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath()));
         var storage = staged.Staging;
         TestAssert.Equal(1, staged.Pages.Count);
-        staged.Dispose();
-        staged.Dispose();
+        await staged.DisposeAsync();
+        await staged.DisposeAsync();
         TestAssert.Throws<ObjectDisposedException>(() => _ = staged.Pages);
+        TestAssert.Throws<ObjectDisposedException>(() => _ = staged.Staging);
         TestAssert.Throws<ObjectDisposedException>(() => storage.GetPageLengthAsync(0, default).GetAwaiter().GetResult());
         TestAssert.Throws<ObjectDisposedException>(() => storage.BeginPage(default));
         TestAssert.Throws<ObjectDisposedException>(() => storage.AppendPageBytesAsync([1], 0, 1, default).GetAwaiter().GetResult());

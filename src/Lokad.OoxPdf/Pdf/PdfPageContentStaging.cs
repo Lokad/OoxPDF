@@ -5,7 +5,7 @@ namespace Lokad.OoxPdf.Pdf;
 // One resident window, retained page/resource descriptors and encoding/readback buffer. Beyond the window,
 // an explicit provider owns temporary backing. Reads stay bounded, records preserve
 // page/group order, and every I/O borrow completes before disposal or refund.
-internal sealed class PdfPageContentStaging : IDisposable, IAsyncDisposable
+internal sealed class PdfPageContentStaging : IAsyncDisposable
 {
     internal const int ChunkByteCount = 65536;
     private static readonly byte[] LengthPlaceholder = new byte[8];
@@ -65,7 +65,6 @@ internal sealed class PdfPageContentStaging : IDisposable, IAsyncDisposable
 
     public int Count => memory.Count + spillOffsets.Count;
     public long SpilledBytes { get; private set; }
-    public bool UsesTemporaryStorage => spillStream is not null;
 
     public void BeginPage(CancellationToken cancellationToken)
     {
@@ -271,8 +270,6 @@ internal sealed class PdfPageContentStaging : IDisposable, IAsyncDisposable
             "Page content exceeded the resident window and moved to temporary storage.", PartName: null, SlideIndex: null,
             PageIndex: null, Feature: "page-content-spill", Fallback: "temporary-storage"));
     }
-
-    public void Dispose() => DisposeAsync().GetAwaiter().GetResult();
 
     public async ValueTask DisposeAsync()
     {

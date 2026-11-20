@@ -4,28 +4,32 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class OoxMemoryAdmissionTests
 {
-    public static void VectorMemoryStagedResourcesSurviveSpillAndEmission()
+    public static void VectorMemoryStagedResourcesSurviveSpillAndEmission() =>
+        VectorMemoryStagedResourcesSurviveSpillAndEmissionAsync().GetAwaiter().GetResult();
+
+    private static async Task VectorMemoryStagedResourcesSurviveSpillAndEmissionAsync()
     {
         PdfPage page = VectorMemoryPage();
         foreach (long window in new[] { 0L, 1_000_000L })
         {
             var limits = new OoxConversionLimits { MaxResidentPageContentBytesPerConversion = window };
             using var baseline = new MemoryStream();
-            PdfDocumentWriter.WriteStagedAsync(baseline, AsyncEnumerable.ToAsyncEnumerable<PdfPage>([page, page]), limits, null, default,
-                DateTimeOffset.UnixEpoch, new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
+            await PdfDocumentWriter.WriteStagedAsync(baseline, AsyncEnumerable.ToAsyncEnumerable<PdfPage>([page, page]), limits, null, default,
+                DateTimeOffset.UnixEpoch, new OoxPdfFileTemporaryStorage(Path.GetTempPath()));
             var pool = new TestMemoryBudget();
             using (var conversion = OoxConversionBudget.BeginScope(null, pool))
             {
-                var staged = PdfDocumentWriter.ProduceStagedPagesAsync(AsyncEnumerable.ToAsyncEnumerable<PdfPage>([page, page]), limits, null, default,
-                    new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
+                await using var staged = await PdfDocumentWriter.ProduceStagedPagesAsync(AsyncEnumerable.ToAsyncEnumerable<PdfPage>([page, page]), limits, null, default,
+                    new OoxPdfFileTemporaryStorage(Path.GetTempPath()));
                 TestAssert.Equal(1, staged.GroupEntries.Count); // Existing shared identity is staged once.
                 long content = window == 0 ? 0 : 2L * page.Content.Length + page.Groups[0].Group.Content.Length;
                 long held = pool.Reserved;
                 TestAssert.True(held > PdfPageContentStaging.ChunkByteCount + content, "Retained vector descriptors need funding after content spills or copies.");
                 using var output = new ObservedOutput(() => TestAssert.Equal(held, pool.Reserved));
-                PdfDocumentWriter.EmitStagedAsync(output, staged, default, DateTimeOffset.UnixEpoch).GetAwaiter().GetResult();
+                await PdfDocumentWriter.EmitStagedAsync(output, staged, default, DateTimeOffset.UnixEpoch);
                 TestAssert.True(baseline.ToArray().SequenceEqual(output.ToArray()), "Funding preserves emitted PDF bytes in both backing modes.");
-                staged.Dispose(); staged.Dispose();
+                await staged.DisposeAsync();
+                await staged.DisposeAsync();
                 TestAssert.Equal(0L, pool.Reserved);
             }
             TestAssert.Equal(pool.ScopesCreated, pool.ScopesDisposed);
@@ -86,21 +90,24 @@ internal static partial class OoxMemoryAdmissionTests
         }
     }
 
-    public static void VectorMemoryEmissionFailureKeepsResourcesUntilOwnerDisposes()
+    public static void VectorMemoryEmissionFailureKeepsResourcesUntilOwnerDisposes() =>
+        VectorMemoryEmissionFailureKeepsResourcesUntilOwnerDisposesAsync().GetAwaiter().GetResult();
+
+    private static async Task VectorMemoryEmissionFailureKeepsResourcesUntilOwnerDisposesAsync()
     {
         PdfPage page = VectorMemoryPage();
         var pool = new TestMemoryBudget();
         using (var conversion = OoxConversionBudget.BeginScope(null, pool))
         {
-            var staged = PdfDocumentWriter.ProduceStagedPagesAsync(AsyncEnumerable.ToAsyncEnumerable<PdfPage>([page]),
+            await using var staged = await PdfDocumentWriter.ProduceStagedPagesAsync(AsyncEnumerable.ToAsyncEnumerable<PdfPage>([page]),
                 new OoxConversionLimits { MaxResidentPageContentBytesPerConversion = 0 }, null, default,
-                new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
+                new OoxPdfFileTemporaryStorage(Path.GetTempPath()));
             long held = pool.Reserved;
             var sentinel = new IOException("vector emission sentinel");
             using var output = new ObservedOutput(() => { TestAssert.True(pool.Reserved > PdfPageContentStaging.ChunkByteCount, "Emission borrows funded descriptors."); throw sentinel; });
             TestAssert.Equal(sentinel, TestAssert.Throws<IOException>(() => PdfDocumentWriter.EmitStagedAsync(output, staged, default).GetAwaiter().GetResult()));
             TestAssert.Equal(held, pool.Reserved);
-            staged.Dispose();
+            await staged.DisposeAsync();
             TestAssert.Equal(0L, pool.Reserved);
         }
         TestAssert.Equal(pool.ScopesCreated, pool.ScopesDisposed);

@@ -166,7 +166,10 @@ internal static partial class OoxMemoryAdmissionTests
         }
     }
 
-    public static void PageMemoryConstructionLivesAcrossPendingStagingIo()
+    public static void PageMemoryConstructionLivesAcrossPendingStagingIo() =>
+        PageMemoryConstructionLivesAcrossPendingStagingIoAsync().GetAwaiter().GetResult();
+
+    private static async Task PageMemoryConstructionLivesAcrossPendingStagingIoAsync()
     {
         foreach (var kind in new[] { OoxPdfInputKind.Docx, OoxPdfInputKind.Pptx })
         {
@@ -189,7 +192,7 @@ internal static partial class OoxMemoryAdmissionTests
                     TestAssert.True(page.Bytes > 0, "Do not refund construction before the pending reader finishes.");
                 }
                 finally { storage.Proceed.TrySetResult(); }
-                using var staged = production.GetAwaiter().GetResult();
+                await using var staged = await production;
                 TestAssert.True(page is not null, "Observe a page construction grant.");
                 TestAssert.Equal(0L, page!.Bytes);
                 TestAssert.True(budget.Pool.Reserved > 0, "Independent staged storage remains funded after page construction ends.");
