@@ -1027,38 +1027,24 @@ TestAssert.True(layoutSnapshot.Pages.Sum(page => page.PlacedRelatedStoryCount) =
 
     public static void DocxLayoutWrapsPlacedFootnoteUsingOwningSectionWidth()
     {
-        DocxPageSettings wideFirstSection = new(
-            "12240",
-            "12000",
-            null,
-            "1440",
-            "1440",
-            "1440",
-            "1440",
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null);
-        DocxPageSettings narrowFinalSection = new(
-            "4400",
-            "6000",
-            null,
-            "200",
-            "200",
-            "200",
-            "200",
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null);
+        DocxPageSettings wideFirstSection = DocxPageSettings.Empty with
+        {
+            WidthValue = "12240",
+            HeightValue = "12000",
+            MarginTopValue = "1440",
+            MarginRightValue = "1440",
+            MarginBottomValue = "1440",
+            MarginLeftValue = "1440"
+        };
+        DocxPageSettings narrowFinalSection = DocxPageSettings.Empty with
+        {
+            WidthValue = "4400",
+            HeightValue = "6000",
+            MarginTopValue = "200",
+            MarginRightValue = "200",
+            MarginBottomValue = "200",
+            MarginLeftValue = "200"
+        };
         DocxParagraph anchor = DocxTests.CreateDocxLayoutParagraph("Narrow note marker", 10d, 12d) with
         {
             InlineReferences =

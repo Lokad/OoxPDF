@@ -147,7 +147,6 @@ internal static class DocxPageTests
                     <w:sectPr>
                       <w:pgSz w:w="16840" w:h="11900" w:orient="landscape"/>
                       <w:pgMar w:top="720" w:right="1440" w:bottom="1080" w:left="1800" w:header="1440" w:footer="1080" w:gutter="360"/>
-                      <w:docGrid w:linePitch="326"/>
                       <w:footnotePr><w:pos w:val="beneathText"/><w:numStart w:val="3"/></w:footnotePr>
                       <w:endnotePr><w:pos w:val="sectEnd"/><w:numRestart w:val="eachSect"/></w:endnotePr>
                     </w:sectPr>
@@ -168,14 +167,10 @@ internal static class DocxPageTests
         TestAssert.Equal("1440", settings.MarginRightValue ?? string.Empty);
         TestAssert.Equal("1080", settings.MarginBottomValue ?? string.Empty);
         TestAssert.Equal("1800", settings.MarginLeftValue ?? string.Empty);
-        TestAssert.Equal("1440", settings.HeaderDistanceValue ?? string.Empty);
-        TestAssert.Equal("1080", settings.FooterDistanceValue ?? string.Empty);
         TestAssert.Equal(72d, settings.HeaderDistancePoints ?? 0d);
         TestAssert.Equal(54d, settings.FooterDistancePoints ?? 0d);
         TestAssert.Equal("360", settings.GutterDistanceValue ?? string.Empty);
         TestAssert.Equal(18d, settings.GutterDistancePoints ?? 0d);
-        TestAssert.Equal("326", settings.DocGridLinePitchValue ?? string.Empty);
-        TestAssert.Equal(16.3d, settings.DocGridLinePitchPoints ?? 0d);
         TestAssert.Equal("beneathText", settings.FootnoteReferenceSettings.PositionValue ?? string.Empty);
         TestAssert.Equal(3, settings.FootnoteReferenceSettings.NumberStart ?? 0);
         TestAssert.Equal("sectEnd", settings.EndnoteReferenceSettings.PositionValue ?? string.Empty);
@@ -1467,38 +1462,24 @@ internal static class DocxPageTests
     {
         DocxParagraph first = DocxTests.CreateDocxLayoutParagraph("First", fontSize: 10d, lineSpacingPoints: 10d);
         DocxParagraph second = DocxTests.CreateDocxLayoutParagraph("Second", fontSize: 10d, lineSpacingPoints: 10d);
-        var firstSectionSettings = new DocxPageSettings(
-            "4000",
-            "4000",
-            null,
-            "360",
-            "360",
-            "360",
-            "360",
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null);
-        var finalSectionSettings = new DocxPageSettings(
-            "6000",
-            "6000",
-            null,
-            "1440",
-            "1440",
-            "1440",
-            "1440",
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null);
+        var firstSectionSettings = DocxPageSettings.Empty with
+        {
+            WidthValue = "4000",
+            HeightValue = "4000",
+            MarginTopValue = "360",
+            MarginRightValue = "360",
+            MarginBottomValue = "360",
+            MarginLeftValue = "360"
+        };
+        var finalSectionSettings = DocxPageSettings.Empty with
+        {
+            WidthValue = "6000",
+            HeightValue = "6000",
+            MarginTopValue = "1440",
+            MarginRightValue = "1440",
+            MarginBottomValue = "1440",
+            MarginLeftValue = "1440"
+        };
         var document = new DocxDocument(
             300d,
             300d,
@@ -1559,38 +1540,24 @@ internal static class DocxPageTests
     {
         DocxParagraph first = DocxTests.CreateDocxLayoutParagraph("First", fontSize: 10d, lineSpacingPoints: 10d);
         DocxParagraph second = DocxTests.CreateDocxLayoutParagraph("Second", fontSize: 10d, lineSpacingPoints: 10d);
-        var firstSectionSettings = new DocxPageSettings(
-            "4000",
-            "4000",
-            null,
-            "360",
-            "360",
-            "360",
-            "360",
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null);
-        var finalSectionSettings = new DocxPageSettings(
-            "6000",
-            "6000",
-            null,
-            "1440",
-            "1440",
-            "1440",
-            "1440",
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null);
+        var firstSectionSettings = DocxPageSettings.Empty with
+        {
+            WidthValue = "4000",
+            HeightValue = "4000",
+            MarginTopValue = "360",
+            MarginRightValue = "360",
+            MarginBottomValue = "360",
+            MarginLeftValue = "360"
+        };
+        var finalSectionSettings = DocxPageSettings.Empty with
+        {
+            WidthValue = "6000",
+            HeightValue = "6000",
+            MarginTopValue = "1440",
+            MarginRightValue = "1440",
+            MarginBottomValue = "1440",
+            MarginLeftValue = "1440"
+        };
         var document = new DocxDocument(
             300d,
             300d,
@@ -1627,38 +1594,24 @@ internal static class DocxPageTests
     {
         DocxParagraph first = DocxTests.CreateDocxLayoutParagraph("First", fontSize: 10d, lineSpacingPoints: 10d);
         DocxParagraph second = DocxTests.CreateDocxLayoutParagraph("Second", fontSize: 10d, lineSpacingPoints: 10d);
-        var firstSectionSettings = new DocxPageSettings(
-            "4000",
-            "4000",
-            null,
-            "360",
-            "360",
-            "360",
-            "360",
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null);
-        var finalSectionSettings = new DocxPageSettings(
-            "6000",
-            "6000",
-            null,
-            "1440",
-            "1440",
-            "1440",
-            "1440",
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null);
+        var firstSectionSettings = DocxPageSettings.Empty with
+        {
+            WidthValue = "4000",
+            HeightValue = "4000",
+            MarginTopValue = "360",
+            MarginRightValue = "360",
+            MarginBottomValue = "360",
+            MarginLeftValue = "360"
+        };
+        var finalSectionSettings = DocxPageSettings.Empty with
+        {
+            WidthValue = "6000",
+            HeightValue = "6000",
+            MarginTopValue = "1440",
+            MarginRightValue = "1440",
+            MarginBottomValue = "1440",
+            MarginLeftValue = "1440"
+        };
         var document = new DocxDocument(
             300d,
             300d,

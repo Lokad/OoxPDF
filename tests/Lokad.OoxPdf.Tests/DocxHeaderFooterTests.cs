@@ -44,23 +44,10 @@ internal static partial class DocxHeaderFooterTests
             DocxParagraphKeepRules.Empty,
             null);
         DocxParagraph body = DocxTests.CreateDocxLayoutParagraph("Body", 10d, 10d);
-        DocxPageSettings settings = new(
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            12d,
-            12d,
-            "240",
-            "240",
-            null,
-            null,
-            null,
-            null)
+        DocxPageSettings settings = DocxPageSettings.Empty with
         {
+            HeaderDistancePoints = 12d,
+            FooterDistancePoints = 12d,
             HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
             {
                 ["default"] = [header]
@@ -515,23 +502,10 @@ internal static partial class DocxHeaderFooterTests
             DocxParagraphKeepRules.Empty,
             null);
         DocxParagraph body = DocxTests.CreateDocxLayoutParagraph("Body", 10d, 10d);
-        DocxPageSettings settings = new(
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            12d,
-            12d,
-            "240",
-            "240",
-            null,
-            null,
-            null,
-            null)
+        DocxPageSettings settings = DocxPageSettings.Empty with
         {
+            HeaderDistancePoints = 12d,
+            FooterDistancePoints = 12d,
             HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
             {
                 ["default"] = [header]
@@ -615,23 +589,10 @@ internal static partial class DocxHeaderFooterTests
             DocxParagraphKeepRules.Empty,
             null);
         DocxParagraph body = DocxTests.CreateDocxLayoutParagraph("Body", 10d, 10d);
-        DocxPageSettings settings = new(
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            12d,
-            12d,
-            "240",
-            "240",
-            null,
-            null,
-            null,
-            null)
+        DocxPageSettings settings = DocxPageSettings.Empty with
         {
+            HeaderDistancePoints = 12d,
+            FooterDistancePoints = 12d,
             HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
             {
                 ["default"] = [first, second]

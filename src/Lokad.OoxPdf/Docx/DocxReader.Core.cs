@@ -557,7 +557,6 @@ internal sealed partial class DocxReader
         // it there (mirrors the titlePg section lookup above).
         XElement? evenAndOddHeaders = sectionProperties?.Element(WordprocessingNamespace + "evenAndOddHeaders")
             ?? settings?.Root?.Element(WordprocessingNamespace + "evenAndOddHeaders");
-        XElement? docGrid = sectionProperties?.Element(WordprocessingNamespace + "docGrid");
         DocxPageSettings pageSettings = new(
             (string?)pageSize?.Attribute(WordprocessingNamespace + "w"),
             (string?)pageSize?.Attribute(WordprocessingNamespace + "h"),
@@ -568,15 +567,11 @@ internal sealed partial class DocxReader
             (string?)pageMargins?.Attribute(WordprocessingNamespace + "left"),
             ReadTwipsAttribute(pageMargins, WordprocessingNamespace + "header"),
             ReadTwipsAttribute(pageMargins, WordprocessingNamespace + "footer"),
-            (string?)pageMargins?.Attribute(WordprocessingNamespace + "header"),
-            (string?)pageMargins?.Attribute(WordprocessingNamespace + "footer"),
             ReadOnOff(titlePage),
             (string?)titlePage?.Attribute(WordprocessingNamespace + "val"),
             ReadOnOff(evenAndOddHeaders),
             (string?)evenAndOddHeaders?.Attribute(WordprocessingNamespace + "val"))
         {
-            DocGridLinePitchPoints = ReadTwipsAttribute(docGrid, WordprocessingNamespace + "linePitch"),
-            DocGridLinePitchValue = (string?)docGrid?.Attribute(WordprocessingNamespace + "linePitch"),
             GutterDistancePoints = ReadTwipsAttribute(pageMargins, WordprocessingNamespace + "gutter"),
             GutterDistanceValue = (string?)pageMargins?.Attribute(WordprocessingNamespace + "gutter"),
             FootnoteReferenceSettings = ReadNoteReferenceSettings(sectionProperties?.Element(WordprocessingNamespace + "footnotePr")),

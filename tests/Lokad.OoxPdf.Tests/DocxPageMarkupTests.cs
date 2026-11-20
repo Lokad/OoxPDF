@@ -311,38 +311,24 @@ internal static class DocxPageMarkupTests
 
     public static void DocxMarkupReserveMarginUsesSectionSpecificPageGeometry()
     {
-        DocxPageSettings firstSectionSettings = new(
-            "8000",
-            "12000",
-            null,
-            "720",
-            "720",
-            "720",
-            "720",
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null);
-        DocxPageSettings finalSectionSettings = new(
-            "12240",
-            "15840",
-            null,
-            "1440",
-            "1440",
-            "1440",
-            "1440",
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null);
+        DocxPageSettings firstSectionSettings = DocxPageSettings.Empty with
+        {
+            WidthValue = "8000",
+            HeightValue = "12000",
+            MarginTopValue = "720",
+            MarginRightValue = "720",
+            MarginBottomValue = "720",
+            MarginLeftValue = "720"
+        };
+        DocxPageSettings finalSectionSettings = DocxPageSettings.Empty with
+        {
+            WidthValue = "12240",
+            HeightValue = "15840",
+            MarginTopValue = "1440",
+            MarginRightValue = "1440",
+            MarginBottomValue = "1440",
+            MarginLeftValue = "1440"
+        };
         DocxDocument document = new(
             612d,
             792d,

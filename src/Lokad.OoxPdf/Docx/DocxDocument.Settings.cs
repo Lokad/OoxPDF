@@ -56,14 +56,12 @@ internal sealed record DocxPageSettings(
     string? MarginLeftValue,
     double? HeaderDistancePoints,
     double? FooterDistancePoints,
-    string? HeaderDistanceValue,
-    string? FooterDistanceValue,
     bool? TitlePage,
     string? TitlePageValue,
     bool? EvenAndOddHeaders,
     string? EvenAndOddHeadersValue)
 {
-    public static DocxPageSettings Empty { get; } = new(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+    public static DocxPageSettings Empty { get; } = new(null, null, null, null, null, null, null, null, null, null, null, null, null);
 
     internal static (double Width, double Height) NormalizeDimensions(double width, double height, string? orientation)
     {
@@ -76,8 +74,6 @@ internal sealed record DocxPageSettings(
             ? (height, width) : (width, height);
     }
 
-    public double? DocGridLinePitchPoints { get; init; }
-    public string? DocGridLinePitchValue { get; init; }
     public double? GutterDistancePoints { get; init; }
     public string? GutterDistanceValue { get; init; }
     public DocxNoteReferenceSettings FootnoteReferenceSettings { get; init; } = DocxNoteReferenceSettings.Empty;
