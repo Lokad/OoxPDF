@@ -1425,7 +1425,7 @@ internal sealed partial class DocxReader
                 runs.Sum(run => run.Text.Length))
             {
                 ContentSourcePosition = contentSourcePosition,
-                IsNonPrintingBoundary = IsNonPrintingBoundary(marker),
+                IsNonPrintingBoundary = IsNonPrintingRevisionRangeBoundary(marker),
                 MarkerRevision = markerRevision
             });
             return;
@@ -1442,7 +1442,7 @@ internal sealed partial class DocxReader
         }
 
         int textOffset = runs.Sum(run => run.Text.Length);
-        bool empty = startRange is { IsNonPrintingBoundary: true } && IsNonPrintingBoundary(marker) &&
+        bool empty = startRange is { IsNonPrintingBoundary: true } && IsNonPrintingRevisionRangeBoundary(marker) &&
             startRange.SourceRunIndex == sourceRunIndex && startRange.TextOffset == textOffset &&
             startRange.ContentSourcePosition == contentSourcePosition;
         revisionRanges.Add(new DocxRevisionRange(
@@ -1461,14 +1461,14 @@ internal sealed partial class DocxReader
             if (startRange!.MarkerRevision is { } startRevision) markers.Add(startRevision);
             if (markerRevision is not null) markers.Add(markerRevision);
         }
-
-        static bool IsNonPrintingBoundary(XElement element) =>
-            !element.HasElements && string.IsNullOrWhiteSpace(element.Value) &&
-            !string.IsNullOrWhiteSpace((string?)element.Attribute(WordprocessingNamespace + "id")) &&
-            element.Attributes().All(attribute => attribute.IsNamespaceDeclaration ||
-                attribute.Name.Namespace == WordprocessingNamespace &&
-                attribute.Name.LocalName is "id" or "name" or "author" or "date");
     }
+
+    private static bool IsNonPrintingRevisionRangeBoundary(XElement element) =>
+        !element.HasElements && string.IsNullOrWhiteSpace(element.Value) &&
+        !string.IsNullOrWhiteSpace((string?)element.Attribute(WordprocessingNamespace + "id")) &&
+        element.Attributes().All(attribute => attribute.IsNamespaceDeclaration ||
+            attribute.Name.Namespace == WordprocessingNamespace &&
+            attribute.Name.LocalName is "id" or "name" or "author" or "date");
 
     private static void AddFieldReference(
         DocxFieldKind kind,

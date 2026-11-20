@@ -150,6 +150,16 @@ internal static partial class DocxInlineCompositionTests
                 CheckNonprinting(Render("hidden-break"));
                 CheckNonprinting(Render("excluded-insertion"));
                 CheckNonprinting(Render("excluded-move", includeDrawings: true));
+                CheckNonprinting(Render("closed-move-range"));
+                CheckNonprinting(Render("excluded-move-range"));
+                PdfPage[] openRange = Render("open-move-range", retainLeadingFragment: true);
+                TestAssert.True(openRange[0].Annotations.Single().Destination is { PageIndex: 0, Left: < 200d },
+                    "An open move range keeps its authored owner.");
+                PdfPage[] moved = Render("selected-move-range", retainLeadingFragment: true);
+                TestAssert.Contains("VISIBLE MOVE", string.Concat(
+                    DocxCommentsTests.ReadEmbeddedGlyphTextShows(moved[0]).Select(show => show.Text)));
+                TestAssert.True(moved[0].Annotations.Single().Destination is { PageIndex: 0, Left: < 200d },
+                    "A move range containing selected ink retains its leading fragment.");
                 PdfPage[] deletion = Render("selected-deletion", retainLeadingFragment: true);
                 TestAssert.Contains("VISIBLE DELETION", string.Concat(
                     DocxCommentsTests.ReadEmbeddedGlyphTextShows(deletion[0]).Select(show => show.Text)));
@@ -220,6 +230,9 @@ internal static partial class DocxInlineCompositionTests
                         new XAttribute(w + "anchor", "destination"), items);
                     XElement Revision(string kind, params XElement[] items) => new(w + kind,
                         new XAttribute(w + "id", 71), new XAttribute(w + "author", "Public probe"), items);
+                    XElement MoveStart(string kind) => new(w + (kind + "RangeStart"), new XAttribute(w + "id", 79),
+                        new XAttribute(w + "name", "PublicMove"), new XAttribute(w + "author", "Public probe"));
+                    XElement MoveEnd(string kind) => new(w + (kind + "RangeEnd"), new XAttribute(w + "id", 79));
                     XElement ContentControl(params XElement[] items) => new(w + "sdt",
                         new XElement(w + "sdtPr", new XElement(w + "alias", new XAttribute(w + "val", "Break probe"))),
                         new XElement(w + "sdtContent", items));
@@ -250,6 +263,14 @@ internal static partial class DocxInlineCompositionTests
                         "excluded-move" => [ContentControl(Revision("moveTo", new XElement(w + "r",
                             new XElement(w + "t", "EXCLUDED MOVE"), new XElement(w + "br", new XAttribute(w + "type", type)),
                             FloatingDrawing(1)))), run],
+                        "closed-move-range" => [ContentControl(MoveStart("moveTo"), MoveEnd("moveTo")), run],
+                        "excluded-move-range" => [MoveStart("moveTo"),
+                            ContentControl(Revision("moveTo", new XElement(w + "r", new XElement(w + "t", "EXCLUDED MOVE")))),
+                            MoveEnd("moveTo"), run],
+                        "open-move-range" => [MoveStart("moveTo"), run],
+                        "selected-move-range" => [MoveStart("moveFrom"),
+                            Revision("moveFrom", new XElement(w + "r", new XElement(w + "delText", "VISIBLE MOVE"))),
+                            MoveEnd("moveFrom"), run],
                         "selected-deletion" => [Revision("del", new XElement(w + "r", new XElement(w + "delText", "VISIBLE DELETION"))), run],
                         "page-field-hint" => [new XElement(w + "fldSimple", new XAttribute(w + "instr", "PAGE"), HintRun()), run],
                         "visible-hyperlink-hint" => [Link(new XElement(w + "r", Hint(), new XElement(w + "t", "VISIBLE BEFORE BREAK"))), run],
@@ -271,6 +292,14 @@ internal static partial class DocxInlineCompositionTests
                         section);
                 });
                 TestAssert.Equal(retainLeadingFragment ? 4 : 3, document.BodyElements.Count);
+                if (wrapper is "closed-move-range" or "excluded-move-range")
+                {
+                    DocxRevisionRange range = document.Paragraphs.Last().RevisionRanges.Single();
+                    TestAssert.Equal("79", range.Id);
+                    TestAssert.Equal("PublicMove", range.Name);
+                    TestAssert.True(!range.HasContentSource && range.StartSourceRunIndex is not null,
+                        "The closed nonprinting range remains on the continuation at its original source boundary.");
+                }
                 if (includeDrawings)
                 {
                     DocxFloatingDrawing drawing = document.FloatingDrawings.Single();

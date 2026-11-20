@@ -576,7 +576,75 @@ internal sealed partial class DocxReader
         }
 
         AddParagraphPart(endsBeforeBreak: false);
+        AttachClosedMoveRangesToContinuation(parts, retainFirstLine);
         return parts;
+    }
+
+    private static void AttachClosedMoveRangesToContinuation(List<ParagraphBreakPart> parts, bool retainFirstLine)
+    {
+        int continuationIndex = -1;
+        bool removedFragment = false;
+        for (int i = parts.Count - 1; i >= 0; i--)
+        {
+            ParagraphBreakPart part = parts[i];
+            if (part.Paragraph is not { } paragraph) continue;
+            var children = DocxSourceXml.StoredChildren(paragraph)
+                .Where(child => child.Name != WordprocessingNamespace + "pPr");
+            if (!children.Any()) continue;
+            if (!ContainsOnlyClosedMoveRanges(children))
+            {
+                continuationIndex = i;
+                continue;
+            }
+
+            // A closed range with no payload can travel to this source paragraph's
+            // next fragment. Standalone marks and numbered first lines keep their frame.
+            if (!part.EndsBeforeBreak || continuationIndex < 0 || retainFirstLine && part.IsFirstFragment)
+                continue;
+
+            ParagraphBreakPart continuation = parts[continuationIndex];
+            XElement target = continuation.Paragraph!;
+            if (target.Element(WordprocessingNamespace + "pPr") is { } properties)
+                properties.AddAfterSelf(children);
+            else
+                target.AddFirst(children);
+            if (part.IsFirstFragment)
+                parts[continuationIndex] = continuation with { IsFirstFragment = true };
+            parts[i] = part with { Paragraph = null };
+            removedFragment = true;
+        }
+
+        if (removedFragment)
+            parts.RemoveAll(part => part.Paragraph is null && part.BreakValue is null);
+    }
+
+    private static bool ContainsOnlyClosedMoveRanges(IEnumerable<XElement> children)
+    {
+        HashSet<(DocxRevisionKind Kind, string Id)>? open = null;
+        return Visit(children) && open is { Count: 0 };
+
+        bool Visit(IEnumerable<XElement> content)
+        {
+            foreach (XElement child in content)
+            {
+                if (DocxSourceXml.IsTransparentInlineContainer(child))
+                {
+                    if (!Visit(DocxSourceXml.StoredChildren(child))) return false;
+                    continue;
+                }
+
+                if (DocxSourceXml.IsNonPrintingMarker(child)) continue;
+                if (!TryResolveRevisionRangeMarker(child, out DocxRevisionKind? kind, out bool isStart) ||
+                    !IsNonPrintingRevisionRangeBoundary(child))
+                    return false;
+
+                var marker = (kind.Value, child.Attribute(WordprocessingNamespace + "id")!.Value);
+                open ??= [];
+                if (!(isStart ? open.Add(marker) : open.Remove(marker))) return false;
+            }
+
+            return true;
+        }
     }
 
     private static void SplitRunBreakContainer(
