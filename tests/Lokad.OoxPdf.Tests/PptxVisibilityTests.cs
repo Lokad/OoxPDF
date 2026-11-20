@@ -219,20 +219,23 @@ internal static class PptxVisibilityTests
 
     public static void PptxHiddenSlidesAreSkipped()
     {
-        string input = WriteHiddenSlidePackage();
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, output);
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Equal(1, PptxTests.CountOccurrences(pdf, "/Type /Page "));
-        TestAssert.Contains("0 0 1 rg", pdf);
-        TestAssert.DoesNotContain("1 0 0 rg", pdf);
+        string input = WriteHiddenSlidePackage("0");
+        string output = Path.ChangeExtension(input, ".pdf");
+        try
+        {
+            OoxPdfConverter.Convert(input, output);
+            AssertVisibleSlidePaint(File.ReadAllText(output, Encoding.ASCII));
+        }
+        finally
+        {
+            File.Delete(input);
+            File.Delete(output);
+        }
     }
 
     public static void PptxPaddedBooleanValuesPreserveExcludedSlides()
     {
-        foreach (string show in new[] { "false", " false ", "0", " 0 " })
+        foreach (string show in new[] { "false", " false ", " 0 " })
         {
             string input = WriteHiddenSlidePackage(show);
             try
@@ -240,13 +243,17 @@ internal static class PptxVisibilityTests
                 using var source = File.OpenRead(input);
                 using var output = new MemoryStream();
                 OoxPdfConverter.Convert(source, output, new OoxPdfOptions { InputKind = OoxPdfInputKind.Pptx });
-                string pdf = Encoding.ASCII.GetString(output.ToArray());
-                TestAssert.Equal(1, PptxTests.CountOccurrences(pdf, "/Type /Page "));
-                TestAssert.Contains("0 0 1 rg", pdf);
-                TestAssert.DoesNotContain("1 0 0 rg", pdf);
+                AssertVisibleSlidePaint(Encoding.ASCII.GetString(output.ToArray()));
             }
             finally { File.Delete(input); }
         }
+    }
+
+    private static void AssertVisibleSlidePaint(string pdf)
+    {
+        TestAssert.Equal(1, PptxTests.CountOccurrences(pdf, "/Type /Page "));
+        TestAssert.Contains("0 0 1 rg", pdf);
+        TestAssert.DoesNotContain("1 0 0 rg", pdf);
     }
 
     public static void PptxLinksToHiddenSlidesAreDiagnosed()
@@ -325,7 +332,7 @@ internal static class PptxVisibilityTests
         TestAssert.True(diagnostics.Any(d => d.Id == "PPTX_UNSUPPORTED_HYPERLINK"), "A link to a hidden slide should diagnose the unresolvable target.");
     }
 
-    private static string WriteHiddenSlidePackage(string show = "0")
+    private static string WriteHiddenSlidePackage(string show)
     {
         return TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
         {

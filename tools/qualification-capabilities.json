@@ -9478,8 +9478,7 @@
     "DocxReaderPromotesSimpleFieldRunPageBreakInsideParagraph",
     "DocxLayoutUsesResolvedBodyPageFieldForLineBreaking",
     "DocxLayoutUsesCompactBodyNumPagesFieldForLineBreaking",
-    "DocxTableLayoutUsesResolvedPageFieldForCellLineBreaking",
-    "DocxTableLayoutUsesCompactNumPagesFieldForCellLineBreaking",
+    "DocxTableLayoutKeepsPageCountersCompactForCellLineBreaking",
     "DocxLayoutStageResolvesStaticHeaderTableCountersPerPage",
     "DocxNativeStaticMathRetainsStoryFlowAndPerPartDiagnosticScope",
     "DocxStaticMathFramesSharePreparedAdvanceAndFooterBlockTranslation",
@@ -9606,8 +9605,7 @@
     "DocxInlineCompositionPageFieldCacheEndsWithItsOwner",
     "DocxLayoutUsesResolvedBodyPageFieldForLineBreaking",
     "DocxLayoutUsesCompactBodyNumPagesFieldForLineBreaking",
-    "DocxTableLayoutUsesResolvedPageFieldForCellLineBreaking",
-    "DocxTableLayoutUsesCompactNumPagesFieldForCellLineBreaking"
+    "DocxTableLayoutKeepsPageCountersCompactForCellLineBreaking"
   ],
   "docx-inline-measured-cursors": [
     "DocxInlineCompositionSourceCursor",
@@ -10097,8 +10095,7 @@
     "DocxInlineCompositionMeasuredAtomsRebindOnlyCounters",
     "DocxLayoutUsesResolvedBodyPageFieldForLineBreaking",
     "DocxLayoutUsesCompactBodyNumPagesFieldForLineBreaking",
-    "DocxTableLayoutUsesResolvedPageFieldForCellLineBreaking",
-    "DocxTableLayoutUsesCompactNumPagesFieldForCellLineBreaking",
+    "DocxTableLayoutKeepsPageCountersCompactForCellLineBreaking",
     "DocxTableCellPageFieldsEvaluatePerFragmentPage",
     "DocxTableCellTextLinesMemoSharesSplitCells",
     "PortableRenderingBodyPageCountersFollowLineAdmission",
@@ -17905,8 +17902,7 @@
     "DocxReaderPromotesSimpleFieldRunPageBreakInsideParagraph",
     "DocxLayoutUsesResolvedBodyPageFieldForLineBreaking",
     "DocxLayoutUsesCompactBodyNumPagesFieldForLineBreaking",
-    "DocxTableLayoutUsesResolvedPageFieldForCellLineBreaking",
-    "DocxTableLayoutUsesCompactNumPagesFieldForCellLineBreaking",
+    "DocxTableLayoutKeepsPageCountersCompactForCellLineBreaking",
     "DocxLayoutStageResolvesStaticHeaderTableCountersPerPage",
     "DocxMarkupModesFilterHyperlinkAndFieldRevisionsBeforeLayout"
   ],
@@ -17949,8 +17945,7 @@
     "PortableRenderingInlineBoxTotalCounters",
     "DocxInlineCompositionTotalPage",
     "PortableRenderingTotalPageMath",
-    "DocxTableLayoutUsesResolvedPageFieldForCellLineBreaking",
-    "DocxTableLayoutUsesCompactNumPagesFieldForCellLineBreaking",
+    "DocxTableLayoutKeepsPageCountersCompactForCellLineBreaking",
     "DocxLayoutStageResolvesStaticHeaderTableCountersPerPage",
     "DocxSpanningCellTotalCountersRetainWordPagesAndCompleteContent",
     "PortableRenderingSpanningCellTotalCountersKeepCompleteSource"
@@ -18026,7 +18021,7 @@
     "DocxLayoutUsesCompactBodyNumPagesFieldForLineBreaking",
     "DocxLayoutRightAlignsBodyNumPagesUsingCompactFieldWidth",
     "DocxTextEmissionCompactsResolvedNumPagesFieldAdvance",
-    "DocxTableLayoutUsesCompactNumPagesFieldForCellLineBreaking",
+    "DocxTableLayoutKeepsPageCountersCompactForCellLineBreaking",
     "DocxLayoutStageResolvesStaticHeaderTableCountersPerPage",
     "DocxLayoutStageResolvesStaticHeaderFloatingTextBoxNumPagesFieldFromPageCount",
     "DocxLayoutRightAlignsFloatingTextBoxNumPagesUsingCompactFieldWidth"
@@ -18629,7 +18624,7 @@
     "DocxRendererUsesThemeTypefaceForThemeOnlyDefaultRun",
     "DocxScaledFootnoteAdmissionMatchesIndependentPageMembership",
     "DocxStructureSnapshotUsesBodyElementInventoryAsCanonicalSource",
-    "DocxTableLayoutUsesCompactNumPagesFieldForCellLineBreaking",
+    "DocxTableLayoutKeepsPageCountersCompactForCellLineBreaking",
     "DocxTextEmissionCompactsResolvedNumPagesFieldAdvance",
     "MathFontDelimiterAliasesKeepAuthoredUnicodeInEitherSourceOrder",
     "MathFontDelimiterAssemblyPartsKeepAuthoredUnicodeAcrossSharedSymbols",

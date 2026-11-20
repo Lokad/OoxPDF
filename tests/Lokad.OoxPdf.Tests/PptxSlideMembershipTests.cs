@@ -84,8 +84,7 @@ internal static class PptxSlideMembershipTests
         finally { Directory.Delete(directory, recursive: true); }
     }
 
-    private static string Case(string id) => Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,
-        "..", "..", "..", "Cases", "SlideMembership", id + ".pptx"));
+    private static string Case(string id) => TestFixtures.PublicCasePath(Path.Combine("SlideMembership", id + ".pptx"));
 
     private static PptxDocument Read(string path, CancellationToken token = default)
     {

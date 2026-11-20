@@ -852,11 +852,12 @@ internal static class DocxTablesTests
         TestAssert.DoesNotContain("0.851 0.918 0.827 rg", pdf);
     }
 
-    public static void DocxTableLayoutUsesResolvedPageFieldForCellLineBreaking()
+    public static void DocxTableLayoutKeepsPageCountersCompactForCellLineBreaking()
     {
-        // 26pt fixture sinks the 0.48pt Office default cell insets (w68) so the resolved field still fits one line; wrap-vs-Word symmetry gets its own probe.
-        DocxParagraph paragraph = DocxTests.CreateDocxLayoutParagraph("A {PAGE} B", 10d, 10d);
-        var cell = new DocxTableCell([paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        // Both counters must fit at 26pt with the default cell insets.
+        DocxParagraph page = DocxTests.CreateDocxLayoutParagraph("A {PAGE} B", 10d, 10d);
+        DocxParagraph total = DocxTests.CreateDocxLayoutParagraph("A {NUMPAGES} B", 10d, 10d);
+        var cell = new DocxTableCell([page, total], null, null, null, null, [], DocxTableCellMargins.Empty);
         var table = new DocxTable(null, [26d], [new DocxTableRow([cell], null)]);
         var document = new DocxDocument(
             100d,
@@ -880,40 +881,10 @@ internal static class DocxTablesTests
             .OfType<DocxTableRowLayout>()
             .Single();
 
-        DocxTextLineLayout line = row.Cells.Single().TextLines.Single();
-        TestAssert.Equal("A 1 B", line.Text);
-    }
-
-    public static void DocxTableLayoutUsesCompactNumPagesFieldForCellLineBreaking()
-    {
-        // 26pt fixture sinks the 0.48pt Office default cell insets (w68) so the literal field still fits one line; wrap-vs-Word symmetry gets its own probe.
-        DocxParagraph paragraph = DocxTests.CreateDocxLayoutParagraph("A {NUMPAGES} B", 10d, 10d);
-        var cell = new DocxTableCell([paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
-        var table = new DocxTable(null, [26d], [new DocxTableRow([cell], null)]);
-        var document = new DocxDocument(
-            100d,
-            100d,
-            10d,
-            10d,
-            10d,
-            10d,
-            DocxPageSettings.Empty,
-            [],
-            [],
-            [],
-            [new DocxTableElement(table)],
-            [],
-            [table]);
-
-        DocxTableRowLayout row = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-            .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
-            .Pages[0]
-            .Items
-            .OfType<DocxTableRowLayout>()
-            .Single();
-
-        DocxTextLineLayout line = row.Cells.Single().TextLines.Single();
-        TestAssert.Equal("A {NUMPAGES} B", line.Text);
+        var lines = row.Cells.Single().TextLines;
+        TestAssert.Equal(2, lines.Count);
+        TestAssert.Equal("A 1 B", lines[0].Text);
+        TestAssert.Equal("A {NUMPAGES} B", lines[1].Text);
     }
 
     public static void DocxReaderUsesSectionNoteDefaultsForBodyAndTableMarkers()
