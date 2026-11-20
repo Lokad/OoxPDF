@@ -71,7 +71,7 @@ foreach ($case in $cases) {
     if ($LASTEXITCODE -ne 0) { throw "Conversion failed for $($case.InputPath)." }
     & (Join-Path $repoRoot "tools/InspectPdf.ps1") -Framework $Framework -InputPdf $pdf -OutputDirectory $inspectDir -TextOnly -InspectorPath $inspectorDll -SkipBuild
     $ops = Get-Content -Raw -LiteralPath (Join-Path $inspectDir "text-operations.json") | ConvertFrom-Json
-    $fullText = Join-DecodedPdfTextPages $ops
+    $fullText = (Get-DecodedPdfTextFragments $ops) -join "`n"
     $cursor = 0
     $missing = 0
     foreach ($expected in $case.Expected) {

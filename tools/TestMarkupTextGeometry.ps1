@@ -88,5 +88,13 @@ Assert-Equal 'failed' $failedWitness.Status 'An equal-geometry substitution fail
 Assert-Equal 1 (New-GateSummary @($failedWitness)).FailureCount 'A missing witness contributes to the live gate failure count'
 Assert-Equal 'failed' (New-MarkupTextWitnessGate @($unknown) @('APPROVE')).Status 'Undecoded text cannot satisfy the authored witness'
 Assert-Equal 'failed' (New-MarkupTextWitnessGate @($laneText[0], $unknown, $laneText[1]) @('APPROVE')).Status 'An undecoded operation breaks a would-be phrase'
+$leftCell = New-Op 80 650 't' 0
+$leftCell.EmittedAdvancePoints = $null
+$rightCell = New-Op 515 650 'Table right' 55
+$separateCells = @($leftCell, $laneText[0], $laneText[1], $rightCell)
+Assert-Equal 'passed' (New-MarkupTextWitnessGate $separateCells @('APPROVE')).Status 'Clearly separated cells preserve their own word boundaries'
+Assert-Equal 'failed' (New-MarkupTextWitnessGate $separateCells @('APPROVE Table right')).Status 'Separate cells cannot supply a joined phrase'
+$spacedTail = New-Op 470 650 'X' 7
+Assert-Equal 'passed' (New-MarkupTextWitnessGate @($laneText[0], $laneText[1], $spacedTail) @('APPROVEX')).Status 'A small same-line split retains the authored text'
 Assert-Equal 'skipped' (New-MarkupTextWitnessGate $substituted @()).Status 'A case without an authored witness reports skipped coverage'
 Write-Host 'Markup text geometry checks passed.'
