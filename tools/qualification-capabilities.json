@@ -18362,7 +18362,10 @@
   "docx-balloon-focused": [
     "DocxWordCompatibleMixedBalloonParagraphBodyBoundaries",
     "DocxWordCompatibleMixedBalloonSpacingBoundaries",
-    "DocxWordCompatibleBalloonSpacingTokensAreIndependent"
+    "DocxWordCompatibleBalloonSpacingTokensAreIndependent",
+    "=DocxWordCompatibleMixedBalloonSplitsFirstTailWordAfterWrappedPrefix",
+    "=DocxWordCompatibleMixedBalloonWrapsOrdinaryPrefixWordsBeforeJoiningTail",
+    "=DocxWordCompatibleMixedBalloonPreservesCompleteWrappedPrefixFallback"
   ],
   "docx-balloon-exhaustive": [
     "DocxWordCompatibleMixedBalloonNormalizesExplicitParagraphSpacing",
