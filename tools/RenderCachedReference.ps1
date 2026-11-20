@@ -30,7 +30,6 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$repoRoot = Split-Path -Parent $PSScriptRoot
 . (Join-Path $PSScriptRoot "ReferenceCache.ps1")
 
 $inputFull = (Resolve-Path -LiteralPath $InputPath).Path
@@ -56,16 +55,18 @@ function New-CacheMissMessage($resolution) {
     return "Reference cache miss for '$inputFull'$variantMessage at $Dpi DPI ($($resolution.Reason)). Cache-only mode refuses to invoke Office/COM reference rendering. Expected identity directory: artifacts/reference-cache/$($resolution.IdentityKey). To populate it on an Office setup, run: $populate"
 }
 
-$resolution = Use-ReferenceCacheLock (Get-ReferenceIdentityKey $inputFull $CacheVariant) {
-    Resolve-ReferenceCacheEntry $inputFull $Dpi $CacheVariant
-}
-
-if ($resolution.Outcome -eq "LegacyHit") {
-    Write-Host ("Reference cache legacy entry ($($resolution.Reason)): $($resolution.CacheDirectory)")
-    $resolution = Use-ReferenceCacheLock $resolution.IdentityKey {
-        Move-LegacyReferenceEntry $resolution.CacheDirectory (Join-Path (Get-ReferenceCacheRoot) $resolution.IdentityKey) $inputFull $Dpi $resolution.DerivativeName $CacheVariant $CaseId
-        Resolve-ReferenceCacheEntry $inputFull $Dpi $CacheVariant
+$identityKey = Get-ReferenceIdentityKey $inputFull $CacheVariant
+$resolution = Use-ReferenceCacheLock $identityKey {
+    $entry = Resolve-ReferenceCacheEntry $inputFull $Dpi $CacheVariant
+    if ($entry.IdentityKey -cne $identityKey) {
+        throw 'Reference input changed during cache lookup'
     }
+    if ($entry.Outcome -ne 'LegacyHit') { return $entry }
+
+    # Another reader must resolve the new entry after adoption completes.
+    Write-Host ("Reference cache legacy entry ($($entry.Reason)): $($entry.CacheDirectory)")
+    Move-LegacyReferenceEntry $entry.CacheDirectory (Join-Path (Get-ReferenceCacheRoot) $identityKey) $inputFull $Dpi $entry.DerivativeName $CacheVariant $CaseId
+    Resolve-ReferenceCacheEntry $inputFull $Dpi $CacheVariant
 }
 
 if ($resolution.Outcome -eq "Corrupt") {

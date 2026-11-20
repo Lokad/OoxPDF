@@ -154,13 +154,23 @@ New-Item -ItemType Directory -Path $legacyDir | Out-Null
 Copy-Item -LiteralPath $sourcePdf -Destination (Join-Path $legacyDir 'reference.pdf')
 Copy-Item -LiteralPath $page -Destination (Join-Path $legacyDir 'page-001.png')
 [IO.File]::WriteAllText((Join-Path $legacyDir 'complete.txt'),"input=$legacyInput`ndpi=144`nvariant=`n")
-$servedLegacy=Join-Path $root 'adopted'
-& $render -InputPath $legacyInput -OutputDirectory $servedLegacy -CaseId 'legacy-control' -CacheOnly -SkipBuild *> ($servedLegacy+'.log')
+$legacyOutputs=@('adopted-first','adopted-second' | ForEach-Object { Join-Path $root $_ })
+$servedLegacy=@($legacyOutputs | ForEach-Object -Parallel {
+    $ErrorActionPreference='Stop'
+    & $using:render -InputPath $using:legacyInput -OutputDirectory $_ -CaseId 'legacy-control' -CacheOnly -SkipBuild *> ($_+'.log')
+    $_
+} -ThrottleLimit 2 -TimeoutSeconds 20)
 $adopted=Resolve-ReferenceCacheEntry $legacyInput 144 ''
-if ((Test-Path -LiteralPath $legacyDir) -or $adopted.Outcome -cne 'Hit' -or $adopted.Derivative.State -cne 'Complete' -or
-    $adopted.Metadata.Producer -cne 'legacy-adopted' -or $adopted.Metadata.CaseId -cne 'legacy-control' -or
-    (Get-FileHash -LiteralPath (Join-Path $servedLegacy 'reference.pdf')).Hash.ToLowerInvariant() -cne $pdfHash) { throw 'Flat reference adoption lost bytes or provenance' }
-$checks+='flat-entry-adoption'
+if ($servedLegacy.Count -ne 2 -or (Test-Path -LiteralPath $legacyDir) -or $adopted.Outcome -cne 'Hit' -or
+    $adopted.Derivative.State -cne 'Complete' -or $adopted.Metadata.Producer -cne 'legacy-adopted' -or
+    $adopted.Metadata.CaseId -cne 'legacy-control') { throw 'Concurrent flat reference adoption lost bytes or provenance' }
+foreach ($output in $legacyOutputs) {
+    if ((Get-FileHash -LiteralPath (Join-Path $output 'reference.pdf')).Hash.ToLowerInvariant() -cne $pdfHash -or
+        (Get-FileHash -LiteralPath (Join-Path $output 'page-001.png')).Hash -cne (Get-FileHash -LiteralPath $page).Hash) {
+        throw 'An adopting reader received a different PDF or raster'
+    }
+}
+$checks+='concurrent-flat-entry-adoption'
 
 $raceInput=Join-Path $root 'race.docx'
 [IO.File]::WriteAllText($raceInput,'Concurrent reference input')
