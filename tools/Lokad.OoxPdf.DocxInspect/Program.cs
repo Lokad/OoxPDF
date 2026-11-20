@@ -20,7 +20,7 @@ for (int i = 2; i < args.Length; i++)
 {
     if (args[i].Equals("--docx-markup", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
     {
-        if (!TryParseDocxMarkupMode(args[++i], out markupMode))
+        if (!DocxMarkupArguments.TryParseMode(args[++i], out markupMode))
         {
             Console.Error.WriteLine($"Invalid DOCX markup mode: {args[i]}");
             Environment.Exit(2);
@@ -31,7 +31,7 @@ for (int i = 2; i < args.Length; i++)
 
     if (args[i].Equals("--docx-markup-geometry", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
     {
-        if (!TryParseDocxMarkupGeometryMode(args[++i], out markupGeometryMode))
+        if (!DocxMarkupArguments.TryParseGeometryMode(args[++i], out markupGeometryMode))
         {
             Console.Error.WriteLine($"Invalid DOCX markup geometry mode: {args[i]}");
             Environment.Exit(2);
@@ -385,59 +385,6 @@ static object ToFloatingDrawingSummary(string streamKind, DocxFloatingDrawingLay
 static int CountChildTextLines(IEnumerable<DocxLayoutItemSnapshot> items)
 {
     return items.Sum(item => item.TextLines?.Count ?? 0);
-}
-
-static bool TryParseDocxMarkupMode(string value, out OoxPdfDocxMarkupMode mode)
-{
-    switch (value.Trim().ToLowerInvariant())
-    {
-        case "final":
-            mode = OoxPdfDocxMarkupMode.Final;
-            return true;
-        case "original":
-            mode = OoxPdfDocxMarkupMode.Original;
-            return true;
-        case "simple":
-        case "simple-markup":
-            mode = OoxPdfDocxMarkupMode.SimpleMarkup;
-            return true;
-        case "all":
-        case "all-markup":
-            mode = OoxPdfDocxMarkupMode.AllMarkup;
-            return true;
-        default:
-            mode = OoxPdfDocxMarkupMode.Final;
-            return false;
-    }
-}
-
-static bool TryParseDocxMarkupGeometryMode(string value, out OoxPdfDocxMarkupGeometryMode mode)
-{
-    switch (value.Trim().ToLowerInvariant())
-    {
-        case "preserve":
-        case "preserve-layout":
-        case "preserve-document-layout":
-            mode = OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout;
-            return true;
-        case "reserve":
-        case "reserve-margin":
-        case "markup-margin":
-        case "reserve-markup-margin":
-            mode = OoxPdfDocxMarkupGeometryMode.ReserveMarkupMargin;
-            return true;
-        case "word":
-        case "word-compatible":
-        case "word-compatible-all-markup":
-        case "office":
-        case "office-compatible":
-        case "office-compatible-all-markup":
-            mode = OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup;
-            return true;
-        default:
-            mode = OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout;
-            return false;
-    }
 }
 
 static object CreateMarkupSummary(

@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Lokad.OoxPdf\Lokad.OoxPdf.csproj" />
+    <Compile Include="..\..\src\Lokad.OoxPdf.Cli\DocxMarkupArguments.cs" Link="DocxMarkupArguments.cs" />
   </ItemGroup>
 
   <PropertyGroup>
