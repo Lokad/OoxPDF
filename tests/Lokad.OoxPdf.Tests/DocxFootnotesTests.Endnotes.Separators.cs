@@ -303,28 +303,18 @@ internal static partial class DocxFootnotesTests
         TestAssert.Equal(144d, separatorLine.Segments[0].X - separatorLine.X);
     }
 
-    public static void DocxEndnoteSeparatorIgnoresDirectParagraphSpacing()
+    public static void DocxEndnoteSeparatorIgnoresAuthoredSpacing()
     {
-        // RV06 endnote-spacing probes (Word 16.0, edge-endsepsp/endsepspb): Office
-        // holds document-end endnotes byte-identical across separator before/after
-        // 0 vs 24pt, so separator stories lay out with latent-default spacing while
-        // the renderer flows direct values into the separator height (24pt error).
-        double topAfter0 = LayoutEndnoteBodyTopWithSeparatorSpacing("<w:pPr><w:spacing w:after=\"0\"/></w:pPr>");
-        double topAfter24 = LayoutEndnoteBodyTopWithSeparatorSpacing("<w:pPr><w:spacing w:after=\"480\"/></w:pPr>");
-        double topDefault = LayoutEndnoteBodyTopWithSeparatorSpacing(string.Empty);
-        TestAssert.True(Math.Abs(topAfter0 - topAfter24) < 0.000001d, "Endnote separator after-spacing must not move the note block; observed shift=" + Math.Abs(topAfter0 - topAfter24).ToString(CultureInfo.InvariantCulture) + ".");
-        TestAssert.True(Math.Abs(topAfter0 - topDefault) < 0.000001d, "Endnote separator after-spacing must match latent defaults; observed shift=" + Math.Abs(topAfter0 - topDefault).ToString(CultureInfo.InvariantCulture) + ".");
-    }
+        // Word 16.0 keeps the endnote block fixed in edge-endsepsp,
+        // edge-endsepspb and edge-endsepspex.
+        double defaults = LayoutNoteWithSeparatorSpacing(DocxRelatedStoryKind.Endnote, string.Empty).BodyTop;
+        double after0 = LayoutNoteWithSeparatorSpacing(DocxRelatedStoryKind.Endnote, SeparatorAfter0).BodyTop;
+        double after24 = LayoutNoteWithSeparatorSpacing(DocxRelatedStoryKind.Endnote, SeparatorAfter24).BodyTop;
+        double exact = LayoutNoteWithSeparatorSpacing(DocxRelatedStoryKind.Endnote, SeparatorExact24).BodyTop;
 
-    public static void DocxEndnoteSeparatorIgnoresExactLineSpacing()
-    {
-        // RV06 exact-line probe (Word 16.0, edge-endsepspex): Office shifts the
-        // endnote block identically with exact-24 and auto separator lines
-        // (minus 8.76 both), so separator stories also ignore exact line rules
-        // while the renderer clamps the mark line box to 24pt (shift minus 3.76).
-        double topExact = LayoutEndnoteBodyTopWithSeparatorSpacing("<w:pPr><w:spacing w:line=\"480\" w:lineRule=\"exact\"/></w:pPr>");
-        double topAuto = LayoutEndnoteBodyTopWithSeparatorSpacing(string.Empty);
-        TestAssert.True(Math.Abs(topExact - topAuto) < 0.000001d, "Endnote separator exact line spacing must match auto lines; observed shift=" + Math.Abs(topExact - topAuto).ToString(CultureInfo.InvariantCulture) + ".");
+        AssertSeparatorPosition(after0, after24, "Endnote top with 0pt and 24pt after-spacing");
+        AssertSeparatorPosition(after0, defaults, "Endnote top with explicit 0pt and default after-spacing");
+        AssertSeparatorPosition(exact, defaults, "Endnote top with exact 24pt and automatic line spacing");
     }
 
     public static void DocxEndnoteSeparatorGapUsesMarkMetrics()

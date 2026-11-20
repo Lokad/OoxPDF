@@ -3743,24 +3743,20 @@ internal static partial class DocxFootnotesTests
         };
     }
 
-    public static void DocxFootnoteSeparatorIgnoresDirectParagraphSpacing()
+    public static void DocxFootnoteSeparatorIgnoresAuthoredSpacing()
     {
-        // Shared story-layout path with endnote separators (Office evidence is
-        // endnote-only; no diverging footnote evidence): direct separator spacing
-        // must not move footnote content, and the separator rule must not ride the
-        // direct spacing either (the footnote content hangs off the stories top
-        // while the rule sits in the separator story, so the rule is the moving
-        // part here).
-        double topAfter0 = LayoutFootnoteBodyTopWithSeparatorSpacing("<w:pPr><w:spacing w:after=\"0\"/></w:pPr>");
-        double topAfter24 = LayoutFootnoteBodyTopWithSeparatorSpacing("<w:pPr><w:spacing w:after=\"480\"/></w:pPr>");
-        double topDefault = LayoutFootnoteBodyTopWithSeparatorSpacing(string.Empty);
-        TestAssert.True(Math.Abs(topAfter0 - topAfter24) < 0.000001d, "Footnote separator after-spacing must not move the note block; observed shift=" + Math.Abs(topAfter0 - topAfter24).ToString(CultureInfo.InvariantCulture) + ".");
-        TestAssert.True(Math.Abs(topAfter0 - topDefault) < 0.000001d, "Footnote separator after-spacing must match latent defaults; observed shift=" + Math.Abs(topAfter0 - topDefault).ToString(CultureInfo.InvariantCulture) + ".");
-        double ruleAfter0 = LayoutFootnoteSeparatorRuleWithSpacing("<w:pPr><w:spacing w:after=\"0\"/></w:pPr>");
-        double ruleAfter24 = LayoutFootnoteSeparatorRuleWithSpacing("<w:pPr><w:spacing w:after=\"480\"/></w:pPr>");
-        double ruleDefault = LayoutFootnoteSeparatorRuleWithSpacing(string.Empty);
-        TestAssert.True(Math.Abs(ruleAfter0 - ruleAfter24) < 0.000001d, "Footnote separator rule must not ride direct after-spacing; observed shift=" + Math.Abs(ruleAfter0 - ruleAfter24).ToString(CultureInfo.InvariantCulture) + ".");
-        TestAssert.True(Math.Abs(ruleAfter0 - ruleDefault) < 0.000001d, "Footnote separator rule must match latent defaults; observed shift=" + Math.Abs(ruleAfter0 - ruleDefault).ToString(CultureInfo.InvariantCulture) + ".");
+        // The Word spacing probes cover endnotes. Footnotes exercise the shared
+        // separator behavior and check both the note position and rule.
+        var defaults = LayoutNoteWithSeparatorSpacing(DocxRelatedStoryKind.Footnote, string.Empty);
+        var after0 = LayoutNoteWithSeparatorSpacing(DocxRelatedStoryKind.Footnote, SeparatorAfter0);
+        var after24 = LayoutNoteWithSeparatorSpacing(DocxRelatedStoryKind.Footnote, SeparatorAfter24);
+        var exact = LayoutNoteWithSeparatorSpacing(DocxRelatedStoryKind.Footnote, SeparatorExact24);
+
+        AssertSeparatorPosition(after0.BodyTop, after24.BodyTop, "Footnote top with 0pt and 24pt after-spacing");
+        AssertSeparatorPosition(after0.BodyTop, defaults.BodyTop, "Footnote top with explicit 0pt and default after-spacing");
+        AssertSeparatorPosition(after0.RuleY, after24.RuleY, "Footnote rule with 0pt and 24pt after-spacing");
+        AssertSeparatorPosition(after0.RuleY, defaults.RuleY, "Footnote rule with explicit 0pt and default after-spacing");
+        AssertSeparatorPosition(exact.RuleY, defaults.RuleY, "Footnote rule with exact 24pt and automatic line spacing");
     }
 
     private sealed class HheaAscenderTextMeasurer(IDocxTextMeasurer inner, double hheaAscenderEm) : IDocxTextMeasurer, IDocxLineMetricsProvider
@@ -5180,80 +5176,76 @@ internal static partial class DocxFootnotesTests
         PdfPage page = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
         return DocxTests.CountPdfTextShows(page.Content);
     }
-    public static void DocxFootnoteSeparatorIgnoresExactLineSpacing()
+
+    private const string SeparatorAfter0 = "<w:pPr><w:spacing w:after=\"0\"/></w:pPr>";
+    private const string SeparatorAfter24 = "<w:pPr><w:spacing w:after=\"480\"/></w:pPr>";
+    private const string SeparatorExact24 = "<w:pPr><w:spacing w:line=\"480\" w:lineRule=\"exact\"/></w:pPr>";
+
+    private static void AssertSeparatorPosition(double? expected, double? actual, string comparison)
     {
-        // Shared story-layout path with endnote separators (Office evidence is
-        // endnote-only; no diverging footnote evidence): the footnote rule rides
-        // the separator bottom, so an exact line rule that Office ignores would
-        // move our rule with the taller story.
-        double ruleExact = LayoutFootnoteSeparatorRuleWithSpacing("<w:pPr><w:spacing w:line=\"480\" w:lineRule=\"exact\"/></w:pPr>");
-        double ruleAuto = LayoutFootnoteSeparatorRuleWithSpacing(string.Empty);
-        TestAssert.True(Math.Abs(ruleExact - ruleAuto) < 0.000001d, "Footnote separator exact line spacing must match auto lines; observed shift=" + Math.Abs(ruleExact - ruleAuto).ToString(CultureInfo.InvariantCulture) + ".");
+        TestAssert.True(expected is double left && actual is double right && Math.Abs(left - right) < 0.000001d,
+            FormattableString.Invariant($"{comparison} should agree. Observed {expected}pt and {actual}pt."));
     }
 
-    private static double LayoutEndnoteBodyTopWithSeparatorSpacing(string separatorParagraphProperties)
+    private static (double BodyTop, double? RuleY) LayoutNoteWithSeparatorSpacing(
+        DocxRelatedStoryKind kind, string separatorParagraphProperties)
     {
-        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        bool footnote = kind == DocxRelatedStoryKind.Footnote;
+        string note = footnote ? "footnote" : "endnote";
+        string bodyLabel = footnote ? "note" : "endnote";
+        using MemoryStream input = TestFixtures.CreateZipPackage(new Dictionary<string, string>
         {
-            ["[Content_Types].xml"] = """<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/endnotes.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.endnotes+xml"/></Types>""",
-            ["_rels/.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>""",
-            ["word/_rels/document.xml.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/endnotes" Target="endnotes.xml"/></Relationships>""",
-            ["word/document.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body><w:p><w:r><w:t xml:space="preserve">Body with endnote</w:t></w:r><w:r><w:rPr><w:vertAlign w:val="superscript"/></w:rPr><w:endnoteReference w:id="2"/></w:r></w:p><w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:body></w:document>""",
-            ["word/endnotes.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:endnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:endnote w:type="separator" w:id="0"><w:p>""" + separatorParagraphProperties + """<w:r><w:separator/></w:r></w:p></w:endnote><w:endnote w:type="continuationSeparator" w:id="1"><w:p><w:r><w:continuationSeparator/></w:r></w:p></w:endnote><w:endnote w:id="2"><w:p><w:r><w:t>Note body one</w:t></w:r></w:p><w:p><w:r><w:t>Note body two</w:t></w:r></w:p></w:endnote></w:endnotes>"""
+            ["[Content_Types].xml"] = $$"""
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/{{note}}s.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.{{note}}s+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/_rels/document.xml.rels"] = $$"""
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/{{note}}s" Target="{{note}}s.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = $$"""
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:r><w:t xml:space="preserve">Body with {{bodyLabel}}</w:t></w:r>
+                      <w:r><w:rPr><w:vertAlign w:val="superscript"/></w:rPr><w:{{note}}Reference w:id="2"/></w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """,
+            [$"word/{note}s.xml"] = $$"""
+                <w:{{note}}s xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:{{note}} w:type="separator" w:id="0"><w:p>{{separatorParagraphProperties}}<w:r><w:separator/></w:r></w:p></w:{{note}}>
+                  <w:{{note}} w:type="continuationSeparator" w:id="1">
+                    <w:p><w:r><w:continuationSeparator/></w:r></w:p>
+                  </w:{{note}}>
+                  <w:{{note}} w:id="2">
+                    <w:p><w:r><w:t>Note body one</w:t></w:r></w:p>
+                    <w:p><w:r><w:t>Note body two</w:t></w:r></w:p>
+                  </w:{{note}}>
+                </w:{{note}}s>
+                """
         });
-        DocxDocument document;
-        using (FileStream stream = File.OpenRead(input))
-        {
-            OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
-            document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
-        }
 
+        using OoxPackage package = OoxPackage.Open(input, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
-        return layout.Pages[0].PlacedRelatedStories.Single(story => story.StoryLayout.Story.Kind == DocxRelatedStoryKind.Endnote && (story.StoryLayout.Story.Type is null || story.StoryLayout.Story.Type == DocxRelatedStoryType.Normal)).TopY;
+        var stories = layout.Pages[0].PlacedRelatedStories;
+        double bodyTop = stories.Single(story => story.StoryLayout.Story.Kind == kind &&
+            (story.StoryLayout.Story.Type is null || story.StoryLayout.Story.Type == DocxRelatedStoryType.Normal)).TopY;
+        double? ruleY = footnote ? stories.Single(story => story.SeparatorY is not null).SeparatorY : null;
+        return (bodyTop, ruleY);
     }
-
-    private static double LayoutFootnoteBodyTopWithSeparatorSpacing(string separatorParagraphProperties)
-    {
-        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = """<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/footnotes.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml"/></Types>""",
-            ["_rels/.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>""",
-            ["word/_rels/document.xml.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes" Target="footnotes.xml"/></Relationships>""",
-            ["word/document.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body><w:p><w:r><w:t xml:space="preserve">Body with note</w:t></w:r><w:r><w:rPr><w:vertAlign w:val="superscript"/></w:rPr><w:footnoteReference w:id="2"/></w:r></w:p><w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:body></w:document>""",
-            ["word/footnotes.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:footnote w:type="separator" w:id="0"><w:p>""" + separatorParagraphProperties + """<w:r><w:separator/></w:r></w:p></w:footnote><w:footnote w:type="continuationSeparator" w:id="1"><w:p><w:r><w:continuationSeparator/></w:r></w:p></w:footnote><w:footnote w:id="2"><w:p><w:r><w:t>Note body one</w:t></w:r></w:p><w:p><w:r><w:t>Note body two</w:t></w:r></w:p></w:footnote></w:footnotes>"""
-        });
-        DocxDocument document;
-        using (FileStream stream = File.OpenRead(input))
-        {
-            OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
-            document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
-        }
-
-        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-            .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
-        return layout.Pages[0].PlacedRelatedStories.Single(story => story.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote && (story.StoryLayout.Story.Type is null || story.StoryLayout.Story.Type == DocxRelatedStoryType.Normal)).TopY;
-    }
-
-    private static double LayoutFootnoteSeparatorRuleWithSpacing(string separatorParagraphProperties)
-    {
-        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = """<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/footnotes.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml"/></Types>""",
-            ["_rels/.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>""",
-            ["word/_rels/document.xml.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes" Target="footnotes.xml"/></Relationships>""",
-            ["word/document.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body><w:p><w:r><w:t xml:space="preserve">Body with note</w:t></w:r><w:r><w:rPr><w:vertAlign w:val="superscript"/></w:rPr><w:footnoteReference w:id="2"/></w:r></w:p><w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:body></w:document>""",
-            ["word/footnotes.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:footnote w:type="separator" w:id="0"><w:p>""" + separatorParagraphProperties + """<w:r><w:separator/></w:r></w:p></w:footnote><w:footnote w:type="continuationSeparator" w:id="1"><w:p><w:r><w:continuationSeparator/></w:r></w:p></w:footnote><w:footnote w:id="2"><w:p><w:r><w:t>Note body one</w:t></w:r></w:p><w:p><w:r><w:t>Note body two</w:t></w:r></w:p></w:footnote></w:footnotes>"""
-        });
-        DocxDocument document;
-        using (FileStream stream = File.OpenRead(input))
-        {
-            OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
-            document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
-        }
-
-        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-            .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
-        return layout.Pages[0].PlacedRelatedStories.Single(story => story.SeparatorY is not null).SeparatorY ?? 0d;
-    }
-    }
+}
