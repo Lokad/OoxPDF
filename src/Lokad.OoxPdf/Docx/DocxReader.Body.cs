@@ -130,8 +130,9 @@ internal sealed partial class DocxReader
                         HiddenBreak, retainEmptyColumnTail: true, retainFirstLine: hasListMarker);
                     var splitFields = new List<DocxComplexFieldState>();
                     var paragraphs = new DocxParagraph?[parts.Count];
-                    // Finish the field results before publishing any fragment. An
-                    // earlier counter's metadata can depend on its later cache.
+                    ParagraphBreakPart? lastParagraph = parts.LastOrDefault(part => part.Paragraph is not null);
+                    // A layout break does not end an authored field. Finish its
+                    // instruction and result before publishing the fragments.
                     for (int i = 0; i < parts.Count; i++)
                     {
                         cancellationToken.ThrowIfCancellationRequested();
@@ -141,7 +142,8 @@ internal sealed partial class DocxReader
                             string.Equals(parts[i - 1].BreakValue, "column", StringComparison.OrdinalIgnoreCase);
                         paragraphs[i] = ReadParagraph(part.Paragraph, styles, numbering, numberingCounters, package, relationships, tableCellStyle: null, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken,
                             isContinuationFragment: !part.IsFirstFragment, leadingBookmarks: bookmarksForFragment,
-                            splitFields: splitFields, retainEmptyColumnMark: retainColumnMark);
+                            splitFields: splitFields, continuesAfterBreak: !ReferenceEquals(part, lastParagraph),
+                            retainEmptyColumnMark: retainColumnMark);
                         bookmarksForFragment = null;
                     }
                     for (int i = 0; i < parts.Count; i++)

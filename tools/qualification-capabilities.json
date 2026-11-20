@@ -2123,6 +2123,7 @@
   "docx-break-continuation-insets": [
     "=DocxGeneratedCountersPaintBeforeHardBreaks",
     "=DocxComplexCounterCacheStaysReplacedAcrossHardBreaks",
+    "=DocxComplexFieldInstructionSurvivesHardBreakFragments",
     "DocxRunBreakFragmentsKeepContinuationInsets",
     "DocxRunBreakContinuationPaintKeepsSourceInsetsAndWords",
     "DocxNumberedRunBreaksConsumeOneSourceCounterEvent",
@@ -4504,6 +4505,7 @@
     "=DocxSplitComputedFieldKeepsCachedPictureAfterHardBreak",
     "=DocxGeneratedCountersPaintBeforeHardBreaks",
     "=DocxComplexCounterCacheStaysReplacedAcrossHardBreaks",
+    "=DocxComplexFieldInstructionSurvivesHardBreakFragments",
     "DocxExplicitPageBreaksRetainEventsAndSingleMarkAdmission",
     "=DocxInlineMetadataLeadingBreaksKeepBookmarkOnThePaintedTarget",
     "DocxRepeatedPageBreaksRetainLayoutPageLimit",
@@ -9459,6 +9461,7 @@
     "=DocxSplitComputedFieldKeepsCachedPictureAfterHardBreak",
     "=DocxGeneratedCountersPaintBeforeHardBreaks",
     "=DocxComplexCounterCacheStaysReplacedAcrossHardBreaks",
+    "=DocxComplexFieldInstructionSurvivesHardBreakFragments",
     "DocxInlineCompositionCachedFieldsPublishResolvedSourceItems",
     "DocxInlineCompositionCachedFieldsRetainRunSplittingAndFallbacks",
     "DocxInlineCompositionCachedFieldsMatchIndependentWordOffsets",
@@ -17866,6 +17869,7 @@
   "docx-dynamic-field-format": [
     "=DocxGeneratedCountersPaintBeforeHardBreaks",
     "=DocxComplexCounterCacheStaysReplacedAcrossHardBreaks",
+    "=DocxComplexFieldInstructionSurvivesHardBreakFragments",
     "DocxInlineCompositionStaticPageFieldsRequireActualPageInputs",
     "DocxInlineCompositionPageFieldCacheEndsWithItsOwner",
     "DocxInlineCompositionStaticPageFieldsMatchIndependentWordFrames",

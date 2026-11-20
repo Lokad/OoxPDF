@@ -1289,6 +1289,64 @@ internal static class DocxPageTests
             "/></w:r><w:r><w:instrText> " + opcode + " </w:instrText></w:r><w:r><w:fldChar w:fldCharType=\"separate\"/></w:r>";
     }
 
+    public static void DocxComplexFieldInstructionSurvivesHardBreakFragments()
+    {
+        const string begin = "<w:r><w:fldChar w:fldCharType=\"begin\"/></w:r>";
+        const string separate = "<w:r><w:fldChar w:fldCharType=\"separate\"/></w:r>";
+        const string end = "<w:r><w:fldChar w:fldCharType=\"end\"/></w:r>";
+        const string cache = "<w:r><w:t>71</w:t></w:r>";
+        string following = Text("77") + Text("FOLLOWING");
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.Original, OoxPdfDocxMarkupMode.AllMarkup })
+        foreach (string kind in new[] { "page", "column" })
+        {
+            int columns = kind == "page" ? 1 : 2;
+            string hardBreak = "<w:r><w:br w:type=\"" + kind + "\"/></w:r>";
+            var geometry = mode == OoxPdfDocxMarkupMode.AllMarkup ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup :
+                OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout;
+            var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(), mode, geometry);
+            string left = Text("LEFT");
+            foreach (var (first, rest, opcode) in new[]
+            {
+                (" PAGE", "REF Bookmark ", DocxFieldKind.Other),
+                (" NUM", "PAGES ", DocxFieldKind.NumPages),
+                (" PAGE", string.Empty, DocxFieldKind.Page),
+            })
+            {
+                string tail = Code(rest) + separate + cache + end + following;
+                var split = Render(left + begin + Code(first) + hardBreak + tail);
+                var direct = Render(left + hardBreak + begin + Code(first) + tail);
+                TestAssert.True(split.Pages.SequenceEqual(direct.Pages),
+                    "An unfinished instruction must resolve in the continuation with the same paint as an adjacent break.");
+                var reference = split.Fields.Single();
+                TestAssert.Equal(first + rest, reference.Instruction);
+                TestAssert.Equal(opcode, reference.Kind);
+                TestAssert.True(reference.HasSeparate && reference.HasCachedResult &&
+                    reference.UsesPlaceholder == (opcode != DocxFieldKind.Other) &&
+                    reference.RendersCachedResult == (opcode == DocxFieldKind.Other),
+                    "The completed source instruction owns one cached or computed result.");
+                TestAssert.Equal(rest.Length == 0 ? 1 : 2, reference.InstructionRunCount);
+            }
+
+            var emitted = Render(left + begin + Code(" PAGE ") + hardBreak + separate + cache + end + following);
+            var adjacent = Render(left + begin + Code(" PAGE ") + separate + cache + end + hardBreak + following);
+            TestAssert.True(emitted.Pages.SequenceEqual(adjacent.Pages),
+                "A counter whose opcode was already confirmed retains its first-frame paint and replaces the continuation cache.");
+            TestAssert.True(emitted.Fields.Single() is { Kind: DocxFieldKind.Page, HasSeparate: true, HasCachedResult: true, UsesPlaceholder: true },
+                "The later separator and cache update the first frame's field reference.");
+
+            (string[] Pages, DocxFieldReference[] Fields) Render(string content)
+            {
+                DocxDocument document = ReadBreakMetadataDocument(content, mode, columns);
+                return (renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().Select(page => page.Content).ToArray(),
+                    document.Paragraphs.SelectMany(paragraph => paragraph.FieldReferences).ToArray());
+            }
+        }
+
+        static string Text(string text) => "<w:r><w:t>" + text + "</w:t></w:r>";
+        static string Code(string text) => text.Length == 0 ? string.Empty :
+            "<w:r><w:instrText xml:space=\"preserve\">" + text + "</w:instrText></w:r>";
+    }
+
     public static void DocxRepeatedColumnBreaksKeepEventsAndOneParagraphMark()
     {
         foreach (int columns in new[] { 1, 2, 3 })

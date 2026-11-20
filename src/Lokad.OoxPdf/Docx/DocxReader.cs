@@ -58,7 +58,7 @@ internal sealed partial class DocxReader
         }
 
         public StringBuilder Instruction { get; } = new();
-        public int SourceRunIndex { get; }
+        public int SourceRunIndex { get; private set; }
         public int InstructionSourceRunIndex { get; set; } = -1;
         public int TextRunIndex { get; private set; }
         public int TextLengthStart { get; private set; }
@@ -72,15 +72,19 @@ internal sealed partial class DocxReader
         public DocxTextRun? PendingPlaceholder { get; set; }
         public int InstructionRunCount { get; set; }
         public int ResultRunCount { get; set; }
-        public bool FromPreviousFragment { get; set; }
-        public (List<DocxFieldReference> References, int Index)? CounterReference { get; set; }
+        public (List<DocxFieldReference> References, int Index)? PublishedReference { get; set; }
 
-        public void RecordCachedResult()
+        public void ContinueInNextFragment()
         {
-            if (HasCachedResult) return;
-            HasCachedResult = true;
-            if (CounterReference is { } owner)
-                owner.References[owner.Index] = owner.References[owner.Index] with { HasCachedResult = true };
+            if (PublishedReference is not null) return;
+            // These positions belong to the new fragment. Keep the pending
+            // counter's formatting until its instruction is confirmed there.
+            SourceRunIndex = 0;
+            InstructionSourceRunIndex = -1;
+            TextRunIndex = 0;
+            TextLengthStart = 0;
+            if (PendingPlaceholder is { } pending)
+                PendingPlaceholder = pending with { SourceRunIndex = -1 };
         }
 
         public void EnsureTextSpan(int textRunIndex, int textLengthStart)

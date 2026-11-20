@@ -208,8 +208,7 @@ internal sealed partial class DocxReader
         foreach (XElement child in run.Elements())
         {
             token.ThrowIfCancellationRequested();
-            if (child.Name == WordprocessingNamespace + "instrText" ||
-                ResolveInlineReferenceKind(child) is not null)
+            if (IsComplexFieldMarkupElement(child) || ResolveInlineReferenceKind(child) is not null)
                 positions[child] = (textOffset, order);
             foreach (XElement source in child.DescendantsAndSelf())
             {
