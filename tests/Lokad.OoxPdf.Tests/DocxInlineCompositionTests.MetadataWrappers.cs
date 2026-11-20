@@ -148,7 +148,7 @@ internal static partial class DocxInlineCompositionTests
             foreach (string wrapper in new[] { "sdt", "customXml", "smartTag", "nested", "proof", "permission",
                 "run-hint", "preceding-hint", "nested-preceding-hint", "adjacent-sdt-hint",
                 "adjacent-custom-xml-hint", "nested-adjacent-hint", "adjacent-hyperlink-hint",
-                "nested-hyperlink-hint" })
+                "nested-hyperlink-hint", "empty-revision", "editing-only-revision" })
             {
                 PdfPage[] pages = Render(wrapper);
                 TestAssert.True(control.Select(page => page.Content).SequenceEqual(pages.Select(page => page.Content)),
@@ -170,6 +170,16 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.True(visible[0].Annotations.All(annotation => annotation.Destination is { PageIndex: 0, Left: < 200d }),
                 "Both links follow the bookmark to its visible pre-break fragment.");
 
+            PdfPage[] revision = Render("visible-revision", retainLeadingFragment: true);
+            TestAssert.Contains("VISIBLE REVISION", string.Concat(
+                DocxCommentsTests.ReadEmbeddedGlyphTextShows(revision[0]).Select(show => show.Text)));
+            TestAssert.True(revision[0].Annotations.Single().Destination is { PageIndex: 0, Left: < 200d },
+                "The bookmark reaches the visible insertion before the break.");
+
+            PdfPage[] revisionRun = Render("empty-revision-run", retainLeadingFragment: true);
+            TestAssert.True(revisionRun[0].Annotations.Single().Destination is { PageIndex: 0, Left: < 200d },
+                "An authored run retains its explicit revision owner.");
+
             PdfPage[] Render(string wrapper, bool retainLeadingFragment = false)
             {
                 var document = ReadMutation("Composition/report", mode, false, false, (xml, w, _) =>
@@ -188,6 +198,8 @@ internal static partial class DocxInlineCompositionTests
                     XElement HintRun() => new(w + "r", Hint());
                     XElement Link(params XElement[] items) => new(w + "hyperlink",
                         new XAttribute(w + "anchor", "destination"), items);
+                    XElement Insertion(params XElement[] items) => new(w + "ins",
+                        new XAttribute(w + "id", 71), new XAttribute(w + "author", "Public probe"), items);
                     XElement ContentControl(params XElement[] items) => new(w + "sdt",
                         new XElement(w + "sdtPr", new XElement(w + "alias", new XAttribute(w + "val", "Break probe"))),
                         new XElement(w + "sdtContent", items));
@@ -207,6 +219,11 @@ internal static partial class DocxInlineCompositionTests
                         "nested-adjacent-hint" => [ContentControl(Metadata("smartTag", HintRun()), run)],
                         "adjacent-hyperlink-hint" => [Link(HintRun()), run],
                         "nested-hyperlink-hint" => [ContentControl(Link(HintRun())), run],
+                        "empty-revision" => [Insertion(), run],
+                        "editing-only-revision" => [Insertion(ContentControl(
+                            new XElement(w + "proofErr", new XAttribute(w + "type", "spellStart")))), run],
+                        "visible-revision" => [Insertion(new XElement(w + "r", new XElement(w + "t", "VISIBLE REVISION"))), run],
+                        "empty-revision-run" => [Insertion(ContentControl(new XElement(w + "r"))), run],
                         "page-field-hint" => [new XElement(w + "fldSimple", new XAttribute(w + "instr", "PAGE"), HintRun()), run],
                         "visible-hyperlink-hint" => [Link(new XElement(w + "r", Hint(), new XElement(w + "t", "VISIBLE BEFORE BREAK"))), run],
                         "sdt" => [ContentControl(run)],

@@ -625,20 +625,24 @@ internal sealed partial class DocxReader
     }
 
     private static IEnumerable<XElement> EnumerateBreakSplitChildren(XElement owner) =>
-        DocxSourceXml.StoredChildren(owner).Where(HasBreakSplitPayload);
+        DocxSourceXml.StoredChildren(owner).Where(child => HasBreakSplitPayload(child));
 
-    // Transparent wrappers and hyperlinks contribute their children's payload.
-    // Fields can generate text, and source boundaries still belong to the fragment.
-    private static bool HasBreakSplitPayload(XElement child)
+    // Revisions need stored payload too, but their authored runs can own revision
+    // state without visible text. Fields and annotation boundaries remain owners.
+    private static bool HasBreakSplitPayload(XElement child, bool preserveRevisionRuns = false)
     {
-        if (DocxSourceXml.IsTransparentInlineContainer(child) || child.Name == WordprocessingNamespace + "hyperlink")
+        if (child.Name == WordprocessingNamespace + "r")
         {
-            return DocxSourceXml.StoredChildren(child).Any(HasBreakSplitPayload);
+            return preserveRevisionRuns || EnumerateBreakSplitRunChildren(child).Any();
         }
 
-        return child.Name == WordprocessingNamespace + "r"
-            ? EnumerateBreakSplitRunChildren(child).Any()
-            : !DocxSourceXml.IsNonPrintingMarker(child);
+        bool isRevision = IsRevisionContainer(child);
+        if (isRevision || DocxSourceXml.IsTransparentInlineContainer(child) || child.Name == WordprocessingNamespace + "hyperlink")
+        {
+            return DocxSourceXml.StoredChildren(child).Any(nested => HasBreakSplitPayload(nested, preserveRevisionRuns || isRevision));
+        }
+
+        return !DocxSourceXml.IsNonPrintingMarker(child);
     }
 
     private static void AddContainerPart(List<XElement> paragraphChildren, XElement sourceContainer, List<XElement> containerChildren)
@@ -742,22 +746,17 @@ internal sealed partial class DocxReader
                 child.Name == WordprocessingNamespace + "br" && isBreak(child));
         }
 
-        if (IsIgnorableBreakOnlyContainerChild(element))
+        if (!HasBreakSplitPayload(element) ||
+            element.Name == WordprocessingNamespace + "bookmarkStart" ||
+            element.Name == WordprocessingNamespace + "bookmarkEnd" ||
+            element.Name == WordprocessingNamespace + "commentRangeStart" ||
+            element.Name == WordprocessingNamespace + "commentRangeEnd")
         {
             return true;
         }
 
         return IsVisibleRunContainer(element, markupMode) &&
             DocxSourceXml.StoredChildren(element).All(child => IsBreakOnlyInlineElement(child, isBreak, markupMode));
-    }
-
-    private static bool IsIgnorableBreakOnlyContainerChild(XElement element)
-    {
-        return DocxSourceXml.IsNonPrintingMarker(element) ||
-            element.Name == WordprocessingNamespace + "bookmarkStart" ||
-            element.Name == WordprocessingNamespace + "bookmarkEnd" ||
-            element.Name == WordprocessingNamespace + "commentRangeStart" ||
-            element.Name == WordprocessingNamespace + "commentRangeEnd";
     }
 
     private static bool IsPageOrColumnBreak(XElement breakElement)
