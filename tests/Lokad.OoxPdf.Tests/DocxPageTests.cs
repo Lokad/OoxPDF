@@ -1146,6 +1146,7 @@ internal static class DocxPageTests
             "<w:lastRenderedPageBreak/>",
             "<w:r><w:lastRenderedPageBreak w:future=\"1\"/></w:r>",
             "<w:r><w:lastRenderedPageBreak><w:t>Payload</w:t></w:lastRenderedPageBreak></w:r>",
+            "<w:customXml><w:r><w:lastRenderedPageBreak w:future=\"1\"/></w:r></w:customXml>",
             "<w:customXmlPr/>", "<w:smartTagPr/>", "<w:sdtPr/>", "<w:sdtEndPr/>" })
         {
             DocxDocument document = ReadBreakMetadataDocument(metadata + run, OoxPdfDocxMarkupMode.Final);

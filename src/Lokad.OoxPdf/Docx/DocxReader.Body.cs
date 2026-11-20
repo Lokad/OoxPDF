@@ -624,10 +624,22 @@ internal sealed partial class DocxReader
         AddContainerPart(ownerChildren, sourceContainer, containerChildren);
     }
 
-    // Properties and empty editing markers do not supply paragraph content.
-    // A leading break must not leave them behind as a separate fragment.
     private static IEnumerable<XElement> EnumerateBreakSplitChildren(XElement owner) =>
-        DocxSourceXml.StoredChildren(owner).Where(child => !DocxSourceXml.IsNonPrintingMarker(child));
+        DocxSourceXml.StoredChildren(owner).Where(HasBreakSplitPayload);
+
+    // A transparent wrapper contributes only the payload of its stored children.
+    // Bookmark, comment and revision boundaries still belong to the fragment.
+    private static bool HasBreakSplitPayload(XElement child)
+    {
+        if (DocxSourceXml.IsTransparentInlineContainer(child))
+        {
+            return DocxSourceXml.StoredChildren(child).Any(HasBreakSplitPayload);
+        }
+
+        return child.Name == WordprocessingNamespace + "r"
+            ? EnumerateBreakSplitRunChildren(child).Any()
+            : !DocxSourceXml.IsNonPrintingMarker(child);
+    }
 
     private static void AddContainerPart(List<XElement> paragraphChildren, XElement sourceContainer, List<XElement> containerChildren)
     {

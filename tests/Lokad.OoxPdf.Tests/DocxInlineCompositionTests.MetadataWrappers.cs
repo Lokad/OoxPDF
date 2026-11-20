@@ -108,11 +108,18 @@ internal static partial class DocxInlineCompositionTests
     {
         foreach (string kind in new[] { "customXml", "smartTag" })
         foreach (string type in new[] { "page", "column" })
+        foreach (bool splitOwner in new[] { false, true })
         {
             var document = ReadMutation("Composition/report", OoxPdfDocxMarkupMode.Final, false, false, (xml, w, _) =>
-                ReplaceMetadataTestBody(xml, w, new XElement(w + "p", MetadataWrapper(w, kind,
-                    new XElement(w + "r", new XElement(w + "t", "Before"),
-                        new XElement(w + "br", new XAttribute(w + "type", type)), new XElement(w + "t", "After"))))));
+            {
+                XElement before = new(w + "t", "Before");
+                XElement after = new(w + "t", "After");
+                XElement lineBreak = new(w + "br", new XAttribute(w + "type", type));
+                XElement[] content = splitOwner
+                    ? [MetadataWrapper(w, kind, new XElement(w + "r", before)), new XElement(w + "r", lineBreak, after)]
+                    : [MetadataWrapper(w, kind, new XElement(w + "r", before, lineBreak, after))];
+                ReplaceMetadataTestBody(xml, w, new XElement(w + "p", content));
+            });
             TestAssert.Equal(3, document.BodyElements.Count);
             TestAssert.Equal("Before", string.Concat(((DocxParagraphElement)document.BodyElements[0]).Paragraph.Runs.Select(run => run.Text)));
             TestAssert.True(type == "page" ? document.BodyElements[1] is DocxPageBreakElement : document.BodyElements[1] is DocxManualBreakElement,
@@ -139,7 +146,8 @@ internal static partial class DocxInlineCompositionTests
                 DocxCommentsTests.ReadEmbeddedGlyphTextShows(control[targetPage]).Select(show => show.Text)));
 
             foreach (string wrapper in new[] { "sdt", "customXml", "smartTag", "nested", "proof", "permission",
-                "run-hint", "preceding-hint", "nested-preceding-hint" })
+                "run-hint", "preceding-hint", "nested-preceding-hint", "adjacent-sdt-hint",
+                "adjacent-custom-xml-hint", "nested-adjacent-hint" })
             {
                 PdfPage[] pages = Render(wrapper);
                 TestAssert.True(control.Select(page => page.Content).SequenceEqual(pages.Select(page => page.Content)),
@@ -177,6 +185,9 @@ internal static partial class DocxInlineCompositionTests
                         "preceding-hint" => [HintRun(), run],
                         "nested-preceding-hint" => [ContentControl(MetadataWrapper(w, "customXml",
                             new XElement(w + "customXmlPr"), HintRun(), run))],
+                        "adjacent-sdt-hint" => [ContentControl(HintRun()), run],
+                        "adjacent-custom-xml-hint" => [Metadata("customXml", HintRun()), run],
+                        "nested-adjacent-hint" => [ContentControl(Metadata("smartTag", HintRun()), run)],
                         "sdt" => [ContentControl(run)],
                         "nested" => [ContentControl(Metadata("customXml", Metadata("smartTag", run)))],
                         "proof" => [new XElement(w + "proofErr", new XAttribute(w + "type", "spellStart")),
