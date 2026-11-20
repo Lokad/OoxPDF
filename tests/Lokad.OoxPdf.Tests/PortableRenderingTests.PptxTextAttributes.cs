@@ -14,7 +14,7 @@ internal static partial class PortableRenderingTests
     {
         foreach (bool table in new[] { false, true })
         {
-            string witness = table ? "Profit" : "Hello";
+            string witness = table ? "$120K" : "Hello";
             var firstLevel = RenderOptionalTextAttributes(witness, table);
             TestAssert.Equal(firstLevel.Content, RenderOptionalTextAttributes(witness, table, level: "unknown").Content);
             TestAssert.Equal(firstLevel.Content, RenderOptionalTextAttributes(witness, table, level: "2147483648").Content);
@@ -29,7 +29,7 @@ internal static partial class PortableRenderingTests
     {
         foreach (bool table in new[] { false, true })
         {
-            string witness = table ? "Profit" : "Hello";
+            string witness = table ? "$120K" : "Hello";
             var inherited = RenderOptionalTextAttributes(witness, table, inheritedSpacing: "200");
             TestAssert.Equal(inherited.Content,
                 RenderOptionalTextAttributes(witness, table, spacing: "", inheritedSpacing: "200").Content);
