@@ -224,6 +224,25 @@ function Test-ReferenceIdentityEntry([string] $CacheDir, [string] $InputSha256, 
     return [pscustomobject]@{ State = "Complete"; Reason = $null; Metadata = $metadata }
 }
 
+function Copy-VerifiedCachedReferencePdf([string] $InputPath, [string] $OutputDirectory, [string] $CacheVariant) {
+    $inputHash = (Get-FileHash -LiteralPath $InputPath -Algorithm SHA256).Hash
+    $key = Get-ReferenceIdentityKey $InputPath $CacheVariant $inputHash
+    $cache = Join-Path (Get-ReferenceCacheRoot) $key
+    Use-ReferenceCacheLock $key {
+        $entry = Test-ReferenceIdentityEntry $cache $inputHash $CacheVariant
+        if ($entry.State -ne 'Complete') {
+            throw "A verified cached reference PDF is required for '$key' ($($entry.State)). $($entry.Reason)"
+        }
+
+        $pdf = Join-Path $OutputDirectory 'reference.pdf'
+        Copy-Item -LiteralPath (Join-Path $cache 'reference.pdf') -Destination $pdf -Force
+        if ((Get-FileHash -LiteralPath $pdf -Algorithm SHA256).Hash -ne $entry.Metadata.ReferencePdfSha256) {
+            throw 'Cached reference PDF changed during copy.'
+        }
+        Copy-Item -LiteralPath (Join-Path $cache 'reference-metadata.json') -Destination $OutputDirectory -Force
+    }
+}
+
 function Get-ReferenceRasterPages([string] $Directory) {
     $pages = @(Get-ChildItem -LiteralPath $Directory -Filter 'page-*.png' -File -ErrorAction SilentlyContinue)
     if (@($pages | Where-Object Name -CNotMatch '^page-[0-9]+\.png$').Count) { throw 'Invalid raster page name' }

@@ -84,6 +84,8 @@ bounded coverage, particularly masks/blends, oblique/CFF/Type1 text and occlusio
 For cached DOCX markup comparisons, supply selected authored phrases in
 `expected.markupTextPhrases`. The report checks their decoded text for the
 case's declared markup view and shows whether that check ran. Verify ink separately.
+With `-SkipRasterDiff`, cached markup comparisons use the verified reference
+PDF and its metadata directly. Legacy entries need a trusted re-import for this path.
 
 `CheckVisualCase.ps1 -CliPath <qualified.dll> -SkipBuild` reuses a frozen converter;
 `CheckVisualFamily.ps1` does the same for capability families. Keep independent

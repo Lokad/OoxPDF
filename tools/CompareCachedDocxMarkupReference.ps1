@@ -3344,6 +3344,10 @@ elseif (-not [string]::IsNullOrWhiteSpace($ReferenceDirectory)) {
 
     Copy-Item -Path (Join-Path $referenceDirectoryFull "*") -Destination $referenceDir -Recurse -Force
 }
+elseif ($SkipRasterDiff) {
+    . (Join-Path $PSScriptRoot 'ReferenceCache.ps1')
+    Copy-VerifiedCachedReferencePdf $inputFull $referenceDir $settings.Variant
+}
 else {
     & (Join-Path $PSScriptRoot "RenderCachedReference.ps1") -InputPath $inputFull -OutputDirectory $referenceDir -Dpi $Dpi -CacheOnly -CacheVariant $settings.Variant
 }

@@ -24,13 +24,39 @@ New-Item -ItemType Directory -Path $cache -Force | Out-Null
 [IO.File]::WriteAllText((Join-Path $cache 'reference.pdf'),'%PDF-Synthetic mechanics probe, not a fidelity reference')
 $pdfHash=(Get-FileHash (Join-Path $cache 'reference.pdf')).Hash.ToLowerInvariant()
 $null=Write-ReferenceIdentityMetadata $cache $key $inputFile ((Get-FileHash $inputFile).Hash.ToLowerInvariant()) '' 'mechanics-only' @{Producer='synthetic-test'} 'Never use for fidelity'
+$checks=@()
+$pdfOnly=(New-Item -ItemType Directory -Path (Join-Path $root 'pdf-only')).FullName
+$sourceMetadata=Join-Path $cache 'reference-metadata.json'
+$metadataHash=(Get-FileHash -LiteralPath $sourceMetadata).Hash
+Copy-VerifiedCachedReferencePdf $inputFile $pdfOnly ''
+if ((Get-FileHash -LiteralPath (Join-Path $pdfOnly 'reference.pdf')).Hash -ne $pdfHash -or
+    (Get-FileHash -LiteralPath (Join-Path $pdfOnly 'reference-metadata.json')).Hash -ne $metadataHash -or
+    (Get-FileHash -LiteralPath $sourceMetadata).Hash -ne $metadataHash -or
+    (Test-Path -LiteralPath (Join-Path $cache 'raster')) -or @(Get-ChildItem -LiteralPath $pdfOnly -Force).Count -ne 2) {
+    throw 'PDF-only cache hit changed the cache or served unexpected output.'
+}
+$checks+='pdf-only-verified-hit'
+
+$sourcePdf=Join-Path $cache 'reference.pdf'
+$originalPdf=[IO.File]::ReadAllBytes($sourcePdf)
+$rejectedPdfOnly=(New-Item -ItemType Directory -Path (Join-Path $root 'pdf-only-corrupt')).FullName
+$caught=$null
+try {
+    [IO.File]::WriteAllText($sourcePdf,'%PDF-Synthetic changed bytes')
+    Copy-VerifiedCachedReferencePdf $inputFile $rejectedPdfOnly ''
+} catch { $caught=$_.Exception.Message }
+finally { [IO.File]::WriteAllBytes($sourcePdf,$originalPdf) }
+if (!$caught -or !$caught.Contains('reference.pdf hash mismatch') -or @(Get-ChildItem -LiteralPath $rejectedPdfOnly -Force).Count) {
+    throw 'PDF-only cache hit served a corrupt reference.'
+}
+$checks+='pdf-only-refuses-corrupt-pdf'
+
 $name=Get-ReferenceDerivativeName 144
 $derivative=Join-Path (Join-Path $cache 'raster') $name
 New-Item -ItemType Directory -Path $derivative -Force | Out-Null
 $page=Join-Path $derivative 'page-001.png'
 [IO.File]::WriteAllText($page,'Old incomplete raster')
 [IO.File]::WriteAllText((Join-Path $derivative 'page-999.png'),'Stale extra page')
-$checks=@()
 function Assert-State([string] $Label,[string] $Expected) {
     $actual=Test-ReferenceDerivative $cache $name $pdfHash
     if ($actual.State -ne $Expected) { throw ($Label+': '+$actual.State+' / '+$actual.Reason) }
