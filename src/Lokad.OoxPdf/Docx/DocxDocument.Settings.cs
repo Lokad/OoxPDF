@@ -4,10 +4,7 @@ internal sealed record DocxDocumentSettings(
     string? CharacterSpacingControlValue,
     string? DefaultTabStopValue,
     double? DefaultTabStopPoints,
-    bool? UseFELayout,
-    string? UseFELayoutValue,
     DocxRevisionViewSettings RevisionViewSettings,
-    DocxTrackChangesSettings TrackChangesSettings,
     DocxNoteReferenceSettings FootnoteReferenceSettings,
     DocxNoteReferenceSettings EndnoteReferenceSettings,
     string? MirrorMarginsValue,
@@ -17,7 +14,8 @@ internal sealed record DocxDocumentSettings(
     public string? MathFontFamily { get; init; }
     public string? MathParagraphAlignmentValue { get; init; }
     public DocxMathLimitSettings MathLimitSettings { get; init; } = DocxMathLimitSettings.Empty;
-    public static DocxDocumentSettings Empty { get; } = new(null, null, null, null, null, DocxRevisionViewSettings.Empty, DocxTrackChangesSettings.Empty, DocxNoteReferenceSettings.Empty, DocxNoteReferenceSettings.Empty, null, null, []);
+    public static DocxDocumentSettings Empty { get; } = new(null, null, null, DocxRevisionViewSettings.Empty,
+        DocxNoteReferenceSettings.Empty, DocxNoteReferenceSettings.Empty, null, null, []);
 }
 
 internal sealed record DocxRevisionViewSettings(
@@ -27,23 +25,9 @@ internal sealed record DocxRevisionViewSettings(
     bool? ShowComments,
     string? InsertionsAndDeletionsValue,
     bool? ShowInsertionsAndDeletions,
-    string? FormattingValue,
-    bool? ShowFormatting,
-    string? InkAnnotationsValue,
-    bool? ShowInkAnnotations)
+    bool? ShowFormatting)
 {
-    public static DocxRevisionViewSettings Empty { get; } = new(null, null, null, null, null, null, null, null, null, null);
-}
-
-internal sealed record DocxTrackChangesSettings(
-    string? TrackRevisionsValue,
-    bool? TrackRevisions,
-    string? DoNotTrackMovesValue,
-    bool? DoNotTrackMoves,
-    string? DoNotTrackFormattingValue,
-    bool? DoNotTrackFormatting)
-{
-    public static DocxTrackChangesSettings Empty { get; } = new(null, null, null, null, null, null);
+    public static DocxRevisionViewSettings Empty { get; } = new(null, null, null, null, null, null, null);
 }
 
 internal sealed record DocxNoteReferenceSettings(

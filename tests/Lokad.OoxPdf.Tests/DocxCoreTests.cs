@@ -426,10 +426,7 @@ internal static class DocxCoreTests
                 <w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
                   <w:defaultTabStop w:val="720"/>
                   <w:characterSpacingControl w:val="doNotCompress"/>
-                  <w:revisionView w:markup="1" w:comments="0" w:insDel="1" w:formatting="0" w:inkAnnotations="1"/>
-                  <w:trackRevisions/>
-                  <w:doNotTrackMoves w:val="0"/>
-                  <w:doNotTrackFormatting w:val="1"/>
+                  <w:revisionView w:markup="1" w:comments="0" w:insDel="1" w:formatting="0"/>
                   <w:mirrorMargins/>
                   <w:footnotePr>
                     <w:pos w:val="pageBottom"/>
@@ -443,7 +440,6 @@ internal static class DocxCoreTests
                     <w:numStart w:val="2"/>
                   </w:endnotePr>
                   <w:compat>
-                    <w:useFELayout/>
                     <w:compatSetting w:name="compatibilityMode" w:uri="http://schemas.microsoft.com/office/word" w:val="15"/>
                   </w:compat>
                 </w:settings>
@@ -470,19 +466,12 @@ internal static class DocxCoreTests
         TestAssert.Equal("doNotCompress", document.Settings.CharacterSpacingControlValue ?? string.Empty);
         TestAssert.Equal("720", document.Settings.DefaultTabStopValue ?? string.Empty);
         TestAssert.Equal(36d, document.Settings.DefaultTabStopPoints ?? 0d);
-        TestAssert.True(document.Settings.UseFELayout == true, "Empty useFELayout should opt in.");
         TestAssert.Equal("1", document.Settings.RevisionViewSettings.MarkupValue ?? string.Empty);
         TestAssert.True(document.Settings.RevisionViewSettings.ShowMarkup == true, "revisionView markup=1 should opt in.");
         TestAssert.Equal("0", document.Settings.RevisionViewSettings.CommentsValue ?? string.Empty);
         TestAssert.True(document.Settings.RevisionViewSettings.ShowComments == false, "revisionView comments=0 should opt out.");
         TestAssert.True(document.Settings.RevisionViewSettings.ShowInsertionsAndDeletions == true, "revisionView insDel=1 should opt in.");
         TestAssert.True(document.Settings.RevisionViewSettings.ShowFormatting == false, "revisionView formatting=0 should opt out.");
-        TestAssert.True(document.Settings.RevisionViewSettings.ShowInkAnnotations == true, "revisionView inkAnnotations=1 should opt in.");
-        TestAssert.True(document.Settings.TrackChangesSettings.TrackRevisions == true, "Empty trackRevisions should opt in.");
-        TestAssert.Equal("0", document.Settings.TrackChangesSettings.DoNotTrackMovesValue ?? string.Empty);
-        TestAssert.True(document.Settings.TrackChangesSettings.DoNotTrackMoves == false, "doNotTrackMoves val=0 should opt out.");
-        TestAssert.Equal("1", document.Settings.TrackChangesSettings.DoNotTrackFormattingValue ?? string.Empty);
-        TestAssert.True(document.Settings.TrackChangesSettings.DoNotTrackFormatting == true, "doNotTrackFormatting val=1 should opt in.");
         TestAssert.True(document.Settings.MirrorMargins == true, "Empty mirrorMargins should opt in.");
         TestAssert.True(document.Settings.MirrorMarginsValue is null, "Val-less mirrorMargins should keep a null source token.");
         TestAssert.Equal("pageBottom", document.Settings.FootnoteReferenceSettings.PositionValue ?? string.Empty);

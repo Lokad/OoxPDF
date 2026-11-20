@@ -220,21 +220,6 @@ internal sealed partial class DocxReader
 
     private static DocxDocumentSettings ReadDocumentSettings(XDocument? settings, CancellationToken cancellationToken)
     {
-            DocxRevisionViewSettings ReadRevisionViewSettings(XElement? revisionView)
-            {
-                return new DocxRevisionViewSettings(
-                    (string?)revisionView?.Attribute(WordprocessingNamespace + "markup"),
-                    OoxBoolean.ParseOptionalAttribute(revisionView, WordprocessingNamespace + "markup"),
-                    (string?)revisionView?.Attribute(WordprocessingNamespace + "comments"),
-                    OoxBoolean.ParseOptionalAttribute(revisionView, WordprocessingNamespace + "comments"),
-                    (string?)revisionView?.Attribute(WordprocessingNamespace + "insDel"),
-                    OoxBoolean.ParseOptionalAttribute(revisionView, WordprocessingNamespace + "insDel"),
-                    (string?)revisionView?.Attribute(WordprocessingNamespace + "formatting"),
-                    OoxBoolean.ParseOptionalAttribute(revisionView, WordprocessingNamespace + "formatting"),
-                    (string?)revisionView?.Attribute(WordprocessingNamespace + "inkAnnotations"),
-                    OoxBoolean.ParseOptionalAttribute(revisionView, WordprocessingNamespace + "inkAnnotations"));
-            }
-
         XElement? root = settings?.Root;
         if (root is null)
         {
@@ -244,11 +229,7 @@ internal sealed partial class DocxReader
         XElement? characterSpacingControl = root.Element(WordprocessingNamespace + "characterSpacingControl");
         XElement? defaultTabStop = root.Element(WordprocessingNamespace + "defaultTabStop");
         XElement? revisionView = root.Element(WordprocessingNamespace + "revisionView");
-        XElement? trackRevisions = root.Element(WordprocessingNamespace + "trackRevisions");
-        XElement? doNotTrackMoves = root.Element(WordprocessingNamespace + "doNotTrackMoves");
-        XElement? doNotTrackFormatting = root.Element(WordprocessingNamespace + "doNotTrackFormatting");
         XElement? mirrorMargins = root.Element(WordprocessingNamespace + "mirrorMargins");
-        XElement? useFELayout = root.Element(WordprocessingNamespace + "compat")?.Element(WordprocessingNamespace + "useFELayout");
         DocxNoteReferenceSettings footnoteReferenceSettings = ReadNoteReferenceSettings(root.Element(WordprocessingNamespace + "footnotePr"));
         DocxNoteReferenceSettings endnoteReferenceSettings = ReadNoteReferenceSettings(root.Element(WordprocessingNamespace + "endnotePr"));
         IReadOnlyList<DocxCompatSetting> compatSettings = root
@@ -264,16 +245,14 @@ internal sealed partial class DocxReader
             (string?)characterSpacingControl?.Attribute(WordprocessingNamespace + "val"),
             (string?)defaultTabStop?.Attribute(WordprocessingNamespace + "val"),
             ReadTwipsAttribute(defaultTabStop, WordprocessingNamespace + "val"),
-            ReadOnOff(useFELayout),
-            (string?)useFELayout?.Attribute(WordprocessingNamespace + "val"),
-            ReadRevisionViewSettings(revisionView),
-            new DocxTrackChangesSettings(
-                (string?)trackRevisions?.Attribute(WordprocessingNamespace + "val"),
-                ReadOnOff(trackRevisions),
-                (string?)doNotTrackMoves?.Attribute(WordprocessingNamespace + "val"),
-                ReadOnOff(doNotTrackMoves),
-                (string?)doNotTrackFormatting?.Attribute(WordprocessingNamespace + "val"),
-                ReadOnOff(doNotTrackFormatting)),
+            new DocxRevisionViewSettings(
+                (string?)revisionView?.Attribute(WordprocessingNamespace + "markup"),
+                OoxBoolean.ParseOptionalAttribute(revisionView, WordprocessingNamespace + "markup"),
+                (string?)revisionView?.Attribute(WordprocessingNamespace + "comments"),
+                OoxBoolean.ParseOptionalAttribute(revisionView, WordprocessingNamespace + "comments"),
+                (string?)revisionView?.Attribute(WordprocessingNamespace + "insDel"),
+                OoxBoolean.ParseOptionalAttribute(revisionView, WordprocessingNamespace + "insDel"),
+                OoxBoolean.ParseOptionalAttribute(revisionView, WordprocessingNamespace + "formatting")),
             footnoteReferenceSettings,
             endnoteReferenceSettings,
             (string?)mirrorMargins?.Attribute(WordprocessingNamespace + "val"),
