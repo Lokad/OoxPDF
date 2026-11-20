@@ -1,13 +1,6 @@
 # Lokad.OoxPdf.Tests
 
-The test project is a dependency-free console runner. Tests are cataloged by capability group so the PPTX
-renderer can be tightened bottom-up without running the whole suite on every iteration.
-
-```powershell
-dotnet run --project tests/Lokad.OoxPdf.Tests/Lokad.OoxPdf.Tests.csproj -f net11.0 -- --list
-dotnet run --project tests/Lokad.OoxPdf.Tests/Lokad.OoxPdf.Tests.csproj -f net11.0 -- --skip-slow
-dotnet run --project tests/Lokad.OoxPdf.Tests/Lokad.OoxPdf.Tests.csproj -f net11.0 -- --group pptx-typography --skip-slow
-```
-
-Primary groups are `pptx-model`, `pptx-typography`, `pptx-shapes`, `pptx-images`,
-`pptx-composition`, `pptx-tables`, `pptx-charts`, and the corresponding `docx-*` groups.
+The dependency-free console runner covers the library and CLI, including
+portable DOCX and PPTX rendering. The development guide documents test
+groups, exact method selection and frozen qualification.
+[Development and validation](../../docs/Development.md).

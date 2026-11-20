@@ -40,7 +40,9 @@ of exact method names). `tools/RunDocxAffectedTests.ps1` selects capabilities fr
 `tools/qualification-capabilities.json` and runs each selected method once.
 Use `=MethodName` in the manifest or `-TestFilter` to select one exact,
 case-sensitive name. Bare selectors match case-insensitive substrings.
-`-FastGroup` unions portable groups; declare understood environment skips explicitly.
+`-FastGroup` adds fast methods from the named groups. Skips from methods selected
+only by a fast group appear under `GroupOnlySkips`. Use `-ExpectedSkip` with exact
+method names for the primary selection, including methods also in a fast group.
 Keep runner TMP/TEMP in its ignored artifact directory. The qualification command
 owns a fresh physical temporary leaf and removes it after complete passing results;
 failed runs and cleanup refusals retain it. Keep useful inputs/references outside
