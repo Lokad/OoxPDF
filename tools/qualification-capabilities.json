@@ -6328,6 +6328,7 @@
     "CffChartUnresolvableRunesSubstituteQuestionMark"
   ],
   "pptx-legend-rows": [
+    "=PptxTopCartesianLegendsWrapEveryFittingName",
     "=PptxExplicitSeriesLegendDeletionKeepsThePlottedSeries",
     "PptxAuthoredPolarLegendKeepsEveryCompleteNameInsideItsClip",
     "PptxPolarHorizontalRowsKeepEveryNameInsideTheirClip",

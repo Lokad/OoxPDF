@@ -197,6 +197,20 @@ internal sealed partial class PptxRenderer
         return style.Merge(ToChartTextStyleOverride(PptxSceneBuilder.ResolveChartLegendTextStyleOverride(sceneChart)));
     }
 
+    private static async ValueTask<(ChartLayout Layout, ChartLegendBox? Box)> PrepareCartesianHorizontalLegendAsync(
+        ChartLayout layout, IReadOnlyList<ChartLegendEntry> entries, ChartTextStyle style,
+        PresentationFontResolver resolver, PptxRenderContext context)
+    {
+        bool bottom = layout.Legend.PositionKind == PptxSceneChartLegendPosition.Bottom;
+        bool automatic = !layout.ManualPlotLayoutApplied && !layout.Legend.Layout.HasGeometryValues;
+        if (!bottom && !(automatic && layout.Legend.PositionKind == PptxSceneChartLegendPosition.Top))
+            return (layout, null);
+
+        var prepared = await LayoutChartLegendRowsAsync(layout, entries, style, resolver, context,
+            layout.PlotBox.Width, measuredBand: bottom && automatic, preserveFittingRow: !bottom).ConfigureAwait(false);
+        return (prepared.Layout, prepared.Box);
+    }
+
     private static async ValueTask RenderChartLegendAsync(PdfGraphicsBuilder graphics, ChartFrameBox frame, ChartPlotBox plotBox, IReadOnlyList<ChartLegendEntry> entries, ChartLegendLayout layout, ChartTextStyle style, PresentationFontResolver? fontResolver, ChartLegendPlacement placement, List<PdfFontResource> chartFonts, Action<OoxPdfDiagnostic>? diagnosticSink = null, double legendLeadExtra = 0d, bool doughnutRightLegend = false, bool doughnutLeftLegend = false, double doughnutRingCenterY = 0d, bool scatterLegend = false, ChartLegendBox? preparedBox = null)
     {
         if (!layout.Visible || entries.Count == 0)

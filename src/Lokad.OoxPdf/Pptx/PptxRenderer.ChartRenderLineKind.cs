@@ -64,15 +64,9 @@ internal sealed partial class PptxRenderer
                     ? BuildLinePointLegendEntries(linePlot, lineChart, workbook, plotVisibleOnly, lineSeriesVectors[0].DensePointCount(), ReadChartStyleId(chartXml), pointAppearance)
                     : BuildLineSeriesLegendEntries(linePlot, lineChart, workbook, seriesAppearance, sourceSeries, themeLineWidth, lineOptions.Stacked, ReadChartStyleId(chartXml));
                 ChartTextStyle legendTextStyle = ReadSceneChartLegendTextStyle(theme, sceneChart);
-                ChartLegendBox? preparedLegendBox = null;
-                if (chartLayout.Legend.PositionKind == PptxSceneChartLegendPosition.Bottom)
-                {
-                    bool automatic = !chartLayout.ManualPlotLayoutApplied && !chartLayout.Legend.Layout.HasGeometryValues;
-                    var prepared = await LayoutChartLegendRowsAsync(chartLayout, legendEntries, legendTextStyle,
-                        fontResolver, context, chartLayout.PlotBox.Width, measuredBand: automatic).ConfigureAwait(false);
-                    chartLayout = prepared.Layout;
-                    preparedLegendBox = prepared.Box;
-                }
+                ChartLegendBox? preparedLegendBox;
+                (chartLayout, preparedLegendBox) = await PrepareCartesianHorizontalLegendAsync(chartLayout,
+                    legendEntries, legendTextStyle, fontResolver, context).ConfigureAwait(false);
                 if (chartLayout.CategoryAxisPlacement is { } categoryPlacement)
                 {
                     valueAxisOptions = valueAxisOptions with { CrossingValue = categoryPlacement.CrossingValue };

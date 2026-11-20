@@ -14,6 +14,31 @@ internal static partial class PptxLegendRowsTests
 
     public static void PptxBottomColumnLegendWrapKeepsNamesInsideTheChartFrame() => CheckBottomLegendRows("column");
 
+    public static void PptxTopCartesianLegendsWrapEveryFittingName()
+    {
+        string[] expected = Enumerable.Range(1, 6).Select(i => $"North West Region {i}").ToArray();
+        foreach (string kind in new[] { "line", "area" })
+        foreach (bool overlay in new[] { false, true })
+        {
+            var result = Render(288, 12, expected.Length, overlay, kind: kind, legendPosition: "t");
+            var names = DocxCommentsTests.ReadEmbeddedGlyphTextShows(result.Page, usePageCoordinates: false,
+                fontResourceFilter: name => name.StartsWith("CL", StringComparison.Ordinal)).ToArray();
+            string actual = string.Concat(names.Select(name => name.Text));
+            TestAssert.True(string.Concat(expected).Equals(actual, StringComparison.Ordinal),
+                $"{kind}, overlay={overlay}, legend: {actual}");
+            TestAssert.True(CheckCompleteNamesInFrame(result.Page, 288, expected.Length) > 1,
+                "Long names use multiple rows inside the authored top-legend chart frame.");
+            var legendClips = Regex.Matches(result.Page.Content,
+                    @"(?m)^([-\d.]+) ([-\d.]+) ([-\d.]+) ([-\d.]+) re W\*? n\r?\nBT\r?\n[^\r\n]+\r?\n/CL\d+ ")
+                .Select(match => match.Groups.Cast<Group>().Skip(1)
+                    .Select(group => double.Parse(group.Value, CultureInfo.InvariantCulture)).ToArray())
+                .DistinctBy(rect => (rect[0], rect[1], rect[2], rect[3])).ToArray();
+            AssertLegendTextInsideClip(names, legendClips.Single());
+            TestAssert.True(!result.Diagnostics.Any(item => item.Message.Contains("overflowing entries", StringComparison.Ordinal)),
+                "Every wrapped row fits the available legend height.");
+        }
+    }
+
     public static void PptxCrowdedLegendsPreservePlotSpaceAndDiagnoseUnadmittedRows()
     {
         // Office PDF/API controls establish a row budget within half the chart
@@ -167,9 +192,9 @@ internal static partial class PptxLegendRowsTests
             series = $"<c:ser><c:idx val=\"0\"/><c:order val=\"0\"/>{seriesOptions}<c:cat><c:strLit><c:ptCount val=\"{count}\"/>{categories}</c:strLit></c:cat><c:val><c:numLit><c:ptCount val=\"{count}\"/>{values}</c:numLit></c:val></c:ser>";
         }
         bool polar = kind is "pie" or "doughnut";
-        bool bar = !polar && kind != "line";
+        bool bar = !polar && kind is not ("line" or "area");
         bool horizontal = kind == "bar";
-        string plot = polar ? kind + "Chart" : bar ? "barChart" : "lineChart";
+        string plot = bar ? "barChart" : kind + "Chart";
         string rotation = firstSliceAngle is { } degrees ? $"<c:firstSliceAng val=\"{degrees}\"/>" : "";
         string axes = polar ? "" : $$"""
                 <c:catAx><c:axId val="1"/><c:axPos val="{{(horizontal ? "l" : "b")}}"/><c:crossAx val="2"/>{{(categoryLegend ? "<c:tickLblPos val=\"none\"/>" : "")}}</c:catAx>

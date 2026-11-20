@@ -57,15 +57,9 @@ internal sealed partial class PptxRenderer
                 ChartShapeStyle plotAreaStyle = ToChartShapeStyle(sceneChart.PlotAreaStyle);
                 IReadOnlyList<ChartLegendEntry> legendEntries = BuildFillLegendEntries(theme, colorMap, chartPalette, areaPlot, areaChart, seriesFills, seriesStrokes, paletteOffset: 0, workbook: workbook, reverseOrder: IsStackedChartGrouping(areaOptions.Grouping));
                 ChartTextStyle legendTextStyle = ReadSceneChartLegendTextStyle(theme, sceneChart);
-                ChartLegendBox? preparedLegendBox = null;
-                if (chartLayout.Legend.PositionKind == PptxSceneChartLegendPosition.Bottom)
-                {
-                    bool automatic = !chartLayout.ManualPlotLayoutApplied && !chartLayout.Legend.Layout.HasGeometryValues;
-                    var prepared = await LayoutChartLegendRowsAsync(chartLayout, legendEntries, legendTextStyle,
-                        fontResolver, context, chartLayout.PlotBox.Width, measuredBand: automatic).ConfigureAwait(false);
-                    chartLayout = prepared.Layout;
-                    preparedLegendBox = prepared.Box;
-                }
+                ChartLegendBox? preparedLegendBox;
+                (chartLayout, preparedLegendBox) = await PrepareCartesianHorizontalLegendAsync(chartLayout,
+                    legendEntries, legendTextStyle, fontResolver, context).ConfigureAwait(false);
                 var categoryLabels = ReadSharedCategoryLabels(areaPlot, workbook, plotVisibleOnly);
                 chartLayout = await PrepareCartesianCategoryFramesAsync(chartLayout, theme, sceneChart, chartXml,
                     valueAxis, valueExtents, valueAxisOptions, GetValueAxisAutoTickTargetCount(false, true, false), axesStyle.ValueAxisRightSide,

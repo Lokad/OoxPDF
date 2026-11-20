@@ -113,11 +113,12 @@ internal sealed partial class PptxRenderer
 
     // Measure once, reserve automatic plot space, then give painting the same rows.
     // Authored data frames and overlay legends do not reserve plot space.
-    private static async ValueTask<(ChartLayout Layout, ChartLegendBox Box, double? AllocationBand)> LayoutChartLegendRowsAsync(
+    private static async ValueTask<(ChartLayout Layout, ChartLegendBox? Box, double? AllocationBand)> LayoutChartLegendRowsAsync(
         ChartLayout layout, IReadOnlyList<ChartLegendEntry> entries, ChartTextStyle style,
-        PresentationFontResolver resolver, PptxRenderContext context, double maximumRowWidth, bool measuredBand)
+        PresentationFontResolver resolver, PptxRenderContext context, double maximumRowWidth, bool measuredBand,
+        bool preserveFittingRow = false)
     {
-        if (!layout.Legend.Visible || entries.Count == 0) { return (layout, default, 0d); }
+        if (!layout.Legend.Visible || entries.Count == 0) { return (layout, default(ChartLegendBox), 0d); }
         var measure = new ChartTextMeasurer(resolver, kerningEnabled: false);
         await measure.PrepareAsync(entries.Select(entry => entry.Name), style).ConfigureAwait(false);
         ChartLegendBox box = ResolveChartLegendBox(layout.Frame, layout.PlotBox, entries,
@@ -218,6 +219,16 @@ internal sealed partial class PptxRenderer
             }
             rows.Add((start, entries.Count, Math.Max(0d, width - padding)));
         }
+        if (preserveFittingRow)
+        {
+            if (rows.Count == 1 && rows[0].Width <= availableWidth)
+                return (layout, null, null);
+            // Leave a complete first row inside the frame, including overlays
+            // whose plot can extend past the old top legend's baseline.
+            double firstBaseline = Math.Min(box.FirstY, layout.Frame.Y + layout.Frame.Height - box.LineHeight);
+            box = box with { FirstY = firstBaseline, ClipY = firstBaseline, TextGap = gap };
+        }
+
         if (!measuredFillGrid && measuredBand && rows.Count > 1 && widths.Max() <= availableWidth + padding)
         {
             // Greedy packing establishes the required row count. Minimize its

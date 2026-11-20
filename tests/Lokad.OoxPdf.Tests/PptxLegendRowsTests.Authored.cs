@@ -90,7 +90,14 @@ internal static partial class PptxLegendRowsTests
             fontResourceFilter: name => name.StartsWith("CL", StringComparison.Ordinal)).ToArray();
         TestAssert.Equal(string.Concat(Enumerable.Range(1, 6).Select(i => $"Category {i}")),
             string.Concat(names.Select(show => show.Text)));
-        double[] clip = ReadPolarLegendClip(page, 144);
+        AssertLegendTextInsideClip(names, ReadPolarLegendClip(page, 144));
+        TestAssert.True(!diagnostics.Any(item => item.Message.Contains("overflowing entries", StringComparison.Ordinal)),
+            "All six names fit the supplied container without shrinking their text.");
+    }
+
+    private static void AssertLegendTextInsideClip(
+        IEnumerable<(PdfEmbeddedFont Font, string Text, double Size, double X, double Y)> names, double[] clip)
+    {
         foreach (var show in names)
         {
             var font = show.Font.Font;
@@ -110,7 +117,5 @@ internal static partial class PptxLegendRowsTests
                 x += font.GetAdvanceWidth(glyph) * scale;
             }
         }
-        TestAssert.True(!diagnostics.Any(item => item.Message.Contains("overflowing entries", StringComparison.Ordinal)),
-            "All six names fit the supplied container without shrinking their text.");
     }
 }
