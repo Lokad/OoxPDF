@@ -544,7 +544,7 @@ internal sealed partial class DocxReader
             startsAfterBreak = false;
         }
 
-        foreach (XElement child in paragraph.Elements())
+        foreach (XElement child in EnumerateBreakSplitChildren(paragraph))
         {
             if (child.Name == WordprocessingNamespace + "pPr")
             {
@@ -634,9 +634,7 @@ internal sealed partial class DocxReader
             flushOwnerAndParagraph(endsBeforeBreak);
         }
 
-        // The same stored children supplied the break candidates. Properties
-        // alone must not create a paragraph fragment before a leading break.
-        foreach (XElement containerChild in DocxSourceXml.StoredChildren(sourceContainer))
+        foreach (XElement containerChild in EnumerateBreakSplitChildren(sourceContainer))
         {
             if (containerChild.Name != WordprocessingNamespace + "r")
             {
@@ -689,6 +687,11 @@ internal sealed partial class DocxReader
 
         AddContainerPart(ownerChildren, sourceContainer, containerChildren);
     }
+
+    // Properties and empty editing markers do not supply paragraph content.
+    // A leading break must not leave them behind as a separate fragment.
+    private static IEnumerable<XElement> EnumerateBreakSplitChildren(XElement owner) =>
+        DocxSourceXml.StoredChildren(owner).Where(child => !DocxSourceXml.IsNonPrintingMarker(child));
 
     private static void AddContainerPart(List<XElement> paragraphChildren, XElement sourceContainer, List<XElement> containerChildren)
     {

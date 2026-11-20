@@ -138,11 +138,11 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.Contains("AUTHORED AFTER BREAK", string.Concat(
                 DocxCommentsTests.ReadEmbeddedGlyphTextShows(control[targetPage]).Select(show => show.Text)));
 
-            foreach (string wrapper in new[] { "sdt", "customXml", "smartTag", "nested" })
+            foreach (string wrapper in new[] { "sdt", "customXml", "smartTag", "nested", "proof", "permission" })
             {
                 PdfPage[] pages = Render(wrapper);
                 TestAssert.True(control.Select(page => page.Content).SequenceEqual(pages.Select(page => page.Content)),
-                    "Wrapper properties preserve the authored pagination and paint.");
+                    "Nonprinting metadata preserves the authored pagination and paint.");
                 TestAssert.Equal(link, pages[0].Annotations.Single());
             }
 
@@ -160,16 +160,21 @@ internal static partial class DocxInlineCompositionTests
 
                     var run = new XElement(w + "r", new XElement(w + "br", new XAttribute(w + "type", type)),
                         new XElement(w + "t", "AUTHORED AFTER BREAK"));
-                    XElement ContentControl(XElement item) => new(w + "sdt",
+                    XElement ContentControl(params XElement[] items) => new(w + "sdt",
                         new XElement(w + "sdtPr", new XElement(w + "alias", new XAttribute(w + "val", "Break probe"))),
-                        new XElement(w + "sdtContent", item));
+                        new XElement(w + "sdtContent", items));
                     XElement Metadata(string kind, XElement item) => MetadataWrapper(w, kind, new XElement(w + (kind + "Pr")), item);
-                    XElement content = wrapper switch
+                    XElement[] content = wrapper switch
                     {
-                        "direct" => run,
-                        "sdt" => ContentControl(run),
-                        "nested" => ContentControl(Metadata("customXml", Metadata("smartTag", run))),
-                        _ => Metadata(wrapper, run)
+                        "direct" => [run],
+                        "sdt" => [ContentControl(run)],
+                        "nested" => [ContentControl(Metadata("customXml", Metadata("smartTag", run)))],
+                        "proof" => [new XElement(w + "proofErr", new XAttribute(w + "type", "spellStart")),
+                            run, new XElement(w + "proofErr", new XAttribute(w + "type", "spellEnd"))],
+                        "permission" => [ContentControl(
+                            new XElement(w + "permStart", new XAttribute(w + "id", 50), new XAttribute(w + "edGrp", "everyone")),
+                            run, new XElement(w + "permEnd", new XAttribute(w + "id", 50)))],
+                        _ => [Metadata(wrapper, run)]
                     };
                     body.ReplaceNodes(
                         new XElement(w + "p", new XElement(w + "hyperlink", new XAttribute(w + "anchor", "destination"),
