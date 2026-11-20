@@ -31,18 +31,9 @@ internal sealed class PdfDocumentWriter
         }
         return deduped;
     }
-    // R06.1: returns the exact serialized byte count. Every byte below crosses the
-    // PdfObjectWriter boundary, which admits each chunk against the output budget
-    // before writing, so a zero budget writes nothing and no call-site whole-output
-    // charge remains. On success the admitted total equals the returned position.
-    // Pages and content bytes admit per produced page during rendering (R06.2);
-    // the writer keeps page validation, planning, and numbering.
-    // R06.3: staged emission. The producer enumerable is drained once: each page is
-    // validated, its page/group content bytes are encoded a single time and handed
-    // to one spill store, and only blanked descriptors are retained. Planning, numbering, and
-    // emission then run over descriptors with content re-read in order, so output
-    // stays byte-identical while stageable payload retention follows the window.
-    public static async ValueTask<long> WriteStagedAsync(
+    // Validate and stage each page once, keeping descriptors in memory while payloads can spill.
+    // PdfObjectWriter admits each serialized chunk against the output budget before writing.
+    public static async ValueTask WriteStagedAsync(
         Stream stream,
         IAsyncEnumerable<PdfPage> pages,
         OoxConversionLimits limits,
@@ -54,10 +45,9 @@ internal sealed class PdfDocumentWriter
         ArgumentNullException.ThrowIfNull(stream);
         PdfStagedDocument staged = await ProduceStagedPagesAsync(pages, limits, diagnosticSink,
             cancellationToken, temporaryStorage).ConfigureAwait(false);
-        long result;
         try
         {
-            result = await EmitStagedAsync(stream, staged, cancellationToken, creationDate).ConfigureAwait(false);
+            await EmitStagedAsync(stream, staged, cancellationToken, creationDate).ConfigureAwait(false);
         }
         catch (Exception failure)
         {
@@ -66,12 +56,10 @@ internal sealed class PdfDocumentWriter
         }
         await staged.DisposeAsync().ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();
-        return result;
     }
 
-    // R06.3: drains the producer once (validate, encode, spill, blank) and hands
-    // a staged document (descriptors plus store) to the caller, so the stream path can snapshot and report
-    // between production and emission. The caller must dispose the document.
+    // The caller owns the staged document. The stream converter reports resource usage
+    // between staging and emission so the observer runs before the first output write.
     public static async ValueTask<PdfStagedDocument> ProduceStagedPagesAsync(
         IAsyncEnumerable<PdfPage> pages,
         OoxConversionLimits limits,
@@ -201,8 +189,8 @@ internal sealed class PdfDocumentWriter
         }
     }
 
-    // R06.3: emits already-produced descriptors with content re-read in order.
-    public static async ValueTask<long> EmitStagedAsync(
+    // Emit the staged descriptors and read each page and group payload in order.
+    public static async ValueTask EmitStagedAsync(
         Stream stream,
         PdfStagedDocument staged,
         CancellationToken cancellationToken,
@@ -218,10 +206,10 @@ internal sealed class PdfDocumentWriter
             throw new InvalidDataException("Staged content entry count mismatch.");
         }
 
-        return await WriteCoreAsync(stream, pages, staging, staged.PageEntries, staged.GroupEntries, cancellationToken, creationDate).ConfigureAwait(false);
+        await WriteCoreAsync(stream, pages, staging, staged.PageEntries, staged.GroupEntries, cancellationToken, creationDate).ConfigureAwait(false);
     }
 
-    private static async ValueTask<long> WriteCoreAsync(Stream stream, IReadOnlyList<PdfPage> pages, PdfPageContentStaging staging, IReadOnlyList<int> pageEntries, IReadOnlyDictionary<PdfTransparencyGroup, int> groupEntries, CancellationToken cancellationToken, DateTimeOffset? creationDate = null)
+    private static async ValueTask WriteCoreAsync(Stream stream, IReadOnlyList<PdfPage> pages, PdfPageContentStaging staging, IReadOnlyList<int> pageEntries, IReadOnlyDictionary<PdfTransparencyGroup, int> groupEntries, CancellationToken cancellationToken, DateTimeOffset? creationDate)
     {
         cancellationToken.ThrowIfCancellationRequested();
         var writer = new PdfObjectWriter(stream, cancellationToken, staging.Scratch);
@@ -333,8 +321,6 @@ internal sealed class PdfDocumentWriter
 
         await writer.WriteAsciiAsync(FormattableString.Invariant(
             $"trailer\n<< /Size {numbers.ObjectCount + 1} /Root 1 0 R{(numbers.InfoObjectNumber is null ? string.Empty : FormattableString.Invariant($" /Info {numbers.InfoObjectNumber.Value} 0 R"))} >>\nstartxref\n{xrefOffset}\n%%EOF\n")).ConfigureAwait(false);
-
-        return writer.Position;
 
         string BuildPagesObject()
         {
