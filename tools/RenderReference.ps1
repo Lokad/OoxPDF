@@ -39,7 +39,6 @@ param(
 $ErrorActionPreference = "Stop"
 if ($ReferenceKind -eq 'OfficeImage') { . (Join-Path $PSScriptRoot 'OfficeReferenceCapture.ps1') }
 
-$repoRoot = Split-Path -Parent $PSScriptRoot
 if ([string]::IsNullOrWhiteSpace($WorkerScript)) {
     $WorkerScript = Join-Path $PSScriptRoot "RenderReferenceWorker.ps1"
 }
@@ -53,7 +52,6 @@ if (Test-Path -LiteralPath $workerSnapshotPath) {
 }
 $statusPath = Join-Path $outputFull "reference-status.json"
 $supervisorLog = Join-Path $outputFull "reference-supervisor.log"
-$workerLog = Join-Path $outputFull "reference-worker.log"
 $progressLog = Join-Path $outputFull "reference-progress.log"
 
 function Write-SupervisorLog([string] $Message) {

@@ -5,7 +5,7 @@
 # derivatives of that identity, verified against recorded page hashes on every
 # hit. Pre-v2 flat entries resolve as legacy hits and are adopted into the v2
 # layout. Corrupt or incomplete entries never satisfy a hit: CacheOnly throws a
-# corrupt-entry error, while rendering mode deletes and re-renders.
+# corrupt-entry error, while rendering mode replaces it after a successful render.
 
 param(
     [ValidateSet('net10.0','net11.0')] [string] $Framework = 'net11.0',
@@ -64,91 +64,91 @@ function New-CacheMissMessage($resolution) {
     return "Reference cache miss for '$inputFull'$variantMessage at $Dpi DPI ($($resolution.Reason)). Cache-only mode refuses to invoke Office/COM reference rendering. Expected identity directory: artifacts/reference-cache/$($resolution.IdentityKey). To populate it on an Office setup, run: $populate"
 }
 
-$identityKey = Get-ReferenceIdentityKey $inputFull $CacheVariant
+$inputHash = (Get-FileHash -LiteralPath $inputFull -Algorithm SHA256).Hash.ToLowerInvariant()
+$identityKey = Get-ReferenceIdentityKey $inputFull $CacheVariant $inputHash
 $resolution = Use-ReferenceCacheLock $identityKey {
+    # Decide and publish under the same lock. Waiting callers see the complete
+    # entry, including a derivative from a publisher that just finished.
     $entry = Resolve-ReferenceCacheEntry $inputFull $Dpi $CacheVariant $derivativeName
     if ($entry.IdentityKey -cne $identityKey) {
         throw 'Reference input changed during cache lookup'
     }
-    if ($entry.Outcome -ne 'LegacyHit') { return $entry }
-
-    # Another reader must resolve the new entry after adoption completes.
-    Write-Host ("Reference cache legacy entry ($($entry.Reason)): $($entry.CacheDirectory)")
-    $legacyDerivativeName = if ($RasterizerPath) { Get-ReferenceDerivativeName $Dpi } else { $derivativeName }
-    Move-LegacyReferenceEntry $entry.CacheDirectory (Join-Path (Get-ReferenceCacheRoot) $identityKey) $inputFull $Dpi $legacyDerivativeName $CacheVariant $CaseId
-    Resolve-ReferenceCacheEntry $inputFull $Dpi $CacheVariant $derivativeName
-}
-
-if ($resolution.Outcome -eq "Corrupt") {
-    if ($CacheOnly) {
-        throw "Reference cache entry is corrupt and CacheOnly refuses to re-render: $($resolution.Reason) Entry: $($resolution.CacheDirectory)"
-    }
-
-    if ($isDocxMarkupVariant) {
-        throw "DOCX markup reference is corrupt; preserve the entry for inspection and re-import a trusted reference with explicit markup view settings. CacheVariant does not configure Word. Entry: $($resolution.CacheDirectory)"
-    }
-
-    Write-Host ("Reference cache entry corrupt ($($resolution.Reason)); re-rendering: $($resolution.CacheDirectory)")
-    Use-ReferenceCacheLock $resolution.IdentityKey {
-        if (Test-Path -LiteralPath $resolution.CacheDirectory) {
-            Remove-Item -LiteralPath $resolution.CacheDirectory -Recurse -Force
+    if ($entry.Outcome -eq 'LegacyHit') {
+        Write-Host ("Reference cache legacy entry ($($entry.Reason)): $($entry.CacheDirectory)")
+        $legacyDerivativeName = if ($RasterizerPath) { Get-ReferenceDerivativeName $Dpi } else { $derivativeName }
+        Move-LegacyReferenceEntry $entry.CacheDirectory (Join-Path (Get-ReferenceCacheRoot) $identityKey) $inputFull $Dpi $legacyDerivativeName $CacheVariant $CaseId
+        $entry = Resolve-ReferenceCacheEntry $inputFull $Dpi $CacheVariant $derivativeName
+        if ($entry.IdentityKey -cne $identityKey) {
+            throw 'Reference input changed during cache adoption'
         }
     }
-    $resolution = [pscustomobject]@{ Outcome = "Miss"; IdentityKey = $resolution.IdentityKey; CacheDirectory = $resolution.CacheDirectory; Reason = "corrupt entry removed" }
-}
+    if ($entry.Outcome -eq 'Hit') { return $entry }
 
-if ($resolution.Outcome -eq "Miss") {
-    if ($CacheOnly) {
-        throw (New-CacheMissMessage $resolution)
-    }
-
-    if ($isDocxMarkupVariant) {
-        throw "DOCX markup reference cache miss: export and import a trusted reference with explicit markup view settings via ExportDocxMarkupReference.ps1 and ImportDocxMarkupReferenceCache.ps1. CacheVariant does not configure Word; generic rendering would cache the wrong view."
-    }
-
-    $renderReference = Join-Path $PSScriptRoot "RenderReference.ps1"
-    Use-ReferenceCacheLock $resolution.IdentityKey {
-        $staging = Join-Path (Get-ReferenceCacheRoot) ("_render-" + [System.Guid]::NewGuid().ToString("N"))
-        New-Item -ItemType Directory -Force -Path $staging | Out-Null
-        try {
-            & $renderReference -InputPath $inputFull -OutputDirectory $staging -TimeoutSeconds $RenderTimeoutSeconds @rasterArguments
-            $workerStatus = $null
-            $workerStatusPath = Join-Path $staging "reference-worker-status.json"
-            if (Test-Path -LiteralPath $workerStatusPath) {
-                $workerStatus = Get-Content -Raw -LiteralPath $workerStatusPath | ConvertFrom-Json
-            }
-
-            foreach ($scratch in @("reference-status.json", "reference-worker-status.json", "reference-supervisor.log", "reference-worker.log", "reference-progress.log")) {
-                $scratchPath = Join-Path $staging $scratch
-                if (Test-Path -LiteralPath $scratchPath) {
-                    Remove-Item -LiteralPath $scratchPath -Force
-                }
-            }
-
-            $null = Write-ReferenceIdentityMetadata $staging $resolution.IdentityKey $inputFull ((Get-FileHash -LiteralPath $inputFull -Algorithm SHA256).Hash.ToLowerInvariant()) $CacheVariant $CaseId @{
-                Producer = "office-com"
-                OfficeApp = $(if ($null -ne $workerStatus) { [string]$workerStatus.OfficeApp } else { "" })
-                OfficeVersion = $(if ($null -ne $workerStatus) { [string]$workerStatus.OfficeVersion } else { "" })
-                ExportSettings = $(if ($null -ne $workerStatus) { [string]$workerStatus.ExportSettings } else { "" })
-            } $null
-            Publish-ReferenceStagedDirectory $staging $resolution.CacheDirectory
-            $derivativeDir = Join-Path (Join-Path $resolution.CacheDirectory "raster") $derivativeName
-            New-Item -ItemType Directory -Force -Path $derivativeDir | Out-Null
-            foreach ($page in @(Get-ChildItem -LiteralPath $resolution.CacheDirectory -Filter "page-*.png" | Sort-Object Name)) {
-                Move-Item -LiteralPath $page.FullName -Destination (Join-Path $derivativeDir $page.Name) -Force
-            }
-            Add-ReferenceDerivativeRecord $resolution.CacheDirectory $derivativeName $Dpi $rasterizerId
+    if ($entry.Outcome -eq 'Corrupt') {
+        if ($CacheOnly) {
+            throw "Reference cache entry is corrupt and CacheOnly refuses to re-render: $($entry.Reason) Entry: $($entry.CacheDirectory)"
         }
-        finally {
-            if (Test-Path -LiteralPath $staging) {
-                Remove-Item -LiteralPath $staging -Recurse -Force
-            }
+        if ($isDocxMarkupVariant) {
+            throw "DOCX markup reference is corrupt; preserve the entry for inspection and re-import a trusted reference with explicit markup view settings. CacheVariant does not configure Word. Entry: $($entry.CacheDirectory)"
+        }
+        Write-Host ("Reference cache entry corrupt ($($entry.Reason)); re-rendering: $($entry.CacheDirectory)")
+    }
+    else {
+        if ($CacheOnly) { throw (New-CacheMissMessage $entry) }
+        if ($isDocxMarkupVariant) {
+            throw "DOCX markup reference cache miss: export and import a trusted reference with explicit markup view settings via ExportDocxMarkupReference.ps1 and ImportDocxMarkupReferenceCache.ps1. CacheVariant does not configure Word; generic rendering would cache the wrong view."
         }
     }
-    $resolution = Resolve-ReferenceCacheEntry $inputFull $Dpi $CacheVariant $derivativeName
-    if ($resolution.Outcome -ne "Hit") {
-        throw "Reference render completed but the cache entry failed verification: $($resolution.Reason)"
+
+    $cacheRoot = [IO.Path]::GetFullPath((Get-ReferenceCacheRoot))
+    $destination = [IO.Path]::GetFullPath($entry.CacheDirectory)
+    $staging = Join-Path $cacheRoot ('_render-' + [Guid]::NewGuid().ToString('N'))
+    if ($destination -cne (Join-Path $cacheRoot $identityKey) -or [IO.Path]::GetDirectoryName($staging) -cne $cacheRoot) {
+        throw 'Unexpected reference publication paths'
     }
+
+    New-Item -ItemType Directory -Path $staging | Out-Null
+    try {
+        $renderReference = Join-Path $PSScriptRoot 'RenderReference.ps1'
+        & $renderReference -InputPath $inputFull -OutputDirectory $staging -TimeoutSeconds $RenderTimeoutSeconds @rasterArguments | Out-Host
+        if ((Get-FileHash -LiteralPath $inputFull -Algorithm SHA256).Hash -ne $inputHash) {
+            throw 'Reference input changed during rendering'
+        }
+
+        $workerStatus = $null
+        $workerStatusPath = Join-Path $staging 'reference-worker-status.json'
+        if (Test-Path -LiteralPath $workerStatusPath) {
+            $workerStatus = Get-Content -Raw -LiteralPath $workerStatusPath | ConvertFrom-Json
+        }
+        foreach ($scratch in @('reference-status.json', 'reference-worker-status.json', 'reference-supervisor.log',
+                'reference-worker-stdout.log', 'reference-worker-stderr.log', 'reference-progress.log')) {
+            $scratchPath = Join-Path $staging $scratch
+            if (Test-Path -LiteralPath $scratchPath) { Remove-Item -LiteralPath $scratchPath -Force }
+        }
+
+        $null = Write-ReferenceIdentityMetadata $staging $identityKey $inputFull $inputHash $CacheVariant $CaseId @{
+            Producer = 'office-com'
+            OfficeApp = [string]$workerStatus.OfficeApp
+            OfficeVersion = [string]$workerStatus.OfficeVersion
+            ExportSettings = [string]$workerStatus.ExportSettings
+        } $null
+        $derivativeDir = Join-Path $staging ('raster/' + $derivativeName)
+        New-Item -ItemType Directory -Force -Path $derivativeDir | Out-Null
+        foreach ($page in @(Get-ChildItem -LiteralPath $staging -Filter 'page-*.png' | Sort-Object Name)) {
+            Move-Item -LiteralPath $page.FullName -Destination (Join-Path $derivativeDir $page.Name)
+        }
+        Add-ReferenceDerivativeRecord $staging $derivativeName $Dpi $rasterizerId
+        Publish-ReferenceStagedDirectory $staging $destination
+    }
+    finally {
+        if (Test-Path -LiteralPath $staging) { Remove-Item -LiteralPath $staging -Recurse -Force }
+    }
+
+    $published = Resolve-ReferenceCacheEntry $inputFull $Dpi $CacheVariant $derivativeName
+    if ($published.Outcome -ne 'Hit' -or $published.IdentityKey -cne $identityKey) {
+        throw "Reference render completed but the cache entry failed verification: $($published.Reason)"
+    }
+    return $published
 }
 
 # At this point the identity entry is verified. Ensure the requested DPI

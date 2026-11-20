@@ -231,5 +231,67 @@ foreach ($file in @('reference.pdf','page-001.png')) {
 }
 $checks+='concurrent-import-publishes-one-pair'
 
+# A cold render and a competing request share one publication. The worker is
+# synthetic and writes visibly different bytes on each invocation.
+@'
+param($InputPath,$OutputDirectory,$TimeoutSeconds,$Framework,$Dpi,[switch]$SkipBuild,$RasterizerPath)
+$call=[guid]::NewGuid().ToString('N')
+[IO.File]::WriteAllText((Join-Path $PSScriptRoot ('render-call-'+$call)), $InputPath)
+Start-Sleep -Milliseconds 250
+[IO.File]::WriteAllText((Join-Path $OutputDirectory 'reference.pdf'), '%PDF-Synthetic '+$call)
+if (!(Test-Path -LiteralPath ($InputPath+'.omit-raster'))) {
+    [IO.File]::WriteAllText((Join-Path $OutputDirectory 'page-001.png'), 'Synthetic raster '+$call)
+}
+[IO.File]::WriteAllText((Join-Path $OutputDirectory 'reference-worker-stdout.log'), 'Synthetic stdout')
+[IO.File]::WriteAllText((Join-Path $OutputDirectory 'reference-worker-stderr.log'), 'Synthetic stderr')
+[IO.File]::WriteAllText((Join-Path $OutputDirectory 'reference-worker-status.json'), '{"OfficeVersion":"synthetic-only"}')
+Write-Output 'Synthetic worker output must stay outside the cache resolution record'
+'@ | Set-Content -LiteralPath (Join-Path $tools 'RenderReference.ps1') -Encoding utf8
+$coldInput=Join-Path $root 'cold-race.docx'
+[IO.File]::WriteAllText($coldInput, 'Unique synthetic input for concurrent cache misses')
+$coldOutputs=@('cold-first','cold-second' | ForEach-Object { Join-Path $root $_ })
+$servedCold=@($coldOutputs | ForEach-Object -Parallel {
+    $ErrorActionPreference='Stop'
+    & $using:render -InputPath $using:coldInput -OutputDirectory $_ -SkipBuild *> ($_+'.log')
+    $_
+} -ThrottleLimit 2 -TimeoutSeconds 20)
+$cold=Resolve-ReferenceCacheEntry $coldInput 144 ''
+if ($servedCold.Count -ne 2 -or @(Get-ChildItem -LiteralPath $tools -Filter 'render-call-*' -File).Count -ne 1 -or
+    $cold.Outcome -cne 'Hit' -or $cold.Derivative.State -cne 'Complete' -or $cold.Metadata.OfficeVersion -cne 'synthetic-only') {
+    throw 'Concurrent cold requests did not share one complete render'
+}
+foreach ($output in $coldOutputs) {
+    if ((Get-FileHash -LiteralPath (Join-Path $output 'reference.pdf')).Hash -ne $cold.Metadata.ReferencePdfSha256 -or
+        (Get-FileHash -LiteralPath (Join-Path $output 'page-001.png')).Hash -ne
+            (Get-FileHash -LiteralPath (Join-Path $cold.Derivative.Directory 'page-001.png')).Hash) {
+        throw 'A cold-cache reader received a different PDF or raster'
+    }
+}
+if (@(Get-ChildItem -LiteralPath $cold.CacheDirectory -Filter 'reference-worker-*' -File).Count -or
+    @(Get-ChildItem -LiteralPath (Get-ReferenceCacheRoot) -Filter '_render-*' -Directory).Count) {
+    throw 'A successful cache fill retained worker scratch'
+}
+$checks+=@('concurrent-cold-render-publishes-once','successful-render-excludes-worker-scratch')
+
+# Keep the old entry until the replacement has both its PDF and derivative.
+$coldPdf=Join-Path $cold.CacheDirectory 'reference.pdf'
+[IO.File]::WriteAllText($coldPdf, '%PDF-Intentional reference hash mismatch')
+$corruptHash=(Get-FileHash -LiteralPath $coldPdf).Hash
+[IO.File]::WriteAllText(($coldInput+'.omit-raster'), 'Synthetic incomplete worker result')
+$caught=$null
+try {
+    & $render -InputPath $coldInput -OutputDirectory (Join-Path $root 'cold-incomplete') -SkipBuild *> (Join-Path $root 'cold-incomplete.log')
+}
+catch { $caught=$_.Exception.Message }
+if ($caught -notlike '*no page-*.png raster output*' -or (Get-FileHash -LiteralPath $coldPdf).Hash -ne $corruptHash) {
+    throw 'An incomplete render displaced the previous cache entry'
+}
+Remove-Item -LiteralPath ($coldInput+'.omit-raster')
+& $render -InputPath $coldInput -OutputDirectory (Join-Path $root 'cold-repaired') -SkipBuild *> (Join-Path $root 'cold-repaired.log')
+$repaired=Resolve-ReferenceCacheEntry $coldInput 144 ''
+if ($repaired.Outcome -cne 'Hit' -or $repaired.Derivative.State -cne 'Complete' -or
+    $repaired.Metadata.ReferencePdfSha256 -eq $corruptHash) { throw 'A complete render did not replace the corrupt entry' }
+$checks+='corrupt-entry-replaced-only-after-complete-render'
+
 @{Checks=$checks;Builds=0;OfficeExports=0;SyntheticOnly=$true;ReferencePdfPreserved=$true} | ConvertTo-Json -Depth 4 | Set-Content (Join-Path $root 'evidence.json') -Encoding utf8
 "Reference derivative: $($checks.Count) checks pass; no build or Office export."
