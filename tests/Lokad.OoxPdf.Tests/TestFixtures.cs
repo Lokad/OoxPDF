@@ -5,6 +5,10 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class TestFixtures
 {
+    // Checkout, frozen and parent runners all keep Cases beside the project's bin directory.
+    public static string PublicCasePath(string relativePath) =>
+        Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", relativePath));
+
     public static MemoryStream CreateZipPackage(IReadOnlyDictionary<string, string> entries)
     {
         var stream = new MemoryStream();

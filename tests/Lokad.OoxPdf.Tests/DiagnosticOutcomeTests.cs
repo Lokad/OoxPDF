@@ -46,7 +46,7 @@ internal static class DiagnosticOutcomeTests
 
     public static void ThrowingSummaryCallbackLeavesFileDestinationUntouched()
     {
-        string input = FindCase("docx-tables.docx");
+        string input = TestFixtures.PublicCasePath("docx-tables.docx");
         string destination = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
         File.WriteAllText(destination, "original");
         TestAssert.Throws<InvalidOperationException>(() => OoxPdfConverter.Convert(input, destination, new OoxPdfOptions
@@ -59,7 +59,7 @@ internal static class DiagnosticOutcomeTests
 
     public static void ThrowingSummaryCallbackLeavesStreamOutputEmpty()
     {
-        string input = FindCase("docx-tables.docx");
+        string input = TestFixtures.PublicCasePath("docx-tables.docx");
         using FileStream inputStream = File.OpenRead(input);
         using var output = new MemoryStream();
         TestAssert.Throws<InvalidOperationException>(() => OoxPdfConverter.Convert(inputStream, output, new OoxPdfOptions
@@ -76,7 +76,7 @@ internal static class DiagnosticOutcomeTests
         // R20: when the atomic move itself fails (destination is an existing
         // directory), the conversion propagates the failure, removes only owned
         // staging, and leaves the destination directory intact.
-        string input = FindCase("docx-tables.docx");
+        string input = TestFixtures.PublicCasePath("docx-tables.docx");
         string directory = Path.Combine(Path.GetTempPath(), "oOxPdfPubFail" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);
         try
@@ -274,7 +274,7 @@ internal static class DiagnosticOutcomeTests
         try
         {
             string input = Path.Combine(directory, "missing-picture.pptx");
-            File.Copy(FindCase("pptx-images.pptx"), input);
+            File.Copy(TestFixtures.PublicCasePath("pptx-images.pptx"), input);
             File.SetAttributes(input, File.GetAttributes(input) & ~FileAttributes.ReadOnly);
             using (ZipArchive package = ZipFile.Open(input, ZipArchiveMode.Update))
             {
@@ -286,21 +286,4 @@ internal static class DiagnosticOutcomeTests
         finally { Directory.Delete(directory, recursive: true); }
     }
 
-    private static string FindCase(string name)
-    {
-        string[] candidates = new[]
-        {
-            Path.Combine("tests", "Lokad.OoxPdf.Tests", "Cases", name),
-            Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", name),
-        };
-        foreach (string candidate in candidates)
-        {
-            if (File.Exists(candidate))
-            {
-                return candidate;
-            }
-        }
-
-        throw new InvalidOperationException("Case file not found: " + name);
-    }
 }

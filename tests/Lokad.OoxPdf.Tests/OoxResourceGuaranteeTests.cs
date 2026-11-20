@@ -18,7 +18,7 @@ internal static class OoxResourceGuaranteeTests
         // R06: page serialization charges against the conversion budget (previously
         // the writer ran outside every budget). A zero page budget trips even a
         // one-page document without publishing output.
-        string input = FindCase("docx-tables.docx");
+        string input = TestFixtures.PublicCasePath("docx-tables.docx");
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
         TestAssert.Throws<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(input, output, new OoxPdfOptions
         {
@@ -101,7 +101,7 @@ internal static class OoxResourceGuaranteeTests
     {
         // R06: encoded content bytes charge up front during serialization. A zero
         // content budget trips conversions that previously sailed through.
-        string input = FindCase("docx-tables.docx");
+        string input = TestFixtures.PublicCasePath("docx-tables.docx");
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
         TestAssert.Throws<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(input, output, new OoxPdfOptions
         {
@@ -115,7 +115,7 @@ internal static class OoxResourceGuaranteeTests
     {
         // R06.1: output bytes admit before every write while the scope is still
         // open, so a zero budget trips before publication.
-        string input = FindCase("docx-tables.docx");
+        string input = TestFixtures.PublicCasePath("docx-tables.docx");
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
         TestAssert.Throws<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(input, output, new OoxPdfOptions
         {
@@ -130,7 +130,7 @@ internal static class OoxResourceGuaranteeTests
         // R06.1: each output chunk admits against the budget before its write, so a
         // zero budget trips before the destination sees any byte (previously the
         // whole PDF was written, then charged).
-        string input = FindCase("docx-tables.docx");
+        string input = TestFixtures.PublicCasePath("docx-tables.docx");
         using var inner = new MemoryStream();
         using var counting = new CountingWriteStream(inner);
         using FileStream inputStream = File.OpenRead(input);
@@ -151,7 +151,7 @@ internal static class OoxResourceGuaranteeTests
         // R06.1: exact/one-byte-too-small boundaries on file, seekable-stream, and
         // forward-only-stream paths. The one-byte-short file case trips at the tail
         // (after fonts/images/xref) and preserves a pre-existing destination.
-        string input = FindCase("docx-tables.docx");
+        string input = TestFixtures.PublicCasePath("docx-tables.docx");
         string ample = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
         OoxPdfConverter.Convert(input, ample, new OoxPdfOptions { InputKind = OoxPdfInputKind.Docx });
         long size = new FileInfo(ample).Length;
@@ -214,7 +214,7 @@ internal static class OoxResourceGuaranteeTests
         // R06.1: a counting destination proves no write crosses the allowed total,
         // including late font/image/xref chunks on an image deck; the destination
         // keeps its allowed prefix after the later failure.
-        string input = FindCase("pptx-ladder-07-image-crop.pptx");
+        string input = TestFixtures.PublicCasePath("pptx-ladder-07-image-crop.pptx");
         string ample = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
         OoxPdfConverter.Convert(input, ample, new OoxPdfOptions { InputKind = OoxPdfInputKind.Pptx });
         long size = new FileInfo(ample).Length;
@@ -239,7 +239,7 @@ internal static class OoxResourceGuaranteeTests
     {
         // R06.1: admission precedes the write, so a destination failure surfaces as
         // the destination exception itself, never wrapped or mistaken for a budget trip.
-        string input = FindCase("docx-tables.docx");
+        string input = TestFixtures.PublicCasePath("docx-tables.docx");
         using FileStream inputStream = File.OpenRead(input);
         using var throwing = new ThrowingWriteStream(new IOException("probe-destination-boom"));
         IOException thrown = TestAssert.Throws<IOException>(() => OoxPdfConverter.Convert(
@@ -351,7 +351,7 @@ internal static class OoxResourceGuaranteeTests
             () => new OoxConversionLimits { MaxPdfImageBytesPerConversion = -1 },
         })
         {
-            string input = FindCase("docx-tables.docx");
+            string input = TestFixtures.PublicCasePath("docx-tables.docx");
             string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
             TestAssert.Throws<ArgumentOutOfRangeException>(() => OoxPdfConverter.Convert(
                 input,
@@ -453,7 +453,7 @@ internal static class OoxResourceGuaranteeTests
         // R06: retained font resources accumulate across embedded fonts. A zero font
         // byte budget trips a font-embedding conversion without publishing output.
         // RV01: deterministic embeddable test face runs this on every host.
-        string input = FindCase("docx-tables.docx");
+        string input = TestFixtures.PublicCasePath("docx-tables.docx");
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
         TestAssert.Throws<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(input, output, new OoxPdfOptions
         {
@@ -468,7 +468,7 @@ internal static class OoxResourceGuaranteeTests
     {
         // R06: retained image resources (including soft masks) accumulate across
         // embedded images. A zero image byte budget trips an image conversion.
-        string input = FindCase("pptx-ladder-07-image-crop.pptx");
+        string input = TestFixtures.PublicCasePath("pptx-ladder-07-image-crop.pptx");
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
         TestAssert.Throws<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(input, output, new OoxPdfOptions
         {
@@ -561,7 +561,7 @@ internal static class OoxResourceGuaranteeTests
         // R20: a destination that fails mid-write surfaces its own exception; the
         // caller keeps the allowed prefix and owns the stream.
         var failure = new IOException("probe-mid-write-boom");
-        string input = FindCase("docx-tables.docx");
+        string input = TestFixtures.PublicCasePath("docx-tables.docx");
         using FileStream inputStream = File.OpenRead(input);
         using var inner = new MemoryStream();
         using var faulting = new FaultAfterWriteStream(inner, 100, failure);
@@ -576,7 +576,7 @@ internal static class OoxResourceGuaranteeTests
     {
         // RV11: per-page content admission lands before the page is handed to
         // the writer, so a zero content cap throws before any spill or encoding.
-        string input = FindCase("docx-basic-paragraphs.docx");
+        string input = TestFixtures.PublicCasePath("docx-basic-paragraphs.docx");
         var diagnostics = new List<OoxPdfDiagnostic>();
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
         OoxPdfLimitExceededException thrown = TestAssert.Throws<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(input, output, new OoxPdfOptions
@@ -598,7 +598,7 @@ internal static class OoxResourceGuaranteeTests
     public static void PdfContentBudgetTripsBeforeSpillingPptx()
     {
         // RV11: same ordering on the PPTX path.
-        string input = FindCase("pptx-ladder-02-plain-text.pptx");
+        string input = TestFixtures.PublicCasePath("pptx-ladder-02-plain-text.pptx");
         var diagnostics = new List<OoxPdfDiagnostic>();
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
         OoxPdfLimitExceededException thrown = TestAssert.Throws<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(input, output, new OoxPdfOptions
@@ -621,7 +621,7 @@ internal static class OoxResourceGuaranteeTests
     {
         // R06.3: forced file escalation must emit byte-identical output on both
         // public paths; the window changes residency, never bytes.
-        string input = FindCase("docx-tables.docx");
+        string input = TestFixtures.PublicCasePath("docx-tables.docx");
         string defaultPdf = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
         string spilledPdf = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
         OoxPdfConverter.Convert(input, defaultPdf, new OoxPdfOptions { InputKind = OoxPdfInputKind.Docx });
@@ -649,7 +649,7 @@ internal static class OoxResourceGuaranteeTests
         // R06.3: a one-byte window spills every content byte; the typed summary
         // reports exactly the serialized content total, and the spill diagnostic fires.
         // The default window spills nothing and stays silent.
-        string input = FindCase("docx-tables.docx");
+        string input = TestFixtures.PublicCasePath("docx-tables.docx");
         var spilledDiagnostics = new List<OoxPdfDiagnostic>();
         string spilledPdf = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
         OoxPdfConverter.Convert(input, spilledPdf, new OoxPdfOptions
@@ -706,7 +706,7 @@ internal static class OoxResourceGuaranteeTests
     {
         // R06.3: a zero output budget trips during emission after the spill, so the
         // owned spill temp must vanish with the staging; nothing is published.
-        string input = FindCase("docx-tables.docx");
+        string input = TestFixtures.PublicCasePath("docx-tables.docx");
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
         TestAssert.Throws<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(input, output, new OoxPdfOptions
         { TemporaryStorage = new OoxPdfFileTemporaryStorage(Path.GetTempPath()),
@@ -724,7 +724,7 @@ internal static class OoxResourceGuaranteeTests
     {
         // R06.3: forward-only destinations never expose Position/Length; spilled
         // content is re-read from the owned temp, so exact bytes still succeed.
-        string input = FindCase("docx-tables.docx");
+        string input = TestFixtures.PublicCasePath("docx-tables.docx");
         using var defaultInner = new MemoryStream();
         using var defaultForward = new ForwardOnlyWriteStream(defaultInner);
         using FileStream defaultInput = File.OpenRead(input);
@@ -1389,24 +1389,6 @@ internal static class OoxResourceGuaranteeTests
             ["word/document.xml"] = TestFixtures.Utf8(documentTemplate.Replace("[[BODY]]", body.ToString())),
             ["word/media/image1.png"] = png,
         });
-    }
-
-    private static string FindCase(string name)
-    {
-        string[] candidates = new[]
-        {
-            Path.Combine("tests", "Lokad.OoxPdf.Tests", "Cases", name),
-            Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", name),
-        };
-        foreach (string candidate in candidates)
-        {
-            if (File.Exists(candidate))
-            {
-                return candidate;
-            }
-        }
-
-        throw new InvalidOperationException("Case file not found: " + name);
     }
 
     private static int ParseCounter(string summary, string prefix)

@@ -1375,12 +1375,7 @@ internal static class PptxChartRenderingTests
 
     public static void PptxBubbleChartRendersNativeAxesGridlinesLegendAndBubbles()
     {
-        string input = Path.Combine(
-            Directory.GetCurrentDirectory(),
-            "tests",
-            "Lokad.OoxPdf.Tests",
-            "Cases",
-            "pptx-ladder-11-chart-bubble-port.pptx");
+        string input = TestFixtures.PublicCasePath("pptx-ladder-11-chart-bubble-port.pptx");
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
         var collector = new DiagnosticCollector();
 
@@ -3605,12 +3600,7 @@ internal static class PptxChartRenderingTests
 
     public static void PptxPercentStackedColumnChartUsesPercentValueAxis()
     {
-        string input = Path.Combine(
-            Directory.GetCurrentDirectory(),
-            "tests",
-            "Lokad.OoxPdf.Tests",
-            "Cases",
-            "pptx-ladder-11-chart-column-100-stacked-port.pptx");
+        string input = TestFixtures.PublicCasePath("pptx-ladder-11-chart-column-100-stacked-port.pptx");
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
         var collector = new DiagnosticCollector();
 

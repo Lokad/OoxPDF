@@ -60,8 +60,7 @@ internal static class PptxSceneTextAgreementTests
     {
         // R14-deeper: scene-retained cascade layers must reproduce the renderer snapshot
         // layer names and kinds (the matched placeholder inherits layout lstStyle).
-        string input = Path.Combine(Directory.GetCurrentDirectory(), "tests", "Lokad.OoxPdf.Tests", "Cases",
-            "pptx-ladder-04-placeholder-inherit-matched.pptx");
+        string input = TestFixtures.PublicCasePath("pptx-ladder-04-placeholder-inherit-matched.pptx");
         using FileStream stream = File.OpenRead(input);
         OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
@@ -137,8 +136,8 @@ internal static class PptxSceneTextAgreementTests
         // both paths (unmatched body placeholder and layout-matched placeholder).
         string[] inputs = new[]
         {
-            System.IO.Path.Combine(Directory.GetCurrentDirectory(), "tests", "Lokad.OoxPdf.Tests", "Cases", "pptx-ladder-04-placeholder-inherit.pptx"),
-            System.IO.Path.Combine(Directory.GetCurrentDirectory(), "tests", "Lokad.OoxPdf.Tests", "Cases", "pptx-ladder-04-placeholder-inherit-matched.pptx"),
+            TestFixtures.PublicCasePath("pptx-ladder-04-placeholder-inherit.pptx"),
+            TestFixtures.PublicCasePath("pptx-ladder-04-placeholder-inherit-matched.pptx"),
         };
         int comparedSpans = 0;
         foreach (string input in inputs)
@@ -201,7 +200,7 @@ internal static class PptxSceneTextAgreementTests
         });
 
         CompareXmlAndFedSpans(input, "Link");
-        string fieldInput = Path.Combine(Directory.GetCurrentDirectory(), "tests", "Lokad.OoxPdf.Tests", "Cases", "pptx-ladder-04-field-text.pptx");
+        string fieldInput = TestFixtures.PublicCasePath("pptx-ladder-04-field-text.pptx");
         CompareXmlAndFedSpans(fieldInput, null);
     }
 
@@ -294,7 +293,7 @@ internal static class PptxSceneTextAgreementTests
 
     public static void TableCellSpansPreserveSourceContentAndDeclaredFrame()
     {
-        string input = Path.Combine(Directory.GetCurrentDirectory(), "tests", "Lokad.OoxPdf.Tests", "Cases", "pptx-ladder-10-table-style-text.pptx");
+        string input = TestFixtures.PublicCasePath("pptx-ladder-10-table-style-text.pptx");
         using FileStream stream = File.OpenRead(input);
         using OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);

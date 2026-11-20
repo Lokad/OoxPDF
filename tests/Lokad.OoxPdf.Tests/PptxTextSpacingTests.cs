@@ -1203,12 +1203,7 @@ internal static class PptxTextSpacingTests
             TestAssert.Skip("Environmental precondition not met: (!File.Exists(cambria))");
         }
 
-        string input = Path.Combine(
-            Directory.GetCurrentDirectory(),
-            "tests",
-            "Lokad.OoxPdf.Tests",
-            "Cases",
-            "pptx-ladder-04-centered-bold-cambria-width.pptx");
+        string input = TestFixtures.PublicCasePath("pptx-ladder-04-centered-bold-cambria-width.pptx");
         using FileStream stream = File.OpenRead(input);
         OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
@@ -1284,12 +1279,7 @@ internal static class PptxTextSpacingTests
             TestAssert.Skip("The original exact Office headline wrap requires Cambria Math; portable highlight content and geometry are checked separately.");
         }
         var inspectionFonts = new PresentationFontResolver(resolver);
-        string input = Path.Combine(
-            Directory.GetCurrentDirectory(),
-            "tests",
-            "Lokad.OoxPdf.Tests",
-            "Cases",
-            "pptx-ladder-04-highlighted-headline-runs.pptx");
+        string input = TestFixtures.PublicCasePath("pptx-ladder-04-highlighted-headline-runs.pptx");
         using FileStream stream = File.OpenRead(input);
         OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);

@@ -3011,7 +3011,7 @@ internal static class DocxTablesTests
     // of the declared grid (fails: second column starts at the grid position).
     public static void DocxAutofitTableDistributesWidthsByContent()
     {
-        string input = FindCase("docx-markup-review.docx");
+        string input = TestFixtures.PublicCasePath("docx-markup-review.docx");
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { InputKind = OoxPdfInputKind.Docx });
         string pdf = File.ReadAllText(output, Encoding.Latin1);
@@ -3135,7 +3135,7 @@ internal static class DocxTablesTests
     public static void DocxReviewAutofitMeasuresCommentDisplayLabelAtParagraphMarkSize()
     {
         var sourceParts = new Dictionary<string, byte[]>();
-        using (ZipArchive archive = ZipFile.OpenRead(FindCase("docx-markup-review.docx")))
+        using (ZipArchive archive = ZipFile.OpenRead(TestFixtures.PublicCasePath("docx-markup-review.docx")))
         {
             foreach (ZipArchiveEntry entry in archive.Entries)
             {
@@ -3206,7 +3206,7 @@ internal static class DocxTablesTests
     public static void DocxOriginalAutofitIgnoresExcludedInsertionLength()
     {
         var parts = new Dictionary<string, byte[]>();
-        using (ZipArchive archive = ZipFile.OpenRead(FindCase("docx-markup-review.docx")))
+        using (ZipArchive archive = ZipFile.OpenRead(TestFixtures.PublicCasePath("docx-markup-review.docx")))
         {
             foreach (ZipArchiveEntry entry in archive.Entries)
             {
@@ -3258,7 +3258,7 @@ internal static class DocxTablesTests
     // excluded del runs for measurement (rendering keeps filtering them).
     public static void DocxReaderPreservesDeletedTextForMeasurement()
     {
-        string input = FindCase("docx-markup-review.docx");
+        string input = TestFixtures.PublicCasePath("docx-markup-review.docx");
         using FileStream stream = File.OpenRead(input);
         DocxDocument final = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
         DocxTable finalTable = final.BodyElements.OfType<DocxTableElement>().First().Table;
@@ -3335,24 +3335,6 @@ internal static class DocxTablesTests
         double[] xs = starts.Distinct().OrderBy(x => x).ToArray();
         TestAssert.Equal(2, xs.Length);
         TestAssert.True(xs[1] > 222d && xs[1] < 239d, "Autofit must split balanced content at the Office-measured position, not the grid.");
-    }
-
-    private static string FindCase(string name)
-    {
-        string[] candidates = new[]
-        {
-            Path.Combine("tests", "Lokad.OoxPdf.Tests", "Cases", name),
-            Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", name),
-        };
-        foreach (string candidate in candidates)
-        {
-            if (File.Exists(candidate))
-            {
-                return candidate;
-            }
-        }
-
-        throw new InvalidOperationException("Case file not found: " + name);
     }
 
     public static void DocxTableCellTrailingLinesShareDrawableLinePositions()

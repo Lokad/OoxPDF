@@ -1255,7 +1255,7 @@ internal static class PptxTextLayoutTests
             TestAssert.Skip("Environmental precondition not met: (!File.Exists(cambria))");
         }
 
-        string input = FindVisualCase("pptx-ladder-04-typography-unspaced-column-tc-probe.pptx");
+        string input = TestFixtures.PublicCasePath("pptx-ladder-04-typography-unspaced-column-tc-probe.pptx");
         using FileStream stream = File.OpenRead(input);
         OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
@@ -1394,24 +1394,6 @@ internal static class PptxTextLayoutTests
         TestAssert.Equal(0, PptxTests.CountTextMatrices(pdf));
     }
 
-    private static string FindVisualCase(string name)
-    {
-        string[] candidates = new[]
-        {
-            Path.Combine("tests", "Lokad.OoxPdf.Tests", "Cases", name),
-            Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", name),
-        };
-        foreach (string candidate in candidates)
-        {
-            if (File.Exists(candidate))
-            {
-                return candidate;
-            }
-        }
-
-        throw new InvalidOperationException("Case file not found: " + name);
-    }
-
     public static void PptxEllipseMicroLabelKeepsOfficePositionedLine()
     {
         // F01: an ellipse micro-box under vertOverflow clip keeps the line whose
@@ -1424,7 +1406,7 @@ internal static class PptxTextLayoutTests
             TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
-        string input = FindVisualCase("pptx-ladder-04-typography-small-label-origin-probe.pptx");
+        string input = TestFixtures.PublicCasePath("pptx-ladder-04-typography-small-label-origin-probe.pptx");
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { InputKind = OoxPdfInputKind.Pptx });
         string pdf = File.ReadAllText(output, Encoding.ASCII);
@@ -1559,12 +1541,7 @@ internal static class PptxTextLayoutTests
 
     public static void PptxTextFrameVerticalClipDropsLinesWithBaselineOutsideClip()
     {
-        string input = Path.Combine(
-            Directory.GetCurrentDirectory(),
-            "tests",
-            "Lokad.OoxPdf.Tests",
-            "Cases",
-            "pptx-ladder-03-text-anchor-overflow.pptx");
+        string input = TestFixtures.PublicCasePath("pptx-ladder-03-text-anchor-overflow.pptx");
         using FileStream stream = File.OpenRead(input);
         OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);

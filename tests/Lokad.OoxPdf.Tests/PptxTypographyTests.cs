@@ -1449,11 +1449,7 @@ internal static class PptxTypographyTests
 
     public static void PptxSyntheticTextCompressedExplicitLineSpacingMovesBaselineByLineBoxReduction()
     {
-        string input = Path.Combine(AppContext.BaseDirectory, "Cases", "pptx-ladder-04-typography-section-baseline-probe.pptx");
-        if (!File.Exists(input))
-        {
-            input = Path.GetFullPath(Path.Combine("tests", "Lokad.OoxPdf.Tests", "Cases", "pptx-ladder-04-typography-section-baseline-probe.pptx"));
-        }
+        string input = TestFixtures.PublicCasePath("pptx-ladder-04-typography-section-baseline-probe.pptx");
 
         using FileStream stream = File.OpenRead(input);
         OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);

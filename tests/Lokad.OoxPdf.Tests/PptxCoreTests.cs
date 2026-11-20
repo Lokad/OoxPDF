@@ -188,12 +188,7 @@ internal static class PptxCoreTests
 
     public static void PptxCambriaMathDenseWrapProbeKeepsHeadingOnOneLine()
     {
-        string input = Path.Combine(
-            Directory.GetCurrentDirectory(),
-            "tests",
-            "Lokad.OoxPdf.Tests",
-            "Cases",
-            "pptx-ladder-04-cambria-math-dense-wrap-probe.pptx");
+        string input = TestFixtures.PublicCasePath("pptx-ladder-04-cambria-math-dense-wrap-probe.pptx");
         using FileStream stream = File.OpenRead(input);
         OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
@@ -212,12 +207,7 @@ internal static class PptxCoreTests
 
     public static void PptxBoundaryInvarianceProbeCoalescesLeftAlignedHighlightBoundaries()
     {
-        string input = Path.Combine(
-            Directory.GetCurrentDirectory(),
-            "tests",
-            "Lokad.OoxPdf.Tests",
-            "Cases",
-            "pptx-ladder-04-typography-boundary-invariance-probe.pptx");
+        string input = TestFixtures.PublicCasePath("pptx-ladder-04-typography-boundary-invariance-probe.pptx");
         using FileStream stream = File.OpenRead(input);
         OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);

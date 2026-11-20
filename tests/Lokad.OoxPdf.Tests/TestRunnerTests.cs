@@ -140,6 +140,38 @@ internal static class TestRunnerTests
         }
     }
 
+    public static void PublicCasePathsIgnoreWorkingDirectoryFixtures()
+    {
+        const string fixture = "docx-tables.docx";
+        string pinned = TestFixtures.PublicCasePath(fixture);
+        byte[] pinnedBytes = File.ReadAllBytes(pinned);
+        string workingDirectory = Directory.CreateTempSubdirectory("working-directory-").FullName;
+        string cases = Path.Combine(workingDirectory, "tests", "Lokad.OoxPdf.Tests", "Cases");
+        Directory.CreateDirectory(cases);
+        string alternate = TestFixtures.PublicCasePath("docx-basic-paragraphs.docx");
+        File.Copy(alternate, Path.Combine(cases, fixture));
+        const string missing = "missing-from-bound-public-case-tree.docx";
+        File.Copy(alternate, Path.Combine(cases, missing));
+
+        string previous = Environment.CurrentDirectory;
+        try
+        {
+            Environment.CurrentDirectory = workingDirectory;
+            string selected = TestFixtures.PublicCasePath(fixture);
+            TestAssert.Equal(pinned, selected);
+            TestAssert.True(pinnedBytes.AsSpan().SequenceEqual(File.ReadAllBytes(selected)),
+                "The working directory fixture must never replace the bound input.");
+
+            string missingPath = TestFixtures.PublicCasePath(missing);
+            FileNotFoundException exception = TestAssert.Throws<FileNotFoundException>(() => File.ReadAllBytes(missingPath));
+            TestAssert.Equal(missingPath, exception.FileName);
+        }
+        finally
+        {
+            Environment.CurrentDirectory = previous;
+        }
+    }
+
     private static IEnumerable<TestCase> UnexpectedEnumeration() => Enumerable.Range(0, 1)
         .Select<int, TestCase>(_ => throw new InvalidOperationException("Invalid arguments must not enumerate tests."));
 

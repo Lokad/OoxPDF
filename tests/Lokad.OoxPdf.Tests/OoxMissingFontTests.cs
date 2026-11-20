@@ -280,7 +280,7 @@ internal static class OoxMissingFontTests
     {
         // RV01: the PPTX audit shows the same silent loss; text stays visible and
         // diagnosed with an empty font source (fails: no BT, no diagnostic).
-        string input = FindCase("pptx-ladder-02-plain-text.pptx");
+        string input = TestFixtures.PublicCasePath("pptx-ladder-02-plain-text.pptx");
         var diagnostics = new List<OoxPdfDiagnostic>();
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { InputKind = OoxPdfInputKind.Pptx, FontResolver = new MapFontResolver([], "Fallback"), DiagnosticSink = diagnostics.Add });
@@ -382,23 +382,6 @@ internal static class OoxMissingFontTests
         }
 
         return builder.ToString();
-    }
-
-    private static string FindCase(string name)
-    {
-        string[] candidates = new[]
-        {
-            Path.Combine("tests", "Lokad.OoxPdf.Tests", "Cases", name),
-            Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", name),
-        };
-        foreach (string candidate in candidates)
-        {
-            if (File.Exists(candidate))
-            {
-                return candidate;
-            }
-        }
-        throw new InvalidOperationException("Case file not found: " + name);
     }
 
     private sealed class FixedBytesResolver(byte[] bytes) : IFontResolver
