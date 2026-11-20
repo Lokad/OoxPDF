@@ -133,18 +133,42 @@ if ($failures.Count -ne 0) {
 foreach ($probe in @(
     @{Name='empty-stream';Pages=1;HasContents=$true;Text='';TextCount=0},
     @{Name='no-content';Pages=1;HasContents=$false;Text='';TextCount=0},
-    @{Name='trailing-blank';Pages=2;HasContents=$true;Text='BT /F1 12 Tf (Visible) Tj ET';TextCount=1}
+    @{Name='trailing-blank';Pages=2;HasContents=$true;Text='BT /F1 12 Tf (Visible) Tj ET';TextCount=1},
+    @{Name='single-byte-cmap';Pages=1;HasContents=$true;Text='BT /F1 12 Tf <41> Tj <8042> Tj [<41> -120 <42>] TJ ET';
+        TextCount=3;ExpectedText=@('A', ([string][char]0x20ac + 'B'), 'AB');Codespace='<20> <FF>';Mappings='<41> <0041> <42> <0042> <80> <20AC>'},
+    @{Name='two-byte-cmap';Pages=1;HasContents=$true;Text='BT /F1 12 Tf <0041> Tj <00410042> Tj ET';
+        TextCount=2;ExpectedText=@('X', 'XY');Codespace='<0000> <FFFF>';Mappings='<0041> <0058> <0042> <0059>';Composite=$true}
 )) {
     $bodies = [Collections.Generic.List[string]]::new()
     $bodies.Add('<< /Type /Catalog /Pages 2 0 R >>')
     $kids = @(for ($index=0; $index -lt $probe.Pages; $index++) { (4 + 2*$index).ToString() + ' 0 R' }) -join ' '
     $bodies.Add('<< /Type /Pages /Kids [' + $kids + '] /Count ' + $probe.Pages + ' >>')
-    $bodies.Add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>')
+    $mapNumber = 4 + 2*$probe.Pages
+    if ($probe.Composite) {
+        $bodies.Add('<< /Type /Font /Subtype /Type0 /BaseFont /Probe /Encoding /Identity-H /DescendantFonts [' + ($mapNumber+1) + ' 0 R] /ToUnicode ' + $mapNumber + ' 0 R >>')
+    } elseif ($probe.Codespace) {
+        $bodies.Add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding /ToUnicode ' + $mapNumber + ' 0 R >>')
+    } else {
+        $bodies.Add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>')
+    }
     for ($index=0; $index -lt $probe.Pages; $index++) {
         $contents = if ($probe.HasContents) { ' /Contents ' + (5 + 2*$index) + ' 0 R' } else { '' }
         $bodies.Add('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 200] /Resources << /Font << /F1 3 0 R >> >>' + $contents + ' >>')
         $stream = if ($index -eq 0) { $probe.Text } else { '' }
         $bodies.Add('<< /Length ' + $stream.Length + " >>`nstream`n" + $stream + "`nendstream")
+    }
+    if ($probe.Codespace) {
+        $mappingCount = ([regex]::Matches($probe.Mappings, '<[0-9A-F]+>').Count / 2)
+        $stream = @(
+            '/CIDInit /ProcSet findresource begin', '12 dict begin', 'begincmap',
+            '/CMapName /Probe-UCS def', '/CMapType 2 def', '1 begincodespacerange', $probe.Codespace,
+            'endcodespacerange', "$mappingCount beginbfchar", $probe.Mappings, 'endbfchar',
+            'endcmap', 'CMapName currentdict /CMap defineresource pop', 'end', 'end'
+        ) -join "`n"
+        $bodies.Add('<< /Length ' + $stream.Length + " >>`nstream`n" + $stream + "`nendstream")
+        if ($probe.Composite) {
+            $bodies.Add('<< /Type /Font /Subtype /CIDFontType2 /BaseFont /Probe /CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >> >>')
+        }
     }
     $pdfBuilder = [Text.StringBuilder]::new("%PDF-1.7`n")
     $offsets = [Collections.Generic.List[int]]::new()
@@ -167,9 +191,13 @@ foreach ($probe in @(
     if (!(Test-Path -LiteralPath $textReport) -or !(Test-Path -LiteralPath $graphicsReport)) {
         throw ('Incomplete operation reports: ' + $probe.Name)
     }
-    if (@(Get-Content -LiteralPath $textReport -Raw | ConvertFrom-Json).Count -ne $probe.TextCount -or
+    $operations = @(Get-Content -LiteralPath $textReport -Raw | ConvertFrom-Json)
+    if ($operations.Count -ne $probe.TextCount -or
         @(Get-Content -LiteralPath $graphicsReport -Raw | ConvertFrom-Json).Count -ne 0) {
-        throw ('Incorrect empty-page operations: ' + $probe.Name)
+        throw ('Incorrect inspected operations: ' + $probe.Name)
+    }
+    if ($probe.ExpectedText -and ($operations.DecodedText -join '|') -cne ($probe.ExpectedText -join '|')) {
+        throw ('Incorrect CMap decoding for ' + $probe.Name + ': ' + ($operations.DecodedText -join '|'))
     }
     $pageCount = @(Get-Content -LiteralPath ($probeDirectory+'.log') | Where-Object { $_ -match '^\d+ \d+ obj: page$' }).Count
     if ($pageCount -ne $probe.Pages) { throw ('Incorrect inspected pages: ' + $probe.Name) }
