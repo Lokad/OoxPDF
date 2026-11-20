@@ -1,3 +1,4 @@
+[CmdletBinding()]
 param(
     [ValidateSet('net10.0','net11.0')] [string] $Framework = 'net11.0',
     [Parameter(Mandatory = $true)]
@@ -6,8 +7,6 @@ param(
     [switch] $List,
 
     [switch] $OnlyUnsupported,
-
-    [switch] $OnlyChanged,
 
     [switch] $UpdateCatalog,
 
@@ -52,39 +51,27 @@ function Read-SupportCatalog {
     return $map
 }
 
-function Get-ChangedPaths {
-    $paths = @()
-    $status = & git -C $repoRoot status --short
-    if ($LASTEXITCODE -ne 0) {
-        return $paths
+function Use-SupportCatalogLock([scriptblock] $Action) {
+    $directory = Split-Path -Parent $supportCatalogPath
+    $physical = [IO.Path]::GetPathRoot($directory)
+    foreach ($segment in ($directory.Substring($physical.Length) -split '[\\/]')) {
+        if (!$segment) { continue }
+        $next = Join-Path $physical $segment
+        $entry = Get-Item -LiteralPath $next -Force -ErrorAction Ignore
+        $target = if ($null -ne $entry) { $entry.ResolveLinkTarget($true) }
+        $physical = if ($null -ne $target) { $target.FullName } else { $next }
     }
-
-    foreach ($line in $status) {
-        if ($line.Length -lt 4) {
-            continue
-        }
-
-        $path = $line.Substring(3).Trim()
-        if ($path.Contains(" -> ")) {
-            $path = ($path -split " -> ")[-1]
-        }
-
-        $paths += $path.Replace("\", "/")
-    }
-
-    return $paths
-}
-
-function Get-CaseInputPath([string] $caseManifestPath) {
-    $caseManifest = Get-Content -Raw -LiteralPath $caseManifestPath | ConvertFrom-Json
-    $caseDirectory = Split-Path -Parent $caseManifestPath
-    $inputPath = Join-Path $caseDirectory $caseManifest.input
+    if ($IsWindows) { $physical = $physical.ToUpperInvariant() }
+    $key = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($physical)))
+    $mutex = [Threading.Mutex]::new($false, 'Global\OoxPdfSupportCatalog-' + $key)
     try {
-        return (Resolve-Path -LiteralPath $inputPath).Path
+        if (!$mutex.WaitOne([TimeSpan]::FromMinutes(5))) {
+            throw 'Timed out waiting for the support-catalog lock.'
+        }
+        try { & $Action }
+        finally { $mutex.ReleaseMutex() }
     }
-    catch {
-        return $inputPath
-    }
+    finally { $mutex.Dispose() }
 }
 
 function Convert-ToRepoPath([string] $path) {
@@ -237,7 +224,6 @@ $cases = @(
         Sort-Object Name
 )
 
-$supportCatalog = Read-SupportCatalog
 if ($CasePattern.Count -ne 0) {
     $cases = @($cases | Where-Object {
         $caseName = $_.Name
@@ -256,19 +242,10 @@ if ($Tag.Count -ne 0) {
 }
 
 if ($OnlyUnsupported) {
+    $supportCatalog = Use-SupportCatalogLock { Read-SupportCatalog }
     $cases = @($cases | Where-Object {
         $id = $_.Name
         -not $supportCatalog.ContainsKey($id) -or $supportCatalog[$id].status -ne "supported"
-    })
-}
-
-if ($OnlyChanged) {
-    $changedPaths = @(Get-ChangedPaths)
-    $cases = @($cases | Where-Object {
-        $manifestPath = Join-Path $_.FullName "case.json"
-        $casePath = Convert-ToRepoPath $_.FullName
-        $inputPath = Convert-ToRepoPath (Get-CaseInputPath $manifestPath)
-        $changedPaths | Where-Object { $_.StartsWith($casePath, [StringComparison]::Ordinal) -or $_ -eq $inputPath }
     })
 }
 
@@ -392,42 +369,38 @@ $rows | Export-Csv -NoTypeInformation -LiteralPath $reportCsvPath
 $rows | Export-Csv -NoTypeInformation -LiteralPath $timestampedCsvPath
 
 if ($UpdateCatalog) {
-    $catalogMutex = New-Object System.Threading.Mutex($false, "Global\OoxPdfSupportCatalog")
-    if (-not $catalogMutex.WaitOne([TimeSpan]::FromMinutes(5))) {
-        throw "Timed out waiting for the support-catalog lock."
-    }
-    try {
-    foreach ($row in $rows) {
-        $supportCatalog[$row.id] = [pscustomobject]@{
-            id = $row.id
-            family = $row.family
-            kind = $row.kind
-            classification = $row.classification
-            status = $row.status
-            lastRunAt = $report.generatedAt
-            lastRunPath = $row.runPath
-            minStructuralSimilarity = $row.minStructuralSimilarity
-            minForegroundColorHistogramCorrelation = $row.minForegroundColorHistogramCorrelation
-            minForegroundRecall = $row.minForegroundRecall
-            requiredStructuralSimilarity = $row.requiredStructuralSimilarity
-            requiredForegroundColorHistogramCorrelation = $row.requiredForegroundColorHistogramCorrelation
-            requiredForegroundRecall = $row.requiredForegroundRecall
-            maxMeanAbsoluteError = $row.maxMeanAbsoluteError
-            maxChangedPixelRatioAtThreshold16 = $row.maxChangedPixelRatioAtThreshold16
+    Use-SupportCatalogLock {
+        $supportCatalog = Read-SupportCatalog
+        foreach ($row in $rows) {
+            $supportCatalog[$row.id] = [pscustomobject]@{
+                id = $row.id
+                family = $row.family
+                kind = $row.kind
+                classification = $row.classification
+                status = $row.status
+                lastRunAt = $report.generatedAt
+                lastRunPath = $row.runPath
+                minStructuralSimilarity = $row.minStructuralSimilarity
+                minForegroundColorHistogramCorrelation = $row.minForegroundColorHistogramCorrelation
+                minForegroundRecall = $row.minForegroundRecall
+                requiredStructuralSimilarity = $row.requiredStructuralSimilarity
+                requiredForegroundColorHistogramCorrelation = $row.requiredForegroundColorHistogramCorrelation
+                requiredForegroundRecall = $row.requiredForegroundRecall
+                maxMeanAbsoluteError = $row.maxMeanAbsoluteError
+                maxChangedPixelRatioAtThreshold16 = $row.maxChangedPixelRatioAtThreshold16
+            }
         }
-    }
 
-    $catalog = [pscustomobject]@{
-        generatedAt = (Get-Date).ToString("o")
-        cases = @($supportCatalog.Values | Sort-Object id)
-    }
-    $catalogDirectory = Split-Path -Parent $supportCatalogPath
-    New-Item -ItemType Directory -Force -Path $catalogDirectory | Out-Null
-    Set-Content -LiteralPath $supportCatalogPath -Value ($catalog | ConvertTo-Json -Depth 8)
-    }
-    finally {
-        $catalogMutex.ReleaseMutex()
-        $catalogMutex.Dispose()
+        $catalog = [pscustomobject]@{
+            generatedAt = (Get-Date).ToString("o")
+            cases = @($supportCatalog.Values | Sort-Object id)
+        }
+        $staging = $supportCatalogPath + '.staging-' + [Guid]::NewGuid().ToString('N')
+        try {
+            Set-Content -LiteralPath $staging -Value ($catalog | ConvertTo-Json -Depth 8)
+            [IO.File]::Move($staging, $supportCatalogPath, $true)
+        }
+        finally { [IO.File]::Delete($staging) }
     }
 }
 

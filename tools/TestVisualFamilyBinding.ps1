@@ -29,6 +29,9 @@ New-Item -ItemType Directory -Path $run -Force | Out-Null
     CliSha256=(Get-FileHash -LiteralPath $CliPath).Hash;
     LibrarySha256=(Get-FileHash -LiteralPath (Join-Path (Split-Path $CliPath) 'Lokad.OoxPdf.dll')).Hash} |
     ConvertTo-Json | Set-Content -LiteralPath (Join-Path $run 'run-info.json')
+if ($overlapCatalogUpdates -and $id -ceq 'probe-a') {
+    & (Join-Path $PSScriptRoot 'CheckVisualFamily.ps1') -Family probe -CasePattern probe-b -CliPath $CliPath -SkipBuild -UpdateCatalog | Out-Null
+}
 '@ | Set-Content (Join-Path $repo 'tools/CheckVisualCase.ps1')
 New-Item -ItemType Directory -Path (Join-Path $repo 'visual-cases/families') -Force | Out-Null
 '{"casePatterns":["probe-*"]}' | Set-Content (Join-Path $repo 'visual-cases/families/probe.json')
@@ -102,6 +105,18 @@ foreach($id in @('probe-a','probe-b')) {
 }
 & $script -Family probe -CliPath $frozenCli | Out-Null
 if(@(Get-Content $buildLog).Count -ne $before+2) {throw 'A false font flag caused an unused inspection build'}
+
+# Interleave disjoint writers deterministically. The nested family publishes
+# probe-b while the first family still has probe-a in progress.
+$overlapCatalogUpdates = $true
+& $script -Family probe -CasePattern probe-a -Tag approximate -CliPath $frozenCli -SkipBuild -OnlyUnsupported -UpdateCatalog | Out-Null
+$overlapCatalogUpdates = $false
+$catalogPath = Join-Path $repo 'artifacts/visual/support-catalog.json'
+$catalog = Get-Content -LiteralPath $catalogPath -Raw | ConvertFrom-Json
+if (($catalog.cases.id -join ',') -cne 'probe-a,probe-b') { throw 'An overlapping family update lost a catalog row' }
+if (@(Get-ChildItem -LiteralPath (Split-Path -Parent $catalogPath) -Filter 'support-catalog.json.staging-*').Count) {
+    throw 'A successful catalog update left staging files'
+}
 
 # Cross the real case -> inspector boundary. Only native executions and Office/
 # raster helpers are stubbed. The real scripts decide preparation and forwarding.
