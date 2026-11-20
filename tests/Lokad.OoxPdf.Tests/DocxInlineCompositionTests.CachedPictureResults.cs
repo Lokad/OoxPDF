@@ -157,7 +157,7 @@ internal static partial class DocxInlineCompositionTests
                 .Select(font => font.Font).ToHashSet();
             string math = string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, true)
                 .Where(show => mathFonts.Contains(show.Font)).Select(show => show.Text)).Normalize(NormalizationForm.FormKC);
-            TestAssert.Equal("ratetimeratetime", math);
+            TestAssert.Equal("x+2ya+b=cx+2ya+b=c", math);
             TestAssert.True(diagnostics.All(item => item.Id != "DOCX_UNSUPPORTED_EQUATION"),
                 "A revised picture must keep its neighboring equations eligible to paint.");
         }
