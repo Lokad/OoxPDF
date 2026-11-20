@@ -7,7 +7,7 @@ internal static class DocxCellMemoTests
 {
     public static void MemoReplaysAtChangedOrigin()
     {
-        var cell = new DocxTableCell("sample", [], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var cell = new DocxTableCell([DocxTests.CreateDocxLayoutParagraph("sample")], null, null, null, null, [], DocxTableCellMargins.Empty);
         var memo = new DocxLayoutEngine.DocxTableCellTextLinesMemo();
         var line = MakeLine("sample", 10d, 20d, 12d);
         memo.StoreRelativeLines(cell, 80d, null, 36d, 0d, 1d, null, null, DocxCounterDependencies.None,
@@ -32,7 +32,7 @@ internal static class DocxCellMemoTests
 
     public static void MemoDistinguishesReferenceIdentity()
     {
-        var cell = new DocxTableCell("sample", [], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var cell = new DocxTableCell([DocxTests.CreateDocxLayoutParagraph("sample")], null, null, null, null, [], DocxTableCellMargins.Empty);
         var clone = cell with { };
         TestAssert.True(!ReferenceEquals(cell, clone), "Test requires distinct instances.");
         TestAssert.True(((object)cell).Equals((object)clone), "Test requires equal-valued clones.");
@@ -47,7 +47,7 @@ internal static class DocxCellMemoTests
 
     public static void MemoTiersPageStaticVsDynamic()
     {
-        var cell = new DocxTableCell("sample", [], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var cell = new DocxTableCell([DocxTests.CreateDocxLayoutParagraph("sample")], null, null, null, null, [], DocxTableCellMargins.Empty);
         var line = MakeLine("sample", 10d, 20d, 12d);
         (DocxCounterDependencies Dependencies, (int Number, int Count)[] Hits)[] cases =
         [
@@ -77,7 +77,7 @@ internal static class DocxCellMemoTests
             var paragraph = DocxTests.CreateDocxLayoutParagraph("Field", 10d, 10d);
             var run = paragraph.Runs[0] with { Text = DocxFieldText.Placeholder(kind)!, FieldKind = kind };
             paragraph = paragraph with { Runs = [run] };
-            var cell = new DocxTableCell(run.Text, [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+            var cell = new DocxTableCell([paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
             var memo = new DocxLayoutEngine.DocxTableCellTextLinesMemo();
             var measurer = new CountingMeasurer();
             var first = PlaceCounterCell(cell, measurer, memo, 1, 12);
@@ -110,7 +110,7 @@ internal static class DocxCellMemoTests
             var paragraph = DocxTests.CreateDocxLayoutParagraph("Field", 10d, 10d);
             var run = paragraph.Runs[0] with { Text = DocxFieldText.Placeholder(kind)!, FieldKind = kind };
             paragraph = paragraph with { Runs = [run] };
-            var cell = new DocxTableCell(run.Text, [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+            var cell = new DocxTableCell([paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
             var memo = new DocxLayoutEngine.DocxTableCellTextLinesMemo();
             var measurer = new CountingMeasurer();
             var superseded = CaptureCounterMeasurement(cell, measurer, memo, kind);
@@ -153,7 +153,7 @@ internal static class DocxCellMemoTests
         var child = DocxMathParagraphPolicy.EnumerateInlineBoxPreparationCandidates(document, default).Single();
         var math = child.Equations.ToDictionary(equation => equation,
             equation => new DocxPreparedMathParagraph(equation, new(18d, 10d, 4d, []), 10d, 16d));
-        var cell = new DocxTableCell("", [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var cell = new DocxTableCell([paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
         var memo = new DocxLayoutEngine.DocxTableCellTextLinesMemo();
         var measurer = new CountingMeasurer();
         var first = PlaceCounterCell(cell, measurer, memo, 1, 12, width: 320d, math: math);
@@ -213,7 +213,7 @@ internal static class DocxCellMemoTests
 
     public static void MemoKeyIncludesMeasurerReference()
     {
-        var cell = new DocxTableCell("sample", [], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var cell = new DocxTableCell([DocxTests.CreateDocxLayoutParagraph("sample")], null, null, null, null, [], DocxTableCellMargins.Empty);
         var memo = new DocxLayoutEngine.DocxTableCellTextLinesMemo();
         var line = MakeLine("sample", 10d, 20d, 12d);
         var firstMeasurer = new CountingMeasurer();

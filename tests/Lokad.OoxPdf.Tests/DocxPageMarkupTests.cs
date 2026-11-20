@@ -490,7 +490,7 @@ internal static class DocxPageMarkupTests
         };
         DocxParagraph plain = DocxTests.CreateDocxLayoutParagraph("Unchanged table", 12d, 14d);
         var table = new DocxTable("fixed", [120d],
-            [new DocxTableRow([new DocxTableCell("Unchanged table", [plain], null, null, null, null, [], DocxTableCellMargins.Empty)], 24d)]);
+            [new DocxTableRow([new DocxTableCell([plain], null, null, null, null, [], DocxTableCellMargins.Empty)], 24d)]);
         DocxDocument document = DocxTests.CreateAllMarkupWrapProbeDocument([changed]) with
         {
             PageWidthPoints = 612d, PageHeightPoints = 792d,

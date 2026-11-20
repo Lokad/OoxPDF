@@ -104,7 +104,7 @@ internal static class DocxConditionalTableStyleTests
         int count = 0;
         foreach (var cell in document.Tables.SelectMany(table => table.Rows).SelectMany(row => row.Cells))
         {
-            TestAssert.Equal(expected.GetProperty(cell.Text).GetString(), cell.FillHex);
+            TestAssert.Equal(expected.GetProperty(DocxTests.GetCellText(cell)).GetString(), cell.FillHex);
             count++;
         }
         TestAssert.Equal(expected.EnumerateObject().Count(), count);

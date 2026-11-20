@@ -1331,7 +1331,7 @@ internal static class DocxImagesTests
         {
             InlineTextBoxes = [textBox]
         };
-        var cell = new DocxTableCell(string.Empty, [hostParagraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var cell = new DocxTableCell([hostParagraph], null, null, null, null, [], DocxTableCellMargins.Empty);
         var table = new DocxTable(null, [200d], [new DocxTableRow([cell], null)]);
         DocxDocument document = new(
             612d,
@@ -1380,7 +1380,7 @@ internal static class DocxImagesTests
         {
             InlineTextBoxes = [textBox]
         };
-        var cell = new DocxTableCell(string.Empty, [textParagraph, boxParagraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var cell = new DocxTableCell([textParagraph, boxParagraph], null, null, null, null, [], DocxTableCellMargins.Empty);
         var table = new DocxTable(null, [200d], [new DocxTableRow([cell], null)]);
         DocxDocument document = new(
             612d,
@@ -1426,7 +1426,7 @@ internal static class DocxImagesTests
         {
             InlineTextBoxes = [textBox]
         };
-        var cell = new DocxTableCell(string.Empty, [textParagraph, boxParagraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var cell = new DocxTableCell([textParagraph, boxParagraph], null, null, null, null, [], DocxTableCellMargins.Empty);
         var table = new DocxTable(null, [200d], [new DocxTableRow([cell], null)]);
         DocxDocument document = new(
             612d,
@@ -1476,7 +1476,7 @@ internal static class DocxImagesTests
         {
             InlineTextBoxes = [textBox]
         };
-        var cell = new DocxTableCell(string.Empty, [textParagraph, boxParagraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var cell = new DocxTableCell([textParagraph, boxParagraph], null, null, null, null, [], DocxTableCellMargins.Empty);
         var table = new DocxTable(null, [200d], [new DocxTableRow([cell], null)]);
         DocxDocument document = new(
             612d,

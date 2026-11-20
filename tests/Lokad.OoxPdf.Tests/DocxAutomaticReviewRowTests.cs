@@ -15,7 +15,7 @@ internal static class DocxAutomaticReviewRowTests
             var paragraph = DocxTests.CreateDocxLayoutParagraph(
                 string.Join('\n', Enumerable.Range(0, count).Select(index => $"ROW{index:000}")), 10d, 12d,
                 DocxParagraphKeepRules.Empty with { WidowControl = widow }) with { LineSpacingPoints = null };
-            var cell = new DocxTableCell(string.Empty, [paragraph], null, null, null, null, [],
+            var cell = new DocxTableCell([paragraph], null, null, null, null, [],
                 DocxTableCellMargins.Empty with { LeftPoints = 0d, RightPoints = 0d, TopPoints = 0d, BottomPoints = 0d });
             var implicitLayout = Layout(null, null);
             var expected = Lines(implicitLayout);

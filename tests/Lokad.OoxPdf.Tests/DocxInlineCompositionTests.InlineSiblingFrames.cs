@@ -140,7 +140,7 @@ internal static partial class DocxInlineCompositionTests
         source = source with { InlineTextBoxes = [box], InlineContent = items.Select(item =>
             item is DocxInlineBox ? (DocxInlineItem)new DocxInlineBox(box) : item).ToArray() };
         var prepared = PrepareSiblingFrameMath(source);
-        var cell = new DocxTableCell(string.Empty, [source], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var cell = new DocxTableCell([source], null, null, null, null, [], DocxTableCellMargins.Empty);
         var measurer = new SiblingFrameMeasurer();
         var memo = new DocxLayoutEngine.DocxTableCellTextLinesMemo();
         (IReadOnlyList<DocxTextLineLayout> Lines, IReadOnlyList<DocxInlineImageLayout> Images,

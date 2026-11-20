@@ -116,7 +116,6 @@ internal static class DocxTests
     {
         DocxParagraph paragraph = CreateCommentRangeParagraph(text, commentId);
         var cell = new DocxTableCell(
-            text,
             [paragraph],
             FillHex: null,
             ShadingValue: null,
@@ -219,7 +218,6 @@ internal static class DocxTests
     {
         DocxParagraph cellParagraph = CreateDocxLayoutParagraph(text, 10d, 12d);
         var cell = new DocxTableCell(
-            text,
             [cellParagraph],
             FillHex: fillHex,
             ShadingValue: null,
@@ -235,7 +233,7 @@ internal static class DocxTests
 
     internal static DocxTable CreateTableRevisionBalloonProbeTable(string text, string idPrefix)
     {
-        DocxTableCell cell = new(text, [CreateDocxLayoutParagraph(text, 10d, 12d)], null, null, null, null, [], DocxTableCellMargins.Empty)
+        DocxTableCell cell = new([CreateDocxLayoutParagraph(text, 10d, 12d)], null, null, null, null, [], DocxTableCellMargins.Empty)
         {
             Revisions =
             [
@@ -319,8 +317,13 @@ internal static class DocxTests
 
     internal static string RowTexts(DocxTable table)
     {
-        return string.Join("|", table.Rows.Select(row => string.Join(" ", row.Cells.Select(cell => cell.Text))));
+        return string.Join("|", table.Rows.Select(row => string.Join(" ", row.Cells.Select(GetCellText))));
     }
+
+    internal static string GetCellText(DocxTableCell cell) =>
+        string.Join(" ", cell.Paragraphs
+            .Select(paragraph => string.Concat(paragraph.Runs.Select(run => run.Text)))
+            .Where(text => text.Length != 0));
 
     internal static string WriteTrackedChangeModeProbeDocx()
     {
@@ -2081,10 +2084,11 @@ internal static class DocxTests
 
     internal static DocxTable CreateSingleCellTable(string text, double rowHeight)
     {
+        IReadOnlyList<DocxParagraph> paragraphs = text.Length == 0 ? [] : [CreateDocxLayoutParagraph(text)];
         return new DocxTable(
             null,
             [60d],
-            [new DocxTableRow([new DocxTableCell(text, [], null, null, null, null, [], DocxTableCellMargins.Empty)], rowHeight)]);
+            [new DocxTableRow([new DocxTableCell(paragraphs, null, null, null, null, [], DocxTableCellMargins.Empty)], rowHeight)]);
     }
 
     internal static DocxDocument CreateLayoutTestDocument(IReadOnlyList<DocxBodyElement> bodyElements, IReadOnlyList<DocxTable> tables)
@@ -2128,8 +2132,8 @@ internal static class DocxTests
 
     internal static DocxParagraph CreateDocxLayoutParagraph(
         string text,
-        double fontSize,
-        double lineSpacingPoints,
+        double fontSize = DocxDefaults.FontSizePoints,
+        double? lineSpacingPoints = null,
         DocxParagraphKeepRules? keepRules = null,
         DocxParagraphIndent? indent = null)
     {

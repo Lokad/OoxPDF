@@ -10,7 +10,7 @@ namespace Lokad.OoxPdf.Tests;
 internal static class DocxAutofitSpanTests
 {
     private static DocxTableCell Cell(string text, int span) => new(
-        text, [DocxTests.CreateDocxLayoutParagraph(text, 10d, 12d)], null, null, null,
+        [DocxTests.CreateDocxLayoutParagraph(text, 10d, 12d)], null, null, null,
         null, [], DocxTableCellMargins.Empty) { GridSpan = span };
 
     private static DocxTableRowLayout[] Layout(DocxTable table)

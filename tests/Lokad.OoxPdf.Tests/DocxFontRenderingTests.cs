@@ -21,7 +21,7 @@ internal static class DocxFontRenderingTests
         var table = new DocxTable(
             null,
             [40d],
-            [new DocxTableRow([new DocxTableCell(string.Empty, [cellParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], null)]) with {StyleId = "TableStyle" };
+            [new DocxTableRow([new DocxTableCell([cellParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], null)]) with {StyleId = "TableStyle" };
         var document = new DocxDocument(
             200d,
             200d,

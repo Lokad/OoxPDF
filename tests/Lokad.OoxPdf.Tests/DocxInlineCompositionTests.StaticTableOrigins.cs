@@ -9,7 +9,7 @@ internal static partial class DocxInlineCompositionTests
         foreach (double margin in new[] { 0d, 5.4d, 10d, 18d })
         {
             var paragraph = DocxTests.CreateDocxLayoutParagraph("Public cell", 11d, 16d);
-            var cell = new DocxTableCell("Public cell", [paragraph], null, null, null, null, [],
+            var cell = new DocxTableCell([paragraph], null, null, null, null, [],
                 DocxTableCellMargins.Empty with { LeftPoints = margin, RightPoints = margin });
             var table = new DocxTable("fixed", [200d], [new DocxTableRow([cell], null)]);
             var page = LayoutSharedTable(table);
@@ -28,7 +28,7 @@ internal static partial class DocxInlineCompositionTests
     public static void DocxStaticTableOriginKeepsIndentStyleAndCompatibilityFallbacks()
     {
         var paragraph = DocxTests.CreateDocxLayoutParagraph("Public cell", 11d, 16d);
-        var cell = new DocxTableCell("Public cell", [paragraph], null, null, null, null, [],
+        var cell = new DocxTableCell([paragraph], null, null, null, null, [],
             DocxTableCellMargins.Empty with { LeftPoints = 10d, RightPoints = 10d });
         var basis = new DocxTable("fixed", [200d], [new DocxTableRow([cell], null)]);
         foreach (var table in new[]

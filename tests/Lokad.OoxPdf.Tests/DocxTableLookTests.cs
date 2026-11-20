@@ -22,9 +22,10 @@ internal static class DocxTableLookTests
                 int count = 0;
                 foreach (var cell in document.Tables.SelectMany(table => table.Rows).SelectMany(row => row.Cells))
                 {
-                    string? expected = control.GetProperty("Fills").GetProperty(cell.Text).GetString();
+                    string text = DocxTests.GetCellText(cell);
+                    string? expected = control.GetProperty("Fills").GetProperty(text).GetString();
                     TestAssert.True(expected == cell.FillHex,
-                        $"Word legacy look {control.GetProperty("Id").GetString()}/{cell.Text}: expected {expected}, got {cell.FillHex}.");
+                        $"Word legacy look {control.GetProperty("Id").GetString()}/{text}: expected {expected}, got {cell.FillHex}.");
                     count++;
                 }
                 TestAssert.Equal(22, count);
@@ -58,9 +59,10 @@ internal static class DocxTableLookTests
                         TestAssert.Equal(raw.GetProperty(names[i]).GetString(), values[i]);
                     foreach (var cell in table.Rows.SelectMany(row => row.Cells))
                     {
-                        string? expected = control.GetProperty("Fills").GetProperty(cell.Text).GetString();
+                        string text = DocxTests.GetCellText(cell);
+                        string? expected = control.GetProperty("Fills").GetProperty(text).GetString();
                         TestAssert.True(expected == cell.FillHex,
-                            $"Word table look {control.GetProperty("Id").GetString()}/{cell.Text}: expected {expected}, got {cell.FillHex}.");
+                            $"Word table look {control.GetProperty("Id").GetString()}/{text}: expected {expected}, got {cell.FillHex}.");
                         count++;
                     }
                 }

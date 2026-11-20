@@ -3496,7 +3496,6 @@ internal static partial class DocxFootnotesTests
             ]
         };
         var cell = new DocxTableCell(
-            string.Empty,
             [cellAnchor, DocxTests.CreateDocxLayoutParagraph("Cell trailing line", 10d, 12d)],
             null, null, null, null, [], DocxTableCellMargins.Empty);
         var table = new DocxTable(null, [200d], [new DocxTableRow([cell], 30d)]);
@@ -3576,7 +3575,7 @@ internal static partial class DocxFootnotesTests
         }
 
         DocxParagraph plain = DocxTests.CreateDocxLayoutParagraph("Plain", 10d, 12d);
-        var table = new DocxTable(null, [60d], [new DocxTableRow([new DocxTableCell("Cell", [plain], null, null, null, null, [], DocxTableCellMargins.Empty)], 30d)]);
+        var table = new DocxTable(null, [60d], [new DocxTableRow([new DocxTableCell([plain], null, null, null, null, [], DocxTableCellMargins.Empty)], 30d)]);
         IReadOnlyList<DocxBodyElement> elements = [new DocxParagraphElement(Keep("Keep zero")), new DocxParagraphElement(Keep("Keep one")), new DocxParagraphElement(plain), new DocxTableElement(table), new DocxParagraphElement(Keep("Keep four"))];
 
         TestAssert.True(new List<int> { 0, 1, 2 }.SequenceEqual(DocxLayoutEngine.KeepChainBlockIndexes(elements, 0)), "Keep chain from 0 must span both keep paras plus the plain follower.");

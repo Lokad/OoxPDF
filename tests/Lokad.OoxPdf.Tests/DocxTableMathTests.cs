@@ -149,7 +149,7 @@ internal static class DocxTableMathTests
     public static void DocxTableMathCandidatesShareStandalonePolicyAndKeepUnsupportedOwners()
     {
         var (paragraph, _) = Prepared(20d);
-        var cell = new DocxTableCell(string.Empty, [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var cell = new DocxTableCell([paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
         var row = new DocxTableRow([cell], null);
         DocxDocument Document(DocxTableRow candidate) => TableDocument(candidate);
         foreach (DocxTableRow supported in new[] { row,
@@ -189,7 +189,7 @@ internal static class DocxTableMathTests
         foreach (DocxTextAlignment alignment in new[] { DocxTextAlignment.Left, DocxTextAlignment.Center, DocxTextAlignment.Right })
         {
             DocxParagraph source = paragraph with { Alignment = alignment };
-            var cell = new DocxTableCell(string.Empty, [source], null, null, null, null, [], DocxTableCellMargins.Empty);
+            var cell = new DocxTableCell([source], null, null, null, null, [], DocxTableCellMargins.Empty);
             DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
                 .Create(TableDocument(new DocxTableRow([cell], null)), new DocxTests.FamilyWidthTextMeasurer(), default,
                     mathEquations: new Dictionary<DocxEquation, DocxPreparedMathParagraph>(ReferenceEqualityComparer.Instance)
@@ -211,7 +211,7 @@ internal static class DocxTableMathTests
         foreach (bool bordered in new[] { false, true })
         {
             DocxParagraph paragraph = DocxTests.CreateDocxLayoutParagraph("Public cell.", 10d, 12d);
-            var cell = new DocxTableCell("Public cell.", [paragraph], null, null, null, null,
+            var cell = new DocxTableCell([paragraph], null, null, null, null,
                 bordered ? [new DocxTableCellBorder("bottom", "single", "243042", "4")] : [], DocxTableCellMargins.Empty);
             DocxLayout Layout(string rule)
             {
@@ -235,7 +235,7 @@ internal static class DocxTableMathTests
     {
         var (paragraph, math) = Prepared(20d);
         DocxParagraph following = DocxTests.CreateDocxLayoutParagraph("Following cell.", 10d, 10d);
-        var cell = new DocxTableCell(string.Empty, [paragraph, following], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var cell = new DocxTableCell([paragraph, following], null, null, null, null, [], DocxTableCellMargins.Empty);
         DocxDocument document = TableDocument(new DocxTableRow([cell], null));
         var measurer = new DocxTests.FamilyWidthTextMeasurer();
         DocxLayout Layout(double height) => new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
@@ -264,7 +264,7 @@ internal static class DocxTableMathTests
     public static void DocxTableMathKeepEstimateUsesThePreparedFirstRowExtent()
     {
         var (paragraph, math) = Prepared(15d);
-        var cell = new DocxTableCell(string.Empty, [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var cell = new DocxTableCell([paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
         DocxDocument source = TableDocument(new DocxTableRow([cell], null));
         DocxParagraph filler = DocxTests.CreateDocxLayoutParagraph("Fill", 10d, 30d);
         DocxParagraph keep = DocxTests.CreateDocxLayoutParagraph("Keep", 10d, 10d,
@@ -293,7 +293,7 @@ internal static class DocxTableMathTests
         DocxEquation equation = prepared.Equation with { Display = false, SourceRunIndex = 1 };
         DocxParagraph paragraph = display with { Runs = [before, after], Equations = [equation] };
         var math = prepared with { Equation = equation };
-        var cell = new DocxTableCell(string.Concat(paragraph.Runs.Select(run => run.Text)), [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var cell = new DocxTableCell([paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
         var document = TableDocument(new DocxTableRow([cell], null));
         TestAssert.True(ReferenceEquals(paragraph, DocxMathParagraphPolicy.EnumeratePreparationCandidates(document, default)
             .Single(source => source.Equations.Count != 0)), "Inline cells share the body semantic owner policy.");
@@ -329,7 +329,7 @@ internal static class DocxTableMathTests
         DocxTextRun run = new(string.Join(" ", Enumerable.Repeat("Public prose", 20)), 10d, null, false, false, false, null, "TestFont");
         DocxEquation equation = prepared.Equation with { Display = false, SourceRunIndex = 1 };
         DocxParagraph paragraph = display with { Runs = [run], Equations = [equation] };
-        var cell = new DocxTableCell(string.Concat(paragraph.Runs.Select(run => run.Text)), [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var cell = new DocxTableCell([paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
         DocxDocument source = TableDocument(new DocxTableRow([cell], 150d) { HeightRuleValue = "exact" }) with { PageHeightPoints = 100d };
         var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
         var measurer = new DocxTests.FamilyWidthTextMeasurer();
@@ -442,7 +442,7 @@ internal static class DocxTableMathTests
                 HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>> { ["default"] = [paragraph] },
                 FooterParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>> { ["default"] = [footer] }
             };
-            var cell = new DocxTableCell("Public cell.", [footer], null, null, null, null, [], DocxTableCellMargins.Empty);
+            var cell = new DocxTableCell([footer], null, null, null, null, [], DocxTableCellMargins.Empty);
             DocxDocument document = guard == "table-first" ? TableDocument(new DocxTableRow([cell], null)) :
                 DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Body.", 10d, 10d))], []);
             document = document with { PageSettings = settings };
@@ -552,7 +552,7 @@ internal static class DocxTableMathTests
     public static void DocxStaticTableMathPreparationSharesCellEligibilityAndSourceIdentity()
     {
         var (paragraph, _) = Prepared(20d);
-        var cell = new DocxTableCell(string.Empty, [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var cell = new DocxTableCell([paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
         var row = new DocxTableRow([cell], null);
         foreach (bool header in new[] { true, false })
         foreach (string guard in new[] { "plain", "exact", "merge", "fit", "vertical", "nested", "height", "note" })
@@ -596,7 +596,7 @@ internal static class DocxTableMathTests
     public static void DocxStaticTableMathOccupiedHeightUsesPreparedCellFrames()
     {
         var (paragraph, math) = Prepared(20d);
-        var cell = new DocxTableCell(string.Empty, [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var cell = new DocxTableCell([paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
         var table = new DocxTable(null, [100d], [new DocxTableRow([cell], null)]) { PreferredWidthPoints = 100d };
         var stories = new Dictionary<string, IReadOnlyList<DocxBodyElement>> { ["default"] = [new DocxTableElement(table)] };
         foreach (bool header in new[] { true, false })

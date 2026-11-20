@@ -118,7 +118,7 @@ internal static class DocxBorderPlanTests
         for (int i = 0; i < cols; i++)
         {
             DocxParagraph paragraph = DocxTests.CreateDocxLayoutParagraph(prefix + i.ToString(System.Globalization.CultureInfo.InvariantCulture), 10d, 10d);
-            cells[i] = new DocxTableCell("c", [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+            cells[i] = new DocxTableCell([paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
         }
 
         return new DocxTableRow(cells, 60d);

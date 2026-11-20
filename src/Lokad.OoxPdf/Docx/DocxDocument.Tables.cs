@@ -117,7 +117,6 @@ internal enum DocxTableCellVerticalAlignment
 }
 
 internal sealed record DocxTableCell(
-    string Text,
     IReadOnlyList<DocxParagraph> Paragraphs,
     string? FillHex,
     string? ShadingValue,
@@ -125,37 +124,25 @@ internal sealed record DocxTableCell(
     string? VerticalAlignmentValue,
     IReadOnlyList<DocxTableCellBorder> Borders,
     DocxTableCellMargins Margins,
-    double? PreferredWidthPoints,
-    string? PreferredWidthValue,
-    string? PreferredWidthType,
-    int GridSpan,
-    string? GridSpanValue,
-    DocxTableCellConditionalFormat? ConditionalFormat,
-    bool HasVerticalMerge,
-    string? VerticalMergeValue,
-    bool NoWrap,
-    string? NoWrapValue,
-    bool FitText,
-    string? FitTextValue,
-    string? TextDirectionValue,
+    double? PreferredWidthPoints = null,
+    string? PreferredWidthValue = null,
+    string? PreferredWidthType = null,
+    int GridSpan = 1,
+    string? GridSpanValue = null,
+    DocxTableCellConditionalFormat? ConditionalFormat = null,
+    bool HasVerticalMerge = false,
+    string? VerticalMergeValue = null,
+    bool NoWrap = false,
+    string? NoWrapValue = null,
+    bool FitText = false,
+    string? FitTextValue = null,
+    string? TextDirectionValue = null,
     // Resolved style origin: zero anchors the grid; null retains the existing
     // unstyled/direct-margin policy. Positive values retain TableNormal anchoring.
     DocxTableCellMargins? GridAnchorMargins = null,
     bool PinTextToMargin = false)
 {
 
-    public DocxTableCell(
-        string Text,
-        IReadOnlyList<DocxParagraph> Paragraphs,
-        string? FillHex,
-        string? ShadingValue,
-        string? ShadingColor,
-        string? VerticalAlignmentValue,
-        IReadOnlyList<DocxTableCellBorder> Borders,
-        DocxTableCellMargins Margins)
-        : this(Text, Paragraphs, FillHex, ShadingValue, ShadingColor, VerticalAlignmentValue, Borders, Margins, null, null, null, 1, null, null, false, null, false, null, false, null, null, null, false)
-    {
-    }
     public IReadOnlyList<DocxBodyElement> BodyElements { get; init; } = [];
     public IReadOnlyList<DocxRevisionInfo> Revisions { get; init; } = [];
     public bool IsVerticalMergeRestart => HasVerticalMerge &&

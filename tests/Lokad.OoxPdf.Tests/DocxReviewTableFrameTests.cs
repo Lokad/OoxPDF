@@ -93,5 +93,5 @@ internal static class DocxReviewTableFrameTests
     private static DocxParagraph Paragraph(string text) => DocxTests.CreateDocxLayoutParagraph(text, 12d, 20d)
         with { LineSpacingPoints = null };
     private static DocxTableCell Cell(DocxParagraph paragraph) =>
-        new(paragraph.Runs[0].Text, [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        new([paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
 }

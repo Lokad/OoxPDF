@@ -21,7 +21,7 @@ internal static partial class DocxInlineCompositionTests
         foreach (bool cell in new[] { false, true })
         {
             var table = new DocxTable(null, [200d], [new DocxTableRow([
-                new DocxTableCell(string.Empty, paragraphs, null, null, null, null, [], DocxTableCellMargins.Empty)], null)]);
+                new DocxTableCell(paragraphs, null, null, null, null, [], DocxTableCellMargins.Empty)], null)]);
             DocxDocument document = new(300d, 156d, 36d, 36d, 36d, 36d, DocxPageSettings.Empty, [], [], [],
                 cell ? [new DocxTableElement(table)] : paragraphs.Select(paragraph => (DocxBodyElement)new DocxParagraphElement(paragraph)).ToArray(),
                 [], cell ? [table] : []);

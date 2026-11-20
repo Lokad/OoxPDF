@@ -24,7 +24,7 @@ internal static class DocxNormalTableStyleTests
                 TestAssert.Equal(9, cells.Length);
                 foreach (var cell in cells)
                 {
-                    var expected = control.GetProperty("Cells").GetProperty(cell.Text);
+                    var expected = control.GetProperty("Cells").GetProperty(DocxTests.GetCellText(cell));
                     TestAssert.Equal(expected.GetProperty("TextColor").GetString(),
                         cell.Paragraphs[0].Runs[0].ColorHex ?? "000000");
                     var fill = expected.GetProperty("Fill");
@@ -43,7 +43,7 @@ internal static class DocxNormalTableStyleTests
                 TestAssert.Equal(9, placed.Length);
                 foreach (var cell in placed)
                 {
-                    double expectedX = control.GetProperty("Cells").GetProperty(cell.Cell.Text)
+                    double expectedX = control.GetProperty("Cells").GetProperty(DocxTests.GetCellText(cell.Cell))
                         .GetProperty("OfficeX").GetDouble();
                     TestAssert.True(Math.Abs(cell.X + cell.ContentPaddingLeft - expectedX) <= 1d,
                         "The cell keeps the one-point Word origin gate: " + control.GetProperty("Id").GetString());

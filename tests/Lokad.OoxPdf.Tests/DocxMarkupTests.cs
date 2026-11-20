@@ -41,7 +41,7 @@ internal static class DocxMarkupTests
                 Runs = [cell.Paragraphs.Single().Runs.Single() with { Text = text }],
                 KeepRules = DocxParagraphKeepRules.Empty with { WidowControl = widow }
             };
-            return cell with { Text = text, Paragraphs = [paragraph] };
+            return cell with { Paragraphs = [paragraph] };
         }
         var table = new DocxTable("fixed", [160d, 160d],
             [original.Rows.Single() with { Cells = [CreateCell("AAA", false), CreateCell("DDD", true)] }]);
@@ -76,7 +76,7 @@ internal static class DocxMarkupTests
                 Equations = unsupportedMath ? [new DocxEquation(new DocxMathRow([])
                     { PropertiesXml = ["<unsupported-math/>"] }, 0, 0, false, null, null, null)] : []
             };
-            table = table with { Rows = [table.Rows.Single() with { Cells = [cell with { Text = text, Paragraphs = [paragraph] }] }] };
+            table = table with { Rows = [table.Rows.Single() with { Cells = [cell with { Paragraphs = [paragraph] }] }] };
             var document = source with
             {
                 BodyElements = [source.BodyElements[0], new DocxTableElement(table), source.BodyElements[2]],
@@ -101,7 +101,7 @@ internal static class DocxMarkupTests
         DocxDocument control = CreateReviewTableInsetDocument(12d, 11d, 20d, tableFirst: false);
         DocxTable table = control.Tables.Single();
         DocxParagraph paragraph = DocxTests.CreateDocxLayoutParagraph("A", 11d, 30d) with { LineSpacingPoints = null };
-        DocxTableCell textCell = table.Rows.Single().Cells.Single() with { Text = "A", Paragraphs = [paragraph] };
+        DocxTableCell textCell = table.Rows.Single().Cells.Single() with { Paragraphs = [paragraph] };
         table = table with { Rows = [table.Rows.Single() with { Cells = [textCell] }] };
         control = control with
         {
@@ -258,7 +258,7 @@ internal static class DocxMarkupTests
             DocxTable table = original with
             {
                 ColumnWidthsPoints = [80d],
-                Rows = [original.Rows.Single() with { Cells = [originalCell with { Text = cellText, Paragraphs = [paragraph] }] }]
+                Rows = [original.Rows.Single() with { Cells = [originalCell with { Paragraphs = [paragraph] }] }]
             };
             document = WithTable(table);
             DocxDocument fallback = WithTable(table with { Rows = [table.Rows.Single() with { HeightRuleValue = "auto" }] });
@@ -326,7 +326,7 @@ internal static class DocxMarkupTests
                     CommentRanges = [paragraph.CommentRanges[0] with { EndSourceRunIndex = 2, EndTextOffset = 0 }]
                 };
             }
-            var cell = new DocxTableCell(text, [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+            var cell = new DocxTableCell([paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
             var table = new DocxTable("fixed", [width], [new DocxTableRow([cell], null)]);
             DocxDocument document = DocxTests.CreateAllMarkupWrapProbeDocument([]) with
             {
@@ -372,7 +372,7 @@ internal static class DocxMarkupTests
                     InlineReferences = [paragraph.InlineReferences[0] with { SourceRunIndex = 2 }]
                 }
             };
-            var cell = new DocxTableCell(text, [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+            var cell = new DocxTableCell([paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
             var table = new DocxTable("fixed", [60d], [new DocxTableRow([cell], null)]);
             DocxDocument document = DocxTests.CreateAllMarkupWrapProbeDocument([]) with
             {
@@ -433,7 +433,7 @@ internal static class DocxMarkupTests
         {
             Runs = [cell.Paragraphs.Single().Runs.Single() with { Text = content }]
         };
-        DocxTableRow longRow = original.Rows.Single() with { Cells = [cell with { Text = content, Paragraphs = [paragraph] }] };
+        DocxTableRow longRow = original.Rows.Single() with { Cells = [cell with { Paragraphs = [paragraph] }] };
         DocxTable table = original with { Rows = includeFollowingRow ? [longRow, original.Rows.Single()] : [longRow] };
         return document with
         {
@@ -524,7 +524,7 @@ internal static class DocxMarkupTests
                 {
                     Runs = [cell.Paragraphs.Single().Runs.Single() with { Text = text }], KeepRules = rules
                 };
-                table = table with { Rows = [table.Rows.Single() with { Cells = [cell with { Text = text, Paragraphs = [paragraph] }] }] };
+                table = table with { Rows = [table.Rows.Single() with { Cells = [cell with { Paragraphs = [paragraph] }] }] };
                 return original with
                 {
                     BodyElements = [original.BodyElements[0], new DocxTableElement(table), original.BodyElements[2]],
@@ -575,7 +575,7 @@ internal static class DocxMarkupTests
             CommentRanges = [new DocxCommentRange("1", 0, 0, 1, 3, 1, 0)]
         };
         if (tableFirst) cellParagraph = anchor; else body = anchor;
-        var cell = new DocxTableCell("AAA", [cellParagraph], "B8D8F8", null, null, null, [], DocxTableCellMargins.Empty);
+        var cell = new DocxTableCell([cellParagraph], "B8D8F8", null, null, null, [], DocxTableCellMargins.Empty);
         var table = new DocxTable("fixed", [160d], [new DocxTableRow([cell], null)]);
         DocxParagraph following = DocxTests.CreateDocxLayoutParagraph("BBB", bodySize, 30d) with { LineSpacingPoints = null };
         return DocxTests.CreateAllMarkupWrapProbeDocument([body, following]) with
@@ -1963,7 +1963,6 @@ internal static class DocxMarkupTests
         };
         DocxParagraph tableParagraph = DocxTests.CreateDocxLayoutParagraph("Bordered", 10d, 12d);
         var cell = new DocxTableCell(
-            "Bordered",
             [tableParagraph],
             FillHex: null,
             ShadingValue: null,
@@ -2377,7 +2376,6 @@ internal static class DocxMarkupTests
 
         DocxParagraph tableParagraph = DocxTests.CreateCommentMarkerParagraph("Table marker", "2");
         var tableCell = new DocxTableCell(
-            "Table marker",
             [tableParagraph],
             FillHex: null,
             ShadingValue: null,

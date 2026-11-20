@@ -273,7 +273,7 @@ internal static class DocxRevisionsTests
     {
         DocxParagraph bodyParagraph = DocxTests.CreateDocxLayoutParagraph("Body anchor", 10d, 12d);
         DocxParagraph tableParagraph = DocxTests.CreateDocxLayoutParagraph("Table anchor", 10d, 12d);
-        DocxTableCell tableCell = new("Table anchor", [tableParagraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        DocxTableCell tableCell = new([tableParagraph], null, null, null, null, [], DocxTableCellMargins.Empty);
         DocxTable anchorTable = new(null, [120d], [new DocxTableRow([tableCell], 30d)]);
         DocxParagraph textBoxParagraph = DocxTests.CreateDocxLayoutParagraph(
             "Floating text box wraps inside the placed extent",
@@ -435,7 +435,7 @@ internal static class DocxRevisionsTests
             DocxParagraphSpacing.Empty,
             DocxParagraphKeepRules.Empty,
             null);
-        var cell = new DocxTableCell("ABCDEFGHIJ", [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var cell = new DocxTableCell([paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
         // Terminal-space emission is exercised in a fixed, overwide frame.
         var table = new DocxTable(
             "fixed",
@@ -516,7 +516,6 @@ internal static class DocxRevisionsTests
             DocxParagraphKeepRules.Empty,
             null);
         var cell = new DocxTableCell(
-            "private text is not exposed",
             [paragraph],
             "D9EAF7",
             "clear",

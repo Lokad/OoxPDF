@@ -40,39 +40,6 @@ internal static class DocxTableCellContent
     {
         return cell.BodyElements.Count != 0
             ? cell.BodyElements
-            : GetParagraphs(cell)
-                .Select(DocxBodyElementFactory.CreateParagraph)
-                .Cast<DocxBodyElement>()
-                .ToArray();
+            : cell.Paragraphs.Select(DocxBodyElementFactory.CreateParagraph).ToArray();
     }
-
-    public static IReadOnlyList<DocxParagraph> GetParagraphs(DocxTableCell cell)
-    {
-        if (cell.BodyElements.Count != 0)
-        {
-            return DocxBlockTraversal.EnumerateDirectParagraphs(cell.BodyElements).ToArray();
-        }
-
-        return cell.Paragraphs.Count == 0 && cell.Text.Length != 0
-            ? [CreatePlainTextParagraph(cell.Text)]
-            : cell.Paragraphs;
-
-        DocxParagraph CreatePlainTextParagraph(string text)
-        {
-            return new DocxParagraph(
-                [new DocxTextRun(text, DocxDefaults.FontSizePoints, null, false, false, false, null, null)],
-                [],
-                null,
-                DocxTextAlignment.Left,
-                null,
-                0d,
-                0d,
-                1d,
-                null,
-                DocxParagraphSpacing.Empty,
-                DocxParagraphKeepRules.Empty,
-                null);
-        }
-    }
-
 }

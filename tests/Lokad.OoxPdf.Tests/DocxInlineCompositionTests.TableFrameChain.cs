@@ -48,7 +48,7 @@ internal static partial class DocxInlineCompositionTests
             DocxParagraph Prose(string text, double size) => DocxTests.CreateDocxLayoutParagraph(text, size, size)
                 with { LineSpacingPoints = null };
             DocxTable Table(string text, double size) => new(null, [468d], [new DocxTableRow(
-                [new DocxTableCell(text, [Prose(text, size)], null, null, null, null, [], DocxTableCellMargins.Empty)], null)]);
+                [new DocxTableCell([Prose(text, size)], null, null, null, null, [], DocxTableCellMargins.Empty)], null)]);
             var first = Table("First cell", sizes.First); var second = Table("Second cell", sizes.Second);
             var tail = Prose("Following body", 11d);
             var elements = new List<DocxBodyElement>();

@@ -1840,7 +1840,7 @@ internal static class DocxTextSpacingTests
             DocxParagraphSpacing.Empty,
             DocxParagraphKeepRules.Empty,
             null);
-        var cell = new DocxTableCell(string.Empty, [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var cell = new DocxTableCell([paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
         DocxTable table = new(null, [90d], [new DocxTableRow([cell], null)]);
         DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
@@ -1901,7 +1901,7 @@ internal static class DocxTextSpacingTests
             DocxParagraphSpacing.Empty,
             DocxParagraphKeepRules.Empty,
             null);
-        var cell = new DocxTableCell(string.Empty, [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var cell = new DocxTableCell([paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
         DocxTable table = new(null, [90d], [new DocxTableRow([cell], null)]);
         DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
         return new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
@@ -1938,7 +1938,7 @@ internal static class DocxTextSpacingTests
             DocxParagraphSpacing.Empty,
             DocxParagraphKeepRules.Empty,
             null);
-        var cell = new DocxTableCell(string.Empty, [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var cell = new DocxTableCell([paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
         DocxTable table = new(null, [90d], [new DocxTableRow([cell], null)]);
         DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
         return new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)

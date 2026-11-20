@@ -162,9 +162,6 @@ internal sealed partial class DocxReader
                         out var firstCellBookmarks);
                     if (!firstCellBookmarks.IsEmpty) columnBookmarks = firstCellBookmarks;
                     IReadOnlyList<DocxParagraph> paragraphs = DocxBlockTraversal.EnumerateDirectParagraphs(cellBodyElements).ToArray();
-                    string text = string.Join(" ", paragraphs
-                        .Select(paragraph => string.Concat(paragraph.Runs.Select(run => run.Text)))
-                        .Where(t => t.Length != 0));
                     XElement? shading = cellProperties?.Element(WordprocessingNamespace + "shd");
                     string? fill = (string?)shading?.Attribute(WordprocessingNamespace + "fill") ?? conditionalStyle.FillHex;
                     string? shadingValue = (string?)shading?.Attribute(WordprocessingNamespace + "val") ?? conditionalStyle.ShadingValue;
@@ -223,7 +220,6 @@ internal sealed partial class DocxReader
                         gridMappings[sourceIndex][nextSourceColumn] - gridMappings[sourceIndex][sourceColumn]);
                     sourceColumn = nextSourceColumn;
                     cells.Add(new DocxTableCell(
-                        text,
                         paragraphs,
                         fill,
                         shadingValue,

@@ -270,8 +270,8 @@ internal static class DocxTablesTests
         var nestedTable = new DocxTable(
             null,
             [40d],
-            [new DocxTableRow([new DocxTableCell(string.Empty, [nestedParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 20d)]);
-        DocxTableCell outerCell = new(string.Empty, [], null, null, null, null, [], DocxTableCellMargins.Empty)
+            [new DocxTableRow([new DocxTableCell([nestedParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 20d)]);
+        DocxTableCell outerCell = new([], null, null, null, null, [], DocxTableCellMargins.Empty)
         {
             BodyElements = [new DocxTableElement(nestedTable)]
         };
@@ -317,7 +317,6 @@ internal static class DocxTablesTests
             TabStops = [new DocxTabStop(72d, "1440", "num", null)]
         };
         var restartCell = new DocxTableCell(
-            string.Empty,
             [],
             "D9EAF7",
             "clear",
@@ -330,7 +329,6 @@ internal static class DocxTablesTests
             BodyElements = [new DocxParagraphElement(cellParagraph)]
         };
         var continuationCell = new DocxTableCell(
-            string.Empty,
             [],
             null,
             null,
@@ -522,7 +520,7 @@ internal static class DocxTablesTests
         var table = new DocxTable(
             null,
             [80d],
-            [new DocxTableRow([new DocxTableCell(string.Empty, [cellParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 20d)]);
+            [new DocxTableRow([new DocxTableCell([cellParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 20d)]);
         DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
         DocxStructureTableSnapshot tableSnapshot = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
@@ -572,7 +570,7 @@ internal static class DocxTablesTests
         var table = new DocxTable(
             null,
             [100d],
-            [new DocxTableRow([new DocxTableCell(string.Empty, [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 24d)]);
+            [new DocxTableRow([new DocxTableCell([paragraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 24d)]);
         DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
         PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
@@ -663,7 +661,7 @@ internal static class DocxTablesTests
         var table = new DocxTable(
             null,
             [160d],
-            [new DocxTableRow([new DocxTableCell(string.Empty, [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 24d)]);
+            [new DocxTableRow([new DocxTableCell([paragraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 24d)]);
         DocxDocument document = new(
             612d,
             792d,
@@ -731,7 +729,7 @@ internal static class DocxTablesTests
                 new DocxHyperlinkSpan("rIdSplitCell", null, "https://example.invalid/split-cell", "External", null, 1, 1, 1, 1, 4)
             ]
         };
-        var cell = new DocxTableCell(string.Empty, [before, after], null, null, null, null, [], DocxTableCellMargins.Empty)
+        var cell = new DocxTableCell([before, after], null, null, null, null, [], DocxTableCellMargins.Empty)
         {
             BodyElements =
             [
@@ -791,7 +789,7 @@ internal static class DocxTablesTests
             [120d],
             [
                 new DocxTableRow(
-                    [new DocxTableCell(string.Empty, [linkParagraph, targetParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)],
+                    [new DocxTableCell([linkParagraph, targetParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)],
                     36d)
             ]);
         DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
@@ -859,7 +857,7 @@ internal static class DocxTablesTests
     {
         // 26pt fixture sinks the 0.48pt Office default cell insets (w68) so the resolved field still fits one line; wrap-vs-Word symmetry gets its own probe.
         DocxParagraph paragraph = DocxTests.CreateDocxLayoutParagraph("A {PAGE} B", 10d, 10d);
-        var cell = new DocxTableCell("A {PAGE} B", [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var cell = new DocxTableCell([paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
         var table = new DocxTable(null, [26d], [new DocxTableRow([cell], null)]);
         var document = new DocxDocument(
             100d,
@@ -891,7 +889,7 @@ internal static class DocxTablesTests
     {
         // 26pt fixture sinks the 0.48pt Office default cell insets (w68) so the literal field still fits one line; wrap-vs-Word symmetry gets its own probe.
         DocxParagraph paragraph = DocxTests.CreateDocxLayoutParagraph("A {NUMPAGES} B", 10d, 10d);
-        var cell = new DocxTableCell("A {NUMPAGES} B", [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var cell = new DocxTableCell([paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
         var table = new DocxTable(null, [26d], [new DocxTableRow([cell], null)]);
         var document = new DocxDocument(
             100d,
@@ -2919,11 +2917,11 @@ internal static class DocxTablesTests
         // width, or following flow rides high (here by a full border width).
         static DocxLayout LayoutPair(bool withBottomBorder, out double tableTotal, out double afterBaseline)
         {
-            var first = new DocxTableCell("A1", [DocxTests.CreateDocxLayoutParagraph("A1", 10d, 10d)], null, null, null, null, [], DocxTableCellMargins.Empty);
+            var first = new DocxTableCell([DocxTests.CreateDocxLayoutParagraph("A1", 10d, 10d)], null, null, null, null, [], DocxTableCellMargins.Empty);
             IReadOnlyList<DocxTableCellBorder> bottom = withBottomBorder
                 ? [new DocxTableCellBorder("bottom", "single", "auto", "8")]
                 : [];
-            var last = new DocxTableCell("B1", [DocxTests.CreateDocxLayoutParagraph("B1", 10d, 10d)], null, null, null, null, bottom, DocxTableCellMargins.Empty);
+            var last = new DocxTableCell([DocxTests.CreateDocxLayoutParagraph("B1", 10d, 10d)], null, null, null, null, bottom, DocxTableCellMargins.Empty);
             var table = new DocxTable(null, [180d], [new DocxTableRow([first], null), new DocxTableRow([last], null)]);
             DocxParagraph after = DocxTests.CreateDocxLayoutParagraph("After", 10d, 10d);
             DocxDocument document = DocxTests.CreateLayoutTestDocument(
@@ -2952,7 +2950,7 @@ internal static class DocxTablesTests
         // exactly like atLeast, so the exact height pins the content box and the
         // bottom width still hangs below it (sz=8 resolves to 0.96).
         var paragraph = DocxTests.CreateDocxLayoutParagraph("A", 10d, 10d);
-        var cell = new DocxTableCell("A", [paragraph], null, null, null, null, [new DocxTableCellBorder("bottom", "single", "auto", "8")], DocxTableCellMargins.Empty);
+        var cell = new DocxTableCell([paragraph], null, null, null, null, [new DocxTableCellBorder("bottom", "single", "auto", "8")], DocxTableCellMargins.Empty);
         var table = new DocxTable(null, [80d], [new DocxTableRow([cell], 10d) with {HeightValue = "200", HeightRuleValue = "exact" }]);
         DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 

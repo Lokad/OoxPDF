@@ -99,7 +99,7 @@ internal static partial class DocxInlineCompositionTests
     private static DocxTable StaticNoteTable(DocxParagraph paragraph, string shape)
     {
         var margins = new DocxTableCellMargins(0d, 0d, 0d, 0d, "0", "0", "0", "0");
-        DocxTableCell Cell(DocxParagraph p) => new(string.Empty, [p], null, null, null, "top", [], margins);
+        DocxTableCell Cell(DocxParagraph p) => new([p], null, null, null, "top", [], margins);
         var row = new DocxTableRow([Cell(paragraph)], null);
         if (shape == "two-rows") return new("fixed", [468d], [row, new([Cell(paragraph with { })], null)]);
         if (shape == "nested")

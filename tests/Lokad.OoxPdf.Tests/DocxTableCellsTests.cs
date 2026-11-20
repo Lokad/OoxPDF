@@ -1634,7 +1634,7 @@ internal static class DocxTableCellsTests
             Spacing = DocxParagraphSpacing.Empty with { LineValue = "480", LineRuleValue = "atLeast" },
             Images = [new DocxInlineImage(18d, 48d, "image/png", [], null) { SourceRunIndex = 1 }]
         };
-        var cell = new DocxTableCell("", [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty)
+        var cell = new DocxTableCell([paragraph], null, null, null, null, [], DocxTableCellMargins.Empty)
             { BodyElements = [new DocxParagraphElement(paragraph)] };
         var row = new DocxTableRow([cell], null) { IsHeader = variant == "header" };
         var table = new DocxTable(null, [120d], variant == "two-rows" ? [row, row] : [row]);
@@ -1708,7 +1708,7 @@ internal static class DocxTableCellsTests
                 };
             return paragraph;
         }).ToArray();
-        var cell = new DocxTableCell(string.Empty, paragraphs, null, null, null, verticalAlignment ?? (variant is "center" or "center-rich" ? "center" : null), [],
+        var cell = new DocxTableCell(paragraphs, null, null, null, verticalAlignment ?? (variant is "center" or "center-rich" ? "center" : null), [],
             cellMargins ?? (variant == "margins" ? DocxTableCellMargins.Empty with { TopPoints = 6d, BottomPoints = 12d } : DocxTableCellMargins.Empty))
             { BodyElements = paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p)).ToArray() };
         if (borderSize is not null) cell = cell with { Borders = new[] { "top", "left", "bottom", "right" }
@@ -1861,7 +1861,7 @@ internal static class DocxTableCellsTests
         if (variant == "mixed")
             previous = previous with { Runs = [.. previous.Runs, previous.Runs[0] with { FontFamily = "LoAsc", Text = " Mixed run" }] };
         DocxParagraph[] paragraphs = predecessor ? [previous, current] : [current];
-        var cell = new DocxTableCell(string.Empty, paragraphs, null, null, null, variant is "center" or "center-rich" ? "center" : null, [], DocxTableCellMargins.Empty)
+        var cell = new DocxTableCell(paragraphs, null, null, null, variant is "center" or "center-rich" ? "center" : null, [], DocxTableCellMargins.Empty)
         { BodyElements = paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p)).ToArray() };
         DocxTableRow row = new(Enumerable.Repeat(cell, columnCount).ToArray(), variant == "unknown-height" ? 200d : null);
         if (variant == "unknown-height") row = row with { HeightRuleValue = "unknown" };
@@ -3115,9 +3115,9 @@ internal static class DocxTableCellsTests
         DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         DocxTableCell cell = document.Tables[0].Rows[0].Cells[0];
-        TestAssert.Equal("Alpha Beta", cell.Text);
         TestAssert.Equal(2, cell.Paragraphs.Count);
         TestAssert.Equal("Alpha", cell.Paragraphs[0].Runs[0].Text);
+        TestAssert.Equal("Beta", cell.Paragraphs[1].Runs[0].Text);
         TestAssert.Equal(DocxTextAlignment.Center, cell.Paragraphs[1].Alignment);
         TestAssert.Equal(16d, cell.Paragraphs[1].Runs[0].FontSize);
         TestAssert.Equal("336699", cell.Paragraphs[1].Runs[0].ColorHex ?? string.Empty);
@@ -3167,7 +3167,6 @@ internal static class DocxTableCellsTests
         TestAssert.True(!diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_MANUAL_BREAK"), "Transparent table-cell column breaks remain supported.");
 
         DocxTableCell cell = document.Tables[0].Rows[0].Cells[0];
-        TestAssert.Equal("LeftRight", cell.Text);
         TestAssert.Equal(1, cell.BodyElements.Count);
         TestAssert.Equal(1, cell.Paragraphs.Count);
         TestAssert.Equal("LeftRight", cell.Paragraphs[0].Runs.Single().Text);
@@ -3590,8 +3589,8 @@ internal static class DocxTableCellsTests
 
     public static void DocxTableLayoutStageContinuesRowsInActiveColumnFrame()
     {
-        var firstRow = new DocxTableRow([new DocxTableCell("first", [], null, null, null, null, [], DocxTableCellMargins.Empty)], 100d);
-        var secondRow = new DocxTableRow([new DocxTableCell("second", [], null, null, null, null, [], DocxTableCellMargins.Empty)], 100d);
+        var firstRow = new DocxTableRow([new DocxTableCell([DocxTests.CreateDocxLayoutParagraph("first")], null, null, null, null, [], DocxTableCellMargins.Empty)], 100d);
+        var secondRow = new DocxTableRow([new DocxTableCell([DocxTests.CreateDocxLayoutParagraph("second")], null, null, null, null, [], DocxTableCellMargins.Empty)], 100d);
         var table = new DocxTable(null, [60d], [firstRow, secondRow]);
         DocxPageSettings sectionSettings = DocxPageSettings.Empty with
         {
@@ -3655,9 +3654,9 @@ internal static class DocxTableCellsTests
 
     public static void DocxTableLayoutStageRepeatsHeaderRowsAfterPageBreak()
     {
-        var header = new DocxTableRow([new DocxTableCell("Header", [], null, null, null, null, [], DocxTableCellMargins.Empty)], 20d) with {IsHeader = true };
-        var first = new DocxTableRow([new DocxTableCell("First", [], null, null, null, null, [], DocxTableCellMargins.Empty)], 50d);
-        var second = new DocxTableRow([new DocxTableCell("Second", [], null, null, null, null, [], DocxTableCellMargins.Empty)], 50d);
+        var header = new DocxTableRow([new DocxTableCell([DocxTests.CreateDocxLayoutParagraph("Header")], null, null, null, null, [], DocxTableCellMargins.Empty)], 20d) with {IsHeader = true };
+        var first = new DocxTableRow([new DocxTableCell([DocxTests.CreateDocxLayoutParagraph("First")], null, null, null, null, [], DocxTableCellMargins.Empty)], 50d);
+        var second = new DocxTableRow([new DocxTableCell([DocxTests.CreateDocxLayoutParagraph("Second")], null, null, null, null, [], DocxTableCellMargins.Empty)], 50d);
         var table = new DocxTable(null, [60d], [header, first, second]);
         var document = new DocxDocument(
             100d,
@@ -3681,8 +3680,8 @@ internal static class DocxTableCellsTests
         DocxTableRowLayout[] secondPageRows = layout.Pages[1].Items.OfType<DocxTableRowLayout>().ToArray();
         TestAssert.Equal(2, firstPageRows.Length);
         TestAssert.Equal(2, secondPageRows.Length);
-        TestAssert.Equal("Header", secondPageRows[0].Cells[0].Cell.Text);
-        TestAssert.Equal("Second", secondPageRows[1].Cells[0].Cell.Text);
+        TestAssert.Equal("Header", DocxTests.GetCellText(secondPageRows[0].Cells[0].Cell));
+        TestAssert.Equal("Second", DocxTests.GetCellText(secondPageRows[1].Cells[0].Cell));
     }
 
     public static void DocxTableRowHeightIncludesListLabelFirstLineExtraLeading()
@@ -3692,8 +3691,8 @@ internal static class DocxTableCellsTests
         DocxParagraphSpacing autoSpacing = new DocxParagraphSpacing(null, null, null, null, null, null, null, "auto", null);
         DocxParagraph tallItem = new DocxParagraph([new DocxTextRun("Tall", 10d, null, false, false, false, null, null)], [], null, DocxTextAlignment.Left, null, 0d, 0d, 1.15d, null, autoSpacing, DocxParagraphKeepRules.Empty, tallLabel);
         DocxParagraph flatItem = new DocxParagraph([new DocxTextRun("Flat", 10d, null, false, false, false, null, null)], [], null, DocxTextAlignment.Left, null, 0d, 0d, 1.15d, null, autoSpacing, DocxParagraphKeepRules.Empty, flatLabel);
-        var tallRow = new DocxTableRow([new DocxTableCell("Tall", [tallItem], null, null, null, null, [], DocxTableCellMargins.Empty)], null);
-        var flatRow = new DocxTableRow([new DocxTableCell("Flat", [flatItem], null, null, null, null, [], DocxTableCellMargins.Empty)], null);
+        var tallRow = new DocxTableRow([new DocxTableCell([tallItem], null, null, null, null, [], DocxTableCellMargins.Empty)], null);
+        var flatRow = new DocxTableRow([new DocxTableCell([flatItem], null, null, null, null, [], DocxTableCellMargins.Empty)], null);
         var table = new DocxTable(null, [400d], [tallRow, flatRow]);
         var document = new DocxDocument(400d, 400d, 10d, 10d, 10d, 10d, DocxPageSettings.Empty, [], [], [], [new DocxTableElement(table)], [], [table]);
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
@@ -3772,8 +3771,8 @@ internal static class DocxTableCellsTests
                 10d,
                 10d))
             .ToArray();
-        var first = new DocxTableRow([new DocxTableCell("First", [firstParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 60d);
-        var second = new DocxTableRow([new DocxTableCell("Second", secondParagraphs, null, null, null, null, [], DocxTableCellMargins.Empty)], 80d);
+        var first = new DocxTableRow([new DocxTableCell([firstParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 60d);
+        var second = new DocxTableRow([new DocxTableCell(secondParagraphs, null, null, null, null, [], DocxTableCellMargins.Empty)], 80d);
         var table = new DocxTable(null, [60d], [first, second]);
         var document = new DocxDocument(
             100d,
@@ -3816,7 +3815,7 @@ internal static class DocxTableCellsTests
             .ToArray();
         var owner = new DocxStaticDrawingOwner();
         paragraphs[2] = paragraphs[2] with { StaticDrawingOwners = [owner] };
-        var cell = new DocxTableCell("Second", paragraphs, null, null, null, null, [], DocxTableCellMargins.Empty);
+        var cell = new DocxTableCell(paragraphs, null, null, null, null, [], DocxTableCellMargins.Empty);
         var memo = new DocxLayoutEngine.DocxTableCellTextLinesMemo();
         var measurer = new DocxTests.FamilyWidthTextMeasurer();
         (IReadOnlyList<DocxTextLineLayout> Lines, IReadOnlyList<DocxInlineImageLayout> Images,
@@ -3861,8 +3860,8 @@ internal static class DocxTableCellsTests
         DocxParagraph[] secondParagraphs = Enumerable.Range(1, 8)
             .Select(index => DocxTests.CreateDocxLayoutParagraph("Line " + index.ToString(CultureInfo.InvariantCulture), 10d, 10d))
             .ToArray();
-        var first = new DocxTableRow([new DocxTableCell("First", [firstParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 60d);
-        var second = new DocxTableRow([new DocxTableCell("Second", secondParagraphs, null, null, null, null, [], DocxTableCellMargins.Empty)], 80d);
+        var first = new DocxTableRow([new DocxTableCell([firstParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 60d);
+        var second = new DocxTableRow([new DocxTableCell(secondParagraphs, null, null, null, null, [], DocxTableCellMargins.Empty)], 80d);
         var table = new DocxTable(null, [60d], [first, second]);
         var document = new DocxDocument(
             100d,
@@ -3929,8 +3928,8 @@ internal static class DocxTableCellsTests
             10d,
             10d,
             keepRules: DocxParagraphKeepRules.Empty with { KeepLines = true });
-        var first = new DocxTableRow([new DocxTableCell("First", [firstParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 60d);
-        var second = new DocxTableRow([new DocxTableCell("Second", [keptCellParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 80d);
+        var first = new DocxTableRow([new DocxTableCell([firstParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 60d);
+        var second = new DocxTableRow([new DocxTableCell([keptCellParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 80d);
         var table = new DocxTable(null, [60d], [first, second]);
         var document = new DocxDocument(
             100d,
@@ -3966,8 +3965,8 @@ internal static class DocxTableCellsTests
     {
         DocxParagraph firstParagraph = DocxTests.CreateDocxLayoutParagraph("First", 10d, 10d);
         DocxParagraph widowControlledParagraph = DocxTests.CreateDocxLayoutParagraph("One\nTwo\nThree", 10d, 10d);
-        var first = new DocxTableRow([new DocxTableCell("First", [firstParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 60d);
-        var second = new DocxTableRow([new DocxTableCell("Second", [widowControlledParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 30d);
+        var first = new DocxTableRow([new DocxTableCell([firstParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 60d);
+        var second = new DocxTableRow([new DocxTableCell([widowControlledParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 30d);
         var table = new DocxTable(null, [60d], [first, second]);
         var document = new DocxDocument(
             100d,
@@ -4006,8 +4005,8 @@ internal static class DocxTableCellsTests
             10d,
             keepRules: DocxParagraphKeepRules.Empty with { KeepNext = true });
         DocxParagraph followingParagraph = DocxTests.CreateDocxLayoutParagraph("Three", 10d, 10d);
-        var first = new DocxTableRow([new DocxTableCell("First", [firstParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 60d);
-        var second = new DocxTableRow([new DocxTableCell("Second", [keepNextParagraph, followingParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 30d);
+        var first = new DocxTableRow([new DocxTableCell([firstParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 60d);
+        var second = new DocxTableRow([new DocxTableCell([keepNextParagraph, followingParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 30d);
         var table = new DocxTable(null, [60d], [first, second]);
         var document = new DocxDocument(
             100d,
@@ -4387,8 +4386,8 @@ internal static class DocxTableCellsTests
         DocxParagraph[] splitParagraphs = Enumerable.Range(1, 8)
             .Select(index => DocxTests.CreateDocxLayoutParagraph("Line " + index.ToString(CultureInfo.InvariantCulture), 10d, 10d))
             .ToArray();
-        var first = new DocxTableRow([new DocxTableCell("First", [firstParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 60d);
-        var split = new DocxTableRow([new DocxTableCell("Split", splitParagraphs, null, null, null, null, borders, DocxTableCellMargins.Empty)], 80d);
+        var first = new DocxTableRow([new DocxTableCell([firstParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 60d);
+        var split = new DocxTableRow([new DocxTableCell(splitParagraphs, null, null, null, null, borders, DocxTableCellMargins.Empty)], 80d);
         // Border coordinates below describe this authored 60pt frame.
         var table = new DocxTable("fixed", [60d], [first, split]);
         var document = new DocxDocument(
@@ -4427,9 +4426,9 @@ internal static class DocxTableCellsTests
         DocxParagraph[] splitParagraphs = Enumerable.Range(1, 8)
             .Select(index => DocxTests.CreateDocxLayoutParagraph("Line " + index.ToString(CultureInfo.InvariantCulture), 10d, 10d))
             .ToArray();
-        var header = new DocxTableRow([new DocxTableCell("Header", [headerParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 10d) with {IsHeader = true };
-        var filler = new DocxTableRow([new DocxTableCell("Filler", [fillerParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 50d);
-        var split = new DocxTableRow([new DocxTableCell("Split", splitParagraphs, null, null, null, null, [], DocxTableCellMargins.Empty)], 80d);
+        var header = new DocxTableRow([new DocxTableCell([headerParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 10d) with {IsHeader = true };
+        var filler = new DocxTableRow([new DocxTableCell([fillerParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 50d);
+        var split = new DocxTableRow([new DocxTableCell(splitParagraphs, null, null, null, null, [], DocxTableCellMargins.Empty)], 80d);
         var table = new DocxTable(null, [60d], [header, filler, split]);
         var document = new DocxDocument(
             100d,
@@ -4486,8 +4485,8 @@ internal static class DocxTableCellsTests
                 DocxParagraphKeepRules.Empty,
                 null))
             .ToArray();
-        var filler = new DocxTableRow([new DocxTableCell("Filler", [fillerParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 60d);
-        var split = new DocxTableRow([new DocxTableCell("Split", splitParagraphs, null, null, null, null, [], DocxTableCellMargins.Empty)], 100d);
+        var filler = new DocxTableRow([new DocxTableCell([fillerParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 60d);
+        var split = new DocxTableRow([new DocxTableCell(splitParagraphs, null, null, null, null, [], DocxTableCellMargins.Empty)], 100d);
         var table = new DocxTable(null, [60d], [filler, split]);
         var document = new DocxDocument(
             100d,
@@ -4521,10 +4520,9 @@ internal static class DocxTableCellsTests
         DocxParagraph[] splitParagraphs = Enumerable.Range(1, 8)
             .Select(index => DocxTests.CreateDocxLayoutParagraph("Line " + index.ToString(CultureInfo.InvariantCulture), 10d, 10d))
             .ToArray();
-        var filler = new DocxTableRow([new DocxTableCell("Filler", [fillerParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 60d);
+        var filler = new DocxTableRow([new DocxTableCell([fillerParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 60d);
         var restart = new DocxTableRow([
             new DocxTableCell(
-                "Merged",
                 splitParagraphs,
                 null,
                 null,
@@ -4535,8 +4533,7 @@ internal static class DocxTableCellsTests
         ], 100d);
         var continuation = new DocxTableRow([
             new DocxTableCell(
-                "Continuation",
-                [],
+                [DocxTests.CreateDocxLayoutParagraph("Continuation")],
                 null,
                 null,
                 null,
@@ -4574,12 +4571,12 @@ internal static class DocxTableCellsTests
         TestAssert.True(splitFragments.All(fragment => fragment.Cells[0].TextLines.Count != 0), "Full merged-cell text coordinates should remain available for fragment clipping.");
     }
 
-    public static void DocxTableLayoutStageNormalizesPlainCellTextThroughSharedParagraphs()
+    public static void DocxTableLayoutStageRendersPlainCellParagraphAtDefaultSize()
     {
         var table = new DocxTable(
             null,
             [60d],
-            [new DocxTableRow([new DocxTableCell("Plain", [], null, null, null, null, [], DocxTableCellMargins.Empty)], 20d)]);
+            [new DocxTableRow([new DocxTableCell([DocxTests.CreateDocxLayoutParagraph("Plain")], null, null, null, null, [], DocxTableCellMargins.Empty)], 20d)]);
         DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
         DocxTableCellLayout cell = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
@@ -4598,8 +4595,8 @@ internal static class DocxTableCellsTests
 
     public static void DocxTableLayoutStageHonorsCantSplitRowsAtPageBoundary()
     {
-        var first = new DocxTableRow([new DocxTableCell("First", [], null, null, null, null, [], DocxTableCellMargins.Empty)], 60d);
-        var second = new DocxTableRow([new DocxTableCell("Second", [], null, null, null, null, [], DocxTableCellMargins.Empty)], 80d) with {CantSplit = true,CantSplitValue = "1" };
+        var first = new DocxTableRow([new DocxTableCell([DocxTests.CreateDocxLayoutParagraph("First")], null, null, null, null, [], DocxTableCellMargins.Empty)], 60d);
+        var second = new DocxTableRow([new DocxTableCell([DocxTests.CreateDocxLayoutParagraph("Second")], null, null, null, null, [], DocxTableCellMargins.Empty)], 80d) with {CantSplit = true,CantSplitValue = "1" };
         var table = new DocxTable(null, [60d], [first, second]);
         var document = new DocxDocument(
             100d,
@@ -4646,7 +4643,7 @@ internal static class DocxTableCellsTests
         var table = new DocxTable(
             null,
             [60d],
-            [new DocxTableRow([new DocxTableCell("Cell", [], null, null, null, null, [], DocxTableCellMargins.Empty)], 20d)]);
+            [new DocxTableRow([new DocxTableCell([DocxTests.CreateDocxLayoutParagraph("Cell")], null, null, null, null, [], DocxTableCellMargins.Empty)], 20d)]);
         DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table), new DocxParagraphElement(paragraph)], [table]);
 
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);

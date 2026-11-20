@@ -49,11 +49,7 @@ internal sealed class DocxParagraphReplacements(
                 if (!ReferenceEquals(source, elements))
                 {
                     var direct = DocxBlockTraversal.EnumerateDirectParagraphs(elements).ToArray();
-                    updated = cell with {
-                        BodyElements = elements, Paragraphs = direct,
-                        Text = string.Join(" ", direct.Select(paragraph => string.Concat(paragraph.Runs.Select(run => run.Text)))
-                            .Where(text => text.Length != 0))
-                    };
+                    updated = cell with { BodyElements = elements, Paragraphs = direct };
                     cells ??= [.. row.Cells.Take(cellIndex)];
                 }
                 cells?.Add(updated);

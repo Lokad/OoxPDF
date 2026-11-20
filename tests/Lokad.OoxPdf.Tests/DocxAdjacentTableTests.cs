@@ -72,9 +72,10 @@ internal static class DocxAdjacentTableTests
                             var cell = row.Cells[cellIndex];
                             TestAssert.Equal(spans[cellIndex], cell.GridSpan);
                             TestAssert.Equal(rowExpected.GetProperty("LeftPadding").GetDouble(), cell.Margins.LeftPoints);
-                            string? fill = control.GetProperty("Fills").GetProperty(cell.Text).GetString();
+                            string text = DocxTests.GetCellText(cell);
+                            string? fill = control.GetProperty("Fills").GetProperty(text).GetString();
                             TestAssert.True(fill == cell.FillHex,
-                                $"Word joined table {control.GetProperty("Id").GetString()}/{cell.Text}: expected {fill}, got {cell.FillHex}.");
+                                $"Word joined table {control.GetProperty("Id").GetString()}/{text}: expected {fill}, got {cell.FillHex}.");
                             string? color = rowExpected.GetProperty("BorderColor").GetString();
                             var borders = cell.Borders.Where(border => border.Value is not ("none" or "nil")).ToArray();
                             TestAssert.Equal(color is null ? 0 : 4, borders.Length);
@@ -105,7 +106,7 @@ internal static class DocxAdjacentTableTests
             var cells = table.Rows.SelectMany(row => row.Cells).ToArray();
             TestAssert.Equal(22, cells.Length);
             foreach (var cell in cells)
-                TestAssert.Equal(control.GetProperty("Fills").GetProperty(cell.Text).GetString(), cell.FillHex);
+                TestAssert.Equal(control.GetProperty("Fills").GetProperty(DocxTests.GetCellText(cell)).GetString(), cell.FillHex);
         }
     }
 

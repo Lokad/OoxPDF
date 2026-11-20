@@ -26,7 +26,7 @@ internal static partial class DocxInlineCompositionTests
         {
             var paragraph = DocxTests.CreateDocxLayoutParagraph("Public cell", 11d, 16d);
             var borders = new[] { new DocxTableCellBorder("left", "single", "000000", width) };
-            var cell = new DocxTableCell("Public cell", [paragraph], null, null, null, null, borders,
+            var cell = new DocxTableCell([paragraph], null, null, null, null, borders,
                 DocxTableCellMargins.Empty with { LeftPoints = margin, RightPoints = margin });
             var basis = new DocxTable("fixed", [200d], [new DocxTableRow([cell], null)]);
             foreach (bool authored in new[] { false, true })

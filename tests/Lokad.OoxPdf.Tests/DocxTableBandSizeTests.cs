@@ -22,7 +22,7 @@ internal static class DocxTableBandSizeTests
                 foreach (var cell in document.BodyElements.OfType<DocxTableElement>()
                     .SelectMany(element => element.Table.Rows).SelectMany(row => row.Cells))
                 {
-                    var expected = control.GetProperty("Fills").GetProperty(cell.Text);
+                    var expected = control.GetProperty("Fills").GetProperty(DocxTests.GetCellText(cell));
                     TestAssert.Equal(expected.ValueKind == JsonValueKind.Null ? null : expected.GetString(), cell.FillHex);
                 }
             }

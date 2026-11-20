@@ -44,7 +44,7 @@ internal static class DocxRepeatedTableHeaderTests
             var layout = Layout(source, mode);
             int sourcePage = precedingPages + 2;
             foreach (var (page, index) in layout.Pages.Select((page, index) => (page, index)))
-            foreach (var row in page.Items.OfType<DocxTableRowLayout>().Where(row => row.Cells[0].Cell.Text != "Filler"))
+            foreach (var row in page.Items.OfType<DocxTableRowLayout>().Where(row => DocxTests.GetCellText(row.Cells[0].Cell) != "Filler"))
                 TestAssert.Equal(row.IsHeader ? "H" + row.RowIndex + "=" + sourcePage : "B=" + (index + 1), Text(row));
             using var canceled = new CancellationTokenSource(); canceled.Cancel();
             TestAssert.Throws<OperationCanceledException>(() => new DocxLayoutEngine(mode).Create(source, new Measurer(), canceled.Token));
@@ -216,7 +216,7 @@ internal static class DocxRepeatedTableHeaderTests
         new DocxLayoutEngine(mode, wordCompatiblePrintScale: 1d, knownPageCount: 20).Create(document, new Measurer(), default);
 
     private static DocxTableCell Cell(DocxParagraph paragraph) =>
-        new(paragraph.Runs[0].Text, [paragraph], null, null, null, null, [],
+        new([paragraph], null, null, null, null, [],
             DocxTableCellMargins.Empty with { LeftPoints = 0d, RightPoints = 0d, TopPoints = 0d, BottomPoints = 0d });
 
     private static DocxTable Table(int headers, bool narrow = false)

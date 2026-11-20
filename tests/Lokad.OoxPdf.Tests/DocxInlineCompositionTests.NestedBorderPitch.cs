@@ -46,11 +46,11 @@ internal static partial class DocxInlineCompositionTests
             var borders = new[] { "top", "bottom", "left", "right" }.Select(edge =>
                 new DocxTableCellBorder(edge, "single", "000000", borderSize)).ToArray();
             DocxParagraph Prose(string text) => DocxTests.CreateDocxLayoutParagraph(text, size, size) with { LineSpacingPoints = null };
-            DocxTableCell Plain(string text) => new(text, [Prose(text)], null, null, null, null, borders, DocxTableCellMargins.Empty);
+            DocxTableCell Plain(string text) => new([Prose(text)], null, null, null, null, borders, DocxTableCellMargins.Empty);
             var childA = new DocxTable(null, [220d], [new DocxTableRow([mathCell with { Borders = borders }], null), new DocxTableRow([Plain("Public inner tail")], null)]);
             var childB = new DocxTable(null, [220d], [new DocxTableRow([Plain("Public second block")], null)]);
             var head = Prose("Public head"); var middle = Prose("Public middle"); var tail = Prose("Public tail");
-            var left = new DocxTableCell(string.Empty, [head, middle, tail], null, null, null, null, borders, DocxTableCellMargins.Empty)
+            var left = new DocxTableCell([head, middle, tail], null, null, null, null, borders, DocxTableCellMargins.Empty)
             { BodyElements = [new DocxParagraphElement(head), new DocxTableElement(childA), new DocxParagraphElement(middle),
                 new DocxTableElement(childB), new DocxParagraphElement(tail)] };
             var right = Plain("Public neighbor") with { Paragraphs = Enumerable.Range(0, tallNeighbor ? 12 : 1)

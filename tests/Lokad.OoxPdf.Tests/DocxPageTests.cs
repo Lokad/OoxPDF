@@ -2134,7 +2134,7 @@ internal static class DocxPageTests
         var table = new DocxTable(
             null,
             [100d],
-            [new DocxTableRow([new DocxTableCell("One Two Three Four Five", [tableParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 10d)]) with {PreferredWidthPoints = 100d,IndentPoints = 70d };
+            [new DocxTableRow([new DocxTableCell([tableParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 10d)]) with {PreferredWidthPoints = 100d,IndentPoints = 70d };
         DocxParagraph[] fillers =
         [
             DocxTests.CreateDocxLayoutParagraph("Fill", fontSize: 10d, lineSpacingPoints: 10d),

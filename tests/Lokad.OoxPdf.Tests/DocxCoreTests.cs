@@ -825,7 +825,7 @@ internal static class DocxCoreTests
         var table = new DocxTable(
             null,
             [40d],
-            [new DocxTableRow([new DocxTableCell(string.Empty, [cellParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], null)]);
+            [new DocxTableRow([new DocxTableCell([cellParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], null)]);
         var document = new DocxDocument(
             200d,
             200d,
@@ -897,8 +897,8 @@ internal static class DocxCoreTests
         var nestedTable = new DocxTable(
             null,
             [40d],
-            [new DocxTableRow([new DocxTableCell(string.Empty, [nestedParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 20d)]);
-        DocxTableCell cell = new(string.Empty, [], null, null, null, null, [], DocxTableCellMargins.Empty)
+            [new DocxTableRow([new DocxTableCell([nestedParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 20d)]);
+        DocxTableCell cell = new([], null, null, null, null, [], DocxTableCellMargins.Empty)
         {
             BodyElements = [new DocxTableElement(nestedTable)]
         };
@@ -932,8 +932,8 @@ internal static class DocxCoreTests
         var nestedTable = new DocxTable(
             null,
             [40d],
-            [new DocxTableRow([new DocxTableCell(string.Empty, [nestedParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 20d)]);
-        DocxTableCell cell = new(string.Empty, [], null, null, null, null, [], DocxTableCellMargins.Empty)
+            [new DocxTableRow([new DocxTableCell([nestedParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 20d)]);
+        DocxTableCell cell = new([], null, null, null, null, [], DocxTableCellMargins.Empty)
         {
             BodyElements = [new DocxTableElement(nestedTable)]
         };

@@ -311,7 +311,7 @@ internal static partial class DocxHeaderFooterTests
     public static void DocxRendererTreatsStaticHeaderBodyElementsAsRenderableContent()
     {
         DocxParagraph headerCellParagraph = DocxTests.CreateDocxLayoutParagraph("HT", 10d, 10d);
-        DocxTableCell headerCell = new("HT", [headerCellParagraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        DocxTableCell headerCell = new([headerCellParagraph], null, null, null, null, [], DocxTableCellMargins.Empty);
         DocxTable headerTable = new(null, [40d], [new DocxTableRow([headerCell], 18d)]);
         DocxPageSettings settings = DocxPageSettings.Empty with
         {

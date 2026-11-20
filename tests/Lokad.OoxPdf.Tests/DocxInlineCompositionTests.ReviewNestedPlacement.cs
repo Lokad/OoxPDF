@@ -54,7 +54,7 @@ internal static partial class DocxInlineCompositionTests
             var table = seed.Tables[0].Rows[0].Cells[0].BodyElements.OfType<DocxTableElement>().Single().Table;
             for (int index = 0; index < depth; index++)
             {
-                var cell = new DocxTableCell(string.Empty, [head, tail], null, null, null, null, [], DocxTableCellMargins.Empty)
+                var cell = new DocxTableCell([head, tail], null, null, null, null, [], DocxTableCellMargins.Empty)
                     { BodyElements = [new DocxParagraphElement(head), new DocxTableElement(table), new DocxParagraphElement(tail)] };
                 table = new DocxTable(null, [468d], [new DocxTableRow([cell], null)]);
             }

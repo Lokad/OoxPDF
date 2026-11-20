@@ -109,7 +109,7 @@ internal static class DocxHyperlinksTests
                 Runs = [new DocxTextRun("Cell", tableFontSize, null, false, false, false, null, null)],
                 Hyperlinks = [], SpacingAfterPoints = 0d
             };
-            var cell = new DocxTableCell("Cell", [cellParagraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+            var cell = new DocxTableCell([cellParagraph], null, null, null, null, [], DocxTableCellMargins.Empty);
             var table = new DocxTable(null, [100d], [new DocxTableRow([cell], null)]);
             DocxDocument document = DocxTests.CreateLayoutTestDocument(
                 [new DocxParagraphElement(paragraph), new DocxTableElement(table)], [table]);

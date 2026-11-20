@@ -15,7 +15,7 @@ internal static partial class DocxInlineCompositionTests
         foreach (bool nested in new[] { false, true })
         {
             var paragraph = DocxTests.CreateDocxLayoutParagraph("Public cell line", size, size) with { LineSpacingPoints = null };
-            var cell = new DocxTableCell(string.Empty, [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+            var cell = new DocxTableCell([paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
             var table = new DocxTable(null, [240d], [new DocxTableRow([cell], null)]);
             if (nested) table = new DocxTable(null, [240d], [new DocxTableRow([cell with
                 { Paragraphs = [], BodyElements = [new DocxTableElement(table)] }], null)]);

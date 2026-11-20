@@ -36,7 +36,7 @@ internal static partial class DocxInlineCompositionTests
                 "Plain source spans share the existing static/complete/property fallback contract without requiring an unrelated equation.");
             if (variant != "complete") continue;
             var table = source.Tables.Single();
-            var empty = table.Rows[0].Cells[0] with { Text = string.Empty, Paragraphs = [], BodyElements = [],
+            var empty = table.Rows[0].Cells[0] with { Paragraphs = [], BodyElements = [],
                 HasVerticalMerge = false, VerticalMergeValue = null };
             var controlTable = table with { Rows = [table.Rows[0] with { Cells = [empty, table.Rows[0].Cells[1]] }, table.Rows[1]] };
             var control = source with { BodyElements = [new DocxTableElement(controlTable)] };

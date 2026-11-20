@@ -36,7 +36,7 @@ internal static partial class DocxInlineCompositionTests
                     "References, source runs and ordered text share one new marker owner.");
                 TestAssert.Equal(2, DocxMathParagraphPolicy.GetPreparationEquations(paragraph).Count);
                 TestAssert.Equal(1, paragraph.Images.Count);
-                TestAssert.True(paragraph.BookmarkAnchors.Count != 0 && cell.Text.Contains(reference.DisplayText!, StringComparison.Ordinal),
+                TestAssert.True(paragraph.BookmarkAnchors.Count != 0 && DocxTests.GetCellText(cell).Contains(reference.DisplayText!, StringComparison.Ordinal),
                     "Publication retains composition metadata and refreshes derived cell text.");
             }
             for (int index = 0; index < before.Length; index++)

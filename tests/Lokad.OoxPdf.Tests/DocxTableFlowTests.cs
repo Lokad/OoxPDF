@@ -18,7 +18,7 @@ internal static class DocxTableFlowTests
         var second = new DocxInlineImage(24d, 18d, "image/png", [1, 2, 3], "/word/media/second.png") { SourceRunIndex = 0 };
         DocxParagraph Picture(DocxInlineImage image) => DocxTests.CreateDocxLayoutParagraph("", 10d, 10d) with
         { Runs = [], Images = [image], SpacingBeforePoints = 0d, SpacingAfterPoints = 0d };
-        var cell = new DocxTableCell("", [], null, null, null, null, [], DocxTableCellMargins.Empty)
+        var cell = new DocxTableCell([], null, null, null, null, [], DocxTableCellMargins.Empty)
         { BodyElements = [new DocxParagraphElement(Picture(first)), new DocxParagraphElement(Picture(second))] };
         var table = new DocxTable(null, [80d], [new DocxTableRow([cell], 80d)]);
         var document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);

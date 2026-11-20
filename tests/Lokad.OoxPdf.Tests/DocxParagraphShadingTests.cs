@@ -187,7 +187,7 @@ internal static partial class DocxParagraphShadingTests
             {
                 var paragraph = source with { Shading = new("552233", "clear", null), SpacingBeforePoints = before,
                     Spacing = source.Spacing with { BeforeValue = (before * 20d).ToString(CultureInfo.InvariantCulture) } };
-                var cell = new DocxTableCell(string.Empty, [previous, paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+                var cell = new DocxTableCell([previous, paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
                 var table = new DocxTable(null, [120d], [new DocxTableRow([cell], 90d)]);
                 var document = inCell ? DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table])
                     : DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(previous), new DocxParagraphElement(paragraph)], []);
@@ -233,7 +233,7 @@ internal static partial class DocxParagraphShadingTests
         var source = DocxTests.ReadDocx(Path.Combine(Cases, "objects.docx"), OoxPdfDocxMarkupMode.Final);
         var paragraph = source.BodyElements.OfType<DocxParagraphElement>().Select(item => item.Paragraph)
             .Single(p => p.Images.Count == 1 && p.Runs.All(run => run.Text.Length == 0));
-        var cell = new DocxTableCell(string.Empty, [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var cell = new DocxTableCell([paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
         var table = new DocxTable(null, [120d], [new DocxTableRow([cell], 60d)]);
         foreach (var document in new[] {
             DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(paragraph)], []),

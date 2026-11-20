@@ -151,7 +151,7 @@ internal static class DocxNestedCellEndTests
         public double MeasureWindowsDescender(DocxTextRun? run, double size) => naturalMetrics ? size / 4d : 2d;
     }
     private static DocxParagraph Paragraph(string text, double size = 12d) => DocxTests.CreateDocxLayoutParagraph(text, size, 20d);
-    private static DocxTableCell Cell(DocxParagraph paragraph) => new(paragraph.Runs[0].Text, [paragraph], null, null, null, null, [],
+    private static DocxTableCell Cell(DocxParagraph paragraph) => new([paragraph], null, null, null, null, [],
         DocxTableCellMargins.Empty with { TopPoints = 0d, BottomPoints = 0d, LeftPoints = 0d, RightPoints = 0d });
     private static DocxTable Nested() => new("fixed", [80d], [new([Cell(Paragraph("Child"))], 20d)]);
     private static DocxTable Outer(IReadOnlyList<DocxBodyElement> elements) => new("fixed", [80d],

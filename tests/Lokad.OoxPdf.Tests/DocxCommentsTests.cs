@@ -443,7 +443,7 @@ internal static partial class DocxCommentsTests
         DocxParagraph foreign = DocxTests.CreateCommentRangeParagraph("AAA", "1");
         DocxBodyElement foreignElement = inTable
             ? new DocxTableElement(new DocxTable("fixed", [160d],
-                [new DocxTableRow([new DocxTableCell("AAA", [foreign], null, null, null, null, [], DocxTableCellMargins.Empty)], null)]))
+                [new DocxTableRow([new DocxTableCell([foreign], null, null, null, null, [], DocxTableCellMargins.Empty)], null)]))
             : new DocxParagraphElement(foreign);
         DocxPageSettings settings = DocxPageSettings.Empty;
         var stories = new List<DocxRelatedStory>
@@ -1250,7 +1250,6 @@ internal static partial class DocxCommentsTests
 
         DocxParagraph tableParagraph = DocxTests.CreateCommentRangeParagraph("Table range", "2");
         var tableCell = new DocxTableCell(
-            "Table range",
             [tableParagraph],
             FillHex: null,
             ShadingValue: null,
@@ -4574,7 +4573,7 @@ internal static partial class DocxCommentsTests
         {
             InlineTextBoxes = [textBox]
         };
-        var cell = new DocxTableCell(string.Empty, [hostParagraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var cell = new DocxTableCell([hostParagraph], null, null, null, null, [], DocxTableCellMargins.Empty);
         var table = new DocxTable(null, [200d], [new DocxTableRow([cell], null)]);
         DocxRelatedStory commentStory = new(
             DocxRelatedStoryKind.Comment,
@@ -4631,7 +4630,7 @@ internal static partial class DocxCommentsTests
         {
             InlineTextBoxes = [textBox]
         };
-        var cell = new DocxTableCell(string.Empty, [hostParagraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var cell = new DocxTableCell([hostParagraph], null, null, null, null, [], DocxTableCellMargins.Empty);
         var table = new DocxTable(null, [200d], [new DocxTableRow([cell], null)]);
         DocxRelatedStory commentStory = new(
             DocxRelatedStoryKind.Comment,

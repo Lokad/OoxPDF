@@ -306,13 +306,13 @@ internal static class DocxTableKeepContentTests
     private static DocxDocument Document(IReadOnlyList<DocxParagraph> paragraphs, bool prefix, string? declaredRule = null,
         int headerLines = 0, double verticalPadding = 0d)
     {
-        var cells = new DocxTableCell(string.Empty, paragraphs, null, null, null, null, [],
+        var cells = new DocxTableCell(paragraphs, null, null, null, null, [],
             DocxTableCellMargins.Empty with { LeftPoints = 0d, RightPoints = 0d, TopPoints = verticalPadding, BottomPoints = verticalPadding });
         var rows = new List<DocxTableRow>();
         if (headerLines != 0)
-            rows.Add(new([new DocxTableCell(string.Empty, [Paragraph(headerLines, false, "R")], null, null, null, null, [],
+            rows.Add(new([new DocxTableCell([Paragraph(headerLines, false, "R")], null, null, null, null, [],
                 DocxTableCellMargins.Empty with { LeftPoints = 0d, RightPoints = 0d, TopPoints = 0d, BottomPoints = 0d })], null) { IsHeader = true });
-        if (prefix) rows.Add(new([new DocxTableCell("Prefix", [], null, null, null, null, [], DocxTableCellMargins.Empty)], 90d)
+        if (prefix) rows.Add(new([new DocxTableCell([DocxTests.CreateDocxLayoutParagraph("Prefix")], null, null, null, null, [], DocxTableCellMargins.Empty)], 90d)
             { HeightRuleValue = "exact", CantSplit = true });
         rows.Add(new([cells], declaredRule is null or "header" ? null : 600d)
             { HeightRuleValue = declaredRule == "header" ? null : declaredRule, IsHeader = declaredRule == "header" });
