@@ -2230,6 +2230,7 @@
   "docx-picture-placement": [
     "=DocxDrawingSelectsLastPlacementWithinEachDrawing",
     "=DocxComputedFieldPicturesFollowCachedRevisions",
+    "=DocxStructuralMetadataWrappersObserveCancellationWithoutYieldingOwners",
     "DocxFloatingPicturesFollowTableRowRevisionVisibility",
     "DocxPictureOnlyNotesShareAuthoredAspectRatioFitting",
     "DocxUnpositionedStaticPicturesShareBoundedFitAndOwners",

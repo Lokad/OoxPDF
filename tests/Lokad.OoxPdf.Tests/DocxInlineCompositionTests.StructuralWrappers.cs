@@ -57,20 +57,24 @@ internal static partial class DocxInlineCompositionTests
     public static void DocxStructuralMetadataWrappersObserveCancellationWithoutYieldingOwners()
     {
         XNamespace w = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
-        var source = new[] { new XElement(w + "p"), MetadataWrapper(w, "customXml",
-            MetadataWrapper(w, "customXml", new XElement(w + "customXmlPr"))), new XElement(w + "p") };
-        using var cancelled = new CancellationTokenSource();
         // Exercise the live deferred visitor without publishing a test-only API.
         var visit = typeof(DocxReader).GetMethod("EnumerateRevisionScopedChildren", BindingFlags.Static | BindingFlags.NonPublic)!;
-        var sequence = (IEnumerable)visit.Invoke(null,
-            [source, OoxPdfDocxMarkupMode.Final, cancelled.Token, new XName[] { w + "p" }, null])!;
-        var iterator = sequence.GetEnumerator();
-        try
+        foreach (bool inlineContent in new[] { false, true })
         {
-            TestAssert.True(iterator.MoveNext(), "The first actual source owner is yielded normally.");
-            cancelled.Cancel();
-            TestAssert.Throws<OperationCanceledException>(() => iterator.MoveNext());
+            XName owner = w + (inlineContent ? "r" : "p");
+            var source = new[] { new XElement(owner), MetadataWrapper(w, "customXml",
+                MetadataWrapper(w, "customXml", new XElement(w + "customXmlPr"))), new XElement(owner) };
+            using var cancelled = new CancellationTokenSource();
+            var sequence = (IEnumerable)visit.Invoke(null,
+                [source, OoxPdfDocxMarkupMode.Final, cancelled.Token, new XName[] { owner }, null, inlineContent])!;
+            var iterator = sequence.GetEnumerator();
+            try
+            {
+                TestAssert.True(iterator.MoveNext(), "The first actual source owner is yielded normally.");
+                cancelled.Cancel();
+                TestAssert.Throws<OperationCanceledException>(() => iterator.MoveNext());
+            }
+            finally { (iterator as IDisposable)?.Dispose(); }
         }
-        finally { (iterator as IDisposable)?.Dispose(); }
     }
 }
