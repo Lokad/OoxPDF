@@ -14742,7 +14742,7 @@
     "DocxLayoutRightAlignsBodyNumPages",
     "DocxLayoutRightAlignsFloatingTextBoxNumPages",
     "DocxTextEmissionCompactsResolvedNumPages",
-    "DocxTableLayoutUsesCompactNumPages",
+    "=DocxTableLayoutKeepsPageCountersCompactForCellLineBreaking",
     "DocxLayoutStageResolvesStaticHeaderFloatingTextBoxNumPages",
     "DocxLayoutStageResolvesStaticHeaderTableCountersPerPage"
   ],
