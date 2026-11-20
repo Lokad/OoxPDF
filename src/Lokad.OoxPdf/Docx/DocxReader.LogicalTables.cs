@@ -12,13 +12,13 @@ internal sealed partial class DocxReader
         EnumerateLogicalTableBlocks(IEnumerable<XElement> elements, DocxStyleSet styles,
             OoxPdfDocxMarkupMode mode, CancellationToken token, DocxRevisionInfo? inheritedRevision = null,
             IReadOnlyList<DocxBookmarkAnchor>? leadingBookmarks = null, bool readTableColumnBookmarks = false,
-            DocxTableColumnBookmark[]? leadingColumnBookmarks = null)
+            DocxTableColumnBookmark[]? leadingColumnBookmarks = null, Action<string>? recordBookmarkEnd = null)
     {
         DocxRevisionScopedElement? pending = null;
         List<DocxRevisionScopedElement>? tables = null;
         foreach (var block in EnumerateBookmarkedBlocks(elements, mode, token, inheritedRevision,
             leadingBookmarks: leadingBookmarks, readTableColumnBookmarks: readTableColumnBookmarks,
-            leadingColumnBookmarks: leadingColumnBookmarks))
+            leadingColumnBookmarks: leadingColumnBookmarks, recordBookmarkEnd: recordBookmarkEnd))
         {
             if (pending is not null && CanJoinTables(pending.Element, block.Element, styles))
             {
@@ -76,11 +76,10 @@ internal sealed partial class DocxReader
                     continue;
                 XName firstColumn = WordprocessingNamespace + "colFirst";
                 XName lastColumn = WordprocessingNamespace + "colLast";
-                if ((readTableColumnBookmarks || tableChildName is not null) &&
+                if (readTableColumnBookmarks &&
                     (scope.Element.Attribute(firstColumn) is not null || scope.Element.Attribute(lastColumn) is not null))
                 {
-                    if (readTableColumnBookmarks &&
-                        ReadNonNegativeIntAttribute(scope.Element, firstColumn) is int first &&
+                    if (ReadNonNegativeIntAttribute(scope.Element, firstColumn) is int first &&
                         ReadNonNegativeIntAttribute(scope.Element, lastColumn) is int last && first <= last)
                         (columnStarts ??= new(StringComparer.Ordinal)).TryAdd(id, new(anchor, first, last));
                     continue;
@@ -156,7 +155,7 @@ internal sealed partial class DocxReader
 
     private readonly record struct DocxTableSourceRow(int FirstColumn, int EndColumn,
         IReadOnlyList<(DocxRevisionScopedElement Scope, int Span)> Cells,
-        IReadOnlyDictionary<string, int>? BookmarkEndBoundaries);
+        Dictionary<string, int>? BookmarkEndBoundaries);
 
     private static DocxTableSourceRow ReadTableSourceRow(DocxRevisionScopedElement row, XElement? properties,
         OoxPdfDocxMarkupMode mode, CancellationToken token, bool joinedGrid = false)

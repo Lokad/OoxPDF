@@ -126,6 +126,16 @@ internal sealed partial class DocxReader
                 int gridBefore = gridMappings is null ? sourceColumn : gridMappings[sourceIndex][sourceColumn];
                 var cellElements = sourceRow.Cells;
                 ReadOnlyMemory<DocxTableColumnBookmark> columnBookmarks = default;
+                var bookmarkEndBoundaries = sourceRow.BookmarkEndBoundaries;
+                int followingCell = 0;
+                // An end inside this cell can close an interval deferred to a
+                // later one. A bookmark already placed in this cell keeps its target.
+                Action<string> recordCellBookmarkEnd = id =>
+                {
+                    bookmarkEndBoundaries ??= new(StringComparer.Ordinal);
+                    if (!bookmarkEndBoundaries.TryGetValue(id, out int boundary) || followingCell < boundary)
+                        bookmarkEndBoundaries[id] = followingCell;
+                };
                 for (int cellIndex = 0; cellIndex < cellElements.Count; cellIndex++)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
@@ -137,7 +147,7 @@ internal sealed partial class DocxReader
                     if (!columnBookmarks.IsEmpty)
                     {
                         var bookmarksForCell = BindColumnBookmarks(cellSource.LeadingBookmarks, ref columnBookmarks,
-                            sourceColumn, nextSourceColumn, cancellationToken, sourceRow.BookmarkEndBoundaries, cellIndex);
+                            sourceColumn, nextSourceColumn, cancellationToken, bookmarkEndBoundaries, cellIndex);
                         if (!ReferenceEquals(bookmarksForCell, cellSource.LeadingBookmarks))
                             cellSource = cellSource with { LeadingBookmarks = bookmarksForCell };
                     }
@@ -146,6 +156,7 @@ internal sealed partial class DocxReader
                     AddRevisions(cellRevisions, ReadPropertyChangeRevisions(cellProperties));
                     DocxTableCellConditionalFormat? conditionalFormat = ReadTableConditionalFormat(cellProperties);
                     DocxTableCellStyle conditionalStyle = ResolveTableCellStyle(tableStyle, rowLook, conditionalFormat, rowIndex, cellIndex, rowCount, cellElements.Count, leadingRowEmphasis);
+                    followingCell = cellIndex + 1;
                     IReadOnlyList<DocxBodyElement> cellBodyElements = ReadTableCellBodyElements(
                         cellSource,
                         styles,
@@ -160,15 +171,8 @@ internal sealed partial class DocxReader
                         cancellationToken,
                         inheritedCellRevision,
                         (sourceColumn, nextSourceColumn),
-                        readCellColumnBookmarks: cellIndex == 0,
-                        out var deferredColumnBookmarks);
-                    if (columnBookmarks.IsEmpty)
-                        columnBookmarks = deferredColumnBookmarks;
-                    else if (!deferredColumnBookmarks.IsEmpty)
-                    {
-                        DocxTableColumnBookmark[] combined = [.. columnBookmarks.Span, .. deferredColumnBookmarks.Span];
-                        columnBookmarks = combined.OrderBy(bookmark => bookmark.First).ToArray();
-                    }
+                        ref columnBookmarks,
+                        recordCellBookmarkEnd);
                     IReadOnlyList<DocxParagraph> paragraphs = DocxBlockTraversal.EnumerateDirectParagraphs(cellBodyElements).ToArray();
                     XElement? shading = cellProperties?.Element(WordprocessingNamespace + "shd");
                     string? fill = (string?)shading?.Attribute(WordprocessingNamespace + "fill") ?? conditionalStyle.FillHex;
@@ -437,29 +441,33 @@ internal sealed partial class DocxReader
         CancellationToken cancellationToken,
         DocxRevisionInfo? inheritedRevision,
         (int Start, int End) cellColumns,
-        bool readCellColumnBookmarks,
-        out ReadOnlyMemory<DocxTableColumnBookmark> columnBookmarks)
+        ref ReadOnlyMemory<DocxTableColumnBookmark> columnBookmarks,
+        Action<string> recordBookmarkEnd)
     {
         var elements = new List<DocxBodyElement>();
-        columnBookmarks = default;
-        bool firstBlock = true;
         foreach (var (block, tableFragments) in EnumerateLogicalTableBlocks(cell.Element.Elements(), styles, markupMode,
-            cancellationToken, inheritedRevision, cell.LeadingBookmarks, readTableColumnBookmarks: readCellColumnBookmarks,
-            leadingColumnBookmarks: cell.LeadingColumnBookmarks))
+            cancellationToken, inheritedRevision, cell.LeadingBookmarks, readTableColumnBookmarks: true,
+            leadingColumnBookmarks: cell.LeadingColumnBookmarks, recordBookmarkEnd: recordBookmarkEnd))
         {
             cancellationToken.ThrowIfCancellationRequested();
             var scopedChild = block;
-            // Resolve the incoming intervals at the first block. Carry any
-            // starts to the right into later cells of the same source-grid row.
-            if (firstBlock && block.LeadingColumnBookmarks is { } starts)
+            // Resolve starts that cover this block and carry intervals to the right
+            // forward within the source row. Their ends may occur inside this cell.
+            if (block.LeadingColumnBookmarks is { } starts)
             {
-                columnBookmarks = starts;
-                var cellBookmarks = BindColumnBookmarks(block.LeadingBookmarks, ref columnBookmarks,
+                ReadOnlyMemory<DocxTableColumnBookmark> pending = starts;
+                var cellBookmarks = BindColumnBookmarks(block.LeadingBookmarks, ref pending,
                     cellColumns.Start, cellColumns.End, cancellationToken);
                 if (!ReferenceEquals(cellBookmarks, block.LeadingBookmarks))
                     scopedChild = block with { LeadingBookmarks = cellBookmarks };
+                if (columnBookmarks.IsEmpty)
+                    columnBookmarks = pending;
+                else if (!pending.IsEmpty)
+                {
+                    DocxTableColumnBookmark[] combined = [.. columnBookmarks.Span, .. pending.Span];
+                    columnBookmarks = combined.OrderBy(bookmark => bookmark.First).ToArray();
+                }
             }
-            firstBlock = false;
             XElement child = scopedChild.Element;
             DocxRevisionInfo? childRevision = scopedChild.Revision ?? inheritedRevision;
             if (child.Name == WordprocessingNamespace + "tcPr")
@@ -513,7 +521,8 @@ internal sealed partial class DocxReader
                             markupMode: markupMode,
                             cancellationToken: cancellationToken,
                             isContinuationFragment: !part.IsFirstFragment,
-                            leadingBookmarks: leadingBookmarks);
+                            leadingBookmarks: leadingBookmarks,
+                            recordBookmarkEnd: columnBookmarks.IsEmpty ? null : recordBookmarkEnd);
                         leadingBookmarks = null;
                         if (splitParagraph is not null)
                         {
@@ -537,7 +546,8 @@ internal sealed partial class DocxReader
                     inheritedRevision: childRevision,
                     markupMode: markupMode,
                     cancellationToken: cancellationToken,
-                    leadingBookmarks: leadingBookmarks);
+                    leadingBookmarks: leadingBookmarks,
+                    recordBookmarkEnd: columnBookmarks.IsEmpty ? null : recordBookmarkEnd);
                 if (parsed is not null)
                 {
                     elements.Add(DocxBodyElementFactory.CreateParagraph(parsed));

@@ -25,7 +25,8 @@ internal sealed partial class DocxReader
         CancellationToken cancellationToken,
         bool retainBalloonParagraphMark = false,
         bool isContinuationFragment = false,
-        IReadOnlyList<DocxBookmarkAnchor>? leadingBookmarks = null)
+        IReadOnlyList<DocxBookmarkAnchor>? leadingBookmarks = null,
+        Action<string>? recordBookmarkEnd = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         XElement? paragraphProperties = paragraph.Element(WordprocessingNamespace + "pPr");
@@ -141,6 +142,9 @@ internal sealed partial class DocxReader
             }
             else if (child.Name == WordprocessingNamespace + "bookmarkEnd")
             {
+                if (recordBookmarkEnd is not null &&
+                    NormalizeDecimalId((string?)child.Attribute(WordprocessingNamespace + "id")) is { } id)
+                    recordBookmarkEnd(id);
                 return false;
             }
             else if (child.Name == WordprocessingNamespace + "fldSimple")
