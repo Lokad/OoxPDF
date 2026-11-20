@@ -364,28 +364,27 @@ internal sealed partial class DocxRenderer
             fontResources.Fallback;
     }
 
-    private static DocxRunFontResource? ResolveUniformCommentBalloonBodyResource(
-        DocxRelatedStoryLayout? storyLayout,
-        string body,
-        DocxFontResources? fontResources,
-        CancellationToken cancellationToken)
+    private static DocxParagraph? ResolveSingleCommentBalloonParagraph(DocxRelatedStoryLayout? storyLayout)
     {
-        // Word preserves the comment's regular face independently of body runs.
-        // Keep the legacy path for mixed formatting, compound stories and groups.
-        if (fontResources is null || storyLayout is null ||
-            storyLayout.Story.BodyElements.Count != 1 ||
+        if (storyLayout is null || storyLayout.Story.BodyElements.Count != 1 ||
             storyLayout.Story.BodyElements[0] is not DocxParagraphElement element ||
             storyLayout.InlineImages.Count != 0 || storyLayout.FloatingDrawings.Count != 0)
         {
             return null;
         }
         DocxParagraph paragraph = element.Paragraph;
-        if (paragraph.Images.Count != 0 || paragraph.InlineTextBoxes.Count != 0 ||
-            paragraph.FieldReferences.Count != 0 || paragraph.Revisions.Count != 0)
-        {
-            return null;
-        }
+        return paragraph.Images.Count == 0 && paragraph.InlineTextBoxes.Count == 0 &&
+            paragraph.FieldReferences.Count == 0 && paragraph.Revisions.Count == 0
+            ? paragraph : null;
+    }
 
+    private static DocxRunFontResource? ResolveUniformCommentBalloonBodyResource(
+        DocxParagraph paragraph,
+        string body,
+        DocxFontResources fontResources,
+        CancellationToken cancellationToken)
+    {
+        // Word preserves the comment's regular face independently of body runs.
         DocxRunFontResource? resource = null;
         foreach (DocxTextRun run in paragraph.Runs)
         {
@@ -743,21 +742,27 @@ internal sealed partial class DocxRenderer
                         // RV06: Word-compatible comment balloons wear the first-seen
                         // author color; other profiles keep the legacy cream palette.
                         int commentAuthorSlot = ResolveCommentAuthorSlot(markupContext.CommentAuthorPaletteSlots, reference.Id);
-                        DocxMarkupBalloonRgb commentFillRgb = UsesWordCompatibleAllMarkupTextProfile(markupContext)
+                        bool wordCompatible = UsesWordCompatibleAllMarkupTextProfile(markupContext);
+                        DocxMarkupBalloonRgb commentFillRgb = wordCompatible
                             ? CommentAuthorFillRgb(commentAuthorSlot)
                             : new DocxMarkupBalloonRgb(255, 250, 220);
-                        DocxMarkupBalloonRgb commentStrokeRgb = UsesWordCompatibleAllMarkupTextProfile(markupContext)
+                        DocxMarkupBalloonRgb commentStrokeRgb = wordCompatible
                             ? CommentAuthorStrokeRgb(commentAuthorSlot)
                             : new DocxMarkupBalloonRgb(217, 151, 0);
-                        DocxRunFontResource? qualifiedBody = UsesWordCompatibleAllMarkupTextProfile(markupContext)
-                            ? ResolveUniformCommentBalloonBodyResource(storyLayout, wordCompatibleCommentBody, fontResources, cancellationToken)
-                            : null;
-                        IReadOnlyList<DocxMarkupBalloonBodyPart>? qualifiedParts = qualifiedBody is null && UsesWordCompatibleAllMarkupTextProfile(markupContext)
-                            ? ResolveMixedCommentBalloonBodyParts(storyLayout, wordCompatibleCommentBody, fontResources, cancellationToken)
-                            : null;
+                        DocxRunFontResource? qualifiedBody = null;
+                        IReadOnlyList<DocxMarkupBalloonBodyPart>? qualifiedParts = null;
+                        if (wordCompatible && fontResources is not null &&
+                            ResolveSingleCommentBalloonParagraph(storyLayout) is { } singleParagraph)
+                        {
+                            qualifiedBody = ResolveUniformCommentBalloonBodyResource(singleParagraph, wordCompatibleCommentBody, fontResources, cancellationToken);
+                            if (qualifiedBody is null)
+                            {
+                                qualifiedParts = ResolveMixedCommentBalloonBodyParts(singleParagraph, wordCompatibleCommentBody, fontResources, cancellationToken);
+                            }
+                        }
                         double? bodyLineHeightEm = qualifiedBody is not null && qualifiedBody.Embedded.Font.UnitsPerEm > 0
                             ? DocxLineMetrics.MeasureHheaLineHeight(qualifiedBody.Embedded.Font, 1d) : null;
-                        var commentParagraphs = UsesWordCompatibleAllMarkupTextProfile(markupContext)
+                        var commentParagraphs = wordCompatible
                             ? ResolveCommentBalloonParagraphs(storyLayout, wordCompatibleCommentBody, fontResources, cancellationToken) : null;
                         DocxOccupiedLineBox? measuredBodyBox = null;
                         if (fontResources is not null && TryResolveWordCompatibleBalloonTextInsets(labelEmbedded,

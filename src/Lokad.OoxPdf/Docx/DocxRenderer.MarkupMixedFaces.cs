@@ -7,24 +7,11 @@ namespace Lokad.OoxPdf.Docx;
 internal sealed partial class DocxRenderer
 {
     private static IReadOnlyList<DocxMarkupBalloonBodyPart>? ResolveMixedCommentBalloonBodyParts(
-        DocxRelatedStoryLayout? storyLayout,
+        DocxParagraph paragraph,
         string body,
-        DocxFontResources? fontResources,
+        DocxFontResources fontResources,
         CancellationToken cancellationToken)
     {
-        if (fontResources is null || storyLayout is null ||
-            storyLayout.Story.BodyElements.Count != 1 ||
-            storyLayout.Story.BodyElements[0] is not DocxParagraphElement element ||
-            storyLayout.InlineImages.Count != 0 || storyLayout.FloatingDrawings.Count != 0)
-        {
-            return null;
-        }
-        DocxParagraph paragraph = element.Paragraph;
-        if (paragraph.Images.Count != 0 || paragraph.InlineTextBoxes.Count != 0 ||
-            paragraph.FieldReferences.Count != 0 || paragraph.Revisions.Count != 0)
-        {
-            return null;
-        }
         var parts = new List<DocxMarkupBalloonBodyPart>();
         foreach (DocxTextRun run in paragraph.Runs)
         {
