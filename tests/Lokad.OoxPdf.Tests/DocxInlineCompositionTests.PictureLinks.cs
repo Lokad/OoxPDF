@@ -18,6 +18,7 @@ internal static partial class DocxInlineCompositionTests
     internal static void CheckInlinePictureLinks(IFontResolver? resolver, bool compareWord)
     {
         using var gold = ReadInlineBoxMathGold("inline-picture-links-office.json");
+        var parents = new Dictionary<(OoxPdfDocxMarkupMode Mode, string Input), (string Content, int ImageCount)>();
         foreach (var row in gold.RootElement.GetProperty("Rows").EnumerateArray())
         {
             bool final = row.GetProperty("Mode").GetString() == "final-preserve";
@@ -25,11 +26,18 @@ internal static partial class DocxInlineCompositionTests
             var renderer = new DocxRenderer(resolver, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
                 OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var source = ReadMutation("InlineBoxMath/" + row.GetProperty("Id").GetString(), mode, false, false);
-            var parent = ReadMutation("InlineBoxMath/" + Path.GetFileNameWithoutExtension(row.GetProperty("SourceInput").GetString()), mode, false, false);
             var page = renderer.RenderPagesAsync(source, null, default).ToBlockingEnumerable().Single();
-            var before = renderer.RenderPagesAsync(parent, null, default).ToBlockingEnumerable().Single();
+            string parentInput = row.GetProperty("SourceInput").GetString()!;
+            var key = (mode, parentInput);
+            if (!parents.TryGetValue(key, out var before))
+            {
+                var parent = ReadMutation("InlineBoxMath/" + Path.GetFileNameWithoutExtension(parentInput), mode, false, false);
+                var parentPage = renderer.RenderPagesAsync(parent, null, default).ToBlockingEnumerable().Single();
+                before = (parentPage.Content, parentPage.Images.Count);
+                parents.Add(key, before);
+            }
             TestAssert.Equal(before.Content, page.Content);
-            TestAssert.Equal(before.Images.Count, page.Images.Count);
+            TestAssert.Equal(before.ImageCount, page.Images.Count);
             var image = page.Images.Single();
             var links = page.Annotations.Where(link => link.Uri == row.GetProperty("TargetUri").GetString()).ToArray();
             TestAssert.Equal(row.GetProperty("ExpectedUriCount").GetInt32(), links.Length);
