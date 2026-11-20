@@ -12,6 +12,7 @@ internal sealed class OoxPackage : IDisposable
     internal const long MaxContentTypesBytes = 4L * 1024L * 1024L;
     internal const long MaxCompressedBytes = 512L * 1024L * 1024L;
     internal const long MaxCentralDirectoryBytes = 32L * 1024L * 1024L;
+    private const string OfficeDocumentRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument";
 
     private readonly Dictionary<string, OoxPart> parts;
     private IMemoryScope? storageScope;
@@ -498,6 +499,19 @@ internal sealed class OoxPackage : IDisposable
     {
         ObjectDisposedException.ThrowIf(disposed, this);
         return parts.TryGetValue(OoxPath.NormalizePartName(partName), out OoxPart? part) ? part : null;
+    }
+
+    public OoxPart? FindMainPart(string contentType, CancellationToken cancellationToken)
+    {
+        // A missing first document relationship target falls back to the declared content type.
+        OoxRelationship? relationship = GetRelationshipDictionary("/", cancellationToken).Values
+            .FirstOrDefault(r => !r.IsExternal && r.Type == OfficeDocumentRelationshipType && r.ResolvedTarget is not null);
+        if (relationship?.ResolvedTarget is { } target && GetPart(target) is { } part)
+        {
+            return part;
+        }
+
+        return Parts.FirstOrDefault(p => p.ContentType == contentType);
     }
 
     public IReadOnlyList<OoxRelationship> GetRelationships(string sourcePartName, CancellationToken cancellationToken)

@@ -9,13 +9,12 @@ namespace Lokad.OoxPdf.Pptx;
 internal sealed class PptxReader
 {
     private const string PresentationContentType = "application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml";
-    private const string OfficeDocumentRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument";
     internal const string SlideRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide";
 
     public PptxDocument Read(OoxPackage package, CancellationToken cancellationToken, Action<OoxPdfDiagnostic>? diagnosticSink = null)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-        OoxPart presentationPart = FindPresentationPart();
+        OoxPart presentationPart = package.FindMainPart(PresentationContentType, cancellationToken)
+            ?? throw new InvalidDataException("PPTX package does not contain a presentation part.");
         XDocument document = package.LoadXml(presentationPart, cancellationToken);
         IMemoryReservation? modelStorage = OoxMemory.ReserveModel(document, cancellationToken);
         PptxDocument? result = null;
@@ -106,24 +105,6 @@ internal sealed class PptxReader
         {
             if (result is null) modelStorage?.Dispose();
             else if (modelStorage is not null) OoxMemory.Resize(modelStorage, modelStorage.Bytes / 2);
-        }
-
-        OoxPart FindPresentationPart()
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            OoxRelationship? packageRelationship = package.GetRelationships("/", cancellationToken)
-                .FirstOrDefault(r => !r.IsExternal && r.Type == OfficeDocumentRelationshipType && r.ResolvedTarget is not null);
-            if (packageRelationship?.ResolvedTarget is not null)
-            {
-                OoxPart? relatedPart = package.GetPart(packageRelationship.ResolvedTarget);
-                if (relatedPart is not null)
-                {
-                    return relatedPart;
-                }
-            }
-
-            OoxPart? contentTypePart = package.Parts.FirstOrDefault(p => p.ContentType == PresentationContentType);
-            return contentTypePart ?? throw new InvalidDataException("PPTX package does not contain a presentation part.");
         }
     }
 

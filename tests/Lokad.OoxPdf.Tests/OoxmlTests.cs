@@ -2,12 +2,79 @@ using System.IO.Compression;
 using System.Text;
 using Lokad.OoxPdf;
 using Lokad.OoxPdf.Diagnostics;
+using Lokad.OoxPdf.Docx;
 using Lokad.OoxPdf.Ooxml;
+using Lokad.OoxPdf.Pptx;
 
 namespace Lokad.OoxPdf.Tests;
 
 internal static partial class OoxmlTests
 {
+    public static void ReadersPreserveMainPartRelationshipPrecedenceAndFallback()
+    {
+        foreach (bool docx in new[] { true, false })
+        {
+            string contentType = docx
+                ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"
+                : "application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml";
+            string part = docx
+                ? """<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p/></w:body></w:document>"""
+                : """<p:presentation xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"/>""";
+            const string officeDocument = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument";
+            (string? FirstTarget, bool DeclaresFallback, string? Selected)[] cases =
+            [
+                ("preferred.xml", true, "/preferred.xml"),
+                ("missing.xml", true, "/fallback.xml"),
+                (null, true, "/fallback.xml"),
+                ("missing.xml", false, null)
+            ];
+
+            foreach (var (target, declaresFallback, selected) in cases)
+            {
+                string fallback = declaresFallback ? $"""<Override PartName="/fallback.xml" ContentType="{contentType}"/>""" : "";
+                var entries = new Dictionary<string, string>
+                {
+                    ["[Content_Types].xml"] = $$"""
+                        <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                          <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                          <Default Extension="xml" ContentType="application/xml"/>
+                          {{fallback}}
+                        </Types>
+                        """,
+                    ["fallback.xml"] = part,
+                    ["preferred.xml"] = part,
+                    ["later.xml"] = part
+                };
+                if (target is not null)
+                {
+                    entries["_rels/.rels"] = $$"""
+                        <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                          <Relationship Id="external" Type="{{officeDocument}}" Target="https://example.invalid/document.xml" TargetMode="External"/>
+                          <Relationship Id="first" Type="{{officeDocument}}" Target="{{target}}"/>
+                          <Relationship Id="later" Type="{{officeDocument}}" Target="later.xml"/>
+                        </Relationships>
+                        """;
+                }
+                using var stream = TestFixtures.CreateZipPackage(entries);
+                using var package = OoxPackage.Open(stream, default);
+                string ReadMainPart() => docx
+                    ? new DocxReader().Read(package, null, default, OoxPdfDocxMarkupMode.Final).MainPartName
+                    : new PptxReader().Read(package, default).PresentationPartName;
+
+                if (selected is not null)
+                {
+                    TestAssert.Equal(selected, ReadMainPart());
+                }
+                else
+                {
+                    var error = TestAssert.Throws<InvalidDataException>(() => ReadMainPart());
+                    TestAssert.Equal(docx ? "DOCX package does not contain a main document part."
+                        : "PPTX package does not contain a presentation part.", error.Message);
+                }
+            }
+        }
+    }
+
     public static void ParsesContentTypesAndRelationships()
     {
         using MemoryStream packageStream = TestFixtures.CreateZipPackage(new Dictionary<string, string>

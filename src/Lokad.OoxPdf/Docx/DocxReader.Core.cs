@@ -18,26 +18,8 @@ internal sealed partial class DocxReader
         OoxPdfDocxMarkupMode markupMode,
         bool includeStyleCatalog = false)
     {
-            OoxPart FindDocumentPart(OoxPackage package, CancellationToken cancellationToken)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                OoxRelationship? packageRelationship = package.GetRelationships("/", cancellationToken)
-                    .FirstOrDefault(r => !r.IsExternal && r.Type == OfficeDocumentRelationshipType && r.ResolvedTarget is not null);
-                if (packageRelationship?.ResolvedTarget is not null)
-                {
-                    OoxPart? relatedPart = package.GetPart(packageRelationship.ResolvedTarget);
-                    if (relatedPart is not null)
-                    {
-                        return relatedPart;
-                    }
-                }
-
-                OoxPart? contentTypePart = package.Parts.FirstOrDefault(p => p.ContentType == MainDocumentContentType);
-                return contentTypePart ?? throw new InvalidDataException("DOCX package does not contain a main document part.");
-            }
-
-        cancellationToken.ThrowIfCancellationRequested();
-        OoxPart documentPart = FindDocumentPart(package, cancellationToken);
+        OoxPart documentPart = package.FindMainPart(MainDocumentContentType, cancellationToken)
+            ?? throw new InvalidDataException("DOCX package does not contain a main document part.");
         XDocument document = package.LoadXml(documentPart, cancellationToken);
         IMemoryReservation? modelStorage = OoxMemory.ReserveModel(document, cancellationToken);
         DocxDocument? result = null;
