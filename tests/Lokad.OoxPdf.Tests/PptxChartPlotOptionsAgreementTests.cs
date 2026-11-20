@@ -1,6 +1,8 @@
 using System.IO.Compression;
 using System.Reflection;
+using System.Text;
 using System.Xml.Linq;
+using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pptx;
 
@@ -10,41 +12,47 @@ namespace Lokad.OoxPdf.Tests;
 internal static class PptxChartPlotOptionsAgreementTests
 {
     private static readonly XNamespace C = "http://schemas.openxmlformats.org/drawingml/2006/chart";
-    private static readonly XNamespace A = "http://schemas.openxmlformats.org/drawingml/2006/main";
+
 
     public static void BarScalarOptionsFollowSourceDefaultsAndClamps()
     {
-        (string Xml, PptxSceneChartGrouping Expected)[] groups = [
-            ("<c:grouping val=\"clustered\"/>", PptxSceneChartGrouping.Clustered),
-            ("<c:grouping val=\"stacked\"/>", PptxSceneChartGrouping.Stacked),
-            ("<c:grouping val=\"bogus\"/>", PptxSceneChartGrouping.Standard), ("", PptxSceneChartGrouping.Standard)];
-        (string Xml, PptxSceneChartBarDirection Expected)[] directions = [
-            ("<c:barDir val=\"bar\"/>", PptxSceneChartBarDirection.Bar),
-            ("<c:barDir val=\"col\"/>", PptxSceneChartBarDirection.Column),
-            ("<c:barDir val=\"bogus\"/>", PptxSceneChartBarDirection.Column), ("", PptxSceneChartBarDirection.Column)];
-        (string Xml, bool Value, bool Defined)[] varies = [
-            ("<c:varyColors/>", true, true), ("<c:varyColors val=\"0\"/>", false, true),
-            ("<c:varyColors val=\"1\"/>", true, true), ("", true, false)];
-        (string Xml, double Expected)[] gaps = [("<c:gapWidth val=\"150\"/>", 150),
-            ("<c:gapWidth val=\"999\"/>", 500), ("<c:gapWidth val=\"-5\"/>", 0), ("", 150)];
-        (string Xml, double Expected)[] overlaps = [("<c:overlap val=\"0\"/>", 0),
-            ("<c:overlap val=\"250\"/>", 100), ("<c:overlap val=\"-150\"/>", -100), ("", 0)];
-        foreach (var group in groups)
-        foreach (var direction in directions)
-        foreach (var vary in varies)
-        foreach (var gap in gaps)
-        foreach (var overlap in overlaps)
+        Check("");
+        Check("""<c:grouping val="clustered"/>""", grouping: PptxSceneChartGrouping.Clustered);
+        Check("""<c:grouping val="stacked"/>""", grouping: PptxSceneChartGrouping.Stacked);
+        Check("""<c:grouping val="bogus"/>""");
+        Check("""<c:barDir val="bar"/>""", direction: PptxSceneChartBarDirection.Bar);
+        Check("""<c:barDir val="col"/>""");
+        Check("""<c:barDir val="bogus"/>""");
+        Check("<c:varyColors/>", variesDefined: true);
+        Check("""<c:varyColors val="0"/>""", varyColors: false, variesDefined: true);
+        Check("""<c:varyColors val="1"/>""", variesDefined: true);
+        Check("""<c:gapWidth val="150"/>""");
+        Check("""<c:gapWidth val="999"/>""", gapWidth: 500);
+        Check("""<c:gapWidth val="-5"/>""", gapWidth: 0);
+        Check("""<c:overlap val="0"/>""");
+        Check("""<c:overlap val="250"/>""", overlap: 100);
+        Check("""<c:overlap val="-150"/>""", overlap: -100);
+        Check("""
+            <c:barDir val="bar"/><c:grouping val="stacked"/><c:varyColors val="0"/>
+            <c:gapWidth val="999"/><c:overlap val="-150"/>
+            """, PptxSceneChartGrouping.Stacked, PptxSceneChartBarDirection.Bar,
+            varyColors: false, variesDefined: true, gapWidth: 500, overlap: -100);
+
+        static void Check(string xml, PptxSceneChartGrouping grouping = PptxSceneChartGrouping.Standard,
+            PptxSceneChartBarDirection direction = PptxSceneChartBarDirection.Column,
+            bool varyColors = true, bool variesDefined = false, double gapWidth = 150, double overlap = 0)
         {
-            var (plot, _) = LoadPlot("barChart", group.Xml + direction.Xml + vary.Xml + gap.Xml + overlap.Xml);
+            PptxSceneChartPlot plot = LoadPlot("barChart", xml);
             object options = Invoke("ReadSceneChartBarOptions", [typeof(PptxSceneChartPlot), typeof(PptxSceneChartGrouping)],
                 [plot, PptxSceneChartGrouping.Standard])!;
             object Value(string name) => options.GetType().GetProperty(name)!.GetValue(options)!;
-            TestAssert.Equal(group.Expected, (PptxSceneChartGrouping)Value("Grouping"));
-            TestAssert.Equal(direction.Expected, (PptxSceneChartBarDirection)Value("BarDirection"));
-            TestAssert.Equal(vary.Value, PptxTests.ChartBooleanOptionValue(Value("VaryColors")));
-            TestAssert.Equal(vary.Defined, PptxTests.ChartBooleanOptionIsDefined(Value("VaryColors")));
-            TestAssert.Equal(gap.Expected, (double)Value("GapWidth"));
-            TestAssert.Equal(overlap.Expected, (double)Value("Overlap"));
+            object varies = Value("VaryColors");
+            TestAssert.Equal(grouping, (PptxSceneChartGrouping)Value("Grouping"));
+            TestAssert.Equal(direction, (PptxSceneChartBarDirection)Value("BarDirection"));
+            TestAssert.Equal(varyColors, PptxTests.ChartBooleanOptionValue(varies));
+            TestAssert.Equal(variesDefined, PptxTests.ChartBooleanOptionIsDefined(varies));
+            TestAssert.Equal(gapWidth, (double)Value("GapWidth"));
+            TestAssert.Equal(overlap, (double)Value("Overlap"));
         }
     }
 
@@ -57,7 +65,7 @@ internal static class PptxChartPlotOptionsAgreementTests
             ("", PptxSceneChartScatterStyle.LineMarker)];
         foreach (var style in styles)
         {
-            var (plot, _) = LoadPlot("scatterChart", style.Xml);
+            PptxSceneChartPlot plot = LoadPlot("scatterChart", style.Xml);
             object options = Invoke("ReadSceneChartScatterOptions", [typeof(PptxSceneChartPlot)], [plot])!;
             TestAssert.Equal(style.Expected, (PptxSceneChartScatterStyle)options.GetType().GetProperty("ScatterStyle")!.GetValue(options)!);
         }
@@ -65,16 +73,52 @@ internal static class PptxChartPlotOptionsAgreementTests
 
     public static void RadarStyleFollowsSourceDefaults()
     {
-        (string Xml, PptxSceneChartRadarStyle Expected)[] styles = [
-            ("<c:radarStyle val=\"standard\"/>", PptxSceneChartRadarStyle.Standard),
-            ("<c:radarStyle val=\"marker\"/>", PptxSceneChartRadarStyle.Marker),
-            ("<c:radarStyle val=\"filled\"/>", PptxSceneChartRadarStyle.Filled),
-            ("<c:radarStyle val=\"bogus\"/>", PptxSceneChartRadarStyle.Standard), ("", PptxSceneChartRadarStyle.Standard)];
+        (string Xml, PptxSceneChartRadarStyle Parsed, PptxSceneChartRadarStyle Effective)[] styles = [
+            ("""<c:radarStyle val="standard"/>""", PptxSceneChartRadarStyle.Standard, PptxSceneChartRadarStyle.Standard),
+            ("""<c:radarStyle val="marker"/>""", PptxSceneChartRadarStyle.Marker, PptxSceneChartRadarStyle.Marker),
+            ("""<c:radarStyle val="filled"/>""", PptxSceneChartRadarStyle.Filled, PptxSceneChartRadarStyle.Filled),
+            ("""<c:radarStyle val="bogus"/>""", PptxSceneChartRadarStyle.Unknown, PptxSceneChartRadarStyle.Standard),
+            ("", PptxSceneChartRadarStyle.Unknown, PptxSceneChartRadarStyle.Standard)];
         foreach (var style in styles)
         {
-            var (plot, _) = LoadPlot("radarChart", style.Xml);
+            PptxSceneChartPlot plot = LoadPlot("radarChart", style.Xml);
+            TestAssert.Equal(style.Parsed, plot.RadarStyleKind);
             object result = Invoke("ReadSceneChartRadarStyle", [typeof(PptxSceneChartPlot)], [plot])!;
-            TestAssert.Equal(style.Expected, (PptxSceneChartRadarStyle)result);
+            TestAssert.Equal(style.Effective, (PptxSceneChartRadarStyle)result);
+        }
+    }
+
+    public static void PptxChartRadarUnknownAndMissingStylesPaintStandardSeries()
+    {
+        byte[] standard = Render("""<c:radarStyle val="standard"/>""");
+        TestAssert.Equal(3, PptxTests.CountLineChartSeriesSegments(Encoding.ASCII.GetString(standard), "1 0 0 RG"));
+        TestAssert.True(standard.AsSpan().SequenceEqual(Render("""<c:radarStyle val="bogus"/>""")),
+            "An unrecognized radar style retains the standard series paint.");
+        TestAssert.True(standard.AsSpan().SequenceEqual(Render("")),
+            "An omitted radar style retains the standard series paint.");
+
+        static byte[] Render(string style)
+        {
+            string xml = ChartSpace($"""
+                <c:radarChart>{style}
+                  <c:ser>
+                    <c:spPr><a:ln><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill></a:ln></c:spPr>
+                    <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt><c:pt idx="2"><c:v>C</c:v></c:pt></c:strLit></c:cat>
+                    <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>3</c:v></c:pt><c:pt idx="2"><c:v>4</c:v></c:pt></c:numLit></c:val>
+                  </c:ser>
+                </c:radarChart>
+                """, "");
+            using var input = PptxTests.CreateSingleChartPackageStream(xml);
+            using var output = new MemoryStream();
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            OoxPdfConverter.Convert(input, output, new OoxPdfOptions
+            {
+                InputKind = OoxPdfInputKind.Pptx,
+                FontResolver = new PortableRenderingTests.PinnedResolver(),
+                DiagnosticSink = diagnostics.Add
+            });
+            TestAssert.Equal(0, diagnostics.Count);
+            return output.ToArray();
         }
     }
 
@@ -87,7 +131,7 @@ internal static class PptxChartPlotOptionsAgreementTests
         foreach (var plotForm in forms)
         foreach (var seriesForm in forms)
         {
-            var (plot, _) = LoadPlot("barChart", plotForm.Xml, seriesForm.Xml);
+            PptxSceneChartPlot plot = LoadPlot("barChart", plotForm.Xml, seriesForm.Xml);
             var options = (System.Collections.IEnumerable)Invoke("ReadSceneSmoothSeries",
                 [typeof(PptxSceneChartPlot), typeof(bool), typeof(bool)], [plot, plotFallback, defaultValue])!;
             object option = options.Cast<object>().Single();
@@ -103,7 +147,7 @@ internal static class PptxChartPlotOptionsAgreementTests
             ("<c:spPr><a:ln><a:noFill/></a:ln></c:spPr>", true)];
         foreach (var form in forms)
         {
-            var (plot, _) = LoadPlot("barChart", "", form.Xml);
+            PptxSceneChartPlot plot = LoadPlot("barChart", "", form.Xml);
             var values = (IReadOnlyList<bool>)Invoke("ReadSceneSeriesLineHidden", [typeof(PptxSceneChartPlot)], [plot])!;
             TestAssert.Equal(form.Hidden, values.Single());
         }
@@ -122,7 +166,7 @@ internal static class PptxChartPlotOptionsAgreementTests
         Type workbookType = TestAssert.NotNull(typeof(PptxRenderer).Assembly.GetType("Lokad.OoxPdf.Pptx.PptxRenderer+ChartWorkbookData"));
         foreach (var test in cases)
         {
-            var (plot, _) = LoadPlot("barChart", "", test.Xml);
+            PptxSceneChartPlot plot = LoadPlot("barChart", "", test.Xml);
             object record = ((System.Collections.IEnumerable)TestAssert.NotNull(Invoke("ReadSceneChartSeriesNameRecords",
                 [typeof(PptxSceneChartPlot), workbookType], [plot, null]))).Cast<object>().Single();
             TestAssert.Equal(test.Expected, (string?)record.GetType().GetProperty("ActiveName")?.GetValue(record) ?? string.Empty);
@@ -148,7 +192,7 @@ internal static class PptxChartPlotOptionsAgreementTests
 
         foreach (var test in cases)
         {
-            var (plot, _) = LoadPlot("pieChart", "", test.Xml);
+            PptxSceneChartPlot plot = LoadPlot("pieChart", "", test.Xml);
             var actual = (IReadOnlyDictionary<int, double>)TestAssert.NotNull(Invoke("ReadSceneChartPointExplosions",
                 [typeof(PptxSceneChartPlot), workbookType], [plot, null]));
             TestAssert.Equal(test.Expected.HasValue ? 1 : 0, actual.Count);
@@ -521,14 +565,12 @@ internal static class PptxChartPlotOptionsAgreementTests
         return new List<string?>();
     }
 
-    private static (PptxSceneChartPlot Plot, XElement Element) LoadPlot(string plotKind, string plotInner, string seriesInner = "")
+    private static PptxSceneChartPlot LoadPlot(string plotKind, string plotInner, string seriesInner = "")
     {
         string xml = ChartSpace("<c:" + plotKind + ">" + plotInner + "<c:ser>" + seriesInner + "<c:cat><c:strLit><c:pt idx=\"0\"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx=\"0\"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser><c:axId val=\"10\"/><c:axId val=\"20\"/></c:" + plotKind + ">", "");
-        PptxSceneChart sceneChart = TestAssert.NotNull(PptxTests.BuildSingleChartScene(xml));
-        PptxSceneChart chart = sceneChart;
+        PptxSceneChart chart = TestAssert.NotNull(PptxTests.BuildSingleChartScene(xml));
         TestAssert.Equal(1, chart.Plots.Count);
-        XElement element = XDocument.Parse(xml).Descendants(C + plotKind).First();
-        return (chart.Plots[0], element);
+        return chart.Plots[0];
     }
 
     private static string ChartSpace(string plotAreaInner, string options)

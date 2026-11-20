@@ -1606,30 +1606,6 @@ internal static class PptxChartAxesTests
         TestAssert.Equal("; ", (string?)resolvedSeriesOptions.GetType().GetProperty("Separator")?.GetValue(resolvedSeriesOptions) ?? string.Empty);
     }
 
-    public static void PptxChartRadarOptionsUseSceneAuthoritativeDefaults()
-    {
-        PptxSceneChart chart = PptxTests.BuildSingleChartScene("""
-            <?xml version="1.0" encoding="UTF-8"?>
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
-              <c:chart><c:plotArea>
-                <c:radarChart>
-                  <c:radarStyle val="bogus"/>
-                  <c:ser><c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt><c:pt idx="2"><c:v>C</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>3</c:v></c:pt><c:pt idx="2"><c:v>4</c:v></c:pt></c:numLit></c:val></c:ser>
-                </c:radarChart>
-              </c:plotArea></c:chart>
-            </c:chartSpace>
-            """) ?? throw new InvalidOperationException("Expected chart scene.");
-        PptxSceneChartPlot plot = chart.Plots[0];
-        TestAssert.Equal(PptxSceneChartRadarStyle.Unknown, plot.RadarStyleKind);
-
-        System.Reflection.MethodInfo readOptions = typeof(PptxRenderer).GetMethod(
-            "ReadSceneChartRadarStyle",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart radar-option resolver.");
-        object options = readOptions.Invoke(null, [plot]) ?? throw new InvalidOperationException("Expected resolved radar options.");
-
-        TestAssert.Equal(PptxSceneChartRadarStyle.Standard, (PptxSceneChartRadarStyle)options);
-    }
-
     public static void PptxChartPolarPointOptionsUseSceneAuthoritativeDefaults()
     {
         PptxSceneChart chart = PptxTests.BuildSingleChartScene("""
@@ -1711,29 +1687,6 @@ internal static class PptxChartAxesTests
 
         TestAssert.Equal(PptxSceneChartScatterStyle.Unknown, (PptxSceneChartScatterStyle)scatterStyle);
         TestAssert.True((bool)connectLines == false, "Expected unknown scatterStyle to keep the scene-owned no-line default instead of borrowing XML fallback lineMarker.");
-    }
-
-    public static void PptxChartUnknownRadarStyleUsesSceneAuthoritativeDefault()
-    {
-        PptxSceneChart chart = PptxTests.BuildSingleChartScene("""
-            <?xml version="1.0" encoding="UTF-8"?>
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
-              <c:chart><c:plotArea>
-                <c:radarChart>
-                  <c:radarStyle val="bogus"/>
-                  <c:ser><c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt><c:pt idx="2"><c:v>C</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>3</c:v></c:pt><c:pt idx="2"><c:v>4</c:v></c:pt></c:numLit></c:val></c:ser>
-                </c:radarChart>
-              </c:plotArea></c:chart>
-            </c:chartSpace>
-            """) ?? throw new InvalidOperationException("Expected chart scene.");
-        TestAssert.Equal(PptxSceneChartRadarStyle.Unknown, chart.Plots[0].RadarStyleKind);
-
-        System.Reflection.MethodInfo readRadarStyle = typeof(PptxRenderer).GetMethod(
-            "ReadSceneChartRadarStyle",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart radar-style resolver.");
-        object radarStyle = readRadarStyle.Invoke(null, [chart.Plots[0]]) ?? throw new InvalidOperationException("Expected resolved radar style.");
-
-        TestAssert.Equal(PptxSceneChartRadarStyle.Standard, (PptxSceneChartRadarStyle)radarStyle);
     }
 
     public static void PptxChartUnknownAxisOrientationUsesSceneAuthoritativeDefault()
