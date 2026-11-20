@@ -202,8 +202,6 @@ internal readonly record struct PptxSceneChartStyleEntry(
     PptxSceneLineStyle ShapeLine,
     PptxSceneChartTextStyleOverride TextStyle);
 
-// T02: kind enums derive from their raw spellings inside Defined, so a plot cannot
-// carry a grouping/direction/style enum that disagrees with its stored spelling.
 internal sealed record PptxSceneChartPlot
 {
     public PptxSceneChartPlotKind PlotKind { get; }
@@ -217,11 +215,7 @@ internal sealed record PptxSceneChartPlot
 
     public PptxSceneChartGrouping GroupingKind { get; }
 
-    public string Grouping { get; }
-
     public PptxSceneChartBarDirection BarDirectionKind { get; }
-
-    public string BarDirection { get; }
 
     public PptxSceneChartScatterStyle ScatterStyleKind { get; }
 
@@ -237,11 +231,7 @@ internal sealed record PptxSceneChartPlot
 
     public PptxSceneChartRadarStyle RadarStyleKind { get; }
 
-    public string RadarStyle { get; }
-
     public bool? MarkersEnabled { get; }
-
-    public string MarkersEnabledValue { get; }
 
     public bool? VaryColors { get; }
 
@@ -249,144 +239,56 @@ internal sealed record PptxSceneChartPlot
 
     public double? GapWidth { get; }
 
-    public string GapWidthValue { get; }
-
     public double? Overlap { get; }
-
-    public string OverlapValue { get; }
 
     public double? HoleSize { get; }
 
-    public string HoleSizeValue { get; }
-
     public double? FirstSliceAngle { get; }
-
-    public string FirstSliceAngleValue { get; }
 
     public PptxSceneChartDataLabels DataLabels { get; }
 
     public XElement Source { get; }
 
-    private PptxSceneChartPlot(
+    public PptxSceneChartPlot(
         PptxSceneChartPlotKind plotKind,
         string kind,
         IReadOnlyList<string> axisIds,
         IReadOnlyList<PptxSceneChartSeries> series,
-        PptxSceneChartGrouping groupingKind,
         string grouping,
-        PptxSceneChartBarDirection barDirectionKind,
         string barDirection,
-        PptxSceneChartScatterStyle scatterStyleKind,
         string scatterStyle,
-        PptxSceneChartRadarStyle radarStyleKind,
         string radarStyle,
         bool? markersEnabled,
-        string markersEnabledValue,
         bool? varyColors,
         string varyColorsValue,
         double? gapWidth,
-        string gapWidthValue,
         double? overlap,
-        string overlapValue,
         double? holeSize,
-        string holeSizeValue,
         double? firstSliceAngle,
-        string firstSliceAngleValue,
         PptxSceneChartDataLabels dataLabels,
-        XElement source,
-        double? bubbleScale,
-        string bubbleScaleValue,
-        string bubbleSizeRepresents,
-        string showNegativeBubblesValue)
+        XElement source)
     {
         PlotKind = plotKind;
         Kind = kind;
         AxisIds = axisIds;
         Series = series;
-        GroupingKind = groupingKind;
-        Grouping = grouping;
-        BarDirectionKind = barDirectionKind;
-        BarDirection = barDirection;
-        ScatterStyleKind = scatterStyleKind;
+        GroupingKind = PptxSceneBuilder.ParseChartGrouping(grouping);
+        BarDirectionKind = PptxSceneBuilder.ParseChartBarDirection(barDirection);
+        ScatterStyleKind = PptxSceneBuilder.ParseChartScatterStyle(scatterStyle);
         ScatterStyle = scatterStyle;
-        BubbleScale = bubbleScale;
-        BubbleScaleValue = bubbleScaleValue;
-        BubbleSizeRepresents = bubbleSizeRepresents;
-        ShowNegativeBubblesValue = showNegativeBubblesValue;
-        RadarStyleKind = radarStyleKind;
-        RadarStyle = radarStyle;
+        (BubbleScale, BubbleScaleValue) = PptxSceneBuilder.ReadChartElementDoubleWithValue(source, "bubbleScale");
+        BubbleSizeRepresents = PptxSceneBuilder.ReadChartElementValue(source, "sizeRepresents");
+        ShowNegativeBubblesValue = PptxSceneBuilder.ReadChartElementValue(source, "showNegBubbles");
+        RadarStyleKind = PptxSceneBuilder.ParseChartRadarStyle(radarStyle);
         MarkersEnabled = markersEnabled;
-        MarkersEnabledValue = markersEnabledValue;
         VaryColors = varyColors;
         VaryColorsValue = varyColorsValue;
         GapWidth = gapWidth;
-        GapWidthValue = gapWidthValue;
         Overlap = overlap;
-        OverlapValue = overlapValue;
         HoleSize = holeSize;
-        HoleSizeValue = holeSizeValue;
         FirstSliceAngle = firstSliceAngle;
-        FirstSliceAngleValue = firstSliceAngleValue;
         DataLabels = dataLabels;
         Source = source;
-    }
-
-    public static PptxSceneChartPlot Defined(
-        PptxSceneChartPlotKind plotKind,
-        string kind,
-        IReadOnlyList<string> axisIds,
-        IReadOnlyList<PptxSceneChartSeries> series,
-        string grouping,
-        string barDirection,
-        string scatterStyle,
-        string radarStyle,
-        bool? markersEnabled,
-        string markersEnabledValue,
-        bool? varyColors,
-        string varyColorsValue,
-        double? gapWidth,
-        string gapWidthValue,
-        double? overlap,
-        string overlapValue,
-        double? holeSize,
-        string holeSizeValue,
-        double? firstSliceAngle,
-        string firstSliceAngleValue,
-        PptxSceneChartDataLabels dataLabels,
-        XElement source)
-    {
-        var bubbleScale = PptxSceneBuilder.ReadChartElementDoubleWithValue(source, "bubbleScale");
-        return new PptxSceneChartPlot(
-            plotKind,
-            kind,
-            axisIds,
-            series,
-            PptxSceneBuilder.ParseChartGrouping(grouping),
-            grouping,
-            PptxSceneBuilder.ParseChartBarDirection(barDirection),
-            barDirection,
-            PptxSceneBuilder.ParseChartScatterStyle(scatterStyle),
-            scatterStyle,
-            PptxSceneBuilder.ParseChartRadarStyle(radarStyle),
-            radarStyle,
-            markersEnabled,
-            markersEnabledValue,
-            varyColors,
-            varyColorsValue,
-            gapWidth,
-            gapWidthValue,
-            overlap,
-            overlapValue,
-            holeSize,
-            holeSizeValue,
-            firstSliceAngle,
-            firstSliceAngleValue,
-            dataLabels,
-            source,
-            bubbleScale.Value,
-            bubbleScale.RawValue,
-            PptxSceneBuilder.ReadChartElementValue(source, "sizeRepresents"),
-            PptxSceneBuilder.ReadChartElementValue(source, "showNegBubbles"));
     }
 }
 

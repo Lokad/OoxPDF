@@ -947,7 +947,7 @@ internal static partial class PptxChartLegendsTests
         TestAssert.Equal("multiLvlStrCache,numCache,strCache", string.Join(",", snapshot.ChartDataSourceCacheKinds));
     }
 
-    public static void PptxScenePreservesChartPlotNumericOptionTokens()
+    public static void PptxSceneParsesChartPlotNumericOptions()
     {
         PptxSceneChart? chart = PptxTests.BuildSingleChartScene("""
             <?xml version="1.0" encoding="UTF-8"?>
@@ -969,15 +969,11 @@ internal static partial class PptxChartLegendsTests
 
         PptxSceneChartPlot barPlot = chart?.Plots[0] ?? throw new InvalidOperationException("Expected bar plot.");
         TestAssert.Equal(null, barPlot.GapWidth);
-        TestAssert.Equal("futureGap", barPlot.GapWidthValue);
         TestAssert.Equal(25d, barPlot.Overlap ?? double.NaN);
-        TestAssert.Equal("25", barPlot.OverlapValue);
 
         PptxSceneChartPlot doughnutPlot = chart.Plots[1];
         TestAssert.Equal(null, doughnutPlot.HoleSize);
-        TestAssert.Equal("futureHole", doughnutPlot.HoleSizeValue);
         TestAssert.Equal(450d, doughnutPlot.FirstSliceAngle ?? double.NaN);
-        TestAssert.Equal("450", doughnutPlot.FirstSliceAngleValue);
     }
 
     public static void PptxScenePreservesChartExplosionNumericOptionTokens()

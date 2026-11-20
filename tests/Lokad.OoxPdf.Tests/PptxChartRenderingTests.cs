@@ -35,7 +35,6 @@ internal static class PptxChartRenderingTests
 
         PptxSceneChartPlot plot = chart?.Plots[0] ?? throw new InvalidOperationException("Expected line-chart plot.");
         TestAssert.True(plot.MarkersEnabled == true, "Expected chart-level marker enablement to survive in the scene model.");
-        TestAssert.Equal("1", plot.MarkersEnabledValue);
         TestAssert.True(plot.Series[0].Marker.IsDefined == false, "Expected an automatically enabled marker to remain distinct from series marker XML.");
         TestAssert.Equal("diamond", plot.Series[0].Marker.Symbol);
         TestAssert.Equal(7d, plot.Series[0].Marker.Size);

@@ -109,19 +109,15 @@ internal sealed partial class PptxSceneBuilder
             string barDirection = ReadChartElementValue(plot, "barDir");
             string scatterStyle = ReadChartElementValue(plot, "scatterStyle");
             string radarStyle = ReadChartElementValue(plot, "radarStyle");
-            (bool? markersEnabled, string markersEnabledValue) = ReadChartPlotMarkersEnabled(plot);
+            bool? markersEnabled = ReadOptionalOoxmlBooleanElementWithValue(plot, "marker").Value;
             (bool? varyColors, string varyColorsValue) = ReadChartPlotVaryColors(plot);
             PptxSceneChartPlotKind plotKind = ParseChartPlotKind(kind);
-            (double? gapWidth, string gapWidthValue) = ReadChartElementDoubleWithValue(plot, "gapWidth");
-            (double? overlap, string overlapValue) = ReadChartElementDoubleWithValue(plot, "overlap");
-            (double? holeSize, string holeSizeValue) = ReadChartElementDoubleWithValue(plot, "holeSize");
-            (double? firstSliceAngle, string firstSliceAngleValue) = ReadChartElementDoubleWithValue(plot, "firstSliceAng");
             string[] axisIds = plot
                 .Elements(ChartNamespace + "axId")
                 .Select(ReadChartValueAttribute)
                 .Where(value => value.Length != 0)
                 .ToArray();
-            plots.Add(PptxSceneChartPlot.Defined(
+            plots.Add(new PptxSceneChartPlot(
                 plotKind,
                 kind,
                 axisIds,
@@ -131,17 +127,12 @@ internal sealed partial class PptxSceneBuilder
                 scatterStyle,
                 radarStyle,
                 markersEnabled,
-                markersEnabledValue,
                 varyColors,
                 varyColorsValue,
-                gapWidth,
-                gapWidthValue,
-                overlap,
-                overlapValue,
-                holeSize,
-                holeSizeValue,
-                firstSliceAngle,
-                firstSliceAngleValue,
+                ReadChartElementDoubleWithValue(plot, "gapWidth").Value,
+                ReadChartElementDoubleWithValue(plot, "overlap").Value,
+                ReadChartElementDoubleWithValue(plot, "holeSize").Value,
+                ReadChartElementDoubleWithValue(plot, "firstSliceAng").Value,
                 ReadChartDataLabels(plot, theme, colorMap),
                 plot));
         }
@@ -414,14 +405,6 @@ internal sealed partial class PptxSceneBuilder
         return varyColors is null
             ? (null, string.Empty)
             : (IsOoxmlBooleanElementEnabled(varyColors, defaultValue: true), (string?)varyColors.Attribute("val") ?? string.Empty);
-    }
-
-    private static (bool? Value, string RawValue) ReadChartPlotMarkersEnabled(XElement plot)
-    {
-        XElement? marker = plot.Element(ChartNamespace + "marker");
-        return marker is null
-            ? (null, string.Empty)
-            : (IsOoxmlBooleanElementEnabled(marker), (string?)marker.Attribute("val") ?? string.Empty);
     }
 
     private static IReadOnlyList<PptxSceneChartAxis> ReadChartAxes(XDocument? chartXml, PptxTheme theme, PptxColorMap colorMap, PptxSceneChartStyle stylePart, IReadOnlyList<PptxSceneChartPlot> plots)

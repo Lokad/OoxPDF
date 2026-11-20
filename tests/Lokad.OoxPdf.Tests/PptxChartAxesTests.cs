@@ -890,9 +890,7 @@ internal static class PptxChartAxesTests
             </c:chartSpace>
             """) ?? throw new InvalidOperationException("Expected chart scene.");
         TestAssert.Equal(PptxSceneChartGrouping.Unknown, chart.Plots[0].GroupingKind);
-        TestAssert.Equal("bogus", chart.Plots[0].Grouping);
 
-        XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
         System.Reflection.MethodInfo readGrouping = typeof(PptxRenderer).GetMethod(
             "ReadSceneChartGrouping",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart grouping resolver.");
@@ -915,9 +913,7 @@ internal static class PptxChartAxesTests
             </c:chartSpace>
             """) ?? throw new InvalidOperationException("Expected chart scene.");
         TestAssert.Equal(PptxSceneChartBarDirection.Unknown, chart.Plots[0].BarDirectionKind);
-        TestAssert.Equal("bogus", chart.Plots[0].BarDirection);
 
-        XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
         System.Reflection.MethodInfo readBarDirection = typeof(PptxRenderer).GetMethod(
             "ReadSceneChartBarDirection",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart bar-direction resolver.");
@@ -1731,9 +1727,7 @@ internal static class PptxChartAxesTests
             </c:chartSpace>
             """) ?? throw new InvalidOperationException("Expected chart scene.");
         TestAssert.Equal(PptxSceneChartRadarStyle.Unknown, chart.Plots[0].RadarStyleKind);
-        TestAssert.Equal("bogus", chart.Plots[0].RadarStyle);
 
-        XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
         System.Reflection.MethodInfo readRadarStyle = typeof(PptxRenderer).GetMethod(
             "ReadSceneChartRadarStyle",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart radar-style resolver.");
