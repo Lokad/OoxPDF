@@ -340,24 +340,13 @@ internal sealed partial class DocxRenderer
 
         if (effective.Strike || effective.DoubleStrike)
         {
-            graphics.SetFillRgb(color.Red, color.Green, color.Blue);
             double thickness = ResolveDecorationThickness(font.Os2.StrikeoutSize, font, fontSize, useWordCompatibleRevisionDecorationProfile);
             double y = baselineY + font.Os2.StrikeoutPosition * fontSize / font.UnitsPerEm;
-            if (effective.DoubleStrike)
-            {
-                double offset = Math.Max(thickness, fontSize / 18d);
-                graphics.FillRectangle(x, y - offset - thickness / 2d, width, thickness);
-                graphics.FillRectangle(x, y + offset - thickness / 2d, width, thickness);
-            }
-            else
-            {
-                graphics.FillRectangle(x, y - thickness / 2d, width, thickness);
-            }
+            RenderStrikeDecoration(graphics, x, y, width, thickness, fontSize, color, effective.DoubleStrike);
         }
     }
 
-    // RV01: fallback underline/strike rectangles from diagnosed constants (no font
-    // tables available). Underline is solid; DoubleStrike draws two rectangles.
+    // Built-in faces use fallback metrics and a solid underline.
     private static void RenderFallbackTextDecorations(
         DocxTextRun style,
         double x,
@@ -383,19 +372,32 @@ internal sealed partial class DocxRenderer
 
         if (effective.Strike || effective.DoubleStrike)
         {
-            graphics.SetFillRgb(color.Red, color.Green, color.Blue);
             double thickness = fontSize * PdfFallbackFont.StrikeoutThicknessEm;
             double y = baselineY + fontSize * PdfFallbackFont.StrikeoutPositionEm;
-            if (effective.DoubleStrike)
-            {
-                double offset = Math.Max(thickness, fontSize / 18d);
-                graphics.FillRectangle(x, y - offset - thickness / 2d, width, thickness);
-                graphics.FillRectangle(x, y + offset - thickness / 2d, width, thickness);
-            }
-            else
-            {
-                graphics.FillRectangle(x, y - thickness / 2d, width, thickness);
-            }
+            RenderStrikeDecoration(graphics, x, y, width, thickness, fontSize, color, effective.DoubleStrike);
+        }
+    }
+
+    private static void RenderStrikeDecoration(
+        PdfGraphicsBuilder graphics,
+        double x,
+        double y,
+        double width,
+        double thickness,
+        double fontSize,
+        RgbColor color,
+        bool doubleStrike)
+    {
+        graphics.SetFillRgb(color.Red, color.Green, color.Blue);
+        if (doubleStrike)
+        {
+            double offset = Math.Max(thickness, fontSize / 18d);
+            graphics.FillRectangle(x, y - offset - thickness / 2d, width, thickness);
+            graphics.FillRectangle(x, y + offset - thickness / 2d, width, thickness);
+        }
+        else
+        {
+            graphics.FillRectangle(x, y - thickness / 2d, width, thickness);
         }
     }
 
