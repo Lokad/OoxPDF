@@ -100,8 +100,8 @@ internal sealed partial class PptxRenderer
             cancellationToken.ThrowIfCancellationRequested();
             string content = graphics.ToString();
             IReadOnlySet<string> usedFonts = graphics.UsedFontResourceNames;
-            var pageFonts = new List<PdfFontResource>(renderedFonts.Resources);
-            foreach (PdfFontResource font in orderedChartFonts)
+            var pageFonts = new List<PdfFontResource>();
+            foreach (PdfFontResource font in renderedFonts.Resources.Concat(orderedChartFonts))
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 if (usedFonts.Contains(font.ResourceName))

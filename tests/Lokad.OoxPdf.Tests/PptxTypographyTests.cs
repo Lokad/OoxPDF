@@ -132,164 +132,135 @@ internal static class PptxTypographyTests
         TestAssert.Contains("0052", pdf);
     }
 
-    public static void PptxSyntheticTransparentTextUsesGlyphOutlinePaths()
+    public static void PptxTransparentGlyphOutlinesKeepSyntheticAdvancesAndShear()
     {
-        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
-        if (!File.Exists(arial))
+        using MemoryStream input = CreateOutlineDeck(
+            OutlineText(100, bold: false, italic: false) +
+            OutlineText(200, bold: true, italic: false) +
+            OutlineText(300, bold: false, italic: true) +
+            OutlineText(400, bold: true, italic: true));
+        using var output = new MemoryStream();
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions
         {
-            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
+            InputKind = OoxPdfInputKind.Pptx,
+            FontResolver = new PortableRenderingTests.PinnedResolver(),
+            ConversionLimits = new OoxConversionLimits { MaxPdfFontBytesPerConversion = 0 }
+        });
+
+        string pdf = Encoding.ASCII.GetString(output.ToArray());
+        TestAssert.DoesNotContain("/FontFile2", pdf);
+        TestAssert.DoesNotContain("/ToUnicode", pdf);
+        TestAssert.DoesNotContain(" Tf", pdf);
+        TestAssert.DoesNotContain(" Tr", pdf);
+        string[] runs = pdf.Split("/GS45000F100000S gs", StringSplitOptions.None);
+        TestAssert.Equal(5, runs.Length);
+        (double X, double Y)[][] regular = ReadContours(runs[1]);
+        // At 36pt the synthetic-bold spacing correction is 0.252pt per pair.
+        CheckStyle(regular, ReadContours(runs[2]), tightening: 0.252d, shear: 0d);
+        CheckStyle(regular, ReadContours(runs[3]), tightening: 0d, shear: 0.213d);
+        CheckStyle(regular, ReadContours(runs[4]), tightening: 0.252d, shear: 0.213d);
+
+        static (double X, double Y)[][] ReadContours(string run)
+        {
+            var contours = new List<(double X, double Y)[]>();
+            var points = new List<(double X, double Y)>();
+            string[] operations = run.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+            TestAssert.Equal("0.2 0.4 0.6 rg", operations[0]);
+            int fill = Array.IndexOf(operations, "f");
+            TestAssert.True(fill > 1 && fill + 1 < operations.Length && operations[fill + 1] == "Q", "The authored glyphs must use a filled path scoped to the authored alpha.");
+            TestAssert.Equal(4, operations.Take(fill).Count(op => op.EndsWith(" m", StringComparison.Ordinal)));
+            foreach (string operation in operations.AsSpan(1, fill - 1))
+            {
+                if (operation == "h")
+                {
+                    contours.Add(points.ToArray());
+                    points.Clear();
+                    continue;
+                }
+
+                string[] args = operation.Split(' ');
+                TestAssert.True(args[^1] is "m" or "l" or "c", "Expected only glyph path operators before fill.");
+                for (int i = 0; i < args.Length - 1; i += 2)
+                {
+                    points.Add((double.Parse(args[i], CultureInfo.InvariantCulture),
+                        double.Parse(args[i + 1], CultureInfo.InvariantCulture)));
+                }
+            }
+            TestAssert.Equal(0, points.Count);
+            TestAssert.Equal(4, contours.Count); // Two closed contours per DejaVu Sans O.
+            TestAssert.True(contours.All(contour => contour.Length > 10), "Every O must retain both full curved contours.");
+            return contours.ToArray();
         }
 
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        static void CheckStyle((double X, double Y)[][] plain, (double X, double Y)[][] styled, double tightening, double shear)
         {
-            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
-            ["_rels/.rels"] = PptxTests.PackageRelationship(),
-            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
-            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
-            ["ppt/slides/slide1.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <p:cSld><p:spTree><p:sp>
-                    <p:spPr><a:xfrm><a:off x="914400" y="1828800"/><a:ext cx="3657600" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
-                    <p:txBody>
-                      <a:bodyPr lIns="0" rIns="0" tIns="0" bIns="0"/><a:lstStyle/>
-                      <a:p><a:r><a:rPr sz="3600"><a:solidFill><a:srgbClr val="336699"><a:alpha val="45000"/></a:srgbClr></a:solidFill><a:latin typeface="Arial"/></a:rPr><a:t>OO</a:t></a:r></a:p>
-                    </p:txBody>
-                  </p:sp></p:spTree></p:cSld>
-                </p:sld>
-                """
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, output);
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("GS45000F100000S", pdf);
-        TestAssert.Contains(" c", pdf);
-        TestAssert.Contains("f", pdf);
-        TestAssert.True(!pdf.Contains(" TJ", StringComparison.Ordinal), "Transparent PPTX text should use glyph outline paths instead of positioned PDF text.");
-        TestAssert.True(!pdf.Contains("> Tj", StringComparison.Ordinal), "Transparent PPTX text should use glyph outline paths instead of simple PDF text.");
-    }
-
-    public static void PptxSyntheticTransparentSyntheticBoldTextUsesGlyphOutlinePaths()
-    {
-        string cambria = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc");
-        if (!File.Exists(cambria))
-        {
-            TestAssert.Skip("Environmental precondition not met: (!File.Exists(cambria))");
+            var plainOrigin = plain[0][0];
+            var styledOrigin = styled[0][0];
+            for (int contour = 0; contour < plain.Length; contour++)
+            {
+                TestAssert.Equal(plain[contour].Length, styled[contour].Length);
+                for (int i = 0; i < plain[contour].Length; i++)
+                {
+                    double dy = plain[contour][i].Y - plainOrigin.Y;
+                    double x = plain[contour][i].X - plainOrigin.X + dy * shear;
+                    if (contour >= 2) x -= tightening; // Move only the second O.
+                    TestAssert.True(Math.Abs(dy - (styled[contour][i].Y - styledOrigin.Y)) <= 0.003d,
+                        "Synthetic styling must preserve each contour's vertical geometry.");
+                    TestAssert.True(Math.Abs(x - (styled[contour][i].X - styledOrigin.X)) <= 0.003d,
+                        $"Contour {contour}, point {i} must preserve the authored shear {shear} and pair tightening {tightening}.");
+                }
+            }
         }
-
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
-            ["_rels/.rels"] = PptxTests.PackageRelationship(),
-            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
-            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
-            ["ppt/slides/slide1.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <p:cSld><p:spTree><p:sp>
-                    <p:spPr><a:xfrm><a:off x="914400" y="1828800"/><a:ext cx="3657600" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
-                    <p:txBody>
-                      <a:bodyPr lIns="0" rIns="0" tIns="0" bIns="0"/><a:lstStyle/>
-                      <a:p><a:r><a:rPr sz="3600" b="1"><a:solidFill><a:srgbClr val="336699"><a:alpha val="45000"/></a:srgbClr></a:solidFill><a:latin typeface="Cambria Math"/></a:rPr><a:t>Bold</a:t></a:r></a:p>
-                    </p:txBody>
-                  </p:sp></p:spTree></p:cSld>
-                </p:sld>
-                """
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, output);
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("GS45000F100000S", pdf);
-        TestAssert.Contains(" c", pdf);
-        TestAssert.Contains("f", pdf);
-        TestAssert.True(!pdf.Contains(" TJ", StringComparison.Ordinal), "Transparent synthetic-bold PPTX text should use glyph outline paths instead of positioned PDF text.");
-        TestAssert.True(!pdf.Contains("> Tj", StringComparison.Ordinal), "Transparent synthetic-bold PPTX text should use glyph outline paths instead of simple PDF text.");
-        TestAssert.True(!pdf.Contains(" Tr", StringComparison.Ordinal), "Transparent synthetic-bold PPTX text should not use PDF text rendering mode.");
     }
 
-    public static void PptxSyntheticTransparentSyntheticItalicTextUsesGlyphOutlinePaths()
+    public static void PptxOutlineAndOpaqueTextPublishOnlyTheUsedFont()
     {
-        string cambria = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc");
-        if (!File.Exists(cambria))
-        {
-            TestAssert.Skip("Environmental precondition not met: (!File.Exists(cambria))");
-        }
+        using MemoryStream input = CreateOutlineDeck(
+            OutlineText(100, bold: false, italic: true) +
+            OutlineText(200, bold: false, italic: false, transparent: false));
+        using OoxPackage package = OoxPackage.Open(input, default);
+        var document = new PptxReader().Read(package, default);
+        var renderer = new PptxRenderer(new PortableRenderingTests.PinnedResolver());
+        PdfPage page = renderer.RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().Single();
 
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
-            ["_rels/.rels"] = PptxTests.PackageRelationship(),
-            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
-            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
-            ["ppt/slides/slide1.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <p:cSld><p:spTree><p:sp>
-                    <p:spPr><a:xfrm><a:off x="914400" y="1828800"/><a:ext cx="3657600" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
-                    <p:txBody>
-                      <a:bodyPr lIns="0" rIns="0" tIns="0" bIns="0"/><a:lstStyle/>
-                      <a:p><a:r><a:rPr sz="3600" i="1"><a:solidFill><a:srgbClr val="663399"><a:alpha val="45000"/></a:srgbClr></a:solidFill><a:latin typeface="Cambria Math"/></a:rPr><a:t>Italic</a:t></a:r></a:p>
-                    </p:txBody>
-                  </p:sp></p:spTree></p:cSld>
-                </p:sld>
-                """
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, output);
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("GS45000F100000S", pdf);
-        TestAssert.Contains(" c", pdf);
-        TestAssert.Contains("f", pdf);
-        TestAssert.True(!pdf.Contains(" TJ", StringComparison.Ordinal), "Transparent synthetic-italic PPTX text should use sheared glyph outline paths instead of positioned PDF text.");
-        TestAssert.True(!pdf.Contains("> Tj", StringComparison.Ordinal), "Transparent synthetic-italic PPTX text should use sheared glyph outline paths instead of simple PDF text.");
-        TestAssert.True(!pdf.Contains(" Tr", StringComparison.Ordinal), "Transparent synthetic-italic PPTX text should not use PDF text rendering mode.");
+        PdfFontResource font = page.Fonts.Single();
+        TestAssert.Equal(1, page.Content.Split('\n').Count(line => line.TrimEnd().EndsWith(" Tf", StringComparison.Ordinal)));
+        TestAssert.Contains($"/{font.ResourceName} 36 Tf", page.Content);
+        TestAssert.Equal(1, page.Content.Split('\n').Count(line => line.Trim() == "f"));
+        TestAssert.True(page.Content.Contains("> Tj", StringComparison.Ordinal) ||
+            page.Content.Contains("] TJ", StringComparison.Ordinal), "The opaque text must still use the retained font.");
     }
 
-    public static void PptxSyntheticTransparentSyntheticBoldItalicTextUsesGlyphOutlinePaths()
+    private static string OutlineText(int y, bool bold, bool italic, bool transparent = true)
     {
-        string cambria = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc");
-        if (!File.Exists(cambria))
-        {
-            TestAssert.Skip("Environmental precondition not met: (!File.Exists(cambria))");
-        }
-
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
-            ["_rels/.rels"] = PptxTests.PackageRelationship(),
-            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
-            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
-            ["ppt/slides/slide1.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <p:cSld><p:spTree><p:sp>
-                    <p:spPr><a:xfrm><a:off x="914400" y="1828800"/><a:ext cx="3657600" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
-                    <p:txBody>
-                      <a:bodyPr lIns="0" rIns="0" tIns="0" bIns="0"/><a:lstStyle/>
-                      <a:p><a:r><a:rPr sz="3600" b="1" i="1"><a:solidFill><a:srgbClr val="663399"><a:alpha val="45000"/></a:srgbClr></a:solidFill><a:latin typeface="Cambria Math"/></a:rPr><a:t>Both</a:t></a:r></a:p>
-                    </p:txBody>
-                  </p:sp></p:spTree></p:cSld>
-                </p:sld>
-                """
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, output);
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("GS45000F100000S", pdf);
-        TestAssert.Contains(" c", pdf);
-        TestAssert.Contains("f", pdf);
-        TestAssert.True(!pdf.Contains(" TJ", StringComparison.Ordinal), "Transparent synthetic-bold-italic PPTX text should use sheared glyph outline paths instead of positioned PDF text.");
-        TestAssert.True(!pdf.Contains("> Tj", StringComparison.Ordinal), "Transparent synthetic-bold-italic PPTX text should use sheared glyph outline paths instead of simple PDF text.");
-        TestAssert.True(!pdf.Contains(" Tr", StringComparison.Ordinal), "Transparent synthetic-bold-italic PPTX text should not use PDF text rendering mode.");
+        int offset = y * 12700;
+        int alpha = transparent ? 45000 : 100000;
+        return $$"""
+            <p:sp>
+              <p:spPr><a:xfrm><a:off x="914400" y="{{offset}}"/><a:ext cx="3657600" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+              <p:txBody>
+                <a:bodyPr lIns="0" rIns="0" tIns="0" bIns="0"/><a:lstStyle/>
+                <a:p><a:r><a:rPr sz="3600" b="{{(bold ? 1 : 0)}}" i="{{(italic ? 1 : 0)}}">
+                  <a:solidFill><a:srgbClr val="336699"><a:alpha val="{{alpha}}"/></a:srgbClr></a:solidFill>
+                  <a:latin typeface="DejaVu Sans"/>
+                </a:rPr><a:t>OO</a:t></a:r></a:p>
+              </p:txBody>
+            </p:sp>
+            """;
     }
+
+    private static MemoryStream CreateOutlineDeck(string shapes) => TestFixtures.CreateZipPackage(new Dictionary<string, string>
+    {
+        ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
+        ["_rels/.rels"] = PptxTests.PackageRelationship(),
+        ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
+        ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
+        ["ppt/slides/slide1.xml"] = $$"""
+            <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <p:cSld><p:spTree>{{shapes}}</p:spTree></p:cSld>
+            </p:sld>
+            """
+    });
 
     public static void PptxSyntheticFlippedRotatedTextBoxKeepsTextReadable()
     {
