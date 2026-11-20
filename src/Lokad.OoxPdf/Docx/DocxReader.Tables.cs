@@ -785,29 +785,29 @@ internal sealed partial class DocxReader
         int rowCount,
         int cellCount)
     {
-        DocxTableCellBorder? top = FindBorder(tableBorders, rowIndex == 0 ? "top" : "insideH");
+        DocxTableCellBorder? top = DocxTableBorderGeometry.Find(tableBorders, rowIndex == 0 ? "top" : "insideH");
         if (top is not null)
         {
             yield return top with { Edge = "top" };
         }
 
-        DocxTableCellBorder? bottom = FindBorder(tableBorders, rowIndex == rowCount - 1 ? "bottom" : "insideH");
+        DocxTableCellBorder? bottom = DocxTableBorderGeometry.Find(tableBorders, rowIndex == rowCount - 1 ? "bottom" : "insideH");
         if (bottom is not null)
         {
             yield return bottom with { Edge = "bottom" };
         }
 
         DocxTableCellBorder? left = cellIndex == 0
-            ? FindBorder(tableBorders, "left") ?? FindBorder(tableBorders, "start")
-            : FindBorder(tableBorders, "insideV");
+            ? DocxTableBorderGeometry.Find(tableBorders, "left") ?? DocxTableBorderGeometry.Find(tableBorders, "start")
+            : DocxTableBorderGeometry.Find(tableBorders, "insideV");
         if (left is not null)
         {
             yield return left with { Edge = "left" };
         }
 
         DocxTableCellBorder? right = cellIndex == cellCount - 1
-            ? FindBorder(tableBorders, "right") ?? FindBorder(tableBorders, "end")
-            : FindBorder(tableBorders, "insideV");
+            ? DocxTableBorderGeometry.Find(tableBorders, "right") ?? DocxTableBorderGeometry.Find(tableBorders, "end")
+            : DocxTableBorderGeometry.Find(tableBorders, "insideV");
         if (right is not null)
         {
             yield return right with { Edge = "right" };
@@ -820,11 +820,6 @@ internal sealed partial class DocxReader
         {
             target[border.Edge] = border;
         }
-    }
-
-    private static DocxTableCellBorder? FindBorder(IReadOnlyList<DocxTableCellBorder> borders, string edge)
-    {
-        return borders.FirstOrDefault(border => string.Equals(border.Edge, edge, StringComparison.OrdinalIgnoreCase));
     }
 
     private static bool IsCanonicalCellBorderEdge(string edge)
