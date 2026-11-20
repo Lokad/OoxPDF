@@ -17,6 +17,7 @@ internal sealed partial class DocxReader
         IReadOnlyDictionary<string, OoxRelationship> relationships,
         DocxMarkupContext markupContext,
         OoxPdfDocxMarkupMode revisionFilteringMarkupMode,
+        int bodyEquationSourceCount,
         Action<OoxPdfDiagnostic>? diagnosticSink,
         HashSet<string> warnedParts,
         CancellationToken cancellationToken)
@@ -80,7 +81,7 @@ internal sealed partial class DocxReader
         }
         // RV09: static payload checks shared by the body document and related stories.
         // Related-story payloads render, so they diagnose with their own part provenance.
-        void EmitStaticPayloadDiagnostics(XDocument probeDocument, string probePartName)
+        void EmitStaticPayloadDiagnostics(XDocument probeDocument, string probePartName, int? knownEquationSourceCount = null)
         {
             foreach (XElement symbol in probeDocument.Descendants(WordprocessingNamespace + "sym"))
             {
@@ -101,7 +102,9 @@ internal sealed partial class DocxReader
             // A fully excluded story may have no parsed body at all. Filter at
             // the source probe too, rather than retaining empty layout stories
             // merely to suppress their later warning.
-            if (CountSelectedEquationSources(probeDocument, revisionFilteringMarkupMode, cancellationToken, out _) != 0)
+            int equationSourceCount = knownEquationSourceCount ??
+                CountSelectedEquationSources(probeDocument, revisionFilteringMarkupMode, cancellationToken, out _);
+            if (equationSourceCount != 0)
             {
                 Emit("DOCX_UNSUPPORTED_EQUATION", "equation", probePartName, "Ignored");
             }
@@ -190,7 +193,7 @@ internal sealed partial class DocxReader
                 fallback: markupContext.ApproximatesFormattingRevisions ? "Approximated" : "Ignored");
         }
 
-        EmitStaticPayloadDiagnostics(document, partName);
+        EmitStaticPayloadDiagnostics(document, partName, bodyEquationSourceCount);
 
         EmitDrawingPayloadDiagnostics(document, partName, relationships);
 

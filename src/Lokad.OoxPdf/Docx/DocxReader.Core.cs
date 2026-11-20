@@ -66,7 +66,7 @@ internal sealed partial class DocxReader
                     else { diagnosticSink?.Invoke(diagnostic); }
                 };
             }
-            EmitUnsupportedFeatureDiagnostics(package, document, documentPart.Name, relationships, markupContext, revisionFilteringMarkupMode, featureSink, warnedMustUnderstandParts, cancellationToken);
+            EmitUnsupportedFeatureDiagnostics(package, document, documentPart.Name, relationships, markupContext, revisionFilteringMarkupMode, equationSourceCount, featureSink, warnedMustUnderstandParts, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
 
             // Current sections belong to the body or a paragraph's properties.
