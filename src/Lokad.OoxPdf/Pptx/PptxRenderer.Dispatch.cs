@@ -7,85 +7,6 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    // Drop orphan image registrations from rewound nodes. Image references
-    // emit "/{name} Do", so the space guards prefix collisions (Im1 vs Im12).
-    // Conservative: a name that never appears is dropped; anything else stays.
-    internal static List<PdfImageResource> PruneUnreferencedImages(string content, List<PdfImageResource> images, CancellationToken cancellationToken = default)
-    {
-        if (images.Count == 0)
-        {
-            return images;
-        }
-
-        var wanted = new HashSet<string>(StringComparer.Ordinal);
-        foreach (PdfImageResource image in images)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            wanted.Add(PdfEmbeddedFont.SanitizeName(image.ResourceName));
-        }
-
-        var referenced = new HashSet<string>(StringComparer.Ordinal);
-        int position = 0;
-        while (position < content.Length)
-        {
-            if ((position & 4095) == 0)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-            }
-
-            if (content[position] != '/')
-            {
-                position++;
-                continue;
-            }
-
-            int tokenStart = position + 1;
-            int tokenEnd = tokenStart;
-            while (tokenEnd < content.Length && !char.IsWhiteSpace(content[tokenEnd]))
-            {
-                tokenEnd++;
-            }
-
-            if (tokenEnd < content.Length && content[tokenEnd] == ' ' && tokenEnd > tokenStart)
-            {
-                string token = content.Substring(tokenStart, tokenEnd - tokenStart);
-                if (wanted.Contains(token))
-                {
-                    referenced.Add(token);
-                    if (referenced.Count == wanted.Count)
-                    {
-                        break;
-                    }
-                }
-            }
-
-            position = tokenEnd + 1;
-        }
-
-        List<PdfImageResource>? pruned = null;
-        for (int i = 0; i < images.Count; i++)
-        {
-            if ((i & 63) == 0)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-            }
-
-            if (referenced.Contains(PdfEmbeddedFont.SanitizeName(images[i].ResourceName)))
-            {
-                if (pruned is not null)
-                {
-                    pruned.Add(images[i]);
-                }
-
-                continue;
-            }
-
-            pruned ??= images.Take(i).ToList();
-        }
-
-        return pruned ?? images;
-    }
-
     private static bool ShouldRenderSceneNode(PptxSceneNode node, bool renderPlaceholders)
     {
         return node.Kind != PptxSceneNodeKind.Shape || renderPlaceholders || !node.IsPlaceholder;
@@ -126,6 +47,8 @@ internal sealed partial class PptxRenderer
         {
             cancellationToken.ThrowIfCancellationRequested();
             PdfGraphicsBuilder.ContentMark contentMark = graphics.MarkContent();
+            // Image registrations are appended only when the image is painted.
+            int imageCount = images.Count;
             int annotationCount = linkAnnotations.Count;
             try
             {
@@ -178,6 +101,7 @@ internal sealed partial class PptxRenderer
             catch (Exception ex) when (IsRecoverableNodeRenderException(ex))
             {
                 graphics.TruncateContent(contentMark);
+                images.RemoveRange(imageCount, images.Count - imageCount);
                 linkAnnotations.RemoveRange(annotationCount, linkAnnotations.Count - annotationCount);
                 EmitNodeRenderFailureDiagnostic(node, ex);
             }

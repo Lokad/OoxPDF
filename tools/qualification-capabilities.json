@@ -15182,8 +15182,7 @@
     "SharedValidationDoesNotMergeSeparateResourceNamespaces",
     "GraphicsBuilderRejectsStrayRestoreBeforeChangingContent",
     "VectorSoftMasksAdmitOnceAndRollbackResourcesTogether",
-    "ShadingPatternsSnapshotAndRollbackWithFormResources",
-    "PruneScalesAcrossManyResources"
+    "ShadingPatternsSnapshotAndRollbackWithFormResources"
   ],
   "docx-delimiter-assemblies": [
     "MathFontVertical",
@@ -17253,9 +17252,6 @@
     "PptxTableGridProductBelowLimitPasses",
     "PresenceChecksMatchDensifiedResults",
     "PresenceChecksPreserveDenseCaps",
-    "PruneKeepsOnlyReferencedNamesWithPrefixGuard",
-    "PruneObservesCancellation",
-    "PruneScalesAcrossManyResources",
     "PublicApiPreservesOptionalRecordArguments",
     "PublicApiRejectsMissingInput",
     "PublicFontSourcesPreserveOptionalCancellationTokens",
@@ -19621,7 +19617,6 @@
     "PresenceChecksMatchDensifiedResults",
     "PresenceChecksPreserveDenseCaps",
     "PresentationFontResolverLoadsMemoryBackedFontSource",
-    "PruneUnreferencedImagesReturnsRetainedResourcesByIdentity",
     "RadarBuildSkipsValuelessVectors",
     "RadarDerivedDarkStopPaintsOfficeDarkBase",
     "RadarDerivedDarkStopsMatchOfficeExactly",

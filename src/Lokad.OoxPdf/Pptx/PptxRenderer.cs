@@ -97,10 +97,8 @@ internal sealed partial class PptxRenderer
             }
             imageIndex = await RenderOrderedSceneNodesAsync(context.SceneSlide.LayoutNodes, context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, linkAnnotations, reportedHyperlinkIds, context.LayoutPartName, context.LayoutColorMap, imageIndex, GroupTransform.Identity, renderPlaceholders: false, cancellationToken: cancellationToken).ConfigureAwait(false);
             imageIndex = await RenderOrderedSceneNodesAsync(context.SceneSlide.SlideNodes, context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, linkAnnotations, reportedHyperlinkIds, context.SlidePartName, context.SlideColorMap, imageIndex, GroupTransform.Identity, renderPlaceholders: true, cancellationToken: cancellationToken).ConfigureAwait(false);
-            // Drop orphan resources left by rewound nodes. The graphics builder
-            // rolls back emitted font names together with the content.
+            cancellationToken.ThrowIfCancellationRequested();
             string content = graphics.ToString();
-            List<PdfImageResource> pageImages = PruneUnreferencedImages(content, orderedImages, context.CancellationToken);
             IReadOnlySet<string> usedFonts = graphics.UsedFontResourceNames;
             var pageFonts = new List<PdfFontResource>(renderedFonts.Resources);
             foreach (PdfFontResource font in orderedChartFonts)
@@ -116,7 +114,7 @@ internal sealed partial class PptxRenderer
             // content budget rejects before the writer encodes or stores the page.
             OoxConversionBudget.Current?.ChargePdfContentBytes(content.Length);
             yield return new PdfPage(context.Document.SlideWidthPoints, context.Document.SlideHeightPoints, content,
-                pageFonts, pageImages, graphics.ExtGStates.ToArray(), graphics.Shadings.ToArray(), graphics.Patterns.ToArray(),
+                pageFonts, orderedImages, graphics.ExtGStates.ToArray(), graphics.Shadings.ToArray(), graphics.Patterns.ToArray(),
                 linkAnnotations, fallbackFonts, graphics.Groups.ToArray(), graphics.ShadingPatterns.ToArray());
         }
     }

@@ -174,19 +174,6 @@ internal static class PptxCompositionTests
             "Graceful gradient fallback must not fail the picture node.");
     }
 
-    public static void PruneUnreferencedImagesReturnsRetainedResourcesByIdentity()
-    {
-        var kept = new PdfImageResource("Im1", PdfImageXObject.Jpeg(2, 1, [1, 2, 3], 3, 8));
-        var dropped = new PdfImageResource("Im12", PdfImageXObject.Jpeg(2, 1, [4, 5, 6], 3, 8));
-        List<PdfImageResource> images = PptxRenderer.PruneUnreferencedImages("q /Im1 Do Q", [kept, dropped]);
-
-        TestAssert.Equal(1, images.Count);
-        TestAssert.True(ReferenceEquals(kept, images[0]), "Referenced images must survive pruning by identity.");
-
-        var all = new List<PdfImageResource> { kept };
-        TestAssert.True(ReferenceEquals(all, PptxRenderer.PruneUnreferencedImages("/Im1 Do", all)), "Fully referenced lists must pass through untouched.");
-    }
-
     public static void PptxGroupHyperlinkSurvivesDiagnosedChildFallback()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
