@@ -16,6 +16,13 @@ internal static class TestRunner
     {
         Dictionary<string, string?>? options = ReadOptions(args);
         if (options is null) return 1;
+        bool list = options.ContainsKey("--list");
+        if (list && options.ContainsKey("--report"))
+        {
+            Console.WriteLine("--list and --report cannot be combined.");
+            return 1;
+        }
+
         TestCase[] testCases = tests.ToArray();
         int passed = 0;
         int failed = 0;
@@ -27,7 +34,6 @@ internal static class TestRunner
             Console.WriteLine("Conflicting options: --skip-slow and --only-slow cannot be combined.");
             return 1;
         }
-        bool list = options.ContainsKey("--list");
         string? group = options.GetValueOrDefault("--group");
         string? name = options.GetValueOrDefault("--test");
         string? testSetPath = options.GetValueOrDefault("--test-set");

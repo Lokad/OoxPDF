@@ -72,6 +72,16 @@ internal static class TestRunnerTests
         {
             string set = Path.Combine(directory, "exact methods.json");
             string report = Path.Combine(directory, "report.json");
+            var listWithReport = RunCaptured(["--list", "--report", report], UnexpectedEnumeration());
+            TestAssert.Equal(1, listWithReport.ExitCode);
+            TestAssert.Contains("--list and --report cannot be combined", listWithReport.Output);
+            TestAssert.True(!File.Exists(report), "Listing with reporting must not create a report.");
+
+            File.WriteAllText(report, "previous report");
+            var reportWithList = RunCaptured(["--report", report, "--list"], UnexpectedEnumeration());
+            TestAssert.Equal(1, reportWithList.ExitCode);
+            TestAssert.Equal("previous report", File.ReadAllText(report));
+
             File.WriteAllText(set, JsonSerializer.Serialize(new[] { second.Method.Name }));
             TestAssert.Equal(0, RunCaptured(["--test-set", set, "--report", report], catalog).ExitCode);
             TestAssert.True(calls.SequenceEqual([2]), "An exact set executes only its named method.");
