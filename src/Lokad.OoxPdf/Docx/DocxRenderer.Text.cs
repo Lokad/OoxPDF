@@ -298,92 +298,58 @@ internal sealed partial class DocxRenderer
             }
         }
 
-        if (line.EndsWithIntraTokenBreak)
+        if (line.EndsWithIntraTokenBreak || segments.Count == 0)
         {
             return emissionSegments;
         }
 
         if (line.EmitsTerminalParagraphMark)
         {
-        void AddTerminalLineSpace()
-        {
-            if (segments.Count == 0)
-            {
-                return;
-            }
-    
             DocxTextSegmentLayout segment = segments[^1];
             DocxRunFontResource? resource = ResolveFontResource(segment.StyleRun, fontResources);
-            fontResources.FallbackFaces.TryGetValue(segment.StyleRun, out PdfFallbackFontResource? terminalFallbackFace);
-            if (resource is null && terminalFallbackFace is null)
+            fontResources.FallbackFaces.TryGetValue(segment.StyleRun, out PdfFallbackFontResource? fallbackFace);
+            if (resource is not null || fallbackFace is not null)
             {
-                return;
+                AddTerminalLineSpace(segment, resource, fallbackFace);
             }
-    
-            double fontSize = ResolveTerminalLineSpaceFontSize(segment, line, fontScale, useWordCompatibleTextProfile);
-            double baselineY = GetSegmentBaselineY(segment, line.BaselineY) - baselineOffsetY;
-            DocxEffectiveRunProperties effective = segment.StyleRun.EffectiveProperties;
-            emissionSegments.Add(new DocxTextEmissionSegment(
-                " ",
-                segment.StyleRun,
-                resource,
-                ResolveRunTextColor(effective, background),
-                ResolveTerminalLineSpaceX(segments, line, fontResources, fontScale, xOffset, useWordCompatibleTextProfile, cancellationToken),
-                baselineY,
-                0d,
-                fontSize,
-                PdfCharacterSpacing: 0d,
-                PdfCharacterSpacingSource: DocxTextStateCharacterSpacingSource.TerminalLineSpace,
-                CompensatePdfCharacterSpacing: true,
-                SyntheticBold: false,
-                SyntheticItalic: resource is not null && effective.Italic && !resource.Resolution.Italic,
-                IsTerminalLineSpace: true,
-                segment.SourceTextRunIndex,
-                segment.SourceTextOffsetInRun + segment.Text.Length,
-                segment.Role,
-                FallbackFace: terminalFallbackFace,
-                FontScale: fontScale));
-        }
-
-            AddTerminalLineSpace();
             return emissionSegments;
         }
 
         for (int i = segments.Count - 1; i >= 0; i--)
         {
             DocxTextSegmentLayout segment = segments[i];
-            if (string.IsNullOrEmpty(segment.Text) || string.IsNullOrWhiteSpace(segment.Text))
+            if (string.IsNullOrWhiteSpace(segment.Text))
             {
                 continue;
             }
 
-            if (char.IsWhiteSpace(segment.Text[^1]))
+            if (!char.IsWhiteSpace(segment.Text[^1]) && ResolveFontResource(segment.StyleRun, fontResources) is { } resource)
             {
-                return emissionSegments;
+                AddTerminalLineSpace(segment, resource, fallbackFace: null);
             }
+            break;
+        }
 
-            DocxRunFontResource? resource = ResolveFontResource(segment.StyleRun, fontResources);
-            if (resource is null)
-            {
-                return emissionSegments;
-            }
+        return emissionSegments;
 
-            double fontSize = ResolveTerminalLineSpaceFontSize(segment, line, fontScale, useWordCompatibleTextProfile);
-            double baselineY = GetSegmentBaselineY(segment, line.BaselineY) - baselineOffsetY;
+        void AddTerminalLineSpace(DocxTextSegmentLayout segment, DocxRunFontResource? resource, PdfFallbackFontResource? fallbackFace)
+        {
             DocxEffectiveRunProperties effective = segment.StyleRun.EffectiveProperties;
-            RgbColor color = ResolveTextEmissionColor(
-                segment.StyleRun,
-                useWordCompatibleTextProfile,
-                ResolveRunTextColor(effective, background), segment.Role);
+            RgbColor color = ResolveRunTextColor(effective, background);
+            if (!line.EmitsTerminalParagraphMark)
+            {
+                color = ResolveTextEmissionColor(segment.StyleRun, useWordCompatibleTextProfile, color, segment.Role);
+            }
+
             emissionSegments.Add(new DocxTextEmissionSegment(
                 " ",
                 segment.StyleRun,
                 resource,
                 color,
                 ResolveTerminalLineSpaceX(segments, line, fontResources, fontScale, xOffset, useWordCompatibleTextProfile, cancellationToken),
-                baselineY,
+                GetSegmentBaselineY(segment, line.BaselineY) - baselineOffsetY,
                 0d,
-                fontSize,
+                ResolveTerminalLineSpaceFontSize(segment, line, fontScale, useWordCompatibleTextProfile),
                 PdfCharacterSpacing: 0d,
                 PdfCharacterSpacingSource: DocxTextStateCharacterSpacingSource.TerminalLineSpace,
                 CompensatePdfCharacterSpacing: true,
@@ -393,12 +359,9 @@ internal sealed partial class DocxRenderer
                 segment.SourceTextRunIndex,
                 segment.SourceTextOffsetInRun + segment.Text.Length,
                 segment.Role,
-                FallbackFace: null,
+                FallbackFace: fallbackFace,
                 FontScale: fontScale));
-            break;
         }
-
-        return emissionSegments;
     }
 
     private static RgbColor ResolvePaintedRevisionColor(DocxTextEmissionSegment segment, DocxMarkupContext context)

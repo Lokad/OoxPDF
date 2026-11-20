@@ -315,19 +315,6 @@ internal static class DocxCoreTests
         TestAssert.True(!plan.CompensatePdfCharacterSpacing, "Numbered labels use PDF Tc as emitted text state, not as a compensated layout offset.");
     }
 
-    public static void DocxTextEmissionPlannerForcesTerminalLineSpacesToNeutralTc()
-    {
-        var run = new DocxTextRun("Body", 11d, null, false, false, false, null, null, 0.25d);
-
-        DocxTextEmissionPlan plan = DocxTextEmissionPlanner.CreateTerminalLineSpace(run, 11d);
-
-        TestAssert.Equal(11.04d, plan.PdfFontSize);
-        TestAssert.Equal(0d, plan.PdfCharacterSpacing);
-        TestAssert.Equal(0.25d, plan.PositioningCharacterSpacing);
-        TestAssert.Equal(DocxTextStateCharacterSpacingSource.TerminalLineSpace, plan.PdfCharacterSpacingSource);
-        TestAssert.True(plan.CompensatePdfCharacterSpacing, "Terminal spaces should stay eligible for authored positioning while emitting neutral PDF Tc.");
-    }
-
     public static void DocxTextEmissionPlannerOwnsTerminalSegmentPlanOverride()
     {
         var run = new DocxTextRun("Body", 11d, null, false, false, false, null, null, 0.25d);
@@ -350,6 +337,7 @@ internal static class DocxCoreTests
         TestAssert.Equal(0.05d, textPlan.PdfCharacterSpacing);
         TestAssert.Equal(DocxTextStateCharacterSpacingSource.AdvanceTarget, textPlan.PdfCharacterSpacingSource);
         TestAssert.True(!textPlan.CompensatePdfCharacterSpacing, "Non-terminal segments should preserve the caller's compensation mode.");
+        TestAssert.Equal(11.04d, terminalPlan.PdfFontSize);
         TestAssert.Equal(0d, terminalPlan.PdfCharacterSpacing);
         TestAssert.Equal(DocxTextStateCharacterSpacingSource.TerminalLineSpace, terminalPlan.PdfCharacterSpacingSource);
         TestAssert.True(terminalPlan.CompensatePdfCharacterSpacing, "Terminal spaces should always be planned through the neutral terminal-space path.");

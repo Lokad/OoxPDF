@@ -2659,10 +2659,14 @@ internal static class DocxPageTests
         // This emission contract requires an embedded font, including on Linux.
         var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(),
             OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
-        DocxTextEmissionSnapshot emission = renderer.InspectTextEmission(document);
-        DocxTextEmissionLineSnapshot markerLine = emission.Lines.Single(line => line.SourceBlockIndex == 0 && line.SourceLineIndex == 0);
-        TestAssert.Equal(1, markerLine.TerminalSpaceSegmentCount);
-        TestAssert.Equal(14d, markerLine.Segments[markerLine.Segments.Count - 1].FontSize);
+        PdfPage page = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
+        double markSize = OfficePdfTextEmissionProfile.FontSize(14d);
+        TestAssert.Equal(1, DocxCommentsTests.ReadEmbeddedGlyphTextShows(page)
+            .Count(show => show.Text == " " && Math.Abs(show.Size - markSize) < 0.001d));
+        string markFont = " " + markSize.ToString("0.###", CultureInfo.InvariantCulture) + " Tf";
+        string markPaint = Regex.Matches(page.Content, @"(?ms)^BT\r?\n.*?^ET\r?$")
+            .Select(match => match.Value).Single(block => block.Contains(markFont, StringComparison.Ordinal));
+        TestAssert.True(Regex.IsMatch(markPaint, @"(?m)^0 Tc\r?$"), "The pilcrow-sized terminal space must paint with neutral Tc.");
     }
 
     public static void DocxBodyFirstBaselineFollowsTierAMax()

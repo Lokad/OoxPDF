@@ -120,17 +120,6 @@ internal static class DocxTextEmissionPlanner
         };
     }
 
-    public static DocxTextEmissionPlan CreateTerminalLineSpace(DocxTextRun style, double layoutFontSize, double fontScale = 1d)
-    {
-        return Create(
-            style,
-            layoutFontSize,
-            pdfCharacterSpacing: 0d,
-            compensatePdfCharacterSpacing: true,
-            DocxTextStateCharacterSpacingSource.TerminalLineSpace,
-            fontScale);
-    }
-
     public static DocxTextEmissionPlan CreateForEmissionSegment(
         DocxTextEmissionSegment segment)
     {
@@ -168,7 +157,8 @@ internal static class DocxTextEmissionPlanner
         double fontScale = 1d)
     {
         var plan = isTerminalLineSpace
-            ? CreateTerminalLineSpace(style, layoutFontSize, fontScale)
+            ? Create(style, layoutFontSize, pdfCharacterSpacing: 0d, compensatePdfCharacterSpacing: true,
+                DocxTextStateCharacterSpacingSource.TerminalLineSpace, fontScale)
             : Create(style, layoutFontSize, pdfCharacterSpacing, compensatePdfCharacterSpacing, source, fontScale);
         var advances = DocxTextAdvances.Resolve(style);
         return plan with { PairKerningEnabled = advances.PairKerningEnabled,
