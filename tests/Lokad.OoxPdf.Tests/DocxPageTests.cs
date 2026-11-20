@@ -1102,6 +1102,7 @@ internal static class DocxPageTests
                 "<w:sdt><w:sdtPr/><w:sdtContent><w:customXml><w:customXmlPr/>" + permissions + "</w:customXml></w:sdtContent><w:sdtEndPr/></w:sdt>",
                 "<w:ins w:id=\"29\" w:author=\"Public probe\"/>" + run +
                     "<w:del w:id=\"30\" w:author=\"Public probe\"><w:proofErr w:type=\"spellStart\"/></w:del>",
+                "<w:r><w:rPr><w:vanish/></w:rPr><w:br w:type=\"" + breakType + "\"/></w:r>" + run,
                 "<w:bookmarkStart w:id=\"28\" w:name=\"Break\"/><w:proofErr w:type=\"spellStart\"/>" + run + "<w:bookmarkEnd w:id=\"28\"/>",
                 "<w:r><w:lastRenderedPageBreak/></w:r>" +
                     run.Replace("</w:r>", "<w:lastRenderedPageBreak/></w:r>", StringComparison.Ordinal)

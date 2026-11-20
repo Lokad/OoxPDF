@@ -481,13 +481,13 @@ internal sealed partial class DocxReader
             if (child.Name == WordprocessingNamespace + "p")
             {
                 var leadingBookmarks = scopedChild.LeadingBookmarks;
-                bool VisibleBreak(XElement source) => IsPageOrColumnBreak(source) &&
-                    !IsHiddenRunBreak(source, styles, tableCellStyle);
+                bool HiddenBreak(XElement source) => IsHiddenHardRunBreak(source, styles, tableCellStyle);
+                bool VisibleBreak(XElement source) => IsPageOrColumnBreak(source) && !HiddenBreak(source);
                 bool VisiblePageBreak(XElement source) => IsPageBreak(source) && VisibleBreak(source);
                 // Inline page/column tokens are transparent inside a cell. Keep
                 // the source paragraph intact before preparation. A standalone
                 // page-break paragraph retains the existing spill/flow handling.
-                if (IsRunBreakOnlyParagraph(child, VisibleBreak, markupMode) &&
+                if (IsRunBreakOnlyParagraph(child, VisibleBreak, HiddenBreak, markupMode) &&
                     child.Elements().Any(element => HasVisibleRunBreak(element, VisiblePageBreak, markupMode)))
                 {
                     XElement? paragraphProperties = child.Element(WordprocessingNamespace + "pPr");
@@ -495,8 +495,8 @@ internal sealed partial class DocxReader
                     var resolvedParagraph = ResolveParagraphProperties(paragraphProperties, paragraphStyleId, styles, tableCellStyle.Paragraph);
                     var sourceNumbering = ResolveParagraphNumbering(paragraphProperties, resolvedParagraph, paragraphStyleId, styles, numbering, cancellationToken);
                     bool hasListMarker = sourceNumbering is { } source && !string.IsNullOrWhiteSpace(source.Definition.Text);
-                    foreach (ParagraphBreakPart part in SplitParagraphAtRunBreaks(child, markupMode,
-                        isBreak: VisiblePageBreak, retainFirstLine: hasListMarker))
+                    foreach (ParagraphBreakPart part in SplitParagraphAtRunBreaks(child, markupMode, VisiblePageBreak,
+                        HiddenBreak, retainFirstLine: hasListMarker))
                     {
                         cancellationToken.ThrowIfCancellationRequested();
                         if (part.BreakValue is not null)

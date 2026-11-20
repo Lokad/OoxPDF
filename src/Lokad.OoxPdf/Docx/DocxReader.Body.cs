@@ -63,8 +63,8 @@ internal sealed partial class DocxReader
             if (element.Name == WordprocessingNamespace + "p")
             {
                 var leadingBookmarks = scopedElement.LeadingBookmarks;
-                bool VisibleBreak(XElement source) => IsPageOrColumnBreak(source) &&
-                    !IsHiddenRunBreak(source, styles, null);
+                bool HiddenBreak(XElement source) => IsHiddenHardRunBreak(source, styles, null);
+                bool VisibleBreak(XElement source) => IsPageOrColumnBreak(source) && !HiddenBreak(source);
                 bool VisiblePageBreak(XElement source) => IsPageBreak(source) && VisibleBreak(source);
                 bool VisibleColumnBreak(XElement source) => IsColumnBreak(source) && VisibleBreak(source);
                 XElement? paragraphProperties = element.Element(WordprocessingNamespace + "pPr");
@@ -90,7 +90,7 @@ internal sealed partial class DocxReader
                 var sourceNumbering = hasVisibleBreak ? ResolveParagraphNumbering(paragraphProperties, resolvedParagraph,
                     paragraphStyleId, styles, numbering, cancellationToken) : null;
                 bool hasListMarker = sourceNumbering is { } source && !string.IsNullOrWhiteSpace(source.Definition.Text);
-                if (!hasListMarker && IsRunBreakOnlyParagraph(element, VisiblePageBreak, markupMode))
+                if (!hasListMarker && IsRunBreakOnlyParagraph(element, VisiblePageBreak, HiddenBreak, markupMode))
                 {
                     DocxParagraph? breakParagraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, tableCellStyle: null, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken,
                         leadingBookmarks: leadingBookmarks);
@@ -105,7 +105,7 @@ internal sealed partial class DocxReader
                     continue;
                 }
 
-                if (!hasListMarker && IsRunBreakOnlyParagraph(element, VisibleColumnBreak, markupMode))
+                if (!hasListMarker && IsRunBreakOnlyParagraph(element, VisibleColumnBreak, HiddenBreak, markupMode))
                 {
                     DocxParagraph? breakParagraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, tableCellStyle: null, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken,
                         leadingBookmarks: leadingBookmarks);
@@ -126,8 +126,8 @@ internal sealed partial class DocxReader
                         EnumerateSplitFloatingAnchors(element).GetEnumerator();
                     bool matchesSourceAnchors = sourceAnchors is not null;
                     var bookmarksForFragment = leadingBookmarks;
-                    foreach (ParagraphBreakPart part in SplitParagraphAtRunBreaks(element, markupMode,
-                        retainEmptyColumnTail: true, isBreak: VisibleBreak, retainFirstLine: hasListMarker))
+                    foreach (ParagraphBreakPart part in SplitParagraphAtRunBreaks(element, markupMode, VisibleBreak,
+                        HiddenBreak, retainEmptyColumnTail: true, retainFirstLine: hasListMarker))
                     {
                         cancellationToken.ThrowIfCancellationRequested();
                         if (part.BreakValue is not null)
@@ -520,9 +520,8 @@ internal sealed partial class DocxReader
     }
 
     private static IReadOnlyList<ParagraphBreakPart> SplitParagraphAtRunBreaks(XElement paragraph, OoxPdfDocxMarkupMode markupMode,
-        bool retainEmptyColumnTail = false, Func<XElement, bool>? isBreak = null, bool retainFirstLine = false)
+        Func<XElement, bool> isBreak, Func<XElement, bool> isHiddenBreak, bool retainEmptyColumnTail = false, bool retainFirstLine = false)
     {
-        isBreak ??= IsPageOrColumnBreak;
         var parts = new List<ParagraphBreakPart>();
         var currentChildren = new List<XElement>();
         XElement? paragraphProperties = paragraph.Element(WordprocessingNamespace + "pPr");
@@ -554,15 +553,16 @@ internal sealed partial class DocxReader
             startsAfterBreak = false;
         }
 
-        foreach (XElement child in EnumerateBreakSplitChildren(paragraph, markupMode))
+        foreach (XElement child in EnumerateBreakSplitChildren(paragraph, isHiddenBreak, markupMode))
         {
             if (child.Name == WordprocessingNamespace + "pPr")
             {
                 continue;
             }
 
-            if (TrySplitRunBreakContainer(child, currentChildren, AddParagraphPart, parts, ref startsAfterBreak, markupMode, isBreak))
+            if (IsVisibleRunContainer(child, markupMode) && HasVisibleRunBreak(child, isBreak, markupMode))
             {
+                SplitRunBreakContainer(child, currentChildren, AddParagraphPart, parts, ref startsAfterBreak, markupMode, isBreak, isHiddenBreak);
                 continue;
             }
 
@@ -572,28 +572,11 @@ internal sealed partial class DocxReader
                 continue;
             }
 
-            SplitRunAtBreaks(child, currentChildren, AddParagraphPart, parts, ref startsAfterBreak, isBreak);
+            SplitRunAtBreaks(child, currentChildren, AddParagraphPart, parts, ref startsAfterBreak, isBreak, isHiddenBreak);
         }
 
         AddParagraphPart(endsBeforeBreak: false);
         return parts;
-    }
-
-    private static bool TrySplitRunBreakContainer(
-        XElement child,
-        List<XElement> paragraphChildren,
-        Action<bool> addParagraphPart,
-        List<ParagraphBreakPart> parts,
-        ref bool startsAfterBreak,
-        OoxPdfDocxMarkupMode markupMode, Func<XElement, bool> isBreak)
-    {
-        if (!IsVisibleRunContainer(child, markupMode) || !HasVisibleRunBreak(child, isBreak, markupMode))
-        {
-            return false;
-        }
-
-        SplitRunBreakContainer(child, paragraphChildren, addParagraphPart, parts, ref startsAfterBreak, markupMode, isBreak);
-        return true;
     }
 
     private static void SplitRunBreakContainer(
@@ -602,7 +585,7 @@ internal sealed partial class DocxReader
         Action<bool> flushOwnerAndParagraph,
         List<ParagraphBreakPart> parts,
         ref bool startsAfterBreak,
-        OoxPdfDocxMarkupMode markupMode, Func<XElement, bool> isBreak)
+        OoxPdfDocxMarkupMode markupMode, Func<XElement, bool> isBreak, Func<XElement, bool> isHiddenBreak)
     {
         var containerChildren = new List<XElement>();
 
@@ -612,13 +595,14 @@ internal sealed partial class DocxReader
             flushOwnerAndParagraph(endsBeforeBreak);
         }
 
-        foreach (XElement containerChild in EnumerateBreakSplitChildren(sourceContainer, markupMode))
+        foreach (XElement containerChild in EnumerateBreakSplitChildren(sourceContainer, isHiddenBreak, markupMode))
         {
             if (containerChild.Name != WordprocessingNamespace + "r")
             {
                 if (IsVisibleRunContainer(containerChild, markupMode) && HasVisibleRunBreak(containerChild, isBreak, markupMode))
                 {
-                    SplitRunBreakContainer(containerChild, containerChildren, FlushThisContainerAndParagraph, parts, ref startsAfterBreak, markupMode, isBreak);
+                    SplitRunBreakContainer(containerChild, containerChildren, FlushThisContainerAndParagraph, parts, ref startsAfterBreak,
+                        markupMode, isBreak, isHiddenBreak);
                 }
                 else
                 {
@@ -628,22 +612,24 @@ internal sealed partial class DocxReader
                 continue;
             }
 
-            SplitRunAtBreaks(containerChild, containerChildren, FlushThisContainerAndParagraph, parts, ref startsAfterBreak, isBreak);
+            SplitRunAtBreaks(containerChild, containerChildren, FlushThisContainerAndParagraph, parts, ref startsAfterBreak, isBreak, isHiddenBreak);
         }
 
         AddContainerPart(ownerChildren, sourceContainer, containerChildren);
     }
 
-    private static IEnumerable<XElement> EnumerateBreakSplitChildren(XElement owner, OoxPdfDocxMarkupMode markupMode) =>
-        DocxSourceXml.StoredChildren(owner).Where(child => HasBreakSplitPayload(child, markupMode));
+    private static IEnumerable<XElement> EnumerateBreakSplitChildren(XElement owner, Func<XElement, bool> isHiddenBreak,
+        OoxPdfDocxMarkupMode markupMode) =>
+        DocxSourceXml.StoredChildren(owner).Where(child => HasBreakSplitPayload(child, isHiddenBreak, markupMode));
 
     // Revisions need stored payload too, but their authored runs can own revision
     // state without visible text. Fields and annotation boundaries remain owners.
-    private static bool HasBreakSplitPayload(XElement child, OoxPdfDocxMarkupMode markupMode, bool preserveRevisionRuns = false)
+    private static bool HasBreakSplitPayload(XElement child, Func<XElement, bool> isHiddenBreak,
+        OoxPdfDocxMarkupMode markupMode, bool preserveRevisionRuns = false)
     {
         if (child.Name == WordprocessingNamespace + "r")
         {
-            return preserveRevisionRuns || EnumerateBreakSplitRunChildren(child).Any();
+            return preserveRevisionRuns || EnumerateBreakSplitRunChildren(child, isHiddenBreak).Any();
         }
 
         bool isRevision = IsRevisionContainer(child);
@@ -654,7 +640,8 @@ internal sealed partial class DocxReader
 
         if (isRevision || DocxSourceXml.IsTransparentInlineContainer(child) || child.Name == WordprocessingNamespace + "hyperlink")
         {
-            return DocxSourceXml.StoredChildren(child).Any(nested => HasBreakSplitPayload(nested, markupMode, preserveRevisionRuns || isRevision));
+            return DocxSourceXml.StoredChildren(child)
+                .Any(nested => HasBreakSplitPayload(nested, isHiddenBreak, markupMode, preserveRevisionRuns || isRevision));
         }
 
         return !DocxSourceXml.IsNonPrintingMarker(child);
@@ -675,7 +662,7 @@ internal sealed partial class DocxReader
 
     private static void SplitRunAtBreaks(XElement run, List<XElement> ownerChildren,
         Action<bool> flushOwnerAndParagraph, List<ParagraphBreakPart> parts, ref bool startsAfterBreak,
-        Func<XElement, bool> isBreak)
+        Func<XElement, bool> isBreak, Func<XElement, bool> isHiddenBreak)
     {
         XElement? properties = run.Element(WordprocessingNamespace + "rPr");
         var content = new List<XElement>();
@@ -690,7 +677,7 @@ internal sealed partial class DocxReader
             }
         }
 
-        foreach (XElement child in EnumerateBreakSplitRunChildren(run))
+        foreach (XElement child in EnumerateBreakSplitRunChildren(run, isHiddenBreak))
         {
             if (child.Name != WordprocessingNamespace + "br" || !isBreak(child))
             {
@@ -706,14 +693,18 @@ internal sealed partial class DocxReader
         AddRunPart();
     }
 
-    // The cached position has no run payload and cannot create a fragment before
-    // an authored break.
-    private static IEnumerable<XElement> EnumerateBreakSplitRunChildren(XElement run) =>
+    // Cached positions and hidden hard breaks contribute no fragment payload.
+    private static IEnumerable<XElement> EnumerateBreakSplitRunChildren(XElement run, Func<XElement, bool> isHiddenBreak) =>
         run.Elements().Where(child => child.Name != WordprocessingNamespace + "rPr" &&
-            !DocxSourceXml.IsLastRenderedPageBreakHint(child));
+            !DocxSourceXml.IsLastRenderedPageBreakHint(child) && !isHiddenBreak(child));
 
-    private static bool IsHiddenRunBreak(XElement source, DocxStyleSet styles, DocxTableCellStyle? tableStyle)
+    private static bool IsHiddenHardRunBreak(XElement source, DocxStyleSet styles, DocxTableCellStyle? tableStyle)
     {
+        if (source.Name != WordprocessingNamespace + "br" || !IsPageOrColumnBreak(source))
+        {
+            return false;
+        }
+
         // Structural admission uses the same resolved visibility as literal run
         // layout, including inherited styles and explicit visible overrides.
         XElement run = source.Parent!;
@@ -723,7 +714,8 @@ internal sealed partial class DocxReader
             ReadEffectiveParagraphStyleId(properties, styles), ReadCharacterStyleId(run), styles, tableStyle?.Run, out _).Hidden == true;
     }
 
-    private static bool IsRunBreakOnlyParagraph(XElement paragraph, Func<XElement, bool> isBreak, OoxPdfDocxMarkupMode markupMode)
+    private static bool IsRunBreakOnlyParagraph(XElement paragraph, Func<XElement, bool> isBreak, Func<XElement, bool> isHiddenBreak,
+        OoxPdfDocxMarkupMode markupMode)
     {
         bool hasBreak = paragraph
             .Elements()
@@ -735,7 +727,7 @@ internal sealed partial class DocxReader
 
         return paragraph.Elements().All(element =>
             element.Name == WordprocessingNamespace + "pPr" ||
-            IsBreakOnlyInlineElement(element, isBreak, markupMode));
+            IsBreakOnlyInlineElement(element, isBreak, isHiddenBreak, markupMode));
     }
 
     private static bool HasVisibleRunBreak(XElement element, Func<XElement, bool> isBreak, OoxPdfDocxMarkupMode markupMode)
@@ -753,15 +745,16 @@ internal sealed partial class DocxReader
             : [];
     }
 
-    private static bool IsBreakOnlyInlineElement(XElement element, Func<XElement, bool> isBreak, OoxPdfDocxMarkupMode markupMode)
+    private static bool IsBreakOnlyInlineElement(XElement element, Func<XElement, bool> isBreak, Func<XElement, bool> isHiddenBreak,
+        OoxPdfDocxMarkupMode markupMode)
     {
         if (element.Name == WordprocessingNamespace + "r")
         {
-            return EnumerateBreakSplitRunChildren(element).All(child =>
+            return EnumerateBreakSplitRunChildren(element, isHiddenBreak).All(child =>
                 child.Name == WordprocessingNamespace + "br" && isBreak(child));
         }
 
-        if (!HasBreakSplitPayload(element, markupMode) ||
+        if (!HasBreakSplitPayload(element, isHiddenBreak, markupMode) ||
             element.Name == WordprocessingNamespace + "bookmarkStart" ||
             element.Name == WordprocessingNamespace + "bookmarkEnd" ||
             element.Name == WordprocessingNamespace + "commentRangeStart" ||
@@ -771,7 +764,7 @@ internal sealed partial class DocxReader
         }
 
         return IsVisibleRunContainer(element, markupMode) &&
-            DocxSourceXml.StoredChildren(element).All(child => IsBreakOnlyInlineElement(child, isBreak, markupMode));
+            DocxSourceXml.StoredChildren(element).All(child => IsBreakOnlyInlineElement(child, isBreak, isHiddenBreak, markupMode));
     }
 
     private static bool IsPageOrColumnBreak(XElement breakElement)

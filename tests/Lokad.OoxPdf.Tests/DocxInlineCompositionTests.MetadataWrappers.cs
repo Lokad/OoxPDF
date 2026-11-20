@@ -147,6 +147,7 @@ internal static partial class DocxInlineCompositionTests
 
             if (mode == OoxPdfDocxMarkupMode.Original)
             {
+                CheckNonprinting(Render("hidden-break"));
                 CheckNonprinting(Render("excluded-insertion"));
                 CheckNonprinting(Render("excluded-move", includeDrawings: true));
                 PdfPage[] deletion = Render("selected-deletion", retainLeadingFragment: true);
@@ -243,6 +244,8 @@ internal static partial class DocxInlineCompositionTests
                             new XElement(w + "proofErr", new XAttribute(w + "type", "spellStart")))), run],
                         "visible-revision" => [Revision("ins", new XElement(w + "r", new XElement(w + "t", "VISIBLE REVISION"))), run],
                         "empty-revision-run" => [Revision("ins", ContentControl(new XElement(w + "r"))), run],
+                        "hidden-break" => [ContentControl(new XElement(w + "r", new XElement(w + "rPr", new XElement(w + "vanish")),
+                            new XElement(w + "br", new XAttribute(w + "type", type)))), run],
                         "excluded-insertion" => [Revision("ins", new XElement(w + "r", new XElement(w + "t", "EXCLUDED INSERTION"))), run],
                         "excluded-move" => [ContentControl(Revision("moveTo", new XElement(w + "r",
                             new XElement(w + "t", "EXCLUDED MOVE"), new XElement(w + "br", new XAttribute(w + "type", type)),
