@@ -56,6 +56,8 @@ for a coherent batch. Harness-only repairs can reuse unchanged production bytes;
 added public fixtures enter a new snapshot, while modified/deleted existing inputs
 are refused. Report joins require identical complete input identities and
 affected reports that identify the declared frozen library and test assembly.
+Each retained skip must be allowed by its producing selection. A check that
+failed in any attempt still needs a later pass.
 The freeze records the SDK source revision embedded in each primary assembly.
 The test assembly must match the checkout revision. Older production binaries
 require matching production sources and build inputs at their embedded revisions.

@@ -77,6 +77,7 @@ if (!$last.TestAssemblySha256 -or $last.TestAssemblySha256 -ne $pins[$attempts[-
 $rows=[Collections.Generic.Dictionary[string,object]]::new([StringComparer]::Ordinal)
 $initialFailures=[Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
 $observedFailures=[Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+$unexpectedSkips=[Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
 $sources=@();$methodAttempts=0
 foreach ($attempt in $attempts) {
     $reportHash=(Get-FileHash -LiteralPath $attempt.Report).Hash
@@ -98,6 +99,13 @@ foreach ($attempt in $attempts) {
         if ($test.outcome -eq 'failed') {
             $null=$observedFailures.Add($test.name)
             if (!$attempt.Repair) { $null=$initialFailures.Add($test.name) }
+        }
+        # Apply the producing selection's skip policy to the retained row.
+        # A report without a fast-group union validates skips for every method.
+        $null=$unexpectedSkips.Remove($test.name)
+        if ($test.outcome -eq 'skipped' -and $test.name -cnotin $report.provenance.ExpectedSkips -and
+            ($null -eq $report.provenance.SkipValidationMethods -or $test.name -cin $report.provenance.SkipValidationMethods)) {
+            $null=$unexpectedSkips.Add($test.name)
         }
         $counts[$test.outcome]++;$methodAttempts++
         $row=[ordered]@{}
@@ -122,6 +130,9 @@ if ($rows.Count -ne $expected.Count -or @($expected | Where-Object {!$rows.Conta
 if (@($rows.Values | Where-Object {$_.outcome -eq 'failed'}).Count -or
     @($observedFailures | Where-Object {$rows[$_].outcome -ne 'passed'}).Count) {
     throw 'A failed check remains unresolved; a skip cannot replace a failure'
+}
+if ($unexpectedSkips.Count) {
+    throw ('Unexpected skips remain in the final selection: ' + (($unexpectedSkips | Sort-Object) -join ', '))
 }
 $result=[ordered]@{
     Scope='Join reviewed test-only repairs; declared corrected methods still require source review.'

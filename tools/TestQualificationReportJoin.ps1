@@ -19,7 +19,9 @@ function Write-Text([string] $Path,[string] $Text) {
 function Write-Json([string] $Path,$Value) { Write-Text $Path ($Value | ConvertTo-Json -Depth 12) }
 function Write-BoundReport([string] $Name,$Report,[string] $Artifact='after') {
     $pin=Get-Content -LiteralPath (Join-Path $repo "artifacts/$Artifact/identity.json") -Raw | ConvertFrom-Json
-    $Report.provenance=@{LibrarySha256=$pin.LibrarySha256;TestAssemblySha256=$pin.TestAssemblySha256}
+    if (!$Report.ContainsKey('provenance')) { $Report.provenance=@{} }
+    $Report.provenance.LibrarySha256=$pin.LibrarySha256
+    $Report.provenance.TestAssemblySha256=$pin.TestAssemblySha256
     Write-Json (Join-Path $root $Name) $Report
 }
 function Invoke-Git([string[]] $Arguments) {
@@ -143,6 +145,49 @@ if ($copyResult.TestAssemblySha256 -ne $result.TestAssemblySha256 -or $copyResul
     ($copyResult.tests | Where-Object name -eq 'Unchanged').SourceTestAssemblySha256 -eq $copyResult.TestAssemblySha256) {
     throw 'Equivalent final copies must preserve tested identity and earlier-pass provenance'
 }
+# A retained skip follows the policy of the report that produced it.
+$skipChecks=@()
+foreach ($policy in @('unexpected','undeclared','expected','fast-group-only')) {
+    $provenance=@{}
+    switch ($policy) {
+        'unexpected' {
+            $provenance.GatePassed=$false
+            $provenance.UnexpectedSkips=@('Neighbor')
+            $provenance.ExpectedSkips=@()
+            $provenance.SkipValidationMethods=@('Corrected','Neighbor')
+        }
+        'expected' { $provenance.ExpectedSkips=@('Neighbor') }
+        'fast-group-only' { $provenance.SkipValidationMethods=@('Corrected') }
+    }
+    $name='skip-'+$policy+'-source.json'
+    Write-BoundReport $name @{passed=1;failed=0;skipped=1;provenance=$provenance;tests=@(
+        @{name='Corrected';outcome='passed'},@{name='Neighbor';outcome='skipped'})}
+    $config.Repairs=@(@{Artifact='repo/artifacts/after';Report=$name})
+    Write-Json $manifest $config
+    if ($policy -in @('unexpected','undeclared')) {
+        Reject ('final-skip-'+$policy) 'Unexpected skips remain.*Neighbor'
+    }
+    else {
+        $joined=Join-Path $root ('joined-skip-'+$policy+'.json')
+        $null=& $join -Manifest $manifest -OutputPath $joined
+        $allowed=Get-Content -LiteralPath $joined -Raw | ConvertFrom-Json
+        if ($allowed.passed -ne 2 -or $allowed.skipped -ne 1 -or
+            ($allowed.tests | Where-Object name -ceq 'Neighbor').outcome -cne 'skipped') {
+            throw 'Joined report lost a declared skip'
+        }
+        $skipChecks+=$policy
+    }
+}
+$config.Repairs=@(@{Artifact='repo/artifacts/after';Report='skip-unexpected-source.json'},
+    @{Artifact='repo/artifacts/after';Report='repair.json'})
+$retriedManifest=Join-Path $root 'retried-skip-manifest.json';Write-Json $retriedManifest $config
+$retriedPath=Join-Path $root 'retried-skip.json'
+$null=& $join -Manifest $retriedManifest -OutputPath $retriedPath
+$retried=Get-Content -LiteralPath $retriedPath -Raw | ConvertFrom-Json
+if ($retried.passed -ne 3 -or $retried.skipped -ne 0 -or $retried.Sources.Count -ne 3) {
+    throw 'A later pass must resolve an unexpected skip and retain both source reports'
+}
+$skipChecks+='unexpected-skip-retried'
 # A method first failing during a repair must also finish with a real pass.
 Write-BoundReport 'repair-failed.json' @{passed=1;failed=1;skipped=0;tests=@(
     @{name='Corrected';outcome='passed'},@{name='Neighbor';outcome='failed';detail='failure during repair'})}
@@ -217,6 +262,7 @@ foreach ($pin in $positivePins) {
 }
 Write-Json (Join-Path $root 'evidence.json') @{PositiveReportSha256=(Get-FileHash -LiteralPath $positive).Hash
     ResolvedRepairReportSha256=(Get-FileHash -LiteralPath $resolvedPath).Hash
-    TestedFinalCopyReportSha256=(Get-FileHash -LiteralPath $copyOutput).Hash;PositiveJoins=3
+    TestedFinalCopyReportSha256=(Get-FileHash -LiteralPath $copyOutput).Hash;PositiveJoins=(3+$skipChecks.Count)
+    SkipPolicyPasses=$skipChecks
     Rejections=$rejections;FilesRetained=$true;Builds=0;Conversions=0;RunnerInvocations=0}
-"Qualification report join checks pass: three provenance-preserving joins, $($rejections.Count) pre-publication rejections; no builds/tests/conversions."
+"Qualification report join checks pass: $(3+$skipChecks.Count) provenance-preserving joins, $($rejections.Count) pre-publication rejections; no builds/tests/conversions."
