@@ -87,7 +87,8 @@ internal static partial class PortableRenderingTests
             ("", 0, true), ("", 3, false), ("/Off gs\n", 0, false), ("/Tiny gs\n", 0, false),
             ("/Dim gs\n", 0, true), ("q\n/Off gs\nQ\n", 0, true), ("q\n3 Tr\nQ\n", 0, true),
             ("/Off gs\nq\n/Dim gs\nQ\n", 0, false), ("3 Tr\nq\n0 Tr\nQ\n", 0, false),
-            ("BT\n3 Tr\nET\n", 0, false), ("", 1, false), ("", 2, false), ("", 7, false)
+            ("BT\n3 Tr\nET\n", 0, false), ("", 1, false), ("", 7, false),
+            ("", 2, true), ("/Dim gs\n", 2, true), ("/Off gs\n", 2, false), ("/Tiny gs\n", 2, false)
         })
         {
             // Mode 0 here leaves the inherited state alone, as ordinary generated
@@ -100,11 +101,14 @@ internal static partial class PortableRenderingTests
                 ReadPaintedSourceLabel(page, "A")).Message);
         }
         var mask = new PdfTransparencyGroup(new PdfRectangle(0, 0, 200, 200), "", [], [], [], []);
-        var masked = new PdfPage(200, 200, "/Masked gs\n/Dim gs\n" + source.Content, source.Fonts, [],
-            [.. states, new("Masked", 1d, 1d, "Mask")], [], [], [], groups: [new("Mask", mask)]);
-        PdfContentValidator.ValidatePage(masked, 0, default);
-        TestAssert.Contains("known visible fill paint", TestAssert.Throws<InvalidOperationException>(() =>
-            ReadPaintedSourceLabel(masked, "A")).Message);
+        foreach (string mode in new[] { "", "2 Tr\n" })
+        {
+            var masked = new PdfPage(200, 200, "/Masked gs\n/Dim gs\n" + mode + source.Content, source.Fonts, [],
+                [.. states, new("Masked", 1d, 1d, "Mask")], [], [], [], groups: [new("Mask", mask)]);
+            PdfContentValidator.ValidatePage(masked, 0, default);
+            TestAssert.Contains("known visible fill paint", TestAssert.Throws<InvalidOperationException>(() =>
+                ReadPaintedSourceLabel(masked, "A")).Message);
+        }
     }
 
     private static PdfPage SourceLabelOraclePage(OpenTypeFont font, string text, bool clipped = false)
