@@ -220,7 +220,7 @@ internal static partial class DocxInlineCompositionTests
             var control = renderer.RenderPagesAsync(ReadComputedSimpleFieldPictures(story, kind, mode, true, 2),
                 null, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(2, control.Sum(page => page.Images.Count));
-            foreach (string container in new[] { "customXml", "smartTag", "sdt", "nested" })
+            foreach (string container in new[] { "customXml", "smartTag", "sdt", "nested", "hyperlink" })
             {
                 var wrapped = renderer.RenderPagesAsync(ReadComputedSimpleFieldPictures(story, kind, mode, true, 2,
                     container: container), null, default).ToBlockingEnumerable().ToArray();
@@ -243,7 +243,7 @@ internal static partial class DocxInlineCompositionTests
         foreach (string revision in new[] { "none", "ins", "del" })
         foreach (bool hidden in new[] { false, true })
         foreach (bool locked in new[] { false, true })
-        foreach (string container in new[] { "customXml", "smartTag", "sdt", "nested" })
+        foreach (string container in new[] { "customXml", "smartTag", "sdt", "nested", "hyperlink" })
         {
             var control = ReadComputedSimpleFieldPictures("body", "PAGE", mode, true, 2, hidden, locked, revision);
             var wrapped = ReadComputedSimpleFieldPictures("body", "PAGE", mode, true, 2, hidden, locked, revision, container);
@@ -304,16 +304,18 @@ internal static partial class DocxInlineCompositionTests
                     XElement Wrap(string name, params object[] content) => name == "sdt"
                         ? new XElement(w + name, new XElement(w + "sdtPr"), new XElement(w + "sdtContent", content))
                         : new XElement(w + name, new XElement(w + (name + "Pr")), content);
-                    XElement wrapper = container switch
+                    XElement[] wrapped = container switch
                     {
-                        "nested" => Wrap("sdt", Wrap("customXml", Wrap("smartTag", children))),
-                        "foreign" => new XElement(XNamespace.Get("urn:ooxpdf:unknown") + "customXml", children),
-                        "nested-field" => new XElement(w + "fldSimple", new XAttribute(w + "instr", "REF OtherOwner"), children),
-                        "directional" => new XElement(w + "dir", new XAttribute(w + "val", "rtl"), children),
-                        "misplaced-property" => new XElement(w + "customXmlPr", children),
-                        _ => Wrap(container, children)
+                        "hyperlink" => [children[0], new XElement(w + "hyperlink",
+                            new XAttribute(w + "anchor", "PublicCalculation"), children.Skip(1))],
+                        "nested" => [Wrap("sdt", Wrap("customXml", Wrap("smartTag", children)))],
+                        "foreign" => [new XElement(XNamespace.Get("urn:ooxpdf:unknown") + "customXml", children)],
+                        "nested-field" => [new XElement(w + "fldSimple", new XAttribute(w + "instr", "REF OtherOwner"), children)],
+                        "directional" => [new XElement(w + "dir", new XAttribute(w + "val", "rtl"), children)],
+                        "misplaced-property" => [new XElement(w + "customXmlPr", children)],
+                        _ => [Wrap(container, children)]
                     };
-                    field.ReplaceNodes(wrapper);
+                    field.ReplaceNodes(wrapped);
                 }
                 source.ReplaceWith(revision == "none" ? field : new XElement(w + revision,
                     new XAttribute(w + "id", "907"), new XAttribute(w + "author", "Public reviewer"), field));

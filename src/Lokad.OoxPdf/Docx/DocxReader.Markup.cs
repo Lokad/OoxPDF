@@ -98,8 +98,12 @@ internal sealed partial class DocxReader
                 continue;
             }
 
-            if (DocxSourceXml.IsTransparentInlineContainer(element) &&
-                (inlineContent || element.Name != WordprocessingNamespace + "smartTag"))
+            bool transparent = DocxSourceXml.IsTransparentInlineContainer(element);
+            // The cached run projection keeps drawing payloads inside hyperlinks.
+            // The paragraph reader owns hyperlink spans for the computed result.
+            if (inlineContent
+                ? transparent || element.Name == WordprocessingNamespace + "hyperlink"
+                : transparent && element.Name != WordprocessingNamespace + "smartTag")
             {
                 foreach (DocxRevisionScopedElement child in EnumerateRevisionScopedChildren(
                     DocxSourceXml.StoredChildren(element), markupMode, cancellationToken, includedNames, inheritedRevision, inlineContent))
