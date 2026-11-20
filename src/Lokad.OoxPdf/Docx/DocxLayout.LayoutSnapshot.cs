@@ -654,52 +654,59 @@ internal sealed partial record DocxLayoutSnapshot(
                 ParagraphBeforeSpacingPoints: null,
                 ParagraphAfterSpacingPoints: null,
                 ContextualSpacingSuppressed: null,
-                box.Story?.VariantType, TextLines: box.TextLines.Select(line => ToSnapshot(line, [])).ToArray(), ParagraphStyleId: null, ParagraphStyleFound: null, ParagraphStyleDepth: null, HasDocumentDefaultParagraphProperties: null, HasDirectParagraphProperties: null, HasTableStyleParagraphProperties: null, CharacterStyleTextSegmentCount: null, DirectRunPropertyTextSegmentCount: null, ParagraphStyleRunPropertyTextSegmentCount: null, TableStyleRunPropertyTextSegmentCount: null, DocumentDefaultRunPropertyTextSegmentCount: null, LineHeightSource: null, RevisionCount: 0, InsertionRevisionCount: 0, DeletionRevisionCount: 0, MoveFromRevisionCount: 0, MoveToRevisionCount: 0, OtherRevisionCount: 0, CommentReferenceCount: 0),            DocxTableRowLayout row => new DocxLayoutItemSnapshot(
-                "TableRow",
-                row.Cells.Count == 0 ? 0d : row.Cells.Min(cell => cell.X),
-                row.Y,
-                row.Cells.Sum(cell => cell.Width),
-                row.Height,
-                TextLength: SumTableRowTextLength(row),
-                CellCount: row.Cells.Count,
-                columnIndex,
-                SourceBlockIndex: row.Table.SourceBlockIndex,
-                SourceParagraphIndex: null,
-                SourceLineIndex: null,
-                LineHeightPoints: null,
-                AppliedBeforeSpacingPoints: null,
-                SingleLineHeightPoints: null,
-                ListLabelSingleLineHeightPoints: null,
-                BodyWindowsLineHeightPoints: null,
-                ListLabelWindowsLineHeightPoints: null,
-                EffectiveLineSpacingFactor: null,
-                LineSpacingFactorFloorApplied: null,
-                IsFirstParagraphLine: null,
-                PendingAfterSpacingPoints: null,
-                ParagraphBeforeSpacingPoints: null,
-                ParagraphAfterSpacingPoints: null,
-                ContextualSpacingSuppressed: null,
-                row.Story?.VariantType,
-                ToTableRowTextLineSnapshots(row), ParagraphStyleId: null, ParagraphStyleFound: null, ParagraphStyleDepth: null, HasDocumentDefaultParagraphProperties: null, HasDirectParagraphProperties: null, HasTableStyleParagraphProperties: null, CharacterStyleTextSegmentCount: null, DirectRunPropertyTextSegmentCount: null, ParagraphStyleRunPropertyTextSegmentCount: null, TableStyleRunPropertyTextSegmentCount: null, DocumentDefaultRunPropertyTextSegmentCount: null, LineHeightSource: null,
-                RevisionCount: row.RevisionCount + TableRowParagraphs(row).Sum(CountRevisions),
-                InsertionRevisionCount: TableRowParagraphs(row).Sum(paragraph => CountRevisions(paragraph, DocxRevisionKind.Insertion)),
-                DeletionRevisionCount: TableRowParagraphs(row).Sum(paragraph => CountRevisions(paragraph, DocxRevisionKind.Deletion)),
-                MoveFromRevisionCount: TableRowParagraphs(row).Sum(paragraph => CountRevisions(paragraph, DocxRevisionKind.MoveFrom)),
-                MoveToRevisionCount: TableRowParagraphs(row).Sum(paragraph => CountRevisions(paragraph, DocxRevisionKind.MoveTo)),
-                OtherRevisionCount: TableRowParagraphs(row).Sum(CountOtherRevisions),
-                CommentReferenceCount: TableRowParagraphs(row).Sum(CountCommentReferences)),
+                box.Story?.VariantType, TextLines: box.TextLines.Select(line => ToSnapshot(line, [])).ToArray(), ParagraphStyleId: null, ParagraphStyleFound: null, ParagraphStyleDepth: null, HasDocumentDefaultParagraphProperties: null, HasDirectParagraphProperties: null, HasTableStyleParagraphProperties: null, CharacterStyleTextSegmentCount: null, DirectRunPropertyTextSegmentCount: null, ParagraphStyleRunPropertyTextSegmentCount: null, TableStyleRunPropertyTextSegmentCount: null, DocumentDefaultRunPropertyTextSegmentCount: null, LineHeightSource: null, RevisionCount: 0, InsertionRevisionCount: 0, DeletionRevisionCount: 0, MoveFromRevisionCount: 0, MoveToRevisionCount: 0, OtherRevisionCount: 0, CommentReferenceCount: 0),
+            DocxTableRowLayout row => ToTableRowSnapshot(row, columnIndex),
             _ => new DocxLayoutItemSnapshot("Unknown", 0d, 0d, 0d, 0d, 0, 0, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 0, 0, 0, 0, 0, 0, 0)
         };
-
-        int CountCommentReferences(DocxParagraph? paragraph)
-        {
-            return paragraph?.InlineReferences.Count(reference => reference.Kind == DocxRelatedStoryKind.Comment) ?? 0;
-        }
 
         int CountTextSegments(DocxTextLineLayout text, Func<DocxRunStyleResolution, bool> predicate)
         {
             return text.Segments.Count(segment => predicate(segment.StyleRun.StyleResolution));
         }
+    }
+
+    private static DocxLayoutItemSnapshot ToTableRowSnapshot(DocxTableRowLayout row, int? columnIndex)
+    {
+        var paragraphs = TableRowParagraphs(row);
+        return new DocxLayoutItemSnapshot(
+            "TableRow",
+            row.Cells.Count == 0 ? 0d : row.Cells.Min(cell => cell.X),
+            row.Y,
+            row.Cells.Sum(cell => cell.Width),
+            row.Height,
+            TextLength: SumTableRowTextLength(row),
+            CellCount: row.Cells.Count,
+            columnIndex,
+            SourceBlockIndex: row.Table.SourceBlockIndex,
+            SourceParagraphIndex: null,
+            SourceLineIndex: null,
+            LineHeightPoints: null,
+            AppliedBeforeSpacingPoints: null,
+            SingleLineHeightPoints: null,
+            ListLabelSingleLineHeightPoints: null,
+            BodyWindowsLineHeightPoints: null,
+            ListLabelWindowsLineHeightPoints: null,
+            EffectiveLineSpacingFactor: null,
+            LineSpacingFactorFloorApplied: null,
+            IsFirstParagraphLine: null,
+            PendingAfterSpacingPoints: null,
+            ParagraphBeforeSpacingPoints: null,
+            ParagraphAfterSpacingPoints: null,
+            ContextualSpacingSuppressed: null,
+            row.Story?.VariantType,
+            ToTableRowTextLineSnapshots(row), ParagraphStyleId: null, ParagraphStyleFound: null, ParagraphStyleDepth: null, HasDocumentDefaultParagraphProperties: null, HasDirectParagraphProperties: null, HasTableStyleParagraphProperties: null, CharacterStyleTextSegmentCount: null, DirectRunPropertyTextSegmentCount: null, ParagraphStyleRunPropertyTextSegmentCount: null, TableStyleRunPropertyTextSegmentCount: null, DocumentDefaultRunPropertyTextSegmentCount: null, LineHeightSource: null,
+            RevisionCount: row.RevisionCount + paragraphs.Sum(CountRevisions),
+            InsertionRevisionCount: paragraphs.Sum(paragraph => CountRevisions(paragraph, DocxRevisionKind.Insertion)),
+            DeletionRevisionCount: paragraphs.Sum(paragraph => CountRevisions(paragraph, DocxRevisionKind.Deletion)),
+            MoveFromRevisionCount: paragraphs.Sum(paragraph => CountRevisions(paragraph, DocxRevisionKind.MoveFrom)),
+            MoveToRevisionCount: paragraphs.Sum(paragraph => CountRevisions(paragraph, DocxRevisionKind.MoveTo)),
+            OtherRevisionCount: paragraphs.Sum(CountOtherRevisions),
+            CommentReferenceCount: paragraphs.Sum(CountCommentReferences));
+    }
+
+    private static int CountCommentReferences(DocxParagraph? paragraph)
+    {
+        return paragraph?.InlineReferences.Count(reference => reference.Kind == DocxRelatedStoryKind.Comment) ?? 0;
     }
 
     private static IReadOnlyList<DocxLayoutItemSnapshot> ToTableRowTextLineSnapshots(DocxTableRowLayout row)
@@ -738,39 +745,28 @@ internal sealed partial record DocxLayoutSnapshot(
         }
     }
 
-    private static IReadOnlyList<DocxParagraph> TableRowParagraphs(DocxTableRowLayout row)
+    private static HashSet<DocxParagraph> TableRowParagraphs(DocxTableRowLayout row)
     {
-        var paragraphs = new List<DocxParagraph>();
-        foreach (DocxTableCellLayout cell in row.Cells)
-        {
-            AddParagraphs(cell.TextLines);
-            foreach (DocxTableRowLayout nestedRow in cell.NestedRows)
-            {
-                foreach (DocxParagraph paragraph in TableRowParagraphs(nestedRow))
-                {
-                    AddParagraph(paragraph);
-                }
-            }
-        }
-
+        var paragraphs = new HashSet<DocxParagraph>(ReferenceEqualityComparer.Instance);
+        AddParagraphs(row);
         return paragraphs;
 
-        void AddParagraphs(IEnumerable<DocxTextLineLayout> lines)
+        void AddParagraphs(DocxTableRowLayout current)
         {
-            foreach (DocxTextLineLayout line in lines)
+            foreach (DocxTableCellLayout cell in current.Cells)
             {
-                if (line.SourceParagraph is not null)
+                foreach (DocxTextLineLayout line in cell.TextLines)
                 {
-                    AddParagraph(line.SourceParagraph);
+                    if (line.SourceParagraph is { } paragraph)
+                    {
+                        paragraphs.Add(paragraph);
+                    }
                 }
-            }
-        }
 
-        void AddParagraph(DocxParagraph paragraph)
-        {
-            if (!paragraphs.Any(existing => ReferenceEquals(existing, paragraph)))
-            {
-                paragraphs.Add(paragraph);
+                foreach (DocxTableRowLayout nestedRow in cell.NestedRows)
+                {
+                    AddParagraphs(nestedRow);
+                }
             }
         }
     }
