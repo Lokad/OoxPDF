@@ -380,11 +380,11 @@ internal sealed partial record DocxLayoutSnapshot(
                 story.FloatingDrawings.Count,
                 story.TableRows.Count))
             .ToArray();
-        IReadOnlyList<DocxLayoutItemSnapshot> staticItems = page.StaticTextLines
-            .Select(ToStaticSnapshot)
-            .Concat(page.StaticInlineImages.Select(ToStaticSnapshot))
-            .Concat(page.StaticInlineTextBoxes.Select(ToStaticSnapshot))
-            .Concat(page.StaticTableRows.Select(ToStaticSnapshot))
+        var staticItems = page.StaticTextLines
+            .Select(text => ToStaticSnapshot(text, text.Story))
+            .Concat(page.StaticInlineImages.Select(image => ToStaticSnapshot(image, image.Story)))
+            .Concat(page.StaticInlineTextBoxes.Select(box => ToStaticSnapshot(box, box.Story)))
+            .Concat(page.StaticTableRows.Select(row => ToStaticSnapshot(row, row.Story)))
             .ToArray();
         int?[] sourceBlockIndexes = items
             .Select(item => item.SourceBlockIndex)
@@ -452,7 +452,7 @@ internal sealed partial record DocxLayoutSnapshot(
             items.Where(item => item.Kind == "InlineImage").Sum(item => item.Height),
             items.Where(item => item.Kind == "TableRow").Sum(item => item.Height),
             ToStaticStorySnapshots(staticItems),
-            staticItems,
+            staticItems.Select(entry => entry.Item).ToArray(),
             placedRelatedStories,
             placedRelatedItems,
             items,
@@ -460,12 +460,12 @@ internal sealed partial record DocxLayoutSnapshot(
     }
 
     private static IReadOnlyList<DocxStaticStoryLayoutSnapshot> ToStaticStorySnapshots(
-        IReadOnlyList<DocxLayoutItemSnapshot> staticItems)
+        IReadOnlyList<(string StoryKind, DocxLayoutItemSnapshot Item)> staticItems)
     {
         return staticItems
-            .GroupBy(item => new StaticStorySnapshotKey(StaticStoryKind(item.Kind), item.StoryVariantType))
+            .GroupBy(entry => (Kind: entry.StoryKind, entry.Item.StoryVariantType), entry => entry.Item)
             .OrderBy(group => group.Key.Kind, StringComparer.Ordinal)
-            .ThenBy(group => group.Key.VariantType ?? string.Empty, StringComparer.Ordinal)
+            .ThenBy(group => group.Key.StoryVariantType ?? string.Empty, StringComparer.Ordinal)
             .Select(group =>
             {
                 DocxLayoutItemSnapshot[] storyItems = group.ToArray();
@@ -485,7 +485,7 @@ internal sealed partial record DocxLayoutSnapshot(
                     .ToArray();
                 return new DocxStaticStoryLayoutSnapshot(
                     group.Key.Kind,
-                    group.Key.VariantType,
+                    group.Key.StoryVariantType,
                     storyItems.Count(item => item.Kind.EndsWith("TextLine", StringComparison.Ordinal)),
                     storyItems.Count(item => item.Kind.EndsWith("InlineImage", StringComparison.Ordinal)),
                     storyItems.Count(item => item.Kind.EndsWith("TableRow", StringComparison.Ordinal)),
@@ -504,64 +504,17 @@ internal sealed partial record DocxLayoutSnapshot(
             .ToArray();
     }
 
-    private static string StaticStoryKind(string itemKind)
+    private static (string StoryKind, DocxLayoutItemSnapshot Item) ToStaticSnapshot(
+        DocxLayoutItem item, DocxStoryId? story)
     {
-        return itemKind switch
+        string? kind = story?.Kind switch
         {
-            "StaticHeaderTextLine" => "Header",
-            "StaticFooterTextLine" => "Footer",
-            "StaticHeaderInlineImage" => "Header",
-            "StaticFooterInlineImage" => "Footer",
-            "StaticHeaderTableRow" => "Header",
-            "StaticFooterTableRow" => "Footer",
-            _ => "Static"
+            DocxStoryKind.Header => "Header",
+            DocxStoryKind.Footer => "Footer",
+            _ => null
         };
-    }
-
-    private sealed record StaticStorySnapshotKey(string Kind, string? VariantType);
-
-    private static DocxLayoutItemSnapshot ToStaticSnapshot(DocxTextLineLayout text)
-    {
-        string kind = text.Story?.Kind switch
-        {
-            DocxStoryKind.Header => "StaticHeaderTextLine",
-            DocxStoryKind.Footer => "StaticFooterTextLine",
-            _ => "StaticTextLine"
-        };
-        return ToSnapshot(text, []) with { Kind = kind };
-    }
-
-    private static DocxLayoutItemSnapshot ToStaticSnapshot(DocxInlineImageLayout image)
-    {
-        string kind = image.Story?.Kind switch
-        {
-            DocxStoryKind.Header => "StaticHeaderInlineImage",
-            DocxStoryKind.Footer => "StaticFooterInlineImage",
-            _ => "StaticInlineImage"
-        };
-        return ToSnapshot(image, []) with { Kind = kind };
-    }
-
-    private static DocxLayoutItemSnapshot ToStaticSnapshot(DocxInlineTextBoxLayout box)
-    {
-        string kind = box.Story?.Kind switch
-        {
-            DocxStoryKind.Header => "StaticHeaderInlineTextBox",
-            DocxStoryKind.Footer => "StaticFooterInlineTextBox",
-            _ => "StaticInlineTextBox"
-        };
-        return ToSnapshot(box, []) with { Kind = kind };
-    }
-
-    private static DocxLayoutItemSnapshot ToStaticSnapshot(DocxTableRowLayout row)
-    {
-        string kind = row.Story?.Kind switch
-        {
-            DocxStoryKind.Header => "StaticHeaderTableRow",
-            DocxStoryKind.Footer => "StaticFooterTableRow",
-            _ => "StaticTableRow"
-        };
-        return ToSnapshot(row, []) with { Kind = kind };
+        var snapshot = ToSnapshot(item, []);
+        return (kind ?? "Static", snapshot with { Kind = "Static" + kind + snapshot.Kind });
     }
 
     private static DocxLayoutItemSnapshot ToPlacedRelatedSnapshot(DocxLayoutItem item)

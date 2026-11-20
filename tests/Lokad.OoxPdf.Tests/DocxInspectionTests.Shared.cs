@@ -38,6 +38,42 @@ internal static partial class DocxInspectionTests
         }
     }
 
+    public static void DocxCombinedInspectionGroupsStaticBoxesWithTheirStories()
+    {
+        string source = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..",
+            "Cases", "Composition", "composed-inline-frame-report.docx"));
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var geometry = mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout
+                : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup;
+            var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true), mode, geometry);
+            var snapshot = renderer.InspectAsync(DocxTests.ReadDocx(source, mode)).AsTask().GetAwaiter().GetResult().Layout;
+            TestAssert.True(snapshot.Pages.Count > 0, "The composed witness must produce inspectable pages.");
+            foreach (var page in snapshot.Pages)
+            {
+                TestAssert.Equal(2, page.StaticStories.Count);
+                var header = page.StaticStories.Single(story => story.Kind == "Header");
+                var footer = page.StaticStories.Single(story => story.Kind == "Footer");
+                CheckOwner(page, header, "StaticHeaderInlineTextBox");
+                CheckOwner(page, footer, "StaticFooterInlineTextBox");
+                TestAssert.True(header.Items.Any(item => item.Kind == "StaticHeaderTableRow"),
+                    "The header keeps its table rows.");
+                TestAssert.True(footer.Items.Any(item => item.Kind == "StaticFooterInlineImage"),
+                    "The footer keeps its inline picture.");
+                TestAssert.True(footer.Items.Any(item => item.Kind == "StaticFooterTableRow"),
+                    "The footer keeps its table rows.");
+            }
+        }
+
+        static void CheckOwner(DocxLayoutPageSnapshot page, DocxStaticStoryLayoutSnapshot story, string kind)
+        {
+            TestAssert.Equal("default", story.VariantType);
+            var grouped = story.Items.Single(item => item.Kind == kind);
+            TestAssert.Equal(grouped, page.StaticItems.Single(item => item.Kind == kind));
+        }
+    }
+
     public static void DocxCombinedInspectionRetainsSourceFontPlanBeforeSubstitution()
     {
         var source = InspectionDocument("CffFamily");
