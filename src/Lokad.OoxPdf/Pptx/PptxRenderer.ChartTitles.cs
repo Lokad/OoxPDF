@@ -183,10 +183,7 @@ internal sealed partial class PptxRenderer
         for (int index = 0; index < sceneChart.Axes.Count; index++)
         {
             PptxSceneChartAxis axis = sceneChart.Axes[index];
-            if (axis.IsDeleted == true ||
-                string.IsNullOrWhiteSpace(axis.Title.Text) ||
-                axis.Title.Layout.HasLayout ||
-                !IsRenderableDefaultChartAxisTitle(axis.AxisKind, axis.PositionKind))
+            if (GetDefaultAxisTitleStatus(axis) != DefaultAxisTitleStatus.Supported)
             {
                 continue;
             }
@@ -201,7 +198,7 @@ internal sealed partial class PptxRenderer
             await RenderDefaultChartAxisTitleAsync(
                 graphics,
                 layout,
-                axis.Title.Text,
+                axis.Title.Text!,
                 ToChartTextRuns(axis.Title.TextRuns),
                 axis.PositionKind,
                 ToChartShapeStyle(axis.Title.ShapeStyle),
@@ -223,10 +220,7 @@ internal sealed partial class PptxRenderer
 
         foreach (PptxSceneChartAxis axis in sceneChart.Axes)
         {
-            if (axis.IsDeleted == true ||
-                string.IsNullOrWhiteSpace(axis.Title.Text) ||
-                axis.Title.Layout.HasLayout ||
-                IsRenderableDefaultChartAxisTitle(axis.AxisKind, axis.PositionKind))
+            if (GetDefaultAxisTitleStatus(axis) != DefaultAxisTitleStatus.Unsupported)
             {
                 continue;
             }
@@ -296,9 +290,22 @@ internal sealed partial class PptxRenderer
         return plotTop + topReserve * PptxChartMetricRules.DefaultAxisTitleTopBandBaselineRatio;
     }
 
-    private static bool IsRenderableDefaultChartAxisTitle(PptxSceneChartAxisKind axisKind, PptxSceneChartAxisPosition positionKind)
+    private enum DefaultAxisTitleStatus
     {
-        return positionKind switch
+        None,
+        Supported,
+        Unsupported
+    }
+
+    private static DefaultAxisTitleStatus GetDefaultAxisTitleStatus(PptxSceneChartAxis axis)
+    {
+        if (axis.IsDeleted == true || string.IsNullOrWhiteSpace(axis.Title.Text) || axis.Title.Layout.HasLayout)
+        {
+            return DefaultAxisTitleStatus.None;
+        }
+
+        PptxSceneChartAxisKind axisKind = axis.AxisKind;
+        bool supported = axis.PositionKind switch
         {
             PptxSceneChartAxisPosition.Bottom or PptxSceneChartAxisPosition.Top =>
                 axisKind is PptxSceneChartAxisKind.Category or PptxSceneChartAxisKind.Date or PptxSceneChartAxisKind.Series or PptxSceneChartAxisKind.Value,
@@ -306,6 +313,7 @@ internal sealed partial class PptxRenderer
                 axisKind is PptxSceneChartAxisKind.Value or PptxSceneChartAxisKind.Category or PptxSceneChartAxisKind.Date,
             _ => false
         };
+        return supported ? DefaultAxisTitleStatus.Supported : DefaultAxisTitleStatus.Unsupported;
     }
 
     private static string GetChartAxisStyleRole(PptxSceneChartAxisKind axisKind)
@@ -514,10 +522,7 @@ internal sealed partial class PptxRenderer
         var reserveSides = new ChartAxisTitleReserveSides();
         foreach (PptxSceneChartAxis axis in sceneChart.Axes)
         {
-            if (axis.IsDeleted == true ||
-                string.IsNullOrWhiteSpace(axis.Title.Text) ||
-                axis.Title.Layout.HasLayout ||
-                !IsRenderableDefaultChartAxisTitle(axis.AxisKind, axis.PositionKind))
+            if (GetDefaultAxisTitleStatus(axis) != DefaultAxisTitleStatus.Supported)
             {
                 continue;
             }

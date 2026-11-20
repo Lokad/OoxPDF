@@ -19,9 +19,7 @@ internal sealed partial class PptxRenderer
         for (int index = 0; index < chart.Axes.Count; index++)
         {
             PptxSceneChartAxis axis = chart.Axes[index];
-            if (axis.IsDeleted == true || axis.Title.Layout.HasLayout ||
-                string.IsNullOrWhiteSpace(axis.Title.Text) ||
-                !IsRenderableDefaultChartAxisTitle(axis.AxisKind, axis.PositionKind))
+            if (GetDefaultAxisTitleStatus(axis) != DefaultAxisTitleStatus.Supported)
             {
                 continue;
             }
@@ -32,11 +30,12 @@ internal sealed partial class PptxRenderer
 
             ChartTextStyle style = ReadDefaultAxisTitleStyle(theme, chart, axis);
             IReadOnlyList<ChartTextRunOverride> runs = ToChartTextRuns(axis.Title.TextRuns);
-            if (!multiline && !await HorizontalAxisTitleWouldClipAsync(layout, axis.PositionKind, axis.Title.Text,
+            string text = axis.Title.Text!;
+            if (!multiline && !await HorizontalAxisTitleWouldClipAsync(layout, axis.PositionKind, text,
                     runs, style, fontResolver).ConfigureAwait(false))
                 continue;
 
-            var (lines, height) = await MeasureChartRichTextLinesAsync(axis.Title.Text, runs, style, fontResolver).ConfigureAwait(false);
+            var (lines, height) = await MeasureChartRichTextLinesAsync(text, runs, style, fontResolver).ConfigureAwait(false);
             (measured ??= []).Add((index, axis.PositionKind, style, lines, height));
         }
 
