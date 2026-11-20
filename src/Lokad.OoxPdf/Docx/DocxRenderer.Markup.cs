@@ -12,6 +12,10 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxRenderer
 {
+    private const double FallbackBalloonBodyFontSize = 5d;
+    private const double FallbackBalloonBodyInset = 3d;
+    private const double FallbackBalloonLinePitch = FallbackBalloonBodyFontSize * PdfFallbackFont.SingleLineHeightEm;
+
     private static bool ShouldRenderRevisionBalloon(DocxMarkupContext markupContext, IReadOnlyList<DocxRevisionInfo> revisions,
         bool isMainStory = true)
     {
@@ -294,7 +298,7 @@ internal sealed partial class DocxRenderer
         // RV06 (RV01 residual): without any embeddable face, balloons render with the
         // diagnosed standard-14 fallback instead of vanishing.
         PdfFallbackFontResource? fallbackFace = labelResource is null || bodyResource is null
-            ? fontResources.FallbackFaces.Values.OrderBy(face => face.ResourceName, StringComparer.Ordinal).FirstOrDefault()
+            ? ResolveMarkupFallbackFace(fontResources)
             : null;
         if (labelResource is null && bodyResource is null && fallbackFace is null)
         {
@@ -320,6 +324,9 @@ internal sealed partial class DocxRenderer
             RenderMarkupBalloonPlacement(placement, graphics, labelResource, titleResource, bodyResource, fallbackFace, markupContext, cancellationToken);
         }
     }
+
+    private static PdfFallbackFontResource? ResolveMarkupFallbackFace(DocxFontResources? fontResources) =>
+        fontResources?.FallbackFaces.Values.OrderBy(face => face.ResourceName, StringComparer.Ordinal).FirstOrDefault();
 
     // Office (comment/unresolved/dense/mirrored references, Word-COM rendered): balloon
     // titles set in Segoe UI Bold while bodies use a regular face (unresolved titles
@@ -445,6 +452,7 @@ internal sealed partial class DocxRenderer
         }
 
         DocxMarkupBalloonArea area = ResolveMarkupBalloonArea(page, markupContext);
+        PdfFallbackFont? fallbackFont = labelEmbedded is null ? ResolveMarkupFallbackFace(fontResources)?.Font : null;
         DocxMarkupBalloonCandidate[] candidates = OrderMarkupBalloonCandidatesForPlacement(
                 GroupNearbyMarkupBalloonCandidates(
                     OrderMarkupBalloonCandidatesForPlacement(CoalesceCellRevisionRanges(
@@ -518,7 +526,7 @@ internal sealed partial class DocxRenderer
             foreach (DocxMarkupBalloonCandidate candidate in laneBand.Candidates)
             {
                 double connectorAnchorY = ResolveMarkupBalloonAnchorY(candidate.AnchorY, page, markupContext, candidate.WordCompatibleAnchorDepthPoints);
-                double height = ResolveMarkupBalloonHeight(candidate, markupContext, labelEmbedded, bodyEmbedded, area.Width, cancellationToken);
+                double height = ResolveMarkupBalloonHeight(candidate, markupContext, labelEmbedded, bodyEmbedded, fallbackFont, area.Width, cancellationToken);
                 double desiredTop = Math.Min(nextTop, ResolveMarkupBalloonPreferredTop(candidate, page, markupContext, labelEmbedded, bodyEmbedded));
                 double y = desiredTop - height;
                 double bottom = candidate.WordCompatiblePlacementBottomY ?? page.MarginBottom;
@@ -612,7 +620,7 @@ internal sealed partial class DocxRenderer
 
             foreach (DocxMarkupBalloonCandidate candidate in candidates)
             {
-                double height = ResolveMarkupBalloonHeight(candidate, markupContext, labelEmbedded, bodyEmbedded, area.Width, cancellationToken);
+                double height = ResolveMarkupBalloonHeight(candidate, markupContext, labelEmbedded, bodyEmbedded, fallbackFont, area.Width, cancellationToken);
                 double preferredTop = ResolveMarkupBalloonPreferredTop(candidate, page, markupContext, labelEmbedded, bodyEmbedded);
                 double preferredBottom = preferredTop - height;
                 if (current.Count != 0 &&
@@ -1155,6 +1163,7 @@ internal sealed partial class DocxRenderer
         DocxMarkupContext markupContext,
         PdfEmbeddedFont? labelEmbedded,
         PdfEmbeddedFont? bodyEmbedded,
+        PdfFallbackFont? fallbackFont,
         double balloonWidth,
         CancellationToken cancellationToken)
     {
@@ -1219,6 +1228,14 @@ internal sealed partial class DocxRenderer
                     continuationsHeight += (finalGapEm - twoFaceRows.TailLineHeightEm!.Value) * fontSize;
                 }
                 return insets.Top + continuationsHeight + insets.Bottom;
+            }
+
+            if (fallbackFont is not null &&
+                !string.IsNullOrWhiteSpace(candidate.WordCompatibleTitle) &&
+                !string.IsNullOrWhiteSpace(candidate.WordCompatibleBody))
+            {
+                var rows = WrapFallbackBalloonBody(candidate.WordCompatibleBody, fallbackFont, balloonWidth, cancellationToken);
+                return WordCompatibleAllMarkupBalloonHeightPoints + Math.Max(0, rows.Length - 1) * FallbackBalloonLinePitch;
             }
 
             return WordCompatibleAllMarkupBalloonHeightPoints;
@@ -1572,10 +1589,28 @@ internal sealed partial class DocxRenderer
             : placement.Body;
 
         DrawBalloonText(graphics, labelResource, title, placement.X + 3d, placement.Y + placement.Height - 7d, 5.5d, placement.TitleRgb.Red, placement.TitleRgb.Green, placement.TitleRgb.Blue, fallbackFace);
-        if (!string.IsNullOrWhiteSpace(body))
+        if (fallbackWordCompatibleText && fallbackFace is not null && labelResource is null && !string.IsNullOrWhiteSpace(body))
+        {
+            var rows = WrapFallbackBalloonBody(body, fallbackFace.Font, placement.Width, cancellationToken);
+            for (int row = 0; row < rows.Length; row++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                double y = placement.Y + 4d + (rows.Length - 1 - row) * FallbackBalloonLinePitch;
+                DrawBalloonText(graphics, null, rows[row].Text, placement.X + FallbackBalloonBodyInset, y,
+                    FallbackBalloonBodyFontSize, placement.BodyRgb.Red, placement.BodyRgb.Green, placement.BodyRgb.Blue, fallbackFace);
+            }
+        }
+        else if (!string.IsNullOrWhiteSpace(body))
         {
             DrawBalloonText(graphics, labelResource, body, placement.X + 3d, placement.Y + 4d, 5d, placement.BodyRgb.Red, placement.BodyRgb.Green, placement.BodyRgb.Blue, fallbackFace);
         }
+    }
+
+    private static DocxUniformBalloonRow[] WrapFallbackBalloonBody(string body, PdfFallbackFont font, double balloonWidth, CancellationToken cancellationToken)
+    {
+        double width = Math.Max(0d, balloonWidth - 2d * FallbackBalloonBodyInset);
+        return WrapUniformBalloonWords(body, null, FallbackBalloonBodyFontSize, width, width,
+            cancellationToken, preserveAsciiSpaces: true, fallback: font);
     }
 
     private static DocxMarkupBalloonRgb ResolveMarkupBalloonBodyFillRgb(

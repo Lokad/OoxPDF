@@ -9,9 +9,9 @@ internal sealed partial class DocxRenderer
     private readonly record struct DocxUniformBalloonRow(string Text, bool SpaceAfter);
 
     private static DocxUniformBalloonRow[] WrapUniformBalloonWords(
-        string text, PdfEmbeddedFont embedded, double fontSize,
+        string text, PdfEmbeddedFont? embedded, double fontSize,
         double firstLineWidth, double continuationWidth, CancellationToken cancellationToken,
-        bool reserveFirstRowBreakSpace = true, bool preserveAsciiSpaces = false)
+        bool reserveFirstRowBreakSpace = true, bool preserveAsciiSpaces = false, PdfFallbackFont? fallback = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         string normalized = preserveAsciiSpaces ? text.Trim(' ') : Regex.Replace(text.Trim(), @"\s+", " ");
@@ -34,8 +34,10 @@ internal sealed partial class DocxRenderer
         }
         var rows = new List<DocxUniformBalloonRow>();
         int wordIndex = 0, wordOffset = 0;
-        ushort space = embedded.Font.MapCodePoint(' ');
-        double pointScale = fontSize / embedded.Font.UnitsPerEm;
+        var font = embedded?.Font;
+        ushort space = font?.MapCodePoint(' ') ?? 0;
+        double spaceAdvance = font is null ? fallback!.MeasureAdvanceEm(' ') : font.GetAdvanceWidth(space);
+        double pointScale = fontSize / (font?.UnitsPerEm ?? PdfFallbackFont.UnitsPerEm);
         while (wordIndex < words.Length)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -57,18 +59,18 @@ internal sealed partial class DocxRenderer
                     int count = separators?[wordIndex - 1] ?? 1;
                     for (int index = 0; index < count; index++)
                     {
-                        initialUnits += embedded.Font.GetAdvanceWidth(space) + embedded.Font.GetKerning(initialPrevious, space);
+                        initialUnits += spaceAdvance + (font?.GetKerning(initialPrevious, space) ?? 0);
                         initialPrevious = space;
                     }
                 }
                 int length = FitPrefix(word, wordOffset, initialUnits, initialPrevious, maxWidth,
                     out double fittedUnits, out ushort lastGlyph);
                 bool completeWord = wordOffset + length == word.Length;
-                double withBreakSpace = fittedUnits + embedded.Font.GetAdvanceWidth(space) + embedded.Font.GetKerning(lastGlyph, space);
+                double withBreakSpace = fittedUnits + spaceAdvance + (font?.GetKerning(lastGlyph, space) ?? 0);
                 int breakSpaces = separators?[wordIndex] ?? 1;
                 for (int index = 1; index < breakSpaces; index++)
                 {
-                    withBreakSpace += embedded.Font.GetAdvanceWidth(space) + embedded.Font.GetKerning(space, space);
+                    withBreakSpace += spaceAdvance + (font?.GetKerning(space, space) ?? 0);
                 }
                 if (hasEarlierWord && (!completeWord || reserveFirstRowBreakSpace && firstRow && wordIndex + 1 < words.Length && withBreakSpace * pointScale > maxWidth))
                 {
@@ -120,9 +122,9 @@ internal sealed partial class DocxRenderer
             foreach (Rune rune in word.AsSpan(offset).EnumerateRunes())
             {
                 if ((count++ & 255) == 0) { cancellationToken.ThrowIfCancellationRequested(); }
-                ushort glyph = embedded.Font.MapCodePoint(rune.Value);
-                double next = units + embedded.Font.GetAdvanceWidth(glyph) +
-                    (prior == 0 || glyph == 0 ? 0d : embedded.Font.GetKerning(prior, glyph));
+                ushort glyph = font?.MapCodePoint(rune.Value) ?? 0;
+                double advance = font is null ? fallback!.MeasureAdvanceEm(rune) : font.GetAdvanceWidth(glyph);
+                double next = units + advance + (prior == 0 || glyph == 0 ? 0d : font!.GetKerning(prior, glyph));
                 if (next * pointScale > width) { break; }
                 units = next;
                 prior = glyph;

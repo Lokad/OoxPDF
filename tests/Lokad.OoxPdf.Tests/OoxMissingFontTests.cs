@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 using Lokad.OoxPdf;
@@ -436,8 +437,26 @@ internal static class OoxMissingFontTests
         TestAssert.Contains("Balloon word", extracted);
         TestAssert.Contains("Anchored", extracted);
         TestAssert.True(diagnostics.Any(d => d.Id == "FONT_NO_USABLE_FACE"), "Word-compatible fallback must stay diagnosed.");
+
+        foreach (string wordSequence in new[] { new string('W', 84), string.Join(" ", Enumerable.Repeat("WWWWWWW", 12)) })
+        {
+            const string tail = ", Tail witness.";
+            (string wrapped, List<OoxPdfDiagnostic> wrappedDiagnostics) =
+                ConvertDocxWordCompatibleMarkup(WriteCommentBalloonDocx(wordSequence + tail), resolver);
+            TestAssert.Contains("/Type /Pages /Count 1", wrapped);
+            TestAssert.Contains(new string('W', 84) + ",Tailwitness.",
+                string.Concat(ExtractWinAnsiText(wrapped).Where(character => !char.IsWhiteSpace(character))));
+            TestAssert.True(wrappedDiagnostics.Any(diagnostic => diagnostic.Id == "FONT_NO_USABLE_FACE"),
+                "Wrapped fallback must stay diagnosed.");
+            var glyphs = Regex.Matches(wrapped, @"1 0 0 1 (?<x>[0-9.]+) (?<y>[0-9.]+) Tm\s*<57> Tj");
+            TestAssert.Equal(84, glyphs.Count);
+            TestAssert.True(glyphs.Select(glyph => glyph.Groups["y"].Value).Distinct().Count() > 1,
+                "Long fallback comments must use multiple baselines.");
+            TestAssert.True(glyphs.All(glyph => double.Parse(glyph.Groups["x"].Value, CultureInfo.InvariantCulture) + 5d <= 612d),
+                "Every fallback glyph must fit on the printed page.");
+        }
     }
-    private static string WriteCommentBalloonDocx()
+    private static string WriteCommentBalloonDocx(string body = "Balloon words here")
     {
         return TestFixtures.WriteTempPackage(".docx", new Dictionary<string, byte[]>()
         {
@@ -469,7 +488,7 @@ internal static class OoxMissingFontTests
                 "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
                 + "<w:comments xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">"
                 + "<w:comment w:id=\"1\" w:author=\"Reviewer\" w:initials=\"RV\" w:date=\"2026-06-01T00:00:00Z\">"
-                + "<w:p><w:r><w:t>Balloon words here</w:t></w:r></w:p>"
+                + "<w:p><w:r><w:t>" + System.Security.SecurityElement.Escape(body) + "</w:t></w:r></w:p>"
                 + "</w:comment></w:comments>"),
         });
     }

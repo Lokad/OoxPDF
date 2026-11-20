@@ -244,7 +244,8 @@ internal sealed partial class DocxRenderer
                 WithPageTextEmissionOffsets(effectiveMarkupContext, layout, pageIndex, separatePlainHeaderOrigins),
                 balloonLabelEmbedded,
                 balloonBodyEmbedded,
-                fontResources))
+                fontResources,
+                cancellationToken))
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 snapshots.Add(placement.ToSnapshot(pageIndex));
