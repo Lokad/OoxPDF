@@ -143,8 +143,6 @@ internal static partial class DocxCommentsTests
                 show.X + show.Font.MeasureTextPoints(show.Text.TrimEnd(), show.Size) <= fallbackBalloon.X + fallbackBalloon.Width + 0.02d),
                 "Overwide fallback words must stay inside the balloon.");
         }
-
-        static string RemoveWhitespace(string text) => string.Concat(text.Where(character => !char.IsWhiteSpace(character)));
     }
 
     public static void DocxWordCompatibleMixedBalloonSeparatesFirstFontTransitionFromTailPitch()
@@ -341,16 +339,26 @@ internal static partial class DocxCommentsTests
             TestAssert.True(Math.Abs(balloon.Height - (12.61d + shows[0].Y - tailRows[^1].Y)) < 0.02d,
                 "Height includes the mixed first step and later tail rows.");
 
-            foreach (string guardedTail in new[] { " ".PadRight(64) + "ok. " + word + "  ending." })
+            // This fallback source is identical for either separator control.
+            if (separator.Length != 1)
             {
-                DocxParagraph guardedComment = comment with { Runs = [comment.Runs[0], comment.Runs[1] with { Text = guardedTail }] };
-                DocxDocument guarded = document with { RelatedStories = [story with { BodyElements = [new DocxParagraphElement(guardedComment)] }] };
-                var guardedBalloon = renderer.InspectMarkupBalloons(guarded).Single();
-                var guardedShows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(guarded, null, CancellationToken.None).ToBlockingEnumerable().Single())
-                    .Where(show => show.X >= guardedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) &&
-                        !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
-                TestAssert.True(guardedShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
-                    "A leading space span with repeated internal spaces retains fallback.");
+                continue;
+            }
+
+            string guardedTail = new string(' ', 64) + "ok. " + word + "  ending.";
+            DocxParagraph guardedComment = comment with { Runs = [comment.Runs[0], comment.Runs[1] with { Text = guardedTail }] };
+            DocxDocument guarded = document with { RelatedStories = [story with { BodyElements = [new DocxParagraphElement(guardedComment)] }] };
+            var guardedBalloon = renderer.InspectMarkupBalloons(guarded).Single();
+            var guardedShows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(guarded, null, CancellationToken.None).ToBlockingEnumerable().Single())
+                .Where(show => show.X >= guardedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) &&
+                    !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
+            string paintedText = string.Concat(guardedShows.Select(show => show.Text));
+            TestAssert.Equal(RemoveWhitespace(prefix + guardedTail), RemoveWhitespace(paintedText));
+            foreach (var show in guardedShows)
+            {
+                TestAssert.Equal(500, (int)show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')));
+                TestAssert.True(show.X + show.Font.MeasureTextPoints(show.Text.TrimEnd(), show.Size) <= guardedBalloon.X + guardedBalloon.Width + 0.02d,
+                    "Guarded fallback words must stay inside the balloon.");
             }
         }
     }
@@ -1011,7 +1019,6 @@ internal static partial class DocxCommentsTests
             }
         }
 
-        static string RemoveWhitespace(string value) => string.Concat(value.Where(character => !char.IsWhiteSpace(character)));
     }
 
     private static string FifthClosingRunText(string suffix) => " " + new string('m', 15) + suffix;
@@ -1774,7 +1781,6 @@ internal static partial class DocxCommentsTests
             }
         }
 
-        static string RemoveWhitespace(string text) => string.Concat(text.Where(character => !char.IsWhiteSpace(character)));
     }
 
     public static void DocxWordCompatibleMixedBalloonSplitsFirstTailWordAfterWrappedPrefix() =>
@@ -1818,7 +1824,6 @@ internal static partial class DocxCommentsTests
                 "Fallback words must stay inside the balloon.");
         }
 
-        static string RemoveWhitespace(string value) => string.Concat(value.Where(character => !char.IsWhiteSpace(character)));
     }
 
     private static void VerifyWrappedPrefixBalloon(bool splitFirstTailWord)
@@ -2013,4 +2018,6 @@ internal static partial class DocxCommentsTests
             }
         }
     }
+
+    private static string RemoveWhitespace(string text) => string.Concat(text.Where(character => !char.IsWhiteSpace(character)));
 }
