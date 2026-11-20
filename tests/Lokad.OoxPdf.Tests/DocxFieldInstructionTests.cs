@@ -142,6 +142,40 @@ internal static class DocxFieldInstructionTests
         }
     }
 
+    public static void DocxFieldInstructionRequiresCompleteNameAndKeepsSwitches()
+    {
+        var resolver = new PortableRenderingTests.PinnedResolver();
+        foreach (var mode in Modes)
+        {
+            DocxDocument document = Read([
+                new XElement(W + "fldSimple", new XAttribute(W + "instr", " PAGE2 "), Run("Simple cache")),
+                Run(" 42 "),
+                .. Field([" NUMPAGES", "_ARCHIVE "], "Complex cache"),
+                Run(" 73 "),
+                new XElement(W + "fldSimple", new XAttribute(W + "instr", @" PAGE\* MERGEFORMAT "), Run("29")),
+                Run(" / "),
+                .. Field([" NUMPAGES", @" \* MERGEFORMAT "], "87")
+            ], mode);
+            var fields = document.Paragraphs.Single().FieldReferences;
+            var stored = fields.Where(field => field.Kind == DocxFieldKind.Other).ToArray();
+            TestAssert.Equal(2, stored.Length);
+            TestAssert.True(stored.All(field => field.HasCachedResult && field.RendersCachedResult && !field.UsesPlaceholder),
+                "Unknown complete names retain their stored result.");
+            TestAssert.True(fields.Where(field => field.UsesPlaceholder).Select(field => field.Kind)
+                .SequenceEqual([DocxFieldKind.Page, DocxFieldKind.NumPages]),
+                "A formatting switch still delimits a recognized counter.");
+
+            var geometry = mode == OoxPdfDocxMarkupMode.AllMarkup
+                ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
+                : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout;
+            var page = new DocxRenderer(resolver, mode, geometry).RenderPagesAsync(document, null, default)
+                .ToBlockingEnumerable().Single();
+            string actual = string.Concat(DocxPageFootnoteNumberingTests.DecodeText(page)
+                .Where(character => !char.IsWhiteSpace(character)));
+            TestAssert.Equal("Simplecache42Complexcache731/1", actual);
+        }
+    }
+
     public static void DocxFieldInstructionSplittingKeepsOrderedMathAndLinks()
     {
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })

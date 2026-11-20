@@ -212,7 +212,7 @@ def screen_picture_ink(source, candidate, reference, case, fitz):
 def unresolved_fields(root):
     """Recognize stored text results, without evaluating fields or page values."""
     def cached_instruction(value):
-        opcode = re.match(r"\s*([A-Za-z]+)", value)
+        opcode = re.match(r"\s*([^\s\\]+)", value)
         return bool(value.strip()) and (not opcode or opcode[1].upper() not in {"PAGE", "NUMPAGES"})
 
     def paragraph_items(paragraph):

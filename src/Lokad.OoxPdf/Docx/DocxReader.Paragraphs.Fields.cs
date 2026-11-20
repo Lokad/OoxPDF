@@ -31,31 +31,20 @@ internal sealed partial class DocxReader
 
     private static DocxFieldKind ResolveFieldKind(string? instruction, bool requireOpcodeTerminator = false)
     {
-            string? ReadFieldOpcode(string? instruction)
-            {
-                if (string.IsNullOrWhiteSpace(instruction))
-                {
-                    return null;
-                }
-
-                ReadOnlySpan<char> trimmed = instruction.AsSpan().TrimStart();
-                int length = 0;
-                while (length < trimmed.Length && char.IsLetter(trimmed[length]))
-                {
-                    length++;
-                }
-
-                return length == 0 || requireOpcodeTerminator && length == trimmed.Length
-                    ? null : trimmed[..length].ToString().ToUpperInvariant();
-            }
-
-        string? opcode = ReadFieldOpcode(instruction);
-        return opcode switch
+        ReadOnlySpan<char> trimmed = instruction.AsSpan().TrimStart();
+        int length = 0;
+        // A switch or whitespace can delimit the opcode. Other characters
+        // are part of the token, so PAGE2 and NUMPAGES_ARCHIVE are stored fields.
+        while (length < trimmed.Length && !char.IsWhiteSpace(trimmed[length]) && trimmed[length] != '\\')
         {
-            "PAGE" => DocxFieldKind.Page,
-            "NUMPAGES" => DocxFieldKind.NumPages,
-            _ => DocxFieldKind.Other
-        };
+            length++;
+        }
+        if (requireOpcodeTerminator && length == trimmed.Length) return DocxFieldKind.Other;
+
+        ReadOnlySpan<char> opcode = trimmed[..length];
+        if (opcode.Equals("PAGE", StringComparison.OrdinalIgnoreCase)) return DocxFieldKind.Page;
+        if (opcode.Equals("NUMPAGES", StringComparison.OrdinalIgnoreCase)) return DocxFieldKind.NumPages;
+        return DocxFieldKind.Other;
     }
 
     private static string? ReadCharacterStyleId(XElement run)

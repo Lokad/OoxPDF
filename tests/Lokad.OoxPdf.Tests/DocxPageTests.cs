@@ -1247,41 +1247,43 @@ internal static class DocxPageTests
             foreach (string opcode in new[] { "PAGE", "NUMPAGES" })
             {
                 string field = Start(opcode);
+                string[] directAfterNested = Content(Render(field + End() + hardBreak + following).Pages).ToArray();
                 foreach (string suffix in new[] { following, string.Empty })
                 {
-                    var direct = Render(field + End() + hardBreak + suffix);
+                    IEnumerable<string> direct = suffix.Length == 0
+                        ? Content(Render(field + End() + hardBreak).Pages)
+                        : directAfterNested;
                     var split = Render(field + hardBreak + Text("STALE CACHE") + End() + suffix);
-                    TestAssert.True(direct.Pages.SequenceEqual(split.Pages),
+                    TestAssert.True(direct.SequenceEqual(Content(split.Pages)),
                         "Carried cache text must leave the computed value, explicit break and following frames intact.");
-                    var reference = split.Fields.Single();
+                    var reference = split.Document.Paragraphs.SelectMany(paragraph => paragraph.FieldReferences).Single();
                     TestAssert.True(reference.UsesPlaceholder && reference.HasCachedResult && !reference.RendersCachedResult,
                         "The first fragment owns both the counter and the fact that its result had a cache.");
                 }
 
                 string nested = Start("PAGEREF") + hardBreak + Text("NESTED CACHE") + End() + Text("OUTER CACHE") + End();
                 var afterNested = Render(field + nested + following);
-                var directAfterNested = Render(field + End() + hardBreak + following);
-                TestAssert.True(directAfterNested.Pages.SequenceEqual(afterNested.Pages),
+                TestAssert.True(directAfterNested.SequenceEqual(Content(afterNested.Pages)),
                     "The inner end token must leave the computed outer result active until its own end.");
             }
 
             foreach (string start in new[] { Start("PAGE", locked: true), Start("PAGEREF") })
             {
                 var cached = Render(start + Text("FIRST CACHE") + hardBreak + Text("SECOND CACHE") + End() + following);
-                string text = string.Concat(cached.Text).Replace(" ", string.Empty, StringComparison.Ordinal);
+                string text = string.Concat(cached.Pages.SelectMany(DocxCommentsTests.ReadEmbeddedGlyphTextShows)
+                    .Select(show => show.Text)).Replace(" ", string.Empty, StringComparison.Ordinal);
                 TestAssert.Contains("FIRSTCACHESECONDCACHE77FOLLOWING", text);
             }
 
-            (string[] Pages, string[] Text, DocxFieldReference[] Fields) Render(string content)
+            (PdfPage[] Pages, DocxDocument Document) Render(string content)
             {
                 DocxDocument document = ReadBreakMetadataDocument(content, mode, columns);
                 PdfPage[] pages = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
-                return (pages.Select(page => page.Content).ToArray(),
-                    pages.SelectMany(DocxCommentsTests.ReadEmbeddedGlyphTextShows).Select(show => show.Text).ToArray(),
-                    document.Paragraphs.SelectMany(paragraph => paragraph.FieldReferences).ToArray());
+                return (pages, document);
             }
         }
 
+        static IEnumerable<string> Content(PdfPage[] pages) => pages.Select(page => page.Content);
         static string Text(string text) => "<w:r><w:t>" + text + "</w:t></w:r>";
         static string End() => "<w:r><w:fldChar w:fldCharType=\"end\"/></w:r>";
         static string Start(string opcode, bool locked = false) =>
@@ -1308,6 +1310,7 @@ internal static class DocxPageTests
             foreach (var (first, rest, opcode) in new[]
             {
                 (" PAGE", "REF Bookmark ", DocxFieldKind.Other),
+                (" PAGE", "2 ", DocxFieldKind.Other),
                 (" NUM", "PAGES ", DocxFieldKind.NumPages),
                 (" PAGE", string.Empty, DocxFieldKind.Page),
             })

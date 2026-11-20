@@ -262,11 +262,15 @@ class CachedFieldAuditTests(unittest.TestCase):
         self.assertEqual([], unresolved_fields(document('<w:p><w:r><w:t>PAGE NUMPAGES REF Target</w:t></w:r></w:p>')))
 
     def test_simple_cached_result(self):
-        self.assertEqual([], unresolved_fields(document('<w:p><w:fldSimple w:instr=" REF Target "><w:r><w:t>North</w:t></w:r></w:fldSimple></w:p>')))
+        for opcode in ["REF Target", "PAGE2", "NUMPAGES_ARCHIVE"]:
+            self.assertEqual([], unresolved_fields(document(
+                f'<w:p><w:fldSimple w:instr=" {opcode} "><w:r><w:t>North</w:t></w:r></w:fldSimple></w:p>')))
 
     def test_packed_and_split_complex_results(self):
         for packed in [False, True]:
             self.assertEqual([], unresolved_fields(document('<w:p>'+complex_field(packed=packed)+'</w:p>')))
+        for opcode in ["PAGE2", "NUMPAGES_ARCHIVE"]:
+            self.assertEqual([], unresolved_fields(document('<w:p>'+complex_field(instruction=opcode)+'</w:p>')))
 
     def test_nested_cached_results(self):
         inner = complex_field(result='North')
@@ -275,7 +279,7 @@ class CachedFieldAuditTests(unittest.TestCase):
         self.assertEqual([], unresolved_fields(document('<w:p>'+outer+'</w:p>')))
 
     def test_dynamic_fields_stay_unresolved(self):
-        for opcode in ['PAGE', 'NUMPAGES', 'page \\* MERGEFORMAT']:
+        for opcode in ['PAGE', 'NUMPAGES', r'page \* MERGEFORMAT', r'page\* MERGEFORMAT']:
             self.assertTrue(unresolved_fields(document('<w:p>'+complex_field(instruction=opcode)+'</w:p>')))
             self.assertTrue(unresolved_fields(document(f'<w:p><w:fldSimple w:instr="{opcode}"><w:r><w:t>1</w:t></w:r></w:fldSimple></w:p>')))
 
