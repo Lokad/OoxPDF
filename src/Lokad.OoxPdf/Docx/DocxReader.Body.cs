@@ -627,11 +627,11 @@ internal sealed partial class DocxReader
     private static IEnumerable<XElement> EnumerateBreakSplitChildren(XElement owner) =>
         DocxSourceXml.StoredChildren(owner).Where(HasBreakSplitPayload);
 
-    // A transparent wrapper contributes only the payload of its stored children.
-    // Bookmark, comment and revision boundaries still belong to the fragment.
+    // Transparent wrappers and hyperlinks contribute their children's payload.
+    // Fields can generate text, and source boundaries still belong to the fragment.
     private static bool HasBreakSplitPayload(XElement child)
     {
-        if (DocxSourceXml.IsTransparentInlineContainer(child))
+        if (DocxSourceXml.IsTransparentInlineContainer(child) || child.Name == WordprocessingNamespace + "hyperlink")
         {
             return DocxSourceXml.StoredChildren(child).Any(HasBreakSplitPayload);
         }

@@ -147,7 +147,8 @@ internal static partial class DocxInlineCompositionTests
 
             foreach (string wrapper in new[] { "sdt", "customXml", "smartTag", "nested", "proof", "permission",
                 "run-hint", "preceding-hint", "nested-preceding-hint", "adjacent-sdt-hint",
-                "adjacent-custom-xml-hint", "nested-adjacent-hint" })
+                "adjacent-custom-xml-hint", "nested-adjacent-hint", "adjacent-hyperlink-hint",
+                "nested-hyperlink-hint" })
             {
                 PdfPage[] pages = Render(wrapper);
                 TestAssert.True(control.Select(page => page.Content).SequenceEqual(pages.Select(page => page.Content)),
@@ -155,7 +156,21 @@ internal static partial class DocxInlineCompositionTests
                 TestAssert.Equal(link, pages[0].Annotations.Single());
             }
 
-            PdfPage[] Render(string wrapper)
+            PdfPage[] field = Render("page-field-hint", retainLeadingFragment: true);
+            TestAssert.Equal(targetPage + 1, field.Length);
+            TestAssert.True(DocxCommentsTests.ReadEmbeddedGlyphTextShows(field[0]).Any(show => show.Text.Trim() == "1"),
+                "The PAGE field still paints its result in the pre-break fragment.");
+            TestAssert.True(field[0].Annotations.Single().Destination is { PageIndex: 0, Left: < 200d },
+                "The bookmark belongs to the generated content before the break.");
+
+            PdfPage[] visible = Render("visible-hyperlink-hint", retainLeadingFragment: true);
+            TestAssert.Contains("VISIBLE BEFORE BREAK", string.Concat(
+                DocxCommentsTests.ReadEmbeddedGlyphTextShows(visible[0]).Select(show => show.Text)));
+            TestAssert.Equal(2, visible[0].Annotations.Count);
+            TestAssert.True(visible[0].Annotations.All(annotation => annotation.Destination is { PageIndex: 0, Left: < 200d }),
+                "Both links follow the bookmark to its visible pre-break fragment.");
+
+            PdfPage[] Render(string wrapper, bool retainLeadingFragment = false)
             {
                 var document = ReadMutation("Composition/report", mode, false, false, (xml, w, _) =>
                 {
@@ -171,6 +186,8 @@ internal static partial class DocxInlineCompositionTests
                         new XElement(w + "t", "AUTHORED AFTER BREAK"));
                     XElement Hint() => new(w + "lastRenderedPageBreak");
                     XElement HintRun() => new(w + "r", Hint());
+                    XElement Link(params XElement[] items) => new(w + "hyperlink",
+                        new XAttribute(w + "anchor", "destination"), items);
                     XElement ContentControl(params XElement[] items) => new(w + "sdt",
                         new XElement(w + "sdtPr", new XElement(w + "alias", new XAttribute(w + "val", "Break probe"))),
                         new XElement(w + "sdtContent", items));
@@ -188,6 +205,10 @@ internal static partial class DocxInlineCompositionTests
                         "adjacent-sdt-hint" => [ContentControl(HintRun()), run],
                         "adjacent-custom-xml-hint" => [Metadata("customXml", HintRun()), run],
                         "nested-adjacent-hint" => [ContentControl(Metadata("smartTag", HintRun()), run)],
+                        "adjacent-hyperlink-hint" => [Link(HintRun()), run],
+                        "nested-hyperlink-hint" => [ContentControl(Link(HintRun())), run],
+                        "page-field-hint" => [new XElement(w + "fldSimple", new XAttribute(w + "instr", "PAGE"), HintRun()), run],
+                        "visible-hyperlink-hint" => [Link(new XElement(w + "r", Hint(), new XElement(w + "t", "VISIBLE BEFORE BREAK"))), run],
                         "sdt" => [ContentControl(run)],
                         "nested" => [ContentControl(Metadata("customXml", Metadata("smartTag", run)))],
                         "proof" => [new XElement(w + "proofErr", new XAttribute(w + "type", "spellStart")),
@@ -205,7 +226,7 @@ internal static partial class DocxInlineCompositionTests
                         new XElement(w + "bookmarkEnd", new XAttribute(w + "id", 131)),
                         section);
                 });
-                TestAssert.Equal(3, document.BodyElements.Count);
+                TestAssert.Equal(retainLeadingFragment ? 4 : 3, document.BodyElements.Count);
                 return renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
             }
         }
