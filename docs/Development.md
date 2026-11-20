@@ -81,6 +81,9 @@ source ownership/order, actual font-program glyph ink, clips, picture colors,
 page targets and consequential overlap. Keep unknown paint traces explicit.
 Extraction or a high image score cannot waive content loss. Native tools have
 bounded coverage, particularly masks/blends, oblique/CFF/Type1 text and occlusion.
+For cached DOCX markup comparisons, supply selected authored phrases in
+`expected.markupTextPhrases`. The report checks their decoded text for the
+case's declared markup view and shows whether that check ran. Verify ink separately.
 
 `CheckVisualCase.ps1 -CliPath <qualified.dll> -SkipBuild` reuses a frozen converter;
 `CheckVisualFamily.ps1` does the same for capability families. Keep independent

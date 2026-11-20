@@ -10,7 +10,8 @@
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "candidateFontsMustBeEmbedded": true,
-    "candidateFontsMustHaveToUnicode": true
+    "candidateFontsMustHaveToUnicode": true,
+    "markupTextPhrases": ["deliberately long review", "to make preview truncation visible.", "maximum height behavior."]
   },
   "allowedUnsupportedFeatures": []
 }

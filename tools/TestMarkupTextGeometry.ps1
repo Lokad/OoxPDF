@@ -77,4 +77,16 @@ Assert-Equal 660 (Get-TextBaselinePageSummary @($unknown) 1).LastBaselineY 'Unde
 $unknown | Add-Member -NotePropertyName DecodedText -NotePropertyValue $null
 $mixed = @(Merge-PdfSameLineOperations @($unknown, (New-Op 97 660 ' ' 3)) -UseEffectiveMatrix)
 Assert-Equal 1 @(Select-NonWhitespacePdfTextOperations $mixed).Count 'Partly undecoded lines are retained'
+$laneText = @((New-Op 432 650 'AP' 10), (New-Op 442 650 'PROVE' 30))
+$substituted = @(New-Op 432 650 'DECLINE' 40)
+$unchangedGeometry = New-TextGateDeltaSummary $laneText $substituted
+Assert-Equal 0 $unchangedGeometry.MaxBaselineDelta 'The changed word retains its original baseline'
+Assert-Equal 0 $unchangedGeometry.MaxEmittedAdvanceDelta 'The changed word retains its original advance'
+Assert-Equal 'passed' (New-MarkupTextWitnessGate $laneText @('APPROVE')).Status 'Authored phrases survive run splitting'
+$failedWitness = New-MarkupTextWitnessGate $substituted @('APPROVE')
+Assert-Equal 'failed' $failedWitness.Status 'An equal-geometry substitution fails the content witness'
+Assert-Equal 1 (New-GateSummary @($failedWitness)).FailureCount 'A missing witness contributes to the live gate failure count'
+Assert-Equal 'failed' (New-MarkupTextWitnessGate @($unknown) @('APPROVE')).Status 'Undecoded text cannot satisfy the authored witness'
+Assert-Equal 'failed' (New-MarkupTextWitnessGate @($laneText[0], $unknown, $laneText[1]) @('APPROVE')).Status 'An undecoded operation breaks a would-be phrase'
+Assert-Equal 'skipped' (New-MarkupTextWitnessGate $substituted @()).Status 'A case without an authored witness reports skipped coverage'
 Write-Host 'Markup text geometry checks passed.'

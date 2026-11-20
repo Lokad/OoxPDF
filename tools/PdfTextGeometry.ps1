@@ -12,16 +12,42 @@ function Select-NonWhitespacePdfTextOperations($Operations) {
 }
 
 # Preserve emitted separators and operation order within each page. A font,
-# kerning or punctuation split does not add a source space.
+# kerning or punctuation split does not add a source space. Keep undecoded
+# operations as a boundary so a phrase cannot match across unknown glyphs.
 function Get-DecodedPdfTextPages($Operations) {
     $pages = @($Operations | Group-Object { $_.PageNumber } | Sort-Object { [int]$_.Name })
     foreach ($page in $pages) {
-        ($page.Group | ForEach-Object { $_.DecodedText }) -join ''
+        ($page.Group | ForEach-Object { $_.DecodedText ?? [string][char]0xfffd }) -join ''
     }
 }
 
 function Join-DecodedPdfTextPages($Operations) {
     (Get-DecodedPdfTextPages $Operations) -join "`n"
+}
+
+function Get-MissingPdfTextPhrases($Operations, $ExpectedText) {
+    function Normalize-PdfTextPhrase([string] $Text) {
+        [regex]::Replace($Text.Normalize([Text.NormalizationForm]::FormKC), '\s+', ' ').Trim()
+    }
+    # Keep page boundaries out of the normalized phrase. Word edges are
+    # significant; punctuation such as a label's colon already separates text.
+    $pages = @(Get-DecodedPdfTextPages $Operations | ForEach-Object { Normalize-PdfTextPhrase $_ })
+    $word = '[\p{L}\p{M}\p{N}\p{Pc}\uFFFD]'
+    foreach ($expected in $ExpectedText) {
+        $phrase = Normalize-PdfTextPhrase $expected
+        if (!$phrase) { continue }
+        $pattern = [regex]::Escape($phrase)
+        if ($phrase -cmatch ('^' + $word)) { $pattern = '(?<!' + $word + ')' + $pattern }
+        if ($phrase -cmatch ($word + '$')) { $pattern += '(?!' + $word + ')' }
+        $found = $false
+        foreach ($page in $pages) {
+            if ($page -cmatch $pattern) {
+                $found = $true
+                break
+            }
+        }
+        if (!$found) { $expected }
+    }
 }
 
 function Get-PdfTextOperationFontSize($Operation, [bool] $UseEffectiveMatrix) {

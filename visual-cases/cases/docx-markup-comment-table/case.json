@@ -8,7 +8,8 @@
   "tags": ["docx", "docx-markup", "comments", "table-comments", "tables", "synthetic", "approximate"],
   "expected": {
     "pageCountMustMatch": true,
-    "dimensionsMustMatch": true
+    "dimensionsMustMatch": true,
+    "markupTextPhrases": ["Commented table cell", "Table-cell comment body."]
   },
   "allowedUnsupportedFeatures": []
 }

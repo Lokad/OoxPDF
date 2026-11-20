@@ -22,31 +22,6 @@ function Read-PortfolioTextOperations([string] $Path, [string] $Id) {
     [pscustomobject]@{Operations=$operations;Hash=[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($bytes))}
 }
 
-function Get-MissingPortfolioText($Operations, $ExpectedText) {
-    function Normalize-PortfolioText([string] $Text) {
-        [regex]::Replace($Text.Normalize([Text.NormalizationForm]::FormKC), '\s+', ' ').Trim()
-    }
-    # Keep page boundaries out of the normalized phrase. Word edges are
-    # significant; punctuation such as a label's colon already separates text.
-    $pages = @(Get-DecodedPdfTextPages $Operations | ForEach-Object { Normalize-PortfolioText $_ })
-    $word = '[\p{L}\p{M}\p{N}\p{Pc}]'
-    foreach ($expected in $ExpectedText) {
-        $phrase = Normalize-PortfolioText $expected
-        if (!$phrase) { continue }
-        $pattern = [regex]::Escape($phrase)
-        if ($phrase -cmatch ('^' + $word)) { $pattern = '(?<!' + $word + ')' + $pattern }
-        if ($phrase -cmatch ($word + '$')) { $pattern += '(?!' + $word + ')' }
-        $found = $false
-        foreach ($page in $pages) {
-            if ($page -cmatch $pattern) {
-                $found = $true
-                break
-            }
-        }
-        if (!$found) { $expected }
-    }
-}
-
 function Get-PortfolioIgnoredEquationCount($Diagnostics) {
     @($Diagnostics | Where-Object { $_.Id -eq 'DOCX_UNSUPPORTED_EQUATION' }).Count
 }

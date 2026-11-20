@@ -2713,6 +2713,11 @@ function New-GateResult([string] $Name, [string] $Category, $Actual, $Limit, [st
     }
 }
 
+function New-MarkupTextWitnessGate($Operations, [string[]] $Phrases) {
+    $missing = if ($Phrases.Count) { @(Get-MissingPdfTextPhrases $Operations $Phrases).Count }
+    New-GateResult 'authored-text-phrase-missing-count' 'content' $missing 0 'phrases'
+}
+
 function Get-GatePhase($Gate) {
     switch -Regex ($Gate.Name) {
         '^(page-count-delta|media-box-count-delta|media-box-max-delta)$' {
@@ -2723,6 +2728,9 @@ function Get-GatePhase($Gate) {
         }
         '^(text-|graphics-(visible-)?operation-comparison-exit-code)' {
             return [pscustomobject]@{ Order = 3; Id = "text-graphics-operation-parity"; Name = "Text and graphics operation parity" }
+        }
+        '^authored-text-phrase-missing-count$' {
+            return [pscustomobject]@{ Order = 0; Id = 'authored-text-coverage'; Name = 'Authored text coverage' }
         }
         '^raster-' {
             return [pscustomobject]@{ Order = 4; Id = "raster-parity"; Name = "Raster parity" }
@@ -3278,6 +3286,16 @@ $inputFull = (Resolve-Path -LiteralPath (Join-Path $caseDirectory $manifest.inpu
 $settings = Resolve-DocxMarkupReferenceSettings $manifest $DocxMarkup $DocxMarkupGeometry -RequireMode
 $resolvedDocxMarkup = $settings.Mode
 $resolvedDocxMarkupGeometry = $settings.Geometry
+$markupTextPhrases = @()
+if ($null -ne $manifest.expected -and $manifest.expected.PSObject.Properties['markupTextPhrases']) {
+    $phrases = $manifest.expected.markupTextPhrases
+    if ($phrases -isnot [array] -or !$phrases.Count -or
+        @($phrases | Where-Object { $_ -isnot [string] -or [string]::IsNullOrWhiteSpace($_) }).Count) {
+        throw 'expected.markupTextPhrases must be a nonempty array of text strings.'
+    }
+    $authoredSettings = Resolve-DocxMarkupReferenceSettings $manifest -RequireMode
+    if ($settings.Variant -eq $authoredSettings.Variant) { $markupTextPhrases = $phrases }
+}
 
 $resolvedCaseId = if (-not [string]::IsNullOrWhiteSpace($CaseId)) {
     $CaseId
@@ -3743,7 +3761,9 @@ $rasterRegionDeltaCount = if ($SkipRasterDiff) { $null } else { Get-RasterRegion
 $rasterRegionDimensionMismatchCount = if ($SkipRasterDiff) { $null } else { Get-SummarySumMetric $rasterRegionSummary "DimensionMismatchCount" }
 $maxRasterRegionMeanAbsoluteError = if ($SkipRasterDiff) { $null } else { Get-SummaryMaxMetric $rasterRegionSummary "MaxMeanAbsoluteError" }
 $maxRasterRegionChangedPixelRatioAtThreshold16 = if ($SkipRasterDiff) { $null } else { Get-SummaryMaxMetric $rasterRegionSummary "MaxChangedPixelRatioAtThreshold16" }
+$markupTextWitnessGate = New-MarkupTextWitnessGate $candidateTextOperationItems $markupTextPhrases
 $gateSummary = New-GateSummary @(
+    $markupTextWitnessGate
     New-GateResult "page-count-delta" "pagination" ([Math]::Abs($candidatePageCount - $referencePageCount)) $MaxPageCountDelta "pages"
     New-GateResult "media-box-count-delta" "page-geometry" $mediaBoxDeltaSummary.CountDelta 0 "boxes"
     New-GateResult "media-box-max-delta" "page-geometry" $mediaBoxDeltaSummary.MaxDelta $MediaBoxTolerance "points"
@@ -3815,6 +3835,9 @@ $summary = [ordered]@{
     MaxMeanAbsoluteError = $MaxMeanAbsoluteError
     MaxChangedPixelRatioAtThreshold16 = $MaxChangedPixelRatioAtThreshold16
     TextComparisonExitCode = $textComparisonExitCode
+    MarkupTextWitnessCount = $markupTextPhrases.Count
+    MarkupTextWitnessStatus = $markupTextWitnessGate.Status
+    MissingMarkupTextWitnessCount = $markupTextWitnessGate.Actual
     GraphicsComparisonExitCode = $graphicsComparisonExitCode
     GraphicsVisibleComparisonExitCode = $graphicsVisibleComparisonExitCode
     ReferenceGraphicsOperationCount = $referenceGraphicsOperationItems.Count
@@ -3891,3 +3914,4 @@ if ($FailOnDeltas) {
 }
 
 Write-Host "Cached DOCX markup comparison artifacts: $runRoot"
+exit 0

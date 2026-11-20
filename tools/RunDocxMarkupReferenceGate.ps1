@@ -89,6 +89,8 @@ function Get-CaseComparisonSummary([string] $OutputDirectory) {
         AnnotationDeltaCount = Get-JsonPropertyValue $summary "AnnotationDeltaCount"
         AnnotationTargetDeltaCount = Get-JsonPropertyValue $summary "AnnotationTargetDeltaCount"
         BalloonGeometryDeltaCount = Get-JsonPropertyValue $summary "BalloonGeometryDeltaCount"
+        MarkupTextWitnessStatus = Get-JsonPropertyValue $summary 'MarkupTextWitnessStatus'
+        MissingMarkupTextWitnessCount = Get-JsonPropertyValue $summary 'MissingMarkupTextWitnessCount'
         GateFailureCount = $gateFailureCount
         BlockingGatePhaseId = Get-JsonPropertyValue $blockingPhase "Id"
         BlockingGatePhaseName = Get-JsonPropertyValue $blockingPhase "Name"
@@ -213,6 +215,8 @@ foreach ($caseInfo in $cases) {
         AnnotationDeltaCount = $comparisonSummary.AnnotationDeltaCount
         AnnotationTargetDeltaCount = $comparisonSummary.AnnotationTargetDeltaCount
         BalloonGeometryDeltaCount = $comparisonSummary.BalloonGeometryDeltaCount
+        MarkupTextWitnessStatus = $comparisonSummary.MarkupTextWitnessStatus
+        MissingMarkupTextWitnessCount = $comparisonSummary.MissingMarkupTextWitnessCount
         GateFailureCount = $comparisonSummary.GateFailureCount
         BlockingGatePhaseId = $comparisonSummary.BlockingGatePhaseId
         BlockingGatePhaseName = $comparisonSummary.BlockingGatePhaseName
