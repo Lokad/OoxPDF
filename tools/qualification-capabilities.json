@@ -2228,6 +2228,7 @@
     "DocxTableLayoutStageNaturalAutoWidthIgnoresEmptyParagraphMarks"
   ],
   "docx-picture-placement": [
+    "=DocxDrawingSelectsLastPlacementWithinEachDrawing",
     "DocxFloatingPicturesFollowTableRowRevisionVisibility",
     "DocxPictureOnlyNotesShareAuthoredAspectRatioFitting",
     "DocxUnpositionedStaticPicturesShareBoundedFitAndOwners",

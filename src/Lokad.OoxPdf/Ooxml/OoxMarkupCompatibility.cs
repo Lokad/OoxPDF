@@ -132,6 +132,8 @@ internal static class OoxMarkupCompatibility
             if (ignored && !processContent) { element.Remove(); return; }
             unrecognized |= HasUnrecognizedMustUnderstand(element);
             VisitChildren(element);
+            if (element.Name == OoxNamespaces.WordprocessingNamespace + "drawing")
+                KeepLastWordDrawingPlacement(element, cancellationToken);
             if (ignored && processContent) { Unwrap(element, element); }
         }
 
@@ -145,6 +147,26 @@ internal static class OoxMarkupCompatibility
                 if (child is XElement element) { Visit(element); }
                 child = next;
             }
+        }
+    }
+
+    // MS-OI29500 §17.3.3.9: Word uses the last inline or anchor in a drawing.
+    // Select it after markup compatibility has resolved representational choices.
+    private static void KeepLastWordDrawingPlacement(XElement drawing, CancellationToken cancellationToken)
+    {
+        XName inline = OoxNamespaces.WordprocessingDrawingNamespace + "inline";
+        XName anchor = OoxNamespaces.WordprocessingDrawingNamespace + "anchor";
+        bool selected = false;
+        for (XNode? node = drawing.LastNode; node is not null;)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            XNode? previous = node.PreviousNode;
+            if (node is XElement placement && (placement.Name == inline || placement.Name == anchor))
+            {
+                if (selected) placement.Remove();
+                else selected = true;
+            }
+            node = previous;
         }
     }
 
