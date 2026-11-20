@@ -379,11 +379,9 @@ internal sealed partial class PptxRenderer
         string LevelName,
         IReadOnlyList<PptxParagraphStyleLayer> Layers)
     {
-        public IReadOnlyList<XElement?> Sources => Layers.Select(layer => layer.Source).ToArray();
-
         public XElement? ResolveDefaultProperties()
         {
-            return MergeParagraphProperties(Sources.ToArray());
+            return MergeParagraphProperties(Layers.Select(layer => layer.Source).ToArray());
         }
     }
 

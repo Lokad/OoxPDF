@@ -135,10 +135,10 @@ internal sealed partial class PptxRenderer
             paragraph.HasManualLineBreak,
             paragraph.FirstLineFallbackFontSize,
             paragraph.Cascade.LevelName,
-            paragraph.Cascade.Sources.Count(source => source is not null),
+            paragraph.Cascade.Layers.Count(layer => layer.Source is not null),
             paragraph.Cascade.Layers.Select(layer => layer.Name).ToArray(),
             paragraph.Cascade.Layers.Select(layer => layer.Kind.ToString()).ToArray(),
-            paragraph.ResolvedStyleCascade.Sources.Count(source => source is not null),
+            paragraph.ResolvedStyleCascade.Layers.Count(layer => layer.Source is not null),
             paragraph.ResolvedStyleCascade.Layers.Select(layer => layer.Name).ToArray(),
             paragraph.ResolvedStyleCascade.Layers.Select(layer => layer.Kind.ToString()).ToArray(),
             paragraph.Style.Alignment.ToString(),
@@ -234,7 +234,8 @@ internal sealed partial class PptxRenderer
         bool includePlaceholders,
         IReadOnlyList<XDocument> placeholderSources,
         PresentationFontResolver? fontResolver = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        bool prepareSceneFrame = false)
     {
         if (!includePlaceholders && IsPlaceholder(shape))
         {
@@ -260,8 +261,6 @@ internal sealed partial class PptxRenderer
         PptxTextOrientation orientation = bodyProperties.Orientation;
         double fontScale = bodyProperties.FontScale;
         double lineSpacingScale = bodyProperties.LineSpacingScale;
-        bool compatibleLineSpacing = bodyProperties.CompatibleLineSpacing;
-        double compatibleDefaultLineSpacingFactor = ResolveCompatibleDefaultLineSpacingFactor(bodyProperties);
         double rotationCenterX = x + width / 2d;
         double rotationCenterY = document.SlideHeightPoints - yTop - height / 2d;
         double orientationRotation = TextOrientationRotationDegrees(orientation);
@@ -317,21 +316,12 @@ internal sealed partial class PptxRenderer
         }
         var shapeFontPaint = ReadShapeFontPaint(shape, theme, colorMap);
         bool useOfficeBaselineFloor = true;
-        IReadOnlyList<PptxTextParagraphModel> paragraphs = BuildParagraphModels(
-            shape,
-            textBody,
-            inheritedPlaceholders,
-            placeholderSources,
-            theme,
-            colorMap,
-            slideNumber,
-            fontScale,
-            lineSpacingScale,
-            compatibleLineSpacing,
-            compatibleDefaultLineSpacingFactor,
-            shapeFontPaint, default,
-            disableZeroKerning: UsesNoWrapZeroKerning(bodyProperties, textRotationDegrees),
-            defaultTextStyle: document.DefaultTextStyle);
+        IReadOnlyList<PptxTextParagraphModel> paragraphs = prepareSceneFrame && !NeedsShapeTextMeasurement(bodyProperties)
+            ? []
+            : BuildParagraphModels(shape, textBody, inheritedPlaceholders, placeholderSources, theme, colorMap,
+                slideNumber, bodyProperties, shapeFontPaint, default,
+                disableZeroKerning: UsesNoWrapZeroKerning(bodyProperties, textRotationDegrees),
+                defaultTextStyle: document.DefaultTextStyle);
         fontResolver ??= new PresentationFontResolver(await WindowsFontResolver.CreateAsync(cancellationToken).ConfigureAwait(false), cancellationToken);
         // Vertical middle/bottom anchors resolve from laid-out actuals below (the estimate
         // uses the wrong axis and advance); other orientations keep estimated offsets.
@@ -458,8 +448,6 @@ internal sealed partial class PptxRenderer
         PptxTextOrientation orientation = bodyProperties.Orientation;
         double fontScale = bodyProperties.FontScale;
         double lineSpacingScale = bodyProperties.LineSpacingScale;
-        bool compatibleLineSpacing = bodyProperties.CompatibleLineSpacing;
-        double compatibleDefaultLineSpacingFactor = ResolveCompatibleDefaultLineSpacingFactor(bodyProperties);
         double rotationCenterX = x + width / 2d;
         double rotationCenterY = document.SlideHeightPoints - yTop - height / 2d;
         double orientationRotation = TextOrientationRotationDegrees(orientation);
@@ -497,10 +485,7 @@ internal sealed partial class PptxRenderer
             context.Theme,
             tableFrame.ColorMap,
             context.DisplayedSlideNumber,
-            fontScale,
-            lineSpacingScale,
-            compatibleLineSpacing,
-            compatibleDefaultLineSpacingFactor,
+            bodyProperties,
             shapeFontPaint: null,
             tableFrame.TextStyle,
             defaultTextStyle: document.DefaultTextStyle);
@@ -630,15 +615,13 @@ internal sealed partial class PptxRenderer
         PptxTheme theme,
         PptxColorMap colorMap,
         long slideNumber,
-        double fontScale,
-        double lineSpacingScale,
-        bool compatibleLineSpacing,
-        double compatibleDefaultLineSpacingFactor,
+        PptxTextBodyProperties bodyProperties,
         (RgbColor Color, double Alpha)? shapeFontPaint,
         PptxSceneTableCellTextStyle tableStyleTextStyle,
         bool disableZeroKerning = false,
         XElement? defaultTextStyle = null)
     {
+        double compatibleDefaultLineSpacingFactor = ResolveCompatibleDefaultLineSpacingFactor(bodyProperties);
         var paragraphs = new List<PptxTextParagraphModel>();
         foreach (XElement paragraph in textBody.Elements(DrawingNamespace + "p"))
         {
@@ -646,33 +629,9 @@ internal sealed partial class PptxRenderer
             int paragraphLevel = PptxTextStyleInheritance.ReadParagraphLevel(paragraphProperties);
             string levelName = PptxTextStyleInheritance.ParagraphLevelName(paragraphLevel);
             PptxParagraphStyleCascade cascade = BuildParagraphStyleCascade(levelName);
-            XElement? defaultParagraphProperties = cascade.ResolveDefaultProperties();
-            PptxParagraphStyleCascade resolvedStyleCascade = BuildResolvedParagraphStyleCascade(cascade, paragraphProperties);
-            XElement? effectiveParagraphProperties = paragraphProperties is null ? defaultParagraphProperties : resolvedStyleCascade.ResolveDefaultProperties();
-            ResolvedParagraphTextStyle paragraphStyle = ResolveParagraphTextStyle(paragraph, paragraphProperties, effectiveParagraphProperties, fontScale, lineSpacingScale, compatibleLineSpacing, compatibleDefaultLineSpacingFactor);
-            PptxParagraphBulletModel bullet = BuildParagraphBulletModel(effectiveParagraphProperties, theme, colorMap);
-            IReadOnlyList<PptxTextRunModel> runs = BuildRunModels(paragraph, paragraphStyle, resolvedStyleCascade,
-                shapeFontPaint, theme, colorMap, fontScale, slideNumber, tableStyleTextStyle,
-                disableZeroKerning && paragraphStyle.Alignment == TextAlignment.Left && bullet.Kind == PptxParagraphBulletKind.None);
-            XElement? endParagraphProperties = paragraph.Element(DrawingNamespace + "endParaRPr");
-            ResolvedEndParagraphTextStyle endParagraphStyle = ResolveEndParagraphTextStyle(endParagraphProperties, paragraphStyle.DefaultRunProperties, fontScale);
-            paragraphs.Add(new PptxTextParagraphModel(
-                paragraph,
-                paragraphProperties,
-                endParagraphProperties,
-                endParagraphStyle,
-                ReadParagraphSpacing(paragraphProperties, defaultParagraphProperties, "spcBef", endParagraphStyle.FontSize),
-                ReadParagraphSpacing(paragraphProperties, defaultParagraphProperties, "spcAft", endParagraphStyle.FontSize),
-                paragraphProperties is not null || endParagraphProperties is not null,
-                runs.Count > 0,
-                runs.Any(run => run.Kind == PptxTextRunKind.Break || TextContainsManualLineBreak(run.Text)),
-                paragraphStyle.FontSize,
-                paragraphLevel,
-                cascade,
-                resolvedStyleCascade,
-                paragraphStyle,
-                bullet,
-                runs));
+            paragraphs.Add(BuildParagraphModel(paragraph, paragraphProperties, paragraph.Element(DrawingNamespace + "endParaRPr"),
+                paragraphLevel, cascade, theme, colorMap, slideNumber, bodyProperties, bodyProperties.FontScale,
+                compatibleDefaultLineSpacingFactor, shapeFontPaint, tableStyleTextStyle, disableZeroKerning));
         }
 
         return paragraphs;
@@ -722,18 +681,16 @@ internal sealed partial class PptxRenderer
 
     }
 
-    // R14-deeper: scene-fed paragraph models reuse the retained cascade defaults
-    // instead of re-walking the placeholder/master chain. Layout, measuring, and
-    // emission share this path for shape and table-cell paragraphs.
+    // The scene retains the paragraph cascade, including its placeholder and master sources.
     private static IReadOnlyList<PptxTextParagraphModel> BuildSceneFedParagraphModels(
         IReadOnlyList<PptxSceneTextParagraph> sceneParagraphs,
         PptxTextFrameModel frameModel,
         PptxTheme theme,
         PptxColorMap colorMap,
-        long slideNumber,
-        (RgbColor Color, double Alpha)? shapeFontPaint,
-        PptxSceneTableCellTextStyle tableStyleTextStyle)
+        long slideNumber)
     {
+        double compatibleDefaultLineSpacingFactor = ResolveCompatibleDefaultLineSpacingFactor(frameModel.BodyProperties);
+        bool disableZeroKerning = UsesNoWrapZeroKerning(frameModel.BodyProperties, frameModel.TextRotationDegrees);
         var paragraphs = new List<PptxTextParagraphModel>();
         foreach (PptxSceneTextParagraph sceneParagraph in sceneParagraphs)
         {
@@ -748,36 +705,58 @@ internal sealed partial class PptxRenderer
             var cascade = new PptxParagraphStyleCascade(
                 levelName,
                 sceneParagraph.CascadeLayers.Select(layer => new PptxParagraphStyleLayer(layer.Name, SceneCascadeLayerKind(layer.Kind), layer.Source)).ToList());
-            XElement? defaultParagraphProperties = cascade.ResolveDefaultProperties();
-            PptxParagraphStyleCascade resolvedStyleCascade = BuildResolvedParagraphStyleCascade(cascade, paragraphProperties);
-            XElement? effectiveParagraphProperties = paragraphProperties is null ? defaultParagraphProperties : resolvedStyleCascade.ResolveDefaultProperties();
-            ResolvedParagraphTextStyle paragraphStyle = ResolveParagraphTextStyle(paragraph, paragraphProperties, effectiveParagraphProperties, frameModel.FontScale, frameModel.LineSpacingScale, frameModel.BodyProperties.CompatibleLineSpacing, ResolveCompatibleDefaultLineSpacingFactor(frameModel.BodyProperties));
-            PptxParagraphBulletModel bullet = BuildParagraphBulletModel(effectiveParagraphProperties, theme, colorMap);
-            IReadOnlyList<PptxTextRunModel> runs = BuildRunModels(paragraph, paragraphStyle, resolvedStyleCascade, shapeFontPaint, theme, colorMap, frameModel.FontScale, slideNumber, tableStyleTextStyle,
-                disableZeroKerning: frameModel.TableRowIndex is null && paragraphStyle.Alignment == TextAlignment.Left &&
-                    bullet.Kind == PptxParagraphBulletKind.None && UsesNoWrapZeroKerning(frameModel.BodyProperties, frameModel.TextRotationDegrees));
-            XElement? endParagraphProperties = sceneParagraph.EndParagraphProperties;
-            ResolvedEndParagraphTextStyle endParagraphStyle = ResolveEndParagraphTextStyle(endParagraphProperties, paragraphStyle.DefaultRunProperties, frameModel.FontScale);
-            paragraphs.Add(new PptxTextParagraphModel(
-                paragraph,
-                paragraphProperties,
-                endParagraphProperties,
-                endParagraphStyle,
-                ReadParagraphSpacing(paragraphProperties, defaultParagraphProperties, "spcBef", endParagraphStyle.FontSize),
-                ReadParagraphSpacing(paragraphProperties, defaultParagraphProperties, "spcAft", endParagraphStyle.FontSize),
-                paragraphProperties is not null || endParagraphProperties is not null,
-                runs.Count > 0,
-                runs.Any(run => run.Kind == PptxTextRunKind.Break || TextContainsManualLineBreak(run.Text)),
-                paragraphStyle.FontSize,
-                sceneParagraph.Level,
-                cascade,
-                resolvedStyleCascade,
-                paragraphStyle,
-                bullet,
-                runs));
+            paragraphs.Add(BuildParagraphModel(paragraph, paragraphProperties, sceneParagraph.EndParagraphProperties,
+                sceneParagraph.Level, cascade, theme, colorMap, slideNumber, frameModel.BodyProperties, frameModel.FontScale,
+                compatibleDefaultLineSpacingFactor, frameModel.ShapeFontPaint, default, disableZeroKerning));
         }
 
         return paragraphs;
+    }
+
+    private static PptxTextParagraphModel BuildParagraphModel(
+        XElement paragraph,
+        XElement? paragraphProperties,
+        XElement? endParagraphProperties,
+        int paragraphLevel,
+        PptxParagraphStyleCascade cascade,
+        PptxTheme theme,
+        PptxColorMap colorMap,
+        long slideNumber,
+        PptxTextBodyProperties bodyProperties,
+        double fontScale,
+        double compatibleDefaultLineSpacingFactor,
+        (RgbColor Color, double Alpha)? shapeFontPaint,
+        PptxSceneTableCellTextStyle tableStyleTextStyle,
+        bool disableZeroKerning)
+    {
+        XElement? defaultParagraphProperties = cascade.ResolveDefaultProperties();
+        PptxParagraphStyleCascade resolvedStyleCascade = BuildResolvedParagraphStyleCascade(cascade, paragraphProperties);
+        XElement? effectiveParagraphProperties = paragraphProperties is null ? defaultParagraphProperties : resolvedStyleCascade.ResolveDefaultProperties();
+        ResolvedParagraphTextStyle paragraphStyle = ResolveParagraphTextStyle(paragraph, paragraphProperties,
+            effectiveParagraphProperties, fontScale, bodyProperties.LineSpacingScale, bodyProperties.CompatibleLineSpacing,
+            compatibleDefaultLineSpacingFactor);
+        PptxParagraphBulletModel bullet = BuildParagraphBulletModel(effectiveParagraphProperties, theme, colorMap);
+        IReadOnlyList<PptxTextRunModel> runs = BuildRunModels(paragraph, paragraphStyle, resolvedStyleCascade,
+            shapeFontPaint, theme, colorMap, fontScale, slideNumber, tableStyleTextStyle,
+            disableZeroKerning && paragraphStyle.Alignment == TextAlignment.Left && bullet.Kind == PptxParagraphBulletKind.None);
+        ResolvedEndParagraphTextStyle endParagraphStyle = ResolveEndParagraphTextStyle(endParagraphProperties, paragraphStyle.DefaultRunProperties, fontScale);
+        return new PptxTextParagraphModel(
+            paragraph,
+            paragraphProperties,
+            endParagraphProperties,
+            endParagraphStyle,
+            ReadParagraphSpacing(paragraphProperties, defaultParagraphProperties, "spcBef", endParagraphStyle.FontSize),
+            ReadParagraphSpacing(paragraphProperties, defaultParagraphProperties, "spcAft", endParagraphStyle.FontSize),
+            paragraphProperties is not null || endParagraphProperties is not null,
+            runs.Count > 0,
+            runs.Any(run => run.Kind == PptxTextRunKind.Break || TextContainsManualLineBreak(run.Text)),
+            paragraphStyle.FontSize,
+            paragraphLevel,
+            cascade,
+            resolvedStyleCascade,
+            paragraphStyle,
+            bullet,
+            runs);
     }
 
     private static IReadOnlyList<PptxTextRunModel> BuildRunModels(
@@ -857,46 +836,38 @@ internal sealed partial class PptxRenderer
     {
         cancellationToken.ThrowIfCancellationRequested();
         PptxSceneTextBody? textBody = node.TextBody;
-        if (textBody is null)
+        if (textBody is null || node.Source.Name != PresentationNamespace + "sp" ||
+            !PptxSceneBuilder.IsVisibleDrawingContent(node.Source))
         {
             return [];
         }
 
         fontResolver ??= new PresentationFontResolver(await WindowsFontResolver.CreateAsync(cancellationToken).ConfigureAwait(false), cancellationToken);
-        XElement current = new(node.Source);
-        foreach (XElement group in node.Source.Ancestors(PresentationNamespace + "grpSp"))
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var groupCopy = new XElement(PresentationNamespace + "grpSp");
-            if (group.Element(PresentationNamespace + "grpSpPr") is { } properties)
-            {
-                groupCopy.Add(new XElement(properties));
-            }
-
-            groupCopy.Add(current);
-            current = groupCopy;
-        }
-
-        var slide = new XDocument(
-            new XElement(PresentationNamespace + "sld",
-                new XElement(PresentationNamespace + "cSld",
-                    new XElement(PresentationNamespace + "spTree", current))));
-        PptxTextLayoutModel xmlLayout = (await BuildTextLayoutModelAsync(slide, document, theme, colorMap, slideNumber, includePlaceholders, placeholderSources, fontResolver, cancellationToken).ConfigureAwait(false));
-        // Layout skips shapes it cannot place (unsupported orientation); the XML path
-        // then yields no spans either.
-        PptxTextFrameLayout? xmlFrame = xmlLayout.Frames.SingleOrDefault();
-        if (xmlFrame is null)
+        PptxTextFrameModel? frameModel = await BuildTextFrameModelAsync(node.Source, document, theme, colorMap,
+            slideNumber, includePlaceholders, placeholderSources, fontResolver, cancellationToken,
+            prepareSceneFrame: true).ConfigureAwait(false);
+        if (frameModel is null)
         {
             return [];
         }
-        PptxTextFrameModel frameModel = xmlFrame.Model;
-        IReadOnlyList<PptxTextParagraphModel> fedParagraphs = BuildSceneFedParagraphModels(textBody.Paragraphs, frameModel, theme, colorMap, slideNumber, frameModel.ShapeFontPaint, default);
-        var fedFrame = frameModel with { Paragraphs = fedParagraphs };
+
         var estimator = new TextAdvanceEstimator(fontResolver, cancellationToken);
+        if (NeedsShapeTextMeasurement(frameModel.BodyProperties))
+        {
+            frameModel = (await BuildTextFrameLayoutAsync(frameModel, document, estimator).ConfigureAwait(false)).Model;
+        }
+
+        IReadOnlyList<PptxTextParagraphModel> fedParagraphs = BuildSceneFedParagraphModels(textBody.Paragraphs, frameModel, theme, colorMap, slideNumber);
+        var fedFrame = frameModel with { Paragraphs = fedParagraphs };
         PptxTextFlowFrame fedFlow = await BuildTextFlowFrameAsync(fedFrame, document, estimator).ConfigureAwait(false);
         PptxTextFrameLayout fedLayout = (await BuildTextFrameLayoutAsync(fedFlow, document, estimator, allowWrapping: true).ConfigureAwait(false));
         return RemapMongolianVerticalSpans(await FlattenTextLayoutToSpansAsync(new PptxTextLayoutModel(new[] { fedLayout }), fontResolver, document).ConfigureAwait(false), node.Source);
     }
+
+    // Autofit and center/bottom anchors can change the frame before scene text is placed.
+    private static bool NeedsShapeTextMeasurement(PptxTextBodyProperties properties) =>
+        HasShapeAutoFit(properties) || properties.VerticalAnchor is TextVerticalAnchor.Middle or TextVerticalAnchor.Bottom;
+
     private static PptxParagraphBulletModel BuildParagraphBulletModel(XElement? paragraphProperties, PptxTheme theme, PptxColorMap colorMap)
     {
         if (paragraphProperties is null || paragraphProperties.Element(DrawingNamespace + "buNone") is not null)
