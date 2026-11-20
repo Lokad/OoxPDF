@@ -24,25 +24,4 @@ internal static partial class PptxColumnIntervalTests
             TestAssert.Equal(Tokens(expected), Tokens(actual));
         }
     }
-
-    public static void PptxDeletedSeriesKeepsAxisCaptionsAndLegend()
-    {
-        using var oracle = LogicalCaptionOracle();
-        foreach (string id in new[] { "outer-high45-no-data-labels", "reference-numeric-format", "logical-reversed-hidden12" })
-        {
-            var page = RenderLogicalCaption(oracle, id);
-            var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, false).ToArray();
-            TestAssert.True(!page.Fonts.Any(font => font.ResourceName.StartsWith("CBD", StringComparison.Ordinal)),
-                "A deleted series with no point requests emits no data-label resources or paint.");
-            TestAssert.Equal(1, shows.Count(show => show.Text.Contains("Regional", StringComparison.Ordinal)));
-            string categories = string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, false,
-                fontResourceFilter: name => name.StartsWith("CCA", StringComparison.Ordinal)).Select(show => show.Text));
-            TestAssert.Equal(string.Concat(LogicalCaptionRow(oracle, id).GetProperty("ExpectedCaptions")
-                .EnumerateArray().Select(value => value.GetString())), categories);
-            if (id == "reference-numeric-format")
-                TestAssert.True(AdmissionNumericShows(page).Select(show => show.Text)
-                    .SequenceEqual(new[] { "7.00", "32.00", "57.00", "82.00", "107.00" }),
-                    "Suppressing series labels preserves complete formatted numeric-axis captions.");
-        }
-    }
 }

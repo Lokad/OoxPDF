@@ -11,55 +11,61 @@ internal static partial class PptxColumnIntervalTests
     private static JsonDocument LogicalCaptionOracle() => JsonDocument.Parse(File.ReadAllText(Path.Combine(LogicalCaptionCases, "office.json")));
     private static JsonElement LogicalCaptionRow(JsonDocument oracle, string id) => oracle.RootElement.GetProperty("Rows")
         .EnumerateArray().Single(row => row.GetProperty("Id").GetString() == id);
-    private static PdfPage RenderLogicalCaption(JsonDocument oracle, string id) => RenderAdmission(
-        LogicalCaptionRow(oracle, id), caseDirectory: LogicalCaptionCases);
+
+    private const string LogicalCaptionBaseline = "outer-high45-no-data-labels";
+    private const string LogicalCaptionLiteralAlias = "outer-high45-literal";
+    private static readonly string[] LogicalCaptionUnrelatedRoles =
+    [
+        "outer-high45-no-legend", "reference-root12", "reference-root36",
+        "reference-root-times24", "reference-numeric-format"
+    ];
+    private static readonly (string First, string Second)[] LogicalCaptionPitchChanges =
+    [
+        (LogicalCaptionBaseline, "reference-count12"),
+        ("logical-hidden-numeric", "logical-reversed-hidden8"),
+        ("logical-reversed-hidden8", "logical-reversed-hidden12")
+    ];
+
+    private static HashSet<string> LogicalCaptionFrameCases()
+    {
+        var cases = new HashSet<string>(LogicalCaptionUnrelatedRoles, StringComparer.Ordinal)
+        {
+            "reference-count4", "outer-high45-middle-wide", "outer-high45-last-wide"
+        };
+        foreach (var (first, second) in LogicalCaptionPitchChanges)
+        {
+            cases.Add(first);
+            cases.Add(second);
+        }
+
+        return cases;
+    }
 
     public static void PptxLogicalCaptionFramesPreserveSourceGeometryAndInk()
     {
         using var oracle = LogicalCaptionOracle();
-        const string baselineId = "outer-high45-no-data-labels";
-        string[] unrelatedRoles =
-        [
-            "outer-high45-no-legend", "reference-root12", "reference-root36",
-            "reference-root-times24", "reference-numeric-format"
-        ];
-        (string First, string Second)[] pitchChanges =
-        [
-            (baselineId, "reference-count12"),
-            ("logical-hidden-numeric", "logical-reversed-hidden8"),
-            ("logical-reversed-hidden8", "logical-reversed-hidden12")
-        ];
-        var geometryCases = new HashSet<string>(unrelatedRoles, StringComparer.Ordinal)
-        {
-            "reference-count4", "outer-high45-middle-wide", "outer-high45-last-wide"
-        };
-        foreach (var (first, second) in pitchChanges)
-        {
-            geometryCases.Add(first);
-            geometryCases.Add(second);
-        }
-
+        var geometryCases = LogicalCaptionFrameCases();
         var bounds = new Dictionary<string, (double Left, double Top, double Right, double Bottom)>(StringComparer.Ordinal);
         foreach (var row in oracle.RootElement.GetProperty("Rows").EnumerateArray())
         {
             string id = row.GetProperty("Id").GetString()!;
-            // Retained Office row for the same authored bytes as baselineId.
-            if (id == "outer-high45-literal")
+            if (!geometryCases.Contains(id))
             {
                 continue;
             }
 
             PdfPage page = RenderAdmission(row, caseDirectory: LogicalCaptionCases);
             CheckLogicalCaptionInk(page, row);
-            if (geometryCases.Contains(id))
+            bounds.Add(id, AdmissionBounds(page));
+            if (id is LogicalCaptionBaseline or "reference-numeric-format" or "logical-reversed-hidden12")
             {
-                bounds.Add(id, AdmissionBounds(page));
+                CheckDeletedSeriesCaptionsAndLegend(page, id);
             }
         }
 
-        var baseline = bounds[baselineId];
-        double nativeRight = LogicalCaptionRow(oracle, baselineId).GetProperty("NativeFrame")[2].GetDouble();
-        foreach (string id in unrelatedRoles)
+        var baseline = bounds[LogicalCaptionBaseline];
+        double nativeRight = LogicalCaptionRow(oracle, LogicalCaptionBaseline).GetProperty("NativeFrame")[2].GetDouble();
+        foreach (string id in LogicalCaptionUnrelatedRoles)
         {
             TestAssert.True(Math.Abs(LogicalCaptionRow(oracle, id).GetProperty("NativeFrame")[2].GetDouble() - nativeRight) < .02d,
                 "Independent native controls isolate the authored reference from unrelated text and numeric gutters.");
@@ -70,7 +76,7 @@ internal static partial class PptxColumnIntervalTests
 
         // Font substitution changes absolute text spans. The native movement
         // caused by source pitch remains independent of the selected face.
-        foreach (var (first, second) in pitchChanges)
+        foreach (var (first, second) in LogicalCaptionPitchChanges)
         {
             var a = bounds[first];
             var b = bounds[second];
@@ -92,7 +98,7 @@ internal static partial class PptxColumnIntervalTests
 
         // Change just the category carrier. The formula uses the eight pinned
         // cached captions, so the assertion is source equivalence within Lokad.OoxPdf.
-        var literal = LogicalCaptionRow(oracle, baselineId);
+        var literal = LogicalCaptionRow(oracle, LogicalCaptionBaseline);
         PdfPage cached = RenderAdmission(literal, caseDirectory: LogicalCaptionCases, editChart: chart =>
         {
             XElement categories = chart.Descendants(CrossingC + "cat").Single();
@@ -104,6 +110,38 @@ internal static partial class PptxColumnIntervalTests
         });
         CheckLogicalCaptionInk(cached, literal);
         TestAssert.True(baseline == AdmissionBounds(cached), "A cached reference preserves the literal categories' plot frame.");
+    }
+
+    public static void PptxLogicalCaptionVariantsKeepExpectedInk()
+    {
+        using var oracle = LogicalCaptionOracle();
+        var geometryCases = LogicalCaptionFrameCases();
+        foreach (var row in oracle.RootElement.GetProperty("Rows").EnumerateArray())
+        {
+            string id = row.GetProperty("Id").GetString()!;
+            // The Office literal alias has the same authored bytes as LogicalCaptionBaseline.
+            if (geometryCases.Contains(id) || id == LogicalCaptionLiteralAlias)
+            {
+                continue;
+            }
+
+            PdfPage page = RenderAdmission(row, caseDirectory: LogicalCaptionCases);
+            CheckLogicalCaptionInk(page, row);
+        }
+    }
+
+    private static void CheckDeletedSeriesCaptionsAndLegend(PdfPage page, string id)
+    {
+        TestAssert.True(!page.Fonts.Any(font => font.ResourceName.StartsWith("CBD", StringComparison.Ordinal)),
+            "A deleted series with no point requests emits no data-label resources or paint.");
+        var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, false);
+        TestAssert.Equal(1, shows.Count(show => show.Text.Contains("Regional", StringComparison.Ordinal)));
+        if (id == "reference-numeric-format")
+        {
+            TestAssert.True(AdmissionNumericShows(page).Select(show => show.Text)
+                .SequenceEqual(new[] { "7.00", "32.00", "57.00", "82.00", "107.00" }),
+                "Suppressing series labels preserves complete formatted numeric-axis captions.");
+        }
     }
 
     private static void CheckLogicalCaptionInk(PdfPage page, JsonElement row)
