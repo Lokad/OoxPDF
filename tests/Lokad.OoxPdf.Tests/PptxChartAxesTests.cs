@@ -2108,7 +2108,6 @@ internal static class PptxChartAxesTests
             </c:chartSpace>
             """) ?? throw new InvalidOperationException("Expected chart scene.");
         TestAssert.Equal(PptxSceneChartDisplayBlanksAs.Unknown, chart.Options.DisplayBlanksAsKind);
-        TestAssert.Equal("bogus", chart.Options.DisplayBlanksAs);
 
         System.Reflection.MethodInfo readDisplayBlanksAs = typeof(PptxRenderer).GetMethod(
             "ResolveChartDisplayBlanksAs",

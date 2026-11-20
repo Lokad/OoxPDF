@@ -20,9 +20,9 @@ internal static class PptxModelTests
     {
         // T02: chart part records build only through factories; the defined flag
         // cannot disagree with construction and defined parts require identity.
-        PptxSceneChartExternalData undefinedExternal = PptxSceneChartExternalData.Undefined;
+        PptxSceneChartExternalData undefinedExternal = default;
         TestAssert.True(!undefinedExternal.IsDefined, "Undefined external data must clear the flag.");
-        PptxSceneChartExternalData definedExternal = PptxSceneChartExternalData.Defined("rId9", "/xl/embed.xlsx", null, null, string.Empty);
+        PptxSceneChartExternalData definedExternal = PptxSceneChartExternalData.Defined("rId9", "/xl/embed.xlsx", null);
         TestAssert.True(definedExternal.IsDefined, "Defined external data must set the flag.");
 
         PptxSceneChartColorStyle undefinedColor = PptxSceneChartColorStyle.Undefined(null);
@@ -507,31 +507,13 @@ internal static class PptxModelTests
         TestAssert.True(slideSnapshot.SlideNodes[4].HasChartExternalData, "Expected scene inspection to expose chart external-data ownership.");
         TestAssert.Equal("rId3", slideSnapshot.SlideNodes[4].ChartExternalDataRelationshipId);
         TestAssert.Equal("/ppt/embeddings/chart-data.xlsx", slideSnapshot.SlideNodes[4].ChartExternalDataTargetPartName);
-        TestAssert.True(slideSnapshot.SlideNodes[4].ChartExternalDataAutoUpdate == false, "Expected scene inspection to expose chart external-data auto-update policy.");
-        TestAssert.Equal("0", slideSnapshot.SlideNodes[4].ChartExternalDataAutoUpdateValue);
         TestAssert.True(slideSnapshot.SlideNodes[4].HasChartExternalDataResource, "Expected scene inspection to expose embedded workbook resource ownership without package bytes.");
         TestAssert.Equal("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", slideSnapshot.SlideNodes[4].ChartExternalDataContentType);
-        TestAssert.True(slide.SlideNodes[4].Chart?.ExternalData.AutoUpdate == false, "Expected chart external-data auto-update flag in the scene model.");
-        TestAssert.Equal("0", slide.SlideNodes[4].Chart?.ExternalData.AutoUpdateValue ?? string.Empty);
         TestAssert.True(slide.SlideNodes[4].Chart?.Options.Date1904 == true, "Expected chart date-system flag ownership in the scene model.");
-        TestAssert.Equal("true", slide.SlideNodes[4].Chart?.Options.Date1904Value ?? string.Empty);
         TestAssert.True(slideSnapshot.SlideNodes[4].ChartDate1904 == true, "Expected scene inspection to expose chart date-system policy.");
-        TestAssert.Equal("true", slideSnapshot.SlideNodes[4].ChartDate1904Value);
-        TestAssert.True(slide.SlideNodes[4].Chart?.Options.RoundedCorners == false, "Expected chart rounded-corners flag ownership in the scene model.");
-        TestAssert.Equal("0", slide.SlideNodes[4].Chart?.Options.RoundedCornersValue ?? string.Empty);
-        TestAssert.True(slideSnapshot.SlideNodes[4].ChartRoundedCorners == false, "Expected scene inspection to expose chart rounded-corners policy.");
-        TestAssert.Equal("0", slideSnapshot.SlideNodes[4].ChartRoundedCornersValue);
         TestAssert.True(slide.SlideNodes[4].Chart?.Options.PlotVisibleOnly == false, "Expected plot-visible-only flag ownership in the scene model.");
-        TestAssert.Equal("false", slide.SlideNodes[4].Chart?.Options.PlotVisibleOnlyValue ?? string.Empty);
         TestAssert.True(slideSnapshot.SlideNodes[4].ChartPlotVisibleOnly == false, "Expected scene inspection to expose chart plot-visible-only policy.");
-        TestAssert.Equal("false", slideSnapshot.SlideNodes[4].ChartPlotVisibleOnlyValue);
-        TestAssert.True(slide.SlideNodes[4].Chart?.Options.ShowDataLabelsOverMaximum == true, "Expected show-data-labels-over-maximum flag ownership in the scene model.");
-        TestAssert.Equal("1", slide.SlideNodes[4].Chart?.Options.ShowDataLabelsOverMaximumValue ?? string.Empty);
-        TestAssert.True(slideSnapshot.SlideNodes[4].ChartShowDataLabelsOverMaximum == true, "Expected scene inspection to expose chart over-maximum data-label policy.");
-        TestAssert.Equal("1", slideSnapshot.SlideNodes[4].ChartShowDataLabelsOverMaximumValue);
         TestAssert.Equal(PptxSceneChartDisplayBlanksAs.Span, slide.SlideNodes[4].Chart?.Options.DisplayBlanksAsKind);
-        TestAssert.Equal("span", slide.SlideNodes[4].Chart?.Options.DisplayBlanksAs ?? string.Empty);
-        TestAssert.Equal("span", slideSnapshot.SlideNodes[4].ChartDisplayBlanksAs);
         TestAssert.True(slide.SlideNodes[4].Chart?.ColorStyle.IsDefined == true, "Expected chart color-style ownership in the scene model.");
         TestAssert.Equal("/ppt/charts/colors1.xml", slide.SlideNodes[4].Chart?.ColorStyle.PartName ?? string.Empty);
         TestAssert.Equal("cycle", slide.SlideNodes[4].Chart?.ColorStyle.Method ?? string.Empty);

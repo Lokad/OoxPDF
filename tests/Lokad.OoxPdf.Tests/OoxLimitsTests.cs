@@ -1678,7 +1678,7 @@ internal static partial class OoxLimitsTests
     {
         byte[] xlsx = MinimalEmbeddedWorkbook();
         var resource = new PptxScenePackageResource("/xl/embed.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", xlsx);
-        var external = PptxSceneChartExternalData.Defined("rId9", "/xl/embed.xlsx", resource, null, string.Empty);
+        var external = PptxSceneChartExternalData.Defined("rId9", "/xl/embed.xlsx", resource);
         var cache = new Dictionary<string, PptxRenderer.ChartWorkbookData?>(StringComparer.Ordinal);
         MethodInfo getOrCreate = typeof(PptxRenderer).GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
             .First(method => method.Name == "GetOrCreateChartWorkbook");
@@ -1701,7 +1701,7 @@ internal static partial class OoxLimitsTests
         TestAssert.True(ReferenceEquals(first, second), "Same embedded workbook part must resolve to one shared model.");
 
         // A different part key parses independently.
-        var other = PptxSceneChartExternalData.Defined("rId9", "/xl/other.xlsx", resource, null, string.Empty);
+        var other = PptxSceneChartExternalData.Defined("rId9", "/xl/other.xlsx", resource);
         object? third = Invoke(cache, other);
         TestAssert.NotNull(third);
         TestAssert.True(!ReferenceEquals(first, third), "Different embedded parts must not alias models.");

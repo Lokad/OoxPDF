@@ -373,26 +373,26 @@ internal static class PptxChartPlotOptionsAgreementTests
 
     public static void ChartLevelOptionsKeepParsedSceneDefaults()
     {
-        (string Xml, PptxSceneChartDisplayBlanksAs Expected)[] blanks =
+        const string plot = """
+            <c:barChart>
+              <c:ser><c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser>
+              <c:axId val="10"/><c:axId val="20"/>
+            </c:barChart>
+            """;
+        (string Xml, PptxSceneChartDisplayBlanksAs Blanks, bool? VisibleOnly)[] samples =
         [
-            ("<c:dispBlanksAs val=\"span\"/>", PptxSceneChartDisplayBlanksAs.Span),
-            ("<c:dispBlanksAs val=\"zero\"/>", PptxSceneChartDisplayBlanksAs.Zero),
-            ("<c:dispBlanksAs val=\"gap\"/>", PptxSceneChartDisplayBlanksAs.Gap),
-            ("<c:dispBlanksAs val=\"bogus\"/>", PptxSceneChartDisplayBlanksAs.Gap),
-            ("", PptxSceneChartDisplayBlanksAs.Gap)
+            ("<c:dispBlanksAs val=\"span\"/><c:plotVisOnly val=\"0\"/>", PptxSceneChartDisplayBlanksAs.Span, false),
+            ("<c:dispBlanksAs val=\"zero\"/><c:plotVisOnly val=\"1\"/>", PptxSceneChartDisplayBlanksAs.Zero, true),
+            ("<c:dispBlanksAs val=\"gap\"/><c:plotVisOnly/>", PptxSceneChartDisplayBlanksAs.Gap, true),
+            ("<c:dispBlanksAs val=\"bogus\"/><c:plotVisOnly val=\"bogus\"/>", PptxSceneChartDisplayBlanksAs.Gap, false),
+            ("", PptxSceneChartDisplayBlanksAs.Gap, null)
         ];
-        (string Xml, bool? Expected)[] visible = [("<c:plotVisOnly val=\"0\"/>", false),
-            ("<c:plotVisOnly val=\"1\"/>", true), ("", null)];
-        foreach (var blank in blanks)
+        foreach (var sample in samples)
         {
-            foreach (var vis in visible)
-            {
-                string xml = ChartSpace("<c:barChart><c:ser><c:cat><c:strLit><c:pt idx=\"0\"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx=\"0\"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser><c:axId val=\"10\"/><c:axId val=\"20\"/></c:barChart>", blank.Xml + vis.Xml);
-                PptxSceneChart sceneChart = TestAssert.NotNull(PptxTests.BuildSingleChartScene(xml));
-                object? effective = Invoke("ResolveChartDisplayBlanksAs", new[] { typeof(PptxSceneChart) }, new object?[] { sceneChart });
-                TestAssert.Equal(blank.Expected, (PptxSceneChartDisplayBlanksAs)TestAssert.NotNull(effective));
-                TestAssert.Equal(vis.Expected, sceneChart.Options.PlotVisibleOnly);
-            }
+            PptxSceneChart sceneChart = TestAssert.NotNull(PptxTests.BuildSingleChartScene(ChartSpace(plot, sample.Xml)));
+            object? effective = Invoke("ResolveChartDisplayBlanksAs", new[] { typeof(PptxSceneChart) }, new object?[] { sceneChart });
+            TestAssert.Equal(sample.Blanks, (PptxSceneChartDisplayBlanksAs)TestAssert.NotNull(effective));
+            TestAssert.Equal(sample.VisibleOnly, sceneChart.Options.PlotVisibleOnly);
         }
     }
 

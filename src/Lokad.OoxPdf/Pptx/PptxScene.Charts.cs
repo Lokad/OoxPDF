@@ -81,26 +81,14 @@ internal sealed partial class PptxSceneBuilder
         }
     }
 
-    internal static PptxSceneChartOptions ReadChartOptions(XDocument? chartXml)
+    private static PptxSceneChartOptions ReadChartOptions(XDocument? chartXml)
     {
         XElement? chartSpace = chartXml?.Root;
         XElement? chart = chartSpace?.Element(ChartNamespace + "chart");
-        string displayBlanksAs = chart is null ? string.Empty : ReadChartElementValue(chart, "dispBlanksAs");
-        (bool? date1904, string date1904Value) = ReadOptionalOoxmlBooleanElementWithValue(chartSpace, "date1904");
-        (bool? roundedCorners, string roundedCornersValue) = ReadOptionalOoxmlBooleanElementWithValue(chartSpace, "roundedCorners");
-        (bool? plotVisibleOnly, string plotVisibleOnlyValue) = ReadOptionalOoxmlBooleanElementWithValue(chart, "plotVisOnly");
-        (bool? showDataLabelsOverMaximum, string showDataLabelsOverMaximumValue) = ReadOptionalOoxmlBooleanElementWithValue(chart, "showDLblsOverMax");
-        return new PptxSceneChartOptions(
-            date1904,
-            date1904Value,
-            roundedCorners,
-            roundedCornersValue,
-            plotVisibleOnly,
-            plotVisibleOnlyValue,
-            showDataLabelsOverMaximum,
-            showDataLabelsOverMaximumValue,
-            ParseChartDisplayBlanksAs(displayBlanksAs),
-            displayBlanksAs);
+        return new(
+            ReadOptionalOoxmlBooleanElementWithValue(chartSpace, "date1904").Value,
+            ReadOptionalOoxmlBooleanElementWithValue(chart, "plotVisOnly").Value,
+            ParseChartDisplayBlanksAs(ReadChartElementValue(chart, "dispBlanksAs")));
     }
 
     private static IReadOnlyList<PptxSceneChartPlot> ReadChartPlots(XDocument? chartXml, PptxTheme theme, PptxColorMap colorMap)

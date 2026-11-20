@@ -32,58 +32,31 @@ internal sealed record PptxSceneChart(
 internal readonly record struct PptxSceneChartExternalData
 {
     public bool IsDefined { get; }
-
     public string? RelationshipId { get; }
-
     public string? TargetPartName { get; }
-
     public PptxScenePackageResource? Resource { get; }
 
-    public bool? AutoUpdate { get; }
-
-    public string AutoUpdateValue { get; }
-
-    public static PptxSceneChartExternalData Undefined => default;
-
     private PptxSceneChartExternalData(
-        bool isDefined,
         string? relationshipId,
         string? targetPartName,
-        PptxScenePackageResource? resource,
-        bool? autoUpdate,
-        string autoUpdateValue)
+        PptxScenePackageResource? resource)
     {
-        IsDefined = isDefined;
+        IsDefined = true;
         RelationshipId = relationshipId;
         TargetPartName = targetPartName;
         Resource = resource;
-        AutoUpdate = autoUpdate;
-        AutoUpdateValue = autoUpdateValue;
     }
 
     public static PptxSceneChartExternalData Defined(
         string? relationshipId,
         string? targetPartName,
-        PptxScenePackageResource? resource,
-        bool? autoUpdate,
-        string autoUpdateValue)
-    {
-        ArgumentNullException.ThrowIfNull(autoUpdateValue);
-        return new PptxSceneChartExternalData(true, relationshipId, targetPartName, resource, autoUpdate, autoUpdateValue);
-    }
+        PptxScenePackageResource? resource) => new(relationshipId, targetPartName, resource);
 }
 
 internal readonly record struct PptxSceneChartOptions(
     bool? Date1904,
-    string Date1904Value,
-    bool? RoundedCorners,
-    string RoundedCornersValue,
     bool? PlotVisibleOnly,
-    string PlotVisibleOnlyValue,
-    bool? ShowDataLabelsOverMaximum,
-    string ShowDataLabelsOverMaximumValue,
-    PptxSceneChartDisplayBlanksAs DisplayBlanksAsKind,
-    string DisplayBlanksAs);
+    PptxSceneChartDisplayBlanksAs DisplayBlanksAsKind);
 
 internal enum PptxSceneChartDisplayBlanksAs
 {

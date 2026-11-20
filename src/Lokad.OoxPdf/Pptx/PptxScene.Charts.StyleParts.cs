@@ -29,13 +29,10 @@ internal sealed partial class PptxSceneBuilder
             targetPartName = relationship.ResolvedTarget;
         }
 
-        (bool? autoUpdate, string autoUpdateValue) = ReadOptionalOoxmlBooleanElementWithValue(externalData, "autoUpdate");
         return PptxSceneChartExternalData.Defined(
             relationshipId,
             targetPartName,
-            ReadPackageResource(package, targetPartName),
-            autoUpdate,
-            autoUpdateValue);
+            ReadPackageResource(package, targetPartName));
     }
 
     private static PptxSceneChartColorStyle ReadChartColorStyle(
