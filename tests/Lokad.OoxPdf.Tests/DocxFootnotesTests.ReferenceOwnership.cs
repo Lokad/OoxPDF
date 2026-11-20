@@ -220,15 +220,20 @@ internal static partial class DocxFootnotesTests
             parts["word/" + kind + "s.xml"] = notes.ToString();
         });
 
-    public static void DocxCompleteFootnoteKerningProtectsOwnedCustomBaselinePrefixes()
+    public static void DocxCompleteFootnoteKerningProtectsOwnedCustomBaselinePrefixes() =>
+        CheckOwnedCustomBaselinePrefixes(DocxRelatedStoryKind.Footnote);
+
+    private static void CheckOwnedCustomBaselinePrefixes(DocxRelatedStoryKind kind)
     {
         foreach (string mark in new[] { "*", "**", "*tail" })
         {
-            DocxDocument source = ReadCustomDocumentEndnoteFlowFixture(mark, footnote: true);
+            DocxDocument source = ReadCustomDocumentNoteFlowFixture(mark, kind == DocxRelatedStoryKind.Footnote);
             DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
                 .Create(source, new DocxTests.FamilyWidthTextMeasurer(), default);
-            TestAssert.True(DocxNoteKerning.TryCreateDocument(source, layout, out var adjusted, out var pages, default, DocxRelatedStoryKind.Footnote),
+            TestAssert.True(DocxNoteKerning.TryCreateDocument(source, layout, out var adjusted, out var pages, default, kind),
                 "A unique typed reference protects the custom prefix through the shared complete-note correction.");
+            TestAssert.Equal(source.BodyElements.Count, adjusted.BodyElements.Count);
+            TestAssert.Equal(source.RelatedStories.Count, adjusted.RelatedStories.Count);
             TestAssert.True(source.BodyElements.Zip(adjusted.BodyElements).All(pair => ReferenceEquals(pair.First, pair.Second)),
                 "Custom note typography preserves body run/reference owners.");
             foreach (var pair in source.RelatedStories.Zip(adjusted.RelatedStories).Where(pair => pair.First.IsNormalStoryType))
@@ -252,45 +257,54 @@ internal static partial class DocxFootnotesTests
             }
             DocxLayout final = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
                 .Create(adjusted, new DocxTests.FamilyWidthTextMeasurer(), default);
-            TestAssert.True(DocxNoteKerning.HasStableOwners(final, pages, default, DocxRelatedStoryKind.Footnote), "Owned custom markers keep the complete note-page map.");
+            TestAssert.True(DocxNoteKerning.HasStableOwners(final, pages, default, kind), "Owned custom markers keep the complete note-page map.");
         }
     }
 
-    public static void DocxCompleteFootnoteKerningRejectsAmbiguousCustomSourceOwners()
+    public static void DocxCompleteFootnoteKerningRejectsAmbiguousCustomSourceOwners() =>
+        CheckAmbiguousCustomSourceOwners(DocxRelatedStoryKind.Footnote);
+
+    private static void CheckAmbiguousCustomSourceOwners(DocxRelatedStoryKind kind)
     {
-        DocxDocument plain = ReadCustomDocumentEndnoteFlowFixture("*", footnote: true);
+        DocxDocument plain = ReadCustomDocumentNoteFlowFixture("*", kind == DocxRelatedStoryKind.Footnote);
         DocxParagraph body = plain.Paragraphs[0];
         DocxInlineReference reference = body.InlineReferences.Single();
         DocxRelatedStory first = plain.RelatedStories.First(s => s.IsNormalStoryType);
         DocxDocument ReplaceBody(DocxParagraph p) => plain with { BodyElements = plain.BodyElements.Select(e =>
             e is DocxParagraphElement pe && ReferenceEquals(pe.Paragraph, body) ? pe with { Paragraph = p } : e).ToArray() };
-        foreach (DocxDocument source in new[]
+        DocxTextRun marker = first.Paragraphs[0].Runs[0];
+        DocxDocument ReplaceMarker(DocxTextRun replacement) => plain with
+        {
+            RelatedStories = plain.RelatedStories.Select(s => ReferenceEquals(s, first) ? s with
+            {
+                BodyElements = [new DocxParagraphElement(first.Paragraphs[0] with
+                { Runs = [replacement, first.Paragraphs[0].Runs[1]] })],
+            } : s).ToArray(),
+        };
+        var sources = new List<DocxDocument>
         {
             ReplaceBody(body with { InlineReferences = [reference with { CustomMarkText = null }] }),
             ReplaceBody(body with { InlineReferences = [reference, reference] }),
             ReplaceBody(body with { InlineReferences = [reference with { SourceRunIndex = reference.SourceRunIndex + 100 }] }),
             ReplaceBody(body with { InlineReferences = [reference with { TextOffsetInRun = reference.TextOffsetInRun + 1 }] }),
             ReplaceBody(body with { Runs = body.Runs.Concat(body.Runs.Where(r => r.SourceRunIndex == reference.SourceRunIndex)).ToArray() }),
-            plain with { RelatedStories = plain.RelatedStories.Select(s => ReferenceEquals(s, first) ? s with
-            {
-                BodyElements = [new DocxParagraphElement(first.Paragraphs[0] with
-                { Runs = [first.Paragraphs[0].Runs[0] with { VerticalAlignmentValue = "superscript" }, first.Paragraphs[0].Runs[1]] })],
-            } : s).ToArray() },
-            plain with { RelatedStories = plain.RelatedStories.Select(s => ReferenceEquals(s, first) ? s with
-            {
-                BodyElements = [new DocxParagraphElement(first.Paragraphs[0] with
-                { Runs = [first.Paragraphs[0].Runs[0] with { Text = "?" }, first.Paragraphs[0].Runs[1]] })],
-            } : s).ToArray() },
-        })
+            ReplaceMarker(marker with { Text = "?" }),
+        };
+        if (kind == DocxRelatedStoryKind.Footnote)
+        {
+            sources.Add(ReplaceMarker(marker with { VerticalAlignmentValue = "superscript" }));
+        }
+
+        foreach (DocxDocument source in sources)
         {
             DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
                 .Create(source, new DocxTests.FamilyWidthTextMeasurer(), default);
-            TestAssert.True(!DocxNoteKerning.TryCreateDocument(source, layout, out var adjusted, out _, default, DocxRelatedStoryKind.Footnote) && ReferenceEquals(source, adjusted),
+            TestAssert.True(!DocxNoteKerning.TryCreateDocument(source, layout, out var adjusted, out _, default, kind) && ReferenceEquals(source, adjusted),
                 "Missing, repeated, overlapping and mismatched source owners keep the exact fallback.");
         }
     }
 
-    private static DocxDocument ReadCustomDocumentEndnoteFlowFixture(string mark, bool footnote = false)
+    private static DocxDocument ReadCustomDocumentNoteFlowFixture(string mark, bool footnote)
     {
         DocxDocument source = footnote ? WithPlainFootnoteTestHeader(ReadWrappedFootnoteFlowFixture(200)) :
             ReadDocumentEndnoteFlowFixture(0, 0);

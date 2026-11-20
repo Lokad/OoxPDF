@@ -1528,7 +1528,7 @@ internal static partial class DocxFootnotesTests
 
     private static DocxDocument ReadCustomNoteMetricFixture(bool footnote, double contentSize)
     {
-        DocxDocument source = ReadCustomDocumentEndnoteFlowFixture("*", footnote);
+        DocxDocument source = ReadCustomDocumentNoteFlowFixture("*", footnote);
         return source with { RelatedStories = source.RelatedStories.Select(s => s.IsNormalStoryType ? s with
         {
             BodyElements = s.Paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p with

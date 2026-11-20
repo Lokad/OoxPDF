@@ -1800,12 +1800,17 @@ internal static partial class PptxChartsTests
             "SplitPieLabelWordLines",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
         TestAssert.True(method is not null, "Expected pie word-wrap helper to remain inspectable by the Office evidence guard.");
-        System.Collections.Generic.List<int[]> Gamma() => (System.Collections.Generic.List<int[]>)method!.Invoke(null, [new double[] { 62.6d, 34.1d }, new double[] { 5d, 0d }, 98.8d])!;
-        System.Collections.Generic.List<int[]> West() => (System.Collections.Generic.List<int[]>)method!.Invoke(null, [new double[] { 40.1d, 34.1d }, new double[] { 5d, 0d }, 79.8d])!;
-        System.Collections.Generic.List<int[]> North() => (System.Collections.Generic.List<int[]>)method!.Invoke(null, [new double[] { 44.4d, 34.1d }, new double[] { 5d, 0d }, 79.8d])!;
-        TestAssert.True(Gamma().Count == 2 && Gamma()[0].Length == 1 && Gamma()[1].Length == 1, "Gamma total over the cap should break between words.");
-        TestAssert.True(West().Count == 1 && West()[0].Length == 2, "West total inside the cap should stay single-line.");
-        TestAssert.True(North().Count == 2, "North total over the cap should wrap despite near-equal single-line widths.");
+
+        string LineIndices(double firstWordWidth, double maxWidth)
+        {
+            var lines = (IReadOnlyList<int[]>)method!.Invoke(null,
+                [new double[] { firstWordWidth, 34.1d }, new double[] { 5d, 0d }, maxWidth])!;
+            return string.Join(" | ", lines.Select(line => string.Join(",", line)));
+        }
+
+        TestAssert.Equal("0 | 1", LineIndices(62.6d, 98.8d)); // Gamma wraps between words.
+        TestAssert.Equal("0,1", LineIndices(40.1d, 79.8d)); // West fits on one line.
+        TestAssert.Equal("0 | 1", LineIndices(44.4d, 79.8d)); // North exceeds the same cap.
     }
 
     public static void PptxSyntheticPieLabelLongWordSplitsGreedily()
