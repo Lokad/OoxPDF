@@ -57,7 +57,18 @@ Invoke-Case "textfilter-plain" @($r1, $r2) @((New-CandRun 10 20 "Beta" 12), (New
 Invoke-Case "textfilter" @($r1, $r2) @((New-CandRun 10 20 "Beta" 12), (New-CandRun 30 20 "Alpha" 12)) 1 0 "-MatchByTextThenPosition"
 Invoke-Case "fontsize" @($r1) @((New-CandRun 10 20 "Alpha" 12.5)) 1 0
 
+$tool = Join-Path $PSScriptRoot 'ComparePptxTextEmission.ps1'
+$referencePath = Join-Path $scratch 'deleted-ref.json'
+$candidatePath = Join-Path $scratch 'deleted-cand.json'
+& $tool -ReferenceTextOperations $referencePath -CandidateGlyphRuns $candidatePath *> (Join-Path $scratch 'in-process-failure.log')
+if ($LASTEXITCODE -ne 1) { throw 'A missing glyph run must report a failed in-process comparison.' }
+$noFailLog = Join-Path $scratch 'in-process-no-fail.log'
+& $tool -ReferenceTextOperations $referencePath -CandidateGlyphRuns $candidatePath -NoFail *> $noFailLog
+if ($LASTEXITCODE -ne 0 -or (Get-Content -LiteralPath $noFailLog -Raw) -notmatch 'deltas=1') {
+    throw 'NoFail must report the delta and return success in-process.'
+}
+
 if ($failures.Count -ne 0) {
     throw ("Emission comparison adversarial checks failed: " + ($failures -join "; "))
 }
-Write-Host "Emission comparison adversarial checks passed (7 cases)."
+Write-Host "Emission comparison adversarial checks passed (9 cases)."

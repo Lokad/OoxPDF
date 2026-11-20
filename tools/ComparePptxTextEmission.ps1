@@ -1000,3 +1000,5 @@ else {
 if ($failures -ne 0 -and -not $NoFail) {
     exit 1
 }
+
+exit 0

@@ -262,3 +262,5 @@ if ($CompareDecodedText) {
 if ($failures -ne 0) {
     exit 1
 }
+
+exit 0

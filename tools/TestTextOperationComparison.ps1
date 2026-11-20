@@ -121,6 +121,13 @@ $unknown.Payload = 'undecoded'
 Invoke-Case 'blank-line-unknown' @($unknown) @($blank) 1 1 $visibleArgs
 Invoke-Case 'blank-line-partly-unknown' @($unknown, (New-MetricOp 13 80 ' ' 3)) @($blank) 1 1 $visibleArgs
 
+$tool = Join-Path $PSScriptRoot 'ComparePdfTextOperations.ps1'
+$referencePath = Join-Path $scratch 'deleted-ref.json'
+& $tool -Reference $referencePath -Candidate (Join-Path $scratch 'deleted-cand.json') *> (Join-Path $scratch 'in-process-failure.log')
+if ($LASTEXITCODE -ne 1) { throw 'A missing operation must report a failed in-process comparison.' }
+& $tool -Reference $referencePath -Candidate $referencePath *> (Join-Path $scratch 'in-process-recovery.log')
+if ($LASTEXITCODE -ne 0) { throw 'An identical in-process comparison inherited the preceding failure.' }
+
 if ($failures.Count -ne 0) {
     throw ("Text comparison adversarial checks failed: " + ($failures -join "; "))
 }

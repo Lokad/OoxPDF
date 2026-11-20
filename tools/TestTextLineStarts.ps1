@@ -66,6 +66,15 @@ foreach ($parameter in @('LineTolerance','StartTolerance','BaselineTolerance')) 
         if ($LASTEXITCODE -ne 1 -or (Get-Content ($prefix+'.log') -Raw) -notlike '*finite and non-negative*') { throw 'Invalid tolerance was not refused by the comparison boundary' }
     }
 }
+$tool = Join-Path $PSScriptRoot 'ComparePdfTextLineStarts.ps1'
+$referencePath = Join-Path $root 'indexed-missing-line-ref.json'
+& $tool -Reference $referencePath -Candidate (Join-Path $root 'indexed-missing-line-cand.json') *> (Join-Path $root 'in-process-failure.log')
+$checks.Add(@{Id='in-process-failure';ExpectedExit=1;ActualExit=$LASTEXITCODE})
+if ($LASTEXITCODE -ne 1) { throw 'A missing line must report a failed in-process comparison.' }
+& $tool -Reference $referencePath -Candidate $referencePath *> (Join-Path $root 'in-process-recovery.log')
+$checks.Add(@{Id='in-process-recovery';ExpectedExit=0;ActualExit=$LASTEXITCODE})
+if ($LASTEXITCODE -ne 0) { throw 'An identical in-process comparison inherited the preceding failure.' }
+
 @{Checks=$checks;Builds=0;Conversions=0;OfficeExports=0} | ConvertTo-Json -Depth 5 |
     Set-Content (Join-Path $root 'evidence.json')
 Write-Output ($checks.Count.ToString()+' line-start checks pass; Y limits, finite inputs, both matching modes and existing X/whitespace behavior covered; no builds or conversions.')
