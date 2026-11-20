@@ -881,7 +881,7 @@ internal sealed partial class DocxReader
             return TrackNonPrintingMoveRangeBoundary(element, ref openMoveRanges);
 
         // An unlocked counter supplies its own text even with an empty stored result.
-        if (keepsBreakParagraph && HasSimpleFieldPlaceholder(element))
+        if (HasSimpleFieldPlaceholder(element))
             return false;
 
         if (!IsVisibleRunContainer(element, markupMode))

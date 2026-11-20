@@ -68,6 +68,78 @@ internal static class DocxCellColumnBreakTests
             "An unknown object beside the ignored break retains the explicit unsupported-owner fallback.");
     }
 
+    public static void DocxCellPageBreakAdmissionUsesComputedContentInsteadOfFieldCache()
+    {
+        const string pageBreak = """<w:r><w:br w:type="page"/></w:r>""";
+        const string stale = "<w:r><w:t>71</w:t></w:r>";
+        var resolver = new PortableRenderingTests.PinnedResolver();
+
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            foreach (var (kind, insideField) in new[] { ("PAGE", false), ("NUMPAGES", true) })
+            {
+                string opening = $"""<w:fldSimple w:instr="{kind}">""";
+                string enclosed = insideField ? pageBreak : "";
+                string following = insideField ? "" : pageBreak;
+                byte[] control = Convert(opening + "</w:fldSimple>");
+                byte[] cached = Convert(opening + stale + enclosed + "</w:fldSimple>" + following);
+                byte[] uncached = Convert(opening + enclosed + "</w:fldSimple>" + following);
+
+                TestAssert.Equal(1, DocxTests.CountOccurrences(Encoding.ASCII.GetString(control), "/Type /Page "));
+                TestAssert.True(control.AsSpan().SequenceEqual(cached),
+                    $"{kind} with a populated cache supplies its computed value and leaves the inline cell break transparent.");
+                TestAssert.True(control.AsSpan().SequenceEqual(uncached),
+                    $"{kind} with an empty cache supplies the same value and must not make the following body move to another page.");
+            }
+
+            byte[] Convert(string field)
+            {
+                using MemoryStream input = TestFixtures.CreateZipPackage(new Dictionary<string, string>
+                {
+                    ["[Content_Types].xml"] = """
+                        <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                          <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                          <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                        </Types>
+                        """,
+                    ["_rels/.rels"] = """
+                        <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                          <Relationship Id="main" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                        </Relationships>
+                        """,
+                    ["word/document.xml"] = $$"""
+                        <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>
+                          <w:tbl>
+                            <w:tblPr><w:tblW w:w="9360" w:type="dxa"/><w:tblLayout w:type="fixed"/></w:tblPr>
+                            <w:tblGrid><w:gridCol w:w="9360"/></w:tblGrid>
+                            <w:tr><w:tc>
+                              <w:tcPr><w:tcW w:w="9360" w:type="dxa"/></w:tcPr>
+                              <w:p><w:r><w:t>Cell before counter</w:t></w:r></w:p>
+                              <w:p>{{field}}</w:p>
+                              <w:p><w:r><w:t>Cell after counter</w:t></w:r></w:p>
+                            </w:tc></w:tr>
+                          </w:tbl>
+                          <w:p><w:r><w:t>Following body.</w:t></w:r></w:p>
+                          <w:sectPr><w:pgSz w:w="12240" w:h="4800"/></w:sectPr>
+                        </w:body></w:document>
+                        """
+                });
+                using var output = new MemoryStream();
+                OoxPdfConverter.Convert(input, output, new OoxPdfOptions
+                {
+                    InputKind = OoxPdfInputKind.Docx,
+                    FontResolver = resolver,
+                    DocxMarkupMode = mode,
+                    DocxMarkupGeometryMode = mode == OoxPdfDocxMarkupMode.AllMarkup
+                        ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
+                        : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout,
+                    FixedCreationDate = DateTimeOffset.UnixEpoch
+                });
+                return output.ToArray();
+            }
+        }
+    }
+
     public static void DocxCellColumnConversionKeepsFormulaPictureAndNavigationContent() =>
         AssertConversionContent("column", ["before", "same-run", "leading", "trailing", "nested", "column-paragraph", "wrapped", "page"]);
 

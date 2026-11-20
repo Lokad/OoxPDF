@@ -988,6 +988,7 @@
       "PptxSyntheticChartVisibleSecondaryAxisReservesInnerPlotStrips"
   ],
   "docx-shared-cell-content-portable": [
+    "DocxCellPageBreakAdmissionUsesComputedContentInsteadOfFieldCache",
     "DocxTableLayoutStageUsesCellBodyElementsForInlineImages",
     "DocxCellFlowWithoutFontMeasurementKeepsAuthoredPictureAdvance",
     "PortableRenderingTableFractionsKeepFollowingNestedContentBelowTheirInk",
@@ -9627,6 +9628,7 @@
     "PortableRenderingOrderedMathCellRetainsPrintedBorderFrame"
   ],
   "docx-cell-page-counters": [
+    "DocxCellPageBreakAdmissionUsesComputedContentInsteadOfFieldCache",
     "DocxInlineCompositionCellPageCounters",
     "PortableRenderingCellPageCountersPreserveMathAcrossDigitBoundary",
     "DocxInlineCompositionCounterAtomsMeasureOnlyTheirOwnedInputs",
@@ -17906,6 +17908,7 @@
     "DocxMarkupModesFilterHyperlinkAndFieldRevisionsBeforeLayout"
   ],
   "docx-dynamic-field-composition-neighbors": [
+    "DocxCellPageBreakAdmissionUsesComputedContentInsteadOfFieldCache",
     "DocxFieldTextCounterInputsRemainIndependent",
     "DocxInlineCompositionCounterAtomsMeasureOnlyTheirOwnedInputs",
     "DocxInlineCompositionMeasuredAtomsRebindOnlyCounters",
