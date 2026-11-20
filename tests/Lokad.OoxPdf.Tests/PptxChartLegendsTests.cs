@@ -2052,50 +2052,6 @@ internal static partial class PptxChartLegendsTests
         TestAssert.Equal("5400000", chart.Title.TextBodyProperties.RotationValue);
     }
 
-    public static void PptxChartMissingSceneAxesDoNotFallBackToMismatchedXmlAxes()
-    {
-        PptxSceneChart chart = PptxTests.BuildSingleChartScene("""
-            <?xml version="1.0" encoding="UTF-8"?>
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
-              <c:chart><c:plotArea>
-                <c:lineChart>
-                  <c:ser><c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser>
-                </c:lineChart>
-              </c:plotArea></c:chart>
-            </c:chartSpace>
-            """) ?? throw new InvalidOperationException("Expected chart scene.");
-        TestAssert.Equal(0, chart.Axes.Count);
-
-        XDocument mismatchedChartXml = XDocument.Parse("""
-            <?xml version="1.0" encoding="UTF-8"?>
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
-              <c:chart><c:plotArea>
-                <c:lineChart><c:axId val="10"/><c:axId val="20"/></c:lineChart>
-                <c:catAx><c:axId val="10"/></c:catAx>
-                <c:valAx><c:axId val="20"/></c:valAx>
-              </c:plotArea></c:chart>
-            </c:chartSpace>
-            """);
-        XNamespace chartNamespace = "http://schemas.openxmlformats.org/drawingml/2006/chart";
-        XElement mismatchedPlot = mismatchedChartXml.Descendants(chartNamespace + "lineChart").First();
-
-        System.Reflection.MethodInfo readValueAxes = typeof(PptxRenderer).GetMethod(
-            "ReadChartValueAxesForPlot",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected renderer value-axis bridge.");
-        System.Reflection.MethodInfo readCategoryAxis = typeof(PptxRenderer).GetMethod(
-            "ReadChartCategoryAxisForPlot",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected renderer category-axis bridge.");
-
-        var sceneValueAxes = (System.Collections.ICollection)(readValueAxes.Invoke(null, [chart, chart.Plots[0]]) ?? throw new InvalidOperationException("Expected scene value-axis collection."));
-        var rebuiltValueAxes = (System.Collections.ICollection)(readValueAxes.Invoke(null, [PptxTests.BuildSingleChartScene(mismatchedChartXml.ToString())!, null]) ?? throw new InvalidOperationException("Expected Rebuilt-scene value-axis collection."));
-        object sceneCategoryAxis = readCategoryAxis.Invoke(null, [chart, chart.Plots[0]]) ?? throw new InvalidOperationException("Expected scene category-axis source.");
-        object rebuiltCategoryAxis = readCategoryAxis.Invoke(null, [PptxTests.BuildSingleChartScene(mismatchedChartXml.ToString())!, null]) ?? throw new InvalidOperationException("Expected Rebuilt-scene category-axis source.");
-
-        TestAssert.Equal(0, sceneValueAxes.Count);
-        TestAssert.Equal(1, rebuiltValueAxes.Count);
-        TestAssert.True(sceneCategoryAxis.GetType().GetProperty("SceneAxis")?.GetValue(sceneCategoryAxis) is null, "Expected missing scene category axes not to be repaired from fallback XML.");
-        TestAssert.True(rebuiltCategoryAxis.GetType().GetProperty("SceneAxis")?.GetValue(rebuiltCategoryAxis) is not null, "Rebuilt-scene category-axis lookup retains its parsed owner.");
-    }
     public static void PptxScatterStrokeLegendEntriesHideSuppressedLinesButKeepMarkers()
     {
         const string scatterChart = """
