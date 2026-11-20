@@ -203,7 +203,7 @@ internal sealed partial class PptxRenderer
         graphics.ClosePath();
     }
 
-    private static void FillArrowedLine(
+    private static void FillStraightArrowedLine(
         PdfGraphicsBuilder graphics,
         double x1,
         double y1,
@@ -212,7 +212,8 @@ internal sealed partial class PptxRenderer
         double lineWidth,
         bool headArrow,
         bool tailArrow,
-        double arrowHalfWidthFactor)
+        bool usesOfficeArrowType,
+        double triangleHalfWidthFactor)
     {
         double dx = x2 - x1;
         double dy = y2 - y1;
@@ -228,8 +229,9 @@ internal sealed partial class PptxRenderer
         double ny = ux;
         double half = lineWidth / 2d;
         double arrowLength = lineWidth * OfficeStraightTriangleLineEndLengthFactor;
-        double arrowHalfWidth = lineWidth * arrowHalfWidthFactor;
-        double shaftInset = Math.Max(0d, arrowLength - lineWidth * OfficeStraightTriangleLineEndOverlapFactor);
+        double shaftInset = usesOfficeArrowType
+            ? lineWidth * 0.99d
+            : Math.Max(0d, arrowLength - lineWidth * OfficeStraightTriangleLineEndOverlapFactor);
         double startX = headArrow ? x1 + ux * shaftInset : x1;
         double startY = headArrow ? y1 + uy * shaftInset : y1;
         double endX = tailArrow ? x2 - ux * shaftInset : x2;
@@ -241,14 +243,20 @@ internal sealed partial class PptxRenderer
         graphics.LineTo(startX - nx * half, startY - ny * half);
         graphics.ClosePath();
 
-        if (headArrow)
+        if (usesOfficeArrowType)
         {
-            AppendTriangle(graphics, x1, y1, x1 + ux * arrowLength, y1 + uy * arrowLength, nx, ny, arrowHalfWidth);
+            if (headArrow)
+                AppendOfficeArrowHeadPath(graphics, x1, y1, ux, uy, nx, ny, lineWidth, false);
+            if (tailArrow)
+                AppendOfficeArrowHeadPath(graphics, x2, y2, -ux, -uy, -nx, -ny, lineWidth, false);
         }
-
-        if (tailArrow)
+        else
         {
-            AppendTriangle(graphics, x2, y2, x2 - ux * arrowLength, y2 - uy * arrowLength, nx, ny, arrowHalfWidth);
+            double arrowHalfWidth = lineWidth * triangleHalfWidthFactor;
+            if (headArrow)
+                AppendTriangle(graphics, x1, y1, x1 + ux * arrowLength, y1 + uy * arrowLength, nx, ny, arrowHalfWidth);
+            if (tailArrow)
+                AppendTriangle(graphics, x2, y2, x2 - ux * arrowLength, y2 - uy * arrowLength, nx, ny, arrowHalfWidth);
         }
 
         graphics.FillCurrentPath();
@@ -260,46 +268,6 @@ internal sealed partial class PptxRenderer
         graphics.LineTo(baseX + nx * halfWidth, baseY + ny * halfWidth);
         graphics.LineTo(baseX - nx * halfWidth, baseY - ny * halfWidth);
         graphics.ClosePath();
-    }
-
-    private static void FillOfficeArrowedLine(PdfGraphicsBuilder graphics, double x1, double y1, double x2, double y2, double lineWidth, bool headArrow, bool tailArrow)
-    {
-        double dx = x2 - x1;
-        double dy = y2 - y1;
-        double length = Math.Sqrt(dx * dx + dy * dy);
-        if (length <= 0.001d)
-        {
-            return;
-        }
-
-        double ux = dx / length;
-        double uy = dy / length;
-        double nx = -uy;
-        double ny = ux;
-        double half = lineWidth / 2d;
-        double shaftInset = lineWidth * 0.99d;
-        double startX = headArrow ? x1 + ux * shaftInset : x1;
-        double startY = headArrow ? y1 + uy * shaftInset : y1;
-        double endX = tailArrow ? x2 - ux * shaftInset : x2;
-        double endY = tailArrow ? y2 - uy * shaftInset : y2;
-
-        graphics.MoveTo(startX + nx * half, startY + ny * half);
-        graphics.LineTo(endX + nx * half, endY + ny * half);
-        graphics.LineTo(endX - nx * half, endY - ny * half);
-        graphics.LineTo(startX - nx * half, startY - ny * half);
-        graphics.ClosePath();
-
-        if (headArrow)
-        {
-            AppendOfficeArrowHeadPath(graphics, x1, y1, ux, uy, nx, ny, lineWidth, false);
-        }
-
-        if (tailArrow)
-        {
-            AppendOfficeArrowHeadPath(graphics, x2, y2, -ux, -uy, -nx, -ny, lineWidth, false);
-        }
-
-        graphics.FillCurrentPath();
     }
 
     private static void AppendOfficeArrowHeadPath(PdfGraphicsBuilder graphics, double tipX, double tipY, double ux, double uy, double nx, double ny, double lineWidth, bool splitTrailingCurve)

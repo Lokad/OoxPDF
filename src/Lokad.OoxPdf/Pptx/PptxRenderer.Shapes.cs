@@ -270,17 +270,11 @@ internal sealed partial class PptxRenderer
                 {
                     graphics.SetFillRgb(stroke.Red, stroke.Green, stroke.Blue);
                     bool usesOfficeArrowType = headEnd.Kind == LineEndKind.Arrow || tailEnd.Kind == LineEndKind.Arrow;
-                    if (usesOfficeArrowType)
-                    {
-                        FillOfficeArrowedLine(graphics, x1, y1, x2, y2, lineWidth, hasHeadArrow, hasTailArrow);
-                    }
-                    else
-                    {
-                        double arrowHalfWidthFactor = string.Equals(preset, "straightConnector1", StringComparison.Ordinal)
-                            ? OfficeStraightConnectorTriangleLineEndHalfWidthFactor
-                            : OfficeStraightTriangleLineEndHalfWidthFactor;
-                        FillArrowedLine(graphics, x1, y1, x2, y2, lineWidth, hasHeadArrow, hasTailArrow, arrowHalfWidthFactor);
-                    }
+                    double triangleHalfWidthFactor = string.Equals(preset, "straightConnector1", StringComparison.Ordinal)
+                        ? OfficeStraightConnectorTriangleLineEndHalfWidthFactor
+                        : OfficeStraightTriangleLineEndHalfWidthFactor;
+                    FillStraightArrowedLine(graphics, x1, y1, x2, y2, lineWidth,
+                        hasHeadArrow, hasTailArrow, usesOfficeArrowType, triangleHalfWidthFactor);
                 }
                 else
                 {
