@@ -8,6 +8,7 @@ param(
     [string] $ReuseRuntimeDirectory
 )
 $ErrorActionPreference='Stop'
+. (Join-Path $PSScriptRoot 'QualificationBuildIdentity.ps1')
 # Handle native exit codes explicitly so failures always point to retained logs.
 $PSNativeCommandUseErrorActionPreference=$false
 if (![IO.Path]::IsPathFullyQualified($WorktreeDirectory) -or ![IO.Path]::IsPathFullyQualified($OutputDirectory)) {
@@ -49,12 +50,7 @@ if ($ReuseRuntimeDirectory) {
     $reuse=Get-Content -LiteralPath (Join-Path $original 'identity.json') -Raw | ConvertFrom-Json -AsHashtable
     $originalFramework=if ($reuse.Framework) {$reuse.Framework} else {'net10.0'}
     if ($originalFramework -ne $Framework) { throw 'Reused runtime framework differs' }
-    $buildInputs=@('src','tools/Lokad.OoxPdf.DocxInspect',':(top,glob)**/*.props',':(top,glob)**/*.targets',
-        ':(top,glob)**/*.csproj','Directory.Build.rsp','tools/Directory.Build.rsp',
-        'global.json','tools/global.json','NuGet.Config','nuget.config','tools/NuGet.Config','tools/nuget.config','.gitattributes')
-    if (@(Read-Git -Arguments (@('diff','--name-only',$reuse.Revision,$Revision,'--')+$buildInputs)).Count) {
-        throw 'Production source or build inputs changed; build a new runtime'
-    }
+    Assert-QualificationProductionInputs $source $reuse.Revision $Revision
     $inputTree=Read-Git -Arguments @('rev-parse','HEAD:tests/Lokad.OoxPdf.Tests/Cases')
     if ($inputTree -ne $reuse.InputTree) {
         # New coverage can extend the harness without recompiling production.

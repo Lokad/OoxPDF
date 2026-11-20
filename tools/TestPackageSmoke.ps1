@@ -21,6 +21,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+. (Join-Path $PSScriptRoot 'QualificationBuildIdentity.ps1')
 function Remove-CompletedPackageConsumerCaches([string]$ConsumerDirectory, [string]$ConsumerRoot) {
     try {
         $directory = [IO.Path]::TrimEndingDirectorySeparator([IO.Path]::GetFullPath($ConsumerDirectory))
@@ -109,35 +110,13 @@ function Read-PackedLibraryIdentity($Entry) {
         $source = $Entry.Open()
         try { $source.CopyTo($bytes) } finally { $source.Dispose() }
         $bytes.Position = 0
-        $pe = [System.Reflection.PortableExecutable.PEReader]::new($bytes,
-            [System.Reflection.PortableExecutable.PEStreamOptions]::LeaveOpen)
-        try {
-            $reader = [System.Reflection.Metadata.PEReaderExtensions]::GetMetadataReader($pe)
-            $assembly = $reader.GetAssemblyDefinition()
-            $versions = @{}
-            foreach ($handle in $assembly.GetCustomAttributes()) {
-                $attribute = $reader.GetCustomAttribute($handle)
-                if ($attribute.Constructor.Kind -ne [System.Reflection.Metadata.HandleKind]::MemberReference) { continue }
-                $member = $reader.GetMemberReference([System.Reflection.Metadata.MemberReferenceHandle]::op_Explicit($attribute.Constructor))
-                if ($member.Parent.Kind -ne [System.Reflection.Metadata.HandleKind]::TypeReference) { continue }
-                $type = $reader.GetTypeReference([System.Reflection.Metadata.TypeReferenceHandle]::op_Explicit($member.Parent))
-                $name = $reader.GetString($type.Name)
-                if ($reader.GetString($type.Namespace) -ne 'System.Reflection' -or
-                    $name -notin @('AssemblyFileVersionAttribute','AssemblyInformationalVersionAttribute')) { continue }
-                $value = $reader.GetBlobReader($attribute.Value)
-                if ($value.ReadUInt16() -ne 1) { throw "Invalid packed version metadata: $($Entry.FullName)" }
-                $versions[$name] = $value.ReadSerializedString()
-            }
-            if (!$versions.AssemblyFileVersionAttribute -or !$versions.AssemblyInformationalVersionAttribute) {
-                throw "Packed library version metadata is missing: $($Entry.FullName)"
-            }
-            $bytes.Position = 0
-            [pscustomobject]@{Entry=$Entry.FullName; AssemblyVersion=$assembly.Version.ToString();
-                FileVersion=$versions.AssemblyFileVersionAttribute;
-                InformationalVersion=$versions.AssemblyInformationalVersionAttribute;
-                Sha256=[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($bytes))}
+        $identity = Read-ManagedAssemblyIdentity $bytes
+        if (!$identity.FileVersion -or !$identity.InformationalVersion) {
+            throw "Packed library version metadata is missing: $($Entry.FullName)"
         }
-        finally { $pe.Dispose() }
+        [pscustomobject]@{ Entry = $Entry.FullName; AssemblyVersion = $identity.AssemblyVersion
+            FileVersion = $identity.FileVersion; InformationalVersion = $identity.InformationalVersion
+            Sha256 = $identity.Sha256 }
     }
     finally { $bytes.Dispose() }
 }

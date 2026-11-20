@@ -18,6 +18,17 @@ Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'NewParentRegressionRuntime.ps1'
 $transferScript = Join-Path $repo 'tools/TransferQualificationArtifact.ps1'
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'TransferQualificationArtifact.ps1') -Destination $transferScript
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'BuildQualificationArtifact.ps1') -Destination (Join-Path $repo 'tools/BuildQualificationArtifact.ps1')
+$assemblyIdentitySource = Join-Path $PSScriptRoot 'QualificationBuildIdentity.ps1'
+$assemblyIdentityFixture = Join-Path $repo 'tools/QualificationBuildIdentity.ps1'
+# Ownership controls use synthetic files. Exercise the real PE reader below.
+Copy-Item -LiteralPath $assemblyIdentitySource -Destination $assemblyIdentityFixture
+@'
+function Read-QualificationAssemblyIdentity([string] $Path) {
+    $revision = git -C (Split-Path $Path -Parent) rev-parse HEAD
+    if ($LASTEXITCODE -ne 0) { throw 'Cannot bind synthetic fixture revision' }
+    @{ Revision = $revision; Sha256 = (Get-FileHash -LiteralPath $Path).Hash }
+}
+'@ | Add-Content -LiteralPath $assemblyIdentityFixture
 function Invoke-Git([string[]] $Arguments) {
     $result = git -C $repo @Arguments 2>&1
     if ($LASTEXITCODE -ne 0) { throw ($result -join "`n") }
@@ -51,6 +62,9 @@ foreach ($project in @('src/Lokad.OoxPdf', 'src/Lokad.OoxPdf.Cli', 'tests/Lokad.
         New-Item -ItemType Directory -Path $directory -Force | Out-Null
         "fake library for $targetFramework; no executable code" | Set-Content -LiteralPath (Join-Path $directory 'Lokad.OoxPdf.dll')
         "fake test assembly for $targetFramework" | Set-Content -LiteralPath (Join-Path $directory 'Lokad.OoxPdf.Tests.dll')
+        if ($projectName -notin @('Lokad.OoxPdf', 'Lokad.OoxPdf.Tests')) {
+            "fake $projectName assembly for $targetFramework" | Set-Content -LiteralPath (Join-Path $directory ($projectName+'.dll'))
+        }
     }
 }
 foreach ($name in @('Lokad.OoxPdf.Tests.pdb','Lokad.OoxPdf.Tests.deps.json','Lokad.OoxPdf.Tests.runtimeconfig.json')) {
@@ -429,6 +443,50 @@ Copy-Item -LiteralPath $inputFile -Destination $damaged -Force
 (Get-Item -LiteralPath $damaged).IsReadOnly = $true
 'stale CLI library' | Set-Content -LiteralPath (Join-Path $repo "src/Lokad.OoxPdf.Cli/bin/Release/$Framework/Lokad.OoxPdf.dll")
 Reject 'mixed' 'Release library copies differ'
+
+# The normal freezer rejects coherent binaries from an older production
+# revision, even when every library copy agrees and fixture bytes match.
+Copy-Item -LiteralPath $assemblyIdentitySource -Destination $assemblyIdentityFixture -Force
+Invoke-Git @('add', 'tools/QualificationBuildIdentity.ps1')
+Invoke-Git @('commit', '--quiet', '-m', 'Use real qualification assembly metadata reader')
+$compiledRevision = git -C $repo rev-parse HEAD
+function New-StampedAssembly([string] $Revision) {
+    $path = Join-Path $OutputDirectory ('revision-'+$Revision+'.dll')
+    Add-Type -TypeDefinition @"
+using System.Reflection;
+[assembly: AssemblyInformationalVersion("1.0.0+$Revision")]
+public sealed class Fixture_$Revision { }
+"@ -OutputAssembly $path
+    return [IO.File]::ReadAllBytes($path)
+}
+$compiledBytes = New-StampedAssembly $compiledRevision
+$harness = "tests/Lokad.OoxPdf.Tests/bin/Release/$Framework/Lokad.OoxPdf.Tests.dll"
+foreach ($project in @('src/Lokad.OoxPdf', 'src/Lokad.OoxPdf.Cli', 'tests/Lokad.OoxPdf.Tests', 'tools/Lokad.OoxPdf.DocxInspect')) {
+    $relative = "$project/bin/Release/$Framework"
+    [IO.File]::WriteAllBytes((Join-Path $repo ($relative+'/Lokad.OoxPdf.dll')), $compiledBytes)
+    [IO.File]::WriteAllBytes((Join-Path $repo ($relative+'/'+(Split-Path $project -Leaf)+'.dll')), $compiledBytes)
+}
+$fresh = Freeze 'compiled-source'
+if ($fresh.Revision -ne $compiledRevision -or @($fresh.AssemblyRevisions.PSObject.Properties).Count -ne 4 -or
+    @($fresh.AssemblyRevisions.PSObject.Properties.Value | Where-Object { $_ -ne $compiledRevision }).Count) {
+    throw 'Fresh assembly identity lost the embedded revisions'
+}
+$production = 'src/Lokad.OoxPdf/ChangedSource.cs'
+'// changed production input' | Set-Content -LiteralPath (Join-Path $repo $production)
+Invoke-Git @('add', $production)
+Invoke-Git @('commit', '--quiet', '-m', 'Change production without rebuilding')
+Reject 'stale-coherent-assemblies' 'Production source or build inputs changed'
+Invoke-Git @('rm', '--quiet', $production)
+Invoke-Git @('commit', '--quiet', '-m', 'Restore the compiled production inputs')
+Reject 'stale-test-assembly' 'Release test assembly was compiled for another source revision'
+$testRevision = git -C $repo rev-parse HEAD
+[IO.File]::WriteAllBytes((Join-Path $repo $harness), (New-StampedAssembly $testRevision))
+$currentHarness = Freeze 'current-harness-with-reused-production'
+if ($currentHarness.Revision -ne $testRevision -or $currentHarness.AssemblyRevisions.$harness -ne $testRevision -or
+    $currentHarness.LibrarySha256 -ne $fresh.LibrarySha256 -or $currentHarness.TestAssemblySha256 -eq $fresh.TestAssemblySha256 -or
+    @($currentHarness.AssemblyRevisions.PSObject.Properties | Where-Object { $_.Name -ne $harness -and $_.Value -eq $compiledRevision }).Count -ne 3) {
+    throw 'Harness-only publication misreported reused production provenance'
+}
 [ordered]@{
     Checks=@('Shared unchanged fixture tree', 'Frozen runner input link', 'Linked worktree reuse', 'Verbatim autocrlf checkout', 'Dirty source rejection',
         'Canonical LF and committed CRLF with spaced path', 'Noncanonical refusal before snapshot',
@@ -442,8 +500,10 @@ Reject 'mixed' 'Release library copies differ'
         'Dirty inspector source refusal', 'Committed inspector source refusal',
         'New tools targets refusal', 'Committed tools targets refusal', 'Harness-only repair transfer',
         'Harness-only runtime reuse', 'Runtime rewrite refusal', 'Reused framework refusal', 'Reused production-change refusal',
-        'Dual-framework fixture verification once', 'All framework libraries checked before batch publication')
+        'Dual-framework fixture verification once', 'All framework libraries checked before batch publication',
+        'Real embedded revision', 'Stale coherent production refusal', 'Stale harness refusal', 'Reused production revision retained')
     LibraryBuilds=0;LibraryTestRuns=0;First=$first;Second=$second;Changed=$changed
+    CompiledSource=$fresh.AssemblyRevisions;ReusedProduction=$currentHarness.AssemblyRevisions
     Batch=$batchPins;CheckoutAndSnapshotHashesPerFixture=2
     SharedInputPathLength=$changedNested.Length
 } | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $OutputDirectory 'evidence.json') -Encoding utf8

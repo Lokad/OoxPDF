@@ -7,6 +7,7 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
+. (Join-Path $PSScriptRoot 'QualificationBuildIdentity.ps1')
 function New-FrozenHardLink([string] $Path, [string] $Target) {
     # The Windows provider needs extended paths in deeply nested worktrees.
     if ($IsWindows) {
@@ -36,10 +37,15 @@ foreach ($targetFramework in @($OutputDirectories.Keys | Sort-Object -Descending
 }
 $status = @(git -C $repo status --porcelain --untracked-files=normal)
 if ($LASTEXITCODE -ne 0 -or $status.Count) { throw 'Commit source and public inputs before freezing' }
+$revision = git -C $repo rev-parse HEAD
+if ($LASTEXITCODE -ne 0) { throw 'Cannot pin source revision' }
 # A test-only rebuild can update the library while leaving the CLI copy stale.
 # Reject mixed runtime copies before creating an immutable snapshot.
-$projects = @('src/Lokad.OoxPdf', 'src/Lokad.OoxPdf.Cli', 'tests/Lokad.OoxPdf.Tests', 'tools/Lokad.OoxPdf.DocxInspect')
+$testProject = 'tests/Lokad.OoxPdf.Tests'
+$projects = @('src/Lokad.OoxPdf', 'src/Lokad.OoxPdf.Cli', $testProject, 'tools/Lokad.OoxPdf.DocxInspect')
 $buildLibraryHashes = @{}
+$compiled = @{}
+$verifiedProductionRevisions = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
 foreach ($targetFramework in $outputs.Keys) {
     $libraryCopies = $projects |
         ForEach-Object { (Get-FileHash -LiteralPath (Join-Path $repo ($_ + "/bin/Release/$targetFramework/Lokad.OoxPdf.dll"))).Hash }
@@ -47,11 +53,23 @@ foreach ($targetFramework in $outputs.Keys) {
         throw 'Release library copies differ; refresh the dependent outputs before freezing'
     }
     $buildLibraryHashes[$targetFramework] = $libraryCopies[0]
-    $testAssembly = Join-Path $repo "tests/Lokad.OoxPdf.Tests/bin/Release/$targetFramework/Lokad.OoxPdf.Tests.dll"
-    if (!(Test-Path -LiteralPath $testAssembly -PathType Leaf)) { throw 'Missing Release test assembly' }
+    foreach ($project in $projects) {
+        $name = "$project/bin/Release/$targetFramework/$(Split-Path $project -Leaf).dll"
+        $assembly = Read-QualificationAssemblyIdentity (Join-Path $repo $name)
+        if ($assembly.Revision -cne $revision) {
+            if ($project -eq $testProject) { throw 'Release test assembly was compiled for another source revision' }
+            # A newly built harness can reuse production bytes when the source
+            # and build inputs at the embedded revision still match HEAD.
+            if ($verifiedProductionRevisions.Add($assembly.Revision)) {
+                Assert-QualificationProductionInputs $repo $assembly.Revision $revision
+            }
+        }
+        $compiled[$name] = $assembly
+    }
+    if ($compiled["src/Lokad.OoxPdf/bin/Release/$targetFramework/Lokad.OoxPdf.dll"].Sha256 -ne $libraryCopies[0]) {
+        throw 'Release library changed during preflight'
+    }
 }
-$revision = git -C $repo rev-parse HEAD
-if ($LASTEXITCODE -ne 0) { throw 'Cannot pin source revision' }
 $inputRoot = 'tests/Lokad.OoxPdf.Tests/Cases'
 $inputTree = git -C $repo rev-parse ("HEAD:" + $inputRoot)
 if ($LASTEXITCODE -ne 0) { throw 'Cannot pin public input tree' }
@@ -136,6 +154,7 @@ foreach ($targetFramework in $outputs.Keys) {
     $output = $outputs[$targetFramework]
     New-Item -ItemType Directory -Path $output | Out-Null
     $assets = [ordered]@{}
+    $assemblyRevisions = [ordered]@{}
     $assetCopies = @{}
     $sharedAssetFiles = 0
     $sharedAssetBytes = 0L
@@ -148,6 +167,10 @@ foreach ($targetFramework in $outputs.Keys) {
         foreach ($file in Get-ChildItem -LiteralPath $source -File) {
             $name = $relative + '/' + $file.Name
             $hash = (Get-FileHash -LiteralPath $file.FullName).Hash
+            if ($compiled.ContainsKey($name)) {
+                if ($compiled[$name].Sha256 -ne $hash) { throw 'Release assembly changed during freeze' }
+                $assemblyRevisions[$name] = $compiled[$name].Revision
+            }
             $destination = Join-Path $output $name
             if ($assetCopies.ContainsKey($hash)) {
                 # Share only inside this fresh immutable output. Linking a writable
@@ -168,12 +191,12 @@ foreach ($targetFramework in $outputs.Keys) {
         }
     }
     $testAssemblyHash = $assets["tests/Lokad.OoxPdf.Tests/bin/Release/$targetFramework/Lokad.OoxPdf.Tests.dll"]
-    if (!$testAssemblyHash) { throw 'Release test assembly disappeared during freeze' }
+    if ($assemblyRevisions.Count -ne $projects.Count) { throw 'Release assembly disappeared during freeze' }
     $inputLink = Join-Path $output $inputRoot
     New-Item -ItemType Directory -Path (Split-Path $inputLink) -Force | Out-Null
     New-Item -ItemType $linkType -Path $inputLink -Target (Join-Path $snapshot $inputRoot) | Out-Null
     [ordered]@{
-        Revision=$revision;Framework=$targetFramework;Rebuilt=$false;Assets=$assets;Inputs=$inputs
+        Revision=$revision;Framework=$targetFramework;Rebuilt=$false;Assets=$assets;AssemblyRevisions=$assemblyRevisions;Inputs=$inputs
         InputTree=$inputTree;InputSnapshot=$snapshot;ReusedInputSnapshot=$reusedInputs
         SharedInputFiles=$inputPin.SharedInputFiles
         SharedAssetFiles=$sharedAssetFiles;SharedAssetBytes=$sharedAssetBytes
