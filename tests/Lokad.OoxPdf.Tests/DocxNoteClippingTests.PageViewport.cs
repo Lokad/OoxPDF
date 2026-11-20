@@ -120,8 +120,14 @@ internal static partial class DocxNoteClippingTests
                     if (shows.Count != 0 && change.Index < shows[0].Index) ApplyPaint(change, ref atShow);
                     else if (shows.Count != 0 && change.Index < shows[^1].Index) changingPaint = true;
                 }
-                bool? visible = shows.Count == 0 || changingPaint ? null :
-                    atShow.Mode == 3 ? false : atShow.Mode != 0 || atShow.Mask ? null : atShow.FillVisible;
+                bool? visible = shows.Count == 0 || changingPaint ? null : atShow.Mode switch
+                {
+                    0 when !atShow.Mask => atShow.FillVisible,
+                    // Synthetic bold paints the glyph fill and adds a stroke.
+                    2 when !atShow.Mask && atShow.FillVisible is true => true,
+                    3 => false,
+                    _ => null
+                };
                 yield return new(block, clip, transform) { VisibleTextPaint = visible };
             }
             else yield return new(operation.Value.TrimEnd('\r'), clip, transform);

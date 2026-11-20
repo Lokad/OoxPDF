@@ -7200,7 +7200,7 @@
       "PptxDefaultBottomAxisTitleBaselineFollowsReserve",
       "PptxSyntheticDefaultAxisTitleVerticalBottomReserve",
       "PptxSyntheticDefaultAxisTitleHorizontalBarReserves",
-      "PptxSyntheticChartDefaultAxisTitleRendersWithoutUnsupportedDiagnostic",
+      "PptxSyntheticChartDefaultAxisTitlePaintsAuthoredCaption",
       "PptxSyntheticChartDefaultAxisTitleMissingPositionEmitsTargetedDiagnostic",
       "PptxSyntheticChartStyleTitleDefaultsDriveChartTitleRendering",
       "PptxChartMissingSceneAxesDoNotFallBackToMismatchedXmlAxes",
@@ -19325,7 +19325,7 @@
     "PptxSyntheticChartColumnAxisNearMaximumKeepsOfficeHeadroom",
     "PptxSyntheticChartComboLineUsesOwnValueAxisScale",
     "PptxSyntheticChartDefaultAxisTitleMissingPositionEmitsTargetedDiagnostic",
-    "PptxSyntheticChartDefaultAxisTitleRendersWithoutUnsupportedDiagnostic",
+    "PptxSyntheticChartDefaultAxisTitlePaintsAuthoredCaption",
     "PptxSyntheticChartHorizontalBarCategoryAxisStrokeUsesAxisPosition",
     "PptxHorizontalFrameAssignsFontsToTheirAxisStrips",
     "PptxSyntheticChartHorizontalBarValueAxisStrokeUsesAxisPosition",
@@ -20262,7 +20262,7 @@
     "PptxSyntheticMiddleAnchorUsesSignedActualSlackWhenWrappedTextOverflows",
     "PptxSyntheticCenteredLogoBoxWrapsDefaultTypefaceText",
     "PptxSyntheticVerticalAnchorUsesLineAdvanceForVisibleLines",
-    "PptxSyntheticChartDefaultAxisTitleRendersWithoutUnsupportedDiagnostic",
+    "PptxSyntheticChartDefaultAxisTitlePaintsAuthoredCaption",
     "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "docx-mixed-terminal-portable": [

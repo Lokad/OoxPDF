@@ -3591,117 +3591,52 @@ internal static partial class PptxChartsTests
         TestAssert.True(!Regex.IsMatch(pdf, @"1 0 0 1 [0-9.]+ 442\.[0-9]+ Tm"), "Expected chart title rendering not to fall back to the full-frame title box.");
     }
 
-    public static void PptxSyntheticChartDefaultAxisTitleRendersWithoutUnsupportedDiagnostic()
+    public static void PptxSyntheticChartDefaultAxisTitlePaintsAuthoredCaption()
     {
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
-        {
-            ["[Content_Types].xml"] = TestFixtures.Utf8(PptxTests.BasicContentTypes()),
-            ["_rels/.rels"] = TestFixtures.Utf8(PptxTests.PackageRelationship()),
-            ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8(PptxTests.PresentationRelationship()),
-            ["ppt/presentation.xml"] = TestFixtures.Utf8(PptxTests.BasicPresentation()),
-            ["ppt/slides/_rels/slide1.xml.rels"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
-                </Relationships>
-                """),
-            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
-                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
-                       xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
-                       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-                  <p:cSld><p:spTree>
-                    <p:graphicFrame>
-                      <p:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="2743200"/></p:xfrm>
-                      <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic>
-                    </p:graphicFrame>
-                  </p:spTree></p:cSld>
-                </p:sld>
-                """),
-            ["ppt/charts/chart1.xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
-                              xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <c:chart>
-                    <c:plotArea>
-                      <c:lineChart>
-                        <c:ser><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt></c:numLit></c:val></c:ser>
-                      </c:lineChart>
-                      <c:valAx><c:axId val="2"/><c:axPos val="l"/><c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>Default Axis</a:t></a:r></a:p></c:rich></c:tx></c:title></c:valAx>
-                    </c:plotArea>
-                  </c:chart>
-                </c:chartSpace>
-                """)
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-        var diagnostics = new List<OoxPdfDiagnostic>();
+        var (page, diagnostics) = RenderDefaultAxisTitle(hasPosition: true);
 
-        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { FontResolver = new TestFaceFontResolver(), DiagnosticSink = diagnostics.Add });
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.True(!diagnostics.Any(d => d.Id == "PPTX_UNSUPPORTED_CHART_AXIS_TITLE_LAYOUT"),
-            "Supported native chart branches should render default-placement axis titles instead of reporting the old unsupported-layout diagnostic.");
-        TestAssert.Contains("/CAT", pdf);
+        PortableRenderingTests.ReadPaintedSourceLabel(page, "Default Axis", fontPrefix: "CAT");
+        TestAssert.True(!diagnostics.Any(d => d.Id == "PPTX_UNSUPPORTED_CHART_AXIS_TITLE_AXIS_POSITION"),
+            "A supported axis position must not report an unsupported-position warning.");
     }
 
     public static void PptxSyntheticChartDefaultAxisTitleMissingPositionEmitsTargetedDiagnostic()
     {
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
-        {
-            ["[Content_Types].xml"] = TestFixtures.Utf8(PptxTests.BasicContentTypes()),
-            ["_rels/.rels"] = TestFixtures.Utf8(PptxTests.PackageRelationship()),
-            ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8(PptxTests.PresentationRelationship()),
-            ["ppt/presentation.xml"] = TestFixtures.Utf8(PptxTests.BasicPresentation()),
-            ["ppt/slides/_rels/slide1.xml.rels"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
-                </Relationships>
-                """),
-            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
-                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
-                       xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
-                       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-                  <p:cSld><p:spTree>
-                    <p:graphicFrame>
-                      <p:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="2743200"/></p:xfrm>
-                      <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic>
-                    </p:graphicFrame>
-                  </p:spTree></p:cSld>
-                </p:sld>
-                """),
-            ["ppt/charts/chart1.xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
-                              xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <c:chart>
-                    <c:plotArea>
-                      <c:lineChart>
-                        <c:ser><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt></c:numLit></c:val></c:ser>
-                      </c:lineChart>
-                      <c:valAx><c:axId val="2"/><c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>Default Axis</a:t></a:r></a:p></c:rich></c:tx></c:title></c:valAx>
-                    </c:plotArea>
-                  </c:chart>
-                </c:chartSpace>
-                """)
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var (page, diagnostics) = RenderDefaultAxisTitle(hasPosition: false);
+
+        OoxPdfDiagnostic warning = diagnostics.Single(d => d.Id == "PPTX_UNSUPPORTED_CHART_AXIS_TITLE_AXIS_POSITION");
+        TestAssert.Equal(OoxPdfSeverity.Warning, warning.Severity);
+        TestAssert.Equal("/ppt/charts/chart1.xml", warning.PartName);
+        TestAssert.Equal("Ignored", warning.Fallback);
+        TestAssert.True(!DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false,
+            includeTextTransforms: true, honorActualText: false,
+            fontResourceFilter: name => name.StartsWith("CAT", StringComparison.Ordinal)).Any(),
+            "An axis title without a supported position must not paint.");
+    }
+
+    private static (PdfPage Page, List<OoxPdfDiagnostic> Diagnostics) RenderDefaultAxisTitle(bool hasPosition)
+    {
+        string position = hasPosition ? """<c:axPos val="l"/>""" : "";
+        using MemoryStream stream = PptxTests.CreateSingleChartPackageStream($$"""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+                          xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <c:chart>
+                <c:plotArea>
+                  <c:lineChart>
+                    <c:ser><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt></c:numLit></c:val></c:ser>
+                  </c:lineChart>
+                  <c:valAx><c:axId val="2"/>{{position}}<c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>Default Axis</a:t></a:r></a:p></c:rich></c:tx></c:title></c:valAx>
+                </c:plotArea>
+              </c:chart>
+            </c:chartSpace>
+            """);
+        using var package = OoxPackage.Open(stream, default);
         var diagnostics = new List<OoxPdfDiagnostic>();
-
-        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.True(diagnostics.Any(d =>
-            d.Id == "PPTX_UNSUPPORTED_CHART_AXIS_TITLE_AXIS_POSITION" &&
-            d.PartName == "/ppt/charts/chart1.xml" &&
-            d.Fallback == "Ignored"),
-            "A default axis title with an unknown axis position should be targeted diagnostic-covered.");
-        TestAssert.True(!diagnostics.Any(d => d.Id == "PPTX_UNSUPPORTED_CHART_AXIS_TITLE_LAYOUT"),
-            "The old blanket default-layout diagnostic should not return for supported chart branches.");
-        TestAssert.DoesNotContain("/CAT", pdf);
+        var document = new PptxReader().Read(package, default, diagnostics.Add);
+        PdfPage page = new PptxRenderer(new PortableRenderingTests.PinnedResolver())
+            .RenderPagesAsync(document, package, diagnostics.Add, default).ToBlockingEnumerable().Single();
+        return (page, diagnostics);
     }
 
     public static void PptxSyntheticTransparentChartTitleUsesGlyphOutlinePaths() =>
