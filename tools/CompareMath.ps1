@@ -1,7 +1,4 @@
-# Shared comparison math (T04): CenterX/CenterY, Delta, RoundedKey, and
-# Group-Count used by chart/text comparison and summary tools. RoundedKey
-# takes an optional digit count defaulting to 6. Dot-source this file
-# instead of copying the functions into comparison and summary tools.
+# Shared math and plot-box selection for PDF comparison and classification.
 
 function CenterX($op) { return ([double]$op.MinX + [double]$op.MaxX) / 2d }
 function CenterY($op) { return ([double]$op.MinY + [double]$op.MaxY) / 2d }
@@ -38,4 +35,43 @@ function Group-Count($items, [scriptblock] $keySelector) {
             }
         }
     )
+}
+
+function Get-PointToBoxDistance([double]$x, [double]$y, $box) {
+    $dx = 0d
+    if ($x -lt [double]$box.MinX) {
+        $dx = [double]$box.MinX - $x
+    }
+    elseif ($x -gt [double]$box.MaxX) {
+        $dx = $x - [double]$box.MaxX
+    }
+
+    $dy = 0d
+    if ($y -lt [double]$box.MinY) {
+        $dy = [double]$box.MinY - $y
+    }
+    elseif ($y -gt [double]$box.MaxY) {
+        $dy = $y - [double]$box.MaxY
+    }
+
+    return [Math]::Sqrt($dx * $dx + $dy * $dy)
+}
+
+function Find-PreferredChartPlotBoxes($structures, [string[]]$sortProperties, [switch]$CartesianOnly) {
+    $priority = @(
+        "GridlineAxisPlotBoxCandidate",
+        "AxisPairPlotBoxCandidate",
+        "CrossingAxisPlotBoxCandidate",
+        "PlotBoxCandidate"
+    )
+    if (!$CartesianOnly) {
+        $priority += @("PolarPlotBoxCandidate", "PlotAreaClipBoxCandidate")
+    }
+
+    foreach ($kind in $priority) {
+        $matches = @($structures | Where-Object { $_.Kind -eq $kind } | Sort-Object -Property $sortProperties)
+        if ($matches.Count -gt 0) {
+            return $matches
+        }
+    }
 }

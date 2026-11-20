@@ -467,70 +467,8 @@ function Is-LegendSwatchShape($structure) {
     return $false
 }
 
-function Distance-ToBox([double]$x, [double]$y, $box) {
-    $dx = 0d
-    if ($x -lt [double]$box.MinX) {
-        $dx = [double]$box.MinX - $x
-    }
-    elseif ($x -gt [double]$box.MaxX) {
-        $dx = $x - [double]$box.MaxX
-    }
-
-    $dy = 0d
-    if ($y -lt [double]$box.MinY) {
-        $dy = [double]$box.MinY - $y
-    }
-    elseif ($y -gt [double]$box.MaxY) {
-        $dy = $y - [double]$box.MaxY
-    }
-
-    return [Math]::Sqrt($dx * $dx + $dy * $dy)
-}
-
-function Find-RegionPlotBoxes($structures) {
-    $priority = @(
-        "GridlineAxisPlotBoxCandidate",
-        "AxisPairPlotBoxCandidate",
-        "CrossingAxisPlotBoxCandidate",
-        "PlotBoxCandidate",
-        "PolarPlotBoxCandidate",
-        "PlotAreaClipBoxCandidate"
-    )
-
-    foreach ($kind in $priority) {
-        $matches = @($structures |
-            Where-Object { $_.Kind -eq $kind } |
-            Sort-Object -Property PageNumber, MinY, MinX, MaxY, MaxX)
-        if ($matches.Count -gt 0) {
-            return $matches
-        }
-    }
-
-    return @()
-}
-
-function Find-CartesianRegionPlotBoxes($structures) {
-    $priority = @(
-        "GridlineAxisPlotBoxCandidate",
-        "AxisPairPlotBoxCandidate",
-        "CrossingAxisPlotBoxCandidate",
-        "PlotBoxCandidate"
-    )
-
-    foreach ($kind in $priority) {
-        $matches = @($structures |
-            Where-Object { $_.Kind -eq $kind } |
-            Sort-Object -Property PageNumber, RegionIndex, MinY, MinX, MaxY, MaxX)
-        if ($matches.Count -gt 0) {
-            return $matches
-        }
-    }
-
-    return @()
-}
-
 function Assign-RegionIndexes($structures) {
-    $plotBoxes = @(Find-RegionPlotBoxes $structures)
+    $plotBoxes = @(Find-PreferredChartPlotBoxes $structures -SortProperties PageNumber, MinY, MinX, MaxY, MaxX)
     if ($plotBoxes.Count -eq 0) {
         return
     }
@@ -549,7 +487,7 @@ function Assign-RegionIndexes($structures) {
         $best = $null
         $bestScore = [double]::PositiveInfinity
         foreach ($plotBox in $plotBoxes) {
-            $score = Distance-ToBox $centerX $centerY $plotBox
+            $score = Get-PointToBoxDistance $centerX $centerY $plotBox
             if ($score -lt $bestScore) {
                 $bestScore = $score
                 $best = $plotBox
@@ -563,7 +501,7 @@ function Assign-RegionIndexes($structures) {
 }
 
 function Reclassify-InPlotSeriesLines($structures, [double]$tolerance) {
-    $plotBoxes = @(Find-CartesianRegionPlotBoxes $structures)
+    $plotBoxes = @(Find-PreferredChartPlotBoxes $structures -SortProperties PageNumber, RegionIndex, MinY, MinX, MaxY, MaxX -CartesianOnly)
     if ($plotBoxes.Count -eq 0) {
         return
     }

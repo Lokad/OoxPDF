@@ -16,6 +16,7 @@ $ErrorActionPreference = "Stop"
 $ChartTitleCenterToleranceFactor = 0.45d
 
 . (Join-Path $PSScriptRoot "JsonArray.ps1")
+. (Join-Path $PSScriptRoot "CompareMath.ps1")
 
 function Round([double]$value) { return [Math]::Round($value, 6) }
 
@@ -62,50 +63,12 @@ function StableTextHash([string]$text) {
     return [Convert]::ToHexString($hash).Substring(0, 16)
 }
 
-function Find-PlotBoxes($structures) {
-    $priority = @(
-        "GridlineAxisPlotBoxCandidate",
-        "AxisPairPlotBoxCandidate",
-        "CrossingAxisPlotBoxCandidate",
-        "PlotBoxCandidate",
-        "PolarPlotBoxCandidate",
-        "PlotAreaClipBoxCandidate"
-    )
-    foreach ($kind in $priority) {
-        $matches = @($structures | Where-Object { $_.Kind -eq $kind } | Sort-Object -Property PageNumber, MinY, MinX)
-        if ($matches.Count -gt 0) {
-            return $matches
-        }
-    }
-
-}
-
-function Distance-ToBox([double]$x, [double]$y, $box) {
-    $dx = 0d
-    if ($x -lt [double]$box.MinX) {
-        $dx = [double]$box.MinX - $x
-    }
-    elseif ($x -gt [double]$box.MaxX) {
-        $dx = $x - [double]$box.MaxX
-    }
-
-    $dy = 0d
-    if ($y -lt [double]$box.MinY) {
-        $dy = [double]$box.MinY - $y
-    }
-    elseif ($y -gt [double]$box.MaxY) {
-        $dy = $y - [double]$box.MaxY
-    }
-
-    return [Math]::Sqrt($dx * $dx + $dy * $dy)
-}
-
 function Find-NearestChart([double]$x, [double]$y, $charts) {
     $best = $null
     $bestScore = [double]::PositiveInfinity
     $ambiguous = $false
     foreach ($chart in $charts) {
-        $score = Distance-ToBox $x $y $chart.PlotBox
+        $score = Get-PointToBoxDistance $x $y $chart.PlotBox
         if ($score -lt $bestScore) {
             $bestScore = $score
             $best = $chart
@@ -488,7 +451,7 @@ foreach ($pageGroup in @($allTextOps | Group-Object -Property PageNumber)) {
     $pageNumberValue = $textOps[0].PageNumber
     $structures = @($allStructures | Where-Object { $_.PageNumber -eq $pageNumberValue })
     $charts = @(foreach ($region in ($structures | Group-Object -Property RegionIndex)) {
-        $plotBoxes = @(Find-PlotBoxes $region.Group)
+        $plotBoxes = @(Find-PreferredChartPlotBoxes $region.Group -SortProperties PageNumber, MinY, MinX)
         if ($plotBoxes.Count -eq 0) { continue }
         if ($null -ne $plotBoxes[0].RegionIndex) {
             # Bounds variants for one known region describe the same chart.
