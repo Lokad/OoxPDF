@@ -19,7 +19,7 @@ internal static partial class DocxInspectionTests
         DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, markupMode: OoxPdfDocxMarkupMode.AllMarkup);
         var renderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
 
-        DocxStructureSnapshot structure = renderer.InspectStructure(document);
+        DocxStructureSnapshot structure = DocxStructureSnapshot.FromDocument(document);
         DocxLayoutSnapshot layout = renderer.InspectLayout(document);
         DocxTextEmissionSnapshot textEmission = renderer.InspectTextEmission(document);
 
@@ -52,7 +52,7 @@ internal static partial class DocxInspectionTests
         DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, markupMode: OoxPdfDocxMarkupMode.SimpleMarkup);
         var renderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.SimpleMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
 
-        DocxStructureSnapshot structure = renderer.InspectStructure(document);
+        DocxStructureSnapshot structure = DocxStructureSnapshot.FromDocument(document);
         DocxLayoutSnapshot layout = renderer.InspectLayout(document);
         DocxTextEmissionSnapshot textEmission = renderer.InspectTextEmission(document);
 
@@ -74,7 +74,7 @@ internal static partial class DocxInspectionTests
         TestAssert.Equal("1|2", string.Join("|", document.PackageCommentAnchorIds));
         TestAssert.Equal("2", string.Join("|", document.HiddenCommentAnchorIds));
 
-        DocxStructureSnapshot structure = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectStructure(document);
+        DocxStructureSnapshot structure = DocxStructureSnapshot.FromDocument(document);
         TestAssert.Equal(2, structure.PackageCommentAnchorIdCount);
         TestAssert.Equal(1, structure.HiddenCommentAnchorIdCount);
         TestAssert.Equal(1, structure.ResolvedCommentStoryAnchorCount);
@@ -99,8 +99,7 @@ internal static partial class DocxInspectionTests
         {
             using FileStream stream = File.OpenRead(input);
             DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, markupMode: mode);
-            return new DocxRenderer(null, mode, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-                .InspectStructure(document)
+            return DocxStructureSnapshot.FromDocument(document)
                 .CommentStoryAnchors!
                 .Single(anchor => anchor.Id == id);
         }
@@ -126,7 +125,7 @@ internal static partial class DocxInspectionTests
             DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, markupMode: mode);
             var renderer = new DocxRenderer(null, mode, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
             return (
-                renderer.InspectStructure(document).CommentReferenceCount,
+                DocxStructureSnapshot.FromDocument(document).CommentReferenceCount,
                 renderer.InspectLayout(document).CommentReferenceCount,
                 renderer.InspectTextEmission(document).CommentReferenceCount,
                 renderer.InspectMarkupBalloons(document).Sum(placement => placement.CommentCandidateCount));
@@ -216,7 +215,7 @@ internal static partial class DocxInspectionTests
         TestAssert.True(reply.CommentMetadata?.ParagraphId == "22222222" && reply.CommentMetadata.ParentParagraphId == "11111111" && reply.CommentMetadata.ParentCommentId == "1" && reply.CommentMetadata.IsResolved == false, "Reply comment extension metadata should resolve the parent comment id through the parent paragraph id.");
         TestAssert.True(secondReply.CommentMetadata?.ParagraphId == "33333333" && secondReply.CommentMetadata.ParentParagraphId == "11111111" && secondReply.CommentMetadata.ParentCommentId == "1" && secondReply.CommentMetadata.IsResolved == false, "Second reply metadata should resolve to the same parent comment thread.");
 
-        DocxStructureSnapshot structure = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectStructure(document);
+        DocxStructureSnapshot structure = DocxStructureSnapshot.FromDocument(document);
         DocxStructureStorySnapshot parentSnapshot = structure.Stories.Single(story => story.Kind == "Comment" && story.VariantType == "1");
         DocxStructureStorySnapshot replySnapshot = structure.Stories.Single(story => story.Kind == "Comment" && story.VariantType == "2");
         DocxStructureStorySnapshot secondReplySnapshot = structure.Stories.Single(story => story.Kind == "Comment" && story.VariantType == "3");
@@ -306,8 +305,7 @@ internal static partial class DocxInspectionTests
         TestAssert.True(reference.Revision?.Kind == DocxRevisionKind.Insertion && reference.Revision.Author == "A" && reference.Revision.Date == "2026-06-04T00:00:00Z" && reference.Revision.SourceElement == "ins", "Inline references inside revision containers should retain direct revision metadata.");
         TestAssert.Equal(1, reference.Revisions.Count);
 
-        DocxStructureInlineReferenceSnapshot snapshot = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-            .InspectStructure(document)
+        DocxStructureInlineReferenceSnapshot snapshot = DocxStructureSnapshot.FromDocument(document)
             .InlineReferences
             .Single();
         TestAssert.True(snapshot.RevisionCount == 1 && snapshot.RevisionKind == "Insertion" && snapshot.RevisionSourceElement == "ins", "Structure snapshots should expose private-safe inline-reference revision provenance.");
@@ -648,7 +646,7 @@ internal static partial class DocxInspectionTests
         TestAssert.Contains("Formatted paragraph: alignment", revisionPreview);
         TestAssert.Contains("Formatted run: color, bold", revisionPreview);
 
-        DocxStructureSnapshot structure = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectStructure(document);
+        DocxStructureSnapshot structure = DocxStructureSnapshot.FromDocument(document);
         TestAssert.Equal(3, structure.RevisionCount);
         TestAssert.Equal(3, structure.OtherRevisionCount);
         TestAssert.Equal(3, structure.FormattingRevisionCount);
@@ -723,7 +721,7 @@ internal static partial class DocxInspectionTests
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
 
-        DocxStructureSnapshot structure = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectStructure(document);
+        DocxStructureSnapshot structure = DocxStructureSnapshot.FromDocument(document);
 
         TestAssert.Equal(3, structure.FormattingRevisionCount);
         TestAssert.Equal(2, structure.RunFormattingRevisionCount);
@@ -998,7 +996,7 @@ internal static partial class DocxInspectionTests
         TestAssert.True(document.RelatedStories.Any(story => story.Kind == DocxRelatedStoryKind.Footnote && story.PartName == "/word/footnotes.xml" && story.Id == "2" && story.Paragraphs.Count == 1), "Footnote bodies should be preserved as related DOCX stories.");
         TestAssert.True(document.RelatedStories.Any(story => story.Kind == DocxRelatedStoryKind.Endnote && story.PartName == "/word/endnotes.xml" && story.Id == "3" && story.Paragraphs.Count == 1), "Endnote bodies should be preserved as related DOCX stories.");
 
-        DocxStructureSnapshot snapshot = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectStructure(document);
+        DocxStructureSnapshot snapshot = DocxStructureSnapshot.FromDocument(document);
         DocxStructureBlockSnapshot referenceBlock = snapshot.Blocks.Single(block => block.Kind == "Paragraph");
         TestAssert.Equal(3, snapshot.InlineReferenceCount);
         TestAssert.Equal(3, snapshot.AnchoredInlineReferenceCount);

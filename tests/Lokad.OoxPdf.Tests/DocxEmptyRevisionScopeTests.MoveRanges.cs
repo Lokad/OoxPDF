@@ -74,8 +74,7 @@ internal static partial class DocxEmptyRevisionScopeTests
         };
         TestAssert.Equal(0, DocxMathParagraphPolicy.GetPreparationEquations(unproven).Count);
         var recorded = ReadMoveRange(Cases[0], OoxPdfDocxMarkupMode.Final, "moveFrom", "empty");
-        var structure = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true),
-            OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectStructure(recorded);
+        var structure = DocxStructureSnapshot.FromDocument(recorded);
         TestAssert.Equal(1, structure.RevisionRanges!.Count);
         TestAssert.True(structure.RevisionRanges[0].IsClosed && structure.RevisionRanges[0].HasName &&
             structure.RevisionRanges[0].HasAuthor && structure.RevisionRanges[0].HasDate,

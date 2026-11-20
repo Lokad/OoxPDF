@@ -157,7 +157,7 @@ internal static class DocxFieldsTests
         TestAssert.Equal(1, complexPage.ResultRunCount);
         TestAssert.Equal("{PAGE}{NUMPAGES}TargetValue{PAGE}", string.Concat(paragraph.Runs.Select(run => run.Text)));
 
-        DocxStructureSnapshot snapshot = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectStructure(document);
+        DocxStructureSnapshot snapshot = DocxStructureSnapshot.FromDocument(document);
         DocxStructureBlockSnapshot block = snapshot.Blocks.Single(block => block.Kind == "Paragraph");
         DocxStructureStorySnapshot bodyStory = snapshot.Stories.Single(story => story.Kind == "Body");
         TestAssert.Equal(4, snapshot.FieldReferenceCount);
@@ -279,7 +279,7 @@ internal static class DocxFieldsTests
         TestAssert.True(endnotePage.SourceKind == DocxFieldSourceKind.ComplexInstruction && endnotePage.HasSeparate && endnotePage.HasCachedResult && !endnotePage.RendersCachedResult && endnotePage.UsesPlaceholder, "Complex PAGE fields in endnotes should keep metadata without rendering stale cached results.");
         TestAssert.True(endnoteNumPages.SourceKind == DocxFieldSourceKind.Simple && endnoteNumPages.UsesPlaceholder && !endnoteNumPages.HasCachedResult, "Simple NUMPAGES fields in endnotes should remain dynamic placeholders.");
 
-        DocxStructureSnapshot snapshot = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectStructure(document);
+        DocxStructureSnapshot snapshot = DocxStructureSnapshot.FromDocument(document);
         TestAssert.Equal(4, snapshot.FieldReferenceCount);
         TestAssert.Equal(2, snapshot.PageFieldReferenceCount);
         TestAssert.Equal(2, snapshot.NumPagesFieldReferenceCount);
@@ -528,7 +528,7 @@ internal static class DocxFieldsTests
         TestAssert.Equal(1, inner.TextRunCount);
         TestAssert.Equal("2026".Length, inner.TextLength);
 
-        DocxStructureSnapshot snapshot = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectStructure(document);
+        DocxStructureSnapshot snapshot = DocxStructureSnapshot.FromDocument(document);
         TestAssert.Equal(2, snapshot.ComplexFieldReferenceCount);
         TestAssert.Equal(2, snapshot.CachedResultFieldReferenceCount);
         TestAssert.Equal(2, snapshot.RenderedCachedResultFieldReferenceCount);
@@ -891,7 +891,7 @@ internal static class DocxFieldsTests
         TestAssert.Equal(1, endnote.RunChildIndex);
         TestAssert.Equal(5, endnote.TextOffsetInRun);
 
-        DocxStructureSnapshot snapshot = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectStructure(document);
+        DocxStructureSnapshot snapshot = DocxStructureSnapshot.FromDocument(document);
         DocxStructureBlockSnapshot block = snapshot.Blocks.Single(block => block.Kind == "Paragraph");
         TestAssert.Equal(3, snapshot.InlineReferenceCount);
         TestAssert.Equal(3, snapshot.AnchoredInlineReferenceCount);
@@ -955,7 +955,7 @@ internal static class DocxFieldsTests
         TestAssert.Equal("2", second.Runs[1].Text);
         TestAssert.Equal("2", second.InlineReferences.Single().DisplayText ?? string.Empty);
 
-        DocxStructureSnapshot snapshot = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectStructure(document);
+        DocxStructureSnapshot snapshot = DocxStructureSnapshot.FromDocument(document);
         DocxStructureInlineReferenceSnapshot[] references = snapshot.InlineReferences.ToArray();
         TestAssert.Equal("1", references.Single(reference => reference.Kind == "Footnote" && reference.Id == "2").DisplayText ?? string.Empty);
         TestAssert.Equal("i", references.Single(reference => reference.Kind == "Endnote").DisplayText ?? string.Empty);
@@ -1014,7 +1014,7 @@ internal static class DocxFieldsTests
         TestAssert.Equal(2, link.TextRunStartIndex);
         TestAssert.Equal(1, link.TextRunCount);
 
-        DocxStructureSnapshot snapshot = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectStructure(document);
+        DocxStructureSnapshot snapshot = DocxStructureSnapshot.FromDocument(document);
         DocxStructureBlockSnapshot block = snapshot.Blocks.Single(block => block.Kind == "Paragraph");
         DocxStructureStorySnapshot bodyStory = snapshot.Stories.Single(story => story.Kind == "Body");
         TestAssert.Equal(1, snapshot.BookmarkAnchorCount);

@@ -93,7 +93,7 @@ internal static class DocxTextSpacingTests
         TestAssert.True(manualBreak.BreakParagraph is not null, "The authored break paragraph should remain available for future column-flow layout.");
         TestAssert.Equal("Second", ((DocxParagraphElement)elements[2]).Paragraph.Runs.Single().Text);
 
-        DocxStructureSnapshot snapshot = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectStructure(document);
+        DocxStructureSnapshot snapshot = DocxStructureSnapshot.FromDocument(document);
         TestAssert.Equal(1, snapshot.ManualBreakBlockCount);
         DocxStructureBlockSnapshot block = snapshot.Blocks[1];
         TestAssert.Equal("ManualBreak", block.Kind);

@@ -393,11 +393,6 @@ internal sealed partial class DocxRenderer
             lines);
     }
 
-    internal DocxStructureSnapshot InspectStructure(DocxDocument document)
-    {
-        return DocxStructureSnapshot.FromDocument(document);
-    }
-
     private static async ValueTask<(DocxDocument Document, DocxFontResources FontResources, DocxLayout Layout)> PreparePageNumberedLayoutAsync(
         DocxDocument document, IFontResolver resolver, DocxMarkupContext context, OoxPdfDocxMarkupGeometryMode geometry,
         Action<OoxPdfDiagnostic>? diagnostics, CancellationToken cancellationToken)

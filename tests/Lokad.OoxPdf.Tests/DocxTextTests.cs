@@ -443,7 +443,7 @@ internal static partial class DocxTextTests
 
         DocxStyleDefinitionSummary childStyle = document.StyleCatalog.ParagraphStyles.Single(style => style.StyleId == "Child");
         TestAssert.True(childStyle.BasedOnStyleId == "Base" && childStyle.HasParagraphProperties && childStyle.HasRunProperties, "The DOCX style catalog should retain private-safe paragraph style topology after resolved properties are applied.");
-        DocxStructureSnapshot structure = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectStructure(document);
+        DocxStructureSnapshot structure = DocxStructureSnapshot.FromDocument(document);
         TestAssert.Equal(2, structure.StyleCatalog.ParagraphStyles.Count);
         DocxStructureBlockSnapshot block = structure.Blocks.Single(block => block.Kind == "Paragraph");
         TestAssert.True(block.ParagraphStyleFound == true, "Structure snapshots should expose private-safe paragraph style resolution.");
@@ -1957,7 +1957,7 @@ internal static partial class DocxTextTests
         TestAssert.Equal(1, link.TextRunCount);
         TestAssert.Equal(4, link.TextLength);
 
-        DocxStructureSnapshot snapshot = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectStructure(document);
+        DocxStructureSnapshot snapshot = DocxStructureSnapshot.FromDocument(document);
         DocxStructureBlockSnapshot block = snapshot.Blocks.Single(block => block.Kind == "Paragraph");
         TestAssert.Equal(1, snapshot.HyperlinkCount);
         TestAssert.Equal(1, snapshot.ExternalHyperlinkCount);

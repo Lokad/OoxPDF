@@ -1208,7 +1208,7 @@ internal static class DocxPageTests
                 var events = document.BodyElements.OfType<DocxPageBreakElement>().ToArray();
                 TestAssert.Equal(count, events.Sum(boundary => boundary.BreakCount));
                 TestAssert.Equal(carrier is "mixed" or "leading" ? 0 : 1, events.Count(boundary => boundary.BreakParagraph is not null));
-                var snapshot = new DocxRenderer(null, mode, geometry).InspectStructure(document);
+                var snapshot = DocxStructureSnapshot.FromDocument(document);
                 TestAssert.Equal(count, snapshot.Blocks.Sum(block => block.SourceBreakCount ?? 0));
                 DocxLayout layout = count == 1 ? single : engine.Create(document, measurer, default);
                 TestAssert.Equal(count + 1, layout.Pages.Count);

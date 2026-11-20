@@ -81,7 +81,7 @@ internal static class DocxRevisionsTests
         TestAssert.DoesNotContain("DOCX_UNSUPPORTED_VML", ids);
         TestAssert.Equal("Before VML note one\nVML note two After", string.Concat(paragraph.Runs.Select(run => run.Text)));
         TestAssert.True(paragraph.Revisions.Any(revision => revision.Kind == DocxRevisionKind.ParagraphPropertiesChange && revision.PropertyElementNames.Contains("pStyle")), "VML textbox paragraph formatting revisions should be retained as private-safe provenance.");
-        DocxStructureSnapshot structure = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectStructure(document);
+        DocxStructureSnapshot structure = DocxStructureSnapshot.FromDocument(document);
         TestAssert.Equal(1, structure.FormattingRevisionCount);
         TestAssert.Equal(1, structure.ParagraphFormattingRevisionCount);
         string pdf = File.ReadAllText(output, Encoding.ASCII);
@@ -123,7 +123,7 @@ internal static class DocxRevisionsTests
         TestAssert.Equal(0, drawing.SourceParagraphIndex ?? -1);
         TestAssert.Equal(0, drawing.SourceBlockIndex ?? -1);
 
-        DocxStructureFloatingDrawingSnapshot snapshot = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectStructure(document).FloatingDrawings.Single();
+        DocxStructureFloatingDrawingSnapshot snapshot = DocxStructureSnapshot.FromDocument(document).FloatingDrawings.Single();
         TestAssert.Equal("rIdImage1", snapshot.ImageRelationshipId ?? string.Empty);
         TestAssert.Equal("/word/media/image1.png", snapshot.ImagePartName ?? string.Empty);
         TestAssert.Equal("image/png", snapshot.ImageContentType ?? string.Empty);
@@ -246,7 +246,7 @@ internal static class DocxRevisionsTests
         DocxParagraph textBoxParagraph = DocxBlockTraversal.EnumerateBodyParagraphs(drawing.TextBoxBodyElements).Single();
         TestAssert.Equal("Floating review note", string.Concat(textBoxParagraph.Runs.Select(run => run.Text)));
 
-        DocxStructureFloatingDrawingSnapshot structure = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectStructure(document).FloatingDrawings.Single();
+        DocxStructureFloatingDrawingSnapshot structure = DocxStructureSnapshot.FromDocument(document).FloatingDrawings.Single();
         TestAssert.Equal(1, structure.TextBoxBlockCount);
         TestAssert.Equal(1, structure.TextBoxParagraphCount);
         TestAssert.Equal("Floating review note".Length, structure.TextBoxTextLength);
@@ -1458,7 +1458,7 @@ internal static class DocxRevisionsTests
         TestAssert.Equal("Insertion:101|Deletion:102", string.Join("|", revisedParagraphs.Select(element => $"{element.Paragraph.Revisions.Single().Kind}:{element.Paragraph.Revisions.Single().Id}")));
         TestAssert.Equal("Insertion:103|Deletion:104", string.Join("|", revisedTables.Select(element => $"{element.Table.Revisions.Single().Kind}:{element.Table.Revisions.Single().Id}")));
 
-        DocxStructureSnapshot structure = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectStructure(document);
+        DocxStructureSnapshot structure = DocxStructureSnapshot.FromDocument(document);
         TestAssert.True(structure.Blocks.Count(block => block.RevisionCount != 0) >= 4, "Structure inspection should continue to see block revision provenance after body-element wrappers retain it.");
     }
 
@@ -1475,7 +1475,7 @@ internal static class DocxRevisionsTests
 
         TestAssert.Equal("Before|Controlled paragraph|After", string.Join("|", paragraphs.Select(ParagraphText)));
         TestAssert.True(controlledParagraph.Revisions.Any(revision => revision.Kind == DocxRevisionKind.ParagraphPropertiesChange && revision.PropertyElementNames.Contains("pStyle")), "Block content controls should expose paragraph formatting revisions to markup inspection.");
-        DocxStructureSnapshot structure = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectStructure(document);
+        DocxStructureSnapshot structure = DocxStructureSnapshot.FromDocument(document);
         TestAssert.Equal(1, structure.FormattingRevisionCount);
         TestAssert.Equal(1, structure.ParagraphFormattingRevisionCount);
         TestAssert.Equal(3, structure.ParagraphBlockCount);
@@ -1585,7 +1585,7 @@ internal static class DocxRevisionsTests
         TestAssert.True(moveFrom.Id == "7" && moveFrom.Name == "move-from" && moveFrom.Author == "A" && moveFrom.Date == "2026-06-05T00:00:00Z" && moveFrom.StartSourceRunIndex == 0 && moveFrom.EndSourceRunIndex == 1, "Move-from range markers should preserve metadata and source coordinates.");
         TestAssert.True(moveTo.Id == "8" && moveTo.Name == "move-to" && moveTo.Author == "B" && moveTo.Date == "2026-06-06T00:00:00Z" && moveTo.StartSourceRunIndex == 1 && moveTo.EndSourceRunIndex == 2, "Move-to range markers should preserve metadata and source coordinates.");
 
-        DocxStructureSnapshot snapshot = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectStructure(document);
+        DocxStructureSnapshot snapshot = DocxStructureSnapshot.FromDocument(document);
         TestAssert.Equal(2, snapshot.Blocks.Single().RevisionRangeCount);
         DocxStructureRevisionRangeSnapshot[] ranges = snapshot.RevisionRanges!.ToArray();
         TestAssert.Equal(2, ranges.Length);
@@ -1640,8 +1640,7 @@ internal static class DocxRevisionsTests
         });
 
         DocxDocument document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
-        DocxStructureRevisionRangeSnapshot[] ranges = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-            .InspectStructure(document)
+        DocxStructureRevisionRangeSnapshot[] ranges = DocxStructureSnapshot.FromDocument(document)
             .RevisionRanges!
             .ToArray();
 

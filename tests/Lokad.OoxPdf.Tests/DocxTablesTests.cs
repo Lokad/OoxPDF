@@ -405,7 +405,7 @@ internal static class DocxTablesTests
             }
         };
 
-        DocxStructureSnapshot snapshot = new DocxRenderer(new MapFontResolver([], "Fallback"), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectStructure(document);
+        DocxStructureSnapshot snapshot = DocxStructureSnapshot.FromDocument(document);
 
         TestAssert.Equal(4, snapshot.BlockCount);
         TestAssert.Equal(1, snapshot.ParagraphBlockCount);
@@ -491,7 +491,7 @@ internal static class DocxTablesTests
         DocxTable table = DocxTests.CreateSingleCellTable("Plain 123", 20d);
         DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
-        DocxStructureSnapshot snapshot = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectStructure(document);
+        DocxStructureSnapshot snapshot = DocxStructureSnapshot.FromDocument(document);
 
         DocxStructureTableSnapshot tableSnapshot = snapshot.Tables.Single();
         DocxStructureTableCellSnapshot cellSnapshot = tableSnapshot.Rows.Single().Cells.Single();
@@ -523,8 +523,7 @@ internal static class DocxTablesTests
             [new DocxTableRow([new DocxTableCell([cellParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 20d)]);
         DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
-        DocxStructureTableSnapshot tableSnapshot = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-            .InspectStructure(document)
+        DocxStructureTableSnapshot tableSnapshot = DocxStructureSnapshot.FromDocument(document)
             .Tables
             .Single();
         DocxStructureTableRowSnapshot rowSnapshot = tableSnapshot.Rows.Single();

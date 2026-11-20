@@ -58,7 +58,7 @@ var options = new JsonSerializerOptions
 };
 
 var (layout, fontPlan, textEmission, markupBalloons) = await renderer.InspectAsync(document);
-DocxStructureSnapshot structure = renderer.InspectStructure(document);
+DocxStructureSnapshot structure = DocxStructureSnapshot.FromDocument(document);
 File.WriteAllText(
     Path.Combine(outputDirectory, "layout-snapshot.json"),
     JsonSerializer.Serialize(layout, options));

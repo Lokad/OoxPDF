@@ -906,7 +906,7 @@ internal static partial class DocxHeaderFooterTests
         TestAssert.Equal(0, drawing.SourceParagraphIndex ?? -1);
         TestAssert.True(drawing.SourceBlockIndex is null, "Header floating drawings should not pretend to belong to a body block.");
 
-        DocxStructureStorySnapshot story = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectStructure(document).Stories.Single(story => story.Kind == "Header" && story.VariantType == "default");
+        DocxStructureStorySnapshot story = DocxStructureSnapshot.FromDocument(document).Stories.Single(story => story.Kind == "Header" && story.VariantType == "default");
         TestAssert.True(story.FloatingDrawingCount == 1 && story.ParagraphCount == 1, "Static header story snapshots should expose anchored drawing ownership without rendering it yet.");
 
         DocxLayoutSnapshot layout = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectLayout(document);

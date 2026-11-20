@@ -676,7 +676,7 @@ internal static class DocxTablesMarkupTests
         TestAssert.Equal(0, document.HeaderParagraphsByType["default"].Count);
         TestAssert.Equal(1, document.PageSettings.HeaderBodyElementsByType["default"].Count);
 
-        DocxStructureStorySnapshot headerStory = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectStructure(document).Stories.Single(story => story.Kind == "Header" && story.VariantType == "default");
+        DocxStructureStorySnapshot headerStory = DocxStructureSnapshot.FromDocument(document).Stories.Single(story => story.Kind == "Header" && story.VariantType == "default");
         TestAssert.True(headerStory.BlockCount == 1 && headerStory.TableCount == 1 && headerStory.ParagraphCount == 0 && headerStory.TextLength == 17, "Static header structure snapshots should derive counts from body elements, including table-cell paragraphs.");
 
         DocxFontPlan fontPlan = DocxFontPlan.Create(document, new MapFontResolver([], "Fallback"), CancellationToken.None);
@@ -1936,7 +1936,7 @@ internal static class DocxTablesMarkupTests
         TestAssert.Contains("Formatted row: row height", DocxRenderer.BuildRevisionBalloonPreview(row.Revisions));
         TestAssert.Contains("Formatted cell: cell width", DocxRenderer.BuildRevisionBalloonPreview(cell.Revisions));
 
-        DocxStructureSnapshot structure = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectStructure(document);
+        DocxStructureSnapshot structure = DocxStructureSnapshot.FromDocument(document);
         DocxStructureBlockSnapshot block = structure.Blocks.Single(block => block.Kind == "Table");
         DocxStructureTableSnapshot tableSnapshot = structure.Tables.Single();
         DocxStructureTableRowSnapshot rowSnapshot = tableSnapshot.Rows.Single();
