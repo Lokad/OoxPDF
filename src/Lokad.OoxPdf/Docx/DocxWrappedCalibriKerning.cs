@@ -14,7 +14,8 @@ internal static class DocxWrappedCalibriKerning
         var replacements = new Dictionary<DocxParagraph, DocxParagraph>(ReferenceEqualityComparer.Instance);
         foreach (var paragraph in source.Paragraphs.Concat(source.RelatedStories.SelectMany(s => s.Paragraphs)))
         {
-            var runs = paragraph.Runs.ToArray();bool changed = false;
+            var runs = paragraph.Runs.ToArray();
+            bool changed = false;
             for (int i = 0; i < runs.Length; i++)
             {
                 var run = runs[i];
@@ -22,19 +23,14 @@ internal static class DocxWrappedCalibriKerning
                 if (run.Text.Length == 0 || run.FontSize != 12d || run.VerticalAlignment != DocxRunVerticalAlignment.Baseline) continue;
                 bool enabled = DocxKerningThreshold.IsMet(minimum, run.FontSize);
                 if (run.PairKerningEnabled == enabled) continue;
-                runs[i] = run with { PairKerningEnabled = enabled };changed = true;
+                runs[i] = run with { PairKerningEnabled = enabled };
+                changed = true;
             }
             if (changed) replacements.Add(paragraph, paragraph with { Runs = runs });
         }
         if (replacements.Count == 0) return policy == DocxWrappedCalibriPolicy.SourceThresholds;
         var publication = new DocxParagraphReplacements(replacements, cancellationToken);
-        adjusted = source with {
-            BodyElements = publication.ReplaceElements(source.BodyElements),
-            FallbackParagraphs = source.FallbackParagraphs.Select(publication.Replace).ToArray(),
-            RelatedStories = source.RelatedStories.Select(s => s with {
-                BodyElements = publication.ReplaceElements(s.BodyElements), FallbackParagraphs = s.FallbackParagraphs.Select(publication.Replace).ToArray()
-            }).ToArray()
-        };
+        adjusted = publication.Replace(source);
         return true;
     }
 }

@@ -9,6 +9,19 @@ internal sealed class DocxParagraphReplacements(
 
     internal DocxParagraph Replace(DocxParagraph paragraph) => paragraphs.GetValueOrDefault(paragraph, paragraph);
 
+    internal DocxDocument Replace(DocxDocument document) => document with
+    {
+        BodyElements = ReplaceElements(document.BodyElements),
+        FallbackParagraphs = document.FallbackParagraphs.Select(Replace).ToArray(),
+        RelatedStories = document.RelatedStories.Select(Replace).ToArray()
+    };
+
+    internal DocxRelatedStory Replace(DocxRelatedStory story) => story with
+    {
+        BodyElements = ReplaceElements(story.BodyElements),
+        FallbackParagraphs = story.FallbackParagraphs.Select(Replace).ToArray()
+    };
+
     internal IReadOnlyList<DocxBodyElement> ReplaceElements(IReadOnlyList<DocxBodyElement> elements)
     {
         List<DocxBodyElement>? changed = null;

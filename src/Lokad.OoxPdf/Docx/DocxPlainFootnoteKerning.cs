@@ -86,13 +86,7 @@ internal static class DocxPlainFootnoteKerning
         if (replacements.Count == 0 ||
             !ordinary && !DocxPageFootnoteNumbering.TryGetReferencePages(source, layout, out pages)) return false;
         var publication = new DocxParagraphReplacements(replacements, cancellationToken);
-        adjusted = source with {
-            BodyElements = publication.ReplaceElements(source.BodyElements),
-            FallbackParagraphs = source.FallbackParagraphs.Select(publication.Replace).ToArray(),
-            RelatedStories = source.RelatedStories.Select(s => s with {
-                BodyElements = publication.ReplaceElements(s.BodyElements), FallbackParagraphs = s.FallbackParagraphs.Select(publication.Replace).ToArray()
-            }).ToArray()
-        };
+        adjusted = publication.Replace(source);
         return true;
     }
 

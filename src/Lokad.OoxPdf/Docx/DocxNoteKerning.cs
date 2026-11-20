@@ -130,11 +130,7 @@ internal static class DocxNoteKerning
         var publication = new DocxParagraphReplacements(replacements, cancellationToken);
         adjusted = source with
         {
-            RelatedStories = source.RelatedStories.Select(s => s with
-            {
-                BodyElements = publication.ReplaceElements(s.BodyElements),
-                FallbackParagraphs = s.FallbackParagraphs.Select(publication.Replace).ToArray(),
-            }).ToArray(),
+            RelatedStories = source.RelatedStories.Select(publication.Replace).ToArray()
         };
         return true;
     }

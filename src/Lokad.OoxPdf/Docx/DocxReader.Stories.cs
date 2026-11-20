@@ -379,8 +379,7 @@ internal sealed partial class DocxReader
                 };
                 var replacements = new DocxParagraphReplacements(
                     new Dictionary<DocxParagraph, DocxParagraph>(ReferenceEqualityComparer.Instance) { [paragraph] = updated }, cancellationToken);
-                story = story with { BodyElements = replacements.ReplaceElements(story.BodyElements),
-                    FallbackParagraphs = story.FallbackParagraphs.Select(replacements.Replace).ToArray() };
+                story = replacements.Replace(story);
             }
             if (usesDefaultSeparator) story = story with { IsSynthetic = true };
             if (story.BodyElements.Count > 0)
