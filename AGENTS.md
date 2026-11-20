@@ -85,7 +85,6 @@ validation tools, including the PDFium rasterizer, remain outside the library.
 - `tools/ComparePdfTextLineStarts.ps1`: compare PDF text line starts (helper used by CheckVisualCase).
 - `tools/RenderCachedReference.ps1`: render cached Office reference PDFs (helper for cache-only gates).
 - `tools/SummarizePdfGraphicsOperations.ps1`: summarize PDF graphics-operation rollups across runs.
-- `tools/SummarizePptxTextStateDeltas.ps1`: summarize PPTX text-state deltas across runs.
 - `tools/NewChartProbeFixtures.ps1`: generate chart probe fixtures (doughnut/sparse/labels/axis-titles/legends).
 - `tools/NewTypographyProbeFixtures.ps1`: generate typography probe fixtures.
 - `tools/NewDocxMarkupCommentFixtures.ps1`: generate DOCX markup comment fixtures.
