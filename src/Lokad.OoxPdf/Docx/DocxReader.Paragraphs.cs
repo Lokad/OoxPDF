@@ -522,7 +522,9 @@ internal sealed partial class DocxReader
             int fieldImageIndex = images.Count;
             int fieldBoxIndex = inlineTextBoxes.Count;
             int fieldTextLengthStart = runs.Sum(run => run.Text.Length);
-            bool hasCachedResult = FieldHasCachedResultContent(field);
+            var fragment = field.Annotation<ComputedSimpleFieldFragment>();
+            bool ownsCounter = fragment?.OwnsCounter != false;
+            bool hasCachedResult = ownsCounter && FieldHasCachedResultContent(fragment?.Source ?? field);
             if (placeholder is not null)
             {
                 using var storedRuns = EnumerateRevisionScopedChildren(field.Elements(), markupMode, cancellationToken,
@@ -531,9 +533,17 @@ internal sealed partial class DocxReader
                 // Bare computed values inherit their instruction's paragraph-style
                 // formatting, rather than stale cached-result formatting. Explicit
                 // MERGEFORMAT and unqualified switches keep the cached-style fallback.
-                XElement formattingRun = hasStoredRun && !UsesDefaultDynamicFieldFormatting(instruction, kind)
-                    ? storedRuns.Current.Element : new XElement(WordprocessingNamespace + "r");
-                AddFieldPlaceholderRun(formattingRun, placeholder, fieldSourceRunIndex, revision, kind);
+                if (ownsCounter)
+                {
+                    XElement? formattingRun = null;
+                    if (!UsesDefaultDynamicFieldFormatting(instruction, kind))
+                    {
+                        formattingRun = fragment is null ? (hasStoredRun ? storedRuns.Current.Element : null) :
+                            EnumerateRevisionScopedChildren(fragment.Source.Elements(), markupMode, cancellationToken,
+                                [WordprocessingNamespace + "r"], revision, inlineContent: true).FirstOrDefault()?.Element;
+                    }
+                    AddFieldPlaceholderRun(formattingRun ?? new XElement(WordprocessingNamespace + "r"), placeholder, fieldSourceRunIndex, revision, kind);
+                }
                 // The computed result replaces its cached runs and owns one
                 // source position, including when there is no stored result.
                 sourceRunIndex++;
@@ -585,21 +595,24 @@ internal sealed partial class DocxReader
                     }
                     resultTextOffset += ReadRunText(resultRun).Length;
                 }
-                AddFieldReference(
-                    kind,
-                    DocxFieldSourceKind.Simple,
-                    instruction,
-                    placeholder,
-                    fieldSourceRunIndex,
-                    fieldTextRunIndex,
-                    fieldTextLengthStart,
-                    hasCachedResult,
-                    rendersCachedResult: false,
-                    usesPlaceholder: true, hasSeparate: false, nestingDepth: 0, instructionRunCount: 0, resultRunCount: 0,
-                    fieldReferences: fieldReferences,
-                    runs: runs);
+                if (ownsCounter)
+                {
+                    AddFieldReference(
+                        kind,
+                        DocxFieldSourceKind.Simple,
+                        instruction,
+                        placeholder,
+                        fieldSourceRunIndex,
+                        fieldTextRunIndex,
+                        fieldTextLengthStart,
+                        hasCachedResult,
+                        rendersCachedResult: false,
+                        usesPlaceholder: true, hasSeparate: false, nestingDepth: 0, instructionRunCount: 0, resultRunCount: 0,
+                        fieldReferences: fieldReferences,
+                        runs: runs);
+                }
                 PublishInlineRunItems(fieldTextRunIndex, fieldImageIndex, fieldBoxIndex);
-                return true;
+                return ownsCounter || images.Count != fieldImageIndex || inlineTextBoxes.Count != fieldBoxIndex;
             }
 
             bool hasSource = false;

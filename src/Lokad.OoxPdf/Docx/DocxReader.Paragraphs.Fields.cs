@@ -16,6 +16,12 @@ internal sealed partial class DocxReader
         OoxBoolean.IsTrue((string?)field.Attribute(WordprocessingNamespace + "fldLock"))
             ? null : DocxFieldText.Placeholder(kind);
 
+    private static bool HasSimpleFieldPlaceholder(XElement element) =>
+        element.Name == WordprocessingNamespace + "fldSimple" &&
+        ResolveSimpleFieldPlaceholder(element, ResolveFieldKind((string?)element.Attribute(WordprocessingNamespace + "instr"))) is not null;
+
+    private sealed record ComputedSimpleFieldFragment(XElement Source, bool OwnsCounter);
+
     private static bool UsesDefaultDynamicFieldFormatting(string? instruction, DocxFieldKind kind) => kind switch
     {
         DocxFieldKind.Page => instruction.AsSpan().Trim().Equals("PAGE", StringComparison.OrdinalIgnoreCase),
@@ -71,8 +77,11 @@ internal sealed partial class DocxReader
     private static bool IsFieldResultContent(XElement element) =>
         element.Name == MathNamespace + "oMath" || element.Name == MathNamespace + "oMathPara" ||
         ReadRunTextChild(element).Length != 0 ||
-        (element.Name == WordprocessingNamespace + "drawing" || element.Name == WordprocessingNamespace + "pict") &&
+        IsCachedFieldDrawing(element) &&
             element.Descendants().Any(content => content.Name == DrawingNamespace + "blip" || content.Name == VmlNamespace + "imagedata");
+
+    private static bool IsCachedFieldDrawing(XElement element) =>
+        element.Name == WordprocessingNamespace + "drawing" || element.Name == WordprocessingNamespace + "pict";
 
     private static bool FieldHasCachedResultContent(XElement field) => field.Descendants().Any(IsFieldResultContent);
 }

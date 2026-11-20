@@ -546,7 +546,8 @@ internal sealed partial class DocxReader
                 splitParagraph.Add(new XElement(paragraphProperties));
             }
 
-            splitParagraph.Add(currentChildren.Select(child => new XElement(child)));
+            // These children are detached copies. Attaching them retains source annotations.
+            splitParagraph.Add(currentChildren);
             parts.Add(new ParagraphBreakPart(splitParagraph, null, startsAfterBreak, endsBeforeBreak, !hasParagraphPart));
             hasParagraphPart = true;
             currentChildren.Clear();
@@ -662,10 +663,34 @@ internal sealed partial class DocxReader
         OoxPdfDocxMarkupMode markupMode, Func<XElement, bool> isBreak, Func<XElement, bool> isHiddenBreak)
     {
         var containerChildren = new List<XElement>();
+        XElement? computedField = HasSimpleFieldPlaceholder(sourceContainer) ? sourceContainer : null;
+        bool ownsCounter = computedField is not null;
+
+        void AddContainerPart()
+        {
+            if (!ownsCounter && (containerChildren.Count == 0 ||
+                computedField is not null && !containerChildren.Any(child => child.DescendantsAndSelf().Any(IsCachedFieldDrawing))))
+            {
+                containerChildren.Clear();
+                return;
+            }
+
+            var fragment = new XElement(sourceContainer.Name, sourceContainer.Attributes());
+            fragment.Add(containerChildren);
+            if (computedField is not null)
+            {
+                // Continuations retain their cached drawings. The first frame owns the
+                // author's one instruction, including when the cache starts with a break.
+                fragment.AddAnnotation(new ComputedSimpleFieldFragment(computedField, ownsCounter));
+                ownsCounter = false;
+            }
+            ownerChildren.Add(fragment);
+            containerChildren.Clear();
+        }
 
         void FlushThisContainerAndParagraph(bool endsBeforeBreak)
         {
-            AddContainerPart(ownerChildren, sourceContainer, containerChildren);
+            AddContainerPart();
             flushOwnerAndParagraph(endsBeforeBreak);
         }
 
@@ -689,7 +714,7 @@ internal sealed partial class DocxReader
             SplitRunAtBreaks(containerChild, containerChildren, FlushThisContainerAndParagraph, parts, ref startsAfterBreak, isBreak, isHiddenBreak);
         }
 
-        AddContainerPart(ownerChildren, sourceContainer, containerChildren);
+        AddContainerPart();
     }
 
     private static IEnumerable<XElement> EnumerateBreakSplitChildren(XElement owner, Func<XElement, bool> isHiddenBreak,
@@ -719,19 +744,6 @@ internal sealed partial class DocxReader
         }
 
         return !DocxSourceXml.IsNonPrintingMarker(child);
-    }
-
-    private static void AddContainerPart(List<XElement> paragraphChildren, XElement sourceContainer, List<XElement> containerChildren)
-    {
-        if (containerChildren.Count == 0)
-        {
-            return;
-        }
-
-        var container = new XElement(sourceContainer.Name, sourceContainer.Attributes());
-        container.Add(containerChildren.Select(child => new XElement(child)));
-        paragraphChildren.Add(container);
-        containerChildren.Clear();
     }
 
     private static void SplitRunAtBreaks(XElement run, List<XElement> ownerChildren,
@@ -852,8 +864,7 @@ internal sealed partial class DocxReader
             return TrackNonPrintingMoveRangeBoundary(element, ref openMoveRanges);
 
         // An unlocked counter supplies its own text even with an empty stored result.
-        if (keepsBreakParagraph && element.Name == WordprocessingNamespace + "fldSimple" &&
-            ResolveSimpleFieldPlaceholder(element, ResolveFieldKind((string?)element.Attribute(WordprocessingNamespace + "instr"))) is not null)
+        if (keepsBreakParagraph && HasSimpleFieldPlaceholder(element))
             return false;
 
         if (!IsVisibleRunContainer(element, markupMode))

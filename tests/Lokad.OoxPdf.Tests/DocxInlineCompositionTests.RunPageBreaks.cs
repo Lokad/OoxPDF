@@ -8,6 +8,44 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class DocxInlineCompositionTests
 {
+    public static void DocxSplitComputedFieldKeepsCachedPictureAfterHardBreak()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(), mode, CachedMathGeometry(mode));
+            PdfPage[] expected = Render(splitField: false);
+            PdfPage[] actual = Render(splitField: true);
+            TestAssert.Equal(2, actual.Length);
+            TestAssert.Equal(0, actual[0].Images.Count);
+            TestAssert.Equal(1, actual[1].Images.Count);
+            TestAssert.True(expected.Select(page => page.Content).SequenceEqual(actual.Select(page => page.Content)),
+                "The counter, continuation picture and prose retain the authored page placement.");
+
+            PdfPage[] Render(bool splitField)
+            {
+                DocxDocument document = ReadMutation("CompositionProbes/inline-math-navigation", mode, false, false, (xml, w, _) =>
+                {
+                    XElement body = xml.Root!.Element(w + "body")!;
+                    var picture = new XElement(body.Descendants(w + "drawing").Single());
+                    var pageBreak = new XElement(w + "br", new XAttribute(w + "type", "page"));
+                    var field = new XElement(w + "fldSimple", new XAttribute(w + "instr", "PAGE"));
+                    var paragraph = new XElement(w + "p", field);
+                    if (splitField)
+                        field.Add(new XElement(w + "r", new XElement(w + "t", "31"), pageBreak, picture, new XElement(w + "t", "32")));
+                    else
+                        paragraph.Add(new XElement(w + "r", pageBreak, picture));
+                    body.ReplaceNodes(paragraph, new XElement(w + "p", new XElement(w + "r", new XElement(w + "t", "AFTER PICTURE"))),
+                        new XElement(w + "sectPr"));
+                });
+                var counter = document.Paragraphs.SelectMany(paragraph => paragraph.FieldReferences).Single();
+                TestAssert.Equal(DocxFieldKind.Page, counter.Kind);
+                TestAssert.True(counter.UsesPlaceholder && counter.HasCachedResult == splitField,
+                    "One instruction owns the counter and reports its authored cache.");
+                return renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
+            }
+        }
+    }
+
     internal static void CheckComposedRunPageBreaks()
     {
         foreach (bool withNote in new[] { false, true })

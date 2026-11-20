@@ -4500,6 +4500,7 @@
     "XrefTablePointsAtObjectHeaders"
   ],
   "docx-explicit-page-events": [
+    "=DocxSplitComputedFieldKeepsCachedPictureAfterHardBreak",
     "=DocxGeneratedCountersPaintBeforeHardBreaks",
     "DocxExplicitPageBreaksRetainEventsAndSingleMarkAdmission",
     "=DocxInlineMetadataLeadingBreaksKeepBookmarkOnThePaintedTarget",
@@ -9453,6 +9454,7 @@
     "DocxWordCompatibleAllMarkupUsesOfficeRevisionDecorationColor"
   ],
   "docx-inline-cached-fields": [
+    "=DocxSplitComputedFieldKeepsCachedPictureAfterHardBreak",
     "=DocxGeneratedCountersPaintBeforeHardBreaks",
     "DocxInlineCompositionCachedFieldsPublishResolvedSourceItems",
     "DocxInlineCompositionCachedFieldsRetainRunSplittingAndFallbacks",

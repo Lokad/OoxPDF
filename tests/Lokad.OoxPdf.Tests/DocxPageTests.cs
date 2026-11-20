@@ -1189,12 +1189,13 @@ internal static class DocxPageTests
         {
             int pageCount = kind == "page" ? 2 : 1;
             int columns = kind == "page" ? 1 : 2;
-            string run = "<w:r><w:br w:type=\"" + kind + "\"/></w:r>";
+            string hardBreak = "<w:br w:type=\"" + kind + "\"/>";
+            string run = "<w:r>" + hardBreak + "</w:r>";
             var geometry = mode == OoxPdfDocxMarkupMode.AllMarkup ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup :
                 OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout;
             var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(), mode, geometry);
-            string[][] direct = Render("");
-            string[][] locked = Render("<w:fldSimple w:instr=\"PAGE\" w:fldLock=\"1\"/>");
+            string[][] direct = Render(run);
+            string[][] locked = Render("<w:fldSimple w:instr=\"PAGE\" w:fldLock=\"1\"/>" + run);
             TestAssert.Equal(pageCount, direct.Length);
             TestAssert.Equal(direct.Length, locked.Length);
             TestAssert.True(direct.Zip(locked).All(pair => pair.First.SequenceEqual(pair.Second)),
@@ -1202,15 +1203,29 @@ internal static class DocxPageTests
 
             foreach (var (opcode, correct) in new[] { ("PAGE", "1"), ("NUMPAGES", pageCount.ToString(CultureInfo.InvariantCulture)) })
             {
-                string[][] pages = Render("<w:sdt><w:sdtContent><w:fldSimple w:instr=\"" + opcode + "\"/></w:sdtContent></w:sdt>");
+                string field = "<w:fldSimple w:instr=\"" + opcode + "\"";
+                string[][] pages = Render("<w:sdt><w:sdtContent>" + field + "/></w:sdtContent></w:sdt>" + run);
                 TestAssert.Equal(pageCount, pages.Length);
                 TestAssert.Equal(1, pages[0].Count(text => text.Trim() == correct));
                 TestAssert.Contains("AFTERBREAK", string.Concat(pages[^1]).Replace(" ", string.Empty, StringComparison.Ordinal));
+                foreach (string cache in new[] { hardBreak, "<w:t>31</w:t>" + hardBreak + "<w:t>32</w:t>" })
+                {
+                    string[][] split = Render(field + "><w:r>" + cache + "</w:r></w:fldSimple>");
+                    TestAssert.Equal(pages.Length, split.Length);
+                    TestAssert.True(pages.Zip(split).All(pair => pair.First.SequenceEqual(pair.Second)),
+                        "Splitting the stored result preserves one computed value and the explicit break.");
+                }
             }
+
+            string[][] lockedSplit = Render("<w:fldSimple w:instr=\"PAGE\" w:fldLock=\"1\"><w:r><w:t>31</w:t>" +
+                hardBreak + "<w:t>32</w:t></w:r></w:fldSimple>");
+            TestAssert.Equal(pageCount, lockedSplit.Length);
+            TestAssert.Equal(1, lockedSplit.SelectMany(page => page).Count(text => text.Trim() == "31"));
+            TestAssert.Equal(1, lockedSplit.SelectMany(page => page).Count(text => text.Trim() == "32"));
 
             string[][] Render(string content)
             {
-                DocxDocument document = ReadBreakMetadataDocument(content + run, mode, columns);
+                DocxDocument document = ReadBreakMetadataDocument(content, mode, columns);
                 return renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().Select(page =>
                     DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).Select(show => show.Text).ToArray()).ToArray();
             }
