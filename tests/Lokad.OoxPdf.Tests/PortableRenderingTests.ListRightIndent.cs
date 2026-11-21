@@ -62,8 +62,17 @@ internal static partial class PortableRenderingTests
         ListIndentPaint[][] hanging = Paint(Hanging);
         ListIndentPaint[][] firstLine = Paint(FirstLine);
         ListIndentPaint[][] reset = Paint(Reset);
-        TestAssert.True(firstLine[0][0].X > hanging[0][0].X + 40d, "The level can move the first marker and its text.");
         TestAssert.True(firstLine[2].SequenceEqual(hanging[2]), "A continuation keeps the left inset and loses the first-line adjustment.");
+        for (int i = 0; i < ListIndentOwners.Length; i++)
+        {
+            string owner = ListIndentOwners[i];
+            if (owner == "Tail") continue;
+            var wrapped = firstLine[i].Where(line => !line.Words.StartsWith(owner + "Alpha", StringComparison.Ordinal)).ToArray();
+            double left = reset[i][0].X;
+            TestAssert.True(wrapped.Length > 0, owner + " wraps within its frame.");
+            TestAssert.True(Math.Abs(firstLine[i][0].X - left - 36d) < .01d, owner + " applies the authored first-line indent.");
+            TestAssert.True(wrapped.All(line => Math.Abs(line.X - left) < .01d), owner + " wraps at the paragraph inset.");
+        }
         AssertListIndentPaint(hanging, Paint(Hanging, FirstLine), "A level hanging indent wins over a styled first line");
         AssertListIndentPaint(firstLine, Paint(FirstLine, Hanging), "A level first line wins over a styled hanging indent");
         AssertListIndentPaint(reset, Paint(FirstLine, Hanging, Reset), "Direct zero replaces the complete first-line choice");

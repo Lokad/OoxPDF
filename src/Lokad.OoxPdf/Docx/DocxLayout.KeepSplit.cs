@@ -724,13 +724,7 @@ internal sealed partial class DocxLayoutEngine
     // layout spacing scale (identical in every mode).
     private static double GetParagraphTextStartOffset(DocxParagraph paragraph, double fixedScale)
     {
-        if (paragraph.ListLabel is null)
-        {
-            return Math.Max(0d, paragraph.EffectiveProperties.Indent.LeftPoints ?? 0d) * fixedScale;
-        }
-
-        var (left, firstLine, _) = ResolveListStartIndent(paragraph, paragraph.ListLabel.Indent);
-        return Math.Max(0d, left + firstLine) * fixedScale;
+        return Math.Max(0d, paragraph.ResolveLeftIndent(paragraph.ListLabel?.Indent).Points ?? 0d) * fixedScale;
     }
 
     private static double GetParagraphFirstLineTextStartOffset(DocxParagraph paragraph, double fontSize, IDocxTextMeasurer textMeasurer, double fixedScale, double defaultTabStopPoints)
@@ -753,7 +747,8 @@ internal sealed partial class DocxLayoutEngine
 
         if (IsNumberingTabSuffix(paragraph.ListLabel))
         {
-            double textStart = GetParagraphTextStartOffset(paragraph, fixedScale);
+            var (left, firstLine, _) = ResolveListStartIndent(paragraph, paragraph.ListLabel.Indent);
+            double textStart = Math.Max(0d, left + firstLine) * fixedScale;
             double preferred = Math.Max(textStart, GetNumberingTabPosition() ?? 0d);
             // A suffix tab follows the complete painted label, whether it is
             // one current counter or a retained previous/current pair.
