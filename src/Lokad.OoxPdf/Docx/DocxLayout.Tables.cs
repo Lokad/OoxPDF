@@ -299,6 +299,49 @@ internal sealed partial class DocxLayoutEngine
         FirstLineInsetPoints = line.FirstLineInsetPoints - (line.InlineFrame is null ? insetCorrection : 0d)
     };
 
+    private static double AppendUnpagedStoryTable(
+        List<DocxTableRowLayout> rows,
+        DocxTable table,
+        int tableIndex,
+        int sourceBlockIndex,
+        double x,
+        double width,
+        double cursorY,
+        DocxStoryId? staticStory,
+        IDocxTextMeasurer textMeasurer,
+        double defaultTabStopPoints,
+        double paragraphSpacingScale,
+        int? pageNumber,
+        int? pageCount,
+        IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations,
+        bool anchorAuthoredCellText,
+        CancellationToken cancellationToken)
+    {
+        var cellMemo = new DocxTableCellTextLinesMemo();
+        DocxTableLayoutFrame frame = CreateTableLayoutFrame(table, tableIndex, sourceBlockIndex,
+            x, width, UnpagedRelatedStoryCanvasHeightPoints, textMeasurer, defaultTabStopPoints, cancellationToken,
+            pageNumber, pageCount, paragraphSpacingScale, mathEquations: mathEquations,
+            anchorAuthoredCellText: anchorAuthoredCellText);
+        int rowPageNumber = pageNumber ?? 1;
+        Func<int> getPageNumber = () => rowPageNumber;
+        for (int rowIndex = 0; rowIndex < table.Rows.Count; rowIndex++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            double rowHeight = frame.RowHeights[rowIndex];
+            DocxTableRowLayout row = CreateTableRowLayout(table, frame.Context, table.Rows[rowIndex], rowIndex,
+                frame.RowHeights, frame.EffectiveColumns, frame.Scale, textMeasurer, defaultTabStopPoints,
+                getPageNumber, cursorY, rowHeight, cursorY, FragmentIndex: 0, FragmentCount: 1,
+                FragmentReason: "None", Story: staticStory, pageCount: pageCount,
+                paragraphSpacingScale: paragraphSpacingScale, cellMemo: cellMemo);
+            // A related story lays out in its own frame and projects the contained baselines.
+            rows.Add(staticStory is null
+                ? ProjectContainedTableBaselines(row, textMeasurer, paragraphSpacingScale, cancellationToken)
+                : row);
+            cursorY -= rowHeight;
+        }
+        return cursorY;
+    }
+
     private static DocxTableRowLayout ProjectContainedTableBaselines(DocxTableRowLayout row,
         IDocxTextMeasurer measurer, double printScale, CancellationToken token)
     {

@@ -2486,50 +2486,9 @@ internal sealed partial class DocxLayoutEngine
                 pendingSpacingAfter = 0d;
                 previousParagraph = null;
                 firstRelatedLineBaselineOffset = null;
-                var cellMemo = new DocxTableCellTextLinesMemo();
-                DocxTableLayoutFrame frame = CreateTableLayoutFrame(
-                    tableElement.Table,
-                    tableIndex++,
-                    elementIndex,
-                    0d,
-                    bodyWidth,
-                    UnpagedRelatedStoryCanvasHeightPoints,
-                    textMeasurer,
-                    defaultTabStopPoints,
-                    cancellationToken,
-                    pageNumber: pageNumber,
-                    pageCount: pageCount,
-                    paragraphSpacingScale: paragraphSpacingScale,
-                    mathEquations: mathEquations,
-                    anchorAuthoredCellText: story.Kind != DocxRelatedStoryKind.TextBox);
-                int relatedStoryPageNumber = pageNumber ?? 1;
-                for (int rowIndex = 0; rowIndex < tableElement.Table.Rows.Count; rowIndex++)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    double rowHeight = frame.RowHeights[rowIndex];
-                    tableRows.Add(ProjectContainedTableBaselines(CreateTableRowLayout(
-                        tableElement.Table,
-                        frame.Context,
-                        tableElement.Table.Rows[rowIndex],
-                        rowIndex,
-                        frame.RowHeights,
-                        frame.EffectiveColumns,
-                        frame.Scale,
-                        textMeasurer,
-                        defaultTabStopPoints,
-                        () => relatedStoryPageNumber,
-                        cursorY,
-                        rowHeight,
-                        cursorY,
-                        FragmentIndex: 0,
-                        FragmentCount: 1,
-                        FragmentReason: "None",
-                        Story: null,
-                        pageCount: pageCount,
-                        paragraphSpacingScale: paragraphSpacingScale,
-                        cellMemo: cellMemo), textMeasurer, paragraphSpacingScale, cancellationToken));
-                    cursorY -= rowHeight;
-                }
+                cursorY = AppendUnpagedStoryTable(tableRows, tableElement.Table, tableIndex++, elementIndex, 0d, bodyWidth, cursorY,
+                    staticStory: null, textMeasurer, defaultTabStopPoints, paragraphSpacingScale, pageNumber, pageCount,
+                    mathEquations, anchorAuthoredCellText: story.Kind != DocxRelatedStoryKind.TextBox, cancellationToken);
 
                 continue;
             }
