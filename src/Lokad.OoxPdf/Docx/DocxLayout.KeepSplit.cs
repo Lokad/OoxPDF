@@ -729,9 +729,7 @@ internal sealed partial class DocxLayoutEngine
             return Math.Max(0d, paragraph.EffectiveProperties.Indent.LeftPoints ?? 0d) * fixedScale;
         }
 
-        DocxNumberingIndent indent = ResolveListIndent(paragraph);
-        double left = indent.LeftPoints ?? 0d;
-        double firstLine = indent.FirstLinePoints ?? 0d;
+        var (left, firstLine, _) = ResolveListStartIndent(paragraph.Indent, paragraph.ListLabel.Indent);
         return Math.Max(0d, left + firstLine) * fixedScale;
     }
 
@@ -789,39 +787,21 @@ internal sealed partial class DocxLayoutEngine
             return 0d;
         }
 
-        DocxNumberingIndent indent = ResolveListIndent(paragraph);
-        double left = indent.LeftPoints ?? 0d;
-        double hanging = indent.HangingPoints ?? 0d;
-        double firstLine = indent.FirstLinePoints ?? 0d;
+        var (left, firstLine, hanging) = ResolveListStartIndent(paragraph.Indent, paragraph.ListLabel.Indent);
         return Math.Max(0d, left - hanging + firstLine) * fixedScale;
     }
 
-    private static DocxNumberingIndent ResolveListIndent(DocxParagraph paragraph)
+    private static (double Left, double FirstLine, double Hanging) ResolveListStartIndent(
+        DocxParagraphIndent paragraphIndent, DocxNumberingIndent listIndent)
     {
-        DocxNumberingIndent listIndent = paragraph.ListLabel?.Indent ?? DocxNumberingIndent.Empty;
-        DocxParagraphIndent paragraphIndent = paragraph.EffectiveProperties.Indent;
-        if (paragraphIndent == DocxParagraphIndent.Empty)
-        {
-            return listIndent;
-        }
-
         bool hasParagraphFirstLineSide =
             paragraphIndent.FirstLinePoints is not null ||
             paragraphIndent.HangingPoints is not null ||
             paragraphIndent.FirstLineValue is not null ||
             paragraphIndent.HangingValue is not null;
-        return new DocxNumberingIndent(
-            paragraphIndent.LeftPoints ?? listIndent.LeftPoints,
-            paragraphIndent.RightPoints ?? listIndent.RightPoints,
-            hasParagraphFirstLineSide ? paragraphIndent.FirstLinePoints : listIndent.FirstLinePoints,
-            hasParagraphFirstLineSide ? paragraphIndent.HangingPoints : listIndent.HangingPoints,
-            listIndent.NumberingTabPositionPoints,
-            paragraphIndent.LeftValue ?? listIndent.LeftValue,
-            paragraphIndent.RightValue ?? listIndent.RightValue,
-            hasParagraphFirstLineSide ? paragraphIndent.FirstLineValue : listIndent.FirstLineValue,
-            hasParagraphFirstLineSide ? paragraphIndent.HangingValue : listIndent.HangingValue,
-            listIndent.NumberingTabValue,
-            listIndent.NumberingTabPositionValue);
+        return (paragraphIndent.LeftPoints ?? listIndent.LeftPoints ?? 0d,
+            (hasParagraphFirstLineSide ? paragraphIndent.FirstLinePoints : listIndent.FirstLinePoints) ?? 0d,
+            (hasParagraphFirstLineSide ? paragraphIndent.HangingPoints : listIndent.HangingPoints) ?? 0d);
     }
 
     private static double GetParagraphStartOffset(DocxParagraph paragraph, double fixedScale)
@@ -833,7 +813,7 @@ internal sealed partial class DocxLayoutEngine
 
     private static double GetParagraphRightInset(DocxParagraph paragraph, double fixedScale)
     {
-        return (paragraph.ListLabel?.Indent.RightPoints ?? paragraph.EffectiveProperties.Indent.RightPoints ?? 0d) * fixedScale;
+        return (paragraph.ResolveRightIndent(paragraph.ListLabel?.Indent).Points ?? 0d) * fixedScale;
     }
 
     private static double GetParagraphFirstLineIndentOffset(DocxParagraph paragraph, double fixedScale)

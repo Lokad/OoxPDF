@@ -16,6 +16,7 @@ internal sealed record DocxParagraph(
 {
     public DocxParagraphShading? Shading { get; init; }
     public DocxParagraphIndent Indent { get; init; } = DocxParagraphIndent.Empty;
+    public bool HasDirectRightIndent { get; init; }
     public IReadOnlyList<DocxTabStop> TabStops { get; init; } = [];
     public bool? SnapToGrid { get; init; }
     public string? SnapToGridValue { get; init; }
@@ -84,6 +85,13 @@ internal sealed record DocxParagraph(
     // Comment autofit retains an empty mark run for anchors. Plain comment
     // stories retain a space run for their printed terminal blank's face.
     public DocxTextRun? ParagraphMarkRun { get; init; }
+
+    // Direct formatting (including zero) wins over the level, which in turn
+    // takes precedence over the inherited paragraph indent.
+    public (double? Points, string? Value) ResolveRightIndent(DocxNumberingIndent? numberingIndent)
+        => !HasDirectRightIndent && numberingIndent?.RightPoints is { } levelRight
+            ? (levelRight, numberingIndent.RightValue)
+            : (Indent.RightPoints, Indent.RightValue);
 
     public DocxEffectiveParagraphProperties EffectiveProperties => new(
         StyleId,

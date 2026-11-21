@@ -136,7 +136,7 @@ internal sealed partial class DocxReader
     }
 
     private static DocxResolvedParagraphProperties ResolveParagraphProperties(
-        XElement? directProperties,
+        DocxResolvedParagraphProperties directProperties,
         string? paragraphStyleId,
         DocxStyleSet styles,
         DocxResolvedParagraphProperties? tableStyleProperties)
@@ -154,7 +154,7 @@ internal sealed partial class DocxReader
             result = result.Merge(style.Paragraph);
         }
 
-        return result.Merge(ReadParagraphProperties(directProperties));
+        return result.Merge(directProperties);
     }
 
     private static DocxParagraphStyleResolution CreateParagraphStyleResolution(

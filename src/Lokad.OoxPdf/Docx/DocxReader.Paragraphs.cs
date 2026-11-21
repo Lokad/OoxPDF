@@ -37,8 +37,9 @@ internal sealed partial class DocxReader
         XElement? paragraphProperties = paragraph.Element(WordprocessingNamespace + "pPr");
         string? authoredParagraphStyleId = ReadParagraphStyleId(paragraphProperties);
         string? paragraphStyleId = ReadEffectiveParagraphStyleId(paragraphProperties, styles);
+        DocxResolvedParagraphProperties directParagraph = ReadParagraphProperties(paragraphProperties);
         DocxResolvedParagraphProperties resolvedParagraph = ResolveParagraphProperties(
-            paragraphProperties,
+            directParagraph,
             paragraphStyleId,
             styles,
             tableCellStyle?.Paragraph);
@@ -396,6 +397,7 @@ internal sealed partial class DocxReader
         {
             Shading = resolvedParagraph.Shading,
             Indent = resolvedParagraph.Indent,
+            HasDirectRightIndent = directParagraph.Indent.RightPoints.HasValue,
             TabStops = resolvedParagraph.TabStops,
             SnapToGrid = resolvedParagraph.SnapToGrid,
             SnapToGridValue = resolvedParagraph.SnapToGridValue,

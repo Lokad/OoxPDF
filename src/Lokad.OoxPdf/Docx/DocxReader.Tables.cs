@@ -500,7 +500,7 @@ internal sealed partial class DocxReader
                 {
                     XElement? paragraphProperties = child.Element(WordprocessingNamespace + "pPr");
                     string? paragraphStyleId = ReadEffectiveParagraphStyleId(paragraphProperties, styles);
-                    var resolvedParagraph = ResolveParagraphProperties(paragraphProperties, paragraphStyleId, styles, tableCellStyle.Paragraph);
+                    var resolvedParagraph = ResolveParagraphProperties(ReadParagraphProperties(paragraphProperties), paragraphStyleId, styles, tableCellStyle.Paragraph);
                     var sourceNumbering = ResolveParagraphNumbering(paragraphProperties, resolvedParagraph, paragraphStyleId, styles, numbering, cancellationToken);
                     bool hasListMarker = sourceNumbering is { } source && !string.IsNullOrWhiteSpace(source.Definition.Text);
                     // Put a consumed boundary before the break, exactly as an
