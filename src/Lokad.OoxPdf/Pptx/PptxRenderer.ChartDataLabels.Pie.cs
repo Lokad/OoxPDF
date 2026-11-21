@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Text;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Diagnostics;
@@ -43,13 +42,10 @@ internal sealed partial class PptxRenderer
             double explosion = pointExplosions.TryGetValue(slice.Index, out double offset) ? Math.Clamp(offset, 0d, 1d) * geometry.Radius * PptxChartMetricRules.PieExplosionLabelRadiusRatio : 0d;
             double labelX = geometry.CenterX + Math.Cos(mid) * (labelRadius + explosion) - labelWidth / 2d;
             double labelY = geometry.CenterY + Math.Sin(mid) * (labelRadius + explosion) - labelHeight / 2d;
-            IReadOnlyList<string> labelParts = FormatPieDataLabelParts(slice.Value, slice.Index, slice.WorkbookPoint, effectiveOptions);
-            string JoinChartDataLabelParts()
-            {
-                return string.Join(GetChartDataLabelSeparator(effectiveOptions), labelParts);
-            }
-
-            string label = JoinChartDataLabelParts();
+            var labelParts = FormatCategoryDataLabelParts(slice.Value, 0, slice.Index, slice.WorkbookPoint,
+                valueFormatCode, effectiveOptions, categoryLabelIndex, seriesNames, polarTotal: total);
+            string separator = GetChartDataLabelSeparator(effectiveOptions);
+            string label = string.Join(separator, labelParts);
             if (!string.IsNullOrEmpty(label))
             {
                 // Factor-mode manuals resolve on a circle past the rim with content-tight
@@ -57,14 +53,13 @@ internal sealed partial class PptxRenderer
                 // edge-mode and layout-free labels keep the legacy path.
                 List<ChartTextRunLayout[]>? pieWrapLines = null;
                 double pieWrapLongest = 0d;
-                string pieWrapSeparator = GetChartDataLabelSeparator(effectiveOptions);
-                if (labelParts.Count > 1 && effectiveOptions.CustomTextRuns.Count == 0 && pieWrapSeparator.Length > 0 && pieWrapSeparator.All(char.IsWhiteSpace))
+                if (labelParts.Count > 1 && effectiveOptions.CustomTextRuns.Count == 0 && separator.Length > 0 && separator.All(char.IsWhiteSpace))
                 {
                     var pieWrapMeasurer = new ChartTextMeasurer(fontResolver);
                     var pieWrapTexts = new List<string>(labelParts.Count);
                     var pieWrapWidths = new List<double>(labelParts.Count);
                     var pieWrapSeps = new List<double>(labelParts.Count);
-                    double pieWrapSepWidth = (await pieWrapMeasurer.MeasureAsync(pieWrapSeparator, style).ConfigureAwait(false));
+                    double pieWrapSepWidth = (await pieWrapMeasurer.MeasureAsync(separator, style).ConfigureAwait(false));
                     double pieWrapCapWidth = plotBox.Width * PptxChartMetricRules.PieDataLabelWrapWidthFactor;
                     foreach (string part in labelParts)
                     {
@@ -143,7 +138,7 @@ internal sealed partial class PptxRenderer
                     double pieCircleGap = geometry.Radius * PptxChartMetricRules.PieManualLabelCircleGapRadiusFactor;
                     double pieCircleX = geometry.CenterX + Math.Cos(mid) * (geometry.Radius + explosion + pieCircleGap);
                     double pieCircleY = geometry.CenterY + Math.Sin(mid) * (geometry.Radius + explosion + pieCircleGap);
-                    pieUnwrappedWidth = (await MeasurePieLabelPartsWidthAsync(labelParts, pieWrapSeparator, style, fontResolver).ConfigureAwait(false));
+                    pieUnwrappedWidth = (await MeasurePieLabelPartsWidthAsync(labelParts, separator, style, fontResolver).ConfigureAwait(false));
                     double pieContentWidth = (pieWrapLines is not null && pieWrapLines.Count > 1 && pieWrapLongest > 0d)
                         ? pieWrapLongest
                         : pieUnwrappedWidth;
@@ -228,45 +223,6 @@ internal sealed partial class PptxRenderer
         }
         RenderedFonts labelFonts = (await RenderChartTextRunsAsync(runs, graphics, chartFonts, "CP", fontResolver, diagnosticSink).ConfigureAwait(false));
         await AddChartTextRunHyperlinkAnnotationsAsync(labelLinks, chart, context, labelFonts, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false);
-
-        IReadOnlyList<string> FormatPieDataLabelParts(double value, int categoryIndex, ChartIndexedNumberPoint? workbookPoint, ChartDataLabelOptions options)
-        {
-            if (!string.IsNullOrWhiteSpace(options.CustomText))
-            {
-                return [options.CustomText];
-            }
-
-            var parts = new List<string>(4);
-            string seriesName = GetActiveSeriesName(seriesNames, 0);
-            if (options.ShowSeriesName && !string.IsNullOrWhiteSpace(seriesName))
-            {
-                parts.Add(seriesName);
-            }
-
-            if (options.ShowCategoryName &&
-                categoryLabelIndex.TryGetValue(categoryIndex, out string? categoryLabel) &&
-                !string.IsNullOrWhiteSpace(categoryLabel))
-            {
-                parts.Add(categoryLabel);
-            }
-
-            if (options.ShowValue)
-            {
-                parts.Add(FormatChartDataLabelValue(value, options, workbookPoint, valueFormatCode));
-            }
-
-            string FormatChartPercentageLabel(double fraction)
-            {
-                return (fraction * 100d).ToString("0.#", CultureInfo.InvariantCulture) + "%";
-            }
-
-            if (options.ShowPercent)
-            {
-                parts.Add(FormatChartPercentageLabel(value / total));
-            }
-
-            return parts;
-        }
 
         async ValueTask AddPolarChartLabelRunsAsync(IReadOnlyList<string> parts, string fallbackText, ChartDataLabelOptions options, double x, double y, double width, double height, ChartTextStyle style, TextAlignment alignment, List<ChartTextRunLayout[]>? wrapLines, double wrapLongest, bool bottomAnchor = false)
         {

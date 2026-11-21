@@ -689,12 +689,28 @@ internal sealed partial class PptxRenderer
         IReadOnlyDictionary<int, string> categoryLabelIndex,
         IReadOnlyList<ChartSeriesNameRecord> seriesNames)
     {
+        var parts = FormatCategoryDataLabelParts(value, seriesIndex, categoryIndex, workbookPoint ?? point,
+            valueFormatCode, options, categoryLabelIndex, seriesNames);
+        return string.Join(GetChartDataLabelSeparator(options), parts);
+    }
+
+    private static IReadOnlyList<string> FormatCategoryDataLabelParts(
+        double value,
+        int seriesIndex,
+        int categoryIndex,
+        ChartIndexedNumberPoint? sourcePoint,
+        string? valueFormatCode,
+        ChartDataLabelOptions options,
+        IReadOnlyDictionary<int, string> categoryLabelIndex,
+        IReadOnlyList<ChartSeriesNameRecord> seriesNames,
+        double? polarTotal = null)
+    {
         if (!string.IsNullOrWhiteSpace(options.CustomText))
         {
-            return options.CustomText;
+            return [options.CustomText];
         }
 
-        var parts = new List<string>(3);
+        var parts = new List<string>(4);
         string seriesName = GetActiveSeriesName(seriesNames, seriesIndex);
         if (options.ShowSeriesName && !string.IsNullOrWhiteSpace(seriesName))
         {
@@ -710,10 +726,16 @@ internal sealed partial class PptxRenderer
 
         if (options.ShowValue)
         {
-            parts.Add(FormatChartDataLabelValue(value, options, workbookPoint ?? point, valueFormatCode));
+            parts.Add(FormatChartDataLabelValue(value, options, sourcePoint, valueFormatCode));
         }
 
-        return string.Join(GetChartDataLabelSeparator(options), parts);
+        if (options.ShowPercent && polarTotal is double total)
+        {
+            double percent = (value / total) * 100d;
+            parts.Add(percent.ToString("0.#", CultureInfo.InvariantCulture) + "%");
+        }
+
+        return parts;
     }
 
     private static string GetActiveSeriesName(IReadOnlyList<ChartSeriesNameRecord> seriesNames, int seriesIndex)
