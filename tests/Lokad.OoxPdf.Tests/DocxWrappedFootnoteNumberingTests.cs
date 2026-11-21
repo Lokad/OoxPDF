@@ -103,6 +103,42 @@ internal static class DocxWrappedFootnoteNumberingTests
     }
 
     private static readonly XNamespace W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+
+    internal static DocxDocument ReadCalibri(string? threshold, Action<XDocument, XDocument, XDocument>? modify = null) =>
+        Read(later: true, format: "decimalZero", family: "Calibri", modify: (xml, settings, notes) =>
+        {
+            if (threshold is not null)
+            {
+                foreach (var properties in xml.Root!.Element(W + "body")!.Descendants(W + "rPr"))
+                    properties.Add(new XElement(W + "kern", new XAttribute(W + "val", threshold)));
+            }
+            modify?.Invoke(xml, settings, notes);
+        });
+
+    internal static void CheckRenderedCalibriNumbering(string threshold)
+    {
+        var source = ReadCalibri(threshold);
+        string[] names = ["Alpha", "Bravo", "Charlie", "Delta"];
+        foreach (var geometry in new[] { OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout })
+        {
+            var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup, geometry);
+            var pages = renderer.RenderPagesAsync(source, null, CancellationToken.None).ToBlockingEnumerable().ToArray();
+            TestAssert.Equal(2, pages.Length);
+            for (int i = 0; i < pages.Length; i++)
+            {
+                string text = DocxPageFootnoteNumberingTests.DecodeText(pages[i]);
+                int first = text.IndexOf($"09 Public destination {names[2 * i]}.", StringComparison.Ordinal);
+                int second = text.IndexOf($"10 Public destination {names[2 * i + 1]}.", StringComparison.Ordinal);
+                TestAssert.True(first >= 0 && second > first, $"Threshold {threshold}, {geometry}, page {i + 1} renders both note labels and complete names in order.");
+                TestAssert.Equal(2, pages[i].Annotations.Count);
+                TestAssert.Equal(2, pages[i].Annotations.Select(annotation => annotation.Destination).Distinct().Count());
+                TestAssert.True(pages[i].Annotations.All(annotation => annotation.Destination?.PageIndex == i),
+                    $"Threshold {threshold}, {geometry}, page {i + 1} retains both note targets on the reference page.");
+            }
+        }
+        TestAssert.Equal("105,106,107,108", string.Join(',', source.Paragraphs.SelectMany(p => p.InlineReferences).Select(r => r.DisplayText)));
+    }
+
     internal static DocxDocument Read(bool later = false, bool runBreak = true, string format = "decimal",
         Action<XDocument, XDocument, XDocument>? modify = null, string family = "Arial") => DocxPageFootnoteNumberingTests.ReadFixture(runBreak, format, 9, (xml, settings, notes) =>
         {

@@ -1,5 +1,6 @@
 using System.Xml.Linq;
 using Lokad.OoxPdf.Docx;
+using static Lokad.OoxPdf.Tests.DocxWrappedFootnoteNumberingTests;
 
 namespace Lokad.OoxPdf.Tests;
 
@@ -9,7 +10,7 @@ internal static class DocxMetWrappedFootnoteNumberingTests
     {
         foreach (string threshold in new[] { "1", "22", "24" })
         {
-            var source = Read(threshold);
+            var source = ReadCalibri(threshold);
             var first = DocxPageFootnoteNumberingTests.CreateLayout(source);
             TestAssert.True(!DocxPageFootnoteNumbering.TryCreateDocument(source, first, out _, out _, allowWrappedBody: true), "Legacy and Preserve callers keep the met-Calibri exclusion.");
             TestAssert.True(Create(source, first, out var numbered, out var owners), "Uniform met thresholds qualify complete wrapped owners.");
@@ -26,7 +27,7 @@ internal static class DocxMetWrappedFootnoteNumberingTests
     {
         foreach (string? threshold in new string?[] { null, "0", "26", "bad", "32768" })
         {
-            var source = Read(threshold);
+            var source = ReadCalibri(threshold);
             TestAssert.True(!Create(source, DocxPageFootnoteNumberingTests.CreateLayout(source), out var fallback, out _), "Nominal and malformed raw frames retain their separate policy.");
             TestAssert.True(ReferenceEquals(source, fallback), "Exclusions do not mutate source.");
         }
@@ -41,7 +42,7 @@ internal static class DocxMetWrappedFootnoteNumberingTests
         ];
         foreach (var exclusion in exclusions)
         {
-            var source = Read("24", exclusion);
+            var source = ReadCalibri("24", exclusion);
             TestAssert.True(!Create(source, DocxPageFootnoteNumberingTests.CreateLayout(source), out var fallback, out _), "Mixed thresholds and unsupported formatting/notes retain fallback.");
             TestAssert.True(ReferenceEquals(source, fallback), "Rejected frame stays unchanged.");
         }
@@ -49,7 +50,7 @@ internal static class DocxMetWrappedFootnoteNumberingTests
 
     public static void DocxMetWrappedFootnoteNumbersRejectShiftedAndDuplicateMarkerSegments()
     {
-        var source = Read("24");var first = DocxPageFootnoteNumberingTests.CreateLayout(source);
+        var source = ReadCalibri("24");var first = DocxPageFootnoteNumberingTests.CreateLayout(source);
         var p = source.Paragraphs.First(q => q.InlineReferences.Count != 0);var r = p.InlineReferences[0];
         var line = first.Pages.SelectMany(page => page.Items).OfType<DocxTextLineLayout>().Single(l => ReferenceEquals(l.SourceParagraph, p) && l.Segments.Any(s => s.SourceTextRunIndex == r.SourceRunIndex));
         var marker = line.Segments.Single(s => s.SourceTextRunIndex == r.SourceRunIndex);
@@ -62,28 +63,10 @@ internal static class DocxMetWrappedFootnoteNumberingTests
         }
     }
 
-    public static void DocxMetWrappedFootnoteNumbersShareSourceNumberingAcrossModes()
-    {
-        var source = Read("24");
-        foreach (var geometry in new[] { OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout })
-        {
-            var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup, geometry);
-            var pages = renderer.RenderPagesAsync(source, null, CancellationToken.None).ToBlockingEnumerable().ToArray();TestAssert.Equal(2, pages.Length);
-            string text = string.Join('|', pages.Select(DocxPageFootnoteNumberingTests.DecodeText));
-            TestAssert.Contains("09 Public destination", text);
-            TestAssert.Equal(4, pages.Sum(p => p.Annotations.Count));
-            for (int i = 0; i < pages.Length; i++) TestAssert.True(pages[i].Annotations.All(a => a.Destination!.Value.PageIndex == i), "Actual destinations retain source-owned pages.");
-        }
-        TestAssert.Equal("105,106,107,108", string.Join(',', source.Paragraphs.SelectMany(p => p.InlineReferences).Select(r => r.DisplayText)));
-    }
+    public static void DocxMetWrappedFootnoteNumbersShareSourceNumberingAcrossModes() =>
+        CheckRenderedCalibriNumbering("24");
 
     private static bool Create(DocxDocument source, DocxLayout layout, out DocxDocument numbered, out IReadOnlyDictionary<string, int> owners) =>
         DocxPageFootnoteNumbering.TryCreateDocument(source, layout, out numbered, out owners, allowWrappedBody: true, calibriPolicy: DocxWrappedCalibriPolicy.NormalizedUniformMet);
     private static readonly XNamespace W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
-    private static DocxDocument Read(string? threshold, Action<XDocument, XDocument, XDocument>? modify = null) =>
-        DocxWrappedFootnoteNumberingTests.Read(later: true, format: "decimalZero", family: "Calibri", modify: (xml, settings, notes) =>
-        {
-            if (threshold is not null) foreach (var rp in xml.Root!.Element(W + "body")!.Descendants(W + "rPr")) rp.Add(new XElement(W + "kern", new XAttribute(W + "val", threshold)));
-            modify?.Invoke(xml, settings, notes);
-        });
 }
