@@ -250,13 +250,11 @@ internal sealed partial class PptxRenderer
             ? PptxSceneChartDisplayBlanksAs.Gap
             : chart.Options.DisplayBlanksAsKind;
 
-    private static IReadOnlyList<ChartRadarSeries> BuildRadarSeries(IEnumerable<ChartIndexedNumberVector> series)
+    private static double?[][] BuildRadarSeries(IEnumerable<ChartIndexedNumberVector> series)
     {
-        // R15: filter on the sparse presence check first so valueless series never
-        // materialize (or charge) dense arrays.
+        // Keep style indices aligned without densifying empty series.
         return series
-            .Where(vector => vector.HasAnyValue())
-            .Select(vector => new ChartRadarSeries(vector.DenseValues(), vector))
+            .Select(vector => vector.HasAnyValue() ? vector.DenseValues() : [])
             .ToArray();
     }
 

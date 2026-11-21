@@ -185,10 +185,8 @@ internal static class PptxChartDensifyTests
         }
     }
 
-    public static void RadarBuildSkipsValuelessVectors()
+    public static void RadarBuildKeepsEmptySeriesPositionsWithoutDensifying()
     {
-        // R15: valueless series (even with declared slots) filter before densifying,
-        // so only valued vectors materialize.
         Type vectorType = NumberVectorType();
         Type pointType = NumberPointType();
         Array series = Array.CreateInstance(vectorType, 2);
@@ -197,17 +195,19 @@ internal static class PptxChartDensifyTests
         MethodInfo build = typeof(PptxRenderer).GetMethod("BuildRadarSeries", BindingFlags.NonPublic | BindingFlags.Static)
             ?? throw new InvalidOperationException("Expected radar builder.");
         {
-            System.Collections.IList built;
+            double?[][] built;
             try
             {
-                built = (System.Collections.IList)build.Invoke(null, [series])!;
+                built = (double?[][])build.Invoke(null, [series])!;
             }
             catch (TargetInvocationException ex)
             {
                 throw ex.InnerException ?? ex;
             }
 
-            TestAssert.Equal(1, built.Count);
+            TestAssert.Equal(2, built.Length);
+            TestAssert.Equal(0, built[0].Length);
+            TestAssert.Equal(1d, built[1].Single());
         }
     }
 

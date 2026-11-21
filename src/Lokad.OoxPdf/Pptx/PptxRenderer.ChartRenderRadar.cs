@@ -11,25 +11,19 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static void RenderRadarChart(PdfGraphicsBuilder graphics, PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, ChartRadarLayout layout, IReadOnlyList<ChartRadarSeries> series, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, ChartValueExtents extents, ChartAxisUnits axisUnits, int? chartStyleId, PptxRenderContext? context = null)
+    private static void RenderRadarChart(PdfGraphicsBuilder graphics, PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, ChartRadarLayout layout, IReadOnlyList<double?[]> series, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, ChartValueExtents extents, ChartAxisUnits axisUnits, int? chartStyleId, PptxRenderContext? context = null)
     {
         ChartPolarGeometry geometry = layout.Geometry;
         int pointCount = layout.PointCount;
+        var points = new (double X, double Y)[pointCount];
 
-        for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
+        if (layout.IsFilled)
         {
-            IReadOnlyList<double?> values = series[seriesIndex].Values;
-            var points = new (double X, double Y)[pointCount];
-            for (int i = 0; i < pointCount; i++)
+            for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
             {
-                double value = i < values.Count && values[i] is { } pointValue ? Math.Max(0d, pointValue) : 0d;
-                double pointRadius = GetChartValuePlotRatio(extents, value, false) * geometry.Radius;
-                double angle = GetRadarPointAngle(i, pointCount);
-                points[i] = (geometry.CenterX + Math.Cos(angle) * pointRadius, geometry.CenterY + Math.Sin(angle) * pointRadius);
-            }
-
-            if (layout.IsFilled)
-            {
+                double?[] values = series[seriesIndex];
+                if (values.Length == 0) continue;
+                PrepareSeriesPolygon(values);
                 // RV04: effective-style-18 filled-radar series paint a vertical theme-relative
                 // gradient sampled from the Office reference; other styles and explicit
                 // fills keep the flat polygon.
@@ -71,26 +65,26 @@ internal sealed partial class PptxRenderer
             graphics.StrokeCurrentPath();
         }
 
-        AppendRadarRadialSegments(repeatFirstSpoke: true);
+        // Keep the repeated first spoke in the calibrated path.
+        for (int i = 0; i <= pointCount; i++)
+        {
+            (double x, double y) = RadarPoint(i % pointCount, geometry.Radius);
+            graphics.MoveTo(geometry.CenterX, geometry.CenterY);
+            graphics.LineTo(x, y);
+        }
         graphics.StrokeCurrentPath();
 
         for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
         {
-            IReadOnlyList<double?> values = series[seriesIndex].Values;
-            var points = new (double X, double Y)[pointCount];
-            for (int i = 0; i < pointCount; i++)
-            {
-                double value = i < values.Count && values[i] is { } pointValue ? Math.Max(0d, pointValue) : 0d;
-                double pointRadius = GetChartValuePlotRatio(extents, value, false) * geometry.Radius;
-                double angle = GetRadarPointAngle(i, pointCount);
-                points[i] = (geometry.CenterX + Math.Cos(angle) * pointRadius, geometry.CenterY + Math.Sin(angle) * pointRadius);
-            }
+            double?[] values = series[seriesIndex];
+            if (values.Length == 0) continue;
 
             // Office omits the polygon outline on filled radars without an explicit line;
             // marker radars always outline (3.75pt default measured on the ladder reference).
             bool hasExplicitStroke = seriesIndex < seriesStrokes.Count && seriesStrokes[seriesIndex] is not null;
             if (!layout.IsFilled || hasExplicitStroke)
             {
+                PrepareSeriesPolygon(values);
                 ChartSeriesStroke stroke = ChartSeriesStrokeColor(theme, colorMap, chartPalette, seriesIndex, seriesStrokes, PptxChartMetricRules.RadarSeriesOutlineWidth);
                 if (!hasExplicitStroke)
                 {
@@ -113,6 +107,22 @@ internal sealed partial class PptxRenderer
             }
         }
 
+        void PrepareSeriesPolygon(double?[] values)
+        {
+            for (int i = 0; i < pointCount; i++)
+            {
+                context?.CancellationToken.ThrowIfCancellationRequested();
+                double value = i < values.Length && values[i] is { } pointValue ? Math.Max(0d, pointValue) : 0d;
+                points[i] = RadarPoint(i, GetChartValuePlotRatio(extents, value, false) * geometry.Radius);
+            }
+        }
+
+        (double X, double Y) RadarPoint(int index, double radius)
+        {
+            double angle = GetRadarPointAngle(index, pointCount);
+            return (geometry.CenterX + Math.Cos(angle) * radius, geometry.CenterY + Math.Sin(angle) * radius);
+        }
+
         void AppendClosedPolylinePath(IReadOnlyList<(double X, double Y)> points)
         {
             if (points.Count == 0)
@@ -131,11 +141,9 @@ internal sealed partial class PptxRenderer
 
         void AppendRadarPolygonEdgeSegments(double radius)
         {
-            var points = new (double X, double Y)[pointCount];
             for (int i = 0; i < pointCount; i++)
             {
-                double angle = GetRadarPointAngle(i, pointCount);
-                points[i] = (geometry.CenterX + Math.Cos(angle) * radius, geometry.CenterY + Math.Sin(angle) * radius);
+                points[i] = RadarPoint(i, radius);
             }
 
             for (int i = 0; i < points.Length; i++)
@@ -147,18 +155,6 @@ internal sealed partial class PptxRenderer
             }
         }
 
-        void AppendRadarRadialSegments(bool repeatFirstSpoke)
-        {
-            int segmentCount = repeatFirstSpoke ? pointCount + 1 : pointCount;
-            for (int i = 0; i < segmentCount; i++)
-            {
-                double angle = GetRadarPointAngle(i % pointCount, pointCount);
-                graphics.MoveTo(geometry.CenterX, geometry.CenterY);
-                graphics.LineTo(
-                    geometry.CenterX + Math.Cos(angle) * geometry.Radius,
-                    geometry.CenterY + Math.Sin(angle) * geometry.Radius);
-            }
-        }
     }
 
     // Reads the effective chart style id from the markup-compatibility-resolved tree:

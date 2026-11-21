@@ -4,6 +4,7 @@ using System.Text;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Ooxml;
+using Lokad.OoxPdf.Pdf;
 using Lokad.OoxPdf.Pptx;
 
 namespace Lokad.OoxPdf.Tests;
@@ -119,6 +120,62 @@ internal static class PptxChartPlotOptionsAgreementTests
             });
             TestAssert.Equal(0, diagnostics.Count);
             return output.ToArray();
+        }
+    }
+
+    public static void PptxSparseRadarSeriesKeepAuthoredStrokeAndFill()
+    {
+        var red = new RgbColor(0xA5, 0x15, 0x15);
+        var green = new RgbColor(0x06, 0x76, 0x49);
+        foreach (string style in new[] { "marker", "filled" })
+        {
+            string first = Series(0, "A51515", true);
+            string emptyFirst = Series(0, "A51515", false);
+            string second = Series(1, "067649", true);
+            PdfPage full = Render(style, first + second);
+            PdfPage sparse = Render(style, emptyFirst + second);
+            PdfPage literal = Render(style, second);
+            TestAssert.True(Paints(full, strokes: true).SequenceEqual([red, green]),
+                "Both outlines keep their authored stroke in the populated plot.");
+            TestAssert.True(Paints(sparse, strokes: true).SequenceEqual([green]),
+                "Only the surviving series may paint its own outline.");
+            TestAssert.True(Paints(full, strokes: false).SequenceEqual(style == "filled" ? [red, green] : []),
+                "Only filled radars paint both authored series fills.");
+            TestAssert.True(Paints(sparse, strokes: false).SequenceEqual(style == "filled" ? [green] : []),
+                "Only the surviving filled series paints its own fill.");
+            TestAssert.True(literal.Content == sparse.Content,
+                "The sparse chart keeps the surviving series' polygon and grid geometry.");
+
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            PdfPage empty = Render(style, emptyFirst + Series(1, "067649", false), diagnostics.Add);
+            TestAssert.Equal(0, Paints(empty, strokes: true).Count());
+            TestAssert.Equal(0, Paints(empty, strokes: false).Count());
+            TestAssert.Equal(1, diagnostics.Count(d => d.Id == "PPTX_CHART_MISSING_CACHED_DATA"));
+        }
+
+        IEnumerable<RgbColor> Paints(PdfPage page, bool strokes) =>
+            PptxChartPaletteTests.ReadColoredPaints(page.Content, strokes: strokes)
+                .Where(color => color == red || color == green);
+
+        static string Series(int index, string color, bool hasCache) => $"""
+            <c:ser><c:idx val="{index}"/><c:order val="{index}"/>
+              <c:spPr><a:solidFill><a:srgbClr val="{color}"/></a:solidFill><a:ln w="25400">
+                <a:solidFill><a:srgbClr val="{color}"/></a:solidFill></a:ln></c:spPr>
+              <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt><c:pt idx="2"><c:v>C</c:v></c:pt></c:strLit></c:cat>
+              <c:val><c:numLit><c:ptCount val="{(hasCache ? 3 : 0)}"/>
+                {(hasCache ? """<c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>5</c:v></c:pt><c:pt idx="2"><c:v>4</c:v></c:pt>""" : "")}
+              </c:numLit></c:val>
+            </c:ser>
+            """;
+
+        static PdfPage Render(string style, string series, Action<OoxPdfDiagnostic>? sink = null)
+        {
+            string xml = ChartSpace($"<c:radarChart><c:radarStyle val=\"{style}\"/>{series}</c:radarChart>", "");
+            using var stream = PptxTests.CreateSingleChartPackageStream(xml);
+            using var package = OoxPackage.Open(stream, default);
+            return new PptxRenderer(new PortableRenderingTests.PinnedResolver())
+                .RenderPagesAsync(new PptxReader().Read(package, default), package, sink, default)
+                .ToBlockingEnumerable().Single();
         }
     }
 

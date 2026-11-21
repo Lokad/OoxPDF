@@ -28,10 +28,9 @@ internal sealed partial class PptxRenderer
         PptxSceneChartPlot? radarPlot = ReadFirstSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Radar);
         if (radarPlot is not null)
         {
-            XElement radarChart = radarPlot.Source;
             IReadOnlyList<ChartIndexedNumberVector> radarSeriesVectors = ReadSharedChartSeriesVectors(radarPlot, workbook, plotVisibleOnly);
-            IReadOnlyList<ChartRadarSeries> radarSeries = BuildRadarSeries(radarSeriesVectors);
-            if (radarSeries.Count != 0)
+            double?[][] radarSeries = BuildRadarSeries(radarSeriesVectors);
+            if (radarSeries.Any(values => values.Length != 0))
             {
                 IReadOnlyList<ChartSeriesFill?> seriesFills = ReadSceneSeriesFills(radarPlot);
                 IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadSceneSeriesStrokes(radarPlot, null);

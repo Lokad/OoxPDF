@@ -862,10 +862,10 @@ internal sealed partial class PptxRenderer
         return rightReserve;
     }
 
-    private static ChartValueExtents GetRadarChartValueExtents(IReadOnlyList<ChartRadarSeries> series)
+    private static ChartValueExtents GetRadarChartValueExtents(IReadOnlyList<double?[]> series)
     {
         IEnumerable<double> values = series
-            .SelectMany(item => item.Values)
+            .SelectMany(values => values)
             .Select(value => value ?? 0d);
         double maxValue = Math.Max(0d, values.DefaultIfEmpty(0d).Max());
         double minValue = Math.Min(0d, values.DefaultIfEmpty(0d).Min());

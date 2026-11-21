@@ -1132,15 +1132,8 @@ internal static class PptxChartRenderingTests
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected radar-series projection.");
         Array typedNumberVectors = Array.CreateInstance(vector.GetType(), 1);
         typedNumberVectors.SetValue(vector, 0);
-        object[] radarSeries = (((System.Collections.IEnumerable?)buildRadarSeries.Invoke(null, [typedNumberVectors])) ?? throw new InvalidOperationException("Expected radar series.")).Cast<object>().ToArray();
-        TestAssert.True(radarSeries.Length == 1, "Expected positive cache value to remain an active radar series.");
-        object[] radarValues = (((System.Collections.IEnumerable?)radarSeries[0].GetType().GetProperty("Values")?.GetValue(radarSeries[0])) ?? throw new InvalidOperationException("Expected radar series to preserve active values.")).Cast<object>().ToArray();
-        TestAssert.True(radarValues.Length == 1, "Expected radar series to preserve one active value.");
-        TestAssert.True((double?)radarValues[0] == 99d, "Expected radar active value to preserve the rendered cache value.");
-        TestAssert.True(radarSeries[0].GetType().GetProperty("Source")?.GetValue(radarSeries[0]) is not null, "Expected radar series to preserve its source vector.");
-        object radarSource = radarSeries[0].GetType().GetProperty("Source")?.GetValue(radarSeries[0]) ?? throw new InvalidOperationException("Expected radar series to preserve its source vector.");
-        object[] radarWorkbookPoints = (((System.Collections.IEnumerable?)radarSource.GetType().GetProperty("WorkbookPoints")?.GetValue(radarSource)) ?? throw new InvalidOperationException("Expected radar source vector workbook sidecar points.")).Cast<object>().ToArray();
-        TestAssert.True((double?)radarWorkbookPoints[0].GetType().GetProperty("Value")?.GetValue(radarWorkbookPoints[0]) == 8.2d, "Expected radar series source to preserve workbook sidecar values.");
+        var radarSeries = (double?[][])buildRadarSeries.Invoke(null, [typedNumberVectors])!;
+        TestAssert.Equal(99d, radarSeries.Single().Single());
         var sparseRadarPlot = ReadPointSourcePlot("""
             <c:val><c:numLit><c:formatCode>General</c:formatCode><c:ptCount val="3"/>
             <c:pt idx="2"><c:v>44</c:v></c:pt></c:numLit></c:val>
@@ -1148,11 +1141,11 @@ internal static class PptxChartRenderingTests
         object sparseRadarVector = NumberVector(sparseRadarPlot, null);
         Array sparseRadarVectors = Array.CreateInstance(vector.GetType(), 1);
         sparseRadarVectors.SetValue(sparseRadarVector, 0);
-        object[] sparseRadarSeries = (((System.Collections.IEnumerable?)buildRadarSeries.Invoke(null, [sparseRadarVectors])) ?? throw new InvalidOperationException("Expected sparse radar series.")).Cast<object>().ToArray();
-        object[] sparseRadarValues = (((System.Collections.IEnumerable?)sparseRadarSeries[0].GetType().GetProperty("Values")?.GetValue(sparseRadarSeries[0])) ?? throw new InvalidOperationException("Expected sparse radar values.")).Cast<object>().ToArray();
+        var sparseRadarSeries = (double?[][])buildRadarSeries.Invoke(null, [sparseRadarVectors])!;
+        double?[] sparseRadarValues = sparseRadarSeries.Single();
         TestAssert.True(sparseRadarValues.Length == 3, "Expected radar geometry projection to preserve sparse point slots.");
         TestAssert.True(sparseRadarValues[0] is null && sparseRadarValues[1] is null, "Expected missing radar point slots to remain explicit gaps.");
-        TestAssert.True((double?)sparseRadarValues[2] == 44d, "Expected sparse radar value to keep its source value.");
+        TestAssert.True(sparseRadarValues[2] == 44d, "Expected sparse radar value to keep its source value.");
         var readScatter = typeof(PptxRenderer).GetMethod("ReadSceneScatterSeriesVectors",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
         object ScatterVector(PptxSceneChartPlot plot, object? book) =>
