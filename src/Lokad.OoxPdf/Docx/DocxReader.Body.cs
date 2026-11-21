@@ -43,9 +43,7 @@ internal sealed partial class DocxReader
             }
 
         var elements = new List<DocxBodyElement>();
-        int commentGroupStart = 0;
-        bool hasPendingCommentRange = false;
-        List<DocxBlockCommentBoundary>? commentBoundaries = null;
+        var comments = projectCommentSelections ? new DocxCommentProjection(elements) : null;
         bool mergeDeletedMarks = !DocxMarkupContext.FromMode(markupMode).IncludesDeletions;
         var numberingCounters = new DocxNumberingCounters();
         var inlineReferenceCounters = new DocxNoteReferenceCounters();
@@ -67,16 +65,7 @@ internal sealed partial class DocxReader
             DocxRevisionInfo? inheritedRevision = scopedElement.Revision;
             if (element.Name == WordprocessingNamespace + "p")
             {
-                int sourceBoundary = elements.Count;
-                if (scopedElement.LeadingCommentBoundaries is { } markers)
-                {
-                    foreach (XElement marker in markers)
-                    {
-                        cancellationToken.ThrowIfCancellationRequested();
-                        if (NormalizeDecimalId((string?)marker.Attribute(WordprocessingNamespace + "id")) is { Length: > 0 } id)
-                            (commentBoundaries ??= []).Add(new(sourceBoundary, id, marker.Name == WordprocessingNamespace + "commentRangeStart"));
-                    }
-                }
+                comments?.BeginParagraph(scopedElement.LeadingCommentBoundaries, cancellationToken);
                 var leadingBookmarks = scopedElement.LeadingBookmarks;
                 bool HiddenBreak(XElement source) => IsHiddenHardRunBreak(source, styles, null);
                 bool VisibleBreak(XElement source) => IsPageOrColumnBreak(source) && !HiddenBreak(source);
@@ -111,7 +100,7 @@ internal sealed partial class DocxReader
                         leadingBookmarks: leadingBookmarks, retainUnmatchedCommentStarts: projectCommentSelections);
                     int breakCount = element.Elements().SelectMany(child => EnumerateVisibleRunBreaks(child, VisiblePageBreak, markupMode)).Count();
                     elements.Add(DocxBodyElementFactory.CreatePageBreak(DocxBreakSourceKind.RunBreak, "page", breakParagraph, null, breakCount));
-                    TrackPendingCommentRange(breakParagraph);
+                    comments?.TrackParagraph(breakParagraph, cancellationToken);
                     XElement? breakParagraphSectionProperties = paragraphProperties?.Element(WordprocessingNamespace + "sectPr");
                     if (breakParagraphSectionProperties is not null)
                     {
@@ -127,7 +116,7 @@ internal sealed partial class DocxReader
                         leadingBookmarks: leadingBookmarks, retainUnmatchedCommentStarts: projectCommentSelections);
                     int breakCount = element.Elements().SelectMany(child => EnumerateVisibleRunBreaks(child, VisibleColumnBreak, markupMode)).Count();
                     elements.Add(DocxBodyElementFactory.CreateManualBreak(DocxBreakSourceKind.RunBreak, "column", breakParagraph, breakCount));
-                    TrackPendingCommentRange(breakParagraph);
+                    comments?.TrackParagraph(breakParagraph, cancellationToken);
                     XElement? breakParagraphSectionProperties = paragraphProperties?.Element(WordprocessingNamespace + "sectPr");
                     if (breakParagraphSectionProperties is not null)
                     {
@@ -189,7 +178,9 @@ internal sealed partial class DocxReader
                         int? blockIndex = null;
                         if (paragraphs[i] is { } splitParagraph)
                         {
-                            blockIndex = AppendBodyParagraph(AdjustBreakParagraphFragment(splitParagraph, part, sourceNumbering?.Definition.Indent), sourceBoundary);
+                            blockIndex = AppendFlowParagraph(elements,
+                                AdjustBreakParagraphFragment(splitParagraph, part, sourceNumbering?.Definition.Indent),
+                                mergeDeletedMarks, cancellationToken, comments);
                         }
                         if (matchesSourceAnchors)
                         {
@@ -224,7 +215,7 @@ internal sealed partial class DocxReader
                     leadingBookmarks: leadingBookmarks, retainUnmatchedCommentStarts: projectCommentSelections);
                 if (paragraph is not null)
                 {
-                    int blockIndex = AppendBodyParagraph(paragraph, sourceBoundary);
+                    int blockIndex = AppendFlowParagraph(elements, paragraph, mergeDeletedMarks, cancellationToken, comments);
                     BindFloatingDrawingBlocks(element, null, floatingBlocks, blockIndex, cancellationToken);
                 }
 
@@ -238,55 +229,23 @@ internal sealed partial class DocxReader
             {
                 // A table or external import interrupts the projected paragraph
                 // sequence. Its content needs its own selection ownership.
-                FinishCommentGroup();
                 if (element.Name == WordprocessingNamespace + "tbl")
                 {
-                    DocxTable? table = ReadTable(scopedElement, styles, numbering, numberingCounters, package, relationships, inlineReferenceCounters, documentSettings, markupMode, cancellationToken, tableFragments);
+                    DocxTable? table = ReadTable(scopedElement, styles, numbering, numberingCounters, package, relationships,
+                        inlineReferenceCounters, documentSettings, markupMode, cancellationToken, tableFragments, projectCommentSelections);
                     if (table is not null)
                     {
                         BindFloatingDrawingBlocks(element, tableFragments, floatingBlocks, elements.Count, cancellationToken);
                         elements.Add(DocxBodyElementFactory.CreateTable(table));
                     }
                 }
-                commentGroupStart = elements.Count;
+                comments?.FinishGroup(cancellationToken);
             }
         }
 
-        FinishCommentGroup();
+        comments?.FinishGroup(cancellationToken);
         AddImplicitTerminalTableParagraph(elements);
         return elements;
-
-        int AppendBodyParagraph(DocxParagraph paragraph, int sourceBoundary)
-        {
-            int part = AppendFlowParagraph(elements, DocxBodyElementFactory.CreateParagraph(paragraph),
-                mergeDeletedMarks, cancellationToken);
-            // A consumed mark requires an inline boundary in the merged line.
-            // Keep the existing fallback for IDs that use such a block marker.
-            if (part < sourceBoundary && commentBoundaries is not null)
-            {
-                for (int index = commentBoundaries.Count - 1; index >= 0 && commentBoundaries[index].BeforePart == sourceBoundary; index--)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    commentBoundaries[index] = commentBoundaries[index] with { Consumed = true };
-                }
-            }
-            TrackPendingCommentRange(paragraph);
-            return part;
-        }
-
-        void TrackPendingCommentRange(DocxParagraph? paragraph)
-        {
-            if (projectCommentSelections && !hasPendingCommentRange && paragraph is not null)
-                hasPendingCommentRange = paragraph.CommentRanges.Any(NeedsBodyCommentBinding);
-        }
-
-        void FinishCommentGroup()
-        {
-            if (hasPendingCommentRange || commentBoundaries is { Count: > 0 })
-                ProjectBodyCommentRanges(elements, commentGroupStart, commentBoundaries, cancellationToken);
-            commentBoundaries?.Clear();
-            hasPendingCommentRange = false;
-        }
 
         IEnumerable<XElement> EnumerateSplitFloatingAnchors(XElement paragraph)
         {
@@ -325,46 +284,21 @@ internal sealed partial class DocxReader
         }
     }
 
-    private static int AppendFlowParagraph(List<DocxBodyElement> elements, DocxParagraphElement paragraph,
-        bool mergeDeletedMarks, CancellationToken cancellationToken)
+    private static int AppendFlowParagraph(List<DocxBodyElement> elements, DocxParagraph paragraph,
+        bool mergeDeletedMarks, CancellationToken cancellationToken, DocxCommentProjection? comments = null)
     {
         if (mergeDeletedMarks && elements.Count > 0 &&
             elements[^1] is DocxParagraphElement previous && previous.Paragraph.HasDeletedParagraphMark)
         {
             elements[^1] = DocxBodyElementFactory.CreateParagraph(
-                MergeParagraphsAcrossDeletedMark(previous.Paragraph, paragraph.Paragraph, cancellationToken));
+                MergeParagraphsAcrossDeletedMark(previous.Paragraph, paragraph, cancellationToken));
         }
         else
         {
-            elements.Add(paragraph);
+            elements.Add(DocxBodyElementFactory.CreateParagraph(paragraph));
         }
+        comments?.TrackParagraph(paragraph, cancellationToken);
         return elements.Count - 1;
-    }
-
-    private static IReadOnlyList<DocxBodyElement> NormalizeDeletedParagraphMarkElements(
-        IReadOnlyList<DocxBodyElement> elements,
-        OoxPdfDocxMarkupMode markupMode, CancellationToken cancellationToken)
-    {
-        if (DocxMarkupContext.FromMode(markupMode).IncludesDeletions || elements.Count < 2)
-        {
-            return elements;
-        }
-
-        var output = new List<DocxBodyElement>(elements.Count);
-        foreach (DocxBodyElement element in elements)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (element is DocxParagraphElement paragraph)
-            {
-                AppendFlowParagraph(output, paragraph, mergeDeletedMarks: true, cancellationToken);
-            }
-            else
-            {
-                output.Add(element);
-            }
-        }
-
-        return output;
     }
 
     private static DocxParagraph MergeParagraphsAcrossDeletedMark(DocxParagraph first, DocxParagraph second,

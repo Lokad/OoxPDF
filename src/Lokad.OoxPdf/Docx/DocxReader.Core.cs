@@ -75,7 +75,8 @@ internal sealed partial class DocxReader
             Dictionary<XElement, int>? floatingBlocks = CreateFloatingBlockMap(document);
             IReadOnlyList<DocxBodyElement> bodyElements = ReadBodyElements(document, styles, numbering, package, relationships, settings, documentSettings,
                 revisionFilteringMarkupMode, cancellationToken, storyCache, floatingBlocks,
-                projectCommentSelections: markupMode == OoxPdfDocxMarkupMode.AllMarkup && markupContext.DrawsCommentMarkers);
+                projectCommentSelections: markupMode == OoxPdfDocxMarkupMode.AllMarkup && markupContext.DrawsCommentMarkers &&
+                    commentAnchorInventory.PackageAnchorIds.Count > 0);
             // An empty final section has a Word paragraph mark even when its
             // paragraph is absent from the XML. Resolve its defaults through
             // the same reader as an authored paragraph; placement decides use.

@@ -494,18 +494,65 @@ internal sealed partial class DocxReader
 
     private readonly record struct DocxTableColumnBookmark(DocxBookmarkAnchor Anchor, int First, int Last);
 
-    private static bool NeedsBodyCommentBinding(DocxCommentRange range) =>
+    private static bool NeedsCommentBinding(DocxCommentRange range) =>
         range.StartSourceRunIndex is not null && range.ReferenceSourceRunIndex is null;
 
     private static bool IsUnmatchedCommentStart(DocxCommentRange range) =>
-        NeedsBodyCommentBinding(range) && range.EndSourceRunIndex is null;
+        NeedsCommentBinding(range) && range.EndSourceRunIndex is null;
 
     private readonly record struct DocxBlockCommentBoundary(int BeforePart, string Id, bool IsStart)
     {
         public bool Consumed { get; init; }
     }
 
-    private static void ProjectBodyCommentRanges(List<DocxBodyElement> elements, int firstPart,
+    // Each flow or cell resolves its own ranges. A nested table or an import
+    // ends the surrounding group without moving its table or paragraph owners.
+    private sealed class DocxCommentProjection(List<DocxBodyElement> elements)
+    {
+        private int groupStart;
+        private int paragraphBoundary;
+        private bool hasPendingRange;
+        private List<DocxBlockCommentBoundary>? boundaries;
+
+        public void BeginParagraph(IReadOnlyList<XElement>? markers, CancellationToken token)
+        {
+            paragraphBoundary = elements.Count;
+            if (markers is null) return;
+            foreach (XElement marker in markers)
+            {
+                token.ThrowIfCancellationRequested();
+                if (NormalizeDecimalId((string?)marker.Attribute(WordprocessingNamespace + "id")) is { Length: > 0 } id)
+                    (boundaries ??= []).Add(new(paragraphBoundary, id, marker.Name == WordprocessingNamespace + "commentRangeStart"));
+            }
+        }
+
+        public void TrackParagraph(DocxParagraph? paragraph, CancellationToken token)
+        {
+            // A consumed paragraph mark needs an inline boundary in the merged
+            // line. Preserve the existing fallback for that block marker.
+            if (elements.Count <= paragraphBoundary && boundaries is not null)
+            {
+                for (int index = boundaries.Count - 1; index >= 0 && boundaries[index].BeforePart == paragraphBoundary; index--)
+                {
+                    token.ThrowIfCancellationRequested();
+                    boundaries[index] = boundaries[index] with { Consumed = true };
+                }
+            }
+            if (!hasPendingRange && paragraph is not null)
+                hasPendingRange = paragraph.CommentRanges.Any(NeedsCommentBinding);
+        }
+
+        public void FinishGroup(CancellationToken token)
+        {
+            if (hasPendingRange || boundaries is { Count: > 0 })
+                ProjectCommentRanges(elements, groupStart, boundaries, token);
+            groupStart = elements.Count;
+            boundaries?.Clear();
+            hasPendingRange = false;
+        }
+    }
+
+    private static void ProjectCommentRanges(List<DocxBodyElement> elements, int firstPart,
         IReadOnlyList<DocxBlockCommentBoundary>? blockBoundaries, CancellationToken token)
     {
         var starts = new List<(int Part, DocxCommentRange Start)>();
@@ -545,7 +592,7 @@ internal sealed partial class DocxReader
             {
                 token.ThrowIfCancellationRequested();
                 if (range.Id is not { Length: > 0 } id) continue;
-                if (NeedsBodyCommentBinding(range))
+                if (NeedsCommentBinding(range))
                 {
                     AddStart(id, part, range);
                 }
@@ -567,7 +614,7 @@ internal sealed partial class DocxReader
         }
 
         // Resolve a closed selection and its unique original reference within
-        // the body sequence. Breaks affect placement but preserve source order.
+        // the paragraph sequence. Breaks affect placement but preserve source order.
         var ranges = new List<DocxSplitCommentRange>();
         int[]? boundaries = null;
         foreach (var (part, start) in starts)

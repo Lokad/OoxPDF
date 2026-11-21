@@ -21,7 +21,8 @@ internal sealed partial class DocxReader
         DocxDocumentSettings? documentSettings,
         OoxPdfDocxMarkupMode markupMode,
         CancellationToken cancellationToken,
-        IReadOnlyList<DocxRevisionScopedElement>? fragments = null)
+        IReadOnlyList<DocxRevisionScopedElement>? fragments = null,
+        bool projectCommentSelections = false)
     {
         cancellationToken.ThrowIfCancellationRequested();
         XElement table = source.Element;
@@ -172,7 +173,8 @@ internal sealed partial class DocxReader
                         inheritedCellRevision,
                         (sourceColumn, nextSourceColumn),
                         ref columnBookmarks,
-                        recordCellBookmarkEnd);
+                        recordCellBookmarkEnd,
+                        projectCommentSelections);
                     IReadOnlyList<DocxParagraph> paragraphs = DocxBlockTraversal.EnumerateDirectParagraphs(cellBodyElements).ToArray();
                     XElement? shading = cellProperties?.Element(WordprocessingNamespace + "shd");
                     string? fill = (string?)shading?.Attribute(WordprocessingNamespace + "fill") ?? conditionalStyle.FillHex;
@@ -445,9 +447,12 @@ internal sealed partial class DocxReader
         DocxRevisionInfo? inheritedRevision,
         (int Start, int End) cellColumns,
         ref ReadOnlyMemory<DocxTableColumnBookmark> columnBookmarks,
-        Action<string> recordBookmarkEnd)
+        Action<string> recordBookmarkEnd,
+        bool projectCommentSelections)
     {
         var elements = new List<DocxBodyElement>();
+        var comments = projectCommentSelections ? new DocxCommentProjection(elements) : null;
+        bool mergeDeletedMarks = !DocxMarkupContext.FromMode(markupMode).IncludesDeletions;
         List<DocxTableColumnBookmark>? deferred = null;
         DocxTableColumnBookmark[]? trailing = null;
         void Defer(DocxTableColumnBookmark bookmark) => (deferred ??= []).Add(bookmark);
@@ -455,7 +460,7 @@ internal sealed partial class DocxReader
         foreach (var (block, tableFragments) in EnumerateLogicalTableBlocks(cell.Element.Elements(), styles, markupMode,
             cancellationToken, inheritedRevision, cell.LeadingBookmarks, readTableColumnBookmarks: true,
             leadingColumnBookmarks: cell.LeadingColumnBookmarks, recordBookmarkEnd: recordBookmarkEnd,
-            recordTrailingColumnBookmarks: starts => trailing = starts))
+            recordTrailingColumnBookmarks: starts => trailing = starts, readCommentBoundaries: projectCommentSelections))
         {
             cancellationToken.ThrowIfCancellationRequested();
             var scopedChild = block;
@@ -480,6 +485,7 @@ internal sealed partial class DocxReader
 
             if (child.Name == WordprocessingNamespace + "p")
             {
+                comments?.BeginParagraph(scopedChild.LeadingCommentBoundaries, cancellationToken);
                 var leadingBookmarks = scopedChild.LeadingBookmarks;
                 bool HiddenBreak(XElement source) => IsHiddenHardRunBreak(source, styles, tableCellStyle);
                 bool VisibleBreak(XElement source) => IsPageOrColumnBreak(source) && !HiddenBreak(source);
@@ -525,11 +531,13 @@ internal sealed partial class DocxReader
                             cancellationToken: cancellationToken,
                             isContinuationFragment: !part.IsFirstFragment,
                             leadingBookmarks: leadingBookmarks,
-                            cellBookmarks: bookmarkScope);
+                            cellBookmarks: bookmarkScope,
+                            retainUnmatchedCommentStarts: projectCommentSelections);
                         leadingBookmarks = null;
                         if (splitParagraph is not null)
                         {
-                            elements.Add(DocxBodyElementFactory.CreateParagraph(AdjustBreakParagraphFragment(splitParagraph, part, sourceNumbering?.Definition.Indent)));
+                            AppendFlowParagraph(elements, AdjustBreakParagraphFragment(splitParagraph, part, sourceNumbering?.Definition.Indent),
+                                mergeDeletedMarks, cancellationToken, comments);
                         }
                     }
 
@@ -550,21 +558,28 @@ internal sealed partial class DocxReader
                     markupMode: markupMode,
                     cancellationToken: cancellationToken,
                     leadingBookmarks: leadingBookmarks,
-                    cellBookmarks: bookmarkScope);
+                    cellBookmarks: bookmarkScope,
+                    retainUnmatchedCommentStarts: projectCommentSelections);
                 if (parsed is not null)
                 {
-                    elements.Add(DocxBodyElementFactory.CreateParagraph(parsed));
+                    AppendFlowParagraph(elements, parsed, mergeDeletedMarks, cancellationToken, comments);
                 }
             }
-            else if (child.Name == WordprocessingNamespace + "tbl")
+            else
             {
-                DocxTable? nestedTable = ReadTable(scopedChild, styles, numbering, numberingCounters, package, relationships, inlineReferenceCounters, documentSettings, markupMode, cancellationToken, tableFragments);
-                if (nestedTable is not null)
+                if (child.Name == WordprocessingNamespace + "tbl")
                 {
-                    elements.Add(DocxBodyElementFactory.CreateTable(nestedTable));
+                    DocxTable? nestedTable = ReadTable(scopedChild, styles, numbering, numberingCounters, package, relationships,
+                        inlineReferenceCounters, documentSettings, markupMode, cancellationToken, tableFragments, projectCommentSelections);
+                    if (nestedTable is not null)
+                    {
+                        elements.Add(DocxBodyElementFactory.CreateTable(nestedTable));
+                    }
                 }
+                comments?.FinishGroup(cancellationToken);
             }
         }
+        comments?.FinishGroup(cancellationToken);
 
         // A trailing start has no following block in this cell. Later cells can
         // still intersect its interval, subject to the same end-marker checks.
@@ -582,7 +597,7 @@ internal sealed partial class DocxReader
             DocxTableColumnBookmark[] combined = [.. columnBookmarks.Span, .. deferred];
             columnBookmarks = combined.OrderBy(bookmark => bookmark.First).ToArray();
         }
-        return NormalizeDeletedParagraphMarkElements(elements, markupMode, cancellationToken);
+        return elements;
     }
 
 

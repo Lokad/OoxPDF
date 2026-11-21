@@ -83,7 +83,7 @@ internal sealed partial class DocxReader
                     leadingBookmarks: scopedElement.LeadingBookmarks);
                 if (paragraph is not null)
                 {
-                    int blockIndex = AppendFlowParagraph(bodyElements, DocxBodyElementFactory.CreateParagraph(paragraph),
+                    int blockIndex = AppendFlowParagraph(bodyElements, paragraph,
                         mergeDeletedMarks, cancellationToken);
                     BindFloatingDrawingBlocks(element, null, floatingBlocks, blockIndex, cancellationToken);
                 }

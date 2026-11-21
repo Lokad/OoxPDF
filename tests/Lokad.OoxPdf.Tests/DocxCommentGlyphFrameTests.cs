@@ -333,6 +333,70 @@ internal static class DocxCommentGlyphFrameTests
         }
     }
 
+    public static void DocxCommentGlyphFramesCarryClosedRangesWithinTableCells()
+    {
+        var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+            OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        foreach (string variant in new[] { "paragraphs", "wrapped", "cell-boundaries", "separate-cells" })
+        {
+            DocxDocument source = DocxInlineCompositionTests.ReadMutation("docx-markup-comment-table",
+                OoxPdfDocxMarkupMode.AllMarkup, false, false, (xml, w, _) =>
+                {
+                    bool blockMarkers = variant == "cell-boundaries";
+                    bool separateCells = variant == "separate-cells";
+                    XElement start = Marker("commentRangeStart");
+                    XElement end = Marker("commentRangeEnd");
+                    var first = new XElement(w + "p", blockMarkers ? null : Text("OutsideLeft "),
+                        blockMarkers ? null : start, Text("SelectedLeft"));
+                    var second = new XElement(w + "p", Text("SelectedRight"), blockMarkers ? null : end,
+                        blockMarkers ? null : new XElement(w + "r", Marker("commentReference")));
+                    var after = new XElement(w + "p", Text("OutsideRight"),
+                        blockMarkers ? new XElement(w + "r", Marker("commentReference")) : null);
+                    var cells = separateCells
+                        ? new[] { new XElement(w + "tc", first), new XElement(w + "tc", second, after) }
+                        : [new XElement(w + "tc", blockMarkers ? start : null, first,
+                            variant == "wrapped" ? new XElement(w + "sdt", new XElement(w + "sdtContent", second)) : second,
+                            blockMarkers ? end : null, after)];
+                    xml.Root!.Element(w + "body")!.ReplaceNodes(
+                        new XElement(w + "tbl",
+                            new XElement(w + "tblGrid", cells.Select(_ => new XElement(w + "gridCol", new XAttribute(w + "w", "4000")))),
+                            new XElement(w + "tr", cells)),
+                        new XElement(w + "p", Text("Following body")),
+                        new XElement(w + "sectPr", new XElement(w + "pgSz",
+                            new XAttribute(w + "w", "12240"), new XAttribute(w + "h", "15840"))));
+
+                    XElement Text(string value) => new(w + "r",
+                        new XElement(w + "t", new XAttribute(XNamespace.Xml + "space", "preserve"), value));
+                    XElement Marker(string name) => new(w + name, new XAttribute(w + "id", "1"));
+                });
+            var paragraphs = DocxBlockTraversal.EnumerateTableParagraphs(source.Tables.Single()).ToArray();
+            TestAssert.Equal(1, paragraphs.Sum(p => p.InlineReferences.Count(r => r.Kind == DocxRelatedStoryKind.Comment)));
+            if (variant == "separate-cells")
+            {
+                TestAssert.True(paragraphs.All(p => p.SplitComments is null), "Separate cells retain their own range scope.");
+            }
+            else
+            {
+                var ranges = TestAssert.NotNull(paragraphs[0].SplitComments?.Ranges);
+                TestAssert.True(ReferenceEquals(ranges, paragraphs[1].SplitComments?.Ranges),
+                    "Both selected paragraphs share the cell's closed range.");
+                TestAssert.True(paragraphs[2].SplitComments is null, "The following paragraph is outside the selection.");
+            }
+
+            PdfPage page = renderer.RenderPagesAsync(source, null, default).ToBlockingEnumerable().Single();
+            if (variant != "separate-cells")
+            {
+                TestAssert.True(DocxTests.CountWordCompatibleCommentRangeFills(page.Content) >= 2,
+                    "Both selected cell paragraphs paint their fills for " + variant);
+            }
+            string text = Regex.Replace(string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(page)
+                .Select(show => show.Text)), @"\s+", "");
+            foreach (string witness in new[] { "SelectedLeft", "SelectedRight", "OutsideRight", "Followingbody" })
+                TestAssert.Contains(witness, text);
+            TestAssert.Equal(1, Regex.Matches(text, "Table-cellcommentbody\\.").Count);
+        }
+    }
+
     private static (double[][] Paths, double StrokeWidth, double FillHeight) ReadGeometry(PdfPage page)
     {
         var fills = Regex.Matches(page.Content, @"0\.973 0\.863 0\.867 rg\s+(?<x>[-\d.]+) (?<y>[-\d.]+) (?<w>[\d.]+) (?<h>[\d.]+) re f");
