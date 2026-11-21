@@ -13,14 +13,14 @@ internal sealed partial class DocxReader
             OoxPdfDocxMarkupMode mode, CancellationToken token, DocxRevisionInfo? inheritedRevision = null,
             IReadOnlyList<DocxBookmarkAnchor>? leadingBookmarks = null, bool readTableColumnBookmarks = false,
             DocxTableColumnBookmark[]? leadingColumnBookmarks = null, Action<string>? recordBookmarkEnd = null,
-            Action<DocxTableColumnBookmark[]>? recordTrailingColumnBookmarks = null)
+            Action<DocxTableColumnBookmark[]>? recordTrailingColumnBookmarks = null, bool readCommentBoundaries = false)
     {
         DocxRevisionScopedElement? pending = null;
         List<DocxRevisionScopedElement>? tables = null;
         foreach (var block in EnumerateBookmarkedBlocks(elements, mode, token, inheritedRevision,
             leadingBookmarks: leadingBookmarks, readTableColumnBookmarks: readTableColumnBookmarks,
             leadingColumnBookmarks: leadingColumnBookmarks, recordBookmarkEnd: recordBookmarkEnd,
-            recordTrailingColumnBookmarks: recordTrailingColumnBookmarks))
+            recordTrailingColumnBookmarks: recordTrailingColumnBookmarks, readCommentBoundaries: readCommentBoundaries))
         {
             if (pending is not null && CanJoinTables(pending.Element, block.Element, styles))
             {
@@ -39,14 +39,20 @@ internal sealed partial class DocxReader
         OoxPdfDocxMarkupMode mode, CancellationToken token, DocxRevisionInfo? inheritedRevision,
         XName? tableChildName = null, IReadOnlyList<DocxBookmarkAnchor>? leadingBookmarks = null,
         bool readTableColumnBookmarks = false, DocxTableColumnBookmark[]? leadingColumnBookmarks = null,
-        Action<string>? recordBookmarkEnd = null, Action<DocxTableColumnBookmark[]>? recordTrailingColumnBookmarks = null)
+        Action<string>? recordBookmarkEnd = null, Action<DocxTableColumnBookmark[]>? recordTrailingColumnBookmarks = null,
+        bool readCommentBoundaries = false)
     {
         XName importedContentName = WordprocessingNamespace + "altChunk";
         XName bookmarkStartName = WordprocessingNamespace + "bookmarkStart";
         XName bookmarkEndName = WordprocessingNamespace + "bookmarkEnd";
+        XName commentStartName = WordprocessingNamespace + "commentRangeStart";
+        XName commentEndName = WordprocessingNamespace + "commentRangeEnd";
         XName[] includedNames = tableChildName is not null
             ? [tableChildName, bookmarkStartName, bookmarkEndName]
             : [WordprocessingNamespace + "p", WordprocessingNamespace + "tbl", importedContentName, bookmarkStartName, bookmarkEndName];
+        if (readCommentBoundaries)
+            includedNames = [.. includedNames, commentStartName, commentEndName];
+        List<XElement>? commentBoundaries = null;
         // A cell inherits starts at its row boundary before choosing its first block.
         Dictionary<string, DocxBookmarkAnchor>? bookmarkStarts = null;
         if (leadingBookmarks is { Count: > 0 })
@@ -71,6 +77,11 @@ internal sealed partial class DocxReader
         foreach (var scope in EnumerateRevisionScopedChildren(elements, mode, token, includedNames, inheritedRevision))
         {
             token.ThrowIfCancellationRequested();
+            if (scope.Element.Name == commentStartName || scope.Element.Name == commentEndName)
+            {
+                (commentBoundaries ??= []).Add(scope.Element);
+                continue;
+            }
             if (scope.Element.Name == bookmarkStartName)
             {
                 var anchor = ReadBookmarkAnchor(scope.Element, 0, 0, 0, 0);
@@ -110,6 +121,11 @@ internal sealed partial class DocxReader
                 : scope;
             bookmarkStarts = null;
             columnStarts = null;
+            if (commentBoundaries is not null)
+            {
+                block = block with { LeadingCommentBoundaries = commentBoundaries };
+                commentBoundaries = null;
+            }
             yield return block;
         }
 

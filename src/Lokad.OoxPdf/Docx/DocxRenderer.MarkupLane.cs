@@ -307,7 +307,8 @@ internal sealed partial class DocxRenderer
                     last ? selection.End.EndTextOffset : null, null, null)
                 {
                     StartInlineItemIndex = first ? selection.StartItemIndex : 0,
-                    EndInlineItemIndex = last ? selection.End.EndInlineItemIndex : paragraph.InlineContent?.Count
+                    EndInlineItemIndex = last && selection.End.EndSourceRunIndex != int.MaxValue
+                        ? selection.End.EndInlineItemIndex : paragraph.InlineContent?.Count
                 };
                 _ = TryPaintRange(local);
             }, cancellationToken);

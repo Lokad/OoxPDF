@@ -45,6 +45,7 @@ internal sealed partial class DocxReader
         var elements = new List<DocxBodyElement>();
         int commentGroupStart = 0;
         bool hasUnmatchedCommentStart = false;
+        List<DocxBlockCommentBoundary>? commentBoundaries = null;
         bool mergeDeletedMarks = !DocxMarkupContext.FromMode(markupMode).IncludesDeletions;
         var numberingCounters = new DocxNumberingCounters();
         var inlineReferenceCounters = new DocxNoteReferenceCounters();
@@ -54,7 +55,7 @@ internal sealed partial class DocxReader
             document, authoredSettings, documentSettings, markupMode, cancellationToken);
         IEnumerable<XElement> bodyChildren = document.Descendants(WordprocessingNamespace + "body").Elements();
         foreach (var (scopedElement, tableFragments) in EnumerateLogicalTableBlocks(
-            bodyChildren, styles, markupMode, cancellationToken))
+            bodyChildren, styles, markupMode, cancellationToken, readCommentBoundaries: projectCommentSelections))
         {
             cancellationToken.ThrowIfCancellationRequested();
             XElement element = scopedElement.Element;
@@ -66,6 +67,16 @@ internal sealed partial class DocxReader
             DocxRevisionInfo? inheritedRevision = scopedElement.Revision;
             if (element.Name == WordprocessingNamespace + "p")
             {
+                int sourceBoundary = elements.Count;
+                if (scopedElement.LeadingCommentBoundaries is { } markers)
+                {
+                    foreach (XElement marker in markers)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        if (NormalizeDecimalId((string?)marker.Attribute(WordprocessingNamespace + "id")) is { Length: > 0 } id)
+                            (commentBoundaries ??= []).Add(new(sourceBoundary, id, marker.Name == WordprocessingNamespace + "commentRangeStart"));
+                    }
+                }
                 var leadingBookmarks = scopedElement.LeadingBookmarks;
                 bool HiddenBreak(XElement source) => IsHiddenHardRunBreak(source, styles, null);
                 bool VisibleBreak(XElement source) => IsPageOrColumnBreak(source) && !HiddenBreak(source);
@@ -178,10 +189,7 @@ internal sealed partial class DocxReader
                         int? blockIndex = null;
                         if (paragraphs[i] is { } splitParagraph)
                         {
-                            blockIndex = AppendFlowParagraph(elements,
-                                DocxBodyElementFactory.CreateParagraph(AdjustBreakParagraphFragment(splitParagraph, part, sourceNumbering?.Definition.Indent)),
-                                mergeDeletedMarks, cancellationToken);
-                            TrackCommentStart(splitParagraph);
+                            blockIndex = AppendBodyParagraph(AdjustBreakParagraphFragment(splitParagraph, part, sourceNumbering?.Definition.Indent), sourceBoundary);
                         }
                         if (matchesSourceAnchors)
                         {
@@ -216,9 +224,7 @@ internal sealed partial class DocxReader
                     leadingBookmarks: leadingBookmarks, retainUnmatchedCommentStarts: projectCommentSelections);
                 if (paragraph is not null)
                 {
-                    int blockIndex = AppendFlowParagraph(elements, DocxBodyElementFactory.CreateParagraph(paragraph),
-                        mergeDeletedMarks, cancellationToken);
-                    TrackCommentStart(paragraph);
+                    int blockIndex = AppendBodyParagraph(paragraph, sourceBoundary);
                     BindFloatingDrawingBlocks(element, null, floatingBlocks, blockIndex, cancellationToken);
                 }
 
@@ -250,6 +256,24 @@ internal sealed partial class DocxReader
         AddImplicitTerminalTableParagraph(elements);
         return elements;
 
+        int AppendBodyParagraph(DocxParagraph paragraph, int sourceBoundary)
+        {
+            int part = AppendFlowParagraph(elements, DocxBodyElementFactory.CreateParagraph(paragraph),
+                mergeDeletedMarks, cancellationToken);
+            // A consumed mark requires an inline boundary in the merged line.
+            // Keep the existing fallback for IDs that use such a block marker.
+            if (part < sourceBoundary && commentBoundaries is not null)
+            {
+                for (int index = commentBoundaries.Count - 1; index >= 0 && commentBoundaries[index].BeforePart == sourceBoundary; index--)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    commentBoundaries[index] = commentBoundaries[index] with { Consumed = true };
+                }
+            }
+            TrackCommentStart(paragraph);
+            return part;
+        }
+
         void TrackCommentStart(DocxParagraph? paragraph)
         {
             if (projectCommentSelections && !hasUnmatchedCommentStart && paragraph is not null)
@@ -258,8 +282,9 @@ internal sealed partial class DocxReader
 
         void FinishCommentGroup()
         {
-            if (hasUnmatchedCommentStart)
-                ProjectBodyCommentRanges(elements, commentGroupStart, cancellationToken);
+            if (hasUnmatchedCommentStart || commentBoundaries is { Count: > 0 })
+                ProjectBodyCommentRanges(elements, commentGroupStart, commentBoundaries, cancellationToken);
+            commentBoundaries?.Clear();
             hasUnmatchedCommentStart = false;
         }
 

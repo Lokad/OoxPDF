@@ -273,6 +273,59 @@ internal static class DocxCommentGlyphFrameTests
                 });
     }
 
+    public static void DocxCommentGlyphFramesPlaceBodyLevelRangeBoundaries()
+    {
+        var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+            OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        var ordinary = RenderSource(false, false, wrappedPage: false);
+        var paged = RenderSource(false, false, wrappedPage: true);
+        foreach ((bool Start, bool End, bool WrappedPage) sample in new[]
+        {
+            (true, false, false),
+            (false, true, false),
+            (true, true, false),
+            (true, true, true),
+        })
+        {
+            var expected = sample.WrappedPage ? paged : ordinary;
+            var actual = RenderSource(sample.Start, sample.End, sample.WrappedPage);
+            TestAssert.Equal(expected.Length, actual.Length);
+            for (int page = 0; page < actual.Length; page++)
+            {
+                TestAssert.Equal(expected[page].Content, actual[page].Content);
+            }
+        }
+
+        PdfPage[] RenderSource(bool outsideStart, bool outsideEnd, bool wrappedPage)
+        {
+            DocxDocument source = DocxInlineCompositionTests.ReadMutation("docx-markup-comment-table",
+                OoxPdfDocxMarkupMode.AllMarkup, false, false, (xml, w, _) =>
+                {
+                    var begin = Marker("commentRangeStart");
+                    var end = Marker("commentRangeEnd");
+                    var first = new XElement(w + "p", outsideStart ? null : begin, Text("ChosenOpening"));
+                    var last = new XElement(w + "p",
+                        wrappedPage ? new XElement(w + "pPr", new XElement(w + "pageBreakBefore")) : null,
+                        Text("ChosenClosing"), outsideEnd ? null : end);
+                    var blocks = new object?[] { outsideStart ? begin : null, first, last, outsideEnd ? end : null };
+                    xml.Root!.Element(w + "body")!.ReplaceNodes(
+                        new XElement(w + "p", Text("OutsideBefore")),
+                        wrappedPage ? new XElement(w + "sdt", new XElement(w + "sdtContent", blocks)) : blocks,
+                        new XElement(w + "p", Text("OutsideAfter"), new XElement(w + "r", Marker("commentReference"))),
+                        new XElement(w + "sectPr", new XElement(w + "pgSz",
+                            new XAttribute(w + "w", "12240"), new XAttribute(w + "h", "15840"))));
+
+                    XElement Text(string value) => new(w + "r", new XElement(w + "t", value));
+                    XElement Marker(string name) => new(w + name, new XAttribute(w + "id", "1"));
+                });
+            var pages = renderer.RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
+            TestAssert.Equal(wrappedPage ? 2 : 1, pages.Length);
+            TestAssert.True(pages.Sum(page => DocxTests.CountWordCompatibleCommentRangeFills(page.Content)) >= 2,
+                "The equivalent boundary positions select both paragraphs.");
+            return pages;
+        }
+    }
+
     private static (double[][] Paths, double StrokeWidth, double FillHeight) ReadGeometry(PdfPage page)
     {
         var fills = Regex.Matches(page.Content, @"0\.973 0\.863 0\.867 rg\s+(?<x>[-\d.]+) (?<y>[-\d.]+) (?<w>[\d.]+) (?<h>[\d.]+) re f");

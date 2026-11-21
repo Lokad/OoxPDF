@@ -489,6 +489,7 @@ internal sealed partial class DocxReader
     {
         public IReadOnlyList<DocxBookmarkAnchor>? LeadingBookmarks { get; init; }
         public DocxTableColumnBookmark[]? LeadingColumnBookmarks { get; init; }
+        public IReadOnlyList<XElement>? LeadingCommentBoundaries { get; init; }
     }
 
     private readonly record struct DocxTableColumnBookmark(DocxBookmarkAnchor Anchor, int First, int Last);
@@ -496,16 +497,46 @@ internal sealed partial class DocxReader
     private static bool IsUnmatchedCommentStart(DocxCommentRange range) =>
         range.StartSourceRunIndex is not null && range.EndSourceRunIndex is null && range.ReferenceSourceRunIndex is null;
 
-    private static void ProjectBodyCommentRanges(List<DocxBodyElement> elements, int firstPart, CancellationToken token)
+    private readonly record struct DocxBlockCommentBoundary(int BeforePart, string Id, bool IsStart)
+    {
+        public bool Consumed { get; init; }
+    }
+
+    private static void ProjectBodyCommentRanges(List<DocxBodyElement> elements, int firstPart,
+        IReadOnlyList<DocxBlockCommentBoundary>? blockBoundaries, CancellationToken token)
     {
         var starts = new List<(int Part, DocxCommentRange Start)>();
         var startIds = new HashSet<string>(StringComparer.Ordinal);
         var lastParts = new Dictionary<string, (int Part, DocxCommentRange End)>(StringComparer.Ordinal);
         var referenceParts = new Dictionary<string, int>(StringComparer.Ordinal);
         var ambiguous = new HashSet<string>(StringComparer.Ordinal);
-        for (int part = firstPart; part < elements.Count; part++)
+        int nextBoundary = 0;
+        int boundaryCount = blockBoundaries?.Count ?? 0;
+        for (int part = firstPart; part <= elements.Count; part++)
         {
             token.ThrowIfCancellationRequested();
+            while (nextBoundary < boundaryCount && blockBoundaries![nextBoundary].BeforePart == part)
+            {
+                token.ThrowIfCancellationRequested();
+                var boundary = blockBoundaries[nextBoundary++];
+                if (boundary.Consumed)
+                {
+                    ambiguous.Add(boundary.Id);
+                }
+                else if (boundary.IsStart)
+                {
+                    AddStart(boundary.Id, part, new(boundary.Id, 0, 0, null, null, null, null)
+                    {
+                        StartInlineItemIndex = 0
+                    });
+                }
+                else if (!lastParts.TryAdd(boundary.Id, (part - 1,
+                             new(boundary.Id, null, null, int.MaxValue, null, null, null))))
+                {
+                    ambiguous.Add(boundary.Id);
+                }
+            }
+            if (part == elements.Count) break;
             if (GetParagraph(elements[part]) is not { } paragraph) continue;
             foreach (DocxCommentRange range in paragraph.CommentRanges)
             {
@@ -513,10 +544,7 @@ internal sealed partial class DocxReader
                 if (range.Id is not { Length: > 0 } id) continue;
                 if (IsUnmatchedCommentStart(range))
                 {
-                    if (startIds.Add(id))
-                        starts.Add((part, range));
-                    else
-                        ambiguous.Add(id);
+                    AddStart(id, part, range);
                 }
                 else if (range.StartSourceRunIndex is not null ||
                     range.EndSourceRunIndex is not null && !lastParts.TryAdd(id, (part, range)))
@@ -542,7 +570,7 @@ internal sealed partial class DocxReader
             token.ThrowIfCancellationRequested();
             string id = start.Id!;
             if (ambiguous.Contains(id) || !lastParts.TryGetValue(id, out var end) ||
-                end.Part <= part || !referenceParts.TryGetValue(id, out int referencePart) ||
+                end.Part < part || !referenceParts.TryGetValue(id, out int referencePart) ||
                 referencePart < end.Part || referencePart == end.Part && end.End.ReferenceSourceRunIndex is null)
                 continue;
 
@@ -551,6 +579,14 @@ internal sealed partial class DocxReader
             boundaries ??= new int[elements.Count - firstPart + 1];
             boundaries[part - firstPart]++;
             boundaries[end.Part - firstPart + 1]--;
+        }
+
+        void AddStart(string id, int part, DocxCommentRange range)
+        {
+            if (startIds.Add(id))
+                starts.Add((part, range));
+            else
+                ambiguous.Add(id);
         }
 
         var selections = ranges.Count == 0 ? null : new DocxSplitCommentRanges(ranges, token);
