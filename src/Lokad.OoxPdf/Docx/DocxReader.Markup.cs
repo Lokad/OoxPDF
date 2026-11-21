@@ -5,7 +5,6 @@ using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Ooxml;
 using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
-using System.Diagnostics.CodeAnalysis;
 
 namespace Lokad.OoxPdf.Docx;
 
@@ -32,7 +31,7 @@ internal sealed partial class DocxReader
             foreach (XElement ancestor in element.Ancestors())
             {
                 token.ThrowIfCancellationRequested();
-                if (IsRevisionContainer(ancestor) && !IsIncludedRevisionContainer(ancestor, mode) &&
+                if (DocxSourceXml.IsRevisionContainer(ancestor) && !IsIncludedRevisionContainer(ancestor, mode) &&
                         !(retainsDeletedStructure && RetainsDeletedMathStructure(ancestor, mode)) ||
                     ancestor.Name == WordprocessingNamespace + "tr" && !IsIncludedTableRow(ancestor, mode, token))
                 { included = false; break; }
@@ -72,14 +71,6 @@ internal sealed partial class DocxReader
         return false;
     }
 
-    private static bool IsRevisionContainer(XElement element)
-    {
-        return element.Name == WordprocessingNamespace + "ins" ||
-            element.Name == WordprocessingNamespace + "del" ||
-            element.Name == WordprocessingNamespace + "moveFrom" ||
-            element.Name == WordprocessingNamespace + "moveTo";
-    }
-
     private static IEnumerable<DocxRevisionScopedElement> EnumerateRevisionScopedChildren(
         IEnumerable<XElement> elements,
         OoxPdfDocxMarkupMode markupMode,
@@ -114,7 +105,7 @@ internal sealed partial class DocxReader
                 continue;
             }
 
-            if (!IsRevisionContainer(element) || !IsIncludedRevisionContainer(element, markupMode))
+            if (!DocxSourceXml.IsRevisionContainer(element) || !IsIncludedRevisionContainer(element, markupMode))
             {
                 continue;
             }
@@ -134,41 +125,6 @@ internal sealed partial class DocxReader
             element.Name == WordprocessingNamespace + "moveFromRangeEnd" ||
             element.Name == WordprocessingNamespace + "moveToRangeStart" ||
             element.Name == WordprocessingNamespace + "moveToRangeEnd";
-    }
-
-    private static bool TryResolveRevisionRangeMarker(XElement element, [NotNullWhen(true)] out DocxRevisionKind? kind, out bool isStart)
-    {
-        if (element.Name == WordprocessingNamespace + "moveFromRangeStart")
-        {
-            kind = DocxRevisionKind.MoveFrom;
-            isStart = true;
-            return true;
-        }
-
-        if (element.Name == WordprocessingNamespace + "moveFromRangeEnd")
-        {
-            kind = DocxRevisionKind.MoveFrom;
-            isStart = false;
-            return true;
-        }
-
-        if (element.Name == WordprocessingNamespace + "moveToRangeStart")
-        {
-            kind = DocxRevisionKind.MoveTo;
-            isStart = true;
-            return true;
-        }
-
-        if (element.Name == WordprocessingNamespace + "moveToRangeEnd")
-        {
-            kind = DocxRevisionKind.MoveTo;
-            isStart = false;
-            return true;
-        }
-
-        kind = null;
-        isStart = false;
-        return false;
     }
 
     private static DocxRevisionKind? RevisionKind(XElement element)
@@ -495,7 +451,7 @@ internal sealed partial class DocxReader
 
     private static DocxRevisionInfo? FindInheritedRevision(XElement element, OoxPdfDocxMarkupMode markupMode)
     {
-        XElement? revisionContainer = element.Ancestors().FirstOrDefault(IsRevisionContainer);
+        XElement? revisionContainer = element.Ancestors().FirstOrDefault(DocxSourceXml.IsRevisionContainer);
         return revisionContainer is not null && IsIncludedRevisionContainer(revisionContainer, markupMode)
             ? CreateRevisionInfo(revisionContainer)
             : null;
@@ -505,7 +461,7 @@ internal sealed partial class DocxReader
     {
         return element
             .Ancestors()
-            .Any(ancestor => IsRevisionContainer(ancestor) && !IsIncludedRevisionContainer(ancestor, markupMode));
+            .Any(ancestor => DocxSourceXml.IsRevisionContainer(ancestor) && !IsIncludedRevisionContainer(ancestor, markupMode));
     }
 
     private static DocxResolvedRunProperties ApplyMarkupRevisionStyle(

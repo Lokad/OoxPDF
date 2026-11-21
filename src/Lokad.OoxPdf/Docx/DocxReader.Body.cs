@@ -662,8 +662,8 @@ internal sealed partial class DocxReader
 
     private static bool TrackNonPrintingMoveRangeBoundary(XElement child, ref HashSet<(DocxRevisionKind Kind, string Id)>? open)
     {
-        if (!TryResolveRevisionRangeMarker(child, out DocxRevisionKind? kind, out bool isStart) ||
-            !IsNonPrintingRevisionRangeBoundary(child))
+        if (!DocxSourceXml.TryResolveRevisionRangeMarker(child, out DocxRevisionKind? kind, out bool isStart) ||
+            !DocxSourceXml.IsNonPrintingRevisionRangeBoundary(child))
             return false;
 
         var marker = (kind.Value, child.Attribute(WordprocessingNamespace + "id")!.Value);
@@ -748,7 +748,7 @@ internal sealed partial class DocxReader
             return preserveRevisionRuns || EnumerateBreakSplitRunChildren(child, isHiddenBreak).Any();
         }
 
-        bool isRevision = IsRevisionContainer(child);
+        bool isRevision = DocxSourceXml.IsRevisionContainer(child);
         // Original excludes unselected insertions and moves even from measurement.
         // Other modes can need excluded deletions for math and table sizing.
         if (isRevision && markupMode == OoxPdfDocxMarkupMode.Original && !IsIncludedRevisionContainer(child, markupMode))

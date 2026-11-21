@@ -342,7 +342,9 @@ internal static class DocxInlineContent
             if (run.SourceRunIndex != equation.SourceRunIndex ||
                 equation.Revision is { } wrapper && !ReferenceEquals(run.Revision, wrapper)) return false;
             if (run.Revision is not { } revision) return run.Revisions.Count == 0;
-            if (revision.Kind is not (DocxRevisionKind.Insertion or DocxRevisionKind.Deletion) ||
+            bool hasInnerMoveOwner = equation.Revision is null &&
+                revision.Kind is DocxRevisionKind.MoveFrom or DocxRevisionKind.MoveTo;
+            if ((!hasInnerMoveOwner && revision.Kind is not (DocxRevisionKind.Insertion or DocxRevisionKind.Deletion)) ||
                 run.Revisions.Count == 0 || run.Revisions.Any(owner => !ReferenceEquals(owner, revision))) return false;
             if (countsAsOwner && seen.Add(revision)) actual.Add(revision);
             return true;
@@ -355,12 +357,12 @@ internal static class DocxInlineContent
         IReadOnlyList<DocxTextRun>? consumedParagraphMarks = null, DocxRevisionInfo? paragraphPropertyRevision = null,
         IReadOnlyList<DocxInlineTextBox>? inlineTextBoxes = null)
     {
-        List<DocxRevisionInfo>? equationOwners = null;
+        HashSet<DocxRevisionInfo>? equationOwners = null;
         if (equations is not null)
             foreach (var equation in equations)
             {
                 if (!TryGetEquationRevisionOwners(equation, token, out var owners)) return false;
-                if (owners.Count != 0) (equationOwners ??= []).AddRange(owners);
+                if (owners.Count != 0) (equationOwners ??= new(ReferenceEqualityComparer.Instance)).UnionWith(owners);
             }
         if (revisions.Count == 0)
         {
@@ -385,7 +387,10 @@ internal static class DocxInlineContent
                     return false;
                 continue;
             }
-            if (revision.Kind is not (DocxRevisionKind.Insertion or DocxRevisionKind.Deletion or DocxRevisionKind.RunPropertiesChange)) return false;
+            bool hasEquationMoveOwner = revision.Kind is DocxRevisionKind.MoveFrom or DocxRevisionKind.MoveTo &&
+                equationOwners?.Contains(revision) == true;
+            if (!hasEquationMoveOwner &&
+                revision.Kind is not (DocxRevisionKind.Insertion or DocxRevisionKind.Deletion or DocxRevisionKind.RunPropertiesChange)) return false;
             remaining.Add(revision);
         }
         // A resolved drawing owns its actual visible revision references. Validate

@@ -303,7 +303,7 @@ internal sealed partial class DocxReader
         ReadFloatingDrawings(document, document.Root?
             .Element(WordprocessingNamespace + "body")?
             .Elements()
-            .Where(static block => IsBodyBlockElement(block) || IsRevisionContainer(block)) ?? [],
+            .Where(static block => IsBodyBlockElement(block) || DocxSourceXml.IsRevisionContainer(block)) ?? [],
             package, relationships, styles, numbering, documentSettings, markupMode, cancellationToken, floatingBlocks);
 
     private static IReadOnlyList<DocxFloatingDrawing> ReadFloatingDrawings(

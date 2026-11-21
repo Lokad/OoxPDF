@@ -28,7 +28,7 @@ internal sealed partial class DocxReader
             }
             // One actual revision owner is supported. Unknown/nested wrapper
             // composition retains the existing diagnosed source fallback.
-            if (!IsRevisionContainer(source.Element) || source.HasWrapper) continue;
+            if (!DocxSourceXml.IsRevisionContainer(source.Element) || source.HasWrapper) continue;
             var revision = source.Revision;
             bool remove = source.RemoveDeletedText;
             if (!IsIncludedRevisionContainer(source.Element, mode))

@@ -165,7 +165,7 @@ internal sealed partial class DocxReader
             {
                 return AddSimpleField(child, revision);
             }
-            else if (IsRevisionContainer(child))
+            else if (DocxSourceXml.IsRevisionContainer(child))
             {
                 return AddRevisionRunContainer(child, inheritedRevision: revision);
             }
@@ -506,7 +506,7 @@ internal sealed partial class DocxReader
             {
                 DocxRevisionInfo? owner = equationRevision;
                 XElement? wrapper = run.Ancestors().TakeWhile(parent => parent.Name != MathNamespace + "oMath")
-                    .FirstOrDefault(parent => parent.Name.Namespace == WordprocessingNamespace && parent.Name.LocalName is "ins" or "del");
+                    .FirstOrDefault(DocxSourceXml.IsRevisionContainer);
                 if (wrapper is not null && !IsIncludedRevisionContainer(wrapper, markupMode)) owner = null;
                 else if (wrapper is not null)
                 {
@@ -1494,7 +1494,7 @@ internal sealed partial class DocxReader
     {
         DocxRevisionInfo? markerRevision = CreateRevisionInfo(marker);
         AddRevision(paragraphRevisions, markerRevision);
-        if (!TryResolveRevisionRangeMarker(marker, out DocxRevisionKind? resolvedKind, out bool isStart) ||
+        if (!DocxSourceXml.TryResolveRevisionRangeMarker(marker, out DocxRevisionKind? resolvedKind, out bool isStart) ||
             resolvedKind is not { } kind)
         {
             return;
@@ -1512,7 +1512,7 @@ internal sealed partial class DocxReader
                 runs.Sum(run => run.Text.Length))
             {
                 ContentSourcePosition = contentSourcePosition,
-                IsNonPrintingBoundary = IsNonPrintingRevisionRangeBoundary(marker),
+                IsNonPrintingBoundary = DocxSourceXml.IsNonPrintingRevisionRangeBoundary(marker),
                 MarkerRevision = markerRevision
             });
             return;
@@ -1529,7 +1529,7 @@ internal sealed partial class DocxReader
         }
 
         int textOffset = runs.Sum(run => run.Text.Length);
-        bool empty = startRange is { IsNonPrintingBoundary: true } && IsNonPrintingRevisionRangeBoundary(marker) &&
+        bool empty = startRange is { IsNonPrintingBoundary: true } && DocxSourceXml.IsNonPrintingRevisionRangeBoundary(marker) &&
             startRange.SourceRunIndex == sourceRunIndex && startRange.TextOffset == textOffset &&
             startRange.ContentSourcePosition == contentSourcePosition;
         revisionRanges.Add(new DocxRevisionRange(
@@ -1549,13 +1549,6 @@ internal sealed partial class DocxReader
             if (markerRevision is not null) markers.Add(markerRevision);
         }
     }
-
-    private static bool IsNonPrintingRevisionRangeBoundary(XElement element) =>
-        !element.HasElements && string.IsNullOrWhiteSpace(element.Value) &&
-        !string.IsNullOrWhiteSpace((string?)element.Attribute(WordprocessingNamespace + "id")) &&
-        element.Attributes().All(attribute => attribute.IsNamespaceDeclaration ||
-            attribute.Name.Namespace == WordprocessingNamespace &&
-            attribute.Name.LocalName is "id" or "name" or "author" or "date");
 
     private static void AddFieldReference(
         DocxFieldKind kind,
