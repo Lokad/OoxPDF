@@ -13,7 +13,7 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
     <PackageIcon>icon.png</PackageIcon>
-    <PackageReleaseNotes>0.3.0 development: .NET 10 and .NET 11 assets. Rendering improvements remain in progress; see CHANGELOG.md and docs/Capabilities.md for the current scope.</PackageReleaseNotes>
+    <PackageReleaseNotes>0.3.0 improves composed DOCX layout and PPTX chart rendering on .NET 10 and .NET 11. See CHANGELOG.md and docs/Migration.md for changes and API migration.</PackageReleaseNotes>
     <PackageProjectUrl>https://github.com/Lokad/OoxPDF</PackageProjectUrl>
     <RepositoryUrl>https://github.com/Lokad/OoxPDF.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>

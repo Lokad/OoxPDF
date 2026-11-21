@@ -4,17 +4,13 @@ Convert `.pptx` presentations and `.docx` documents to PDF in **.NET 10 and .NET
 The library is safe managed code with no runtime dependencies, Office automation
 or native libraries. Office and PDFium are used only by separate validation tools.
 
-[Lokad.OoxPdf 0.2.0](https://www.nuget.org/packages/Lokad.OoxPdf/0.2.0) is available
-on NuGet. Read the
+The documentation describes the **0.3.0** API. See the
 [changelog](CHANGELOG.md), [migration guide](docs/Migration.md) and
 [supported scope and limitations](docs/Capabilities.md).
 
-The current **0.3.0** source targets .NET 10 and .NET 11. Documentation describes
-this source API; publication is deferred.
-
 ## Usage
 
-Install with `dotnet add package Lokad.OoxPdf --version 0.2.0`.
+Install with `dotnet add package Lokad.OoxPdf`.
 
 ```csharp
 using Lokad.OoxPdf;

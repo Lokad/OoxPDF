@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.3.0 — Unreleased
+## 0.3.0
 
 - Targets .NET 10 and .NET 11, with safe managed code and no runtime dependencies.
 - DOCX: improves mixed text/equation/picture layout, table flow, notes, pagination,
@@ -16,9 +16,9 @@
 - PDF text preserves distinct Unicode characters when fonts share glyph outlines.
 - Breaking API changes require recompilation; see [migration](docs/Migration.md).
 
-Rendering remains approximate in [documented areas](docs/Capabilities.md).
-Office application-view calibration and release acceptance remain unfinished;
-publication is deferred.
+See [rendering scope and limitations](docs/Capabilities.md) for approximate
+features, known correctness gaps and the status of Office application-view
+calibration.
 
 ## 0.2.0 — 2026-10-29
 
