@@ -794,15 +794,8 @@ internal sealed partial class DocxLayoutEngine
     private static (double Left, double FirstLine, double Hanging) ResolveListStartIndent(
         DocxParagraph paragraph, DocxNumberingIndent listIndent)
     {
-        DocxParagraphIndent paragraphIndent = paragraph.Indent;
-        bool hasParagraphFirstLineSide =
-            paragraphIndent.FirstLinePoints is not null ||
-            paragraphIndent.HangingPoints is not null ||
-            paragraphIndent.FirstLineValue is not null ||
-            paragraphIndent.HangingValue is not null;
-        return (paragraph.ResolveLeftIndent(listIndent).Points ?? 0d,
-            (hasParagraphFirstLineSide ? paragraphIndent.FirstLinePoints : listIndent.FirstLinePoints) ?? 0d,
-            (hasParagraphFirstLineSide ? paragraphIndent.HangingPoints : listIndent.HangingPoints) ?? 0d);
+        var (firstLine, hanging) = paragraph.ResolveListFirstLineIndent(listIndent);
+        return (paragraph.ResolveLeftIndent(listIndent).Points ?? 0d, firstLine, hanging);
     }
 
     private static double GetParagraphStartOffset(DocxParagraph paragraph, double fixedScale)

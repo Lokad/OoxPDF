@@ -16,8 +16,7 @@ internal sealed record DocxParagraph(
 {
     public DocxParagraphShading? Shading { get; init; }
     public DocxParagraphIndent Indent { get; init; } = DocxParagraphIndent.Empty;
-    public bool HasDirectLeftIndent { get; init; }
-    public bool HasDirectRightIndent { get; init; }
+    public DocxParagraphIndent DirectIndent { get; init; } = DocxParagraphIndent.Empty;
     public IReadOnlyList<DocxTabStop> TabStops { get; init; } = [];
     public bool? SnapToGrid { get; init; }
     public string? SnapToGridValue { get; init; }
@@ -88,12 +87,21 @@ internal sealed record DocxParagraph(
     public DocxTextRun? ParagraphMarkRun { get; init; }
 
     public (double? Points, string? Value) ResolveLeftIndent(DocxNumberingIndent? numberingIndent)
-        => ResolveIndentSide(HasDirectLeftIndent, Indent.LeftPoints, Indent.LeftValue,
+        => ResolveIndentSide(DirectIndent.LeftPoints is not null, Indent.LeftPoints, Indent.LeftValue,
             numberingIndent?.LeftPoints, numberingIndent?.LeftValue);
 
     public (double? Points, string? Value) ResolveRightIndent(DocxNumberingIndent? numberingIndent)
-        => ResolveIndentSide(HasDirectRightIndent, Indent.RightPoints, Indent.RightValue,
+        => ResolveIndentSide(DirectIndent.RightPoints is not null, Indent.RightPoints, Indent.RightValue,
             numberingIndent?.RightPoints, numberingIndent?.RightValue);
+
+    public (double FirstLine, double Hanging) ResolveListFirstLineIndent(DocxNumberingIndent level)
+    {
+        // First-line and hanging offsets are inherited as one formatting choice.
+        if (!DirectIndent.HasFirstLineIndent && (level.FirstLinePoints is not null || level.HangingPoints is not null))
+            return (level.FirstLinePoints ?? 0d, level.HangingPoints ?? 0d);
+
+        return (Indent.FirstLinePoints ?? 0d, Indent.HangingPoints ?? 0d);
+    }
 
     // Direct formatting (including zero) wins over numbering-level formatting,
     // which takes precedence over the inherited paragraph indent.
@@ -387,6 +395,8 @@ internal sealed record DocxParagraphIndent(
     string? HangingValue)
 {
     public static DocxParagraphIndent Empty { get; } = new(null, null, null, null, null, null, null, null);
+    public bool HasFirstLineIndent => FirstLinePoints is not null || HangingPoints is not null ||
+        FirstLineValue is not null || HangingValue is not null;
 
     public DocxParagraphIndent Merge(DocxParagraphIndent other)
     {

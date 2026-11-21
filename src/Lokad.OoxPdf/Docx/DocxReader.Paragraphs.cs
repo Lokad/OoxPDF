@@ -397,8 +397,7 @@ internal sealed partial class DocxReader
         {
             Shading = resolvedParagraph.Shading,
             Indent = resolvedParagraph.Indent,
-            HasDirectLeftIndent = directParagraph.Indent.LeftPoints.HasValue,
-            HasDirectRightIndent = directParagraph.Indent.RightPoints.HasValue,
+            DirectIndent = directParagraph.Indent,
             TabStops = resolvedParagraph.TabStops,
             SnapToGrid = resolvedParagraph.SnapToGrid,
             SnapToGridValue = resolvedParagraph.SnapToGridValue,

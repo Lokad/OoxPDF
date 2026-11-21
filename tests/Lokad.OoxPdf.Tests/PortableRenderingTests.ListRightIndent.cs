@@ -10,7 +10,8 @@ internal static partial class PortableRenderingTests
     public static void PortableRenderingListRightIndentFollowsFormattingAcrossContainersAndBreaks()
     {
         ListIndentPaint[][] Paint(int? levelRight, int? styleRight = null, string directAttributes = "") =>
-            PaintListIndents("w:left=\"720\"" + Attribute("right", levelRight), Attribute("right", styleRight), directAttributes);
+            PaintListIndents("w:left=\"720\" w:hanging=\"360\"" + Attribute("right", levelRight),
+                Attribute("right", styleRight), directAttributes);
 
         ListIndentPaint[][] zero = Paint(0);
         ListIndentPaint[][] tight = Paint(1440);
@@ -29,21 +30,44 @@ internal static partial class PortableRenderingTests
 
     public static void PortableRenderingListLeftIndentFollowsFormattingAcrossContainersAndBreaks()
     {
-        ListIndentPaint[][] zero = PaintListIndents("w:left=\"0\"");
-        ListIndentPaint[][] tight = PaintListIndents("w:left=\"1440\"");
+        ListIndentPaint[][] Paint(int? levelLeft, int? styleLeft = null, string directAttributes = "") =>
+            PaintListIndents("w:hanging=\"360\"" + Attribute("left", levelLeft),
+                Attribute("left", styleLeft), directAttributes);
+
+        ListIndentPaint[][] zero = Paint(0);
+        ListIndentPaint[][] tight = Paint(1440);
         for (int i = 0; i < ListIndentOwners.Length; i++)
             TestAssert.True(tight[i][0].X > zero[i][0].X + 40d, ListIndentOwners[i] + " responds to the level inset.");
 
-        AssertListIndentPaint(zero, PaintListIndents("w:left=\"0\"", "w:left=\"1440\""),
+        AssertListIndentPaint(zero, Paint(0, 1440),
             "A level zero overrides an inherited left inset");
-        AssertListIndentPaint(tight, PaintListIndents("w:left=\"1440\"", "w:left=\"0\""),
+        AssertListIndentPaint(tight, Paint(1440, 0),
             "An inherited zero does not replace a level inset");
-        AssertListIndentPaint(zero, PaintListIndents("w:left=\"1440\"", directAttributes: "w:left=\"0\""),
+        AssertListIndentPaint(zero, Paint(1440, directAttributes: "w:left=\"0\""),
             "Direct zero resets a level inset");
-        AssertListIndentPaint(tight, PaintListIndents("w:left=\"0\"", directAttributes: "w:start=\"1440\" w:left=\"0\""),
+        AssertListIndentPaint(tight, Paint(0, directAttributes: "w:start=\"1440\" w:left=\"0\""),
             "Logical start owns the direct inset");
-        AssertListIndentPaint(tight, PaintListIndents("", "w:left=\"1440\""),
+        AssertListIndentPaint(tight, Paint(null, 1440),
             "The paragraph style fills an absent level inset");
+    }
+
+    public static void PortableRenderingListFirstLineIndentKeepsItsFormattingOwner()
+    {
+        const string Hanging = "w:hanging=\"360\"";
+        const string FirstLine = "w:firstLine=\"720\"";
+        const string Reset = "w:hanging=\"0\"";
+        ListIndentPaint[][] Paint(string level, string style = "", string direct = "") =>
+            PaintListIndents("w:left=\"1440\" " + level, style, direct);
+
+        ListIndentPaint[][] hanging = Paint(Hanging);
+        ListIndentPaint[][] firstLine = Paint(FirstLine);
+        ListIndentPaint[][] reset = Paint(Reset);
+        TestAssert.True(firstLine[0][0].X > hanging[0][0].X + 40d, "The level can move the first marker and its text.");
+        TestAssert.True(firstLine[2].SequenceEqual(hanging[2]), "A continuation keeps the left inset and loses the first-line adjustment.");
+        AssertListIndentPaint(hanging, Paint(Hanging, FirstLine), "A level hanging indent wins over a styled first line");
+        AssertListIndentPaint(firstLine, Paint(FirstLine, Hanging), "A level first line wins over a styled hanging indent");
+        AssertListIndentPaint(reset, Paint(FirstLine, Hanging, Reset), "Direct zero replaces the complete first-line choice");
+        AssertListIndentPaint(firstLine, Paint("", FirstLine), "The style supplies a missing level choice");
     }
 
     private static void AssertListIndentPaint(ListIndentPaint[][] expected, ListIndentPaint[][] actual, string rule)
@@ -96,7 +120,7 @@ internal static partial class PortableRenderingTests
             ["word/numbering.xml"] = $"""
                 <w:numbering xmlns:w="{w}">
                   <w:abstractNum w:abstractNumId="1"><w:lvl w:ilvl="0"><w:start w:val="1"/><w:numFmt w:val="decimal"/><w:lvlText w:val="%1."/><w:suff w:val="space"/>
-                  <w:pPr><w:ind w:hanging="360" {levelAttributes}/></w:pPr></w:lvl></w:abstractNum>
+                  <w:pPr><w:ind {levelAttributes}/></w:pPr></w:lvl></w:abstractNum>
                   <w:num w:numId="1"><w:abstractNumId w:val="1"/></w:num>
                 </w:numbering>
                 """,
