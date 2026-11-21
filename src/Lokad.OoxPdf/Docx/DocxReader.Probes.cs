@@ -218,14 +218,10 @@ internal sealed partial class DocxReader
                 "Approximated");
         }
 
-        bool hasUnsupportedColumnBreak = document.Descendants(WordprocessingNamespace + "br").Any(breakElement =>
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            return IsUnsupportedColumnBreak(breakElement, revisionFilteringMarkupMode);
-        });
+        var (bodyColumnBreaks, hasUnsupportedColumnBreak) = InspectColumnBreaks(
+            document, resolvedStyles, revisionFilteringMarkupMode, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
-        if (HasUnsupportedMultiColumnSection(document, resolvedStyles, revisionFilteringMarkupMode,
-            hasUnsupportedColumnBreak, cancellationToken))
+        if (HasUnsupportedMultiColumnSection(document, bodyColumnBreaks, hasUnsupportedColumnBreak))
         {
             Emit("DOCX_UNSUPPORTED_MULTI_COLUMN", "multi-column balancing or in-flow section columns", diagnosticPartName: "", fallback: "Sequential flow uses the available column frames");
         }
@@ -557,8 +553,7 @@ internal sealed partial class DocxReader
             !typeValue.Equals("evenPage", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static bool HasUnsupportedMultiColumnSection(XDocument document, DocxStyleSet styles,
-        OoxPdfDocxMarkupMode markupMode, bool hasUnsupportedColumnBreak, CancellationToken cancellationToken)
+    private static bool HasUnsupportedMultiColumnSection(XDocument document, int bodyColumnBreaks, bool hasUnsupportedColumnBreak)
     {
             bool IsMultiColumnDeclaration(XElement columns)
             {
@@ -573,11 +568,11 @@ internal sealed partial class DocxReader
             .ToArray();
         return multiColumnDeclarations.Length != 0 &&
             (hasUnsupportedColumnBreak ||
-                !IsSupportedExplicitFinalSectionColumnFlow(document, multiColumnDeclarations, styles, markupMode, cancellationToken));
+                !IsSupportedExplicitFinalSectionColumnFlow(document, multiColumnDeclarations, bodyColumnBreaks));
     }
 
     private static bool IsSupportedExplicitFinalSectionColumnFlow(XDocument document, IReadOnlyList<XElement> multiColumnDeclarations,
-        DocxStyleSet styles, OoxPdfDocxMarkupMode markupMode, CancellationToken cancellationToken)
+        int bodyColumnBreaks)
     {
         XElement? body = document.Root?.Element(WordprocessingNamespace + "body");
         XElement? finalSectionProperties = body?.Element(WordprocessingNamespace + "sectPr");
@@ -591,40 +586,54 @@ internal sealed partial class DocxReader
         }
 
         int columnCount = (int)OoxXml.ParseRequiredLong(finalColumns, WordprocessingNamespace + "num", "column count");
-        int supportedColumnBreaks = body
-            .Elements(WordprocessingNamespace + "p")
-            .SelectMany(paragraph => paragraph.Elements())
-            .SelectMany(child => EnumerateVisibleRunBreaks(child, VisibleColumnBreak, markupMode))
-            .Count();
-        return supportedColumnBreaks == columnCount - 1;
-
-        bool VisibleColumnBreak(XElement source)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            return IsColumnBreak(source) && !IsHiddenHardRunBreak(source, styles, null);
-        }
+        return bodyColumnBreaks == columnCount - 1;
     }
 
-    private static bool IsUnsupportedColumnBreak(XElement breakElement, OoxPdfDocxMarkupMode markupMode)
+    private static (int BodyColumnBreaks, bool HasUnsupportedColumnBreak) InspectColumnBreaks(
+        XDocument document, DocxStyleSet styles, OoxPdfDocxMarkupMode markupMode, CancellationToken cancellationToken)
     {
-        if (!IsColumnBreak(breakElement) || IsInsideExcludedRevisionContainer(breakElement, markupMode))
+        HashSet<XElement>? unassigned = null;
+        foreach (XElement source in document.Descendants(WordprocessingNamespace + "br"))
         {
-            return false;
+            cancellationToken.ThrowIfCancellationRequested();
+            if (IsColumnBreak(source) && !IsInsideExcludedRevisionContainer(source, markupMode))
+                (unassigned ??= []).Add(source);
+        }
+        if (unassigned is null)
+            return (0, false);
+
+        int bodyColumnBreaks = 0;
+        if (document.Root?.Element(WordprocessingNamespace + "body") is { } body)
+        {
+            // A paragraph in a transparent block wrapper keeps its body owner.
+            // Use the same paragraph and run projection as body pagination.
+            foreach (var paragraph in EnumerateRevisionScopedChildren(body.Elements(), markupMode,
+                         cancellationToken, [WordprocessingNamespace + "p"]))
+            foreach (XElement child in paragraph.Element.Elements())
+            foreach (XElement source in EnumerateVisibleRunBreaks(child, IsColumnBreak, markupMode))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (unassigned.Remove(source) && !IsHiddenHardRunBreak(source, styles, null))
+                    bodyColumnBreaks++;
+            }
         }
 
+        foreach (XElement source in unassigned)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (IsUnsupportedNonBodyColumnBreak(source, markupMode))
+                return (bodyColumnBreaks, true);
+        }
+        return (bodyColumnBreaks, false);
+    }
+
+    private static bool IsUnsupportedNonBodyColumnBreak(XElement breakElement, OoxPdfDocxMarkupMode markupMode)
+    {
         XElement? paragraph = breakElement.Ancestors(WordprocessingNamespace + "p").FirstOrDefault();
-        if (paragraph is null)
-        {
+        if (paragraph is null || !paragraph.Ancestors(WordprocessingNamespace + "tc").Any())
             return true;
-        }
 
-        bool isBodyParagraph = paragraph.Parent?.Name == WordprocessingNamespace + "body";
-        bool isTableCellParagraph = paragraph.Ancestors(WordprocessingNamespace + "tc").Any();
-        if (!isBodyParagraph && !isTableCellParagraph)
-        {
-            return true;
-        }
-
+        // Inline column breaks in table cells retain the existing fallback.
         XElement? visibleOwner = breakElement
             .AncestorsAndSelf()
             .TakeWhile(element => element != paragraph)

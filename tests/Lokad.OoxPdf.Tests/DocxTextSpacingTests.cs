@@ -1127,16 +1127,21 @@ internal static class DocxTextSpacingTests
         const string movedRun = "<w:moveTo w:id='70' w:author='Public probe'>" + visibleRun + "</w:moveTo>";
         var final = OoxPdfDocxMarkupMode.Final;
         var original = OoxPdfDocxMarkupMode.Original;
-        (string Name, string Prefix, OoxPdfDocxMarkupMode Mode, int Columns, int VisibleBreaks, bool MultiColumnWarning, bool ManualBreakWarning)[] cases =
+        string BreakParagraph(string prefix = "") => "<w:p>" + prefix + visibleRun + "</w:p>";
+        string direct = BreakParagraph();
+        (string Name, string Block, OoxPdfDocxMarkupMode Mode, int Columns, int VisibleBreaks, bool MultiColumnWarning, bool ManualBreakWarning)[] cases =
         [
-            ("direct", "", final, 2, 1, false, false),
-            ("excluded move", movedRun, original, 2, 1, false, false),
-            ("selected move", movedRun, final, 2, 2, true, false),
-            ("direct hidden", "<w:r><w:rPr><w:vanish/></w:rPr>" + columnBreak + "</w:r>", final, 2, 1, false, false),
-            ("inherited hidden", "<w:r><w:rPr><w:rStyle w:val='HiddenDerived'/></w:rPr>" + columnBreak + "</w:r>", final, 2, 1, false, false),
-            ("visible override", "<w:r><w:rPr><w:rStyle w:val='HiddenDerived'/><w:vanish w:val='0'/></w:rPr>" + columnBreak + "</w:r>", final, 2, 2, true, false),
-            ("unsupported container", columnBreak, final, 2, 1, true, true),
-            ("different section", "", final, 3, 1, true, false)
+            ("direct", direct, final, 2, 1, false, false),
+            ("content control", "<w:sdt><w:sdtContent>" + direct + "</w:sdtContent></w:sdt>", final, 2, 1, false, false),
+            ("custom XML", "<w:customXml w:element='layout'>" + direct + "</w:customXml>", OoxPdfDocxMarkupMode.AllMarkup, 2, 1, false, false),
+            ("unrecognized block", "<w:unrecognized>" + direct + "</w:unrecognized>", final, 2, 0, true, true),
+            ("excluded move", BreakParagraph(movedRun), original, 2, 1, false, false),
+            ("selected move", BreakParagraph(movedRun), final, 2, 2, true, false),
+            ("direct hidden", BreakParagraph("<w:r><w:rPr><w:vanish/></w:rPr>" + columnBreak + "</w:r>"), final, 2, 1, false, false),
+            ("inherited hidden", BreakParagraph("<w:r><w:rPr><w:rStyle w:val='HiddenDerived'/></w:rPr>" + columnBreak + "</w:r>"), final, 2, 1, false, false),
+            ("visible override", BreakParagraph("<w:r><w:rPr><w:rStyle w:val='HiddenDerived'/><w:vanish w:val='0'/></w:rPr>" + columnBreak + "</w:r>"), final, 2, 2, true, false),
+            ("unsupported container", BreakParagraph(columnBreak), final, 2, 1, true, true),
+            ("different section", direct, final, 3, 1, true, false)
         ];
 
         foreach (var test in cases)
@@ -1173,7 +1178,7 @@ internal static class DocxTextSpacingTests
                 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
                   <w:body>
                     <w:p><w:r><w:t>Left column</w:t></w:r></w:p>
-                    <w:p>{{test.Prefix}}{{visibleRun}}</w:p>
+                    {{test.Block}}
                     <w:p><w:r><w:t>Right column</w:t></w:r></w:p>
                     <w:sectPr>
                       <w:pgSz w:w="12240" w:h="15840"/>
