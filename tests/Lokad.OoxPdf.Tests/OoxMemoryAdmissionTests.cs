@@ -359,6 +359,65 @@ internal static partial class OoxMemoryAdmissionTests
         TestAssert.Throws<ObjectDisposedException>(() => _ = storage.Scratch);
     }
 
+    private static void AssertAdmissionPreservesPublication(OoxPdfInputKind kind, Func<MemoryStream> createInput,
+        Func<long, long, bool> selectsGrant)
+    {
+        foreach (bool cancel in new[] { false, true })
+        foreach (bool file in new[] { false, true })
+        {
+            using var cancellation = new CancellationTokenSource();
+            int selected = 0;
+            var budget = new TestMemoryBudget
+            {
+                RefuseChange = (before, after) =>
+                {
+                    if (!selectsGrant(before, after)) return false;
+                    selected++;
+                    if (cancel) cancellation.Cancel();
+                    return !cancel;
+                }
+            };
+            using var source = createInput();
+            var options = new OoxPdfOptions { InputKind = kind, FontResolver = new TestFaceFontResolver(), MemoryBudget = budget };
+            if (file)
+            {
+                string directory = Directory.CreateTempSubdirectory("construction-admission-").FullName;
+                string input = Path.Combine(directory, kind == OoxPdfInputKind.Docx ? "input.docx" : "input.pptx");
+                string target = Path.Combine(directory, "output.pdf");
+                File.WriteAllBytes(input, source.ToArray());
+                byte[] original = [7, 8, 9];
+                File.WriteAllBytes(target, original);
+                CheckFailure(() => OoxPdfConverter.ConvertAsync(input, target, options, cancellation.Token).GetAwaiter().GetResult());
+                TestAssert.True(File.ReadAllBytes(target).SequenceEqual(original), "Preserve the destination.");
+                TestAssert.Equal(0, Directory.GetFiles(directory, "*.tmp-*").Length);
+            }
+            else
+            {
+                using var output = new MemoryStream();
+                CheckFailure(() => OoxPdfConverter.ConvertAsync(source, output, options, cancellation.Token).GetAwaiter().GetResult());
+                TestAssert.True(source.CanRead && output.CanWrite, "Caller streams remain open.");
+                TestAssert.Equal(0L, output.Length);
+            }
+
+            TestAssert.Equal(1, selected);
+            TestAssert.Equal(0L, budget.Reserved);
+            TestAssert.Equal(budget.ScopesCreated, budget.ScopesDisposed);
+            TestAssert.Equal(0, budget.CallerDisposals);
+
+            void CheckFailure(Action convert)
+            {
+                if (cancel)
+                    TestAssert.Equal(cancellation.Token, TestAssert.Throws<OperationCanceledException>(convert).CancellationToken);
+                else
+                {
+                    var failure = TestAssert.Throws<OoxPdfLimitExceededException>(convert);
+                    TestAssert.Equal(OoxPdfLimitKind.MemoryAdmission, failure.Kind);
+                    TestAssert.Equal(OoxPdfLimitScope.Conversion, failure.Scope);
+                }
+            }
+        }
+    }
+
     private static string Case(string relative) => Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,
         "..", "..", "..", "Cases", relative));
 

@@ -52,47 +52,8 @@ internal static partial class OoxMemoryAdmissionTests
         foreach (var kind in new[] { OoxPdfInputKind.Docx, OoxPdfInputKind.Pptx })
         {
             long request = ObserveSampledSvg(kind, count: 16, groups: true).Request;
-            foreach (bool cancel in new[] { false, true })
-            foreach (bool file in new[] { false, true })
-            {
-                string directory = Path.Combine(Path.GetTempPath(), "svg-expansion-" + Guid.NewGuid().ToString("N"));
-                Directory.CreateDirectory(directory);
-                try
-                {
-                    using var cancellation = new CancellationTokenSource();
-                    int selected = 0;
-                    var budget = new TestMemoryBudget { RefuseChange = (before, after) => {
-                        if (before <= 0 || after != request) return false;
-                        selected++;
-                        if (cancel) { cancellation.Cancel(); return false; }
-                        return true;
-                    }};
-                    using var source = SampledSvgPackage(kind, 16, true, false, 1, 1);
-                    string input = Path.Combine(directory, kind == OoxPdfInputKind.Docx ? "input.docx" : "input.pptx");
-                    string target = Path.Combine(directory, "output.pdf");
-                    File.WriteAllBytes(input, source.ToArray()); File.WriteAllBytes(target, [7, 8, 9]);
-                    using var output = new MemoryStream();
-                    var options = new OoxPdfOptions { InputKind = kind, FontResolver = new TestFaceFontResolver(), MemoryBudget = budget };
-                    void Convert() => (file ? OoxPdfConverter.ConvertAsync(input, target, options, cancellation.Token) :
-                        OoxPdfConverter.ConvertAsync(source, output, options, cancellation.Token)).GetAwaiter().GetResult();
-                    if (cancel) TestAssert.Equal(cancellation.Token, TestAssert.Throws<OperationCanceledException>(Convert).CancellationToken);
-                    else
-                    {
-                        var failure = TestAssert.Throws<OoxPdfLimitExceededException>(Convert);
-                        TestAssert.Equal(OoxPdfLimitKind.MemoryAdmission, failure.Kind);
-                        TestAssert.Equal(OoxPdfLimitScope.Conversion, failure.Scope);
-                    }
-                    TestAssert.Equal(1, selected);
-                    TestAssert.Equal(0L, output.Length);
-                    TestAssert.True(File.ReadAllBytes(target).SequenceEqual(new byte[] { 7, 8, 9 }), "Preserve the destination.");
-                    TestAssert.True(source.CanRead && output.CanWrite, "Caller streams remain open.");
-                    TestAssert.Equal(0, Directory.GetFiles(directory, "*.tmp-*").Length);
-                    TestAssert.Equal(0L, budget.Reserved);
-                    TestAssert.Equal(budget.ScopesCreated, budget.ScopesDisposed);
-                    TestAssert.Equal(0, budget.CallerDisposals);
-                }
-                finally { Directory.Delete(directory, true); }
-            }
+            AssertAdmissionPreservesPublication(kind, () => SampledSvgPackage(kind, 16, true, false, 1, 1),
+                (before, after) => before > 0 && after == request);
         }
     }
 
