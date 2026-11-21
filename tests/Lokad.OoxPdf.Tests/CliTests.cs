@@ -8,7 +8,7 @@ internal static class CliTests
     public static void CliConvertReturnsZeroOnSuccess()
     {
         string input = WriteBasicDocx();
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        string output = TestFixtures.NewTemporaryPath(".pdf");
 
         TestToolResult result = RunCli("convert", input, output);
 
@@ -33,8 +33,8 @@ internal static class CliTests
 
     public static void CliReturnsOneForConversionFailure()
     {
-        string missing = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".docx");
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        string missing = TestFixtures.NewTemporaryPath(".docx");
+        string output = TestFixtures.NewTemporaryPath(".pdf");
 
         TestToolResult result = RunCli("convert", missing, output);
 
@@ -44,8 +44,8 @@ internal static class CliTests
     public static void CliStrictReturnsThreeWhenWarningsAreEmitted()
     {
         string input = WriteUnsupportedDocx();
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-        string diagnostics = Path.ChangeExtension(Path.GetTempFileName(), ".json");
+        string output = TestFixtures.NewTemporaryPath(".pdf");
+        string diagnostics = TestFixtures.NewTemporaryPath(".json");
 
         TestToolResult result = RunCli("convert", input, output, "--diagnostics", diagnostics, "--strict");
 
@@ -82,8 +82,8 @@ internal static class CliTests
         });
         foreach (string mode in new[] { "final", "original", "simple", "all" })
         {
-            string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-            string diagnostics = Path.ChangeExtension(Path.GetTempFileName(), ".json");
+            string output = TestFixtures.NewTemporaryPath(".pdf");
+            string diagnostics = TestFixtures.NewTemporaryPath(".json");
             TestToolResult result = RunCli("convert", input, output, "--diagnostics", diagnostics,
                 "--strict", "--docx-markup", mode);
             bool requested = mode is "simple" or "all";
@@ -100,7 +100,7 @@ internal static class CliTests
     public static void CliAcceptsDocxMarkupArgumentForDocxInput()
     {
         string input = WriteBasicDocx();
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        string output = TestFixtures.NewTemporaryPath(".pdf");
 
         TestToolResult result = RunCli("convert", input, output, "--docx-markup", "all");
 
@@ -111,7 +111,7 @@ internal static class CliTests
     public static void CliAcceptsDocxMarkupGeometryArgumentForDocxInput()
     {
         string input = WriteBasicDocx();
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        string output = TestFixtures.NewTemporaryPath(".pdf");
 
         TestToolResult result = RunCli("convert", input, output, "--docx-markup", "all", "--docx-markup-geometry", "reserve-margin");
 
@@ -122,7 +122,7 @@ internal static class CliTests
     public static void CliAcceptsDocxWordCompatibleMarkupGeometryArgumentForDocxInput()
     {
         string input = WriteBasicDocx();
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        string output = TestFixtures.NewTemporaryPath(".pdf");
 
         TestToolResult result = RunCli("convert", input, output, "--docx-markup", "all", "--docx-markup-geometry", "word-compatible");
 
@@ -133,7 +133,7 @@ internal static class CliTests
     public static void CliRejectsInvalidDocxMarkupArgument()
     {
         string input = WriteBasicDocx();
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        string output = TestFixtures.NewTemporaryPath(".pdf");
 
         TestToolResult result = RunCli("convert", input, output, "--docx-markup", "invalid");
 
@@ -144,7 +144,7 @@ internal static class CliTests
     public static void CliRejectsInvalidDocxMarkupGeometryArgument()
     {
         string input = WriteBasicDocx();
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        string output = TestFixtures.NewTemporaryPath(".pdf");
 
         TestToolResult result = RunCli("convert", input, output, "--docx-markup-geometry", "invalid");
 
@@ -154,8 +154,8 @@ internal static class CliTests
 
     public static void CliRejectsDocxMarkupArgumentForPptxInput()
     {
-        string input = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".pptx");
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        string input = TestFixtures.NewTemporaryPath(".pptx");
+        string output = TestFixtures.NewTemporaryPath(".pdf");
 
         TestToolResult result = RunCli("convert", input, output, "--docx-markup", "simple");
 
@@ -165,8 +165,8 @@ internal static class CliTests
 
     public static void CliRejectsDocxMarkupGeometryArgumentForPptxInput()
     {
-        string input = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".pptx");
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        string input = TestFixtures.NewTemporaryPath(".pptx");
+        string output = TestFixtures.NewTemporaryPath(".pdf");
 
         TestToolResult result = RunCli("convert", input, output, "--docx-markup-geometry", "reserve-margin");
 
@@ -177,7 +177,7 @@ internal static class CliTests
     public static void CliRejectsDiagnosticsPathEqualToInput()
     {
         string input = WriteBasicDocx();
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        string output = TestFixtures.NewTemporaryPath(".pdf");
         long beforeLength = new FileInfo(input).Length;
 
         TestToolResult result = RunCli("convert", input, output, "--diagnostics", input);
@@ -190,7 +190,7 @@ internal static class CliTests
     public static void CliRejectsDiagnosticsPathEqualToOutput()
     {
         string input = WriteBasicDocx();
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        string output = TestFixtures.NewTemporaryPath(".pdf");
 
         TestToolResult result = RunCli("convert", input, output, "--diagnostics", output);
 
@@ -264,8 +264,8 @@ internal static class CliTests
     public static void CliReportsMalformedNumericInputAsConversionFailure()
     {
         string input = WriteMalformedNumericDocx();
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-        string diagnostics = Path.ChangeExtension(Path.GetTempFileName(), ".json");
+        string output = TestFixtures.NewTemporaryPath(".pdf");
+        string diagnostics = TestFixtures.NewTemporaryPath(".json");
 
         TestToolResult result = RunCli("convert", input, output, "--diagnostics", diagnostics);
 

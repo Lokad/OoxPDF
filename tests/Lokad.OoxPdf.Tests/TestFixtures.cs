@@ -9,6 +9,9 @@ internal static class TestFixtures
     public static string PublicCasePath(string relativePath) =>
         Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", relativePath));
 
+    public static string NewTemporaryPath(string extension) =>
+        Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString("N"), extension));
+
     public static MemoryStream CreateZipPackage(IReadOnlyDictionary<string, string> entries)
     {
         var stream = new MemoryStream();
@@ -47,8 +50,7 @@ internal static class TestFixtures
     public static string WriteTempPackage(string extension, IReadOnlyDictionary<string, string> entries)
     {
         using MemoryStream stream = CreateZipPackage(entries);
-        string path = Path.Combine(Path.GetTempPath(),
-            Path.ChangeExtension(Guid.NewGuid().ToString("N"), extension));
+        string path = NewTemporaryPath(extension);
         File.WriteAllBytes(path, stream.ToArray());
         return path;
     }
@@ -56,8 +58,7 @@ internal static class TestFixtures
     public static string WriteTempPackage(string extension, IReadOnlyDictionary<string, byte[]> entries)
     {
         using MemoryStream stream = CreateZipPackage(entries);
-        string path = Path.Combine(Path.GetTempPath(),
-            Path.ChangeExtension(Guid.NewGuid().ToString("N"), extension));
+        string path = NewTemporaryPath(extension);
         File.WriteAllBytes(path, stream.ToArray());
         return path;
     }
