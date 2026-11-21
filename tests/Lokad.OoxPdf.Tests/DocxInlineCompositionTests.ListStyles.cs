@@ -15,9 +15,9 @@ internal static partial class DocxInlineCompositionTests
 
     internal static void CheckListLabelStyles(IFontResolver? resolver)
     {
-        string folder = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes"));
+        string folder = TestFixtures.PublicCasePath("CompositionProbes");
         using var golden = JsonDocument.Parse(File.ReadAllText(Path.Combine(folder, "list-styles-office.json")));
-        foreach (var row in golden.RootElement.GetProperty("Rows").EnumerateArray())
+        foreach (var row in RequireListLabelReferenceRows(golden, "list-styles-office.json"))
         {
             string id = row.GetProperty("Id").GetString()!;
             string path = Path.Combine(folder, row.GetProperty("File").GetString()!);
@@ -27,7 +27,6 @@ internal static partial class DocxInlineCompositionTests
             var document = DocxTests.ReadDocx(path, mode);
             var paragraphs = DocxBlockTraversal.EnumerateBodyParagraphs(document.BodyElements)
                 .Concat(document.HeaderParagraphs).Concat(document.FooterParagraphs).Where(p => p.ListLabel is not null).ToArray();
-            var owners = paragraphs.SelectMany(p => p.Runs).ToArray();
             var labels = row.GetProperty("Labels").EnumerateArray().ToArray();
             TestAssert.Equal(3, paragraphs.Length);
             foreach (var paragraph in paragraphs)
@@ -40,22 +39,15 @@ internal static partial class DocxInlineCompositionTests
             }
             var page = new DocxRenderer(resolver, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout
                 : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
-            var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true, includeTextTransforms: true).ToArray();
-            foreach (var expected in labels)
+            var paints = ReadListLabelPaintFonts(page, labels, id);
+            if (resolver is null)
             {
-                string text = expected.GetProperty("Text").GetString()!;
-                var paints = shows.Where(show => show.Text.Trim() == text).ToArray();
-                TestAssert.True(paints.Length != 0 && paints.All(show => show.Y > 0d && show.Y < page.Height),
-                    "Resolved labels keep their painted source row: " + id);
-                if (resolver is null)
-                    foreach (var paint in paints)
-                    {
-                        TestAssert.Equal(expected.GetProperty("Bold").GetBoolean(), paint.Font.Font.Os2.WeightClass >= 600);
-                        TestAssert.Equal(expected.GetProperty("Italic").GetBoolean(), Math.Abs(paint.Font.Font.Post.ItalicAngle) > .01d);
-                    }
+                for (int i = 0; i < labels.Length; i++)
+                {
+                    TestAssert.Equal(labels[i].GetProperty("Bold").GetBoolean(), paints[i].Font.Os2.WeightClass >= 600);
+                    TestAssert.Equal(labels[i].GetProperty("Italic").GetBoolean(), Math.Abs(paints[i].Font.Post.ItalicAngle) > .01d);
+                }
             }
-            TestAssert.True(owners.Zip(paragraphs.SelectMany(p => p.Runs)).All(pair => ReferenceEquals(pair.First, pair.Second)),
-                "Resolving label faces cannot rewrite source text formatting or revision owners.");
         }
     }
 }

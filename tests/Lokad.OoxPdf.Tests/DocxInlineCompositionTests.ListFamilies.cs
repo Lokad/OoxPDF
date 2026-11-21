@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using Lokad.OoxPdf.Docx;
 using Lokad.OoxPdf.Fonts;
+using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Tests;
 
@@ -15,9 +16,9 @@ internal static partial class DocxInlineCompositionTests
 
     internal static void CheckListLabelFamilies(IFontResolver? resolver)
     {
-        string folder = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes"));
+        string folder = TestFixtures.PublicCasePath("CompositionProbes");
         using var golden = JsonDocument.Parse(File.ReadAllText(Path.Combine(folder, "list-families-office.json")));
-        foreach (var row in golden.RootElement.GetProperty("Rows").EnumerateArray())
+        foreach (var row in RequireListLabelReferenceRows(golden, "list-families-office.json"))
         {
             string id = row.GetProperty("Id").GetString()!;
             string path = Path.Combine(folder, row.GetProperty("File").GetString()!);
@@ -26,7 +27,6 @@ internal static partial class DocxInlineCompositionTests
             var mode = final ? OoxPdfDocxMarkupMode.Final : OoxPdfDocxMarkupMode.AllMarkup;
             var document = DocxTests.ReadDocx(path, mode);
             var paragraphs = document.FooterParagraphs.Where(p => p.ListLabel is not null).ToArray();
-            var owners = paragraphs.SelectMany(p => p.Runs).ToArray();
             var labels = row.GetProperty("Labels").EnumerateArray().ToArray();
             TestAssert.Equal(3, paragraphs.Length);
             foreach (var paragraph in paragraphs)
@@ -39,19 +39,40 @@ internal static partial class DocxInlineCompositionTests
             }
             var page = new DocxRenderer(resolver, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout
                 : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
-            var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true, includeTextTransforms: true).ToArray();
-            foreach (var expected in labels)
-            {
-                string text = expected.GetProperty("Text").GetString()!;
-                var paints = shows.Where(show => show.Text.Trim() == text).ToArray();
-                TestAssert.True(paints.Length != 0 && paints.All(show => show.Y > 0d && show.Y < page.Height),
-                    "Resolved label families keep every painted source row: " + id);
-                if (resolver is null)
-                    foreach (var paint in paints)
-                        TestAssert.Equal(expected.GetProperty("Family").GetString(), paint.Font.Font.FamilyName);
-            }
-            TestAssert.True(owners.Zip(paragraphs.SelectMany(p => p.Runs)).All(pair => ReferenceEquals(pair.First, pair.Second)),
-                "Resolving numbering families cannot rewrite first-run formatting or revision owners.");
+            var paints = ReadListLabelPaintFonts(page, labels, id);
+            if (resolver is null)
+                for (int i = 0; i < labels.Length; i++)
+                    TestAssert.Equal(labels[i].GetProperty("Family").GetString(), paints[i].Font.FamilyName);
         }
+    }
+
+    private static JsonElement.ArrayEnumerator RequireListLabelReferenceRows(JsonDocument golden, string name)
+    {
+        JsonElement rows = golden.RootElement.GetProperty("Rows");
+        TestAssert.True(rows.GetArrayLength() != 0, $"The list label reference {name} has no rows.");
+        return rows.EnumerateArray();
+    }
+
+    private static PdfEmbeddedFont[] ReadListLabelPaintFonts(PdfPage page, JsonElement[] labels, string id)
+    {
+        var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true,
+            includeTextTransforms: true, honorActualText: false).ToArray();
+        string[] paragraphStarts = ["Summary:", "The two relationships", "The trend marker"];
+        TestAssert.Equal(paragraphStarts.Length, labels.Length);
+        var fonts = new PdfEmbeddedFont[labels.Length];
+        for (int i = 0; i < labels.Length; i++)
+        {
+            string label = labels[i].GetProperty("Text").GetString()!;
+            var paints = shows.Where(show => show.Text.Trim() == label).ToArray();
+            TestAssert.True(paints.Length == 1, $"{id}: expected one painted '{label}', found {paints.Length}.");
+            var paint = paints[0];
+            TestAssert.True(paint.Y > 0d && paint.Y < page.Height, $"{id}: label '{label}' leaves the page.");
+            string followingText = string.Concat(shows.Where(show => show.X > paint.X && Math.Abs(show.Y - paint.Y) < 2d)
+                .OrderBy(show => show.X).Select(show => show.Text));
+            TestAssert.True(followingText.TrimStart().StartsWith(paragraphStarts[i], StringComparison.Ordinal),
+                $"{id}: label '{label}' must precede '{paragraphStarts[i]}' on its printed line. Found '{followingText}'.");
+            fonts[i] = paint.Font;
+        }
+        return fonts;
     }
 }
