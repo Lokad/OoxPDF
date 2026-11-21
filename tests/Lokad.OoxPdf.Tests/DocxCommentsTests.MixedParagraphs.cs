@@ -535,57 +535,12 @@ internal static partial class DocxCommentsTests
 
     public static void DocxWordCompatibleMixedBalloonKeepsFittingSecondBodyFaces()
     {
-        foreach (int mask in Enumerable.Range(0, 2))
-        foreach (bool supplementary in new[] { false, true })
-        foreach (bool reverseFaces in new[] { false, true })
-        foreach (short gap in new short[] { 0, 450 })
-        foreach (double rightMargin in new[] { 72d, 207d })
-        foreach (bool canonicalSpacing in new[] { false, true })
+        foreach (var (firstWraps, supplementary, reverseFaces, gap, rightMargin, canonicalSpacing) in MixedSecondParagraphCases())
         {
-            string[] families = ["CommentFace", "OtherCommentFace", "CommentFace"];
-            var paragraphs = Enumerable.Range(0, 1).Select(index =>
-            {
-                string text = (mask & (1 << index)) == 0 ? "end." : new string('m', 72) + " ending.";
-                return DocxTests.CreateDocxLayoutParagraph(text, 12d, 14d) with
-                {
-                    LineSpacingPoints = null,
-                    Runs = [new DocxTextRun(text, 12d, null, false, false, false, null, families[index])],
-                    ParagraphMarkRun = new DocxTextRun(" ", 18d, null, false, false, false, null, "AnchorFace")
-                };
-            }).ToList();
             string prefix = supplementary ? "a\U0001F600b." : "Review.";
             const string suffix = " tail.";
-            paragraphs.Add(paragraphs[0] with
-            {
-                Runs = [new DocxTextRun(prefix, 12d, null, false, false, false, null, reverseFaces ? "OtherCommentFace" : "CommentFace"),
-                    new DocxTextRun(suffix, 12d, null, false, false, false, null, reverseFaces ? "CommentFace" : "OtherCommentFace")],
-                ParagraphMarkRun = paragraphs[0].ParagraphMarkRun! with { FontFamily = "OtherCommentFace", FontSize = 30d }
-            });
-            if (canonicalSpacing)
-            {
-                paragraphs = paragraphs.Select(paragraph => paragraph with
-                {
-                    Spacing = paragraph.Spacing with
-                    {
-                        BeforeLinesValue = "300", AfterLinesValue = "300", BeforeAutoSpacingValue = "off", AfterAutoSpacingValue = "on",
-                        BeforeValue = "120", AfterValue = "240"
-                    }
-                }).ToList();
-            }
-            DocxParagraph anchor = DocxTests.CreateCommentMarkerParagraph("Body anchor", "1") with
-            {
-                Runs = [new DocxTextRun("Body anchor", 12d, null, false, false, false, null, "AnchorFace")]
-            };
-            DocxRelatedStory story = new(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1",
-                paragraphs.Select(paragraph => (DocxBodyElement)new DocxParagraphElement(paragraph)).ToArray(), [], [], null)
-            {
-                CommentMetadata = new DocxCommentMetadata("Reviewer", "RV", null, null, null, null, null)
-            };
-            DocxDocument document = new(612d, 792d, 72d, rightMargin, 72d, 72d, DocxPageSettings.Empty,
-                [], [], [], [new DocxParagraphElement(anchor)], [], [])
-            {
-                RelatedStories = [story], MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
-            };
+            var (document, story, paragraphs) = CreateMixedSecondParagraphBalloon(
+                firstWraps, prefix, suffix, reverseFaces, rightMargin, canonicalSpacing);
             var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodyLineGap: gap, bodySpaceAdvance: 123),
                 OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var balloon = renderer.InspectMarkupBalloons(document).Single();
@@ -593,41 +548,7 @@ internal static partial class DocxCommentsTests
                 .Where(show => show.X >= balloon.X && show.Text.Length != 0 && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
             string expected = string.Join(" ", paragraphs.Select(paragraph => string.Concat(paragraph.Runs.Select(run => run.Text)))) + " ";
             TestAssert.Equal(expected, string.Concat(shows.Select(show => show.Text)));
-            int operationIndex = 0;
-            double previousParagraphLastY = shows[0].Y;
-            PdfEmbeddedFont? previousParagraphFont = null;
-            for (int paragraphIndex = 0; paragraphIndex < 1; paragraphIndex++)
-            {
-                string paragraphText = paragraphs[paragraphIndex].Runs[0].Text + " ";
-                var operations = new List<(PdfEmbeddedFont Font, string Text, double Size, double X, double Y)>();
-                string joined = "";
-                while (operationIndex < shows.Length && joined.Length < paragraphText.Length)
-                {
-                    operations.Add(shows[operationIndex]);
-                    joined += shows[operationIndex++].Text;
-                }
-                TestAssert.Equal(paragraphText, joined);
-                TestAssert.True(operations.Count >= 2, "The preceding paragraph retains separate body and nominal-mark emission.");
-                var bodyRows = operations.Take(operations.Count - 1).GroupBy(show => show.Y).OrderByDescending(group => group.Key).ToArray();
-                var embedded = bodyRows[0].First().Font;
-                var font = embedded.Font;
-                double pitch = (font.Hhea.HorizontalAscender - font.Hhea.HorizontalDescender + font.Hhea.HorizontalLineGap) / (double)font.UnitsPerEm * bodyRows[0].First().Size;
-                for (int rowIndex = 1; rowIndex < bodyRows.Length; rowIndex++)
-                {
-                    TestAssert.True(Math.Abs(bodyRows[rowIndex - 1].Key - bodyRows[rowIndex].Key - pitch) < 0.02d,
-                        "Each preceding paragraph retains its own continuation pitch.");
-                }
-                if (previousParagraphFont is not null)
-                {
-                    var previousBody = previousParagraphFont.Font;
-                    double transition = (-previousBody.Hhea.HorizontalDescender / (double)previousBody.UnitsPerEm +
-                        (font.Hhea.HorizontalAscender + font.Hhea.HorizontalLineGap) / (double)font.UnitsPerEm) * bodyRows[0].First().Size;
-                    TestAssert.True(Math.Abs(previousParagraphLastY - bodyRows[0].Key - transition) < 0.02d,
-                        "Preceding paragraph boundaries retain their own prepared-face transition.");
-                }
-                previousParagraphLastY = bodyRows[^1].Key;
-                previousParagraphFont = embedded;
-            }
+            AssertFirstBalloonParagraph(shows, paragraphs[0]);
             var last = shows.GroupBy(show => show.Y).OrderByDescending(group => group.Key).Last().ToArray();
             TestAssert.Equal(3, last.Length);
             TestAssert.Equal(prefix, last[0].Text);
@@ -668,7 +589,7 @@ internal static partial class DocxCommentsTests
                 TestAssert.True(guardedShows.Length > 0 && guardedShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
                     "Three second-body runs, decoration, an overwide closing run and unqualified spacing retain fallback.");
             }
-            if (mask == 0 && !supplementary && !reverseFaces && gap == 0 && rightMargin == 72d && !canonicalSpacing)
+            if (!firstWraps && !supplementary && !reverseFaces && gap == 0 && rightMargin == 72d && !canonicalSpacing)
             {
                 var numericParagraphs = paragraphs.Select((paragraph, index) => index < 1
                     ? paragraph with { Runs = [paragraph.Runs[0] with { FontFamily = "CommentFace", Text = "a." }] }
@@ -703,57 +624,12 @@ internal static partial class DocxCommentsTests
     public static void DocxWordCompatibleMixedBalloonWrapsSecondBodyBeforeFittingClosingRun()
     {
         foreach (int prefixLength in new[] { 80, 88, 96 })
-        foreach (int mask in Enumerable.Range(0, 2))
-        foreach (bool supplementary in new[] { false, true })
-        foreach (bool reverseFaces in new[] { false, true })
-        foreach (short gap in new short[] { 0, 450 })
-        foreach (double rightMargin in new[] { 72d, 207d })
-        foreach (bool canonicalSpacing in new[] { false, true })
+        foreach (var (firstWraps, supplementary, reverseFaces, gap, rightMargin, canonicalSpacing) in MixedSecondParagraphCases())
         {
-            string[] families = ["CommentFace", "OtherCommentFace", "CommentFace"];
-            var paragraphs = Enumerable.Range(0, 1).Select(index =>
-            {
-                string text = (mask & (1 << index)) == 0 ? "end." : new string('m', 72) + " ending.";
-                return DocxTests.CreateDocxLayoutParagraph(text, 12d, 14d) with
-                {
-                    LineSpacingPoints = null,
-                    Runs = [new DocxTextRun(text, 12d, null, false, false, false, null, families[index])],
-                    ParagraphMarkRun = new DocxTextRun(" ", 18d, null, false, false, false, null, "AnchorFace")
-                };
-            }).ToList();
             string prefix = (supplementary ? string.Concat(Enumerable.Repeat("a\U0001F600", prefixLength / 2)) : new string('a', prefixLength)) + " finish.";
             const string suffix = "tail.";
-            paragraphs.Add(paragraphs[0] with
-            {
-                Runs = [new DocxTextRun(prefix, 12d, null, false, false, false, null, reverseFaces ? "OtherCommentFace" : "CommentFace"),
-                    new DocxTextRun(suffix, 12d, null, false, false, false, null, reverseFaces ? "CommentFace" : "OtherCommentFace")],
-                ParagraphMarkRun = paragraphs[0].ParagraphMarkRun! with { FontFamily = "OtherCommentFace", FontSize = 30d }
-            });
-            if (canonicalSpacing)
-            {
-                paragraphs = paragraphs.Select(paragraph => paragraph with
-                {
-                    Spacing = paragraph.Spacing with
-                    {
-                        BeforeLinesValue = "300", AfterLinesValue = "300", BeforeAutoSpacingValue = "off", AfterAutoSpacingValue = "on",
-                        BeforeValue = "120", AfterValue = "240"
-                    }
-                }).ToList();
-            }
-            DocxParagraph anchor = DocxTests.CreateCommentMarkerParagraph("Body anchor", "1") with
-            {
-                Runs = [new DocxTextRun("Body anchor", 12d, null, false, false, false, null, "AnchorFace")]
-            };
-            DocxRelatedStory story = new(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1",
-                paragraphs.Select(paragraph => (DocxBodyElement)new DocxParagraphElement(paragraph)).ToArray(), [], [], null)
-            {
-                CommentMetadata = new DocxCommentMetadata("Reviewer", "RV", null, null, null, null, null)
-            };
-            DocxDocument document = new(612d, 792d, 72d, rightMargin, 72d, 72d, DocxPageSettings.Empty,
-                [], [], [], [new DocxParagraphElement(anchor)], [], [])
-            {
-                RelatedStories = [story], MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
-            };
+            var (document, story, paragraphs) = CreateMixedSecondParagraphBalloon(
+                firstWraps, prefix, suffix, reverseFaces, rightMargin, canonicalSpacing);
             var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodyLineGap: gap, bodySpaceAdvance: 123),
                 OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var balloon = renderer.InspectMarkupBalloons(document).Single();
@@ -761,41 +637,8 @@ internal static partial class DocxCommentsTests
                 .Where(show => show.X >= balloon.X && show.Text.Length != 0 && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
             string expected = string.Join(" ", paragraphs.Select(paragraph => string.Concat(paragraph.Runs.Select(run => run.Text)))) + " ";
             TestAssert.Equal(expected, string.Concat(shows.Select(show => show.Text)));
-            int operationIndex = 0;
-            double previousParagraphLastY = shows[0].Y;
-            PdfEmbeddedFont? previousParagraphFont = null;
-            for (int paragraphIndex = 0; paragraphIndex < 1; paragraphIndex++)
-            {
-                string paragraphText = paragraphs[paragraphIndex].Runs[0].Text + " ";
-                var operations = new List<(PdfEmbeddedFont Font, string Text, double Size, double X, double Y)>();
-                string joined = "";
-                while (operationIndex < shows.Length && joined.Length < paragraphText.Length)
-                {
-                    operations.Add(shows[operationIndex]);
-                    joined += shows[operationIndex++].Text;
-                }
-                TestAssert.Equal(paragraphText, joined);
-                TestAssert.True(operations.Count >= 2, "The preceding paragraph retains separate body and nominal-mark emission.");
-                var bodyRows = operations.Take(operations.Count - 1).GroupBy(show => show.Y).OrderByDescending(group => group.Key).ToArray();
-                var embedded = bodyRows[0].First().Font;
-                var font = embedded.Font;
-                double pitch = (font.Hhea.HorizontalAscender - font.Hhea.HorizontalDescender + font.Hhea.HorizontalLineGap) / (double)font.UnitsPerEm * bodyRows[0].First().Size;
-                for (int rowIndex = 1; rowIndex < bodyRows.Length; rowIndex++)
-                {
-                    TestAssert.True(Math.Abs(bodyRows[rowIndex - 1].Key - bodyRows[rowIndex].Key - pitch) < 0.02d,
-                        "Each preceding paragraph retains its own continuation pitch.");
-                }
-                if (previousParagraphFont is not null)
-                {
-                    var previousBody = previousParagraphFont.Font;
-                    double transition = (-previousBody.Hhea.HorizontalDescender / (double)previousBody.UnitsPerEm +
-                        (font.Hhea.HorizontalAscender + font.Hhea.HorizontalLineGap) / (double)font.UnitsPerEm) * bodyRows[0].First().Size;
-                    TestAssert.True(Math.Abs(previousParagraphLastY - bodyRows[0].Key - transition) < 0.02d,
-                        "Preceding paragraph boundaries retain their own prepared-face transition.");
-                }
-                previousParagraphLastY = bodyRows[^1].Key;
-                previousParagraphFont = embedded;
-            }
+            var (operationIndex, previousParagraphLastY, previousParagraphFont) =
+                AssertFirstBalloonParagraph(shows, paragraphs[0]);
             var last = shows.GroupBy(show => show.Y).OrderByDescending(group => group.Key).Last().ToArray();
             TestAssert.True(last.Length is 2 or 3, "The final row retains its body runs and nominal mark.");
             bool closingOwnRow = last.Length == 2;
@@ -811,7 +654,7 @@ internal static partial class DocxCommentsTests
                 TestAssert.True(Math.Abs(secondRows[rowIndex - 1].Key - secondRows[rowIndex].Key - ownPitch) < 0.02d,
                     "Ordinary second continuations use only their first prepared body face.");
             }
-            var precedingFont = previousParagraphFont!.Font;
+            var precedingFont = previousParagraphFont.Font;
             double firstStep = (-precedingFont.Hhea.HorizontalDescender / (double)precedingFont.UnitsPerEm +
                 (firstFont.Hhea.HorizontalAscender + firstFont.Hhea.HorizontalLineGap) / (double)firstFont.UnitsPerEm) * firstSecond.Size;
             TestAssert.True(Math.Abs(previousParagraphLastY - firstSecond.Y - firstStep) < 0.02d,
@@ -867,7 +710,7 @@ internal static partial class DocxCommentsTests
                 TestAssert.True(guardedShows.Length > 0 && guardedShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
                     "Three second-body runs, decoration, a closing run that cannot fit, a trailing prefix separator and unqualified spacing retain fallback.");
             }
-            if (mask == 0 && !supplementary && !reverseFaces && gap == 0 && rightMargin == 72d && !canonicalSpacing)
+            if (!firstWraps && !supplementary && !reverseFaces && gap == 0 && rightMargin == 72d && !canonicalSpacing)
             {
                 var numericParagraphs = paragraphs.Select((paragraph, index) => index < 1
                     ? paragraph with { Runs = [paragraph.Runs[0] with { FontFamily = "CommentFace", Text = "a." }] }
@@ -897,6 +740,92 @@ internal static partial class DocxCommentsTests
                 }
             }
         }
+    }
+
+    private static IEnumerable<(bool FirstWraps, bool Supplementary, bool ReverseFaces, short Gap, double RightMargin, bool CanonicalSpacing)>
+        MixedSecondParagraphCases()
+    {
+        foreach (bool firstWraps in new[] { false, true })
+        foreach (bool supplementary in new[] { false, true })
+        foreach (bool reverseFaces in new[] { false, true })
+        foreach (short gap in new short[] { 0, 450 })
+        foreach (double rightMargin in new[] { 72d, 207d })
+        foreach (bool canonicalSpacing in new[] { false, true })
+            yield return (firstWraps, supplementary, reverseFaces, gap, rightMargin, canonicalSpacing);
+    }
+
+    private static (DocxDocument Document, DocxRelatedStory Story, DocxParagraph[] Paragraphs)
+        CreateMixedSecondParagraphBalloon(bool firstWraps, string prefix, string suffix, bool reverseFaces,
+            double rightMargin, bool canonicalSpacing)
+    {
+        string text = firstWraps ? new string('m', 72) + " ending." : "end.";
+        var first = DocxTests.CreateDocxLayoutParagraph(text, 12d, 14d) with
+        {
+            LineSpacingPoints = null,
+            Runs = [new DocxTextRun(text, 12d, null, false, false, false, null, "CommentFace")],
+            ParagraphMarkRun = new DocxTextRun(" ", 18d, null, false, false, false, null, "AnchorFace")
+        };
+        DocxParagraph[] paragraphs =
+        [
+            first,
+            first with
+            {
+                Runs = [new DocxTextRun(prefix, 12d, null, false, false, false, null, reverseFaces ? "OtherCommentFace" : "CommentFace"),
+                    new DocxTextRun(suffix, 12d, null, false, false, false, null, reverseFaces ? "CommentFace" : "OtherCommentFace")],
+                ParagraphMarkRun = first.ParagraphMarkRun! with { FontFamily = "OtherCommentFace", FontSize = 30d }
+            }
+        ];
+        if (canonicalSpacing)
+        {
+            paragraphs = paragraphs.Select(paragraph => paragraph with
+            {
+                Spacing = paragraph.Spacing with
+                {
+                    BeforeLinesValue = "300", AfterLinesValue = "300", BeforeAutoSpacingValue = "off", AfterAutoSpacingValue = "on",
+                    BeforeValue = "120", AfterValue = "240"
+                }
+            }).ToArray();
+        }
+        DocxParagraph anchor = DocxTests.CreateCommentMarkerParagraph("Body anchor", "1") with
+        {
+            Runs = [new DocxTextRun("Body anchor", 12d, null, false, false, false, null, "AnchorFace")]
+        };
+        DocxRelatedStory story = new(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1",
+            paragraphs.Select(paragraph => (DocxBodyElement)new DocxParagraphElement(paragraph)).ToArray(), [], [], null)
+        {
+            CommentMetadata = new DocxCommentMetadata("Reviewer", "RV", null, null, null, null, IsResolved: null)
+        };
+        DocxDocument document = new(612d, 792d, 72d, rightMargin, 72d, 72d, DocxPageSettings.Empty,
+            [], [], [], [new DocxParagraphElement(anchor)], [], [])
+        {
+            RelatedStories = [story], MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+        return (document, story, paragraphs);
+    }
+
+    private static (int NextOperation, double LastBaseline, PdfEmbeddedFont Font) AssertFirstBalloonParagraph(
+        (PdfEmbeddedFont Font, string Text, double Size, double X, double Y)[] shows, DocxParagraph paragraph)
+    {
+        string paragraphText = paragraph.Runs[0].Text + " ";
+        int operationIndex = 0;
+        string joined = "";
+        while (operationIndex < shows.Length && joined.Length < paragraphText.Length)
+            joined += shows[operationIndex++].Text;
+
+        TestAssert.Equal(paragraphText, joined);
+        TestAssert.True(operationIndex >= 2, "The preceding paragraph retains separate body and nominal-mark emission.");
+        TestAssert.Equal(" ", shows[operationIndex - 1].Text);
+        var bodyRows = shows.Take(operationIndex - 1).GroupBy(show => show.Y).OrderByDescending(group => group.Key).ToArray();
+        var first = bodyRows[0].First();
+        var font = first.Font.Font;
+        double pitch = (font.Hhea.HorizontalAscender - font.Hhea.HorizontalDescender + font.Hhea.HorizontalLineGap) /
+            (double)font.UnitsPerEm * first.Size;
+        for (int rowIndex = 1; rowIndex < bodyRows.Length; rowIndex++)
+        {
+            TestAssert.True(Math.Abs(bodyRows[rowIndex - 1].Key - bodyRows[rowIndex].Key - pitch) < 0.02d,
+                "The first paragraph retains its own continuation pitch.");
+        }
+        return (operationIndex, bodyRows[^1].Key, first.Font);
     }
 
     public static void DocxWordCompatibleMixedBalloonWrapsThirdBodyBeforeFittingClosingRun()
