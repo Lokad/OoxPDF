@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Text;
 
 namespace Lokad.OoxPdf.Pdf;
 
@@ -7,24 +6,8 @@ internal sealed record PdfTilingPatternResource(string ResourceName, PdfTilingPa
 
 internal sealed class PdfTilingPattern
 {
+    private const int OfficeBitmapSize = 16;
     private string? resourceKey;
-
-    public PdfTilingPattern(double width, double height, string content)
-        : this(width, height, width, height, null, 1, content, [])
-    {
-    }
-
-    public PdfTilingPattern(
-        double width,
-        double height,
-        double xStep,
-        double yStep,
-        PdfPatternMatrix? matrix,
-        int tilingType,
-        string content)
-        : this(width, height, xStep, yStep, matrix, tilingType, content, [])
-    {
-    }
 
     public PdfTilingPattern(
         double width,
@@ -74,15 +57,12 @@ internal sealed class PdfTilingPattern
         byte backgroundGreen,
         byte backgroundBlue)
     {
-        const int cellSize = 16;
-        const double matrixScale = 0.375d;
-        const string imageName = "ImPattern";
         int stripeWidth = thin ? 1 : 2;
 
-        byte[] rgb = new byte[cellSize * cellSize * 3];
-        for (int y = 0; y < cellSize; y++)
+        byte[] rgb = new byte[OfficeBitmapSize * OfficeBitmapSize * 3];
+        for (int y = 0; y < OfficeBitmapSize; y++)
         {
-            for (int x = 0; x < cellSize; x++)
+            for (int x = 0; x < OfficeBitmapSize; x++)
             {
                 int diagonalOffset = 2 * (y / 2);
                 int position = kind switch
@@ -94,23 +74,14 @@ internal sealed class PdfTilingPattern
                     _ => 0
                 };
                 bool foreground = position >= 8 - stripeWidth;
-                int index = (y * cellSize + x) * 3;
+                int index = (y * OfficeBitmapSize + x) * 3;
                 rgb[index] = foreground ? foregroundRed : backgroundRed;
                 rgb[index + 1] = foreground ? foregroundGreen : backgroundGreen;
                 rgb[index + 2] = foreground ? foregroundBlue : backgroundBlue;
             }
         }
 
-        var image = PdfImageXObject.RgbPng(cellSize, cellSize, rgb, alpha: null);
-        return new PdfTilingPattern(
-            cellSize,
-            cellSize,
-            cellSize,
-            cellSize,
-            new PdfPatternMatrix(matrixScale, 0d, 0d, matrixScale, 0d, 0d),
-            tilingType: 2,
-            "q 16 0 0 16 0 0 cm /" + imageName + " Do Q\n",
-            [new PdfImageResource(imageName, image)]);
+        return CreateOfficeBitmapPattern(rgb);
     }
 
     // Office pct70 percentage weave: two banked Office renders emit byte-identical 16x16
@@ -125,29 +96,32 @@ internal sealed class PdfTilingPattern
         byte backgroundGreen,
         byte backgroundBlue)
     {
-        const int cellSize = 16;
-        const double matrixScale = 0.375d;
-        const string imageName = "ImPattern";
-
-        byte[] rgb = new byte[cellSize * cellSize * 3];
-        for (int y = 0; y < cellSize; y++)
+        byte[] rgb = new byte[OfficeBitmapSize * OfficeBitmapSize * 3];
+        for (int y = 0; y < OfficeBitmapSize; y++)
         {
-            for (int x = 0; x < cellSize; x++)
+            for (int x = 0; x < OfficeBitmapSize; x++)
             {
                 bool foreground = PositiveModulo(x - 4 * ((y / 2) % 2), 8) >= 2;
-                int index = (y * cellSize + x) * 3;
+                int index = (y * OfficeBitmapSize + x) * 3;
                 rgb[index] = foreground ? foregroundRed : backgroundRed;
                 rgb[index + 1] = foreground ? foregroundGreen : backgroundGreen;
                 rgb[index + 2] = foreground ? foregroundBlue : backgroundBlue;
             }
         }
 
-        var image = PdfImageXObject.RgbPng(cellSize, cellSize, rgb, alpha: null);
+        return CreateOfficeBitmapPattern(rgb);
+    }
+
+    private static PdfTilingPattern CreateOfficeBitmapPattern(byte[] rgb)
+    {
+        const double matrixScale = 0.375d;
+        const string imageName = "ImPattern";
+        var image = PdfImageXObject.RgbPng(OfficeBitmapSize, OfficeBitmapSize, rgb, alpha: null);
         return new PdfTilingPattern(
-            cellSize,
-            cellSize,
-            cellSize,
-            cellSize,
+            OfficeBitmapSize,
+            OfficeBitmapSize,
+            OfficeBitmapSize,
+            OfficeBitmapSize,
             new PdfPatternMatrix(matrixScale, 0d, 0d, matrixScale, 0d, 0d),
             tilingType: 2,
             "q 16 0 0 16 0 0 cm /" + imageName + " Do Q\n",

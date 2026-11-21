@@ -501,7 +501,7 @@ internal static class PdfTransparencyGroupTests
             new(100, 100, "/Pattern CS /Missing SCN\n"),
             new(100, 100, "/Pattern cs /Missing scn\n"),
             new(100, 100, "/Ps1 SCN\n", [], [], [], [], [], [], shadingPatterns: [new("Ps1", pattern), new("Ps1", pattern)]),
-            new(100, 100, "/Ps1 SCN\n", [], [], [], [], [new("Ps1", new PdfTilingPattern(10, 10, "0 g\n"))], [], shadingPatterns: [new("Ps1", pattern)]),
+            new(100, 100, "/Ps1 SCN\n", [], [], [], [], [new("Ps1", new PdfTilingPattern(10, 10, 10, 10, null, 1, "0 g\n", []))], [], shadingPatterns: [new("Ps1", pattern)]),
             new(100, 100, "/Tr1 Do\n", [], [], [], [], [], [], groups: [new("Tr1", new PdfTransparencyGroup(Bounds, "/Ps1 SCN\n", [], [], []))], shadingPatterns: [new("Ps1", pattern)]),
             GroupPage(new PdfTransparencyGroup(Bounds, "/Ps1 SCN\n", [], [], [], [new("Ps1", pattern), new("Ps1", pattern)]))
         ];

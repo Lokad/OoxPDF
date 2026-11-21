@@ -228,7 +228,7 @@ internal static partial class PdfWriterTests
     public static void WritesTilingPatternResources()
     {
         var graphics = new PdfGraphicsBuilder();
-        var pattern = new PdfTilingPattern(4d, 4d, "0 0 m 4 4 l S\n");
+        var pattern = new PdfTilingPattern(4d, 4d, 4d, 4d, null, 1, "0 0 m 4 4 l S\n", []);
         graphics.FillRectangleWithTilingPattern(10, 20, 30, 40, pattern);
         var page = new PdfPage(100, 100, graphics.ToString(), [], [], graphics.ExtGStates, graphics.Shadings, graphics.Patterns);
 
@@ -247,7 +247,7 @@ internal static partial class PdfWriterTests
     {
         var graphics = new PdfGraphicsBuilder();
         var pattern = new PdfTilingPattern(16d, 16d, 16d, 16d,
-            new PdfPatternMatrix(0.375d, 0d, 0d, 0.375d, 0d, 0d), 2, "0 0 m 16 16 l S\n");
+            new PdfPatternMatrix(0.375d, 0d, 0d, 0.375d, 0d, 0d), 2, "0 0 m 16 16 l S\n", []);
         graphics.FillRectangleWithTilingPattern(10, 20, 30, 40, pattern);
         var page = new PdfPage(100, 100, graphics.ToString(), [], [], graphics.ExtGStates, graphics.Shadings, graphics.Patterns);
 
@@ -653,7 +653,7 @@ internal static partial class PdfWriterTests
         graphics.DrawImage("Im1", 0, 0, 10, 10);
         graphics.PaintAxialShading(0, 0, 10, 0, 255, 0, 0, 0, 0, 255);
         graphics.PaintRadialShading([new(0d, 255, 0, 0), new(1d, 0, 0, 255)], 3, reflect: true);
-        var pattern = new PdfTilingPattern(4d, 4d, "0 0 m 4 4 l S\n");
+        var pattern = new PdfTilingPattern(4d, 4d, 4d, 4d, null, 1, "0 0 m 4 4 l S\n", []);
         graphics.FillRectangleWithTilingPattern(0, 0, 10, 10, pattern);
         var page = new PdfPage(
             200,
@@ -673,14 +673,14 @@ internal static partial class PdfWriterTests
 
     public static void RejectsDanglingPatternImageReference()
     {
-        var pattern = new PdfTilingPattern(4, 4, "q /ImMissing Do Q\n");
+        var pattern = new PdfTilingPattern(4, 4, 4, 4, null, 1, "q /ImMissing Do Q\n", []);
         var page = new PdfPage(200, 200, "/Pattern cs /P1 scn\n", [], [], [], [], [new PdfTilingPatternResource("P1", pattern)]);
         TestAssert.Throws<InvalidDataException>(() => WritePdfBytes([page]));
     }
 
     public static void RejectsUnbalancedPatternGraphicsState()
     {
-        var pattern = new PdfTilingPattern(4, 4, "q q Q\n");
+        var pattern = new PdfTilingPattern(4, 4, 4, 4, null, 1, "q q Q\n", []);
         var page = new PdfPage(200, 200, "/Pattern cs /P1 scn\n", [], [], [], [], [new PdfTilingPatternResource("P1", pattern)]);
         TestAssert.Throws<InvalidDataException>(() => WritePdfBytes([page]));
     }
@@ -702,7 +702,7 @@ internal static partial class PdfWriterTests
 
     public static void RejectsNonAsciiPatternContent()
     {
-        var pattern = new PdfTilingPattern(4, 4, "q Q\n% caf\u00e9\n");
+        var pattern = new PdfTilingPattern(4, 4, 4, 4, null, 1, "q Q\n% caf\u00e9\n", []);
         var page = new PdfPage(200, 200, "/Pattern cs /P1 scn\n", [], [], [], [], [new PdfTilingPatternResource("P1", pattern)]);
         TestAssert.Throws<InvalidDataException>(() => WritePdfBytes([page]));
     }
@@ -811,7 +811,7 @@ internal static partial class PdfWriterTests
         graphics.DrawGlyphText("F1", 12, 20, 30, 0, 0, 0, "0041", false, 0d, 0, 0, 0, 0, 0d);
         graphics.DrawImage("Im1", 0, 0, 10, 10);
         graphics.PaintAxialShading(0, 0, 10, 0, 255, 0, 0, 0, 0, 255);
-        var pattern = new PdfTilingPattern(4d, 4d, "0 0 m 4 4 l S\n");
+        var pattern = new PdfTilingPattern(4d, 4d, 4d, 4d, null, 1, "0 0 m 4 4 l S\n", []);
         graphics.FillRectangleWithTilingPattern(0, 0, 10, 10, pattern);
         var first = new PdfPage(
             200,
@@ -963,7 +963,7 @@ internal static partial class PdfWriterTests
         graphics.SetAlpha(0.5d, 0.5d);
         graphics.PaintAxialShading(0, 0, 100, 100, 255, 0, 0, 0, 0, 255);
         graphics.PaintRadialShading([new(0d, 255, 0, 0), new(1d, 0, 0, 255)]);
-        var pattern = new PdfTilingPattern(4d, 4d, "0 0 m 4 4 l S\n");
+        var pattern = new PdfTilingPattern(4d, 4d, 4d, 4d, null, 1, "0 0 m 4 4 l S\n", []);
         graphics.FillRectangleWithTilingPattern(1, 2, 3, 4, pattern);
         TestAssert.Equal(2, graphics.Shadings.Count);
 
