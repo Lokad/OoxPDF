@@ -263,6 +263,45 @@ internal static partial class SvgTextTests
         }
     }
 
+    public static void SvgLabelsPrepareFontsOnlyForVisiblePictureUses()
+    {
+        const string family = "LABEL-FONT";
+        string svg = Svg($"<text x=\"20\" y=\"80\" font-family=\"{family}\" font-weight=\"bold\" fill=\"#112233\">{Label}</text>");
+        XNamespace p = "http://schemas.openxmlformats.org/presentationml/2006/main";
+        XNamespace a = "http://schemas.openxmlformats.org/drawingml/2006/main";
+        foreach (var (transparent, secondVisible) in new[] { (false, false), (true, false), (true, true) })
+        {
+            string input = Input(false, svg, picture =>
+            {
+                if (secondVisible)
+                {
+                    var visible = new XElement(picture);
+                    visible.Descendants(p + "cNvPr").Single().SetAttributeValue("id", "1000");
+                    visible.Descendants(a + "off").First().SetAttributeValue("x", "4572000");
+                    picture.AddAfterSelf(visible);
+                }
+                if (transparent)
+                    picture.Descendants(a + "blip").Single().AddFirst(new XElement(a + "alphaModFix", new XAttribute("amt", 0)));
+            });
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            int requests = 0;
+            var resolver = new ObservingResolver(request => { if (request.FamilyName == family) requests++; });
+            using OoxPackage package = OoxPackage.Open(input, default);
+            PdfPage page = new PptxRenderer(resolver).RenderPagesAsync(new PptxReader().Read(package, default),
+                package, diagnostics.Add, default).ToBlockingEnumerable().Single();
+
+            bool paintsLabel = !transparent || secondVisible;
+            TestAssert.Equal(paintsLabel ? 1 : 0, requests);
+            TestAssert.Equal(paintsLabel ? 1 : 0, diagnostics.Count(d => d.Fallback == "SubstitutedFont" &&
+                d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains(family, StringComparison.Ordinal)));
+            if (paintsLabel)
+                TestAssert.Equal(13, LabelPaths(page.Content));
+            else
+                TestAssert.DoesNotContain(LabelColor, page.Content);
+            Write(page);
+        }
+    }
+
     public static void SvgLabelsKeepHarmlessAttributesAndNonRenderingMetadata()
     {
         string text = "<text x=\"20\" y=\"80\" fill=\"#112233\">" + Label + "</text>";
@@ -397,7 +436,7 @@ internal static partial class SvgTextTests
         TestAssert.True(stream.Length > 0, "The writer must accept the actual label content and group resources.");
     }
 
-    private static string Input(bool docx, string svg)
+    private static string Input(bool docx, string svg, Action<XElement>? editPptxPicture = null)
     {
         string file = docx ? "docx-svg-inline.docx" : "pptx-svg-extensions.pptx";
         string source = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", file));
@@ -413,6 +452,7 @@ internal static partial class SvgTextTests
             var xml = XDocument.Parse(Encoding.UTF8.GetString(parts["ppt/slides/slide1.xml"]));
             var first = xml.Descendants(p + "pic").First();
             foreach (var sibling in first.Parent!.Elements().Where(e => e.Name == p + "pic" && e != first).ToArray()) sibling.Remove();
+            editPptxPicture?.Invoke(first);
             parts["ppt/slides/slide1.xml"] = Encoding.UTF8.GetBytes(xml.ToString(SaveOptions.DisableFormatting));
         }
         return TestFixtures.WriteTempPackage(docx ? ".docx" : ".pptx", parts);

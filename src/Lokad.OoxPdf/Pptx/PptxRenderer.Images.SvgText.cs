@@ -23,7 +23,8 @@ internal sealed partial class PptxRenderer
             .Concat(EnumerateRenderedSceneNodes(slide.SlideNodes, true));
         if (slide.ShowMasterShapes) nodes = EnumerateRenderedSceneNodes(slide.MasterNodes, false).Concat(nodes);
         foreach (PptxSceneNode node in nodes)
-            if (node.Picture?.Resource is { } image && image.ContentType.Equals("image/svg+xml", StringComparison.OrdinalIgnoreCase))
+            if (node.Picture is { Alpha: > 0d, Resource: { } image } &&
+                image.ContentType.Equals("image/svg+xml", StringComparison.OrdinalIgnoreCase))
                 yield return image.Bytes;
     }
 
