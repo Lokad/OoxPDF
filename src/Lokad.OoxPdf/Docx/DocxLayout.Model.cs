@@ -71,6 +71,7 @@ internal readonly record struct DocxInlineSourceExtent(int ItemIndex, double Sta
     double AboveBaseline = 0d, double BelowBaseline = 0d, bool IsMath = false)
 {
     public double? LiteralMathSelectionAscent { get; init; }
+    public bool ContinuesSourceItem { get; init; }
 
     public DocxInlineSourceExtent Scale(double scale) => this with
     {

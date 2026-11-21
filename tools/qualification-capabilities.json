@@ -8644,6 +8644,7 @@
   ],
   "docx-inner-math-bookmarks": [
     "DocxInnerMathBookmarks",
+    "=DocxTerminalMathBookmarkFollowsFinalPlacedFragment",
     "DocxMathEditingMarkers",
     "DocxDeletedMathMetadata",
     "DocxInlineCompositionEmptyFractionKeepsOnlyStructuralOwnership",

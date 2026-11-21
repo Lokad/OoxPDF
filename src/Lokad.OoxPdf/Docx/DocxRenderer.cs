@@ -1232,7 +1232,8 @@ internal sealed partial class DocxRenderer
                             foreach (var extent in line.InlineSourceExtents)
                             {
                                 cancellationToken.ThrowIfCancellationRequested();
-                                if (extent.ItemIndex != itemIndex || extent.EndOffset <= extent.StartOffset) continue;
+                                if (extent.ItemIndex != itemIndex || extent.EndOffset <= extent.StartOffset ||
+                                    afterItem && extent.ContinuesSourceItem) continue;
                                 double offset = afterItem ? extent.EndOffset :
                                     extent.StartOffset == 0d ? line.FrameOriginOffsetX ?? 0d : extent.StartOffset;
                                 destinations.Add(bookmark.Name, new PdfLinkDestination(pageIndex,

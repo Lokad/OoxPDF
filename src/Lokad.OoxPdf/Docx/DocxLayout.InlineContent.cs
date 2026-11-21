@@ -497,7 +497,8 @@ internal sealed partial class DocxLayoutEngine
                     if (double.IsFinite(left) && double.IsFinite(right))
                         fragment = fragment with { VisibleSourceExtent = new(sourceItemIndex, left * scale, right * scale,
                             math.Box.AboveBaseline * scale, math.Box.BelowBaseline * scale, IsMath: true)
-                            { LiteralMathSelectionAscent = literalMathSelectionAscent } };
+                            { LiteralMathSelectionAscent = literalMathSelectionAscent,
+                              ContinuesSourceItem = fragmentIndex + 1 < measured.Count } };
                 }
                 else if (fragment.TextBox is { } box)
                     fragment = fragment with { VisibleSourceExtent = new(sourceItemIndex, 0d, box.BoxWidth, box.BoxHeight, 0d) };

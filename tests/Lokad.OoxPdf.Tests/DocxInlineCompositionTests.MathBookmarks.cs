@@ -129,22 +129,7 @@ internal static partial class DocxInlineCompositionTests
 
     public static void DocxInnerMathBookmarksFollowTheirWrappedFragmentPage()
     {
-        var document = ReadMutation("CompositionProbes/math-inner-bookmark-outer", OoxPdfDocxMarkupMode.Final,
-            false, false, (xml, w, m) =>
-            {
-                var math = xml.Descendants(m + "oMath").Single();
-                var start = xml.Descendants(w + "bookmarkStart").Single();
-                var end = xml.Descendants(w + "bookmarkEnd").Single();
-                start.Remove(); end.Remove(); math.RemoveNodes();
-                for (int index = 0; index < 70; index++)
-                    math.Add(new XElement(m + "r", new XElement(m + "t", "x+")));
-                math.Add(start, new XElement(m + "r", new XElement(m + "t", "z")), end);
-                var section = xml.Descendants(w + "sectPr").Single();
-                section.Element(w + "pgSz")!.SetAttributeValue(w + "w", "4800");
-                section.Element(w + "pgSz")!.SetAttributeValue(w + "h", "2400");
-                foreach (string side in new[] { "top", "bottom", "left", "right" })
-                    section.Element(w + "pgMar")!.SetAttributeValue(w + side, "480");
-            });
+        var document = ReadWrappedMathBookmark(OoxPdfDocxMarkupMode.Final, 2400, afterFormula: false);
         var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true),
             OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
         var pages = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
@@ -156,4 +141,59 @@ internal static partial class DocxInlineCompositionTests
         TestAssert.True(links.Length != 0 && links.All(link => link.Destination?.PageIndex == targetPage),
             "Every wrapped annotation for the logical hyperlink must target its source fragment's page.");
     }
+
+    public static void DocxTerminalMathBookmarkFollowsFinalPlacedFragment()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        foreach (int pageHeight in new[] { 2400, 12000 })
+        {
+            var document = ReadWrappedMathBookmark(mode, pageHeight, afterFormula: true);
+            var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true), mode,
+                mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
+                    OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var pages = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
+            var finalTerm = pages.SelectMany((page, index) => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, true)
+                .Select(show => (Page: index, Show: show)))
+                .Single(item => item.Show.Text.Normalize(System.Text.NormalizationForm.FormKC) == "z");
+            TestAssert.True(pageHeight == 2400 ? finalTerm.Page > 0 : pages.Length == 1,
+                "The short page splits the formula across pages and the tall page keeps its wrapped lines together.");
+            var links = pages.SelectMany(page => page.Annotations).ToArray();
+            TestAssert.True(links.Length != 0, "The authored link must retain its destination.");
+            foreach (var link in links)
+            {
+                TestAssert.True(link.Destination is { } target && target.PageIndex == finalTerm.Page &&
+                    target.Left is double left && left > finalTerm.Show.X && left < finalTerm.Show.X + 24d &&
+                    target.Top is double top && top >= finalTerm.Show.Y && top < finalTerm.Show.Y + 24d,
+                    $"The terminal bookmark must use the final term's placed line and page: {mode}/{pageHeight}.");
+            }
+        }
+    }
+
+    private static DocxDocument ReadWrappedMathBookmark(OoxPdfDocxMarkupMode mode, int pageHeight, bool afterFormula) =>
+        ReadMutation("CompositionProbes/math-inner-bookmark-outer", mode, false, false, (xml, w, m) =>
+        {
+            var math = xml.Descendants(m + "oMath").Single();
+            var start = xml.Descendants(w + "bookmarkStart").Single();
+            var end = xml.Descendants(w + "bookmarkEnd").Single();
+            start.Remove();
+            end.Remove();
+            math.RemoveNodes();
+            for (int index = 0; index < 70; index++)
+                math.Add(new XElement(m + "r", new XElement(m + "t", "x+")));
+            var finalTerm = new XElement(m + "r", new XElement(m + "t", "z"));
+            if (afterFormula)
+            {
+                math.Add(finalTerm);
+                math.AddAfterSelf(start, end);
+            }
+            else
+            {
+                math.Add(start, finalTerm, end);
+            }
+            var section = xml.Descendants(w + "sectPr").Single();
+            section.Element(w + "pgSz")!.SetAttributeValue(w + "w", "4800");
+            section.Element(w + "pgSz")!.SetAttributeValue(w + "h", pageHeight);
+            foreach (string side in new[] { "top", "bottom", "left", "right" })
+                section.Element(w + "pgMar")!.SetAttributeValue(w + side, "480");
+        });
 }
