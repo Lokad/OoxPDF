@@ -778,6 +778,38 @@ internal sealed partial class PptxRenderer
         }
     }
 
+    private static void StrokeCartesianCategoryAndValueAxes(
+        PdfGraphicsBuilder graphics, ChartPlotBox plotBox, ChartAxesStyle axesStyle, double categoryAxisY)
+    {
+        ChartSeriesStroke categoryAxisStroke = axesStyle.CategoryAxis ?? ChartAxisDefaultStroke;
+        if (axesStyle.CategoryAxisVisible && categoryAxisStroke.Alpha > 0.001d)
+        {
+            SetChartStroke(graphics, categoryAxisStroke);
+            RenderInChartPlotAreaClip(graphics, plotBox,
+                () => graphics.StrokeLine(plotBox.X, categoryAxisY, plotBox.X + plotBox.Width, categoryAxisY));
+        }
+
+        if (axesStyle.ValueAxisVisible)
+        {
+            StrokeValueAxis(axesStyle.ValueAxis ?? ChartAxisDefaultStroke, axesStyle.ValueAxisRightSide);
+            if (axesStyle.SecondaryValueAxis is { } secondary)
+            {
+                StrokeValueAxis(secondary, axesStyle.SecondaryValueAxisRightSide);
+            }
+        }
+
+        void StrokeValueAxis(ChartSeriesStroke stroke, bool rightSide)
+        {
+            if (stroke.Alpha > 0.001d)
+            {
+                SetChartStroke(graphics, stroke);
+                double x = rightSide ? plotBox.X + plotBox.Width : plotBox.X;
+                RenderInChartPlotAreaClip(graphics, plotBox,
+                    () => graphics.StrokeLine(x, plotBox.Y, x, plotBox.Y + plotBox.Height));
+            }
+        }
+    }
+
     private static void RenderInChartPlotAreaClip(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, Action render)
     {
         graphics.SaveState();

@@ -72,31 +72,7 @@ internal sealed partial class PptxRenderer
             }
 
             RenderAreaChartSeries(graphics, theme, colorMap, chartPalette, plotBox, denseSeries, areaOptions, seriesFills, seriesStrokes, valueExtents, valueAxisReversed, categoryPointsOnTickMarks, valueAxisCrossingY, categoryAxisReversed);
-
-            ChartSeriesStroke valueAxisStroke = axesStyle.ValueAxis ?? ChartAxisDefaultStroke;
-            ChartSeriesStroke categoryAxisStroke = axesStyle.CategoryAxis ?? ChartAxisDefaultStroke;
-            if (axesStyle.CategoryAxisVisible && categoryAxisStroke.Alpha > 0.001d)
-            {
-                SetChartStroke(graphics, categoryAxisStroke);
-                RenderInChartPlotAreaClip(graphics, plotBox, () => graphics.StrokeLine(plotX, valueAxisCrossingY, plotX + plotWidth, valueAxisCrossingY));
-            }
-
-            if (axesStyle.ValueAxisVisible)
-            {
-                if (valueAxisStroke.Alpha > 0.001d)
-                {
-                    SetChartStroke(graphics, valueAxisStroke);
-                    double axisX = axesStyle.ValueAxisRightSide ? plotX + plotWidth : plotX;
-                    RenderInChartPlotAreaClip(graphics, plotBox, () => graphics.StrokeLine(axisX, plotY, axisX, plotY + plotHeight));
-                }
-
-                if (axesStyle.SecondaryValueAxis is { } secondaryValueAxisStroke && secondaryValueAxisStroke.Alpha > 0.001d)
-                {
-                    SetChartStroke(graphics, secondaryValueAxisStroke);
-                    double axisX = axesStyle.SecondaryValueAxisRightSide ? plotX + plotWidth : plotX;
-                    RenderInChartPlotAreaClip(graphics, plotBox, () => graphics.StrokeLine(axisX, plotY, axisX, plotY + plotHeight));
-                }
-            }
+            StrokeCartesianCategoryAndValueAxes(graphics, plotBox, axesStyle, valueAxisCrossingY);
         }
     }
 

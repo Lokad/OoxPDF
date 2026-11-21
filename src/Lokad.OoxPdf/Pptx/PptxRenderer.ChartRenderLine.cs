@@ -32,16 +32,10 @@ internal sealed partial class PptxRenderer
         bool gallerySmooth = IsGalleryLineChartStyle(chartStyleId);
         bool plotSmoothed = smoothSeries.Any(static option => option.Value);
         RenderChartShapeStyle(graphics, plotAreaBox.X, plotAreaBox.Y, plotAreaBox.Width, plotAreaBox.Height, plotAreaStyle);
-        int pointCount = 0;
-        double valueAxisCrossingY = 0d;
+        int pointCount = Math.Max(1, denseSeries.Max(values => values.Count));
+        double valueAxisCrossingY = ChartValueToPlotCoordinate(valueExtents, valueAxisCrossingValue, plotY, plotHeight, valueAxisReversed);
         ChartSeriesStroke categoryAxisStroke = axesStyle.CategoryAxis ?? ChartAxisDefaultStroke;
         {
-            pointCount = Math.Max(1, denseSeries.Max(values => values.Count));
-            double maxValue = valueExtents.Max;
-            double minValue = valueExtents.Min;
-            double valueRange = Math.Max(1d, maxValue - minValue);
-            valueAxisCrossingY = ChartValueToPlotCoordinate(valueExtents, valueAxisCrossingValue, plotY, plotHeight, valueAxisReversed);
-
             if (minorGridlines)
             {
                 RenderInChartPlotAreaClip(
@@ -58,35 +52,7 @@ internal sealed partial class PptxRenderer
                     () => DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits, valueAxisCrossingValue, valueAxisReversed, major: true, gridlineStyle.Major, valueAxisOptions.HasMajorGridlineElement, valueAxisOptions.TickPolicy, context: context));
             }
 
-            ChartSeriesStroke valueAxisStroke = axesStyle.ValueAxis ?? ChartAxisDefaultStroke;
-            if (axesStyle.CategoryAxisVisible)
-            {
-                if (categoryAxisStroke.Alpha > 0.001d)
-                {
-                    SetChartStroke(graphics, categoryAxisStroke);
-                    RenderInChartPlotAreaClip(graphics, plotBox, () => graphics.StrokeLine(plotX, valueAxisCrossingY, plotX + plotWidth, valueAxisCrossingY));
-                }
-            }
-
-            if (axesStyle.ValueAxisVisible)
-            {
-                if (valueAxisStroke.Alpha > 0.001d)
-                {
-                    SetChartStroke(graphics, valueAxisStroke);
-                    double axisX = axesStyle.ValueAxisRightSide ? plotX + plotWidth : plotX;
-                    RenderInChartPlotAreaClip(graphics, plotBox, () => graphics.StrokeLine(axisX, plotY, axisX, plotY + plotHeight));
-                }
-
-                if (axesStyle.SecondaryValueAxis is { } secondaryValueAxisStroke)
-                {
-                    if (secondaryValueAxisStroke.Alpha > 0.001d)
-                    {
-                        SetChartStroke(graphics, secondaryValueAxisStroke);
-                        double axisX = axesStyle.SecondaryValueAxisRightSide ? plotX + plotWidth : plotX;
-                        RenderInChartPlotAreaClip(graphics, plotBox, () => graphics.StrokeLine(axisX, plotY, axisX, plotY + plotHeight));
-                    }
-                }
-            }
+            StrokeCartesianCategoryAndValueAxes(graphics, plotBox, axesStyle, valueAxisCrossingY);
 
             double[] lower = new double[pointCount];
             for (int seriesIndex = 0; seriesIndex < denseSeries.Count; seriesIndex++)
