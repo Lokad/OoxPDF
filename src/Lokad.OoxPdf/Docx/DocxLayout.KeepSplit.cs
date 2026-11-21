@@ -800,7 +800,7 @@ internal sealed partial class DocxLayoutEngine
     {
         DocxNumberingIndent listIndent = paragraph.ListLabel?.Indent ?? DocxNumberingIndent.Empty;
         DocxParagraphIndent paragraphIndent = paragraph.EffectiveProperties.Indent;
-        if (!HasParagraphIndentOverride(paragraphIndent))
+        if (paragraphIndent == DocxParagraphIndent.Empty)
         {
             return listIndent;
         }
@@ -822,18 +822,6 @@ internal sealed partial class DocxLayoutEngine
             hasParagraphFirstLineSide ? paragraphIndent.HangingValue : listIndent.HangingValue,
             listIndent.NumberingTabValue,
             listIndent.NumberingTabPositionValue);
-    }
-
-    private static bool HasParagraphIndentOverride(DocxParagraphIndent indent)
-    {
-        return indent.LeftPoints is not null ||
-            indent.RightPoints is not null ||
-            indent.FirstLinePoints is not null ||
-            indent.HangingPoints is not null ||
-            indent.LeftValue is not null ||
-            indent.RightValue is not null ||
-            indent.FirstLineValue is not null ||
-            indent.HangingValue is not null;
     }
 
     private static double GetParagraphStartOffset(DocxParagraph paragraph, double fixedScale)

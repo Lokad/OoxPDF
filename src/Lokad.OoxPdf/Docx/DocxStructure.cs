@@ -668,18 +668,6 @@ internal sealed partial record DocxStructureSnapshot(
 
     private static IReadOnlyList<DocxStructureListUsageSnapshot> ToListUsages(DocxDocument document)
     {
-            bool HasParagraphIndentOverride(DocxParagraphIndent indent)
-            {
-                return indent.LeftPoints is not null ||
-                    indent.RightPoints is not null ||
-                    indent.FirstLinePoints is not null ||
-                    indent.HangingPoints is not null ||
-                    indent.LeftValue is not null ||
-                    indent.RightValue is not null ||
-                    indent.FirstLineValue is not null ||
-                    indent.HangingValue is not null;
-            }
-
         return EnumerateParagraphs(document)
             .SelectMany(paragraph => paragraph.ListLabel is { } label ? new[] { (Paragraph: paragraph, Label: label) } : [])
             .GroupBy(item => new
@@ -701,7 +689,7 @@ internal sealed partial record DocxStructureSnapshot(
                 group.Count(item => item.Label.Indent.FirstLinePoints is not null),
                 group.Count(item => item.Label.Indent.HangingPoints is not null),
                 group.Count(item => item.Label.Indent.NumberingTabPositionPoints is not null),
-                group.Count(item => HasParagraphIndentOverride(item.Paragraph.EffectiveProperties.Indent)),
+                group.Count(item => item.Paragraph.EffectiveProperties.Indent != DocxParagraphIndent.Empty),
                 group.Count(item => item.Paragraph.EffectiveProperties.TabStops.Any(tab => string.Equals(tab.Value, "num", StringComparison.OrdinalIgnoreCase)))))
             .ToArray();
     }
