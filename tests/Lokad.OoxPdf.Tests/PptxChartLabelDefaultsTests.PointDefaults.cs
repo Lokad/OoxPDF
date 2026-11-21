@@ -1,4 +1,5 @@
 using System.Xml.Linq;
+using Lokad.OoxPdf.Pdf;
 using Lokad.OoxPdf.Pptx;
 
 namespace Lokad.OoxPdf.Tests;
@@ -63,6 +64,44 @@ internal static partial class PptxChartLabelDefaultsTests
             foreach (var component in Components)
                 TestAssert.Equal(component.Property != "ShowValue", Flag(point, component.Property));
         }
+    }
+
+    public static void PptxPieUnmatchedLabelKeepsUnlabeledPlot()
+    {
+        var resolver = new PortableRenderingTests.PinnedResolver();
+        PdfPage Render(int? pointIndex)
+        {
+            string point = pointIndex is int index
+                ? $"<c:dLbl><c:idx val=\"{index}\"/>{PointDefaultsCustomText}{PointDefaultsDisabledFlags}</c:dLbl>"
+                : "";
+            var source = XDocument.Parse($$"""
+                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <c:chart><c:autoTitleDeleted val="1"/><c:plotArea><c:pieChart>
+                    <c:ser><c:idx val="0"/><c:order val="0"/><c:dLbls>{{point}}{{PointDefaultsDisabledFlags}}</c:dLbls>
+                    <c:val><c:numLit><c:ptCount val="4"/>
+                      <c:pt idx="0"><c:v>10</c:v></c:pt><c:pt idx="1"><c:v>20</c:v></c:pt><c:pt idx="2"><c:v>0</c:v></c:pt>
+                    </c:numLit></c:val></c:ser>
+                  </c:pieChart></c:plotArea></c:chart>
+                </c:chartSpace>
+                """);
+            return RenderChartPage(source, fontResolver: resolver);
+        }
+
+        static string LabelText(PdfPage page) => string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, false,
+            fontResourceFilter: resource => resource.StartsWith("CP", StringComparison.Ordinal)).Select(show => show.Text));
+
+        PdfPage unlabeled = Render(null);
+        PdfPage unmatched = Render(8);
+        TestAssert.True(unlabeled.Content == unmatched.Content, "An absent point cannot change the pie's painted geometry.");
+        TestAssert.Equal("", LabelText(unmatched));
+        TestAssert.Equal("Pinned", LabelText(Render(0)));
+
+        PdfPage zero = Render(2);
+        PdfPage blank = Render(3);
+        TestAssert.Equal("", LabelText(zero));
+        TestAssert.Equal("", LabelText(blank));
+        TestAssert.True(zero.Content == blank.Content && zero.Content != unlabeled.Content,
+            "The declared zero and blank slots retain the existing label reservation.");
     }
 
     public static void PptxDefinedSeriesOwnPointDeclarationsWithoutLeakingPlotPoints()

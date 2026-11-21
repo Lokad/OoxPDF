@@ -472,10 +472,14 @@ internal sealed partial class PptxRenderer
 
         // Potential text components guide layout. A component can format to no
         // text for this plot kind; painting checks the actual formatted result.
-        public bool HasVisibleText => (IsDeleted != true &&
+        private bool HasContainerText => IsDeleted != true &&
             (ShowValue || ShowPercent || ShowCategoryName || ShowSeriesName || ShowBubbleSize ||
-             !string.IsNullOrWhiteSpace(CustomText))) ||
-            Overrides.Values.Any(label => label.HasVisibleText);
+             !string.IsNullOrWhiteSpace(CustomText));
+
+        public bool HasVisibleText => HasContainerText || Overrides.Values.Any(label => label.HasVisibleText);
+
+        public bool HasVisibleTextWithin(int pointCount) => HasContainerText ||
+            Overrides.Any(label => label.Key >= 0 && label.Key < pointCount && label.Value.HasVisibleText);
 
         // Component presence admits point overrides, including custom text.
         // A key alone does not paint a label; layout/painting use HasVisibleText.

@@ -4946,6 +4946,7 @@
     "PptxLineLabelDefaultsUseRightWithOneOrAllLabels",
     "PptxLineLabelsReserveAuthoredMarkerExtentInEachPosition",
     "PptxLinePointLegendsSharePathAndDataLabelPaint",
+    "PptxPieUnmatchedLabelKeepsUnlabeledPlot",
     "PptxPlotPointDefaultRenderingRestoresCompleteContentAndKey",
     "PptxPointAppearanceControlsLegendIdentityWithoutChangingSeriesColors",
     "PptxPointLabelBackgroundContainsTextAndExcludesKey",

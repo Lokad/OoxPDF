@@ -11,7 +11,7 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static IReadOnlyList<ChartIndexedPieSlice> BuildChartIndexedPieSlices(ChartIndexedNumberVector values)
+    private static IReadOnlyList<ChartIndexedPieSlice> BuildChartIndexedPieSlices(ChartIndexedNumberVector values, out int slotCount)
     {
         IReadOnlyDictionary<int, ChartIndexedNumberPoint> workbookPoints = values.WorkbookPointsForPlotVisibility(values.PlotVisibleOnly)
             .GroupBy(point => point.Index)
@@ -20,7 +20,7 @@ internal sealed partial class PptxRenderer
         // slots (same resolution, range, validity and precedence) with
         // provenance kept once in the source. Charge the resolved slot count
         // exactly as the dense materialization did.
-        int slotCount = values.DensePointCount();
+        slotCount = values.DensePointCount();
         if (slotCount <= 0)
         {
             return [];

@@ -31,7 +31,9 @@ internal sealed partial class PptxRenderer
         if (piePlot is not null)
         {
             IReadOnlyList<ChartIndexedNumberVector> pieSeriesVectors = ReadSharedChartSeriesVectors(piePlot, workbook, plotVisibleOnly);
-            IReadOnlyList<ChartIndexedPieSlice> pieSlices = pieSeriesVectors.Count == 0 ? [] : BuildChartIndexedPieSlices(pieSeriesVectors[0]);
+            int cachedPointCount = 0;
+            IReadOnlyList<ChartIndexedPieSlice> pieSlices = pieSeriesVectors.Count == 0
+                ? [] : BuildChartIndexedPieSlices(pieSeriesVectors[0], out cachedPointCount);
             if (pieSlices.Count != 0)
             {
                 ChartIndexedTextVector categoryLabels = ReadSceneCategoryLabelVector(piePlot, workbook, plotVisibleOnly);
@@ -51,7 +53,10 @@ internal sealed partial class PptxRenderer
                 var prepared = await PreparePolarChartLayoutAsync(ChartPolarKind.Pie, sourceLayout, theme, sceneChart,
                     legendEntries, legendStyle, fontResolver, context).ConfigureAwait(false);
                 RenderChartAreaStyle(graphics, document, bounds, sceneChart);
-                bool hasVisiblePieDataLabels = labelOptions.HasVisibleText || pieSlices.Any(slice => ResolveChartDataLabelOptions(labelOptions, slice.Index).HasVisibleText);
+                // Use source slots for point-label ownership. A zero, blank or
+                // hidden slot can exist without a painted wedge.
+                int sourcePointCount = Math.Max(cachedPointCount, pieSeriesVectors[0].WorkbookPoints.Count);
+                bool hasVisiblePieDataLabels = labelOptions.HasVisibleTextWithin(sourcePointCount);
                 ChartPolarLayout polarLayout = ResolvePieFrameLayout(sourceLayout, prepared.Layout,
                     sceneChart, polarPoints.PointExplosions, hasVisiblePieDataLabels, prepared.FitFrame);
                 bool factorX = sceneChart.PlotAreaLayout.X is not null &&
@@ -84,7 +89,10 @@ internal sealed partial class PptxRenderer
                 }
                 double total = pieSlices.Sum(slice => slice.Value);
                 RenderPieOrDoughnutSlices(graphics, theme, colorMap, chartPalette, polarLayout, pieSlices, total, polarPoints.PointFills, polarPoints.PointStrokes, polarPoints.PointExplosions, holeSize: 0d, polarPoints.FirstSliceAngle);
-                await RenderPieDataLabelsAsync(theme, colorMap, graphics, chartPalette, polarLayout, prepared.Layout.PlotBox, pieSlices, total, polarPoints.PointFills, polarPoints.PointExplosions, 0d, polarPoints.FirstSliceAngle, pieSeriesVectors[0].FormatCode, labelOptions, categoryLabels, seriesNames, fontResolver, fonts, context, sceneChart, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false);
+                if (hasVisiblePieDataLabels)
+                {
+                    await RenderPieDataLabelsAsync(theme, colorMap, graphics, chartPalette, polarLayout, prepared.Layout.PlotBox, pieSlices, total, polarPoints.PointFills, polarPoints.PointExplosions, 0d, polarPoints.FirstSliceAngle, pieSeriesVectors[0].FormatCode, labelOptions, categoryLabels, seriesNames, fontResolver, fonts, context, sceneChart, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false);
+                }
                 await RenderChartLegendAsync(graphics, frame, plotBox, legendEntries, legend, legendStyle,
                     fontResolver, ChartLegendPlacement.Default, chartFonts: fonts, preparedBox: prepared.LegendBox).ConfigureAwait(false);
                 return true;
@@ -113,7 +121,7 @@ internal sealed partial class PptxRenderer
         if (doughnutPlot is not null)
         {
             IReadOnlyList<ChartIndexedNumberVector> doughnutSeriesVectors = ReadSharedChartSeriesVectors(doughnutPlot, workbook, plotVisibleOnly);
-            IReadOnlyList<ChartIndexedPieSlice> doughnutSlices = doughnutSeriesVectors.Count == 0 ? [] : BuildChartIndexedPieSlices(doughnutSeriesVectors[0]);
+            IReadOnlyList<ChartIndexedPieSlice> doughnutSlices = doughnutSeriesVectors.Count == 0 ? [] : BuildChartIndexedPieSlices(doughnutSeriesVectors[0], out _);
             if (doughnutSlices.Count != 0)
             {
                 ChartIndexedTextVector categoryLabels = ReadSceneCategoryLabelVector(doughnutPlot, workbook, plotVisibleOnly);
