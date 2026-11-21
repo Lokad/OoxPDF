@@ -188,7 +188,9 @@ internal static class TestCatalog
         .. FromType("pptx-tables", typeof(PptxTableMergeTests)),
         .. FromType("pptx-images", typeof(PptxImagesTests)),
         .. FromType("pptx-model", typeof(PptxModelTests)),
-        .. FromType("pptx-model", typeof(PptxDiagnosticsTests)),
+        .. FromType(name => name is nameof(PptxDiagnosticsTests.PptxSyntheticInheritedPlaceholderTextIsSkipped)
+            or nameof(PptxDiagnosticsTests.PptxSyntheticSlidePlaceholderTextUsesInheritedBounds)
+            ? "rendering-portable" : "pptx-model", typeof(PptxDiagnosticsTests)),
         .. FromType("pptx-shapes", typeof(PptxShapesTests)),
         .. FromType("pptx-shapes", typeof(PptxSceneTextAgreementTests)),
         .. FromType(name => name is nameof(PptxVisibilityTests.PptxHiddenObjectsLeaveNoPaintResourcesOrLinks)

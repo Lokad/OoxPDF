@@ -72,76 +72,92 @@ internal static class PptxDiagnosticsTests
 
     public static void PptxSyntheticInheritedPlaceholderTextIsSkipped()
     {
-        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
-        if (!File.Exists(arial))
+        const string master = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <p:cSld><p:spTree><p:sp>
+                <p:nvSpPr><p:cNvPr id="2" name="Body Placeholder"/><p:cNvSpPr/><p:nvPr><p:ph type="body"/></p:nvPr></p:nvSpPr>
+                <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="5486400" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                <p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="2400"/><a:t>Click to edit Master text styles</a:t></a:r></a:p></p:txBody>
+              </p:sp></p:spTree></p:cSld>
+            </p:sld>
+            """;
+        var renderer = new PptxRenderer(new MissingTestFontResolver());
+        PdfPage prompt = Render(master);
+        TestAssert.Equal(0, DocxTests.CountPdfTextShows(prompt.Content));
+        TestAssert.Equal(0, prompt.Fonts.Count + prompt.FallbackFonts.Count);
+
+        // The master still contributes ordinary text when only the placeholder role is removed.
+        const string placeholder = "<p:ph type=\"body\"/>";
+        PdfPage ordinary = Render(master.Replace(placeholder, string.Empty, StringComparison.Ordinal));
+        TestAssert.Equal(0, ordinary.Fonts.Count);
+        TestAssert.True(ordinary.FallbackFonts.Count != 0, "The ordinary master shape must reach standard-font paint.");
+        string painted = new(FallbackFontMetricsTests.ReadGlyphs(ordinary.Content).Select(glyph => (char)glyph.Code).ToArray());
+        TestAssert.Equal("Click to edit Master text styles", painted);
+        TestAssert.Equal(painted.Length, DocxTests.CountPdfTextShows(ordinary.Content));
+
+        PdfPage Render(string masterPart)
         {
-            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
+            using var input = CreatePlaceholderDeck(masterPart, EmptyPlaceholderSlide, EmptyPlaceholderSlide);
+            using var package = OoxPackage.Open(input, default);
+            var document = new PptxReader().Read(package, default);
+            return renderer.RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().Single();
         }
-
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-                  <Default Extension="xml" ContentType="application/xml"/>
-                  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
-                  <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
-                  <Override PartName="/ppt/slideLayouts/slideLayout1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"/>
-                  <Override PartName="/ppt/slideMasters/slideMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"/>
-                </Types>
-                """,
-            ["_rels/.rels"] = PptxTests.PackageRelationship(),
-            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
-            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
-            ["ppt/slides/_rels/slide1.xml.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/>
-                </Relationships>
-                """,
-            ["ppt/slideLayouts/_rels/slideLayout1.xml.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="../slideMasters/slideMaster1.xml"/>
-                </Relationships>
-                """,
-            ["ppt/slideMasters/slideMaster1.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <p:cSld><p:spTree><p:sp>
-                    <p:nvSpPr><p:cNvPr id="2" name="Body Placeholder"/><p:cNvSpPr/><p:nvPr><p:ph type="body"/></p:nvPr></p:nvSpPr>
-                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="5486400" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
-                    <p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="2400"/><a:t>Click to edit Master text styles</a:t></a:r></a:p></p:txBody>
-                  </p:sp></p:spTree></p:cSld>
-                </p:sld>
-                """,
-            ["ppt/slideLayouts/slideLayout1.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:cSld><p:spTree/></p:cSld></p:sld>
-                """,
-            ["ppt/slides/slide1.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:cSld><p:spTree/></p:cSld></p:sld>
-                """
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, output);
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.True(!pdf.Contains("/Subtype /Type0", StringComparison.Ordinal), "Inherited placeholder text should not create PDF font resources.");
     }
 
     public static void PptxSyntheticSlidePlaceholderTextUsesInheritedBounds()
     {
-        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
-        if (!File.Exists(arial))
-        {
-            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
-        }
+        const string master = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <p:sldMaster xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <p:txStyles><p:titleStyle><a:lvl1pPr><a:defRPr sz="4000"/></a:lvl1pPr></p:titleStyle></p:txStyles>
+            </p:sldMaster>
+            """;
+        const string layout = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <p:cSld><p:spTree><p:sp>
+                <p:nvSpPr><p:cNvPr id="2" name="Title Placeholder"/><p:cNvSpPr/><p:nvPr><p:ph type="title"/></p:nvPr></p:nvSpPr>
+                <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="5486400" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                <p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="2400"/><a:t>Layout title</a:t></a:r></a:p></p:txBody>
+              </p:sp></p:spTree></p:cSld>
+            </p:sld>
+            """;
+        const string slide = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <p:cSld><p:spTree><p:sp>
+                <p:nvSpPr><p:cNvPr id="3" name="Title"/><p:cNvSpPr/><p:nvPr><p:ph type="title"/></p:nvPr></p:nvSpPr>
+                <p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr/><a:t>Slide title</a:t></a:r></a:p></p:txBody>
+              </p:sp></p:spTree></p:cSld>
+            </p:sld>
+            """;
+        var resolver = new PortableRenderingTests.PinnedResolver();
+        using var input = CreatePlaceholderDeck(master, layout, slide);
+        using var package = OoxPackage.Open(input, default);
+        PptxDocument document = new PptxReader().Read(package, default);
+        PdfPage page = new PptxRenderer(resolver).RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().Single();
+        var glyphs = PortableRenderingTests.ReadPaintedSourceLabel(page, "Slide title");
+        TestAssert.True(Math.Abs(glyphs[0].Origin.X - 79.2d) < .001d,
+            "The complete title must paint at the inherited slide origin.");
+        TestAssert.True(glyphs.All(glyph => Math.Abs(glyph.Size - 39.96d) < .001d),
+            "The master title style must supply the painted font size.");
 
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        PptxTextFrameModelSnapshot frame = PptxRenderer.InspectTextFrameModels(document, package, 0,
+            inspectionFonts: new PresentationFontResolver(resolver))
+            .Single(model => model.Paragraphs.Any(paragraph => paragraph.Runs.Any(run => run.Text == "Slide title")));
+        TestAssert.True(frame.InheritedPlaceholderCount >= 1, "The text model must include the matched placeholder.");
+        TestAssert.True(frame.HasInheritedTextBody, "The text model must include the inherited text body.");
+        TestAssert.True(frame.UsesInheritedShapeBounds, "The text model must identify inherited bounds.");
+    }
+
+    private const string EmptyPlaceholderSlide = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:cSld><p:spTree/></p:cSld></p:sld>
+        """;
+
+    private static MemoryStream CreatePlaceholderDeck(string master, string layout, string slide) =>
+        TestFixtures.CreateZipPackage(new Dictionary<string, string>
         {
             ["[Content_Types].xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
@@ -169,49 +185,10 @@ internal static class PptxDiagnosticsTests
                   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="../slideMasters/slideMaster1.xml"/>
                 </Relationships>
                 """,
-            ["ppt/slideMasters/slideMaster1.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sldMaster xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <p:txStyles><p:titleStyle><a:lvl1pPr><a:defRPr sz="4000"/></a:lvl1pPr></p:titleStyle></p:txStyles>
-                </p:sldMaster>
-                """,
-            ["ppt/slideLayouts/slideLayout1.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <p:cSld><p:spTree><p:sp>
-                    <p:nvSpPr><p:cNvPr id="2" name="Title Placeholder"/><p:cNvSpPr/><p:nvPr><p:ph type="title"/></p:nvPr></p:nvSpPr>
-                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="5486400" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
-                    <p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="2400"/><a:t>Layout title</a:t></a:r></a:p></p:txBody>
-                  </p:sp></p:spTree></p:cSld>
-                </p:sld>
-                """,
-            ["ppt/slides/slide1.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <p:cSld><p:spTree><p:sp>
-                    <p:nvSpPr><p:cNvPr id="3" name="Title"/><p:cNvSpPr/><p:nvPr><p:ph type="title"/></p:nvPr></p:nvSpPr>
-                    <p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr/><a:t>Slide title</a:t></a:r></a:p></p:txBody>
-                  </p:sp></p:spTree></p:cSld>
-                </p:sld>
-                """
+            ["ppt/slideMasters/slideMaster1.xml"] = master,
+            ["ppt/slideLayouts/slideLayout1.xml"] = layout,
+            ["ppt/slides/slide1.xml"] = slide
         });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, output);
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("/F1 39.96 Tf", pdf);
-        PptxTests.AssertContainsTextMatrixAtX(pdf, 79.2d);
-
-        using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
-        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
-        PptxTextFrameModelSnapshot textFrame = PptxRenderer.InspectTextFrameModels(document, package, 0)
-            .Single(frame => frame.Paragraphs.Any(paragraph => paragraph.Runs.Any(run => run.Text == "Slide title")));
-        TestAssert.True(textFrame.InheritedPlaceholderCount >= 1, "Expected text model to expose inherited placeholder participation.");
-        TestAssert.True(textFrame.HasInheritedTextBody, "Expected text model to expose inherited placeholder text body participation.");
-        TestAssert.True(textFrame.UsesInheritedShapeBounds, "Expected text model to expose placeholder geometry fallback.");
-    }
 
     public static void PptxUnsupportedMediaDiagnosticsUseScenePictureState()
     {
