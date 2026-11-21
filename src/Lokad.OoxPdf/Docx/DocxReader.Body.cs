@@ -44,7 +44,7 @@ internal sealed partial class DocxReader
 
         var elements = new List<DocxBodyElement>();
         int commentGroupStart = 0;
-        bool hasUnmatchedCommentStart = false;
+        bool hasPendingCommentRange = false;
         List<DocxBlockCommentBoundary>? commentBoundaries = null;
         bool mergeDeletedMarks = !DocxMarkupContext.FromMode(markupMode).IncludesDeletions;
         var numberingCounters = new DocxNumberingCounters();
@@ -111,7 +111,7 @@ internal sealed partial class DocxReader
                         leadingBookmarks: leadingBookmarks, retainUnmatchedCommentStarts: projectCommentSelections);
                     int breakCount = element.Elements().SelectMany(child => EnumerateVisibleRunBreaks(child, VisiblePageBreak, markupMode)).Count();
                     elements.Add(DocxBodyElementFactory.CreatePageBreak(DocxBreakSourceKind.RunBreak, "page", breakParagraph, null, breakCount));
-                    TrackCommentStart(breakParagraph);
+                    TrackPendingCommentRange(breakParagraph);
                     XElement? breakParagraphSectionProperties = paragraphProperties?.Element(WordprocessingNamespace + "sectPr");
                     if (breakParagraphSectionProperties is not null)
                     {
@@ -127,7 +127,7 @@ internal sealed partial class DocxReader
                         leadingBookmarks: leadingBookmarks, retainUnmatchedCommentStarts: projectCommentSelections);
                     int breakCount = element.Elements().SelectMany(child => EnumerateVisibleRunBreaks(child, VisibleColumnBreak, markupMode)).Count();
                     elements.Add(DocxBodyElementFactory.CreateManualBreak(DocxBreakSourceKind.RunBreak, "column", breakParagraph, breakCount));
-                    TrackCommentStart(breakParagraph);
+                    TrackPendingCommentRange(breakParagraph);
                     XElement? breakParagraphSectionProperties = paragraphProperties?.Element(WordprocessingNamespace + "sectPr");
                     if (breakParagraphSectionProperties is not null)
                     {
@@ -270,22 +270,22 @@ internal sealed partial class DocxReader
                     commentBoundaries[index] = commentBoundaries[index] with { Consumed = true };
                 }
             }
-            TrackCommentStart(paragraph);
+            TrackPendingCommentRange(paragraph);
             return part;
         }
 
-        void TrackCommentStart(DocxParagraph? paragraph)
+        void TrackPendingCommentRange(DocxParagraph? paragraph)
         {
-            if (projectCommentSelections && !hasUnmatchedCommentStart && paragraph is not null)
-                hasUnmatchedCommentStart = paragraph.CommentRanges.Any(IsUnmatchedCommentStart);
+            if (projectCommentSelections && !hasPendingCommentRange && paragraph is not null)
+                hasPendingCommentRange = paragraph.CommentRanges.Any(NeedsBodyCommentBinding);
         }
 
         void FinishCommentGroup()
         {
-            if (hasUnmatchedCommentStart || commentBoundaries is { Count: > 0 })
+            if (hasPendingCommentRange || commentBoundaries is { Count: > 0 })
                 ProjectBodyCommentRanges(elements, commentGroupStart, commentBoundaries, cancellationToken);
             commentBoundaries?.Clear();
-            hasUnmatchedCommentStart = false;
+            hasPendingCommentRange = false;
         }
 
         IEnumerable<XElement> EnumerateSplitFloatingAnchors(XElement paragraph)

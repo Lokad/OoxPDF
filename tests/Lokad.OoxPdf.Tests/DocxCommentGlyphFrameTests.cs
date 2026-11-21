@@ -296,15 +296,22 @@ internal static class DocxCommentGlyphFrameTests
             }
         }
 
-        PdfPage[] RenderSource(bool outsideStart, bool outsideEnd, bool wrappedPage)
+        PdfPage[] inlineDelayed = RenderSource(false, false, wrappedPage: false, singleParagraph: true);
+        PdfPage[] blockDelayed = RenderSource(true, true, wrappedPage: false, singleParagraph: true);
+        TestAssert.Equal(blockDelayed.Single().Content, inlineDelayed.Single().Content);
+        TestAssert.Contains("OutsideAfter", string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(inlineDelayed.Single())
+            .Select(show => show.Text)));
+
+        PdfPage[] RenderSource(bool outsideStart, bool outsideEnd, bool wrappedPage, bool singleParagraph = false)
         {
             DocxDocument source = DocxInlineCompositionTests.ReadMutation("docx-markup-comment-table",
                 OoxPdfDocxMarkupMode.AllMarkup, false, false, (xml, w, _) =>
                 {
                     var begin = Marker("commentRangeStart");
                     var end = Marker("commentRangeEnd");
-                    var first = new XElement(w + "p", outsideStart ? null : begin, Text("ChosenOpening"));
-                    var last = new XElement(w + "p",
+                    var first = new XElement(w + "p", outsideStart ? null : begin, Text("ChosenOpening"),
+                        singleParagraph && !outsideEnd ? end : null);
+                    var last = singleParagraph ? null : new XElement(w + "p",
                         wrappedPage ? new XElement(w + "pPr", new XElement(w + "pageBreakBefore")) : null,
                         Text("ChosenClosing"), outsideEnd ? null : end);
                     var blocks = new object?[] { outsideStart ? begin : null, first, last, outsideEnd ? end : null };
@@ -320,8 +327,8 @@ internal static class DocxCommentGlyphFrameTests
                 });
             var pages = renderer.RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(wrappedPage ? 2 : 1, pages.Length);
-            TestAssert.True(pages.Sum(page => DocxTests.CountWordCompatibleCommentRangeFills(page.Content)) >= 2,
-                "The equivalent boundary positions select both paragraphs.");
+            TestAssert.True(pages.Sum(page => DocxTests.CountWordCompatibleCommentRangeFills(page.Content)) >= (singleParagraph ? 2 : 3),
+                "The selection fills and the delayed reference mark keep their own paragraphs.");
             return pages;
         }
     }

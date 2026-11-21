@@ -494,8 +494,11 @@ internal sealed partial class DocxReader
 
     private readonly record struct DocxTableColumnBookmark(DocxBookmarkAnchor Anchor, int First, int Last);
 
+    private static bool NeedsBodyCommentBinding(DocxCommentRange range) =>
+        range.StartSourceRunIndex is not null && range.ReferenceSourceRunIndex is null;
+
     private static bool IsUnmatchedCommentStart(DocxCommentRange range) =>
-        range.StartSourceRunIndex is not null && range.EndSourceRunIndex is null && range.ReferenceSourceRunIndex is null;
+        NeedsBodyCommentBinding(range) && range.EndSourceRunIndex is null;
 
     private readonly record struct DocxBlockCommentBoundary(int BeforePart, string Id, bool IsStart)
     {
@@ -542,15 +545,17 @@ internal sealed partial class DocxReader
             {
                 token.ThrowIfCancellationRequested();
                 if (range.Id is not { Length: > 0 } id) continue;
-                if (IsUnmatchedCommentStart(range))
+                if (NeedsBodyCommentBinding(range))
                 {
                     AddStart(id, part, range);
                 }
-                else if (range.StartSourceRunIndex is not null ||
-                    range.EndSourceRunIndex is not null && !lastParts.TryAdd(id, (part, range)))
+                else if (range.StartSourceRunIndex is not null)
                 {
                     ambiguous.Add(id);
+                    continue;
                 }
+                if (range.EndSourceRunIndex is not null && !lastParts.TryAdd(id, (part, range)))
+                    ambiguous.Add(id);
             }
             foreach (DocxInlineReference reference in paragraph.InlineReferences)
             {
