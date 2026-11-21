@@ -8,24 +8,25 @@ namespace Lokad.OoxPdf.Tests;
 internal static class PptxChartRangeTests
 {
 
-    public static void FullColumnFormulaThrowsPromptly()
+    public static void FullGridAndColumnFormulasExceedRangeBudget()
     {
-        object workbook = CreateWorkbook();
-        TestAssert.Throws<IOException>(() => ReadCellCount(workbook, "Sheet1!$A$1:$XFD$1048576"));
+        var workbook = CreateWorkbook();
+        TestAssert.Throws<OoxPdfLimitExceededException>(() => workbook.ReadRangeCells("Sheet1!$A$1:$XFD$1048576"));
+        TestAssert.Throws<OoxPdfLimitExceededException>(() => workbook.ReadRangeCells("Sheet1!$A$1:$A$1048576"));
     }
 
-    public static void FullRowFormulaReadsWithoutExpansion()
+    public static void FullRowFormulaReturnsEveryColumn()
     {
-        object workbook = CreateWorkbook();
-        TestAssert.Equal(16384, ReadCellCount(workbook, "Sheet1!$A$1048576:$XFD$1048576"));
+        var workbook = CreateWorkbook();
+        TestAssert.Equal(16384, workbook.ReadRangeCells("Sheet1!$A$1048576:$XFD$1048576").Length);
     }
 
     public static void OutOfGridReferencesResolveEmpty()
     {
-        object workbook = CreateWorkbook();
-        TestAssert.Equal(0, ReadCellCount(workbook, "Sheet1!$A$1:$XFE$1"));
-        TestAssert.Equal(0, ReadCellCount(workbook, "Sheet1!$A$0:$A$5"));
-        TestAssert.Equal(0, ReadCellCount(workbook, "Sheet1!$AAAA$1:$AAAA$2"));
+        var workbook = CreateWorkbook();
+        TestAssert.Equal(0, workbook.ReadRangeCells("Sheet1!$A$1:$XFE$1").Length);
+        TestAssert.Equal(0, workbook.ReadRangeCells("Sheet1!$A$0:$A$5").Length);
+        TestAssert.Equal(0, workbook.ReadRangeCells("Sheet1!$AAAA$1:$AAAA$2").Length);
     }
 
     public static void TableReferencesKeepUnboundedValidation()
@@ -44,14 +45,14 @@ internal static class PptxChartRangeTests
 
     public static void SmallRangeReadsCells()
     {
-        object workbook = CreateWorkbook();
-        TestAssert.Equal(2, ReadCellCount(workbook, "Sheet1!$A$1:$A$2"));
-        TestAssert.Equal(1, ReadCellCount(workbook, "Sheet1!$A$1"));
+        var workbook = CreateWorkbook();
+        TestAssert.Equal(2, workbook.ReadRangeCells("Sheet1!$A$1:$A$2").Length);
+        TestAssert.Equal(1, workbook.ReadRangeCells("Sheet1!$A$1").Length);
     }
 
     public static void WorkbookScopedNamesUseDeclaredSheetOrder()
     {
-        var workbook = (PptxRenderer.ChartWorkbookData)ReadWorkbookPackage(
+        var workbook = ReadWorkbookPackage(
             """
             <sheets><sheet name="First" sheetId="91" r:id="first"/><sheet name="Second" sheetId="7" r:id="second"/></sheets>
             <definedNames>
@@ -74,19 +75,7 @@ internal static class PptxChartRangeTests
         TestAssert.Equal("9", workbook.ReadRangeCells("Second!Scoped").Single().Text);
     }
 
-    public static void RangeAtCellBudgetBoundaryPasses()
-    {
-        object workbook = CreateWorkbook();
-        TestAssert.Equal(100000, ReadCellCount(workbook, "Sheet1!$A$1:$A$100000"));
-    }
-
-    public static void RangeBeyondCellBudgetThrows()
-    {
-        object workbook = CreateWorkbook();
-        TestAssert.Throws<IOException>(() => ReadCellCount(workbook, "Sheet1!$A$1:$A$100001"));
-    }
-
-    private static object CreateWorkbook()
+    private static PptxRenderer.ChartWorkbookData CreateWorkbook()
     {
         var sheets = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase)
         {
@@ -99,25 +88,12 @@ internal static class PptxChartRangeTests
         return PptxChartRangeTests.ReadWorkbookCells(sheets);
     }
 
-    private static int ReadCellCount(object workbook, string formula)
-    {
-        MethodInfo read = workbook.GetType().GetMethod("ReadRangeCells", BindingFlags.Public | BindingFlags.Instance, null, [typeof(string)], null) ?? throw new InvalidOperationException("Expected range reader.");
-        try
-        {
-            return ((Array)read.Invoke(workbook, [formula])!).Length;
-        }
-        catch (TargetInvocationException ex)
-        {
-            throw ex.InnerException ?? ex;
-        }
-
-    }
     public static void HiddenColumnRunBeyondGridIsClamped()
     {
-        object workbook = ReadWorkbookFromSheetXml(
+        var workbook = ReadWorkbookFromSheetXml(
             "<cols><col min=\"1\" max=\"2147483647\" hidden=\"1\"/></cols>" +
             "<sheetData><row r=\"1\"><c r=\"A1\"><v>5</v></c><c r=\"B1\"><v>6</v></c></row></sheetData>");
-        var cells = ReadRangeCells(workbook, "Sheet1!$A$1:$B$1");
+        var cells = workbook.ReadRangeCells("Sheet1!$A$1:$B$1");
         TestAssert.Equal(2, cells.Length);
         TestAssert.True(cells[0].ColumnHidden, "Column A must report hidden.");
         TestAssert.True(cells[1].ColumnHidden, "Column B must report hidden.");
@@ -125,10 +101,10 @@ internal static class PptxChartRangeTests
 
     public static void NarrowHiddenColumnRunPreservesSemantics()
     {
-        object workbook = ReadWorkbookFromSheetXml(
+        var workbook = ReadWorkbookFromSheetXml(
             "<cols><col min=\"1\" max=\"1\" hidden=\"1\"/></cols>" +
             "<sheetData><row r=\"1\"><c r=\"A1\"><v>5</v></c><c r=\"B1\"><v>6</v></c><c r=\"C1\"><v>7</v></c></row></sheetData>");
-        var cells = ReadRangeCells(workbook, "Sheet1!$A$1:$C$1");
+        var cells = workbook.ReadRangeCells("Sheet1!$A$1:$C$1");
         TestAssert.Equal(3, cells.Length);
         TestAssert.True(cells[0].ColumnHidden, "Column A must report hidden.");
         TestAssert.True(!cells[1].ColumnHidden, "Column B must report visible.");
@@ -137,11 +113,11 @@ internal static class PptxChartRangeTests
 
     public static void OutOfGridHiddenRowIsIgnored()
     {
-        object workbook = ReadWorkbookFromSheetXml(
+        var workbook = ReadWorkbookFromSheetXml(
             "<sheetData><row r=\"1\"><c r=\"A1\"><v>1</v></c></row>" +
             "<row r=\"2\" hidden=\"1\"><c r=\"A2\"><v>2</v></c></row>" +
             "<row r=\"99999999\" hidden=\"1\"/></sheetData>");
-        var cells = ReadRangeCells(workbook, "Sheet1!$A$1:$A$2");
+        var cells = workbook.ReadRangeCells("Sheet1!$A$1:$A$2");
         TestAssert.Equal(2, cells.Length);
         TestAssert.True(!cells[0].RowHidden, "Row 1 must report visible.");
         TestAssert.True(cells[1].RowHidden, "Row 2 must report hidden.");
@@ -149,14 +125,14 @@ internal static class PptxChartRangeTests
 
     public static void HiddenColumnStorageStaysBoundedAcrossWideRuns()
     {
-        static object Read(int last) => ReadWorkbookFromSheetXml(
+        static PptxRenderer.ChartWorkbookData Read(int last) => ReadWorkbookFromSheetXml(
             $"<cols><col min=\"4\" max=\"{last}\" hidden=\"1\"/></cols>" +
             "<sheetData><row r=\"1\"><c r=\"A1\"><v>5</v></c></row></sheetData>");
         Read(4);
         static long Allocated(int last)
         {
             long before = GC.GetAllocatedBytesForCurrentThread();
-            object workbook = Read(last);
+            var workbook = Read(last);
             long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
             GC.KeepAlive(workbook);
             return allocated;
@@ -172,11 +148,11 @@ internal static class PptxChartRangeTests
             "<col min=\"0\" max=\"0\" hidden=\"1\"/>", "<col min=\"16385\" max=\"2147483647\" hidden=\"1\"/>",
             "<col min=\"8\" max=\"4\" hidden=\"1\"/>" })
         {
-            object workbook = ReadWorkbookFromSheetXml("<cols>" + declaration +
+            var workbook = ReadWorkbookFromSheetXml("<cols>" + declaration +
                 "</cols><sheetData><row r=\"1\"><c r=\"A1\"><v>5</v></c></row></sheetData>");
-            TestAssert.True(!ReadRangeCells(workbook, "Sheet1!A1").Single().ColumnHidden,
+            TestAssert.True(!workbook.ReadRangeCells("Sheet1!A1").Single().ColumnHidden,
                 "Absent, visible and invalid runs preserve a visible first column.");
-            TestAssert.True(!ReadRangeCells(workbook, "Sheet1!XFD1").Single().ColumnHidden,
+            TestAssert.True(!workbook.ReadRangeCells("Sheet1!XFD1").Single().ColumnHidden,
                 "Absent, visible and invalid runs preserve a visible last column.");
         }
     }
@@ -219,8 +195,8 @@ internal static class PptxChartRangeTests
 
     public static void WorksheetCellsAtBudgetBoundaryPass()
     {
-        object workbook = ReadWorkbookFromSheetXml(BuildManyCellSheet(100000));
-        TestAssert.Equal(1, ReadCellCount(workbook, "Sheet1!$A$100000"));
+        var workbook = ReadWorkbookFromSheetXml(BuildManyCellSheet(100000));
+        TestAssert.Equal(1, workbook.ReadRangeCells("Sheet1!$A$100000").Length);
     }
 
     public static void WorkbookSheetsBeyondBudgetThrow()
@@ -275,12 +251,7 @@ internal static class PptxChartRangeTests
     }
 
 
-    private static object ReadWorkbookFromSheetXml(string sheetBody)
-    {
-        return ReadWorkbookFromSheetXml(sheetBody, null);
-    }
-
-    private static object ReadWorkbookFromSheetXml(string sheetBody, string? sharedStringsBody)
+    private static PptxRenderer.ChartWorkbookData ReadWorkbookFromSheetXml(string sheetBody, string? sharedStringsBody = null)
     {
         return ReadWorkbookPackage(
             "<sheets><sheet name=\"Sheet1\" sheetId=\"1\" r:id=\"rId1\"/></sheets>",
@@ -292,7 +263,7 @@ internal static class PptxChartRangeTests
             sharedStringsBody, null);
     }
 
-    internal static object ReadWorkbookCells(IReadOnlyDictionary<string, Dictionary<string, string>> sheets,
+    internal static PptxRenderer.ChartWorkbookData ReadWorkbookCells(IReadOnlyDictionary<string, Dictionary<string, string>> sheets,
         CancellationToken cancellationToken = default)
     {
         XNamespace spreadsheet = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
@@ -317,7 +288,7 @@ internal static class PptxChartRangeTests
             cancellationToken: cancellationToken);
     }
 
-    private static object ReadWorkbookPackage(string sheetsFragment, string workbookRelsFragment, IReadOnlyDictionary<string, string> sheetBodies, string? sharedStringsBody, string? stylesBody = null,
+    private static PptxRenderer.ChartWorkbookData ReadWorkbookPackage(string sheetsFragment, string workbookRelsFragment, IReadOnlyDictionary<string, string> sheetBodies, string? sharedStringsBody, string? stylesBody = null,
         CancellationToken cancellationToken = default)
     {
         const string spreadsheet = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
@@ -373,20 +344,15 @@ internal static class PptxChartRangeTests
 
         using MemoryStream packageStream = TestFixtures.CreateZipPackage(entries);
         using OoxPackage package = OoxPackage.Open(packageStream, CancellationToken.None);
+        return ReadWorkbook(package, cancellationToken);
+    }
+
+    internal static PptxRenderer.ChartWorkbookData ReadWorkbook(OoxPackage package, CancellationToken cancellationToken = default)
+    {
         MethodInfo read = typeof(PptxRenderer).GetMethod(
             "ReadWorkbookDataCore",
             BindingFlags.NonPublic | BindingFlags.Static) ?? throw new InvalidOperationException("Expected workbook reader.");
-        try
-        {
-            return read.Invoke(null, [package, cancellationToken])
-                ?? throw new InvalidOperationException("Expected workbook data.");
-        }
-        catch (TargetInvocationException ex)
-        {
-            throw ex.InnerException ?? ex;
-        }
+        return (PptxRenderer.ChartWorkbookData?)read.Invoke(null, BindingFlags.DoNotWrapExceptions, null, [package, cancellationToken], null)
+            ?? throw new InvalidOperationException("Expected workbook data.");
     }
-
-    private static PptxRenderer.ChartWorkbookRangeCell[] ReadRangeCells(object workbook, string formula) =>
-        ((PptxRenderer.ChartWorkbookData)workbook).ReadRangeCells(formula);
 }

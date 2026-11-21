@@ -158,36 +158,39 @@ internal static partial class OoxLimitsTests
 
     public static void ChartRangeSingleAtLimitPasses()
     {
-        object workbook = ChartWorkbookWithCells();
+        var workbook = ChartWorkbookWithCells();
         // 100000 is the documented per-union cap (M05). Single area at limit must pass.
-        TestAssert.Equal(100000, ReadCellCount(workbook, "Sheet1!$A$1:$A$100000"));
+        var cells = workbook.ReadRangeCells("Sheet1!$A$1:$A$100000");
+        TestAssert.Equal(100000, cells.Length);
+        TestAssert.Equal("5", cells[0].Text);
+        TestAssert.True(!cells[^1].HasValue, "The last in-budget empty cell retains its position.");
     }
 
     public static void ChartRangeSingleAboveLimitThrows()
     {
-        object workbook = ChartWorkbookWithCells();
-        TestAssert.Throws<IOException>(() => ReadCellCount(workbook, "Sheet1!$A$1:$A$100001"));
+        var workbook = ChartWorkbookWithCells();
+        TestAssert.Throws<OoxPdfLimitExceededException>(() => workbook.ReadRangeCells("Sheet1!$A$1:$A$100001"));
     }
 
     public static void ChartRangeUnionAtLimitPasses()
     {
-        object workbook = ChartWorkbookWithCells();
+        var workbook = ChartWorkbookWithCells();
         // 50000 + 50000 = 100000 cumulative must pass (M05).
-        TestAssert.Equal(100000, ReadCellCount(workbook, "Sheet1!$A$1:$A$50000,Sheet1!$A$1:$A$50000"));
+        TestAssert.Equal(100000, workbook.ReadRangeCells("Sheet1!$A$1:$A$50000,Sheet1!$A$1:$A$50000").Length);
     }
 
     public static void ChartRangeUnionBeyondLimitThrows()
     {
-        object workbook = ChartWorkbookWithCells();
+        var workbook = ChartWorkbookWithCells();
         // Each area is individually legal (50001), but the union (100002) must fail (M05).
-        TestAssert.Throws<IOException>(() => ReadCellCount(workbook, "Sheet1!$A$1:$A$50001,Sheet1!$A$1:$A$50001"));
+        TestAssert.Throws<OoxPdfLimitExceededException>(() => workbook.ReadRangeCells("Sheet1!$A$1:$A$50001,Sheet1!$A$1:$A$50001"));
     }
 
     public static void ChartRangeAreaCountCapThrows()
     {
-        object workbook = ChartWorkbookWithCells();
+        var workbook = ChartWorkbookWithCells();
         string formula = string.Join(",", Enumerable.Repeat("Sheet1!$A$1", 257));
-        TestAssert.Throws<IOException>(() => ReadCellCount(workbook, formula));
+        TestAssert.Throws<OoxPdfLimitExceededException>(() => workbook.ReadRangeCells(formula));
     }
 
     public static void ChartHugeDeclaredCountThrowsBeforeAllocation()
@@ -264,50 +267,13 @@ internal static partial class OoxLimitsTests
     public static void CancelledRangeExpansionObservesCancellation()
     {
         using var cts = new CancellationTokenSource();
-        object workbook = ChartWorkbookWithCells(cts.Token);
+        var workbook = ChartWorkbookWithCells(cts.Token);
         cts.Cancel();
-        MethodInfo read = workbook.GetType().GetMethod("ReadRangeCells", BindingFlags.Public | BindingFlags.Instance, null, [typeof(string)], null)
-            ?? throw new InvalidOperationException("Expected cancellable range reader.");
-        try
-        {
-            read.Invoke(workbook, ["Sheet1!$A$1:$A$10"]);
-        }
-        catch (TargetInvocationException ex) when (ex.InnerException is OperationCanceledException)
-        {
-            return;
-        }
-        throw new InvalidOperationException("Expected cancelled range expansion to observe cancellation.");
+        var error = TestAssert.Throws<OperationCanceledException>(() => workbook.ReadRangeCells("Sheet1!$A$1:$A$10"));
+        TestAssert.Equal(cts.Token, error.CancellationToken);
     }
 
-    private static int ReadCellCount(object workbook, string formula)
-    {
-        MethodInfo read = workbook.GetType().GetMethod("ReadRangeCells", BindingFlags.Public | BindingFlags.Instance, null, [typeof(string)], null)
-            ?? throw new InvalidOperationException("Expected range reader.");
-        try
-        {
-            return ((Array)read.Invoke(workbook, [formula])!).Length;
-        }
-        catch (TargetInvocationException ex)
-        {
-            throw ex.InnerException ?? ex;
-        }
-    }
-
-    private static Array ReadRangeArray(object workbook, string formula)
-    {
-        MethodInfo read = workbook.GetType().GetMethod("ReadRangeCells", BindingFlags.Public | BindingFlags.Instance, null, [typeof(string)], null)
-            ?? throw new InvalidOperationException("Expected range reader.");
-        try
-        {
-            return (Array)read.Invoke(workbook, [formula])!;
-        }
-        catch (TargetInvocationException ex)
-        {
-            throw ex.InnerException ?? ex;
-        }
-    }
-
-    private static object ChartWorkbookWithCells(CancellationToken cancellationToken = default)
+    private static PptxRenderer.ChartWorkbookData ChartWorkbookWithCells(CancellationToken cancellationToken = default)
     {
         var sheets = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase)
         {
@@ -818,7 +784,7 @@ internal static partial class OoxLimitsTests
             ["First"] = Enumerable.Range(1, 50_000).ToDictionary(row => "A" + row, _ => "1"),
             ["Second"] = Enumerable.Range(1, 50_000).ToDictionary(row => "A" + row, _ => "2")
         };
-        var workbook = (PptxRenderer.ChartWorkbookData)PptxChartRangeTests.ReadWorkbookCells(sheets);
+        var workbook = PptxChartRangeTests.ReadWorkbookCells(sheets);
         TestAssert.Equal("2", workbook.ReadRangeCells("Second!A50000").Single().Text);
         // Both sheets stay below their individual limit; only the workbook total changes.
         sheets["Second"].Add("A50001", "2");
@@ -1676,22 +1642,12 @@ internal static partial class OoxLimitsTests
 
     public static void ChartRangeMemoReusesExpansionWithinFrame()
     {
-        object workbook = ChartWorkbookWithCells();
-        Array first = ReadRangeArray(workbook, "Sheet1!$A$1:$A$2");
-        Array second = ReadRangeArray(workbook, "Sheet1!$A$1:$A$2");
+        var workbook = ChartWorkbookWithCells();
+        var first = workbook.ReadRangeCells("Sheet1!$A$1:$A$2");
+        var second = workbook.ReadRangeCells("Sheet1!$A$1:$A$2");
         TestAssert.True(ReferenceEquals(first, second), "Same formula must reuse the memoized expansion within a frame.");
-        MethodInfo clear = workbook.GetType().GetMethod("ClearRangeMemo", BindingFlags.NonPublic | BindingFlags.Instance)
-            ?? throw new InvalidOperationException("Expected range memo reset.");
-        try
-        {
-            clear.Invoke(workbook, []);
-        }
-        catch (TargetInvocationException ex)
-        {
-            throw ex.InnerException ?? ex;
-        }
-
-        Array third = ReadRangeArray(workbook, "Sheet1!$A$1:$A$2");
+        workbook.ClearRangeMemo();
+        var third = workbook.ReadRangeCells("Sheet1!$A$1:$A$2");
         TestAssert.True(!ReferenceEquals(first, third), "Cleared memo must expand fresh.");
         TestAssert.Equal(first.Length, third.Length);
     }

@@ -1021,9 +1021,7 @@ internal static class PptxChartRenderingTests
     {
         using var input = new MemoryStream(PptxTests.EmbeddedChartWorkbook());
         using var package = OoxPackage.Open(input, default);
-        var read = typeof(PptxRenderer).GetMethod("ReadWorkbookDataCore",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
-        var workbook = (PptxRenderer.ChartWorkbookData)read.Invoke(null, [package, CancellationToken.None])!;
+        var workbook = PptxChartRangeTests.ReadWorkbook(package);
         string[] amounts = ["8.2", "3.2", "1.4"];
         foreach (var (formula, expected) in new (string, string[])[] {
             ("Sheet1!$B$2:$B$4", amounts), ("'[Book.xlsx]Sheet1'!$B$2:$B$4", amounts),
@@ -1060,7 +1058,7 @@ internal static class PptxChartRenderingTests
         var blank = workbook.ReadRangeCells("Sheet1!C2").Single();
         TestAssert.True(!blank.HasValue && blank.Text == "", "A formula without a stored result is not recalculated.");
         TestAssert.True(ReferenceEquals(values, workbook.ReadRangeCells("SalesValues")), "Range memoization retains the owned immutable result.");
-        var empty = (PptxRenderer.ChartWorkbookData)PptxChartRangeTests.ReadWorkbookCells(
+        var empty = PptxChartRangeTests.ReadWorkbookCells(
             new Dictionary<string, Dictionary<string, string>> { ["Sheet1"] = new() { ["A1"] = "" } });
         TestAssert.True(empty.ReadRangeCells("Sheet1!A1").Single().HasValue,
             "An authored empty stored value differs from a missing result.");
@@ -1195,11 +1193,8 @@ internal static class PptxChartRenderingTests
             "Missing workbook source cells cannot supply a stored value.");
 
         using MemoryStream embeddedWorkbookStream = new(PptxTests.EmbeddedChartWorkbook());
-        OoxPackage embeddedWorkbookPackage = OoxPackage.Open(embeddedWorkbookStream, CancellationToken.None);
-        var readWorkbookData = typeof(PptxRenderer).GetMethod(
-            "ReadWorkbookDataCore",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected workbook reader helper.");
-        object parsedWorkbook = readWorkbookData.Invoke(null, [embeddedWorkbookPackage, CancellationToken.None]) ?? throw new InvalidOperationException("Expected parsed workbook data.");
+        using OoxPackage embeddedWorkbookPackage = OoxPackage.Open(embeddedWorkbookStream, CancellationToken.None);
+        var parsedWorkbook = PptxChartRangeTests.ReadWorkbook(embeddedWorkbookPackage);
         object hiddenColumnVector = NumberVector(threeSlotPlot, parsedWorkbook);
         object[] allHiddenColumnWorkbookPoints = (((System.Collections.IEnumerable?)hiddenColumnVector.GetType().GetMethod("WorkbookPointsForPlotVisibility")?.Invoke(hiddenColumnVector, [false])) ?? throw new InvalidOperationException("Expected unfiltered workbook points.")).Cast<object>().ToArray();
         object[] visibleHiddenColumnWorkbookPoints = (((System.Collections.IEnumerable?)hiddenColumnVector.GetType().GetMethod("WorkbookPointsForPlotVisibility")?.Invoke(hiddenColumnVector, [true])) ?? throw new InvalidOperationException("Expected visibility-filtered workbook points.")).Cast<object>().ToArray();

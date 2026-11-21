@@ -1,5 +1,4 @@
 using System.IO.Compression;
-using System.Reflection;
 using Lokad.OoxPdf.Docx;
 using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Ooxml;
@@ -90,9 +89,7 @@ internal static partial class OoxMemoryAdmissionTests
             PptxRenderer.ChartWorkbookData data;
             using (var package = OoxPackage.Open(input, default))
             {
-                var method = typeof(PptxRenderer).GetMethod("ReadWorkbookDataCore", BindingFlags.NonPublic | BindingFlags.Static)!;
-                try { data = (PptxRenderer.ChartWorkbookData)TestAssert.NotNull(method.Invoke(null, [package, CancellationToken.None])); }
-                catch (TargetInvocationException ex) { throw ex.InnerException ?? ex; }
+                data = PptxChartRangeTests.ReadWorkbook(package);
             }
             TestAssert.True(pool.Reserved > 0, "Workbook records stay funded after nested package buffers refund.");
             TestAssert.Equal(1, data.ReadRangeCells("Data!A1:A1").Length);

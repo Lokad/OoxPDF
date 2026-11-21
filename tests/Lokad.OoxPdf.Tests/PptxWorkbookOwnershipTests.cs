@@ -1,5 +1,4 @@
 using System.IO.Compression;
-using System.Reflection;
 using System.Text;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Diagnostics;
@@ -191,8 +190,6 @@ internal static partial class PptxWorkbookOwnershipTests
     {
         using var input = TestFixtures.CreateZipPackage(parts);
         using OoxPackage package = OoxPackage.Open(input, default);
-        MethodInfo read = typeof(PptxRenderer).GetMethod("ReadWorkbookDataCore", BindingFlags.NonPublic | BindingFlags.Static)!;
-        try { return (PptxRenderer.ChartWorkbookData)read.Invoke(null, [package, token])!; }
-        catch (TargetInvocationException ex) { throw ex.InnerException ?? ex; }
+        return PptxChartRangeTests.ReadWorkbook(package, token);
     }
 }
