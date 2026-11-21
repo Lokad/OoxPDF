@@ -1223,43 +1223,27 @@ internal sealed partial class DocxRenderer
                             continue;
                         }
 
-                        int? targetItemIndex = bookmark.InlineItemIndex;
-                        if (paragraph.InlineContent is { } inlineItems && targetItemIndex is int sourceIndex && sourceIndex >= 0)
+                        DocxInlineItem? targetItem = ResolveBookmarkInlineItem(paragraph, bookmark, cancellationToken,
+                            out int itemIndex, out bool afterItem);
+                        if (line.InlineFrame is { } objectLine &&
+                            (targetItem is DocxInlinePicture or DocxInlineBox || afterItem && targetItem is DocxInlineEquation))
                         {
-                            // A source boundary can precede retained but unpainted runs.
-                            // Keep the source identity and find its first placed object.
-                            while (sourceIndex < inlineItems.Count && inlineItems[sourceIndex] is
-                                DocxInlineText { Run.EffectiveProperties.Hidden: true } or DocxInlineText { Length: 0 } or
-                                DocxInlineTab { Run.EffectiveProperties.Hidden: true } or DocxInlineBreak { Run.EffectiveProperties.Hidden: true })
-                            {
-                                cancellationToken.ThrowIfCancellationRequested();
-                                sourceIndex++;
-                            }
-                            targetItemIndex = sourceIndex;
-                        }
-
-                        if (line.InlineFrame is { } objectLine && paragraph.InlineContent is { } objectItems &&
-                            targetItemIndex is int objectIndex && objectIndex >= 0 && objectIndex < objectItems.Count &&
-                            objectItems[objectIndex] is DocxInlinePicture or DocxInlineBox)
-                        {
-                            // Ordered source extents belong to the placed line. An object
-                            // bookmark must wait for that line rather than bind later prose.
+                            // The measured line owns both boundaries of its placed object.
                             foreach (var extent in line.InlineSourceExtents)
                             {
                                 cancellationToken.ThrowIfCancellationRequested();
-                                if (extent.ItemIndex != objectIndex || extent.EndOffset <= extent.StartOffset) continue;
+                                if (extent.ItemIndex != itemIndex || extent.EndOffset <= extent.StartOffset) continue;
+                                double offset = afterItem ? extent.EndOffset :
+                                    extent.StartOffset == 0d ? line.FrameOriginOffsetX ?? 0d : extent.StartOffset;
                                 destinations.Add(bookmark.Name, new PdfLinkDestination(pageIndex,
-                                    line.X + (extent.StartOffset == 0d ? line.FrameOriginOffsetX ?? 0d : extent.StartOffset) +
-                                        pageTextEmissionXOffset - viewportContextPoints * textEmissionFontScale,
+                                    line.X + offset + pageTextEmissionXOffset - viewportContextPoints * textEmissionFontScale,
                                     line.BaselineY + objectLine.BaselineInset - pageTextEmissionBaselineOffset, Zoom: null));
                                 break;
                             }
                             continue;
                         }
 
-                        if (paragraph.InlineContent is { } pictureItems &&
-                            targetItemIndex is int pictureIndex && pictureIndex >= 0 && pictureIndex < pictureItems.Count &&
-                            pictureItems[pictureIndex] is DocxInlinePicture targetPicture)
+                        if (targetItem is DocxInlinePicture targetPicture)
                         {
                             // Legacy text wrapping still owns ordinary placement.
                             // Borrow its actual picture, including container transforms,
@@ -1269,16 +1253,14 @@ internal sealed partial class DocxRenderer
                                 sourceImage => ReferenceEquals(sourceImage, targetPicture.Image), cancellationToken))
                             {
                                 destinations.Add(bookmark.Name, new PdfLinkDestination(pageIndex,
-                                    image.X - viewportContextPoints * textEmissionFontScale,
+                                    image.X + (afterItem ? image.Width : 0d) - viewportContextPoints * textEmissionFontScale,
                                     image.Y + image.Height, Zoom: null));
                                 break;
                             }
                             continue;
                         }
 
-                        if (paragraph.InlineContent is { } sourceItems &&
-                            targetItemIndex is int itemIndex && itemIndex >= 0 && itemIndex < sourceItems.Count &&
-                            sourceItems[itemIndex] is DocxInlineEquation sourceEquation)
+                        if (targetItem is DocxInlineEquation sourceEquation)
                         {
                             // Legacy body lines paint a separate item. Resolve its final
                             // placed record, rather than recomputing its geometry from prose.
@@ -1317,12 +1299,19 @@ internal sealed partial class DocxRenderer
                                 // Word keeps line-start viewport context at the container
                                 // origin; a later formula targets its actual placed position.
                                 if (placement is not null && line.FrameOriginOffsetX is { } inlineOrigin)
+                                {
+                                    double offset = afterItem
+                                        ? placement.OffsetX + placement.Math.Box.AdvanceWidth * (bodyEquation?.Scale ?? line.MathScale)
+                                        : placement.OffsetX == 0d ? inlineOrigin : placement.OffsetX;
                                     destinations.Add(bookmark.Name, new PdfLinkDestination(pageIndex,
-                                        line.X + (placement.OffsetX == 0d ? inlineOrigin : placement.OffsetX) + pageTextEmissionXOffset - viewportContextPoints * textEmissionFontScale,
+                                        line.X + offset + pageTextEmissionXOffset - viewportContextPoints * textEmissionFontScale,
                                         mathTop - pageTextEmissionBaselineOffset, Zoom: null));
+                                }
                                 continue;
                             }
                         }
+
+                        if (afterItem) continue;
 
                         if (!TryResolveBookmarkDestinationSegment(segments, paragraph, bookmark, out DocxTextEmissionSegment? target, out double targetX))
                         {
@@ -1886,6 +1875,37 @@ internal sealed partial class DocxRenderer
         return emittedAdvance > 0d ? emittedAdvance : segment.Width;
     }
 
+    private static DocxInlineItem? ResolveBookmarkInlineItem(DocxParagraph paragraph, DocxBookmarkAnchor bookmark,
+        CancellationToken token, out int index, out bool afterItem)
+    {
+        index = bookmark.InlineItemIndex ?? -1;
+        afterItem = false;
+        if (paragraph.InlineContent is not { } items || index < 0 || index > items.Count)
+            return null;
+
+        while (index < items.Count && IsUnpainted(items[index]))
+        {
+            token.ThrowIfCancellationRequested();
+            index++;
+        }
+        if (index < items.Count) return items[index];
+        if (bookmark.MathSource is not null) return null;
+
+        // A terminal boundary has no following item. Its preceding object
+        // owns the endpoint, including when hidden source follows the object.
+        while (--index >= 0 && IsUnpainted(items[index])) token.ThrowIfCancellationRequested();
+        if (index >= 0 && items[index] is DocxInlinePicture or DocxInlineBox or DocxInlineEquation)
+        {
+            afterItem = true;
+            return items[index];
+        }
+        return null;
+
+        static bool IsUnpainted(DocxInlineItem item) => item is
+            DocxInlineText { Run.EffectiveProperties.Hidden: true } or DocxInlineText { Length: 0 } or
+            DocxInlineTab { Run.EffectiveProperties.Hidden: true } or DocxInlineBreak { Run.EffectiveProperties.Hidden: true };
+    }
+
     private static bool TryResolveBookmarkDestinationSegment(
         IReadOnlyList<DocxTextEmissionSegment> segments,
         DocxParagraph paragraph,
@@ -1900,8 +1920,8 @@ internal sealed partial class DocxRenderer
         bool terminalTextBoundary = false;
         // A bookmark after the final item has no following source run. Bind a
         // trailing text boundary to its retained source endpoint instead; hidden
-        // neighbors do not own a painted destination. Other terminal object kinds
-        // keep their existing placement rules.
+        // neighbors do not own a painted destination. Placed objects bind through
+        // their inline extents before this text fallback.
         if (paragraph.InlineContent is { } items && bookmark.InlineItemIndex == items.Count)
         {
             for (int index = items.Count - 1; index >= 0; index--)
