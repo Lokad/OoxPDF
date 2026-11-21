@@ -541,6 +541,7 @@ internal sealed partial class DocxReader
     {
         var parts = new List<ParagraphBreakPart>();
         var currentChildren = new List<XElement>();
+        var authoredStory = DocxSourceXml.FindStoryRoot(paragraph) is { } story ? new DocxSourceXml.StoryOrigin(story) : null;
         XElement? paragraphProperties = paragraph.Element(WordprocessingNamespace + "pPr");
         bool startsAfterBreak = false;
         bool hasParagraphPart = false;
@@ -558,6 +559,7 @@ internal sealed partial class DocxReader
             }
 
             var splitParagraph = new XElement(WordprocessingNamespace + "p");
+            if (authoredStory is not null) splitParagraph.AddAnnotation(authoredStory);
             if (paragraphProperties is not null)
             {
                 splitParagraph.Add(new XElement(paragraphProperties));

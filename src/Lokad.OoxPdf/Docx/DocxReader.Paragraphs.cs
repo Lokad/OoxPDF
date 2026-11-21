@@ -479,7 +479,8 @@ internal sealed partial class DocxReader
                             AddCommentRangeEnd(boundary, openCommentRanges, commentRanges, sourceRunIndex, runs, inlineItems!.Count + 1);
                     }, readHyperlink: sourceEquation.RemoveDeletedText ? null : hyperlink =>
                         AddHyperlinkSpan(hyperlink, sourceRunIndex, 0, runs.Count, 0, 0,
-                            inlineItems!.Count, inlineItems.Count + 1, hyperlinkSpans, relationships, mathContent: true));
+                            inlineItems!.Count, inlineItems.Count + 1, hyperlinkSpans, relationships, mathContent: true),
+                    authoredStory: paragraph.Annotation<DocxSourceXml.StoryOrigin>()?.Story);
                 if (sourceEquation.RemoveDeletedText)
                 {
                     var source = new DocxEquation(content, runs.Count, sourceRunIndex, display, null, null, null);

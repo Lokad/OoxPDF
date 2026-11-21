@@ -12,11 +12,12 @@ internal static partial class DocxMathParser
         Func<XElement, string, DocxTextRun> readRun,
         CancellationToken cancellationToken, Func<XElement, bool>? includeRevision = null,
         bool preserveDeletedStructure = false, Action<DocxMathBookmark>? readBookmark = null,
-        Action<XElement>? readCommentBoundary = null, Func<XElement, DocxHyperlinkSpan>? readHyperlink = null)
+        Action<XElement>? readCommentBoundary = null, Func<XElement, DocxHyperlinkSpan>? readHyperlink = null,
+        XElement? authoredStory = null)
     {
         var pending = new Stack<(XElement Element, bool Expanded, bool InsideRevision, bool IncludeAnnotations, DocxHyperlinkSpan? Hyperlink)>();
         var nodes = new Dictionary<XElement, DocxMathNode>();
-        HashSet<XElement>? moveOwners = null;
+        IReadOnlySet<(XName Name, string Id)>? moveOwners = null;
         pending.Push((equation, false, false, true, null));
         while (pending.TryPop(out var item))
         {
@@ -30,7 +31,10 @@ internal static partial class DocxMathParser
             }
             bool revisionSource = !item.InsideRevision && includeRevision is not null &&
                 DocxSourceXml.IsRevisionContainer(element) &&
-                (name is not ("moveFrom" or "moveTo") || (moveOwners ??= ReadPairedMoveOwners(equation, cancellationToken)).Contains(element));
+                (name is not ("moveFrom" or "moveTo") ||
+                    (string?)element.Attribute(WordprocessingNamespace + "id") is { } id &&
+                    (moveOwners ??= DocxSourceXml.ReadPairedMoveOwnerIds(equation, authoredStory, cancellationToken))
+                        .Contains((element.Name, id)));
             XElement[]? revisionChildren = revisionSource ? ReadRevisionChildren(element, cancellationToken).ToArray() : null;
             // A revision still needs an actual operand or structural control.
             // Readable zero-content siblings do not invalidate that owner.
@@ -235,55 +239,6 @@ internal static partial class DocxMathParser
         DocxSourceXml.IsNonPrintingMarker(element) ||
         DocxSourceXml.TryResolveRevisionRangeMarker(element, out _, out _) &&
         DocxSourceXml.IsNonPrintingRevisionRangeBoundary(element);
-
-    private static HashSet<XElement> ReadPairedMoveOwners(XElement equation, CancellationToken token)
-    {
-        // A move within an equation needs both named sides and a closed range
-        // around each owner. Bare, overlapping and cross-equation moves keep
-        // the existing fallback.
-        var closed = new Dictionary<(DocxRevisionKind Kind, string Name), List<XElement>>();
-        (DocxRevisionKind Kind, string Id, string Name, List<XElement> Runs)? open = null;
-        foreach (var child in equation.Descendants())
-        {
-            token.ThrowIfCancellationRequested();
-            if (DocxSourceXml.TryResolveRevisionRangeMarker(child, out var kind, out bool isStart))
-            {
-                if (!DocxSourceXml.IsNonPrintingRevisionRangeBoundary(child)) return [];
-                string id = child.Attribute(WordprocessingNamespace + "id")!.Value;
-                if (isStart)
-                {
-                    if (open is not null || (string?)child.Attribute(WordprocessingNamespace + "name") is not { Length: > 0 } name)
-                        return [];
-                    open = (kind.Value, id, name, []);
-                }
-                else
-                {
-                    if (open is not { } range || range.Kind != kind.Value || range.Id != id ||
-                        !closed.TryAdd((range.Kind, range.Name), range.Runs)) return [];
-                    open = null;
-                }
-            }
-            else if (child.Name == WordprocessingNamespace + "moveFrom" || child.Name == WordprocessingNamespace + "moveTo")
-            {
-                DocxRevisionKind side = child.Name.LocalName == "moveFrom" ? DocxRevisionKind.MoveFrom : DocxRevisionKind.MoveTo;
-                if (open is not { } range || range.Kind != side) return [];
-                range.Runs.Add(child);
-            }
-        }
-        if (open is not null) return [];
-        var owners = new HashSet<XElement>();
-        foreach (var (key, from) in closed)
-        {
-            token.ThrowIfCancellationRequested();
-            if (key.Kind == DocxRevisionKind.MoveFrom && from.Count != 0 &&
-                closed.TryGetValue((DocxRevisionKind.MoveTo, key.Name), out var to) && to.Count != 0)
-            {
-                owners.UnionWith(from);
-                owners.UnionWith(to);
-            }
-        }
-        return owners;
-    }
 
     private static IEnumerable<XElement> TraversalChildren(XElement element) =>
         DocxSourceXml.StoredChildren(element).Where(child => !IsProperty(child) && !IsNonPrintingSourceMarker(child) && !IsBookmarkMarker(child));

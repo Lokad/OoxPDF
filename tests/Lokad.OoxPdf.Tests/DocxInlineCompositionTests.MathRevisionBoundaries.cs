@@ -1,5 +1,6 @@
 using System.Xml.Linq;
 using Lokad.OoxPdf.Docx;
+using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
 
 namespace Lokad.OoxPdf.Tests;
 
@@ -70,22 +71,14 @@ internal static partial class DocxInlineCompositionTests
             (OoxPdfDocxMarkupMode.AllMarkup, "rate2rate", new[] { DocxRevisionKind.MoveFrom, DocxRevisionKind.MoveTo })
         })
         {
-            var document = ReadMutation("docx-omml-normal-fraction-inline-arial-normal", mode, false, false, (xml, w, m) =>
+            var document = ReadMutation("docx-omml-normal-fraction-inline-arial-normal", mode, false, false, (xml, _, m) =>
             {
                 XElement numerator = xml.Descendants(m + "num").Single();
                 XElement moved = numerator.Element(m + "r")!;
                 var unchanged = new XElement(moved);
                 unchanged.Element(m + "t")!.Value = "2";
-                numerator.ReplaceNodes(MoveRange("moveFrom", "41", "42"), unchanged, MoveRange("moveTo", "43", "44"));
-
-                XElement[] MoveRange(string kind, string rangeId, string revisionId) =>
-                [
-                    new(w + (kind + "RangeStart"), new XAttribute(w + "id", rangeId), new XAttribute(w + "name", "FormulaMove"),
-                        new XAttribute(w + "author", "Editor"), new XAttribute(w + "date", "2024-01-01T00:00:00Z")),
-                    new(w + kind, new XAttribute(w + "id", revisionId), new XAttribute(w + "author", "Editor"),
-                        new XAttribute(w + "date", "2024-01-01T00:00:00Z"), new XElement(moved)),
-                    new(w + (kind + "RangeEnd"), new XAttribute(w + "id", rangeId))
-                ];
+                numerator.ReplaceNodes(MathOperandMove(moved, "moveFrom", "41", "42"), unchanged,
+                    MathOperandMove(moved, "moveTo", "43", "44"));
             });
             var equation = document.Paragraphs.First().Equations.Single();
             TestAssert.True(DocxMathLayout.TryGetRuns(equation, default, out var runs), "A move inside a numerator preserves the supported fraction.");
@@ -104,6 +97,90 @@ internal static partial class DocxInlineCompositionTests
             foreach (string label in new[] { "Before formula:", "after formula.", "Following prose." })
                 TestAssert.Contains(label, painted);
         }
+    }
+
+    public static void DocxMathRevisionBoundariesPairOperandsAcrossParagraphsAndPages()
+    {
+        foreach (bool pageBreak in new[] { false, true })
+        foreach (var (mode, sourceRow, destinationRow) in new[]
+        {
+            (OoxPdfDocxMarkupMode.Final, "2time", "3ratecost"),
+            (OoxPdfDocxMarkupMode.SimpleMarkup, "2time", "3ratecost"),
+            (OoxPdfDocxMarkupMode.Original, "rate2time", "3cost"),
+            (OoxPdfDocxMarkupMode.AllMarkup, "rate2time", "3ratecost")
+        })
+        {
+            var document = ReadMovedOperands(mode, pageBreak);
+            var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true), mode,
+                mode == OoxPdfDocxMarkupMode.AllMarkup ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
+                    : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+            var pages = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
+            string[] painted = pages.Select(page => string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(page,
+                usePageCoordinates: true, fontResourceFilter: name => name.StartsWith("Eq", StringComparison.Ordinal))
+                .Select(show => show.Text))).ToArray();
+            TestAssert.True(painted.SequenceEqual(pageBreak ? [sourceRow, destinationRow] : [sourceRow + destinationRow]),
+                $"Both complete fractions follow the authored move and page ownership in {mode} (page break {pageBreak}).");
+        }
+    }
+
+    public static void DocxMathRevisionBoundariesKeepStoryAndUniqueMoveIds()
+    {
+        var run = new XElement(MathNamespace + "r", new XElement(MathNamespace + "t", "rate"));
+        var from = new XElement(MathNamespace + "oMath", MathOperandMove(run, "moveFrom", "41", "42"));
+        var to = new XElement(MathNamespace + "oMath", MathOperandMove(run, "moveTo", "43", "44"));
+        var scope = new XElement(WordprocessingNamespace + "footnotes",
+            new XElement(WordprocessingNamespace + "footnote", new XAttribute(WordprocessingNamespace + "id", "1"),
+                new XElement(WordprocessingNamespace + "p", from)),
+            new XElement(WordprocessingNamespace + "footnote", new XAttribute(WordprocessingNamespace + "id", "2"),
+                new XElement(WordprocessingNamespace + "p", to)));
+        TestAssert.Equal(2, scope.Elements().Count());
+        TestAssert.Equal(0, DocxSourceXml.ReadPairedMoveOwnerIds(from, null, default).Count);
+        TestAssert.Equal(0, DocxSourceXml.ReadPairedMoveOwnerIds(to, null, default).Count);
+
+        var paired = new XElement(WordprocessingNamespace + "body",
+            new XElement(WordprocessingNamespace + "p", new XElement(from), new XElement(to)));
+        var unrelated = new XElement(WordprocessingNamespace + "moveTo", new XAttribute(WordprocessingNamespace + "id", "80"),
+            new XElement(WordprocessingNamespace + "r", new XElement(WordprocessingNamespace + "t", "Independent")));
+        paired.Add(new XElement(WordprocessingNamespace + "p", unrelated));
+        var ambiguous = new XElement(paired);
+        ambiguous.Elements().Last().Element(WordprocessingNamespace + "moveTo")!
+            .SetAttributeValue(WordprocessingNamespace + "id", "44");
+        TestAssert.Equal(2, DocxSourceXml.ReadPairedMoveOwnerIds(paired.Descendants(MathNamespace + "oMath").First(), null, default).Count);
+        TestAssert.Equal(0, DocxSourceXml.ReadPairedMoveOwnerIds(ambiguous.Descendants(MathNamespace + "oMath").First(), null, default).Count);
+    }
+
+    private static DocxDocument ReadMovedOperands(OoxPdfDocxMarkupMode mode, bool pageBreak) =>
+        ReadMutation("docx-omml-normal-fraction-inline-arial-normal", mode, false, false, (xml, w, m) =>
+        {
+            XElement source = xml.Descendants(m + "oMath").Single().Parent!;
+            var destination = new XElement(source);
+            XElement firstNumerator = source.Descendants(m + "num").Single();
+            XElement lastNumerator = destination.Descendants(m + "num").Single();
+            var rate = new XElement(firstNumerator.Element(m + "r")!);
+            firstNumerator.Element(m + "r")!.Element(m + "t")!.Value = "2";
+            lastNumerator.Element(m + "r")!.Element(m + "t")!.Value = "3";
+            destination.Descendants(m + "den").Single().Element(m + "r")!.Element(m + "t")!.Value = "cost";
+            firstNumerator.AddFirst(MathOperandMove(rate, "moveFrom", "41", "42"));
+            lastNumerator.Add(MathOperandMove(rate, "moveTo", "43", "44"));
+            if (pageBreak)
+            {
+                source.Add(new XElement(w + "r", new XElement(w + "br", new XAttribute(w + "type", "page"))));
+                source.Add(destination.Elements().Where(child => child.Name != w + "pPr"));
+            }
+            else source.AddAfterSelf(destination);
+        });
+
+    private static XElement[] MathOperandMove(XElement operand, string kind, string rangeId, string revisionId)
+    {
+        XNamespace w = WordprocessingNamespace;
+        return
+        [
+            new(w + (kind + "RangeStart"), new XAttribute(w + "id", rangeId), new XAttribute(w + "name", "FormulaMove"),
+                new XAttribute(w + "author", "Editor"), new XAttribute(w + "date", "2024-01-01T00:00:00Z")),
+            new(w + kind, new XAttribute(w + "id", revisionId), new XAttribute(w + "author", "Editor"),
+                new XAttribute(w + "date", "2024-01-01T00:00:00Z"), new XElement(operand)),
+            new(w + (kind + "RangeEnd"), new XAttribute(w + "id", rangeId))
+        ];
     }
 
     private static DocxDocument ReadMathRevisionBoundary(OoxPdfDocxMarkupMode mode, string kind,
