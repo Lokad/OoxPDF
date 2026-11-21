@@ -54,10 +54,12 @@ function Invoke-FrozenTests([string[]] $Arguments, [string] $Log) {
     $previousTmp = [Environment]::GetEnvironmentVariable('TMP')
     $previousTemp = [Environment]::GetEnvironmentVariable('TEMP')
     $previousTmpDir = [Environment]::GetEnvironmentVariable('TMPDIR')
+    $previousToolBinding = [Environment]::GetEnvironmentVariable('OOXPDF_TEST_REQUIRE_BOUND_TOOLS')
     try {
         [Environment]::SetEnvironmentVariable('TMP', $temporaryDirectory)
         [Environment]::SetEnvironmentVariable('TEMP', $temporaryDirectory)
         [Environment]::SetEnvironmentVariable('TMPDIR', $temporaryDirectory)
+        [Environment]::SetEnvironmentVariable('OOXPDF_TEST_REQUIRE_BOUND_TOOLS', '1')
         dotnet $runner @Arguments *> $Log
         return $LASTEXITCODE
     }
@@ -65,6 +67,7 @@ function Invoke-FrozenTests([string[]] $Arguments, [string] $Log) {
         [Environment]::SetEnvironmentVariable('TMP', ($null -eq $previousTmp ? [NullString]::Value : $previousTmp))
         [Environment]::SetEnvironmentVariable('TEMP', ($null -eq $previousTemp ? [NullString]::Value : $previousTemp))
         [Environment]::SetEnvironmentVariable('TMPDIR', ($null -eq $previousTmpDir ? [NullString]::Value : $previousTmpDir))
+        [Environment]::SetEnvironmentVariable('OOXPDF_TEST_REQUIRE_BOUND_TOOLS', ($null -eq $previousToolBinding ? [NullString]::Value : $previousToolBinding))
     }
 }
 $catalogPath = Join-Path $output 'catalog.txt'

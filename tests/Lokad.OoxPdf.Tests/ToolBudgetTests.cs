@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.IO.Compression;
 using System.Text;
 using System.Text.Json;
@@ -7,9 +6,12 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class ToolBudgetTests
 {
-    private static readonly Lazy<string> InspectAssemblyPath = new(() => BuildTool("tools/Lokad.OoxPdf.PdfInspect/Lokad.OoxPdf.PdfInspect.csproj", "Lokad.OoxPdf.PdfInspect.dll"));
-    private static readonly Lazy<string> VisualDiffAssemblyPath = new(() => BuildTool("tools/Lokad.OoxPdf.VisualDiff/Lokad.OoxPdf.VisualDiff.csproj", "Lokad.OoxPdf.VisualDiff.dll"));
-    private static readonly Lazy<string> RasterizerAssemblyPath = new(() => BuildTool("tools/Lokad.OoxPdf.PdfiumRasterizer/Lokad.OoxPdf.PdfiumRasterizer.csproj", "Lokad.OoxPdf.PdfiumRasterizer.dll"));
+    private static readonly Lazy<string> InspectAssemblyPath = new(() =>
+        TestToolProcess.ResolveAssembly("OOXPDF_TEST_PDF_INSPECTOR", "tools/Lokad.OoxPdf.PdfInspect"));
+    private static readonly Lazy<string> VisualDiffAssemblyPath = new(() =>
+        TestToolProcess.ResolveAssembly("OOXPDF_TEST_VISUAL_DIFF", "tools/Lokad.OoxPdf.VisualDiff"));
+    private static readonly Lazy<string> RasterizerAssemblyPath = new(() =>
+        TestToolProcess.ResolveAssembly("OOXPDF_TEST_PDF_RASTERIZER", "tools/Lokad.OoxPdf.PdfiumRasterizer"));
 
     public static void InspectToUnicodeSequentialSurrogatePairsRetainDistinctMathLetters()
     {
@@ -48,7 +50,7 @@ internal static class ToolBudgetTests
         // R21: three individually legal 10 KB streams exceed a 15 KB aggregate quota.
         // The first decodes; the rest keep raw bytes with an aggregate skip note.
         string input = WriteMultiFlatePdf();
-        ToolResult result = RunTool(InspectAssemblyPath.Value, input, "--max-total-decoded-bytes", "15000");
+        TestToolResult result = TestToolProcess.Run(InspectAssemblyPath.Value, input, "--max-total-decoded-bytes", "15000");
         TestAssert.Equal(0, result.ExitCode);
         TestAssert.Contains("decoded", result.Output);
         TestAssert.Contains("aggregate", result.Output);
@@ -58,7 +60,7 @@ internal static class ToolBudgetTests
     {
         // R21: the default aggregate quota leaves small inspections untouched.
         string input = WriteMultiFlatePdf();
-        ToolResult result = RunTool(InspectAssemblyPath.Value, input);
+        TestToolResult result = TestToolProcess.Run(InspectAssemblyPath.Value, input);
         TestAssert.Equal(0, result.ExitCode);
         TestAssert.Contains("decoded raw deflate", result.Output);
         TestAssert.DoesNotContain("aggregate", result.Output);
@@ -68,7 +70,7 @@ internal static class ToolBudgetTests
     {
         // R21: the aggregate object quota fails fast instead of parsing unboundedly.
         string input = WriteMultiFlatePdf();
-        ToolResult result = RunTool(InspectAssemblyPath.Value, input, "--max-objects", "2");
+        TestToolResult result = TestToolProcess.Run(InspectAssemblyPath.Value, input, "--max-objects", "2");
         TestAssert.Equal(1, result.ExitCode);
         TestAssert.Contains("object count", result.Output + result.Error);
     }
@@ -81,7 +83,7 @@ internal static class ToolBudgetTests
         string candidateDirectory = NewTempDirectory();
         WritePngPair(referenceDirectory, candidateDirectory);
         string outputDirectory = NewTempDirectory();
-        ToolResult result = RunTool(VisualDiffAssemblyPath.Value, referenceDirectory, candidateDirectory, outputDirectory, "--max-combined-pixels", "100");
+        TestToolResult result = TestToolProcess.Run(VisualDiffAssemblyPath.Value, referenceDirectory, candidateDirectory, outputDirectory, "--max-combined-pixels", "100");
         TestAssert.Equal(1, result.ExitCode);
         TestAssert.Contains("exceeds the maximum", result.Output + result.Error);
     }
@@ -93,7 +95,7 @@ internal static class ToolBudgetTests
         string candidateDirectory = NewTempDirectory();
         WritePngPair(referenceDirectory, candidateDirectory);
         string outputDirectory = NewTempDirectory();
-        ToolResult result = RunTool(VisualDiffAssemblyPath.Value, referenceDirectory, candidateDirectory, outputDirectory);
+        TestToolResult result = TestToolProcess.Run(VisualDiffAssemblyPath.Value, referenceDirectory, candidateDirectory, outputDirectory);
         TestAssert.Equal(0, result.ExitCode);
         TestAssert.True(File.Exists(Path.Combine(outputDirectory, "metrics.json")), "VisualDiff must write metrics on success.");
     }
@@ -118,7 +120,7 @@ internal static class ToolBudgetTests
                 palette: [22, 31, 40, 210, 220, 230], transparency: [64]),
             [22, 31, 40, 64, 210, 220, 230, 255]);
 
-        ToolResult result = RunTool(VisualDiffAssemblyPath.Value, reference, candidate, output);
+        TestToolResult result = TestToolProcess.Run(VisualDiffAssemblyPath.Value, reference, candidate, output);
         TestAssert.Equal(0, result.ExitCode);
         using JsonDocument report = JsonDocument.Parse(File.ReadAllText(Path.Combine(output, "metrics.json")));
         TestAssert.Equal(expected.Count, report.RootElement.GetArrayLength());
@@ -158,7 +160,7 @@ internal static class ToolBudgetTests
             string output = NewTempDirectory();
             File.WriteAllBytes(Path.Combine(reference, "page-001.png"), opaque);
             File.WriteAllBytes(Path.Combine(candidate, "page-001.png"), malformed);
-            ToolResult result = RunTool(VisualDiffAssemblyPath.Value, reference, candidate, output);
+            TestToolResult result = TestToolProcess.Run(VisualDiffAssemblyPath.Value, reference, candidate, output);
             TestAssert.Equal(1, result.ExitCode);
             TestAssert.Contains("PNG transparency key has the wrong length", result.Error);
             TestAssert.True(!File.Exists(Path.Combine(output, "metrics.json")), "Invalid input must not produce comparison metrics.");
@@ -191,7 +193,7 @@ internal static class ToolBudgetTests
         {
             string output = NewTempDirectory();
             string[] arguments = item.Regional ? [item.Reference, item.Candidate, output, regions] : [item.Reference, item.Candidate, output];
-            ToolResult result = RunTool(VisualDiffAssemblyPath.Value, arguments);
+            TestToolResult result = TestToolProcess.Run(VisualDiffAssemblyPath.Value, arguments);
             TestAssert.Equal(0, result.ExitCode);
             using JsonDocument page = JsonDocument.Parse(File.ReadAllText(Path.Combine(output, "metrics.json")));
             TestAssert.Equal(1, page.RootElement.GetArrayLength());
@@ -271,102 +273,7 @@ internal static class ToolBudgetTests
 
     internal static void RasterizePdfAt144Dpi(string input, string outputDirectory)
     {
-        ToolResult result = RunTool(RasterizerAssemblyPath.Value, input, outputDirectory, "144");
+        TestToolResult result = TestToolProcess.Run(RasterizerAssemblyPath.Value, input, outputDirectory, "144");
         TestAssert.True(result.ExitCode == 0, $"PDFium validation failed. {result.Output}{result.Error}");
     }
-
-    private static ToolResult RunTool(string assemblyPath, params string[] args)
-    {
-        var start = new ProcessStartInfo("dotnet")
-        {
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false
-        };
-        start.ArgumentList.Add(assemblyPath);
-        foreach (string arg in args)
-        {
-            start.ArgumentList.Add(arg);
-        }
-
-        using Process process = Process.Start(start) ?? throw new InvalidOperationException("Failed to start tool process.");
-        Task<string> outputRead = process.StandardOutput.ReadToEndAsync();
-        Task<string> errorRead = process.StandardError.ReadToEndAsync();
-        if (!process.WaitForExit(60_000))
-        {
-            process.Kill(entireProcessTree: true);
-            process.WaitForExit();
-            throw new TimeoutException("Child process timed out.");
-        }
-        string output = outputRead.GetAwaiter().GetResult();
-        string error = errorRead.GetAwaiter().GetResult();
-        return new ToolResult(process.ExitCode, output, error);
-    }
-
-    private static string BuildTool(string projectPath, string dllName)
-    {
-        string binding = dllName switch
-        {
-            "Lokad.OoxPdf.PdfInspect.dll" => "OOXPDF_TEST_PDF_INSPECTOR",
-            "Lokad.OoxPdf.VisualDiff.dll" => "OOXPDF_TEST_VISUAL_DIFF",
-            "Lokad.OoxPdf.PdfiumRasterizer.dll" => "OOXPDF_TEST_PDF_RASTERIZER",
-            _ => throw new InvalidOperationException("Unknown validation tool.")
-        };
-        if (Environment.GetEnvironmentVariable(binding) is { Length: > 0 } frozen)
-        {
-            string path = Path.GetFullPath(frozen);
-            return File.Exists(path) ? path : throw new InvalidOperationException("Frozen validation tool is missing.");
-        }
-        string repositoryRoot = FindRepositoryRoot();
-        var start = new ProcessStartInfo("dotnet")
-        {
-            WorkingDirectory = repositoryRoot,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false
-        };
-        start.ArgumentList.Add("build");
-        start.ArgumentList.Add(projectPath);
-        start.ArgumentList.Add("--nologo");
-        string framework = "net" + new System.Runtime.Versioning.FrameworkName(AppContext.TargetFrameworkName!).Version.ToString(2);
-        start.ArgumentList.Add("--framework");
-        start.ArgumentList.Add(framework);
-
-        using Process process = Process.Start(start) ?? throw new InvalidOperationException("Failed to build tool project.");
-        Task<string> outputRead = process.StandardOutput.ReadToEndAsync();
-        Task<string> errorRead = process.StandardError.ReadToEndAsync();
-        if (!process.WaitForExit(120_000))
-        {
-            process.Kill(entireProcessTree: true);
-            process.WaitForExit();
-            throw new TimeoutException("Child process timed out.");
-        }
-        string output = outputRead.GetAwaiter().GetResult();
-        string error = errorRead.GetAwaiter().GetResult();
-        if (process.ExitCode != 0)
-        {
-            throw new InvalidOperationException($"Tool build failed with exit code {process.ExitCode}.{Environment.NewLine}{output}{Environment.NewLine}{error}");
-        }
-
-        string projectDirectory = Path.GetDirectoryName(projectPath) ?? throw new InvalidOperationException("Expected a project directory.");
-        return Path.Combine(repositoryRoot, projectDirectory, "bin", "Debug", framework, dllName);
-    }
-
-    private static string FindRepositoryRoot()
-    {
-        DirectoryInfo? directory = new(AppContext.BaseDirectory);
-        while (directory is not null)
-        {
-            if (File.Exists(Path.Combine(directory.FullName, "Lokad.OoxPdf.slnx")))
-            {
-                return directory.FullName;
-            }
-
-            directory = directory.Parent;
-        }
-
-        throw new InvalidOperationException("Could not locate repository root.");
-    }
-
-    private sealed record ToolResult(int ExitCode, string Output, string Error);
 }

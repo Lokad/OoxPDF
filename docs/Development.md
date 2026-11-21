@@ -67,6 +67,11 @@ framework and package checks at meaningful milestones. Transfer qualified assets
 with identity checks and a small integration smoke, without rebuilding or replaying
 unchanged suites. Each frozen artifact pins one framework. Do not poll closed CI.
 
+Console tests launch prebuilt tools from the matching local build configuration
+or an explicitly bound assembly. For frozen tests, bind the tools your selection
+uses with `OOXPDF_TEST_CLI_ASSEMBLY`, `OOXPDF_TEST_PDF_INSPECTOR`,
+`OOXPDF_TEST_VISUAL_DIFF` or `OOXPDF_TEST_PDF_RASTERIZER`.
+
 When changing the shared build helper, use `tools/TestBuildIncrementality.ps1`
 to check imported MSBuild properties, output provenance and stale DLL refusal.
 

@@ -26,6 +26,7 @@ function dotnet {
     $global:ooxPdfAffectedReportCalls++
     $report=$args[[Array]::IndexOf([object[]]$args,'--report')+1]
     if([IO.Path]::GetFileName($env:TMPDIR) -ne 'temporary-files') {throw 'Runner temp path escaped its output directory'}
+    if($env:OOXPDF_TEST_REQUIRE_BOUND_TOOLS -cne '1') {throw 'Runner did not require bound tools'}
     if ($global:ooxPdfAffectedReportFault -in @('failed','cleanup-residual','cleanup-link','cleanup-child-link')) {
         $scratch=New-Item -ItemType Directory -Path (Join-Path $env:TMPDIR 'nested')
         [IO.File]::WriteAllText((Join-Path $scratch.FullName 'retained.bin'),'Retained runner data')
@@ -73,9 +74,13 @@ try {
         if($case -eq 'unknown-expected') {$expected=@('NotSelected')}
         $caught=$null
         $beforeTmpDir=[Environment]::GetEnvironmentVariable('TMPDIR')
+        $beforeToolBinding=[Environment]::GetEnvironmentVariable('OOXPDF_TEST_REQUIRE_BOUND_TOOLS')
         try {& (Join-Path $PSScriptRoot 'RunDocxAffectedTests.ps1') -RunnerPath $runner -OutputDirectory $output -TestFilter @('ReportAlpha','ReportNeighbor') -ExpectedSkip $expected *> (Join-Path $root ($case+'.log'))}
         catch {$caught=$_.Exception.Message}
         if([Environment]::GetEnvironmentVariable('TMPDIR') -cne $beforeTmpDir) {throw 'Runner did not restore TMPDIR'}
+        if([Environment]::GetEnvironmentVariable('OOXPDF_TEST_REQUIRE_BOUND_TOOLS') -cne $beforeToolBinding) {
+            throw 'Runner did not restore the caller tool policy'
+        }
         $shouldPass=$case -in @('pass','expected-skip')
         if($shouldPass -eq ($null -ne $caught)) {throw ($case+': unexpected gate outcome '+$caught)}
         if($case -eq 'wrong-name-case' -and ($caught -notlike 'Incomplete affected report:*' -or
