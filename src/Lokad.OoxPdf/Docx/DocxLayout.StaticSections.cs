@@ -37,9 +37,8 @@ internal sealed partial class DocxLayoutEngine
         // a selected-but-undefined first/even story renders empty on its pages; Word
         // does not fall back to the default story there.
         string variant = GetStaticStoryVariant(settings, pageNumber, sectionFirstPageNumber);
-        return DocxBlockTraversal.TryGetStaticStoryBodyElements(variant, bodyElementsByType, paragraphsByType, out IReadOnlyList<DocxBodyElement>? selected)
-            ? new DocxSelectedStaticStory(selected, variant)
-            : new DocxSelectedStaticStory([], null);
+        IReadOnlyList<DocxBodyElement>? selected = DocxBlockTraversal.FindStaticStoryBodyElements(variant, bodyElementsByType, paragraphsByType);
+        return selected is null ? new DocxSelectedStaticStory([], null) : new DocxSelectedStaticStory(selected, variant);
     }
 
     private sealed record DocxSelectedStaticStory(IReadOnlyList<DocxBodyElement> BodyElements, string? VariantType);

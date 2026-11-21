@@ -2483,10 +2483,10 @@ internal sealed partial class DocxLayoutEngine
             cancellationToken.ThrowIfCancellationRequested();
             var settings = page.PageSettings;
             string variant = GetStaticStoryVariant(settings, pageNumber, page.SectionFirstPageNumber);
-            var header = DocxBlockTraversal.GetStaticStoryBodyElements(variant,
-                settings.HeaderBodyElementsByType, settings.HeaderParagraphsByType);
-            var footer = DocxBlockTraversal.GetStaticStoryBodyElements(variant,
-                settings.FooterBodyElementsByType, settings.FooterParagraphsByType);
+            var header = DocxBlockTraversal.FindStaticStoryBodyElements(variant,
+                settings.HeaderBodyElementsByType, settings.HeaderParagraphsByType) ?? [];
+            var footer = DocxBlockTraversal.FindStaticStoryBodyElements(variant,
+                settings.FooterBodyElementsByType, settings.FooterParagraphsByType) ?? [];
             var headerDrawings = settings.HeaderFloatingDrawingsByType.GetValueOrDefault(variant, []);
             var footerDrawings = settings.FooterFloatingDrawingsByType.GetValueOrDefault(variant, []);
             if (!DocxPlainBodyFrame.HasPlainStaticSource(header, headerDrawings, cancellationToken, mathEquations) ||

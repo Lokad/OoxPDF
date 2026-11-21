@@ -306,7 +306,7 @@ internal sealed partial record DocxStructureSnapshot(
             .ToArray();
         foreach (string variantType in variantTypes)
         {
-            IReadOnlyList<DocxBodyElement> bodyElements = DocxBlockTraversal.GetStaticStoryBodyElements(variantType, bodyElementsByType, paragraphsByType);
+            IReadOnlyList<DocxBodyElement> bodyElements = DocxBlockTraversal.FindStaticStoryBodyElements(variantType, bodyElementsByType, paragraphsByType) ?? [];
             int drawingCount = drawingsByType.TryGetValue(variantType, out var drawings) ? drawings.Count : 0;
             stories.Add(CreateParagraphStorySnapshot(kind.ToKindString(), scope, sectionBreakBlockIndex, variantType,
                 bodyElements, DocxBlockTraversal.EnumerateBodyParagraphs(bodyElements),

@@ -46,7 +46,7 @@ internal static class DocxBlockTraversal
                 foreach (string variant in bodies.Keys.Concat(paragraphs.Keys).Concat(drawings.Keys).Distinct(StringComparer.OrdinalIgnoreCase))
                 {
                     token.ThrowIfCancellationRequested();
-                    yield return (settings, variant, GetStaticStoryBodyElements(variant, bodies, paragraphs),
+                    yield return (settings, variant, FindStaticStoryBodyElements(variant, bodies, paragraphs) ?? [],
                         drawings.TryGetValue(variant, out var selected) ? selected : []);
                 }
             }
@@ -166,7 +166,8 @@ internal static class DocxBlockTraversal
             : paragraphsByType.Values.SelectMany(paragraphs => paragraphs);
     }
 
-    public static IReadOnlyList<DocxBodyElement> GetStaticStoryBodyElements(
+    // A defined empty story still owns its variant. Null means it is absent.
+    public static IReadOnlyList<DocxBodyElement>? FindStaticStoryBodyElements(
         string variantType,
         IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> bodyElementsByType,
         IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> fallbackParagraphsByType)
@@ -178,29 +179,7 @@ internal static class DocxBlockTraversal
 
         return fallbackParagraphsByType.TryGetValue(variantType, out IReadOnlyList<DocxParagraph>? paragraphs)
             ? paragraphs.Select(DocxBodyElementFactory.CreateParagraph).Cast<DocxBodyElement>().ToArray()
-            : [];
-    }
-
-    public static bool TryGetStaticStoryBodyElements(
-        string variantType,
-        IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> bodyElementsByType,
-        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> fallbackParagraphsByType,
-        out IReadOnlyList<DocxBodyElement> bodyElements)
-    {
-        if (bodyElementsByType.TryGetValue(variantType, out IReadOnlyList<DocxBodyElement>? foundElements))
-        {
-            bodyElements = foundElements;
-            return true;
-        }
-
-        if (fallbackParagraphsByType.TryGetValue(variantType, out IReadOnlyList<DocxParagraph>? paragraphs))
-        {
-            bodyElements = paragraphs.Select(DocxBodyElementFactory.CreateParagraph).Cast<DocxBodyElement>().ToArray();
-            return true;
-        }
-
-        bodyElements = [];
-        return false;
+            : null;
     }
 
     public static IEnumerable<DocxParagraph> EnumerateBodyParagraphs(IEnumerable<DocxBodyElement> bodyElements)

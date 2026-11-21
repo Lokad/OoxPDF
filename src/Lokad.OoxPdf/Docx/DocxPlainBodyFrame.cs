@@ -49,10 +49,10 @@ internal static class DocxPlainBodyFrame
             {
                 // Selection belongs to the same container rule as painting.
                 // Unused first/even templates do not own this body's metrics.
-                var header = DocxBlockTraversal.GetStaticStoryBodyElements(variant,
-                    settings.HeaderBodyElementsByType, settings.HeaderParagraphsByType);
-                var footer = DocxBlockTraversal.GetStaticStoryBodyElements(variant,
-                    settings.FooterBodyElementsByType, settings.FooterParagraphsByType);
+                var header = DocxBlockTraversal.FindStaticStoryBodyElements(variant,
+                    settings.HeaderBodyElementsByType, settings.HeaderParagraphsByType) ?? [];
+                var footer = DocxBlockTraversal.FindStaticStoryBodyElements(variant,
+                    settings.FooterBodyElementsByType, settings.FooterParagraphsByType) ?? [];
                 var headerDrawings = settings.HeaderFloatingDrawingsByType.GetValueOrDefault(variant, []);
                 var footerDrawings = settings.FooterFloatingDrawingsByType.GetValueOrDefault(variant, []);
                 if (!HasPlainStaticSource(header.Concat(footer), headerDrawings.Concat(footerDrawings))) return false;
