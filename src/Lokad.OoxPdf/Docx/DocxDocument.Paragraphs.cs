@@ -16,6 +16,7 @@ internal sealed record DocxParagraph(
 {
     public DocxParagraphShading? Shading { get; init; }
     public DocxParagraphIndent Indent { get; init; } = DocxParagraphIndent.Empty;
+    public bool HasDirectLeftIndent { get; init; }
     public bool HasDirectRightIndent { get; init; }
     public IReadOnlyList<DocxTabStop> TabStops { get; init; } = [];
     public bool? SnapToGrid { get; init; }
@@ -86,12 +87,19 @@ internal sealed record DocxParagraph(
     // stories retain a space run for their printed terminal blank's face.
     public DocxTextRun? ParagraphMarkRun { get; init; }
 
-    // Direct formatting (including zero) wins over the level, which in turn
-    // takes precedence over the inherited paragraph indent.
+    public (double? Points, string? Value) ResolveLeftIndent(DocxNumberingIndent? numberingIndent)
+        => ResolveIndentSide(HasDirectLeftIndent, Indent.LeftPoints, Indent.LeftValue,
+            numberingIndent?.LeftPoints, numberingIndent?.LeftValue);
+
     public (double? Points, string? Value) ResolveRightIndent(DocxNumberingIndent? numberingIndent)
-        => !HasDirectRightIndent && numberingIndent?.RightPoints is { } levelRight
-            ? (levelRight, numberingIndent.RightValue)
-            : (Indent.RightPoints, Indent.RightValue);
+        => ResolveIndentSide(HasDirectRightIndent, Indent.RightPoints, Indent.RightValue,
+            numberingIndent?.RightPoints, numberingIndent?.RightValue);
+
+    // Direct formatting (including zero) wins over numbering-level formatting,
+    // which takes precedence over the inherited paragraph indent.
+    private static (double? Points, string? Value) ResolveIndentSide(
+        bool hasDirectIndent, double? paragraphPoints, string? paragraphValue, double? levelPoints, string? levelValue)
+        => !hasDirectIndent && levelPoints is not null ? (levelPoints, levelValue) : (paragraphPoints, paragraphValue);
 
     public DocxEffectiveParagraphProperties EffectiveProperties => new(
         StyleId,

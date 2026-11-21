@@ -522,11 +522,12 @@ internal sealed partial class DocxReader
             // column. Suppressing the repeated label must not discard its level's
             // indentation, or apply the paragraph's first-line offset again.
             sourceListIndent ??= paragraph.ListLabel?.Indent;
+            var left = paragraph.ResolveLeftIndent(sourceListIndent);
             var right = paragraph.ResolveRightIndent(sourceListIndent);
             indent = indent with
             {
-                LeftPoints = indent.LeftPoints ?? sourceListIndent?.LeftPoints,
-                LeftValue = indent.LeftValue ?? sourceListIndent?.LeftValue,
+                LeftPoints = left.Points,
+                LeftValue = left.Value,
                 RightPoints = right.Points,
                 RightValue = right.Value,
                 FirstLinePoints = null, FirstLineValue = null,

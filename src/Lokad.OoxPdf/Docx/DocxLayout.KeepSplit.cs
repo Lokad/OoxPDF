@@ -729,7 +729,7 @@ internal sealed partial class DocxLayoutEngine
             return Math.Max(0d, paragraph.EffectiveProperties.Indent.LeftPoints ?? 0d) * fixedScale;
         }
 
-        var (left, firstLine, _) = ResolveListStartIndent(paragraph.Indent, paragraph.ListLabel.Indent);
+        var (left, firstLine, _) = ResolveListStartIndent(paragraph, paragraph.ListLabel.Indent);
         return Math.Max(0d, left + firstLine) * fixedScale;
     }
 
@@ -787,19 +787,20 @@ internal sealed partial class DocxLayoutEngine
             return 0d;
         }
 
-        var (left, firstLine, hanging) = ResolveListStartIndent(paragraph.Indent, paragraph.ListLabel.Indent);
+        var (left, firstLine, hanging) = ResolveListStartIndent(paragraph, paragraph.ListLabel.Indent);
         return Math.Max(0d, left - hanging + firstLine) * fixedScale;
     }
 
     private static (double Left, double FirstLine, double Hanging) ResolveListStartIndent(
-        DocxParagraphIndent paragraphIndent, DocxNumberingIndent listIndent)
+        DocxParagraph paragraph, DocxNumberingIndent listIndent)
     {
+        DocxParagraphIndent paragraphIndent = paragraph.Indent;
         bool hasParagraphFirstLineSide =
             paragraphIndent.FirstLinePoints is not null ||
             paragraphIndent.HangingPoints is not null ||
             paragraphIndent.FirstLineValue is not null ||
             paragraphIndent.HangingValue is not null;
-        return (paragraphIndent.LeftPoints ?? listIndent.LeftPoints ?? 0d,
+        return (paragraph.ResolveLeftIndent(listIndent).Points ?? 0d,
             (hasParagraphFirstLineSide ? paragraphIndent.FirstLinePoints : listIndent.FirstLinePoints) ?? 0d,
             (hasParagraphFirstLineSide ? paragraphIndent.HangingPoints : listIndent.HangingPoints) ?? 0d);
     }
