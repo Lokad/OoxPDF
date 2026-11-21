@@ -178,41 +178,19 @@ internal static class PptxVisibilityTests
         TestAssert.Equal(0, scene.MasterNodes.Count);
     }
 
-    public static void PptxHiddenMasterShapesStayUnpainted()
+    public static void PptxHiddenMasterShapesStayUnpainted() => AssertMasterShapePaint("0", expectsMaster: false);
+    public static void PptxShownMasterShapesPaintByDefault() => AssertMasterShapePaint(null, expectsMaster: true);
+    public static void PptxExplicitShownMasterShapesPaint() => AssertMasterShapePaint("1", expectsMaster: true);
+
+    private static void AssertMasterShapePaint(string? showMasterSp, bool expectsMaster)
     {
-        string input = WriteMasterShapePackage(showMasterSp: "0");
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        string input = WriteMasterShapePackage(showMasterSp);
+        string output = Path.ChangeExtension(input, ".pdf");
 
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.DoesNotContain("1 0 0 rg", pdf);
-        TestAssert.Contains("0 1 0 rg", pdf);
-        TestAssert.Contains("0 0 1 rg", pdf);
-    }
-
-    public static void PptxShownMasterShapesPaintByDefault()
-    {
-        string input = WriteMasterShapePackage(showMasterSp: null);
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, output);
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("1 0 0 rg", pdf);
-        TestAssert.Contains("0 1 0 rg", pdf);
-        TestAssert.Contains("0 0 1 rg", pdf);
-    }
-
-    public static void PptxExplicitShownMasterShapesPaint()
-    {
-        string input = WriteMasterShapePackage(showMasterSp: "1");
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, output);
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("1 0 0 rg", pdf);
+        TestAssert.Equal(expectsMaster, pdf.Contains("1 0 0 rg", StringComparison.Ordinal));
         TestAssert.Contains("0 1 0 rg", pdf);
         TestAssert.Contains("0 0 1 rg", pdf);
     }
