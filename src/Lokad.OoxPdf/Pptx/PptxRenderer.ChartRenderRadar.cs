@@ -11,7 +11,7 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static void RenderRadarChart(PdfGraphicsBuilder graphics, PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, ChartRadarLayout layout, IReadOnlyList<double?[]> series, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, ChartValueExtents extents, ChartAxisUnits axisUnits, int? chartStyleId, PptxRenderContext? context = null)
+    private static void RenderRadarChart(PdfGraphicsBuilder graphics, PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, ChartRadarLayout layout, IReadOnlyList<double?[]> series, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, ChartValueExtents extents, IReadOnlyList<double> ticks, int? chartStyleId, PptxRenderContext? context = null)
     {
         ChartPolarGeometry geometry = layout.Geometry;
         int pointCount = layout.PointCount;
@@ -49,7 +49,7 @@ internal sealed partial class PptxRenderer
 
         SetChartStroke(graphics, RadarGridlineDefaultStroke);
         bool hasGridPath = false;
-        foreach (double tickValue in GetChartAxisTickValues(extents, axisUnits.MajorUnit, includeEndpoints: true, PptxChartMetricRules.AxisNiceTickTargetCount, context: context))
+        foreach (double tickValue in ticks)
         {
             double tickRatio = GetChartValuePlotRatio(extents, tickValue, false);
             if (tickRatio <= PptxChartMetricRules.AxisValueEpsilon)
@@ -85,11 +85,7 @@ internal sealed partial class PptxRenderer
             if (!layout.IsFilled || hasExplicitStroke)
             {
                 PrepareSeriesPolygon(values);
-                ChartSeriesStroke stroke = ChartSeriesStrokeColor(theme, colorMap, chartPalette, seriesIndex, seriesStrokes, PptxChartMetricRules.RadarSeriesOutlineWidth);
-                if (!hasExplicitStroke)
-                {
-                    stroke = stroke with { Color = ApplyUnstyledLineStrokeTint(stroke.Color) };
-                }
+                ChartSeriesStroke stroke = ResolveRadarSeriesStroke(theme, colorMap, chartPalette, seriesStrokes, seriesIndex);
                 if (stroke.Alpha < 1d)
                 {
                     graphics.SaveState();
@@ -155,6 +151,16 @@ internal sealed partial class PptxRenderer
             }
         }
 
+    }
+
+    private static ChartSeriesStroke ResolveRadarSeriesStroke(PptxTheme theme, PptxColorMap colorMap,
+        ChartColorPalette palette, IReadOnlyList<ChartSeriesStroke?> strokes, int index)
+    {
+        ChartSeriesStroke stroke = ChartSeriesStrokeColor(theme, colorMap, palette, index, strokes,
+            PptxChartMetricRules.RadarSeriesOutlineWidth);
+        return index < strokes.Count && strokes[index] is not null
+            ? stroke
+            : stroke with { Color = ApplyUnstyledLineStrokeTint(stroke.Color) };
     }
 
     // Reads the effective chart style id from the markup-compatibility-resolved tree:
@@ -405,21 +411,17 @@ internal sealed partial class PptxRenderer
         return Math.PI / 2d - index * Math.PI * 2d / pointCount;
     }
 
-    private static async ValueTask RenderRadarCategoryLabelsAsync(
+    private static async ValueTask<List<TextRun>> PrepareRadarCategoryLabelsAsync(
         PptxTheme theme,
-        PdfGraphicsBuilder graphics,
         ChartRadarLayout layout,
-        XDocument chartXml,
         PptxSceneChart sceneChart,
         PptxSceneChartAxis? sceneAxis,
         IReadOnlyList<ChartIndexedTextPoint?> labels,
-        PresentationFontResolver? fontResolver,
-        List<PdfFontResource> chartFonts,
-        Action<OoxPdfDiagnostic>? diagnosticSink = null)
+        PresentationFontResolver? fontResolver)
     {
         if (labels.Count == 0)
         {
-            return;
+            return [];
         }
 
         ChartTextStyle style = ReadSceneChartTextStyle(theme, sceneChart, sceneAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
@@ -440,7 +442,7 @@ internal sealed partial class PptxRenderer
             runs.Add(CreateChartLabelRun(label, frame.X, frame.Y, frame.Width, frame.Height, plotBox, style, frame.Alignment, kerningEnabled: false));
         }
 
-        await RenderChartTextRunsAsync(runs, graphics, chartFonts, "RCA", fontResolver, diagnosticSink).ConfigureAwait(false);
+        return runs;
     }
 
     private static ChartRadarLabelFrame ResolveRadarCategoryLabelFrame(ChartRadarLayout layout, string label, ChartTextStyle style, ChartTextMeasurer textMeasurer, int index, int pointCount)
@@ -483,24 +485,21 @@ internal sealed partial class PptxRenderer
         return anchorY + labelHeight * baselineFactor;
     }
 
-    private static async ValueTask RenderRadarValueAxisLabelsAsync(
+    private static async ValueTask<List<TextRun>> PrepareRadarValueAxisLabelsAsync(
         PptxTheme theme,
-        PdfGraphicsBuilder graphics,
         ChartRadarLayout layout,
-        XDocument chartXml,
         PptxSceneChart sceneChart,
         PptxSceneChartAxis? sceneAxis,
         ChartValueExtents extents,
-        ChartAxisUnits axisUnits,
-        PresentationFontResolver? fontResolver,
-        List<PdfFontResource> chartFonts,
-        Action<OoxPdfDiagnostic>? diagnosticSink = null, PptxRenderContext? context = null)
+        IReadOnlyList<double> ticks,
+        PresentationFontResolver? fontResolver)
     {
+        if (ticks.Count == 0) return [];
         ChartTextStyle style = ReadSceneChartTextStyle(theme, sceneChart, sceneAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
         ChartPlotBox plotBox = layout.PlotBox;
         var textMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
-        var runs = new List<TextRun>();
-        foreach (double tickValue in GetChartAxisTickValues(extents, axisUnits.MajorUnit, includeEndpoints: true, PptxChartMetricRules.AxisNiceTickTargetCount, context: context))
+        var runs = new List<TextRun>(ticks.Count);
+        foreach (double tickValue in ticks)
         {
             double ratio = GetChartValuePlotRatio(extents, tickValue, false);
             string label = FormatSceneChartAxisLabel(tickValue, sceneAxis, sceneChart.Options.Date1904 == true, null);
@@ -509,7 +508,7 @@ internal sealed partial class PptxRenderer
             runs.Add(CreateChartLabelRun(label, frame.X, frame.Y, frame.Width, frame.Height, plotBox, style, frame.Alignment, kerningEnabled: false));
         }
 
-        await RenderChartTextRunsAsync(runs, graphics, chartFonts, "RVA", fontResolver, diagnosticSink).ConfigureAwait(false);
+        return runs;
     }
 
     private static ChartRadarLabelFrame ResolveRadarValueAxisLabelFrame(ChartRadarLayout layout, string label, ChartTextStyle style, ChartTextMeasurer textMeasurer, double ratio)

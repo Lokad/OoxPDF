@@ -129,12 +129,12 @@ internal static class PptxChartPlotOptionsAgreementTests
         var green = new RgbColor(0x06, 0x76, 0x49);
         foreach (string style in new[] { "marker", "filled" })
         {
-            string first = Series(0, "A51515", true);
-            string emptyFirst = Series(0, "A51515", false);
-            string second = Series(1, "067649", true);
-            PdfPage full = Render(style, first + second);
-            PdfPage sparse = Render(style, emptyFirst + second);
-            PdfPage literal = Render(style, second);
+            string first = RadarSeries(0, "A51515", true);
+            string emptyFirst = RadarSeries(0, "A51515", false);
+            string second = RadarSeries(1, "067649", true);
+            PdfPage full = RenderRadar(style, first + second);
+            PdfPage sparse = RenderRadar(style, emptyFirst + second);
+            PdfPage literal = RenderRadar(style, second);
             TestAssert.True(Paints(full, strokes: true).SequenceEqual([red, green]),
                 "Both outlines keep their authored stroke in the populated plot.");
             TestAssert.True(Paints(sparse, strokes: true).SequenceEqual([green]),
@@ -147,7 +147,7 @@ internal static class PptxChartPlotOptionsAgreementTests
                 "The sparse chart keeps the surviving series' polygon and grid geometry.");
 
             var diagnostics = new List<OoxPdfDiagnostic>();
-            PdfPage empty = Render(style, emptyFirst + Series(1, "067649", false), diagnostics.Add);
+            PdfPage empty = RenderRadar(style, emptyFirst + RadarSeries(1, "067649", false), sink: diagnostics.Add);
             TestAssert.Equal(0, Paints(empty, strokes: true).Count());
             TestAssert.Equal(0, Paints(empty, strokes: false).Count());
             TestAssert.Equal(1, diagnostics.Count(d => d.Id == "PPTX_CHART_MISSING_CACHED_DATA"));
@@ -157,8 +157,78 @@ internal static class PptxChartPlotOptionsAgreementTests
             PptxChartPaletteTests.ReadColoredPaints(page.Content, strokes: strokes)
                 .Where(color => color == red || color == green);
 
-        static string Series(int index, string color, bool hasCache) => $"""
+    }
+
+    public static void PptxRadarRightLegendPaintsCompleteNamesAndOwnedKeys()
+    {
+        const string right = """<c:legend><c:legendPos val="r"/><c:overlay val="0"/></c:legend>""";
+        const string largeRight = """
+            <c:legend><c:legendPos val="r"/><c:overlay val="0"/>
+              <c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1800"/></a:pPr></a:p></c:txPr>
+            </c:legend>
+            """;
+        const string narrow = """
+            <c:legend><c:legendPos val="r"/><c:layout><c:manualLayout>
+              <c:wMode val="factor"/><c:w val="0.05"/>
+            </c:manualLayout></c:layout><c:overlay val="0"/></c:legend>
+            """;
+        const string authoredPlot = """
+            <c:layout><c:manualLayout><c:layoutTarget val="inner"/>
+              <c:xMode val="edge"/><c:yMode val="edge"/><c:wMode val="factor"/><c:hMode val="factor"/>
+              <c:x val="0.08"/><c:y val="0.1"/><c:w val="0.48"/><c:h val="0.7"/>
+            </c:manualLayout></c:layout>
+            """;
+        string series = RadarSeries(0, "A51515", true, "MeridianSales") + RadarSeries(1, "067649", true, "StationCredits");
+        var red = new RgbColor(0xA5, 0x15, 0x15);
+        var green = new RgbColor(0x06, 0x76, 0x49);
+        foreach (string style in new[] { "marker", "filled" })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            PdfPage omitted = RenderRadar(style, series, plotLayout: authoredPlot);
+            PdfPage visible = RenderRadar(style, series, right, authoredPlot, diagnostics.Add);
+            TestAssert.Equal(0, diagnostics.Count);
+            var names = LegendNames(visible).ToArray();
+            TestAssert.True(names.Select(show => show.Text).SequenceEqual(["MeridianSales", "StationCredits"]),
+                "Every legend name appears once in authored series order.");
+            TestAssert.True(names[0].Y > names[1].Y, "The right legend allocates one row per name.");
+            TestAssert.True(AxisCaptions(omitted).SequenceEqual(AxisCaptions(visible)),
+                "A fitting legend preserves the authored plot and both sets of axis captions.");
+            TestAssert.True(Paints(visible, strokes: true).SequenceEqual([red, green, red, green]),
+                "The legend keys match the authored series strokes.");
+            TestAssert.True(Paints(visible, strokes: false).SequenceEqual(style == "filled" ? [red, green, red, green] : []),
+                "A filled radar shares its authored series fill with the legend key.");
+            TestAssert.DoesNotContain("/CL", omitted.Content);
+
+            PdfPage automatic = RenderRadar(style, series, largeRight, sink: diagnostics.Add);
+            TestAssert.Equal(0, diagnostics.Count);
+            TestAssert.True(LegendNames(automatic).Select(show => show.Text).SequenceEqual(["MeridianSales", "StationCredits"]),
+                "A large right legend fits beside an automatic web and paints both names.");
+            TestAssert.True(AxisCaptions(automatic).Any(), "The automatic web retains its axis captions during fitting.");
+
+            var refused = RenderRadar(style, series, narrow, authoredPlot, diagnostics.Add);
+            TestAssert.True(refused.Content == omitted.Content, "A rejected legend preserves the authored chart paint.");
+            TestAssert.True(diagnostics.Any(d => d.Id == "PPTX_UNSUPPORTED_CHART" && d.Fallback == "Legend ignored"),
+                "A declared legend box that cannot contain its names has a diagnostic.");
+        }
+
+        IEnumerable<RgbColor> Paints(PdfPage page, bool strokes) =>
+            PptxChartPaletteTests.ReadColoredPaints(page.Content, strokes: strokes)
+                .Where(color => color == red || color == green);
+
+        static IEnumerable<(string Text, double X, double Y)> AxisCaptions(PdfPage page) =>
+            DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, true,
+                fontResourceFilter: name => name.StartsWith("RC", StringComparison.Ordinal) || name.StartsWith("RV", StringComparison.Ordinal))
+                .Select(show => (show.Text, show.X, show.Y));
+
+        static IEnumerable<(string Text, double Y)> LegendNames(PdfPage page) =>
+            DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, false,
+                fontResourceFilter: name => name.StartsWith("CL", StringComparison.Ordinal))
+                .Select(show => (show.Text, show.Y));
+    }
+
+    private static string RadarSeries(int index, string color, bool hasCache, string? name = null) => $"""
             <c:ser><c:idx val="{index}"/><c:order val="{index}"/>
+              {(name is null ? "" : $"<c:tx><c:v>{name}</c:v></c:tx>")}
               <c:spPr><a:solidFill><a:srgbClr val="{color}"/></a:solidFill><a:ln w="25400">
                 <a:solidFill><a:srgbClr val="{color}"/></a:solidFill></a:ln></c:spPr>
               <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt><c:pt idx="2"><c:v>C</c:v></c:pt></c:strLit></c:cat>
@@ -168,15 +238,14 @@ internal static class PptxChartPlotOptionsAgreementTests
             </c:ser>
             """;
 
-        static PdfPage Render(string style, string series, Action<OoxPdfDiagnostic>? sink = null)
-        {
-            string xml = ChartSpace($"<c:radarChart><c:radarStyle val=\"{style}\"/>{series}</c:radarChart>", "");
-            using var stream = PptxTests.CreateSingleChartPackageStream(xml);
-            using var package = OoxPackage.Open(stream, default);
-            return new PptxRenderer(new PortableRenderingTests.PinnedResolver())
-                .RenderPagesAsync(new PptxReader().Read(package, default), package, sink, default)
-                .ToBlockingEnumerable().Single();
-        }
+    private static PdfPage RenderRadar(string style, string series, string legend = "", string plotLayout = "", Action<OoxPdfDiagnostic>? sink = null)
+    {
+        string xml = ChartSpace($"{plotLayout}<c:radarChart><c:radarStyle val=\"{style}\"/>{series}</c:radarChart>", legend);
+        using var stream = PptxTests.CreateSingleChartPackageStream(xml);
+        using var package = OoxPackage.Open(stream, default);
+        return new PptxRenderer(new PortableRenderingTests.PinnedResolver())
+            .RenderPagesAsync(new PptxReader().Read(package, default), package, sink, default)
+            .ToBlockingEnumerable().Single();
     }
 
     public static void SeriesSmoothUsesSourceAndExplicitFallback()

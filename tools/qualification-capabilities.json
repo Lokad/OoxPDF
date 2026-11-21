@@ -3891,6 +3891,7 @@
     "XrefTablePointsAtObjectHeaders"
   ],
   "pptx-chart-plot-selection": [
+    "PptxRadarRightLegendPaintsCompleteNamesAndOwnedKeys",
     "PptxSparseRadarSeriesKeepAuthoredStrokeAndFill",
     "BarScalarOptionsFollowSourceDefaultsAndClamps",
     "ScatterStyleFollowsSourceDefaults",
