@@ -21,7 +21,8 @@ internal sealed partial class DocxReader
         OoxPdfDocxMarkupMode markupMode,
         CancellationToken cancellationToken,
         RelatedStoryPartCache storyCache,
-        Dictionary<XElement, int>? floatingBlocks)
+        Dictionary<XElement, int>? floatingBlocks,
+        bool projectCommentSelections)
     {
             void AddImplicitTerminalTableParagraph(List<DocxBodyElement> elements)
             {
@@ -42,6 +43,8 @@ internal sealed partial class DocxReader
             }
 
         var elements = new List<DocxBodyElement>();
+        int commentGroupStart = 0;
+        bool hasUnmatchedCommentStart = false;
         bool mergeDeletedMarks = !DocxMarkupContext.FromMode(markupMode).IncludesDeletions;
         var numberingCounters = new DocxNumberingCounters();
         var inlineReferenceCounters = new DocxNoteReferenceCounters();
@@ -94,9 +97,10 @@ internal sealed partial class DocxReader
                 if (!hasListMarker && IsRunBreakOnlyParagraph(element, VisiblePageBreak, HiddenBreak, markupMode, keepsBreakParagraph: true))
                 {
                     DocxParagraph? breakParagraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, tableCellStyle: null, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken,
-                        leadingBookmarks: leadingBookmarks);
+                        leadingBookmarks: leadingBookmarks, retainUnmatchedCommentStarts: projectCommentSelections);
                     int breakCount = element.Elements().SelectMany(child => EnumerateVisibleRunBreaks(child, VisiblePageBreak, markupMode)).Count();
                     elements.Add(DocxBodyElementFactory.CreatePageBreak(DocxBreakSourceKind.RunBreak, "page", breakParagraph, null, breakCount));
+                    TrackCommentStart(breakParagraph);
                     XElement? breakParagraphSectionProperties = paragraphProperties?.Element(WordprocessingNamespace + "sectPr");
                     if (breakParagraphSectionProperties is not null)
                     {
@@ -109,9 +113,10 @@ internal sealed partial class DocxReader
                 if (!hasListMarker && IsRunBreakOnlyParagraph(element, VisibleColumnBreak, HiddenBreak, markupMode, keepsBreakParagraph: true))
                 {
                     DocxParagraph? breakParagraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, tableCellStyle: null, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken,
-                        leadingBookmarks: leadingBookmarks);
+                        leadingBookmarks: leadingBookmarks, retainUnmatchedCommentStarts: projectCommentSelections);
                     int breakCount = element.Elements().SelectMany(child => EnumerateVisibleRunBreaks(child, VisibleColumnBreak, markupMode)).Count();
                     elements.Add(DocxBodyElementFactory.CreateManualBreak(DocxBreakSourceKind.RunBreak, "column", breakParagraph, breakCount));
+                    TrackCommentStart(breakParagraph);
                     XElement? breakParagraphSectionProperties = paragraphProperties?.Element(WordprocessingNamespace + "sectPr");
                     if (breakParagraphSectionProperties is not null)
                     {
@@ -131,9 +136,6 @@ internal sealed partial class DocxReader
                         HiddenBreak, retainEmptyColumnTail: true, retainFirstLine: hasListMarker);
                     var splitFields = new List<DocxComplexFieldState>();
                     var paragraphs = new DocxParagraph?[parts.Count];
-                    List<DocxCommentRangeStart>? unclosedComments = parts.Count > 2 &&
-                        element.Descendants(WordprocessingNamespace + "commentRangeStart").Any() ? [] : null;
-                    List<(int Part, DocxCommentRangeStart Start)>? splitCommentStarts = null;
                     ParagraphBreakPart? lastParagraph = parts.LastOrDefault(part => part.Paragraph is not null);
                     // A layout break does not end an authored field. Finish its
                     // instruction and result before publishing the fragments.
@@ -147,18 +149,9 @@ internal sealed partial class DocxReader
                         paragraphs[i] = ReadParagraph(part.Paragraph, styles, numbering, numberingCounters, package, relationships, tableCellStyle: null, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken,
                             isContinuationFragment: !part.IsFirstFragment, leadingBookmarks: bookmarksForFragment,
                             splitFields: splitFields, continuesAfterBreak: !ReferenceEquals(part, lastParagraph),
-                            retainEmptyColumnMark: retainColumnMark, unclosedComments: unclosedComments);
-                        if (unclosedComments is { Count: > 0 })
-                        {
-                            foreach (DocxCommentRangeStart start in unclosedComments)
-                                (splitCommentStarts ??= []).Add((i, start));
-                            unclosedComments.Clear();
-                        }
+                            retainEmptyColumnMark: retainColumnMark, retainUnmatchedCommentStarts: projectCommentSelections);
                         bookmarksForFragment = null;
                     }
-                    if (splitCommentStarts is not null)
-                        ProjectSplitCommentRanges(paragraphs, splitCommentStarts, cancellationToken);
-
                     for (int i = 0; i < parts.Count; i++)
                     {
                         ParagraphBreakPart part = parts[i];
@@ -188,6 +181,7 @@ internal sealed partial class DocxReader
                             blockIndex = AppendFlowParagraph(elements,
                                 DocxBodyElementFactory.CreateParagraph(AdjustBreakParagraphFragment(splitParagraph, part, sourceNumbering?.Definition.Indent)),
                                 mergeDeletedMarks, cancellationToken);
+                            TrackCommentStart(splitParagraph);
                         }
                         if (matchesSourceAnchors)
                         {
@@ -219,11 +213,12 @@ internal sealed partial class DocxReader
                 }
 
                 DocxParagraph? paragraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, tableCellStyle: null, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken,
-                    leadingBookmarks: leadingBookmarks);
+                    leadingBookmarks: leadingBookmarks, retainUnmatchedCommentStarts: projectCommentSelections);
                 if (paragraph is not null)
                 {
                     int blockIndex = AppendFlowParagraph(elements, DocxBodyElementFactory.CreateParagraph(paragraph),
                         mergeDeletedMarks, cancellationToken);
+                    TrackCommentStart(paragraph);
                     BindFloatingDrawingBlocks(element, null, floatingBlocks, blockIndex, cancellationToken);
                 }
 
@@ -233,19 +228,40 @@ internal sealed partial class DocxReader
                     elements.Add(ReadSectionBreak(sectionProperties, package, relationships, styles, numbering, settings, markupMode, cancellationToken, storyCache, inheritedRevision));
                 }
             }
-            else if (element.Name == WordprocessingNamespace + "tbl")
+            else
             {
-                DocxTable? table = ReadTable(scopedElement, styles, numbering, numberingCounters, package, relationships, inlineReferenceCounters, documentSettings, markupMode, cancellationToken, tableFragments);
-                if (table is not null)
+                // A table or external import interrupts the projected paragraph
+                // sequence. Its content needs its own selection ownership.
+                FinishCommentGroup();
+                if (element.Name == WordprocessingNamespace + "tbl")
                 {
-                    BindFloatingDrawingBlocks(element, tableFragments, floatingBlocks, elements.Count, cancellationToken);
-                    elements.Add(DocxBodyElementFactory.CreateTable(table));
+                    DocxTable? table = ReadTable(scopedElement, styles, numbering, numberingCounters, package, relationships, inlineReferenceCounters, documentSettings, markupMode, cancellationToken, tableFragments);
+                    if (table is not null)
+                    {
+                        BindFloatingDrawingBlocks(element, tableFragments, floatingBlocks, elements.Count, cancellationToken);
+                        elements.Add(DocxBodyElementFactory.CreateTable(table));
+                    }
                 }
+                commentGroupStart = elements.Count;
             }
         }
 
+        FinishCommentGroup();
         AddImplicitTerminalTableParagraph(elements);
         return elements;
+
+        void TrackCommentStart(DocxParagraph? paragraph)
+        {
+            if (projectCommentSelections && !hasUnmatchedCommentStart && paragraph is not null)
+                hasUnmatchedCommentStart = paragraph.CommentRanges.Any(IsUnmatchedCommentStart);
+        }
+
+        void FinishCommentGroup()
+        {
+            if (hasUnmatchedCommentStart)
+                ProjectBodyCommentRanges(elements, commentGroupStart, cancellationToken);
+            hasUnmatchedCommentStart = false;
+        }
 
         IEnumerable<XElement> EnumerateSplitFloatingAnchors(XElement paragraph)
         {

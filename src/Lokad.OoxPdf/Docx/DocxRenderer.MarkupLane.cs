@@ -295,12 +295,10 @@ internal sealed partial class DocxRenderer
         }
         if (paragraph.SplitComments is { } fragment)
         {
-            foreach (DocxSplitCommentRange selection in fragment.Ranges)
+            fragment.Ranges.VisitContainingPart(fragment.Part, selection =>
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                if (fragment.Part < selection.FirstPart || fragment.Part > selection.LastPart ||
-                    selection.End.Id is not { } id || !markupContext.CommentAuthorPaletteSlots.ContainsKey(id))
-                    continue;
+                if (selection.End.Id is not { } id || !markupContext.CommentAuthorPaletteSlots.ContainsKey(id))
+                    return;
 
                 bool first = fragment.Part == selection.FirstPart;
                 bool last = fragment.Part == selection.LastPart;
@@ -312,7 +310,7 @@ internal sealed partial class DocxRenderer
                     EndInlineItemIndex = last ? selection.End.EndInlineItemIndex : paragraph.InlineContent?.Count
                 };
                 _ = TryPaintRange(local);
-            }
+            }, cancellationToken);
         }
 
         bool TryPaintRange(DocxCommentRange range)

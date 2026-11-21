@@ -30,7 +30,7 @@ internal sealed partial class DocxReader
         List<DocxComplexFieldState>? splitFields = null,
         bool continuesAfterBreak = false,
         bool retainEmptyColumnMark = false,
-        List<DocxCommentRangeStart>? unclosedComments = null)
+        bool retainUnmatchedCommentStarts = false)
     {
         cancellationToken.ThrowIfCancellationRequested();
         XElement? paragraphProperties = paragraph.Element(WordprocessingNamespace + "pPr");
@@ -243,8 +243,6 @@ internal sealed partial class DocxReader
 
         bool instructionContinues = continuesAfterBreak && complexFieldStack.Any(field => !field.InResult);
         FinalizeOpenComplexFields();
-        if (continuesAfterBreak)
-            unclosedComments?.AddRange(openCommentRanges);
 
         bool keepsListMarker = !isContinuationFragment && sourceNumbering is { } numberingSource &&
             !string.IsNullOrWhiteSpace(numberingSource.Definition.Text);
@@ -275,6 +273,20 @@ internal sealed partial class DocxReader
                 sourceTextOffsetInRun: 0,
                 revision: inheritedRevision,
                 revisions: MergeRevisionLists(inheritedRevision, paragraphMarkRevisions));
+        }
+
+        // Carry unmatched starts through the same source-offset adjustments as
+        // local endpoints. The body reader consumes them before layout.
+        if (retainUnmatchedCommentStarts)
+        {
+            foreach (DocxCommentRangeStart start in openCommentRanges)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                commentRanges.Add(new DocxCommentRange(start.Id, start.SourceRunIndex, start.TextOffset, null, null, null, null)
+                {
+                    StartInlineItemIndex = start.InlineItemIndex
+                });
+            }
         }
 
         foreach (DocxRevisionRangeStart openRange in openRevisionRanges)

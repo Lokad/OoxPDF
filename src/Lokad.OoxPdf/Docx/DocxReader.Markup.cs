@@ -493,69 +493,100 @@ internal sealed partial class DocxReader
 
     private readonly record struct DocxTableColumnBookmark(DocxBookmarkAnchor Anchor, int First, int Last);
 
-    private static void ProjectSplitCommentRanges(DocxParagraph?[] paragraphs,
-        List<(int Part, DocxCommentRangeStart Start)> starts, CancellationToken token)
+    private static bool IsUnmatchedCommentStart(DocxCommentRange range) =>
+        range.StartSourceRunIndex is not null && range.EndSourceRunIndex is null && range.ReferenceSourceRunIndex is null;
+
+    private static void ProjectBodyCommentRanges(List<DocxBodyElement> elements, int firstPart, CancellationToken token)
     {
-        var firstParts = new Dictionary<string, (int Part, DocxCommentRangeStart Start)>(StringComparer.Ordinal);
+        var starts = new List<(int Part, DocxCommentRange Start)>();
+        var startIds = new HashSet<string>(StringComparer.Ordinal);
         var lastParts = new Dictionary<string, (int Part, DocxCommentRange End)>(StringComparer.Ordinal);
         var referenceParts = new Dictionary<string, int>(StringComparer.Ordinal);
         var ambiguous = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var start in starts)
+        for (int part = firstPart; part < elements.Count; part++)
         {
             token.ThrowIfCancellationRequested();
-            if (start.Start.Id is { Length: > 0 } id && !firstParts.TryAdd(id, start))
-                ambiguous.Add(id);
-        }
-        if (firstParts.Count == 0) return;
-
-        for (int part = 0; part < paragraphs.Length; part++)
-        {
-            token.ThrowIfCancellationRequested();
-            if (paragraphs[part] is not { } paragraph) continue;
+            if (GetParagraph(elements[part]) is not { } paragraph) continue;
             foreach (DocxCommentRange range in paragraph.CommentRanges)
             {
                 token.ThrowIfCancellationRequested();
-                if (range.Id is not { } id || !firstParts.ContainsKey(id) || range.EndSourceRunIndex is null)
-                    continue;
-                if (range.StartSourceRunIndex is not null || !lastParts.TryAdd(id, (part, range)))
+                if (range.Id is not { Length: > 0 } id) continue;
+                if (IsUnmatchedCommentStart(range))
+                {
+                    if (startIds.Add(id))
+                        starts.Add((part, range));
+                    else
+                        ambiguous.Add(id);
+                }
+                else if (range.StartSourceRunIndex is not null ||
+                    range.EndSourceRunIndex is not null && !lastParts.TryAdd(id, (part, range)))
+                {
                     ambiguous.Add(id);
+                }
             }
             foreach (DocxInlineReference reference in paragraph.InlineReferences)
             {
                 token.ThrowIfCancellationRequested();
                 if (reference.Kind == DocxRelatedStoryKind.Comment && reference.Id is { } id &&
-                    firstParts.ContainsKey(id) && !referenceParts.TryAdd(id, part))
+                    !referenceParts.TryAdd(id, part))
                     ambiguous.Add(id);
             }
         }
 
-        // Resolve a closed selection and a unique original reference within this
-        // authored paragraph. Share the intervals instead of retaining a copy
-        // of every range in every covered paragraph fragment.
+        // Resolve a closed selection and its unique original reference within
+        // the body sequence. Breaks affect placement but preserve source order.
         var ranges = new List<DocxSplitCommentRange>();
-        var boundaries = new int[paragraphs.Length + 1];
-        foreach ((string id, var start) in firstParts)
+        int[]? boundaries = null;
+        foreach (var (part, start) in starts)
         {
             token.ThrowIfCancellationRequested();
+            string id = start.Id!;
             if (ambiguous.Contains(id) || !lastParts.TryGetValue(id, out var end) ||
-                end.Part <= start.Part || !referenceParts.TryGetValue(id, out int referencePart) || referencePart < end.Part)
+                end.Part <= part || !referenceParts.TryGetValue(id, out int referencePart) ||
+                referencePart < end.Part || referencePart == end.Part && end.End.ReferenceSourceRunIndex is null)
                 continue;
 
-            ranges.Add(new(start.Part, end.Part, start.Start.SourceRunIndex,
-                start.Start.TextOffset, start.Start.InlineItemIndex, end.End));
-            boundaries[start.Part]++;
-            boundaries[end.Part + 1]--;
+            ranges.Add(new(part, end.Part, start.StartSourceRunIndex!.Value,
+                start.StartTextOffset!.Value, start.StartInlineItemIndex, end.End));
+            boundaries ??= new int[elements.Count - firstPart + 1];
+            boundaries[part - firstPart]++;
+            boundaries[end.Part - firstPart + 1]--;
         }
-        if (ranges.Count == 0) return;
 
+        var selections = ranges.Count == 0 ? null : new DocxSplitCommentRanges(ranges, token);
         int active = 0;
-        for (int part = 0; part < paragraphs.Length; part++)
+        for (int part = firstPart; part < elements.Count; part++)
         {
             token.ThrowIfCancellationRequested();
-            active += boundaries[part];
-            if (active != 0 && paragraphs[part] is { } paragraph)
-                paragraphs[part] = paragraph with { SplitComments = new DocxSplitCommentFragment(part, ranges) };
+            active += boundaries?[part - firstPart] ?? 0;
+            DocxBodyElement element = elements[part];
+            if (GetParagraph(element) is not { } paragraph) continue;
+            var localRanges = paragraph.CommentRanges;
+            if (localRanges.Any(IsUnmatchedCommentStart))
+                localRanges = localRanges.Where(range => !IsUnmatchedCommentStart(range)).ToArray();
+            if (active == 0 && ReferenceEquals(localRanges, paragraph.CommentRanges)) continue;
+
+            paragraph = paragraph with
+            {
+                CommentRanges = localRanges,
+                SplitComments = active == 0 ? null : new DocxSplitCommentFragment(part, selections!)
+            };
+            elements[part] = element switch
+            {
+                DocxParagraphElement flow => flow with { Paragraph = paragraph },
+                DocxPageBreakElement page => page with { BreakParagraph = paragraph },
+                DocxManualBreakElement column => column with { BreakParagraph = paragraph },
+                _ => element
+            };
         }
+
+        static DocxParagraph? GetParagraph(DocxBodyElement element) => element switch
+        {
+            DocxParagraphElement flow => flow.Paragraph,
+            DocxPageBreakElement page => page.BreakParagraph,
+            DocxManualBreakElement column => column.BreakParagraph,
+            _ => null
+        };
     }
 
     private sealed record DocxCommentRangeStart(string? Id, int SourceRunIndex, int TextOffset)

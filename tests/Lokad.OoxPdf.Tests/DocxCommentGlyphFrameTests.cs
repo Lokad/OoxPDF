@@ -133,7 +133,7 @@ internal static class DocxCommentGlyphFrameTests
             {
                 TestAssert.Equal(sample.Count + 1, paragraphs.Length);
                 var ranges = paragraphs[0].SplitComments?.Ranges;
-                TestAssert.Equal(1, TestAssert.NotNull(ranges).Count);
+                TestAssert.NotNull(ranges);
                 TestAssert.True(paragraphs.All(p => ReferenceEquals(ranges, p.SplitComments?.Ranges)),
                     "All covered fragments share the authored comment range.");
             }
@@ -180,6 +180,95 @@ internal static class DocxCommentGlyphFrameTests
                             kind == "column" ? new XElement(w + "cols", new XAttribute(w + "num", "2")) : null));
 
                     XElement Text(string value) => new(w + "r", new XElement(w + "t", new XAttribute(XNamespace.Xml + "space", "preserve"), value));
+                });
+    }
+
+    public static void DocxCommentGlyphFramesCarryClosedRangesAcrossBodyParagraphs()
+    {
+        var resolver = new PortableRenderingTests.PinnedResolver();
+        var review = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.AllMarkup,
+            OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        foreach ((string Kind, int[] Fills) sample in new[]
+        {
+            ("adjacent", new[] { 2 }),
+            ("wrapped-page", new[] { 2, 1 }),
+            ("unclosed", new[] { 0 }),
+            ("early-reference", new[] { 0 }),
+            ("table", new[] { 0 }),
+        })
+        {
+            DocxDocument source = Source(sample.Kind, OoxPdfDocxMarkupMode.AllMarkup);
+            var paragraphs = DocxBlockTraversal.EnumerateDirectParagraphs(source.BodyElements).ToArray();
+            TestAssert.Equal(1, paragraphs.Sum(p => p.InlineReferences.Count(r => r.Kind == DocxRelatedStoryKind.Comment)));
+            TestAssert.True(paragraphs.All(p => p.CommentRanges.All(range =>
+                range.StartSourceRunIndex is null || range.EndSourceRunIndex is not null || range.ReferenceSourceRunIndex is not null)),
+                "Unmatched starts are consumed before layout.");
+            if (sample.Fills.Sum() > 0)
+            {
+                var ranges = TestAssert.NotNull(paragraphs[0].SplitComments?.Ranges);
+                foreach (var paragraph in paragraphs)
+                {
+                    TestAssert.True(paragraph.SplitComments is { } fragment && ReferenceEquals(ranges, fragment.Ranges),
+                        "The closed interval covers every selected body paragraph.");
+                    var selected = new List<DocxSplitCommentRange>();
+                    ranges.VisitContainingPart(paragraph.SplitComments!.Value.Part, selected.Add, default);
+                    TestAssert.Equal("1", selected.Single().End.Id);
+                }
+            }
+            else
+            {
+                TestAssert.True(paragraphs.All(p => p.SplitComments is null),
+                    "Unclosed, out-of-order and interrupted sources retain their established fallback.");
+            }
+
+            var pages = review.RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
+            TestAssert.True(pages.Select(page => DocxTests.CountWordCompatibleCommentRangeFills(page.Content)).SequenceEqual(sample.Fills),
+                "Body selection paints on its owning pages for " + sample.Kind);
+            string text = ReadText(pages);
+            foreach (string word in new[] { "OutsideLeft", "SelectedLeft", "SelectedRight", "OutsideRight" })
+                TestAssert.Contains(word, text);
+            TestAssert.Equal(1, Regex.Matches(text, "Table-cellcommentbody\\.").Count);
+            if (sample.Kind == "wrapped-page")
+                TestAssert.Contains("SelectedMiddle", ReadText([pages[0]]));
+        }
+
+        var final = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.Final,
+            OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        DocxDocument finalSource = Source("adjacent", OoxPdfDocxMarkupMode.Final);
+        PdfPage finalPage = final.RenderPagesAsync(finalSource, null, default).ToBlockingEnumerable().Single();
+        TestAssert.Equal(0, DocxTests.CountWordCompatibleCommentRangeFills(finalPage.Content));
+        TestAssert.Contains("SelectedRight", ReadText([finalPage]));
+        TestAssert.DoesNotContain("Table-cellcommentbody", ReadText([finalPage]));
+
+        static string ReadText(IEnumerable<PdfPage> pages) => Regex.Replace(string.Concat(pages.SelectMany(page =>
+            DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).Select(show => show.Text))), @"\s+", "");
+
+        static DocxDocument Source(string kind, OoxPdfDocxMarkupMode mode) =>
+            DocxInlineCompositionTests.ReadMutation("docx-markup-comment-table", mode, false, false,
+                (xml, w, _) =>
+                {
+                    XElement body = xml.Root!.Element(w + "body")!;
+                    XElement? originalTable = kind == "table" ? body.Element(w + "tbl") : null;
+                    originalTable?.Descendants(w + "commentReference").Remove();
+                    originalTable?.Descendants(w + "commentRangeStart").Remove();
+                    originalTable?.Descendants(w + "commentRangeEnd").Remove();
+                    var start = new XElement(w + "p", Text("OutsideLeft "), Marker("commentRangeStart"), Text("SelectedLeft"));
+                    var end = new XElement(w + "p",
+                        kind == "wrapped-page" ? new XElement(w + "pPr", new XElement(w + "pageBreakBefore")) : null,
+                        kind == "early-reference" ? Reference() : null,
+                        Text("SelectedRight"), kind == "unclosed" ? null : Marker("commentRangeEnd"),
+                        kind == "early-reference" ? null : Reference(), Text(" OutsideRight"));
+                    body.ReplaceNodes(start,
+                        kind == "wrapped-page" ? new XElement(w + "p", Text("SelectedMiddle")) : null,
+                        originalTable,
+                        kind == "wrapped-page" ? new XElement(w + "sdt", new XElement(w + "sdtContent", end)) : end,
+                        new XElement(w + "sectPr", new XElement(w + "pgSz",
+                            new XAttribute(w + "w", "12240"), new XAttribute(w + "h", "15840"))));
+
+                    XElement Text(string value) => new(w + "r",
+                        new XElement(w + "t", new XAttribute(XNamespace.Xml + "space", "preserve"), value));
+                    XElement Marker(string name) => new(w + name, new XAttribute(w + "id", "1"));
+                    XElement Reference() => new(w + "r", Marker("commentReference"));
                 });
     }
 

@@ -186,7 +186,49 @@ internal sealed record DocxCommentRange(
 internal sealed record DocxSplitCommentRange(int FirstPart, int LastPart, int StartRunIndex,
     int StartTextOffset, int? StartItemIndex, DocxCommentRange End);
 
-internal readonly record struct DocxSplitCommentFragment(int Part, IReadOnlyList<DocxSplitCommentRange> Ranges);
+internal readonly record struct DocxSplitCommentFragment(int Part, DocxSplitCommentRanges Ranges);
+
+// One shared interval index per body sequence. Midpoints store the last part
+// reached by their subtree, so disjoint selections are skipped during paint.
+internal sealed class DocxSplitCommentRanges
+{
+    private readonly IReadOnlyList<DocxSplitCommentRange> ranges;
+    private readonly int[] lastParts;
+
+    public DocxSplitCommentRanges(IReadOnlyList<DocxSplitCommentRange> ranges, CancellationToken token)
+    {
+        this.ranges = ranges;
+        lastParts = new int[ranges.Count];
+        SetBounds(0, ranges.Count);
+
+        int SetBounds(int start, int end)
+        {
+            if (start == end) return -1;
+            token.ThrowIfCancellationRequested();
+            int middle = start + (end - start) / 2;
+            return lastParts[middle] = Math.Max(ranges[middle].LastPart,
+                Math.Max(SetBounds(start, middle), SetBounds(middle + 1, end)));
+        }
+    }
+
+    public void VisitContainingPart(int part, Action<DocxSplitCommentRange> visit, CancellationToken token)
+    {
+        Visit(0, ranges.Count);
+
+        void Visit(int start, int end)
+        {
+            if (start == end || ranges[start].FirstPart > part) return;
+            int middle = start + (end - start) / 2;
+            if (lastParts[middle] < part) return;
+            token.ThrowIfCancellationRequested();
+            Visit(start, middle);
+            DocxSplitCommentRange range = ranges[middle];
+            if (range.FirstPart <= part && range.LastPart >= part)
+                visit(range);
+            Visit(middle + 1, end);
+        }
+    }
+}
 
 internal sealed record DocxRevisionRange(
     DocxRevisionKind Kind,
