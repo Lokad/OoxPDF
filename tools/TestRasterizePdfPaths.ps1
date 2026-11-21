@@ -81,6 +81,25 @@ function Write-BlankPdf([string] $Path, [int] $Pages) {
 $twoPages=Join-Path $root 'two-pages.pdf';$onePage=Join-Path $root 'one-page.pdf'
 Write-BlankPdf $twoPages 2
 Write-BlankPdf $onePage 1
+$rasterizerDll=Join-Path $ownedRuntime 'Lokad.OoxPdf.PdfiumRasterizer.dll'
+# Each 72pt square page produces 1,296 pixels at 36 DPI. Both pages fit
+# individually at either budget, so the low bound detects a per-page reset.
+foreach ($quota in @(
+    @{Id='total-quota-exact';Limit=2592;Exit=0;Names=@('page-001.png','page-002.png')},
+    @{Id='total-quota-over';Limit=2591;Exit=1;Names=@('page-001.png')})) {
+    $destination=Join-Path $root $quota.Id
+    $log=Join-Path $root ($quota.Id+'.log')
+    & dotnet $rasterizerDll $twoPages $destination 36 --max-total-pixels $quota.Limit *> $log
+    $exitCode=$LASTEXITCODE
+    $pageNames=@(Get-ChildItem -LiteralPath $destination -File -Filter '*.png' | Sort-Object Name | ForEach-Object Name)
+    if ($exitCode -ne $quota.Exit -or ($pageNames -join ',') -cne ($quota.Names -join ',')) {
+        throw ('Unexpected raster quota result: '+$quota.Id)
+    }
+    if ($quota.Exit -ne 0 -and !(Select-String -LiteralPath $log -SimpleMatch 'PDF total raster pixel count 2592 exceeds the maximum of 2591' -Quiet)) {
+        throw 'An aggregate quota refusal must identify the cumulative pixel count'
+    }
+    $rows+=@{Id=$quota.Id;Outcome='passed';Pages=$pageNames.Count;TotalPixelLimit=$quota.Limit;ExitCode=$exitCode}
+}
 $reused=Join-Path $root 'shrinking-raster'
 & (Join-Path $ownedTools 'RasterizePdf.ps1') -Framework $Framework -InputPdf $twoPages -OutputDirectory $reused -Dpi 36 -SkipBuild *> (Join-Path $root 'two-pages.log')
 if (@(Get-ChildItem -LiteralPath $reused -Filter '*.png' -File).Count -ne 2) { throw 'Expected two initial raster pages' }
@@ -94,7 +113,7 @@ foreach ($job in @(@{Id='shrinking-reuse';Input=$onePage;Timeout=30},
     if (!$failure -or !$failure.Contains('choose a fresh directory')) { throw ('Reused raster did not refuse: '+$job.Id) }
     $rows+=@{Id=$job.Id;Outcome='passed';Pages=2;ExpectedFailure=$failure}
 }
-& dotnet (Join-Path $ownedRuntime 'Lokad.OoxPdf.PdfiumRasterizer.dll') $onePage $reused 36 *> (Join-Path $root 'direct-reuse.log')
+& dotnet $rasterizerDll $onePage $reused 36 *> (Join-Path $root 'direct-reuse.log')
 if ($LASTEXITCODE -ne 2) { throw 'Direct rasterizer must also refuse stale output' }
 $after=@(Get-ChildItem -LiteralPath $reused -File | Sort-Object Name | ForEach-Object { (Get-FileHash $_.FullName).Hash })
 if (@(Compare-Object $before $after).Count) { throw 'Refused raster reuse modified caller files' }
@@ -105,7 +124,7 @@ if (@(Get-ChildItem -LiteralPath $fresh -Filter '*.png' -File).Count -ne 1) { th
 $rows+=@{Id='fresh-shorter';Outcome='passed';Pages=1}
 $bound=Join-Path $root 'explicit-frozen-tool'
 $otherFramework=if ($Framework -eq 'net11.0') {'net10.0'} else {'net11.0'}
-& (Join-Path $ownedTools 'RasterizePdf.ps1') -Framework $otherFramework -RasterizerPath (Join-Path $ownedRuntime 'Lokad.OoxPdf.PdfiumRasterizer.dll') -InputPdf $onePage -OutputDirectory $bound -Dpi 36 *> (Join-Path $root 'explicit-frozen-tool.log')
+& (Join-Path $ownedTools 'RasterizePdf.ps1') -Framework $otherFramework -RasterizerPath $rasterizerDll -InputPdf $onePage -OutputDirectory $bound -Dpi 36 *> (Join-Path $root 'explicit-frozen-tool.log')
 if (@(Get-ChildItem -LiteralPath $bound -Filter '*.png' -File).Count -ne 1) { throw 'Explicit frozen rasterizer did not override framework discovery without building' }
 $rows+=@{Id='explicit-frozen-tool';Outcome='passed';Pages=1}
 $inputHash=(Get-FileHash -LiteralPath $inputFull).Hash
@@ -114,5 +133,5 @@ if ((Get-FileHash -LiteralPath $plain).Hash -ne $inputHash -or (Get-FileHash -Li
     LibraryBuilds=0;OfficeExports=0;Checks=$rows} |
     ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $root 'evidence.json') -Encoding utf8
 Write-Output ('Raster wrapper: '+$rows.Count+' checks passed; no build.')
-# The direct-tool refusal above is expected; callers must not inherit its exit 2.
+# Expected child-process refusals must not become the exit code of this suite.
 $global:LASTEXITCODE=0

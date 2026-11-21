@@ -146,29 +146,6 @@ internal static class ToolBudgetTests
         }
     }
 
-    public static void RasterizerTotalPixelQuotaRejects()
-    {
-        // R21: a single page exceeds a 1-pixel aggregate quota and aborts the run.
-        RequirePdfium();
-        string input = WriteSinglePagePdf();
-        string outputDirectory = NewTempDirectory();
-        ToolResult result = RunTool(RasterizerAssemblyPath.Value, input, outputDirectory, "--max-total-pixels", "1");
-        TestAssert.Equal(1, result.ExitCode);
-        TestAssert.Contains("exceeds the maximum", result.Output + result.Error);
-    }
-
-    public static void RasterizerDefaultQuotaRendersTinyPage()
-    {
-        // R21: the default aggregate quota renders a tiny page and exits, proving
-        // termination and per-run cleanup.
-        RequirePdfium();
-        string input = WriteSinglePagePdf();
-        string outputDirectory = NewTempDirectory();
-        ToolResult result = RunTool(RasterizerAssemblyPath.Value, input, outputDirectory);
-        TestAssert.Equal(0, result.ExitCode);
-        TestAssert.True(File.Exists(Path.Combine(outputDirectory, "page-001.png")), "Rasterizer must render page 1 on success.");
-    }
-
     private static string WriteMultiFlatePdf()
     {
         using var pdf = new MemoryStream();
@@ -216,52 +193,6 @@ internal static class ToolBudgetTests
         byte[] png = TestFixtures.CreateRgbPng(100, 100, rgb);
         File.WriteAllBytes(Path.Combine(referenceDirectory, "page-001.png"), png);
         File.WriteAllBytes(Path.Combine(candidateDirectory, "page-001.png"), png);
-    }
-
-    private static string WriteSinglePagePdf()
-    {
-        string docx = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-                  <Default Extension="xml" ContentType="application/xml"/>
-                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
-                </Types>
-                """,
-            ["_rels/.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
-                </Relationships>
-                """,
-            ["word/document.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-                  <w:body><w:p><w:r><w:t>Hi</w:t></w:r></w:p>
-                  <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:body>
-                </w:document>
-                """,
-        });
-        string pdf = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-        Lokad.OoxPdf.OoxPdfConverter.Convert(docx, pdf, new Lokad.OoxPdf.OoxPdfOptions { InputKind = Lokad.OoxPdf.OoxPdfInputKind.Docx });
-        return pdf;
-    }
-
-    private static void RequirePdfium()
-    {
-        if (!OperatingSystem.IsWindows())
-        {
-            TestAssert.Skip("PDFium rasterizer runs on Windows.");
-        }
-
-        string repositoryRoot = FindRepositoryRoot();
-        string dll = Path.Combine(repositoryRoot, "tools", "vendor", "pdfium", "win-x64", "bin", "pdfium.dll");
-        if (!File.Exists(dll))
-        {
-            TestAssert.Skip("PDFium native binary is not provisioned.");
-        }
     }
 
     private static string NewTempDirectory()
