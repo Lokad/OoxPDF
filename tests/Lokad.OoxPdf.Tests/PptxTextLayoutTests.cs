@@ -116,37 +116,26 @@ internal static class PptxTextLayoutTests
 
     public static void PptxSyntheticTextBoxHonorsVerticalAnchor()
     {
-        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
-        if (!File.Exists(arial))
+        double top = PaintedBaseline("t");
+        double center = PaintedBaseline("ctr");
+        double bottom = PaintedBaseline("b");
+
+        TestAssert.True(top - bottom > 100d, "Top and bottom anchors use opposite ends of the 144pt frame.");
+        TestAssert.True(Math.Abs(center - (top + bottom) / 2d) < .01d,
+            "The centered label paints halfway between the top and bottom baselines.");
+
+        static double PaintedBaseline(string anchor)
         {
-            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
+            const string label = "Anchor";
+            const string frame = """<a:off x="0" y="914400"/><a:ext cx="1828800" cy="1828800"/>""";
+            PdfPage page = PaintSlideClipCase(label, 1800, frame,
+                $"""<a:bodyPr tIns="0" bIns="0" anchor="{anchor}"/>""", textBox: true);
+            var glyphs = PortableRenderingTests.ReadPaintedSourceLabel(page, label);
+            var origin = glyphs[0].Origin;
+            TestAssert.True(Math.Abs(origin.X - 7.2d) < .01d && glyphs.All(glyph => Math.Abs(glyph.Origin.Y - origin.Y) < .01d),
+                "The complete label retains its horizontal inset and one painted baseline.");
+            return origin.Y;
         }
-
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
-            ["_rels/.rels"] = PptxTests.PackageRelationship(),
-            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
-            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
-            ["ppt/slides/slide1.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <p:cSld><p:spTree><p:sp>
-                    <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="1828800" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
-                    <p:txBody>
-                      <a:bodyPr tIns="0" bIns="0" anchor="ctr"/><a:lstStyle/>
-                      <a:p><a:r><a:rPr sz="1800"/><a:t>Centered</a:t></a:r></a:p>
-                    </p:txBody>
-                  </p:sp></p:spTree></p:cSld>
-                </p:sld>
-                """
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, output);
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        PptxTests.AssertContainsTextMatrixAtX(pdf, 7.2d);
     }
 
     public static void PptxSyntheticTextBoxVerticalAnchorUsesWrappedHeight()
