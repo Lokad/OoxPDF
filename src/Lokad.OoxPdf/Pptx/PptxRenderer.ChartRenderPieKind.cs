@@ -48,7 +48,7 @@ internal sealed partial class PptxRenderer
                 ChartLegendLayout legend = sourceLayout.Legend;
                 ChartPlotBox plotBox = sourceLayout.PlotBox;
                 IReadOnlyList<ChartLegendEntry> legendEntries = BuildCategoryFillLegendEntries(theme, colorMap, chartPalette,
-                    piePlot, polarPoints.PointFills, workbook, plotVisibleOnly, valuePointCount: pieSlices.Count);
+                    piePlot, polarPoints.PointFills, workbook, plotVisibleOnly, pieSlices.Count, pieSlices.Select(slice => slice.Index));
                 ChartTextStyle legendStyle = ReadSceneChartLegendTextStyle(theme, sceneChart);
                 var prepared = await PreparePolarChartLayoutAsync(ChartPolarKind.Pie, sourceLayout, theme, sceneChart,
                     legendEntries, legendStyle, fontResolver, context).ConfigureAwait(false);
@@ -137,7 +137,8 @@ internal sealed partial class PptxRenderer
                 ChartPlotBox plotBox = sourceLayout.PlotBox;
                 RenderChartAreaStyle(graphics, document, bounds, sceneChart);
                 ChartPolarPointOptions polarPoints = doughnutOptions.PolarPoints;
-                IReadOnlyList<ChartLegendEntry> doughnutLegendEntries = BuildCategoryFillLegendEntries(theme, colorMap, chartPalette, doughnutPlot, polarPoints.PointFills, workbook, plotVisibleOnly, valuePointCount: doughnutSlices.Count);
+                IReadOnlyList<ChartLegendEntry> doughnutLegendEntries = BuildCategoryFillLegendEntries(theme, colorMap, chartPalette,
+                    doughnutPlot, polarPoints.PointFills, workbook, plotVisibleOnly, doughnutSlices.Count, doughnutSlices.Select(slice => slice.Index));
                 ChartTextStyle doughnutLegendStyle = ReadSceneChartLegendTextStyle(theme, sceneChart);
                 var prepared = await PreparePolarChartLayoutAsync(ChartPolarKind.Doughnut, sourceLayout, theme, sceneChart,
                     doughnutLegendEntries, doughnutLegendStyle, fontResolver, context).ConfigureAwait(false);

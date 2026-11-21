@@ -108,7 +108,7 @@ internal sealed partial class PptxRenderer
             ? stroke : seriesStrokes.Count > 0 && seriesStrokes[0] is { } seriesStroke
                 ? seriesStroke : ResolveNegativeBarFallbackStroke(pointStrokes, 0, index, Value(index), options.InvertsNegativePoint(0, index));
         return BuildCategoryFillLegendEntries(theme, colorMap, palette, plot, pointFills[0],
-            workbook, plotVisibleOnly, count, Fill, Stroke);
+            workbook, plotVisibleOnly, count, Enumerable.Range(0, count), Fill, Stroke);
     }
 
     // Measure once, reserve automatic plot space, then give painting the same rows.

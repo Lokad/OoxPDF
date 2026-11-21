@@ -1,4 +1,5 @@
 using System.Xml.Linq;
+using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pdf;
 using Lokad.OoxPdf.Pptx;
 
@@ -102,6 +103,54 @@ internal static partial class PptxChartLabelDefaultsTests
         TestAssert.Equal("", LabelText(blank));
         TestAssert.True(zero.Content == blank.Content && zero.Content != unlabeled.Content,
             "The declared zero and blank slots retain the existing label reservation.");
+    }
+
+    public static void PptxPolarLegendsUseSourceIndicesForUnlabeledKeys()
+    {
+        var renderer = new PptxRenderer(new PortableRenderingTests.PinnedResolver());
+        RgbColor red = new(197, 32, 33);
+        RgbColor green = new(24, 148, 72);
+        RgbColor blue = new(36, 73, 213);
+        foreach (string kind in new[] { "pieChart", "doughnutChart" })
+        foreach (int trailingIndex in new[] { 1, 3 })
+        {
+            string hole = kind == "doughnutChart" ? "<c:holeSize val=\"50\"/>" : "";
+            var chart = XDocument.Parse($$"""
+                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <c:chart><c:autoTitleDeleted val="1"/><c:plotArea><c:{{kind}}>
+                    <c:varyColors val="1"/><c:ser><c:idx val="0"/><c:order val="0"/>
+                    {{Point(0, "C52021")}}{{Point(1, "189448")}}{{Point(3, "2449D5")}}
+                    <c:cat><c:strLit><c:ptCount val="1"/><c:pt idx="0"><c:v>Source Anchor</c:v></c:pt></c:strLit></c:cat>
+                    <c:val><c:numLit><c:ptCount val="4"/>
+                      <c:pt idx="0"><c:v>16</c:v></c:pt><c:pt idx="{{trailingIndex}}"><c:v>27</c:v></c:pt>
+                    </c:numLit></c:val></c:ser>{{hole}}
+                  </c:{{kind}}></c:plotArea><c:legend><c:legendPos val="r"/>
+                    <c:layout><c:manualLayout><c:xMode val="edge"/><c:yMode val="edge"/><c:wMode val="factor"/><c:hMode val="factor"/>
+                      <c:x val=".5"/><c:y val=".25"/><c:w val=".45"/><c:h val=".35"/>
+                    </c:manualLayout></c:layout><c:overlay val="1"/>
+                    <c:txPr><a:bodyPr/><a:p><a:pPr><a:defRPr sz="1000"/></a:pPr></a:p></c:txPr>
+                  </c:legend></c:chart>
+                </c:chartSpace>
+                """);
+            using var input = PptxTests.CreateSingleChartPackageStream(chart.ToString());
+            using var package = OoxPackage.Open(input, default);
+            var document = new PptxReader().Read(package, default);
+            PdfPage page = renderer.RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().Single();
+            var operations = new List<string>();
+            RgbColor[] colors = PptxChartPaletteTests.ReadColoredPaints(page.Content, operations.Add).ToArray();
+            var paints = colors.Zip(operations, (color, op) => (Color: color, Operation: op))
+                .Where(paint => paint.Color == red || paint.Color == green || paint.Color == blue).ToArray();
+            RgbColor[] expected = [red, trailingIndex == 1 ? green : blue];
+            TestAssert.True(paints.Where(p => p.Operation == "f*").Select(p => p.Color).SequenceEqual(expected),
+                $"{kind} must paint both authored slice colors for point {trailingIndex}.");
+            TestAssert.True(paints.Where(p => p.Operation.EndsWith(" re f", StringComparison.Ordinal)).Select(p => p.Color).SequenceEqual(expected),
+                $"{kind} legend keys must use the actual source points for index {trailingIndex}.");
+            PortableRenderingTests.ReadPaintedSourceLabel(page, "Source Anchor");
+        }
+
+        static string Point(int index, string color) => $"""
+            <c:dPt><c:idx val="{index}"/><c:spPr><a:solidFill><a:srgbClr val="{color}"/></a:solidFill></c:spPr></c:dPt>
+            """;
     }
 
     public static void PptxDefinedSeriesOwnPointDeclarationsWithoutLeakingPlotPoints()

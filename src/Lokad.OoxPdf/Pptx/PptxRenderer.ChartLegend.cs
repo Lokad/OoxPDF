@@ -49,7 +49,10 @@ internal sealed partial class PptxRenderer
         return entries;
     }
 
-    private static IReadOnlyList<ChartLegendEntry> BuildCategoryFillLegendEntries(PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, PptxSceneChartPlot plot, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, ChartWorkbookData? workbook, bool plotVisibleOnly, int valuePointCount = 0, Func<int, ChartSeriesFill>? resolveFill = null, Func<int, ChartSeriesStroke?>? resolveStroke = null)
+    private static IReadOnlyList<ChartLegendEntry> BuildCategoryFillLegendEntries(PptxTheme theme, PptxColorMap colorMap,
+        ChartColorPalette chartPalette, PptxSceneChartPlot plot, IReadOnlyDictionary<int, ChartSeriesFill> pointFills,
+        ChartWorkbookData? workbook, bool plotVisibleOnly, int valuePointCount, IEnumerable<int> valuePointIndices,
+        Func<int, ChartSeriesFill>? resolveFill = null, Func<int, ChartSeriesStroke?>? resolveStroke = null)
     {
         IReadOnlyList<ChartIndexedTextPoint> points = ReadSharedCategoryLabels(plot, workbook, plotVisibleOnly)
             .OfType<ChartIndexedTextPoint>()
@@ -73,7 +76,7 @@ internal sealed partial class PptxRenderer
         // Value points without category text still draw swatch-only legend rows
         // (doughnut overlay probe: four values over three categories emits a textless
         // fourth swatch; pies share the rule, unobserved).
-        for (int valueIndex = 0; valueIndex < valuePointCount; valueIndex++)
+        foreach (int valueIndex in valuePointIndices)
         {
             if (!usedIndexes.Add(valueIndex))
             {

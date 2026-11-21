@@ -6548,6 +6548,7 @@
   ],
   "pptx-point-legends": [
     "PptxPointLegendsMatchIndependentOfficeIdentityAndPaint",
+    "=PptxPolarLegendsUseSourceIndicesForUnlabeledKeys",
     "PptxVaryingBarCategoryLegends",
     "PptxNegativeBar",
     "PptxAuthoredTintShade",
