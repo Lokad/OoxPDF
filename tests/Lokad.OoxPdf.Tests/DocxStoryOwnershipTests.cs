@@ -94,6 +94,67 @@ internal static class DocxStoryOwnershipTests
             "Different package owners must not share mutable DOM instances.");
     }
 
+    public static void DocxStoryOwnershipCountsEachStaticSourceOnceInStructureAggregates()
+    {
+        foreach (bool separateDefault in new[] { false, true })
+        Mutate("selected-header", (parts, document) =>
+        {
+            XElement finalSection = document.Descendants(W + "sectPr").Single();
+            XElement finalReference = finalSection.Element(W + "headerReference")!;
+            var earlierSection = new XElement(finalSection);
+            finalSection.AddBeforeSelf(new XElement(W + "p", new XElement(W + "pPr", earlierSection)));
+            finalSection.AddFirst(new XElement(W + "headerReference", new XAttribute(W + "type", "first"),
+                new XAttribute(R + "id", "unprintedHeader")));
+
+            const string sourcePart = "word/unused-header.xml";
+            var header = Xml(parts, sourcePart);
+            header.Root!.Element(W + "p")!.AddFirst(new XElement(W + "pPr",
+                new XElement(W + "pStyle", new XAttribute(W + "val", "SourceHeader")),
+                new XElement(W + "numPr", new XElement(W + "numId", new XAttribute(W + "val", "1")))));
+            parts[sourcePart] = Bytes(header);
+
+            var relationships = Xml(parts, "word/_rels/document.xml.rels");
+            var types = Xml(parts, "[Content_Types].xml");
+            AddPart("unprinted-header.xml", "unprintedHeader", "header", parts[sourcePart]);
+            if (separateDefault)
+            {
+                finalReference.SetAttributeValue(R + "id", "distinctHeader");
+                AddPart("distinct-header.xml", "distinctHeader", "header", parts[sourcePart]);
+            }
+            string numbering = $"""
+                <w:numbering xmlns:w="{W}"><w:abstractNum w:abstractNumId="1"><w:lvl w:ilvl="0">
+                <w:start w:val="1"/><w:numFmt w:val="decimal"/><w:lvlText w:val="%1."/>
+                </w:lvl></w:abstractNum><w:num w:numId="1"><w:abstractNumId w:val="1"/></w:num></w:numbering>
+                """;
+            AddPart("numbering.xml", "structureNumbering", "numbering", Encoding.UTF8.GetBytes(numbering));
+            parts["word/_rels/document.xml.rels"] = Bytes(relationships);
+            parts["[Content_Types].xml"] = Bytes(types);
+
+            void AddPart(string name, string id, string kind, byte[] payload)
+            {
+                parts["word/" + name] = payload;
+                relationships.Root!.Add(new XElement(relationships.Root.Name.Namespace + "Relationship",
+                    new XAttribute("Id", id), new XAttribute("Type", R.NamespaceName + "/" + kind), new XAttribute("Target", name)));
+                types.Root!.Add(new XElement(types.Root.Name.Namespace + "Override", new XAttribute("PartName", "/word/" + name),
+                    new XAttribute("ContentType", "application/vnd.openxmlformats-officedocument.wordprocessingml." + kind + "+xml")));
+            }
+        }, path =>
+        {
+            foreach (var mode in Modes)
+            {
+                using var input = File.OpenRead(path);
+                var document = new DocxReader().Read(OoxPackage.Open(input, default), null, default, mode);
+                var snapshot = DocxStructureSnapshot.FromDocument(document);
+                // The unprinted first-page part counts once, as does each
+                // distinct default part even though their payloads match.
+                int expected = separateDefault ? 3 : 2;
+                TestAssert.Equal(expected, snapshot.ListUsages.Single().ParagraphCount);
+                TestAssert.Equal(expected, snapshot.StyleUsages.Single(usage => usage.StyleId == "SourceHeader").ParagraphCount);
+                TestAssert.Equal(expected, snapshot.FieldReferenceCount);
+            }
+        });
+    }
+
     public static void DocxStoryOwnershipRetainsMalformedRecoveryAndCancellation()
     {
         foreach (bool selected in new[] { false, true })

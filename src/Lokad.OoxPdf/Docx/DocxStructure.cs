@@ -150,7 +150,7 @@ internal sealed partial record DocxStructureSnapshot(
 
         DocxParagraph[] allParagraphs = EnumerateParagraphs(document).ToArray();
         DocxRevisionInfo[] documentRevisions = EnumerateDocumentRevisions(document).ToArray();
-        DocxStructureCommentStoryAnchorSnapshot[] commentStoryAnchors = ToCommentStoryAnchorSnapshots(document).ToArray();
+        IReadOnlyList<DocxStructureCommentStoryAnchorSnapshot> commentStoryAnchors = ToCommentStoryAnchorSnapshots(document, allParagraphs);
         var (inlineReferences, commentRanges) = ToAnnotationSnapshots(document.BodyElements, relatedStories);
         return new DocxStructureSnapshot(
             document.MarkupMode.ToString(),
@@ -196,8 +196,8 @@ internal sealed partial record DocxStructureSnapshot(
             inlineReferences,
             document.FloatingDrawings.Select((drawing, index) => ToFloatingDrawingSnapshot(drawing, index)).ToArray(),
             document.StyleCatalog,
-            ToStyleUsages(document),
-            ToListUsages(document),
+            ToStyleUsages(document, allParagraphs),
+            ToListUsages(allParagraphs),
             tables,
             adjacency,
             commentRanges,
@@ -434,14 +434,15 @@ internal sealed partial record DocxStructureSnapshot(
         return (references, ranges);
     }
 
-    private static IReadOnlyList<DocxStructureCommentStoryAnchorSnapshot> ToCommentStoryAnchorSnapshots(DocxDocument document)
+    private static IReadOnlyList<DocxStructureCommentStoryAnchorSnapshot> ToCommentStoryAnchorSnapshots(
+        DocxDocument document, IReadOnlyList<DocxParagraph> paragraphs)
     {
-        Dictionary<string, int> visibleInlineCounts = EnumerateParagraphs(document)
+        Dictionary<string, int> visibleInlineCounts = paragraphs
             .SelectMany(paragraph => paragraph.InlineReferences)
             .Where(reference => reference.Kind == DocxRelatedStoryKind.Comment && !string.IsNullOrWhiteSpace(reference.Id))
             .GroupBy(reference => reference.Id ?? string.Empty, StringComparer.Ordinal)
             .ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
-        Dictionary<string, int> visibleRangeCounts = EnumerateParagraphs(document)
+        Dictionary<string, int> visibleRangeCounts = paragraphs
             .SelectMany(paragraph => paragraph.CommentRanges)
             .Where(range => !string.IsNullOrWhiteSpace(range.Id))
             .GroupBy(range => range.Id ?? string.Empty, StringComparer.Ordinal)
@@ -600,7 +601,8 @@ internal sealed partial record DocxStructureSnapshot(
                 : (null, null);
     }
 
-    private static IReadOnlyList<DocxStructureStyleUsageSnapshot> ToStyleUsages(DocxDocument document)
+    private static IReadOnlyList<DocxStructureStyleUsageSnapshot> ToStyleUsages(DocxDocument document,
+        IReadOnlyList<DocxParagraph> paragraphs)
     {
             bool IsExactLineSpacing(DocxParagraphSpacing spacing)
             {
@@ -620,7 +622,7 @@ internal sealed partial record DocxStructureSnapshot(
                     (spacing.LineRuleValue is null || string.Equals(spacing.LineRuleValue, "auto", StringComparison.OrdinalIgnoreCase));
             }
 
-        DocxStructureStyleUsageSnapshot[] paragraphStyles = EnumerateParagraphs(document)
+        DocxStructureStyleUsageSnapshot[] paragraphStyles = paragraphs
             .GroupBy(paragraph => paragraph.EffectiveProperties.StyleId, StringComparer.Ordinal)
             .Select(group => new DocxStructureStyleUsageSnapshot(
                 "Paragraph",
@@ -666,9 +668,9 @@ internal sealed partial record DocxStructureSnapshot(
         return paragraphStyles.Concat(tableStyles).ToArray();
     }
 
-    private static IReadOnlyList<DocxStructureListUsageSnapshot> ToListUsages(DocxDocument document)
+    private static IReadOnlyList<DocxStructureListUsageSnapshot> ToListUsages(IReadOnlyList<DocxParagraph> paragraphs)
     {
-        return EnumerateParagraphs(document)
+        return paragraphs
             .SelectMany(paragraph => paragraph.ListLabel is { } label ? new[] { (Paragraph: paragraph, Label: label) } : [])
             .GroupBy(item => new
             {
@@ -696,13 +698,16 @@ internal sealed partial record DocxStructureSnapshot(
 
     private static IEnumerable<DocxParagraph> EnumerateParagraphs(DocxDocument document)
     {
-        return DocxBlockTraversal.EnumerateBodyParagraphs(document)
-            .Concat(DocxBlockTraversal.EnumerateStaticStoryParagraphs(document.HeaderBodyElementsByType, document.HeaderParagraphsByType))
+        // The reader shares one parsed static part across document, section
+        // and variant references. Count each source paragraph once in aggregates.
+        var staticParagraphs = DocxBlockTraversal.EnumerateStaticStoryParagraphs(document.HeaderBodyElementsByType, document.HeaderParagraphsByType)
             .Concat(DocxBlockTraversal.EnumerateStaticStoryParagraphs(document.FooterBodyElementsByType, document.FooterParagraphsByType))
             .Concat(DocxBlockTraversal.EnumerateStaticStoryParagraphs(document.PageSettings))
             .Concat(document.BodyElements
                 .OfType<DocxSectionBreakElement>()
-                .SelectMany(sectionBreak => DocxBlockTraversal.EnumerateStaticStoryParagraphs(sectionBreak.PageSettings)))
+                .SelectMany(sectionBreak => DocxBlockTraversal.EnumerateStaticStoryParagraphs(sectionBreak.PageSettings)));
+        return DocxBlockTraversal.EnumerateBodyParagraphs(document)
+            .Concat(staticParagraphs.Distinct<DocxParagraph>(ReferenceEqualityComparer.Instance))
             .Concat(document.RelatedStories.SelectMany(DocxBlockTraversal.EnumerateBodyParagraphs));
     }
 
