@@ -3436,44 +3436,8 @@ internal static partial class PptxImagesTests
             0x03, 0x11, 0x00,
             0xFF, 0xD9
         ];
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
-        {
-            ["[Content_Types].xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-                  <Default Extension="xml" ContentType="application/xml"/>
-                  <Default Extension="jpeg" ContentType="image/jpeg"/>
-                  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
-                  <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
-                </Types>
-                """),
-            ["_rels/.rels"] = TestFixtures.Utf8(PptxTests.PackageRelationship()),
-            ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8(PptxTests.PresentationRelationship()),
-            ["ppt/presentation.xml"] = TestFixtures.Utf8(PptxTests.BasicPresentation()),
-            ["ppt/slides/_rels/slide1.xml.rels"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image1.jpeg"/>
-                </Relationships>
-                """),
-            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-                  <p:cSld><p:spTree><p:pic>
-                    <p:blipFill>
-                      <a:blip r:embed="rId1">
-                        <a:duotone><a:srgbClr val="000000"/><a:srgbClr val="FFFFFF"/></a:duotone>
-                        <a:alphaModFix amt="50000"/>
-                      </a:blip>
-                    </p:blipFill>
-                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="914400" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
-                  </p:pic></p:spTree></p:cSld>
-                </p:sld>
-                """),
-            ["ppt/media/image1.jpeg"] = jpegHeader
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        string input = WriteJpegDuotonePicture(jpegHeader, "000000", "FFFFFF", """<a:alphaModFix amt="50000"/>""");
+        string output = Path.ChangeExtension(input, ".pdf");
         var diagnostics = new List<OoxPdfDiagnostic>();
 
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
@@ -3494,7 +3458,27 @@ internal static partial class PptxImagesTests
     {
         byte[] jpeg = Convert.FromBase64String(
             "/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/2wBDAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/wAARCAABAAIDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD+Rb4g/wDI++N/+xv8S/8Ap5vaKKK/7o/An/kyHg3/ANmq8PP/AFkcoPyHxn/5PD4r/wDZyuOv/WozQ//Z");
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
+        string input = WriteJpegDuotonePicture(jpeg, "00FF00", "FF0000");
+        string output = Path.ChangeExtension(input, ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("/Subtype /Image", pdf);
+        TestAssert.True(!pdf.Contains("/DCTDecode", StringComparison.Ordinal), "Recolored JPEG output should be materialized as decoded RGB image data.");
+        TestAssert.True(diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_IMAGE_RECOLOR"), "Supported baseline JPEG duotone recolor should not emit unsupported diagnostics.");
+
+        // The two source samples have luminances 60 and 29. Green-to-red maps
+        // luminance to red and its complement to green, with no blue.
+        byte[] rgb = PptxTests.ReadPdfDeviceRgbImageStreams(output, width: 2, height: 1).Single();
+        TestAssert.True(rgb.AsSpan().SequenceEqual(new byte[] { 60, 195, 0, 29, 226, 0 }),
+            "Each decoded JPEG sample must use the authored chromatic duotone palette.");
+    }
+
+    private static string WriteJpegDuotonePicture(byte[] jpeg, string low, string high, string alphaEffect = "")
+    {
+        return TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
         {
             ["[Content_Types].xml"] = TestFixtures.Utf8("""
                 <?xml version="1.0" encoding="UTF-8"?>
@@ -3515,13 +3499,13 @@ internal static partial class PptxImagesTests
                   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image1.jpeg"/>
                 </Relationships>
                 """),
-            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
+            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8($$"""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
                   <p:cSld><p:spTree><p:pic>
                     <p:blipFill>
                       <a:blip r:embed="rId1">
-                        <a:duotone><a:srgbClr val="000000"/><a:srgbClr val="FFFFFF"/></a:duotone>
+                        <a:duotone><a:srgbClr val="{{low}}"/><a:srgbClr val="{{high}}"/></a:duotone>{{alphaEffect}}
                       </a:blip>
                     </p:blipFill>
                     <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="914400" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
@@ -3530,15 +3514,6 @@ internal static partial class PptxImagesTests
                 """),
             ["ppt/media/image1.jpeg"] = jpeg
         });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-        var diagnostics = new List<OoxPdfDiagnostic>();
-
-        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("/Subtype /Image", pdf);
-        TestAssert.True(!pdf.Contains("/DCTDecode", StringComparison.Ordinal), "Recolored JPEG output should be materialized as decoded RGB image data.");
-        TestAssert.True(diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_IMAGE_RECOLOR"), "Supported baseline JPEG duotone recolor should not emit unsupported diagnostics.");
     }
 
     public static void PptxSyntheticPngPictureAppliesGrayAndBilevelRecolor()
@@ -3630,25 +3605,57 @@ internal static partial class PptxImagesTests
         };
         const string Slide = "ppt/slides/slide1.xml";
         string authoredSlide = Encoding.UTF8.GetString(parts[Slide]);
-        foreach (bool cropped in new[] { false, true })
+        const string closedPath = """
+            <a:path w="21600" h="21600" fill="norm" stroke="0">
+              <a:moveTo><a:pt x="0" y="0"/></a:moveTo>
+              <a:lnTo><a:pt x="18000" y="0"/></a:lnTo>
+              <a:lnTo><a:pt x="18000" y="21600"/></a:lnTo>
+              <a:lnTo><a:pt x="0" y="21600"/></a:lnTo>
+              <a:close/>
+            </a:path>
+            """;
+        foreach (var (customPaths, cropped, paintsPicture, unsupported) in new (string?, bool, bool, bool)[]
         {
+            (null, false, true, false),
+            (null, true, true, false),
+            (closedPath, true, true, false),
+            (closedPath.Replace("fill=\"norm\"", "fill=\"none\"", StringComparison.Ordinal), true, false, false),
+            (closedPath + closedPath, true, false, true),
+            (closedPath.Replace("<a:close/>", "", StringComparison.Ordinal), true, false, true)
+        })
+        {
+            string slide = authoredSlide;
+            if (customPaths is not null)
+                slide = slide.Replace("<a:prstGeom prst=\"rect\"/>",
+                    $"<a:custGeom><a:pathLst>{customPaths}</a:pathLst></a:custGeom>", StringComparison.Ordinal);
             if (cropped)
-                parts[Slide] = TestFixtures.Utf8(authoredSlide.Replace("</a:blipFill>",
+                slide = slide.Replace("</a:blipFill>",
                     """<a:srcRect l="25000" r="25000"/><a:stretch><a:fillRect l="25000"/></a:stretch></a:blipFill>""",
-                    StringComparison.Ordinal));
+                    StringComparison.Ordinal);
+            parts[Slide] = TestFixtures.Utf8(slide);
             using var input = TestFixtures.CreateZipPackage(parts);
             using var output = new MemoryStream();
-            OoxPdfConverter.Convert(input, output, new OoxPdfOptions { InputKind = OoxPdfInputKind.Pptx });
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            OoxPdfConverter.Convert(input, output, new OoxPdfOptions { InputKind = OoxPdfInputKind.Pptx, DiagnosticSink = diagnostics.Add });
 
             string pdf = NormalizeGeometryContent(Encoding.ASCII.GetString(output.ToArray()));
-            TestAssert.Contains("/Subtype /Image", pdf);
-            TestAssert.Contains("/Im1 Do", pdf);
+            var pictureWarnings = diagnostics.Where(d => d.Id == "PPTX_UNSUPPORTED_PICTURE_FILL").ToArray();
+            TestAssert.Equal(unsupported ? 1 : 0, pictureWarnings.Length);
+            if (unsupported)
+                TestAssert.Equal("/ppt/slides/slide1.xml", pictureWarnings[0].PartName);
+            TestAssert.Equal(paintsPicture, pdf.Contains("/Subtype /Image", StringComparison.Ordinal));
+            TestAssert.Equal(paintsPicture, pdf.Contains("/Im1 Do", StringComparison.Ordinal));
             int frame = pdf.IndexOf("108 396 108 72 re W* n", StringComparison.Ordinal);
-            if (cropped)
+            if (cropped && paintsPicture)
             {
                 int image = pdf.IndexOf("216 0 0 72 54 396 cm /Im1 Do", StringComparison.Ordinal);
                 TestAssert.True(frame >= 0 && frame < image,
                     "Clip the destination fill rectangle before painting the scaled source crop.");
+                if (customPaths is not null)
+                {
+                    int mask = pdf.IndexOf("72 468 m 192 468 l 192 396 l 72 396 l h W* n", StringComparison.Ordinal);
+                    TestAssert.True(mask >= 0 && mask < frame, "Clip the picture to the authored custom silhouette before its crop.");
+                }
             }
             else
                 TestAssert.Equal(-1, frame);

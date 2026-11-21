@@ -608,63 +608,89 @@ internal sealed partial class PptxRenderer
         return PptxColorResolver.ToByte(from + (to - from) * Math.Clamp(ratio, 0d, 1d));
     }
 
-    private static bool TryReadShapePictureFill(
-        string preset,
+    private static PdfImageResource? PrepareShapePictureFill(
+        ShapePictureFill fill,
         Action<OoxPdfDiagnostic>? diagnosticSink,
         int slideIndex,
-        List<PdfImageResource>? images,
         Dictionary<string, PdfImageXObject?>? imageCache,
         ref int imageIndex,
-        ShapePictureFill? pictureFillOverride,
-        out string? name,
-        out PdfImageXObject? image,
-        out CropRect crop,
-        out FillRect fillRect,
-        out double alpha,
         CancellationToken cancellationToken)
     {
-        name = null;
-        image = null;
-        crop = default;
-        fillRect = default;
-        alpha = 1d;
-        if (images is null || pictureFillOverride is null || !CanRenderPictureFillPreset(preset))
-        {
-            return false;
-        }
-
-        ShapePictureFill resolvedPictureFill = pictureFillOverride.Value;
-        if (resolvedPictureFill.Resource is null)
+        if (fill.Resource is null)
         {
             diagnosticSink?.Invoke(new OoxPdfDiagnostic(
                 "IMAGE_MISSING_PART",
                 OoxPdfSeverity.Error,
                 "Referenced image part was missing and the image was ignored.",
-                resolvedPictureFill.TargetPartName,
+                fill.TargetPartName,
                 PageIndex: null,
                 SlideIndex: slideIndex,
                 Feature: "image",
                 Fallback: "Ignored"));
-            return false;
+            return null;
         }
 
-        image = GetOrCreateImage(resolvedPictureFill.Resource, resolvedPictureFill.Recolor, imageCache, diagnosticSink, slideIndex, cancellationToken);
-        if (image is null)
-        {
-            return false;
-        }
-
-        crop = resolvedPictureFill.Crop;
-        fillRect = resolvedPictureFill.Fill;
-        alpha = resolvedPictureFill.Alpha;
-        name = "Im" + imageIndex++;
-        return true;
+        PdfImageXObject? image = GetOrCreateImage(fill.Resource, fill.Recolor, imageCache, diagnosticSink, slideIndex, cancellationToken);
+        return image is null ? null : new PdfImageResource("Im" + imageIndex++, image);
     }
 
     private static bool CanRenderPictureFillPreset(string preset)
     {
         return preset is "rect" or "ellipse" or "roundRect" ||
-            TryCreatePresetPolygonPoints(preset, 0d, 0d, 1d, 1d, out _);
+            ResolvePresetPolygonFactory(preset) is not null;
+    }
+
+    private static void RenderShapePictureFill(
+        PdfGraphicsBuilder graphics,
+        List<PdfImageResource> images,
+        PdfImageResource resource,
+        ShapePictureFill fill,
+        XElement shapeProperties,
+        string preset,
+        double x, double y, double width, double height,
+        IReadOnlyDictionary<string, double>? adjustments,
+        (PptxSceneCustomGeometry Geometry, PptxSceneCustomPath Path)? customMask = null)
+    {
+        FillRect fillRect = fill.Fill;
+        double imageX = x + fillRect.Left * width;
+        double imageY = y + fillRect.Bottom * height;
+        double imageWidth = Math.Max(0.001d, width * (1d - fillRect.Left - fillRect.Right));
+        double imageHeight = Math.Max(0.001d, height * (1d - fillRect.Top - fillRect.Bottom));
+        bool transparent = fill.Alpha < 0.999d;
+        if (transparent)
+        {
+            graphics.SaveState();
+            graphics.SetAlpha(fill.Alpha, 1d);
+        }
+
+        bool clippedToShape = customMask is not null || preset != "rect";
+        if (clippedToShape)
+        {
+            graphics.SaveState();
+            if (customMask is { } mask)
+            {
+                AppendCustomGeometryPath(graphics, mask.Geometry, mask.Path, x, y, width, height);
+                graphics.ClipCurrentPath(evenOdd: true);
+            }
+            else
+            {
+                ClipToPresetShape(graphics, shapeProperties, preset, x, y, width, height, adjustments);
+            }
+        }
+
+        DrawImageFill(graphics, resource.ResourceName, imageX, imageY, imageWidth, imageHeight, fill.Crop);
+
+        if (clippedToShape)
+        {
+            graphics.RestoreState();
+        }
+
+        if (transparent)
+        {
+            graphics.RestoreState();
+        }
+
+        images.Add(resource);
     }
 
     private static void StrokePresetShape(PdfGraphicsBuilder graphics, XElement? shapeProperties, string preset,

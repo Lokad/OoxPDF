@@ -45,33 +45,40 @@ internal sealed partial class PptxRenderer
 
     private static bool TryCreatePresetPolygonPoints(string preset, double x, double y, double width, double height, out (double X, double Y)[] points)
     {
-        points = preset switch
-        {
-            "triangle" => CreateTrianglePoints(x, y, width, height),
-            "rtTriangle" => CreateRightTrianglePoints(x, y, width, height),
-            "diamond" => CreateDiamondPoints(x, y, width, height),
-            "pentagon" => CreatePentagonPoints(x, y, width, height),
-            "hexagon" => CreateHexagonPoints(x, y, width, height),
-            "octagon" => CreateOctagonPoints(x, y, width, height),
-            "star4" => CreateStar4Points(x, y, width, height),
-            "star5" => CreateStar5Points(x, y, width, height),
-            "star6" => CreateStar6Points(x, y, width, height),
-            "star8" => CreateStar8Points(x, y, width, height),
-            "plus" => CreatePlusPoints(x, y, width, height),
-            "chevron" => CreateChevronPoints(x, y, width, height),
-            "homePlate" => CreateHomePlatePoints(x, y, width, height),
-            "parallelogram" => CreateParallelogramPoints(x, y, width, height),
-            "trapezoid" => CreateTrapezoidPoints(x, y, width, height),
-            "downArrow" => CreateDownArrowPoints(x, y, width, height),
-            "upArrow" => CreateUpArrowPoints(x, y, width, height),
-            "leftArrow" => CreateLeftArrowPoints(x, y, width, height),
-            "rightArrow" => CreateRightArrowPoints(x, y, width, height),
-            "leftRightArrow" => CreateLeftRightArrowPoints(x, y, width, height),
-            "upDownArrow" => CreateUpDownArrowPoints(x, y, width, height),
-            "wedgeRectCallout" => CreateWedgeRectCalloutPoints(x, y, width, height),
-            _ => []
-        };
+        points = ResolvePresetPolygonFactory(preset)?.Invoke(x, y, width, height) ?? [];
         return points.Length != 0;
+    }
+
+    private delegate (double X, double Y)[] PresetPolygonFactory(double x, double y, double width, double height);
+
+    private static PresetPolygonFactory? ResolvePresetPolygonFactory(string preset)
+    {
+        return preset switch
+        {
+            "triangle" => CreateTrianglePoints,
+            "rtTriangle" => CreateRightTrianglePoints,
+            "diamond" => CreateDiamondPoints,
+            "pentagon" => CreatePentagonPoints,
+            "hexagon" => CreateHexagonPoints,
+            "octagon" => CreateOctagonPoints,
+            "star4" => CreateStar4Points,
+            "star5" => CreateStar5Points,
+            "star6" => CreateStar6Points,
+            "star8" => CreateStar8Points,
+            "plus" => CreatePlusPoints,
+            "chevron" => CreateChevronPoints,
+            "homePlate" => CreateHomePlatePoints,
+            "parallelogram" => CreateParallelogramPoints,
+            "trapezoid" => CreateTrapezoidPoints,
+            "downArrow" => CreateDownArrowPoints,
+            "upArrow" => CreateUpArrowPoints,
+            "leftArrow" => CreateLeftArrowPoints,
+            "rightArrow" => CreateRightArrowPoints,
+            "leftRightArrow" => CreateLeftRightArrowPoints,
+            "upDownArrow" => CreateUpDownArrowPoints,
+            "wedgeRectCallout" => CreateWedgeRectCalloutPoints,
+            _ => null
+        };
     }
 
     private static (double X, double Y)[] CreateTrianglePoints(double x, double y, double width, double height)

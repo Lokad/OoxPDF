@@ -5,7 +5,61 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static bool TryRenderCustomGeometry(
+    private static bool TryResolveCustomPictureFillPath(PptxSceneCustomGeometry geometry, out PptxSceneCustomPath? mask)
+    {
+        mask = null;
+        if (geometry.HasUnsupportedGeometry)
+        {
+            return false;
+        }
+
+        foreach (PptxSceneCustomPath path in geometry.Paths)
+        {
+            if (!path.AllowsFill)
+            {
+                continue;
+            }
+
+            if (mask is not null || !HasClosedSubpaths(path))
+            {
+                return false;
+            }
+
+            mask = path;
+        }
+
+        // A custom shape with only stroke paths intentionally has no picture mask.
+        return true;
+    }
+
+    private static bool HasClosedSubpaths(PptxSceneCustomPath path)
+    {
+        bool open = false;
+        foreach (PptxSceneCustomCommand command in path.Commands)
+        {
+            switch (command.Kind)
+            {
+                case PptxSceneCustomCommandKind.MoveTo when !open:
+                    open = true;
+                    break;
+                case PptxSceneCustomCommandKind.Close when open:
+                    open = false;
+                    break;
+                case PptxSceneCustomCommandKind.MoveTo or PptxSceneCustomCommandKind.Close:
+                    return false;
+                default:
+                    if (!open)
+                    {
+                        return false;
+                    }
+                    break;
+            }
+        }
+
+        return path.Commands.Count != 0 && !open;
+    }
+
+    private static void RenderCustomGeometry(
         PptxSceneCustomGeometry customGeometry,
         PdfGraphicsBuilder graphics,
         double x,
@@ -26,11 +80,6 @@ internal sealed partial class PptxRenderer
         LineEndStyle headEnd,
         LineEndStyle tailEnd)
     {
-        if (!customGeometry.HasGeometry || customGeometry.Paths.Count == 0)
-        {
-            return false;
-        }
-
         if (hasFill)
         {
             bool transparentFill = fillAlpha < 0.999d;
@@ -126,8 +175,6 @@ internal sealed partial class PptxRenderer
                 graphics.RestoreState();
             }
         }
-
-        return true;
     }
 
     private static bool TryFillCustomGeometryOpenLineEndPath(

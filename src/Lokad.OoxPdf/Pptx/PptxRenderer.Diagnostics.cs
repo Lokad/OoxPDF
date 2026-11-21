@@ -177,7 +177,9 @@ internal sealed partial class PptxRenderer
         foreach (PptxSceneNode node in nodes)
         {
             if ((node.Shape is { PictureFill.HasPicture: true } shape &&
-                    !CanRenderPictureFillPreset(shape.Preset)) ||
+                    (shape.CustomGeometry.HasGeometry
+                        ? !TryResolveCustomPictureFillPath(shape.CustomGeometry, out _)
+                        : !CanRenderPictureFillPreset(shape.Preset))) ||
                 HasUnsupportedChartPictureFill(node.Chart))
             {
                 return true;

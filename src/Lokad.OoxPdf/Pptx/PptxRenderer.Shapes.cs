@@ -157,21 +157,16 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<double> dashPattern = line.DashPattern;
         int? lineCap = line.Cap;
         int? lineJoin = line.Join;
-        bool hasPictureFill = TryReadShapePictureFill(
-            preset,
-            diagnosticSink,
-            slideIndex,
-            images,
-            imageCache,
-            ref imageIndex,
-            pictureFillOverride,
-            out string? pictureFillName,
-            out PdfImageXObject? pictureFillImage,
-            out CropRect pictureFillCrop,
-            out FillRect pictureFillRect,
-            out double pictureFillAlpha,
-            cancellationToken);
         PptxSceneCustomGeometry? sceneCustomGeometry = customGeometryOverride is { HasGeometry: true } ? customGeometryOverride : null;
+        PptxSceneCustomPath? customPictureMask = null;
+        PdfImageResource? pictureResource = null;
+        if (images is not null && pictureFillOverride is { } pictureFill &&
+            (sceneCustomGeometry is null
+                ? CanRenderPictureFillPreset(preset)
+                : TryResolveCustomPictureFillPath(sceneCustomGeometry, out customPictureMask) && customPictureMask is not null))
+        {
+            pictureResource = PrepareShapePictureFill(pictureFill, diagnosticSink, slideIndex, imageCache, ref imageIndex, cancellationToken);
+        }
 
         if (transformed)
         {
@@ -207,14 +202,25 @@ internal sealed partial class PptxRenderer
             }
         }
 
-        if (sceneCustomGeometry is not null && TryRenderCustomGeometry(
+        if (sceneCustomGeometry is not null)
+        {
+            bool paintSolidFill = hasFill;
+            if (customPictureMask is not null && pictureResource is not null &&
+                pictureFillOverride is { } customFill && images is not null)
+            {
+                RenderShapePictureFill(graphics, images, pictureResource, customFill, shapeProperties, preset,
+                    x, y, width, height, presetAdjustmentsOverride, (sceneCustomGeometry, customPictureMask));
+                paintSolidFill = false;
+            }
+
+            RenderCustomGeometry(
                 sceneCustomGeometry,
                 graphics,
                 x,
                 y,
                 width,
                 height,
-                hasFill,
+                paintSolidFill,
                 fill,
                 fillAlpha,
                 hasStroke,
@@ -226,8 +232,7 @@ internal sealed partial class PptxRenderer
                 lineCap,
                 lineJoin,
                 headEnd,
-                tailEnd))
-        {
+                tailEnd);
             if (transformed)
             {
                 graphics.RestoreState();
@@ -438,41 +443,10 @@ internal sealed partial class PptxRenderer
 
             graphics.RestoreState();
         }
-        else if (hasPictureFill && pictureFillName is not null && pictureFillImage is not null)
+        else if (pictureResource is not null && pictureFillOverride is { } presetFill && images is not null)
         {
-            CropRect crop = pictureFillCrop;
-            FillRect fillRect = pictureFillRect;
-            double imageX = x + fillRect.Left * width;
-            double imageY = y + fillRect.Bottom * height;
-            double imageWidth = Math.Max(0.001d, width * (1d - fillRect.Left - fillRect.Right));
-            double imageHeight = Math.Max(0.001d, height * (1d - fillRect.Top - fillRect.Bottom));
-            bool transparentPictureFill = pictureFillAlpha < 0.999d;
-            if (transparentPictureFill)
-            {
-                graphics.SaveState();
-                graphics.SetAlpha(pictureFillAlpha, 1d);
-            }
-
-            bool clippedToShape = preset != "rect";
-            if (clippedToShape)
-            {
-                graphics.SaveState();
-                ClipToPresetShape(graphics, shapeProperties, preset, x, y, width, height, presetAdjustmentsOverride);
-            }
-
-            DrawImageFill(graphics, pictureFillName, imageX, imageY, imageWidth, imageHeight, crop);
-
-            if (clippedToShape)
-            {
-                graphics.RestoreState();
-            }
-
-            if (transparentPictureFill)
-            {
-                graphics.RestoreState();
-            }
-
-            images?.Add(new PdfImageResource(pictureFillName, pictureFillImage));
+            RenderShapePictureFill(graphics, images, pictureResource, presetFill, shapeProperties, preset,
+                x, y, width, height, presetAdjustmentsOverride);
         }
         else if (patternFill.HasPattern)
         {
