@@ -63,11 +63,17 @@ internal static partial class DocxInlineCompositionTests
         for (int i = 0; i < labels.Length; i++)
         {
             string label = labels[i].GetProperty("Text").GetString()!;
-            var paints = shows.Where(show => show.Text.Trim() == label).ToArray();
-            TestAssert.True(paints.Length == 1, $"{id}: expected one painted '{label}', found {paints.Length}.");
+            var paints = shows.Where(show => show.Text.Trim() == label).OrderBy(show => show.X).ToArray();
+            // The portable face draws synthetic bold a second time on the same baseline.
+            bool syntheticBold = paints.Length == 2 && labels[i].TryGetProperty("Bold", out var bold) &&
+                bold.GetBoolean() && ReferenceEquals(paints[0].Font, paints[1].Font) &&
+                paints[0].Size == paints[1].Size && paints[0].Y == paints[1].Y &&
+                paints[1].X - paints[0].X is > 0d and <= .351d;
+            TestAssert.True(paints.Length == 1 || syntheticBold,
+                $"{id}: expected one painted '{label}', found {paints.Length} text shows.");
             var paint = paints[0];
             TestAssert.True(paint.Y > 0d && paint.Y < page.Height, $"{id}: label '{label}' leaves the page.");
-            string followingText = string.Concat(shows.Where(show => show.X > paint.X && Math.Abs(show.Y - paint.Y) < 2d)
+            string followingText = string.Concat(shows.Where(show => show.X > paints[^1].X && Math.Abs(show.Y - paint.Y) < 2d)
                 .OrderBy(show => show.X).Select(show => show.Text));
             TestAssert.True(followingText.TrimStart().StartsWith(paragraphStarts[i], StringComparison.Ordinal),
                 $"{id}: label '{label}' must precede '{paragraphStarts[i]}' on its printed line. Found '{followingText}'.");
