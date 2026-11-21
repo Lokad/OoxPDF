@@ -43,7 +43,10 @@ internal static partial class PptxScatterIntervalTests
             AssertSeries(sparse, ["LiveOwner"], [nextLink], 0, marks);
             series[0].Remove();
             PdfPage literal = Render();
-            TestAssert.Equal(literal.Content, sparse.Content);
+            var circles = BubbleCircles(sparse);
+            TestAssert.Equal(marks, circles.Length);
+            TestAssert.True(BubbleCircles(literal).SequenceEqual(circles),
+                "The surviving circles keep their coordinates and size.");
             TestAssert.Equal(literal.Annotations.Single(), sparse.Annotations.Single());
             DropPoints(series[1]);
             var diagnostics = new List<OoxPdfDiagnostic>();
