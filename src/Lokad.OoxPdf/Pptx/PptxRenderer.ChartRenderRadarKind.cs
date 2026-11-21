@@ -58,9 +58,12 @@ internal sealed partial class PptxRenderer
                 double plotShift = 0d;
                 if (legend.Visible)
                 {
-                    if (legend.PositionKind == PptxSceneChartLegendPosition.Right &&
+                    if (legend.PositionKind is PptxSceneChartLegendPosition.Left or PptxSceneChartLegendPosition.Right &&
                         sceneChart.Legend.DeletedEntryIndices is not { Count: > 0 })
                     {
+                        bool legendOnLeft = legend.PositionKind == PptxSceneChartLegendPosition.Left;
+                        var horizontalLimits = (Left: Math.Max(frame.X, 0d),
+                            Right: Math.Min(frame.X + frame.Width, document.SlideWidthPoints));
                         legendEntries = radarLayout.IsFilled
                             ? BuildFillLegendEntries(theme, colorMap, chartPalette, radarPlot, radarPlot.Source,
                                 seriesFills, seriesStrokes, paletteOffset: 0, workbook)
@@ -68,17 +71,17 @@ internal sealed partial class PptxRenderer
                                 name.ActiveName, null, ResolveRadarSeriesStroke(theme, colorMap, chartPalette, seriesStrokes, index),
                                 null, name, LineHidden: false)).ToArray();
                         legendStyle = ReadSceneChartLegendTextStyle(theme, sceneChart);
-                        legendBox = await PrepareRadarRightLegendAsync(document, frame, plotBox, legend,
-                            legendEntries, legendStyle, fontResolver).ConfigureAwait(false);
+                        legendBox = await PrepareRadarSideLegendAsync(frame, plotBox, legend, legendEntries,
+                            legendStyle, fontResolver, horizontalLimits, document.SlideHeightPoints, legendOnLeft).ConfigureAwait(false);
                         if (legendBox is { } box && !legend.Overlay)
                         {
                             double strokeWidth = Math.Max(PptxChartMetricRules.RadarSeriesOutlineWidth,
                                 seriesStrokes.Max(stroke => stroke?.Width ?? 0d));
-                            if (!TryPlaceRadarPlotBesideLegend(frame, radarLayout, radarManualPlot,
-                                    box, legendStyle, strokeWidth, categoryLabels.Concat(valueLabels), out plotShift))
+                            if (!TryPlaceRadarPlotBesideLegend(radarLayout, radarManualPlot, box, legendStyle,
+                                    strokeWidth, categoryLabels.Concat(valueLabels), horizontalLimits, legendOnLeft, out plotShift))
                             {
-                                if (!radarManualPlot && TryFitRadarWebBesideLegend(frame, radarLayout, box,
-                                        strokeWidth, categoryLabels, valueLabels, out var fitted))
+                                if (!radarManualPlot && TryFitRadarWebBesideLegend(radarLayout, box, strokeWidth,
+                                        categoryLabels, valueLabels, horizontalLimits, legendOnLeft, out var fitted))
                                 {
                                     radarLayout = fitted;
                                     categoryLabels = await PrepareRadarCategoryLabelsAsync(theme, radarLayout, sceneChart,
@@ -132,62 +135,75 @@ internal sealed partial class PptxRenderer
         return false;
     }
 
-    private static async ValueTask<ChartLegendBox?> PrepareRadarRightLegendAsync(
-        PptxDocument document, ChartFrameBox frame, ChartPlotBox plot, ChartLegendLayout legend,
-        IReadOnlyList<ChartLegendEntry> entries, ChartTextStyle style, PresentationFontResolver resolver)
+    private static async ValueTask<ChartLegendBox?> PrepareRadarSideLegendAsync(
+        ChartFrameBox frame, ChartPlotBox plot, ChartLegendLayout legend, IReadOnlyList<ChartLegendEntry> entries,
+        ChartTextStyle style, PresentationFontResolver resolver, (double Left, double Right) horizontalLimits,
+        double slideHeight, bool legendOnLeft)
     {
         if (entries.Count == 0) return null;
         var measure = new ChartTextMeasurer(resolver, kerningEnabled: false);
         await measure.PrepareAsync(entries.Select(entry => entry.Name), style).ConfigureAwait(false);
         var box = ResolveChartLegendBox(frame, plot, entries, legend, style, measure, ChartLegendPlacement.Default);
-        double right = Math.Min(frame.X + frame.Width, document.SlideWidthPoints);
         double requiredWidth = box.MarkerWidth + box.TextGap + entries.Max(entry => measure.Measure(entry.Name, style));
         if (!legend.Layout.HasGeometryValues)
         {
-            double width = Math.Max(box.Width, requiredWidth + PptxChartMetricRules.ChartContentFrameInset);
-            box = box with { X = right - PptxChartMetricRules.ChartContentFrameInset - width, Width = width };
+            double inset = PptxChartMetricRules.ChartContentFrameInset;
+            double width = Math.Max(box.Width, requiredWidth + inset);
+            double x = legendOnLeft ? horizontalLimits.Left + inset : horizontalLimits.Right - inset - width;
+            box = box with { X = x, Width = width };
         }
 
         double bottom = Math.Max(frame.Y, 0d);
-        double top = Math.Min(frame.Y + frame.Height, document.SlideHeightPoints);
+        double top = Math.Min(frame.Y + frame.Height, slideHeight);
         double lastBaseline = ResolveLegendEntryBaseline(box, entries.Count - 1);
-        return box.Width >= requiredWidth && box.X >= Math.Max(frame.X, 0d) && box.X + box.Width <= right &&
+        return box.Width >= requiredWidth && box.X >= horizontalLimits.Left && box.X + box.Width <= horizontalLimits.Right &&
             box.ClipY >= bottom && box.ClipY + box.ClipHeight <= top &&
             lastBaseline >= box.ClipY && lastBaseline - style.FontSize >= bottom && box.FirstY + style.FontSize <= top
             ? box : null;
     }
 
-    private static bool TryPlaceRadarPlotBesideLegend(ChartFrameBox frame, ChartRadarLayout radar, bool manualPlot,
-        ChartLegendBox legend, ChartTextStyle legendStyle, double strokeWidth, IEnumerable<TextRun> labels, out double shift)
+    private static bool TryPlaceRadarPlotBesideLegend(ChartRadarLayout radar, bool manualPlot, ChartLegendBox legend,
+        ChartTextStyle legendStyle, double strokeWidth, IEnumerable<TextRun> labels,
+        (double Left, double Right) horizontalLimits, bool legendOnLeft, out double shift)
     {
         // Preserve the web radius and the axis label positions within the web.
         // A non-overlay legend can take a free band or translate an automatic web.
-        double left = radar.Geometry.CenterX - radar.Geometry.Radius - strokeWidth;
-        double right = radar.Geometry.CenterX + radar.Geometry.Radius + strokeWidth;
+        // In this coordinate system the legend is always on the high side.
+        double direction = legendOnLeft ? -1d : 1d;
+        double center = direction * radar.Geometry.CenterX;
+        double farEdge = center - radar.Geometry.Radius - strokeWidth;
+        double nearEdge = center + radar.Geometry.Radius + strokeWidth;
         double bottom = legend.ClipY - legendStyle.FontSize;
         double top = legend.ClipY + legend.ClipHeight + legendStyle.FontSize;
         foreach (TextRun label in labels)
         {
-            left = Math.Min(left, Math.Max(label.X, label.ClipX));
+            double labelLeft = Math.Max(label.X, label.ClipX);
+            double labelRight = Math.Min(label.X + label.Width, label.ClipX + label.ClipWidth);
+            farEdge = Math.Min(farEdge, legendOnLeft ? -labelRight : labelLeft);
             if (label.Y + label.Height > bottom && label.Y - label.FontSize < top)
-                right = Math.Max(right, Math.Min(label.X + label.Width, label.ClipX + label.ClipWidth));
+                nearEdge = Math.Max(nearEdge, legendOnLeft ? -labelLeft : labelRight);
         }
 
-        double available = legend.X - PptxChartMetricRules.ChartContentFrameInset - right;
-        shift = Math.Min(0d, available);
-        if (shift == 0d || !manualPlot && left + shift >= Math.Max(frame.X, 0d))
+        double legendEdge = legendOnLeft ? -(legend.X + legend.Width) : legend.X;
+        double farLimit = legendOnLeft ? -horizontalLimits.Right : horizontalLimits.Left;
+        double displacement = Math.Min(0d, legendEdge - PptxChartMetricRules.ChartContentFrameInset - nearEdge);
+        if (displacement == 0d || !manualPlot && farEdge + displacement >= farLimit)
+        {
+            shift = direction * displacement;
             return true;
+        }
         shift = 0d;
         return false;
     }
 
-    private static bool TryFitRadarWebBesideLegend(ChartFrameBox frame, ChartRadarLayout radar,
-        ChartLegendBox legend, double strokeWidth, IReadOnlyList<TextRun> categoryLabels,
-        IReadOnlyList<TextRun> valueLabels, out ChartRadarLayout fitted)
+    private static bool TryFitRadarWebBesideLegend(ChartRadarLayout radar, ChartLegendBox legend, double strokeWidth,
+        IReadOnlyList<TextRun> categoryLabels, IReadOnlyList<TextRun> valueLabels,
+        (double Left, double Right) horizontalLimits, bool legendOnLeft, out ChartRadarLayout fitted)
     {
         fitted = radar;
-        double left = Math.Max(frame.X, 0d) + PptxChartMetricRules.ChartContentFrameInset;
-        double right = legend.X - PptxChartMetricRules.ChartContentFrameInset;
+        double inset = PptxChartMetricRules.ChartContentFrameInset;
+        double left = (legendOnLeft ? legend.X + legend.Width : horizontalLimits.Left) + inset;
+        double right = (legendOnLeft ? horizontalLimits.Right : legend.X) - inset;
         double gapFactor = radar.LabelRules.CategoryHorizontalGapSideFactor;
         // The horizontal category anchor grows with the web radius and its
         // proportional gap. The full prepared label width bounds either alignment.

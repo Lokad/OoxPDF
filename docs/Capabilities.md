@@ -65,7 +65,7 @@ usable stored results rather than executing arbitrary instructions.
   negative, duplicate or malformed orders retain XML sibling order, preserving
   series identities, explicit styles and data.
 - Measured automatic legend/label placement preserves supported names and keys.
-  Right-side radar legends render when their entries fit inside the chart frame.
+  Left and right radar legends render when their entries fit inside the chart frame.
   Non-overlay legends need a separate band, and an authored plot stays in place.
   Per-entry deletions apply to series legends on single-plot bar and column
   charts when the authored indices, series order and legend slots agree.

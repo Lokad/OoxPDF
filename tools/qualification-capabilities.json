@@ -3892,6 +3892,7 @@
   ],
   "pptx-chart-plot-selection": [
     "PptxRadarRightLegendPaintsCompleteNamesAndOwnedKeys",
+    "PptxRadarLeftLegendUsesFittingSideAndAuthoredOverlayBoxes",
     "PptxSparseRadarSeriesKeepAuthoredStrokeAndFill",
     "BarScalarOptionsFollowSourceDefaultsAndClamps",
     "ScatterStyleFollowsSourceDefaults",

@@ -226,6 +226,73 @@ internal static class PptxChartPlotOptionsAgreementTests
                 .Select(show => (show.Text, show.Y));
     }
 
+    public static void PptxRadarLeftLegendUsesFittingSideAndAuthoredOverlayBoxes()
+    {
+        const string left = """
+            <c:legend><c:legendPos val="l"/><c:layout><c:manualLayout>
+              <c:xMode val="edge"/><c:yMode val="edge"/><c:wMode val="factor"/><c:hMode val="factor"/>
+              <c:x val="0.04"/><c:y val="0.28"/><c:w val="0.35"/><c:h val="0.36"/>
+            </c:manualLayout></c:layout><c:overlay val="0"/></c:legend>
+            """;
+        const string automatic = """<c:legend><c:legendPos val="l"/><c:overlay val="0"/></c:legend>""";
+        const string authoredPlot = """
+            <c:layout><c:manualLayout><c:layoutTarget val="inner"/>
+              <c:xMode val="edge"/><c:yMode val="edge"/><c:wMode val="factor"/><c:hMode val="factor"/>
+              <c:x val="0.50"/><c:y val="0.15"/><c:w val="0.42"/><c:h val="0.70"/>
+            </c:manualLayout></c:layout>
+            """;
+        string overlappingPlot = authoredPlot.Replace("0.50", "0.08", StringComparison.Ordinal);
+        string overlay = left.Replace("""<c:overlay val="0"/>""", """<c:overlay val="1"/>""", StringComparison.Ordinal);
+        string rightOverlay = overlay.Replace("""<c:legendPos val="l"/>""", """<c:legendPos val="r"/>""", StringComparison.Ordinal);
+        string series = RadarSeries(0, "A51515", true, "MeridianSales") + RadarSeries(1, "067649", true, "StationCredits");
+        var red = new RgbColor(0xA5, 0x15, 0x15);
+        var green = new RgbColor(0x06, 0x76, 0x49);
+
+        foreach (string style in new[] { "marker", "filled" })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            PdfPage baseline = RenderRadar(style, series, plotLayout: authoredPlot);
+            PdfPage fitted = RenderRadar(style, series, left, authoredPlot, diagnostics.Add);
+            AssertNames(fitted);
+            TestAssert.True(AxisCaptions(baseline).SequenceEqual(AxisCaptions(fitted)),
+                "A left legend in a free band preserves the manually placed axis captions.");
+            TestAssert.True(Paints(fitted, strokes: true).SequenceEqual([red, green, red, green]),
+                "The left legend keys match the radar series strokes in source order.");
+            TestAssert.True(Paints(fitted, strokes: false).SequenceEqual(style == "filled" ? [red, green, red, green] : []),
+                "The left filled radar retains its series colors in the legend.");
+
+            PdfPage overlaid = RenderRadar(style, series, overlay, overlappingPlot, diagnostics.Add);
+            AssertNames(overlaid);
+            PdfPage equivalent = RenderRadar(style, series, rightOverlay, overlappingPlot, diagnostics.Add);
+            TestAssert.Equal(equivalent.Content, overlaid.Content);
+            AssertNames(RenderRadar(style, series, automatic, sink: diagnostics.Add));
+            TestAssert.Equal(0, diagnostics.Count);
+
+            PdfPage refused = RenderRadar(style, series, left, overlappingPlot, diagnostics.Add);
+            PdfPage omitted = RenderRadar(style, series, plotLayout: overlappingPlot);
+            TestAssert.Equal(omitted.Content, refused.Content);
+            TestAssert.True(diagnostics.Any(d => d.Id == "PPTX_UNSUPPORTED_CHART" && d.Fallback == "Legend ignored"),
+                "A non-overlay legend cannot displace a conflicting manual plot.");
+        }
+
+        IEnumerable<RgbColor> Paints(PdfPage page, bool strokes) =>
+            PptxChartPaletteTests.ReadColoredPaints(page.Content, strokes: strokes).Where(color => color == red || color == green);
+
+        static void AssertNames(PdfPage page)
+        {
+            var names = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, false,
+                fontResourceFilter: name => name.StartsWith("CL", StringComparison.Ordinal)).ToArray();
+            TestAssert.True(names.Select(show => show.Text).SequenceEqual(["MeridianSales", "StationCredits"]),
+                "A fitting left legend paints each authored name exactly once in series order.");
+            TestAssert.True(names[0].Y > names[1].Y, "Each legend name has its own row.");
+        }
+
+        static IEnumerable<(string Text, double X, double Y)> AxisCaptions(PdfPage page) =>
+            DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, true,
+                fontResourceFilter: name => name.StartsWith("RC", StringComparison.Ordinal) || name.StartsWith("RV", StringComparison.Ordinal))
+                .Select(show => (show.Text, show.X, show.Y));
+    }
+
     private static string RadarSeries(int index, string color, bool hasCache, string? name = null) => $"""
             <c:ser><c:idx val="{index}"/><c:order val="{index}"/>
               {(name is null ? "" : $"<c:tx><c:v>{name}</c:v></c:tx>")}
