@@ -129,6 +129,11 @@ internal sealed class PngImage
             }
             else if (type.SequenceEqual("tRNS"u8))
             {
+                if ((header.ColorType == 0 && length != 2) || (header.ColorType == 2 && length != 6))
+                {
+                    throw new InvalidDataException("PNG transparency key has the wrong length for its color type.");
+                }
+
                 transparency = data.ToArray();
             }
             else if (type.SequenceEqual("IDAT"u8))
@@ -269,21 +274,28 @@ internal sealed class PngImage
         if (colorType == 2)
         {
             int pixel = x * 3;
-            rgba[targetOffset++] = current[pixel];
-            rgba[targetOffset++] = current[pixel + 1];
-            rgba[targetOffset++] = current[pixel + 2];
-            rgba[targetOffset++] = byte.MaxValue;
+            byte red = current[pixel];
+            byte green = current[pixel + 1];
+            byte blue = current[pixel + 2];
+            rgba[targetOffset++] = red;
+            rgba[targetOffset++] = green;
+            rgba[targetOffset++] = blue;
+            // An 8-bit RGB sample uses the low byte of each 16-bit transparency key component.
+            rgba[targetOffset++] = transparency is not null && red == transparency[1] &&
+                green == transparency[3] && blue == transparency[5] ? (byte)0 : byte.MaxValue;
             return;
         }
 
         int sample = ReadPackedSample(current, x, bitDepth);
         if (colorType == 0)
         {
-            byte gray = bitDepth == 8 ? (byte)sample : (byte)(sample * 255 / ((1 << bitDepth) - 1));
+            int sampleMask = (1 << bitDepth) - 1;
+            byte gray = bitDepth == 8 ? (byte)sample : (byte)(sample * 255 / sampleMask);
             rgba[targetOffset++] = gray;
             rgba[targetOffset++] = gray;
             rgba[targetOffset++] = gray;
-            rgba[targetOffset++] = byte.MaxValue;
+            rgba[targetOffset++] = transparency is not null && sample == (transparency[1] & sampleMask)
+                ? (byte)0 : byte.MaxValue;
             return;
         }
 

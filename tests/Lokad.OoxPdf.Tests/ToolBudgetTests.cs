@@ -98,6 +98,73 @@ internal static class ToolBudgetTests
         TestAssert.True(File.Exists(Path.Combine(outputDirectory, "metrics.json")), "VisualDiff must write metrics on success.");
     }
 
+    public static void VisualDiffComparesKeyedTransparencyWithExplicitAlpha()
+    {
+        string reference = NewTempDirectory();
+        string candidate = NewTempDirectory();
+        string output = NewTempDirectory();
+        var expected = new List<(double ChangedRatio, double MeanError)>();
+
+        // Packed grayscale sample 1 expands to 85. Upper tRNS bits are unused.
+        AddComparisons(ImagingTests.BuildStoredPng(2, 1, 2, 0, 0, [0, 0x60], transparency: [0xA5, 0xFD]),
+            [85, 85, 85, 0, 170, 170, 170, 255]);
+        AddComparisons(ImagingTests.BuildStoredPng(2, 1, 8, 0, 0, [0, 30, 220], transparency: [0, 30]),
+            [30, 30, 30, 0, 220, 220, 220, 255]);
+        // Every near match differs in just one channel and must stay opaque.
+        AddComparisons(ImagingTests.BuildStoredPng(4, 1, 8, 2, 0,
+                [0, 22, 31, 40, 23, 31, 40, 22, 32, 40, 22, 31, 41], transparency: [0xA5, 22, 0xA5, 31, 0xA5, 40]),
+            [22, 31, 40, 0, 23, 31, 40, 255, 22, 32, 40, 255, 22, 31, 41, 255]);
+        AddComparisons(ImagingTests.BuildStoredPng(2, 1, 1, 3, 0, [0, 0x40],
+                palette: [22, 31, 40, 210, 220, 230], transparency: [64]),
+            [22, 31, 40, 64, 210, 220, 230, 255]);
+
+        ToolResult result = RunTool(VisualDiffAssemblyPath.Value, reference, candidate, output);
+        TestAssert.Equal(0, result.ExitCode);
+        using JsonDocument report = JsonDocument.Parse(File.ReadAllText(Path.Combine(output, "metrics.json")));
+        TestAssert.Equal(expected.Count, report.RootElement.GetArrayLength());
+        foreach ((JsonElement metric, (double changedRatio, double error)) in report.RootElement.EnumerateArray().Zip(expected))
+        {
+            TestAssert.Equal(changedRatio, metric.GetProperty("ChangedPixelRatioAtThreshold16").GetDouble());
+            TestAssert.Equal(error, metric.GetProperty("MeanAbsoluteError").GetDouble());
+        }
+
+        void AddComparisons(byte[] keyed, byte[] rgba)
+        {
+            int width = rgba.Length / 4;
+            string equivalent = $"page-{expected.Count + 1:D3}.png";
+            File.WriteAllBytes(Path.Combine(reference, equivalent), keyed);
+            File.WriteAllBytes(Path.Combine(candidate, equivalent), TestFixtures.CreateRgbaPng(width, 1, rgba));
+            expected.Add((0, 0));
+
+            string opaque = $"page-{expected.Count + 1:D3}.png";
+            File.WriteAllBytes(Path.Combine(reference, opaque), keyed);
+            expected.Add((1d / width, (255d - rgba[3]) / rgba.Length));
+            rgba[3] = 255;
+            File.WriteAllBytes(Path.Combine(candidate, opaque), TestFixtures.CreateRgbaPng(width, 1, rgba));
+        }
+    }
+
+    public static void VisualDiffRejectsInvalidTransparencyKeyLengths()
+    {
+        byte[] opaque = TestFixtures.CreateRgbPng(1, 1, [22, 31, 40]);
+        foreach (byte[] malformed in new[]
+        {
+            ImagingTests.BuildStoredPng(1, 1, 8, 0, 0, [0, 30], transparency: [30]),
+            ImagingTests.BuildStoredPng(1, 1, 8, 2, 0, [0, 22, 31, 40], transparency: [0, 22, 0, 31, 0]),
+        })
+        {
+            string reference = NewTempDirectory();
+            string candidate = NewTempDirectory();
+            string output = NewTempDirectory();
+            File.WriteAllBytes(Path.Combine(reference, "page-001.png"), opaque);
+            File.WriteAllBytes(Path.Combine(candidate, "page-001.png"), malformed);
+            ToolResult result = RunTool(VisualDiffAssemblyPath.Value, reference, candidate, output);
+            TestAssert.Equal(1, result.ExitCode);
+            TestAssert.Contains("PNG transparency key has the wrong length", result.Error);
+            TestAssert.True(!File.Exists(Path.Combine(output, "metrics.json")), "Invalid input must not produce comparison metrics.");
+        }
+    }
+
     public static void VisualDiffForegroundRecallCoversSparseBlankAndRegionCases()
     {
         byte[] white = Enumerable.Repeat((byte)255, 100 * 100 * 3).ToArray();
