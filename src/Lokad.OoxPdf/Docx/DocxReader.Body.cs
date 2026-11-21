@@ -78,8 +78,28 @@ internal sealed partial class DocxReader
                     styles,
                     null);
                 bool hasVisibleBreak = element.Elements().Any(child => HasVisibleRunBreak(child, VisibleBreak, markupMode));
+
+                // Numbering belongs to the paragraph, outside its run children.
+                // A visible marker keeps the source first line even when its only
+                // run payload is a break; ordinary paragraph layout paints it.
+                var sourceNumbering = hasVisibleBreak ? ResolveParagraphNumbering(paragraphProperties, resolvedParagraph,
+                    paragraphStyleId, styles, numbering, cancellationToken) : null;
+                bool hasListMarker = sourceNumbering is { } source && !string.IsNullOrWhiteSpace(source.Definition.Text);
+                bool isPageBreakOnly = hasVisibleBreak && !hasListMarker &&
+                    IsRunBreakOnlyParagraph(element, VisiblePageBreak, HiddenBreak, markupMode, keepsBreakParagraph: true);
+                bool isColumnBreakOnly = hasVisibleBreak && !hasListMarker && !isPageBreakOnly &&
+                    IsRunBreakOnlyParagraph(element, VisibleColumnBreak, HiddenBreak, markupMode, keepsBreakParagraph: true);
+                var parts = hasVisibleBreak && !isPageBreakOnly && !isColumnBreakOnly
+                    ? SplitParagraphAtRunBreaks(element, markupMode, VisibleBreak, HiddenBreak,
+                        retainEmptyColumnTail: true, retainFirstLine: hasListMarker)
+                    : null;
+
+                // A first fragment can consume the preceding paragraph mark
+                // before the authored break places the rest of the paragraph.
+                bool canMergeLeadingFlow = !hasVisibleBreak || parts is [{ Paragraph: not null }, ..];
                 var inlineCommentBoundaries = comments?.BeginParagraph(scopedElement.LeadingCommentBoundaries,
-                    resolvedParagraph.PageBreakBefore != true && !hasVisibleBreak && FindMergePredecessor(elements, mergeDeletedMarks) is not null,
+                    resolvedParagraph.PageBreakBefore != true && canMergeLeadingFlow &&
+                    FindMergePredecessor(elements, mergeDeletedMarks) is not null,
                     cancellationToken);
                 if (resolvedParagraph.PageBreakBefore == true)
                 {
@@ -90,13 +110,7 @@ internal sealed partial class DocxReader
                         revisions: inheritedRevision is null ? [] : [inheritedRevision]));
                 }
 
-                // Numbering belongs to the paragraph, outside its run children.
-                // A visible marker keeps the source first line even when its only
-                // run payload is a break; ordinary paragraph layout paints it.
-                var sourceNumbering = hasVisibleBreak ? ResolveParagraphNumbering(paragraphProperties, resolvedParagraph,
-                    paragraphStyleId, styles, numbering, cancellationToken) : null;
-                bool hasListMarker = sourceNumbering is { } source && !string.IsNullOrWhiteSpace(source.Definition.Text);
-                if (!hasListMarker && IsRunBreakOnlyParagraph(element, VisiblePageBreak, HiddenBreak, markupMode, keepsBreakParagraph: true))
+                if (isPageBreakOnly)
                 {
                     DocxParagraph? breakParagraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, tableCellStyle: null, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken,
                         leadingBookmarks: leadingBookmarks, retainUnmatchedCommentStarts: projectCommentSelections);
@@ -112,7 +126,7 @@ internal sealed partial class DocxReader
                     continue;
                 }
 
-                if (!hasListMarker && IsRunBreakOnlyParagraph(element, VisibleColumnBreak, HiddenBreak, markupMode, keepsBreakParagraph: true))
+                if (isColumnBreakOnly)
                 {
                     DocxParagraph? breakParagraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, tableCellStyle: null, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken,
                         leadingBookmarks: leadingBookmarks, retainUnmatchedCommentStarts: projectCommentSelections);
@@ -128,14 +142,12 @@ internal sealed partial class DocxReader
                     continue;
                 }
 
-                if (hasVisibleBreak)
+                if (parts is not null)
                 {
                     using IEnumerator<XElement>? sourceAnchors = floatingBlocks is null ? null :
                         EnumerateSplitFloatingAnchors(element).GetEnumerator();
                     bool matchesSourceAnchors = sourceAnchors is not null;
                     var bookmarksForFragment = leadingBookmarks;
-                    var parts = SplitParagraphAtRunBreaks(element, markupMode, VisibleBreak,
-                        HiddenBreak, retainEmptyColumnTail: true, retainFirstLine: hasListMarker);
                     var splitFields = new List<DocxComplexFieldState>();
                     var paragraphs = new DocxParagraph?[parts.Count];
                     ParagraphBreakPart? lastParagraph = parts.LastOrDefault(part => part.Paragraph is not null);
@@ -151,7 +163,8 @@ internal sealed partial class DocxReader
                         paragraphs[i] = ReadParagraph(part.Paragraph, styles, numbering, numberingCounters, package, relationships, tableCellStyle: null, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken,
                             isContinuationFragment: !part.IsFirstFragment, leadingBookmarks: bookmarksForFragment,
                             splitFields: splitFields, continuesAfterBreak: !ReferenceEquals(part, lastParagraph),
-                            retainEmptyColumnMark: retainColumnMark, retainUnmatchedCommentStarts: projectCommentSelections);
+                            retainEmptyColumnMark: retainColumnMark, retainUnmatchedCommentStarts: projectCommentSelections,
+                            leadingInlineCommentBoundaries: i == 0 ? inlineCommentBoundaries : null);
                         bookmarksForFragment = null;
                     }
                     for (int i = 0; i < parts.Count; i++)

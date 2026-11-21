@@ -405,12 +405,15 @@ internal static class DocxCommentGlyphFrameTests
         XNamespace w = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
         foreach (bool cell in new[] { false, true })
         foreach (bool startBoundary in new[] { false, true })
+        foreach (string? hardBreak in cell ? new string?[] { null } : new string?[] { null, "page", "column" })
         {
-            PdfPage inline = RenderVariant(blockMarker: false);
-            PdfPage block = RenderVariant(blockMarker: true);
-            TestAssert.Equal(inline.Content, block.Content);
+            PdfPage[] inline = RenderVariant(blockMarker: false);
+            PdfPage[] block = RenderVariant(blockMarker: true);
+            TestAssert.Equal(inline.Length, block.Length);
+            for (int pageIndex = 0; pageIndex < inline.Length; pageIndex++)
+                TestAssert.Equal(inline[pageIndex].Content, block[pageIndex].Content);
 
-            PdfPage RenderVariant(bool blockMarker)
+            PdfPage[] RenderVariant(bool blockMarker)
             {
                 DocxDocument source = DocxInlineCompositionTests.ReadMutation("Composition/report", mode, false, false,
                     (xml, _, _) =>
@@ -423,7 +426,9 @@ internal static class DocxCommentGlyphFrameTests
                         var boundary = startBoundary ? start : end;
                         var second = new XElement(w + "p", blockMarker ? null : boundary,
                             startBoundary ? Text("SelectedRight") : null, startBoundary ? end : null,
-                            new XElement(w + "r", Marker("commentReference")), Text(" OutsideRight"));
+                            new XElement(w + "r", Marker("commentReference")), Text(" OutsideRight"),
+                            hardBreak is null ? null : new XElement(w + "r", new XElement(w + "br", new XAttribute(w + "type", hardBreak))),
+                            hardBreak is null ? null : Text("AfterHardBreak"));
                         object[] flow = blockMarker ? [first, boundary, second] : [first, second];
                         xml.Root!.Element(w + "body")!.ReplaceNodes(
                             cell ? new XElement(w + "tbl",
@@ -431,7 +436,8 @@ internal static class DocxCommentGlyphFrameTests
                                 new XElement(w + "tr", new XElement(w + "tc", flow))) : flow,
                             new XElement(w + "p", Text("Following body")),
                             new XElement(w + "sectPr", new XElement(w + "pgSz",
-                                new XAttribute(w + "w", "12240"), new XAttribute(w + "h", "15840"))));
+                                new XAttribute(w + "w", "12240"), new XAttribute(w + "h", "15840")),
+                                hardBreak == "column" ? new XElement(w + "cols", new XAttribute(w + "num", "2")) : null));
                     }, packageChange: zip =>
                     {
                         const string part = "word/settings.xml";
@@ -452,14 +458,17 @@ internal static class DocxCommentGlyphFrameTests
                 TestAssert.Equal(1, merged.InlineReferences.Count(reference => reference.Kind == DocxRelatedStoryKind.Comment));
                 TestAssert.True(string.Concat(merged.Runs.Select(run => run.Text)).Contains(selected, StringComparison.Ordinal),
                     "The selected word remains in the merged paragraph.");
-                PdfPage page = renderer.RenderPagesAsync(source, null, default).ToBlockingEnumerable().Single();
-                var fills = Regex.Matches(page.Content, @"0\.973 0\.863 0\.867 rg\s+[-\d.]+ [-\d.]+ (?<w>[-\d.]+) [-\d.]+ re f");
+                PdfPage[] pages = renderer.RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
+                TestAssert.Equal(hardBreak == "page" ? 2 : 1, pages.Length);
+                var fills = Regex.Matches(pages[0].Content, @"0\.973 0\.863 0\.867 rg\s+[-\d.]+ [-\d.]+ (?<w>[-\d.]+) [-\d.]+ re f");
                 TestAssert.True(fills.Any(fill => Number(fill, "w") > 20d), "The selection covers the word at the consumed mark.");
-                string text = Regex.Replace(string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).Select(show => show.Text)), @"\s+", "");
+                string text = Regex.Replace(string.Concat(pages.SelectMany(page => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page))
+                    .Select(show => show.Text)), @"\s+", "");
                 foreach (string word in new[] { "OutsideLeft", selected, "OutsideRight", "Followingbody" })
                     TestAssert.Contains(word, text);
+                if (hardBreak is not null) TestAssert.Contains("AfterHardBreak", text);
                 TestAssert.Equal(1, Regex.Matches(text, "Checkthecalculationalongsidetheillustration\\.").Count);
-                return page;
+                return pages;
             }
         }
 
