@@ -397,6 +397,76 @@ internal static class DocxCommentGlyphFrameTests
         }
     }
 
+    public static void DocxCommentGlyphFramesKeepSelectionsAtConsumedParagraphMarks()
+    {
+        const OoxPdfDocxMarkupMode mode = OoxPdfDocxMarkupMode.AllMarkup;
+        var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(), mode,
+            OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        XNamespace w = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+        foreach (bool cell in new[] { false, true })
+        foreach (bool startBoundary in new[] { false, true })
+        {
+            PdfPage inline = RenderVariant(blockMarker: false);
+            PdfPage block = RenderVariant(blockMarker: true);
+            TestAssert.Equal(inline.Content, block.Content);
+
+            PdfPage RenderVariant(bool blockMarker)
+            {
+                DocxDocument source = DocxInlineCompositionTests.ReadMutation("Composition/report", mode, false, false,
+                    (xml, _, _) =>
+                    {
+                        var start = Marker("commentRangeStart");
+                        var end = Marker("commentRangeEnd");
+                        var first = new XElement(w + "p", new XElement(w + "pPr", new XElement(w + "rPr",
+                            new XElement(w + "del", new XAttribute(w + "id", "31"), new XAttribute(w + "author", "Reviewer")))),
+                            Text("OutsideLeft "), startBoundary ? null : start, startBoundary ? null : Text("SelectedLeft "));
+                        var boundary = startBoundary ? start : end;
+                        var second = new XElement(w + "p", blockMarker ? null : boundary,
+                            startBoundary ? Text("SelectedRight") : null, startBoundary ? end : null,
+                            new XElement(w + "r", Marker("commentReference")), Text(" OutsideRight"));
+                        object[] flow = blockMarker ? [first, boundary, second] : [first, second];
+                        xml.Root!.Element(w + "body")!.ReplaceNodes(
+                            cell ? new XElement(w + "tbl",
+                                new XElement(w + "tblGrid", new XElement(w + "gridCol", new XAttribute(w + "w", "7000"))),
+                                new XElement(w + "tr", new XElement(w + "tc", flow))) : flow,
+                            new XElement(w + "p", Text("Following body")),
+                            new XElement(w + "sectPr", new XElement(w + "pgSz",
+                                new XAttribute(w + "w", "12240"), new XAttribute(w + "h", "15840"))));
+                    }, packageChange: zip =>
+                    {
+                        const string part = "word/settings.xml";
+                        var entry = zip.GetEntry(part)!;
+                        XDocument settings;
+                        using (var stream = entry.Open()) settings = XDocument.Load(stream);
+                        settings.Root!.Element(w + "revisionView")?.Remove();
+                        settings.Root.AddFirst(new XElement(w + "revisionView", new XAttribute(w + "markup", "1"),
+                            new XAttribute(w + "comments", "1"), new XAttribute(w + "insDel", "0")));
+                        entry.Delete();
+                        using var output = zip.CreateEntry(part).Open();
+                        settings.Save(output);
+                    });
+                string selected = startBoundary ? "SelectedRight" : "SelectedLeft";
+                var selectedFlow = cell ? DocxBlockTraversal.EnumerateTableParagraphs(source.Tables.Single()) :
+                    DocxBlockTraversal.EnumerateBodyParagraphs(source).Take(1);
+                DocxParagraph merged = selectedFlow.Single();
+                TestAssert.Equal(1, merged.InlineReferences.Count(reference => reference.Kind == DocxRelatedStoryKind.Comment));
+                TestAssert.True(string.Concat(merged.Runs.Select(run => run.Text)).Contains(selected, StringComparison.Ordinal),
+                    "The selected word remains in the merged paragraph.");
+                PdfPage page = renderer.RenderPagesAsync(source, null, default).ToBlockingEnumerable().Single();
+                var fills = Regex.Matches(page.Content, @"0\.973 0\.863 0\.867 rg\s+[-\d.]+ [-\d.]+ (?<w>[-\d.]+) [-\d.]+ re f");
+                TestAssert.True(fills.Any(fill => Number(fill, "w") > 20d), "The selection covers the word at the consumed mark.");
+                string text = Regex.Replace(string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).Select(show => show.Text)), @"\s+", "");
+                foreach (string word in new[] { "OutsideLeft", selected, "OutsideRight", "Followingbody" })
+                    TestAssert.Contains(word, text);
+                TestAssert.Equal(1, Regex.Matches(text, "Checkthecalculationalongsidetheillustration\\.").Count);
+                return page;
+            }
+        }
+
+        XElement Text(string value) => new(w + "r", new XElement(w + "t", new XAttribute(XNamespace.Xml + "space", "preserve"), value));
+        XElement Marker(string kind) => new(w + kind, new XAttribute(w + "id", "0"));
+    }
+
     private static (double[][] Paths, double StrokeWidth, double FillHeight) ReadGeometry(PdfPage page)
     {
         var fills = Regex.Matches(page.Content, @"0\.973 0\.863 0\.867 rg\s+(?<x>[-\d.]+) (?<y>[-\d.]+) (?<w>[\d.]+) (?<h>[\d.]+) re f");

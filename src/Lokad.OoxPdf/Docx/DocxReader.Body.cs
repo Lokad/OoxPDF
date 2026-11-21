@@ -65,7 +65,6 @@ internal sealed partial class DocxReader
             DocxRevisionInfo? inheritedRevision = scopedElement.Revision;
             if (element.Name == WordprocessingNamespace + "p")
             {
-                comments?.BeginParagraph(scopedElement.LeadingCommentBoundaries, cancellationToken);
                 var leadingBookmarks = scopedElement.LeadingBookmarks;
                 bool HiddenBreak(XElement source) => IsHiddenHardRunBreak(source, styles, null);
                 bool VisibleBreak(XElement source) => IsPageOrColumnBreak(source) && !HiddenBreak(source);
@@ -78,6 +77,10 @@ internal sealed partial class DocxReader
                     paragraphStyleId,
                     styles,
                     null);
+                bool hasVisibleBreak = element.Elements().Any(child => HasVisibleRunBreak(child, VisibleBreak, markupMode));
+                var inlineCommentBoundaries = comments?.BeginParagraph(scopedElement.LeadingCommentBoundaries,
+                    resolvedParagraph.PageBreakBefore != true && !hasVisibleBreak && FindMergePredecessor(elements, mergeDeletedMarks) is not null,
+                    cancellationToken);
                 if (resolvedParagraph.PageBreakBefore == true)
                 {
                     elements.Add(DocxBodyElementFactory.CreatePageBreak(
@@ -87,7 +90,6 @@ internal sealed partial class DocxReader
                         revisions: inheritedRevision is null ? [] : [inheritedRevision]));
                 }
 
-                bool hasVisibleBreak = element.Elements().Any(child => HasVisibleRunBreak(child, VisibleBreak, markupMode));
                 // Numbering belongs to the paragraph, outside its run children.
                 // A visible marker keeps the source first line even when its only
                 // run payload is a break; ordinary paragraph layout paints it.
@@ -212,7 +214,8 @@ internal sealed partial class DocxReader
                 }
 
                 DocxParagraph? paragraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, tableCellStyle: null, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken,
-                    leadingBookmarks: leadingBookmarks, retainUnmatchedCommentStarts: projectCommentSelections);
+                    leadingBookmarks: leadingBookmarks, retainUnmatchedCommentStarts: projectCommentSelections,
+                    leadingInlineCommentBoundaries: inlineCommentBoundaries);
                 if (paragraph is not null)
                 {
                     int blockIndex = AppendFlowParagraph(elements, paragraph, mergeDeletedMarks, cancellationToken, comments);
@@ -284,11 +287,14 @@ internal sealed partial class DocxReader
         }
     }
 
+    private static DocxParagraphElement? FindMergePredecessor(List<DocxBodyElement> elements, bool mergeDeletedMarks) =>
+        mergeDeletedMarks && elements.Count > 0 && elements[^1] is DocxParagraphElement { Paragraph.HasDeletedParagraphMark: true } previous
+            ? previous : null;
+
     private static int AppendFlowParagraph(List<DocxBodyElement> elements, DocxParagraph paragraph,
         bool mergeDeletedMarks, CancellationToken cancellationToken, DocxCommentProjection? comments = null)
     {
-        if (mergeDeletedMarks && elements.Count > 0 &&
-            elements[^1] is DocxParagraphElement previous && previous.Paragraph.HasDeletedParagraphMark)
+        if (FindMergePredecessor(elements, mergeDeletedMarks) is { } previous)
         {
             elements[^1] = DocxBodyElementFactory.CreateParagraph(
                 MergeParagraphsAcrossDeletedMark(previous.Paragraph, paragraph, cancellationToken));
@@ -387,7 +393,7 @@ internal sealed partial class DocxReader
             InlineReferences = first.InlineReferences.Concat(second.InlineReferences.Select(reference => reference with {
                 SourceRunIndex = ShiftSourceRunIndex(reference.SourceRunIndex, sourceRunOffset),
                 DisplayRun = reference.DisplayRun is { } run ? ShiftRun(run) : null })).ToArray(),
-            CommentRanges = first.CommentRanges.Concat(second.CommentRanges.Select(range => ShiftCommentRange(range, sourceRunOffset, textOffset, itemOffset))).ToArray(),
+            CommentRanges = first.CommentRanges.Concat(second.CommentRanges.Select(range => ShiftCommentRange(range, sourceRunOffset, itemOffset))).ToArray(),
             RevisionRanges = first.RevisionRanges.Concat(second.RevisionRanges.Select(range => ShiftRevisionRange(range, sourceRunOffset, textOffset))).ToArray(),
             FieldReferences = first.FieldReferences.Concat(second.FieldReferences.Select(field => ShiftFieldReference(field, sourceRunOffset, textRunOffset))).ToArray(),
             Hyperlinks = first.Hyperlinks.Concat(second.Hyperlinks.Select(link => ShiftHyperlink(link, sourceRunOffset, textRunOffset, itemOffset))).ToArray(),
@@ -439,16 +445,14 @@ internal sealed partial class DocxReader
         return textOffset is null ? null : textOffset + offset;
     }
 
-    private static DocxCommentRange ShiftCommentRange(DocxCommentRange range, int sourceRunOffset, int textOffset, int itemOffset)
+    private static DocxCommentRange ShiftCommentRange(DocxCommentRange range, int sourceRunOffset, int itemOffset)
     {
+        // Text offsets belong to their source run and survive renumbering.
         return range with
         {
             StartSourceRunIndex = ShiftSourceRunIndex(range.StartSourceRunIndex, sourceRunOffset),
-            StartTextOffset = ShiftTextOffset(range.StartTextOffset, textOffset),
             EndSourceRunIndex = ShiftSourceRunIndex(range.EndSourceRunIndex, sourceRunOffset),
-            EndTextOffset = ShiftTextOffset(range.EndTextOffset, textOffset),
             ReferenceSourceRunIndex = ShiftSourceRunIndex(range.ReferenceSourceRunIndex, sourceRunOffset),
-            ReferenceTextOffset = ShiftTextOffset(range.ReferenceTextOffset, textOffset),
             StartInlineItemIndex = ShiftSourceRunIndex(range.StartInlineItemIndex, itemOffset),
             EndInlineItemIndex = ShiftSourceRunIndex(range.EndInlineItemIndex, itemOffset)
         };

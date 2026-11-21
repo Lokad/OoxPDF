@@ -514,22 +514,23 @@ internal sealed partial class DocxReader
         private bool hasPendingRange;
         private List<DocxBlockCommentBoundary>? boundaries;
 
-        public void BeginParagraph(IReadOnlyList<XElement>? markers, CancellationToken token)
+        public IReadOnlyList<XElement>? BeginParagraph(IReadOnlyList<XElement>? markers, bool mergesWithPrevious, CancellationToken token)
         {
             paragraphBoundary = elements.Count;
-            if (markers is null) return;
+            if (markers is null || mergesWithPrevious) return markers;
             foreach (XElement marker in markers)
             {
                 token.ThrowIfCancellationRequested();
                 if (NormalizeDecimalId((string?)marker.Attribute(WordprocessingNamespace + "id")) is { Length: > 0 } id)
                     (boundaries ??= []).Add(new(paragraphBoundary, id, marker.Name == WordprocessingNamespace + "commentRangeStart"));
             }
+            return null;
         }
 
         public void TrackParagraph(DocxParagraph? paragraph, CancellationToken token)
         {
-            // A consumed paragraph mark needs an inline boundary in the merged
-            // line. Preserve the existing fallback for that block marker.
+            // A split fragment can merge without a single inline entry point.
+            // Keep those block boundaries unresolved.
             if (elements.Count <= paragraphBoundary && boundaries is not null)
             {
                 for (int index = boundaries.Count - 1; index >= 0 && boundaries[index].BeforePart == paragraphBoundary; index--)

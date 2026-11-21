@@ -30,7 +30,8 @@ internal sealed partial class DocxReader
         List<DocxComplexFieldState>? splitFields = null,
         bool continuesAfterBreak = false,
         bool retainEmptyColumnMark = false,
-        bool retainUnmatchedCommentStarts = false)
+        bool retainUnmatchedCommentStarts = false,
+        IReadOnlyList<XElement>? leadingInlineCommentBoundaries = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         XElement? paragraphProperties = paragraph.Element(WordprocessingNamespace + "pPr");
@@ -88,6 +89,11 @@ internal sealed partial class DocxReader
         int sourceRunIndex = 0;
         long contentSourcePosition = 0;
         HashSet<DocxRevisionInfo>? nonPrintingRangeMarkers = null;
+        if (leadingInlineCommentBoundaries is not null)
+        {
+            foreach (XElement marker in leadingInlineCommentBoundaries)
+                AddInlineContainerChild(marker, inheritedRevision);
+        }
         foreach (XElement child in paragraph.Elements())
         {
             AddInlineContainerChild(child, inheritedRevision);

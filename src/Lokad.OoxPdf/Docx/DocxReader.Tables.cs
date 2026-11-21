@@ -485,7 +485,6 @@ internal sealed partial class DocxReader
 
             if (child.Name == WordprocessingNamespace + "p")
             {
-                comments?.BeginParagraph(scopedChild.LeadingCommentBoundaries, cancellationToken);
                 var leadingBookmarks = scopedChild.LeadingBookmarks;
                 bool HiddenBreak(XElement source) => IsHiddenHardRunBreak(source, styles, tableCellStyle);
                 bool VisibleBreak(XElement source) => IsPageOrColumnBreak(source) && !HiddenBreak(source);
@@ -493,8 +492,11 @@ internal sealed partial class DocxReader
                 // Inline page/column tokens are transparent inside a cell. Keep
                 // the source paragraph intact before preparation. A standalone
                 // page-break paragraph retains the existing spill/flow handling.
-                if (IsRunBreakOnlyParagraph(child, VisibleBreak, HiddenBreak, markupMode) &&
-                    child.Elements().Any(element => HasVisibleRunBreak(element, VisiblePageBreak, markupMode)))
+                bool keepsPageBreak = IsRunBreakOnlyParagraph(child, VisibleBreak, HiddenBreak, markupMode) &&
+                    child.Elements().Any(element => HasVisibleRunBreak(element, VisiblePageBreak, markupMode));
+                var inlineCommentBoundaries = comments?.BeginParagraph(scopedChild.LeadingCommentBoundaries,
+                    !keepsPageBreak && FindMergePredecessor(elements, mergeDeletedMarks) is not null, cancellationToken);
+                if (keepsPageBreak)
                 {
                     XElement? paragraphProperties = child.Element(WordprocessingNamespace + "pPr");
                     string? paragraphStyleId = ReadEffectiveParagraphStyleId(paragraphProperties, styles);
@@ -559,7 +561,8 @@ internal sealed partial class DocxReader
                     cancellationToken: cancellationToken,
                     leadingBookmarks: leadingBookmarks,
                     cellBookmarks: bookmarkScope,
-                    retainUnmatchedCommentStarts: projectCommentSelections);
+                    retainUnmatchedCommentStarts: projectCommentSelections,
+                    leadingInlineCommentBoundaries: inlineCommentBoundaries);
                 if (parsed is not null)
                 {
                     AppendFlowParagraph(elements, parsed, mergeDeletedMarks, cancellationToken, comments);
