@@ -18,23 +18,6 @@ internal static partial class DocxFootnotesTests
     public static void DocxContinuedFootnoteFooterFramesKeepHeadsSeparatorsAndTailClear()
     {
         DocxDocument plain = ReadWrappedFootnoteFlowFixture(100);
-        DocxParagraph footer = DocxTests.CreateDocxLayoutParagraph("public footer frame", 12d, 14d) with
-        {
-            LineSpacingPoints = null,
-            Spacing = DocxParagraphSpacing.Empty with { BeforeValue = "0", AfterValue = "0", LineValue = "240", LineRuleValue = "auto" },
-        };
-        DocxDocument Compose(int count, bool alternating)
-        {
-            var paragraphs = new Dictionary<string, IReadOnlyList<DocxParagraph>>
-            { ["default"] = Enumerable.Repeat(footer, count).ToArray() };
-            if (alternating) paragraphs["even"] = [footer];
-            var elements = paragraphs.ToDictionary(p => p.Key,
-                p => (IReadOnlyList<DocxBodyElement>)p.Value.Select(v => (DocxBodyElement)new DocxParagraphElement(v)).ToArray());
-            var settings = plain.PageSettings with { FooterDistancePoints = 36d, EvenAndOddHeaders = alternating,
-                FooterParagraphsByType = paragraphs, FooterBodyElementsByType = elements };
-            return plain with { PageSettings = settings, FinalSectionBreak = plain.FinalSectionBreak! with { PageSettings = settings },
-                FooterParagraphs = paragraphs["default"], FooterParagraphsByType = paragraphs, FooterBodyElementsByType = elements };
-        }
         var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
         var measurer = new LogicalBoundaryTextMeasurer();
         DocxLayout baseline = engine.Create(plain, measurer, default);
@@ -46,14 +29,14 @@ internal static partial class DocxFootnotesTests
         DocxDocument fittingPlain = WithEndnoteText(plain, "37", "Short public note.");
         fittingPlain = WithEndnoteText(fittingPlain, "4", "Another short public note.");
         DocxLayout fittingBaseline = engine.Create(fittingPlain, measurer, default);
-        DocxLayout fitting = engine.Create(Compose(1, false) with { RelatedStories = fittingPlain.RelatedStories }, measurer, default);
+        DocxLayout fitting = engine.Create(WithPlainFootnoteTestFooter(fittingPlain, 1, false), measurer, default);
         DocxPlacedRelatedStoryLayout fittingHead = fitting.Pages[0].PlacedRelatedStories.Single(s =>
             s.StoryLayout.Story.Type == DocxRelatedStoryType.Separator);
         double fittingHeadRuleGap = fittingHead.SeparatorY!.Value - fitting.Pages[0].PlacedRelatedStories
             .First(s => s.StoryLayout.Story.IsNormalStoryType).TextLines[0].BaselineY;
         foreach ((int footerCount, bool alternating) in new[] { (10, false), (10, true), (1, false) })
         {
-            DocxDocument source = Compose(footerCount, alternating);
+            DocxDocument source = WithPlainFootnoteTestFooter(plain, footerCount, alternating);
             DocxLayout layout = engine.Create(source, measurer, default);
             TestAssert.True(ReferenceEquals(source.BodyElements, plain.BodyElements) && ReferenceEquals(source.RelatedStories, plain.RelatedStories),
                 "Footer frame placement preserves authored body and note ownership.");
@@ -90,8 +73,8 @@ internal static partial class DocxFootnotesTests
                 }
             }
         }
-        DocxLayout consumed = engine.Create(Compose(100, true), measurer, default);
-        DocxLayout uniformlyConsumed = engine.Create(Compose(100, false), measurer, default);
+        DocxLayout consumed = engine.Create(WithPlainFootnoteTestFooter(plain, 100, true), measurer, default);
+        DocxLayout uniformlyConsumed = engine.Create(WithPlainFootnoteTestFooter(plain, 100, false), measurer, default);
         TestAssert.Equal(baseline.Pages.Count, consumed.Pages.Count);
         TestAssert.True(uniformlyConsumed.Pages.SelectMany(p => p.PlacedRelatedStories).Select(s => (s.TopY, s.Height, s.ContentTopOffset))
             .SequenceEqual(consumed.Pages.SelectMany(p => p.PlacedRelatedStories).Select(s => (s.TopY, s.Height, s.ContentTopOffset))),

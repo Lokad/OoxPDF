@@ -455,23 +455,6 @@ internal static partial class DocxFootnotesTests
     public static void DocxContinuedEndnoteFooterFramesKeepSelectedStoriesClearAndPreserveSourceLines()
     {
         DocxDocument plain = ReadWrappedDocumentEndnoteFlowFixture(0, 0, 80);
-        DocxParagraph footer = DocxTests.CreateDocxLayoutParagraph("public footer frame", 12d, 14d) with
-        {
-            LineSpacingPoints = null,
-            Spacing = DocxParagraphSpacing.Empty with { BeforeValue = "0", AfterValue = "0", LineValue = "240", LineRuleValue = "auto" },
-        };
-        DocxDocument Compose(int count, bool alternating)
-        {
-            var paragraphs = new Dictionary<string, IReadOnlyList<DocxParagraph>>
-            { ["default"] = Enumerable.Repeat(footer, count).ToArray() };
-            if (alternating) paragraphs["even"] = [footer];
-            var elements = paragraphs.ToDictionary(p => p.Key,
-                p => (IReadOnlyList<DocxBodyElement>)p.Value.Select(v => (DocxBodyElement)new DocxParagraphElement(v)).ToArray());
-            var settings = plain.PageSettings with { FooterDistancePoints = 36d, EvenAndOddHeaders = alternating,
-                FooterParagraphsByType = paragraphs, FooterBodyElementsByType = elements };
-            return plain with { PageSettings = settings, FinalSectionBreak = plain.FinalSectionBreak! with { PageSettings = settings },
-                FooterParagraphs = paragraphs["default"], FooterParagraphsByType = paragraphs, FooterBodyElementsByType = elements };
-        }
         var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
         var measurer = new LogicalBoundaryTextMeasurer();
         DocxLayout baseline = engine.Create(plain, measurer, default);
@@ -483,7 +466,7 @@ internal static partial class DocxFootnotesTests
                 .Select(l => (l.Text, l.SourceParagraph, l.SourceLineIndex)).ToArray());
         foreach (bool alternating in new[] { false, true })
         {
-            DocxDocument source = Compose(10, alternating);
+            DocxDocument source = WithPlainFootnoteTestFooter(plain, 10, alternating);
             DocxLayout actual = engine.Create(source, measurer, default);
             TestAssert.True(actual.Pages.Count >= baseline.Pages.Count, "Reducing the continuation frame does not remove pages.");
             TestAssert.True(expectedBody.SequenceEqual(actual.Pages.SelectMany(p => p.Items.OfType<DocxTextLineLayout>())
@@ -509,7 +492,7 @@ internal static partial class DocxFootnotesTests
             TestAssert.True(DocxNoteKerning.TryCreateDocument(source, actual, out _, out _, default),
                 "A usable plain frame shares the existing note typography policy.");
         }
-        DocxLayout fitting = engine.Create(Compose(1, false), measurer, default);
+        DocxLayout fitting = engine.Create(WithPlainFootnoteTestFooter(plain, 1, false), measurer, default);
         TestAssert.True(baseline.Pages.SelectMany(p => p.PlacedRelatedStories).Select(s => (s.TopY, s.Height, s.ContentTopOffset))
             .SequenceEqual(fitting.Pages.SelectMany(p => p.PlacedRelatedStories).Select(s => (s.TopY, s.Height, s.ContentTopOffset))),
             "Fitting static edges leave the original note placement exact.");

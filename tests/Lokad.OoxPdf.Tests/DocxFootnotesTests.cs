@@ -123,19 +123,25 @@ internal static partial class DocxFootnotesTests
             HeaderParagraphs = [header], HeaderParagraphsByType = paragraphs, HeaderBodyElementsByType = elements };
     }
 
-    private static DocxDocument WithPlainFootnoteTestFooter(DocxDocument source)
+    private static DocxDocument WithPlainFootnoteTestFooter(DocxDocument source, int count = 1, bool? alternating = null)
     {
         DocxParagraph footer = DocxTests.CreateDocxLayoutParagraph("public footer frame", 12d, 14d) with
         {
             LineSpacingPoints = null,
             Spacing = DocxParagraphSpacing.Empty with { BeforeValue = "0", AfterValue = "0", LineValue = "240", LineRuleValue = "auto" },
         };
-        var paragraphs = new Dictionary<string, IReadOnlyList<DocxParagraph>> { ["default"] = [footer] };
-        var elements = new Dictionary<string, IReadOnlyList<DocxBodyElement>> { ["default"] = [new DocxParagraphElement(footer)] };
+        var paragraphs = new Dictionary<string, IReadOnlyList<DocxParagraph>>
+        {
+            ["default"] = Enumerable.Repeat(footer, count).ToArray()
+        };
+        if (alternating == true) paragraphs["even"] = [footer];
+        var elements = paragraphs.ToDictionary(pair => pair.Key,
+            pair => (IReadOnlyList<DocxBodyElement>)pair.Value.Select(paragraph => (DocxBodyElement)new DocxParagraphElement(paragraph)).ToArray());
         var settings = source.PageSettings with { FooterDistancePoints = 36d,
+            EvenAndOddHeaders = alternating ?? source.PageSettings.EvenAndOddHeaders,
             FooterParagraphsByType = paragraphs, FooterBodyElementsByType = elements };
         return source with { PageSettings = settings, FinalSectionBreak = source.FinalSectionBreak! with { PageSettings = settings },
-            FooterParagraphs = [footer], FooterParagraphsByType = paragraphs, FooterBodyElementsByType = elements };
+            FooterParagraphs = paragraphs["default"], FooterParagraphsByType = paragraphs, FooterBodyElementsByType = elements };
     }
 
     public static void DocxAutomaticNoteMarkerSizeDoesNotInflateContentPitchOrInset()
