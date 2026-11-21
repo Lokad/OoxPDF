@@ -1254,7 +1254,6 @@ internal sealed partial class DocxLayoutEngine
         double scale = rawTableWidth <= 0d ? 1d : targetTableWidth / rawTableWidth;
         return new DocxResolvedTableGrid(
             gridX,
-            tableAvailableWidth,
             targetTableWidth,
             effectiveColumns,
             scale,

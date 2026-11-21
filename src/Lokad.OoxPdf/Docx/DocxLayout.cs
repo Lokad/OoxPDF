@@ -290,7 +290,6 @@ internal sealed partial class DocxLayoutEngine
 
     private sealed record DocxResolvedTableGrid(
         double TableX,
-        double TableAvailableWidth,
         double TargetTableWidth,
         IReadOnlyList<double> EffectiveColumns,
         double Scale,
