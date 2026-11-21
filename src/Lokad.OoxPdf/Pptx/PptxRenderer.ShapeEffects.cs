@@ -592,11 +592,4 @@ internal sealed partial class PptxRenderer
 
         return Math.Atan2(Math.Sin(angle) / radiusY, Math.Cos(angle) / radiusX);
     }
-
-    private static string ReadPreset(XElement shapeProperties)
-    {
-        return (string?)shapeProperties
-            .Element(DrawingNamespace + "prstGeom")
-            ?.Attribute("prst") ?? "rect";
-    }
 }

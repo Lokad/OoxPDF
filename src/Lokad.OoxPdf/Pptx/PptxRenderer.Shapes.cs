@@ -158,7 +158,7 @@ internal sealed partial class PptxRenderer
         int? lineCap = line.Cap;
         int? lineJoin = line.Join;
         bool hasPictureFill = TryReadShapePictureFill(
-            shapeProperties,
+            preset,
             diagnosticSink,
             slideIndex,
             images,

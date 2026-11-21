@@ -609,7 +609,7 @@ internal sealed partial class PptxRenderer
     }
 
     private static bool TryReadShapePictureFill(
-        XElement shapeProperties,
+        string preset,
         Action<OoxPdfDiagnostic>? diagnosticSink,
         int slideIndex,
         List<PdfImageResource>? images,
@@ -628,7 +628,7 @@ internal sealed partial class PptxRenderer
         crop = default;
         fillRect = default;
         alpha = 1d;
-        if (images is null || pictureFillOverride is null || !CanRenderPictureFillPreset(ReadPreset(shapeProperties)))
+        if (images is null || pictureFillOverride is null || !CanRenderPictureFillPreset(preset))
         {
             return false;
         }
@@ -714,7 +714,12 @@ internal sealed partial class PptxRenderer
         }
         else
         {
+            // The source crop scales up the full image. Keep the visible
+            // portion inside the destination fill rectangle.
+            graphics.SaveState();
+            graphics.ClipRectangleEvenOdd(x, y, width, height);
             graphics.DrawImageCropped(imageName, x, y, width, height, crop.Left, crop.Top, crop.Right, crop.Bottom);
+            graphics.RestoreState();
         }
     }
 }

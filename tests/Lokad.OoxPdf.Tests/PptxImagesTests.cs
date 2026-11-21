@@ -3593,7 +3593,7 @@ internal static partial class PptxImagesTests
 
     public static void PptxSyntheticShapePictureFillRendersImageXObject()
     {
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
+        var parts = new Dictionary<string, byte[]>
         {
             ["[Content_Types].xml"] = TestFixtures.Utf8("""
                 <?xml version="1.0" encoding="UTF-8"?>
@@ -3627,14 +3627,32 @@ internal static partial class PptxImagesTests
                 </p:sld>
                 """),
             ["ppt/media/image1.png"] = TestFixtures.CreateRgbPng(1, 1, [255, 0, 0])
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        };
+        const string Slide = "ppt/slides/slide1.xml";
+        string authoredSlide = Encoding.UTF8.GetString(parts[Slide]);
+        foreach (bool cropped in new[] { false, true })
+        {
+            if (cropped)
+                parts[Slide] = TestFixtures.Utf8(authoredSlide.Replace("</a:blipFill>",
+                    """<a:srcRect l="25000" r="25000"/><a:stretch><a:fillRect l="25000"/></a:stretch></a:blipFill>""",
+                    StringComparison.Ordinal));
+            using var input = TestFixtures.CreateZipPackage(parts);
+            using var output = new MemoryStream();
+            OoxPdfConverter.Convert(input, output, new OoxPdfOptions { InputKind = OoxPdfInputKind.Pptx });
 
-        OoxPdfConverter.Convert(input, output);
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("/Subtype /Image", pdf);
-        TestAssert.Contains("/Im1 Do", pdf);
+            string pdf = NormalizeGeometryContent(Encoding.ASCII.GetString(output.ToArray()));
+            TestAssert.Contains("/Subtype /Image", pdf);
+            TestAssert.Contains("/Im1 Do", pdf);
+            int frame = pdf.IndexOf("108 396 108 72 re W* n", StringComparison.Ordinal);
+            if (cropped)
+            {
+                int image = pdf.IndexOf("216 0 0 72 54 396 cm /Im1 Do", StringComparison.Ordinal);
+                TestAssert.True(frame >= 0 && frame < image,
+                    "Clip the destination fill rectangle before painting the scaled source crop.");
+            }
+            else
+                TestAssert.Equal(-1, frame);
+        }
     }
 
     public static void PptxSyntheticRgbaPngPicturePreservesSoftMask()
