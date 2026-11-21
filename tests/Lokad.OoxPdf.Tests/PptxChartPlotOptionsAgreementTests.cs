@@ -728,36 +728,6 @@ internal static class PptxChartPlotOptionsAgreementTests
         return Equals(xml, scene);
     }
 
-    private static bool SeriesNameEqual(object? xml, object? scene)
-    {
-        if (xml is null || scene is null)
-        {
-            return xml is null && scene is null;
-        }
-
-        // WorkbookPoints is a fresh list per arm, so compare its contents rather
-        // than the record (list identity would never agree across arms).
-        return Prop(xml, "ActiveName") == Prop(scene, "ActiveName") &&
-            Prop(xml, "CacheName") == Prop(scene, "CacheName") &&
-            Prop(xml, "ActiveNameSource") == Prop(scene, "ActiveNameSource") &&
-            PointsText(xml, "WorkbookPoints").SequenceEqual(PointsText(scene, "WorkbookPoints"));
-    }
-
-    private static string? Prop(object record, string name)
-    {
-        return record.GetType().GetProperty(name)?.GetValue(record)?.ToString();
-    }
-
-    private static List<string?> PointsText(object record, string name)
-    {
-        if (record.GetType().GetProperty(name)?.GetValue(record) is System.Collections.IEnumerable points)
-        {
-            return points.Cast<object?>().Select(point => point?.ToString()).ToList();
-        }
-
-        return new List<string?>();
-    }
-
     private static PptxSceneChartPlot LoadPlot(string plotKind, string plotInner, string seriesInner = "")
     {
         string xml = ChartSpace("<c:" + plotKind + ">" + plotInner + "<c:ser>" + seriesInner + "<c:cat><c:strLit><c:pt idx=\"0\"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx=\"0\"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser><c:axId val=\"10\"/><c:axId val=\"20\"/></c:" + plotKind + ">", "");
