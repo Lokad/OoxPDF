@@ -2827,13 +2827,12 @@ function New-PdfBoundsRasterRegionSpec([string] $Region, [int] $Page, $MediaBoxe
 function New-OperationBoundsRasterRegionSpec(
     [string] $Region,
     [int] $Page,
-    $ReferenceOperations,
-    $CandidateOperations,
+    $Operations,
     [scriptblock] $Predicate,
     $MediaBoxes)
 {
-    $items = @($ReferenceOperations + $CandidateOperations | Where-Object {
-            (Get-OperationPage $_) -eq $Page -and (& $Predicate $_) -and
+    $items = @($Operations | Where-Object {
+            (& $Predicate $_) -and
             $_.MinX -ne $null -and $_.MinY -ne $null -and $_.MaxX -ne $null -and $_.MaxY -ne $null
         })
     if ($items.Count -eq 0) {
@@ -2851,7 +2850,7 @@ function New-OperationBoundsRasterRegionSpec(
 }
 
 function New-BalloonBoundsRasterRegionSpec([string] $Region, [int] $Page, $Balloons, $MediaBoxes) {
-    $items = @($Balloons | Where-Object { $_.Page -eq $Page -and $_.MinX -ne $null -and $_.MinY -ne $null -and $_.MaxX -ne $null -and $_.MaxY -ne $null })
+    $items = @($Balloons | Where-Object { $_.MinX -ne $null -and $_.MinY -ne $null -and $_.MaxX -ne $null -and $_.MaxY -ne $null })
     if ($items.Count -eq 0) {
         return $null
     }
@@ -2875,6 +2874,9 @@ function New-RasterRegionSpecs(
     $CandidateBalloons)
 {
     $pageCount = [Math]::Max($ReferencePageCount, $CandidatePageCount)
+    $graphicsByPage = ($ReferenceGraphicsOperations + $CandidateGraphicsOperations) |
+        Group-Object -Property { Get-OperationPage $_ } -AsHashTable -AsString
+    $balloonsByPage = $CandidateBalloons | Group-Object -Property Page -AsHashTable -AsString
     for ($page = 1; $page -le $pageCount; $page++) {
         New-RasterRegionSpec "body-text" $page 0.16 0.12 0.58 0.76
         New-RasterRegionSpec "headers-footers" $page 0.00 0.00 1.00 0.12
@@ -2883,15 +2885,17 @@ function New-RasterRegionSpecs(
         New-RasterRegionSpec "left-markup-lane" $page 0.00 0.10 0.18 0.80
         New-RasterRegionSpec "right-markup-lane" $page 0.72 0.10 0.28 0.80
 
-        $tableSpec = New-OperationBoundsRasterRegionSpec "tables" $page $ReferenceGraphicsOperations $CandidateGraphicsOperations { param($op) Test-TableLikeGraphic $op } $MediaBoxes
+        $graphics = if ($graphicsByPage) { $graphicsByPage[[string]$page] }
+        $balloons = if ($balloonsByPage) { $balloonsByPage[[string]$page] }
+        $tableSpec = New-OperationBoundsRasterRegionSpec "tables" $page $graphics { param($op) Test-TableLikeGraphic $op } $MediaBoxes
         if ($null -ne $tableSpec) { $tableSpec }
-        $drawingSpec = New-OperationBoundsRasterRegionSpec "drawings" $page $ReferenceGraphicsOperations $CandidateGraphicsOperations { param($op) Test-DrawingLikeGraphic $op } $MediaBoxes
+        $drawingSpec = New-OperationBoundsRasterRegionSpec "drawings" $page $graphics { param($op) Test-DrawingLikeGraphic $op } $MediaBoxes
         if ($null -ne $drawingSpec) { $drawingSpec }
-        $connectorSpec = New-OperationBoundsRasterRegionSpec "connectors" $page $ReferenceGraphicsOperations $CandidateGraphicsOperations { param($op) Test-ConnectorLikeGraphic $op } $MediaBoxes
+        $connectorSpec = New-OperationBoundsRasterRegionSpec "connectors" $page $graphics { param($op) Test-ConnectorLikeGraphic $op } $MediaBoxes
         if ($null -ne $connectorSpec) { $connectorSpec }
-        $commentSpec = New-BalloonBoundsRasterRegionSpec "comment-balloons" $page (@($CandidateBalloons | Where-Object { $_.Subtype -eq "Comment" })) $MediaBoxes
+        $commentSpec = New-BalloonBoundsRasterRegionSpec "comment-balloons" $page (@($balloons | Where-Object { $_.Subtype -eq "Comment" })) $MediaBoxes
         if ($null -ne $commentSpec) { $commentSpec }
-        $revisionSpec = New-BalloonBoundsRasterRegionSpec "revision-balloons" $page (@($CandidateBalloons | Where-Object { $_.Subtype -eq "Revision" })) $MediaBoxes
+        $revisionSpec = New-BalloonBoundsRasterRegionSpec "revision-balloons" $page (@($balloons | Where-Object { $_.Subtype -eq "Revision" })) $MediaBoxes
         if ($null -ne $revisionSpec) { $revisionSpec }
     }
 }

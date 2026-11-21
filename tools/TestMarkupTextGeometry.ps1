@@ -77,6 +77,26 @@ Assert-Equal 660 (Get-TextBaselinePageSummary @($unknown) 1).LastBaselineY 'Unde
 $unknown | Add-Member -NotePropertyName DecodedText -NotePropertyValue $null
 $mixed = @(Merge-PdfSameLineOperations @($unknown, (New-Op 97 660 ' ' 3)) -UseEffectiveMatrix)
 Assert-Equal 1 @(Select-NonWhitespacePdfTextOperations $mixed).Count 'Partly undecoded lines are retained'
+$regionGraphics = @(
+    [pscustomobject]@{PageNumber=1; Page=3; Kind='FillStroke'; SegmentCount=4; MinX=20; MinY=30; MaxX=60; MaxY=90}
+    [pscustomobject]@{Kind='Fill'; SegmentCount=4; MinX=0; MinY=0; MaxX=200; MaxY=400}
+)
+$regionConnector = [pscustomobject]@{Page=3; Kind='Stroke'; SegmentCount=1; MinX=190; MinY=100; MaxX=220; MaxY=102}
+$regionBalloons = @(
+    [pscustomobject]@{Page=2; Subtype='Comment'; MinX=60; MinY=70; MaxX=100; MaxY=90}
+    [pscustomobject]@{Page=2; Subtype='Revision'; MinX=60; MinY=70; MaxX=100}
+    [pscustomobject]@{Page=3; Subtype='Revision'; MinX=60; MinY=70; MaxX=100; MaxY=90}
+)
+$boxes = @(1..3 | ForEach-Object { [pscustomobject]@{ Width=200; Height=400 } })
+$regionalSpecs = @(New-RasterRegionSpecs 1 3 $boxes $regionGraphics @($regionConnector) $regionBalloons)
+Assert-Equal 24 $regionalSpecs.Count 'Raster regions retain the fixed page bands and six source-bound regions'
+Assert-Equal '1/tables,1/drawings,2/comment-balloons,3/tables,3/connectors,3/revision-balloons' (
+    ($regionalSpecs | Where-Object region -in @('tables','drawings','connectors','comment-balloons','revision-balloons') |
+        ForEach-Object { "$($_.page)/$($_.region)" }) -join ',') 'Raster regions retain page precedence, overlapping memberships and source order'
+$connectorRegion = $regionalSpecs | Where-Object region -eq 'connectors'
+Assert-Equal .93d $connectorRegion.xRatio 'Connector region keeps its left padding'
+Assert-Equal .07d $connectorRegion.widthRatio 'Connector region clips to the last page edge'
+Assert-Equal 6 @(New-RasterRegionSpecs 1 0 @($boxes[0]) @() @() @()).Count 'An empty graphics and balloon group keeps the fixed page bands'
 $laneText = @((New-Op 432 650 'AP' 10), (New-Op 442 650 'PROVE' 30))
 $substituted = @(New-Op 432 650 'DECLINE' 40)
 $unchangedGeometry = New-TextGateDeltaSummary $laneText $substituted
