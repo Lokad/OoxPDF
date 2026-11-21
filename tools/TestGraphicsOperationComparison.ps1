@@ -124,6 +124,46 @@ $emptyHash = $hashed.PSObject.Copy(); $emptyHash.TextHash = ' '
 Invoke-Case 'hash-empty' @($hashed) @($emptyHash) 1 0 '-MatchTextHash' -ExpectedError 'TextHash is required'
 Invoke-Case 'optional-hash-disabled' @($hashed) @($a) 0 0
 
+$cellLayout = Join-Path $scratch 'cell-layout.json'
+'{"Pages":[{"TableRows":[{"TableIndex":0,"RowIndex":0,"FragmentCount":1,"Cells":[{"CellIndex":0,"X":10,"Y":10,"Width":20,"Height":20}]}]}]}' |
+    Set-Content -LiteralPath $cellLayout -Encoding utf8
+$rectangle = New-PathRect 'Clip' 10 10 30 30 0 0 'W'
+$reversed = New-PathRect 'Clip' 10 10 30 30 0 0 'W*'
+$reversed.PathCommands[1].Values = @(10,30)
+$reversed.PathCommands[3].Values = @(30,10)
+$trapezoid = New-PathRect 'Clip' 10 10 30 30 0 0 'W'
+$trapezoid.PathCommands[2].Values = @(25,30)
+$trapezoid.PathCommands[3].Values = @(15,30)
+$crossed = New-PathRect 'Clip' 10 10 30 30 0 0 'W'
+$crossed.PathCommands[1].Values = @(30,30)
+$crossed.PathCommands[2].Values = @(30,10)
+$retraced = New-PathRect 'Clip' 10 10 30 30 0 0 'W'
+$retraced.PathCommands[3].Values = @(30,10)
+$missingPath = New-Rect 'Clip' 10 10 30 30 'W'
+foreach ($test in @(
+    @{ Id='cell-clip-reversed'; Ref=$reversed; Cand=$rectangle; Matched=1; Status='MatchedSourceCellClip'; MissingPaths=0 },
+    @{ Id='cell-clip-trapezoid'; Ref=$trapezoid; Cand=$rectangle; Matched=0; Status='MissingOrUnresolvedReferenceClip'; MissingPaths=0 },
+    @{ Id='cell-clip-crossed'; Ref=$rectangle; Cand=$crossed; Matched=0; Status='UnresolvedSourceMapping'; MissingPaths=0 },
+    @{ Id='cell-clip-retraced'; Ref=$rectangle; Cand=$retraced; Matched=0; Status='UnresolvedSourceMapping'; MissingPaths=0 },
+    @{ Id='cell-clip-missing-path'; Ref=$missingPath; Cand=$rectangle; Matched=0; Status='MissingOrUnresolvedReferenceClip'; MissingPaths=1 }
+)) {
+    $inputs = @{
+        LayoutSnapshot = $cellLayout
+        ReferenceGraphics = Write-Ops ($test.Id+'-ref') @($test.Ref)
+        CandidateGraphics = Write-Ops ($test.Id+'-cand') @($test.Cand)
+        OutputPath = Join-Path $scratch ($test.Id+'-summary.json')
+    }
+    & (Join-Path $PSScriptRoot 'SummarizeDocxTableCellGeometry.ps1') @inputs
+    $report = Get-Content -LiteralPath $inputs.OutputPath -Raw | ConvertFrom-Json
+    $checks.Add([pscustomobject]@{Id=$test.Id; ExpectedMatched=$test.Matched; ActualMatched=$report.MatchedCellCount;
+        ExpectedStatus=$test.Status; ActualStatus=$report.Cells[0].Status; MissingReferencePaths=$report.ReferenceClipCountWithoutPathCommands})
+    if ($report.MatchedCellCount -ne $test.Matched -or $report.UnresolvedCellCount -ne (1-$test.Matched) -or
+        $report.Cells[0].Status -ne $test.Status -or $report.ReferenceClipCountWithoutPathCommands -ne $test.MissingPaths) {
+        $failures += $test.Id
+        Write-Host "FAIL: $($test.Id)"
+    } else { Write-Host "PASS: $($test.Id)" }
+}
+
 $checks | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $scratch 'checks.json') -Encoding utf8
 if ($failures.Count -ne 0) {
     throw ("Graphics comparison adversarial checks failed: " + ($failures -join "; "))

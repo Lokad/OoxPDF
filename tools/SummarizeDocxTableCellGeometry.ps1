@@ -11,20 +11,52 @@ $ErrorActionPreference = 'Stop'
 if (![double]::IsFinite($CandidateMappingTolerance) -or ![double]::IsFinite($ReferenceSearchTolerance) -or
     $CandidateMappingTolerance -le 0 -or $ReferenceSearchTolerance -le 0) { throw 'Tolerances must be finite and positive' }
 $layout = Get-Content -LiteralPath $LayoutSnapshot -Raw | ConvertFrom-Json
+
+function Test-RectangularClipPath($Op) {
+    $commands = @($Op.PathCommands)
+    # PdfInspect expands re into the same m/l/l/l/h form as explicit edges.
+    if ($commands.Count -ne 5 -or ($commands.Operator -join ' ') -cne 'm l l l h') { return $false }
+    for ($i = 0; $i -lt 4; $i++) {
+        $point = $commands[$i].Values
+        if ($point.Count -ne 2 -or $null -in $point -or
+            ($point[0] -ne $Op.MinX -and $point[0] -ne $Op.MaxX) -or
+            ($point[1] -ne $Op.MinY -and $point[1] -ne $Op.MaxY)) { return $false }
+    }
+    $previous = $commands[3].Values
+    $previousHorizontal = $null
+    for ($i = 0; $i -lt 4; $i++) {
+        $point = $commands[$i].Values
+        $sameX = $previous[0] -eq $point[0]
+        $sameY = $previous[1] -eq $point[1]
+        # Each edge changes exactly one axis, and the axes alternate.
+        if ($sameX -eq $sameY -or ($i -gt 0 -and $sameY -eq $previousHorizontal)) { return $false }
+        $previousHorizontal = $sameY
+        $previous = $point
+    }
+    return $true
+}
+
 function Read-CellClips([string] $Path) {
     $seen = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
-    foreach ($op in @(Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json)) {
+    $missingPaths = 0
+    $rectangles = @(foreach ($op in @(Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json)) {
         if ($op.Kind -ne 'Clip' -or $op.CurveCount -ne 0 -or $op.SegmentCount -ne 4 -or
             $op.LineCount -ne 3 -or $op.CloseCount -ne 1 -or $op.MaxX -le $op.MinX -or $op.MaxY -le $op.MinY) { continue }
-        $key = '{0}|{1:F3}|{2:F3}|{3:F3}|{4:F3}' -f $op.PageNumber,$op.MinX,$op.MinY,$op.MaxX,$op.MaxY
-        if ($seen.Add($key)) {
-            [pscustomobject]@{ Key=$key; Page=$op.PageNumber; X=[double]$op.MinX; Y=[double]$op.MinY;
-                Width=[double]($op.MaxX-$op.MinX); Height=[double]($op.MaxY-$op.MinY) }
+        if (!$op.PathCommands) { $missingPaths++; continue }
+        if (Test-RectangularClipPath $op) {
+            $key = '{0}|{1:F3}|{2:F3}|{3:F3}|{4:F3}' -f $op.PageNumber,$op.MinX,$op.MinY,$op.MaxX,$op.MaxY
+            if ($seen.Add($key)) {
+                [pscustomobject]@{ Key=$key; Page=$op.PageNumber; X=[double]$op.MinX; Y=[double]$op.MinY;
+                    Width=[double]($op.MaxX-$op.MinX); Height=[double]($op.MaxY-$op.MinY) }
+            }
         }
-    }
+    })
+    [pscustomobject]@{ Rectangles=$rectangles; MissingPaths=$missingPaths }
 }
-$reference = @(Read-CellClips $ReferenceGraphics)
-$candidate = @(Read-CellClips $CandidateGraphics)
+$referenceClips = Read-CellClips $ReferenceGraphics
+$candidateClips = Read-CellClips $CandidateGraphics
+$reference = $referenceClips.Rectangles
+$candidate = $candidateClips.Rectangles
 $cells = @(for ($pageIndex=0; $pageIndex -lt $layout.Pages.Count; $pageIndex++) {
     foreach ($row in @($layout.Pages[$pageIndex].TableRows)) {
         foreach ($cell in @($row.Cells)) {
@@ -98,6 +130,8 @@ $matched=@($results|Where-Object Status -eq 'MatchedSourceCellClip')
     Method='Supplemental effective source clip dimensions and translation mapping; does not alter gates or tolerances'
     SourceCellCount=$cells.Count; MatchedCellCount=$matched.Count; UnresolvedCellCount=$cells.Count-$matched.Count
     CandidateRectangularClipCount=$candidate.Count; ReferenceRectangularClipCount=$reference.Count
+    CandidateClipCountWithoutPathCommands=$candidateClips.MissingPaths
+    ReferenceClipCountWithoutPathCommands=$referenceClips.MissingPaths
     UnclassifiedCandidateClipCount=$candidate.Count-$usedCandidate.Count
     UnclassifiedReferenceClipCount=$reference.Count-$usedReference.Count
     MaxMatchedBoundsDelta=if($matched.Count){($matched.MaxBoundsDelta|Measure-Object -Maximum).Maximum}else{$null}
