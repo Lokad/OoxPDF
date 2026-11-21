@@ -368,13 +368,7 @@ internal static class DocxPageMarkupTests
 
     public static void DocxMarkupReserveMarginKeepsRightLaneOnMirroredEvenPages()
     {
-        string input = Path.GetFullPath(Path.Combine(
-            AppContext.BaseDirectory,
-            "..",
-            "..",
-            "..",
-            "Cases",
-            "docx-markup-margin-mirrored.docx"));
+        string input = TestFixtures.PublicCasePath("docx-markup-margin-mirrored.docx");
         DocxDocument allDocument = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
         var preserveRenderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
         var reserveRenderer = new DocxRenderer(
@@ -383,8 +377,7 @@ internal static class DocxPageMarkupTests
             markupGeometryMode: OoxPdfDocxMarkupGeometryMode.ReserveMarkupMargin);
 
         DocxLayoutSnapshot preserveLayout = preserveRenderer.InspectLayout(allDocument);
-        DocxLayoutSnapshot reserveLayout = reserveRenderer.InspectLayout(allDocument);
-        DocxMarkupBalloonPlacementSnapshot[] placements = reserveRenderer.InspectMarkupBalloons(allDocument).ToArray();
+        var (reserveLayout, _, _, placements) = reserveRenderer.InspectAsync(allDocument).AsTask().GetAwaiter().GetResult();
 
         TestAssert.True(allDocument.Settings.MirrorMargins == true, "The mirrored-margin fixture should expose the modeled document setting.");
         TestAssert.True(reserveLayout.Pages.Count >= 2, "The mirrored-margin fixture should cover odd and even pages.");
@@ -401,7 +394,7 @@ internal static class DocxPageMarkupTests
 
     public static void DocxWordCompatibleMirroredPagesKeepWrapWidthAndBalloonLane()
     {
-        string input = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "docx-markup-margin-mirrored.docx"));
+        string input = TestFixtures.PublicCasePath("docx-markup-margin-mirrored.docx");
         DocxDocument source = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
         string text = string.Join(" ", Enumerable.Repeat("Identical public paragraph for mirrored review wrapping.", 8));
         DocxParagraph first = DocxTests.CreateCommentMarkerParagraph(text, "1");

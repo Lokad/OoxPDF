@@ -1866,13 +1866,7 @@ internal static class DocxMarkupTests
 
     public static void DocxWordCompatibleAllMarkupMirrorsReviewLaneBackground()
     {
-        string input = Path.GetFullPath(Path.Combine(
-            AppContext.BaseDirectory,
-            "..",
-            "..",
-            "..",
-            "Cases",
-            "docx-markup-margin-mirrored.docx"));
+        string input = TestFixtures.PublicCasePath("docx-markup-margin-mirrored.docx");
         DocxDocument document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
 
         PdfPage[] pages = new DocxRenderer(

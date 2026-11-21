@@ -912,23 +912,17 @@ internal static partial class DocxCommentsTests
 
     public static void DocxWordCompatibleBalloonsStayRightOnMirroredEvenPages()
     {
-        string input = Path.GetFullPath(Path.Combine(
-            AppContext.BaseDirectory,
-            "..",
-            "..",
-            "..",
-            "Cases",
-            "docx-markup-margin-mirrored.docx"));
+        string input = TestFixtures.PublicCasePath("docx-markup-margin-mirrored.docx");
         DocxDocument document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
         var renderer = new DocxRenderer(
             fontResolver: null,
             markupMode: OoxPdfDocxMarkupMode.AllMarkup,
             markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
 
-        DocxMarkupBalloonPlacementSnapshot[] evenBalloons = renderer.InspectMarkupBalloons(document)
+        var (layout, _, _, balloons) = renderer.InspectAsync(document).AsTask().GetAwaiter().GetResult();
+        DocxMarkupBalloonPlacementSnapshot[] evenBalloons = balloons
             .Where(placement => placement.PageIndex == 1)
             .ToArray();
-        DocxLayoutSnapshot layout = renderer.InspectLayout(document);
 
         TestAssert.True(evenBalloons.Length != 0, "The mirrored fixture should balloon even-page comments.");
         TestAssert.True(
