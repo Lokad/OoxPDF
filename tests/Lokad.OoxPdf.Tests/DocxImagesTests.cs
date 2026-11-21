@@ -1082,7 +1082,7 @@ internal static class DocxImagesTests
         // Textbox content scales with the page like body text (tbxrev probe refutes the
         // unscaled-content reading of the s=1 fixture).
         DocxDocument document = WriteFloatingTextBoxInsetLayoutDocument(new string('X', 21) + " " + new string('Y', 2));
-        var scaled = new DocxTests.ScaledLayoutTextMeasurer(new DocxTests.FamilyWidthTextMeasurer(), 0.842391d, 0.7936d);
+        var scaled = new DocxRenderer.ScaledDocxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer(), 0.842391d, 0.7936d);
         DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
             .Create(document, scaled, CancellationToken.None)
             .FloatingDrawings.Single().TextBoxLayout?.TextLines.ToArray() ?? [];
@@ -1098,7 +1098,7 @@ internal static class DocxImagesTests
         // content out in design space (12pt advances in the unscaled content box) and map it
         // uniformly to emission space, so the layout must measure it raw, not scaled.
         DocxDocument document = WriteFloatingTextBoxInsetLayoutDocument(new string('X', 18));
-        var scaled = new DocxTests.ScaledLayoutTextMeasurer(new DocxTests.FamilyWidthTextMeasurer(), 0.842391d, 0.7936d);
+        var scaled = new DocxRenderer.ScaledDocxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer(), 0.842391d, 0.7936d);
         DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
             .Create(document, scaled, CancellationToken.None, new DocxTests.FamilyWidthTextMeasurer())
             .FloatingDrawings.Single().TextBoxLayout?.TextLines.ToArray() ?? [];
@@ -1112,7 +1112,7 @@ internal static class DocxImagesTests
         // The design-space fork only engages on scaled pages; unit-scale geometry keeps the
         // legacy single-measurer path even when a raw measurer is threaded alongside.
         DocxDocument document = WriteFloatingTextBoxInsetLayoutDocument(new string('X', 18));
-        var scaled = new DocxTests.ScaledLayoutTextMeasurer(new DocxTests.FamilyWidthTextMeasurer(), 0.842391d, 0.7936d);
+        var scaled = new DocxRenderer.ScaledDocxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer(), 0.842391d, 0.7936d);
         DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, 1d)
             .Create(document, scaled, CancellationToken.None, new DocxTests.FamilyWidthTextMeasurer())
             .FloatingDrawings.Single().TextBoxLayout?.TextLines.ToArray() ?? [];
@@ -1175,7 +1175,7 @@ internal static class DocxImagesTests
         {
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
-        var scaled = new DocxTests.ScaledLayoutTextMeasurer(new DocxTests.FamilyWidthTextMeasurer(), printScale, 0.7936d);
+        var scaled = new DocxRenderer.ScaledDocxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer(), printScale, 0.7936d);
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, printScale)
             .Create(document, scaled, CancellationToken.None, new DocxTests.FamilyWidthTextMeasurer());
         DocxFloatingDrawingLayout drawing = layout.FloatingDrawings.Single();
@@ -1306,7 +1306,7 @@ internal static class DocxImagesTests
         {
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
-        var scaled = new DocxTests.ScaledLayoutTextMeasurer(new DocxTests.FamilyWidthTextMeasurer(), printScale, 0.7936d);
+        var scaled = new DocxRenderer.ScaledDocxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer(), printScale, 0.7936d);
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, printScale)
             .Create(document, scaled, CancellationToken.None);
         DocxInlineTextBoxLayout box = layout.Pages[0].Items.OfType<DocxInlineTextBoxLayout>().Single();
@@ -1350,7 +1350,7 @@ internal static class DocxImagesTests
         {
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
-        var scaled = new DocxTests.ScaledLayoutTextMeasurer(new DocxTests.FamilyWidthTextMeasurer(), printScale, 0.7936d);
+        var scaled = new DocxRenderer.ScaledDocxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer(), printScale, 0.7936d);
         DocxTableCellLayout cellLayout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, printScale)
             .Create(document, scaled, CancellationToken.None)
             .Pages.Single()
@@ -1409,7 +1409,7 @@ internal static class DocxImagesTests
         {
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
-        var scaled = new DocxTests.ScaledLayoutTextMeasurer(new DocxTests.FamilyWidthTextMeasurer(), printScale, 0.7936d);
+        var scaled = new DocxRenderer.ScaledDocxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer(), printScale, 0.7936d);
         DocxTableCellLayout cellLayout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, printScale)
             .Create(document, scaled, CancellationToken.None)
             .Pages.Single()

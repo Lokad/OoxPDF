@@ -21,7 +21,7 @@ internal static partial class DocxInlineCompositionTests
                 { Paragraphs = [], BodyElements = [new DocxTableElement(table)] }], null)]);
             var source = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
             var natural = new DocxTests.FamilyWidthTextMeasurer();
-            var measurer = new DocxTests.ScaledLayoutTextMeasurer(natural, scale, scale);
+            var measurer = new DocxRenderer.ScaledDocxTextMeasurer(natural, scale, scale);
             var layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, wordCompatiblePrintScale: scale)
                 .Create(source, measurer, default, unscaledTextMeasurer: natural);
             var lines = layout.Pages.SelectMany(page => NestedMathRows(page.Items.OfType<DocxTableRowLayout>()))

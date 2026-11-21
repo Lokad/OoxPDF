@@ -2014,36 +2014,29 @@ internal static class DocxTests
         }
     }
 
-    // Mirrors the production scaled measurer (advances times the layout scale, line metrics
-    // times the fitted compromise) so Word-compatible layout tests model production instead of
-    // pairing raw advances with scaled table geometry (W6-a1).
-    internal sealed class ScaledLayoutTextMeasurer(IDocxTextMeasurer inner, double textScale, double lineMetricScale) : IDocxTextMeasurer, IDocxLineMetricsProvider, IDocxStaticTextMetricsProvider
+    public static void DocxScaledMeasurerPreservesDesignInsetAndScalesAdvances()
     {
-        public double MeasureText(DocxTextRun? run, string text, double fontSize)
-        {
-            return inner.MeasureText(run, text, fontSize) * textScale;
-        }
+        var typographic = new DocxRenderer.ScaledDocxTextMeasurer(new TypographicMetricProbe(), .75d, .5d);
+        TestAssert.Equal(22.5d, typographic.MeasureText(null, "abc", 10d));
+        TestAssert.True(typographic.UseTypographicMetrics(null), "Scale must preserve the face's typographic opt-in.");
+        TestAssert.Equal(3.25d, typographic.MeasureTypographicBaselineInset(null, 10d));
+        TestAssert.Equal(7d, typographic.MeasureTypographicLineHeight(null, 10d));
 
-        public double MeasureSingleLineHeight(DocxTextRun? run, double fontSize)
-        {
-            return inner is IDocxLineMetricsProvider lineMetrics
-                ? lineMetrics.MeasureSingleLineHeight(run, fontSize) * lineMetricScale
-                : fontSize * 1.2d * lineMetricScale;
-        }
+        var advanceOnly = new DocxTextWrapTests.ProfilingMeasurer((_, text) => text.Length * 10d);
+        var fallback = new DocxRenderer.ScaledDocxTextMeasurer(advanceOnly, .75d, .5d);
+        TestAssert.Equal(22.5d, fallback.MeasureText(null, "abc", 10d));
+        TestAssert.True(!fallback.UseTypographicMetrics(null), "An advance-only provider retains non-typographic fallback.");
+        TestAssert.Equal(6d, fallback.MeasureSingleLineHeight(null, 10d));
+        TestAssert.Equal(5d, fallback.MeasureWindowsAscender(null, 10d));
+        TestAssert.Equal(1d, fallback.MeasureWindowsDescender(null, 10d));
+    }
 
-        public double MeasureWindowsAscender(DocxTextRun? run, double fontSize)
-        {
-            return inner is IDocxStaticTextMetricsProvider staticMetrics
-                ? staticMetrics.MeasureWindowsAscender(run, fontSize) * lineMetricScale
-                : fontSize * lineMetricScale;
-        }
-
-        public double MeasureWindowsDescender(DocxTextRun? run, double fontSize)
-        {
-            return inner is IDocxStaticTextMetricsProvider staticMetrics
-                ? staticMetrics.MeasureWindowsDescender(run, fontSize) * lineMetricScale
-                : fontSize * 0.2d * lineMetricScale;
-        }
+    private sealed class TypographicMetricProbe : IDocxTextMeasurer, IDocxTypographicMetricsProvider
+    {
+        public double MeasureText(DocxTextRun? run, string text, double fontSize) => text.Length * fontSize;
+        public bool UseTypographicMetrics(DocxTextRun? run) => true;
+        public double MeasureTypographicBaselineInset(DocxTextRun? run, double fontSize) => 3.25d;
+        public double MeasureTypographicLineHeight(DocxTextRun? run, double fontSize) => 14d;
     }
 
     internal sealed class FractionalLineHeightTextMeasurer : IDocxTextMeasurer, IDocxLineMetricsProvider, IDocxStaticTextMetricsProvider

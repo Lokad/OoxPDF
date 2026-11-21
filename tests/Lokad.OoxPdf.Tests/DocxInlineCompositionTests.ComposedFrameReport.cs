@@ -19,7 +19,7 @@ internal static partial class DocxInlineCompositionTests
                 paragraphs.Select(paragraph => (DocxBodyElement)new DocxParagraphElement(paragraph)).ToArray(), paragraphs, []);
             var measurer = new DocxTests.FamilyWidthTextMeasurer();
             var layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, scale)
-                .Create(document, new DocxTests.ScaledLayoutTextMeasurer(measurer, scale, scale), default, measurer,
+                .Create(document, new DocxRenderer.ScaledDocxTextMeasurer(measurer, scale, scale), default, measurer,
                     footerFrameBottomDisplacementByPage: new Dictionary<int, double> { [0] = reserve });
             // The160pt source body becomes80/120pt. A measured footer's10/20pt
             // reserve is already printed geometry, independent of that scale.

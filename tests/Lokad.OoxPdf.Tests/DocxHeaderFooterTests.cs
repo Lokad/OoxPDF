@@ -1792,7 +1792,7 @@ internal static partial class DocxHeaderFooterTests
         };
         DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)], [body], []);
         var raw = new DocxTests.FamilyWidthTextMeasurer();
-        var scaled = new DocxTests.ScaledLayoutTextMeasurer(raw, 0.76d, 0.79359971328d);
+        var scaled = new DocxRenderer.ScaledDocxTextMeasurer(raw, 0.76d, 0.79359971328d);
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, 0.76d).Create(document, scaled, CancellationToken.None, raw);
         DocxTextLineLayout[] headerLines = layout.Pages[0].StaticTextLines.Where(line => line.Story?.Kind == DocxStoryKind.Header).ToArray();
         TestAssert.Equal(2, headerLines.Length);

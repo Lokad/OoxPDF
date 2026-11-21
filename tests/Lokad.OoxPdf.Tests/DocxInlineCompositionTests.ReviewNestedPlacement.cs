@@ -60,7 +60,7 @@ internal static partial class DocxInlineCompositionTests
             }
             var source = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
             var natural = new DocxTests.FamilyWidthTextMeasurer();
-            var measured = new DocxTests.ScaledLayoutTextMeasurer(natural, scale, scale);
+            var measured = new DocxRenderer.ScaledDocxTextMeasurer(natural, scale, scale);
             var layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, wordCompatiblePrintScale: scale)
                 .Create(source, measured, default, unscaledTextMeasurer: natural, mathEquations: math);
             var rows = NestedMathRows(layout.Pages.Single().Items.OfType<DocxTableRowLayout>()).ToArray();

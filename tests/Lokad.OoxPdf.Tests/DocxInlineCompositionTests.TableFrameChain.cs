@@ -67,7 +67,7 @@ internal static partial class DocxInlineCompositionTests
             var natural = new DocxTests.FamilyWidthTextMeasurer();
             var final = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(source, natural, default).Pages.Single();
             var review = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, wordCompatiblePrintScale: scale)
-                .Create(source, new DocxTests.ScaledLayoutTextMeasurer(natural, scale, scale), default,
+                .Create(source, new DocxRenderer.ScaledDocxTextMeasurer(natural, scale, scale), default,
                     unscaledTextMeasurer: natural).Pages.Single();
             var before = final.Items.OfType<DocxTableRowLayout>().ToArray();
             var after = review.Items.OfType<DocxTableRowLayout>().ToArray();

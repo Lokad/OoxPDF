@@ -34,7 +34,7 @@ internal static class DocxTableMathTests
             };
             DocxLayout Layout(DocxDocument source, double factor) => new DocxLayoutEngine(
                 OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, factor).Create(source,
-                    new DocxTests.ScaledLayoutTextMeasurer(measurer, factor, factor), default, measurer);
+                    new DocxRenderer.ScaledDocxTextMeasurer(measurer, factor, factor), default, measurer);
             var design = Layout(document, 1d).Pages.Single();
             var mapped = Layout(document, scale).Pages.Single();
             TestAssert.Equal(2, mapped.StaticTextLines.Count);
@@ -404,7 +404,7 @@ internal static class DocxTableMathTests
             DocxDocument document = DocxTests.CreateLayoutTestDocument(
                 [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Body.", 10d, 10d))], []) with { PageSettings = settings };
             DocxLayout Layout(double height) => new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, scale)
-                .Create(document, new DocxTests.ScaledLayoutTextMeasurer(measurer, scale, scale), default, measurer,
+                .Create(document, new DocxRenderer.ScaledDocxTextMeasurer(measurer, scale, scale), default, measurer,
                     mathEquations: new Dictionary<DocxEquation, DocxPreparedMathParagraph>(ReferenceEqualityComparer.Instance)
                     { [paragraph.Equations.Single()] = prepared with { LineHeight = height } });
             DocxLayout a = Layout(20d), z = Layout(30d);
@@ -447,7 +447,7 @@ internal static class DocxTableMathTests
                 DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Body.", 10d, 10d))], []);
             document = document with { PageSettings = settings };
             DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, .75d)
-                .Create(document, new DocxTests.ScaledLayoutTextMeasurer(measurer, .75d, .75d), default,
+                .Create(document, new DocxRenderer.ScaledDocxTextMeasurer(measurer, .75d, .75d), default,
                     guard == "missing-metrics" ? null : measurer,
                     mathEquations: guard == "unprepared-math" ? null :
                         new Dictionary<DocxEquation, DocxPreparedMathParagraph>(ReferenceEqualityComparer.Instance) { [paragraph.Equations.Single()] = prepared });
@@ -480,7 +480,7 @@ internal static class DocxTableMathTests
             DocxDocument document = DocxTests.CreateLayoutTestDocument(
                 [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Body.", 10d, 10d))], []) with { PageSettings = settings };
             DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, .75d)
-                .Create(document, new DocxTests.ScaledLayoutTextMeasurer(measurer, .75d, .75d), default, measurer);
+                .Create(document, new DocxRenderer.ScaledDocxTextMeasurer(measurer, .75d, .75d), default, measurer);
             var line = layout.Pages.Single().StaticTextLines.Single();
             TestAssert.True(line.StaticStoryUsesPhysicalY, "Supported ordered alignment keeps the physical static source frame.");
             positions.Add(line.X);

@@ -69,7 +69,7 @@ internal static partial class DocxInlineCompositionTests
             var final = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
                 .Create(source, natural, default, mathEquations: prepared);
             var review = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, wordCompatiblePrintScale: scale)
-                .Create(source, new DocxTests.ScaledLayoutTextMeasurer(natural, scale, scale), default,
+                .Create(source, new DocxRenderer.ScaledDocxTextMeasurer(natural, scale, scale), default,
                     unscaledTextMeasurer: natural, mathEquations: prepared);
             var before = NestedMathRows(final.Pages.Single().Items.OfType<DocxTableRowLayout>()).ToArray();
             var after = NestedMathRows(review.Pages.Single().Items.OfType<DocxTableRowLayout>()).ToArray();

@@ -967,7 +967,7 @@ internal static class DocxTablesMarkupTests
         // W6-a1: the Word-compatible engine models production with scaled advances and line
         // metrics (0.842391 default print scale, 0.7936 fitted line compromise).
         DocxTableRowLayout wordOuterRow = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-            .Create(document, new DocxTests.ScaledLayoutTextMeasurer(new DocxTests.FamilyWidthTextMeasurer(), 0.842391d, 0.7936d), CancellationToken.None)
+            .Create(document, new DocxRenderer.ScaledDocxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer(), 0.842391d, 0.7936d), CancellationToken.None)
             .Pages.Single()
             .Items.OfType<DocxTableRowLayout>()
             .Single();
@@ -1059,7 +1059,7 @@ internal static class DocxTablesMarkupTests
         // W6-a1: the Word-compatible engine models production with scaled advances and line
         // metrics (0.842391 default print scale, 0.7936 fitted line compromise).
         DocxLayoutPage page = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-            .Create(document, new DocxTests.ScaledLayoutTextMeasurer(new DocxTests.FamilyWidthTextMeasurer(), 0.842391d, 0.7936d), CancellationToken.None)
+            .Create(document, new DocxRenderer.ScaledDocxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer(), 0.842391d, 0.7936d), CancellationToken.None)
             .Pages
             .Single();
         DocxTableRowLayout outerRow = page.Items.OfType<DocxTableRowLayout>().Single();

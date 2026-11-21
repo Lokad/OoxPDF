@@ -17800,6 +17800,7 @@
     "DocxInlineBoxMathPreparationObservesCancellationBetweenChildren"
   ],
   "docx-printed-footer-reserve": [
+    "DocxScaledMeasurerPreservesDesignInsetAndScalesAdvances",
     "PortableRenderingFooterTableAdmissionKeepsBodyAboveTheCompleteFrame",
     "DocxStaticTableMathOccupiedHeightUsesPreparedCellFrames",
     "DocxStaticTableMathAndPlainFramesMatchIndependentWordAnchors",
