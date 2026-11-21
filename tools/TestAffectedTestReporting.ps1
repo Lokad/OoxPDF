@@ -26,8 +26,10 @@ function dotnet {
     $global:ooxPdfAffectedReportCalls++
     $report=$args[[Array]::IndexOf([object[]]$args,'--report')+1]
     if([IO.Path]::GetFileName($env:TMPDIR) -ne 'temporary-files') {throw 'Runner temp path escaped its output directory'}
-    $scratch=New-Item -ItemType Directory -Path (Join-Path $env:TMPDIR 'nested')
-    [IO.File]::WriteAllText((Join-Path $scratch.FullName 'transient.bin'),'Disposable runner data')
+    if ($global:ooxPdfAffectedReportFault -in @('failed','cleanup-residual','cleanup-link','cleanup-child-link')) {
+        $scratch=New-Item -ItemType Directory -Path (Join-Path $env:TMPDIR 'nested')
+        [IO.File]::WriteAllText((Join-Path $scratch.FullName 'retained.bin'),'Retained runner data')
+    }
     $selection=$args[[Array]::IndexOf([object[]]$args,'--test-set')+1]
     $methods=@(Get-Content -LiteralPath $selection -Raw | ConvertFrom-Json)
     $rows=@(foreach($method in $methods) {
@@ -90,8 +92,12 @@ try {
             if($report.provenance.TemporaryFilesRetained -eq $shouldPass) {throw 'Passing and failed temporary ownership changed'}
         }
         if($global:ooxPdfAffectedReportCalls -gt 0 -and
-            (Test-Path -LiteralPath (Join-Path $output 'temporary-files/nested/transient.bin')) -eq $shouldPass) {
-            throw 'Disposable data cleanup did not follow the complete passing gate'
+            (Test-Path -LiteralPath (Join-Path $output 'temporary-files')) -eq $shouldPass) {
+            throw 'The empty outer directory cleanup did not follow the complete passing gate'
+        }
+        if($case -eq 'failed' -and
+            !(Test-Path -LiteralPath (Join-Path $output 'temporary-files/nested/retained.bin') -PathType Leaf)) {
+            throw 'Failed runner scratch did not survive qualification'
         }
         $checks+=@{Case=$case;GatePassed=$shouldPass;Error=$caught;ReportRetained=$retained}
     }
@@ -213,7 +219,7 @@ try {
     }
     finally {[Environment]::SetEnvironmentVariable('OOXPDF_TEST_CLI_ASSEMBLY', $(if ($null -eq $priorCli) {[NullString]::Value} else {$priorCli}))}
 
-    foreach($case in @('temp-existing','temp-linked-output','cleanup-link','cleanup-child-link')) {
+    foreach($case in @('temp-existing','temp-linked-output','cleanup-link','cleanup-child-link','cleanup-residual')) {
         $global:ooxPdfAffectedReportFault=$case
         $global:ooxPdfAffectedReportCalls=0
         $directory=Join-Path $root $case
@@ -232,13 +238,18 @@ try {
         $caught=$null
         try {& (Join-Path $PSScriptRoot 'RunDocxAffectedTests.ps1') -RunnerPath $runner -OutputDirectory $output -TestFilter ReportAlpha *> (Join-Path $directory 'run.log')}
         catch {$caught=$_.Exception.Message}
-        if($case -in @('cleanup-link','cleanup-child-link')) {
+        if($case -in @('cleanup-link','cleanup-child-link','cleanup-residual')) {
             $report=Get-Content -LiteralPath (Join-Path $output 'affected-tests.json') -Raw | ConvertFrom-Json
             $rootLink=$case -eq 'cleanup-link'
-            if($caught -or !$report.provenance.GatePassed -or $report.provenance.TemporaryFilesRetained -ne $rootLink -or
-                [bool]$report.provenance.TemporaryCleanupError -ne $rootLink -or $global:ooxPdfAffectedReportCalls -ne 1 -or
+            $retained=Join-Path $output $(if ($rootLink) {'temporary-files.retained'} else {'temporary-files'})
+            if($caught -or !$report.provenance.GatePassed -or !$report.provenance.TemporaryFilesRetained -or
+                !$report.provenance.TemporaryCleanupError -or $global:ooxPdfAffectedReportCalls -ne 1 -or
+                [IO.File]::ReadAllText((Join-Path $retained 'nested/retained.bin')) -ne 'Retained runner data') {
+                throw 'The wrapper lost runner scratch or changed the passing result'
+            }
+            if ($case -ne 'cleanup-residual' -and
                 [IO.File]::ReadAllText((Join-Path $output 'unowned-target/keep.txt')) -ne 'Keep this target') {
-                throw 'Cleanup refusal lost results or changed the unowned target'
+                throw 'The wrapper changed the unowned link target'
             }
         }
         else {

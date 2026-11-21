@@ -214,7 +214,8 @@ if ($inventory.GatePassed -and $inventory.TemporaryFilesRetained) {
         $owned = [IO.Path]::GetFullPath($temporaryDirectory)
         if ([IO.Path]::GetDirectoryName($owned) -cne $output) { throw 'Temporary storage escaped its declared output directory.' }
         Assert-PhysicalDirectory $owned
-        Remove-Item -LiteralPath $owned -Recurse -Force
+        # The console runner owns test files and may deliberately retain them.
+        [IO.Directory]::Delete($owned, $false)
         $inventory.TemporaryFilesRetained = $false
     }
     catch {
