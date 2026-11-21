@@ -1119,7 +1119,9 @@ internal static class PptxChartRenderingTests
         System.Reflection.MethodInfo buildPieSlices = typeof(PptxRenderer).GetMethod(
             "BuildChartIndexedPieSlices",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected indexed pie-slice builder.");
-        object[] pieSlices = (((System.Collections.IEnumerable?)buildPieSlices.Invoke(null, [vector])) ?? throw new InvalidOperationException("Expected indexed pie slices.")).Cast<object>().ToArray();
+        object?[] pieArguments = [vector, null];
+        object[] pieSlices = (((System.Collections.IEnumerable?)buildPieSlices.Invoke(null, pieArguments)) ?? throw new InvalidOperationException("Expected indexed pie slices.")).Cast<object>().ToArray();
+        TestAssert.Equal(1, (int)pieArguments[1]!);
         TestAssert.True(pieSlices.Length == 1, "Expected stale positive cache value to remain an active pie slice.");
         object slicePoint = pieSlices[0].GetType().GetProperty("Point")?.GetValue(pieSlices[0]) ?? throw new InvalidOperationException("Expected pie slice to preserve its active point record.");
         object sliceWorkbookPoint = pieSlices[0].GetType().GetProperty("WorkbookPoint")?.GetValue(pieSlices[0]) ?? throw new InvalidOperationException("Expected pie slice to preserve matching workbook sidecar point.");
