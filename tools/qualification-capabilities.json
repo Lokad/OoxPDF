@@ -4661,6 +4661,7 @@
     "XrefTablePointsAtObjectHeaders"
   ],
   "pptx-bubble-measured-geometry": [
+    "PptxSparsePointSeriesKeepAuthoredLabelsLinksAndPaint",
     "PptxBubbleLegendWhitespaceKeepsMeasuredInkCenter",
     "PptxBubbleMeasured",
     "PptxBubbleSubunit",
@@ -4764,6 +4765,7 @@
     "PptxSyntheticChartValueAxisReversedOrientationInvertsLineGeometry"
   ],
   "pptx-scatter-intervals": [
+    "PptxSparsePointSeriesKeepAuthoredLabelsLinksAndPaint",
     "PptxScatterAndBubbleIntervalsUseAuthoredMinima",
     "PptxScatterAndBubbleMarksAndGridsShareSourceIntervals",
     "PptxScatterIntervalPolicyKeepsSceneAuthorityAndFallbacks",

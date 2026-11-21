@@ -97,6 +97,8 @@ internal sealed partial class PptxRenderer
         {
             for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
             {
+                IReadOnlyList<ScatterPoint> sourcePoints = series[seriesIndex].Points;
+                if (sourcePoints.Count == 0) continue;
                 ChartSeriesFill fill = ChartSeriesColor(theme, colorMap, chartPalette, seriesIndex, seriesFills, 1d);
                 // Unstyled scatter connects share the line-chart 2.25pt default width
                 // (Office smooth connects render 2.25); marker
@@ -114,8 +116,8 @@ internal sealed partial class PptxRenderer
                 ChartSeriesStroke scatterStroke = defaultSeriesStroke ? stroke with { Cap = stroke.Cap ?? 1, Join = stroke.Join ?? 1, Color = ApplyUnstyledLineStrokeTint(stroke.Color) } : stroke;
                 SetChartStroke(graphics, scatterStroke);
                 graphics.SetFillRgb(fill.Color.Red, fill.Color.Green, fill.Color.Blue);
-                var points = new List<(double X, double Y)>(series[seriesIndex].Points.Count);
-                foreach (ScatterPoint point in series[seriesIndex].Points)
+                var points = new List<(double X, double Y)>(sourcePoints.Count);
+                foreach (ScatterPoint point in sourcePoints)
                 {
                     (double pointX, double pointY, _) = ResolveScatterPointGeometry(plotBox, point, bubble, xExtents, yExtents, maxBubbleSize, xAxisOptions.Reversed, yAxisOptions.Reversed, bubbleSizing);
                     points.Add((pointX, pointY));
@@ -126,7 +128,7 @@ internal sealed partial class PptxRenderer
                     StrokeScatterChartPathInPlotClip(graphics, plotBox, points, IsSmoothSeries(seriesIndex, smoothSeries));
                 }
 
-                foreach (ScatterPoint point in series[seriesIndex].Points)
+                foreach (ScatterPoint point in sourcePoints)
                 {
                     (double pointX, double pointY, double radius) = ResolveScatterPointGeometry(plotBox, point, bubble, xExtents, yExtents, maxBubbleSize, xAxisOptions.Reversed, yAxisOptions.Reversed, bubbleSizing);
                     if (bubble)

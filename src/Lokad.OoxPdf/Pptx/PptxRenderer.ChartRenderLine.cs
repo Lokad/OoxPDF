@@ -811,13 +811,20 @@ internal sealed partial class PptxRenderer
             return 0d;
         }
 
-        if (ReadSceneSeriesLineHidden(plot).Any(hidden => hidden))
+        var hiddenLines = ReadSceneSeriesLineHidden(plot);
+        if (hiddenLines.Any(hidden => hidden))
         {
             return 0d;
         }
 
-        var measured = MeasureScatterChartExtents(ReadSceneScatterSeries(plot, readBubbleSize: false, workbook: workbook, plotVisibleOnly: plotVisibleOnly),
-            ReadSceneChartScatterOptions(plot), ReadSceneSeriesLineHidden(plot), fontResolver?.CancellationToken ?? default);
+        var series = ReadSceneScatterSeries(plot, readBubbleSize: false, workbook: workbook, plotVisibleOnly: plotVisibleOnly);
+        if (series.Count == 0)
+        {
+            return 0d;
+        }
+
+        var measured = MeasureScatterChartExtents(series,
+            ReadSceneChartScatterOptions(plot), hiddenLines, fontResolver?.CancellationToken ?? default);
         var (xExtents, xOptions) = ReadChartPointValueAxisScale( xValueAxis, measured.DataX, measured.PathX, bubble: false, horizontal: true, scatterXTickTargetCount);
         ChartTextStyle style = ReadSceneChartTextStyle(theme, sceneChart, xValueAxis.SceneAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
         var measurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);

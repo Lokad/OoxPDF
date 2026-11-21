@@ -73,6 +73,7 @@ internal sealed partial class PptxRenderer
         for (int seriesIndex = 0; seriesIndex < denseValueSeries.Count; seriesIndex++)
         {
             IReadOnlyList<double?> values = denseValueSeries[seriesIndex];
+            ChartDataLabelOptions seriesOptions = ResolveChartDataLabelOptionsForSeries(labelOptions, seriesLabelOptions, seriesIndex);
             for (int i = 0; i < values.Count; i++)
             {
                 context.CancellationToken.ThrowIfCancellationRequested();
@@ -96,7 +97,7 @@ internal sealed partial class PptxRenderer
                     pointY = (span.LowerY + span.UpperY) / 2d;
                     if (areaLower is not null) areaLower[i] = span.UpperValue;
                 }
-                ChartDataLabelOptions effectiveOptions = ResolveChartDataLabelOptions(ResolveChartDataLabelOptionsForSeries(labelOptions, seriesLabelOptions, seriesIndex), i);
+                ChartDataLabelOptions effectiveOptions = ResolveChartDataLabelOptions(seriesOptions, i);
                 if (!effectiveOptions.HasVisibleText)
                 {
                     continue;

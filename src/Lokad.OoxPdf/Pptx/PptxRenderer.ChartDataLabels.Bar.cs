@@ -61,7 +61,7 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<ChartSeriesFill?> seriesFills,
         IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills,
         ChartDataLabelOptions labelOptions,
-        IReadOnlyList<ChartDataLabelOptions> seriesLabelOptions,
+        ChartDataLabelOptions[] seriesLabelOptions,
         ChartIndexedTextVector categoryLabels,
         IReadOnlyList<ChartSeriesNameRecord> seriesNames,
         PresentationFontResolver? fontResolver,
@@ -87,6 +87,14 @@ internal sealed partial class PptxRenderer
         if (denseValueSeries.Count == 0)
         {
             return;
+        }
+
+        // The caller supplies a fresh array for this paint. Resolve its series
+        // before the category-major loop so each stack keeps its paint order.
+        for (int index = 0; index < Math.Min(denseValueSeries.Count, seriesLabelOptions.Length); index++)
+        {
+            context.CancellationToken.ThrowIfCancellationRequested();
+            seriesLabelOptions[index] = ResolveChartDataLabelOptionsForSeries(labelOptions, seriesLabelOptions, index);
         }
 
         // A lone point-styled series uses category keys even without variation.
@@ -150,7 +158,8 @@ internal sealed partial class PptxRenderer
                         ? ChartValueToPlotCoordinate(extents, barBase, plotBox.X, plotBox.Width, valueAxisReversed)
                         : originX;
                     double barEndX = ChartValueToPlotCoordinate(extents, barEnd, plotBox.X, plotBox.Width, valueAxisReversed);
-                    ChartDataLabelOptions effectiveOptions = ResolveChartDataLabelOptions(ResolveChartDataLabelOptionsForSeries(labelOptions, seriesLabelOptions, seriesIndex), category);
+                    ChartDataLabelOptions effectiveOptions = ResolveChartDataLabelOptions(
+                        seriesIndex < seriesLabelOptions.Length ? seriesLabelOptions[seriesIndex] : labelOptions, category);
                     if (!effectiveOptions.HasVisibleText)
                     {
                         continue;
@@ -269,7 +278,8 @@ internal sealed partial class PptxRenderer
                     // their category anchor must belong to the plot interval.
                     if (!stacked && (columnCenterX < plotBox.X - PptxChartMetricRules.AxisValueEpsilon ||
                         columnCenterX > plotBox.X + plotBox.Width + PptxChartMetricRules.AxisValueEpsilon)) continue;
-                    ChartDataLabelOptions effectiveOptions = ResolveChartDataLabelOptions(ResolveChartDataLabelOptionsForSeries(labelOptions, seriesLabelOptions, seriesIndex), category);
+                    ChartDataLabelOptions effectiveOptions = ResolveChartDataLabelOptions(
+                        seriesIndex < seriesLabelOptions.Length ? seriesLabelOptions[seriesIndex] : labelOptions, category);
                     if (!effectiveOptions.HasVisibleText)
                     {
                         continue;

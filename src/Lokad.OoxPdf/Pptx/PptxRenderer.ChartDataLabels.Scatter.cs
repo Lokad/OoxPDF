@@ -45,11 +45,13 @@ internal sealed partial class PptxRenderer
         List<ChartTextRunLink>? labelLinks = chart?.Relationships is null ? null : new List<ChartTextRunLink>();
         for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
         {
-            foreach (ScatterPoint point in series[seriesIndex].Points)
+            context.CancellationToken.ThrowIfCancellationRequested();
+            IReadOnlyList<ScatterPoint> points = series[seriesIndex].Points;
+            if (points.Count == 0) continue;
+            ChartDataLabelOptions seriesOptions = ResolveChartDataLabelOptionsForSeries(labelOptions, seriesLabelOptions, seriesIndex);
+            foreach (ScatterPoint point in points)
             {
-                ChartDataLabelOptions effectiveOptions = ResolveChartDataLabelOptions(
-                    ResolveChartDataLabelOptionsForSeries(labelOptions, seriesLabelOptions, seriesIndex),
-                    point.Index);
+                ChartDataLabelOptions effectiveOptions = ResolveChartDataLabelOptions(seriesOptions, point.Index);
                 if (!effectiveOptions.HasVisibleText)
                 {
                     continue;

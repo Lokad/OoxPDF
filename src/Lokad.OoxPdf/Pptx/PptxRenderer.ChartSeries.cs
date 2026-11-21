@@ -321,10 +321,11 @@ internal sealed partial class PptxRenderer
 
     private static IReadOnlyList<ScatterSeries> ReadSceneScatterSeries(PptxSceneChartPlot plot, bool readBubbleSize, ChartWorkbookData? workbook, bool plotVisibleOnly)
     {
-        return ReadSceneScatterSeriesVectors(plot, readBubbleSize, workbook, plotVisibleOnly)
+        ScatterSeries[] series = ReadSceneScatterSeriesVectors(plot, readBubbleSize, workbook, plotVisibleOnly)
             .Select(BuildScatterSeries)
-            .Where(series => series.Points.Count != 0)
             .ToArray();
+        // Styles, labels and smoothing use the same source series positions.
+        return series.Any(item => item.Points.Count != 0) ? series : [];
     }
 
     private static IReadOnlyList<ChartIndexedScatterSeries> ReadSceneScatterSeriesVectors(PptxSceneChartPlot plot, bool readBubbleSize, ChartWorkbookData? workbook, bool plotVisibleOnly)

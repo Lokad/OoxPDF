@@ -481,7 +481,7 @@ internal sealed partial class PptxRenderer
             independentPoints: plot.Kind is "pieChart" or "doughnutChart");
     }
 
-    private static IReadOnlyList<ChartDataLabelOptions> ReadSceneSeriesDataLabelOptions(PptxSceneChart sceneChart, PptxSceneChartPlot plot)
+    private static ChartDataLabelOptions[] ReadSceneSeriesDataLabelOptions(PptxSceneChart sceneChart, PptxSceneChartPlot plot)
     {
         PptxSceneChartTextStyleOverride defaults = PptxSceneBuilder.ResolveChartElementTextStyleOverride(sceneChart, default, "dataLabel");
         return plot.Series
