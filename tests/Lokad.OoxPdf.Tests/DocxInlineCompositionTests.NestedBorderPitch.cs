@@ -32,17 +32,19 @@ internal static partial class DocxInlineCompositionTests
 
     public static void DocxInlineCompositionNestedBorderPitchScalesRowsAndSourceFlowAcrossCompetingCells()
     {
+        var seed = DocxTests.ReadDocx(TestFixtures.PublicCasePath("CompositionProbes/mixed-nested-cell-inside.docx"),
+            OoxPdfDocxMarkupMode.Final);
+        var mathCell = seed.Tables[0].Rows[0].Cells[0].BodyElements.OfType<DocxTableElement>().Single().Table.Rows[0].Cells[0];
+        var prepared = DocxMathParagraphPolicy.EnumeratePreparationCandidates(seed, default)
+            .SelectMany(paragraph => paragraph.Equations).ToDictionary(equation => equation,
+                equation => new DocxPreparedMathParagraph(equation, new(18d, 20d, 8d, []), 28d, 36d));
+
         foreach (double size in new[] { 9d, 12d, 17d })
         foreach (double scale in new[] { .5d, .75d, .9d })
         foreach (bool minimum in new[] { false, true })
         foreach (bool tallNeighbor in new[] { false, true })
         foreach (string borderSize in new[] { "4", "16" })
         {
-            var seed = ReadMutation("CompositionProbes/mixed-nested-cell-inside", OoxPdfDocxMarkupMode.Final, false, false);
-            var mathCell = seed.Tables[0].Rows[0].Cells[0].BodyElements.OfType<DocxTableElement>().Single().Table.Rows[0].Cells[0];
-            var prepared = DocxMathParagraphPolicy.EnumeratePreparationCandidates(seed, default)
-                .SelectMany(paragraph => paragraph.Equations).ToDictionary(equation => equation,
-                    equation => new DocxPreparedMathParagraph(equation, new(18d, 20d, 8d, []), 28d, 36d));
             var borders = new[] { "top", "bottom", "left", "right" }.Select(edge =>
                 new DocxTableCellBorder(edge, "single", "000000", borderSize)).ToArray();
             DocxParagraph Prose(string text) => DocxTests.CreateDocxLayoutParagraph(text, size, size) with { LineSpacingPoints = null };
