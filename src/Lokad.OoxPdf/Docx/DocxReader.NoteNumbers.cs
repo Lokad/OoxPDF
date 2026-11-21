@@ -46,36 +46,48 @@ internal sealed partial class DocxReader
     }
 
     private static IReadOnlyDictionary<XElement, DocxNoteReferenceSection> ResolveSectionNoteReferenceSettings(
-        XDocument document, DocxDocumentSettings settings, DocxDocumentSettings fallback)
+        XDocument document, DocxDocumentSettings settings, DocxDocumentSettings fallback,
+        OoxPdfDocxMarkupMode markupMode, CancellationToken cancellationToken)
     {
         var result = new Dictionary<XElement, DocxNoteReferenceSection>();
         var word = Ooxml.OoxNamespaces.WordprocessingNamespace;
+        XName sectionName = word + "sectPr";
+        XName sectionChangeName = word + "sectPrChange";
+        XName importedContentName = word + "altChunk";
         XElement? body = document.Root?.Element(word + "body");
-        XElement[] children = body?.Elements().ToArray() ?? [];
-        if (children.Length == 0 || children[^1].Name != word + "sectPr" ||
-            children.Any(e => e.Name != word + "p" && e.Name != word + "tbl" && e.Name != word + "sectPr") ||
-            body!.Descendants().Any(e => e.Name == word + "ins" || e.Name == word + "del" ||
-                e.Name == word + "moveFrom" || e.Name == word + "moveTo" || e.Name == word + "sectPrChange"))
+        XElement? terminal = body?.Elements().LastOrDefault();
+        if (body is null || terminal?.Name != sectionName)
         {
             return result;
+        }
+        foreach (XElement element in body.Descendants())
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (DocxSourceXml.IsRevisionContainer(element) || element.Name == sectionChangeName)
+                return result;
         }
 
         var sections = new List<(XElement? First, XElement Properties)>();
         XElement? first = null;
-        foreach (XElement child in children)
+        // Use the same original block owners as body reading through transparent
+        // containers. Unexpanded imports and section history retain the fallback.
+        foreach (var scope in EnumerateRevisionScopedChildren(body.Elements(), markupMode, cancellationToken,
+                     [word + "p", word + "tbl", sectionName, importedContentName]))
         {
-            if (child.Name != word + "sectPr") first ??= child;
-            XElement? properties = child.Name == word + "sectPr" ? child : child.Element(word + "pPr")?.Element(word + "sectPr");
+            XElement child = scope.Element;
+            if (child.Name == importedContentName || child.Name == sectionName && child != terminal)
+                return result;
+
+            if (child.Name != sectionName) first ??= child;
+            XElement? properties = child == terminal ? child : child.Element(word + "pPr")?.Element(sectionName);
             if (properties is not null)
             {
                 sections.Add((first, properties));
                 first = null;
             }
         }
-        // Hidden history, nested/table section properties, or a nonterminal body
-        // section retain the old document-wide fallback rather than guessing scope.
-        if (children.Take(children.Length - 1).Any(e => e.Name == word + "sectPr") ||
-            !document.Descendants(word + "sectPr").SequenceEqual(sections.Select(s => s.Properties)))
+        // A section inside table or otherwise unplaced content has no body owner.
+        if (!document.Descendants(sectionName).SequenceEqual(sections.Select(s => s.Properties)))
         {
             return result;
         }

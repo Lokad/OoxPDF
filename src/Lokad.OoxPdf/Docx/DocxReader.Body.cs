@@ -47,7 +47,8 @@ internal sealed partial class DocxReader
         var inlineReferenceCounters = new DocxNoteReferenceCounters();
         DocxDocumentSettings authoredSettings = documentSettings;
         documentSettings = ResolveSingleSectionNoteReferenceSettings(document, documentSettings);
-        IReadOnlyDictionary<XElement, DocxNoteReferenceSection> noteSections = ResolveSectionNoteReferenceSettings(document, authoredSettings, documentSettings);
+        IReadOnlyDictionary<XElement, DocxNoteReferenceSection> noteSections = ResolveSectionNoteReferenceSettings(
+            document, authoredSettings, documentSettings, markupMode, cancellationToken);
         IEnumerable<XElement> bodyChildren = document.Descendants(WordprocessingNamespace + "body").Elements();
         foreach (var (scopedElement, tableFragments) in EnumerateLogicalTableBlocks(
             bodyChildren, styles, markupMode, cancellationToken))

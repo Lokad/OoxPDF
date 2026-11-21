@@ -168,9 +168,43 @@ internal static partial class DocxFootnotesTests
             (xml, _, _) => SetNoteSection(xml.Descendants(NoteWord + "sectPr").Last(), kind, "decimal", "broken", "eachSect"),
             (xml, _, _) => xml.Descendants(NoteWord + "sectPr").First().Add(new XElement(NoteWord + "sectPrChange", new XElement(NoteWord + "sectPr"))),
             (xml, _, _) => xml.Descendants(NoteWord + "body").Single().Elements(NoteWord + "p").First().Add(new XElement(NoteWord + "ins", new XElement(NoteWord + "r", new XElement(NoteWord + "t", "tracked")))),
+            (xml, _, _) => xml.Descendants(NoteWord + "body").Single().AddFirst(new XElement(NoteWord + "altChunk")),
             (_, settings, _) => settings.Descendants(NoteWord + kind + "Pr").Single().Add(new XElement(NoteWord + "numRestart", new XAttribute(NoteWord + "val", "unrecognized")))
         })
             CheckNoteLabels(ReadSectionNumberingFixture(kind, modify), ["105", "106", "107", "108"]);
+    }
+
+    public static void DocxSectionNoteNumbersKeepVisibleLabelsThroughBlockWrappers()
+    {
+        foreach (string kind in new[] { "footnote", "endnote" })
+        foreach (OoxPdfDocxMarkupMode mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            DocxDocument plain = ReadSectionNumberingFixture(kind, mode: mode);
+            DocxDocument wrapped = ReadSectionNumberingFixture(kind, (xml, _, _) =>
+            {
+                XElement paragraph = xml.Descendants(NoteWord + kind + "Reference")
+                    .ElementAt(2).Ancestors(NoteWord + "p").First();
+                var content = new XElement(NoteWord + "sdtContent");
+                var control = new XElement(NoteWord + "sdt",
+                    new XElement(NoteWord + "sdtPr",
+                        new XElement(NoteWord + "id", new XAttribute(NoteWord + "val", "444")),
+                        new XElement(NoteWord + "richText")), content);
+                paragraph.ReplaceWith(control);
+                content.Add(paragraph);
+            }, mode);
+            CheckNoteLabels(wrapped, ["iv", "v", "09", "10"]);
+
+            var geometry = mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout
+                : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup;
+            var renderer = new DocxRenderer(new TestFaceFontResolver(), mode, geometry);
+            PdfPage[] expected = renderer.RenderPagesAsync(plain, null, default).ToBlockingEnumerable().ToArray();
+            PdfPage[] actual = renderer.RenderPagesAsync(wrapped, null, default).ToBlockingEnumerable().ToArray();
+            TestAssert.Equal(2, actual.Length);
+            TestAssert.True(expected.Select(page => page.Content).SequenceEqual(actual.Select(page => page.Content)),
+                "A block wrapper preserves note markers, prose and pagination.");
+            TestAssert.True(expected.SelectMany(page => page.Annotations).SequenceEqual(actual.SelectMany(page => page.Annotations)),
+                "A block wrapper preserves the four note destinations.");
+        }
     }
 
     public static void DocxSectionNoteNumbersDoNotCountCustomMarks()
