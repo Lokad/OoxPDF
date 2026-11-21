@@ -61,20 +61,22 @@ internal static class PptxAutomaticScaleTests
     public static void PptxAutomaticColumnScaleSeparatesAuthoredPlotPlacement()
     {
         foreach (int height in new[] { 120, 480 })
-        foreach (int innerHeight in new[] { 60, 90 })
         {
-            string layout = ManualLayout(height, innerHeight, "inner");
             double expectedMaximum = Read(Render(height)).Values.Max();
-            var automatic = Read(Render(height, plotLayout: layout));
-            TestAssert.Equal(expectedMaximum, automatic.Values.Max());
-            TestAssert.Equal(4, automatic.Bars.Length);
-            var equivalent = Read(Render(height, declaration: $"<c:min val=\"0\"/><c:max val=\"{expectedMaximum.ToString(CultureInfo.InvariantCulture)}\"/>",
-                major: expectedMaximum == 5d ? "5" : "0.5", plotLayout: layout));
-            TestAssert.True(automatic.Values.SequenceEqual(equivalent.Values),
-                "Later authored inner placement retains every allocated numeric caption, as equivalent declared intervals do.");
-            TestAssert.Equal(4, equivalent.Bars.Length);
-            TestAssert.True(automatic.Bars.Zip(equivalent.Bars).All(pair => Math.Abs(pair.First - pair.Second) < .002d),
-                "Automatic scale and equivalent declared bounds share the admitted rectangle, including frame clamping.");
+            foreach (int innerHeight in new[] { 60, 90 })
+            {
+                string layout = ManualLayout(height, innerHeight, "inner");
+                var automatic = Read(Render(height, plotLayout: layout));
+                TestAssert.Equal(expectedMaximum, automatic.Values.Max());
+                TestAssert.Equal(4, automatic.Bars.Length);
+                var equivalent = Read(Render(height, declaration: $"<c:min val=\"0\"/><c:max val=\"{expectedMaximum.ToString(CultureInfo.InvariantCulture)}\"/>",
+                    major: expectedMaximum == 5d ? "5" : "0.5", plotLayout: layout));
+                TestAssert.True(automatic.Values.SequenceEqual(equivalent.Values),
+                    "Later authored inner placement retains every allocated numeric caption, as equivalent declared intervals do.");
+                TestAssert.Equal(4, equivalent.Bars.Length);
+                TestAssert.True(automatic.Bars.Zip(equivalent.Bars).All(pair => Math.Abs(pair.First - pair.Second) < .002d),
+                    "Automatic scale and equivalent declared bounds share the admitted rectangle, including frame clamping.");
+            }
         }
     }
 
@@ -83,17 +85,6 @@ internal static class PptxAutomaticScaleTests
         foreach (string target in new[] { "inner", "outer" })
         {
             string layout = ManualLayout(120, 90, target);
-            if (target == "inner")
-            {
-                var automatic = Read(Render(120, plotLayout: layout));
-                var equivalent = Read(Render(120, declaration: "<c:min val=\"0\"/><c:max val=\"5\"/>",
-                    major: "5", plotLayout: layout));
-                TestAssert.Equal(5d, automatic.Values.Max());
-                TestAssert.Equal(4, automatic.Bars.Length);
-                TestAssert.Equal(4, equivalent.Bars.Length);
-                TestAssert.True(automatic.Bars.Zip(equivalent.Bars).All(pair => Math.Abs(pair.First - pair.Second) < .002d),
-                    "Equivalent authored and automatic bounds consume the same placed data rectangle.");
-            }
             var authored = Read(Render(120, declaration: "<c:min val=\"0\"/><c:max val=\"8\"/>",
                 major: "2", plotLayout: layout));
             TestAssert.True(authored.Values.SequenceEqual(new[] { 0d, 2d, 4d, 6d, 8d }),
