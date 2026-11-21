@@ -66,16 +66,19 @@ $first = Join-Path $repo 'first.docx'
 $second = Join-Path $repo 'second.docx'
 'First input' | Set-Content -LiteralPath $first
 $firstHash = (Get-FileHash -LiteralPath $first).Hash
-foreach ($fault in @('missing', 'hash', 'duplicate', 'duplicate-case', 'valid')) {
+foreach ($fault in @('empty', 'missing', 'hash', 'duplicate', 'duplicate-case', 'valid')) {
     $case = Join-Path $OutputDirectory $fault
     New-Item -ItemType Directory -Path $case | Out-Null
     $manifest = Join-Path $case 'manifest.json'
-    if ($fault -ne 'missing') { 'Second input' | Set-Content -LiteralPath $second }
-    $secondHash = if ($fault -in @('valid','duplicate','duplicate-case')) { (Get-FileHash -LiteralPath $second).Hash } else { '0' * 64 }
-    $secondId = if ($fault -eq 'duplicate') {'first'} elseif ($fault -eq 'duplicate-case') {'FIRST'} else {'second'}
-    @(@{Id='first';Input='first.docx';Sha256=$firstHash},
-      @{Id=$secondId;Input='second.docx';Sha256=$secondHash}) |
-        ConvertTo-Json | Set-Content -LiteralPath $manifest
+    if ($fault -eq 'empty') { '[]' | Set-Content -LiteralPath $manifest }
+    else {
+        if ($fault -ne 'missing') { 'Second input' | Set-Content -LiteralPath $second }
+        $secondHash = if ($fault -in @('valid','duplicate','duplicate-case')) { (Get-FileHash -LiteralPath $second).Hash } else { '0' * 64 }
+        $secondId = if ($fault -eq 'duplicate') {'first'} elseif ($fault -eq 'duplicate-case') {'FIRST'} else {'second'}
+        @(@{Id='first';Input='first.docx';Sha256=$firstHash},
+          @{Id=$secondId;Input='second.docx';Sha256=$secondHash}) |
+            ConvertTo-Json | Set-Content -LiteralPath $manifest
+    }
     $output = Join-Path $case 'candidate'
     $calls.Clear()
     $failure = $null
@@ -90,7 +93,10 @@ foreach ($fault in @('missing', 'hash', 'duplicate', 'duplicate-case', 'valid'))
     }
     else {
         if (!$failure -or $calls.Count -ne 0 -or (Test-Path -LiteralPath $output)) {
-            throw ('Late invalid input started conversion or published output: ' + $fault)
+            throw ('Invalid input started conversion or published output: ' + $fault)
+        }
+        if ($fault -eq 'empty' -and "$failure" -ne 'An explicit nonempty manifest is required') {
+            throw 'An empty manifest must reject before creating a measurement'
         }
         if ($fault -eq 'hash' -and "$failure" -notlike '*Portfolio input differs: second*') {
             throw 'Hash mismatch must identify its actual input'

@@ -91,6 +91,7 @@ function New-Case([string] $Name, [string] $Fault, [string] $Mode='final-preserv
         'Retain this evidence' | Set-Content -LiteralPath (Join-Path $diff 'sentinel.txt')
     }
     if ($Fault -eq 'duplicate') { $rows = @($rows[0], $rows[0]) }
+    if ($Fault -eq 'empty') { $rows = @() }
     @{LibrarySha256=('1' * 64);Rows=$rows} | ConvertTo-Json -Depth 6 |
         Set-Content -LiteralPath (Join-Path $candidate 'outcomes.json')
     return @{Directory=$directory;CandidateDirectory=$candidate;ReferenceDirectory=$reference;SecondReferenceDirectory=(Join-Path $directory 'reference-second');Rows=$rows}
@@ -109,7 +110,7 @@ function dotnet {
     Write-ControlPdfInspection $args[1]
 }
 $passed = @()
-foreach ($fault in @('missing-reference', 'candidate-hash', 'existing-comparison', 'duplicate')) {
+foreach ($fault in @('empty', 'missing-reference', 'candidate-hash', 'existing-comparison', 'duplicate')) {
     $case = New-Case $fault $fault
     $before = Snapshot $case.Directory
     $rejected = $false
@@ -119,6 +120,7 @@ foreach ($fault in @('missing-reference', 'candidate-hash', 'existing-comparison
     }
     catch {
         $expected = switch ($fault) {
+            'empty' { 'A nonempty measured portfolio is required' }
             'missing-reference' { 'second-final-preserve' }
             'candidate-hash' { 'Candidate identity differs: second-final-preserve' }
             'existing-comparison' { 'Comparison already exists: second-final-preserve' }

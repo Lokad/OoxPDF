@@ -27,6 +27,7 @@ if (Test-Path -LiteralPath $OutputDirectory) { throw 'A fresh portfolio output d
 $ids = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
 $manifestBytes = [IO.File]::ReadAllBytes((Resolve-Path -LiteralPath $Manifest).Path)
 $documents = ConvertFrom-Json -AsHashtable -InputObject ([Text.Encoding]::UTF8.GetString($manifestBytes).TrimStart([char]0xFEFF))
+if (!$documents) { throw 'An explicit nonempty manifest is required' }
 $jobs = @(foreach ($document in @($documents)) {
     if (!$ids.Add($document.Id)) { throw ('Duplicate portfolio ID: ' + $document.Id) }
     $inputPath = (Resolve-Path -LiteralPath (Join-Path $repo $document.Input)).Path

@@ -20,6 +20,7 @@ $reportName=if ($ReferenceKind -eq 'OfficeImage') {'office-image-comparisons.jso
 $candidate = (Resolve-Path -LiteralPath $CandidateDirectory).Path
 $references = @($ReferenceDirectory | ForEach-Object { (Resolve-Path -LiteralPath $_).Path } | Select-Object -Unique)
 $outcomes = Get-Content -LiteralPath (Join-Path $candidate 'outcomes.json') -Raw | ConvertFrom-Json
+if (!$outcomes.Rows) { throw 'A nonempty measured portfolio is required' }
 $docxThresholdSource = Join-Path $PSScriptRoot 'CompositionDocxThresholds.json'
 $pptxThresholdSource = Join-Path $PSScriptRoot 'CompositionPptxThresholds.json'
 $thresholds = @{
