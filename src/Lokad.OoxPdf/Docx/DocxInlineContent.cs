@@ -49,7 +49,8 @@ internal static class DocxInlineContent
         paragraph.RevisionRanges.Any(range => range.HasContentSource);
 
     public static bool RequiresMeasuredSourceRanges(DocxParagraph paragraph) =>
-        paragraph.CommentRanges.Count != 0 || paragraph.Hyperlinks.Count != 0 || paragraph.BookmarkAnchors.Count != 0;
+        paragraph.CommentRanges.Count != 0 || paragraph.SplitComments is not null ||
+        paragraph.Hyperlinks.Count != 0 || paragraph.BookmarkAnchors.Count != 0;
 
     public static bool IsKnownEmptyCommentAnchor(DocxParagraph paragraph, DocxInlineReference reference)
     {

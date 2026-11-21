@@ -113,6 +113,76 @@ internal static class DocxCommentGlyphFrameTests
         AssertContent(page, source);
     }
 
+    public static void DocxCommentGlyphFramesCarryOneSelectionAcrossAuthoredBreaks()
+    {
+        var resolver = new PortableRenderingTests.PinnedResolver();
+        var renderer = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.AllMarkup,
+            OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        foreach ((string Break, int Count, int[] Fills) sample in new[]
+        {
+            ("textWrapping", 1, new[] { 2 }),
+            ("page", 1, new[] { 1, 1 }),
+            ("column", 1, new[] { 2 }),
+            ("page", 2, new[] { 1, 1, 1 }),
+        })
+        {
+            DocxDocument source = Source(sample.Break, sample.Count, close: true);
+            var paragraphs = DocxBlockTraversal.EnumerateBodyParagraphs(source).ToArray();
+            TestAssert.Equal(1, paragraphs.Sum(paragraph => paragraph.InlineReferences.Count(r => r.Kind == DocxRelatedStoryKind.Comment)));
+            if (sample.Break != "textWrapping")
+            {
+                TestAssert.Equal(sample.Count + 1, paragraphs.Length);
+                var ranges = paragraphs[0].SplitComments?.Ranges;
+                TestAssert.Equal(1, TestAssert.NotNull(ranges).Count);
+                TestAssert.True(paragraphs.All(p => ReferenceEquals(ranges, p.SplitComments?.Ranges)),
+                    "All covered fragments share the authored comment range.");
+            }
+            var pages = renderer.RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
+            TestAssert.True(pages.Select(page => DocxTests.CountWordCompatibleCommentRangeFills(page.Content)).SequenceEqual(sample.Fills),
+                "Each selected text fragment retains its source fill across " + sample.Break);
+            string text = Regex.Replace(string.Concat(pages.SelectMany(page =>
+                DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).Select(show => show.Text))), @"\s+", "");
+            foreach (string word in new[] { "OutsideLeft", "SelectedLeft", "SelectedRight", "OutsideRight" })
+                TestAssert.Contains(word, text);
+            TestAssert.Equal(1, Regex.Matches(text, "Table-cellcommentbody\\.").Count);
+        }
+
+        DocxDocument unclosed = Source("page", 1, close: false);
+        TestAssert.True(DocxBlockTraversal.EnumerateBodyParagraphs(unclosed).All(p => p.SplitComments is null),
+            "Unclosed ranges retain their previous fallback.");
+        DocxDocument hidden = Source("page", 1, close: true);
+        hidden = hidden with { Settings = hidden.Settings with
+        {
+            RevisionViewSettings = hidden.Settings.RevisionViewSettings with { ShowMarkup = false }
+        } };
+        TestAssert.Equal(0, renderer.RenderPagesAsync(hidden, null, default).ToBlockingEnumerable()
+            .Sum(page => DocxTests.CountWordCompatibleCommentRangeFills(page.Content)));
+
+        static DocxDocument Source(string kind, int count, bool close) =>
+            DocxInlineCompositionTests.ReadMutation("docx-markup-comment-table", OoxPdfDocxMarkupMode.AllMarkup, false, false,
+                (xml, w, _) =>
+                {
+                    XElement body = xml.Root!.Element(w + "body")!;
+                    var run = new XElement(w + "r", new XElement(w + "t", "SelectedLeft"));
+                    for (int index = 0; index < count; index++)
+                    {
+                        run.Add(new XElement(w + "br", new XAttribute(w + "type", kind)),
+                            new XElement(w + "t", index == count - 1 ? "SelectedRight" : "SelectedMiddle"));
+                    }
+                    body.ReplaceNodes(new XElement(w + "p",
+                        Text("OutsideLeft "),
+                        new XElement(w + "commentRangeStart", new XAttribute(w + "id", "1")), run,
+                        close ? new XElement(w + "commentRangeEnd", new XAttribute(w + "id", "1")) : null,
+                        new XElement(w + "r", new XElement(w + "commentReference", new XAttribute(w + "id", "1"))),
+                        Text(" OutsideRight")),
+                        new XElement(w + "sectPr", new XElement(w + "pgSz",
+                            new XAttribute(w + "w", "12240"), new XAttribute(w + "h", "15840")),
+                            kind == "column" ? new XElement(w + "cols", new XAttribute(w + "num", "2")) : null));
+
+                    XElement Text(string value) => new(w + "r", new XElement(w + "t", new XAttribute(XNamespace.Xml + "space", "preserve"), value));
+                });
+    }
+
     private static (double[][] Paths, double StrokeWidth, double FillHeight) ReadGeometry(PdfPage page)
     {
         var fills = Regex.Matches(page.Content, @"0\.973 0\.863 0\.867 rg\s+(?<x>[-\d.]+) (?<y>[-\d.]+) (?<w>[\d.]+) (?<h>[\d.]+) re f");

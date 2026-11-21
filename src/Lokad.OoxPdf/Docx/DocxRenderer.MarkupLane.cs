@@ -285,25 +285,56 @@ internal sealed partial class DocxRenderer
             if (!markupContext.IsCommentMarkupVisible(paragraph, reference)) continue;
             DocxCommentRange? range = paragraph.CommentRanges.FirstOrDefault(range =>
                 string.Equals(range.Id, reference.Id, StringComparison.Ordinal));
-            if (range is not null && TryResolveFractionNumeratorCommentPoint(line, range, out double pointX))
+            if (range is not null && TryPaintRange(range)) continue;
+            if ((range is null || !HasCommentRangeBounds(range)) &&
+                TryResolveWordCompatibleCommentReferenceMarkerBounds(line, reference, emissionXOffset, out double startX, out double endX))
+            {
+                int authorSlot = ResolveCommentAuthorSlot(markupContext.CommentAuthorPaletteSlots, reference.Id);
+                RenderWordCompatibleCommentRangeMarker(startX, endX, baselineY, graphics, CommentAuthorFillRgb(authorSlot), CommentAuthorStrokeRgb(authorSlot));
+            }
+        }
+        if (paragraph.SplitComments is { } fragment)
+        {
+            foreach (DocxSplitCommentRange selection in fragment.Ranges)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (fragment.Part < selection.FirstPart || fragment.Part > selection.LastPart ||
+                    selection.End.Id is not { } id || !markupContext.CommentAuthorPaletteSlots.ContainsKey(id))
+                    continue;
+
+                bool first = fragment.Part == selection.FirstPart;
+                bool last = fragment.Part == selection.LastPart;
+                var local = new DocxCommentRange(id, first ? selection.StartRunIndex : 0,
+                    first ? selection.StartTextOffset : 0, last ? selection.End.EndSourceRunIndex : int.MaxValue,
+                    last ? selection.End.EndTextOffset : null, null, null)
+                {
+                    StartInlineItemIndex = first ? selection.StartItemIndex : 0,
+                    EndInlineItemIndex = last ? selection.End.EndInlineItemIndex : paragraph.InlineContent?.Count
+                };
+                _ = TryPaintRange(local);
+            }
+        }
+
+        bool TryPaintRange(DocxCommentRange range)
+        {
+            if (TryResolveFractionNumeratorCommentPoint(line, range, out double pointX))
             {
                 // Word prints a point at a numerator-only annotation of an
                 // inline fraction. The brackets still follow its vertical frame.
                 var (above, below) = DocxInlineLineGeometry.VerticalExtents(line);
                 double center = pointX + emissionXOffset;
-                int authorSlot = ResolveCommentAuthorSlot(markupContext.CommentAuthorPaletteSlots, reference.Id);
+                int authorSlot = ResolveCommentAuthorSlot(markupContext.CommentAuthorPaletteSlots, range.Id);
                 DocxMarkupBalloonRgb stroke = CommentAuthorStrokeRgb(authorSlot);
                 graphics.SetStrokeRgb(stroke.Red, stroke.Green, stroke.Blue);
                 PaintWordCompatibleCommentGlyphBrackets(graphics, new PdfRectangle(
                     center - CommentGlyphBracketStrokePoints, baselineY - below,
                     2d * CommentGlyphBracketStrokePoints, above + below));
-                continue;
+                return true;
             }
-            if (range is not null &&
-                TryResolveWordCompatibleCommentRangeBounds(line, range, emissionXOffset,
+            if (TryResolveWordCompatibleCommentRangeBounds(line, range, emissionXOffset,
                     out double startX, out double endX, out var sourceBounds))
             {
-                int authorSlot = ResolveCommentAuthorSlot(markupContext.CommentAuthorPaletteSlots, reference.Id);
+                int authorSlot = ResolveCommentAuthorSlot(markupContext.CommentAuthorPaletteSlots, range.Id);
                 var (above, below) = DocxInlineLineGeometry.VerticalExtents(line);
                 PdfRectangle? fill = fillLineBox is { } box && double.IsFinite(sourceBounds.Start) &&
                     double.IsFinite(sourceBounds.End) && sourceBounds.End > sourceBounds.Start
@@ -315,16 +346,12 @@ internal sealed partial class DocxRenderer
                 RenderWordCompatibleCommentRangeMarker(startX, endX, baselineY, graphics, CommentAuthorFillRgb(authorSlot), CommentAuthorStrokeRgb(authorSlot), above, below,
                     usesExactFrame: DocxInlineLineGeometry.TryGetExactBodyLineBox(line, out _), fillRectangle: fill, glyphRectangle: glyphs,
                     selection: (line, range, emissionXOffset), cancellationToken: cancellationToken);
+                return true;
             }
-            else if ((range is null || !HasCommentRangeBounds(range)) &&
-                TryResolveWordCompatibleCommentReferenceMarkerBounds(line, reference, emissionXOffset, out startX, out endX))
-            {
-                int authorSlot = ResolveCommentAuthorSlot(markupContext.CommentAuthorPaletteSlots, reference.Id);
-                RenderWordCompatibleCommentRangeMarker(startX, endX, baselineY, graphics, CommentAuthorFillRgb(authorSlot), CommentAuthorStrokeRgb(authorSlot));
-            }
+            return false;
         }
 
-        bool HasCommentRangeBounds(DocxCommentRange range)
+        static bool HasCommentRangeBounds(DocxCommentRange range)
         {
             return range.StartSourceRunIndex is not null ||
                 range.StartTextOffset is not null ||

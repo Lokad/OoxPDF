@@ -29,7 +29,8 @@ internal sealed partial class DocxReader
         DocxCellBookmarkScope? cellBookmarks = null,
         List<DocxComplexFieldState>? splitFields = null,
         bool continuesAfterBreak = false,
-        bool retainEmptyColumnMark = false)
+        bool retainEmptyColumnMark = false,
+        List<DocxCommentRangeStart>? unclosedComments = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         XElement? paragraphProperties = paragraph.Element(WordprocessingNamespace + "pPr");
@@ -242,6 +243,8 @@ internal sealed partial class DocxReader
 
         bool instructionContinues = continuesAfterBreak && complexFieldStack.Any(field => !field.InResult);
         FinalizeOpenComplexFields();
+        if (continuesAfterBreak)
+            unclosedComments?.AddRange(openCommentRanges);
 
         bool keepsListMarker = !isContinuationFragment && sourceNumbering is { } numberingSource &&
             !string.IsNullOrWhiteSpace(numberingSource.Definition.Text);

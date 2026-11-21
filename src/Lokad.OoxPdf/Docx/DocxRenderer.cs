@@ -651,8 +651,9 @@ internal sealed partial class DocxRenderer
             ? document.Paragraphs.Concat(document.Tables.SelectMany(DocxBlockTraversal.EnumerateTableParagraphs))
             : DocxBlockTraversal.EnumerateBodyParagraphs(document);
         IReadOnlySet<DocxParagraph>? visibleComments = UsesWordCompatibleAllMarkupTextProfile(effective)
-            ? new HashSet<DocxParagraph>(mainParagraphs.Where(paragraph => paragraph.InlineReferences.Any(
-                reference => reference.Kind == DocxRelatedStoryKind.Comment)), ReferenceEqualityComparer.Instance)
+            ? new HashSet<DocxParagraph>(mainParagraphs.Where(paragraph =>
+                paragraph.InlineReferences.Any(reference => reference.Kind == DocxRelatedStoryKind.Comment) ||
+                paragraph.SplitComments is not null), ReferenceEqualityComparer.Instance)
             : null;
         return effective with { WordCompatiblePrintScale = printScale, WordCompatibleTextXOffset = xOffset,
             WordCompatibleTextYOffset = yOffset, CommentMarkerLabels = markerLabels,

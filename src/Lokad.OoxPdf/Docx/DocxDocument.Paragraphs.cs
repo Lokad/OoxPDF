@@ -27,6 +27,7 @@ internal sealed record DocxParagraph(
     public string? ContextualSpacingDefaultStyleId { get; init; }
     public IReadOnlyList<DocxInlineReference> InlineReferences { get; init; } = [];
     public IReadOnlyList<DocxCommentRange> CommentRanges { get; init; } = [];
+    public DocxSplitCommentFragment? SplitComments { get; init; }
     public IReadOnlyList<DocxRevisionRange> RevisionRanges { get; init; } = [];
     public IReadOnlyList<DocxInlineTextBox> InlineTextBoxes { get; init; } = [];
     public IReadOnlyList<DocxStaticDrawingOwner> StaticDrawingOwners { get; init; } = [];
@@ -181,6 +182,11 @@ internal sealed record DocxCommentRange(
     public int? EndInlineItemIndex { get; init; }
     public bool InFractionNumerator { get; init; }
 }
+
+internal sealed record DocxSplitCommentRange(int FirstPart, int LastPart, int StartRunIndex,
+    int StartTextOffset, int? StartItemIndex, DocxCommentRange End);
+
+internal readonly record struct DocxSplitCommentFragment(int Part, IReadOnlyList<DocxSplitCommentRange> Ranges);
 
 internal sealed record DocxRevisionRange(
     DocxRevisionKind Kind,

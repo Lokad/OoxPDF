@@ -131,6 +131,9 @@ internal sealed partial class DocxReader
                         HiddenBreak, retainEmptyColumnTail: true, retainFirstLine: hasListMarker);
                     var splitFields = new List<DocxComplexFieldState>();
                     var paragraphs = new DocxParagraph?[parts.Count];
+                    List<DocxCommentRangeStart>? unclosedComments = parts.Count > 2 &&
+                        element.Descendants(WordprocessingNamespace + "commentRangeStart").Any() ? [] : null;
+                    List<(int Part, DocxCommentRangeStart Start)>? splitCommentStarts = null;
                     ParagraphBreakPart? lastParagraph = parts.LastOrDefault(part => part.Paragraph is not null);
                     // A layout break does not end an authored field. Finish its
                     // instruction and result before publishing the fragments.
@@ -144,9 +147,18 @@ internal sealed partial class DocxReader
                         paragraphs[i] = ReadParagraph(part.Paragraph, styles, numbering, numberingCounters, package, relationships, tableCellStyle: null, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken,
                             isContinuationFragment: !part.IsFirstFragment, leadingBookmarks: bookmarksForFragment,
                             splitFields: splitFields, continuesAfterBreak: !ReferenceEquals(part, lastParagraph),
-                            retainEmptyColumnMark: retainColumnMark);
+                            retainEmptyColumnMark: retainColumnMark, unclosedComments: unclosedComments);
+                        if (unclosedComments is { Count: > 0 })
+                        {
+                            foreach (DocxCommentRangeStart start in unclosedComments)
+                                (splitCommentStarts ??= []).Add((i, start));
+                            unclosedComments.Clear();
+                        }
                         bookmarksForFragment = null;
                     }
+                    if (splitCommentStarts is not null)
+                        ProjectSplitCommentRanges(paragraphs, splitCommentStarts, cancellationToken);
+
                     for (int i = 0; i < parts.Count; i++)
                     {
                         ParagraphBreakPart part = parts[i];
