@@ -12,6 +12,7 @@ $repo=Join-Path $root 'repo'
 New-Item -ItemType Directory -Path (Join-Path $repo 'tools') -Force | Out-Null
 $join=Join-Path $repo 'tools/JoinQualificationTestReports.ps1'
 Copy-Item -LiteralPath $JoinScript -Destination $join
+Copy-Item -LiteralPath (Join-Path (Split-Path -Parent $JoinScript) 'QualificationBuildIdentity.ps1') -Destination (Split-Path -Parent $join)
 function Write-Text([string] $Path,[string] $Text) {
     New-Item -ItemType Directory -Path (Split-Path -Parent $Path) -Force | Out-Null
     [IO.File]::WriteAllText($Path,$Text,[Text.UTF8Encoding]::new($false))
@@ -248,11 +249,18 @@ $finalPin.Assets[$deps]=(Get-FileHash -LiteralPath (Join-Path $repo ('artifacts/
 Write-Text (Join-Path $repo 'Directory.Build.props') '<Project><PropertyGroup><CheckForOverflowUnderflow>true</CheckForOverflowUnderflow></PropertyGroup></Project>'
 $null=Invoke-Git @('add','Directory.Build.props');$null=Invoke-Git @('commit','--quiet','-m','production build-setting change')
 $finalPin.Revision=[string](Invoke-Git @('rev-parse','HEAD'));Write-Json $finalPinPath $finalPin
-Reject 'changed-build-setting' 'Production source changed'
+Reject 'changed-build-setting' 'Production source or build inputs changed'
+# Branch from the original final revision to isolate the nested import.
+$null=Invoke-Git @('checkout','--quiet','--detach',$finalRevision)
+Write-Text (Join-Path $repo 'tools/Directory.Build.props') '<Project><PropertyGroup><CheckForOverflowUnderflow>true</CheckForOverflowUnderflow></PropertyGroup></Project>'
+$null=Invoke-Git @('add','tools/Directory.Build.props');$null=Invoke-Git @('commit','--quiet','-m','inspector build-setting change')
+$finalPin.Revision=[string](Invoke-Git @('rev-parse','HEAD'));Write-Json $finalPinPath $finalPin
+Reject 'changed-tools-build-setting' 'Production source or build inputs changed'
+$null=Invoke-Git @('checkout','--quiet','--detach',$finalRevision)
 Write-Text (Join-Path $repo 'src/source.txt') 'changed production'
 $null=Invoke-Git @('add','src/source.txt');$null=Invoke-Git @('commit','--quiet','-m','production change')
 $finalPin.Revision=[string](Invoke-Git @('rev-parse','HEAD'));Write-Json $finalPinPath $finalPin
-Reject 'changed-production' 'Production source changed'
+Reject 'changed-production' 'Production source or build inputs changed'
 foreach ($path in $positiveInputs.Keys) { [IO.File]::WriteAllBytes($path,$positiveInputs[$path]) }
 $positivePins=@($result.Manifest,$result.Selection,$result.Tool,$resolved.Manifest,$resolved.Selection,$resolved.Tool,
     $copyResult.Manifest,$copyResult.Selection,$copyResult.Tool)

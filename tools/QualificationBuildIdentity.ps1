@@ -1,8 +1,12 @@
-function Assert-QualificationProductionInputs([string] $Repository, [string] $Before, [string] $After) {
-    $buildInputs = @('src', 'tools/Lokad.OoxPdf.DocxInspect',
+function Get-QualificationProductionInputs {
+    @('src', 'tools/Lokad.OoxPdf.DocxInspect',
         ':(top,glob)**/*.props', ':(top,glob)**/*.targets', ':(top,glob)**/*.csproj',
         'Directory.Build.rsp', 'tools/Directory.Build.rsp', 'global.json', 'tools/global.json',
         'NuGet.Config', 'nuget.config', 'tools/NuGet.Config', 'tools/nuget.config', '.gitattributes')
+}
+
+function Assert-QualificationProductionInputs([string] $Repository, [string] $Before, [string] $After) {
+    $buildInputs = @(Get-QualificationProductionInputs)
     $changed = @(git -C $Repository diff --name-only --no-ext-diff $Before $After -- @buildInputs)
     if ($LASTEXITCODE -ne 0) { throw 'Cannot verify qualification production inputs' }
     if ($changed.Count) { throw 'Production source or build inputs changed; build a new runtime' }

@@ -31,10 +31,11 @@ function dotnet {
     Set-Variable -Name LASTEXITCODE -Value 0 -Scope 1
 }
 try {
-    foreach ($kind in @('independent','hard-linked','smoke-failure','publication-failure','directory-link','source-mismatch','input-mismatch')) {
+    foreach ($kind in @('independent','hard-linked','smoke-failure','publication-failure','directory-link','source-mismatch','input-mismatch','untracked-import')) {
         $checkout=Join-Path $root $kind
         New-Item -ItemType Directory -Path (Join-Path $checkout tools) -Force | Out-Null
         Copy-Item -LiteralPath $TransferScript -Destination (Join-Path $checkout tools/TransferQualificationArtifact.ps1)
+        Copy-Item -LiteralPath (Join-Path (Split-Path -Parent $TransferScript) 'QualificationBuildIdentity.ps1') -Destination (Join-Path $checkout tools)
         Write-Text (Join-Path $checkout .gitignore) "artifacts/`n**/bin`n"
         Write-Text (Join-Path $checkout src/source.txt) 'unchanged source'
         $null=Invoke-Git $checkout @('init','--quiet')
@@ -70,6 +71,7 @@ try {
         Write-Json (Join-Path $checkout artifacts/smoke.json) @(@{Input=$inputFile;InputSha256=(Get-FileHash -LiteralPath $inputFile).Hash;PdfSha256=(Get-FileHash -LiteralPath $expectedPdf).Hash;Arguments=@()})
         if ($kind -eq 'source-mismatch') { Write-Text $newFile 'changed before preflight' }
         if ($kind -eq 'input-mismatch') { Write-Text $inputFile 'changed before preflight' }
+        if ($kind -eq 'untracked-import') { Write-Text (Join-Path $checkout 'shared/build/Local.props') '<Project/>' }
         $sourceHashBefore=(Get-FileHash -LiteralPath $newFile).Hash
         $output=Join-Path $checkout artifacts/transfer
         $caught=$null; $cause=$null
@@ -82,13 +84,14 @@ try {
         if ($success -and $caught) { throw ('Unexpected transfer failure: '+$kind+' / '+$caught) }
         if (!$success -and !$caught) { throw ('Expected transfer refusal: '+$kind) }
         $expected=@{'smoke-failure'='Synthetic smoke failure';'directory-link'='Root asset directories must not be linked';
-            'source-mismatch'='Frozen asset differs';'input-mismatch'='Smoke input differs'}
+            'source-mismatch'='Frozen asset differs';'input-mismatch'='Smoke input differs';
+            'untracked-import'='Source/input/build-setting transfer identity differs'}
         if ($expected.ContainsKey($kind) -and $caught -ne $expected[$kind]) { throw ('Unexpected refusal: '+$kind+' / '+$caught) }
         if ($kind -eq 'publication-failure' -and $cause -isnot [IO.IOException] -and $cause -isnot [UnauthorizedAccessException]) { throw ('Expected a publication I/O failure: '+$caught) }
         if ((Get-FileHash -LiteralPath $oldFile).Hash -ne $oldHash) { throw ('Previous artifact changed: '+$kind) }
         if ((Get-FileHash -LiteralPath $newFile).Hash -ne $sourceHashBefore) { throw ('Frozen source changed: '+$kind) }
         if (@(Get-ChildItem -LiteralPath (Split-Path $target) -Filter '*.staging-*' -File).Count) { throw ('Owned staging file leaked: '+$kind) }
-        $preflight=$kind -in @('directory-link','source-mismatch','input-mismatch')
+        $preflight=$kind -in @('directory-link','source-mismatch','input-mismatch','untracked-import')
         if ($preflight -and ((Test-Path -LiteralPath $output) -or (Get-FileHash -LiteralPath $target).Hash -ne $oldHash)) { throw ('Preflight changed output: '+$kind) }
         if ($kind -eq 'publication-failure' -and [IO.File]::ReadAllText((Join-Path $target retained.txt)) -ne 'retained directory') { throw 'Publication failure changed the existing directory' }
         if (($success -or $kind -eq 'smoke-failure') -and (Get-FileHash -LiteralPath $target).Hash -ne $newHash) { throw ('Root asset differs: '+$kind) }
@@ -102,4 +105,4 @@ try {
     }
 } finally { Remove-Item Function:\dotnet }
 Write-Json (Join-Path $root evidence.json) @{Checks=$rows;Builds=0;RealConversions=0;RunnerInvocations=0;ToolSha256=(Get-FileHash -LiteralPath $TransferScript).Hash}
-'Transfer checks pass: two successful ownership cases, five publication/smoke/preflight refusals; no builds or real conversions.'
+'Transfer checks pass: two successful ownership cases, six publication/smoke/preflight refusals; no builds or real conversions.'

@@ -5,6 +5,7 @@ param(
     [Parameter(Mandatory=$true)] [string] $OutputPath
 )
 $ErrorActionPreference='Stop'
+. (Join-Path $PSScriptRoot 'QualificationBuildIdentity.ps1')
 $manifestPath=(Resolve-Path -LiteralPath $Manifest).Path
 $base=Split-Path -Parent $manifestPath
 $repo=Split-Path -Parent $PSScriptRoot
@@ -52,10 +53,7 @@ foreach ($artifact in $pins.Keys) {
         $pin.TestAssemblySha256 -ne $pin.Assets["tests/Lokad.OoxPdf.Tests/bin/Release/$framework/Lokad.OoxPdf.Tests.dll"]) {
         throw 'Frozen assembly metadata differs from asset identities'
     }
-    $sourceChanges=@(& git -C $repo diff --name-only $first.Revision $pin.Revision -- src `
-        ':(top,glob)*.props' ':(top,glob)*.targets' Directory.Build.rsp global.json NuGet.Config nuget.config .gitattributes)
-    if ($LASTEXITCODE -ne 0) { throw 'Frozen source revisions are unavailable' }
-    if ($sourceChanges.Count) { throw 'Production source changed; qualify the changed runtime separately' }
+    Assert-QualificationProductionInputs $repo $first.Revision $pin.Revision
     if ($pin.Assets.Count -ne $first.Assets.Count -or
         @($first.Assets.Keys | Where-Object {!$pin.Assets.ContainsKey($_)}).Count -or
         @($runtime | Where-Object {$pin.Assets[$_] -ne $first.Assets[$_]}).Count -or

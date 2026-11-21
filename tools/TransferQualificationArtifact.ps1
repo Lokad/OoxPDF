@@ -7,6 +7,7 @@ param(
     [Parameter(Mandatory=$true)] [string] $OutputDirectory
 )
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'QualificationBuildIdentity.ps1')
 $repo = Split-Path -Parent $PSScriptRoot
 $artifact = (Resolve-Path -LiteralPath $ArtifactDirectory).Path
 $pin = Get-Content (Join-Path $artifact 'identity.json') -Raw | ConvertFrom-Json -AsHashtable
@@ -15,15 +16,13 @@ if ($framework -notin @('net10.0','net11.0')) { throw 'Unknown frozen target fra
 $qualification = Get-Content -LiteralPath $QualificationEvidence -Raw | ConvertFrom-Json
 if ($qualification.LibrarySha256 -ne $pin.LibrarySha256 -or
     $qualification.TestAssemblySha256 -ne $pin.TestAssemblySha256) { throw 'Qualification identities differ' }
-# Root imports can change compiled behavior without changing a source/project file.
-$buildInputs = @('src', 'tests', 'tools/Lokad.OoxPdf.DocxInspect',
-    ':(top,glob)*.props', ':(top,glob)*.targets', ':(top,glob)tools/*.props', ':(top,glob)tools/*.targets',
-    'Directory.Build.rsp', 'tools/Directory.Build.rsp', 'global.json', 'tools/global.json',
-    'NuGet.Config', 'nuget.config', 'tools/NuGet.Config', 'tools/nuget.config', '.gitattributes')
-$changes = @(git -C $repo diff --name-only $pin.Revision HEAD -- @buildInputs)
+# The transfer also binds the complete test tree and the working tree.
+$buildInputs = @(Get-QualificationProductionInputs) + @('tests')
+$changes = @(git -C $repo diff --name-only --no-ext-diff $pin.Revision HEAD -- @buildInputs)
 if ($LASTEXITCODE -ne 0) { throw 'Frozen source revision is unavailable' }
-if ($changes.Count -or
-    @(git -C $repo status --porcelain --untracked-files=normal -- @buildInputs).Count) { throw 'Source/input/build-setting transfer identity differs' }
+$workingChanges = @(git -C $repo status --porcelain --untracked-files=normal -- @buildInputs)
+if ($LASTEXITCODE -ne 0) { throw 'Cannot verify transfer working-tree inputs' }
+if ($changes.Count -or $workingChanges.Count) { throw 'Source/input/build-setting transfer identity differs' }
 if (Test-Path -LiteralPath $OutputDirectory) { throw 'A fresh transfer evidence directory is required' }
 $jobs = @(Get-Content -LiteralPath $SmokeManifest -Raw | ConvertFrom-Json)
 if (!$jobs.Count) { throw 'Select a small nonempty integration smoke set' }
