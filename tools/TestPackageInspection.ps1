@@ -24,7 +24,6 @@ $hashes=@{}
 foreach ($framework in $payloads.Keys) { $hashes[$framework]=[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([byte[]]$payloads[$framework])) }
 $tool=Join-Path $PSScriptRoot 'TestPackageSmoke.ps1'
 $expectedFeed = Split-Path -Parent $package
-$expectedVersion = [IO.Path]::GetFileNameWithoutExtension($package).Substring('Lokad.OoxPdf.'.Length)
 # The restore mock supplies a different archive with the same selected DLL.
 # The tool must refuse those bytes before it calls dotnet run.
 $failedConsumers = [Collections.Generic.List[string]]::new()
@@ -82,7 +81,7 @@ function Check([string]$Name,[string]$InputPackage,[string[]]$Hash,[string[]]$Fr
         ExpectedRefusal=$Failure;ObservedRefusal=$caught;Passed=$true;Log=$log;Reports=$reports}
     return $reports
 }
-function Write-Variant([string]$Name,[byte[]]$Net10Bytes,[string]$Omit='') {
+function Write-Variant([string]$Name,[byte[]]$Net10Bytes,[string]$Omit='', [string]$ManifestVersion='') {
     $folder=(New-Item -ItemType Directory -Path (Join-Path $output $Name)).FullName
     $target=Join-Path $folder ([IO.Path]::GetFileName($package))
     $sourceArchive=[IO.Compression.ZipFile]::OpenRead($package)
@@ -97,6 +96,13 @@ function Write-Variant([string]$Name,[byte[]]$Net10Bytes,[string]$Omit='') {
                     $writer=$copy.Open()
                     try {
                         if ($Net10Bytes -and $entry.FullName -ceq 'lib/net10.0/Lokad.OoxPdf.dll') { $writer.Write($Net10Bytes) }
+                        elseif ($ManifestVersion -and $entry.FullName -ceq 'Lokad.OoxPdf.nuspec') {
+                            $reader=[IO.StreamReader]::new($entry.Open())
+                            try { [xml]$metadata=$reader.ReadToEnd() } finally { $reader.Dispose() }
+                            $versionNode=$metadata.SelectSingleNode("//*[local-name()='metadata']/*[local-name()='version']")
+                            $versionNode.InnerText=$ManifestVersion
+                            $metadata.Save($writer)
+                        }
                         else { $reader=$entry.Open();try {$reader.CopyTo($writer)} finally {$reader.Dispose()} }
                     } finally {$writer.Dispose()}
                 }
@@ -129,6 +135,15 @@ if ($net11.FrameworkIdentities.Count -ne 2 -or
     throw 'Expected shared archive, framework identities and documentation checks'
 }
 $version=$net11.FrameworkIdentities[0].InformationalVersion
+$expectedVersion=($version -split '\+', 2)[0]
+if ($net11.PackageVersion -cne $expectedVersion -or @($dual | Where-Object PackageVersion -CNE $expectedVersion).Count) {
+    throw 'Inspection did not report the package manifest version.'
+}
+$assemblyVersion=[version]$net11.FrameworkIdentities[0].AssemblyVersion
+$otherVersion="$($assemblyVersion.Major).$($assemblyVersion.Minor).$($assemblyVersion.Build + 1)"
+$mixedManifest=Write-Variant 'mixed-manifest' $null -ManifestVersion $otherVersion
+$null=Check 'mixed-manifest-refused' $mixedManifest $pins $frameworks 'Package, assembly, file and informational versions disagree.'
+$null=Check 'mixed-manifest-refused-before-restore' $mixedManifest $pins $frameworks 'Package, assembly, file and informational versions disagree.' -ConsumerBoundary
 $last=$version.Substring($version.Length-1)
 $replacement=$version.Substring(0,$version.Length-1)+$(if($last -ceq '0') {'1'} else {'0'})
 $mixed=Write-Variant 'mixed-build' (Replace-UniqueUtf8 $payloads['net10.0'] $version $replacement)

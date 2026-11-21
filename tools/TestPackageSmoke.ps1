@@ -101,7 +101,6 @@ if ($packages.Count -ne 1 -or $packages[0] -isnot [IO.FileInfo] -or $packages[0]
 }
 $package = $packages[0]
 $packageSha256 = (Get-FileHash -LiteralPath $package.FullName).Hash
-$version = $package.BaseName.Substring("Lokad.OoxPdf.".Length)
 Write-Host ("Smoking package {0}." -f $package.Name)
 
 function Read-PackedLibraryIdentity($Entry) {
@@ -123,6 +122,20 @@ function Read-PackedLibraryIdentity($Entry) {
 
 $archive = [IO.Compression.ZipFile]::OpenRead($package.FullName)
 try {
+    $manifests = @($archive.Entries | Where-Object FullName -CEQ 'Lokad.OoxPdf.nuspec')
+    if ($manifests.Count -ne 1) { throw 'Expected one Lokad.OoxPdf package manifest.' }
+    $reader = [IO.StreamReader]::new($manifests[0].Open())
+    try { [xml]$manifest = $reader.ReadToEnd() }
+    finally { $reader.Dispose() }
+    $metadata = $manifest.package.metadata
+    if ([string]$metadata.id -cne 'Lokad.OoxPdf') { throw 'Package manifest ID differs.' }
+    $version = ([string]$metadata.version -split '\+', 2)[0]
+    [version]$numericVersion = $null
+    if (![version]::TryParse(($version -split '-', 2)[0], [ref]$numericVersion) -or $numericVersion.Build -lt 0) {
+        throw 'Package manifest version is invalid.'
+    }
+    $assemblyVersion = [version]::new($numericVersion.Major, $numericVersion.Minor, $numericVersion.Build, 0).ToString()
+
     $localDocumentationLinks = 0
     foreach ($required in @('README.md', 'CHANGELOG.md', 'docs/Migration.md', 'docs/Capabilities.md', 'docs/Hosting.md', 'docs/Usage.md')) {
         $entry = $archive.GetEntry($required)
@@ -153,6 +166,10 @@ try {
         $_.AssemblyVersion -cne $first.AssemblyVersion -or $_.FileVersion -cne $first.FileVersion -or
         $_.InformationalVersion -cne $first.InformationalVersion
     }).Count) { throw 'Packed framework library build identities differ.' }
+    if ($libraryIdentities.Count -and ($first.AssemblyVersion -cne $assemblyVersion -or
+        $first.FileVersion -cne $assemblyVersion -or ($first.InformationalVersion -split '\+', 2)[0] -cne $version)) {
+        throw 'Package, assembly, file and informational versions disagree.'
+    }
 }
 finally { $archive.Dispose() }
 $consumers = @(for ($index = 0; $index -lt $Framework.Count; $index++) {
@@ -175,7 +192,7 @@ foreach ($consumer in $consumers) {
     if ($InspectOnly) {
         [ordered]@{InspectionOnly=$true;LibraryRebuilt=$false;ConsumerRan=$false;
             Framework=$consumer.Framework;ExpectedLibrarySha256=$consumer.ExpectedLibrarySha256;LibrarySha256=$consumer.LibrarySha256;
-            Package=$package.FullName;PackageSha256=$packageSha256;
+            Package=$package.FullName;PackageVersion=$version;PackageSha256=$packageSha256;
             FrameworkIdentities=$libraryIdentities;LocalDocumentationLinksChecked=$localDocumentationLinks} |
             ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $scratch 'summary.json') -Encoding utf8
         Write-Host 'Package metadata and documentation inspection passed; no build, restore or consumer.'
@@ -187,6 +204,7 @@ foreach ($consumer in $consumers) {
     Copy-Item -LiteralPath (Join-Path $repoRoot "tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-10-composite-table-port.pptx") -Destination (Join-Path $scratch "input.pptx")
 
     $escapedFeedPath = [Security.SecurityElement]::Escape($package.DirectoryName)
+    $escapedVersion = [Security.SecurityElement]::Escape($version)
     Set-Content -LiteralPath (Join-Path $scratch "NuGet.config") -Encoding UTF8 -Value @"
 <?xml version="1.0" encoding="utf-8"?>
 <configuration>
@@ -205,7 +223,7 @@ foreach ($consumer in $consumers) {
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Lokad.OoxPdf" Version="[$version]" />
+    <PackageReference Include="Lokad.OoxPdf" Version="[$escapedVersion]" />
   </ItemGroup>
 </Project>
 "@
@@ -214,24 +232,12 @@ foreach ($consumer in $consumers) {
     $program = @'
 using System.Text;
 using System.Security.Cryptography;
-using System.Reflection;
 using Lokad.OoxPdf;
 using Lokad.OoxPdf.Fonts;
 
 string input = args[0];
 string output = args[1];
 string expectedLibrarySha256 = args[2];
-string packageVersion = args[3];
-Assembly library = typeof(OoxPdfConverter).Assembly;
-string informationalVersion = library.GetCustomAttribute<AssemblyInformationalVersionAttribute>()!.InformationalVersion;
-string fileVersion = library.GetCustomAttribute<AssemblyFileVersionAttribute>()!.Version;
-Version numericVersion = new Version(Version.Parse(packageVersion.Split('-')[0]).Major,
-    Version.Parse(packageVersion.Split('-')[0]).Minor, Version.Parse(packageVersion.Split('-')[0]).Build, 0);
-if (library.GetName().Version != numericVersion || fileVersion != numericVersion.ToString() ||
-    informationalVersion.Split('+')[0] != packageVersion)
-{
-    throw new InvalidDataException("Package, assembly, file and informational versions disagree.");
-}
 string loadedLibrarySha256 = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(typeof(OoxPdfConverter).Assembly.Location)));
 if (!string.Equals(expectedLibrarySha256, loadedLibrarySha256, StringComparison.Ordinal))
 {
@@ -243,7 +249,7 @@ string temporaryDirectory = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(
 IOoxPdfTemporaryStorage temporaryStorage = new OoxPdfFileTemporaryStorage(temporaryDirectory);
 var options = new OoxPdfOptions
 {
-    FontResolver = args[4].Length != 0 ? new SmokeFontResolver(args[4]) : null,
+    FontResolver = args[3].Length != 0 ? new SmokeFontResolver(args[3]) : null,
     FixedCreationDate = DateTimeOffset.UnixEpoch,
     MemoryBudget = admission, TemporaryStorage = temporaryStorage,
     ConversionLimits = new OoxConversionLimits { MaxResidentPageContentBytesPerConversion = 1 }
@@ -269,7 +275,7 @@ if (!pdf.Contains("/FontFile2", StringComparison.Ordinal) || !pdf.Contains("/ToU
     throw new InvalidDataException("Smoke output must embed a TrueType font and its Unicode map.");
 }
 string pptxOutput = Path.ChangeExtension(output, ".pptx.pdf");
-OoxPdfConverter.Convert(args[5], pptxOutput, options);
+OoxPdfConverter.Convert(args[4], pptxOutput, options);
 string pptxPdf = Encoding.ASCII.GetString(File.ReadAllBytes(pptxOutput));
 if (!pptxPdf.StartsWith("%PDF-", StringComparison.Ordinal) || !pptxPdf.Contains("/FontFile2", StringComparison.Ordinal))
     throw new InvalidDataException("Packed PPTX conversion must produce a PDF with embedded text.");
@@ -306,7 +312,7 @@ string malformed = Path.ChangeExtension(input, ".malformed.docx");
 File.WriteAllText(malformed, "This is not an OOXML ZIP package.");
 ExpectFailure<InvalidDataException>(() => OoxPdfConverter.Convert(malformed, protectedOutput, options));
 var refusal = new RefusingBudget();
-var admissionError = ExpectFailure<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(args[5], protectedOutput,
+var admissionError = ExpectFailure<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(args[4], protectedOutput,
     new OoxPdfOptions { FontResolver = options.FontResolver, MemoryBudget = refusal }));
 if (admissionError.Kind != OoxPdfLimitKind.MemoryAdmission || admissionError.Scope != OoxPdfLimitScope.Conversion)
     throw new InvalidOperationException("Packed refusal must retain its structured category.");
@@ -432,7 +438,7 @@ sealed class SmokeFontResolver(string path) : IFontResolver, IFontProgramSource
 
     $input = Join-Path $scratch "input.docx"
     $output = Join-Path $scratch "output.pdf"
-    $smokeArguments = @($input, $output, $consumer.LibrarySha256, $version, $FontPath, (Join-Path $scratch 'input.pptx'))
+    $smokeArguments = @($input, $output, $consumer.LibrarySha256, $FontPath, (Join-Path $scratch 'input.pptx'))
     $smokeProject = Join-Path $scratch "smoke.csproj"
     $restorePackages = Join-Path $scratch 'packages'
     & dotnet restore $smokeProject --packages $restorePackages --configfile (Join-Path $scratch "NuGet.config") --nologo
