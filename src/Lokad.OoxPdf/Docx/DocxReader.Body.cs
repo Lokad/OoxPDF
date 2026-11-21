@@ -542,7 +542,8 @@ internal sealed partial class DocxReader
     }
 
     private static IReadOnlyList<ParagraphBreakPart> SplitParagraphAtRunBreaks(XElement paragraph, OoxPdfDocxMarkupMode markupMode,
-        Func<XElement, bool> isBreak, Func<XElement, bool> isHiddenBreak, bool retainEmptyColumnTail = false, bool retainFirstLine = false)
+        Func<XElement, bool> isBreak, Func<XElement, bool> isHiddenBreak, bool retainEmptyColumnTail = false, bool retainFirstLine = false,
+        IReadOnlyList<XElement>? leadingCommentBoundaries = null)
     {
         var parts = new List<ParagraphBreakPart>();
         var currentChildren = new List<XElement>();
@@ -578,7 +579,10 @@ internal sealed partial class DocxReader
             startsAfterBreak = false;
         }
 
-        foreach (XElement child in EnumerateBreakSplitChildren(paragraph, isHiddenBreak, markupMode))
+        IEnumerable<XElement> children = EnumerateBreakSplitChildren(paragraph, isHiddenBreak, markupMode);
+        if (leadingCommentBoundaries is not null)
+            children = leadingCommentBoundaries.Concat(children);
+        foreach (XElement child in children)
         {
             if (child.Name == WordprocessingNamespace + "pPr")
             {

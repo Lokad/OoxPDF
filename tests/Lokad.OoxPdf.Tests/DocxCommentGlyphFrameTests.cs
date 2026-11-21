@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -438,19 +439,7 @@ internal static class DocxCommentGlyphFrameTests
                             new XElement(w + "sectPr", new XElement(w + "pgSz",
                                 new XAttribute(w + "w", "12240"), new XAttribute(w + "h", "15840")),
                                 hardBreak == "column" ? new XElement(w + "cols", new XAttribute(w + "num", "2")) : null));
-                    }, packageChange: zip =>
-                    {
-                        const string part = "word/settings.xml";
-                        var entry = zip.GetEntry(part)!;
-                        XDocument settings;
-                        using (var stream = entry.Open()) settings = XDocument.Load(stream);
-                        settings.Root!.Element(w + "revisionView")?.Remove();
-                        settings.Root.AddFirst(new XElement(w + "revisionView", new XAttribute(w + "markup", "1"),
-                            new XAttribute(w + "comments", "1"), new XAttribute(w + "insDel", "0")));
-                        entry.Delete();
-                        using var output = zip.CreateEntry(part).Open();
-                        settings.Save(output);
-                    });
+                    }, packageChange: zip => ShowCommentsWithoutRevisionPaint(zip, w));
                 string selected = startBoundary ? "SelectedRight" : "SelectedLeft";
                 var selectedFlow = cell ? DocxBlockTraversal.EnumerateTableParagraphs(source.Tables.Single()) :
                     DocxBlockTraversal.EnumerateBodyParagraphs(source).Take(1);
@@ -474,6 +463,79 @@ internal static class DocxCommentGlyphFrameTests
 
         XElement Text(string value) => new(w + "r", new XElement(w + "t", new XAttribute(XNamespace.Xml + "space", "preserve"), value));
         XElement Marker(string kind) => new(w + kind, new XAttribute(w + "id", "0"));
+    }
+
+    public static void DocxCommentGlyphFramesKeepSelectionsAtConsumedCellBreakParagraphs()
+    {
+        const OoxPdfDocxMarkupMode mode = OoxPdfDocxMarkupMode.AllMarkup;
+        var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(), mode,
+            OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        XNamespace w = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+        foreach (bool numbered in new[] { false, true })
+        foreach (bool startBoundary in new[] { false, true })
+        {
+            PdfPage inline = Render(blockMarker: false);
+            PdfPage block = Render(blockMarker: true);
+            TestAssert.Equal(inline.Content, block.Content);
+
+            PdfPage Render(bool blockMarker)
+            {
+                DocxDocument source = DocxInlineCompositionTests.ReadMutation("Composition/report", mode, false, false, (xml, _, _) =>
+                {
+                    var start = Marker("commentRangeStart");
+                    var end = Marker("commentRangeEnd");
+                    var boundary = startBoundary ? start : end;
+                    var first = new XElement(w + "p",
+                        new XElement(w + "pPr", new XElement(w + "rPr",
+                            new XElement(w + "del", new XAttribute(w + "id", "31"), new XAttribute(w + "author", "Reviewer")))),
+                        Text("OutsideLeft "), startBoundary ? null : start, startBoundary ? null : Text("SelectedLeft "));
+                    var pageBreak = new XElement(w + "p", ListProperties(), blockMarker ? null : boundary,
+                        new XElement(w + "r", new XElement(w + "br", new XAttribute(w + "type", "page"))));
+                    var following = new XElement(w + "p", ListProperties(), startBoundary ? Text("SelectedRight") : null,
+                        startBoundary ? end : null, new XElement(w + "r", Marker("commentReference")), Text(" OutsideRight"));
+                    xml.Root!.Element(w + "body")!.ReplaceNodes(
+                        new XElement(w + "tbl", new XElement(w + "tblGrid", new XElement(w + "gridCol", new XAttribute(w + "w", "6700"))),
+                            new XElement(w + "tr", new XElement(w + "tc", first, blockMarker ? boundary : null, pageBreak, following))),
+                        new XElement(w + "p", Text("Following body witness")),
+                        new XElement(w + "sectPr", new XElement(w + "pgSz",
+                            new XAttribute(w + "w", "12240"), new XAttribute(w + "h", "15840"))));
+                }, packageChange: zip => ShowCommentsWithoutRevisionPaint(zip, w));
+
+                var cell = source.Tables.Single().Rows.Single().Cells.Single();
+                TestAssert.Equal(1, cell.BodyElements.OfType<DocxPageBreakElement>().Count());
+                TestAssert.Equal(1, cell.Paragraphs.Sum(p => p.InlineReferences.Count(reference => reference.Kind == DocxRelatedStoryKind.Comment)));
+                PdfPage page = renderer.RenderPagesAsync(source, null, default).ToBlockingEnumerable().Single();
+                var fills = Regex.Matches(page.Content, @"0\.973 0\.863 0\.867 rg\s+[-\d.]+ [-\d.]+ (?<w>[-\d.]+) [-\d.]+ re f");
+                TestAssert.True(fills.Any(fill => Number(fill, "w") > 20d), "The selection retains its word-sized fill at the cell break.");
+                string text = Regex.Replace(string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(page)
+                    .Select(show => show.Text)), @"\s+", "");
+                foreach (string word in new[] { "OutsideLeft", startBoundary ? "SelectedRight" : "SelectedLeft", "OutsideRight", "Followingbodywitness" })
+                    TestAssert.Contains(word, text);
+                if (numbered) TestAssert.Contains("2.", text);
+                TestAssert.Equal(1, Regex.Matches(text, "Checkthecalculationalongsidetheillustration\\.").Count);
+                return page;
+            }
+
+            XElement? ListProperties() => numbered ? new XElement(w + "pPr", new XElement(w + "numPr",
+                new XElement(w + "ilvl", new XAttribute(w + "val", "0")), new XElement(w + "numId", new XAttribute(w + "val", "1")))) : null;
+        }
+
+        XElement Text(string text) => new(w + "r", new XElement(w + "t", new XAttribute(XNamespace.Xml + "space", "preserve"), text));
+        XElement Marker(string kind) => new(w + kind, new XAttribute(w + "id", "0"));
+    }
+
+    private static void ShowCommentsWithoutRevisionPaint(ZipArchive zip, XNamespace w)
+    {
+        const string part = "word/settings.xml";
+        var entry = zip.GetEntry(part)!;
+        XDocument settings;
+        using (var stream = entry.Open()) settings = XDocument.Load(stream);
+        settings.Root!.Element(w + "revisionView")?.Remove();
+        settings.Root.AddFirst(new XElement(w + "revisionView", new XAttribute(w + "markup", "1"),
+            new XAttribute(w + "comments", "1"), new XAttribute(w + "insDel", "0")));
+        entry.Delete();
+        using var output = zip.CreateEntry(part).Open();
+        settings.Save(output);
     }
 
     private static (double[][] Paths, double StrokeWidth, double FillHeight) ReadGeometry(PdfPage page)

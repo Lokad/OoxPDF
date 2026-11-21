@@ -495,7 +495,7 @@ internal sealed partial class DocxReader
                 bool keepsPageBreak = IsRunBreakOnlyParagraph(child, VisibleBreak, HiddenBreak, markupMode) &&
                     child.Elements().Any(element => HasVisibleRunBreak(element, VisiblePageBreak, markupMode));
                 var inlineCommentBoundaries = comments?.BeginParagraph(scopedChild.LeadingCommentBoundaries,
-                    !keepsPageBreak && FindMergePredecessor(elements, mergeDeletedMarks) is not null, cancellationToken);
+                    FindMergePredecessor(elements, mergeDeletedMarks) is not null, cancellationToken);
                 if (keepsPageBreak)
                 {
                     XElement? paragraphProperties = child.Element(WordprocessingNamespace + "pPr");
@@ -503,8 +503,10 @@ internal sealed partial class DocxReader
                     var resolvedParagraph = ResolveParagraphProperties(paragraphProperties, paragraphStyleId, styles, tableCellStyle.Paragraph);
                     var sourceNumbering = ResolveParagraphNumbering(paragraphProperties, resolvedParagraph, paragraphStyleId, styles, numbering, cancellationToken);
                     bool hasListMarker = sourceNumbering is { } source && !string.IsNullOrWhiteSpace(source.Definition.Text);
+                    // Put a consumed boundary before the break, exactly as an
+                    // authored inline marker in the fragment that merges.
                     foreach (ParagraphBreakPart part in SplitParagraphAtRunBreaks(child, markupMode, VisiblePageBreak,
-                        HiddenBreak, retainFirstLine: hasListMarker))
+                        HiddenBreak, retainFirstLine: hasListMarker, leadingCommentBoundaries: inlineCommentBoundaries))
                     {
                         cancellationToken.ThrowIfCancellationRequested();
                         if (part.BreakValue is not null)
