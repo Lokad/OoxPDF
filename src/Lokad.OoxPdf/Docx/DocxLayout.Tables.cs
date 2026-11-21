@@ -621,14 +621,14 @@ internal sealed partial class DocxLayoutEngine
                 // Keep only painted math boxes atomic until math-bearing row
                 // fragments have their own placement qualification.
                 if (textLines.Any(line => line.Math is not null || line.InlineMath.Count != 0)) { return false; }
+                IReadOnlyList<DocxParagraph> cellParagraphs = GetParagraphsFromBodyElements(DocxTableCellContent.GetBodyElements(cell));
                 double fragmentBaselineScale = ResolveTableRowFragmentBaselineScale(row, paragraphSpacingScale, fragmentCount: 2);
                 if (fragmentBaselineScale < 1d)
                 {
-                    double correction = ResolveTableCellFirstBaselineInset(
-                        GetParagraphsFromBodyElements(DocxTableCellContent.GetBodyElements(cell)), textMeasurer) * (1d - fragmentBaselineScale);
+                    double correction = ResolveTableCellFirstBaselineInset(cellParagraphs, textMeasurer) * (1d - fragmentBaselineScale);
                     textLines = textLines.Select(line => line with { BaselineY = line.BaselineY + correction }).ToArray();
                 }
-                laidOutCells.Add((GetParagraphsFromBodyElements(DocxTableCellContent.GetBodyElements(cell)), textLines, measuredCell.UsedHeight));
+                laidOutCells.Add((cellParagraphs, textLines, measuredCell.UsedHeight));
                 splitLineBaselines.AddRange(textLines.Select(line => line.BaselineY));
             }
 

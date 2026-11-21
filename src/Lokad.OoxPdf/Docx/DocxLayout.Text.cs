@@ -10,7 +10,7 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxLayoutEngine
 {
-    private static IReadOnlyList<DocxTextSpan> CreateTextSpans(IReadOnlyList<DocxTextRun> runs, int? pageNumber, int? pageCount)
+    private static DocxTextSpan[] CreateTextSpans(IReadOnlyList<DocxTextRun> runs, int? pageNumber, int? pageCount)
     {
         if (runs.Count != 0 && runs.All(run => run.Text.Length == 0 || run.EffectiveProperties.Hidden))
         {
@@ -28,12 +28,9 @@ internal sealed partial class DocxLayoutEngine
         return runs
             .Select((run, index) => (run, index))
             .Where(item => item.run.Text.Length != 0 && !item.run.EffectiveProperties.Hidden)
-            .Select(item => CreateTextSpan(ResolveLayoutFieldPlaceholders(item.run, pageNumber, pageCount), item.run, item.index))
+            .Select(item => CreateTextSpan(DocxFieldText.Resolve(item.run, item.run.Text, pageNumber, pageCount), item.run, item.index))
             .ToArray();
     }
-
-    private static string ResolveLayoutFieldPlaceholders(DocxTextRun run, int? pageNumber, int? pageCount)
-        => DocxFieldText.Resolve(run, run.Text, pageNumber, pageCount);
 
     private static DocxTextSpan CreateTextSpan(string text, DocxTextRun run, int fallbackSourceRunIndex)
     {

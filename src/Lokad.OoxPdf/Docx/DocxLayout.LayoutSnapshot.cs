@@ -852,14 +852,18 @@ internal sealed partial record DocxLayoutSnapshot(
         DocxTableCell visualCell = cellLayout.VisualCell;
         DocxTextLineLayout? firstLine = cellLayout.TextLines.FirstOrDefault();
         DocxTextLineLayout? lastLine = cellLayout.TextLines.LastOrDefault();
+        bool sharesSourceCell = ReferenceEquals(cell, visualCell);
         IReadOnlyList<DocxBodyElement> bodyElements = DocxTableCellContent.GetBodyElements(cell);
         IReadOnlyList<DocxParagraph> paragraphs = GetParagraphsFromBodyElements(bodyElements);
-        IReadOnlyList<DocxBodyElement> visualBodyElements = DocxTableCellContent.GetBodyElements(visualCell);
-        IReadOnlyList<DocxParagraph> visualParagraphs = GetParagraphsFromBodyElements(visualBodyElements);
+        IReadOnlyList<DocxParagraph> visualParagraphs = sharesSourceCell
+            ? paragraphs
+            : GetParagraphsFromBodyElements(DocxTableCellContent.GetBodyElements(visualCell));
         IReadOnlyList<double> spacingBeforePoints = paragraphs.Select(paragraph => paragraph.EffectiveProperties.SpacingBeforePoints).ToArray();
         IReadOnlyList<double> spacingAfterPoints = paragraphs.Select(paragraph => paragraph.EffectiveProperties.SpacingAfterPoints).ToArray();
         string cellText = string.Concat(paragraphs.SelectMany(paragraph => paragraph.Runs).Select(run => run.Text));
-        string visualCellText = string.Concat(visualParagraphs.SelectMany(paragraph => paragraph.Runs).Select(run => run.Text));
+        string visualCellText = sharesSourceCell
+            ? cellText
+            : string.Concat(visualParagraphs.SelectMany(paragraph => paragraph.Runs).Select(run => run.Text));
         TextProfile textProfile = BuildTextProfile();
         DocxTableCellClipSnapshot clip = DocxRenderer.ResolveTableCellContentClip(row, cellLayout);
         return new DocxTableCellSnapshot(

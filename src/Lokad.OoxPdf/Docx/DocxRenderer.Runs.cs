@@ -733,9 +733,6 @@ internal sealed partial class DocxRenderer
             : thickness;
     }
 
-    private static string ResolveStaticFieldPlaceholders(DocxTextRun styleRun, string text, int pageNumber, int pageCount)
-        => DocxFieldText.Resolve(styleRun, text, pageNumber, pageCount);
-
     private static double ResolveSubstitutedFieldEmissionWidth(
         string sourceText,
         string emittedText,

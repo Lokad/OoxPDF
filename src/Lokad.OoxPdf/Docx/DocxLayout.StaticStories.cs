@@ -337,8 +337,8 @@ internal sealed partial class DocxLayoutEngine
             bool sourcePictures = paragraph.Images.Count != 0 && paragraph.Images.All(image => image.SourceRunIndex >= 0);
             bool sourceControls = paragraph.Runs.Any(run => !run.EffectiveProperties.Hidden &&
                 (run.Text.Contains('\t') || run.Text.Contains('\n')));
-            bool needsInlineFrame = paragraph.Runs.Any(run => !run.EffectiveProperties.Hidden &&
-                ResolveStaticFieldPlaceholders(run, pageNumber, pageCount).Length != 0) && (sourceControls ||
+            bool hasVisibleText = paragraph.Runs.Any(run => run.Text.Length != 0 && !run.EffectiveProperties.Hidden);
+            bool needsInlineFrame = hasVisibleText && (sourceControls ||
                 GetParagraphFirstLineIndentOffset(paragraph, paragraphSpacingScale) != 0d ||
                 GetParagraphTextStartOffset(paragraph, paragraphSpacingScale) != 0d ||
                 GetParagraphRightInset(paragraph, paragraphSpacingScale) != 0d);
@@ -396,7 +396,7 @@ internal sealed partial class DocxLayoutEngine
                     continue;
                 }
             }
-            DocxTextSpan[] spans = CreateStaticTextSpans(paragraph.Runs);
+            DocxTextSpan[] spans = CreateTextSpans(paragraph.Runs, pageNumber, pageCount);
             int sourceLineIndex = 0;
             var placedStaticImages = new List<DocxInlineImage>();
             if (spans.Length != 0)
@@ -809,29 +809,6 @@ internal sealed partial class DocxLayoutEngine
             return CreateMidLinePlan(planParagraph, planSpans, planLines, planWidth, planWidth, maxDisplacement);
         }
 
-        DocxTextSpan[] CreateStaticTextSpans(IReadOnlyList<DocxTextRun> runs)
-        {
-            if (runs.Count != 0 && runs.All(run => run.Text.Length == 0 || run.EffectiveProperties.Hidden))
-            {
-                for (int i = 0; i < runs.Count; i++)
-                {
-                    if (!runs[i].EffectiveProperties.Hidden)
-                    {
-                        return [CreateTextSpan(" ", runs[i], i)];
-                    }
-                }
-
-                return [];
-            }
-
-            return runs
-                .Select((run, index) => (run, index))
-                .Where(item => !item.run.EffectiveProperties.Hidden)
-                .Select(item => CreateTextSpan(ResolveStaticFieldPlaceholders(item.run, pageNumber, pageCount), item.run, item.index))
-                .Where(span => span.Text.Length != 0)
-                .ToArray();
-        }
-
         IReadOnlyList<DocxTextSegmentLayout> CreateStaticTextSegments(IReadOnlyList<DocxTextSpan> spans, double lineX)
         {
             var segments = new List<DocxTextSegmentLayout>(spans.Count);
@@ -899,7 +876,4 @@ internal sealed partial class DocxLayoutEngine
             ? DocxLineMetrics.ResolveBodyBaselineOffset(fontSize, lineHeight, hasExplicitLineSpacing: true)
             : Math.Max(0d, lineHeight - descender);
     }
-
-    private static string ResolveStaticFieldPlaceholders(DocxTextRun run, int pageNumber, int pageCount)
-        => DocxFieldText.Resolve(run, run.Text, pageNumber, pageCount);
 }
