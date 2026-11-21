@@ -728,7 +728,8 @@ try {
     }
     finally {[IO.File]::WriteAllBytes($visualDiff,$engineBytes)}
     $passed+='changed-engine-reuses-pinned-rasters'
-    foreach ($fault in @('valid-raster-reuse','stale-pdf','missing-page','changed-page','extra-page','wrong-dpi','wrong-tool','missing-pin')) {
+    foreach ($fault in @('valid-raster-reuse','stale-pdf','missing-page','changed-page','extra-page',
+        'wrong-page-name','missing-middle-page','wrong-dpi','wrong-tool','missing-pin')) {
         $directory=Join-Path $OutputDirectory $fault
         Copy-Item -LiteralPath $baseline.Directory -Destination $directory -Recurse
         $candidate=Join-Path $directory 'candidate';$reference=Join-Path $directory 'reference'
@@ -744,6 +745,13 @@ try {
             'missing-page' { Remove-Item -LiteralPath (Join-Path $raster 'page-001.png') }
             'changed-page' { Add-Content (Join-Path $raster 'page-001.png') 'changed' }
             'extra-page' { Set-Content (Join-Path $raster 'page-002.png') 'extra' }
+            { $_ -in @('wrong-page-name','missing-middle-page') } {
+                $name=if ($fault -eq 'wrong-page-name') {'page-label.png'} else {'page-003.png'}
+                $page=Join-Path $raster $name
+                Set-Content -LiteralPath $page 'Correctly pinned invalid page sequence'
+                $pin.Pages=@($pin.Pages)+@{Name=$name;Sha256=(Get-FileHash -LiteralPath $page).Hash}
+                $pin | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $pinPath
+            }
             'wrong-dpi' { $pin.Dpi=72;$pin | ConvertTo-Json -Depth 5 | Set-Content $pinPath }
             'wrong-tool' { $pin.RasterizerId='wrong';$pin | ConvertTo-Json -Depth 5 | Set-Content $pinPath }
             'missing-pin' { Remove-Item -LiteralPath $pinPath }
@@ -752,6 +760,8 @@ try {
         try { & $script -CandidateDirectory $candidate -ReferenceDirectory $reference -VisualDiffPath $visualDiff -ValidationToolsDirectory $tools | Out-Null }
         catch {
             if ($fault -eq 'valid-raster-reuse' -or $_.Exception.Message -notmatch '[Pp]ortfolio raster') { throw }
+            if ($fault -in @('wrong-page-name','missing-middle-page') -and
+                $_.Exception.Message -notlike 'Portfolio raster page set is incomplete:*') { throw }
             $rejected=$true
         }
         if ($fault -eq 'valid-raster-reuse') {

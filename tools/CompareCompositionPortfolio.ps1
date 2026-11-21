@@ -215,12 +215,11 @@ function Get-PortfolioRaster([string] $Pdf, [string] $Folder, [int] $Dpi=144) {
         & (Join-Path $ValidationToolsDirectory 'RasterizePdf.ps1') -Framework $Framework -InputPdf $Pdf -OutputDirectory $Folder -Dpi $Dpi -SkipBuild @binding *> ($Folder+'.log')
         # The wrapper throws on native failure; Start-Process does not set LASTEXITCODE.
     }
-    $files = @(Get-ChildItem -LiteralPath $Folder -Filter 'page-*.png' -File)
-    if (!$files.Count -or @($files | Where-Object Name -CNotMatch '^page-[0-9]+\.png$').Count) { throw ('Portfolio raster page set is incomplete: ' + $Folder) }
-    $files = @($files | Sort-Object { [int]$_.BaseName.Substring(5) })
-    $pages = @(for ($index=0; $index -lt $files.Count; $index++) {
-        if ($files[$index].Name -cne ('page-{0:000}.png' -f ($index+1))) { throw ('Portfolio raster page set is incomplete: ' + $Folder) }
-        [ordered]@{Name=$files[$index].Name;Sha256=(Get-FileHash -LiteralPath $files[$index].FullName).Hash}
+    try { $files = Get-ReferenceRasterPages $Folder }
+    catch { throw ('Portfolio raster page set is incomplete: ' + $Folder) }
+    if (!$files.Count) { throw ('Portfolio raster page set is incomplete: ' + $Folder) }
+    $pages = @(foreach ($file in $files) {
+        [ordered]@{Name=$file.Name;Sha256=(Get-FileHash -LiteralPath $file.FullName).Hash}
     })
     if ($reuseRaster) {
         if ($pin.Pages.Count -ne $pages.Count) { throw ('Portfolio raster page set differs: ' + $Folder) }
