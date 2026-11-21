@@ -166,7 +166,7 @@ internal sealed partial class DocxReader
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        if (HasUnsupportedTrackedChanges(document))
+        if (HasUnsupportedTrackedChanges(document, markupContext.ApproximatesTrackedChanges, cancellationToken))
         {
             if (markupContext.ApproximatesTrackedChanges)
             {
@@ -654,7 +654,7 @@ internal sealed partial class DocxReader
         return value is not null && !value.Equals("lrTb", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static bool HasUnsupportedTrackedChanges(XDocument document)
+    private static bool HasUnsupportedTrackedChanges(XDocument document, bool reviewApproximation, CancellationToken token)
     {
             bool IsSupportedVisibleInlineContainerChild(XElement element)
             {
@@ -679,7 +679,7 @@ internal sealed partial class DocxReader
             WordprocessingNamespace + "moveToRangeStart",
             WordprocessingNamespace + "moveToRangeEnd"
         ];
-        if (unsupportedTrackChangeContainers.Any(name => document.Descendants(name).Any()))
+        if (unsupportedTrackChangeContainers.Any(name => document.Descendants(name).Any(NeedsDiagnostic)))
         {
             return true;
         }
@@ -691,8 +691,15 @@ internal sealed partial class DocxReader
         ];
         return visibleTrackedChangeContainers.Any(containerName =>
             document.Descendants(containerName).Any(container =>
-                !IsSupportedInlineContainerParent(container.Parent) ||
-                container.Elements().Any(child => !IsSupportedVisibleInlineContainerChild(child))));
+                (!IsSupportedInlineContainerParent(container.Parent) ||
+                    container.Elements().Any(child => !IsSupportedVisibleInlineContainerChild(child))) &&
+                NeedsDiagnostic(container)));
+
+        bool NeedsDiagnostic(XElement source)
+        {
+            token.ThrowIfCancellationRequested();
+            return reviewApproximation || !DocxSourceXml.IsPairedMathMoveSource(source, token);
+        }
     }
 
     private static bool HasFormattingTrackedChanges(XDocument document)

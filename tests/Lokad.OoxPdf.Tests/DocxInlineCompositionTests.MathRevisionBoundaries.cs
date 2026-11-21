@@ -1,4 +1,5 @@
 using System.Xml.Linq;
+using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Docx;
 using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
 
@@ -110,16 +111,45 @@ internal static partial class DocxInlineCompositionTests
             (OoxPdfDocxMarkupMode.AllMarkup, "rate2time", "3ratecost")
         })
         {
-            var document = ReadMovedOperands(mode, pageBreak);
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var document = ReadMovedOperands(mode, pageBreak, diagnostics.Add);
             var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true), mode,
                 mode == OoxPdfDocxMarkupMode.AllMarkup ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
                     : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
-            var pages = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
+            var pages = renderer.RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
             string[] painted = pages.Select(page => string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(page,
                 usePageCoordinates: true, fontResourceFilter: name => name.StartsWith("Eq", StringComparison.Ordinal))
                 .Select(show => show.Text))).ToArray();
             TestAssert.True(painted.SequenceEqual(pageBreak ? [sourceRow, destinationRow] : [sourceRow + destinationRow]),
                 $"Both complete fractions follow the authored move and page ownership in {mode} (page break {pageBreak}).");
+            TestAssert.Equal(0, diagnostics.Count(d => d.Id == "DOCX_UNSUPPORTED_TRACKED_CHANGES"));
+            TestAssert.Equal(mode == OoxPdfDocxMarkupMode.Final ? 0 : 1,
+                diagnostics.Count(d => d.Id == "DOCX_APPROXIMATED_TRACKED_CHANGES"));
+            TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION"),
+                "The supported fractions still report their equation approximation.");
+        }
+    }
+
+    public static void DocxMathRevisionBoundariesKeepMoveFallbackDiagnostics()
+    {
+        var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true),
+            OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+
+        Check(move => move[0].SetAttributeValue(WordprocessingNamespace + "name", "DifferentMove"),
+            broadWarning: true, "DOCX_UNSUPPORTED_EQUATION");
+        Check(move => move[2].AddAfterSelf(new XElement(move[2])),
+            broadWarning: true, "DOCX_APPROXIMATED_EQUATION");
+        Check(move => move[1].Add(new XElement(MathNamespace + "future")),
+            broadWarning: false, "DOCX_UNSUPPORTED_EQUATION");
+
+        void Check(Action<XElement[]> change, bool broadWarning, string equationDiagnostic)
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var document = ReadMovedOperands(OoxPdfDocxMarkupMode.Final, pageBreak: false, diagnostics.Add, change);
+            _ = renderer.RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().Single();
+            TestAssert.Equal(broadWarning ? 1 : 0, diagnostics.Count(d => d.Id == "DOCX_UNSUPPORTED_TRACKED_CHANGES"));
+            TestAssert.True(diagnostics.Any(d => d.Id == equationDiagnostic),
+                $"Expected {equationDiagnostic} for the affected math move.");
         }
     }
 
@@ -149,7 +179,8 @@ internal static partial class DocxInlineCompositionTests
         TestAssert.Equal(0, DocxSourceXml.ReadPairedMoveOwnerIds(ambiguous.Descendants(MathNamespace + "oMath").First(), null, default).Count);
     }
 
-    private static DocxDocument ReadMovedOperands(OoxPdfDocxMarkupMode mode, bool pageBreak) =>
+    private static DocxDocument ReadMovedOperands(OoxPdfDocxMarkupMode mode, bool pageBreak,
+        Action<OoxPdfDiagnostic> diagnostics, Action<XElement[]>? changeDestinationMove = null) =>
         ReadMutation("docx-omml-normal-fraction-inline-arial-normal", mode, false, false, (xml, w, m) =>
         {
             XElement source = xml.Descendants(m + "oMath").Single().Parent!;
@@ -161,14 +192,16 @@ internal static partial class DocxInlineCompositionTests
             lastNumerator.Element(m + "r")!.Element(m + "t")!.Value = "3";
             destination.Descendants(m + "den").Single().Element(m + "r")!.Element(m + "t")!.Value = "cost";
             firstNumerator.AddFirst(MathOperandMove(rate, "moveFrom", "41", "42"));
-            lastNumerator.Add(MathOperandMove(rate, "moveTo", "43", "44"));
+            var destinationMove = MathOperandMove(rate, "moveTo", "43", "44");
+            lastNumerator.Add(destinationMove);
+            changeDestinationMove?.Invoke(destinationMove);
             if (pageBreak)
             {
                 source.Add(new XElement(w + "r", new XElement(w + "br", new XAttribute(w + "type", "page"))));
                 source.Add(destination.Elements().Where(child => child.Name != w + "pPr"));
             }
             else source.AddAfterSelf(destination);
-        });
+        }, diagnosticSink: diagnostics);
 
     private static XElement[] MathOperandMove(XElement operand, string kind, string rangeId, string revisionId)
     {

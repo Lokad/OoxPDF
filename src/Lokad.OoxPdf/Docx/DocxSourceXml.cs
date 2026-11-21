@@ -35,8 +35,8 @@ internal static class DocxSourceXml
 
     public sealed record StoryOrigin(XElement Story);
 
-    private sealed record PairedMoveOwners(IReadOnlySet<(XName Name, string Id)> Ids);
-    private sealed record MoveRange(string Name, List<(XName Name, string Id)> Owners);
+    private sealed record PairedMoveOwners(IReadOnlySet<(XName Name, string Id)> Ids, IReadOnlySet<XElement> MathSources);
+    private sealed record MoveRange(string Name, XElement Start, List<XElement> Owners);
 
     public static XElement? FindStoryRoot(XElement source) =>
         source.AncestorsAndSelf().FirstOrDefault(IsStoryRoot);
@@ -49,16 +49,27 @@ internal static class DocxSourceXml
         XElement equation, XElement? authoredStory, CancellationToken token)
     {
         XElement? story = FindStoryRoot(equation) ?? authoredStory;
-        if (story?.Annotation<PairedMoveOwners>() is { } cached) return cached.Ids;
-        var ids = CollectPairedMoveOwnerIds(story ?? equation, token);
-        story?.AddAnnotation(new PairedMoveOwners(ids));
-        return ids;
+        return story is null ? CollectPairedMoveOwners(equation, token).Ids : GetPairedMoveOwners(story, token).Ids;
     }
 
-    private static HashSet<(XName Name, string Id)> CollectPairedMoveOwnerIds(XElement story, CancellationToken token)
+    public static bool IsPairedMathMoveSource(XElement element, CancellationToken token) =>
+        IsInEquation(element) && FindStoryRoot(element) is { } story &&
+        GetPairedMoveOwners(story, token).MathSources.Contains(element);
+
+    private static bool IsInEquation(XElement element) => element.Ancestors(MathNamespace + "oMath").Any();
+
+    private static PairedMoveOwners GetPairedMoveOwners(XElement story, CancellationToken token)
+    {
+        if (story.Annotation<PairedMoveOwners>() is { } cached) return cached;
+        var paired = CollectPairedMoveOwners(story, token);
+        story.AddAnnotation(paired);
+        return paired;
+    }
+
+    private static PairedMoveOwners CollectPairedMoveOwners(XElement story, CancellationToken token)
     {
         var open = new Dictionary<(DocxRevisionKind Kind, string Id), MoveRange?>();
-        var closed = new Dictionary<(DocxRevisionKind Kind, string Name), MoveRange?>();
+        var closed = new Dictionary<(DocxRevisionKind Kind, string Name), (MoveRange Range, XElement End)?>();
         var declaredIds = new HashSet<(XName Name, string Id)>();
         var duplicateIds = new HashSet<(XName Name, string Id)>();
         var pending = new Stack<XElement>(StoredChildren(story).Reverse());
@@ -80,13 +91,13 @@ internal static class DocxSourceXml
                     if (open.Count == 1) open[open.Keys.First()] = null;
                     MoveRange? range = open.Count == 0 && boundary &&
                         (string?)child.Attribute(WordprocessingNamespace + "name") is { Length: > 0 } name
-                        ? new(name, []) : null;
+                        ? new(name, child, []) : null;
                     open.TryAdd(key, range);
                 }
                 else if (open.Remove(key, out var range) && boundary && range is not null)
                 {
                     var named = (kind.Value, range.Name);
-                    if (!closed.TryAdd(named, range)) closed[named] = null;
+                    if (!closed.TryAdd(named, (range, child))) closed[named] = null;
                 }
             }
             else if (child.Name == WordprocessingNamespace + "moveFrom" || child.Name == WordprocessingNamespace + "moveTo")
@@ -96,25 +107,47 @@ internal static class DocxSourceXml
                 if (open.Count != 1) continue;
                 var range = open.First();
                 DocxRevisionKind side = child.Name.LocalName == "moveFrom" ? DocxRevisionKind.MoveFrom : DocxRevisionKind.MoveTo;
-                if (range.Key.Kind == side) range.Value?.Owners.Add(owner);
+                if (range.Key.Kind == side) range.Value?.Owners.Add(child);
             }
         }
 
         // A move has a closed source and destination with the same name.
         // Unique revision IDs carry these owners through cloned page-break fragments.
         var owners = new HashSet<(XName Name, string Id)>();
+        var mathSources = new HashSet<XElement>();
         foreach (var (key, from) in closed)
         {
             token.ThrowIfCancellationRequested();
-            if (key.Kind == DocxRevisionKind.MoveFrom && from is { Owners.Count: > 0 } &&
-                closed.TryGetValue((DocxRevisionKind.MoveTo, key.Name), out var to) && to is { Owners.Count: > 0 } &&
-                !from.Owners.Any(duplicateIds.Contains) && !to.Owners.Any(duplicateIds.Contains))
+            if (key.Kind != DocxRevisionKind.MoveFrom || from is not { } source ||
+                !closed.TryGetValue((DocxRevisionKind.MoveTo, key.Name), out var to) || to is not { } destination ||
+                !HasUniqueOwners(source.Range) || !HasUniqueOwners(destination.Range))
             {
-                owners.UnionWith(from.Owners);
-                owners.UnionWith(to.Owners);
+                continue;
+            }
+            owners.UnionWith(source.Range.Owners.Select(OwnerId));
+            owners.UnionWith(destination.Range.Owners.Select(OwnerId));
+            // Math has its own fallback diagnostics at placement. The broad
+            // revision probe can defer to them when both move ranges belong to it.
+            if (IsMathRange(source) && IsMathRange(destination))
+            {
+                AddMathSources(source);
+                AddMathSources(destination);
             }
         }
-        return owners;
+        return new(owners, mathSources);
+
+        bool HasUniqueOwners(MoveRange range) =>
+            range.Owners.Count != 0 && !range.Owners.Select(OwnerId).Any(duplicateIds.Contains);
+        static (XName Name, string Id) OwnerId(XElement owner) =>
+            (owner.Name, owner.Attribute(WordprocessingNamespace + "id")!.Value);
+        static bool IsMathRange((MoveRange Range, XElement End) move) =>
+            IsInEquation(move.Range.Start) && IsInEquation(move.End) && move.Range.Owners.All(IsInEquation);
+        void AddMathSources((MoveRange Range, XElement End) move)
+        {
+            mathSources.Add(move.Range.Start);
+            mathSources.UnionWith(move.Range.Owners);
+            mathSources.Add(move.End);
+        }
     }
 
     // These wrappers contribute stored content without changing inline formatting.
