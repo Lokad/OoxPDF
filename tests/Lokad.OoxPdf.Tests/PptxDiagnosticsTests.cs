@@ -424,98 +424,6 @@ internal static class PptxDiagnosticsTests
         TestAssert.Contains("PPTX_UNSUPPORTED_TRANSPARENCY", string.Join("|", diagnostics.Select(d => d.Id)));
     }
 
-    public static void PptxUnsupportedTransparencyDiagnosticsUseInheritedSceneShapeState()
-    {
-        string contentTypes = PptxTests.BasicContentTypes().Replace(
-            "</Types>",
-            """
-              <Override PartName="/ppt/slideLayouts/slideLayout1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"/>
-              <Override PartName="/ppt/slideMasters/slideMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"/>
-            </Types>
-            """);
-        string presentationRelationships = PptxTests.PresentationRelationship().Replace(
-            "</Relationships>",
-            """
-              <Relationship Id="rIdMaster" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/>
-            </Relationships>
-            """);
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = contentTypes,
-            ["_rels/.rels"] = PptxTests.PackageRelationship(),
-            ["ppt/_rels/presentation.xml.rels"] = presentationRelationships,
-            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
-            ["ppt/slides/_rels/slide1.xml.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rIdLayout" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/>
-                </Relationships>
-                """,
-            ["ppt/slides/slide1.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
-                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
-                       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-                  <p:cSld><p:spTree/></p:cSld>
-                </p:sld>
-                """,
-            ["ppt/slideLayouts/_rels/slideLayout1.xml.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rIdMaster" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="../slideMasters/slideMaster1.xml"/>
-                </Relationships>
-                """,
-            ["ppt/slideLayouts/slideLayout1.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sldLayout xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
-                             xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <p:cSld><p:spTree>
-                    <p:sp>
-                      <p:nvSpPr><p:cNvPr id="2" name="LayoutTransparentEffect"/><p:nvPr/></p:nvSpPr>
-                      <p:spPr>
-                        <a:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="914400"/></a:xfrm>
-                        <a:effectLst>
-                          <a:reflection><a:srgbClr val="123456"><a:alpha val="50000"/></a:srgbClr></a:reflection>
-                        </a:effectLst>
-                      </p:spPr>
-                    </p:sp>
-                  </p:spTree></p:cSld>
-                </p:sldLayout>
-                """,
-            ["ppt/slideMasters/slideMaster1.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sldMaster xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
-                             xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <p:cSld><p:spTree/></p:cSld>
-                </p:sldMaster>
-                """
-        });
-        using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
-        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
-        PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
-        PptxSceneSlide sceneSlide = scene.Slides[0];
-        TestAssert.True(
-            sceneSlide.LayoutNodes.Any(node => node.Shape?.HasUnsupportedTransparency == true),
-            "Expected inherited layout transparency provenance to be owned by layout scene nodes.");
-
-        var diagnostics = new List<OoxPdfDiagnostic>();
-        XDocument slideXmlWithoutAlpha = XDocument.Parse("""
-            <?xml version="1.0" encoding="UTF-8"?>
-            <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
-                   xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-              <p:cSld><p:spTree/></p:cSld>
-            </p:sld>
-            """);
-        System.Reflection.MethodInfo emitDiagnostics = typeof(PptxRenderer).GetMethod(
-            "EmitUnsupportedFeatureDiagnostics",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected unsupported feature diagnostic emitter.");
-        Action<OoxPdfDiagnostic> sink = diagnostics.Add;
-        emitDiagnostics.Invoke(null, [sceneSlide, slideXmlWithoutAlpha, "/ppt/slides/slide1.xml", 1, sink, new HashSet<string>(StringComparer.Ordinal)]);
-
-        TestAssert.Contains("PPTX_UNSUPPORTED_TRANSPARENCY", string.Join("|", diagnostics.Select(d => d.Id)));
-    }
-
     public static void PptxUnsupportedGradientDiagnosticsUseSceneShapeGradient()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -863,9 +771,9 @@ internal static class PptxDiagnosticsTests
         TestAssert.Equal("Ignored", matches[0].Fallback);
     }
     // RV09: unsupported payloads must diagnose identically from slide, layout and master nodes.
-    public static void PptxUnsupportedEffectDiagnosticsUseInheritedSceneState()
+    public static void PptxInheritedReflectionDiagnosticsUseLayoutSceneState()
     {
-        string ids = CollectInheritedPayloadDiagnostics(
+        var (scene, diagnostics) = ReadInheritedPayloadDiagnostics(
             """
                     <p:sp>
                       <p:nvSpPr><p:cNvPr id="2" name="LayoutReflect"/><p:nvPr/></p:nvSpPr>
@@ -878,12 +786,15 @@ internal static class PptxDiagnosticsTests
                     </p:sp>
             """,
             "");
-        TestAssert.Contains("PPTX_UNSUPPORTED_EFFECT", ids);
+        TestAssert.True(scene.LayoutNodes.Any(node => node.Shape?.HasUnsupportedTransparency == true),
+            "The unsupported reflection alpha belongs to the layout scene shape.");
+        AssertInheritedDiagnostic(diagnostics, "PPTX_UNSUPPORTED_EFFECT", "/ppt/slideLayouts/slideLayout1.xml");
+        AssertInheritedDiagnostic(diagnostics, "PPTX_UNSUPPORTED_TRANSPARENCY", "/ppt/slideLayouts/slideLayout1.xml");
     }
 
     public static void PptxUnsupportedCustomGeometryDiagnosticsUseInheritedSceneState()
     {
-        string ids = CollectInheritedPayloadDiagnostics(
+        var (_, diagnostics) = ReadInheritedPayloadDiagnostics(
             "",
             """
                     <p:sp><p:spPr>
@@ -896,12 +807,12 @@ internal static class PptxDiagnosticsTests
                       </a:custGeom>
                     </p:spPr></p:sp>
             """);
-        TestAssert.Contains("PPTX_UNSUPPORTED_CUSTOM_GEOMETRY", ids);
+        AssertInheritedDiagnostic(diagnostics, "PPTX_UNSUPPORTED_CUSTOM_GEOMETRY", "/ppt/slideMasters/slideMaster1.xml");
     }
 
     public static void PptxUnsupportedCalloutDiagnosticsUseInheritedSceneState()
     {
-        string ids = CollectInheritedPayloadDiagnostics(
+        var (_, diagnostics) = ReadInheritedPayloadDiagnostics(
             """
                     <p:sp>
                       <p:nvSpPr><p:cNvPr id="2" name="LayoutCallout"/><p:nvPr/></p:nvSpPr>
@@ -912,10 +823,17 @@ internal static class PptxDiagnosticsTests
                     </p:sp>
             """,
             "");
-        TestAssert.Contains("PPTX_UNSUPPORTED_CALLOUT", ids);
+        AssertInheritedDiagnostic(diagnostics, "PPTX_UNSUPPORTED_CALLOUT", "/ppt/slideLayouts/slideLayout1.xml");
     }
 
-    private static string CollectInheritedPayloadDiagnostics(string layoutShapes, string masterShapes)
+    private static void AssertInheritedDiagnostic(IReadOnlyList<OoxPdfDiagnostic> diagnostics, string id, string partName)
+    {
+        OoxPdfDiagnostic diagnostic = diagnostics.Single(item => item.Id == id);
+        TestAssert.Equal(partName, diagnostic.PartName);
+    }
+
+    private static (PptxSceneSlide Scene, IReadOnlyList<OoxPdfDiagnostic> Diagnostics) ReadInheritedPayloadDiagnostics(
+        string layoutShapes, string masterShapes)
     {
         string contentTypes = PptxTests.BasicContentTypes().Replace(
             "</Types>",
@@ -930,7 +848,7 @@ internal static class PptxDiagnosticsTests
               <Relationship Id="rIdMaster" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/>
             </Relationships>
             """);
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        using MemoryStream input = TestFixtures.CreateZipPackage(new Dictionary<string, string>
         {
             ["[Content_Types].xml"] = contentTypes,
             ["_rels/.rels"] = PptxTests.PackageRelationship(),
@@ -975,8 +893,7 @@ internal static class PptxDiagnosticsTests
                 </p:sldMaster>
                 """
         });
-        using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        using OoxPackage package = OoxPackage.Open(input, CancellationToken.None);
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
         PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
         PptxSceneSlide sceneSlide = scene.Slides[0];
@@ -993,6 +910,6 @@ internal static class PptxDiagnosticsTests
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected unsupported feature diagnostic emitter.");
         Action<OoxPdfDiagnostic> sink = diagnostics.Add;
         emitDiagnostics.Invoke(null, [sceneSlide, slideXmlWithoutShapes, "/ppt/slides/slide1.xml", 1, sink, new HashSet<string>(StringComparer.Ordinal)]);
-        return string.Join("|", diagnostics.Select(d => d.Id));
+        return (sceneSlide, diagnostics);
     }
 }
