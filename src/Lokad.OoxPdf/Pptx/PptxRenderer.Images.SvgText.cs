@@ -111,7 +111,8 @@ internal sealed partial class PptxRenderer
         foreach (XElement owner in element.AncestorsAndSelf().Reverse())
         {
             string? value = ReadSvgPresentationAttribute(owner, ReadSvgStyleDeclarations(owner), "font-size");
-            if (value is not null && !TryReadSvgTextLength(value, size, out size, allowPercent: true)) return false;
+            if (value is not null && !IsSvgInherit(value) && !TryReadSvgTextLength(value, size, out size, allowPercent: true))
+                return false;
         }
         if (size <= 0d || !TryReadSvgTextLength((string?)element.Attribute("x") ?? "0", null, out double x) ||
             !TryReadSvgTextLength((string?)element.Attribute("y") ?? "0", null, out double y) ||

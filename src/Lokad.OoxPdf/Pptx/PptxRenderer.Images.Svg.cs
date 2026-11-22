@@ -1421,13 +1421,17 @@ internal sealed partial class PptxRenderer
         {
             IReadOnlyDictionary<string, string> declarations = ReferenceEquals(source, path) ? style : ReadSvgStyleDeclarations(source);
             string? value = ReadSvgPresentationAttribute(source, declarations, name);
-            if (!string.IsNullOrWhiteSpace(value) && !value.AsSpan().Trim().Equals("inherit", StringComparison.OrdinalIgnoreCase))
+            if (!string.IsNullOrWhiteSpace(value) && !IsSvgInherit(value))
             {
                 return value;
             }
         }
         return null;
     }
+
+    private static bool IsSvgInherit(string value) =>
+        value.AsSpan().Trim().Equals("inherit", StringComparison.OrdinalIgnoreCase);
+
     private static string? ReadSvgPresentationAttribute(XElement path, IReadOnlyDictionary<string, string> style, string name)
     {
         if (style.TryGetValue(name, out string? styleValue) && !string.IsNullOrWhiteSpace(styleValue))

@@ -22,7 +22,8 @@ internal static partial class SvgTextTests
     public static void SvgLabelsRetainEveryGlyphInDocxAndPptxPictures()
     {
         string svg = Svg("<rect x=\"5\" y=\"5\" width=\"390\" height=\"150\" fill=\"#cce5ff\"/>" +
-            "<text x=\"20\" y=\"80\" font-size=\"24\" fill=\"#112233\">" + Label + "</text>");
+            "<g font-size=\"16\"><g font-size=\"150%\">" +
+            "<text x=\"20\" y=\"80\" font-size=\"8\" style=\"font-size: inherit\" fill=\"#112233\">" + Label + "</text></g></g>");
         foreach (bool docx in new[] { true, false })
         foreach (bool review in docx ? new[] { false, true } : new[] { false })
         {
@@ -51,8 +52,8 @@ internal static partial class SvgTextTests
         int index = 0;
         foreach (string anchor in new[] { "start", "middle", "end" })
         {
-            string inherited = Svg("<g font-size=\"20\" fill=\"#112233\"><g font-size=\"150%\">" +
-                "<text x=\"200\" y=\"80\" font-size=\".5em\" text-anchor=\"" + anchor + "\">I</text></g></g>");
+            string inherited = Svg("<g font-size=\"20\" fill=\"#112233\"><g font-size=\"150%\"><g font-size=\"inherit\">" +
+                "<text x=\"200\" y=\"80\" font-size=\".5em\" text-anchor=\"" + anchor + "\">I</text></g></g></g>");
             var graphics = Paint(inherited);
             TestAssert.Equal(Paint(Svg("<text x=\"200\" y=\"80\" font-size=\"15\" fill=\"#112233\" text-anchor=\"" +
                 anchor + "\">I</text>")).ToString(), graphics.ToString());
