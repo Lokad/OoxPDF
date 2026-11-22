@@ -108,7 +108,7 @@ internal static class PdfResourceIndexTests
         graphics.SetAlpha(.50049d, .25049d);
         TestAssert.Equal(1, graphics.ExtGStates.Count);
         graphics.SetAlpha(0.1d, 0.2d);
-        graphics.PaintAxialShading(0d, 0d, 10d, 10d, 255, 0, 0, 0, 0, 255);
+        graphics.PaintAxialShading(0d, 0d, 10d, 10d, [new(0d, 255, 0, 0), new(1d, 0, 0, 255)]);
         TestAssert.Equal(2, graphics.ExtGStates.Count);
         TestAssert.Equal(1, graphics.Shadings.Count);
         graphics.TruncateContent(mark);
@@ -119,7 +119,7 @@ internal static class PdfResourceIndexTests
         graphics.SetAlpha(0.1d, 0.2d);
         TestAssert.Equal(2, graphics.ExtGStates.Count);
         TestAssert.Equal("GS10000F20000S", graphics.ExtGStates[1].ResourceName);
-        graphics.PaintAxialShading(0d, 0d, 10d, 10d, 255, 0, 0, 0, 0, 255);
+        graphics.PaintAxialShading(0d, 0d, 10d, 10d, [new(0d, 255, 0, 0), new(1d, 0, 0, 255)]);
         TestAssert.Equal(1, graphics.Shadings.Count);
         TestAssert.Equal("Sh1", graphics.Shadings[0].ResourceName);
         TestAssert.True(graphics.ToString().Contains("/GS10000F20000S gs", StringComparison.Ordinal), "Re-registered states must emit the same deterministic name.");

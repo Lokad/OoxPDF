@@ -263,19 +263,9 @@ internal sealed class PdfGraphicsBuilder
         FillRectangle(x, y, width, height);
     }
 
-    public void PaintAxialShading(double x0, double y0, double x1, double y1, byte startRed, byte startGreen, byte startBlue, byte endRed, byte endGreen, byte endBlue)
-    {
-        PaintAxialShading(x0, y0, x1, y1, [new PdfShadingStop(0d, startRed, startGreen, startBlue), new PdfShadingStop(1d, endRed, endGreen, endBlue)]);
-    }
-
     public void PaintAxialShading(double x0, double y0, double x1, double y1, IReadOnlyList<PdfShadingStop> stops)
     {
         PaintShading(new PdfAxialShading(x0, y0, x1, y1, stops));
-    }
-
-    public void PaintRadialShading(IReadOnlyList<PdfShadingStop> stops, int cycleCount = 1, bool reflect = false)
-    {
-        PaintShading(new PdfRadialShading(stops, cycleCount, reflect));
     }
 
     public void SetStrokeShadingPattern(PdfShadingPattern pattern) => SetShadingPattern(pattern, stroking: true);

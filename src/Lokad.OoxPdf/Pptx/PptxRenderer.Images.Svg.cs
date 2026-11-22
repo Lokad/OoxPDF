@@ -2157,8 +2157,7 @@ internal sealed partial class PptxRenderer
                 mask.Transform(printedRadiusX * padEnd, 0d, 0d, printedRadiusY * padEnd,
                     imageX + (centerX - minX) * scaleX,
                     imageY + imageHeight - (centerY - minY) * scaleY);
-                mask.PaintShading(new PdfRadialShading(CreateSvgShadingStops(radial.Stops, 0d, padEnd, opacityMask: true),
-                    preserveHardStops: true));
+                mask.PaintShading(new PdfRadialShading(CreateSvgShadingStops(radial.Stops, 0d, padEnd, opacityMask: true)));
                 mask.RestoreState();
                 graphics.SetVectorLuminositySoftMask(mask, new PdfRectangle(maskX, maskY, maskWidth, maskHeight), opacity, 1d);
                 varyingAlphaAdmitted = true;
@@ -2168,7 +2167,7 @@ internal sealed partial class PptxRenderer
                 imageX + (centerX - minX) * scaleX,
                 imageY + imageHeight - (centerY - minY) * scaleY);
             graphics.PaintShading(new PdfRadialShading(CreateSvgShadingStops(radial.Stops, 0d, padEnd),
-                cycleCount, radial.Spread == SvgGradientSpread.Reflect, preserveHardStops: true));
+                cycleCount, radial.Spread == SvgGradientSpread.Reflect));
             graphics.RestoreState();
         }
         else

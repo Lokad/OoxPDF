@@ -166,7 +166,7 @@ internal static partial class PdfWriterTests
     {
         var graphics = new PdfGraphicsBuilder();
         graphics.ClipRectangle(10, 20, 30, 40);
-        graphics.PaintAxialShading(10, 20, 40, 60, 255, 0, 0, 0, 0, 255);
+        graphics.PaintAxialShading(10, 20, 40, 60, [new(0d, 255, 0, 0), new(1d, 0, 0, 255)]);
         var page = new PdfPage(100, 100, graphics.ToString(), [], [], graphics.ExtGStates, graphics.Shadings);
 
         string pdf = WritePdfText([page]);
@@ -184,10 +184,10 @@ internal static partial class PdfWriterTests
         PdfShadingStop[] stops = [new(0d, 255, 0, 0), new(0.5d, 0, 255, 0), new(1d, 0, 0, 255)];
         var first = new PdfGraphicsBuilder();
         first.PaintAxialShading(0, 0, 0, 1, stops);
-        first.PaintRadialShading(stops);
-        first.PaintRadialShading(stops);
+        first.PaintShading(new PdfRadialShading(stops));
+        first.PaintShading(new PdfRadialShading(stops));
         var second = new PdfGraphicsBuilder();
-        second.PaintRadialShading(stops);
+        second.PaintShading(new PdfRadialShading(stops));
         PdfPage[] pages = [
             new(100, 100, first.ToString(), [], [], first.ExtGStates, first.Shadings),
             new(100, 100, second.ToString(), [], [], second.ExtGStates, second.Shadings)
@@ -209,10 +209,10 @@ internal static partial class PdfWriterTests
     {
         PdfShadingStop[] stops = [new(0d, 255, 0, 0), new(1d, 0, 0, 255)];
         var graphics = new PdfGraphicsBuilder();
-        graphics.PaintRadialShading(stops);
-        graphics.PaintRadialShading(stops, 3);
-        graphics.PaintRadialShading(stops, 3, reflect: true);
-        graphics.PaintRadialShading(stops, 3);
+        graphics.PaintShading(new PdfRadialShading(stops));
+        graphics.PaintShading(new PdfRadialShading(stops, 3));
+        graphics.PaintShading(new PdfRadialShading(stops, 3, reflect: true));
+        graphics.PaintShading(new PdfRadialShading(stops, 3));
         var page = new PdfPage(100, 100, graphics.ToString(), [], [], graphics.ExtGStates, graphics.Shadings);
 
         string pdf = WritePdfText([page]);
@@ -651,8 +651,8 @@ internal static partial class PdfWriterTests
         graphics.SetAlpha(0.5d, 1d);
         graphics.DrawGlyphText("F1", 12, 20, 30, 0, 0, 0, "0041", false, 0d, 0, 0, 0, 0, 0d);
         graphics.DrawImage("Im1", 0, 0, 10, 10);
-        graphics.PaintAxialShading(0, 0, 10, 0, 255, 0, 0, 0, 0, 255);
-        graphics.PaintRadialShading([new(0d, 255, 0, 0), new(1d, 0, 0, 255)], 3, reflect: true);
+        graphics.PaintAxialShading(0, 0, 10, 0, [new(0d, 255, 0, 0), new(1d, 0, 0, 255)]);
+        graphics.PaintShading(new PdfRadialShading([new(0d, 255, 0, 0), new(1d, 0, 0, 255)], 3, reflect: true));
         var pattern = new PdfTilingPattern(4d, 4d, 4d, 4d, null, 1, "0 0 m 4 4 l S\n", []);
         graphics.FillRectangleWithTilingPattern(0, 0, 10, 10, pattern);
         var page = new PdfPage(
@@ -810,7 +810,7 @@ internal static partial class PdfWriterTests
         var graphics = new PdfGraphicsBuilder();
         graphics.DrawGlyphText("F1", 12, 20, 30, 0, 0, 0, "0041", false, 0d, 0, 0, 0, 0, 0d);
         graphics.DrawImage("Im1", 0, 0, 10, 10);
-        graphics.PaintAxialShading(0, 0, 10, 0, 255, 0, 0, 0, 0, 255);
+        graphics.PaintAxialShading(0, 0, 10, 0, [new(0d, 255, 0, 0), new(1d, 0, 0, 255)]);
         var pattern = new PdfTilingPattern(4d, 4d, 4d, 4d, null, 1, "0 0 m 4 4 l S\n", []);
         graphics.FillRectangleWithTilingPattern(0, 0, 10, 10, pattern);
         var first = new PdfPage(
@@ -961,8 +961,8 @@ internal static partial class PdfWriterTests
         graphics.FillRectangle(50, 60, 70, 80);
         graphics.SaveState();
         graphics.SetAlpha(0.5d, 0.5d);
-        graphics.PaintAxialShading(0, 0, 100, 100, 255, 0, 0, 0, 0, 255);
-        graphics.PaintRadialShading([new(0d, 255, 0, 0), new(1d, 0, 0, 255)]);
+        graphics.PaintAxialShading(0, 0, 100, 100, [new(0d, 255, 0, 0), new(1d, 0, 0, 255)]);
+        graphics.PaintShading(new PdfRadialShading([new(0d, 255, 0, 0), new(1d, 0, 0, 255)]));
         var pattern = new PdfTilingPattern(4d, 4d, 4d, 4d, null, 1, "0 0 m 4 4 l S\n", []);
         graphics.FillRectangleWithTilingPattern(1, 2, 3, 4, pattern);
         TestAssert.Equal(2, graphics.Shadings.Count);
@@ -979,7 +979,7 @@ internal static partial class PdfWriterTests
         TestAssert.Equal(0, graphics.Shadings.Count);
         TestAssert.Equal(0, graphics.Patterns.Count);
         TestAssert.Equal(0, graphics.StateDepth);
-        graphics.PaintRadialShading([new(0d, 255, 0, 0), new(1d, 0, 0, 255)]);
+        graphics.PaintShading(new PdfRadialShading([new(0d, 255, 0, 0), new(1d, 0, 0, 255)]));
         TestAssert.Equal(1, graphics.Shadings.Count);
         TestAssert.Equal("Sh1", graphics.Shadings[0].ResourceName);
         TestAssert.Contains("/Sh1 sh", graphics.ToString());

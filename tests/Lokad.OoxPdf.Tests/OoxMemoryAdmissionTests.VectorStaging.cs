@@ -117,7 +117,7 @@ internal static partial class OoxMemoryAdmissionTests
     private static PdfPage VectorMemoryPage()
     {
         var child = new PdfGraphicsBuilder();
-        child.PaintAxialShading(0, 0, 100, 0, 255, 0, 0, 0, 0, 255);
+        child.PaintAxialShading(0, 0, 100, 0, [new(0d, 255, 0, 0), new(1d, 0, 0, 255)]);
         var graphics = new PdfGraphicsBuilder();
         graphics.DrawTransparencyGroup(child, new PdfRectangle(0, 0, 100, 100), .5);
         return new PdfPage(100, 100, graphics.ToString(), [], [], graphics.ExtGStates, graphics.Shadings, [], [], groups: graphics.Groups);

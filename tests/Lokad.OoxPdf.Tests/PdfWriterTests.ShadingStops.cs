@@ -37,17 +37,18 @@ internal static partial class PdfWriterTests
 
     public static void ShadingResourceIdentityPreservesDistinctStopPositions()
     {
-        PdfShadingStop[] Palette(double middle) => [new(0, 255, 0, 0), new(middle, 0, 255, 0), new(1, 0, 0, 255)];
+        PdfShadingStop[] Palette(double before, double after) =>
+            [new(0, 255, 0, 0), new(before, 0, 255, 0), new(after, 0, 255, 255), new(1, 0, 0, 255)];
         var graphics = new PdfGraphicsBuilder();
-        graphics.PaintRadialShading(Palette(.500002d));
-        graphics.PaintRadialShading(Palette(.500003d));
-        graphics.PaintRadialShading(Palette(.500002d));
+        graphics.PaintShading(new PdfRadialShading(Palette(.500002d, .5000021d)));
+        graphics.PaintShading(new PdfRadialShading(Palette(.500002d, .5000022d)));
+        graphics.PaintShading(new PdfRadialShading(Palette(.500002d, .5000021d)));
         TestAssert.Equal(2, graphics.Shadings.Count);
         var page = new PdfPage(100, 100, graphics.ToString(), [], [], graphics.ExtGStates, graphics.Shadings);
         string pdf = WritePdfText([page]);
         TestAssert.Equal(2, CountOccurrences(pdf, "/ShadingType 3"));
-        TestAssert.Contains("/Bounds [0.500002]", pdf);
-        TestAssert.Contains("/Bounds [0.500003]", pdf);
+        TestAssert.Contains("/Bounds [0.500002 0.5000021]", pdf);
+        TestAssert.Contains("/Bounds [0.500002 0.5000022]", pdf);
         TestAssert.Equal(2, CountOccurrences(pdf, "/Sh1 sh"));
     }
 

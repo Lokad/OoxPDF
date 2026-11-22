@@ -92,11 +92,6 @@ internal abstract class PdfShading
 
 internal sealed class PdfAxialShading : PdfShading
 {
-    public PdfAxialShading(double X0, double Y0, double X1, double Y1, byte StartRed, byte StartGreen, byte StartBlue, byte EndRed, byte EndGreen, byte EndBlue)
-        : this(X0, Y0, X1, Y1, [new PdfShadingStop(0d, StartRed, StartGreen, StartBlue), new PdfShadingStop(1d, EndRed, EndGreen, EndBlue)])
-    {
-    }
-
     public PdfAxialShading(double X0, double Y0, double X1, double Y1, IReadOnlyList<PdfShadingStop> Stops, bool preserveHardStops = false)
         : base(Stops, preserveHardStops)
     {
@@ -115,8 +110,8 @@ internal sealed class PdfAxialShading : PdfShading
 }
 
 // A centered unit-circle gradient; the caller maps it into the printed ellipse.
-internal sealed class PdfRadialShading(IReadOnlyList<PdfShadingStop> stops, int cycleCount = 1, bool reflect = false,
-    bool preserveHardStops = false) : PdfShading(stops, preserveHardStops)
+internal sealed class PdfRadialShading(IReadOnlyList<PdfShadingStop> stops, int cycleCount = 1, bool reflect = false)
+    : PdfShading(stops, preserveHardStops: true)
 {
     public int CycleCount { get; } = cycleCount is >= 1 and <= 128 ? cycleCount :
         throw new ArgumentOutOfRangeException(nameof(cycleCount));

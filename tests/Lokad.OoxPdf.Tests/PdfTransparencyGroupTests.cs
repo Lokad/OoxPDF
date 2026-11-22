@@ -445,7 +445,7 @@ internal static class PdfTransparencyGroupTests
         var first = new PdfGraphicsBuilder();
         first.SetFillShadingPattern(StrokePattern());
         first.FillRectangle(0, 0, 100, 100);
-        first.PaintAxialShading(0, 0, 1, 0, 255, 0, 0, 0, 0, 255);
+        first.PaintAxialShading(0, 0, 1, 0, [new(0d, 255, 0, 0), new(1d, 0, 0, 255)]);
         var second = new PdfGraphicsBuilder();
         second.SetStrokeShadingPattern(StrokePattern(50));
         page.DrawTransparencyGroup(first, Bounds, .5);
@@ -515,7 +515,7 @@ internal static class PdfTransparencyGroupTests
 
     public static void ShadingPatternsRejectNonFiniteAndCollapsedPrintedGeometry()
     {
-        var shading = new PdfAxialShading(0, 0, 1, 0, 255, 0, 0, 0, 0, 255);
+        var shading = new PdfAxialShading(0, 0, 1, 0, [new(0d, 255, 0, 0), new(1d, 0, 0, 255)]);
         foreach (PdfPatternMatrix matrix in new PdfPatternMatrix[]
         {
             new(double.NaN, 0, 0, 1, 0, 0), new(1, 0, 0, 1, double.PositiveInfinity, 0),
@@ -527,10 +527,10 @@ internal static class PdfTransparencyGroupTests
         }
         foreach (PdfShading invalid in new PdfShading[]
         {
-            new PdfAxialShading(0, 0, 0, 0, 255, 0, 0, 0, 0, 255),
-            new PdfAxialShading(0, 0, .00000001, 0, 255, 0, 0, 0, 0, 255),
-            new PdfAxialShading(0, 0, double.NaN, 0, 255, 0, 0, 0, 0, 255),
-            new PdfAxialShading(0, 0, double.MaxValue, 0, 255, 0, 0, 0, 0, 255),
+            new PdfAxialShading(0, 0, 0, 0, [new(0d, 255, 0, 0), new(1d, 0, 0, 255)]),
+            new PdfAxialShading(0, 0, .00000001, 0, [new(0d, 255, 0, 0), new(1d, 0, 0, 255)]),
+            new PdfAxialShading(0, 0, double.NaN, 0, [new(0d, 255, 0, 0), new(1d, 0, 0, 255)]),
+            new PdfAxialShading(0, 0, double.MaxValue, 0, [new(0d, 255, 0, 0), new(1d, 0, 0, 255)]),
             new PdfRadialShading([new(double.NaN, 255, 0, 0), new(1, 0, 0, 255)])
         })
         {
@@ -616,7 +616,7 @@ internal static class PdfTransparencyGroupTests
     }
 
     private static PdfShadingPattern StrokePattern(double scale = 100) => new(
-        new PdfAxialShading(0, 0, 1, 0, 255, 0, 0, 0, 0, 255), new(scale, 0, 0, scale, 0, 0));
+        new PdfAxialShading(0, 0, 1, 0, [new(0d, 255, 0, 0), new(1d, 0, 0, 255)]), new(scale, 0, 0, scale, 0, 0));
     private static PdfPage PatternPage(int repetitions)
     {
         var child = new PdfGraphicsBuilder();
@@ -637,7 +637,7 @@ internal static class PdfTransparencyGroupTests
     private static PdfGraphicsBuilder Mask(int repetitions = 0)
     {
         var mask = new PdfGraphicsBuilder();
-        mask.PaintRadialShading([new(0, 0, 0, 0), new(1, 255, 255, 255)]);
+        mask.PaintShading(new PdfRadialShading([new(0, 0, 0, 0), new(1, 255, 255, 255)]));
         for (int i = 0; i < repetitions; i++) { mask.FillRectangle(0, 0, 100, 100); }
         return mask;
     }
