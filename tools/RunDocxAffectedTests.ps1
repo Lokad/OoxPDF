@@ -23,7 +23,8 @@ $runnerHash = (Get-FileHash -LiteralPath $runner).Hash
 $libraryHash = (Get-FileHash -LiteralPath $library).Hash
 $cliPath = $null
 $cliHash = $null
-foreach ($name in @('affected-tests.json', 'evidence.json', 'catalog.txt')) {
+$rawReportName = 'selection-000.json'
+foreach ($name in @('affected-tests.json', 'evidence.json', 'catalog.txt', $rawReportName)) {
     if (Test-Path -LiteralPath (Join-Path $OutputDirectory $name)) { throw 'Output directory already contains qualification reports' }
 }
 New-Item -ItemType Directory -Force -Path $OutputDirectory | Out-Null
@@ -178,9 +179,10 @@ if (@($catalog | Where-Object { $_.Group -eq 'cli' -and $selected.Contains($_.Na
     $inventory.CliPath = $cliPath
     $inventory.CliSha256 = $cliHash
 }
-$path = Join-Path $output 'selection-000.json'
+$path = Join-Path $output $rawReportName
 Assert-FrozenAssembly
 $exitCode = Invoke-FrozenTests @('--test-set', $selectionPath, '--report', $path) ($path + '.log')
+if (!(Test-Path -LiteralPath $path -PathType Leaf)) { throw 'Test runner did not produce its report' }
 $report = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
 $rows = @($report.tests)
 $seen = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)

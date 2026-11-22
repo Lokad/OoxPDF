@@ -27,6 +27,7 @@ function dotnet {
     $report=$args[[Array]::IndexOf([object[]]$args,'--report')+1]
     if([IO.Path]::GetFileName($env:TMPDIR) -ne 'temporary-files') {throw 'Runner temp path escaped its output directory'}
     if($env:OOXPDF_TEST_REQUIRE_BOUND_TOOLS -cne '1') {throw 'Runner did not require bound tools'}
+    if ($global:ooxPdfAffectedReportFault -eq 'missing-report') { $global:LASTEXITCODE=0; return }
     if ($global:ooxPdfAffectedReportFault -in @('failed','cleanup-residual','cleanup-link','cleanup-child-link')) {
         $scratch=New-Item -ItemType Directory -Path (Join-Path $env:TMPDIR 'nested')
         [IO.File]::WriteAllText((Join-Path $scratch.FullName 'retained.bin'),'Retained runner data')
@@ -65,7 +66,7 @@ function dotnet {
 }
 $checks=@()
 try {
-    foreach($case in @('pass','expected-skip','unexpected-skip','failed','unknown-expected','incomplete','duplicate','wrong-name-case','miscount')) {
+    foreach($case in @('pass','expected-skip','unexpected-skip','failed','unknown-expected','incomplete','duplicate','wrong-name-case','miscount','missing-report')) {
         $global:ooxPdfAffectedReportFault=$case
         $global:ooxPdfAffectedReportCalls=0
         $output=Join-Path $root $case
@@ -87,6 +88,9 @@ try {
             !(Test-Path -LiteralPath (Join-Path $output 'selection-000.json') -PathType Leaf))) {
             throw 'A case-only method mismatch must be rejected and retain its raw report'
         }
+        if ($case -eq 'missing-report' -and $caught -ne 'Test runner did not produce its report') {
+            throw 'Successful exit with a missing raw report must fail qualification'
+        }
         $retained=Test-Path (Join-Path $output 'affected-tests.json')
         if($retained -ne ($case -in @('pass','expected-skip','unexpected-skip','failed'))) {throw ($case+': incorrect complete-report retention')}
         if($retained) {
@@ -106,6 +110,23 @@ try {
         }
         $checks+=@{Case=$case;GatePassed=$shouldPass;Error=$caught;ReportRetained=$retained}
     }
+
+    $case='preexisting-raw-report'
+    $output=(New-Item -ItemType Directory -Path (Join-Path $root $case)).FullName
+    $rawReport=Join-Path $output 'selection-000.json'
+    [IO.File]::Copy((Join-Path $root 'pass/selection-000.json'), $rawReport)
+    $rawHash=(Get-FileHash -LiteralPath $rawReport).Hash
+    $global:ooxPdfAffectedReportFault='missing-report'
+    $global:ooxPdfAffectedReportCalls=0
+    $caught=$null
+    try {& (Join-Path $PSScriptRoot 'RunDocxAffectedTests.ps1') -RunnerPath $runner -OutputDirectory $output -TestFilter @('ReportAlpha','ReportNeighbor') *> (Join-Path $root ($case+'.log'))}
+    catch {$caught=$_.Exception.Message}
+    if ($caught -ne 'Output directory already contains qualification reports' -or
+        $global:ooxPdfAffectedReportCalls -ne 0 -or (Get-FileHash -LiteralPath $rawReport).Hash -ne $rawHash -or
+        (Test-Path -LiteralPath (Join-Path $output 'affected-tests.json'))) {
+        throw 'A preexisting raw report must be preserved and refused before execution'
+    }
+    $checks+=@{Case=$case;GatePassed=$false;Error=$caught;RawReportSha256=$rawHash;RunnerInvocations=$global:ooxPdfAffectedReportCalls}
 
     $manifest=Join-Path $root 'union-capabilities.json'
     @{union=@('=ReportAlpha','ReportExplicitSlow')} | ConvertTo-Json | Set-Content -LiteralPath $manifest -Encoding utf8
