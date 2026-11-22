@@ -129,7 +129,7 @@ internal sealed partial class PptxRenderer
         bool manual = TryBuildManualPlotLayout(sceneChart.PlotAreaLayout, frame, defaultPlotBox, out ChartPlotLayout manualPlotLayout);
         ChartPlotBox plot = manual ? manualPlotLayout.PlotBox : defaultPlotBox;
         return new ChartLayout(frame, new ChartLayoutBox(plot.X, plot.Y, plot.Width, plot.Height), plot,
-            manual, sceneChart.Title.Text, sceneChart.Title.TextBodyProperties, ReadSceneChartLegendLayout(sceneChart));
+            manual, sceneChart.Title.Text, ReadSceneChartLegendLayout(sceneChart));
     }
 
     private static ChartLayout GetAutomaticPolarFrame(ChartLayout source) => source with

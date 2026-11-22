@@ -200,7 +200,6 @@ internal sealed partial class PptxRenderer
     {
         ChartFrameBox frame = GetChartFrameBox(document, bounds);
         string? title = sceneChart.Title.Text;
-        PptxSceneChartTextBodyProperties titleTextBodyProperties = sceneChart.Title.TextBodyProperties;
         // Horizontal legend rows are admitted by the legend owner. The baseline
         // plot retains title/axis space; its legend band is applied exactly once.
         ChartLegendLayout plotLegend = UsesMeasuredBarLegend(barOptions, sceneChart, legend)
@@ -212,7 +211,7 @@ internal sealed partial class PptxRenderer
             !axisTitles.HasHorizontalTitle && !axisTitles.HasVerticalTitle)
             titleHeight = (await MeasureChartTitleAsync(theme, sceneChart, fontResolver).ConfigureAwait(false)).Height;
         ChartPlotLayout plotLayout = (await GetBarChartPlotLayoutAsync(theme, colorMap, frame, chartXml, sceneChart, barPlot, barChart, title, plotLegend, barOptions, workbook, plotVisibleOnly, categoryLabels, fontResolver: fontResolver, ignoreManualPlotLayout: false, measuredTitleHeight: titleHeight, categoryPlacement: categoryPlacement, context: context, resolvedValueScale: resolvedValueScale, numericPlacement: numericPlacement).ConfigureAwait(false));
-        return new ChartLayout(frame, plotLayout.PlotAreaBox, plotLayout.PlotBox, plotLayout.ManualLayoutTargetKind is not null, title, titleTextBodyProperties, legend,
+        return new ChartLayout(frame, plotLayout.PlotAreaBox, plotLayout.PlotBox, plotLayout.ManualLayoutTargetKind is not null, title, legend,
             plotLayout.CategoryLabelOffsetAdjustment,
             // Resolved ranges serve admitted single/shared horizontal plots and
             // shared columns. Retain their automatic category placement too.

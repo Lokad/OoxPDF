@@ -357,7 +357,6 @@ internal sealed partial class PptxRenderer
     {
         ChartFrameBox frame = GetChartFrameBox(document, bounds);
         string? title = sceneChart.Title.Text;
-        PptxSceneChartTextBodyProperties titleTextBodyProperties = sceneChart.Title.TextBodyProperties;
         ChartLegendLayout legend = ReadSceneChartLegendLayout(sceneChart);
         ChartTextStyle legendTextStyle = ReadSceneChartLegendTextStyle(theme, sceneChart);
         // Line and area callers supply their already resolved source scale.
@@ -371,7 +370,7 @@ internal sealed partial class PptxRenderer
         double? categoryFittingClearance = null;
         ChartAxisPlacement? categoryAxisPlacement = await ReadCategoryPlacementAsync().ConfigureAwait(false);
         ChartPlotLayout plotLayout = (await GetPlotLayoutAsync().ConfigureAwait(false));
-        return new ChartLayout(frame, plotLayout.PlotAreaBox, plotLayout.PlotBox, plotLayout.ManualLayoutTargetKind is not null, title, titleTextBodyProperties, legend, categoryLabelOffsetAdjustment, categoryAxisPlacement)
+        return new ChartLayout(frame, plotLayout.PlotAreaBox, plotLayout.PlotBox, plotLayout.ManualLayoutTargetKind is not null, title, legend, categoryLabelOffsetAdjustment, categoryAxisPlacement)
         { AutomaticCaptionFittingClearance = categoryFittingClearance };
 
         async ValueTask<ChartAxisPlacement?> ReadCategoryPlacementAsync()
@@ -718,11 +717,10 @@ internal sealed partial class PptxRenderer
     {
         ChartFrameBox frame = GetChartFrameBox(document, bounds);
         string? title = sceneChart.Title.Text;
-        PptxSceneChartTextBodyProperties titleTextBodyProperties = sceneChart.Title.TextBodyProperties;
         ChartLegendLayout legend = ReadSceneChartLegendLayout(sceneChart);
         ChartTextStyle legendTextStyle = ReadSceneChartLegendTextStyle(theme, sceneChart);
         ChartPlotLayout plotLayout = GetBubbleChartPlotLayout();
-        return new ChartLayout(frame, plotLayout.PlotAreaBox, plotLayout.PlotBox, plotLayout.ManualLayoutTargetKind is not null, title, titleTextBodyProperties, legend);
+        return new ChartLayout(frame, plotLayout.PlotAreaBox, plotLayout.PlotBox, plotLayout.ManualLayoutTargetKind is not null, title, legend);
 
         ChartPlotLayout GetBubbleChartPlotLayout()
         {

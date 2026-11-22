@@ -326,7 +326,7 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct ChartAxisPlacement(double CrossingValue, double LabelPlotRatio, bool LabelsHighSide, bool AxisHighSide);
 
-    private readonly record struct ChartLayout(ChartFrameBox Frame, ChartLayoutBox PlotAreaBox, ChartPlotBox PlotBox, bool ManualPlotLayoutApplied, string? Title, PptxSceneChartTextBodyProperties TitleTextBodyProperties, ChartLegendLayout Legend, double? CategoryLabelOffsetAdjustment = null, ChartAxisPlacement? CategoryAxisPlacement = null)
+    private readonly record struct ChartLayout(ChartFrameBox Frame, ChartLayoutBox PlotAreaBox, ChartPlotBox PlotBox, bool ManualPlotLayoutApplied, string? Title, ChartLegendLayout Legend, double? CategoryLabelOffsetAdjustment = null, ChartAxisPlacement? CategoryAxisPlacement = null)
     {
         public ChartCategoryLabelLayout? CategoryLabels { get; init; }
         public double? AutomaticCaptionFittingClearance { get; init; }
