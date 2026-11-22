@@ -397,6 +397,24 @@ internal static partial class SvgTextTests
             """);
     }
 
+    public static void SvgSmoothCubicsMatchExplicitCurvesInBothFormats()
+    {
+        AssertSvgPaintInBothFormats(
+            Picture("M10 30 C15 10 25 10 30 30 C35 50 45 50 50 30 C55 10 65 10 70 30 L90 30",
+                "M10 58 c5 -10 15 -10 20 0 c5 10 15 10 20 0 l10 0 c0 0 10 -10 20 0 c10 10 15 10 20 0 z c0 0 10 12 20 0 m87 6 c0 0 8 -8 16 0"),
+            Picture("M10 30 C15 10 25 10 30 30 S45 50 50 30 65 10 70 30 L90 30",
+                "M10 58 c5 -10 15 -10 20 0 s15 10 20 0 l10 0 s10 -10 20 0 15 10 20 0 z s10 12 20 0 m87 6 s8 -8 16 0"),
+            "1 0 0 RG", " c" + Environment.NewLine, "/PatternType 2", "0 0.502 0 rg");
+
+        static string Picture(string solid, string gradient) => Svg($"""
+            <defs><linearGradient id="ramp"><stop stop-color="blue"/>
+              <stop offset="1" stop-color="purple"/></linearGradient></defs>
+            <path d="{solid}" fill="none" stroke="red" stroke-width="4"/>
+            <path d="{gradient}" fill="none" stroke="url(#ramp)" stroke-width="4"/>
+            <rect x="136" y="64" width="9" height="10" fill="green"/>
+            """);
+    }
+
     public static void SvgPercentageOpacityMatchesUnitOpacityInBothFormats()
     {
         AssertSvgPaintInBothFormats(

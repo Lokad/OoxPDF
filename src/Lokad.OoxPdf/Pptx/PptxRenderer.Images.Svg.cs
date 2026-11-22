@@ -698,8 +698,7 @@ internal sealed partial class PptxRenderer
         }
         return false;
     }
-    // RV07: first unsupported path command for diagnostics (mirrors the M/L/H/V/C/Z
-    // support in both path readers without reinterpreting data).
+    // Report the first unsupported path command independently of partial path paint.
     private static char? FindFirstUnsupportedSvgPathCommand(string data)
     {
         // The path tokenizer only matches supported command letters, so unknown
@@ -740,7 +739,7 @@ internal sealed partial class PptxRenderer
 
     private static bool IsSupportedSvgPathCommand(char command)
     {
-        return "MLHVCZ".IndexOf(char.ToUpperInvariant(command)) >= 0;
+        return "MLHVCSZ".IndexOf(char.ToUpperInvariant(command)) >= 0;
     }
     private static void ReportSkippedSvgPaths(SortedSet<char> unsupportedCommands, int unreadablePaths, SortedSet<string> missingGradients, int unpaintablePaths, int unsupportedTransforms, int gradientStrokes, int unpaintableStrokes, int invalidStrokePresentations, int vectorEffectStrokes, int focalRadialGradients, int nonFiniteGradientPaths, Action<OoxPdfDiagnostic>? diagnosticSink, int slideIndex, string? partName)
     {
@@ -2266,7 +2265,8 @@ internal sealed partial class PptxRenderer
             }
 
             bool relative = char.IsLower(command);
-            switch (char.ToUpperInvariant(command))
+            char kind = char.ToUpperInvariant(command);
+            switch (kind)
             {
                 case 'M':
                     if (!TryReadSvgPoint(tokens, ref index, relative, currentX, currentY, out currentX, out currentY))
@@ -2306,8 +2306,25 @@ internal sealed partial class PptxRenderer
                     commands.Add(new SvgPathCommand('V', new[] { currentY }));
                     break;
                 case 'C':
-                    if (!TryReadSvgPoint(tokens, ref index, relative, currentX, currentY, out double c1x, out double c1y) ||
-                        !TryReadSvgPoint(tokens, ref index, relative, currentX, currentY, out double c2x, out double c2y) ||
+                case 'S':
+                {
+                    double c1x = currentX;
+                    double c1y = currentY;
+                    if (kind == 'C')
+                    {
+                        if (!TryReadSvgPoint(tokens, ref index, relative, currentX, currentY, out c1x, out c1y))
+                        {
+                            return (commands, false);
+                        }
+                    }
+                    else if (commands.Count > 0 && commands[^1] is { Kind: 'C', Arguments: var previous })
+                    {
+                        // Both cubic spellings emit C, so each completed tuple supplies the next reflection.
+                        c1x += currentX - previous[2];
+                        c1y += currentY - previous[3];
+                    }
+
+                    if (!TryReadSvgPoint(tokens, ref index, relative, currentX, currentY, out double c2x, out double c2y) ||
                         !TryReadSvgPoint(tokens, ref index, relative, currentX, currentY, out currentX, out currentY))
                     {
                         return (commands, false);
@@ -2315,6 +2332,7 @@ internal sealed partial class PptxRenderer
 
                     commands.Add(new SvgPathCommand('C', new[] { c1x, c1y, c2x, c2y, currentX, currentY }));
                     break;
+                }
                 case 'Z':
                     if (index < tokens.Count)
                     {
@@ -2807,7 +2825,7 @@ internal sealed partial class PptxRenderer
     [GeneratedRegex(@"[-+]?(?:\d*\.\d+|\d+)(?:[eE][-+]?\d+)?", RegexOptions.CultureInvariant)]
     private static partial Regex SvgNumberRegex();
 
-    [GeneratedRegex(@"[MmLlHhVvCcZz]|[-+]?(?:\d*\.\d+|\d+)(?:[eE][-+]?\d+)?", RegexOptions.CultureInvariant)]
+    [GeneratedRegex(@"[MmLlHhVvCcSsZz]|[-+]?(?:\d*\.\d+|\d+)(?:[eE][-+]?\d+)?", RegexOptions.CultureInvariant)]
     private static partial Regex SvgPathTokenRegex();
 
     [GeneratedRegex(@"[A-Za-z]+|[-+]?(?:\d*\.\d+|\d+)(?:[eE][-+]?\d+)?|[(),]", RegexOptions.CultureInvariant)]

@@ -667,6 +667,7 @@
     "=SvgPercentageDashOffsetsMatchViewportUnitsInBothFormats",
     "=SvgDashArrayXmlWhitespaceMatchesSpacesInBothFormats",
     "=SvgPointListsWithTrailingCoordinateKeepCompletePairsInBothFormats",
+    "=SvgSmoothCubicsMatchExplicitCurvesInBothFormats",
     "=SvgPercentageOpacityMatchesUnitOpacityInBothFormats",
     "=SvgConstantLinearGradientsMatchSolidPaintInBothFormats",
     "=SvgSingleStopRadialGradientsMatchSolidPaintInBothFormats",
