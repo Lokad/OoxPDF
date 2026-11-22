@@ -305,13 +305,7 @@ internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMet
     public double MeasureSingleLineHeight(DocxTextRun? run, double fontSize)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        DocxResolvedRunTypeface? resolved = ResolveRun(run);
-        if ((resolved?.Resolution ?? fallbackResolution) is not FontFaceResolution resolution)
-        {
-            return fontSize;
-        }
-
-        OpenTypeFont? font = LoadFont(resolution);
+        OpenTypeFont? font = ResolveFont(run);
         return font is null
             ? fontSize
             : DocxLineMetrics.MeasureOpenTypeSingleLineHeight(font, fontSize);
@@ -320,13 +314,7 @@ internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMet
     public double MeasureHheaLineHeight(DocxTextRun? run, double fontSize)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        DocxResolvedRunTypeface? resolved = ResolveRun(run);
-        if ((resolved?.Resolution ?? fallbackResolution) is not FontFaceResolution resolution)
-        {
-            return fontSize;
-        }
-
-        OpenTypeFont? font = LoadFont(resolution);
+        OpenTypeFont? font = ResolveFont(run);
         return font is null
             ? fontSize
             : DocxLineMetrics.MeasureHheaLineHeight(font, fontSize);
@@ -334,13 +322,7 @@ internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMet
     public double MeasureTypographicLineHeight(DocxTextRun? run, double fontSize)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        DocxResolvedRunTypeface? resolved = ResolveRun(run);
-        if ((resolved?.Resolution ?? fallbackResolution) is not FontFaceResolution resolution)
-        {
-            return 0d;
-        }
-
-        OpenTypeFont? font = LoadFont(resolution);
+        OpenTypeFont? font = ResolveFont(run);
         return font is null
             ? 0d
             : DocxLineMetrics.MeasureTypographicLineHeight(font, fontSize);
@@ -349,13 +331,7 @@ internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMet
     public double MeasureHheaAscender(DocxTextRun? run, double fontSize)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        DocxResolvedRunTypeface? resolved = ResolveRun(run);
-        if ((resolved?.Resolution ?? fallbackResolution) is not FontFaceResolution resolution)
-        {
-            return 0d;
-        }
-
-        OpenTypeFont? font = LoadFont(resolution);
+        OpenTypeFont? font = ResolveFont(run);
         return font is null
             ? 0d
             : DocxLineMetrics.MeasureHheaAscender(font, fontSize);
@@ -364,13 +340,7 @@ internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMet
     public double MeasureHheaLineGap(DocxTextRun? run, double fontSize)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        DocxResolvedRunTypeface? resolved = ResolveRun(run);
-        if ((resolved?.Resolution ?? fallbackResolution) is not FontFaceResolution resolution)
-        {
-            return 0d;
-        }
-
-        OpenTypeFont? font = LoadFont(resolution);
+        OpenTypeFont? font = ResolveFont(run);
         return font is null
             ? 0d
             : DocxLineMetrics.MeasureHheaLineGap(font, fontSize);
@@ -379,13 +349,7 @@ internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMet
     public double MeasureHheaDescender(DocxTextRun? run, double fontSize)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        DocxResolvedRunTypeface? resolved = ResolveRun(run);
-        if ((resolved?.Resolution ?? fallbackResolution) is not FontFaceResolution resolution)
-        {
-            return 0d;
-        }
-
-        OpenTypeFont? font = LoadFont(resolution);
+        OpenTypeFont? font = ResolveFont(run);
         return font is null
             ? 0d
             : DocxLineMetrics.MeasureHheaDescender(font, fontSize);
