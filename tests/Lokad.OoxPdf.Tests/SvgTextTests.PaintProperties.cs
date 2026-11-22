@@ -196,7 +196,32 @@ internal static partial class SvgTextTests
             "stroke=\"blue\" stroke-opacity=\".4\"", "stroke=\"green\" stroke-opacity=\".3\"");
         string actual = Picture("fill=\"url(#zero)\" fill-opacity=\".8\"",
             "stroke=\"url(#zero)\" stroke-opacity=\".8\"", "stroke=\"url(#one)\" stroke-opacity=\".5\"");
+        AssertSolidSvgPaintInBothFormats(expected, actual, "0 0 1 rg", "0 0 1 RG", "0 0.502 0 RG");
+    }
 
+    public static void SvgSingleStopRadialGradientsMatchSolidPaintInBothFormats()
+    {
+        string Picture(string padFill, string repeatFill, string stroke) => Svg($"""
+            <defs>
+              <radialGradient id="pad" r="30%"><stop offset=".2" style="stop-color:blue;stop-opacity:.5"/></radialGradient>
+              <radialGradient id="repeat" r="15%" spreadMethod="repeat">
+                <stop offset=".4" stop-color="green" stop-opacity=".6"/>
+              </radialGradient>
+            </defs>
+            <rect width="400" height="160" fill="yellow"/>
+            <rect x="20" y="20" width="60" height="60" {padFill}/>
+            <rect x="105" y="20" width="60" height="60" {repeatFill}/>
+            <rect x="190" y="20" width="60" height="60" fill="none" stroke-width="8" {stroke}/>
+            """);
+        string expected = Picture("fill=\"blue\" fill-opacity=\".4\"",
+            "fill=\"green\" fill-opacity=\".3\"", "stroke=\"blue\" stroke-opacity=\".4\"");
+        string actual = Picture("fill=\"url(#pad)\" fill-opacity=\".8\"",
+            "fill=\"url(#repeat)\" fill-opacity=\".5\"", "stroke=\"url(#pad)\" stroke-opacity=\".8\"");
+        AssertSolidSvgPaintInBothFormats(expected, actual, "0 0 1 rg", "0 0.502 0 rg", "0 0 1 RG");
+    }
+
+    private static void AssertSolidSvgPaintInBothFormats(string expected, string actual, params string[] paintOperators)
+    {
         foreach (var (kind, view, geometry) in new[] {
             (OoxPdfInputKind.Pptx, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout),
             (OoxPdfInputKind.Docx, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout),
@@ -218,9 +243,10 @@ internal static partial class SvgTextTests
 
             byte[] solidPdf = Render(expected);
             string content = Encoding.Latin1.GetString(solidPdf);
-            TestAssert.Contains("0 0 1 rg", content);
-            TestAssert.Contains("0 0 1 RG", content);
-            TestAssert.Contains("0 0.502 0 RG", content);
+            foreach (string paint in paintOperators)
+            {
+                TestAssert.Contains(paint, content);
+            }
             TestAssert.True(solidPdf.AsSpan().SequenceEqual(Render(actual)),
                 $"{kind} {view} must paint the same fills, strokes and alpha as the explicit solid colors.");
             TestAssert.Equal(0, diagnostics.Count);

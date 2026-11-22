@@ -264,7 +264,7 @@ internal sealed partial class PptxRenderer
                 }
             }
             bool allowStrokePattern = Math.Abs(bounds.RotationDegrees) <= 0.001d && !bounds.FlipHorizontal && !bounds.FlipVertical;
-            SvgStroke stroke = ReadSvgStroke(element, gradients, elementIds, allowStrokePattern, hasFill,
+            SvgStroke stroke = ReadSvgStroke(element, gradients, radialGradients, elementIds, allowStrokePattern, hasFill,
                 out SvgStrokeFailure strokeFailure, out bool invalidStrokePresentation, out bool hasVectorEffect, out bool nonScalingStroke);
             List<SvgPathCommand>? gradientCommands = null;
             SvgPathBounds gradientBounds = default;
@@ -1324,21 +1324,22 @@ internal sealed partial class PptxRenderer
         }
         if (gradientId is not null)
         {
-            if (gradients.TryGetValue(gradientId, out SvgGradient? svgGradient))
+            SvgGradient? svgGradient = gradients.GetValueOrDefault(gradientId);
+            SvgRadialGradient? svgRadial = svgGradient is null ? radialGradients.GetValueOrDefault(gradientId) : null;
+            if ((svgGradient?.ConstantStop ?? svgRadial?.ConstantStop) is { Opacity: double stopOpacity } stop)
             {
-                if (svgGradient.ConstantStop is { Opacity: double stopOpacity } stop)
-                {
-                    paint = new SvgPaint(stop.Color, null, opacity * stopOpacity);
-                    gradientId = null;
-                }
-                else
-                {
-                    paint = new SvgPaint(null, svgGradient, opacity * (svgGradient.UniformStopOpacity ?? 1d));
-                }
+                paint = new SvgPaint(stop.Color, null, opacity * stopOpacity);
+                gradientId = null;
                 failure = SvgFillFailure.None;
                 return true;
             }
-            if (radialGradients.TryGetValue(gradientId, out SvgRadialGradient? svgRadial))
+            if (svgGradient is not null)
+            {
+                paint = new SvgPaint(null, svgGradient, opacity * (svgGradient.UniformStopOpacity ?? 1d));
+                failure = SvgFillFailure.None;
+                return true;
+            }
+            if (svgRadial is not null)
             {
                 radial = svgRadial;
                 paint = new SvgPaint(null, null, opacity * (svgRadial.UniformStopOpacity ?? 1d));
@@ -1378,7 +1379,8 @@ internal sealed partial class PptxRenderer
     // vector-effect=non-scaling-stroke skips the element-transform factor;
     // any other effect value stays diagnosed with the scaled stroke.
     private static SvgStroke ReadSvgStroke(XElement path, IReadOnlyDictionary<string, SvgGradient> gradients,
-        Lazy<HashSet<string>> elementIds, bool allowGradientStroke, bool hasFill, out SvgStrokeFailure failure,
+        IReadOnlyDictionary<string, SvgRadialGradient> radialGradients, Lazy<HashSet<string>> elementIds,
+        bool allowGradientStroke, bool hasFill, out SvgStrokeFailure failure,
         out bool invalidPresentation, out bool hasVectorEffect, out bool nonScalingStroke)
     {
         failure = SvgStrokeFailure.None;
@@ -1409,8 +1411,10 @@ internal sealed partial class PptxRenderer
         RgbColor? color = null;
         if (gradientId is not null)
         {
-            if (gradients.TryGetValue(gradientId, out SvgGradient? gradient) &&
-                gradient.ConstantStop is { Opacity: double stopOpacity } stop)
+            SvgGradient? gradient = gradients.GetValueOrDefault(gradientId);
+            SvgGradientStop? constant = gradient is null
+                ? radialGradients.GetValueOrDefault(gradientId)?.ConstantStop : gradient.ConstantStop;
+            if (constant is { Opacity: double stopOpacity } stop)
             {
                 color = stop.Color;
                 opacity *= stopOpacity;
