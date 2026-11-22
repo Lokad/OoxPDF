@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 using Lokad.OoxPdf;
@@ -456,17 +457,43 @@ internal static partial class PdfWriterTests
         byte[] rgb = [255, 0, 0, 0, 0, 255];
         PdfImageXObject first = PdfImageXObject.RgbPng(2, 1, rgb, [255, 64]);
         PdfImageXObject second = PdfImageXObject.RgbPng(2, 1, rgb, [64, 255]);
-        var page = new PdfPage(100, 100, string.Empty, [], [
+        var graphics = new PdfGraphicsBuilder();
+        graphics.DrawImage("Im1", 10, 40, 40, 20);
+        graphics.DrawImage("Im2", 55, 40, 40, 20);
+        var page = new PdfPage(100, 100, graphics.ToString(), [], [
             new PdfImageResource("Im1", first),
             new PdfImageResource("Im2", second)
         ]);
 
-        string pdf = WritePdfText([page]);
+        AssertPaintedImageMasks(Encoding.Latin1.GetString(WritePdfBytes([page])));
+    }
 
-        TestAssert.Equal(4, CountOccurrences(pdf, "/Subtype /Image"));
-        TestAssert.Equal(2, CountOccurrences(pdf, "/SMask"));
-        TestAssert.Contains("/Im1 ", pdf);
-        TestAssert.Contains("/Im2 ", pdf);
+    private static void AssertPaintedImageMasks(string pdf)
+    {
+        var pages = Regex.Match(pdf, @"/Type /Pages\b[^\r\n]*/Kids \[(\d+) 0 R\]");
+        string page = ReadObject(pdf, pages.Groups[1].Value);
+        string paint = ReadObject(pdf, Regex.Match(page, @"/Contents (\d+) 0 R").Groups[1].Value);
+        string images = Regex.Match(page, @"/XObject << ([^>]+)>>").Groups[1].Value;
+
+        (string Name, int X, byte[] Alpha)[] expected = [("Im1", 10, [255, 64]), ("Im2", 55, [64, 255])];
+        foreach (var (name, x, alpha) in expected)
+        {
+            TestAssert.True(Regex.IsMatch(paint, $@"(?m)(?:^|[ ])40 0 0 20 {x} 40 cm\s+/{name} Do\b"),
+                $"{name} must paint at its authored rectangle.");
+            string image = ReadObject(pdf, Regex.Match(images, $@"/{name} (\d+) 0 R").Groups[1].Value);
+            TestAssert.Contains("/Subtype /Image /Width 2 /Height 1", image);
+            TestAssert.Contains("/ColorSpace /DeviceRGB", image);
+
+            string mask = ReadObject(pdf, Regex.Match(image, @"/SMask (\d+) 0 R").Groups[1].Value);
+            TestAssert.Contains("/Subtype /Image /Width 2 /Height 1", mask);
+            TestAssert.Contains("/ColorSpace /DeviceGray", mask);
+            var stream = Regex.Match(mask, @"/Length (\d+) >>\r?\nstream\r?\n");
+            TestAssert.True(stream.Success, $"{name} must reference a mask stream with a declared length.");
+            int length = int.Parse(stream.Groups[1].Value, CultureInfo.InvariantCulture);
+            byte[] compressed = Encoding.Latin1.GetBytes(mask.Substring(stream.Index + stream.Length, length));
+            TestAssert.True(TestFixtures.InflateZlib(compressed).AsSpan().SequenceEqual(alpha),
+                $"{name} must own its ordered alpha samples.");
+        }
     }
 
     public static void WritesStitchedAxialShadingFunctionForMultipleStops()
