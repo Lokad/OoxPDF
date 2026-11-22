@@ -128,6 +128,7 @@ internal static partial class PortableRenderingTests
     public static void PortableRenderingMathEmptyRunFormattingKeepsComposedFractions() =>
         CheckComposedMathRunContent("x2", (numerators, w, m) =>
         {
+            foreach (var numerator in numerators) numerator.Value = "x2";
             numerators[0].Parent!.AddAfterSelf(new XElement(m + "r",
                 new XElement(w + "rPr", new XElement(w + "vanish")), new XElement(m + "t")));
             numerators[1].Parent!.AddAfterSelf(new XElement(m + "r",
