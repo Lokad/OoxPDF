@@ -63,14 +63,14 @@ internal sealed partial class DocxReader
 
     // Math and pictures are result items, rather than ordinary w:r text children.
     // Both field forms and the diagnostic scan use this source-content rule.
-    private static bool IsFieldResultContent(XElement element) =>
+    private static bool IsFieldResultContent(XElement element, bool inFieldResult = false) =>
         element.Name == MathNamespace + "oMath" || element.Name == MathNamespace + "oMathPara" ||
-        ReadRunTextChild(element).Length != 0 ||
+        ReadRunTextChild(element, inFieldResult).Length != 0 ||
         IsCachedFieldDrawing(element) &&
             element.Descendants().Any(content => content.Name == DrawingNamespace + "blip" || content.Name == VmlNamespace + "imagedata");
 
     private static bool IsCachedFieldDrawing(XElement element) =>
         element.Name == WordprocessingNamespace + "drawing" || element.Name == WordprocessingNamespace + "pict";
 
-    private static bool FieldHasCachedResultContent(XElement field) => field.Descendants().Any(IsFieldResultContent);
+    private static bool FieldHasCachedResultContent(XElement field) => field.Descendants().Any(element => IsFieldResultContent(element));
 }

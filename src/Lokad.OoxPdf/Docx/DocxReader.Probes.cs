@@ -882,9 +882,10 @@ internal sealed partial class DocxReader
             return true;
         }
 
-        if (child.Name == WordprocessingNamespace + "instrText")
+        bool inFieldResult = fields.Count != 0 && fields[^1].InResult;
+        if (child.Name == WordprocessingNamespace + "instrText" && !inFieldResult)
         {
-            if (fields.Count == 0 || fields[^1].InResult)
+            if (fields.Count == 0)
             {
                 return true;
             }
@@ -893,7 +894,7 @@ internal sealed partial class DocxReader
             return false;
         }
 
-        if (IsFieldResultContent(child))
+        if (IsFieldResultContent(child, inFieldResult))
         {
             for (int fieldIndex = 0; fieldIndex < fields.Count; fieldIndex++)
             {

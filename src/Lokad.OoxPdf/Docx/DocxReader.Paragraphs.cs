@@ -768,7 +768,6 @@ internal sealed partial class DocxReader
                 hasComplexFieldMarkup ? RecordPictureChild : null);
             if (runDrawings.TextBoxes.Count != 0) EnsureInlineContent();
             sourceRunIndex++;
-            inlineTextBoxes.AddRange(runDrawings.TextBoxes);
             CaptureUnmarkedListTextStyle(text, resolvedRun, runStyleResolution, currentSourceRunIndex, revision);
             resolvedRun = ApplyMarkupRevisionStyle(resolvedRun, revision, markupMode);
             // Content revisions need a painted or known nonprinting source.
@@ -784,16 +783,16 @@ internal sealed partial class DocxReader
 
             if (hasComplexFieldMarkup)
             {
-                AddOrderedRunContent(
+                runDrawings = AddOrderedRunContent(
                     run,
                     currentSourceRunIndex,
                     resolvedRun,
                     runStyleResolution,
                     revision,
                     effectiveRevisions,
-                    runDrawings.Positions,
+                    runDrawings,
                     fieldPictureChildren);
-                PublishRun(runDrawings.Pictures);
+                PublishRun(runDrawings);
                 return;
             }
 
@@ -803,8 +802,8 @@ internal sealed partial class DocxReader
                     child.Name == WordprocessingNamespace + "drawing" || child.Name == WordprocessingNamespace + "pict" ||
                     child.Name == WordprocessingNamespace + "sym"))
             {
-                AddOrderedRunContent(run, currentSourceRunIndex, resolvedRun, runStyleResolution, revision, effectiveRevisions,
-                    runDrawings.Positions);
+                runDrawings = AddOrderedRunContent(run, currentSourceRunIndex, resolvedRun, runStyleResolution, revision, effectiveRevisions,
+                    runDrawings);
             }
             else if (text.Length != 0)
             {
@@ -817,7 +816,7 @@ internal sealed partial class DocxReader
             }
 
             if (runDrawings.Pictures.Count != 0) RecordComplexFieldResult();
-            PublishRun(runDrawings.Pictures);
+            PublishRun(runDrawings);
 
             void RecordPictureChild(XElement source)
             {
@@ -825,8 +824,10 @@ internal sealed partial class DocxReader
                 (fieldPictureChildren ??= []).Add(child);
             }
 
-            void PublishRun(IReadOnlyList<DocxInlineImage> pictures)
+            void PublishRun(RunDrawings drawings)
             {
+                IReadOnlyList<DocxInlineImage> pictures = drawings.Pictures;
+                inlineTextBoxes.AddRange(drawings.TextBoxes);
                 if (inlineReferences.Count > firstReference &&
                     inlineReferences.Skip(firstReference).Any(reference => reference.CustomMarkText is not null))
                 {
@@ -1018,34 +1019,38 @@ internal sealed partial class DocxReader
             (nonRenderingRunOwners ??= []).Add(new(index, revisions));
         }
 
-        void AddOrderedRunContent(
+        RunDrawings AddOrderedRunContent(
             XElement run,
             int currentSourceRunIndex,
             DocxResolvedRunProperties resolvedRun,
             DocxRunStyleResolution runStyleResolution,
             DocxRevisionInfo? revision,
             IReadOnlyList<DocxRevisionInfo> revisions,
-            IReadOnlyDictionary<XElement, (int Offset, int Order)>? positions,
+            RunDrawings drawings,
             IReadOnlySet<XElement>? fieldPictureChildren = null)
         {
+            var positions = drawings.Positions;
+            int[]? drawingTextOffsets = null;
             int childIndex = 0;
             int textOffset = 0;
             foreach (XElement child in run.Elements())
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 if (fieldPictureChildren?.Contains(child) == true) RecordComplexFieldResult();
-                string childText = ReadRunTextChild(child);
+                bool inFieldResult = CurrentComplexField()?.InResult == true;
+                bool isFieldCode = child.Name == WordprocessingNamespace + "instrText";
+                string childText = ReadRunTextChild(child, inFieldResult);
                 if (child.Name == WordprocessingNamespace + "fldChar")
                 {
                     var position = CurrentComplexField()?.PendingPlaceholder is { SourceRunIndex: < 0 }
-                        ? (positions ??= ReadRunInlinePositions(run, cancellationToken))[child]
+                        ? (Offset: textOffset, (positions ??= ReadRunInlinePositions(run, cancellationToken))[child].Order)
                         : (Offset: 0, Order: 0);
                     ApplyComplexFieldChar(child, currentSourceRunIndex, position);
                 }
-                else if (child.Name == WordprocessingNamespace + "instrText")
+                else if (isFieldCode && !inFieldResult)
                 {
                     var position = (positions ??= ReadRunInlinePositions(run, cancellationToken))[child];
-                    AddComplexFieldInstruction(child, currentSourceRunIndex, position.Offset, position.Order,
+                    AddComplexFieldInstruction(child, currentSourceRunIndex, textOffset, position.Order,
                         resolvedRun, runStyleResolution, revision, revisions);
                 }
                 else if (IsInlineReferenceElement(child))
@@ -1063,6 +1068,13 @@ internal sealed partial class DocxReader
                 {
                     if (childText.Length != 0)
                     {
+                        // The drawing scan knows source order before field parsing
+                        // establishes which instruction elements carry literal text.
+                        if (isFieldCode && drawings.Positions is { } drawingPositions)
+                        {
+                            drawingTextOffsets ??= new int[drawingPositions.Count];
+                            drawingTextOffsets[drawingPositions[child].Order] += childText.Length;
+                        }
                         var childProperties = resolvedRun;
                         if (child.Name == WordprocessingNamespace + "sym" && TryReadSymbol(child, out string? font, out _))
                         {
@@ -1092,6 +1104,23 @@ internal sealed partial class DocxReader
                 textOffset += childText.Length;
                 childIndex++;
             }
+
+            if (drawingTextOffsets is null) return drawings;
+
+            for (int index = 1; index < drawingTextOffsets.Length; index++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                drawingTextOffsets[index] += drawingTextOffsets[index - 1];
+            }
+            return new RunDrawings(
+                drawings.Pictures.Select(picture => picture with
+                {
+                    SourceTextOffsetInRun = picture.SourceTextOffsetInRun + drawingTextOffsets[picture.SourceOrderInRun]
+                }).ToArray(),
+                drawings.TextBoxes.Select(box => box with
+                {
+                    SourceTextOffsetInRun = box.SourceTextOffsetInRun + drawingTextOffsets[box.SourceOrderInRun]
+                }).ToArray(), drawings.Positions);
         }
 
         void ApplyComplexFieldChar(XElement fieldChar, int currentSourceRunIndex, (int Offset, int Order) position)
@@ -1958,7 +1987,7 @@ internal sealed partial class DocxReader
         return false;
     }
 
-    private static string ReadRunTextChild(XElement child)
+    private static string ReadRunTextChild(XElement child, bool inFieldResult = false)
     {
         if (child.Name == WordprocessingNamespace + "sym")
         {
@@ -1966,7 +1995,8 @@ internal sealed partial class DocxReader
             return character.ToString();
         }
         if (child.Name == WordprocessingNamespace + "t" ||
-            child.Name == WordprocessingNamespace + "delText")
+            child.Name == WordprocessingNamespace + "delText" ||
+            inFieldResult && child.Name == WordprocessingNamespace + "instrText")
         {
             string value = child.Value;
             // Word 16 honors preservation on the text element itself, not on

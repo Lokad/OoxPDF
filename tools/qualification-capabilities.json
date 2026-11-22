@@ -3026,6 +3026,7 @@
     "PortableRenderingCustomNotesPreserveMathContentAndFirstGlyphLinks"
   ],
   "docx-field-picture-order": [
+    "=DocxFieldResultCodeSpellingKeepsLiteralTextAndDrawingOrder",
     "=DocxComputedFieldPicturesFollowCachedRevisions",
     "DocxComputedFieldsKeepAtomicOrderBesideRunDrawings",
     "DocxComputedFieldPictureRunBoundariesPreserveVisibleContent",

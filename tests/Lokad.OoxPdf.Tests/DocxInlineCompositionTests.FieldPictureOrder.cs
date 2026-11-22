@@ -6,6 +6,69 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class DocxInlineCompositionTests
 {
+    public static void DocxFieldResultCodeSpellingKeepsLiteralTextAndDrawingOrder()
+    {
+        const string cache = " Cached dispatch ";
+        var resolver = new PortableRenderingTests.PinnedResolver(mathFont: true);
+        foreach (string story in new[] { "body", "cell" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        foreach (var (instruction, locked) in new[] { ("DATE", false), ("PAGE", true), ("PAGE", false) })
+        {
+            DocxDocument Source(string cacheElement)
+            {
+                var diagnostics = new List<Lokad.OoxPdf.Diagnostics.OoxPdfDiagnostic>();
+                DocxDocument document = ReadMutation("CompositionProbes/math-composition-unnumbered" + (story == "body" ? "" : "-cell"),
+                    mode, true, false, (xml, w, _) =>
+                    {
+                        XElement drawing = xml.Descendants(w + "drawing").Single();
+                        XElement Marker(string kind) => new(w + "fldChar", new XAttribute(w + "fldCharType", kind));
+                        XElement TextElement(string kind, string value) =>
+                            new(w + kind, new XAttribute(XNamespace.Xml + "space", "preserve"), value);
+                        XElement begin = Marker("begin");
+                        if (locked) begin.SetAttributeValue(w + "fldLock", "1");
+                        XElement field = new(w + "r", begin, TextElement("instrText", " " + instruction + " "),
+                            Marker("separate"), new XElement(drawing), TextElement(cacheElement, cache), new XElement(drawing),
+                            Marker("begin"), TextElement("instrText", " REF Target "), Marker("separate"),
+                            TextElement("t", "Nested value"), Marker("end"), Marker("end"), TextElement("t", " after field "));
+                        drawing.Parent!.ReplaceWith(new XElement(w + "hyperlink", new XAttribute(w + "anchor", "PublicCalculation"), field));
+                    }, diagnosticSink: diagnostics.Add);
+                TestAssert.True(diagnostics.All(diagnostic => diagnostic.Id != "DOCX_UNSUPPORTED_COMPLEX_FIELD"),
+                    "A literal code element inside a stored result is supported.");
+                return document;
+            }
+
+            var control = Source("t");
+            var candidate = Source("instrText");
+            var paragraph = DocxBlockTraversal.EnumerateBodyParagraphs(candidate).Single(p => p.Images.Count != 0);
+            TestAssert.True(paragraph.Images.Select(image => image.SourceTextOffsetInRun).SequenceEqual([0, cache.Length]),
+                "Only the second picture follows the literal text in the same run.");
+            TestAssert.True(paragraph.Images.Select(image => image.SourceOrderInRun).SequenceEqual([0, 1]),
+                "Both pictures retain their distinct source order.");
+            var nested = paragraph.FieldReferences.Single(field => field.NestingDepth == 1);
+            TestAssert.Equal("REF Target", nested.Instruction!.Trim());
+            TestAssert.Equal(1, nested.InstructionRunCount);
+
+            var renderer = new DocxRenderer(resolver, mode, CachedMathGeometry(mode));
+            var expected = renderer.RenderPagesAsync(control, null, default).ToBlockingEnumerable().ToArray();
+            var actual = renderer.RenderPagesAsync(candidate, null, default).ToBlockingEnumerable().ToArray();
+            TestAssert.Equal(expected.Length, actual.Length);
+            string text = string.Concat(actual.SelectMany(page => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, true))
+                .Select(show => show.Text));
+            bool computed = instruction == "PAGE" && !locked;
+            TestAssert.Equal(!computed, text.Contains(cache.Trim(), StringComparison.Ordinal));
+            TestAssert.Equal(!computed, text.Contains("Nested value", StringComparison.Ordinal));
+            TestAssert.Contains("after field", text);
+            TestAssert.True(actual.SelectMany(page => page.Annotations).Any(annotation => annotation.IsDestination),
+                "The cached field and neighboring content retain internal links.");
+            for (int index = 0; index < actual.Length; index++)
+            {
+                TestAssert.Equal(expected[index].Content, actual[index].Content);
+                TestAssert.True(expected[index].Annotations.SequenceEqual(actual[index].Annotations),
+                    "The literal source spelling preserves picture and link placement.");
+            }
+        }
+    }
+
     public static void DocxComputedComplexCachesKeepPicturesMathAndNavigationAcrossStories()
     {
         var resolver = new PortableRenderingTests.PinnedResolver(mathFont: true);
