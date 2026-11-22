@@ -381,7 +381,9 @@ internal static partial class PptxChartTextHyperlinksTests
         }
     }
 
-    internal static (List<PdfPage> Pages, List<OoxPdfDiagnostic> Diagnostics) RenderChartTitlePage(string titleRunXml, string? chartRelsXml, string? chartXmlOverride = null, IFontResolver? fontResolver = null, bool? autoTitleDeleted = null)
+    internal static (List<PdfPage> Pages, List<OoxPdfDiagnostic> Diagnostics) RenderChartTitlePage(string titleRunXml,
+        string? chartRelsXml, string? chartXmlOverride = null, IFontResolver? fontResolver = null,
+        bool? autoTitleDeleted = null, string? chartStyleXml = null)
     {
         string contentTypes = PptxTests.BasicContentTypes().Replace(
             "</Types>",
@@ -445,10 +447,13 @@ internal static partial class PptxChartTextHyperlinksTests
         {
             parts["ppt/charts/_rels/chart1.xml.rels"] = chartRelsXml;
         }
+        if (chartStyleXml is not null)
+        {
+            parts["ppt/charts/style1.xml"] = chartStyleXml;
+        }
 
-        string input = TestFixtures.WriteTempPackage(".pptx", parts);
-        using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        using MemoryStream stream = TestFixtures.CreateZipPackage(parts);
+        using OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
         var diagnostics = new List<OoxPdfDiagnostic>();
         List<PdfPage> pages = new PptxRenderer(fontResolver).RenderPagesAsync(document, package, diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().ToList();
