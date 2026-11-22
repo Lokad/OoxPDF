@@ -2725,21 +2725,62 @@ internal static partial class PptxImagesTests
         TestAssert.True(!diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("unresolvable", StringComparison.Ordinal)), "Percentage vectors must resolve.");
     }
 
-    // RV07: percentage vectors in user space diagnose instead of killing conversion.
-    public static void PptxSyntheticSvgUserSpacePercentVectorDiagnoses()
+    public static void PptxSvgUserSpacePercentGradientsMatchViewportUnits()
     {
-        string input = WriteSvgGradientDeck("""
-            <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
-              <defs><linearGradient id="g" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="50%" y2="0"><stop offset="0" stop-color="#FF0000"/><stop offset="1" stop-color="#0000FF"/></linearGradient></defs>
-              <path d="M0 0H100V50H0Z" fill="url(#g)"/>
+        const string sourceBox = """width="680" height="280" viewBox="10 20 340 140" """;
+        const string fixedViewport = """width="340px" height="140px" """;
+        string Picture(string viewport, string linear, string radial) => $"""
+            <svg {viewport} xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="linear" gradientUnits="userSpaceOnUse" {linear}>
+                  <stop offset="0" stop-color="red"/><stop offset="1" stop-color="blue"/>
+                </linearGradient>
+                <radialGradient id="radial" gradientUnits="userSpaceOnUse" {radial}>
+                  <stop offset="0" stop-color="yellow"/><stop offset="1" stop-color="green"/>
+                </radialGradient>
+              </defs>
+              <rect x="20" y="25" width="120" height="100" fill="url(#linear)"/>
+              <circle cx="204" cy="70" r="52" fill="url(#radial)"/>
+              <path d="M270 35H320V110H270Z" fill="none" stroke="url(#linear)" stroke-width="6"/>
             </svg>
-            """);
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+            """;
+        const string linearUnits = """x1="34" y1="28" x2="272" y2="84" """;
+        const string radialUnits = """cx="204" cy="70" r="52" fx="204" fy="70" """;
+        const string linearPercent = """x1="10%" y1="20%" x2="80%" y2="60%" """;
+        // The normalized diagonal of the 340 by 140 frame is 260 user units.
+        const string radialPercent = """cx="60%" cy="50%" r="20%" fx="60%" fy="50%" """;
         var diagnostics = new List<OoxPdfDiagnostic>();
+        foreach (var (viewport, crop) in new[] { (sourceBox, (int?)null), (sourceBox, 5000), (fixedViewport, null) })
+        {
+            string expected = RenderSyntheticSvgPicture(Picture(viewport, linearUnits, radialUnits), crop, diagnostics);
+            TestAssert.Contains("/PatternType 2", expected);
+            TestAssert.Contains("/ShadingType 3", expected);
+            string actual = RenderSyntheticSvgPicture(Picture(viewport, linearPercent, radialPercent), crop, diagnostics);
+            TestAssert.True(expected == actual, $"Percentage coordinates must match literal viewport units for {viewport} and crop {crop}.");
+        }
 
-        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+        string explicitDefaults = RenderSyntheticSvgPicture(Picture(sourceBox, """x2="340" """,
+            """cx="170" cy="70" r="130" """), diagnostics: diagnostics);
+        TestAssert.Contains("/PatternType 2", explicitDefaults);
+        TestAssert.Contains("/ShadingType 3", explicitDefaults);
+        TestAssert.True(explicitDefaults == RenderSyntheticSvgPicture(Picture(sourceBox, "", ""), diagnostics: diagnostics),
+            "Omitted user-space gradient coordinates use the same viewport basis as their percentage defaults.");
+        TestAssert.Equal(0, diagnostics.Count);
+    }
 
-        TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("unresolvable", StringComparison.Ordinal)), "User-space percentages must diagnose.");
+    public static void PptxSyntheticSvgInvalidUserSpacePercentVectorDiagnoses()
+    {
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        string pdf = RenderSyntheticSvgPicture("""
+            <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+              <defs><linearGradient id="g" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="bad%" y2="0"><stop offset="0" stop-color="#FF0000"/><stop offset="1" stop-color="#0000FF"/></linearGradient></defs>
+              <path d="M0 0H100V50H0Z" fill="url(#g)"/>
+              <rect x="20" y="10" width="40" height="20" fill="fuchsia"/>
+            </svg>
+            """, diagnostics: diagnostics);
+        TestAssert.Contains("1 0 1 rg", pdf);
+        TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("unresolvable", StringComparison.Ordinal)),
+            "A malformed percentage keeps the gradient diagnostic and sibling paint.");
     }
 
     // RV07: garbage opacities fall back to opaque instead of killing conversion.

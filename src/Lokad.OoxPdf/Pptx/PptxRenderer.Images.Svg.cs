@@ -151,8 +151,8 @@ internal sealed partial class PptxRenderer
             return true;
         }
 
-        var gradients = ReadSvgGradients(svg);
-        var radialGradients = ReadSvgRadialGradients(svg);
+        var gradients = ReadSvgGradients(svg, viewWidth, viewHeight);
+        var radialGradients = ReadSvgRadialGradients(svg, viewWidth, viewHeight);
         var elementIds = CreateSvgElementIdLookup(svg, cancellationToken);
         var paintedText = new HashSet<XElement>();
         bool hasStylesheet = HasSvgStylesheet(svg);
@@ -1096,7 +1096,7 @@ internal sealed partial class PptxRenderer
         return true;
     }
 
-    private static IReadOnlyDictionary<string, SvgGradient> ReadSvgGradients(XDocument svg)
+    private static IReadOnlyDictionary<string, SvgGradient> ReadSvgGradients(XDocument svg, double viewWidth, double viewHeight)
     {
         var gradients = new Dictionary<string, SvgGradient>(StringComparer.Ordinal);
         foreach (XElement gradient in svg.Descendants().Where(element => element.Name.LocalName == "linearGradient"))
@@ -1115,10 +1115,12 @@ internal sealed partial class PptxRenderer
                 }
 
                 bool linearUserSpace = string.Equals((string?)gradient.Attribute("gradientUnits"), "userSpaceOnUse", StringComparison.Ordinal);
-                if (!TryReadSvgGradientCoordinate(gradient, "x1", 0d, !linearUserSpace, out double x1)
-                    || !TryReadSvgGradientCoordinate(gradient, "y1", 0d, !linearUserSpace, out double y1)
-                    || !TryReadSvgGradientCoordinate(gradient, "x2", 1d, !linearUserSpace, out double x2)
-                    || !TryReadSvgGradientCoordinate(gradient, "y2", 0d, !linearUserSpace, out double y2))
+                double? width = linearUserSpace ? viewWidth : null;
+                double? height = linearUserSpace ? viewHeight : null;
+                if (!TryReadSvgGradientCoordinate(gradient, "x1", 0d, width, out double x1)
+                    || !TryReadSvgGradientCoordinate(gradient, "y1", 0d, height, out double y1)
+                    || !TryReadSvgGradientCoordinate(gradient, "x2", width ?? 1d, width, out double x2)
+                    || !TryReadSvgGradientCoordinate(gradient, "y2", 0d, height, out double y2))
                 {
                     continue;
                 }
@@ -1217,9 +1219,9 @@ internal sealed partial class PptxRenderer
         };
     }
 
-    // Bounding-box coordinates accept fractions or percentages. User-space
-    // coordinates share the numeric and pixel units used by shapes and strokes.
-    private static bool TryReadSvgGradientCoordinate(XElement gradient, string name, double fallback, bool percentAsFraction, out double value)
+    // A null basis means fractions of the object's bounding box. In user space,
+    // percentages use the uncropped viewport and numbers or px use user units.
+    private static bool TryReadSvgGradientCoordinate(XElement gradient, string name, double fallback, double? viewportBasis, out double value)
     {
         value = fallback;
         string? text = (string?)gradient.Attribute(name);
@@ -1230,21 +1232,16 @@ internal sealed partial class PptxRenderer
         string trimmed = text.Trim();
         if (trimmed.EndsWith("%", StringComparison.Ordinal))
         {
-            if (!percentAsFraction)
+            if (double.TryParse(trimmed.AsSpan(0, trimmed.Length - 1), NumberStyles.Float, CultureInfo.InvariantCulture, out double percent))
             {
-                return false;
-            }
-            if (double.TryParse(trimmed[..^1], NumberStyles.Float, CultureInfo.InvariantCulture, out double percent)
-                && double.IsFinite(percent))
-            {
-                value = percent / 100d;
-                return true;
+                value = (percent / 100d) * (viewportBasis ?? 1d);
+                return double.IsFinite(value);
             }
             return false;
         }
-        return percentAsFraction
-            ? double.TryParse(trimmed, NumberStyles.Float, CultureInfo.InvariantCulture, out value) && double.IsFinite(value)
-            : TryReadSvgNumberOrPixels(trimmed, out value);
+        return viewportBasis.HasValue
+            ? TryReadSvgNumberOrPixels(trimmed, out value)
+            : double.TryParse(trimmed, NumberStyles.Float, CultureInfo.InvariantCulture, out value) && double.IsFinite(value);
     }
 
     // RV07: CSS style declarations override presentation attributes; opacity
@@ -1847,9 +1844,10 @@ internal sealed partial class PptxRenderer
     // RV07: radial gradients paint concentric ellipse rings, largest first.
     // Focal points diagnose and render centered; radii resolve per axis like
     // the linear vector mapping, with the gradient transform baked at read.
-    private static IReadOnlyDictionary<string, SvgRadialGradient> ReadSvgRadialGradients(XDocument svg)
+    private static IReadOnlyDictionary<string, SvgRadialGradient> ReadSvgRadialGradients(XDocument svg, double viewWidth, double viewHeight)
     {
         var gradients = new Dictionary<string, SvgRadialGradient>(StringComparer.Ordinal);
+        double viewDiagonal = double.Hypot(viewWidth / Math.Sqrt(2d), viewHeight / Math.Sqrt(2d));
         foreach (XElement gradient in svg.Descendants().Where(element => element.Name.LocalName == "radialGradient"))
         {
             string? id = (string?)gradient.Attribute("id");
@@ -1863,22 +1861,18 @@ internal sealed partial class PptxRenderer
                 continue;
             }
             bool userSpace = string.Equals((string?)gradient.Attribute("gradientUnits"), "userSpaceOnUse", StringComparison.Ordinal);
-            if (!TryReadSvgGradientCoordinate(gradient, "cx", 0.5d, !userSpace, out double cx)
-                || !TryReadSvgGradientCoordinate(gradient, "cy", 0.5d, !userSpace, out double cy)
-                || !TryReadSvgGradientCoordinate(gradient, "r", 0.5d, !userSpace, out double radius))
+            double? width = userSpace ? viewWidth : null;
+            double? height = userSpace ? viewHeight : null;
+            double? diagonal = userSpace ? viewDiagonal : null;
+            if (!TryReadSvgGradientCoordinate(gradient, "cx", (width ?? 1d) / 2d, width, out double cx)
+                || !TryReadSvgGradientCoordinate(gradient, "cy", (height ?? 1d) / 2d, height, out double cy)
+                || !TryReadSvgGradientCoordinate(gradient, "r", (diagonal ?? 1d) / 2d, diagonal, out double radius)
+                || !TryReadSvgGradientCoordinate(gradient, "fx", cx, width, out double fx)
+                || !TryReadSvgGradientCoordinate(gradient, "fy", cy, height, out double fy))
             {
                 continue;
             }
             if (radius <= 0d)
-            {
-                continue;
-            }
-            double fx = cx;
-            double fy = cy;
-            string? fxText = (string?)gradient.Attribute("fx");
-            string? fyText = (string?)gradient.Attribute("fy");
-            if ((fxText is not null && !TryReadSvgGradientCoordinate(gradient, "fx", cx, !userSpace, out fx))
-                || (fyText is not null && !TryReadSvgGradientCoordinate(gradient, "fy", cy, !userSpace, out fy)))
             {
                 continue;
             }
