@@ -87,19 +87,74 @@ internal static partial class DocxInlineCompositionTests
                     $"The terminal text boundary must retain both links: {mode}/{cell}/{content}/{hiddenBeforeBookmark}/{(int?)breakMarker}.");
             }
 
-            PdfPage[] Render(bool? hiddenBeforeBookmark, char? breakMarker = null) => renderer.RenderPagesAsync(
-                ReadTerminalBookmarkDocument(mode, cell, content, hiddenBeforeBookmark, breakMarker),
+            PdfPage[] Render(bool? hiddenBeforeBookmark, char? breakMarker = null)
+            {
+                return renderer.RenderPagesAsync(
+                    ReadTerminalBookmarkDocument(mode, cell, content, hiddenBeforeBookmark, AddBreakMarker),
+                    null, default).ToBlockingEnumerable().ToArray();
+
+                void AddBreakMarker(XElement anchor)
+                {
+                    XNamespace w = anchor.Name.Namespace;
+                    if (breakMarker == '\u00AD')
+                        anchor.Parent!.Elements(w + "r").Last().Add(new XElement(w + "softHyphen"));
+                    else if (breakMarker is { } marker)
+                        anchor.AddBeforeSelf(new XElement(w + "r", new XElement(w + "t", marker.ToString())));
+                }
+            }
+        }
+    }
+
+    public static void DocxTerminalInlineObjectsKeepBookmarkLinksAcrossOptionalBreaks()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        foreach (bool cell in new[] { false, true })
+        foreach (string content in new[] { "picture", "math", "box" })
+        {
+            var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true), mode,
+                mode == OoxPdfDocxMarkupMode.AllMarkup ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
+                    : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+            var control = Render(null);
+            TestAssert.Equal(2, control.Length);
+            var links = control[0].Annotations.OrderBy(link => link.X).ToArray();
+            TestAssert.Equal(2, links.Length);
+            TestAssert.True(links.All(link => link.Destination is { PageIndex: 1 }));
+            TestAssert.True(links[1].Destination!.Value.Left > links[0].Destination!.Value.Left);
+
+            foreach (bool before in new[] { true, false })
+            {
+                var pages = Render(anchor =>
+                {
+                    XNamespace w = anchor.Name.Namespace;
+                    if (before)
+                        anchor.AddBeforeSelf(new XElement(w + "r", new XElement(w + "softHyphen")));
+                    else
+                        anchor.ElementsAfterSelf().First().AddAfterSelf(new XElement(w + "r", new XElement(w + "t", "\u200B")));
+                });
+                TestAssert.True(control.Select(DocxPageFootnoteNumberingTests.DecodeText)
+                    .SequenceEqual(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)));
+                TestAssert.True(links.SequenceEqual(pages[0].Annotations.OrderBy(link => link.X)),
+                    $"The unused break must preserve the placed {content} endpoint: {mode}/{cell}/{before}.");
+            }
+
+            PdfPage[] Render(Action<XElement>? addSuffix) => renderer.RenderPagesAsync(
+                ReadTerminalBookmarkDocument(mode, cell, content, null, addSuffix),
                 null, default).ToBlockingEnumerable().ToArray();
         }
     }
 
     private static DocxDocument ReadTerminalBookmarkDocument(OoxPdfDocxMarkupMode mode, bool cell, string contentKind,
-        bool? hiddenBeforeBookmark, char? breakMarker = null) => ReadMutation("CompositionProbes/body", mode, false, false, (xml, w, m) =>
+        bool? hiddenBeforeBookmark, Action<XElement>? addSuffix = null) => ReadMutation(
+        contentKind == "box" ? "InlineBoxMath/inline-box-body-equation-inline-box-valid" : "CompositionProbes/body",
+        mode, false, false, (xml, w, m) =>
     {
         var body = xml.Root!.Element(w + "body")!;
-        var original = body.Element(w + "p")!;
+        var original = body.Elements(w + "p").First(paragraph => contentKind != "box" ||
+            paragraph.Descendants(w + "txbxContent").Any());
         var section = body.Element(w + "sectPr")!;
         section.Elements().Where(e => e.Name == w + "headerReference" || e.Name == w + "footerReference").Remove();
+        if (contentKind == "box")
+            body.Elements().Where(element => element != original && element != section).Remove();
 
         XElement Run(string value) => new(w + "r", new XElement(w + "t",
             new XAttribute(XNamespace.Xml + "space", "preserve"), value));
@@ -113,14 +168,17 @@ internal static partial class DocxInlineCompositionTests
         {
             "picture" => new XElement(original.Element(w + "r")!),
             "text" => Run("plain ending"),
+            "box" => new XElement(original.Elements(w + "r").Single(run => run.Descendants(w + "txbxContent").Any())),
             _ => new XElement(original.Element(m + "oMath")!)
         };
-        var owner = new XElement(w + "p", Run("Terminal owner "), Start("701", "ObjectStart"), content, End("701"));
+        var owner = new XElement(w + "p", Run("Terminal owner "));
+        if (contentKind == "box") owner.Add(new XElement(original.Element(m + "oMath")!));
+        owner.Add(Start("701", "ObjectStart"), content, End("701"));
         if (contentKind == "mixed") owner.Add(Run(" plain ending"));
         if (hiddenBeforeBookmark is true) owner.Add(HiddenRun());
-        if (breakMarker == '\u00AD') owner.Elements(w + "r").Last().Add(new XElement(w + "softHyphen"));
-        else if (breakMarker is { } marker) owner.Add(Run(marker.ToString()));
-        owner.Add(Start("702", "ObjectEnd"), End("702"));
+        var anchor = Start("702", "ObjectEnd");
+        owner.Add(anchor, End("702"));
+        addSuffix?.Invoke(anchor);
         if (hiddenBeforeBookmark is false) owner.Add(HiddenRun());
 
         var following = new XElement(w + "p", Run("Following text"));

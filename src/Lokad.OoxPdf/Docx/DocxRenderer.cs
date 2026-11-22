@@ -1891,12 +1891,23 @@ internal sealed partial class DocxRenderer
             token.ThrowIfCancellationRequested();
             index++;
         }
-        if (index < items.Count) return items[index];
+        if (index < items.Count && (bookmark.MathSource is not null ||
+            !IsOptionalBreakOnlyBookmarkItem(items[index], token)))
+        {
+            return items[index];
+        }
         if (bookmark.MathSource is not null) return null;
 
-        // The last painted item owns the endpoint when the rest of the
-        // paragraph contains only nonpainting source.
-        while (--index >= 0 && IsNonpaintingBookmarkItem(items[index])) token.ThrowIfCancellationRequested();
+        // A suffix made entirely of nonpainting items and unused break
+        // markers has the endpoint of the preceding placed item.
+        int last = items.Count - 1;
+        while (last >= 0 && (IsNonpaintingBookmarkItem(items[last]) || IsOptionalBreakOnlyBookmarkItem(items[last], token)))
+        {
+            token.ThrowIfCancellationRequested();
+            last--;
+        }
+        if (index <= last) return items[index];
+        index = last;
         if (index >= 0 && items[index] is DocxInlineText or DocxInlinePicture or DocxInlineBox or DocxInlineEquation)
         {
             afterItem = true;
@@ -1908,6 +1919,21 @@ internal sealed partial class DocxRenderer
     private static bool IsNonpaintingBookmarkItem(DocxInlineItem item) => item is
         DocxInlineText { Run.EffectiveProperties.Hidden: true } or DocxInlineText { Length: 0 } or
         DocxInlineTab { Run.EffectiveProperties.Hidden: true } or DocxInlineBreak { Run.EffectiveProperties.Hidden: true };
+
+    private static bool IsOptionalBreakOnlyBookmarkItem(DocxInlineItem item, CancellationToken token)
+    {
+        if (item is not DocxInlineText { Length: > 0 } text) return false;
+        for (int index = text.Start; index < text.Start + text.Length; index++)
+        {
+            token.ThrowIfCancellationRequested();
+            if (!IsBookmarkBreakMarker(text.Run, index)) return false;
+        }
+        return true;
+    }
+
+    private static bool IsBookmarkBreakMarker(DocxTextRun run, int index) =>
+        DocxTextBreakRules.IsOptionalBreakMarker(run.Text[index]) &&
+        run.LiteralNoteMarkerOffset != run.SourceTextOffsetInRun + index;
 
     private static bool TryResolveBookmarkDestinationSegment(
         IReadOnlyList<DocxTextEmissionSegment> segments,
@@ -1987,9 +2013,7 @@ internal sealed partial class DocxRenderer
             token.ThrowIfCancellationRequested();
             int index = start + length - 1;
             char value = run.Text[index];
-            if (!char.IsWhiteSpace(value) &&
-                (!DocxTextBreakRules.IsOptionalBreakMarker(value) ||
-                    run.LiteralNoteMarkerOffset == run.SourceTextOffsetInRun + index))
+            if (!char.IsWhiteSpace(value) && !IsBookmarkBreakMarker(run, index))
             {
                 break;
             }

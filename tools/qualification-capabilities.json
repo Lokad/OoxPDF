@@ -8771,6 +8771,7 @@
     "DocxTerminalBookmarksSurviveUnpaintedWhitespaceBeforePageBreak",
     "=DocxTerminalPictureAndMathBookmarksKeepTheirPlacedLinks",
     "=DocxTerminalTextBookmarksKeepLinksAcrossHiddenSuffixes",
+    "=DocxTerminalInlineObjectsKeepBookmarkLinksAcrossOptionalBreaks",
     "DocxParagraphEndBookmarks",
     "DocxReaderPromotesInlineRunPageBreakInsideParagraph",
     "DocxReaderPromotesHyperlinkRunPageBreakInsideParagraph",
