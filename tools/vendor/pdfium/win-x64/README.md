@@ -9,6 +9,8 @@ Run from the repository root:
 
     pwsh tools/RasterizePdf.ps1 -InputPdf input.pdf -OutputDirectory artifacts/raster
 
-This builds only the validation tool when needed. Use -SkipBuild to reuse its
-existing Debug build. No pdfium_test.exe, native headers or import library are
+This builds only the validation tool when needed. Use `-SkipBuild` to reuse its
+existing Debug build, or `-RasterizerPath` to bind an existing assembly. Keep
+the pinned native DLL in that assembly's checkout-relative vendor directory
+when moving the runtime. No pdfium_test.exe, native headers or import library are
 required. PDFium remains outside the shipped Lokad.OoxPdf library.

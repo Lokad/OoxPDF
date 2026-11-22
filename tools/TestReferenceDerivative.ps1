@@ -8,7 +8,7 @@ if (Test-Path -LiteralPath $OutputDirectory) { throw 'Use a fresh test directory
 $root=[IO.Path]::GetFullPath($OutputDirectory)
 $tools=Join-Path $root 'tools'
 New-Item -ItemType Directory -Path $tools -Force | Out-Null
-foreach ($name in @('ReferenceCache.ps1','RenderCachedReference.ps1','ImportOfficeReferenceCache.ps1')) {
+foreach ($name in @('ReferenceCache.ps1','PathHelpers.ps1','RenderCachedReference.ps1','ImportOfficeReferenceCache.ps1')) {
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination $tools
 }
 @'
@@ -103,7 +103,9 @@ Assert-State 'restored-control' 'Complete'
 
 $frozenLog = Join-Path $tools 'frozen-raster-calls.jsonl'
 foreach ($framework in @('net10.0', 'net11.0')) {
-    $rasterizer = Join-Path $root ("frozen-$framework.dll")
+    $runtime = Join-Path $tools "Lokad.OoxPdf.PdfiumRasterizer/bin/Debug/$framework"
+    New-Item -ItemType Directory -Path $runtime -Force | Out-Null
+    $rasterizer = Join-Path $runtime 'Lokad.OoxPdf.PdfiumRasterizer.dll'
     [IO.File]::WriteAllText($rasterizer, "Frozen rasterizer $framework")
     $frozenId = Get-RasterizerId $rasterizer
     $frozenDerivative = Get-ReferenceDerivativeName 144 $frozenId

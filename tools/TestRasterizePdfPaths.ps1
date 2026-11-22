@@ -54,7 +54,9 @@ $ownedRepo=Join-Path $root 'repository with spaces'
 $ownedTools=Join-Path $ownedRepo 'tools'
 $ownedRuntime=Join-Path $ownedTools "Lokad.OoxPdf.PdfiumRasterizer/bin/Debug/$Framework"
 New-Item -ItemType Directory -Path $ownedRuntime -Force | Out-Null
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'RasterizePdf.ps1') -Destination $ownedTools
+foreach ($name in @('RasterizePdf.ps1', 'PathHelpers.ps1')) {
+    Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination $ownedTools
+}
 foreach ($file in Get-ChildItem -LiteralPath (Split-Path $rasterizer) -File) {
     Copy-Item -LiteralPath $file.FullName -Destination $ownedRuntime
 }
@@ -149,6 +151,48 @@ $otherFramework=if ($Framework -eq 'net11.0') {'net10.0'} else {'net11.0'}
 & (Join-Path $ownedTools 'RasterizePdf.ps1') -Framework $otherFramework -RasterizerPath $rasterizerDll -InputPdf $onePage -OutputDirectory $bound -Dpi 36 *> (Join-Path $root 'explicit-frozen-tool.log')
 if (@(Get-ChildItem -LiteralPath $bound -Filter '*.png' -File).Count -ne 1) { throw 'Explicit frozen rasterizer did not override framework discovery without building' }
 $rows+=@{Id='explicit-frozen-tool';Outcome='passed';Pages=1}
+
+# The wrapper and explicit assembly now belong to different checkouts.
+. (Join-Path $PSScriptRoot 'ReferenceCache.ps1')
+$relocatedTools=Join-Path $root 'other repository/tools'
+$relocatedRuntime=Join-Path $relocatedTools "Lokad.OoxPdf.PdfiumRasterizer/bin/Debug/$Framework"
+New-Item -ItemType Directory -Path $relocatedRuntime -Force | Out-Null
+$toolName='Lokad.OoxPdf.PdfiumRasterizer'
+foreach ($suffix in @('.dll', '.deps.json', '.runtimeconfig.json')) {
+    Copy-Item -LiteralPath (Join-Path $ownedRuntime ($toolName+$suffix)) -Destination $relocatedRuntime
+}
+$relocatedDll=Join-Path $relocatedRuntime ($toolName+'.dll')
+$relocatedNative=Join-Path $relocatedTools ($nativeRelative+'/bin/pdfium.dll')
+$missingIdentity=Get-RasterizerId $relocatedDll
+foreach ($failureCase in @('missing', 'mismatched')) {
+    if ($failureCase -eq 'mismatched') {
+        New-Item -ItemType Directory -Path (Split-Path $relocatedNative) -Force | Out-Null
+        [IO.File]::WriteAllText($relocatedNative,'Owned non-PDFium sentinel')
+    }
+    $destination=Join-Path $root ("relocated-"+$failureCase+"-raster")
+    $message=$null
+    try {
+        & (Join-Path $ownedTools 'RasterizePdf.ps1') -RasterizerPath $relocatedDll -InputPdf $twoPages -OutputDirectory $destination -Dpi 36
+    }
+    catch { $message=$_.Exception.Message }
+    $expected=if ($failureCase -eq 'missing') { "Missing PDFium DLL: $relocatedNative" } else { 'PDFium binary does not match the pinned hash' }
+    if (!$message -or !$message.Contains($expected) -or (Test-Path -LiteralPath $destination)) {
+        throw "Relocated rasterizer must reject a $failureCase native file before creating output"
+    }
+    $rows+=@{Id="relocated-$failureCase";Outcome='passed';Pages=0;ExpectedFailure=$message}
+}
+$mismatchedIdentity=Get-RasterizerId $relocatedDll
+Copy-Item -LiteralPath (Join-Path $nativeDirectory 'bin/pdfium.dll') -Destination $relocatedNative -Force
+$relocatedIdentity=Get-RasterizerId $relocatedDll
+if (@($missingIdentity,$mismatchedIdentity,$relocatedIdentity | Select-Object -Unique).Count -ne 3 -or
+    $relocatedIdentity -cne (Get-RasterizerId $rasterizerDll)) {
+    throw 'The reference derivative identity must bind the actual native file of the explicit assembly'
+}
+$destination=Join-Path $root 'relocated-raster'
+& (Join-Path $ownedTools 'RasterizePdf.ps1') -RasterizerPath $relocatedDll -InputPdf $twoPages -OutputDirectory $destination -Dpi 36
+if ((Get-NamedHashes $destination) -cne $expectedHashes) { throw 'Relocated raster must match both visible pages' }
+$rows+=@{Id='relocated-pinned-tool';Outcome='passed';Pages=2;RasterizerId=$relocatedIdentity}
+
 if ((Get-FileHash -LiteralPath $twoPages).Hash -ne $inputHash -or (Get-FileHash -LiteralPath $spaced).Hash -ne $inputHash) { throw 'Probe changed its PDF input' }
 @{InputSha256=$inputHash;RasterizerSha256=(Get-FileHash -LiteralPath $rasterizer).Hash;
     LibraryBuilds=0;OfficeExports=0;Checks=$rows} |

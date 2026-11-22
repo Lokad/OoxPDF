@@ -13,6 +13,7 @@
 
 $ReferenceCacheProtocol = "v2"
 $ReferenceMetadataSchema = "ooxpdf-reference-metadata/2"
+. (Join-Path $PSScriptRoot 'PathHelpers.ps1')
 
 function Get-ShortSha256([byte[]] $Bytes, [int] $Length = 12) {
     $sha256 = [System.Security.Cryptography.SHA256]::Create()
@@ -103,8 +104,11 @@ function Get-RasterizerId([string] $RasterizerPath) {
             $hasher.TransformBlock($content, 0, $content.Length, $null, 0) | Out-Null
         }
 
-        $pdfium = Join-Path $repoRoot "tools/vendor/pdfium/win-x64/bin/pdfium.dll"
-        $pdfiumBytes = if (Test-Path -LiteralPath $pdfium) {
+        $pdfium = if ($RasterizerPath) {
+            $RasterizerPath = (Resolve-Path -LiteralPath $RasterizerPath).Path
+            Get-RasterizerNativePath $RasterizerPath
+        } else { Join-Path $repoRoot "tools/vendor/pdfium/win-x64/bin/pdfium.dll" }
+        $pdfiumBytes = if (Test-Path -LiteralPath $pdfium -PathType Leaf) {
             [System.IO.File]::ReadAllBytes($pdfium)
         }
         else {

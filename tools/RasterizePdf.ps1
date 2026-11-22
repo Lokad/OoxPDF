@@ -18,10 +18,14 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+. (Join-Path $PSScriptRoot 'PathHelpers.ps1')
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$pdfium = Join-Path $PSScriptRoot "vendor/pdfium/win-x64/bin/pdfium.dll"
-if (-not (Test-Path -LiteralPath $pdfium)) {
+$rasterizerProject = Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfiumRasterizer/Lokad.OoxPdf.PdfiumRasterizer.csproj"
+$rasterizerDll = if ($RasterizerPath) { (Resolve-Path -LiteralPath $RasterizerPath).Path }
+    else { Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfiumRasterizer/bin/Debug/$Framework/Lokad.OoxPdf.PdfiumRasterizer.dll" }
+$pdfium = Get-RasterizerNativePath $rasterizerDll
+if (-not (Test-Path -LiteralPath $pdfium -PathType Leaf)) {
     throw "Missing PDFium DLL: $pdfium. Restore the tracked pinned binary; see tools/vendor/pdfium/win-x64/VERSION, pdfium.sha256 and docs/Development.md."
 }
 
@@ -40,20 +44,17 @@ if ((Test-Path -LiteralPath $OutputDirectory -PathType Container) -and
     @(Get-ChildItem -LiteralPath $OutputDirectory -Filter '*.png' -File).Count) {
     throw 'Raster output already contains PNG images; choose a fresh directory.'
 }
-New-Item -ItemType Directory -Force -Path $OutputDirectory | Out-Null
-$outputFull = (Resolve-Path -LiteralPath $OutputDirectory).Path
-
-$rasterizerProject = Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfiumRasterizer/Lokad.OoxPdf.PdfiumRasterizer.csproj"
-$rasterizerDll = if ($RasterizerPath) { (Resolve-Path -LiteralPath $RasterizerPath).Path }
-    else { Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfiumRasterizer/bin/Debug/$Framework/Lokad.OoxPdf.PdfiumRasterizer.dll" }
 if ($SkipBuild -or $RasterizerPath) {
-    if (-not (Test-Path -LiteralPath $rasterizerDll)) {
+    if (-not (Test-Path -LiteralPath $rasterizerDll -PathType Leaf)) {
         throw "PDFium rasterizer DLL is missing and -SkipBuild was requested: $rasterizerDll."
     }
 }
 else {
     & (Join-Path $repoRoot "tools/EnsureDotnetBuild.ps1") -Framework $Framework -Project $rasterizerProject -OutputDll $rasterizerDll -Description "PDFium rasterizer"
 }
+
+New-Item -ItemType Directory -Force -Path $OutputDirectory | Out-Null
+$outputFull = (Resolve-Path -LiteralPath $OutputDirectory).Path
 
 $start = [Diagnostics.ProcessStartInfo]::new("dotnet")
 $start.UseShellExecute = $false

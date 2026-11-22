@@ -38,3 +38,9 @@ function Get-CaseInputPath($CaseInfo) {
     $caseDirectory = Split-Path -Parent $CaseInfo.Path
     return (Resolve-Path -LiteralPath (Join-Path $caseDirectory $CaseInfo.Manifest.input)).Path
 }
+
+function Get-RasterizerNativePath([string] $RasterizerDll) {
+    # Match the native path used by the rasterizer relative to its assembly.
+    return [IO.Path]::GetFullPath('../../../../vendor/pdfium/win-x64/bin/pdfium.dll',
+        [IO.Path]::GetDirectoryName($RasterizerDll))
+}

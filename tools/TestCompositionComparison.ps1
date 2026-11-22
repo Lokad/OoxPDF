@@ -16,7 +16,7 @@ New-Item -ItemType Directory -Path $tools -Force | Out-Null
 $script = Join-Path $tools 'CompareCompositionPortfolio.ps1'
 Copy-Item -LiteralPath $ComparisonScript -Destination $script
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'ReferenceCache.ps1') -Destination $tools
-foreach ($name in @('CompositionReferenceIdentity.ps1','CompositionOutcomes.ps1','PdfTextGeometry.ps1',
+foreach ($name in @('CompositionReferenceIdentity.ps1','CompositionOutcomes.ps1','PdfTextGeometry.ps1','PathHelpers.ps1',
     'CompositionDocxThresholds.json','CompositionPptxThresholds.json')) {
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination $tools
 }
@@ -159,8 +159,8 @@ function New-ReuseCache($case) {
 function Test-ComparisonPolicyFixture {
     # A valid wire-format fixture; the checks below independently change its tools,
     # policy and DPI rather than accepting a cached pass/fail summary.
-    $identity=[ordered]@{SourceAndNativeId=(Get-RasterizerId);
-        WrapperSha256=(Get-FileHash (Join-Path $tools 'RasterizePdf.ps1')).Hash;AssemblySha256=$null}
+    $identity=[ordered]@{RasterizerId=(Get-RasterizerId);
+        WrapperSha256=(Get-FileHash (Join-Path $tools 'RasterizePdf.ps1')).Hash}
     @{Schema=1;VisualDiffSha256=(Get-FileHash $visualDiff).Hash;
         RasterizerId=(Get-ShortSha256 ([Text.Encoding]::UTF8.GetBytes(($identity | ConvertTo-Json -Compress))) 32)}
 }
@@ -581,7 +581,10 @@ if ($report.Rows.Count -ne 2 -or @($report.Rows | Where-Object {
 $passed += 'multi-reuse-identical-duplicates'
 # Exercise the real raster-identity branches with tiny owned PDF/page stand-ins.
 @'
-param($InputPdf, $OutputDirectory, $Dpi, [switch]$SkipBuild)
+param($InputPdf, $OutputDirectory, $Dpi, [switch]$SkipBuild, $RasterizerPath)
+if ($RasterizerPath -and !(Test-Path -LiteralPath $RasterizerPath -PathType Leaf)) {
+    throw 'Mock rasterizer did not receive its bound assembly'
+}
 New-Item -ItemType Directory -Path $OutputDirectory | Out-Null
 $count=if ([IO.File]::ReadAllText($InputPdf).Contains('two pages')) {2} else {1}
 for ($i=1;$i -le $count;$i++) { [IO.File]::WriteAllText((Join-Path $OutputDirectory ('page-{0:000}.png' -f $i)),('owned page '+$i)) }
@@ -659,14 +662,29 @@ try {
         }
         $passed+=('metric-policy-'+$control)
     }
-    foreach ($control in @('engine','wrapper')) {
+    foreach ($control in @('engine','wrapper','native')) {
         $case=New-Case ('tool-change-during-'+$control) 'legacy'
-        $tool=if ($control -eq 'engine') {$visualDiff} else {Join-Path $tools 'RasterizePdf.ps1'}
+        $binding=@{}
+        $tool=switch ($control) {
+            'engine' { $visualDiff }
+            'wrapper' { Join-Path $tools 'RasterizePdf.ps1' }
+            'native' {
+                $alternate=Join-Path $case.Directory 'another checkout/tools'
+                $runtime=Join-Path $alternate 'Lokad.OoxPdf.PdfiumRasterizer/bin/Debug/net11.0'
+                $native=Join-Path $alternate 'vendor/pdfium/win-x64/bin'
+                New-Item -ItemType Directory -Path $runtime,$native -Force | Out-Null
+                $binding.RasterizerPath=Join-Path $runtime 'Lokad.OoxPdf.PdfiumRasterizer.dll'
+                [IO.File]::WriteAllText($binding.RasterizerPath, 'Owned fake rasterizer')
+                $nativeFile=Join-Path $native 'pdfium.dll'
+                [IO.File]::WriteAllText($nativeFile, 'Native dependency stand-in, never loaded')
+                $nativeFile
+            }
+        }
         $original=[IO.File]::ReadAllBytes($tool);$rejected=$false
         $comparisonProbeState.AfterDiff={ [IO.File]::AppendAllText($tool,"`n# changed during comparison") }
         try {
             & $script -CandidateDirectory $case.CandidateDirectory -ReferenceDirectory $case.ReferenceDirectory `
-                -VisualDiffPath $visualDiff -ValidationToolsDirectory $tools | Out-Null
+                -VisualDiffPath $visualDiff -ValidationToolsDirectory $tools @binding | Out-Null
         }
         catch { if ($_.Exception.Message -notlike 'Comparison tools changed during the batch*') {throw};$rejected=$true }
         finally { $comparisonProbeState.AfterDiff=$null;[IO.File]::WriteAllBytes($tool,$original) }

@@ -48,10 +48,10 @@ function Get-PortfolioPdfPageCount([string] $Pdf, [string] $PdfHash) {
 $rasterizerDll = if ($RasterizerPath) {(Resolve-Path -LiteralPath $RasterizerPath).Path}
     else {Join-Path $ValidationToolsDirectory "Lokad.OoxPdf.PdfiumRasterizer/bin/Debug/$Framework/Lokad.OoxPdf.PdfiumRasterizer.dll"}
 function Get-PortfolioRasterizerId {
+    $assembly = if (Test-Path -LiteralPath $rasterizerDll -PathType Leaf) { $rasterizerDll }
     $identity = [ordered]@{
-        SourceAndNativeId = Get-RasterizerId
+        RasterizerId = Get-RasterizerId $assembly
         WrapperSha256 = (Get-FileHash (Join-Path $ValidationToolsDirectory 'RasterizePdf.ps1')).Hash
-        AssemblySha256 = if (Test-Path -LiteralPath $rasterizerDll) { (Get-FileHash $rasterizerDll).Hash } else { $null }
     }
     Get-ShortSha256 ([Text.Encoding]::UTF8.GetBytes(($identity | ConvertTo-Json -Compress))) 32
 }
