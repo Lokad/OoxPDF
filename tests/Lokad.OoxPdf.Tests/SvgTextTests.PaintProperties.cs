@@ -297,6 +297,24 @@ internal static partial class SvgTextTests
         AssertSvgPaintInBothFormats(expected, actual, "/PatternType 2", "/ShadingType 3", "/S /Luminosity");
     }
 
+    public static void SvgOpaqueRgbMatchesHexPaintInBothFormats()
+    {
+        string Picture(string red, string blue, string label) => Svg($"""
+            <defs>
+              <linearGradient id="palette"><stop stop-color="{red}"/><stop offset="1" stop-color="{blue}"/></linearGradient>
+              <radialGradient id="radial" href="#palette"/>
+            </defs>
+            <rect x="10" y="15" width="25" height="25" fill="{red}"/>
+            <rect x="40" y="15" width="25" height="25" fill="none" stroke="{blue}" stroke-width="4"/>
+            <rect x="85" y="20" width="60" height="60" fill="none" stroke="url(#palette)" stroke-width="8"/>
+            <rect x="160" y="20" width="60" height="60" fill="url(#radial)"/>
+            <text x="10" y="125" font-size="24" color="{label}" fill="currentColor">I</text>
+            """);
+        AssertSvgPaintInBothFormats(Picture("#ff0000", "#0000ff", "#112233"),
+            Picture("rgb(100%,0%,0%)", "RGB(0, 0, 255)", "rgb(17 34 51)"),
+            "1 0 0 rg", "0 0 1 RG", "/PatternType 2", "/ShadingType 3", LabelColor);
+    }
+
     public static void SvgGradientTemplateCyclesAndMissingTargetsKeepLocalDeclarations()
     {
         const string definitions = """

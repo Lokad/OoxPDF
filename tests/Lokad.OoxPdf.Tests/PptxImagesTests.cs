@@ -1691,12 +1691,11 @@ internal static partial class PptxImagesTests
         TestAssert.Contains("1 0 0 rg", pdf);
     }
 
-    // RV07: functional color syntax stays diagnosed (guard: boundary never silently renders).
-    public static void PptxSyntheticSvgRgbFunctionFillDiagnoses()
+    public static void PptxSyntheticSvgMalformedRgbFunctionFillDiagnoses()
     {
         string input = WriteSvgGradientDeck("""
             <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
-              <path d="M0 0 H100 V50 H0 Z" fill="rgb(255,0,0)"/>
+              <path d="M0 0 H100 V50 H0 Z" fill="rgb(255,0,)"/>
             </svg>
             """);
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
@@ -1704,7 +1703,7 @@ internal static partial class PptxImagesTests
 
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
 
-        TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("unparsable paint", StringComparison.Ordinal)), "Functional color must diagnose.");
+        TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("unparsable paint", StringComparison.Ordinal)), "An incomplete RGB color must diagnose.");
     }
 
     // RV07: rect elements render their box instead of diagnosing.

@@ -86,6 +86,7 @@ SVG text can become glyph outlines. Complex SVG text, filters, masks/blends and
 unsupported constructs retain limitations. TrueType outlines embed; CFF faces
 require an embeddable fallback. Missing glyphs use diagnosed replacement.
 Local SVG gradient templates reuse the authored stops and their source colors.
+SVG paint accepts opaque numeric `rgb()` colors and separate opacity properties.
 
 PPTX picture opacity composes with supported SVG opacity. Usable authored raster
 previews retain precedence. Unsupported SVG picture recoloring retains original

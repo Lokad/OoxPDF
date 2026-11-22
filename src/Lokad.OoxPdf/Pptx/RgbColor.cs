@@ -22,8 +22,7 @@ internal readonly record struct RgbColor(byte Red, byte Green, byte Blue)
         color = new RgbColor(red, green, blue);
         return true;
     }
-    // RV07: CSS paint covers #rgb/#rrggbb plus the 148 SVG color keywords
-    // (hex values per CSS Color; functional rgb()/hsl() stays unparsed and diagnoses).
+    // SVG paint uses opaque sRGB colors. Opacity is handled separately.
     public static bool TryParseCssColor(string? text, out RgbColor color)
     {
         color = default;
@@ -45,8 +44,42 @@ internal readonly record struct RgbColor(byte Red, byte Green, byte Blue)
         {
             return true;
         }
+        if (trimmed.StartsWith("rgb(", StringComparison.OrdinalIgnoreCase) && trimmed.EndsWith(')'))
+        {
+            return TryParseCssRgb(trimmed.AsSpan(4, trimmed.Length - 5), out color);
+        }
         return CssColorKeywords.TryGetValue(trimmed, out color);
     }
+
+    private static bool TryParseCssRgb(ReadOnlySpan<char> arguments, out RgbColor color)
+    {
+        color = default;
+        bool legacy = arguments.Contains(',');
+        Span<Range> components = stackalloc Range[4];
+        int count = legacy ? arguments.Split(components, ',', StringSplitOptions.TrimEntries) :
+            arguments.SplitAny(components, " \t\r\n\f", StringSplitOptions.RemoveEmptyEntries);
+        if (count != 3) return false;
+
+        bool firstIsPercent = arguments[components[0]].EndsWith("%", StringComparison.Ordinal);
+        Span<byte> channels = stackalloc byte[3];
+        for (int index = 0; index < channels.Length; index++)
+        {
+            ReadOnlySpan<char> component = arguments[components[index]];
+            bool percent = component.EndsWith("%", StringComparison.Ordinal);
+            if ((legacy && percent != firstIsPercent) || (percent && (component.Length == 1 || char.IsWhiteSpace(component[^2]))))
+                return false;
+
+            ReadOnlySpan<char> number = percent ? component[..^1] : component;
+            if (!double.TryParse(number, NumberStyles.Float, CultureInfo.InvariantCulture, out double value) || !double.IsFinite(value))
+                return false;
+
+            double scaled = percent ? Math.Clamp(value, 0d, 100d) * 255d / 100d : Math.Clamp(value, 0d, 255d);
+            channels[index] = (byte)Math.Round(scaled, MidpointRounding.AwayFromZero);
+        }
+        color = new RgbColor(channels[0], channels[1], channels[2]);
+        return true;
+    }
+
     private static readonly Dictionary<string, RgbColor> CssColorKeywords = new(StringComparer.OrdinalIgnoreCase)
     {
         ["aliceblue"] = new(0xF0, 0xF8, 0xFF),

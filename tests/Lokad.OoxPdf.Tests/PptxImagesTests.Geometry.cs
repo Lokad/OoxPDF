@@ -197,6 +197,29 @@ internal static partial class PptxImagesTests
         TestAssert.True(RgbColor.TryParseCssColor("#fF0", out var shortColor) && shortColor == new RgbColor(255, 255, 0), "Safe hex parsing preserves supported shorthand.");
     }
 
+    public static void PptxSvgRgbFunctionsParseOpaqueSrgbChannels()
+    {
+        foreach (var (value, expected) in new[]
+        {
+            ("rgb(235,20,10)", new RgbColor(235, 20, 10)),
+            ("RGB(100%, 50%, 0%)", new RgbColor(255, 128, 0)),
+            (" rgb(100% 17.5 4%) ", new RgbColor(255, 18, 10)),
+            ("rgb( -1e2 , +3e2 , 127.5 )", new RgbColor(0, 255, 128)),
+            ("rgb(-5%\t45%\r\n115%)", new RgbColor(0, 115, 255))
+        })
+        {
+            TestAssert.True(RgbColor.TryParseCssColor(value, out RgbColor color), value);
+            TestAssert.Equal(expected, color);
+        }
+
+        foreach (string invalid in new[] { "rgb()", "rgb(255 0)", "rgb(255,0,0,)", "rgb(255,0%,0)",
+            "rgb(255,0 0)", "rgb(255,0,0) trailing", "rgb(10 % 0 0)", "rgb(1e999 0 0)", "rgb(NaN 0 0)",
+            "rgb(255 0 0 / .5)", "rgba(255,0,0,0.5)" })
+        {
+            TestAssert.True(!RgbColor.TryParseCssColor(invalid, out _), $"Unsupported RGB color {invalid} must stay distinguishable from an opaque sRGB color.");
+        }
+    }
+
     public static void PptxPictureGeometryPolygonBlurPreservesImageRowsAndConcaveMasks()
     {
         var diagnostics = new List<OoxPdfDiagnostic>();
