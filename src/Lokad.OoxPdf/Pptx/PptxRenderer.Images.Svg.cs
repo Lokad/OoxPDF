@@ -2741,14 +2741,16 @@ internal sealed partial class PptxRenderer
     private static string? ConvertSvgPointsToPathData(XElement element, bool closed)
     {
         System.Text.RegularExpressions.MatchCollection numbers = SvgNumberRegex().Matches((string?)element.Attribute("points") ?? string.Empty);
-        if (numbers.Count < 4 || numbers.Count % 2 == 1)
+        // A trailing unpaired coordinate does not discard the complete points.
+        int coordinateCount = numbers.Count - numbers.Count % 2;
+        if (coordinateCount < 4)
         {
             return null;
         }
         var points = new List<double>();
-        foreach (System.Text.RegularExpressions.Match number in numbers)
+        for (int index = 0; index < coordinateCount; index++)
         {
-            if (!double.TryParse(number.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double coordinate))
+            if (!double.TryParse(numbers[index].Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double coordinate))
             {
                 return null;
             }

@@ -385,6 +385,18 @@ internal static partial class SvgTextTests
             "1 0 0 RG", "/PatternType 2", " d");
     }
 
+    public static void SvgPointListsWithTrailingCoordinateKeepCompletePairsInBothFormats()
+    {
+        AssertSvgPaintInBothFormats(Picture("", ""), Picture(" 80", " 140"),
+            "1 0 0 RG", "0 0 1 rg", "0 0.502 0 rg");
+
+        static string Picture(string lineTail, string polygonTail) => Svg($"""
+            <polyline points="10,22 50,22 50,55{lineTail}" fill="none" stroke="red" stroke-width="4"/>
+            <polygon points="70,20 130,20 105,65{polygonTail}" fill="blue" stroke="#502070" stroke-width="4"/>
+            <rect x="132" y="64" width="9" height="10" fill="green"/>
+            """);
+    }
+
     public static void SvgPercentageOpacityMatchesUnitOpacityInBothFormats()
     {
         AssertSvgPaintInBothFormats(
