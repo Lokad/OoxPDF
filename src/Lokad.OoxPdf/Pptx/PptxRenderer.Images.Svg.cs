@@ -1146,13 +1146,24 @@ internal sealed partial class PptxRenderer
 
             double offset = ReadSvgOffset((string?)stop.Attribute("offset"));
             if (double.IsNaN(offset)) continue;
-            string? colorText = ReadSvgPresentationAttribute(stop, style, "stop-color");
-            if (!TryReadSvgSolidColor(stop, style, string.IsNullOrWhiteSpace(colorText) ? "black" : colorText,
-                out RgbColor color)) continue;
+            if (!TryReadSvgStopColor(stop, style, out RgbColor color)) continue;
             stops.Add(new SvgGradientStop(offset, color, opacity));
         }
         return (stops.OrderBy(stop => stop.Offset).ToArray(),
             hasNumericOpacity && hasUniformOpacity ? firstNumericOpacity ?? 1d : null, hasNumericOpacity);
+    }
+
+    private static bool TryReadSvgStopColor(XElement stop, IReadOnlyDictionary<string, string> style, out RgbColor color)
+    {
+        if (style.TryGetValue("stop-color", out string? inlineColor) &&
+            TryReadSvgSolidColor(stop, style, inlineColor, out color))
+        {
+            return true;
+        }
+
+        // Keep the presentation color when the inline declaration cannot be used.
+        string? attributeColor = (string?)stop.Attribute("stop-color");
+        return TryReadSvgSolidColor(stop, style, string.IsNullOrWhiteSpace(attributeColor) ? "black" : attributeColor, out color);
     }
 
     private static double ReadSvgOffset(string? value)

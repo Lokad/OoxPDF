@@ -1941,6 +1941,10 @@ internal static partial class PptxImagesTests
                     <stop offset="0" stop-color="blue" style="stop-color:red"/>
                     <stop offset="1" stop-color="red" style="stop-color:blue"/>
                     """),
+                ("", """
+                    <stop offset="0" stop-color="red" style="stop-color:bogus"/>
+                    <stop offset="1" stop-color="blue"/>
+                    """),
                 (""" color="red" """, """
                     <stop offset="0" stop-color="currentColor"/>
                     <stop offset="1" color="green" style="color:blue;stop-color:currentColor"/>
