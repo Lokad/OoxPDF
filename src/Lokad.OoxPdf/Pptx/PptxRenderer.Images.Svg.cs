@@ -1406,12 +1406,7 @@ internal sealed partial class PptxRenderer
         {
             return true;
         }
-        string trimmed = text.Trim();
-        if (trimmed.EndsWith("px", StringComparison.OrdinalIgnoreCase))
-        {
-            trimmed = trimmed.Substring(0, trimmed.Length - 2);
-        }
-        return double.TryParse(trimmed, NumberStyles.Float, CultureInfo.InvariantCulture, out width) && double.IsFinite(width) && width >= 0d;
+        return TryReadSvgNumberOrPixels(text, out width) && width >= 0d;
     }
     // Resolve the winning declaration on each element before following inheritance.
     // Whole-element opacity stays with the element or its compositing group.
@@ -1499,12 +1494,7 @@ internal sealed partial class PptxRenderer
         var lengths = new List<double>();
         foreach (string part in parts)
         {
-            string item = part.Trim();
-            if (item.EndsWith("px", StringComparison.OrdinalIgnoreCase))
-            {
-                item = item.Substring(0, item.Length - 2);
-            }
-            if (!double.TryParse(item, NumberStyles.Float, CultureInfo.InvariantCulture, out double length) || !double.IsFinite(length) || length < 0d)
+            if (!TryReadSvgNumberOrPixels(part, out double length) || length < 0d)
             {
                 invalid = true;
                 return null;
@@ -1535,12 +1525,7 @@ internal sealed partial class PptxRenderer
         {
             return true;
         }
-        string trimmed = text.Trim();
-        if (trimmed.EndsWith("px", StringComparison.OrdinalIgnoreCase))
-        {
-            trimmed = trimmed.Substring(0, trimmed.Length - 2);
-        }
-        return double.TryParse(trimmed, NumberStyles.Float, CultureInfo.InvariantCulture, out miterLimit) && double.IsFinite(miterLimit) && miterLimit >= 1d;
+        return TryReadSvgNumberOrPixels(text, out miterLimit) && miterLimit >= 1d;
     }
     private static bool TryReadSvgStrokeOffset(string? text, out double offset)
     {
@@ -1549,12 +1534,17 @@ internal sealed partial class PptxRenderer
         {
             return true;
         }
-        string trimmed = text.Trim();
-        if (trimmed.EndsWith("px", StringComparison.OrdinalIgnoreCase))
+        return TryReadSvgNumberOrPixels(text, out offset);
+    }
+
+    private static bool TryReadSvgNumberOrPixels(ReadOnlySpan<char> text, out double value)
+    {
+        text = text.Trim();
+        if (text.EndsWith("px", StringComparison.OrdinalIgnoreCase))
         {
-            trimmed = trimmed.Substring(0, trimmed.Length - 2);
+            text = text[..^2];
         }
-        return double.TryParse(trimmed, NumberStyles.Float, CultureInfo.InvariantCulture, out offset) && double.IsFinite(offset);
+        return double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out value) && double.IsFinite(value);
     }
     private static double GetSvgStrokeElementScale(SvgTransform transform)
     {
@@ -2436,7 +2426,7 @@ internal sealed partial class PptxRenderer
             value = fallback;
             return true;
         }
-        return double.TryParse(text.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out value) && double.IsFinite(value);
+        return TryReadSvgNumberOrPixels(text, out value);
     }
     private static string SvgPathNumber(double value)
     {
@@ -2459,11 +2449,11 @@ internal sealed partial class PptxRenderer
         string? ryText = (string?)element.Attribute("ry");
         double rx = 0d;
         double ry = 0d;
-        if (rxText is not null && (!double.TryParse(rxText.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out rx) || !double.IsFinite(rx)))
+        if (rxText is not null && !TryReadSvgNumberOrPixels(rxText, out rx))
         {
             return null;
         }
-        if (ryText is not null && (!double.TryParse(ryText.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out ry) || !double.IsFinite(ry)))
+        if (ryText is not null && !TryReadSvgNumberOrPixels(ryText, out ry))
         {
             return null;
         }

@@ -653,6 +653,7 @@
     "PptxAutomaticBarPalettesMatchIndependentOfficeAcrossCountsAndThemes"
   ],
   "svg-inherited-paint": [
+    "SvgPrimitivePixelUnitsMatchUserCoordinates",
     "SvgInheritedPaintPropertiesKeepNearestAndLocalOwners",
     "SvgInheritedOpacityPreservesTransparentOverlayContent",
     "SvgZeroWidthStrokesKeepTheirIndependentFill",

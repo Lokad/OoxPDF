@@ -121,6 +121,26 @@ internal static partial class SvgTextTests
         }
     }
 
+    public static void SvgPrimitivePixelUnitsMatchUserCoordinates()
+    {
+        string Shapes(string unit) => $$"""
+            <g transform="translate(6 3) scale(.95)">
+              <rect x="10{{unit}}" y="20{{unit}}" width="45{{unit}}" height="45{{unit}}" fill="red"/>
+              <rect x="70" y="20" width="45" height="45" rx="12{{unit}}" ry="9{{unit}}" fill="yellow"/>
+              <circle cx="150{{unit}}" cy="42{{unit}}" r="21{{unit}}" fill="green"/>
+              <ellipse cx="215{{unit}}" cy="42{{unit}}" rx="27{{unit}}" ry="16{{unit}}" fill="fuchsia"/>
+              <line x1="265{{unit}}" x2="350{{unit}}" y1="42{{unit}}" y2="42{{unit}}" stroke="blue" stroke-width="6{{unit}}"/>
+            </g>
+            """;
+        var plain = Paint(Svg(Shapes("")));
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        var pixels = Paint(Svg(Shapes("px")), diagnostics);
+        foreach (string paint in new[] { "1 0 0 rg", "1 1 0 rg", "0 0.502 0 rg", "1 0 1 rg", "0 0 1 RG" })
+            TestAssert.Contains(paint, plain.ToString());
+        AssertEquivalentSvgPaint(plain, pixels, "Pixels and unitless lengths share the SVG user coordinate system.");
+        TestAssert.Equal(0, diagnostics.Count);
+    }
+
     private static void AssertEquivalentSvgPaint(PdfGraphicsBuilder expected, PdfGraphicsBuilder actual, string reason)
     {
         TestAssert.Equal(expected.ToString(), actual.ToString());
