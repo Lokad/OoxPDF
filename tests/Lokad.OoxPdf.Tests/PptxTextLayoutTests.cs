@@ -586,29 +586,10 @@ internal static class PptxTextLayoutTests
 
     public static void PptxSyntheticTextBoxInheritsParagraphIndentFromListStyle()
     {
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
-            ["_rels/.rels"] = PptxTests.PackageRelationship(),
-            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
-            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
-            ["ppt/slides/slide1.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <p:cSld><p:spTree><p:sp>
-                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
-                    <p:txBody>
-                      <a:bodyPr lIns="0" rIns="0" tIns="0" bIns="0"/>
-                      <a:lstStyle><a:lvl1pPr marL="91440" indent="45720"/></a:lstStyle>
-                      <a:p><a:pPr algn="l"/><a:r><a:rPr sz="1200"/><a:t>Indented</a:t></a:r></a:p>
-                    </p:txBody>
-                  </p:sp></p:spTree></p:cSld>
-                </p:sld>
-                """
-        });
-
-        using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        using var input = PptxTests.CreateSingleTextShapePackage(
+            """<a:pPr algn="l"/><a:r><a:rPr sz="1200"/><a:t>Indented</a:t></a:r>""",
+            """<a:lstStyle><a:lvl1pPr marL="91440" indent="45720"/></a:lstStyle>""");
+        using var package = OoxPackage.Open(input, CancellationToken.None);
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextLineLayoutSnapshot line = PptxRenderer.InspectTextLayout(document, package, 0)
@@ -2164,45 +2145,49 @@ internal static class PptxTextLayoutTests
 
     public static void PptxSyntheticStyledTextProducesStyleOperators()
     {
-        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
-        if (!File.Exists(arial))
+        var resolver = new PortableRenderingTests.PinnedResolver();
+        foreach (var (bold, italic) in new[] { (false, false), (true, false), (false, true), (true, true) })
         {
-            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
+            string boldAttribute = bold ? " b=\"1\"" : "";
+            string italicAttribute = italic ? " i=\"1\"" : "";
+            using var input = PptxTests.CreateSingleTextShapePackage($"""
+                <a:pPr algn="ctr"/>
+                <a:r><a:rPr sz="2400"{boldAttribute}{italicAttribute} u="sng">
+                  <a:solidFill><a:srgbClr val="0000FF"/></a:solidFill><a:latin typeface="DejaVu Sans"/>
+                </a:rPr><a:t>Styled text</a:t></a:r>
+                """);
+            using var package = OoxPackage.Open(input, default);
+            var document = new PptxReader().Read(package, default);
+            var page = new PptxRenderer(resolver)
+                .RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().Single();
+            var glyphs = PortableRenderingTests.ReadPaintedSourceLabel(page, "Styled text");
+
+            string[] operations = page.Content.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+            TestAssert.Equal(1, operations.Count(op => op == "BT"));
+            int textEnd = Array.IndexOf(operations, "ET");
+            string[] text = operations[(Array.IndexOf(operations, "BT") + 1)..textEnd];
+            TestAssert.True(text.Contains("0 0 1 rg"), "The source label uses the authored blue fill.");
+            TestAssert.Equal(bold, text.Contains("2 Tr"));
+            TestAssert.Equal(bold, text.Contains("0 0 1 RG"));
+            string[] matrix = text.Single(op => op.EndsWith(" Tm", StringComparison.Ordinal)).Split(' ');
+            TestAssert.Equal(italic ? "0.213" : "0", matrix[2]);
+
+            int underlineEnd = Array.IndexOf(operations, "f*", textEnd + 1);
+            TestAssert.True(underlineEnd > textEnd + 1, "The source label has a painted underline.");
+            string[] underline = operations[(textEnd + 1)..underlineEnd];
+            TestAssert.Equal("0 0 1 rg", underline[0]);
+            string[] start = underline.Single(op => op.EndsWith(" m", StringComparison.Ordinal)).Split(' ');
+            var face = page.Fonts.Single().Font.Font;
+            double expectedTop = Number(matrix[5]) + face.Post.UnderlinePosition * 24d / face.UnitsPerEm;
+            TestAssert.True(Math.Abs(Number(start[0]) - glyphs[0].Origin.X) < .002d &&
+                Math.Abs(Number(start[1]) - expectedTop) < .002d,
+                "The blue underline starts at the first glyph and follows its baseline.");
+            double right = underline.Where(op => op.EndsWith(" l", StringComparison.Ordinal))
+                .Max(op => Number(op.Split(' ')[0]));
+            TestAssert.True(right > glyphs[^1].Origin.X, "The underline reaches the final glyph.");
         }
 
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
-            ["_rels/.rels"] = PptxTests.PackageRelationship(),
-            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
-            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
-            ["ppt/slides/slide1.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <p:cSld><p:spTree><p:sp>
-                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="5486400" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
-                    <p:txBody>
-                      <a:bodyPr/><a:lstStyle/>
-                      <a:p>
-                        <a:pPr algn="ctr"/>
-                        <a:r>
-                          <a:rPr sz="2400" b="1" i="1" u="sng"><a:solidFill><a:srgbClr val="0000FF"/></a:solidFill></a:rPr>
-                          <a:t>Styled text</a:t>
-                        </a:r>
-                      </a:p>
-                    </p:txBody>
-                  </p:sp></p:spTree></p:cSld>
-                </p:sld>
-                """
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, output);
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("0 0 1 rg", pdf);
-        TestAssert.Contains(" re f", pdf);
-        TestAssert.True(PptxTests.CountOccurrences(pdf, " TJ") >= 1, "Expected styled text to be emitted.");
+        static double Number(string value) => double.Parse(value, CultureInfo.InvariantCulture);
     }
 
     public static void PptxMongolianVerticalEmitsClockwiseRowMatrices()

@@ -54,7 +54,7 @@ internal static class PptxTextSpacingTests
 
     public static void PptxTextModelInheritsListStyleTabStops()
     {
-        using var input = CreateTabProbe("<a:pPr/>" + TabProbeRun(TabbedText),
+        using var input = PptxTests.CreateSingleTextShapePackage("<a:pPr/>" + TabProbeRun(TabbedText),
             "<a:lstStyle><a:lvl1pPr>" + TabStops + "</a:lvl1pPr></a:lstStyle>");
         using var package = OoxPackage.Open(input, default);
         var document = new PptxReader().Read(package, default);
@@ -76,7 +76,7 @@ internal static class PptxTextSpacingTests
 
     private static PdfPage RenderTabProbe(string paragraph, int leftEmu = 914400)
     {
-        using var input = CreateTabProbe(paragraph, leftEmu: leftEmu);
+        using var input = PptxTests.CreateSingleTextShapePackage(paragraph, leftEmu: leftEmu);
         using var package = OoxPackage.Open(input, default);
         var document = new PptxReader().Read(package, default);
         return new PptxRenderer(new PortableRenderingTests.PinnedResolver())
@@ -86,50 +86,11 @@ internal static class PptxTextSpacingTests
     private static string TabProbeRun(string text) =>
         $"""<a:r><a:rPr sz="1800"><a:latin typeface="DejaVu Sans"/></a:rPr><a:t>{text}</a:t></a:r>""";
 
-    private static MemoryStream CreateTabProbe(string paragraph, string listStyle = "<a:lstStyle/>", int leftEmu = 914400) =>
-        TestFixtures.CreateZipPackage(new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
-            ["_rels/.rels"] = PptxTests.PackageRelationship(),
-            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
-            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
-            ["ppt/slides/slide1.xml"] = $$"""
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <p:cSld><p:spTree><p:sp>
-                    <p:spPr><a:xfrm><a:off x="{{leftEmu}}" y="914400"/><a:ext cx="3657600" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
-                    <p:txBody>
-                      <a:bodyPr lIns="0" rIns="0" tIns="0" bIns="0"/>{{listStyle}}
-                      <a:p>{{paragraph}}</a:p>
-                    </p:txBody>
-                  </p:sp></p:spTree></p:cSld>
-                </p:sld>
-                """
-        });
-
     public static void PptxSyntheticTextBoxTreatsNarrowNoBreakSpaceAsHiddenAdvance()
     {
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
-            ["_rels/.rels"] = PptxTests.PackageRelationship(),
-            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
-            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
-            ["ppt/slides/slide1.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <p:cSld><p:spTree><p:sp>
-                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
-                    <p:txBody>
-                      <a:bodyPr lIns="0" rIns="0" tIns="0" bIns="0"/><a:lstStyle/>
-                      <a:p><a:r><a:rPr sz="2600"><a:latin typeface="Arial"/></a:rPr><a:t>Alpha&#x202F;beta</a:t></a:r></a:p>
-                    </p:txBody>
-                  </p:sp></p:spTree></p:cSld>
-                </p:sld>
-                """
-        });
-
-        using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        using var input = PptxTests.CreateSingleTextShapePackage(
+            """<a:r><a:rPr sz="2600"><a:latin typeface="Arial"/></a:rPr><a:t>Alpha&#x202F;beta</a:t></a:r>""");
+        using var package = OoxPackage.Open(input, CancellationToken.None);
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextLineLayoutSnapshot line = PptxRenderer.InspectTextLayout(document, package, 0)
