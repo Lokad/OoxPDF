@@ -275,7 +275,7 @@ internal readonly record struct PptxSceneShapePictureFill(
     PptxSceneRect Fill,
     double Alpha,
     string? AlphaValue,
-    PptxScenePictureTile Tile)
+    bool HasTile)
 {
     public PptxSceneImageRecolor Recolor { get; init; }
 }
@@ -359,7 +359,7 @@ internal sealed record PptxScenePicture(
     PptxSceneImageRecolor Recolor,
     bool HasVideo,
     bool HasAudio,
-    PptxScenePictureTile Tile,
+    bool HasTile,
     PptxSceneLineStyle Line,
     PptxSceneOuterShadow OuterShadow,
     string Preset,

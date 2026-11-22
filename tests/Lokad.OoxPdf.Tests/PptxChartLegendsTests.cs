@@ -833,9 +833,7 @@ internal static partial class PptxChartLegendsTests
         TestAssert.Equal(string.Empty, plotArea.RelationshipId);
         TestAssert.Equal(0.625d, plotArea.Alpha);
         TestAssert.Equal("62500", plotArea.AlphaValue ?? string.Empty);
-        TestAssert.True(plotArea.Tile.HasTile, "Expected chart plot area picture tile mode to be preserved.");
-        TestAssert.Equal("ctr", plotArea.Tile.AlignmentValue ?? string.Empty);
-        TestAssert.Equal("x", plotArea.Tile.FlipValue ?? string.Empty);
+        TestAssert.True(plotArea.HasTile, "Expected the chart plot area to request image tiling.");
     }
 
     public static void PptxChartShapeStylePreservesUnsupportedEffectTokens()

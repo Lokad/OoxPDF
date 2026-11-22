@@ -53,7 +53,7 @@ internal static partial class PptxImagesTests
         TestAssert.Equal(0.625d, biLevel.Threshold);
     }
 
-    public static void PptxImageTilePreservesRawOoxmlTokens()
+    public static void PptxImageTileModeFollowsDrawingMlFill()
     {
         XElement tiledPicture = XElement.Parse("""
             <p:pic xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
@@ -64,15 +64,14 @@ internal static partial class PptxImagesTests
               </p:blipFill>
             </p:pic>
             """);
-        PptxScenePictureTile tile = PptxSceneBuilder.ReadPictureTile(tiledPicture);
-        TestAssert.True(tile.HasTile, "Expected scene model to preserve image tile mode.");
-        TestAssert.Equal("tile", tile.TileValue ?? string.Empty);
-        TestAssert.Equal("tl", tile.AlignmentValue ?? string.Empty);
-        TestAssert.Equal("xy", tile.FlipValue ?? string.Empty);
-        TestAssert.Equal("75000", tile.ScaleXValue ?? string.Empty);
-        TestAssert.Equal("125000", tile.ScaleYValue ?? string.Empty);
-        TestAssert.Equal("12700", tile.OffsetXValue ?? string.Empty);
-        TestAssert.Equal("-25400", tile.OffsetYValue ?? string.Empty);
+        TestAssert.True(PptxSceneBuilder.HasPictureTile(tiledPicture), "The slide picture requests tiling.");
+        XElement fill = tiledPicture.Elements().Single();
+        XNamespace drawing = fill.Elements().First().Name.Namespace;
+        var shapeFill = new XElement(drawing + "blipFill", fill.Elements());
+        var shape = new XElement(tiledPicture.Name.Namespace + "spPr", shapeFill);
+        TestAssert.True(PptxSceneBuilder.HasPictureTile(shape), "The shape picture fill requests tiling.");
+        shapeFill.Element(drawing + "tile")!.ReplaceWith(new XElement(drawing + "stretch"));
+        TestAssert.True(!PptxSceneBuilder.HasPictureTile(shape), "The shape picture fill requests stretch.");
     }
 
     public static void PptxImageAlphaPreservesRawOoxmlTokens()

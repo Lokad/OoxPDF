@@ -645,7 +645,7 @@ internal sealed partial class PptxSceneBuilder
             ReadImageRecolor(picture, theme, colorMap),
             HasPictureVideo(),
             HasPictureAudio(),
-            ReadPictureTile(picture),
+            HasPictureTile(picture),
             line,
             TryReadOuterShadow(shapeProperties, theme, colorMap, out PptxSceneOuterShadow outerShadow) ? outerShadow : default,
             ReadPresetGeometry(shapeProperties),

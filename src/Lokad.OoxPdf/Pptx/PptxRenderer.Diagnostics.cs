@@ -162,8 +162,8 @@ internal sealed partial class PptxRenderer
     {
         foreach (PptxSceneNode node in nodes)
         {
-            if (node.Picture?.Tile.HasTile == true ||
-                node.Shape?.PictureFill.Tile.HasTile == true)
+            if (node.Picture?.HasTile == true ||
+                node.Shape?.PictureFill.HasTile == true)
             {
                 return true;
             }

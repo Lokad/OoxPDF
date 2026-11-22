@@ -5,16 +5,6 @@ using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
 
 namespace Lokad.OoxPdf.Pptx;
 
-internal readonly record struct PptxScenePictureTile(
-    bool HasTile,
-    string? TileValue,
-    string? AlignmentValue,
-    string? FlipValue,
-    string? ScaleXValue,
-    string? ScaleYValue,
-    string? OffsetXValue,
-    string? OffsetYValue);
-
 internal enum PptxSceneImageRecolorKind
 {
     None,

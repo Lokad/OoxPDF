@@ -27,7 +27,7 @@ internal sealed partial class PptxSceneBuilder
                 ReadPictureFill(shapeProperties),
                 ReadPictureAlpha(shapeProperties),
                 ReadPictureAlphaValue(shapeProperties),
-                ReadPictureTile(shapeProperties)) { Recolor = ReadImageRecolor(shapeProperties, theme, colorMap) };
+                HasPictureTile(shapeProperties)) { Recolor = ReadImageRecolor(shapeProperties, theme, colorMap) };
     }
 
     private static PptxSceneImageResource? ReadImageResource(OoxPackage package, string? targetPartName)
@@ -89,22 +89,11 @@ internal sealed partial class PptxSceneBuilder
             : ReadPercentageRectangle(fillRectangle);
     }
 
-    internal static PptxScenePictureTile ReadPictureTile(XElement picture)
+    internal static bool HasPictureTile(XElement picture)
     {
         XElement? blipFill = picture.Element(PresentationNamespace + "blipFill") ??
             picture.Element(DrawingNamespace + "blipFill");
-        XElement? tile = blipFill?.Element(DrawingNamespace + "tile");
-        return tile is null
-            ? default
-            : new PptxScenePictureTile(
-                true,
-                tile.Name.LocalName,
-                (string?)tile.Attribute("algn"),
-                (string?)tile.Attribute("flip"),
-                (string?)tile.Attribute("sx"),
-                (string?)tile.Attribute("sy"),
-                (string?)tile.Attribute("tx"),
-                (string?)tile.Attribute("ty"));
+        return blipFill?.Element(DrawingNamespace + "tile") is not null;
     }
 
     internal static double ReadPictureAlpha(XElement picture)

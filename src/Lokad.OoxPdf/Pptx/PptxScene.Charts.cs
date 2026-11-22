@@ -329,7 +329,7 @@ internal sealed partial class PptxSceneBuilder
             ReadPictureFill(shapeProperties),
             ReadPictureAlpha(shapeProperties),
             ReadPictureAlphaValue(shapeProperties),
-            ReadPictureTile(shapeProperties));
+            HasPictureTile(shapeProperties));
     }
 
     private static PptxSceneChartEffectFamily ReadChartEffects(XElement? shapeProperties)
