@@ -142,7 +142,8 @@ internal static partial class PptxColumnIntervalTests
                     new XElement(CrossingC + "showCatName", new XAttribute("val", "0")),
                     new XElement(CrossingC + "showLegendKey", new XAttribute("val", "1"))));
             });
-            TestAssert.Equal(invert ? 0 : 4, PptxChartNegativeInversionTests.CountSeriesColorPaint(page.Content));
+            TestAssert.Equal(invert ? 0 : 4,
+                PptxChartPaletteTests.ReadColoredPaints(page.Content).Count(color => color == new RgbColor(51, 102, 204)));
             TestAssert.Equal("82,96", string.Join(",", DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false,
                 fontResourceFilter: name => name.StartsWith("CBD", StringComparison.Ordinal)).Select(p => p.Text)));
         }

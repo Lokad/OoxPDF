@@ -23,7 +23,7 @@ internal static class PptxComposedPaletteTests
             byte[] bytes = File.ReadAllBytes(Path.Combine(Cases, row.GetProperty("Input").GetString()!));
             TestAssert.Equal(row.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(bytes)));
             bool horizontal = row.GetProperty("Horizontal").GetBoolean();
-            var rectangles = Rectangles(Render(bytes)).ToArray();
+            var rectangles = ReadFilledRectangles(Render(bytes)).ToArray();
             foreach (bool keys in new[] { false, true })
             {
                 var expected = row.GetProperty(keys ? "KeyColors" : "BarColors").EnumerateArray().ToArray();
@@ -58,7 +58,7 @@ internal static class PptxComposedPaletteTests
                 var source = xml.Descendants(c + "barChart").Last().Element(c + "ser")!.Element(c + "idx")!;
                 if (index is null) source.Remove(); else source.SetAttributeValue("val", index);
             });
-            var bars = Rectangles(Render(bytes)).Where(r => r.Width is > 1d and < 80d && r.Height > 50d).ToArray();
+            var bars = ReadFilledRectangles(Render(bytes)).Where(r => r.Width is > 1d and < 80d && r.Height > 50d).ToArray();
             TestAssert.True(bars.Length == 16, "Sparse source indices do not allocate dense series slots or omit bars.");
             if (index != int.MaxValue.ToString(CultureInfo.InvariantCulture))
                 TestAssert.True(bars.All(r => r.Color == new RgbColor(79, 129, 189)),
@@ -80,7 +80,7 @@ internal static class PptxComposedPaletteTests
                 plots[1].Remove();
                 plots[0].Element(c + "varyColors")!.SetAttributeValue("val", varying ? "1" : "0");
             });
-            var keys = Rectangles(Render(bytes)).Where(r => r.Width is > 1d and < 25d && r.Height is > 1d and < 25d)
+            var keys = ReadFilledRectangles(Render(bytes)).Where(r => r.Width is > 1d and < 25d && r.Height is > 1d and < 25d)
                 .GroupBy(r => r.Color).ToDictionary(group => group.Key, group => group.Count());
             RgbColor purple = new(85, 0, 170);
             TestAssert.True(keys.TryGetValue(purple, out int points) && points == 2,
@@ -129,32 +129,16 @@ internal static class PptxComposedPaletteTests
             new PptxReader().Read(package, default), package, null, default).ToBlockingEnumerable().Single();
     }
 
-    private static IEnumerable<(RgbColor Color, double Width, double Height)> Rectangles(PdfPage page)
+    internal static IEnumerable<(RgbColor Color, double X, double Y, double Width, double Height, string Operation)> ReadFilledRectangles(PdfPage page)
     {
-        var saved = new Stack<RgbColor>();
-        RgbColor color = default;
-        foreach (string line in page.Content.Split('\n').Select(line => line.Trim()))
+        string operation = "";
+        foreach (var color in PptxChartPaletteTests.ReadColoredPaints(page.Content, line => operation = line, includeNeutral: true))
         {
-            if (line == "q") saved.Push(color);
-            else if (line == "Q") color = saved.Pop();
-            else if (line.EndsWith(" rg", StringComparison.Ordinal))
-            {
-                byte[] rgb = line[..^3].Split(' ').Select(value => (byte)Math.Round(
-                    double.Parse(value, CultureInfo.InvariantCulture) * 255d)).ToArray();
-                color = new(rgb[0], rgb[1], rgb[2]);
-            }
-            else if (line.EndsWith(" g", StringComparison.Ordinal))
-            {
-                byte gray = (byte)Math.Round(double.Parse(line[..^2], CultureInfo.InvariantCulture) * 255d);
-                color = new(gray, gray, gray);
-            }
-            else
-            {
-                var rectangle = Regex.Match(line, @"^([-\d.]+) ([-\d.]+) ([-\d.]+) ([-\d.]+) re f\*?$");
-                if (rectangle.Success) yield return (color,
-                    Math.Abs(double.Parse(rectangle.Groups[3].Value, CultureInfo.InvariantCulture)),
-                    Math.Abs(double.Parse(rectangle.Groups[4].Value, CultureInfo.InvariantCulture)));
-            }
+            var rectangle = Regex.Match(operation, @"^([-\d.]+) ([-\d.]+) ([-\d.]+) ([-\d.]+) re f\*?$");
+            if (rectangle.Success)
+                yield return (color, Read(1), Read(2), Math.Abs(Read(3)), Math.Abs(Read(4)), operation);
+
+            double Read(int group) => double.Parse(rectangle.Groups[group].Value, CultureInfo.InvariantCulture);
         }
     }
 }

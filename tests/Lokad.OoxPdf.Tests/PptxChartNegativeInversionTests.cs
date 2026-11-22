@@ -5,6 +5,9 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class PptxChartNegativeInversionTests
 {
+    private static readonly RgbColor SeriesFill = new(51, 102, 204);
+    private static readonly RgbColor InvertedFill = new(255, 255, 255);
+
     public static void PptxNegativeBarScenePreservesSeriesAndPointInversion()
     {
         foreach ((string declaration, bool expected) in new[]
@@ -50,7 +53,11 @@ internal static class PptxChartNegativeInversionTests
         })
         {
             PdfPage page = Render(Chart(declaration, direction: direction, grouping: grouping));
-            TestAssert.Equal(blue ? 1 : 0, CountSeriesColorPaint(page.Content));
+            // Stacked bars can use closed paths. This chart paints only the slide background and one bar.
+            var fills = PptxChartPaletteTests.ReadColoredPaints(page.Content, includeNeutral: true).ToArray();
+            TestAssert.Equal(2, fills.Length);
+            TestAssert.Equal(InvertedFill, fills[0]);
+            TestAssert.Equal(blue ? SeriesFill : InvertedFill, fills[1]);
         }
     }
 
@@ -61,25 +68,69 @@ internal static class PptxChartNegativeInversionTests
             string declaration = "<c:invertIfNegative val=\"" + (series ? "1" : "0") + "\"/>";
             string pointStyle = "<c:dPt><c:idx val=\"0\"/><c:invertIfNegative val=\"" + (point ? "1" : "0") + "\"/></c:dPt>";
             PdfPage page = Render(Chart(declaration, pointStyle, labels: true));
-            TestAssert.Equal(point ? 0 : 2, CountSeriesColorPaint(page.Content));
+            var expected = point ? InvertedFill : SeriesFill;
+            var (barFill, swatchFill) = CheckBarAndSwatch(page, expected);
+
+            if (point && !series)
+            {
+                var wrongBar = page with
+                {
+                    Content = page.Content.Replace(barFill, "1 0 0 rg\n" + barFill, StringComparison.Ordinal)
+                };
+                var missingSwatch = page with
+                {
+                    Content = page.Content.Replace(swatchFill, "", StringComparison.Ordinal)
+                };
+                TestAssert.Equal("Unexpected bar fill.", TestAssert.Throws<InvalidOperationException>(
+                    () => CheckBarAndSwatch(wrongBar, expected)).Message);
+                TestAssert.Equal("Expected both the bar and the data-label swatch.", TestAssert.Throws<InvalidOperationException>(
+                    () => CheckBarAndSwatch(missingSwatch, expected)).Message);
+            }
         }
     }
+
+    private static (string Bar, string Swatch) CheckBarAndSwatch(PdfPage page, RgbColor expected)
+    {
+        var fills = ChartFills(page).ToArray();
+        TestAssert.True(fills.Length == 2, "Expected both the bar and the data-label swatch.");
+        var bar = fills[0];
+        var swatch = fills[1];
+        TestAssert.True(bar.Color == expected, "Unexpected bar fill.");
+        TestAssert.True(swatch.Color == expected, "Unexpected data-label swatch fill.");
+        TestAssert.True(bar.Width > swatch.Width && bar.Height > swatch.Height,
+            "The data-label swatch must be smaller than its bar.");
+
+        var label = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false,
+            fontResourceFilter: name => name.StartsWith("CBD", StringComparison.Ordinal)).ToArray();
+        TestAssert.Equal("Series 1, Negative, -2", string.Concat(label.Select(show => show.Text)));
+        double baseline = label[0].Y;
+        TestAssert.True(swatch.X + swatch.Width < label[0].X &&
+            Math.Abs(swatch.Y + swatch.Height / 2d - baseline) < label[0].Size,
+            "The swatch must sit to the left of its complete data label at the same text line.");
+        return (bar.Operation, swatch.Operation);
+    }
+
+    private static IEnumerable<(RgbColor Color, double X, double Y, double Width, double Height, string Operation)> ChartFills(PdfPage page) =>
+        // BuildSingleChartPackage places the 288 by 216 point chart at (72, 72) from the slide top.
+        PptxComposedPaletteTests.ReadFilledRectangles(page).Where(rect =>
+            rect.X >= 72d && rect.X + rect.Width <= 360d &&
+            rect.Y >= page.Height - 288d && rect.Y + rect.Height <= page.Height - 72d);
 
     public static void PptxNegativeBarPointDefaultsAndExplicitPaintMatchOffice()
     {
         const string fill = "<c:spPr><a:solidFill><a:srgbClr val=\"3366CC\"/></a:solidFill></c:spPr>";
-        foreach ((string flag, string paint, bool negative, int expected) in new[]
+        foreach ((string flag, string paint, bool negative, bool blue) in new[]
         {
-            ("", "", true, 0),
-            ("", fill, true, 0),
-            ("<c:invertIfNegative val=\"0\"/>", fill, true, 1),
-            ("<c:invertIfNegative val=\"1\"/>", fill, true, 0),
-            ("", fill, false, 1)
+            ("", "", true, false),
+            ("", fill, true, false),
+            ("<c:invertIfNegative val=\"0\"/>", fill, true, true),
+            ("<c:invertIfNegative val=\"1\"/>", fill, true, false),
+            ("", fill, false, true)
         })
         {
             string point = "<c:dPt><c:idx val=\"0\"/>" + flag + paint + "</c:dPt>";
             PdfPage page = Render(Chart("<c:invertIfNegative val=\"0\"/>", point, negative: negative));
-            TestAssert.Equal(expected, CountSeriesColorPaint(page.Content));
+            TestAssert.Equal(blue ? SeriesFill : InvertedFill, ChartFills(page).Single().Color);
         }
     }
 
@@ -104,24 +155,5 @@ internal static class PptxChartNegativeInversionTests
         var (document, package) = PptxTests.BuildSingleChartPackage(chart);
         return new PptxRenderer(new PortableRenderingTests.PinnedResolver())
             .RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().Single();
-    }
-
-    // Assert painted source color, independent of rectangle/path grouping and IDs.
-    internal static int CountSeriesColorPaint(string content)
-    {
-        string color = "";
-        var saved = new Stack<string>();
-        int count = 0;
-        foreach (string raw in content.Split('\n'))
-        {
-            string line = raw.Trim();
-            if (line == "q") { saved.Push(color); }
-            else if (line == "Q") { color = saved.Pop(); }
-            else if (line.EndsWith(" rg", StringComparison.Ordinal) || line.EndsWith(" g", StringComparison.Ordinal)) { color = line; }
-            else if (color == "0.2 0.4 0.8 rg" &&
-                (line is "f" or "f*" || line.EndsWith(" f", StringComparison.Ordinal) || line.EndsWith(" f*", StringComparison.Ordinal)))
-            { count++; }
-        }
-        return count;
     }
 }

@@ -136,9 +136,10 @@ internal static class PptxChartPaletteTests
 
 
     // Inspect painted colors rather than private helpers, branch names or constants.
-    internal static IEnumerable<RgbColor> ReadColoredPaints(string content, Action<string>? painted = null, bool strokes = false)
+    internal static IEnumerable<RgbColor> ReadColoredPaints(string content, Action<string>? painted = null, bool strokes = false,
+        bool includeNeutral = false)
     {
-        RgbColor? color = null;
+        RgbColor? color = includeNeutral ? default(RgbColor) : null;
         var saved = new Stack<RgbColor?>();
         foreach (string raw in content.Split('\n'))
         {
@@ -151,8 +152,16 @@ internal static class PptxChartPaletteTests
                     .Select(value => double.Parse(value, CultureInfo.InvariantCulture)).ToArray();
                 color = new RgbColor(Channel(channels[0]), Channel(channels[1]), Channel(channels[2]));
             }
-            else if (line.EndsWith(strokes ? " G" : " g", StringComparison.Ordinal)) { color = null; }
-            else if (color is { } paint && (paint.Red != paint.Green || paint.Green != paint.Blue) &&
+            else if (line.EndsWith(strokes ? " G" : " g", StringComparison.Ordinal))
+            {
+                if (includeNeutral)
+                {
+                    byte gray = Channel(double.Parse(line[..^2], CultureInfo.InvariantCulture));
+                    color = new RgbColor(gray, gray, gray);
+                }
+                else color = null;
+            }
+            else if (color is { } paint && (includeNeutral || paint.Red != paint.Green || paint.Green != paint.Blue) &&
                 (strokes ? line is "S" or "s" || line.EndsWith(" S", StringComparison.Ordinal) || line.EndsWith(" s", StringComparison.Ordinal) :
                     line is "f" or "f*" || line.EndsWith(" f", StringComparison.Ordinal) || line.EndsWith(" f*", StringComparison.Ordinal)))
             { painted?.Invoke(line); yield return paint; }
