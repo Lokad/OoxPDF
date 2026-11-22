@@ -99,7 +99,23 @@ internal static partial class PortableRenderingTests
             fontResourceFilter: name => name.StartsWith("Eq", StringComparison.Ordinal)).Select(show => show.Text))
         .Normalize(NormalizationForm.FormKC);
 
-    public static void PortableRenderingMathRunWordContentKeepsComposedFractions()
+    public static void PortableRenderingMathRunWordContentKeepsComposedFractions() =>
+        CheckComposedMathRunContent("x\u20112", (numerators, w, m) =>
+        {
+            numerators[0].ReplaceWith(new XElement(w + "t", "x\u20112"));
+            numerators[1].ReplaceWith(new XElement(w + "t", "x"), new XElement(w + "noBreakHyphen"), new XElement(w + "t", "2"));
+            numerators[2].ReplaceWith(new XElement(w + "t", "x"), new XElement(w + "noBreakHyphen"), new XElement(m + "t", "2"));
+        });
+
+    public static void PortableRenderingMathDiscretionaryHyphensKeepUnbrokenFractions() =>
+        CheckComposedMathRunContent("x2", (numerators, w, m) =>
+        {
+            numerators[0].Value = "x\u00AD2";
+            numerators[1].ReplaceWith(new XElement(w + "t", "x"), new XElement(w + "softHyphen"), new XElement(m + "t", "2"));
+            numerators[2].ReplaceWith(new XElement(w + "t", "x\u00AD2"));
+        });
+
+    private static void CheckComposedMathRunContent(string numerator, Action<XElement[], XNamespace, XNamespace> rewrite)
     {
         const string fixture = "CompositionProbes/composed-static-svg-report";
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
@@ -108,16 +124,11 @@ internal static partial class PortableRenderingTests
             var afterDiagnostics = new List<OoxPdfDiagnostic>();
             var beforeSource = DocxInlineCompositionTests.ReadMutation(fixture, mode, false, false, (xml, _, m) =>
             {
-                foreach (var literal in ReadNumerators(xml, m)) literal.Value = "x\u20112";
+                foreach (var literal in ReadNumerators(xml, m)) literal.Value = numerator;
             },
                 diagnosticSink: beforeDiagnostics.Add);
-            var afterSource = DocxInlineCompositionTests.ReadMutation(fixture, mode, false, false, (xml, w, m) =>
-            {
-                var numerators = ReadNumerators(xml, m);
-                numerators[0].ReplaceWith(new XElement(w + "t", "x\u20112"));
-                numerators[1].ReplaceWith(new XElement(w + "t", "x"), new XElement(w + "noBreakHyphen"), new XElement(w + "t", "2"));
-                numerators[2].ReplaceWith(new XElement(w + "t", "x"), new XElement(w + "noBreakHyphen"), new XElement(m + "t", "2"));
-            }, diagnosticSink: afterDiagnostics.Add);
+            var afterSource = DocxInlineCompositionTests.ReadMutation(fixture, mode, false, false,
+                (xml, w, m) => rewrite(ReadNumerators(xml, m), w, m), diagnosticSink: afterDiagnostics.Add);
             var renderer = new DocxRenderer(new PinnedResolver(mathFont: true), mode,
                 mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
                     OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
@@ -127,8 +138,10 @@ internal static partial class PortableRenderingTests
                 usePageCoordinates: true, honorActualText: false,
                 fontResourceFilter: name => name.StartsWith("Eq", StringComparison.Ordinal)));
             string text = string.Concat(shows.Select(show => show.Text));
-            TestAssert.Equal(3, text.Count(character => character == '\u2011'));
-            TestAssert.Equal(3, text.Normalize(NormalizationForm.FormKC).Split("x\u20102y", StringSplitOptions.None).Length - 1);
+            TestAssert.Equal(3 * numerator.Count(character => character == '\u2011'), text.Count(character => character == '\u2011'));
+            TestAssert.True(!text.Contains('\u00AD'), "Unbroken optional hyphens must stay out of the painted glyph stream.");
+            string expected = numerator.Normalize(NormalizationForm.FormKC) + "y";
+            TestAssert.Equal(3, text.Normalize(NormalizationForm.FormKC).Split(expected, StringSplitOptions.None).Length - 1);
             TestAssert.Equal(before.Length, after.Length);
             for (int page = 0; page < before.Length; page++)
             {

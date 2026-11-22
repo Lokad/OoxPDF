@@ -90,6 +90,30 @@ internal static partial class DocxMathTests
         }
     }
 
+    public static void DocxMathDiscretionaryHyphensKeepOrderedInkAndEmptyRevisionRules()
+    {
+        XName marker = WordprocessingNamespace + "softHyphen";
+        foreach (var hyphen in new[] { new XElement(marker), new XElement(MathNamespace + "t", "\u00AD") })
+        {
+            var equation = EditingMarkerFraction();
+            equation.Descendants(MathNamespace + "r").First().Add(hyphen, new XElement(WordprocessingNamespace + "t", "z"));
+            TestAssert.Equal("az+b", RowText(((DocxMathFraction)Parse(equation).Children.Single()).Numerator));
+
+            var revised = EditingMarkerFraction();
+            var first = revised.Descendants(MathNamespace + "r").First();
+            first.ReplaceNodes(new XElement(hyphen));
+            first.ReplaceWith(new XElement(WordprocessingNamespace + "ins", new XElement(first)));
+            var math = DocxMathParser.Read(revised, (_, text) => PlainRun(text), default, _ => true);
+            TestAssert.True(((DocxMathFraction)math.Children.Single()).Numerator.Children[0] is DocxMathUnsupported,
+                "An optional hyphen alone does not supply a visible revision operand.");
+        }
+
+        var malformed = EditingMarkerFraction();
+        malformed.Descendants(MathNamespace + "r").First().Add(new XElement(marker, "Unexpected text"));
+        TestAssert.True(((DocxMathFraction)Parse(malformed).Children.Single()).Numerator.Children[0] is DocxMathUnsupported,
+            "A content-bearing optional-hyphen marker retains the unsupported-run fallback.");
+    }
+
     public static void DocxMathRevisionAdmissionSharesReadableEmptyRunRules()
     {
         foreach (string kind in new[] { "ins", "del" })

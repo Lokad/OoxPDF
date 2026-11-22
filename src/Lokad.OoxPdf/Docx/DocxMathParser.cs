@@ -230,7 +230,7 @@ internal static partial class DocxMathParser
 
     private static bool IsRevisionContent(XElement element, bool allowsDeletedText) => element.Name.Namespace == MathNamespace &&
         (IsControl(element.Name.LocalName) || element.Name.LocalName == "r" &&
-            element.Elements().Any(text => ReadLiteralRunText(text, allowsDeletedText) is { Length: > 0 }));
+            element.Elements().Any(text => !ReadLiteralRunText(text, allowsDeletedText).AsSpan().Trim('\u00AD').IsEmpty));
     // Revision admission and structural retention see the same stored content
     // through metadata containers; role nodes still need their actual parent.
     private static IEnumerable<XElement> ReadRevisionChildren(XElement source, CancellationToken token)
@@ -323,8 +323,9 @@ internal static partial class DocxMathParser
         {
             "t" => element.Value,
             "delText" when allowsDeletedText => element.Value,
-            "noBreakHyphen" when string.IsNullOrWhiteSpace(element.Value) &&
-                element.Attributes().All(attribute => attribute.IsNamespaceDeclaration) => "\u2011",
+            "noBreakHyphen" or "softHyphen" when string.IsNullOrWhiteSpace(element.Value) &&
+                element.Attributes().All(attribute => attribute.IsNamespaceDeclaration) =>
+                element.Name.LocalName == "noBreakHyphen" ? "\u2011" : "\u00AD",
             _ => null
         };
     }
@@ -334,8 +335,12 @@ internal static partial class DocxMathParser
         if (IsReadableRun(element, allowsDeletedText))
         {
             var (normalText, literalText, supported) = ReadRunProperties(element);
+            // Math layout uses its qualified operator breaks. Unbroken soft
+            // hyphens contribute neither ink nor advance to a native equation.
+            string text = string.Concat(element.Elements().Select(child => ReadLiteralRunText(child, allowsDeletedText)))
+                .Replace("\u00AD", string.Empty, StringComparison.Ordinal);
             return new DocxMathRun(
-                readRun(element, string.Concat(element.Elements().Select(text => ReadLiteralRunText(text, allowsDeletedText)))),
+                readRun(element, text),
                 PropertyValue(element, "rPr", "sty"), PropertyValue(element, "rPr", "scr"))
             {
                 PropertiesXml = ReadProperties(element),
