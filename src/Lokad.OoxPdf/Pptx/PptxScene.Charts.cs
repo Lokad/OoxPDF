@@ -27,7 +27,7 @@ internal sealed partial class PptxSceneBuilder
             ? relationship.ResolvedTarget
             : null;
         OoxPart? chartPart = targetPartName is null ? null : package.GetPart(targetPartName);
-        XDocument? chartXml = chartPart is null ? null : LoadXml(package, chartPart, cancellationToken);
+        XDocument? chartXml = chartPart is null ? null : package.LoadXml(chartPart, cancellationToken);
         IMemoryReservation? modelStorage = chartXml is null ? null : OoxMemory.ReserveModel(chartXml, cancellationToken);
         PptxSceneChart? result = null;
         try

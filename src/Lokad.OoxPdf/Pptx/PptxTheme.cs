@@ -1,6 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Xml.Linq;
-using Lokad.OoxPdf.Ooxml;
 using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
 
 namespace Lokad.OoxPdf.Pptx;
@@ -53,10 +52,9 @@ internal sealed class PptxTheme
 
     public static PptxTheme Empty { get; } = new(new Dictionary<string, RgbColor>(), null, null, null, null, null, null, [], [], []);
 
-    public static PptxTheme Load(OoxPackage package, OoxPart themePart, CancellationToken cancellationToken)
+    public static PptxTheme Parse(XDocument document, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        XDocument document = package.LoadXml(themePart, cancellationToken);
         var colors = new Dictionary<string, RgbColor>(StringComparer.Ordinal);
         XElement? colorScheme = document.Descendants(DrawingNamespace + "clrScheme").FirstOrDefault();
         if (colorScheme is not null)

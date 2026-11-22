@@ -255,7 +255,7 @@ internal sealed partial class PptxSceneBuilder
                     continue;
                 }
 
-                XDocument slideXml = LoadXml(package, slidePart, cancellationToken);
+                XDocument slideXml = package.LoadXml(slidePart, cancellationToken);
                 OoxPart? layoutPart = GetRelatedPart(package, slide.PartName, SlideLayoutRelationshipType, cancellationToken);
                 OoxPart? masterPart = layoutPart is null ? null : GetRelatedPart(package, layoutPart.Name, SlideMasterRelationshipType, cancellationToken);
                 if (modelStorage is not null)
@@ -267,8 +267,8 @@ internal sealed partial class PptxSceneBuilder
                     cancellationToken.ThrowIfCancellationRequested();
                 }
                 PptxTheme theme = ReadTheme(masterPart?.Name) ?? GetFallbackTheme();
-                XDocument? masterXml = masterPart is null ? null : LoadXml(package, masterPart, cancellationToken);
-                XDocument? layoutXml = layoutPart is null ? null : LoadXml(package, layoutPart, cancellationToken);
+                XDocument? masterXml = masterPart is null ? null : package.LoadXml(masterPart, cancellationToken);
+                XDocument? layoutXml = layoutPart is null ? null : package.LoadXml(layoutPart, cancellationToken);
                 IReadOnlyDictionary<string, OoxRelationship> masterRelationships = masterPart is null ? new Dictionary<string, OoxRelationship>() : ReadRelationships(package, masterPart.Name, cancellationToken);
                 IReadOnlyDictionary<string, OoxRelationship> layoutRelationships = layoutPart is null ? new Dictionary<string, OoxRelationship>() : ReadRelationships(package, layoutPart.Name, cancellationToken);
                 IReadOnlyDictionary<string, OoxRelationship> slideRelationships = ReadRelationships(package, slide.PartName, cancellationToken);
@@ -322,8 +322,9 @@ internal sealed partial class PptxSceneBuilder
             if (part is null) return null;
             if (!themes.TryGetValue(part.Name, out PptxTheme? parsed))
             {
-                if (modelStorage is not null) OoxMemory.GrowModel(modelStorage, package.LoadXml(part, cancellationToken), cancellationToken);
-                themes.Add(part.Name, parsed = PptxTheme.Load(package, part, cancellationToken));
+                XDocument themeXml = package.LoadXml(part, cancellationToken);
+                OoxMemory.GrowModel(modelStorage, themeXml, cancellationToken);
+                themes.Add(part.Name, parsed = PptxTheme.Parse(themeXml, cancellationToken));
             }
             return parsed;
         }
@@ -360,11 +361,6 @@ internal sealed partial class PptxSceneBuilder
         {
             return slideXml.Descendants(PresentationNamespace + "transition").Any();
         }
-    }
-
-    private static XDocument LoadXml(OoxPackage package, OoxPart part, CancellationToken cancellationToken)
-    {
-        return package.LoadXml(part, cancellationToken);
     }
 
     private static PptxColorMap ReadMasterColorMap(XDocument? xml)

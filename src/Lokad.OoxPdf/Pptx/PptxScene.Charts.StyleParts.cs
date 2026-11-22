@@ -58,7 +58,7 @@ internal sealed partial class PptxSceneBuilder
             return PptxSceneChartColorStyle.Undefined(colorRelationship.ResolvedTarget);
         }
 
-        XDocument document = LoadXml(package, colorPart, cancellationToken);
+        XDocument document = package.LoadXml(colorPart, cancellationToken);
         IReadOnlyList<PptxSceneChartColorDeclaration> rootDeclarations = ReadChartColorStyleRootDeclarations(document, theme, colorMap, cancellationToken);
         IReadOnlyList<PptxSceneChartColorVariation> variations = ReadChartColorStyleVariations(document, theme, colorMap, cancellationToken);
         PptxSceneChartColorDeclaration[] declarations = rootDeclarations
@@ -160,7 +160,7 @@ internal sealed partial class PptxSceneBuilder
             return PptxSceneChartStyle.Undefined(styleRelationship.ResolvedTarget);
         }
 
-        XDocument document = LoadXml(package, stylePart, cancellationToken);
+        XDocument document = package.LoadXml(stylePart, cancellationToken);
         return PptxSceneChartStyle.Defined(
             stylePart.Name,
             (string?)document.Root?.Attribute("id") ?? string.Empty,
