@@ -282,7 +282,7 @@ internal sealed partial class DocxRenderer
                     DocxMathRowLayout.TryGetRenderCodePoints(new DocxMathRow([run]), token, out IReadOnlyList<int> points, out _);
                     foreach (int point in points)
                     {
-                        ushort glyph = font.MapCodePoint(point);
+                        ushort glyph = DocxMathRowLayout.MapRenderGlyph(font, point);
                         if (glyph == 0 || source.ScriptLevel != 0 && !run.NormalText && !font.TryGetMathScriptGlyph(glyph, source.ScriptLevel, token, out glyph))
                         { valid = false; break; }
                         bool mapped = group.Glyphs.TryGetValue(glyph, out int existing);

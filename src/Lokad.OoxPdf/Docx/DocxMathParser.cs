@@ -230,7 +230,7 @@ internal static partial class DocxMathParser
 
     private static bool IsRevisionContent(XElement element, bool allowsDeletedText) => element.Name.Namespace == MathNamespace &&
         (IsControl(element.Name.LocalName) || element.Name.LocalName == "r" &&
-            element.Elements().Any(text => IsLiteralRunText(text, allowsDeletedText) && text.Value.Length != 0));
+            element.Elements().Any(text => ReadLiteralRunText(text, allowsDeletedText) is { Length: > 0 }));
     // Revision admission and structural retention see the same stored content
     // through metadata containers; role nodes still need their actual parent.
     private static IEnumerable<XElement> ReadRevisionChildren(XElement source, CancellationToken token)
@@ -311,14 +311,23 @@ internal static partial class DocxMathParser
     // unknown payload cannot become a supported revision owner.
     private static bool IsReadableRun(XElement element, bool allowsDeletedText) =>
         element.Name == MathNamespace + "r" && element.Elements().All(child =>
-            IsLiteralRunText(child, allowsDeletedText) ||
+            ReadLiteralRunText(child, allowsDeletedText) is not null ||
             child.Name == MathNamespace + "rPr" || child.Name == WordprocessingNamespace + "rPr" ||
             DocxSourceXml.IsNonPrintingMarker(child));
 
-    private static bool IsLiteralRunText(XElement element, bool allowsDeletedText) =>
-        element.Name == MathNamespace + "t" ||
-        !element.HasElements && (element.Name == WordprocessingNamespace + "t" ||
-            allowsDeletedText && element.Name == WordprocessingNamespace + "delText");
+    private static string? ReadLiteralRunText(XElement element, bool allowsDeletedText)
+    {
+        if (element.Name == MathNamespace + "t") return element.Value;
+        if (element.HasElements || element.Name.Namespace != WordprocessingNamespace) return null;
+        return element.Name.LocalName switch
+        {
+            "t" => element.Value,
+            "delText" when allowsDeletedText => element.Value,
+            "noBreakHyphen" when string.IsNullOrWhiteSpace(element.Value) &&
+                element.Attributes().All(attribute => attribute.IsNamespaceDeclaration) => "\u2011",
+            _ => null
+        };
+    }
 
     private static DocxMathNode ReadLeaf(XElement element, Func<XElement, string, DocxTextRun> readRun, bool allowsDeletedText)
     {
@@ -326,7 +335,7 @@ internal static partial class DocxMathParser
         {
             var (normalText, literalText, supported) = ReadRunProperties(element);
             return new DocxMathRun(
-                readRun(element, string.Concat(element.Elements().Where(text => IsLiteralRunText(text, allowsDeletedText)).Select(text => text.Value))),
+                readRun(element, string.Concat(element.Elements().Select(text => ReadLiteralRunText(text, allowsDeletedText)))),
                 PropertyValue(element, "rPr", "sty"), PropertyValue(element, "rPr", "scr"))
             {
                 PropertiesXml = ReadProperties(element),

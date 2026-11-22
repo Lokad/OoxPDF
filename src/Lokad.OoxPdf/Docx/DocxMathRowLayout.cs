@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Pdf;
 using Lokad.OoxPdf.Pptx;
 
@@ -45,7 +46,7 @@ internal static partial class DocxMathRowLayout
             }
             else if (exportFontSize) { size = OfficePdfTextEmissionProfile.FontSize(size); }
             if (!double.IsFinite(size) || size <= 0d) { fallback = "InvalidMathFontSize"; return false; }
-            ushort glyph = font.MapCodePoint(atom.Render.Value);
+            ushort glyph = MapRenderGlyph(font, atom.Render.Value);
             if (scriptLevel != 0 && !atom.Run.NormalText && !font.TryGetMathScriptGlyph(glyph, scriptLevel, token, out glyph))
             { fallback = "UnsupportedMathScriptGlyph"; return false; }
             if (glyph == 0) { fallback = "MissingMathGlyph"; return false; }
@@ -123,6 +124,14 @@ internal static partial class DocxMathRowLayout
         bool valid = TryGetAtoms(row, token, out List<Atom> atoms, out _, out fallback, allowArgumentSize);
         codePoints = valid ? atoms.Select(atom => atom.Render.Value).Distinct().ToArray() : [];
         return valid;
+    }
+
+    internal static ushort MapRenderGlyph(OpenTypeFont font, int codePoint)
+    {
+        ushort glyph = font.MapCodePoint(codePoint);
+        // The regular hyphen outline can paint a nonbreaking hyphen. Subsetting,
+        // extraction and line breaking still use the original Unicode identity.
+        return glyph == 0 && codePoint == 0x2011 ? font.MapCodePoint(0x2010) : glyph;
     }
 
     private static bool TryGetAtoms(DocxMathRow row, CancellationToken token, out List<Atom> atoms,

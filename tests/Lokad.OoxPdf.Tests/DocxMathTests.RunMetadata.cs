@@ -55,6 +55,41 @@ internal static partial class DocxMathTests
             "Content nested inside a WordprocessingML text element retains the unsupported fallback.");
     }
 
+    public static void DocxMathNonBreakingHyphenPreservesRunOrderAndRevisionOwnership()
+    {
+        XName hyphen = WordprocessingNamespace + "noBreakHyphen";
+        var xml = EditingMarkerFraction();
+        xml.Descendants(MathNamespace + "r").First().Add(new XElement(hyphen), new XElement(WordprocessingNamespace + "t", "z"));
+        TestAssert.Equal("a\u2011z+b", RowText(((DocxMathFraction)Parse(xml).Children.Single()).Numerator));
+
+        foreach (string owner in new[] { "ins", "del" })
+        foreach (bool included in new[] { false, true })
+        {
+            var revised = EditingMarkerFraction();
+            var run = revised.Descendants(MathNamespace + "r").First();
+            run.ReplaceNodes(new XElement(hyphen));
+            run.ReplaceWith(new XElement(WordprocessingNamespace + owner, new XElement(run)));
+            var parsed = DocxMathParser.Read(revised, (_, text) => PlainRun(text), default, _ => included);
+            var numerator = ((DocxMathFraction)parsed.Children.Single()).Numerator;
+            var revision = TestAssert.NotNull(numerator.Children[0] as DocxMathRow);
+            TestAssert.Equal(included ? "\u2011" : "", RowText(revision));
+        }
+
+        foreach (var malformed in new[]
+        {
+            new XElement(hyphen, "Unexpected text"),
+            new XElement(hyphen, new XElement(MathNamespace + "t", "x")),
+            new XElement(hyphen, new XAttribute("extra", "unknown"))
+        })
+        {
+            var invalid = EditingMarkerFraction();
+            invalid.Descendants(MathNamespace + "r").First().Add(malformed);
+            var fraction = (DocxMathFraction)Parse(invalid).Children.Single();
+            TestAssert.True(fraction.Numerator.Children[0] is DocxMathUnsupported,
+                "A nonbreaking hyphen marker must be empty and carry no payload attributes.");
+        }
+    }
+
     public static void DocxMathRevisionAdmissionSharesReadableEmptyRunRules()
     {
         foreach (string kind in new[] { "ins", "del" })

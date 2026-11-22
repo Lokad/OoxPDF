@@ -99,39 +99,53 @@ internal static partial class PortableRenderingTests
             fontResourceFilter: name => name.StartsWith("Eq", StringComparison.Ordinal)).Select(show => show.Text))
         .Normalize(NormalizationForm.FormKC);
 
-    public static void PortableRenderingMathRunWordTextKeepsComposedFractions()
+    public static void PortableRenderingMathRunWordContentKeepsComposedFractions()
     {
         const string fixture = "CompositionProbes/composed-static-svg-report";
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
         {
             var beforeDiagnostics = new List<OoxPdfDiagnostic>();
             var afterDiagnostics = new List<OoxPdfDiagnostic>();
-            var beforeSource = DocxInlineCompositionTests.ReadMutation(fixture, mode, false, false,
+            var beforeSource = DocxInlineCompositionTests.ReadMutation(fixture, mode, false, false, (xml, _, m) =>
+            {
+                foreach (var literal in ReadNumerators(xml, m)) literal.Value = "x\u20112";
+            },
                 diagnosticSink: beforeDiagnostics.Add);
             var afterSource = DocxInlineCompositionTests.ReadMutation(fixture, mode, false, false, (xml, w, m) =>
             {
-                var numerators = xml.Descendants(m + "f").Select(fraction =>
-                    fraction.Element(m + "num")!.Descendants(m + "t").Single()).ToArray();
-                TestAssert.Equal(3, numerators.Length);
-                foreach (var literal in numerators)
-                    literal.Name = w + "t";
+                var numerators = ReadNumerators(xml, m);
+                numerators[0].ReplaceWith(new XElement(w + "t", "x\u20112"));
+                numerators[1].ReplaceWith(new XElement(w + "t", "x"), new XElement(w + "noBreakHyphen"), new XElement(w + "t", "2"));
+                numerators[2].ReplaceWith(new XElement(w + "t", "x"), new XElement(w + "noBreakHyphen"), new XElement(m + "t", "2"));
             }, diagnosticSink: afterDiagnostics.Add);
             var renderer = new DocxRenderer(new PinnedResolver(mathFont: true), mode,
                 mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
                     OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var before = renderer.RenderPagesAsync(beforeSource, beforeDiagnostics.Add, default).ToBlockingEnumerable().ToArray();
             var after = renderer.RenderPagesAsync(afterSource, afterDiagnostics.Add, default).ToBlockingEnumerable().ToArray();
-            string text = string.Concat(after.Select(ReadPortableEquationGlyphs));
-            TestAssert.Equal(3, text.Split("x+2y", StringSplitOptions.None).Length - 1);
+            var shows = after.SelectMany(page => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page,
+                usePageCoordinates: true, honorActualText: false,
+                fontResourceFilter: name => name.StartsWith("Eq", StringComparison.Ordinal)));
+            string text = string.Concat(shows.Select(show => show.Text));
+            TestAssert.Equal(3, text.Count(character => character == '\u2011'));
+            TestAssert.Equal(3, text.Normalize(NormalizationForm.FormKC).Split("x\u20102y", StringSplitOptions.None).Length - 1);
             TestAssert.Equal(before.Length, after.Length);
             for (int page = 0; page < before.Length; page++)
             {
                 TestAssert.Equal(before[page].Content, after[page].Content);
                 TestAssert.True(before[page].Annotations.SequenceEqual(after[page].Annotations),
-                    "Literal text in fractions preserves navigation.");
+                    "WordprocessingML run content in fractions preserves navigation.");
             }
-            TestAssert.True(beforeDiagnostics.SequenceEqual(afterDiagnostics), "Literal text preserves equation diagnostics.");
+            TestAssert.True(beforeDiagnostics.SequenceEqual(afterDiagnostics), "WordprocessingML run content preserves equation diagnostics.");
             CheckWrittenPages(after);
+        }
+
+        static XElement[] ReadNumerators(XDocument xml, XNamespace math)
+        {
+            var numerators = xml.Descendants(math + "f").Select(fraction =>
+                fraction.Element(math + "num")!.Descendants(math + "t").Single()).ToArray();
+            TestAssert.Equal(3, numerators.Length);
+            return numerators;
         }
     }
 

@@ -20825,11 +20825,12 @@
     "DocxMathRevisionBoundariesPreservePaintAndFiltering",
     "DocxMathRunNonPrintingMarkersRetainTextAndFallbacks",
     "=DocxMathDeletedTextRequiresDeletionOwner",
+    "=DocxMathNonBreakingHyphenPreservesRunOrderAndRevisionOwnership",
     "=DocxMathWordTextPreservesOrderAndRevisionOwnership",
     "=PortableRenderingDeletedMathTextRetainsRevisionPaint",
     "PortableRenderingEmptyRevisedMathRunsKeepFractions",
     "PortableRenderingMathRunPaginationHintsKeepComposedContent",
-    "=PortableRenderingMathRunWordTextKeepsComposedFractions",
+    "=PortableRenderingMathRunWordContentKeepsComposedFractions",
     "PortableRenderingRevisedInlineBoxesKeepVisibleSourceContent"
   ],
   "docx-unsupported-equation-siblings": [
