@@ -660,6 +660,7 @@
     "SvgCurrentColorUsesEachPaintedElementsColor",
     "SvgPrimitivePixelUnitsMatchUserCoordinates",
     "=SvgUserSpaceGradientPixelUnitsMatchUserCoordinates",
+    "=SvgConstantLinearGradientsMatchSolidPaintInBothFormats",
     "=PptxSvgUserSpacePercentGradientsMatchViewportUnits",
     "=PptxSyntheticSvgInvalidUserSpacePercentVectorDiagnoses",
     "=SvgExplicitViewportDimensionsKeepPaintWithoutViewBox",

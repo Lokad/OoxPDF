@@ -174,6 +174,59 @@ internal static partial class SvgTextTests
         TestAssert.Equal(0, diagnostics.Count);
     }
 
+    public static void SvgConstantLinearGradientsMatchSolidPaintInBothFormats()
+    {
+        const string definitions = """
+            <defs>
+              <linearGradient id="zero" gradientUnits="userSpaceOnUse" x1="80px" y1="24" x2="20%" y2="15%">
+                <stop offset=".8" stop-color="red" stop-opacity=".75"/>
+                <stop offset=".2" style="stop-color:blue;stop-opacity:.5"/>
+              </linearGradient>
+              <linearGradient id="one"><stop offset=".4" stop-color="green" stop-opacity=".6"/></linearGradient>
+            </defs>
+            """;
+        string Picture(string fill, string constantStroke, string singleStopStroke) => Svg($"""
+            {definitions}
+            <rect width="400" height="160" fill="yellow"/>
+            <rect x="20" y="20" width="60" height="60" {fill}/>
+            <rect x="105" y="20" width="60" height="60" fill="none" stroke-width="8" {constantStroke}/>
+            <rect x="190" y="20" width="60" height="60" fill="none" stroke-width="8" {singleStopStroke}/>
+            """);
+        string expected = Picture("fill=\"blue\" fill-opacity=\".4\"",
+            "stroke=\"blue\" stroke-opacity=\".4\"", "stroke=\"green\" stroke-opacity=\".3\"");
+        string actual = Picture("fill=\"url(#zero)\" fill-opacity=\".8\"",
+            "stroke=\"url(#zero)\" stroke-opacity=\".8\"", "stroke=\"url(#one)\" stroke-opacity=\".5\"");
+
+        foreach (var (kind, view, geometry) in new[] {
+            (OoxPdfInputKind.Pptx, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout),
+            (OoxPdfInputKind.Docx, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout),
+            (OoxPdfInputKind.Docx, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup) })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var options = new OoxPdfOptions
+            {
+                InputKind = kind, DocxMarkupMode = view, DocxMarkupGeometryMode = geometry,
+                FontResolver = new PortableRenderingTests.PinnedResolver(), DiagnosticSink = diagnostics.Add
+            };
+            byte[] Render(string svg)
+            {
+                using var input = File.OpenRead(Input(kind == OoxPdfInputKind.Docx, svg));
+                using var output = new MemoryStream();
+                OoxPdfConverter.Convert(input, output, options);
+                return output.ToArray();
+            }
+
+            byte[] solidPdf = Render(expected);
+            string content = Encoding.Latin1.GetString(solidPdf);
+            TestAssert.Contains("0 0 1 rg", content);
+            TestAssert.Contains("0 0 1 RG", content);
+            TestAssert.Contains("0 0.502 0 RG", content);
+            TestAssert.True(solidPdf.AsSpan().SequenceEqual(Render(actual)),
+                $"{kind} {view} must paint the same fills, strokes and alpha as the explicit solid colors.");
+            TestAssert.Equal(0, diagnostics.Count);
+        }
+    }
+
     public static void SvgExplicitViewportDimensionsKeepPaintWithoutViewBox()
     {
         const string content = """

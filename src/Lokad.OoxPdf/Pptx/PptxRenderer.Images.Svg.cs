@@ -1102,7 +1102,7 @@ internal sealed partial class PptxRenderer
         foreach (XElement gradient in svg.Descendants().Where(element => element.Name.LocalName == "linearGradient"))
         {
             string? id = (string?)gradient.Attribute("id");
-            var (stops, uniformOpacity, hasNumericOpacity) = ReadSvgGradientStops(gradient);
+            var (stops, uniformOpacity, hasNumericOpacity, lastAuthoredStop) = ReadSvgGradientStops(gradient);
             if (!string.IsNullOrWhiteSpace(id) && stops.Length > 0)
             {
                 // RV07: gradientTransform composes onto the raw vector in its own
@@ -1136,7 +1136,10 @@ internal sealed partial class PptxRenderer
                 {
                     UniformStopOpacity = uniformOpacity,
                     HasNumericStopOpacity = hasNumericOpacity,
-                    HasIdentityGradientTransform = gradientTransform.IsIdentity
+                    HasIdentityGradientTransform = gradientTransform.IsIdentity,
+                    // A single stop or coincident source endpoints define solid paint.
+                    ConstantStop = hasNumericOpacity && (stops.Length == 1 || (x1 == x2 && y1 == y2))
+                        ? lastAuthoredStop : null
                 };
             }
         }
@@ -1144,7 +1147,7 @@ internal sealed partial class PptxRenderer
         return gradients;
     }
 
-    private static (SvgGradientStop[] Stops, double? UniformOpacity, bool HasNumericOpacity) ReadSvgGradientStops(XElement gradient)
+    private static (SvgGradientStop[] Stops, double? UniformOpacity, bool HasNumericOpacity, SvgGradientStop LastAuthoredStop) ReadSvgGradientStops(XElement gradient)
     {
         var stops = new List<SvgGradientStop>();
         double? firstNumericOpacity = null;
@@ -1163,7 +1166,8 @@ internal sealed partial class PptxRenderer
             if (hasPaint) stops.Add(new SvgGradientStop(offset, color, opacity));
         }
         return (stops.OrderBy(stop => stop.Offset).ToArray(),
-            hasNumericOpacity && hasUniformOpacity ? firstNumericOpacity ?? 1d : null, hasNumericOpacity);
+            hasNumericOpacity && hasUniformOpacity ? firstNumericOpacity ?? 1d : null,
+            hasNumericOpacity, stops.Count == 0 ? default : stops[^1]);
     }
 
     private static bool TryReadSvgStopPaint(XElement stop, IReadOnlyDictionary<string, string> style,
@@ -1322,7 +1326,15 @@ internal sealed partial class PptxRenderer
         {
             if (gradients.TryGetValue(gradientId, out SvgGradient? svgGradient))
             {
-                paint = new SvgPaint(null, svgGradient, opacity * (svgGradient.UniformStopOpacity ?? 1d));
+                if (svgGradient.ConstantStop is { Opacity: double stopOpacity } stop)
+                {
+                    paint = new SvgPaint(stop.Color, null, opacity * stopOpacity);
+                    gradientId = null;
+                }
+                else
+                {
+                    paint = new SvgPaint(null, svgGradient, opacity * (svgGradient.UniformStopOpacity ?? 1d));
+                }
                 failure = SvgFillFailure.None;
                 return true;
             }
@@ -1397,16 +1409,26 @@ internal sealed partial class PptxRenderer
         RgbColor? color = null;
         if (gradientId is not null)
         {
-            if (!allowGradientStroke || !HasQualifiedSvgStrokeContainers(path) || !HasNumericSvgStrokeOpacity(path, style)
-                || (hasFill && ReadSvgOpacityValue(ReadSvgPresentationAttribute(path, style, "opacity")) < 1d)
-                || !gradients.TryGetValue(gradientId, out strokeGradient)
-                || strokeGradient.UniformStopOpacity is null || !strokeGradient.HasNumericStopOpacity
-                || !strokeGradient.HasIdentityGradientTransform || strokeGradient.Spread != SvgGradientSpread.Pad)
+            if (gradients.TryGetValue(gradientId, out SvgGradient? gradient) &&
+                gradient.ConstantStop is { Opacity: double stopOpacity } stop)
             {
-                failure = SvgStrokeFailure.UnresolvedGradient;
-                return default;
+                color = stop.Color;
+                opacity *= stopOpacity;
+                gradientId = null;
             }
-            opacity *= strokeGradient.UniformStopOpacity.Value;
+            else
+            {
+                if (!allowGradientStroke || !HasQualifiedSvgStrokeContainers(path) || !HasNumericSvgStrokeOpacity(path, style)
+                    || (hasFill && ReadSvgOpacityValue(ReadSvgPresentationAttribute(path, style, "opacity")) < 1d)
+                    || gradient is null || gradient.UniformStopOpacity is null || !gradient.HasNumericStopOpacity
+                    || !gradient.HasIdentityGradientTransform || gradient.Spread != SvgGradientSpread.Pad)
+                {
+                    failure = SvgStrokeFailure.UnresolvedGradient;
+                    return default;
+                }
+                strokeGradient = gradient;
+                opacity *= gradient.UniformStopOpacity.Value;
+            }
         }
         else if (TryReadSvgSolidColor(path, style, strokePaint, out RgbColor parsedColor))
         {
@@ -1851,7 +1873,7 @@ internal sealed partial class PptxRenderer
         foreach (XElement gradient in svg.Descendants().Where(element => element.Name.LocalName == "radialGradient"))
         {
             string? id = (string?)gradient.Attribute("id");
-            var (stops, uniformOpacity, hasNumericOpacity) = ReadSvgGradientStops(gradient);
+            var (stops, uniformOpacity, hasNumericOpacity, _) = ReadSvgGradientStops(gradient);
             if (string.IsNullOrWhiteSpace(id) || stops.Length == 0)
             {
                 continue;
