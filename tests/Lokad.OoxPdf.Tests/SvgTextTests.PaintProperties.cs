@@ -446,6 +446,35 @@ internal static partial class SvgTextTests
         <rect x="136" y="64" width="9" height="10" fill="green"/>
         """);
 
+    public static void SvgUnsupportedCommandsKeepOnlyTheDecodedStrokePrefix()
+    {
+        const string prefix = "M16 18H9.6e1V45";
+        var expected = Paint(Picture(prefix, "none"));
+        TestAssert.True(Regex.IsMatch(expected.ToString(), @"(?m)^16 -18 m\s+96 -18 l\s+96 -45 l\s+S\r?$"),
+            "The solid stroke must paint both authored segments up to (96,45).");
+        TestAssert.Contains("0 0.502 0 rg", expected.ToString());
+
+        foreach (string fill in new[] { "none", "url(#linear)", "url(#radial)" })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var actual = Paint(Picture(prefix + " A15 15 0 0 1 111 60 H130", fill), diagnostics);
+            AssertEquivalentSvgPaint(expected, actual, "An unsupported tail leaves only the decoded solid stroke.");
+            var warning = diagnostics.Single();
+            TestAssert.Equal("SVG_UNSUPPORTED_CONTENT", warning.Id);
+            TestAssert.Equal(1, warning.PageIndex ?? 0);
+            TestAssert.Contains("unsupported A command", warning.Message);
+        }
+
+        static string Picture(string path, string fill) => Svg($"""
+            <defs>
+              <linearGradient id="linear"><stop stop-color="red"/><stop offset="1" stop-color="blue"/></linearGradient>
+              <radialGradient id="radial"><stop stop-color="yellow"/><stop offset="1" stop-color="aqua"/></radialGradient>
+            </defs>
+            <path d="{path}" fill="{fill}" stroke="magenta" stroke-width="6" opacity=".6"/>
+            <rect x="130" y="58" width="12" height="12" fill="green"/>
+            """);
+    }
+
     public static void SvgTransparentFillKeepsTranslucentGradientStrokeInBothFormats()
     {
         const string definitions = """

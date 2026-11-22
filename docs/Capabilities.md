@@ -97,7 +97,8 @@ Object opacity can compose a visible fill with a supported linear-gradient strok
 Translucent solid strokes retain the fill beneath them.
 Rectangles and ellipses resolve an automatic radius from the other radius.
 SVG paths accept absolute and relative cubic and quadratic Bézier commands,
-including smooth forms.
+including smooth forms. An unsupported command reports a warning and stops the
+path at that command. A solid stroke can retain the preceding supported segments.
 
 PPTX picture opacity composes with supported SVG opacity. Usable authored raster
 previews retain precedence. Unsupported SVG picture recoloring retains original

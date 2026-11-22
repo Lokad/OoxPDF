@@ -276,8 +276,9 @@ internal sealed partial class PptxRenderer
             // under the stroke. A translucent SVG stroke paints over its fill.
             bool separateStroke = stroke.Gradient is not null || paint.Color is null ||
                 paint.Opacity > 0d && stroke.Opacity != elementOpacity;
+            bool gradientFill = radial is not null || paint.Gradient is not null;
             bool isolateObject = separateStroke && stroke.HasPaint && stroke.Opacity > 0d &&
-                hasFill && paint.Opacity > 0d && elementOpacity < 1d;
+                hasFill && (!gradientFill || completePath) && paint.Opacity > 0d && elementOpacity < 1d;
             if (isolateObject)
             {
                 // Leave room for the fill mask when adding an object group.
@@ -315,7 +316,6 @@ internal sealed partial class PptxRenderer
             }
             SvgPathBounds gradientBounds = default;
             SvgPathBounds controlBounds = default;
-            bool gradientFill = radial is not null || paint.Gradient is not null;
             bool needObjectBounds = isolateObject && !hasViewportClip && !clipViewport;
             bool hasPathBounds = (needObjectBounds || completePath && (gradientFill || stroke.Gradient is not null)) &&
                 TryReadSvgPathBounds(pathCommands, out gradientBounds, out controlBounds);
@@ -557,7 +557,9 @@ internal sealed partial class PptxRenderer
                     }
                 }
             }
-            if (separateStroke && stroke.HasPaint && (!gradientFill || hasGradientBounds))
+            // Stroke patterns already require complete bounds. A solid stroke
+            // can still paint the readable prefix when gradient fill is skipped.
+            if (separateStroke && stroke.HasPaint)
             {
                 if (!TryPaintSvgStrokePath(graphics, pathCommands, completePath, stroke.Color.GetValueOrDefault(), strokeWidthPoints, stroke.Opacity, stroke.LineCap, stroke.LineJoin, dashPoints, dashPhasePoints, stroke.MiterLimit, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY, strokePattern)
                     && badCommand is null)
@@ -772,9 +774,8 @@ internal sealed partial class PptxRenderer
     // Report the first unsupported path command independently of partial path paint.
     private static char? FindFirstUnsupportedSvgPathCommand(string data)
     {
-        // The path tokenizer only matches supported command letters, so unknown
-        // commands never surface as tokens: scan raw data instead, skipping
-        // scientific-notation exponents that merely look like letters.
+        // Report even when the decoder stops earlier or the path has no paint.
+        // Skip scientific-notation exponents that merely look like commands.
         for (int i = 0; i < data.Length; i++)
         {
             char command = data[i];
@@ -3010,7 +3011,9 @@ internal sealed partial class PptxRenderer
     [GeneratedRegex(@"[-+]?(?:\d*\.\d+|\d+)(?:[eE][-+]?\d+)?", RegexOptions.CultureInvariant)]
     private static partial Regex SvgNumberRegex();
 
-    [GeneratedRegex(@"[MmLlHhVvCcSsQqTtZz]|[-+]?(?:\d*\.\d+|\d+)(?:[eE][-+]?\d+)?", RegexOptions.CultureInvariant)]
+    // Retain unsupported command letters so their operands cannot continue
+    // the preceding command.
+    [GeneratedRegex(@"\p{L}|[-+]?(?:\d*\.\d+|\d+)(?:[eE][-+]?\d+)?", RegexOptions.CultureInvariant)]
     private static partial Regex SvgPathTokenRegex();
 
     [GeneratedRegex(@"[A-Za-z]+|[-+]?(?:\d*\.\d+|\d+)(?:[eE][-+]?\d+)?|[(),]", RegexOptions.CultureInvariant)]
