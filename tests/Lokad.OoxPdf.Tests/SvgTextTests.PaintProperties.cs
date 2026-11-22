@@ -450,7 +450,7 @@ internal static partial class SvgTextTests
     {
         const string prefix = "M16 18H9.6e1V45";
         var expected = Paint(Picture(prefix, "none"));
-        TestAssert.True(Regex.IsMatch(expected.ToString(), @"(?m)^16 -18 m\s+96 -18 l\s+96 -45 l\s+S\r?$"),
+        TestAssert.True(Regex.IsMatch(expected.ToString(), @"(?m)^16 142 m\s+96 142 l\s+96 115 l\s+S\r?$"),
             "The solid stroke must paint both authored segments up to (96,45).");
         TestAssert.Contains("0 0.502 0 rg", expected.ToString());
 
