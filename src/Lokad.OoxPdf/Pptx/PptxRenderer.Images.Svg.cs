@@ -906,32 +906,32 @@ internal sealed partial class PptxRenderer
             graphics.SaveState();
             graphics.SetAlpha(opacity, 1d);
         }
-        SvgTransform? axial = allowAlphaMask ? ReadSvgLinearAlphaTransform(gradient, transform, effective,
+        bool varyingAlpha = gradient.UniformStopOpacity is null;
+        bool tryNative = varyingAlpha ? allowAlphaMask : gradient.HasHardStops;
+        SvgTransform? axial = tryNative ? ReadSvgAxialShadingTransform(gradient, transform, effective,
             pathBounds, minX, minY, imageX, imageY, imageHeight, scaleX, scaleY) : null;
         if (axial is { } matrix)
         {
-            var mask = new PdfGraphicsBuilder();
-            mask.SaveState();
-            mask.Transform(matrix.M11, matrix.M12, matrix.M21, matrix.M22, matrix.OffsetX, matrix.OffsetY);
-            mask.PaintAxialShading(0d, 0d, 1d, 0d, gradient.Stops.Select(stop =>
+            if (varyingAlpha)
             {
-                byte alpha = (byte)Math.Round(stop.Opacity!.Value * 255d);
-                return new PdfShadingStop(stop.Offset, alpha, alpha, alpha);
-            }).ToArray());
-            mask.RestoreState();
-            double maskX = imageX + (pathBounds.MinX - minX) * scaleX;
-            double maskY = imageY + imageHeight - (pathBounds.MaxY - minY) * scaleY;
-            graphics.SetVectorLuminositySoftMask(mask, new PdfRectangle(maskX, maskY,
-                Math.Max(0.001d, imageX + (pathBounds.MaxX - minX) * scaleX - maskX),
-                Math.Max(0.001d, imageY + imageHeight - (pathBounds.MinY - minY) * scaleY - maskY)), opacity, 1d);
+                var mask = new PdfGraphicsBuilder();
+                mask.SaveState();
+                mask.Transform(matrix.M11, matrix.M12, matrix.M21, matrix.M22, matrix.OffsetX, matrix.OffsetY);
+                mask.PaintShading(CreateSvgAxialShading(gradient.Stops, opacityMask: true));
+                mask.RestoreState();
+                double maskX = imageX + (pathBounds.MinX - minX) * scaleX;
+                double maskY = imageY + imageHeight - (pathBounds.MaxY - minY) * scaleY;
+                graphics.SetVectorLuminositySoftMask(mask, new PdfRectangle(maskX, maskY,
+                    Math.Max(0.001d, imageX + (pathBounds.MaxX - minX) * scaleX - maskX),
+                    Math.Max(0.001d, imageY + imageHeight - (pathBounds.MinY - minY) * scaleY - maskY)), opacity, 1d);
+                varyingAlphaAdmitted = true;
+            }
             graphics.SaveState();
             graphics.Transform(matrix.M11, matrix.M12, matrix.M21, matrix.M22, matrix.OffsetX, matrix.OffsetY);
-            graphics.PaintAxialShading(0d, 0d, 1d, 0d, gradient.Stops.Select(stop =>
-                new PdfShadingStop(stop.Offset, stop.Color.Red, stop.Color.Green, stop.Color.Blue)).ToArray());
+            graphics.PaintShading(CreateSvgAxialShading(gradient.Stops));
             graphics.RestoreState();
             if (opacity < 1d) { graphics.RestoreState(); }
             graphics.RestoreState();
-            varyingAlphaAdmitted = true;
             return true;
         }
         if (Math.Abs(effective.X2 - effective.X1) >= Math.Abs(effective.Y2 - effective.Y1))
@@ -988,20 +988,15 @@ internal sealed partial class PptxRenderer
         return true;
     }
 
-    private static SvgTransform? ReadSvgLinearAlphaTransform(SvgGradient gradient, SvgTransform pathTransform,
+    private static SvgTransform? ReadSvgAxialShadingTransform(SvgGradient gradient, SvgTransform pathTransform,
         SvgGradient effective, SvgPathBounds bounds, double minX, double minY, double imageX, double imageY,
-        double imageHeight, double scaleX, double scaleY, bool requireVaryingAlpha = true)
+        double imageHeight, double scaleX, double scaleY)
     {
-        if ((requireVaryingAlpha && gradient.UniformStopOpacity is not null) || !gradient.HasNumericStopOpacity ||
+        if (!gradient.HasNumericStopOpacity ||
             !gradient.HasIdentityGradientTransform || gradient.Spread != SvgGradientSpread.Pad ||
-            (gradient.IsUserSpace && !pathTransform.IsIdentity) || gradient.Stops.Count is < 2 or > 256 ||
+            (gradient.IsUserSpace && !pathTransform.IsIdentity) || gradient.Stops.Count > 256 ||
             (!gradient.IsUserSpace && (pathTransform.M11 <= 0d || pathTransform.M22 <= 0d || pathTransform.M12 != 0d || pathTransform.M21 != 0d)) ||
-            (gradient.Stops[0].Offset != 0d && gradient.Stops[0].Offset < 0.001d) ||
-            (gradient.Stops[^1].Offset != 1d && gradient.Stops[^1].Offset > 0.999d)) { return null; }
-        for (int i = 1; i < gradient.Stops.Count; i++)
-        {
-            if (gradient.Stops[i].Offset - gradient.Stops[i - 1].Offset < 0.001d) { return null; }
-        }
+            !HaveRepresentableSvgStops(gradient.Stops)) { return null; }
         double unitWidth = gradient.IsUserSpace ? 1d : bounds.MaxX - bounds.MinX;
         double unitHeight = gradient.IsUserSpace ? 1d : bounds.MaxY - bounds.MinY;
         double startX = gradient.IsUserSpace ? effective.X1 : gradient.X1;
@@ -1054,11 +1049,51 @@ internal sealed partial class PptxRenderer
         (double x2, double y2) = gradient.IsUserSpace ? transform.Apply(gradient.X2, gradient.Y2)
             : (bounds.MinX + gradient.X2 * (bounds.MaxX - bounds.MinX), bounds.MinY + gradient.Y2 * (bounds.MaxY - bounds.MinY));
         var effective = new SvgGradient(x1, y1, x2, y2, gradient.Stops, gradient.IsUserSpace, gradient.Spread);
-        SvgTransform? projection = ReadSvgLinearAlphaTransform(gradient, transform, effective, bounds, minX, minY, imageX, imageY, imageHeight, scaleX, scaleY, requireVaryingAlpha: false);
+        SvgTransform? projection = ReadSvgAxialShadingTransform(gradient, transform, effective, bounds, minX, minY, imageX, imageY, imageHeight, scaleX, scaleY);
         if (projection is not { } matrix) { return null; }
-        var shading = new PdfAxialShading(0d, 0d, 1d, 0d, gradient.Stops.Select(stop =>
-            new PdfShadingStop(stop.Offset, stop.Color.Red, stop.Color.Green, stop.Color.Blue)).ToArray());
-        return new PdfShadingPattern(shading, new PdfPatternMatrix(matrix.M11, matrix.M12, matrix.M21, matrix.M22, matrix.OffsetX, matrix.OffsetY));
+        return new PdfShadingPattern(CreateSvgAxialShading(gradient.Stops),
+            new PdfPatternMatrix(matrix.M11, matrix.M12, matrix.M21, matrix.M22, matrix.OffsetX, matrix.OffsetY));
+    }
+
+    private static bool HaveRepresentableSvgStops(IReadOnlyList<SvgGradientStop> stops)
+    {
+        if (stops.Count < 2 || stops[0].Offset is > 0d and < 0.001d ||
+            stops[^1].Offset is > 0.999d and < 1d) return false;
+        for (int i = 1; i < stops.Count; i++)
+        {
+            double interval = stops[i].Offset - stops[i - 1].Offset;
+            if (interval != 0d && interval < 0.001d) return false;
+        }
+        return true;
+    }
+
+    private static PdfAxialShading CreateSvgAxialShading(IReadOnlyList<SvgGradientStop> stops, bool opacityMask = false)
+    {
+        // Move endpoint jumps inside the PDF shading domain. Its extensions
+        // then use the first and last source colors on the outer sides.
+        double start = stops[1].Offset == 0d ? -1d : 0d;
+        double end = stops[^2].Offset == 1d ? 2d : 1d;
+        return new PdfAxialShading(start, 0d, end, 0d,
+            CreateSvgShadingStops(stops, start, end, opacityMask), preserveHardStops: true);
+    }
+
+    private static PdfShadingStop[] CreateSvgShadingStops(IReadOnlyList<SvgGradientStop> stops, double start, double end,
+        bool opacityMask = false)
+    {
+        var result = new PdfShadingStop[stops.Count];
+        for (int i = 0; i < stops.Count; i++)
+        {
+            SvgGradientStop stop = stops[i];
+            double offset = (stop.Offset - start) / (end - start);
+            RgbColor color = stop.Color;
+            if (opacityMask)
+            {
+                byte alpha = (byte)Math.Round(stop.Opacity!.Value * 255d);
+                color = new RgbColor(alpha, alpha, alpha);
+            }
+            result[i] = new PdfShadingStop(offset, color.Red, color.Green, color.Blue);
+        }
+        return result;
     }
 
     private static bool TryReadSvgSourceFrame(XElement? root, out double minX, out double minY, out double width, out double height)
@@ -1102,7 +1137,7 @@ internal sealed partial class PptxRenderer
         foreach (XElement gradient in svg.Descendants().Where(element => element.Name.LocalName == "linearGradient"))
         {
             string? id = (string?)gradient.Attribute("id");
-            var (stops, uniformOpacity, hasNumericOpacity, lastAuthoredStop) = ReadSvgGradientStops(gradient);
+            var (stops, uniformOpacity, hasNumericOpacity, hasHardStops) = ReadSvgGradientStops(gradient);
             if (!string.IsNullOrWhiteSpace(id) && stops.Length > 0)
             {
                 // RV07: gradientTransform composes onto the raw vector in its own
@@ -1137,9 +1172,10 @@ internal sealed partial class PptxRenderer
                     UniformStopOpacity = uniformOpacity,
                     HasNumericStopOpacity = hasNumericOpacity,
                     HasIdentityGradientTransform = gradientTransform.IsIdentity,
+                    HasHardStops = hasHardStops,
                     // A single stop or coincident source endpoints define solid paint.
                     ConstantStop = hasNumericOpacity && (stops.Length == 1 || (x1 == x2 && y1 == y2))
-                        ? lastAuthoredStop : null
+                        ? stops[^1] : null
                 };
             }
         }
@@ -1147,12 +1183,13 @@ internal sealed partial class PptxRenderer
         return gradients;
     }
 
-    private static (SvgGradientStop[] Stops, double? UniformOpacity, bool HasNumericOpacity, SvgGradientStop LastAuthoredStop) ReadSvgGradientStops(XElement gradient)
+    private static (SvgGradientStop[] Stops, double? UniformOpacity, bool HasNumericOpacity, bool HasHardStops) ReadSvgGradientStops(XElement gradient)
     {
         var stops = new List<SvgGradientStop>();
         double? firstNumericOpacity = null;
         bool hasNumericOpacity = true;
         bool hasUniformOpacity = true;
+        bool hasHardStops = false;
         foreach (XElement stop in gradient.Elements().Where(element => element.Name.LocalName == "stop"))
         {
             IReadOnlyDictionary<string, string> style = ReadSvgStyleDeclarations(stop);
@@ -1163,11 +1200,19 @@ internal sealed partial class PptxRenderer
             firstNumericOpacity ??= opacity;
             hasUniformOpacity &= opacity == firstNumericOpacity;
 
-            if (hasPaint) stops.Add(new SvgGradientStop(offset, color, opacity));
+            if (!hasPaint) continue;
+            if (stops.Count > 0)
+            {
+                // SVG raises a decreasing offset to the preceding one and
+                // keeps both sides of the transition in source order.
+                offset = Math.Max(offset, stops[^1].Offset);
+                hasHardStops |= offset == stops[^1].Offset;
+            }
+            stops.Add(new SvgGradientStop(offset, color, opacity));
         }
-        return (stops.OrderBy(stop => stop.Offset).ToArray(),
+        return (stops.ToArray(),
             hasNumericOpacity && hasUniformOpacity ? firstNumericOpacity ?? 1d : null,
-            hasNumericOpacity, stops.Count == 0 ? default : stops[^1]);
+            hasNumericOpacity, hasHardStops);
     }
 
     private static bool TryReadSvgStopPaint(XElement stop, IReadOnlyDictionary<string, string> style,
@@ -1970,17 +2015,14 @@ internal sealed partial class PptxRenderer
         }
         double printedRadiusX = Math.Abs(radiusX * scaleX);
         double printedRadiusY = Math.Abs(radiusY * scaleY);
-        // PDF coordinates and function bounds use three decimal places. Retain
-        // sampling when quantization could collapse a radius or stop interval.
+        // Retain sampling for sub-precision radii or distinct stop intervals.
         // One clipped shading applies alpha once instead of accumulating it
         // over nested sampled rings and the padded background.
-        bool nativeShading = printedRadiusX >= 0.001d && printedRadiusY >= 0.001d && radial.Stops.Count >= 2 &&
-            (radial.Stops[0].Offset == 0d || radial.Stops[0].Offset >= 0.001d) &&
-            (radial.Stops[^1].Offset == 1d || radial.Stops[^1].Offset <= 0.999d);
-        for (int index = 1; nativeShading && index < radial.Stops.Count; index++)
-        {
-            nativeShading = radial.Stops[index].Offset - radial.Stops[index - 1].Offset >= 0.001d;
-        }
+        double padEnd = radial.Spread == SvgGradientSpread.Pad && radial.Stops.Count >= 2 &&
+            radial.Stops[^2].Offset == 1d ? 2d : 1d;
+        bool nativeShading = printedRadiusX >= 0.001d && printedRadiusY >= 0.001d &&
+            double.IsFinite(printedRadiusX * padEnd) && double.IsFinite(printedRadiusY * padEnd) &&
+            HaveRepresentableSvgStops(radial.Stops);
         int cycleCount = 1;
         if (nativeShading && radial.Spread != SvgGradientSpread.Pad)
         {
@@ -1998,7 +2040,7 @@ internal sealed partial class PptxRenderer
         if (!nativeShading && radial.Spread == SvgGradientSpread.Pad)
         {
             // Pad extends the final stop through the clipped shape beyond the outer ring.
-            RgbColor outerColor = SampleSvgRadialStops(radial.Stops, 1d, radial.Spread);
+            RgbColor outerColor = radial.Stops[^1].Color;
             graphics.SetFillRgb(outerColor.Red, outerColor.Green, outerColor.Blue);
             if (TryAppendSvgPath(graphics, commands, minX, minY, imageX, imageY, imageHeight, scaleX, scaleY))
             {
@@ -2020,25 +2062,21 @@ internal sealed partial class PptxRenderer
             {
                 var mask = new PdfGraphicsBuilder();
                 mask.SaveState();
-                mask.Transform(printedRadiusX, 0d, 0d, printedRadiusY,
+                mask.Transform(printedRadiusX * padEnd, 0d, 0d, printedRadiusY * padEnd,
                     imageX + (centerX - minX) * scaleX,
                     imageY + imageHeight - (centerY - minY) * scaleY);
-                mask.PaintRadialShading(radial.Stops.Select(stop =>
-                {
-                    byte alpha = (byte)Math.Round(stop.Opacity!.Value * 255d);
-                    return new PdfShadingStop(stop.Offset, alpha, alpha, alpha);
-                }).ToArray());
+                mask.PaintShading(new PdfRadialShading(CreateSvgShadingStops(radial.Stops, 0d, padEnd, opacityMask: true),
+                    preserveHardStops: true));
                 mask.RestoreState();
                 graphics.SetVectorLuminositySoftMask(mask, new PdfRectangle(maskX, maskY, maskWidth, maskHeight), opacity, 1d);
                 varyingAlphaAdmitted = true;
             }
             graphics.SaveState();
-            graphics.Transform(printedRadiusX * cycleCount, 0d, 0d, printedRadiusY * cycleCount,
+            graphics.Transform(printedRadiusX * cycleCount * padEnd, 0d, 0d, printedRadiusY * cycleCount * padEnd,
                 imageX + (centerX - minX) * scaleX,
                 imageY + imageHeight - (centerY - minY) * scaleY);
-            graphics.PaintRadialShading(radial.Stops.Select(stop =>
-                new PdfShadingStop(stop.Offset, stop.Color.Red, stop.Color.Green, stop.Color.Blue)).ToArray(),
-                cycleCount, radial.Spread == SvgGradientSpread.Reflect);
+            graphics.PaintShading(new PdfRadialShading(CreateSvgShadingStops(radial.Stops, 0d, padEnd),
+                cycleCount, radial.Spread == SvgGradientSpread.Reflect, preserveHardStops: true));
             graphics.RestoreState();
         }
         else
@@ -2049,7 +2087,7 @@ internal sealed partial class PptxRenderer
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 double fraction = (double)(ringCount - ring) / ringCount;
-                RgbColor color = SampleSvgRadialStops(radial.Stops, (double)(ringCount - ring - 1) / (ringCount - 1), radial.Spread);
+                RgbColor color = SampleSvgStops(radial.Stops, (double)(ringCount - ring - 1) / (ringCount - 1), radial.Spread);
                 graphics.SetFillRgb(color.Red, color.Green, color.Blue);
                 string ringData = ConvertSvgEllipseBody(centerX, centerY, radiusX * fraction, radiusY * fraction);
                 if (TryAppendSvgPath(graphics, ringData, SvgTransform.Identity, minX, minY, imageX, imageY, imageHeight, scaleX, scaleY))
@@ -2065,18 +2103,19 @@ internal sealed partial class PptxRenderer
         graphics.RestoreState();
         return true;
     }
-    private static RgbColor SampleSvgRadialStops(IReadOnlyList<SvgGradientStop> stops, double t, SvgGradientSpread spread)
+    private static RgbColor SampleSvgStops(IReadOnlyList<SvgGradientStop> stops, double t, SvgGradientSpread spread)
     {
         double offset = spread switch
         {
             SvgGradientSpread.Repeat => t - Math.Floor(t),
-            SvgGradientSpread.Reflect => ReflectSvgRadialOffset(t),
-            _ => Math.Clamp(t, 0d, 1d),
+            SvgGradientSpread.Reflect => ReflectSvgOffset(t),
+            _ => t,
         };
         SvgGradientStop previous = stops[0];
-        foreach (SvgGradientStop next in stops.Skip(1))
+        for (int index = 1; index < stops.Count; index++)
         {
-            if (offset <= next.Offset)
+            SvgGradientStop next = stops[index];
+            if (offset < next.Offset)
             {
                 double span = next.Offset - previous.Offset;
                 double amount = span <= PptxTextMetricRules.TextStateTolerance ? 0d : (offset - previous.Offset) / span;
@@ -2086,7 +2125,7 @@ internal sealed partial class PptxRenderer
         }
         return previous.Color;
     }
-    private static double ReflectSvgRadialOffset(double value)
+    private static double ReflectSvgOffset(double value)
     {
         double wrapped = value % 2d;
         if (wrapped < 0d)
@@ -2111,48 +2150,7 @@ internal sealed partial class PptxRenderer
         double offset = lengthSquared <= PptxTextMetricRules.TextStateTolerance
             ? 0d
             : ((x - gradient.X1) * dx + (y - gradient.Y1) * dy) / lengthSquared;
-        offset = gradient.Spread switch
-        {
-            SvgGradientSpread.Repeat => offset - Math.Floor(offset),
-            SvgGradientSpread.Reflect => ReflectSvgGradientOffset(offset),
-            _ => Math.Clamp(offset, 0d, 1d),
-        };
-
-        static double ReflectSvgGradientOffset(double value)
-        {
-            double wrapped = value % 2d;
-            if (wrapped < 0d)
-            {
-                wrapped += 2d;
-            }
-
-            return wrapped > 1d ? 2d - wrapped : wrapped;
-        }
-
-        SvgGradientStop previous = gradient.Stops[0];
-        foreach (SvgGradientStop next in gradient.Stops.Skip(1))
-        {
-            if (offset <= next.Offset)
-            {
-                double span = next.Offset - previous.Offset;
-                double amount = span <= PptxTextMetricRules.TextStateTolerance ? 0d : (offset - previous.Offset) / span;
-                return Interpolate(previous.Color, next.Color, Math.Clamp(amount, 0d, 1d));
-            }
-
-            previous = next;
-        }
-
-        return previous.Color;
-
-        static RgbColor Interpolate(RgbColor left, RgbColor right, double amount)
-        {
-            return new RgbColor(
-                ToByte(left.Red + (right.Red - left.Red) * amount),
-                ToByte(left.Green + (right.Green - left.Green) * amount),
-                ToByte(left.Blue + (right.Blue - left.Blue) * amount));
-        }
-
-        static byte ToByte(double value) => (byte)Math.Clamp((int)Math.Round(value), byte.MinValue, byte.MaxValue);
+        return SampleSvgStops(gradient.Stops, offset, gradient.Spread);
     }
 
     // Bounds and emission share the absolute-command representation and parser;

@@ -239,6 +239,31 @@ internal static partial class SvgTextTests
         AssertSvgPaintInBothFormats(expected, actual, "/PatternType 2", "/ShadingType 3", "0 0.502 0 rg", LabelColor);
     }
 
+    public static void SvgDecreasingStopsKeepNativePaintAndOpacityInBothFormats()
+    {
+        string Picture(string last) => Svg($"""
+            <defs>
+              <linearGradient id="linear" x1="20%" x2="80%">
+                <stop offset="0" stop-color="black"/><stop offset="0" stop-color="red"/>
+                <stop offset=".75" stop-color="green"/><stop offset="{last}" stop-color="blue"/>
+                <stop offset="1" stop-color="blue"/><stop offset="1" stop-color="black"/>
+              </linearGradient>
+              <radialGradient id="radial" r="35%">
+                <stop offset="0" stop-color="red"/>
+                <stop offset=".75" stop-color="green" stop-opacity=".45"/><stop offset="{last}" stop-color="blue"/>
+                <stop offset="1" stop-color="blue"/><stop offset="1" stop-color="black"/>
+              </radialGradient>
+            </defs>
+            <rect width="400" height="160" fill="yellow"/>
+            <rect x="10" y="20" width="65" height="60" fill="url(#linear)"/>
+            <rect x="85" y="20" width="65" height="60" fill="none" stroke="url(#linear)" stroke-width="8"/>
+            <rect x="160" y="20" width="65" height="60" fill="url(#radial)"/>
+            """);
+
+        AssertSvgPaintInBothFormats(Picture(".75"), Picture(".25"), "/PatternType 2", "/ShadingType 3",
+            "/S /Luminosity", "/Coords [-1 0 2 0]", "/Bounds [0.375 0.5]");
+    }
+
     private static void AssertSvgPaintInBothFormats(string expected, string actual, params string[] expectedMarkers)
     {
         foreach (var (kind, view, geometry) in new[] {

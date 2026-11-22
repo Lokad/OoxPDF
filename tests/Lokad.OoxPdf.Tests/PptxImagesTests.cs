@@ -2564,7 +2564,7 @@ internal static partial class PptxImagesTests
 
     public static void PptxSvgRadialUnrepresentableFunctionBoundsKeepPaintedFallback()
     {
-        foreach (string offsets in new[] { "0.5,0.5", "0.5,0.500001", "0.000001,0.5", "0.5,0.999999" })
+        foreach (string offsets in new[] { "0.5,0.500001", "0.000001,0.5", "0.5,0.999999" })
         {
             string[] pair = offsets.Split(',');
             string input = WriteSvgGradientDeck($"""
@@ -2580,7 +2580,7 @@ internal static partial class PptxImagesTests
             TestAssert.DoesNotContain("/ShadingType 3", pdf);
             TestAssert.Contains("0 0 1 rg", pdf);
             TestAssert.True(!diagnostics.Any(d => d.Id == "PPTX_NODE_RENDER_FAILED"),
-                "Hard stops and sub-precision intervals must retain their painted fill.");
+                "Sub-precision intervals must retain their painted fill.");
         }
     }
 

@@ -11,9 +11,9 @@ internal abstract class PdfShading
 {
     private string? resourceKey;
 
-    protected PdfShading(IReadOnlyList<PdfShadingStop> stops)
+    protected PdfShading(IReadOnlyList<PdfShadingStop> stops, bool preserveHardStops)
     {
-        Stops = NormalizeStops(stops);
+        Stops = NormalizeStops(stops, preserveHardStops);
     }
 
     protected abstract string CoordinateKey { get; }
@@ -46,7 +46,7 @@ internal abstract class PdfShading
         return "0." + new string('0', -exponent - 1) + number[..exponentIndex].Replace(".", "", StringComparison.Ordinal);
     }
 
-    private static IReadOnlyList<PdfShadingStop> NormalizeStops(IReadOnlyList<PdfShadingStop> stops)
+    private static IReadOnlyList<PdfShadingStop> NormalizeStops(IReadOnlyList<PdfShadingStop> stops, bool preserveHardStops)
     {
         if (stops.Count < 2)
         {
@@ -67,7 +67,7 @@ internal abstract class PdfShading
 
         foreach (PdfShadingStop stop in ordered)
         {
-            if (normalized.Count != 0 && Math.Abs(normalized[^1].Offset - stop.Offset) < 0.000001d)
+            if (!preserveHardStops && normalized.Count != 0 && Math.Abs(normalized[^1].Offset - stop.Offset) < 0.000001d)
             {
                 normalized[^1] = stop;
             }
@@ -97,8 +97,8 @@ internal sealed class PdfAxialShading : PdfShading
     {
     }
 
-    public PdfAxialShading(double X0, double Y0, double X1, double Y1, IReadOnlyList<PdfShadingStop> Stops)
-        : base(Stops)
+    public PdfAxialShading(double X0, double Y0, double X1, double Y1, IReadOnlyList<PdfShadingStop> Stops, bool preserveHardStops = false)
+        : base(Stops, preserveHardStops)
     {
         this.X0 = X0;
         this.Y0 = Y0;
@@ -115,7 +115,8 @@ internal sealed class PdfAxialShading : PdfShading
 }
 
 // A centered unit-circle gradient; the caller maps it into the printed ellipse.
-internal sealed class PdfRadialShading(IReadOnlyList<PdfShadingStop> stops, int cycleCount = 1, bool reflect = false) : PdfShading(stops)
+internal sealed class PdfRadialShading(IReadOnlyList<PdfShadingStop> stops, int cycleCount = 1, bool reflect = false,
+    bool preserveHardStops = false) : PdfShading(stops, preserveHardStops)
 {
     public int CycleCount { get; } = cycleCount is >= 1 and <= 128 ? cycleCount :
         throw new ArgumentOutOfRangeException(nameof(cycleCount));

@@ -295,7 +295,7 @@ internal sealed class PdfGraphicsBuilder
         builder.Append(PdfEmbeddedFont.SanitizeName(shadingPatterns[index].ResourceName)).AppendLine(stroking ? " SCN" : " scn");
     }
 
-    private void PaintShading(PdfShading shading)
+    internal void PaintShading(PdfShading shading)
     {
         string resourceName = "Sh" + (shadings.Count + 1).ToString(CultureInfo.InvariantCulture);
         if (!shadingIndex.TryGetValue(shading.ResourceKey, out int existingShadingIndex))

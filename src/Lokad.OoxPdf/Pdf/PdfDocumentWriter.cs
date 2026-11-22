@@ -600,15 +600,26 @@ internal sealed class PdfDocumentWriter
 
             var builder = new StringBuilder();
             builder.Append("<< /FunctionType 3 /Domain [0 1] /Functions [");
+            int intervalCount = 0;
+            int firstInterval = 0;
             for (int i = 0; i < stops.Count - 1; i++)
             {
+                // Each adjacent nonempty interval owns its own endpoint colors.
+                if (stops[i].Offset == stops[i + 1].Offset) continue;
+                if (intervalCount++ == 0) firstInterval = i;
                 builder.Append(' ').Append(BuildExponentialInterpolationFunction(stops[i], stops[i + 1]));
+            }
+            if (intervalCount == 1)
+            {
+                return BuildExponentialInterpolationFunction(stops[firstInterval], stops[firstInterval + 1]);
             }
 
             builder.Append(" ] /Bounds [");
-            for (int i = 1; i < stops.Count - 1; i++)
+            int boundCount = 0;
+            for (int i = firstInterval + 1; i < stops.Count - 1; i++)
             {
-                if (i > 1)
+                if (stops[i].Offset == stops[i + 1].Offset) continue;
+                if (boundCount++ != 0)
                 {
                     builder.Append(' ');
                 }
@@ -617,7 +628,7 @@ internal sealed class PdfDocumentWriter
             }
 
             builder.Append("] /Encode [");
-            for (int i = 0; i < stops.Count - 1; i++)
+            for (int i = 0; i < intervalCount; i++)
             {
                 if (i > 0)
                 {

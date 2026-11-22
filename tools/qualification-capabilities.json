@@ -663,6 +663,8 @@
     "=SvgConstantLinearGradientsMatchSolidPaintInBothFormats",
     "=SvgSingleStopRadialGradientsMatchSolidPaintInBothFormats",
     "=SvgQuotedLocalPaintServersMatchUnquotedReferencesInBothFormats",
+    "=SvgDecreasingStopsKeepNativePaintAndOpacityInBothFormats",
+    "=ShadingHardStopsKeepSeparateIntervalColors",
     "=PptxSvgUserSpacePercentGradientsMatchViewportUnits",
     "=PptxSyntheticSvgInvalidUserSpacePercentVectorDiagnoses",
     "=SvgExplicitViewportDimensionsKeepPaintWithoutViewBox",

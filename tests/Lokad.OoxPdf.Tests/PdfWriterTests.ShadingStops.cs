@@ -62,6 +62,23 @@ internal static partial class PdfWriterTests
         TestAssert.Equal((byte)255, shading.Stops[1].Blue);
     }
 
+    public static void ShadingHardStopsKeepSeparateIntervalColors()
+    {
+        var graphics = new PdfGraphicsBuilder();
+        graphics.PaintShading(new PdfAxialShading(0, 0, 100, 0, [
+            new(0, 255, 0, 0), new(0, 0, 0, 255),
+            new(.5d, 0, 255, 0), new(.5d, 255, 255, 0), new(.5d, 1, 2, 3),
+            new(1, 0, 0, 255), new(1, 0, 0, 0)], preserveHardStops: true));
+        var page = new PdfPage(100, 100, graphics.ToString(), [], [], graphics.ExtGStates, graphics.Shadings);
+        string pdf = WritePdfText([page]);
+
+        TestAssert.True(ReadShadingBounds(pdf).SequenceEqual(new[] { .5d }), "A coincident group contributes one interior bound.");
+        TestAssert.Equal(2, CountOccurrences(pdf, "/FunctionType 2"));
+        TestAssert.Contains("/C0 [0 0 1] /C1 [0 1 0]", pdf);
+        TestAssert.Contains("/C0 [0.004 0.008 0.012] /C1 [0 0 1]", pdf);
+        TestAssert.Contains("/Encode [0 1 0 1]", pdf);
+    }
+
     private static double[] ReadShadingBounds(string pdf)
     {
         Match match = Regex.Match(pdf, @"/Bounds \[([^\]]*)\]");

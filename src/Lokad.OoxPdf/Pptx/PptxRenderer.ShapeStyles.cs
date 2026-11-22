@@ -542,6 +542,7 @@ internal sealed partial class PptxRenderer
 
     private sealed record SvgGradient(double X1, double Y1, double X2, double Y2, IReadOnlyList<SvgGradientStop> Stops, bool IsUserSpace, SvgGradientSpread Spread)
     {
+        public bool HasHardStops { get; init; }
         public double? UniformStopOpacity { get; init; } = 1d;
         public bool HasNumericStopOpacity { get; init; }
         public bool HasIdentityGradientTransform { get; init; }
