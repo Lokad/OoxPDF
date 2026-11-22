@@ -2391,6 +2391,57 @@ internal static partial class PptxImagesTests
         TestAssert.True(diagnostics.Count == 0, "Qualified numeric linear stroke alpha must render without fallback diagnostics.");
     }
 
+    public static void PptxSvgGradientStrokesFollowPicturePlacementAndFormOwnership()
+    {
+        const string gradient = """gradientUnits="userSpaceOnUse" x1="10" y1="5" x2="90" y2="45" """;
+        var local = new PdfPatternMatrix(115.2, -57.6, -57.6, -115.2, 86.4, 460.8);
+        // The authored picture occupies (72, 396) to (216, 468) in PDF space.
+        (int Rotation, bool FlipX, bool FlipY, PdfPatternMatrix PageMatrix)[] placements =
+        [
+            (0, false, false, local),
+            (90, false, false, new(-57.6, -115.2, -115.2, 57.6, 172.8, 489.6)),
+            (0, true, false, new(-115.2, -57.6, 57.6, -115.2, 201.6, 460.8)),
+            (0, false, true, new(115.2, 57.6, -57.6, 115.2, 86.4, 403.2))
+        ];
+        const string path = """<path d="M10 5H90V45H10Z" fill="#00AA00" stroke="url(#s)" stroke-width="4"/>""";
+        string[] bodies =
+        [
+            path,
+            """<g opacity=".5">""" + path + "</g>",
+            path.Replace("<path ", """<path opacity=".5" """, StringComparison.Ordinal)
+        ];
+        foreach ((int rotation, bool flipX, bool flipY, PdfPatternMatrix pageMatrix) in placements)
+        foreach (string body in bodies)
+        {
+            bool isolated = body != path;
+            string svg = LinearStrokeSvg(LinearStrokeStops, gradient, """overflow="hidden" """, body: body);
+            var parts = SvgPictureParts(svg);
+            const string slidePart = "ppt/slides/slide1.xml";
+            var slide = XDocument.Parse(Encoding.UTF8.GetString(parts[slidePart]));
+            XElement transform = slide.Descendants(XName.Get("xfrm", "http://schemas.openxmlformats.org/drawingml/2006/main")).Single();
+            transform.SetAttributeValue("rot", rotation * 60_000);
+            transform.SetAttributeValue("flipH", flipX ? "1" : "0");
+            transform.SetAttributeValue("flipV", flipY ? "1" : "0");
+            parts[slidePart] = TestFixtures.Utf8(slide.ToString());
+            using var input = TestFixtures.CreateZipPackage(parts);
+            using var package = OoxPackage.Open(input, default);
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            PdfPage page = new PptxRenderer(new PortableRenderingTests.PinnedResolver())
+                .RenderPagesAsync(new PptxReader().Read(package, default), package, diagnostics.Add, default)
+                .ToBlockingEnumerable().Single();
+            TestAssert.Equal(0, diagnostics.Count);
+            TestAssert.Equal(isolated ? 0 : 1, page.ShadingPatterns.Count);
+            TestAssert.Equal(isolated ? 1 : 0, page.Groups.Count);
+            PdfShadingPatternResource pattern = isolated
+                ? page.Groups.Single().Group.ShadingPatterns.Single()
+                : page.ShadingPatterns.Single();
+            TestAssert.Equal(isolated ? local : pageMatrix, pattern.Pattern.Matrix);
+            string content = isolated ? page.Groups.Single().Group.Content : page.Content;
+            TestAssert.Contains("/Pattern CS /" + pattern.ResourceName + " SCN", content);
+            TestAssert.True(content.Split('\n').Any(line => line.Trim() == "S"), "The bound shading pattern must stroke the path.");
+        }
+    }
+
     public static void PptxSvgLinearGradientStrokePreservesProjectionAcrossSourceUnits()
     {
         foreach (bool sourceUnits in new[] { false, true })

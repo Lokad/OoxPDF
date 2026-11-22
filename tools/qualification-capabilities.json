@@ -714,6 +714,7 @@
     "PptxSvgNestedAndSiblingContainerOpacityPreservesPaintOrder",
     "PptxSvgPictureOpacityComposesWithRootAndNestedGroups",
     "PptxSvgLinearGradientStrokeUsesNativePatternAndMultipliesAlpha",
+    "PptxSvgGradientStrokesFollowPicturePlacementAndFormOwnership",
     "PptxSvgLinearGradientStrokeRetainsBoundedFallbackPaint",
     "SvgLabelFontPreparationRefundsScratchOnRefusalAndCancellation",
     "SvgSampledPageConstructionCoversReturnedPaintAndOpacityGroups"
@@ -842,6 +843,7 @@
     "PptxTextFrameVerticalClipDropsLinesWithBaselineOutsideClip",
     "PptxSvgPictureQuarterTurnClipKeepsTheRotatedFootprint",
     "PptxSvgPictureObliqueClipKeepsItsCentreAndRotatedExtent",
+    "PptxSvgGradientStrokesFollowPicturePlacementAndFormOwnership",
     "PptxPortableHeadlineHighlightKeepsContentAndSpanGeometry",
     "PptxPortableHighlightContinuationKeepsSpacingAcrossWrappedLines"
   ],

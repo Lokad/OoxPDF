@@ -125,10 +125,16 @@ internal sealed partial class PptxRenderer
             return false;
         }
 
+        SvgTransform? picturePlacement = null;
         graphics.SaveState();
         if (Math.Abs(bounds.RotationDegrees) > 0.001d || bounds.FlipHorizontal || bounds.FlipVertical)
         {
-            ApplyShapeTransform(graphics, x, y, width, height, bounds);
+            var (a, b, c, d, e, f) = ShapeTransformMatrix(x, y, width, height, bounds);
+            graphics.Transform(a, b, c, d, e, f);
+            static double Coefficient(double value) => double.Parse(
+                PdfDocumentWriter.FormatNumber(value, PdfGraphicsBuilder.TransformCoefficientFormat), CultureInfo.InvariantCulture);
+            picturePlacement = new SvgTransform(Coefficient(a), Coefficient(b), Coefficient(c), Coefficient(d),
+                PrintedSvgNumber(e), PrintedSvgNumber(f));
         }
 
         if (picturePreset != "rect")
@@ -137,7 +143,7 @@ internal sealed partial class PptxRenderer
         string? overflow = !hasViewportClip && svg.Root is { } outerSvg
             ? ReadSvgPresentationAttribute(outerSvg, ReadSvgStyleDeclarations(outerSvg), "overflow")?.Trim()
             : null;
-        bool clipViewport = !crop.IsEmpty || Math.Abs(bounds.RotationDegrees) > 0.001d || bounds.FlipHorizontal || bounds.FlipVertical ||
+        bool clipViewport = !crop.IsEmpty || picturePlacement.HasValue ||
             string.Equals(overflow, "hidden", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(overflow, "scroll", StringComparison.OrdinalIgnoreCase);
         if (clipViewport)
@@ -171,7 +177,6 @@ internal sealed partial class PptxRenderer
         HashSet<string>? usedGradientIds = diagnosticSink is null ? null : new(StringComparer.Ordinal);
         var isolation = new List<(XElement Container, PdfGraphicsBuilder Parent, PdfGraphicsBuilder Child, double Opacity)>();
         var opacityGroups = new List<(XElement Container, double Opacity)>();
-        bool allowStrokePattern = Math.Abs(bounds.RotationDegrees) <= 0.001d && !bounds.FlipHorizontal && !bounds.FlipVertical;
         var admittedContainers = new HashSet<XElement>();
         var admittedGradientAlpha = new HashSet<string>(StringComparer.Ordinal);
         var fallbackGradientAlpha = new HashSet<string>(StringComparer.Ordinal);
@@ -254,7 +259,7 @@ internal sealed partial class PptxRenderer
             string? opacityText = ReadSvgPresentationAttribute(element, style, "opacity");
             double? authoredOpacity = ParseSvgOpacity(opacityText);
             double elementOpacity = Math.Clamp(authoredOpacity ?? 1d, 0d, 1d);
-            bool allowGradientStroke = allowStrokePattern && strokeContainersQualified &&
+            bool allowGradientStroke = strokeContainersQualified &&
                 (string.IsNullOrWhiteSpace(opacityText) || authoredOpacity is >= 0d and <= 1d);
             bool hasFill = TryReadSvgFill(element, style, gradients, radialGradients, elementIds, elementOpacity,
                 out SvgPaint paint, out SvgFillFailure fillFailure, out string? gradientId, out SvgRadialGradient? radial);
@@ -327,7 +332,11 @@ internal sealed partial class PptxRenderer
             {
                 if (hasGradientBounds && controlsMappable)
                 {
-                    strokePattern = TryReadSvgStrokePattern(gradientBounds, strokeGradient, transform, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY);
+                    // A Form inherits placement through its invocation. A page
+                    // pattern maps to the initial user space before the picture cm.
+                    SvgTransform? patternPlacement = isolation.Count == 0 && !isolateObject ? picturePlacement : null;
+                    strokePattern = TryReadSvgStrokePattern(gradientBounds, strokeGradient, transform, sourceMinX, sourceMinY,
+                        imageX, imageY, imageHeight, scaleX, scaleY, patternPlacement);
                 }
                 if (strokePattern is null)
                 {
@@ -1043,7 +1052,7 @@ internal sealed partial class PptxRenderer
 
     private static SvgTransform? ReadSvgAxialShadingTransform(SvgGradient gradient, SvgTransform pathTransform,
         SvgGradient effective, SvgPathBounds bounds, double minX, double minY, double imageX, double imageY,
-        double imageHeight, double scaleX, double scaleY)
+        double imageHeight, double scaleX, double scaleY, SvgTransform? patternPlacement = null)
     {
         // Mapped endpoints still determine the perpendicular gradient axis
         // after a translation or positive uniform scale.
@@ -1066,10 +1075,11 @@ internal sealed partial class PptxRenderer
         double c = -dy * unitWidth * scaleX, d = -dx * unitHeight * scaleY;
         double e = imageX + (effective.X1 - minX) * scaleX;
         double f = imageY + imageHeight - (effective.Y1 - minY) * scaleY;
-        if (!double.IsFinite(a) || !double.IsFinite(b) || !double.IsFinite(c) || !double.IsFinite(d) ||
-            !double.IsFinite(e) || !double.IsFinite(f) || !double.IsFinite(lengthSquared) || lengthSquared <= 0d) { return null; }
-        double Printed(double value) => double.Parse(PdfDocumentWriter.FormatNumber(value), CultureInfo.InvariantCulture);
-        var matrix = new SvgTransform(Printed(a), Printed(b), Printed(c), Printed(d), Printed(e), Printed(f));
+        var local = new SvgTransform(a, b, c, d, e, f);
+        var placed = patternPlacement is { } placement ? SvgTransform.Compose(placement, local) : local;
+        if (!placed.IsFinite || !double.IsFinite(lengthSquared) || lengthSquared <= 0d) { return null; }
+        var matrix = new SvgTransform(PrintedSvgNumber(placed.M11), PrintedSvgNumber(placed.M12),
+            PrintedSvgNumber(placed.M21), PrintedSvgNumber(placed.M22), PrintedSvgNumber(placed.OffsetX), PrintedSvgNumber(placed.OffsetY));
         double determinant = matrix.M11 * matrix.M22 - matrix.M12 * matrix.M21;
         if (!double.IsFinite(determinant) || determinant == 0d) { return null; }
         foreach ((double x, double y) in new[] { (bounds.MinX, bounds.MinY), (bounds.MinX, bounds.MaxY), (bounds.MaxX, bounds.MinY), (bounds.MaxX, bounds.MaxY) })
@@ -1077,14 +1087,18 @@ internal sealed partial class PptxRenderer
             double coordinateX = gradient.IsUserSpace ? x : (x - bounds.MinX) / unitWidth;
             double coordinateY = gradient.IsUserSpace ? y : (y - bounds.MinY) / unitHeight;
             double source = ((coordinateX - startX) * dx + (coordinateY - startY) * dy) / lengthSquared;
-            double printedX = Printed(imageX + (x - minX) * scaleX);
-            double printedY = Printed(imageY + imageHeight - (y - minY) * scaleY);
+            double printedX = PrintedSvgNumber(imageX + (x - minX) * scaleX);
+            double printedY = PrintedSvgNumber(imageY + imageHeight - (y - minY) * scaleY);
+            if (patternPlacement is { } device) { (printedX, printedY) = device.Apply(printedX, printedY); }
             double actual = (matrix.M22 * (printedX - matrix.OffsetX) - matrix.M21 * (printedY - matrix.OffsetY)) / determinant;
             // Projection error is affine: corner bounds cover the clipped path.
             if (!double.IsFinite(source) || !double.IsFinite(actual) || Math.Abs(actual - source) > 0.001d) { return null; }
         }
         return matrix;
     }
+
+    private static double PrintedSvgNumber(double value) =>
+        double.Parse(PdfDocumentWriter.FormatNumber(value), CultureInfo.InvariantCulture);
 
     private static bool AreSvgGradientBoundsMappable(SvgPathBounds bounds, double minX, double minY, double imageX, double imageY, double imageHeight, double scaleX, double scaleY)
     {
@@ -1096,7 +1110,8 @@ internal sealed partial class PptxRenderer
     }
 
     private static PdfShadingPattern? TryReadSvgStrokePattern(SvgPathBounds bounds, SvgGradient gradient, SvgTransform transform,
-        double minX, double minY, double imageX, double imageY, double imageHeight, double scaleX, double scaleY)
+        double minX, double minY, double imageX, double imageY, double imageHeight, double scaleX, double scaleY,
+        SvgTransform? patternPlacement)
     {
         if (!AreSvgGradientBoundsMappable(bounds, minX, minY, imageX, imageY, imageHeight, scaleX, scaleY)) { return null; }
         (double x1, double y1) = gradient.IsUserSpace ? transform.Apply(gradient.X1, gradient.Y1)
@@ -1104,7 +1119,8 @@ internal sealed partial class PptxRenderer
         (double x2, double y2) = gradient.IsUserSpace ? transform.Apply(gradient.X2, gradient.Y2)
             : (bounds.MinX + gradient.X2 * (bounds.MaxX - bounds.MinX), bounds.MinY + gradient.Y2 * (bounds.MaxY - bounds.MinY));
         var effective = new SvgGradient(x1, y1, x2, y2, gradient.Stops, gradient.IsUserSpace, gradient.Spread);
-        SvgTransform? projection = ReadSvgAxialShadingTransform(gradient, transform, effective, bounds, minX, minY, imageX, imageY, imageHeight, scaleX, scaleY);
+        SvgTransform? projection = ReadSvgAxialShadingTransform(gradient, transform, effective, bounds, minX, minY,
+            imageX, imageY, imageHeight, scaleX, scaleY, patternPlacement);
         if (projection is not { } matrix) { return null; }
         return new PdfShadingPattern(CreateSvgAxialShading(gradient.Stops),
             new PdfPatternMatrix(matrix.M11, matrix.M12, matrix.M21, matrix.M22, matrix.OffsetX, matrix.OffsetY));
@@ -3035,6 +3051,9 @@ internal sealed partial class PptxRenderer
         public bool HasPositiveUniformScale => M11 > 0d && M11 == M22 && M12 == 0d && M21 == 0d;
 
         public bool IsIdentity => HasPositiveUniformScale && M11 == 1d && OffsetX == 0d && OffsetY == 0d;
+
+        public bool IsFinite => double.IsFinite(M11) && double.IsFinite(M12) && double.IsFinite(M21) &&
+            double.IsFinite(M22) && double.IsFinite(OffsetX) && double.IsFinite(OffsetY);
 
         public (double X, double Y) Apply(double x, double y) => (M11 * x + M21 * y + OffsetX, M12 * x + M22 * y + OffsetY);
 

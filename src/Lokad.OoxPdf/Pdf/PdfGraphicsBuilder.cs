@@ -227,12 +227,14 @@ internal sealed class PdfGraphicsBuilder
         return (emitted * 100000m).ToString("0", CultureInfo.InvariantCulture);
     }
 
+    internal const string TransformCoefficientFormat = "0.######";
+
     public void Transform(double a, double b, double c, double d, double e, double f)
     {
         // Linear coefficients multiply page coordinates. Coordinate precision
         // here can move a distant rotation pivot by tenths of a point.
-        builder.Append(PdfDocumentWriter.FormatNumber(a, "0.######")).Append(' ').Append(PdfDocumentWriter.FormatNumber(b, "0.######")).Append(' ');
-        builder.Append(PdfDocumentWriter.FormatNumber(c, "0.######")).Append(' ').Append(PdfDocumentWriter.FormatNumber(d, "0.######")).Append(' ');
+        builder.Append(PdfDocumentWriter.FormatNumber(a, TransformCoefficientFormat)).Append(' ').Append(PdfDocumentWriter.FormatNumber(b, TransformCoefficientFormat)).Append(' ');
+        builder.Append(PdfDocumentWriter.FormatNumber(c, TransformCoefficientFormat)).Append(' ').Append(PdfDocumentWriter.FormatNumber(d, TransformCoefficientFormat)).Append(' ');
         builder.Append(PdfDocumentWriter.FormatNumber(e)).Append(' ').Append(PdfDocumentWriter.FormatNumber(f)).AppendLine(" cm");
     }
 
