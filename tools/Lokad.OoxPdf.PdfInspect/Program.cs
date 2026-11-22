@@ -61,19 +61,6 @@ catch (InvalidDataException ex)
     Console.Error.WriteLine($"Cannot inspect '{inputPath}': {ex.Message}");
     return 1;
 }
-Dictionary<int, int> contentPageNumbers = BuildContentPageMap(objects);
-IReadOnlyList<PdfFontResource> fontResources = BuildFontResources(objects);
-Dictionary<(int PageNumber, string FontName), PdfToUnicodeMap> fontUnicodeMaps = BuildFontUnicodeMaps(objects);
-Dictionary<(int PageNumber, string FontName), PdfFontWidthMap> fontWidthMaps = BuildFontWidthMaps(objects);
-HashSet<int>? filteredContentObjects = pageFilter is null
-    ? null
-    : contentPageNumbers
-        .Where(pair => pageFilter.Contains(pair.Value))
-        .Select(pair => pair.Key)
-        .ToHashSet();
-var textOperations = new List<PdfTextOperation>();
-var graphicsOperations = new List<PdfGraphicsOperation>();
-
 Console.WriteLine(FormattableString.Invariant($"PDF: {inputPath}"));
 Console.WriteLine(FormattableString.Invariant($"Objects: {objects.Count}"));
 if (pageFilter is not null)
@@ -81,49 +68,77 @@ if (pageFilter is not null)
     Console.WriteLine(FormattableString.Invariant($"Page filter: {string.Join(",", pageFilter.Order())}"));
 }
 
-foreach (PdfObject item in objects)
+if (outputDirectory is null)
+{
+    foreach (PdfObject item in objects)
+    {
+        WriteObjectSummary(item);
+    }
+}
+else
+{
+    WriteInspection(objects, outputDirectory, textOnly, pageFilter);
+}
+
+// tool peaks are recorded separately from converter peaks.
+Console.WriteLine($"Tool peak working set: {System.Diagnostics.Process.GetCurrentProcess().PeakWorkingSet64} bytes.");
+return 0;
+
+static void WriteObjectSummary(PdfObject item)
 {
     string streamNote = item.Stream is null
         ? string.Empty
         : FormattableString.Invariant($", stream {item.Stream.RawLength} bytes, decoded {item.Stream.DecodedLength} bytes, filters: {item.Stream.Filters}, {item.Stream.DecodeStatus}");
     Console.WriteLine(FormattableString.Invariant($"{item.Number} {item.Generation} obj: {Classify(item.Body)}{streamNote}"));
-
-    if (outputDirectory is null || item.Stream is null)
-    {
-        continue;
-    }
-
-    if (filteredContentObjects is not null && !filteredContentObjects.Contains(item.Number))
-    {
-        continue;
-    }
-
-    string prefix = Path.Combine(outputDirectory, FormattableString.Invariant($"obj-{item.Number:0000}-{item.Generation}"));
-    if (!textOnly)
-    {
-        File.WriteAllText(prefix + ".dict.txt", item.Dictionary, Encoding.UTF8);
-    }
-
-    if (LooksTextual(item.Stream.Decoded))
-    {
-        string text = Encoding.Latin1.GetString(item.Stream.Decoded);
-        if (!textOnly)
-        {
-            File.WriteAllText(prefix + ".stream.txt", text, Encoding.UTF8);
-        }
-
-        int? pageNumber = contentPageNumbers.TryGetValue(item.Number, out int page) ? page : null;
-        textOperations.AddRange(PdfTextOperation.Extract(pageNumber, item.Number, item.Generation, text, fontUnicodeMaps, fontWidthMaps));
-        graphicsOperations.AddRange(PdfGraphicsOperation.Extract(pageNumber, item.Number, item.Generation, text));
-    }
-    else if (!textOnly)
-    {
-        File.WriteAllBytes(prefix + ".stream.bin", item.Stream.Decoded);
-    }
 }
 
-if (outputDirectory is not null)
+static void WriteInspection(IReadOnlyList<PdfObject> objects, string outputDirectory, bool textOnly, HashSet<int>? pageFilter)
 {
+    Dictionary<int, int> contentPageNumbers = BuildContentPageMap(objects);
+    IReadOnlyList<PdfFontResource> fontResources = BuildFontResources(objects);
+    Dictionary<(int PageNumber, string FontName), PdfToUnicodeMap> fontUnicodeMaps = BuildFontUnicodeMaps(objects);
+    Dictionary<(int PageNumber, string FontName), PdfFontWidthMap> fontWidthMaps = BuildFontWidthMaps(objects);
+    HashSet<int>? filteredContentObjects = pageFilter is null
+        ? null
+        : contentPageNumbers
+            .Where(pair => pageFilter.Contains(pair.Value))
+            .Select(pair => pair.Key)
+            .ToHashSet();
+    var textOperations = new List<PdfTextOperation>();
+    var graphicsOperations = new List<PdfGraphicsOperation>();
+
+    foreach (PdfObject item in objects)
+    {
+        WriteObjectSummary(item);
+        if (item.Stream is null || (filteredContentObjects is not null && !filteredContentObjects.Contains(item.Number)))
+        {
+            continue;
+        }
+
+        string prefix = Path.Combine(outputDirectory, FormattableString.Invariant($"obj-{item.Number:0000}-{item.Generation}"));
+        if (!textOnly)
+        {
+            File.WriteAllText(prefix + ".dict.txt", item.Dictionary, Encoding.UTF8);
+        }
+
+        if (LooksTextual(item.Stream.Decoded))
+        {
+            string text = Encoding.Latin1.GetString(item.Stream.Decoded);
+            if (!textOnly)
+            {
+                File.WriteAllText(prefix + ".stream.txt", text, Encoding.UTF8);
+            }
+
+            int? pageNumber = contentPageNumbers.TryGetValue(item.Number, out int page) ? page : null;
+            textOperations.AddRange(PdfTextOperation.Extract(pageNumber, item.Number, item.Generation, text, fontUnicodeMaps, fontWidthMaps));
+            graphicsOperations.AddRange(PdfGraphicsOperation.Extract(pageNumber, item.Number, item.Generation, text));
+        }
+        else if (!textOnly)
+        {
+            File.WriteAllBytes(prefix + ".stream.bin", item.Stream.Decoded);
+        }
+    }
+
     var jsonOptions = new JsonSerializerOptions
     {
         WriteIndented = true,
@@ -138,10 +153,6 @@ if (outputDirectory is not null)
     File.WriteAllText(Path.Combine(outputDirectory, "font-resources.json"),
         JsonSerializer.Serialize(fontResources, jsonOptions), Encoding.UTF8);
 }
-
-// tool peaks are recorded separately from converter peaks.
-Console.WriteLine($"Tool peak working set: {System.Diagnostics.Process.GetCurrentProcess().PeakWorkingSet64} bytes.");
-return 0;
 
 static long ReadLongOption(string[] args, string name, long defaultValue)
 {
