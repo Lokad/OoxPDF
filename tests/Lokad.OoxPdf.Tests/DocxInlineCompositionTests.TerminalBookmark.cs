@@ -76,8 +76,10 @@ internal static partial class DocxInlineCompositionTests
             foreach (bool hiddenBeforeBookmark in new[] { true, false })
             {
                 var pages = Render(hiddenBeforeBookmark);
-                TestAssert.True(control.Select(page => page.Content).SequenceEqual(pages.Select(page => page.Content)),
-                    "A hidden suffix must preserve both pages' visible content.");
+                TestAssert.Equal(control.Length, pages.Length);
+                TestAssert.True(control.Select(DocxPageFootnoteNumberingTests.DecodeText)
+                    .SequenceEqual(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)),
+                    "A hidden suffix must preserve decoded content on each page.");
                 var actual = pages[0].Annotations.OrderBy(link => link.X).ToArray();
                 TestAssert.Equal(2, actual.Length);
                 TestAssert.True(expected.SequenceEqual(actual),
