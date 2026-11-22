@@ -749,7 +749,7 @@ internal sealed partial class PptxRenderer
 
     private static bool IsSupportedSvgPathCommand(char command)
     {
-        return "MLHVCSZ".IndexOf(char.ToUpperInvariant(command)) >= 0;
+        return "MLHVCSQTZ".IndexOf(char.ToUpperInvariant(command)) >= 0;
     }
     private static void ReportSkippedSvgPaths(SortedSet<char> unsupportedCommands, int unreadablePaths, SortedSet<string> missingGradients, int unpaintablePaths, int unsupportedTransforms, int gradientStrokes, int unpaintableStrokes, int invalidStrokePresentations, int vectorEffectStrokes, int focalRadialGradients, int nonFiniteGradientPaths, Action<OoxPdfDiagnostic>? diagnosticSink, int slideIndex, string? partName)
     {
@@ -2259,10 +2259,13 @@ internal sealed partial class PptxRenderer
         var commands = new List<SvgPathCommand>();
         int index = 0;
         char command = '\0';
+        char previousKind = '\0';
         double currentX = 0d;
         double currentY = 0d;
         double startX = 0d;
         double startY = 0d;
+        double quadraticControlX = 0d;
+        double quadraticControlY = 0d;
         while (index < tokens.Count)
         {
             string token = tokens[index].Value;
@@ -2329,9 +2332,10 @@ internal sealed partial class PptxRenderer
                             return (commands, false);
                         }
                     }
-                    else if (commands.Count > 0 && commands[^1] is { Kind: 'C', Arguments: var previous })
+                    else if (previousKind is 'C' or 'S')
                     {
-                        // Both cubic spellings emit C, so each completed tuple supplies the next reflection.
+                        // Reflection follows the authored curve family. Quadratics also emit C.
+                        double[] previous = commands[^1].Arguments;
                         c1x += currentX - previous[2];
                         c1y += currentY - previous[3];
                     }
@@ -2343,6 +2347,37 @@ internal sealed partial class PptxRenderer
                     }
 
                     commands.Add(new SvgPathCommand('C', new[] { c1x, c1y, c2x, c2y, currentX, currentY }));
+                    break;
+                }
+                case 'Q':
+                case 'T':
+                {
+                    double controlX = currentX;
+                    double controlY = currentY;
+                    if (kind == 'Q')
+                    {
+                        if (!TryReadSvgPoint(tokens, ref index, relative, currentX, currentY, out controlX, out controlY))
+                        {
+                            return (commands, false);
+                        }
+                    }
+                    else if (previousKind is 'Q' or 'T')
+                    {
+                        controlX += currentX - quadraticControlX;
+                        controlY += currentY - quadraticControlY;
+                    }
+
+                    if (!TryReadSvgPoint(tokens, ref index, relative, currentX, currentY, out double endX, out double endY))
+                    {
+                        return (commands, false);
+                    }
+
+                    BezierSegment curve = CreateQuadraticBezierSegment((currentX, currentY), (controlX, controlY), (endX, endY));
+                    commands.Add(new SvgPathCommand('C', [curve.Control1X, curve.Control1Y, curve.Control2X, curve.Control2Y, endX, endY]));
+                    quadraticControlX = controlX;
+                    quadraticControlY = controlY;
+                    currentX = endX;
+                    currentY = endY;
                     break;
                 }
                 case 'Z':
@@ -2362,6 +2397,7 @@ internal sealed partial class PptxRenderer
                 default:
                     return (commands, false);
             }
+            previousKind = kind;
         }
 
         return (commands, true);
@@ -2834,7 +2870,7 @@ internal sealed partial class PptxRenderer
     [GeneratedRegex(@"[-+]?(?:\d*\.\d+|\d+)(?:[eE][-+]?\d+)?", RegexOptions.CultureInvariant)]
     private static partial Regex SvgNumberRegex();
 
-    [GeneratedRegex(@"[MmLlHhVvCcSsZz]|[-+]?(?:\d*\.\d+|\d+)(?:[eE][-+]?\d+)?", RegexOptions.CultureInvariant)]
+    [GeneratedRegex(@"[MmLlHhVvCcSsQqTtZz]|[-+]?(?:\d*\.\d+|\d+)(?:[eE][-+]?\d+)?", RegexOptions.CultureInvariant)]
     private static partial Regex SvgPathTokenRegex();
 
     [GeneratedRegex(@"[A-Za-z]+|[-+]?(?:\d*\.\d+|\d+)(?:[eE][-+]?\d+)?|[(),]", RegexOptions.CultureInvariant)]

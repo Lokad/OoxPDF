@@ -92,7 +92,8 @@ Local SVG gradient templates reuse the authored stops and their source colors.
 SVG paint accepts opaque numeric `rgb()` colors and separate opacity properties.
 Basic shape geometry, stroke widths, dash lengths and dash offsets accept viewport percentages.
 Rectangles and ellipses resolve an automatic radius from the other radius.
-SVG paths accept absolute and relative smooth cubic commands.
+SVG paths accept absolute and relative cubic and quadratic Bézier commands,
+including smooth forms.
 
 PPTX picture opacity composes with supported SVG opacity. Usable authored raster
 previews retain precedence. Unsupported SVG picture recoloring retains original

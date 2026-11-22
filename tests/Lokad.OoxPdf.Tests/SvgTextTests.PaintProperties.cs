@@ -400,20 +400,31 @@ internal static partial class SvgTextTests
     public static void SvgSmoothCubicsMatchExplicitCurvesInBothFormats()
     {
         AssertSvgPaintInBothFormats(
-            Picture("M10 30 C15 10 25 10 30 30 C35 50 45 50 50 30 C55 10 65 10 70 30 L90 30",
+            CurveStrokeSvg("M10 30 C15 10 25 10 30 30 C35 50 45 50 50 30 C55 10 65 10 70 30 L90 30",
                 "M10 58 c5 -10 15 -10 20 0 c5 10 15 10 20 0 l10 0 c0 0 10 -10 20 0 c10 10 15 10 20 0 z c0 0 10 12 20 0 m87 6 c0 0 8 -8 16 0"),
-            Picture("M10 30 C15 10 25 10 30 30 S45 50 50 30 65 10 70 30 L90 30",
+            CurveStrokeSvg("M10 30 C15 10 25 10 30 30 S45 50 50 30 65 10 70 30 L90 30",
                 "M10 58 c5 -10 15 -10 20 0 s15 10 20 0 l10 0 s10 -10 20 0 15 10 20 0 z s10 12 20 0 m87 6 s8 -8 16 0"),
             "1 0 0 RG", " c" + Environment.NewLine, "/PatternType 2", "0 0.502 0 rg");
-
-        static string Picture(string solid, string gradient) => Svg($"""
-            <defs><linearGradient id="ramp"><stop stop-color="blue"/>
-              <stop offset="1" stop-color="purple"/></linearGradient></defs>
-            <path d="{solid}" fill="none" stroke="red" stroke-width="4"/>
-            <path d="{gradient}" fill="none" stroke="url(#ramp)" stroke-width="4"/>
-            <rect x="136" y="64" width="9" height="10" fill="green"/>
-            """);
     }
+
+    public static void SvgQuadraticCurvesMatchExplicitCubicsInBothFormats()
+    {
+        AssertSvgPaintInBothFormats(
+            CurveStrokeSvg("M12 24 C24 12 36 12 48 24 C60 36 72 36 84 24 C96 12 108 12 120 24 L132 24",
+                "M12 58 C24 46 36 46 48 58 C60 70 72 70 84 58 L90 58 C90 58 96 58 108 58 C112 46 118 46 126 58 " +
+                "C130 70 136 70 144 58 C144 58 150 67 156 58 C156 58 160 58 168 58 Z C12 58 18 58 30 58"),
+            CurveStrokeSvg("M12 24 Q30 6 48 24 T84 24 120 24 L132 24",
+                "M12 58 q18 -18 36 0 t36 0 l6 0 t18 0 q6 -18 18 0 6 18 18 0 s6 9 12 0 t12 0 z t18 0"),
+            "1 0 0 RG", " c" + Environment.NewLine, "/PatternType 2", "0 0.502 0 rg");
+    }
+
+    private static string CurveStrokeSvg(string solid, string gradient) => Svg($"""
+        <defs><linearGradient id="ramp"><stop stop-color="blue"/>
+          <stop offset="1" stop-color="purple"/></linearGradient></defs>
+        <path d="{solid}" fill="none" stroke="red" stroke-width="4"/>
+        <path d="{gradient}" fill="none" stroke="url(#ramp)" stroke-width="4"/>
+        <rect x="136" y="64" width="9" height="10" fill="green"/>
+        """);
 
     public static void SvgTransparentFillKeepsTranslucentGradientStrokeInBothFormats()
     {

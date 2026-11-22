@@ -371,14 +371,14 @@ internal static partial class PptxImagesTests
     {
         string svg = SolidSvgPicture.Replace("</svg>", """
               <text x="10" y="5"><textPath href="#unsupported">Hello</textPath></text>
-              <path d="M0 0 Q10 10 20 0 Z" fill="#778899"/>
+              <path d="M0 0 A10 10 0 0 1 20 0 Z" fill="#778899"/>
             </svg>
             """, StringComparison.Ordinal);
         var diagnostics = new List<OoxPdfDiagnostic>();
         string pdf = RenderSyntheticSvgPicture(svg, diagnostics: diagnostics);
         TestAssert.Contains(SolidSvgPicturePaint, pdf);
         TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("text", StringComparison.Ordinal)), "Unsupported SVG element must diagnose.");
-        TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("Q", StringComparison.Ordinal)), "Unsupported SVG path command must diagnose.");
+        TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("unsupported A command", StringComparison.Ordinal)), "Unsupported SVG path command must diagnose.");
     }
 
     public static void PptxSyntheticSvgPictureAppliesSourceCropBeforeScaling()
