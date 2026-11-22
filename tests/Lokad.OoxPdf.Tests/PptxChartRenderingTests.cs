@@ -1648,56 +1648,17 @@ internal static class PptxChartRenderingTests
     // the flat theme fill (fails: flat solid, no shading resource).
     public static void BarStyle18ColumnPaintsSampledGradient()
     {
-        string input = TestFixtures.WriteTempPackage(".pptx", ThemedBarChartPackage("""
-            <?xml version="1.0" encoding="UTF-8"?>
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:style val="18"/><c:chart><c:plotArea><c:barChart>
-              <c:barDir val="col"/>
-              <c:grouping val="clustered"/>
-              <c:varyColors val="0"/>
-              <c:ser>
-                <c:tx><c:strLit><c:pt idx="0"><c:v>Demand</c:v></c:pt></c:strLit></c:tx>
-                <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
-                <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt></c:numLit></c:val>
-              </c:ser>
-              <c:axId val="10"/><c:axId val="20"/>
-            </c:barChart><c:catAx><c:axId val="10"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="b"/><c:tickLblPos val="none"/><c:crossAx val="20"/></c:catAx><c:valAx><c:axId val="20"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="l"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:valAx></c:plotArea></c:chart></c:chartSpace>
-            """));
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-        OoxPdfConverter.Convert(input, output);
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        string pdf = RenderStyle18BarChart("col", "clustered", includeSupply: false);
         TestAssert.Contains("/Sh1 sh", pdf);
         TestAssert.Contains("ShadingType 2", pdf);
         TestAssert.Contains("/Bounds [", pdf);
-        TestAssert.DoesNotContain("0.082 0.376 0.51 rg", pdf);
     }
 
     // RV04: the second style-18 series resolves its own theme base and gradient stops.
     public static void BarStyle18SecondSeriesPaintsOwnGradient()
     {
-        string input = TestFixtures.WriteTempPackage(".pptx", ThemedBarChartPackage("""
-            <?xml version="1.0" encoding="UTF-8"?>
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:style val="18"/><c:chart><c:plotArea><c:barChart>
-              <c:barDir val="col"/>
-              <c:grouping val="clustered"/>
-              <c:varyColors val="0"/>
-              <c:ser>
-                <c:tx><c:strLit><c:pt idx="0"><c:v>Demand</c:v></c:pt></c:strLit></c:tx>
-                <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
-                <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt></c:numLit></c:val>
-              </c:ser>
-              <c:ser>
-                <c:tx><c:strLit><c:pt idx="0"><c:v>Supply</c:v></c:pt></c:strLit></c:tx>
-                <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
-                <c:val><c:numLit><c:pt idx="0"><c:v>1</c:v></c:pt><c:pt idx="1"><c:v>3</c:v></c:pt></c:numLit></c:val>
-              </c:ser>
-              <c:axId val="10"/><c:axId val="20"/>
-            </c:barChart><c:catAx><c:axId val="10"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="b"/><c:tickLblPos val="none"/><c:crossAx val="20"/></c:catAx><c:valAx><c:axId val="20"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="l"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:valAx></c:plotArea></c:chart></c:chartSpace>
-            """));
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-        OoxPdfConverter.Convert(input, output);
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        string pdf = RenderStyle18BarChart("col", "clustered", includeSupply: true);
         TestAssert.Contains("/Sh4 sh", pdf);
-        TestAssert.DoesNotContain("0.082 0.376 0.51 rg", pdf);
     }
     // Office uses the raw theme base and a 5pt stroke for style-18 series without markers.
     public static void LineStyle18UsesRawFivePointSeriesStroke()
@@ -2974,51 +2935,94 @@ internal static class PptxChartRenderingTests
     // (fails: flat solid, no shading resource).
     public static void BarStyle18HorizontalBarPaintsGradient()
     {
-        string input = TestFixtures.WriteTempPackage(".pptx", ThemedBarChartPackage("""
-            <?xml version="1.0" encoding="UTF-8"?>
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:style val="18"/><c:chart><c:plotArea><c:barChart>
-              <c:barDir val="bar"/>
-              <c:grouping val="clustered"/>
-              <c:varyColors val="0"/>
-              <c:ser>
-                <c:tx><c:strLit><c:pt idx="0"><c:v>Demand</c:v></c:pt></c:strLit></c:tx>
-                <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
-                <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt></c:numLit></c:val>
-              </c:ser>
-              <c:axId val="10"/><c:axId val="20"/>
-            </c:barChart><c:catAx><c:axId val="10"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="b"/><c:tickLblPos val="none"/><c:crossAx val="20"/></c:catAx><c:valAx><c:axId val="20"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="l"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:valAx></c:plotArea></c:chart></c:chartSpace>
-            """));
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-        OoxPdfConverter.Convert(input, output);
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("/Sh2 sh", pdf);
-        TestAssert.DoesNotContain("0.082 0.376 0.51 rg", pdf);
+        PdfRectangle[] bars = ReadStyle18BarGradientClips(
+            RenderStyle18BarChart("bar", "clustered", includeSupply: false)).OrderBy(clip => clip.Y).ToArray();
+        TestAssert.Equal(2, bars.Length);
+        TestAssert.True(bars[0].X == bars[1].X && bars[0].Height == bars[1].Height &&
+            bars[0].Y + bars[0].Height < bars[1].Y,
+            "Each category must paint a separate horizontal bar on the common value axis.");
+        TestAssert.True(Math.Abs(2d * bars[0].Width - bars[1].Width) < 0.005d,
+            "The gradient clips must cover the authored values 2 and 4.");
     }
 
     // RV04: style-18 stacked columns paint each segment with its own bar-relative
     // gradient instead of one flat compound path (fails: flat solid, no shading).
     public static void BarStyle18StackedColumnPaintsPerSegmentGradient()
     {
-        string input = TestFixtures.WriteTempPackage(".pptx", ThemedBarChartPackage("""
-            <?xml version="1.0" encoding="UTF-8"?>
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:style val="18"/><c:chart><c:plotArea><c:barChart>
-              <c:barDir val="col"/>
-              <c:grouping val="stacked"/>
-              <c:varyColors val="0"/>
-              <c:ser>
-                <c:tx><c:strLit><c:pt idx="0"><c:v>Demand</c:v></c:pt></c:strLit></c:tx>
-                <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
-                <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt></c:numLit></c:val>
-              </c:ser>
-              <c:axId val="10"/><c:axId val="20"/>
-            </c:barChart><c:catAx><c:axId val="10"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="b"/><c:tickLblPos val="none"/><c:crossAx val="20"/></c:catAx><c:valAx><c:axId val="20"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="l"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:valAx></c:plotArea></c:chart></c:chartSpace>
-            """));
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-        OoxPdfConverter.Convert(input, output);
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("/Sh2 sh", pdf);
-        TestAssert.DoesNotContain("0.082 0.376 0.51 rg", pdf);
+        PdfRectangle[] clips = ReadStyle18BarGradientClips(
+            RenderStyle18BarChart("col", "stacked", includeSupply: true));
+        TestAssert.Equal(4, clips.Length);
+        PdfRectangle[][] columns = clips.GroupBy(clip => clip.X).OrderBy(column => column.Key)
+            .Select(column => column.OrderBy(clip => clip.Y).ToArray()).ToArray();
+        TestAssert.Equal(2, columns.Length);
+        TestAssert.Equal(2, columns[0].Length);
+        TestAssert.Equal(2, columns[1].Length);
+        PdfRectangle baseline = columns[0][0];
+        double valueUnit = baseline.Height / 2d;
+        TestAssert.True(baseline.X + baseline.Width < columns[1][0].X,
+            "The two stacked categories must paint separate columns.");
+        foreach (var (column, lowerValue, upperValue) in new[]
+        {
+            (columns[0], 2d, 1d),
+            (columns[1], 4d, 3d)
+        })
+        {
+            PdfRectangle lower = column[0], upper = column[1];
+            TestAssert.True(lower.Y == baseline.Y && lower.Width == baseline.Width && upper.Width == lower.Width &&
+                Math.Abs(lower.Y + lower.Height - upper.Y) < 0.005d,
+                "Every stacked pair must share the value-axis baseline and meet at its segment boundary.");
+            TestAssert.True(Math.Abs(lower.Height - valueUnit * lowerValue) < 0.005d &&
+                Math.Abs(upper.Height - valueUnit * upperValue) < 0.005d,
+                $"The separate gradient clips must cover the authored stack {lowerValue} + {upperValue}.");
+        }
     }
+
+    private static string RenderStyle18BarChart(string direction, string grouping, bool includeSupply)
+    {
+        static string Series(string name, int categoryA, int categoryB) => FormattableString.Invariant($$"""
+            <c:ser>
+              <c:tx><c:strLit><c:pt idx="0"><c:v>{{name}}</c:v></c:pt></c:strLit></c:tx>
+              <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
+              <c:val><c:numLit><c:pt idx="0"><c:v>{{categoryA}}</c:v></c:pt><c:pt idx="1"><c:v>{{categoryB}}</c:v></c:pt></c:numLit></c:val>
+            </c:ser>
+            """);
+        string series = Series("Demand", 2, 4);
+        if (includeSupply) series += Series("Supply", 1, 3);
+        using var input = TestFixtures.CreateZipPackage(ThemedBarChartPackage($$"""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <c:style val="18"/><c:chart><c:plotArea><c:barChart>
+                <c:barDir val="{{direction}}"/><c:grouping val="{{grouping}}"/><c:varyColors val="0"/>
+                {{series}}
+                <c:axId val="10"/><c:axId val="20"/>
+              </c:barChart>
+              <c:catAx><c:axId val="10"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="b"/><c:tickLblPos val="none"/><c:crossAx val="20"/></c:catAx>
+              <c:valAx><c:axId val="20"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="l"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:valAx>
+              </c:plotArea></c:chart>
+            </c:chartSpace>
+            """));
+        using var output = new MemoryStream();
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { InputKind = OoxPdfInputKind.Pptx });
+        string pdf = Encoding.ASCII.GetString(output.ToArray());
+        TestAssert.DoesNotContain("0.082 0.376 0.51 rg", pdf);
+        return pdf;
+    }
+
+    private static PdfRectangle[] ReadStyle18BarGradientClips(string pdf)
+    {
+        // Each complete bar paint is a rectangle clip followed by its shading operation.
+        var clips = Regex.Matches(pdf, @"(?m)^([-\d.]+) ([-\d.]+) ([-\d.]+) ([-\d.]+) re W n\r?\n/Sh\d+ sh\r?$")
+            .Select(match => new PdfRectangle(ReadCoordinate(match, 1), ReadCoordinate(match, 2),
+                ReadCoordinate(match, 3), ReadCoordinate(match, 4)))
+            .ToArray();
+        TestAssert.True(clips.All(clip => clip.Width > 0d && clip.Height > 0d),
+            "Every painted bar or segment requires a nonempty clip.");
+        return clips;
+
+        static double ReadCoordinate(Match match, int index) =>
+            double.Parse(match.Groups[index].Value, CultureInfo.InvariantCulture);
+    }
+
     public static void PptxSyntheticBarChartLegendSwatchesUseSeriesStroke()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
