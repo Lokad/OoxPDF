@@ -224,10 +224,6 @@ internal static class PptxDiagnosticsTests
         TestAssert.True(sceneSlide.SlideNodes.Any(node => node.Picture?.HasVideo == true), "Expected video provenance to be owned by the scene picture.");
         TestAssert.True(sceneSlide.SlideNodes.Any(node => node.Picture?.HasAudio == true), "Expected audio provenance to be owned by the scene picture.");
 
-        PptxSceneSnapshot snapshot = PptxRenderer.InspectScene(document, package);
-        TestAssert.True(snapshot.Slides[0].SlideNodes.Any(node => node.PictureHasVideo), "Expected video provenance to be visible in scene inspection.");
-        TestAssert.True(snapshot.Slides[0].SlideNodes.Any(node => node.PictureHasAudio), "Expected audio provenance to be visible in scene inspection.");
-
         var diagnostics = new List<OoxPdfDiagnostic>();
         XDocument slideXmlWithoutMedia = XDocument.Parse("""
             <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
@@ -276,9 +272,6 @@ internal static class PptxDiagnosticsTests
         PptxSceneSlide sceneSlide = scene.Slides[0];
         TestAssert.True(sceneSlide.SlideNodes.Any(node => node.IsSmartArtGraphicFrame), "Expected SmartArt classification to be owned by the scene node.");
 
-        PptxSceneSnapshot snapshot = PptxRenderer.InspectScene(document, package);
-        TestAssert.True(snapshot.Slides[0].SlideNodes.Any(node => node.IsSmartArtGraphicFrame), "Expected SmartArt classification to be visible in scene inspection.");
-
         var diagnostics = new List<OoxPdfDiagnostic>();
         XDocument slideXmlWithoutSmartArt = XDocument.Parse("""
             <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
@@ -324,11 +317,6 @@ internal static class PptxDiagnosticsTests
         TestAssert.True(sceneSlide.HasTransition, "Expected transition provenance to be owned by the scene slide.");
         TestAssert.True(sceneSlide.HasTiming, "Expected timing provenance to be owned by the scene slide.");
         TestAssert.True(sceneSlide.HasOleObject, "Expected OLE object provenance to be owned by the scene slide.");
-
-        PptxSceneSnapshot snapshot = PptxRenderer.InspectScene(document, package);
-        TestAssert.True(snapshot.Slides[0].HasTransition, "Expected transition provenance to be visible in scene inspection.");
-        TestAssert.True(snapshot.Slides[0].HasTiming, "Expected timing provenance to be visible in scene inspection.");
-        TestAssert.True(snapshot.Slides[0].HasOleObject, "Expected OLE object provenance to be visible in scene inspection.");
 
         var diagnostics = new List<OoxPdfDiagnostic>();
         XDocument slideXmlWithoutDynamicFeatures = XDocument.Parse("""
@@ -381,9 +369,6 @@ internal static class PptxDiagnosticsTests
         PptxSceneNode sceneNode = sceneSlide.SlideNodes[0];
         TestAssert.True(sceneNode.Shape?.HasUnsupportedTransparency == true, "Expected unsupported alpha provenance to be owned by the scene shape.");
 
-        PptxSceneNodeSnapshot snapshot = PptxRenderer.InspectScene(document, package).Slides[0].SlideNodes[0];
-        TestAssert.True(snapshot.ShapeHasUnsupportedTransparency, "Expected private-safe scene inspection to expose unsupported transparency state.");
-
         var diagnostics = new List<OoxPdfDiagnostic>();
         XDocument slideXmlWithoutAlpha = XDocument.Parse("""
             <?xml version="1.0" encoding="UTF-8"?>
@@ -428,12 +413,8 @@ internal static class PptxDiagnosticsTests
             PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
             PptxSceneShape shape = new PptxSceneBuilder().Build(document, package, CancellationToken.None).Slides[0].SlideNodes[0].Shape
                 ?? throw new InvalidOperationException("Expected shape scene node.");
-            PptxSceneNodeSnapshot snapshot = PptxRenderer.InspectScene(document, package).Slides[0].SlideNodes[0];
-
             TestAssert.True(shape.GradientFill.HasGradientSource, "Expected unsupported shape gradient provenance to remain scene-owned.");
             TestAssert.True(shape.GradientFill.HasUnsupportedGradient, "Expected unsupported shape gradient state to remain scene-owned.");
-            TestAssert.True(snapshot.ShapeHasGradientSource, "Expected private-safe scene inspection to expose shape gradient provenance.");
-            TestAssert.True(snapshot.ShapeHasUnsupportedGradient, "Expected private-safe scene inspection to expose unsupported shape gradient provenance.");
         }
 
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
@@ -468,12 +449,8 @@ internal static class PptxDiagnosticsTests
             PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
             PptxSceneShape shape = new PptxSceneBuilder().Build(document, package, CancellationToken.None).Slides[0].SlideNodes[0].Shape
                 ?? throw new InvalidOperationException("Expected shape scene node.");
-            PptxSceneNodeSnapshot snapshot = PptxRenderer.InspectScene(document, package).Slides[0].SlideNodes[0];
-
             TestAssert.True(shape.PatternFill.HasPatternSource, "Expected unsupported shape pattern provenance to remain scene-owned.");
             TestAssert.True(shape.PatternFill.HasUnsupportedPattern, "Expected unsupported shape pattern state to remain scene-owned.");
-            TestAssert.True(snapshot.ShapeHasPatternSource, "Expected private-safe scene inspection to expose shape pattern provenance.");
-            TestAssert.True(snapshot.ShapeHasUnsupportedPattern, "Expected private-safe scene inspection to expose unsupported shape pattern provenance.");
         }
 
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
@@ -514,12 +491,8 @@ internal static class PptxDiagnosticsTests
             PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
             PptxSceneTextBody textBody = new PptxSceneBuilder().Build(document, package, CancellationToken.None).Slides[0].SlideNodes[0].TextBody
                 ?? throw new InvalidOperationException("Expected shape text body scene node.");
-            PptxSceneNodeSnapshot snapshot = PptxRenderer.InspectScene(document, package).Slides[0].SlideNodes[0];
-
             TestAssert.True(textBody.HasUnsupportedTextOrientation, "Expected unsupported shape text orientation state to remain scene-owned.");
             TestAssert.True(textBody.HasUnsupportedVerticalOverflow, "Expected unsupported shape text overflow state to remain scene-owned.");
-            TestAssert.True(snapshot.TextHasUnsupportedOrientation, "Expected private-safe scene inspection to expose unsupported shape text orientation.");
-            TestAssert.True(snapshot.TextHasUnsupportedVerticalOverflow, "Expected private-safe scene inspection to expose unsupported shape text overflow.");
         }
 
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });

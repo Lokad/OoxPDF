@@ -839,9 +839,9 @@ internal static partial class PptxChartLegendsTests
         TestAssert.True(!scatterSeries.DataSources.BubbleSizes.HasCachedPoints, "Expected empty bubble-size cache to remain explicit.");
     }
 
-    public static void PptxSceneInspectionSummarizesChartDataSourceStructure()
+    public static void PptxSceneKeepsEmptyAndPopulatedChartDataSources()
     {
-        PptxSceneNodeSnapshot snapshot = PptxTests.BuildSingleChartSceneSnapshot("""
+        PptxSceneChart? chart = PptxTests.BuildSingleChartScene("""
             <?xml version="1.0" encoding="UTF-8"?>
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
               <c:chart><c:plotArea>
@@ -854,10 +854,18 @@ internal static partial class PptxChartLegendsTests
             </c:chartSpace>
             """);
 
-        TestAssert.Equal(3, snapshot.ChartDataSourceFormulaCount);
-        TestAssert.Equal(1, snapshot.ChartDataSourceCachedPointSourceCount);
-        TestAssert.Equal("multiLvlStrRef,numRef,strRef", string.Join(",", snapshot.ChartDataSourceReferenceKinds));
-        TestAssert.Equal("multiLvlStrCache,numCache,strCache", string.Join(",", snapshot.ChartDataSourceCacheKinds));
+        var sources = TestAssert.NotNull(chart).Plots.Single().Series.Single().DataSources;
+        TestAssert.Equal("Sheet1!$B$1", sources.Name.Formula);
+        TestAssert.Equal("Sheet1!$A$2:$A$4", sources.Categories.Formula);
+        TestAssert.Equal("Sheet1!$B$2:$B$4", sources.Values.Formula);
+        TestAssert.Equal("strRef", sources.Name.ReferenceKind);
+        TestAssert.Equal("multiLvlStrRef", sources.Categories.ReferenceKind);
+        TestAssert.Equal("numRef", sources.Values.ReferenceKind);
+        TestAssert.Equal("strCache", sources.Name.CacheKind);
+        TestAssert.Equal("multiLvlStrCache", sources.Categories.CacheKind);
+        TestAssert.Equal("numCache", sources.Values.CacheKind);
+        TestAssert.True(!sources.Name.HasCachedPoints && !sources.Categories.HasCachedPoints && sources.Values.HasCachedPoints,
+            "Presence of a cache declaration and populated data remain independent.");
     }
 
     public static void PptxSceneParsesChartPlotNumericOptions()
@@ -1012,15 +1020,9 @@ internal static partial class PptxChartLegendsTests
         TestAssert.Equal(PptxSceneChartManualLayoutMode.Unknown, layout.YModeKind);
         TestAssert.Equal(PptxSceneChartManualLayoutMode.Unknown, layout.WidthModeKind);
         TestAssert.Equal(PptxSceneChartManualLayoutMode.Unknown, layout.HeightModeKind);
-
-        PptxSceneNodeSnapshot snapshot = PptxTests.BuildSingleChartSceneSnapshot(chartXml);
-        TestAssert.True(!snapshot.HasChartPlotAreaManualLayout, "Expected scene inspection to keep absent plot-area manual layout distinct from a default inner target.");
-        TestAssert.Equal(string.Empty, snapshot.ChartPlotAreaLayoutTarget);
-        TestAssert.Equal("Unknown", snapshot.ChartPlotAreaLayoutTargetKind);
-        TestAssert.Equal(string.Empty, snapshot.ChartPlotAreaLayoutXMode);
-        TestAssert.Equal("Unknown", snapshot.ChartPlotAreaLayoutXModeKind);
-        TestAssert.Equal(string.Empty, snapshot.ChartPlotAreaLayoutWidthMode);
-        TestAssert.Equal("Unknown", snapshot.ChartPlotAreaLayoutWidthModeKind);
+        TestAssert.Equal(string.Empty, layout.LayoutTarget);
+        TestAssert.Equal(string.Empty, layout.XMode);
+        TestAssert.Equal(string.Empty, layout.WidthMode);
     }
 
     public static void PptxScenePreservesChartNumericPointIndicesAndBlanks()

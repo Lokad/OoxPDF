@@ -165,13 +165,6 @@ internal static class PptxTests
         return BuildSingleChartPackageScene(chartXml).Slides[0].SlideNodes[0].Chart;
     }
 
-    internal static PptxSceneNodeSnapshot BuildSingleChartSceneSnapshot(string chartXml)
-    {
-        (PptxDocument document, OoxPackage package) = BuildSingleChartPackage(chartXml);
-        PptxSceneSnapshot scene = PptxRenderer.InspectScene(document, package);
-        return scene.Slides[0].SlideNodes[0];
-    }
-
     internal static PptxScene BuildSingleChartPackageScene(string chartXml)
     {
         (PptxDocument document, OoxPackage package) = BuildSingleChartPackage(chartXml);

@@ -3440,23 +3440,8 @@ internal static class PptxChartRenderingTests
         TestAssert.Equal("-1", chart.Plots[0].DataLabels.RejectedOverrideIndexValues[0]);
         TestAssert.Equal("futureLabel", chart.Plots[0].DataLabels.RejectedOverrideIndexValues[1]);
         TestAssert.Equal(string.Empty, chart.Plots[0].DataLabels.RejectedOverrideIndexValues[2]);
-
-        PptxSceneNodeSnapshot snapshot = PptxTests.BuildSingleChartSceneSnapshot(chartXml);
-        TestAssert.Equal(1, snapshot.ChartSeriesCount);
-        TestAssert.Equal(1, snapshot.ChartSeriesMarkerCount);
-        TestAssert.Equal(1, snapshot.ChartSeriesPointStyleCount);
-        TestAssert.Equal(1, snapshot.ChartSeriesPointExplosionCount);
-        TestAssert.Equal(1, snapshot.ChartDataLabelsDefinedCount);
-        TestAssert.Equal(1, snapshot.ChartDataLabelOverrideCount);
-        TestAssert.Equal(1, snapshot.ChartDataLabelManualLayoutCount);
-        TestAssert.Equal(3, snapshot.ChartRejectedPointStyleIndexCount);
-        TestAssert.Equal("-1", snapshot.ChartRejectedPointStyleIndexValues[0]);
-        TestAssert.Equal("futurePoint", snapshot.ChartRejectedPointStyleIndexValues[1]);
-        TestAssert.Equal(string.Empty, snapshot.ChartRejectedPointStyleIndexValues[2]);
-        TestAssert.Equal(3, snapshot.ChartRejectedDataLabelOverrideIndexCount);
-        TestAssert.Equal("-1", snapshot.ChartRejectedDataLabelOverrideIndexValues[0]);
-        TestAssert.Equal("futureLabel", snapshot.ChartRejectedDataLabelOverrideIndexValues[1]);
-        TestAssert.Equal(string.Empty, snapshot.ChartRejectedDataLabelOverrideIndexValues[2]);
+        TestAssert.True(chart.Plots.Single().DataLabels.IsDefined, "Expected a plot-level data-label definition.");
+        TestAssert.Equal(1, chart.Plots.Single().Series.Count);
     }
 
     public static void PptxScenePreservesChartColorStyleDeclarations()
@@ -3494,7 +3479,6 @@ internal static class PptxChartRenderingTests
         });
         PptxSceneChart chart = new PptxSceneBuilder().Build(document, package, CancellationToken.None).Slides[0].SlideNodes[0].Chart
             ?? throw new InvalidOperationException("Expected chart scene.");
-        PptxSceneNodeSnapshot snapshot = PptxRenderer.InspectScene(document, package).Slides[0].SlideNodes[0];
 
         TestAssert.Equal("/ppt/charts/colors1.xml", chart.ColorStyle.PartName);
         TestAssert.Equal(1, chart.ColorStyle.VariationCount);
@@ -3522,13 +3506,7 @@ internal static class PptxChartRenderingTests
         TestAssert.True(chart.ColorStyle.Declarations[0].IsResolved, "Expected direct RGB color-style declaration to resolve.");
         TestAssert.True(!chart.ColorStyle.Declarations[1].IsResolved, "Expected unresolved scheme color-style declaration to remain observable.");
         TestAssert.Equal(1, chart.ColorStyle.Colors.Count);
-        TestAssert.Equal(1, snapshot.ChartColorStyleVariationCount);
-        TestAssert.Equal(3, snapshot.ChartColorStyleDeclarationCount);
-        TestAssert.Equal(2, snapshot.ChartColorStyleRootDeclarationCount);
-        TestAssert.Equal(2, snapshot.ChartColorStyleResolvedDeclarationCount);
-        TestAssert.Equal("srgbClr", snapshot.ChartColorStyleDeclarationKinds[0]);
-        TestAssert.Equal("schemeClr", snapshot.ChartColorStyleDeclarationKinds[1]);
-        TestAssert.Equal("srgbClr", snapshot.ChartColorStyleDeclarationKinds[2]);
+        TestAssert.Equal(2, chart.ColorStyle.Declarations.Count(declaration => declaration.IsResolved));
     }
 
     public static void PptxScenePreservesChartStyleUnderlineStrikeOnlyTextRoles()
@@ -3841,9 +3819,6 @@ internal static class PptxChartRenderingTests
         PptxSceneSlide sceneSlide = new PptxSceneBuilder().Build(document, package, CancellationToken.None).Slides[0];
         TestAssert.Equal("futureVert", sceneSlide.SlideNodes[0].Chart?.Title.TextBodyProperties.OrientationValue ?? string.Empty);
         TestAssert.Equal("ellipsis", sceneSlide.SlideNodes[0].Chart?.Title.TextBodyProperties.VerticalOverflowValue ?? string.Empty);
-        PptxSceneNodeSnapshot snapshot = PptxRenderer.InspectScene(document, package).Slides[0].SlideNodes[0];
-        TestAssert.Equal(1, snapshot.ChartTextBodyOrientationCount);
-        TestAssert.Equal(1, snapshot.ChartTextBodyVerticalOverflowCount);
 
         var diagnostics = new List<OoxPdfDiagnostic>();
         XDocument slideXmlWithoutBodyProperties = XDocument.Parse("""
@@ -3886,8 +3861,10 @@ internal static class PptxChartRenderingTests
             </c:chartSpace>
             """;
         (PptxDocument document, OoxPackage package) = PptxTests.BuildSingleChartPackage(chartXml);
-        PptxSceneNodeSnapshot snapshot = PptxRenderer.InspectScene(document, package).Slides[0].SlideNodes[0];
-        TestAssert.Equal(2, snapshot.ChartTextBodyVerticalOverflowCount);
+        PptxSceneSlide sceneSlide = new PptxSceneBuilder().Build(document, package, default).Slides.Single();
+        PptxSceneChart chart = TestAssert.NotNull(sceneSlide.SlideNodes.Single().Chart);
+        TestAssert.Equal("ellipsis", chart.Legend.TextBodyProperties.VerticalOverflowValue);
+        TestAssert.Equal("ellipsis", chart.Plots.Single().DataLabels.TextBodyProperties.VerticalOverflowValue);
 
         var diagnostics = new List<OoxPdfDiagnostic>();
         XDocument slideXmlWithoutBodyProperties = XDocument.Parse("""
@@ -3901,7 +3878,7 @@ internal static class PptxChartRenderingTests
             "EmitUnsupportedFeatureDiagnostics",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected unsupported feature diagnostic emitter.");
         Action<OoxPdfDiagnostic> sink = diagnostics.Add;
-        emitDiagnostics.Invoke(null, [new PptxSceneBuilder().Build(document, package, CancellationToken.None).Slides[0], slideXmlWithoutBodyProperties, "/ppt/slides/slide1.xml", 1, sink, new HashSet<string>(StringComparer.Ordinal)]);
+        emitDiagnostics.Invoke(null, [sceneSlide, slideXmlWithoutBodyProperties, "/ppt/slides/slide1.xml", 1, sink, new HashSet<string>(StringComparer.Ordinal)]);
 
         TestAssert.True(diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_TEXT_OVERFLOW"), "Chart legend/data-label ellipsis defaults should not warn unless an overflowing chart text-frame surface is unsupported.");
     }

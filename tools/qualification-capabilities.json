@@ -399,7 +399,7 @@
     "PptxSceneMarksFallbackChartPointIndices",
     "PptxScenePreservesChartMultiLevelCategoryPoints",
     "PptxScenePreservesChartNumberFormatMetadata",
-    "PptxSceneInspectionSummarizesChartDataSourceStructure",
+    "=PptxSceneKeepsEmptyAndPopulatedChartDataSources",
     "PptxSeriesOrderAutomaticDefaultsFollowResolvedOrder",
     "PptxSeriesOrderPermutationsKeepAutomaticPaintAndVisibleNames",
     "PptxSeriesOrderExplicitAndInvalidDeclarationsRetainOwners",
@@ -19588,6 +19588,8 @@
     "XrefTablePointsAtObjectHeaders"
   ],
   "pptx-layout-oracle-portability": [
+    "=PptxSyntheticTextAndShapesUseSiblingOrder",
+    "=PptxSyntheticUnknownGraphicFrameDoesNotDisableSiblingOrder",
     "PptxVerticalShapeClipUsesWritingFrameAxes",
     "PptxSyntheticChartTitleManualBoxDrivesPlacement",
     "PptxSyntheticMiddleAnchorUsesSignedActualSlackWhenWrappedTextOverflows",

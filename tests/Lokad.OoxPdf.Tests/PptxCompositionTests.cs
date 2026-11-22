@@ -479,21 +479,27 @@ internal static class PptxCompositionTests
         TestAssert.True(pdf.Contains(" TJ", StringComparison.Ordinal) || pdf.Contains("> Tj", StringComparison.Ordinal), "Expected body text to be drawn as PDF text.");
     }
 
-    public static void PptxSyntheticTextAndShapesUseSiblingOrder()
-    {
-        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
-        if (!File.Exists(arial))
-        {
-            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
-        }
+    public static void PptxSyntheticTextAndShapesUseSiblingOrder() =>
+        AssertSiblingPaintOrder(includeUnknownFrame: false);
 
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+    public static void PptxSyntheticUnknownGraphicFrameDoesNotDisableSiblingOrder() =>
+        AssertSiblingPaintOrder(includeUnknownFrame: true);
+
+    private static void AssertSiblingPaintOrder(bool includeUnknownFrame)
+    {
+        const string unknownFrame = """
+            <p:graphicFrame>
+              <p:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="914400"/></p:xfrm>
+              <a:graphic><a:graphicData uri="urn:vendor:unknown-graphic"/></a:graphic>
+            </p:graphicFrame>
+            """;
+        using var input = TestFixtures.CreateZipPackage(new Dictionary<string, string>
         {
             ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
             ["_rels/.rels"] = PptxTests.PackageRelationship(),
             ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
             ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
-            ["ppt/slides/slide1.xml"] = """
+            ["ppt/slides/slide1.xml"] = $"""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
                   <p:cSld><p:spTree>
@@ -501,6 +507,7 @@ internal static class PptxCompositionTests
                       <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/><a:noFill/><a:ln><a:noFill/></a:ln></p:spPr>
                       <p:txBody><a:bodyPr lIns="0" rIns="0" tIns="0" bIns="0"/><a:lstStyle/><a:p><a:r><a:rPr sz="2400"><a:latin typeface="Arial"/></a:rPr><a:t>Covered</a:t></a:r></a:p></p:txBody>
                     </p:sp>
+                    {(includeUnknownFrame ? unknownFrame : string.Empty)}
                     <p:sp>
                       <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill><a:ln><a:noFill/></a:ln></p:spPr>
                     </p:sp>
@@ -508,98 +515,33 @@ internal static class PptxCompositionTests
                 </p:sld>
                 """
         });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, output);
-
-        using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
-        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
-        PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
-        PptxSceneNode textNode = scene.Slides[0].SlideNodes[0];
-        PptxSceneNode coverNode = scene.Slides[0].SlideNodes[1];
-        PptxSceneSnapshot snapshot = PptxRenderer.InspectScene(document, package);
-        TestAssert.True(textNode.Shape?.LineNoFill == true, "Expected text shape line noFill provenance in the scene model.");
-        TestAssert.True(coverNode.Shape?.LineNoFill == true, "Expected cover shape line noFill provenance in the scene model.");
-        TestAssert.True(textNode.Shape?.Line.HasLine == false, "Expected explicit line noFill to suppress scene line rendering.");
-        TestAssert.True(coverNode.Shape?.Line.HasLine == false, "Expected explicit cover line noFill to suppress scene line rendering.");
-        TestAssert.True(snapshot.Slides[0].SlideNodes[0].ShapeLineNoFill, "Expected private-safe inspection to expose text shape line noFill.");
-        TestAssert.True(snapshot.Slides[0].SlideNodes[1].ShapeLineNoFill, "Expected private-safe inspection to expose cover shape line noFill.");
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        int textIndex = pdf.IndexOf(" TJ", StringComparison.Ordinal);
-        int coverIndex = pdf.IndexOf("72 396 288 72 re f", StringComparison.Ordinal);
-        TestAssert.True(textIndex >= 0 && coverIndex > textIndex, "Expected the covering shape to be emitted after the text box.");
-    }
-
-    public static void PptxSyntheticUnknownGraphicFrameDoesNotDisableSiblingOrder()
-    {
-        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
-        if (!File.Exists(arial))
-        {
-            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
-        }
-
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
-            ["_rels/.rels"] = PptxTests.PackageRelationship(),
-            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
-            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
-            ["ppt/slides/slide1.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <p:cSld><p:spTree>
-                    <p:sp>
-                      <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/><a:noFill/><a:ln><a:noFill/></a:ln></p:spPr>
-                      <p:txBody><a:bodyPr lIns="0" rIns="0" tIns="0" bIns="0"/><a:lstStyle/><a:p><a:r><a:rPr sz="2400"><a:latin typeface="Arial"/></a:rPr><a:t>Covered</a:t></a:r></a:p></p:txBody>
-                    </p:sp>
-                    <p:graphicFrame>
-                      <p:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="914400"/></p:xfrm>
-                      <a:graphic><a:graphicData uri="urn:vendor:unknown-graphic"/></a:graphic>
-                    </p:graphicFrame>
-                    <p:sp>
-                      <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill><a:ln><a:noFill/></a:ln></p:spPr>
-                    </p:sp>
-                  </p:spTree></p:cSld>
-                </p:sld>
-                """
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        using OoxPackage package = OoxPackage.Open(input, default);
+        var document = new PptxReader().Read(package, default);
         var diagnostics = new List<OoxPdfDiagnostic>();
+        var page = new PptxRenderer(new PortableRenderingTests.PinnedResolver())
+            .RenderPagesAsync(document, package, diagnostics.Add, default).ToBlockingEnumerable().Single();
 
-        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+        const string cover = "72 396 288 72 re f";
+        var paths = new List<string>();
+        RgbColor[] colors = PptxChartPaletteTests.ReadColoredPaints(page.Content, paths.Add, includeNeutral: true).ToArray();
+        TestAssert.Equal(new RgbColor(255, 0, 0), colors.Where((_, index) => paths[index] == cover).Single());
+        TestAssert.True(!PptxChartPaletteTests.ReadColoredPaints(page.Content, strokes: true, includeNeutral: true).Any(),
+            "Both shapes explicitly suppress their outlines.");
 
-        using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
-        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
-        PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
-        PptxSceneSlide sceneSlide = scene.Slides[0];
-        PptxSceneNode unknownGraphicFrame = sceneSlide.SlideNodes[1];
-        PptxSceneNodeSnapshot snapshot = PptxRenderer.InspectScene(document, package).Slides[0].SlideNodes[1];
-        TestAssert.Equal(PptxSceneNodeKind.UnknownGraphicFrame, unknownGraphicFrame.Kind);
-        TestAssert.True(snapshot.IsUnsupportedGraphicFrame, "Expected private-safe scene inspection to expose unsupported graphic-frame state.");
+        int coverIndex = page.Content.IndexOf(cover, StringComparison.Ordinal);
+        var beforeCover = new PdfPage(page.Width, page.Height, page.Content[..coverIndex], page.Fonts);
+        string text = string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(beforeCover, usePageCoordinates: false,
+            honorActualText: false).Select(show => show.Text));
+        TestAssert.Equal("Covered", text);
 
-        var sceneDiagnostics = new List<OoxPdfDiagnostic>();
-        XDocument slideXmlWithoutGraphicFrame = XDocument.Parse("""
-            <?xml version="1.0" encoding="UTF-8"?>
-            <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
-                   xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-              <p:cSld><p:spTree/></p:cSld>
-            </p:sld>
-            """);
-        System.Reflection.MethodInfo emitDiagnostics = typeof(PptxRenderer).GetMethod(
-            "EmitUnsupportedFeatureDiagnostics",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected unsupported feature diagnostic emitter.");
-        Action<OoxPdfDiagnostic> sceneSink = sceneDiagnostics.Add;
-        emitDiagnostics.Invoke(null, [sceneSlide, slideXmlWithoutGraphicFrame, "/ppt/slides/slide1.xml", 1, sceneSink, new HashSet<string>(StringComparer.Ordinal)]);
-        TestAssert.Contains("PPTX_UNSUPPORTED_GRAPHIC_FRAME", string.Join("|", sceneDiagnostics.Select(d => d.Id)));
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        int textIndex = pdf.IndexOf(" TJ", StringComparison.Ordinal);
-        int coverIndex = pdf.IndexOf("72 396 288 72 re f", StringComparison.Ordinal);
-        TestAssert.True(textIndex >= 0 && coverIndex > textIndex, "Expected unknown graphic frames to be ignored without reverting known siblings to fallback paint order.");
-        TestAssert.True(diagnostics.Any(d => d.Id == "PPTX_UNSUPPORTED_GRAPHIC_FRAME" && d.PartName == "/ppt/slides/slide1.xml"), "Unknown graphic frame should still emit a slide-scoped diagnostic.");
+        TestAssert.Equal(includeUnknownFrame ? 1 : 0, diagnostics.Count);
+        if (includeUnknownFrame)
+        {
+            var diagnostic = diagnostics.Single();
+            TestAssert.Equal("PPTX_UNSUPPORTED_GRAPHIC_FRAME", diagnostic.Id);
+            TestAssert.Equal("/ppt/slides/slide1.xml", diagnostic.PartName);
+            TestAssert.Equal(1, diagnostic.SlideIndex);
+        }
     }
 
     public static void PptxSyntheticGroupedTableUsesGroupTransform() =>

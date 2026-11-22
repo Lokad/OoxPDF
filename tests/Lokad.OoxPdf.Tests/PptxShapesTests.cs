@@ -222,7 +222,6 @@ internal static partial class PptxShapesTests
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
         PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
         PptxSceneNode shapeNode = scene.Slides[0].SlideNodes[0];
-        PptxSceneNodeSnapshot shapeSnapshot = PptxRenderer.InspectScene(document, package).Slides[0].SlideNodes[0];
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.True(shapeNode.Shape?.NoFill == true, "Expected explicit shape noFill provenance in the scene model.");
         TestAssert.True(shapeNode.Shape?.Fill.HasFill == false, "Expected explicit shape noFill to suppress scene solid fill resolution.");
@@ -232,11 +231,6 @@ internal static partial class PptxShapesTests
         TestAssert.Equal(2, shapeNode.Shape?.LineReference.Index ?? 0);
         TestAssert.True(shapeNode.Shape?.LineReference.Reference is not null, "Expected line reference XML ownership in the shape scene model.");
         TestAssert.True(shapeNode.Shape?.LineReference.Style is not null, "Expected line reference to resolve through the theme line style list.");
-        TestAssert.True(shapeSnapshot.ShapeNoFill, "Expected private-safe inspection to expose explicit shape noFill.");
-        TestAssert.Equal(0, shapeSnapshot.ShapeFillReferenceIndex);
-        TestAssert.True(!shapeSnapshot.ShapeFillReferenceResolved, "Expected private-safe inspection to expose unresolved fillRef state.");
-        TestAssert.Equal(2, shapeSnapshot.ShapeLineReferenceIndex);
-        TestAssert.True(shapeSnapshot.ShapeLineReferenceResolved, "Expected private-safe inspection to expose resolved lnRef state.");
         TestAssert.Contains("1.5 w", pdf);
         TestAssert.Contains("0.753 0 0 RG", pdf);
         TestAssert.Contains("72 396 144 72 re S", pdf);

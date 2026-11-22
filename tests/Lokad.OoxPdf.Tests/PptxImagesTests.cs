@@ -275,11 +275,11 @@ internal static partial class PptxImagesTests
         using FileStream stream = File.OpenRead(input);
         OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
-        PptxSceneNodeSnapshot picture = PptxRenderer.InspectScene(document, package).Slides[0].SlideNodes.Single();
-        TestAssert.True(picture.HasPicture, "Expected scene inspection to identify the picture node.");
-        TestAssert.True(picture.PictureHasLine, "Expected scene inspection to expose the picture outline.");
-        TestAssert.Equal(2d, picture.PictureLineWidth);
-        TestAssert.True(picture.PictureLineWidthSpecified, "Expected the authored picture outline width to stay visible.");
+        PptxSceneNode node = new PptxSceneBuilder().Build(document, package, default).Slides.Single().SlideNodes.Single();
+        PptxScenePicture picture = TestAssert.NotNull(node.Picture);
+        TestAssert.True(picture.Line.HasLine, "Expected an authored picture outline.");
+        TestAssert.Equal(2d, picture.Line.Width);
+        TestAssert.True(picture.Line.WidthSpecified, "Expected the authored picture outline width to stay visible.");
     }
 
     public static void PptxSyntheticPngPictureClipIntersectsSlideBounds()

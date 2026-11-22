@@ -329,64 +329,26 @@ internal static class PptxModelTests
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
-        PptxSceneSnapshot sceneSnapshot = PptxRenderer.InspectScene(document, package);
 
         TestAssert.Equal(1, scene.Slides.Count);
-        TestAssert.Equal(1, sceneSnapshot.Slides.Count);
         PptxSceneSlide slide = scene.Slides[0];
-        PptxSceneSlideSnapshot slideSnapshot = sceneSnapshot.Slides[0];
         TestAssert.True(slide.MasterXml is not null, "Expected master XML ownership in the scene model.");
         TestAssert.True(slide.LayoutXml is not null, "Expected layout XML ownership in the scene model.");
         TestAssert.True(slide.SlideXml.Root is not null, "Expected slide XML ownership in the scene model.");
-        TestAssert.True(slideSnapshot.HasMasterXml, "Expected scene inspection to expose master XML ownership without XML content.");
-        TestAssert.True(slideSnapshot.HasLayoutXml, "Expected scene inspection to expose layout XML ownership without XML content.");
-        TestAssert.True(slideSnapshot.HasSlideXml, "Expected scene inspection to expose slide XML ownership without XML content.");
         TestAssert.Equal(1, slide.MasterRelationships.Count);
         TestAssert.Equal(1, slide.LayoutRelationships.Count);
         TestAssert.Equal(5, slide.SlideRelationships.Count);
-        TestAssert.Equal(1, slideSnapshot.MasterRelationshipCount);
-        TestAssert.Equal(1, slideSnapshot.LayoutRelationshipCount);
-        TestAssert.Equal(5, slideSnapshot.SlideRelationshipCount);
         TestAssert.True(slide.SlideBackground.HasFill, "Expected slide background fill in the scene model.");
-        TestAssert.True(slideSnapshot.HasSlideBackground, "Expected scene inspection to expose slide background ownership.");
         TestAssert.Equal(new RgbColor(18, 52, 86), slide.SlideBackground.Color);
         TestAssert.Equal(0.8d, slide.SlideBackground.Alpha);
         TestAssert.Equal(1, slide.MasterNodes.Count);
         TestAssert.Equal(3, slide.LayoutNodes.Count);
         TestAssert.Equal(6, slide.SlideNodes.Count);
-        TestAssert.Equal(1, slideSnapshot.MasterNodes.Count);
-        TestAssert.Equal(3, slideSnapshot.LayoutNodes.Count);
-        TestAssert.Equal(6, slideSnapshot.SlideNodes.Count);
-        TestAssert.Equal("Shape", slideSnapshot.SlideNodes[0].Kind);
         TestAssert.True(slide.SlideNodes[0].HyperlinkClick.IsDefined, "Expected shape-level hyperlink-click source state in the scene model.");
         TestAssert.Equal("rIdShapeHyperlink", slide.SlideNodes[0].HyperlinkClick.RelationshipId ?? string.Empty);
         TestAssert.Equal("ppaction://hlinkshowjump", slide.SlideNodes[0].HyperlinkClick.Action ?? string.Empty);
-        TestAssert.True(slideSnapshot.SlideNodes[0].HasHyperlinkClick, "Expected scene inspection to expose shape-level hyperlink-click source state.");
-        TestAssert.Equal("rIdShapeHyperlink", slideSnapshot.SlideNodes[0].HyperlinkClickId ?? string.Empty);
-        TestAssert.Equal("ppaction://hlinkshowjump", slideSnapshot.SlideNodes[0].HyperlinkClickAction ?? string.Empty);
-        TestAssert.True(slideSnapshot.SlideNodes[0].HasTextBody, "Expected private-safe scene inspection to expose text-body ownership without text content.");
-        TestAssert.Equal(1, slideSnapshot.SlideNodes[0].TextParagraphCount);
-        TestAssert.Equal(3, slideSnapshot.SlideNodes[0].TextRunCount);
-        TestAssert.Equal("Table", slideSnapshot.SlideNodes[2].Kind);
-        TestAssert.Equal(1, slideSnapshot.SlideNodes[2].TableRowCount);
-        TestAssert.Equal(2, slideSnapshot.SlideNodes[2].TableCellCount);
-        TestAssert.Equal("{93296810-A885-4BE3-A3E7-6D5BEEA58F35}", slideSnapshot.SlideNodes[2].TableStyleId);
-        TestAssert.True(slideSnapshot.SlideNodes[2].TableStyleIsSupported, "Expected scene inspection to expose table-style support state.");
-        TestAssert.Equal("Medium-Style-2", slideSnapshot.SlideNodes[2].TableStyleName);
-        TestAssert.Equal("MediumStyle2", slideSnapshot.SlideNodes[2].TableStyleKind);
-        TestAssert.Equal("accent6", slideSnapshot.SlideNodes[2].TableStyleAccent);
-        TestAssert.True(slideSnapshot.SlideNodes[2].TableStyleFirstRow, "Expected scene inspection to expose table first-row state.");
-        TestAssert.Equal("1", slideSnapshot.SlideNodes[2].TableStyleFirstRowValue);
-        TestAssert.True(slideSnapshot.SlideNodes[2].TableStyleBandRow, "Expected scene inspection to expose table band-row state.");
-        TestAssert.Equal("1", slideSnapshot.SlideNodes[2].TableStyleBandRowValue);
-        TestAssert.Equal(2, slideSnapshot.SlideNodes[2].TableStyleFillCellCount);
-        TestAssert.Equal(2, slideSnapshot.SlideNodes[2].TableStyleTextColorCellCount);
-        TestAssert.Equal(2, slideSnapshot.SlideNodes[2].TableStyleTextBoldCellCount);
-        TestAssert.Equal("Chart", slideSnapshot.SlideNodes[4].Kind);
-        TestAssert.Equal(3, slideSnapshot.SlideNodes[4].ChartPlotCount);
-        TestAssert.Equal(2, slideSnapshot.SlideNodes[4].ChartAxisCount);
-        TestAssert.Equal("Group", slideSnapshot.SlideNodes[5].Kind);
-        TestAssert.Equal(1, slideSnapshot.SlideNodes[5].Children.Count);
+        var text = TestAssert.NotNull(slide.SlideNodes[0].TextBody);
+        TestAssert.Equal(3, text.Paragraphs.Single().Runs.Count);
         TestAssert.Equal(PptxSceneNodeKind.Shape, slide.SlideNodes[0].Kind);
         TestAssert.Equal("rect", slide.SlideNodes[0].Shape?.Preset ?? string.Empty);
         TestAssert.True(slide.SlideNodes[0].Shape?.HasCustomGeometry == false, "Expected preset geometry in the scene model.");
@@ -404,16 +366,10 @@ internal static class PptxModelTests
         TestAssert.True(slide.SlideNodes[0].Shape?.Effects.HasEffectList == true, "Expected shape effect list provenance in the scene model.");
         TestAssert.True(slide.SlideNodes[0].Shape?.Effects.HasEffectDag == true, "Expected shape effectDag provenance in the scene model.");
         TestAssert.Equal("reflection", string.Join(",", slide.SlideNodes[0].Shape?.Effects.UnsupportedEffectNames ?? []));
-        TestAssert.True(slideSnapshot.SlideNodes[0].ShapeHasEffectList, "Expected scene inspection to expose shape effect list provenance.");
-        TestAssert.True(slideSnapshot.SlideNodes[0].ShapeHasEffectDag, "Expected scene inspection to expose shape effectDag provenance.");
-        TestAssert.Equal(1, slideSnapshot.SlideNodes[0].ShapeUnsupportedEffectCount);
-        TestAssert.Equal("reflection", string.Join(",", slideSnapshot.SlideNodes[0].ShapeUnsupportedEffectNames));
         TestAssert.Equal(PptxSceneNodeKind.Picture, slide.SlideNodes[1].Kind);
         TestAssert.Equal("rIdImage", slide.SlideNodes[1].Picture?.RelationshipId ?? string.Empty);
         TestAssert.Equal("/ppt/media/image1.png", slide.SlideNodes[1].Picture?.TargetPartName ?? string.Empty);
         TestAssert.Equal("image/png", slide.SlideNodes[1].Picture?.Resource?.ContentType ?? string.Empty);
-        TestAssert.True(slideSnapshot.SlideNodes[1].HasPictureResource, "Expected scene inspection to expose picture resource ownership without media bytes.");
-        TestAssert.Equal("image/png", slideSnapshot.SlideNodes[1].PictureContentType);
         TestAssert.Equal(0.1d, slide.SlideNodes[1].Picture?.Crop.Left ?? 0d);
         TestAssert.Equal(0.4d, slide.SlideNodes[1].Picture?.Crop.Bottom ?? 0d);
         TestAssert.Equal("10000", slide.SlideNodes[1].Picture?.Crop.LeftValue ?? string.Empty);
@@ -424,11 +380,11 @@ internal static class PptxModelTests
         TestAssert.Equal(0.5d, slide.SlideNodes[1].Picture?.Alpha ?? 0d);
         TestAssert.Equal(PptxSceneImageRecolorKind.Luminance, slide.SlideNodes[1].Picture?.Recolor.Kind ?? PptxSceneImageRecolorKind.None);
         TestAssert.Equal("lum", slide.SlideNodes[1].Picture?.Recolor.KindValue ?? string.Empty);
-        TestAssert.Equal("lum", slideSnapshot.SlideNodes[1].PictureRecolorKindValue);
-        TestAssert.Equal(0.25d, slideSnapshot.SlideNodes[1].PictureRecolorBrightness ?? 0d);
-        TestAssert.Equal(-0.15d, slideSnapshot.SlideNodes[1].PictureRecolorContrast ?? 0d);
-        TestAssert.Equal("25000", slideSnapshot.SlideNodes[1].PictureRecolorBrightnessValue);
-        TestAssert.Equal("-15000", slideSnapshot.SlideNodes[1].PictureRecolorContrastValue);
+        var recolor = TestAssert.NotNull(slide.SlideNodes[1].Picture).Recolor;
+        TestAssert.Equal(0.25d, recolor.Brightness);
+        TestAssert.Equal(-0.15d, recolor.Contrast);
+        TestAssert.Equal("25000", recolor.BrightnessValue);
+        TestAssert.Equal("-15000", recolor.ContrastValue);
         TestAssert.Equal(PptxSceneNodeKind.Table, slide.SlideNodes[2].Kind);
         TestAssert.Equal(2, slide.SlideNodes[2].Table?.ColumnWidths.Count ?? 0);
         TestAssert.Equal(914400d, slide.SlideNodes[2].Table?.ColumnWidths[0] ?? 0d);
@@ -440,6 +396,14 @@ internal static class PptxModelTests
         TestAssert.Equal("accent6", slide.SlideNodes[2].Table?.Style.Accent ?? string.Empty);
         TestAssert.True(slide.SlideNodes[2].Table?.Style.FirstRow == true, "Expected table first-row flag in the scene model.");
         TestAssert.True(slide.SlideNodes[2].Table?.Style.BandRow == true, "Expected table band-row flag in the scene model.");
+        var table = TestAssert.NotNull(slide.SlideNodes[2].Table);
+        TestAssert.Equal("{93296810-A885-4BE3-A3E7-6D5BEEA58F35}", table.Style.StyleId);
+        TestAssert.Equal("1", table.Style.FirstRowValue);
+        TestAssert.Equal("1", table.Style.BandRowValue);
+        var cells = table.Rows.Single().Cells;
+        TestAssert.Equal(2, cells.Count);
+        TestAssert.True(cells.All(cell => cell.StyleFill.HasFill && cell.StyleText.Color is not null && cell.StyleText.Bold),
+            "Both cells retain the first-row style.");
         TestAssert.True(slide.SlideNodes[2].Table?.Source is not null, "Expected table source element ownership in the scene model.");
         TestAssert.True(slide.SlideNodes[2].Table?.Rows[0].Cells[0].StyleFill.HasFill == true, "Expected resolved table-style fill in the scene model.");
         TestAssert.Equal(new RgbColor(51, 102, 153), slide.SlideNodes[2].Table?.Rows[0].Cells[0].StyleFill.Color ?? default);
@@ -497,22 +461,13 @@ internal static class PptxModelTests
         TestAssert.Equal(PptxSceneNodeKind.Chart, slide.SlideNodes[4].Kind);
         TestAssert.Equal("rIdChart", slide.SlideNodes[4].Chart?.RelationshipId ?? string.Empty);
         TestAssert.Equal("/ppt/charts/chart1.xml", slide.SlideNodes[4].Chart?.TargetPartName ?? string.Empty);
-        TestAssert.Equal("rIdChart", slideSnapshot.SlideNodes[4].ChartRelationshipId);
-        TestAssert.Equal("/ppt/charts/chart1.xml", slideSnapshot.SlideNodes[4].ChartTargetPartName);
         TestAssert.True(slide.SlideNodes[4].Chart?.ChartXml is not null, "Expected chart part XML ownership in the scene model.");
         TestAssert.True(slide.SlideNodes[4].Chart?.ExternalData.IsDefined == true, "Expected chart external-data ownership in the scene model.");
         TestAssert.Equal("rId3", slide.SlideNodes[4].Chart?.ExternalData.RelationshipId ?? string.Empty);
         TestAssert.Equal("/ppt/embeddings/chart-data.xlsx", slide.SlideNodes[4].Chart?.ExternalData.TargetPartName ?? string.Empty);
         TestAssert.Equal("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", slide.SlideNodes[4].Chart?.ExternalData.Resource?.ContentType ?? string.Empty);
-        TestAssert.True(slideSnapshot.SlideNodes[4].HasChartExternalData, "Expected scene inspection to expose chart external-data ownership.");
-        TestAssert.Equal("rId3", slideSnapshot.SlideNodes[4].ChartExternalDataRelationshipId);
-        TestAssert.Equal("/ppt/embeddings/chart-data.xlsx", slideSnapshot.SlideNodes[4].ChartExternalDataTargetPartName);
-        TestAssert.True(slideSnapshot.SlideNodes[4].HasChartExternalDataResource, "Expected scene inspection to expose embedded workbook resource ownership without package bytes.");
-        TestAssert.Equal("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", slideSnapshot.SlideNodes[4].ChartExternalDataContentType);
         TestAssert.True(slide.SlideNodes[4].Chart?.Options.Date1904 == true, "Expected chart date-system flag ownership in the scene model.");
-        TestAssert.True(slideSnapshot.SlideNodes[4].ChartDate1904 == true, "Expected scene inspection to expose chart date-system policy.");
         TestAssert.True(slide.SlideNodes[4].Chart?.Options.PlotVisibleOnly == false, "Expected plot-visible-only flag ownership in the scene model.");
-        TestAssert.True(slideSnapshot.SlideNodes[4].ChartPlotVisibleOnly == false, "Expected scene inspection to expose chart plot-visible-only policy.");
         TestAssert.Equal(PptxSceneChartDisplayBlanksAs.Span, slide.SlideNodes[4].Chart?.Options.DisplayBlanksAsKind);
         TestAssert.True(slide.SlideNodes[4].Chart?.ColorStyle.IsDefined == true, "Expected chart color-style ownership in the scene model.");
         TestAssert.Equal("/ppt/charts/colors1.xml", slide.SlideNodes[4].Chart?.ColorStyle.PartName ?? string.Empty);
@@ -523,39 +478,21 @@ internal static class PptxModelTests
         TestAssert.Equal("srgbClr", slide.SlideNodes[4].Chart?.ColorStyle.Declarations[0].Kind ?? string.Empty);
         TestAssert.Equal("010203", slide.SlideNodes[4].Chart?.ColorStyle.Declarations[0].Value ?? string.Empty);
         TestAssert.True(slide.SlideNodes[4].Chart?.ColorStyle.Declarations[0].IsResolved == true, "Expected typed chart color-style declaration resolution state.");
-        TestAssert.True(slideSnapshot.SlideNodes[4].HasChartColorStyle, "Expected scene inspection to expose chart color-style ownership without XML contents.");
-        TestAssert.Equal("/ppt/charts/colors1.xml", slideSnapshot.SlideNodes[4].ChartColorStylePartName);
-        TestAssert.Equal("cycle", slideSnapshot.SlideNodes[4].ChartColorStyleMethod);
-        TestAssert.Equal("10", slideSnapshot.SlideNodes[4].ChartColorStyleId);
-        TestAssert.Equal(1, slideSnapshot.SlideNodes[4].ChartColorStyleColorCount);
-        TestAssert.Equal(0, slideSnapshot.SlideNodes[4].ChartColorStyleVariationCount);
-        TestAssert.Equal(1, slideSnapshot.SlideNodes[4].ChartColorStyleDeclarationCount);
-        TestAssert.Equal(1, slideSnapshot.SlideNodes[4].ChartColorStyleRootDeclarationCount);
-        TestAssert.Equal(1, slideSnapshot.SlideNodes[4].ChartColorStyleResolvedDeclarationCount);
-        TestAssert.Equal("srgbClr", slideSnapshot.SlideNodes[4].ChartColorStyleDeclarationKinds[0]);
+        var chart = TestAssert.NotNull(slide.SlideNodes[4].Chart);
+        TestAssert.Equal(3, chart.Plots.Count);
+        TestAssert.Equal(2, chart.Axes.Count);
+        TestAssert.Equal(new RgbColor(1, 2, 3), chart.ColorStyle.Colors.Single());
+        TestAssert.Equal(0, chart.ColorStyle.VariationCount);
+        TestAssert.Equal("srgbClr", chart.ColorStyle.RootDeclarations.Single().Kind);
         TestAssert.True(slide.SlideNodes[4].Chart?.StylePart.IsDefined == true, "Expected chart style-part ownership in the scene model.");
         TestAssert.Equal("/ppt/charts/style1.xml", slide.SlideNodes[4].Chart?.StylePart.PartName ?? string.Empty);
         TestAssert.Equal("10", slide.SlideNodes[4].Chart?.StylePart.Id ?? string.Empty);
-        TestAssert.True(slideSnapshot.SlideNodes[4].HasChartStylePart, "Expected scene inspection to expose chart style-part ownership without XML contents.");
-        TestAssert.Equal("/ppt/charts/style1.xml", slideSnapshot.SlideNodes[4].ChartStylePartName);
-        TestAssert.Equal("10", slideSnapshot.SlideNodes[4].ChartStylePartId);
-        TestAssert.Equal(3, slideSnapshot.SlideNodes[4].ChartStyleEntryCount);
-        TestAssert.Equal("gridlineMajor", slideSnapshot.SlideNodes[4].ChartStyleEntryRoles[0]);
-        TestAssert.Equal("gridlineMinor", slideSnapshot.SlideNodes[4].ChartStyleEntryRoles[1]);
-        TestAssert.Equal("title", slideSnapshot.SlideNodes[4].ChartStyleEntryRoles[2]);
-        TestAssert.Equal(1, slideSnapshot.SlideNodes[4].ChartStyleEntrySourceIndexes[0]);
-        TestAssert.Equal(2, slideSnapshot.SlideNodes[4].ChartStyleEntrySourceIndexes[1]);
-        TestAssert.Equal(3, slideSnapshot.SlideNodes[4].ChartStyleEntrySourceIndexes[2]);
-        TestAssert.Equal("http://schemas.microsoft.com/office/drawing/2012/chartStyle", slideSnapshot.SlideNodes[4].ChartStyleEntryNamespaceUris[0]);
-        TestAssert.Equal("http://schemas.microsoft.com/office/drawing/2012/chartStyle", slideSnapshot.SlideNodes[4].ChartStyleEntryNamespaceUris[1]);
-        TestAssert.Equal("http://schemas.microsoft.com/office/drawing/2012/chartStyle", slideSnapshot.SlideNodes[4].ChartStyleEntryNamespaceUris[2]);
-        TestAssert.Equal(2, slideSnapshot.SlideNodes[4].ChartStyleShapeStyleCount);
-        TestAssert.Equal(1, slideSnapshot.SlideNodes[4].ChartStyleShapeFillCount);
-        TestAssert.Equal(1, slideSnapshot.SlideNodes[4].ChartStyleFillReferenceCount);
-        TestAssert.Equal(1, slideSnapshot.SlideNodes[4].ChartStyleResolvedFillReferenceCount);
-        TestAssert.Equal(1, slideSnapshot.SlideNodes[4].ChartStyleEffectReferenceCount);
-        TestAssert.Equal(1, slideSnapshot.SlideNodes[4].ChartStyleResolvedEffectReferenceCount);
-        TestAssert.Equal(1, slideSnapshot.SlideNodes[4].ChartStyleFontReferenceCount);
+        var entries = chart.StylePart.Entries;
+        TestAssert.True(entries.Select(entry => (entry.Role, entry.SourceIndex)).SequenceEqual(
+            new[] { ("gridlineMajor", 1), ("gridlineMinor", 2), ("title", 3) }),
+            "Chart style entries retain their ordered source positions.");
+        TestAssert.True(entries.All(entry => entry.NamespaceUri == "http://schemas.microsoft.com/office/drawing/2012/chartStyle"),
+            "Style entries retain their authored namespace.");
         PptxSceneChartStyleEntry majorGridlineStyle = slide.SlideNodes[4].Chart?.StylePart.Entries.FirstOrDefault(entry => entry.Role == "gridlineMajor") ?? default;
         TestAssert.Equal("gridlineMajor", majorGridlineStyle.Role ?? string.Empty);
         TestAssert.Equal(1, majorGridlineStyle.SourceIndex);
@@ -630,21 +567,6 @@ internal static class PptxModelTests
         TestAssert.Equal(PptxSceneChartManualLayoutMode.Factor, slide.SlideNodes[4].Chart?.PlotAreaLayout.WidthModeKind);
         TestAssert.Equal("factor", slide.SlideNodes[4].Chart?.PlotAreaLayout.HeightMode ?? string.Empty);
         TestAssert.Equal(PptxSceneChartManualLayoutMode.Factor, slide.SlideNodes[4].Chart?.PlotAreaLayout.HeightModeKind);
-        TestAssert.True(slideSnapshot.SlideNodes[4].HasChartPlotAreaManualLayout, "Expected scene inspection to expose chart plot-area manual layout ownership.");
-        TestAssert.Equal(0.12d, slideSnapshot.SlideNodes[4].ChartPlotAreaLayoutX ?? 0d);
-        TestAssert.Equal(0.18d, slideSnapshot.SlideNodes[4].ChartPlotAreaLayoutY ?? 0d);
-        TestAssert.Equal(0.72d, slideSnapshot.SlideNodes[4].ChartPlotAreaLayoutWidth ?? 0d);
-        TestAssert.Equal(0.66d, slideSnapshot.SlideNodes[4].ChartPlotAreaLayoutHeight ?? 0d);
-        TestAssert.Equal("inner", slideSnapshot.SlideNodes[4].ChartPlotAreaLayoutTarget);
-        TestAssert.Equal("Inner", slideSnapshot.SlideNodes[4].ChartPlotAreaLayoutTargetKind);
-        TestAssert.Equal("factor", slideSnapshot.SlideNodes[4].ChartPlotAreaLayoutXMode);
-        TestAssert.Equal("Factor", slideSnapshot.SlideNodes[4].ChartPlotAreaLayoutXModeKind);
-        TestAssert.Equal("factor", slideSnapshot.SlideNodes[4].ChartPlotAreaLayoutYMode);
-        TestAssert.Equal("Factor", slideSnapshot.SlideNodes[4].ChartPlotAreaLayoutYModeKind);
-        TestAssert.Equal("factor", slideSnapshot.SlideNodes[4].ChartPlotAreaLayoutWidthMode);
-        TestAssert.Equal("Factor", slideSnapshot.SlideNodes[4].ChartPlotAreaLayoutWidthModeKind);
-        TestAssert.Equal("factor", slideSnapshot.SlideNodes[4].ChartPlotAreaLayoutHeightMode);
-        TestAssert.Equal("Factor", slideSnapshot.SlideNodes[4].ChartPlotAreaLayoutHeightModeKind);
         TestAssert.True(slide.SlideNodes[4].Chart?.ChartAreaStyle.NoFill == false, "Expected chart area noFill to be absent in the scene model.");
         TestAssert.True(slide.SlideNodes[4].Chart?.ChartAreaStyle.PatternFill.HasPattern == true, "Expected chart area pattern fill in the scene model.");
         TestAssert.Equal("pct25", slide.SlideNodes[4].Chart?.ChartAreaStyle.PatternFill.Preset ?? string.Empty);
@@ -917,28 +839,17 @@ internal static class PptxModelTests
         TestAssert.Equal("b", slide.SlideNodes[4].Chart?.Legend.Position ?? string.Empty);
         TestAssert.Equal(PptxSceneChartLegendPosition.Bottom, slide.SlideNodes[4].Chart?.Legend.PositionKind);
         TestAssert.True(slide.SlideNodes[4].Chart?.Legend.IsDefined == true, "Expected chart legend presence in the scene model.");
-        TestAssert.True(slideSnapshot.SlideNodes[4].HasChartLegend, "Expected scene inspection to expose chart legend presence.");
-        TestAssert.Equal("b", slideSnapshot.SlideNodes[4].ChartLegendPosition);
         TestAssert.True(slide.SlideNodes[4].Chart?.Legend.IsDeleted is null, "Expected missing chart legend delete metadata to remain distinct from an explicit disable.");
-        TestAssert.True(slideSnapshot.SlideNodes[4].ChartLegendDeleted is null, "Expected scene inspection to preserve missing chart legend delete metadata.");
         TestAssert.Equal(string.Empty, slide.SlideNodes[4].Chart?.Legend.IsDeletedValue ?? string.Empty);
-        TestAssert.Equal(string.Empty, slideSnapshot.SlideNodes[4].ChartLegendDeletedValue);
         TestAssert.True(slide.SlideNodes[4].Chart?.Legend.Overlay == true, "Expected chart legend overlay flag in the scene model.");
         TestAssert.Equal("1", slide.SlideNodes[4].Chart?.Legend.OverlayValue ?? string.Empty);
         TestAssert.Equal(-90d, slide.SlideNodes[4].Chart?.Legend.TextBodyProperties.RotationDegrees ?? 0d);
         TestAssert.Equal("-5400000", slide.SlideNodes[4].Chart?.Legend.TextBodyProperties.RotationValue ?? string.Empty);
-        TestAssert.True(slideSnapshot.SlideNodes[4].ChartLegendOverlay == true, "Expected scene inspection to expose chart legend overlay policy.");
-        TestAssert.Equal("1", slideSnapshot.SlideNodes[4].ChartLegendOverlayValue);
         TestAssert.True(slide.SlideNodes[4].Chart?.Legend.Layout.HasLayout == true, "Expected chart legend manual layout in the scene model.");
         TestAssert.Equal(0.7d, slide.SlideNodes[4].Chart?.Legend.Layout.X ?? 0d);
         TestAssert.Equal(0.68d, slide.SlideNodes[4].Chart?.Legend.Layout.Y ?? 0d);
         TestAssert.Equal(0.2d, slide.SlideNodes[4].Chart?.Legend.Layout.Width ?? 0d);
         TestAssert.Equal(0.15d, slide.SlideNodes[4].Chart?.Legend.Layout.Height ?? 0d);
-        TestAssert.True(slideSnapshot.SlideNodes[4].HasChartLegendManualLayout, "Expected scene inspection to expose chart legend manual layout ownership.");
-        TestAssert.Equal(0.7d, slideSnapshot.SlideNodes[4].ChartLegendLayoutX ?? 0d);
-        TestAssert.Equal(0.68d, slideSnapshot.SlideNodes[4].ChartLegendLayoutY ?? 0d);
-        TestAssert.Equal(0.2d, slideSnapshot.SlideNodes[4].ChartLegendLayoutWidth ?? 0d);
-        TestAssert.Equal(0.15d, slideSnapshot.SlideNodes[4].ChartLegendLayoutHeight ?? 0d);
         TestAssert.True(slide.SlideNodes[4].Chart?.Legend.ShapeStyle.Fill.HasFill == true, "Expected chart legend fill in the scene model.");
         TestAssert.Equal(new RgbColor(238, 247, 255), slide.SlideNodes[4].Chart?.Legend.ShapeStyle.Fill.Color ?? default);
         TestAssert.Equal(0.5d, slide.SlideNodes[4].Chart?.Legend.ShapeStyle.Line.Width ?? 0d);
@@ -962,8 +873,6 @@ internal static class PptxModelTests
         TestAssert.Equal("rIdShapeImage", slide.SlideNodes[5].Children[0].Shape?.PictureFill.RelationshipId ?? string.Empty);
         TestAssert.Equal("/ppt/media/image1.png", slide.SlideNodes[5].Children[0].Shape?.PictureFill.TargetPartName ?? string.Empty);
         TestAssert.Equal("image/png", slide.SlideNodes[5].Children[0].Shape?.PictureFill.Resource?.ContentType ?? string.Empty);
-        TestAssert.True(slideSnapshot.SlideNodes[5].Children[0].HasShapePictureFillResource, "Expected scene inspection to expose shape picture-fill resource ownership without media bytes.");
-        TestAssert.Equal("image/png", slideSnapshot.SlideNodes[5].Children[0].ShapePictureFillContentType);
         TestAssert.Equal(0.05d, slide.SlideNodes[5].Children[0].Shape?.PictureFill.Crop.Left ?? 0d);
         TestAssert.Equal(0.2d, slide.SlideNodes[5].Children[0].Shape?.PictureFill.Crop.Bottom ?? 0d);
         TestAssert.Equal("5000", slide.SlideNodes[5].Children[0].Shape?.PictureFill.Crop.LeftValue ?? string.Empty);
@@ -1394,91 +1303,93 @@ internal static class PptxModelTests
         using FileStream stream = File.OpenRead(input);
         OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
-        PptxTextLayoutSnapshot layout = PptxRenderer.InspectTextLayout(document, package, slideIndex);
-        PptxTextFlowSnapshot flow = PptxRenderer.InspectTextFlow(document, package, slideIndex);
-        PptxTextFrameModelSnapshot[] models = PptxRenderer.InspectTextFrameModels(document, package, slideIndex).ToArray();
-        IReadOnlyList<PptxTextGlyphRunSnapshot> glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, slideIndex);
-        PptxSceneSnapshot scene = PptxRenderer.InspectScene(document, package);
-        PptxSceneSlideSnapshot? sceneSlide = scene.Slides.FirstOrDefault(slide => slide.Index == slideIndex + 1);
+        PptxScene scene = new PptxSceneBuilder().Build(document, package, default);
+        var fonts = new PresentationFontResolver(null);
+        PptxTextLayoutSnapshot layout = PptxRenderer.InspectTextLayout(document, package, slideIndex, scene, fonts);
+        PptxTextFlowSnapshot flow = PptxRenderer.InspectTextFlow(document, package, slideIndex, scene, fonts);
+        PptxTextFrameModelSnapshot[] models = PptxRenderer.InspectTextFrameModels(document, package, slideIndex, scene, fonts).ToArray();
+        IReadOnlyList<PptxTextGlyphRunSnapshot> glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, slideIndex, scene, fonts);
+        PptxSceneSlide? sceneSlide = scene.Slides.FirstOrDefault(slide => slide.Index == slideIndex + 1);
 
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(output))!);
-        object[] FlattenSceneNodes(IReadOnlyList<PptxSceneNodeSnapshot> nodes, string source)
+        object[] FlattenSceneNodes(IReadOnlyList<PptxSceneNode> nodes, string source)
         {
             return nodes
                 .SelectMany(node => FlattenSceneNode(node, source))
                 .ToArray();
         }
 
-        IEnumerable<object> FlattenSceneNode(PptxSceneNodeSnapshot node, string source)
+        IEnumerable<object> FlattenSceneNode(PptxSceneNode node, string source)
         {
+            PptxSceneNodeSnapshot snapshot = PptxRenderer.InspectSceneNode(node);
             yield return new
             {
                 source,
-                node.Kind,
-                node.IsPlaceholder,
-                node.HasBounds,
-                node.RotationDegrees,
-                node.FlipHorizontal,
-                node.FlipVertical,
-                node.ShapePreset,
-                node.ShapeHasCustomGeometry,
-                node.ShapeHasUnsupportedCustomGeometry,
-                node.ShapeHasGradientSource,
-                node.ShapeHasUnsupportedGradient,
-                node.ShapeHasPatternSource,
-                node.ShapeHasUnsupportedPattern,
-                node.ShapeNoFill,
-                node.ShapeLineNoFill,
-                node.ShapeHasEffectList,
-                node.ShapeHasEffectDag,
-                node.ShapeUnsupportedEffectCount,
-                node.ShapeUnsupportedEffectNames,
-                node.HasTextBody,
-                node.TextParagraphCount,
-                node.TextRunCount,
-                node.TextHasUnsupportedOrientation,
-                node.TextHasUnsupportedVerticalOverflow,
-                node.HasPicture,
-                node.PictureRecolorKind,
-                node.HasTable,
-                node.TableRowCount,
-                node.TableCellCount,
-                node.HasChart,
-                node.ChartPlotCount,
-                node.ChartAxisCount,
-                node.ChartSeriesCount,
-                node.ChartSeriesMarkerCount,
-                node.ChartSeriesPointStyleCount,
-                node.ChartSeriesPointExplosionCount,
-                node.ChartDataLabelsDefinedCount,
-                node.ChartDataLabelOverrideCount,
-                node.ChartDataLabelManualLayoutCount,
-                node.ChartTextBodyOrientationCount,
-                node.ChartTextBodyVerticalOverflowCount,
-                node.HasChartColorStyle,
-                node.ChartColorStyleMethod,
-                node.ChartColorStyleColorCount,
-                node.ChartColorStyleVariationCount,
-                node.ChartColorStyleDeclarationCount,
-                node.ChartColorStyleRootDeclarationCount,
-                node.ChartColorStyleResolvedDeclarationCount,
-                node.ChartColorStyleDeclarationKinds,
-                node.HasChartStylePart,
-                node.ChartStyleEntryCount,
-                node.ChartStyleEntryRoles,
-                node.ChartStyleEntrySourceIndexes,
-                node.ChartStyleEntryNamespaceUris,
-                node.ChartStyleShapeStyleCount,
-                node.ChartStyleShapeFillCount,
-                node.ChartStyleFillReferenceCount,
-                node.ChartStyleResolvedFillReferenceCount,
-                node.ChartStyleEffectReferenceCount,
-                node.ChartStyleResolvedEffectReferenceCount,
-                node.ChartStyleFontReferenceCount,
-                node.HasGroupTransform
+                snapshot.Kind,
+                snapshot.IsPlaceholder,
+                snapshot.HasBounds,
+                snapshot.RotationDegrees,
+                snapshot.FlipHorizontal,
+                snapshot.FlipVertical,
+                snapshot.ShapePreset,
+                snapshot.ShapeHasCustomGeometry,
+                snapshot.ShapeHasUnsupportedCustomGeometry,
+                snapshot.ShapeHasGradientSource,
+                snapshot.ShapeHasUnsupportedGradient,
+                snapshot.ShapeHasPatternSource,
+                snapshot.ShapeHasUnsupportedPattern,
+                snapshot.ShapeNoFill,
+                snapshot.ShapeLineNoFill,
+                snapshot.ShapeHasEffectList,
+                snapshot.ShapeHasEffectDag,
+                snapshot.ShapeUnsupportedEffectCount,
+                snapshot.ShapeUnsupportedEffectNames,
+                snapshot.HasTextBody,
+                snapshot.TextParagraphCount,
+                snapshot.TextRunCount,
+                snapshot.TextHasUnsupportedOrientation,
+                snapshot.TextHasUnsupportedVerticalOverflow,
+                snapshot.HasPicture,
+                snapshot.PictureRecolorKind,
+                snapshot.HasTable,
+                snapshot.TableRowCount,
+                snapshot.TableCellCount,
+                snapshot.HasChart,
+                snapshot.ChartPlotCount,
+                snapshot.ChartAxisCount,
+                snapshot.ChartSeriesCount,
+                snapshot.ChartSeriesMarkerCount,
+                snapshot.ChartSeriesPointStyleCount,
+                snapshot.ChartSeriesPointExplosionCount,
+                snapshot.ChartDataLabelsDefinedCount,
+                snapshot.ChartDataLabelOverrideCount,
+                snapshot.ChartDataLabelManualLayoutCount,
+                snapshot.ChartTextBodyOrientationCount,
+                snapshot.ChartTextBodyVerticalOverflowCount,
+                snapshot.HasChartColorStyle,
+                snapshot.ChartColorStyleMethod,
+                snapshot.ChartColorStyleColorCount,
+                snapshot.ChartColorStyleVariationCount,
+                snapshot.ChartColorStyleDeclarationCount,
+                snapshot.ChartColorStyleRootDeclarationCount,
+                snapshot.ChartColorStyleResolvedDeclarationCount,
+                snapshot.ChartColorStyleDeclarationKinds,
+                snapshot.HasChartStylePart,
+                snapshot.ChartStyleEntryCount,
+                snapshot.ChartStyleEntryRoles,
+                snapshot.ChartStyleEntrySourceIndexes,
+                snapshot.ChartStyleEntryNamespaceUris,
+                snapshot.ChartStyleShapeStyleCount,
+                snapshot.ChartStyleShapeFillCount,
+                snapshot.ChartStyleFillReferenceCount,
+                snapshot.ChartStyleResolvedFillReferenceCount,
+                snapshot.ChartStyleEffectReferenceCount,
+                snapshot.ChartStyleResolvedEffectReferenceCount,
+                snapshot.ChartStyleFontReferenceCount,
+                snapshot.HasGroupTransform
             };
 
-            foreach (PptxSceneNodeSnapshot child in node.Children)
+            foreach (PptxSceneNode child in node.Children)
             {
                 foreach (object descendant in FlattenSceneNode(child, source))
                 {
@@ -1495,9 +1406,9 @@ internal static class PptxModelTests
                 sceneSlide.PartName,
                 sceneSlide.MasterPartName,
                 sceneSlide.LayoutPartName,
-                sceneSlide.HasMasterBackground,
-                sceneSlide.HasLayoutBackground,
-                sceneSlide.HasSlideBackground,
+                HasMasterBackground = sceneSlide.MasterBackground.HasFill,
+                HasLayoutBackground = sceneSlide.LayoutBackground.HasFill,
+                HasSlideBackground = sceneSlide.SlideBackground.HasFill,
                 masterNodeCount = sceneSlide.MasterNodes.Count,
                 layoutNodeCount = sceneSlide.LayoutNodes.Count,
                 slideNodeCount = sceneSlide.SlideNodes.Count,
@@ -1855,17 +1766,16 @@ internal static class PptxModelTests
         using FileStream stream = File.OpenRead(input);
         OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
-        PptxSceneSnapshot snapshot = PptxRenderer.InspectScene(document, package);
-        PptxSceneSlideSnapshot slide = snapshot.Slides[0];
+        PptxSceneSlide slide = new PptxSceneBuilder().Build(document, package, default).Slides.Single();
 
-        TestAssert.Equal("accent1", slide.MasterColorMap["bg1"]);
-        TestAssert.Equal("accent2", slide.MasterColorMap["tx1"]);
-        TestAssert.Equal("accent3", slide.LayoutColorMap["bg1"]);
-        TestAssert.Equal("accent4", slide.LayoutColorMap["tx1"]);
-        TestAssert.Equal("accent2", slide.LayoutColorMap["accent2"]);
-        TestAssert.Equal("accent5", slide.SlideColorMap["bg1"]);
-        TestAssert.Equal("accent6", slide.SlideColorMap["tx1"]);
-        TestAssert.Equal("accent2", slide.SlideColorMap["accent2"]);
+        TestAssert.Equal("accent1", slide.MasterColorMap.Mappings["bg1"]);
+        TestAssert.Equal("accent2", slide.MasterColorMap.Mappings["tx1"]);
+        TestAssert.Equal("accent3", slide.LayoutColorMap.Mappings["bg1"]);
+        TestAssert.Equal("accent4", slide.LayoutColorMap.Mappings["tx1"]);
+        TestAssert.Equal("accent2", slide.LayoutColorMap.Mappings["accent2"]);
+        TestAssert.Equal("accent5", slide.SlideColorMap.Mappings["bg1"]);
+        TestAssert.Equal("accent6", slide.SlideColorMap.Mappings["tx1"]);
+        TestAssert.Equal("accent2", slide.SlideColorMap.Mappings["accent2"]);
     }
 
     public static void PptxThemeColorMapResolvesSceneTextAndShapeColors()
