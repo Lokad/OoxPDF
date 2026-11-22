@@ -198,9 +198,11 @@ jobs:
           retention-days: 7
           path: |
             artifacts/ci-candidate/identity.json
-            artifacts/ci-candidate/**/bin/Release/net11.0/*
+            artifacts/ci-candidate/src/Lokad.OoxPdf.Cli/bin/Release/net11.0/*
+            !artifacts/ci-candidate/src/Lokad.OoxPdf.Cli/bin/Release/net11.0/Lokad.OoxPdf.pdb
             artifacts/ci-candidate-net10/identity.json
-            artifacts/ci-candidate-net10/**/bin/Release/net10.0/*
+            artifacts/ci-candidate-net10/src/Lokad.OoxPdf.Cli/bin/Release/net10.0/*
+            !artifacts/ci-candidate-net10/src/Lokad.OoxPdf.Cli/bin/Release/net10.0/Lokad.OoxPdf.pdb
             artifacts/nuget/*.nupkg
             artifacts/nuget/*.snupkg
             artifacts/package-smoke/**/summary.json
