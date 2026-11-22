@@ -99,9 +99,43 @@ internal static partial class PptxImagesTests
         TestAssert.Equal("62500", PptxSceneBuilder.ReadPictureAlphaValue(shapePictureFill) ?? string.Empty);
     }
 
-    public static void PptxSyntheticPngPictureRendersImageXObject()
+    public static void PptxSyntheticPngPictureRendersImageXObject() =>
+        AssertPaintedPng(TestFixtures.CreateRgbPng(2, 1, [255, 0, 0, 0, 0, 255]), expectedAlpha: null);
+
+    private static void AssertPaintedPng(byte[] png, byte[]? expectedAlpha)
     {
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
+        using var input = CreateSyntheticPngPicturePackage(png);
+        using var package = OoxPackage.Open(input, default);
+        var document = new PptxReader().Read(package, default);
+        var page = new PptxRenderer(new TestFaceFontResolver())
+            .RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().Single();
+        var resource = page.Images.Single();
+        var image = resource.Image;
+
+        TestAssert.Equal("Im1", resource.ResourceName);
+        TestAssert.Contains("/Im1 Do", page.Content);
+        TestAssert.Equal(1, PptxTests.CountOccurrences(page.Content, "0 0 720 540 re W* n"));
+        TestAssert.Contains("72 396 144 72 re W* n", page.Content);
+        TestAssert.Equal(2, image.Width);
+        TestAssert.Equal(1, image.Height);
+        TestAssert.Equal("/DeviceRGB", image.ColorSpace);
+        TestAssert.Equal("/FlateDecode", image.Filter);
+        TestAssert.Equal(8, image.BitsPerComponent);
+        TestAssert.True(TestFixtures.InflateZlib(image.Bytes).SequenceEqual(new byte[] { 255, 0, 0, 0, 0, 255 }),
+            "The painted image puts the red sample before the blue sample.");
+        if (expectedAlpha is null)
+        {
+            TestAssert.True(image.Alpha is null, "The opaque picture has no soft mask.");
+        }
+        else
+        {
+            TestAssert.True(TestFixtures.InflateZlib(TestAssert.NotNull(image.Alpha)).SequenceEqual(expectedAlpha),
+                "The soft mask for the painted image follows the order of the color samples.");
+        }
+    }
+
+    private static MemoryStream CreateSyntheticPngPicturePackage(byte[] png) =>
+        TestFixtures.CreateZipPackage(new Dictionary<string, byte[]>
         {
             ["[Content_Types].xml"] = TestFixtures.Utf8("""
                 <?xml version="1.0" encoding="UTF-8"?>
@@ -131,22 +165,8 @@ internal static partial class PptxImagesTests
                   </p:pic></p:spTree></p:cSld>
                 </p:sld>
                 """),
-            ["ppt/media/image1.png"] = TestFixtures.CreateRgbPng(2, 1, [255, 0, 0, 0, 0, 255])
+            ["ppt/media/image1.png"] = png
         });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, output);
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("/Subtype /Image", pdf);
-        TestAssert.Contains("/XObject", pdf);
-        TestAssert.True(
-            PptxTests.CountOccurrences(pdf, "0 0 720 540 re W* n") == 1,
-            "Pictures should rely on the page clip and their own frame clip, not an extra slide-sized node clip.");
-        TestAssert.Contains("72 396 144 72 re W* n", pdf);
-        TestAssert.Contains("/Im1 Do", pdf);
-        TestAssert.Contains("/Width 2 /Height 1", pdf);
-    }
 
     public static void PptxSyntheticPngPictureOuterShadowUsesRasterSoftMask()
     {
@@ -3737,49 +3757,8 @@ internal static partial class PptxImagesTests
         }
     }
 
-    public static void PptxSyntheticRgbaPngPicturePreservesSoftMask()
-    {
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
-        {
-            ["[Content_Types].xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-                  <Default Extension="xml" ContentType="application/xml"/>
-                  <Default Extension="png" ContentType="image/png"/>
-                  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
-                  <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
-                </Types>
-                """),
-            ["_rels/.rels"] = TestFixtures.Utf8(PptxTests.PackageRelationship()),
-            ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8(PptxTests.PresentationRelationship()),
-            ["ppt/presentation.xml"] = TestFixtures.Utf8(PptxTests.BasicPresentation()),
-            ["ppt/slides/_rels/slide1.xml.rels"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image1.png"/>
-                </Relationships>
-                """),
-            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-                  <p:cSld><p:spTree><p:pic>
-                    <p:blipFill><a:blip r:embed="rId1"/></p:blipFill>
-                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
-                  </p:pic></p:spTree></p:cSld>
-                </p:sld>
-                """),
-            ["ppt/media/image1.png"] = TestFixtures.CreateRgbaPng(2, 1, [255, 0, 0, 255, 0, 0, 255, 64])
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, output);
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("/Subtype /Image", pdf);
-        TestAssert.Contains("/SMask", pdf);
-        TestAssert.Contains("/Im1 Do", pdf);
-    }
+    public static void PptxSyntheticRgbaPngPicturePreservesSoftMask() =>
+        AssertPaintedPng(TestFixtures.CreateRgbaPng(2, 1, [255, 0, 0, 255, 0, 0, 255, 64]), expectedAlpha: [255, 64]);
 
     public static void PptxSyntheticEllipsePictureFillClipsImage()
     {
@@ -3893,45 +3872,21 @@ internal static partial class PptxImagesTests
 
     public static void PptxUnsupportedPngImageEmitsDiagnostic()
     {
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
-        {
-            ["[Content_Types].xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-                  <Default Extension="xml" ContentType="application/xml"/>
-                  <Default Extension="png" ContentType="image/png"/>
-                  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
-                  <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
-                </Types>
-                """),
-            ["_rels/.rels"] = TestFixtures.Utf8(PptxTests.PackageRelationship()),
-            ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8(PptxTests.PresentationRelationship()),
-            ["ppt/presentation.xml"] = TestFixtures.Utf8(PptxTests.BasicPresentation()),
-            ["ppt/slides/_rels/slide1.xml.rels"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image1.png"/>
-                </Relationships>
-                """),
-            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-                  <p:cSld><p:spTree><p:pic>
-                    <p:blipFill><a:blip r:embed="rId1"/></p:blipFill>
-                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
-                  </p:pic></p:spTree></p:cSld>
-                </p:sld>
-                """),
-            ["ppt/media/image1.png"] = TestFixtures.CreateUnsupportedHighBitDepthPng()
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        using var input = CreateSyntheticPngPicturePackage(TestFixtures.CreateUnsupportedHighBitDepthPng());
+        using var output = new MemoryStream();
         var collector = new DiagnosticCollector();
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { InputKind = OoxPdfInputKind.Pptx, DiagnosticSink = collector.Add });
 
-        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = collector.Add });
-
-        TestAssert.True(File.Exists(output), "Unsupported image should not fail the whole conversion.");
-        TestAssert.True(collector.Diagnostics.Any(d => d.Id == "IMAGE_UNSUPPORTED_FORMAT" && d.Severity == OoxPdfSeverity.Error), "Unsupported image should emit a release-blocking diagnostic.");
+        string pdf = Encoding.ASCII.GetString(output.ToArray());
+        TestAssert.Contains("/Type /Page ", pdf);
+        TestAssert.DoesNotContain("/Subtype /Image", pdf);
+        TestAssert.DoesNotContain("/Im1 Do", pdf);
+        var diagnostic = collector.Diagnostics.Single();
+        TestAssert.Equal("IMAGE_UNSUPPORTED_FORMAT", diagnostic.Id);
+        TestAssert.Equal(OoxPdfSeverity.Error, diagnostic.Severity);
+        TestAssert.Equal("/ppt/media/image1.png", diagnostic.PartName);
+        TestAssert.Equal(1, diagnostic.SlideIndex ?? 0);
+        TestAssert.Equal("Ignored", diagnostic.Fallback);
     }
 
     public static void PptxSyntheticCroppedPictureUsesClipping()

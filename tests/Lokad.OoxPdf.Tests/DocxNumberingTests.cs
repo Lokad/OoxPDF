@@ -1511,16 +1511,21 @@ internal static partial class DocxNumberingTests
         TestAssert.Contains("DOCX_NUMBERING_INDENT", ids);
         TestAssert.Contains("DOCX_STYLE_PARAGRAPH_SPACING", ids);
         TestAssert.DoesNotContain("DOCX_STYLE_TABLE_COMPLEX_SCRIPT_RUN", ids);
-        TestAssert.DoesNotContain("DOCX_NUMBERING_MARKER_FONT", ids);
         TestAssert.DoesNotContain("DOCX_STYLE_TABLE_STYLE", ids);
         TestAssert.DoesNotContain("DOCX_UNSUPPORTED_TABLE_STYLE", ids);
         TestAssert.DoesNotContain("DOCX_UNSUPPORTED_TABLE_HEADER_ROW", ids);
         TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_NUMBERING_INDENT" && d.PartName == "/word/numbering.xml"), "Numbering diagnostics should point to numbering.xml.");
     }
 
-    public static void DocxSupportedNumberingLeftHangingTabsDoNotEmitIndentDiagnostic()
+    public static void DocxSupportedNumberingLeftHangingTabsDoNotEmitIndentDiagnostic() =>
+        AssertSupportedNumberingIndent("""w:hanging="360" """, 720, 90f, 108f);
+
+    public static void DocxSupportedNumberingFirstLineIndentDoesNotEmitIndentDiagnostic() =>
+        AssertSupportedNumberingIndent("""w:firstLine="120" """, 840, 114f, 144f);
+
+    private static void AssertSupportedNumberingIndent(string indent, int tabTwips, float labelX, float bodyX)
     {
-        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        using var input = TestFixtures.CreateZipPackage(new Dictionary<string, string>
         {
             ["[Content_Types].xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
@@ -1552,15 +1557,15 @@ internal static partial class DocxNumberingTests
                   </w:body>
                 </w:document>
                 """,
-            ["word/numbering.xml"] = """
+            ["word/numbering.xml"] = $$"""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
                   <w:abstractNum w:abstractNumId="1">
                     <w:lvl w:ilvl="0">
                       <w:numFmt w:val="decimal"/>
                       <w:pPr>
-                        <w:tabs><w:tab w:val="num" w:pos="720"/></w:tabs>
-                        <w:ind w:left="720" w:hanging="360"/>
+                        <w:tabs><w:tab w:val="num" w:pos="{{tabTwips}}"/></w:tabs>
+                        <w:ind w:left="720" {{indent}}/>
                       </w:pPr>
                     </w:lvl>
                   </w:abstractNum>
@@ -1568,73 +1573,19 @@ internal static partial class DocxNumberingTests
                 </w:numbering>
                 """
         });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        using var package = OoxPackage.Open(input, default);
         var diagnostics = new List<OoxPdfDiagnostic>();
+        var document = new DocxReader().Read(package, diagnostics.Add, default, OoxPdfDocxMarkupMode.Final);
+        var page = new DocxRenderer(new PortableRenderingTests.PinnedResolver(),
+            OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().Single();
 
-        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
-
-        string ids = string.Join("|", diagnostics.Select(d => d.Id).Order(StringComparer.Ordinal));
-        TestAssert.DoesNotContain("DOCX_NUMBERING_INDENT", ids);
-        TestAssert.DoesNotContain("DOCX_NUMBERING_MARKER_FONT", ids);
-    }
-
-    public static void DocxSupportedNumberingFirstLineIndentDoesNotEmitIndentDiagnostic()
-    {
-        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-                  <Default Extension="xml" ContentType="application/xml"/>
-                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
-                  <Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/>
-                </Types>
-                """,
-            ["_rels/.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
-                </Relationships>
-                """,
-            ["word/_rels/document.xml.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rIdNumbering" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering" Target="numbering.xml"/>
-                </Relationships>
-                """,
-            ["word/document.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-                  <w:body>
-                    <w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr></w:pPr><w:r><w:t>Item</w:t></w:r></w:p>
-                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
-                  </w:body>
-                </w:document>
-                """,
-            ["word/numbering.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-                  <w:abstractNum w:abstractNumId="1">
-                    <w:lvl w:ilvl="0">
-                      <w:numFmt w:val="decimal"/>
-                      <w:pPr>
-                        <w:tabs><w:tab w:val="num" w:pos="840"/></w:tabs>
-                        <w:ind w:left="720" w:firstLine="120"/>
-                      </w:pPr>
-                    </w:lvl>
-                  </w:abstractNum>
-                  <w:num w:numId="1"><w:abstractNumId w:val="1"/></w:num>
-                </w:numbering>
-                """
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-        var diagnostics = new List<OoxPdfDiagnostic>();
-
-        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
-
-        string ids = string.Join("|", diagnostics.Select(d => d.Id).Order(StringComparer.Ordinal));
-        TestAssert.DoesNotContain("DOCX_NUMBERING_INDENT", ids);
-        TestAssert.DoesNotContain("DOCX_NUMBERING_MARKER_FONT", ids);
+        var label = PortableRenderingTests.ReadPaintedSourceLabel(page, "1.");
+        var body = PortableRenderingTests.ReadPaintedSourceLabel(page, "Item");
+        TestAssert.Equal(labelX, label[0].Origin.X);
+        TestAssert.Equal(bodyX, body[0].Origin.X);
+        TestAssert.Equal(label[0].Origin.Y, body[0].Origin.Y);
+        TestAssert.True(diagnostics.All(diagnostic => diagnostic.Id != "DOCX_NUMBERING_INDENT"),
+            "A supported numbered paragraph should paint without the indent approximation warning.");
     }
 }

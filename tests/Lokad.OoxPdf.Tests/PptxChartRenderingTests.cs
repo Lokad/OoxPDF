@@ -2011,68 +2011,79 @@ internal static class PptxChartRenderingTests
         TestAssert.Contains("9 9 re", pdf);
         TestAssert.DoesNotContain("0.078 0.369 0.498 RG", pdf);
     }
-    // RV04: plot-wide smoothing fallout (Office smooths every series when any series
-    // carries smooth=1, with markers on all of them; only the smoothed series is
-    // pinned here, the plot-wide behavior is covered by deck verification).
-    public static void LinePlotSmoothedAppliesPackagePlotWide()
+
+    public static void LinePlotSmoothedAppliesPackagePlotWide() =>
+        AssertLinePlotSmoothing();
+
+    public static void LinePlotSmoothedKeepsExplicitStraightSeries() =>
+        AssertLinePlotSmoothing(straightSeries: true);
+
+    private static void AssertLinePlotSmoothing(bool straightSeries = false, bool straightPlot = false)
     {
-        string input = TestFixtures.WriteTempPackage(".pptx", ThemedBarChartPackage("""
+        const string disabledSmoothing = """<c:smooth val="0"/>""";
+        string seriesSmooth = straightSeries ? disabledSmoothing : string.Empty;
+        string plotSmooth = straightPlot ? disabledSmoothing : string.Empty;
+        using var input = TestFixtures.CreateZipPackage(ThemedBarChartPackage($$"""
             <?xml version="1.0" encoding="UTF-8"?>
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:chart><c:plotArea><c:lineChart>
               <c:grouping val="standard"/>
               <c:varyColors val="0"/>
               <c:ser>
                 <c:tx><c:strLit><c:pt idx="0"><c:v>Demand</c:v></c:pt></c:strLit></c:tx>
-                <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
-                <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt></c:numLit></c:val>
+                <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt><c:pt idx="2"><c:v>C</c:v></c:pt></c:strLit></c:cat>
+                <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>8</c:v></c:pt><c:pt idx="2"><c:v>4</c:v></c:pt></c:numLit></c:val>
                 <c:smooth val="1"/>
               </c:ser>
               <c:ser>
                 <c:tx><c:strLit><c:pt idx="0"><c:v>Supply</c:v></c:pt></c:strLit></c:tx>
-                <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
-                <c:val><c:numLit><c:pt idx="0"><c:v>1</c:v></c:pt><c:pt idx="1"><c:v>3</c:v></c:pt></c:numLit></c:val>
+                <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt><c:pt idx="2"><c:v>C</c:v></c:pt></c:strLit></c:cat>
+                <c:val><c:numLit><c:pt idx="0"><c:v>1</c:v></c:pt><c:pt idx="1"><c:v>5</c:v></c:pt><c:pt idx="2"><c:v>3</c:v></c:pt></c:numLit></c:val>
+                {{seriesSmooth}}
               </c:ser>
+              {{plotSmooth}}
               <c:axId val="10"/><c:axId val="20"/>
-            </c:lineChart><c:catAx><c:axId val="10"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="b"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:catAx><c:valAx><c:axId val="20"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="l"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:valAx></c:plotArea></c:chart></c:chartSpace>
+            </c:lineChart><c:catAx><c:axId val="10"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="b"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:catAx><c:valAx><c:axId val="20"/><c:scaling><c:orientation val="minMax"/><c:min val="0"/><c:max val="10"/></c:scaling><c:axPos val="l"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:valAx></c:plotArea></c:chart></c:chartSpace>
             """));
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-        OoxPdfConverter.Convert(input, output);
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Equal(6, Regex.Matches(pdf, @"0\.082 0\.376 0\.51 RG|0\.914 0\.443 0\.196 RG").Count);
-        TestAssert.DoesNotContain("0.078 0.369 0.498 RG", pdf);
-        TestAssert.DoesNotContain("0.91 0.427 0.173 RG", pdf);
+        using var package = OoxPackage.Open(input, default);
+        var document = new PptxReader().Read(package, default);
+        string paint = new PptxRenderer(new TestFaceFontResolver())
+            .RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().Single().Content;
+
+        // The explicit 0–10 axis scale fixes these PDF endpoints at the three category centers.
+        AssertSeries("0.082 0.376 0.51", smooth: true, diamond: true, heights: ["272.264", "410.816", "318.448"]);
+        AssertSeries(straightSeries ? "0.91 0.427 0.173" : "0.914 0.443 0.196",
+            smooth: !straightSeries, diamond: false, heights: ["249.172", "341.54", "295.356"]);
+        TestAssert.DoesNotContain("0.078 0.369 0.498 RG", paint);
+        if (!straightSeries) TestAssert.DoesNotContain("0.91 0.427 0.173 RG", paint);
+
+        void AssertSeries(string rgb, bool smooth, bool diamond, string[] heights)
+        {
+            const string coordinate = @"[-0-9.]+";
+            string color = Regex.Escape(rgb);
+            string width = smooth ? "3" : @"2\.25";
+            var paths = Regex.Matches(paint, $@"(?m)^{color} RG\s+{width} w\s+\[\] 0 d\s+1 J\s+1 j\s+q\s+"
+                + $@"83 226\.08 410 230\.92 re W\* n\s+(?<path>{coordinate} {coordinate} m\s+(?:(?:{coordinate} )+[cl]\s+){{2}})S\s+Q");
+            TestAssert.True(paths.Count == 1, $"Series {rgb} must paint one path in its plot clip.");
+            string[] commands = paths[0].Groups["path"].Value.Trim().Split('\n', StringSplitOptions.TrimEntries);
+            string[] positions = ["151.333", "288", "424.667"];
+            TestAssert.Equal($"{positions[0]} {heights[0]} m", commands[0]);
+            for (int index = 1; index < positions.Length; index++)
+            {
+                string point = Regex.Escape($"{positions[index]} {heights[index]}");
+                string segment = smooth ? $@"^(?:{coordinate} ){{4}}{point} c$" : $@"^{point} l$";
+                TestAssert.True(Regex.IsMatch(commands[index], segment),
+                    $"Series {rgb} must reach point {index + 1} with the authored smoothing precedence.");
+            }
+
+            string markerWidth = smooth ? "1" : @"0\.75";
+            string markerSize = smooth ? "9" : "7";
+            string marker = diamond ? $@"(?:{coordinate} {coordinate} [ml]\s+){{4}}h\s+S"
+                : $@"{coordinate} {coordinate} {markerSize} {markerSize} re S";
+            TestAssert.Equal(3, Regex.Matches(paint,
+                $@"(?m)^{color} RG\s+{markerWidth} w\s+\[\] 0 d\s+0 J\s+1 j\s+{marker}\s+Q").Count);
+        }
     }
 
-    // RV04: an explicit smooth=false keeps the legacy straight package under a
-    // smoothed plot (explicit markup wins per series).
-    public static void LinePlotSmoothedKeepsExplicitStraightSeries()
-    {
-        string input = TestFixtures.WriteTempPackage(".pptx", ThemedBarChartPackage("""
-            <?xml version="1.0" encoding="UTF-8"?>
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:chart><c:plotArea><c:lineChart>
-              <c:grouping val="standard"/>
-              <c:varyColors val="0"/>
-              <c:ser>
-                <c:tx><c:strLit><c:pt idx="0"><c:v>Demand</c:v></c:pt></c:strLit></c:tx>
-                <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
-                <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt></c:numLit></c:val>
-                <c:smooth val="1"/>
-              </c:ser>
-              <c:ser>
-                <c:tx><c:strLit><c:pt idx="0"><c:v>Supply</c:v></c:pt></c:strLit></c:tx>
-                <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
-                <c:val><c:numLit><c:pt idx="0"><c:v>1</c:v></c:pt><c:pt idx="1"><c:v>3</c:v></c:pt></c:numLit></c:val>
-                <c:smooth val="0"/>
-              </c:ser>
-              <c:axId val="10"/><c:axId val="20"/>
-            </c:lineChart><c:catAx><c:axId val="10"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="b"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:catAx><c:valAx><c:axId val="20"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="l"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:valAx></c:plotArea></c:chart></c:chartSpace>
-            """));
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-        OoxPdfConverter.Convert(input, output);
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.True(Regex.IsMatch(pdf, @"^2\.25 w\r?$", RegexOptions.Multiline), "The explicit-straight series keeps the default width.");
-        TestAssert.Contains("0.91 0.427 0.173 RG", pdf);
-    }
     // RV04: style-18 legend keys match the series appearance (Office draws raw 5pt
     // swatches with gradient gallery markers; the two plot series pin four marker
     // shadings and the two legend keys pin two more).
@@ -2233,38 +2244,8 @@ internal static class PptxChartRenderingTests
         TestAssert.Contains("1 0 0 rg", pdf);
     }
 
-    // RV04: an explicit plot-level smooth=0 does not veto an explicitly
-    // smoothed series (Office smooths every series with 3pt raw strokes when one
-    // series carries smooth=1 under plot smooth=0); inherited straight is not explicit.
-    public static void LinePlotSmoothZeroYieldsToExplicitSeriesSmooth()
-    {
-        string input = TestFixtures.WriteTempPackage(".pptx", ThemedBarChartPackage("""
-            <?xml version="1.0" encoding="UTF-8"?>
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:chart><c:plotArea><c:lineChart>
-              <c:grouping val="standard"/>
-              <c:varyColors val="0"/>
-              <c:ser>
-                <c:tx><c:strLit><c:pt idx="0"><c:v>Demand</c:v></c:pt></c:strLit></c:tx>
-                <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
-                <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt></c:numLit></c:val>
-                <c:smooth val="1"/>
-              </c:ser>
-              <c:ser>
-                <c:tx><c:strLit><c:pt idx="0"><c:v>Supply</c:v></c:pt></c:strLit></c:tx>
-                <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
-                <c:val><c:numLit><c:pt idx="0"><c:v>1</c:v></c:pt><c:pt idx="1"><c:v>3</c:v></c:pt></c:numLit></c:val>
-              </c:ser>
-              <c:smooth val="0"/>
-              <c:axId val="10"/><c:axId val="20"/>
-            </c:lineChart><c:catAx><c:axId val="10"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="b"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:catAx><c:valAx><c:axId val="20"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="l"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:valAx></c:plotArea></c:chart></c:chartSpace>
-            """));
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-        OoxPdfConverter.Convert(input, output);
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Equal(6, Regex.Matches(pdf, @"0\.082 0\.376 0\.51 RG|0\.914 0\.443 0\.196 RG").Count);
-        TestAssert.DoesNotContain("0.078 0.369 0.498 RG", pdf);
-        TestAssert.DoesNotContain("0.91 0.427 0.173 RG", pdf);
-    }
+    public static void LinePlotSmoothZeroYieldsToExplicitSeriesSmooth() =>
+        AssertLinePlotSmoothing(straightPlot: true);
 
     // RV04: default-style legend keys keep the legacy tinted swatches.
     public static void DefaultLegendKeysKeepTintedSwatches()
