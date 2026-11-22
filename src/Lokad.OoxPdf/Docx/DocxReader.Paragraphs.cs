@@ -143,7 +143,7 @@ internal sealed partial class DocxReader
             }
             else if (child.Name == WordprocessingNamespace + "r")
             {
-                AddParagraphRun(child, ref pageInstructionSeen, revision);
+                AddParagraphRun(child, revision);
                 return true;
             }
             else if (child.Name == WordprocessingNamespace + "bookmarkStart")
@@ -738,7 +738,7 @@ internal sealed partial class DocxReader
             AddResolvedTextRuns(runs, DocxTextRun.ResolveDisplayText(text, resolvedRun.AllCaps == true), ApplyMarkupRevisionStyle(resolvedRun, revision, markupMode), runStyleResolution, sourceRunIndex, sourceTextOffsetInRun: 0, revision, MergeRevisionLists(revision, runRevisions), placeholderKind);
         }
 
-        void AddParagraphRun(XElement run, ref bool currentPageInstructionSeen, DocxRevisionInfo? revision)
+        void AddParagraphRun(XElement run, DocxRevisionInfo? revision)
         {
             int firstRun = runs.Count;
             int firstReference = inlineReferences.Count;
@@ -751,14 +751,6 @@ internal sealed partial class DocxReader
                 runProperties, paragraphStyleId, characterStyleId, styles, tableCellStyle?.Run,
                 out DocxRunStyleResolution runStyleResolution);
             string text = ReadRunText(run);
-            string? fieldInstruction = run
-                .Elements(WordprocessingNamespace + "instrText")
-                .Select(instruction => (string?)instruction)
-                .FirstOrDefault(value => value is not null);
-            string? placeholder = ResolveFieldPlaceholder(fieldInstruction);
-            DocxFieldKind? placeholderKind = placeholder is null ? null : ResolveFieldKind(fieldInstruction);
-            int fieldTextRunIndex = runs.Count;
-            int fieldTextLengthStart = runs.Sum(run => run.Text.Length);
             IReadOnlyList<DocxRevisionInfo> runRevisions = ReadRunPropertyChangeRevisions(runProperties,
                 paragraphStyleId, characterStyleId, styles, tableCellStyle?.Run, resolvedRun);
             AddRevisions(paragraphRevisions, runRevisions);
@@ -799,51 +791,29 @@ internal sealed partial class DocxReader
                     runStyleResolution,
                     revision,
                     effectiveRevisions,
-                    ref currentPageInstructionSeen,
                     runDrawings.Positions,
                     fieldPictureChildren);
                 PublishRun(runDrawings.Pictures);
                 return;
             }
 
-            if (placeholder is not null)
-            {
-                text = placeholder;
-                currentPageInstructionSeen = true;
-            }
-            if (placeholder is null &&
-                fieldInstruction is null &&
-                // Nontext children delimit the text before and after their
-                // source position, even when they share one formatted run.
-                run.Elements().Any(child => IsInlineReferenceElement(child) || child.Annotation<AutomaticNoteStoryMarker>() is not null ||
+            // Nontext children delimit the text before and after their
+            // source position, even when they share one formatted run.
+            if (run.Elements().Any(child => IsInlineReferenceElement(child) || child.Annotation<AutomaticNoteStoryMarker>() is not null ||
                     child.Name == WordprocessingNamespace + "drawing" || child.Name == WordprocessingNamespace + "pict" ||
                     child.Name == WordprocessingNamespace + "sym"))
             {
                 AddOrderedRunContent(run, currentSourceRunIndex, resolvedRun, runStyleResolution, revision, effectiveRevisions,
-                    ref currentPageInstructionSeen, runDrawings.Positions);
+                    runDrawings.Positions);
             }
             else if (text.Length != 0)
             {
-                AddParagraphDisplayText(text, currentSourceRunIndex, sourceTextOffset: 0, resolvedRun, runStyleResolution, revision, effectiveRevisions, placeholderKind);
+                AddParagraphDisplayText(text, currentSourceRunIndex, sourceTextOffset: 0, resolvedRun, runStyleResolution, revision, effectiveRevisions);
                 AddInlineReferences(run, currentSourceRunIndex, resolvedRun, runStyleResolution, emitDisplayRuns: false, revision, effectiveRevisions);
             }
             else
             {
                 AddInlineReferences(run, currentSourceRunIndex, resolvedRun, runStyleResolution, emitDisplayRuns: false, revision, effectiveRevisions);
-            }
-
-            if (fieldInstruction is not null)
-            {
-                AddFieldReference(
-                    ResolveFieldKind(fieldInstruction),
-                    DocxFieldSourceKind.ComplexInstruction,
-                    fieldInstruction,
-                    placeholder,
-                    currentSourceRunIndex,
-                    fieldTextRunIndex,
-                    fieldTextLengthStart, hasCachedResult: false, rendersCachedResult: false, usesPlaceholder: false, hasSeparate: false, nestingDepth: 0, instructionRunCount: 0, resultRunCount: 0,
-                    fieldReferences: fieldReferences,
-                    runs: runs);
             }
 
             if (runDrawings.Pictures.Count != 0) RecordComplexFieldResult();
@@ -938,7 +908,7 @@ internal sealed partial class DocxReader
                         foreach (var nested in EnumerateBookmarkedBlocks(content.Elements(), markupMode, cancellationToken, revision))
                         {
                             if (nested.Element.Name != WordprocessingNamespace + "p") continue;
-                            if (!first) AddParagraphRun(new XElement(WordprocessingNamespace + "r", new XElement(WordprocessingNamespace + "br")), ref pageInstructionSeen, revision);
+                            if (!first) AddParagraphRun(new XElement(WordprocessingNamespace + "r", new XElement(WordprocessingNamespace + "br")), revision);
                             first = false;
                             if (nested.LeadingBookmarks is { } leading)
                             {
@@ -994,11 +964,11 @@ internal sealed partial class DocxReader
                     view.Add(copy);
                 }
                 fragment.Clear();
-                AddParagraphRun(view, ref pageInstructionSeen, revision);
+                AddParagraphRun(view, revision);
             }
         }
 
-        void AddParagraphDisplayText(string text, int currentSourceRunIndex, int sourceTextOffset, DocxResolvedRunProperties resolvedRun, DocxRunStyleResolution runStyleResolution, DocxRevisionInfo? revision, IReadOnlyList<DocxRevisionInfo> effectiveRevisions, DocxFieldKind? fieldKind = null)
+        void AddParagraphDisplayText(string text, int currentSourceRunIndex, int sourceTextOffset, DocxResolvedRunProperties resolvedRun, DocxRunStyleResolution runStyleResolution, DocxRevisionInfo? revision, IReadOnlyList<DocxRevisionInfo> effectiveRevisions)
         {
             if (text.Length == 0)
             {
@@ -1032,7 +1002,7 @@ internal sealed partial class DocxReader
                 return;
 
             int runsBefore = runs.Count;
-            AddResolvedTextRuns(runs, displayText, resolvedRun, runStyleResolution, currentSourceRunIndex, sourceTextOffset, revision, effectiveRevisions, fieldKind);
+            AddResolvedTextRuns(runs, displayText, resolvedRun, runStyleResolution, currentSourceRunIndex, sourceTextOffset, revision, effectiveRevisions);
             int addedRuns = runs.Count - runsBefore;
             foreach (DocxComplexFieldState field in resultFields)
             {
@@ -1055,7 +1025,6 @@ internal sealed partial class DocxReader
             DocxRunStyleResolution runStyleResolution,
             DocxRevisionInfo? revision,
             IReadOnlyList<DocxRevisionInfo> revisions,
-            ref bool currentPageInstructionSeen,
             IReadOnlyDictionary<XElement, (int Offset, int Order)>? positions,
             IReadOnlySet<XElement>? fieldPictureChildren = null)
         {
@@ -1077,7 +1046,7 @@ internal sealed partial class DocxReader
                 {
                     var position = (positions ??= ReadRunInlinePositions(run, cancellationToken))[child];
                     AddComplexFieldInstruction(child, currentSourceRunIndex, position.Offset, position.Order,
-                        resolvedRun, runStyleResolution, revision, revisions, ref currentPageInstructionSeen);
+                        resolvedRun, runStyleResolution, revision, revisions);
                 }
                 else if (IsInlineReferenceElement(child))
                 {
@@ -1257,8 +1226,7 @@ internal sealed partial class DocxReader
             DocxResolvedRunProperties resolvedRun,
             DocxRunStyleResolution runStyleResolution,
             DocxRevisionInfo? revision,
-            IReadOnlyList<DocxRevisionInfo> revisions,
-            ref bool currentPageInstructionSeen)
+            IReadOnlyList<DocxRevisionInfo> revisions)
         {
             string instructionText = (string?)instruction ?? string.Empty;
             DocxComplexFieldState? field = CurrentComplexField();
@@ -1282,7 +1250,7 @@ internal sealed partial class DocxReader
                         ResolveFieldKind(instructionText));
                     for (int index = firstRun; index < runs.Count; index++)
                         runs[index] = runs[index] with { SourceDrawingIndexInRun = sourceDrawingIndex };
-                    currentPageInstructionSeen = true;
+                    pageInstructionSeen = true;
                 }
 
                 AddFieldReference(
