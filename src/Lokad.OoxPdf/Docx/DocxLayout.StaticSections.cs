@@ -26,6 +26,19 @@ internal sealed partial class DocxLayoutEngine
          string.Equals(variant, "even", StringComparison.OrdinalIgnoreCase)) &&
         !IsStaticStoryVariantEnabled(settings, variant);
 
+    internal static (
+        IReadOnlyList<DocxBodyElement> Header,
+        IReadOnlyList<DocxBodyElement> Footer,
+        IReadOnlyList<DocxFloatingDrawing> HeaderDrawings,
+        IReadOnlyList<DocxFloatingDrawing> FooterDrawings)
+        GetStaticFrameSources(DocxPageSettings settings, string variant) =>
+        (DocxBlockTraversal.FindStaticStoryBodyElements(variant,
+             settings.HeaderBodyElementsByType, settings.HeaderParagraphsByType) ?? [],
+         DocxBlockTraversal.FindStaticStoryBodyElements(variant,
+             settings.FooterBodyElementsByType, settings.FooterParagraphsByType) ?? [],
+         settings.HeaderFloatingDrawingsByType.GetValueOrDefault(variant, []),
+         settings.FooterFloatingDrawingsByType.GetValueOrDefault(variant, []));
+
     private static DocxSelectedStaticStory SelectStaticHeaderFooter(
         IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> bodyElementsByType,
         IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> paragraphsByType,
