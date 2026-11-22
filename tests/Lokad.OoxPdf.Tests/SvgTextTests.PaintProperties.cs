@@ -375,6 +375,16 @@ internal static partial class SvgTextTests
             "1 0 0 RG", "/PatternType 2", " d");
     }
 
+    public static void SvgDashArrayXmlWhitespaceMatchesSpacesInBothFormats()
+    {
+        AssertSvgPaintInBothFormats(
+            DashStrokeSvg("""stroke-dasharray="13 6.5" stroke-dashoffset="13" """,
+                "stroke-dasharray:13 6.5;stroke-dashoffset:-6.5px"),
+            DashStrokeSvg("""stroke-dasharray="13&#x9;6.5" stroke-dashoffset="13" """,
+                "stroke-dasharray:13&#xD;&#xA;6.5;stroke-dashoffset:-6.5px"),
+            "1 0 0 RG", "/PatternType 2", " d");
+    }
+
     public static void SvgPercentageOpacityMatchesUnitOpacityInBothFormats()
     {
         AssertSvgPaintInBothFormats(

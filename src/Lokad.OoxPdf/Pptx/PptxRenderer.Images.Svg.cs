@@ -1755,7 +1755,7 @@ internal sealed partial class PptxRenderer
         {
             return null;
         }
-        string[] parts = text.Replace(",", " ").Split((char)32, StringSplitOptions.RemoveEmptyEntries);
+        string[] parts = text.Split([',', ' ', '\t', '\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
         var lengths = new List<double>();
         foreach (string part in parts)
         {

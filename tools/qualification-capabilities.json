@@ -665,6 +665,7 @@
     "=SvgPercentageStrokeWidthsMatchViewportUnitsInBothFormats",
     "=SvgPercentageDashLengthsMatchViewportUnitsInBothFormats",
     "=SvgPercentageDashOffsetsMatchViewportUnitsInBothFormats",
+    "=SvgDashArrayXmlWhitespaceMatchesSpacesInBothFormats",
     "=SvgPercentageOpacityMatchesUnitOpacityInBothFormats",
     "=SvgConstantLinearGradientsMatchSolidPaintInBothFormats",
     "=SvgSingleStopRadialGradientsMatchSolidPaintInBothFormats",
