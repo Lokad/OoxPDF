@@ -264,6 +264,97 @@ internal static partial class SvgTextTests
             "/S /Luminosity", "/Coords [-1 0 2 0]", "/Bounds [0.375 0.5]");
     }
 
+    public static void SvgGradientTemplatesMatchExpandedPaintInBothFormats()
+    {
+        const string stops = "<stop offset=\"0\" stop-color=\"currentColor\"/><stop offset=\"1\" stop-color=\"blue\"/>";
+        const string alphaStops = "<stop offset=\"0\" stop-color=\"green\" stop-opacity=\".35\"/><stop offset=\"1\" stop-color=\"yellow\"/>";
+        string Picture(string definitions) => Svg($"""
+            <defs>{definitions}</defs>
+            <rect width="400" height="160" fill="#fff0a0"/>
+            <rect x="10" y="20" width="60" height="60" fill="url(#linear)"/>
+            <rect x="85" y="20" width="60" height="60" fill="none" stroke="url(#stroke)" stroke-width="8"/>
+            <rect x="160" y="20" width="60" height="60" fill="url(#shared)"/>
+            <rect x="235" y="20" width="60" height="60" fill="url(#radial)"/>
+            """);
+
+        string expected = Picture($"""
+            <linearGradient id="linear" color="red" gradientUnits="userSpaceOnUse" x1="15" x2="42" spreadMethod="reflect"
+                gradientTransform="translate(5 0)">{stops}</linearGradient>
+            <linearGradient id="stroke" color="red">{stops}</linearGradient>
+            <radialGradient id="shared" color="red" cx="45%" cy="55%" r="40%">{stops}</radialGradient>
+            <radialGradient id="radial" cx="45%" cy="55%" r="40%">{alphaStops}</radialGradient>
+            """);
+        string actual = Picture($"""
+            <linearGradient id="linear" href="#axis" x2="42" color="green"><title>Local override</title></linearGradient>
+            <linearGradient id="axis" href="#palette" gradientUnits="userSpaceOnUse" x1="15" x2="70"
+                gradientTransform="translate(5 0)" spreadMethod="reflect"/>
+            <linearGradient id="stroke" xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#palette"/>
+            <radialGradient id="shared" href="#palette" cx="45%" cy="55%" r="40%"/>
+            <radialGradient id="radial" href="#shared">{alphaStops}</radialGradient>
+            <linearGradient id="palette" color="red">{stops}</linearGradient>
+            """);
+
+        AssertSvgPaintInBothFormats(expected, actual, "/PatternType 2", "/ShadingType 3", "/S /Luminosity");
+    }
+
+    public static void SvgGradientTemplateCyclesAndMissingTargetsKeepLocalDeclarations()
+    {
+        const string definitions = """
+            <defs xmlns:xlink="http://www.w3.org/1999/xlink">
+              <linearGradient id="cycle-with-paint" href="#cycle"><stop stop-color="red"/></linearGradient>
+              <linearGradient id="cycle" href="#cycle-with-paint"/>
+              <linearGradient id="outside" href="#cycle-with-paint"/>
+              <linearGradient id="relative" href="separate.svg#paint"/>
+              <linearGradient id="missing" href="#absent" xlink:href="#cycle-with-paint"/>
+              <linearGradient id="discarded" href="#cycle-with-paint"><stop stop-color="unknown-color"/></linearGradient>
+              <linearGradient id="self" href="#self"><stop stop-color="blue"/></linearGradient>
+            </defs>
+            """;
+        const string shapes = """
+            <rect width="20" height="20" fill="url(#outside)"/>
+            <rect x="25" width="20" height="20" fill="url(#self)"/>
+            <rect x="50" width="20" height="20" fill="url(#cycle)"/>
+            <rect x="75" width="20" height="20" fill="url(#relative)"/>
+            <rect x="100" width="20" height="20" fill="url(#missing)"/>
+            <rect x="125" width="20" height="20" fill="url(#discarded)"/>
+            """;
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        var actual = Paint(Svg(definitions + shapes), diagnostics);
+        var expected = Paint(Svg("""
+            <rect width="20" height="20" fill="red"/>
+            <rect x="25" width="20" height="20" fill="blue"/>
+            """));
+        AssertEquivalentSvgPaint(expected, actual, "The usable local palette survives a malformed reference.");
+        TestAssert.Equal(4, diagnostics.Count);
+        foreach (string id in new[] { "cycle", "relative", "missing", "discarded" })
+        {
+            TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" &&
+                d.Message.Contains($"gradient {id}.", StringComparison.Ordinal)), $"Expected fallback for {id}.");
+        }
+    }
+
+    public static void SvgGradientTemplateChainsPreserveStopsAndOpacityDiagnostics()
+    {
+        const int chainLength = 1024;
+        const string palette = "<linearGradient id=\"end\" x2=\".6\"><stop offset=\"0\" stop-color=\"red\" stop-opacity=\"50%\"/>" +
+            "<stop offset=\"1\" stop-color=\"blue\"/></linearGradient>";
+        const string picture = "<rect width=\"60\" height=\"60\" fill=\"url(#end)\"/>";
+        var chain = new StringBuilder();
+        for (int i = 0; i < chainLength; i++)
+        {
+            string target = i + 1 == chainLength ? "end" : $"g{i + 1}";
+            chain.Append($"<linearGradient id=\"g{i}\" href=\"#{target}\"/>");
+        }
+        var expectedDiagnostics = new List<OoxPdfDiagnostic>();
+        var actualDiagnostics = new List<OoxPdfDiagnostic>();
+        var expected = Paint(Svg($"<defs>{palette}</defs>{picture}"), expectedDiagnostics);
+        var actual = Paint(Svg($"<defs>{chain}{palette}</defs>{picture.Replace("#end", "#g0", StringComparison.Ordinal)}"), actualDiagnostics);
+        AssertEquivalentSvgPaint(expected, actual, "Deep chains should share the authored gradient palette.");
+        TestAssert.Contains("ignores stop-opacity on 1 gradient stop", expectedDiagnostics.Single().Message);
+        TestAssert.True(expectedDiagnostics.SequenceEqual(actualDiagnostics), "Used template stops retain the same opacity diagnostic.");
+        Write(Page(actual));
+    }
+
     private static void AssertSvgPaintInBothFormats(string expected, string actual, params string[] expectedMarkers)
     {
         foreach (var (kind, view, geometry) in new[] {

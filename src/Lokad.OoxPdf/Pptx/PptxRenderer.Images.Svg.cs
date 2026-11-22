@@ -151,8 +151,7 @@ internal sealed partial class PptxRenderer
             return true;
         }
 
-        var gradients = ReadSvgGradients(svg, viewWidth, viewHeight);
-        var radialGradients = ReadSvgRadialGradients(svg, viewWidth, viewHeight);
+        var (gradients, radialGradients) = ReadSvgGradients(svg, viewWidth, viewHeight, cancellationToken);
         var elementIds = CreateSvgElementIdLookup(svg, cancellationToken);
         var paintedText = new HashSet<XElement>();
         bool hasStylesheet = HasSvgStylesheet(svg);
@@ -519,7 +518,8 @@ internal sealed partial class PptxRenderer
         while (isolation.Count > 0) { CloseGroup(); }
         ReportUnsupportedSvgElements(svg, diagnosticSink, slideIndex, partName, paintedText);
         ReportSkippedSvgPaths(unsupportedCommands, unreadablePaths, missingGradients, unpaintablePaths, unsupportedTransforms, gradientStrokes, unpaintableStrokes, invalidStrokePresentations, vectorEffectStrokes, focalRadialGradients, nonFiniteGradientPaths, diagnosticSink, slideIndex, partName);
-        ReportIgnoredSvgOpacity(svg, usedGradientIds, admittedContainers, admittedGradientAlpha, fallbackGradientAlpha, diagnosticSink, slideIndex, partName, cancellationToken);
+        ReportIgnoredSvgOpacity(svg, gradients, radialGradients, usedGradientIds, admittedContainers,
+            admittedGradientAlpha, fallbackGradientAlpha, diagnosticSink, slideIndex, partName, cancellationToken);
 
         graphics.RestoreState();
         return true;
@@ -562,11 +562,13 @@ internal sealed partial class PptxRenderer
                 Fallback: "Partial"));
         }
     }
-    private static void ReportIgnoredSvgOpacity(XDocument svg, HashSet<string>? usedGradientIds, HashSet<XElement> admittedContainers, HashSet<string> admittedGradientAlpha, HashSet<string> fallbackGradientAlpha, Action<OoxPdfDiagnostic>? diagnosticSink, int slideIndex, string? partName, CancellationToken cancellationToken)
+    private static void ReportIgnoredSvgOpacity(XDocument svg, IReadOnlyDictionary<string, SvgGradient> gradients,
+        IReadOnlyDictionary<string, SvgRadialGradient> radialGradients, HashSet<string>? usedGradientIds,
+        HashSet<XElement> admittedContainers, HashSet<string> admittedGradientAlpha, HashSet<string> fallbackGradientAlpha,
+        Action<OoxPdfDiagnostic>? diagnosticSink, int slideIndex, string? partName, CancellationToken cancellationToken)
     {
         if (diagnosticSink is null || usedGradientIds is null) { return; }
         int containerCount = 0;
-        int stopCount = 0;
         foreach (XElement element in svg.Descendants())
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -577,17 +579,16 @@ internal sealed partial class PptxRenderer
                 string? opacity = style.TryGetValue("opacity", out string? value) ? value : (string?)element.Attribute("opacity");
                 if (ReadSvgOpacityValue(opacity) < 1d && !admittedContainers.Contains(element)) { containerCount++; }
             }
-            if (name is "linearGradient" or "radialGradient" &&
-                (string?)element.Attribute("id") is { } id && usedGradientIds.Contains(id))
+        }
+
+        long stopCount = 0;
+        foreach (string id in usedGradientIds)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!admittedGradientAlpha.Contains(id) || fallbackGradientAlpha.Contains(id))
             {
-                if (ReadUniformSvgStopOpacity(element) is not null ||
-                    (admittedGradientAlpha.Contains(id) && !fallbackGradientAlpha.Contains(id))) { continue; }
-                foreach (XElement stop in element.Elements().Where(child => child.Name.LocalName == "stop"))
-                {
-                    IReadOnlyDictionary<string, string> style = ReadSvgStyleDeclarations(stop);
-                    string? opacity = style.TryGetValue("stop-opacity", out string? value) ? value : (string?)stop.Attribute("stop-opacity");
-                    if (ReadSvgOpacityValue(opacity) < 1d) { stopCount++; }
-                }
+                stopCount += gradients.GetValueOrDefault(id)?.IgnoredStopOpacityCount ??
+                    radialGradients.GetValueOrDefault(id)?.IgnoredStopOpacityCount ?? 0;
             }
         }
         if (containerCount > 0)
@@ -669,26 +670,14 @@ internal sealed partial class PptxRenderer
         return false;
     }
 
-    private static double? ReadUniformSvgStopOpacity(XElement gradient)
-    {
-        double? uniform = null;
-        foreach (XElement stop in gradient.Elements().Where(e => e.Name.LocalName == "stop"))
-        {
-            double? value = ReadNumericSvgStopOpacity(stop, ReadSvgStyleDeclarations(stop));
-            if (value is null || (uniform is { } previous && value != previous)) { return null; }
-            uniform = value;
-        }
-        return uniform ?? 1d;
-    }
-
     private static double? ReadNumericSvgStopOpacity(XElement stop, IReadOnlyDictionary<string, string> style,
-        bool? hasPaint = null)
+        bool hasPaint)
     {
         string? opacity = (string?)stop.Attribute("stop-opacity");
         if (style.TryGetValue("stop-opacity", out string? styledOpacity))
         {
             // A discarded style-bearing stop still prevents alpha admission.
-            if (!(hasPaint ?? TryReadSvgStopPaint(stop, style, out _, out _))) return null;
+            if (!hasPaint) return null;
             opacity = styledOpacity;
         }
         if (opacity is null) return 1d;
@@ -1131,67 +1120,179 @@ internal sealed partial class PptxRenderer
         return true;
     }
 
-    private static IReadOnlyDictionary<string, SvgGradient> ReadSvgGradients(XDocument svg, double viewWidth, double viewHeight)
+    private static (Dictionary<string, SvgGradient> Linear, Dictionary<string, SvgRadialGradient> Radial)
+        ReadSvgGradients(XDocument svg, double viewWidth, double viewHeight, CancellationToken cancellationToken)
     {
-        var gradients = new Dictionary<string, SvgGradient>(StringComparer.Ordinal);
-        foreach (XElement gradient in svg.Descendants().Where(element => element.Name.LocalName == "linearGradient"))
+        var linear = new Dictionary<string, SvgGradient>(StringComparer.Ordinal);
+        var radial = new Dictionary<string, SvgRadialGradient>(StringComparer.Ordinal);
+        var sources = new List<(string Id, XElement Element)>();
+        var byId = new Dictionary<string, XElement>(StringComparer.Ordinal);
+        foreach (XElement element in svg.Descendants())
         {
-            string? id = (string?)gradient.Attribute("id");
-            var (stops, uniformOpacity, hasNumericOpacity, hasHardStops) = ReadSvgGradientStops(gradient);
-            if (!string.IsNullOrWhiteSpace(id) && stops.Length > 0)
+            cancellationToken.ThrowIfCancellationRequested();
+            if (element.Name.LocalName is not ("linearGradient" or "radialGradient")) continue;
+            string? id = (string?)element.Attribute("id");
+            if (!string.IsNullOrWhiteSpace(id))
             {
-                // RV07: gradientTransform composes onto the raw vector in its own
-                // coordinate system; unparseable transforms leave no gradient so
-                // referencing paths diagnose as unresolvable instead of
-                // misrendering untransformed.
-                if (!TryParseSvgTransformList((string?)gradient.Attribute("gradientTransform"), out SvgTransform gradientTransform))
-                {
-                    continue;
-                }
-
-                bool linearUserSpace = string.Equals((string?)gradient.Attribute("gradientUnits"), "userSpaceOnUse", StringComparison.Ordinal);
-                double? width = linearUserSpace ? viewWidth : null;
-                double? height = linearUserSpace ? viewHeight : null;
-                if (!TryReadSvgGradientCoordinate(gradient, "x1", 0d, width, out double x1)
-                    || !TryReadSvgGradientCoordinate(gradient, "y1", 0d, height, out double y1)
-                    || !TryReadSvgGradientCoordinate(gradient, "x2", width ?? 1d, width, out double x2)
-                    || !TryReadSvgGradientCoordinate(gradient, "y2", 0d, height, out double y2))
-                {
-                    continue;
-                }
-                (double rawX1, double rawY1) = gradientTransform.Apply(x1, y1);
-                (double rawX2, double rawY2) = gradientTransform.Apply(x2, y2);
-                // RV07: composed overflow (huge transforms on finite vectors)
-                // cannot sample; the gradient is skipped like a garbage vector.
-                if (!double.IsFinite(rawX1) || !double.IsFinite(rawY1) || !double.IsFinite(rawX2) || !double.IsFinite(rawY2))
-                {
-                    continue;
-                }
-                gradients[id] = new SvgGradient(rawX1, rawY1, rawX2, rawY2, stops, linearUserSpace, ReadSvgGradientSpread((string?)gradient.Attribute("spreadMethod")))
-                {
-                    UniformStopOpacity = uniformOpacity,
-                    HasNumericStopOpacity = hasNumericOpacity,
-                    HasIdentityGradientTransform = gradientTransform.IsIdentity,
-                    HasHardStops = hasHardStops,
-                    // A single stop or coincident source endpoints define solid paint.
-                    ConstantStop = hasNumericOpacity && (stops.Length == 1 || (x1 == x2 && y1 == y2))
-                        ? stops[^1] : null
-                };
+                sources.Add((id, element));
+                byId.TryAdd(id, element);
             }
         }
 
-        return gradients;
+        var resolved = new Dictionary<XElement, SvgGradientDefinition?>();
+        var chain = new List<XElement>();
+        foreach ((string id, XElement element) in sources)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            SvgGradientDefinition definition = ResolveSvgGradientDefinition(element, byId, resolved, chain, cancellationToken);
+            if (definition.Ramp is not { Stops.Length: > 0 } ramp || definition.Transform is not { } transform)
+            {
+                continue;
+            }
+
+            bool userSpace = definition.IsUserSpace;
+            double? width = userSpace ? viewWidth : null;
+            double? height = userSpace ? viewHeight : null;
+            SvgGradientSpread spread = definition.Spread;
+            if (definition.IsRadial)
+            {
+                double? diagonal = userSpace ? double.Hypot(viewWidth / Math.Sqrt(2d), viewHeight / Math.Sqrt(2d)) : null;
+                if (ReadSvgRadialGradient(definition, ramp, transform, width, height, diagonal, spread) is { } gradient)
+                {
+                    radial[id] = gradient;
+                }
+            }
+            else if (ReadSvgLinearGradient(definition, ramp, transform, width, height, spread) is { } gradient)
+            {
+                linear[id] = gradient;
+            }
+        }
+        return (linear, radial);
     }
 
-    private static (SvgGradientStop[] Stops, double? UniformOpacity, bool HasNumericOpacity, bool HasHardStops) ReadSvgGradientStops(XElement gradient)
+    private static SvgGradientDefinition ResolveSvgGradientDefinition(XElement element, Dictionary<string, XElement> byId,
+        Dictionary<XElement, SvgGradientDefinition?> resolved, List<XElement> chain, CancellationToken cancellationToken)
     {
-        var stops = new List<SvgGradientStop>();
+        chain.Clear();
+        XElement? current = element;
+        while (current is not null && resolved.TryAdd(current, null))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            chain.Add(current);
+            string? href = ((string?)current.Attribute("href") ??
+                (string?)current.Attribute(XName.Get("href", "http://www.w3.org/1999/xlink")))?.Trim();
+            current = href is { Length: > 1 } && href[0] == '#' ? byId.GetValueOrDefault(href[1..]) : null;
+        }
+
+        int index = chain.Count - 1;
+        if (current is not null && !resolved[current].HasValue)
+        {
+            // Each cyclic reference is invalid. Keep the cycle members' local
+            // declarations independently of traversal order.
+            XElement member;
+            do
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                member = chain[index--];
+                resolved[member] = ReadSvgGradientDefinition(member, SvgGradientDefinition.Empty, cancellationToken);
+            }
+            while (!ReferenceEquals(member, current));
+        }
+
+        SvgGradientDefinition inherited = current is null ? SvgGradientDefinition.Empty : resolved[current].GetValueOrDefault();
+        for (; index >= 0; index--)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            XElement source = chain[index];
+            inherited = ReadSvgGradientDefinition(source, inherited, cancellationToken);
+            resolved[source] = inherited;
+        }
+        return resolved[element].GetValueOrDefault();
+    }
+
+    private static SvgGradientDefinition ReadSvgGradientDefinition(XElement gradient, SvgGradientDefinition inherited,
+        CancellationToken cancellationToken)
+    {
+        bool radial = gradient.Name.LocalName == "radialGradient";
+        SvgGradientDefinition geometry = radial == inherited.IsRadial ? inherited : default;
+        SvgTransform? transform = inherited.Transform;
+        if (gradient.Attribute("gradientTransform") is { } attribute)
+        {
+            transform = TryParseSvgTransformList(attribute.Value, out SvgTransform local) ? local : null;
+        }
+
+        // Local stops replace the palette, including when their paint cannot be
+        // used. Inherited stops keep the color context of their authored source.
+        return new SvgGradientDefinition(
+            ReadSvgGradientStops(gradient, cancellationToken) ?? inherited.Ramp,
+            radial,
+            gradient.Attribute("gradientUnits") is { } units ? units.Value == "userSpaceOnUse" : inherited.IsUserSpace,
+            transform,
+            gradient.Attribute("spreadMethod") is { } spread ? ReadSvgGradientSpread(spread.Value) : inherited.Spread,
+            radial ? default : ReadSvgGradientCoordinate(gradient, "x1", geometry.X1),
+            radial ? default : ReadSvgGradientCoordinate(gradient, "y1", geometry.Y1),
+            radial ? default : ReadSvgGradientCoordinate(gradient, "x2", geometry.X2),
+            radial ? default : ReadSvgGradientCoordinate(gradient, "y2", geometry.Y2),
+            radial ? ReadSvgGradientCoordinate(gradient, "cx", geometry.Cx) : default,
+            radial ? ReadSvgGradientCoordinate(gradient, "cy", geometry.Cy) : default,
+            radial ? ReadSvgGradientCoordinate(gradient, "r", geometry.Radius) : default,
+            radial ? ReadSvgGradientCoordinate(gradient, "fx", geometry.Fx) : default,
+            radial ? ReadSvgGradientCoordinate(gradient, "fy", geometry.Fy) : default);
+    }
+
+    private readonly record struct SvgGradientDefinition(SvgGradientRamp? Ramp, bool IsRadial, bool IsUserSpace,
+        SvgTransform? Transform, SvgGradientSpread Spread, SvgGradientCoordinate X1, SvgGradientCoordinate Y1,
+        SvgGradientCoordinate X2, SvgGradientCoordinate Y2, SvgGradientCoordinate Cx, SvgGradientCoordinate Cy,
+        SvgGradientCoordinate Radius, SvgGradientCoordinate Fx, SvgGradientCoordinate Fy)
+    {
+        public static SvgGradientDefinition Empty => default(SvgGradientDefinition) with { Transform = SvgTransform.Identity };
+    }
+
+    private sealed record SvgGradientRamp(SvgGradientStop[] Stops, double? UniformOpacity, bool HasNumericOpacity,
+        bool HasHardStops, int IgnoredOpacityCount);
+
+    private static SvgGradient? ReadSvgLinearGradient(SvgGradientDefinition definition, SvgGradientRamp ramp,
+        SvgTransform transform, double? width, double? height, SvgGradientSpread spread)
+    {
+        if (!definition.X1.TryResolve(0d, width, out double x1)
+            || !definition.Y1.TryResolve(0d, height, out double y1)
+            || !definition.X2.TryResolve(width ?? 1d, width, out double x2)
+            || !definition.Y2.TryResolve(0d, height, out double y2))
+        {
+            return null;
+        }
+        (double rawX1, double rawY1) = transform.Apply(x1, y1);
+        (double rawX2, double rawY2) = transform.Apply(x2, y2);
+        if (!double.IsFinite(rawX1) || !double.IsFinite(rawY1) || !double.IsFinite(rawX2) || !double.IsFinite(rawY2))
+        {
+            return null;
+        }
+        return new SvgGradient(rawX1, rawY1, rawX2, rawY2, ramp.Stops, width.HasValue, spread)
+        {
+            UniformStopOpacity = ramp.UniformOpacity,
+            HasNumericStopOpacity = ramp.HasNumericOpacity,
+            HasIdentityGradientTransform = transform.IsIdentity,
+            HasHardStops = ramp.HasHardStops,
+            IgnoredStopOpacityCount = ramp.IgnoredOpacityCount,
+            // A single stop or coincident source endpoints define solid paint.
+            ConstantStop = ramp.HasNumericOpacity && (ramp.Stops.Length == 1 || (x1 == x2 && y1 == y2))
+                ? ramp.Stops[^1] : null
+        };
+    }
+
+    private static SvgGradientRamp? ReadSvgGradientStops(XElement gradient, CancellationToken cancellationToken)
+    {
+        List<SvgGradientStop>? stops = null;
         double? firstNumericOpacity = null;
         bool hasNumericOpacity = true;
         bool hasUniformOpacity = true;
         bool hasHardStops = false;
-        foreach (XElement stop in gradient.Elements().Where(element => element.Name.LocalName == "stop"))
+        int fallbackOpacityCount = 0;
+        foreach (XElement stop in gradient.Elements())
         {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (stop.Name.LocalName != "stop") continue;
+            stops ??= new List<SvgGradientStop>();
             IReadOnlyDictionary<string, string> style = ReadSvgStyleDeclarations(stop);
             bool hasPaint = TryReadSvgStopPaint(stop, style, out double offset, out RgbColor color);
             // Opacity admission considers all authored stops, including those discarded for paint.
@@ -1199,6 +1300,11 @@ internal sealed partial class PptxRenderer
             hasNumericOpacity &= opacity.HasValue;
             firstNumericOpacity ??= opacity;
             hasUniformOpacity &= opacity == firstNumericOpacity;
+            if ((opacity ?? ReadSvgOpacityValue(style.GetValueOrDefault("stop-opacity") ??
+                (string?)stop.Attribute("stop-opacity"))) < 1d)
+            {
+                fallbackOpacityCount++;
+            }
 
             if (!hasPaint) continue;
             if (stops.Count > 0)
@@ -1210,9 +1316,11 @@ internal sealed partial class PptxRenderer
             }
             stops.Add(new SvgGradientStop(offset, color, opacity));
         }
-        return (stops.ToArray(),
-            hasNumericOpacity && hasUniformOpacity ? firstNumericOpacity ?? 1d : null,
-            hasNumericOpacity, hasHardStops);
+
+        if (stops is null) return null;
+        double? uniformOpacity = hasNumericOpacity && hasUniformOpacity ? firstNumericOpacity ?? 1d : null;
+        return new SvgGradientRamp(stops.ToArray(), uniformOpacity, hasNumericOpacity, hasHardStops,
+            uniformOpacity.HasValue ? 0 : fallbackOpacityCount);
     }
 
     private static bool TryReadSvgStopPaint(XElement stop, IReadOnlyDictionary<string, string> style,
@@ -1268,29 +1376,42 @@ internal sealed partial class PptxRenderer
         };
     }
 
-    // A null basis means fractions of the object's bounding box. In user space,
-    // percentages use the uncropped viewport and numbers or px use user units.
-    private static bool TryReadSvgGradientCoordinate(XElement gradient, string name, double fallback, double? viewportBasis, out double value)
+    private enum SvgGradientUnit { Unspecified, Number, Percent, Pixel, Invalid }
+
+    private readonly record struct SvgGradientCoordinate(double Value, SvgGradientUnit Unit)
     {
-        value = fallback;
-        string? text = (string?)gradient.Attribute(name);
-        if (string.IsNullOrWhiteSpace(text))
+        // The receiving gradient supplies the coordinate system after templating.
+        public bool TryResolve(double fallback, double? viewportBasis, out double value)
         {
-            return true;
-        }
-        string trimmed = text.Trim();
-        if (trimmed.EndsWith("%", StringComparison.Ordinal))
-        {
-            if (double.TryParse(trimmed.AsSpan(0, trimmed.Length - 1), NumberStyles.Float, CultureInfo.InvariantCulture, out double percent))
+            value = Unit switch
             {
-                value = (percent / 100d) * (viewportBasis ?? 1d);
-                return double.IsFinite(value);
-            }
-            return false;
+                SvgGradientUnit.Unspecified => fallback,
+                SvgGradientUnit.Percent => (Value / 100d) * (viewportBasis ?? 1d),
+                _ => Value
+            };
+            return Unit != SvgGradientUnit.Invalid && (Unit != SvgGradientUnit.Pixel || viewportBasis.HasValue) && double.IsFinite(value);
         }
-        return viewportBasis.HasValue
-            ? TryReadSvgNumberOrPixels(trimmed, out value)
-            : double.TryParse(trimmed, NumberStyles.Float, CultureInfo.InvariantCulture, out value) && double.IsFinite(value);
+    }
+
+    private static SvgGradientCoordinate ReadSvgGradientCoordinate(XElement gradient, string name, SvgGradientCoordinate inherited)
+    {
+        if (gradient.Attribute(name) is not { } attribute) return inherited;
+        ReadOnlySpan<char> text = attribute.Value.AsSpan().Trim();
+        if (text.IsEmpty) return default;
+
+        SvgGradientUnit unit = SvgGradientUnit.Number;
+        if (text.EndsWith("%", StringComparison.Ordinal))
+        {
+            unit = SvgGradientUnit.Percent;
+            text = text[..^1];
+        }
+        else if (text.EndsWith("px", StringComparison.OrdinalIgnoreCase))
+        {
+            unit = SvgGradientUnit.Pixel;
+            text = text[..^2];
+        }
+        return double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out double value) && double.IsFinite(value)
+            ? new SvgGradientCoordinate(value, unit) : new SvgGradientCoordinate(0d, SvgGradientUnit.Invalid);
     }
 
     // RV07: CSS style declarations override presentation attributes; opacity
@@ -1916,60 +2037,38 @@ internal sealed partial class PptxRenderer
     // RV07: radial gradients paint concentric ellipse rings, largest first.
     // Focal points diagnose and render centered; radii resolve per axis like
     // the linear vector mapping, with the gradient transform baked at read.
-    private static IReadOnlyDictionary<string, SvgRadialGradient> ReadSvgRadialGradients(XDocument svg, double viewWidth, double viewHeight)
+    private static SvgRadialGradient? ReadSvgRadialGradient(SvgGradientDefinition definition, SvgGradientRamp ramp,
+        SvgTransform transform, double? width, double? height, double? diagonal, SvgGradientSpread spread)
     {
-        var gradients = new Dictionary<string, SvgRadialGradient>(StringComparer.Ordinal);
-        double viewDiagonal = double.Hypot(viewWidth / Math.Sqrt(2d), viewHeight / Math.Sqrt(2d));
-        foreach (XElement gradient in svg.Descendants().Where(element => element.Name.LocalName == "radialGradient"))
+        if (!definition.Cx.TryResolve((width ?? 1d) / 2d, width, out double cx)
+            || !definition.Cy.TryResolve((height ?? 1d) / 2d, height, out double cy)
+            || !definition.Radius.TryResolve((diagonal ?? 1d) / 2d, diagonal, out double radius)
+            || !definition.Fx.TryResolve(cx, width, out double fx)
+            || !definition.Fy.TryResolve(cy, height, out double fy)
+            || radius <= 0d)
         {
-            string? id = (string?)gradient.Attribute("id");
-            var (stops, uniformOpacity, hasNumericOpacity, _) = ReadSvgGradientStops(gradient);
-            if (string.IsNullOrWhiteSpace(id) || stops.Length == 0)
-            {
-                continue;
-            }
-            if (!TryParseSvgTransformList((string?)gradient.Attribute("gradientTransform"), out SvgTransform gradientTransform))
-            {
-                continue;
-            }
-            bool userSpace = string.Equals((string?)gradient.Attribute("gradientUnits"), "userSpaceOnUse", StringComparison.Ordinal);
-            double? width = userSpace ? viewWidth : null;
-            double? height = userSpace ? viewHeight : null;
-            double? diagonal = userSpace ? viewDiagonal : null;
-            if (!TryReadSvgGradientCoordinate(gradient, "cx", (width ?? 1d) / 2d, width, out double cx)
-                || !TryReadSvgGradientCoordinate(gradient, "cy", (height ?? 1d) / 2d, height, out double cy)
-                || !TryReadSvgGradientCoordinate(gradient, "r", (diagonal ?? 1d) / 2d, diagonal, out double radius)
-                || !TryReadSvgGradientCoordinate(gradient, "fx", cx, width, out double fx)
-                || !TryReadSvgGradientCoordinate(gradient, "fy", cy, height, out double fy))
-            {
-                continue;
-            }
-            if (radius <= 0d)
-            {
-                continue;
-            }
-            (double rawCx, double rawCy) = gradientTransform.Apply(cx, cy);
-            double rawRadius = radius;
-            if (userSpace)
-            {
-                (double edgeX, double edgeY) = gradientTransform.Apply(cx + radius, cy + radius);
-                rawRadius = Math.Max(Math.Abs(edgeX - rawCx), Math.Abs(edgeY - rawCy));
-            }
-            // RV07: composed overflow (huge transforms on finite centers)
-            // cannot sample; the gradient is skipped like a garbage vector.
-            if (!double.IsFinite(rawCx) || !double.IsFinite(rawCy) || !double.IsFinite(rawRadius))
-            {
-                continue;
-            }
-
-            gradients[id] = new SvgRadialGradient(rawCx, rawCy, rawRadius, fx != cx || fy != cy, stops, userSpace, ReadSvgGradientSpread((string?)gradient.Attribute("spreadMethod")))
-            {
-                UniformStopOpacity = uniformOpacity,
-                HasNumericStopOpacity = hasNumericOpacity,
-                HasIdentityGradientTransform = gradientTransform.IsIdentity
-            };
+            return null;
         }
-        return gradients;
+
+        (double rawCx, double rawCy) = transform.Apply(cx, cy);
+        double rawRadius = radius;
+        if (width.HasValue)
+        {
+            (double edgeX, double edgeY) = transform.Apply(cx + radius, cy + radius);
+            rawRadius = Math.Max(Math.Abs(edgeX - rawCx), Math.Abs(edgeY - rawCy));
+        }
+        if (!double.IsFinite(rawCx) || !double.IsFinite(rawCy) || !double.IsFinite(rawRadius))
+        {
+            return null;
+        }
+
+        return new SvgRadialGradient(rawCx, rawCy, rawRadius, fx != cx || fy != cy, ramp.Stops, width.HasValue, spread)
+        {
+            UniformStopOpacity = ramp.UniformOpacity,
+            HasNumericStopOpacity = ramp.HasNumericOpacity,
+            HasIdentityGradientTransform = transform.IsIdentity,
+            IgnoredStopOpacityCount = ramp.IgnoredOpacityCount
+        };
     }
     private static bool TryRenderSvgRadialGradientPath(PdfGraphicsBuilder graphics, IReadOnlyList<SvgPathCommand> commands, SvgRadialGradient radial, SvgTransform transform, bool evenOddFill, double opacity, SvgPathBounds pathBounds, double minX, double minY, double imageX, double imageY, double imageHeight, double scaleX, double scaleY, bool allowAlphaMask, out bool varyingAlphaAdmitted, Action<int> admitSamples, CancellationToken cancellationToken)
     {
