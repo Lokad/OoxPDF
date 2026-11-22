@@ -1312,9 +1312,11 @@ internal sealed partial class DocxRenderer
                             }
                         }
 
-                        if (afterItem) continue;
+                        if (afterItem && targetItem is not DocxInlineText) continue;
 
-                        if (!TryResolveBookmarkDestinationSegment(segments, paragraph, bookmark, out DocxTextEmissionSegment? target, out double targetX))
+                        if (!TryResolveBookmarkDestinationSegment(segments, paragraph, bookmark,
+                            afterItem ? targetItem as DocxInlineText : null, cancellationToken,
+                            out DocxTextEmissionSegment? target, out double targetX))
                         {
                             continue;
                         }
@@ -1884,7 +1886,7 @@ internal sealed partial class DocxRenderer
         if (paragraph.InlineContent is not { } items || index < 0 || index > items.Count)
             return null;
 
-        while (index < items.Count && IsUnpainted(items[index]))
+        while (index < items.Count && IsNonpaintingBookmarkItem(items[index]))
         {
             token.ThrowIfCancellationRequested();
             index++;
@@ -1892,25 +1894,27 @@ internal sealed partial class DocxRenderer
         if (index < items.Count) return items[index];
         if (bookmark.MathSource is not null) return null;
 
-        // A terminal boundary has no following item. Its preceding object
-        // owns the endpoint, including when hidden source follows the object.
-        while (--index >= 0 && IsUnpainted(items[index])) token.ThrowIfCancellationRequested();
-        if (index >= 0 && items[index] is DocxInlinePicture or DocxInlineBox or DocxInlineEquation)
+        // The last painted item owns the endpoint when the rest of the
+        // paragraph contains only nonpainting source.
+        while (--index >= 0 && IsNonpaintingBookmarkItem(items[index])) token.ThrowIfCancellationRequested();
+        if (index >= 0 && items[index] is DocxInlineText or DocxInlinePicture or DocxInlineBox or DocxInlineEquation)
         {
             afterItem = true;
             return items[index];
         }
         return null;
-
-        static bool IsUnpainted(DocxInlineItem item) => item is
-            DocxInlineText { Run.EffectiveProperties.Hidden: true } or DocxInlineText { Length: 0 } or
-            DocxInlineTab { Run.EffectiveProperties.Hidden: true } or DocxInlineBreak { Run.EffectiveProperties.Hidden: true };
     }
+
+    private static bool IsNonpaintingBookmarkItem(DocxInlineItem item) => item is
+        DocxInlineText { Run.EffectiveProperties.Hidden: true } or DocxInlineText { Length: 0 } or
+        DocxInlineTab { Run.EffectiveProperties.Hidden: true } or DocxInlineBreak { Run.EffectiveProperties.Hidden: true };
 
     private static bool TryResolveBookmarkDestinationSegment(
         IReadOnlyList<DocxTextEmissionSegment> segments,
         DocxParagraph paragraph,
         DocxBookmarkAnchor bookmark,
+        DocxInlineText? terminalInlineText,
+        CancellationToken token,
         [NotNullWhen(true)] out DocxTextEmissionSegment? target,
         out double targetX)
     {
@@ -1918,38 +1922,27 @@ internal sealed partial class DocxRenderer
         targetX = 0d;
         int sourceRunIndex = bookmark.SourceRunIndex;
         int sourceOffset = Math.Max(0, bookmark.TextOffset);
-        bool terminalTextBoundary = false;
-        // A bookmark after the final item has no following source run. Bind a
-        // trailing text boundary to its retained source endpoint instead; hidden
-        // neighbors do not own a painted destination. Placed objects bind through
-        // their inline extents before this text fallback.
-        if (paragraph.InlineContent is { } items && bookmark.InlineItemIndex == items.Count)
+        bool terminalTextBoundary = terminalInlineText is not null;
+        if (terminalInlineText is { } terminalText)
         {
-            for (int index = items.Count - 1; index >= 0; index--)
-            {
-                if (items[index] is DocxInlineText { Run.EffectiveProperties.Hidden: true } or
-                    DocxInlineTab { Run.EffectiveProperties.Hidden: true } or
-                    DocxInlineBreak { Run.EffectiveProperties.Hidden: true }) continue;
-                if (items[index] is DocxInlineText text)
-                {
-                    terminalTextBoundary = true;
-                    sourceRunIndex = text.Run.SourceRunIndex;
-                    sourceOffset = text.Run.SourceTextOffsetInRun + text.Start + text.Length;
-                }
-                break;
-            }
+            sourceRunIndex = terminalText.Run.SourceRunIndex;
+            sourceOffset = terminalText.Run.SourceTextOffsetInRun + terminalText.Start + terminalText.Length;
         }
-        else if (paragraph.InlineContent is null && bookmark.TextRunIndex == paragraph.Runs.Count &&
+        else if (paragraph.InlineContent is null && bookmark.TextRunIndex <= paragraph.Runs.Count &&
             paragraph.Images.Count == 0 && paragraph.Equations.Count == 0 && paragraph.InlineTextBoxes.Count == 0)
         {
-            // Ordinary prose retains its run-based layout. Do not opt it into
-            // inline-object layout merely to resolve non-rendering metadata.
-            DocxTextRun? last = paragraph.Runs.LastOrDefault(run => !run.EffectiveProperties.Hidden && run.Text.Length != 0);
-            if (last is not null)
+            // Ordinary prose keeps its run-based layout. Ignore trailing
+            // nonpainting runs when deciding whether the bookmark is terminal.
+            for (int index = paragraph.Runs.Count - 1; index >= 0; index--)
             {
+                token.ThrowIfCancellationRequested();
+                var run = paragraph.Runs[index];
+                if (run.EffectiveProperties.Hidden || run.Text.Length == 0) continue;
+                if (index >= bookmark.TextRunIndex) break;
                 terminalTextBoundary = true;
-                sourceRunIndex = last.SourceRunIndex;
-                sourceOffset = last.SourceTextOffsetInRun + last.Text.Length;
+                sourceRunIndex = run.SourceRunIndex;
+                sourceOffset = run.SourceTextOffsetInRun + run.Text.Length;
+                break;
             }
         }
         if (TryResolveBookmarkTextBoundary(segments, sourceRunIndex, sourceOffset, out target, out targetX))
@@ -1963,9 +1956,8 @@ internal sealed partial class DocxRenderer
         {
             for (int index = terminalItems.Count - 1; index >= 0; index--)
             {
-                if (terminalItems[index] is DocxInlineText { Run.EffectiveProperties.Hidden: true } or
-                    DocxInlineTab { Run.EffectiveProperties.Hidden: true } or
-                    DocxInlineBreak { Run.EffectiveProperties.Hidden: true }) continue;
+                token.ThrowIfCancellationRequested();
+                if (IsNonpaintingBookmarkItem(terminalItems[index])) continue;
                 if (terminalItems[index] is not DocxInlineText text) return false;
                 int length = text.Run.Text.AsSpan(text.Start, text.Length).TrimEnd().Length;
                 if (length == 0) continue;
@@ -1977,6 +1969,7 @@ internal sealed partial class DocxRenderer
         {
             for (int index = paragraph.Runs.Count - 1; index >= 0; index--)
             {
+                token.ThrowIfCancellationRequested();
                 DocxTextRun run = paragraph.Runs[index];
                 if (run.EffectiveProperties.Hidden) continue;
                 int length = run.Text.AsSpan().TrimEnd().Length;
