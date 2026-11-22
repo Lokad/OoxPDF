@@ -293,6 +293,36 @@ internal static class PptxChartPlotOptionsAgreementTests
                 .Select(show => (show.Text, show.X, show.Y));
     }
 
+    public static void PptxRadarInnerPlotRetainsCompleteCategoryInk()
+    {
+        const string plot = """
+            <c:layout><c:manualLayout><c:layoutTarget val="inner"/>
+              <c:xMode val="edge"/><c:yMode val="edge"/><c:wMode val="factor"/><c:hMode val="factor"/>
+              <c:x val="0.20"/><c:y val="0.19"/><c:w val="0.60"/><c:h val="0.62"/>
+            </c:manualLayout></c:layout>
+            """;
+        const string series = """
+            <c:ser><c:idx val="0"/><c:order val="0"/>
+              <c:cat><c:strLit>
+                <c:pt idx="0"><c:v>Speed</c:v></c:pt><c:pt idx="1"><c:v>Power</c:v></c:pt>
+                <c:pt idx="2"><c:v>Agility</c:v></c:pt><c:pt idx="3"><c:v>Defense</c:v></c:pt>
+                <c:pt idx="4"><c:v>Stamina</c:v></c:pt>
+              </c:strLit></c:cat>
+              <c:val><c:numLit><c:ptCount val="5"/>
+                <c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>5</c:v></c:pt>
+                <c:pt idx="2"><c:v>4</c:v></c:pt><c:pt idx="3"><c:v>3</c:v></c:pt>
+                <c:pt idx="4"><c:v>2</c:v></c:pt>
+              </c:numLit></c:val>
+            </c:ser>
+            """;
+        foreach (string style in new[] { "marker", "filled" })
+        {
+            var page = RenderRadar(style, series, plotLayout: plot);
+            foreach (string label in new[] { "Speed", "Power", "Agility", "Defense", "Stamina" })
+                PortableRenderingTests.ReadPaintedSourceLabel(page, label);
+        }
+    }
+
     private static string RadarSeries(int index, string color, bool hasCache, string? name = null) => $"""
             <c:ser><c:idx val="{index}"/><c:order val="{index}"/>
               {(name is null ? "" : $"<c:tx><c:v>{name}</c:v></c:tx>")}

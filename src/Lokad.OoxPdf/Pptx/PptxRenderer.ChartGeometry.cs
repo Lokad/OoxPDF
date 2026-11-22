@@ -402,13 +402,14 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static ChartRadarLayout ResolveRadarLayout(ChartFrameBox frame, ChartPlotBox plotBox, PptxSceneChartRadarStyle radarStyle, IReadOnlyList<double?[]> series, bool hasTitle, bool manualPlotLayout)
+    private static ChartRadarLayout ResolveRadarLayout(ChartFrameBox frame, ChartPlotBox plotBox, ChartPlotBox captionClip,
+        PptxSceneChartRadarStyle radarStyle, IReadOnlyList<double?[]> series, bool hasTitle, bool manualPlotLayout)
     {
         ChartRadarStyle style = radarStyle == PptxSceneChartRadarStyle.Filled
             ? ChartRadarStyle.Filled
             : ChartRadarStyle.Marker;
         return new ChartRadarLayout(
-            plotBox,
+            captionClip,
             GetRadarChartGeometry(),
             style,
             Math.Max(3, series.Max(values => values.Length)),

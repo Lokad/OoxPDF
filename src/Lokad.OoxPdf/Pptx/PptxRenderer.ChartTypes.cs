@@ -592,7 +592,7 @@ internal sealed partial class PptxRenderer
         double ValueWidthFactor);
 
     private readonly record struct ChartRadarLayout(
-        ChartPlotBox PlotBox,
+        ChartPlotBox CaptionClip,
         ChartPolarGeometry Geometry,
         ChartRadarStyle Style,
         int PointCount,

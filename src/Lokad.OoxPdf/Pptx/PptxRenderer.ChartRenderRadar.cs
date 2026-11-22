@@ -425,7 +425,6 @@ internal sealed partial class PptxRenderer
         }
 
         ChartTextStyle style = ReadSceneChartTextStyle(theme, sceneChart, sceneAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
-        ChartPlotBox plotBox = layout.PlotBox;
         int pointCount = Math.Max(labels.Count, layout.PointCount);
         var textMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
         var runs = new List<TextRun>(labels.Count);
@@ -439,7 +438,7 @@ internal sealed partial class PptxRenderer
 
             await textMeasurer.PrepareAsync(label, style).ConfigureAwait(false);
             ChartRadarLabelFrame frame = ResolveRadarCategoryLabelFrame(layout, label, style, textMeasurer, i, pointCount);
-            runs.Add(CreateChartLabelRun(label, frame.X, frame.Y, frame.Width, frame.Height, plotBox, style, frame.Alignment, kerningEnabled: false));
+            runs.Add(CreateChartLabelRun(label, frame.X, frame.Y, frame.Width, frame.Height, layout.CaptionClip, style, frame.Alignment, kerningEnabled: false));
         }
 
         return runs;
@@ -496,7 +495,6 @@ internal sealed partial class PptxRenderer
     {
         if (ticks.Count == 0) return [];
         ChartTextStyle style = ReadSceneChartTextStyle(theme, sceneChart, sceneAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
-        ChartPlotBox plotBox = layout.PlotBox;
         var textMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
         var runs = new List<TextRun>(ticks.Count);
         foreach (double tickValue in ticks)
@@ -505,7 +503,7 @@ internal sealed partial class PptxRenderer
             string label = FormatSceneChartAxisLabel(tickValue, sceneAxis, sceneChart.Options.Date1904 == true, null);
             await textMeasurer.PrepareAsync(label, style).ConfigureAwait(false);
             ChartRadarLabelFrame frame = ResolveRadarValueAxisLabelFrame(layout, label, style, textMeasurer, ratio);
-            runs.Add(CreateChartLabelRun(label, frame.X, frame.Y, frame.Width, frame.Height, plotBox, style, frame.Alignment, kerningEnabled: false));
+            runs.Add(CreateChartLabelRun(label, frame.X, frame.Y, frame.Width, frame.Height, layout.CaptionClip, style, frame.Alignment, kerningEnabled: false));
         }
 
         return runs;

@@ -38,9 +38,12 @@ internal sealed partial class PptxRenderer
                 ChartPlotBox defaultPlotBox = new(frame.X, frame.Y, frame.Width, frame.Height);
                 bool radarManualPlot = TryBuildManualPlotLayout(sceneChart.PlotAreaLayout, frame, defaultPlotBox, out ChartPlotLayout radarManualLayout);
                 ChartPlotBox plotBox = radarManualPlot ? radarManualLayout.PlotBox : defaultPlotBox;
+                // An authored inner plot bounds the web. Axis labels use the enclosing chart frame.
+                ChartPlotBox captionClip = radarManualLayout.ManualLayoutTargetKind == PptxSceneChartManualLayoutTarget.Inner
+                    ? defaultPlotBox : plotBox;
                 PptxSceneChartRadarStyle radarStyle = ReadSceneChartRadarStyle(radarPlot);
                 bool radarHasTitle = !string.IsNullOrWhiteSpace(sceneChart.Title.Text);
-                ChartRadarLayout radarLayout = ResolveRadarLayout(frame, plotBox, radarStyle, radarSeries, radarHasTitle, radarManualPlot);
+                ChartRadarLayout radarLayout = ResolveRadarLayout(frame, plotBox, captionClip, radarStyle, radarSeries, radarHasTitle, radarManualPlot);
                 IReadOnlyList<double> ticks = GetChartAxisTickValues(valueExtents, axisUnits.MajorUnit,
                     includeEndpoints: true, PptxChartMetricRules.AxisNiceTickTargetCount, context);
                 IReadOnlyList<ChartIndexedTextPoint?> categorySource = IsSceneChartAxisLabelVisible(categoryAxis.SceneAxis)
