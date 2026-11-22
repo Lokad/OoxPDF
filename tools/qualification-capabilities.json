@@ -673,6 +673,7 @@
     "=SvgTransparentFillKeepsTranslucentGradientStrokeInBothFormats",
     "=SvgLinesKeepTranslucentGradientStrokesWithDefaultOrInheritedFill",
     "=SvgObjectOpacityMatchesGroupForFilledGradientStrokes",
+    "=SvgTranslucentSolidStrokesPaintOverTheirFill",
     "=PptxSvgSquareDashMatchesOfficePaintedFootprint",
     "=SvgPercentageOpacityMatchesUnitOpacityInBothFormats",
     "=SvgConstantLinearGradientsMatchSolidPaintInBothFormats",

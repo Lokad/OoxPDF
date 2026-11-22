@@ -500,6 +500,37 @@ internal static partial class SvgTextTests
         }
     }
 
+    public static void SvgTranslucentSolidStrokesPaintOverTheirFill()
+    {
+        AssertSvgPaintInBothFormats(Picture(separate: true), Picture(separate: false), pdf =>
+        {
+            TestAssert.Equal(3, Regex.Matches(pdf, @"(?m)^S\r?$").Count);
+        }, "/ca 0.55 /CA 0.55", "/ca 0.65 /CA 1", "/ca 1 /CA 0.75", "/S /Luminosity");
+
+        static string Picture(bool separate) => Svg("""
+            <defs><linearGradient id="fill">
+              <stop stop-color="yellow" stop-opacity=".3"/><stop offset="1" stop-color="aqua"/>
+            </linearGradient></defs>
+            <rect width="400" height="160" fill="white"/>
+            """ + Figure("M24 22H112V66H24Z", "red", ".75", false, separate) +
+            Figure("M152 22H240V66H152Z", "red", ".75", true, separate) +
+            Figure("M280 22H368V66H280Z", "url(#fill)", "1", true, separate));
+
+        static string Figure(string path, string fill, string strokeOpacity, bool objectOpacity, bool separate)
+        {
+            string source = $"""<path d="{path}" """;
+            string fillPaint = $"""fill="{fill}" fill-opacity=".65" """;
+            string strokePaint = $"""stroke="blue" stroke-opacity="{strokeOpacity}" stroke-width="6" """;
+            if (!separate)
+            {
+                string opacity = objectOpacity ? """opacity=".55" """ : "";
+                return source + fillPaint + strokePaint + opacity + "/>";
+            }
+            string paint = source + fillPaint + "/>" + source + """fill="none" """ + strokePaint + "/>";
+            return objectOpacity ? """<g opacity=".55">""" + paint + "</g>" : paint;
+        }
+    }
+
     public static void SvgLinesKeepTranslucentGradientStrokesWithDefaultOrInheritedFill()
     {
         AssertSvgPaintInBothFormats(Picture("""fill="none" """), Picture(""), AssertStrokes,

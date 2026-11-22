@@ -272,18 +272,28 @@ internal sealed partial class PptxRenderer
                 gradientId = null;
                 radial = null;
             }
-            // The object opacity applies once to the completed fill and stroke.
-            // Preserve the space for a varying-alpha fill's mask at the depth limit.
-            bool isolateObject = stroke.Gradient is not null && stroke.Opacity > 0d &&
+            // A combined PDF fill-and-stroke operation knocks out the fill
+            // under the stroke. A translucent SVG stroke paints over its fill.
+            bool separateStroke = stroke.Gradient is not null || paint.Color is null ||
+                paint.Opacity > 0d && stroke.Opacity != elementOpacity;
+            bool isolateObject = separateStroke && stroke.HasPaint && stroke.Opacity > 0d &&
                 hasFill && paint.Opacity > 0d && elementOpacity < 1d;
             if (isolateObject)
             {
+                // Leave room for the fill mask when adding an object group.
                 bool fillNeedsMask = paint.Gradient is { UniformStopOpacity: null } ||
                     radial is { UniformStopOpacity: null };
                 if (isolation.Count >= PdfTransparencyGroup.MaxDepth - (fillNeedsMask ? 1 : 0))
                 {
-                    stroke = default;
-                    strokeFailure = SvgStrokeFailure.UnresolvedGradient;
+                    if (stroke.Gradient is not null)
+                    {
+                        stroke = default;
+                        strokeFailure = SvgStrokeFailure.UnresolvedGradient;
+                    }
+                    else
+                    {
+                        separateStroke = paint.Color is null;
+                    }
                     isolateObject = false;
                 }
             }
@@ -304,19 +314,18 @@ internal sealed partial class PptxRenderer
                 }
             }
             SvgPathBounds gradientBounds = default;
-            bool hasGradientBounds = false;
-            bool gradientControlsMappable = false;
             SvgPathBounds controlBounds = default;
-            if ((radial is not null || paint.Gradient is not null || stroke.Gradient is not null) &&
-                completePath && TryReadSvgPathBounds(pathCommands, out gradientBounds, out controlBounds))
-            {
-                hasGradientBounds = true;
-                gradientControlsMappable = AreSvgGradientBoundsMappable(controlBounds, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY);
-            }
+            bool gradientFill = radial is not null || paint.Gradient is not null;
+            bool needObjectBounds = isolateObject && !hasViewportClip && !clipViewport;
+            bool hasPathBounds = (needObjectBounds || completePath && (gradientFill || stroke.Gradient is not null)) &&
+                TryReadSvgPathBounds(pathCommands, out gradientBounds, out controlBounds);
+            bool hasGradientBounds = completePath && hasPathBounds;
+            bool controlsMappable = hasPathBounds &&
+                AreSvgGradientBoundsMappable(controlBounds, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY);
             PdfShadingPattern? strokePattern = null;
             if (stroke.Gradient is { } strokeGradient)
             {
-                if (gradientControlsMappable)
+                if (hasGradientBounds && controlsMappable)
                 {
                     strokePattern = TryReadSvgStrokePattern(gradientBounds, strokeGradient, transform, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY);
                 }
@@ -403,22 +412,27 @@ internal sealed partial class PptxRenderer
                 }
             }
             PdfRectangle? objectFrame = null;
-            if (isolateObject && strokePattern is not null)
+            if (isolateObject && stroke.HasPaint)
             {
-                objectFrame = hasViewportClip || clipViewport ? pictureFrame :
-                    ReadSvgObjectPaintBounds(pictureFrame, controlBounds, stroke, strokeWidthPoints,
-                        sourceMinX, sourceMinY, scaleX, scaleY);
+                objectFrame = !needObjectBounds ? pictureFrame : controlsMappable
+                    ? ReadSvgObjectPaintBounds(pictureFrame, controlBounds, stroke, strokeWidthPoints,
+                        sourceMinX, sourceMinY, scaleX, scaleY)
+                    : null;
                 if (objectFrame.HasValue)
                 {
                     OpenGroup(element, elementOpacity);
                     paint = paint with { Opacity = paint.Opacity / elementOpacity };
                     stroke = stroke with { Opacity = stroke.Opacity / elementOpacity };
                 }
-                else
+                else if (stroke.Gradient is not null)
                 {
                     stroke = default;
                     strokePattern = null;
                     gradientStrokes++;
+                }
+                else
+                {
+                    separateStroke = paint.Color is null;
                 }
             }
             if (radial is { } radialGradient)
@@ -430,15 +444,9 @@ internal sealed partial class PptxRenderer
                 bool varyingAlphaAdmitted = false;
                 if (hasGradientBounds)
                 {
-                    if (!gradientControlsMappable || !TryRenderSvgRadialGradientPath(graphics, pathCommands, radialGradient, transform, evenOddFill, paint.Opacity, gradientBounds, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY, isolation.Count < PdfTransparencyGroup.MaxDepth, out varyingAlphaAdmitted, AdmitSamples, cancellationToken))
+                    if (!controlsMappable || !TryRenderSvgRadialGradientPath(graphics, pathCommands, radialGradient, transform, evenOddFill, paint.Opacity, gradientBounds, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY, isolation.Count < PdfTransparencyGroup.MaxDepth, out varyingAlphaAdmitted, AdmitSamples, cancellationToken))
                     {
                         nonFiniteGradientPaths++;
-                    }
-                    if (stroke.Color is { } radialStrokeColor
-                        && !TryPaintSvgStrokePath(graphics, pathCommands, completePath, radialStrokeColor, strokeWidthPoints, stroke.Opacity, stroke.LineCap, stroke.LineJoin, dashPoints, dashPhasePoints, stroke.MiterLimit, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY)
-                        && badCommand is null)
-                    {
-                        unreadablePaths++;
                     }
                 }
                 else if (badCommand is null)
@@ -455,15 +463,9 @@ internal sealed partial class PptxRenderer
                 bool varyingAlphaAdmitted = false;
                 if (hasGradientBounds)
                 {
-                    if (!gradientControlsMappable || !TryRenderSvgGradientPath(graphics, pathCommands, gradient, transform, evenOddFill, paint.Opacity, gradientBounds, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY, isolation.Count < PdfTransparencyGroup.MaxDepth, out varyingAlphaAdmitted, AdmitSamples, cancellationToken))
+                    if (!controlsMappable || !TryRenderSvgGradientPath(graphics, pathCommands, gradient, transform, evenOddFill, paint.Opacity, gradientBounds, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY, isolation.Count < PdfTransparencyGroup.MaxDepth, out varyingAlphaAdmitted, AdmitSamples, cancellationToken))
                     {
                         nonFiniteGradientPaths++;
-                    }
-                    if (stroke.Color is { } gradientStrokeColor
-                        && !TryPaintSvgStrokePath(graphics, pathCommands, completePath, gradientStrokeColor, strokeWidthPoints, stroke.Opacity, stroke.LineCap, stroke.LineJoin, dashPoints, dashPhasePoints, stroke.MiterLimit, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY)
-                        && badCommand is null)
-                    {
-                        unreadablePaths++;
                     }
                 }
                 else if (badCommand is null)
@@ -477,7 +479,7 @@ internal sealed partial class PptxRenderer
             }
             else if (paint.Color is { } color)
             {
-                if (stroke.Color is { } strokeColor)
+                if (!separateStroke && stroke.Color is { } strokeColor)
                 {
                     bool transparent = paint.Opacity < 1d || stroke.Opacity < 1d;
                     graphics.SaveState();
@@ -555,17 +557,9 @@ internal sealed partial class PptxRenderer
                     }
                 }
             }
-            else if (stroke.Color is { } strokeOnlyColor)
+            if (separateStroke && stroke.HasPaint && (!gradientFill || hasGradientBounds))
             {
-                if (!TryPaintSvgStrokePath(graphics, pathCommands, completePath, strokeOnlyColor, strokeWidthPoints, stroke.Opacity, stroke.LineCap, stroke.LineJoin, dashPoints, dashPhasePoints, stroke.MiterLimit, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY)
-                    && badCommand is null)
-                {
-                    unreadablePaths++;
-                }
-            }
-            if (strokePattern is not null && stroke.Gradient is not null)
-            {
-                if (!TryPaintSvgStrokePath(graphics, pathCommands, completePath, default, strokeWidthPoints, stroke.Opacity, stroke.LineCap, stroke.LineJoin, dashPoints, dashPhasePoints, stroke.MiterLimit, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY, strokePattern)
+                if (!TryPaintSvgStrokePath(graphics, pathCommands, completePath, stroke.Color.GetValueOrDefault(), strokeWidthPoints, stroke.Opacity, stroke.LineCap, stroke.LineJoin, dashPoints, dashPhasePoints, stroke.MiterLimit, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY, strokePattern)
                     && badCommand is null)
                 {
                     unreadablePaths++;

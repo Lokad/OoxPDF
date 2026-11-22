@@ -699,12 +699,16 @@ internal static partial class PptxImagesTests
             List<double> widths = ReadPdfStrokeWidths(pdf);
             TestAssert.Equal(2, widths.Count);
             TestAssert.True(Math.Abs(widths[0] - 4.32d) < .004d && Math.Abs(widths[1] - 8.64d) < .004d, "Combined paint must preserve directional viewport widths.");
-            string operation = evenOdd ? "B*" : "B";
-            TestAssert.Equal(2, pdf.Split('\n').Count(line => line.Trim() == operation));
             if (evenOdd)
             {
+                TestAssert.Equal(2, Regex.Matches(pdf, @"(?m)^0 1 0 rg\s+(?:[-\d.]+ [-\d.]+ [ml]\s+)+h\s+f\*\r?$").Count);
+                TestAssert.Equal(2, Regex.Matches(pdf, @"(?m)^S\r?$").Count);
                 TestAssert.Contains("/ca 0.5", pdf);
                 TestAssert.Contains("/CA 0.25", pdf);
+            }
+            else
+            {
+                TestAssert.Equal(2, Regex.Matches(pdf, @"(?m)^B\r?$").Count);
             }
         }
     }
@@ -867,7 +871,9 @@ internal static partial class PptxImagesTests
                 TestAssert.True(Math.Abs(gap - widths[0] - 2.88d) < .001d, "Square caps must retain the Office white gap.");
                 TestAssert.Contains("2 J", pdf);
                 TestAssert.Contains("/CA 0.25", pdf);
-                TestAssert.Equal(1, Regex.Matches(pdf, combinedPaint ? @"(?m)^B\r?$" : @"(?m)^S\r?$").Count);
+                TestAssert.Equal(1, Regex.Matches(pdf, @"(?m)^S\r?$").Count);
+                TestAssert.Equal(combinedPaint ? 1 : 0,
+                    Regex.Matches(pdf, @"(?m)^0 1 0 rg\s+(?:[-\d.]+ [-\d.]+ [ml]\s+)+h\s+f\r?$").Count);
                 if (baseline is null) baseline = bytes;
                 else TestAssert.True(baseline.AsSpan().SequenceEqual(bytes), "Square dash paint must survive source-coordinate rescaling.");
             }
