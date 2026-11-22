@@ -1,10 +1,12 @@
 namespace Lokad.OoxPdf.Docx;
 
 /// <summary>
-/// Character break rules shared by the wrap engine and the layout snapshot counters.
+/// Character break rules shared by layout, its counters, and source navigation.
 /// </summary>
 internal static class DocxTextBreakRules
 {
+    internal static bool IsOptionalBreakMarker(char value) => value is '\u00AD' or '\u200B';
+
     /// <summary>
     /// Returns true for whitespace characters that may end a line.
     /// </summary>

@@ -1011,8 +1011,8 @@ internal sealed partial class DocxLayoutEngine
 
     private static bool IsHiddenBreakCharacter(char value, bool preserveTerminalSoftHyphen)
     {
-        return value == '\u200B' ||
-            (value == '\u00AD' && !preserveTerminalSoftHyphen);
+        return DocxTextBreakRules.IsOptionalBreakMarker(value) &&
+            (value != '\u00AD' || !preserveTerminalSoftHyphen);
     }
 
     private static IReadOnlyList<TextToken> TokenizeSpaces(string text, int start, int length)

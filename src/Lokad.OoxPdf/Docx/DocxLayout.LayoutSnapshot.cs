@@ -1008,7 +1008,7 @@ internal sealed partial record DocxLayoutSnapshot(
                 continue;
             }
 
-            if (IsTextProfileHiddenBreakCharacter(value))
+            if (DocxTextBreakRules.IsOptionalBreakMarker(value))
             {
                 longest = Math.Max(longest, current);
                 current = 0;
@@ -1024,11 +1024,6 @@ internal sealed partial record DocxLayoutSnapshot(
         }
 
         return Math.Max(longest, current);
-    }
-
-    private static bool IsTextProfileHiddenBreakCharacter(char value)
-    {
-        return value is '\u00AD' or '\u200B';
     }
 
     private static bool IsTextProfileLineBreakOpportunityAfter(char value)

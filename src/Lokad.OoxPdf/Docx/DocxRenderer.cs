@@ -1949,9 +1949,8 @@ internal sealed partial class DocxRenderer
             return true;
         if (!terminalTextBoundary) return false;
 
-        // Wrapping can omit trailing source whitespace. Resolve its boundary
-        // through the last painted text endpoint, preserving existing targets
-        // and the source offset that keeps earlier wrapped lines ineligible.
+        // Wrapping can omit whitespace and unused break markers. Try the
+        // painted endpoint only after the exact source boundary failed.
         if (paragraph.InlineContent is { } terminalItems)
         {
             for (int index = terminalItems.Count - 1; index >= 0; index--)
@@ -1959,7 +1958,7 @@ internal sealed partial class DocxRenderer
                 token.ThrowIfCancellationRequested();
                 if (IsNonpaintingBookmarkItem(terminalItems[index])) continue;
                 if (terminalItems[index] is not DocxInlineText text) return false;
-                int length = text.Run.Text.AsSpan(text.Start, text.Length).TrimEnd().Length;
+                int length = TrimBookmarkTextEnd(text.Run, text.Start, text.Length, token);
                 if (length == 0) continue;
                 return TryResolveBookmarkTextBoundary(segments, text.Run.SourceRunIndex,
                     text.Run.SourceTextOffsetInRun + text.Start + length, out target, out targetX);
@@ -1972,13 +1971,31 @@ internal sealed partial class DocxRenderer
                 token.ThrowIfCancellationRequested();
                 DocxTextRun run = paragraph.Runs[index];
                 if (run.EffectiveProperties.Hidden) continue;
-                int length = run.Text.AsSpan().TrimEnd().Length;
+                int length = TrimBookmarkTextEnd(run, 0, run.Text.Length, token);
                 if (length == 0) continue;
                 return TryResolveBookmarkTextBoundary(segments, run.SourceRunIndex,
                     run.SourceTextOffsetInRun + length, out target, out targetX);
             }
         }
         return false;
+    }
+
+    private static int TrimBookmarkTextEnd(DocxTextRun run, int start, int length, CancellationToken token)
+    {
+        while (length > 0)
+        {
+            token.ThrowIfCancellationRequested();
+            int index = start + length - 1;
+            char value = run.Text[index];
+            if (!char.IsWhiteSpace(value) &&
+                (!DocxTextBreakRules.IsOptionalBreakMarker(value) ||
+                    run.LiteralNoteMarkerOffset == run.SourceTextOffsetInRun + index))
+            {
+                break;
+            }
+            length--;
+        }
+        return length;
     }
 
     private static bool TryResolveBookmarkTextBoundary(

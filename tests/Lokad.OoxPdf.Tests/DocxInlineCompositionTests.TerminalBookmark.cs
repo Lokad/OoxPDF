@@ -73,26 +73,28 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.Equal(2, expected.Length);
             TestAssert.Equal(1, expected[1].Destination!.Value.PageIndex);
             TestAssert.Contains("plain ending", DocxPageFootnoteNumberingTests.DecodeText(control[1]));
-            foreach (bool hiddenBeforeBookmark in new[] { true, false })
+            (bool? HiddenBefore, char? BreakMarker)[] suffixes =
+                [(true, null), (false, null), (null, '\u00AD'), (null, '\u200B')];
+            foreach (var (hiddenBeforeBookmark, breakMarker) in suffixes)
             {
-                var pages = Render(hiddenBeforeBookmark);
+                var pages = Render(hiddenBeforeBookmark, breakMarker);
                 TestAssert.Equal(control.Length, pages.Length);
                 TestAssert.True(control.Select(DocxPageFootnoteNumberingTests.DecodeText)
                     .SequenceEqual(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)),
-                    "A hidden suffix must preserve decoded content on each page.");
+                    "The unpainted suffix must preserve decoded content on each page.");
                 var actual = pages[0].Annotations.OrderBy(link => link.X).ToArray();
-                TestAssert.Equal(2, actual.Length);
                 TestAssert.True(expected.SequenceEqual(actual),
-                    $"The terminal text boundary must keep its whole link: {mode}/{cell}/{content}/{hiddenBeforeBookmark}.");
+                    $"The terminal text boundary must retain both links: {mode}/{cell}/{content}/{hiddenBeforeBookmark}/{(int?)breakMarker}.");
             }
 
-            PdfPage[] Render(bool? hiddenBeforeBookmark) => renderer.RenderPagesAsync(
-                ReadTerminalBookmarkDocument(mode, cell, content, hiddenBeforeBookmark), null, default).ToBlockingEnumerable().ToArray();
+            PdfPage[] Render(bool? hiddenBeforeBookmark, char? breakMarker = null) => renderer.RenderPagesAsync(
+                ReadTerminalBookmarkDocument(mode, cell, content, hiddenBeforeBookmark, breakMarker),
+                null, default).ToBlockingEnumerable().ToArray();
         }
     }
 
     private static DocxDocument ReadTerminalBookmarkDocument(OoxPdfDocxMarkupMode mode, bool cell, string contentKind,
-        bool? hiddenBeforeBookmark) => ReadMutation("CompositionProbes/body", mode, false, false, (xml, w, m) =>
+        bool? hiddenBeforeBookmark, char? breakMarker = null) => ReadMutation("CompositionProbes/body", mode, false, false, (xml, w, m) =>
     {
         var body = xml.Root!.Element(w + "body")!;
         var original = body.Element(w + "p")!;
@@ -116,6 +118,8 @@ internal static partial class DocxInlineCompositionTests
         var owner = new XElement(w + "p", Run("Terminal owner "), Start("701", "ObjectStart"), content, End("701"));
         if (contentKind == "mixed") owner.Add(Run(" plain ending"));
         if (hiddenBeforeBookmark is true) owner.Add(HiddenRun());
+        if (breakMarker == '\u00AD') owner.Elements(w + "r").Last().Add(new XElement(w + "softHyphen"));
+        else if (breakMarker is { } marker) owner.Add(Run(marker.ToString()));
         owner.Add(Start("702", "ObjectEnd"), End("702"));
         if (hiddenBeforeBookmark is false) owner.Add(HiddenRun());
 
