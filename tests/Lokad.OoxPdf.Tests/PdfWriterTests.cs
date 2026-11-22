@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.RegularExpressions;
 using Lokad.OoxPdf;
 using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Pdf;
@@ -198,11 +199,42 @@ internal static partial class PdfWriterTests
         TestAssert.Equal(2, first.Shadings.Count);
         TestAssert.Equal(1, CountOccurrences(pdf, "/ShadingType 2"));
         TestAssert.Equal(1, CountOccurrences(pdf, "/ShadingType 3"));
-        TestAssert.Equal(2, CountOccurrences(pdf, "/Sh2 sh"));
-        TestAssert.Contains("/Coords [0 0 0 0 0 1]", pdf);
-        TestAssert.Contains("/Bounds [0.5]", pdf);
-        TestAssert.Contains("/C1 [0 1 0]", pdf);
-        TestAssert.Contains("/C1 [0 0 1]", pdf);
+        var pageDictionaries = Regex.Matches(pdf, @"(?m)^<< /Type /Page [^\r\n]+ >>\r?$");
+        TestAssert.Equal(2, pageDictionaries.Count);
+
+        string[] firstPaint = ReadPaintedShadingReferences(pageDictionaries[0].Value);
+        string[] secondPaint = ReadPaintedShadingReferences(pageDictionaries[1].Value);
+        TestAssert.Equal(3, firstPaint.Length);
+        TestAssert.Equal(1, secondPaint.Length);
+        TestAssert.Equal(firstPaint[1], firstPaint[2]);
+        TestAssert.Equal(firstPaint[1], secondPaint[0]);
+        TestAssert.Contains("/ShadingType 2", ReadObject(firstPaint[0]));
+        string radial = ReadObject(secondPaint[0]);
+        TestAssert.Contains("/ShadingType 3", radial);
+        TestAssert.Contains("/Coords [0 0 0 0 0 1]", radial);
+        TestAssert.Contains("/Bounds [0.5]", radial);
+        TestAssert.Contains("/C1 [0 1 0]", radial);
+        TestAssert.Contains("/C1 [0 0 1]", radial);
+
+        string ReadObject(string number)
+        {
+            var obj = Regex.Match(pdf, $@"(?ms)^{number} 0 obj\r?\n(.*?)^endobj\r?$");
+            TestAssert.True(obj.Success, "Expected the referenced object " + number);
+            return obj.Groups[1].Value;
+        }
+
+        string[] ReadPaintedShadingReferences(string page)
+        {
+            string content = ReadObject(Regex.Match(page, @"/Contents (\d+) 0 R").Groups[1].Value);
+            string bindings = Regex.Match(page, @"/Shading << ([^>]*) >>").Groups[1].Value;
+            return Regex.Matches(content, @"(?m)^/(Sh\d+) sh\r?$").Select(operation =>
+            {
+                string name = operation.Groups[1].Value;
+                var binding = Regex.Match(bindings, $@"/{name} (\d+) 0 R");
+                TestAssert.True(binding.Success, "Expected a local binding for " + name);
+                return binding.Groups[1].Value;
+            }).ToArray();
+        }
     }
 
     public static void RadialSpreadFunctionsPreserveCycleBoundariesAndReflection()

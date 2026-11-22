@@ -826,22 +826,23 @@ internal sealed class PdfDocumentWriter
                 .Concat(p.Patterns.SelectMany(pattern => pattern.Pattern.Images.Select(image => image.Image)))),
             cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
+        List<PdfShadingPattern> shadingPatterns = pages
+            .SelectMany(page => page.ShadingPatterns.Select(pattern => pattern.Pattern))
+            .Concat(groups.SelectMany(group => group.ShadingPatterns.Select(pattern => pattern.Pattern)))
+            .DistinctBy(pattern => pattern.ResourceKey, StringComparer.Ordinal)
+            .ToList();
+        cancellationToken.ThrowIfCancellationRequested();
+        // An identical pattern already owns the same shading key. Keep direct shadings first.
         List<PdfShading> shadings = pages
             .SelectMany(p => p.Shadings.Select(s => s.Shading))
             .Concat(groups.SelectMany(group => group.Shadings.Select(shading => shading.Shading)))
-            .Concat(pages.SelectMany(page => page.ShadingPatterns.Select(pattern => pattern.Pattern.Shading)))
-            .Concat(groups.SelectMany(group => group.ShadingPatterns.Select(pattern => pattern.Pattern.Shading)))
+            .Concat(shadingPatterns.Select(pattern => pattern.Shading))
             .DistinctBy(s => s.ResourceKey)
             .ToList();
         cancellationToken.ThrowIfCancellationRequested();
         List<PdfTilingPattern> patterns = pages
             .SelectMany(p => p.Patterns.Select(s => s.Pattern))
             .DistinctBy(s => s.ResourceKey)
-            .ToList();
-        List<PdfShadingPattern> shadingPatterns = pages
-            .SelectMany(page => page.ShadingPatterns.Select(pattern => pattern.Pattern))
-            .Concat(groups.SelectMany(group => group.ShadingPatterns.Select(pattern => pattern.Pattern)))
-            .DistinctBy(pattern => pattern.ResourceKey, StringComparer.Ordinal)
             .ToList();
         return new PdfDocumentPlan(fonts, fallbackFonts, images, shadings, patterns, shadingPatterns, groups);
     }
