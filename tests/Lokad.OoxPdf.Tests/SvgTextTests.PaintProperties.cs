@@ -349,22 +349,9 @@ internal static partial class SvgTextTests
 
     public static void SvgPercentageDashLengthsMatchViewportUnitsInBothFormats()
     {
-        // The 170 x 70 viewBox has a normalized diagonal of 130 user units.
-        string Picture(string solid, string inherited) => $"""
-            <svg xmlns="http://www.w3.org/2000/svg" width="340" height="140" viewBox="-10 -5 170 70">
-              <defs>
-                <linearGradient id="stroke" gradientUnits="userSpaceOnUse" x1="12" y1="0" x2="150" y2="0">
-                  <stop offset="0" stop-color="blue"/><stop offset="1" stop-color="purple"/>
-                </linearGradient>
-              </defs>
-              <path d="M12 16 H150" fill="none" stroke="red" stroke-width="4" stroke-dasharray="{solid}"/>
-              <g style="stroke-dasharray:{inherited}">
-                <path d="M12 38 H150" fill="none" stroke="url(#stroke)" stroke-width="4"/>
-              </g>
-            </svg>
-            """;
-
-        AssertSvgPaintInBothFormats(Picture("13 6.5", "13, 6.5px, 13"), Picture("10% 5%", "10%, 6.5px, 10%"),
+        AssertSvgPaintInBothFormats(
+            DashStrokeSvg("""stroke-dasharray="13 6.5" """, "stroke-dasharray:13, 6.5px, 13"),
+            DashStrokeSvg("""stroke-dasharray="10% 5%" """, "stroke-dasharray:10%, 6.5px, 10%"),
             "1 0 0 RG", "/PatternType 2", " d");
 
         string Line(string pattern) => Svg($"""
@@ -377,6 +364,31 @@ internal static partial class SvgTextTests
         AssertEquivalentSvgPaint(solid, Paint(Line("10% -5%"), diagnostics), "A negative entry retains the diagnosed solid fallback.");
         TestAssert.Contains("unparsable dash", diagnostics.Single().Message);
     }
+
+    public static void SvgPercentageDashOffsetsMatchViewportUnitsInBothFormats()
+    {
+        AssertSvgPaintInBothFormats(
+            DashStrokeSvg("""stroke-dasharray="13 6.5" stroke-dashoffset="13" """,
+                "stroke-dasharray:13 6.5;stroke-dashoffset:-6.5px"),
+            DashStrokeSvg("""stroke-dasharray="13 6.5" stroke-dashoffset="10%" """,
+                "stroke-dasharray:13 6.5;stroke-dashoffset:-5%"),
+            "1 0 0 RG", "/PatternType 2", " d");
+    }
+
+    // The 170 x 70 viewBox has a normalized diagonal of 130 user units.
+    private static string DashStrokeSvg(string attributes, string inheritedStyle) => $"""
+        <svg xmlns="http://www.w3.org/2000/svg" width="340" height="140" viewBox="-10 -5 170 70">
+          <defs>
+            <linearGradient id="stroke" gradientUnits="userSpaceOnUse" x1="12" y1="0" x2="150" y2="0">
+              <stop offset="0" stop-color="blue"/><stop offset="1" stop-color="purple"/>
+            </linearGradient>
+          </defs>
+          <path d="M12 16 H150" fill="none" stroke="red" stroke-width="4" {attributes}/>
+          <g style="{inheritedStyle}">
+            <path d="M12 38 H150" fill="none" stroke="url(#stroke)" stroke-width="4"/>
+          </g>
+        </svg>
+        """;
 
     public static void SvgGradientTemplatesMatchExpandedPaintInBothFormats()
     {

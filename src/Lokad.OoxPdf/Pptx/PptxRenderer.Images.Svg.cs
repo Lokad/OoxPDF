@@ -1604,7 +1604,8 @@ internal sealed partial class PptxRenderer
         double[]? dash = ReadSvgDashPattern(path, ReadSvgInheritedAttribute(path, style, "stroke-dasharray"),
             percentageBasis, out bool dashInvalid);
         double offset = 0d;
-        if (dash is not null && !TryReadSvgStrokeOffset(ReadSvgInheritedAttribute(path, style, "stroke-dashoffset"), out offset))
+        if (dash is not null && ReadSvgInheritedAttribute(path, style, "stroke-dashoffset") is { } dashOffset &&
+            !TryReadSvgViewportLength(path, dashOffset, percentageBasis, out offset))
         {
             dash = null;
             dashInvalid = true;
@@ -1798,16 +1799,6 @@ internal sealed partial class PptxRenderer
         }
         return TryReadSvgNumberOrPixels(text, out miterLimit) && miterLimit >= 1d;
     }
-    private static bool TryReadSvgStrokeOffset(string? text, out double offset)
-    {
-        offset = 0d;
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return true;
-        }
-        return TryReadSvgNumberOrPixels(text, out offset);
-    }
-
     private static bool TryReadSvgNumberOrPixels(ReadOnlySpan<char> text, out double value)
     {
         text = text.Trim();

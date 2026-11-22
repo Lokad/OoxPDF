@@ -664,6 +664,7 @@
     "=SvgAutomaticShapeRadiiMatchExplicitPairsInBothFormats",
     "=SvgPercentageStrokeWidthsMatchViewportUnitsInBothFormats",
     "=SvgPercentageDashLengthsMatchViewportUnitsInBothFormats",
+    "=SvgPercentageDashOffsetsMatchViewportUnitsInBothFormats",
     "=SvgConstantLinearGradientsMatchSolidPaintInBothFormats",
     "=SvgSingleStopRadialGradientsMatchSolidPaintInBothFormats",
     "=SvgQuotedLocalPaintServersMatchUnquotedReferencesInBothFormats",
