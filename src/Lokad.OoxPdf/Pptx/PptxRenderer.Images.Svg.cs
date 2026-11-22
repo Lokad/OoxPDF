@@ -256,8 +256,10 @@ internal sealed partial class PptxRenderer
                     unpaintablePaths++;
                 }
             }
+            // A transparent fill contributes no ink to the element's opacity composition.
+            bool hasVisibleFill = hasFill && paint.Opacity > 0d;
             SvgStroke stroke = ReadSvgStroke(element, gradients, radialGradients, elementIds,
-                allowStrokePattern && strokeContainersQualified, hasFill, strokePercentageBasis,
+                allowStrokePattern && strokeContainersQualified, hasVisibleFill, strokePercentageBasis,
                 out SvgStrokeFailure strokeFailure, out bool invalidStrokePresentation, out bool hasVectorEffect, out bool nonScalingStroke);
             List<SvgPathCommand>? pathCommands = null;
             bool completePath = false;
@@ -1533,7 +1535,7 @@ internal sealed partial class PptxRenderer
     // any other effect value stays diagnosed with the scaled stroke.
     private static SvgStroke ReadSvgStroke(XElement path, IReadOnlyDictionary<string, SvgGradient> gradients,
         IReadOnlyDictionary<string, SvgRadialGradient> radialGradients, Lazy<HashSet<string>> elementIds,
-        bool allowGradientStroke, bool hasFill, double percentageBasis, out SvgStrokeFailure failure,
+        bool allowGradientStroke, bool hasVisibleFill, double percentageBasis, out SvgStrokeFailure failure,
         out bool invalidPresentation, out bool hasVectorEffect, out bool nonScalingStroke)
     {
         failure = SvgStrokeFailure.None;
@@ -1579,7 +1581,7 @@ internal sealed partial class PptxRenderer
             {
                 if (!allowGradientStroke || (!string.IsNullOrWhiteSpace(strokeOpacity) && ReadUnitSvgOpacity(strokeOpacity) is null)
                     || (!string.IsNullOrWhiteSpace(elementOpacity) && ReadUnitSvgOpacity(elementOpacity) is null)
-                    || (hasFill && ownOpacity < 1d)
+                    || (hasVisibleFill && ownOpacity < 1d)
                     || gradient is null || gradient.UniformStopOpacity is null || !gradient.HasNumericStopOpacity
                     || !gradient.HasIdentityGradientTransform || gradient.Spread != SvgGradientSpread.Pad)
                 {

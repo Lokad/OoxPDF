@@ -668,6 +668,7 @@
     "=SvgDashArrayXmlWhitespaceMatchesSpacesInBothFormats",
     "=SvgPointListsWithTrailingCoordinateKeepCompletePairsInBothFormats",
     "=SvgSmoothCubicsMatchExplicitCurvesInBothFormats",
+    "=SvgTransparentFillKeepsTranslucentGradientStrokeInBothFormats",
     "=SvgPercentageOpacityMatchesUnitOpacityInBothFormats",
     "=SvgConstantLinearGradientsMatchSolidPaintInBothFormats",
     "=SvgSingleStopRadialGradientsMatchSolidPaintInBothFormats",

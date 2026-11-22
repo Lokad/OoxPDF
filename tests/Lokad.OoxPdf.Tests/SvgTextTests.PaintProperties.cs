@@ -415,6 +415,24 @@ internal static partial class SvgTextTests
             """);
     }
 
+    public static void SvgTransparentFillKeepsTranslucentGradientStrokeInBothFormats()
+    {
+        const string definitions = """
+            <defs><linearGradient id="ramp"><stop stop-color="blue"/>
+              <stop offset="1" stop-color="purple"/></linearGradient></defs>
+            """;
+        const string path = """
+            <path d="M15 17 H125 V61 H15 Z" fill="red" opacity=".5"
+              stroke="url(#ramp)" stroke-width="6" stroke-opacity=".75"/>
+            """;
+        const string sibling = """<rect x="131" y="62" width="12" height="13" fill="green"/>""";
+
+        AssertSvgPaintInBothFormats(
+            Svg(definitions + path.Replace("fill=\"red\"", "fill=\"red\" fill-opacity=\"0\"", StringComparison.Ordinal) + sibling),
+            Svg(definitions + "<g style=\"fill-opacity:0%\">" + path + "</g>" + sibling),
+            "/PatternType 2", "/Pattern CS", "/ca 1 /CA 0.375", "/ca 0 /CA 1", "0 0.502 0 rg");
+    }
+
     public static void SvgPercentageOpacityMatchesUnitOpacityInBothFormats()
     {
         AssertSvgPaintInBothFormats(
