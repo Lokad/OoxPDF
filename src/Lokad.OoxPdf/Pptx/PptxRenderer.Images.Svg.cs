@@ -1601,7 +1601,8 @@ internal sealed partial class PptxRenderer
         }
         int lineCap = ReadSvgLineCap(ReadSvgInheritedAttribute(path, style, "stroke-linecap"), out bool capInvalid);
         int lineJoin = ReadSvgLineJoin(ReadSvgInheritedAttribute(path, style, "stroke-linejoin"), out bool joinInvalid);
-        double[]? dash = ReadSvgDashPattern(ReadSvgInheritedAttribute(path, style, "stroke-dasharray"), out bool dashInvalid);
+        double[]? dash = ReadSvgDashPattern(path, ReadSvgInheritedAttribute(path, style, "stroke-dasharray"),
+            percentageBasis, out bool dashInvalid);
         double offset = 0d;
         if (dash is not null && !TryReadSvgStrokeOffset(ReadSvgInheritedAttribute(path, style, "stroke-dashoffset"), out offset))
         {
@@ -1751,9 +1752,9 @@ internal sealed partial class PptxRenderer
         invalid = true;
         return 0;
     }
-    // RV07: dash patterns scale like widths at emission; an odd count doubles
-    // per SVG and an all-zero pattern means solid. Percentages stay diagnosed.
-    private static double[]? ReadSvgDashPattern(string? text, out bool invalid)
+    // Dash lengths and widths share the viewport diagonal. An odd list doubles
+    // per SVG and an all-zero pattern means solid.
+    private static double[]? ReadSvgDashPattern(XElement path, string? text, double percentageBasis, out bool invalid)
     {
         invalid = false;
         if (string.IsNullOrWhiteSpace(text) || text.Trim().Equals("none", StringComparison.OrdinalIgnoreCase))
@@ -1764,7 +1765,7 @@ internal sealed partial class PptxRenderer
         var lengths = new List<double>();
         foreach (string part in parts)
         {
-            if (!TryReadSvgNumberOrPixels(part, out double length) || length < 0d)
+            if (!TryReadSvgViewportLength(path, part, percentageBasis, out double length) || length < 0d)
             {
                 invalid = true;
                 return null;
