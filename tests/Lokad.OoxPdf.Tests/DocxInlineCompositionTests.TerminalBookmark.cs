@@ -105,7 +105,7 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
-    public static void DocxTerminalInlineObjectsKeepBookmarkLinksAcrossOptionalBreaks()
+    public static void DocxTerminalInlineObjectsKeepBookmarkLinksAcrossUnpaintedSuffixes()
     {
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
         foreach (bool cell in new[] { false, true })
@@ -123,22 +123,32 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.True(links[1].Destination!.Value.Left > links[0].Destination!.Value.Left,
                 $"The end of the placed {content} must follow its start: {mode}/{cell}.");
 
-            foreach (bool before in new[] { true, false })
+            (bool Before, string? Text)[] suffixes = [(true, null), (false, "\u200B"), (true, "  "), (false, "  ")];
+            foreach (var (before, text) in suffixes)
             {
-                var pages = Render(anchor =>
-                {
-                    XNamespace w = anchor.Name.Namespace;
-                    if (before)
-                        anchor.AddBeforeSelf(new XElement(w + "r", new XElement(w + "softHyphen")));
-                    else
-                        anchor.ElementsAfterSelf().First().AddAfterSelf(new XElement(w + "r", new XElement(w + "t", "\u200B")));
-                });
+                var pages = RenderSuffix(before, text);
                 TestAssert.True(control.Select(DocxPageFootnoteNumberingTests.DecodeText)
                     .SequenceEqual(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)),
-                    $"The unused break must preserve decoded page text: {mode}/{cell}/{content}/{before}.");
+                    $"The unpainted suffix must preserve decoded page text: {mode}/{cell}/{content}/{before}/{text?.Length}.");
                 TestAssert.True(links.SequenceEqual(pages[0].Annotations.OrderBy(link => link.X)),
-                    $"The unused break must preserve the placed {content} endpoint: {mode}/{cell}/{before}.");
+                    $"The unpainted suffix must preserve the placed {content} endpoint: {mode}/{cell}/{before}/{text?.Length}.");
             }
+
+            var beforeNoBreak = RenderSuffix(true, "\u00A0\u00A0")[0].Annotations.OrderBy(link => link.X).ToArray();
+            var afterNoBreak = RenderSuffix(false, "\u00A0\u00A0")[0].Annotations.OrderBy(link => link.X).ToArray();
+            TestAssert.True(beforeNoBreak.Length == 2 && afterNoBreak.Length == 2 &&
+                beforeNoBreak[1].Destination is { PageIndex: 1, Left: double beforeX } &&
+                afterNoBreak[1].Destination is { PageIndex: 1, Left: double afterX } && beforeX > afterX,
+                $"A no-break space must retain its authored advance on the target page: {mode}/{cell}/{content}.");
+
+            PdfPage[] RenderSuffix(bool before, string? text) => Render(anchor =>
+            {
+                XNamespace w = anchor.Name.Namespace;
+                var suffix = new XElement(w + "r", text is null ? new XElement(w + "softHyphen") :
+                    new XElement(w + "t", new XAttribute(XNamespace.Xml + "space", "preserve"), text));
+                if (before) anchor.AddBeforeSelf(suffix);
+                else anchor.ElementsAfterSelf().First().AddAfterSelf(suffix);
+            });
 
             PdfPage[] Render(Action<XElement>? addSuffix) => renderer.RenderPagesAsync(
                 ReadTerminalBookmarkDocument(mode, cell, content, null, addSuffix),

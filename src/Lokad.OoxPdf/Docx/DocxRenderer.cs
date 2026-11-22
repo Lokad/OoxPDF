@@ -1892,16 +1892,16 @@ internal sealed partial class DocxRenderer
             index++;
         }
         if (index < items.Count && (bookmark.MathSource is not null ||
-            !IsOptionalBreakOnlyBookmarkItem(items[index], token)))
+            !IsDiscardableBookmarkSuffix(items[index], token)))
         {
             return items[index];
         }
         if (bookmark.MathSource is not null) return null;
 
-        // A suffix made entirely of nonpainting items and unused break
-        // markers has the endpoint of the preceding placed item.
+        // Terminal breakable spaces and unused break markers have no ink.
+        // Resolve their boundary on the preceding placed item.
         int last = items.Count - 1;
-        while (last >= 0 && (IsNonpaintingBookmarkItem(items[last]) || IsOptionalBreakOnlyBookmarkItem(items[last], token)))
+        while (last >= 0 && (IsNonpaintingBookmarkItem(items[last]) || IsDiscardableBookmarkSuffix(items[last], token)))
         {
             token.ThrowIfCancellationRequested();
             last--;
@@ -1920,13 +1920,15 @@ internal sealed partial class DocxRenderer
         DocxInlineText { Run.EffectiveProperties.Hidden: true } or DocxInlineText { Length: 0 } or
         DocxInlineTab { Run.EffectiveProperties.Hidden: true } or DocxInlineBreak { Run.EffectiveProperties.Hidden: true };
 
-    private static bool IsOptionalBreakOnlyBookmarkItem(DocxInlineItem item, CancellationToken token)
+    private static bool IsDiscardableBookmarkSuffix(DocxInlineItem item, CancellationToken token)
     {
-        if (item is not DocxInlineText { Length: > 0 } text) return false;
+        if (item is not DocxInlineText { Length: > 0 } text || text.Run.FieldKind is { } field && field.IsDynamic())
+            return false;
         for (int index = text.Start; index < text.Start + text.Length; index++)
         {
             token.ThrowIfCancellationRequested();
-            if (!IsBookmarkBreakMarker(text.Run, index)) return false;
+            if (!IsBookmarkBreakMarker(text.Run, index) &&
+                !DocxTextBreakRules.IsBreakableWhitespaceChar(text.Run.Text[index])) return false;
         }
         return true;
     }
