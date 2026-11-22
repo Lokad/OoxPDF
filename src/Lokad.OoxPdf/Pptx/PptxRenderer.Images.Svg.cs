@@ -1041,9 +1041,11 @@ internal sealed partial class PptxRenderer
         SvgGradient effective, SvgPathBounds bounds, double minX, double minY, double imageX, double imageY,
         double imageHeight, double scaleX, double scaleY)
     {
+        // Mapped endpoints still determine the perpendicular gradient axis
+        // after a translation or positive uniform scale.
         if (!gradient.HasNumericStopOpacity ||
             !gradient.HasIdentityGradientTransform || gradient.Spread != SvgGradientSpread.Pad ||
-            (gradient.IsUserSpace && !pathTransform.IsIdentity) || gradient.Stops.Count > 256 ||
+            (gradient.IsUserSpace && !pathTransform.HasPositiveUniformScale) || gradient.Stops.Count > 256 ||
             (!gradient.IsUserSpace && (pathTransform.M11 <= 0d || pathTransform.M22 <= 0d || pathTransform.M12 != 0d || pathTransform.M21 != 0d)) ||
             !HaveRepresentableSvgStops(gradient.Stops)) { return null; }
         double unitWidth = gradient.IsUserSpace ? 1d : bounds.MaxX - bounds.MinX;
@@ -3025,7 +3027,9 @@ internal sealed partial class PptxRenderer
     {
         public static SvgTransform Identity => new SvgTransform(1d, 0d, 0d, 1d, 0d, 0d);
 
-        public bool IsIdentity => M11 == 1d && M12 == 0d && M21 == 0d && M22 == 1d && OffsetX == 0d && OffsetY == 0d;
+        public bool HasPositiveUniformScale => M11 > 0d && M11 == M22 && M12 == 0d && M21 == 0d;
+
+        public bool IsIdentity => HasPositiveUniformScale && M11 == 1d && OffsetX == 0d && OffsetY == 0d;
 
         public (double X, double Y) Apply(double x, double y) => (M11 * x + M21 * y + OffsetX, M12 * x + M22 * y + OffsetY);
 

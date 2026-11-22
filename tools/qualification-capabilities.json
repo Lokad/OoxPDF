@@ -672,6 +672,7 @@
     "=SvgUnsupportedCommandsKeepOnlyTheDecodedStrokePrefix",
     "=SvgImportantInlinePaintMatchesExplicitPaintInBothFormats",
     "=SvgTransparentFillKeepsTranslucentGradientStrokeInBothFormats",
+    "=SvgUserSpaceGradientsFollowTranslatedAndUniformlyScaledGroups",
     "=SvgLinesKeepTranslucentGradientStrokesWithDefaultOrInheritedFill",
     "=SvgObjectOpacityMatchesGroupForFilledGradientStrokes",
     "=SvgTranslucentSolidStrokesPaintOverTheirFill",

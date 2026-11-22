@@ -493,6 +493,43 @@ internal static partial class SvgTextTests
             "/PatternType 2", "/Pattern CS", "/ca 1 /CA 0.375", "/ca 0 /CA 1", "0 0.502 0 rg");
     }
 
+    public static void SvgUserSpaceGradientsFollowTranslatedAndUniformlyScaledGroups()
+    {
+        string direct = Svg(Figure("left", 0, 1, 0, 0) + Figure("right", 180, 1, 0, 0));
+        string transformed = Svg(Figure("left", 0, 1, -8, 6) + Figure("right", 180, 2, 188, 6));
+        AssertSvgPaintInBothFormats(direct, transformed, pdf =>
+        {
+            TestAssert.Equal(2, Regex.Matches(pdf, @"/Pattern CS /Ps\d+ SCN").Count);
+            TestAssert.Equal(2, Regex.Matches(pdf, "/S /Luminosity").Count);
+        }, "0 0.502 0 rg");
+
+        static string Figure(string id, int offset, int scale, int translateX, int translateY)
+        {
+            int X(int value) => (value + offset - translateX) / scale;
+            int Y(int value) => (value - translateY) / scale;
+            string transform = scale == 1 && translateX == 0 && translateY == 0
+                ? "" : FormattableString.Invariant($"""transform="translate({translateX} {translateY}) scale({scale})" """);
+            return FormattableString.Invariant($"""
+                <defs>
+                  <linearGradient id="{id}-stroke" gradientUnits="userSpaceOnUse"
+                                  x1="{X(16)}" y1="{Y(10)}" x2="{X(112)}" y2="{Y(42)}">
+                    <stop stop-color="blue"/><stop offset="1" stop-color="purple"/>
+                  </linearGradient>
+                  <linearGradient id="{id}-fill" gradientUnits="userSpaceOnUse"
+                                  x1="{X(24)}" y1="{Y(48)}" x2="{X(114)}" y2="{Y(70)}">
+                    <stop stop-color="yellow" stop-opacity=".3"/><stop offset="1" stop-color="aqua"/>
+                  </linearGradient>
+                </defs>
+                <g {transform}>
+                  <path d="M{X(24)} {Y(22)} L{X(112)} {Y(40)}" fill="none"
+                        stroke="url(#{id}-stroke)" stroke-width="{6 / scale}" stroke-opacity=".75"/>
+                  <rect x="{X(24)}" y="{Y(48)}" width="{90 / scale}" height="{22 / scale}" fill="url(#{id}-fill)"/>
+                </g>
+                <rect x="{offset + 130}" y="62" width="11" height="11" fill="green"/>
+                """);
+        }
+    }
+
     public static void SvgObjectOpacityMatchesGroupForFilledGradientStrokes()
     {
         AssertSvgPaintInBothFormats(Picture(groupOpacity: true), Picture(groupOpacity: false), pdf =>
