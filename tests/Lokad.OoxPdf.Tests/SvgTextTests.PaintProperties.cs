@@ -1,4 +1,6 @@
+using System.Globalization;
 using System.Text;
+using System.Text.RegularExpressions;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Docx;
 using Lokad.OoxPdf.Ooxml;
@@ -464,8 +466,39 @@ internal static partial class SvgTextTests
 
     public static void SvgLinesKeepTranslucentGradientStrokesWithDefaultOrInheritedFill()
     {
-        AssertSvgPaintInBothFormats(Picture("""fill="none" """), Picture(""),
-            "/PatternType 2", "/Pattern CS", "/ca 1 /CA 0.55", "0 0.502 0 rg");
+        AssertSvgPaintInBothFormats(Picture("""fill="none" """), Picture(""), AssertStrokes,
+            "/PatternType 2", "/ca 1 /CA 0.55", "0 0.502 0 rg");
+
+        static void AssertStrokes(string pdf)
+        {
+            const string point = @"(?<x>-?[0-9.]+) (?<y>-?[0-9.]+) (?<operator>[ml])";
+            var strokes = Regex.Matches(pdf,
+                $@"(?m)^/Pattern CS /\S+ SCN\s+[0-9.]+ w\s+[0-9.]+ M\s+(?<path>(?:(?:{point}|h)\s+)+)S\r?$");
+            (string Shape, int[] Ys)[] expected =
+                [("line", [10, 30]), ("path", [40, 48, 53, 61]), ("polyline", [65, 72])];
+            TestAssert.True(strokes.Count == expected.Length, "The line, path and polyline each need a pattern stroke.");
+            for (int i = 0; i < expected.Length; i++)
+            {
+                var (shape, ys) = expected[i];
+                var points = Regex.Matches(strokes[i].Groups["path"].Value, point);
+                TestAssert.True(points.Count == ys.Length, $"The {shape} must stroke every authored segment.");
+                // The picture frame can scale the two axes differently.
+                double xScale = Coordinate(points[1], "x") / 120d;
+                double yScale = -Coordinate(points[1], "y") / ys[1];
+                TestAssert.True(xScale > 0d && yScale > 0d, $"The {shape} must have a valid right endpoint.");
+                for (int j = 0; j < ys.Length; j++)
+                {
+                    bool startsSegment = j % 2 == 0;
+                    TestAssert.True(points[j].Groups["operator"].Value == (startsSegment ? "m" : "l") &&
+                        Math.Abs(Coordinate(points[j], "x") - (startsSegment ? 16d : 120d) * xScale) < 0.002d &&
+                        Math.Abs(Coordinate(points[j], "y") + ys[j] * yScale) < 0.002d,
+                        $"The {shape} must stroke the authored point at Y={ys[j]}.");
+                }
+            }
+
+            static double Coordinate(Match point, string name)
+                => double.Parse(point.Groups[name].Value, CultureInfo.InvariantCulture);
+        }
 
         static string Picture(string fill) => Svg($"""
             <defs><linearGradient id="ramp" gradientUnits="userSpaceOnUse" x1="16" x2="120">
@@ -637,6 +670,10 @@ internal static partial class SvgTextTests
     }
 
     private static void AssertSvgPaintInBothFormats(string expected, string actual, params string[] expectedMarkers)
+        => AssertSvgPaintInBothFormats(expected, actual, null, expectedMarkers);
+
+    private static void AssertSvgPaintInBothFormats(string expected, string actual, Action<string>? assertControl,
+        params string[] expectedMarkers)
     {
         foreach (var (kind, view, geometry) in new[] {
             (OoxPdfInputKind.Pptx, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout),
@@ -663,6 +700,7 @@ internal static partial class SvgTextTests
             {
                 TestAssert.Contains(marker, content);
             }
+            assertControl?.Invoke(content);
             TestAssert.True(control.AsSpan().SequenceEqual(Render(actual)),
                 $"{kind} {view} must emit the same paint and resources as the control.");
             TestAssert.Equal(0, diagnostics.Count);
