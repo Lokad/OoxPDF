@@ -118,8 +118,10 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.Equal(2, control.Length);
             var links = control[0].Annotations.OrderBy(link => link.X).ToArray();
             TestAssert.Equal(2, links.Length);
-            TestAssert.True(links.All(link => link.Destination is { PageIndex: 1 }));
-            TestAssert.True(links[1].Destination!.Value.Left > links[0].Destination!.Value.Left);
+            TestAssert.True(links.All(link => link.Destination is { PageIndex: 1 }),
+                $"Both {content} links must land on the second page: {mode}/{cell}.");
+            TestAssert.True(links[1].Destination!.Value.Left > links[0].Destination!.Value.Left,
+                $"The end of the placed {content} must follow its start: {mode}/{cell}.");
 
             foreach (bool before in new[] { true, false })
             {
@@ -132,7 +134,8 @@ internal static partial class DocxInlineCompositionTests
                         anchor.ElementsAfterSelf().First().AddAfterSelf(new XElement(w + "r", new XElement(w + "t", "\u200B")));
                 });
                 TestAssert.True(control.Select(DocxPageFootnoteNumberingTests.DecodeText)
-                    .SequenceEqual(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)));
+                    .SequenceEqual(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)),
+                    $"The unused break must preserve decoded page text: {mode}/{cell}/{content}/{before}.");
                 TestAssert.True(links.SequenceEqual(pages[0].Annotations.OrderBy(link => link.X)),
                     $"The unused break must preserve the placed {content} endpoint: {mode}/{cell}/{before}.");
             }
