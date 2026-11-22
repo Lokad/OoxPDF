@@ -259,15 +259,15 @@ internal sealed partial class PptxRenderer
             SvgStroke stroke = ReadSvgStroke(element, gradients, radialGradients, elementIds,
                 allowStrokePattern && strokeContainersQualified, hasFill, strokePercentageBasis,
                 out SvgStrokeFailure strokeFailure, out bool invalidStrokePresentation, out bool hasVectorEffect, out bool nonScalingStroke);
-            List<SvgPathCommand>? gradientCommands = null;
+            List<SvgPathCommand>? pathCommands = null;
+            bool completePath = false;
             SvgPathBounds gradientBounds = default;
             bool hasGradientBounds = false;
             bool gradientControlsMappable = false;
             if (radial is not null || paint.Gradient is not null || stroke.Gradient is not null)
             {
-                var (commands, complete) = ParseSvgPathData(data);
-                gradientCommands = TransformSvgCommands(commands, transform);
-                if (complete && TryReadSvgPathBounds(gradientCommands, out gradientBounds, out SvgPathBounds controlBounds))
+                (pathCommands, completePath) = ReadTransformedSvgPath(data, transform);
+                if (completePath && TryReadSvgPathBounds(pathCommands, out gradientBounds, out SvgPathBounds controlBounds))
                 {
                     hasGradientBounds = true;
                     gradientControlsMappable = AreSvgGradientBoundsMappable(controlBounds, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY);
@@ -357,6 +357,14 @@ internal sealed partial class PptxRenderer
                 stroke = default;
                 strokePattern = null;
                 unpaintableStrokes++;
+                if (!hasFill)
+                {
+                    continue;
+                }
+            }
+            if (pathCommands is null)
+            {
+                (pathCommands, completePath) = ReadTransformedSvgPath(data, transform);
             }
             if (radial is { } radialGradient)
             {
@@ -367,12 +375,12 @@ internal sealed partial class PptxRenderer
                 bool varyingAlphaAdmitted = false;
                 if (hasGradientBounds)
                 {
-                    if (!gradientControlsMappable || !TryRenderSvgRadialGradientPath(graphics, gradientCommands!, radialGradient, transform, evenOddFill, paint.Opacity, gradientBounds, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY, isolation.Count < PdfTransparencyGroup.MaxDepth, out varyingAlphaAdmitted, AdmitSamples, cancellationToken))
+                    if (!gradientControlsMappable || !TryRenderSvgRadialGradientPath(graphics, pathCommands, radialGradient, transform, evenOddFill, paint.Opacity, gradientBounds, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY, isolation.Count < PdfTransparencyGroup.MaxDepth, out varyingAlphaAdmitted, AdmitSamples, cancellationToken))
                     {
                         nonFiniteGradientPaths++;
                     }
                     if (stroke.Color is { } radialStrokeColor
-                        && !TryPaintSvgStrokePath(graphics, data, transform, radialStrokeColor, strokeWidthPoints, stroke.Opacity, stroke.LineCap, stroke.LineJoin, dashPoints, dashPhasePoints, stroke.MiterLimit, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY, parsedCommands: gradientCommands)
+                        && !TryPaintSvgStrokePath(graphics, pathCommands, completePath, radialStrokeColor, strokeWidthPoints, stroke.Opacity, stroke.LineCap, stroke.LineJoin, dashPoints, dashPhasePoints, stroke.MiterLimit, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY)
                         && badCommand is null)
                     {
                         unreadablePaths++;
@@ -392,12 +400,12 @@ internal sealed partial class PptxRenderer
                 bool varyingAlphaAdmitted = false;
                 if (hasGradientBounds)
                 {
-                    if (!gradientControlsMappable || !TryRenderSvgGradientPath(graphics, gradientCommands!, gradient, transform, evenOddFill, paint.Opacity, gradientBounds, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY, isolation.Count < PdfTransparencyGroup.MaxDepth, out varyingAlphaAdmitted, AdmitSamples, cancellationToken))
+                    if (!gradientControlsMappable || !TryRenderSvgGradientPath(graphics, pathCommands, gradient, transform, evenOddFill, paint.Opacity, gradientBounds, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY, isolation.Count < PdfTransparencyGroup.MaxDepth, out varyingAlphaAdmitted, AdmitSamples, cancellationToken))
                     {
                         nonFiniteGradientPaths++;
                     }
                     if (stroke.Color is { } gradientStrokeColor
-                        && !TryPaintSvgStrokePath(graphics, data, transform, gradientStrokeColor, strokeWidthPoints, stroke.Opacity, stroke.LineCap, stroke.LineJoin, dashPoints, dashPhasePoints, stroke.MiterLimit, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY, parsedCommands: gradientCommands)
+                        && !TryPaintSvgStrokePath(graphics, pathCommands, completePath, gradientStrokeColor, strokeWidthPoints, stroke.Opacity, stroke.LineCap, stroke.LineJoin, dashPoints, dashPhasePoints, stroke.MiterLimit, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY)
                         && badCommand is null)
                     {
                         unreadablePaths++;
@@ -444,7 +452,7 @@ internal sealed partial class PptxRenderer
                     {
                         graphics.SetMiterLimit(stroke.MiterLimit);
                     }
-                    if (TryAppendSvgPath(graphics, data, transform, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY, strokeViewport, gradientCommands))
+                    if (TryAppendSvgPath(graphics, pathCommands, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY, strokeViewport))
                     {
                         if (evenOddFill)
                         {
@@ -470,7 +478,7 @@ internal sealed partial class PptxRenderer
                     }
 
                     graphics.SetFillRgb(color.Red, color.Green, color.Blue);
-                    if (TryAppendSvgPath(graphics, data, transform, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY, parsedCommands: gradientCommands))
+                    if (TryAppendSvgPath(graphics, pathCommands, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY))
                     {
                         if (evenOddFill)
                         {
@@ -494,7 +502,7 @@ internal sealed partial class PptxRenderer
             }
             else if (stroke.Color is { } strokeOnlyColor)
             {
-                if (!TryPaintSvgStrokePath(graphics, data, transform, strokeOnlyColor, strokeWidthPoints, stroke.Opacity, stroke.LineCap, stroke.LineJoin, dashPoints, dashPhasePoints, stroke.MiterLimit, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY, parsedCommands: gradientCommands)
+                if (!TryPaintSvgStrokePath(graphics, pathCommands, completePath, strokeOnlyColor, strokeWidthPoints, stroke.Opacity, stroke.LineCap, stroke.LineJoin, dashPoints, dashPhasePoints, stroke.MiterLimit, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY)
                     && badCommand is null)
                 {
                     unreadablePaths++;
@@ -502,7 +510,7 @@ internal sealed partial class PptxRenderer
             }
             if (strokePattern is not null && stroke.Gradient is not null)
             {
-                if (!TryPaintSvgStrokePath(graphics, data, transform, default, strokeWidthPoints, stroke.Opacity, stroke.LineCap, stroke.LineJoin, dashPoints, dashPhasePoints, stroke.MiterLimit, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY, strokePattern, gradientCommands)
+                if (!TryPaintSvgStrokePath(graphics, pathCommands, completePath, default, strokeWidthPoints, stroke.Opacity, stroke.LineCap, stroke.LineJoin, dashPoints, dashPhasePoints, stroke.MiterLimit, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY, strokePattern)
                     && badCommand is null)
                 {
                     unreadablePaths++;
@@ -1822,12 +1830,12 @@ internal sealed partial class PptxRenderer
         double second = Math.Sqrt((a - d) * (a - d) + (b + c) * (b + c));
         return largest * ((first + second) / 2d);
     }
-    private static bool TryPaintSvgStrokePath(PdfGraphicsBuilder graphics, string data, SvgTransform transform, RgbColor color, double widthPoints, double opacity, int lineCap, int lineJoin, double[]? dashPoints, double dashPhasePoints, double miterLimit, double minX, double minY, double imageX, double imageY, double imageHeight, double scaleX, double scaleY, PdfShadingPattern? shadingPattern = null, IReadOnlyList<SvgPathCommand>? parsedCommands = null)
+    private static bool TryPaintSvgStrokePath(PdfGraphicsBuilder graphics, IReadOnlyList<SvgPathCommand> commands, bool completePath, RgbColor color, double widthPoints, double opacity, int lineCap, int lineJoin, double[]? dashPoints, double dashPhasePoints, double miterLimit, double minX, double minY, double imageX, double imageY, double imageHeight, double scaleX, double scaleY, PdfShadingPattern? shadingPattern = null)
     {
         graphics.SaveState();
         SvgTransform? strokeViewport = ApplySvgStrokeViewport(graphics, imageX, imageY, imageHeight, scaleX, scaleY);
-        SvgRoundDashPaint? roundDashPaint = opacity == 1d && lineCap == 1 && dashPoints is { Length: 2 }
-            ? ReadSvgRoundDashPaint(data, transform, widthPoints, dashPoints, dashPhasePoints, minX, minY, imageX, imageY, imageHeight, scaleX, scaleY, strokeViewport)
+        SvgRoundDashPaint? roundDashPaint = completePath && opacity == 1d && lineCap == 1 && dashPoints is { Length: 2 }
+            ? ReadSvgRoundDashPaint(commands, widthPoints, dashPoints, dashPhasePoints, minX, minY, imageX, imageY, imageHeight, scaleX, scaleY, strokeViewport)
             : null;
         List<SvgRoundDashCap>? roundDashCaps = roundDashPaint?.Caps;
         if (opacity < 1d)
@@ -1857,7 +1865,7 @@ internal sealed partial class PptxRenderer
         {
             graphics.SetMiterLimit(miterLimit);
         }
-        bool painted = TryAppendSvgPath(graphics, data, transform, minX, minY, imageX, imageY, imageHeight, scaleX, scaleY, strokeViewport, parsedCommands);
+        bool painted = TryAppendSvgPath(graphics, commands, minX, minY, imageX, imageY, imageHeight, scaleX, scaleY, strokeViewport);
         if (painted)
         {
             graphics.StrokeCurrentPath();
@@ -1904,7 +1912,7 @@ internal sealed partial class PptxRenderer
         graphics.ClosePath();
         graphics.FillCurrentPath();
     }
-    private static SvgRoundDashPaint? ReadSvgRoundDashPaint(string data, SvgTransform transform, double widthPoints, double[] dash, double phase, double minX, double minY, double imageX, double imageY, double imageHeight, double scaleX, double scaleY, SvgTransform? viewport)
+    private static SvgRoundDashPaint? ReadSvgRoundDashPaint(IReadOnlyList<SvgPathCommand> commands, double widthPoints, double[] dash, double phase, double minX, double minY, double imageX, double imageY, double imageHeight, double scaleX, double scaleY, SvgTransform? viewport)
     {
         // RV07-S6: Office rounds visible dash ends within half a stroke width
         // of an original endpoint. Outward semicircles retain partial dash gaps.
@@ -1916,9 +1924,7 @@ internal sealed partial class PptxRenderer
         bool qualifiedCaps = dash[0] > widthPoints;
         double meanScale = (scaleX + scaleY) / 2d;
         if (viewport is null && Math.Abs(scaleX - scaleY) > meanScale * .000001d) return null;
-        (List<SvgPathCommand> parsed, bool complete) = ParseSvgPathData(data);
-        if (!complete || parsed.Count == 0 || parsed.Count > 256 || parsed.Count % 2 != 0) return null;
-        List<SvgPathCommand> commands = TransformSvgCommands(parsed, transform);
+        if (commands.Count == 0 || commands.Count > 256 || commands.Count % 2 != 0) return null;
         var caps = new List<SvgRoundDashCap>();
         var solidLines = new List<(double X, double Y, double EndX, double EndY)>();
         bool hasPaintedDash = false;
@@ -2167,7 +2173,7 @@ internal sealed partial class PptxRenderer
                 RgbColor color = SampleSvgStops(radial.Stops, (double)(ringCount - ring - 1) / (ringCount - 1), radial.Spread);
                 graphics.SetFillRgb(color.Red, color.Green, color.Blue);
                 string ringData = ConvertSvgEllipseBody(centerX, centerY, radiusX * fraction, radiusY * fraction);
-                if (TryAppendSvgPath(graphics, ringData, SvgTransform.Identity, minX, minY, imageX, imageY, imageHeight, scaleX, scaleY))
+                if (TryAppendSvgPath(graphics, ParseSvgPathData(ringData).Commands, minX, minY, imageX, imageY, imageHeight, scaleX, scaleY))
                 {
                     graphics.FillCurrentPath();
                 }
@@ -2230,9 +2236,13 @@ internal sealed partial class PptxRenderer
         return SampleSvgStops(gradient.Stops, offset, gradient.Spread);
     }
 
-    // Bounds and emission share the absolute-command representation and parser;
-    // each consumer currently parses its own result.
     private readonly record struct SvgPathCommand(char Kind, double[] Arguments);
+
+    private static (List<SvgPathCommand> Commands, bool Complete) ReadTransformedSvgPath(string data, SvgTransform transform)
+    {
+        var (commands, complete) = ParseSvgPathData(data);
+        return (TransformSvgCommands(commands, transform), complete);
+    }
 
     // Parses the longest supported prefix of SVG path data into absolute
     // commands. Complete is false when parsing stops early: missing numbers,
@@ -2494,9 +2504,6 @@ internal sealed partial class PptxRenderer
             max = Math.Max(max, value);
         }
     }
-
-    private static bool TryAppendSvgPath(PdfGraphicsBuilder graphics, string data, SvgTransform transform, double minX, double minY, double imageX, double imageY, double imageHeight, double scaleX, double scaleY, SvgTransform? strokeViewport = null, IReadOnlyList<SvgPathCommand>? parsedCommands = null) =>
-        TryAppendSvgPath(graphics, parsedCommands ?? TransformSvgCommands(ParseSvgPathData(data).Commands, transform), minX, minY, imageX, imageY, imageHeight, scaleX, scaleY, strokeViewport);
 
     private static bool TryAppendSvgPath(PdfGraphicsBuilder graphics, IReadOnlyList<SvgPathCommand> commands, double minX, double minY, double imageX, double imageY, double imageHeight, double scaleX, double scaleY, SvgTransform? strokeViewport = null)
     {
@@ -2978,71 +2985,54 @@ internal sealed partial class PptxRenderer
         }
 
         var mapped = new List<SvgPathCommand>(commands.Count);
-        double currentX = 0d;
-        double currentY = 0d;
-        double startX = 0d;
-        double startY = 0d;
         double sourceCurrentX = 0d;
         double sourceCurrentY = 0d;
         double sourceStartX = 0d;
         double sourceStartY = 0d;
         foreach (SvgPathCommand command in commands)
         {
-            string kind = command.Kind.ToString();
-            if (kind == "M")
+            char kind = command.Kind;
+            if (kind is 'M' or 'L')
             {
                 sourceCurrentX = command.Arguments[0];
                 sourceCurrentY = command.Arguments[1];
-                (currentX, currentY) = transform.Apply(sourceCurrentX, sourceCurrentY);
-                startX = currentX;
-                startY = currentY;
-                sourceStartX = sourceCurrentX;
-                sourceStartY = sourceCurrentY;
-                mapped.Add(new SvgPathCommand(
-                    command.Kind, new double[] { currentX, currentY }));
+                if (kind == 'M')
+                {
+                    sourceStartX = sourceCurrentX;
+                    sourceStartY = sourceCurrentY;
+                }
+
+                var (x, y) = transform.Apply(sourceCurrentX, sourceCurrentY);
+                mapped.Add(new SvgPathCommand(kind, [x, y]));
             }
-            else if (kind == "L")
+            else if (kind == 'H')
             {
                 sourceCurrentX = command.Arguments[0];
-                sourceCurrentY = command.Arguments[1];
-                (currentX, currentY) = transform.Apply(sourceCurrentX, sourceCurrentY);
-                mapped.Add(new SvgPathCommand(
-                    command.Kind, new double[] { currentX, currentY }));
+                var (x, y) = transform.Apply(sourceCurrentX, sourceCurrentY);
+                mapped.Add(new SvgPathCommand('L', [x, y]));
             }
-            else if (kind == "H")
-            {
-                sourceCurrentX = command.Arguments[0];
-                (currentX, currentY) = transform.Apply(sourceCurrentX, sourceCurrentY);
-                mapped.Add(new SvgPathCommand(
-                    "L"[0], new double[] { currentX, currentY }));
-            }
-            else if (kind == "V")
+            else if (kind == 'V')
             {
                 sourceCurrentY = command.Arguments[0];
-                (currentX, currentY) = transform.Apply(sourceCurrentX, sourceCurrentY);
-                mapped.Add(new SvgPathCommand(
-                    "L"[0], new double[] { currentX, currentY }));
+                var (x, y) = transform.Apply(sourceCurrentX, sourceCurrentY);
+                mapped.Add(new SvgPathCommand('L', [x, y]));
             }
-            else if (kind == "C")
+            else if (kind == 'C')
             {
-                (double X0, double Y0) = transform.Apply(command.Arguments[0], command.Arguments[1]);
-                (double X1, double Y1) = transform.Apply(command.Arguments[2], command.Arguments[3]);
+                var (x0, y0) = transform.Apply(command.Arguments[0], command.Arguments[1]);
+                var (x1, y1) = transform.Apply(command.Arguments[2], command.Arguments[3]);
                 sourceCurrentX = command.Arguments[4];
                 sourceCurrentY = command.Arguments[5];
-                (currentX, currentY) = transform.Apply(sourceCurrentX, sourceCurrentY);
-                mapped.Add(new SvgPathCommand(
-                    command.Kind, new double[] { X0, Y0, X1, Y1, currentX, currentY }));
-            }
-            else if (kind == "Z")
-            {
-                currentX = startX;
-                currentY = startY;
-                sourceCurrentX = sourceStartX;
-                sourceCurrentY = sourceStartY;
-                mapped.Add(command);
+                var (x, y) = transform.Apply(sourceCurrentX, sourceCurrentY);
+                mapped.Add(new SvgPathCommand(kind, [x0, y0, x1, y1, x, y]));
             }
             else
             {
+                if (kind == 'Z')
+                {
+                    sourceCurrentX = sourceStartX;
+                    sourceCurrentY = sourceStartY;
+                }
                 mapped.Add(command);
             }
         }
