@@ -647,7 +647,7 @@ internal static class DocxCoreTests
     public static void DocxFontResolverBuildsLatinTypefaceCandidatesFromCatalogAndTheme()
     {
         var catalog = new DocxFontCatalog(
-            [new DocxFontTableEntry("Corporate Sans", "Aptos", "swiss", "variable", null, null)],
+            [new DocxFontTableEntry("Corporate Sans", "Aptos", null)],
             new DocxThemeFonts("Aptos Display", "Aptos", null, null, null, null));
         var run = new DocxTextRun("Text", 11d, null, false, false, false, null, "Corporate Sans")
         {
@@ -672,7 +672,7 @@ internal static class DocxCoreTests
     public static void DocxFontResolverBuildsEastAsianTypefaceCandidatesFromCatalogAndTheme()
     {
         var catalog = new DocxFontCatalog(
-            [new DocxFontTableEntry("Corporate East", "Installed East", "modern", "variable", null, "80")],
+            [new DocxFontTableEntry("Corporate East", "Installed East", "80")],
             new DocxThemeFonts(
                 "Theme Display",
                 "Theme Sans",
@@ -728,8 +728,8 @@ internal static class DocxCoreTests
             [eastAsianRun, complexScriptRun],
             new DocxFontCatalog(
                 [
-                    new DocxFontTableEntry("Corporate East", "Installed East", "modern", null, null, "80"),
-                    new DocxFontTableEntry("Corporate Bidi", "Installed Bidi", "roman", null, null, "B2")
+                    new DocxFontTableEntry("Corporate East", "Installed East", "80"),
+                    new DocxFontTableEntry("Corporate Bidi", "Installed Bidi", "B2")
                 ],
                 new DocxThemeFonts(
                     "Theme Display",
@@ -767,7 +767,7 @@ internal static class DocxCoreTests
         DocxDocument document = DocxTests.CreateFontPlanDocument(
             run,
             new DocxFontCatalog(
-                [new DocxFontTableEntry("Corporate Sans", "Installed Sans", "swiss", null, null, null)],
+                [new DocxFontTableEntry("Corporate Sans", "Installed Sans", null)],
                 new DocxThemeFonts("Theme Display", "Theme Sans", null, null, null, null)));
         var resolver = new MapFontResolver(["Corporate Sans", "Installed Sans", "Theme Display"], "Resolver Fallback");
 
@@ -963,7 +963,7 @@ internal static class DocxCoreTests
         DocxDocument document = DocxTests.CreateFontPlanDocument(
             [primaryRun, alternateRun, missingRun],
             new DocxFontCatalog(
-                [new DocxFontTableEntry("Corporate Sans", "Installed Sans", "swiss", null, null, null)],
+                [new DocxFontTableEntry("Corporate Sans", "Installed Sans", null)],
                 DocxThemeFonts.Empty));
         var resolver = new MapFontResolver(["Primary Sans", "Installed Sans"], "Resolver Fallback");
 

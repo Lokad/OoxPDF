@@ -642,9 +642,6 @@ internal sealed partial class DocxReader
             .Select(font => new DocxFontTableEntry(
                 (string?)font.Attribute(WordprocessingNamespace + "name") ?? string.Empty,
                 (string?)font.Element(WordprocessingNamespace + "altName")?.Attribute(WordprocessingNamespace + "val"),
-                (string?)font.Element(WordprocessingNamespace + "family")?.Attribute(WordprocessingNamespace + "val"),
-                (string?)font.Element(WordprocessingNamespace + "pitch")?.Attribute(WordprocessingNamespace + "val"),
-                (string?)font.Element(WordprocessingNamespace + "panose1")?.Attribute(WordprocessingNamespace + "val"),
                 (string?)font.Element(WordprocessingNamespace + "charset")?.Attribute(WordprocessingNamespace + "val")))
             .Where(entry => entry.Name.Length != 0)
             .ToArray();

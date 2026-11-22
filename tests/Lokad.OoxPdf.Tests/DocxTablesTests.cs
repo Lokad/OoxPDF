@@ -209,9 +209,6 @@ internal static class DocxTablesTests
         DocxFontTableEntry entry = document.FontCatalog.Entries.Single();
         TestAssert.Equal("Corporate Sans", entry.Name);
         TestAssert.Equal("Aptos", entry.AlternateName ?? string.Empty);
-        TestAssert.Equal("swiss", entry.FamilyValue ?? string.Empty);
-        TestAssert.Equal("variable", entry.PitchValue ?? string.Empty);
-        TestAssert.Equal("020B0604020202020204", entry.PanoseValue ?? string.Empty);
         TestAssert.Equal("00", entry.CharsetValue ?? string.Empty);
         TestAssert.Equal("Aptos Display", document.FontCatalog.ThemeFonts.MajorLatinTypeface ?? string.Empty);
         TestAssert.Equal("Aptos", document.FontCatalog.ThemeFonts.MinorLatinTypeface ?? string.Empty);
@@ -238,7 +235,7 @@ internal static class DocxTablesTests
         DocxDocument document = DocxTests.CreateFontPlanDocument(
             run,
             new DocxFontCatalog(
-                [new DocxFontTableEntry("Corporate Sans", "Installed Sans", "swiss", null, null, null)],
+                [new DocxFontTableEntry("Corporate Sans", "Installed Sans", null)],
                 new DocxThemeFonts("Theme Display", "Theme Sans", null, null, null, null)));
         var resolver = new MapFontResolver(["Installed Sans", "Theme Sans"], "Resolver Fallback");
 

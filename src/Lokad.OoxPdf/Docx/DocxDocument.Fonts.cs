@@ -10,9 +10,6 @@ internal sealed record DocxFontCatalog(
 internal sealed record DocxFontTableEntry(
     string Name,
     string? AlternateName,
-    string? FamilyValue,
-    string? PitchValue,
-    string? PanoseValue,
     string? CharsetValue);
 
 internal sealed record DocxThemeFonts(
