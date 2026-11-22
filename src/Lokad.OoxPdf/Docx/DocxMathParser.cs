@@ -362,9 +362,12 @@ internal static partial class DocxMathParser
         XElement? properties = run.Element(MathNamespace + "rPr");
         var (normalText, normalSupported) = ReadRunFlag(properties, MathNamespace + "nor");
         var (literalText, literalSupported) = ReadRunFlag(properties, MathNamespace + "lit");
+        var (alignment, alignmentSupported) = ReadRunFlag(properties, MathNamespace + "aln");
         bool propertiesSupported = properties?.Elements().All(property =>
-            property.Name.Namespace == MathNamespace && property.Name.LocalName is "sty" or "scr" or "nor" or "lit") != false;
-        return (normalText, literalText == true, propertiesSupported && normalSupported && literalSupported);
+            property.Name.Namespace == MathNamespace && property.Name.LocalName is "sty" or "scr" or "nor" or "lit" or "aln") != false;
+        // Disabled alignment has no layout effect. Active alignment points still need their own placement rule.
+        return (normalText, literalText == true, propertiesSupported && normalSupported && literalSupported &&
+            alignmentSupported && alignment != true);
     }
 
     private static (bool? Value, bool Supported) ReadRunFlag(XElement? properties, XName name)

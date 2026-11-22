@@ -568,6 +568,25 @@ internal static partial class DocxMathTests
         }
     }
 
+    public static void DocxMathRunAlignmentAdmitsDisabledFlags()
+    {
+        foreach ((string property, bool supported) in new (string, bool)[]
+        {
+            ("", true), ("<m:aln m:val='0'/>", true), ("<m:aln m:val='false'/>", true),
+            ("<m:aln/>", false), ("<m:aln m:val='1'/>", false), ("<m:aln m:val='true'/>", false),
+            ("<m:aln m:val='unknown'/>", false), ("<m:aln m:val='0' extra='1'/>", false),
+            ("<m:aln m:val='0'/><m:aln m:val='0'/>", false), ("<m:aln m:val='0'>text</m:aln>", false)
+        })
+        {
+            DocxMathRow row = Parse(XElement.Parse($"<m:oMath xmlns:m='{MathNamespace}'><m:r><m:rPr>" +
+                property + "</m:rPr><m:t>x+2</m:t></m:r></m:oMath>"));
+            var run = (DocxMathRun)row.Children.Single();
+            TestAssert.Equal("x+2", run.Text.Text);
+            TestAssert.Equal(!supported, run.HasUnsupportedProperties);
+            TestAssert.Equal(supported, DocxMathRowLayout.TryGetRenderCodePoints(row, default, out _, out _));
+        }
+    }
+
     public static void DocxMathArgumentPropertiesPreserveTypedSizeAndConservativeEligibility()
     {
         foreach ((string properties, int? size, bool unsupported, bool eligible) in new (string, int?, bool, bool)[]

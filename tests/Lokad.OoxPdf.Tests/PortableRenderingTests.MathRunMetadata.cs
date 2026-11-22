@@ -137,6 +137,18 @@ internal static partial class PortableRenderingTests
             numerators[2].Parent!.AddAfterSelf(new XElement(m + "r", new XElement(m + "t")));
         });
 
+    public static void PortableRenderingDisabledMathAlignmentKeepsComposedFractions() =>
+        CheckComposedMathRunContent("x+2", (numerators, _, m) =>
+        {
+            for (int index = 0; index < numerators.Length; index++)
+            {
+                XElement run = numerators[index].Parent!;
+                XElement properties = run.Element(m + "rPr") ?? new XElement(m + "rPr");
+                if (properties.Parent is null) run.AddFirst(properties);
+                properties.Add(new XElement(m + "aln", new XAttribute(m + "val", index == 1 ? "false" : "0")));
+            }
+        });
+
     private static void CheckComposedMathRunContent(string numerator, Action<XElement[], XNamespace, XNamespace> rewrite)
     {
         const string fixture = "CompositionProbes/composed-static-svg-report";

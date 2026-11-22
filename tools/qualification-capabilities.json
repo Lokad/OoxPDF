@@ -20819,6 +20819,8 @@
   ],
   "docx-math-run-metadata": [
     "=MathLiteralOperatorsKeepGlyphsAndUseOrdinarySpacing",
+    "=DocxMathRunAlignmentAdmitsDisabledFlags",
+    "=PortableRenderingDisabledMathAlignmentKeepsComposedFractions",
     "DocxDeletedMathMetadataDoesNotReviveOtherDeletedContent",
     "DocxDeletedMathMetadataKeepsModeFilteringAndSourceOwners",
     "DocxDeletedMathMetadataKeepsPortablePaintAndNeighborContent",
