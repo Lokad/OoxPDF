@@ -27,26 +27,25 @@ internal sealed partial class PptxRenderer
     {
         bool scatterX = !bubble && horizontal;
         double target = scatterX ? PptxChartMetricRules.ScatterXAxisNiceTickTargetCount : PptxChartMetricRules.BubbleAxisNiceTickTargetCount;
-        ChartValueExtents extents = ReadSceneBubbleChartValueAxisExtents(source.SceneAxis, data,
-            scatterX ? PptxChartMetricRules.ScatterXAxisNiceTickTargetCount : PptxChartMetricRules.BubbleAxisBoundsTickTargetCount, !scatterX);
         PptxSceneChartAxis? axis = source.SceneAxis;
-        ChartAxisDeclaration? declaration = ReadChartAxisDeclaration(source.SceneAxis);
-        double? automaticTarget = !bubble && !horizontal
-            ? PptxChartMetricRules.AxisNiceTickTargetCount : automaticTickTargetCount;
-        bool automaticUnit = !bubble && automaticTarget is { } count && count >= 2d && double.IsFinite(count) &&
-            declaration is { MajorUnit: null } && occupied.Max > occupied.Min;
+        ChartAxisDeclaration? declaration = bubble ? null : ReadChartAxisDeclaration(axis);
+        double? automaticTarget = horizontal ? automaticTickTargetCount : PptxChartMetricRules.AxisNiceTickTargetCount;
+        bool automaticUnit = automaticTarget is { } count && count >= 2d && double.IsFinite(count) && occupied.Max > occupied.Min;
         // Authored units, inferred vertical units and measured source X plots
         // share bounds and emitted intervals. Other automatic X layouts and
         // bubbles keep their existing fallback.
-        ChartValueExtents owned = default;
-        double unit = 0d;
-        bool resolvedIntervals = !bubble && declaration is { } declared &&
+        if (declaration is { } declared &&
             (automaticUnit || declared.MajorUnit is not null) &&
-            TryResolvePointAxisRange(occupied, declared.Minimum, declared.Maximum, declared.MajorUnit, automaticTarget ?? target, out owned, out unit);
-        if (resolvedIntervals) extents = owned;
-        ChartValueAxisRenderOptions options = ReadSceneChartBubbleValueAxisOptions(axis, extents, target);
-        if (resolvedIntervals) options = options with { Units = options.Units with { MajorUnit = unit }, TickPolicy = ChartAxisTickPolicy.SourceMinimumIntervals };
-        return (extents, options);
+            TryResolvePointAxisRange(occupied, declared.Minimum, declared.Maximum, declared.MajorUnit, automaticTarget ?? target,
+                out ChartValueExtents owned, out double unit))
+        {
+            ChartValueAxisRenderOptions options = ReadSceneChartValueAxisRenderOptions(axis, owned, percentStacked: false);
+            return (owned, options with { Units = options.Units with { MajorUnit = unit }, TickPolicy = ChartAxisTickPolicy.SourceMinimumIntervals });
+        }
+
+        ChartValueExtents fallback = ReadSceneBubbleChartValueAxisExtents(axis, data,
+            scatterX ? PptxChartMetricRules.ScatterXAxisNiceTickTargetCount : PptxChartMetricRules.BubbleAxisBoundsTickTargetCount, !scatterX);
+        return (fallback, ReadSceneChartBubbleValueAxisOptions(axis, fallback, target));
     }
 
     private readonly record struct ChartAxisDeclaration(double? Minimum, double? Maximum, double? MajorUnit);
