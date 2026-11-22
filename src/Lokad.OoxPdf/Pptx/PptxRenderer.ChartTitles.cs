@@ -394,16 +394,16 @@ internal sealed partial class PptxRenderer
     {
         ChartFrameBox frame = layout.Frame;
         ChartPlotBox plotBox = layout.PlotBox;
-        bool rightSide = positionKind == PptxSceneChartAxisPosition.Right;
-        double sideReserve = rightSide
-            ? Math.Max(0d, frame.X + frame.Width - plotBox.X - plotBox.Width)
-            : Math.Max(0d, plotBox.X - frame.X);
-        double sideBaselineRatio = rightSide
-            ? PptxChartMetricRules.DefaultAxisTitleRightSideBaselineRatio
-            : PptxChartMetricRules.DefaultAxisTitleLeftSideBaselineRatio;
-        double baselineX = rightSide
-            ? plotBox.X + plotBox.Width + sideReserve * sideBaselineRatio
-            : frame.X + PptxChartMetricRules.DefaultAxisTitleLeftColumnOffset;
+        double baselineX;
+        if (positionKind == PptxSceneChartAxisPosition.Right)
+        {
+            double rightReserve = Math.Max(0d, frame.X + frame.Width - plotBox.X - plotBox.Width);
+            baselineX = plotBox.X + plotBox.Width + rightReserve * PptxChartMetricRules.DefaultAxisTitleRightSideBaselineRatio;
+        }
+        else
+        {
+            baselineX = frame.X + PptxChartMetricRules.DefaultAxisTitleLeftColumnOffset;
+        }
         // Office centers the title ink on the plot middle: the TJ origin sits exactly
         // at mid minus half the EMITTED width on three cached references (bar 253.9 vs
         // 253.7, column 280.95 vs 280.8, top-right 245.09 vs 245.0). The caller-measured
