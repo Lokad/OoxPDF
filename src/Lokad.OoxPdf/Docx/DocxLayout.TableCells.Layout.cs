@@ -819,43 +819,10 @@ internal sealed partial class DocxLayoutEngine
                         !cell.FitText &&
                         wrappedLines.Length > 0 &&
                         wrappedLines[^1].Text.EndsWith(' ') &&
-                        textSpans.Any(static span => span.Text.Any(static character => !char.IsWhiteSpace(character))) &&
+                        HasVisibleTextSpans(textSpans) &&
                         context.TextMeasurer is not null)
                     {
-                        for (int cellLineIndex = lines.Count - 1; cellLineIndex >= 0; cellLineIndex--)
-                        {
-                            if (lines[cellLineIndex] is not DocxTextLineLayout cellLastLine ||
-                                !ReferenceEquals(cellLastLine.SourceParagraph, paragraph) ||
-                                cellLastLine.Text.Length == 0)
-                            {
-                                continue;
-                            }
-
-                            double cellSpaceWidth = measurer.MeasureText(firstRun, " ", fontSize);
-                            lines[cellLineIndex] = cellLastLine with
-                            {
-                                Text = cellLastLine.Text + " ",
-                                Width = cellLastLine.Width + cellSpaceWidth,
-                                Segments =
-                                [
-                                    .. cellLastLine.Segments,
-                                    new DocxTextSegmentLayout(
-                                        " ",
-                                        firstRun,
-                                        cellLastLine.X + cellLastLine.Width,
-                                        cellSpaceWidth,
-                                        fontSize,
-                                        0d,
-                                        0d,
-                                        DocxTextStateCharacterSpacingSource.None,
-                                        true,
-                                        -1,
-                                        0,
-                                        DocxTextSegmentRole.BreakSpill),
-                                ],
-                            };
-                            break;
-                        }
+                        AppendRowEndSpace(lines, paragraph, firstRun, fontSize, measurer);
                     }
                 }
 

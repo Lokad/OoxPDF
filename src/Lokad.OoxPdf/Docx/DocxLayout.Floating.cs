@@ -472,42 +472,9 @@ internal sealed partial class DocxLayoutEngine
             paragraph.InlineTextBoxes.Count == 0 &&
             lines.Length > 0 &&
             lines[^1].Text.EndsWith(' ') &&
-            textSpans.Any(static span => span.Text.Any(static character => !char.IsWhiteSpace(character))))
+            HasVisibleTextSpans(textSpans))
         {
-            for (int storyLineIndex = layouts.Count - 1; storyLineIndex >= 0; storyLineIndex--)
-            {
-                if (layouts[storyLineIndex] is not DocxTextLineLayout storyLastLine ||
-                    !ReferenceEquals(storyLastLine.SourceParagraph, paragraph) ||
-                    storyLastLine.Text.Length == 0)
-                {
-                    continue;
-                }
-
-                double storySpaceWidth = textMeasurer.MeasureText(firstRun, " ", fontSize);
-                layouts[storyLineIndex] = storyLastLine with
-                {
-                    Text = storyLastLine.Text + " ",
-                    Width = storyLastLine.Width + storySpaceWidth,
-                    Segments =
-                    [
-                        .. storyLastLine.Segments,
-                        new DocxTextSegmentLayout(
-                            " ",
-                            firstRun,
-                            storyLastLine.X + storyLastLine.Width,
-                            storySpaceWidth,
-                            fontSize,
-                            0d,
-                            0d,
-                            DocxTextStateCharacterSpacingSource.None,
-                            true,
-                            -1,
-                            0,
-                            DocxTextSegmentRole.BreakSpill),
-                    ],
-                };
-                break;
-            }
+            AppendRowEndSpace(layouts, paragraph, firstRun, fontSize, textMeasurer);
         }
 
         return (layouts, placedImages, startCursorY - cursorY, storyBaselineOffset);

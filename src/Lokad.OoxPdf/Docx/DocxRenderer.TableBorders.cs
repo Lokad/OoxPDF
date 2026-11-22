@@ -109,8 +109,6 @@ internal sealed partial class DocxRenderer
         DocxTableCellLayout nextRowCell,
         PdfGraphicsBuilder graphics)
     {
-        DocxTableCell cell = cellLayout.VisualCell;
-        DocxTableCell nextCell = nextRowCell.VisualCell;
         DocxTableCellBorder? border = ResolveSharedHorizontalBorder(cellLayout, nextRowCell);
         if (border is null)
         {

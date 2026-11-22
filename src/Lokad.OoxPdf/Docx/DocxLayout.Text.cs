@@ -41,6 +41,34 @@ internal sealed partial class DocxLayoutEngine
             Math.Max(0, run.SourceTextOffsetInRun));
     }
 
+    private static void AppendRowEndSpace(List<DocxTextLineLayout> lines, DocxParagraph paragraph,
+        DocxTextRun firstRun, double fontSize, IDocxTextMeasurer textMeasurer)
+    {
+        for (int index = lines.Count - 1; index >= 0; index--)
+        {
+            DocxTextLineLayout line = lines[index];
+            if (!ReferenceEquals(line.SourceParagraph, paragraph) || line.Text.Length == 0)
+                continue;
+
+            double width = textMeasurer.MeasureText(firstRun, " ", fontSize);
+            lines[index] = line with
+            {
+                Text = line.Text + " ",
+                Width = line.Width + width,
+                Segments =
+                [
+                    .. line.Segments,
+                    new DocxTextSegmentLayout(" ", firstRun, line.X + line.Width, width, fontSize,
+                        BaselineOffsetY: 0d, PdfCharacterSpacing: 0d,
+                        PdfCharacterSpacingSource: DocxTextStateCharacterSpacingSource.None,
+                        CompensatePdfCharacterSpacing: true, SourceTextRunIndex: -1, SourceTextOffsetInRun: 0,
+                        Role: DocxTextSegmentRole.BreakSpill),
+                ],
+            };
+            return;
+        }
+    }
+
     private static double GetParagraphFontSize(DocxParagraph paragraph)
     {
         // Object-only and empty paragraphs still have an authored metric owner.
