@@ -58,7 +58,8 @@ internal static partial class DocxInlineCompositionTests
                                 .Where(child => child.Name == m + "num" || child.Name == m + "den"))
                             {
                                 var target = argument.Element(m + "sSubSup")?.Element(m + "e") ?? argument;
-                                target.Add(new XElement(m + "r", new XElement(m + "t", string.Empty)));
+                                target.Add(new XElement(m + "r",
+                                    new XElement(w + "rPr", new XElement(w + "vanish")), new XElement(m + "t")));
                             }
                         body.ReplaceNodes(new XElement(paragraph), new XElement(body.Element(w + "sectPr")!));
                     });

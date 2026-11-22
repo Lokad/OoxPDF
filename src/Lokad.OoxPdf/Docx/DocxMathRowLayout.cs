@@ -165,7 +165,9 @@ internal static partial class DocxMathRowLayout
 
     internal static bool HasSupportedStyle(DocxMathRun run) =>
         !run.HasUnsupportedProperties && run.MathStyleValue is null or "i" or "p" or "b" or "bi" && run.ScriptValue is null or "roman" &&
-        HasSupportedTextFormatting(run.Text, run.NormalText);
+        // Empty runs have no glyph formatting to render. Authored math structure
+        // and any control formatting still determine whether the row is supported.
+        (run.Text.Text.Length == 0 || HasSupportedTextFormatting(run.Text, run.NormalText));
 
     internal static bool HasSupportedTextFormatting(DocxTextRun text, bool allowBold) =>
         (!text.Bold || allowBold) && !text.Underline && !text.Strike && !text.DoubleStrike && !text.Hidden &&

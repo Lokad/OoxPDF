@@ -20840,6 +20840,7 @@
     "=PortableRenderingDeletedMathTextRetainsRevisionPaint",
     "=PortableRenderingMathDiscretionaryHyphensKeepUnbrokenFractions",
     "=PortableRenderingMathZeroWidthBreaksKeepUnbrokenFractions",
+    "=PortableRenderingMathEmptyRunFormattingKeepsComposedFractions",
     "PortableRenderingEmptyRevisedMathRunsKeepFractions",
     "PortableRenderingMathRunPaginationHintsKeepComposedContent",
     "=PortableRenderingMathRunWordContentKeepsComposedFractions",
