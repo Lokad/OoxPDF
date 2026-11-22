@@ -514,12 +514,6 @@ internal sealed class OoxPackage : IDisposable
         return Parts.FirstOrDefault(p => p.ContentType == contentType);
     }
 
-    public IReadOnlyList<OoxRelationship> GetRelationships(string sourcePartName, CancellationToken cancellationToken)
-    {
-        // Fresh list over the shared dictionary: same elements in document order, no reparse.
-        return [.. GetRelationshipDictionary(sourcePartName, cancellationToken).Values];
-    }
-
     public IReadOnlyDictionary<string, OoxRelationship> GetRelationshipDictionary(string sourcePartName, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();

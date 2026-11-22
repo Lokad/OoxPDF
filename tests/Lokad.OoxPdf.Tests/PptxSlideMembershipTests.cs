@@ -47,6 +47,8 @@ internal static class PptxSlideMembershipTests
             TestAssert.Equal("/ppt/slides/slide1.xml", document.Slides[1].PartName);
             TestAssert.Equal(0, document.Slides[0].Index);
             TestAssert.Equal(1, document.Slides[1].Index);
+            TestAssert.Equal(0, document.Slides[0].SourceIndex);
+            TestAssert.Equal(1, document.Slides[1].SourceIndex);
         });
         foreach (bool hidden in new[] { false, true })
             WithPresentation(hidden ? "listed-hidden-unlisted-visible" : "ordered-visible",
@@ -55,6 +57,12 @@ internal static class PptxSlideMembershipTests
                     TestAssert.Equal(hidden ? 1 : 2, document.Slides.Count);
                     TestAssert.Equal(hidden ? "/ppt/slides/slide2.xml" : "/ppt/slides/slide1.xml", document.Slides[0].PartName);
                     TestAssert.Equal(0, document.Slides[0].Index);
+                    TestAssert.Equal(hidden ? 1 : 0, document.Slides[0].SourceIndex);
+                    if (!hidden)
+                    {
+                        TestAssert.Equal("/ppt/slides/slide2.xml", document.Slides[1].PartName);
+                        TestAssert.Equal(1, document.Slides[1].SourceIndex);
+                    }
                 });
     }
 

@@ -38,8 +38,7 @@ internal static partial class PptxWorkbookOwnershipTests
                     string name = "xl/" + kind + ".xml", target = "metadata/" + kind + ".xml";
                     parts["xl/" + target] = parts[name];
                     parts[name] = TestFixtures.Utf8("<orphan-at-the-usual-name");
-                    ChangeXml(parts, "xl/_rels/workbook.xml.rels", xml =>
-                        Relationship(xml, kind).SetAttributeValue("Target", target));
+                    LinkAlternate(parts, "xl/_rels/workbook.xml.rels", kind, target);
                     ChangeXml(parts, "[Content_Types].xml", xml =>
                     {
                         XElement entry = xml.Root!.Elements().Single(element => (string?)element.Attribute("PartName") == "/" + name);
@@ -48,6 +47,11 @@ internal static partial class PptxWorkbookOwnershipTests
                         xml.Root.Add(related);
                     });
                 }
+
+                parts["xl/linkedWorkbook.xml"] = parts["xl/workbook.xml"];
+                parts["xl/_rels/linkedWorkbook.xml.rels"] = parts["xl/_rels/workbook.xml.rels"];
+                parts["xl/workbook.xml"] = TestFixtures.Utf8("<broken-content-type-fallback");
+                LinkAlternate(parts, "_rels/.rels", "officeDocument", "xl/linkedWorkbook.xml");
             }
             var workbook = Read(parts);
             var value = workbook.ReadRangeCells("Sheet1!$B$2").Single();
@@ -57,6 +61,19 @@ internal static partial class PptxWorkbookOwnershipTests
             TestAssert.True(value.ColumnHidden && workbook.ReadRangeCells("Sheet1!$B$3").Single().RowHidden,
                 "Related row/column visibility remains available.");
             TestAssert.Equal("North", workbook.ReadRangeCells("Sheet1!$A$2").Single().Text);
+        }
+
+        static void LinkAlternate(Dictionary<string, byte[]> parts, string relationshipsPart, string kind, string target)
+        {
+            ChangeXml(parts, relationshipsPart, xml =>
+            {
+                XElement live = Relationship(xml, kind);
+                var missing = new XElement(live);
+                missing.SetAttributeValue("Id", (string?)live.Attribute("Id") + "Missing");
+                missing.SetAttributeValue("Target", target + ".missing");
+                live.AddBeforeSelf(missing);
+                live.SetAttributeValue("Target", target);
+            });
         }
     }
 

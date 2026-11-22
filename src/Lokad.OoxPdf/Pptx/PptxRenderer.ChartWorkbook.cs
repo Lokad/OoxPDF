@@ -49,10 +49,9 @@ internal sealed partial class PptxRenderer
         bool OnlyTotals,
         bool WholeTable);
 
-    internal readonly record struct ChartWorkbookDefinedName(
+    internal readonly record struct ChartWorkbookLocalName(
         string Name,
         string Formula,
-        int? LocalSheetId,
         string SheetName);
 
     internal readonly record struct ChartWorkbookSheet(
@@ -93,7 +92,7 @@ internal sealed partial class PptxRenderer
         private readonly IReadOnlyDictionary<string, ChartWorksheetData> sheets;
         private readonly ChartWorkbookStyles styles;
         private readonly IReadOnlyDictionary<string, string> definedNames;
-        private readonly IReadOnlyList<ChartWorkbookDefinedName> definedNameRecords;
+        private readonly IReadOnlyList<ChartWorkbookLocalName> localNames;
         private readonly IReadOnlyDictionary<string, ChartWorkbookTable> tables;
         // The same conversion owns initial loading and later frame expansions.
         private readonly CancellationToken cancellationToken;
@@ -103,13 +102,13 @@ internal sealed partial class PptxRenderer
             ChartWorkbookStyles styles,
             IReadOnlyDictionary<string, string> definedNames,
             IReadOnlyDictionary<string, ChartWorkbookTable> tables,
-            IReadOnlyList<ChartWorkbookDefinedName> definedNameRecords,
+            IReadOnlyList<ChartWorkbookLocalName> localNames,
             CancellationToken cancellationToken)
         {
             this.sheets = sheets;
             this.styles = styles;
             this.definedNames = definedNames;
-            this.definedNameRecords = definedNameRecords;
+            this.localNames = localNames;
             this.tables = tables;
             this.cancellationToken = cancellationToken;
         }

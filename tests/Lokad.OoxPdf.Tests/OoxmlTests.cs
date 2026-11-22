@@ -104,8 +104,8 @@ internal static partial class OoxmlTests
         OoxPart presentation = TestAssert.NotNull(package.GetPart("/ppt/presentation.xml"));
         TestAssert.Equal("application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml", presentation.ContentType);
 
-        IReadOnlyList<OoxRelationship> relationships = package.GetRelationships("/", CancellationToken.None);
-        TestAssert.Equal(2, relationships.Count);
+        var relationships = package.GetRelationshipDictionary("/", CancellationToken.None).Values.ToArray();
+        TestAssert.Equal(2, relationships.Length);
         TestAssert.Equal("rId1", relationships[0].Id);
         TestAssert.Equal("/ppt/presentation.xml", relationships[0].ResolvedTarget);
         TestAssert.Equal("rID1", relationships[1].Id);
@@ -432,8 +432,8 @@ internal static partial class OoxmlTests
 
         OoxPackage package = OoxPackage.Open(packageStream, CancellationToken.None);
 
-        IReadOnlyList<OoxRelationship> relationships = package.GetRelationships("/", CancellationToken.None);
-        TestAssert.Equal(2, relationships.Count);
+        var relationships = package.GetRelationshipDictionary("/", CancellationToken.None).Values.ToArray();
+        TestAssert.Equal(2, relationships.Length);
         TestAssert.Equal("http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide", relationships[0].Type);
         TestAssert.Equal("/ppt/slides/slide1.xml", relationships[0].ResolvedTarget);
         TestAssert.Equal("http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart", relationships[1].Type);

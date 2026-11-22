@@ -76,7 +76,7 @@ internal static class DocxStoryOwnershipTests
         string path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "note-section-footnote-roman-4.docx"));
         using var input = File.OpenRead(path);
         var package = OoxPackage.Open(input, default);
-        var relation = package.GetRelationships("/word/document.xml", default).Single(r => r.Type == R.NamespaceName+"/footnotes");
+        var relation = package.GetRelationshipDictionary("/word/document.xml", default).Values.Single(r => r.Type == R.NamespaceName+"/footnotes");
         var part = package.GetPart(relation.ResolvedTarget!)!;
         var cached = package.LoadXml(part, default);
         string before = cached.ToString(SaveOptions.DisableFormatting);

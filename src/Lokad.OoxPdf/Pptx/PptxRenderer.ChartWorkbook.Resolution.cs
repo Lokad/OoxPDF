@@ -120,14 +120,14 @@ internal sealed partial class PptxRenderer
             {
                 resolvedFormula = definedFormula;
             }
-            else if (TryResolveQualifiedLocalDefinedName(resolvedFormula, out ChartWorkbookDefinedName localDefinedName))
+            else if (TryResolveQualifiedLocalDefinedName(resolvedFormula, out ChartWorkbookLocalName localDefinedName))
             {
                 resolvedFormula = localDefinedName.Formula;
             }
             return ResolveStructuredReferenceFormula(resolvedFormula);
         }
 
-        private bool TryResolveQualifiedLocalDefinedName(string sourceFormula, out ChartWorkbookDefinedName definedName)
+        private bool TryResolveQualifiedLocalDefinedName(string sourceFormula, out ChartWorkbookLocalName definedName)
         {
             definedName = default;
             int separator = sourceFormula.LastIndexOf('!');
@@ -146,10 +146,9 @@ internal sealed partial class PptxRenderer
                 return false;
             }
 
-            foreach (ChartWorkbookDefinedName candidate in definedNameRecords)
+            foreach (ChartWorkbookLocalName candidate in localNames)
             {
-                if (candidate.LocalSheetId is not null &&
-                    string.Equals(candidate.SheetName, sheetName, StringComparison.OrdinalIgnoreCase) &&
+                if (string.Equals(candidate.SheetName, sheetName, StringComparison.OrdinalIgnoreCase) &&
                     string.Equals(candidate.Name, name, StringComparison.OrdinalIgnoreCase))
                 {
                     definedName = candidate;

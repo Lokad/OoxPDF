@@ -95,7 +95,7 @@ internal static class OoxmlBoundsTests
         });
 
         using OoxPackage package = OoxPackage.Open(packageStream, CancellationToken.None);
-        var error = TestAssert.Throws<InvalidDataException>(() => package.GetRelationships("/", CancellationToken.None));
+        var error = TestAssert.Throws<InvalidDataException>(() => package.GetRelationshipDictionary("/", CancellationToken.None));
         TestAssert.Contains("duplicate relationship id", error.Message);
     }
 

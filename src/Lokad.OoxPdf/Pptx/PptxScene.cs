@@ -332,7 +332,7 @@ internal sealed partial class PptxSceneBuilder
         PptxTheme GetFallbackTheme()
         {
             if (fallbackTheme is not null) return fallbackTheme;
-            var relationships = package.GetRelationships(document.PresentationPartName, cancellationToken);
+            var relationships = package.GetRelationshipDictionary(document.PresentationPartName, cancellationToken).Values;
             string? owner = relationships.Any(r => !r.IsExternal && r.Type == ThemeRelationshipType && r.ResolvedTarget is not null)
                 ? document.PresentationPartName
                 : relationships.FirstOrDefault(r => !r.IsExternal && r.Type == SlideMasterRelationshipType && r.ResolvedTarget is not null)?.ResolvedTarget;
@@ -379,7 +379,7 @@ internal sealed partial class PptxSceneBuilder
     private static OoxPart? GetRelatedPart(OoxPackage package, string sourcePartName, string relationshipType, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        OoxRelationship? relationship = package.GetRelationships(sourcePartName, cancellationToken)
+        OoxRelationship? relationship = package.GetRelationshipDictionary(sourcePartName, cancellationToken).Values
             .FirstOrDefault(r => !r.IsExternal && r.Type == relationshipType && r.ResolvedTarget is not null);
         return relationship?.ResolvedTarget is null ? null : package.GetPart(relationship.ResolvedTarget);
     }

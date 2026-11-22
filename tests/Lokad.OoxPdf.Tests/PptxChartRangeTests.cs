@@ -56,9 +56,13 @@ internal static class PptxChartRangeTests
             """
             <sheets><sheet name="First" sheetId="91" r:id="first"/><sheet name="Second" sheetId="7" r:id="second"/></sheets>
             <definedNames>
-              <definedName name="Global">First!$A$1</definedName>
+              <definedName name="Global">Second!$A$1</definedName>
+              <definedName name="global">First!$A$1</definedName>
+              <definedName name="Scoped" localSheetId="17">Second!$A$1</definedName>
               <definedName name="Scoped" localSheetId="0">First!$A$1</definedName>
+              <definedName name="scoped" localSheetId="0">Second!$A$1</definedName>
               <definedName name="Scoped" localSheetId="1">Second!$A$1</definedName>
+              <definedName name="Unresolved" localSheetId="-1">First!$A$1</definedName>
             </definedNames>
             """,
             """
@@ -73,6 +77,8 @@ internal static class PptxChartRangeTests
         TestAssert.Equal("5", workbook.ReadRangeCells("Global").Single().Text);
         TestAssert.Equal("5", workbook.ReadRangeCells("First!Scoped").Single().Text);
         TestAssert.Equal("9", workbook.ReadRangeCells("Second!Scoped").Single().Text);
+        TestAssert.Equal(0, workbook.ReadRangeCells("Unresolved").Length);
+        TestAssert.Equal(0, workbook.ReadRangeCells("First!Unresolved").Length);
     }
 
     private static PptxRenderer.ChartWorkbookData CreateWorkbook()
@@ -197,6 +203,36 @@ internal static class PptxChartRangeTests
     {
         var workbook = ReadWorkbookFromSheetXml(BuildManyCellSheet(100000));
         TestAssert.Equal(1, workbook.ReadRangeCells("Sheet1!$A$100000").Length);
+    }
+
+    public static void PptxWorkbookReplacementRetainsCombinedCellLimit()
+    {
+        string original = BuildManyCellSheet(60_000);
+        var workbook = Read(40_000);
+        TestAssert.Equal("1", workbook.ReadRangeCells("First!A40000").Single().Text);
+        TestAssert.Equal(false, workbook.ReadRangeCells("First!A40001").Single().HasValue);
+        TestAssert.Equal("1", workbook.ReadRangeCells("Tail!A60000").Single().Text);
+
+        var failure = TestAssert.Throws<OoxPdfLimitExceededException>(() => Read(40_001));
+        TestAssert.Contains("maximum supported total cell count", failure.Message);
+
+        PptxRenderer.ChartWorkbookData Read(int replacementCells) => ReadWorkbookPackage(
+            """
+            <sheets><sheet name="First" sheetId="1" r:id="first"/>
+              <sheet name="fIRSt" sheetId="2" r:id="replacement"/>
+              <sheet name="Tail" sheetId="3" r:id="tail"/></sheets>
+            """,
+            """
+            <Relationship Id="first" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/first.xml"/>
+            <Relationship Id="replacement" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/replacement.xml"/>
+            <Relationship Id="tail" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/tail.xml"/>
+            """,
+            new Dictionary<string, string>
+            {
+                ["xl/worksheets/first.xml"] = original,
+                ["xl/worksheets/replacement.xml"] = BuildManyCellSheet(replacementCells),
+                ["xl/worksheets/tail.xml"] = original
+            }, null);
     }
 
     public static void WorkbookSheetsBeyondBudgetThrow()
@@ -347,12 +383,7 @@ internal static class PptxChartRangeTests
         return ReadWorkbook(package, cancellationToken);
     }
 
-    internal static PptxRenderer.ChartWorkbookData ReadWorkbook(OoxPackage package, CancellationToken cancellationToken = default)
-    {
-        MethodInfo read = typeof(PptxRenderer).GetMethod(
-            "ReadWorkbookDataCore",
-            BindingFlags.NonPublic | BindingFlags.Static) ?? throw new InvalidOperationException("Expected workbook reader.");
-        return (PptxRenderer.ChartWorkbookData?)read.Invoke(null, BindingFlags.DoNotWrapExceptions, null, [package, cancellationToken], null)
+    internal static PptxRenderer.ChartWorkbookData ReadWorkbook(OoxPackage package, CancellationToken cancellationToken = default) =>
+        PptxRenderer.ReadWorkbookDataCore(package, cancellationToken)
             ?? throw new InvalidOperationException("Expected workbook data.");
-    }
 }

@@ -16,7 +16,7 @@ internal static partial class OoxMemoryAdmissionTests
         using (var operation = OoxConversionBudget.BeginScope(null, pool))
         {
             using var package = OoxPackage.Open(input, default);
-            package.GetRelationships("/", default);
+            package.GetRelationshipDictionary("/", default);
             package.LoadXml(TestAssert.NotNull(package.GetPart("/word/document.xml")), default);
             long prior = pool.Reserved;
             var document = new DocxReader().Read(package, null, default, OoxPdfDocxMarkupMode.Final);
@@ -45,7 +45,7 @@ internal static partial class OoxMemoryAdmissionTests
             using (var operation = OoxConversionBudget.BeginScope(null, pool))
             using (var package = OoxPackage.Open(input, default))
             {
-                package.GetRelationships("/", default);
+                package.GetRelationshipDictionary("/", default);
                 package.LoadXml(TestAssert.NotNull(package.GetPart("/word/document.xml")), default);
                 long prior = pool.Reserved;
                 bool requested = false;

@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Ooxml;
@@ -55,42 +54,35 @@ internal sealed class PptxReader
             long firstSlideNumber = OoxXml.ReadOptionalLong(document.Root, "firstSlideNum", 1);
             if (firstSlideNumber is < 0 or > uint.MaxValue) firstSlideNumber = 1;
 
-            IReadOnlyDictionary<string, OoxRelationship> relationships = package.GetRelationships(presentationPart.Name, cancellationToken)
-                .Where(r => !r.IsExternal && r.Type == SlideRelationshipType && r.ResolvedTarget is not null)
-                .ToDictionary(r => r.Id, StringComparer.Ordinal);
+            var relationships = package.GetRelationshipDictionary(presentationPart.Name, cancellationToken);
 
             var slides = new List<PptxSlide>();
             XElement? slideList = document.Root?.Element(PresentationNamespace + "sldIdLst");
-            IEnumerable<XElement> slideIds = slideList?.Elements(PresentationNamespace + "sldId") ?? [];
-
             int sourceIndex = -1;
-            foreach (XElement slideId in slideIds)
+            if (slideList is not null)
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                sourceIndex++;
-                string? relationshipId = (string?)slideId.Attribute(RelationshipsNamespace + "id");
-                if (relationshipId is not null && relationships.TryGetValue(relationshipId, out OoxRelationship? relationship))
-                {
-                    string target = relationship.ResolvedTarget ?? throw new InvalidDataException("Slide relationship has no resolved target part.");
-                    if (!IsHiddenSlide(package, target, cancellationToken))
-                    {
-                        slides.Add(new PptxSlide(target, slides.Count) { SourceIndex = sourceIndex });
-                    }
-                }
-            }
-
-            // Recover missing ordering metadata, never an explicitly empty or fully
-            // hidden list: relationships alone do not make an unlisted slide printable.
-            if (slideList is null)
-            {
-                foreach (OoxRelationship relationship in relationships.Values)
+                foreach (XElement slideId in slideList.Elements(PresentationNamespace + "sldId"))
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     sourceIndex++;
-                    string target = relationship.ResolvedTarget ?? throw new InvalidDataException("Slide relationship has no resolved target part.");
-                    if (!IsHiddenSlide(package, target, cancellationToken))
+                    string? relationshipId = (string?)slideId.Attribute(RelationshipsNamespace + "id");
+                    if (relationshipId is not null && relationships.TryGetValue(relationshipId, out OoxRelationship? relationship) &&
+                        SlideTarget(relationship) is { } target)
                     {
-                        slides.Add(new PptxSlide(target, slides.Count) { SourceIndex = sourceIndex });
+                        AddVisibleSlide(target);
+                    }
+                }
+            }
+            else
+            {
+                // With no slide list, only eligible relationships own a source position.
+                foreach (OoxRelationship relationship in relationships.Values)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (SlideTarget(relationship) is { } target)
+                    {
+                        sourceIndex++;
+                        AddVisibleSlide(target);
                     }
                 }
             }
@@ -100,6 +92,17 @@ internal sealed class PptxReader
                 FirstSlideNumber = firstSlideNumber,
                 DefaultTextStyle = document.Root?.Element(PresentationNamespace + "defaultTextStyle")
             };
+
+            static string? SlideTarget(OoxRelationship relationship) =>
+                !relationship.IsExternal && relationship.Type == SlideRelationshipType ? relationship.ResolvedTarget : null;
+
+            void AddVisibleSlide(string target)
+            {
+                if (!IsHiddenSlide(package, target, cancellationToken))
+                {
+                    slides.Add(new PptxSlide(target, slides.Count) { SourceIndex = sourceIndex });
+                }
+            }
         }
         finally
         {

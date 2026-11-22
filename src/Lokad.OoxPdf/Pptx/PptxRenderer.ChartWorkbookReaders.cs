@@ -25,14 +25,11 @@ internal sealed partial class PptxRenderer
         return ReadWorkbookDataCore(workbookPackage, cancellationToken);
     }
 
-    private static ChartWorkbookData? ReadWorkbookDataCore(OoxPackage workbookPackage, CancellationToken cancellationToken)
+    internal static ChartWorkbookData? ReadWorkbookDataCore(OoxPackage workbookPackage, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        OoxPart? workbookPart = workbookPackage
-            .GetRelationships("/", cancellationToken)
-            .Where(relationship => !relationship.IsExternal && relationship.Type == WorkbookRelationshipType && relationship.ResolvedTarget is not null)
-            .Select(relationship => workbookPackage.GetPart(relationship.ResolvedTarget ?? string.Empty))
-            .FirstOrDefault(part => part is not null);
+        var rootRelationships = workbookPackage.GetRelationshipDictionary("/", cancellationToken);
+        OoxPart? workbookPart = FindExistingWorkbookPart(workbookPackage, rootRelationships.Values, WorkbookRelationshipType, cancellationToken);
         workbookPart ??= workbookPackage.Parts.FirstOrDefault(part => part.ContentType == WorkbookContentType);
         if (workbookPart is null)
         {
@@ -44,21 +41,18 @@ internal sealed partial class PptxRenderer
         ChartWorkbookData? result = null;
         try
         {
-            string[] sharedStrings = ReadWorkbookSharedStrings(workbookPackage, workbookPart, cancellationToken, modelStorage);
-            ChartWorkbookStyles styles = ReadWorkbookStyles(workbookPackage, workbookPart, cancellationToken, modelStorage);
-            IReadOnlyDictionary<string, OoxRelationship> workbookRelationships = workbookPackage
-                .GetRelationships(workbookPart.Name, cancellationToken)
-                .Where(relationship => !relationship.IsExternal && relationship.ResolvedTarget is not null)
-                .ToDictionary(relationship => relationship.Id, StringComparer.Ordinal);
+            var workbookRelationships = workbookPackage.GetRelationshipDictionary(workbookPart.Name, cancellationToken);
+            string[] sharedStrings = ReadWorkbookSharedStrings(workbookPackage, workbookRelationships.Values, cancellationToken, modelStorage);
+            ChartWorkbookStyles styles = ReadWorkbookStyles(workbookPackage, workbookRelationships.Values, cancellationToken, modelStorage);
             ChartWorkbookSheet[] workbookSheets = ReadWorkbookSheetRecords(workbookXml);
             if (workbookSheets.Length > MaxWorkbookSheets)
             {
                 throw new OoxPdfLimitExceededException("Chart workbook declares more sheets than the maximum supported count.");
             }
-            ChartWorkbookDefinedName[] definedNameRecords = ReadWorkbookDefinedNameRecords(workbookXml, workbookSheets);
-            IReadOnlyDictionary<string, string> definedNames = ReadWorkbookDefinedNames(definedNameRecords);
+            var (definedNames, localNames) = ReadWorkbookDefinedNames(workbookXml, workbookSheets, cancellationToken);
             var tables = new Dictionary<string, ChartWorkbookTable>(StringComparer.OrdinalIgnoreCase);
             var sheets = new Dictionary<string, ChartWorksheetData>(StringComparer.OrdinalIgnoreCase);
+            long retainedCells = 0;
 
             foreach (ChartWorkbookSheet sheet in workbookSheets)
             {
@@ -66,6 +60,7 @@ internal sealed partial class PptxRenderer
                 if (string.IsNullOrWhiteSpace(sheet.Name) ||
                     string.IsNullOrWhiteSpace(sheet.RelationshipId) ||
                     !workbookRelationships.TryGetValue(sheet.RelationshipId, out OoxRelationship? relationship) ||
+                    relationship.IsExternal ||
                     relationship.Type != WorksheetRelationshipType ||
                     relationship.ResolvedTarget is null)
                 {
@@ -79,19 +74,20 @@ internal sealed partial class PptxRenderer
                 }
 
                 ChartWorksheetData worksheetData = ReadWorksheetData(workbookPackage, worksheetPart, sharedStrings, cancellationToken, modelStorage);
-                long totalCells = 0;
-                foreach (ChartWorksheetData existing in sheets.Values)
-                {
-                    totalCells = checked(totalCells + existing.Cells.Count);
-                }
-                totalCells = checked(totalCells + worksheetData.Cells.Count);
-                if (totalCells > MaxWorkbookTotalCells)
+                long combinedCells = checked(retainedCells + worksheetData.Cells.Count);
+                if (combinedCells > MaxWorkbookTotalCells)
                 {
                     throw new OoxPdfLimitExceededException(
                         "Chart workbook exceeds the maximum supported total cell count of " + MaxWorkbookTotalCells + ".");
                 }
 
+                // The old sheet still counts during admission of its replacement.
+                if (sheets.TryGetValue(sheet.Name, out ChartWorksheetData? previous))
+                {
+                    combinedCells -= previous.Cells.Count;
+                }
                 sheets[sheet.Name] = worksheetData;
+                retainedCells = combinedCells;
                 foreach (ChartWorkbookTable table in ReadWorksheetTables(workbookPackage, worksheetPart, sheet.Name, cancellationToken, modelStorage))
                 {
                     cancellationToken.ThrowIfCancellationRequested();
@@ -103,7 +99,7 @@ internal sealed partial class PptxRenderer
                 }
             }
 
-            result = sheets.Count == 0 ? null : new ChartWorkbookData(sheets, styles, definedNames, tables, definedNameRecords, cancellationToken);
+            result = sheets.Count == 0 ? null : new ChartWorkbookData(sheets, styles, definedNames, tables, localNames, cancellationToken);
             return result;
         }
         finally
@@ -113,14 +109,26 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static string[] ReadWorkbookSharedStrings(OoxPackage workbookPackage, OoxPart workbookPart, CancellationToken cancellationToken, IMemoryReservation? modelStorage = null)
+    private static OoxPart? FindExistingWorkbookPart(OoxPackage package, IEnumerable<OoxRelationship> relationships,
+        string relationshipType, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        OoxPart? sharedStringsPart = workbookPackage
-            .GetRelationships(workbookPart.Name, cancellationToken)
-            .Where(relationship => !relationship.IsExternal && relationship.Type == SharedStringsRelationshipType && relationship.ResolvedTarget is not null)
-            .Select(relationship => workbookPackage.GetPart(relationship.ResolvedTarget ?? string.Empty))
-            .FirstOrDefault(part => part is not null);
+        foreach (OoxRelationship relationship in relationships)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!relationship.IsExternal && relationship.Type == relationshipType &&
+                relationship.ResolvedTarget is { } target && package.GetPart(target) is { } part)
+            {
+                return part;
+            }
+        }
+        return null;
+    }
+
+    private static string[] ReadWorkbookSharedStrings(OoxPackage workbookPackage, IEnumerable<OoxRelationship> relationships,
+        CancellationToken cancellationToken, IMemoryReservation? modelStorage)
+    {
+        OoxPart? sharedStringsPart = FindExistingWorkbookPart(workbookPackage, relationships, SharedStringsRelationshipType, cancellationToken);
         if (sharedStringsPart is null)
         {
             return [];
@@ -169,11 +177,15 @@ internal sealed partial class PptxRenderer
             .ToArray() ?? [];
     }
 
-    private static ChartWorkbookDefinedName[] ReadWorkbookDefinedNameRecords(XDocument workbookXml, IReadOnlyList<ChartWorkbookSheet> workbookSheets)
+    private static (IReadOnlyDictionary<string, string> Global, IReadOnlyList<ChartWorkbookLocalName> Local)
+        ReadWorkbookDefinedNames(XDocument workbookXml, IReadOnlyList<ChartWorkbookSheet> workbookSheets, CancellationToken cancellationToken)
     {
-        var definedNames = new List<ChartWorkbookDefinedName>();
+        var globalNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var localNames = new List<ChartWorkbookLocalName>();
+        int nameCount = 0;
         foreach (XElement definedName in workbookXml.Root?.Element(SpreadsheetNamespace + "definedNames")?.Elements(SpreadsheetNamespace + "definedName") ?? [])
         {
+            cancellationToken.ThrowIfCancellationRequested();
             string? name = (string?)definedName.Attribute("name");
             string formula = definedName.Value.Trim();
             if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(formula))
@@ -181,43 +193,29 @@ internal sealed partial class PptxRenderer
                 continue;
             }
 
-            int? localSheetId = ReadSpreadsheetIntegerAttribute(definedName, "localSheetId");
-            string sheetName = localSheetId is { } index && index >= 0 && index < workbookSheets.Count
-                ? workbookSheets[index].Name
-                : string.Empty;
-            if (definedNames.Count >= MaxWorkbookDefinedNames)
+            if (nameCount >= MaxWorkbookDefinedNames)
             {
                 throw new OoxPdfLimitExceededException("Chart workbook declares more defined names than the maximum supported count.");
             }
 
-            definedNames.Add(new ChartWorkbookDefinedName(name.Trim(), formula, localSheetId, sheetName));
-        }
-
-        return definedNames.ToArray();
-    }
-
-    private static IReadOnlyDictionary<string, string> ReadWorkbookDefinedNames(IReadOnlyList<ChartWorkbookDefinedName> definedNameRecords)
-    {
-        var definedNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        foreach (ChartWorkbookDefinedName definedName in definedNameRecords)
-        {
-            if (definedName.LocalSheetId is null)
+            nameCount++;
+            if (ReadSpreadsheetIntegerAttribute(definedName, "localSheetId") is not { } index)
             {
-                definedNames[definedName.Name] = definedName.Formula;
+                globalNames[name.Trim()] = formula;
+            }
+            else if (index >= 0 && index < workbookSheets.Count && workbookSheets[index].Name.Length > 0)
+            {
+                localNames.Add(new ChartWorkbookLocalName(name.Trim(), formula, workbookSheets[index].Name));
             }
         }
 
-        return definedNames;
+        return (globalNames, localNames);
     }
 
-    private static ChartWorkbookStyles ReadWorkbookStyles(OoxPackage workbookPackage, OoxPart workbookPart, CancellationToken cancellationToken, IMemoryReservation? modelStorage = null)
+    private static ChartWorkbookStyles ReadWorkbookStyles(OoxPackage workbookPackage, IEnumerable<OoxRelationship> relationships,
+        CancellationToken cancellationToken, IMemoryReservation? modelStorage)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-        OoxPart? stylesPart = workbookPackage
-            .GetRelationships(workbookPart.Name, cancellationToken)
-            .Where(relationship => !relationship.IsExternal && relationship.Type == SpreadsheetStylesRelationshipType && relationship.ResolvedTarget is not null)
-            .Select(relationship => workbookPackage.GetPart(relationship.ResolvedTarget ?? string.Empty))
-            .FirstOrDefault(part => part is not null);
+        OoxPart? stylesPart = FindExistingWorkbookPart(workbookPackage, relationships, SpreadsheetStylesRelationshipType, cancellationToken);
         if (stylesPart is null)
         {
             return ChartWorkbookStyles.Empty;
@@ -409,7 +407,7 @@ internal sealed partial class PptxRenderer
     private static IReadOnlyList<ChartWorkbookTable> ReadWorksheetTables(OoxPackage workbookPackage, OoxPart worksheetPart, string sheetName, CancellationToken cancellationToken, IMemoryReservation? modelStorage = null)
     {
         var tables = new List<ChartWorkbookTable>();
-        foreach (OoxRelationship relationship in workbookPackage.GetRelationships(worksheetPart.Name, cancellationToken))
+        foreach (OoxRelationship relationship in workbookPackage.GetRelationshipDictionary(worksheetPart.Name, cancellationToken).Values)
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (relationship.IsExternal ||
