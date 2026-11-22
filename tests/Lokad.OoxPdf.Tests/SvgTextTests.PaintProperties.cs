@@ -142,6 +142,30 @@ internal static partial class SvgTextTests
         TestAssert.Equal(0, diagnostics.Count);
     }
 
+    public static void SvgPrimitivePercentagesMatchUserCoordinatesInBothFormats()
+    {
+        const string absolute = """
+            <rect x="17" y="14" width="34" height="28" rx="6.8" ry="5.6" fill="red"/>
+            <circle cx="68" cy="28" r="13" fill="blue"/>
+            <ellipse cx="110.5" cy="28" rx="13.6" ry="10.5" fill="lime"/>
+            <line x1="127.5" y1="42" x2="153" y2="56" stroke="fuchsia" stroke-width="4"/>
+            """;
+        const string percent = """
+            <rect x="10%" y="20%" width="20%" height="40%" rx="4%" ry="8%" fill="red"/>
+            <circle cx="40%" cy="40%" r="10%" fill="blue"/>
+            <ellipse cx="65%" cy="40%" rx="8%" ry="15%" fill="lime"/>
+            <line x1="75%" y1="60%" x2="90%" y2="80%" stroke="fuchsia" stroke-width="4"/>
+            """;
+        foreach (string frame in new[] { "width=\"340\" height=\"140\" viewBox=\"-10 -5 170 70\"",
+            "width=\"170px\" height=\"70px\"" })
+        {
+            string Picture(string shapes) =>
+                $"""<svg xmlns="http://www.w3.org/2000/svg" {frame}><g transform="translate(2 3)">{shapes}</g></svg>""";
+            AssertSvgPaintInBothFormats(Picture(absolute), Picture(percent),
+                "1 0 0 rg", "0 0 1 rg", "0 1 0 rg", "1 0 1 RG");
+        }
+    }
+
     public static void SvgUserSpaceGradientPixelUnitsMatchUserCoordinates()
     {
         string Picture(string unit) => Svg($$"""

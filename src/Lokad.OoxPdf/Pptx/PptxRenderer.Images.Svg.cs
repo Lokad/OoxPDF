@@ -223,7 +223,7 @@ internal sealed partial class PptxRenderer
                     paintedText.Add(element);
                 continue;
             }
-            string? data = element.Name.LocalName == "path" ? (string?)element.Attribute("d") : ConvertSvgShapeToPathData(element);
+            string? data = ConvertSvgShapeToPathData(element, viewWidth, viewHeight);
             if (string.IsNullOrWhiteSpace(data))
             {
                 continue;
@@ -1142,7 +1142,7 @@ internal sealed partial class PptxRenderer
             SvgGradientSpread spread = definition.Spread;
             if (definition.IsRadial)
             {
-                double? diagonal = userSpace ? double.Hypot(viewWidth / Math.Sqrt(2d), viewHeight / Math.Sqrt(2d)) : null;
+                double? diagonal = userSpace ? GetSvgNormalizedDiagonal(viewWidth, viewHeight) : null;
                 if (ReadSvgRadialGradient(definition, ramp, transform, width, height, diagonal, spread) is { } gradient)
                 {
                     radial[id] = gradient;
@@ -1814,6 +1814,10 @@ internal sealed partial class PptxRenderer
         }
         return double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out value) && double.IsFinite(value);
     }
+
+    private static double GetSvgNormalizedDiagonal(double width, double height) =>
+        double.Hypot(width / Math.Sqrt(2d), height / Math.Sqrt(2d));
+
     private static double GetSvgStrokeElementScale(SvgTransform transform)
     {
         // RV07-S2: PowerPoint scales a uniform element stroke by the largest
@@ -2601,39 +2605,59 @@ internal sealed partial class PptxRenderer
     {
         return element.Name.LocalName is "path" or "rect" or "circle" or "ellipse" or "line" or "polyline" or "polygon";
     }
-    private static string? ConvertSvgShapeToPathData(XElement element)
+    private static string? ConvertSvgShapeToPathData(XElement element, double viewWidth, double viewHeight)
     {
         return element.Name.LocalName switch
         {
-            "rect" => ConvertSvgRectToPathData(element),
-            "circle" => ConvertSvgCircleToPathData(element),
-            "ellipse" => ConvertSvgEllipseToPathData(element),
-            "line" => ConvertSvgLineToPathData(element),
+            "rect" => ConvertSvgRectToPathData(element, viewWidth, viewHeight),
+            "circle" => ConvertSvgCircleToPathData(element, viewWidth, viewHeight),
+            "ellipse" => ConvertSvgEllipseToPathData(element, viewWidth, viewHeight),
+            "line" => ConvertSvgLineToPathData(element, viewWidth, viewHeight),
             "polyline" => ConvertSvgPointsToPathData(element, false),
             "polygon" => ConvertSvgPointsToPathData(element, true),
             _ => (string?)element.Attribute("d"),
         };
     }
-    private static bool TryReadSvgShapeCoordinate(XElement element, string name, double fallback, out double value)
+    private static bool TryReadSvgShapeCoordinate(XElement element, string name, double percentageBasis, out double value)
     {
         string? text = (string?)element.Attribute(name);
         if (string.IsNullOrWhiteSpace(text))
         {
-            value = fallback;
+            value = 0d;
             return true;
         }
-        return TryReadSvgNumberOrPixels(text, out value);
+        return TryReadSvgShapeLength(element, text, percentageBasis, out value);
     }
+
+    private static bool TryReadSvgShapeLength(XElement element, ReadOnlySpan<char> text, double percentageBasis, out double value)
+    {
+        text = text.Trim();
+        if (!text.EndsWith("%", StringComparison.Ordinal)) return TryReadSvgNumberOrPixels(text, out value);
+
+        value = 0d;
+        // Nested viewports have their own geometry. The root dimensions only
+        // resolve percentages in shapes that use the outer viewport.
+        if (text.Length == 1 || char.IsWhiteSpace(text[^2]) ||
+            element.Ancestors().Any(ancestor => ancestor.Name.LocalName == "svg" && ancestor.Parent is not null) ||
+            !double.TryParse(text[..^1], NumberStyles.Float, CultureInfo.InvariantCulture, out double percent))
+        {
+            return false;
+        }
+
+        value = (percent / 100d) * percentageBasis;
+        return double.IsFinite(value);
+    }
+
     private static string SvgPathNumber(double value)
     {
         return value.ToString(CultureInfo.InvariantCulture);
     }
-    private static string? ConvertSvgRectToPathData(XElement element)
+    private static string? ConvertSvgRectToPathData(XElement element, double viewWidth, double viewHeight)
     {
-        if (!TryReadSvgShapeCoordinate(element, "x", 0d, out double x)
-            || !TryReadSvgShapeCoordinate(element, "y", 0d, out double y)
-            || !TryReadSvgShapeCoordinate(element, "width", 0d, out double width)
-            || !TryReadSvgShapeCoordinate(element, "height", 0d, out double height))
+        if (!TryReadSvgShapeCoordinate(element, "x", viewWidth, out double x)
+            || !TryReadSvgShapeCoordinate(element, "y", viewHeight, out double y)
+            || !TryReadSvgShapeCoordinate(element, "width", viewWidth, out double width)
+            || !TryReadSvgShapeCoordinate(element, "height", viewHeight, out double height))
         {
             return null;
         }
@@ -2645,11 +2669,11 @@ internal sealed partial class PptxRenderer
         string? ryText = (string?)element.Attribute("ry");
         double rx = 0d;
         double ry = 0d;
-        if (rxText is not null && !TryReadSvgNumberOrPixels(rxText, out rx))
+        if (rxText is not null && !TryReadSvgShapeLength(element, rxText, viewWidth, out rx))
         {
             return null;
         }
-        if (ryText is not null && !TryReadSvgNumberOrPixels(ryText, out ry))
+        if (ryText is not null && !TryReadSvgShapeLength(element, ryText, viewHeight, out ry))
         {
             return null;
         }
@@ -2684,23 +2708,23 @@ internal sealed partial class PptxRenderer
             + "C" + SvgPathNumber(x) + " " + SvgPathNumber(y + ry - ky) + " " + SvgPathNumber(x + rx - kx) + " " + SvgPathNumber(y) + " " + SvgPathNumber(x + rx) + " " + SvgPathNumber(y)
             + "Z";
     }
-    private static string? ConvertSvgCircleToPathData(XElement element)
+    private static string? ConvertSvgCircleToPathData(XElement element, double viewWidth, double viewHeight)
     {
-        if (!TryReadSvgShapeCoordinate(element, "cx", 0d, out double cx)
-            || !TryReadSvgShapeCoordinate(element, "cy", 0d, out double cy)
-            || !TryReadSvgShapeCoordinate(element, "r", 0d, out double radius)
+        if (!TryReadSvgShapeCoordinate(element, "cx", viewWidth, out double cx)
+            || !TryReadSvgShapeCoordinate(element, "cy", viewHeight, out double cy)
+            || !TryReadSvgShapeCoordinate(element, "r", GetSvgNormalizedDiagonal(viewWidth, viewHeight), out double radius)
             || radius <= 0d)
         {
             return null;
         }
         return ConvertSvgEllipseBody(cx, cy, radius, radius);
     }
-    private static string? ConvertSvgEllipseToPathData(XElement element)
+    private static string? ConvertSvgEllipseToPathData(XElement element, double viewWidth, double viewHeight)
     {
-        if (!TryReadSvgShapeCoordinate(element, "cx", 0d, out double cx)
-            || !TryReadSvgShapeCoordinate(element, "cy", 0d, out double cy)
-            || !TryReadSvgShapeCoordinate(element, "rx", 0d, out double rx)
-            || !TryReadSvgShapeCoordinate(element, "ry", 0d, out double ry)
+        if (!TryReadSvgShapeCoordinate(element, "cx", viewWidth, out double cx)
+            || !TryReadSvgShapeCoordinate(element, "cy", viewHeight, out double cy)
+            || !TryReadSvgShapeCoordinate(element, "rx", viewWidth, out double rx)
+            || !TryReadSvgShapeCoordinate(element, "ry", viewHeight, out double ry)
             || rx <= 0d || ry <= 0d)
         {
             return null;
@@ -2718,12 +2742,12 @@ internal sealed partial class PptxRenderer
             + "C" + SvgPathNumber(cx + kx) + " " + SvgPathNumber(cy - ry) + " " + SvgPathNumber(cx + rx) + " " + SvgPathNumber(cy - ky) + " " + SvgPathNumber(cx + rx) + " " + SvgPathNumber(cy)
             + "Z";
     }
-    private static string? ConvertSvgLineToPathData(XElement element)
+    private static string? ConvertSvgLineToPathData(XElement element, double viewWidth, double viewHeight)
     {
-        if (!TryReadSvgShapeCoordinate(element, "x1", 0d, out double x1)
-            || !TryReadSvgShapeCoordinate(element, "y1", 0d, out double y1)
-            || !TryReadSvgShapeCoordinate(element, "x2", 0d, out double x2)
-            || !TryReadSvgShapeCoordinate(element, "y2", 0d, out double y2))
+        if (!TryReadSvgShapeCoordinate(element, "x1", viewWidth, out double x1)
+            || !TryReadSvgShapeCoordinate(element, "y1", viewHeight, out double y1)
+            || !TryReadSvgShapeCoordinate(element, "x2", viewWidth, out double x2)
+            || !TryReadSvgShapeCoordinate(element, "y2", viewHeight, out double y2))
         {
             return null;
         }
