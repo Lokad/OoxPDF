@@ -1,3 +1,4 @@
+using System.Globalization;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Fonts;
@@ -242,11 +243,25 @@ internal static partial class PptxChartTextHyperlinksTests
                 <a:r><a:rPr sz="{size}" b="0"><a:hlinkClick r:id="rIdLink"/></a:rPr><a:t>{linked}</a:t></a:r>
                 """).Replace("<c:barDir val=\"col\"/>", "<c:barDir val=\"bar\"/>", StringComparison.Ordinal)
                 .Replace("<c:axPos val=\"b\"/><c:crossAx val=\"20\"/>",
-                    "<c:axPos val=\"l\"/><c:crossAx val=\"20\"/>", StringComparison.Ordinal);
+                    "<c:axPos val=\"l\"/><c:crossAx val=\"20\"/>", StringComparison.Ordinal)
+                .Replace("</c:plotArea>", """<c:spPr><a:solidFill><a:srgbClr val="25A997"/></a:solidFill></c:spPr></c:plotArea>""",
+                    StringComparison.Ordinal);
             PdfPage page = RenderChartTitlePage("", AxisTitleRelationships, chart, resolver).Pages.Single();
             var firstInk = PortableRenderingTests.ReadPaintedSourceLabel(page, first, fontPrefix: "CAT");
             var linkedInk = PortableRenderingTests.ReadPaintedSourceLabel(page, linked, fontPrefix: "CAT");
             TestAssert.Equal(firstInk[0].Origin.Y, linkedInk[0].Origin.Y);
+            var paintPaths = new List<string>();
+            RgbColor[] colors = PptxChartPaletteTests.ReadColoredPaints(page.Content, paintPaths.Add).ToArray();
+            string plot = colors.Zip(paintPaths).Single(paint => paint.First == new RgbColor(0x25, 0xA9, 0x97)).Second;
+            TestAssert.True(plot.EndsWith(" re f", StringComparison.Ordinal), "The authored plot fill paints a rectangle.");
+            string[] rectangle = plot.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            double plotTop = double.Parse(rectangle[1], CultureInfo.InvariantCulture) +
+                double.Parse(rectangle[3], CultureInfo.InvariantCulture);
+            // The chart fixture's authored top offset is 914400 EMU (72pt).
+            double chartTop = page.Height - 72d;
+            TestAssert.True(firstInk.Concat(linkedInk).All(glyph => glyph.Ink.Y > plotTop &&
+                glyph.Ink.Y + glyph.Ink.Height <= chartTop + .02d),
+                "All caption ink stays in the band between the plot and chart top.");
             var link = page.Annotations.Single();
             TestAssert.Equal("https://example.invalid/chart-axis", link.Uri);
             TestAssert.True(linkedInk.All(glyph => glyph.Ink.X >= link.X - .02d &&
