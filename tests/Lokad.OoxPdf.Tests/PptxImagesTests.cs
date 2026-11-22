@@ -3800,52 +3800,6 @@ internal static partial class PptxImagesTests
         TestAssert.Contains("/Im1 Do", pdf);
     }
 
-    public static void PptxSyntheticBmpPictureRendersImageXObject()
-    {
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
-        {
-            ["[Content_Types].xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-                  <Default Extension="xml" ContentType="application/xml"/>
-                  <Default Extension="bmp" ContentType="image/bmp"/>
-                  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
-                  <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
-                </Types>
-                """),
-            ["_rels/.rels"] = TestFixtures.Utf8(PptxTests.PackageRelationship()),
-            ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8(PptxTests.PresentationRelationship()),
-            ["ppt/presentation.xml"] = TestFixtures.Utf8(PptxTests.BasicPresentation()),
-            ["ppt/slides/_rels/slide1.xml.rels"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image1.bmp"/>
-                </Relationships>
-                """),
-            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-                  <p:cSld><p:spTree><p:pic>
-                    <p:blipFill><a:blip r:embed="rId1"/></p:blipFill>
-                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
-                  </p:pic></p:spTree></p:cSld>
-                </p:sld>
-                """),
-            ["ppt/media/image1.bmp"] = TestFixtures.CreateRgbBmp(2, 1, [255, 0, 0, 0, 0, 255])
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-        var diagnostics = new List<OoxPdfDiagnostic>();
-
-        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("/Subtype /Image", pdf);
-        TestAssert.Contains("/Im1 Do", pdf);
-        TestAssert.Contains("/Width 2 /Height 1", pdf);
-        TestAssert.True(diagnostics.All(d => d.Id != "IMAGE_UNSUPPORTED_FORMAT"), "BMP should render instead of emitting unsupported image diagnostics.");
-    }
-
     public static void PptxSyntheticBmpPictureAppliesDuotoneRecolor()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
@@ -3875,24 +3829,37 @@ internal static partial class PptxImagesTests
                   <p:cSld><p:spTree>
                     <p:pic>
                       <p:blipFill><a:blip r:embed="rId1"/></p:blipFill>
-                      <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="914400" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                      <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
                     </p:pic>
                     <p:pic>
                       <p:blipFill><a:blip r:embed="rId1"><a:duotone><a:srgbClr val="000000"/><a:srgbClr val="FFFFFF"/></a:duotone></a:blip></p:blipFill>
-                      <p:spPr><a:xfrm><a:off x="1828800" y="914400"/><a:ext cx="914400" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                      <p:spPr><a:xfrm><a:off x="3657600" y="914400"/><a:ext cx="1828800" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
                     </p:pic>
                   </p:spTree></p:cSld>
                 </p:sld>
                 """),
-            ["ppt/media/image1.bmp"] = TestFixtures.CreateRgbBmp(1, 1, [255, 0, 0])
+            ["ppt/media/image1.bmp"] = TestFixtures.CreateRgbBmp(2, 1, [255, 0, 0, 0, 0, 255])
         });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        string output = Path.ChangeExtension(input, ".pdf");
         var diagnostics = new List<OoxPdfDiagnostic>();
 
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.True(PptxTests.CountOccurrences(pdf, "/Subtype /Image") >= 2, "The same BMP image part with and without recolor must use distinct cached image XObjects.");
+        List<byte[]> images = PptxTests.ReadPdfDeviceRgbImageStreams(output, width: 2, height: 1);
+        TestAssert.Equal(2, images.Count);
+        MatchCollection imageObjects = Regex.Matches(pdf, @"(?m)^(?<id>\d+) 0 obj\s+<< /Type /XObject /Subtype /Image\b");
+        TestAssert.Equal(2, imageObjects.Count);
+        TestAssert.Contains($"/Im1 {imageObjects[0].Groups["id"].Value} 0 R", pdf);
+        TestAssert.Contains($"/Im2 {imageObjects[1].Groups["id"].Value} 0 R", pdf);
+        TestAssert.True(Regex.IsMatch(pdf, @"144 0 0 72 72 396 cm\s+/Im1 Do\b"),
+            "The left picture must paint the original resource at its authored size and position.");
+        TestAssert.True(Regex.IsMatch(pdf, @"144 0 0 72 288 396 cm\s+/Im2 Do\b"),
+            "The right picture must paint the recolored resource at its authored size and position.");
+        TestAssert.True(images[0].AsSpan().SequenceEqual(new byte[] { 255, 0, 0, 0, 0, 255 }),
+            "The painted original must keep both authored RGB samples.");
+        TestAssert.True(images[1].AsSpan().SequenceEqual(new byte[] { 54, 54, 54, 18, 18, 18 }),
+            "The painted duotone must map the red and blue samples to their authored black-to-white luminances.");
         TestAssert.True(diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_IMAGE_RECOLOR"), "Supported BMP duotone recolor should not emit unsupported diagnostics.");
         TestAssert.True(diagnostics.All(d => d.Id != "IMAGE_UNSUPPORTED_FORMAT"), "Supported BMP duotone recolor should render instead of emitting unsupported image diagnostics.");
     }
