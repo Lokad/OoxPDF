@@ -1413,31 +1413,17 @@ internal sealed partial class PptxRenderer
         }
         return double.TryParse(trimmed, NumberStyles.Float, CultureInfo.InvariantCulture, out width) && double.IsFinite(width) && width >= 0d;
     }
-    // Inherited paint properties resolve element style/attribute, then each
-    // ancestor outward in the same order. Whole-element opacity stays local;
-    // container opacity belongs to group isolation rather than this lookup.
+    // Resolve the winning declaration on each element before following inheritance.
+    // Whole-element opacity stays with the element or its compositing group.
     private static string? ReadSvgInheritedAttribute(XElement path, IReadOnlyDictionary<string, string> style, string name)
     {
-        if (style.TryGetValue(name, out string? styleValue) && !string.IsNullOrWhiteSpace(styleValue))
+        foreach (XElement source in path.AncestorsAndSelf())
         {
-            return styleValue;
-        }
-        string? attribute = (string?)path.Attribute(name);
-        if (!string.IsNullOrWhiteSpace(attribute))
-        {
-            return attribute;
-        }
-        foreach (XElement ancestor in path.Ancestors())
-        {
-            IReadOnlyDictionary<string, string> ancestorStyle = ReadSvgStyleDeclarations(ancestor);
-            if (ancestorStyle.TryGetValue(name, out string? ancestorStyleValue) && !string.IsNullOrWhiteSpace(ancestorStyleValue))
+            IReadOnlyDictionary<string, string> declarations = ReferenceEquals(source, path) ? style : ReadSvgStyleDeclarations(source);
+            string? value = ReadSvgPresentationAttribute(source, declarations, name);
+            if (!string.IsNullOrWhiteSpace(value) && !value.AsSpan().Trim().Equals("inherit", StringComparison.OrdinalIgnoreCase))
             {
-                return ancestorStyleValue;
-            }
-            string? ancestorAttribute = (string?)ancestor.Attribute(name);
-            if (!string.IsNullOrWhiteSpace(ancestorAttribute))
-            {
-                return ancestorAttribute;
+                return value;
             }
         }
         return null;

@@ -34,6 +34,8 @@ internal static partial class SvgTextTests
         string visible = Paint(Svg(rectangle)).ToString(), empty = Paint(Svg("")).ToString();
         foreach (var sample in new[] {
             (Body: "<g visibility=\"hidden\">" + rectangle + "</g>", Expected: empty),
+            (Body: "<g visibility=\"hidden\"><g visibility=\"inherit\">" +
+                rectangle.Replace("<rect ", "<rect visibility=\"visible\" style=\"visibility: inherit\" ") + "</g></g>", Expected: empty),
             (Body: "<g visibility=\"hidden\"><g visibility=\"visible\">" + rectangle + "</g></g>", Expected: visible),
             (Body: "<g display=\"none\"><g visibility=\"visible\">" + rectangle + "</g></g>", Expected: empty),
             (Body: rectangle.Replace("<rect ", "<rect display=\"none\" style=\"display:block\" "), Expected: visible),
@@ -45,7 +47,8 @@ internal static partial class SvgTextTests
     public static void SvgVisibilitySkipsHiddenFontsAndUnsupportedPayload()
     {
         string svg = Svg("<g display=\"none\"><rect transform=\"unknown(1)\" width=\"80\" height=\"60\"/>" +
-            "<use href=\"#unused\"/><text font-family=\"HIDDEN-FONT\"><tspan>Hidden</tspan></text></g>");
+            "<use href=\"#unused\"/><text font-family=\"HIDDEN-FONT\"><tspan>Hidden</tspan></text></g>" +
+            "<g visibility=\"hidden\"><text visibility=\"inherit\" font-family=\"HIDDEN-FONT\">Also hidden</text></g>");
         var diagnostics = new List<OoxPdfDiagnostic>();
         bool resolved = false, loaded = false;
         var bytes = Encoding.UTF8.GetBytes(svg);

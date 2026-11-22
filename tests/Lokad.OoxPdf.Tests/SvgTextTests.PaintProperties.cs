@@ -87,12 +87,18 @@ internal static partial class SvgTextTests
 
     public static void SvgInheritedPaintSurvivesDocxAndPptxContainers()
     {
+        const string strokePath = "<path d=\"M140 50H220\" fill=\"none\" ";
         foreach (bool docx in new[] { false, true })
         foreach (var pair in new[] {
             ("<g fill-opacity=\"0\"><rect width=\"100\" height=\"100\" fill=\"white\"/></g>",
                 "<rect width=\"100\" height=\"100\" fill=\"white\" fill-opacity=\"0\"/>"),
             ("<g stroke-width=\"10\"><path d=\"M20 50H120\" fill=\"none\" stroke=\"blue\"/></g>",
-                "<path d=\"M20 50H120\" fill=\"none\" stroke=\"blue\" stroke-width=\"10\"/>") })
+                "<path d=\"M20 50H120\" fill=\"none\" stroke=\"blue\" stroke-width=\"10\"/>"),
+            ("<g fill=\"green\" stroke=\"blue\" stroke-width=\"10\"><g fill=\"inherit\">" +
+                "<rect x=\"110\" width=\"20\" height=\"80\" fill=\"inherit\" stroke=\"none\"/>" +
+                strokePath + "stroke=\"red\" style=\"stroke: inherit\" stroke-width=\"inherit\"/></g></g>",
+                "<rect x=\"110\" width=\"20\" height=\"80\" fill=\"green\"/>" +
+                strokePath + "stroke=\"blue\" stroke-width=\"10\"/>") })
         {
             PdfPage Render(string contents)
             {
