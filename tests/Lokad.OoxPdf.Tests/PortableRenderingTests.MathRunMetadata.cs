@@ -86,6 +86,36 @@ internal static partial class PortableRenderingTests
         }
     }
 
+    public static void PortableRenderingMathSmartTagsPreserveRevisedFractions()
+    {
+        foreach (string kind in new[] { "ins", "del" })
+        foreach (var mode in Enum.GetValues<OoxPdfDocxMarkupMode>())
+        {
+            string fixture = "CompositionProbes/math-run-revision-body-" + kind;
+            var beforeNotes = new List<OoxPdfDiagnostic>();
+            var afterNotes = new List<OoxPdfDiagnostic>();
+            var direct = DocxInlineCompositionTests.ReadMutation(fixture, mode, false, false, diagnosticSink: beforeNotes.Add);
+            var wrapped = DocxInlineCompositionTests.ReadMutation(fixture, mode, false, false, (xml, w, _) =>
+            {
+                XElement revision = xml.Descendants(w + kind).Single();
+                revision.ReplaceWith(new XElement(w + "smartTag", new XAttribute(w + "element", "operand"),
+                    new XElement(w + "smartTagPr", new XElement(w + "attr",
+                        new XAttribute(w + "name", "role"), new XAttribute(w + "val", "numerator"))), revision));
+            }, diagnosticSink: afterNotes.Add);
+            var renderer = new DocxRenderer(new PinnedResolver(mathFont: true), mode,
+                mode == OoxPdfDocxMarkupMode.AllMarkup ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup :
+                    OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+            var expected = renderer.RenderPagesAsync(direct, beforeNotes.Add, default).ToBlockingEnumerable().Single();
+            var measured = renderer.RenderPagesAsync(wrapped, afterNotes.Add, default).ToBlockingEnumerable().Single();
+            TestAssert.Equal(RevisionBodyEquationText(kind, mode), ReadPortableEquationGlyphs(measured));
+            TestAssert.Equal(expected.Content, measured.Content);
+            TestAssert.True(expected.Annotations.Count > 0 && expected.Annotations.SequenceEqual(measured.Annotations),
+                "A math metadata wrapper must preserve the surrounding link.");
+            TestAssert.True(beforeNotes.SequenceEqual(afterNotes), "The revision keeps its selected view's diagnostics.");
+            CheckWrittenPages([measured]);
+        }
+    }
+
     private static string RevisionBodyEquationText(string kind, OoxPdfDocxMarkupMode mode)
     {
         // The first fraction has a revised numerator. The other equations are unmarked.

@@ -20823,6 +20823,7 @@
     "=PortableRenderingDisabledMathAlignmentKeepsComposedFractions",
     "=DocxMathArgumentControlsRequireTrailingPrintNeutralProperties",
     "=PortableRenderingNeutralMathArgumentControlsKeepComposedFractions",
+    "=PortableRenderingMathSmartTagsPreserveRevisedFractions",
     "DocxDeletedMathMetadataDoesNotReviveOtherDeletedContent",
     "DocxDeletedMathMetadataKeepsModeFilteringAndSourceOwners",
     "DocxDeletedMathMetadataKeepsPortablePaintAndNeighborContent",

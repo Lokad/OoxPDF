@@ -249,9 +249,10 @@ internal static partial class DocxMathParser
         }
     }
     private static bool IsSourceContainer(XElement? element) =>
-        element?.Name == WordprocessingNamespace + "hyperlink" ||
-        element?.Name == WordprocessingNamespace + "customXml" || element?.Name == WordprocessingNamespace + "sdt" ||
-        element?.Name == WordprocessingNamespace + "sdtContent" && element.Parent?.Name == WordprocessingNamespace + "sdt";
+        element is not null &&
+        (DocxSourceXml.IsInlineMetadataContainer(element) ||
+         element.Name == WordprocessingNamespace + "hyperlink" || element.Name == WordprocessingNamespace + "sdt" ||
+         element.Name == WordprocessingNamespace + "sdtContent" && element.Parent?.Name == WordprocessingNamespace + "sdt");
     private static bool IsContainer(string name) => IsRow(name) || IsControl(name) || name == "mr";
     private static bool IsProperty(XElement element) => element.Name.Namespace == MathNamespace && element.Name.LocalName.EndsWith("Pr", StringComparison.Ordinal);
     private static bool IsBookmarkMarker(XElement element) =>
