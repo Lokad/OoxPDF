@@ -159,7 +159,7 @@ internal static partial class SvgTextTests
             </g>
             <rect x="75" y="20" width="30" height="30" fill="currentColor"/>
             """), diagnostics);
-        foreach (string operation in new[] { "1 0 0 rg", "0 0 1 RG", LabelColor, "0 0 0 rg" })
+        foreach (string operation in new[] { "1 0 0 rg", "0 0 1 RG", LabelColor, "75 140 m" })
             TestAssert.Contains(operation, expected.ToString());
         TestAssert.Equal(1, LabelPaths(expected.ToString()));
         AssertEquivalentSvgPaint(expected, actual, "Each solid paint uses the color of the element being painted.");
