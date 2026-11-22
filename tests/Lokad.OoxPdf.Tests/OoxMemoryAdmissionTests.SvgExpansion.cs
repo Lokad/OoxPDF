@@ -122,8 +122,9 @@ internal static partial class OoxMemoryAdmissionTests
             $"<rect x=\"{i}\" y=\"0\" width=\"1024\" height=\"1024\" fill=\"url(#g)\"/>" +
             (groups && (i == count / 2 - 1 || i == count - 1) ? "</g>" : "")));
         string svg = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1024\" height=\"1024\" viewBox=\"0 0 1024 1024\"><defs><radialGradient id=\"g\" gradientUnits=\"userSpaceOnUse\" cx=\"512\" cy=\"512\" r=\"512\">" +
-            (native ? "" : "<stop offset=\"0\" stop-color=\"#FF0000\"/>") +
-            "<stop offset=\"0\" stop-color=\"#0000FF\"/><stop offset=\"1\" stop-color=\"#00FF00\"/></radialGradient></defs>" + paths + "</svg>";
+            "<stop offset=\"0\" stop-color=\"#0000FF\"/>" +
+            (native ? "" : "<stop offset=\"0.00001\" stop-color=\"#FF0000\"/>") +
+            "<stop offset=\"1\" stop-color=\"#00FF00\"/></radialGradient></defs>" + paths + "</svg>";
         foreach (string image in parts.Keys.Where(key => key.EndsWith(".svg", StringComparison.OrdinalIgnoreCase)).ToArray())
             parts[image] = Encoding.UTF8.GetBytes(svg);
         if (kind == OoxPdfInputKind.Docx && pages > 1)
