@@ -2322,19 +2322,16 @@ internal static partial class PptxImagesTests
             TestAssert.True(!pdf.Contains("/S /Luminosity", StringComparison.Ordinal) && diagnostics.Any(d => d.Message.Contains("ignores stop-opacity", StringComparison.Ordinal)),
                 "Excluded syntax or native stop spacing must retain diagnosed sampling.");
         }
-        var transformed = new List<OoxPdfDiagnostic>();
-        string transformedPdf = Encoding.ASCII.GetString(RenderSvgOpacityTest(VaryingLinearSvg(VaryingLinearStops,
-            "gradientUnits=\"userSpaceOnUse\" x2=\"100\"", "transform=\"translate(5,3)\""), transformed));
-        TestAssert.True(!transformedPdf.Contains("/S /Luminosity", StringComparison.Ordinal) && transformed.Any(d => d.Message.Contains("ignores stop-opacity", StringComparison.Ordinal)),
-            "Unqualified user-space path transforms must retain their alpha fallback.");
-        foreach (string transform in new[] { "rotate(30,50,25)", "skewX(20)", "translate(100,0) scale(-1,1)" })
+        foreach (var (gradientAttrs, transform) in new[] {
+            ("gradientUnits=\"userSpaceOnUse\" x2=\"100\"", "scale(.5,1)"),
+            ("", "rotate(30,50,25)"), ("", "skewX(20)"), ("", "translate(100,0) scale(-1,1)") })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
             string bodyAttrs = "transform=\"" + transform + "\"";
-            byte[] actual = RenderSvgOpacityTest(VaryingLinearSvg(VaryingLinearStops, bodyAttrs: bodyAttrs), diagnostics);
-            byte[] opaque = RenderSvgOpacityTest(VaryingLinearSvg(VaryingLinearStops.Replace(" stop-opacity=\".25\"", string.Empty, StringComparison.Ordinal), bodyAttrs: bodyAttrs));
+            byte[] actual = RenderSvgOpacityTest(VaryingLinearSvg(VaryingLinearStops, gradientAttrs, bodyAttrs), diagnostics);
+            byte[] opaque = RenderSvgOpacityTest(VaryingLinearSvg(VaryingLinearStops.Replace(" stop-opacity=\".25\"", string.Empty, StringComparison.Ordinal), gradientAttrs, bodyAttrs));
             TestAssert.True(actual.AsSpan().SequenceEqual(opaque) && diagnostics.Any(d => d.Message.Contains("ignores stop-opacity", StringComparison.Ordinal)),
-                "Rotated/sheared/reflected SVG element gradients must retain their diagnosed sampling.");
+                "Excluded SVG element transforms must retain their diagnosed sampling.");
         }
     }
 
@@ -2498,7 +2495,7 @@ internal static partial class PptxImagesTests
             LinearStrokeSvg(LinearStrokeStops, pathAttrs: "stroke-opacity=\"150%\""),
             LinearStrokeSvg(LinearStrokeStops, pathAttrs: "opacity=\"garbage\""),
             LinearStrokeSvg(LinearStrokeStops, pathAttrs: "transform=\"rotate(20 50 25)\""),
-            LinearStrokeSvg(LinearStrokeStops, gradientAttrs: "gradientUnits=\"userSpaceOnUse\"", pathAttrs: "transform=\"scale(.5)\""),
+            LinearStrokeSvg(LinearStrokeStops, gradientAttrs: "gradientUnits=\"userSpaceOnUse\"", pathAttrs: "transform=\"scale(.5,1)\""),
             LinearStrokeSvg(LinearStrokeStops).Replace("linearGradient", "radialGradient", StringComparison.Ordinal),
             LinearStrokeSvg("<stop offset=\"0\" stop-color=\"#FF0000\"/><stop offset=\".00001\" stop-color=\"#00FF00\"/><stop offset=\"1\" stop-color=\"#0000FF\"/>")
         };
