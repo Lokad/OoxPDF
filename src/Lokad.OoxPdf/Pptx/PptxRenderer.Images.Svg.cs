@@ -137,9 +137,10 @@ internal sealed partial class PptxRenderer
         string? overflow = !hasViewportClip && svg.Root is { } outerSvg
             ? ReadSvgPresentationAttribute(outerSvg, ReadSvgStyleDeclarations(outerSvg), "overflow")?.Trim()
             : null;
-        if (!crop.IsEmpty || Math.Abs(bounds.RotationDegrees) > 0.001d || bounds.FlipHorizontal || bounds.FlipVertical ||
+        bool clipViewport = !crop.IsEmpty || Math.Abs(bounds.RotationDegrees) > 0.001d || bounds.FlipHorizontal || bounds.FlipVertical ||
             string.Equals(overflow, "hidden", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(overflow, "scroll", StringComparison.OrdinalIgnoreCase))
+            string.Equals(overflow, "scroll", StringComparison.OrdinalIgnoreCase);
+        if (clipViewport)
         {
             // The viewport rotates with the picture, matching the raster path.
             graphics.ClipRectangle(imageX, imageY, imageWidth, imageHeight);
@@ -186,12 +187,19 @@ internal sealed partial class PptxRenderer
             pageGraphics.AdmitSvgConstruction(sampledBytes, bytes.Length, precedingCharacters);
             cancellationToken.ThrowIfCancellationRequested();
         }
-        void CloseGroup()
+        var pictureFrame = new PdfRectangle(imageX, imageY, imageWidth, imageHeight);
+        void OpenGroup(XElement owner, double opacity)
+        {
+            var child = new PdfGraphicsBuilder();
+            isolation.Add((owner, graphics, child, opacity));
+            graphics = child;
+        }
+        void CloseGroup(PdfRectangle? paintBounds = null)
         {
             var entry = isolation[^1];
             isolation.RemoveAt(isolation.Count - 1);
             graphics = entry.Parent;
-            graphics.DrawTransparencyGroup(entry.Child, new PdfRectangle(imageX, imageY, imageWidth, imageHeight), entry.Opacity);
+            graphics.DrawTransparencyGroup(entry.Child, paintBounds ?? pictureFrame, entry.Opacity);
         }
         foreach (XElement element in svg.Descendants().Where(candidate => IsSvgPaintableElement(candidate) || candidate.Name.LocalName == "text"))
         {
@@ -217,10 +225,8 @@ internal sealed partial class PptxRenderer
             for (int i = shared; i < opacityGroups.Count; i++)
             {
                 var (container, opacity) = opacityGroups[i];
-                var child = new PdfGraphicsBuilder();
-                isolation.Add((container, graphics, child, opacity));
                 admittedContainers.Add(container);
-                graphics = child;
+                OpenGroup(container, opacity);
             }
             if (element.Name.LocalName == "text")
             {
@@ -266,12 +272,20 @@ internal sealed partial class PptxRenderer
                 gradientId = null;
                 radial = null;
             }
-            // The gradient stroke can share element opacity only when the fill
-            // contributes no ink. Admission uses the actual path interior.
-            if (stroke.Gradient is not null && hasFill && paint.Opacity > 0d && elementOpacity < 1d)
+            // The object opacity applies once to the completed fill and stroke.
+            // Preserve the space for a varying-alpha fill's mask at the depth limit.
+            bool isolateObject = stroke.Gradient is not null && stroke.Opacity > 0d &&
+                hasFill && paint.Opacity > 0d && elementOpacity < 1d;
+            if (isolateObject)
             {
-                stroke = default;
-                strokeFailure = SvgStrokeFailure.UnresolvedGradient;
+                bool fillNeedsMask = paint.Gradient is { UniformStopOpacity: null } ||
+                    radial is { UniformStopOpacity: null };
+                if (isolation.Count >= PdfTransparencyGroup.MaxDepth - (fillNeedsMask ? 1 : 0))
+                {
+                    stroke = default;
+                    strokeFailure = SvgStrokeFailure.UnresolvedGradient;
+                    isolateObject = false;
+                }
             }
 
             if (hasFill && gradientId is not null)
@@ -292,8 +306,9 @@ internal sealed partial class PptxRenderer
             SvgPathBounds gradientBounds = default;
             bool hasGradientBounds = false;
             bool gradientControlsMappable = false;
+            SvgPathBounds controlBounds = default;
             if ((radial is not null || paint.Gradient is not null || stroke.Gradient is not null) &&
-                completePath && TryReadSvgPathBounds(pathCommands, out gradientBounds, out SvgPathBounds controlBounds))
+                completePath && TryReadSvgPathBounds(pathCommands, out gradientBounds, out controlBounds))
             {
                 hasGradientBounds = true;
                 gradientControlsMappable = AreSvgGradientBoundsMappable(controlBounds, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY);
@@ -385,6 +400,25 @@ internal sealed partial class PptxRenderer
                 if (!hasFill)
                 {
                     continue;
+                }
+            }
+            PdfRectangle? objectFrame = null;
+            if (isolateObject && strokePattern is not null)
+            {
+                objectFrame = hasViewportClip || clipViewport ? pictureFrame :
+                    ReadSvgObjectPaintBounds(pictureFrame, controlBounds, stroke, strokeWidthPoints,
+                        sourceMinX, sourceMinY, scaleX, scaleY);
+                if (objectFrame.HasValue)
+                {
+                    OpenGroup(element, elementOpacity);
+                    paint = paint with { Opacity = paint.Opacity / elementOpacity };
+                    stroke = stroke with { Opacity = stroke.Opacity / elementOpacity };
+                }
+                else
+                {
+                    stroke = default;
+                    strokePattern = null;
+                    gradientStrokes++;
                 }
             }
             if (radial is { } radialGradient)
@@ -537,6 +571,7 @@ internal sealed partial class PptxRenderer
                     unreadablePaths++;
                 }
             }
+            if (objectFrame.HasValue) { CloseGroup(objectFrame); }
         }
         while (isolation.Count > 0) { CloseGroup(); }
         ReportUnsupportedSvgElements(svg, diagnosticSink, slideIndex, partName, paintedText);
@@ -2053,12 +2088,21 @@ internal sealed partial class PptxRenderer
     }
     private static SvgTransform? ApplySvgStrokeViewport(PdfGraphicsBuilder graphics, double imageX, double imageY, double imageHeight, double scaleX, double scaleY)
     {
+        SvgTransform? viewport = ReadSvgStrokeViewport(imageX, imageY, imageHeight, scaleX, scaleY);
+        if (viewport is { } transform)
+        {
+            graphics.Transform(transform.M11, 0d, 0d, transform.M22, transform.OffsetX, transform.OffsetY);
+        }
+        return viewport;
+    }
+
+    private static SvgTransform? ReadSvgStrokeViewport(double imageX, double imageY, double imageHeight, double scaleX, double scaleY)
+    {
         // RV07-S1: keep viewport anisotropy in the PDF CTM so it stretches
         // the stroke's normal, caps and dash lengths as well as the path.
         // Normalize around the existing mean scale to retain page-sized path
         // coordinates. Bound the error from the writer's three-decimal CTM;
         // extreme aspect ratios retain the previous scalar approximation.
-        SvgTransform? strokeViewport = null;
         double meanScale = (scaleX + scaleY) / 2d;
         if (double.IsFinite(meanScale) && meanScale > 0d && Math.Abs(scaleX - scaleY) > meanScale * .000001d)
         {
@@ -2069,11 +2113,30 @@ internal sealed partial class PptxRenderer
                 && Math.Abs(printedY - factorY) <= factorY * .001d
                 && double.IsFinite(imageY + imageHeight))
             {
-                strokeViewport = new SvgTransform(printedX, 0d, 0d, printedY, imageX, imageY + imageHeight);
-                graphics.Transform(printedX, 0d, 0d, printedY, imageX, imageY + imageHeight);
+                return new SvgTransform(printedX, 0d, 0d, printedY, imageX, imageY + imageHeight);
             }
         }
-        return strokeViewport;
+        return null;
+    }
+
+    private static PdfRectangle? ReadSvgObjectPaintBounds(PdfRectangle frame, SvgPathBounds controls, SvgStroke stroke,
+        double strokeWidth, double sourceMinX, double sourceMinY, double scaleX, double scaleY)
+    {
+        // A PDF Form clips to its bounding box. Where the picture has no
+        // viewport clip, retain the full control hull and stroke envelope.
+        var viewport = ReadSvgStrokeViewport(frame.X, frame.Y, frame.Height, scaleX, scaleY);
+        double tip = Math.Max(stroke.LineJoin == 0 ? stroke.MiterLimit : 1d, stroke.LineCap == 2 ? Math.Sqrt(2d) : 1d);
+        double radius = (strokeWidth / 2d) * tip;
+        double marginX = radius * (viewport?.M11 ?? 1d) + .002d;
+        double marginY = radius * (viewport?.M22 ?? 1d) + .002d;
+        double top = frame.Y + frame.Height;
+        double left = Math.Min(frame.X, frame.X + (controls.MinX - sourceMinX) * scaleX - marginX);
+        double right = Math.Max(frame.X + frame.Width, frame.X + (controls.MaxX - sourceMinX) * scaleX + marginX);
+        double bottom = Math.Min(frame.Y, top - (controls.MaxY - sourceMinY) * scaleY - marginY);
+        top = Math.Max(top, top - (controls.MinY - sourceMinY) * scaleY + marginY);
+        double width = right - left, height = top - bottom;
+        if (!double.IsFinite(width) || !double.IsFinite(height)) { return null; }
+        return new PdfRectangle(left, bottom, width, height);
     }
     // RV07: radial gradients paint concentric ellipse rings, largest first.
     // Focal points diagnose and render centered; radii resolve per axis like

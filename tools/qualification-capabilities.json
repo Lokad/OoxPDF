@@ -672,6 +672,7 @@
     "=SvgImportantInlinePaintMatchesExplicitPaintInBothFormats",
     "=SvgTransparentFillKeepsTranslucentGradientStrokeInBothFormats",
     "=SvgLinesKeepTranslucentGradientStrokesWithDefaultOrInheritedFill",
+    "=SvgObjectOpacityMatchesGroupForFilledGradientStrokes",
     "=SvgPercentageOpacityMatchesUnitOpacityInBothFormats",
     "=SvgConstantLinearGradientsMatchSolidPaintInBothFormats",
     "=SvgSingleStopRadialGradientsMatchSolidPaintInBothFormats",

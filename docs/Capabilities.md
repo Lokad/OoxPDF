@@ -93,6 +93,7 @@ SVG paint accepts opaque numeric `rgb()` colors and separate opacity properties.
 Supported inline style declarations honor `!important` precedence.
 Basic shape geometry, stroke widths, dash lengths and dash offsets accept viewport percentages.
 Line elements use stroke paint and ignore fill declarations.
+Object opacity can compose a visible fill with a supported linear-gradient stroke.
 Rectangles and ellipses resolve an automatic radius from the other radius.
 SVG paths accept absolute and relative cubic and quadratic Bézier commands,
 including smooth forms.

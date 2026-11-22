@@ -2464,7 +2464,6 @@ internal static partial class PptxImagesTests
             LinearStrokeSvg(LinearStrokeStops, rootAttrs: "opacity=\"150%\""),
             LinearStrokeSvg(LinearStrokeStops, pathAttrs: "stroke-opacity=\"150%\""),
             LinearStrokeSvg(LinearStrokeStops, pathAttrs: "opacity=\"garbage\""),
-            LinearStrokeSvg(LinearStrokeStops, pathAttrs: "opacity=\".5\"", fill: "#EECC66"),
             LinearStrokeSvg(LinearStrokeStops, pathAttrs: "transform=\"rotate(20 50 25)\""),
             LinearStrokeSvg(LinearStrokeStops, gradientAttrs: "gradientUnits=\"userSpaceOnUse\"", pathAttrs: "transform=\"scale(.5)\""),
             LinearStrokeSvg(LinearStrokeStops).Replace("linearGradient", "radialGradient", StringComparison.Ordinal),
@@ -2473,7 +2472,12 @@ internal static partial class PptxImagesTests
         string path = "<path d=\"M10 5H90V45H10Z\" fill=\"none\" stroke=\"url(#s)\" stroke-width=\"4\"/>";
         excluded.Add(LinearStrokeSvg(LinearStrokeStops, body: "<svg>" + path + "</svg>"));
         excluded.Add(LinearStrokeSvg(LinearStrokeStops, body: "<g opacity=\"1\" style=\"opacity:.5\">" + path + "</g>"));
-        excluded.Add(LinearStrokeSvg(LinearStrokeStops, body: string.Concat(Enumerable.Repeat("<g opacity=\".5\">", 33)) + path + string.Concat(Enumerable.Repeat("</g>", 33))));
+        excluded.Add(LinearStrokeSvg(LinearStrokeStops, body: NestOpacity(path, PdfTransparencyGroup.MaxDepth + 1)));
+        string filled = path.Replace("fill=\"none\"", "fill=\"#EECC66\" opacity=\".5\"", StringComparison.Ordinal);
+        excluded.Add(LinearStrokeSvg(LinearStrokeStops, body: NestOpacity(filled, PdfTransparencyGroup.MaxDepth)));
+        string masked = """<defs><linearGradient id="f">""" + varying + "</linearGradient></defs>" +
+            filled.Replace("#EECC66", "url(#f)", StringComparison.Ordinal);
+        excluded.Add(LinearStrokeSvg(LinearStrokeStops, body: NestOpacity(masked, PdfTransparencyGroup.MaxDepth - 1)));
         string tooMany = string.Concat(Enumerable.Range(0, 257).Select(i => "<stop offset=\"" + ((double)i / 256).ToString("R", CultureInfo.InvariantCulture) + "\" stop-color=\"#FF0000\"/>"));
         excluded.Add(LinearStrokeSvg(tooMany));
         foreach (string svg in excluded)
@@ -2485,15 +2489,25 @@ internal static partial class PptxImagesTests
             TestAssert.True(actual.AsSpan().SequenceEqual(expected), "Unqualified gradient strokes must preserve the existing omitted-stroke fallback and sibling bytes.");
             TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("stroke", StringComparison.Ordinal)) && !diagnostics.Any(d => d.Id == "PPTX_NODE_RENDER_FAILED"),
                 "Unqualified paint must diagnose and keep the picture.");
+            if (svg.Contains("url(#f)", StringComparison.Ordinal))
+            {
+                TestAssert.Contains("/S /Luminosity", Encoding.ASCII.GetString(actual));
+            }
         }
+        string atLimit = LinearStrokeSvg(LinearStrokeStops, body: NestOpacity(filled, PdfTransparencyGroup.MaxDepth - 1));
+        TestAssert.Contains("/PatternType 2", Encoding.ASCII.GetString(RenderSvgOpacityTest(atLimit)));
         string boundaryStops = string.Concat(Enumerable.Range(0, 256).Select(i => "<stop offset=\"" + ((double)i / 255).ToString("R", CultureInfo.InvariantCulture) + "\" stop-color=\"#FF0000\"/>"));
         TestAssert.Contains("/PatternType 2", Encoding.ASCII.GetString(RenderSvgOpacityTest(LinearStrokeSvg(boundaryStops))));
+
+        static string NestOpacity(string body, int depth) =>
+            string.Concat(Enumerable.Repeat("<g opacity=\".5\">", depth)) + body +
+                string.Concat(Enumerable.Repeat("</g>", depth));
     }
 
     private const string LinearStrokeStops = "<stop offset=\"0\" stop-color=\"#FF0000\"/><stop offset=\"1\" stop-color=\"#0000FF\"/>";
-    private static string LinearStrokeSvg(string stops, string gradientAttrs = "", string rootAttrs = "", string pathAttrs = "", string fill = "none", string? body = null) =>
+    private static string LinearStrokeSvg(string stops, string gradientAttrs = "", string rootAttrs = "", string pathAttrs = "", string? body = null) =>
         "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 50\" " + rootAttrs + "><defs><linearGradient id=\"s\" " + gradientAttrs + ">" + stops + "</linearGradient></defs>" +
-        (body ?? "<path d=\"M10 5H90V45H10Z\" fill=\"" + fill + "\" stroke=\"url(#s)\" stroke-width=\"4\" " + pathAttrs + "/>") + "</svg>";
+        (body ?? "<path d=\"M10 5H90V45H10Z\" fill=\"none\" stroke=\"url(#s)\" stroke-width=\"4\" " + pathAttrs + "/>") + "</svg>";
 
     private static byte[] RenderSvgOpacityTest(string svg, List<OoxPdfDiagnostic>? diagnostics = null)
     {

@@ -464,6 +464,42 @@ internal static partial class SvgTextTests
             "/PatternType 2", "/Pattern CS", "/ca 1 /CA 0.375", "/ca 0 /CA 1", "0 0.502 0 rg");
     }
 
+    public static void SvgObjectOpacityMatchesGroupForFilledGradientStrokes()
+    {
+        AssertSvgPaintInBothFormats(Picture(groupOpacity: true), Picture(groupOpacity: false), pdf =>
+        {
+            TestAssert.Equal(3, Regex.Matches(pdf, @"(?m)^/Pattern CS /Ps1 SCN\r?$").Count);
+            TestAssert.Equal(2, Regex.Matches(pdf, "/S /Luminosity").Count);
+        }, "/ca 0.55 /CA 0.55", "/ca 0.65 /CA 1", "/ca 1 /CA 0.75", "0 0.502 0 rg");
+
+        static string Picture(bool groupOpacity) => Svg("""
+            <defs>
+              <linearGradient id="stroke" gradientUnits="userSpaceOnUse" x1="24" x2="112">
+                <stop stop-color="blue"/><stop offset="1" stop-color="purple"/>
+              </linearGradient>
+              <linearGradient id="linear">
+                <stop stop-color="yellow" stop-opacity=".3"/><stop offset="1" stop-color="aqua"/>
+              </linearGradient>
+              <radialGradient id="radial">
+                <stop stop-color="yellow" stop-opacity=".3"/><stop offset="1" stop-color="aqua"/>
+              </radialGradient>
+            </defs>
+            <rect width="400" height="160" fill="white"/>
+            """ + Path(24, "red", groupOpacity) + Path(152, "url(#linear)", groupOpacity) +
+            Path(280, "url(#radial)", groupOpacity) +
+            """<rect x="136" y="80" width="9" height="10" fill="green"/>""");
+
+        static string Path(int x, string fill, bool groupOpacity)
+        {
+            string opacity = groupOpacity ? "" : """opacity=".55" """;
+            string path = FormattableString.Invariant($"""
+                <path {opacity}d="M{x} 22 H{x + 88} V66 H{x} Z" fill="{fill}" fill-opacity=".65"
+                      stroke="url(#stroke)" stroke-opacity=".75" stroke-width="6"/>
+                """);
+            return groupOpacity ? """<g opacity=".55">""" + path + "</g>" : path;
+        }
+    }
+
     public static void SvgLinesKeepTranslucentGradientStrokesWithDefaultOrInheritedFill()
     {
         AssertSvgPaintInBothFormats(Picture("""fill="none" """), Picture(""), AssertStrokes,
