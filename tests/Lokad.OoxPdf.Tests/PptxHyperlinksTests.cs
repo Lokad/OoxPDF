@@ -137,73 +137,9 @@ internal static class PptxHyperlinksTests
 
     public static void PptxShapeInternalSlideHyperlinkEmitsDestination()
     {
-        var entries = new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-                  <Default Extension="xml" ContentType="application/xml"/>
-                  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
-                  <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
-                  <Override PartName="/ppt/slides/slide2.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
-                </Types>
-                """,
-            ["_rels/.rels"] = PptxTests.PackageRelationship(),
-            ["ppt/_rels/presentation.xml.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/>
-                  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide2.xml"/>
-                </Relationships>
-                """,
-            ["ppt/presentation.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:presentation xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-                  <p:sldSz cx="9144000" cy="6858000"/>
-                  <p:sldIdLst><p:sldId id="256" r:id="rId1"/><p:sldId id="257" r:id="rId2"/></p:sldIdLst>
-                </p:presentation>
-                """,
-            ["ppt/slides/_rels/slide1.xml.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rIdLink" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slide2.xml"/>
-                </Relationships>
-                """,
-            ["ppt/slides/slide1.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-                  <p:cSld><p:spTree><p:sp>
-                    <p:nvSpPr><p:cNvPr id="2" name="Jump"><a:hlinkClick r:id="rIdLink"/></p:cNvPr><p:nvPr/></p:nvSpPr>
-                    <p:spPr>
-                      <a:xfrm><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="914400"/></a:xfrm>
-                      <a:prstGeom prst="rect"/>
-                      <a:solidFill><a:srgbClr val="FF0000"/></a:solidFill>
-                    </p:spPr>
-                  </p:sp></p:spTree></p:cSld>
-                </p:sld>
-                """,
-            ["ppt/slides/slide2.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <p:cSld><p:spTree><p:sp>
-                    <p:nvSpPr><p:cNvPr id="2" name="Target"/><p:nvPr/></p:nvSpPr>
-                    <p:spPr>
-                      <a:xfrm><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="914400"/></a:xfrm>
-                      <a:prstGeom prst="rect"/>
-                      <a:solidFill><a:srgbClr val="00FF00"/></a:solidFill>
-                    </p:spPr>
-                  </p:sp></p:spTree></p:cSld>
-                </p:sld>
-                """
-        };
-
         foreach (string target in new[] { "slide2.xml", "SLIDE2.XML", "./slide2.xml", "./SLIDE2.XML", "/ppt/slides/SLIDE2.XML", "missing.xml" })
         {
-            var variant = new Dictionary<string, string>(entries);
-            variant["ppt/slides/_rels/slide1.xml.rels"] = entries["ppt/slides/_rels/slide1.xml.rels"]
-                .Replace("Target=\"slide2.xml\"", $"Target=\"{target}\"", StringComparison.Ordinal);
-            string input = TestFixtures.WriteTempPackage(".pptx", variant);
+            string input = WriteInternalSlideLinkPackage(ShapeWithInternalLink, target);
             (IReadOnlyList<PdfPage> pages, List<OoxPdfDiagnostic> diagnostics) = RenderSlidePages(input);
 
             TestAssert.Equal(2, pages.Count);
@@ -219,6 +155,58 @@ internal static class PptxHyperlinksTests
             TestAssert.True(annotation.Destination is { PageIndex: 1 }, "Equivalent package targets should select the second page.");
             TestAssert.True(diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_HYPERLINK" && d.Id != "PPTX_UNSUPPORTED_HYPERLINK_ACTION"), "A resolvable internal slide hyperlink should not emit hyperlink diagnostics.");
         }
+    }
+
+    internal const string ShapeWithInternalLink = """
+        <p:sp>
+          <p:nvSpPr><p:cNvPr id="2" name="Jump"><a:hlinkClick r:id="rIdLink"/></p:cNvPr><p:nvPr/></p:nvSpPr>
+          <p:spPr>
+            <a:xfrm><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="914400"/></a:xfrm>
+            <a:prstGeom prst="rect"/>
+            <a:solidFill><a:srgbClr val="0000FF"/></a:solidFill>
+          </p:spPr>
+        </p:sp>
+        """;
+
+    internal static string WriteInternalSlideLinkPackage(string sourceShape, string target = "slide2.xml", bool hideTarget = false)
+    {
+        string targetVisibility = hideTarget ? " show=\"0\"" : "";
+        return TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = PptxTests.BasicContentTypes().Replace("</Types>", """
+                <Override PartName="/ppt/slides/slide2.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
+                </Types>
+                """, StringComparison.Ordinal),
+            ["_rels/.rels"] = PptxTests.PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship().Replace("</Relationships>", """
+                <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide2.xml"/>
+                </Relationships>
+                """, StringComparison.Ordinal),
+            ["ppt/presentation.xml"] = PptxTests.BasicPresentation().Replace("</p:sldIdLst>",
+                """<p:sldId id="257" r:id="rId2"/></p:sldIdLst>""", StringComparison.Ordinal),
+            ["ppt/slides/_rels/slide1.xml.rels"] = $"""
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdLink" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="{target}"/>
+                </Relationships>
+                """,
+            ["ppt/slides/slide1.xml"] = $"""
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                  <p:cSld><p:spTree>{sourceShape}</p:spTree></p:cSld>
+                </p:sld>
+                """,
+            ["ppt/slides/slide2.xml"] = $"""
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"{targetVisibility}>
+                  <p:cSld><p:spTree><p:sp>
+                    <p:nvSpPr><p:cNvPr id="2" name="Target"/><p:nvPr/></p:nvSpPr>
+                    <p:spPr>
+                      <a:xfrm><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="914400"/></a:xfrm>
+                      <a:prstGeom prst="rect"/>
+                      <a:solidFill><a:srgbClr val="FF0000"/></a:solidFill>
+                    </p:spPr>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
     }
 
     public static void PptxShapeHyperlinkActionWithoutTargetEmitsDiagnostic()
@@ -478,15 +466,10 @@ internal static class PptxHyperlinksTests
         TestAssert.Equal(0, pages.Single().Annotations.Count);
         TestAssert.Equal(1, diagnostics.Count(d => d.Id == "PPTX_UNSUPPORTED_HYPERLINK"));
     }
-    private static (List<PdfPage> Pages, List<OoxPdfDiagnostic> Diagnostics) RenderSlidePages(string input)
-    {
-        return RenderSlidePages(input, null);
-    }
-
-    private static (List<PdfPage> Pages, List<OoxPdfDiagnostic> Diagnostics) RenderSlidePages(string input, IFontResolver? fontResolver)
+    internal static (List<PdfPage> Pages, List<OoxPdfDiagnostic> Diagnostics) RenderSlidePages(string input, IFontResolver? fontResolver = null)
     {
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        using var package = OoxPackage.Open(stream, CancellationToken.None);
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
         var diagnostics = new List<OoxPdfDiagnostic>();
         List<PdfPage> pages = new PptxRenderer(fontResolver).RenderPagesAsync(document, package, diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().ToList();

@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using Lokad.OoxPdf;
 using Lokad.OoxPdf.Diagnostics;
@@ -236,78 +237,18 @@ internal static class PptxVisibilityTests
 
     public static void PptxLinksToHiddenSlidesAreDiagnosed()
     {
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-                  <Default Extension="xml" ContentType="application/xml"/>
-                  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
-                  <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
-                  <Override PartName="/ppt/slides/slide2.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
-                </Types>
-                """,
-            ["_rels/.rels"] = PptxTests.PackageRelationship(),
-            ["ppt/_rels/presentation.xml.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/>
-                  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide2.xml"/>
-                </Relationships>
-                """,
-            ["ppt/presentation.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:presentation xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-                  <p:sldSz cx="9144000" cy="6858000"/>
-                  <p:sldIdLst><p:sldId id="256" r:id="rId1"/><p:sldId id="257" r:id="rId2"/></p:sldIdLst>
-                </p:presentation>
-                """,
-            ["ppt/slides/_rels/slide1.xml.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rIdLink" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slide2.xml"/>
-                </Relationships>
-                """,
-            ["ppt/slides/slide1.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-                  <p:cSld><p:spTree><p:sp>
-                    <p:nvSpPr><p:cNvPr id="2" name="Jump"><a:hlinkClick r:id="rIdLink"/></p:cNvPr><p:nvPr/></p:nvSpPr>
-                    <p:spPr>
-                      <a:xfrm><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="914400"/></a:xfrm>
-                      <a:prstGeom prst="rect"/>
-                      <a:solidFill><a:srgbClr val="0000FF"/></a:solidFill>
-                    </p:spPr>
-                  </p:sp></p:spTree></p:cSld>
-                </p:sld>
-                """,
-            ["ppt/slides/slide2.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" show="0">
-                  <p:cSld><p:spTree><p:sp>
-                    <p:nvSpPr><p:cNvPr id="2" name="Hidden"/><p:nvPr/></p:nvSpPr>
-                    <p:spPr>
-                      <a:xfrm><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="914400"/></a:xfrm>
-                      <a:prstGeom prst="rect"/>
-                      <a:solidFill><a:srgbClr val="FF0000"/></a:solidFill>
-                    </p:spPr>
-                  </p:sp></p:spTree></p:cSld>
-                </p:sld>
-                """
-        });
+        string input = PptxHyperlinksTests.WriteInternalSlideLinkPackage(PptxHyperlinksTests.ShapeWithInternalLink, hideTarget: true);
+        var (pages, diagnostics) = PptxHyperlinksTests.RenderSlidePages(input);
 
-        var diagnostics = new List<OoxPdfDiagnostic>();
-        int pages;
-        using (FileStream stream = File.OpenRead(input))
-        {
-            OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
-            PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
-            pages = new PptxRenderer(null).RenderPagesAsync(document, package, diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Count();
-        }
-
-        TestAssert.Equal(1, pages);
-        TestAssert.True(diagnostics.Any(d => d.Id == "PPTX_UNSUPPORTED_HYPERLINK"), "A link to a hidden slide should diagnose the unresolvable target.");
+        PdfPage page = pages.Single();
+        TestAssert.Equal(0, page.Annotations.Count);
+        TestAssert.True(Regex.IsMatch(page.Content, @"0 0 1 rg\s+72 396 144 72 re f\*"),
+            "The linked shape keeps its blue fill at the authored bounds.");
+        TestAssert.DoesNotContain("1 0 0 rg", page.Content);
+        OoxPdfDiagnostic warning = diagnostics.Single(d => d.Id == "PPTX_UNSUPPORTED_HYPERLINK");
+        TestAssert.Equal(OoxPdfSeverity.Warning, warning.Severity);
+        TestAssert.Equal("/ppt/slides/slide1.xml", warning.PartName);
+        TestAssert.Equal<int?>(1, warning.SlideIndex);
     }
 
     private static string WriteHiddenSlidePackage(string show)

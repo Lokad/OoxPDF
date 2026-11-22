@@ -3,9 +3,7 @@ using System.Text.RegularExpressions;
 using System.Globalization;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Fonts;
-using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pdf;
-using Lokad.OoxPdf.Pptx;
 
 namespace Lokad.OoxPdf.Tests;
 
@@ -99,75 +97,27 @@ internal static partial class PptxTextHyperlinksTests
 
     public static void PptxRunInternalSlideHyperlinkEmitsDestination()
     {
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-                  <Default Extension="xml" ContentType="application/xml"/>
-                  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
-                  <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
-                  <Override PartName="/ppt/slides/slide2.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
-                </Types>
-                """,
-            ["_rels/.rels"] = PptxTests.PackageRelationship(),
-            ["ppt/_rels/presentation.xml.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/>
-                  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide2.xml"/>
-                </Relationships>
-                """,
-            ["ppt/presentation.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:presentation xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-                  <p:sldSz cx="9144000" cy="6858000"/>
-                  <p:sldIdLst><p:sldId id="256" r:id="rId1"/><p:sldId id="257" r:id="rId2"/></p:sldIdLst>
-                </p:presentation>
-                """,
-            ["ppt/slides/_rels/slide1.xml.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rIdRunJump" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slide2.xml"/>
-                </Relationships>
-                """,
-            ["ppt/slides/slide1.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-                  <p:cSld><p:spTree><p:sp>
-                    <p:nvSpPr><p:cNvPr id="2" name="RunJump"/><p:nvPr/></p:nvSpPr>
-                    <p:spPr>
-                      <a:xfrm><a:off x="914400" y="914400"/><a:ext cx="5486400" cy="914400"/></a:xfrm>
-                      <a:prstGeom prst="rect"/>
-                      <a:solidFill><a:srgbClr val="DDDDDD"/></a:solidFill>
-                    </p:spPr>
-                    <p:txBody><a:bodyPr/><a:lstStyle/>
-                      <a:p><a:r><a:rPr sz="1800"><a:latin typeface="Link Sans"/><a:hlinkClick r:id="rIdRunJump"/></a:rPr><a:t>Jump</a:t></a:r></a:p>
-                    </p:txBody>
-                  </p:sp></p:spTree></p:cSld>
-                </p:sld>
-                """,
-            ["ppt/slides/slide2.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <p:cSld><p:spTree><p:sp>
-                    <p:nvSpPr><p:cNvPr id="2" name="Target"/><p:nvPr/></p:nvSpPr>
-                    <p:spPr>
-                      <a:xfrm><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="914400"/></a:xfrm>
-                      <a:prstGeom prst="rect"/>
-                      <a:solidFill><a:srgbClr val="00FF00"/></a:solidFill>
-                    </p:spPr>
-                  </p:sp></p:spTree></p:cSld>
-                </p:sld>
-                """
-        });
+        string input = PptxHyperlinksTests.WriteInternalSlideLinkPackage("""
+            <p:sp>
+              <p:nvSpPr><p:cNvPr id="2" name="RunJump"/><p:nvPr/></p:nvSpPr>
+              <p:spPr>
+                <a:xfrm><a:off x="914400" y="914400"/><a:ext cx="5486400" cy="914400"/></a:xfrm>
+                <a:prstGeom prst="rect"/>
+                <a:solidFill><a:srgbClr val="DDDDDD"/></a:solidFill>
+              </p:spPr>
+              <p:txBody><a:bodyPr/><a:lstStyle/>
+                <a:p><a:r><a:rPr sz="1800"><a:latin typeface="Link Sans"/><a:hlinkClick r:id="rIdLink"/></a:rPr><a:t>Jump</a:t></a:r></a:p>
+              </p:txBody>
+            </p:sp>
+            """);
 
         foreach (IFontResolver resolver in new IFontResolver[] { new LinkTestFontResolver(), new MissingTestFontResolver() })
         {
             (IReadOnlyList<PdfPage> pages, List<OoxPdfDiagnostic> diagnostics) = RenderSlidePages(input, resolver);
 
             TestAssert.Equal(2, pages.Count);
+            if (resolver is LinkTestFontResolver)
+                TestAssert.True(pages[0].Fonts.Count > 0, "The embedded-font control must embed its linked text font.");
             PdfLinkAnnotation annotation = pages[0].Annotations.Single();
             TestAssert.True(annotation.Uri is null, "An internal run hyperlink should not carry a URI target.");
             TestAssert.True(annotation.Destination is { PageIndex: 1 }, "An internal run hyperlink should target the second page.");
@@ -354,11 +304,7 @@ internal static partial class PptxTextHyperlinksTests
 
     private static (List<PdfPage> Pages, List<OoxPdfDiagnostic> Diagnostics) RenderSlidePages(string input, IFontResolver fontResolver)
     {
-        using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
-        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
-        var diagnostics = new List<OoxPdfDiagnostic>();
-        List<PdfPage> pages = new PptxRenderer(fontResolver).RenderPagesAsync(document, package, diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().ToList();
+        var (pages, diagnostics) = PptxHyperlinksTests.RenderSlidePages(input, fontResolver);
         if (fontResolver is MissingTestFontResolver)
             TestAssert.True(pages[0].FallbackFonts.Count > 0 && pages[0].Fonts.Count == 0, "The missing-font control must use standard PDF fonts.");
         return (pages, diagnostics);
