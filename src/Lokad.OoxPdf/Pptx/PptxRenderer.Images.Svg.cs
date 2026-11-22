@@ -2184,11 +2184,12 @@ internal sealed partial class PptxRenderer
         double centerY;
         double radiusX;
         double radiusY;
+        bool uniformPathScale = transform.HasPositiveUniformScale;
         if (radial.IsUserSpace)
         {
             (centerX, centerY) = transform.Apply(radial.Cx, radial.Cy);
-            radiusX = radial.Radius;
-            radiusY = radial.Radius;
+            radiusX = radial.Radius * (uniformPathScale ? transform.M11 : 1d);
+            radiusY = radiusX;
         }
         else
         {
@@ -2259,7 +2260,7 @@ internal sealed partial class PptxRenderer
             double maskHeight = Math.Max(0.001d, imageY + imageHeight - (pathBounds.MinY - minY) * scaleY - maskY);
             if (allowAlphaMask && radial.UniformStopOpacity is null && radial.HasNumericStopOpacity &&
                 radial.HasIdentityGradientTransform && !radial.HasFocal &&
-                (!radial.IsUserSpace || transform.IsIdentity) &&
+                (!radial.IsUserSpace || uniformPathScale) &&
                 radial.Spread == SvgGradientSpread.Pad && radial.Stops.Count <= 256 &&
                 double.IsFinite(maskWidth) && double.IsFinite(maskHeight) &&
                 double.IsFinite(maskX + maskWidth) && double.IsFinite(maskY + maskHeight))

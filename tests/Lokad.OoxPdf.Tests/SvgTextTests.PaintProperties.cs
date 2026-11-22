@@ -530,6 +530,41 @@ internal static partial class SvgTextTests
         }
     }
 
+    public static void SvgUserSpaceRadialGradientsFollowTranslatedAndUniformlyScaledGroups()
+    {
+        string direct = Svg(Figure("left", 0, 1, 0, 0) + Figure("right", 180, 1, 0, 0));
+        string transformed = Svg(Figure("left", 0, 1, -8, 6) + Figure("right", 180, 2, 188, 6));
+        AssertSvgPaintInBothFormats(direct, transformed, pdf =>
+        {
+            TestAssert.Equal(3, Regex.Matches(pdf, "/ShadingType 3").Count);
+            TestAssert.Equal(2, Regex.Matches(pdf, "/S /Luminosity").Count);
+        }, "0 0.502 0 rg");
+
+        static string Figure(string id, int offset, int scale, int translateX, int translateY)
+        {
+            int X(int x) => (x + offset - translateX) / scale;
+            int Y(int y) => (y - translateY) / scale;
+            string transform = scale == 1 && translateX == 0 && translateY == 0
+                ? "" : FormattableString.Invariant($"""transform="translate({translateX} {translateY}) scale({scale})" """);
+            return FormattableString.Invariant($"""
+                <defs>
+                  <radialGradient id="{id}-alpha" gradientUnits="userSpaceOnUse" cx="{X(40)}" cy="{Y(40)}" r="{22 / scale}">
+                    <stop stop-color="yellow" stop-opacity=".3"/><stop offset="1" stop-color="purple"/>
+                  </radialGradient>
+                  <radialGradient id="{id}-opaque" gradientUnits="userSpaceOnUse" cx="{X(104)}" cy="{Y(40)}" r="{22 / scale}">
+                    <stop stop-color="white"/><stop offset="1" stop-color="blue"/>
+                  </radialGradient>
+                </defs>
+                <rect x="{offset + 12}" y="12" width="62" height="56" fill="aqua"/>
+                <g {transform}>
+                  <rect x="{X(14)}" y="{Y(14)}" width="{58 / scale}" height="{52 / scale}" fill="url(#{id}-alpha)"/>
+                  <rect x="{X(78)}" y="{Y(14)}" width="{58 / scale}" height="{52 / scale}" fill="url(#{id}-opaque)"/>
+                </g>
+                <rect x="{offset + 130}" y="68" width="11" height="9" fill="green"/>
+                """);
+        }
+    }
+
     public static void SvgOpaqueContainerStylesPreserveGradientStrokes()
     {
         const string definitions = """
