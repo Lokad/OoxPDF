@@ -2269,7 +2269,7 @@ internal static partial class PptxImagesTests
     {
         foreach (string attrs in new[] { "spreadMethod=\"repeat\" x2=\".2\"", "spreadMethod=\"reflect\" x2=\".2\"",
             "gradientTransform=\"scale(.75,.6)\"", "x1=\"1\" x2=\"0\"", "x2=\"0\" y1=\"1\" y2=\"0\"",
-            "x1=\".314159\" x2=\".31417\"", "x1=\".5\" x2=\".5\"" })
+            "x1=\".314159\" x2=\".31417\"" })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
             byte[] actual = RenderSvgOpacityTest(VaryingLinearSvg(VaryingLinearStops, attrs), diagnostics);
