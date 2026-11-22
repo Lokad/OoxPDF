@@ -26,6 +26,5 @@ The committed DOCX files sit in the parent Cases folder. Independent Word/PDFium
 comparisons use the same visual thresholds as existing math and SVG cases.
 Passing producer validation or preserving media bytes does not establish visual
 parity. Fenced-matrix optical/baseline differences remain explicit review items.
-The consecutive body image control exposed duplicated padding, now removed from
-body advance and its keep estimate. Table/story image flow remains separately
-qualified; none of these fixtures relaxes the thresholds.
+The consecutive body image control checks image advance and keep behavior.
+Separate controls cover image flow in tables and other stories.
