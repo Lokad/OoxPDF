@@ -126,13 +126,14 @@ internal static class DocxTextEmissionPlanner
         if (segment.FallbackFace is not null)
         {
             // Fallback glyphs use the layout font size and absolute positions.
-            // They do not emit the embedded-font export grid or a PDF Tc value.
+            // The fit delta belongs in those positions because PDF Tc is zero.
+            bool fitted = segment.PdfCharacterSpacingSource == DocxTextStateCharacterSpacingSource.AdvanceTarget;
             return new(
                 segment.FontSize,
                 PdfCharacterSpacing: 0d,
-                segment.StyleRun.EffectiveProperties.CharacterSpacingPoints,
+                segment.StyleRun.EffectiveProperties.CharacterSpacingPoints + (fitted ? segment.PdfCharacterSpacing : 0d),
                 CompensatePdfCharacterSpacing: false,
-                segment.IsTerminalLineSpace
+                fitted ? DocxTextStateCharacterSpacingSource.AdvanceTarget : segment.IsTerminalLineSpace
                     ? DocxTextStateCharacterSpacingSource.TerminalLineSpace
                     : DocxTextStateCharacterSpacingSource.None);
         }
@@ -539,7 +540,10 @@ internal static class DocxTextEmissionPlanner
             return [];
         }
 
-        if (textMeasurer is null ||
+        // A fitted segment already distributes its advance across the whole run.
+        // Splitting at punctuation would position the suffix at its natural advance.
+        if (segment.PdfCharacterSpacingSource == DocxTextStateCharacterSpacingSource.AdvanceTarget ||
+            textMeasurer is null ||
             !segment.Text.Any(IsOfficeTextOperationBoundaryPunctuation))
         {
             return [new DocxTextEmissionPart(segment.Text, segment.X, segment.Width)];

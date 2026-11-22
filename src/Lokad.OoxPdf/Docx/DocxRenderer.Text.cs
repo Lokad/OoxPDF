@@ -579,6 +579,7 @@ internal sealed partial class DocxRenderer
                 graphics);
         }
 
+        DocxTextEmissionPlan plan = DocxTextEmissionPlanner.CreateForEmissionSegment(segment);
         DrawFallbackRunGlyphText(
             graphics,
             fallback,
@@ -586,8 +587,8 @@ internal sealed partial class DocxRenderer
             segment.X,
             segment.BaselineY,
             color,
-            segment.FontSize,
-            segment.StyleRun.EffectiveProperties.CharacterSpacingPoints);
+            plan.PdfFontSize,
+            plan.PositioningCharacterSpacing);
 
         if (!segment.IsTerminalLineSpace)
         {

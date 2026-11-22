@@ -39,6 +39,71 @@ internal static class OoxMissingFontTests
         TestAssert.True(File.ReadAllBytes(first).SequenceEqual(File.ReadAllBytes(repeat)), "Fallback output must be deterministic.");
     }
 
+    public static void MissingFontsKeepFittedDocxCellGlyphsInsideTheirClip()
+    {
+        string[] lines = ["Original target words remain clear", "Original-target words remain clear"];
+        string rows = string.Concat(lines.Select(line => $$"""
+            <w:tr><w:tc><w:tcPr><w:tcW w:w="2880" w:type="dxa"/><w:tcFitText/></w:tcPr>
+              <w:p><w:pPr><w:jc w:val="right"/></w:pPr><w:r><w:rPr><w:sz w:val="24"/></w:rPr><w:t>{{line}}</w:t></w:r></w:p>
+            </w:tc></w:tr>
+            """));
+        using var input = TestFixtures.CreateZipPackage(new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="document" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = $$"""
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>
+                  <w:tbl><w:tblPr><w:tblW w:w="2880" w:type="dxa"/><w:tblLayout w:type="fixed"/></w:tblPr>
+                    <w:tblGrid><w:gridCol w:w="2880"/></w:tblGrid>{{rows}}</w:tbl>
+                  <w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:left="1440" w:right="1440" w:top="1440" w:bottom="1440"/></w:sectPr>
+                </w:body></w:document>
+                """
+        });
+
+        foreach ((var mode, var geometry) in new[]
+        {
+            (OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout),
+            (OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+        })
+        {
+            input.Position = 0;
+            using var output = new MemoryStream();
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            OoxPdfConverter.Convert(input, output, new OoxPdfOptions
+            {
+                InputKind = OoxPdfInputKind.Docx, FontResolver = new MissingTestFontResolver(),
+                DocxMarkupMode = mode, DocxMarkupGeometryMode = geometry, DiagnosticSink = diagnostics.Add
+            });
+            TestAssert.True(diagnostics.Any(diagnostic => diagnostic.Id == "FONT_NO_USABLE_FACE"),
+                "The fitted text must use the diagnosed fallback face.");
+            string pdf = Encoding.Latin1.GetString(output.ToArray());
+            TestAssert.Contains("/Type /Pages /Count 1", pdf);
+            TestAssert.True(Regex.Matches(pdf, @"(?m)^72 [-\d.]+ 144 [-\d.]+ re W\*? n").Count >= lines.Length,
+                "Each fitted row must retain its authored cell clip.");
+            var rowsByBaseline = FallbackFontMetricsTests.ReadGlyphs(pdf).GroupBy(glyph => glyph.Y).ToArray();
+            TestAssert.Equal(lines.Length, rowsByBaseline.Length);
+            for (int i = 0; i < lines.Length; i++)
+            {
+                var glyphs = rowsByBaseline[i].ToArray();
+                TestAssert.Equal(lines[i], Encoding.ASCII.GetString(glyphs.Select(glyph => glyph.Code).ToArray()));
+                TestAssert.True(glyphs.All(glyph => glyph.Size == 12d && glyph.X >= 72d &&
+                    glyph.X + PdfFallbackFont.Helvetica.MeasureAdvanceEm(glyph.Code) * .012d <= 216.001d),
+                    $"{mode} must paint the entire fitted label '{lines[i]}' inside the 144pt clip.");
+                // The final Helvetica r has a 333-unit advance at 12pt.
+                TestAssert.True(glyphs[^1].X + 3.996d >= 215d, "The fitted run reaches the right inset.");
+            }
+        }
+    }
+
     public static void InvalidFontBytesPreserveDocxPagesAndText()
     {
         // RV01: undecodable font programs take the same diagnosed fallback.
