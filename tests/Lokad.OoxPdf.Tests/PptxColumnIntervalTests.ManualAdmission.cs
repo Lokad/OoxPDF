@@ -37,47 +37,44 @@ internal static partial class PptxColumnIntervalTests
         }
     }
 
-    public static void PptxManualInnerVerticalAdmissionMatchesIndependentOfficeFrames()
+    public static void PptxManualInnerAdmissionPreservesOfficeFramesAndCaptions()
     {
         using var oracle = AdmissionOracle();
-        // Calibri crosses the endcap boundary in this fixture; the pinned
-        // DejaVu face fits it. Frozen Office qualification retains its absolute
-        // rectangle gate, while the portable check below retains source content.
-        foreach (var row in oracle.RootElement.GetProperty("Rows").EnumerateArray().Where(row => row.GetProperty("CheckY").GetBoolean() &&
-            row.GetProperty("Id").GetString() != AdmissionFaceBoundary))
+        foreach (var row in oracle.RootElement.GetProperty("Rows").EnumerateArray())
         {
-            var box = AdmissionBounds(RenderAdmission(row));
-            double[] expected = AdmissionNumbers(row, "NativeFrame");
-            TestAssert.True(Math.Abs(box.Top - expected[1]) <= 1d && Math.Abs(box.Bottom - expected[3]) <= 1d,
-                row.GetProperty("Id").GetString() + ": native visible-axis admission and hidden-axis ownership.");
-        }
-    }
+            string id = row.GetProperty("Id").GetString()!;
+            // Calibri and the pinned DejaVu face fall on opposite sides of the
+            // endcap boundary. The boundary row checks paint with the pinned face.
+            bool checkVertical = row.GetProperty("CheckY").GetBoolean() && id != AdmissionFaceBoundary;
+            bool checkUnchanged = row.GetProperty("Unchanged").GetBoolean();
+            bool checkCaptions = id is AdmissionFaceBoundary or "axes12-global6-y15" or "axes12-global24-y15";
+            if (!checkVertical && !checkUnchanged && !checkCaptions)
+            {
+                continue;
+            }
 
-    public static void PptxManualInnerFaceBoundaryKeepsSourceCaptions()
-    {
-        using var oracle = AdmissionOracle();
-        foreach (var row in oracle.RootElement.GetProperty("Rows").EnumerateArray().Where(row =>
-            row.GetProperty("Id").GetString() is AdmissionFaceBoundary or "axes12-global6-y15" or "axes12-global24-y15"))
-        {
             PdfPage page = RenderAdmission(row);
-            var categories = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false,
-                fontResourceFilter: name => name.StartsWith("CCA", StringComparison.Ordinal)).Select(show => show.Text).ToArray();
-            TestAssert.True(categories.SequenceEqual(Enumerable.Range(1, 8).Select(index => "W" + index)),
-                "Face substitution and chart defaults preserve every emitted source category.");
-            TestAssert.True(AdmissionNumericShows(page).Select(show => show.Text).SequenceEqual(new[] { "7", "32", "57", "82", "107" }),
-                "The face-dependent admission boundary preserves all source intervals.");
-        }
-    }
+            if (checkVertical || checkUnchanged)
+            {
+                var box = AdmissionBounds(page);
+                double[] expected = AdmissionNumbers(row, "NativeFrame");
+                if (checkVertical)
+                    TestAssert.True(Math.Abs(box.Top - expected[1]) <= 1d && Math.Abs(box.Bottom - expected[3]) <= 1d,
+                        id + ": native visible-axis admission and hidden-axis ownership.");
+                if (checkUnchanged)
+                    TestAssert.True(new[] { box.Left, box.Top, box.Right, box.Bottom }.Zip(expected).All(p => Math.Abs(p.First - p.Second) < .002d),
+                        id + ": global defaults and an X correction must not refit an admitted Y interval.");
+            }
 
-    public static void PptxManualInnerAdmissionPreservesQualifiedAuthoredFrames()
-    {
-        using var oracle = AdmissionOracle();
-        foreach (var row in oracle.RootElement.GetProperty("Rows").EnumerateArray().Where(row => row.GetProperty("Unchanged").GetBoolean()))
-        {
-            var box = AdmissionBounds(RenderAdmission(row));
-            double[] expected = AdmissionNumbers(row, "NativeFrame");
-            TestAssert.True(new[] { box.Left, box.Top, box.Right, box.Bottom }.Zip(expected).All(p => Math.Abs(p.First - p.Second) < .002d),
-                row.GetProperty("Id").GetString() + ": global defaults and an X correction must not refit an admitted Y interval.");
+            if (checkCaptions)
+            {
+                var categories = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false,
+                    fontResourceFilter: name => name.StartsWith("CCA", StringComparison.Ordinal)).Select(show => show.Text);
+                TestAssert.True(categories.SequenceEqual(Enumerable.Range(1, 8).Select(index => "W" + index)),
+                    id + ": face substitution and chart defaults preserve every emitted source category.");
+                TestAssert.True(AdmissionNumericShows(page).Select(show => show.Text).SequenceEqual(new[] { "7", "32", "57", "82", "107" }),
+                    id + ": the face-dependent admission boundary preserves all source intervals.");
+            }
         }
     }
 
