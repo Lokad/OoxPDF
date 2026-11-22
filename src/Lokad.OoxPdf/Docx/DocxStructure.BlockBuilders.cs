@@ -247,7 +247,15 @@ internal sealed partial record DocxStructureSnapshot
         int cellCount = table.Rows.Sum(row => row.Cells.Count);
         DocxParagraph[] tableParagraphs = DocxBlockTraversal.EnumerateTableParagraphs(table).ToArray();
         DocxRevisionInfo[] tableRevisions = EnumerateTableRevisions(table).ToArray();
-        DocxTableCellBorder[] tableCellBorders = table.Rows.SelectMany(row => row.Cells.SelectMany(cell => cell.Borders)).ToArray();
+        Span<int> borderCounts = stackalloc int[(int)DocxTableBorderKind.Count];
+        borderCounts.Clear();
+        int borderCount = 0;
+        foreach (var border in table.Rows.SelectMany(row => row.Cells).SelectMany(cell => cell.Borders))
+        {
+            borderCounts[(int)DocxTableBorderGeometry.Classify(border.Value)]++;
+            borderCount++;
+        }
+        int suppressedBorders = borderCounts[(int)DocxTableBorderKind.Suppressed];
         int paragraphCount = tableParagraphs.Length;
         return new DocxStructureTableSnapshot(
             tableIndex,
@@ -281,24 +289,14 @@ internal sealed partial record DocxStructureSnapshot
             table.Rows.Sum(row => row.Cells.Count(cell => cell.FillHex is not null || cell.ShadingValue is not null)),
             table.Rows.Sum(row => row.Cells.Count(cell => cell.VerticalAlignmentValue is not null)),
             table.Rows.Sum(row => row.Cells.Count(cell => cell.PreferredWidthPoints is not null || cell.PreferredWidthValue is not null)),
-            tableCellBorders.Count(IsVisibleBorder),
-            tableCellBorders.Count(border => IsBorderStyle(border, "single")),
-            tableCellBorders.Count(border => IsBorderStyle(border, "thick")),
-            tableCellBorders.Count(border => IsBorderStyle(border, "double")),
-            tableCellBorders.Count(border => IsBorderStyle(border, "dotted")),
-            tableCellBorders.Count(IsDashedBorderStyle),
-            tableCellBorders.Count(IsSuppressedBorder),
-            tableCellBorders.Count(border => IsVisibleBorder(border) &&
-                !IsBorderStyle(border, "single") &&
-                !IsBorderStyle(border, "thick") &&
-                !IsBorderStyle(border, "double") &&
-                !IsBorderStyle(border, "triple") &&
-                !IsBorderStyle(border, "dotted") &&
-                !IsDashedBorderStyle(border) &&
-                !IsCompoundBorderStyle(border) &&
-                !IsThreeDBorderStyle(border) &&
-                !IsWaveBorderStyle(border) &&
-                !IsSupportedSolidBorderStyle(border)),
+            borderCount - suppressedBorders,
+            borderCounts[(int)DocxTableBorderKind.Single],
+            borderCounts[(int)DocxTableBorderKind.Thick],
+            borderCounts[(int)DocxTableBorderKind.Double],
+            borderCounts[(int)DocxTableBorderKind.Dotted],
+            borderCounts[(int)DocxTableBorderKind.Dashed] + borderCounts[(int)DocxTableBorderKind.DashDotStroked],
+            suppressedBorders,
+            borderCounts[(int)DocxTableBorderKind.Unsupported],
             paragraphCount,
             tableParagraphs.Sum(paragraph => paragraph.Runs.Count),
             tableParagraphs.Sum(paragraph => TextLength(paragraph)),

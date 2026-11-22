@@ -919,44 +919,10 @@ internal sealed partial class DocxReader
 
     private static bool IsUnsupportedVisibleBorderStyle(string? value)
     {
-        if (string.IsNullOrWhiteSpace(value) ||
-            value.Equals("nil", StringComparison.OrdinalIgnoreCase) ||
-            value.Equals("none", StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        return !IsSupportedVisibleBorderStyle(value);
+        return !string.IsNullOrWhiteSpace(value) &&
+            DocxTableBorderGeometry.Classify(value) == DocxTableBorderKind.Unsupported;
     }
 
-    private static bool IsSupportedVisibleBorderStyle(string value)
-    {
-        return value.Equals("single", StringComparison.OrdinalIgnoreCase) ||
-            value.Equals("thick", StringComparison.OrdinalIgnoreCase) ||
-            value.Equals("double", StringComparison.OrdinalIgnoreCase) ||
-            value.Equals("dotted", StringComparison.OrdinalIgnoreCase) ||
-            value.Equals("dashed", StringComparison.OrdinalIgnoreCase) ||
-            value.Equals("dashSmallGap", StringComparison.OrdinalIgnoreCase) ||
-            value.Equals("dashDotStroked", StringComparison.OrdinalIgnoreCase) ||
-            value.Equals("dotDash", StringComparison.OrdinalIgnoreCase) ||
-            value.Equals("dotDotDash", StringComparison.OrdinalIgnoreCase) ||
-            value.Equals("triple", StringComparison.OrdinalIgnoreCase) ||
-            value.Equals("thinThickSmallGap", StringComparison.OrdinalIgnoreCase) ||
-            value.Equals("thickThinSmallGap", StringComparison.OrdinalIgnoreCase) ||
-            value.Equals("thinThickThinSmallGap", StringComparison.OrdinalIgnoreCase) ||
-            value.Equals("thinThickMediumGap", StringComparison.OrdinalIgnoreCase) ||
-            value.Equals("thickThinMediumGap", StringComparison.OrdinalIgnoreCase) ||
-            value.Equals("thinThickThinMediumGap", StringComparison.OrdinalIgnoreCase) ||
-            value.Equals("thinThickLargeGap", StringComparison.OrdinalIgnoreCase) ||
-            value.Equals("thickThinLargeGap", StringComparison.OrdinalIgnoreCase) ||
-            value.Equals("thinThickThinLargeGap", StringComparison.OrdinalIgnoreCase) ||
-            value.Equals("threeDEmboss", StringComparison.OrdinalIgnoreCase) ||
-            value.Equals("threeDEngrave", StringComparison.OrdinalIgnoreCase) ||
-            value.Equals("wave", StringComparison.OrdinalIgnoreCase) ||
-            value.Equals("doubleWave", StringComparison.OrdinalIgnoreCase) ||
-            value.Equals("outset", StringComparison.OrdinalIgnoreCase) ||
-            value.Equals("inset", StringComparison.OrdinalIgnoreCase);
-    }
 }
 
 

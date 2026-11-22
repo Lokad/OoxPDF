@@ -260,58 +260,39 @@ internal sealed partial class DocxRenderer
         }
 
         string value = border.Value ?? "single";
-        if (value.Equals("double", StringComparison.OrdinalIgnoreCase))
+        switch (DocxTableBorderGeometry.Classify(border.Value))
         {
-            RenderDoubleTableBorderStrip(graphics, x, y, width, height, orientation);
-            return;
-        }
-
-        if (value.Equals("triple", StringComparison.OrdinalIgnoreCase))
-        {
-            RenderTripleTableBorderStrip(graphics, x, y, width, height, orientation);
-            return;
-        }
-
-        if (TryGetCompoundTableBorderProfile(value, out double[] stripeWeights, out double gapWeight))
-        {
-            RenderCompoundTableBorderStrip(graphics, x, y, width, height, orientation, stripeWeights, gapWeight);
-            return;
-        }
-
-        if (IsThreeDTableBorderStyle(value))
-        {
-            RenderThreeDTableBorderStrip(graphics, border, value, x, y, width, height, orientation);
-            return;
-        }
-
-        if (IsWaveTableBorderStyle(value))
-        {
-            RenderWaveTableBorderStrip(graphics, border, value, x, y, width, height, orientation);
-            return;
-        }
-
-        if (value.Equals("dashDotStroked", StringComparison.OrdinalIgnoreCase))
-        {
-            RenderDashDotStrokedTableBorderStrip(graphics, x, y, width, height, orientation);
-            return;
-        }
-
-        if (IsSegmentedTableBorderStyle())
-        {
-            RenderSegmentedTableBorderStrip(graphics, value, x, y, width, height, orientation);
-            return;
+            case DocxTableBorderKind.Double:
+                RenderDoubleTableBorderStrip(graphics, x, y, width, height, orientation);
+                return;
+            case DocxTableBorderKind.Triple:
+                RenderTripleTableBorderStrip(graphics, x, y, width, height, orientation);
+                return;
+            case DocxTableBorderKind.Compound:
+            case DocxTableBorderKind.Unsupported:
+                // Keep the prefix-based compound approximation for unknown tokens.
+                if (TryGetCompoundTableBorderProfile(value, out double[] stripeWeights, out double gapWeight))
+                {
+                    RenderCompoundTableBorderStrip(graphics, x, y, width, height, orientation, stripeWeights, gapWeight);
+                    return;
+                }
+                break;
+            case DocxTableBorderKind.ThreeDimensional:
+                RenderThreeDTableBorderStrip(graphics, border, value, x, y, width, height, orientation);
+                return;
+            case DocxTableBorderKind.Wave:
+                RenderWaveTableBorderStrip(graphics, border, value, x, y, width, height, orientation);
+                return;
+            case DocxTableBorderKind.DashDotStroked:
+                RenderDashDotStrokedTableBorderStrip(graphics, x, y, width, height, orientation);
+                return;
+            case DocxTableBorderKind.Dotted:
+            case DocxTableBorderKind.Dashed:
+                RenderSegmentedTableBorderStrip(graphics, value, x, y, width, height, orientation);
+                return;
         }
 
         graphics.FillRectangle(x, y, width, height);
-
-        bool IsSegmentedTableBorderStyle()
-        {
-            return value.Equals("dotted", StringComparison.OrdinalIgnoreCase) ||
-                value.Equals("dashed", StringComparison.OrdinalIgnoreCase) ||
-                value.Equals("dashSmallGap", StringComparison.OrdinalIgnoreCase) ||
-                value.Equals("dotDash", StringComparison.OrdinalIgnoreCase) ||
-                value.Equals("dotDotDash", StringComparison.OrdinalIgnoreCase);
-        }
     }
 
     private static void RenderDoubleTableBorderStrip(
@@ -436,12 +417,6 @@ internal sealed partial class DocxRenderer
         }
     }
 
-    private static bool IsThreeDTableBorderStyle(string value)
-    {
-        return value.Equals("threeDEmboss", StringComparison.OrdinalIgnoreCase) ||
-            value.Equals("threeDEngrave", StringComparison.OrdinalIgnoreCase);
-    }
-
     private static void RenderThreeDTableBorderStrip(
         PdfGraphicsBuilder graphics,
         DocxTableCellBorder border,
@@ -483,12 +458,6 @@ internal sealed partial class DocxRenderer
             graphics.SetFillRgb(second.Red, second.Green, second.Blue);
             graphics.FillRectangle(x + firstWidth, y, secondWidth, height);
         }
-    }
-
-    private static bool IsWaveTableBorderStyle(string value)
-    {
-        return value.Equals("wave", StringComparison.OrdinalIgnoreCase) ||
-            value.Equals("doubleWave", StringComparison.OrdinalIgnoreCase);
     }
 
     private static void RenderWaveTableBorderStrip(

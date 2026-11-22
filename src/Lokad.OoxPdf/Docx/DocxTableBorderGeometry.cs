@@ -2,9 +2,62 @@ using System.Globalization;
 
 namespace Lokad.OoxPdf.Docx;
 
+internal enum DocxTableBorderKind
+{
+    Single,
+    Thick,
+    Double,
+    Triple,
+    Dotted,
+    Dashed,
+    DashDotStroked,
+    Compound,
+    ThreeDimensional,
+    Wave,
+    InsetOrOutset,
+    Suppressed,
+    Unsupported,
+    Count
+}
+
 internal static class DocxTableBorderGeometry
 {
     private const double WordPdfBorderWidthScale = 0.96d;
+
+    private static readonly Dictionary<string, DocxTableBorderKind> BorderKinds = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["single"] = DocxTableBorderKind.Single,
+        ["thick"] = DocxTableBorderKind.Thick,
+        ["double"] = DocxTableBorderKind.Double,
+        ["triple"] = DocxTableBorderKind.Triple,
+        ["dotted"] = DocxTableBorderKind.Dotted,
+        ["dashed"] = DocxTableBorderKind.Dashed,
+        ["dashSmallGap"] = DocxTableBorderKind.Dashed,
+        ["dotDash"] = DocxTableBorderKind.Dashed,
+        ["dotDotDash"] = DocxTableBorderKind.Dashed,
+        ["dashDotStroked"] = DocxTableBorderKind.DashDotStroked,
+        ["thinThickSmallGap"] = DocxTableBorderKind.Compound,
+        ["thickThinSmallGap"] = DocxTableBorderKind.Compound,
+        ["thinThickThinSmallGap"] = DocxTableBorderKind.Compound,
+        ["thinThickMediumGap"] = DocxTableBorderKind.Compound,
+        ["thickThinMediumGap"] = DocxTableBorderKind.Compound,
+        ["thinThickThinMediumGap"] = DocxTableBorderKind.Compound,
+        ["thinThickLargeGap"] = DocxTableBorderKind.Compound,
+        ["thickThinLargeGap"] = DocxTableBorderKind.Compound,
+        ["thinThickThinLargeGap"] = DocxTableBorderKind.Compound,
+        ["threeDEmboss"] = DocxTableBorderKind.ThreeDimensional,
+        ["threeDEngrave"] = DocxTableBorderKind.ThreeDimensional,
+        ["wave"] = DocxTableBorderKind.Wave,
+        ["doubleWave"] = DocxTableBorderKind.Wave,
+        ["outset"] = DocxTableBorderKind.InsetOrOutset,
+        ["inset"] = DocxTableBorderKind.InsetOrOutset,
+        ["nil"] = DocxTableBorderKind.Suppressed,
+        ["none"] = DocxTableBorderKind.Suppressed
+    };
+
+    public static DocxTableBorderKind Classify(string? value) => value is null
+        ? DocxTableBorderKind.Single
+        : BorderKinds.GetValueOrDefault(value, DocxTableBorderKind.Unsupported);
 
     public static bool TryResolveReviewPaintScale(double printScale, out double matrixScale)
     {
@@ -35,9 +88,7 @@ internal static class DocxTableBorderGeometry
 
     public static bool IsSuppressed(DocxTableCellBorder? border)
     {
-        return border is not null &&
-            (string.Equals(border.Value, "nil", StringComparison.OrdinalIgnoreCase) ||
-             string.Equals(border.Value, "none", StringComparison.OrdinalIgnoreCase));
+        return Classify(border?.Value) == DocxTableBorderKind.Suppressed;
     }
 
     public static double ResolveVisibleWidth(DocxTableCellBorder? border)
@@ -47,7 +98,13 @@ internal static class DocxTableBorderGeometry
 
     public static double ResolveNominalWidth(DocxTableCellBorder? border)
     {
-        if (border is null || IsSuppressed(border))
+        if (border is null)
+        {
+            return 0d;
+        }
+
+        DocxTableBorderKind kind = Classify(border.Value);
+        if (kind == DocxTableBorderKind.Suppressed)
         {
             return 0d;
         }
@@ -56,7 +113,7 @@ internal static class DocxTableBorderGeometry
             ? Math.Max(0.25d, eighths / 8d)
             : 0.75d;
         // Word's double border has two authored-width strokes and an equal gap.
-        return border.UseDoubleBandWidth && string.Equals(border.Value, "double", StringComparison.OrdinalIgnoreCase)
+        return border.UseDoubleBandWidth && kind == DocxTableBorderKind.Double
             ? 3d * lineWidth : lineWidth;
     }
 
