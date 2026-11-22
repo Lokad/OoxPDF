@@ -200,6 +200,24 @@ if ($seen.Count -ne $selected.Count -or $counts.passed -ne $report.passed -or
 }
 Assert-FrozenAssembly
 
+if ($null -ne $report.validationTools) {
+    $validationTools = [ordered]@{}
+    foreach ($entry in $report.validationTools.PSObject.Properties) {
+        $bound = [Environment]::GetEnvironmentVariable($entry.Name)
+        $tool = $entry.Value
+        if (!$bound -or $tool.Path -isnot [string] -or $tool.Sha256 -isnot [string] -or
+            $tool.Sha256 -cnotmatch '^[0-9A-F]{64}$' -or
+            [IO.Path]::GetFullPath($bound) -cne $tool.Path) {
+            throw ('Validation tool report differs from the supplied binding: ' + $entry.Name)
+        }
+        if (!(Test-Path -LiteralPath $tool.Path -PathType Leaf) -or (Get-FileHash -LiteralPath $tool.Path).Hash -cne $tool.Sha256) {
+            throw ('Validation tool changed during qualification: ' + $entry.Name)
+        }
+        $validationTools[$entry.Name] = $tool
+    }
+    $inventory.ValidationTools = $validationTools
+}
+
 $inventory.CompletedUtc = [DateTime]::UtcNow.ToString('o')
 $inventory.UniqueExecutedMethods = $rows.Count
 $inventory.SourceReports = @([pscustomobject]@{ Selection = $selectionPath; Report = $path; Sha256 = (Get-FileHash -LiteralPath $path).Hash })

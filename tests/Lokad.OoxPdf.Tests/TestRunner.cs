@@ -178,6 +178,8 @@ internal static class TestRunner
                 }).ToArray()),
             };
 
+            if (TestToolProcess.ValidationTools.Count > 0)
+                report["validationTools"] = System.Text.Json.JsonSerializer.SerializeToNode(TestToolProcess.ValidationTools);
             System.IO.File.WriteAllText(reportPath, report.ToJsonString());
         }
 

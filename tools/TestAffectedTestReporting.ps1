@@ -48,7 +48,17 @@ function dotnet {
     $failed=@($rows | Where-Object outcome -EQ 'failed').Count
     $skipped=@($rows | Where-Object outcome -EQ 'skipped').Count
     if($global:ooxPdfAffectedReportFault -eq 'miscount') {$passed=999}
-    @{passed=$passed;failed=$failed;skipped=$skipped;tests=$rows} | ConvertTo-Json -Depth 5 | Set-Content $report -Encoding utf8
+    $raw = @{passed=$passed;failed=$failed;skipped=$skipped;tests=$rows}
+    if ($global:ooxPdfAffectedReportFault -in @('inspector-bound','inspector-changed','inspector-unbound')) {
+        $tool = Join-Path (Split-Path (Split-Path $report)) 'validation tools/PdfInspect.dll'
+        $raw.validationTools = @{
+            OOXPDF_TEST_PDF_INSPECTOR = @{ Path=$tool; Sha256=(Get-FileHash -LiteralPath $tool).Hash }
+        }
+        if ($global:ooxPdfAffectedReportFault -eq 'inspector-changed') {
+            [IO.File]::WriteAllText($tool, 'Modified validation tool')
+        }
+    }
+    $raw | ConvertTo-Json -Depth 5 | Set-Content $report -Encoding utf8
     if($global:ooxPdfAffectedReportFault -in @('cleanup-link','cleanup-child-link')) {
         $target=Join-Path (Split-Path $env:TMPDIR) 'unowned-target'
         New-Item -ItemType Directory -Path $target | Out-Null
@@ -244,6 +254,40 @@ try {
         }
     }
     finally {[Environment]::SetEnvironmentVariable('OOXPDF_TEST_CLI_ASSEMBLY', $(if ($null -eq $priorCli) {[NullString]::Value} else {$priorCli}))}
+
+    $inspector = Join-Path (New-Item -ItemType Directory (Join-Path $root 'validation tools')).FullName 'PdfInspect.dll'
+    $priorInspector = [Environment]::GetEnvironmentVariable('OOXPDF_TEST_PDF_INSPECTOR')
+    try {
+        foreach ($case in @('inspector-bound','inspector-changed','inspector-unbound','tool-free-selection')) {
+            [IO.File]::WriteAllText($inspector, 'Frozen validation tool')
+            $env:OOXPDF_TEST_PDF_INSPECTOR = switch ($case) {
+                'inspector-unbound' { $null }
+                'tool-free-selection' { Join-Path $root 'absent.dll' }
+                default { $inspector }
+            }
+            $global:ooxPdfAffectedReportFault=$case
+            $output=Join-Path $root $case
+            $caught=$null
+            try {& (Join-Path $PSScriptRoot 'RunDocxAffectedTests.ps1') -RunnerPath $runner -OutputDirectory $output -TestFilter ReportAlpha *> (Join-Path $root ($case+'.log'))}
+            catch {$caught=$_.Exception.Message}
+            $expected = switch ($case) {
+                'inspector-changed' { 'Validation tool changed during qualification: OOXPDF_TEST_PDF_INSPECTOR' }
+                'inspector-unbound' { 'Validation tool report differs from the supplied binding: OOXPDF_TEST_PDF_INSPECTOR' }
+            }
+            if ($caught -cne $expected) { throw ($case+': validation tool identity result differs '+$caught) }
+            if (!$caught) {
+                $affected=Get-Content -LiteralPath (Join-Path $output 'affected-tests.json') -Raw | ConvertFrom-Json
+                $binding=$affected.provenance.ValidationTools.OOXPDF_TEST_PDF_INSPECTOR
+                if ($case -eq 'inspector-bound' -and ($binding.Path -cne $inspector -or
+                    $binding.Sha256 -cne (Get-FileHash -LiteralPath $inspector).Hash)) { throw 'Inspector identity is missing from qualification' }
+                if ($case -eq 'tool-free-selection' -and $affected.provenance.ValidationTools) { throw 'Tool-free selection published an unused binding' }
+            }
+            $checks+=@{Case=$case;GatePassed=(!$caught);Error=$caught}
+        }
+    }
+    finally {
+        [Environment]::SetEnvironmentVariable('OOXPDF_TEST_PDF_INSPECTOR', $(if ($null -eq $priorInspector) {[NullString]::Value} else {$priorInspector}))
+    }
 
     foreach($case in @('temp-existing','temp-linked-output','cleanup-link','cleanup-child-link','cleanup-residual')) {
         $global:ooxPdfAffectedReportFault=$case

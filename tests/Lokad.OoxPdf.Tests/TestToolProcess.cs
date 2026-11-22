@@ -1,21 +1,35 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.Versioning;
+using System.Security.Cryptography;
 
 namespace Lokad.OoxPdf.Tests;
 
 internal static class TestToolProcess
 {
+    private static readonly ConcurrentDictionary<string, TestToolIdentity> validationTools = new(StringComparer.Ordinal);
+
+    internal static IReadOnlyDictionary<string, TestToolIdentity> ValidationTools => validationTools;
+
     public static string ResolveAssembly(string binding, string projectDirectory)
     {
+        bool frozen = Environment.GetEnvironmentVariable("OOXPDF_TEST_REQUIRE_BOUND_TOOLS") == "1";
         if (Environment.GetEnvironmentVariable(binding) is { Length: > 0 } configured)
         {
             string path = Path.GetFullPath(configured);
-            return File.Exists(path) ? path : throw new InvalidOperationException(
-                $"The assembly specified by {binding} is missing: {path}");
+            if (!File.Exists(path))
+                throw new InvalidOperationException($"The assembly specified by {binding} is missing: {path}");
+            // The qualification wrapper already pins the CLI and its library.
+            if (frozen && binding != "OOXPDF_TEST_CLI_ASSEMBLY")
+            {
+                using FileStream program = File.OpenRead(path);
+                validationTools.TryAdd(binding, new(path, Convert.ToHexString(SHA256.HashData(program))));
+            }
+            return path;
         }
 
-        if (Environment.GetEnvironmentVariable("OOXPDF_TEST_REQUIRE_BOUND_TOOLS") == "1")
+        if (frozen)
             throw new InvalidOperationException($"Frozen qualification requires {binding} to name a prebuilt tool.");
 
         // Local console builds live under tests/<project>/bin/<configuration>/<framework>.
@@ -56,3 +70,4 @@ internal static class TestToolProcess
 }
 
 internal sealed record TestToolResult(int ExitCode, string Output, string Error);
+internal sealed record TestToolIdentity(string Path, string Sha256);
