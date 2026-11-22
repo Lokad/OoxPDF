@@ -530,6 +530,25 @@ internal static partial class SvgTextTests
         }
     }
 
+    public static void SvgOpaqueContainerStylesPreserveGradientStrokes()
+    {
+        const string definitions = """
+            <defs><linearGradient id="stroke" gradientUnits="userSpaceOnUse" x1="16" y1="10" x2="112" y2="42">
+              <stop stop-color="blue"/><stop offset="1" stop-color="purple"/>
+            </linearGradient></defs>
+            """;
+        const string shape = """
+            <path d="M24 22 L112 40" fill="none" stroke="url(#stroke)" stroke-width="6" stroke-opacity=".75"/>
+            """;
+        string expected = Svg(definitions + $"<g opacity=\"1\">{shape}</g>");
+        string rootStyle = expected.Replace("font-family=\"DejaVu Sans\"", "font-family=\"DejaVu Sans\" style=\"opacity:1\"",
+            StringComparison.Ordinal);
+        string groupStyle = Svg(definitions + $"<g opacity=\".4\" style=\"opacity:100% !important; opacity:.5\">{shape}</g>");
+
+        AssertSvgPaintInBothFormats(expected, rootStyle, "/Pattern CS /Ps1 SCN");
+        AssertSvgPaintInBothFormats(expected, groupStyle, "/Pattern CS /Ps1 SCN");
+    }
+
     public static void SvgObjectOpacityMatchesGroupForFilledGradientStrokes()
     {
         AssertSvgPaintInBothFormats(Picture(groupOpacity: true), Picture(groupOpacity: false), pdf =>

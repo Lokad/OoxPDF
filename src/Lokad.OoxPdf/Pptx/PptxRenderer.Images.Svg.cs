@@ -668,11 +668,15 @@ internal sealed partial class PptxRenderer
 
         bool nestedSvg = name == "svg" && element.Parent is not null;
         string? attribute = (string?)element.Attribute("opacity");
-        bool styled = element.Attribute("style") is not null && ReadSvgStyleDeclarations(element).ContainsKey("opacity");
-        double? numeric = styled ? null : ReadUnitSvgOpacity(attribute);
+        string? inlineOpacity = element.Attribute("style") is null
+            ? null : ReadSvgStyleDeclarations(element).GetValueOrDefault("opacity");
+        double? numeric = ReadUnitSvgOpacity(inlineOpacity ?? attribute);
+        // A fully opaque inline style needs no group and admits the same stroke
+        // paint as an opaque presentation attribute.
+        if (inlineOpacity is not null && numeric != 1d) numeric = null;
         // A numeric zero also hides descendants of a nested SVG viewport.
         return new(nestedSvg ? null : numeric, numeric == 0d,
-            !nestedSvg && (numeric.HasValue || (!styled && attribute is null)));
+            !nestedSvg && (numeric.HasValue || (inlineOpacity is null && attribute is null)));
     }
 
     private readonly record struct SvgContainerOpacity(double? GroupOpacity, bool IsTransparent, bool AllowsGradientStroke);
