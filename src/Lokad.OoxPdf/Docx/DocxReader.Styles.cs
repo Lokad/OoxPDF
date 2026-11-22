@@ -47,21 +47,24 @@ internal sealed partial class DocxReader
                 continue;
             }
 
-            var parsed = new DocxStyle(
-                (string?)style.Element(WordprocessingNamespace + "basedOn")?.Attribute(WordprocessingNamespace + "val"),
-                ReadParagraphProperties(style.Element(WordprocessingNamespace + "pPr"), includeNumberingLevel: false),
-                ReadRunProperties(style.Element(WordprocessingNamespace + "rPr")));
-            if (type == "paragraph")
+            if (type is "paragraph" or "character")
             {
-                paragraphStyles[styleId] = parsed;
-                if (OoxBoolean.ParseAttribute(style, WordprocessingNamespace + "default", false))
+                var parsed = new DocxStyle(
+                    (string?)style.Element(WordprocessingNamespace + "basedOn")?.Attribute(WordprocessingNamespace + "val"),
+                    ReadParagraphProperties(style.Element(WordprocessingNamespace + "pPr"), includeNumberingLevel: false),
+                    ReadRunProperties(style.Element(WordprocessingNamespace + "rPr")));
+                if (type == "paragraph")
                 {
-                    defaultParagraphStyleIds.Add(styleId);
+                    paragraphStyles[styleId] = parsed;
+                    if (OoxBoolean.ParseAttribute(style, WordprocessingNamespace + "default", false))
+                    {
+                        defaultParagraphStyleIds.Add(styleId);
+                    }
                 }
-            }
-            else if (type == "character")
-            {
-                characterStyles[styleId] = parsed;
+                else
+                {
+                    characterStyles[styleId] = parsed;
+                }
             }
             else if (type == "table")
             {
