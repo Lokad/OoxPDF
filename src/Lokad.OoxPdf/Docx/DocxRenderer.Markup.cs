@@ -815,9 +815,7 @@ internal sealed partial class DocxRenderer
                         continue;
                     }
 
-                    DocxRevisionMarkupPalette paragraphRevisionPalette = ResolveRevisionMarkupPalette(paragraph.Revisions);
-                    string revisionTitle = TrimBalloonText(BuildRevisionBalloonTitle(paragraph.Revisions), textWidth);
-                    string revisionBody = TrimBalloonText(BuildRevisionBalloonPreview(paragraph), textWidth);
+                    var caption = BuildRevisionCaption(paragraph.Revisions, BuildRevisionBalloonPreview(paragraph));
                     string? wordFormatting = BuildWordCompatibleRunFormattingPreview(paragraph, cancellationToken);
                     // The footer's occupied physical frame and printed body boundary
                     // own placement, independently of caption wording or mark/run role.
@@ -831,24 +829,8 @@ internal sealed partial class DocxRenderer
                             markupContext.WordCompatiblePrintScale, revisionLineHeightEm, null, null, out var insets);
                         footerTop += insets.Top - WordCompatibleAllMarkupBalloonFirstBaselineTopInsetPoints;
                     }
-                    var revisionCandidate = new DocxMarkupBalloonCandidate(
-                        DocxMarkupBalloonKind.Revision,
-                        revisionTitle,
-                        revisionBody,
-                        wordFormatting is null ? revisionTitle : "Formatted: ",
-                        wordFormatting ?? revisionBody,
-                        line.BaselineY,
-                        line.X + Math.Max(0d, line.Width) * 0.5d,
-                        line.X - 2d,
-                        line.X + Math.Max(0d, line.Width) + 2d,
-                        sequence++,
-                        paragraphRevisionPalette.FillRgb,
-                        paragraphRevisionPalette.StrokeRgb,
-                        paragraphRevisionPalette.TitleRgb,
-                        new DocxMarkupBalloonRgb(0, 0, 0),
-                        CandidateCount: 1, CommentCandidateCount: 0, CommentWithDateCount: 0, CommentResolvedCount: 0, CommentOpenCount: 0, CommentReplyCount: 0, RevisionCandidateCount: 1,
-                        BodySummaryPartCount: CountBalloonSummaryPart(revisionBody),
-                        WordCompatibleBodySummaryPartCount: CountBalloonSummaryPart(revisionBody))
+                    var revisionCandidate = new DocxMarkupBalloonCandidate(caption, line.BaselineY,
+                        line.X, line.Width, sequence++, formattingPreview: wordFormatting)
                     {
                         WordCompatiblePlacementTopY = footerTop,
                         WordCompatiblePlacementBottomY = footerTop is not null
@@ -882,33 +864,11 @@ internal sealed partial class DocxRenderer
                 {
                     IReadOnlyList<DocxRevisionInfo> tableRevisions = row.Table.Revisions ?? [];
                     bool mainTableStory = row.Story?.Kind is null or DocxStoryKind.Body;
-                    if (ShouldRenderRevisionBalloon(markupContext, tableRevisions, mainTableStory))
+                    string tableKey = TableBalloonKey(row);
+                    if (ShouldRenderRevisionBalloon(markupContext, tableRevisions, mainTableStory) &&
+                        renderedTableRevisions.Add(tableKey))
                     {
-                        string tableKey = TableBalloonKey(row);
-                        if (renderedTableRevisions.Add(tableKey))
-                        {
-                            DocxRevisionMarkupPalette tableRevisionPalette = ResolveRevisionMarkupPalette(tableRevisions);
-                            string revisionTitle = TrimBalloonText(BuildRevisionBalloonTitle(tableRevisions), textWidth);
-                            string revisionBody = TrimBalloonText(BuildRevisionBalloonPreview(tableRevisions), textWidth);
-                            balloonCandidates.Add(new DocxMarkupBalloonCandidate(
-                                DocxMarkupBalloonKind.Revision,
-                                revisionTitle,
-                                revisionBody,
-                                revisionTitle,
-                                revisionBody,
-                                row.Y + Math.Max(0d, row.Height) * 0.5d + anchorYOffset,
-                                row.Table.TableX + Math.Max(0d, row.Table.ResolvedTableWidth) * 0.5d,
-                                row.Table.TableX - 2d,
-                                row.Table.TableX + Math.Max(0d, row.Table.ResolvedTableWidth) + 2d,
-                                sequence++,
-                                tableRevisionPalette.FillRgb,
-                                tableRevisionPalette.StrokeRgb,
-                                tableRevisionPalette.TitleRgb,
-                                new DocxMarkupBalloonRgb(0, 0, 0),
-                                CandidateCount: 1, CommentCandidateCount: 0, CommentWithDateCount: 0, CommentResolvedCount: 0, CommentOpenCount: 0, CommentReplyCount: 0, RevisionCandidateCount: 1,
-                                BodySummaryPartCount: CountBalloonSummaryPart(revisionBody),
-                                WordCompatibleBodySummaryPartCount: CountBalloonSummaryPart(revisionBody)));
-                        }
+                        AddTableRevisionCandidate(row, anchorYOffset, tableRevisions);
                     }
 
                     // Row rollups include cell markers for diagnostics/indicators;
@@ -916,39 +876,15 @@ internal sealed partial class DocxRenderer
                     IReadOnlyList<DocxRevisionInfo> rowRevisions = row.Revisions ?? [];
                     if (rowRevisions.Any(revision => revision.Kind.IsCellStructureRevision()))
                         rowRevisions = rowRevisions.Where(revision => !revision.Kind.IsCellStructureRevision()).ToArray();
-                    if (ShouldRenderRevisionBalloon(markupContext, rowRevisions, mainTableStory))
+                    if (ShouldRenderRevisionBalloon(markupContext, rowRevisions, mainTableStory) &&
+                        renderedTableRowRevisions.Add(TableRowBalloonKey(row)))
                     {
-                        string rowKey = TableRowBalloonKey(row);
-                        if (renderedTableRowRevisions.Add(rowKey))
-                        {
-                            DocxRevisionMarkupPalette rowRevisionPalette = ResolveRevisionMarkupPalette(rowRevisions);
-                            string revisionTitle = TrimBalloonText(BuildRevisionBalloonTitle(rowRevisions), textWidth);
-                            string revisionBody = TrimBalloonText(BuildRevisionBalloonPreview(rowRevisions), textWidth);
-                            balloonCandidates.Add(new DocxMarkupBalloonCandidate(
-                                DocxMarkupBalloonKind.Revision,
-                                revisionTitle,
-                                revisionBody,
-                                revisionTitle,
-                                revisionBody,
-                                row.Y + Math.Max(0d, row.Height) * 0.5d + anchorYOffset,
-                                row.Table.TableX + Math.Max(0d, row.Table.ResolvedTableWidth) * 0.5d,
-                                row.Table.TableX - 2d,
-                                row.Table.TableX + Math.Max(0d, row.Table.ResolvedTableWidth) + 2d,
-                                sequence++,
-                                rowRevisionPalette.FillRgb,
-                                rowRevisionPalette.StrokeRgb,
-                                rowRevisionPalette.TitleRgb,
-                                new DocxMarkupBalloonRgb(0, 0, 0),
-                                CandidateCount: 1, CommentCandidateCount: 0, CommentWithDateCount: 0, CommentResolvedCount: 0, CommentOpenCount: 0, CommentReplyCount: 0, RevisionCandidateCount: 1,
-                                BodySummaryPartCount: CountBalloonSummaryPart(revisionBody),
-                                WordCompatibleBodySummaryPartCount: CountBalloonSummaryPart(revisionBody)));
-                        }
+                        AddTableRevisionCandidate(row, anchorYOffset, rowRevisions);
                     }
 
                     int sourceGridStart = 0;
                     bool completeGrid = row.FragmentCount == 1 && row.Cells.All(cell => cell.Cell.GridSpan > 0) &&
                         row.Cells.Sum(cell => cell.Cell.GridSpan) == row.Table.GridColumnCount;
-                    string cellTableKey = TableBalloonKey(row);
                     for (int cellIndex = 0; cellIndex < row.Cells.Count; cellIndex++)
                     {
                         DocxTableCellLayout cell = row.Cells[cellIndex];
@@ -966,35 +902,20 @@ internal sealed partial class DocxRenderer
                             continue;
                         }
 
-                        DocxRevisionMarkupPalette cellRevisionPalette = ResolveRevisionMarkupPalette(cellRevisions);
-                        string revisionTitle = TrimBalloonText(BuildRevisionBalloonTitle(cellRevisions), textWidth);
-                        string revisionBody = TrimBalloonText(BuildRevisionBalloonPreview(cellRevisions), textWidth);
+                        var caption = BuildRevisionCaption(cellRevisions, BuildRevisionBalloonPreview(cellRevisions));
                         bool cellStructureOnly = cellRevisions.All(revision => revision.Kind.IsCellStructureRevision());
                         DocxTextLineLayout? structuralAnchor = cellStructureOnly && UsesWordCompatibleAllMarkupTextProfile(markupContext)
                             ? cell.TextLines.FirstOrDefault() : null;
                         DocxCellRevisionBalloonSource? cellSource = structuralAnchor is not null && completeGrid &&
                             !cell.Cell.HasVerticalMerge && cell.NestedRows.Count == 0 && cellRevisions.Count == 1 &&
                             !string.IsNullOrEmpty(cellRevisions[0].Author)
-                                ? new(cellTableKey, row.RowIndex, gridStart, cell.Cell.GridSpan, cellRevisions[0]) : null;
+                                ? new(tableKey, row.RowIndex, gridStart, cell.Cell.GridSpan, cellRevisions[0]) : null;
                         balloonCandidates.Add(new DocxMarkupBalloonCandidate(
-                            DocxMarkupBalloonKind.Revision,
-                            revisionTitle,
-                            revisionBody,
-                            cellStructureOnly ? revisionBody : revisionTitle,
-                            cellStructureOnly ? string.Empty : revisionBody,
+                            caption,
                             (structuralAnchor?.BaselineY ?? cell.Y + Math.Max(0d, cell.Height) * 0.5d) + anchorYOffset,
-                            structuralAnchor is null ? cell.X + Math.Max(0d, cell.Width) * 0.5d :
-                                structuralAnchor.X + ResolveTextEmissionXOffset(markupContext),
-                            cell.X - 2d,
-                            cell.X + Math.Max(0d, cell.Width) + 2d,
-                            sequence++,
-                            cellRevisionPalette.FillRgb,
-                            cellRevisionPalette.StrokeRgb,
-                            cellRevisionPalette.TitleRgb,
-                            new DocxMarkupBalloonRgb(0, 0, 0),
-                            CandidateCount: 1, CommentCandidateCount: 0, CommentWithDateCount: 0, CommentResolvedCount: 0, CommentOpenCount: 0, CommentReplyCount: 0, RevisionCandidateCount: 1,
-                            BodySummaryPartCount: CountBalloonSummaryPart(revisionBody),
-                            WordCompatibleBodySummaryPartCount: CountBalloonSummaryPart(revisionBody))
+                            cell.X, cell.Width, sequence++,
+                            connectorX: structuralAnchor is null ? null : structuralAnchor.X + ResolveTextEmissionXOffset(markupContext),
+                            titleOnly: cellStructureOnly)
                         {
                             // A structural cell label belongs to the changed cell's
                             // top frame, independently of its height and connector.
@@ -1025,6 +946,21 @@ internal sealed partial class DocxRenderer
                         WordCompatibleBodyLineHeightEm = revisionLineHeightEm };
             }
             return balloonCandidates;
+
+            DocxRevisionBalloonCaption BuildRevisionCaption(IReadOnlyList<DocxRevisionInfo> revisions, string preview)
+            {
+                string title = TrimBalloonText(BuildRevisionBalloonTitle(revisions), textWidth);
+                string body = TrimBalloonText(preview, textWidth);
+                return new(title, body, ResolveRevisionMarkupPalette(revisions), CountBalloonSummaryPart(body));
+            }
+
+            void AddTableRevisionCandidate(DocxTableRowLayout row, double offset, IReadOnlyList<DocxRevisionInfo> revisions)
+            {
+                var caption = BuildRevisionCaption(revisions, BuildRevisionBalloonPreview(revisions));
+                double anchorY = row.Y + Math.Max(0d, row.Height) * 0.5d + offset;
+                balloonCandidates.Add(new DocxMarkupBalloonCandidate(caption, anchorY,
+                    row.Table.TableX, row.Table.ResolvedTableWidth, sequence++));
+            }
 
             DocxCommentThreadBalloonMetrics CountCommentThreadBalloonMetrics(DocxRelatedStoryLayout? storyLayout, IReadOnlyList<DocxRelatedStoryLayout> replies)
             {

@@ -20,6 +20,9 @@ internal sealed partial class DocxRenderer
         DocxMarkupBalloonRgb StrokeRgb,
         DocxMarkupBalloonRgb TitleRgb);
 
+    private readonly record struct DocxRevisionBalloonCaption(
+        string Title, string Body, DocxRevisionMarkupPalette Palette, int SummaryPartCount);
+
     private readonly record struct DocxCommentThreadBalloonMetrics(
         int WithDateCount,
         int ResolvedCount,
@@ -57,6 +60,23 @@ internal sealed partial class DocxRenderer
         int BodySummaryPartCount,
         int WordCompatibleBodySummaryPartCount)
     {
+        public DocxMarkupBalloonCandidate(DocxRevisionBalloonCaption caption, double anchorY,
+            double sourceX, double sourceWidth, int sequence, double? connectorX = null,
+            string? formattingPreview = null, bool titleOnly = false)
+            : this(
+                DocxMarkupBalloonKind.Revision, caption.Title, caption.Body,
+                titleOnly ? caption.Body : formattingPreview is null ? caption.Title : "Formatted: ",
+                titleOnly ? string.Empty : formattingPreview ?? caption.Body,
+                anchorY, connectorX ?? sourceX + Math.Max(0d, sourceWidth) * 0.5d,
+                sourceX - 2d, sourceX + Math.Max(0d, sourceWidth) + 2d, sequence,
+                caption.Palette.FillRgb, caption.Palette.StrokeRgb, caption.Palette.TitleRgb,
+                new DocxMarkupBalloonRgb(0, 0, 0),
+                CandidateCount: 1, CommentCandidateCount: 0, RevisionCandidateCount: 1,
+                CommentWithDateCount: 0, CommentResolvedCount: 0, CommentOpenCount: 0, CommentReplyCount: 0,
+                BodySummaryPartCount: caption.SummaryPartCount, WordCompatibleBodySummaryPartCount: caption.SummaryPartCount)
+        {
+        }
+
         public DocxCellRevisionBalloonSource? WordCompatibleCellSource { get; init; }
         public DocxCellRevisionBalloonSource? WordCompatibleCellLastSource { get; init; }
         public double? WordCompatibleAnchorDepthPoints { get; init; }
