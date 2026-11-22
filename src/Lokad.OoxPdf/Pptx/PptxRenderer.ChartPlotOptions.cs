@@ -14,7 +14,7 @@ internal sealed partial class PptxRenderer
     private readonly record struct ChartBarPlotOptions(
         PptxSceneChartGrouping Grouping,
         PptxSceneChartBarDirection BarDirection,
-        ChartBooleanOption VaryColors,
+        bool VaryColors,
         double GapWidth,
         double Overlap,
         IReadOnlyList<PptxSceneChartNegativeInversion> NegativeInversions)
@@ -34,27 +34,24 @@ internal sealed partial class PptxRenderer
     private static ChartBarPlotOptions ReadSceneChartBarOptions(PptxSceneChartPlot plot, PptxSceneChartGrouping defaultGrouping) => new(
         ReadSceneChartGrouping(plot, defaultGrouping),
         ReadSceneChartBarDirection(plot),
-        ReadSceneChartVaryColors(plot),
+        plot.VaryColors ?? true,
         NormalizeGapWidth(plot.GapWidth),
         NormalizeOverlap(plot.Overlap),
         plot.Series.Select(series => series.NegativeInversion).ToArray());
-
-    private static ChartBooleanOption ReadSceneChartVaryColors(PptxSceneChartPlot plot) =>
-        new(plot.VaryColors ?? true, plot.VaryColorsValue, plot.VaryColors is not null);
 
     private readonly record struct ChartLinePlotOptions(
         PptxSceneChartGrouping Grouping,
         bool Stacked,
         bool PercentStacked,
-        ChartBooleanOption VaryColors,
-        IReadOnlyList<ChartBooleanOption> SmoothSeries,
+        bool VaryColors,
+        IReadOnlyList<ChartSeriesSmoothing> SmoothSeries,
         PptxSceneChartDisplayBlanksAs DisplayBlanksAs);
 
     private static ChartLinePlotOptions ReadSceneChartLineOptions(PptxSceneChart sceneChart, PptxSceneChartPlot plot, PptxSceneChartGrouping defaultGrouping, bool defaultSmooth = false)
     {
         PptxSceneChartGrouping grouping = ReadSceneChartGrouping(plot, defaultGrouping);
         return new ChartLinePlotOptions(grouping, IsStackedChartGrouping(grouping), IsPercentStackedChartGrouping(grouping),
-            ReadSceneChartVaryColors(plot), ReadSceneSmoothSeries(plot, applyPlotFallback: true, defaultValue: defaultSmooth),
+            plot.VaryColors ?? true, ReadSceneSmoothSeries(plot, applyPlotFallback: true, defaultValue: defaultSmooth),
             ResolveChartDisplayBlanksAs(sceneChart));
     }
 
@@ -74,7 +71,7 @@ internal sealed partial class PptxRenderer
     private readonly record struct ChartScatterPlotOptions(
         PptxSceneChartScatterStyle ScatterStyle,
         bool ConnectLines,
-        IReadOnlyList<ChartBooleanOption> SmoothSeries);
+        IReadOnlyList<ChartSeriesSmoothing> SmoothSeries);
 
     private static ChartScatterPlotOptions ReadSceneChartScatterOptions(PptxSceneChartPlot plot)
     {

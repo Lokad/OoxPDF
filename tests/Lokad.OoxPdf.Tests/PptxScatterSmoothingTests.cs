@@ -13,14 +13,15 @@ internal static class PptxScatterSmoothingTests
     {
         var read = typeof(PptxRenderer).GetMethod("ReadSceneChartScatterOptions", BindingFlags.NonPublic | BindingFlags.Static)!;
         foreach (string style in new[] { "lineMarker", "smoothMarker" })
-        foreach (string? smooth in new string?[] { null, "0", "1" })
+        foreach (string? smooth in new string?[] { null, "", "0", "1", "unknown" })
         {
             var scene = TestAssert.NotNull(PptxTests.BuildSingleChartScene(Chart(style, smooth)));
             object options = read.Invoke(null, [scene.Plots[0]])!;
             object option = ((IEnumerable)options.GetType().GetProperty("SmoothSeries")!.GetValue(options)!).Cast<object>().Single();
-            TestAssert.Equal(smooth != "0", PptxTests.ChartBooleanOptionValue(option));
-            TestAssert.Equal(smooth is not null, PptxTests.ChartBooleanOptionIsDefined(option));
-            TestAssert.Equal(smooth is null, scene.Plots[0].Series[0].Smooth is null);
+            bool? declared = smooth is null ? null : smooth is "" or "1";
+            TestAssert.Equal(declared, scene.Plots[0].Series[0].Smooth);
+            TestAssert.Equal(declared ?? true, PptxTests.ChartBooleanOptionValue(option));
+            TestAssert.Equal(declared.HasValue, PptxTests.ChartBooleanOptionIsDefined(option));
         }
     }
 
@@ -90,7 +91,7 @@ internal static class PptxScatterSmoothingTests
             <c:marker><c:symbol val="none"/></c:marker>
             <c:xVal><c:numLit><c:pt idx="0"><c:v>1</c:v></c:pt><c:pt idx="1"><c:v>2</c:v></c:pt><c:pt idx="2"><c:v>3</c:v></c:pt></c:numLit></c:xVal>
             <c:yVal><c:numLit><c:pt idx="0"><c:v>1</c:v></c:pt><c:pt idx="1"><c:v>7</c:v></c:pt><c:pt idx="2"><c:v>2</c:v></c:pt></c:numLit></c:yVal>
-            {{(smooth is null ? "" : $"<c:smooth val=\"{smooth}\"/>")}}
+            {{(smooth is null ? "" : smooth.Length == 0 ? "<c:smooth/>" : $"<c:smooth val=\"{smooth}\"/>")}}
           </c:ser><c:axId val="1"/><c:axId val="2"/></c:scatterChart>
           <c:valAx><c:axId val="1"/><c:scaling><c:min val="0"/><c:max val="4"/></c:scaling><c:axPos val="b"/><c:crossAx val="2"/><c:majorUnit val="1"/></c:valAx>
           <c:valAx><c:axId val="2"/><c:scaling><c:min val="0"/><c:max val="8"/></c:scaling><c:axPos val="l"/><c:crossAx val="1"/><c:majorUnit val="2"/></c:valAx>

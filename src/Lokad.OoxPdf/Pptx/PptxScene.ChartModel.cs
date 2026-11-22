@@ -235,8 +235,6 @@ internal sealed record PptxSceneChartPlot
 
     public bool? VaryColors { get; }
 
-    public string VaryColorsValue { get; }
-
     public double? GapWidth { get; }
 
     public double? Overlap { get; }
@@ -260,7 +258,6 @@ internal sealed record PptxSceneChartPlot
         string radarStyle,
         bool? markersEnabled,
         bool? varyColors,
-        string varyColorsValue,
         double? gapWidth,
         double? overlap,
         double? holeSize,
@@ -282,7 +279,6 @@ internal sealed record PptxSceneChartPlot
         RadarStyleKind = PptxSceneBuilder.ParseChartRadarStyle(radarStyle);
         MarkersEnabled = markersEnabled;
         VaryColors = varyColors;
-        VaryColorsValue = varyColorsValue;
         GapWidth = gapWidth;
         Overlap = overlap;
         HoleSize = holeSize;
@@ -346,35 +342,19 @@ internal sealed record PptxSceneChartDataLabels
 {
     public bool? IsDeleted { get; }
 
-    public string IsDeletedValue { get; }
-
     public bool? ShowValue { get; }
-
-    public string ShowValueValue { get; }
 
     public bool? ShowPercent { get; }
 
-    public string ShowPercentValue { get; }
-
     public bool? ShowCategoryName { get; }
-
-    public string ShowCategoryNameValue { get; }
 
     public bool? ShowSeriesName { get; }
 
-    public string ShowSeriesNameValue { get; }
-
     public bool? ShowLeaderLines { get; }
-
-    public string ShowLeaderLinesValue { get; }
 
     public bool? ShowLegendKey { get; }
 
-    public string ShowLegendKeyValue { get; }
-
     public bool? ShowBubbleSize { get; }
-
-    public string ShowBubbleSizeValue { get; }
 
     public PptxSceneChartLeaderLines LeaderLines { get; }
 
@@ -404,19 +384,12 @@ internal sealed record PptxSceneChartDataLabels
 
     private PptxSceneChartDataLabels(
         bool? showValue,
-        string showValueValue,
         bool? showPercent,
-        string showPercentValue,
         bool? showCategoryName,
-        string showCategoryNameValue,
         bool? showSeriesName,
-        string showSeriesNameValue,
         bool? showLeaderLines,
-        string showLeaderLinesValue,
         bool? showLegendKey,
-        string showLegendKeyValue,
         bool? showBubbleSize,
-        string showBubbleSizeValue,
         PptxSceneChartLeaderLines leaderLines,
         PptxSceneChartDataLabelPosition positionKind,
         string position,
@@ -430,25 +403,16 @@ internal sealed record PptxSceneChartDataLabels
         IReadOnlyList<string> rejectedOverrideIndexValues,
         IReadOnlyList<PptxSceneChartDataLabelOverride> overrides,
         bool isDefined,
-        bool? isDeleted,
-        string isDeletedValue)
+        bool? isDeleted)
     {
         IsDeleted = isDeleted;
-        IsDeletedValue = isDeletedValue;
         ShowValue = showValue;
-        ShowValueValue = showValueValue;
         ShowPercent = showPercent;
-        ShowPercentValue = showPercentValue;
         ShowCategoryName = showCategoryName;
-        ShowCategoryNameValue = showCategoryNameValue;
         ShowSeriesName = showSeriesName;
-        ShowSeriesNameValue = showSeriesNameValue;
         ShowLeaderLines = showLeaderLines;
-        ShowLeaderLinesValue = showLeaderLinesValue;
         ShowLegendKey = showLegendKey;
-        ShowLegendKeyValue = showLegendKeyValue;
         ShowBubbleSize = showBubbleSize;
-        ShowBubbleSizeValue = showBubbleSizeValue;
         LeaderLines = leaderLines;
         PositionKind = positionKind;
         Position = position;
@@ -466,19 +430,12 @@ internal sealed record PptxSceneChartDataLabels
 
     public static PptxSceneChartDataLabels Defined(
         bool? showValue,
-        string showValueValue,
         bool? showPercent,
-        string showPercentValue,
         bool? showCategoryName,
-        string showCategoryNameValue,
         bool? showSeriesName,
-        string showSeriesNameValue,
         bool? showLeaderLines,
-        string showLeaderLinesValue,
         bool? showLegendKey,
-        string showLegendKeyValue,
         bool? showBubbleSize,
-        string showBubbleSizeValue,
         PptxSceneChartLeaderLines leaderLines,
         string position,
         string separator,
@@ -491,24 +448,16 @@ internal sealed record PptxSceneChartDataLabels
         IReadOnlyList<string> rejectedOverrideIndexValues,
         IReadOnlyList<PptxSceneChartDataLabelOverride> overrides,
         bool isDefined,
-        bool? isDeleted = null,
-        string isDeletedValue = "")
+        bool? isDeleted = null)
     {
         return new PptxSceneChartDataLabels(
             showValue,
-            showValueValue,
             showPercent,
-            showPercentValue,
             showCategoryName,
-            showCategoryNameValue,
             showSeriesName,
-            showSeriesNameValue,
             showLeaderLines,
-            showLeaderLinesValue,
             showLegendKey,
-            showLegendKeyValue,
             showBubbleSize,
-            showBubbleSizeValue,
             leaderLines,
             PptxSceneBuilder.ParseChartDataLabelPosition(position),
             position,
@@ -522,8 +471,7 @@ internal sealed record PptxSceneChartDataLabels
             rejectedOverrideIndexValues,
             overrides,
             isDefined,
-            isDeleted,
-            isDeletedValue);
+            isDeleted);
     }
 }
 
@@ -533,21 +481,13 @@ internal sealed record PptxSceneChartDataLabelOverride(
     int Index,
     string IndexValue,
     bool? IsDeleted,
-    string IsDeletedValue,
     bool? ShowValue,
-    string ShowValueValue,
     bool? ShowPercent,
-    string ShowPercentValue,
     bool? ShowCategoryName,
-    string ShowCategoryNameValue,
     bool? ShowSeriesName,
-    string ShowSeriesNameValue,
     bool? ShowLeaderLines,
-    string ShowLeaderLinesValue,
     bool? ShowLegendKey,
-    string ShowLegendKeyValue,
     bool? ShowBubbleSize,
-    string ShowBubbleSizeValue,
     PptxSceneChartLeaderLines LeaderLines,
     string CustomText,
     IReadOnlyList<PptxSceneChartTextRun> CustomTextRuns,
@@ -723,7 +663,6 @@ internal sealed record PptxSceneChartSeries(
     double? Explosion,
     string ExplosionValue,
     bool? Smooth,
-    string SmoothValue,
     PptxSceneChartDataLabels DataLabels)
 {
     public PptxSceneChartNegativeInversion NegativeInversion { get; init; }

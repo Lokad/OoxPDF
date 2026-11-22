@@ -327,6 +327,9 @@ internal sealed partial class PptxSceneBuilder
         };
     }
 
+    internal static bool? ReadOptionalChartBoolean(XElement? parent, string name) =>
+        parent?.Element(ChartNamespace + name) is { } element ? IsOoxmlBooleanElementEnabled(element) : null;
+
     private static (bool? Value, string RawValue) ReadOptionalOoxmlBooleanElementWithValue(XElement? parent, string elementName)
     {
         XElement? element = parent?.Element(ChartNamespace + elementName);

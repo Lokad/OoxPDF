@@ -151,7 +151,6 @@ internal static partial class PptxChartsTests
         PptxSceneChartDataLabelOverride labelOverride = chart.Plots[0].DataLabels.Overrides.Single();
         TestAssert.Equal(1, labelOverride.Index);
         TestAssert.True(labelOverride.IsDeleted == true, "Expected point-level data label delete to be preserved.");
-        TestAssert.Equal("1", labelOverride.IsDeletedValue);
     }
 
     public static void PptxSyntheticBarChartsRenderNativeCharts()

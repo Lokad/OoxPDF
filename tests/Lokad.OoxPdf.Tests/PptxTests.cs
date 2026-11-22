@@ -236,34 +236,10 @@ internal static class PptxTests
             ?? throw new InvalidOperationException("Expected chart boolean option value."));
     }
 
-    internal static string ChartBooleanOptionRawValue(object option)
-    {
-        return (string)(option.GetType().GetProperty("RawValue")?.GetValue(option)
-            ?? throw new InvalidOperationException("Expected chart boolean option raw value."));
-    }
-
     internal static bool ChartBooleanOptionIsDefined(object option)
     {
         return (bool)(option.GetType().GetProperty("IsDefined")?.GetValue(option)
             ?? throw new InvalidOperationException("Expected chart boolean option defined state."));
-    }
-
-    internal static object ChartDataLabelFlagOption(object options, string flagName)
-    {
-        object flags = options.GetType().GetProperty("FlagOptions")?.GetValue(options)
-            ?? throw new InvalidOperationException("Expected chart data-label flag options.");
-        foreach (object entry in (System.Collections.IEnumerable)flags)
-        {
-            string key = (string)(entry.GetType().GetProperty("Key")?.GetValue(entry)
-                ?? throw new InvalidOperationException("Expected chart data-label flag key."));
-            if (key == flagName)
-            {
-                return entry.GetType().GetProperty("Value")?.GetValue(entry)
-                    ?? throw new InvalidOperationException("Expected chart data-label flag value.");
-            }
-        }
-
-        throw new InvalidOperationException($"Expected chart data-label flag '{flagName}'.");
     }
 
     internal static object ChartDataLabelOverride(object options, int index)

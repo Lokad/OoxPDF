@@ -160,7 +160,7 @@ internal sealed partial class PptxRenderer
                         continue;
                     }
 
-                    ChartSeriesFill fill = ResolveBarPointFill(theme, colorMap, chartPalette, seriesIndex, category, denseSeries.Count, plotOptions.VaryColors.Value, seriesFills, pointFills, values.Count, value - columnOrigin, plotOptions.InvertsNegativePoint(seriesIndex, category));
+                    ChartSeriesFill fill = ResolveBarPointFill(theme, colorMap, chartPalette, seriesIndex, category, denseSeries.Count, plotOptions.VaryColors, seriesFills, pointFills, values.Count, value - columnOrigin, plotOptions.InvertsNegativePoint(seriesIndex, category));
                     double centerX = ChartCategoryToPlotCoordinate(category, categoryCount, plotX, plotWidth,
                         plotOptions.CategoryPointsOnTickMarks, plotOptions.CategoryAxisReversed,
                         slotOffset: -clusterWidth / 2d + seriesIndex * step + barWidth / 2d);
@@ -1856,7 +1856,7 @@ internal sealed partial class PptxRenderer
 
     private static void RenderClusteredHorizontalBars(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, double plotX, double plotY, double plotWidth, double plotHeight, IReadOnlyList<IReadOnlyList<double?>> series, int categoryCount, ChartValueExtents valueExtents, bool valueAxisReversed, double originValue, double originX, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, ChartBarPlotOptions barOptions, int? chartStyleId)
     {
-        bool varyColors = barOptions.VaryColors.Value;
+        bool varyColors = barOptions.VaryColors;
         double gapWidthPercent = barOptions.GapWidth;
         double overlapPercent = barOptions.Overlap;
         double categoryHeight = plotHeight / categoryCount;
@@ -1905,7 +1905,7 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills,
         IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, ChartBarPlotOptions barOptions, int? chartStyleId)
     {
-        bool varyColors = barOptions.VaryColors.Value;
+        bool varyColors = barOptions.VaryColors;
         double categoryOrigin = horizontalBars ? plotY : plotX;
         double categoryPitch = (horizontalBars ? plotHeight : plotWidth) / categoryCount;
         double barThickness = GetStackedBarWidth(categoryPitch, barOptions.GapWidth);

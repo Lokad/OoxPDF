@@ -147,17 +147,17 @@ internal sealed partial class PptxRenderer
             return ChartDataLabelOptions.None;
         }
 
-        IReadOnlyDictionary<string, ChartBooleanOption> flags = ResolveChartDataLabelFlagOptions(options.FlagOptions, dataLabel.FlagOptions, overrideDefined: true);
+        // A defined point supplies its own component defaults. Leader lines inherit.
         return options with
         {
             IsDeleted = false,
-            ShowValue = ChartDataLabelFlagValue(flags, "showVal", labelsDefined: true),
-            ShowPercent = ChartDataLabelFlagValue(flags, "showPercent", labelsDefined: true),
-            ShowCategoryName = ChartDataLabelFlagValue(flags, "showCatName", labelsDefined: true),
-            ShowSeriesName = ChartDataLabelFlagValue(flags, "showSerName", labelsDefined: true),
-            ShowLeaderLines = dataLabel.ShowLeaderLines ?? options.ShowLeaderLines,
-            ShowLegendKey = ChartDataLabelFlagValue(flags, "showLegendKey", labelsDefined: true),
-            ShowBubbleSize = ChartDataLabelFlagValue(flags, "showBubbleSize", labelsDefined: true),
+            ShowValue = dataLabel.ShowValue ?? true,
+            ShowPercent = dataLabel.ShowPercent ?? true,
+            ShowCategoryName = dataLabel.ShowCategoryName ?? true,
+            ShowSeriesName = dataLabel.ShowSeriesName ?? true,
+            LeaderLinesEnabled = dataLabel.ShowLeaderLines ?? options.LeaderLinesEnabled,
+            ShowLegendKey = dataLabel.ShowLegendKey ?? true,
+            ShowBubbleSize = dataLabel.ShowBubbleSize ?? true,
             LeaderLines = dataLabel.LeaderLines.IsDefined ? dataLabel.LeaderLines : options.LeaderLines,
             CustomText = string.IsNullOrEmpty(dataLabel.CustomText) ? options.CustomText : dataLabel.CustomText,
             CustomTextRuns = dataLabel.CustomTextRuns.Count == 0 ? options.CustomTextRuns : dataLabel.CustomTextRuns,
@@ -171,7 +171,6 @@ internal sealed partial class PptxRenderer
             TextScope = dataLabel.TextScope,
             TextBodyProperties = IsChartTextBodyPropertiesEmpty(dataLabel.TextBodyProperties) ? options.TextBodyProperties : dataLabel.TextBodyProperties,
             ShapeStyle = dataLabel.ShapeStyle.IsEmpty ? options.ShapeStyle : dataLabel.ShapeStyle,
-            FlagOptions = flags,
             Overrides = EmptyChartDataLabelOverrides
         };
     }
@@ -183,59 +182,37 @@ internal sealed partial class PptxRenderer
             return plotOptions;
         }
 
-        return MergeChartDataLabelOptions(plotOptions, seriesOptions[seriesIndex]);
-    }
-
-    private static ChartDataLabelOptions MergeChartDataLabelOptions(ChartDataLabelOptions baseOptions, ChartDataLabelOptions overrideOptions)
-    {
-        IReadOnlyDictionary<string, ChartBooleanOption> flags = ResolveChartDataLabelFlagOptions(baseOptions.FlagOptions, overrideOptions.FlagOptions, overrideOptions.IsDefined);
-        bool labelsDefined = baseOptions.IsDefined || overrideOptions.IsDefined;
-        return baseOptions with
+        ChartDataLabelOptions series = seriesOptions[seriesIndex];
+        // The active series owns its components and point requests. Each
+        // component already has its default from the source container.
+        return plotOptions with
         {
-            IsDeleted = overrideOptions.IsDefined ? overrideOptions.IsDeleted : baseOptions.IsDeleted,
-            ShowValue = ChartDataLabelFlagValue(flags, "showVal", labelsDefined),
-            ShowPercent = ChartDataLabelFlagValue(flags, "showPercent", labelsDefined),
-            ShowCategoryName = ChartDataLabelFlagValue(flags, "showCatName", labelsDefined),
-            ShowSeriesName = ChartDataLabelFlagValue(flags, "showSerName", labelsDefined),
-            ShowLeaderLines = ChartDataLabelFlagValue(flags, "showLeaderLines", labelsDefined),
-            ShowLegendKey = ChartDataLabelFlagValue(flags, "showLegendKey", labelsDefined),
-            ShowBubbleSize = ChartDataLabelFlagValue(flags, "showBubbleSize", labelsDefined),
-            LeaderLines = overrideOptions.LeaderLines.IsDefined ? overrideOptions.LeaderLines : baseOptions.LeaderLines,
-            CustomText = string.IsNullOrEmpty(overrideOptions.CustomText) ? baseOptions.CustomText : overrideOptions.CustomText,
-            CustomTextRuns = overrideOptions.CustomTextRuns.Count == 0 ? baseOptions.CustomTextRuns : overrideOptions.CustomTextRuns,
-            PositionKind = string.IsNullOrEmpty(overrideOptions.Position) ? baseOptions.PositionKind : overrideOptions.PositionKind,
-            Position = string.IsNullOrEmpty(overrideOptions.Position) ? baseOptions.Position : overrideOptions.Position,
-            Separator = string.IsNullOrEmpty(overrideOptions.Separator) ? baseOptions.Separator : overrideOptions.Separator,
-            NumberFormat = string.IsNullOrEmpty(overrideOptions.NumberFormat) ? baseOptions.NumberFormat : overrideOptions.NumberFormat,
-            NumberFormatInfo = overrideOptions.NumberFormatInfo.IsDefined ? overrideOptions.NumberFormatInfo : baseOptions.NumberFormatInfo,
-            Layout = overrideOptions.Layout.HasLayout ? overrideOptions.Layout : baseOptions.Layout,
+            IsDeleted = series.IsDeleted,
+            ShowValue = series.ShowValue,
+            ShowPercent = series.ShowPercent,
+            ShowCategoryName = series.ShowCategoryName,
+            ShowSeriesName = series.ShowSeriesName,
+            LeaderLinesEnabled = series.LeaderLinesEnabled ?? plotOptions.LeaderLinesEnabled,
+            ShowLegendKey = series.ShowLegendKey,
+            ShowBubbleSize = series.ShowBubbleSize,
+            LeaderLines = series.LeaderLines.IsDefined ? series.LeaderLines : plotOptions.LeaderLines,
+            CustomText = string.IsNullOrEmpty(series.CustomText) ? plotOptions.CustomText : series.CustomText,
+            CustomTextRuns = series.CustomTextRuns.Count == 0 ? plotOptions.CustomTextRuns : series.CustomTextRuns,
+            PositionKind = string.IsNullOrEmpty(series.Position) ? plotOptions.PositionKind : series.PositionKind,
+            Position = string.IsNullOrEmpty(series.Position) ? plotOptions.Position : series.Position,
+            Separator = string.IsNullOrEmpty(series.Separator) ? plotOptions.Separator : series.Separator,
+            NumberFormat = string.IsNullOrEmpty(series.NumberFormat) ? plotOptions.NumberFormat : series.NumberFormat,
+            NumberFormatInfo = series.NumberFormatInfo.IsDefined ? series.NumberFormatInfo : plotOptions.NumberFormatInfo,
+            Layout = series.Layout.HasLayout ? series.Layout : plotOptions.Layout,
             // Each defined container already owns chart defaults plus its local
             // style. Missing properties request those defaults, not plot style.
-            TextStyle = overrideOptions.TextStyle,
-            TextBodyProperties = IsChartTextBodyPropertiesEmpty(overrideOptions.TextBodyProperties) ? baseOptions.TextBodyProperties : overrideOptions.TextBodyProperties,
-            ShapeStyle = overrideOptions.ShapeStyle.IsEmpty ? baseOptions.ShapeStyle : overrideOptions.ShapeStyle,
-            FlagOptions = flags,
-            // A defined series owns its point declarations as well as its
-            // component defaults; plot point requests do not leak into it.
-            Overrides = overrideOptions.IsDefined ? overrideOptions.Overrides : baseOptions.Overrides,
-            IsDefined = labelsDefined
+            TextStyle = series.TextStyle,
+            TextBodyProperties = IsChartTextBodyPropertiesEmpty(series.TextBodyProperties) ? plotOptions.TextBodyProperties : series.TextBodyProperties,
+            ShapeStyle = series.ShapeStyle.IsEmpty ? plotOptions.ShapeStyle : series.ShapeStyle,
+            Overrides = series.Overrides,
+            IsDefined = true
         };
     }
-
-    private static bool ChartDataLabelFlagValue(IReadOnlyDictionary<string, ChartBooleanOption> flags, string name, bool labelsDefined)
-    {
-        if (flags.TryGetValue(name, out ChartBooleanOption option) && option.IsDefined)
-            return option.Value;
-
-        // Office supplies components and keys for a defined label container.
-        // Each defined plot/series/point container owns its component defaults;
-        // explicit false in that active container survives. Styles still inherit.
-        // The leader-line controls do not establish its default; keep that fallback.
-        return labelsDefined && IsChartDataLabelComponentFlag(name);
-    }
-
-    private static bool IsChartDataLabelComponentFlag(string name) => name is
-        "showVal" or "showPercent" or "showCatName" or "showSerName" or "showLegendKey" or "showBubbleSize";
 
     private static bool IsChartTextBodyPropertiesEmpty(PptxSceneChartTextBodyProperties properties)
     {
@@ -509,16 +486,15 @@ internal sealed partial class PptxRenderer
     private static ChartDataLabelOptions ToChartDataLabelOptions(PptxSceneChartDataLabels labels,
         PptxSceneChartTextStyleOverride defaults, bool date1904, bool independentPoints)
     {
-        IReadOnlyDictionary<string, ChartBooleanOption> flags = ToChartDataLabelFlagOptions(labels);
         var containerStyle = PptxSceneBuilder.MergeChartTextStyleOverride(defaults, labels.TextStyle);
         var options = new ChartDataLabelOptions(
-            ChartDataLabelFlagValue(flags, "showVal", labels.IsDefined),
-            ChartDataLabelFlagValue(flags, "showPercent", labels.IsDefined),
-            ChartDataLabelFlagValue(flags, "showCatName", labels.IsDefined),
-            ChartDataLabelFlagValue(flags, "showSerName", labels.IsDefined),
-            ChartDataLabelFlagValue(flags, "showLeaderLines", labels.IsDefined),
-            ChartDataLabelFlagValue(flags, "showLegendKey", labels.IsDefined),
-            ChartDataLabelFlagValue(flags, "showBubbleSize", labels.IsDefined),
+            labels.ShowValue ?? labels.IsDefined,
+            labels.ShowPercent ?? labels.IsDefined,
+            labels.ShowCategoryName ?? labels.IsDefined,
+            labels.ShowSeriesName ?? labels.IsDefined,
+            labels.ShowLeaderLines,
+            labels.ShowLegendKey ?? labels.IsDefined,
+            labels.ShowBubbleSize ?? labels.IsDefined,
             ToChartDataLabelLeaderLines(labels.LeaderLines),
             string.Empty,
             [],
@@ -531,7 +507,6 @@ internal sealed partial class PptxRenderer
             ToChartTextStyleOverride(containerStyle),
             labels.TextBodyProperties,
             ToChartShapeStyle(labels.ShapeStyle),
-            flags,
             EmptyChartDataLabelOverrides,
             labels.IsDefined,
             Date1904: date1904,
@@ -585,8 +560,7 @@ internal sealed partial class PptxRenderer
                 // raw nullable formatting remains an independent declaration.
                 ToChartTextStyleOverride(PptxSceneBuilder.MergeChartTextStyleOverride(sourceDefaults, dataLabel.TextStyle)),
                 dataLabel.TextBodyProperties,
-                ToChartShapeStyle(dataLabel.ShapeStyle),
-                ToChartDataLabelOverrideFlagOptions(dataLabel)) { TextScope = dataLabel.TextScope };
+                ToChartShapeStyle(dataLabel.ShapeStyle)) { TextScope = dataLabel.TextScope };
         }
 
         return result;
@@ -612,69 +586,6 @@ internal sealed partial class PptxRenderer
             ? []
             : runs.Select(run => new ChartTextRunOverride(run.Text, ToChartTextStyleOverride(run.TextStyle),
                 run.HyperlinkClickId, run.HyperlinkClickAction, run.LineIndex)).ToArray();
-    }
-
-    private static IReadOnlyDictionary<string, ChartBooleanOption> ToChartDataLabelFlagOptions(PptxSceneChartDataLabels labels)
-    {
-        return new Dictionary<string, ChartBooleanOption>(StringComparer.Ordinal)
-        {
-            ["showVal"] = new(labels.ShowValue == true, labels.ShowValueValue, labels.ShowValue is not null),
-            ["showPercent"] = new(labels.ShowPercent == true, labels.ShowPercentValue, labels.ShowPercent is not null),
-            ["showCatName"] = new(labels.ShowCategoryName == true, labels.ShowCategoryNameValue, labels.ShowCategoryName is not null),
-            ["showSerName"] = new(labels.ShowSeriesName == true, labels.ShowSeriesNameValue, labels.ShowSeriesName is not null),
-            ["showLeaderLines"] = new(labels.ShowLeaderLines == true, labels.ShowLeaderLinesValue, labels.ShowLeaderLines is not null),
-            ["showLegendKey"] = new(labels.ShowLegendKey == true, labels.ShowLegendKeyValue, labels.ShowLegendKey is not null),
-            ["showBubbleSize"] = new(labels.ShowBubbleSize == true, labels.ShowBubbleSizeValue, labels.ShowBubbleSize is not null)
-        };
-    }
-
-    private static IReadOnlyDictionary<string, ChartBooleanOption> ToChartDataLabelOverrideFlagOptions(PptxSceneChartDataLabelOverride label)
-    {
-        return new Dictionary<string, ChartBooleanOption>(StringComparer.Ordinal)
-        {
-            ["showVal"] = new(label.ShowValue == true, label.ShowValueValue, label.ShowValue is not null),
-            ["showPercent"] = new(label.ShowPercent == true, label.ShowPercentValue, label.ShowPercent is not null),
-            ["showCatName"] = new(label.ShowCategoryName == true, label.ShowCategoryNameValue, label.ShowCategoryName is not null),
-            ["showSerName"] = new(label.ShowSeriesName == true, label.ShowSeriesNameValue, label.ShowSeriesName is not null),
-            ["showLeaderLines"] = new(label.ShowLeaderLines == true, label.ShowLeaderLinesValue, label.ShowLeaderLines is not null),
-            ["showLegendKey"] = new(label.ShowLegendKey == true, label.ShowLegendKeyValue, label.ShowLegendKey is not null),
-            ["showBubbleSize"] = new(label.ShowBubbleSize == true, label.ShowBubbleSizeValue, label.ShowBubbleSize is not null)
-        };
-    }
-
-    private static IReadOnlyDictionary<string, ChartBooleanOption> ResolveChartDataLabelFlagOptions(
-        IReadOnlyDictionary<string, ChartBooleanOption> baseFlags,
-        IReadOnlyDictionary<string, ChartBooleanOption> overrideFlags,
-        bool overrideDefined)
-    {
-        if (overrideFlags.Count == 0)
-        {
-            return baseFlags;
-        }
-
-        var resolved = new Dictionary<string, ChartBooleanOption>(ChartDataLabelFlagNames.Length, StringComparer.Ordinal);
-        foreach (string flagName in ChartDataLabelFlagNames)
-        {
-            if (overrideDefined && IsChartDataLabelComponentFlag(flagName))
-            {
-                resolved[flagName] = overrideFlags.TryGetValue(flagName, out ChartBooleanOption scopedOption)
-                    ? scopedOption : new ChartBooleanOption(false, string.Empty, false);
-            }
-            else if (overrideFlags.TryGetValue(flagName, out ChartBooleanOption overrideOption) && overrideOption.IsDefined)
-            {
-                resolved[flagName] = overrideOption;
-            }
-            else if (baseFlags.TryGetValue(flagName, out ChartBooleanOption baseOption))
-            {
-                resolved[flagName] = baseOption;
-            }
-            else
-            {
-                resolved[flagName] = new ChartBooleanOption(false, string.Empty, false);
-            }
-        }
-
-        return resolved;
     }
 
     // RV14: per-frame first-match category index built once; O(1) lookups replace

@@ -103,7 +103,7 @@ internal sealed partial class PptxRenderer
         Dictionary<int, ChartIndexedNumberPoint> points = BuildDensePointIndex(vector);
         double Value(int index) => points.TryGetValue(index, out var point) ? point.Value ?? 0d : 0d;
         ChartSeriesFill Fill(int index) => ResolveBarPointFill(theme, colorMap, palette, 0, index, 1,
-            options.VaryColors.Value, seriesFills, pointFills, count, Value(index), options.InvertsNegativePoint(0, index));
+            options.VaryColors, seriesFills, pointFills, count, Value(index), options.InvertsNegativePoint(0, index));
         ChartSeriesStroke? Stroke(int index) => pointStrokes.Count > 0 && pointStrokes[0].TryGetValue(index, out var stroke)
             ? stroke : seriesStrokes.Count > 0 && seriesStrokes[0] is { } seriesStroke
                 ? seriesStroke : ResolveNegativeBarFallbackStroke(pointStrokes, 0, index, Value(index), options.InvertsNegativePoint(0, index));

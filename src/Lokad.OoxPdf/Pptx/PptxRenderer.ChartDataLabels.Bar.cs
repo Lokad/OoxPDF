@@ -77,7 +77,7 @@ internal sealed partial class PptxRenderer
         bool valueAxisReversed = valueAxisOptions.Reversed;
         PptxSceneChartGrouping grouping = barOptions.Grouping;
         double gapWidthPercent = barOptions.GapWidth;
-        bool varyColors = barOptions.VaryColors.Value;
+        bool varyColors = barOptions.VaryColors;
         if ((!labelOptions.HasVisibleText && !seriesLabelOptions.Any(options => options.HasVisibleText)) || series.Count == 0)
         {
             return;

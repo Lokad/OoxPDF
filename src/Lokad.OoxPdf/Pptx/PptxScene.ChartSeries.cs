@@ -33,7 +33,6 @@ internal sealed partial class PptxSceneBuilder
             (int? xValuePointCount, string xValuePointCountValue) = ReadChartSeriesPointCountWithValue(seriesElement, "xVal");
             (int? yValuePointCount, string yValuePointCountValue) = ReadChartSeriesPointCountWithValue(seriesElement, "yVal");
             (int? bubbleSizePointCount, string bubbleSizePointCountValue) = ReadChartSeriesPointCountWithValue(seriesElement, "bubbleSize");
-            (bool? smooth, string smoothValue) = ReadChartSeriesSmooth(seriesElement);
             XElement? shapeProperties = seriesElement.Element(ChartNamespace + "spPr");
             PptxSceneChartMarker seriesMarker = ReadChartMarker(seriesElement, theme, colorMap, plotKind, chartMarkersEnabled, seriesIndex);
             series.Add(new PptxSceneChartSeries(
@@ -72,8 +71,7 @@ internal sealed partial class PptxSceneBuilder
                 ReadRejectedChartNonNegativeIndexValues(seriesElement, "dPt"),
                 explosion,
                 explosionValue,
-                smooth,
-                smoothValue,
+                ReadOptionalChartBoolean(seriesElement, "smooth"),
                 ReadChartDataLabels(seriesElement, theme, colorMap))
             {
                 NegativeInversion = ReadChartNegativeInversion(seriesElement)
@@ -85,7 +83,7 @@ internal sealed partial class PptxSceneBuilder
 
     internal static PptxSceneChartNegativeInversion ReadChartNegativeInversion(XElement series)
     {
-        bool? seriesValue = ReadOptionalOoxmlBooleanElementWithValue(series, "invertIfNegative").Value;
+        bool? seriesValue = ReadOptionalChartBoolean(series, "invertIfNegative");
         Dictionary<int, bool>? points = null;
         foreach (XElement point in series.Elements(ChartNamespace + "dPt"))
         {
@@ -95,7 +93,7 @@ internal sealed partial class PptxSceneBuilder
                 // A point declaration has its own enabled default, including
                 // declarations that only override fill or line. Office does not
                 // inherit the series flag for an existing dPt with no flag.
-                points[index] = ReadOptionalOoxmlBooleanElementWithValue(point, "invertIfNegative").Value ?? true;
+                points[index] = ReadOptionalChartBoolean(point, "invertIfNegative") ?? true;
             }
         }
         return new PptxSceneChartNegativeInversion(seriesValue, points);
@@ -251,14 +249,6 @@ internal sealed partial class PptxSceneBuilder
             PptxLineStyleReader.TryReadLineWithAlpha(line, theme, colorMap, out RgbColor color, out double lineWidth, out double alpha, fallbackLineWidth: inheritedWidth)
                 ? ReadSceneLineStyle(line, color, lineWidth, alpha, widthSpecified)
                 : widthSpecified ? default(PptxSceneLineStyle) with { Width = lineWidth, WidthSpecified = true } : default;
-    }
-
-    internal static (bool? Value, string RawValue) ReadChartSeriesSmooth(XElement series)
-    {
-        XElement? smooth = series.Element(ChartNamespace + "smooth");
-        return smooth is null
-            ? (null, string.Empty)
-            : (IsOoxmlBooleanElementEnabled(smooth), (string?)smooth.Attribute("val") ?? string.Empty);
     }
 
     private static string? ReadChartSeriesName(XElement series)

@@ -86,8 +86,8 @@ internal sealed partial class PptxSceneBuilder
         XElement? chartSpace = chartXml?.Root;
         XElement? chart = chartSpace?.Element(ChartNamespace + "chart");
         return new(
-            ReadOptionalOoxmlBooleanElementWithValue(chartSpace, "date1904").Value,
-            ReadOptionalOoxmlBooleanElementWithValue(chart, "plotVisOnly").Value,
+            ReadOptionalChartBoolean(chartSpace, "date1904"),
+            ReadOptionalChartBoolean(chart, "plotVisOnly"),
             ParseChartDisplayBlanksAs(ReadChartElementValue(chart, "dispBlanksAs")));
     }
 
@@ -109,8 +109,7 @@ internal sealed partial class PptxSceneBuilder
             string barDirection = ReadChartElementValue(plot, "barDir");
             string scatterStyle = ReadChartElementValue(plot, "scatterStyle");
             string radarStyle = ReadChartElementValue(plot, "radarStyle");
-            bool? markersEnabled = ReadOptionalOoxmlBooleanElementWithValue(plot, "marker").Value;
-            (bool? varyColors, string varyColorsValue) = ReadChartPlotVaryColors(plot);
+            bool? markersEnabled = ReadOptionalChartBoolean(plot, "marker");
             PptxSceneChartPlotKind plotKind = ParseChartPlotKind(kind);
             string[] axisIds = plot
                 .Elements(ChartNamespace + "axId")
@@ -127,8 +126,7 @@ internal sealed partial class PptxSceneBuilder
                 scatterStyle,
                 radarStyle,
                 markersEnabled,
-                varyColors,
-                varyColorsValue,
+                ReadOptionalChartBoolean(plot, "varyColors"),
                 ReadChartElementDoubleWithValue(plot, "gapWidth").Value,
                 ReadChartElementDoubleWithValue(plot, "overlap").Value,
                 ReadChartElementDoubleWithValue(plot, "holeSize").Value,
@@ -147,19 +145,12 @@ internal sealed partial class PptxSceneBuilder
         {
             return PptxSceneChartDataLabels.Defined(
                 showValue: null,
-                showValueValue: string.Empty,
                 showPercent: null,
-                showPercentValue: string.Empty,
                 showCategoryName: null,
-                showCategoryNameValue: string.Empty,
                 showSeriesName: null,
-                showSeriesNameValue: string.Empty,
                 showLeaderLines: null,
-                showLeaderLinesValue: string.Empty,
                 showLegendKey: null,
-                showLegendKeyValue: string.Empty,
                 showBubbleSize: null,
-                showBubbleSizeValue: string.Empty,
                 leaderLines: default,
                 position: string.Empty,
                 separator: string.Empty,
@@ -175,29 +166,14 @@ internal sealed partial class PptxSceneBuilder
         }
 
         PptxSceneChartNumberFormat numberFormat = ReadChartNumberFormat(labels);
-        (bool? isDeleted, string isDeletedValue) = ReadOptionalOoxmlBooleanElementWithValue(labels, "delete");
-        (bool? showValue, string showValueValue) = ReadOptionalOoxmlBooleanElementWithValue(labels, "showVal");
-        (bool? showPercent, string showPercentValue) = ReadOptionalOoxmlBooleanElementWithValue(labels, "showPercent");
-        (bool? showCategoryName, string showCategoryNameValue) = ReadOptionalOoxmlBooleanElementWithValue(labels, "showCatName");
-        (bool? showSeriesName, string showSeriesNameValue) = ReadOptionalOoxmlBooleanElementWithValue(labels, "showSerName");
-        (bool? showLeaderLines, string showLeaderLinesValue) = ReadOptionalOoxmlBooleanElementWithValue(labels, "showLeaderLines");
-        (bool? showLegendKey, string showLegendKeyValue) = ReadOptionalOoxmlBooleanElementWithValue(labels, "showLegendKey");
-        (bool? showBubbleSize, string showBubbleSizeValue) = ReadOptionalOoxmlBooleanElementWithValue(labels, "showBubbleSize");
         return PptxSceneChartDataLabels.Defined(
-                showValue,
-                showValueValue,
-                showPercent,
-                showPercentValue,
-                showCategoryName,
-                showCategoryNameValue,
-                showSeriesName,
-                showSeriesNameValue,
-                showLeaderLines,
-                showLeaderLinesValue,
-                showLegendKey,
-                showLegendKeyValue,
-                showBubbleSize,
-                showBubbleSizeValue,
+                ReadOptionalChartBoolean(labels, "showVal"),
+                ReadOptionalChartBoolean(labels, "showPercent"),
+                ReadOptionalChartBoolean(labels, "showCatName"),
+                ReadOptionalChartBoolean(labels, "showSerName"),
+                ReadOptionalChartBoolean(labels, "showLeaderLines"),
+                ReadOptionalChartBoolean(labels, "showLegendKey"),
+                ReadOptionalChartBoolean(labels, "showBubbleSize"),
                 ReadChartLeaderLines(labels, theme, colorMap),
                 ReadChartElementValue(labels, "dLblPos"),
                 labels.Element(ChartNamespace + "separator")?.Value ?? string.Empty,
@@ -210,8 +186,7 @@ internal sealed partial class PptxSceneBuilder
                 ReadRejectedChartNonNegativeIndexValues(labels, "dLbl"),
                 ReadChartDataLabelOverrides(labels, theme, colorMap),
                 isDefined: true,
-                isDeleted: isDeleted,
-                isDeletedValue: isDeletedValue);
+                isDeleted: ReadOptionalChartBoolean(labels, "delete"));
     }
 
     private static PptxSceneChartLeaderLines ReadChartLeaderLines(XElement labels, PptxTheme theme, PptxColorMap colorMap)
@@ -233,33 +208,17 @@ internal sealed partial class PptxSceneBuilder
             }
 
             PptxSceneChartNumberFormat numberFormat = ReadChartNumberFormat(label);
-            (bool? isDeleted, string isDeletedValue) = ReadOptionalOoxmlBooleanElementWithValue(label, "delete");
-            (bool? showValue, string showValueValue) = ReadOptionalOoxmlBooleanElementWithValue(label, "showVal");
-            (bool? showPercent, string showPercentValue) = ReadOptionalOoxmlBooleanElementWithValue(label, "showPercent");
-            (bool? showCategoryName, string showCategoryNameValue) = ReadOptionalOoxmlBooleanElementWithValue(label, "showCatName");
-            (bool? showSeriesName, string showSeriesNameValue) = ReadOptionalOoxmlBooleanElementWithValue(label, "showSerName");
-            (bool? showLeaderLines, string showLeaderLinesValue) = ReadOptionalOoxmlBooleanElementWithValue(label, "showLeaderLines");
-            (bool? showLegendKey, string showLegendKeyValue) = ReadOptionalOoxmlBooleanElementWithValue(label, "showLegendKey");
-            (bool? showBubbleSize, string showBubbleSizeValue) = ReadOptionalOoxmlBooleanElementWithValue(label, "showBubbleSize");
             overrides.Add(new PptxSceneChartDataLabelOverride(
                 index,
                 indexValue,
-                isDeleted,
-                isDeletedValue,
-                showValue,
-                showValueValue,
-                showPercent,
-                showPercentValue,
-                showCategoryName,
-                showCategoryNameValue,
-                showSeriesName,
-                showSeriesNameValue,
-                showLeaderLines,
-                showLeaderLinesValue,
-                showLegendKey,
-                showLegendKeyValue,
-                showBubbleSize,
-                showBubbleSizeValue,
+                ReadOptionalChartBoolean(label, "delete"),
+                ReadOptionalChartBoolean(label, "showVal"),
+                ReadOptionalChartBoolean(label, "showPercent"),
+                ReadOptionalChartBoolean(label, "showCatName"),
+                ReadOptionalChartBoolean(label, "showSerName"),
+                ReadOptionalChartBoolean(label, "showLeaderLines"),
+                ReadOptionalChartBoolean(label, "showLegendKey"),
+                ReadOptionalChartBoolean(label, "showBubbleSize"),
                 ReadChartLeaderLines(label, theme, colorMap),
                 ReadChartText(label.Element(ChartNamespace + "tx"), false) ?? string.Empty,
                 ReadChartTextRuns(label.Element(ChartNamespace + "tx"), theme, colorMap),
@@ -399,14 +358,6 @@ internal sealed partial class PptxSceneBuilder
             : (null, value);
     }
 
-    internal static (bool? Value, string RawValue) ReadChartPlotVaryColors(XElement plot)
-    {
-        XElement? varyColors = plot.Element(ChartNamespace + "varyColors");
-        return varyColors is null
-            ? (null, string.Empty)
-            : (IsOoxmlBooleanElementEnabled(varyColors, defaultValue: true), (string?)varyColors.Attribute("val") ?? string.Empty);
-    }
-
     private static IReadOnlyList<PptxSceneChartAxis> ReadChartAxes(XDocument? chartXml, PptxTheme theme, PptxColorMap colorMap, PptxSceneChartStyle stylePart, IReadOnlyList<PptxSceneChartPlot> plots)
     {
         XElement? plotArea = chartXml?
@@ -457,7 +408,7 @@ internal sealed partial class PptxSceneBuilder
             double? minorUnit = ReadChartAxisUnitValueWithValue(axis, "minorUnit").Value;
             int? labelOffset = ReadChartElementIntWithValue(axis, "lblOffset").Value;
             (int? tickLabelSkip, string tickLabelSkipValue) = ReadChartElementIntWithValue(axis, "tickLblSkip");
-            bool? isDeleted = ReadOptionalOoxmlBooleanElementWithValue(axis, "delete").Value;
+            bool? isDeleted = ReadOptionalChartBoolean(axis, "delete");
             XElement? majorGridlines = axis.Element(ChartNamespace + "majorGridlines");
             XElement? minorGridlines = axis.Element(ChartNamespace + "minorGridlines");
             bool hasLogarithmicScale = axis.Element(ChartNamespace + "scaling")?.Element(ChartNamespace + "logBase") is not null;

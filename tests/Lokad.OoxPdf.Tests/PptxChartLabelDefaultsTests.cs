@@ -33,16 +33,14 @@ internal static partial class PptxChartLabelDefaultsTests
             TestAssert.Equal(defined, chart.Plots[0].DataLabels.IsDefined);
         }
         foreach (var component in Components)
-        foreach (string value in new[] { "0", "false", "1", "" })
+        foreach (string value in new[] { "0", "false", "1", "", "unknown" })
         {
             string attribute = value.Length == 0 ? "" : $" val=\"{value}\"";
             var (chart, plot) = Source($"<c:dLbls><c:{component.Element}{attribute}/></c:dLbls>");
             object options = Read(chart);
             foreach (var other in Components)
-                TestAssert.Equal(other == component ? value is not ("0" or "false") : true, Flag(options, other.Property));
-            object raw = PptxTests.ChartDataLabelFlagOption(options, component.Element);
-            TestAssert.True(PptxTests.ChartBooleanOptionIsDefined(raw), "Explicit flags retain source presence.");
-            TestAssert.Equal(value, PptxTests.ChartBooleanOptionRawValue(raw));
+                TestAssert.Equal(other == component ? value is "1" or "" : true, Flag(options, other.Property));
+            TestAssert.Equal(value is "1" or "", SourceFlag(chart.Plots[0].DataLabels, component.Property));
         }
     }
 
@@ -80,6 +78,23 @@ internal static partial class PptxChartLabelDefaultsTests
             object perSeries = Invoke("ReadSceneSeriesDataLabelOptions", chart, chart.Plots[0]);
             object merged = Invoke("ResolveChartDataLabelOptionsForSeries", options, perSeries, 0);
             TestAssert.Equal(!deleted, Flag(merged, "HasVisibleContent"));
+        }
+
+        foreach ((string Series, string Point, bool WantsSeries, bool WantsPoint) example in new[]
+        {
+            ("", "", true, true),
+            ("<c:showLeaderLines val=\"0\"/>", "", false, false),
+            ("<c:showLeaderLines val=\"0\"/>", "<c:showLeaderLines/>", false, true),
+            ("", "<c:showLeaderLines val=\"0\"/>", true, false)
+        })
+        {
+            var (chart, _) = Source("<c:dLbls><c:showLeaderLines/></c:dLbls>",
+                $"<c:dLbls><c:dLbl><c:idx val=\"0\"/>{example.Point}</c:dLbl>{example.Series}</c:dLbls>");
+            var plot = chart.Plots[0];
+            object seriesOptions = Invoke("ReadSceneSeriesDataLabelOptions", chart, plot);
+            object merged = Invoke("ResolveChartDataLabelOptionsForSeries", Read(chart), seriesOptions, 0);
+            TestAssert.Equal(example.WantsSeries, Flag(merged, "ShowLeaderLines"));
+            TestAssert.Equal(example.WantsPoint, Flag(Invoke("ResolveChartDataLabelOptions", merged, 0), "ShowLeaderLines"));
         }
     }
 
@@ -219,6 +234,9 @@ internal static partial class PptxChartLabelDefaultsTests
 
     private static object Invoke(string name, params object?[] arguments)
         => typeof(PptxRenderer).GetMethod(name, BindingFlags.NonPublic | BindingFlags.Static)!.Invoke(null, arguments)!;
+
+    private static bool? SourceFlag(object source, string property) =>
+        (bool?)source.GetType().GetProperty(property)!.GetValue(source);
 
     private static bool Flag(object value, string name) => (bool)value.GetType().GetProperty(name)!.GetValue(value)!;
 }

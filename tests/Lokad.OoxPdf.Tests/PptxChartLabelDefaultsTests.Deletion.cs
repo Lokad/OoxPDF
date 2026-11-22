@@ -4,15 +4,14 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class PptxChartLabelDefaultsTests
 {
-    public static void PptxLabelSetDeletionKeepsRawStateAndDefinedChildDefaults()
+    public static void PptxLabelSetDeletionKeepsDefinedChildDefaults()
     {
-        foreach (string? raw in new string?[] { null, "", "1", "true", "0", "false" })
+        foreach (string? raw in new string?[] { null, "", "1", "true", "0", "false", "unknown" })
         {
             string deletion = raw is null ? "" : raw.Length == 0 ? "<c:delete/>" : $"<c:delete val=\"{raw}\"/>";
             var (chart, plot) = Source("<c:dLbls>" + deletion + "</c:dLbls>");
-            bool? expected = raw is null ? null : raw is not ("0" or "false");
+            bool? expected = raw is null ? null : raw is "" or "1" or "true";
             TestAssert.Equal(expected, chart.Plots[0].DataLabels.IsDeleted);
-            TestAssert.Equal(raw ?? "", chart.Plots[0].DataLabels.IsDeletedValue);
             TestAssert.Equal(null, chart.Plots[0].DataLabels.ShowValue);
             TestAssert.Equal(expected != true, Flag(Invoke("ResolveChartDataLabelOptions", Read(chart), 1), "HasVisibleContent"));
         }

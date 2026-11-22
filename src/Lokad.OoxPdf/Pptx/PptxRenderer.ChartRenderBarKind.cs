@@ -77,7 +77,7 @@ internal sealed partial class PptxRenderer
                 IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills = ReadSceneSeriesPointFills(barPlot);
                 IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes = ReadSceneSeriesPointStrokes(barPlot);
                 bool categoryLegend = barSeriesVectors.Count == 1 && sceneChart.Plots.Sum(plot => plot.Series.Count) == 1 &&
-                    (barOptions.VaryColors.Value || barPlot.Series.FirstOrDefault()?.PointStyles.Any(point => point.HasShapeProperties) == true);
+                    (barOptions.VaryColors || barPlot.Series.FirstOrDefault()?.PointStyles.Any(point => point.HasShapeProperties) == true);
                 IReadOnlySet<int>? deletedEntries = categoryLegend ? null : ResolveBarSeriesLegendDeletions(sceneChart, barPlot);
                 var legendEntries = new List<ChartLegendEntry>(categoryLegend
                     ? BuildBarCategoryLegendEntries(theme, colorMap, barPalette, barPlot, barSeriesVectors[0], barOptions, seriesFills, seriesStrokes, pointFills, pointStrokes, workbook, plotVisibleOnly)

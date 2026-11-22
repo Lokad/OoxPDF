@@ -942,7 +942,6 @@ internal static class PptxChartAxesTests
         TestAssert.Equal(PptxSceneChartGrouping.Unknown, plot.GroupingKind);
         TestAssert.Equal(PptxSceneChartBarDirection.Unknown, plot.BarDirectionKind);
         TestAssert.True(plot.VaryColors is null, "Expected missing varyColors metadata to remain distinct from the effective renderer default.");
-        TestAssert.Equal(string.Empty, plot.VaryColorsValue);
         TestAssert.Equal(null, plot.GapWidth);
         TestAssert.Equal(null, plot.Overlap);
 
@@ -955,10 +954,8 @@ internal static class PptxChartAxesTests
 
         TestAssert.Equal(PptxSceneChartGrouping.Clustered, (PptxSceneChartGrouping)(optionsType.GetProperty("Grouping")?.GetValue(options) ?? default(PptxSceneChartGrouping)));
         TestAssert.Equal(PptxSceneChartBarDirection.Column, (PptxSceneChartBarDirection)(optionsType.GetProperty("BarDirection")?.GetValue(options) ?? default(PptxSceneChartBarDirection)));
-        object varyColors = optionsType.GetProperty("VaryColors")?.GetValue(options) ?? throw new InvalidOperationException("Expected varyColors option.");
-        TestAssert.True(PptxTests.ChartBooleanOptionValue(varyColors), "Expected missing effective scene varyColors to use the scene default, not the XML fallback.");
-        TestAssert.True(!PptxTests.ChartBooleanOptionIsDefined(varyColors), "Expected missing scene varyColors state to remain distinguishable from an explicit true token.");
-        TestAssert.Equal(string.Empty, PptxTests.ChartBooleanOptionRawValue(varyColors));
+        TestAssert.True((bool)optionsType.GetProperty("VaryColors")!.GetValue(options)!,
+            "The renderer uses the default for a missing scene declaration.");
         TestAssert.Equal(150d, (double)(optionsType.GetProperty("GapWidth")?.GetValue(options) ?? double.NaN));
         TestAssert.Equal(0d, (double)(optionsType.GetProperty("Overlap")?.GetValue(options) ?? double.NaN));
     }
@@ -1356,88 +1353,7 @@ internal static class PptxChartAxesTests
         TestAssert.True(!PptxTests.ChartBooleanOptionIsDefined(smoothSeries[0]), "Expected missing scene scatter smooth state to remain distinguishable from an explicit false token.");
     }
 
-    public static void PptxChartSmoothOptionsPreserveRawBooleanState()
-    {
-        XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
-        XElement chartElement = XDocument.Parse("""
-            <?xml version="1.0" encoding="UTF-8"?>
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
-              <c:chart><c:plotArea><c:scatterChart>
-                <c:scatterStyle val="lineMarker"/>
-                <c:ser><c:smooth/></c:ser>
-                <c:ser><c:smooth val="0"/></c:ser>
-                <c:ser/>
-              </c:scatterChart></c:plotArea></c:chart>
-            </c:chartSpace>
-            """).Descendants(c + "scatterChart").Single();
-        System.Reflection.MethodInfo readOptions = typeof(PptxRenderer).GetMethod(
-            "ReadSceneChartScatterOptions",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart scatter-option resolver.");
-        object options = readOptions.Invoke(null, [TestAssert.NotNull(PptxTests.BuildSingleChartScene(chartElement.Document!.ToString())).Plots[0]]) ?? throw new InvalidOperationException("Expected resolved scatter options.");
-        Type optionsType = options.GetType();
-        object[] smoothSeries = (((System.Collections.IEnumerable?)optionsType.GetProperty("SmoothSeries")?.GetValue(options)) ?? throw new InvalidOperationException("Expected smooth series options.")).Cast<object>().ToArray();
-
-        TestAssert.Equal(3, smoothSeries.Length);
-        TestAssert.True(PptxTests.ChartBooleanOptionValue(smoothSeries[0]), "Expected shorthand smooth element to resolve through the shared OOXML boolean parser.");
-        TestAssert.True(PptxTests.ChartBooleanOptionIsDefined(smoothSeries[0]), "Expected shorthand smooth element presence to remain explicit.");
-        TestAssert.Equal(string.Empty, PptxTests.ChartBooleanOptionRawValue(smoothSeries[0]));
-        TestAssert.True(!PptxTests.ChartBooleanOptionValue(smoothSeries[1]), "Expected explicit smooth=0 to resolve false.");
-        TestAssert.True(PptxTests.ChartBooleanOptionIsDefined(smoothSeries[1]), "Expected explicit smooth=0 presence to remain explicit.");
-        TestAssert.Equal("0", PptxTests.ChartBooleanOptionRawValue(smoothSeries[1]));
-        TestAssert.True(PptxTests.ChartBooleanOptionValue(smoothSeries[2]), "Expected missing scatter smooth element to use Office's true default.");
-        TestAssert.True(!PptxTests.ChartBooleanOptionIsDefined(smoothSeries[2]), "Expected missing smooth element to remain distinct from explicit false.");
-        TestAssert.Equal(string.Empty, PptxTests.ChartBooleanOptionRawValue(smoothSeries[2]));
-    }
-
-    public static void PptxChartVaryColorsOptionsPreserveRawBooleanState()
-    {
-        XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
-        System.Reflection.MethodInfo readOptions = typeof(PptxRenderer).GetMethod(
-            "ReadSceneChartBarOptions",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart bar-option resolver.");
-
-        object shorthand = ReadBarOptions("""
-            <?xml version="1.0" encoding="UTF-8"?>
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
-              <c:chart><c:plotArea><c:barChart><c:varyColors/></c:barChart></c:plotArea></c:chart>
-            </c:chartSpace>
-            """);
-        object explicitFalse = ReadBarOptions("""
-            <?xml version="1.0" encoding="UTF-8"?>
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
-              <c:chart><c:plotArea><c:barChart><c:varyColors val="0"/></c:barChart></c:plotArea></c:chart>
-            </c:chartSpace>
-            """);
-        object missing = ReadBarOptions("""
-            <?xml version="1.0" encoding="UTF-8"?>
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
-              <c:chart><c:plotArea><c:barChart/></c:plotArea></c:chart>
-            </c:chartSpace>
-            """);
-
-        object shorthandVaryColors = shorthand.GetType().GetProperty("VaryColors")?.GetValue(shorthand) ?? throw new InvalidOperationException("Expected shorthand varyColors option.");
-        TestAssert.True(PptxTests.ChartBooleanOptionValue(shorthandVaryColors), "Expected shorthand varyColors element to resolve through the shared OOXML boolean parser.");
-        TestAssert.True(PptxTests.ChartBooleanOptionIsDefined(shorthandVaryColors), "Expected shorthand varyColors element presence to remain explicit.");
-        TestAssert.Equal(string.Empty, PptxTests.ChartBooleanOptionRawValue(shorthandVaryColors));
-
-        object explicitFalseVaryColors = explicitFalse.GetType().GetProperty("VaryColors")?.GetValue(explicitFalse) ?? throw new InvalidOperationException("Expected explicit false varyColors option.");
-        TestAssert.True(!PptxTests.ChartBooleanOptionValue(explicitFalseVaryColors), "Expected explicit varyColors=0 to resolve false.");
-        TestAssert.True(PptxTests.ChartBooleanOptionIsDefined(explicitFalseVaryColors), "Expected explicit varyColors=0 presence to remain explicit.");
-        TestAssert.Equal("0", PptxTests.ChartBooleanOptionRawValue(explicitFalseVaryColors));
-
-        object missingVaryColors = missing.GetType().GetProperty("VaryColors")?.GetValue(missing) ?? throw new InvalidOperationException("Expected missing varyColors option.");
-        TestAssert.True(PptxTests.ChartBooleanOptionValue(missingVaryColors), "Expected missing varyColors element to use the renderer default true.");
-        TestAssert.True(!PptxTests.ChartBooleanOptionIsDefined(missingVaryColors), "Expected missing varyColors element to remain distinct from explicit true.");
-        TestAssert.Equal(string.Empty, PptxTests.ChartBooleanOptionRawValue(missingVaryColors));
-
-        object ReadBarOptions(string xml)
-        {
-            var source = TestAssert.NotNull(PptxTests.BuildSingleChartScene(xml)).Plots[0];
-            return readOptions.Invoke(null, [source, PptxSceneChartGrouping.Clustered]) ?? throw new InvalidOperationException("Expected resolved bar options.");
-        }
-    }
-
-    public static void PptxChartDataLabelOptionsPreserveRawBooleanState()
+    public static void PptxChartDataLabelOptionsPreserveSourcePrecedence()
     {
         PptxSceneChart chart = PptxTests.BuildSingleChartScene("""
             <?xml version="1.0" encoding="UTF-8"?>
@@ -1479,17 +1395,11 @@ internal static class PptxChartAxesTests
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected series data-label merge resolver.");
         object sceneOptions = readOptions.Invoke(null, [chart, plot]) ?? throw new InvalidOperationException("Expected scene-backed label options.");
 
-        object sceneShowValue = PptxTests.ChartDataLabelFlagOption(sceneOptions, "showVal");
-        TestAssert.True(PptxTests.ChartBooleanOptionValue(sceneShowValue), "Expected scene-backed shorthand showVal to resolve true.");
-        TestAssert.True(PptxTests.ChartBooleanOptionIsDefined(sceneShowValue), "Expected scene-backed shorthand showVal presence to remain explicit.");
-        TestAssert.Equal(string.Empty, PptxTests.ChartBooleanOptionRawValue(sceneShowValue));
-        object sceneShowPercent = PptxTests.ChartDataLabelFlagOption(sceneOptions, "showPercent");
-        TestAssert.True(!PptxTests.ChartBooleanOptionValue(sceneShowPercent), "Expected scene-backed showPercent=0 to resolve false.");
-        TestAssert.True(PptxTests.ChartBooleanOptionIsDefined(sceneShowPercent), "Expected scene-backed showPercent=0 presence to remain explicit.");
-        TestAssert.Equal("0", PptxTests.ChartBooleanOptionRawValue(sceneShowPercent));
-        object sceneShowLegendKey = PptxTests.ChartDataLabelFlagOption(sceneOptions, "showLegendKey");
-        TestAssert.True(!PptxTests.ChartBooleanOptionValue(sceneShowLegendKey), "Expected absent scene showLegendKey to keep its raw source value, preserve its parsed owner.");
-        TestAssert.True(!PptxTests.ChartBooleanOptionIsDefined(sceneShowLegendKey), "Expected missing scene showLegendKey to remain distinct from explicit false.");
+        TestAssert.Equal(true, plot.DataLabels.ShowValue);
+        TestAssert.Equal(false, plot.DataLabels.ShowPercent);
+        TestAssert.Equal(null, plot.DataLabels.ShowLegendKey);
+        TestAssert.True(LabelFlag(sceneOptions, "ShowValue") && !LabelFlag(sceneOptions, "ShowPercent") &&
+            LabelFlag(sceneOptions, "ShowLegendKey"), "The plot supplies defaults for absent components.");
         object sceneLeaderLines = PptxTests.ChartDataLabelLeaderLines(sceneOptions);
         TestAssert.True(PptxTests.ChartDataLabelLeaderLinesIsDefined(sceneLeaderLines), "Expected scene-backed data-label leader-line source to remain defined.");
         TestAssert.Equal(new RgbColor(17, 34, 51), PptxTests.ChartSeriesStrokeColor(PptxTests.ChartDataLabelLeaderLinesStroke(sceneLeaderLines)));
@@ -1498,13 +1408,9 @@ internal static class PptxChartAxesTests
         TestAssert.Equal(60d, PptxTests.ChartTextBodyRotationDegrees(sceneBody) ?? 0d);
         TestAssert.Equal("3600000", PptxTests.ChartTextBodyRotationValue(sceneBody));
         object sceneOverride = PptxTests.ChartDataLabelOverride(sceneOptions, 0);
-        object sceneOverrideShowValue = PptxTests.ChartDataLabelFlagOption(sceneOverride, "showVal");
-        TestAssert.True(!PptxTests.ChartBooleanOptionValue(sceneOverrideShowValue), "Expected scene-backed override showVal=0 to resolve false.");
-        TestAssert.True(PptxTests.ChartBooleanOptionIsDefined(sceneOverrideShowValue), "Expected scene-backed override showVal=0 presence to remain explicit.");
-        TestAssert.Equal("0", PptxTests.ChartBooleanOptionRawValue(sceneOverrideShowValue));
-        object sceneOverrideShowLegendKey = PptxTests.ChartDataLabelFlagOption(sceneOverride, "showLegendKey");
-        TestAssert.True(PptxTests.ChartBooleanOptionValue(sceneOverrideShowLegendKey), "Expected scene-backed override shorthand showLegendKey to resolve true.");
-        TestAssert.True(PptxTests.ChartBooleanOptionIsDefined(sceneOverrideShowLegendKey), "Expected scene-backed override shorthand showLegendKey presence to remain explicit.");
+        var scenePoint = plot.DataLabels.Overrides[0];
+        TestAssert.Equal(false, scenePoint.ShowValue);
+        TestAssert.Equal(true, scenePoint.ShowLegendKey);
         object sceneOverrideLeaderLines = PptxTests.ChartDataLabelLeaderLines(sceneOverride);
         TestAssert.True(PptxTests.ChartDataLabelLeaderLinesIsDefined(sceneOverrideLeaderLines), "Expected scene-backed data-label override leader-line source to remain defined.");
         TestAssert.Equal(new RgbColor(68, 85, 102), PptxTests.ChartSeriesStrokeColor(PptxTests.ChartDataLabelLeaderLinesStroke(sceneOverrideLeaderLines)));
@@ -1513,15 +1419,9 @@ internal static class PptxChartAxesTests
         TestAssert.Equal(-20d, PptxTests.ChartTextBodyRotationDegrees(sceneOverrideBody) ?? 0d);
         TestAssert.Equal("-1200000", PptxTests.ChartTextBodyRotationValue(sceneOverrideBody));
         object resolvedSceneOptions = resolveOptions.Invoke(null, [sceneOptions, 0]) ?? throw new InvalidOperationException("Expected resolved scene-backed label options.");
-        object resolvedSceneShowValue = PptxTests.ChartDataLabelFlagOption(resolvedSceneOptions, "showVal");
-        TestAssert.True(!PptxTests.ChartBooleanOptionValue(resolvedSceneShowValue), "Expected resolved scene-backed override showVal=0 to replace base shorthand showVal.");
-        TestAssert.True(PptxTests.ChartBooleanOptionIsDefined(resolvedSceneShowValue), "Expected resolved scene-backed override showVal=0 presence to remain explicit.");
-        TestAssert.Equal("0", PptxTests.ChartBooleanOptionRawValue(resolvedSceneShowValue));
-        object resolvedSceneShowPercent = PptxTests.ChartDataLabelFlagOption(resolvedSceneOptions, "showPercent");
-        TestAssert.True(!PptxTests.ChartBooleanOptionValue(resolvedSceneShowPercent), "Missing point showPercent retains its raw source value.");
-        TestAssert.True(!PptxTests.ChartBooleanOptionIsDefined(resolvedSceneShowPercent), "A parent explicit false does not become a present point flag.");
-        TestAssert.True((bool)resolvedSceneOptions.GetType().GetProperty("ShowPercent")!.GetValue(resolvedSceneOptions)!,
-            "The defined point supplies its own enabled percentage default.");
+        TestAssert.Equal(null, scenePoint.ShowPercent);
+        TestAssert.True(!LabelFlag(resolvedSceneOptions, "ShowValue") && LabelFlag(resolvedSceneOptions, "ShowPercent"),
+            "The point uses its explicit false and its absent-component default.");
         object resolvedSceneLeaderLines = PptxTests.ChartDataLabelLeaderLines(resolvedSceneOptions);
         TestAssert.True(PptxTests.ChartDataLabelLeaderLinesIsDefined(resolvedSceneLeaderLines), "Expected resolved scene-backed leader-line source to remain defined.");
         TestAssert.Equal(new RgbColor(68, 85, 102), PptxTests.ChartSeriesStrokeColor(PptxTests.ChartDataLabelLeaderLinesStroke(resolvedSceneLeaderLines)));
@@ -1532,14 +1432,9 @@ internal static class PptxChartAxesTests
 
         PptxSceneChart alternateChart = PptxTests.BuildSingleChartScene(alternateSource.Document!.ToString())!;
         object xmlOptions = readOptions.Invoke(null, [alternateChart, alternateChart.Plots[0]]) ?? throw new InvalidOperationException("Expected XML-backed label options.");
-        object xmlShowValue = PptxTests.ChartDataLabelFlagOption(xmlOptions, "showVal");
-        TestAssert.True(!PptxTests.ChartBooleanOptionValue(xmlShowValue), "Expected XML showVal=0 to resolve false.");
-        TestAssert.True(PptxTests.ChartBooleanOptionIsDefined(xmlShowValue), "Expected XML showVal=0 presence to remain explicit.");
-        TestAssert.Equal("0", PptxTests.ChartBooleanOptionRawValue(xmlShowValue));
-        object xmlShowLegendKey = PptxTests.ChartDataLabelFlagOption(xmlOptions, "showLegendKey");
-        TestAssert.True(PptxTests.ChartBooleanOptionValue(xmlShowLegendKey), "Expected XML showLegendKey=1 to resolve true.");
-        TestAssert.True(PptxTests.ChartBooleanOptionIsDefined(xmlShowLegendKey), "Expected XML showLegendKey=1 presence to remain explicit.");
-        TestAssert.Equal("1", PptxTests.ChartBooleanOptionRawValue(xmlShowLegendKey));
+        var alternateLabels = alternateChart.Plots[0].DataLabels;
+        TestAssert.Equal(false, alternateLabels.ShowValue);
+        TestAssert.Equal(true, alternateLabels.ShowLegendKey);
         object xmlLeaderLines = PptxTests.ChartDataLabelLeaderLines(xmlOptions);
         TestAssert.True(PptxTests.ChartDataLabelLeaderLinesIsDefined(xmlLeaderLines), "Expected XML-backed data-label leader-line source to remain defined.");
         TestAssert.Equal(new RgbColor(171, 205, 239), PptxTests.ChartSeriesStrokeColor(PptxTests.ChartDataLabelLeaderLinesStroke(xmlLeaderLines)));
@@ -1548,13 +1443,8 @@ internal static class PptxChartAxesTests
         TestAssert.Equal(10d, PptxTests.ChartTextBodyRotationDegrees(xmlBody) ?? 0d);
         TestAssert.Equal("600000", PptxTests.ChartTextBodyRotationValue(xmlBody));
         object xmlOverride = PptxTests.ChartDataLabelOverride(xmlOptions, 0);
-        object xmlOverrideShowValue = PptxTests.ChartDataLabelFlagOption(xmlOverride, "showVal");
-        TestAssert.True(PptxTests.ChartBooleanOptionValue(xmlOverrideShowValue), "Expected XML override shorthand showVal to resolve true.");
-        TestAssert.True(PptxTests.ChartBooleanOptionIsDefined(xmlOverrideShowValue), "Expected XML override shorthand showVal presence to remain explicit.");
-        object xmlOverrideShowLegendKey = PptxTests.ChartDataLabelFlagOption(xmlOverride, "showLegendKey");
-        TestAssert.True(!PptxTests.ChartBooleanOptionValue(xmlOverrideShowLegendKey), "Expected XML override showLegendKey=0 to resolve false.");
-        TestAssert.True(PptxTests.ChartBooleanOptionIsDefined(xmlOverrideShowLegendKey), "Expected XML override showLegendKey=0 presence to remain explicit.");
-        TestAssert.Equal("0", PptxTests.ChartBooleanOptionRawValue(xmlOverrideShowLegendKey));
+        TestAssert.Equal(true, alternateLabels.Overrides[0].ShowValue);
+        TestAssert.Equal(false, alternateLabels.Overrides[0].ShowLegendKey);
         object xmlOverrideLeaderLines = PptxTests.ChartDataLabelLeaderLines(xmlOverride);
         TestAssert.True(PptxTests.ChartDataLabelLeaderLinesIsDefined(xmlOverrideLeaderLines), "Expected XML-backed data-label override leader-line source to remain defined.");
         TestAssert.Equal(new RgbColor(254, 220, 186), PptxTests.ChartSeriesStrokeColor(PptxTests.ChartDataLabelLeaderLinesStroke(xmlOverrideLeaderLines)));
@@ -1563,10 +1453,8 @@ internal static class PptxChartAxesTests
         TestAssert.Equal(40d, PptxTests.ChartTextBodyRotationDegrees(xmlOverrideBody) ?? 0d);
         TestAssert.Equal("2400000", PptxTests.ChartTextBodyRotationValue(xmlOverrideBody));
         object resolvedXmlOptions = resolveOptions.Invoke(null, [xmlOptions, 0]) ?? throw new InvalidOperationException("Expected resolved XML-backed label options.");
-        object resolvedXmlShowLegendKey = PptxTests.ChartDataLabelFlagOption(resolvedXmlOptions, "showLegendKey");
-        TestAssert.True(!PptxTests.ChartBooleanOptionValue(resolvedXmlShowLegendKey), "Expected resolved XML override showLegendKey=0 to replace base showLegendKey=1.");
-        TestAssert.True(PptxTests.ChartBooleanOptionIsDefined(resolvedXmlShowLegendKey), "Expected resolved XML override showLegendKey=0 presence to remain explicit.");
-        TestAssert.Equal("0", PptxTests.ChartBooleanOptionRawValue(resolvedXmlShowLegendKey));
+        TestAssert.True(LabelFlag(resolvedXmlOptions, "ShowValue") && !LabelFlag(resolvedXmlOptions, "ShowLegendKey"),
+            "The resolved point uses both of its explicit declarations.");
         object resolvedXmlLeaderLines = PptxTests.ChartDataLabelLeaderLines(resolvedXmlOptions);
         TestAssert.True(PptxTests.ChartDataLabelLeaderLinesIsDefined(resolvedXmlLeaderLines), "Expected resolved XML-backed leader-line source to remain defined.");
         TestAssert.Equal(new RgbColor(254, 220, 186), PptxTests.ChartSeriesStrokeColor(PptxTests.ChartDataLabelLeaderLinesStroke(resolvedXmlLeaderLines)));
@@ -1592,18 +1480,15 @@ internal static class PptxChartAxesTests
         object plotOptions = readOptions.Invoke(null, [seriesChart, seriesChart.Plots[0]]) ?? throw new InvalidOperationException("Expected plot label options.");
         object seriesOptions = readSeriesOptions.Invoke(null, [seriesChart, seriesChart.Plots[0]]) ?? throw new InvalidOperationException("Expected series label options.");
         object resolvedSeriesOptions = resolveSeriesOptions.Invoke(null, [plotOptions, seriesOptions, 0]) ?? throw new InvalidOperationException("Expected resolved series label options.");
-        object seriesShowValue = PptxTests.ChartDataLabelFlagOption(resolvedSeriesOptions, "showVal");
-        TestAssert.True(!PptxTests.ChartBooleanOptionValue(seriesShowValue), "Missing series showVal retains its raw source value.");
-        TestAssert.True(!PptxTests.ChartBooleanOptionIsDefined(seriesShowValue), "Missing series showVal remains absent in the active source container.");
-        TestAssert.True((bool)resolvedSeriesOptions.GetType().GetProperty("ShowValue")!.GetValue(resolvedSeriesOptions)!, "The defined series supplies its own enabled value default.");
-        object seriesShowPercent = PptxTests.ChartDataLabelFlagOption(resolvedSeriesOptions, "showPercent");
-        TestAssert.True(!PptxTests.ChartBooleanOptionValue(seriesShowPercent), "Missing series showPercent retains its raw source value.");
-        TestAssert.True(!PptxTests.ChartBooleanOptionIsDefined(seriesShowPercent), "A parent explicit false does not become a present series flag.");
-        TestAssert.True((bool)resolvedSeriesOptions.GetType().GetProperty("ShowPercent")!.GetValue(resolvedSeriesOptions)!, "The defined series supplies its own enabled percentage default.");
-        object seriesShowLegendKey = PptxTests.ChartDataLabelFlagOption(resolvedSeriesOptions, "showLegendKey");
-        TestAssert.True(PptxTests.ChartBooleanOptionValue(seriesShowLegendKey), "Expected series-level showLegendKey to override the plot-level default.");
-        TestAssert.True(PptxTests.ChartBooleanOptionIsDefined(seriesShowLegendKey), "Expected series-level showLegendKey presence to remain explicit.");
+        var seriesLabels = seriesChart.Plots[0].Series[0].DataLabels;
+        TestAssert.Equal(null, seriesLabels.ShowValue);
+        TestAssert.Equal(null, seriesLabels.ShowPercent);
+        TestAssert.Equal(true, seriesLabels.ShowLegendKey);
+        TestAssert.True(LabelFlag(resolvedSeriesOptions, "ShowValue") && LabelFlag(resolvedSeriesOptions, "ShowPercent") &&
+            LabelFlag(resolvedSeriesOptions, "ShowLegendKey"), "The series supplies defaults for its own absent components.");
         TestAssert.Equal("; ", (string?)resolvedSeriesOptions.GetType().GetProperty("Separator")?.GetValue(resolvedSeriesOptions) ?? string.Empty);
+
+        static bool LabelFlag(object value, string property) => (bool)value.GetType().GetProperty(property)!.GetValue(value)!;
     }
 
     public static void PptxChartPolarPointOptionsUseSceneAuthoritativeDefaults()

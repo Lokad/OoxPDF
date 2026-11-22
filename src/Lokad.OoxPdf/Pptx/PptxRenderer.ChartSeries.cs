@@ -671,27 +671,14 @@ internal sealed partial class PptxRenderer
     // RV04: plot-level smooth applies to series without their own smooth element on line
     // charts (COM plot-smooth-only probe smooths every series); series-explicit values win.
     // Scatter keeps the series-only legacy path (plot-level scatter smoothing unprobed).
-    private static IReadOnlyList<ChartBooleanOption> ReadSceneSmoothSeries(PptxSceneChartPlot plot, bool applyPlotFallback, bool defaultValue = false)
+    private static IReadOnlyList<ChartSeriesSmoothing> ReadSceneSmoothSeries(PptxSceneChartPlot plot,
+        bool applyPlotFallback, bool defaultValue = false)
     {
-        (bool? plotSmooth, string plotSmoothValue) = applyPlotFallback
-            ? PptxSceneBuilder.ReadChartSeriesSmooth(plot.Source) : (null, string.Empty);
-        return plot.Series.Select(series => ResolveSmoothOption(
-            series.Smooth, series.SmoothValue, plotSmooth, plotSmoothValue, defaultValue)).ToArray();
-    }
-
-    private static ChartBooleanOption ResolveSmoothOption(bool? seriesSmooth, string seriesSmoothValue, bool? plotSmooth, string plotSmoothValue, bool defaultValue)
-    {
-        if (seriesSmooth is not null)
-        {
-            return new ChartBooleanOption(seriesSmooth.Value, seriesSmoothValue, true);
-        }
-
-        // RV04: plot-inherited smooth options never count as defined (an explicit plot-level
-        // smooth=0 must not veto an explicitly smoothed series; Office smooths every series
-        // with the full package when one series carries smooth=1 under plot smooth=0).
-        // Only series-explicit markup defines the option, so only it keeps straight series
-        // straight under a smoothed plot.
-        return new ChartBooleanOption(plotSmooth ?? defaultValue, plotSmooth is not null ? plotSmoothValue : seriesSmoothValue, false);
+        bool? plotSmooth = applyPlotFallback ? PptxSceneBuilder.ReadOptionalChartBoolean(plot.Source, "smooth") : null;
+        // Only series-explicit markup keeps an individual line straight in a
+        // smoothed plot. A plot fallback affects the value without defining it.
+        return plot.Series.Select(series => new ChartSeriesSmoothing(
+            series.Smooth ?? plotSmooth ?? defaultValue, series.Smooth.HasValue)).ToArray();
     }
 
     private static IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> ReadSceneSeriesPointFills(PptxSceneChartPlot plot) =>

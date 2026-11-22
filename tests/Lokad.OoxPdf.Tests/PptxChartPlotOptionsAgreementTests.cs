@@ -24,9 +24,10 @@ internal static class PptxChartPlotOptionsAgreementTests
         Check("""<c:barDir val="bar"/>""", direction: PptxSceneChartBarDirection.Bar);
         Check("""<c:barDir val="col"/>""");
         Check("""<c:barDir val="bogus"/>""");
-        Check("<c:varyColors/>", variesDefined: true);
-        Check("""<c:varyColors val="0"/>""", varyColors: false, variesDefined: true);
-        Check("""<c:varyColors val="1"/>""", variesDefined: true);
+        Check("<c:varyColors/>", varyColors: true);
+        Check("""<c:varyColors val="bogus"/>""", varyColors: false);
+        Check("""<c:varyColors val="0"/>""", varyColors: false);
+        Check("""<c:varyColors val="1"/>""", varyColors: true);
         Check("""<c:gapWidth val="150"/>""");
         Check("""<c:gapWidth val="999"/>""", gapWidth: 500);
         Check("""<c:gapWidth val="-5"/>""", gapWidth: 0);
@@ -37,21 +38,20 @@ internal static class PptxChartPlotOptionsAgreementTests
             <c:barDir val="bar"/><c:grouping val="stacked"/><c:varyColors val="0"/>
             <c:gapWidth val="999"/><c:overlap val="-150"/>
             """, PptxSceneChartGrouping.Stacked, PptxSceneChartBarDirection.Bar,
-            varyColors: false, variesDefined: true, gapWidth: 500, overlap: -100);
+            varyColors: false, gapWidth: 500, overlap: -100);
 
         static void Check(string xml, PptxSceneChartGrouping grouping = PptxSceneChartGrouping.Standard,
             PptxSceneChartBarDirection direction = PptxSceneChartBarDirection.Column,
-            bool varyColors = true, bool variesDefined = false, double gapWidth = 150, double overlap = 0)
+            bool? varyColors = null, double gapWidth = 150, double overlap = 0)
         {
             PptxSceneChartPlot plot = LoadPlot("barChart", xml);
             object options = Invoke("ReadSceneChartBarOptions", [typeof(PptxSceneChartPlot), typeof(PptxSceneChartGrouping)],
                 [plot, PptxSceneChartGrouping.Standard])!;
             object Value(string name) => options.GetType().GetProperty(name)!.GetValue(options)!;
-            object varies = Value("VaryColors");
             TestAssert.Equal(grouping, (PptxSceneChartGrouping)Value("Grouping"));
             TestAssert.Equal(direction, (PptxSceneChartBarDirection)Value("BarDirection"));
-            TestAssert.Equal(varyColors, PptxTests.ChartBooleanOptionValue(varies));
-            TestAssert.Equal(variesDefined, PptxTests.ChartBooleanOptionIsDefined(varies));
+            TestAssert.Equal(varyColors, plot.VaryColors);
+            TestAssert.Equal(varyColors ?? true, (bool)Value("VaryColors"));
             TestAssert.Equal(gapWidth, (double)Value("GapWidth"));
             TestAssert.Equal(overlap, (double)Value("Overlap"));
         }

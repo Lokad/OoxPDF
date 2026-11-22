@@ -7,7 +7,7 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class PptxChartLabelDefaultsTests
 {
-    public static void PptxActivePlotPointsOwnDefaultsWithoutChangingRawFlags()
+    public static void PptxActivePlotPointsOwnDefaults()
     {
         string fourOff = string.Concat(Components.Where(c => c.Property is not ("ShowPercent" or "ShowBubbleSize"))
             .Select(c => $"<c:{c.Element} val=\"0\"/>"));
@@ -21,22 +21,19 @@ internal static partial class PptxChartLabelDefaultsTests
             foreach (var component in Components)
             {
                 TestAssert.True(Flag(point, component.Property), "An admitted point owns its absent-component defaults.");
-                object raw = PptxTests.ChartDataLabelFlagOption(point, component.Element);
-                TestAssert.True(!PptxTests.ChartBooleanOptionIsDefined(raw), "Default resolution preserves missing source flags.");
+                TestAssert.Equal(null, SourceFlag(chart.Plots[0].DataLabels.Overrides[0], component.Property));
             }
         }
         foreach (var component in Components)
-        foreach (string value in new[] { "0", "false", "1", "" })
+        foreach (string value in new[] { "0", "false", "1", "", "unknown" })
         {
             string attribute = value.Length == 0 ? "" : $" val=\"{value}\"";
             var (chart, plot) = PointDefaultsSource("lineChart", "<c:showVal val=\"0\"/>", $"<c:{component.Element}{attribute}/>");
             object options = Read(chart);
             object point = Invoke("ResolveChartDataLabelOptions", options, 0);
             foreach (var other in Components)
-                TestAssert.Equal(other == component ? value is not ("0" or "false") : true, Flag(point, other.Property));
-            object raw = PptxTests.ChartDataLabelFlagOption(point, component.Element);
-            TestAssert.True(PptxTests.ChartBooleanOptionIsDefined(raw), "An explicit point flag keeps its own source presence.");
-            TestAssert.Equal(value, PptxTests.ChartBooleanOptionRawValue(raw));
+                TestAssert.Equal(other == component ? value is "1" or "" : true, Flag(point, other.Property));
+            TestAssert.Equal(value is "1" or "", SourceFlag(chart.Plots[0].DataLabels.Overrides[0], component.Property));
         }
     }
 

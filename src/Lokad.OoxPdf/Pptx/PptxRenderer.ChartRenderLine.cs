@@ -15,7 +15,7 @@ internal sealed partial class PptxRenderer
     {
         bool stacked = lineOptions.Stacked;
         bool percentStacked = lineOptions.PercentStacked;
-        IReadOnlyList<ChartBooleanOption> smoothSeries = lineOptions.SmoothSeries;
+        IReadOnlyList<ChartSeriesSmoothing> smoothSeries = lineOptions.SmoothSeries;
         bool majorGridlines = valueAxisOptions.MajorGridlines;
         bool minorGridlines = valueAxisOptions.MinorGridlines;
         ChartGridlineStyle gridlineStyle = valueAxisOptions.GridlineStyle;
@@ -880,7 +880,7 @@ internal sealed partial class PptxRenderer
         return new ChartValueExtents(minValue, maxValue);
     }
 
-    private static bool IsSmoothSeries(int seriesIndex, IReadOnlyList<ChartBooleanOption> smoothSeries)
+    private static bool IsSmoothSeries(int seriesIndex, IReadOnlyList<ChartSeriesSmoothing> smoothSeries)
     {
         return seriesIndex < smoothSeries.Count && smoothSeries[seriesIndex].Value;
     }
