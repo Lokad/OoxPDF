@@ -17,14 +17,25 @@ internal static partial class DocxInlineCompositionTests
         {
             var pages = RenderWidowInlineSource(count, content, enabled, mode, counter: false);
             TestAssert.Equal(2, pages.Length);
+            string[] pageText = pages.Select(DocxPageFootnoteNumberingTests.DecodeText).ToArray();
+            int previousPage = 0;
+            int previousOffset = pageText[0].IndexOf("FILLER", StringComparison.Ordinal);
+            TestAssert.True(previousOffset >= 0 && previousOffset == pageText[0].LastIndexOf("FILLER", StringComparison.Ordinal),
+                "The preceding paragraph must paint once on the first page.");
+            TestAssert.DoesNotContain("FILLER", pageText[1]);
+
+            int firstPageLines = count == 3 ? enabled != false ? 0 : 1 : count == 4 && enabled != false ? 2 : 3;
             for (int line = 1; line <= count; line++)
             {
-                int firstPageLines = count == 3 ? enabled != false ? 0 : 1 : count == 4 && enabled != false ? 2 : 3;
-                int expected = line <= firstPageLines ? 0 : 1;
-                int actual = Enumerable.Range(0, pages.Length).Single(index =>
-                    DocxPageFootnoteNumberingTests.DecodeText(pages[index]).Contains("ROW " + line, StringComparison.Ordinal));
-                TestAssert.True(expected == actual,
-                    $"Shared head/tail admission retains row {line}: {count}/{content}/{enabled}/{mode}.");
+                int page = line <= firstPageLines ? 0 : 1;
+                string row = "ROW " + line;
+                int offset = pageText[page].IndexOf(row, StringComparison.Ordinal);
+                TestAssert.True(offset >= 0 && offset == pageText[page].LastIndexOf(row, StringComparison.Ordinal)
+                    && (page > previousPage || offset > previousOffset),
+                    $"Head/tail admission paints row {line} once and in order on page {page + 1}: {count}/{content}/{enabled}/{mode}.");
+                TestAssert.DoesNotContain(row, pageText[1 - page]);
+                previousPage = page;
+                previousOffset = offset;
             }
             if (content is "picture" or "mixed")
                 TestAssert.Equal(1, pages.Sum(page => Regex.Matches(page.Content, @"/\w+\s+Do\b").Count));

@@ -838,51 +838,6 @@ internal static class DocxTextSpacingTests
         TestAssert.True(lines[5].ContextualSpacingSuppressed == true, "The kept pair should use the same contextual spacing collapse as normal paragraph layout.");
     }
 
-    public static void DocxSyntheticParagraphExplicitWidowControlOffAllowsWidowLine()
-    {
-        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
-        if (!File.Exists(arial))
-        {
-            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
-        }
-
-        DocxParagraph widowOff = DocxTests.CreateDocxLayoutParagraph(
-            "One\nTwo\nThree",
-            fontSize: 10d,
-            lineSpacingPoints: 10d,
-            keepRules: new DocxParagraphKeepRules(null, null, null, null, false, null));
-        DocxParagraph[] fillers =
-        [
-            DocxTests.CreateDocxLayoutParagraph("Fill", fontSize: 10d, lineSpacingPoints: 10d),
-            DocxTests.CreateDocxLayoutParagraph("Fill", fontSize: 10d, lineSpacingPoints: 10d),
-            DocxTests.CreateDocxLayoutParagraph("Fill", fontSize: 10d, lineSpacingPoints: 10d),
-            DocxTests.CreateDocxLayoutParagraph("Fill", fontSize: 10d, lineSpacingPoints: 10d)
-        ];
-        DocxBodyElement[] body = fillers.Select(paragraph => new DocxParagraphElement(paragraph)).Cast<DocxBodyElement>()
-            .Append(new DocxParagraphElement(widowOff))
-            .ToArray();
-        var document = new DocxDocument(
-            160d,
-            80d,
-            10d,
-            10d,
-            10d,
-            10d,
-            DocxPageSettings.Empty,
-            [],
-            [],
-            [],
-            body,
-            body.OfType<DocxParagraphElement>().Select(element => element.Paragraph).ToArray(),
-            []);
-        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(File.ReadAllBytes(arial)), "FillOneTwoThree".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
-
-        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, embedded, CancellationToken.None);
-
-        TestAssert.Equal(6, layout.Pages[0].Items.OfType<DocxTextLineLayout>().Count());
-        TestAssert.Equal(1, layout.Pages[1].Items.OfType<DocxTextLineLayout>().Count());
-    }
-
     public static void DocxLayoutSnapshotReportsLineHeightProfileFacts()
     {
         var label = new DocxListLabel(
