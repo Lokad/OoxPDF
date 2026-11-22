@@ -2390,7 +2390,8 @@ internal static partial class PptxImagesTests
     public static void PptxSvgLinearGradientStrokeBindsPatternsInsideNestedIsolation()
     {
         const string path = "<path d=\"M10 5H90V45H10Z\" fill=\"none\" stroke=\"url(#s)\" stroke-width=\"4\"/>";
-        string svg = LinearStrokeSvg(LinearStrokeStops, rootAttrs: "opacity=\".5\"", body: "<g opacity=\".5\">" + path + "</g>");
+        string svg = LinearStrokeSvg(LinearStrokeStops, rootAttrs: "opacity=\".5\"",
+            body: "<g opacity=\".5\" style=\"fill:red\">" + path + "</g>");
         var diagnostics = new List<OoxPdfDiagnostic>();
         string pdf = Encoding.ASCII.GetString(RenderSvgOpacityTest(svg, diagnostics));
         TestAssert.Equal(2, System.Text.RegularExpressions.Regex.Matches(pdf, "/Subtype /Form").Count);
@@ -2471,6 +2472,7 @@ internal static partial class PptxImagesTests
         };
         string path = "<path d=\"M10 5H90V45H10Z\" fill=\"none\" stroke=\"url(#s)\" stroke-width=\"4\"/>";
         excluded.Add(LinearStrokeSvg(LinearStrokeStops, body: "<svg>" + path + "</svg>"));
+        excluded.Add(LinearStrokeSvg(LinearStrokeStops, body: "<g opacity=\"1\" style=\"opacity:.5\">" + path + "</g>"));
         excluded.Add(LinearStrokeSvg(LinearStrokeStops, body: string.Concat(Enumerable.Repeat("<g opacity=\".5\">", 33)) + path + string.Concat(Enumerable.Repeat("</g>", 33))));
         string tooMany = string.Concat(Enumerable.Range(0, 257).Select(i => "<stop offset=\"" + ((double)i / 256).ToString("R", CultureInfo.InvariantCulture) + "\" stop-color=\"#FF0000\"/>"));
         excluded.Add(LinearStrokeSvg(tooMany));

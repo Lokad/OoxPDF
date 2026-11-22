@@ -168,6 +168,8 @@ internal sealed partial class PptxRenderer
         int vectorEffectStrokes = 0;
         HashSet<string>? usedGradientIds = diagnosticSink is null ? null : new(StringComparer.Ordinal);
         var isolation = new List<(XElement Container, PdfGraphicsBuilder Parent, PdfGraphicsBuilder Child, double Opacity)>();
+        var opacityGroups = new List<(XElement Container, double Opacity)>();
+        bool allowStrokePattern = Math.Abs(bounds.RotationDegrees) <= 0.001d && !bounds.FlipHorizontal && !bounds.FlipVertical;
         var admittedContainers = new HashSet<XElement>();
         var admittedGradientAlpha = new HashSet<string>(StringComparer.Ordinal);
         var fallbackGradientAlpha = new HashSet<string>(StringComparer.Ordinal);
@@ -190,35 +192,26 @@ internal sealed partial class PptxRenderer
             graphics = entry.Parent;
             graphics.DrawTransparencyGroup(entry.Child, new PdfRectangle(imageX, imageY, imageWidth, imageHeight), entry.Opacity);
         }
-        double? ContainerOpacity(XElement container)
-        {
-            double? local = ReadNumericSvgContainerOpacity(container);
-            // Picture opacity composites the complete vector, including overlap
-            // and local alpha. Reuse root isolation without mutating SVG source.
-            return pictureOpacity < 1d && ReferenceEquals(container, svg.Root)
-                ? (local ?? 1d) * pictureOpacity : local;
-        }
         foreach (XElement element in svg.Descendants().Where(candidate => IsSvgPaintableElement(candidate) || candidate.Name.LocalName == "text"))
         {
             cancellationToken.ThrowIfCancellationRequested();
             // RV07-D2: definition descendants supply reusable paint resources;
             // they do not paint into the picture or activate paint diagnostics.
-            if (IsSvgDefinitionElement(element) || IsInFullyTransparentSvgContainer(element) || IsHiddenSvgElement(element))
+            if (IsSvgDefinitionElement(element) || IsHiddenSvgElement(element) ||
+                !TryCollectSvgOpacityGroups(element, pictureOpacity, opacityGroups, out bool strokeContainersQualified))
             {
                 continue;
             }
 
-            XElement[] containers = element.Ancestors().Reverse()
-                .Where(ancestor => ContainerOpacity(ancestor) is > 0d and < 1d)
-                .Take(PdfTransparencyGroup.MaxDepth).ToArray();
             int shared = 0;
-            while (shared < isolation.Count && shared < containers.Length && ReferenceEquals(isolation[shared].Container, containers[shared])) { shared++; }
+            while (shared < isolation.Count && shared < opacityGroups.Count &&
+                ReferenceEquals(isolation[shared].Container, opacityGroups[shared].Container)) { shared++; }
             while (isolation.Count > shared) { CloseGroup(); }
-            for (int i = shared; i < containers.Length; i++)
+            for (int i = shared; i < opacityGroups.Count; i++)
             {
-                XElement container = containers[i];
+                var (container, opacity) = opacityGroups[i];
                 var child = new PdfGraphicsBuilder();
-                isolation.Add((container, graphics, child, ContainerOpacity(container)!.Value));
+                isolation.Add((container, graphics, child, opacity));
                 admittedContainers.Add(container);
                 graphics = child;
             }
@@ -262,8 +255,8 @@ internal sealed partial class PptxRenderer
                     unpaintablePaths++;
                 }
             }
-            bool allowStrokePattern = Math.Abs(bounds.RotationDegrees) <= 0.001d && !bounds.FlipHorizontal && !bounds.FlipVertical;
-            SvgStroke stroke = ReadSvgStroke(element, gradients, radialGradients, elementIds, allowStrokePattern, hasFill,
+            SvgStroke stroke = ReadSvgStroke(element, gradients, radialGradients, elementIds,
+                allowStrokePattern && strokeContainersQualified, hasFill,
                 out SvgStrokeFailure strokeFailure, out bool invalidStrokePresentation, out bool hasVectorEffect, out bool nonScalingStroke);
             List<SvgPathCommand>? gradientCommands = null;
             SvgPathBounds gradientBounds = default;
@@ -604,62 +597,57 @@ internal sealed partial class PptxRenderer
             PageIndex: null, SlideIndex: slideIndex, Feature: "svg", Fallback: "Partial"));
     }
 
-    private static double? ReadNumericSvgContainerOpacity(XElement element)
+    private static SvgContainerOpacity ReadSvgContainerOpacity(XElement element)
     {
-        if (element.Name.LocalName is not ("svg" or "g") || element.Attribute("opacity") is not { } opacity ||
-            (element.Name.LocalName == "svg" && element.Parent is not null) ||
-            (element.Attribute("style") is not null && ReadSvgStyleDeclarations(element).ContainsKey("opacity")))
+        string name = element.Name.LocalName;
+        if (name is not ("svg" or "g"))
         {
-            return null;
+            return new(null, IsTransparent: false, AllowsGradientStroke: true);
         }
-        return double.TryParse(opacity.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double value) &&
-            double.IsFinite(value) && value >= 0d && value <= 1d ? value : null;
+
+        bool nestedSvg = name == "svg" && element.Parent is not null;
+        string? attribute = (string?)element.Attribute("opacity");
+        bool styled = element.Attribute("style") is not null && ReadSvgStyleDeclarations(element).ContainsKey("opacity");
+        double? numeric = styled ? null : ReadUnitSvgOpacity(attribute);
+        // A numeric zero also hides descendants of a nested SVG viewport.
+        return new(nestedSvg ? null : numeric, numeric == 0d,
+            !nestedSvg && (numeric.HasValue || (!styled && attribute is null)));
     }
 
-    private static bool HasQualifiedSvgStrokeContainers(XElement element)
+    private readonly record struct SvgContainerOpacity(double? GroupOpacity, bool IsTransparent, bool AllowsGradientStroke);
+
+    private static bool TryCollectSvgOpacityGroups(XElement element, double pictureOpacity,
+        List<(XElement Container, double Opacity)> groups, out bool strokeContainersQualified)
     {
-        int depth = 0;
-        foreach (XElement ancestor in element.Ancestors())
+        groups.Clear();
+        strokeContainersQualified = true;
+        int authoredDepth = 0;
+        foreach (XElement ancestor in element.Ancestors().Reverse())
         {
-            if (ancestor.Name.LocalName is not ("svg" or "g")) { continue; }
-            if (ancestor.Name.LocalName == "svg" && ancestor.Parent is not null) { return false; }
-            bool hasOpacity = ancestor.Attribute("opacity") is not null
-                || (ancestor.Attribute("style") is not null && ReadSvgStyleDeclarations(ancestor).ContainsKey("opacity"));
-            if (!hasOpacity) { continue; }
-            double? opacity = ReadNumericSvgContainerOpacity(ancestor);
-            if (opacity is null) { return false; }
-            if (opacity is > 0d and < 1d && ++depth > PdfTransparencyGroup.MaxDepth) { return false; }
+            SvgContainerOpacity opacity = ReadSvgContainerOpacity(ancestor);
+            if (opacity.IsTransparent) return false;
+
+            if (opacity.GroupOpacity is > 0d and < 1d) authoredDepth++;
+            strokeContainersQualified &= opacity.AllowsGradientStroke && authoredDepth <= PdfTransparencyGroup.MaxDepth;
+
+            // Picture alpha shares the root group. Stroke eligibility still follows
+            // authored SVG containers, including their distinct nesting limit.
+            double groupOpacity = opacity.GroupOpacity ?? 1d;
+            if (pictureOpacity < 1d && ancestor.Parent is null) groupOpacity *= pictureOpacity;
+            if (groupOpacity is > 0d and < 1d && groups.Count < PdfTransparencyGroup.MaxDepth)
+            {
+                groups.Add((ancestor, groupOpacity));
+            }
         }
         return true;
     }
 
-    private static bool HasNumericSvgStrokeOpacity(XElement element, IReadOnlyDictionary<string, string> style)
-    {
-        foreach (string name in new[] { "opacity", "stroke-opacity" })
-        {
-            string? text = name == "stroke-opacity"
-                ? ReadSvgInheritedAttribute(element, style, name)
-                : ReadSvgPresentationAttribute(element, style, name);
-            if (!string.IsNullOrWhiteSpace(text) && (!double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out double value)
-                || !double.IsFinite(value) || value < 0d || value > 1d)) { return false; }
-        }
-        return true;
-    }
+    private static double? ReadUnitSvgOpacity(string? text) =>
+        double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out double value) &&
+        value is >= 0d and <= 1d ? value : null;
 
-    private static bool IsFullyTransparentSvgContainer(XElement element)
-    {
-        if (element.Name.LocalName is not ("svg" or "g") || element.Attribute("opacity") is not { } opacity)
-        {
-            return false;
-        }
-        // Office-authored numeric attributes are qualified. CSS overrides and
-        // percentage container opacity retain their previous diagnostic fallback.
-        if (element.Attribute("style") is not null && ReadSvgStyleDeclarations(element).ContainsKey("opacity"))
-        {
-            return false;
-        }
-        return double.TryParse(opacity.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double value) && value == 0d;
-    }
+    private static bool IsFullyTransparentSvgContainer(XElement element) =>
+        element.Attribute("opacity") is not null && ReadSvgContainerOpacity(element).IsTransparent;
 
     private static bool IsInFullyTransparentSvgContainer(XElement element)
     {
@@ -680,9 +668,7 @@ internal sealed partial class PptxRenderer
             if (!hasPaint) return null;
             opacity = styledOpacity;
         }
-        if (opacity is null) return 1d;
-        return double.TryParse(opacity, NumberStyles.Float, CultureInfo.InvariantCulture, out double value) &&
-            double.IsFinite(value) && value >= 0d && value <= 1d ? value : null;
+        return opacity is null ? 1d : ReadUnitSvgOpacity(opacity);
     }
 
     private static bool IsHiddenSvgElement(XElement element)
@@ -1560,8 +1546,10 @@ internal sealed partial class PptxRenderer
         {
             return default;
         }
-        double opacity = ReadSvgOpacityValue(ReadSvgInheritedAttribute(path, style, "stroke-opacity"))
-            * ReadSvgOpacityValue(ReadSvgPresentationAttribute(path, style, "opacity"));
+        string? strokeOpacity = ReadSvgInheritedAttribute(path, style, "stroke-opacity");
+        string? elementOpacity = ReadSvgPresentationAttribute(path, style, "opacity");
+        double ownOpacity = ReadSvgOpacityValue(elementOpacity);
+        double opacity = ReadSvgOpacityValue(strokeOpacity) * ownOpacity;
         if (!TryReadSvgStrokeWidth(style, path, out double width))
         {
             failure = SvgLocalPaintServerRegex().IsMatch(strokePaint)
@@ -1588,8 +1576,9 @@ internal sealed partial class PptxRenderer
             }
             else
             {
-                if (!allowGradientStroke || !HasQualifiedSvgStrokeContainers(path) || !HasNumericSvgStrokeOpacity(path, style)
-                    || (hasFill && ReadSvgOpacityValue(ReadSvgPresentationAttribute(path, style, "opacity")) < 1d)
+                if (!allowGradientStroke || (!string.IsNullOrWhiteSpace(strokeOpacity) && ReadUnitSvgOpacity(strokeOpacity) is null)
+                    || (!string.IsNullOrWhiteSpace(elementOpacity) && ReadUnitSvgOpacity(elementOpacity) is null)
+                    || (hasFill && ownOpacity < 1d)
                     || gradient is null || gradient.UniformStopOpacity is null || !gradient.HasNumericStopOpacity
                     || !gradient.HasIdentityGradientTransform || gradient.Spread != SvgGradientSpread.Pad)
                 {
