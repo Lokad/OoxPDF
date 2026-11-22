@@ -2652,6 +2652,27 @@ internal sealed partial class PptxRenderer
     {
         return value.ToString(CultureInfo.InvariantCulture);
     }
+
+    private static bool TryReadSvgPairedRadii(XElement element, double viewWidth, double viewHeight, out double rx, out double ry)
+    {
+        string? horizontal = (string?)element.Attribute("rx");
+        string? vertical = (string?)element.Attribute("ry");
+        bool autoX = horizontal is null || horizontal.AsSpan().Trim().Equals("auto", StringComparison.OrdinalIgnoreCase);
+        bool autoY = vertical is null || vertical.AsSpan().Trim().Equals("auto", StringComparison.OrdinalIgnoreCase);
+        rx = 0d;
+        ry = 0d;
+        if (!autoX && (!TryReadSvgViewportLength(element, horizontal, viewWidth, out rx) || rx < 0d) ||
+            !autoY && (!TryReadSvgViewportLength(element, vertical, viewHeight, out ry) || ry < 0d))
+        {
+            return false;
+        }
+
+        // Resolve before the rectangle's own per-axis clamps.
+        if (autoX) rx = ry;
+        if (autoY) ry = rx;
+        return true;
+    }
+
     private static string? ConvertSvgRectToPathData(XElement element, double viewWidth, double viewHeight)
     {
         if (!TryReadSvgShapeCoordinate(element, "x", viewWidth, out double x)
@@ -2665,27 +2686,7 @@ internal sealed partial class PptxRenderer
         {
             return null;
         }
-        string? rxText = (string?)element.Attribute("rx");
-        string? ryText = (string?)element.Attribute("ry");
-        double rx = 0d;
-        double ry = 0d;
-        if (rxText is not null && !TryReadSvgViewportLength(element, rxText, viewWidth, out rx))
-        {
-            return null;
-        }
-        if (ryText is not null && !TryReadSvgViewportLength(element, ryText, viewHeight, out ry))
-        {
-            return null;
-        }
-        if (rxText is null && ryText is not null)
-        {
-            rx = ry;
-        }
-        if (ryText is null && rxText is not null)
-        {
-            ry = rx;
-        }
-        if (rx < 0d || ry < 0d)
+        if (!TryReadSvgPairedRadii(element, viewWidth, viewHeight, out double rx, out double ry))
         {
             return null;
         }
@@ -2723,8 +2724,7 @@ internal sealed partial class PptxRenderer
     {
         if (!TryReadSvgShapeCoordinate(element, "cx", viewWidth, out double cx)
             || !TryReadSvgShapeCoordinate(element, "cy", viewHeight, out double cy)
-            || !TryReadSvgShapeCoordinate(element, "rx", viewWidth, out double rx)
-            || !TryReadSvgShapeCoordinate(element, "ry", viewHeight, out double ry)
+            || !TryReadSvgPairedRadii(element, viewWidth, viewHeight, out double rx, out double ry)
             || rx <= 0d || ry <= 0d)
         {
             return null;

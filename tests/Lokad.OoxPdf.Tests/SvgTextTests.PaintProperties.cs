@@ -166,6 +166,34 @@ internal static partial class SvgTextTests
         }
     }
 
+    public static void SvgAutomaticShapeRadiiMatchExplicitPairsInBothFormats()
+    {
+        string Picture(string vertical, string horizontal, string corner) => $"""
+            <svg xmlns="http://www.w3.org/2000/svg" width="340" height="140" viewBox="-10 -5 170 70">
+              <rect x="-10" y="-5" width="170" height="70" fill="yellow"/>
+              <ellipse cx="28" cy="22" rx="10%" {vertical} fill="red"/>
+              <ellipse cx="78" cy="22" {horizontal} ry="20%" fill="blue"/>
+              <rect x="110" y="12" width="36" height="20" {corner} ry="20%" fill="green"/>
+            </svg>
+            """;
+
+        AssertSvgPaintInBothFormats(
+            Picture("ry=\"17\"", "rx=\"14\"", "rx=\"14\""),
+            Picture("", "rx=\"auto\"", "rx=\"auto\""),
+            "1 0 0 rg", "0 0 1 rg", "0 0.502 0 rg");
+
+        const string square = """<rect x="20" y="10" width="30" height="25" fill="green"/>""";
+        var expected = Paint(Svg(square));
+        var actual = Paint(Svg("""
+            <rect x="20" y="10" width="30" height="25" rx="auto" ry="auto" fill="green"/>
+            <ellipse cx="60" cy="40" fill="red"/>
+            <ellipse cx="100" cy="40" rx="0" ry="12" fill="red"/>
+            <ellipse cx="140" cy="40" rx="12" ry="NaN" fill="red"/>
+            <rect x="170" y="10" width="30" height="25" rx="-4" ry="8" fill="red"/>
+            """));
+        AssertEquivalentSvgPaint(expected, actual, "The square rectangle and existing zero and invalid radius outcomes retain their paint.");
+    }
+
     public static void SvgUserSpaceGradientPixelUnitsMatchUserCoordinates()
     {
         string Picture(string unit) => Svg($$"""

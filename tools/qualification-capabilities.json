@@ -661,6 +661,7 @@
     "SvgPrimitivePixelUnitsMatchUserCoordinates",
     "=SvgUserSpaceGradientPixelUnitsMatchUserCoordinates",
     "=SvgPrimitivePercentagesMatchUserCoordinatesInBothFormats",
+    "=SvgAutomaticShapeRadiiMatchExplicitPairsInBothFormats",
     "=SvgPercentageStrokeWidthsMatchViewportUnitsInBothFormats",
     "=SvgConstantLinearGradientsMatchSolidPaintInBothFormats",
     "=SvgSingleStopRadialGradientsMatchSolidPaintInBothFormats",
