@@ -166,6 +166,37 @@ internal static partial class SvgTextTests
         TestAssert.Equal(0, diagnostics.Count);
     }
 
+    public static void SvgMissingPaintServersUseAuthoredFallback()
+    {
+        const string rectangle = "<rect x=\"20\" y=\"20\" width=\"30\" height=\"30\" fill=\"{0}\"/>";
+        const string line = "<line x1=\"40\" y1=\"80\" x2=\"80\" y2=\"80\" fill=\"none\" color=\"blue\" stroke=\"{0}\" stroke-width=\"4\"/>";
+        const string text = "<text x=\"20\" y=\"120\" font-size=\"24\" fill=\"{0}\" stroke=\"{1}\">I</text>";
+        var literal = Paint(Svg(string.Format(rectangle, "red") + string.Format(line, "blue") +
+            string.Format(text, "#112233", "none")));
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        var fallback = Paint(Svg(string.Format(rectangle, "url(#missing-fill) red") +
+            string.Format(line, "url(#missing-stroke) currentColor") +
+            string.Format(text, "url(#missing-text) #112233", "url(#missing-outline) none") +
+            string.Format(rectangle, "url(#missing-optional) none")), diagnostics);
+        TestAssert.Contains("1 0 0 rg", literal.ToString());
+        TestAssert.Contains("0 0 1 RG", literal.ToString());
+        TestAssert.Equal(1, LabelPaths(literal.ToString()));
+        AssertEquivalentSvgPaint(literal, fallback, "An absent server uses its explicit fallback.");
+        TestAssert.Equal(0, diagnostics.Count);
+
+        const string stops = "<stop offset=\"0\" stop-color=\"blue\"/><stop offset=\"1\" stop-color=\"yellow\"/>";
+        string Definition(string attributes) => "<defs><linearGradient id=\"present\" " + attributes + ">" + stops + "</linearGradient></defs>";
+        var gradient = Paint(Svg(Definition("") + string.Format(rectangle, "url(#present)")));
+        AssertEquivalentSvgPaint(gradient, Paint(Svg(Definition("") + string.Format(rectangle, "url(#present) red"))),
+            "A usable server owns its paint even when a fallback is provided.");
+        var unresolved = Paint(Svg(Definition("gradientTransform=\"bogus(1)\"") +
+            string.Format(rectangle, "url(#present) red") + string.Format(rectangle, "url(#no-fallback)")), diagnostics);
+        TestAssert.DoesNotContain("1 0 0 rg", unresolved.ToString());
+        foreach (string id in new[] { "present", "no-fallback" })
+            TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains(id, StringComparison.Ordinal)),
+                "An unsupported present server and an absent server without fallback still diagnose.");
+    }
+
     private static void AssertEquivalentSvgPaint(PdfGraphicsBuilder expected, PdfGraphicsBuilder actual, string reason)
     {
         TestAssert.Equal(expected.ToString(), actual.ToString());
