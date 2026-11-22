@@ -27,15 +27,14 @@ internal sealed partial class PptxRenderer
         }
         if (chart.ColorStyle.Colors is { Count: > 0 } colors) { return new(colors, null, seriesCount); }
 
-        int? preferred = OoxMarkupCompatibility.ReadPreferredChartGalleryStyle(chart.ChartXml?.Root);
-        int style = preferred is int modern ? modern - 100 :
-            int.TryParse(chart.StyleId, NumberStyles.Integer,
-                CultureInfo.InvariantCulture, out int legacy) ? legacy : 0;
-        int slot = (style - 1) % 8;
-        if (style is >= 1 and <= 48 && slot >= 2 &&
-            theme.TryResolveColor("accent" + (slot - 1).ToString(CultureInfo.InvariantCulture), colorMap, out RgbColor accent))
+        if (chart.GalleryStyle is int style)
         {
-            return new(null, accent, seriesCount);
+            int slot = (style - 1) % 8;
+            if (slot >= 2 &&
+                theme.TryResolveColor("accent" + (slot - 1).ToString(CultureInfo.InvariantCulture), colorMap, out RgbColor accent))
+            {
+                return new(null, accent, seriesCount);
+            }
         }
 
         return new(null, null, seriesCount, declaredIndices ? indexSpan : 0);

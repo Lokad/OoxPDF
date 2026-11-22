@@ -1,6 +1,5 @@
 using System.Globalization;
 using System.Text;
-using System.Xml.Linq;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Ooxml;
@@ -161,27 +160,6 @@ internal sealed partial class PptxRenderer
         return index < strokes.Count && strokes[index] is not null
             ? stroke
             : stroke with { Color = ApplyUnstyledLineStrokeTint(stroke.Color) };
-    }
-
-    // Reads the effective chart style id from the markup-compatibility-resolved tree:
-    // a spliced c14 style when that namespace is understood, else the transitional
-    // style. In this corpus 18 always arrives as the c14:118 fallback; a native-2007
-    // style-18 reference would confirm or split the recipe below.
-    private static int? ReadChartStyleId(XDocument chartXml)
-    {
-        XElement? root = chartXml.Root;
-        XElement? styled = root?.Element(ChartStyle2010Namespace + "style")
-            ?? root?.Element(ChartNamespace + "style");
-        return styled is not null && TryReadStyleValue(styled, out int styleId)
-            ? styleId
-            : null;
-
-        static bool TryReadStyleValue(XElement element, out int value)
-        {
-            value = 0;
-            return element.Attribute("val") is { } attribute &&
-                int.TryParse(attribute.Value, out value);
-        }
     }
 
     // Effective-style-18 series recipe: a vertical light-to-dark gradient. The top stop

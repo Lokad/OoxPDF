@@ -572,7 +572,7 @@ internal sealed partial class PptxRenderer
         // role/global fonts change. Those unused sizes must not alter the frame.
         // Actual numeric typography still consumes space at both ends; painting
         // retains its effective fonts. External/custom styles keep their fallback.
-        ChartTextStyle reference = PptxSceneBuilder.HasBuiltInChartStyle(chart)
+        ChartTextStyle reference = chart.GalleryStyle.HasValue
             ? CreateDefaultChartTextStyle(theme, chart.ColorMap, PptxChartMetricRules.BuiltInAxisFittingReferenceFontSize)
             : ReadSceneChartTextStyle(theme, chart, null,
                 PptxChartMetricRules.CategoryAxisFallbackFontSize, "categoryAxis");

@@ -113,7 +113,7 @@ internal sealed partial class PptxRenderer
                     graphics.SaveState();
                     graphics.Transform(1d, 0d, 0d, 1d, plotShift, 0d);
                 }
-                int? radarStyleId = ReadChartStyleId(chartXml);
+                int? radarStyleId = sceneChart.SeriesStyleId;
                 RenderRadarChart(graphics, theme, colorMap, chartPalette, radarLayout, radarSeries, seriesFills, seriesStrokes, valueExtents, ticks, radarStyleId, context);
                 if (categoryLabels.Count != 0)
                 {

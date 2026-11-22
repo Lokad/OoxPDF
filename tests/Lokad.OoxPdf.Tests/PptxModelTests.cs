@@ -604,7 +604,7 @@ internal static class PptxModelTests
         TestAssert.Equal(0.5d, titleStyle.TextStyle.Alpha ?? 0d);
         TestAssert.True(titleStyle.TextStyle.Bold == true, "Expected chart style-part title bold default in the scene model.");
         TestAssert.True(titleStyle.TextStyle.Italic == false, "Expected chart style-part title italic default in the scene model.");
-        TestAssert.Equal("10", slide.SlideNodes[4].Chart?.StyleId ?? string.Empty);
+        TestAssert.Equal("10", slide.SlideNodes[4].Chart?.LegacyStyleValue ?? string.Empty);
         TestAssert.Equal("Arial", slide.SlideNodes[4].Chart?.TextStyle.FontFamily ?? string.Empty);
         TestAssert.Equal("Arial", slide.SlideNodes[4].Chart?.TextStyle.RequestedTypeface ?? string.Empty);
         TestAssert.Equal(PptxThemeTypefaceSource.Direct, slide.SlideNodes[4].Chart?.TextStyle.TypefaceSource ?? default);

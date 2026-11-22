@@ -1023,6 +1023,31 @@ internal static partial class PptxChartsTests
         TestAssert.True(pdf.Contains(expected, StringComparison.Ordinal), "Expected " + expected + "; actual clips: " + actual);
     }
 
+    public static void PptxChartSceneKeepsGalleryAndSeriesStyleSourcesDistinct()
+    {
+        const string direct = """<c14:style xmlns:c14="http://schemas.microsoft.com/office/drawing/2007/8/2/chart" val="118"/>""";
+        const string legacy = """<c:style val="02"/>""";
+        foreach (var (declarations, legacyValue, gallery, series) in new (string, string, int?, int?)[]
+        {
+            (direct + legacy, "02", 18, 118),
+            (GalleryStyleChoice(118).Replace("""<c:style val="18"/>""", legacy, StringComparison.Ordinal), "02", 18, 2),
+            (direct.Replace("118", "149", StringComparison.Ordinal) + legacy, "02", 2, 149),
+            (direct.Replace("118", "invalid", StringComparison.Ordinal) + legacy, "02", 2, null),
+            (legacy, "02", 2, 2),
+            (string.Empty, string.Empty, null, null)
+        })
+        {
+            PptxSceneChart chart = TestAssert.NotNull(PptxTests.BuildSingleChartScene($"""
+                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+                  {declarations}<c:chart><c:plotArea/></c:chart>
+                </c:chartSpace>
+                """));
+            TestAssert.Equal(legacyValue, chart.LegacyStyleValue);
+            TestAssert.Equal(gallery, chart.GalleryStyle);
+            TestAssert.Equal(series, chart.SeriesStyleId);
+        }
+    }
+
     public static void PptxGalleryGridlinesUsePreferredModernRolesAndKeepLegacyFallbacks()
     {
         foreach (int modern in new[] { 102, 118, 126 })

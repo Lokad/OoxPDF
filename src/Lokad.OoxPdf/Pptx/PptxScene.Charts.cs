@@ -50,7 +50,22 @@ internal sealed partial class PptxSceneBuilder
             cancellationToken.ThrowIfCancellationRequested();
             IReadOnlyList<PptxSceneChartPlot> plots = ReadChartPlots(chartXml, theme, colorMap);
             cancellationToken.ThrowIfCancellationRequested();
-            IReadOnlyList<PptxSceneChartAxis> axes = ReadChartAxes(chartXml, theme, colorMap, stylePart, plots);
+            XElement? chartSpace = chartXml?.Root;
+            string legacyStyleValue = ReadChartElementValue(chartSpace, "style");
+            int? preferredGalleryStyle = OoxMarkupCompatibility.ReadPreferredChartGalleryStyle(chartSpace);
+            int? galleryStyle = preferredGalleryStyle - 100;
+            if (galleryStyle is null && int.TryParse(legacyStyleValue, NumberStyles.Integer,
+                    CultureInfo.InvariantCulture, out int legacyStyle) && legacyStyle is >= 1 and <= 48)
+            {
+                galleryStyle = legacyStyle;
+            }
+
+            // Series recipes use the selected tree. The preferred gallery may
+            // instead come from an annotation on an unselected modern choice.
+            XElement? directStyle = chartSpace?.Element(ChartStyle2010Namespace + "style");
+            string seriesStyleValue = directStyle is null ? legacyStyleValue : ReadChartValueAttribute(directStyle);
+            int? seriesStyleId = int.TryParse(seriesStyleValue, out int seriesStyle) ? seriesStyle : null;
+            IReadOnlyList<PptxSceneChartAxis> axes = ReadChartAxes(chartXml, theme, colorMap, stylePart, plots, preferredGalleryStyle);
             return result = new PptxSceneChart(
                 relationshipId,
                 targetPartName,
@@ -60,7 +75,9 @@ internal sealed partial class PptxSceneBuilder
                 ReadChartOptions(chartXml),
                 colorStyle,
                 stylePart,
-                ReadChartElementValue(chartXml?.Root, "style"),
+                legacyStyleValue,
+                galleryStyle,
+                seriesStyleId,
                 plots,
                 axes,
                 ReadChartTitle(chartXml, theme, colorMap, plots),
@@ -358,7 +375,8 @@ internal sealed partial class PptxSceneBuilder
             : (null, value);
     }
 
-    private static IReadOnlyList<PptxSceneChartAxis> ReadChartAxes(XDocument? chartXml, PptxTheme theme, PptxColorMap colorMap, PptxSceneChartStyle stylePart, IReadOnlyList<PptxSceneChartPlot> plots)
+    private static IReadOnlyList<PptxSceneChartAxis> ReadChartAxes(XDocument? chartXml, PptxTheme theme, PptxColorMap colorMap,
+        PptxSceneChartStyle stylePart, IReadOnlyList<PptxSceneChartPlot> plots, int? preferredGalleryStyle)
     {
         XElement? plotArea = chartXml?
             .Descendants(ChartNamespace + "plotArea")
@@ -372,7 +390,6 @@ internal sealed partial class PptxSceneBuilder
         PptxSceneLineStyle majorStyleLine = ReadChartStyleRoleLine(stylePart, "gridlineMajor");
         PptxSceneLineStyle minorStyleLine = ReadChartStyleRoleLine(stylePart, "gridlineMinor");
         PptxSceneLineStyle axisStyleLine = default;
-        int? preferredGalleryStyle = OoxMarkupCompatibility.ReadPreferredChartGalleryStyle(chartXml?.Root);
         if (!stylePart.IsDefined && singleLinePlot &&
             preferredGalleryStyle is 102 or 118 or 126)
         {

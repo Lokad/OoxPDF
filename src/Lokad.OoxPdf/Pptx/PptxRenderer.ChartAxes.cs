@@ -508,8 +508,8 @@ internal sealed partial class PptxRenderer
     // the built-in gallery style render unstyled axis-family strokes gray-0.537 at width
     // 1.0 (three cached Office refs); style-part charts keep their role-driven output and
     // multi-plot dual-axis charts keep legacy output for lack of axis-color evidence.
-    // Modern Office applies the c14 Choice branch, not this fallback value, so a future
-    // c14-capable normalization must revisit which branch drives the gray.
+    // This calibration uses the literal Transitional style token. The modern
+    // choice supplies the preferred gallery for the separately qualified roles.
     private static ChartSeriesStroke? ResolveGalleryAxisFamilyDefault(string? galleryStyleId)
     {
         if (galleryStyleId != "2")

@@ -3646,6 +3646,7 @@
     "PortableRenderingRepeatedInlineMathPreservesBaselineAndAdvance"
   ],
   "pptx-chart-wide-styles": [
+    "=PptxChartSceneKeepsGalleryAndSeriesStyleSourcesDistinct",
     "LegendOptionsUseParsedSceneDefaults",
     "PptxChartAxisTextStyleUsesSceneAuthoritativeMissingAxis",
     "PptxChartTextStyleCarriesTypefaceSourceThroughRendererStyle",

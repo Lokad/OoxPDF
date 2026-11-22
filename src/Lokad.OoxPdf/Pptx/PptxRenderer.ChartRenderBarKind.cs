@@ -99,7 +99,7 @@ internal sealed partial class PptxRenderer
                     : null;
                 if (numericPlacement is { } numeric)
                     axesStyle = axesStyle with { ValueAxisBottomSide = !numeric.AxisHighSide };
-                int? barStyleId = ReadChartStyleId(chartXml);
+                int? barStyleId = sceneChart.SeriesStyleId;
                 int legendSeriesOffset = barSeriesCount;
                 // Collect every painted plot before measuring rows. A prepared
                 // legend box owns its complete entries, not a mutable prefix.
@@ -198,7 +198,7 @@ internal sealed partial class PptxRenderer
                 // Gallery style 2 fills unstyled axis-family strokes on single-plot charts
                 // (multi-plot dual-axis charts keep legacy output); explicit styles win by
                 // construction since only null entries are replaced.
-                if (barPlots.Count == 1 && ResolveGalleryAxisFamilyDefault(sceneChart.StyleId) is { } galleryAxisDefault)
+                if (barPlots.Count == 1 && ResolveGalleryAxisFamilyDefault(sceneChart.LegacyStyleValue) is { } galleryAxisDefault)
                 {
                     // SecondaryValueAxis stays untouched: its null-ness gates secondary-axis
                     // emission downstream, and filling it would conjure duplicate axis lines.

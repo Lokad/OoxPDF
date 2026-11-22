@@ -18,14 +18,9 @@ internal sealed partial class PptxSceneBuilder
         return style with
         {
             FontSize = chart.Title.TextStyle.FontSize ??
-                (chart.TextStyle.FontSize is double size ? size * 1.2d : HasBuiltInChartStyle(chart) ? 18d : 10d)
+                (chart.TextStyle.FontSize is double size ? size * 1.2d : chart.GalleryStyle.HasValue ? 18d : 10d)
         };
     }
-
-    internal static bool HasBuiltInChartStyle(PptxSceneChart chart) =>
-        OoxMarkupCompatibility.ReadPreferredChartGalleryStyle(chart.ChartXml?.Root) is not null ||
-        int.TryParse(chart.StyleId, NumberStyles.Integer, CultureInfo.InvariantCulture, out int legacyStyle) &&
-        legacyStyle is >= 1 and <= 48;
 
     internal static PptxSceneChartTextStyleOverride ResolveChartLegendTextStyleOverride(PptxSceneChart chart)
     {
@@ -38,7 +33,7 @@ internal sealed partial class PptxSceneBuilder
         // Built-in category/value axes inherit their size from the chart, then
         // local axis formatting. External role sizes remain scene-visible but
         // do not supply the missing size; other role attributes keep their owner.
-        return HasBuiltInChartStyle(chart) && chartStyleRole is "categoryAxis" or "valueAxis"
+        return chart.GalleryStyle.HasValue && chartStyleRole is "categoryAxis" or "valueAxis"
             ? style with { FontSize = axis?.TextStyle.FontSize ?? chart.TextStyle.FontSize }
             : style;
     }
