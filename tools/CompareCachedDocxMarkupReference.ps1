@@ -112,17 +112,6 @@ function Invoke-DotnetBuildIfStale {
 
 . (Join-Path $PSScriptRoot "PdfTextGeometry.ps1")
 
-function Get-PdfObjects([string] $PdfText) {
-    $matches = [regex]::Matches($PdfText, '(?s)(?<number>\d+)\s+(?<generation>\d+)\s+obj\s*(?<body>.*?)\s*endobj')
-    foreach ($match in $matches) {
-        [pscustomobject]@{
-            Number = [int]$match.Groups["number"].Value
-            Generation = [int]$match.Groups["generation"].Value
-            Body = [string]$match.Groups["body"].Value
-        }
-    }
-}
-
 function Get-Sha256Hex([string] $Value) {
     $sha256 = [System.Security.Cryptography.SHA256]::Create()
     try {
@@ -184,43 +173,6 @@ function Decode-PdfLiteralString([string] $Value) {
     }
 
     return $builder.ToString()
-}
-
-function Get-PdfPageMap($Objects) {
-    $byReference = @{}
-    foreach ($object in $Objects) {
-        $byReference["$($object.Number) $($object.Generation)"] = $object
-    }
-    $catalog = $Objects | Where-Object { $_.Body -match '/Type\s*/Catalog\b' } | Select-Object -Last 1
-    $root = [regex]::Match([string]$catalog.Body, '/Pages\s+(?<number>\d+)\s+(?<generation>\d+)\s+R')
-    $pageByReference = @{}
-    if (-not $root.Success) { throw 'PDF page tree is unavailable to the annotation inspector.' }
-
-    # Page object numbers and physical object order are writer-specific. Traverse
-    # /Kids in logical order, retaining generation numbers and guarding cycles.
-    $pending = [Collections.Generic.Stack[string]]::new()
-    $pending.Push("$($root.Groups['number'].Value) $($root.Groups['generation'].Value)")
-    $visited = [Collections.Generic.HashSet[string]]::new()
-    while ($pending.Count -gt 0) {
-        $key = $pending.Pop()
-        if (-not $visited.Add($key) -or -not $byReference.ContainsKey($key)) {
-            throw "Unresolvable or repeated PDF page-tree reference: $key"
-        }
-        $body = $byReference[$key].Body
-        if ($body -match '/Type\s*/Page\b') {
-            $pageByReference[$key] = $pageByReference.Count + 1
-            continue
-        }
-        $kids = [regex]::Match($body, '(?s)/Kids\s*\[(?<items>.*?)\]')
-        if ($body -notmatch '/Type\s*/Pages\b' -or -not $kids.Success) {
-            throw "Unsupported PDF page-tree node: $key"
-        }
-        $references = [regex]::Matches($kids.Groups['items'].Value, '(?<number>\d+)\s+(?<generation>\d+)\s+R')
-        for ($i = $references.Count - 1; $i -ge 0; $i--) {
-            $pending.Push("$($references[$i].Groups['number'].Value) $($references[$i].Groups['generation'].Value)")
-        }
-    }
-    return $pageByReference
 }
 
 function Get-PdfExplicitDestination([string] $Value, [hashtable] $PageByReference) {
@@ -306,9 +258,7 @@ function Get-PdfAnnotationTargetInfo([string] $Body, [hashtable] $PageByReferenc
     }
 }
 
-function Get-PdfAnnotations([string] $PdfText) {
-    $objects = @(Get-PdfObjects $PdfText)
-    $pageByReference = Get-PdfPageMap $objects
+function Get-PdfAnnotations($Objects, [hashtable] $PageByReference) {
     $pageByAnnotationObject = @{}
     foreach ($object in $objects) {
         $pageKey = "$($object.Number) $($object.Generation)"
@@ -856,33 +806,13 @@ function New-FontResourceSummary($fontResources) {
 
 . (Join-Path $PSScriptRoot "PdfInfo.ps1")
 
-function Get-PdfMediaBoxes([string] $PdfText) {
-    $matches = [regex]::Matches($PdfText, '(?s)/MediaBox\s*\[(?<box>.*?)\]')
-    foreach ($match in $matches) {
-        $numbers = @([regex]::Matches($match.Groups["box"].Value, '[-+]?(?:\d+(?:\.\d*)?|\.\d+)') | ForEach-Object {
-            [double]::Parse($_.Value, [Globalization.CultureInfo]::InvariantCulture)
-        })
-        if ($numbers.Count -lt 4) {
-            continue
-        }
-
-        [pscustomobject]@{
-            MinX = [Math]::Round($numbers[0], 6)
-            MinY = [Math]::Round($numbers[1], 6)
-            MaxX = [Math]::Round($numbers[2], 6)
-            MaxY = [Math]::Round($numbers[3], 6)
-            Width = [Math]::Round($numbers[2] - $numbers[0], 6)
-            Height = [Math]::Round($numbers[3] - $numbers[1], 6)
-        }
-    }
-}
-
 function Get-PdfMarkupFacts([string] $PdfPath) {
-    $pdfText = Read-PdfLatin1Text $PdfPath
+    $objects = @(Get-PdfObjects (Read-PdfLatin1Text $PdfPath))
+    $pages = Get-PdfPageFacts $objects
     [pscustomobject]@{
-        Annotations = @(Get-PdfAnnotations $pdfText)
-        PageCount = Get-PdfPageCount $pdfText
-        MediaBoxes = @(Get-PdfMediaBoxes $pdfText)
+        Annotations = @(Get-PdfAnnotations $objects $pages.PageByReference)
+        PageCount = $pages.PageCount
+        MediaBoxes = $pages.MediaBoxes
     }
 }
 

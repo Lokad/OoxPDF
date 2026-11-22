@@ -14,7 +14,8 @@ function Assert-Equal($Expected, $Actual, [string] $Name) {
 }
 $output = Join-Path (Split-Path -Parent $PSScriptRoot) ('artifacts/markup-annotation-tests/' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $output -Force | Out-Null
-function New-AnnotationFixture([string] $Name, [int] $Offset, [string] $Target, [switch] $ReversePages, [switch] $IncludePageFacts) {
+function New-AnnotationFixture([string] $Name, [int] $Offset, [string] $Target, [switch] $ReversePages,
+    [switch] $IncludePageFacts, [switch] $PageLikeContent) {
     # Physical object order deliberately differs from logical /Kids order.
     $catalog = $Offset + 1
     $root = $Offset + 2
@@ -22,15 +23,22 @@ function New-AnnotationFixture([string] $Name, [int] $Offset, [string] $Target, 
     $first = $Offset + 30
     $second = $Offset + 20
     $annotation = $Offset + 40
+    $content = $Offset + 41
     $kids = if ($ReversePages) { "$second 0 R $first 0 R" } else { "$first 0 R $second 0 R" }
+    $contentsRef = if ($PageLikeContent) { "/Contents $content 0 R" }
+    $stream = if ($PageLikeContent) {
+        $payload = "% Design note uses /Type /Page`n"
+        "$content 0 obj << /Length $($payload.Length) >>`nstream`n${payload}endstream`nendobj"
+    }
     $body = @"
 %PDF-1.7
 $catalog 0 obj << /Type /Catalog /Pages $root 0 R >> endobj
-$second 0 obj << /Type /Page /Parent $branch 0 R /MediaBox [0 0 612 792] >> endobj
-$root 0 obj << /Type /Pages /Kids [$branch 0 R] /Count 2 >> endobj
-$first 0 obj << /Type /Page /Parent $branch 0 R /MediaBox [0 0 612 792] /Annots [$annotation 0 R] >> endobj
+$second 0 obj << /Type /Page /Parent $branch 0 R /MediaBox [0 0 360 480] >> endobj
+$root 0 obj << /Type /Pages /Kids [$branch 0 R] /Count 2 /MediaBox [0 0 612 792] >> endobj
+$first 0 obj << /Type /Page /Parent $branch 0 R /Annots [$annotation 0 R] $contentsRef >> endobj
 $branch 0 obj << /Type /Pages /Kids [$kids] /Count 2 >> endobj
 $annotation 0 obj << /Subtype /Link /Rect [72 600 150 620] $Target >> endobj
+$stream
 trailer << /Root $catalog 0 R >>
 %%EOF
 "@
@@ -43,9 +51,13 @@ trailer << /Root $catalog 0 R >>
 function Compare-Target($Reference, $Candidate, [double] $Tolerance = 1) {
     return @(Compare-RectLists @($Reference) @($Candidate) $Tolerance)[0]
 }
-$referenceFacts = New-AnnotationFixture 'reference' 0 '/Dest [30 0 R/XYZ 72 700 0]' -IncludePageFacts
+$referenceFacts = New-AnnotationFixture 'reference' 0 '/Dest [30 0 R/XYZ 72 700 0]' -IncludePageFacts -PageLikeContent
 Assert-Equal 2 $referenceFacts.PageCount 'Markup facts count both pages of a nested page tree'
-Assert-Equal '612x792|612x792' (($referenceFacts.MediaBoxes | ForEach-Object { "$($_.Width)x$($_.Height)" }) -join '|') 'Markup facts include both media boxes'
+Assert-Equal '612x792|360x480' (($referenceFacts.MediaBoxes | ForEach-Object { "$($_.Width)x$($_.Height)" }) -join '|') 'Markup facts preserve the inherited box and trailing blank page in logical order'
+$reversedFacts = New-AnnotationFixture 'reordered' 0 '/Dest [30 0 R/XYZ 72 700 0]' -IncludePageFacts -ReversePages
+Assert-Equal '360x480|612x792' (($reversedFacts.MediaBoxes | ForEach-Object { "$($_.Width)x$($_.Height)" }) -join '|') 'Changing Kids order changes the page box order'
+$boxDelta = New-MediaBoxDeltaSummary $referenceFacts.MediaBoxes $reversedFacts.MediaBoxes
+Assert-Equal 312 $boxDelta.MaxDelta 'A real page box difference reaches the geometry gate'
 $reference = $referenceFacts.Annotations[0]
 $equivalent = New-AnnotationFixture 'equivalent' 300 '/Dest [330 0 R /XYZ 72.000 +700.0 null]'
 Assert-Equal 'ok' (Compare-Target $reference $equivalent).Status 'Object numbers, whitespace, numeric spelling and inherited zoom do not change a destination'

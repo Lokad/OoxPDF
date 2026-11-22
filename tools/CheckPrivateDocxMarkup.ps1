@@ -29,21 +29,9 @@ $privateRoot = Join-Path $repoRoot "private-cases"
 
 . (Join-Path $PSScriptRoot "PdfInfo.ps1")
 
-function Get-PdfMediaBoxSummary([string] $Path) {
-    $pdf = [System.IO.File]::ReadAllText($Path, [System.Text.Encoding]::Latin1)
-    $matches = [regex]::Matches($pdf, "/MediaBox\s*\[\s*(?<x0>-?\d+(?:\.\d+)?)\s+(?<y0>-?\d+(?:\.\d+)?)\s+(?<x1>-?\d+(?:\.\d+)?)\s+(?<y1>-?\d+(?:\.\d+)?)\s*\]")
-    $boxes = foreach ($match in $matches) {
-        $x0 = [double]::Parse($match.Groups["x0"].Value, [Globalization.CultureInfo]::InvariantCulture)
-        $y0 = [double]::Parse($match.Groups["y0"].Value, [Globalization.CultureInfo]::InvariantCulture)
-        $x1 = [double]::Parse($match.Groups["x1"].Value, [Globalization.CultureInfo]::InvariantCulture)
-        $y1 = [double]::Parse($match.Groups["y1"].Value, [Globalization.CultureInfo]::InvariantCulture)
-        [pscustomobject]@{
-            Width = [Math]::Round($x1 - $x0, 3)
-            Height = [Math]::Round($y1 - $y0, 3)
-        }
-    }
-
-    return @($boxes |
+function Get-PdfMediaBoxSummary($MediaBoxes) {
+    return @($MediaBoxes |
+        ForEach-Object { [pscustomobject]@{ Width = [Math]::Round($_.Width, 3); Height = [Math]::Round($_.Height, 3) } } |
         Group-Object Width, Height |
         ForEach-Object {
             [pscustomobject]@{
@@ -726,6 +714,7 @@ else {
     $null
 }
 
+$pdfPages = Get-PdfPageFacts @(Get-PdfObjects (Read-PdfLatin1Text $candidatePdf))
 $summary = [ordered]@{
     CaseId = $caseId
     RunId = $runId
@@ -738,8 +727,8 @@ $summary = [ordered]@{
     DocxInspectSkipped = [bool]$SkipDocxInspect
     PdfInspectSkipped = [bool]$SkipPdfInspect
     Inventory = ConvertTo-RepoPath $featureCountsPath
-    PdfPageCount = Get-PdfPageCount (Read-PdfLatin1Text $candidatePdf)
-    PdfMediaBoxes = Get-PdfMediaBoxSummary $candidatePdf
+    PdfPageCount = $pdfPages.PageCount
+    PdfMediaBoxes = Get-PdfMediaBoxSummary $pdfPages.MediaBoxes
     DiagnosticCount = $diagnostics.Count
     DiagnosticIds = $diagnosticIds
     MarkupFeatureCounts = $featureCounts
