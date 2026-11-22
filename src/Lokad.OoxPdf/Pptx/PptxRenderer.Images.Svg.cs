@@ -681,11 +681,18 @@ internal sealed partial class PptxRenderer
         return uniform ?? 1d;
     }
 
-    private static double? ReadNumericSvgStopOpacity(XElement stop, IReadOnlyDictionary<string, string> style)
+    private static double? ReadNumericSvgStopOpacity(XElement stop, IReadOnlyDictionary<string, string> style,
+        bool? hasPaint = null)
     {
-        if (style.ContainsKey("stop-opacity")) { return null; }
-        if (stop.Attribute("stop-opacity") is not { } opacity) { return 1d; }
-        return double.TryParse(opacity.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double value) &&
+        string? opacity = (string?)stop.Attribute("stop-opacity");
+        if (style.TryGetValue("stop-opacity", out string? styledOpacity))
+        {
+            // A discarded style-bearing stop still prevents alpha admission.
+            if (!(hasPaint ?? TryReadSvgStopPaint(stop, style, out _, out _))) return null;
+            opacity = styledOpacity;
+        }
+        if (opacity is null) return 1d;
+        return double.TryParse(opacity, NumberStyles.Float, CultureInfo.InvariantCulture, out double value) &&
             double.IsFinite(value) && value >= 0d && value <= 1d ? value : null;
     }
 
@@ -1138,19 +1145,25 @@ internal sealed partial class PptxRenderer
         foreach (XElement stop in gradient.Elements().Where(element => element.Name.LocalName == "stop"))
         {
             IReadOnlyDictionary<string, string> style = ReadSvgStyleDeclarations(stop);
+            bool hasPaint = TryReadSvgStopPaint(stop, style, out double offset, out RgbColor color);
             // Opacity admission considers all authored stops, including those discarded for paint.
-            double? opacity = ReadNumericSvgStopOpacity(stop, style);
+            double? opacity = ReadNumericSvgStopOpacity(stop, style, hasPaint);
             hasNumericOpacity &= opacity.HasValue;
             firstNumericOpacity ??= opacity;
             hasUniformOpacity &= opacity == firstNumericOpacity;
 
-            double offset = ReadSvgOffset((string?)stop.Attribute("offset"));
-            if (double.IsNaN(offset)) continue;
-            if (!TryReadSvgStopColor(stop, style, out RgbColor color)) continue;
-            stops.Add(new SvgGradientStop(offset, color, opacity));
+            if (hasPaint) stops.Add(new SvgGradientStop(offset, color, opacity));
         }
         return (stops.OrderBy(stop => stop.Offset).ToArray(),
             hasNumericOpacity && hasUniformOpacity ? firstNumericOpacity ?? 1d : null, hasNumericOpacity);
+    }
+
+    private static bool TryReadSvgStopPaint(XElement stop, IReadOnlyDictionary<string, string> style,
+        out double offset, out RgbColor color)
+    {
+        offset = ReadSvgOffset((string?)stop.Attribute("offset"));
+        color = default;
+        return !double.IsNaN(offset) && TryReadSvgStopColor(stop, style, out color);
     }
 
     private static bool TryReadSvgStopColor(XElement stop, IReadOnlyDictionary<string, string> style, out RgbColor color)

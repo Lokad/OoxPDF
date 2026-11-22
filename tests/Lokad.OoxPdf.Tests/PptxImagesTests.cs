@@ -1983,6 +1983,35 @@ internal static partial class PptxImagesTests
         }
     }
 
+    public static void PptxSvgNumericStopStyleMatchesPresentationOpacity()
+    {
+        foreach (string kind in new[] { "linearGradient", "radialGradient" })
+        foreach (var (first, last) in new[] { ("0", "0"), (".25", ".75") })
+        {
+            byte[] expected = RenderSvgOpacityTest(Svg(kind, first, last, inlineStyle: false));
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            byte[] actual = RenderSvgOpacityTest(Svg(kind, first, last, inlineStyle: true), diagnostics);
+            TestAssert.True(actual.AsSpan().SequenceEqual(expected),
+                $"{kind} must apply numeric inline opacity even when the presentation attribute is opaque.");
+            TestAssert.Equal(0, diagnostics.Count);
+        }
+
+        static string Svg(string kind, string first, string last, bool inlineStyle) => $$"""
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 50">
+              <defs><{{kind}} id="g">
+                <stop offset="0" stop-color="red" {{Opacity(first, inlineStyle)}}/>
+                <stop offset="1" stop-color="blue" {{Opacity(last, inlineStyle)}}/>
+              </{{kind}}></defs>
+              <rect x="12" y="12" width="60" height="20" fill="lime"/>
+              <path d="M0 0H100V50H0Z" fill="url(#g)"/>
+            </svg>
+            """;
+
+        static string Opacity(string value, bool inlineStyle) => inlineStyle
+            ? $"""stop-opacity="1" style="stop-opacity:{value}" """
+            : $"""stop-opacity="{value}" """;
+    }
+
     public static void PptxSvgDiscardedGradientStopsKeepOpacityFallback()
     {
         const string opaque = """<stop offset="0" stop-color="#FF0000"/><stop offset="1" stop-color="#0000FF"/>""";

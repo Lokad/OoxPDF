@@ -231,6 +231,7 @@
     "PortableRenderingStaticPictureLinksRetainComposedFrames"
   ],
   "svg-fill-winding": [
+    "=PptxSvgNumericStopStyleMatchesPresentationOpacity",
     "SvgFillRulesFollowTheSourcePathAcrossPaintAndDocumentKinds",
     "PptxSyntheticSvgEvenOddFillRulePunchesHole",
     "PptxSyntheticSvgNonzeroFillRuleKeepsOperator",
