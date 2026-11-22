@@ -24,6 +24,7 @@ jobs:
     env:
       TMP: ${{ github.workspace }}/artifacts/ci-tmp
       TEMP: ${{ github.workspace }}/artifacts/ci-tmp
+      TMPDIR: ${{ github.workspace }}/artifacts/ci-tmp
       OOXPDF_TEST_CLI_ASSEMBLY: ${{ github.workspace }}/src/Lokad.OoxPdf.Cli/bin/Release/net11.0/Lokad.OoxPdf.Cli.dll
       OOXPDF_TEST_PDF_INSPECTOR: ${{ github.workspace }}/tools/Lokad.OoxPdf.PdfInspect/bin/Release/net11.0/Lokad.OoxPdf.PdfInspect.dll
       OOXPDF_TEST_VISUAL_DIFF: ${{ github.workspace }}/tools/Lokad.OoxPdf.VisualDiff/bin/Release/net11.0/Lokad.OoxPdf.VisualDiff.dll
