@@ -299,8 +299,7 @@ internal sealed partial class DocxReader
         foreach ((string storyPartName, XDocument storyDocument) in LoadProbeStoryDocuments(package, document, relationships, cancellationToken))
         {
             EmitStaticPayloadDiagnostics(storyDocument, storyPartName);
-            var storyRelationships = package.GetRelationships(storyPartName, cancellationToken)
-                .ToDictionary(relationship => relationship.Id, StringComparer.Ordinal);
+            var storyRelationships = package.GetRelationshipDictionary(storyPartName, cancellationToken);
             EmitDrawingPayloadDiagnostics(storyDocument, storyPartName, storyRelationships);
         }
     }

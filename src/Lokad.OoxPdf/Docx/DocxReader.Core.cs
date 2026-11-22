@@ -25,8 +25,7 @@ internal sealed partial class DocxReader
         DocxDocument? result = null;
         try
         {
-            IReadOnlyDictionary<string, OoxRelationship> relationships = package.GetRelationships(documentPart.Name, cancellationToken)
-                .ToDictionary(r => r.Id, StringComparer.Ordinal);
+            IReadOnlyDictionary<string, OoxRelationship> relationships = package.GetRelationshipDictionary(documentPart.Name, cancellationToken);
             IReadOnlyDictionary<string, OoxRelationship> internalRelationships = relationships.Values
                 .Where(r => !r.IsExternal && r.ResolvedTarget is not null)
                 .ToDictionary(r => r.Id, StringComparer.Ordinal);
@@ -616,7 +615,7 @@ internal sealed partial class DocxReader
     private static OoxPart? FindRelatedPart(OoxPackage package, string documentPartName, string relationshipType, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        OoxRelationship? relationship = package.GetRelationships(documentPartName, cancellationToken)
+        OoxRelationship? relationship = package.GetRelationshipDictionary(documentPartName, cancellationToken).Values
             .FirstOrDefault(r => !r.IsExternal && r.Type == relationshipType && r.ResolvedTarget is not null);
         // Optional parts belong to this document through relationships. A
         // matching but unreferenced package payload does not configure the story.

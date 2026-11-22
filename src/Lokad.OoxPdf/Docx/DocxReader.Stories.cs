@@ -282,8 +282,7 @@ internal sealed partial class DocxReader
         XDocument partXml = package.LoadXml(part, cancellationToken);
         OoxMemory.GrowModel(modelStorage, partXml, cancellationToken);
         OoxMarkupCompatibility.WarnMustUnderstandOnce(partXml, part.Name, diagnosticSink, warnedParts);
-        IReadOnlyDictionary<string, OoxRelationship> relationships = package.GetRelationships(part.Name, cancellationToken)
-            .ToDictionary(r => r.Id, StringComparer.Ordinal);
+        IReadOnlyDictionary<string, OoxRelationship> relationships = package.GetRelationshipDictionary(part.Name, cancellationToken);
         var numberingCounters = new DocxNumberingCounters();
         var parsedStories = new List<(int Index, DocxRelatedStory Story)>();
         HashSet<string> registeredSeparators = (settings?.Root?
