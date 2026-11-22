@@ -687,8 +687,10 @@ internal static partial class PptxImagesTests
             string presentation = evenOdd ? "fill-rule=\"evenodd\" fill-opacity=\"0.5\" stroke-opacity=\"0.25\"" : "";
             string input = WriteSvgGradientDeck(FormattableString.Invariant($"""
                 <svg viewBox="0 0 {size} {size}" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M{size * .15} {size * .25}H{size * .85}" fill="#00FF00" stroke="#0000FF" stroke-width="{size * .06}" {presentation}/>
-                  <path d="M{size * .25} {size * .15}V{size * .85}" fill="#00FF00" stroke="#0000FF" stroke-width="{size * .06}" {presentation}/>
+                  <path d="M{size * .15} {size * .25}V{size * .32}H{size * .85}V{size * .25}Z"
+                        fill="#00FF00" stroke="#0000FF" stroke-width="{size * .06}" {presentation}/>
+                  <path d="M{size * .25} {size * .15}H{size * .32}V{size * .85}H{size * .25}Z"
+                        fill="#00FF00" stroke="#0000FF" stroke-width="{size * .06}" {presentation}/>
                 </svg>
                 """));
             string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
@@ -839,9 +841,14 @@ internal static partial class PptxImagesTests
             byte[]? baseline = null;
             foreach (double size in new[] { .1d, 100d, 1000d })
             {
+                string edges = combinedPaint
+                    ? FormattableString.Invariant($"V{size * .32}H{size * .85}V{size * .25}Z")
+                    : FormattableString.Invariant($"H{size * .85}");
                 string input = WriteSvgGradientDeck(FormattableString.Invariant($"""
                     <svg viewBox="0 0 {size * 2} {size}" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M{size * .15} {size * .25}H{size * .85}" fill="{(combinedPaint ? "#00FF00" : "none")}" stroke="#0000FF" stroke-width="{size * width / 100}" stroke-linecap="square" stroke-dasharray="{size * .08} {size * .04}" stroke-dashoffset="3" stroke-opacity="0.25"/>
+                      <path d="M{size * .15} {size * .25}{edges}" fill="{(combinedPaint ? "#00FF00" : "none")}"
+                            stroke="#0000FF" stroke-width="{size * width / 100}" stroke-linecap="square"
+                            stroke-dasharray="{size * .08} {size * .04}" stroke-dashoffset="3" stroke-opacity="0.25"/>
                     </svg>
                     """));
                 string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
