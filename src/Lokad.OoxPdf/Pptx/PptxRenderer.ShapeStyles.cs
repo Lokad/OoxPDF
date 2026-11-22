@@ -160,7 +160,6 @@ internal sealed partial class PptxRenderer
     private static (double X, double Y)[] CreateStar6Points(double x, double y, double width, double height)
     {
         double quarterWidth = width / 6d;
-        double quarterHeight = height / 4d;
         return
         [
             (x, y + height * 0.75d),

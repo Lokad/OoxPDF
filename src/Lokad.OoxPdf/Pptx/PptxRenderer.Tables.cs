@@ -280,7 +280,6 @@ internal sealed partial class PptxRenderer
         for (int rowIndex = 0; rowIndex < rows.Count; rowIndex++)
         {
             double rowHeight = rowHeights[rowIndex];
-            double cellY = yTop - rowHeight;
             IReadOnlyList<PptxSceneTableCell> cells = rows[rowIndex].Cells;
 
             double cellX = frameX;

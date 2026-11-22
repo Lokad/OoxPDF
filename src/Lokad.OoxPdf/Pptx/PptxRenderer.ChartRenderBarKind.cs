@@ -220,7 +220,6 @@ internal sealed partial class PptxRenderer
                 bool secondaryAxisReversed = false;
                 foreach (PptxSceneChartPlot extraBarPlot in barPlots.Skip(1))
                 {
-                    XElement extraBarChart = extraBarPlot.Source;
                     IReadOnlyList<ChartIndexedNumberVector> extraSeriesVectors = ReadSharedChartSeriesVectors(extraBarPlot, workbook, plotVisibleOnly);
                     if (CountRenderableSeries(extraSeriesVectors) == 0)
                     {
@@ -294,7 +293,6 @@ internal sealed partial class PptxRenderer
 
                 foreach (PptxSceneChartPlot linePlot in ReadSceneChartPlots(sceneChart, PptxSceneChartPlotKind.Line))
                 {
-                    XElement comboLineChart = linePlot.Source;
                     IReadOnlyList<ChartIndexedNumberVector> lineSeriesVectors = ReadSharedChartSeriesVectors(linePlot, workbook, plotVisibleOnly);
                     if (CountRenderableSeries(lineSeriesVectors) == 0)
                     {

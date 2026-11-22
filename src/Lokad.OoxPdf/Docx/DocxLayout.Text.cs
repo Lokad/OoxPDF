@@ -643,7 +643,6 @@ internal sealed partial class DocxLayoutEngine
     {
         double fontSize = span.StyleRun.EffectiveProperties.FontSize;
         double nominalFontSize = fontSize > 0d ? fontSize : fallbackFontSize;
-        double layoutFontSize = DocxVerticalAlignMetrics.ResolveFontSize(nominalFontSize, span.StyleRun);
         return DocxVerticalAlignMetrics.ResolveBaselineOffset(nominalFontSize, span.StyleRun);
     }
 
