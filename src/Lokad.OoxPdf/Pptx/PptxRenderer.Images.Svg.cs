@@ -77,7 +77,7 @@ internal sealed partial class PptxRenderer
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        if (!TryReadSvgViewBox(svg.Root, out double minX, out double minY, out double viewWidth, out double viewHeight) ||
+        if (!TryReadSvgSourceFrame(svg.Root, out double minX, out double minY, out double viewWidth, out double viewHeight) ||
             viewWidth <= 0d ||
             viewHeight <= 0d)
         {
@@ -1061,16 +1061,22 @@ internal sealed partial class PptxRenderer
         return new PdfShadingPattern(shading, new PdfPatternMatrix(matrix.M11, matrix.M12, matrix.M21, matrix.M22, matrix.OffsetX, matrix.OffsetY));
     }
 
-    private static bool TryReadSvgViewBox(XElement? root, out double minX, out double minY, out double width, out double height)
+    private static bool TryReadSvgSourceFrame(XElement? root, out double minX, out double minY, out double width, out double height)
     {
         minX = 0d;
         minY = 0d;
         width = 0d;
         height = 0d;
-        string? viewBox = (string?)root?.Attribute("viewBox");
+        if (root is null) return false;
+        string? viewBox = (string?)root.Attribute("viewBox");
         if (viewBox is null)
         {
-            return false;
+            if (root.Name.LocalName != "svg") return false;
+            // Without a viewBox, fixed viewport dimensions define the source
+            // coordinate system at the origin, with one user unit per pixel.
+            var style = ReadSvgStyleDeclarations(root);
+            return TryReadSvgNumberOrPixels(ReadSvgPresentationAttribute(root, style, "width"), out width) &&
+                TryReadSvgNumberOrPixels(ReadSvgPresentationAttribute(root, style, "height"), out height);
         }
 
         double[] values = SvgNumberRegex().Matches(viewBox)

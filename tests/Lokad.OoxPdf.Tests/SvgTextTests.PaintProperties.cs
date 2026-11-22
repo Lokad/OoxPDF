@@ -1,3 +1,4 @@
+using System.Text;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Docx;
 using Lokad.OoxPdf.Ooxml;
@@ -171,6 +172,61 @@ internal static partial class SvgTextTests
         TestAssert.Equal(expected.ShadingPatterns[0].Pattern.ResourceKey, actual.ShadingPatterns.Single().Pattern.ResourceKey);
         TestAssert.Equal(expected.Shadings[0].Shading.ResourceKey, actual.Shadings.Single().Shading.ResourceKey);
         TestAssert.Equal(0, diagnostics.Count);
+    }
+
+    public static void SvgExplicitViewportDimensionsKeepPaintWithoutViewBox()
+    {
+        const string content = """
+            <rect x="12" y="15" width="76" height="44" fill="red"/>
+            <g transform="translate(24 10)">
+              <path d="M120 25 L170 64" fill="none" stroke="blue" stroke-width="6"/>
+              <text x="135" y="110" font-size="24" fill="#112233">I</text>
+            </g>
+            """;
+        string Picture(string sizing) =>
+            $"""<svg xmlns="http://www.w3.org/2000/svg" {sizing} font-family="DejaVu Sans">{content}</svg>""";
+
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        var expected = Paint(Picture("width=\"300\" height=\"150\" viewBox=\"0 0 300 150\""), diagnostics);
+        string paint = expected.ToString();
+        TestAssert.Contains("1 0 0 rg", paint);
+        TestAssert.Contains("0 0 1 RG", paint);
+        TestAssert.Equal(1, LabelPaths(paint));
+
+        foreach (string sizing in new[]
+        {
+            "width=\"300\" height=\"150\"",
+            "width=\"300px\" height=\"150px\"",
+            "width=\"600\" height=\"300\" style=\"width:300px; height:150px\"",
+            "width=\"600\" height=\"300\" viewBox=\"0 0 300 150\""
+        })
+        {
+            AssertEquivalentSvgPaint(expected, Paint(Picture(sizing), diagnostics),
+                "Explicit dimensions supply the same coordinate frame as the equivalent viewBox.");
+        }
+        TestAssert.Equal(0, diagnostics.Count);
+    }
+
+    public static void SvgUnknownSourceFrameRetainsIgnoredDiagnostic()
+    {
+        foreach (string sizing in new[]
+        {
+            "height=\"150\"",
+            "width=\"100%\" height=\"150\"",
+            "width=\"0\" height=\"150\"",
+            "width=\"300\" height=\"150\" viewBox=\"invalid\""
+        })
+        {
+            byte[] source = Encoding.UTF8.GetBytes(
+                $"""<svg xmlns="http://www.w3.org/2000/svg" {sizing}><rect width="50" height="50" fill="red"/></svg>""");
+            var graphics = new PdfGraphicsBuilder();
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            TestAssert.True(!PptxRenderer.TryRenderSvgImage(graphics, 0, 0, 400, 160, source, diagnostics.Add, 1, "/test.svg", default),
+                $"The source dimensions must resolve for {sizing}.");
+            TestAssert.Equal("SVG_UNSUPPORTED_CONTENT", diagnostics.Single().Id);
+            TestAssert.Equal("Ignored", diagnostics.Single().Fallback);
+            TestAssert.DoesNotContain("1 0 0 rg", graphics.ToString());
+        }
     }
 
     public static void SvgCurrentColorUsesEachPaintedElementsColor()

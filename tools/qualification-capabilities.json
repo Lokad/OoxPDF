@@ -660,6 +660,8 @@
     "SvgCurrentColorUsesEachPaintedElementsColor",
     "SvgPrimitivePixelUnitsMatchUserCoordinates",
     "=SvgUserSpaceGradientPixelUnitsMatchUserCoordinates",
+    "=SvgExplicitViewportDimensionsKeepPaintWithoutViewBox",
+    "=SvgUnknownSourceFrameRetainsIgnoredDiagnostic",
     "SvgInheritedPaintPropertiesKeepNearestAndLocalOwners",
     "SvgInheritedOpacityPreservesTransparentOverlayContent",
     "SvgZeroWidthStrokesKeepTheirIndependentFill",
