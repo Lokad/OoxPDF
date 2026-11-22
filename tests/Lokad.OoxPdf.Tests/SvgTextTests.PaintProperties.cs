@@ -196,7 +196,7 @@ internal static partial class SvgTextTests
             "stroke=\"blue\" stroke-opacity=\".4\"", "stroke=\"green\" stroke-opacity=\".3\"");
         string actual = Picture("fill=\"url(#zero)\" fill-opacity=\".8\"",
             "stroke=\"url(#zero)\" stroke-opacity=\".8\"", "stroke=\"url(#one)\" stroke-opacity=\".5\"");
-        AssertSolidSvgPaintInBothFormats(expected, actual, "0 0 1 rg", "0 0 1 RG", "0 0.502 0 RG");
+        AssertSvgPaintInBothFormats(expected, actual, "0 0 1 rg", "0 0 1 RG", "0 0.502 0 RG");
     }
 
     public static void SvgSingleStopRadialGradientsMatchSolidPaintInBothFormats()
@@ -217,10 +217,29 @@ internal static partial class SvgTextTests
             "fill=\"green\" fill-opacity=\".3\"", "stroke=\"blue\" stroke-opacity=\".4\"");
         string actual = Picture("fill=\"url(#pad)\" fill-opacity=\".8\"",
             "fill=\"url(#repeat)\" fill-opacity=\".5\"", "stroke=\"url(#pad)\" stroke-opacity=\".8\"");
-        AssertSolidSvgPaintInBothFormats(expected, actual, "0 0 1 rg", "0 0.502 0 rg", "0 0 1 RG");
+        AssertSvgPaintInBothFormats(expected, actual, "0 0 1 rg", "0 0.502 0 rg", "0 0 1 RG");
     }
 
-    private static void AssertSolidSvgPaintInBothFormats(string expected, string actual, params string[] paintOperators)
+    public static void SvgQuotedLocalPaintServersMatchUnquotedReferencesInBothFormats()
+    {
+        string Picture(string linear, string stroke, string radial, string missing) => Svg($"""
+            <defs>
+              <linearGradient id="linear"><stop offset="0" stop-color="red"/><stop offset="1" stop-color="blue"/></linearGradient>
+              <radialGradient id="radial"><stop offset="0" stop-color="yellow"/><stop offset="1" stop-color="purple"/></radialGradient>
+            </defs>
+            <rect x="10" y="20" width="60" height="60" fill="{linear} lime"/>
+            <rect x="85" y="20" width="60" height="60" fill="none" style="stroke: {stroke}; stroke-width: 8"/>
+            <rect x="160" y="20" width="60" height="60" fill="{radial}"/>
+            <rect x="235" y="20" width="60" height="60" fill="{missing} green"/>
+            <text x="20" y="130" font-size="36" fill="{missing} #112233">I</text>
+            """);
+
+        string expected = Picture("url(#linear)", "url(#linear)", "url(#radial)", "url(#missing)");
+        string actual = Picture("url('#linear')", "URL( &quot;#linear&quot; )", "url( #radial )", "url( '#missing' )");
+        AssertSvgPaintInBothFormats(expected, actual, "/PatternType 2", "/ShadingType 3", "0 0.502 0 rg", LabelColor);
+    }
+
+    private static void AssertSvgPaintInBothFormats(string expected, string actual, params string[] expectedMarkers)
     {
         foreach (var (kind, view, geometry) in new[] {
             (OoxPdfInputKind.Pptx, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout),
@@ -241,14 +260,14 @@ internal static partial class SvgTextTests
                 return output.ToArray();
             }
 
-            byte[] solidPdf = Render(expected);
-            string content = Encoding.Latin1.GetString(solidPdf);
-            foreach (string paint in paintOperators)
+            byte[] control = Render(expected);
+            string content = Encoding.Latin1.GetString(control);
+            foreach (string marker in expectedMarkers)
             {
-                TestAssert.Contains(paint, content);
+                TestAssert.Contains(marker, content);
             }
-            TestAssert.True(solidPdf.AsSpan().SequenceEqual(Render(actual)),
-                $"{kind} {view} must paint the same fills, strokes and alpha as the explicit solid colors.");
+            TestAssert.True(control.AsSpan().SequenceEqual(Render(actual)),
+                $"{kind} {view} must emit the same paint and resources as the control.");
             TestAssert.Equal(0, diagnostics.Count);
         }
     }

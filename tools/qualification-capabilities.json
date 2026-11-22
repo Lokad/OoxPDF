@@ -662,6 +662,7 @@
     "=SvgUserSpaceGradientPixelUnitsMatchUserCoordinates",
     "=SvgConstantLinearGradientsMatchSolidPaintInBothFormats",
     "=SvgSingleStopRadialGradientsMatchSolidPaintInBothFormats",
+    "=SvgQuotedLocalPaintServersMatchUnquotedReferencesInBothFormats",
     "=PptxSvgUserSpacePercentGradientsMatchViewportUnits",
     "=PptxSyntheticSvgInvalidUserSpacePercentVectorDiagnoses",
     "=SvgExplicitViewportDimensionsKeepPaintWithoutViewBox",

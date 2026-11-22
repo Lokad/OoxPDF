@@ -1398,7 +1398,7 @@ internal sealed partial class PptxRenderer
             * ReadSvgOpacityValue(ReadSvgPresentationAttribute(path, style, "opacity"));
         if (!TryReadSvgStrokeWidth(style, path, out double width))
         {
-            failure = MatchSvgGradientReference(strokePaint).Success
+            failure = SvgLocalPaintServerRegex().IsMatch(strokePaint)
                 ? SvgStrokeFailure.UnresolvedGradient : SvgStrokeFailure.UnparsableWidth;
             return default;
         }
@@ -1474,20 +1474,21 @@ internal sealed partial class PptxRenderer
             return ids;
         });
 
-    private static Match MatchSvgGradientReference(string paint) => Regex.Match(paint, @"url\(#(?<id>[^)]+)\)");
+    [GeneratedRegex("""^\s*url\(\s*(?:"#(?<id>[^"\s\\]+)"|'#(?<id>[^'\s\\]+)'|#(?<id>[^()\s"'\\]+))\s*\)""",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex SvgLocalPaintServerRegex();
 
     private static string ResolveSvgPaintFallback(XElement element, IReadOnlyDictionary<string, string> style,
         string paint, Lazy<HashSet<string>> elementIds, out string? gradientId)
     {
         gradientId = null;
-        if (!paint.Contains("url(#", StringComparison.Ordinal)) return paint;
-        Match reference = MatchSvgGradientReference(paint);
+        if (!paint.AsSpan().TrimStart().StartsWith("url(", StringComparison.OrdinalIgnoreCase)) return paint;
+        Match reference = SvgLocalPaintServerRegex().Match(paint);
         gradientId = reference.Success ? reference.Groups["id"].Value : null;
         if (gradientId is null) return paint;
 
-        ReadOnlySpan<char> suffix = paint.AsSpan(reference.Index + reference.Length);
-        if (suffix.IsEmpty || !char.IsWhiteSpace(suffix[0]) || !paint.AsSpan(0, reference.Index).Trim().IsEmpty ||
-            gradientId.AsSpan().IndexOfAny(" \t\r\n%\\") >= 0) return paint;
+        ReadOnlySpan<char> suffix = paint.AsSpan(reference.Length);
+        if (suffix.IsEmpty || !char.IsWhiteSpace(suffix[0]) || gradientId.Contains('%')) return paint;
 
         // A present server still owns its existing paint and diagnostics, even
         // when the renderer cannot use it. Resolve only absent local targets.
