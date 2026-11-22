@@ -48,20 +48,21 @@ internal static class TestFixtures
         return stream;
     }
 
-    public static string WriteTempPackage(string extension, IReadOnlyDictionary<string, string> entries)
-    {
-        using MemoryStream stream = CreateZipPackage(entries);
-        string path = NewTemporaryPath(extension);
-        File.WriteAllBytes(path, stream.ToArray());
-        return path;
-    }
+    public static string WriteTempPackage(string extension, IReadOnlyDictionary<string, string> entries) =>
+        WriteTempPackage(extension, CreateZipPackage(entries));
 
-    public static string WriteTempPackage(string extension, IReadOnlyDictionary<string, byte[]> entries)
+    public static string WriteTempPackage(string extension, IReadOnlyDictionary<string, byte[]> entries) =>
+        WriteTempPackage(extension, CreateZipPackage(entries));
+
+    private static string WriteTempPackage(string extension, MemoryStream package)
     {
-        using MemoryStream stream = CreateZipPackage(entries);
-        string path = NewTemporaryPath(extension);
-        File.WriteAllBytes(path, stream.ToArray());
-        return path;
+        using (package)
+        {
+            string path = NewTemporaryPath(extension);
+            using FileStream file = File.Create(path);
+            package.WriteTo(file);
+            return path;
+        }
     }
 
     public static byte[] Utf8(string text)
