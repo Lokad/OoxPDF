@@ -8772,6 +8772,7 @@
     "=DocxTerminalPictureAndMathBookmarksKeepTheirPlacedLinks",
     "=DocxTerminalTextBookmarksKeepLinksAcrossHiddenSuffixes",
     "=DocxTerminalInlineObjectsKeepBookmarkLinksAcrossUnpaintedSuffixes",
+    "=DocxTerminalTabBookmarksFollowBothPlacedEdges",
     "DocxParagraphEndBookmarks",
     "DocxReaderPromotesInlineRunPageBreakInsideParagraph",
     "DocxReaderPromotesHyperlinkRunPageBreakInsideParagraph",

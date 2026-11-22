@@ -1225,20 +1225,22 @@ internal sealed partial class DocxRenderer
 
                         DocxInlineItem? targetItem = ResolveBookmarkInlineItem(paragraph, bookmark, cancellationToken,
                             out int itemIndex, out bool afterItem);
-                        if (line.InlineFrame is { } objectLine &&
-                            (targetItem is DocxInlinePicture or DocxInlineBox || afterItem && targetItem is DocxInlineEquation))
+                        bool tab = targetItem is DocxInlineTab;
+                        if (line.InlineFrame is { } inlineFrame &&
+                            (tab || targetItem is DocxInlinePicture or DocxInlineBox || afterItem && targetItem is DocxInlineEquation))
                         {
-                            // The measured line owns both boundaries of its placed object.
+                            // The measured line owns both boundaries, including tabs with no ink.
                             foreach (var extent in line.InlineSourceExtents)
                             {
                                 cancellationToken.ThrowIfCancellationRequested();
-                                if (extent.ItemIndex != itemIndex || extent.EndOffset <= extent.StartOffset ||
+                                if (extent.ItemIndex != itemIndex || extent.EndOffset < extent.StartOffset ||
+                                    !tab && extent.EndOffset == extent.StartOffset ||
                                     afterItem && extent.ContinuesSourceItem) continue;
                                 double offset = afterItem ? extent.EndOffset :
                                     extent.StartOffset == 0d ? line.FrameOriginOffsetX ?? 0d : extent.StartOffset;
                                 destinations.Add(bookmark.Name, new PdfLinkDestination(pageIndex,
                                     line.X + offset + pageTextEmissionXOffset - viewportContextPoints * textEmissionFontScale,
-                                    line.BaselineY + objectLine.BaselineInset - pageTextEmissionBaselineOffset, Zoom: null));
+                                    line.BaselineY + inlineFrame.BaselineInset - pageTextEmissionBaselineOffset, Zoom: null));
                                 break;
                             }
                             continue;
@@ -1312,7 +1314,7 @@ internal sealed partial class DocxRenderer
                             }
                         }
 
-                        if (afterItem && targetItem is not DocxInlineText) continue;
+                        if (afterItem && !tab && targetItem is not DocxInlineText) continue;
 
                         if (!TryResolveBookmarkDestinationSegment(segments, paragraph, bookmark,
                             afterItem ? targetItem as DocxInlineText : null, cancellationToken,
@@ -1908,7 +1910,7 @@ internal sealed partial class DocxRenderer
         }
         if (index <= last) return items[index];
         index = last;
-        if (index >= 0 && items[index] is DocxInlineText or DocxInlinePicture or DocxInlineBox or DocxInlineEquation)
+        if (index >= 0 && items[index] is DocxInlineText or DocxInlinePicture or DocxInlineBox or DocxInlineEquation or DocxInlineTab)
         {
             afterItem = true;
             return items[index];

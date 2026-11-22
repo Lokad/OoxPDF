@@ -156,6 +156,62 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
+    public static void DocxTerminalTabBookmarksFollowBothPlacedEdges()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        foreach (bool cell in new[] { false, true })
+        {
+            var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true), mode,
+                mode == OoxPdfDocxMarkupMode.AllMarkup ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
+                    : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+            var control = Render(null);
+            var clean = EndLink(control);
+            var beforePages = RenderTab(4320, afterTab: false);
+            var nearStart = EndLink(beforePages);
+            var farStart = EndLink(RenderTab(5040, afterTab: false));
+            var afterPages = RenderTab(4320, afterTab: true);
+            var nearEnd = EndLink(afterPages);
+            var farEnd = EndLink(RenderTab(5040, afterTab: true));
+            TestAssert.Equal(nearStart, farStart);
+            TestAssert.Equal(nearStart.Top, nearEnd.Top);
+            TestAssert.True(nearEnd.Left > nearStart.Left &&
+                Math.Abs(farEnd.Left!.Value - nearEnd.Left!.Value - 36d) < .001d,
+                $"Tab endpoints must follow the two authored stops on page two: {mode}/{cell}.");
+            TestAssert.Equal(clean, EndLink(RenderTab(4320, afterTab: true, hidden: true)));
+            TestAssert.Equal(clean, EndLink(RenderTab(4320, afterTab: false, hidden: true)));
+            TestAssert.True(afterPages.Select(page => page.Content).SequenceEqual(beforePages.Select(page => page.Content)),
+                "Moving the bookmark across the tab must preserve the page's paint commands.");
+            TestAssert.Contains("Following text", DocxPageFootnoteNumberingTests.DecodeText(afterPages[1]));
+
+            PdfPage[] Render(Action<XElement>? mutate) => renderer.RenderPagesAsync(
+                ReadTerminalBookmarkDocument(mode, cell, "math", null, mutate), null, default).ToBlockingEnumerable().ToArray();
+
+            PdfPage[] RenderTab(int position, bool afterTab, bool hidden = false) => Render(anchor =>
+            {
+                XNamespace w = anchor.Name.Namespace;
+                var owner = anchor.Parent!;
+                var properties = owner.Element(w + "pPr");
+                if (properties is null) owner.AddFirst(properties = new XElement(w + "pPr"));
+                properties.Add(new XElement(w + "tabs", new XElement(w + "tab",
+                    new XAttribute(w + "val", "left"), new XAttribute(w + "pos", position))));
+                var tab = new XElement(w + "r", new XElement(w + "tab"));
+                if (hidden) tab.AddFirst(new XElement(w + "rPr", new XElement(w + "vanish")));
+                if (afterTab) anchor.AddBeforeSelf(tab);
+                else anchor.ElementsAfterSelf().First().AddAfterSelf(tab);
+            });
+
+            PdfLinkDestination EndLink(PdfPage[] pages)
+            {
+                TestAssert.Equal(2, pages.Length);
+                var links = pages[0].Annotations.OrderBy(link => link.X).ToArray();
+                TestAssert.Equal(2, links.Length);
+                TestAssert.True(links[1].Destination is { PageIndex: 1, Left: not null, Top: not null },
+                    $"The terminal link must have a complete destination on page two: {mode}/{cell}.");
+                return links[1].Destination!.Value;
+            }
+        }
+    }
+
     private static DocxDocument ReadTerminalBookmarkDocument(OoxPdfDocxMarkupMode mode, bool cell, string contentKind,
         bool? hiddenBeforeBookmark, Action<XElement>? addSuffix = null) => ReadMutation(
         contentKind == "box" ? "InlineBoxMath/inline-box-body-equation-inline-box-valid" : "CompositionProbes/body",
@@ -185,6 +241,7 @@ internal static partial class DocxInlineCompositionTests
             _ => new XElement(original.Element(m + "oMath")!)
         };
         var owner = new XElement(w + "p", Run("Terminal owner "));
+        if (!cell) owner.AddFirst(new XElement(w + "pPr", new XElement(w + "pageBreakBefore")));
         if (contentKind == "box") owner.Add(new XElement(original.Element(m + "oMath")!));
         owner.Add(Start("701", "ObjectStart"), content, End("701"));
         if (contentKind == "mixed") owner.Add(Run(" plain ending"));
@@ -204,7 +261,6 @@ internal static partial class DocxInlineCompositionTests
         }
         else
         {
-            owner.AddFirst(new XElement(w + "pPr", new XElement(w + "pageBreakBefore")));
             original.ReplaceWith(links, owner, following);
         }
     });
