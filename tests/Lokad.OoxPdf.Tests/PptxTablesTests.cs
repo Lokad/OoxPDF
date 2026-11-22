@@ -559,13 +559,7 @@ internal static class PptxTablesTests
 
     public static void PptxSyntheticTableStyleMediumStyle2Accent6RendersFills()
     {
-        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
-        if (!File.Exists(arial))
-        {
-            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
-        }
-
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
+        using var input = TestFixtures.CreateZipPackage(new Dictionary<string, byte[]>
         {
             ["[Content_Types].xml"] = TestFixtures.Utf8(PptxTests.BasicContentTypes().Replace(
                 "</Types>",
@@ -662,28 +656,38 @@ internal static class PptxTablesTests
                 </p:sld>
                 """)
         });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        using var package = OoxPackage.Open(input, default);
+        PdfPage page = new PptxRenderer(new PortableRenderingTests.PinnedResolver())
+            .RenderPagesAsync(new PptxReader().Read(package, default), package, null, default)
+            .ToBlockingEnumerable().Single();
 
-        OoxPdfConverter.Convert(input, output);
+        AssertCellFills(page.Content, new RgbColor(51, 102, 153),
+        [
+            "72 420 72 48 re f*", "144 420 72 48 re f*", "216 420 72 48 re f*",
+            "72 372 72 48 re f*", "216 372 72 48 re f*",
+            "72 324 72 48 re f*", "216 324 72 48 re f*",
+            "72 276 72 48 re f*", "144 276 72 48 re f*", "216 276 72 48 re f*",
+            "324 396 72 72 re f*", "396 396 72 72 re f*", "324 324 72 72 re f*"
+        ]);
+        AssertCellFills(page.Content, new RgbColor(205, 211, 222), ["144 372 72 48 re f*"]);
+        AssertCellFills(page.Content, new RgbColor(232, 234, 239), ["144 324 72 48 re f*"]);
+        AssertCellFills(page.Content, new RgbColor(39, 80, 121), ["504 324 108 72 re f*"]);
 
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("0.2 0.4 0.6 rg", pdf);
-        TestAssert.Contains("0.804 0.827 0.871 rg", pdf);
-        TestAssert.Contains("0.91 0.918 0.937 rg", pdf);
-        TestAssert.Contains("1 g", pdf);
-        TestAssert.True(Regex.Matches(pdf, "0\\.2 0\\.4 0\\.6 rg").Count >= 3, "Expected header cells and first-column body cell to use the accent fill.");
-        TestAssert.Contains("/GS40000F100000S gs", pdf);
-        TestAssert.Contains("0.153 0.314 0.475 rg", pdf);
+        PdfExtGStateResource translucent = page.ExtGStates.Single(state => state.FillAlpha == 0.4d && state.StrokeAlpha == 1d);
+        string content = page.Content.Replace("\r\n", "\n", StringComparison.Ordinal);
+        TestAssert.Contains($"q\n/{translucent.ResourceName} gs\n0.2 0.4 0.6 rg\n324 324 72 72 re f*\nQ", content);
+        var textPaint = ReadCellTextPaint(page);
+        TestAssert.Equal("A B C D D1 D2 E F G H H1 H2 H3 I L1 L2 L3 L4",
+            string.Join(" ", textPaint.Keys.Order(StringComparer.Ordinal)));
+        TestAssert.Equal("1 g", textPaint["D1"]);
+        TestAssert.Equal("1 g", textPaint["D2"]);
     }
 
     public static void PptxSyntheticTableStyleDarkStyle1Accent6RendersWhiteBodyText()
     {
         PdfPage page = RenderDarkStyleAccent6Table("""firstRow="1" bandRow="1" """,
             ["HDR"], ["BOD1"], ["BOD2"], ["BOD3"]);
-        var textPaint = Regex.Matches(page.Content, @"(?ms)^BT\r?\n(?<fill>[^\r\n]+)\r?\n.*?^ET\r?$")
-            .ToDictionary(block => string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(
-                new PdfPage(page.Width, page.Height, block.Value, page.Fonts)).Select(show => show.Text)),
-                block => block.Groups["fill"].Value, StringComparer.Ordinal);
+        var textPaint = ReadCellTextPaint(page);
         TestAssert.Equal(4, textPaint.Count);
         foreach (string label in new[] { "HDR", "BOD1", "BOD2", "BOD3" })
             TestAssert.Equal("1 g", textPaint[label]);
@@ -726,6 +730,12 @@ internal static class PptxTablesTests
             path.EndsWith(" re f*", StringComparison.Ordinal)).Order(StringComparer.Ordinal);
         TestAssert.Equal(string.Join(", ", expected.Order(StringComparer.Ordinal)), string.Join(", ", actual));
     }
+
+    private static Dictionary<string, string> ReadCellTextPaint(PdfPage page) =>
+        Regex.Matches(page.Content, @"(?ms)^BT\r?\n(?<fill>[^\r\n]+)\r?\n.*?^ET\r?$")
+            .ToDictionary(block => string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(
+                new PdfPage(page.Width, page.Height, block.Value, page.Fonts)).Select(show => show.Text)),
+                block => block.Groups["fill"].Value, StringComparer.Ordinal);
 
     private static PdfPage RenderDarkStyleAccent6Table(string tableFlags, params string[][] rows)
     {
