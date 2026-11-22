@@ -196,6 +196,9 @@ function New-ReportRow($case, [bool]$passed, [string]$errorMessage, [string]$exp
         passed = $passed
         status = $status
         runPath = if ($latestRun -ne $null) { Convert-ToRepoPath $latestRun.FullName } else { $null }
+        referencePageCount = $runInfo.ReferencePageCount
+        candidatePageCount = $runInfo.CandidatePageCount
+        # VisualDiff emits one row for each position on either side.
         pageCount = $metrics.Count
         dimensionMismatchCount = $dimensionMismatchCount
         diagnosticsCount = $diagnostics.Count
@@ -346,7 +349,7 @@ if ((Get-FileHash -LiteralPath $CliPath).Hash -ne $cliHash -or
 New-Item -ItemType Directory -Force -Path $reportRoot | Out-Null
 $runId = "{0}-p{1}-{2}" -f (Get-Date -Format "yyyyMMdd-HHmmss-fff"), $PID, ([System.Guid]::NewGuid().ToString("N").Substring(0, 8))
 $report = [pscustomobject]@{
-    schema = "ooxpdf-visual-family-report/1"
+    schema = "ooxpdf-visual-family-report/2"
     family = $Family
     cliPath = $CliPath
     cliSha256 = $cliHash

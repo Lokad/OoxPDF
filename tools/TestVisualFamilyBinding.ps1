@@ -210,7 +210,7 @@ try {
     if(@(Get-Content $buildLog).Count -ne $before) {throw 'Real prebuilt family requested a build'}
     $reportPath=Join-Path $repo 'artifacts/visual/reports/probe.json'
     $bound=Get-Content -LiteralPath $reportPath -Raw | ConvertFrom-Json
-    if ($bound.schema -cne 'ooxpdf-visual-family-report/1' -or $bound.cases.Count -ne 2) {
+    if ($bound.schema -cne 'ooxpdf-visual-family-report/2' -or $bound.cases.Count -ne 2) {
         throw 'The real family did not publish a versioned comparison identity'
     }
     foreach ($row in $bound.cases) {
@@ -229,6 +229,10 @@ try {
         }
         if ($null -ne $info.GitCommit -or $null -ne $info.GitDirty) {
             throw 'The synthetic repository inherited an enclosing checkout identity'
+        }
+        if ($row.referencePageCount -ne 1 -or $row.candidatePageCount -ne 1 -or $row.pageCount -ne 1 -or
+            $info.ReferencePageCount -ne 1 -or $info.CandidatePageCount -ne 1) {
+            throw 'The case and family report did not retain separate raster page counts'
         }
     }
     & (Join-Path $PSScriptRoot 'CompareVisualReports.ps1') -Baseline $reportPath -Current $reportPath | Out-Null
@@ -308,7 +312,7 @@ foreach($inspection in $inspections) {
     'Fresh shifted PDF fails the manifest Y bound','Combined gates inspect each PDF once',
     'Chart classification reuse and independent page scopes','Candidate-only font inspection',
     'Incomplete inspection refusal','Inspector provenance','Canonical markup cache key',
-    'Bound visual report identity','Measured failure identity','Synthetic repository isolation');
+    'Bound visual report identity','Separate raster page counts','Measured failure identity','Synthetic repository isolation');
     InspectionCapabilities=$inspectionKeys.Count;RealInspectionCalls=$inspections.Count;LibraryBuilds=0;LibraryExecutions=0;OfficeExports=0} |
     ConvertTo-Json | Set-Content (Join-Path $OutputDirectory 'evidence.json')
 Write-Output 'Visual-family and real case/inspector binding checks pass; no actual build, library execution or Office export.'

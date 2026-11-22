@@ -96,8 +96,8 @@ function Assert-CaseIdentity($case, [string] $side) {
     }
 }
 
-function Get-CaseCompletenessError($case, $baselineCase = $null) {
-    if ($case.passed -ne $true) {
+function Get-CaseCompletenessError($case, $baselineCase, [bool] $bound) {
+    if (!$bound -and $case.passed -ne $true) {
         return $null
     }
 
@@ -108,12 +108,21 @@ function Get-CaseCompletenessError($case, $baselineCase = $null) {
     if ($requiresRecall) { $fields += 'minForegroundRecall' }
     foreach ($field in $fields) {
         if ($null -eq (To-FiniteDouble $case.$field)) {
-            return ("passed case '{0}' is missing finite metric '{1}': incomplete measurement." -f [string]$case.id, $field)
+            return ("case '{0}' is missing finite metric '{1}': incomplete measurement." -f [string]$case.id, $field)
         }
     }
 
-    if ($null -eq (To-PositiveInteger $case.pageCount)) {
-        return ("passed case '{0}' requires a positive integer 'pageCount': incomplete measurement." -f [string]$case.id)
+    $rows = To-PositiveInteger $case.pageCount
+    if ($null -eq $rows) {
+        return ("case '{0}' requires a positive integer 'pageCount': incomplete measurement." -f [string]$case.id)
+    }
+    if ($bound) {
+        $referencePages = To-PositiveInteger $case.referencePageCount
+        $candidatePages = To-PositiveInteger $case.candidatePageCount
+        if ($null -eq $referencePages -or $null -eq $candidatePages -or
+            $rows -ne [Math]::Max($referencePages, $candidatePages)) {
+            return ("case '{0}' requires separate page counts consistent with its comparison rows: incomplete measurement." -f [string]$case.id)
+        }
     }
 
     return $null
@@ -121,8 +130,11 @@ function Get-CaseCompletenessError($case, $baselineCase = $null) {
 
 $baselineReport = Read-Report $Baseline
 $currentReport = Read-Report $Current
-$schema = "ooxpdf-visual-family-report/1"
+$schema = "ooxpdf-visual-family-report/2"
 foreach ($report in @($baselineReport, $currentReport)) {
+    if ($report.schema -ceq "ooxpdf-visual-family-report/1") {
+        throw "Historical visual family report lacks separate candidate and reference page counts. Regenerate it for comparison."
+    }
     if ($null -ne $report.schema -and $report.schema -cne $schema) {
         throw "Unknown visual report schema '$($report.schema)'."
     }
@@ -131,6 +143,8 @@ if ($baselineReport.schema -cne $currentReport.schema) {
     throw "Incomparable visual reports: both must record the comparison inputs. Regenerate the historical report."
 }
 $bound = $currentReport.schema -ceq $schema
+if ($bound) { $comparableFields += 'referencePageCount' }
+$pageField = if ($bound) { 'candidatePageCount' } else { 'pageCount' }
 
 if (($null -ne $baselineReport.family -or $null -ne $currentReport.family) -and ([string]$baselineReport.family -ne [string]$currentReport.family)) {
     throw ("Incomparable visual reports: baseline family '{0}' differs from current family '{1}'. Compare matching families only." -f [string]$baselineReport.family, [string]$currentReport.family)
@@ -151,11 +165,11 @@ $regressions = @()
 $incomplete = @()
 foreach ($id in $currentMap.Keys | Sort-Object) {
     $after = $currentMap[$id]
-    $afterError = Get-CaseCompletenessError $after $baselineMap[$id]
+    $afterError = Get-CaseCompletenessError $after $baselineMap[$id] $bound
     if ($null -ne $afterError) {
         $incomplete += "current: $afterError"
     }
-    if ($bound -and ($after.passed -eq $true -or $baselineMap.ContainsKey($id))) {
+    if ($bound -and ($null -eq $afterError -or $baselineMap.ContainsKey($id))) {
         Assert-CaseIdentity $after "current"
     }
 }
@@ -184,7 +198,10 @@ foreach ($id in $baselineMap.Keys | Sort-Object) {
         }
     }
 
-    $beforeError = Get-CaseCompletenessError $before
+    $beforeError = Get-CaseCompletenessError $before $null $bound
+    if ($bound -and $null -ne $beforeError) {
+        $incomplete += "baseline: $beforeError"
+    }
 
     if ($before.passed -eq $true -and $after.passed -ne $true) {
         $regressions += [pscustomobject]@{
@@ -197,7 +214,7 @@ foreach ($id in $baselineMap.Keys | Sort-Object) {
         }
     }
 
-    if ($before.passed -eq $true -and $after.passed -eq $true -and $null -ne $beforeError) {
+    if (!$bound -and $before.passed -eq $true -and $after.passed -eq $true -and $null -ne $beforeError) {
         $regressions += [pscustomobject]@{
             id = $id
             metric = "completeness"
@@ -209,12 +226,12 @@ foreach ($id in $baselineMap.Keys | Sort-Object) {
         continue
     }
 
-    $beforePages = To-PositiveInteger $before.pageCount
-    $afterPages = To-PositiveInteger $after.pageCount
+    $beforePages = To-PositiveInteger $before.$pageField
+    $afterPages = To-PositiveInteger $after.$pageField
     if ($null -ne $beforePages -and $null -ne $afterPages -and $beforePages -ne $afterPages) {
         $regressions += [pscustomobject]@{
             id = $id
-            metric = "pageCount"
+            metric = $pageField
             baseline = $beforePages
             current = $afterPages
             delta = $afterPages - $beforePages
@@ -243,7 +260,7 @@ foreach ($id in $baselineMap.Keys | Sort-Object) {
 }
 
 if ($incomplete.Count -ne 0) {
-    Write-Host "Incomplete current measurements:"
+    Write-Host "Incomplete measurements:"
     $incomplete | Sort-Object -Unique | ForEach-Object { Write-Host (" - " + $_) }
 }
 
@@ -262,4 +279,4 @@ if ($regressions.Count -ne 0) {
     throw ("Detected {0} visual report regression(s)." -f $regressions.Count)
 }
 
-throw ("Current visual report has {0} incomplete measurement(s); refusing to report no regressions." -f $incomplete.Count)
+throw ("Visual reports have {0} incomplete measurement(s); refusing to report no regressions." -f $incomplete.Count)

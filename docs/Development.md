@@ -115,6 +115,9 @@ PDF and its metadata directly. Legacy entries need a trusted re-import for this 
 Office references, producer/input/font identities and raw thresholds. Reuse
 comparisons only with verified matching identities. PDF/image exports do not
 calibrate Office application view; record view/zoom/markup settings separately.
+The visual-family comparison uses separate reference and candidate page counts.
+An inherited threshold failure still needs complete comparison measurements.
+Older bound family reports need regeneration before comparison.
 
 `MeasureCompositionPortfolio.ps1` measures frozen outcomes.
 `CompareCompositionPortfolio.ps1` compares pinned Office references. Use

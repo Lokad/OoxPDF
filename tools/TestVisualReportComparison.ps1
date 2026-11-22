@@ -39,6 +39,8 @@ $bound=$baseline.Clone()
 $bound.kind='docx'
 $bound.docxMarkup='all'
 $bound.docxMarkupGeometry='word-compatible'
+$bound.referencePageCount=1
+$bound.candidatePageCount=1
 $bound.dpi=144
 $bound.caseSha256='A'*64
 $bound.inputSha256='B'*64
@@ -64,6 +66,7 @@ $unbound=$bound.Clone()
 $unbound.Remove('referencePdfSha256')
 $cases.Add(@{Id='missing-bound-reference';Before=$bound;After=$unbound;Bound=$true;Accept=$false;ErrorLike='*missing or invalid referencePdfSha256*'})
 $cases.Add(@{Id='mixed-schemas';Before=$bound;After=$bound;Bound=$true;LegacyBaseline=$true;Accept=$false;ErrorLike='*both must record the comparison inputs*'})
+$cases.Add(@{Id='old-bound-schema';Before=$bound;After=$bound;Bound=$true;OldSchema=$true;Accept=$false;ErrorLike='*lacks separate candidate and reference page counts*'})
 foreach ($count in @(1.25, $true, 0, 2147483648)) {
     $after=$bound.Clone()
     $after.pageCount=$count
@@ -77,7 +80,23 @@ $incomplete.Remove('minStructuralSimilarity')
 $cases.Add(@{Id='incomplete-addition';Before=$bound;After=@($bound,$incomplete);Bound=$true;Accept=$false;ErrorLike='*incomplete measurement*'})
 $twoPages=$bound.Clone()
 $twoPages.pageCount=2
+$twoPages.candidatePageCount=2
 $cases.Add(@{Id='different-page-count';Before=$bound;After=$twoPages;Bound=$true;Accept=$false;ErrorLike='*visual report regression*'})
+$failed=$bound.Clone();$failed.passed=$false;$failed.minStructuralSimilarity=.90
+$cases.Add(@{Id='complete-inherited-failure';Before=$failed;After=$failed;Bound=$true;Accept=$true})
+$twoPageFailure=$failed.Clone();$twoPageFailure.pageCount=2;$twoPageFailure.referencePageCount=2;$twoPageFailure.candidatePageCount=2
+$missingPage=$twoPageFailure.Clone();$missingPage.candidatePageCount=1
+$extraPage=$failed.Clone();$extraPage.pageCount=2;$extraPage.candidatePageCount=2
+$cases.Add(@{Id='inherited-failure-missing-page';Before=$twoPageFailure;After=$missingPage;Bound=$true;Accept=$false;ErrorLike='*visual report regression*'})
+$cases.Add(@{Id='inherited-failure-extra-page';Before=$failed;After=$extraPage;Bound=$true;Accept=$false;ErrorLike='*visual report regression*'})
+$missingMetrics=$failed.Clone();$missingMetrics.minStructuralSimilarity=$null;$missingMetrics.maxMeanAbsoluteError=$null
+$cases.Add(@{Id='inherited-failure-missing-metrics';Before=$failed;After=$missingMetrics;Bound=$true;Accept=$false;ErrorLike='*incomplete measurement*'})
+$cases.Add(@{Id='inherited-failure-incomplete-baseline';Before=$missingMetrics;After=$failed;Bound=$true;Accept=$false;ErrorLike='*incomplete measurement*'})
+$missingCount=$failed.Clone();$missingCount.Remove('candidatePageCount')
+$cases.Add(@{Id='inherited-failure-missing-count';Before=$failed;After=$missingCount;Bound=$true;Accept=$false;ErrorLike='*incomplete measurement*'})
+$missingRows=$twoPageFailure.Clone();$missingRows.pageCount=1
+$cases.Add(@{Id='inherited-failure-missing-rows';Before=$twoPageFailure;After=$missingRows;Bound=$true;Accept=$false;ErrorLike='*incomplete measurement*'})
+$cases.Add(@{Id='inconsistent-pinned-reference-count';Before=$failed;After=$missingPage;Bound=$true;Accept=$false;ErrorLike='*differs from current referencePageCount*'})
 $metricRegressions=@{minStructuralSimilarity=.99;minForegroundColorHistogramCorrelation=.97;
     maxMeanAbsoluteError=.03;maxChangedPixelRatioAtThreshold16=.01}
 foreach ($field in $metricRegressions.Keys | Sort-Object) {
@@ -93,7 +112,7 @@ foreach ($case in $cases) {
     foreach ($side in @('Before','After')) {
         $report=@{family='synthetic';cases=@($case[$side])}
         if ($case.Bound -and ($side -eq 'After' -or !$case.LegacyBaseline)) {
-            $report.schema='ooxpdf-visual-family-report/1'
+            $report.schema=if ($case.OldSchema) {'ooxpdf-visual-family-report/1'} else {'ooxpdf-visual-family-report/2'}
             $report.librarySha256=if ($side -eq 'Before') {'7'*64} else {'8'*64}
         }
         $report | ConvertTo-Json -Depth 6 |
