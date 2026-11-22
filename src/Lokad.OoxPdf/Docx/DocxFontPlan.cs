@@ -260,6 +260,7 @@ internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMet
         }
 
         double widthPoints = 0d;
+        bool pairKerningEnabled = UsesPairKerning(run);
         foreach (FontCoverageSpan span in FontCoverageFallback.SplitByCoverage(text, candidates, cancellationToken))
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -269,37 +270,19 @@ internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMet
                 continue;
             }
 
-            widthPoints += MeasureSingleFontRawText(text.Substring(span.Start, span.Length), fontSize, spanFont, UsesPairKerning(run));
+            widthPoints += MeasureSingleFontRawText(text.AsSpan(span.Start, span.Length), fontSize, spanFont, pairKerningEnabled);
         }
 
         return DocxTextSpacing.AddCharacterSpacing(widthPoints, run, text);
     }
 
-    private double MeasureSingleFontText(DocxTextRun? run, string text, double fontSize, OpenTypeFont font)
-    {
-        double units = 0d;
-        ushort previousGlyph = 0;
-        bool pairKerningEnabled = UsesPairKerning(run);
-        foreach (Rune rune in text.EnumerateRunes())
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            ushort glyph = font.MapCodePoint(rune.Value);
-            if (pairKerningEnabled && previousGlyph != 0 && glyph != 0)
-            {
-                units += font.GetKerning(previousGlyph, glyph);
-            }
-
-            units += font.GetAdvanceWidth(glyph);
-            previousGlyph = glyph;
-        }
-
-        return DocxTextSpacing.AddCharacterSpacing(units * fontSize / font.UnitsPerEm, run, text);
-    }
+    private double MeasureSingleFontText(DocxTextRun? run, string text, double fontSize, OpenTypeFont font) =>
+        DocxTextSpacing.AddCharacterSpacing(MeasureSingleFontRawText(text, fontSize, font, UsesPairKerning(run)), run, text);
 
     private bool UsesPairKerning(DocxTextRun? run) => run is null ||
         (resolveSourceAdvances ? DocxTextAdvances.Resolve(run).PairKerningEnabled : run.PairKerningEnabled);
 
-    private double MeasureSingleFontRawText(string text, double fontSize, OpenTypeFont font, bool pairKerningEnabled)
+    private double MeasureSingleFontRawText(ReadOnlySpan<char> text, double fontSize, OpenTypeFont font, bool pairKerningEnabled)
     {
         double units = 0d;
         ushort previousGlyph = 0;

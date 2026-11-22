@@ -584,14 +584,25 @@ internal static partial class FontTests
         DocxFontPlan plan = DocxFontPlan.Create(document, resolver, CancellationToken.None);
         DocxTextRun planRun = plan.Runs.Single(candidate => candidate.Run.Text == "ACB").Run;
         var measurer = DocxFontPlanTextMeasurer.CreateAsync(plan, null, CancellationToken.None, resolver).GetAwaiter().GetResult();
-        double actual = measurer.MeasureText(planRun, "ACB", 9d);
         OpenTypeFont primary = OpenTypeFont.Load(primaryBytes);
         OpenTypeFont fallback = OpenTypeFont.Load(fallbackBytes);
-        double expected =
-            (primary.GetAdvanceWidth(primary.MapCodePoint(65)) +
-            fallback.GetAdvanceWidth(fallback.MapCodePoint(67)) +
-            primary.GetAdvanceWidth(primary.MapCodePoint(66))) * 9d / TestFontBuilder.UnitsPerEm;
-        TestAssert.True(Math.Abs(actual - expected) < 0.000001d, "Expected per-character fallback to measure the missing glyph in the fallback face.");
+        double surroundingUnits = primary.GetAdvanceWidth(primary.MapCodePoint('A')) +
+            primary.GetAdvanceWidth(primary.MapCodePoint('B'));
+        var controls = new[]
+        {
+            (Text: "ACB", Middle: fallback.GetAdvanceWidth(fallback.MapCodePoint('C'))),
+            (Text: "A\U0001F600B", Middle: fallback.GetAdvanceWidth(fallback.MapCodePoint(0x1F600))),
+            (Text: "A\u2603B", Middle: primary.GetAdvanceWidth(0))
+        };
+        TestAssert.True(fallback.MapCodePoint(0x1F600) != 0 && fallback.MapCodePoint(0x2603) == 0,
+            "The fallback face covers the supplementary scalar and has no snowman glyph.");
+        foreach (var control in controls)
+        {
+            double actual = measurer.MeasureText(planRun, control.Text, 9d);
+            double expected = (surroundingUnits + control.Middle) * 9d / TestFontBuilder.UnitsPerEm;
+            TestAssert.True(Math.Abs(actual - expected) < 0.000001d,
+                "Each scalar keeps the advance of its selected face or the primary missing glyph.");
+        }
     }
 
     private sealed class FamilyFontResolver(IReadOnlyDictionary<string, byte[]> fontsByFamily, string fallbackFamily) : IFontResolver
