@@ -73,7 +73,7 @@ internal static partial class SvgTextTests
         const string definitions = "<defs><linearGradient id=\"g\"><stop offset=\"0\" stop-color=\"red\"/>" +
             "<stop offset=\"1\" stop-color=\"blue\"/></linearGradient></defs>";
         const string path = "<path d=\"M20 20H120V80H20Z\" fill=\"none\" stroke=\"url(#g)\" stroke-width=\"4\" {0}/>";
-        foreach (string opacity in new[] { ".25", "50%", "bad" })
+        foreach (var (opacity, alpha) in new (string, double?)[] { (".25", .25d), ("50%", .5d), ("bad", null) })
         {
             var directDiagnostics = new List<OoxPdfDiagnostic>();
             var inheritedDiagnostics = new List<OoxPdfDiagnostic>();
@@ -81,7 +81,7 @@ internal static partial class SvgTextTests
             var inherited = Paint(Svg(definitions + "<g stroke-opacity=\"" + opacity + "\">" + string.Format(path, "") + "</g>"), inheritedDiagnostics);
             AssertEquivalentSvgPaint(direct, inherited, "Gradient opacity eligibility follows the resolved source value.");
             TestAssert.True(directDiagnostics.SequenceEqual(inheritedDiagnostics), "The same unsupported value keeps the same diagnosis.");
-            if (opacity == ".25") TestAssert.True(inherited.ExtGStates.Any(state => state.StrokeAlpha == .25d), "Numeric gradient alpha remains supported.");
+            if (alpha is double expected) TestAssert.True(inherited.ExtGStates.Any(state => state.StrokeAlpha == expected), "Resolved gradient alpha remains supported.");
             else TestAssert.True(inheritedDiagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT"), "Unqualified gradient alpha keeps its diagnosed fallback.");
         }
     }
@@ -375,6 +375,38 @@ internal static partial class SvgTextTests
             "1 0 0 RG", "/PatternType 2", " d");
     }
 
+    public static void SvgPercentageOpacityMatchesUnitOpacityInBothFormats()
+    {
+        AssertSvgPaintInBothFormats(
+            Picture(".8", ".25", ".75", ".5", "0"), Picture("80%", "25%", "75%", "50%", "0%"),
+            "/S /Luminosity", "/PatternType 2", "/Subtype /Form", "/ca 0.8 /CA 0.8", "/ca 0.5 /CA 0.5");
+
+        static string Picture(string root, string first, string last, string half, string zero) => $"""
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120" opacity="{root}">
+              <defs>
+                <linearGradient id="linear"><stop offset="0" stop-color="red" stop-opacity="{first}"/>
+                  <stop offset="1" stop-color="blue" style="stop-opacity:{last}"/></linearGradient>
+                <radialGradient id="radial"><stop offset="0" stop-color="blue" stop-opacity="{first}"/>
+                  <stop offset="1" stop-color="purple" stop-opacity="{last}"/></radialGradient>
+                <linearGradient id="stroke"><stop offset="0" stop-color="blue" stop-opacity="{half}"/>
+                  <stop offset="1" stop-color="purple" style="stop-opacity:{half}"/></linearGradient>
+                <linearGradient id="opaque"><stop offset="0" stop-color="blue"/><stop offset="1" stop-color="purple"/></linearGradient>
+              </defs>
+              <rect width="200" height="120" fill="#fff0a0"/>
+              <rect x="10" y="8" width="38" height="40" fill="url(#linear)"/>
+              <rect x="59" y="8" width="38" height="40" fill="url(#radial)"/>
+              <path d="M113 16h71v8h-71z" fill="none" stroke="url(#stroke)" stroke-width="5"/>
+              <path d="M113 42h71v8h-71z" fill="none" stroke="url(#opaque)" stroke-width="5" stroke-opacity="{half}"/>
+              <g opacity="{half}">
+                <rect x="10" y="61" width="42" height="26" fill="green"/>
+                <rect x="31" y="61" width="42" height="26" fill="green"/>
+                <path d="M113 73h71v8h-71z" fill="none" stroke="url(#opaque)" stroke-width="5"/>
+              </g>
+              <g opacity="{zero}"><rect x="12" y="96" width="24" height="14"/></g>
+            </svg>
+            """;
+    }
+
     // The 170 x 70 viewBox has a normalized diagonal of 130 user units.
     private static string DashStrokeSvg(string attributes, string inheritedStyle) => $"""
         <svg xmlns="http://www.w3.org/2000/svg" width="340" height="140" viewBox="-10 -5 170 70">
@@ -480,7 +512,7 @@ internal static partial class SvgTextTests
     public static void SvgGradientTemplateChainsPreserveStopsAndOpacityDiagnostics()
     {
         const int chainLength = 1024;
-        const string palette = "<linearGradient id=\"end\" x2=\".6\"><stop offset=\"0\" stop-color=\"red\" stop-opacity=\"50%\"/>" +
+        const string palette = "<linearGradient id=\"end\" x2=\".6\"><stop offset=\"0\" stop-color=\"red\" stop-opacity=\"-50%\"/>" +
             "<stop offset=\"1\" stop-color=\"blue\"/></linearGradient>";
         const string picture = "<rect width=\"60\" height=\"60\" fill=\"url(#end)\"/>";
         var chain = new StringBuilder();

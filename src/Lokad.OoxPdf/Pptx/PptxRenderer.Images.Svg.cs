@@ -643,9 +643,11 @@ internal sealed partial class PptxRenderer
         return true;
     }
 
-    private static double? ReadUnitSvgOpacity(string? text) =>
-        double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out double value) &&
-        value is >= 0d and <= 1d ? value : null;
+    private static double? ReadUnitSvgOpacity(string? text)
+    {
+        double? opacity = ParseSvgOpacity(text);
+        return opacity is >= 0d and <= 1d ? opacity : null;
+    }
 
     private static bool IsFullyTransparentSvgContainer(XElement element) =>
         element.Attribute("opacity") is not null && ReadSvgContainerOpacity(element).IsTransparent;
@@ -1430,25 +1432,16 @@ internal sealed partial class PptxRenderer
         return declarations;
     }
 
-    private static double ReadSvgOpacityValue(string? text)
+    private static double ReadSvgOpacityValue(string? text) =>
+        Math.Clamp(ParseSvgOpacity(text) ?? 1d, 0d, 1d);
+
+    private static double? ParseSvgOpacity(string? text)
     {
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return 1d;
-        }
-
-        string trimmed = text.Trim();
-        if (trimmed.EndsWith("%", StringComparison.Ordinal) && double.TryParse(trimmed.Substring(0, trimmed.Length - 1), NumberStyles.Float, CultureInfo.InvariantCulture, out double percent))
-        {
-            return Math.Clamp(percent / 100d, 0d, 1d);
-        }
-
-        if (double.TryParse(trimmed, NumberStyles.Float, CultureInfo.InvariantCulture, out double value))
-        {
-            return Math.Clamp(value, 0d, 1d);
-        }
-
-        return 1d;
+        ReadOnlySpan<char> token = text.AsSpan().Trim();
+        bool percent = token.Length != 0 && token[^1] == '%';
+        if (percent) token = token[..^1];
+        if (!double.TryParse(token, NumberStyles.Float, CultureInfo.InvariantCulture, out double opacity)) return null;
+        return percent ? opacity / 100d : opacity;
     }
 
     private static bool TryReadSvgFill(XElement path, IReadOnlyDictionary<string, SvgGradient> gradients,

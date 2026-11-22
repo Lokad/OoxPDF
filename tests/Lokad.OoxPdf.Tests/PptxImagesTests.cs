@@ -2056,8 +2056,8 @@ internal static partial class PptxImagesTests
         byte[] expected = RenderSvgOpacityTest(Wrap(opaque));
         foreach (string actual in new[]
         {
-            Wrap("<stop offset=\"0\" stop-color=\"#FF0000\" stop-opacity=\"50%\"/><stop offset=\"1\" stop-color=\"#0000FF\" style=\"stop-opacity:0.5\"/>"),
-            Wrap(opaque, "opacity=\"50%\""), Wrap(opaque, container: "opacity=\".5\" style=\"opacity:.5\""),
+            Wrap("<stop offset=\"0\" stop-color=\"#FF0000\" stop-opacity=\"-50%\"/><stop offset=\"1\" stop-color=\"#0000FF\" style=\"stop-opacity:0.5\"/>"),
+            Wrap(opaque, "opacity=\"-50%\""), Wrap(opaque, container: "opacity=\".5\" style=\"opacity:.5\""),
             Wrap(opaque, container: "opacity=\"-0.5\""),
             Wrap(opaque).Replace("<g >", "<svg opacity=\".5\">", StringComparison.Ordinal).Replace("</g>", "</svg>", StringComparison.Ordinal),
             Wrap(opaque, container: "opacity=\"0\" style=\"opacity:0.5\"")
@@ -2279,7 +2279,7 @@ internal static partial class PptxImagesTests
         }
         foreach (string stops in new[]
         {
-            "<stop offset=\"0\" stop-color=\"#FF0000\" stop-opacity=\"50%\"/><stop offset=\"1\" stop-color=\"#0000FF\"/>",
+            "<stop offset=\"0\" stop-color=\"#FF0000\" stop-opacity=\"-50%\"/><stop offset=\"1\" stop-color=\"#0000FF\"/>",
             "<stop offset=\"0\" stop-color=\"#FF0000\" style=\"stop-opacity:-.25\"/><stop offset=\"1\" stop-color=\"#0000FF\"/>",
             "<stop offset=\"0\" stop-color=\"#FF0000\" stop-opacity=\".25\"/><stop offset=\".00001\" stop-color=\"#00FF00\"/><stop offset=\"1\" stop-color=\"#0000FF\"/>"
         })
@@ -2459,10 +2459,10 @@ internal static partial class PptxImagesTests
             LinearStrokeSvg(LinearStrokeStops, gradientAttrs: "spreadMethod=\"repeat\" x2=\".2\""),
             LinearStrokeSvg(LinearStrokeStops, gradientAttrs: "spreadMethod=\"reflect\" x2=\".2\""),
             LinearStrokeSvg(varying),
-            LinearStrokeSvg(LinearStrokeStops.Replace("/>", " stop-opacity=\"50%\"/>", StringComparison.Ordinal)),
+            LinearStrokeSvg(LinearStrokeStops.Replace("/>", " stop-opacity=\"150%\"/>", StringComparison.Ordinal)),
             LinearStrokeSvg(LinearStrokeStops, rootAttrs: "style=\"opacity:.5\""),
-            LinearStrokeSvg(LinearStrokeStops, rootAttrs: "opacity=\"50%\""),
-            LinearStrokeSvg(LinearStrokeStops, pathAttrs: "stroke-opacity=\"50%\""),
+            LinearStrokeSvg(LinearStrokeStops, rootAttrs: "opacity=\"150%\""),
+            LinearStrokeSvg(LinearStrokeStops, pathAttrs: "stroke-opacity=\"150%\""),
             LinearStrokeSvg(LinearStrokeStops, pathAttrs: "opacity=\"garbage\""),
             LinearStrokeSvg(LinearStrokeStops, pathAttrs: "opacity=\".5\"", fill: "#EECC66"),
             LinearStrokeSvg(LinearStrokeStops, pathAttrs: "transform=\"rotate(20 50 25)\""),
@@ -2515,7 +2515,7 @@ internal static partial class PptxImagesTests
               <defs>
                 <g opacity="0.5"><path d="M0 0H5V5H0Z"/></g>
                 <radialGradient id="unused"><stop offset="0" stop-color="#FF0000" stop-opacity="0.5"/><stop offset="1" stop-color="#0000FF"/></radialGradient>
-                <radialGradient id="g"><stop offset="0" stop-color="#FF0000" stop-opacity="50%"/><stop offset="1" stop-color="#0000FF" style="stop-opacity:0.5"/></radialGradient>
+                <radialGradient id="g"><stop offset="0" stop-color="#FF0000" stop-opacity="-50%"/><stop offset="1" stop-color="#0000FF" style="stop-opacity:0.5"/></radialGradient>
               </defs>
               <g opacity="1" style="opacity:0.25"><path d="M0 0H100V50H0Z" fill="url(#g)"/><path d="M0 0H100V50H0Z" fill="url(#g)"/></g>
             </svg>
