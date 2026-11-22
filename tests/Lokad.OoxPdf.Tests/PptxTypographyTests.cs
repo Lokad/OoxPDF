@@ -2125,7 +2125,34 @@ internal static class PptxTypographyTests
     {
         byte[] cffBytes = TestFontBuilder.CreateCffKindFont("CffFamily");
         byte[] fallbackBytes = TestFontBuilder.CreateTestFont();
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        using var input = CreateCffChartPackage("Sales");
+        using var cffOutput = new MemoryStream();
+        var cffDiagnostics = new List<OoxPdfDiagnostic>();
+        OoxPdfConverter.Convert(
+            input,
+            cffOutput,
+            new OoxPdfOptions { InputKind = OoxPdfInputKind.Pptx, FontResolver = new CffFallbackPptxResolver(cffBytes, fallbackBytes, matchAllFamilies: true), DiagnosticSink = cffDiagnostics.Add });
+        input.Position = 0;
+        using var ttOutput = new MemoryStream();
+        var ttDiagnostics = new List<OoxPdfDiagnostic>();
+        OoxPdfConverter.Convert(
+            input,
+            ttOutput,
+            new OoxPdfOptions { InputKind = OoxPdfInputKind.Pptx, FontResolver = new CffFallbackPptxResolver(cffBytes, fallbackBytes, emitCff: false), DiagnosticSink = ttDiagnostics.Add });
+
+        byte[] cffPdfBytes = cffOutput.ToArray();
+        string cffPdf = Encoding.ASCII.GetString(cffPdfBytes);
+        TestAssert.True(DocxTests.CountPdfTextShows(cffPdf) >= 1, "Substituted chart text must be painted.");
+        TestAssert.DoesNotContain("CffFamily", cffPdf);
+        TestAssert.True(cffDiagnostics.Any(diagnostic => diagnostic.Id == "FONT_UNSUPPORTED_OUTLINES"), "Chart CFF rendering must report the substitution.");
+        TestAssert.True(ttOutput.ToArray().AsSpan().SequenceEqual(cffPdfBytes),
+            "Chart CFF substitution must produce the same PDF as requesting the TrueType fallback directly.");
+        TestAssert.True(!ttDiagnostics.Any(diagnostic => diagnostic.Id == "FONT_UNSUPPORTED_OUTLINES"), "TrueType rendering must not report a substitution.");
+    }
+
+    internal static MemoryStream CreateCffChartPackage(string title)
+    {
+        return TestFixtures.CreateZipPackage(new Dictionary<string, string>
         {
             ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
             ["_rels/.rels"] = PptxTests.PackageRelationship(),
@@ -2148,9 +2175,9 @@ internal static class PptxTypographyTests
                   </p:spTree></p:cSld>
                 </p:sld>
                 """,
-            ["ppt/charts/chart1.xml"] = """
+            ["ppt/charts/chart1.xml"] = $$"""
                 <?xml version="1.0" encoding="UTF-8"?>
-                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:chart><c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="1800"><a:latin typeface="CffFamily"/></a:rPr><a:t>Sales</a:t></a:r></a:p></c:rich></c:tx></c:title><c:plotArea><c:bubbleChart>
+                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:chart><c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="1800"><a:latin typeface="CffFamily"/></a:rPr><a:t>{{title}}</a:t></a:r></a:p></c:rich></c:tx></c:title><c:plotArea><c:bubbleChart>
                   <c:dLbls><c:showVal val="0"/><c:showBubbleSize val="1"/><c:dLblPos val="t"/><c:numFmt formatCode="0"/></c:dLbls>
                   <c:ser>
                     <c:tx><c:strLit><c:pt idx="0"><c:v>Demand</c:v></c:pt></c:strLit></c:tx>
@@ -2162,26 +2189,6 @@ internal static class PptxTypographyTests
                 </c:bubbleChart></c:plotArea></c:chart></c:chartSpace>
                 """
         });
-        string cffOutput = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-        var cffDiagnostics = new List<OoxPdfDiagnostic>();
-        OoxPdfConverter.Convert(
-            input,
-            cffOutput,
-            new OoxPdfOptions { FontResolver = new CffFallbackPptxResolver(cffBytes, fallbackBytes, matchAllFamilies: true), DiagnosticSink = cffDiagnostics.Add });
-        string ttOutput = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-        var ttDiagnostics = new List<OoxPdfDiagnostic>();
-        OoxPdfConverter.Convert(
-            input,
-            ttOutput,
-            new OoxPdfOptions { FontResolver = new CffFallbackPptxResolver(cffBytes, fallbackBytes, emitCff: false), DiagnosticSink = ttDiagnostics.Add });
-
-        string cffPdf = File.ReadAllText(cffOutput, Encoding.ASCII);
-        TestAssert.True(DocxTests.CountPdfTextShows(cffPdf) >= 1, "Substituted chart text must be painted.");
-        TestAssert.DoesNotContain("CffFamily", cffPdf);
-        TestAssert.True(cffDiagnostics.Any(diagnostic => diagnostic.Id == "FONT_UNSUPPORTED_OUTLINES"), "Chart CFF rendering must report the substitution.");
-        TestAssert.True(File.ReadAllText(ttOutput, Encoding.ASCII) == cffPdf,
-            "Chart CFF substitution must produce the same PDF as requesting the TrueType fallback directly.");
-        TestAssert.True(!ttDiagnostics.Any(diagnostic => diagnostic.Id == "FONT_UNSUPPORTED_OUTLINES"), "TrueType rendering must not report a substitution.");
     }
 
     private static string WriteCffProbePackage()

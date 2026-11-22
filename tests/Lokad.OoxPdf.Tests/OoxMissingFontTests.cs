@@ -4,6 +4,9 @@ using System.Text.RegularExpressions;
 using Lokad.OoxPdf;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Fonts;
+using Lokad.OoxPdf.Ooxml;
+using Lokad.OoxPdf.Pdf;
+using Lokad.OoxPdf.Pptx;
 
 namespace Lokad.OoxPdf.Tests;
 
@@ -179,56 +182,18 @@ internal static class OoxMissingFontTests
     // them as default-family runs so emission substitutes a diagnosed question mark.
     public static void CffChartUnresolvableRunesSubstituteQuestionMark()
     {
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
-            ["_rels/.rels"] = PptxTests.PackageRelationship(),
-            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
-            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
-            ["ppt/slides/_rels/slide1.xml.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
-                </Relationships>
-                """,
-            ["ppt/slides/slide1.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
-                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
-                       xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
-                       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-                  <p:cSld><p:spTree>
-                    <p:graphicFrame><p:xfrm><a:off x="914400" y="914400"/><a:ext cx="5486400" cy="3657600"/></p:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic></p:graphicFrame>
-                  </p:spTree></p:cSld>
-                </p:sld>
-                """,
-            ["ppt/charts/chart1.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:chart><c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="1800"><a:latin typeface="CffFamily"/></a:rPr><a:t>A中B</a:t></a:r></a:p></c:rich></c:tx></c:title><c:plotArea><c:bubbleChart>
-                  <c:dLbls><c:showVal val="0"/><c:showBubbleSize val="1"/><c:dLblPos val="t"/><c:numFmt formatCode="0"/></c:dLbls>
-                  <c:ser>
-                    <c:tx><c:strLit><c:pt idx="0"><c:v>Demand</c:v></c:pt></c:strLit></c:tx>
-                    <c:spPr><a:solidFill><a:srgbClr val="4472C4"/></a:solidFill></c:spPr>
-                    <c:xVal><c:numLit><c:pt idx="0"><c:v>1</c:v></c:pt><c:pt idx="1"><c:v>3</c:v></c:pt><c:pt idx="2"><c:v>5</c:v></c:pt></c:numLit></c:xVal>
-                    <c:yVal><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>3</c:v></c:pt><c:pt idx="2"><c:v>5</c:v></c:pt></c:numLit></c:yVal>
-                    <c:bubbleSize><c:numLit><c:formatCode>0</c:formatCode><c:pt idx="0"><c:v>9</c:v></c:pt><c:pt idx="1"><c:v>16</c:v></c:pt><c:pt idx="2"><c:v>4</c:v></c:pt></c:numLit></c:bubbleSize>
-                  </c:ser>
-                </c:bubbleChart></c:plotArea></c:chart></c:chartSpace>
-                """
-        });
-        var resolver = new CffSingleFallbackResolver(TestFontBuilder.CreateCffKindFont(), TestFontBuilder.CreateTestFont());
+        using var source = PptxTypographyTests.CreateCffChartPackage("A中B");
+        using var package = OoxPackage.Open(source, CancellationToken.None);
+        byte[] fallback = File.ReadAllBytes(TestFixtures.PublicCasePath("PortableFonts/DejaVuSans.ttf"));
+        var resolver = new CffSingleFallbackResolver(TestFontBuilder.CreateCffKindFont(), fallback);
         var diagnostics = new List<OoxPdfDiagnostic>();
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { InputKind = OoxPdfInputKind.Pptx, FontResolver = resolver, DiagnosticSink = diagnostics.Add });
-        string pdf = File.ReadAllText(output, Encoding.Latin1);
-        // The title splits into three runs (covered, unresolvable, covered), so the
-        // 18pt title resource paints three text shows: A, the substituted mark, B.
-        // Data labels render at 8.52pt, so the title-size count is exact.
-        TestAssert.Equal(3, Regex.Matches(pdf, "/CT\\d+ 18 Tf").Count);
-        // The unresolvable rune is prepared as a question mark in an embedded subset.
-        TestAssert.Contains("<0001> <003F>", pdf);
-        string extracted = ExtractCidMappedText(pdf);
-        TestAssert.Contains("B", extracted);
+        PdfPage page = new PptxRenderer(resolver)
+            .RenderPagesAsync(new PptxReader().Read(package, CancellationToken.None), package, diagnostics.Add, CancellationToken.None)
+            .ToBlockingEnumerable().Single();
+        // The 72pt slide insets and 432pt by 288pt chart frame bound the title.
+        var glyphs = PortableRenderingTests.ReadPaintedSourceLabel(page, "A?B", fontPrefix: "CT",
+            requiredClip: new PdfRectangle(72, 180, 432, 288));
+        TestAssert.Equal(3, glyphs.Count);
         OoxPdfDiagnostic missing = diagnostics.Single(d => d.Id == "FONT_MISSING_GLYPHS");
         TestAssert.Contains("U+4E2D", missing.Message);
     }
