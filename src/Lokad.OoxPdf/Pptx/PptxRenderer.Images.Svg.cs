@@ -1498,6 +1498,14 @@ internal sealed partial class PptxRenderer
     {
         gradientId = null;
         radial = null;
+        // A line has no interior, so its fill cannot affect stroke composition.
+        if (path.Name.LocalName == "line")
+        {
+            paint = default;
+            failure = SvgFillFailure.None;
+            return false;
+        }
+
         string? fill = ReadSvgInheritedAttribute(path, style, "fill");
         double opacity = ReadSvgOpacityValue(ReadSvgInheritedAttribute(path, style, "fill-opacity"))
             * ReadSvgOpacityValue(ReadSvgPresentationAttribute(path, style, "opacity"));

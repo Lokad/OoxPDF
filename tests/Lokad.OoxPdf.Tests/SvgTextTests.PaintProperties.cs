@@ -462,6 +462,23 @@ internal static partial class SvgTextTests
             "/PatternType 2", "/Pattern CS", "/ca 1 /CA 0.375", "/ca 0 /CA 1", "0 0.502 0 rg");
     }
 
+    public static void SvgLinesKeepTranslucentGradientStrokesWithDefaultOrInheritedFill()
+    {
+        AssertSvgPaintInBothFormats(Picture("""fill="none" """), Picture(""),
+            "/PatternType 2", "/Pattern CS", "/ca 1 /CA 0.55", "0 0.502 0 rg");
+
+        static string Picture(string fill) => Svg($"""
+            <defs><linearGradient id="ramp" gradientUnits="userSpaceOnUse" x1="16" x2="120">
+              <stop stop-color="blue"/><stop offset="1" stop-color="purple"/>
+            </linearGradient></defs>
+            <line x1="16" y1="10" x2="120" y2="30" {fill} stroke="url(#ramp)" stroke-width="6" opacity=".55"/>
+            <g fill="red">
+              <line x1="16" y1="45" x2="120" y2="65" {fill} stroke="url(#ramp)" stroke-width="6" opacity=".55"/>
+            </g>
+            <rect x="136" y="64" width="9" height="10" fill="green"/>
+            """);
+    }
+
     public static void SvgPercentageOpacityMatchesUnitOpacityInBothFormats()
     {
         AssertSvgPaintInBothFormats(

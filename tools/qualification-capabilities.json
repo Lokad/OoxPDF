@@ -671,6 +671,7 @@
     "=SvgQuadraticCurvesMatchExplicitCubicsInBothFormats",
     "=SvgImportantInlinePaintMatchesExplicitPaintInBothFormats",
     "=SvgTransparentFillKeepsTranslucentGradientStrokeInBothFormats",
+    "=SvgLinesKeepTranslucentGradientStrokesWithDefaultOrInheritedFill",
     "=SvgPercentageOpacityMatchesUnitOpacityInBothFormats",
     "=SvgConstantLinearGradientsMatchSolidPaintInBothFormats",
     "=SvgSingleStopRadialGradientsMatchSolidPaintInBothFormats",
