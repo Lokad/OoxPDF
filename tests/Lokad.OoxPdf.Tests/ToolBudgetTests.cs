@@ -1,6 +1,8 @@
+using System.Globalization;
 using System.IO.Compression;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace Lokad.OoxPdf.Tests;
 
@@ -51,9 +53,18 @@ internal static class ToolBudgetTests
         // The first decodes; the rest keep raw bytes with an aggregate skip note.
         string input = WriteMultiFlatePdf();
         TestToolResult result = TestToolProcess.Run(InspectAssemblyPath.Value, input, "--max-total-decoded-bytes", "15000");
-        TestAssert.Equal(0, result.ExitCode);
-        TestAssert.Contains("decoded", result.Output);
-        TestAssert.Contains("aggregate", result.Output);
+        var streams = ReadInspectedStreams(result);
+        TestAssert.Equal(3, streams.Length);
+        TestAssert.Equal(1, streams[0].ObjectNumber);
+        TestAssert.Equal(10_000, streams[0].DecodedLength);
+        TestAssert.Equal("decoded raw deflate", streams[0].Status);
+        for (int index = 1; index < streams.Length; index++)
+        {
+            var stream = streams[index];
+            TestAssert.Equal(index + 1, stream.ObjectNumber);
+            TestAssert.Equal(stream.RawLength, stream.DecodedLength);
+            TestAssert.Equal("decode skipped (aggregate over 15000 bytes)", stream.Status);
+        }
     }
 
     public static void InspectDefaultQuotaDecodesSmallStreams()
@@ -61,9 +72,25 @@ internal static class ToolBudgetTests
         // R21: the default aggregate quota leaves small inspections untouched.
         string input = WriteMultiFlatePdf();
         TestToolResult result = TestToolProcess.Run(InspectAssemblyPath.Value, input);
+        var streams = ReadInspectedStreams(result);
+        TestAssert.Equal(3, streams.Length);
+        for (int index = 0; index < streams.Length; index++)
+        {
+            TestAssert.Equal(index + 1, streams[index].ObjectNumber);
+            TestAssert.Equal(10_000, streams[index].DecodedLength);
+            TestAssert.Equal("decoded raw deflate", streams[index].Status);
+        }
+    }
+
+    private static (int ObjectNumber, int RawLength, int DecodedLength, string Status)[] ReadInspectedStreams(TestToolResult result)
+    {
         TestAssert.Equal(0, result.ExitCode);
-        TestAssert.Contains("decoded raw deflate", result.Output);
-        TestAssert.DoesNotContain("aggregate", result.Output);
+        return Regex.Matches(result.Output,
+            @"(?m)^(\d+) 0 obj: [^\r\n]*?, stream (\d+) bytes, decoded (\d+) bytes, filters: /FlateDecode, ([^\r\n]+)\r?$")
+            .Select(row => (int.Parse(row.Groups[1].Value, CultureInfo.InvariantCulture),
+                int.Parse(row.Groups[2].Value, CultureInfo.InvariantCulture),
+                int.Parse(row.Groups[3].Value, CultureInfo.InvariantCulture), row.Groups[4].Value))
+            .ToArray();
     }
 
     public static void InspectObjectCapRejects()
