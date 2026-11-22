@@ -232,6 +232,7 @@
   ],
   "svg-fill-winding": [
     "=PptxSvgNumericStopStyleMatchesPresentationOpacity",
+    "=PptxSvgVaryingLinearAlphaRetainsExcludedGeometryFallbacks",
     "SvgFillRulesFollowTheSourcePathAcrossPaintAndDocumentKinds",
     "PptxSyntheticSvgEvenOddFillRulePunchesHole",
     "PptxSyntheticSvgNonzeroFillRuleKeepsOperator",

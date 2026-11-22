@@ -2294,7 +2294,7 @@ internal static partial class PptxImagesTests
         foreach (string stops in new[]
         {
             "<stop offset=\"0\" stop-color=\"#FF0000\" stop-opacity=\"50%\"/><stop offset=\"1\" stop-color=\"#0000FF\"/>",
-            "<stop offset=\"0\" stop-color=\"#FF0000\" style=\"stop-opacity:.25\"/><stop offset=\"1\" stop-color=\"#0000FF\"/>",
+            "<stop offset=\"0\" stop-color=\"#FF0000\" style=\"stop-opacity:-.25\"/><stop offset=\"1\" stop-color=\"#0000FF\"/>",
             "<stop offset=\"0\" stop-color=\"#FF0000\" stop-opacity=\".25\"/><stop offset=\".00001\" stop-color=\"#00FF00\"/><stop offset=\"1\" stop-color=\"#0000FF\"/>"
         })
         {
