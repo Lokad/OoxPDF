@@ -1000,18 +1000,10 @@ internal static class PptxSceneTextAgreementTests
         TestAssert.Equal(2, shapeRuns.Length);
 
         var tableResolver = CreateCannedPresentationResolver("memory:r14-table");
-        var slideSource = new PptxRenderSource(
-            PptxRenderSourceKind.Slide,
-            scene.Slides[0].PartName,
-            scene.Slides[0].SlideXml,
-            new Dictionary<string, OoxRelationship>(),
-            scene.Slides[0].SlideColorMap);
         var context = new PptxRenderContext(
             document,
             document.Slides[0],
             scene.Slides[0],
-            slideSource,
-            [],
             tableResolver,
             new Dictionary<string, PdfImageXObject?>(),
             null,
@@ -1165,18 +1157,10 @@ internal static class PptxSceneTextAgreementTests
         PptxSceneTable table = TestAssert.NotNull(tableNode.Table);
         PptxSceneTableCell headerCell = table.Rows[0].Cells[0];
         PptxSceneTableCell bodyCell = table.Rows[0].Cells[1];
-        var slideSource = new PptxRenderSource(
-            PptxRenderSourceKind.Slide,
-            scene.Slides[0].PartName,
-            scene.Slides[0].SlideXml,
-            new Dictionary<string, OoxRelationship>(),
-            scene.Slides[0].SlideColorMap);
         var context = new PptxRenderContext(
             document,
             document.Slides[0],
             scene.Slides[0],
-            slideSource,
-            [],
             CreateCannedPresentationResolver("memory:r14-tablestyle"),
             new Dictionary<string, PdfImageXObject?>(),
             null,

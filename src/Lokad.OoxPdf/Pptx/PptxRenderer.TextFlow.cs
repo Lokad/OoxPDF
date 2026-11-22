@@ -19,10 +19,10 @@ internal sealed partial class PptxRenderer
         // visibility consistently with painting.
         if (includeMasterNodes)
         {
-            await AddSceneShapeTextSpansAsync(context.SceneSlide.MasterNodes, context, textSpans, context.MasterColorMap, renderPlaceholders: false).ConfigureAwait(false);
+            await AddSceneShapeTextSpansAsync(context.SceneSlide.MasterNodes, context, textSpans, context.SceneSlide.MasterColorMap, renderPlaceholders: false).ConfigureAwait(false);
         }
-        await AddSceneShapeTextSpansAsync(context.SceneSlide.LayoutNodes, context, textSpans, context.LayoutColorMap, renderPlaceholders: false).ConfigureAwait(false);
-        await AddSceneShapeTextSpansAsync(context.SceneSlide.SlideNodes, context, textSpans, context.SlideColorMap, renderPlaceholders: true).ConfigureAwait(false);
+        await AddSceneShapeTextSpansAsync(context.SceneSlide.LayoutNodes, context, textSpans, context.SceneSlide.LayoutColorMap, renderPlaceholders: false).ConfigureAwait(false);
+        await AddSceneShapeTextSpansAsync(context.SceneSlide.SlideNodes, context, textSpans, context.SceneSlide.SlideColorMap, renderPlaceholders: true).ConfigureAwait(false);
         return textSpans;
     }
 
@@ -52,14 +52,14 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static async ValueTask<PptxTextLayoutModel> BuildTextLayoutModelAsync(
+    private static ValueTask<PptxTextLayoutModel> BuildTextLayoutModelAsync(
         PptxRenderContext context,
-        PptxRenderSource source,
+        XDocument source,
+        PptxColorMap colorMap,
         bool includePlaceholders,
-        IReadOnlyList<XDocument> placeholderSources)
-    {
-        return (await BuildTextLayoutModelAsync(source.Xml, context.Document, context.Theme, source.ColorMap, context.DisplayedSlideNumber, includePlaceholders, placeholderSources, context.FontResolver, context.CancellationToken).ConfigureAwait(false));
-    }
+        IReadOnlyList<XDocument> placeholderSources) =>
+        BuildTextLayoutModelAsync(source, context.Document, context.Theme, colorMap, context.DisplayedSlideNumber,
+            includePlaceholders, placeholderSources, context.FontResolver, context.CancellationToken);
 
     private static async ValueTask<PptxTextLayoutModel> BuildTextLayoutModelAsync(
         XDocument slideXml,
@@ -163,11 +163,12 @@ internal sealed partial class PptxRenderer
 
     private static async ValueTask<PptxTextFlowModel> BuildTextFlowModelAsync(
         PptxRenderContext context,
-        PptxRenderSource source,
+        XDocument source,
+        PptxColorMap colorMap,
         bool includePlaceholders,
         IReadOnlyList<XDocument> placeholderSources)
     {
-        IReadOnlyList<PptxTextFrameModel> frames = await BuildTextFrameModelsAsync(context, source,
+        IReadOnlyList<PptxTextFrameModel> frames = await BuildTextFrameModelsAsync(context, source, colorMap,
             includePlaceholders, placeholderSources).ConfigureAwait(false);
         var advanceEstimator = new TextAdvanceEstimator(context.FontResolver, context.CancellationToken);
         var flowFrames = new List<PptxTextFlowFrame>(frames.Count);

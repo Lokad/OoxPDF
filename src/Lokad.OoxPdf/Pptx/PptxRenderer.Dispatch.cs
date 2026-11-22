@@ -119,7 +119,7 @@ internal sealed partial class PptxRenderer
                 "PPTX_NODE_RENDER_FAILED",
                 OoxPdfSeverity.Warning,
                 "PPTX node rendering failed and the node was ignored while rendering continued. Cause: " + cause.GetType().Name + ".",
-                sourcePartName ?? context.SlidePartName,
+                sourcePartName ?? context.SceneSlide.PartName,
                 PageIndex: null,
                 SlideIndex: context.SlideNumber,
                 Feature: node.Kind.ToString(),
@@ -300,8 +300,8 @@ internal sealed partial class PptxRenderer
 
     private static void RenderUnsupportedGraphicFrame(PptxSceneNode node, PptxRenderContext context, string? sourcePartName)
     {
-        string effectivePartName = sourcePartName ?? context.SlidePartName;
-        if (context.DiagnosticSink is null || effectivePartName == context.SlidePartName || node.IsSmartArtGraphicFrame)
+        string effectivePartName = sourcePartName ?? context.SceneSlide.PartName;
+        if (context.DiagnosticSink is null || effectivePartName == context.SceneSlide.PartName || node.IsSmartArtGraphicFrame)
         {
             return;
         }

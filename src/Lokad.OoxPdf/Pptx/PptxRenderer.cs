@@ -61,7 +61,7 @@ internal sealed partial class PptxRenderer
             var graphics = new PdfGraphicsBuilder(construction, svgSourceBytes);
             var textSpanMemo = new Dictionary<PptxTextSpanMemoKey, IReadOnlyList<PptxPositionedTextSpan>>(PptxTextSpanMemoKeyComparer.Instance);
             var tableFrameMemo = new Dictionary<PptxTableFrameMemoKey, TableFrameLayout?>(PptxTableFrameMemoKeyComparer.Instance);
-            PptxRenderContext context = CreateRenderContext(document, slide, slideXml, sceneSlide, fontResolver, imageCache, diagnosticSink, cancellationToken, chartWorkbookCache, textSpanMemo, tableFrameMemo) with
+            PptxRenderContext context = CreateRenderContext(document, slide, sceneSlide, fontResolver, imageCache, diagnosticSink, cancellationToken, chartWorkbookCache, textSpanMemo, tableFrameMemo) with
             {
                 PageConstruction = construction,
                 PageConstructionBaseBytes = construction?.Bytes ?? 0L,
@@ -77,9 +77,9 @@ internal sealed partial class PptxRenderer
             var reportedHyperlinkIds = new HashSet<string>(StringComparer.Ordinal);
             var orderedChartFonts = new List<PdfFontResource>();
             int imageIndex = 1;
-            IReadOnlyList<PptxPositionedTextSpan> shapeTextSpans = (await ReadSceneShapeTextSpansAsync(context, includeMasterNodes: context.SceneSlide.ShowMasterShapes).ConfigureAwait(false));
+            IReadOnlyList<PptxPositionedTextSpan> shapeTextSpans = (await ReadSceneShapeTextSpansAsync(context, includeMasterNodes: sceneSlide.ShowMasterShapes).ConfigureAwait(false));
             cancellationToken.ThrowIfCancellationRequested();
-            IReadOnlyList<PptxPositionedTextSpan> tableTextSpans = (await ReadSceneTableTextSpansAsync(context, includeMasterNodes: context.SceneSlide.ShowMasterShapes).ConfigureAwait(false));
+            IReadOnlyList<PptxPositionedTextSpan> tableTextSpans = (await ReadSceneTableTextSpansAsync(context, includeMasterNodes: sceneSlide.ShowMasterShapes).ConfigureAwait(false));
             cancellationToken.ThrowIfCancellationRequested();
             // Prepare the faces used by measured glyphs, rather than reporting a
             // primary-face gap for text that already has an allowed fallback.
@@ -91,12 +91,12 @@ internal sealed partial class PptxRenderer
             renderedFonts = new RenderedFonts(slideFonts, slideResources);
 
             // Hidden master shapes stay unpainted when the slide opts out (S01).
-            if (context.SceneSlide.ShowMasterShapes)
+            if (sceneSlide.ShowMasterShapes)
             {
-                imageIndex = await RenderOrderedSceneNodesAsync(context.SceneSlide.MasterNodes, context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, linkAnnotations, reportedHyperlinkIds, context.MasterPartName, context.MasterColorMap, imageIndex, GroupTransform.Identity, renderPlaceholders: false, cancellationToken: cancellationToken).ConfigureAwait(false);
+                imageIndex = await RenderOrderedSceneNodesAsync(sceneSlide.MasterNodes, context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, linkAnnotations, reportedHyperlinkIds, sceneSlide.MasterPartName, sceneSlide.MasterColorMap, imageIndex, GroupTransform.Identity, renderPlaceholders: false, cancellationToken: cancellationToken).ConfigureAwait(false);
             }
-            imageIndex = await RenderOrderedSceneNodesAsync(context.SceneSlide.LayoutNodes, context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, linkAnnotations, reportedHyperlinkIds, context.LayoutPartName, context.LayoutColorMap, imageIndex, GroupTransform.Identity, renderPlaceholders: false, cancellationToken: cancellationToken).ConfigureAwait(false);
-            imageIndex = await RenderOrderedSceneNodesAsync(context.SceneSlide.SlideNodes, context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, linkAnnotations, reportedHyperlinkIds, context.SlidePartName, context.SlideColorMap, imageIndex, GroupTransform.Identity, renderPlaceholders: true, cancellationToken: cancellationToken).ConfigureAwait(false);
+            imageIndex = await RenderOrderedSceneNodesAsync(sceneSlide.LayoutNodes, context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, linkAnnotations, reportedHyperlinkIds, sceneSlide.LayoutPartName, sceneSlide.LayoutColorMap, imageIndex, GroupTransform.Identity, renderPlaceholders: false, cancellationToken: cancellationToken).ConfigureAwait(false);
+            imageIndex = await RenderOrderedSceneNodesAsync(sceneSlide.SlideNodes, context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, linkAnnotations, reportedHyperlinkIds, sceneSlide.PartName, sceneSlide.SlideColorMap, imageIndex, GroupTransform.Identity, renderPlaceholders: true, cancellationToken: cancellationToken).ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
             string content = graphics.ToString();
             IReadOnlySet<string> usedFonts = graphics.UsedFontResourceNames;
@@ -140,19 +140,17 @@ internal sealed partial class PptxRenderer
         // rebuilding it per slide per entry point. Rendering still builds its own.
         PptxScene scene = sharedScene ?? new PptxSceneBuilder().Build(document, package, cancellationToken);
         PptxSceneSlide sceneSlide = scene.Slides[slideIndex];
-        XDocument slideXml = sceneSlide.SlideXml;
-        if (slideXml.Root is null)
+        if (sceneSlide.SlideXml.Root is null)
         {
             return null;
         }
 
-        return CreateRenderContext(document, slide, slideXml, sceneSlide, inspectionFonts ?? new PresentationFontResolver(null), imageCache, diagnosticSink, cancellationToken);
+        return CreateRenderContext(document, slide, sceneSlide, inspectionFonts ?? new PresentationFontResolver(null), imageCache, diagnosticSink, cancellationToken);
     }
 
     private static PptxRenderContext CreateRenderContext(
         PptxDocument document,
         PptxSlide slide,
-        XDocument slideXml,
         PptxSceneSlide sceneSlide,
         PresentationFontResolver fontResolver,
         Dictionary<string, PdfImageXObject?> imageCache,
@@ -163,44 +161,10 @@ internal sealed partial class PptxRenderer
         Dictionary<PptxTableFrameMemoKey, TableFrameLayout?>? tableFrameMemo = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        PptxRenderSource slideSource = new(
-            PptxRenderSourceKind.Slide,
-            sceneSlide.PartName,
-            slideXml,
-            sceneSlide.SlideRelationships,
-            sceneSlide.SlideColorMap);
-        return new PptxRenderContext(document, slide, sceneSlide, slideSource, BuildInheritedSources(), fontResolver, imageCache, diagnosticSink, cancellationToken, chartWorkbookCache ?? new Dictionary<string, ChartWorkbookData?>(StringComparer.Ordinal), textSpanMemo ?? new Dictionary<PptxTextSpanMemoKey, IReadOnlyList<PptxPositionedTextSpan>>(PptxTextSpanMemoKeyComparer.Instance), tableFrameMemo ?? new Dictionary<PptxTableFrameMemoKey, TableFrameLayout?>(PptxTableFrameMemoKeyComparer.Instance));
-
-        IReadOnlyList<PptxRenderSource> BuildInheritedSources()
-        {
-            return (sceneSlide.MasterXml, sceneSlide.LayoutXml) switch
-            {
-                ({ } master, { } layout) => [BuildMasterSource(sceneSlide, master), BuildLayoutSource(sceneSlide, layout)],
-                ({ } master, null) => [BuildMasterSource(sceneSlide, master)],
-                (null, { } layout) => [BuildLayoutSource(sceneSlide, layout)],
-                _ => []
-            };
-        }
-    }
-
-    private static PptxRenderSource BuildMasterSource(PptxSceneSlide sceneSlide, XDocument xml)
-    {
-        return new PptxRenderSource(
-            PptxRenderSourceKind.Master,
-            sceneSlide.MasterPartName,
-            xml,
-            sceneSlide.MasterRelationships,
-            sceneSlide.MasterColorMap);
-    }
-
-    private static PptxRenderSource BuildLayoutSource(PptxSceneSlide sceneSlide, XDocument xml)
-    {
-        return new PptxRenderSource(
-            PptxRenderSourceKind.Layout,
-            sceneSlide.LayoutPartName,
-            xml,
-            sceneSlide.LayoutRelationships,
-            sceneSlide.LayoutColorMap);
+        return new PptxRenderContext(document, slide, sceneSlide, fontResolver, imageCache, diagnosticSink, cancellationToken,
+            chartWorkbookCache ?? new Dictionary<string, ChartWorkbookData?>(StringComparer.Ordinal),
+            textSpanMemo ?? new Dictionary<PptxTextSpanMemoKey, IReadOnlyList<PptxPositionedTextSpan>>(PptxTextSpanMemoKeyComparer.Instance),
+            tableFrameMemo ?? new Dictionary<PptxTableFrameMemoKey, TableFrameLayout?>(PptxTableFrameMemoKeyComparer.Instance));
     }
 
     private static ShapeBounds? ReadShapeBounds(XElement shape, IReadOnlyList<XElement> inheritedPlaceholders,

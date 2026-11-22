@@ -38,7 +38,7 @@ internal sealed partial class PptxRenderer
             {
                 EmitHyperlinkDiagnostic(
                     scope.Context,
-                    scope.SourcePartName ?? scope.Context.SlidePartName,
+                    scope.SourcePartName ?? scope.Context.SceneSlide.PartName,
                     scope.ReportedIds,
                     action,
                     "PPTX_UNSUPPORTED_HYPERLINK_ACTION",
@@ -51,7 +51,7 @@ internal sealed partial class PptxRenderer
         PptxHyperlinkResolution resolution = ResolveHyperlink(scope.Context, scope.SourcePartName, relationshipId);
         if (!resolution.Resolved)
         {
-            EmitHyperlinkDiagnostic(scope.Context, scope.SourcePartName ?? scope.Context.SlidePartName,
+            EmitHyperlinkDiagnostic(scope.Context, scope.SourcePartName ?? scope.Context.SceneSlide.PartName,
                 scope.ReportedIds, relationshipId, resolution.FailureId, resolution.FailureMessage);
 
             return;

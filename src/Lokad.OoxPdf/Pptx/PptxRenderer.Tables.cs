@@ -71,10 +71,10 @@ internal sealed partial class PptxRenderer
         // same visibility rule as shape preflight (see ReadSceneShapeTextSpansAsync).
         if (includeMasterNodes)
         {
-            await AddSceneTableTextSpansAsync(context.SceneSlide.MasterNodes, context, textSpans, GroupTransform.Identity, context.MasterColorMap).ConfigureAwait(false);
+            await AddSceneTableTextSpansAsync(context.SceneSlide.MasterNodes, context, textSpans, GroupTransform.Identity, context.SceneSlide.MasterColorMap).ConfigureAwait(false);
         }
-        await AddSceneTableTextSpansAsync(context.SceneSlide.LayoutNodes, context, textSpans, GroupTransform.Identity, context.LayoutColorMap).ConfigureAwait(false);
-        await AddSceneTableTextSpansAsync(context.SceneSlide.SlideNodes, context, textSpans, GroupTransform.Identity, context.SlideColorMap).ConfigureAwait(false);
+        await AddSceneTableTextSpansAsync(context.SceneSlide.LayoutNodes, context, textSpans, GroupTransform.Identity, context.SceneSlide.LayoutColorMap).ConfigureAwait(false);
+        await AddSceneTableTextSpansAsync(context.SceneSlide.SlideNodes, context, textSpans, GroupTransform.Identity, context.SceneSlide.SlideColorMap).ConfigureAwait(false);
 
         return textSpans;
     }
@@ -83,9 +83,9 @@ internal sealed partial class PptxRenderer
     {
         var textFrames = new List<PptxTableCellTextFrame>();
         if (context.SceneSlide.ShowMasterShapes)
-            await AddSceneTableTextFramesAsync(context.SceneSlide.MasterNodes, context, textFrames, GroupTransform.Identity, context.MasterColorMap).ConfigureAwait(false);
-        await AddSceneTableTextFramesAsync(context.SceneSlide.LayoutNodes, context, textFrames, GroupTransform.Identity, context.LayoutColorMap).ConfigureAwait(false);
-        await AddSceneTableTextFramesAsync(context.SceneSlide.SlideNodes, context, textFrames, GroupTransform.Identity, context.SlideColorMap).ConfigureAwait(false);
+            await AddSceneTableTextFramesAsync(context.SceneSlide.MasterNodes, context, textFrames, GroupTransform.Identity, context.SceneSlide.MasterColorMap).ConfigureAwait(false);
+        await AddSceneTableTextFramesAsync(context.SceneSlide.LayoutNodes, context, textFrames, GroupTransform.Identity, context.SceneSlide.LayoutColorMap).ConfigureAwait(false);
+        await AddSceneTableTextFramesAsync(context.SceneSlide.SlideNodes, context, textFrames, GroupTransform.Identity, context.SceneSlide.SlideColorMap).ConfigureAwait(false);
 
         return textFrames;
     }
@@ -181,7 +181,7 @@ internal sealed partial class PptxRenderer
                 "PPTX_UNSUPPORTED_TABLE_STYLE",
                 OoxPdfSeverity.Warning,
                 "Table style is not in the supported built-in style subset and was rendered without Office table-style cascade formatting.",
-                context.SlidePartName,
+                context.SceneSlide.PartName,
                 context.SlideNumber,
                 null,
                 "table style",

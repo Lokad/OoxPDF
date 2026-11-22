@@ -374,7 +374,7 @@ internal sealed partial class PptxRenderer
         if (clipped)
         {
             EmitChartDiagnostic(context.DiagnosticSink, "PPTX_UNSUPPORTED_CHART", OoxPdfSeverity.Warning,
-                "Legend exceeds its available frame; overflowing entries are clipped.", context.SlidePartName, context.SlideNumber, "Approximate");
+                "Legend exceeds its available frame; overflowing entries are clipped.", context.SceneSlide.PartName, context.SlideNumber, "Approximate");
         }
         return (layout, box with { FirstY = firstY, EntryFrames = frames }, allocationBand);
     }

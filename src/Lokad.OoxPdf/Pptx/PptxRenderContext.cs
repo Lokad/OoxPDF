@@ -1,31 +1,14 @@
 using System.Xml.Linq;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Fonts;
-using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Pptx;
-
-internal enum PptxRenderSourceKind
-{
-    Master,
-    Layout,
-    Slide
-}
-
-internal sealed record PptxRenderSource(
-    PptxRenderSourceKind Kind,
-    string? PartName,
-    XDocument Xml,
-    IReadOnlyDictionary<string, OoxRelationship> Relationships,
-    PptxColorMap ColorMap);
 
 internal sealed record PptxRenderContext(
     PptxDocument Document,
     PptxSlide Slide,
     PptxSceneSlide SceneSlide,
-    PptxRenderSource SlideSource,
-    IReadOnlyList<PptxRenderSource> InheritedSources,
     PresentationFontResolver FontResolver,
     Dictionary<string, PdfImageXObject?> ImageCache,
     Action<OoxPdfDiagnostic>? DiagnosticSink,
@@ -44,35 +27,18 @@ internal sealed record PptxRenderContext(
 
     public PptxTheme Theme => SceneSlide.Theme;
 
-    public IReadOnlyList<XDocument> InheritedXml { get; } = InheritedSources.Select(source => source.Xml).ToArray();
+    // Hidden master paint still contributes placeholder defaults before the layout.
+    public IReadOnlyList<XDocument> InheritedXml { get; } = (SceneSlide.MasterXml, SceneSlide.LayoutXml) switch
+    {
+        ({ } master, { } layout) => [master, layout],
+        ({ } master, null) => [master],
+        (null, { } layout) => [layout],
+        _ => []
+    };
 
     public int SlideNumber => Slide.Index + 1;
 
     // Displayed fields follow the authored sequence, independently of the
     // compacted page index used by diagnostics and navigation.
     public long DisplayedSlideNumber => Document.FirstSlideNumber + (Slide.SourceIndex ?? Slide.Index);
-
-    public XDocument SlideXml => SlideSource.Xml;
-
-    public string SlidePartName => SlideSource.PartName ?? SceneSlide.PartName;
-
-    public string? MasterPartName => MasterSource?.PartName ?? SceneSlide.MasterPartName;
-
-    public string? LayoutPartName => LayoutSource?.PartName ?? SceneSlide.LayoutPartName;
-
-    public PptxRenderSource? MasterSource => InheritedSources.FirstOrDefault(source => source.Kind == PptxRenderSourceKind.Master);
-
-    public PptxRenderSource? LayoutSource => InheritedSources.FirstOrDefault(source => source.Kind == PptxRenderSourceKind.Layout);
-
-    public IReadOnlyDictionary<string, OoxRelationship> SlideRelationships => SlideSource.Relationships;
-
-    public IReadOnlyDictionary<string, OoxRelationship> MasterRelationships => MasterSource?.Relationships ?? SceneSlide.MasterRelationships;
-
-    public IReadOnlyDictionary<string, OoxRelationship> LayoutRelationships => LayoutSource?.Relationships ?? SceneSlide.LayoutRelationships;
-
-    public PptxColorMap SlideColorMap => SlideSource.ColorMap;
-
-    public PptxColorMap MasterColorMap => MasterSource?.ColorMap ?? SceneSlide.MasterColorMap;
-
-    public PptxColorMap LayoutColorMap => LayoutSource?.ColorMap ?? SceneSlide.LayoutColorMap;
 }

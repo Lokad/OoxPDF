@@ -19,17 +19,26 @@ internal sealed partial class PptxRenderer
             return [];
         }
 
-        return EnumerateInheritedPaintSources(context)
-            .SelectMany(source => (BuildTextFrameModelsAsync(context, source, includePlaceholders: false, placeholderSources: []).GetAwaiter().GetResult()))
-            .Concat((BuildTextFrameModelsAsync(context, context.SlideSource, includePlaceholders: true, context.InheritedXml).GetAwaiter().GetResult()))
+        PptxSceneSlide slide = context.SceneSlide;
+        var slideFrames = BuildTextFrameModelsAsync(context, slide.SlideXml, slide.SlideColorMap,
+            includePlaceholders: true, context.InheritedXml).GetAwaiter().GetResult();
+        return EnumerateInheritedPaintSources(slide)
+            .SelectMany(source => BuildTextFrameModelsAsync(context, source.Xml, source.ColorMap,
+                includePlaceholders: false, placeholderSources: []).GetAwaiter().GetResult())
+            .Concat(slideFrames)
             .Select(ToSnapshot)
             .ToArray();
     }
 
     // Inherited XML still supplies placeholder defaults when master paint is
     // suppressed. Only placed inspection content follows the paint selection.
-    private static IEnumerable<PptxRenderSource> EnumerateInheritedPaintSources(PptxRenderContext context) =>
-        context.InheritedSources.Where(source => source.Kind != PptxRenderSourceKind.Master || context.SceneSlide.ShowMasterShapes);
+    private static IEnumerable<(XDocument Xml, PptxColorMap ColorMap)> EnumerateInheritedPaintSources(PptxSceneSlide slide)
+    {
+        if (slide.ShowMasterShapes && slide.MasterXml is { } master)
+            yield return (master, slide.MasterColorMap);
+        if (slide.LayoutXml is { } layout)
+            yield return (layout, slide.LayoutColorMap);
+    }
 
     internal static IReadOnlyList<PptxTextFrameModelSnapshot> InspectTableTextFrameModels(PptxDocument document, OoxPackage package, int slideIndex, PptxScene? sharedScene = null, PresentationFontResolver? inspectionFonts = null)
     {
@@ -191,14 +200,14 @@ internal sealed partial class PptxRenderer
             run.Style.Highlight?.Color);
     }
 
-    private static async ValueTask<IReadOnlyList<PptxTextFrameModel>> BuildTextFrameModelsAsync(
+    private static ValueTask<IReadOnlyList<PptxTextFrameModel>> BuildTextFrameModelsAsync(
         PptxRenderContext context,
-        PptxRenderSource source,
+        XDocument source,
+        PptxColorMap colorMap,
         bool includePlaceholders,
-        IReadOnlyList<XDocument> placeholderSources)
-    {
-        return (await BuildTextFrameModelsAsync(source.Xml, context.Document, context.Theme, source.ColorMap, context.DisplayedSlideNumber, includePlaceholders, placeholderSources, context.FontResolver, context.CancellationToken).ConfigureAwait(false));
-    }
+        IReadOnlyList<XDocument> placeholderSources) =>
+        BuildTextFrameModelsAsync(source, context.Document, context.Theme, colorMap, context.DisplayedSlideNumber,
+            includePlaceholders, placeholderSources, context.FontResolver, context.CancellationToken);
 
     private static async ValueTask<IReadOnlyList<PptxTextFrameModel>> BuildTextFrameModelsAsync(
         XDocument slideXml,

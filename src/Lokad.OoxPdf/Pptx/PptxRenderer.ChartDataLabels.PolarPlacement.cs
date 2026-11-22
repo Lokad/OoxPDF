@@ -79,7 +79,7 @@ internal sealed partial class PptxRenderer
                 Array.Clear(offsets);
                 context.DiagnosticSink?.Invoke(new OoxPdfDiagnostic("PPTX_CHART_LABEL_OVERLAP", OoxPdfSeverity.Warning,
                     "Automatic polar labels do not fit separate rows without leaving their container or moving authored geometry.",
-                    PartName: context.SlidePartName, SlideIndex: context.SlideNumber,
+                    PartName: context.SceneSlide.PartName, SlideIndex: context.SlideNumber,
                     Feature: "Polar data labels", Fallback: "Source label arrangement retained"));
                 return offsets;
             }

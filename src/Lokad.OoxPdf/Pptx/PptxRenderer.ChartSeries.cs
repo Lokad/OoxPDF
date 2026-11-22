@@ -63,7 +63,7 @@ internal sealed partial class PptxRenderer
 
         if (sceneChart is null || bounds is null || chartPartName is null)
         {
-            EmitChartDiagnostic(context.DiagnosticSink, "PPTX_UNSUPPORTED_CHART", OoxPdfSeverity.Warning, "Chart frame could not be resolved and was ignored.", context.SlidePartName, context.SlideNumber, "Ignored");
+            EmitChartDiagnostic(context.DiagnosticSink, "PPTX_UNSUPPORTED_CHART", OoxPdfSeverity.Warning, "Chart frame could not be resolved and was ignored.", context.SceneSlide.PartName, context.SlideNumber, "Ignored");
             return;
         }
 

@@ -56,7 +56,7 @@ internal sealed partial class PptxRenderer
             return;
         }
 
-        string partName = sourcePartName ?? context.SlidePartName;
+        string partName = sourcePartName ?? context.SceneSlide.PartName;
         string? relationshipId = node.HyperlinkClick.RelationshipId;
         if (string.IsNullOrEmpty(relationshipId))
         {
@@ -104,7 +104,7 @@ internal sealed partial class PptxRenderer
         {
             if (!string.IsNullOrEmpty(link.Action))
             {
-                EmitHyperlinkDiagnostic(context, chartPartName ?? context.SlidePartName, reportedIds, link.Action,
+                EmitHyperlinkDiagnostic(context, chartPartName ?? context.SceneSlide.PartName, reportedIds, link.Action,
                     "PPTX_UNSUPPORTED_HYPERLINK_ACTION", $"Hyperlink action '{link.Action}' is not supported and was ignored.");
             }
 
@@ -114,7 +114,7 @@ internal sealed partial class PptxRenderer
         PptxHyperlinkResolution resolution = ResolveHyperlink(context, chartRelationships, link.RelationshipId);
         if (!resolution.Resolved)
         {
-            EmitHyperlinkDiagnostic(context, chartPartName ?? context.SlidePartName, reportedIds, link.RelationshipId,
+            EmitHyperlinkDiagnostic(context, chartPartName ?? context.SceneSlide.PartName, reportedIds, link.RelationshipId,
                 resolution.FailureId, resolution.FailureMessage);
 
             return;
@@ -178,7 +178,7 @@ internal sealed partial class PptxRenderer
         string? sourcePartName,
         string relationshipId)
     {
-        return ResolveHyperlink(context, ResolvePartRelationships(context, sourcePartName), relationshipId);
+        return ResolveHyperlink(context, ResolvePartRelationships(context.SceneSlide, sourcePartName), relationshipId);
     }
 
     // Chart-text run clicks resolve against the chart part's own relationships (S08).
@@ -227,19 +227,19 @@ internal sealed partial class PptxRenderer
         return new PptxHyperlinkResolution(false, null, null, "PPTX_UNSUPPORTED_HYPERLINK", $"Hyperlink relationship '{relationshipId}' of type '{relationship.Type}' is not supported and was ignored.");
     }
 
-    private static IReadOnlyDictionary<string, OoxRelationship> ResolvePartRelationships(PptxRenderContext context, string? sourcePartName)
+    private static IReadOnlyDictionary<string, OoxRelationship> ResolvePartRelationships(PptxSceneSlide slide, string? sourcePartName)
     {
-        if (string.Equals(sourcePartName, context.MasterPartName, StringComparison.Ordinal))
+        if (string.Equals(sourcePartName, slide.MasterPartName, StringComparison.Ordinal))
         {
-            return context.MasterRelationships;
+            return slide.MasterRelationships;
         }
 
-        if (string.Equals(sourcePartName, context.LayoutPartName, StringComparison.Ordinal))
+        if (string.Equals(sourcePartName, slide.LayoutPartName, StringComparison.Ordinal))
         {
-            return context.LayoutRelationships;
+            return slide.LayoutRelationships;
         }
 
-        return context.SlideRelationships;
+        return slide.SlideRelationships;
     }
 
     private static void EmitHyperlinkDiagnostic(PptxRenderContext context, string partName,

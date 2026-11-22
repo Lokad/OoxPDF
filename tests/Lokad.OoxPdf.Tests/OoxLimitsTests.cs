@@ -1913,11 +1913,11 @@ internal static partial class OoxLimitsTests
             }
         }
 
-        object? first = Invoke(context.SlideColorMap, false);
-        object? second = Invoke(context.SlideColorMap, false);
+        object? first = Invoke(context.SceneSlide.SlideColorMap, false);
+        object? second = Invoke(context.SceneSlide.SlideColorMap, false);
         TestAssert.NotNull(first);
         TestAssert.True(ReferenceEquals(first, second), "Identical node lookups must share one layout computation.");
-        object? other = Invoke(context.SlideColorMap, true);
+        object? other = Invoke(context.SceneSlide.SlideColorMap, true);
         TestAssert.NotNull(other);
         TestAssert.True(!ReferenceEquals(first, other), "Different traversal contexts must not share layouts.");
     }
@@ -1937,7 +1937,7 @@ internal static partial class OoxLimitsTests
         {
             try
             {
-                object pending = getOrBuild.Invoke(null, [context, bounds, node, context.SlideColorMap])!;
+                object pending = getOrBuild.Invoke(null, [context, bounds, node, context.SceneSlide.SlideColorMap])!;
                 var task = (Task)pending.GetType().GetMethod("AsTask")!.Invoke(pending, null)!;
                 task.GetAwaiter().GetResult();
                 return task.GetType().GetProperty("Result")!.GetValue(task);

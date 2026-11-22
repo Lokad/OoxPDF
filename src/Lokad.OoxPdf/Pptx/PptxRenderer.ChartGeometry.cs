@@ -179,7 +179,7 @@ internal sealed partial class PptxRenderer
             {
                 context.DiagnosticSink?.Invoke(new OoxPdfDiagnostic("PPTX_UNSUPPORTED_CHART", OoxPdfSeverity.Warning,
                     "The side legend cannot be measured within the automatic plot frame; inherited plot placement is retained.",
-                    PartName: context.SlidePartName, SlideIndex: context.SlideNumber,
+                    PartName: context.SceneSlide.PartName, SlideIndex: context.SlideNumber,
                     Feature: "chart", Fallback: "Approximate"));
                 return (source, null, false);
             }

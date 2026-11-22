@@ -30,7 +30,7 @@ internal sealed partial class PptxRenderer
             context.DiagnosticSink?.Invoke(new OoxPdfDiagnostic(
                 "IMAGE_MISSING_RELATIONSHIP", OoxPdfSeverity.Error,
                 "Picture image relationship could not be resolved and the image was ignored.",
-                sourcePartName ?? context.SlidePartName, SlideIndex: context.SlideNumber,
+                sourcePartName ?? context.SceneSlide.PartName, SlideIndex: context.SlideNumber,
                 Feature: "image", Fallback: "Ignored"));
             return false;
         }

@@ -27,9 +27,9 @@ internal sealed partial class PptxRenderer
         foreach (bool shapes in new[] { true, false })
         {
             if (context.SceneSlide.ShowMasterShapes)
-                Add(context.SceneSlide.MasterNodes, context.MasterColorMap, false, shapes, GroupTransform.Identity);
-            Add(context.SceneSlide.LayoutNodes, context.LayoutColorMap, false, shapes, GroupTransform.Identity);
-            Add(context.SceneSlide.SlideNodes, context.SlideColorMap, true, shapes, GroupTransform.Identity);
+                Add(context.SceneSlide.MasterNodes, context.SceneSlide.MasterColorMap, false, shapes, GroupTransform.Identity);
+            Add(context.SceneSlide.LayoutNodes, context.SceneSlide.LayoutColorMap, false, shapes, GroupTransform.Identity);
+            Add(context.SceneSlide.SlideNodes, context.SceneSlide.SlideColorMap, true, shapes, GroupTransform.Identity);
         }
         return spans;
 
@@ -65,20 +65,16 @@ internal sealed partial class PptxRenderer
             return new PptxTextLayoutSnapshot([]);
         }
 
-        PptxTextLayoutModel inheritedLayout = BuildTextLayoutModelForSources(EnumerateInheritedPaintSources(context), context);
-        PptxTextLayoutModel slideLayout = (BuildTextLayoutModelAsync(context, context.SlideSource, includePlaceholders: true, context.InheritedXml).GetAwaiter().GetResult());
-        return ToSnapshot(new PptxTextLayoutModel(inheritedLayout.Frames.Concat(slideLayout.Frames).ToArray()));
-
-        PptxTextLayoutModel BuildTextLayoutModelForSources(IEnumerable<PptxRenderSource> sources, PptxRenderContext context)
+        PptxSceneSlide slide = context.SceneSlide;
+        var frames = new List<PptxTextFrameLayout>();
+        foreach (var (xml, colorMap) in EnumerateInheritedPaintSources(slide))
         {
-            var frames = new List<PptxTextFrameLayout>();
-            foreach (PptxRenderSource source in sources)
-            {
-                frames.AddRange((BuildTextLayoutModelAsync(context, source, includePlaceholders: false, placeholderSources: []).GetAwaiter().GetResult()).Frames);
-            }
-
-            return new PptxTextLayoutModel(frames);
+            frames.AddRange(BuildTextLayoutModelAsync(context, xml, colorMap, includePlaceholders: false,
+                placeholderSources: []).GetAwaiter().GetResult().Frames);
         }
+        frames.AddRange(BuildTextLayoutModelAsync(context, slide.SlideXml, slide.SlideColorMap, includePlaceholders: true,
+            context.InheritedXml).GetAwaiter().GetResult().Frames);
+        return ToSnapshot(new PptxTextLayoutModel(frames));
     }
 
     internal static PptxTextFlowSnapshot InspectTextFlow(PptxDocument document, OoxPackage package, int slideIndex, PptxScene? sharedScene = null, PresentationFontResolver? inspectionFonts = null)
@@ -89,20 +85,16 @@ internal sealed partial class PptxRenderer
             return new PptxTextFlowSnapshot([]);
         }
 
-        PptxTextFlowModel inheritedFlow = BuildTextFlowModelForSources(EnumerateInheritedPaintSources(context), context);
-        PptxTextFlowModel slideFlow = (BuildTextFlowModelAsync(context, context.SlideSource, includePlaceholders: true, context.InheritedXml).GetAwaiter().GetResult());
-        return ToSnapshot(new PptxTextFlowModel(inheritedFlow.Frames.Concat(slideFlow.Frames).ToArray()));
-
-        PptxTextFlowModel BuildTextFlowModelForSources(IEnumerable<PptxRenderSource> sources, PptxRenderContext context)
+        PptxSceneSlide slide = context.SceneSlide;
+        var frames = new List<PptxTextFlowFrame>();
+        foreach (var (xml, colorMap) in EnumerateInheritedPaintSources(slide))
         {
-            var frames = new List<PptxTextFlowFrame>();
-            foreach (PptxRenderSource source in sources)
-            {
-                frames.AddRange((BuildTextFlowModelAsync(context, source, includePlaceholders: false, placeholderSources: []).GetAwaiter().GetResult()).Frames);
-            }
-
-            return new PptxTextFlowModel(frames);
+            frames.AddRange(BuildTextFlowModelAsync(context, xml, colorMap, includePlaceholders: false,
+                placeholderSources: []).GetAwaiter().GetResult().Frames);
         }
+        frames.AddRange(BuildTextFlowModelAsync(context, slide.SlideXml, slide.SlideColorMap, includePlaceholders: true,
+            context.InheritedXml).GetAwaiter().GetResult().Frames);
+        return ToSnapshot(new PptxTextFlowModel(frames));
     }
 
     private static PptxTextLayoutSnapshot ToSnapshot(PptxTextLayoutModel layout)
