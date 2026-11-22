@@ -16704,6 +16704,7 @@
     "DocxInlineCompositionFractionControl",
     "DocxInlineCompositionFractionSize",
     "PortableRenderingFractionControl",
+    "=PortableRenderingMathControlProofingKeepsComposedFractions",
     "DocxInlineCompositionExplicitControl",
     "PortableRenderingExplicitControl",
     "DocxInlineCompositionCellConnectors",

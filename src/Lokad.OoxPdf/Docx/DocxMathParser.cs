@@ -198,9 +198,15 @@ internal static partial class DocxMathParser
     private static bool IsRow(string name) => name is "oMath" or "e" or "sub" or "sup" or "num" or "den" or "deg" or "fName";
     private static bool HasKnownControlProperty(XElement property) =>
         property.Name.Namespace == WordprocessingNamespace && !property.HasElements &&
-        string.IsNullOrWhiteSpace(property.Value) && property.Name.LocalName is
+        string.IsNullOrWhiteSpace(property.Value) && (property.Name.LocalName switch
+        {
             "rFonts" or "sz" or "szCs" or "color" or "i" or "iCs" or "b" or "bCs" or "lang" or "rStyle" or
-            "u" or "strike" or "dstrike" or "vanish" or "caps" or "smallCaps" or "vertAlign" or "spacing" or "highlight" or "shd";
+                "u" or "strike" or "dstrike" or "vanish" or "caps" or "smallCaps" or "vertAlign" or "spacing" or "highlight" or "shd" => true,
+            // Proofing metadata has no effect on the painted control character.
+            "noProof" => HasBooleanValue((string?)property.Attribute(WordprocessingNamespace + "val")) &&
+                property.Attributes().All(a => a.IsNamespaceDeclaration || a.Name == WordprocessingNamespace + "val"),
+            _ => false
+        });
     // A single control has the same grammar inside an admitted revision wrapper.
     // Role rows and orphan matrix rows still require their actual source parent.
     private static bool IsControl(string name) => name is "f" or "sSub" or "sSup" or "sSubSup" or "rad" or "d" or "nary" or "func" or "m";

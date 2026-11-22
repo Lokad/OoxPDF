@@ -27,7 +27,7 @@ internal static partial class DocxInlineCompositionTests
                 DocxMathLayout.GetMetricOnlyControls(equation, runs, default).Count == (paint == "empty" ? 1 : 0),
                 "The parsed child owns its actual authored metrics while raw properties and painted sources remain distinct.");
             if (paint != "empty" || size != 11) continue;
-            foreach (string malformed in new[] { "unknown", "duplicate-control", "duplicate-owner", "attribute" })
+            foreach (string malformed in new[] { "unknown", "duplicate-control", "duplicate-owner", "attribute", "proofing-value" })
             {
                 var invalid = ReadMutation(fixture, OoxPdfDocxMarkupMode.Final, false, false, (xml, w, m) =>
                 {
@@ -36,7 +36,9 @@ internal static partial class DocxInlineCompositionTests
                     if (malformed == "unknown") property.Add(new XElement(m + "future"));
                     else if (malformed == "duplicate-control") property.Add(new XElement(property.Element(m + "ctrlPr")!));
                     else if (malformed == "duplicate-owner") child.AddFirst(new XElement(property));
-                    else property.SetAttributeValue("future", "1");
+                    else if (malformed == "attribute") property.SetAttributeValue("future", "1");
+                    else property.Element(m + "ctrlPr")!.Element(w + "rPr")!
+                        .Add(new XElement(w + "noProof", new XAttribute(w + "val", "invalid")));
                 }).Paragraphs.First().Equations.Single();
                 TestAssert.True(!DocxMathLayout.TryGetRuns(invalid, default, out _),
                     "Unknown or malformed controls retain the complete equation fallback.");
