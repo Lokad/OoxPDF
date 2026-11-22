@@ -688,11 +688,12 @@ internal sealed partial class DocxLayoutEngine
                             exactSpacing ? 0d : midLinePlan?.ExtraBelow(lineIndex) ?? 0d);
                         cursorY -= extraAbove;
                         double mathWidth = inlineMath?.LineIndex == lineIndex ? inlineMath.Width : 0d;
-                        double lineWidth = MeasureTextSpansForLayout(line.Spans, fontSize, measurer, ScaleTabStopPositions(paragraph.EffectiveProperties.TabStops, context.ParagraphSpacingScale), context.DefaultTabStopPoints * context.ParagraphSpacingScale, context.PageNumber) + (midLinePlan?.LineImageWidths[lineIndex] ?? 0d) + mathWidth;
+                        double inlineWidth = (midLinePlan?.LineImageWidths[lineIndex] ?? 0d) + mathWidth;
+                        double lineWidth = MeasureTextSpansForLayout(line.Spans, fontSize, measurer, ScaleTabStopPositions(paragraph.EffectiveProperties.TabStops, context.ParagraphSpacingScale), context.DefaultTabStopPoints * context.ParagraphSpacingScale, context.PageNumber) + inlineWidth;
                         // RV06 table-align probe: Office centers/rights the drawable cell
                         // text too, letting trailing spaces overflow past the edge.
                         double lineAlignWidth = paragraph.EffectiveProperties.Alignment is DocxTextAlignment.Center or DocxTextAlignment.Right
-                            ? MeasureDrawableTextSpansForLayout(line.Spans, fontSize, measurer, ScaleTabStopPositions(paragraph.EffectiveProperties.TabStops, context.ParagraphSpacingScale), context.DefaultTabStopPoints * context.ParagraphSpacingScale, context.PageNumber) + (midLinePlan?.LineImageWidths[lineIndex] ?? 0d) + mathWidth
+                            ? MeasureDrawableTextSpansForLayout(line.Spans, fontSize, measurer, ScaleTabStopPositions(paragraph.EffectiveProperties.TabStops, context.ParagraphSpacingScale), context.DefaultTabStopPoints * context.ParagraphSpacingScale, context.PageNumber) + inlineWidth
                             : lineWidth;
                         double lineX = paragraph.EffectiveProperties.Alignment switch
                         {
@@ -713,8 +714,13 @@ internal sealed partial class DocxLayoutEngine
                             measurer,
                             ScaleTabStopPositions(paragraph.EffectiveProperties.TabStops, context.ParagraphSpacingScale),
                             context.DefaultTabStopPoints * context.ParagraphSpacingScale,
-                            context.PageNumber, (midLinePlan?.LineImageWidths[lineIndex] ?? 0d) + mathWidth);
-                        lineShape = FitTableCellLineText(lineShape, paragraphWidth);
+                            context.PageNumber, inlineWidth);
+                        // A fitted text-only line occupies its full inset frame. Labels
+                        // and inline objects retain their separately placed origins.
+                        double? fittedOrigin = inlineWidth == 0d && (!firstLine || paragraph.ListLabel is null)
+                            ? paragraphX
+                            : null;
+                        lineShape = FitTableCellLineText(lineShape, paragraphWidth, fittedOrigin);
                         IReadOnlyList<DocxTextSegmentLayout> emissionSegments = lineShape.Segments;
                         double mathOffset = 0d;
                         if (inlineMath?.LineIndex == lineIndex)
@@ -936,7 +942,7 @@ internal sealed partial class DocxLayoutEngine
 
         return (lines, usedHeight, placedImages, placedBoxes, nestedRows, anchors ?? []);
 
-        DocxParagraphLineShape FitTableCellLineText(DocxParagraphLineShape lineShape, double targetWidth)
+        DocxParagraphLineShape FitTableCellLineText(DocxParagraphLineShape lineShape, double targetWidth, double? fittedOrigin)
         {
             if (!cell.FitText ||
                 lineShape.Segments.Count == 0 ||
@@ -954,7 +960,8 @@ internal sealed partial class DocxLayoutEngine
 
             double fitSpacing = (targetWidth - lineShape.Width) / gapCount;
             var segments = new List<DocxTextSegmentLayout>(lineShape.Segments.Count);
-            double segmentX = lineShape.Segments[0].X;
+            double origin = fittedOrigin ?? lineShape.X;
+            double segmentX = lineShape.Segments[0].X + (origin - lineShape.X);
             for (int index = 0; index < lineShape.Segments.Count; index++)
             {
                 DocxTextSegmentLayout segment = lineShape.Segments[index];
@@ -979,6 +986,7 @@ internal sealed partial class DocxLayoutEngine
 
             return lineShape with
             {
+                X = origin,
                 Width = targetWidth,
                 Segments = segments
             };

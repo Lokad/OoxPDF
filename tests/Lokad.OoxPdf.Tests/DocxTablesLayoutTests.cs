@@ -2216,43 +2216,42 @@ internal static class DocxTablesLayoutTests
     public static void DocxTableLayoutStageFitsCellTextToWidth()
     {
         const string text = "First Second Third";
-        var paragraph = new DocxParagraph(
-            [new DocxTextRun(text, 10d, null, false, false, false, null, null)],
-            [],
-            null,
-            DocxTextAlignment.Left,
-            null,
-            0d,
-            0d,
-            1d,
-            null,
-            DocxParagraphSpacing.Empty,
-            DocxParagraphKeepRules.Empty,
-            null);
-        var cell = new DocxTableCell([paragraph], null, null, null, null, [], DocxTableCellMargins.Empty) with {FitText = true };
-        var table = new DocxTable(
-            null,
-            [34d],
-            [new DocxTableRow([cell], 10d)]) with {PreferredWidthPoints = 34d };
-        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+        const double leftIndent = 5d, firstLineIndent = 4d, rightIndent = 3d;
+        foreach ((double columnWidth, bool expand) in new[] { (34d, false), (468d, true) })
+        foreach (var alignment in new[] { DocxTextAlignment.Left, DocxTextAlignment.Center, DocxTextAlignment.Right })
+        {
+            var paragraph = DocxTests.CreateDocxLayoutParagraph(text, 10d) with
+            {
+                Alignment = alignment,
+                Indent = DocxParagraphIndent.Empty with
+                    { LeftPoints = leftIndent, FirstLinePoints = firstLineIndent, RightPoints = rightIndent }
+            };
+            var cell = new DocxTableCell([paragraph], null, null, null, null, [], DocxTableCellMargins.Empty) with { FitText = true };
+            var table = new DocxTable("fixed", [columnWidth], [new DocxTableRow([cell], 10d)])
+                { PreferredWidthPoints = columnWidth };
+            DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
-        DocxTableCellLayout cellLayout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-            .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
-            .Pages[0]
-            .Items
-            .OfType<DocxTableRowLayout>()
-            .Single()
-            .Cells
-            .Single();
+            DocxTableCellLayout cellLayout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+                .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
+                .Pages[0].Items.OfType<DocxTableRowLayout>().Single().Cells.Single();
 
-        DocxTextLineLayout line = cellLayout.TextLines.Single();
-        DocxTextSegmentLayout segment = line.Segments.Single();
-        TestAssert.Equal(text, line.Text);
-        // Office default insets (w68) narrow the text extents below the cell width; fit-text still targets the extents, now read off the record pads.
-        TestAssert.True(Math.Abs(line.Width - (cellLayout.Width - cellLayout.ContentPaddingLeft - cellLayout.ContentPaddingRight)) < 0.001d, "Fit-text cell lines should target the cell text extents instead of keeping the natural overwide advance.");
-        TestAssert.True(segment.PdfCharacterSpacing < 0d, "Fitting overwide text should reduce inter-character spacing.");
-        TestAssert.Equal(DocxTextStateCharacterSpacingSource.AdvanceTarget, segment.PdfCharacterSpacingSource);
-        TestAssert.True(!segment.CompensatePdfCharacterSpacing, "Fit-text advance targets should add a text-state spacing delta instead of compensating it away.");
+            DocxTextLineLayout line = cellLayout.TextLines.Single();
+            DocxTextSegmentLayout segment = line.Segments.Single();
+            double left = cellLayout.X + cellLayout.ContentPaddingLeft + leftIndent + firstLineIndent;
+            double right = cellLayout.X + cellLayout.Width - cellLayout.ContentPaddingRight - rightIndent;
+            TestAssert.Equal(text, line.Text);
+            TestAssert.Equal(text, segment.Text);
+            TestAssert.True(Math.Abs(line.X - left) < 0.001d && Math.Abs(segment.X - left) < 0.001d,
+                $"{alignment}: fitted text should start at its inset origin.");
+            TestAssert.True(Math.Abs(line.X + line.Width - right) < 0.001d &&
+                Math.Abs(segment.X + segment.Width - right) < 0.001d,
+                $"{alignment}: the fitted line and its text must end at the right inset.");
+            TestAssert.Equal(10d, line.FontSize);
+            TestAssert.True(expand ? segment.PdfCharacterSpacing > 0d : segment.PdfCharacterSpacing < 0d,
+                $"{alignment}: fit-text adjusts inter-character spacing.");
+            TestAssert.Equal(DocxTextStateCharacterSpacingSource.AdvanceTarget, segment.PdfCharacterSpacingSource);
+            TestAssert.True(!segment.CompensatePdfCharacterSpacing, "Fit-text advance targets should add a text-state spacing delta instead of compensating it away.");
+        }
     }
 
     public static void DocxTableLayoutStageSplitsOverwideCellTokensAtSafeCharacterBoundaries()
