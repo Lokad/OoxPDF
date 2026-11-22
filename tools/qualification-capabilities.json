@@ -20824,8 +20824,10 @@
     "DocxMathRevisionAdmissionSharesReadableEmptyRunRules",
     "DocxMathRevisionBoundariesPreservePaintAndFiltering",
     "DocxMathRunNonPrintingMarkersRetainTextAndFallbacks",
+    "=DocxMathWordTextPreservesOrderAndRevisionOwnership",
     "PortableRenderingEmptyRevisedMathRunsKeepFractions",
     "PortableRenderingMathRunPaginationHintsKeepComposedContent",
+    "=PortableRenderingMathRunWordTextKeepsComposedFractions",
     "PortableRenderingRevisedInlineBoxesKeepVisibleSourceContent"
   ],
   "docx-unsupported-equation-siblings": [

@@ -6,6 +6,36 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class DocxMathTests
 {
+    public static void DocxMathWordTextPreservesOrderAndRevisionOwnership()
+    {
+        XName wordText = WordprocessingNamespace + "t";
+        var mixed = EditingMarkerFraction();
+        mixed.Descendants(MathNamespace + "r").First().Add(
+            new XElement(wordText, new XAttribute(XNamespace.Xml + "space", "preserve"), " q "),
+            new XElement(MathNamespace + "t", "x"));
+        var fraction = (DocxMathFraction)Parse(mixed).Children.Single();
+        TestAssert.Equal("a q x+b", RowText(fraction.Numerator));
+
+        foreach (bool included in new[] { false, true })
+        {
+            var revised = EditingMarkerFraction();
+            var run = revised.Descendants(MathNamespace + "r").First();
+            run.Element(MathNamespace + "t")!.Name = wordText;
+            run.ReplaceWith(new XElement(WordprocessingNamespace + "ins", new XElement(run)));
+            var parsed = DocxMathParser.Read(revised, (_, text) => PlainRun(text), default, _ => included);
+            var numerator = ((DocxMathFraction)parsed.Children.Single()).Numerator;
+            var revision = TestAssert.NotNull(numerator.Children[0] as DocxMathRow);
+            TestAssert.Equal(included ? "a" : "", RowText(revision));
+        }
+
+        var malformed = EditingMarkerFraction();
+        malformed.Descendants(MathNamespace + "r").First().Add(
+            new XElement(wordText, new XElement(WordprocessingNamespace + "br")));
+        var fallback = (DocxMathFraction)Parse(malformed).Children.Single();
+        TestAssert.True(fallback.Numerator.Children[0] is DocxMathUnsupported,
+            "Content nested inside a WordprocessingML text element retains the unsupported fallback.");
+    }
+
     public static void DocxMathRevisionAdmissionSharesReadableEmptyRunRules()
     {
         foreach (string kind in new[] { "ins", "del" })

@@ -212,7 +212,7 @@ internal static partial class DocxMathParser
     private static bool IsControl(string name) => name is "f" or "sSub" or "sSup" or "sSubSup" or "rad" or "d" or "nary" or "func" or "m";
     private static bool IsRevisionContent(XElement element) => element.Name.Namespace == MathNamespace &&
         (IsControl(element.Name.LocalName) || element.Name.LocalName == "r" &&
-            element.Elements(MathNamespace + "t").Any(text => text.Value.Length != 0));
+            element.Elements().Any(text => IsLiteralRunText(text) && text.Value.Length != 0));
     // Revision admission and structural retention see the same stored content
     // through metadata containers; role nodes still need their actual parent.
     private static IEnumerable<XElement> ReadRevisionChildren(XElement source, CancellationToken token)
@@ -293,8 +293,12 @@ internal static partial class DocxMathParser
     // unknown payload cannot become a supported revision owner.
     private static bool IsReadableRun(XElement element) =>
         element.Name == MathNamespace + "r" && element.Elements().All(child =>
-            child.Name == MathNamespace + "t" || child.Name == MathNamespace + "rPr" || child.Name == WordprocessingNamespace + "rPr" ||
+            IsLiteralRunText(child) || child.Name == MathNamespace + "rPr" || child.Name == WordprocessingNamespace + "rPr" ||
             DocxSourceXml.IsNonPrintingMarker(child));
+
+    private static bool IsLiteralRunText(XElement element) =>
+        element.Name == MathNamespace + "t" ||
+        element.Name == WordprocessingNamespace + "t" && !element.HasElements;
 
     private static DocxMathNode ReadLeaf(XElement element, Func<XElement, string, DocxTextRun> readRun)
     {
@@ -302,7 +306,7 @@ internal static partial class DocxMathParser
         {
             var (normalText, literalText, supported) = ReadRunProperties(element);
             return new DocxMathRun(
-                readRun(element, string.Concat(element.Elements(MathNamespace + "t").Select(text => text.Value))),
+                readRun(element, string.Concat(element.Elements().Where(IsLiteralRunText).Select(text => text.Value))),
                 PropertyValue(element, "rPr", "sty"), PropertyValue(element, "rPr", "scr"))
             {
                 PropertiesXml = ReadProperties(element),

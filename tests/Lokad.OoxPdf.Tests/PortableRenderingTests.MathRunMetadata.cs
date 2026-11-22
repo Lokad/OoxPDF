@@ -61,6 +61,42 @@ internal static partial class PortableRenderingTests
             fontResourceFilter: name => name.StartsWith("Eq", StringComparison.Ordinal)).Select(show => show.Text))
         .Normalize(NormalizationForm.FormKC);
 
+    public static void PortableRenderingMathRunWordTextKeepsComposedFractions()
+    {
+        const string fixture = "CompositionProbes/composed-static-svg-report";
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var beforeDiagnostics = new List<OoxPdfDiagnostic>();
+            var afterDiagnostics = new List<OoxPdfDiagnostic>();
+            var beforeSource = DocxInlineCompositionTests.ReadMutation(fixture, mode, false, false,
+                diagnosticSink: beforeDiagnostics.Add);
+            var afterSource = DocxInlineCompositionTests.ReadMutation(fixture, mode, false, false, (xml, w, m) =>
+            {
+                var numerators = xml.Descendants(m + "f").Select(fraction =>
+                    fraction.Element(m + "num")!.Descendants(m + "t").Single()).ToArray();
+                TestAssert.Equal(3, numerators.Length);
+                foreach (var literal in numerators)
+                    literal.Name = w + "t";
+            }, diagnosticSink: afterDiagnostics.Add);
+            var renderer = new DocxRenderer(new PinnedResolver(mathFont: true), mode,
+                mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
+                    OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var before = renderer.RenderPagesAsync(beforeSource, beforeDiagnostics.Add, default).ToBlockingEnumerable().ToArray();
+            var after = renderer.RenderPagesAsync(afterSource, afterDiagnostics.Add, default).ToBlockingEnumerable().ToArray();
+            string text = string.Concat(after.Select(ReadPortableEquationGlyphs));
+            TestAssert.Equal(3, text.Split("x+2y", StringSplitOptions.None).Length - 1);
+            TestAssert.Equal(before.Length, after.Length);
+            for (int page = 0; page < before.Length; page++)
+            {
+                TestAssert.Equal(before[page].Content, after[page].Content);
+                TestAssert.True(before[page].Annotations.SequenceEqual(after[page].Annotations),
+                    "Literal text in fractions preserves navigation.");
+            }
+            TestAssert.True(beforeDiagnostics.SequenceEqual(afterDiagnostics), "Literal text preserves equation diagnostics.");
+            CheckWrittenPages(after);
+        }
+    }
+
     public static void PortableRenderingMathControlMetadataKeepsComposedFractions()
     {
         const string fixture = "CompositionProbes/composed-static-svg-report";
