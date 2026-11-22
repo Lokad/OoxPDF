@@ -552,7 +552,7 @@ internal sealed partial class PptxRenderer
     {
         public double? UniformStopOpacity { get; init; } = 1d;
         public bool HasNumericStopOpacity { get; init; }
-        public bool HasIdentityGradientTransform { get; init; }
+        public bool HasPositiveUniformGradientTransform { get; init; }
         public int IgnoredStopOpacityCount { get; init; }
         public SvgGradientStop? ConstantStop => HasNumericStopOpacity && Stops.Count == 1 ? Stops[0] : null;
     }

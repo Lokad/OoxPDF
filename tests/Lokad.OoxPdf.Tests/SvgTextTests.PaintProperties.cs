@@ -571,6 +571,47 @@ internal static partial class SvgTextTests
         }
     }
 
+    public static void SvgRadialGradientResourcesPreserveTranslatedAndUniformlyScaledPaint()
+    {
+        foreach (bool boundingBox in new[] { false, true })
+        {
+            double shiftX = boundingBox ? 0.125d : 8d;
+            double shiftY = boundingBox ? 0.25d : 6d;
+            string direct = Svg(Figure("left", 0, boundingBox, 1d, 0d, 0d) + Figure("right", 180, boundingBox, 1d, 0d, 0d));
+            string transformed = Svg(Figure("left", 0, boundingBox, 1d, shiftX, shiftY) +
+                Figure("right", 180, boundingBox, 2d, shiftX, shiftY));
+            AssertSvgPaintInBothFormats(direct, transformed, pdf =>
+            {
+                TestAssert.Equal(3, Regex.Matches(pdf, "/ShadingType 3").Count);
+                TestAssert.Equal(2, Regex.Matches(pdf, "/S /Luminosity").Count);
+            }, "0 0.502 0 rg");
+        }
+
+        static string Figure(string id, int offset, bool boundingBox, double scale, double shiftX, double shiftY)
+        {
+            string units = boundingBox ? "objectBoundingBox" : "userSpaceOnUse";
+            double X(int center) => ((boundingBox ? .5d : center + offset) - shiftX) / scale;
+            double y = ((boundingBox ? .5d : 40d) - shiftY) / scale;
+            double radius = (boundingBox ? .25d : 22d) / scale;
+            string transform = scale == 1d && shiftX == 0d && shiftY == 0d ? "" :
+                FormattableString.Invariant($"""gradientTransform="translate({shiftX} {shiftY}) scale({scale})" """);
+            return FormattableString.Invariant($"""
+                <defs>
+                  <radialGradient id="{id}-alpha" gradientUnits="{units}" cx="{X(40)}" cy="{y}" r="{radius}" {transform}>
+                    <stop stop-color="yellow" stop-opacity=".3"/><stop offset="1" stop-color="purple"/>
+                  </radialGradient>
+                  <radialGradient id="{id}-opaque" gradientUnits="{units}" cx="{X(104)}" cy="{y}" r="{radius}" {transform}>
+                    <stop stop-color="white"/><stop offset="1" stop-color="blue"/>
+                  </radialGradient>
+                </defs>
+                <rect x="{offset + 12}" y="12" width="62" height="56" fill="aqua"/>
+                <rect x="{offset + 14}" y="14" width="58" height="52" fill="url(#{id}-alpha)"/>
+                <rect x="{offset + 78}" y="14" width="58" height="52" fill="url(#{id}-opaque)"/>
+                <rect x="{offset + 130}" y="68" width="11" height="9" fill="green"/>
+                """);
+        }
+    }
+
     public static void SvgUserSpaceRadialGradientsFollowTranslatedAndUniformlyScaledGroups()
     {
         string direct = Svg(Figure("left", 0, 1, 0, 0) + Figure("right", 180, 1, 0, 0));

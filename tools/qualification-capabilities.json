@@ -674,6 +674,7 @@
     "=SvgTransparentFillKeepsTranslucentGradientStrokeInBothFormats",
     "=SvgUserSpaceGradientsFollowTranslatedAndUniformlyScaledGroups",
     "=SvgLinearGradientResourcesPreserveTranslatedAndUniformlyScaledPaint",
+    "=SvgRadialGradientResourcesPreserveTranslatedAndUniformlyScaledPaint",
     "=SvgUserSpaceRadialGradientsFollowTranslatedAndUniformlyScaledGroups",
     "=SvgOpaqueContainerStylesPreserveGradientStrokes",
     "=SvgLinesKeepTranslucentGradientStrokesWithDefaultOrInheritedFill",

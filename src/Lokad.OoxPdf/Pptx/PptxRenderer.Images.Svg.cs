@@ -2157,9 +2157,9 @@ internal sealed partial class PptxRenderer
         if (!double.IsFinite(width) || !double.IsFinite(height)) { return null; }
         return new PdfRectangle(left, bottom, width, height);
     }
-    // RV07: radial gradients paint concentric ellipse rings, largest first.
-    // Focal points diagnose and render centered; radii resolve per axis like
-    // the linear vector mapping, with the gradient transform baked at read.
+    // Bake the gradient transform before mapping the radius to each paint axis.
+    // Off-center focal points diagnose and render centered. The painter uses
+    // native radial shadings and falls back to bounded ring sampling.
     private static SvgRadialGradient? ReadSvgRadialGradient(SvgGradientDefinition definition, SvgGradientRamp ramp,
         SvgTransform transform, double? width, double? height, double? diagonal, SvgGradientSpread spread)
     {
@@ -2174,8 +2174,10 @@ internal sealed partial class PptxRenderer
         }
 
         (double rawCx, double rawCy) = transform.Apply(cx, cy);
-        double rawRadius = radius;
-        if (width.HasValue)
+        bool uniformGradientScale = transform.HasPositiveUniformScale;
+        // Scale the circle in gradient space before mapping bounding-box units.
+        double rawRadius = uniformGradientScale ? radius * transform.M11 : radius;
+        if (width.HasValue && !uniformGradientScale)
         {
             (double edgeX, double edgeY) = transform.Apply(cx + radius, cy + radius);
             rawRadius = Math.Max(Math.Abs(edgeX - rawCx), Math.Abs(edgeY - rawCy));
@@ -2189,7 +2191,7 @@ internal sealed partial class PptxRenderer
         {
             UniformStopOpacity = ramp.UniformOpacity,
             HasNumericStopOpacity = ramp.HasNumericOpacity,
-            HasIdentityGradientTransform = transform.IsIdentity,
+            HasPositiveUniformGradientTransform = uniformGradientScale,
             IgnoredStopOpacityCount = ramp.IgnoredOpacityCount
         };
     }
@@ -2277,7 +2279,7 @@ internal sealed partial class PptxRenderer
             double maskWidth = Math.Max(0.001d, imageX + (pathBounds.MaxX - minX) * scaleX - maskX);
             double maskHeight = Math.Max(0.001d, imageY + imageHeight - (pathBounds.MinY - minY) * scaleY - maskY);
             if (allowAlphaMask && radial.UniformStopOpacity is null && radial.HasNumericStopOpacity &&
-                radial.HasIdentityGradientTransform && !radial.HasFocal &&
+                radial.HasPositiveUniformGradientTransform && !radial.HasFocal &&
                 (!radial.IsUserSpace || uniformPathScale) &&
                 radial.Spread == SvgGradientSpread.Pad && radial.Stops.Count <= 256 &&
                 double.IsFinite(maskWidth) && double.IsFinite(maskHeight) &&
