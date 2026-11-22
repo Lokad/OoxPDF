@@ -253,7 +253,7 @@ internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMet
             return MeasureSingleFontText(run, text, fontSize, font);
         }
 
-        IReadOnlyList<OpenTypeFont?> candidates = ResolveCandidateFonts(run, resolved, resolution, font);
+        IReadOnlyList<OpenTypeFont?> candidates = ResolveCandidateFonts(run, resolved, resolution);
         if (candidates.Count <= 1)
         {
             return MeasureSingleFontText(run, text, fontSize, font);
@@ -437,21 +437,17 @@ internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMet
     }
 
     private IReadOnlyList<OpenTypeFont?> ResolveCandidateFonts(DocxTextRun? run,
-        DocxResolvedRunTypeface? resolved, FontFaceResolution resolution, OpenTypeFont primary)
+        DocxResolvedRunTypeface? resolved, FontFaceResolution resolution)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var key = (resolution.Source.StableId, resolution.FontFaceIndex, resolved?.ResolvedFamily,
-            run is not null && run.Bold, run is not null && run.Italic);
+        var key = GetCandidateChainKey(run, resolved, resolution);
         return candidateChains.TryGetValue(key, out var chain) ? chain
             : throw new InvalidOperationException("Fallback fonts must be prepared before text measurement.");
     }
 
     private async ValueTask<IReadOnlyList<OpenTypeFont?>> PrepareCandidateFontsAsync(DocxTextRun? run, DocxResolvedRunTypeface? resolved, FontFaceResolution resolution, OpenTypeFont primary)
     {
-        bool bold = run is not null && run.Bold;
-        bool italic = run is not null && run.Italic;
-        string? primaryFamily = resolved?.ResolvedFamily;
-        var key = (resolution.Source.StableId, resolution.FontFaceIndex, primaryFamily, bold, italic);
+        var key = GetCandidateChainKey(run, resolved, resolution);
         if (candidateChains.TryGetValue(key, out IReadOnlyList<OpenTypeFont?>? cached))
         {
             return cached;
@@ -464,7 +460,7 @@ internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMet
         }
         else
         {
-            foreach (FontFaceResolution candidate in DocxFontFallbackRules.ResolveCandidateResolutions(fontResolver, run, primaryFamily, resolution, fallbackResolution))
+            foreach (FontFaceResolution candidate in DocxFontFallbackRules.ResolveCandidateResolutions(fontResolver, run, key.PrimaryFamily, resolution, fallbackResolution))
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 OpenTypeFont? candidateFont = candidates.Count == 0 ? primary : await PrepareFontAsync(candidate).ConfigureAwait(false);
@@ -479,6 +475,10 @@ internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMet
         candidateChains[key] = chain;
         return chain;
     }
+
+    private static (string StableId, int FaceIndex, string? PrimaryFamily, bool Bold, bool Italic) GetCandidateChainKey(
+        DocxTextRun? run, DocxResolvedRunTypeface? resolved, FontFaceResolution resolution) =>
+        (resolution.Source.StableId, resolution.FontFaceIndex, resolved?.ResolvedFamily, run?.Bold == true, run?.Italic == true);
 
     private DocxResolvedRunTypeface? ResolveRun(DocxTextRun? run)
     {

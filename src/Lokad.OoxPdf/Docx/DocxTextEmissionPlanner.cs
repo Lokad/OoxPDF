@@ -590,7 +590,7 @@ internal static class DocxTextEmissionPlanner
         return CharUnicodeInfo.GetUnicodeCategory(value) == UnicodeCategory.DashPunctuation;
     }
 
-    private static int CountMappedGlyphs(string text, PdfEmbeddedFont embedded)
+    internal static int CountMappedGlyphs(string text, PdfEmbeddedFont embedded)
     {
         int count = 0;
         foreach (Rune rune in text.EnumerateRunes())

@@ -551,23 +551,9 @@ internal sealed partial class DocxRenderer
             return 0d;
         }
 
-        int glyphGapCount = Math.Max(0, CountMappedGlyphs(text, embedded) - 1);
+        int glyphGapCount = Math.Max(0, DocxTextEmissionPlanner.CountMappedGlyphs(text, embedded) - 1);
         return embedded.MeasureTextPoints(text, plan.PdfFontSize, kerningEnabled: plan.PairKerningEnabled) +
             (plan.PositioningCharacterSpacing + plan.PdfCharacterSpacing) * glyphGapCount;
-    }
-
-    private static int CountMappedGlyphs(string text, PdfEmbeddedFont embedded)
-    {
-        int count = 0;
-        foreach (Rune rune in text.EnumerateRunes())
-        {
-            if (embedded.Font.MapCodePoint(rune.Value) != 0)
-            {
-                count++;
-            }
-        }
-
-        return count;
     }
 
     private static bool IsWaveUnderlineValue(string? underlineValue)
