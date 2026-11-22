@@ -152,6 +152,7 @@ internal sealed partial class PptxRenderer
         }
 
         var (gradients, radialGradients) = ReadSvgGradients(svg, viewWidth, viewHeight, cancellationToken);
+        double strokePercentageBasis = GetSvgNormalizedDiagonal(viewWidth, viewHeight);
         var elementIds = CreateSvgElementIdLookup(svg, cancellationToken);
         var paintedText = new HashSet<XElement>();
         bool hasStylesheet = HasSvgStylesheet(svg);
@@ -256,7 +257,7 @@ internal sealed partial class PptxRenderer
                 }
             }
             SvgStroke stroke = ReadSvgStroke(element, gradients, radialGradients, elementIds,
-                allowStrokePattern && strokeContainersQualified, hasFill,
+                allowStrokePattern && strokeContainersQualified, hasFill, strokePercentageBasis,
                 out SvgStrokeFailure strokeFailure, out bool invalidStrokePresentation, out bool hasVectorEffect, out bool nonScalingStroke);
             List<SvgPathCommand>? gradientCommands = null;
             SvgPathBounds gradientBounds = default;
@@ -1532,7 +1533,7 @@ internal sealed partial class PptxRenderer
     // any other effect value stays diagnosed with the scaled stroke.
     private static SvgStroke ReadSvgStroke(XElement path, IReadOnlyDictionary<string, SvgGradient> gradients,
         IReadOnlyDictionary<string, SvgRadialGradient> radialGradients, Lazy<HashSet<string>> elementIds,
-        bool allowGradientStroke, bool hasFill, out SvgStrokeFailure failure,
+        bool allowGradientStroke, bool hasFill, double percentageBasis, out SvgStrokeFailure failure,
         out bool invalidPresentation, out bool hasVectorEffect, out bool nonScalingStroke)
     {
         failure = SvgStrokeFailure.None;
@@ -1550,7 +1551,7 @@ internal sealed partial class PptxRenderer
         string? elementOpacity = ReadSvgPresentationAttribute(path, style, "opacity");
         double ownOpacity = ReadSvgOpacityValue(elementOpacity);
         double opacity = ReadSvgOpacityValue(strokeOpacity) * ownOpacity;
-        if (!TryReadSvgStrokeWidth(style, path, out double width))
+        if (!TryReadSvgStrokeWidth(style, path, percentageBasis, out double width))
         {
             failure = SvgLocalPaintServerRegex().IsMatch(strokePaint)
                 ? SvgStrokeFailure.UnresolvedGradient : SvgStrokeFailure.UnparsableWidth;
@@ -1653,7 +1654,8 @@ internal sealed partial class PptxRenderer
         gradientId = null;
         return fallback;
     }
-    private static bool TryReadSvgStrokeWidth(IReadOnlyDictionary<string, string> style, XElement path, out double width)
+    private static bool TryReadSvgStrokeWidth(IReadOnlyDictionary<string, string> style, XElement path,
+        double percentageBasis, out double width)
     {
         width = 1d;
         string? text = ReadSvgInheritedAttribute(path, style, "stroke-width");
@@ -1661,7 +1663,7 @@ internal sealed partial class PptxRenderer
         {
             return true;
         }
-        return TryReadSvgNumberOrPixels(text, out width) && width >= 0d;
+        return TryReadSvgViewportLength(path, text, percentageBasis, out width) && width >= 0d;
     }
     // Resolve the winning declaration on each element before following inheritance.
     // Whole-element opacity stays with the element or its compositing group.
@@ -2625,17 +2627,16 @@ internal sealed partial class PptxRenderer
             value = 0d;
             return true;
         }
-        return TryReadSvgShapeLength(element, text, percentageBasis, out value);
+        return TryReadSvgViewportLength(element, text, percentageBasis, out value);
     }
 
-    private static bool TryReadSvgShapeLength(XElement element, ReadOnlySpan<char> text, double percentageBasis, out double value)
+    private static bool TryReadSvgViewportLength(XElement element, ReadOnlySpan<char> text, double percentageBasis, out double value)
     {
         text = text.Trim();
         if (!text.EndsWith("%", StringComparison.Ordinal)) return TryReadSvgNumberOrPixels(text, out value);
 
         value = 0d;
-        // Nested viewports have their own geometry. The root dimensions only
-        // resolve percentages in shapes that use the outer viewport.
+        // Nested viewports require their own dimensions.
         if (text.Length == 1 || char.IsWhiteSpace(text[^2]) ||
             element.Ancestors().Any(ancestor => ancestor.Name.LocalName == "svg" && ancestor.Parent is not null) ||
             !double.TryParse(text[..^1], NumberStyles.Float, CultureInfo.InvariantCulture, out double percent))
@@ -2668,11 +2669,11 @@ internal sealed partial class PptxRenderer
         string? ryText = (string?)element.Attribute("ry");
         double rx = 0d;
         double ry = 0d;
-        if (rxText is not null && !TryReadSvgShapeLength(element, rxText, viewWidth, out rx))
+        if (rxText is not null && !TryReadSvgViewportLength(element, rxText, viewWidth, out rx))
         {
             return null;
         }
-        if (ryText is not null && !TryReadSvgShapeLength(element, ryText, viewHeight, out ry))
+        if (ryText is not null && !TryReadSvgViewportLength(element, ryText, viewHeight, out ry))
         {
             return null;
         }

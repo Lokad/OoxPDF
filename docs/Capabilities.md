@@ -87,7 +87,7 @@ unsupported constructs retain limitations. TrueType outlines embed; CFF faces
 require an embeddable fallback. Missing glyphs use diagnosed replacement.
 Local SVG gradient templates reuse the authored stops and their source colors.
 SVG paint accepts opaque numeric `rgb()` colors and separate opacity properties.
-Basic shape attributes accept percentages of the outer SVG viewport.
+Basic shape geometry and stroke widths accept percentages of the outer SVG viewport.
 
 PPTX picture opacity composes with supported SVG opacity. Usable authored raster
 previews retain precedence. Unsupported SVG picture recoloring retains original

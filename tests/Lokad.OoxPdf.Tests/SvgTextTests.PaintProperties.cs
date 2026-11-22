@@ -288,6 +288,37 @@ internal static partial class SvgTextTests
             "/S /Luminosity", "/Coords [-1 0 2 0]", "/Bounds [0.375 0.5]");
     }
 
+    public static void SvgPercentageStrokeWidthsMatchViewportUnitsInBothFormats()
+    {
+        // A 170 x 70 viewBox has a normalized diagonal of 130 user units.
+        string Picture(string solid, string inherited, string zero) => $"""
+            <svg xmlns="http://www.w3.org/2000/svg" width="340" height="140" viewBox="-10 -5 170 70">
+              <defs>
+                <linearGradient id="stroke" gradientUnits="userSpaceOnUse" x1="68" y1="0" x2="140" y2="0">
+                  <stop offset="0" stop-color="blue"/><stop offset="1" stop-color="purple"/>
+                </linearGradient>
+              </defs>
+              <line x1="14" y1="16" x2="60" y2="16" stroke="red" stroke-width="{solid}"/>
+              <g style="stroke-width:{inherited}"><path d="M68 40 H140" fill="none" stroke="url(#stroke)"/></g>
+              <rect x="22" y="45" width="16" height="10" fill="green" stroke="red" stroke-width="{zero}"/>
+            </svg>
+            """;
+
+        AssertSvgPaintInBothFormats(Picture("13", "6.5", "0"), Picture("10%", "5%", "0%"),
+            "1 0 0 RG", "/PatternType 2", "0 0.502 0 rg");
+
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        const string rect = """<rect x="20" y="20" width="50" height="50" fill="green"/>""";
+        var control = Paint(Svg(rect));
+        foreach (string invalid in new[] { "-5%", "5 %", "NaN%", "Infinity%" })
+        {
+            diagnostics.Clear();
+            var actual = Paint(Svg(rect.Replace("/>", $" stroke=\"red\" stroke-width=\"{invalid}\"/>", StringComparison.Ordinal)), diagnostics);
+            AssertEquivalentSvgPaint(control, actual, $"Invalid width {invalid} preserves the fill.");
+            TestAssert.Contains("unparsable stroke paint", diagnostics.Single().Message);
+        }
+    }
+
     public static void SvgGradientTemplatesMatchExpandedPaintInBothFormats()
     {
         const string stops = "<stop offset=\"0\" stop-color=\"currentColor\"/><stop offset=\"1\" stop-color=\"blue\"/>";
