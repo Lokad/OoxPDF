@@ -5672,6 +5672,8 @@
     "PptxNegativeOnlyAxesKeepOfficeRangeAndAuthoredBounds"
   ],
   "pptx-chart-oracle-portability": [
+    "=PptxSyntheticChartStyleLegendDefaultsDriveChartLegendRendering",
+    "=PptxSyntheticChartStyleDataLabelDefaultsDriveDataLabelRendering",
     "PptxSyntheticLineAndPieChartsRenderNativeCharts",
     "PptxSyntheticChartAxisTickLabelOptionsRender",
     "PptxSyntheticChartAxisTickLabelOptionsUsePortableFontSemantics",

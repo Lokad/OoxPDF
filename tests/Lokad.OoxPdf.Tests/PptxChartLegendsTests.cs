@@ -76,123 +76,63 @@ internal static partial class PptxChartLegendsTests
 
     public static void PptxSyntheticChartStyleLegendDefaultsDriveChartLegendRendering()
     {
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
-        {
-            ["[Content_Types].xml"] = TestFixtures.Utf8(PptxTests.BasicContentTypes()),
-            ["_rels/.rels"] = TestFixtures.Utf8(PptxTests.PackageRelationship()),
-            ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8(PptxTests.PresentationRelationship()),
-            ["ppt/presentation.xml"] = TestFixtures.Utf8(PptxTests.BasicPresentation()),
-            ["ppt/slides/_rels/slide1.xml.rels"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
-                </Relationships>
-                """),
-            ["ppt/charts/_rels/chart1.xml.rels"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.microsoft.com/office/2011/relationships/chartStyle" Target="style1.xml"/>
-                </Relationships>
-                """),
-            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
-                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
-                       xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
-                       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-                  <p:cSld><p:spTree>
-                    <p:graphicFrame>
-                      <p:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="2743200"/></p:xfrm>
-                      <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic>
-                    </p:graphicFrame>
-                  </p:spTree></p:cSld>
-                </p:sld>
-                """),
-            ["ppt/charts/chart1.xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
-                              xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <c:chart>
-                    <c:legend><c:legendPos val="r"/></c:legend>
-                    <c:plotArea>
-                      <c:lineChart>
-                        <c:varyColors val="0"/>
-                        <c:ser>
-                          <c:tx><c:v>Styled Legend</c:v></c:tx>
-                          <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt></c:numLit></c:val>
-                        </c:ser>
-                      </c:lineChart>
-                    </c:plotArea>
-                  </c:chart>
-                </c:chartSpace>
-                """),
-            ["ppt/charts/style1.xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <cs:style xmlns:cs="http://schemas.microsoft.com/office/drawing/2012/chartStyle"
-                          xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
-                          id="78">
-                  <cs:legend>
-                    <cs:defRPr sz="1150" u="sng" strike="sngStrike">
-                      <a:solidFill><a:srgbClr val="2468AC"/></a:solidFill>
-                      <a:latin typeface="Arial"/>
-                    </cs:defRPr>
-                  </cs:legend>
-                </cs:style>
-                """)
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { FontResolver = new TestFaceFontResolver() });
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("0.141 0.408 0.675 rg", pdf);
-        TestAssert.True(Regex.IsMatch(pdf, @"/CL[0-9]+ 11\.52 Tf"), "Expected chart-style legend role font size to drive legend rendering when c:legend has no direct txPr.");
-        int decorationPathCount = PptxTests.CountFilledDecorationPaths(pdf, @"0\.141 0\.408 0\.675");
-        TestAssert.True(decorationPathCount >= 2, "Expected chart-style legend role underline and strike to emit filled decoration paths through the common text renderer.");
+        const string caption = "Styled Legend";
+        const string style = """
+            <cs:legend>
+              <cs:defRPr sz="1150" u="sng" strike="sngStrike">
+                <a:solidFill><a:srgbClr val="2468AC"/></a:solidFill>
+                <a:latin typeface="Arial"/>
+              </cs:defRPr>
+            </cs:legend>
+            """;
+        string chart = $$"""
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart>
+                <c:legend><c:legendPos val="r"/></c:legend>
+                <c:plotArea>
+                  <c:lineChart>
+                    <c:varyColors val="0"/>
+                    <c:ser>
+                      <c:tx><c:v>{{caption}}</c:v></c:tx>
+                      <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt></c:numLit></c:val>
+                    </c:ser>
+                  </c:lineChart>
+                </c:plotArea>
+              </c:chart>
+            </c:chartSpace>
+            """;
+        PdfPage page = RenderStyledChart(chart, 78, style, new PortableRenderingTests.PinnedResolver());
+        AssertStyledChartLabels(page, "CL", 11.52d, "0.141 0.408 0.675", caption);
     }
 
     public static void PptxSyntheticChartStyleDataLabelDefaultsDriveDataLabelRendering()
     {
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
+        const string first = "Series 1, 2";
+        const string second = "Series 1, 4";
+        const string color = "0.2 0.667 0.4";
+        const string style = """
+            <cs:dataLabel>
+              <cs:defRPr sz="1400" u="sng" strike="sngStrike">
+                <a:solidFill><a:srgbClr val="33AA66"/></a:solidFill>
+                <a:latin typeface="Arial"/>
+              </cs:defRPr>
+            </cs:dataLabel>
+            """;
+        var resolver = new PortableRenderingTests.PinnedResolver();
+        AssertStyledChartLabels(Render(""), "CLD", 14.04d, color, first, second);
+
+        // The surviving label keeps all its own paint when the second point explicitly deletes its label.
+        const string deletion = """<c:dLbl><c:idx val="1"/><c:delete val="1"/></c:dLbl>""";
+        AssertStyledChartLabels(Render(deletion), "CLD", 14.04d, color, first);
+
+        PdfPage Render(string pointOverride)
         {
-            ["[Content_Types].xml"] = TestFixtures.Utf8(PptxTests.BasicContentTypes()),
-            ["_rels/.rels"] = TestFixtures.Utf8(PptxTests.PackageRelationship()),
-            ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8(PptxTests.PresentationRelationship()),
-            ["ppt/presentation.xml"] = TestFixtures.Utf8(PptxTests.BasicPresentation()),
-            ["ppt/slides/_rels/slide1.xml.rels"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
-                </Relationships>
-                """),
-            ["ppt/charts/_rels/chart1.xml.rels"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.microsoft.com/office/2011/relationships/chartStyle" Target="style1.xml"/>
-                </Relationships>
-                """),
-            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
-                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
-                       xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
-                       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-                  <p:cSld><p:spTree>
-                    <p:graphicFrame>
-                      <p:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="2743200"/></p:xfrm>
-                      <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic>
-                    </p:graphicFrame>
-                  </p:spTree></p:cSld>
-                </p:sld>
-                """),
-            ["ppt/charts/chart1.xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
-                              xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+            string chart = $$"""
+                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
                   <c:chart>
                     <c:plotArea>
                       <c:lineChart>
-                        <c:dLbls><c:showVal val="1"/><c:dLblPos val="t"/></c:dLbls>
+                        <c:dLbls>{{pointOverride}}<c:showVal val="1"/><c:dLblPos val="t"/></c:dLbls>
                         <c:ser>
                           <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt></c:numLit></c:val>
                         </c:ser>
@@ -200,31 +140,56 @@ internal static partial class PptxChartLegendsTests
                     </c:plotArea>
                   </c:chart>
                 </c:chartSpace>
-                """),
-            ["ppt/charts/style1.xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <cs:style xmlns:cs="http://schemas.microsoft.com/office/drawing/2012/chartStyle"
-                          xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
-                          id="79">
-                  <cs:dataLabel>
-                    <cs:defRPr sz="1400" u="sng" strike="sngStrike">
-                      <a:solidFill><a:srgbClr val="33AA66"/></a:solidFill>
-                      <a:latin typeface="Arial"/>
-                    </cs:defRPr>
-                  </cs:dataLabel>
-                </cs:style>
-                """)
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { FontResolver = new TestFaceFontResolver() });
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("0.2 0.667 0.4 rg", pdf);
-        TestAssert.True(Regex.IsMatch(pdf, @"/CLD[0-9]+ 14\.04 Tf"), "Expected chart-style dataLabel role font size to drive data-label rendering when c:dLbls has no direct txPr.");
-        int decorationPathCount = PptxTests.CountFilledDecorationPaths(pdf, @"0\.2 0\.667 0\.4");
-        TestAssert.True(decorationPathCount >= 2, "Expected chart-style dataLabel role underline and strike to emit filled decoration paths through the common text renderer.");
+                """;
+            return RenderStyledChart(chart, 79, style, resolver);
+        }
     }
+
+    private static void AssertStyledChartLabels(PdfPage page, string fontPrefix, double size, string color, params string[] labels)
+    {
+        // Each line may wrap, so check the exact label sequence separately from its line-level paint.
+        var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false,
+            fontResourceFilter: name => name.StartsWith(fontPrefix, StringComparison.Ordinal)).ToArray();
+        static string WithoutWhitespace(IEnumerable<string> strings) =>
+            string.Concat(strings.SelectMany(text => text.Where(c => !char.IsWhiteSpace(c))));
+        TestAssert.Equal(WithoutWhitespace(labels), WithoutWhitespace(shows.Select(show => show.Text)));
+        foreach (string label in labels)
+        {
+            var glyphs = PortableRenderingTests.ReadPaintedSourceLabel(page, label, fontPrefix: fontPrefix);
+            TestAssert.True(glyphs.All(glyph => Math.Abs(glyph.Size - size) < .001d),
+                "The chart style supplies the size of every visible glyph: " + label);
+        }
+
+        var blocks = Regex.Matches(page.Content,
+            @"(?m)^BT\r?\n(?<text>[\s\S]*?)^ET\r?\n(?<decorations>(?:(?!^(?:BT|q|Q)\r?$)[\s\S])*)")
+            .Where(block => Regex.IsMatch(block.Groups["text"].Value, $@"(?m)^/{fontPrefix}[0-9]+ [0-9.]+ Tf\r?$"))
+            .ToArray();
+        TestAssert.Equal(shows.Length, blocks.Length);
+        foreach (Match block in blocks)
+        {
+            TestAssert.True(block.Groups["text"].Value.StartsWith(color + " rg", StringComparison.Ordinal),
+                "The chart style supplies the fill for the painted line.");
+            TestAssert.Equal(2, PptxTests.CountFilledDecorationPaths(block.Groups["decorations"].Value, Regex.Escape(color)));
+        }
+    }
+
+    private static PdfPage RenderStyledChart(string chart, int styleId, string role, IFontResolver resolver)
+    {
+        string style = $$"""
+            <cs:style xmlns:cs="http://schemas.microsoft.com/office/drawing/2012/chartStyle"
+                      xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" id="{{styleId}}">
+              {{role}}
+            </cs:style>
+            """;
+        return PptxChartTextHyperlinksTests.RenderChartTitlePage("", ChartStyleRelationships, chart, resolver, chartStyleXml: style)
+            .Pages.Single();
+    }
+
+    private const string ChartStyleRelationships = """
+        <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+          <Relationship Id="rId1" Type="http://schemas.microsoft.com/office/2011/relationships/chartStyle" Target="style1.xml"/>
+        </Relationships>
+        """;
 
     public static void PptxSyntheticChartStyleAxisDefaultsDriveTickLabelRendering()
     {
@@ -279,11 +244,6 @@ internal static partial class PptxChartLegendsTests
 
     private static PdfPage RenderStyledAxes(string categoryTitle, string valueTitle, IFontResolver resolver)
     {
-        const string relationships = """
-            <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-              <Relationship Id="rId1" Type="http://schemas.microsoft.com/office/2011/relationships/chartStyle" Target="style1.xml"/>
-            </Relationships>
-            """;
         const string style = """
             <cs:style xmlns:cs="http://schemas.microsoft.com/office/drawing/2012/chartStyle"
                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" id="80">
@@ -326,7 +286,7 @@ internal static partial class PptxChartLegendsTests
               </c:chart>
             </c:chartSpace>
             """;
-        return PptxChartTextHyperlinksTests.RenderChartTitlePage("", relationships, chart, resolver, chartStyleXml: style)
+        return PptxChartTextHyperlinksTests.RenderChartTitlePage("", ChartStyleRelationships, chart, resolver, chartStyleXml: style)
             .Pages.Single();
     }
 
