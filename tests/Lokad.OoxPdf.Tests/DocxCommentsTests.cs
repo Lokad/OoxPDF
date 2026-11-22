@@ -979,25 +979,6 @@ internal static partial class DocxCommentsTests
             "A bold-marked but unloadable title face (server-SKU Segoe stub) must fall back to the label face.");
     }
 
-    private static bool HasUsableAptosBodyFace()
-    {
-        try
-        {
-            FontFaceResolution resolved = new WindowsFontResolver().Resolve(new FontRequest("Aptos"));
-            if (resolved.IsFallback)
-            {
-                return false;
-            }
-
-            OpenTypeFont? font = FontProgramLoader.Load(resolved, CancellationToken.None);
-            return font is not null && font.HasTrueTypeOutlines;
-        }
-        catch (Exception ex) when (ex is IOException or InvalidDataException or NotSupportedException or ArgumentOutOfRangeException or UnauthorizedAccessException)
-        {
-            return false;
-        }
-    }
-
     private static double MeasureSegoeTitleDesignAdvance()
     {
         try
@@ -1073,7 +1054,7 @@ internal static partial class DocxCommentsTests
         // skip like other font-environmental tests (the measured design advance is reported).
         // The source declares Aptos for the body. Merely installing Aptos does not
         // select it for an undeclared font, whose stable library fallback is Times New Roman.
-        if (!HasUsableAptosBodyFace())
+        if (!TestFixtures.HasUsableInstalledAptosFace())
         {
             TestAssert.Skip("Environmental precondition not met: Aptos is not installed.");
         }

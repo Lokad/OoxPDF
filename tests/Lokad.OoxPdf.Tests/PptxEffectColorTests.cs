@@ -1,4 +1,3 @@
-using System.IO.Compression;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Ooxml;
@@ -24,22 +23,21 @@ internal static class PptxEffectColorTests
         {
             PdfPage baseline = Render(owner, string.Format(System.Globalization.CultureInfo.InvariantCulture, colors[0], alpha));
             PdfImageXObject paint = baseline.Images.Select(resource => resource.Image).Single(image => image.Width > 1);
-            byte[] rgb = ReadPlane(paint.Bytes);
+            byte[] rgb = TestFixtures.InflateZlib(paint.Bytes);
             TestAssert.True(Enumerable.Range(0, rgb.Length / 3).All(i => rgb[i * 3] == 255 && rgb[i * 3 + 1] == 0 && rgb[i * 3 + 2] == 0),
                 "The actual effect image retains the independently specified red samples: " + owner);
-            TestAssert.True(ReadPlane(TestAssert.NotNull(paint.Alpha)).Any(value => value > 0), "The effect has visible mask samples.");
+            TestAssert.True(TestFixtures.InflateZlib(TestAssert.NotNull(paint.Alpha)).Any(value => value > 0), "The effect has visible mask samples.");
             TestAssert.True(baseline.ExtGStates.Any(state => state.FillAlpha == .5d), "Ordered opacity transforms produce half opacity.");
             foreach (string color in colors.Skip(1))
             {
                 PdfPage actual = Render(owner, string.Format(System.Globalization.CultureInfo.InvariantCulture, color, alpha));
-                TestAssert.Equal(baseline.Content, actual.Content);
-                TestAssert.Equal(baseline.Images.Count, actual.Images.Count);
-                for (int i = 0; i < baseline.Images.Count; i++)
-                {
-                    TestAssert.True(baseline.Images[i].Image.Bytes.AsSpan().SequenceEqual(actual.Images[i].Image.Bytes), "Equivalent colors retain actual image samples.");
-                    TestAssert.True((baseline.Images[i].Image.Alpha ?? []).AsSpan().SequenceEqual(actual.Images[i].Image.Alpha ?? []), "Equivalent colors retain actual masks.");
-                }
+                TestAssert.True(HasSamePaint(baseline, actual), "Equivalent colors retain image samples and paint state: " + owner);
             }
+            PdfPage green = Render(owner, $"<a:srgbClr val=\"00FF00\">{alpha}</a:srgbClr>");
+            TestAssert.Equal(baseline.Content, green.Content);
+            TestAssert.Equal(baseline.Images.Count, green.Images.Count);
+            TestAssert.True(baseline.ExtGStates.SequenceEqual(green.ExtGStates), "The color control retains the same opacity.");
+            TestAssert.True(!HasSamePaint(baseline, green), "The paint comparison detects changed pixels with identical drawing commands: " + owner);
         }
     }
 
@@ -51,8 +49,7 @@ internal static class PptxEffectColorTests
             foreach (string color in new[] { "", "<a:prstClr val=\"unknown-color\"/>", "<a:srgbClr val=\"invalid\"/>", "<x:srgbClr xmlns:x=\"urn:ignored\" val=\"FF0000\"/>" })
             {
                 PdfPage actual = Render(owner, color);
-                TestAssert.Equal(baseline.Content, actual.Content);
-                TestAssert.Equal(baseline.Images.Count, actual.Images.Count);
+                TestAssert.True(HasSamePaint(baseline, actual), $"Unsupported effect color retains fallback paint: {owner}/{color}.");
             }
         }
         XNamespace a = "http://schemas.openxmlformats.org/drawingml/2006/main";
@@ -103,12 +100,13 @@ internal static class PptxEffectColorTests
         return page;
     }
 
-    private static byte[] ReadPlane(byte[] bytes)
+    private static bool HasSamePaint(PdfPage expected, PdfPage actual)
     {
-        using var input = new MemoryStream(bytes, writable: false);
-        using var stream = new ZLibStream(input, CompressionMode.Decompress);
-        using var output = new MemoryStream();
-        stream.CopyTo(output);
-        return output.ToArray();
+        return expected.Content == actual.Content &&
+            expected.ExtGStates.SequenceEqual(actual.ExtGStates) &&
+            expected.Images.Count == actual.Images.Count &&
+            expected.Images.Zip(actual.Images).All(pair =>
+                pair.First.ResourceName == pair.Second.ResourceName &&
+                pair.First.Image.HasIdenticalContent(pair.Second.Image));
     }
 }

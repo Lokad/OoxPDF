@@ -13,7 +13,7 @@ internal static partial class DocxCommentsTests
 {
     public static void DocxWordCompatiblePlainParagraphCountsMatchIndependentOffice()
     {
-        if (!HasUsableAptosBodyFace() || MeasureSegoeTitleDesignAdvance() < 78d)
+        if (!TestFixtures.HasUsableInstalledAptosFace() || MeasureSegoeTitleDesignAdvance() < 78d)
             TestAssert.Skip("The Office paragraph controls require installed Aptos and matching Segoe UI Bold.");
         string cases = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases"));
         using var reference = JsonDocument.Parse(File.ReadAllText(Path.Combine(cases, "plain-comment-paragraphs-office.json")));

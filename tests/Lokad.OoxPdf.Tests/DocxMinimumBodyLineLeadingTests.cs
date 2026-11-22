@@ -10,7 +10,7 @@ internal static class DocxMinimumBodyLineLeadingTests
     public static void DocxMinimumBodyLineLeadingKeepsCapacityAndParagraphTop()
     {
         var document = ReadFixture();
-        var before = Layout(document);
+        var before = CreatePreserveLayout(document);
         TestAssert.True(DocxMinimumBodyLineLeading.TryCreateLayout(document, before, out var after), "A regular minimum-height line must qualify with complete actual note owners.");
         var a = Minimum(before); var z = Minimum(after);
         double excess = a.LineHeight!.Value - a.SingleLineHeight!.Value;
@@ -42,7 +42,7 @@ internal static class DocxMinimumBodyLineLeadingTests
                 var nextProperties = next.Element(Word + "pPr")!;
                 nextProperties.Add(new XElement(Word + "shd", new XAttribute(Word + "val", "clear"), new XAttribute(Word + "fill", "552233")));
             });
-            var before = Layout(document);
+            var before = CreatePreserveLayout(document);
             TestAssert.True(DocxMinimumBodyLineLeading.TryCreateLayout(document, before, out var placed), "A shaded minimum paragraph retains the existing placement policy.");
             var original = Minimum(before); var actual = Minimum(placed);
             var paint = actual.ParagraphShadingFrame!.Value;
@@ -66,7 +66,7 @@ internal static class DocxMinimumBodyLineLeadingTests
         ];
         foreach (var modify in guards)
         {
-            var document = ReadFixture(modify); var before = Layout(document);
+            var document = ReadFixture(modify); var before = CreatePreserveLayout(document);
             DocxMinimumBodyLineLeading.TryCreateLayout(document, before, out var fallback);
             TestAssert.True(ReferenceEquals(Minimum(before), Minimum(fallback)),
                 "Exact/auto and unowned scripts retain the affected line; other measured paragraphs remain independent.");
@@ -75,7 +75,7 @@ internal static class DocxMinimumBodyLineLeadingTests
 
     public static void DocxMinimumBodyLineLeadingKeepsEmissionAndPreserveGeometryCoherent()
     {
-        var document = ReadFixture(); var original = Minimum(Layout(document));
+        var document = ReadFixture(); var original = Minimum(CreatePreserveLayout(document));
         DocxRenderer Renderer(OoxPdfDocxMarkupGeometryMode geometry) => new(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup, geometry);
         var preserve = Renderer(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectTextEmission(document);
         var word = Renderer(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).InspectTextEmission(document);
@@ -93,13 +93,43 @@ internal static class DocxMinimumBodyLineLeadingTests
 
     private static DocxTextLineLayout Minimum(DocxLayout layout) => layout.Pages.SelectMany(p => p.Items)
         .OfType<DocxTextLineLayout>().Single(l => l.Text.StartsWith("Public minimum body"));
-    private static DocxLayout Layout(DocxDocument document)
+    internal static DocxLayout CreatePreserveLayout(DocxDocument document)
     {
         var resolver = new TestFaceFontResolver();
         var measurer = DocxFontPlanTextMeasurer.CreateAsync(DocxFontPlan.Create(document, resolver, CancellationToken.None),
             resolver.Resolve(new FontRequest("Calibri", false, false)), CancellationToken.None, resolver).GetAwaiter().GetResult();
         return new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, measurer, CancellationToken.None);
     }
+
+    internal static void AssertLocalFallbacks(
+        Func<int, int, Action<XDocument, XDocument>?, DocxDocument> read, int paragraphIndex)
+    {
+        Action<XElement>[] mutations =
+        [
+            paragraph => Spacing(paragraph).SetAttributeValue(Word + "before", "-80"),
+            paragraph => Spacing(paragraph).SetAttributeValue(Word + "afterLines", "100"),
+            paragraph => Spacing(paragraph).SetAttributeValue(Word + "beforeAutospacing", "1"),
+            paragraph => paragraph.Element(Word + "pPr")!.Add(new XElement(Word + "contextualSpacing"),
+                new XElement(Word + "pStyle", new XAttribute(Word + "val", "PublicMissingContextualStyle"))),
+            paragraph => paragraph.Descendants(Word + "rPr").First().Add(
+                new XElement(Word + "vertAlign", new XAttribute(Word + "val", "superscript"))),
+        ];
+        foreach (var mutate in mutations)
+        {
+            var document = read(4, 4, (xml, _) =>
+                mutate(xml.Root!.Element(Word + "body")!.Elements(Word + "p").ElementAt(paragraphIndex)));
+            var original = CreatePreserveLayout(document);
+            var excluded = original.Pages.SelectMany(page => page.Items).OfType<DocxTextLineLayout>()
+                .First(line => ReferenceEquals(line.SourceParagraph, document.Paragraphs[paragraphIndex]));
+            TestAssert.True(DocxMinimumBodyLineLeading.TryCreateLayout(document, original, out var adjusted),
+                "The local fallback keeps minimum-leading correction active elsewhere.");
+            TestAssert.True(adjusted.Pages.SelectMany(page => page.Items).Any(item => ReferenceEquals(item, excluded)),
+                "Unsupported spacing or an unowned script retains its original line.");
+        }
+
+        static XElement Spacing(XElement paragraph) => paragraph.Element(Word + "pPr")!.Element(Word + "spacing")!;
+    }
+
     private static readonly XNamespace Word = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
     private static XElement Target(XDocument xml) => xml.Descendants(Word + "p").Single(p => p.Descendants(Word + "t").Any(t => t.Value.StartsWith("Public minimum body")));
     private static DocxDocument ReadFixture(Action<XDocument, XDocument>? modify = null)

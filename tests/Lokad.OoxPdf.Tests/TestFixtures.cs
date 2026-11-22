@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using System.Text;
+using Lokad.OoxPdf.Fonts;
 
 namespace Lokad.OoxPdf.Tests;
 
@@ -66,6 +67,29 @@ internal static class TestFixtures
     public static byte[] Utf8(string text)
     {
         return Encoding.UTF8.GetBytes(text);
+    }
+
+    public static byte[] InflateZlib(byte[] bytes)
+    {
+        using var input = new MemoryStream(bytes, writable: false);
+        using var stream = new ZLibStream(input, CompressionMode.Decompress);
+        using var output = new MemoryStream();
+        stream.CopyTo(output);
+        return output.ToArray();
+    }
+
+    public static bool HasUsableInstalledAptosFace()
+    {
+        try
+        {
+            var resolution = new WindowsFontResolver().Resolve(new FontRequest("Aptos"));
+            return !resolution.IsFallback &&
+                FontProgramLoader.Load(resolution, CancellationToken.None) is { HasTrueTypeOutlines: true };
+        }
+        catch (Exception ex) when (ex is IOException or InvalidDataException or NotSupportedException or ArgumentOutOfRangeException or UnauthorizedAccessException)
+        {
+            return false;
+        }
     }
 
     // Fixed baseline JPEGs: Pillow 11.1, decoded independently to RGB 128.

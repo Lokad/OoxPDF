@@ -3041,56 +3041,36 @@ internal static partial class DocxFootnotesTests
             TestAssert.True(continuation.SeparatorY <= lowestHeaderBaseline - 1d, "Continuation rules must sit below the header baselines of their page.");
         }
     }
-    public static void DocxLongFootnoteHeadTakeMatchesOfficeWithAptosMetrics()
+    public static void DocxLongFootnoteHeadMatchesOfficeTakeAndPosition()
     {
-        // RV06 p1-clamp probes (Word 16.0, h1/b-sweep): the head page takes 24 note
-        // lines (2 mixed-size plus long 0..21) with full-width rules below the body,
-        // with its document-default resolver explicitly pinned to Aptos. Synthetic
-        // metrics take frame-exact counts that cannot see the real-advance shortfall,
-        // so this pins the Office take with installed Aptos advances and skips without
-        // a usable Aptos face like other font-environmental tests.
-        if (!HasUsableAptosFootnoteFace())
+        // The Word control uses Aptos advances. The synthetic face misses the
+        // real-advance shortfall that determines the head page take.
+        if (!TestFixtures.HasUsableInstalledAptosFace())
         {
             TestAssert.Skip("Environmental precondition not met: Aptos is not installed.");
         }
 
-        DocxLayout layout = CreateAptosContinuationHeadLayout();
-        var headLines = layout.Pages[0].PlacedRelatedStories
+        var page = CreateAptosContinuationHeadLayout().Pages[0];
+        var headLines = page.PlacedRelatedStories
             .Where(story => story.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote &&
                 (story.StoryLayout.Story.Type is null || story.StoryLayout.Story.Type == DocxRelatedStoryType.Normal))
             .SelectMany(story => story.TextLines)
             .ToArray();
-        var longIndexes = headLines
-            .Select(line => line.Text)
-            .Select(text => text.StartsWith("Long note line ", StringComparison.Ordinal) && int.TryParse(text.Substring(15).Split(' ')[0], out int index) ? index : -1)
-            .Where(index => index >= 0)
+        const string prefix = "Long note line ";
+        var longIndexes = headLines.Select(line => line.Text)
+            .Where(text => text.StartsWith(prefix, StringComparison.Ordinal))
+            .Select(text => int.Parse(text[prefix.Length..].Split(' ', 2)[0], CultureInfo.InvariantCulture))
             .ToArray();
-        DocxTextLineLayout firstLine = headLines[0];        string diagnosis = "headLines=" + headLines.Length + ",long=[" + string.Join(",", longIndexes.Take(3)) + ".." + (longIndexes.Length == 0 ? "none" : longIndexes[^1].ToString(CultureInfo.InvariantCulture)) + "],firstLine(h=" + (firstLine.LineHeight?.ToString("F3", CultureInfo.InvariantCulture) ?? "?") + ",single=" + (firstLine.SingleLineHeight?.ToString("F3", CultureInfo.InvariantCulture) ?? "?") + ",factor=" + (firstLine.EffectiveLineSpacingFactor?.ToString("F4", CultureInfo.InvariantCulture) ?? "?") + ",after=" + (firstLine.ParagraphAfterSpacing?.ToString("F3", CultureInfo.InvariantCulture) ?? "?") + ")";
         TestAssert.Equal(24, headLines.Length);
-        TestAssert.True(longIndexes.Length == 22 && longIndexes[0] == 0 && longIndexes[^1] == 21, "Head page must take long lines 0..21 like Office. " + diagnosis);
-    }
+        TestAssert.True(longIndexes.SequenceEqual(Enumerable.Range(0, 22)),
+            "Head page must take long lines 0 through 21 in order. Observed " + string.Join(", ", longIndexes));
 
-    public static void DocxLongFootnoteHeadBlockSitsAtOfficePosition()
-    {
-        // RV06 p1-position probes (Word 16.0, h1/b-sweep): with takes exact, the head
-        // block must also sit at Office absolute positions (h1-Final rule 682.54 with
-        // mixed1 at 664.18). Fresh C153 exports retain both positions. Windows-only
-        // Aptos pins this like the take test; the numerical thresholds stay unchanged.
-        if (!HasUsableAptosFootnoteFace())
-        {
-            TestAssert.Skip("Environmental precondition not met: Aptos is not installed.");
-        }
-
-        DocxLayout layout = CreateAptosContinuationHeadLayout();
-        DocxLayoutPage page = layout.Pages[0];
-        DocxPlacedRelatedStoryLayout separator = page.PlacedRelatedStories.Single(story => story.SeparatorY is not null);
-        DocxTextLineLayout mixedFirst = page.PlacedRelatedStories
-            .Where(story => story.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote &&
-                (story.StoryLayout.Story.Type is null || story.StoryLayout.Story.Type == DocxRelatedStoryType.Normal))
-            .SelectMany(story => story.TextLines)
-            .First(line => line.Text.StartsWith("Footnote twelve opening", StringComparison.Ordinal));
-        TestAssert.True(Math.Abs((separator.SeparatorY ?? double.NaN) - 682.54d) < 1.5d, "Head separator rule must sit at the Office position; observed rule bottom=" + (separator.SeparatorY?.ToString(CultureInfo.InvariantCulture) ?? "?") + ".");
-        TestAssert.True(Math.Abs(mixedFirst.BaselineY - 664.18d) < 1.5d, "Head footnote content must start at the Office position; observed mixed1 baseline=" + mixedFirst.BaselineY.ToString(CultureInfo.InvariantCulture) + ".");
+        var separator = page.PlacedRelatedStories.Single(story => story.SeparatorY is not null);
+        var mixedFirst = headLines.First(line => line.Text.StartsWith("Footnote twelve opening", StringComparison.Ordinal));
+        TestAssert.True(Math.Abs((separator.SeparatorY ?? double.NaN) - 682.54d) < 1.5d,
+            "Head separator rule must sit at the Office position. Observed " + separator.SeparatorY?.ToString(CultureInfo.InvariantCulture));
+        TestAssert.True(Math.Abs(mixedFirst.BaselineY - 664.18d) < 1.5d,
+            "Head footnote content must start at the Office position. Observed " + mixedFirst.BaselineY.ToString(CultureInfo.InvariantCulture));
     }
 
     private static DocxLayout CreateAptosContinuationHeadLayout()
@@ -3120,24 +3100,6 @@ internal static partial class DocxFootnotesTests
                 ? request with { FamilyName = "Aptos" } : request);
     }
 
-    private static bool HasUsableAptosFootnoteFace()
-    {
-        try
-        {
-            FontFaceResolution resolved = new WindowsFontResolver().Resolve(new FontRequest("Aptos"));
-            if (resolved.IsFallback)
-            {
-                return false;
-            }
-
-            OpenTypeFont? font = FontProgramLoader.Load(resolved, CancellationToken.None);
-            return font is not null && font.HasTrueTypeOutlines;
-        }
-        catch (Exception ex) when (ex is IOException or InvalidDataException or NotSupportedException or ArgumentOutOfRangeException or UnauthorizedAccessException)
-        {
-            return false;
-        }
-    }
     public static void DocxFootnoteStoriesTopHangsBelowBodyStart()
     {
         // RV06 p1-clamp probes (Word 16.0, b/ba/2para/bodyb sweeps): Office storiesTop

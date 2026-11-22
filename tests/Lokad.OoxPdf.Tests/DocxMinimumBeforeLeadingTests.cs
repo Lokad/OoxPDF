@@ -1,7 +1,6 @@
 using System.IO.Compression;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Docx;
-using Lokad.OoxPdf.Fonts;
 
 namespace Lokad.OoxPdf.Tests;
 
@@ -10,7 +9,7 @@ internal static class DocxMinimumBeforeLeadingTests
     public static void DocxMinimumBeforeLeadingKeepsMetricBaselineAndParagraphTop()
     {
         var source = Read(4, 4);
-        var original = Layout(source);
+        var original = DocxMinimumBodyLineLeadingTests.CreatePreserveLayout(source);
         TestAssert.True(DocxMinimumBodyLineLeading.TryCreateLayout(source, original, out var adjusted),
             "Bounded before/after spacing qualifies with complete actual note owners.");
         var a = original.Pages.SelectMany(p => p.Items).OfType<DocxTextLineLayout>().First(l => l.SourceParagraph!.InlineReferences.Count != 0);
@@ -82,24 +81,7 @@ internal static class DocxMinimumBeforeLeadingTests
 
     public static void DocxMinimumBeforeLeadingRetainsUnsupportedSpacingAndComposition()
     {
-        Action<XDocument>[] guards =
-        [
-            xml => Spacing(Body(xml)[1]).SetAttributeValue(Word + "before", "-80"),
-            xml => Spacing(Body(xml)[1]).SetAttributeValue(Word + "beforeLines", "100"),
-            xml => Spacing(Body(xml)[1]).SetAttributeValue(Word + "beforeAutospacing", "1"),
-            xml => Body(xml)[1].Element(Word + "pPr")!.Add(new XElement(Word + "contextualSpacing"),
-                new XElement(Word + "pStyle", new XAttribute(Word + "val", "PublicMissingContextualStyle"))),
-            xml => Body(xml)[1].Descendants(Word + "rPr").First().Add(new XElement(Word + "vertAlign", new XAttribute(Word + "val", "superscript"))),
-        ];
-        foreach (var modify in guards)
-        {
-            var source = Read(4, 4, (xml, _) => modify(xml));
-            var original = Layout(source);
-            var excluded = original.Pages.SelectMany(p => p.Items).OfType<DocxTextLineLayout>().First(l => ReferenceEquals(l.SourceParagraph, source.Paragraphs[1]));
-            DocxMinimumBodyLineLeading.TryCreateLayout(source, original, out var fallback);
-            TestAssert.True(fallback.Pages.SelectMany(p => p.Items).Any(item => ReferenceEquals(item, excluded)),
-                "Negative/line/automatic/unresolved contextual spacing, unowned scripts retain their local line.");
-        }
+        DocxMinimumBodyLineLeadingTests.AssertLocalFallbacks(Read, paragraphIndex: 1);
     }
 
     private static readonly XNamespace Word = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
@@ -107,13 +89,6 @@ internal static class DocxMinimumBeforeLeadingTests
     private static XElement Spacing(XElement paragraph) => paragraph.Element(Word + "pPr")!.Element(Word + "spacing")!;
     private static DocxRenderer Renderer(OoxPdfDocxMarkupGeometryMode mode) => new(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup, mode);
     private static void Near(double expected, double actual, string message) => TestAssert.True(Math.Abs(expected - actual) < .00001d, message);
-    private static DocxLayout Layout(DocxDocument document)
-    {
-        var resolver = new TestFaceFontResolver();
-        var measurer = DocxFontPlanTextMeasurer.CreateAsync(DocxFontPlan.Create(document, resolver, CancellationToken.None),
-            resolver.Resolve(new FontRequest("Calibri", false, false)), CancellationToken.None, resolver).GetAwaiter().GetResult();
-        return new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, measurer, CancellationToken.None);
-    }
     private static DocxDocument Read(int before, int after, Action<XDocument, XDocument>? modify = null)
     {
         string input = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "note-marked-minimum-line-20.docx"));

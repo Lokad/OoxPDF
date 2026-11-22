@@ -1,7 +1,6 @@
 using System.IO.Compression;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Docx;
-using Lokad.OoxPdf.Fonts;
 
 namespace Lokad.OoxPdf.Tests;
 
@@ -9,7 +8,7 @@ internal static class DocxOrdinaryMinimumSpacingTests
 {
     public static void DocxOrdinaryMinimumSpacingKeepsTopsAndAutomaticNeighbors()
     {
-        var source = Read(4, 4); var original = Layout(source);
+        var source = Read(4, 4); var original = DocxMinimumBodyLineLeadingTests.CreatePreserveLayout(source);
         TestAssert.True(DocxMinimumBodyLineLeading.TryCreateLayout(source, original, out var adjusted),
             "Plain ordinary minimum paragraphs admit bounded numeric spacing.");
         TestAssert.Equal(0, source.RelatedStories.Count);
@@ -38,7 +37,7 @@ internal static class DocxOrdinaryMinimumSpacingTests
 
     public static void DocxOrdinaryMinimumSpacingActualEmissionKeepsPreserveAndEmptyLinks()
     {
-        var source = Read(0, 8); var original = Layout(source);
+        var source = Read(0, 8); var original = DocxMinimumBodyLineLeadingTests.CreatePreserveLayout(source);
         var line = original.Pages.SelectMany(p => p.Items).OfType<DocxTextLineLayout>()
             .First(l => l.LineHeightSource == DocxLineHeightSource.AtLeastLineSpacing);
         var preserve = Renderer(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectTextEmission(source)
@@ -73,7 +72,7 @@ internal static class DocxOrdinaryMinimumSpacingTests
         });
         TestAssert.True(source.Paragraphs.All(p => p.SpacingBeforePoints == 8 && p.SpacingAfterPoints == 4 &&
             p.Spacing.BeforeValue == "160" && p.Spacing.AfterValue == "80"), "Inherited raw tokens and effective spacing remain coherent.");
-        var original = Layout(source);
+        var original = DocxMinimumBodyLineLeadingTests.CreatePreserveLayout(source);
         TestAssert.True(original.Pages.Count > 1, "The synthetic ordinary frame spans multiple pages.");
         TestAssert.True(DocxMinimumBodyLineLeading.TryCreateLayout(source, original, out var adjusted),
             "The complete ordinary frame admits multiple pages without repagination.");
@@ -87,23 +86,7 @@ internal static class DocxOrdinaryMinimumSpacingTests
 
     public static void DocxOrdinaryMinimumSpacingKeepsUnsupportedSpacingRunsAndFlow()
     {
-        Action<XDocument>[] guards =
-        [
-            xml => Spacing(Body(xml)[0]).SetAttributeValue(Word + "before", "-80"),
-            xml => Spacing(Body(xml)[0]).SetAttributeValue(Word + "afterLines", "100"),
-            xml => Spacing(Body(xml)[0]).SetAttributeValue(Word + "beforeAutospacing", "1"),
-            xml => Body(xml)[0].Element(Word + "pPr")!.Add(new XElement(Word + "contextualSpacing"),
-                new XElement(Word + "pStyle", new XAttribute(Word + "val", "PublicMissingContextualStyle"))),
-            xml => Body(xml)[0].Descendants(Word + "rPr").First().Add(new XElement(Word + "vertAlign", new XAttribute(Word + "val", "superscript"))),
-        ];
-        foreach (var modify in guards)
-        {
-            var source = Read(4, 4, (xml, _) => modify(xml)); var original = Layout(source);
-            var excluded = original.Pages.SelectMany(p => p.Items).OfType<DocxTextLineLayout>().First(l => ReferenceEquals(l.SourceParagraph, source.Paragraphs[0]));
-            DocxMinimumBodyLineLeading.TryCreateLayout(source, original, out var fallback);
-            TestAssert.True(fallback.Pages.SelectMany(p => p.Items).Any(item => ReferenceEquals(item, excluded)),
-                "Unsupported spacing, unowned script retain their local fallback.");
-        }
+        DocxMinimumBodyLineLeadingTests.AssertLocalFallbacks(Read, paragraphIndex: 0);
         TestAssert.Throws<InvalidDataException>(() => Read(4, 4, (xml, _) => Spacing(Body(xml)[0]).SetAttributeValue(Word + "before", "bad")));
     }
 
@@ -112,13 +95,6 @@ internal static class DocxOrdinaryMinimumSpacingTests
     private static XElement Spacing(XElement p) => p.Element(Word + "pPr")!.Element(Word + "spacing")!;
     private static DocxRenderer Renderer(OoxPdfDocxMarkupGeometryMode mode) => new(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup, mode);
     private static void Near(double expected, double actual, string message) => TestAssert.True(Math.Abs(expected - actual) < .00001d, message);
-    private static DocxLayout Layout(DocxDocument document)
-    {
-        var resolver = new TestFaceFontResolver();
-        var measurer = DocxFontPlanTextMeasurer.CreateAsync(DocxFontPlan.Create(document, resolver, CancellationToken.None),
-            resolver.Resolve(new FontRequest("Calibri", false, false)), CancellationToken.None, resolver).GetAwaiter().GetResult();
-        return new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, measurer, CancellationToken.None);
-    }
     private static DocxDocument Read(int before, int after, Action<XDocument, XDocument>? modify = null)
     {
         string input = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "ordinary-minimum-line-20.docx"));

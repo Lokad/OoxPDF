@@ -1,4 +1,3 @@
-using System.IO.Compression;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pdf;
@@ -61,20 +60,11 @@ internal static class PptxPictureRecolorTests
             var image = page.Images[i].Image;
             TestAssert.Equal(2, image.Width);
             TestAssert.Equal(1, image.Height);
-            TestAssert.True(ReadPlane(image.Bytes).AsSpan().SequenceEqual(treatments[i % treatments.Length].Rgb),
+            TestAssert.True(TestFixtures.InflateZlib(image.Bytes).AsSpan().SequenceEqual(treatments[i % treatments.Length].Rgb),
                 "Each picture owner retains its literal source-pixel treatment when sharing one image part.");
-            TestAssert.True(ReadPlane(TestAssert.NotNull(image.Alpha)).AsSpan().SequenceEqual(new byte[] { 255, 128 }),
+            TestAssert.True(TestFixtures.InflateZlib(TestAssert.NotNull(image.Alpha)).AsSpan().SequenceEqual(new byte[] { 255, 128 }),
                 "Recoloring retains the image's authored alpha plane.");
         }
         TestAssert.True(page.ExtGStates.Any(state => state.FillAlpha == .5d), "Picture alpha remains a separate paint state.");
-    }
-
-    private static byte[] ReadPlane(byte[] bytes)
-    {
-        using var input = new MemoryStream(bytes, writable: false);
-        using var stream = new ZLibStream(input, CompressionMode.Decompress);
-        using var output = new MemoryStream();
-        stream.CopyTo(output);
-        return output.ToArray();
     }
 }

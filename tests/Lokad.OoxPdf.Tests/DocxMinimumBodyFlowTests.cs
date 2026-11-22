@@ -1,7 +1,6 @@
 using System.IO.Compression;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Docx;
-using Lokad.OoxPdf.Fonts;
 
 namespace Lokad.OoxPdf.Tests;
 
@@ -10,7 +9,7 @@ internal static class DocxMinimumBodyFlowTests
     public static void DocxMinimumBodyFlowCancellationStopsMinimumPlacement()
     {
         var source = Read(ordinary: true);
-        var layout = Layout(source);
+        var layout = DocxMinimumBodyLineLeadingTests.CreatePreserveLayout(source);
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();
         TestAssert.Throws<OperationCanceledException>(() =>
@@ -21,7 +20,7 @@ internal static class DocxMinimumBodyFlowTests
     {
         var document = Read(ordinary: false);
         TestAssert.True(document.Paragraphs.All(p => p.StyleResolution.HasDocumentDefaultParagraphProperties), "The fixture exercises inherited minimum defaults.");
-        var before = Layout(document);
+        var before = DocxMinimumBodyLineLeadingTests.CreatePreserveLayout(document);
         TestAssert.True(DocxMinimumBodyLineLeading.TryCreateLayout(document, before, out var after), "Coherent inherited minimum defaults qualify with complete note owners.");
         AssertPlacement(before, after);
         TestAssert.True(ReferenceEquals(before.RelatedStories, after.RelatedStories), "Global note regions retain their layout identity.");
@@ -41,7 +40,7 @@ internal static class DocxMinimumBodyFlowTests
         TestAssert.Equal(0, document.RelatedStories.Count);
         TestAssert.True(document.Paragraphs.All(p => p.InlineReferences.Count == 0), "Ordinary body flow has no note references.");
         TestAssert.True(document.FinalSectionBreak!.PageSettings.FootnoteReferenceSettings.NumberRestartValue is null, "Ordinary admission must not require an unused each-page setting.");
-        var before = Layout(document);
+        var before = DocxMinimumBodyLineLeadingTests.CreatePreserveLayout(document);
         TestAssert.True(DocxMinimumBodyLineLeading.TryCreateLayout(document, before, out var after), "Ordinary minimum lines qualify independently of note numbering.");
         AssertPlacement(before, after);
         double Baseline(DocxTextEmissionSnapshot snapshot) => snapshot.Lines.Single(l => l.StoryKind == "Body" && l.SourceBlockIndex == 0).Segments.First().BaselineY;
@@ -59,7 +58,7 @@ internal static class DocxMinimumBodyFlowTests
         ];
         foreach (var modify in guards)
         {
-            var document = Read(ordinary: true, modify); var before = Layout(document);
+            var document = Read(ordinary: true, modify); var before = DocxMinimumBodyLineLeadingTests.CreatePreserveLayout(document);
             DocxMinimumBodyLineLeading.TryCreateLayout(document, before, out var after);
             TestAssert.True(ReferenceEquals(Minimum(before)[0], Minimum(after)[0]),
                 "Unowned scripts and combining-text sources retain their local fallback.");
@@ -84,13 +83,6 @@ internal static class DocxMinimumBodyFlowTests
     private static DocxTextLineLayout[] Minimum(DocxLayout layout) => layout.Pages.SelectMany(p => p.Items).OfType<DocxTextLineLayout>()
         .Where(l => l.Text.StartsWith("Public minimum ")).ToArray();
     private static DocxRenderer Renderer(OoxPdfDocxMarkupGeometryMode geometry) => new(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup, geometry);
-    private static DocxLayout Layout(DocxDocument document)
-    {
-        var resolver = new TestFaceFontResolver();
-        var measurer = DocxFontPlanTextMeasurer.CreateAsync(DocxFontPlan.Create(document, resolver, CancellationToken.None),
-            resolver.Resolve(new FontRequest("Calibri", false, false)), CancellationToken.None, resolver).GetAwaiter().GetResult();
-        return new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, measurer, CancellationToken.None);
-    }
     private static readonly XNamespace Word = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
     private static XElement MinimumParagraph(XDocument xml) => xml.Descendants(Word + "p").First(p => p.Descendants(Word + "t").Any(t => t.Value.StartsWith("Public minimum ")));
     private static DocxDocument Read(bool ordinary, Action<XDocument>? modify = null)

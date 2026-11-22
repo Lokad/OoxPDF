@@ -14146,8 +14146,7 @@
     "DocxRendererKeepsSplitTableCellHyperlinkAnnotationsOnVisibleFragment"
   ],
   "docx-aptos-head-fixture": [
-    "DocxLongFootnoteHeadTakeMatchesOfficeWithAptosMetrics",
-    "DocxLongFootnoteHeadBlockSitsAtOfficePosition"
+    "DocxLongFootnoteHeadMatchesOfficeTakeAndPosition"
   ],
   "docx-note-table-composition": [
     "DocxNoteTablesSharePrintedFramesWithSurroundingNotes",
@@ -15422,7 +15421,7 @@
     "DocxLongFootnoteSplitsAcrossPagesWithContinuationSeparator",
     "DocxLongFootnoteWithoutSeparatorSplitsAcrossPages",
     "DocxSharedFootnotePagesKeepBodyAboveNotes",
-    "DocxLongFootnoteHeadBlockSitsAtOfficePosition",
+    "DocxLongFootnoteHeadMatchesOfficeTakeAndPosition",
     "DocxFootnoteContinuationTakeChargesRideTolerance",
     "DocxFootnoteContinuationTakeChargesRuleOverhead",
     "DocxFootnoteHeadTakeReservesClampMargin",
@@ -15484,7 +15483,7 @@
     "DocxLongFootnoteSplitsAcrossPagesWithContinuationSeparator",
     "DocxLongFootnoteWithoutSeparatorSplitsAcrossPages",
     "DocxSharedFootnotePagesKeepBodyAboveNotes",
-    "DocxLongFootnoteHeadBlockSitsAtOfficePosition",
+    "DocxLongFootnoteHeadMatchesOfficeTakeAndPosition",
     "DocxFootnoteContinuationTakeChargesRideTolerance",
     "DocxFootnoteContinuationTakeChargesRuleOverhead",
     "DocxFootnoteHeadTakeReservesClampMargin",
@@ -15583,7 +15582,7 @@
     "DocxLongFootnoteSplitsAcrossPagesWithContinuationSeparator",
     "DocxLongFootnoteWithoutSeparatorSplitsAcrossPages",
     "DocxSharedFootnotePagesKeepBodyAboveNotes",
-    "DocxLongFootnoteHeadBlockSitsAtOfficePosition",
+    "DocxLongFootnoteHeadMatchesOfficeTakeAndPosition",
     "DocxFootnoteContinuationTakeChargesRideTolerance",
     "DocxFootnoteContinuationTakeChargesRuleOverhead",
     "DocxFootnoteHeadTakeReservesClampMargin",
