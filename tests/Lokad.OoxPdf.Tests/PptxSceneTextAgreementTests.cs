@@ -599,106 +599,20 @@ internal static class PptxSceneTextAgreementTests
 
     public static void PlaceholderTextAgreesBetweenSceneAndSpans()
     {
-        // Source text and live rendering retain the declared formatting.
-        string slide = """
-            <?xml version="1.0" encoding="UTF-8"?>
-            <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-              <p:cSld><p:spTree><p:sp>
-                <p:nvSpPr><p:cNvPr id="2" name="Body"/><p:cNvSpPr/><p:nvPr><p:ph type="body" idx="1"/></p:nvPr></p:nvSpPr>
-                <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="4572000" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
-                <p:txBody>
-                  <a:bodyPr tIns="0" bIns="0"/><a:lstStyle/>
-                  <a:p><a:r><a:t>BodyText</a:t></a:r></a:p>
-                </p:txBody>
-              </p:sp></p:spTree></p:cSld>
-            </p:sld>
-            """;
-        string slideRels = """
-            <?xml version="1.0" encoding="UTF-8"?>
-            <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-              <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/>
-            </Relationships>
-            """;
-        string layout = """
-            <?xml version="1.0" encoding="UTF-8"?>
-            <p:sldLayout xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><p:cSld><p:spTree/></p:cSld></p:sldLayout>
-            """;
-        string layoutRels = """
-            <?xml version="1.0" encoding="UTF-8"?>
-            <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-              <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="../slideMasters/slideMaster1.xml"/>
-            </Relationships>
-            """;
-        string master = """
-            <?xml version="1.0" encoding="UTF-8"?>
-            <p:sldMaster xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-              <p:cSld><p:spTree/></p:cSld>
-              <p:txStyles>
-                <p:titleStyle><a:lvl1pPr><a:defRPr sz="3100"/></a:lvl1pPr></p:titleStyle>
-                <p:bodyStyle><a:lvl1pPr><a:defRPr sz="2500"><a:solidFill><a:srgbClr val="AABBCC"/></a:solidFill></a:defRPr></a:lvl1pPr></p:bodyStyle>
-                <p:otherStyle><a:lvl1pPr><a:defRPr sz="1900"/></a:lvl1pPr></p:otherStyle>
-              </p:txStyles>
-            </p:sldMaster>
-            """;
-        string types = """
-            <?xml version="1.0" encoding="UTF-8"?>
-            <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-              <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-              <Default Extension="xml" ContentType="application/xml"/>
-              <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
-              <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
-              <Override PartName="/ppt/slideLayouts/slideLayout1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"/>
-              <Override PartName="/ppt/slideMasters/slideMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"/>
-            </Types>
-            """;
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = types,
-            ["_rels/.rels"] = PptxTests.PackageRelationship(),
-            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
-            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
-            ["ppt/slides/slide1.xml"] = slide,
-            ["ppt/slides/_rels/slide1.xml.rels"] = slideRels,
-            ["ppt/slideLayouts/slideLayout1.xml"] = layout,
-            ["ppt/slideLayouts/_rels/slideLayout1.xml.rels"] = layoutRels,
-            ["ppt/slideMasters/slideMaster1.xml"] = master,
-        });
-
-        using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
-        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
-        PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
-        PptxSceneNode node = scene.Slides[0].SlideNodes[0];
-        PptxSceneTextBody body = TestAssert.NotNull(node.TextBody);
-        PptxSceneTextRun[] sceneRuns = body.Paragraphs
-            .SelectMany(paragraph => paragraph.Runs)
-            .ToArray();
-        TestAssert.Equal(1, sceneRuns.Length);
-        string sceneText = string.Concat(sceneRuns.Select(run => run.Text));
-        TestAssert.Equal(0, body.Paragraphs[0].Level);
-        System.Xml.Linq.XElement slideSp = scene.Slides[0].SlideXml.Descendants("{http://schemas.openxmlformats.org/presentationml/2006/main}sp").First();
-        TestAssert.True(object.ReferenceEquals(node.Source, slideSp), "node-source-detached");
-
-        IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> positioned = ReadXmlSpans(node, document, scene, includePlaceholders: true);
-        PptxRenderer.PptxTextRunModel[] spanRuns = positioned
-            .Select(span => span.SourceRun)
-            .Where(run => run is not null && run.Kind == PptxRenderer.PptxTextRunKind.Text)
-            .Distinct()
-            .Select(run => run!)
-            .ToArray();
-        TestAssert.Equal(1, spanRuns.Length);
-        string spanText = string.Concat(spanRuns.Select(run => run.Text));
-        TestAssert.Equal("BodyText", sceneText);
-        TestAssert.Equal(sceneText, spanText);
-
-        TestAssert.Equal(25d, spanRuns[0].Style.FontSize);
-        TestAssert.Equal(new RgbColor(0xAA, 0xBB, 0xCC), spanRuns[0].Style.Color);
+        var run = ReadPlaceholderAgreementRun("BodyText", matchLayoutPlaceholder: false);
+        TestAssert.Equal(25d, run.Style.FontSize);
+        TestAssert.Equal(new RgbColor(0xAA, 0xBB, 0xCC), run.Style.Color);
     }
 
     public static void MatchedPlaceholderInheritanceAgrees()
     {
-        // Source text and live rendering retain the declared formatting.
-        string slide = """
+        var run = ReadPlaceholderAgreementRun("MatchedBody", matchLayoutPlaceholder: true);
+        TestAssert.Equal(26d, run.Style.FontSize);
+    }
+
+    private static PptxRenderer.PptxTextRunModel ReadPlaceholderAgreementRun(string caption, bool matchLayoutPlaceholder)
+    {
+        string slide = $"""
             <?xml version="1.0" encoding="UTF-8"?>
             <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
               <p:cSld><p:spTree><p:sp>
@@ -706,7 +620,7 @@ internal static class PptxSceneTextAgreementTests
                 <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="4572000" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
                 <p:txBody>
                   <a:bodyPr tIns="0" bIns="0"/><a:lstStyle/>
-                  <a:p><a:r><a:t>MatchedBody</a:t></a:r></a:p>
+                  <a:p><a:r><a:t>{caption}</a:t></a:r></a:p>
                 </p:txBody>
               </p:sp></p:spTree></p:cSld>
             </p:sld>
@@ -717,14 +631,17 @@ internal static class PptxSceneTextAgreementTests
               <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/>
             </Relationships>
             """;
-        string layout = """
+        string layoutShape = matchLayoutPlaceholder ? """
+            <p:sp>
+              <p:nvSpPr><p:cNvPr id="2" name="Body Placeholder"/><p:cNvSpPr/><p:nvPr><p:ph type="body" idx="1"/></p:nvPr></p:nvSpPr>
+              <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="4572000" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+              <p:txBody><a:bodyPr/><a:lstStyle><a:lvl1pPr><a:defRPr sz="2600"/></a:lvl1pPr></a:lstStyle><a:p/></p:txBody>
+            </p:sp>
+            """ : string.Empty;
+        string layout = $"""
             <?xml version="1.0" encoding="UTF-8"?>
             <p:sldLayout xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-              <p:cSld><p:spTree><p:sp>
-                <p:nvSpPr><p:cNvPr id="2" name="Body Placeholder"/><p:cNvSpPr/><p:nvPr><p:ph type="body" idx="1"/></p:nvPr></p:nvSpPr>
-                <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="4572000" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
-                <p:txBody><a:bodyPr/><a:lstStyle><a:lvl1pPr><a:defRPr sz="2600"/></a:lvl1pPr></a:lstStyle><a:p/></p:txBody>
-              </p:sp></p:spTree></p:cSld>
+              <p:cSld><p:spTree>{layoutShape}</p:spTree></p:cSld>
             </p:sldLayout>
             """;
         string layoutRels = """
@@ -733,12 +650,17 @@ internal static class PptxSceneTextAgreementTests
               <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="../slideMasters/slideMaster1.xml"/>
             </Relationships>
             """;
-        string master = """
+        string titleStyle = matchLayoutPlaceholder ? string.Empty :
+            """<p:titleStyle><a:lvl1pPr><a:defRPr sz="3100"/></a:lvl1pPr></p:titleStyle>""";
+        string bodyRunProperties = matchLayoutPlaceholder ? """<a:defRPr sz="2500"/>""" :
+            """<a:defRPr sz="2500"><a:solidFill><a:srgbClr val="AABBCC"/></a:solidFill></a:defRPr>""";
+        string master = $"""
             <?xml version="1.0" encoding="UTF-8"?>
             <p:sldMaster xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
               <p:cSld><p:spTree/></p:cSld>
               <p:txStyles>
-                <p:bodyStyle><a:lvl1pPr><a:defRPr sz="2500"/></a:lvl1pPr></p:bodyStyle>
+                {titleStyle}
+                <p:bodyStyle><a:lvl1pPr>{bodyRunProperties}</a:lvl1pPr></p:bodyStyle>
                 <p:otherStyle><a:lvl1pPr><a:defRPr sz="1900"/></a:lvl1pPr></p:otherStyle>
               </p:txStyles>
             </p:sldMaster>
@@ -768,32 +690,24 @@ internal static class PptxSceneTextAgreementTests
         });
 
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        using OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
         PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
-        PptxSceneNode node = scene.Slides[0].SlideNodes[0];
-        PptxSceneTextBody body = TestAssert.NotNull(node.TextBody);
-        PptxSceneTextRun[] sceneRuns = body.Paragraphs
-            .SelectMany(paragraph => paragraph.Runs)
-            .ToArray();
-        TestAssert.Equal(1, sceneRuns.Length);
-        TestAssert.Equal(0, body.Paragraphs[0].Level);
-        System.Xml.Linq.XElement slideSp = scene.Slides[0].SlideXml.Descendants("{http://schemas.openxmlformats.org/presentationml/2006/main}sp").First();
-        TestAssert.True(object.ReferenceEquals(node.Source, slideSp), "node-source-detached");
+        PptxSceneSlide sceneSlide = scene.Slides.Single();
+        PptxSceneNode node = sceneSlide.SlideNodes.Single();
+        PptxSceneTextParagraph paragraph = TestAssert.NotNull(node.TextBody).Paragraphs.Single();
+        TestAssert.Equal(caption, paragraph.Runs.Single().Text);
+        TestAssert.Equal(0, paragraph.Level);
+        XElement slideShape = sceneSlide.SlideXml.Descendants("{http://schemas.openxmlformats.org/presentationml/2006/main}sp").Single();
+        TestAssert.True(ReferenceEquals(node.Source, slideShape), "node-source-detached");
 
-        IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> positioned = ReadXmlSpans(node, document, scene, includePlaceholders: true);
-
-        PptxRenderer.PptxTextRunModel[] spanRuns = positioned
-            .Select(span => span.SourceRun)
-            .Where(run => run is not null)
-            .Select(run => run!)
-            .Distinct()
-            .ToArray();
-        TestAssert.Equal(1, spanRuns.Length);
-        TestAssert.Equal("MatchedBody", spanRuns[0].Text);
-        TestAssert.Equal(sceneRuns[0].Text, spanRuns[0].Text);
-        double spanSize = spanRuns[0].Style.FontSize;
-        TestAssert.Equal(26d, spanSize);
+        PptxRenderer.PptxTextRunModel span = ReadXmlSpans(node, document, scene, includePlaceholders: true)
+            .Select(positioned => positioned.SourceRun)
+            .OfType<PptxRenderer.PptxTextRunModel>()
+            .Distinct().Single();
+        TestAssert.Equal(PptxRenderer.PptxTextRunKind.Text, span.Kind);
+        TestAssert.Equal(caption, span.Text);
+        return span;
     }
 
     public static void HyperlinkRunAgreesBetweenSceneAndSpans()
