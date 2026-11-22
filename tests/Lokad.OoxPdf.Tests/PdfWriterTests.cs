@@ -208,24 +208,17 @@ internal static partial class PdfWriterTests
         TestAssert.Equal(1, secondPaint.Length);
         TestAssert.Equal(firstPaint[1], firstPaint[2]);
         TestAssert.Equal(firstPaint[1], secondPaint[0]);
-        TestAssert.Contains("/ShadingType 2", ReadObject(firstPaint[0]));
-        string radial = ReadObject(secondPaint[0]);
+        TestAssert.Contains("/ShadingType 2", ReadObject(pdf, firstPaint[0]));
+        string radial = ReadObject(pdf, secondPaint[0]);
         TestAssert.Contains("/ShadingType 3", radial);
         TestAssert.Contains("/Coords [0 0 0 0 0 1]", radial);
         TestAssert.Contains("/Bounds [0.5]", radial);
         TestAssert.Contains("/C1 [0 1 0]", radial);
         TestAssert.Contains("/C1 [0 0 1]", radial);
 
-        string ReadObject(string number)
-        {
-            var obj = Regex.Match(pdf, $@"(?ms)^{number} 0 obj\r?\n(.*?)^endobj\r?$");
-            TestAssert.True(obj.Success, "Expected the referenced object " + number);
-            return obj.Groups[1].Value;
-        }
-
         string[] ReadPaintedShadingReferences(string page)
         {
-            string content = ReadObject(Regex.Match(page, @"/Contents (\d+) 0 R").Groups[1].Value);
+            string content = ReadObject(pdf, Regex.Match(page, @"/Contents (\d+) 0 R").Groups[1].Value);
             string bindings = Regex.Match(page, @"/Shading << ([^>]*) >>").Groups[1].Value;
             return Regex.Matches(content, @"(?m)^/(Sh\d+) sh\r?$").Select(operation =>
             {
@@ -235,6 +228,14 @@ internal static partial class PdfWriterTests
                 return binding.Groups[1].Value;
             }).ToArray();
         }
+    }
+
+    private static string ReadObject(string pdf, string number)
+    {
+        TestAssert.True(number.Length != 0, "Expected a PDF object reference.");
+        var obj = Regex.Match(pdf, $@"(?ms)^{number} 0 obj\r?\n(.*?)^endobj\r?$");
+        TestAssert.True(obj.Success, "Expected the referenced object " + number);
+        return obj.Groups[1].Value;
     }
 
     public static void RadialSpreadFunctionsPreserveCycleBoundariesAndReflection()
@@ -390,13 +391,24 @@ internal static partial class PdfWriterTests
             [PdfLinkAnnotation.ToDestination(10, 20, 30, 40, new PdfLinkDestination(1, null, 180, null))]);
         var secondPage = new PdfPage(200, 200);
 
-        string pdf = WritePdfText([firstPage, secondPage]);
+        AssertInternalDestinationOnFirstPage(WritePdfText([firstPage, secondPage]));
+    }
 
-        TestAssert.Contains("/Annots [7 0 R]", pdf);
-        TestAssert.Contains("/Type /Annot /Subtype /Link", pdf);
-        TestAssert.Contains("/Rect [10 20 40 60]", pdf);
-        TestAssert.Contains("/Dest [5 0 R /XYZ null 180 null]", pdf);
-        TestAssert.DoesNotContain("/S /URI", pdf);
+    private static void AssertInternalDestinationOnFirstPage(string pdf)
+    {
+        var pages = Regex.Match(pdf, @"/Type /Pages /Count 2 /Kids \[(\d+) 0 R (\d+) 0 R\]");
+        string firstPage = ReadObject(pdf, pages.Groups[1].Value);
+        string secondPageNumber = pages.Groups[2].Value;
+        string secondPage = ReadObject(pdf, secondPageNumber);
+        TestAssert.Contains("/Type /Page ", firstPage);
+        TestAssert.Contains("/Type /Page ", secondPage);
+        TestAssert.DoesNotContain("/Annots", secondPage);
+        var annotations = Regex.Match(firstPage, @"/Annots \[(\d+) 0 R\]");
+        string link = ReadObject(pdf, annotations.Groups[1].Value);
+        TestAssert.Contains("/Type /Annot /Subtype /Link", link);
+        TestAssert.Contains("/Rect [10 20 40 60]", link);
+        TestAssert.Contains($"/Dest [{secondPageNumber} 0 R /XYZ null 180 null]", link);
+        TestAssert.DoesNotContain("/S /URI", link);
     }
 
     public static void WritesImageBackedTilingPatternResources()
@@ -406,15 +418,24 @@ internal static partial class PdfWriterTests
         graphics.FillRectangleWithTilingPattern(10, 20, 30, 40, pattern);
         var page = new PdfPage(100, 100, graphics.ToString(), [], [], graphics.ExtGStates, graphics.Shadings, graphics.Patterns);
 
-        string pdf = WritePdfText([page]);
+        AssertImageBackedPatternPaint(WritePdfText([page]));
+    }
 
-        TestAssert.Contains("/Pattern << /P1 ", pdf);
-        TestAssert.Contains("/PatternType 1", pdf);
-        TestAssert.Contains("/TilingType 2", pdf);
-        TestAssert.Contains("/Resources << /XObject << /ImPattern ", pdf);
-        TestAssert.Contains("/Subtype /Image", pdf);
-        TestAssert.Contains("q 16 0 0 16 0 0 cm /ImPattern Do Q", pdf);
-        TestAssert.Contains("/Pattern cs /P1 scn", pdf);
+    private static void AssertImageBackedPatternPaint(string pdf)
+    {
+        var pages = Regex.Match(pdf, @"/Type /Pages /Count 1 /Kids \[(\d+) 0 R\]");
+        string page = ReadObject(pdf, pages.Groups[1].Value);
+        var contents = Regex.Match(page, @"/Contents (\d+) 0 R");
+        string paint = ReadObject(pdf, contents.Groups[1].Value);
+        TestAssert.True(Regex.IsMatch(paint, @"(?m)^/Pattern cs /P1 scn\r?\n10 20 30 40 re f\r?$"),
+            "The page must fill the authored rectangle with its tiling pattern.");
+        var patterns = Regex.Match(page, @"/Pattern << /P1 (\d+) 0 R >>");
+        string pattern = ReadObject(pdf, patterns.Groups[1].Value);
+        TestAssert.Contains("/PatternType 1", pattern);
+        TestAssert.Contains("/TilingType 2", pattern);
+        var images = Regex.Match(pattern, @"/Resources << /XObject << /ImPattern (\d+) 0 R >> >>");
+        TestAssert.Contains("/Subtype /Image", ReadObject(pdf, images.Groups[1].Value));
+        TestAssert.Contains("q 16 0 0 16 0 0 cm /ImPattern Do Q", pattern);
     }
 
     public static void WritesJpegImageColorSpaceFromFrameMetadata()
