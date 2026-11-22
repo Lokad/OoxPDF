@@ -245,8 +245,35 @@ internal sealed partial class PptxRenderer
             {
                 unsupportedCommands.Add(badCommand.Value);
             }
-            bool hasFill = TryReadSvgFill(element, style, gradients, radialGradients, elementIds,
+            string? opacityText = ReadSvgPresentationAttribute(element, style, "opacity");
+            double? authoredOpacity = ParseSvgOpacity(opacityText);
+            double elementOpacity = Math.Clamp(authoredOpacity ?? 1d, 0d, 1d);
+            bool allowGradientStroke = allowStrokePattern && strokeContainersQualified &&
+                (string.IsNullOrWhiteSpace(opacityText) || authoredOpacity is >= 0d and <= 1d);
+            bool hasFill = TryReadSvgFill(element, style, gradients, radialGradients, elementIds, elementOpacity,
                 out SvgPaint paint, out SvgFillFailure fillFailure, out string? gradientId, out SvgRadialGradient? radial);
+            SvgStroke stroke = ReadSvgStroke(element, style, gradients, radialGradients, elementIds,
+                allowGradientStroke, elementOpacity, strokePercentageBasis, out SvgStrokeFailure strokeFailure,
+                out bool invalidStrokePresentation, out bool hasVectorEffect, out bool nonScalingStroke);
+
+            (IReadOnlyList<SvgPathCommand> pathCommands, bool completePath) =
+                hasFill || stroke.HasPaint ? ReadTransformedSvgPath(data, transform) : ([], false);
+            if ((hasFill || fillFailure != SvgFillFailure.None) && completePath && !SvgPathMayHaveInterior(pathCommands))
+            {
+                hasFill = false;
+                paint = default;
+                fillFailure = SvgFillFailure.None;
+                gradientId = null;
+                radial = null;
+            }
+            // The gradient stroke can share element opacity only when the fill
+            // contributes no ink. Admission uses the actual path interior.
+            if (stroke.Gradient is not null && hasFill && paint.Opacity > 0d && elementOpacity < 1d)
+            {
+                stroke = default;
+                strokeFailure = SvgStrokeFailure.UnresolvedGradient;
+            }
+
             if (hasFill && gradientId is not null)
             {
                 usedGradientIds?.Add(gradientId);
@@ -262,24 +289,14 @@ internal sealed partial class PptxRenderer
                     unpaintablePaths++;
                 }
             }
-            // A transparent fill contributes no ink to the element's opacity composition.
-            bool hasVisibleFill = hasFill && paint.Opacity > 0d;
-            SvgStroke stroke = ReadSvgStroke(element, style, gradients, radialGradients, elementIds,
-                allowStrokePattern && strokeContainersQualified, hasVisibleFill, strokePercentageBasis,
-                out SvgStrokeFailure strokeFailure, out bool invalidStrokePresentation, out bool hasVectorEffect, out bool nonScalingStroke);
-            List<SvgPathCommand>? pathCommands = null;
-            bool completePath = false;
             SvgPathBounds gradientBounds = default;
             bool hasGradientBounds = false;
             bool gradientControlsMappable = false;
-            if (radial is not null || paint.Gradient is not null || stroke.Gradient is not null)
+            if ((radial is not null || paint.Gradient is not null || stroke.Gradient is not null) &&
+                completePath && TryReadSvgPathBounds(pathCommands, out gradientBounds, out SvgPathBounds controlBounds))
             {
-                (pathCommands, completePath) = ReadTransformedSvgPath(data, transform);
-                if (completePath && TryReadSvgPathBounds(pathCommands, out gradientBounds, out SvgPathBounds controlBounds))
-                {
-                    hasGradientBounds = true;
-                    gradientControlsMappable = AreSvgGradientBoundsMappable(controlBounds, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY);
-                }
+                hasGradientBounds = true;
+                gradientControlsMappable = AreSvgGradientBoundsMappable(controlBounds, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY);
             }
             PdfShadingPattern? strokePattern = null;
             if (stroke.Gradient is { } strokeGradient)
@@ -369,10 +386,6 @@ internal sealed partial class PptxRenderer
                 {
                     continue;
                 }
-            }
-            if (pathCommands is null)
-            {
-                (pathCommands, completePath) = ReadTransformedSvgPath(data, transform);
             }
             if (radial is { } radialGradient)
             {
@@ -1494,7 +1507,7 @@ internal sealed partial class PptxRenderer
     private static bool TryReadSvgFill(XElement path, IReadOnlyDictionary<string, string> style,
         IReadOnlyDictionary<string, SvgGradient> gradients,
         IReadOnlyDictionary<string, SvgRadialGradient> radialGradients, Lazy<HashSet<string>> elementIds,
-        out SvgPaint paint, out SvgFillFailure failure, out string? gradientId, out SvgRadialGradient? radial)
+        double elementOpacity, out SvgPaint paint, out SvgFillFailure failure, out string? gradientId, out SvgRadialGradient? radial)
     {
         gradientId = null;
         radial = null;
@@ -1507,8 +1520,7 @@ internal sealed partial class PptxRenderer
         }
 
         string? fill = ReadSvgInheritedAttribute(path, style, "fill");
-        double opacity = ReadSvgOpacityValue(ReadSvgInheritedAttribute(path, style, "fill-opacity"))
-            * ReadSvgOpacityValue(ReadSvgPresentationAttribute(path, style, "opacity"));
+        double opacity = ReadSvgOpacityValue(ReadSvgInheritedAttribute(path, style, "fill-opacity")) * elementOpacity;
         if (fill is null)
         {
             // SVG initial value: a path without fill paints black instead of vanishing.
@@ -1582,7 +1594,7 @@ internal sealed partial class PptxRenderer
     private static SvgStroke ReadSvgStroke(XElement path, IReadOnlyDictionary<string, string> style,
         IReadOnlyDictionary<string, SvgGradient> gradients,
         IReadOnlyDictionary<string, SvgRadialGradient> radialGradients, Lazy<HashSet<string>> elementIds,
-        bool allowGradientStroke, bool hasVisibleFill, double percentageBasis, out SvgStrokeFailure failure,
+        bool allowGradientStroke, double elementOpacity, double percentageBasis, out SvgStrokeFailure failure,
         out bool invalidPresentation, out bool hasVectorEffect, out bool nonScalingStroke)
     {
         failure = SvgStrokeFailure.None;
@@ -1596,9 +1608,7 @@ internal sealed partial class PptxRenderer
             return default;
         }
         string? strokeOpacity = ReadSvgInheritedAttribute(path, style, "stroke-opacity");
-        string? elementOpacity = ReadSvgPresentationAttribute(path, style, "opacity");
-        double ownOpacity = ReadSvgOpacityValue(elementOpacity);
-        double opacity = ReadSvgOpacityValue(strokeOpacity) * ownOpacity;
+        double opacity = ReadSvgOpacityValue(strokeOpacity) * elementOpacity;
         if (!TryReadSvgStrokeWidth(style, path, percentageBasis, out double width))
         {
             failure = SvgLocalPaintServerRegex().IsMatch(strokePaint)
@@ -1626,8 +1636,6 @@ internal sealed partial class PptxRenderer
             else
             {
                 if (!allowGradientStroke || (!string.IsNullOrWhiteSpace(strokeOpacity) && ReadUnitSvgOpacity(strokeOpacity) is null)
-                    || (!string.IsNullOrWhiteSpace(elementOpacity) && ReadUnitSvgOpacity(elementOpacity) is null)
-                    || (hasVisibleFill && ownOpacity < 1d)
                     || gradient is null || gradient.UniformStopOpacity is null || !gradient.HasNumericStopOpacity
                     || !gradient.HasIdentityGradientTransform || gradient.Spread != SvgGradientSpread.Pad)
                 {
@@ -2290,6 +2298,35 @@ internal sealed partial class PptxRenderer
     {
         var (commands, complete) = ParseSvgPathData(data);
         return (TransformSvgCommands(commands, transform), complete);
+    }
+
+    private static bool SvgPathMayHaveInterior(IReadOnlyList<SvgPathCommand> commands)
+    {
+        if (commands.Count == 0 || commands[0].Kind != 'M') return true;
+
+        bool hasSegment = false;
+        // Closing a single segment traverses the same edge in reverse.
+        // Two edges or a curve can enclose an area when filled.
+        foreach (SvgPathCommand command in commands)
+        {
+            if (!command.Arguments.All(double.IsFinite)) return true;
+            switch (command.Kind)
+            {
+                case 'M':
+                case 'Z':
+                    hasSegment = false;
+                    break;
+                case 'L':
+                case 'H':
+                case 'V':
+                    if (hasSegment) return true;
+                    hasSegment = true;
+                    break;
+                default:
+                    return true;
+            }
+        }
+        return false;
     }
 
     // Parses the longest supported prefix of SVG path data into absolute

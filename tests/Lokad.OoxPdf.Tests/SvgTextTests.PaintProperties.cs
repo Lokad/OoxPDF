@@ -473,7 +473,8 @@ internal static partial class SvgTextTests
             </linearGradient></defs>
             <line x1="16" y1="10" x2="120" y2="30" {fill} stroke="url(#ramp)" stroke-width="6" opacity=".55"/>
             <g fill="red">
-              <line x1="16" y1="45" x2="120" y2="65" {fill} stroke="url(#ramp)" stroke-width="6" opacity=".55"/>
+              <path d="M16 40 L120 48 M16 53 L120 61 Z" {fill} stroke="url(#ramp)" stroke-width="6" opacity=".55"/>
+              <polyline points="16,65 120,72" {fill} stroke="url(#ramp)" stroke-width="6" opacity=".55"/>
             </g>
             <rect x="136" y="64" width="9" height="10" fill="green"/>
             """);
