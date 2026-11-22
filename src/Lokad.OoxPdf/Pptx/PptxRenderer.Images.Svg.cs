@@ -198,7 +198,13 @@ internal sealed partial class PptxRenderer
             cancellationToken.ThrowIfCancellationRequested();
             // RV07-D2: definition descendants supply reusable paint resources;
             // they do not paint into the picture or activate paint diagnostics.
-            if (IsSvgDefinitionElement(element) || IsHiddenSvgElement(element) ||
+            if (IsSvgDefinitionElement(element))
+            {
+                continue;
+            }
+
+            IReadOnlyDictionary<string, string> style = ReadSvgStyleDeclarations(element);
+            if (IsHiddenSvgElement(element, style) ||
                 !TryCollectSvgOpacityGroups(element, pictureOpacity, opacityGroups, out bool strokeContainersQualified))
             {
                 continue;
@@ -239,7 +245,7 @@ internal sealed partial class PptxRenderer
             {
                 unsupportedCommands.Add(badCommand.Value);
             }
-            bool hasFill = TryReadSvgFill(element, gradients, radialGradients, elementIds,
+            bool hasFill = TryReadSvgFill(element, style, gradients, radialGradients, elementIds,
                 out SvgPaint paint, out SvgFillFailure fillFailure, out string? gradientId, out SvgRadialGradient? radial);
             if (hasFill && gradientId is not null)
             {
@@ -258,7 +264,7 @@ internal sealed partial class PptxRenderer
             }
             // A transparent fill contributes no ink to the element's opacity composition.
             bool hasVisibleFill = hasFill && paint.Opacity > 0d;
-            SvgStroke stroke = ReadSvgStroke(element, gradients, radialGradients, elementIds,
+            SvgStroke stroke = ReadSvgStroke(element, style, gradients, radialGradients, elementIds,
                 allowStrokePattern && strokeContainersQualified, hasVisibleFill, strokePercentageBasis,
                 out SvgStrokeFailure strokeFailure, out bool invalidStrokePresentation, out bool hasVectorEffect, out bool nonScalingStroke);
             List<SvgPathCommand>? pathCommands = null;
@@ -312,7 +318,7 @@ internal sealed partial class PptxRenderer
             {
                 continue;
             }
-            bool evenOddFill = ReadSvgInheritedAttribute(element, ReadSvgStyleDeclarations(element), "fill-rule")?.Trim().Equals("evenodd", StringComparison.OrdinalIgnoreCase) == true;
+            bool evenOddFill = ReadSvgInheritedAttribute(element, style, "fill-rule")?.Trim().Equals("evenodd", StringComparison.OrdinalIgnoreCase) == true;
             double viewportScale = (scaleX + scaleY) / 2d;
             double strokeScale = nonScalingStroke ? viewportScale : GetSvgStrokeElementScale(transform) * viewportScale;
             double strokeWidthPoints = Math.Max(0.001d, stroke.Width * strokeScale);
@@ -684,12 +690,25 @@ internal sealed partial class PptxRenderer
         return opacity is null ? 1d : ReadUnitSvgOpacity(opacity);
     }
 
-    private static bool IsHiddenSvgElement(XElement element)
+    private static bool IsHiddenSvgElement(XElement element, IReadOnlyDictionary<string, string>? style = null)
     {
-        string? visibility = ReadSvgInheritedAttribute(element, ReadSvgStyleDeclarations(element), "visibility");
-        return visibility?.Trim().ToLowerInvariant() is "hidden" or "collapse" ||
-            element.AncestorsAndSelf().Any(e => string.Equals(
-                ReadSvgPresentationAttribute(e, ReadSvgStyleDeclarations(e), "display")?.Trim(), "none", StringComparison.OrdinalIgnoreCase));
+        style ??= ReadSvgStyleDeclarations(element);
+        string? visibility = ReadSvgInheritedAttribute(element, style, "visibility");
+        if (visibility?.Trim().ToLowerInvariant() is "hidden" or "collapse")
+        {
+            return true;
+        }
+
+        foreach (XElement source in element.AncestorsAndSelf())
+        {
+            var declarations = ReferenceEquals(source, element) ? style : ReadSvgStyleDeclarations(source);
+            if (string.Equals(ReadSvgPresentationAttribute(source, declarations, "display")?.Trim(), "none", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static bool IsSupportedSvgElement(string name)
@@ -1472,13 +1491,13 @@ internal sealed partial class PptxRenderer
         return percent ? opacity / 100d : opacity;
     }
 
-    private static bool TryReadSvgFill(XElement path, IReadOnlyDictionary<string, SvgGradient> gradients,
+    private static bool TryReadSvgFill(XElement path, IReadOnlyDictionary<string, string> style,
+        IReadOnlyDictionary<string, SvgGradient> gradients,
         IReadOnlyDictionary<string, SvgRadialGradient> radialGradients, Lazy<HashSet<string>> elementIds,
         out SvgPaint paint, out SvgFillFailure failure, out string? gradientId, out SvgRadialGradient? radial)
     {
         gradientId = null;
         radial = null;
-        IReadOnlyDictionary<string, string> style = ReadSvgStyleDeclarations(path);
         string? fill = ReadSvgInheritedAttribute(path, style, "fill");
         double opacity = ReadSvgOpacityValue(ReadSvgInheritedAttribute(path, style, "fill-opacity"))
             * ReadSvgOpacityValue(ReadSvgPresentationAttribute(path, style, "opacity"));
@@ -1552,13 +1571,13 @@ internal sealed partial class PptxRenderer
     // a uniform stroke width; the viewport separately stretches its normal.
     // vector-effect=non-scaling-stroke skips the element-transform factor;
     // any other effect value stays diagnosed with the scaled stroke.
-    private static SvgStroke ReadSvgStroke(XElement path, IReadOnlyDictionary<string, SvgGradient> gradients,
+    private static SvgStroke ReadSvgStroke(XElement path, IReadOnlyDictionary<string, string> style,
+        IReadOnlyDictionary<string, SvgGradient> gradients,
         IReadOnlyDictionary<string, SvgRadialGradient> radialGradients, Lazy<HashSet<string>> elementIds,
         bool allowGradientStroke, bool hasVisibleFill, double percentageBasis, out SvgStrokeFailure failure,
         out bool invalidPresentation, out bool hasVectorEffect, out bool nonScalingStroke)
     {
         failure = SvgStrokeFailure.None;
-        IReadOnlyDictionary<string, string> style = ReadSvgStyleDeclarations(path);
         string? strokePaint = ReadSvgInheritedAttribute(path, style, "stroke");
         invalidPresentation = false;
         string? vectorEffect = ReadSvgPresentationAttribute(path, style, "vector-effect");
