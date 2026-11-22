@@ -1057,7 +1057,7 @@ internal sealed partial class PptxRenderer
         // Mapped endpoints still determine the perpendicular gradient axis
         // after a translation or positive uniform scale.
         if (!gradient.HasNumericStopOpacity ||
-            !gradient.HasIdentityGradientTransform || gradient.Spread != SvgGradientSpread.Pad ||
+            !gradient.HasPositiveUniformGradientTransform || gradient.Spread != SvgGradientSpread.Pad ||
             (gradient.IsUserSpace && !pathTransform.HasPositiveUniformScale) || gradient.Stops.Count > 256 ||
             (!gradient.IsUserSpace && (pathTransform.M11 <= 0d || pathTransform.M22 <= 0d || pathTransform.M12 != 0d || pathTransform.M21 != 0d)) ||
             !HaveRepresentableSvgStops(gradient.Stops)) { return null; }
@@ -1353,7 +1353,9 @@ internal sealed partial class PptxRenderer
         {
             UniformStopOpacity = ramp.UniformOpacity,
             HasNumericStopOpacity = ramp.HasNumericOpacity,
-            HasIdentityGradientTransform = transform.IsIdentity,
+            // The mapped endpoints still determine the gradient normal after
+            // a translation or positive uniform scale in gradient space.
+            HasPositiveUniformGradientTransform = transform.HasPositiveUniformScale,
             HasHardStops = ramp.HasHardStops,
             IgnoredStopOpacityCount = ramp.IgnoredOpacityCount,
             // A single stop or coincident source endpoints define solid paint.
@@ -1689,7 +1691,7 @@ internal sealed partial class PptxRenderer
             {
                 if (!allowGradientStroke || (!string.IsNullOrWhiteSpace(strokeOpacity) && ReadUnitSvgOpacity(strokeOpacity) is null)
                     || gradient is null || gradient.UniformStopOpacity is null || !gradient.HasNumericStopOpacity
-                    || !gradient.HasIdentityGradientTransform || gradient.Spread != SvgGradientSpread.Pad)
+                    || !gradient.HasPositiveUniformGradientTransform || gradient.Spread != SvgGradientSpread.Pad)
                 {
                     failure = SvgStrokeFailure.UnresolvedGradient;
                     return default;

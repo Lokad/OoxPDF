@@ -2536,7 +2536,7 @@ internal static partial class PptxImagesTests
         var excluded = new List<string>
         {
             LinearStrokeSvg(LinearStrokeStops, gradientAttrs: "x1=\"1\" x2=\"0\""),
-            LinearStrokeSvg(LinearStrokeStops, gradientAttrs: "gradientTransform=\"scale(.5)\""),
+            LinearStrokeSvg(LinearStrokeStops, gradientAttrs: "gradientTransform=\"scale(.5,.6)\""),
             LinearStrokeSvg(LinearStrokeStops, gradientAttrs: "spreadMethod=\"repeat\" x2=\".2\""),
             LinearStrokeSvg(LinearStrokeStops, gradientAttrs: "spreadMethod=\"reflect\" x2=\".2\""),
             LinearStrokeSvg(varying),

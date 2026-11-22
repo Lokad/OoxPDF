@@ -530,6 +530,47 @@ internal static partial class SvgTextTests
         }
     }
 
+    public static void SvgLinearGradientResourcesPreserveTranslatedAndUniformlyScaledPaint()
+    {
+        foreach (bool boundingBox in new[] { false, true })
+        {
+            double shiftX = boundingBox ? 0.125d : 8d;
+            double shiftY = boundingBox ? 0.25d : 6d;
+            string direct = Svg(Figure("left", 0, boundingBox, 1d, 0d, 0d) + Figure("right", 180, boundingBox, 1d, 0d, 0d));
+            string transformed = Svg(Figure("left", 0, boundingBox, 1d, shiftX, shiftY) +
+                Figure("right", 180, boundingBox, 2d, shiftX, shiftY));
+            AssertSvgPaintInBothFormats(direct, transformed, pdf =>
+            {
+                TestAssert.Equal(2, Regex.Matches(pdf, @"/Pattern CS /Ps\d+ SCN").Count);
+                TestAssert.Equal(2, Regex.Matches(pdf, "/S /Luminosity").Count);
+            }, "0 0.502 0 rg");
+        }
+
+        static string Figure(string id, int offset, bool boundingBox, double scale, double shiftX, double shiftY)
+        {
+            string units = boundingBox ? "objectBoundingBox" : "userSpaceOnUse";
+            double X(double coordinate, double fraction) => ((boundingBox ? fraction : coordinate + offset) - shiftX) / scale;
+            double Y(double coordinate, double fraction) => ((boundingBox ? fraction : coordinate) - shiftY) / scale;
+            string transform = scale == 1d && shiftX == 0d && shiftY == 0d ? "" :
+                FormattableString.Invariant($"""gradientTransform="translate({shiftX} {shiftY}) scale({scale})" """);
+            return FormattableString.Invariant($"""
+                <defs>
+                  <linearGradient id="{id}-stroke" gradientUnits="{units}"
+                                  x1="{X(16, .125)}" y1="{Y(10, .125)}" x2="{X(112, .875)}" y2="{Y(60, .875)}" {transform}>
+                    <stop stop-color="blue" stop-opacity=".75"/><stop offset="1" stop-color="purple" stop-opacity=".75"/>
+                  </linearGradient>
+                  <linearGradient id="{id}-fill" href="#{id}-stroke">
+                    <stop stop-color="yellow" stop-opacity=".3"/><stop offset="1" stop-color="aqua"/>
+                  </linearGradient>
+                </defs>
+                <path d="M{24 + offset} 22L{112 + offset} 40L{104 + offset} 12Z" fill="orange"
+                      stroke="url(#{id}-stroke)" stroke-width="6"/>
+                <rect x="{24 + offset}" y="48" width="90" height="22" fill="url(#{id}-fill)"/>
+                <rect x="{130 + offset}" y="62" width="11" height="9" fill="green"/>
+                """);
+        }
+    }
+
     public static void SvgUserSpaceRadialGradientsFollowTranslatedAndUniformlyScaledGroups()
     {
         string direct = Svg(Figure("left", 0, 1, 0, 0) + Figure("right", 180, 1, 0, 0));
