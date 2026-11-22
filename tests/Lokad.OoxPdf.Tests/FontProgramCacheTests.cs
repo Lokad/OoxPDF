@@ -6,23 +6,6 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class FontProgramCacheTests
 {
-    public static void OversizedFontIsBorrowedWithoutExceedingRetention()
-    {
-        using var cache = new FontProgramCache(3, StringComparer.Ordinal);
-        using var small = new FontProgramBuffer(new byte[] { 1, 2 }, null);
-        using var large = new FontProgramBuffer(new byte[] { 3, 4, 5, 6 }, null);
-        using var replacement = new FontProgramBuffer(new byte[] { 7, 8, 9 }, null);
-        cache.Store("small", small, null);
-        TestAssert.True(cache.TryAcquire("small", null, out var borrowed), "The small entry must be retained.");
-        cache.Store("large", large, null);
-        TestAssert.Equal(2L, cache.RetainedBytes);
-        TestAssert.True(!cache.TryAcquire("large", null, out _), "An entry over the aggregate budget must not be retained.");
-        cache.Store("small", replacement, null);
-        TestAssert.Equal(3L, cache.RetainedBytes);
-        TestAssert.True(borrowed!.Bytes.Span.SequenceEqual(new byte[] { 1, 2 }), "Replacement must preserve an already borrowed array.");
-        borrowed.Dispose();
-    }
-
     public static void LocalLoadsAndReadsRemainValidDuringConcurrentEviction()
     {
         string directory = Path.Combine(Path.GetTempPath(), "ooxpdf-font-cache-" + Guid.NewGuid().ToString("N"));

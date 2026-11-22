@@ -31,10 +31,8 @@ internal static partial class PptxFontCacheTests
 
     public static void PptxSlideRenderLoadsEachFontProgramOnce()
     {
-        byte[] fontBytes = TestFontBuilder.CreateTestFont();
-        var counters = new System.Collections.Concurrent.ConcurrentDictionary<string, int>(System.StringComparer.OrdinalIgnoreCase);
-        var resolver = new PerFamilyCountingResolver(fontBytes, counters);
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        var resolver = new TestFontPrograms.PerFamilyCountingResolver(TestFontBuilder.CreateTestFont());
+        using var stream = TestFixtures.CreateZipPackage(new Dictionary<string, string>
         {
             ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
             ["_rels/.rels"] = PptxTests.PackageRelationship(),
@@ -70,46 +68,17 @@ internal static partial class PptxFontCacheTests
                 """
         });
 
-        int pageCount;
-        using (System.IO.FileStream stream = System.IO.File.OpenRead(input))
-        {
-            OoxPackage package = OoxPackage.Open(stream, System.Threading.CancellationToken.None);
-            PptxDocument document = new PptxReader().Read(package, System.Threading.CancellationToken.None);
-            pageCount = new PptxRenderer(resolver).RenderPagesAsync(document, package, diagnosticSink: null, System.Threading.CancellationToken.None).ToBlockingEnumerable().Count();
-        }
+        using var package = OoxPackage.Open(stream, default);
+        PptxDocument document = new PptxReader().Read(package, default);
+        PdfPage page = new PptxRenderer(resolver).RenderPagesAsync(document, package, diagnosticSink: null, default)
+            .ToBlockingEnumerable().Single();
 
-        TestAssert.Equal(1, pageCount);
-        TestAssert.Equal(1, counters.Count);
-        TestAssert.Equal("counting:TestFont", counters.Keys.Single());
-        TestAssert.Equal(1, counters.Values.Single());
+        TestAssert.Equal(1, resolver.Acquisitions.Count);
+        TestAssert.Equal(1, resolver.Acquisitions["counting:TestFont"]);
+        string text = string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false).Select(show => show.Text));
+        TestAssert.Equal("AlphaBetaGammaDelta", text);
     }
 
-    private sealed class PerFamilyCountingResolver(byte[] fontBytes, System.Collections.Concurrent.ConcurrentDictionary<string, int> counters) : IFontResolver
-    {
-        public FontFaceResolution Resolve(FontRequest request)
-        {
-            string family = string.IsNullOrWhiteSpace(request.FamilyName) ? "(default)" : request.FamilyName;
-            var source = new CountingProgramSource("counting:" + family, fontBytes, counters);
-            return new FontFaceResolution(
-                request.FamilyName,
-                family,
-                new FontStyleKey(request.Bold, request.Italic, request.Bold ? 700 : 400, 0, false),
-                source,
-                IsFallback: false);
-        }
-
-        private sealed class CountingProgramSource(string stableId, byte[] bytes, System.Collections.Concurrent.ConcurrentDictionary<string, int> counters) : IFontProgramSource
-        {
-            public string StableId => stableId;
-
-            public ValueTask<IOoxPdfFontProgramLease> AcquireAsync(IMemoryBudget? operationBudget, CancellationToken ct = default)
-            {
-                counters.AddOrUpdate(stableId, 1, (_, count) => count + 1);
-                ct.ThrowIfCancellationRequested();
-                return ValueTask.FromResult(TestFontPrograms.Borrow(bytes));
-            }
-        }
-    }
     public static void PptxSharedResolverDeduplicatesIdenticalSubsets()
     {
         var program = new MemoryFontProgramSource("cache-test", TestFontBuilder.CreateTestFont());

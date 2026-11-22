@@ -39,12 +39,31 @@ internal static partial class FontProgramCacheTests
     {
         var pool = new TestMemoryBudget();
         using var cache = new FontProgramCache(2, StringComparer.Ordinal, pool);
-        var program = new FontProgramBuffer(new byte[] { 1, 2, 3 }, OoxMemory.Reserve(pool, 3));
+        using (var small = new FontProgramBuffer(new byte[] { 4, 5 }, OoxMemory.Reserve(pool, 2)))
+        {
+            cache.Store("small", small, null);
+        }
+
+        using var program = new FontProgramBuffer(new byte[] { 1, 2, 3 }, OoxMemory.Reserve(pool, 3));
         cache.Store("large", program, null);
-        using var a = program.Acquire(); using var b = program.Acquire(); program.Dispose();
-        TestAssert.Equal(0L, cache.RetainedBytes); TestAssert.Equal(3L, pool.Reserved);
-        a.Dispose(); cache.Dispose(); TestAssert.Equal(3L, pool.Reserved);
-        b.Dispose(); TestAssert.Equal(0L, pool.Reserved);
+        TestAssert.Equal(2L, cache.RetainedBytes);
+        TestAssert.True(!cache.TryAcquire("large", null, out _), "The oversized program stays outside cache retention.");
+        TestAssert.True(cache.TryAcquire("small", null, out var cached), "Oversized admission preserves the existing entry.");
+        using (var retained = cached!)
+        {
+            TestAssert.True(retained.Bytes.Span.SequenceEqual(new byte[] { 4, 5 }), "The original retained bytes remain available.");
+        }
+
+        using var first = program.Acquire();
+        using var second = program.Acquire();
+        program.Dispose();
+        TestAssert.Equal(5L, pool.Reserved);
+        first.Dispose();
+        cache.Dispose();
+        TestAssert.Equal(3L, pool.Reserved);
+        TestAssert.True(second.Bytes.Span.SequenceEqual(new byte[] { 1, 2, 3 }), "The final oversized reader outlives the cache.");
+        second.Dispose();
+        TestAssert.Equal(0L, pool.Reserved);
     }
 
     public static void FontLeasesGovernedFilesDoNotRetainOperationBudgets()

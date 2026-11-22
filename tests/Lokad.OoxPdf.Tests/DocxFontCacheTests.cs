@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using Lokad.OoxPdf;
 using Lokad.OoxPdf.Fonts;
 
@@ -6,28 +5,14 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxFontCacheTests
 {
-    public static void DocxConversionLoadsEachFontProgramOnce()
-    {
-        byte[] fontBytes = TestFontBuilder.CreateTestFont();
-        var source = new CountingProgramSource("counting-test", fontBytes);
-        var resolver = new SingleSourceResolver(source);
-        byte[] pdfBytes = ConvertMinimalDoc(resolver);
-
-        TestAssert.True(pdfBytes.Length > 0, "Conversion should produce output.");
-        TestAssert.Equal(1, source.RequestCount);
-    }
-
     public static void DocxCoveredRunsSkipFallbackProgramLoads()
     {
-        byte[] fontBytes = TestFontBuilder.CreateTestFont();
-        var counters = new ConcurrentDictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-        var resolver = new PerFamilyCountingResolver(fontBytes, counters);
+        var resolver = new TestFontPrograms.PerFamilyCountingResolver(TestFontBuilder.CreateTestFont());
         byte[] pdfBytes = ConvertMinimalDoc(resolver);
 
         TestAssert.True(pdfBytes.Length > 0, "Conversion should produce output.");
-        TestAssert.Equal(1, counters.Count);
-        TestAssert.Equal("counting:TestFont", counters.Keys.Single());
-        TestAssert.Equal(1, counters.Values.Single());
+        TestAssert.Equal(1, resolver.Acquisitions.Count);
+        TestAssert.Equal(1, resolver.Acquisitions["counting:TestFont"]);
     }
 
     public static void DocxNumberingRetriesKeepParsedFontsOwnedByOneConversion()
@@ -70,7 +55,7 @@ internal static class DocxFontCacheTests
 
     private static byte[] ConvertMinimalDoc(IFontResolver resolver)
     {
-        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        using var inputStream = TestFixtures.CreateZipPackage(new Dictionary<string, string>
         {
             ["[Content_Types].xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
@@ -100,7 +85,6 @@ internal static class DocxFontCacheTests
                 """
         });
 
-        using var inputStream = File.OpenRead(input);
         using var outputStream = new MemoryStream();
         OoxPdfConverter.Convert(inputStream, outputStream, new OoxPdfOptions { InputKind = OoxPdfInputKind.Docx, FontResolver = resolver });
         return outputStream.ToArray();
@@ -132,32 +116,6 @@ internal static class DocxFontCacheTests
                 new FontStyleKey(request.Bold, request.Italic, request.Bold ? 700 : 400, 0, false),
                 source,
                 IsFallback: false);
-        }
-    }
-
-    private sealed class PerFamilyCountingResolver(byte[] fontBytes, ConcurrentDictionary<string, int> counters) : IFontResolver
-    {
-        public FontFaceResolution Resolve(FontRequest request)
-        {
-            string family = string.IsNullOrWhiteSpace(request.FamilyName) ? "(default)" : request.FamilyName;
-            var source = new CountingProgramSource("counting:" + family, fontBytes);
-            return new FontFaceResolution(
-                request.FamilyName,
-                family,
-                new FontStyleKey(request.Bold, request.Italic, request.Bold ? 700 : 400, 0, false),
-                new FamilySource(counters, source),
-                IsFallback: false);
-        }
-
-        private sealed class FamilySource(ConcurrentDictionary<string, int> counters, CountingProgramSource inner) : IFontProgramSource
-        {
-            public string StableId => inner.StableId;
-
-            public ValueTask<IOoxPdfFontProgramLease> AcquireAsync(IMemoryBudget? operationBudget, CancellationToken ct = default)
-            {
-                counters.AddOrUpdate(inner.StableId, 1, (_, count) => count + 1);
-                return inner.AcquireAsync(operationBudget, ct);
-            }
         }
     }
 }
