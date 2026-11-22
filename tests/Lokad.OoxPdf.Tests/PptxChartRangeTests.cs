@@ -62,7 +62,8 @@ internal static class PptxChartRangeTests
               <definedName name="Scoped" localSheetId="0">First!$A$1</definedName>
               <definedName name="scoped" localSheetId="0">Second!$A$1</definedName>
               <definedName name="Scoped" localSheetId="1">Second!$A$1</definedName>
-              <definedName name="Unresolved" localSheetId="-1">First!$A$1</definedName>
+              <definedName name="Unresolved" localSheetId="19">First!$A$1</definedName>
+              <definedName name="MalformedScope" localSheetId="-1">Second!$A$1</definedName>
             </definedNames>
             """,
             """
@@ -79,6 +80,7 @@ internal static class PptxChartRangeTests
         TestAssert.Equal("9", workbook.ReadRangeCells("Second!Scoped").Single().Text);
         TestAssert.Equal(0, workbook.ReadRangeCells("Unresolved").Length);
         TestAssert.Equal(0, workbook.ReadRangeCells("First!Unresolved").Length);
+        TestAssert.Equal("9", workbook.ReadRangeCells("MalformedScope").Single().Text);
     }
 
     private static PptxRenderer.ChartWorkbookData CreateWorkbook()

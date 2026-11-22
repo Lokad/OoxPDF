@@ -27,12 +27,13 @@ internal static class PptxSlideMembershipTests
 
     public static void PptxSlideMembershipExplicitEmptyAndUnresolvedListsStayEmpty()
     {
-        foreach (bool unresolved in new[] { false, true })
+        foreach (string? relationshipId in new string?[] { null, "missingRelationship", "rId1" })
             WithPresentation("ordered-visible", xml => {
                 XElement list = xml.Root!.Element(P + "sldIdLst")!;
                 list.RemoveNodes();
-                if (unresolved) list.Add(new XElement(P + "sldId", new XAttribute("id", "256"),
-                    new XAttribute(R + "id", "missingRelationship")));
+                if (relationshipId is not null)
+                    list.Add(new XElement(P + "sldId", new XAttribute("id", "256"),
+                        new XAttribute(R + "id", relationshipId)));
             }, path => TestAssert.Equal(0, Read(path).Slides.Count));
     }
 
