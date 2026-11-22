@@ -192,12 +192,15 @@ internal sealed partial class DocxRenderer
             return;
         }
 
-        var widths = new double[spans.Count];
+        var measuredSpans = new (string Text, double Width)[spans.Count];
         double total = 0d;
         for (int i = 0; i < spans.Count; i++)
         {
-            widths[i] = measurer.MeasureText(segment.StyleRun, segment.Text.Substring(spans[i].Start, spans[i].Length), segment.FontSize);
-            total += widths[i];
+            FontCoverageSpan span = spans[i];
+            string text = segment.Text.Substring(span.Start, span.Length);
+            double width = measurer.MeasureText(segment.StyleRun, text, segment.FontSize);
+            measuredSpans[i] = (text, width);
+            total += width;
         }
 
         if (total <= 0d)
@@ -213,10 +216,11 @@ internal sealed partial class DocxRenderer
         {
             FontCoverageSpan span = spans[i];
             DocxFallbackFontEntry entry = span.FontIndex < 0 ? chain[0] : chain[span.FontIndex];
-            double spanWidth = i == spans.Count - 1 ? segment.X + segment.Width - x : widths[i] * scale;
+            var (text, width) = measuredSpans[i];
+            double spanWidth = i == spans.Count - 1 ? segment.X + segment.Width - x : width * scale;
             emissionSegments.Add(segment with
             {
-                Text = segment.Text.Substring(span.Start, span.Length),
+                Text = text,
                 Resource = entry.Resource,
                 X = x,
                 Width = spanWidth,
