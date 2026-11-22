@@ -503,7 +503,8 @@ internal sealed partial class DocxReader
                     }, readHyperlink: sourceEquation.RemoveDeletedText ? null : hyperlink =>
                         AddHyperlinkSpan(hyperlink, sourceRunIndex, 0, runs.Count, 0, 0,
                             inlineItems!.Count, inlineItems.Count + 1, hyperlinkSpans, relationships, mathContent: true),
-                    authoredStory: paragraph.Annotation<DocxSourceXml.StoryOrigin>()?.Story);
+                    authoredStory: paragraph.Annotation<DocxSourceXml.StoryOrigin>()?.Story,
+                    equationHasDeletionOwner: sourceEquation.RemoveDeletedText || equationRevision?.Kind == DocxRevisionKind.Deletion);
                 if (sourceEquation.RemoveDeletedText)
                 {
                     var source = new DocxEquation(content, runs.Count, sourceRunIndex, display, null, null, null);

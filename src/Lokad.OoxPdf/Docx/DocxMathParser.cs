@@ -14,12 +14,13 @@ internal static partial class DocxMathParser
         CancellationToken cancellationToken, Func<XElement, bool>? includeRevision = null,
         bool preserveDeletedStructure = false, Action<DocxMathBookmark>? readBookmark = null,
         Action<XElement>? readCommentBoundary = null, Func<XElement, DocxHyperlinkSpan>? readHyperlink = null,
-        XElement? authoredStory = null)
+        XElement? authoredStory = null, bool equationHasDeletionOwner = false)
     {
-        var pending = new Stack<(XElement Element, bool Expanded, bool InsideRevision, bool IncludeAnnotations, DocxHyperlinkSpan? Hyperlink)>();
+        var pending = new Stack<(XElement Element, bool Expanded, XName? RevisionOwner, bool IncludeAnnotations, DocxHyperlinkSpan? Hyperlink)>();
         var nodes = new Dictionary<XElement, DocxMathNode>();
         IReadOnlySet<(XName Name, string Id)>? moveOwners = null;
-        pending.Push((equation, false, false, true, null));
+        XName deletion = WordprocessingNamespace + "del";
+        pending.Push((equation, false, null, true, null));
         while (pending.TryPop(out var item))
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -30,19 +31,17 @@ internal static partial class DocxMathParser
                 if (item.IncludeAnnotations) readCommentBoundary?.Invoke(element);
                 continue;
             }
-            bool revisionSource = !item.InsideRevision && includeRevision is not null &&
+            bool revisionSource = item.RevisionOwner is null && includeRevision is not null &&
                 DocxSourceXml.IsRevisionContainer(element) &&
                 (name is not ("moveFrom" or "moveTo") ||
                     (string?)element.Attribute(WordprocessingNamespace + "id") is { } id &&
                     (moveOwners ??= DocxSourceXml.ReadPairedMoveOwnerIds(equation, authoredStory, cancellationToken))
                         .Contains((element.Name, id)));
             XElement[]? revisionChildren = revisionSource ? ReadRevisionChildren(element, cancellationToken).ToArray() : null;
-            // A revision still needs an actual operand or structural control.
-            // Readable zero-content siblings do not invalidate that owner.
-            bool revisionRow = revisionChildren is { Length: > 0 } && revisionChildren.Any(IsRevisionContent) &&
-                revisionChildren.All(child => IsRevisionContent(child) || IsReadableRun(child) && ReadRunProperties(child).Supported);
+            bool deleting = element.Name == deletion;
+            bool revisionRow = revisionChildren is not null && IsReadableRevision(revisionChildren, deleting);
             bool included = !revisionRow || includeRevision!(element);
-            bool retainDeletedFrame = revisionRow && preserveDeletedStructure && name == "del" && !included &&
+            bool retainDeletedFrame = revisionRow && preserveDeletedStructure && deleting && !included &&
                 revisionChildren!.Any(child => IsControl(child.Name.LocalName));
             if (revisionRow && !item.Expanded && !included && !retainDeletedFrame)
             {
@@ -52,7 +51,9 @@ internal static partial class DocxMathParser
             bool sourceContainer = IsSourceContainer(element);
             if (!revisionRow && !sourceContainer && (element.Name.Namespace != MathNamespace || !IsContainer(name)))
             {
-                nodes.Add(element, ReadLeaf(element, readRun) with { Hyperlink = item.IncludeAnnotations ? item.Hyperlink : null });
+                bool allowsDeletedText = item.RevisionOwner is null ? equationHasDeletionOwner : item.RevisionOwner == deletion;
+                nodes.Add(element, ReadLeaf(element, readRun, allowsDeletedText) with
+                    { Hyperlink = item.IncludeAnnotations ? item.Hyperlink : null });
                 continue;
             }
 
@@ -61,12 +62,13 @@ internal static partial class DocxMathParser
                 DocxHyperlinkSpan? hyperlink = item.IncludeAnnotations && included ? item.Hyperlink : null;
                 if (item.IncludeAnnotations && included && element.Name == WordprocessingNamespace + "hyperlink")
                     hyperlink = readHyperlink?.Invoke(element);
-                pending.Push((element, true, item.InsideRevision, item.IncludeAnnotations && included, hyperlink));
+                pending.Push((element, true, item.RevisionOwner, item.IncludeAnnotations && included, hyperlink));
+                XName? revisionOwner = revisionRow ? element.Name : item.RevisionOwner;
                 // Comment ranges need source order, including boundaries in
                 // different nested rows. They are events, not math operands.
                 foreach (XElement child in TraversalChildren(element).Reverse())
                 {
-                    pending.Push((child, false, item.InsideRevision || revisionRow,
+                    pending.Push((child, false, revisionOwner,
                         item.IncludeAnnotations && included, hyperlink));
                 }
                 continue;
@@ -210,9 +212,25 @@ internal static partial class DocxMathParser
     // A single control has the same grammar inside an admitted revision wrapper.
     // Role rows and orphan matrix rows still require their actual source parent.
     private static bool IsControl(string name) => name is "f" or "sSub" or "sSup" or "sSubSup" or "rad" or "d" or "nary" or "func" or "m";
-    private static bool IsRevisionContent(XElement element) => element.Name.Namespace == MathNamespace &&
+
+    private static bool IsReadableRevision(XElement[] children, bool allowsDeletedText)
+    {
+        // A revision needs an actual operand or structural control.
+        // Readable zero-content siblings do not invalidate that owner.
+        bool hasContent = false;
+        foreach (var child in children)
+        {
+            if (IsRevisionContent(child, allowsDeletedText))
+                hasContent = true;
+            else if (!IsReadableRun(child, allowsDeletedText) || !ReadRunProperties(child).Supported)
+                return false;
+        }
+        return hasContent;
+    }
+
+    private static bool IsRevisionContent(XElement element, bool allowsDeletedText) => element.Name.Namespace == MathNamespace &&
         (IsControl(element.Name.LocalName) || element.Name.LocalName == "r" &&
-            element.Elements().Any(text => IsLiteralRunText(text) && text.Value.Length != 0));
+            element.Elements().Any(text => IsLiteralRunText(text, allowsDeletedText) && text.Value.Length != 0));
     // Revision admission and structural retention see the same stored content
     // through metadata containers; role nodes still need their actual parent.
     private static IEnumerable<XElement> ReadRevisionChildren(XElement source, CancellationToken token)
@@ -291,22 +309,24 @@ internal static partial class DocxMathParser
     // Revision admission and leaf parsing share the same zero-content run shape.
     // Visible unknown payloads retain their former deferred fallback; an empty
     // unknown payload cannot become a supported revision owner.
-    private static bool IsReadableRun(XElement element) =>
+    private static bool IsReadableRun(XElement element, bool allowsDeletedText) =>
         element.Name == MathNamespace + "r" && element.Elements().All(child =>
-            IsLiteralRunText(child) || child.Name == MathNamespace + "rPr" || child.Name == WordprocessingNamespace + "rPr" ||
+            IsLiteralRunText(child, allowsDeletedText) ||
+            child.Name == MathNamespace + "rPr" || child.Name == WordprocessingNamespace + "rPr" ||
             DocxSourceXml.IsNonPrintingMarker(child));
 
-    private static bool IsLiteralRunText(XElement element) =>
+    private static bool IsLiteralRunText(XElement element, bool allowsDeletedText) =>
         element.Name == MathNamespace + "t" ||
-        element.Name == WordprocessingNamespace + "t" && !element.HasElements;
+        !element.HasElements && (element.Name == WordprocessingNamespace + "t" ||
+            allowsDeletedText && element.Name == WordprocessingNamespace + "delText");
 
-    private static DocxMathNode ReadLeaf(XElement element, Func<XElement, string, DocxTextRun> readRun)
+    private static DocxMathNode ReadLeaf(XElement element, Func<XElement, string, DocxTextRun> readRun, bool allowsDeletedText)
     {
-        if (IsReadableRun(element))
+        if (IsReadableRun(element, allowsDeletedText))
         {
             var (normalText, literalText, supported) = ReadRunProperties(element);
             return new DocxMathRun(
-                readRun(element, string.Concat(element.Elements().Where(IsLiteralRunText).Select(text => text.Value))),
+                readRun(element, string.Concat(element.Elements().Where(text => IsLiteralRunText(text, allowsDeletedText)).Select(text => text.Value))),
                 PropertyValue(element, "rPr", "sty"), PropertyValue(element, "rPr", "scr"))
             {
                 PropertiesXml = ReadProperties(element),

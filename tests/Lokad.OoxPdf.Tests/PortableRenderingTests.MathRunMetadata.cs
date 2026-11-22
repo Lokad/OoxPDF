@@ -8,6 +8,44 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class PortableRenderingTests
 {
+    public static void PortableRenderingDeletedMathTextRetainsRevisionPaint()
+    {
+        foreach (string kind in new[] { "math-run-revision", "equation-revision" })
+        foreach (var mode in Enum.GetValues<OoxPdfDocxMarkupMode>())
+        {
+            string fixture = $"CompositionProbes/{kind}-body-del";
+            var beforeDiagnostics = new List<OoxPdfDiagnostic>();
+            var afterDiagnostics = new List<OoxPdfDiagnostic>();
+            var baseline = DocxInlineCompositionTests.ReadMutation(fixture, mode, false, false,
+                diagnosticSink: beforeDiagnostics.Add);
+            var changed = DocxInlineCompositionTests.ReadMutation(fixture, mode, false, false, (xml, w, m) =>
+            {
+                var deletedText = xml.Descendants(w + "del").Single().Descendants(m + "t").ToArray();
+                TestAssert.Equal(kind == "math-run-revision" ? 1 : 2, deletedText.Length);
+                foreach (var literal in deletedText) literal.Name = w + "delText";
+            }, diagnosticSink: afterDiagnostics.Add);
+            var renderer = new DocxRenderer(new PinnedResolver(mathFont: true), mode,
+                mode == OoxPdfDocxMarkupMode.AllMarkup ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup :
+                    OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+            var before = renderer.RenderPagesAsync(baseline, beforeDiagnostics.Add, default).ToBlockingEnumerable().ToArray();
+            var after = renderer.RenderPagesAsync(changed, afterDiagnostics.Add, default).ToBlockingEnumerable().ToArray();
+            string expected = RevisionBodyEquationText("del", mode);
+            if (kind == "equation-revision" && mode is OoxPdfDocxMarkupMode.Final or OoxPdfDocxMarkupMode.SimpleMarkup)
+                expected = expected[1..]; // The entire first fraction, including its denominator, is deleted.
+            TestAssert.Equal(expected, string.Concat(after.Select(ReadPortableEquationGlyphs)));
+            TestAssert.Equal(before.Length, after.Length);
+            for (int page = 0; page < before.Length; page++)
+            {
+                TestAssert.Equal(before[page].Content, after[page].Content);
+                TestAssert.True(before[page].Annotations.SequenceEqual(after[page].Annotations),
+                    "Deleted literal text preserves the selected view's navigation.");
+            }
+            TestAssert.True(beforeDiagnostics.SequenceEqual(afterDiagnostics),
+                "Deleted literal text preserves the selected view's equation diagnostics.");
+            CheckWrittenPages(after);
+        }
+    }
+
     public static void PortableRenderingEmptyRevisedMathRunsKeepFractions()
     {
         foreach (string kind in new[] { "ins", "del" })

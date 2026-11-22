@@ -6,6 +6,25 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class DocxMathTests
 {
+    public static void DocxMathDeletedTextRequiresDeletionOwner()
+    {
+        foreach (string? wrapper in new[] { null, "ins", "del" })
+        {
+            var xml = EditingMarkerFraction();
+            var run = xml.Descendants(MathNamespace + "r").First();
+            var deletedText = run.Element(MathNamespace + "t")!;
+            deletedText.Name = WordprocessingNamespace + "delText";
+            if (wrapper == "del")
+                deletedText.Add(new XElement(WordprocessingNamespace + "br"));
+            if (wrapper is not null)
+                run.ReplaceWith(new XElement(WordprocessingNamespace + wrapper, new XElement(run)));
+            var parsed = DocxMathParser.Read(xml, (_, text) => PlainRun(text), default, _ => true);
+            var fraction = (DocxMathFraction)parsed.Children.Single();
+            TestAssert.True(fraction.Numerator.Children[0] is DocxMathUnsupported,
+                "Deleted literal text needs an actual deletion owner and cannot contain nested elements.");
+        }
+    }
+
     public static void DocxMathWordTextPreservesOrderAndRevisionOwnership()
     {
         XName wordText = WordprocessingNamespace + "t";
