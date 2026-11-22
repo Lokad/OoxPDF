@@ -55,6 +55,7 @@ internal sealed record DocxMathRun(DocxTextRun Text, string? MathStyleValue, str
 {
     public bool? NormalTextValue { get; init; }
     public bool NormalText => NormalTextValue == true;
+    public bool LiteralText { get; init; }
     public bool HasUnsupportedProperties { get; init; }
     public string? ExplicitFontFamily { get; init; }
 }

@@ -1,4 +1,5 @@
 using System.Xml.Linq;
+using Lokad.OoxPdf.Ooxml;
 using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
 
 namespace Lokad.OoxPdf.Docx;
@@ -39,7 +40,7 @@ internal static partial class DocxMathParser
             // A revision still needs an actual operand or structural control.
             // Readable zero-content siblings do not invalidate that owner.
             bool revisionRow = revisionChildren is { Length: > 0 } && revisionChildren.Any(IsRevisionContent) &&
-                revisionChildren.All(child => IsRevisionContent(child) || IsReadableRun(child) && HasSupportedRunProperties(child));
+                revisionChildren.All(child => IsRevisionContent(child) || IsReadableRun(child) && ReadRunProperties(child).Supported);
             bool included = !revisionRow || includeRevision!(element);
             bool retainDeletedFrame = revisionRow && preserveDeletedStructure && name == "del" && !included &&
                 revisionChildren!.Any(child => IsControl(child.Name.LocalName));
@@ -289,39 +290,45 @@ internal static partial class DocxMathParser
             child.Name == MathNamespace + "t" || child.Name == MathNamespace + "rPr" || child.Name == WordprocessingNamespace + "rPr" ||
             DocxSourceXml.IsNonPrintingMarker(child));
 
-    private static bool HasSupportedRunProperties(XElement element) =>
-        element.Element(MathNamespace + "rPr")?.Elements().Any(property =>
-            property.Name != MathNamespace + "sty" && property.Name != MathNamespace + "scr" &&
-            property.Name != MathNamespace + "nor") != true && HasSupportedNormalTextProperty(element);
-
     private static DocxMathNode ReadLeaf(XElement element, Func<XElement, string, DocxTextRun> readRun)
     {
         if (IsReadableRun(element))
         {
+            var (normalText, literalText, supported) = ReadRunProperties(element);
             return new DocxMathRun(
                 readRun(element, string.Concat(element.Elements(MathNamespace + "t").Select(text => text.Value))),
                 PropertyValue(element, "rPr", "sty"), PropertyValue(element, "rPr", "scr"))
             {
                 PropertiesXml = ReadProperties(element),
-                NormalTextValue = element.Element(MathNamespace + "rPr")?.Element(MathNamespace + "nor") is { } authoredNormal
-                    ? Lokad.OoxPdf.Ooxml.OoxBoolean.ParseElement(authoredNormal, false, valueAttributeName: MathNamespace + "val") : null,
+                NormalTextValue = normalText,
+                LiteralText = literalText,
                 ExplicitFontFamily = (string?)element.Element(WordprocessingNamespace + "rPr")?.Element(WordprocessingNamespace + "rFonts")?.Attribute(WordprocessingNamespace + "ascii")
                     ?? (string?)element.Element(WordprocessingNamespace + "rPr")?.Element(WordprocessingNamespace + "rFonts")?.Attribute(WordprocessingNamespace + "hAnsi"),
-                HasUnsupportedProperties = !HasSupportedRunProperties(element)
+                HasUnsupportedProperties = !supported
             };
         }
         return Unsupported(element);
     }
 
-    private static bool HasSupportedNormalTextProperty(XElement element)
+    private static (bool? NormalText, bool LiteralText, bool Supported) ReadRunProperties(XElement run)
     {
-        XElement[] properties = element.Element(MathNamespace + "rPr")?.Elements(MathNamespace + "nor").ToArray() ?? [];
-        if (properties.Length == 0) { return true; }
-        if (properties.Length != 1 || properties[0].HasElements || !string.IsNullOrWhiteSpace(properties[0].Value) ||
-            properties[0].Attributes().Any(attribute => !attribute.IsNamespaceDeclaration && attribute.Name != MathNamespace + "val"))
-            return false;
-        string? value = (string?)properties[0].Attribute(MathNamespace + "val");
-        return value is null || Lokad.OoxPdf.Ooxml.OoxBoolean.IsTrue(value) || Lokad.OoxPdf.Ooxml.OoxBoolean.IsOff(value);
+        XElement? properties = run.Element(MathNamespace + "rPr");
+        var (normalText, normalSupported) = ReadRunFlag(properties, MathNamespace + "nor");
+        var (literalText, literalSupported) = ReadRunFlag(properties, MathNamespace + "lit");
+        bool propertiesSupported = properties?.Elements().All(property =>
+            property.Name.Namespace == MathNamespace && property.Name.LocalName is "sty" or "scr" or "nor" or "lit") != false;
+        return (normalText, literalText == true, propertiesSupported && normalSupported && literalSupported);
+    }
+
+    private static (bool? Value, bool Supported) ReadRunFlag(XElement? properties, XName name)
+    {
+        if (properties?.Element(name) is not { } flag) return (null, true);
+        string? source = (string?)flag.Attribute(MathNamespace + "val");
+        bool enabled = source is null || OoxBoolean.IsTrue(source);
+        bool supported = !properties.Elements(name).Skip(1).Any() && !flag.HasElements &&
+            string.IsNullOrWhiteSpace(flag.Value) && (enabled || OoxBoolean.IsOff(source)) &&
+            flag.Attributes().All(attribute => attribute.IsNamespaceDeclaration || attribute.Name == MathNamespace + "val");
+        return (enabled, supported);
     }
 
     private static DocxMathUnsupported Unsupported(XElement element) =>

@@ -142,9 +142,11 @@ internal static partial class DocxMathRowLayout
                 foreach (Rune rune in run.Text.Text.EnumerateRunes())
                 {
                     token.ThrowIfCancellationRequested();
-                    int rendered = run.NormalText ? rune.Value : RenderCodePoint(rune.Value, run.MathStyleValue);
+                    int rendered = run.NormalText || run.LiteralText && rune.Value == '-'
+                        ? rune.Value : RenderCodePoint(rune.Value, run.MathStyleValue);
                     if (rendered < 0) { fallback = "UnsupportedMathAlphabet"; return false; }
-                    atoms.Add(new(run, rune, new Rune(rendered), run.NormalText ? AtomKind.Ordinary : Kind(rune.Value)));
+                    AtomKind kind = run.NormalText || run.LiteralText ? AtomKind.Ordinary : Kind(rune.Value);
+                    atoms.Add(new(run, rune, new Rune(rendered), kind));
                 }
             }
             else { fallback = node is DocxMathUnsupported unsupported ? "UnsupportedMathNode:" + unsupported.ElementName : "UnsupportedMathStructureOrStyle"; return false; }

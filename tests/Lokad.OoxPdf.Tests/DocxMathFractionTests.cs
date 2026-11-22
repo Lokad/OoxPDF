@@ -821,6 +821,50 @@ internal static partial class DocxMathFractionTests
             "Equation glue cannot rescale or reposition the already measured script role internally.");
     }
 
+    public static void MathLiteralOperatorsKeepGlyphsAndUseOrdinarySpacing()
+    {
+        var resource = Resource(TestFontBuilder.CreateMathFont(Constants()));
+        DocxMathRow Read(string flag, string character = "+") => DocxMathParser.Read(XElement.Parse($"""
+            <m:oMath xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math">
+              <m:r><m:rPr><m:sty m:val="p"/></m:rPr><m:t>A</m:t></m:r>
+              <m:r><m:rPr>{flag}<m:sty m:val="p"/></m:rPr><m:t>{character}</m:t></m:r>
+              <m:r><m:rPr><m:sty m:val="p"/></m:rPr><m:t>B</m:t></m:r>
+            </m:oMath>
+            """), (_, text) => new DocxTextRun(text, 18d, null, false, false, false, null, "TestFont"), default);
+        DocxMathBox Measure(DocxMathRow row)
+        {
+            TestAssert.True(DocxMathRowLayout.TryMeasure(row, _ => resource, default, out var box, out var reason),
+                reason ?? "Expected a renderable math row.");
+            return TestAssert.NotNull(box);
+        }
+
+        var ordinary = Measure(Read(""));
+        TestAssert.True(ordinary.Glyphs[1].X > ordinary.Glyphs[0].Advance &&
+            ordinary.Glyphs[2].X > ordinary.Glyphs[1].X + ordinary.Glyphs[1].Advance,
+            "The ordinary binary operator adds space on both sides.");
+        foreach (string flag in new[] { """<m:lit m:val="0"/>""", """<m:lit m:val="false"/>""" })
+        {
+            var disabled = Measure(Read(flag));
+            TestAssert.True(disabled.Glyphs.SequenceEqual(ordinary.Glyphs), "An explicit off flag preserves the operator.");
+        }
+        foreach (string flag in new[] { "<m:lit/>", """<m:lit m:val="1"/>""" })
+        {
+            var literal = Measure(Read(flag));
+            TestAssert.Equal("A+B", string.Concat(literal.Glyphs.Select(glyph => char.ConvertFromUtf32(glyph.SourceCodePoint))));
+            TestAssert.Equal(ordinary.Glyphs[1].OriginalGlyph, literal.Glyphs[1].OriginalGlyph);
+            TestAssert.Equal(literal.Glyphs[0].Advance, literal.Glyphs[1].X);
+            TestAssert.Equal(literal.Glyphs[1].X + literal.Glyphs[1].Advance, literal.Glyphs[2].X);
+            TestAssert.Equal(0, literal.InlineBreakAfterGlyphs.Count);
+        }
+        TestAssert.True(DocxMathRowLayout.TryGetRenderCodePoints(Read("<m:lit/>", "-"), default, out var points, out _) &&
+            points.Contains('-') && !points.Contains(0x2212), "A literal hyphen keeps its authored glyph identity.");
+        foreach (string flag in new[] { """<m:lit m:val="unknown"/>""", "<m:lit/><m:lit/>" })
+        {
+            TestAssert.True(!DocxMathRowLayout.TryGetRenderCodePoints(Read(flag), default, out _, out _),
+                "Malformed literal declarations retain the diagnosed fallback.");
+        }
+    }
+
     public static void MathFontScriptRowsRetainChildStylesBaselinesAndSourceOwners()
     {
         var resource = Resource(TestFontBuilder.CreateMathFont(Constants()));

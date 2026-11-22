@@ -20798,6 +20798,7 @@
     "XrefTablePointsAtObjectHeaders"
   ],
   "docx-math-run-metadata": [
+    "=MathLiteralOperatorsKeepGlyphsAndUseOrdinarySpacing",
     "DocxDeletedMathMetadataDoesNotReviveOtherDeletedContent",
     "DocxDeletedMathMetadataKeepsModeFilteringAndSourceOwners",
     "DocxDeletedMathMetadataKeepsPortablePaintAndNeighborContent",

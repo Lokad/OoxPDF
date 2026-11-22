@@ -39,7 +39,8 @@ font/glyph availability still controls whether the authored symbol can be painte
 
 Native equations support bounded common OMML: runs, fractions, scripts, roots,
 accents/bars, delimiters, n-ary operators and supported arrays/matrices. Structural
-pieces can use PDF ActualText. Supported equations also render in placed floating
+pieces can use PDF ActualText. Literal math operators keep their symbols and use
+ordinary spacing. Supported equations also render in placed floating
 text boxes, within their authored and ancestor clips. Placement, baselines, line breaks, large operators
 and font-dependent geometry remain approximate. Unsupported constructs/placements
 are diagnosed and can be omitted. Math fonts and coverage matter.
