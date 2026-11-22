@@ -12,6 +12,7 @@ from pathlib import Path
 import re
 import posixpath
 import subprocess
+from tempfile import TemporaryDirectory
 import unicodedata
 from zipfile import ZipFile
 import xml.etree.ElementTree as ET
@@ -23,7 +24,11 @@ R = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}"
 
 
 def sha(path):
-    return hashlib.sha256(path.read_bytes()).hexdigest().upper()
+    return sha_bytes(path.read_bytes())
+
+
+def sha_bytes(data):
+    return hashlib.sha256(data).hexdigest().upper()
 
 
 def read(path):
@@ -332,26 +337,50 @@ def source_content(path, mode, pages):
 
 def inspect_reference(pdf, inspector, cache):
     pdf_hash, inspector_hash = sha(pdf), sha(inspector)
-    folder = cache / (pdf_hash + "-" + inspector_hash[:12])
-    pin = folder / "identity.json"
-    operations = folder / "text-operations.json"
+    # Legacy entries lack a pin for the log that establishes the page count.
+    folder = cache / ("v2-" + pdf_hash + "-" + inspector_hash[:12])
     if not folder.exists():
-        folder.mkdir(parents=True)
-        with (folder / "inspect.log").open("w", encoding="utf-8") as log:
-            subprocess.run(["dotnet", str(inspector), str(pdf), str(folder), "--text-only"],
-                           stdout=log, stderr=subprocess.STDOUT, check=True)
-        pin.write_text(json.dumps({"PdfSha256": pdf_hash, "InspectorSha256": inspector_hash,
-                                  "OperationsSha256": sha(operations)}, indent=2) + "\n", encoding="utf-8")
-    identity = read(pin)
-    if identity != {"PdfSha256": pdf_hash, "InspectorSha256": inspector_hash, "OperationsSha256": sha(operations)}:
+        cache.mkdir(parents=True, exist_ok=True)
+        with TemporaryDirectory(prefix="reference-inspection-", dir=cache) as temporary:
+            staged = Path(temporary) / "inspection"
+            staged.mkdir()
+            with (staged / "inspect.log").open("w", encoding="utf-8") as log:
+                subprocess.run(["dotnet", str(inspector), str(pdf), str(staged), "--text-only"],
+                               stdout=log, stderr=subprocess.STDOUT, check=True)
+            if (sha(pdf), sha(inspector)) != (pdf_hash, inspector_hash):
+                raise ValueError("Reference PDF or inspector changed during inspection")
+            result = read_reference_inspection(staged, pdf_hash, inspector_hash, creating=True)
+            try:
+                staged.rename(folder)
+            except OSError:
+                # A concurrent inspection can publish the same entry first.
+                if not folder.is_dir():
+                    raise
+            else:
+                return result
+    return read_reference_inspection(folder, pdf_hash, inspector_hash)
+
+
+def read_reference_inspection(folder, pdf_hash, inspector_hash, *, creating=False):
+    pin = folder / "identity.json"
+    operations = (folder / "text-operations.json").read_bytes()
+    log = (folder / "inspect.log").read_bytes()
+    identity = {"PdfSha256": pdf_hash, "InspectorSha256": inspector_hash,
+                "OperationsSha256": sha_bytes(operations), "InspectionLogSha256": sha_bytes(log)}
+    if not creating and read(pin) != identity:
         raise ValueError("Reference text cache identity differs: " + str(folder))
     # Page objects include empty and trailing blank pages. Text-operation page
     # numbers cannot establish the size of an empty reference document.
-    log = folder / "inspect.log"
-    pages = len(re.findall(r"^\d+ \d+ obj: page$", log.read_text(encoding="utf-8-sig"), re.MULTILINE))
+    log_text = log.decode("utf-8-sig").replace("\r\n", "\n")
+    pages = len(re.findall(r"^\d+ \d+ obj: page$", log_text, re.MULTILINE))
     if pages < 1:
         raise ValueError("No inspected reference pages: " + str(folder))
-    return read(operations), sha(operations), pages, sha(log)
+    records = json.loads(operations.decode("utf-8-sig"))
+    if not isinstance(records, list):
+        raise ValueError("Invalid reference text operations: " + str(folder))
+    if creating:
+        pin.write_text(json.dumps(identity, indent=2) + "\n", encoding="utf-8")
+    return records, identity["OperationsSha256"], pages, identity["InspectionLogSha256"]
 
 
 def validate_outcome_modes(cases, outcomes, comparisons):
@@ -453,7 +482,7 @@ def main():
         if not operations_path.is_file():
             raise ValueError("Candidate text inspection is missing: " + folder)
         operations_bytes = operations_path.read_bytes()
-        operations_hash = hashlib.sha256(operations_bytes).hexdigest().upper()
+        operations_hash = sha_bytes(operations_bytes)
         if operations_hash != operations_pin:
             raise ValueError("Candidate text inspection differs: " + folder)
         operations = json.loads(operations_bytes.decode("utf-8-sig"))

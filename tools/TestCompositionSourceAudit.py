@@ -6,6 +6,7 @@ from zipfile import ZipFile
 sys.dont_write_bytecode = True
 from xml.etree import ElementTree as E
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 from tempfile import TemporaryDirectory, gettempdir
 from AuditCompositionContent import (inspect_reference, operation_text, resolve_reference, screen_picture_ink,
@@ -310,28 +311,66 @@ class CachedFieldAuditTests(unittest.TestCase):
 class ReferenceInspectionTests(unittest.TestCase):
     def test_empty_reference_reports_keep_actual_blank_pages(self):
         for page_count in [1, 2]:
-            with TemporaryDirectory() as temporary:
+            with self.subTest(page_count=page_count), TemporaryDirectory() as temporary:
                 root = Path(temporary)
                 pdf, inspector = root / "reference.pdf", root / "inspector.dll"
                 pdf.write_bytes(b"pinned reference")
                 inspector.write_bytes(b"pinned inspector")
                 cache = root / "cache"
-                folder = cache / (sha(pdf) + "-" + sha(inspector)[:12])
-                folder.mkdir(parents=True)
+                key = sha(pdf) + "-" + sha(inspector)[:12]
+                legacy = cache / key
+                legacy.mkdir(parents=True)
+                legacy_operations = legacy / "text-operations.json"
+                legacy_operations.write_text("[]", encoding="utf-8")
+                (legacy / "identity.json").write_text(json.dumps({"PdfSha256": sha(pdf),
+                    "InspectorSha256": sha(inspector), "OperationsSha256": sha(legacy_operations)}), encoding="utf-8")
+                legacy_log = legacy / "inspect.log"
+                legacy_log.write_text("9 0 obj: page\n", encoding="utf-8")
+
+                def inspect(argv, *, stdout, stderr, check):
+                    self.assertEqual(["dotnet", str(inspector), str(pdf)], argv[:3])
+                    self.assertEqual("--text-only", argv[4])
+                    self.assertEqual(subprocess.STDOUT, stderr)
+                    self.assertTrue(check)
+                    (Path(argv[3]) / "text-operations.json").write_text("[]", encoding="utf-8")
+                    stdout.write("2 0 obj: pages\n" + "".join(f"{3 + index} 0 obj: page\n" for index in range(page_count)))
+
+                with patch("AuditCompositionContent.subprocess.run", side_effect=inspect) as process:
+                    result = inspect_reference(pdf, inspector, cache)
+                    self.assertEqual(result, inspect_reference(pdf, inspector, cache))
+                    process.assert_called_once()
+
+                folder = cache / ("v2-" + key)
                 operations = folder / "text-operations.json"
-                operations.write_text("[]", encoding="utf-8")
-                (folder / "identity.json").write_text(json.dumps({"PdfSha256": sha(pdf),
-                    "InspectorSha256": sha(inspector), "OperationsSha256": sha(operations)}), encoding="utf-8")
                 log = folder / "inspect.log"
-                log.write_text("2 0 obj: pages\n" + "".join(f"{3 + index} 0 obj: page\n" for index in range(page_count)), encoding="utf-8")
-                observed, operations_hash, pages, log_hash = inspect_reference(pdf, inspector, cache)
-                self.assertEqual([], observed)
-                self.assertEqual(sha(operations), operations_hash)
-                self.assertEqual(page_count, pages)
-                self.assertEqual(sha(log), log_hash)
-                log.write_text("2 0 obj: pages\n", encoding="utf-8")
-                with self.assertRaises(ValueError):
+                self.assertEqual(([], sha(operations), page_count, sha(log)), result)
+                self.assertEqual("9 0 obj: page\n", legacy_log.read_text(encoding="utf-8"))
+                original_log = log.read_bytes()
+                log.write_text("9 0 obj: page\n" * (3 - page_count), encoding="utf-8")
+                with self.assertRaisesRegex(ValueError, "Reference text cache identity differs"):
                     inspect_reference(pdf, inspector, cache)
+                log.write_bytes(original_log)
+                operations.write_text('[{"DecodedText":"changed"}]', encoding="utf-8")
+                with self.assertRaisesRegex(ValueError, "Reference text cache identity differs"):
+                    inspect_reference(pdf, inspector, cache)
+
+    def test_cold_inspection_without_page_evidence_leaves_no_entry(self):
+        with TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            pdf, inspector = root / "reference.pdf", root / "inspector.dll"
+            pdf.write_bytes(b"pinned reference")
+            inspector.write_bytes(b"pinned inspector")
+            cache = root / "cache"
+
+            def inspect(argv, *, stdout, **_):
+                (Path(argv[3]) / "text-operations.json").write_text("[]", encoding="utf-8")
+                stdout.write("2 0 obj: pages\n")
+
+            with patch("AuditCompositionContent.subprocess.run", side_effect=inspect):
+                with self.assertRaisesRegex(ValueError, "No inspected reference pages"):
+                    inspect_reference(pdf, inspector, cache)
+            self.assertEqual([], list(cache.iterdir()))
+
 
 class AuditFrameworkBindingTests(unittest.TestCase):
     def test_audit_uses_pinned_framework_and_preserves_legacy_identity(self):
@@ -371,13 +410,15 @@ class AuditFrameworkBindingTests(unittest.TestCase):
                 reference = references / 'control-presentation/reference.pdf'
                 reference.parent.mkdir()
                 reference.write_bytes(pdf.read_bytes())
-                cache = root / 'cache' / (sha(reference) + '-' + sha(inspector)[:12])
+                cache = root / 'cache' / ('v2-' + sha(reference) + '-' + sha(inspector)[:12])
                 cache.mkdir(parents=True)
                 ops = cache / 'text-operations.json'
                 ops.write_text('[]', encoding='utf-8')
+                log = cache / 'inspect.log'
+                log.write_text('2 0 obj: pages\n3 0 obj: page\n', encoding='utf-8')
                 (cache / 'identity.json').write_text(json.dumps(dict(PdfSha256=sha(reference), InspectorSha256=sha(inspector),
-                                                                    OperationsSha256=sha(ops))), encoding='utf-8')
-                (cache / 'inspect.log').write_text('2 0 obj: pages\n3 0 obj: page\n', encoding='utf-8')
+                                                                    OperationsSha256=sha(ops),
+                                                                    InspectionLogSha256=sha(log))), encoding='utf-8')
                 row = dict(Id='control', Mode='presentation', InputSha256=sha(source), PdfSha256=sha(pdf),
                            TextOperationsSha256=sha(operations),
                            InspectedPages=1, IgnoredEquationDiagnostics=0)
