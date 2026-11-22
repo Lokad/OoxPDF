@@ -90,6 +90,7 @@ unsupported constructs retain limitations. TrueType outlines embed; CFF faces
 require an embeddable fallback. Missing glyphs use diagnosed replacement.
 Local SVG gradient templates reuse the authored stops and their source colors.
 SVG paint accepts opaque numeric `rgb()` colors and separate opacity properties.
+Supported inline style declarations honor `!important` precedence.
 Basic shape geometry, stroke widths, dash lengths and dash offsets accept viewport percentages.
 Rectangles and ellipses resolve an automatic radius from the other radius.
 SVG paths accept absolute and relative cubic and quadratic Bézier commands,

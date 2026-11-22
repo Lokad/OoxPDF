@@ -418,6 +418,24 @@ internal static partial class SvgTextTests
             "1 0 0 RG", " c" + Environment.NewLine, "/PatternType 2", "0 0.502 0 rg");
     }
 
+    public static void SvgImportantInlinePaintMatchesExplicitPaintInBothFormats()
+    {
+        AssertSvgPaintInBothFormats(
+            Picture("stroke=\"red\"", "stroke-width=\"4\""),
+            Picture(
+                """stroke="none" style="stroke:red ! IMPORTANT;STROKE:none" """,
+                """stroke-width="1" style="stroke-width:2!important;stroke-width:4!important;stroke-width:0" """),
+            "1 0 0 RG", "/PatternType 2", "0 0.502 0 rg");
+
+        static string Picture(string solid, string gradient) => Svg($"""
+            <defs><linearGradient id="ramp"><stop stop-color="blue"/>
+              <stop offset="1" stop-color="purple"/></linearGradient></defs>
+            <path d="M12 12 L100 38" fill="none" stroke-width="4" {solid}/>
+            <path d="M12 42 L100 68" fill="none" stroke="url(#ramp)" {gradient}/>
+            <rect x="136" y="64" width="9" height="10" fill="green"/>
+            """);
+    }
+
     private static string CurveStrokeSvg(string solid, string gradient) => Svg($"""
         <defs><linearGradient id="ramp"><stop stop-color="blue"/>
           <stop offset="1" stop-color="purple"/></linearGradient></defs>

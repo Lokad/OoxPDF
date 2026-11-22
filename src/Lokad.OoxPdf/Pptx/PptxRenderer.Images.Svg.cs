@@ -1422,6 +1422,7 @@ internal sealed partial class PptxRenderer
         }
 
         var declarations = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        HashSet<string>? importantNames = null;
         foreach (string declaration in style.Split((char)59))
         {
             int colon = declaration.IndexOf((char)58);
@@ -1432,10 +1433,28 @@ internal sealed partial class PptxRenderer
 
             string name = declaration.Substring(0, colon).Trim();
             string value = declaration.Substring(colon + 1).Trim();
-            if (name.Length != 0 && value.Length != 0)
+            if (name.Length == 0 || value.Length == 0)
             {
-                declarations[name] = value;
+                continue;
             }
+
+            int marker = value.LastIndexOf('!');
+            if (marker >= 0 && value.AsSpan(marker + 1).Trim().Equals("important", StringComparison.OrdinalIgnoreCase))
+            {
+                value = value[..marker].TrimEnd();
+                if (value.Length == 0)
+                {
+                    continue;
+                }
+
+                (importantNames ??= new(StringComparer.OrdinalIgnoreCase)).Add(name);
+            }
+            else if (importantNames?.Contains(name) == true)
+            {
+                continue;
+            }
+
+            declarations[name] = value;
         }
 
         return declarations;

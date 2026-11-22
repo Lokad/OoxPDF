@@ -669,6 +669,7 @@
     "=SvgPointListsWithTrailingCoordinateKeepCompletePairsInBothFormats",
     "=SvgSmoothCubicsMatchExplicitCurvesInBothFormats",
     "=SvgQuadraticCurvesMatchExplicitCubicsInBothFormats",
+    "=SvgImportantInlinePaintMatchesExplicitPaintInBothFormats",
     "=SvgTransparentFillKeepsTranslucentGradientStrokeInBothFormats",
     "=SvgPercentageOpacityMatchesUnitOpacityInBothFormats",
     "=SvgConstantLinearGradientsMatchSolidPaintInBothFormats",
