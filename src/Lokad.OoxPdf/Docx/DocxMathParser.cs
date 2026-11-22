@@ -202,8 +202,8 @@ internal static partial class DocxMathParser
         {
             "rFonts" or "sz" or "szCs" or "color" or "i" or "iCs" or "b" or "bCs" or "lang" or "rStyle" or
                 "u" or "strike" or "dstrike" or "vanish" or "caps" or "smallCaps" or "vertAlign" or "spacing" or "highlight" or "shd" => true,
-            // Proofing metadata has no effect on the painted control character.
-            "noProof" => HasBooleanValue((string?)property.Attribute(WordprocessingNamespace + "val")) &&
+            // Proofing and web-view flags preserve the control's paginated paint.
+            "noProof" or "webHidden" => HasBooleanValue((string?)property.Attribute(WordprocessingNamespace + "val")) &&
                 property.Attributes().All(a => a.IsNamespaceDeclaration || a.Name == WordprocessingNamespace + "val"),
             _ => false
         });

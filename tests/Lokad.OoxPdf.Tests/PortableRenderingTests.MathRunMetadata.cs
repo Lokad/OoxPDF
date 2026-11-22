@@ -61,44 +61,48 @@ internal static partial class PortableRenderingTests
             fontResourceFilter: name => name.StartsWith("Eq", StringComparison.Ordinal)).Select(show => show.Text))
         .Normalize(NormalizationForm.FormKC);
 
-    public static void PortableRenderingMathControlProofingKeepsComposedFractions()
+    public static void PortableRenderingMathControlMetadataKeepsComposedFractions()
     {
         const string fixture = "CompositionProbes/composed-static-svg-report";
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
         {
             var beforeDiagnostics = new List<OoxPdfDiagnostic>();
-            var afterDiagnostics = new List<OoxPdfDiagnostic>();
             var beforeSource = DocxInlineCompositionTests.ReadMutation(fixture, mode, false, false,
                 diagnosticSink: beforeDiagnostics.Add);
-            var afterSource = DocxInlineCompositionTests.ReadMutation(fixture, mode, false, false, (xml, w, m) =>
-            {
-                var fractions = xml.Descendants(m + "f").ToArray();
-                TestAssert.Equal(3, fractions.Length);
-                string?[] values = [null, "1", "0"];
-                for (int i = 0; i < values.Length; i++)
-                {
-                    var proofing = new XElement(w + "noProof");
-                    proofing.SetAttributeValue(w + "val", values[i]);
-                    fractions[i].AddFirst(new XElement(m + "fPr",
-                        new XElement(m + "ctrlPr", new XElement(w + "rPr", proofing))));
-                }
-            }, diagnosticSink: afterDiagnostics.Add);
-
             var renderer = new DocxRenderer(new PinnedResolver(mathFont: true), mode,
                 mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
                     OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var before = renderer.RenderPagesAsync(beforeSource, beforeDiagnostics.Add, default).ToBlockingEnumerable().ToArray();
-            var after = renderer.RenderPagesAsync(afterSource, afterDiagnostics.Add, default).ToBlockingEnumerable().ToArray();
-            string text = string.Concat(after.Select(ReadPortableEquationGlyphs));
-            TestAssert.Equal(3, text.Split("x+2y", StringSplitOptions.None).Length - 1);
-            TestAssert.Equal(before.Length, after.Length);
-            for (int page = 0; page < before.Length; page++)
+
+            foreach (string propertyName in new[] { "noProof", "webHidden" })
             {
-                TestAssert.Equal(before[page].Content, after[page].Content);
-                TestAssert.True(before[page].Annotations.SequenceEqual(after[page].Annotations), "Proofing metadata preserves navigation.");
+                var afterDiagnostics = new List<OoxPdfDiagnostic>();
+                var afterSource = DocxInlineCompositionTests.ReadMutation(fixture, mode, false, false, (xml, w, m) =>
+                {
+                    var fractions = xml.Descendants(m + "f").ToArray();
+                    TestAssert.Equal(3, fractions.Length);
+                    string?[] values = [null, "1", "0"];
+                    for (int i = 0; i < values.Length; i++)
+                    {
+                        var property = new XElement(w + propertyName);
+                        property.SetAttributeValue(w + "val", values[i]);
+                        fractions[i].AddFirst(new XElement(m + "fPr",
+                            new XElement(m + "ctrlPr", new XElement(w + "rPr", property))));
+                    }
+                }, diagnosticSink: afterDiagnostics.Add);
+                var after = renderer.RenderPagesAsync(afterSource, afterDiagnostics.Add, default).ToBlockingEnumerable().ToArray();
+                string text = string.Concat(after.Select(ReadPortableEquationGlyphs));
+                TestAssert.Equal(3, text.Split("x+2y", StringSplitOptions.None).Length - 1);
+                TestAssert.Equal(before.Length, after.Length);
+                for (int page = 0; page < before.Length; page++)
+                {
+                    TestAssert.Equal(before[page].Content, after[page].Content);
+                    TestAssert.True(before[page].Annotations.SequenceEqual(after[page].Annotations),
+                        $"{propertyName} preserves navigation.");
+                }
+                TestAssert.True(beforeDiagnostics.SequenceEqual(afterDiagnostics), $"{propertyName} preserves equation diagnostics.");
+                CheckWrittenPages(after);
             }
-            TestAssert.True(beforeDiagnostics.SequenceEqual(afterDiagnostics), "Proofing metadata preserves equation diagnostics.");
-            CheckWrittenPages(after);
         }
     }
 
