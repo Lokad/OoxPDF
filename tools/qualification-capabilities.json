@@ -659,6 +659,7 @@
     "SvgMissingPaintServersUseAuthoredFallback",
     "SvgCurrentColorUsesEachPaintedElementsColor",
     "SvgPrimitivePixelUnitsMatchUserCoordinates",
+    "=SvgUserSpaceGradientPixelUnitsMatchUserCoordinates",
     "SvgInheritedPaintPropertiesKeepNearestAndLocalOwners",
     "SvgInheritedOpacityPreservesTransparentOverlayContent",
     "SvgZeroWidthStrokesKeepTheirIndependentFill",

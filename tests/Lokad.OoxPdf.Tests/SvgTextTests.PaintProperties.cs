@@ -141,6 +141,38 @@ internal static partial class SvgTextTests
         TestAssert.Equal(0, diagnostics.Count);
     }
 
+    public static void SvgUserSpaceGradientPixelUnitsMatchUserCoordinates()
+    {
+        string Picture(string unit) => Svg($$"""
+            <defs>
+              <linearGradient id="linear" gradientUnits="userSpaceOnUse"
+                              x1="10{{unit}}" y1="15{{unit}}" x2="90{{unit}}" y2="15{{unit}}">
+                <stop offset="0" stop-color="red"/><stop offset="1" stop-color="blue"/>
+              </linearGradient>
+              <radialGradient id="radial" gradientUnits="userSpaceOnUse"
+                              cx="220{{unit}}" cy="45{{unit}}" r="35{{unit}}"
+                              fx="220{{unit}}" fy="45{{unit}}">
+                <stop offset="0" stop-color="yellow"/><stop offset="1" stop-color="green"/>
+              </radialGradient>
+            </defs>
+            <rect x="10" y="15" width="80" height="60" fill="url(#linear)"/>
+            <rect x="20" y="103" width="60" height="36" fill="none" stroke="url(#linear)" stroke-width="6"/>
+            <circle cx="220" cy="45" r="35" fill="url(#radial)"/>
+            """);
+
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        var expected = Paint(Picture(""), diagnostics);
+        var actual = Paint(Picture("px"), diagnostics);
+        TestAssert.Contains("0.988 0 0.012 rg", expected.ToString());
+        TestAssert.Contains("0.012 0 0.988 rg", expected.ToString());
+        TestAssert.Equal(1, expected.ShadingPatterns.Count);
+        TestAssert.Equal(1, expected.Shadings.Count);
+        AssertEquivalentSvgPaint(expected, actual, "User-space gradient coordinates give the same paint with pixel units.");
+        TestAssert.Equal(expected.ShadingPatterns[0].Pattern.ResourceKey, actual.ShadingPatterns.Single().Pattern.ResourceKey);
+        TestAssert.Equal(expected.Shadings[0].Shading.ResourceKey, actual.Shadings.Single().Shading.ResourceKey);
+        TestAssert.Equal(0, diagnostics.Count);
+    }
+
     public static void SvgCurrentColorUsesEachPaintedElementsColor()
     {
         var expected = Paint(Svg("""

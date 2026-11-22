@@ -1211,9 +1211,8 @@ internal sealed partial class PptxRenderer
         };
     }
 
-    // RV07: gradient coordinates resolve percentages as fractions in bounding
-    // boxes (spec-exact); user-space percentages and garbage skip the gradient
-    // so referencing paths diagnose instead of dropping the whole picture.
+    // Bounding-box coordinates accept fractions or percentages. User-space
+    // coordinates share the numeric and pixel units used by shapes and strokes.
     private static bool TryReadSvgGradientCoordinate(XElement gradient, string name, double fallback, bool percentAsFraction, out double value)
     {
         value = fallback;
@@ -1237,7 +1236,9 @@ internal sealed partial class PptxRenderer
             }
             return false;
         }
-        return double.TryParse(trimmed, NumberStyles.Float, CultureInfo.InvariantCulture, out value) && double.IsFinite(value);
+        return percentAsFraction
+            ? double.TryParse(trimmed, NumberStyles.Float, CultureInfo.InvariantCulture, out value) && double.IsFinite(value)
+            : TryReadSvgNumberOrPixels(trimmed, out value);
     }
 
     // RV07: CSS style declarations override presentation attributes; opacity
