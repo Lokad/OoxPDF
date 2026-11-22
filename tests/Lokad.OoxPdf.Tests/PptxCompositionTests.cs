@@ -602,18 +602,31 @@ internal static class PptxCompositionTests
         TestAssert.True(diagnostics.Any(d => d.Id == "PPTX_UNSUPPORTED_GRAPHIC_FRAME" && d.PartName == "/ppt/slides/slide1.xml"), "Unknown graphic frame should still emit a slide-scoped diagnostic.");
     }
 
-    public static void PptxSyntheticGroupedTableUsesGroupTransform()
+    public static void PptxSyntheticGroupedTableUsesGroupTransform() =>
+        AssertGroupedTablePaint(includeUnknownFrame: false);
+
+    public static void PptxSyntheticGroupedTableUsesGroupTransformWithUnknownGraphicFrame() =>
+        AssertGroupedTablePaint(includeUnknownFrame: true);
+
+    private static void AssertGroupedTablePaint(bool includeUnknownFrame)
     {
+        const string unknownFrame = """
+            <p:graphicFrame>
+              <p:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="914400"/></p:xfrm>
+              <a:graphic><a:graphicData uri="urn:unknown"/></a:graphic>
+            </p:graphicFrame>
+            """;
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
         {
             ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
             ["_rels/.rels"] = PptxTests.PackageRelationship(),
             ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
             ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
-            ["ppt/slides/slide1.xml"] = """
+            ["ppt/slides/slide1.xml"] = $"""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
                   <p:cSld><p:spTree>
+                    {(includeUnknownFrame ? unknownFrame : string.Empty)}
                     <p:grpSp>
                       <p:nvGrpSpPr><p:cNvPr id="1" name="Table group"/><p:nvPr/></p:nvGrpSpPr>
                       <p:grpSpPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="914400"/><a:chOff x="0" y="0"/><a:chExt cx="1828800" cy="914400"/></a:xfrm></p:grpSpPr>
@@ -633,55 +646,23 @@ internal static class PptxCompositionTests
                 </p:sld>
                 """
         });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, output);
+        string output = TestFixtures.NewTemporaryPath(".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("72 396 144 72 re f", pdf);
-    }
+        var paintedPaths = new List<string>();
+        RgbColor[] colors = PptxChartPaletteTests.ReadColoredPaints(pdf, paintedPaths.Add).ToArray();
+        RgbColor cellColor = colors.Where((_, i) => paintedPaths[i] is "72 396 144 72 re f" or "72 396 144 72 re f*").Single();
+        TestAssert.Equal(new RgbColor(217, 234, 211), cellColor);
 
-    public static void PptxSyntheticGroupedTableUsesGroupTransformWithUnknownGraphicFrame()
-    {
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        OoxPdfDiagnostic[] unsupported = diagnostics.Where(d => d.Id == "PPTX_UNSUPPORTED_GRAPHIC_FRAME").ToArray();
+        TestAssert.Equal(includeUnknownFrame ? 1 : 0, unsupported.Length);
+        if (includeUnknownFrame)
         {
-            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
-            ["_rels/.rels"] = PptxTests.PackageRelationship(),
-            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
-            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
-            ["ppt/slides/slide1.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <p:cSld><p:spTree>
-                    <p:graphicFrame>
-                      <p:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="914400"/></p:xfrm>
-                      <a:graphic><a:graphicData uri="urn:unknown"/></a:graphic>
-                    </p:graphicFrame>
-                    <p:grpSp>
-                      <p:nvGrpSpPr><p:cNvPr id="1" name="Table group"/><p:nvPr/></p:nvGrpSpPr>
-                      <p:grpSpPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="914400"/><a:chOff x="0" y="0"/><a:chExt cx="1828800" cy="914400"/></a:xfrm></p:grpSpPr>
-                      <p:graphicFrame>
-                        <p:xfrm><a:off x="0" y="0"/><a:ext cx="1828800" cy="914400"/></p:xfrm>
-                        <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table">
-                          <a:tbl>
-                            <a:tblGrid><a:gridCol w="1828800"/></a:tblGrid>
-                            <a:tr h="914400">
-                              <a:tc><a:txBody><a:bodyPr/><a:lstStyle/><a:p/></a:txBody><a:tcPr><a:solidFill><a:srgbClr val="D9EAD3"/></a:solidFill></a:tcPr></a:tc>
-                            </a:tr>
-                          </a:tbl>
-                        </a:graphicData></a:graphic>
-                      </p:graphicFrame>
-                    </p:grpSp>
-                  </p:spTree></p:cSld>
-                </p:sld>
-                """
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, output);
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("72 396 144 72 re f", pdf);
+            TestAssert.Equal("/ppt/slides/slide1.xml", unsupported[0].PartName);
+            TestAssert.Equal(1, unsupported[0].SlideIndex);
+        }
     }
 
     public static void PptxSyntheticGroupedBarChartUsesGroupTransform()
