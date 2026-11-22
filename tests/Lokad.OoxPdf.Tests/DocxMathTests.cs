@@ -622,6 +622,30 @@ internal static partial class DocxMathTests
             "Unparsed synthetic properties cannot silently acquire neutral semantics.");
     }
 
+    public static void DocxMathArgumentControlsRequireTrailingPrintNeutralProperties()
+    {
+        const string literal = "<m:r><m:t>x</m:t></m:r>";
+        foreach ((string argument, bool supported, int? size) in new (string, bool, int?)[]
+        {
+            (literal + "<m:ctrlPr/>", true, null),
+            ("<m:argPr><m:argSz m:val='-1'/></m:argPr>" + literal +
+                "<m:ctrlPr><w:rPr><w:noProof w:val='0'/><w:webHidden/></w:rPr></m:ctrlPr>", true, -1),
+            (literal + "<m:ctrlPr><w:rPr><w:color w:val='FF0000'/></w:rPr></m:ctrlPr>", false, null),
+            (literal + "<m:ctrlPr><w:rPr><w:webHidden w:val='?'/></w:rPr></m:ctrlPr>", false, null),
+            (literal + "<m:ctrlPr><w:rPr><w:noProof/><w:noProof/></w:rPr></m:ctrlPr>", false, null),
+            (literal + "<m:ctrlPr/><m:ctrlPr/>", false, null),
+            ("<m:ctrlPr/>" + literal, false, null)
+        })
+        {
+            var row = Parse(XElement.Parse($"<m:oMath xmlns:m='{MathNamespace}' xmlns:w='{WordprocessingNamespace}'>" +
+                $"<m:f><m:num>{argument}</m:num><m:den><m:r><m:t>y</m:t></m:r></m:den></m:f></m:oMath>"));
+            var numerator = ((DocxMathFraction)row.Children.Single()).Numerator;
+            TestAssert.Equal(new DocxMathArgumentProperties(size, !supported), numerator.ArgumentProperties);
+            TestAssert.Equal(supported && (size is null or 0), numerator.HasSupportedProperties);
+            TestAssert.Equal("x", RowText(numerator));
+        }
+    }
+
     public static void DocxMathNeutralArgumentPropertiesShareLiteralAndStructuredDiscovery()
     {
         foreach (string body in new[]

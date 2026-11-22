@@ -20821,6 +20821,8 @@
     "=MathLiteralOperatorsKeepGlyphsAndUseOrdinarySpacing",
     "=DocxMathRunAlignmentAdmitsDisabledFlags",
     "=PortableRenderingDisabledMathAlignmentKeepsComposedFractions",
+    "=DocxMathArgumentControlsRequireTrailingPrintNeutralProperties",
+    "=PortableRenderingNeutralMathArgumentControlsKeepComposedFractions",
     "DocxDeletedMathMetadataDoesNotReviveOtherDeletedContent",
     "DocxDeletedMathMetadataKeepsModeFilteringAndSourceOwners",
     "DocxDeletedMathMetadataKeepsPortablePaintAndNeighborContent",

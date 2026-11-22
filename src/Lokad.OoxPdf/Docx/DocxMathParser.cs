@@ -287,12 +287,27 @@ internal static partial class DocxMathParser
     {
         XElement[] properties = element.Elements().Where(IsProperty).ToArray();
         if (properties.Length == 0) { return null; }
-        if (properties.Length != 1 || properties[0].Name != MathNamespace + "argPr")
+        int argumentPropertyCount = properties.Length;
+        XElement control = properties[^1];
+        if (control.Name == MathNamespace + "ctrlPr")
+        {
+            // Arguments can carry trailing control character properties. Only
+            // controls with no print effect are neutral to the current layout.
+            if (element.Name == MathNamespace + "oMath" || control != element.Elements().Last() ||
+                !HasKnownControl(control))
+                return new(null, true);
+            if (control.Element(WordprocessingNamespace + "rPr") is { } runProperties &&
+                (runProperties.Elements().Any(property => property.Name.LocalName is not ("noProof" or "webHidden")) ||
+                 runProperties.Elements().GroupBy(property => property.Name).Any(group => group.Skip(1).Any())))
+                return new(null, true);
+            argumentPropertyCount--;
+        }
+        if (argumentPropertyCount == 0) { return new(null, false); }
+        if (argumentPropertyCount != 1 || properties[0].Name != MathNamespace + "argPr")
             return new(null, true);
         XElement argument = properties[0];
         XElement[] children = argument.Elements().ToArray();
-        if (argument.Attributes().Any(attribute => !attribute.IsNamespaceDeclaration) ||
-            !string.IsNullOrWhiteSpace(string.Concat(argument.Nodes().OfType<XText>().Select(text => text.Value))))
+        if (argument.Attributes().Any(attribute => !attribute.IsNamespaceDeclaration) || !HasOnlyWhitespaceText(argument))
             return new(null, true);
         if (children.Length == 0) { return new(null, false); }
         if (children.Length != 1 || children[0].Name != MathNamespace + "argSz") { return new(null, true); }
