@@ -3737,7 +3737,7 @@
     "PptxBubbleFixedBoundsAndReversalSharePreparedPlacement",
     "PptxScatterIntervalPolicyKeepsSceneAuthorityAndFallbacks",
     "PptxPointAxisFallbackOwnsLegacyZeroAndUnitBounds",
-    "PptxScatterBetweenCrossingsKeepValueUnitsAndMaximumOwnership",
+    "PptxScatterDirectionsShareCrossingsLabelsAndTickSides",
     "PptxScatterFixedUnitRangesMatchIndependentOfficeBounds",
     "PptxScatterFixedUnitLabelsMarksAndGridsUseOneScale",
     "PptxScatterCurveOrderOwnsBoundsAndHiddenLinesKeepPointBounds",
@@ -4754,7 +4754,6 @@
     "PptxPointAxisFallbackOwnsLegacyZeroAndUnitBounds"
   ],
   "pptx-scatter-direction": [
-    "PptxScatterBetweenCrossingsKeepValueUnitsAndMaximumOwnership",
     "PptxScatterDirectionsMoveDataLabelsWithTheirPoints",
     "PptxScatterDirectionsShareCrossingsLabelsAndTickSides",
     "PptxBubbleFallbackRadiusKeepsLegacyGeometry",
