@@ -6,6 +6,8 @@ development tests and net10 explicitly for compatibility.
 
 ```powershell
 dotnet build Lokad.OoxPdf.slnx -c Release
+$testTemp = (New-Item -ItemType Directory -Force artifacts/test-tmp).FullName
+$env:TMP = $env:TEMP = $env:TMPDIR = $testTemp
 dotnet run --no-build --project tests/Lokad.OoxPdf.Tests -c Release -f net11.0 -- --skip-slow
 dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj -c Release --no-build
 ```
@@ -43,10 +45,10 @@ case-sensitive name. Bare selectors match case-insensitive substrings.
 `-FastGroup` adds fast methods from the named groups. Skips from methods selected
 only by a fast group appear under `GroupOnlySkips`. Use `-ExpectedSkip` with exact
 method names for the primary selection, including methods also in a fast group.
-Keep runner TMP/TEMP in its ignored artifact directory. The qualification command
-owns a fresh physical temporary leaf and removes it after complete passing results;
-failed runs and cleanup refusals retain it. Keep useful inputs/references outside
-that disposable leaf. Direct console runs need caller-owned temporary storage.
+Bind direct console runs to a caller-owned temporary parent under `artifacts/`.
+The console creates and cleans its own child directory. The qualification command
+supplies a fresh parent and removes it when empty after a passing gate. Failed
+runs and cleanup refusals retain scratch. Keep inputs and references outside it.
 
 ## Frozen qualification
 
