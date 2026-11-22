@@ -1302,7 +1302,7 @@ internal sealed partial class PptxRenderer
             failure = SvgFillFailure.UnresolvedGradient;
             return false;
         }
-        if (RgbColor.TryParseCssColor(fill, out RgbColor color))
+        if (TryReadSvgSolidColor(path, style, fill, out RgbColor color))
         {
             paint = new SvgPaint(color, null, opacity);
             failure = SvgFillFailure.None;
@@ -1371,7 +1371,7 @@ internal sealed partial class PptxRenderer
             }
             opacity *= strokeGradient.UniformStopOpacity.Value;
         }
-        else if (RgbColor.TryParseCssColor(strokePaint, out RgbColor parsedColor))
+        else if (TryReadSvgSolidColor(path, style, strokePaint, out RgbColor parsedColor))
         {
             color = parsedColor;
         }
@@ -1416,7 +1416,8 @@ internal sealed partial class PptxRenderer
         {
             IReadOnlyDictionary<string, string> declarations = ReferenceEquals(source, path) ? style : ReadSvgStyleDeclarations(source);
             string? value = ReadSvgPresentationAttribute(source, declarations, name);
-            if (!string.IsNullOrWhiteSpace(value) && !IsSvgInherit(value))
+            if (!string.IsNullOrWhiteSpace(value) && !IsSvgInherit(value) &&
+                (name != "color" || !IsSvgCurrentColor(value)))
             {
                 return value;
             }
@@ -1426,6 +1427,18 @@ internal sealed partial class PptxRenderer
 
     private static bool IsSvgInherit(string value) =>
         value.AsSpan().Trim().Equals("inherit", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsSvgCurrentColor(string value) =>
+        value.AsSpan().Trim().Equals("currentColor", StringComparison.OrdinalIgnoreCase);
+
+    private static bool TryReadSvgSolidColor(XElement element, IReadOnlyDictionary<string, string> style,
+        string value, out RgbColor color)
+    {
+        // A descendant can inherit the paint keyword and supply its own color.
+        if (IsSvgCurrentColor(value))
+            value = ReadSvgInheritedAttribute(element, style, "color") ?? "black";
+        return RgbColor.TryParseCssColor(value, out color);
+    }
 
     private static string? ReadSvgPresentationAttribute(XElement path, IReadOnlyDictionary<string, string> style, string name)
     {

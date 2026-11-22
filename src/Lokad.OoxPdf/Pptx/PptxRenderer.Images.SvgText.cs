@@ -124,7 +124,7 @@ internal sealed partial class PptxRenderer
         RgbColor? color = null;
         if (!string.Equals(fill, "none", StringComparison.OrdinalIgnoreCase))
         {
-            if (!RgbColor.TryParseCssColor(fill ?? "black", out RgbColor parsed)) return false;
+            if (!TryReadSvgSolidColor(element, style, fill ?? "black", out RgbColor parsed)) return false;
             color = parsed;
         }
         string valueText = string.Concat(element.Nodes().OfType<XText>().Select(node => node.Value));

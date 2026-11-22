@@ -141,6 +141,31 @@ internal static partial class SvgTextTests
         TestAssert.Equal(0, diagnostics.Count);
     }
 
+    public static void SvgCurrentColorUsesEachPaintedElementsColor()
+    {
+        var expected = Paint(Svg("""
+            <rect x="20" y="20" width="30" height="30" fill="red"/>
+            <line x1="40" y1="80" x2="80" y2="80" fill="none" stroke="blue" stroke-width="4"/>
+            <text x="20" y="120" font-size="24" fill="#112233">I</text>
+            <rect x="75" y="20" width="30" height="30" fill="black"/>
+            """));
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        var actual = Paint(Svg("""
+            <g color="#112233" fill="currentColor">
+              <rect x="20" y="20" width="30" height="30" color="red"/>
+              <line x1="40" y1="80" x2="80" y2="80" fill="none" color="green"
+                    style="color:blue;stroke:currentColor" stroke-width="4"/>
+              <text x="20" y="120" font-size="24" color="currentColor">I</text>
+            </g>
+            <rect x="75" y="20" width="30" height="30" fill="currentColor"/>
+            """), diagnostics);
+        foreach (string operation in new[] { "1 0 0 rg", "0 0 1 RG", LabelColor, "0 0 0 rg" })
+            TestAssert.Contains(operation, expected.ToString());
+        TestAssert.Equal(1, LabelPaths(expected.ToString()));
+        AssertEquivalentSvgPaint(expected, actual, "Each solid paint uses the color of the element being painted.");
+        TestAssert.Equal(0, diagnostics.Count);
+    }
+
     private static void AssertEquivalentSvgPaint(PdfGraphicsBuilder expected, PdfGraphicsBuilder actual, string reason)
     {
         TestAssert.Equal(expected.ToString(), actual.ToString());
