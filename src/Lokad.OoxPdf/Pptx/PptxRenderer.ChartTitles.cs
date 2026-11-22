@@ -407,20 +407,11 @@ internal sealed partial class PptxRenderer
         // Office centers the title ink on the plot middle: the TJ origin sits exactly
         // at mid minus half the EMITTED width on three cached references (bar 253.9 vs
         // 253.7, column 280.95 vs 280.8, top-right 245.09 vs 245.0). The caller-measured
-        // textWidth uses the chart-level size while runs emit at run-level sizes, so the
-        // width is remeasured here with the merged run styles that drive emission.
-        double emittedTitleWidth = 0d;
-        if (textRuns.Count != 0)
-        {
-            var titleMeasurer = new ChartTextMeasurer(fontResolver);
-            foreach (ChartTextRunOverride titleRun in textRuns)
-            {
-                if (!string.IsNullOrEmpty(titleRun.Text))
-                {
-                    emittedTitleWidth += Math.Max(0d, (await titleMeasurer.MeasureAsync(titleRun.Text, style.Merge(titleRun.TextStyle)).ConfigureAwait(false)));
-                }
-            }
-        }
+        // textWidth uses the chart-level size. Use the same measured run styles for
+        // centering and emission.
+        List<ChartTextRunLayout> measuredRuns = await MeasureChartRichTextRunsAsync(
+            textRuns, style, new ChartTextMeasurer(fontResolver)).ConfigureAwait(false);
+        double emittedTitleWidth = measuredRuns.Sum(run => run.Width);
 
         double centeredTitleWidth = emittedTitleWidth > 0d ? emittedTitleWidth : textWidth;
         double baselineY = plotBox.Y + plotBox.Height / 2d - centeredTitleWidth / 2d;
@@ -429,22 +420,8 @@ internal sealed partial class PptxRenderer
         RenderChartShapeStyle(graphics, boxX, boxY, titleHeight, textWidth, shapeStyle);
         var runs = new List<TextRun>();
         List<ChartTextRunLink>? axisLinks = chart?.Relationships is null ? null : new List<ChartTextRunLink>();
-        await AddChartRichTextRunsAsync(
-            runs,
-            textRuns,
-            text,
-            baselineX,
-            baselineY,
-            textWidth,
-            titleHeight,
-            frame.X,
-            frame.Y,
-            frame.Width,
-            frame.Height,
-            style,
-            TextAlignment.Left,
-            fontResolver,
-            axisLinks).ConfigureAwait(false);
+        AddMeasuredChartTextRuns(runs, measuredRuns, emittedTitleWidth, text, baselineX, baselineY, textWidth,
+            titleHeight, new ChartLayoutBox(frame.X, frame.Y, frame.Width, frame.Height), style, TextAlignment.Left, axisLinks);
         RotateChartAxisTitle(runs, axisLinks, baselineX, baselineY);
         RenderedFonts axisFonts = (await RenderChartTextRunsAsync(runs, graphics, chartFonts, "CAT", fontResolver, diagnosticSink).ConfigureAwait(false));
         await AddChartTextRunHyperlinkAnnotationsAsync(axisLinks, chart, context, axisFonts, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false);

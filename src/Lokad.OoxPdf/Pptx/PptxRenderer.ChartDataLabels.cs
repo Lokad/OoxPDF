@@ -312,9 +312,9 @@ internal sealed partial class PptxRenderer
         return ExpandChartLabelClipToText(clip, new(x, bottom, width, top - bottom));
     }
 
-    private static async ValueTask AddChartRichTextRunsAsync(List<TextRun> runs, IReadOnlyList<ChartTextRunOverride> richTextRuns, string fallbackText, double x, double y, double width, double height, double clipX, double clipY, double clipWidth, double clipHeight, ChartTextStyle style, TextAlignment alignment, PresentationFontResolver? fontResolver, List<ChartTextRunLink>? links = null, bool admitTextOverflow = false)
+    private static async ValueTask<List<ChartTextRunLayout>> MeasureChartRichTextRunsAsync(
+        IReadOnlyList<ChartTextRunOverride> richTextRuns, ChartTextStyle style, ChartTextMeasurer textMeasurer)
     {
-        var textMeasurer = new ChartTextMeasurer(fontResolver);
         var measuredRuns = new List<ChartTextRunLayout>(richTextRuns.Count);
         foreach (ChartTextRunOverride run in richTextRuns)
         {
@@ -325,24 +325,34 @@ internal sealed partial class PptxRenderer
                 measuredRuns.Add(new ChartTextRunLayout(run.Text, runStyle, runWidth,
                     HyperlinkClickId: run.HyperlinkClickId, HyperlinkClickAction: run.HyperlinkClickAction));
         }
-        ChartTextRunLayout[] richRuns = measuredRuns.ToArray();
+        return measuredRuns;
+    }
+
+    private static async ValueTask AddChartRichTextRunsAsync(List<TextRun> runs,
+        IReadOnlyList<ChartTextRunOverride> richTextRuns, string fallbackText, double x, double y,
+        double width, double height, double clipX, double clipY, double clipWidth, double clipHeight,
+        ChartTextStyle style, TextAlignment alignment, PresentationFontResolver? fontResolver,
+        List<ChartTextRunLink>? links = null, bool admitTextOverflow = false)
+    {
+        var textMeasurer = new ChartTextMeasurer(fontResolver);
+        List<ChartTextRunLayout> richRuns = await MeasureChartRichTextRunsAsync(richTextRuns, style, textMeasurer).ConfigureAwait(false);
         double totalWidth = richRuns.Sum(run => run.Width);
+        ChartLayoutBox clip = new(clipX, clipY, clipWidth, clipHeight);
         if (admitTextOverflow)
         {
-            if (richRuns.Length == 0)
+            if (richRuns.Count == 0)
                 totalWidth = await textMeasurer.MeasureAsync(fallbackText, style).ConfigureAwait(false);
             // Whole text emission clamps negative alignment space; split runs
             // retain their existing centered/right-aligned source origin.
             double free = Math.Max(1d, width) - totalWidth;
-            if (richRuns.Length == 0) free = Math.Max(0d, free);
+            if (richRuns.Count == 0) free = Math.Max(0d, free);
             double textX = alignment switch
             {
                 TextAlignment.Center => x + free / 2d,
                 TextAlignment.Right => x + free,
                 _ => x
             };
-            ChartLayoutBox clip = new(clipX, clipY, clipWidth, clipHeight);
-            if (richRuns.Length == 0)
+            if (richRuns.Count == 0)
                 clip = await AdmitChartLabelInkAsync(clip, fallbackText, style, textX, y, totalWidth, textMeasurer).ConfigureAwait(false);
             else
             {
@@ -354,11 +364,17 @@ internal sealed partial class PptxRenderer
                     textCursor += runWidth;
                 }
             }
-            (clipX, clipY, clipWidth, clipHeight) = (clip.X, clip.Y, clip.Width, clip.Height);
         }
-        if (richRuns.Length == 0)
+        AddMeasuredChartTextRuns(runs, richRuns, totalWidth, fallbackText, x, y, width, height, clip, style, alignment, links);
+    }
+
+    private static void AddMeasuredChartTextRuns(List<TextRun> runs, IReadOnlyList<ChartTextRunLayout> richRuns,
+        double totalWidth, string fallbackText, double x, double y, double width, double height, ChartLayoutBox clip,
+        ChartTextStyle style, TextAlignment alignment, List<ChartTextRunLink>? links)
+    {
+        if (richRuns.Count == 0)
         {
-            runs.Add(CreateChartTextRun(fallbackText, x, y, width, height, clipX, clipY, clipWidth, clipHeight, style, alignment));
+            runs.Add(CreateChartTextRun(fallbackText, x, y, width, height, clip.X, clip.Y, clip.Width, clip.Height, style, alignment));
             return;
         }
 
@@ -372,7 +388,7 @@ internal sealed partial class PptxRenderer
         foreach (ChartTextRunLayout run in richRuns)
         {
             double runWidth = Math.Max(0.1d, run.Width);
-            TextRun richRun = CreateChartTextRun(run.Text, cursor, y, runWidth, height, clipX, clipY, clipWidth, clipHeight, run.Style, TextAlignment.Left) with { PreventCoalesce = true };
+            TextRun richRun = CreateChartTextRun(run.Text, cursor, y, runWidth, height, clip.X, clip.Y, clip.Width, clip.Height, run.Style, TextAlignment.Left) with { PreventCoalesce = true };
             runs.Add(richRun);
             if (links is not null && (!string.IsNullOrEmpty(run.HyperlinkClickId) || !string.IsNullOrEmpty(run.HyperlinkClickAction)))
             {
