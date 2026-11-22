@@ -1020,9 +1020,8 @@ internal static partial class PptxChartLegendsTests
         TestAssert.Equal(PptxSceneChartManualLayoutMode.Unknown, layout.YModeKind);
         TestAssert.Equal(PptxSceneChartManualLayoutMode.Unknown, layout.WidthModeKind);
         TestAssert.Equal(PptxSceneChartManualLayoutMode.Unknown, layout.HeightModeKind);
-        TestAssert.Equal(string.Empty, layout.LayoutTarget);
-        TestAssert.Equal(string.Empty, layout.XMode);
-        TestAssert.Equal(string.Empty, layout.WidthMode);
+        TestAssert.True(string.IsNullOrEmpty(layout.LayoutTarget) && string.IsNullOrEmpty(layout.XMode) &&
+            string.IsNullOrEmpty(layout.WidthMode), "An absent plot layout has no authored mode tokens.");
     }
 
     public static void PptxScenePreservesChartNumericPointIndicesAndBlanks()

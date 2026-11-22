@@ -521,14 +521,15 @@ internal static class PptxCompositionTests
         var page = new PptxRenderer(new PortableRenderingTests.PinnedResolver())
             .RenderPagesAsync(document, package, diagnostics.Add, default).ToBlockingEnumerable().Single();
 
-        const string cover = "72 396 288 72 re f";
         var paths = new List<string>();
         RgbColor[] colors = PptxChartPaletteTests.ReadColoredPaints(page.Content, paths.Add, includeNeutral: true).ToArray();
-        TestAssert.Equal(new RgbColor(255, 0, 0), colors.Where((_, index) => paths[index] == cover).Single());
+        int cover = Enumerable.Range(0, paths.Count)
+            .Single(index => paths[index] is "72 396 288 72 re f" or "72 396 288 72 re f*");
+        TestAssert.Equal(new RgbColor(255, 0, 0), colors[cover]);
         TestAssert.True(!PptxChartPaletteTests.ReadColoredPaints(page.Content, strokes: true, includeNeutral: true).Any(),
             "Both shapes explicitly suppress their outlines.");
 
-        int coverIndex = page.Content.IndexOf(cover, StringComparison.Ordinal);
+        int coverIndex = page.Content.IndexOf(paths[cover], StringComparison.Ordinal);
         var beforeCover = new PdfPage(page.Width, page.Height, page.Content[..coverIndex], page.Fonts);
         string text = string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(beforeCover, usePageCoordinates: false,
             honorActualText: false).Select(show => show.Text));
