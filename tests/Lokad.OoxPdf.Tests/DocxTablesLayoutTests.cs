@@ -1496,93 +1496,45 @@ internal static class DocxTablesLayoutTests
 
     public static void DocxTableExactTallRowSplitsNineAndOneLikeOffice()
     {
-        // RV06 pagination probe (edge-page-ex48, Word 16.0): a 10-line exact-48 row
-        // following two short exact-48 lines splits 9/1 across the page boundary
-        // (11 lines on page one). Pre-fix the row-level split gate saw no baseline
-        // below its unfloored boundary and pushed the whole row to page two.
-        DocxParagraph ExactLine(string text)
-        {
-            return DocxTests.CreateDocxLayoutParagraph(text, 12d, 48d) with
-            {
-                SpacingAfterPoints = 8d,
-                Spacing = new DocxParagraphSpacing(null, null, null, null, null, null, null, "exact", null)
-            };
-        }
-
-        var firstCell = new DocxTableCell([ExactLine("Short 1"), ExactLine("Short 2")], null, null, null, null, [], DocxTableCellMargins.Empty);
-        DocxParagraph[] tallParas = Enumerable.Range(1, 10)
-            .Select(index => ExactLine("Exact tall line " + index.ToString(CultureInfo.InvariantCulture) + " padding words"))
-            .ToArray();
-        var secondCell = new DocxTableCell(tallParas, null, null, null, null, [], DocxTableCellMargins.Empty);
-        DocxTable table = new(null, [468d], [new DocxTableRow([firstCell], null), new DocxTableRow([secondCell], null)]);
-        DocxDocument document = new(
-            612d,
-            792d,
-            72d,
-            72d,
-            72d,
-            72d,
-            DocxPageSettings.Empty,
-            [],
-            [],
-            [],
-            [new DocxTableElement(table)],
-            [],
-            [table]);
-
-        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-            .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
-        TestAssert.Equal(2, layout.Pages.Count);
-        int firstPageCellLines = layout.Pages[0].Items.OfType<DocxTableRowLayout>().SelectMany(row => row.Cells).Sum(cell => cell.TextLines.Count);
-        int secondPageCellLines = layout.Pages[1].Items.OfType<DocxTableRowLayout>().SelectMany(row => row.Cells).Sum(cell => cell.TextLines.Count);
-        TestAssert.Equal(11, firstPageCellLines);
-        TestAssert.Equal(1, secondPageCellLines);
+        // Word 16.0 edge-page-ex48: two short lines precede the 9/1 split of the tall row.
+        // The unfloored split gate previously moved the entire tall row to page two.
+        AssertExactTallRowPageContents(792d);
     }
 
     public static void DocxTableExactRowSplitsWhenBoundaryClearsLastBaseline()
     {
-        // RV06 pagination probe (edge-page-ex48-r550, Word 16.0): with 550pt left
-        // for a 560pt exact-48 row, the boundary falls below the last baseline
-        // (17.6pt above the row bottom) but above the row bottom, and Office keeps
-        // the floored 9 lines on page one. Pre-fix the split gate tested the
-        // unfloored boundary, saw no baseline below it, and pushed the whole row.
-        DocxParagraph ExactLine(string text)
-        {
-            return DocxTests.CreateDocxLayoutParagraph(text, 12d, 48d) with
-            {
-                SpacingAfterPoints = 8d,
-                Spacing = new DocxParagraphSpacing(null, null, null, null, null, null, null, "exact", null)
-            };
-        }
+        // Word 16.0 edge-page-ex48-r550: 550pt remain for a 560pt row. The boundary
+        // clears the final baseline but still falls inside the row. Nine tall lines fit.
+        AssertExactTallRowPageContents(806d);
+    }
 
-        var firstCell = new DocxTableCell([ExactLine("Short 1"), ExactLine("Short 2")], null, null, null, null, [], DocxTableCellMargins.Empty);
-        DocxParagraph[] tallParas = Enumerable.Range(1, 10)
-            .Select(index => ExactLine("Exact tall line " + index.ToString(CultureInfo.InvariantCulture) + " padding words"))
-            .ToArray();
-        var secondCell = new DocxTableCell(tallParas, null, null, null, null, [], DocxTableCellMargins.Empty);
+    private static void AssertExactTallRowPageContents(double pageHeight)
+    {
+        static DocxParagraph ExactLine(string text) => DocxTests.CreateDocxLayoutParagraph(text, 12d, 48d) with
+        {
+            SpacingAfterPoints = 8d,
+            Spacing = new DocxParagraphSpacing(null, null, null, null, null, null, null, "exact", null)
+        };
+
+        string[] shortLines = ["Short 1", "Short 2"];
+        string[] tallLines = Enumerable.Range(1, 10)
+            .Select(index => "Exact tall line " + index.ToString(CultureInfo.InvariantCulture) + " padding words").ToArray();
+        var firstCell = new DocxTableCell(shortLines.Select(ExactLine).ToArray(), null, null, null, null, [], DocxTableCellMargins.Empty);
+        var secondCell = new DocxTableCell(tallLines.Select(ExactLine).ToArray(), null, null, null, null, [], DocxTableCellMargins.Empty);
         DocxTable table = new(null, [468d], [new DocxTableRow([firstCell], null), new DocxTableRow([secondCell], null)]);
         DocxDocument document = new(
-            612d,
-            806d,
-            72d,
-            72d,
-            72d,
-            72d,
-            DocxPageSettings.Empty,
-            [],
-            [],
-            [],
-            [new DocxTableElement(table)],
-            [],
-            [table]);
+            612d, pageHeight, 72d, 72d, 72d, 72d, DocxPageSettings.Empty, [], [], [],
+            [new DocxTableElement(table)], [], [table]);
 
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
         TestAssert.Equal(2, layout.Pages.Count);
-        int firstPageCellLines = layout.Pages[0].Items.OfType<DocxTableRowLayout>().SelectMany(row => row.Cells).Sum(cell => cell.TextLines.Count);
-        int secondPageCellLines = layout.Pages[1].Items.OfType<DocxTableRowLayout>().SelectMany(row => row.Cells).Sum(cell => cell.TextLines.Count);
-        TestAssert.Equal(11, firstPageCellLines);
-        TestAssert.Equal(1, secondPageCellLines);
+
+        static string ReadCellLines(DocxLayoutPage page) => string.Join('\n', page.Items.OfType<DocxTableRowLayout>()
+            .SelectMany(row => row.Cells).SelectMany(cell => cell.TextLines).Select(line => line.Text));
+
+        TestAssert.Equal(string.Join('\n', shortLines.Concat(tallLines.Take(9))), ReadCellLines(layout.Pages[0]));
+        TestAssert.Equal(tallLines[^1], ReadCellLines(layout.Pages[1]));
     }
 
     public static void DocxTableLayoutStageKeepsNestedTablesOnAuthoredSideOfPageBreak()
