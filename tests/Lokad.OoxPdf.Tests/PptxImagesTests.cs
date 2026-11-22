@@ -1272,64 +1272,51 @@ internal static partial class PptxImagesTests
     // RV07: default objectBoundingBox gradients normalize into path space.
     public static void PptxSyntheticSvgObjectBoundingBoxGradientVariesAcrossStrips()
     {
-        string input = WriteSvgGradientDeck("""
-            <svg viewBox="0 0 100 20" xmlns="http://www.w3.org/2000/svg">
-              <linearGradient id="g" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0" stop-color="#FF0000"/>
-                <stop offset="1" stop-color="#0000FF"/>
-              </linearGradient>
-              <path d="M0 0 H100 V20 H0 Z" fill="url(#g)"/>
-            </svg>
-            """);
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, output);
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("0.988 0 0.012 rg", pdf);
-        TestAssert.Contains("0.012 0 0.988 rg", pdf);
+        AssertSvgGradientPaint(20, 1, 0, "FC0003", "0300FC", topToBottom: false);
     }
 
     // RV07: vertical gradients tessellate along the dominant axis.
     public static void PptxSyntheticSvgVerticalGradientVariesTopToBottom()
     {
-        string input = WriteSvgGradientDeck("""
-            <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-              <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0" stop-color="#FF0000"/>
-                <stop offset="1" stop-color="#0000FF"/>
-              </linearGradient>
-              <path d="M0 0 H100 V100 H0 Z" fill="url(#g)"/>
-            </svg>
-            """);
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, output);
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("0.988 0 0.012 rg", pdf);
-        TestAssert.Contains("0.012 0 0.988 rg", pdf);
+        AssertSvgGradientPaint(100, 0, 1, "FC0003", "0300FC", topToBottom: true);
     }
 
     // RV07: diagonal gradients project onto the dominant axis.
     public static void PptxSyntheticSvgDiagonalGradientProjectsOntoDominantAxis()
     {
-        string input = WriteSvgGradientDeck("""
-            <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-              <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+        AssertSvgGradientPaint(100, 1, 1, "BE0041", "4100BE", topToBottom: false);
+    }
+
+    private static void AssertSvgGradientPaint(int sourceHeight, int x2, int y2,
+        string startColor, string endColor, bool topToBottom)
+    {
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        string pdf = RenderSyntheticSvgPicture(FormattableString.Invariant($"""
+            <svg viewBox="0 0 100 {sourceHeight}" xmlns="http://www.w3.org/2000/svg">
+              <linearGradient id="g" x1="0" y1="0" x2="{x2}" y2="{y2}">
                 <stop offset="0" stop-color="#FF0000"/>
                 <stop offset="1" stop-color="#0000FF"/>
               </linearGradient>
-              <path d="M0 0 H100 V100 H0 Z" fill="url(#g)"/>
+              <path d="M0 0 H100 V{sourceHeight} H0 Z" fill="url(#g)"/>
             </svg>
-            """);
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+            """), diagnostics: diagnostics);
+        TestAssert.Equal(0, diagnostics.Count);
 
-        OoxPdfConverter.Convert(input, output);
+        var strips = DocxParagraphShadingTests.ReadRectangles(pdf).ToArray();
+        // The authored picture occupies x=[72,216], y=[396,468] in PDF points.
+        // Sample inside the two ends of each axis and away from the center seams.
+        string left = ColorAt(72.72, 433), right = ColorAt(215.28, 433);
+        string top = ColorAt(145, 467.28), bottom = ColorAt(145, 396.72);
+        var (start, end, crossStart, crossEnd) = topToBottom
+            ? (top, bottom, left, right)
+            : (left, right, top, bottom);
+        TestAssert.Equal(startColor, start);
+        TestAssert.Equal(endColor, end);
+        TestAssert.Equal(crossStart, crossEnd);
+        TestAssert.True(crossStart != start && crossStart != end, "The middle of the gradient must have an intermediate color.");
 
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("0.745 0 0.255 rg", pdf);
-        TestAssert.Contains("0.255 0 0.745 rg", pdf);
+        string ColorAt(double x, double y) => strips.Single(strip =>
+            strip.X < x && x < strip.X + strip.Width && strip.Y < y && y < strip.Y + strip.Height).Color;
     }
 
     // RV07: path transforms shift emitted coordinates.
