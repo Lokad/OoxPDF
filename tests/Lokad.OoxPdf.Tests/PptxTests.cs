@@ -641,6 +641,41 @@ internal static class PptxTests
             new PptxReader().Read(package, default), package, null, default).ToBlockingEnumerable().Single().Content;
     }
 
+    internal static PptxTextFrameModelSnapshot InspectPlaceholderBodyProperties(string layoutXml, string slideXml, string? masterXml = null)
+    {
+        using var input = TestFixtures.CreateZipPackage(new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes().Replace("</Types>", """
+                <Override PartName="/ppt/slideLayouts/slideLayout1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"/>
+                <Override PartName="/ppt/slideMasters/slideMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"/>
+                </Types>
+                """, StringComparison.Ordinal),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/_rels/slide1.xml.rels"] = """
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/>
+                </Relationships>
+                """,
+            ["ppt/slideLayouts/_rels/slideLayout1.xml.rels"] = """
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="../slideMasters/slideMaster1.xml"/>
+                </Relationships>
+                """,
+            ["ppt/slideMasters/slideMaster1.xml"] = masterXml ?? """
+                <p:sldMaster xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+                  <p:cSld><p:spTree/></p:cSld>
+                </p:sldMaster>
+                """,
+            ["ppt/slideLayouts/slideLayout1.xml"] = layoutXml,
+            ["ppt/slides/slide1.xml"] = slideXml
+        });
+        using var package = OoxPackage.Open(input, default);
+        PptxDocument document = new PptxReader().Read(package, default);
+        return PptxRenderer.InspectTextFrameModels(document, package, 0).Single();
+    }
+
     internal static string BasicContentTypes()
     {
         return """

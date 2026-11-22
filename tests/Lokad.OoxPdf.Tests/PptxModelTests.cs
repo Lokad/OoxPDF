@@ -1133,39 +1133,8 @@ internal static class PptxModelTests
 
     public static void PptxTextModelInheritsPlaceholderBodyProperties()
     {
-        string contentTypes = PptxTests.BasicContentTypes().Replace(
-            "</Types>",
-            """
-              <Override PartName="/ppt/slideLayouts/slideLayout1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"/>
-              <Override PartName="/ppt/slideMasters/slideMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"/>
-            </Types>
-            """,
-            StringComparison.Ordinal);
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = contentTypes,
-            ["_rels/.rels"] = PptxTests.PackageRelationship(),
-            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
-            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
-            ["ppt/slides/_rels/slide1.xml.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/>
-                </Relationships>
-                """,
-            ["ppt/slideLayouts/_rels/slideLayout1.xml.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="../slideMasters/slideMaster1.xml"/>
-                </Relationships>
-                """,
-            ["ppt/slideMasters/slideMaster1.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sldMaster xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <p:cSld><p:spTree/></p:cSld>
-                </p:sldMaster>
-                """,
-            ["ppt/slideLayouts/slideLayout1.xml"] = """
+        PptxTextFrameModelSnapshot frame = PptxTests.InspectPlaceholderBodyProperties(
+            layoutXml: """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <p:sldLayout xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
                   <p:cSld><p:spTree><p:sp>
@@ -1175,7 +1144,7 @@ internal static class PptxModelTests
                   </p:sp></p:spTree></p:cSld>
                 </p:sldLayout>
                 """,
-            ["ppt/slides/slide1.xml"] = """
+            slideXml: """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
                   <p:cSld><p:spTree><p:sp>
@@ -1183,14 +1152,8 @@ internal static class PptxModelTests
                     <p:txBody><a:bodyPr rIns="0" spcCol="914400"/><a:lstStyle/><a:p><a:r><a:rPr sz="1800"/><a:t>Inherited body properties</a:t></a:r></a:p></p:txBody>
                   </p:sp></p:spTree></p:cSld>
                 </p:sld>
-                """
-        });
+                """);
 
-        using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
-        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
-
-        PptxTextFrameModelSnapshot frame = PptxRenderer.InspectTextFrameModels(document, package, 0).Single();
         TestAssert.Equal(72d, frame.InsetLeft);
         TestAssert.Equal(0d, frame.InsetRight);
         TestAssert.Equal(36d, frame.InsetTop);
@@ -1240,43 +1203,8 @@ internal static class PptxModelTests
 
     public static void PptxTextModelCascadesPlaceholderBodyPropertiesAcrossLayoutAndMaster()
     {
-        string contentTypes = PptxTests.BasicContentTypes().Replace(
-            "</Types>",
-            """
-              <Override PartName="/ppt/slideLayouts/slideLayout1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"/>
-              <Override PartName="/ppt/slideMasters/slideMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"/>
-            </Types>
-            """,
-            StringComparison.Ordinal);
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = contentTypes,
-            ["_rels/.rels"] = PptxTests.PackageRelationship(),
-            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
-            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
-            ["ppt/slides/_rels/slide1.xml.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/>
-                </Relationships>
-                """,
-            ["ppt/slideLayouts/_rels/slideLayout1.xml.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="../slideMasters/slideMaster1.xml"/>
-                </Relationships>
-                """,
-            ["ppt/slideMasters/slideMaster1.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sldMaster xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <p:cSld><p:spTree><p:sp>
-                    <p:nvSpPr><p:cNvPr id="1" name="Master Title"/><p:nvPr><p:ph type="title"/></p:nvPr></p:nvSpPr>
-                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="5486400" cy="1371600"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
-                    <p:txBody><a:bodyPr anchor="ctr" lIns="91440" tIns="45720" rIns="91440" bIns="45720"><a:noAutofit/></a:bodyPr><a:lstStyle/><a:p/></p:txBody>
-                  </p:sp></p:spTree></p:cSld>
-                </p:sldMaster>
-                """,
-            ["ppt/slideLayouts/slideLayout1.xml"] = """
+        PptxTextFrameModelSnapshot frame = PptxTests.InspectPlaceholderBodyProperties(
+            layoutXml: """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <p:sldLayout xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
                   <p:cSld><p:spTree><p:sp>
@@ -1285,7 +1213,7 @@ internal static class PptxModelTests
                   </p:sp></p:spTree></p:cSld>
                 </p:sldLayout>
                 """,
-            ["ppt/slides/slide1.xml"] = """
+            slideXml: """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
                   <p:cSld><p:spTree><p:sp>
@@ -1294,14 +1222,18 @@ internal static class PptxModelTests
                     <p:txBody><a:bodyPr lIns="0" tIns="0" rIns="0" bIns="0"/><a:lstStyle/><a:p><a:r><a:rPr sz="1800"/><a:t>Master anchored title</a:t></a:r></a:p></p:txBody>
                   </p:sp></p:spTree></p:cSld>
                 </p:sld>
-                """
-        });
+                """,
+            masterXml: """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sldMaster xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:nvSpPr><p:cNvPr id="1" name="Master Title"/><p:nvPr><p:ph type="title"/></p:nvPr></p:nvSpPr>
+                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="5486400" cy="1371600"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody><a:bodyPr anchor="ctr" lIns="91440" tIns="45720" rIns="91440" bIns="45720"><a:noAutofit/></a:bodyPr><a:lstStyle/><a:p/></p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sldMaster>
+                """);
 
-        using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
-        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
-
-        PptxTextFrameModelSnapshot frame = PptxRenderer.InspectTextFrameModels(document, package, 0).Single();
         TestAssert.Equal(2, frame.InheritedPlaceholderCount);
         TestAssert.Equal(0d, frame.InsetTop);
         TestAssert.Equal("DirectBodyPr", frame.InsetTopSource);

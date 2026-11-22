@@ -1178,39 +1178,8 @@ internal static class PptxTypographyTests
 
     public static void PptxTextModelDirectTopAnchorOverridesInheritedBottomAnchor()
     {
-        string contentTypes = PptxTests.BasicContentTypes().Replace(
-            "</Types>",
-            """
-              <Override PartName="/ppt/slideLayouts/slideLayout1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"/>
-              <Override PartName="/ppt/slideMasters/slideMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"/>
-            </Types>
-            """,
-            StringComparison.Ordinal);
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = contentTypes,
-            ["_rels/.rels"] = PptxTests.PackageRelationship(),
-            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
-            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
-            ["ppt/slides/_rels/slide1.xml.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/>
-                </Relationships>
-                """,
-            ["ppt/slideLayouts/_rels/slideLayout1.xml.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="../slideMasters/slideMaster1.xml"/>
-                </Relationships>
-                """,
-            ["ppt/slideMasters/slideMaster1.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sldMaster xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <p:cSld><p:spTree/></p:cSld>
-                </p:sldMaster>
-                """,
-            ["ppt/slideLayouts/slideLayout1.xml"] = """
+        PptxTextFrameModelSnapshot frame = PptxTests.InspectPlaceholderBodyProperties(
+            layoutXml: """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <p:sldLayout xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
                   <p:cSld><p:spTree><p:sp>
@@ -1220,7 +1189,7 @@ internal static class PptxTypographyTests
                   </p:sp></p:spTree></p:cSld>
                 </p:sldLayout>
                 """,
-            ["ppt/slides/slide1.xml"] = """
+            slideXml: """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
                   <p:cSld><p:spTree><p:sp>
@@ -1228,14 +1197,8 @@ internal static class PptxTypographyTests
                     <p:txBody><a:bodyPr anchor="t"/><a:lstStyle/><a:p><a:r><a:rPr sz="1800"/><a:t>Direct top anchor</a:t></a:r></a:p></p:txBody>
                   </p:sp></p:spTree></p:cSld>
                 </p:sld>
-                """
-        });
+                """);
 
-        using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
-        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
-
-        PptxTextFrameModelSnapshot frame = PptxRenderer.InspectTextFrameModels(document, package, 0).Single();
         TestAssert.Equal("Top", frame.VerticalAnchor);
         TestAssert.Equal("t", frame.VerticalAnchorValue ?? string.Empty);
         TestAssert.Equal("DirectBodyPr", frame.VerticalAnchorSource);
