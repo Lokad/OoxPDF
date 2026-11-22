@@ -1928,6 +1928,41 @@ internal static partial class PptxImagesTests
         TestAssert.True(!diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("unresolvable", StringComparison.Ordinal)), "Resolvable radial gradients must render.");
     }
 
+    public static void PptxSvgGradientStopColorsUseLocalDeclarationsAndCurrentColor()
+    {
+        const string literal = """<stop offset="0" stop-color="red"/><stop offset="1" stop-color="blue"/>""";
+        foreach (string kind in new[] { "linearGradient", "radialGradient" })
+        {
+            byte[] expected = RenderSvgOpacityTest(Svg(kind, "", literal));
+            foreach (var (gradientColor, stops) in new[]
+            {
+                ("", """<stop offset="0" style="stop-color:red"/><stop offset="1" style="stop-color:blue"/>"""),
+                ("", """
+                    <stop offset="0" stop-color="blue" style="stop-color:red"/>
+                    <stop offset="1" stop-color="red" style="stop-color:blue"/>
+                    """),
+                (""" color="red" """, """
+                    <stop offset="0" stop-color="currentColor"/>
+                    <stop offset="1" color="green" style="color:blue;stop-color:currentColor"/>
+                    """)
+            })
+            {
+                var diagnostics = new List<OoxPdfDiagnostic>();
+                byte[] actual = RenderSvgOpacityTest(Svg(kind, gradientColor, stops), diagnostics);
+                TestAssert.True(actual.AsSpan().SequenceEqual(expected),
+                    $"{kind} stops must paint their used color.");
+                TestAssert.Equal(0, diagnostics.Count);
+            }
+        }
+
+        static string Svg(string kind, string gradientColor, string stops) => $$"""
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 50">
+              <defs><{{kind}} id="g"{{gradientColor}}>{{stops}}</{{kind}}></defs>
+              <path d="M0 0H100V50H0Z" fill="url(#g)"/>
+            </svg>
+            """;
+    }
+
     public static void PptxSvgUniformNumericStopOpacityMatchesFillOpacity()
     {
         foreach (string kind in new[] { "linearGradient", "radialGradient" })

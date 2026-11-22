@@ -3,6 +3,7 @@ using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Imaging;
 using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pdf;
+using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
@@ -673,16 +674,16 @@ internal sealed partial class PptxRenderer
         double? uniform = null;
         foreach (XElement stop in gradient.Elements().Where(e => e.Name.LocalName == "stop"))
         {
-            double? value = ReadNumericSvgStopOpacity(stop);
+            double? value = ReadNumericSvgStopOpacity(stop, ReadSvgStyleDeclarations(stop));
             if (value is null || (uniform is { } previous && value != previous)) { return null; }
             uniform = value;
         }
         return uniform ?? 1d;
     }
 
-    private static double? ReadNumericSvgStopOpacity(XElement stop)
+    private static double? ReadNumericSvgStopOpacity(XElement stop, IReadOnlyDictionary<string, string> style)
     {
-        if (stop.Attribute("style") is not null && ReadSvgStyleDeclarations(stop).ContainsKey("stop-opacity")) { return null; }
+        if (style.ContainsKey("stop-opacity")) { return null; }
         if (stop.Attribute("stop-opacity") is not { } opacity) { return 1d; }
         return double.TryParse(opacity.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double value) &&
             double.IsFinite(value) && value >= 0d && value <= 1d ? value : null;
@@ -1136,21 +1137,18 @@ internal sealed partial class PptxRenderer
         bool hasUniformOpacity = true;
         foreach (XElement stop in gradient.Elements().Where(element => element.Name.LocalName == "stop"))
         {
+            IReadOnlyDictionary<string, string> style = ReadSvgStyleDeclarations(stop);
             // Opacity admission considers all authored stops, including those discarded for paint.
-            double? opacity = ReadNumericSvgStopOpacity(stop);
+            double? opacity = ReadNumericSvgStopOpacity(stop, style);
             hasNumericOpacity &= opacity.HasValue;
             firstNumericOpacity ??= opacity;
             hasUniformOpacity &= opacity == firstNumericOpacity;
 
             double offset = ReadSvgOffset((string?)stop.Attribute("offset"));
             if (double.IsNaN(offset)) continue;
-            string? colorText = (string?)stop.Attribute("stop-color");
-            if (!RgbColor.TryParseCssColor(colorText, out RgbColor color))
-            {
-                if (!string.IsNullOrWhiteSpace(colorText)) continue;
-                // PowerPoint can serialize a black stop without a stop-color attribute.
-                color = new RgbColor(0, 0, 0);
-            }
+            string? colorText = ReadSvgPresentationAttribute(stop, style, "stop-color");
+            if (!TryReadSvgSolidColor(stop, style, string.IsNullOrWhiteSpace(colorText) ? "black" : colorText,
+                out RgbColor color)) continue;
             stops.Add(new SvgGradientStop(offset, color, opacity));
         }
         return (stops.OrderBy(stop => stop.Offset).ToArray(),
@@ -1222,8 +1220,13 @@ internal sealed partial class PptxRenderer
     // multiplies fill-opacity with whole-element opacity.
     private static IReadOnlyDictionary<string, string> ReadSvgStyleDeclarations(XElement path)
     {
+        if ((string?)path.Attribute("style") is not { Length: > 0 } style)
+        {
+            return ReadOnlyDictionary<string, string>.Empty;
+        }
+
         var declarations = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        foreach (string declaration in (((string?)path.Attribute("style")) ?? string.Empty).Split((char)59))
+        foreach (string declaration in style.Split((char)59))
         {
             int colon = declaration.IndexOf((char)58);
             if (colon <= 0)
