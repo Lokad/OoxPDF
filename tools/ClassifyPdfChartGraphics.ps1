@@ -535,94 +535,52 @@ function Reclassify-InPlotSeriesLines($structures, [double]$tolerance) {
     }
 }
 
-function Add-DataLabelLegendKeyStructures($structures, $textOps) {
-    if ($null -eq $textOps -or $textOps.Count -eq 0) {
-        return
-    }
-
-    $numericText = @($textOps | Where-Object { Is-NumericText (TextValue $_) })
-    if ($numericText.Count -eq 0) {
+function Add-LegendSwatchStructures($structures, $textOps, $plotBox, [double]$tolerance) {
+    if ($null -eq $plotBox -and $textOps.Count -eq 0) {
         return
     }
 
     $snapshot = [object[]]$structures.ToArray()
     foreach ($structure in $snapshot) {
+        if (!(Is-LegendSwatchShape $structure)) {
+            continue
+        }
+
         $kind = [string]$structure.Kind
-        if ($kind -ne "MarkerCandidate" -and $kind -ne "StrokeMarkerCandidate") {
-            continue
-        }
+        $isSwatch = $null -ne $plotBox -and (Is-OutsideBox $structure $plotBox $tolerance)
+        $isNumericKey = $false
+        if ($kind -eq "MarkerCandidate" -or $kind -eq "StrokeMarkerCandidate") {
+            $centerY = CenterY $structure
+            foreach ($text in $textOps) {
+                if ([int]$text.PageNumber -ne [int]$structure.PageNumber) {
+                    continue
+                }
+                $fontSize = if ($text.FontSize -ne $null) { [double]$text.FontSize } else { 0d }
+                $gap = (TextX $text) - [double]$structure.MaxX
+                $verticalTolerance = [Math]::Max(8d, $fontSize * 0.9d)
+                if (!($gap -ge 0d -and $gap -le 28d -and [Math]::Abs((TextY $text) - $centerY) -le $verticalTolerance)) {
+                    continue
+                }
 
-        $width = Width $structure
-        $height = Height $structure
-        if ($width -gt 24d -or $height -gt 24d) {
-            continue
-        }
-
-        $matched = $false
-        foreach ($text in $numericText) {
-            if ([int]$text.PageNumber -ne [int]$structure.PageNumber) {
-                continue
+                $value = TextValue $text
+                if (Is-NumericText $value) {
+                    $isNumericKey = $true
+                }
+                elseif (![string]::IsNullOrWhiteSpace($value)) {
+                    $isSwatch = $true
+                }
+                if ($isSwatch -and $isNumericKey) {
+                    break
+                }
             }
-
-            $fontSize = if ($text.FontSize -ne $null) { [double]$text.FontSize } else { 0d }
-            $gap = (TextX $text) - [double]$structure.MaxX
-            $verticalTolerance = [Math]::Max(8d, $fontSize * 0.9d)
-            if ($gap -ge 0d -and $gap -le 28d -and [Math]::Abs((TextY $text) - (CenterY $structure)) -le $verticalTolerance) {
-                $matched = $true
-                break
-            }
         }
 
-        if ($matched) {
+        if ($isSwatch) {
+            $structures.Add((Copy-StructureAsKind "LegendSwatchCandidate" $structure))
+        }
+        if ($isNumericKey) {
             $targetKind = if ($kind -eq "StrokeMarkerCandidate") { "DataLabelLegendKeyStrokeCandidate" } else { "DataLabelLegendKeyFillCandidate" }
             $structures.Add((Copy-StructureAsKind $targetKind $structure))
-        }
-    }
-}
-
-function Add-LegendSwatchTextProximityStructures($structures, $textOps) {
-    if ($null -eq $textOps -or $textOps.Count -eq 0) {
-        return
-    }
-
-    $legendText = @($textOps | Where-Object {
-        $text = TextValue $_
-        -not [string]::IsNullOrWhiteSpace($text) -and -not (Is-NumericText $text)
-    })
-    if ($legendText.Count -eq 0) {
-        return
-    }
-
-    $snapshot = [object[]]$structures.ToArray()
-    foreach ($structure in $snapshot) {
-        $kind = [string]$structure.Kind
-        if ($kind -ne "MarkerCandidate" -and $kind -ne "StrokeMarkerCandidate") {
-            continue
-        }
-
-        $width = Width $structure
-        $height = Height $structure
-        if ($width -gt 24d -or $height -gt 24d) {
-            continue
-        }
-
-        $matched = $false
-        foreach ($text in $legendText) {
-            if ([int]$text.PageNumber -ne [int]$structure.PageNumber) {
-                continue
-            }
-
-            $fontSize = if ($text.FontSize -ne $null) { [double]$text.FontSize } else { 0d }
-            $gap = (TextX $text) - [double]$structure.MaxX
-            $verticalTolerance = [Math]::Max(8d, $fontSize * 0.9d)
-            if ($gap -ge 0d -and $gap -le 28d -and [Math]::Abs((TextY $text) - (CenterY $structure)) -le $verticalTolerance) {
-                $matched = $true
-                break
-            }
-        }
-
-        if ($matched) {
-            $structures.Add((Copy-StructureAsKind "LegendSwatchCandidate" $structure))
         }
     }
 }
@@ -812,15 +770,6 @@ foreach ($pageGroup in @($allOps | Group-Object -Property PageNumber)) {
         }
     }
 
-    if ($null -ne $plotBoxForGridlines) {
-        $structureSnapshot = [object[]]$structures.ToArray()
-        foreach ($structure in $structureSnapshot) {
-            if ((Is-LegendSwatchShape $structure) -and (Is-OutsideBox $structure $plotBoxForGridlines $GridlineBoundsTolerance)) {
-                $structures.Add((Copy-StructureAsKind "LegendSwatchCandidate" $structure))
-            }
-        }
-    }
-
     if ($null -eq $plotBoxForGridlines) {
         foreach ($op in $ops) {
             $segmentCount = if ($null -ne $op.SegmentCount) { [int]$op.SegmentCount } else { 0 }
@@ -949,8 +898,7 @@ foreach ($pageGroup in @($allOps | Group-Object -Property PageNumber)) {
 
     Assign-RegionIndexes ([object[]]$structures.ToArray())
     Reclassify-InPlotSeriesLines $structures $GridlineBoundsTolerance
-    Add-LegendSwatchTextProximityStructures $structures $textOps
-    Add-DataLabelLegendKeyStructures $structures $textOps
+    Add-LegendSwatchStructures $structures $textOps $plotBoxForGridlines $GridlineBoundsTolerance
     $allStructures.AddRange([object[]]$structures.ToArray())
 }
 

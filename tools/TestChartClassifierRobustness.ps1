@@ -91,6 +91,33 @@ $gfxDupe = Invoke-Classifier $gfxTool "gfx-dupe" ($gfxList + $gfxList[0])
 Compare-JsonFile "gfx-reorder" (Join-Path $scratch "gfx-reorder-out.json") (Join-Path $scratch "gfx-base-out.json")
 Assert-OneExtraBlock "gfx-dupe" $gfxBase $gfxDupe
 
+$swatch = New-Graphic "Fill" 312 146 320 154
+$swatchOps = @($swatch) + $gfxList[1..2]
+$swatchKinds = @("MarkerCandidate", "HorizontalLine", "VerticalLine", "AxisPairPlotBoxCandidate", "LegendSwatchCandidate")
+$caption = New-Text 324 150 "North"
+$number = New-Text 324 150 "42"
+foreach ($variant in @(
+    @{ Name = "plot"; Text = @(); Keys = @() },
+    @{ Name = "caption"; Text = @($caption); Keys = @() },
+    @{ Name = "number"; Text = @($number); Keys = @("DataLabelLegendKeyFillCandidate") },
+    @{ Name = "both"; Text = @($caption, $number); Keys = @("DataLabelLegendKeyFillCandidate") }
+)) {
+    $name = "gfx-swatch-" + $variant.Name
+    $textPath = Join-Path $scratch "$name-text.json"
+    ConvertTo-Json -InputObject $variant.Text | Set-Content -LiteralPath $textPath -Encoding UTF8
+    $classified = Invoke-Classifier $gfxTool $name $swatchOps @("-TextOperations", $textPath)
+    Assert-Kinds $name $classified ($swatchKinds + $variant.Keys)
+}
+$captionPath = Join-Path $scratch "gfx-swatch-caption-text.json"
+$twoSwatches = Invoke-Classifier $gfxTool "gfx-swatch-duplicate-paint" ($swatchOps + $swatch) @("-TextOperations", $captionPath)
+Assert-Kinds "gfx-swatch-duplicate-paint" $twoSwatches ($swatchKinds + @("MarkerCandidate", "LegendSwatchCandidate"))
+
+$textOnlyPath = Join-Path $scratch "gfx-text-only-swatch-text.json"
+ConvertTo-Json -InputObject @((New-Text 158 150 "North"), (New-Text 158 150 "42")) |
+    Set-Content -LiteralPath $textOnlyPath -Encoding UTF8
+$textOnlySwatch = Invoke-Classifier $gfxTool "gfx-text-only-swatch" $gfxList @("-TextOperations", $textOnlyPath)
+Assert-Kinds "gfx-text-only-swatch" $textOnlySwatch ($swatchKinds + "DataLabelLegendKeyFillCandidate")
+
 $textTool = "tools/ClassifyPdfChartText.ps1"
 $textList = @(
     (New-Text 150 150 "42"),
