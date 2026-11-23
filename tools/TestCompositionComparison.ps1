@@ -263,12 +263,16 @@ foreach ($control in @('pptx-boundary','pptx-mae','pptx-recall','pptx-changed-pi
     }
     $passed+=$control
 }
-foreach ($control in @('unrelated-case-edited','policy-bytes-changed','stricter-policy')) {
+foreach ($control in @('unrelated-case-edited','policy-bytes-changed','stricter-policy','zero-ssim-policy')) {
     $case=New-Case $control 'legacy'
     $cache=New-ReuseCache $case
     $path=Join-Path $cache 'office-comparisons.json'
     $prior=Get-Content $path -Raw | ConvertFrom-Json -AsHashtable
     foreach ($row in $prior.Rows) { $row.Metrics[0].ForegroundRecall=.995; $row.Failures=@() }
+    if ($control -eq 'zero-ssim-policy') {
+        $prior.Rows[0].Metrics[0].StructuralSimilarity=-.1
+        $prior.Rows[1].Metrics[0].StructuralSimilarity=0
+    }
     $prior | ConvertTo-Json -Depth 10 | Set-Content $path
     $policyPath=Join-Path $tools 'CompositionDocxThresholds.json'
     $casePath=Join-Path $repo ('visual-cases/cases/'+$thresholdNames[0]+'/case.json')
@@ -286,16 +290,24 @@ foreach ($control in @('unrelated-case-edited','policy-bytes-changed','stricter-
                 $limits.minForegroundRecall=.999
                 $limits | ConvertTo-Json | Set-Content $policyPath
             }
+            'zero-ssim-policy' {
+                $limits=Get-Content $policyPath -Raw | ConvertFrom-Json
+                $limits.minStructuralSimilarity=0
+                $limits | ConvertTo-Json | Set-Content $policyPath
+            }
         }
         $before=Snapshot $case.ReferenceDirectory
         & $script -CandidateDirectory $case.CandidateDirectory -ReferenceDirectory $case.ReferenceDirectory `
             -VisualDiffPath $visualDiff -ValidationToolsDirectory $tools -ReuseComparisonDirectory $cache | Out-Null
         $report=Get-Content (Join-Path $case.CandidateDirectory 'office-comparisons.json') -Raw | ConvertFrom-Json
         $expectedRecall=if ($control -eq 'stricter-policy') {.999} else {.99}
+        $expectedSsim=if ($control -eq 'zero-ssim-policy') {0} else {.985}
         foreach ($row in $report.Rows) {
-            $expectedFailures=if ($control -eq 'stricter-policy') {'ForegroundRecall'} else {''}
+            $expectedFailures=if ($control -eq 'stricter-policy') {'ForegroundRecall'}
+                elseif ($control -eq 'zero-ssim-policy' -and $row.Id -eq 'first') {'StructuralSimilarity'} else {''}
             if (!$row.ReusedComparison -or ($row.Failures -join ',') -cne $expectedFailures -or
                 $row.Thresholds.minForegroundRecall -ne $expectedRecall -or
+                $row.Thresholds.minStructuralSimilarity -ne $expectedSsim -or
                 (($row.Thresholds.PSObject.Properties.Name | Sort-Object) -join ',') -cne 'maxChangedPixelRatioAtThreshold16,maxMeanAbsoluteError,minForegroundRecall,minStructuralSimilarity') {
                 throw ('Incorrect active threshold ownership: '+$control)
             }

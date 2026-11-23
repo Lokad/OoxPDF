@@ -219,6 +219,8 @@ if (Test-Path -LiteralPath (Join-Path $repoRoot '.git')) {
 
 $runInfo | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $runRoot "run-info.json") -Encoding UTF8
 
+if (!$metrics) { throw "The visual comparison produced no page measurements." }
+
 if ($manifest.expected.pageCountMustMatch -eq $true -and $referencePages.Count -ne $candidatePages.Count) {
     throw "Page count mismatch. Reference: $($referencePages.Count). Candidate: $($candidatePages.Count)."
 }
@@ -233,19 +235,19 @@ if ($manifest.expected.dimensionsMustMatch -eq $true) {
 
 if ($manifest.expected.maxMeanAbsoluteError -ne $null) {
     $maxMae = [double]$manifest.expected.maxMeanAbsoluteError
-    $exceeded = @($metrics | Where-Object { [double]$_.MeanAbsoluteError -gt $maxMae })
+    $exceeded = @($metrics | Where-Object { $null -eq $_.MeanAbsoluteError -or [double]$_.MeanAbsoluteError -gt $maxMae })
     if ($exceeded.Count -ne 0) {
         $worst = $exceeded | Sort-Object -Property MeanAbsoluteError -Descending | Select-Object -First 1
-        throw "Mean absolute error gate failed. Page $($worst.Page) was $($worst.MeanAbsoluteError), limit is $maxMae."
+        throw "Mean absolute error gate failed. Page $($worst.Page) was $($worst.MeanAbsoluteError ?? 'unavailable'), limit is $maxMae."
     }
 }
 
 if ($manifest.expected.maxChangedPixelRatioAtThreshold16 -ne $null) {
     $maxChanged = [double]$manifest.expected.maxChangedPixelRatioAtThreshold16
-    $exceeded = @($metrics | Where-Object { [double]$_.ChangedPixelRatioAtThreshold16 -gt $maxChanged })
+    $exceeded = @($metrics | Where-Object { $null -eq $_.ChangedPixelRatioAtThreshold16 -or [double]$_.ChangedPixelRatioAtThreshold16 -gt $maxChanged })
     if ($exceeded.Count -ne 0) {
         $worst = $exceeded | Sort-Object -Property ChangedPixelRatioAtThreshold16 -Descending | Select-Object -First 1
-        throw "Changed-pixel ratio gate failed. Page $($worst.Page) was $($worst.ChangedPixelRatioAtThreshold16), limit is $maxChanged."
+        throw "Changed-pixel ratio gate failed. Page $($worst.Page) was $($worst.ChangedPixelRatioAtThreshold16 ?? 'unavailable'), limit is $maxChanged."
     }
 }
 

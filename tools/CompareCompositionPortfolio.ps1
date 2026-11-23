@@ -122,7 +122,8 @@ function Get-ComparisonFailures([object[]] $Metrics, $Limits, [int] $CandidatePa
             if ($page.DimensionsMatch -and $null -eq $foreground) { $failures += 'ForegroundRecallUnverified' }
         }
         elseif ($page.ForegroundRecall -lt $Limits.minForegroundRecall) { $failures += 'ForegroundRecall' }
-        if ($null -ne $page.StructuralSimilarity -and $Limits.minStructuralSimilarity -and $page.StructuralSimilarity -lt $Limits.minStructuralSimilarity) { $failures += 'StructuralSimilarity' }
+        if ($null -ne $page.StructuralSimilarity -and $null -ne $Limits.minStructuralSimilarity -and
+            $page.StructuralSimilarity -lt $Limits.minStructuralSimilarity) { $failures += 'StructuralSimilarity' }
     }
     if ($candidatePages -ne $CandidatePageCount -or $referencePages -ne $ReferencePageCount) { throw $incomplete }
     return @($failures | Sort-Object -Unique)

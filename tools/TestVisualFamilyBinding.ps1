@@ -148,13 +148,16 @@ foreach($id in @('probe-a','probe-b')) {
 $inspectionLog=Join-Path $repo 'inspection-calls.jsonl'
 $candidateBaseline = 700
 $emitGraphicsOperations = $true
+$rasterPage = @{Page=1;DimensionsMatch=$true;MeanAbsoluteError=0;ChangedPixelRatioAtThreshold16=0;
+    StructuralSimilarity=1;ForegroundColorHistogramCorrelation=1}
+$rasterMetrics = @($rasterPage)
 function dotnet {
     $values=@($args)
     if($values[0] -like '*Lokad.OoxPdf.Cli.dll') {
         [IO.File]::WriteAllText($values[3],"%PDF-fake candidate baseline $candidateBaseline")
         [IO.File]::WriteAllText($values[5],'[]')
     } elseif($values[0] -like '*Lokad.OoxPdf.VisualDiff.dll') {
-        '[{"Page":1,"DimensionsMatch":true,"MeanAbsoluteError":0,"ChangedPixelRatioAtThreshold16":0,"StructuralSimilarity":1,"ForegroundColorHistogramCorrelation":1}]' |
+        ConvertTo-Json -InputObject $rasterMetrics -Compress |
             Set-Content (Join-Path $values[3] 'metrics.json')
     } elseif($values[0] -like '*Lokad.OoxPdf.PdfInspect.dll') {
         $output=$values[2]
@@ -285,6 +288,31 @@ try {
     if ($inspections.Count -ne 1 -or (Split-Path -Leaf $inspections[0].Output) -ne 'candidate') {
         throw 'A font-only case should inspect only its candidate'
     }
+    $rasterOnly = $combined.Clone()
+    $rasterOnly.expected = @{pageCountMustMatch=$true;dimensionsMustMatch=$true;maxMeanAbsoluteError=0;maxChangedPixelRatioAtThreshold16=0}
+    $rasterOnly | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $realManifest
+    & $realCase -Case $realManifest -CliPath $frozenCli -SkipBuild -RunId 'real-zero-raster-errors' | Out-Null
+    foreach ($control in @(
+        @{Field='MeanAbsoluteError'; Value=$null; Error='Mean absolute error gate failed. Page 1 was unavailable, limit is 0.'},
+        @{Field='ChangedPixelRatioAtThreshold16'; Value=$null; Error='Changed-pixel ratio gate failed. Page 1 was unavailable, limit is 0.'},
+        @{Field='DimensionsMatch'; Value=$false; Error='Dimension mismatch on page(s): 1.'}
+    )) {
+        $original = $rasterPage[$control.Field]
+        $rasterPage[$control.Field] = $control.Value
+        $failure = $null
+        try {
+            & $realCase -Case $realManifest -CliPath $frozenCli -SkipBuild -RunId ('real-raster-' + $control.Field) | Out-Null
+        }
+        catch { $failure = $_.Exception.Message }
+        finally { $rasterPage[$control.Field] = $original }
+        if ($failure -cne $control.Error) { throw ('Incorrect raster gate outcome for ' + $control.Field + ': ' + $failure) }
+    }
+    $rasterMetrics = @()
+    $failure = $null
+    try { & $realCase -Case $realManifest -CliPath $frozenCli -SkipBuild -RunId 'real-empty-raster' | Out-Null }
+    catch { $failure = $_.Exception.Message }
+    finally { $rasterMetrics = @($rasterPage) }
+    if ($failure -cne 'The visual comparison produced no page measurements.') { throw 'An empty raster report must fail' }
     $combined | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $realManifest
     $emitGraphicsOperations = $false
     $failure = $null
@@ -312,7 +340,9 @@ foreach($inspection in $inspections) {
     'Fresh shifted PDF fails the manifest Y bound','Combined gates inspect each PDF once',
     'Chart classification reuse and independent page scopes','Candidate-only font inspection',
     'Incomplete inspection refusal','Inspector provenance','Canonical markup cache key',
-    'Bound visual report identity','Separate raster page counts','Measured failure identity','Synthetic repository isolation');
+    'Bound visual report identity','Separate raster page counts','Measured failure identity',
+    'Zero upper limits admit exact metrics','Missing upper-bound metrics fail independently','Raster dimensions fail independently',
+    'Empty raster report fails','Synthetic repository isolation');
     InspectionCapabilities=$inspectionKeys.Count;RealInspectionCalls=$inspections.Count;LibraryBuilds=0;LibraryExecutions=0;OfficeExports=0} |
     ConvertTo-Json | Set-Content (Join-Path $OutputDirectory 'evidence.json')
 Write-Output 'Visual-family and real case/inspector binding checks pass; no actual build, library execution or Office export.'
