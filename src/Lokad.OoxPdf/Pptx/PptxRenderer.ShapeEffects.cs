@@ -1,9 +1,6 @@
-using System.Globalization;
-using System.Xml.Linq;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Imaging;
 using Lokad.OoxPdf.Ooxml;
-using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
 using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Pptx;
@@ -27,19 +24,18 @@ internal sealed partial class PptxRenderer
 
     private static void DrawOuterShadow(
         PdfGraphicsBuilder graphics,
-        XElement? shapeProperties,
         string preset,
         double x,
         double y,
         double width,
         double height,
         OuterShadow shadow,
-        IReadOnlyDictionary<string, double>? presetAdjustmentsOverride)
+        IReadOnlyDictionary<string, double>? presetAdjustments)
     {
         graphics.SaveState();
         graphics.SetAlpha(shadow.Alpha, 1d);
         graphics.SetFillRgb(shadow.Color.Red, shadow.Color.Green, shadow.Color.Blue);
-        DrawPresetFill(graphics, shapeProperties, preset, x + shadow.OffsetX, y + shadow.OffsetY, width, height, presetAdjustmentsOverride);
+        DrawPresetFill(graphics, preset, x + shadow.OffsetX, y + shadow.OffsetY, width, height, presetAdjustments);
         graphics.RestoreState();
     }
 
@@ -157,13 +153,12 @@ internal sealed partial class PptxRenderer
 
     private static void DrawPresetFill(
         PdfGraphicsBuilder graphics,
-        XElement? shapeProperties,
         string preset,
         double x,
         double y,
         double width,
         double height,
-        IReadOnlyDictionary<string, double>? presetAdjustmentsOverride)
+        IReadOnlyDictionary<string, double>? presetAdjustments)
     {
         if (preset == "ellipse")
         {
@@ -171,7 +166,7 @@ internal sealed partial class PptxRenderer
         }
         else if (preset == "roundRect")
         {
-            graphics.FillRoundedRectangleEvenOdd(x, y, width, height, ReadRoundRectangleRadius(shapeProperties, presetAdjustmentsOverride, width, height));
+            graphics.FillRoundedRectangleEvenOdd(x, y, width, height, ReadRoundRectangleRadius(presetAdjustments, width, height));
         }
         else if (TryCreatePresetPolygonPoints(preset, x, y, width, height, out (double X, double Y)[] polygonPoints))
         {
@@ -315,14 +310,13 @@ internal sealed partial class PptxRenderer
 
     private static void DrawPresetArcStroke(
         PdfGraphicsBuilder graphics,
-        XElement shapeProperties,
         double x,
         double y,
         double width,
         double height,
-        IReadOnlyDictionary<string, double>? presetAdjustmentsOverride)
+        IReadOnlyDictionary<string, double>? presetAdjustments)
     {
-        (double startDegrees, double sweepDegrees) = ReadPresetArcAngles(shapeProperties, presetAdjustmentsOverride);
+        (double startDegrees, double sweepDegrees) = ReadPresetArcAngles(presetAdjustments);
 
         double centerX = x + width / 2d;
         double centerY = y + height / 2d;
@@ -345,21 +339,20 @@ internal sealed partial class PptxRenderer
 
     private static bool TryFillPresetArcLineEndOutline(
         PdfGraphicsBuilder graphics,
-        XElement shapeProperties,
         double x,
         double y,
         double width,
         double height,
         double lineWidth,
         LineEndStyle tailEnd,
-        IReadOnlyDictionary<string, double>? presetAdjustmentsOverride)
+        IReadOnlyDictionary<string, double>? presetAdjustments)
     {
         if (width <= 0d || height <= 0d || lineWidth <= 0d)
         {
             return false;
         }
 
-        (double startDegrees, double sweepDegrees) = ReadPresetArcAngles(shapeProperties, presetAdjustmentsOverride);
+        (double startDegrees, double sweepDegrees) = ReadPresetArcAngles(presetAdjustments);
 
         double centerX = x + width / 2d;
         double centerY = y + height / 2d;
@@ -450,8 +443,7 @@ internal sealed partial class PptxRenderer
     }
 
     private static (double StartDegrees, double SweepDegrees) ReadPresetArcAngles(
-        XElement shapeProperties,
-        IReadOnlyDictionary<string, double>? presetAdjustmentsOverride)
+        IReadOnlyDictionary<string, double>? presetAdjustments)
     {
         // The arc preset pins each guide to [0, 21599999] and adds one turn
         // only when end <= start. This also bounds stroke construction to four
@@ -463,7 +455,7 @@ internal sealed partial class PptxRenderer
 
         double ReadAngle(string name, double fallback)
         {
-            double value = ReadPresetGeometryGuide(shapeProperties, presetAdjustmentsOverride, name, fallback);
+            double value = ReadPresetGeometryGuide(presetAdjustments, name, fallback);
             return Math.Clamp(double.IsFinite(value) ? value : fallback, 0d, 21599999d) / 60000d;
         }
     }
@@ -499,39 +491,16 @@ internal sealed partial class PptxRenderer
     }
 
     private static double ReadPresetGeometryGuide(
-        XElement? shapeProperties,
-        IReadOnlyDictionary<string, double>? presetAdjustmentsOverride,
+        IReadOnlyDictionary<string, double>? presetAdjustments,
         string name,
-        double fallback)
-    {
-        if (presetAdjustmentsOverride is not null && presetAdjustmentsOverride.TryGetValue(name, out double resolved))
-        {
-            return resolved;
-        }
-
-        XElement? guide = shapeProperties
-            ?.Element(DrawingNamespace + "prstGeom")
-            ?.Element(DrawingNamespace + "avLst")
-            ?.Elements(DrawingNamespace + "gd")
-            .FirstOrDefault(element => string.Equals((string?)element.Attribute("name"), name, StringComparison.Ordinal));
-        string? formula = (string?)guide?.Attribute("fmla");
-        if (formula is null || !formula.StartsWith("val ", StringComparison.Ordinal))
-        {
-            return fallback;
-        }
-
-        return double.TryParse(formula[4..], NumberStyles.Float, CultureInfo.InvariantCulture, out double value)
-            ? value
-            : fallback;
-    }
+        double fallback) => presetAdjustments?.GetValueOrDefault(name, fallback) ?? fallback;
 
     private static double ReadRoundRectangleRadius(
-        XElement? shapeProperties,
-        IReadOnlyDictionary<string, double>? presetAdjustmentsOverride,
+        IReadOnlyDictionary<string, double>? presetAdjustments,
         double width,
         double height)
     {
-        double adjustment = ReadPresetGeometryGuide(shapeProperties, presetAdjustmentsOverride, "adj", 16667d);
+        double adjustment = ReadPresetGeometryGuide(presetAdjustments, "adj", 16667d);
         double factor = Math.Clamp(adjustment / 100000d, 0d, 0.5d);
         return Math.Min(width, height) * factor;
     }

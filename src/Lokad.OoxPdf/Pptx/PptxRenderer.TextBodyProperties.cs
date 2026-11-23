@@ -144,14 +144,17 @@ internal sealed partial class PptxRenderer
 
     private static TextInsets RoundRectTextRectInsets(XElement shapeProperties, double width, double height)
     {
-        double adjustment = Math.Clamp(
-            ReadPresetGeometryGuide(
-                shapeProperties,
-                presetAdjustmentsOverride: null,
-                "adj",
-                PptxTextMetricRules.RoundRectDefaultAdjustment),
-            0d,
-            50000d) / 100000d;
+        // Text insets historically read the first matching declaration.
+        // Paint uses the scene's adjustment map.
+        string? formula = (string?)shapeProperties.Element(DrawingNamespace + "prstGeom")
+            ?.Element(DrawingNamespace + "avLst")
+            ?.Elements(DrawingNamespace + "gd")
+            .FirstOrDefault(element => (string?)element.Attribute("name") == "adj")?.Attribute("fmla");
+        double adjustment = formula is not null && formula.StartsWith("val ", StringComparison.Ordinal) &&
+            double.TryParse(formula.AsSpan(4), NumberStyles.Float, CultureInfo.InvariantCulture, out double value)
+                ? value
+                : PptxTextMetricRules.RoundRectDefaultAdjustment;
+        adjustment = Math.Clamp(adjustment, 0d, 50000d) / 100000d;
         double radius = Math.Min(width, height) * adjustment;
         double inset = radius * PptxTextMetricRules.RoundRectTextRectRadiusInsetFactor;
         return new TextInsets(inset, inset, inset, inset);

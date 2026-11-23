@@ -5,7 +5,6 @@ using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pdf;
 using System.Globalization;
 using System.Text.RegularExpressions;
-using System.Xml.Linq;
 
 namespace Lokad.OoxPdf.Pptx;
 
@@ -167,7 +166,7 @@ internal sealed partial class PptxRenderer
         // Source crop/fill controls image sampling. The authored mask belongs
         // to the picture frame, in the same transformed coordinate system.
         if (preset != "rect")
-            ClipToPresetShape(graphics, null, preset, x, y, width, height, geometry.PresetAdjustments);
+            ClipToPresetShape(graphics, preset, x, y, width, height, geometry.PresetAdjustments);
         graphics.ClipRectangleEvenOdd(clipX, clipY, clipWidth, clipHeight);
         if (crop.IsEmpty)
         {
@@ -226,13 +225,13 @@ internal sealed partial class PptxRenderer
 
         if (shadow.BlurRadius > 0d)
         {
-            double radius = preset == "roundRect" ? ReadRoundRectangleRadius(null, adjustments, width, height) : 0d;
+            double radius = preset == "roundRect" ? ReadRoundRectangleRadius(adjustments, width, height) : 0d;
             DrawRasterOuterShadow(graphics, x, y, width, height, shadow, images, ref imageIndex,
                 preset, radius, cancellationToken);
         }
         else
         {
-            DrawOuterShadow(graphics, null, preset, x, y, width, height, shadow, adjustments);
+            DrawOuterShadow(graphics, preset, x, y, width, height, shadow, adjustments);
         }
 
         graphics.RestoreState();
@@ -294,7 +293,7 @@ internal sealed partial class PptxRenderer
         double outlineOutset = line.Width / 2d;
         // Office's picture outline surrounds the frame: its centerline grows
         // by half the authored width on each side, including nonrectangular masks.
-        StrokePresetShape(graphics, null, preset, x - outlineOutset, y - outlineOutset,
+        StrokePresetShape(graphics, preset, x - outlineOutset, y - outlineOutset,
             width + line.Width, height + line.Width, adjustments);
 
         if (line.DashPattern is { Count: > 0 })
@@ -645,7 +644,6 @@ internal sealed partial class PptxRenderer
         List<PdfImageResource> images,
         PdfImageResource resource,
         ShapePictureFill fill,
-        XElement shapeProperties,
         string preset,
         double x, double y, double width, double height,
         IReadOnlyDictionary<string, double>? adjustments,
@@ -674,7 +672,7 @@ internal sealed partial class PptxRenderer
             }
             else
             {
-                ClipToPresetShape(graphics, shapeProperties, preset, x, y, width, height, adjustments);
+                ClipToPresetShape(graphics, preset, x, y, width, height, adjustments);
             }
         }
 
@@ -693,12 +691,12 @@ internal sealed partial class PptxRenderer
         images.Add(resource);
     }
 
-    private static void StrokePresetShape(PdfGraphicsBuilder graphics, XElement? shapeProperties, string preset,
+    private static void StrokePresetShape(PdfGraphicsBuilder graphics, string preset,
         double x, double y, double width, double height, IReadOnlyDictionary<string, double>? adjustments)
     {
         if (preset == "ellipse") graphics.StrokeEllipse(x, y, width, height);
         else if (preset == "roundRect")
-            graphics.StrokeRoundedRectangle(x, y, width, height, ReadRoundRectangleRadius(shapeProperties, adjustments, width, height));
+            graphics.StrokeRoundedRectangle(x, y, width, height, ReadRoundRectangleRadius(adjustments, width, height));
         else if (TryCreatePresetPolygonPoints(preset, x, y, width, height, out (double X, double Y)[] points))
             graphics.StrokePolygon(points);
         else graphics.StrokeRectangle(x, y, width, height);
@@ -706,13 +704,12 @@ internal sealed partial class PptxRenderer
 
     private static void ClipToPresetShape(
         PdfGraphicsBuilder graphics,
-        XElement? shapeProperties,
         string preset,
         double x,
         double y,
         double width,
         double height,
-        IReadOnlyDictionary<string, double>? presetAdjustmentsOverride)
+        IReadOnlyDictionary<string, double>? presetAdjustments)
     {
         if (preset == "ellipse")
         {
@@ -720,7 +717,7 @@ internal sealed partial class PptxRenderer
         }
         else if (preset == "roundRect")
         {
-            graphics.ClipRoundedRectangle(x, y, width, height, ReadRoundRectangleRadius(shapeProperties, presetAdjustmentsOverride, width, height));
+            graphics.ClipRoundedRectangle(x, y, width, height, ReadRoundRectangleRadius(presetAdjustments, width, height));
         }
         else if (TryCreatePresetPolygonPoints(preset, x, y, width, height, out (double X, double Y)[] polygonPoints))
         {

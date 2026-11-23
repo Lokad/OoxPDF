@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Xml.Linq;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Imaging;
 using Lokad.OoxPdf.Ooxml;
@@ -76,8 +75,13 @@ internal sealed partial class PptxRenderer
             return;
         }
 
+        cancellationToken.ThrowIfCancellationRequested();
+        if (shape.Source.Element(PresentationNamespace + "spPr") is null)
+        {
+            return;
+        }
+
         RenderShape(
-            shape.Source,
             document,
             graphics,
             diagnosticSink,
@@ -104,7 +108,6 @@ internal sealed partial class PptxRenderer
     }
 
     private static void RenderShape(
-        XElement shape,
         PptxDocument document,
         PdfGraphicsBuilder graphics,
         Action<OoxPdfDiagnostic>? diagnosticSink,
@@ -115,7 +118,7 @@ internal sealed partial class PptxRenderer
         ref int imageIndex,
         ShapeBounds rawBounds,
         string preset,
-        IReadOnlyDictionary<string, double>? presetAdjustmentsOverride,
+        IReadOnlyDictionary<string, double>? presetAdjustments,
         bool hasCustomGeometry,
         PptxSceneCustomGeometry? customGeometryOverride,
         PptxSceneFillStyle fillStyle,
@@ -129,13 +132,6 @@ internal sealed partial class PptxRenderer
         LineEndStyle tailEnd,
         CancellationToken cancellationToken)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-        XElement? shapeProperties = shape.Element(PresentationNamespace + "spPr");
-        if (shapeProperties is null)
-        {
-            return;
-        }
-
         ShapeBounds bounds = groupTransform.Apply(rawBounds);
 
         double x = OoxUnits.EmuToPoints(bounds.X);
@@ -198,7 +194,7 @@ internal sealed partial class PptxRenderer
             }
             else
             {
-                DrawOuterShadow(graphics, shapeProperties, preset, x, y, width, height, outerShadow, presetAdjustmentsOverride);
+                DrawOuterShadow(graphics, preset, x, y, width, height, outerShadow, presetAdjustments);
             }
         }
 
@@ -208,8 +204,8 @@ internal sealed partial class PptxRenderer
             if (customPictureMask is not null && pictureResource is not null &&
                 pictureFillOverride is { } customFill && images is not null)
             {
-                RenderShapePictureFill(graphics, images, pictureResource, customFill, shapeProperties, preset,
-                    x, y, width, height, presetAdjustmentsOverride, (sceneCustomGeometry, customPictureMask));
+                RenderShapePictureFill(graphics, images, pictureResource, customFill, preset,
+                    x, y, width, height, presetAdjustments, (sceneCustomGeometry, customPictureMask));
                 paintSolidFill = false;
             }
 
@@ -358,7 +354,6 @@ internal sealed partial class PptxRenderer
                     graphics.SetFillRgb(stroke.Red, stroke.Green, stroke.Blue);
                     if (!TryFillCurvedConnectorPreset(
                         graphics,
-                        shapeProperties,
                         preset,
                         x,
                         yTop,
@@ -367,11 +362,10 @@ internal sealed partial class PptxRenderer
                         document.SlideHeightPoints,
                         lineWidth,
                         tailEnd,
-                        presetAdjustmentsOverride))
+                        presetAdjustments))
                     {
                         DrawCurvedConnectorPreset(
                             graphics,
-                            shapeProperties,
                             preset,
                             x,
                             yTop,
@@ -382,14 +376,13 @@ internal sealed partial class PptxRenderer
                             lineWidth,
                             headEnd,
                             tailEnd,
-                            presetAdjustmentsOverride);
+                            presetAdjustments);
                     }
                 }
                 else
                 {
                     DrawCurvedConnectorPreset(
                         graphics,
-                        shapeProperties,
                         preset,
                         x,
                         yTop,
@@ -400,7 +393,7 @@ internal sealed partial class PptxRenderer
                         lineWidth,
                         headEnd,
                         tailEnd,
-                        presetAdjustmentsOverride);
+                        presetAdjustments);
                 }
 
                 if (hasDash)
@@ -437,7 +430,7 @@ internal sealed partial class PptxRenderer
         if (gradientFill is not null)
         {
             graphics.SaveState();
-            ClipToPresetShape(graphics, shapeProperties, preset, x, y, width, height, presetAdjustmentsOverride);
+            ClipToPresetShape(graphics, preset, x, y, width, height, presetAdjustments);
 
             DrawLinearGradientFill(graphics, gradientFill, x, y, width, height);
 
@@ -445,14 +438,14 @@ internal sealed partial class PptxRenderer
         }
         else if (pictureResource is not null && pictureFillOverride is { } presetFill && images is not null)
         {
-            RenderShapePictureFill(graphics, images, pictureResource, presetFill, shapeProperties, preset,
-                x, y, width, height, presetAdjustmentsOverride);
+            RenderShapePictureFill(graphics, images, pictureResource, presetFill, preset,
+                x, y, width, height, presetAdjustments);
         }
         else if (patternFill.HasPattern)
         {
             graphics.SetFillRgb(patternFill.Background.Red, patternFill.Background.Green, patternFill.Background.Blue);
-            DrawPresetFill(graphics, shapeProperties, preset, x, y, width, height, presetAdjustmentsOverride);
-            StrokeShapePatternFill(graphics, shapeProperties, preset, x, y, width, height, patternFill, presetAdjustmentsOverride);
+            DrawPresetFill(graphics, preset, x, y, width, height, presetAdjustments);
+            StrokeShapePatternFill(graphics, preset, x, y, width, height, patternFill, presetAdjustments);
         }
         else if (hasFill)
         {
@@ -464,7 +457,7 @@ internal sealed partial class PptxRenderer
             }
 
             graphics.SetFillRgb(fill.Red, fill.Green, fill.Blue);
-            DrawPresetFill(graphics, shapeProperties, preset, x, y, width, height, presetAdjustmentsOverride);
+            DrawPresetFill(graphics, preset, x, y, width, height, presetAdjustments);
 
             if (transparentFill)
             {
@@ -527,14 +520,14 @@ internal sealed partial class PptxRenderer
                 }
 
                 if (!useFilledLineEndOutline ||
-                    !TryFillPresetArcLineEndOutline(graphics, shapeProperties, x, y, width, height, lineWidth, tailEnd, presetAdjustmentsOverride))
+                    !TryFillPresetArcLineEndOutline(graphics, x, y, width, height, lineWidth, tailEnd, presetAdjustments))
                 {
-                    DrawPresetArcStroke(graphics, shapeProperties, x, y, width, height, presetAdjustmentsOverride);
+                    DrawPresetArcStroke(graphics, x, y, width, height, presetAdjustments);
                 }
             }
             else
             {
-                StrokePresetShape(graphics, shapeProperties, preset, x, y, width, height, presetAdjustmentsOverride);
+                StrokePresetShape(graphics, preset, x, y, width, height, presetAdjustments);
             }
 
             if (hasDash)

@@ -39,14 +39,13 @@ internal sealed partial class PptxRenderer
 
     private static void StrokeShapePatternFill(
         PdfGraphicsBuilder graphics,
-        XElement shapeProperties,
         string preset,
         double x,
         double y,
         double width,
         double height,
         PptxScenePatternFill fill,
-        IReadOnlyDictionary<string, double>? presetAdjustmentsOverride)
+        IReadOnlyDictionary<string, double>? presetAdjustments)
     {
         if (width <= 0d || height <= 0d)
         {
@@ -54,7 +53,7 @@ internal sealed partial class PptxRenderer
         }
 
         graphics.SaveState();
-        ClipToPresetShape(graphics, shapeProperties, preset, x, y, width, height, presetAdjustmentsOverride);
+        ClipToPresetShape(graphics, preset, x, y, width, height, presetAdjustments);
         graphics.SetStrokeRgb(fill.Foreground.Red, fill.Foreground.Green, fill.Foreground.Blue);
         graphics.SetLineWidth(IsDarkDiagonalPatternFill(fill.Preset) ? 1.0d : 0.5d);
         double spacing = IsDarkDiagonalPatternFill(fill.Preset) ? 4d : 5d;

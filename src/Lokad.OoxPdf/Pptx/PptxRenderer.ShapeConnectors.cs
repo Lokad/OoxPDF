@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Xml.Linq;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Imaging;
 using Lokad.OoxPdf.Ooxml;
@@ -341,7 +340,6 @@ internal sealed partial class PptxRenderer
 
     private static void DrawCurvedConnectorPreset(
         PdfGraphicsBuilder graphics,
-        XElement shapeProperties,
         string preset,
         double x,
         double yTop,
@@ -352,12 +350,12 @@ internal sealed partial class PptxRenderer
         double lineWidth,
         LineEndStyle headEnd,
         LineEndStyle tailEnd,
-        IReadOnlyDictionary<string, double>? presetAdjustmentsOverride)
+        IReadOnlyDictionary<string, double>? presetAdjustments)
     {
         List<BezierSegment> segments = preset switch
         {
             "curvedConnector2" => CreateCurvedConnector2Segments(x, yTop, width, height, slideHeight),
-            "curvedConnector3" => CreateCurvedConnector3Segments(shapeProperties, presetAdjustmentsOverride, x, yTop, width, height, slideHeight),
+            "curvedConnector3" => CreateCurvedConnector3Segments(presetAdjustments, x, yTop, width, height, slideHeight),
             _ => []
         };
         if (segments.Count == 0)
@@ -401,7 +399,6 @@ internal sealed partial class PptxRenderer
 
     private static bool TryFillCurvedConnectorPreset(
         PdfGraphicsBuilder graphics,
-        XElement shapeProperties,
         string preset,
         double x,
         double yTop,
@@ -410,12 +407,12 @@ internal sealed partial class PptxRenderer
         double slideHeight,
         double lineWidth,
         LineEndStyle tailEnd,
-        IReadOnlyDictionary<string, double>? presetAdjustmentsOverride)
+        IReadOnlyDictionary<string, double>? presetAdjustments)
     {
         List<BezierSegment> segments = preset switch
         {
             "curvedConnector2" => CreateCurvedConnector2Segments(x, yTop, width, height, slideHeight),
-            "curvedConnector3" => CreateCurvedConnector3Segments(shapeProperties, presetAdjustmentsOverride, x, yTop, width, height, slideHeight),
+            "curvedConnector3" => CreateCurvedConnector3Segments(presetAdjustments, x, yTop, width, height, slideHeight),
             _ => []
         };
         if (segments.Count == 0)
@@ -745,15 +742,14 @@ internal sealed partial class PptxRenderer
     }
 
     private static List<BezierSegment> CreateCurvedConnector3Segments(
-        XElement shapeProperties,
-        IReadOnlyDictionary<string, double>? presetAdjustmentsOverride,
+        IReadOnlyDictionary<string, double>? presetAdjustments,
         double x,
         double yTop,
         double width,
         double height,
         double slideHeight)
     {
-        double adj1 = ReadPresetGeometryGuide(shapeProperties, presetAdjustmentsOverride, "adj1", 50000d) / 100000d;
+        double adj1 = ReadPresetGeometryGuide(presetAdjustments, "adj1", 50000d) / 100000d;
         double x2 = width * adj1;
         double x1 = x2 / 2d;
         double x3 = (width + x2) / 2d;

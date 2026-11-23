@@ -138,7 +138,7 @@ internal sealed partial class PptxRenderer
         }
 
         if (picturePreset != "rect")
-            ClipToPresetShape(graphics, null, picturePreset, x, y, width, height, pictureAdjustments);
+            ClipToPresetShape(graphics, picturePreset, x, y, width, height, pictureAdjustments);
 
         string? overflow = !hasViewportClip && svg.Root is { } outerSvg
             ? ReadSvgPresentationAttribute(outerSvg, ReadSvgStyleDeclarations(outerSvg), "overflow")?.Trim()
