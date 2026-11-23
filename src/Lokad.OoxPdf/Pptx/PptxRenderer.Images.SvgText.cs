@@ -217,8 +217,8 @@ internal sealed partial class PptxRenderer
             (!TryReadSvgSolidColor(element, style, paint, out _, out double colorAlpha) || colorAlpha > 0d);
     }
 
-    // Plain spans and link text share the label's metrics. Visibility controls
-    // which outlines paint. Only display:none removes characters from layout.
+    // Plain spans and link text share the label's metrics. Visibility and
+    // zero opacity suppress outlines while retaining the glyph advances.
     private static bool TryReadPlainSvgText(XElement element, SvgTextAppearance appearance,
         Lazy<HashSet<string>> paintServerIds, bool hidden, CancellationToken cancellationToken,
         out string text, out bool[]? hiddenCharacters)
@@ -233,19 +233,20 @@ internal sealed partial class PptxRenderer
             .FirstOrDefault(value => value is not null) == "preserve";
         XName spanName = element.Name.Namespace + "tspan";
         XName linkName = element.Name.Namespace + "a";
-        if (!Append(element, hidden, preserve)) return false;
+        if (!Append(element, hidden, ownerTransparent: false, preserve)) return false;
 
         text = characters.ToString();
         hiddenCharacters = visibility?.ToArray();
         return true;
 
-        bool Append(XElement owner, bool ownerHidden, bool preserveSpace)
+        bool Append(XElement owner, bool ownerHidden, bool ownerTransparent, bool preserveSpace)
         {
             foreach (XNode node in owner.Nodes())
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 if (node is XText content)
                 {
+                    bool hideOutlines = ownerHidden || ownerTransparent;
                     foreach (char source in content.Value)
                     {
                         if (!preserveSpace && source is '\r' or '\n') continue;
@@ -253,7 +254,7 @@ internal sealed partial class PptxRenderer
                         if (!preserveSpace && character == ' ')
                         {
                             // Hold a collapsed space until there is content on both sides.
-                            if (characters.Length != 0) pendingSpaceHidden ??= ownerHidden;
+                            if (characters.Length != 0) pendingSpaceHidden ??= hideOutlines;
                             continue;
                         }
                         if (pendingSpaceHidden is { } spaceHidden)
@@ -261,7 +262,7 @@ internal sealed partial class PptxRenderer
                             AppendCharacter(' ', spaceHidden);
                             pendingSpaceHidden = null;
                         }
-                        AppendCharacter(character, ownerHidden);
+                        AppendCharacter(character, hideOutlines);
                     }
                     continue;
                 }
@@ -276,7 +277,12 @@ internal sealed partial class PptxRenderer
                 string? localVisibility = ReadSvgPresentationAttribute(child, style, "visibility");
                 bool childHidden = string.IsNullOrWhiteSpace(localVisibility) || InheritsSvgPropertyValue(localVisibility)
                     ? ownerHidden : IsSvgVisibilityHidden(localVisibility);
-                if (!Append(child, childHidden, localSpace is null ? preserveSpace : localSpace == "preserve")) return false;
+                string? authoredOpacity = ReadSvgElementOpacity(child, style);
+                double? opacity = authoredOpacity is null ? 1d : ParseSvgOpacity(authoredOpacity);
+                if (opacity is not double localOpacity || !double.IsFinite(localOpacity) ||
+                    localOpacity is > 0d and < 1d) return false;
+                bool childTransparent = ownerTransparent || localOpacity <= 0d;
+                if (!Append(child, childHidden, childTransparent, localSpace is null ? preserveSpace : localSpace == "preserve")) return false;
             }
             return true;
         }
@@ -300,7 +306,7 @@ internal sealed partial class PptxRenderer
 
             bool RetainsLabelStyle(string name, string value) => name switch
             {
-                "display" or "visibility" => true,
+                "display" or "visibility" or "opacity" => true,
                 "font-family" => InheritsSvgPropertyValue(value) ||
                     value.AsSpan().Trim().Equals(appearance.FamilyList, StringComparison.OrdinalIgnoreCase),
                 "font-style" => InheritsSvgPropertyValue(value) ||

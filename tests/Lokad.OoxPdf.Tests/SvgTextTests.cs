@@ -473,6 +473,8 @@ internal static partial class SvgTextTests
             ("""stroke="red" """, ""),
             ("""stroke-opacity="1" """, """stroke="red" stroke-opacity="0" """),
             ("""opacity="inherit" """, """opacity=".5" """),
+            ("""opacity=".5" """, ""),
+            ("""opacity="NaN" """, ""),
             ("""font-size="2em" """, ""),
             ("""font-size="initial" """, ""),
             ("""font-family="monospace" """, ""),
@@ -530,6 +532,9 @@ internal static partial class SvgTextTests
         const string hiddenB = """A<tspan visibility="hidden">B</tspan>C D""";
         const string explicitVisibility = """A<tspan visibility="visible">B</tspan>C D""";
         const string inheritedVisibility = """  A<tspan visibility="collapse">B<tspan style="visibility:initial !important;visibility:hidden">C</tspan></tspan>  D  """;
+        const string transparentB = """A<tspan opacity="0"><tspan opacity="1" visibility="visible">B</tspan></tspan>C D""";
+        const string unitOpacity = """A<tspan opacity="100%"><tspan opacity="inherit">B</tspan></tspan>C D""";
+        const string resetOpacity = """A<tspan opacity=".3" style="opacity:initial !important;opacity:.5">B</tspan>C D""";
         string Picture(string value, string attributes = "") => Svg($"""
             <text x="120" y="80" font-size="20" text-anchor="middle" fill="#112233" {attributes}>{value}</text>
             <rect x="120" y="90" width="20" height="10" fill="lime"/>
@@ -546,7 +551,12 @@ internal static partial class SvgTextTests
         TestAssert.Equal(complete[2], Glyphs(Paint(revealed, diagnostics).ToString()).Single());
         TestAssert.Equal(0, diagnostics.Count);
 
-        AssertSvgPaintInBothFormats(Picture(hiddenB), Picture(inheritedVisibility), pdf => TestAssert.Equal(3, LabelPaths(pdf)), "0 1 0 rg");
+        AssertSvgPaintInBothFormats(Picture(hiddenB), [Picture(inheritedVisibility), Picture(transparentB)],
+            pdf => TestAssert.Equal(3, LabelPaths(pdf)), "0 1 0 rg");
+        AssertSvgPaintInBothFormats(Picture("ABC D"), Picture(unitOpacity),
+            pdf => TestAssert.Equal(4, LabelPaths(pdf)), "0 1 0 rg");
+        AssertSvgPaintInBothFormats(Picture("ABC D", """opacity=".8" """), Picture(resetOpacity, """opacity=".8" """),
+            pdf => TestAssert.Equal(4, LabelPaths(pdf)), "0 1 0 rg");
 
         static string[] Glyphs(string content)
         {
