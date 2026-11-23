@@ -436,11 +436,15 @@ internal static partial class SvgTextTests
         const string sameTypefaceSouth = """&#160;SO<tspan font-weight="900" style="font-weight:400 !important;font-weight:bold">UT</tspan>H""";
         const string sameOpacityNorth = """NO<tspan fill-opacity="initial"><tspan fill-opacity="100%">RT</tspan></tspan>H""";
         const string sameOpacitySouth = """&#160;SO<tspan fill-opacity=".2" style="fill-opacity:75% !important;fill-opacity:.3">UT</tspan>H""";
+        const string noStrokeNorth = """NO<tspan stroke="none">RT</tspan>H""";
+        const string noStrokeSouth = """&#160;SO<tspan stroke="red" style="stroke-opacity:0% !important;stroke-opacity:.3">UT</tspan>H""";
+        const string zeroWidthNorth = """NO<tspan stroke="red"><tspan stroke="blue">RT</tspan></tspan>H""";
         string control = Picture("NORTH", plainSouth);
         AssertSvgPaintInBothFormats(control,
             [Picture(northSpan, southSpan), Picture(sameSizeNorth, sameSizeSouth),
                 Picture(sameFillNorth, sameFillSouth), Picture(sameTypefaceNorth, sameTypefaceSouth),
-                Picture(sameOpacityNorth, sameOpacitySouth)], pdf =>
+                Picture(sameOpacityNorth, sameOpacitySouth),
+                Picture(noStrokeNorth, noStrokeSouth), Picture(zeroWidthNorth, plainSouth, """stroke-width="0" """)], pdf =>
         {
             TestAssert.Equal(5, LabelPaths(pdf));
             TestAssert.Equal(5, LabelPaths(pdf, "0.067 0.267 0.6 rg"));
@@ -460,6 +464,8 @@ internal static partial class SvgTextTests
             ("""fill-opacity="50%" """, ""),
             ("""fill-opacity="initial" """, """fill-opacity=".5" """),
             ("""fill-opacity="NaN" """, ""),
+            ("""stroke="red" """, ""),
+            ("""stroke-opacity="1" """, """stroke="red" stroke-opacity="0" """),
             ("""opacity="inherit" """, """opacity=".5" """),
             ("""font-size="2em" """, ""),
             ("""font-size="initial" """, ""),

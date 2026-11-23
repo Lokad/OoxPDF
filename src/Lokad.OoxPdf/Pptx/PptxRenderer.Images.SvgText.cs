@@ -108,17 +108,7 @@ internal sealed partial class PptxRenderer
             !IsDefault("text-decoration", "none") || !IsDefault("font-kerning", "auto", "normal", "none") ||
             !IsDefault("kerning", "auto", "0", "0px") ||
             !IsDefault("clip-path", "none") || !IsDefault("mask", "none") || !IsDefault("filter", "none")) return false;
-        // A nonpainting stroke leaves the supported glyph fill intact. The
-        // width check needs only a positive percentage basis to recognize zero.
-        if (Inherited("stroke") is { } stroke &&
-            ReadSvgOpacityValue(Inherited("stroke-opacity")) != 0d &&
-            !(TryReadSvgStrokeWidth(style, element, percentageBasis: 1d, out double strokeWidth) && strokeWidth == 0d))
-        {
-            string strokePaint = ResolveSvgPaintFallback(element, style, stroke, paintServerIds, out _);
-            if (!strokePaint.Equals("none", StringComparison.OrdinalIgnoreCase) &&
-                (!TryReadSvgSolidColor(element, style, strokePaint, out _, out double strokeOpacity) || strokeOpacity > 0d))
-                return false;
-        }
+        if (HasSvgTextStroke(element, style, paintServerIds)) return false;
         string anchor = Inherited("text-anchor")?.ToLowerInvariant() ?? "start";
         if (anchor is not ("start" or "middle" or "end")) return false;
         string fontStyle = Inherited("font-style")?.ToLowerInvariant() ?? "normal";
@@ -141,7 +131,7 @@ internal sealed partial class PptxRenderer
         if (!TryReadSvgTextFill(element, style, fill, out var paint)) return false;
         double fillOpacity = ReadSvgOpacityValue(Inherited("fill-opacity"));
         var appearance = new SvgTextAppearance(familyList, fontStyle, weight, size, paint, fillOpacity);
-        if (!TryReadPlainSvgText(element, appearance, IsSvgVisibilityHidden(Inherited("visibility")), cancellationToken,
+        if (!TryReadPlainSvgText(element, appearance, paintServerIds, IsSvgVisibilityHidden(Inherited("visibility")), cancellationToken,
                 out string valueText, out bool[]? hiddenCharacters)) return false;
         if (OoxComplexScript.DetectNeeds(valueText) != OoxComplexScriptKind.None ||
             valueText.EnumerateRunes().Any(r => Rune.IsControl(r))) return false;
@@ -212,9 +202,24 @@ internal sealed partial class PptxRenderer
         return false;
     }
 
+    // A nonpainting stroke leaves the glyph fill intact. Any positive
+    // percentage basis is enough to recognize a zero stroke width.
+    private static bool HasSvgTextStroke(XElement element, IReadOnlyDictionary<string, string> style,
+        Lazy<HashSet<string>> paintServerIds)
+    {
+        if (ReadSvgInheritedAttribute(element, style, "stroke") is not { } stroke ||
+            ReadSvgOpacityValue(ReadSvgInheritedAttribute(element, style, "stroke-opacity")) == 0d ||
+            (TryReadSvgStrokeWidth(style, element, percentageBasis: 1d, out double width) && width == 0d))
+            return false;
+        string paint = ResolveSvgPaintFallback(element, style, stroke, paintServerIds, out _);
+        return !paint.Equals("none", StringComparison.OrdinalIgnoreCase) &&
+            (!TryReadSvgSolidColor(element, style, paint, out _, out double colorAlpha) || colorAlpha > 0d);
+    }
+
     // Plain spans and link text share the label's metrics. Visibility controls
     // which outlines paint. Only display:none removes characters from layout.
-    private static bool TryReadPlainSvgText(XElement element, SvgTextAppearance appearance, bool hidden, CancellationToken cancellationToken,
+    private static bool TryReadPlainSvgText(XElement element, SvgTextAppearance appearance,
+        Lazy<HashSet<string>> paintServerIds, bool hidden, CancellationToken cancellationToken,
         out string text, out bool[]? hiddenCharacters)
     {
         text = string.Empty;
@@ -277,6 +282,7 @@ internal sealed partial class PptxRenderer
 
         bool IsPlainChild(XElement child, IReadOnlyDictionary<string, string> style, bool isLink)
         {
+            bool? hasStroke = null;
             return child.Attributes().All(IsPlainAttribute) &&
                 style.All(declaration => RetainsLabelStyle(declaration.Key.ToLowerInvariant(), declaration.Value));
 
@@ -305,6 +311,8 @@ internal sealed partial class PptxRenderer
                 "fill-opacity" => InheritsSvgPropertyValue(value) ||
                     ParseSvgOpacity(value) is { } opacity && double.IsFinite(opacity) &&
                     Math.Clamp(opacity, 0d, 1d) == appearance.FillOpacity,
+                "stroke" or "stroke-opacity" or "stroke-width" =>
+                    (hasStroke ??= HasSvgTextStroke(child, style, paintServerIds)) == false,
                 "color" => InheritsSvgPropertyValue(value),
                 _ => false,
             };
