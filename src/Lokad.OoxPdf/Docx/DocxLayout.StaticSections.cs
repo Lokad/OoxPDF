@@ -278,13 +278,13 @@ internal sealed partial class DocxLayoutEngine
         int pageNumber)
     {
         DocxPageSettings effectiveSettings = section.PageSettings;
-        double width = ReadTwipsValue(effectiveSettings.WidthValue, document.PageWidthPoints);
-        double height = ReadTwipsValue(effectiveSettings.HeightValue, document.PageHeightPoints);
+        double width = ReadOptionalTwipsValue(effectiveSettings.WidthValue) ?? document.PageWidthPoints;
+        double height = ReadOptionalTwipsValue(effectiveSettings.HeightValue) ?? document.PageHeightPoints;
         (width, height) = DocxPageSettings.NormalizeDimensions(width, height, effectiveSettings.OrientationValue);
 
-        double marginLeft = ReadTwipsValue(effectiveSettings.MarginLeftValue, document.MarginLeftPoints);
-        double marginRight = ReadTwipsValue(effectiveSettings.MarginRightValue, document.MarginRightPoints);
-        double gutter = Math.Max(0d, ReadTwipsValue(effectiveSettings.GutterDistanceValue, effectiveSettings.GutterDistancePoints ?? 0d));
+        double marginLeft = ReadOptionalTwipsValue(effectiveSettings.MarginLeftValue) ?? document.MarginLeftPoints;
+        double marginRight = ReadOptionalTwipsValue(effectiveSettings.MarginRightValue) ?? document.MarginRightPoints;
+        double gutter = Math.Max(0d, ReadOptionalTwipsValue(effectiveSettings.GutterDistanceValue) ?? effectiveSettings.GutterDistancePoints ?? 0d);
         // Keep the authored right edge for the fixed review lane. Word mirrors
         // the body and inside gutter, while balloons remain at this odd-page edge.
         double oddAuthoredMarginLeft = marginLeft;
@@ -330,8 +330,8 @@ internal sealed partial class DocxLayoutEngine
                 marginRight = oddAuthoredMarginLeft;
             }
         }
-        double marginTop = ReadTwipsValue(effectiveSettings.MarginTopValue, document.MarginTopPoints);
-        double marginBottom = ReadTwipsValue(effectiveSettings.MarginBottomValue, document.MarginBottomPoints);
+        double marginTop = ReadOptionalTwipsValue(effectiveSettings.MarginTopValue) ?? document.MarginTopPoints;
+        double marginBottom = ReadOptionalTwipsValue(effectiveSettings.MarginBottomValue) ?? document.MarginBottomPoints;
 
         return new DocxPageGeometry(
             width,
@@ -435,13 +435,6 @@ internal sealed partial class DocxLayoutEngine
 
         int index = Math.Clamp(activeColumnIndex, 0, page.ColumnFrames.Count - 1);
         return page.ColumnFrames[index];
-    }
-
-    private static double ReadTwipsValue(string? value, double fallback)
-    {
-        return long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long twips)
-            ? OoxUnits.TwipsToPoints(twips)
-            : fallback;
     }
 
     private static double? ReadOptionalTwipsValue(string? value)

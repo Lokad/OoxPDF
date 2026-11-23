@@ -3,11 +3,8 @@ using System.Xml.Linq;
 
 namespace Lokad.OoxPdf.Ooxml;
 
-// Centralized OOXML attribute readers. Parser and renderer classes each grew
-// their own ParseLong/ReadLong/ParseOptional copies with subtly different
-// missing-vs-malformed behavior; the names below make that choice explicit:
-// Parse-prefixed members throw on malformed values, Read-prefixed members
-// fall back to the default.
+// Numeric Parse readers reject malformed values. Numeric Read readers supply
+// the caller's default. Boolean readers delegate to the shared OOXML vocabulary.
 internal static class OoxXml
 {
     // DrawingML accepts thousandths of a percent or a decimal percent literal.
@@ -112,11 +109,6 @@ internal static class OoxXml
     public static bool ParseOptionalBool(XElement? element, string name)
     {
         return OoxBoolean.ParseAttribute(element, name, defaultValue: false);
-    }
-
-    public static bool ParseBoolOrDefault(XElement? element, string name, bool defaultValue)
-    {
-        return OoxBoolean.ParseAttribute(element, name, defaultValue);
     }
 
     public static bool ReadBool(XElement element, string name)

@@ -36,10 +36,9 @@ internal readonly record struct PptxSceneBackground(
     RgbColor Color,
     double Alpha);
 
-// T02: kind/payload combinations are validated at construction so impossible states
-// cannot arise through normal builders. The scene builder is the only producer;
-// TextBody stays unconstrained (read for every kind) as does Bounds (absent without
-// shape properties). Unknown kinds carry no payload and never reach here (skipped).
+// Scene creation and image preparation validate kind/payload combinations through
+// the same factory. TextBody and Bounds can accompany any kind. Scene traversal
+// skips unknown kinds before construction.
 internal sealed record PptxSceneNode
 {
     public PptxSceneNodeKind Kind { get; }

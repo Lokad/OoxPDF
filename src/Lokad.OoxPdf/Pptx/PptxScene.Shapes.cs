@@ -211,7 +211,7 @@ internal sealed partial class PptxSceneBuilder
             OoxXml.ReadOptionalDouble(path, "w", 21600d),
             OoxXml.ReadOptionalDouble(path, "h", 21600d),
             !string.Equals((string?)path.Attribute("fill"), "none", StringComparison.Ordinal),
-            OoxXml.ParseBoolOrDefault(path, "stroke", defaultValue: true),
+            OoxBoolean.ParseAttribute(path, "stroke", defaultValue: true),
             commands
                 .Cast<PptxSceneCustomCommand>()
                 .ToArray());
