@@ -11,11 +11,6 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static bool IsOfficeTextOperationBoundaryPunctuation(char value)
-    {
-        return CharUnicodeInfo.GetUnicodeCategory(value) == UnicodeCategory.DashPunctuation;
-    }
-
     private static double MeasureFlowSegmentBoundaryAdjustment(TextAdvanceEstimator advanceEstimator, string advanceText, int? previousCodePoint, double fontSize, TextAdvanceOptions options)
     {
         if (previousCodePoint is int previous && FirstCodePoint() is int first)

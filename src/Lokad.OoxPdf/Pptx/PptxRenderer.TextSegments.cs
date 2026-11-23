@@ -525,7 +525,7 @@ internal sealed partial class PptxRenderer
                 continue;
             }
 
-            if (IsOfficeTextOperationBoundaryPunctuation(c))
+            if (OfficePdfTextEmissionProfile.IsBoundaryPunctuation(c))
             {
                 if (builder.Length > 0)
                 {

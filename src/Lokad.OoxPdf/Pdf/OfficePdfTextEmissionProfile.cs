@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace Lokad.OoxPdf.Pdf;
 
 internal static class OfficePdfTextEmissionProfile
@@ -5,6 +7,9 @@ internal static class OfficePdfTextEmissionProfile
     private const double OfficeExportFontGridDpi = 600d;
     private const double PointsPerInch = 72d;
     private const double ObservedWordNumberedListTextStateCharacterSpacingEm = 0.004d;
+
+    public static bool IsBoundaryPunctuation(char value) =>
+        CharUnicodeInfo.GetUnicodeCategory(value) == UnicodeCategory.DashPunctuation;
 
     public static double FontSize(double layoutFontSize)
     {

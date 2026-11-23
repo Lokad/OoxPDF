@@ -465,7 +465,7 @@ internal static class DocxTextEmissionPlanner
         // Splitting at punctuation would position the suffix at its natural advance.
         if (segment.PdfCharacterSpacingSource == DocxTextStateCharacterSpacingSource.AdvanceTarget ||
             textMeasurer is null ||
-            !segment.Text.Any(IsOfficeTextOperationBoundaryPunctuation))
+            !segment.Text.Any(OfficePdfTextEmissionProfile.IsBoundaryPunctuation))
         {
             return [new DocxTextEmissionPart(segment.Text, segment.X, segment.Width)];
         }
@@ -474,7 +474,7 @@ internal static class DocxTextEmissionPlanner
         int partStart = 0;
         for (int i = 0; i < segment.Text.Length; i++)
         {
-            if (!IsOfficeTextOperationBoundaryPunctuation(segment.Text[i]))
+            if (!OfficePdfTextEmissionProfile.IsBoundaryPunctuation(segment.Text[i]))
             {
                 continue;
             }
@@ -508,11 +508,6 @@ internal static class DocxTextEmissionPlanner
             ? Math.Max(0d, segment.X + segment.Width - x)
             : textMeasurer.MeasureText(segment.StyleRun, text, fontSize);
         parts.Add(new DocxTextEmissionPart(text, x, width));
-    }
-
-    private static bool IsOfficeTextOperationBoundaryPunctuation(char value)
-    {
-        return CharUnicodeInfo.GetUnicodeCategory(value) == UnicodeCategory.DashPunctuation;
     }
 
     internal static int CountMappedGlyphs(string text, PdfEmbeddedFont embedded)
