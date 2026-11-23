@@ -89,6 +89,8 @@ SVG text, including plain spans with identifiers or descriptive metadata, can be
 Spans with `display:none` contribute neither glyphs nor spacing.
 Plain spans with hidden visibility retain their advances. Descendant visibility
 can restore ink at its original placement.
+Plain spans can restate the label's inherited `xml:space` policy. No-break spaces
+retain their advance at label edges.
 Complex SVG text, filters, masks/blends and
 unsupported constructs retain limitations. TrueType outlines embed; CFF faces
 require an embeddable fallback. Missing glyphs use diagnosed replacement.

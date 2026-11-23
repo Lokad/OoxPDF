@@ -180,8 +180,10 @@ internal sealed partial class PptxRenderer
         hiddenCharacters = null;
         var characters = new StringBuilder();
         List<bool>? visibility = null;
-        bool preserve = element.AncestorsAndSelf().Select(e => (string?)e.Attribute(XNamespace.Xml + "space"))
+        XName spaceName = XNamespace.Xml + "space";
+        bool preserve = element.AncestorsAndSelf().Select(e => (string?)e.Attribute(spaceName))
             .FirstOrDefault(value => value is not null) == "preserve";
+        string spacePolicy = preserve ? "preserve" : "default";
         XName spanName = element.Name.Namespace + "tspan";
         if (!Append(element, hidden)) return false;
 
@@ -190,9 +192,11 @@ internal sealed partial class PptxRenderer
         int start = 0;
         if (!preserve)
         {
-            ReadOnlySpan<char> trimmed = normalized.TrimStart();
+            // Tabs and XML line endings have already been normalized. Other
+            // characters such as no-break spaces still own glyph advances.
+            ReadOnlySpan<char> trimmed = normalized.TrimStart(' ');
             start = normalized.Length - trimmed.Length;
-            normalized = trimmed.TrimEnd();
+            normalized = trimmed.TrimEnd(' ');
         }
         text = normalized.Length == untrimmed.Length ? untrimmed : normalized.ToString();
         if (visibility is not null && text.Length != 0)
@@ -224,7 +228,9 @@ internal sealed partial class PptxRenderer
                 if (child.Name != spanName) return false;
                 var style = ReadSvgStyleDeclarations(child);
                 if (IsSvgDisplayNone(child, style)) continue;
-                if (child.Attributes().Any(attribute => !IsPlainSvgTextSpanAttribute(attribute)) ||
+                // Plain spans can restate the label's existing whitespace policy.
+                if (child.Attributes().Any(attribute => attribute.Name == spaceName
+                        ? attribute.Value != spacePolicy : !IsPlainSvgTextSpanAttribute(attribute)) ||
                     style.Keys.Any(property => property != "visibility")) return false;
                 string? localVisibility = ReadSvgPresentationAttribute(child, style, "visibility");
                 bool childHidden = string.IsNullOrWhiteSpace(localVisibility) || InheritsSvgPropertyValue(localVisibility)

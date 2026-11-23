@@ -349,6 +349,19 @@ internal static partial class SvgTextTests
         string Text(string value, string extra = "") => Svg("<text x=\"20\" y=\"80\" fill=\"#112233\" " + extra + ">" + value + "</text>");
         TestAssert.Equal(Paint(Text("AB")).ToString(), Paint(Text("A\nB")).ToString());
         TestAssert.Equal(Paint(Text("A B", "xml:space=\"preserve\"")).ToString(), Paint(Text("A\nB", "xml:space=\"preserve\"")).ToString());
+        string SpacedLabel(string value, string space = "") => Svg($"""
+            <text x="120" y="80" text-anchor="middle" fill="#112233" {space}>{value}</text>
+            <rect x="120" y="90" width="20" height="10" fill="lime"/>
+            """);
+        const string preserve = "xml:space=\"preserve\"";
+        const string spaced = "&#160;AB&#160;&#160;";
+        var preserved = SpacedLabel(spaced, preserve);
+        AssertSvgPaintInBothFormats(preserved,
+            [SpacedLabel("  &#160;A<tspan xml:space=\"default\">B</tspan>&#160;&#160;  "),
+             SpacedLabel("&#160;A<tspan xml:space=\"preserve\">B</tspan>&#160;&#160;", preserve)],
+            pdf => TestAssert.Equal(2, LabelPaths(pdf)), "0 1 0 rg");
+        TestAssert.True(Paint(preserved).ToString() != Paint(SpacedLabel("AB")).ToString(),
+            "Asymmetric no-break spaces move the centered glyphs.");
         foreach (string hidden in new[] { "display=\"none\"", "visibility=\"hidden\"", "opacity=\"0\"" })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
@@ -366,7 +379,7 @@ internal static partial class SvgTextTests
             <rect x="120" y="90" width="20" height="10" fill="lime"/>
             """);
         AssertSvgPaintInBothFormats(Picture("NORTH", "A B"),
-            [Picture("""NO<tspan id="direction">R<tspan>T</tspan></tspan>H""",
+            [Picture("""NO<tspan id="direction" xml:space="default">R<tspan>T</tspan></tspan>H""",
                 """A <tspan class="caption" data-key="initials" role="presentation" aria-hidden="true"> B</tspan>"""),
              Picture("""NO<tspan display="none" x="100"><tspan display="inline">HIDDEN</tspan></tspan>RTH""",
                 """A<tspan display="inline" style="display:none !important;display:inline">WRONG</tspan> B""")], pdf =>
@@ -485,11 +498,12 @@ internal static partial class SvgTextTests
             "<text y=\"1e308in\">overflowing length</text>" +
             "<text transform=\"matrix(1e308 0 0 1e308 1e308 0)\">overflow</text>" +
             "<text><tspan display=\"none\" style=\"display:inline\" x=\"40\">visible positioned span</tspan></text>" +
+            "<text>A<tspan xml:space=\"preserve\"> B </tspan>C</text>" +
             "<text x=\"20\" y=\"80\" fill=\"#112233\">I</text>"), diagnostics);
         TestAssert.Contains("0.8 0.898 1 rg", graphics.ToString());
         TestAssert.Equal(1, LabelPaths(graphics.ToString()));
-        TestAssert.True(diagnostics.Any(d => d.Message.Contains("5 unsupported text elements", StringComparison.Ordinal)),
-            "Unimplemented positions and non-finite mapped outlines must diagnose while supported siblings survive.");
+        TestAssert.True(diagnostics.Any(d => d.Message.Contains("6 unsupported text elements", StringComparison.Ordinal)),
+            "Unimplemented positions, non-finite outlines and a span changing whitespace policy retain diagnostics.");
         TestAssert.Equal(0, graphics.StateDepth);
         Write(Page(graphics));
     }
