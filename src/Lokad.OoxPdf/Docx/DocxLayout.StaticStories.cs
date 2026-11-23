@@ -37,11 +37,8 @@ internal sealed partial class DocxLayoutEngine
         IDocxLineMetricsProvider? unscaledLineMetrics =
             (unscaledTextMeasurer as IDocxLineMetricsProvider) ?? (textMeasurer as IDocxLineMetricsProvider);
         double bodyWidth = Math.Max(1d, templatePage.Width - templatePage.MarginLeft - templatePage.MarginRight);
-        DocxSelectedStaticStory selectedStory = SelectStaticHeaderFooter(
-            header ? templatePage.PageSettings.HeaderBodyElementsByType : templatePage.PageSettings.FooterBodyElementsByType,
-            header ? templatePage.PageSettings.HeaderParagraphsByType : templatePage.PageSettings.FooterParagraphsByType,
-            templatePage.PageSettings,
-            pageNumber, templatePage.SectionFirstPageNumber);
+        string variant = GetStaticStoryVariant(templatePage.PageSettings, pageNumber, templatePage.SectionFirstPageNumber);
+        DocxSelectedStaticStory selectedStory = SelectStaticHeaderFooter(templatePage.PageSettings, header, variant);
         DocxStaticStoryLayoutResult layout = CreatePageStaticStoryLayout(
             templatePage, selectedStory,
             templatePage.MarginLeft,
@@ -149,8 +146,9 @@ internal sealed partial class DocxLayoutEngine
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 DocxLayoutPage page = pages[pageIndex];
-                AddDrawings(page, pageIndex, true, GetDrawings(page, pageIndex, true), null);
-                AddDrawings(page, pageIndex, false, GetDrawings(page, pageIndex, false), null);
+                string variant = GetStaticStoryVariant(page.PageSettings, pageIndex + 1, page.SectionFirstPageNumber);
+                AddDrawings(page, pageIndex, true, SelectStaticHeaderFooterDrawings(page.PageSettings, header: true, variant), null);
+                AddDrawings(page, pageIndex, false, SelectStaticHeaderFooterDrawings(page.PageSettings, header: false, variant), null);
             }
             return (pages, drawings, new Dictionary<int, double>(), new Dictionary<int, double>());
         }
@@ -167,18 +165,11 @@ internal sealed partial class DocxLayoutEngine
             DocxLayoutPage page = pages[pageIndex];
             int pageNumber = pageIndex + 1;
             double bodyWidth = Math.Max(1d, page.Width - page.MarginLeft - page.MarginRight);
-            DocxSelectedStaticStory selectedHeader = SelectStaticHeaderFooter(
-                page.PageSettings.HeaderBodyElementsByType,
-                page.PageSettings.HeaderParagraphsByType,
-                page.PageSettings,
-                pageNumber, page.SectionFirstPageNumber);
-            DocxSelectedStaticStory selectedFooter = SelectStaticHeaderFooter(
-                page.PageSettings.FooterBodyElementsByType,
-                page.PageSettings.FooterParagraphsByType,
-                page.PageSettings,
-                pageNumber, page.SectionFirstPageNumber);
-            var headerDrawings = GetDrawings(page, pageIndex, true);
-            var footerDrawings = GetDrawings(page, pageIndex, false);
+            string variant = GetStaticStoryVariant(page.PageSettings, pageNumber, page.SectionFirstPageNumber);
+            var selectedHeader = SelectStaticHeaderFooter(page.PageSettings, header: true, variant);
+            var selectedFooter = SelectStaticHeaderFooter(page.PageSettings, header: false, variant);
+            var headerDrawings = SelectStaticHeaderFooterDrawings(page.PageSettings, header: true, variant);
+            var footerDrawings = SelectStaticHeaderFooterDrawings(page.PageSettings, header: false, variant);
             DocxStaticStoryLayoutResult headerLayout = CreatePageStaticStoryLayout(
                     page, selectedHeader,
                     page.MarginLeft,
@@ -245,11 +236,6 @@ internal sealed partial class DocxLayoutEngine
         }
 
         return (pagesWithStaticText, drawings, headerContentBottomByPage, footerContentTopByPage);
-
-        static DocxSelectedStaticDrawings GetDrawings(DocxLayoutPage page, int pageIndex, bool isHeader) =>
-            SelectStaticHeaderFooterDrawings(
-                isHeader ? page.PageSettings.HeaderFloatingDrawingsByType : page.PageSettings.FooterFloatingDrawingsByType,
-                page.PageSettings, pageIndex + 1, page.SectionFirstPageNumber);
 
         void AddDrawings(DocxLayoutPage page, int pageIndex, bool isHeader, DocxSelectedStaticDrawings selected,
             DocxStaticStoryLayoutResult? placedStory) => drawings.AddRange(CreateStaticFloatingDrawingLayouts(

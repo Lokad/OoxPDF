@@ -441,9 +441,8 @@ internal sealed partial class DocxLayoutEngine
         double width = Math.Max(1d, page.Width - page.MarginLeft - page.MarginRight);
         double tabStop = document.Settings.DefaultTabStopPoints ?? WordDefaultTabStopPoints;
         var metrics = measurer as IDocxLineMetricsProvider;
-        DocxStaticStoryLayoutResult Layout(bool header, int number) => CreateStaticStoryLayout(
-            SelectStaticHeaderFooter(header ? settings.HeaderBodyElementsByType : settings.FooterBodyElementsByType,
-                header ? settings.HeaderParagraphsByType : settings.FooterParagraphsByType, settings, number),
+        DocxStaticStoryLayoutResult Layout(bool header, int number, string variant) => CreateStaticStoryLayout(
+            SelectStaticHeaderFooter(settings, header, variant),
             page.MarginLeft, width, header ? page.Height - ResolveHeaderDistance(page) : ResolveFooterDistance(page),
             header, number, pageCount, measurer, staticMetrics, tabStop, printScale, metrics, cancellationToken);
         // Source fields are excluded, so first/even/default are the only page
@@ -452,8 +451,9 @@ internal sealed partial class DocxLayoutEngine
         foreach (int number in variants)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var headerLayout = Layout(true, number);
-            var footerLayout = Layout(false, number);
+            string variant = GetStaticStoryVariant(settings, number);
+            var headerLayout = Layout(true, number, variant);
+            var footerLayout = Layout(false, number, variant);
             // Body and continuation notes share the selected static flow edges.
             // Plain static overflow is usable when those edges leave a frame;
             // frames consumed entirely by static content retain the fallback.

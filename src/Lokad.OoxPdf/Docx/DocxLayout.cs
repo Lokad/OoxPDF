@@ -2464,8 +2464,8 @@ internal sealed partial class DocxLayoutEngine
                 // remain in design coordinates until their common print map.
                 double noteTop = footer?.PhysicalFooterFrameTop is { } physicalTop
                     ? new DocxPrintedPageFrame(templatePage.Height, paragraphSpacingScale).UnmapY(physicalTop) : top;
-                var footerSource = SelectStaticHeaderFooter(templatePage.PageSettings.FooterBodyElementsByType,
-                    templatePage.PageSettings.FooterParagraphsByType, templatePage.PageSettings, pageNumber, templatePage.SectionFirstPageNumber);
+                string variant = GetStaticStoryVariant(templatePage.PageSettings, pageNumber, templatePage.SectionFirstPageNumber);
+                var footerSource = SelectStaticHeaderFooter(templatePage.PageSettings, header: false, variant);
                 bounds = (top, noteTop, footer?.PhysicalFooterFrameTop,
                     HasCompleteStaticContent(footer, footerSource.BodyElements, templatePage,
                         ResolveFooterDistance(templatePage), top, cancellationToken));

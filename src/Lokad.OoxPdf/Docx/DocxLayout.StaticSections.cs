@@ -39,32 +39,24 @@ internal sealed partial class DocxLayoutEngine
          settings.HeaderFloatingDrawingsByType.GetValueOrDefault(variant, []),
          settings.FooterFloatingDrawingsByType.GetValueOrDefault(variant, []));
 
-    private static DocxSelectedStaticStory SelectStaticHeaderFooter(
-        IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> bodyElementsByType,
-        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> paragraphsByType,
-        DocxPageSettings settings,
-        int pageNumber,
-        int sectionFirstPageNumber = 1)
+    private static DocxSelectedStaticStory SelectStaticHeaderFooter(DocxPageSettings settings, bool header, string variant)
     {
         // Office A/B (w52 title-page plus w53 even-pages probes, Word-COM rendered):
         // a selected-but-undefined first/even story renders empty on its pages; Word
         // does not fall back to the default story there.
-        string variant = GetStaticStoryVariant(settings, pageNumber, sectionFirstPageNumber);
-        IReadOnlyList<DocxBodyElement>? selected = DocxBlockTraversal.FindStaticStoryBodyElements(variant, bodyElementsByType, paragraphsByType);
+        IReadOnlyList<DocxBodyElement>? selected = DocxBlockTraversal.FindStaticStoryBodyElements(variant,
+            header ? settings.HeaderBodyElementsByType : settings.FooterBodyElementsByType,
+            header ? settings.HeaderParagraphsByType : settings.FooterParagraphsByType);
         return selected is null ? new DocxSelectedStaticStory([], null) : new DocxSelectedStaticStory(selected, variant);
     }
 
     private sealed record DocxSelectedStaticStory(IReadOnlyList<DocxBodyElement> BodyElements, string? VariantType);
 
-    private static DocxSelectedStaticDrawings SelectStaticHeaderFooterDrawings(
-        IReadOnlyDictionary<string, IReadOnlyList<DocxFloatingDrawing>> drawingsByType,
-        DocxPageSettings settings,
-        int pageNumber,
-        int sectionFirstPageNumber)
+    private static DocxSelectedStaticDrawings SelectStaticHeaderFooterDrawings(DocxPageSettings settings, bool header, string variant)
     {
         // Same no-fallback rule as text stories above (mechanism consistency; floating
         // drawings in undefined first/even stories are unprobed on their own).
-        string variant = GetStaticStoryVariant(settings, pageNumber, sectionFirstPageNumber);
+        var drawingsByType = header ? settings.HeaderFloatingDrawingsByType : settings.FooterFloatingDrawingsByType;
         return drawingsByType.TryGetValue(variant, out IReadOnlyList<DocxFloatingDrawing>? selected)
             ? new DocxSelectedStaticDrawings(selected, variant)
             : new DocxSelectedStaticDrawings([], null);
