@@ -113,8 +113,8 @@ internal static partial class DocxInlineCompositionTests
                 var glyphs = PortableRenderingTests.ReadPaintedSourceLabel(page, number);
                 var label = PortableRenderingTests.ReadPaintedSourceLabel(page, "Evidence");
                 TestAssert.Equal(5, glyphs.Count);
-                TestAssert.True(Math.Abs(glyphs[2].Origin.X - label[0].Origin.X - 120d) < .02d,
-                    "The decimal separator paints at the authored 120pt tab stop.");
+                TestAssert.True(Math.Abs(glyphs[2].Origin.X - label[0].Origin.X - 132d) < .02d,
+                    "The decimal separator paints at the authored 132pt tab stop.");
                 foreach (string value in new[] { "437", "293" })
                     TestAssert.True(PortableRenderingTests.ReadPaintedSourceLabel(right, value, mathOnly: true).SequenceEqual(
                         PortableRenderingTests.ReadPaintedSourceLabel(page, value, mathOnly: true)),
@@ -127,9 +127,9 @@ internal static partial class DocxInlineCompositionTests
             {
                 var document = ReadMutation("docx-run-picture-visible", mode, false, false, (xml, w, m) =>
                 {
-                    var (paragraph, drawing) = CreateExactPictureCell(xml, w, 2800, 1320, 320, "After table.");
+                    var (paragraph, drawing) = CreateExactPictureCell(xml, w, 3200, 1320, 320, "After table.");
                     paragraph.Element(w + "pPr")!.AddFirst(new XElement(w + "tabs", new XElement(w + "tab",
-                        new XAttribute(w + "val", alignment), new XAttribute(w + "pos", "2400"))));
+                        new XAttribute(w + "val", alignment), new XAttribute(w + "pos", "2640"))));
                     AddPictureFractionLabel(paragraph, drawing, w, m);
                     paragraph.Add(PictureCellRun(w, new XElement(w + "tab")));
                     foreach (string part in number)
@@ -138,7 +138,9 @@ internal static partial class DocxInlineCompositionTests
                 var diagnostics = new List<OoxPdfDiagnostic>();
                 var page = new DocxRenderer(resolver, mode, CachedMathGeometry(mode))
                     .RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().Single();
-                TestAssert.Equal("DOCX_APPROXIMATED_EQUATION", diagnostics.Single(d => d.Feature == "equation").Id);
+                var equation = diagnostics.Single(d => d.Feature == "equation");
+                TestAssert.True(equation.Id == "DOCX_APPROXIMATED_EQUATION",
+                    $"The {alignment} stop keeps the fraction beside {string.Concat(number)} in {mode}. {equation.Message}");
                 return page;
             }
         }
