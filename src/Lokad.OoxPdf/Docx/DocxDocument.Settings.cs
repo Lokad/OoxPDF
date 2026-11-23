@@ -1,3 +1,5 @@
+using System.Collections.ObjectModel;
+
 namespace Lokad.OoxPdf.Docx;
 
 internal sealed record DocxDocumentSettings(
@@ -68,20 +70,20 @@ internal sealed record DocxPageSettings(
     public DocxNoteReferenceSettings EndnoteReferenceSettings { get; init; } = DocxNoteReferenceSettings.Empty;
 
     public IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> HeaderParagraphsByType { get; init; } =
-        new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase);
+        ReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>>.Empty;
 
     public IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> FooterParagraphsByType { get; init; } =
-        new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase);
+        ReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>>.Empty;
 
     public IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> HeaderBodyElementsByType { get; init; } =
-        new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase);
+        ReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>>.Empty;
 
     public IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> FooterBodyElementsByType { get; init; } =
-        new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase);
+        ReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>>.Empty;
 
     public IReadOnlyDictionary<string, IReadOnlyList<DocxFloatingDrawing>> HeaderFloatingDrawingsByType { get; init; } =
-        new Dictionary<string, IReadOnlyList<DocxFloatingDrawing>>(StringComparer.OrdinalIgnoreCase);
+        ReadOnlyDictionary<string, IReadOnlyList<DocxFloatingDrawing>>.Empty;
 
     public IReadOnlyDictionary<string, IReadOnlyList<DocxFloatingDrawing>> FooterFloatingDrawingsByType { get; init; } =
-        new Dictionary<string, IReadOnlyList<DocxFloatingDrawing>>(StringComparer.OrdinalIgnoreCase);
+        ReadOnlyDictionary<string, IReadOnlyList<DocxFloatingDrawing>>.Empty;
 }
