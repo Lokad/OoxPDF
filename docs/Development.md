@@ -69,10 +69,12 @@ framework and package checks at meaningful milestones. Transfer qualified assets
 with identity checks and a small integration smoke, without rebuilding or replaying
 unchanged suites. Each frozen artifact pins one framework. Do not poll closed CI.
 
-The hosted candidate archive contains both CLI runtimes, their build identities,
-NuGet packages and symbols, and package consumer summaries. The console-test
-artifact carries the hosted reports. Use a local frozen build for the test runner
-and inspectors.
+Each hosted candidate archive contains both CLI runtimes and their build
+identities. The Windows archive also contains the canonical NuGet package,
+symbols and Windows consumer summaries. The Ubuntu package job consumes those
+same bytes and publishes its summaries in `package-smoke-ubuntu-latest`.
+The console-test artifacts carry the hosted rendering reports. Use a local frozen
+build for the test runner and inspectors.
 
 Console tests launch prebuilt tools from the matching local build configuration
 or an explicitly bound assembly. For frozen tests, bind the tools your selection

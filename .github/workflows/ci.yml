@@ -9,6 +9,11 @@ on:
   push:
   pull_request:
 
+env:
+  OOXPDF_CI_DOTNET_VERSIONS: |
+    10.0.403
+    11.0.100-rc.3.26522.148
+
 jobs:
   verify:
     name: verify (${{ matrix.os }})
@@ -35,15 +40,7 @@ jobs:
         run: New-Item -ItemType Directory -Force artifacts/ci-tmp | Out-Null
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: |
-            10.0.403
-            11.0.100-rc.3.26522.148
-      - name: Install font for Ubuntu package smoke test
-        if: runner.os == 'Linux'
-        shell: bash
-        run: |
-          sudo apt-get update
-          sudo apt-get install --yes --no-install-recommends fonts-dejavu-core
+          dotnet-version: ${{ env.OOXPDF_CI_DOTNET_VERSIONS }}
       - name: Build (Release)
         run: dotnet build Lokad.OoxPdf.slnx -c Release --nologo
       - name: Pin candidate runtime identity
@@ -92,22 +89,21 @@ jobs:
           $env:OOXPDF_TEST_CLI_ASSEMBLY = "$env:GITHUB_WORKSPACE/artifacts/ci-candidate-net10/src/Lokad.OoxPdf.Cli/bin/Release/net10.0/Lokad.OoxPdf.Cli.dll"
           & ./tools/RunDocxAffectedTests.ps1 -RunnerPath artifacts/ci-candidate-net10/tests/Lokad.OoxPdf.Tests/bin/Release/net10.0/Lokad.OoxPdf.Tests.dll -OutputDirectory artifacts/ci-tests/net10 -Capability framework-compatibility -ExpectedSkip ConvertReplacesSymbolicLinkDestinationWithoutChangingInput,ConvertRejectsLinkedInputReferentDestinations
       - name: Package smoke tests (one package, both frameworks)
+        if: runner.os == 'Windows'
         run: |
           dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj -c Release --no-build --nologo
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           [xml]$project = Get-Content src/Lokad.OoxPdf/Lokad.OoxPdf.csproj
           $package = "artifacts/nuget/Lokad.OoxPdf.$($project.Project.PropertyGroup.Version).nupkg"
-          $fontArguments = @{}
-          if ($IsLinux) { $fontArguments.FontPath = '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf' }
           $frameworks = @('net11.0','net10.0')
           $hashes = @(foreach ($framework in $frameworks) {
             (Get-FileHash "src/Lokad.OoxPdf/bin/Release/$framework/Lokad.OoxPdf.dll").Hash
           })
-          & ./tools/TestPackageSmoke.ps1 -PackagePath $package -Framework $frameworks -ExpectedLibrarySha256 $hashes @fontArguments
+          & ./tools/TestPackageSmoke.ps1 -PackagePath $package -Framework $frameworks -ExpectedLibrarySha256 $hashes
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           & ./tools/TestPackageInspection.ps1 -PackagePath $package -OutputDirectory artifacts/ci-tests/package-inspection
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          pwsh -NoProfile -File tools/TestPackageConsumerCleanup.ps1
+      - name: Package consumer cleanup checks
+        run: pwsh -NoProfile -File tools/TestPackageConsumerCleanup.ps1
       - name: Text comparison adversarial checks
         run: |
           pwsh -NoProfile -File tools/TestTextOperationComparison.ps1
@@ -207,3 +203,64 @@ jobs:
             artifacts/nuget/*.nupkg
             artifacts/nuget/*.snupkg
             artifacts/package-smoke/**/summary.json
+
+  ubuntu-package:
+    name: Package consumer (ubuntu-latest)
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      TMP: ${{ github.workspace }}/artifacts/ci-tmp
+      TEMP: ${{ github.workspace }}/artifacts/ci-tmp
+      TMPDIR: ${{ github.workspace }}/artifacts/ci-tmp
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare owned temporary directory
+        run: New-Item -ItemType Directory -Force artifacts/ci-tmp | Out-Null
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.OOXPDF_CI_DOTNET_VERSIONS }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: candidate-windows-latest
+          path: artifacts/windows-candidate
+      - name: Consume the exact Windows package on Ubuntu
+        run: |
+          $transfer = 'artifacts/windows-candidate'
+          $packages = @(Get-ChildItem -LiteralPath "$transfer/nuget" -Filter 'Lokad.OoxPdf.*.nupkg' -File)
+          if ($packages.Count -ne 1) { throw 'Expected one canonical Windows package.' }
+          $package = $packages[0].FullName
+          $packageHash = (Get-FileHash -LiteralPath $package).Hash
+          $summaries = @(Get-ChildItem -LiteralPath "$transfer/package-smoke" -Filter 'summary.json' -File -Recurse |
+            ForEach-Object { Get-Content -LiteralPath $_.FullName -Raw | ConvertFrom-Json } |
+            Where-Object ReusedPackage -EQ $true)
+          $frameworks = @('net11.0','net10.0')
+          if ($summaries.Count -ne $frameworks.Count) { throw 'Expected one Windows consumer summary per framework.' }
+          $hashes = @(foreach ($framework in $frameworks) {
+            $directory = if ($framework -eq 'net11.0') { 'ci-candidate' } else { 'ci-candidate-net10' }
+            $identity = Get-Content -LiteralPath "$transfer/$directory/identity.json" -Raw | ConvertFrom-Json
+            $summary = @($summaries | Where-Object Framework -CEQ $framework)
+            if ($identity.Revision -cne $env:GITHUB_SHA -or $identity.Framework -cne $framework -or
+                $summary.Count -ne 1 -or $summary[0].PackageSha256 -cne $packageHash -or
+                $summary[0].RestoredPackageSha256 -cne $packageHash -or
+                $summary[0].LibrarySha256 -cne $identity.LibrarySha256) {
+              throw "Windows package identity mismatch for $framework."
+            }
+            $identity.LibrarySha256
+          })
+          & ./tools/TestPackageSmoke.ps1 -PackagePath $package -Framework $frameworks -ExpectedLibrarySha256 $hashes `
+              -FontPath tests/Lokad.OoxPdf.Tests/Cases/PortableFonts/DejaVuSans.ttf
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & ./tools/TestPackageInspection.ps1 -PackagePath $package -OutputDirectory artifacts/ci-tests/package-inspection
+      - name: Retain Ubuntu package consumer evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-smoke-ubuntu-latest
+          retention-days: 7
+          path: |
+            artifacts/package-smoke/**/summary.json
+            artifacts/ci-tests/package-inspection/**/*.json
