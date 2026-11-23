@@ -13,29 +13,30 @@ internal sealed partial class PptxRenderer
 {
     // Chart text calls share a page-level name scope for unique font names.
     // Font preparation returns its new resources; this caller appends them once.
-    private static async ValueTask<RenderedFonts> RenderChartTextRunsAsync(
+    private static async ValueTask<(IReadOnlyList<TextRun> Runs, IReadOnlyDictionary<FontRequest, RenderedFont> Fonts)> RenderChartTextRunsAsync(
         List<TextRun> runs,
         PdfGraphicsBuilder graphics,
         List<PdfFontResource> chartFonts,
         string resourcePrefix,
         PresentationFontResolver? fontResolver,
-        Action<OoxPdfDiagnostic>? diagnosticSink)
+        Action<OoxPdfDiagnostic>? diagnosticSink,
+        List<ChartTextRunLink>? links = null)
     {
         if (runs.Count == 0)
         {
-            return new RenderedFonts(new Dictionary<FontRequest, RenderedFont>(FontRequestKeyComparer.OrdinalIgnoreCaseFamily), []);
+            return (runs, new Dictionary<FontRequest, RenderedFont>(FontRequestKeyComparer.OrdinalIgnoreCaseFamily));
         }
         fontResolver ??= new PresentationFontResolver(null);
         CancellationToken cancellationToken = fontResolver.CancellationToken;
         var estimator = new TextAdvanceEstimator(fontResolver, cancellationToken);
         foreach (TextRun run in runs)
             await estimator.PrepareAsync(run.FontFamily, run.Bold, run.Italic, run.Text).ConfigureAwait(false);
-        runs = await SplitRunsByResolvedTypefaceAsync(runs, fontResolver, diagnosticSink, cancellationToken).ConfigureAwait(false);
+        runs = await SplitRunsByResolvedTypefaceAsync(runs, fontResolver, diagnosticSink, cancellationToken, links).ConfigureAwait(false);
 
         RenderedFonts renderedFonts = await CreateRenderedFontsAsync(runs, fontResolver, resourcePrefix, cancellationToken, diagnosticSink, chartFonts).ConfigureAwait(false);
         DrawTextRunsWithFonts(runs, graphics, renderedFonts.Fonts, cancellationToken);
         chartFonts.AddRange(renderedFonts.Resources);
-        return renderedFonts;
+        return (runs, renderedFonts.Fonts);
     }
 
     // Chart measurement and paint must use the same allowed per-glyph face.
@@ -45,7 +46,8 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<TextRun> runs,
         PresentationFontResolver fontResolver,
         Action<OoxPdfDiagnostic>? diagnosticSink,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        List<ChartTextRunLink>? links)
     {
         var rewritten = new List<TextRun>(runs.Count);
         // T01: family-name keys are typed FontRequests with explicit case-insensitive
@@ -54,9 +56,12 @@ internal sealed partial class PptxRenderer
         var verdicts = new Dictionary<FontRequest, OpenTypeFont?>(FontRequestKeyComparer.OrdinalIgnoreCaseFamily);
         var reported = new HashSet<FontRequest>(FontRequestKeyComparer.OrdinalIgnoreCaseFamily);
         TextAdvanceEstimator? estimator = null;
-        foreach (TextRun run in runs)
+        int linkIndex = 0;
+        for (int runIndex = 0; runIndex < runs.Count; runIndex++)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            TextRun run = runs[runIndex];
+            int firstPart = rewritten.Count;
             string requestedFamily = PptxFontFallbackRules.ResolveDefaultLatinTypeface(run.FontFamily);
             FontRequest familyKey = new(requestedFamily, run.Bold, run.Italic);
             if (!verdicts.TryGetValue(familyKey, out OpenTypeFont? primary))
@@ -69,59 +74,68 @@ internal sealed partial class PptxRenderer
                 FontCoverageFallback.IsFullyCovered(run.Text, primary, cancellationToken))
             {
                 rewritten.Add(run);
-                continue;
-            }
-
-            estimator ??= new TextAdvanceEstimator(fontResolver, cancellationToken);
-            await estimator.PrepareAsync(run.FontFamily, run.Bold, run.Italic, run.Text).ConfigureAwait(false);
-            // An unresolved glyph in a usable primary keeps that family's existing
-            // diagnosed substitution, including when another glyph needs a fallback.
-            List<(string? Typeface, string Text)> segments = SplitRunByFallbackTypeface(run, estimator, cancellationToken,
-                primary.HasTrueTypeOutlines ? requestedFamily : null);
-            if (segments.Count == 1)
-            {
-                rewritten.Add(run with { FontFamily = segments[0].Typeface });
             }
             else
             {
-                double naturalWidth = estimator.Measure(run.Text, run.FontSize, run.FontFamily,
-                    run.Bold, run.Italic, run.CharacterSpacing, run.KerningEnabled);
-                double cursorX = run.X + (run.Alignment switch
+                estimator ??= new TextAdvanceEstimator(fontResolver, cancellationToken);
+                await estimator.PrepareAsync(run.FontFamily, run.Bold, run.Italic, run.Text).ConfigureAwait(false);
+                // An unresolved glyph in a usable primary keeps that family's existing
+                // diagnosed substitution, including when another glyph needs a fallback.
+                List<(string? Typeface, string Text)> segments = SplitRunByFallbackTypeface(run, estimator, cancellationToken,
+                    primary.HasTrueTypeOutlines ? requestedFamily : null);
+                if (segments.Count == 1)
                 {
-                    TextAlignment.Center => Math.Max(0d, run.Width - naturalWidth) / 2d,
-                    TextAlignment.Right => Math.Max(0d, run.Width - naturalWidth),
-                    _ => 0d
-                });
-                bool first = true;
-                foreach ((string? typeface, string text) in segments)
+                    rewritten.Add(run with { FontFamily = segments[0].Typeface });
+                }
+                else
                 {
-                    if (!first) cursorX += run.CharacterSpacing;
-                    double width = estimator.Measure(text, run.FontSize, typeface, run.Bold, run.Italic, run.CharacterSpacing, run.KerningEnabled);
-                    rewritten.Add(run with
+                    double naturalWidth = estimator.Measure(run.Text, run.FontSize, run.FontFamily,
+                        run.Bold, run.Italic, run.CharacterSpacing, run.KerningEnabled);
+                    double cursorX = run.X + (run.Alignment switch
                     {
-                        Text = text,
-                        X = cursorX,
-                        Width = width,
-                        FontFamily = typeface,
-                        Alignment = TextAlignment.Left,
-                        PreventCoalesce = true
+                        TextAlignment.Center => Math.Max(0d, run.Width - naturalWidth) / 2d,
+                        TextAlignment.Right => Math.Max(0d, run.Width - naturalWidth),
+                        _ => 0d
                     });
-                    cursorX += width;
-                    first = false;
+                    bool first = true;
+                    foreach ((string? typeface, string text) in segments)
+                    {
+                        if (!first) cursorX += run.CharacterSpacing;
+                        double width = estimator.Measure(text, run.FontSize, typeface, run.Bold, run.Italic, run.CharacterSpacing, run.KerningEnabled);
+                        rewritten.Add(run with
+                        {
+                            Text = text,
+                            X = cursorX,
+                            Width = width,
+                            FontFamily = typeface,
+                            Alignment = TextAlignment.Left,
+                            PreventCoalesce = true
+                        });
+                        cursorX += width;
+                        first = false;
+                    }
+                }
+
+                if (!primary.HasTrueTypeOutlines && reported.Add(familyKey))
+                {
+                    diagnosticSink?.Invoke(new OoxPdfDiagnostic(
+                        "FONT_UNSUPPORTED_OUTLINES",
+                        OoxPdfSeverity.Warning,
+                        "Font '" + requestedFamily + "' has no embeddable TrueType outlines (CFF/OpenType-CFF); affected runs were substituted with fallback typefaces.",
+                        PartName: null,
+                        SlideIndex: null,
+                        PageIndex: null,
+                        Feature: requestedFamily,
+                        Fallback: "Per-glyph fallback typeface"));
                 }
             }
 
-            if (!primary.HasTrueTypeOutlines && reported.Add(familyKey))
+            // Navigation follows the same resolved fragments and their final
+            // source order. Only rich runs with authored links carry a range.
+            if (links is not null && linkIndex < links.Count && links[linkIndex].RunIndex == runIndex)
             {
-                diagnosticSink?.Invoke(new OoxPdfDiagnostic(
-                    "FONT_UNSUPPORTED_OUTLINES",
-                    OoxPdfSeverity.Warning,
-                    "Font '" + requestedFamily + "' has no embeddable TrueType outlines (CFF/OpenType-CFF); affected runs were substituted with fallback typefaces.",
-                    PartName: null,
-                    SlideIndex: null,
-                    PageIndex: null,
-                    Feature: requestedFamily,
-                    Fallback: "Per-glyph fallback typeface"));
+                links[linkIndex] = links[linkIndex] with { RunIndex = firstPart, RunCount = rewritten.Count - firstPart };
+                linkIndex++;
             }
         }
 

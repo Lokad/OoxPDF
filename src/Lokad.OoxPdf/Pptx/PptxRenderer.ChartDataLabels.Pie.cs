@@ -186,7 +186,7 @@ internal sealed partial class PptxRenderer
                     alignment = TextAlignment.Left;
                 }
 
-                int runStart = runs.Count, linkStart = labelLinks?.Count ?? 0;
+                int runStart = runs.Count;
                 if (!string.IsNullOrEmpty(label))
                 {
                 double pieManualTextX = textX;
@@ -197,8 +197,7 @@ internal sealed partial class PptxRenderer
                     await AddPolarChartLabelRunsAsync(labelParts, label, effectiveOptions, pieManualTextX, labelBox.Y, textWidth, labelBox.Height, style, alignment, pieWrapLines, pieWrapLongest, pieManualBottomAnchor).ConfigureAwait(false);
                 }
                 paints.Add(new PolarLabelPaint(labelBox, effectiveOptions.ShapeStyle, keyBox, keyFill,
-                    effectiveOptions.Layout.HasGeometryValues, runStart, runs.Count - runStart,
-                    linkStart, (labelLinks?.Count ?? 0) - linkStart, leader));
+                    effectiveOptions.Layout.HasGeometryValues, runStart, runs.Count - runStart, leader));
             }
         }
         double[] offsets = await PlacePolarLabelRowsAsync(paints, runs, placementBox, fontResolver, context).ConfigureAwait(false);
@@ -214,15 +213,9 @@ internal sealed partial class PptxRenderer
             if (dy == 0d) continue;
             for (int runIndex = paint.RunStart; runIndex < paint.RunStart + paint.RunCount; runIndex++)
                 runs[runIndex] = runs[runIndex] with { Y = runs[runIndex].Y + dy, ClipY = runs[runIndex].ClipY + dy };
-            if (labelLinks is not null)
-                for (int linkIndex = paint.LinkStart; linkIndex < paint.LinkStart + paint.LinkCount; linkIndex++)
-                {
-                    ChartTextRunLink link = labelLinks[linkIndex];
-                    labelLinks[linkIndex] = link with { Run = link.Run with { Y = link.Run.Y + dy, ClipY = link.Run.ClipY + dy } };
-                }
         }
-        RenderedFonts labelFonts = (await RenderChartTextRunsAsync(runs, graphics, chartFonts, "CP", fontResolver, diagnosticSink).ConfigureAwait(false));
-        await AddChartTextRunHyperlinkAnnotationsAsync(labelLinks, chart, context, labelFonts, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false);
+        var labelPaint = await RenderChartTextRunsAsync(runs, graphics, chartFonts, "CP", fontResolver, diagnosticSink, labelLinks).ConfigureAwait(false);
+        AddChartTextRunHyperlinkAnnotations(labelLinks, chart, context, labelPaint, linkAnnotations, reportedHyperlinkIds);
 
         async ValueTask AddPolarChartLabelRunsAsync(IReadOnlyList<string> parts, string fallbackText, ChartDataLabelOptions options, double x, double y, double width, double height, ChartTextStyle style, TextAlignment alignment, List<ChartTextRunLayout[]>? wrapLines, double wrapLongest, bool bottomAnchor = false)
         {

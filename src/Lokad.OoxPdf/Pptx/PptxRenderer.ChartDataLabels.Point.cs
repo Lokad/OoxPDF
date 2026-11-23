@@ -308,8 +308,8 @@ internal sealed partial class PptxRenderer
             }
         }
 
-        RenderedFonts labelFonts = (await RenderChartTextRunsAsync(runs, graphics, chartFonts, "CLD", fontResolver, diagnosticSink).ConfigureAwait(false));
-        await AddChartTextRunHyperlinkAnnotationsAsync(labelLinks, chart, context, labelFonts, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false);
+        var labelPaint = await RenderChartTextRunsAsync(runs, graphics, chartFonts, "CLD", fontResolver, diagnosticSink, labelLinks).ConfigureAwait(false);
+        AddChartTextRunHyperlinkAnnotations(labelLinks, chart, context, labelPaint, linkAnnotations, reportedHyperlinkIds);
 
     }
 

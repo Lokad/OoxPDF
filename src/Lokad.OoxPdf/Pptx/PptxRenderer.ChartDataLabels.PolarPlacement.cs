@@ -9,7 +9,7 @@ internal sealed partial class PptxRenderer
     // One existing label owns its furniture, text, clip and links through placement.
     private sealed record PolarLabelPaint(ChartLayoutBox Box, ChartShapeStyle Shape,
         ChartLayoutBox? KeyBox, ChartSeriesFill? KeyFill, bool Authored,
-        int RunStart, int RunCount, int LinkStart, int LinkCount, Action? Leader);
+        int RunStart, int RunCount, Action? Leader);
 
     private static async ValueTask<double[]> PlacePolarLabelRowsAsync(
         IReadOnlyList<PolarLabelPaint> paints, IReadOnlyList<TextRun> runs,

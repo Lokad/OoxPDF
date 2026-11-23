@@ -81,87 +81,73 @@ internal sealed partial class PptxRenderer
             : PdfLinkAnnotation.ToDestination(x, y, width, height, resolution.Destination!.Value));
     }
 
-    // Chart-title run clicks resolve against the chart part's own relationships so
-    // title links navigate independently of the whole-frame link (S08). Run boxes
-    // reuse the shared span-box math; chart layout space is already PDF-flipped.
-    private static async ValueTask AddChartTextRunHyperlinkAnnotationAsync(
-        ChartTextRunLink link,
-        IReadOnlyDictionary<string, OoxRelationship> chartRelationships,
-        PptxRenderContext context,
-        string? chartPartName,
-        List<PdfLinkAnnotation> annotations,
-        HashSet<string> reportedIds,
-        IReadOnlyDictionary<FontRequest, RenderedFont> renderedFonts)
-    {
-        TextRun run = link.Run;
-        if (run.Text.Length == 0 || run.Width <= 0d)
-        {
-            return;
-        }
-
-        if (string.IsNullOrEmpty(link.RelationshipId))
-        {
-            if (!string.IsNullOrEmpty(link.Action))
-            {
-                EmitHyperlinkDiagnostic(context, chartPartName ?? context.SceneSlide.PartName, reportedIds, link.Action,
-                    "PPTX_UNSUPPORTED_HYPERLINK_ACTION", $"Hyperlink action '{link.Action}' is not supported and was ignored.");
-            }
-
-            return;
-        }
-
-        PptxHyperlinkResolution resolution = ResolveHyperlink(context, chartRelationships, link.RelationshipId);
-        if (!resolution.Resolved)
-        {
-            EmitHyperlinkDiagnostic(context, chartPartName ?? context.SceneSlide.PartName, reportedIds, link.RelationshipId,
-                resolution.FailureId, resolution.FailureMessage);
-
-            return;
-        }
-
-        if (renderedFonts.ContainsKey(FontRequestForRun(run)))
-        {
-            AddPaintedRun(run);
-        }
-        else if (renderedFonts.Count != 0)
-        {
-            // A completely substituted run has no resource under its requested
-            // family. Navigation consumes the same split and prepared faces as paint.
-            foreach (TextRun part in await SplitRunsByResolvedTypefaceAsync([run], context.FontResolver, null,
-                context.CancellationToken).ConfigureAwait(false)) AddPaintedRun(part);
-        }
-
-        void AddPaintedRun(TextRun painted)
-        {
-            if (!renderedFonts.TryGetValue(FontRequestForRun(painted), out RenderedFont rendered) ||
-                (rendered.Font is null && rendered.FallbackFace is null) ||
-                !TryGetSpanLinkRect(painted, rendered.Font, context.Document, out double x, out double y, out double width, out double height)) return;
-
-            annotations.Add(resolution.Uri is not null
-                ? PdfLinkAnnotation.ToUri(x, y, width, height, resolution.Uri)
-                : PdfLinkAnnotation.ToDestination(x, y, width, height, resolution.Destination!.Value));
-        }
-    }
-
-    // One annotation per linked chart-text run for axis titles and data labels (S08).
-    // Null relationships (scene-less fallback rendering) skip emission silently.
-    private static async ValueTask AddChartTextRunHyperlinkAnnotationsAsync(
+    // Each authored title, axis or label link covers the resolved glyph
+    // fragments from that source run. Relationships belong to the chart.
+    private static void AddChartTextRunHyperlinkAnnotations(
         List<ChartTextRunLink>? links,
         PptxSceneChart? chart,
         PptxRenderContext context,
-        RenderedFonts renderedFonts,
+        (IReadOnlyList<TextRun> Runs, IReadOnlyDictionary<FontRequest, RenderedFont> Fonts) paint,
         List<PdfLinkAnnotation> annotations,
         HashSet<string> reportedIds)
     {
-        if (links is null || chart?.Relationships is not { } chartRelationships)
+        if (links is null || chart?.Relationships is not { } relationships)
         {
             return;
         }
 
+        string partName = chart.TargetPartName ?? context.SceneSlide.PartName;
         foreach (ChartTextRunLink link in links)
         {
-            await AddChartTextRunHyperlinkAnnotationAsync(link, chartRelationships, context, chart.TargetPartName,
-                annotations, reportedIds, renderedFonts.Fonts).ConfigureAwait(false);
+            context.CancellationToken.ThrowIfCancellationRequested();
+            if (link.RunCount == 0)
+            {
+                continue;
+            }
+            if (string.IsNullOrEmpty(link.RelationshipId))
+            {
+                if (!string.IsNullOrEmpty(link.Action))
+                {
+                    EmitHyperlinkDiagnostic(context, partName, reportedIds, link.Action,
+                        "PPTX_UNSUPPORTED_HYPERLINK_ACTION", $"Hyperlink action '{link.Action}' is not supported and was ignored.");
+                }
+                continue;
+            }
+
+            PptxHyperlinkResolution resolution = ResolveHyperlink(context, relationships, link.RelationshipId);
+            if (!resolution.Resolved)
+            {
+                EmitHyperlinkDiagnostic(context, partName, reportedIds, link.RelationshipId,
+                    resolution.FailureId, resolution.FailureMessage);
+                continue;
+            }
+
+            double left = double.PositiveInfinity, bottom = double.PositiveInfinity;
+            double right = double.NegativeInfinity, top = double.NegativeInfinity;
+            for (int i = link.RunIndex; i < link.RunIndex + link.RunCount; i++)
+            {
+                context.CancellationToken.ThrowIfCancellationRequested();
+                TextRun run = paint.Runs[i];
+                if (run.Text.Length == 0 || run.Width <= 0d ||
+                    !paint.Fonts.TryGetValue(FontRequestForRun(run), out RenderedFont rendered) ||
+                    (rendered.Font is null && rendered.FallbackFace is null) ||
+                    !TryGetSpanLinkRect(run, rendered.Font, context.Document, out double x, out double y, out double width, out double height))
+                {
+                    continue;
+                }
+
+                left = Math.Min(left, x);
+                bottom = Math.Min(bottom, y);
+                right = Math.Max(right, x + width);
+                top = Math.Max(top, y + height);
+            }
+
+            if (right > left && top > bottom)
+            {
+                annotations.Add(resolution.Uri is not null
+                    ? PdfLinkAnnotation.ToUri(left, bottom, right - left, top - bottom, resolution.Uri)
+                    : PdfLinkAnnotation.ToDestination(left, bottom, right - left, top - bottom, resolution.Destination!.Value));
+            }
         }
     }
 

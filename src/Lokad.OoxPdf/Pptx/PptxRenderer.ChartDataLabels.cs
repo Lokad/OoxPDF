@@ -369,7 +369,7 @@ internal sealed partial class PptxRenderer
             runs.Add(richRun);
             if (links is not null && (!string.IsNullOrEmpty(run.HyperlinkClickId) || !string.IsNullOrEmpty(run.HyperlinkClickAction)))
             {
-                links.Add(new ChartTextRunLink(richRun, run.HyperlinkClickId, run.HyperlinkClickAction));
+                links.Add(new ChartTextRunLink(runs.Count - 1, 1, run.HyperlinkClickId, run.HyperlinkClickAction));
             }
             cursor += runWidth;
         }

@@ -484,7 +484,7 @@ internal sealed partial class PptxRenderer
     private readonly record struct ChartTextRunOverride(string Text, ChartTextStyleOverride TextStyle,
         string? HyperlinkClickId = null, string? HyperlinkClickAction = null, int LineIndex = 0);
 
-    private readonly record struct ChartTextRunLink(TextRun Run, string? RelationshipId, string? Action);
+    private readonly record struct ChartTextRunLink(int RunIndex, int RunCount, string? RelationshipId, string? Action);
 
     private readonly record struct ChartTextRunLayout(string Text, ChartTextStyle Style, double Width, string? HyperlinkClickId = null, string? HyperlinkClickAction = null);
 

@@ -80,6 +80,53 @@ internal static partial class PptxChartTextHyperlinksTests
         }
     }
 
+    public static void PptxChartTitleLinksCoverVisibleFallbackGlyphInk()
+    {
+        const string scriptF = "\U0001D4BB";
+        const string uri = "https://example.invalid/fallback-title";
+        const string relationships = """
+            <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+              <Relationship Id="rIdLink" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.invalid/fallback-title" TargetMode="External"/>
+            </Relationships>
+            """;
+        foreach (string label in new[] { scriptF, "A" + scriptF + "B" })
+        {
+            PdfPage page = RenderChartTitlePage($"""
+                <a:r><a:rPr sz="3600"><a:latin typeface="DejaVu Sans"/><a:hlinkClick r:id="rIdLink"/></a:rPr><a:t>{label}</a:t></a:r>
+                <a:r><a:rPr sz="3600"><a:latin typeface="DejaVu Sans"/></a:rPr><a:t>Z</a:t></a:r>
+                """, relationships, fontResolver: new TitleFallbackResolver()).Pages.Single();
+            var linked = PortableRenderingTests.ReadPaintedSourceLabel(page, label, fontPrefix: "CT");
+            var fallback = linked[label.Length == scriptF.Length ? 0 : 1];
+            var neighbor = PortableRenderingTests.ReadPaintedSourceLabel(page, "Z", fontPrefix: "CT").Single();
+            TestAssert.True(fallback.Origin.Y - fallback.Ink.Y > .25d * fallback.Size,
+                "The fallback glyph paints below the primary font's link bounds.");
+            PdfLinkAnnotation link = page.Annotations.Single();
+            TestAssert.Equal(uri, link.Uri);
+            foreach (var glyph in linked)
+            {
+                double center = glyph.Ink.X + glyph.Ink.Width / 2d;
+                TestAssert.True(center >= link.X - .01d && center <= link.X + link.Width + .01d &&
+                    glyph.Ink.Y >= link.Y - .01d && glyph.Ink.Y + glyph.Ink.Height <= link.Y + link.Height + .01d,
+                    $"The linked glyph at {center:F2} extends from {glyph.Ink.Y:F2} to {glyph.Ink.Y + glyph.Ink.Height:F2}pt. " +
+                    $"Link box: [{link.X:F2}, {link.Y:F2}, {link.Width:F2}, {link.Height:F2}].");
+            }
+            TestAssert.True(link.X + link.Width <= neighbor.Origin.X + .01d,
+                "The following unlinked run keeps its own paint and stays outside the link.");
+        }
+    }
+
+    private sealed class TitleFallbackResolver : IFontResolver, IFontCatalog
+    {
+        private readonly FontFaceResolution primary = new PortableRenderingTests.PinnedResolver().Resolve(new("DejaVu Sans", false, false));
+        private readonly FontFaceResolution fallback = new PortableRenderingTests.PinnedResolver(mathFont: true)
+            .Resolve(new("DejaVu Math TeX Gyre", false, false)) with { Style = new() };
+
+        public FontFaceResolution Resolve(FontRequest request) =>
+            request.FamilyName == fallback.ResolvedFamily ? fallback : primary;
+
+        public IReadOnlyList<FontFaceResolution> GetDiscoveredFonts() => [fallback];
+    }
+
     public static void PptxChartTitleHyperlinkActionIsDiagnosed()
     {
         (IReadOnlyList<PdfPage> pages, List<OoxPdfDiagnostic> diagnostics) = RenderChartTitlePage(

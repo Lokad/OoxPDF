@@ -200,9 +200,9 @@ internal sealed partial class PptxRenderer
         }
 
         if (vertical)
-            RotateChartAxisTitle(runs, links, centerX, centerY);
-        RenderedFonts axisFonts = await RenderChartTextRunsAsync(runs, graphics, chartFonts, "CAT", fontResolver,
-            context.DiagnosticSink).ConfigureAwait(false);
-        await AddChartTextRunHyperlinkAnnotationsAsync(links, chart, context, axisFonts, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false);
+            RotateChartAxisTitle(runs, centerX, centerY);
+        var axisPaint = await RenderChartTextRunsAsync(runs, graphics, chartFonts, "CAT", fontResolver,
+            context.DiagnosticSink, links).ConfigureAwait(false);
+        AddChartTextRunHyperlinkAnnotations(links, chart, context, axisPaint, linkAnnotations, reportedHyperlinkIds);
     }
 }

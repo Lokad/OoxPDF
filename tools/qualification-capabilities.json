@@ -7241,6 +7241,7 @@
       "=PptxDefaultBarTopAxisTitleUsesMeasuredInkBand",
       "=PptxManualAxisTitleKeepsAuthoredLinesAndLinkedInk",
       "=PptxRotatedAxisTitleRunsSharePaintAndNavigationFrame",
+      "=PptxChartTitleLinksCoverVisibleFallbackGlyphInk",
       "=PortableRenderingRichChartTitleKeepsAuthoredLinesAndTheirLinks",
       "PptxInferredTitleDefaultsMatchIndependentOfficeSizes",
       "PptxInferredTitleSizeFollowsSourcePrecedence",

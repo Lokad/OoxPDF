@@ -47,14 +47,8 @@ internal sealed partial class PptxRenderer
                 : await MeasureChartTitlePaintBoxAsync(runs, style, fontResolver).ConfigureAwait(false);
             RenderChartShapeStyle(graphics, paintBox.X, paintBox.Y, paintBox.Width, paintBox.Height, titleShape);
         }
-        RenderedFonts titleFonts = (await RenderChartTextRunsAsync(runs, graphics, chartFonts, "CT", fontResolver, diagnosticSink).ConfigureAwait(false));
-        if (titleLinks is not null && sceneChart.Relationships is not null)
-        {
-            foreach (ChartTextRunLink titleLink in titleLinks)
-            {
-                await AddChartTextRunHyperlinkAnnotationAsync(titleLink, sceneChart.Relationships, context, sceneChart.TargetPartName, linkAnnotations, reportedHyperlinkIds, titleFonts.Fonts).ConfigureAwait(false);
-            }
-        }
+        var titlePaint = await RenderChartTextRunsAsync(runs, graphics, chartFonts, "CT", fontResolver, diagnosticSink, titleLinks).ConfigureAwait(false);
+        AddChartTextRunHyperlinkAnnotations(titleLinks, sceneChart, context, titlePaint, linkAnnotations, reportedHyperlinkIds);
     }
 
     private static async ValueTask AddMeasuredChartTitleRunsAsync(List<TextRun> runs, string title,
@@ -370,8 +364,8 @@ internal sealed partial class PptxRenderer
             TextAlignment.Center,
             fontResolver,
             axisLinks).ConfigureAwait(false);
-        RenderedFonts axisFonts = (await RenderChartTextRunsAsync(runs, graphics, chartFonts, "CAT", fontResolver, diagnosticSink).ConfigureAwait(false));
-        await AddChartTextRunHyperlinkAnnotationsAsync(axisLinks, chart, context, axisFonts, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false);
+        var axisPaint = await RenderChartTextRunsAsync(runs, graphics, chartFonts, "CAT", fontResolver, diagnosticSink, axisLinks).ConfigureAwait(false);
+        AddChartTextRunHyperlinkAnnotations(axisLinks, chart, context, axisPaint, linkAnnotations, reportedHyperlinkIds);
     }
 
     private static async ValueTask RenderDefaultVerticalChartAxisTitleAsync(
@@ -422,26 +416,16 @@ internal sealed partial class PptxRenderer
         List<ChartTextRunLink>? axisLinks = chart?.Relationships is null ? null : new List<ChartTextRunLink>();
         AddMeasuredChartTextRuns(runs, measuredRuns, emittedTitleWidth, text, baselineX, baselineY, textWidth,
             titleHeight, new ChartLayoutBox(frame.X, frame.Y, frame.Width, frame.Height), style, TextAlignment.Left, axisLinks);
-        RotateChartAxisTitle(runs, axisLinks, baselineX, baselineY);
-        RenderedFonts axisFonts = (await RenderChartTextRunsAsync(runs, graphics, chartFonts, "CAT", fontResolver, diagnosticSink).ConfigureAwait(false));
-        await AddChartTextRunHyperlinkAnnotationsAsync(axisLinks, chart, context, axisFonts, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false);
+        RotateChartAxisTitle(runs, baselineX, baselineY);
+        var axisPaint = await RenderChartTextRunsAsync(runs, graphics, chartFonts, "CAT", fontResolver, diagnosticSink, axisLinks).ConfigureAwait(false);
+        AddChartTextRunHyperlinkAnnotations(axisLinks, chart, context, axisPaint, linkAnnotations, reportedHyperlinkIds);
     }
 
-    private static void RotateChartAxisTitle(List<TextRun> runs, List<ChartTextRunLink>? axisLinks,
-        double pivotX, double pivotY)
+    private static void RotateChartAxisTitle(List<TextRun> runs, double pivotX, double pivotY)
     {
         for (int i = 0; i < runs.Count; i++)
         {
             runs[i] = PlaceInAxisFrame(runs[i]);
-        }
-
-        if (axisLinks is not null)
-        {
-            for (int linkIndex = 0; linkIndex < axisLinks.Count; linkIndex++)
-            {
-                ChartTextRunLink axisLink = axisLinks[linkIndex];
-                axisLinks[linkIndex] = axisLink with { Run = PlaceInAxisFrame(axisLink.Run) };
-            }
         }
 
         // The same physical frame owns all runs and their linked ink.
@@ -484,8 +468,8 @@ internal sealed partial class PptxRenderer
         var (titleLines, measuredHeight) = await MeasureChartRichTextLinesAsync(text, textRuns, style, fontResolver).ConfigureAwait(false);
         await AddMeasuredChartTitleRunsAsync(runs, text, titleLines, measuredHeight, titleBox,
             manualLayout: true, style, fontResolver, axisLinks).ConfigureAwait(false);
-        RenderedFonts axisFonts = (await RenderChartTextRunsAsync(runs, graphics, chartFonts, "CAT", fontResolver, diagnosticSink).ConfigureAwait(false));
-        await AddChartTextRunHyperlinkAnnotationsAsync(axisLinks, chart, context, axisFonts, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false);
+        var axisPaint = await RenderChartTextRunsAsync(runs, graphics, chartFonts, "CAT", fontResolver, diagnosticSink, axisLinks).ConfigureAwait(false);
+        AddChartTextRunHyperlinkAnnotations(axisLinks, chart, context, axisPaint, linkAnnotations, reportedHyperlinkIds);
     }
 
     private static ChartAxisTitleReserveSides ReadDefaultAxisTitleReserveSides(PptxSceneChart sceneChart)
