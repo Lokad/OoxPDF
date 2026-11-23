@@ -366,8 +366,10 @@ internal static partial class SvgTextTests
             <rect x="120" y="90" width="20" height="10" fill="lime"/>
             """);
         AssertSvgPaintInBothFormats(Picture("NORTH", "A B"),
-            Picture("""NO<tspan id="direction">R<tspan>T</tspan></tspan>H""",
-                """A <tspan class="caption" data-key="initials" role="presentation" aria-hidden="true"> B</tspan>"""), pdf =>
+            [Picture("""NO<tspan id="direction">R<tspan>T</tspan></tspan>H""",
+                """A <tspan class="caption" data-key="initials" role="presentation" aria-hidden="true"> B</tspan>"""),
+             Picture("""NO<tspan display="none" x="100"><tspan display="inline">HIDDEN</tspan></tspan>RTH""",
+                """A<tspan display="inline" style="display:none !important;display:inline">WRONG</tspan> B""")], pdf =>
             {
                 TestAssert.Equal(5, LabelPaths(pdf));
                 TestAssert.Equal(2, LabelPaths(pdf, "0.067 0.267 0.6 rg"));
@@ -448,10 +450,11 @@ internal static partial class SvgTextTests
             "<text x=\"10 20\">array positions</text><text dx=\"10% 20%\">percentage positions</text>" +
             "<text y=\"1e308in\">overflowing length</text>" +
             "<text transform=\"matrix(1e308 0 0 1e308 1e308 0)\">overflow</text>" +
+            "<text><tspan display=\"none\" style=\"display:inline\" x=\"40\">visible positioned span</tspan></text>" +
             "<text x=\"20\" y=\"80\" fill=\"#112233\">I</text>"), diagnostics);
         TestAssert.Contains("0.8 0.898 1 rg", graphics.ToString());
         TestAssert.Equal(1, LabelPaths(graphics.ToString()));
-        TestAssert.True(diagnostics.Any(d => d.Message.Contains("4 unsupported text elements", StringComparison.Ordinal)),
+        TestAssert.True(diagnostics.Any(d => d.Message.Contains("5 unsupported text elements", StringComparison.Ordinal)),
             "Unimplemented positions and non-finite mapped outlines must diagnose while supported siblings survive.");
         TestAssert.Equal(0, graphics.StateDepth);
         Write(Page(graphics));

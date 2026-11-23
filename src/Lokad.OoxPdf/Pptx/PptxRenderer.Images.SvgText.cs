@@ -181,12 +181,13 @@ internal sealed partial class PptxRenderer
         foreach (XNode node in element.Nodes())
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (node is XText text)
-                characters.Append(text.Value);
-            else if (node is XElement child && !IsSvgMetadataElement(child) &&
-                (child.Name != spanName || child.Attributes().Any(attribute => !IsPlainSvgTextSpanAttribute(attribute)) ||
-                 !AppendPlainSvgText(child, characters, cancellationToken)))
-                return false;
+            if (node is XText text) { characters.Append(text.Value); continue; }
+            if (node is not XElement child || IsSvgMetadataElement(child)) continue;
+            if (child.Name != spanName) return false;
+            // A display:none span contributes neither characters nor advance.
+            if (IsSvgDisplayNone(child, ReadSvgStyleDeclarations(child))) continue;
+            if (child.Attributes().Any(attribute => !IsPlainSvgTextSpanAttribute(attribute)) ||
+                !AppendPlainSvgText(child, characters, cancellationToken)) return false;
         }
         return true;
     }

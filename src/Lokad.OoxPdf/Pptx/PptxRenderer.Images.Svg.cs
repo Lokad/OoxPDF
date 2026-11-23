@@ -771,7 +771,7 @@ internal sealed partial class PptxRenderer
         foreach (XElement source in element.AncestorsAndSelf())
         {
             var declarations = ReferenceEquals(source, element) ? style : ReadSvgStyleDeclarations(source);
-            if (string.Equals(ReadSvgPresentationAttribute(source, declarations, "display")?.Trim(), "none", StringComparison.OrdinalIgnoreCase))
+            if (IsSvgDisplayNone(source, declarations))
             {
                 return true;
             }
@@ -779,6 +779,9 @@ internal sealed partial class PptxRenderer
 
         return false;
     }
+
+    private static bool IsSvgDisplayNone(XElement element, IReadOnlyDictionary<string, string> style) =>
+        string.Equals(ReadSvgPresentationAttribute(element, style, "display")?.Trim(), "none", StringComparison.OrdinalIgnoreCase);
 
     private static bool IsSupportedSvgElement(string name)
     {
