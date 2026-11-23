@@ -171,8 +171,8 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    // Plain spans share the label's metrics. Visibility controls which glyph
-    // outlines paint. Only display:none removes characters from layout.
+    // Plain spans and link text share the label's metrics. Visibility controls
+    // which outlines paint. Only display:none removes characters from layout.
     private static bool TryReadPlainSvgText(XElement element, bool hidden, CancellationToken cancellationToken,
         out string text, out bool[]? hiddenCharacters)
     {
@@ -185,6 +185,7 @@ internal sealed partial class PptxRenderer
             .FirstOrDefault(value => value is not null) == "preserve";
         string spacePolicy = preserve ? "preserve" : "default";
         XName spanName = element.Name.Namespace + "tspan";
+        XName linkName = element.Name.Namespace + "a";
         if (!Append(element, hidden)) return false;
 
         string untrimmed = characters.ToString();
@@ -225,12 +226,13 @@ internal sealed partial class PptxRenderer
                     continue;
                 }
                 if (node is not XElement child || IsSvgMetadataElement(child)) continue;
-                if (child.Name != spanName) return false;
+                bool isLink = child.Name == linkName;
+                if (child.Name != spanName && !isLink) return false;
                 var style = ReadSvgStyleDeclarations(child);
                 if (IsSvgDisplayNone(child, style)) continue;
-                // Plain spans can restate the label's existing whitespace policy.
+                // A child can restate the label's existing whitespace policy.
                 if (child.Attributes().Any(attribute => attribute.Name == spaceName
-                        ? attribute.Value != spacePolicy : !IsPlainSvgTextSpanAttribute(attribute)) ||
+                        ? attribute.Value != spacePolicy : !IsPlainSvgTextChildAttribute(attribute, isLink)) ||
                     style.Keys.Any(property => property is not ("display" or "visibility"))) return false;
                 string? localVisibility = ReadSvgPresentationAttribute(child, style, "visibility");
                 bool childHidden = string.IsNullOrWhiteSpace(localVisibility) || InheritsSvgPropertyValue(localVisibility)
@@ -241,8 +243,10 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static bool IsPlainSvgTextSpanAttribute(XAttribute attribute) =>
+    private static bool IsPlainSvgTextChildAttribute(XAttribute attribute, bool isLink) =>
         attribute.IsNamespaceDeclaration ||
+        (isLink && attribute.Name.LocalName == "href" &&
+         (attribute.Name.Namespace == XNamespace.None || attribute.Name.NamespaceName == "http://www.w3.org/1999/xlink")) ||
         attribute.Name.Namespace == XNamespace.None &&
         (attribute.Name.LocalName is "id" or "class" or "role" or "display" or "visibility" or "style" ||
          attribute.Name.LocalName.StartsWith("aria-", StringComparison.Ordinal) ||

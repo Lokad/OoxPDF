@@ -391,6 +391,42 @@ internal static partial class SvgTextTests
             }, "0 1 0 rg");
     }
 
+    public static void SvgInlineLinkTextKeepsPaintAndDiagnosesActions()
+    {
+        string Picture(string north, string south) => Svg($"""
+            <text x="95" y="45" text-anchor="middle" font-size="20" fill="#112233">{north}</text>
+            <text x="20" y="80" xml:space="preserve" font-size="20" fill="#114499">{south}</text>
+            <rect id="marker" x="120" y="90" width="20" height="10" fill="lime"/>
+            """);
+        const string plainSouth = "&#160;SOUTH";
+        const string modern = """NO<a href="#marker"><tspan>RT</tspan></a><a display="none" transform="translate(200)">INVISIBLE</a>H""";
+        const string legacy = """&#160;SO<tspan><a xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#marker">UT</a></tspan>H""";
+        var expected = Paint(Picture("NORTH", plainSouth));
+        TestAssert.Equal(5, LabelPaths(expected.ToString()));
+        TestAssert.Equal(5, LabelPaths(expected.ToString(), "0.067 0.267 0.6 rg"));
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        var linked = Paint(Picture(modern, legacy), diagnostics);
+        AssertEquivalentSvgPaint(expected, linked, "Plain links preserve their authored glyphs and advances.");
+        var warning = diagnostics.Single();
+        TestAssert.Equal("SVG_UNSUPPORTED_CONTENT", warning.Id);
+        TestAssert.Contains("2 unsupported a elements", warning.Message);
+        Write(Page(linked));
+
+        diagnostics.Clear();
+        var hidden = Paint(Picture("""NO<a href="#marker" visibility="hidden">RT</a>H""", plainSouth), diagnostics);
+        AssertEquivalentSvgPaint(Paint(Picture("""NO<tspan visibility="hidden">RT</tspan>H""", plainSouth)), hidden,
+            "Hidden link text keeps its advances.");
+        TestAssert.Equal(3, LabelPaths(hidden.ToString()));
+        TestAssert.Equal(0, diagnostics.Count);
+
+        diagnostics.Clear();
+        var transformed = Paint(Picture("""NO<a href="#marker" transform="translate(20)">RT</a>H""", plainSouth), diagnostics);
+        TestAssert.DoesNotContain(LabelColor, transformed.ToString());
+        TestAssert.Equal(5, LabelPaths(transformed.ToString(), "0.067 0.267 0.6 rg"));
+        TestAssert.True(diagnostics.Any(d => d.Message.Contains("unsupported text element", StringComparison.Ordinal)),
+            "A link requiring separate layout keeps the label fallback.");
+    }
+
     public static void SvgLabelsRetainVisibilityAndHiddenAdvances()
     {
         const string hiddenB = """A<tspan visibility="hidden">B</tspan>C D""";

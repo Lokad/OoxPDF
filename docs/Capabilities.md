@@ -99,8 +99,9 @@ Local SVG gradient templates reuse the authored stops and their source colors.
 Supported user-space linear and radial gradients accept absolute CSS lengths.
 Explicit `initial` and `unset` on `stop-color` restore black.
 Missing or wrong-type local paint references use the authored fallback color or `none`.
-SVG link wrappers preserve transforms on their shapes and text. Embedded SVG link
-actions retain an unsupported-content diagnostic. Numeric opacity on SVG roots,
+SVG link wrappers preserve transforms on their shapes and text. Plain links
+within a label preserve its glyphs and advances. Embedded SVG link actions retain
+an unsupported-content diagnostic. Numeric opacity on SVG roots,
 groups and link wrappers composes their children as a group for both presentation
 attributes and inline style.
 Explicit `inherit` on a shape, label or container uses its parent's opacity.

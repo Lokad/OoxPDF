@@ -686,6 +686,7 @@
     "=SvgResourceDefinitionsKeepTheirChildrenOutOfVisiblePaint",
     "=SvgLinkWrapperTransformsKeepShapeAndLabelPaint",
     "=SvgLinkWrapperOpacityKeepsVisibilityAndDiagnosedStrokeFallback",
+    "=SvgInlineLinkTextKeepsPaintAndDiagnosesActions",
     "=SvgLinesKeepTranslucentGradientStrokesWithDefaultOrInheritedFill",
     "=SvgObjectOpacityMatchesGroupForFilledGradientStrokes",
     "=SvgTranslucentSolidStrokesPaintOverTheirFill",
@@ -20935,6 +20936,7 @@
   ],
   "svg-text-labels": [
     "SvgLabelsRetainEveryGlyphInDocxAndPptxPictures",
+    "=SvgInlineLinkTextKeepsPaintAndDiagnosesActions",
     "SvgLabelsPrepareFontsOnlyForVisiblePictureUses",
     "SvgTransformFormsPreservePicturePlacement",
     "SvgRootOverflowClipsThePictureViewport",
