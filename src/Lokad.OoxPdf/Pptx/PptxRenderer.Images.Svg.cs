@@ -1557,6 +1557,9 @@ internal sealed partial class PptxRenderer
     private static double? ParseSvgOpacity(string? text)
     {
         ReadOnlySpan<char> token = text.AsSpan().Trim();
+        // Inherited fill and stroke opacity resolve unset before parsing.
+        if (token.Equals("initial", StringComparison.OrdinalIgnoreCase) ||
+            token.Equals("unset", StringComparison.OrdinalIgnoreCase)) return 1d;
         bool percent = token.Length != 0 && token[^1] == '%';
         if (percent) token = token[..^1];
         if (!double.TryParse(token, NumberStyles.Float, CultureInfo.InvariantCulture, out double opacity)) return null;

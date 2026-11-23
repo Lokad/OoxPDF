@@ -697,6 +697,39 @@ internal static partial class SvgTextTests
         AssertSvgPaintInBothFormats(expected, groupStyle, "/Pattern CS /Ps1 SCN");
     }
 
+    public static void SvgOpacityDefaultsKeepGradientStrokesAndStopMasksInBothFormats()
+    {
+        static string Picture(string value) => Svg($"""
+            <defs>
+              <linearGradient id="stroke" gradientUnits="userSpaceOnUse" x1="16" x2="112">
+                <stop stop-color="blue"/><stop offset="1" stop-color="purple"/>
+              </linearGradient>
+              <linearGradient id="fill">
+                <stop stop-color="blue" stop-opacity=".25"/>
+                <stop offset="1" stop-color="purple" stop-opacity="0" style="stop-opacity:{value}"/>
+              </linearGradient>
+            </defs>
+            <rect x="10" y="10" width="165" height="95" fill="red"/>
+            <g opacity=".25" style="opacity:{value}">
+              <path d="M24 22H112" fill="none" stroke="url(#stroke)" stroke-width="6"/>
+            </g>
+            <path d="M24 40H112" fill="none" stroke="url(#stroke)" stroke-width="6"
+                  opacity=".25" style="opacity:{value}"/>
+            <rect x="24" y="55" width="88" height="40" fill="url(#fill)"/>
+            <rect x="120" y="70" width="12" height="10" fill="green"/>
+            """).Insert("<svg ".Length, $"opacity=\".25\" style=\"opacity:{value}\" ");
+
+        string direct = Picture("1");
+        foreach (string keyword in new[] { "UnSeT", "initial" })
+        {
+            AssertSvgPaintInBothFormats(direct, Picture(keyword), pdf =>
+            {
+                TestAssert.Equal(2, Regex.Matches(pdf, @"(?m)^/Pattern CS /Ps\d+ SCN\r?$").Count);
+                TestAssert.Equal(1, Regex.Matches(pdf, "/S /Luminosity").Count);
+            }, "1 0 0 rg", "0 0.502 0 rg");
+        }
+    }
+
     public static void SvgZeroOpacityContainerStylesHidePaintAndDiagnostics()
     {
         const string backdrop = """<rect x="10" y="10" width="90" height="60" fill="#136c9e"/>""";
