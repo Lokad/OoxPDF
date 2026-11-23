@@ -136,7 +136,7 @@
     "DocxPageFootnoteNumbersRestartWithoutChangingAuthoredDigits",
     "DocxPageFootnoteNumbersRenderLabelsAndDistinctDestinationsTogether",
     "DocxPageFootnoteNumbersUseCompleteCellOwnershipAndKeepTypographyScope",
-    "DocxCffFontSubstitutesFallbackWithDiagnostic",
+    "DocxCffSubstitutionMatchesTrueTypeRendering",
     "DocxTextEmissionSnapshot",
     "MemoryBudgetFontProgram",
     "MemoryBudgetGrowthRefusalIsTerminalAndRefundsAcquiredStorage"
@@ -18616,7 +18616,6 @@
     "CaseDistinctStableIdsDoNotAliasPrograms",
     "CollectionFaceIndexesCacheSeparately",
     "DocxCffFallbackCandidateSkipsWithDiagnostic",
-    "DocxCffFontSubstitutesFallbackWithDiagnostic",
     "DocxCffOnlyResolverRendersWithoutThrowing",
     "DocxCffSubstitutionMatchesTrueTypeRendering",
     "DocxConcurrentNumberingRetriesKeepIndependentParsedFontOwners",

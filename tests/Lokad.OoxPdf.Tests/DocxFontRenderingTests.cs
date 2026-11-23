@@ -624,32 +624,6 @@ internal static class DocxFontRenderingTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Equal(2, DocxTests.CountPdfTextShows(pdf));
     }
-    public static void DocxCffFontSubstitutesFallbackWithDiagnostic()
-    {
-        byte[] cffBytes = TestFontBuilder.CreateCffKindFont("CffFamily");
-        byte[] fallbackBytes = TestFontBuilder.CreateTestFont();
-        var resolver = new DocxTests.CffPrimaryFontResolver(cffBytes, fallbackBytes);
-        var run = new DocxTextRun("Hello", 12d, null, false, false, false, null, "CffFamily")
-        {
-            Fonts = new DocxRunFonts("CffFamily", null, null, null, null, null, null, null)
-        };
-        DocxDocument document = DocxTests.CreateFontPlanDocument(run, new DocxFontCatalog([], DocxThemeFonts.Empty));
-        var diagnostics = new List<OoxPdfDiagnostic>();
-        List<PdfPage> pages = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-            .RenderPagesAsync(document, diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().ToList();
-
-        TestAssert.Equal(1, pages.Count);
-        PdfPage page = pages[0];
-        TestAssert.True(DocxTests.CountPdfTextShows(page.Content) >= 1, "Substituted text must be painted.");
-        TestAssert.Equal(1, page.Fonts.Count);
-        TestAssert.True(page.Fonts[0].Font.Font.HasTrueTypeOutlines, "Emitted font must be embeddable.");
-        TestAssert.Contains("TestFont", page.Fonts[0].Font.BaseFontName);
-        OoxPdfDiagnostic warning = TestAssert.NotNull(diagnostics.SingleOrDefault(diagnostic => diagnostic.Id == "FONT_UNSUPPORTED_OUTLINES"));
-        TestAssert.DoesNotContain("CffFamily", page.Fonts[0].Font.BaseFontName);
-        TestAssert.Equal(OoxPdfSeverity.Warning, warning.Severity);
-        TestAssert.Contains("CffFamily", warning.Message);
-        TestAssert.Equal("Document fallback typeface", warning.Fallback);
-    }
 
     public static void DocxCffSubstitutionMatchesTrueTypeRendering()
     {
@@ -671,7 +645,18 @@ internal static class DocxFontRenderingTests
 
         TestAssert.Equal(ttPage.Content, cffPage.Content);
         TestAssert.True(!ttDiagnostics.Any(diagnostic => diagnostic.Id == "FONT_UNSUPPORTED_OUTLINES"), "TrueType rendering must not report a substitution.");
-        TestAssert.True(cffDiagnostics.Any(diagnostic => diagnostic.Id == "FONT_UNSUPPORTED_OUTLINES"), "CFF rendering must report the substitution.");
+        var fallback = cffPage.Fonts.Single();
+        TestAssert.True(fallback.Font.Font.HasTrueTypeOutlines, "Emitted font must be embeddable.");
+        TestAssert.Contains("TestFont", fallback.Font.BaseFontName);
+        TestAssert.DoesNotContain("CffFamily", fallback.Font.BaseFontName);
+        var glyphs = DocxCommentsTests.ReadEmbeddedGlyphTextShows(cffPage, usePageCoordinates: false,
+            fontResourceFilter: name => name == fallback.ResourceName);
+        TestAssert.Equal("Hello", string.Concat(glyphs.Select(show => show.Text)).TrimEnd(' '));
+
+        var warning = cffDiagnostics.Single(diagnostic => diagnostic.Id == "FONT_UNSUPPORTED_OUTLINES");
+        TestAssert.Equal(OoxPdfSeverity.Warning, warning.Severity);
+        TestAssert.Contains("CffFamily", warning.Message);
+        TestAssert.Equal("Document fallback typeface", warning.Fallback);
     }
 
     public static void DocxCffFallbackCandidateSkipsWithDiagnostic()
