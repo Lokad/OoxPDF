@@ -133,61 +133,56 @@ internal sealed partial class PptxRenderer
 
         void EmitNodeDiagnostics(IReadOnlyList<PptxSceneNode> nodes, PptxColorMap colorMap, bool renderPlaceholders, string nodePartName)
         {
-            // The same node admission as painting, without cloning the scene or
-            // discarding the master XML used for text/style inheritance.
-            IEnumerable<PptxSceneNode> renderedNodes = EnumerateRenderedSceneNodes(nodes, renderPlaceholders);
-            if (HasUnsupportedSceneGradientFill(renderedNodes))
+            bool gradient = false, pattern = false, orientation = false, overflow = false;
+            bool pictureFill = false, tile = false, transparency = false, effect = false;
+            bool geometry = false, callout = false;
+            foreach (PptxSceneNode node in EnumerateRenderedSceneNodes(nodes, renderPlaceholders))
+            {
+                var shape = node.Shape;
+                gradient = gradient || shape is { GradientFill.HasUnsupportedGradient: true } || HasUnsupportedChartGradientFill(node.Chart);
+                pattern = pattern || shape is { PatternFill.HasUnsupportedPattern: true };
+                orientation = orientation || HasUnsupportedSceneTextOrientation(node);
+                overflow = overflow || HasUnsupportedSceneTextVerticalOverflow(node, colorMap, renderPlaceholders, textSpanMemo);
+                pictureFill = pictureFill || HasUnsupportedPictureFill(node);
+                tile = tile || node.Picture?.HasTile == true || shape?.PictureFill.HasTile == true;
+                transparency = transparency || shape is { HasUnsupportedTransparency: true };
+                effect = effect || HasUnsupportedEffect(node);
+                geometry = geometry || shape?.CustomGeometry.HasUnsupportedGeometry == true;
+                callout = callout || IsUnsupportedCalloutPreset(shape?.Preset);
+            }
+
+            // Emit in feature order within each part. The first visible part
+            // that owns a feature supplies its diagnostic on this slide.
+            if (gradient)
                 Emit("PPTX_UNSUPPORTED_GRADIENT_FILL", "gradient fill", nodePartName);
-            if (HasUnsupportedShapePatternFill(renderedNodes))
+            if (pattern)
                 Emit("PPTX_UNSUPPORTED_PATTERN_FILL", "pattern fill", nodePartName);
-            if (HasUnsupportedSceneTextOrientation(renderedNodes))
+            if (orientation)
                 Emit("PPTX_UNSUPPORTED_TEXT_ORIENTATION", "vertical text", nodePartName);
-            if (HasUnsupportedSceneTextVerticalOverflow(renderedNodes, colorMap, renderPlaceholders, textSpanMemo))
+            if (overflow)
                 EmitTextOverflow(nodePartName);
-            if (HasUnsupportedPictureFill(renderedNodes))
+            if (pictureFill)
                 Emit("PPTX_UNSUPPORTED_PICTURE_FILL", "picture fill", nodePartName);
-            if (HasTiledImageFill(renderedNodes))
+            if (tile)
                 Emit("PPTX_UNSUPPORTED_IMAGE_TILE", "tiled image fill", nodePartName);
-            if (HasUnsupportedShapeTransparency(renderedNodes))
+            if (transparency)
                 Emit("PPTX_UNSUPPORTED_TRANSPARENCY", "transparency", nodePartName);
-            if (HasUnsupportedEffect(renderedNodes))
+            if (effect)
                 Emit("PPTX_UNSUPPORTED_EFFECT", "effect", nodePartName);
-            if (HasUnsupportedCustomGeometry(renderedNodes))
+            if (geometry)
                 Emit("PPTX_UNSUPPORTED_CUSTOM_GEOMETRY", "custom geometry", nodePartName);
-            if (HasUnsupportedCallout(renderedNodes))
+            if (callout)
                 Emit("PPTX_UNSUPPORTED_CALLOUT", "callout shape", nodePartName);
         }
     }
 
-    private static bool HasTiledImageFill(IEnumerable<PptxSceneNode> nodes)
+    private static bool HasUnsupportedPictureFill(PptxSceneNode node)
     {
-        foreach (PptxSceneNode node in nodes)
-        {
-            if (node.Picture?.HasTile == true ||
-                node.Shape?.PictureFill.HasTile == true)
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private static bool HasUnsupportedPictureFill(IEnumerable<PptxSceneNode> nodes)
-    {
-        foreach (PptxSceneNode node in nodes)
-        {
-            if ((node.Shape is { PictureFill.HasPicture: true } shape &&
-                    (shape.CustomGeometry.HasGeometry
-                        ? !TryResolveCustomPictureFillPath(shape.CustomGeometry, out _)
-                        : !CanRenderPictureFillPreset(shape.Preset))) ||
-                HasUnsupportedChartPictureFill(node.Chart))
-            {
-                return true;
-            }
-        }
-
-        return false;
+        return (node.Shape is { PictureFill.HasPicture: true } shape &&
+            (shape.CustomGeometry.HasGeometry
+                ? !TryResolveCustomPictureFillPath(shape.CustomGeometry, out _)
+                : !CanRenderPictureFillPreset(shape.Preset))) ||
+            HasUnsupportedChartPictureFill(node.Chart);
     }
 
     private static bool HasUnsupportedChartPictureFill(PptxSceneChart? chart)
@@ -227,19 +222,6 @@ internal sealed partial class PptxRenderer
     {
         return preset?.Contains("Callout", StringComparison.OrdinalIgnoreCase) == true &&
             !string.Equals(preset, "wedgeRectCallout", StringComparison.Ordinal);
-    }
-
-    private static bool HasUnsupportedCallout(IEnumerable<PptxSceneNode> nodes)
-    {
-        foreach (PptxSceneNode node in nodes)
-        {
-            if ((node.Shape is not null && IsUnsupportedCalloutPreset(node.Shape.Preset)))
-            {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     private static bool HasVideo(IReadOnlyList<PptxSceneNode> nodes)
@@ -292,20 +274,6 @@ internal sealed partial class PptxRenderer
             !PptxColorResolver.HasSupportedGradientStopAlpha(stops);
     }
 
-    private static bool HasUnsupportedSceneGradientFill(IEnumerable<PptxSceneNode> nodes)
-    {
-        foreach (PptxSceneNode node in nodes)
-        {
-            if ((node.Shape is { GradientFill.HasUnsupportedGradient: true }) ||
-                HasUnsupportedChartGradientFill(node.Chart))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
     private static bool HasUnsupportedChartGradientFill(PptxSceneChart? chart)
     {
         return chart is not null &&
@@ -345,19 +313,11 @@ internal sealed partial class PptxRenderer
             IsUnsupportedGradientFill(gradientFill);
     }
 
-    private static bool HasUnsupportedEffect(IEnumerable<PptxSceneNode> nodes)
+    private static bool HasUnsupportedEffect(PptxSceneNode node)
     {
-        foreach (PptxSceneNode node in nodes)
-        {
-            if ((node.Shape is { } shape && (shape.Effects.HasUnsupportedEffects ||
-                    (shape.Glow.HasGlow && !CanRenderGlowPreset(shape.Preset)))) ||
-                (node.Chart is { } chart && HasUnsupportedEffect(chart)))
-            {
-                return true;
-            }
-        }
-
-        return false;
+        return (node.Shape is { } shape && (shape.Effects.HasUnsupportedEffects ||
+                (shape.Glow.HasGlow && !CanRenderGlowPreset(shape.Preset)))) ||
+            (node.Chart is { } chart && HasUnsupportedEffect(chart));
     }
 
     private static bool HasUnsupportedEffect(PptxSceneChart chart)
@@ -391,19 +351,6 @@ internal sealed partial class PptxRenderer
             labels.Overrides.Any(label => label.ShapeStyle.Effects.HasUnsupportedEffects);
     }
 
-    private static bool HasUnsupportedCustomGeometry(IEnumerable<PptxSceneNode> nodes)
-    {
-        foreach (PptxSceneNode node in nodes)
-        {
-            if ((node.Shape is not null && node.Shape.CustomGeometry.HasUnsupportedGeometry))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
     private static bool HasUnsupportedTextOrientation(XElement bodyProperties)
     {
         string? orientation = (string?)bodyProperties.Attribute("vert");
@@ -413,21 +360,13 @@ internal sealed partial class PptxRenderer
     internal static bool HasUnsupportedTextOrientation(string? orientation) =>
         ParseTextOrientation(orientation) == PptxTextOrientation.Unknown;
 
-    private static bool HasUnsupportedSceneTextOrientation(IEnumerable<PptxSceneNode> nodes)
+    private static bool HasUnsupportedSceneTextOrientation(PptxSceneNode node)
     {
-        foreach (PptxSceneNode node in nodes)
-        {
-            if ((node.TextBody?.HasUnsupportedTextOrientation == true) ||
-                HasUnsupportedTableTextOrientation(node.Table) ||
-                HasUnsupportedChartTextOrientation(node.Chart))
-            {
-                return true;
-            }
-        }
+        return node.TextBody?.HasUnsupportedTextOrientation == true ||
+            node.Table?.Rows.Any(row => row.Cells.Any(cell => cell.HasUnsupportedTextOrientation)) == true ||
+            HasUnsupportedChartTextOrientation(node.Chart);
 
-        return false;
-
-        bool HasUnsupportedChartTextOrientation(PptxSceneChart? chart)
+        static bool HasUnsupportedChartTextOrientation(PptxSceneChart? chart)
         {
             return chart is not null &&
                 (HasUnsupportedTextOrientation(chart.Title.TextBodyProperties.OrientationValue) ||
@@ -439,11 +378,6 @@ internal sealed partial class PptxRenderer
                         plot.Series.Any(series =>
                             HasUnsupportedTextOrientation(series.DataLabels.TextBodyProperties.OrientationValue) ||
                             series.DataLabels.Overrides.Any(label => HasUnsupportedTextOrientation(label.TextBodyProperties.OrientationValue)))));
-        }
-
-        bool HasUnsupportedTableTextOrientation(PptxSceneTable? table)
-        {
-            return table?.Rows.Any(row => row.Cells.Any(cell => cell.HasUnsupportedTextOrientation)) == true;
         }
     }
 
@@ -464,22 +398,13 @@ internal sealed partial class PptxRenderer
         return overflow?.Equals("ellipsis", StringComparison.OrdinalIgnoreCase) == true;
     }
 
-    private static bool HasUnsupportedSceneTextVerticalOverflow(IEnumerable<PptxSceneNode> nodes, PptxColorMap colorMap, bool renderPlaceholders,
+    private static bool HasUnsupportedSceneTextVerticalOverflow(PptxSceneNode node, PptxColorMap colorMap, bool renderPlaceholders,
         IReadOnlyDictionary<PptxTextSpanMemoKey, IReadOnlyList<PptxPositionedTextSpan>>? textSpanMemo)
     {
-        foreach (PptxSceneNode node in nodes)
-        {
-            if (HasUnmarkedShapeTextOverflow(node) ||
-                HasUnsupportedTableTextVerticalOverflow(node.Table) ||
-                HasUnsupportedChartTextVerticalOverflow(node.Chart))
-            {
-                return true;
-            }
-        }
+        return HasUnmarkedShapeTextOverflow() || HasUnsupportedTableTextVerticalOverflow(node.Table) ||
+            HasUnsupportedChartTextVerticalOverflow(node.Chart);
 
-        return false;
-
-        bool HasUnmarkedShapeTextOverflow(PptxSceneNode node)
+        bool HasUnmarkedShapeTextOverflow()
         {
             return node.TextBody is not null && textSpanMemo is not null &&
                 textSpanMemo.TryGetValue(new PptxTextSpanMemoKey(node, colorMap, renderPlaceholders), out var spans) &&
@@ -487,14 +412,14 @@ internal sealed partial class PptxRenderer
                 spans.Any(UsesEllipsisClipFallback);
         }
 
-        bool HasUnsupportedChartTextVerticalOverflow(PptxSceneChart? chart)
+        static bool HasUnsupportedChartTextVerticalOverflow(PptxSceneChart? chart)
         {
             return chart is not null &&
                 (HasUnsupportedTextVerticalOverflow(chart.Title.TextBodyProperties.VerticalOverflowValue) ||
                     chart.Axes.Any(axis => HasUnsupportedTextVerticalOverflow(axis.Title.TextBodyProperties.VerticalOverflowValue)));
         }
 
-        bool HasUnsupportedTableTextVerticalOverflow(PptxSceneTable? table)
+        static bool HasUnsupportedTableTextVerticalOverflow(PptxSceneTable? table)
         {
             return table?.Rows.Any(row => row.Cells.Any(cell =>
                 cell.HasUnsupportedVerticalOverflow &&
@@ -538,19 +463,6 @@ internal sealed partial class PptxRenderer
             parentName == DrawingNamespace + "txBody";
     }
 
-    private static bool HasUnsupportedShapePatternFill(IEnumerable<PptxSceneNode> nodes)
-    {
-        foreach (PptxSceneNode node in nodes)
-        {
-            if ((node.Shape is { PatternFill.HasUnsupportedPattern: true }))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
     private static bool IsUnsupportedNonShapePatternFill(XElement patternFill)
     {
         return patternFill.Parent?.Name != PresentationNamespace + "spPr" &&
@@ -591,19 +503,6 @@ internal sealed partial class PptxRenderer
         {
             if ((node.Kind == PptxSceneNodeKind.UnknownGraphicFrame && !node.IsSmartArtGraphicFrame) ||
                 HasUnsupportedGraphicFrame(node.Children))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private static bool HasUnsupportedShapeTransparency(IEnumerable<PptxSceneNode> nodes)
-    {
-        foreach (PptxSceneNode node in nodes)
-        {
-            if ((node.Shape is { HasUnsupportedTransparency: true }))
             {
                 return true;
             }

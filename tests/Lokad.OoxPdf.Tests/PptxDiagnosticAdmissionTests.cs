@@ -70,6 +70,29 @@ internal static class PptxDiagnosticAdmissionTests
         });
     }
 
+    public static void PptxDiagnosticAdmissionKeepsOrderedWarningsAndFirstVisibleOwner()
+    {
+        const string effect = "<a:effectDag/>";
+        const string callout = "<a:prstGeom prst=\"wedgeRoundRectCallout\"/>";
+        const string custom = "<a:custGeom><a:pathLst><a:path><a:unknownPathCommand/></a:path></a:pathLst></a:custGeom>";
+        string group = "<p:grpSp><p:nvGrpSpPr><p:cNvPr id=\"3\" name=\"Group\"/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/>" +
+            Shape(custom) + "</p:grpSp>";
+        (string Id, string? PartName)[] expected =
+        [
+            ("PPTX_UNSUPPORTED_EFFECT", "/ppt/slideMasters/slideMaster1.xml"),
+            ("PPTX_UNSUPPORTED_CALLOUT", "/ppt/slideMasters/slideMaster1.xml"),
+            ("PPTX_UNSUPPORTED_GRADIENT_FILL", "/ppt/slideLayouts/slideLayout1.xml"),
+            ("PPTX_UNSUPPORTED_CUSTOM_GEOMETRY", "/ppt/slides/slide1.xml")
+        ];
+        WithParts(master: Shape(callout + effect), layout: Shape("<a:gradFill/>" + effect),
+            slide: Shape(callout) + group, check: path =>
+            {
+                var warnings = Convert(path);
+                TestAssert.True(warnings.Select(item => (item.Id, item.PartName)).SequenceEqual(expected),
+                    "Each warning should appear once, in part and feature order, including grouped shapes.");
+            });
+    }
+
     public static void PptxDiagnosticAdmissionUsesTheEffectivePlaceholderOrientation()
     {
         const string unsupported = "PPTX_UNSUPPORTED_TEXT_ORIENTATION";
