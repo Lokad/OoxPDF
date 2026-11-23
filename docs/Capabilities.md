@@ -85,7 +85,8 @@ usable stored results rather than executing arbitrary instructions.
 ## Images, fonts and remaining correctness gaps
 
 PNG, supported JPEG/BMP and a bounded SVG subset share managed rendering. Ordinary
-SVG text can become glyph outlines. Complex SVG text, filters, masks/blends and
+SVG text, including text wrapped in attribute-free spans, can become glyph outlines.
+Complex SVG text, filters, masks/blends and
 unsupported constructs retain limitations. TrueType outlines embed; CFF faces
 require an embeddable fallback. Missing glyphs use diagnosed replacement.
 Local SVG gradient templates reuse the authored stops and their source colors.

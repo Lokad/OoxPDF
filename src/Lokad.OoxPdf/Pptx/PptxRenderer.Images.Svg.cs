@@ -604,7 +604,8 @@ internal sealed partial class PptxRenderer
         foreach (XElement element in svg.Descendants())
         {
             string name = element.Name.LocalName;
-            if (IsSupportedSvgElement(name) || paintedText.Contains(element) || IsSvgDefinitionElement(element) ||
+            if (IsSupportedSvgElement(name) || paintedText.Contains(element) ||
+                name == "tspan" && element.Ancestors().Any(paintedText.Contains) || IsSvgDefinitionElement(element) ||
                 IsInFullyTransparentSvgContainer(element) || IsHiddenSvgElement(element))
             {
                 continue;

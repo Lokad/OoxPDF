@@ -265,14 +265,14 @@ internal static partial class SvgTextTests
         var diagnostics = new List<OoxPdfDiagnostic>();
         var graphics = Paint(Svg("<rect width=\"400\" height=\"160\" fill=\"#cce5ff\"/>" +
             "<g opacity=\"0.5\"><text x=\"20\" y=\"80\" fill=\"#112233\">I</text></g>" +
-            "<text><tspan>unsupported nested text</tspan></text><text fill=\"url(#missing)\">unsupported gradient</text>"), diagnostics);
+            "<text><tspan dx=\"10\">unsupported positioned text</tspan></text><text fill=\"url(#missing)\">unsupported gradient</text>"), diagnostics);
         TestAssert.Equal(1, graphics.Groups.Count);
         TestAssert.Equal(1, LabelPaths(graphics.Groups[0].Group.Content));
         TestAssert.True(!graphics.Groups[0].Group.Content.Contains(" BT", StringComparison.Ordinal) &&
             !graphics.Groups[0].Group.Content.Contains(" Tf", StringComparison.Ordinal), "Isolated labels borrow paths without unbound fonts.");
         TestAssert.True(diagnostics.Any(d => d.Fallback == "Partial" && d.Message.Contains("2 unsupported text elements", StringComparison.Ordinal)),
             "Unsupported text features must not be declared supported because a sibling label painted.");
-        TestAssert.True(diagnostics.Any(d => d.Message.Contains("tspan", StringComparison.Ordinal)), "Nested text remains diagnosed.");
+        TestAssert.True(diagnostics.Any(d => d.Message.Contains("tspan", StringComparison.Ordinal)), "Positioned spans retain their diagnostic.");
         TestAssert.Equal(0, graphics.UsedFontResourceNames.Count);
         Write(Page(graphics));
     }
@@ -289,6 +289,21 @@ internal static partial class SvgTextTests
             TestAssert.Equal(0, Regex.Matches(graphics.ToString(), @"(?m)^f\r?$").Count);
             TestAssert.Equal(0, diagnostics.Count);
         }
+    }
+
+    public static void SvgLabelsKeepTextAcrossAttributeFreeSpans()
+    {
+        string Picture(string name, string initials) => Svg($"""
+            <text x="20" y="45" font-size="20" fill="#112233">{name}</text>
+            <text x="20" y="80" font-size="20" fill="#114499">{initials}</text>
+            <rect x="120" y="90" width="20" height="10" fill="lime"/>
+            """);
+        AssertSvgPaintInBothFormats(Picture("NORTH", "A B"),
+            Picture("NO<tspan>R<tspan>T</tspan></tspan>H", "A <tspan> B</tspan>"), pdf =>
+            {
+                TestAssert.Equal(5, LabelPaths(pdf));
+                TestAssert.Equal(2, LabelPaths(pdf, "0.067 0.267 0.6 rg"));
+            }, "0 1 0 rg");
     }
 
     public static void SvgLabelsPrepareFontsOnlyForVisiblePictureUses()

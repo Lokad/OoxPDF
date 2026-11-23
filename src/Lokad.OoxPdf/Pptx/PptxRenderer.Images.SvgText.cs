@@ -50,7 +50,7 @@ internal sealed partial class PptxRenderer
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 if (IsSvgDefinitionElement(element) || IsInFullyTransparentSvgContainer(element) || IsHiddenSvgElement(element) ||
-                    !TryReadSvgText(element, paintServerIds, out SvgTextLabel? label) || label.Color is null ||
+                    !TryReadSvgText(element, paintServerIds, cancellationToken, out SvgTextLabel? label) || label.Color is null ||
                     label.Opacity == 0d || label.Text.Length == 0 || fonts.ContainsKey(label.Font)) continue;
                 FontFaceResolution resolution = resolver.Resolve(label.Font);
                 OpenTypeFont? font = await loadFont(resolution, cancellationToken).ConfigureAwait(false);
@@ -76,11 +76,10 @@ internal sealed partial class PptxRenderer
         element.Name.LocalName is "title" or "desc" or "metadata";
 
     private static bool TryReadSvgText(XElement element, Lazy<HashSet<string>> paintServerIds,
-        [NotNullWhen(true)] out SvgTextLabel? label)
+        CancellationToken cancellationToken, [NotNullWhen(true)] out SvgTextLabel? label)
     {
         label = null;
-        if (element.Elements().Any(child => !IsSvgMetadataElement(child)) ||
-            element.AncestorsAndSelf().Any(e => ReadSvgStyleDeclarations(e).ContainsKey("font")) ||
+        if (element.AncestorsAndSelf().Any(e => ReadSvgStyleDeclarations(e).ContainsKey("font")) ||
             element.Attributes().Any(a => a.Name.LocalName is "rotate" or "textLength" or "lengthAdjust")) return false;
         var style = ReadSvgStyleDeclarations(element);
         string? Inherited(string name) => ReadSvgInheritedAttribute(element, style, name)?.Trim();
@@ -139,7 +138,9 @@ internal sealed partial class PptxRenderer
             if (!TryReadSvgSolidColor(element, style, fill, out RgbColor parsed)) return false;
             color = parsed;
         }
-        string valueText = string.Concat(element.Nodes().OfType<XText>().Select(node => node.Value));
+        var characters = new StringBuilder();
+        if (!AppendPlainSvgText(element, characters, cancellationToken)) return false;
+        string valueText = characters.ToString();
         bool preserve = element.AncestorsAndSelf().Select(e => (string?)e.Attribute(XNamespace.Xml + "space"))
             .FirstOrDefault(v => v is not null) == "preserve";
         valueText = preserve ? valueText.Replace('\r', ' ').Replace('\n', ' ').Replace('\t', ' ') :
@@ -154,6 +155,24 @@ internal sealed partial class PptxRenderer
         label = new(valueText, new FontRequest(family, bold, fontStyle != "normal"), size, x, y, anchor, color, opacity,
             !string.Equals(Inherited("font-kerning"), "none", StringComparison.OrdinalIgnoreCase) &&
             Inherited("kerning") is not ("0" or "0px"));
+        return true;
+    }
+
+    // SafeXml bounds the nesting. Spans without local declarations share
+    // the parent's paint, positioning and whitespace processing.
+    private static bool AppendPlainSvgText(XElement element, StringBuilder characters, CancellationToken cancellationToken)
+    {
+        XName spanName = element.Name.Namespace + "tspan";
+        foreach (XNode node in element.Nodes())
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (node is XText text)
+                characters.Append(text.Value);
+            else if (node is XElement child && !IsSvgMetadataElement(child) &&
+                (child.Name != spanName || child.Attributes().Any(attribute => !attribute.IsNamespaceDeclaration) ||
+                 !AppendPlainSvgText(child, characters, cancellationToken)))
+                return false;
+        }
         return true;
     }
 
@@ -176,7 +195,7 @@ internal sealed partial class PptxRenderer
         double scaleX, double scaleY, Action<int> admitSamples, CancellationToken cancellationToken)
     {
         if (IsHiddenSvgElement(element)) return true;
-        if (!TryReadSvgText(element, paintServerIds, out SvgTextLabel? label)) return false;
+        if (!TryReadSvgText(element, paintServerIds, cancellationToken, out SvgTextLabel? label)) return false;
         if (label.Color is not { } color || label.Opacity == 0d || label.Text.Length == 0) return true;
         if (fonts is null || !fonts.TryGetValue(label.Font, out SvgTextFont? prepared) || prepared is null) return false;
         OpenTypeFont font = prepared.Font;

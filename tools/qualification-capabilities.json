@@ -707,6 +707,7 @@
     "SvgInheritedOpacityPreservesTransparentOverlayContent",
     "SvgZeroWidthStrokesKeepTheirIndependentFill",
     "=SvgLabelsKeepTheirFillWhenStrokesDoNotPaint",
+    "=SvgLabelsKeepTextAcrossAttributeFreeSpans",
     "SvgInheritedGradientStrokeOpacityKeepsNumericFallbackContract",
     "SvgInheritedPaintSurvivesDocxAndPptxContainers",
     "PptxSyntheticSvgGroupStrokeWidthInherits",
