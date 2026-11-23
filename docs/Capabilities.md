@@ -95,7 +95,7 @@ Missing or wrong-type local paint references use the authored fallback color or 
 SVG link wrappers preserve transforms, numeric opacity attributes, and inline
 zero opacity on their shapes and text. Embedded SVG link actions retain an
 unsupported-content diagnostic.
-SVG paint accepts opaque numeric `rgb()` colors and separate opacity properties.
+SVG paint accepts opaque numeric `rgb()` colors, the `transparent` keyword and separate opacity properties.
 Supported inline style declarations honor `!important` precedence, including
 zero opacity on SVG roots and groups. `unset` follows inheritance for supported
 paint, visibility and font properties. `initial` resets inherited fill, stroke

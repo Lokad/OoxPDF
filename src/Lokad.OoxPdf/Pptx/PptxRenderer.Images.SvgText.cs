@@ -100,9 +100,13 @@ internal sealed partial class PptxRenderer
         // width check needs only a positive percentage basis to recognize zero.
         if (Inherited("stroke") is { } stroke &&
             ReadSvgOpacityValue(Inherited("stroke-opacity")) != 0d &&
-            !(TryReadSvgStrokeWidth(style, element, percentageBasis: 1d, out double strokeWidth) && strokeWidth == 0d) &&
-            !ResolveSvgPaintFallback(element, style, stroke, paintServerIds, out _).Equals("none", StringComparison.OrdinalIgnoreCase))
-            return false;
+            !(TryReadSvgStrokeWidth(style, element, percentageBasis: 1d, out double strokeWidth) && strokeWidth == 0d))
+        {
+            string strokePaint = ResolveSvgPaintFallback(element, style, stroke, paintServerIds, out _);
+            if (!strokePaint.Equals("none", StringComparison.OrdinalIgnoreCase) &&
+                (!TryReadSvgSolidColor(element, style, strokePaint, out _, out double strokeOpacity) || strokeOpacity > 0d))
+                return false;
+        }
         string anchor = Inherited("text-anchor")?.ToLowerInvariant() ?? "start";
         if (anchor is not ("start" or "middle" or "end")) return false;
         string fontStyle = Inherited("font-style")?.ToLowerInvariant() ?? "normal";
@@ -133,9 +137,10 @@ internal sealed partial class PptxRenderer
         if (!double.IsFinite(x) || !double.IsFinite(y)) return false;
         string fill = ResolveSvgPaintFallback(element, style, Inherited("fill") ?? "black", paintServerIds, out _);
         RgbColor? color = null;
+        double colorOpacity = 1d;
         if (!string.Equals(fill, "none", StringComparison.OrdinalIgnoreCase))
         {
-            if (!TryReadSvgSolidColor(element, style, fill, out RgbColor parsed)) return false;
+            if (!TryReadSvgSolidColor(element, style, fill, out RgbColor parsed, out colorOpacity)) return false;
             color = parsed;
         }
         var characters = new StringBuilder();
@@ -150,7 +155,7 @@ internal sealed partial class PptxRenderer
         string family = (Inherited("font-family") ?? "serif").Split(',')[0].Trim().Trim('\'', '"');
         family = family.ToLowerInvariant() switch { "serif" => "Times New Roman", "sans-serif" => "Arial", "monospace" => "Courier New", _ => family };
         if (family.Length == 0) return false;
-        double opacity = ReadSvgOpacityValue(Inherited("fill-opacity")) *
+        double opacity = colorOpacity * ReadSvgOpacityValue(Inherited("fill-opacity")) *
             ReadSvgOpacityValue(ReadSvgPresentationAttribute(element, style, "opacity"));
         label = new(valueText, new FontRequest(family, bold, fontStyle != "normal"), size, x, y, anchor, color, opacity,
             !string.Equals(Inherited("font-kerning"), "none", StringComparison.OrdinalIgnoreCase) &&

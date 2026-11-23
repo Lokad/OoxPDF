@@ -1384,13 +1384,13 @@ internal sealed partial class PptxRenderer
             if (stop.Name.LocalName != "stop") continue;
             stops ??= new List<SvgGradientStop>();
             IReadOnlyDictionary<string, string> style = ReadSvgStyleDeclarations(stop);
-            bool hasPaint = TryReadSvgStopPaint(stop, style, out double offset, out RgbColor color);
+            bool hasPaint = TryReadSvgStopPaint(stop, style, out double offset, out RgbColor color, out double colorOpacity);
             // Opacity admission considers all authored stops, including those discarded for paint.
-            double? opacity = ReadNumericSvgStopOpacity(stop, style, hasPaint);
+            double? opacity = ReadNumericSvgStopOpacity(stop, style, hasPaint) * colorOpacity;
             hasNumericOpacity &= opacity.HasValue;
             firstNumericOpacity ??= opacity;
             hasUniformOpacity &= opacity == firstNumericOpacity;
-            if ((opacity ?? ReadSvgOpacityValue(style.GetValueOrDefault("stop-opacity") ??
+            if ((opacity ?? colorOpacity * ReadSvgOpacityValue(style.GetValueOrDefault("stop-opacity") ??
                 (string?)stop.Attribute("stop-opacity"))) < 1d)
             {
                 fallbackOpacityCount++;
@@ -1414,27 +1414,29 @@ internal sealed partial class PptxRenderer
     }
 
     private static bool TryReadSvgStopPaint(XElement stop, IReadOnlyDictionary<string, string> style,
-        out double offset, out RgbColor color)
+        out double offset, out RgbColor color, out double colorOpacity)
     {
         offset = ReadSvgOffset((string?)stop.Attribute("offset"));
         color = default;
-        return !double.IsNaN(offset) && TryReadSvgStopColor(stop, style, out color);
+        colorOpacity = 1d;
+        return !double.IsNaN(offset) && TryReadSvgStopColor(stop, style, out color, out colorOpacity);
     }
 
-    private static bool TryReadSvgStopColor(XElement stop, IReadOnlyDictionary<string, string> style, out RgbColor color)
+    private static bool TryReadSvgStopColor(XElement stop, IReadOnlyDictionary<string, string> style,
+        out RgbColor color, out double colorOpacity)
     {
         if (style.TryGetValue("stop-color", out string? inlineColor) &&
-            TryReadColor(inlineColor, out color))
+            TryReadColor(inlineColor, out color, out colorOpacity))
         {
             return true;
         }
 
         // Keep the presentation color when the inline declaration cannot be used.
-        return TryReadColor((string?)stop.Attribute("stop-color"), out color);
+        return TryReadColor((string?)stop.Attribute("stop-color"), out color, out colorOpacity);
 
-        bool TryReadColor(string? value, out RgbColor result) =>
+        bool TryReadColor(string? value, out RgbColor result, out double opacity) =>
             TryReadSvgSolidColor(stop, style,
-                string.IsNullOrWhiteSpace(value) || IsSvgNonInheritedDefault(value) ? "black" : value, out result);
+                string.IsNullOrWhiteSpace(value) || IsSvgNonInheritedDefault(value) ? "black" : value, out result, out opacity);
     }
 
     private static double ReadSvgOffset(string? value)
@@ -1628,9 +1630,9 @@ internal sealed partial class PptxRenderer
             failure = SvgFillFailure.UnresolvedGradient;
             return false;
         }
-        if (TryReadSvgSolidColor(path, style, fill, out RgbColor color))
+        if (TryReadSvgSolidColor(path, style, fill, out RgbColor color, out double colorOpacity))
         {
-            paint = new SvgPaint(color, null, opacity);
+            paint = new SvgPaint(color, null, opacity * colorOpacity);
             failure = SvgFillFailure.None;
             return true;
         }
@@ -1711,9 +1713,10 @@ internal sealed partial class PptxRenderer
                 opacity *= gradient.UniformStopOpacity.Value;
             }
         }
-        else if (TryReadSvgSolidColor(path, style, strokePaint, out RgbColor parsedColor))
+        else if (TryReadSvgSolidColor(path, style, strokePaint, out RgbColor parsedColor, out double colorOpacity))
         {
             color = parsedColor;
+            opacity *= colorOpacity;
         }
         else
         {
@@ -1775,7 +1778,7 @@ internal sealed partial class PptxRenderer
         // declared paint server retains its existing paint and diagnostics.
         string fallback = suffix.Trim().ToString();
         if ((!fallback.Equals("none", StringComparison.OrdinalIgnoreCase) &&
-             !TryReadSvgSolidColor(element, style, fallback, out _)) || paintServerIds.Value.Contains(gradientId)) return paint;
+             !TryReadSvgSolidColor(element, style, fallback, out _, out _)) || paintServerIds.Value.Contains(gradientId)) return paint;
         gradientId = null;
         return fallback;
     }
@@ -1825,11 +1828,18 @@ internal sealed partial class PptxRenderer
         value.AsSpan().Trim().Equals("currentColor", StringComparison.OrdinalIgnoreCase);
 
     private static bool TryReadSvgSolidColor(XElement element, IReadOnlyDictionary<string, string> style,
-        string value, out RgbColor color)
+        string value, out RgbColor color, out double colorOpacity)
     {
         // A descendant can inherit the paint keyword and supply its own color.
         if (IsSvgCurrentColor(value))
             value = ReadSvgInheritedAttribute(element, style, "color") ?? "black";
+        if (value.AsSpan().Trim().Equals("transparent", StringComparison.OrdinalIgnoreCase))
+        {
+            color = default;
+            colorOpacity = 0d;
+            return true;
+        }
+        colorOpacity = 1d;
         return RgbColor.TryParseCssColor(value, out color);
     }
 

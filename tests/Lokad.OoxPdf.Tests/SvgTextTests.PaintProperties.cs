@@ -107,6 +107,39 @@ internal static partial class SvgTextTests
         TestAssert.Equal("SVG_UNSUPPORTED_CONTENT", diagnostics[0].Id);
     }
 
+    public static void SvgTransparentPaintMatchesExplicitZeroOpacity()
+    {
+        string Picture(bool keyword)
+        {
+            string direct = keyword ? """stroke="TrAnSpArEnT" """ : """stroke="black" stroke-opacity="0" """;
+            string inherited = keyword ? """style="color:transparent;stroke:currentColor" """ :
+                """style="color:black;stroke:currentColor;stroke-opacity:0" """;
+            string fallback = keyword ? """stroke="url(#absent) transparent" """ : """stroke="url(#absent) black" stroke-opacity="0" """;
+            string stop = keyword ? """style="stop-color:transparent" """ : """style="stop-color:black;stop-opacity:0" """;
+            string invisible = keyword ? """fill="transparent" """ : """fill="black" fill-opacity="0" """;
+            return Svg($"""
+                <defs><linearGradient id="fade">
+                  <stop offset="0" stop-color="#c02010"/>
+                  <stop offset="1" stop-color="#0088ff" {stop}/>
+                </linearGradient></defs>
+                <rect width="400" height="160" fill="white"/>
+                <text x="8" y="24" fill="#112233" {direct}>NORTH</text>
+                <g {inherited}><text x="8" y="49" fill="#114499">WEST</text></g>
+                <text x="8" y="74" fill="#771188" {fallback}>SIX</text>
+                <text x="88" y="24" {invisible}>HIDE</text>
+                <rect x="150" y="28" width="80" height="28" fill="url(#fade)"/>
+                <rect x="150" y="67" width="60" height="30" {invisible} stroke="lime" stroke-width="2"/>
+                """);
+        }
+
+        AssertSvgPaintInBothFormats(Picture(false), Picture(true), pdf =>
+        {
+            TestAssert.Equal(5, LabelPaths(pdf));
+            TestAssert.Equal(4, LabelPaths(pdf, "0.067 0.267 0.6 rg"));
+            TestAssert.Equal(3, LabelPaths(pdf, "0.467 0.067 0.533 rg"));
+        }, "/Subtype /Image", "0 1 0 RG");
+    }
+
     public static void SvgInheritedGradientStrokeOpacityKeepsNumericFallbackContract()
     {
         const string definitions = "<defs><linearGradient id=\"g\"><stop offset=\"0\" stop-color=\"red\"/>" +
