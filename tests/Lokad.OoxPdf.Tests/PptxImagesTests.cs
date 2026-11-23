@@ -3577,20 +3577,7 @@ internal static partial class PptxImagesTests
 
     public static void PptxSyntheticJpegPictureDuotoneRecolorEmitsDiagnostic()
     {
-        byte[] jpegHeader =
-        [
-            0xFF, 0xD8,
-            0xFF, 0xC0,
-            0x00, 0x11,
-            0x08,
-            0x00, 0x03,
-            0x00, 0x05,
-            0x03,
-            0x01, 0x11, 0x00,
-            0x02, 0x11, 0x00,
-            0x03, 0x11, 0x00,
-            0xFF, 0xD9
-        ];
+        byte[] jpegHeader = TestFixtures.CreateBaselineRgbJpegHeader();
         string input = WriteJpegDuotonePicture(jpegHeader, "000000", "FFFFFF", """<a:alphaModFix amt="50000"/>""");
         string output = Path.ChangeExtension(input, ".pdf");
         var diagnostics = new List<OoxPdfDiagnostic>();
