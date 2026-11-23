@@ -3031,11 +3031,15 @@ internal static class PptxChartRenderingTests
         PdfPage page = Render();
         AssertSwatches(page);
 
-        const string demandStroke = "0.071 0.204 0.337 RG\n";
-        const string supplyStroke = "0.396 0.263 0.129 RG\n";
-        const string temporaryStroke = "0.5 0 0.5 RG\n";
-        PdfPage swapped = page with { Content = page.Content.Replace(demandStroke, temporaryStroke, StringComparison.Ordinal)
-            .Replace(supplyStroke, demandStroke, StringComparison.Ordinal).Replace(temporaryStroke, supplyStroke, StringComparison.Ordinal) };
+        const string demandStroke = "0.071 0.204 0.337 RG";
+        const string supplyStroke = "0.396 0.263 0.129 RG";
+        string swappedContent = string.Join('\n', page.Content.Split('\n').Select(line => line.TrimEnd('\r') switch
+        {
+            demandStroke => supplyStroke,
+            supplyStroke => demandStroke,
+            _ => line
+        }));
+        PdfPage swapped = page with { Content = swappedContent };
         var failure = TestAssert.Throws<InvalidOperationException>(() => AssertSwatches(swapped));
         TestAssert.Contains("Demand legend swatch stroke", failure.Message);
 
