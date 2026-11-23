@@ -381,6 +381,13 @@ internal static class OoxMissingFontTests
 
     private static string ExtractCidMappedText(string pdf)
     {
+        var unicodes = ReadCidTextMap(pdf);
+        return string.Concat(Regex.Matches(pdf, @"BT(.*?)ET", RegexOptions.Singleline)
+            .Select(region => DecodeCidTextShows(region.Groups[1].Value, unicodes)));
+    }
+
+    internal static Dictionary<string, string> ReadCidTextMap(string pdf)
+    {
         // Embedded subsets remap glyphs to dense CIDs, so extraction decodes
         // BT..ET text operators through the ToUnicode CMaps in the same file.
         var unicodes = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -391,26 +398,26 @@ internal static class OoxMissingFontTests
                 unicodes[entry.Groups[1].Value] = char.ConvertFromUtf32(Convert.ToInt32(entry.Groups[2].Value, 16));
             }
         }
+        return unicodes;
+    }
 
+    internal static string DecodeCidTextShows(string paint, IReadOnlyDictionary<string, string> unicodes)
+    {
         var builder = new StringBuilder();
-        foreach (Match region in Regex.Matches(pdf, @"BT(.*?)ET", RegexOptions.Singleline))
+        foreach (Match op in Regex.Matches(paint, @"(?:<[0-9A-Fa-f]+>\s*)+Tj|\[(?:\s*<[0-9A-Fa-f]+>\s*|\s*-?\d+(?:\.\d+)?\s*)+\]\s*TJ"))
         {
-            foreach (Match op in Regex.Matches(region.Groups[1].Value, @"(?:<[0-9A-Fa-f]+>\s*)+Tj|\[(?:\s*<[0-9A-Fa-f]+>\s*|\s*-?\d+(?:\.\d+)?\s*)+\]\s*TJ"))
+            foreach (Match hex in Regex.Matches(op.Value, @"<([0-9A-Fa-f]+)>"))
             {
-                foreach (Match hex in Regex.Matches(op.Value, @"<([0-9A-Fa-f]+)>"))
+                string digits = hex.Groups[1].Value;
+                for (int i = 0; i + 4 <= digits.Length; i += 4)
                 {
-                    string digits = hex.Groups[1].Value;
-                    for (int i = 0; i + 4 <= digits.Length; i += 4)
+                    if (unicodes.TryGetValue(digits.Substring(i, 4), out string? rune))
                     {
-                        if (unicodes.TryGetValue(digits.Substring(i, 4), out string? rune))
-                        {
-                            builder.Append(rune);
-                        }
+                        builder.Append(rune);
                     }
                 }
             }
         }
-
         return builder.ToString();
     }
 

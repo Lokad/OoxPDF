@@ -81,6 +81,37 @@ internal static class TestFixtures
         }
     }
 
+    public static string WriteDocxHeaderImage(string document, string header, byte[] png) =>
+        WriteTempPackage(".docx", new Dictionary<string, byte[]>
+        {
+            ["[Content_Types].xml"] = Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                <Default Extension="xml" ContentType="application/xml"/>
+                <Default Extension="png" ContentType="image/png"/>
+                <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                <Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>
+                </Types>
+                """),
+            ["_rels/.rels"] = Utf8(DocxPackageRelationships),
+            ["word/_rels/document.xml.rels"] = Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdHeader1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/>
+                </Relationships>
+                """),
+            ["word/_rels/header1.xml.rels"] = Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdImage1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/image1.png"/>
+                </Relationships>
+                """),
+            ["word/document.xml"] = Utf8(document),
+            ["word/header1.xml"] = Utf8(header),
+            ["word/media/image1.png"] = png,
+        });
+
     public static byte[] Utf8(string text)
     {
         return Encoding.UTF8.GetBytes(text);
