@@ -655,6 +655,7 @@
     "PptxAutomaticBarPalettesMatchIndependentOfficeAcrossCountsAndThemes"
   ],
   "svg-inherited-paint": [
+    "=SvgUnsetInheritedPropertiesPreservePaintAndVisibilityInBothFormats",
     "=PptxSvgGradientStopColorsUseLocalDeclarationsAndCurrentColor",
     "SvgMissingPaintServersUseAuthoredFallback",
     "SvgCurrentColorUsesEachPaintedElementsColor",

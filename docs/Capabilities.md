@@ -95,7 +95,8 @@ zero opacity on their shapes and text. Embedded SVG link actions retain an
 unsupported-content diagnostic.
 SVG paint accepts opaque numeric `rgb()` colors and separate opacity properties.
 Supported inline style declarations honor `!important` precedence, including
-zero opacity on SVG roots and groups.
+zero opacity on SVG roots and groups. `unset` follows inheritance for supported
+paint, visibility and font properties.
 Basic shape geometry, stroke widths, dash lengths and dash offsets accept viewport percentages.
 Line elements use stroke paint and ignore fill declarations.
 Object opacity can compose a visible fill with a supported linear-gradient stroke.

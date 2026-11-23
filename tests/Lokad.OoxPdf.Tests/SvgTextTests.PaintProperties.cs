@@ -125,6 +125,36 @@ internal static partial class SvgTextTests
         }
     }
 
+    public static void SvgUnsetInheritedPropertiesPreservePaintAndVisibilityInBothFormats()
+    {
+        string Picture(bool useUnset)
+        {
+            string Value(string explicitValue) => useUnset ? "UnSeT" : explicitValue;
+            return Svg($"""
+                <defs><linearGradient id="stroke" gradientUnits="userSpaceOnUse" x1="10" x2="65">
+                  <stop stop-color="blue"/><stop offset="1" stop-color="purple"/>
+                </linearGradient></defs>
+                <g fill="red" stroke="url(#stroke)" stroke-width="4" color="#112233" font-size="16">
+                  <rect x="10" y="8" width="28" height="16" fill="fuchsia" stroke="none" style="fill:{Value("red")}"/>
+                  <path d="M10 31H65" fill="none" stroke="fuchsia" stroke-width="1" style="stroke:{Value("url(#stroke)")};stroke-width:{Value("4")}"/>
+                  <g font-size="150%">
+                    <text x="11" y="65" font-size="8" stroke="none" style="fill:currentColor;color:{Value("#112233")};font-size:{Value("24")}">INK</text>
+                  </g>
+                </g>
+                <g visibility="hidden">
+                  <rect x="78" y="14" width="20" height="20" fill="fuchsia" visibility="visible" style="visibility:{Value("hidden")}"/>
+                  <rect x="106" y="15" width="22" height="20" fill="lime" visibility="visible"/>
+                </g>
+                """);
+        }
+
+        AssertSvgPaintInBothFormats(Picture(false), Picture(true), content =>
+        {
+            TestAssert.Equal(3, LabelPaths(content));
+            TestAssert.DoesNotContain("1 0 1 rg", content);
+        }, "1 0 0 rg", "0 1 0 rg", LabelColor, "/PatternType 2");
+    }
+
     public static void SvgPrimitivePixelUnitsMatchUserCoordinates()
     {
         string Shapes(string unit) => $$"""

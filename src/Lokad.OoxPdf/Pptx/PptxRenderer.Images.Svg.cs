@@ -1792,7 +1792,7 @@ internal sealed partial class PptxRenderer
         {
             IReadOnlyDictionary<string, string> declarations = ReferenceEquals(source, path) ? style : ReadSvgStyleDeclarations(source);
             string? value = ReadSvgPresentationAttribute(source, declarations, name);
-            if (!string.IsNullOrWhiteSpace(value) && !IsSvgInherit(value) &&
+            if (!string.IsNullOrWhiteSpace(value) && !InheritsSvgPropertyValue(value) &&
                 (name != "color" || !IsSvgCurrentColor(value)))
             {
                 return value;
@@ -1801,8 +1801,12 @@ internal sealed partial class PptxRenderer
         return null;
     }
 
-    private static bool IsSvgInherit(string value) =>
-        value.AsSpan().Trim().Equals("inherit", StringComparison.OrdinalIgnoreCase);
+    private static bool InheritsSvgPropertyValue(string value)
+    {
+        ReadOnlySpan<char> keyword = value.AsSpan().Trim();
+        return keyword.Equals("inherit", StringComparison.OrdinalIgnoreCase) ||
+            keyword.Equals("unset", StringComparison.OrdinalIgnoreCase);
+    }
 
     private static bool IsSvgCurrentColor(string value) =>
         value.AsSpan().Trim().Equals("currentColor", StringComparison.OrdinalIgnoreCase);
