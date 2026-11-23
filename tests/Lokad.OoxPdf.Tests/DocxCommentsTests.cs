@@ -811,7 +811,7 @@ internal static partial class DocxCommentsTests
 
         TestAssert.Contains("0.82 0.204 0.22 RG", page.Content);
         TestAssert.Contains("0.973 0.863 0.867 rg", page.Content);
-        int strokeCount = DocxTests.CountOccurrences(page.Content, " l S");
+        int strokeCount = page.Content.AsSpan().Count(" l S");
         TestAssert.True(
             strokeCount >= 6,
             "Word-compatible all-markup should draw a point marker for bare commentReference anchors without explicit range bounds; observed " + strokeCount + " stroke-line operations.");
@@ -877,7 +877,7 @@ internal static partial class DocxCommentsTests
         TestAssert.Contains("0.82 0.204 0.22 RG", page.Content);
         TestAssert.Contains("0.973 0.863 0.867 rg", page.Content);
         TestAssert.True(
-            DocxTests.CountOccurrences(page.Content, " l S") >= 6,
+            page.Content.AsSpan().Count(" l S") >= 6,
             "Word-compatible all-markup should draw comment range brackets as stroke segments.");
         TestAssert.True(
             !page.Content.Contains("1 0.753 0 rg", StringComparison.Ordinal),
@@ -1183,7 +1183,7 @@ internal static partial class DocxCommentsTests
         TestAssert.Contains("0.835 0.929 1 rg", page.Content);
         TestAssert.Contains("0 0.471 0.831 RG", page.Content);
         TestAssert.True(
-            DocxTests.CountOccurrences(page.Content, "0.973 0.863 0.867 rg") >= 2,
+            page.Content.AsSpan().Count("0.973 0.863 0.867 rg") >= 2,
             "Both Zebra balloons should reuse the first-seen author fill color.");
     }
 
@@ -1562,7 +1562,7 @@ internal static partial class DocxCommentsTests
             mixedPlacement.BodySummaryPartCount == 2 && mixedPlacement.WordCompatibleBodySummaryPartCount == 2,
             "Grouped comment/revision balloons should retain both private-safe summary parts in Word-compatible body text.");
         TestAssert.True(
-            DocxTests.CountOccurrences(page.Content, "8.203 Tf") >= 3,
+            page.Content.AsSpan().Count("8.203 Tf") >= 3,
             "Word-compatible grouped comment balloons should render Office-sized title and wrapped body text.");
         // Office titles carry no character spacing (cs=0 on every sampled reference
         // title op), so the June-era -4.093 title tracking is retired: titles render
@@ -4857,7 +4857,7 @@ internal static partial class DocxCommentsTests
         });
         DocxDocument document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
         PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
-        TestAssert.Equal(4, DocxTests.CountOccurrences(page.Content, "0.973 0.863 0.867 rg"));
+        TestAssert.Equal(4, page.Content.AsSpan().Count("0.973 0.863 0.867 rg"));
     }
     public static void DocxWordCompatibleAllMarkupRendersFullLongCommentBalloonBody()
     {

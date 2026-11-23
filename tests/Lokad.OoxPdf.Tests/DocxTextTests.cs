@@ -1298,7 +1298,7 @@ internal static partial class DocxTextTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.True(DocxTests.CountOccurrences(pdf, " l S") >= 2, "Expected w:u wave to render as repeated stroked underline segments instead of a single filled rectangle.");
+        TestAssert.True(pdf.AsSpan().Count(" l S") >= 2, "Expected w:u wave to render as repeated stroked underline segments instead of a single filled rectangle.");
     }
 
     public static void DocxParagraphRendererDrawsSegmentedUnderlineStylesAsFragments()
@@ -1345,7 +1345,7 @@ internal static partial class DocxTextTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        int filledRectangles = DocxTests.CountOccurrences(pdf, " re f");
+        int filledRectangles = pdf.AsSpan().Count(" re f");
         TestAssert.True(filledRectangles >= 12, $"Expected segmented underline styles to render as repeated filled fragments; found {filledRectangles}.");
     }
 
@@ -1440,7 +1440,7 @@ internal static partial class DocxTextTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        int filledRectangles = DocxTests.CountOccurrences(pdf, " re f");
+        int filledRectangles = pdf.AsSpan().Count(" re f");
         TestAssert.True(filledRectangles >= 6, $"Expected official heavy dash underline tokens to render as repeated filled fragments; found {filledRectangles}.");
     }
 
@@ -1485,7 +1485,7 @@ internal static partial class DocxTextTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        int filledRectangles = DocxTests.CountOccurrences(pdf, " re f");
+        int filledRectangles = pdf.AsSpan().Count(" re f");
         TestAssert.True(filledRectangles >= 2, $"Expected w:u words to emit separate underline rectangles around spaces; found {filledRectangles}.");
     }
 

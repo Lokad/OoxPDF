@@ -71,7 +71,7 @@ internal static partial class PdfWriterTests
         TestAssert.Contains("<< /Type /Pages /Count 2 /Kids [3 0 R 5 0 R] >>", pdf);
         TestAssert.Contains("/MediaBox [0 0 960 540]", pdf);
         TestAssert.Contains("/MediaBox [0 0 595.276 841.89]", pdf);
-        TestAssert.Equal(2, CountOccurrences(pdf, "/Type /Page /Parent"));
+        TestAssert.Equal(2, pdf.AsSpan().Count("/Type /Page /Parent"));
     }
 
     public static void WritesDrawingOperators()
@@ -198,8 +198,8 @@ internal static partial class PdfWriterTests
         string pdf = WritePdfText(pages);
 
         TestAssert.Equal(2, first.Shadings.Count);
-        TestAssert.Equal(1, CountOccurrences(pdf, "/ShadingType 2"));
-        TestAssert.Equal(1, CountOccurrences(pdf, "/ShadingType 3"));
+        TestAssert.Equal(1, pdf.AsSpan().Count("/ShadingType 2"));
+        TestAssert.Equal(1, pdf.AsSpan().Count("/ShadingType 3"));
         var pageDictionaries = Regex.Matches(pdf, @"(?m)^<< /Type /Page [^\r\n]+ >>\r?$");
         TestAssert.Equal(2, pageDictionaries.Count);
 
@@ -252,11 +252,11 @@ internal static partial class PdfWriterTests
         string pdf = WritePdfText([page]);
 
         TestAssert.Equal(3, graphics.Shadings.Count);
-        TestAssert.Equal(3, CountOccurrences(pdf, "/ShadingType 3"));
+        TestAssert.Equal(3, pdf.AsSpan().Count("/ShadingType 3"));
         TestAssert.Contains("/Bounds [0.333333 0.666667]", pdf);
         TestAssert.Contains("/Encode [0 1 0 1 0 1]", pdf);
         TestAssert.Contains("/Encode [0 1 1 0 0 1]", pdf);
-        TestAssert.Equal(2, CountOccurrences(pdf, "/Sh2 sh"));
+        TestAssert.Equal(2, pdf.AsSpan().Count("/Sh2 sh"));
     }
 
     public static void WritesTilingPatternResources()
@@ -1104,24 +1104,6 @@ internal static partial class PdfWriterTests
         return stream.ToArray();
     }
 
-
-    private static int CountOccurrences(string text, string value)
-    {
-        int count = 0;
-        int start = 0;
-        while (true)
-        {
-            int index = text.IndexOf(value, start, StringComparison.Ordinal);
-            if (index < 0)
-            {
-                return count;
-            }
-
-            count++;
-            start = index + value.Length;
-        }
-
-    }
 
     public static void DrawGlyphTextEmitsQuarterTurnTextMatrices()
     {

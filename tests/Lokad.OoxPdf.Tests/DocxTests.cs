@@ -50,10 +50,10 @@ internal static class DocxTests
         DocxLayoutSnapshot layout = new DocxRenderer(null, OoxPdfDocxMarkupMode.SimpleMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectLayout(document);
         PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.SimpleMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 
-        TestAssert.True(CountOccurrences(page.Content, "1 0.753 0 rg") >= 1, "Comment markers should use the expected marker fill color for " + flowName + ".");
-        TestAssert.True(CountOccurrences(page.Content, "0.851 0.592 0 RG") >= 1, "Comment markers should use the expected marker outline color for " + flowName + ".");
-        TestAssert.True(CountOccurrences(page.Content, " re f") >= 1, "Simple-markup rendering should emit a filled comment marker rectangle for " + flowName + ".");
-        TestAssert.True(CountOccurrences(page.Content, " re S") >= 1, "Simple-markup rendering should emit a stroked comment marker outline for " + flowName + ".");
+        TestAssert.True(page.Content.AsSpan().Count("1 0.753 0 rg") >= 1, "Comment markers should use the expected marker fill color for " + flowName + ".");
+        TestAssert.True(page.Content.AsSpan().Count("0.851 0.592 0 RG") >= 1, "Comment markers should use the expected marker outline color for " + flowName + ".");
+        TestAssert.True(page.Content.AsSpan().Count(" re f") >= 1, "Simple-markup rendering should emit a filled comment marker rectangle for " + flowName + ".");
+        TestAssert.True(page.Content.AsSpan().Count(" re S") >= 1, "Simple-markup rendering should emit a stroked comment marker outline for " + flowName + ".");
         TestAssert.True(
             layout.Pages[0].TextLineCount +
             layout.Pages[0].StaticTextLineCount +
@@ -2165,7 +2165,7 @@ internal static class DocxTests
 
     internal static int CountPdfTextShows(string pdf)
     {
-        return CountOccurrences(pdf, "> Tj") + CountOccurrences(pdf, "] TJ");
+        return pdf.AsSpan().Count("> Tj") + pdf.AsSpan().Count("] TJ");
     }
 
     internal static bool HasAuthoredWhitespaceTextOperation(DocxTextEmissionSnapshot snapshot)
@@ -2201,19 +2201,6 @@ internal static class DocxTests
         return Math.Max(
             pdf.LastIndexOf("> Tj", StringComparison.Ordinal),
             pdf.LastIndexOf("] TJ", StringComparison.Ordinal));
-    }
-
-    internal static int CountOccurrences(string text, string value)
-    {
-        int count = 0;
-        int index = 0;
-        while ((index = text.IndexOf(value, index, StringComparison.Ordinal)) >= 0)
-        {
-            count++;
-            index += value.Length;
-        }
-
-        return count;
     }
 
     private static int MinNonNegative(int first, int second)

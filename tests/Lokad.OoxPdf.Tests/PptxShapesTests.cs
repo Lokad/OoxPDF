@@ -1156,7 +1156,7 @@ internal static partial class PptxShapesTests
         TestAssert.Contains("[4 3 1 3 ] 0 d", pdf);
         TestAssert.Contains("[8 3 1 3 ] 0 d", pdf);
         TestAssert.Contains("[8 3 1 3 1 3 ] 0 d", pdf);
-        TestAssert.True(PptxTests.CountOccurrences(pdf, "[] 0 d") == dashValues.Length - 1, "Each dashed line should reset the dash pattern; solid must not set a dash pattern.");
+        TestAssert.True(pdf.AsSpan().Count("[] 0 d") == dashValues.Length - 1, "Each dashed line should reset the dash pattern; solid must not set a dash pattern.");
     }
 
     public static void PptxSyntheticOuterShadowRendersOffsetShape()

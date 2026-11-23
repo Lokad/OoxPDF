@@ -750,23 +750,6 @@ internal static class PptxTests
             """;
     }
 
-    internal static int CountOccurrences(string text, string value)
-    {
-        int count = 0;
-        int start = 0;
-        while (true)
-        {
-            int index = text.IndexOf(value, start, StringComparison.Ordinal);
-            if (index < 0)
-            {
-                return count;
-            }
-
-            count++;
-            start = index + value.Length;
-        }
-    }
-
     internal static void AssertContainsTextMatrixAtX(string pdf, double x)
     {
         string xText = FormatPdfNumber(x);

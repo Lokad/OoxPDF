@@ -1985,7 +1985,7 @@ internal static class DocxTableCellsTests
         string ids = string.Join("|", diagnostics.Select(d => d.Id).Order(StringComparer.Ordinal));
         TestAssert.DoesNotContain("DOCX_TABLE_BORDER_STYLE", ids);
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.True(DocxTests.CountOccurrences(pdf, " l S") >= 8, "Wave table borders should render as repeated stroked wave segments.");
+        TestAssert.True(pdf.AsSpan().Count(" l S") >= 8, "Wave table borders should render as repeated stroked wave segments.");
 
         using FileStream stream = File.OpenRead(input);
         DocxStructureTableSnapshot table = DocxStructureSnapshot.FromDocument(new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, OoxPdfDocxMarkupMode.Final)).Tables.Single();
@@ -3051,7 +3051,7 @@ internal static class DocxTableCellsTests
         TestAssert.Contains("/PatternType 1", pdf);
         TestAssert.Contains("/Pattern cs", pdf);
         TestAssert.Contains("/ImPattern", pdf);
-        TestAssert.True(DocxTests.CountOccurrences(pdf, "/PatternType 1") >= shadingValues.Length, "Each supported DOCX stripe family should have a distinct tiling pattern resource.");
+        TestAssert.True(pdf.AsSpan().Count("/PatternType 1") >= shadingValues.Length, "Each supported DOCX stripe family should have a distinct tiling pattern resource.");
     }
 
     public static void DocxReaderTableCellPreservesParagraphModel()

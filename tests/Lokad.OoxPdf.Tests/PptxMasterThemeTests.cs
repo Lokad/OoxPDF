@@ -147,7 +147,7 @@ internal static class PptxMasterThemeTests
                 .RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().ToArray();
             // Two literal gray columns, each painted through both owners. A
             // direct-only control must not conceal the missing themed rectangle.
-            TestAssert.Equal(4, PptxTests.CountOccurrences(pages[0].Content, "0.737 g"));
+            TestAssert.Equal(4, pages[0].Content.AsSpan().Count("0.737 g"));
             TestAssert.Contains("0 0 1 rg", pages[1].Content);
             var scene = new PptxSceneBuilder().Build(document, package, default);
             TestAssert.True(!scene.Slides[0].Theme.Colors.ContainsKey("hlink"), "Unresolved theme references stay unresolved.");

@@ -85,7 +85,7 @@ internal static class DocxCellColumnBreakTests
                 byte[] cached = Convert(opening + stale + enclosed + "</w:fldSimple>" + following);
                 byte[] uncached = Convert(opening + enclosed + "</w:fldSimple>" + following);
 
-                TestAssert.Equal(1, DocxTests.CountOccurrences(Encoding.ASCII.GetString(control), "/Type /Page "));
+                TestAssert.Equal(1, Encoding.ASCII.GetString(control).AsSpan().Count("/Type /Page "));
                 TestAssert.True(control.AsSpan().SequenceEqual(cached),
                     $"{kind} with a populated cache supplies its computed value and leaves the inline cell break transparent.");
                 TestAssert.True(control.AsSpan().SequenceEqual(uncached),

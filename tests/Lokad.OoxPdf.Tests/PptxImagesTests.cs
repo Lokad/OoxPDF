@@ -114,7 +114,7 @@ internal static partial class PptxImagesTests
 
         TestAssert.Equal("Im1", resource.ResourceName);
         TestAssert.Contains("/Im1 Do", page.Content);
-        TestAssert.Equal(1, PptxTests.CountOccurrences(page.Content, "0 0 720 540 re W* n"));
+        TestAssert.Equal(1, page.Content.AsSpan().Count("0 0 720 540 re W* n"));
         TestAssert.Contains("72 396 144 72 re W* n", page.Content);
         TestAssert.Equal(2, image.Width);
         TestAssert.Equal(1, image.Height);
@@ -365,7 +365,7 @@ internal static partial class PptxImagesTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.True(
-            PptxTests.CountOccurrences(pdf, "0 0 720 540 re W* n") == 2,
+            pdf.AsSpan().Count("0 0 720 540 re W* n") == 2,
             "Transformed pictures should add a slide clip before applying the picture transform.");
         TestAssert.Contains("72 522 72 21.6 re W* n", pdf);
         TestAssert.Contains("/Im1 Do", pdf);
@@ -3519,7 +3519,7 @@ internal static partial class PptxImagesTests
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.True(PptxTests.CountOccurrences(pdf, "/Subtype /Image") >= 2, "The same image part with and without recolor must use distinct cached image XObjects.");
+        TestAssert.True(pdf.AsSpan().Count("/Subtype /Image") >= 2, "The same image part with and without recolor must use distinct cached image XObjects.");
         List<byte[]> imageRgbStreams = PptxTests.ReadPdfDeviceRgbImageStreams(output, width: 1, height: 1);
         TestAssert.True(imageRgbStreams.Any(rgb => rgb.SequenceEqual(new byte[] { 32, 64, 96 })), "Expected the original image RGB stream to remain unchanged.");
         TestAssert.True(imageRgbStreams.Any(rgb => rgb.SequenceEqual(new byte[] { 188, 198, 207 })), "Expected OOXML luminance contrast to scale channels before brightness lifts them toward white.");
@@ -3705,7 +3705,7 @@ internal static partial class PptxImagesTests
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.True(PptxTests.CountOccurrences(pdf, "/Subtype /Image") >= 2, "Distinct grayscale and bi-level recolors should use distinct cached image XObjects.");
+        TestAssert.True(pdf.AsSpan().Count("/Subtype /Image") >= 2, "Distinct grayscale and bi-level recolors should use distinct cached image XObjects.");
         TestAssert.True(diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_IMAGE_RECOLOR"), "Supported PNG gray/bi-level recolor should not emit unsupported diagnostics.");
     }
 

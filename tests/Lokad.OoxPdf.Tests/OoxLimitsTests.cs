@@ -85,8 +85,8 @@ internal static partial class OoxLimitsTests
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
         {
-            ["[Content_Types].xml"] = DocxContentTypes(),
-            ["_rels/.rels"] = DocxPackageRels(),
+            ["[Content_Types].xml"] = TestFixtures.DocxContentTypes,
+            ["_rels/.rels"] = TestFixtures.DocxPackageRelationships,
             ["word/document.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
@@ -285,34 +285,12 @@ internal static partial class OoxLimitsTests
         return PptxChartRangeTests.ReadWorkbookCells(sheets, cancellationToken: cancellationToken);
     }
 
-    private static string DocxContentTypes()
-    {
-        return """
-            <?xml version="1.0" encoding="UTF-8"?>
-            <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-              <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-              <Default Extension="xml" ContentType="application/xml"/>
-              <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
-            </Types>
-            """;
-    }
-
-    private static string DocxPackageRels()
-    {
-        return """
-            <?xml version="1.0" encoding="UTF-8"?>
-            <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-              <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
-            </Relationships>
-            """;
-    }
-
     private static string DocxWithGridSpan(int span)
     {
         return TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
         {
-            ["[Content_Types].xml"] = DocxContentTypes(),
-            ["_rels/.rels"] = DocxPackageRels(),
+            ["[Content_Types].xml"] = TestFixtures.DocxContentTypes,
+            ["_rels/.rels"] = TestFixtures.DocxPackageRelationships,
             ["word/document.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
@@ -338,8 +316,8 @@ internal static partial class OoxLimitsTests
     {
         return TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
         {
-            ["[Content_Types].xml"] = DocxContentTypes(),
-            ["_rels/.rels"] = DocxPackageRels(),
+            ["[Content_Types].xml"] = TestFixtures.DocxContentTypes,
+            ["_rels/.rels"] = TestFixtures.DocxPackageRelationships,
             ["word/document.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
@@ -601,8 +579,8 @@ internal static partial class OoxLimitsTests
     {
         using MemoryStream package = TestFixtures.CreateZipPackage(new Dictionary<string, string>
         {
-            ["[Content_Types].xml"] = DocxContentTypes(),
-            ["_rels/.rels"] = DocxPackageRels(),
+            ["[Content_Types].xml"] = TestFixtures.DocxContentTypes,
+            ["_rels/.rels"] = TestFixtures.DocxPackageRelationships,
             ["word/document.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
@@ -621,8 +599,8 @@ internal static partial class OoxLimitsTests
     {
         using MemoryStream package = TestFixtures.CreateZipPackage(new Dictionary<string, string>
         {
-            ["[Content_Types].xml"] = DocxContentTypes(),
-            ["_rels/.rels"] = DocxPackageRels(),
+            ["[Content_Types].xml"] = TestFixtures.DocxContentTypes,
+            ["_rels/.rels"] = TestFixtures.DocxPackageRelationships,
             ["word/document.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
@@ -692,7 +670,7 @@ internal static partial class OoxLimitsTests
     public static void IntakeManyTinyEntriesExceedEntryCap()
     {
         // R05: 10,001 individually trivial entries exceed the entry cap end to end.
-        var entries = new Dictionary<string, string> { ["[Content_Types].xml"] = DocxContentTypes() };
+        var entries = new Dictionary<string, string> { ["[Content_Types].xml"] = TestFixtures.DocxContentTypes };
         for (int i = 0; i < 10_000; i++)
         {
             entries[$"parts/p{i}.xml"] = "<x/>";
@@ -719,8 +697,8 @@ internal static partial class OoxLimitsTests
     {
         using MemoryStream package = TestFixtures.CreateZipPackage(new Dictionary<string, string>
         {
-            ["[Content_Types].xml"] = DocxContentTypes(),
-            ["_rels/.rels"] = DocxPackageRels(),
+            ["[Content_Types].xml"] = TestFixtures.DocxContentTypes,
+            ["_rels/.rels"] = TestFixtures.DocxPackageRelationships,
             ["word/document.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">

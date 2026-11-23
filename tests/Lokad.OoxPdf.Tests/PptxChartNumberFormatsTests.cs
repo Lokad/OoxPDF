@@ -209,7 +209,7 @@ internal static partial class PptxChartNumberFormatsTests
             string pdf = System.Text.Encoding.Latin1.GetString(output.ToArray());
             TestAssert.True(!diagnostics.Any(d => d.Id == "PPTX_NODE_RENDER_FAILED"), "A date-format fallback must retain its chart.");
             TestAssert.True(DocxTests.CountPdfTextShows(pdf) >= 9, "Date fallback must preserve category and axis labels.");
-            TestAssert.True(PptxTests.CountOccurrences(pdf, " re f") >= 3, "Date fallback must preserve the plot's bars.");
+            TestAssert.True(pdf.AsSpan().Count(" re f") >= 3, "Date fallback must preserve the plot's bars.");
         }
     }
 

@@ -476,7 +476,7 @@ internal static class PptxTypographyTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Equal(1, PptxTests.CountOccurrences(pdf, " TJ"));
+        TestAssert.Equal(1, pdf.AsSpan().Count(" TJ"));
     }
 
     public static void PptxSyntheticTextBoxPreservesFractionalFontSize()

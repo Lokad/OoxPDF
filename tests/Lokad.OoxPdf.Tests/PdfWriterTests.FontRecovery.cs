@@ -29,8 +29,8 @@ internal static partial class PdfWriterTests
             var page = new PdfPage(200, 100, string.Empty,
                 [new PdfFontResource("F1", first), new PdfFontResource("F2", second), new PdfFontResource("F3", repeat)]);
             string pdf = WritePdfText([page]);
-            TestAssert.Equal(2, PptxTests.CountOccurrences(pdf, "/Subtype /Type0"));
-            TestAssert.Equal(2, PptxTests.CountOccurrences(pdf, "/FontFile2 "));
+            TestAssert.Equal(2, pdf.AsSpan().Count("/Subtype /Type0"));
+            TestAssert.Equal(2, pdf.AsSpan().Count("/FontFile2 "));
         }
     }
 

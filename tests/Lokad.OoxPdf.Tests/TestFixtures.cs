@@ -6,6 +6,22 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class TestFixtures
 {
+    public const string DocxContentTypes = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+          <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+          <Default Extension="xml" ContentType="application/xml"/>
+          <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+        </Types>
+        """;
+
+    public const string DocxPackageRelationships = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+          <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+        </Relationships>
+        """;
+
     // Checkout, frozen and parent runners all keep Cases beside the project's bin directory.
     public static string PublicCasePath(string relativePath) =>
         Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", relativePath));

@@ -70,8 +70,8 @@ internal static class CliTests
         // and comment bodies are covered by the reader/rendering view tests.
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
         {
-            ["[Content_Types].xml"] = BasicContentTypes(),
-            ["_rels/.rels"] = PackageRelationship(),
+            ["[Content_Types].xml"] = TestFixtures.DocxContentTypes,
+            ["_rels/.rels"] = TestFixtures.DocxPackageRelationships,
             ["word/document.xml"] = """
                 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
                   <w:body><w:p><w:commentRangeStart w:id="1"/>
@@ -364,8 +364,8 @@ internal static class CliTests
     {
         return TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
         {
-            ["[Content_Types].xml"] = BasicContentTypes(),
-            ["_rels/.rels"] = PackageRelationship(),
+            ["[Content_Types].xml"] = TestFixtures.DocxContentTypes,
+            ["_rels/.rels"] = TestFixtures.DocxPackageRelationships,
             ["word/document.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
@@ -379,8 +379,8 @@ internal static class CliTests
     {
         return TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
         {
-            ["[Content_Types].xml"] = BasicContentTypes(),
-            ["_rels/.rels"] = PackageRelationship(),
+            ["[Content_Types].xml"] = TestFixtures.DocxContentTypes,
+            ["_rels/.rels"] = TestFixtures.DocxPackageRelationships,
             ["word/document.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
@@ -391,27 +391,5 @@ internal static class CliTests
                 </w:document>
                 """
         });
-    }
-
-    private static string BasicContentTypes()
-    {
-        return """
-            <?xml version="1.0" encoding="UTF-8"?>
-            <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-              <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-              <Default Extension="xml" ContentType="application/xml"/>
-              <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
-            </Types>
-            """;
-    }
-
-    private static string PackageRelationship()
-    {
-        return """
-            <?xml version="1.0" encoding="UTF-8"?>
-            <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-              <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
-            </Relationships>
-            """;
     }
 }

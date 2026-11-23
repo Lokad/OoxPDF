@@ -1966,10 +1966,10 @@ internal static class DocxMarkupTests
         TestAssert.Contains("[0.475 0.475] 0 d", page.Content);
         TestAssert.Contains("32.81 ", page.Content);
         TestAssert.Contains("0 0 1 rg", page.Content);
-        TestAssert.True(DocxTests.CountOccurrences(page.Content, " c") >= 4 && page.Content.Contains("h" + Environment.NewLine + "B*", StringComparison.Ordinal),
+        TestAssert.True(page.Content.AsSpan().Count(" c") >= 4 && page.Content.Contains("h" + Environment.NewLine + "B*", StringComparison.Ordinal),
             "Markup balloons should render as closed fill/stroke paths with rounded corners.");
-        TestAssert.True(DocxTests.CountOccurrences(page.Content, " l S") >= 6, "Comment ranges and balloon connectors should render stroked line primitives.");
-        TestAssert.True(DocxTests.CountOccurrences(page.Content, " re f") >= 8, "Decorations, change bars, comment markers, and table borders should render filled rectangle primitives.");
+        TestAssert.True(page.Content.AsSpan().Count(" l S") >= 6, "Comment ranges and balloon connectors should render stroked line primitives.");
+        TestAssert.True(page.Content.AsSpan().Count(" re f") >= 8, "Decorations, change bars, comment markers, and table borders should render filled rectangle primitives.");
     }
 
     public static void DocxWordCompatibleAllMarkupRendersRevisionBalloonTextWithOfficeFont()
@@ -2008,7 +2008,7 @@ internal static class DocxMarkupTests
 
         // 9pt balloon design over this document lane-fit scale (612/(72+333+266.5)).
         TestAssert.True(
-            DocxTests.CountOccurrences(page.Content, "8.203 Tf") >= 2,
+            page.Content.AsSpan().Count("8.203 Tf") >= 2,
             "Word-compatible revision balloons should render Office-sized title and body text.");
         TestAssert.True(
             !page.Content.Contains(" 5.5 Tf", StringComparison.Ordinal),
@@ -2074,10 +2074,10 @@ internal static class DocxMarkupTests
         TestAssert.Equal(1, placement.WordCompatibleBodySummaryPartCount);
         // 9pt balloon design over this document lane-fit scale (612/(72+333+266.5)).
         TestAssert.True(
-            DocxTests.CountOccurrences(page.Content, "8.203 Tf") >= 4,
+            page.Content.AsSpan().Count("8.203 Tf") >= 4,
             "Long Word-compatible revision balloons should render title, first body line, continuation line, and terminal spacing at the Office-sized font.");
         TestAssert.True(
-            DocxTests.CountOccurrences(page.Content, "] TJ") >= 2,
+            page.Content.AsSpan().Count("] TJ") >= 2,
             "Long Word-compatible revision balloons should use positioned glyph arrays for the title and wrapped continuation body line.");
         TestAssert.True(
             !page.Content.Contains(" 5.5 Tf", StringComparison.Ordinal) &&

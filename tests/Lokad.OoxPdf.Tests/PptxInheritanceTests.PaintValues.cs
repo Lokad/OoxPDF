@@ -57,7 +57,7 @@ internal static partial class PptxInheritanceTests
         });
         WithDeck(parts, (document, package) => {
             PdfPage page = Render(document, package).Single();
-            TestAssert.Equal(4, DocxTests.CountOccurrences(page.Content, "1 1 0 rg"));
+            TestAssert.Equal(4, page.Content.AsSpan().Count("1 1 0 rg"));
             TestAssert.True(page.ExtGStates.Any(state => state.FillAlpha == 0d), "Transparent highlights cannot merge into an opaque neighbor.");
             string text = string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).Select(show => show.Text));
             TestAssert.Contains("Shape default", text);
@@ -100,7 +100,7 @@ internal static partial class PptxInheritanceTests
                 {
                     TestAssert.True(page.ExtGStates.Any(state => state.FillAlpha == alpha / 100000d), "Explicit bullet alpha must survive " + (numbered ? "numbering" : "character") + " placement.");
                     string stateName = "GS" + alpha + "F100000S";
-                    TestAssert.Equal(2, DocxTests.CountOccurrences(page.Content, "/" + stateName + " gs"));
+                    TestAssert.Equal(2, page.Content.AsSpan().Count("/" + stateName + " gs"));
                 }
                 string text = string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).Select(show => show.Text));
                 TestAssert.Contains("Shape default", text);

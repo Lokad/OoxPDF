@@ -46,10 +46,10 @@ internal static partial class PdfWriterTests
         TestAssert.Equal(2, graphics.Shadings.Count);
         var page = new PdfPage(100, 100, graphics.ToString(), [], [], graphics.ExtGStates, graphics.Shadings);
         string pdf = WritePdfText([page]);
-        TestAssert.Equal(2, CountOccurrences(pdf, "/ShadingType 3"));
+        TestAssert.Equal(2, pdf.AsSpan().Count("/ShadingType 3"));
         TestAssert.Contains("/Bounds [0.500002 0.5000021]", pdf);
         TestAssert.Contains("/Bounds [0.500002 0.5000022]", pdf);
-        TestAssert.Equal(2, CountOccurrences(pdf, "/Sh1 sh"));
+        TestAssert.Equal(2, pdf.AsSpan().Count("/Sh1 sh"));
     }
 
     public static void ShadingCoalescingKeepsDomainEndpointsAndLatestColor()
@@ -74,7 +74,7 @@ internal static partial class PdfWriterTests
         string pdf = WritePdfText([page]);
 
         TestAssert.True(ReadShadingBounds(pdf).SequenceEqual(new[] { .5d }), "A coincident group contributes one interior bound.");
-        TestAssert.Equal(2, CountOccurrences(pdf, "/FunctionType 2"));
+        TestAssert.Equal(2, pdf.AsSpan().Count("/FunctionType 2"));
         TestAssert.Contains("/C0 [0 0 1] /C1 [0 1 0]", pdf);
         TestAssert.Contains("/C0 [0.004 0.008 0.012] /C1 [0 0 1]", pdf);
         TestAssert.Contains("/Encode [0 1 0 1]", pdf);

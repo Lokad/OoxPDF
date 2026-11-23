@@ -1552,7 +1552,7 @@ internal static class PptxTextSpacingTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("24 Tf", pdf);
         TestAssert.Contains("19.2 Tf", pdf);
-        TestAssert.True(PptxTests.CountOccurrences(pdf, " TJ") >= 3, "Expected small-caps text to split into full-size and scaled positioned text runs.");
+        TestAssert.True(pdf.AsSpan().Count(" TJ") >= 3, "Expected small-caps text to split into full-size and scaled positioned text runs.");
     }
 
     public static void PptxSyntheticTextBoxRendersBaselineShiftWithOfficeScale()

@@ -2222,8 +2222,8 @@ internal static class PptxTextLayoutTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Equal(2, PptxTests.CountOccurrences(pdf, "0 -1 1 0 "));
-        TestAssert.Equal(0, PptxTests.CountOccurrences(pdf, " cm"));
+        TestAssert.Equal(2, pdf.AsSpan().Count("0 -1 1 0 "));
+        TestAssert.Equal(0, pdf.AsSpan().Count(" cm"));
         TestAssert.Contains("0 -1 1 0 226.15 480 Tm", pdf);
         TestAssert.Contains("0 -1 1 0 254.95 480 Tm", pdf);
     }
@@ -2348,7 +2348,7 @@ internal static class PptxTextLayoutTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         // Eight strict-greedy runs at full size; legacy shrinks to one 3.96pt run.
-        TestAssert.Equal(8, PptxTests.CountOccurrences(pdf, " TJ"));
+        TestAssert.Equal(8, pdf.AsSpan().Count(" TJ"));
         TestAssert.Contains(" 24 Tf", pdf);
     }
 

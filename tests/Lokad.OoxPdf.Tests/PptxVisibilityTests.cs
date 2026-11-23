@@ -230,7 +230,7 @@ internal static class PptxVisibilityTests
 
     private static void AssertVisibleSlidePaint(string pdf)
     {
-        TestAssert.Equal(1, PptxTests.CountOccurrences(pdf, "/Type /Page "));
+        TestAssert.Equal(1, pdf.AsSpan().Count("/Type /Page "));
         TestAssert.Contains("0 0 1 rg", pdf);
         TestAssert.DoesNotContain("1 0 0 rg", pdf);
     }
