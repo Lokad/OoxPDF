@@ -323,12 +323,8 @@ internal sealed partial class DocxLayoutEngine
         bool hasTabs = items.Any(item => item is DocxInlineTab tab && !tab.Run.EffectiveProperties.Hidden);
         // Bars can draw without consuming a tab, and unknown kinds have no
         // placement contract. Positioning stops are checked when consumed.
-        if (hasTabs && paragraph.TabStops.Any(stop =>
-            stop.Value is not null && !string.Equals(stop.Value, "left", StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(stop.Value, "right", StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(stop.Value, "center", StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(stop.Value, "decimal", StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(stop.Value, "clear", StringComparison.OrdinalIgnoreCase))) return false;
+        if (hasTabs && paragraph.TabStops.Any(stop => stop.Kind is
+            DocxTabStopKind.Bar or DocxTabStopKind.Numbering or DocxTabStopKind.Unknown)) return false;
         if (!double.IsFinite(scale) || scale <= 0d) return false;
         if (DocxPlainBodyFrame.HasFixedLineFlow(paragraph))
         {
@@ -734,9 +730,8 @@ internal sealed partial class DocxLayoutEngine
                 if (!CanMeasureOrderedTabStop(tabStop)) return false;
                 double stop = tabStop.PositionPoints;
                 double available = output.Count == 0 ? firstWidth : nextWidth;
-                bool decimalTab = string.Equals(tabStop.Value, "decimal", StringComparison.OrdinalIgnoreCase);
-                if (decimalTab || string.Equals(tabStop.Value, "right", StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(tabStop.Value, "center", StringComparison.OrdinalIgnoreCase))
+                bool decimalTab = tabStop.Kind == DocxTabStopKind.Decimal;
+                if (tabStop.Kind is DocxTabStopKind.Decimal or DocxTabStopKind.Right or DocxTabStopKind.Center)
                 {
                     int fieldEnd = index + 1;
                     while (fieldEnd < measured.Count && Atom(fieldEnd).Source is not (DocxInlineTab or DocxInlineBreak))
@@ -746,7 +741,7 @@ internal sealed partial class DocxLayoutEngine
                     }
                     var field = MeasureGroup(index + 1, fieldEnd, decimalTab);
                     double? anchor = decimalTab ? field.DecimalOffset ?? field.Advance : null;
-                    double start = GetAlignedTabFieldStart(tabStop, field.Advance, anchor);
+                    double start = GetAlignedTabFieldBounds(tabStop, field.Advance, anchor).Start;
                     // The complete aligned field must fit without overlap. Its
                     // wrapping and leader variants retain their fallbacks.
                     if (!double.IsFinite(start) || start < advance || start + field.Advance > available) return false;

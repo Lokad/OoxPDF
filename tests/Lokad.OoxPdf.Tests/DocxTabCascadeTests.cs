@@ -36,7 +36,7 @@ internal static class DocxTabCascadeTests
         var resolver = new PortableRenderingTests.PinnedResolver();
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
         foreach (string container in new[] { "body", "cell", "header" })
-        foreach (string kind in new[] { "defaults-add", "style-add", "direct-add", "clear-one", "override-one" })
+        foreach (string kind in new[] { "defaults-add", "style-add", "direct-add", "clear-one", "override-one", "logical" })
         {
             var renderer = new DocxRenderer(resolver, mode, mode == OoxPdfDocxMarkupMode.Final ?
                 OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
@@ -66,6 +66,11 @@ internal static class DocxTabCascadeTests
         string baseline = Stop("01800", leader: "dot") + Stop("3600");
         string higher = Stop("5400");
         string expected = baseline + higher;
+        if (kind == "logical")
+        {
+            baseline = Stop("1800", "start") + Stop("3600", "END");
+            expected = Stop("1800") + Stop("3600", "right") + higher;
+        }
         if (kind is "clear-one" or "override-one")
         {
             baseline += Stop("5400");
@@ -84,7 +89,7 @@ internal static class DocxTabCascadeTests
         string properties = flattened ? spacing + "<w:tabs>" + expected + "</w:tabs>" : kind switch
         {
             "defaults-add" => "<w:pStyle w:val=\"Base\"/>",
-            "style-add" => "<w:pStyle w:val=\"Derived\"/>",
+            "style-add" or "logical" => "<w:pStyle w:val=\"Derived\"/>",
             _ => "<w:pStyle w:val=\"Base\"/><w:tabs>" + higher + "</w:tabs>"
         };
         string paragraph = "<w:p><w:pPr>" + properties + "</w:pPr><w:r><w:t>A</w:t><w:tab/><w:t>B</w:t><w:tab/><w:t>C</w:t><w:tab/><w:t>D</w:t></w:r></w:p>";

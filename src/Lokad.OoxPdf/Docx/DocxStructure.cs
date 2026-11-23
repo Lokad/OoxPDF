@@ -692,7 +692,7 @@ internal sealed partial record DocxStructureSnapshot(
                 group.Count(item => item.Label.Indent.HangingPoints is not null),
                 group.Count(item => item.Label.Indent.NumberingTabPositionPoints is not null),
                 group.Count(item => item.Paragraph.EffectiveProperties.Indent != DocxParagraphIndent.Empty),
-                group.Count(item => item.Paragraph.EffectiveProperties.TabStops.Any(tab => string.Equals(tab.Value, "num", StringComparison.OrdinalIgnoreCase)))))
+                group.Count(item => item.Paragraph.EffectiveProperties.TabStops.Any(tab => tab.Kind == DocxTabStopKind.Numbering))))
             .ToArray();
     }
 

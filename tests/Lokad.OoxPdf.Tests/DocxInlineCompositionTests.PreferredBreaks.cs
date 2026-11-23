@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Numerics;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Docx;
@@ -70,6 +72,7 @@ internal static partial class DocxInlineCompositionTests
                 "The word wraps inside the narrower continuation rather than rejecting the preceding math.");
             TestAssert.Equal(ReadPaintedPictureFrame(manual), ReadPaintedPictureFrame(wrapped));
             TestAssert.Equal(manual.Images.Single().Image.ResourceKey, wrapped.Images.Single().Image.ResourceKey);
+            TestAssert.Equal(ReadPictureFractionRule(manual), ReadPictureFractionRule(wrapped));
 
             PdfPage Paint(bool authoredSplit)
             {
@@ -102,14 +105,16 @@ internal static partial class DocxInlineCompositionTests
         var resolver = new PortableRenderingTests.PinnedResolver();
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
         {
-            PdfPage right = Paint("right", "123");
-            PdfPage integer = Paint("decimal", "123");
+            var renderer = new DocxRenderer(resolver, mode, CachedMathGeometry(mode));
+            PdfPage right = PaintPictureTabField(renderer, mode, "right", ["123"]);
+            PdfPage integer = PaintPictureTabField(renderer, mode, "decimal", ["123"]);
             TestAssert.Equal(right.Content, integer.Content);
             TestAssert.Equal(3, PortableRenderingTests.ReadPaintedSourceLabel(integer, "123").Count);
+            PdfRectangle rule = ReadPictureFractionRule(right);
 
             foreach (var (number, parts) in new[] { ("12.34", new[] { "12.34" }), ("12,34", new[] { "12", ",34" }) })
             {
-                PdfPage page = Paint("decimal", parts);
+                PdfPage page = PaintPictureTabField(renderer, mode, "decimal", parts);
                 var glyphs = PortableRenderingTests.ReadPaintedSourceLabel(page, number);
                 var label = PortableRenderingTests.ReadPaintedSourceLabel(page, "Evidence");
                 TestAssert.Equal(5, glyphs.Count);
@@ -121,29 +126,93 @@ internal static partial class DocxInlineCompositionTests
                         "Decimal positioning must preserve the preceding fraction's complete glyph paint.");
                 TestAssert.Equal(ReadPaintedPictureFrame(right), ReadPaintedPictureFrame(page));
                 TestAssert.Equal(right.Images.Single().Image.ResourceKey, page.Images.Single().Image.ResourceKey);
-            }
-
-            PdfPage Paint(string alignment, params string[] number)
-            {
-                var document = ReadMutation("docx-run-picture-visible", mode, false, false, (xml, w, m) =>
-                {
-                    var (paragraph, drawing) = CreateExactPictureCell(xml, w, 3200, 1320, 320, "After table.");
-                    paragraph.Element(w + "pPr")!.AddFirst(new XElement(w + "tabs", new XElement(w + "tab",
-                        new XAttribute(w + "val", alignment), new XAttribute(w + "pos", "2640"))));
-                    AddPictureFractionLabel(paragraph, drawing, w, m);
-                    paragraph.Add(PictureCellRun(w, new XElement(w + "tab")));
-                    foreach (string part in number)
-                        paragraph.Add(PictureCellRun(w, PictureCellText(w, part)));
-                });
-                var diagnostics = new List<OoxPdfDiagnostic>();
-                var page = new DocxRenderer(resolver, mode, CachedMathGeometry(mode))
-                    .RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().Single();
-                var equation = diagnostics.Single(d => d.Feature == "equation");
-                TestAssert.True(equation.Id == "DOCX_APPROXIMATED_EQUATION",
-                    $"The {alignment} stop keeps the fraction beside {string.Concat(number)} in {mode}. {equation.Message}");
-                return page;
+                TestAssert.Equal(rule, ReadPictureFractionRule(page));
             }
         }
+    }
+
+    public static void DocxLogicalTabsPreserveComposedFractionsAndFieldPlacement()
+    {
+        var resolver = new PortableRenderingTests.PinnedResolver();
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var renderer = new DocxRenderer(resolver, mode, CachedMathGeometry(mode));
+            foreach (bool body in new[] { false, true })
+            foreach (var (physical, logical) in new[] { ("left", "start"), ("right", "end") })
+            {
+                PdfPage control = PaintPictureTabField(renderer, mode, physical, ["123"], body);
+                PdfPage aliased = PaintPictureTabField(renderer, mode, logical, ["123"], body);
+                TestAssert.Equal(control.Content, aliased.Content);
+                TestAssert.Equal(3, PortableRenderingTests.ReadPaintedSourceLabel(aliased, "123").Count);
+                TestAssert.Equal(ReadPictureFractionRule(control), ReadPictureFractionRule(aliased));
+                TestAssert.Equal(ReadPaintedPictureFrame(control), ReadPaintedPictureFrame(aliased));
+                TestAssert.Equal(control.Images.Single().Image.ResourceKey, aliased.Images.Single().Image.ResourceKey);
+            }
+
+            PdfPage plainRight = PaintPictureTabField(renderer, mode, "right", ["123"], body: true, composed: false);
+            PdfPage plainEnd = PaintPictureTabField(renderer, mode, "end", ["123"], body: true, composed: false);
+            PdfPage plainLeft = PaintPictureTabField(renderer, mode, "left", ["123"], body: true, composed: false);
+            var rightNumber = PortableRenderingTests.ReadPaintedSourceLabel(plainRight, "123");
+            var leftNumber = PortableRenderingTests.ReadPaintedSourceLabel(plainLeft, "123");
+            TestAssert.True(rightNumber.SequenceEqual(PortableRenderingTests.ReadPaintedSourceLabel(plainEnd, "123")),
+                "The plain end tab uses the right-aligned numeric field geometry.");
+            TestAssert.True(rightNumber[0].Origin.X < leftNumber[0].Origin.X,
+                "The plain field moves left of the same stop when end-aligned.");
+        }
+    }
+
+    private static PdfPage PaintPictureTabField(DocxRenderer renderer, OoxPdfDocxMarkupMode mode,
+        string alignment, IReadOnlyList<string> number, bool body = false, bool composed = true)
+    {
+        var document = ReadMutation("docx-run-picture-visible", mode, false, false, (xml, w, m) =>
+        {
+            var (paragraph, drawing) = CreateExactPictureCell(xml, w, 3600, 1320, 320, "After table.");
+            paragraph.Element(w + "pPr")!.AddFirst(new XElement(w + "tabs", new XElement(w + "tab",
+                new XAttribute(w + "val", alignment), new XAttribute(w + "pos", "2640"))));
+            if (composed) AddPictureFractionLabel(paragraph, drawing, w, m);
+            paragraph.Add(PictureCellRun(w, new XElement(w + "tab")));
+            foreach (string part in number)
+                paragraph.Add(PictureCellRun(w, PictureCellText(w, part)));
+            if (body)
+            {
+                var table = paragraph.Ancestors(w + "tbl").Single();
+                paragraph.Remove();
+                table.ReplaceWith(paragraph);
+            }
+        });
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        var page = renderer.RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().Single();
+        if (composed)
+        {
+            var equation = diagnostics.Single(d => d.Feature == "equation");
+            TestAssert.True(equation.Id == "DOCX_APPROXIMATED_EQUATION",
+                $"The {alignment} stop keeps the fraction beside {string.Concat(number)} in {mode}. {equation.Message}");
+        }
+        return page;
+    }
+
+    private static PdfRectangle ReadPictureFractionRule(PdfPage page)
+    {
+        var numerator = PortableRenderingTests.ReadPaintedSourceLabel(page, "437", mathOnly: true);
+        var denominator = PortableRenderingTests.ReadPaintedSourceLabel(page, "293", mathOnly: true);
+        var rules = new List<PdfRectangle>();
+        foreach (var (block, clip, transform) in DocxNoteClippingTests.ReadPhysicalPaintFrames(page, includeVisibleFills: true))
+        {
+            if (!block.EndsWith(" re f", StringComparison.Ordinal)) continue;
+            string[] tokens = block.Split(' ');
+            float Number(int index) => float.Parse(tokens[index], CultureInfo.InvariantCulture);
+            var start = Vector2.Transform(new Vector2(Number(0), Number(1)), transform);
+            var end = Vector2.Transform(new Vector2(Number(0) + Number(2), Number(1) + Number(3)), transform);
+            if (start.X <= Math.Min(numerator[0].Origin.X, denominator[0].Origin.X) &&
+                end.X > Math.Max(numerator[^1].Origin.X, denominator[^1].Origin.X) &&
+                start.Y > denominator[0].Origin.Y && end.Y < numerator[0].Origin.Y &&
+                start.X >= clip.X && end.X <= clip.X + clip.Width &&
+                start.Y >= clip.Y && end.Y <= clip.Y + clip.Height &&
+                end.Y > start.Y && end.X > start.X)
+                rules.Add(new PdfRectangle(start.X, start.Y, end.X - start.X, end.Y - start.Y));
+        }
+        TestAssert.True(rules.Count == 1, "The fraction paints one complete visible rule between its arguments.");
+        return rules[0];
     }
 
     private static void AddPictureFractionLabel(XElement paragraph, XElement drawing, XNamespace w, XNamespace m)

@@ -314,7 +314,37 @@ internal sealed record DocxTabStop(
     double? PositionPoints,
     string? PositionValue,
     string? Value,
-    string? LeaderValue);
+    string? LeaderValue)
+{
+    // Layout uses left-to-right frames. Keep the authored token for inspection.
+    public DocxTabStopKind Kind
+    {
+        get
+        {
+            const StringComparison comparison = StringComparison.OrdinalIgnoreCase;
+            if (Value is null || Value.Equals("left", comparison) || Value.Equals("start", comparison)) return DocxTabStopKind.Left;
+            if (Value.Equals("right", comparison) || Value.Equals("end", comparison)) return DocxTabStopKind.Right;
+            if (Value.Equals("center", comparison)) return DocxTabStopKind.Center;
+            if (Value.Equals("decimal", comparison)) return DocxTabStopKind.Decimal;
+            if (Value.Equals("clear", comparison)) return DocxTabStopKind.Clear;
+            if (Value.Equals("bar", comparison)) return DocxTabStopKind.Bar;
+            if (Value.Equals("num", comparison)) return DocxTabStopKind.Numbering;
+            return DocxTabStopKind.Unknown;
+        }
+    }
+}
+
+internal enum DocxTabStopKind
+{
+    Left,
+    Right,
+    Center,
+    Decimal,
+    Clear,
+    Bar,
+    Numbering,
+    Unknown
+}
 
 internal sealed record DocxParagraphSpacing(
     string? BeforeValue,

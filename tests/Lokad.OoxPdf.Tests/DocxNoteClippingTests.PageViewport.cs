@@ -75,12 +75,13 @@ internal static partial class DocxNoteClippingTests
     // Read only generated q/Q, rectangle clips/strokes, matrices and text/image paints for these
     // fixtures. CID decoding stays in the existing glyph-show reader; standard
     // affine matrices map clips and glyph ink into physical page coordinates.
-    internal static IEnumerable<PhysicalPaintFrame> ReadPhysicalPaintFrames(PdfPage page)
+    internal static IEnumerable<PhysicalPaintFrame> ReadPhysicalPaintFrames(PdfPage page, bool includeVisibleFills = false)
     {
         const string number = @"[-+\d.eE]+";
         string rectangle = number + @"(?: " + number + @"){3}";
         const string paintPattern = @"(?m)^(?:(?<state>/\S+) gs|(?<mode>[0-7]) Tr)\r?$";
-        string pattern = @"(?m)^(?:(?<save>q)|(?<restore>Q)|(?<clip>" + rectangle + @") re W\*? n|(?<matrix>" + number + @"(?: " + number + @"){5}) cm|(?<state>/\S+) gs|(?<mode>[0-7]) Tr|(?<text>BT)|(?<image>/[A-Za-z0-9_]+ Do)|(?<stroke>" + rectangle + @" re S))\r?$";
+        string fills = includeVisibleFills ? "|(?<fill>" + rectangle + @" re f)" : "";
+        string pattern = @"(?m)^(?:(?<save>q)|(?<restore>Q)|(?<clip>" + rectangle + @") re W\*? n|(?<matrix>" + number + @"(?: " + number + @"){5}) cm|(?<state>/\S+) gs|(?<mode>[0-7]) Tr|(?<text>BT)|(?<image>/[A-Za-z0-9_]+ Do)|(?<stroke>" + rectangle + @" re S)" + fills + @")\r?$";
         var saved = new Stack<(PdfRectangle Clip, Matrix3x2 Transform, (bool? FillVisible, bool Mask, int Mode) Paint)>();
         var clip = new PdfRectangle(0d, 0d, page.Width, page.Height);
         var transform = Matrix3x2.Identity;
@@ -130,7 +131,8 @@ internal static partial class DocxNoteClippingTests
                 };
                 yield return new(block, clip, transform) { VisibleTextPaint = visible };
             }
-            else yield return new(operation.Value.TrimEnd('\r'), clip, transform);
+            else if (!operation.Groups["fill"].Success || (!paint.Mask && paint.FillVisible is true))
+                yield return new(operation.Value.TrimEnd('\r'), clip, transform);
         }
         TestAssert.Equal(0, saved.Count);
 

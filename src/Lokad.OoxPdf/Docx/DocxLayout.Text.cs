@@ -115,9 +115,9 @@ internal sealed partial class DocxLayoutEngine
             DocxResolvedTabStop tabStop = ResolveNextTabStop(currentWidth, tabStops, defaultTabStopPoints);
             double fieldWidth = MeasureTextFieldSpans(field.Spans, fontSize, textMeasurer);
             double? decimalAlignmentWidth = GetDecimalTabAlignmentWidth(tabStop, field.Spans, fontSize, textMeasurer);
-            double fieldStart = GetAlignedTabFieldStart(tabStop, fieldWidth, decimalAlignmentWidth);
+            var (fieldStart, fieldEnd) = GetAlignedTabFieldBounds(tabStop, fieldWidth, decimalAlignmentWidth);
             AddTextFieldSegments(segments, field.Spans, lineX + fieldStart, fontSize, textMeasurer);
-            currentWidth = GetAlignedTabFieldEnd(tabStop, fieldWidth, decimalAlignmentWidth);
+            currentWidth = fieldEnd;
         }
 
         return segments;
@@ -145,7 +145,7 @@ internal sealed partial class DocxLayoutEngine
 
             DocxResolvedTabStop tabStop = ResolveNextTabStop(currentWidth, tabStops, defaultTabStopPoints);
             double? decimalAlignmentWidth = GetDecimalTabAlignmentWidth(tabStop, field.Spans, fontSize, textMeasurer);
-            currentWidth = GetAlignedTabFieldEnd(tabStop, fieldWidth, decimalAlignmentWidth);
+            currentWidth = GetAlignedTabFieldBounds(tabStop, fieldWidth, decimalAlignmentWidth).End;
         }
 
         return currentWidth;
@@ -435,7 +435,7 @@ internal sealed partial class DocxLayoutEngine
         public List<DocxTextSpan> Spans { get; } = [];
     }
 
-    private readonly record struct DocxResolvedTabStop(double PositionPoints, string? Value, string? LeaderValue = null);
+    private readonly record struct DocxResolvedTabStop(double PositionPoints, DocxTabStopKind Kind, string? LeaderValue = null);
 
     private static IReadOnlyList<DocxTabField> SplitTabFields(IReadOnlyList<DocxTextSpan> spans)
     {
@@ -586,7 +586,7 @@ internal sealed partial class DocxLayoutEngine
         double fontSize,
         IDocxTextMeasurer textMeasurer)
     {
-        if (!string.Equals(tabStop.Value, "decimal", StringComparison.OrdinalIgnoreCase))
+        if (tabStop.Kind != DocxTabStopKind.Decimal)
         {
             return null;
         }
@@ -615,38 +615,24 @@ internal sealed partial class DocxLayoutEngine
 
     private static int FindDecimalTabSeparator(ReadOnlySpan<char> text) => text.IndexOfAny('.', ',');
 
-    private static double GetAlignedTabFieldStart(DocxResolvedTabStop tabStop, double fieldWidth, double? decimalAlignmentWidth)
+    private static (double Start, double End) GetAlignedTabFieldBounds(
+        DocxResolvedTabStop tabStop, double fieldWidth, double? decimalAlignmentWidth)
     {
-        if (string.Equals(tabStop.Value, "right", StringComparison.OrdinalIgnoreCase))
+        double stop = tabStop.PositionPoints;
+        if (tabStop.Kind == DocxTabStopKind.Right)
         {
-            return tabStop.PositionPoints - fieldWidth;
+            return (stop - fieldWidth, stop);
         }
 
-        if (decimalAlignmentWidth is not null)
+        if (decimalAlignmentWidth is { } anchor)
         {
-            return tabStop.PositionPoints - decimalAlignmentWidth.Value;
+            double start = stop - anchor;
+            return (start, start + fieldWidth);
         }
 
-        return string.Equals(tabStop.Value, "center", StringComparison.OrdinalIgnoreCase)
-            ? tabStop.PositionPoints - (fieldWidth / 2d)
-            : tabStop.PositionPoints;
-    }
-
-    private static double GetAlignedTabFieldEnd(DocxResolvedTabStop tabStop, double fieldWidth, double? decimalAlignmentWidth)
-    {
-        if (string.Equals(tabStop.Value, "right", StringComparison.OrdinalIgnoreCase))
-        {
-            return tabStop.PositionPoints;
-        }
-
-        if (decimalAlignmentWidth is not null)
-        {
-            return tabStop.PositionPoints - decimalAlignmentWidth.Value + fieldWidth;
-        }
-
-        return string.Equals(tabStop.Value, "center", StringComparison.OrdinalIgnoreCase)
-            ? tabStop.PositionPoints + (fieldWidth / 2d)
-            : tabStop.PositionPoints + fieldWidth;
+        return tabStop.Kind == DocxTabStopKind.Center
+            ? (stop - (fieldWidth / 2d), stop + (fieldWidth / 2d))
+            : (stop, stop + fieldWidth);
     }
 
     private static double GetTextSpanFontSize(DocxTextSpan span, double fallbackFontSize)
@@ -665,29 +651,20 @@ internal sealed partial class DocxLayoutEngine
 
     private static DocxResolvedTabStop ResolveNextTabStop(double width, IReadOnlyList<DocxTabStop> tabStops, double defaultTabStopPoints)
     {
-        foreach (DocxTabStop tabStop in tabStops
-            .Where(tabStop => tabStop.PositionPoints is not null && IsPositioningTabStop(tabStop))
-            .OrderBy(tabStop => tabStop.PositionPoints ?? 0d))
+        foreach (DocxTabStop tabStop in tabStops.OrderBy(tabStop => tabStop.PositionPoints))
         {
-            if ((tabStop.PositionPoints ?? 0d) > width + 0.001d)
+            if (tabStop.PositionPoints is { } position && position > width + 0.001d)
             {
-                return new DocxResolvedTabStop(tabStop.PositionPoints ?? 0d, tabStop.Value, tabStop.LeaderValue);
+                DocxTabStopKind kind = tabStop.Kind;
+                if (kind is not (DocxTabStopKind.Bar or DocxTabStopKind.Clear))
+                {
+                    return new DocxResolvedTabStop(position, kind, tabStop.LeaderValue);
+                }
             }
         }
 
-        return new DocxResolvedTabStop(AdvanceToNextDefaultTabStop(), null);
-
-        double AdvanceToNextDefaultTabStop()
-        {
-            double tabStop = defaultTabStopPoints > 0d ? defaultTabStopPoints : WordDefaultTabStopPoints;
-            return (Math.Floor(width / tabStop) + 1d) * tabStop;
-        }
-
-        bool IsPositioningTabStop(DocxTabStop tabStop)
-        {
-            return !string.Equals(tabStop.Value, "bar", StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(tabStop.Value, "clear", StringComparison.OrdinalIgnoreCase);
-        }
+        double defaultStop = defaultTabStopPoints > 0d ? defaultTabStopPoints : WordDefaultTabStopPoints;
+        return new DocxResolvedTabStop((Math.Floor(width / defaultStop) + 1d) * defaultStop, DocxTabStopKind.Left);
     }
 
     // RV05: ordered inline atoms (body path). Images carrying a recorded source run

@@ -768,7 +768,7 @@ internal sealed partial class DocxLayoutEngine
         double? GetNumberingTabPosition()
         {
             double? paragraphNumberingTab = paragraph.EffectiveProperties.TabStops
-                .Where(tab => string.Equals(tab.Value, "num", StringComparison.OrdinalIgnoreCase))
+                .Where(tab => tab.Kind == DocxTabStopKind.Numbering)
                 .Select(tab => tab.PositionPoints)
                 .FirstOrDefault(position => position is not null);
             return (paragraphNumberingTab ?? paragraph.ListLabel?.Indent.NumberingTabPositionPoints) * fixedScale;
