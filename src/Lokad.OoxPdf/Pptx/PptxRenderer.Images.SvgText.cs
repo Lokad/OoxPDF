@@ -97,7 +97,11 @@ internal sealed partial class PptxRenderer
             !IsDefault("text-decoration", "none") || !IsDefault("font-kerning", "auto", "normal", "none") ||
             !IsDefault("kerning", "auto", "0", "0px") ||
             !IsDefault("clip-path", "none") || !IsDefault("mask", "none") || !IsDefault("filter", "none")) return false;
+        // A nonpainting stroke leaves the supported glyph fill intact. The
+        // width check needs only a positive percentage basis to recognize zero.
         if (Inherited("stroke") is { } stroke &&
+            ReadSvgOpacityValue(Inherited("stroke-opacity")) != 0d &&
+            !(TryReadSvgStrokeWidth(style, element, percentageBasis: 1d, out double strokeWidth) && strokeWidth == 0d) &&
             !ResolveSvgPaintFallback(element, style, stroke, paintServerIds, out _).Equals("none", StringComparison.OrdinalIgnoreCase))
             return false;
         string anchor = Inherited("text-anchor")?.ToLowerInvariant() ?? "start";

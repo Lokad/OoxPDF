@@ -71,6 +71,32 @@ internal static partial class SvgTextTests
         }
     }
 
+    public static void SvgLabelsKeepTheirFillWhenStrokesDoNotPaint()
+    {
+        const string definitions = """
+            <defs><linearGradient id="g"><stop stop-color="red"/><stop offset="1" stop-color="blue"/></linearGradient></defs>
+            <rect x="113" y="20" width="24" height="18" fill="lime"/>
+            """;
+        string Picture(bool authoredStrokes, string localWidth = "")
+        {
+            string direct = authoredStrokes ? """stroke="blue" stroke-width="0px" """ : "";
+            string inherited = authoredStrokes ? """stroke="url(#g)" style="stroke-width:0%" """ : "";
+            string transparent = authoredStrokes ? """stroke="blue" style="stroke-opacity:0%" """ : "";
+            return Svg(definitions + $"""
+                <text x="10" y="24" font-size="16" fill="#112233" {direct}>ONE</text>
+                <g {inherited}><text x="10" y="49" font-size="16" fill="#112233" {localWidth}>TWO</text></g>
+                <g {transparent}><text x="10" y="74" font-size="16" fill="#112233">SIX</text></g>
+                """);
+        }
+        AssertSvgPaintInBothFormats(Picture(false), Picture(true), pdf => TestAssert.Equal(9, LabelPaths(pdf)), "0 1 0 rg");
+
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        var active = Paint(Picture(true, "stroke-width=\"1px\""), diagnostics);
+        TestAssert.Equal(6, LabelPaths(active.ToString()));
+        TestAssert.Equal(1, diagnostics.Count);
+        TestAssert.Equal("SVG_UNSUPPORTED_CONTENT", diagnostics[0].Id);
+    }
+
     public static void SvgInheritedGradientStrokeOpacityKeepsNumericFallbackContract()
     {
         const string definitions = "<defs><linearGradient id=\"g\"><stop offset=\"0\" stop-color=\"red\"/>" +
