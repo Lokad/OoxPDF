@@ -99,6 +99,7 @@ zero opacity on SVG roots and groups. `unset` follows inheritance for supported
 paint, visibility and font properties. `initial` resets inherited fill, stroke
 and stroke width to their defaults. `initial` and `unset` restore full
 opacity on SVG objects and gradient stops.
+An SVG `font-size` reset restores the default for the label and its relative descendants.
 Basic shape geometry, stroke widths, dash lengths and dash offsets accept viewport percentages.
 Line elements use stroke paint and ignore fill declarations.
 Object opacity can compose a visible fill with a supported linear-gradient stroke.

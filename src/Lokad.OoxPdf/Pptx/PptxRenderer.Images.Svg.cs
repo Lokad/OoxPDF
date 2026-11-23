@@ -1558,7 +1558,7 @@ internal sealed partial class PptxRenderer
     {
         ReadOnlySpan<char> token = text.AsSpan().Trim();
         // Inherited fill and stroke opacity resolve unset before parsing.
-        if (token.Equals("initial", StringComparison.OrdinalIgnoreCase) ||
+        if (IsSvgInitialValue(token) ||
             token.Equals("unset", StringComparison.OrdinalIgnoreCase)) return 1d;
         bool percent = token.Length != 0 && token[^1] == '%';
         if (percent) token = token[..^1];
@@ -1799,7 +1799,7 @@ internal sealed partial class PptxRenderer
             if (!string.IsNullOrWhiteSpace(value) && !InheritsSvgPropertyValue(value) &&
                 (name != "color" || !IsSvgCurrentColor(value)))
             {
-                return value.AsSpan().Trim().Equals("initial", StringComparison.OrdinalIgnoreCase) ? null : value;
+                return IsSvgInitialValue(value) ? null : value;
             }
         }
         return null;
@@ -1811,6 +1811,9 @@ internal sealed partial class PptxRenderer
         return keyword.Equals("inherit", StringComparison.OrdinalIgnoreCase) ||
             keyword.Equals("unset", StringComparison.OrdinalIgnoreCase);
     }
+
+    private static bool IsSvgInitialValue(ReadOnlySpan<char> value) =>
+        value.Trim().Equals("initial", StringComparison.OrdinalIgnoreCase);
 
     private static bool IsSvgCurrentColor(string value) =>
         value.AsSpan().Trim().Equals("currentColor", StringComparison.OrdinalIgnoreCase);

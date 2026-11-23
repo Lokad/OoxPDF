@@ -68,6 +68,33 @@ internal static partial class SvgTextTests
         TestAssert.True(Math.Abs(positions[0] - positions[2] - width) < .002d, "End anchors use the measured advance.");
     }
 
+    public static void SvgInitialFontSizePreservesLocalAndRelativeLabelsInBothFormats()
+    {
+        const string expected = """
+            <text x="12" y="30" font-size="16" fill="#112233">INK</text>
+            <text x="12" y="71" font-size="24" fill="#2254b4">NEXT</text>
+            <text x="12" y="115" font-size="32" fill="green">STAY</text>
+            """;
+        const string source = """
+            <g font-size="32">
+              <text x="12" y="30" font-size="7" fill="#112233"
+                    style="font-size:InItIaL !important; font-size:8px">INK</text>
+              <g font-size="38" style="font-size:initial">
+                <g font-size="150%">
+                  <text x="12" y="71" font-size="7" fill="#2254b4" style="font-size:inherit">NEXT</text>
+                </g>
+              </g>
+              <text x="12" y="115" fill="green">STAY</text>
+            </g>
+            """;
+        AssertSvgPaintInBothFormats(Svg(expected), Svg(source), pdf =>
+        {
+            TestAssert.Equal(3, LabelPaths(pdf));
+            TestAssert.Equal(4, LabelPaths(pdf, "0.133 0.329 0.706 rg"));
+            TestAssert.Equal(4, LabelPaths(pdf, "0 0.502 0 rg"));
+        });
+    }
+
     public static void SvgLabelTransformsUseThePictureCoordinateSystem()
     {
         const string transform = "matrix(0.965925826 0.258819045 -0.258819045 0.965925826 5 7)";
@@ -418,9 +445,9 @@ internal static partial class SvgTextTests
         return graphics;
     }
 
-    private static int LabelPaths(string content)
+    private static int LabelPaths(string content, string color = LabelColor)
     {
-        int start = content.IndexOf(LabelColor, StringComparison.Ordinal);
+        int start = content.IndexOf(color, StringComparison.Ordinal);
         TestAssert.True(start >= 0, "The authored label color must reach visible paths.");
         int end = content.IndexOf("\nQ", start, StringComparison.Ordinal);
         return Regex.Matches(content[start..(end < 0 ? content.Length : end)], @"(?m)^f\r?$").Count;

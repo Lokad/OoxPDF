@@ -111,11 +111,15 @@ internal sealed partial class PptxRenderer
             if (!int.TryParse(weight, NumberStyles.None, CultureInfo.InvariantCulture, out int numeric) || numeric is < 100 or > 900) return false;
             bold = numeric >= 600;
         }
-        double size = 16d;
+        const double initialFontSize = 16d;
+        double size = initialFontSize;
         foreach (XElement owner in element.AncestorsAndSelf().Reverse())
         {
             string? value = ReadSvgPresentationAttribute(owner, ReadSvgStyleDeclarations(owner), "font-size");
-            if (value is not null && !InheritsSvgPropertyValue(value) && !TryReadSvgTextLength(value, size, out size, allowPercent: true))
+            if (value is null || InheritsSvgPropertyValue(value)) continue;
+            if (IsSvgInitialValue(value))
+                size = initialFontSize;
+            else if (!TryReadSvgTextLength(value, size, out size, allowPercent: true))
                 return false;
         }
         if (size <= 0d || !TryReadSvgTextLength((string?)element.Attribute("x") ?? "0", null, out double x) ||
