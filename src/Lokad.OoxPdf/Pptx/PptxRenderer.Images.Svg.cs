@@ -683,9 +683,6 @@ internal sealed partial class PptxRenderer
         string? inlineOpacity = element.Attribute("style") is null
             ? null : ReadSvgStyleDeclarations(element).GetValueOrDefault("opacity");
         double? numeric = ReadUnitSvgOpacity(inlineOpacity ?? attribute);
-        // Inline zero hides the container and inline one needs no group.
-        // Other inline values retain the existing partial-opacity fallback.
-        if (inlineOpacity is not null && numeric is not (0d or 1d)) numeric = null;
         // Link wrappers previously painted their strokes at full opacity.
         // Keep that paint when an opacity declaration still needs fallback.
         bool allowsGradientStroke = !nestedSvg &&

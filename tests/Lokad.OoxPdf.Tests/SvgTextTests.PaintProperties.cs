@@ -800,6 +800,32 @@ internal static partial class SvgTextTests
         AssertSvgPaintInBothFormats(expected, groupStyle, "/Pattern CS /Ps1 SCN");
     }
 
+    public static void SvgFractionalContainerStylesMatchPresentationOpacity()
+    {
+        const string paint = """
+            <rect x="16" y="10" width="76" height="38" fill="red"/>
+            <rect x="51" y="20" width="67" height="35" fill="yellow"/>
+            <path d="M16 60H118" fill="none" stroke="url(#stroke)" stroke-width="6"/>
+            <text x="16" y="90" font-size="18" fill="#112233">NORTH</text>
+            """;
+        const string definitions = """
+            <defs><linearGradient id="stroke" gradientUnits="userSpaceOnUse" x1="16" x2="118">
+              <stop stop-color="blue"/><stop offset="1" stop-color="purple"/>
+            </linearGradient></defs>
+            """;
+        const string attribute = """opacity=".5" """;
+        const string inline = """opacity="0" style="opacity:50% !important; opacity:.75" """;
+
+        string Root(string opacity) => Svg(definitions + paint).Insert("<svg ".Length, opacity);
+        string Group(string opacity) => Svg(definitions + $"<g {opacity}>{paint}</g>");
+        AssertSvgPaintInBothFormats(Root(attribute), Root(inline), AssertControl,
+            "/Pattern CS /Ps1 SCN", "/ca 0.5 /CA 0.5", "/I true /K false", "1 0 0 rg", "1 1 0 rg");
+        AssertSvgPaintInBothFormats(Group(attribute), Group(inline), AssertControl,
+            "/Pattern CS /Ps1 SCN", "/ca 0.5 /CA 0.5", "/I true /K false", "1 0 0 rg", "1 1 0 rg");
+
+        static void AssertControl(string pdf) => TestAssert.Equal(5, LabelPaths(pdf));
+    }
+
     public static void SvgOpacityDefaultsKeepGradientStrokesAndStopMasksInBothFormats()
     {
         static string Picture(string value) => Svg($"""
@@ -985,12 +1011,18 @@ internal static partial class SvgTextTests
         Write(Page(half));
 
         diagnostics.Clear();
-        var fallback = Paint(Picture("a", """style="opacity:.5" """), diagnostics);
-        AssertEquivalentSvgPaint(Paint(Picture("a", "")), fallback, "An unsupported inline opacity preserves its stroke paint.");
+        var styled = Paint(Picture("a", """opacity=".25" style="opacity:50% !important; opacity:.75" """), diagnostics);
+        AssertEquivalentSvgPaint(half, styled, "Inline opacity gives the link wrapper the same group opacity as the attribute.");
+        TestAssert.Equal(half.Groups.Single().Group.Content, styled.Groups.Single().Group.Content);
+        TestAssert.Equal(1, styled.Groups.Single().Group.ShadingPatterns.Count);
+        TestAssert.Contains("unsupported a element", diagnostics.Single().Message);
+
+        diagnostics.Clear();
+        var fallback = Paint(Picture("a", """style="opacity:garbage" """), diagnostics);
+        AssertEquivalentSvgPaint(Paint(Picture("a", "")), fallback, "An invalid inline opacity preserves the link wrapper's stroke paint.");
         TestAssert.Equal(1, fallback.ShadingPatterns.Count);
         TestAssert.Equal(0, fallback.Groups.Count);
-        TestAssert.True(diagnostics.Any(d => d.Message.Contains("ignores opacity on 1 container", StringComparison.Ordinal)),
-            "The inline opacity approximation remains diagnosed.");
+        TestAssert.Contains("unsupported a element", diagnostics.Single().Message);
     }
 
     public static void SvgObjectOpacityMatchesGroupForFilledGradientStrokes()

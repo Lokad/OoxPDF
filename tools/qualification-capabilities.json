@@ -678,6 +678,7 @@
     "=SvgRadialGradientResourcesPreserveTranslatedAndUniformlyScaledPaint",
     "=SvgUserSpaceRadialGradientsFollowTranslatedAndUniformlyScaledGroups",
     "=SvgOpaqueContainerStylesPreserveGradientStrokes",
+    "=SvgFractionalContainerStylesMatchPresentationOpacity",
     "=SvgOpacityDefaultsKeepGradientStrokesAndStopMasksInBothFormats",
     "=SvgZeroOpacityContainerStylesHidePaintAndDiagnostics",
     "=SvgResourceDefinitionsKeepTheirChildrenOutOfVisiblePaint",
@@ -727,6 +728,7 @@
     "PptxSvgLinearGradientStrokeUsesNativePatternAndMultipliesAlpha",
     "PptxSvgGradientStrokesFollowPicturePlacementAndFormOwnership",
     "PptxSvgLinearGradientStrokeRetainsBoundedFallbackPaint",
+    "=PptxSvgIgnoredContainerAndStopOpacityDiagnosesOnlyUsedPaint",
     "SvgLabelFontPreparationRefundsScratchOnRefusalAndCancellation",
     "SvgSampledPageConstructionCoversReturnedPaintAndOpacityGroups"
   ],

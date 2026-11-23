@@ -92,9 +92,10 @@ require an embeddable fallback. Missing glyphs use diagnosed replacement.
 Local SVG gradient templates reuse the authored stops and their source colors.
 Explicit `initial` and `unset` on `stop-color` restore black.
 Missing or wrong-type local paint references use the authored fallback color or `none`.
-SVG link wrappers preserve transforms, numeric opacity attributes, and inline
-zero opacity on their shapes and text. Embedded SVG link actions retain an
-unsupported-content diagnostic.
+SVG link wrappers preserve transforms on their shapes and text. Embedded SVG link
+actions retain an unsupported-content diagnostic. Numeric opacity on SVG roots,
+groups and link wrappers composes their children as a group for both presentation
+attributes and inline style.
 SVG paint accepts opaque numeric `rgb()` colors, the `transparent` keyword and separate opacity properties.
 Supported inline style declarations honor `!important` precedence, including
 zero opacity on SVG roots and groups. `unset` follows inheritance for supported
