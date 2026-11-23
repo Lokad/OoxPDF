@@ -420,11 +420,14 @@ def source_content(path, mode, pages):
     return prose, math, parts, unresolved
 
 
-def inspect_reference(pdf, inspector, cache):
-    pdf_hash, inspector_hash = sha(pdf), sha(inspector)
+def inspect_reference(pdf, inspector, cache, *, pdf_hash, inspector_hash):
+    # The audit has already verified these pins. Warm lookups only read the
+    # cached files whose identity is checked below.
     # Legacy entries lack a pin for the log that establishes the page count.
     folder = cache / ("v2-" + pdf_hash + "-" + inspector_hash[:12])
     if not folder.exists():
+        if (sha(pdf), sha(inspector)) != (pdf_hash, inspector_hash):
+            raise ValueError("Reference PDF or inspector changed before inspection")
         cache.mkdir(parents=True, exist_ok=True)
         with TemporaryDirectory(prefix="reference-inspection-", dir=cache) as temporary:
             staged = Path(temporary) / "inspection"
@@ -580,7 +583,8 @@ def main():
         operations = json.loads(operations_bytes.decode("utf-8-sig"))
         if not isinstance(operations, list):
             raise ValueError("Invalid candidate text operations: " + folder)
-        office, office_ops_hash, pages, office_log_hash = inspect_reference(reference, inspector, args.cache.resolve())
+        office, office_ops_hash, pages, office_log_hash = inspect_reference(
+            reference, inspector, args.cache.resolve(), pdf_hash=reference_hash, inspector_hash=inspector_hash)
         operations = page_owned_operations(operations)
         office = page_owned_operations(office)
         candidate_words = words(operation_text(operations))

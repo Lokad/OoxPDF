@@ -376,7 +376,8 @@ class ReferenceInspectionTests(unittest.TestCase):
                 pdf.write_bytes(b"pinned reference")
                 inspector.write_bytes(b"pinned inspector")
                 cache = root / "cache"
-                key = sha(pdf) + "-" + sha(inspector)[:12]
+                pins = {"pdf_hash": sha(pdf), "inspector_hash": sha(inspector)}
+                key = pins["pdf_hash"] + "-" + pins["inspector_hash"][:12]
                 legacy = cache / key
                 legacy.mkdir(parents=True)
                 legacy_operations = legacy / "text-operations.json"
@@ -395,8 +396,9 @@ class ReferenceInspectionTests(unittest.TestCase):
                     stdout.write("2 0 obj: pages\n" + "".join(f"{3 + index} 0 obj: page\n" for index in range(page_count)))
 
                 with patch("AuditCompositionContent.subprocess.run", side_effect=inspect) as process:
-                    result = inspect_reference(pdf, inspector, cache)
-                    self.assertEqual(result, inspect_reference(pdf, inspector, cache))
+                    result = inspect_reference(pdf, inspector, cache, **pins)
+                    with patch("AuditCompositionContent.sha", side_effect=AssertionError("unexpected warm hash read")):
+                        self.assertEqual(result, inspect_reference(pdf, inspector, cache, **pins))
                     process.assert_called_once()
 
                 folder = cache / ("v2-" + key)
@@ -407,11 +409,11 @@ class ReferenceInspectionTests(unittest.TestCase):
                 original_log = log.read_bytes()
                 log.write_text("9 0 obj: page\n" * (3 - page_count), encoding="utf-8")
                 with self.assertRaisesRegex(ValueError, "Reference text cache identity differs"):
-                    inspect_reference(pdf, inspector, cache)
+                    inspect_reference(pdf, inspector, cache, **pins)
                 log.write_bytes(original_log)
                 operations.write_text('[{"DecodedText":"changed"}]', encoding="utf-8")
                 with self.assertRaisesRegex(ValueError, "Reference text cache identity differs"):
-                    inspect_reference(pdf, inspector, cache)
+                    inspect_reference(pdf, inspector, cache, **pins)
 
     def test_cold_inspection_without_page_evidence_leaves_no_entry(self):
         with TemporaryDirectory() as temporary:
@@ -420,6 +422,7 @@ class ReferenceInspectionTests(unittest.TestCase):
             pdf.write_bytes(b"pinned reference")
             inspector.write_bytes(b"pinned inspector")
             cache = root / "cache"
+            pins = {"pdf_hash": sha(pdf), "inspector_hash": sha(inspector)}
 
             def inspect(argv, *, stdout, **_):
                 (Path(argv[3]) / "text-operations.json").write_text("[]", encoding="utf-8")
@@ -427,8 +430,28 @@ class ReferenceInspectionTests(unittest.TestCase):
 
             with patch("AuditCompositionContent.subprocess.run", side_effect=inspect):
                 with self.assertRaisesRegex(ValueError, "No inspected reference pages"):
-                    inspect_reference(pdf, inspector, cache)
+                    inspect_reference(pdf, inspector, cache, **pins)
             self.assertEqual([], list(cache.iterdir()))
+
+    def test_cold_inspection_refuses_changed_assets_before_or_during_read(self):
+        for before_process in [True, False]:
+            with self.subTest(before_process=before_process), TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                pdf, inspector, cache = root / "reference.pdf", root / "inspector.dll", root / "cache"
+                pdf.write_bytes(b"pinned reference")
+                inspector.write_bytes(b"pinned inspector")
+                pins = {"pdf_hash": sha(pdf), "inspector_hash": sha(inspector)}
+                if before_process:
+                    inspector.write_bytes(b"changed inspector")
+
+                def change_pdf(*args, **kwargs):
+                    pdf.write_bytes(b"changed reference")
+
+                with patch("AuditCompositionContent.subprocess.run", side_effect=change_pdf) as process:
+                    with self.assertRaisesRegex(ValueError, "Reference PDF or inspector changed"):
+                        inspect_reference(pdf, inspector, cache, **pins)
+                self.assertEqual(0 if before_process else 1, process.call_count)
+                self.assertTrue(not cache.exists() or not any(cache.iterdir()))
 
 
 class AuditFrameworkBindingTests(unittest.TestCase):
