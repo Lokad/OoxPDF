@@ -1140,6 +1140,20 @@ internal static partial class SvgTextTests
         AssertEquivalentSvgPaint(literal, fallback, "An absent server uses its explicit fallback.");
         TestAssert.Equal(0, diagnostics.Count);
 
+        const string wrongTargets = """
+            <defs>
+              <g id="wrong-fill"/>
+              <rect id="wrong-stroke" width="10" height="10"/>
+              <clipPath id="wrong-text"><rect width="10" height="10"/></clipPath>
+              <symbol id="wrong-outline"><rect width="10" height="10"/></symbol>
+            </defs>
+            """;
+        var wrongType = Paint(Svg(wrongTargets + string.Format(rectangle, "url(#wrong-fill) red") +
+            string.Format(line, "url(#wrong-stroke) currentColor") +
+            string.Format(text, "url(#wrong-text) #112233", "url(#wrong-outline) none")), diagnostics);
+        AssertEquivalentSvgPaint(literal, wrongType, "A present target of the wrong type also uses its authored fallback.");
+        TestAssert.Equal(0, diagnostics.Count);
+
         const string stops = "<stop offset=\"0\" stop-color=\"blue\"/><stop offset=\"1\" stop-color=\"yellow\"/>";
         string Definition(string attributes) => "<defs><linearGradient id=\"present\" " + attributes + ">" + stops + "</linearGradient></defs>";
         var gradient = Paint(Svg(Definition("") + string.Format(rectangle, "url(#present)")));
@@ -1151,6 +1165,14 @@ internal static partial class SvgTextTests
         foreach (string id in new[] { "present", "no-fallback" })
             TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains(id, StringComparison.Ordinal)),
                 "An unsupported present server and an absent server without fallback still diagnose.");
+
+        diagnostics.Clear();
+        const string pattern = """
+            <defs><pattern id="tile" width="8" height="8"><rect width="8" height="8" fill="green"/></pattern></defs>
+            """;
+        var unsupportedPattern = Paint(Svg(pattern + string.Format(rectangle, "url(#tile) red")), diagnostics);
+        TestAssert.DoesNotContain("1 0 0 rg", unsupportedPattern.ToString());
+        TestAssert.Contains("unresolvable gradient tile", diagnostics.Single().Message);
     }
 
     private static void AssertEquivalentSvgPaint(PdfGraphicsBuilder expected, PdfGraphicsBuilder actual, string reason)
