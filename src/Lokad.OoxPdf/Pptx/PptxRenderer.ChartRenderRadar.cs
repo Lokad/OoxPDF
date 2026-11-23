@@ -217,15 +217,15 @@ internal sealed partial class PptxRenderer
         double lightness = (maximum + minimum) / 2d;
         if (minimum == maximum)
         {
-            byte gray = RadarLightByte(188d + 0.0019d * lightness + 0.001023d * lightness * lightness);
+            byte gray = PptxColorResolver.ToByte(188d + 0.0019d * lightness + 0.001023d * lightness * lightness);
             return new RgbColor(gray, gray, gray);
         }
 
         double liftSlope = 0.00632372d - 0.0000109710d * lightness + 0.0000103250d * minimum;
         byte minimumLight = minimum == 0
-            ? RadarLightByte(187.86d - 0.0135d * lightness - 0.00512d * lightness * lightness)
-            : RadarLightByte(187.86d - 0.0135d * lightness - 0.00512d * lightness * lightness + minimum * lightness * liftSlope);
-        byte maximumLight = RadarLightByte(188d - 0.025d * maximum + 0.0025d * maximum * maximum - 0.03125d * minimum - 0.000977d * minimum * minimum);
+            ? PptxColorResolver.ToByte(187.86d - 0.0135d * lightness - 0.00512d * lightness * lightness)
+            : PptxColorResolver.ToByte(187.86d - 0.0135d * lightness - 0.00512d * lightness * lightness + minimum * lightness * liftSlope);
+        byte maximumLight = PptxColorResolver.ToByte(188d - 0.025d * maximum + 0.0025d * maximum * maximum - 0.03125d * minimum - 0.000977d * minimum * minimum);
         double exponent = 1.413d + 0.004607d * (maximum - minimum) - 0.00403d * lightness;
         return new RgbColor(
             DeriveRadarLightChannel(baseColor.Red, minimum, maximum, minimumLight, maximumLight, exponent),
@@ -251,7 +251,7 @@ internal sealed partial class PptxRenderer
         }
 
         double position = (channel - minimum) / (double)(maximum - minimum);
-        return RadarLightByte(minimumLight + (maximumLight - minimumLight) * Math.Pow(position, exponent));
+        return PptxColorResolver.ToByte(minimumLight + (maximumLight - minimumLight) * Math.Pow(position, exponent));
     }
 
     // RV04: one interior radar knot at the shared position: per-channel values
@@ -287,11 +287,7 @@ internal sealed partial class PptxRenderer
         }
 
         shape = Math.Clamp(shape, 0d, 1d);
-        return RadarLightByte(dark + shape * span);
-    }
-    private static byte RadarLightByte(double value)
-    {
-        return (byte)Math.Clamp((int)Math.Round(value, MidpointRounding.AwayFromZero), 0, 255);
+        return PptxColorResolver.ToByte(dark + shape * span);
     }
 
     // RV04: radar series gradient stops: a five-stop forward stitch (light, q1,
@@ -330,13 +326,13 @@ internal sealed partial class PptxRenderer
 
     private static byte RadarLegacyTopChannel(byte channel)
     {
-        return RadarLightByte(channel * 0.88d + 255d * 0.315d);
+        return PptxColorResolver.ToByte(channel * 0.88d + 255d * 0.315d);
     }
 
     private static byte DeriveRadarDarkChannel(byte channel, double lightness)
     {
         double staged = lightness + 1.298d * (channel - lightness);
-        return (byte)System.Math.Clamp((int)System.Math.Round(staged, System.MidpointRounding.AwayFromZero), 0, 255);
+        return PptxColorResolver.ToByte(staged);
     }
 
     private static void PaintRadarSeriesGradient(PdfGraphicsBuilder graphics, (double X, double Y)[] points, IReadOnlyList<PdfShadingStop> stops)

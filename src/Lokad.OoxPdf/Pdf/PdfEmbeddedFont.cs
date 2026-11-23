@@ -492,15 +492,7 @@ internal sealed partial class PdfEmbeddedFont
         foreach ((ushort originalGlyph, int codePoint) in UnicodeByOriginalGlyph)
         {
             if (TryGetCid(originalGlyph, out ushort cid))
-            {
-                // When subsetting merges identically-outlined glyphs (e.g. space and NBSP) into one CID,
-                // report plain space: Office also extracts spaces there (NBSP probe 2026-09-06: 15 source NBSPs,
-                // Word reference decodes 245 spaces and 0 NBSP while we decoded 315 NBSPs).
-                if (!unicodeByCid.TryGetValue(cid, out int existing) || (existing != 0x20 && codePoint == 0x20))
-                {
-                    unicodeByCid[cid] = codePoint;
-                }
-            }
+                unicodeByCid.Add(cid, codePoint);
         }
 
         if (sourceAliases is not null)
