@@ -1479,8 +1479,7 @@ internal static partial class PortableRenderingTests
                     row.HeightPoints is null && row.HeightRuleValue is null
                         ? row with { HeightPoints = 0d, HeightValue = "0", HeightRuleValue = "auto" } : row).ToArray() } }
                 : element).ToArray();
-            var explicitSource = source with { BodyElements = elements,
-                FallbackTables = elements.OfType<DocxTableElement>().Select(element => element.Table).ToArray() };
+            var explicitSource = source with { BodyElements = elements };
             var renderer = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var expected = renderer.RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();

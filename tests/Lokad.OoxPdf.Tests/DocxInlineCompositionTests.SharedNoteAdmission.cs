@@ -62,7 +62,7 @@ internal static partial class DocxInlineCompositionTests
                 _ => reference with { TextOffsetInRun = reference.TextOffsetInRun + 1 }
             };
             var changed = paragraph with { InlineReferences = references };
-            source = source with { BodyElements = [new DocxParagraphElement(changed)], FallbackParagraphs = [changed] };
+            source = source with { BodyElements = [new DocxParagraphElement(changed)] };
             TestAssert.True(!DocxPageFootnoteNumberingTests.CreateLayout(source).UsesSourceOwnedFootnoteReserve,
                 "Missing, foreign or mismatched automatic source owners retain fallback: " + variant);
         }

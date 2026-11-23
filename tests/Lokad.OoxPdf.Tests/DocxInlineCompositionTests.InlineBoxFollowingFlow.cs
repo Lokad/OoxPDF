@@ -23,8 +23,7 @@ internal static partial class DocxInlineCompositionTests
             var table = new DocxTable(null, [200d], [new DocxTableRow([
                 new DocxTableCell(paragraphs, null, null, null, null, [], DocxTableCellMargins.Empty)], null)]);
             DocxDocument document = new(300d, 156d, 36d, 36d, 36d, 36d, DocxPageSettings.Empty, [], [], [],
-                cell ? [new DocxTableElement(table)] : paragraphs.Select(paragraph => (DocxBodyElement)new DocxParagraphElement(paragraph)).ToArray(),
-                [], cell ? [table] : []);
+                cell ? [new DocxTableElement(table)] : paragraphs.Select(paragraph => (DocxBodyElement)new DocxParagraphElement(paragraph)).ToArray());
             var layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
                 .Create(document, new DocxTests.FamilyWidthTextMeasurer(), default);
             TestAssert.Equal(1, layout.Pages.Count);

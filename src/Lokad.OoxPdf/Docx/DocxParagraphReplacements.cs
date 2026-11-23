@@ -1,7 +1,7 @@
 namespace Lokad.OoxPdf.Docx;
 
-// Publish one replacement paragraph through both ordered body elements and
-// fallback views. Unchanged containers retain their existing identities.
+// Publish paragraph replacements through the ordered body elements.
+// Unchanged containers retain their existing identities.
 internal sealed class DocxParagraphReplacements(
     IReadOnlyDictionary<DocxParagraph, DocxParagraph> paragraphs, CancellationToken token)
 {
@@ -12,14 +12,12 @@ internal sealed class DocxParagraphReplacements(
     internal DocxDocument Replace(DocxDocument document) => document with
     {
         BodyElements = ReplaceElements(document.BodyElements),
-        FallbackParagraphs = document.FallbackParagraphs.Select(Replace).ToArray(),
         RelatedStories = document.RelatedStories.Select(Replace).ToArray()
     };
 
     internal DocxRelatedStory Replace(DocxRelatedStory story) => story with
     {
-        BodyElements = ReplaceElements(story.BodyElements),
-        FallbackParagraphs = story.FallbackParagraphs.Select(Replace).ToArray()
+        BodyElements = ReplaceElements(story.BodyElements)
     };
 
     internal IReadOnlyList<DocxBodyElement> ReplaceElements(IReadOnlyList<DocxBodyElement> elements)
@@ -42,7 +40,7 @@ internal sealed class DocxParagraphReplacements(
         return changed is null ? elements : changed;
     }
 
-    internal DocxTable ReplaceTable(DocxTable table)
+    private DocxTable ReplaceTable(DocxTable table)
     {
         token.ThrowIfCancellationRequested();
         if (tables.TryGetValue(table, out var cached)) return cached;

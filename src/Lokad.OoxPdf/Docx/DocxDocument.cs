@@ -11,9 +11,7 @@ internal sealed record DocxDocument(
     IReadOnlyList<DocxFloatingDrawing> FloatingDrawings,
     IReadOnlyList<DocxParagraph> HeaderParagraphs,
     IReadOnlyList<DocxParagraph> FooterParagraphs,
-    IReadOnlyList<DocxBodyElement> BodyElements,
-    IReadOnlyList<DocxParagraph> FallbackParagraphs,
-    IReadOnlyList<DocxTable> FallbackTables)
+    IReadOnlyList<DocxBodyElement> BodyElements)
 {
     public string MainPartName { get; init; } = "/word/document.xml";
     public IReadOnlyList<DocxEquationPartSource> EquationParts { get; init; } = [];
@@ -39,15 +37,11 @@ internal sealed record DocxDocument(
     public OoxPdfDocxMarkupMode MarkupMode { get; init; } = OoxPdfDocxMarkupMode.Final;
     public DocxSectionBreakElement? FinalSectionBreak { get; init; }
     public DocxParagraph? EmptyFinalSectionParagraph { get; init; }
-    public IReadOnlyList<DocxParagraph> Paragraphs => BodyElements.Count == 0
-        ? FallbackParagraphs
-        : DocxBlockTraversal.EnumerateDirectParagraphs(BodyElements).ToArray();
-    public IReadOnlyList<DocxTable> Tables => BodyElements.Count == 0
-        ? FallbackTables
-        : DocxBlockTraversal.EnumerateBodyTables(BodyElements).ToArray();
+    public IReadOnlyList<DocxParagraph> Paragraphs => DocxBlockTraversal.EnumerateDirectParagraphs(BodyElements).ToArray();
+    public IReadOnlyList<DocxTable> Tables => DocxBlockTraversal.EnumerateBodyTables(BodyElements).ToArray();
 
     public DocxDocument(double pageWidthPoints, double pageHeightPoints)
-        : this(pageWidthPoints, pageHeightPoints, 72d, 72d, 72d, 72d, DocxPageSettings.Empty, [], [], [], [], [], [])
+        : this(pageWidthPoints, pageHeightPoints, 72d, 72d, 72d, 72d, DocxPageSettings.Empty, [], [], [], [])
     {
     }
 }
@@ -57,8 +51,6 @@ internal sealed record DocxRelatedStory(
     string PartName,
     string? Id,
     IReadOnlyList<DocxBodyElement> BodyElements,
-    IReadOnlyList<DocxParagraph> FallbackParagraphs,
-    IReadOnlyList<DocxTable> FallbackTables,
     DocxRelatedStoryType? Type)
 {
     public IReadOnlyList<DocxFloatingDrawing> FloatingDrawings { get; init; } = [];
@@ -70,12 +62,8 @@ internal sealed record DocxRelatedStory(
     public int SourceEquationCount { get; init; }
     public bool IsNormalStoryType => Type is null || Type == DocxRelatedStoryType.Normal;
     public DocxCommentMetadata? CommentMetadata { get; init; }
-    public IReadOnlyList<DocxParagraph> Paragraphs => BodyElements.Count == 0
-        ? FallbackParagraphs
-        : DocxBlockTraversal.EnumerateDirectParagraphs(BodyElements).ToArray();
-    public IReadOnlyList<DocxTable> Tables => BodyElements.Count == 0
-        ? FallbackTables
-        : DocxBlockTraversal.EnumerateBodyTables(BodyElements).ToArray();
+    public IReadOnlyList<DocxParagraph> Paragraphs => DocxBlockTraversal.EnumerateDirectParagraphs(BodyElements).ToArray();
+    public IReadOnlyList<DocxTable> Tables => DocxBlockTraversal.EnumerateBodyTables(BodyElements).ToArray();
 }
 
 internal sealed record DocxCommentMetadata(

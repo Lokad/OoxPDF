@@ -57,8 +57,7 @@ internal static partial class DocxInlineCompositionTests
                 : source.PageSettings with { FooterParagraphsByType = paragraphs, FooterBodyElementsByType = elements };
             var body = DocxTests.CreateDocxLayoutParagraph("Body survives.", 12d, 14d);
             source = source with { PageSettings = settings, FinalSectionBreak = source.FinalSectionBreak! with { PageSettings = settings },
-                BodyElements = [new DocxParagraphElement(body)], FallbackParagraphs = [body],
-                HeaderParagraphs = header ? [paragraph] : [], FooterParagraphs = header ? [] : [paragraph],
+                BodyElements = [new DocxParagraphElement(body)], HeaderParagraphs = header ? [paragraph] : [], FooterParagraphs = header ? [] : [paragraph],
                 HeaderParagraphsByType = settings.HeaderParagraphsByType, FooterParagraphsByType = settings.FooterParagraphsByType,
                 HeaderBodyElementsByType = settings.HeaderBodyElementsByType, FooterBodyElementsByType = settings.FooterBodyElementsByType };
             var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);

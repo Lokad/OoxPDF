@@ -47,7 +47,7 @@ internal static class DocxMarkupTests
             [original.Rows.Single() with { Cells = [CreateCell("AAA", false), CreateCell("DDD", true)] }]);
         var document = source with
         {
-            BodyElements = [source.BodyElements[0], new DocxTableElement(table), source.BodyElements[2]], FallbackTables = [table]
+            BodyElements = [source.BodyElements[0], new DocxTableElement(table), source.BodyElements[2]]
         };
         var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
             OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
@@ -79,8 +79,7 @@ internal static class DocxMarkupTests
             table = table with { Rows = [table.Rows.Single() with { Cells = [cell with { Paragraphs = [paragraph] }] }] };
             var document = source with
             {
-                BodyElements = [source.BodyElements[0], new DocxTableElement(table), source.BodyElements[2]],
-                FallbackTables = [table]
+                BodyElements = [source.BodyElements[0], new DocxTableElement(table), source.BodyElements[2]]
             };
             var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
                 OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
@@ -105,8 +104,7 @@ internal static class DocxMarkupTests
         table = table with { Rows = [table.Rows.Single() with { Cells = [textCell] }] };
         control = control with
         {
-            BodyElements = [control.BodyElements[0], new DocxTableElement(table), control.BodyElements[2]],
-            FallbackTables = [table]
+            BodyElements = [control.BodyElements[0], new DocxTableElement(table), control.BodyElements[2]]
         };
         DocxTableCell cell = table.Rows.Single().Cells.Single() with
         {
@@ -116,8 +114,7 @@ internal static class DocxMarkupTests
         table = table with { Rows = [table.Rows.Single() with { Cells = [cell] }] };
         DocxDocument candidate = control with
         {
-            BodyElements = [control.BodyElements[0], new DocxTableElement(table), control.BodyElements[2]],
-            FallbackTables = [table]
+            BodyElements = [control.BodyElements[0], new DocxTableElement(table), control.BodyElements[2]]
         };
         var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
             OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
@@ -170,8 +167,7 @@ internal static class DocxMarkupTests
 
             DocxDocument WithTable(DocxTable table) => input with
             {
-                BodyElements = [input.BodyElements[0], new DocxTableElement(table), input.BodyElements[2]],
-                FallbackTables = [table]
+                BodyElements = [input.BodyElements[0], new DocxTableElement(table), input.BodyElements[2]]
             };
             double FollowingBaseline(DocxDocument document) => renderer.InspectTextEmission(document).Lines
                 .Single(line => line.SourceBlockIndex == 2).Segments.First(segment => !segment.IsTerminalLineSpace).BaselineY;
@@ -216,8 +212,7 @@ internal static class DocxMarkupTests
             DocxTable fallbackTable = table with { Rows = [table.Rows.Single() with { HeightRuleValue = "auto" }] };
             DocxDocument fallback = document with
             {
-                BodyElements = [document.BodyElements[0], new DocxTableElement(fallbackTable), document.BodyElements[2]],
-                FallbackTables = [fallbackTable]
+                BodyElements = [document.BodyElements[0], new DocxTableElement(fallbackTable), document.BodyElements[2]]
             };
             var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
                 OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
@@ -296,8 +291,7 @@ internal static class DocxMarkupTests
             {
                 BodyElements = tableFirst
                     ? [new DocxTableElement(replacement), document.BodyElements[^1]]
-                    : [document.BodyElements[0], new DocxTableElement(replacement), document.BodyElements[^1]],
-                FallbackTables = [replacement]
+                    : [document.BodyElements[0], new DocxTableElement(replacement), document.BodyElements[^1]]
             };
             static double[] CellBaselines(DocxTextEmissionSnapshot snapshot) => snapshot.Lines
                 .Where(line => line.SourceBlockIndex is null && !line.IsStaticStory)
@@ -332,9 +326,8 @@ internal static class DocxMarkupTests
             {
                 PageWidthPoints = 612d,
                 BodyElements = [new DocxTableElement(table)],
-                FallbackTables = [table],
                 RelatedStories = [new DocxRelatedStory(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1",
-                    [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Public comment.", 10d, 12d))], [], [], null)]
+                    [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Public comment.", 10d, 12d))], null)]
             };
             var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
                 OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
@@ -378,9 +371,8 @@ internal static class DocxMarkupTests
             {
                 PageWidthPoints = 612d,
                 BodyElements = [new DocxTableElement(table)],
-                FallbackTables = [table],
                 RelatedStories = [new DocxRelatedStory(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1",
-                    [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Public comment.", 10d, 12d))], [], [], null)]
+                    [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Public comment.", 10d, 12d))], null)]
             };
             var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
                 OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
@@ -437,8 +429,7 @@ internal static class DocxMarkupTests
         DocxTable table = original with { Rows = includeFollowingRow ? [longRow, original.Rows.Single()] : [longRow] };
         return document with
         {
-            BodyElements = [document.BodyElements[0], new DocxTableElement(table), document.BodyElements[2]],
-            FallbackTables = [table]
+            BodyElements = [document.BodyElements[0], new DocxTableElement(table), document.BodyElements[2]]
         };
     }
 
@@ -527,8 +518,7 @@ internal static class DocxMarkupTests
                 table = table with { Rows = [table.Rows.Single() with { Cells = [cell with { Paragraphs = [paragraph] }] }] };
                 return original with
                 {
-                    BodyElements = [original.BodyElements[0], new DocxTableElement(table), original.BodyElements[2]],
-                    FallbackTables = [table]
+                    BodyElements = [original.BodyElements[0], new DocxTableElement(table), original.BodyElements[2]]
                 };
             }
         }
@@ -550,7 +540,7 @@ internal static class DocxMarkupTests
                 { ["default"] = [new DocxParagraphElement(paragraph)] }
             },
             RelatedStories = [new DocxRelatedStory(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1",
-                [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Public comment.", 10d, 12d))], [], [], null)]
+                [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Public comment.", 10d, 12d))], null)]
         };
         var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
             OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
@@ -585,8 +575,7 @@ internal static class DocxMarkupTests
             BodyElements = tableFirst
                 ? [new DocxTableElement(table), new DocxParagraphElement(following)]
                 : [new DocxParagraphElement(body), new DocxTableElement(table), new DocxParagraphElement(following)],
-            FallbackTables = [table],
-            RelatedStories = [new DocxRelatedStory(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1", [], [], [], null)]
+            RelatedStories = [new DocxRelatedStory(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1", [], null)]
         };
     }
 
@@ -608,7 +597,7 @@ internal static class DocxMarkupTests
             {
                 PageWidthPoints = 612d,
                 RelatedStories = [new DocxRelatedStory(DocxRelatedStoryKind.Comment,
-                    "/word/comments.xml", "1", [], [], [], null)]
+                    "/word/comments.xml", "1", [], null)]
             };
             var renderer = new DocxRenderer(new MapFontResolver([], "Fallback"), OoxPdfDocxMarkupMode.AllMarkup, geometry);
             DocxTextEmissionSegmentSnapshot segment = renderer.InspectTextEmission(document).Lines
@@ -651,7 +640,7 @@ internal static class DocxMarkupTests
             {
                 PageWidthPoints = 612d,
                 RelatedStories = [new DocxRelatedStory(DocxRelatedStoryKind.Comment,
-                    "/word/comments.xml", "1", [], [], [], null)]
+                    "/word/comments.xml", "1", [], null)]
             };
             var context = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, geometry);
             double scale = DocxRenderer.ResolveWordCompatiblePrintScale(document, context);
@@ -687,7 +676,7 @@ internal static class DocxMarkupTests
             {
                 PageWidthPoints = pageWidth,
                 RelatedStories = [new DocxRelatedStory(DocxRelatedStoryKind.Comment,
-                    "/word/comments.xml", "1", [], [], [], null)]
+                    "/word/comments.xml", "1", [], null)]
             };
             var context = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup,
                 OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
@@ -741,11 +730,11 @@ internal static class DocxMarkupTests
         // Office A/B (print-with-balloons probes): Word scales the page so left margin + body +
         // a fixed balloon lane fits the paper width. The comment is body-anchored: balloons
         // (and the lane) need anchors, so an anchorless part alone reserves nothing.
-        var document = new DocxDocument(612d, 792d, 72d, 72d, 72d, 72d, DocxPageSettings.Empty, [], [], [], [new DocxParagraphElement(DocxTests.CreateCommentMarkerParagraph("Anchor", "1"))], [], [])
+        var document = new DocxDocument(612d, 792d, 72d, 72d, 72d, 72d, DocxPageSettings.Empty, [], [], [], [new DocxParagraphElement(DocxTests.CreateCommentMarkerParagraph("Anchor", "1"))])
         {
             RelatedStories =
             [
-                new DocxRelatedStory(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1", [], [], [], null)
+                new DocxRelatedStory(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1", [], null)
             ]
         };
         DocxMarkupContext context = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
@@ -757,7 +746,7 @@ internal static class DocxMarkupTests
 
     public static void DocxWordCompatiblePrintScaleSkipsBalloonlessDocuments()
     {
-        var document = new DocxDocument(612d, 792d, 72d, 72d, 72d, 72d, DocxPageSettings.Empty, [], [], [], [], [], []);
+        var document = new DocxDocument(612d, 792d, 72d, 72d, 72d, 72d, DocxPageSettings.Empty, [], [], [], []);
         DocxMarkupContext context = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
 
         TestAssert.Equal(1d, DocxRenderer.ResolveWordCompatiblePrintScale(document, context));
@@ -773,7 +762,7 @@ internal static class DocxMarkupTests
                 new DocxRevisionInfo(DocxRevisionKind.Insertion, "1", "A", "2026-06-10T00:00:00Z", "ins", null, [])
             ]
         };
-        var document = new DocxDocument(612d, 792d, 72d, 72d, 72d, 72d, DocxPageSettings.Empty, [], [], [], [new DocxParagraphElement(paragraph)], [], []);
+        var document = new DocxDocument(612d, 792d, 72d, 72d, 72d, 72d, DocxPageSettings.Empty, [], [], [], [new DocxParagraphElement(paragraph)]);
         DocxMarkupContext context = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
 
         TestAssert.Equal(1d, DocxRenderer.ResolveWordCompatiblePrintScale(document, context));
@@ -789,7 +778,7 @@ internal static class DocxMarkupTests
                 new DocxRevisionInfo(DocxRevisionKind.RunPropertiesChange, "9", "A", "2026-06-10T00:00:00Z", "rPrChange", null, propertyElementNames: ["b"])
             ]
         };
-        var document = new DocxDocument(612d, 792d, 72d, 72d, 72d, 72d, DocxPageSettings.Empty, [], [], [], [new DocxParagraphElement(paragraph)], [], []);
+        var document = new DocxDocument(612d, 792d, 72d, 72d, 72d, 72d, DocxPageSettings.Empty, [], [], [], [new DocxParagraphElement(paragraph)]);
         DocxMarkupContext context = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
 
         TestAssert.True(Math.Abs(DocxRenderer.ResolveWordCompatiblePrintScale(document, context) - (612d / 806.5d)) < 0.000000001d, "Formatting revisions should reserve the balloon lane.");
@@ -797,11 +786,11 @@ internal static class DocxMarkupTests
 
     public static void DocxWordCompatiblePrintScaleStaysUnitOutsideWordCompatible()
     {
-        var document = new DocxDocument(612d, 792d, 72d, 72d, 72d, 72d, DocxPageSettings.Empty, [], [], [], [], [], [])
+        var document = new DocxDocument(612d, 792d, 72d, 72d, 72d, 72d, DocxPageSettings.Empty, [], [], [], [])
         {
             RelatedStories =
             [
-                new DocxRelatedStory(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1", [], [], [], null)
+                new DocxRelatedStory(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1", [], null)
             ]
         };
         DocxMarkupContext context = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
@@ -855,7 +844,7 @@ internal static class DocxMarkupTests
 
     public static void DocxWordCompatibleTextYOffsetUsesMeasuredUnitScaleOriginWithBalloons()
     {
-        var document = new DocxDocument(612d, 792d, 72d, 72d, 72d, 72d, DocxPageSettings.Empty, [], [], [], [], [], []);
+        var document = new DocxDocument(612d, 792d, 72d, 72d, 72d, 72d, DocxPageSettings.Empty, [], [], [], []);
         DocxMarkupContext context = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
         double scale = DocxRenderer.ResolveWordCompatiblePrintScale(document, context);
 
@@ -870,7 +859,6 @@ internal static class DocxMarkupTests
     {
         // Office A/B (w6-tbxctl text-box reference): Word prints balloonless unscaled pages
         // plain, so the fitted anchor must not shift them.
-        var document = new DocxDocument(612d, 792d, 72d, 72d, 72d, 72d, DocxPageSettings.Empty, [], [], [], [], [], []);
         DocxMarkupContext context = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
 
         TestAssert.Equal(0d, DocxRenderer.ResolveWordCompatibleTextYOffset(context, 700d, 792d, hasBalloonContent: false));
@@ -878,13 +866,6 @@ internal static class DocxMarkupTests
 
     public static void DocxWordCompatibleTextYOffsetStaysZeroOutsideWordCompatible()
     {
-        var document = new DocxDocument(612d, 792d, 72d, 72d, 72d, 72d, DocxPageSettings.Empty, [], [], [], [], [], [])
-        {
-            RelatedStories =
-            [
-                new DocxRelatedStory(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1", [], [], [], null)
-            ]
-        };
         DocxMarkupContext context = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
 
         TestAssert.Equal(0d, DocxRenderer.ResolveWordCompatibleTextYOffset(context, 700d, 792d, hasBalloonContent: false));
@@ -900,11 +881,11 @@ internal static class DocxMarkupTests
             ],
             CommentRanges = [new DocxCommentRange("1", 0, 0, 1, 20, 1, 0)]
         };
-        return new DocxDocument(612d, 792d, 72d, 72d, marginTopPoints, 72d, DocxPageSettings.Empty, [], [], [], [new DocxParagraphElement(paragraph)], [], [])
+        return new DocxDocument(612d, 792d, 72d, 72d, marginTopPoints, 72d, DocxPageSettings.Empty, [], [], [], [new DocxParagraphElement(paragraph)])
         {
             RelatedStories =
             [
-                new DocxRelatedStory(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1", [], [], [], null)
+                new DocxRelatedStory(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1", [], null)
             ],
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
@@ -986,10 +967,8 @@ internal static class DocxMarkupTests
             DocxRelatedStoryKind.Comment,
             "/word/comments.xml",
             "1",
-            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Public lane probe comment", 10d, 12d))],
-            [],
-            [], null);
-        return new DocxDocument(612d, 792d, 72d, marginRightPoints, 72d, 72d, DocxPageSettings.Empty, [], [], [], [new DocxParagraphElement(paragraph)], [], [])
+            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Public lane probe comment", 10d, 12d))], null);
+        return new DocxDocument(612d, 792d, 72d, marginRightPoints, 72d, 72d, DocxPageSettings.Empty, [], [], [], [new DocxParagraphElement(paragraph)])
         {
             RelatedStories = [commentStory],
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
@@ -1029,9 +1008,7 @@ internal static class DocxMarkupTests
             [],
             [],
             [],
-            [new DocxParagraphElement(paragraph)],
-            [],
-            [])
+            [new DocxParagraphElement(paragraph)])
         {
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
@@ -1087,9 +1064,7 @@ internal static class DocxMarkupTests
                 new DocxParagraphElement(first),
                 new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null),
                 new DocxParagraphElement(second)
-            ],
-            [first, second],
-            [])
+            ])
         {
             Settings = DocxDocumentSettings.Empty with
             {
@@ -1124,7 +1099,7 @@ internal static class DocxMarkupTests
             // Balloon content triggers the word-compatible print scale (Office: print shrinks iff balloons show).
             RelatedStories =
             [
-                new DocxRelatedStory(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1", [], [], [], null)
+                new DocxRelatedStory(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1", [], null)
             ],
             BodyElements = [.. readDocument.BodyElements, new DocxParagraphElement(DocxTests.CreateCommentMarkerParagraph("Balloon anchor", "1"))]
         };
@@ -1187,7 +1162,7 @@ internal static class DocxMarkupTests
         // body to bodyW times scale so breaks land where Word full-design layout breaks them
         // (612/72/72 portrait at s = 612/806.5 reserves to right margin 184.86, not 207).
         DocxParagraph paragraph = DocxTests.CreateDocxLayoutParagraph("Reserve probe body", 10d, 12d);
-        var document = new DocxDocument(612d, 792d, 72d, 72d, 72d, 72d, DocxPageSettings.Empty, [], [], [], [new DocxParagraphElement(paragraph)], [], []);
+        var document = new DocxDocument(612d, 792d, 72d, 72d, 72d, 72d, DocxPageSettings.Empty, [], [], [], [new DocxParagraphElement(paragraph)]);
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, 612d / 806.5d)
             .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
 
@@ -1311,13 +1286,11 @@ internal static class DocxMarkupTests
             [],
             [],
             [],
-            [new DocxParagraphElement(title)],
-            [],
-            [])
+            [new DocxParagraphElement(title)])
         {
             RelatedStories =
             [
-                new DocxRelatedStory(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1", [], [], [], null)
+                new DocxRelatedStory(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1", [], null)
             ],
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
@@ -1386,13 +1359,11 @@ internal static class DocxMarkupTests
             [],
             [],
             [],
-            [new DocxParagraphElement(first), new DocxParagraphElement(second)],
-            [],
-            [])
+            [new DocxParagraphElement(first), new DocxParagraphElement(second)])
         {
             RelatedStories =
             [
-                new DocxRelatedStory(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1", [], [], [], null)
+                new DocxRelatedStory(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1", [], null)
             ],
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
@@ -1450,9 +1421,7 @@ internal static class DocxMarkupTests
             [drawing],
             [],
             [],
-            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Anchor", 11d, 13.2d))],
-            [],
-            [])
+            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Anchor", 11d, 13.2d))])
         {
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
@@ -1506,9 +1475,7 @@ internal static class DocxMarkupTests
             [],
             [],
             [],
-            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Body", 11d, 13.2d))],
-            [],
-            [])
+            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Body", 11d, 13.2d))])
         {
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
@@ -1559,9 +1526,7 @@ internal static class DocxMarkupTests
             [],
             [],
             [],
-            [new DocxParagraphElement(paragraph)],
-            [],
-            [])
+            [new DocxParagraphElement(paragraph)])
         {
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
@@ -1632,9 +1597,7 @@ internal static class DocxMarkupTests
                 new DocxParagraphElement(movedFromParagraph),
                 new DocxParagraphElement(insertedParagraph),
                 new DocxParagraphElement(movedToParagraph)
-            ],
-            [],
-            [])
+            ])
         {
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
@@ -1744,9 +1707,7 @@ internal static class DocxMarkupTests
             DocxRelatedStoryKind.Footnote,
             "/word/footnotes.xml",
             "91",
-            [new DocxParagraphElement(CreateMoveRevisionParagraph())],
-            [],
-            [], null);
+            [new DocxParagraphElement(CreateMoveRevisionParagraph())], null);
         DocxDocument footnoteDocument = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(footnoteAnchor)], [])
             with
             {
@@ -1776,9 +1737,7 @@ internal static class DocxMarkupTests
             DocxRelatedStoryKind.Endnote,
             "/word/endnotes.xml",
             "92",
-            [new DocxParagraphElement(CreateMoveRevisionParagraph())],
-            [],
-            [], null);
+            [new DocxParagraphElement(CreateMoveRevisionParagraph())], null);
         DocxDocument endnoteDocument = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(endnoteAnchor)], [])
             with
             {
@@ -1973,9 +1932,7 @@ internal static class DocxMarkupTests
             DocxRelatedStoryKind.Comment,
             "/word/comments.xml",
             "1",
-            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Public comment body", 10d, 12d))],
-            [],
-            [], null)
+            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Public comment body", 10d, 12d))], null)
         {
             CommentMetadata = new DocxCommentMetadata("Reviewer", "RV", "2026-06-01T00:00:00Z", null, null, null, null)
         };
@@ -1990,9 +1947,7 @@ internal static class DocxMarkupTests
             [],
             [],
             [],
-            [new DocxParagraphElement(markupParagraph), new DocxTableElement(table)],
-            [],
-            [table])
+            [new DocxParagraphElement(markupParagraph), new DocxTableElement(table)])
         {
             RelatedStories = [commentStory],
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
@@ -2039,9 +1994,7 @@ internal static class DocxMarkupTests
             [],
             [],
             [],
-            [new DocxParagraphElement(formatParagraph)],
-            [],
-            [])
+            [new DocxParagraphElement(formatParagraph)])
         {
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
@@ -2105,9 +2058,7 @@ internal static class DocxMarkupTests
             [],
             [],
             [],
-            [new DocxParagraphElement(paragraph)],
-            [],
-            [])
+            [new DocxParagraphElement(paragraph)])
         {
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
@@ -2217,9 +2168,7 @@ internal static class DocxMarkupTests
             DocxRelatedStoryKind.Footnote,
             "/word/footnotes.xml",
             "19",
-            [new DocxParagraphElement(footnoteParagraph)],
-            [],
-            [], null);
+            [new DocxParagraphElement(footnoteParagraph)], null);
         DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(bodyParagraph)], [])
             with
             {
@@ -2263,9 +2212,7 @@ internal static class DocxMarkupTests
             DocxRelatedStoryKind.Endnote,
             "/word/endnotes.xml",
             "29",
-            [new DocxParagraphElement(endnoteParagraph)],
-            [],
-            [], null);
+            [new DocxParagraphElement(endnoteParagraph)], null);
         DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(bodyParagraph)], [])
             with
             {
@@ -2460,9 +2407,7 @@ internal static class DocxMarkupTests
             DocxRelatedStoryKind.Footnote,
             "/word/footnotes.xml",
             "21",
-            [new DocxParagraphElement(footnoteParagraph)],
-            [],
-            [], null);
+            [new DocxParagraphElement(footnoteParagraph)], null);
         DocxTests.AssertSimpleMarkupCommentMarkerRendered(
             DocxTests.CreateCommentMarkerFlowDocument([new DocxParagraphElement(footnoteAnchor)], [], DocxPageSettings.Empty, []) with
             {
@@ -2489,9 +2434,7 @@ internal static class DocxMarkupTests
             DocxRelatedStoryKind.Endnote,
             "/word/endnotes.xml",
             "22",
-            [new DocxParagraphElement(endnoteParagraph)],
-            [],
-            [], null);
+            [new DocxParagraphElement(endnoteParagraph)], null);
         DocxTests.AssertSimpleMarkupCommentMarkerRendered(
             DocxTests.CreateCommentMarkerFlowDocument([new DocxParagraphElement(endnoteAnchor)], [], DocxPageSettings.Empty, []) with
             {
@@ -2519,9 +2462,7 @@ internal static class DocxMarkupTests
             [],
             [],
             [],
-            [new DocxParagraphElement(paragraph)],
-            [],
-            [])
+            [new DocxParagraphElement(paragraph)])
         {
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
@@ -2572,9 +2513,7 @@ internal static class DocxMarkupTests
             [],
             [],
             [],
-            [new DocxParagraphElement(paragraph)],
-            [],
-            [])
+            [new DocxParagraphElement(paragraph)])
         {
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
@@ -2617,9 +2556,7 @@ internal static class DocxMarkupTests
             [
                 new DocxParagraphElement(insertionParagraph),
                 new DocxParagraphElement(deletionParagraph)
-            ],
-            [],
-            [])
+            ])
         {
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };

@@ -93,8 +93,7 @@ internal static partial class DocxInlineCompositionTests
         var replacement = paragraph with { Images = [broken], InlineContent = TestAssert.NotNull(paragraph.InlineContent)
             .Select(item => item is DocxInlinePicture ? new DocxInlinePicture(broken) : item).ToArray() };
         var document = source with { BodyElements = source.BodyElements.Select(item =>
-            item is DocxParagraphElement p && ReferenceEquals(p.Paragraph, paragraph) ? new DocxParagraphElement(replacement) : item).ToArray(),
-            FallbackParagraphs = source.FallbackParagraphs.Select(p => ReferenceEquals(p, paragraph) ? replacement : p).ToArray() };
+            item is DocxParagraphElement p && ReferenceEquals(p.Paragraph, paragraph) ? new DocxParagraphElement(replacement) : item).ToArray() };
         var diagnostics = new List<OoxPdfDiagnostic>();
         var renderer = new DocxRenderer(new MapFontResolver([], "Courier"), OoxPdfDocxMarkupMode.Final,
             OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);

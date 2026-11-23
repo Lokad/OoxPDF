@@ -89,7 +89,7 @@ internal static class DocxCommentAnchorTests
             RelatedStories = [Story("0", "Public comment"), Story("1", "Second comment")]
         };
     private static DocxRelatedStory Story(string id, string text) => new(DocxRelatedStoryKind.Comment,
-        "/word/comments.xml", id, [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph(text, 10d, 12d))], [], [], null);
+        "/word/comments.xml", id, [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph(text, 10d, 12d))], null);
     private static DocxRenderer Renderer(OoxPdfDocxMarkupGeometryMode geometry = OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup) =>
         new(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup, geometry);
     private static double Scale(DocxDocument source) => DocxRenderer.ResolveWordCompatiblePrintScale(source,

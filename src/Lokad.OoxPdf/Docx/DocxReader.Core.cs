@@ -159,9 +159,7 @@ internal sealed partial class DocxReader
                 floatingDrawings,
                 headers,
                 footers,
-                bodyElements,
-                [],
-                [])
+                bodyElements)
             {
                 FontCatalog = fontCatalog,
                 MainPartName = documentPart.Name,

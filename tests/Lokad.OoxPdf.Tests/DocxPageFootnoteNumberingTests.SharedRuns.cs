@@ -19,8 +19,7 @@ internal static partial class DocxPageFootnoteNumberingTests
                 foreach (var p in source.Paragraphs)
                     replacements.Add(p, p with { InlineContent = DocxInlineContent.FromPrefix(p.Runs, p.Images, default) });
                 var publication = new DocxParagraphReplacements(replacements, default);
-                source = source with { BodyElements = publication.ReplaceElements(source.BodyElements),
-                    FallbackParagraphs = source.FallbackParagraphs.Select(publication.Replace).ToArray() };
+                source = source with { BodyElements = publication.ReplaceElements(source.BodyElements) };
             }
             var paragraph = source.Paragraphs.First(p => p.InlineReferences.Count != 0);
             var pair = paragraph.InlineReferences;

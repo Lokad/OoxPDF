@@ -64,7 +64,7 @@ internal static partial class DocxInlineCompositionTests
                 var paragraph = source.Paragraphs.Single();
                 var reference = paragraph.InlineReferences[0];
                 var changed = paragraph with { InlineReferences = [.. paragraph.InlineReferences, reference] };
-                source = source with { BodyElements = [new DocxParagraphElement(changed)], FallbackParagraphs = [changed] };
+                source = source with { BodyElements = [new DocxParagraphElement(changed)] };
             }
             var layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
                 .Create(source, new DocxTests.FamilyWidthTextMeasurer(), default);

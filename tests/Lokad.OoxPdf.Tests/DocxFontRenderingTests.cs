@@ -33,9 +33,7 @@ internal static class DocxFontRenderingTests
             [],
             [],
             [],
-            [new DocxTableElement(table)],
-            [],
-            []);
+            [new DocxTableElement(table)]);
 
         DocxStructureSnapshot snapshot = DocxStructureSnapshot.FromDocument(document);
 
@@ -127,9 +125,7 @@ internal static class DocxFontRenderingTests
             [],
             [],
             [],
-            [new DocxParagraphElement(paragraph)],
-            [],
-            []);
+            [new DocxParagraphElement(paragraph)]);
 
         DocxTextLineLayout line = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
@@ -204,9 +200,7 @@ internal static class DocxFontRenderingTests
             [],
             [],
             [],
-            [new DocxParagraphElement(paragraph)],
-            [],
-            []);
+            [new DocxParagraphElement(paragraph)]);
 
         DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
@@ -252,9 +246,7 @@ internal static class DocxFontRenderingTests
             [],
             [],
             [],
-            [new DocxParagraphElement(paragraph)],
-            [paragraph],
-            []);
+            [new DocxParagraphElement(paragraph)]);
 
         DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)

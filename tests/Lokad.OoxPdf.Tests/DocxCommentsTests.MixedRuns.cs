@@ -31,12 +31,12 @@ internal static partial class DocxCommentsTests
                 ParagraphMarkRun = new DocxTextRun(" ", 18d, null, false, false, false, null, "AnchorFace")
             };
             DocxRelatedStory story = new(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1",
-                [new DocxParagraphElement(comment)], [], [], null)
+                [new DocxParagraphElement(comment)], null)
             {
                 CommentMetadata = new DocxCommentMetadata("Reviewer", "RV", null, null, null, null, null)
             };
             DocxDocument document = new(612d, 792d, 72d, rightMargin, 72d, 72d, DocxPageSettings.Empty,
-                [], [], [], [new DocxParagraphElement(anchor)], [], [])
+                [], [], [], [new DocxParagraphElement(anchor)])
             {
                 RelatedStories = [story], MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
             };
@@ -89,12 +89,12 @@ internal static partial class DocxCommentsTests
                 ParagraphMarkRun = new DocxTextRun(" ", 18d, null, false, false, false, null, "AnchorFace")
             };
             DocxRelatedStory story = new(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1",
-                [new DocxParagraphElement(comment)], [], [], null)
+                [new DocxParagraphElement(comment)], null)
             {
                 CommentMetadata = new DocxCommentMetadata("Reviewer", "RV", null, null, null, null, null)
             };
             DocxDocument document = new(612d, 792d, 72d, rightMargin, 72d, 72d, DocxPageSettings.Empty,
-                [], [], [], [new DocxParagraphElement(anchor)], [], [])
+                [], [], [], [new DocxParagraphElement(anchor)])
             {
                 RelatedStories = [story], MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
             };
@@ -164,12 +164,12 @@ internal static partial class DocxCommentsTests
                 ParagraphMarkRun = new DocxTextRun(" ", 18d, null, false, false, false, null, "AnchorFace")
             };
             DocxRelatedStory story = new(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1",
-                [new DocxParagraphElement(comment)], [], [], null)
+                [new DocxParagraphElement(comment)], null)
             {
                 CommentMetadata = new DocxCommentMetadata("Reviewer", "RV", null, null, null, null, null)
             };
             DocxDocument document = new(612d, 792d, 72d, rightMargin, 72d, 72d, DocxPageSettings.Empty,
-                [], [], [], [new DocxParagraphElement(anchor)], [], [])
+                [], [], [], [new DocxParagraphElement(anchor)])
             {
                 RelatedStories = [story], MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
             };
@@ -226,12 +226,12 @@ internal static partial class DocxCommentsTests
                 ParagraphMarkRun = new DocxTextRun(" ", 18d, null, false, false, false, null, "AnchorFace")
             };
             DocxRelatedStory story = new(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1",
-                [new DocxParagraphElement(comment)], [], [], null)
+                [new DocxParagraphElement(comment)], null)
             {
                 CommentMetadata = new DocxCommentMetadata("Reviewer", "RV", null, null, null, null, null)
             };
             DocxDocument document = new(612d, 792d, 72d, rightMargin, 72d, 72d, DocxPageSettings.Empty,
-                [], [], [], [new DocxParagraphElement(anchor)], [], [])
+                [], [], [], [new DocxParagraphElement(anchor)])
             {
                 RelatedStories = [story], MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
             };
@@ -296,12 +296,12 @@ internal static partial class DocxCommentsTests
                 ParagraphMarkRun = new DocxTextRun(" ", 18d, null, false, false, false, null, "AnchorFace")
             };
             DocxRelatedStory story = new(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1",
-                [new DocxParagraphElement(comment)], [], [], null)
+                [new DocxParagraphElement(comment)], null)
             {
                 CommentMetadata = new DocxCommentMetadata("Reviewer", "RV", null, null, null, null, null)
             };
             DocxDocument document = new(612d, 792d, 72d, rightMargin, 72d, 72d, DocxPageSettings.Empty,
-                [], [], [], [new DocxParagraphElement(anchor)], [], [])
+                [], [], [], [new DocxParagraphElement(anchor)])
             {
                 RelatedStories = [story], MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
             };
@@ -386,12 +386,12 @@ internal static partial class DocxCommentsTests
                 ParagraphMarkRun = new DocxTextRun(" ", 18d, null, false, false, false, null, "AnchorFace")
             };
             DocxRelatedStory story = new(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1",
-                [new DocxParagraphElement(comment)], [], [], null)
+                [new DocxParagraphElement(comment)], null)
             {
                 CommentMetadata = new DocxCommentMetadata("Reviewer", "RV", null, null, null, null, null)
             };
             DocxDocument document = new(612d, 792d, 72d, rightMargin, 72d, 72d, DocxPageSettings.Empty,
-                [], [], [], [new DocxParagraphElement(anchor)], [], [])
+                [], [], [], [new DocxParagraphElement(anchor)])
             {
                 RelatedStories = [story], MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
             };
@@ -576,12 +576,12 @@ internal static partial class DocxCommentsTests
             ParagraphMarkRun = new DocxTextRun(" ", 18d, null, false, false, false, null, "AnchorFace")
         };
         DocxRelatedStory story = new(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1",
-            [new DocxParagraphElement(comment)], [], [], null)
+            [new DocxParagraphElement(comment)], null)
         {
             CommentMetadata = new DocxCommentMetadata("Reviewer", "RV", null, null, null, null, null)
         };
         return new DocxDocument(612d, 792d, 72d, rightMargin, 72d, 72d, DocxPageSettings.Empty,
-            [], [], [], [new DocxParagraphElement(anchor)], [], [])
+            [], [], [], [new DocxParagraphElement(anchor)])
         {
             RelatedStories = [story], MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
@@ -726,12 +726,12 @@ internal static partial class DocxCommentsTests
             Runs = [new DocxTextRun("Body anchor", 12d, null, false, false, false, null, "AnchorFace")]
         };
         var story = new DocxRelatedStory(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1",
-            [new DocxParagraphElement(first), new DocxParagraphElement(first), new DocxParagraphElement(terminal)], [], [], null)
+            [new DocxParagraphElement(first), new DocxParagraphElement(first), new DocxParagraphElement(terminal)], null)
         {
             CommentMetadata = new DocxCommentMetadata("Reviewer", "RV", null, null, null, null, null)
         };
         var document = new DocxDocument(612d, 792d, 72d, 72d, 72d, 72d, DocxPageSettings.Empty,
-            [], [], [], [new DocxParagraphElement(anchor)], [], [])
+            [], [], [], [new DocxParagraphElement(anchor)])
         {
             RelatedStories = [story], MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
@@ -800,12 +800,12 @@ internal static partial class DocxCommentsTests
                 Runs = [new DocxTextRun("Body anchor", 12d, null, false, false, false, null, "AnchorFace")]
             };
             var story = new DocxRelatedStory(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1",
-                [new DocxParagraphElement(first), new DocxParagraphElement(terminal)], [], [], null)
+                [new DocxParagraphElement(first), new DocxParagraphElement(terminal)], null)
             {
                 CommentMetadata = new DocxCommentMetadata("Reviewer", "RV", null, null, null, null, null)
             };
             var document = new DocxDocument(612d, 792d, 72d, 72d, 72d, 72d, DocxPageSettings.Empty,
-                [], [], [], [new DocxParagraphElement(anchor)], [], [])
+                [], [], [], [new DocxParagraphElement(anchor)])
             {
                 RelatedStories = [story], MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
             };
@@ -881,12 +881,12 @@ internal static partial class DocxCommentsTests
                 Runs = [new DocxTextRun("Body anchor", 12d, null, false, false, false, null, "AnchorFace")]
             };
             var story = new DocxRelatedStory(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1",
-                [.. leading.Select(paragraph => (DocxBodyElement)new DocxParagraphElement(paragraph)), new DocxParagraphElement(terminal)], [], [], null)
+                [.. leading.Select(paragraph => (DocxBodyElement)new DocxParagraphElement(paragraph)), new DocxParagraphElement(terminal)], null)
             {
                 CommentMetadata = new DocxCommentMetadata("Reviewer", "RV", null, null, null, null, null)
             };
             var document = new DocxDocument(612d, 792d, 72d, 72d, 72d, 72d, DocxPageSettings.Empty,
-                [], [], [], [new DocxParagraphElement(anchor)], [], [])
+                [], [], [], [new DocxParagraphElement(anchor)])
             {
                 RelatedStories = [story], MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
             };
@@ -1105,12 +1105,12 @@ internal static partial class DocxCommentsTests
                 Runs = [new DocxTextRun("Body anchor", 12d, null, false, false, false, null, "AnchorFace")]
             };
             var story = new DocxRelatedStory(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1",
-                [.. leading.Select(paragraph => (DocxBodyElement)new DocxParagraphElement(paragraph)), new DocxParagraphElement(terminal)], [], [], null)
+                [.. leading.Select(paragraph => (DocxBodyElement)new DocxParagraphElement(paragraph)), new DocxParagraphElement(terminal)], null)
             {
                 CommentMetadata = new DocxCommentMetadata("Reviewer", "RV", null, null, null, null, null)
             };
             var document = new DocxDocument(612d, 792d, 72d, 72d, 72d, 72d, DocxPageSettings.Empty,
-                [], [], [], [new DocxParagraphElement(anchor)], [], [])
+                [], [], [], [new DocxParagraphElement(anchor)])
             {
                 RelatedStories = [story], MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
             };
@@ -1210,12 +1210,12 @@ internal static partial class DocxCommentsTests
                 Runs = [new DocxTextRun("Body anchor", 12d, null, false, false, false, null, "AnchorFace")]
             };
             var story = new DocxRelatedStory(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1",
-                [.. leading.Select(paragraph => (DocxBodyElement)new DocxParagraphElement(paragraph)), new DocxParagraphElement(terminal)], [], [], null)
+                [.. leading.Select(paragraph => (DocxBodyElement)new DocxParagraphElement(paragraph)), new DocxParagraphElement(terminal)], null)
             {
                 CommentMetadata = new DocxCommentMetadata("Reviewer", "RV", null, null, null, null, null)
             };
             var document = new DocxDocument(612d, 792d, 72d, 72d, 72d, 72d, DocxPageSettings.Empty,
-                [], [], [], [new DocxParagraphElement(anchor)], [], [])
+                [], [], [], [new DocxParagraphElement(anchor)])
             {
                 RelatedStories = [story], MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
             };
@@ -1285,12 +1285,12 @@ internal static partial class DocxCommentsTests
                 ParagraphMarkRun = new DocxTextRun(" ", 18d, null, false, false, false, null, "AnchorFace")
             };
             DocxRelatedStory story = new(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1",
-                [new DocxParagraphElement(comment)], [], [], null)
+                [new DocxParagraphElement(comment)], null)
             {
                 CommentMetadata = new DocxCommentMetadata("Reviewer", "RV", null, null, null, null, null)
             };
             DocxDocument document = new(612d, 792d, 72d, rightMargin, 72d, 72d, DocxPageSettings.Empty,
-                [], [], [], [new DocxParagraphElement(anchor)], [], [])
+                [], [], [], [new DocxParagraphElement(anchor)])
             {
                 RelatedStories = [story], MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
             };
@@ -1397,12 +1397,12 @@ internal static partial class DocxCommentsTests
                 ParagraphMarkRun = new DocxTextRun(" ", 18d, null, false, false, false, null, "AnchorFace")
             };
             DocxRelatedStory story = new(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1",
-                [new DocxParagraphElement(comment)], [], [], null)
+                [new DocxParagraphElement(comment)], null)
             {
                 CommentMetadata = new DocxCommentMetadata("Reviewer", "RV", null, null, null, null, IsResolved: null)
             };
             DocxDocument document = new(612d, 792d, 72d, rightMargin, 72d, 72d, DocxPageSettings.Empty,
-                [], [], [], [new DocxParagraphElement(anchor)], [], [])
+                [], [], [], [new DocxParagraphElement(anchor)])
             {
                 MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
             };
@@ -1641,12 +1641,12 @@ internal static partial class DocxCommentsTests
             ParagraphMarkRun = new DocxTextRun(" ", 18d, null, false, false, false, null, "AnchorFace")
         };
         DocxRelatedStory story = new(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1",
-            [new DocxParagraphElement(comment)], [], [], null)
+            [new DocxParagraphElement(comment)], null)
         {
             CommentMetadata = new DocxCommentMetadata("Reviewer", "RV", null, null, null, null, null)
         };
         DocxDocument document = new(612d, 792d, 72d, rightMargin, 72d, 72d, DocxPageSettings.Empty,
-            [], [], [], [new DocxParagraphElement(anchor)], [], [])
+            [], [], [], [new DocxParagraphElement(anchor)])
         {
             RelatedStories = [story], MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };

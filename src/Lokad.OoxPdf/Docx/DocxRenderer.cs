@@ -642,7 +642,7 @@ internal sealed partial class DocxRenderer
         IReadOnlyDictionary<string, string>? markerLabels = wordCompatible && effective.RendersCommentBalloons
             ? BuildWordCompatibleCommentMarkerLabels(document, cancellationToken) : null;
         IReadOnlySet<DocxParagraph>? visibleComments = wordCompatible
-            ? new HashSet<DocxParagraph>(EnumerateMainStoryParagraphs(document).Where(paragraph =>
+            ? new HashSet<DocxParagraph>(DocxBlockTraversal.EnumerateBodyParagraphs(document).Where(paragraph =>
                 paragraph.InlineReferences.Any(reference => reference.Kind == DocxRelatedStoryKind.Comment) ||
                 paragraph.SplitComments is not null), ReferenceEqualityComparer.Instance)
             : null;
@@ -712,13 +712,8 @@ internal sealed partial class DocxRenderer
                 !DocxInlineContent.IsKnownEmptyCommentAnchor(paragraph, reference));
         }
 
-        return EnumerateMainStoryParagraphs(document).Any(HasCommentReference);
+        return DocxBlockTraversal.EnumerateBodyParagraphs(document).Any(HasCommentReference);
     }
-
-    private static IEnumerable<DocxParagraph> EnumerateMainStoryParagraphs(DocxDocument document) =>
-        document.BodyElements.Count != 0
-            ? DocxBlockTraversal.EnumerateBodyParagraphs(document)
-            : document.FallbackParagraphs.Concat(document.FallbackTables.SelectMany(DocxBlockTraversal.EnumerateTableParagraphs));
 
     private static bool HasRevisionBalloon(IReadOnlyList<DocxRevisionInfo> revisions, bool isMainStory = true)
     {
@@ -730,7 +725,7 @@ internal sealed partial class DocxRenderer
     // stories do not independently place revision captions.
     private static bool HasAnyRevisionBalloon(DocxDocument document)
     {
-        if (HasStory(document.BodyElements, document.FallbackParagraphs, document.FallbackTables, isMainStory: true) ||
+        if (HasContent(document.BodyElements, isMainStory: true) ||
             HasFloatingContent(document.FloatingDrawings))
         {
             return true;
@@ -752,16 +747,10 @@ internal sealed partial class DocxRenderer
             .Select(reference => (reference.Kind, reference.Id))
             .ToHashSet();
         return document.RelatedStories.Any(story => story.IsNormalStoryType && references.Contains((story.Kind, story.Id)) &&
-            (HasStory(story.BodyElements, story.FallbackParagraphs, story.FallbackTables) || HasFloatingContent(story.FloatingDrawings)));
+            (HasContent(story.BodyElements, isMainStory: false) || HasFloatingContent(story.FloatingDrawings)));
 
         bool HasFloatingContent(IEnumerable<DocxFloatingDrawing> drawings) =>
             drawings.Any(drawing => HasContent(drawing.TextBoxBodyElements, isMainStory: false));
-
-        bool HasStory(IReadOnlyList<DocxBodyElement> elements, IReadOnlyList<DocxParagraph> paragraphs,
-            IReadOnlyList<DocxTable> tables, bool isMainStory = false) =>
-            elements.Count != 0 ? HasContent(elements, isMainStory) :
-                paragraphs.Any(paragraph => HasParagraph(paragraph, isMainStory)) ||
-                tables.Any(table => HasTable(table, isMainStory, includeInlineTextBoxes: true));
 
         bool HasContent(IEnumerable<DocxBodyElement> elements, bool isMainStory, bool includeInlineTextBoxes = true) =>
             elements.Any(element => element switch

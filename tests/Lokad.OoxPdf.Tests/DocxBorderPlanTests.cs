@@ -137,9 +137,7 @@ internal static class DocxBorderPlanTests
             [],
             [],
             [],
-            [new DocxTableElement(table)],
-            [],
-            [table]);
+            [new DocxTableElement(table)]);
         return new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
     }
 

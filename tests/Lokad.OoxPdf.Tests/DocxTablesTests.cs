@@ -388,9 +388,7 @@ internal static class DocxTablesTests
                 new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", breakParagraph),
                 new DocxTableElement(table),
                 sectionBreak
-            ],
-            [paragraph],
-            [table])
+            ])
         {
             HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
             {
@@ -669,9 +667,7 @@ internal static class DocxTablesTests
             [],
             [],
             [],
-            [new DocxTableElement(table)],
-            [],
-            [table])
+            [new DocxTableElement(table)])
         {
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
@@ -867,9 +863,7 @@ internal static class DocxTablesTests
             [],
             [],
             [],
-            [new DocxTableElement(table)],
-            [],
-            [table]);
+            [new DocxTableElement(table)]);
 
         DocxTableRowLayout row = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
@@ -1028,9 +1022,7 @@ internal static class DocxTablesTests
             [drawing],
             [],
             [],
-            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Drawing anchor", 10d, 12d))],
-            [],
-            []);
+            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Drawing anchor", 10d, 12d))]);
         var renderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
 
         DocxLayoutSnapshot layout = renderer.InspectLayout(document);
@@ -1061,9 +1053,7 @@ internal static class DocxTablesTests
             [],
             [],
             [],
-            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Body", 10d, 12d))],
-            [],
-            []);
+            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Body", 10d, 12d))]);
         var renderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
 
         DocxLayoutSnapshot layout = renderer.InspectLayout(document);
@@ -1095,9 +1085,7 @@ internal static class DocxTablesTests
             DocxRelatedStoryKind.Footnote,
             "/word/footnotes.xml",
             "51",
-            [new DocxParagraphElement(footnoteParagraph)],
-            [],
-            [], null)
+            [new DocxParagraphElement(footnoteParagraph)], null)
         {
             FloatingDrawings = [DocxTests.CreateFloatingTextBoxDrawing([new DocxTableElement(table)])]
         };
@@ -1112,9 +1100,7 @@ internal static class DocxTablesTests
             [],
             [],
             [],
-            [new DocxParagraphElement(body)],
-            [body],
-            [])
+            [new DocxParagraphElement(body)])
         {
             RelatedStories = [footnoteStory]
         };

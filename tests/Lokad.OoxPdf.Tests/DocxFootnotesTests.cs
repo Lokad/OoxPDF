@@ -1857,9 +1857,7 @@ internal static partial class DocxFootnotesTests
             DocxRelatedStoryKind.Comment,
             "/word/comments.xml",
             "1",
-            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Public edge comment body", 10d, 12d))],
-            [],
-            [], null);
+            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Public edge comment body", 10d, 12d))], null);
         // Near-edge clamp calibration: anchor = L - L * (1 - s) - 3.18 with s = 200 / 346.5,
         // so L = 4 lands at -0.87 and clamps to 0.5 (L = 10 no longer reaches the edge
         // under the lane-fit print scale).
@@ -1874,9 +1872,7 @@ internal static partial class DocxFootnotesTests
             [],
             [],
             [],
-            [new DocxParagraphElement(paragraph)],
-            [],
-            [])
+            [new DocxParagraphElement(paragraph)])
         {
             RelatedStories = [commentStory],
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
@@ -2021,9 +2017,7 @@ internal static partial class DocxFootnotesTests
             DocxRelatedStoryKind.Footnote,
             "/word/footnotes.xml",
             "7",
-            [new DocxParagraphElement(footnoteParagraph)],
-            [],
-            [], null);
+            [new DocxParagraphElement(footnoteParagraph)], null);
         var document = new DocxDocument(
             220d,
             112d,
@@ -2041,9 +2035,7 @@ internal static partial class DocxFootnotesTests
                 new DocxParagraphElement(filler),
                 new DocxParagraphElement(filler),
                 new DocxParagraphElement(filler)
-            ],
-            [],
-            [])
+            ])
         {
             RelatedStories = [footnoteStory]
         };
@@ -2096,8 +2088,6 @@ internal static partial class DocxFootnotesTests
                     new DocxParagraphElement(SizedLine("Beta", 15d)),
                     new DocxParagraphElement(SizedLine("Gamma", 12d))
                 ],
-                [],
-                [],
                 null);
             var document = new DocxDocument(
                 220d,
@@ -2110,9 +2100,7 @@ internal static partial class DocxFootnotesTests
                 [],
                 [],
                 [],
-                [new DocxParagraphElement(anchor)],
-                [],
-                [])
+                [new DocxParagraphElement(anchor)])
             {
                 RelatedStories = [footnoteStory]
             };
@@ -2165,16 +2153,12 @@ internal static partial class DocxFootnotesTests
             DocxRelatedStoryKind.Footnote,
             "/word/footnotes.xml",
             "31",
-            [new DocxParagraphElement(firstFootnote)],
-            [],
-            [], null);
+            [new DocxParagraphElement(firstFootnote)], null);
         var secondStory = new DocxRelatedStory(
             DocxRelatedStoryKind.Footnote,
             "/word/footnotes.xml",
             "32",
-            [new DocxParagraphElement(secondFootnote)],
-            [],
-            [], null);
+            [new DocxParagraphElement(secondFootnote)], null);
         DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(anchor)], []) with
         {
             RelatedStories = [firstStory, secondStory]
@@ -2212,9 +2196,7 @@ internal static partial class DocxFootnotesTests
             DocxRelatedStoryKind.Footnote,
             "/word/footnotes.xml",
             "16",
-            Enumerable.Range(0, 8).Select(_ => new DocxParagraphElement(footnoteParagraph)).Cast<DocxBodyElement>().ToArray(),
-            [],
-            [], null);
+            Enumerable.Range(0, 8).Select(_ => new DocxParagraphElement(footnoteParagraph)).Cast<DocxBodyElement>().ToArray(), null);
         var document = new DocxDocument(
             220d,
             82d,
@@ -2226,9 +2208,7 @@ internal static partial class DocxFootnotesTests
             [],
             [],
             [],
-            [new DocxParagraphElement(bodyParagraph)],
-            [bodyParagraph],
-            [])
+            [new DocxParagraphElement(bodyParagraph)])
         {
             RelatedStories = [footnoteStory]
         };
@@ -2298,9 +2278,7 @@ internal static partial class DocxFootnotesTests
             DocxRelatedStoryKind.Footnote,
             "/word/footnotes.xml",
             "11",
-            [new DocxParagraphElement(footnoteParagraph)],
-            [],
-            [], null);
+            [new DocxParagraphElement(footnoteParagraph)], null);
         var document = new DocxDocument(
             220d,
             82d,
@@ -2312,9 +2290,7 @@ internal static partial class DocxFootnotesTests
             [],
             [],
             [],
-            [new DocxParagraphElement(anchor)],
-            [anchor],
-            [])
+            [new DocxParagraphElement(anchor)])
         {
             RelatedStories = [footnoteStory]
         };
@@ -2374,9 +2350,7 @@ internal static partial class DocxFootnotesTests
             DocxRelatedStoryKind.Footnote,
             "/word/footnotes.xml",
             "12",
-            [new DocxParagraphElement(footnoteParagraph)],
-            [],
-            [], null);
+            [new DocxParagraphElement(footnoteParagraph)], null);
         var document = new DocxDocument(
             220d,
             82d,
@@ -2388,9 +2362,7 @@ internal static partial class DocxFootnotesTests
             [],
             [],
             [],
-            [new DocxParagraphElement(anchor)],
-            [anchor],
-            [])
+            [new DocxParagraphElement(anchor)])
         {
             RelatedStories = [footnoteStory]
         };
@@ -2502,9 +2474,7 @@ internal static partial class DocxFootnotesTests
             DocxRelatedStoryKind.Footnote,
             "/word/footnotes.xml",
             "13",
-            [new DocxParagraphElement(footnoteParagraph)],
-            [],
-            [], null);
+            [new DocxParagraphElement(footnoteParagraph)], null);
         var document = new DocxDocument(
             220d,
             82d,
@@ -2516,9 +2486,7 @@ internal static partial class DocxFootnotesTests
             [],
             [],
             [],
-            [new DocxParagraphElement(anchor)],
-            [anchor],
-            [])
+            [new DocxParagraphElement(anchor)])
         {
             RelatedStories = [footnoteStory]
         };
@@ -3284,8 +3252,6 @@ internal static partial class DocxFootnotesTests
             DocxRelatedStoryKind.Footnote,
             "/word/footnotes.xml",
             "31",
-            [],
-            [],
             [], null);
         var storyLayout = new DocxRelatedStoryLayout(story, 0, [], [], [], [], 0d);
         var location = new DocxLayoutEngine.DocxInlineReferenceLocation(
@@ -3306,8 +3272,6 @@ internal static partial class DocxFootnotesTests
             DocxRelatedStoryKind.Footnote,
             "/word/footnotes.xml",
             "32",
-            [],
-            [],
             [], null);
         DocxTextRun lineRun = new("Shared note", 10d, null, false, false, false, null, null);
         DocxTextLineLayout RemainderLine(int index)
@@ -3346,8 +3310,6 @@ internal static partial class DocxFootnotesTests
             DocxRelatedStoryKind.Footnote,
             "/word/footnotes.xml",
             "33",
-            [],
-            [],
             [], null);
         var storyLayout = new DocxRelatedStoryLayout(
             story, 0, [Line("Shared note line zero", 700d), Line("Shared note line one", 688d), Line("Shared note line two", 676d)], [], [], [], 36d);
@@ -3474,9 +3436,7 @@ internal static partial class DocxFootnotesTests
             DocxRelatedStoryKind.Footnote,
             "/word/footnotes.xml",
             "51",
-            noteElements,
-            [],
-            [], null);
+            noteElements, null);
         var bodyElements = new List<DocxParagraphElement> { };
         var paragraphs = new List<DocxParagraph> { cellAnchor };
         for (int index = 0; index < 60; index++)
@@ -3497,9 +3457,7 @@ internal static partial class DocxFootnotesTests
             [],
             [],
             [],
-            new DocxBodyElement[] { new DocxTableElement(table) }.Concat(bodyElements).ToArray(),
-            paragraphs.ToArray(),
-            [])
+            new DocxBodyElement[] { new DocxTableElement(table) }.Concat(bodyElements).ToArray())
         {
             RelatedStories = [footnoteStory]
         };
@@ -3609,9 +3567,7 @@ internal static partial class DocxFootnotesTests
             DocxRelatedStoryKind.Footnote,
             "/word/footnotes.xml",
             footnoteId,
-            noteElements,
-            [],
-            [], null);
+            noteElements, null);
         var bodyElements = new List<DocxParagraphElement>();
         var paragraphs = new List<DocxParagraph>();
         for (int index = 0; index < fillersBefore; index++)
@@ -3641,9 +3597,7 @@ internal static partial class DocxFootnotesTests
             [],
             [],
             [],
-            bodyElements.ToArray(),
-            paragraphs.ToArray(),
-            [])
+            bodyElements.ToArray())
         {
             RelatedStories = [footnoteStory]
         };
@@ -3672,16 +3626,14 @@ internal static partial class DocxFootnotesTests
             DocxRelatedStoryKind.Footnote,
             "/word/footnotes.xml",
             footnoteId,
-            noteElements,
-            [],
-            [], null);
+            noteElements, null);
         var bodyElements = new List<DocxParagraphElement> { new DocxParagraphElement(anchor) };
         DocxRelatedStory? separatorStory = null;
         DocxRelatedStory? continuationStory = null;
         if (includeSeparators)
         {
-            separatorStory = new DocxRelatedStory(DocxRelatedStoryKind.Footnote, "/word/footnotes.xml", "0", [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Note separator mark", 10d, 12d))], [], [], DocxRelatedStoryType.Separator);
-            continuationStory = new DocxRelatedStory(DocxRelatedStoryKind.Footnote, "/word/footnotes.xml", "1", [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Note continuation mark", 10d, 12d))], [], [], DocxRelatedStoryType.ContinuationSeparator);
+            separatorStory = new DocxRelatedStory(DocxRelatedStoryKind.Footnote, "/word/footnotes.xml", "0", [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Note separator mark", 10d, 12d))], DocxRelatedStoryType.Separator);
+            continuationStory = new DocxRelatedStory(DocxRelatedStoryKind.Footnote, "/word/footnotes.xml", "1", [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Note continuation mark", 10d, 12d))], DocxRelatedStoryType.ContinuationSeparator);
         }
 
         var paragraphs = new List<DocxParagraph> { anchor };
@@ -3703,9 +3655,7 @@ internal static partial class DocxFootnotesTests
             [],
             [],
             [],
-            bodyElements.ToArray(),
-            paragraphs.ToArray(),
-            [])
+            bodyElements.ToArray())
         {
             RelatedStories = separatorStory is null || continuationStory is null ? [footnoteStory] : [footnoteStory, separatorStory, continuationStory]
         };
@@ -4252,7 +4202,7 @@ internal static partial class DocxFootnotesTests
             612d, 792d, 72d, 72d, 72d, 72d,
             DocxPageSettings.Empty,
             [drawing],
-            [], [], [new DocxParagraphElement(anchor)], [], []);
+            [], [], [new DocxParagraphElement(anchor)]);
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, new MixMaxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer()), CancellationToken.None);
         DocxFloatingDrawingLayout placed = layout.FloatingDrawings.Single();
@@ -4283,7 +4233,7 @@ internal static partial class DocxFootnotesTests
             612d, 792d, 72d, 72d, 72d, 72d,
             DocxPageSettings.Empty,
             [drawing],
-            [], [], [new DocxParagraphElement(anchor)], [], []);
+            [], [], [new DocxParagraphElement(anchor)]);
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, new DescMostTextMeasurer(new DocxTests.FamilyWidthTextMeasurer()), CancellationToken.None);
         DocxFloatingDrawingLayout placed = layout.FloatingDrawings.Single();

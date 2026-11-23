@@ -530,9 +530,7 @@ internal static class DocxTextWrapTests
             [],
             [],
             [],
-            [new DocxParagraphElement(paragraph)],
-            [],
-            []);
+            [new DocxParagraphElement(paragraph)]);
 
         DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
@@ -572,9 +570,7 @@ internal static class DocxTextWrapTests
             [],
             [],
             [],
-            [new DocxParagraphElement(paragraph)],
-            [],
-            []);
+            [new DocxParagraphElement(paragraph)]);
 
         DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
@@ -614,9 +610,7 @@ internal static class DocxTextWrapTests
             [],
             [],
             [],
-            [new DocxParagraphElement(paragraph)],
-            [],
-            []);
+            [new DocxParagraphElement(paragraph)]);
 
         DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
@@ -658,9 +652,7 @@ internal static class DocxTextWrapTests
             [],
             [],
             [],
-            [new DocxParagraphElement(paragraph)],
-            [],
-            []);
+            [new DocxParagraphElement(paragraph)]);
 
         DocxTextLineLayout line = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
@@ -706,9 +698,7 @@ internal static class DocxTextWrapTests
             [],
             [],
             [],
-            [new DocxParagraphElement(paragraph)],
-            [],
-            []);
+            [new DocxParagraphElement(paragraph)]);
 
         DocxTextLineLayout line = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
@@ -754,9 +744,7 @@ internal static class DocxTextWrapTests
             [],
             [],
             [],
-            [new DocxParagraphElement(paragraph)],
-            [],
-            []);
+            [new DocxParagraphElement(paragraph)]);
 
         DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
@@ -800,9 +788,7 @@ internal static class DocxTextWrapTests
             [],
             [],
             [],
-            [new DocxParagraphElement(paragraph)],
-            [],
-            []);
+            [new DocxParagraphElement(paragraph)]);
 
         DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
@@ -896,9 +882,7 @@ internal static class DocxTextWrapTests
             [],
             [],
             [],
-            [new DocxParagraphElement(paragraph)],
-            [],
-            []);
+            [new DocxParagraphElement(paragraph)]);
 
         DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)

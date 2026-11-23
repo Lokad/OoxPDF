@@ -693,8 +693,7 @@ internal sealed partial class DocxLayoutEngine
             "inline-textbox",
             null,
             textBox.BodyElements,
-            [],
-            [], null);
+            null);
         DocxRelatedStoryLayout storyLayout = CreateRelatedStoryLayout(
             story,
             storyIndex: -1,
@@ -842,8 +841,7 @@ internal sealed partial class DocxLayoutEngine
                 "floating-drawing",
                 drawing.ImageRelationshipId,
                 drawing.TextBoxBodyElements,
-                [],
-                [], null);
+                null);
             return CreateRelatedStoryLayout(
                 story,
                 storyIndex: -1,

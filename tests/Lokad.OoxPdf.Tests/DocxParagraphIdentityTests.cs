@@ -69,13 +69,13 @@ internal static class DocxParagraphIdentityTests
     }
     private static DocxDocument Document(params DocxParagraph[] paragraphs) => new(
         612,792,72,180,72,72,DocxPageSettings.Empty,[],[],[],
-        paragraphs.Select(paragraph=>(DocxBodyElement)new DocxParagraphElement(paragraph)).ToArray(),[],[])
+        paragraphs.Select(paragraph=>(DocxBodyElement)new DocxParagraphElement(paragraph)).ToArray())
         {
             MarkupMode=OoxPdfDocxMarkupMode.AllMarkup,
             RelatedStories=paragraphs.SelectMany(paragraph=>paragraph.InlineReferences).Select(reference=>reference.Id)
                 .OfType<string>().Distinct(StringComparer.Ordinal)
                 .Select(id=>new DocxRelatedStory(DocxRelatedStoryKind.Comment,"/word/comments.xml",id,
-                    [new DocxParagraphElement(Paragraph("Comment body"))],[],[],null)).ToArray(),
+                    [new DocxParagraphElement(Paragraph("Comment body"))],null)).ToArray(),
             PackageCommentAnchorIds=paragraphs.SelectMany(paragraph=>paragraph.InlineReferences).Select(reference=>reference.Id).OfType<string>().ToArray()
         };
 

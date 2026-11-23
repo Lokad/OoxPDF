@@ -62,7 +62,7 @@ internal static class DocxFooterRevisionFrameTests
                 Revisions = [new DocxRevisionInfo(DocxRevisionKind.RunPropertiesChange, index.ToString(), "R", null,
                     "rPrChange", null, propertyElementNames: [property])]
             })).ToArray();
-        var grouped = new DocxDocument(612d, 792d, 72d, 300d, 72d, 72d, DocxPageSettings.Empty, [], [], [], groupedParagraphs, [], [])
+        var grouped = new DocxDocument(612d, 792d, 72d, 300d, 72d, 72d, DocxPageSettings.Empty, [], [], [], groupedParagraphs)
             { MarkupMode = OoxPdfDocxMarkupMode.AllMarkup };
         var groupedPage = Render(grouped, new ReviewResolver());
         string captions = string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(groupedPage, true)

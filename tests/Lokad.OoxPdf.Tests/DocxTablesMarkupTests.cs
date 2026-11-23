@@ -181,9 +181,7 @@ internal static class DocxTablesMarkupTests
             [],
             [],
             [],
-            [new DocxParagraphElement(intro), new DocxTableElement(table)],
-            [],
-            [table]);
+            [new DocxParagraphElement(intro), new DocxTableElement(table)]);
 
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
 
@@ -519,9 +517,7 @@ internal static class DocxTablesMarkupTests
             [],
             [],
             [],
-            [new DocxParagraphElement(body)],
-            [body],
-            [headerTable]);
+            [new DocxParagraphElement(body)]);
 
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
 
@@ -580,9 +576,7 @@ internal static class DocxTablesMarkupTests
             [],
             [],
             [],
-            [new DocxParagraphElement(firstBody), new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null), new DocxParagraphElement(secondBody)],
-            [firstBody, secondBody],
-            [headerTable]);
+            [new DocxParagraphElement(firstBody), new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null), new DocxParagraphElement(secondBody)]);
 
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
 
@@ -889,9 +883,7 @@ internal static class DocxTablesMarkupTests
             [],
             [],
             [],
-            [new DocxTableElement(table)],
-            [],
-            [table])
+            [new DocxTableElement(table)])
         {
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
@@ -952,9 +944,7 @@ internal static class DocxTablesMarkupTests
             [],
             [],
             [],
-            [new DocxTableElement(outerTable)],
-            [],
-            [outerTable, nestedTable])
+            [new DocxTableElement(outerTable)])
         {
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
@@ -1049,9 +1039,7 @@ internal static class DocxTablesMarkupTests
             [],
             [],
             [],
-            [new DocxTableElement(outerTable)],
-            [],
-            [outerTable, nestedTable])
+            [new DocxTableElement(outerTable)])
         {
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
@@ -1132,9 +1120,7 @@ internal static class DocxTablesMarkupTests
                 [],
                 [],
                 [],
-                [new DocxTableElement(filler), new DocxParagraphElement(keep), new DocxTableElement(target)],
-                [keep, targetParagraph],
-                [filler, target])
+                [new DocxTableElement(filler), new DocxParagraphElement(keep), new DocxTableElement(target)])
             {
                 MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
             };
@@ -1180,9 +1166,7 @@ internal static class DocxTablesMarkupTests
             [],
             [],
             [],
-            [new DocxTableElement(table)],
-            [],
-            [table])
+            [new DocxTableElement(table)])
         {
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
@@ -1276,9 +1260,7 @@ internal static class DocxTablesMarkupTests
             [],
             [],
             [],
-            [new DocxTableElement(table)],
-            [],
-            [table])
+            [new DocxTableElement(table)])
         {
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
@@ -1358,9 +1340,7 @@ internal static class DocxTablesMarkupTests
             DocxRelatedStoryKind.Footnote,
             "/word/footnotes.xml",
             "37",
-            [new DocxTableElement(footnoteTable)],
-            [],
-            [], null);
+            [new DocxTableElement(footnoteTable)], null);
         DocxDocument footnoteDocument = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(bodyParagraph)], [])
             with
             {
@@ -1388,9 +1368,7 @@ internal static class DocxTablesMarkupTests
             DocxRelatedStoryKind.Endnote,
             "/word/endnotes.xml",
             "38",
-            [new DocxTableElement(endnoteTable)],
-            [],
-            [], null);
+            [new DocxTableElement(endnoteTable)], null);
         DocxDocument endnoteDocument = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(endnoteAnchor)], [])
             with
             {
@@ -1415,9 +1393,7 @@ internal static class DocxTablesMarkupTests
             [floatingDrawing],
             [],
             [],
-            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Drawing anchor", 10d, 12d))],
-            [],
-            [])
+            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Drawing anchor", 10d, 12d))])
         {
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
@@ -1451,9 +1427,7 @@ internal static class DocxTablesMarkupTests
             [],
             [],
             [],
-            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Body", 10d, 12d))],
-            [],
-            [])
+            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Body", 10d, 12d))])
         {
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
@@ -1487,9 +1461,7 @@ internal static class DocxTablesMarkupTests
             [],
             [],
             [],
-            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Body", 10d, 12d))],
-            [],
-            [headerTable])
+            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Body", 10d, 12d))])
         {
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
@@ -1521,9 +1493,7 @@ internal static class DocxTablesMarkupTests
             [],
             [],
             [],
-            [new DocxTableElement(outerTable)],
-            [],
-            [outerTable, nestedTable])
+            [new DocxTableElement(outerTable)])
         {
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
@@ -1557,9 +1527,7 @@ internal static class DocxTablesMarkupTests
             DocxRelatedStoryKind.Footnote,
             "/word/footnotes.xml",
             "9",
-            [new DocxTableElement(footnoteTable)],
-            [],
-            [], null);
+            [new DocxTableElement(footnoteTable)], null);
         DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(bodyParagraph)], [])
             with
             {
@@ -1593,9 +1561,7 @@ internal static class DocxTablesMarkupTests
             DocxRelatedStoryKind.Endnote,
             "/word/endnotes.xml",
             "10",
-            [new DocxTableElement(endnoteTable)],
-            [],
-            [], null);
+            [new DocxTableElement(endnoteTable)], null);
         DocxDocument endnoteDocument = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(endnoteAnchor)], [])
             with
             {
@@ -1647,9 +1613,7 @@ internal static class DocxTablesMarkupTests
             DocxRelatedStoryKind.Footnote,
             "/word/footnotes.xml",
             "23",
-            [new DocxTableElement(footnoteTable)],
-            [],
-            [], null);
+            [new DocxTableElement(footnoteTable)], null);
         DocxTests.AssertWordCompatibleCommentRangeMarkerRendered(
             DocxTests.CreateCommentMarkerFlowDocument([new DocxParagraphElement(footnoteAnchor)], [], DocxPageSettings.Empty, []) with
             {
@@ -1682,9 +1646,7 @@ internal static class DocxTablesMarkupTests
                     DocxRelatedStoryKind.Comment,
                     "/word/comments.xml",
                     "8",
-                    [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Public static table comment", 10d, 12d))],
-                    [],
-                    [], null)
+                    [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Public static table comment", 10d, 12d))], null)
             ],
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
@@ -1709,9 +1671,7 @@ internal static class DocxTablesMarkupTests
             DocxRelatedStoryKind.Footnote,
             "/word/footnotes.xml",
             "23",
-            [new DocxTableElement(footnoteTable)],
-            [],
-            [], null);
+            [new DocxTableElement(footnoteTable)], null);
         DocxDocument footnoteDocument = new(
             612d,
             792d,
@@ -1723,9 +1683,7 @@ internal static class DocxTablesMarkupTests
             [],
             [],
             [],
-            [new DocxParagraphElement(footnoteAnchor)],
-            [],
-            [])
+            [new DocxParagraphElement(footnoteAnchor)])
         {
             RelatedStories =
             [
@@ -1734,9 +1692,7 @@ internal static class DocxTablesMarkupTests
                     DocxRelatedStoryKind.Comment,
                     "/word/comments.xml",
                     "9",
-                    [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Public footnote table comment", 10d, 12d))],
-                    [],
-                    [], null)
+                    [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Public footnote table comment", 10d, 12d))], null)
             ],
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
@@ -1782,9 +1738,7 @@ internal static class DocxTablesMarkupTests
             DocxRelatedStoryKind.Comment,
             "/word/comments.xml",
             "1",
-            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Public table comment body", 10d, 12d))],
-            [],
-            [], null);
+            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Public table comment body", 10d, 12d))], null);
         DocxDocument document = new(
             612d,
             792d,
@@ -1796,9 +1750,7 @@ internal static class DocxTablesMarkupTests
             [],
             [],
             [],
-            [new DocxTableElement(table)],
-            [],
-            [table])
+            [new DocxTableElement(table)])
         {
             RelatedStories = [commentStory],
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
@@ -1878,9 +1830,7 @@ internal static class DocxTablesMarkupTests
             DocxRelatedStoryKind.Comment,
             "/word/comments.xml",
             "9",
-            [new DocxParagraphElement(imageParagraph), new DocxTableElement(table)],
-            [],
-            [], null);
+            [new DocxParagraphElement(imageParagraph), new DocxTableElement(table)], null);
         DocxDocument document = new(612d, 792d)
         {
             BodyElements = [new DocxParagraphElement(bodyParagraph)],
@@ -1956,9 +1906,7 @@ internal static class DocxTablesMarkupTests
             DocxRelatedStoryKind.Footnote,
             "/word/footnotes.xml",
             "17",
-            [new DocxTableElement(footnoteTable)],
-            [],
-            [footnoteTable], null);
+            [new DocxTableElement(footnoteTable)], null);
         var document = new DocxDocument(
             220d,
             140d,
@@ -1970,9 +1918,7 @@ internal static class DocxTablesMarkupTests
             [],
             [],
             [],
-            [new DocxParagraphElement(anchor)],
-            [anchor],
-            [])
+            [new DocxParagraphElement(anchor)])
         {
             RelatedStories = [footnoteStory]
         };
@@ -2020,9 +1966,7 @@ internal static class DocxTablesMarkupTests
             DocxRelatedStoryKind.Footnote,
             "/word/footnotes.xml",
             "14",
-            [new DocxParagraphElement(footnoteParagraph)],
-            [],
-            [], null);
+            [new DocxParagraphElement(footnoteParagraph)], null);
         var document = new DocxDocument(
             220d,
             82d,
@@ -2034,9 +1978,7 @@ internal static class DocxTablesMarkupTests
             [],
             [],
             [],
-            [new DocxTableElement(table)],
-            [],
-            [table])
+            [new DocxTableElement(table)])
         {
             RelatedStories = [footnoteStory]
         };

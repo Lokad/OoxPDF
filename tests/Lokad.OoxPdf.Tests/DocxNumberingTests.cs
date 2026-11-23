@@ -1236,9 +1236,7 @@ internal static partial class DocxNumberingTests
             [],
             [],
             [],
-            [new DocxParagraphElement(paragraph)],
-            [paragraph],
-            []);
+            [new DocxParagraphElement(paragraph)]);
         PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font.Value.Font, "• Item".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
 
         DocxTextLineLayout line = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
@@ -1297,9 +1295,7 @@ internal static partial class DocxNumberingTests
             [],
             [],
             [],
-            [new DocxParagraphElement(paragraph)],
-            [paragraph],
-            []);
+            [new DocxParagraphElement(paragraph)]);
         PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(File.ReadAllBytes(arial)), "1. Alpha Beta".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
 
         DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
@@ -1387,9 +1383,7 @@ internal static partial class DocxNumberingTests
             [],
             [],
             [],
-            [new DocxParagraphElement(paragraph)],
-            [paragraph],
-            [])
+            [new DocxParagraphElement(paragraph)])
         {
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };

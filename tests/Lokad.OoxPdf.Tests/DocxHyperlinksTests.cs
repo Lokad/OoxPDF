@@ -237,9 +237,7 @@ internal static class DocxHyperlinksTests
             [],
             [],
             [],
-            [new DocxParagraphElement(paragraph)],
-            [],
-            [])
+            [new DocxParagraphElement(paragraph)])
         {
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
@@ -302,9 +300,7 @@ internal static class DocxHyperlinksTests
             [drawing],
             [],
             [],
-            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Drawing anchor", 10d, 12d))],
-            [],
-            [])
+            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Drawing anchor", 10d, 12d))])
         {
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
@@ -381,9 +377,7 @@ internal static class DocxHyperlinksTests
             [],
             [],
             [],
-            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Body", 10d, 12d))],
-            [],
-            [])
+            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Body", 10d, 12d))])
         {
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
@@ -470,7 +464,7 @@ internal static class DocxHyperlinksTests
         DocxDocument columns = new(612d, 792d, 72d, 72d, 72d, 72d, DocxPageSettings.Empty, [], [], [],
             [new DocxParagraphElement(link), new DocxManualBreakElement(DocxBreakSourceKind.RunBreak, "column", null),
                 new DocxParagraphElement(target with { Alignment = DocxTextAlignment.Right, Indent = DocxParagraphIndent.Empty with { LeftPoints = 36d } }),
-                new DocxSectionBreakElement(DocxPageSettings.Empty, DocxSectionBreakType.NextPage, "2", "1", "720", [])], [], []);
+                new DocxSectionBreakElement(DocxPageSettings.Empty, DocxSectionBreakType.NextPage, "2", "1", "720", [])]);
         var plainRenderer = new DocxRenderer(new MapFontResolver([], "Fallback"), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
         PdfLinkDestination columnDestination = plainRenderer.RenderPagesAsync(columns, null, CancellationToken.None).ToBlockingEnumerable().Single().Annotations.Single().Destination
             ?? throw new InvalidOperationException("The column target must resolve.");
@@ -767,9 +761,7 @@ internal static class DocxHyperlinksTests
             DocxRelatedStoryKind.Footnote,
             "/word/footnotes.xml",
             "9",
-            [new DocxParagraphElement(footnoteParagraph)],
-            [],
-            [], null);
+            [new DocxParagraphElement(footnoteParagraph)], null);
         DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(bodyParagraph)], [])
             with
             {
@@ -829,9 +821,7 @@ internal static class DocxHyperlinksTests
             DocxRelatedStoryKind.Endnote,
             "/word/endnotes.xml",
             "11",
-            [new DocxParagraphElement(endnoteParagraph)],
-            [],
-            [], null);
+            [new DocxParagraphElement(endnoteParagraph)], null);
         DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(bodyParagraph)], [])
             with
             {
@@ -896,9 +886,7 @@ internal static class DocxHyperlinksTests
             DocxRelatedStoryKind.Footnote,
             "/word/footnotes.xml",
             "12",
-            [new DocxParagraphElement(targetParagraph)],
-            [],
-            [], null);
+            [new DocxParagraphElement(targetParagraph)], null);
         DocxDocument document = DocxTests.CreateLayoutTestDocument(
                 [new DocxParagraphElement(linkParagraph), new DocxParagraphElement(markerParagraph)],
                 [])
@@ -966,9 +954,7 @@ internal static class DocxHyperlinksTests
             DocxRelatedStoryKind.Endnote,
             "/word/endnotes.xml",
             "13",
-            [new DocxParagraphElement(targetParagraph)],
-            [],
-            [], null);
+            [new DocxParagraphElement(targetParagraph)], null);
         DocxDocument document = DocxTests.CreateLayoutTestDocument(
                 [new DocxParagraphElement(linkParagraph), new DocxParagraphElement(markerParagraph)],
                 [])
@@ -1025,9 +1011,7 @@ internal static class DocxHyperlinksTests
             [floatingDrawing],
             [],
             [],
-            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Drawing anchor", 10d, 12d))],
-            [],
-            []);
+            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Drawing anchor", 10d, 12d))]);
 
         PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 
@@ -1083,9 +1067,7 @@ internal static class DocxHyperlinksTests
             [],
             [],
             [],
-            [new DocxParagraphElement(body)],
-            [body],
-            []);
+            [new DocxParagraphElement(body)]);
 
         PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 
@@ -1138,9 +1120,7 @@ internal static class DocxHyperlinksTests
             [floatingDrawing],
             [],
             [],
-            [new DocxParagraphElement(linkParagraph)],
-            [],
-            []);
+            [new DocxParagraphElement(linkParagraph)]);
 
         PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 
@@ -1202,9 +1182,7 @@ internal static class DocxHyperlinksTests
             [],
             [],
             [],
-            [new DocxParagraphElement(linkParagraph)],
-            [linkParagraph],
-            []);
+            [new DocxParagraphElement(linkParagraph)]);
 
         PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 
@@ -1265,9 +1243,7 @@ internal static class DocxHyperlinksTests
             [],
             [header],
             [],
-            [new DocxParagraphElement(target)],
-            [target],
-            []);
+            [new DocxParagraphElement(target)]);
 
         PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 

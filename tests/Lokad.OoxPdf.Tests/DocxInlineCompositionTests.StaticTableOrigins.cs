@@ -65,7 +65,7 @@ internal static partial class DocxInlineCompositionTests
                 { ["default"] = [new DocxTableElement(table)] }
         };
         var document = new DocxDocument(500d, 700d, 36d, 36d, 100d, 36d, settings, [], [], [],
-            [new DocxParagraphElement(body), new DocxTableElement(table)], [body], [table]);
+            [new DocxParagraphElement(body), new DocxTableElement(table)]);
         return new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, new DocxTests.FamilyWidthTextMeasurer(), default).Pages.Single();
     }

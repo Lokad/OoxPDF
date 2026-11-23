@@ -210,8 +210,7 @@ internal static partial class DocxParagraphShadingTests
         var replacements = document.BodyElements.OfType<DocxParagraphElement>().Select(item => item.Paragraph)
             .ToDictionary(paragraph => paragraph, paragraph => paragraph with { Shading = null });
         var replace = new DocxParagraphReplacements(replacements, default);
-        var plain = document with { BodyElements = replace.ReplaceElements(document.BodyElements),
-            FallbackParagraphs = document.FallbackParagraphs.Select(replace.Replace).ToArray() };
+        var plain = document with { BodyElements = replace.ReplaceElements(document.BodyElements) };
         var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
         var shadedPages = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
         var plainPages = renderer.RenderPagesAsync(plain, null, default).ToBlockingEnumerable().ToArray();

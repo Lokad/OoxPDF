@@ -31,12 +31,12 @@ internal static partial class DocxCommentsTests
                 Runs = [new DocxTextRun("Body anchor", 12d, null, false, false, false, null, "AnchorFace")]
             };
             DocxRelatedStory story = new(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1",
-                paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p)).ToArray(), [], [], null)
+                paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p)).ToArray(), null)
             {
                 CommentMetadata = new DocxCommentMetadata("Reviewer", "RV", null, null, null, null, null)
             };
             DocxDocument document = new(612d, 792d, 72d, 72d, 72d, 72d, DocxPageSettings.Empty,
-                [], [], [], [new DocxParagraphElement(anchor)], [], [])
+                [], [], [], [new DocxParagraphElement(anchor)])
             {
                 RelatedStories = [story], MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
             };

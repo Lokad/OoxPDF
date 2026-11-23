@@ -790,7 +790,7 @@ internal static partial class DocxInlineCompositionTests
         var equations = paragraph.Equations.ToDictionary(equation => equation,
             equation => new DocxPreparedMathParagraph(equation, new(18d, 10d, 4d, []), 10d, 16d));
         var document = new DocxDocument(120d, 60d, 10d, 10d, 10d, 10d, DocxPageSettings.Empty,
-            [], [], [], [new DocxParagraphElement(paragraph)], [], [])
+            [], [], [], [new DocxParagraphElement(paragraph)])
         {
             FinalSectionBreak = new(DocxPageSettings.Empty, null, "2", "0", "200", [new("1600", "200"), new("200", null)])
         };

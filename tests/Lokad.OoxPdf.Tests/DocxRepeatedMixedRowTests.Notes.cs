@@ -35,7 +35,7 @@ internal static partial class DocxRepeatedMixedRowTests
                 {
                     BodyElements = [.. source.BodyElements, new DocxParagraphElement(DocxTests.CreateCommentRangeParagraph("Public review", "900"))],
                     RelatedStories = [.. source.RelatedStories, new DocxRelatedStory(DocxRelatedStoryKind.Comment,
-                        "/word/comments.xml", "900", [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Public review", 10d, 12d))], [], [], null)]
+                        "/word/comments.xml", "900", [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Public review", 10d, 12d))], null)]
                 };
                 var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont), mode,
                     mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :

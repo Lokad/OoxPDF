@@ -958,9 +958,7 @@ internal static partial class DocxTextTests
             [],
             [],
             [],
-            [new DocxParagraphElement(paragraph)],
-            [paragraph],
-            []);
+            [new DocxParagraphElement(paragraph)]);
 
         DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, new DocxTests.FontSizeWidthTextMeasurer(), CancellationToken.None)

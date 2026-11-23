@@ -163,9 +163,7 @@ internal static class DocxTablesLayoutTests
             [],
             [],
             [],
-            [new DocxParagraphElement(filler), new DocxParagraphElement(heading), new DocxTableElement(table)],
-            [filler, heading],
-            [table]);
+            [new DocxParagraphElement(filler), new DocxParagraphElement(heading), new DocxTableElement(table)]);
 
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
 
@@ -198,9 +196,7 @@ internal static class DocxTablesLayoutTests
             [],
             [],
             [],
-            [new DocxParagraphElement(filler), new DocxParagraphElement(heading), new DocxTableElement(table)],
-            [filler, heading],
-            [table]);
+            [new DocxParagraphElement(filler), new DocxParagraphElement(heading), new DocxTableElement(table)]);
 
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
         DocxTableRowLayout keptRow = layout.Pages[1].Items.OfType<DocxTableRowLayout>().Single();
@@ -248,9 +244,7 @@ internal static class DocxTablesLayoutTests
             [],
             [],
             [],
-            [new DocxTableElement(table)],
-            [],
-            [table]);
+            [new DocxTableElement(table)]);
 
         DocxTableRowLayout[] rows = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, embedded: null, cancellationToken: CancellationToken.None)
@@ -311,9 +305,7 @@ internal static class DocxTablesLayoutTests
             [],
             [],
             [],
-            [new DocxTableElement(table)],
-            [],
-            [table]);
+            [new DocxTableElement(table)]);
 
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
         DocxTableRowLayout restartRow = layout.Pages[0].Items.OfType<DocxTableRowLayout>().Single(row => row.RowIndex == 1);
@@ -396,9 +388,7 @@ internal static class DocxTablesLayoutTests
             [],
             [],
             [],
-            [new DocxTableElement(table)],
-            [],
-            [table]);
+            [new DocxTableElement(table)]);
 
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
         DocxTableRowLayout[] secondPageRows = layout.Pages[1].Items.OfType<DocxTableRowLayout>().ToArray();
@@ -1054,9 +1044,7 @@ internal static class DocxTablesLayoutTests
             [],
             [],
             [],
-            [new DocxTableElement(table)],
-            [],
-            [table]);
+            [new DocxTableElement(table)]);
 
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
         DocxTableRowLayout[] rowFragments = layout.Pages.SelectMany(page => page.Items.OfType<DocxTableRowLayout>()).ToArray();
@@ -1100,9 +1088,7 @@ internal static class DocxTablesLayoutTests
             [],
             [],
             [],
-            [new DocxTableElement(table)],
-            [],
-            [table]);
+            [new DocxTableElement(table)]);
 
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
         DocxTableRowLayout[] rowFragments = layout.Pages.SelectMany(page => page.Items.OfType<DocxTableRowLayout>()).ToArray();
@@ -1524,7 +1510,7 @@ internal static class DocxTablesLayoutTests
         DocxTable table = new(null, [468d], [new DocxTableRow([firstCell], null), new DocxTableRow([secondCell], null)]);
         DocxDocument document = new(
             612d, pageHeight, 72d, 72d, 72d, 72d, DocxPageSettings.Empty, [], [], [],
-            [new DocxTableElement(table)], [], [table]);
+            [new DocxTableElement(table)]);
 
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);

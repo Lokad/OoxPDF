@@ -84,9 +84,8 @@ internal static class DocxReviewTableFrameTests
             BodyElements = tableFirst
                 ? [new DocxTableElement(table), new DocxParagraphElement(anchor)]
                 : [new DocxParagraphElement(anchor), new DocxTableElement(table)],
-            FallbackTables = [table],
             RelatedStories = [new(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1",
-                [new DocxParagraphElement(Paragraph("Public comment"))], [], [], null)]
+                [new DocxParagraphElement(Paragraph("Public comment"))], null)]
         };
     }
 

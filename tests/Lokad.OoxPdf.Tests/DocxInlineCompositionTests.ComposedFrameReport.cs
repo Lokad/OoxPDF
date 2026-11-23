@@ -16,7 +16,7 @@ internal static partial class DocxInlineCompositionTests
         {
             var paragraphs = Enumerable.Range(0, 40).Select(_ => DocxTests.CreateDocxLayoutParagraph("Line", 10d, 10d)).ToArray();
             var document = new DocxDocument(300d, 200d, 20d, 20d, 20d, 20d, DocxPageSettings.Empty, [], [], [],
-                paragraphs.Select(paragraph => (DocxBodyElement)new DocxParagraphElement(paragraph)).ToArray(), paragraphs, []);
+                paragraphs.Select(paragraph => (DocxBodyElement)new DocxParagraphElement(paragraph)).ToArray());
             var measurer = new DocxTests.FamilyWidthTextMeasurer();
             var layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, scale)
                 .Create(document, new DocxRenderer.ScaledDocxTextMeasurer(measurer, scale, scale), default, measurer,

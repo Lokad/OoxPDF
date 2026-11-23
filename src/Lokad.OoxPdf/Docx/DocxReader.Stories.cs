@@ -498,8 +498,6 @@ internal sealed partial class DocxReader
             partName,
             storyId,
             bodyElements,
-            [],
-            [],
             ParseRelatedStoryType((string?)story.Attribute(WordprocessingNamespace + "type")))
         {
             FloatingDrawings = floatingDrawings,

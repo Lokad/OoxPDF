@@ -811,9 +811,7 @@ internal static partial class DocxFootnotesTests
             DocxRelatedStoryKind.Endnote,
             "/word/endnotes.xml",
             "21",
-            [new DocxParagraphElement(endnoteParagraph)],
-            [],
-            [], null);
+            [new DocxParagraphElement(endnoteParagraph)], null);
         DocxPageSettings firstSectionSettings = DocxPageSettings.Empty with
         {
             EndnoteReferenceSettings = DocxNoteReferenceSettings.Empty with { PositionValue = "sectEnd" }
@@ -834,9 +832,7 @@ internal static partial class DocxFootnotesTests
                 new DocxParagraphElement(firstSectionParagraph),
                 sectionBreak,
                 new DocxParagraphElement(secondSectionParagraph)
-            ],
-            [firstSectionParagraph, secondSectionParagraph],
-            [])
+            ])
         {
             RelatedStories = [endnoteStory]
         };
@@ -907,7 +903,7 @@ internal static partial class DocxFootnotesTests
         DocxParagraph finalText = DocxTests.CreateDocxLayoutParagraph("Final section", 10d, 12d);
         var note = new DocxRelatedStory(
             DocxRelatedStoryKind.Endnote, "/word/endnotes.xml", noteId,
-            [new DocxParagraphElement(noteText)], [], [], null);
+            [new DocxParagraphElement(noteText)], null);
         var document = new DocxDocument(
             612d, 792d, 72d, 72d, 72d, 72d,
             narrowFinalSection,
@@ -916,9 +912,7 @@ internal static partial class DocxFootnotesTests
                 new DocxParagraphElement(anchor),
                 new DocxSectionBreakElement(wideFirstSection, DocxSectionBreakType.NextPage, null, null, null, []),
                 new DocxParagraphElement(finalText)
-            ],
-            [anchor, finalText],
-            [])
+            ])
         {
             RelatedStories = [note]
         };
@@ -968,16 +962,12 @@ internal static partial class DocxFootnotesTests
             DocxRelatedStoryKind.Endnote,
             "/word/endnotes.xml",
             "22",
-            Enumerable.Range(0, 4).Select(_ => new DocxParagraphElement(endnoteParagraph)).Cast<DocxBodyElement>().ToArray(),
-            [],
-            [], null);
+            Enumerable.Range(0, 4).Select(_ => new DocxParagraphElement(endnoteParagraph)).Cast<DocxBodyElement>().ToArray(), null);
         var secondEndnoteStory = new DocxRelatedStory(
             DocxRelatedStoryKind.Endnote,
             "/word/endnotes.xml",
             "23",
-            Enumerable.Range(0, 4).Select(_ => new DocxParagraphElement(endnoteParagraph)).Cast<DocxBodyElement>().ToArray(),
-            [],
-            [], null);
+            Enumerable.Range(0, 4).Select(_ => new DocxParagraphElement(endnoteParagraph)).Cast<DocxBodyElement>().ToArray(), null);
         DocxPageSettings firstSectionSettings = DocxPageSettings.Empty with
         {
             EndnoteReferenceSettings = DocxNoteReferenceSettings.Empty with { PositionValue = "sectEnd" }
@@ -997,9 +987,7 @@ internal static partial class DocxFootnotesTests
                 new DocxParagraphElement(firstSectionParagraph),
                 new DocxSectionBreakElement(firstSectionSettings, DocxSectionBreakType.NextPage, null, null, null, []),
                 new DocxParagraphElement(secondSectionParagraph)
-            ],
-            [firstSectionParagraph, secondSectionParagraph],
-            [])
+            ])
         {
             RelatedStories = [firstEndnoteStory, secondEndnoteStory]
         };

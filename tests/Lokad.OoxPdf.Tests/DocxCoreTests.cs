@@ -249,8 +249,7 @@ internal static class DocxCoreTests
         var paragraph = document.Paragraphs.Single();
         var unspaced = paragraph with { Runs = paragraph.Runs.Select(run => run with { CharacterSpacingPoints = 0d }).ToArray() };
         var baseline = document with { BodyElements = document.BodyElements.Select(element =>
-            element is DocxParagraphElement item ? item with { Paragraph = unspaced } : element).ToArray(),
-            FallbackParagraphs = [unspaced] };
+            element is DocxParagraphElement item ? item with { Paragraph = unspaced } : element).ToArray() };
         var renderer = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
         double Advance(DocxDocument source) => renderer.InspectTextEmission(source).Lines.SelectMany(line => line.Segments)
             .Where(segment => !segment.IsTerminalLineSpace).Sum(segment => segment.AdvanceProfile.PlannedEmittedAdvance);
@@ -835,9 +834,7 @@ internal static class DocxCoreTests
             [],
             [],
             [],
-            [new DocxParagraphElement(bodyParagraph), new DocxTableElement(table)],
-            [],
-            []);
+            [new DocxParagraphElement(bodyParagraph), new DocxTableElement(table)]);
         var resolver = new MapFontResolver(["Body Sans", "Cell Sans"], "Resolver Fallback");
 
         string plannedTexts = string.Join("|", DocxFontPlan.Create(document, resolver, CancellationToken.None).Runs.Select(run => run.Run.Text).Order(StringComparer.Ordinal));
@@ -888,7 +885,6 @@ internal static class DocxCoreTests
 
     public static void DocxDocumentCompatibilityInventoriesDeriveFromBodyElements()
     {
-        DocxParagraph fallbackParagraph = DocxTests.CreateDocxLayoutParagraph("Fallback", 12d, 12d);
         DocxParagraph bodyParagraph = DocxTests.CreateDocxLayoutParagraph("Body", 12d, 12d);
         DocxParagraph nestedParagraph = DocxTests.CreateDocxLayoutParagraph("Nested", 12d, 12d);
         var nestedTable = new DocxTable(
@@ -911,9 +907,7 @@ internal static class DocxCoreTests
             [],
             [],
             [],
-            [new DocxParagraphElement(bodyParagraph), new DocxTableElement(bodyTable)],
-            [fallbackParagraph],
-            []);
+            [new DocxParagraphElement(bodyParagraph), new DocxTableElement(bodyTable)]);
 
         TestAssert.Equal("Body", document.Paragraphs.Single().Runs.Single().Text);
         TestAssert.Equal("Body|Nested", string.Join("|", DocxBlockTraversal.EnumerateBodyParagraphs(document).Select(paragraph => paragraph.Runs.Single().Text)));
@@ -923,7 +917,6 @@ internal static class DocxCoreTests
 
     public static void DocxRelatedStoryCompatibilityInventoriesDeriveFromBodyElements()
     {
-        DocxParagraph fallbackParagraph = DocxTests.CreateDocxLayoutParagraph("Fallback", 12d, 12d);
         DocxParagraph bodyParagraph = DocxTests.CreateDocxLayoutParagraph("Story", 12d, 12d);
         DocxParagraph nestedParagraph = DocxTests.CreateDocxLayoutParagraph("Nested", 12d, 12d);
         var nestedTable = new DocxTable(
@@ -939,9 +932,7 @@ internal static class DocxCoreTests
             DocxRelatedStoryKind.Comment,
             "/word/comments.xml",
             "1",
-            [new DocxParagraphElement(bodyParagraph), new DocxTableElement(storyTable)],
-            [fallbackParagraph],
-            [], null);
+            [new DocxParagraphElement(bodyParagraph), new DocxTableElement(storyTable)], null);
 
         TestAssert.Equal("Story", story.Paragraphs.Single().Runs.Single().Text);
         TestAssert.Equal("Story|Nested", string.Join("|", DocxBlockTraversal.EnumerateBodyParagraphs(story).Select(paragraph => paragraph.Runs.Single().Text)));

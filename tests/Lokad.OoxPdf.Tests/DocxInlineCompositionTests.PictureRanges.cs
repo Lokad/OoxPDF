@@ -274,7 +274,6 @@ internal static partial class DocxInlineCompositionTests
         var replacement = paragraph with { Images = [image], InlineContent = TestAssert.NotNull(paragraph.InlineContent)
             .Select(item => item is DocxInlinePicture ? new DocxInlinePicture(image) : item).ToArray() };
         return source with { BodyElements = source.BodyElements.Select(item => item is DocxParagraphElement p &&
-            ReferenceEquals(p.Paragraph, paragraph) ? new DocxParagraphElement(replacement) : item).ToArray(),
-            FallbackParagraphs = source.FallbackParagraphs.Select(p => ReferenceEquals(p, paragraph) ? replacement : p).ToArray() };
+            ReferenceEquals(p.Paragraph, paragraph) ? new DocxParagraphElement(replacement) : item).ToArray() };
     }
 }

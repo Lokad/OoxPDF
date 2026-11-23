@@ -344,9 +344,7 @@ internal static class DocxPageMarkupTests
                 new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Narrow first section", 10d, 12d)),
                 new DocxSectionBreakElement(firstSectionSettings, DocxSectionBreakType.NextPage, null, null, null, []),
                 new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Wide final section", 10d, 12d))
-            ],
-            [],
-            [])
+            ])
         {
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
@@ -500,9 +498,7 @@ internal static class DocxPageMarkupTests
             [],
             [],
             [],
-            [new DocxParagraphElement(paragraph)],
-            [],
-            [])
+            [new DocxParagraphElement(paragraph)])
         {
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
@@ -548,9 +544,7 @@ internal static class DocxPageMarkupTests
             [],
             [],
             [],
-            [new DocxParagraphElement(paragraph)],
-            [],
-            [])
+            [new DocxParagraphElement(paragraph)])
         {
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
@@ -594,9 +588,7 @@ internal static class DocxPageMarkupTests
             DocxRelatedStoryKind.Footnote,
             "/word/footnotes.xml",
             "27",
-            [new DocxParagraphElement(footnoteParagraph)],
-            [],
-            [], null);
+            [new DocxParagraphElement(footnoteParagraph)], null);
         DocxDocument document = new(
             612d,
             792d,
@@ -608,9 +600,7 @@ internal static class DocxPageMarkupTests
             [],
             [],
             [],
-            [new DocxParagraphElement(bodyParagraph)],
-            [],
-            [])
+            [new DocxParagraphElement(bodyParagraph)])
         {
             RelatedStories = [footnoteStory],
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
@@ -658,9 +648,7 @@ internal static class DocxPageMarkupTests
             DocxRelatedStoryKind.Endnote,
             "/word/endnotes.xml",
             "28",
-            [new DocxParagraphElement(endnoteParagraph)],
-            [],
-            [], null);
+            [new DocxParagraphElement(endnoteParagraph)], null);
         DocxDocument document = new(
             612d,
             792d,
@@ -672,9 +660,7 @@ internal static class DocxPageMarkupTests
             [],
             [],
             [],
-            [new DocxParagraphElement(bodyParagraph)],
-            [],
-            [])
+            [new DocxParagraphElement(bodyParagraph)])
         {
             RelatedStories = [endnoteStory],
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
@@ -722,9 +708,7 @@ internal static class DocxPageMarkupTests
             [drawing],
             [],
             [],
-            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Drawing anchor", 10d, 12d))],
-            [],
-            [])
+            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Drawing anchor", 10d, 12d))])
         {
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
@@ -774,9 +758,7 @@ internal static class DocxPageMarkupTests
             [],
             [],
             [],
-            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Body", 10d, 12d))],
-            [],
-            [])
+            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Body", 10d, 12d))])
         {
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };

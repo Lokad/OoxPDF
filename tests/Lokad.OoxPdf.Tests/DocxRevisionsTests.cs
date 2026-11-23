@@ -347,9 +347,7 @@ internal static class DocxRevisionsTests
             [textBoxDrawing, tableAnchorDrawing],
             [],
             [],
-            [new DocxParagraphElement(bodyParagraph), new DocxTableElement(anchorTable)],
-            [bodyParagraph],
-            [anchorTable])
+            [new DocxParagraphElement(bodyParagraph), new DocxTableElement(anchorTable)])
         {
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
@@ -704,9 +702,7 @@ internal static class DocxRevisionsTests
             [floatingDrawing],
             [],
             [],
-            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Drawing anchor", 10d, 12d))],
-            [],
-            [])
+            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Drawing anchor", 10d, 12d))])
         {
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
@@ -847,9 +843,7 @@ internal static class DocxRevisionsTests
             [],
             [],
             [],
-            [new DocxParagraphElement(spacedParagraph), new DocxParagraphElement(numberedParagraph)],
-            [spacedParagraph, numberedParagraph],
-            []);
+            [new DocxParagraphElement(spacedParagraph), new DocxParagraphElement(numberedParagraph)]);
         var renderer = new DocxRenderer(new DocxTests.SingleResolutionFontResolver(font.Value.Resolution), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
 
         DocxTextEmissionSnapshot snapshot = renderer.InspectTextEmission(document);
@@ -1003,9 +997,7 @@ internal static class DocxRevisionsTests
             [],
             [],
             [],
-            [new DocxParagraphElement(paragraph)],
-            [paragraph],
-            []);
+            [new DocxParagraphElement(paragraph)]);
         var renderer = new DocxRenderer(new DocxTests.SingleResolutionFontResolver(font.Value.Resolution), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
 
         DocxTextEmissionLineSnapshot line = renderer.InspectTextEmission(document).Lines.Single();

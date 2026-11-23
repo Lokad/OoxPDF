@@ -68,9 +68,7 @@ internal static partial class DocxHeaderFooterTests
             [],
             [],
             [],
-            [new DocxParagraphElement(body)],
-            [body],
-            []);
+            [new DocxParagraphElement(body)]);
 
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
 
@@ -125,7 +123,7 @@ internal static partial class DocxHeaderFooterTests
                     ["default"] = [SizedLine("Alpha", 12d), SizedLine("Beta", 15d), SizedLine("Gamma", 12d)]
                 }
             };
-            DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)], [body], []);
+            DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)]);
             DocxTextLineLayout[] lines = new DocxLayoutEngine(mode, scale)
                 .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
                 .Pages.Single().StaticTextLines.ToArray();
@@ -182,9 +180,7 @@ internal static partial class DocxHeaderFooterTests
             DocxRelatedStoryKind.Endnote,
             "/word/endnotes.xml",
             "5",
-            Enumerable.Range(0, 8).Select(_ => new DocxParagraphElement(endnoteParagraph)).Cast<DocxBodyElement>().ToArray(),
-            [],
-            [], null);
+            Enumerable.Range(0, 8).Select(_ => new DocxParagraphElement(endnoteParagraph)).Cast<DocxBodyElement>().ToArray(), null);
         DocxPageSettings settings = DocxPageSettings.Empty with
         {
             HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
@@ -203,9 +199,7 @@ internal static partial class DocxHeaderFooterTests
             [],
             [],
             [],
-            [new DocxParagraphElement(body)],
-            [body],
-            [])
+            [new DocxParagraphElement(body)])
         {
             RelatedStories = [endnoteStory]
         };
@@ -247,9 +241,7 @@ internal static partial class DocxHeaderFooterTests
             [],
             [],
             [],
-            [new DocxParagraphElement(body)],
-            [body],
-            []);
+            [new DocxParagraphElement(body)]);
 
         DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None));
 
@@ -282,9 +274,7 @@ internal static partial class DocxHeaderFooterTests
             [],
             [],
             [],
-            [new DocxParagraphElement(firstBody), new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null), new DocxParagraphElement(secondBody)],
-            [firstBody, secondBody],
-            []);
+            [new DocxParagraphElement(firstBody), new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null), new DocxParagraphElement(secondBody)]);
 
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
 
@@ -318,9 +308,7 @@ internal static partial class DocxHeaderFooterTests
             [],
             [],
             [],
-            [],
-            [],
-            [headerTable]);
+            []);
 
         PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 
@@ -375,8 +363,6 @@ internal static partial class DocxHeaderFooterTests
             [],
             [],
             [],
-            [],
-            [],
             []);
 
         PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
@@ -420,9 +406,7 @@ internal static partial class DocxHeaderFooterTests
             [],
             [],
             [],
-            [new DocxParagraphElement(firstBody), new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null), new DocxParagraphElement(secondBody)],
-            [firstBody, secondBody],
-            []);
+            [new DocxParagraphElement(firstBody), new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null), new DocxParagraphElement(secondBody)]);
 
         DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None));
 
@@ -468,9 +452,7 @@ internal static partial class DocxHeaderFooterTests
             [],
             [],
             [],
-            [new DocxParagraphElement(body)],
-            [body],
-            []);
+            [new DocxParagraphElement(body)]);
 
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
 
@@ -522,9 +504,7 @@ internal static partial class DocxHeaderFooterTests
             [],
             [],
             [],
-            [new DocxParagraphElement(body)],
-            [body],
-            []);
+            [new DocxParagraphElement(body)]);
 
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
 
@@ -609,9 +589,7 @@ internal static partial class DocxHeaderFooterTests
             [],
             [],
             [],
-            [new DocxParagraphElement(body)],
-            [body],
-            []);
+            [new DocxParagraphElement(body)]);
 
         DocxTextLineLayout[] staticLines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
@@ -1146,7 +1124,7 @@ internal static partial class DocxHeaderFooterTests
             HeaderDistancePoints = 20d,
             FooterDistancePoints = 20d
         };
-        DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)], [body], []);
+        DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)]);
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
         TestAssert.Equal(double.PositiveInfinity, layout.HeaderContentBottomByPage[0]);
     }
@@ -1180,7 +1158,7 @@ internal static partial class DocxHeaderFooterTests
                 ["default"] = [StaticPara("Fa"), StaticPara("Fb")]
             }
         };
-        DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)], [body], []);
+        DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)]);
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
         TestAssert.Equal(43.1667, Math.Round(layout.FooterContentTopByPage[0], 4));
     }
@@ -1215,7 +1193,7 @@ internal static partial class DocxHeaderFooterTests
                 ["default"] = [StaticPara("F")]
             }
         };
-        DocxDocument document = new(100d, 100d, 10d, 10d, 10d, 10d, settings, [], [], [], [new DocxParagraphElement(first), new DocxParagraphElement(second)], [first, second], []);
+        DocxDocument document = new(100d, 100d, 10d, 10d, 10d, 10d, settings, [], [], [], [new DocxParagraphElement(first), new DocxParagraphElement(second)]);
         var footerMap = new Dictionary<int, double> { [0] = 60d };
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None, null, null, footerMap);
         TestAssert.Equal(2, layout.Pages.Count);
@@ -1267,7 +1245,7 @@ internal static partial class DocxHeaderFooterTests
                 }
             };
             DocxParagraph body = BodyPara(bodyAfterPoints, bodyAfterValue);
-            DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)], [body], []);
+            DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)]);
             DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
             return layout.Pages[0].StaticTextLines.Where(line => line.Story?.Kind == DocxStoryKind.Footer).Single().BaselineY;
         }
@@ -1305,7 +1283,7 @@ internal static partial class DocxHeaderFooterTests
                     ["default"] = [FootPara(beforePoints, beforeValue)]
                 }
             };
-            DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)], [body], []);
+            DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)]);
             DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
             return layout.Pages[0].StaticTextLines.Where(line => line.Story?.Kind == DocxStoryKind.Footer).Single().BaselineY;
         }
@@ -1380,7 +1358,7 @@ internal static partial class DocxHeaderFooterTests
                 ["default"] = [StaticPara("H")]
             }
         };
-        DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)], [body], []);
+        DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)]);
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
         TestAssert.Equal(0, layout.Pages[0].StaticTextLines.Where(line => line.Story?.Kind == DocxStoryKind.Header).Count());
     }
@@ -1426,7 +1404,7 @@ internal static partial class DocxHeaderFooterTests
                 ["default"] = [StaticPara("H")]
             }
         };
-        DocxDocument document = new(100d, 100d, 10d, 10d, 10d, 10d, settings, [], [], [], [new DocxParagraphElement(body)], [body], []);
+        DocxDocument document = new(100d, 100d, 10d, 10d, 10d, 10d, settings, [], [], [], [new DocxParagraphElement(body)]);
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
         TestAssert.True(layout.Pages.Count > 1, "The long body should paginate.");
         TestAssert.Equal(1, layout.Pages[0].StaticTextLines.Where(line => line.Story?.Kind == DocxStoryKind.Header).Count());
@@ -1461,7 +1439,7 @@ internal static partial class DocxHeaderFooterTests
                 ["default"] = [StaticPara("Ha"), StaticPara("Hb"), StaticPara("Hc")]
             }
         };
-        DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)], [body], []);
+        DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)]);
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
         TestAssert.Equal(145.25, Math.Round(layout.HeaderContentBottomByPage[0], 4));
     }
@@ -1507,7 +1485,7 @@ internal static partial class DocxHeaderFooterTests
                 ["default"] = [StaticPara("Ha"), StaticPara("Hb"), StaticPara("Hc")]
             }
         };
-        DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)], [body], []);
+        DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)]);
         var displacement = new Dictionary<int, double> { [0] = 34.75d };
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None, null, displacement);
         DocxTextLineLayout bodyLine = layout.Pages[0].Items.OfType<DocxTextLineLayout>().Single();
@@ -1556,7 +1534,7 @@ internal static partial class DocxHeaderFooterTests
                 ["default"] = [HeaderPara("Ha", 0d, "0"), HeaderPara("Hb", 24d, "480")]
             }
         };
-        DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)], [body], []);
+        DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)]);
         DocxLayout undisplaced = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
         double headerBottom = undisplaced.HeaderContentBottomByPage[0];
         TestAssert.Equal(132.8333, Math.Round(headerBottom, 4));
@@ -1587,7 +1565,7 @@ internal static partial class DocxHeaderFooterTests
             DocxParagraphKeepRules.Empty,
             null);
         DocxPageSettings settings = DocxPageSettings.Empty;
-        DocxDocument document = new(100d, 100d, 10d, 10d, 10d, 10d, settings, [], [], [], [new DocxParagraphElement(body)], [body], []);
+        DocxDocument document = new(100d, 100d, 10d, 10d, 10d, 10d, settings, [], [], [], [new DocxParagraphElement(body)]);
         var headerMap = new Dictionary<int, double> { [0] = 11.5833d, [1] = 0d };
         var footerMap = new Dictionary<int, double> { [0] = 60d, [1] = 0d };
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None, null, headerMap, footerMap);
@@ -1636,7 +1614,7 @@ internal static partial class DocxHeaderFooterTests
                 ["default"] = [StaticPara("H")]
             }
         };
-        DocxDocument document = new(100d, 100d, 10d, 10d, 10d, 10d, settings, [], [], [], [new DocxParagraphElement(body)], [body], []);
+        DocxDocument document = new(100d, 100d, 10d, 10d, 10d, 10d, settings, [], [], [], [new DocxParagraphElement(body)]);
         var displacement = new Dictionary<int, double> { [0] = 11.5833d };
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None, null, displacement);
         TestAssert.True(layout.Pages.Count > 1, "The long body should paginate.");
@@ -1674,7 +1652,7 @@ internal static partial class DocxHeaderFooterTests
                 ["default"] = [StaticPara("Ha"), StaticPara("Hb")]
             }
         };
-        DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)], [body], []);
+        DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)]);
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
         DocxTextLineLayout[] headerLines = layout.Pages[0].StaticTextLines.Where(line => line.Story?.Kind == DocxStoryKind.Header).ToArray();
         TestAssert.Equal(2, headerLines.Length);
@@ -1713,7 +1691,7 @@ internal static partial class DocxHeaderFooterTests
                 ["default"] = [StaticPara("Fa"), StaticPara("Fb")]
             }
         };
-        DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)], [body], []);
+        DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)]);
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
         DocxTextLineLayout[] footerLines = layout.Pages[0].StaticTextLines.Where(line => line.Story?.Kind == DocxStoryKind.Footer).ToArray();
         TestAssert.Equal(2, footerLines.Length);
@@ -1751,7 +1729,7 @@ internal static partial class DocxHeaderFooterTests
                 ["default"] = [StaticPara("Fa", 10d), StaticPara("Fb", 16d)]
             }
         };
-        DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)], [body], []);
+        DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)]);
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
         DocxTextLineLayout[] footerLines = layout.Pages[0].StaticTextLines.Where(line => line.Story?.Kind == DocxStoryKind.Footer).ToArray();
         TestAssert.Equal(2, footerLines.Length);
@@ -1790,7 +1768,7 @@ internal static partial class DocxHeaderFooterTests
                 ["default"] = [StaticPara("Ha"), StaticPara("Hb")]
             }
         };
-        DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)], [body], []);
+        DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)]);
         var raw = new DocxTests.FamilyWidthTextMeasurer();
         var scaled = new DocxRenderer.ScaledDocxTextMeasurer(raw, 0.76d, 0.79359971328d);
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, 0.76d).Create(document, scaled, CancellationToken.None, raw);
@@ -1833,7 +1811,7 @@ internal static partial class DocxHeaderFooterTests
                 ["default"] = [StaticPara("Ha"), StaticPara("Hb")]
             }
         };
-        DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)], [body], []);
+        DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)]);
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
         DocxTextLineLayout[] headerLines = layout.Pages[0].StaticTextLines.Where(line => line.Story?.Kind == DocxStoryKind.Header).ToArray();
         TestAssert.Equal(2, headerLines.Length);
@@ -1889,7 +1867,7 @@ internal static partial class DocxHeaderFooterTests
                 ["default"] = [header]
             }
         };
-        DocxDocument document = new(200d, 200d, 10d, 10d, 10d, 10d, settings, [], [], [], [new DocxParagraphElement(body)], [body], []);
+        DocxDocument document = new(200d, 200d, 10d, 10d, 10d, 10d, settings, [], [], [], [new DocxParagraphElement(body)]);
         var resolver = new StaticHheaFontResolver();
         DocxFontPlan fontPlan = DocxFontPlan.Create(document, resolver, CancellationToken.None);
         var measurer = DocxFontPlanTextMeasurer.CreateAsync(fontPlan, resolver.Resolve(new FontRequest("HheaFace")), CancellationToken.None, resolver).GetAwaiter().GetResult();

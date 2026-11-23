@@ -855,9 +855,7 @@ internal static class DocxImagesTests
             DocxRelatedStoryKind.Footnote,
             "/word/footnotes.xml",
             "42",
-            [new DocxParagraphElement(footnoteParagraph)],
-            [],
-            [], null)
+            [new DocxParagraphElement(footnoteParagraph)], null)
         {
             FloatingDrawings = [footnoteDrawing]
         };
@@ -872,9 +870,7 @@ internal static class DocxImagesTests
             [],
             [],
             [],
-            [new DocxParagraphElement(body)],
-            [body],
-            [])
+            [new DocxParagraphElement(body)])
         {
             RelatedStories = [footnoteStory]
         };
@@ -942,9 +938,7 @@ internal static class DocxImagesTests
             DocxRelatedStoryKind.Comment,
             "/word/comments.xml",
             "9",
-            [new DocxParagraphElement(imageParagraph)],
-            [],
-            [], null);
+            [new DocxParagraphElement(imageParagraph)], null);
         DocxDocument document = new DocxDocument(612d, 792d)
         {
             BodyElements = [new DocxParagraphElement(bodyParagraph)],
@@ -1067,9 +1061,7 @@ internal static class DocxImagesTests
             [floatingDrawing],
             [],
             [],
-            [new DocxParagraphElement(bodyParagraph)],
-            [],
-            [])
+            [new DocxParagraphElement(bodyParagraph)])
         {
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
@@ -1169,9 +1161,7 @@ internal static class DocxImagesTests
             [lowDrawing],
             [],
             [],
-            [new DocxParagraphElement(bodyParagraph)],
-            [],
-            [])
+            [new DocxParagraphElement(bodyParagraph)])
         {
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
@@ -1300,9 +1290,7 @@ internal static class DocxImagesTests
             [],
             [],
             [],
-            [new DocxParagraphElement(hostParagraph)],
-            [],
-            [])
+            [new DocxParagraphElement(hostParagraph)])
         {
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
@@ -1344,9 +1332,7 @@ internal static class DocxImagesTests
             [],
             [],
             [],
-            [new DocxTableElement(table)],
-            [],
-            [table])
+            [new DocxTableElement(table)])
         {
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
@@ -1403,9 +1389,7 @@ internal static class DocxImagesTests
             [],
             [],
             [],
-            [new DocxTableElement(table)],
-            [],
-            [table])
+            [new DocxTableElement(table)])
         {
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
@@ -1454,9 +1438,7 @@ internal static class DocxImagesTests
             [],
             [],
             [],
-            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Body", 10d, 12d))],
-            [],
-            []);
+            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Body", 10d, 12d))]);
 
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);

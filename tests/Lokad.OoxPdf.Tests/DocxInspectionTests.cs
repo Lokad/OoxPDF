@@ -714,9 +714,7 @@ internal static partial class DocxInspectionTests
             [DocxTests.CreateFloatingTextBoxDrawing([new DocxParagraphElement(textBoxParagraph)])],
             [],
             [],
-            [new DocxParagraphElement(bodyParagraph)],
-            [],
-            [])
+            [new DocxParagraphElement(bodyParagraph)])
         {
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
@@ -1064,9 +1062,7 @@ TestAssert.True(layoutSnapshot.Pages.Sum(page => page.PlacedRelatedStoryCount) =
             DocxRelatedStoryKind.Footnote,
             "/word/footnotes.xml",
             "23",
-            [new DocxParagraphElement(footnoteParagraph)],
-            [],
-            [], null);
+            [new DocxParagraphElement(footnoteParagraph)], null);
         var document = new DocxDocument(
             612d,
             792d,
@@ -1082,9 +1078,7 @@ TestAssert.True(layoutSnapshot.Pages.Sum(page => page.PlacedRelatedStoryCount) =
                 new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Wide first section", 10d, 12d)),
                 new DocxSectionBreakElement(wideFirstSection, DocxSectionBreakType.NextPage, null, null, null, []),
                 new DocxParagraphElement(anchor)
-            ],
-            [],
-            [])
+            ])
         {
             RelatedStories = [footnoteStory]
         };
@@ -1122,9 +1116,7 @@ TestAssert.True(layoutSnapshot.Pages.Sum(page => page.PlacedRelatedStoryCount) =
             DocxRelatedStoryKind.Endnote,
             "/word/endnotes.xml",
             "24",
-            Enumerable.Range(0, 8).Select(_ => new DocxParagraphElement(endnoteParagraph)).Cast<DocxBodyElement>().ToArray(),
-            [],
-            [], null);
+            Enumerable.Range(0, 8).Select(_ => new DocxParagraphElement(endnoteParagraph)).Cast<DocxBodyElement>().ToArray(), null);
         DocxPageSettings firstSectionSettings = DocxPageSettings.Empty with
         {
             EndnoteReferenceSettings = DocxNoteReferenceSettings.Empty with { PositionValue = "sectEnd" }
@@ -1144,9 +1136,7 @@ TestAssert.True(layoutSnapshot.Pages.Sum(page => page.PlacedRelatedStoryCount) =
                 new DocxParagraphElement(firstSectionParagraph),
                 new DocxSectionBreakElement(firstSectionSettings, DocxSectionBreakType.NextPage, null, null, null, []),
                 new DocxParagraphElement(secondSectionParagraph)
-            ],
-            [firstSectionParagraph, secondSectionParagraph],
-            [])
+            ])
         {
             RelatedStories = [endnoteStory]
         };

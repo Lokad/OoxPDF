@@ -33,7 +33,7 @@ internal static partial class DocxPageFootnoteNumberingTests
         var paragraph = story.Paragraphs[0];
         var mismatched = paragraph with { Runs = [paragraph.Runs[0] with { Text = "wrong source marker" }, .. paragraph.Runs.Skip(1)] };
         var invalid = numbered with { RelatedStories = numbered.RelatedStories.Select(item => ReferenceEquals(item, story)
-            ? item with { FallbackParagraphs = [mismatched], BodyElements = [new DocxParagraphElement(mismatched)] } : item).ToArray() };
+            ? item with { BodyElements = [new DocxParagraphElement(mismatched)] } : item).ToArray() };
         TestAssert.True(!DocxPageFootnoteNumbering.TryGetReferencePages(invalid, numberedLayout, out _),
             "Complete page ownership does not excuse a mismatched note-source marker.");
     }

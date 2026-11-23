@@ -363,7 +363,7 @@ internal static partial class DocxFootnotesTests
 
     public static void DocxAtomicFootnoteHeadIgnoresFutureContinuationRule()
     {
-        var story = new DocxRelatedStory(DocxRelatedStoryKind.Footnote, "/word/footnotes.xml", "1", [], [], [], null);
+        var story = new DocxRelatedStory(DocxRelatedStoryKind.Footnote, "/word/footnotes.xml", "1", [], null);
         var run = new DocxTextRun("Note", 10d, null, false, false, false, null, null);
         var line = new DocxTextLineLayout("Note", run, 10d, 0d, -10d, 100d, [], null, null, null, null, 12d,
             null, null, false, null, null, null, null, null, null, null, null, null, null, null, null, false);

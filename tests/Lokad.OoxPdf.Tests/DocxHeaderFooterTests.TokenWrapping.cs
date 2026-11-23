@@ -27,7 +27,7 @@ internal static partial class DocxHeaderFooterTests
                 FooterParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>> { ["default"] = [paragraph] }
             };
             var document = new DocxDocument(160, 1000, 10, 10, 300, 300, settings, [], [], [],
-                [new DocxParagraphElement(paragraph)], [], []);
+                [new DocxParagraphElement(paragraph)]);
             DocxLayoutPage page = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
                 .Create(document, new DocxTests.FamilyWidthTextMeasurer(), default).Pages.Single();
             var body = page.Items.OfType<DocxTextLineLayout>().ToArray();

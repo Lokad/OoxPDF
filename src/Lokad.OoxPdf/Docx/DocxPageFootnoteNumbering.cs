@@ -121,16 +121,7 @@ internal static class DocxPageFootnoteNumbering
             replacements.Add(p, p with { Runs = [p.Runs[0] with { Text = label.After }, .. p.Runs.Skip(1)] });
         }
         var publication = new DocxParagraphReplacements(replacements, cancellationToken);
-        numbered = source with {
-            BodyElements = publication.ReplaceElements(source.BodyElements),
-            FallbackParagraphs = source.FallbackParagraphs.Select(publication.Replace).ToArray(),
-            FallbackTables = source.FallbackTables.Select(publication.ReplaceTable).ToArray(),
-            RelatedStories = source.RelatedStories.Select(story => story with {
-                BodyElements = publication.ReplaceElements(story.BodyElements),
-                FallbackParagraphs = story.FallbackParagraphs.Select(publication.Replace).ToArray(),
-                FallbackTables = story.FallbackTables.Select(publication.ReplaceTable).ToArray()
-            }).ToArray()
-        };
+        numbered = publication.Replace(source);
         referencePages = pages;
         return true;
     }
