@@ -84,15 +84,25 @@ internal static partial class SvgTextTests
             string transparent = authoredStrokes ? """stroke="blue" style="stroke-opacity:0%" """ : "";
             return Svg(definitions + $"""
                 <text x="10" y="24" font-size="16" fill="#112233" {direct}>ONE</text>
-                <g {inherited}><text x="10" y="49" font-size="16" fill="#112233" {localWidth}>TWO</text></g>
-                <g {transparent}><text x="10" y="74" font-size="16" fill="#112233">SIX</text></g>
+                <g {inherited}><text x="10" y="49" font-size="16" fill="#114499" {localWidth}>TWO</text></g>
+                <g {transparent}><text x="10" y="74" font-size="16" fill="#771188">SIX</text></g>
                 """);
         }
-        AssertSvgPaintInBothFormats(Picture(false), Picture(true), pdf => TestAssert.Equal(9, LabelPaths(pdf)), "0 1 0 rg");
+        const string inheritedInk = "0.067 0.267 0.6 rg";
+        const string transparentStrokeFill = "0.467 0.067 0.533 rg";
+        AssertSvgPaintInBothFormats(Picture(false), Picture(true), pdf =>
+        {
+            TestAssert.Equal(3, LabelPaths(pdf));
+            TestAssert.Equal(3, LabelPaths(pdf, inheritedInk));
+            TestAssert.Equal(3, LabelPaths(pdf, transparentStrokeFill));
+        }, "0 1 0 rg");
 
         var diagnostics = new List<OoxPdfDiagnostic>();
         var active = Paint(Picture(true, "stroke-width=\"1px\""), diagnostics);
-        TestAssert.Equal(6, LabelPaths(active.ToString()));
+        string content = active.ToString();
+        TestAssert.Equal(3, LabelPaths(content));
+        TestAssert.Equal(3, LabelPaths(content, transparentStrokeFill));
+        TestAssert.DoesNotContain(inheritedInk, content);
         TestAssert.Equal(1, diagnostics.Count);
         TestAssert.Equal("SVG_UNSUPPORTED_CONTENT", diagnostics[0].Id);
     }
