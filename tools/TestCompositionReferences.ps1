@@ -12,7 +12,9 @@ $scripts=Join-Path $repo 'tools'
 New-Item -ItemType Directory -Path $scripts -Force | Out-Null
 $script=Join-Path $scripts 'ExportCompositionReferences.ps1'
 Copy-Item -LiteralPath $ExportScript -Destination $script
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'CompositionReferenceIdentity.ps1') -Destination $scripts
+foreach ($dependency in @('CompositionReferenceIdentity.ps1','CompositionOutcomes.ps1','PdfTextGeometry.ps1')) {
+    Copy-Item -LiteralPath (Join-Path $PSScriptRoot $dependency) -Destination $scripts
+}
 @'
 param($InputDocx,$OutputPdf,[bool]$ShowRevisions,$RevisionsView,$MarkupMode,$RevisionsMode,[bool]$ShowComments,[bool]$ShowFormatChanges,[bool]$ShowInsertionsAndDeletions,[switch]$RejectAll)
 Add-Content -LiteralPath (Join-Path $PSScriptRoot 'calls.txt') $InputDocx
@@ -128,18 +130,22 @@ foreach ($fault in @('reference-kind','capture-fonts')) {
 }
 @'
 param($InputPath,$OutputDirectory,[switch]$SkipBuild,[switch]$SkipRaster)
-if (!$SkipRaster) {throw 'PDF-only composition references must defer rasterization to comparisons'}
+if (!$SkipRaster -or $PSBoundParameters.ContainsKey('SkipBuild')) {
+    throw 'PDF-only composition references must defer rasterization and its build settings to comparisons'
+}
 Add-Content (Join-Path $PSScriptRoot 'pptx-calls.txt') $InputPath
 [IO.File]::WriteAllText((Join-Path $OutputDirectory 'reference.pdf'),'Fake PowerPoint PDF')
 '@ | Set-Content (Join-Path $scripts 'RenderReference.ps1')
 $pptx=Join-Path $repo 'slide.pptx'
 'Fake PPTX input' | Set-Content $pptx
-ConvertTo-Json -InputObject @(@{Id='slide';Input='slide.pptx';Sha256=(Get-FileHash $pptx).Hash}) | Set-Content $manifest
+ConvertTo-Json -InputObject @($documents[0],@{Id='slide';Input='slide.pptx';Sha256=(Get-FileHash $pptx).Hash}) | Set-Content $manifest
 $pptxReference=Join-Path $OutputDirectory 'pptx-reference'
-& $script -Manifest $manifest -OutputDirectory $pptxReference -SkipBuild | Out-Null
-& $script -Manifest $manifest -OutputDirectory $pptxReference -SkipBuild | Out-Null
+& $script -Manifest $manifest -OutputDirectory $pptxReference -DocxPreset Final | Out-Null
+& $script -Manifest $manifest -OutputDirectory $pptxReference -DocxPreset Final | Out-Null
 if (@(Get-Content (Join-Path $scripts 'pptx-calls.txt')).Count -ne 1) {throw 'Pinned PPTX PDF export was repeated'}
 if (!(Test-Path (Join-Path $pptxReference 'slide-presentation/source-identity.json'))) {throw 'PPTX PDF reference was not pinned'}
+if (!(Test-Path (Join-Path $pptxReference 'first-final-preserve/source-identity.json')) -or
+    (Test-Path (Join-Path $pptxReference 'first-all-word-compatible'))) {throw 'Mixed manifest did not honor the DOCX Final preset'}
 $passed+='pptx-pdf-only-export-and-cache-reuse'
 @{Passed=$passed;OfficeInvocations=0;LibraryBuilds=0;Scope='Fake DOCX/PPTX/PDF inputs; view and provenance orchestration only'} |
     ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $OutputDirectory 'evidence.json')

@@ -4,13 +4,13 @@ param(
     [Parameter(Mandatory=$true)] [string] $Manifest,
     [Parameter(Mandatory=$true)] [string] $OutputDirectory,
     [ValidateSet('Both','Final','Review')] [string] $DocxPreset = 'Both',
-    [switch] $SkipBuild,
     [ValidateSet('OfficePdf','OfficeImage')] [string] $ReferenceKind = 'OfficePdf',
     [int] $Dpi = 144,
     [string] $FontIdentity
 )
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'CompositionReferenceIdentity.ps1')
+. (Join-Path $PSScriptRoot 'CompositionOutcomes.ps1')
 if ($ReferenceKind -eq 'OfficeImage') { . (Join-Path $PSScriptRoot 'OfficeReferenceCapture.ps1') }
 $repo = Split-Path -Parent $PSScriptRoot
 $jobs = @()
@@ -18,10 +18,8 @@ $jobs = @()
 foreach ($document in @(Get-Content -LiteralPath $Manifest -Raw | ConvertFrom-Json)) {
     $inputPath = (Resolve-Path -LiteralPath (Join-Path $repo $document.Input)).Path
     if ((Get-FileHash $inputPath).Hash -ne $document.Sha256) { throw ('Reference input differs: ' + $document.Id) }
-    $docx = $inputPath.EndsWith('.docx',[StringComparison]::OrdinalIgnoreCase)
-    $modes = if ($docx) { @('final-preserve','all-word-compatible') } else { @('presentation') }
-    if ($docx -and $DocxPreset -ne 'Both') { $modes = if ($DocxPreset -eq 'Final') { @('final-preserve') } else { @('all-word-compatible') } }
-    foreach ($mode in $modes) {
+    foreach ($mode in (Get-PortfolioModes $document $DocxPreset)) {
+        $docx = $mode -cne 'presentation'
         $folder = Join-Path $OutputDirectory ($document.Id+'-'+$mode)
         $identity = Join-Path $folder 'source-identity.json'
         $pdf = Join-Path $folder 'reference.pdf'
@@ -60,7 +58,7 @@ foreach ($job in $jobs) {
         else {
             # Publish the PDF reference once. Comparisons own the verified raster
             # derivative and bind their explicit frozen validation tools.
-            & (Join-Path $PSScriptRoot 'RenderReference.ps1') -InputPath $inputPath -OutputDirectory $folder -SkipBuild:$SkipBuild -SkipRaster *> (Join-Path $folder 'export.log')
+            & (Join-Path $PSScriptRoot 'RenderReference.ps1') -InputPath $inputPath -OutputDirectory $folder -SkipRaster *> $job.Log
         }
         $pin = [ordered]@{Id=$document.Id;Mode=$mode;InputSha256=$document.Sha256;PdfSha256=(Get-FileHash $pdf).Hash;ReferenceKind=$ReferenceKind}
         if ($ReferenceKind -eq 'OfficeImage') {
