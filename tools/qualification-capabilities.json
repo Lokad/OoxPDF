@@ -18679,7 +18679,7 @@
     "PptxNumberingWrapPreservesCountersPitchAndContinuationMargins",
     "PptxNumberingWrapRetainsCharacterAndExcludedFallbacks",
     "PptxPlaceholderMatchingPrefersExactThenIndex",
-    "PptxPrivateLayoutDiagnosticWhenRequested",
+    "PptxLayoutDiagnosticBindsSceneAndFramesToRequestedSlide",
     "PptxSceneChartPartRecordsEnforceDefinedUndefined",
     "PptxSceneNodeFactoriesRejectInvalidCombinations",
     "PptxSceneTableStylePreservesConditionalFormatFlagTokens",

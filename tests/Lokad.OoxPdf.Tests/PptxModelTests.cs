@@ -1285,6 +1285,68 @@ internal static class PptxModelTests
         TestAssert.True(Math.Abs(paragraphSpan.GlyphSpan.NaturalWidth - paragraphGlyphRun.Width) < 0.01d, "Expected layout-owned glyph span width to match the emitted glyph-run width before PDF text operators are written.");
     }
 
+    public static void PptxLayoutDiagnosticBindsSceneAndFramesToRequestedSlide()
+    {
+        static string Transform(int offset) => $"""
+            <a:xfrm><a:off x="{offset}" y="0"/><a:ext cx="1270000" cy="1270000"/>
+              <a:chOff x="0" y="0"/><a:chExt cx="1270000" cy="1270000"/></a:xfrm>
+            """;
+        static string Slide(string text, string transform, string extraGroup = "") => $"""
+            <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+                   xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <p:cSld><p:spTree><p:grpSp>
+                <p:grpSpPr>{transform}</p:grpSpPr>
+                <p:sp>
+                  <p:spPr><a:xfrm><a:off x="254000" y="381000"/><a:ext cx="2540000" cy="381000"/></a:xfrm>
+                    <a:prstGeom prst="rect"/></p:spPr>
+                  <p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>{text}</a:t></a:r></a:p></p:txBody>
+                </p:sp>
+              </p:grpSp>{extraGroup}</p:spTree></p:cSld>
+            </p:sld>
+            """;
+        using var stream = TestFixtures.CreateZipPackage(new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = PptxTests.BasicContentTypes().Replace("</Types>", """
+                <Override PartName="/ppt/slides/slide2.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
+                </Types>
+                """, StringComparison.Ordinal),
+            ["_rels/.rels"] = PptxTests.PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship().Replace("</Relationships>", """
+                <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide2.xml"/>
+                </Relationships>
+                """, StringComparison.Ordinal),
+            ["ppt/presentation.xml"] = PptxTests.BasicPresentation().Replace("</p:sldIdLst>",
+                """<p:sldId id="257" r:id="rId2"/></p:sldIdLst>""", StringComparison.Ordinal),
+            ["ppt/slides/slide1.xml"] = Slide("First", "", $"<p:grpSp><p:grpSpPr>{Transform(0)}</p:grpSpPr></p:grpSp>"),
+            ["ppt/slides/slide2.xml"] = Slide("Second", Transform(1270000))
+        });
+        using var package = OoxPackage.Open(stream, default);
+        PptxDocument document = new PptxReader().Read(package, default);
+
+        double firstTextX = CheckSlide(0, "/ppt/slides/slide1.xml", "First", [false, true]);
+        double secondTextX = CheckSlide(1, "/ppt/slides/slide2.xml", "Second", [true]);
+        TestAssert.True(Math.Abs(secondTextX - firstTextX - 100d) < 0.001d,
+            "The second frame should move by the authored group offset.");
+
+        double CheckSlide(int index, string partName, string text, bool[] transforms)
+        {
+            JsonElement report = JsonSerializer.SerializeToElement(CreatePrivateLayoutDiagnostic(document, package, index, "synthetic.pptx"));
+            TestAssert.Equal(index, report.GetProperty("slideIndex").GetInt32());
+            JsonElement scene = report.GetProperty("scene");
+            TestAssert.Equal(partName, scene.GetProperty("PartName").GetString()!);
+            TestAssert.Equal(index, scene.GetProperty("Index").GetInt32());
+            bool[] reportedTransforms = scene.GetProperty("nodes").EnumerateArray()
+                .Where(node => node.GetProperty("Kind").GetString() == "Group" && node.GetProperty("source").GetString() == "slide")
+                .Select(node => node.GetProperty("HasGroupTransform").GetBoolean()).ToArray();
+            TestAssert.True(transforms.SequenceEqual(reportedTransforms), "Group transform presence follows the authored XML.");
+            JsonElement frame = report.GetProperty("frames").EnumerateArray().Single();
+            JsonElement model = frame.GetProperty("model");
+            JsonElement run = model.GetProperty("paragraphs")[0].GetProperty("runs")[0];
+            TestAssert.Equal(PptxTests.ShortHash(text), run.GetProperty("hash").GetString()!);
+            return model.GetProperty("TextX").GetDouble();
+        }
+    }
+
     public static void PptxPrivateLayoutDiagnosticWhenRequested()
     {
         string? input = Environment.GetEnvironmentVariable("OOXPDF_PRIVATE_PPTX_PATH");
@@ -1298,93 +1360,29 @@ internal static class PptxModelTests
             ? parsed
             : 0;
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        using OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
+        object report = CreatePrivateLayoutDiagnostic(document, package, slideIndex, Path.GetFileName(input));
+        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(output))!);
+        File.WriteAllText(output, JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true }));
+    }
+
+    private static object CreatePrivateLayoutDiagnostic(PptxDocument document, OoxPackage package, int slideIndex, string input)
+    {
         PptxScene scene = new PptxSceneBuilder().Build(document, package, default);
         var fonts = new PresentationFontResolver(null);
         PptxTextLayoutSnapshot layout = PptxRenderer.InspectTextLayout(document, package, slideIndex, scene, fonts);
         PptxTextFlowSnapshot flow = PptxRenderer.InspectTextFlow(document, package, slideIndex, scene, fonts);
         PptxTextFrameModelSnapshot[] models = PptxRenderer.InspectTextFrameModels(document, package, slideIndex, scene, fonts).ToArray();
         IReadOnlyList<PptxTextGlyphRunSnapshot> glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, slideIndex, scene, fonts);
-        PptxSceneSlide? sceneSlide = scene.Slides.FirstOrDefault(slide => slide.Index == slideIndex + 1);
+        PptxSceneSlide? sceneSlide = scene.Slides.FirstOrDefault(slide => slide.Index == slideIndex);
 
-        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(output))!);
-        object[] FlattenSceneNodes(IReadOnlyList<PptxSceneNode> nodes, string source)
-        {
-            return nodes
-                .SelectMany(node => FlattenSceneNode(node, source))
-                .ToArray();
-        }
+        IEnumerable<object> FlattenSceneNodes(IReadOnlyList<PptxSceneNode> nodes, string source) =>
+            nodes.SelectMany(node => FlattenSceneNode(node, source));
 
         IEnumerable<object> FlattenSceneNode(PptxSceneNode node, string source)
         {
-            PptxSceneNodeSnapshot snapshot = PptxRenderer.InspectSceneNode(node);
-            yield return new
-            {
-                source,
-                snapshot.Kind,
-                snapshot.IsPlaceholder,
-                snapshot.HasBounds,
-                snapshot.RotationDegrees,
-                snapshot.FlipHorizontal,
-                snapshot.FlipVertical,
-                snapshot.ShapePreset,
-                snapshot.ShapeHasCustomGeometry,
-                snapshot.ShapeHasUnsupportedCustomGeometry,
-                snapshot.ShapeHasGradientSource,
-                snapshot.ShapeHasUnsupportedGradient,
-                snapshot.ShapeHasPatternSource,
-                snapshot.ShapeHasUnsupportedPattern,
-                snapshot.ShapeNoFill,
-                snapshot.ShapeLineNoFill,
-                snapshot.ShapeHasEffectList,
-                snapshot.ShapeHasEffectDag,
-                snapshot.ShapeUnsupportedEffectCount,
-                snapshot.ShapeUnsupportedEffectNames,
-                snapshot.HasTextBody,
-                snapshot.TextParagraphCount,
-                snapshot.TextRunCount,
-                snapshot.TextHasUnsupportedOrientation,
-                snapshot.TextHasUnsupportedVerticalOverflow,
-                snapshot.HasPicture,
-                snapshot.PictureRecolorKind,
-                snapshot.HasTable,
-                snapshot.TableRowCount,
-                snapshot.TableCellCount,
-                snapshot.HasChart,
-                snapshot.ChartPlotCount,
-                snapshot.ChartAxisCount,
-                snapshot.ChartSeriesCount,
-                snapshot.ChartSeriesMarkerCount,
-                snapshot.ChartSeriesPointStyleCount,
-                snapshot.ChartSeriesPointExplosionCount,
-                snapshot.ChartDataLabelsDefinedCount,
-                snapshot.ChartDataLabelOverrideCount,
-                snapshot.ChartDataLabelManualLayoutCount,
-                snapshot.ChartTextBodyOrientationCount,
-                snapshot.ChartTextBodyVerticalOverflowCount,
-                snapshot.HasChartColorStyle,
-                snapshot.ChartColorStyleMethod,
-                snapshot.ChartColorStyleColorCount,
-                snapshot.ChartColorStyleVariationCount,
-                snapshot.ChartColorStyleDeclarationCount,
-                snapshot.ChartColorStyleRootDeclarationCount,
-                snapshot.ChartColorStyleResolvedDeclarationCount,
-                snapshot.ChartColorStyleDeclarationKinds,
-                snapshot.HasChartStylePart,
-                snapshot.ChartStyleEntryCount,
-                snapshot.ChartStyleEntryRoles,
-                snapshot.ChartStyleEntrySourceIndexes,
-                snapshot.ChartStyleEntryNamespaceUris,
-                snapshot.ChartStyleShapeStyleCount,
-                snapshot.ChartStyleShapeFillCount,
-                snapshot.ChartStyleFillReferenceCount,
-                snapshot.ChartStyleResolvedFillReferenceCount,
-                snapshot.ChartStyleEffectReferenceCount,
-                snapshot.ChartStyleResolvedEffectReferenceCount,
-                snapshot.ChartStyleFontReferenceCount,
-                snapshot.HasGroupTransform
-            };
+            yield return SummarizeSceneNode(node, source);
 
             foreach (PptxSceneNode child in node.Children)
             {
@@ -1581,9 +1579,9 @@ internal static class PptxModelTests
             })
         });
 
-        File.WriteAllText(output, JsonSerializer.Serialize(new
+        return new
         {
-            input = Path.GetFileName(input),
+            input,
             slideIndex,
             frameCount = layout.Frames.Count,
             scene = sceneSummary,
@@ -1606,7 +1604,168 @@ internal static class PptxModelTests
                     .Count()
             }),
             frames
-        }, new JsonSerializerOptions { WriteIndented = true }));
+        };
+    }
+
+    private static object SummarizeSceneNode(PptxSceneNode node, string source)
+    {
+        int textParagraphCount = node.TextBody?.Paragraphs.Count ?? 0;
+        int textRunCount = node.TextBody?.Paragraphs.Sum(paragraph => paragraph.Runs.Count) ?? 0;
+        int tableRowCount = node.Table?.Rows.Count ?? 0;
+        int tableCellCount = node.Table?.Rows.Sum(row => row.Cells.Count) ?? 0;
+        PptxSceneBounds? bounds = node.Bounds;
+        PptxSceneImageRecolor? recolor = node.Picture?.Recolor;
+        IReadOnlyList<PptxSceneChartPlot> chartPlots = node.Chart?.Plots ?? [];
+        IReadOnlyList<PptxSceneChartSeries> chartSeries = chartPlots
+            .SelectMany(plot => plot.Series)
+            .ToArray();
+        IReadOnlyList<PptxSceneChartTextBodyProperties> chartTextBodyProperties = ReadChartTextBodyProperties(node.Chart);
+        IReadOnlyList<PptxSceneChartColorDeclaration> chartColorDeclarations =
+            node.Chart?.ColorStyle.Declarations ?? [];
+        IReadOnlyList<string> chartColorDeclarationKinds = chartColorDeclarations
+            .Select(declaration => declaration.Kind)
+            .ToArray();
+        IReadOnlyList<PptxSceneChartStyleEntry> chartStyleEntries = node.Chart?.StylePart.Entries ?? [];
+        IReadOnlyList<string> chartStyleEntryRoles = chartStyleEntries
+            .Select(entry => entry.Role)
+            .ToArray();
+        IReadOnlyList<int> chartStyleEntrySourceIndexes = chartStyleEntries
+            .Select(entry => entry.SourceIndex)
+            .ToArray();
+        IReadOnlyList<string> chartStyleEntryNamespaceUris = chartStyleEntries
+            .Select(entry => entry.NamespaceUri)
+            .ToArray();
+        return new
+        {
+            source,
+            Kind = node.Kind.ToString(),
+            node.IsPlaceholder,
+            HasBounds = bounds is not null,
+            RotationDegrees = bounds?.RotationDegrees ?? 0d,
+            FlipHorizontal = bounds?.FlipHorizontal ?? false,
+            FlipVertical = bounds?.FlipVertical ?? false,
+            ShapePreset = node.Shape?.Preset ?? string.Empty,
+            ShapeHasCustomGeometry = node.Shape?.HasCustomGeometry ?? false,
+            ShapeHasUnsupportedCustomGeometry = node.Shape?.CustomGeometry.HasUnsupportedGeometry ?? false,
+            ShapeHasGradientSource = node.Shape?.GradientFill.HasGradientSource ?? false,
+            ShapeHasUnsupportedGradient = node.Shape?.GradientFill.HasUnsupportedGradient ?? false,
+            ShapeHasPatternSource = node.Shape?.PatternFill.HasPatternSource ?? false,
+            ShapeHasUnsupportedPattern = node.Shape?.PatternFill.HasUnsupportedPattern ?? false,
+            ShapeNoFill = node.Shape?.NoFill ?? false,
+            ShapeLineNoFill = node.Shape?.LineNoFill ?? false,
+            ShapeHasEffectList = node.Shape?.Effects.HasEffectList ?? false,
+            ShapeHasEffectDag = node.Shape?.Effects.HasEffectDag ?? false,
+            ShapeUnsupportedEffectCount = node.Shape?.Effects.UnsupportedEffectNames.Count ?? 0,
+            ShapeUnsupportedEffectNames = node.Shape?.Effects.UnsupportedEffectNames ?? [],
+            HasTextBody = node.TextBody is not null,
+            TextParagraphCount = textParagraphCount,
+            TextRunCount = textRunCount,
+            TextHasUnsupportedOrientation = node.TextBody?.HasUnsupportedTextOrientation ?? false,
+            TextHasUnsupportedVerticalOverflow = node.TextBody?.HasUnsupportedVerticalOverflow ?? false,
+            HasPicture = node.Picture is not null,
+            PictureRecolorKind = recolor?.Kind.ToString() ?? string.Empty,
+            HasTable = node.Table is not null,
+            TableRowCount = tableRowCount,
+            TableCellCount = tableCellCount,
+            HasChart = node.Chart is not null,
+            ChartPlotCount = node.Chart?.Plots.Count ?? 0,
+            ChartAxisCount = node.Chart?.Axes.Count ?? 0,
+            ChartSeriesCount = chartSeries.Count,
+            ChartSeriesMarkerCount = chartSeries.Count(series => series.Marker.IsDefined),
+            ChartSeriesPointStyleCount = chartSeries.Sum(series => series.PointStyles.Count),
+            ChartSeriesPointExplosionCount = chartSeries.Sum(series => series.PointStyles.Count(point => point.Explosion is not null)) +
+                chartSeries.Count(series => series.Explosion is not null),
+            ChartDataLabelsDefinedCount = chartPlots.Count(plot => plot.DataLabels.IsDefined) +
+                chartSeries.Count(series => series.DataLabels.IsDefined),
+            ChartDataLabelOverrideCount = chartPlots.Sum(plot => plot.DataLabels.Overrides.Count) +
+                chartSeries.Sum(series => series.DataLabels.Overrides.Count),
+            ChartDataLabelManualLayoutCount = chartPlots.Count(plot => plot.DataLabels.Layout.HasLayout) +
+                chartSeries.Count(series => series.DataLabels.Layout.HasLayout) +
+                chartPlots.Sum(plot => plot.DataLabels.Overrides.Count(label => label.Layout.HasLayout)) +
+                chartSeries.Sum(series => series.DataLabels.Overrides.Count(label => label.Layout.HasLayout)),
+            ChartTextBodyOrientationCount = chartTextBodyProperties.Count(properties => !string.IsNullOrWhiteSpace(properties.OrientationValue)),
+            ChartTextBodyVerticalOverflowCount = chartTextBodyProperties.Count(properties => !string.IsNullOrWhiteSpace(properties.VerticalOverflowValue)),
+            HasChartColorStyle = node.Chart?.ColorStyle.IsDefined ?? false,
+            ChartColorStyleMethod = node.Chart?.ColorStyle.Method ?? string.Empty,
+            ChartColorStyleColorCount = node.Chart?.ColorStyle.Colors.Count ?? 0,
+            ChartColorStyleVariationCount = node.Chart?.ColorStyle.VariationCount ?? 0,
+            ChartColorStyleDeclarationCount = chartColorDeclarations.Count,
+            ChartColorStyleRootDeclarationCount = node.Chart?.ColorStyle.RootDeclarations.Count ?? 0,
+            ChartColorStyleResolvedDeclarationCount = chartColorDeclarations.Count(declaration => declaration.IsResolved),
+            ChartColorStyleDeclarationKinds = chartColorDeclarationKinds,
+            HasChartStylePart = node.Chart?.StylePart.IsDefined ?? false,
+            ChartStyleEntryCount = chartStyleEntries.Count,
+            ChartStyleEntryRoles = chartStyleEntryRoles,
+            ChartStyleEntrySourceIndexes = chartStyleEntrySourceIndexes,
+            ChartStyleEntryNamespaceUris = chartStyleEntryNamespaceUris,
+            ChartStyleShapeStyleCount = chartStyleEntries.Count(entry => HasChartShapeStyle(entry.ShapeStyle)),
+            ChartStyleShapeFillCount = chartStyleEntries.Count(entry => entry.ShapeStyle?.Fill.HasFill == true ||
+                entry.ShapeStyle?.PatternFill.HasPattern == true ||
+                entry.ShapeStyle?.GradientFill?.HasGradient == true),
+            ChartStyleFillReferenceCount = chartStyleEntries.Count(entry => entry.FillReferenceIndex is not null),
+            ChartStyleResolvedFillReferenceCount = chartStyleEntries.Count(entry => entry.FillReferenceFill.HasFill),
+            ChartStyleEffectReferenceCount = chartStyleEntries.Count(entry => entry.EffectReferenceIndex is not null),
+            ChartStyleResolvedEffectReferenceCount = chartStyleEntries.Count(entry => entry.EffectReferenceEffects.HasEffectList ||
+                entry.EffectReferenceEffects.HasUnsupportedEffects),
+            ChartStyleFontReferenceCount = chartStyleEntries.Count(entry => !string.IsNullOrWhiteSpace(entry.FontReferenceIndex)),
+            HasGroupTransform = node.Kind == PptxSceneNodeKind.Group
+                && node.Source.Element(OoxNamespaces.PresentationNamespace + "grpSpPr")
+                    ?.Element(OoxNamespaces.DrawingNamespace + "xfrm") is not null
+        };
+    }
+
+    private static IReadOnlyList<PptxSceneChartTextBodyProperties> ReadChartTextBodyProperties(PptxSceneChart? chart)
+    {
+        if (chart is null)
+        {
+            return [];
+        }
+
+        var properties = new List<PptxSceneChartTextBodyProperties>
+        {
+            chart.Title.TextBodyProperties,
+            chart.Legend.TextBodyProperties
+        };
+
+        foreach (PptxSceneChartAxis axis in chart.Axes)
+        {
+            properties.Add(axis.TextBodyProperties);
+            properties.Add(axis.Title.TextBodyProperties);
+        }
+
+        foreach (PptxSceneChartPlot plot in chart.Plots)
+        {
+            AddChartDataLabelTextBodyProperties(properties, plot.DataLabels);
+            foreach (PptxSceneChartSeries series in plot.Series)
+            {
+                AddChartDataLabelTextBodyProperties(properties, series.DataLabels);
+            }
+        }
+
+        return properties;
+    }
+
+    private static void AddChartDataLabelTextBodyProperties(
+        List<PptxSceneChartTextBodyProperties> properties,
+        PptxSceneChartDataLabels labels)
+    {
+        properties.Add(labels.TextBodyProperties);
+        foreach (PptxSceneChartDataLabelOverride labelOverride in labels.Overrides)
+        {
+            properties.Add(labelOverride.TextBodyProperties);
+        }
+    }
+
+    private static bool HasChartShapeStyle(PptxSceneChartShapeStyle? style)
+    {
+        return style is not null &&
+            (style.NoFill ||
+                style.Fill.HasFill ||
+                style.GradientFill?.HasGradient == true ||
+                style.PatternFill.HasPattern ||
+                style.Line.HasLine ||
+                style.Glow.HasGlow ||
+                style.OuterShadow.HasShadow);
     }
 
     public static void PptxSyntheticThemeColorsAndFontsResolve()
