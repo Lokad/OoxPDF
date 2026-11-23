@@ -847,56 +847,66 @@ internal static class PptxTablesTests
 
     public static void PptxSyntheticTableKeepsSlide6HeaderOnOneLine()
     {
-        string cambria = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc");
-        if (!File.Exists(cambria))
-        {
-            TestAssert.Skip("Environmental precondition not met: (!File.Exists(cambria))");
-        }
+        PdfPage page = RenderCambriaMathTable("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <p:cSld><p:spTree>
+                <p:graphicFrame>
+                  <p:xfrm><a:off x="914400" y="914400"/><a:ext cx="2453469" cy="700198"/></p:xfrm>
+                  <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table"><a:tbl>
+                    <a:tblGrid><a:gridCol w="2453469"/></a:tblGrid>
+                    <a:tr h="700198">
+                      <a:tc>
+                        <a:txBody><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:buNone/></a:pPr><a:r><a:rPr lang="en-US" sz="1200" b="1"><a:latin typeface="Cambria Math" panose="02040503050406030204" pitchFamily="18" charset="0"/><a:ea typeface="Cambria Math" panose="02040503050406030204" pitchFamily="18" charset="0"/></a:rPr><a:t>Recurring decision Lokad automates</a:t></a:r></a:p></a:txBody>
+                        <a:tcPr marL="46789" marR="46789" marT="23394" marB="23394" anchor="ctr"/>
+                      </a:tc>
+                    </a:tr>
+                  </a:tbl></a:graphicData></a:graphic>
+                </p:graphicFrame>
+              </p:spTree></p:cSld>
+            </p:sld>
+            """);
 
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
-            ["_rels/.rels"] = PptxTests.PackageRelationship(),
-            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
-            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
-            ["ppt/slides/slide1.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <p:cSld><p:spTree>
-                    <p:graphicFrame>
-                      <p:xfrm><a:off x="914400" y="914400"/><a:ext cx="2453469" cy="700198"/></p:xfrm>
-                      <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table"><a:tbl>
-                        <a:tblGrid><a:gridCol w="2453469"/></a:tblGrid>
-                        <a:tr h="700198">
-                          <a:tc>
-                            <a:txBody><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:buNone/></a:pPr><a:r><a:rPr lang="en-US" sz="1200" b="1"><a:latin typeface="Cambria Math" panose="02040503050406030204" pitchFamily="18" charset="0"/><a:ea typeface="Cambria Math" panose="02040503050406030204" pitchFamily="18" charset="0"/></a:rPr><a:t>Recurring decision Lokad automates</a:t></a:r></a:p></a:txBody>
-                            <a:tcPr marL="46789" marR="46789" marT="23394" marB="23394" anchor="ctr"/>
-                          </a:tc>
-                        </a:tr>
-                      </a:tbl></a:graphicData></a:graphic>
-                    </p:graphicFrame>
-                  </p:spTree></p:cSld>
-                </p:sld>
-                """
-        });
-
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, output);
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        string[] matrices = Regex.Matches(pdf, @"1 0 0 1 [0-9.]+ [0-9.]+ Tm")
-            .Select(match => match.Value)
-            .ToArray();
-        int lineBaselines = matrices
-            .Select(matrix => Regex.Match(matrix, @"1 0 0 1 [0-9.]+ (?<y>[0-9.]+) Tm").Groups["y"].Value)
-            .Distinct(StringComparer.Ordinal)
-            .Count();
-        TestAssert.True(lineBaselines == 1, $"Expected one rendered baseline for the table header; got {lineBaselines}. Matrices: {string.Join(" | ", matrices)}");
-        TestAssert.True(Regex.IsMatch(pdf, @"1 0 0 1 75\.684 [0-9.]+ Tm"), $"The centered table header should measure and render at the table-cell inset. Matrices: {string.Join(" | ", matrices)}");
+        var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false, honorActualText: false).ToArray();
+        TestAssert.Equal(1, shows.Select(show => show.Y).Distinct().Count());
+        TestAssert.Equal("Recurring decision Lokad automates", string.Concat(shows.Select(show => show.Text)));
+        TestAssert.True(shows.Any(show => show.X == 75.684d),
+            "The centered table header should measure and render at the table-cell inset.");
     }
 
     public static void PptxSyntheticCenteredTableCellUsesOfficeWrapSlack()
+    {
+        PdfPage page = RenderCambriaMathTable("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <p:cSld><p:spTree>
+                <p:graphicFrame>
+                  <p:xfrm><a:off x="4572000" y="914400"/><a:ext cx="1585000" cy="609600"/></p:xfrm>
+                  <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table"><a:tbl>
+                    <a:tblGrid><a:gridCol w="1585000"/></a:tblGrid>
+                    <a:tr h="609600">
+                      <a:tc>
+                        <a:txBody><a:bodyPr/><a:lstStyle/><a:p><a:pPr algn="ctr"><a:buNone/></a:pPr><a:r><a:rPr lang="en-US" sz="1200"><a:latin typeface="Cambria Math"/><a:ea typeface="Cambria Math"/></a:rPr><a:t>Forecasting, Allocation, Planning</a:t></a:r></a:p></a:txBody>
+                        <a:tcPr marL="36000" marR="36000" marT="18000" marB="18000" anchor="ctr"/>
+                      </a:tc>
+                    </a:tr>
+                  </a:tbl></a:graphicData></a:graphic>
+                </p:graphicFrame>
+              </p:spTree></p:cSld>
+            </p:sld>
+            """);
+
+        string[] lines = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false, honorActualText: false)
+            .GroupBy(show => show.Y)
+            .OrderByDescending(line => line.Key)
+            .Select(line => string.Concat(line.OrderBy(show => show.X).Select(show => show.Text)).TrimEnd())
+            .ToArray();
+        TestAssert.Equal(2, lines.Length);
+        TestAssert.Equal("Forecasting, Allocation,", lines[0]);
+        TestAssert.Equal("Planning", lines[1]);
+    }
+
+    private static PdfPage RenderCambriaMathTable(string slide)
     {
         string cambria = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc");
         if (!File.Exists(cambria))
@@ -904,46 +914,19 @@ internal static class PptxTablesTests
             TestAssert.Skip("Environmental precondition not met: (!File.Exists(cambria))");
         }
 
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        using var input = TestFixtures.CreateZipPackage(new Dictionary<string, string>
         {
             ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
             ["_rels/.rels"] = PptxTests.PackageRelationship(),
             ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
             ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
-            ["ppt/slides/slide1.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <p:cSld><p:spTree>
-                    <p:graphicFrame>
-                      <p:xfrm><a:off x="4572000" y="914400"/><a:ext cx="1585000" cy="609600"/></p:xfrm>
-                      <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table"><a:tbl>
-                        <a:tblGrid><a:gridCol w="1585000"/></a:tblGrid>
-                        <a:tr h="609600">
-                          <a:tc>
-                            <a:txBody><a:bodyPr/><a:lstStyle/><a:p><a:pPr algn="ctr"><a:buNone/></a:pPr><a:r><a:rPr lang="en-US" sz="1200"><a:latin typeface="Cambria Math"/><a:ea typeface="Cambria Math"/></a:rPr><a:t>Forecasting, Allocation, Planning</a:t></a:r></a:p></a:txBody>
-                            <a:tcPr marL="36000" marR="36000" marT="18000" marB="18000" anchor="ctr"/>
-                          </a:tc>
-                        </a:tr>
-                      </a:tbl></a:graphicData></a:graphic>
-                    </p:graphicFrame>
-                  </p:spTree></p:cSld>
-                </p:sld>
-                """
+            ["ppt/slides/slide1.xml"] = slide
         });
-
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, output);
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        string[] matrices = Regex.Matches(pdf, @"1 0 0 1 [0-9.]+ [0-9.]+ Tm")
-            .Select(match => match.Value)
-            .ToArray();
-        int lineBaselines = matrices
-            .Select(matrix => Regex.Match(matrix, @"1 0 0 1 [0-9.]+ (?<y>[0-9.]+) Tm").Groups["y"].Value)
-            .Distinct(StringComparer.Ordinal)
-            .Count();
-        TestAssert.True(lineBaselines == 2, $"Expected centered table text to keep the first two words on one line; got {lineBaselines}. Matrices: {string.Join(" | ", matrices)}");
+        using var package = OoxPackage.Open(input, default);
+        using var resolver = new WindowsFontResolver();
+        return new PptxRenderer(resolver)
+            .RenderPagesAsync(new PptxReader().Read(package, default), package, null, default)
+            .ToBlockingEnumerable().Single();
     }
 
     public static void PptxSyntheticTableDistributesSmallPositiveSlackToShortestRows()
