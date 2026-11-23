@@ -84,7 +84,6 @@ internal sealed partial class DocxReader
         bool? originalNumberingIncluded = knownNumberingMark ? numberingMarkInsertion is null : null;
         bool hasDeletedParagraphMark = paragraphMarkRevisions.Any(revision => revision.Kind == DocxRevisionKind.Deletion && revision.SourceElement == "del");
         AddRevisions(paragraphRevisions, paragraphMarkRevisions);
-        bool pageInstructionSeen = false;
         var complexFieldStack = splitFields ?? new List<DocxComplexFieldState>();
         bool startsInsideComputedField = complexFieldStack.Any(field => field.PlaceholderEmitted);
         int sourceRunIndex = 0;
@@ -992,7 +991,7 @@ internal sealed partial class DocxReader
 
             // A computed result replaces its cached text, regardless of its
             // spelling or run boundaries. Pictures keep their separate source
-            // ownership. An orphan instruction retains the legacy digit fallback.
+            // ownership.
             if (resultFields.Any(field => field.PlaceholderEmitted))
             {
                 // Replacing cache text does not discard its actual revision
@@ -1000,8 +999,6 @@ internal sealed partial class DocxReader
                 RetainNonRenderingRunOwner(currentSourceRunIndex, effectiveRevisions);
                 return;
             }
-            if (resultFields.Length == 0 && pageInstructionSeen && displayText.Trim().All(char.IsDigit))
-                return;
 
             int runsBefore = runs.Count;
             AddResolvedTextRuns(runs, displayText, resolvedRun, runStyleResolution, currentSourceRunIndex, sourceTextOffset, revision, effectiveRevisions);
@@ -1038,20 +1035,21 @@ internal sealed partial class DocxReader
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 if (fieldPictureChildren?.Contains(child) == true) RecordComplexFieldResult();
-                bool inFieldResult = CurrentComplexField()?.InResult == true;
-                bool isFieldCode = child.Name == WordprocessingNamespace + "instrText";
-                string childText = ReadRunTextChild(child, inFieldResult);
+                DocxComplexFieldState? field = CurrentComplexField();
+                bool isInstructionText = IsFieldInstructionText(child);
+                // Outside a complex field's code region, instrText is regular text.
+                string childText = ReadRunTextChild(child, includeInstructionText: field is not { InResult: false });
                 if (child.Name == WordprocessingNamespace + "fldChar")
                 {
-                    var position = CurrentComplexField()?.PendingPlaceholder is { SourceRunIndex: < 0 }
+                    var position = field?.PendingPlaceholder is { SourceRunIndex: < 0 }
                         ? (Offset: textOffset, (positions ??= ReadRunInlinePositions(run, cancellationToken))[child].Order)
                         : (Offset: 0, Order: 0);
                     ApplyComplexFieldChar(child, currentSourceRunIndex, position);
                 }
-                else if (isFieldCode && !inFieldResult)
+                else if (isInstructionText && field is { InResult: false })
                 {
                     var position = (positions ??= ReadRunInlinePositions(run, cancellationToken))[child];
-                    AddComplexFieldInstruction(child, currentSourceRunIndex, textOffset, position.Order,
+                    AddComplexFieldInstruction(field, child, currentSourceRunIndex, textOffset, position.Order,
                         resolvedRun, runStyleResolution, revision, revisions);
                 }
                 else if (IsInlineReferenceElement(child))
@@ -1071,7 +1069,7 @@ internal sealed partial class DocxReader
                     {
                         // The drawing scan knows source order before field parsing
                         // establishes which instruction elements carry literal text.
-                        if (isFieldCode && drawings.Positions is { } drawingPositions)
+                        if (isInstructionText && drawings.Positions is { } drawingPositions)
                         {
                             drawingTextOffsets ??= new int[drawingPositions.Count];
                             drawingTextOffsets[drawingPositions[child].Order] += childText.Length;
@@ -1162,9 +1160,6 @@ internal sealed partial class DocxReader
 
                 EmitPendingFieldPlaceholder(field, currentSourceRunIndex, position.Offset, position.Order);
                 complexFieldStack.RemoveAt(complexFieldStack.Count - 1);
-                // A completed page field no longer owns following authored
-                // spaces or numbers. Nested page results keep their own cache.
-                pageInstructionSeen = complexFieldStack.Any(active => active.PlaceholderEmitted);
                 AddComplexFieldReference(field, null, null);
             }
         }
@@ -1249,6 +1244,7 @@ internal sealed partial class DocxReader
         }
 
         void AddComplexFieldInstruction(
+            DocxComplexFieldState field,
             XElement instruction,
             int currentSourceRunIndex,
             int sourceTextOffset,
@@ -1259,45 +1255,6 @@ internal sealed partial class DocxReader
             IReadOnlyList<DocxRevisionInfo> revisions)
         {
             string instructionText = (string?)instruction ?? string.Empty;
-            DocxComplexFieldState? field = CurrentComplexField();
-            if (field is null)
-            {
-                int fieldTextRunIndex = runs.Count;
-                int fieldTextLengthStart = runs.Sum(run => run.Text.Length);
-                string? placeholder = ResolveFieldPlaceholder(instructionText);
-                if (placeholder is not null)
-                {
-                    int firstRun = runs.Count;
-                    AddResolvedTextRuns(
-                        runs,
-                        DocxTextRun.ResolveDisplayText(placeholder, resolvedRun.AllCaps == true),
-                        resolvedRun,
-                        runStyleResolution,
-                        currentSourceRunIndex,
-                        sourceTextOffset,
-                        revision,
-                        revisions,
-                        ResolveFieldKind(instructionText));
-                    for (int index = firstRun; index < runs.Count; index++)
-                        runs[index] = runs[index] with { SourceDrawingIndexInRun = sourceDrawingIndex };
-                    pageInstructionSeen = true;
-                }
-
-                AddFieldReference(
-                    ResolveFieldKind(instructionText),
-                    DocxFieldSourceKind.ComplexInstruction,
-                    instructionText,
-                    placeholder,
-                    currentSourceRunIndex,
-                    fieldTextRunIndex,
-                    fieldTextLengthStart,
-                    usesPlaceholder: placeholder is not null,
-                    instructionRunCount: 1, hasCachedResult: false, rendersCachedResult: false, hasSeparate: false, nestingDepth: 0, resultRunCount: 0,
-                    fieldReferences: fieldReferences,
-                    runs: runs);
-                return;
-            }
-
             if (field.InstructionSourceRunIndex < 0)
             {
                 field.InstructionSourceRunIndex = currentSourceRunIndex;
@@ -1343,7 +1300,6 @@ internal sealed partial class DocxReader
             runs.Add(pending);
             field.ResultRunCount++;
             field.PlaceholderEmitted = true;
-            pageInstructionSeen = true;
         }
 
         // Computed results own their replacement text, including nested counters.
@@ -1983,7 +1939,7 @@ internal sealed partial class DocxReader
         return false;
     }
 
-    private static string ReadRunTextChild(XElement child, bool inFieldResult = false)
+    private static string ReadRunTextChild(XElement child, bool includeInstructionText = false)
     {
         if (child.Name == WordprocessingNamespace + "sym")
         {
@@ -1992,7 +1948,7 @@ internal sealed partial class DocxReader
         }
         if (child.Name == WordprocessingNamespace + "t" ||
             child.Name == WordprocessingNamespace + "delText" ||
-            inFieldResult && child.Name == WordprocessingNamespace + "instrText")
+            includeInstructionText && IsFieldInstructionText(child))
         {
             string value = child.Value;
             // Word 16 honors preservation on the text element itself, not on

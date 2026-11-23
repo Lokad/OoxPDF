@@ -55,11 +55,11 @@ internal sealed partial class DocxReader
             ?.Attribute(WordprocessingNamespace + "val");
     }
 
-    private static bool IsComplexFieldMarkupElement(XElement element)
-    {
-        return element.Name == WordprocessingNamespace + "fldChar" ||
-            element.Name == WordprocessingNamespace + "instrText";
-    }
+    private static bool IsFieldInstructionText(XElement element) =>
+        element.Name == WordprocessingNamespace + "instrText";
+
+    private static bool IsComplexFieldMarkupElement(XElement element) =>
+        element.Name == WordprocessingNamespace + "fldChar" || IsFieldInstructionText(element);
 
     // Math and pictures are result items, rather than ordinary w:r text children.
     // Both field forms and the diagnostic scan use this source-content rule.

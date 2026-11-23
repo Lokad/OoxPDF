@@ -1,6 +1,9 @@
 using System.Xml.Linq;
 using System.Text;
+using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Docx;
+using Lokad.OoxPdf.Ooxml;
+using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Tests;
 
@@ -124,6 +127,45 @@ internal static class DocxFieldInstructionTests
         }
     }
 
+    public static void DocxUnownedInstructionTextRetainsAuthoredTextAndLinks()
+    {
+        var resolver = new PortableRenderingTests.PinnedResolver();
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var geometry = mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout
+                : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup;
+
+            var literal = Render(W + "t");
+            var fieldText = Render(W + "instrText");
+            TestAssert.Equal("BeforePAGE4729afterREFAnchor!", Compact(fieldText.Text));
+            TestAssert.Equal(literal.Text, fieldText.Text);
+            TestAssert.Equal(literal.Link, fieldText.Link);
+
+            (string Text, PdfLinkAnnotation Link) Render(XName textElement)
+            {
+                var diagnostics = new List<OoxPdfDiagnostic>();
+                var link = new XElement(W + "hyperlink", new XAttribute(W + "anchor", "Target"),
+                    new XElement(W + "r", Text(W + "t", "Before"), Text(textElement, " PAGE ")));
+                var sameRun = new XElement(W + "r", Text(W + "t", " after "),
+                    Text(textElement, "REF Anchor"), Text(W + "t", "!"));
+                var document = Read([link, Run("4729"), sameRun],
+                    mode, target: true, diagnosticSink: diagnostics.Add);
+                TestAssert.Equal(0, diagnostics.Count);
+                TestAssert.Equal(0, document.Paragraphs[0].FieldReferences.Count);
+                var pages = new DocxRenderer(resolver, mode, geometry).RenderPagesAsync(document, null, default)
+                    .ToBlockingEnumerable().ToArray();
+                TestAssert.Equal(2, pages.Length);
+                var annotation = pages[0].Annotations.Single();
+                TestAssert.Equal(1, annotation.Destination!.Value.PageIndex);
+                return (DocxPageFootnoteNumberingTests.DecodeText(pages[0]), annotation);
+            }
+        }
+
+        static XElement Text(XName name, string value) => new(name, new XAttribute(XNamespace.Xml + "space", "preserve"), value);
+        static string Compact(string text) => string.Concat(text.Where(character => !char.IsWhiteSpace(character)));
+    }
+
     public static void DocxFieldInstructionBoundariesConfirmRealCountersAndKeepFollowingNumbers()
     {
         foreach (var mode in Modes)
@@ -226,7 +268,8 @@ internal static class DocxFieldInstructionTests
         if (end) yield return new XElement(W + "r", new XElement(W + "fldChar", new XAttribute(W + "fldCharType", "end")));
     }
 
-    private static DocxDocument Read(XElement[] content, OoxPdfDocxMarkupMode mode, bool target = false)
+    private static DocxDocument Read(XElement[] content, OoxPdfDocxMarkupMode mode, bool target = false,
+        Action<OoxPdfDiagnostic>? diagnosticSink = null)
     {
         var body = new XElement(W + "body", new XElement(W + "p", content));
         if (target) body.Add(new XElement(W + "p", new XElement(W + "pPr", new XElement(W + "pageBreakBefore")),
@@ -239,7 +282,8 @@ internal static class DocxFieldInstructionTests
             ["_rels/.rels"] = "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"main\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"word/document.xml\"/></Relationships>",
             ["word/document.xml"] = new XElement(W + "document", body).ToString()
         });
-        return DocxTests.ReadDocx(path, mode);
+        using FileStream input = File.OpenRead(path);
+        return new DocxReader().Read(OoxPackage.Open(input, CancellationToken.None), diagnosticSink, CancellationToken.None, mode);
     }
 
     private static XElement Run(string text) => new(W + "r", new XElement(W + "t", new XAttribute(XNamespace.Xml + "space", "preserve"), text));

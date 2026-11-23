@@ -883,13 +883,8 @@ internal sealed partial class DocxReader
         }
 
         bool inFieldResult = fields.Count != 0 && fields[^1].InResult;
-        if (child.Name == WordprocessingNamespace + "instrText" && !inFieldResult)
+        if (fields.Count != 0 && !inFieldResult && IsFieldInstructionText(child))
         {
-            if (fields.Count == 0)
-            {
-                return true;
-            }
-
             fields[^1].Instruction.Append((string?)child);
             return false;
         }
