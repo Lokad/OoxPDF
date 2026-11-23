@@ -89,6 +89,7 @@ SVG text can become glyph outlines. Complex SVG text, filters, masks/blends and
 unsupported constructs retain limitations. TrueType outlines embed; CFF faces
 require an embeddable fallback. Missing glyphs use diagnosed replacement.
 Local SVG gradient templates reuse the authored stops and their source colors.
+Explicit `initial` and `unset` on `stop-color` restore black.
 Missing or wrong-type local paint references use the authored fallback color or `none`.
 SVG link wrappers preserve transforms, numeric opacity attributes, and inline
 zero opacity on their shapes and text. Embedded SVG link actions retain an

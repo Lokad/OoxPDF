@@ -764,6 +764,33 @@ internal static partial class SvgTextTests
         }
     }
 
+    public static void SvgStopColorDefaultsMatchBlackForGradientFillsAndStrokes()
+    {
+        static string Picture(string value) => Svg($"""
+            <defs>
+              <linearGradient id="line" gradientUnits="userSpaceOnUse" x1="10" x2="71">
+                <stop stop-color="#e91935" style="stop-color:{value} !important; stop-color:fuchsia"/>
+                <stop offset="1" stop-color="#2254b4"/>
+              </linearGradient>
+              <radialGradient id="fade">
+                <stop stop-color="{value}"/>
+                <stop offset="1" stop-color="{value}" stop-opacity=".25"/>
+              </radialGradient>
+            </defs>
+            <rect x="10" y="9" width="61" height="34" fill="url(#line)"/>
+            <rect x="87" y="11" width="51" height="36" fill="url(#fade)"/>
+            <path d="M10 60H71" fill="none" stroke="url(#line)" stroke-width="5"/>
+            <rect x="112" y="62" width="23" height="9" fill="lime"/>
+            """);
+
+        string explicitBlack = Picture("black");
+        foreach (string keyword in new[] { "InItIaL", "unset" })
+        {
+            AssertSvgPaintInBothFormats(explicitBlack, Picture(keyword),
+                "/ShadingType 2", "/ShadingType 3", "/PatternType 2", "/S /Luminosity", "0 1 0 rg");
+        }
+    }
+
     public static void SvgZeroOpacityContainerStylesHidePaintAndDiagnostics()
     {
         const string backdrop = """<rect x="10" y="10" width="90" height="60" fill="#136c9e"/>""";

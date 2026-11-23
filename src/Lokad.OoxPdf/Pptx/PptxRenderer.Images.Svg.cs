@@ -1423,14 +1423,17 @@ internal sealed partial class PptxRenderer
     private static bool TryReadSvgStopColor(XElement stop, IReadOnlyDictionary<string, string> style, out RgbColor color)
     {
         if (style.TryGetValue("stop-color", out string? inlineColor) &&
-            TryReadSvgSolidColor(stop, style, inlineColor, out color))
+            TryReadColor(inlineColor, out color))
         {
             return true;
         }
 
         // Keep the presentation color when the inline declaration cannot be used.
-        string? attributeColor = (string?)stop.Attribute("stop-color");
-        return TryReadSvgSolidColor(stop, style, string.IsNullOrWhiteSpace(attributeColor) ? "black" : attributeColor, out color);
+        return TryReadColor((string?)stop.Attribute("stop-color"), out color);
+
+        bool TryReadColor(string? value, out RgbColor result) =>
+            TryReadSvgSolidColor(stop, style,
+                string.IsNullOrWhiteSpace(value) || IsSvgNonInheritedDefault(value) ? "black" : value, out result);
     }
 
     private static double ReadSvgOffset(string? value)
@@ -1558,8 +1561,7 @@ internal sealed partial class PptxRenderer
     {
         ReadOnlySpan<char> token = text.AsSpan().Trim();
         // Inherited fill and stroke opacity resolve unset before parsing.
-        if (IsSvgInitialValue(token) ||
-            token.Equals("unset", StringComparison.OrdinalIgnoreCase)) return 1d;
+        if (IsSvgNonInheritedDefault(token)) return 1d;
         bool percent = token.Length != 0 && token[^1] == '%';
         if (percent) token = token[..^1];
         if (!double.TryParse(token, NumberStyles.Float, CultureInfo.InvariantCulture, out double opacity)) return null;
@@ -1814,6 +1816,9 @@ internal sealed partial class PptxRenderer
 
     private static bool IsSvgInitialValue(ReadOnlySpan<char> value) =>
         value.Trim().Equals("initial", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsSvgNonInheritedDefault(ReadOnlySpan<char> value) =>
+        IsSvgInitialValue(value) || value.Trim().Equals("unset", StringComparison.OrdinalIgnoreCase);
 
     private static bool IsSvgCurrentColor(string value) =>
         value.AsSpan().Trim().Equals("currentColor", StringComparison.OrdinalIgnoreCase);
