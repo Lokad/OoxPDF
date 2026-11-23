@@ -99,6 +99,7 @@ for font family, size, style, weight, color, fill and fill opacity.
 They can restate the same font family list, slant, weight, resolved size, solid fill or fill opacity.
 Local color declarations preserve labels when the resolved fill stays the same and the stroke stays nonpainting.
 Nonpainting stroke declarations also preserve the glyph fill.
+Plain spans can also use the default spacing, font variant, font stretch and text decoration.
 Complex SVG text, filters, masks/blends and
 unsupported constructs retain limitations. TrueType outlines embed; CFF faces
 require an embeddable fallback. Missing glyphs use diagnosed replacement.

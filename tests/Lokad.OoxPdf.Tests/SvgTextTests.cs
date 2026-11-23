@@ -439,6 +439,9 @@ internal static partial class SvgTextTests
         const string sameColorNorth = """NO<tspan color="red" style="color:rgb(17,34,51) !important;color:green">RT</tspan>H""";
         const string literalColorNorth = """NO<tspan color="green" fill="#112233"><tspan color="blue">RT</tspan></tspan>H""";
         const string literalColorSouth = """&#160;SO<tspan color="red">UT</tspan>H""";
+        const string neutralSpacingNorth = """NO<tspan letter-spacing="0">RT</tspan>H""";
+        const string neutralSpacingSouth = """&#160;SO<tspan word-spacing="2px" style="word-spacing:0px !important;word-spacing:3px">UT</tspan>H""";
+        const string neutralTypographyNorth = """NO<tspan style="font-variant:normal;text-decoration:none"><tspan font-stretch="normal">RT</tspan></tspan>H""";
         const string noStrokeNorth = """NO<tspan stroke="none">RT</tspan>H""";
         const string noStrokeSouth = """&#160;SO<tspan stroke="red" style="stroke-opacity:0% !important;stroke-opacity:.3">UT</tspan>H""";
         const string zeroWidthNorth = """NO<tspan stroke="red"><tspan stroke="blue">RT</tspan></tspan>H""";
@@ -448,6 +451,7 @@ internal static partial class SvgTextTests
                 Picture(sameFillNorth, sameFillSouth), Picture(sameTypefaceNorth, sameTypefaceSouth),
                 Picture(sameOpacityNorth, sameOpacitySouth),
                 Picture(sameColorNorth, literalColorSouth), Picture(literalColorNorth, plainSouth),
+                Picture(neutralSpacingNorth, neutralSpacingSouth), Picture(neutralTypographyNorth, plainSouth),
                 Picture(noStrokeNorth, noStrokeSouth), Picture(zeroWidthNorth, plainSouth, """stroke-width="0" """)], pdf =>
         {
             TestAssert.Equal(5, LabelPaths(pdf));
@@ -480,6 +484,11 @@ internal static partial class SvgTextTests
             ("""font-family="monospace" """, ""),
             ("""font-weight="700" """, ""),
             ("""font-style="italic" """, ""),
+            ("""letter-spacing="1px" """, ""),
+            ("""word-spacing="1px" """, ""),
+            ("""font-variant="small-caps" """, ""),
+            ("""font-stretch="condensed" """, ""),
+            ("""text-decoration="underline" """, ""),
         })
         {
             diagnostics.Clear();

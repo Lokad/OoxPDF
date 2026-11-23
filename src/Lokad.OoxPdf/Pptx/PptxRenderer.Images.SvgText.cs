@@ -97,15 +97,15 @@ internal sealed partial class PptxRenderer
         string? Inherited(string name) => ReadSvgInheritedAttribute(element, style, name)?.Trim();
         bool IsDefault(string name, params string[] accepted) => Inherited(name) is not { } value ||
             accepted.Contains(value, StringComparer.OrdinalIgnoreCase);
+        bool PreservesTextStyle(string name) => IsNeutralSvgTextStyle(name, Inherited(name));
         if (!IsDefault("direction", "ltr") || !IsDefault("unicode-bidi", "normal") ||
             !IsDefault("writing-mode", "lr", "lr-tb", "horizontal-tb") ||
             !IsDefault("dominant-baseline", "auto", "alphabetic") ||
             !IsDefault("alignment-baseline", "auto", "baseline", "alphabetic") ||
             !IsDefault("baseline-shift", "baseline", "0", "0px") ||
-            !IsDefault("font-variant", "normal") || !IsDefault("font-stretch", "normal") ||
-            !IsDefault("letter-spacing", "normal", "0", "0px") ||
-            !IsDefault("word-spacing", "normal", "0", "0px") ||
-            !IsDefault("text-decoration", "none") || !IsDefault("font-kerning", "auto", "normal", "none") ||
+            !PreservesTextStyle("font-variant") || !PreservesTextStyle("font-stretch") ||
+            !PreservesTextStyle("letter-spacing") || !PreservesTextStyle("word-spacing") ||
+            !PreservesTextStyle("text-decoration") || !IsDefault("font-kerning", "auto", "normal", "none") ||
             !IsDefault("kerning", "auto", "0", "0px") ||
             !IsDefault("clip-path", "none") || !IsDefault("mask", "none") || !IsDefault("filter", "none")) return false;
         if (HasSvgTextStroke(element, style, paintServerIds)) return false;
@@ -151,6 +151,20 @@ internal sealed partial class PptxRenderer
                 ? TryReadSvgViewportLength(element, text, percentageBasis, out value)
                 : TryReadSvgLength(text, out value, relativeSize: size);
         }
+    }
+
+    private static bool IsNeutralSvgTextStyle(string name, string? value)
+    {
+        ReadOnlySpan<char> token = value.AsSpan().Trim();
+        return name switch
+        {
+            "letter-spacing" or "word-spacing" => value is null || token is "0" ||
+                token.Equals("normal", StringComparison.OrdinalIgnoreCase) ||
+                token.Equals("0px", StringComparison.OrdinalIgnoreCase),
+            "font-variant" or "font-stretch" => value is null || token.Equals("normal", StringComparison.OrdinalIgnoreCase),
+            "text-decoration" => value is null || token.Equals("none", StringComparison.OrdinalIgnoreCase),
+            _ => false
+        };
     }
 
     private static bool TryReadSvgTextWeight(ReadOnlySpan<char> value, out int weight)
@@ -321,6 +335,8 @@ internal sealed partial class PptxRenderer
                     ParseSvgOpacity(value) is { } opacity && double.IsFinite(opacity) &&
                     Math.Clamp(opacity, 0d, 1d) == appearance.FillOpacity,
                 "stroke" or "stroke-opacity" or "stroke-width" => !PaintsStroke(),
+                "letter-spacing" or "word-spacing" or "font-variant" or "font-stretch" or "text-decoration" =>
+                    IsNeutralSvgTextStyle(name, ReadSvgInheritedAttribute(child, style, name)),
                 _ => false,
             };
 
