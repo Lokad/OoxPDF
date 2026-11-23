@@ -1,5 +1,5 @@
 using System.Globalization;
-using System.Text;
+using System.Numerics;
 using System.Text.RegularExpressions;
 using Lokad.OoxPdf;
 using Lokad.OoxPdf.Diagnostics;
@@ -169,48 +169,44 @@ internal static class DocxCoreTests
 
     public static void DocxReaderParsesRunCharacterSpacing()
     {
-        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-                  <Default Extension="xml" ContentType="application/xml"/>
-                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
-                </Types>
-                """,
-            ["_rels/.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
-                </Relationships>
-                """,
-            ["word/document.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-                  <w:body>
-                    <w:p>
-                      <w:r><w:rPr><w:spacing w:val="40"/></w:rPr><w:t>Wide</w:t></w:r>
-                      <w:r><w:rPr><w:spacing w:val="-20"/></w:rPr><w:t>Tight</w:t></w:r>
-                    </w:p>
-                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
-                  </w:body>
-                </w:document>
-                """
-        });
-
-        using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
-        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
-
-        DocxParagraph paragraph = document.Paragraphs[0];
+        DocxParagraph paragraph = ReadSpacingProbe("""
+            <w:p>
+              <w:r><w:rPr><w:spacing w:val="40"/></w:rPr><w:t>Wide</w:t></w:r>
+              <w:r><w:rPr><w:spacing w:val="-20"/></w:rPr><w:t>Tight</w:t></w:r>
+            </w:p>
+            """).Paragraphs.Single();
         TestAssert.Equal(2d, paragraph.Runs[0].CharacterSpacingPoints);
         TestAssert.Equal(-1d, paragraph.Runs[1].CharacterSpacingPoints);
     }
 
     public static void DocxRendererEmitsRunCharacterSpacingAsPositionedGlyphs()
     {
-        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(), OoxPdfDocxMarkupMode.Final,
+            OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        var unspaced = Paint("0");
+        var spaced = Paint("40");
+        TestAssert.Equal(unspaced.First, spaced.First);
+        TestAssert.Equal(unspaced.Second.Y, spaced.Second.Y);
+        TestAssert.True(Math.Abs(spaced.Second.X - unspaced.Second.X - 2d) < .002d,
+            "The second painted glyph moves two points while the first glyph keeps its origin.");
+
+        (Vector2 First, Vector2 Second) Paint(string spacing)
+        {
+            var document = ReadSpacingProbe($$"""
+                <w:p>
+                  <w:r><w:rPr><w:sz w:val="24"/><w:spacing w:val="{{spacing}}"/></w:rPr><w:t>AB</w:t></w:r>
+                </w:p>
+                """);
+            var page = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
+            var glyphs = PortableRenderingTests.ReadPaintedSourceLabel(page, "AB");
+            TestAssert.Equal(2, glyphs.Count);
+            return (glyphs[0].Origin, glyphs[1].Origin);
+        }
+    }
+
+    private static DocxDocument ReadSpacingProbe(string paragraphs)
+    {
+        using var input = TestFixtures.CreateZipPackage(new Dictionary<string, string>
         {
             ["[Content_Types].xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
@@ -226,35 +222,17 @@ internal static class DocxCoreTests
                   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
                 </Relationships>
                 """,
-            ["word/document.xml"] = """
+            ["word/document.xml"] = $$"""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
                   <w:body>
-                    <w:p>
-                      <w:r><w:rPr><w:sz w:val="24"/><w:spacing w:val="40"/></w:rPr><w:t>AB</w:t></w:r>
-                    </w:p>
+                    {{paragraphs}}
                     <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
                   </w:body>
                 </w:document>
                 """
         });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        var resolver = new TestFaceFontResolver();
-        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { FontResolver = resolver });
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("TJ", pdf);
-        var document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final);
-        var paragraph = document.Paragraphs.Single();
-        var unspaced = paragraph with { Runs = paragraph.Runs.Select(run => run with { CharacterSpacingPoints = 0d }).ToArray() };
-        var baseline = document with { BodyElements = document.BodyElements.Select(element =>
-            element is DocxParagraphElement item ? item with { Paragraph = unspaced } : element).ToArray() };
-        var renderer = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
-        double Advance(DocxDocument source) => renderer.InspectTextEmission(source).Lines.SelectMany(line => line.Segments)
-            .Where(segment => !segment.IsTerminalLineSpace).Sum(segment => segment.AdvanceProfile.PlannedEmittedAdvance);
-        TestAssert.True(Math.Abs(Advance(document) - Advance(baseline) - 2d) < .001d,
-            "Two glyphs retain their authored two-point gap after nominal/export-width compensation.");
+        return DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final);
     }
 
     public static void OfficePdfTextProfileExposesWordNumberedListCharacterSpacing()
@@ -508,82 +486,26 @@ internal static class DocxCoreTests
 
     public static void DocxReaderAppliesAutoLineSpacingAsTwoHundredFortieths()
     {
-        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-                  <Default Extension="xml" ContentType="application/xml"/>
-                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
-                </Types>
-                """,
-            ["_rels/.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
-                </Relationships>
-                """,
-            ["word/document.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-                  <w:body>
-                    <w:p>
-                      <w:pPr><w:spacing w:line="276" w:lineRule="auto"/></w:pPr>
-                      <w:r><w:rPr><w:sz w:val="40"/></w:rPr><w:t>Auto line spacing</w:t></w:r>
-                    </w:p>
-                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
-                  </w:body>
-                </w:document>
-                """
-        });
-
-        using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
-        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
-
-        DocxParagraph paragraph = document.Paragraphs.Single();
+        DocxParagraph paragraph = ReadSpacingProbe("""
+            <w:p>
+              <w:pPr><w:spacing w:line="276" w:lineRule="auto"/></w:pPr>
+              <w:r><w:rPr><w:sz w:val="40"/></w:rPr><w:t>Auto line spacing</w:t></w:r>
+            </w:p>
+            """).Paragraphs.Single();
         TestAssert.Equal(1.15d, paragraph.LineSpacingFactor);
     }
 
     public static void DocxReaderUsesWordDefaultAutoLineSpacingWhenLineTokenIsAbsent()
     {
-        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-                  <Default Extension="xml" ContentType="application/xml"/>
-                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
-                </Types>
-                """,
-            ["_rels/.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
-                </Relationships>
-                """,
-            ["word/document.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-                  <w:body>
-                    <w:p>
-                      <w:pPr><w:spacing w:before="36" w:after="0"/></w:pPr>
-                      <w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>Missing line token</w:t></w:r>
-                    </w:p>
-                    <w:p>
-                      <w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>No spacing token</w:t></w:r>
-                    </w:p>
-                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
-                  </w:body>
-                </w:document>
-                """
-        });
-
-        using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
-        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
+        DocxDocument document = ReadSpacingProbe("""
+            <w:p>
+              <w:pPr><w:spacing w:before="36" w:after="0"/></w:pPr>
+              <w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>Missing line token</w:t></w:r>
+            </w:p>
+            <w:p>
+              <w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>No spacing token</w:t></w:r>
+            </w:p>
+            """);
 
         TestAssert.Equal(2, document.Paragraphs.Count);
         // Office default auto spacing is 278/240 (w15-w20 pitch probes: style-less 11pt Arial body pitches 14.64 with after 0, so factor about 1.1573 on single 12.65; Normal styles resolve 278/240 exactly).
