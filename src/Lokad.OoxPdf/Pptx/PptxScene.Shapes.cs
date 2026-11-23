@@ -70,7 +70,7 @@ internal sealed partial class PptxSceneBuilder
             HasUnsupportedAlpha(shapeProperties),
             TryReadGlow(shapeProperties, theme, colorMap, out PptxSceneGlow glow) ? glow : default,
             TryReadOuterShadow(shapeProperties, theme, colorMap, out PptxSceneOuterShadow outerShadow) ? outerShadow : default,
-            ReadShapeEffects(shapeProperties),
+            ReadEffects(shapeProperties),
             line,
             ReadLineEnd(shapeProperties, "headEnd"),
             ReadLineEnd(shapeProperties, "tailEnd"));

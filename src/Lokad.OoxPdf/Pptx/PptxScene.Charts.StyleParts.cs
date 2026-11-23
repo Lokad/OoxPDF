@@ -197,7 +197,7 @@ internal sealed partial class PptxSceneBuilder
             string effectReferenceIndexRaw = (string?)effectReference?.Attribute("idx") ?? string.Empty;
             int effectReferenceIndexValue = effectReference is null ? 0 : OoxXml.ReadOptionalInt(effectReference, "idx", 0);
             int? effectReferenceIndex = effectReferenceIndexValue > 0 ? effectReferenceIndexValue : null;
-            PptxSceneChartEffectFamily effectReferenceEffects = ReadChartStyleEffectReference(effectReference, theme);
+            PptxSceneEffectFamily effectReferenceEffects = ReadChartStyleEffectReference(effectReference, theme);
             string fontReferenceIndex = (string?)roleElement
                 .Elements()
                 .FirstOrDefault(element => element.Name.LocalName == "fontRef")
@@ -298,12 +298,12 @@ internal sealed partial class PptxSceneBuilder
             : default;
     }
 
-    private static PptxSceneChartEffectFamily ReadChartStyleEffectReference(XElement? effectReference, PptxTheme theme)
+    private static PptxSceneEffectFamily ReadChartStyleEffectReference(XElement? effectReference, PptxTheme theme)
     {
         int effectReferenceIndex = PptxFormatSchemeResolver.ReadIndex(effectReference);
         return effectReferenceIndex > 0 &&
             theme.TryGetEffectStyle(effectReferenceIndex, out XElement? effectStyle)
-            ? ReadChartEffects(effectStyle)
+            ? ReadEffects(effectStyle)
             : default;
     }
 
@@ -317,8 +317,7 @@ internal sealed partial class PptxSceneBuilder
             style.Line.HasLine ||
             style.Glow.HasGlow ||
             style.OuterShadow.HasShadow ||
-            style.Effects.HasEffectDag ||
-            style.Effects.UnsupportedEffectNames?.Count > 0;
+            style.Effects.HasUnsupportedEffects;
     }
 
     private static PptxSceneChartTextStyleOverride ReadChartStyleRoleTextStyle(XElement roleElement, PptxTheme theme, PptxColorMap colorMap)

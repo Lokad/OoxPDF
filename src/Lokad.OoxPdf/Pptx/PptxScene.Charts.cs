@@ -281,7 +281,7 @@ internal sealed partial class PptxSceneBuilder
             ReadChartLine(shapeProperties, theme, colorMap),
             TryReadGlow(shapeProperties, theme, colorMap, out PptxSceneGlow glow) ? glow : default,
             TryReadOuterShadow(shapeProperties, theme, colorMap, out PptxSceneOuterShadow outerShadow) ? outerShadow : default,
-            ReadChartEffects(shapeProperties));
+            ReadEffects(shapeProperties));
     }
 
     private static PptxSceneShapePictureFill ReadChartPictureFill(XElement? shapeProperties)
@@ -306,25 +306,6 @@ internal sealed partial class PptxSceneBuilder
             ReadPictureAlpha(shapeProperties),
             ReadPictureAlphaValue(shapeProperties),
             HasPictureTile(shapeProperties));
-    }
-
-    private static PptxSceneChartEffectFamily ReadChartEffects(XElement? shapeProperties)
-    {
-        XElement? effectList = shapeProperties?.Element(DrawingNamespace + "effectLst");
-        XElement? effectDag = shapeProperties?.Element(DrawingNamespace + "effectDag");
-        IReadOnlyList<string> unsupportedEffects = effectList is null
-            ? []
-            : effectList
-                .Elements()
-                .Where(IsUnsupportedChartEffect)
-                .Select(effect => effect.Name.LocalName)
-                .ToArray();
-        return new PptxSceneChartEffectFamily(effectList is not null, effectDag is not null, unsupportedEffects);
-    }
-
-    private static bool IsUnsupportedChartEffect(XElement effect)
-    {
-        return IsUnsupportedDirectEffect(effect);
     }
 
     internal static string ReadChartElementValue(XElement? element, string childName)

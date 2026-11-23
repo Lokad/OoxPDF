@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Ooxml;
 using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
@@ -7,24 +6,18 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxSceneBuilder
 {
-    private static PptxSceneShapeEffectFamily ReadShapeEffects(XElement? shapeProperties)
+    private static PptxSceneEffectFamily ReadEffects(XElement? owner)
     {
-        XElement? effectList = shapeProperties?.Element(DrawingNamespace + "effectLst");
-        XElement? effectDag = shapeProperties?.Element(DrawingNamespace + "effectDag");
+        XElement? effectList = owner?.Element(DrawingNamespace + "effectLst");
+        bool hasEffectDag = owner?.Element(DrawingNamespace + "effectDag") is not null;
         IReadOnlyList<string> unsupportedEffects = effectList is null
             ? []
             : effectList
                 .Elements()
-                .Where(IsUnsupportedDirectEffect)
+                .Where(effect => effect.Name != DrawingNamespace + "outerShdw" && effect.Name != DrawingNamespace + "glow")
                 .Select(effect => effect.Name.LocalName)
                 .ToArray();
-        return new PptxSceneShapeEffectFamily(effectList is not null, effectDag is not null, unsupportedEffects);
-    }
-
-    private static bool IsUnsupportedDirectEffect(XElement effect)
-    {
-        return effect.Name != DrawingNamespace + "outerShdw" &&
-            effect.Name != DrawingNamespace + "glow";
+        return new PptxSceneEffectFamily(effectList is not null, hasEffectDag, unsupportedEffects);
     }
 
     internal static bool TryReadGlow(XElement? shapeProperties, PptxTheme theme, PptxColorMap colorMap, out PptxSceneGlow glow)

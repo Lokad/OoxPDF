@@ -197,7 +197,7 @@ internal sealed record PptxSceneShape(
     bool HasUnsupportedTransparency,
     PptxSceneGlow Glow,
     PptxSceneOuterShadow OuterShadow,
-    PptxSceneShapeEffectFamily Effects,
+    PptxSceneEffectFamily Effects,
     PptxSceneLineStyle Line,
     PptxSceneLineEnd HeadEnd,
     PptxSceneLineEnd TailEnd);
@@ -294,10 +294,13 @@ internal readonly record struct PptxSceneOuterShadow(
     double OffsetY,
     double BlurRadius);
 
-internal readonly record struct PptxSceneShapeEffectFamily(
+internal readonly record struct PptxSceneEffectFamily(
     bool HasEffectList,
     bool HasEffectDag,
-    IReadOnlyList<string> UnsupportedEffectNames);
+    IReadOnlyList<string> UnsupportedEffectNames)
+{
+    public bool HasUnsupportedEffects => HasEffectDag || UnsupportedEffectNames?.Count > 0;
+}
 
 internal readonly record struct PptxSceneLineStyle(
     bool HasLine,

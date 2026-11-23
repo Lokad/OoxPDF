@@ -197,7 +197,7 @@ internal readonly record struct PptxSceneChartStyleEntry(
     PptxSceneFillStyle FillReferenceFill,
     int? EffectReferenceIndex,
     string EffectReferenceIndexValue,
-    PptxSceneChartEffectFamily EffectReferenceEffects,
+    PptxSceneEffectFamily EffectReferenceEffects,
     string FontReferenceIndex,
     PptxSceneLineStyle Line,
     PptxSceneChartShapeStyle ShapeStyle,
@@ -551,12 +551,7 @@ internal sealed record PptxSceneChartShapeStyle(
     PptxSceneLineStyle Line,
     PptxSceneGlow Glow,
     PptxSceneOuterShadow OuterShadow,
-    PptxSceneChartEffectFamily Effects);
-
-internal readonly record struct PptxSceneChartEffectFamily(
-    bool HasEffectList,
-    bool HasEffectDag,
-    IReadOnlyList<string> UnsupportedEffectNames);
+    PptxSceneEffectFamily Effects);
 
 internal readonly record struct PptxSceneChartTextStyleOverride(
     string? FontFamily,
@@ -658,7 +653,7 @@ internal sealed record PptxSceneChartSeries(
     PptxSceneFillStyle Fill,
     PptxScenePatternFill PatternFill,
     PptxSceneLineStyle Line,
-    PptxSceneChartEffectFamily Effects,
+    PptxSceneEffectFamily Effects,
     PptxSceneChartMarker Marker,
     IReadOnlyList<PptxSceneChartPointStyle> PointStyles,
     IReadOnlyList<string> RejectedPointStyleIndexValues,
@@ -761,7 +756,7 @@ internal sealed record PptxSceneChartPointStyle(
     PptxSceneFillStyle Fill,
     PptxScenePatternFill PatternFill,
     PptxSceneLineStyle Line,
-    PptxSceneChartEffectFamily Effects,
+    PptxSceneEffectFamily Effects,
     double? Explosion,
     string ExplosionValue)
 {

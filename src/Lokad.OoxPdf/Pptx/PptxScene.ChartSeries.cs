@@ -65,7 +65,7 @@ internal sealed partial class PptxSceneBuilder
                 ReadChartSeriesFill(seriesElement, theme, colorMap),
                 ReadChartPatternFill(shapeProperties, theme, colorMap),
                 ReadChartSeriesLine(seriesElement, theme, colorMap),
-                ReadChartEffects(shapeProperties),
+                ReadEffects(shapeProperties),
                 seriesMarker,
                 ReadChartPointStyles(seriesElement, theme, colorMap, plotKind, seriesIndex, seriesMarker),
                 ReadRejectedChartNonNegativeIndexValues(seriesElement, "dPt"),
@@ -190,7 +190,7 @@ internal sealed partial class PptxSceneBuilder
                 ReadChartPointFill(shapeProperties, theme, colorMap),
                 ReadChartPatternFill(shapeProperties, theme, colorMap),
                 ReadChartLine(shapeProperties, theme, colorMap),
-                ReadChartEffects(shapeProperties),
+                ReadEffects(shapeProperties),
                 explosion,
                 explosionValue)
             {

@@ -348,8 +348,9 @@ internal sealed partial class PptxRenderer
     {
         foreach (PptxSceneNode node in nodes)
         {
-            if ((node.Shape is not null && ((node.Shape.Glow.HasGlow && !CanRenderGlowPreset(node.Shape.Preset)) || HasUnsupportedEffect(node.Shape.Effects))) ||
-                (node.Chart is not null && HasUnsupportedEffect(node.Chart)))
+            if ((node.Shape is { } shape && (shape.Effects.HasUnsupportedEffects ||
+                    (shape.Glow.HasGlow && !CanRenderGlowPreset(shape.Preset)))) ||
+                (node.Chart is { } chart && HasUnsupportedEffect(chart)))
             {
                 return true;
             }
@@ -358,21 +359,15 @@ internal sealed partial class PptxRenderer
         return false;
     }
 
-    private static bool HasUnsupportedEffect(PptxSceneShapeEffectFamily effects)
-    {
-        return effects.HasEffectDag ||
-            effects.UnsupportedEffectNames?.Count > 0;
-    }
-
     private static bool HasUnsupportedEffect(PptxSceneChart chart)
     {
-        return HasUnsupportedEffect(chart.ChartAreaStyle) ||
-            HasUnsupportedEffect(chart.PlotAreaStyle) ||
-            HasUnsupportedEffect(chart.Title.ShapeStyle) ||
-            HasUnsupportedEffect(chart.Legend.ShapeStyle) ||
+        return chart.ChartAreaStyle.Effects.HasUnsupportedEffects ||
+            chart.PlotAreaStyle.Effects.HasUnsupportedEffects ||
+            chart.Title.ShapeStyle.Effects.HasUnsupportedEffects ||
+            chart.Legend.ShapeStyle.Effects.HasUnsupportedEffects ||
             chart.StylePart.Entries.Any(entry =>
-                HasUnsupportedEffect(entry.ShapeStyle) ||
-                HasUnsupportedEffect(entry.EffectReferenceEffects)) ||
+                entry.ShapeStyle.Effects.HasUnsupportedEffects ||
+                entry.EffectReferenceEffects.HasUnsupportedEffects) ||
             chart.Plots.Any(HasUnsupportedEffect);
     }
 
@@ -384,26 +379,15 @@ internal sealed partial class PptxRenderer
 
     private static bool HasUnsupportedEffect(PptxSceneChartSeries series)
     {
-        return HasUnsupportedEffect(series.Effects) ||
+        return series.Effects.HasUnsupportedEffects ||
             HasUnsupportedEffect(series.DataLabels) ||
-            series.PointStyles.Any(point => HasUnsupportedEffect(point.Effects));
+            series.PointStyles.Any(point => point.Effects.HasUnsupportedEffects);
     }
 
     private static bool HasUnsupportedEffect(PptxSceneChartDataLabels labels)
     {
-        return HasUnsupportedEffect(labels.ShapeStyle) ||
-            labels.Overrides.Any(label => HasUnsupportedEffect(label.ShapeStyle));
-    }
-
-    private static bool HasUnsupportedEffect(PptxSceneChartShapeStyle style)
-    {
-        return HasUnsupportedEffect(style.Effects);
-    }
-
-    private static bool HasUnsupportedEffect(PptxSceneChartEffectFamily effects)
-    {
-        return effects.HasEffectDag ||
-            effects.UnsupportedEffectNames?.Count > 0;
+        return labels.ShapeStyle.Effects.HasUnsupportedEffects ||
+            labels.Overrides.Any(label => label.ShapeStyle.Effects.HasUnsupportedEffects);
     }
 
     private static bool HasUnsupportedCustomGeometry(IEnumerable<PptxSceneNode> nodes)

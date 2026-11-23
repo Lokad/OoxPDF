@@ -712,14 +712,14 @@ internal static partial class PptxChartLegendsTests
             </c:chartSpace>
             """);
 
-        PptxSceneChartEffectFamily chartArea = chart?.ChartAreaStyle.Effects
+        PptxSceneEffectFamily chartArea = chart?.ChartAreaStyle.Effects
             ?? throw new InvalidOperationException("Expected chart area effects.");
         TestAssert.True(chartArea.HasEffectList, "Expected chart area effect list presence to be preserved.");
         TestAssert.True(!chartArea.HasEffectDag, "Expected chart area effectDag absence to remain distinct.");
         TestAssert.Equal("reflection,softEdge", string.Join(",", chartArea.UnsupportedEffectNames));
         TestAssert.True(chart?.ChartAreaStyle.OuterShadow.HasShadow == true, "Expected supported outer shadow to remain parsed beside unsupported effects.");
 
-        PptxSceneChartEffectFamily plotArea = chart?.PlotAreaStyle.Effects
+        PptxSceneEffectFamily plotArea = chart?.PlotAreaStyle.Effects
             ?? throw new InvalidOperationException("Expected plot area effects.");
         TestAssert.True(!plotArea.HasEffectList, "Expected plot area effect list absence to remain distinct.");
         TestAssert.True(plotArea.HasEffectDag, "Expected plot area effectDag presence to be preserved.");
