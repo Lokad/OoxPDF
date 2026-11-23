@@ -126,15 +126,8 @@ internal sealed partial class PptxRenderer
                 Fallback: "Ignored"));
         }
 
-        bool IsRecoverableNodeRenderException(Exception exception)
-        {
-            if (exception is OoxPdfLimitExceededException)
-            {
-                return false;
-            }
-
-            return exception is FormatException or InvalidDataException or NotSupportedException or ArgumentException;
-        }
+        bool IsRecoverableNodeRenderException(Exception exception) =>
+            exception is FormatException or InvalidDataException or NotSupportedException or ArgumentException;
     }
 
     private static void RenderOrderedLeafNode(
@@ -160,19 +153,7 @@ internal sealed partial class PptxRenderer
                 {
                     if (HasDrawableShape())
                     {
-                        BeginSlideNodeClip(context, graphics);
-                        RenderShape(
-                            node,
-                            context.Document,
-                            graphics,
-                            context.DiagnosticSink,
-                            context.SlideNumber,
-                            transform,
-                            images,
-                            context.ImageCache,
-                            ref imageIndex,
-                            cancellationToken);
-                        EndSlideNodeClip(graphics);
+                        PaintClippedShape(ref imageIndex);
                     }
 
                     // Node-level links go first so run-level links sit above them.
@@ -192,19 +173,7 @@ internal sealed partial class PptxRenderer
 
                 break;
             case PptxSceneNodeKind.Connector:
-                BeginSlideNodeClip(context, graphics);
-                RenderShape(
-                    node,
-                    context.Document,
-                    graphics,
-                    context.DiagnosticSink,
-                    context.SlideNumber,
-                    transform,
-                    images,
-                    context.ImageCache,
-                    ref imageIndex,
-                    cancellationToken);
-                EndSlideNodeClip(graphics);
+                PaintClippedShape(ref imageIndex);
                 AddNodeHyperlinkAnnotation(node, context, sourcePartName, transform, linkAnnotations, reportedHyperlinkIds);
                 break;
             case PptxSceneNodeKind.Picture:
@@ -234,6 +203,23 @@ internal sealed partial class PptxRenderer
                 RenderUnsupportedGraphicFrame(node, context, sourcePartName);
                 break;
 
+        }
+
+        void PaintClippedShape(ref int nextImageIndex)
+        {
+            BeginSlideNodeClip(context, graphics);
+            RenderShape(
+                node,
+                context.Document,
+                graphics,
+                context.DiagnosticSink,
+                context.SlideNumber,
+                transform,
+                images,
+                context.ImageCache,
+                ref nextImageIndex,
+                cancellationToken);
+            EndSlideNodeClip(graphics);
         }
 
         bool HasDrawableShape()
