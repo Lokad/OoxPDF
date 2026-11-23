@@ -3951,34 +3951,35 @@ internal static class DocxTableCellsTests
     public static void DocxTableLayoutStageKeepsCellWidowControlledParagraphWholeAtPageBoundary()
     {
         DocxParagraph firstParagraph = DocxTests.CreateDocxLayoutParagraph("First", 10d, 10d);
-        DocxParagraph widowControlledParagraph = DocxTests.CreateDocxLayoutParagraph("One\nTwo\nThree", 10d, 10d);
         var first = new DocxTableRow([new DocxTableCell([firstParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 60d);
-        var second = new DocxTableRow([new DocxTableCell([widowControlledParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 30d);
-        var table = new DocxTable(null, [60d], [first, second]);
-        var document = new DocxDocument(
-            100d,
-            100d,
-            10d,
-            10d,
-            10d,
-            10d,
-            DocxPageSettings.Empty,
-            [],
-            [],
-            [],
-            [new DocxTableElement(table)]);
+        foreach (var (widowControl, rowHeight, split) in new (bool?, double?, bool)[]
+        {
+            (null, null, true), (false, null, true), (true, null, false), (null, 30d, false)
+        })
+        {
+            DocxParagraph paragraph = DocxTests.CreateDocxLayoutParagraph("One\nTwo\nThree", 10d,
+                keepRules: DocxParagraphKeepRules.Empty with { WidowControl = widowControl });
+            var second = new DocxTableRow([new DocxTableCell([paragraph], null, null, null, null, [], DocxTableCellMargins.Empty)], rowHeight);
+            var table = new DocxTable(null, [60d], [first, second]);
+            var document = new DocxDocument(100d, 100d, 10d, 10d, 10d, 10d, DocxPageSettings.Empty,
+                [], [], [], [new DocxTableElement(table)]);
 
-        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
-        DocxTableRowLayout[] firstPageRows = layout.Pages[0].Items.OfType<DocxTableRowLayout>().ToArray();
-        DocxTableRowLayout[] secondPageRows = layout.Pages[1].Items.OfType<DocxTableRowLayout>().ToArray();
+            DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+                .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+            TestAssert.Equal(2, layout.Pages.Count);
 
-        TestAssert.Equal(2, layout.Pages.Count);
-        TestAssert.Equal(1, firstPageRows.Length);
-        TestAssert.Equal(1, secondPageRows.Length);
-        TestAssert.Equal(1, secondPageRows[0].RowIndex);
-        TestAssert.Equal(1, secondPageRows[0].FragmentCount);
-        TestAssert.Equal("None", secondPageRows[0].FragmentReason);
-        TestAssert.Equal(3, secondPageRows[0].Cells[0].TextLines.Count);
+            var firstPageRows = layout.Pages[0].Items.OfType<DocxTableRowLayout>().ToArray();
+            var continuedRow = layout.Pages[1].Items.OfType<DocxTableRowLayout>().Single();
+            TestAssert.Equal(split ? 2 : 1, firstPageRows.Length);
+            TestAssert.Equal(1, continuedRow.RowIndex);
+            TestAssert.Equal(split ? 2 : 1, continuedRow.FragmentCount);
+            TestAssert.Equal(split ? "PageBoundary" : "None", continuedRow.FragmentReason);
+            TestAssert.Equal(split ? "Three" : "One Two Three", ReadText(continuedRow));
+            if (split)
+                TestAssert.Equal("One Two", ReadText(firstPageRows[1]));
+        }
+
+        static string ReadText(DocxTableRowLayout row) => string.Join(' ', row.Cells[0].TextLines.Select(line => line.Text.Trim()));
     }
 
     public static void DocxTableLayoutStageKeepsCellKeepNextParagraphWithFollowingParagraphAtPageBoundary()

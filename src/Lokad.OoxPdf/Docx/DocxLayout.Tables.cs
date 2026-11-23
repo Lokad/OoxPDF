@@ -479,11 +479,8 @@ internal sealed partial class DocxLayoutEngine
         double paragraphSpacingScale,
         int[] headerSourcePages,
         DocxTableCellTextLinesMemo? cellMemo = null,
-        double reviewFragmentScale = 1d,
         Func<DocxTableRow, IReadOnlyList<IReadOnlyList<DocxTextLineLayout>>, DocxTableNoteFragmentPlan?>? resolveNoteFragments = null)
     {
-        if (!double.IsFinite(reviewFragmentScale) || reviewFragmentScale <= 0d || reviewFragmentScale >= 1d ||
-            !CanUsePrintedReviewTextTableFrame(table)) reviewFragmentScale = 1d;
         IReadOnlyList<(DocxTableRow Row, int RowIndex)> headerRows = table.Rows
             .Select((row, rowIndex) => (row, rowIndex))
             .TakeWhile(entry => entry.row.IsHeader)
@@ -602,6 +599,10 @@ internal sealed partial class DocxLayoutEngine
                 return false;
             }
 
+            // Automatic plain-text rows can split at a whole-line boundary
+            // without an authored widow rule. Other row layouts retain their
+            // conservative default. Explicit and inherited rules win in both.
+            bool defaultWidowControl = !CanUseNaturalTextRowFragments(row);
             double[] cellWidths = GetTableRowCellWidths(row, frame.EffectiveColumns, frame.Scale);
             double rowTopPadding = ResolveTableRowTopPadding(row, paragraphSpacingScale);
             int currentPageNumber = getPageNumber();
@@ -663,7 +664,7 @@ internal sealed partial class DocxLayoutEngine
                         if (firstCount != 0 && continuationCount != 0)
                         {
                             if (RequiresAtomicParagraphKeep(keepRules, group)) return false;
-                            bool widow = keepRules.WidowControl ?? (reviewFragmentScale == 1d);
+                            bool widow = keepRules.WidowControl ?? defaultWidowControl;
                             if (widow && firstCount == 1) return false;
                             if (widow && continuationCount == 1)
                             {
@@ -783,10 +784,11 @@ internal sealed partial class DocxLayoutEngine
                     if (before == 0) continue;
                     if (after != 0)
                     {
+                        bool widow = rules.WidowControl ?? defaultWidowControl;
                         if (RequiresAtomicParagraphKeep(rules, group.Select(item => item.Line), maximumContentHeight) ||
-                            (rules.WidowControl ?? (reviewFragmentScale == 1d)) && (before == 1 || before == 2 && after == 1))
+                            widow && (before == 1 || before == 2 && after == 1))
                             end = Math.Max(first, group.First().Index);
-                        else if ((rules.WidowControl ?? (reviewFragmentScale == 1d)) && after == 1)
+                        else if (widow && after == 1)
                             end = group.Last().Index - 1;
                     }
                     if (after == 0 && rules.KeepNext == true &&
@@ -1013,21 +1015,18 @@ internal sealed partial class DocxLayoutEngine
         }
     }
 
-    private static bool CanUsePrintedReviewTextTableFrame(DocxTable table)
+    private static bool CanUsePrintedReviewTextTableFrame(DocxTable table) =>
+        table.Rows.All(CanUseNaturalTextRowFragments);
+
+    private static bool CanUseNaturalTextRowFragments(DocxTableRow row)
     {
-        // Natural row metrics share printed body capacity; widow control
-        // selects a line boundary. Authored keep/row policies and rich content
-        // retain explicit fallbacks until their placement is qualified.
-        foreach (DocxTableRow row in table.Rows)
+        if (row.IsHeader || row.CantSplit || !HasAutomaticTableRowHeight(row.HeightPoints, row.HeightRuleValue))
+            return false;
+        foreach (DocxTableCell cell in row.Cells)
         {
-            if (row.IsHeader || row.CantSplit || !HasAutomaticTableRowHeight(row.HeightPoints, row.HeightRuleValue))
-                return false;
-            foreach (DocxTableCell cell in row.Cells)
-            {
-                if (!HasNaturalReviewCellLineMetrics(cell)) return false;
-                DocxParagraph paragraph = ((DocxParagraphElement)DocxTableCellContent.GetBodyElements(cell)[0]).Paragraph;
-                if (paragraph.Equations.Count != 0 || paragraph.KeepRules.KeepLines == true || paragraph.KeepRules.KeepNext == true) return false;
-            }
+            if (!HasNaturalReviewCellLineMetrics(cell)) return false;
+            DocxParagraph paragraph = ((DocxParagraphElement)DocxTableCellContent.GetBodyElements(cell)[0]).Paragraph;
+            if (paragraph.Equations.Count != 0 || paragraph.KeepRules.KeepLines == true || paragraph.KeepRules.KeepNext == true) return false;
         }
         return true;
     }

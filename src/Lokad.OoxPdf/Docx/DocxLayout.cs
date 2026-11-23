@@ -1401,7 +1401,7 @@ internal sealed partial class DocxLayoutEngine
                 int currentTableIndex = tableIndex++;
                 bool tableActiveFrameHasContent = false;
                 bool projectsReviewTableFrames = scaleBaselineOffsetTransitions && page.ColumnFrames.Count <= 1;
-                bool projectsReviewTableFragments = projectsReviewTableFrames && CanUsePrintedReviewTextTableFrame(bodyTable);
+                bool projectsReviewTableFragments = projectsReviewTableFrames && paragraphSpacingScale < 1d && CanUsePrintedReviewTextTableFrame(bodyTable);
                 // Row content/keep policies can change fragmentation, but cannot
                 // grant additional space beyond the containing printed body.
                 double CurrentTableFrameBottom() => CurrentParagraphFrameBottom();
@@ -1419,7 +1419,6 @@ internal sealed partial class DocxLayoutEngine
                     ? DocxTableNoteAdmission.TryCreate(elementIndex, bodyTable, inFlightNotes.Values,
                         locationsByBlock.GetValueOrDefault(elementIndex), cancellationToken) : null;
                 double NoteFrameBottom(double reserve) => ParagraphFrameBottom(reserve);
-                double reviewFragmentScale = projectsReviewTableFragments ? paragraphSpacingScale : 1d;
                 void MarkTableBoundaryContent()
                 {
                     tableActiveFrameHasContent = true;
@@ -1440,7 +1439,7 @@ internal sealed partial class DocxLayoutEngine
                     {
                         ApplyReviewTableBaselineGeometry(currentItems, itemCountBeforeTable, precedingBodyBaselineInset,
                             textMeasurer, paragraphSpacingScale, ref cursorY, cancellationToken,
-                            allowPageBoundaryFragments: reviewFragmentScale < 1d);
+                            allowPageBoundaryFragments: projectsReviewTableFragments);
                         advanceTableBoundaryCore();
                         itemCountBeforeTable = 0;
                     }
@@ -1487,7 +1486,6 @@ internal sealed partial class DocxLayoutEngine
 
                 LayoutTable(bodyTable, CurrentTableFrameBottom, continuationTableHeight, page.Height - page.MarginTop - page.MarginBottom,
                     textMeasurer, defaultTabStopPoints, () => pages.Count + 1, ref currentItems, ref cursorY, ResolveCurrentTableFrame, advanceTableBoundary, hasTableBoundaryContent, MarkTableBoundaryContent, cancellationToken, paragraphSpacingScale, headerSourcePages, new DocxTableCellTextLinesMemo(),
-                    reviewFragmentScale: reviewFragmentScale,
                     resolveNoteFragments: noteAdmission is null ? null : (row, fragments) => noteAdmission.TryPlan(row, fragments,
                         NoteFrameBottom, cursorY, page.Height - page.MarginTop, cancellationToken));
                 if (scaleBaselineOffsetTransitions &&
@@ -1495,7 +1493,7 @@ internal sealed partial class DocxLayoutEngine
                 {
                     double? tableBodyAnchor = ApplyReviewTableBaselineGeometry(currentItems, itemCountBeforeTable, precedingBodyBaselineInset,
                         textMeasurer, paragraphSpacingScale, ref cursorY, cancellationToken,
-                        allowPageBoundaryFragments: reviewFragmentScale < 1d);
+                        allowPageBoundaryFragments: projectsReviewTableFragments);
                     // A complete table consumes printed height in the current
                     // body frame; it does not start a new font-baseline origin.
                     // Page/column transitions and unprojected tables keep their
