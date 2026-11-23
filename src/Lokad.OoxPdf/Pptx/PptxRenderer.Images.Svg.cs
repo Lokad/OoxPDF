@@ -3258,7 +3258,7 @@ internal sealed partial class PptxRenderer
     private static bool TryReadSvgPathTransform(XElement path, out SvgTransform transform)
     {
         transform = SvgTransform.Identity;
-        foreach (XElement ancestor in path.Ancestors().Where(element => element.Name.LocalName == "g").Reverse())
+        foreach (XElement ancestor in path.Ancestors().Where(element => element.Name.LocalName is "g" or "a").Reverse())
         {
             if (!TryParseSvgTransformList((string?)ancestor.Attribute("transform"), out SvgTransform ancestorTransform))
             {

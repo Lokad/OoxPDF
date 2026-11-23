@@ -732,6 +732,39 @@ internal static partial class SvgTextTests
         Write(Page(actual));
     }
 
+    public static void SvgLinkWrapperTransformsKeepShapeAndLabelPaint()
+    {
+        const string definitions = """
+            <defs><linearGradient id="stroke" gradientUnits="userSpaceOnUse" x1="-75" x2="-40">
+              <stop stop-color="#2254b4"/><stop offset="1" stop-color="#8342ba"/>
+            </linearGradient></defs>
+            """;
+        const string children = """
+            <g transform="scale(1.25)">
+              <rect x="-72" y="8" width="18" height="16" fill="red"/>
+              <path d="M-72 31H-43" stroke="url(#stroke)" fill="none" stroke-width="4"/>
+              <text x="-66" y="45" font-size="11" fill="#112233">INK</text>
+            </g>
+            """;
+        const string sibling = """<rect id="destination" x="106" y="15" width="22" height="20" fill="green"/>""";
+        var group = Paint(Svg(definitions + sibling + $"""<g transform="translate(95 18)">{children}</g>"""));
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        var link = Paint(Svg(definitions + sibling + $"""<a href="#destination" transform="translate(95 18)">{children}</a>"""), diagnostics);
+        TestAssert.Contains("1 0 0 rg", group.ToString());
+        TestAssert.Equal(3, LabelPaths(group.ToString()));
+        TestAssert.Equal(1, group.ShadingPatterns.Count);
+        TestAssert.Equal(1, link.ShadingPatterns.Count);
+        AssertEquivalentSvgPaint(group, link, "A transformed link wrapper places the same paint as the equivalent group.");
+        TestAssert.Contains("unsupported a element", diagnostics.Single().Message);
+        Write(Page(link));
+
+        diagnostics.Clear();
+        var malformed = Paint(Svg(definitions + sibling + $"""<a href="#destination" transform="unsupported(95 18)">{children}</a>"""), diagnostics);
+        AssertEquivalentSvgPaint(Paint(Svg(sibling)), malformed, "An unusable transform leaves its neighboring paint intact.");
+        TestAssert.True(diagnostics.Any(d => d.Message.Contains("paths with unsupported transforms", StringComparison.Ordinal)),
+            "An unusable link transform retains the transform diagnostic.");
+    }
+
     public static void SvgObjectOpacityMatchesGroupForFilledGradientStrokes()
     {
         AssertSvgPaintInBothFormats(Picture(groupOpacity: true), Picture(groupOpacity: false), pdf =>

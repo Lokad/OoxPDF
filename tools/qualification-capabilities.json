@@ -679,6 +679,7 @@
     "=SvgOpaqueContainerStylesPreserveGradientStrokes",
     "=SvgZeroOpacityContainerStylesHidePaintAndDiagnostics",
     "=SvgResourceDefinitionsKeepTheirChildrenOutOfVisiblePaint",
+    "=SvgLinkWrapperTransformsKeepShapeAndLabelPaint",
     "=SvgLinesKeepTranslucentGradientStrokesWithDefaultOrInheritedFill",
     "=SvgObjectOpacityMatchesGroupForFilledGradientStrokes",
     "=SvgTranslucentSolidStrokesPaintOverTheirFill",
