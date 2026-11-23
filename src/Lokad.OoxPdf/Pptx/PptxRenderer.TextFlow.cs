@@ -732,6 +732,10 @@ internal sealed partial class PptxRenderer
                 span.GlyphSpan,
                 PdfCharacterSpacingOverride: null)))
             .ToArray();
+        if (layout.Frames.All(frame => frame.Model.BodyProperties.VerticalOverflow != PptxTextVerticalOverflow.Ellipsis))
+        {
+            return spans;
+        }
         return await AddEllipsisOverflowMarkersAsync().ConfigureAwait(false);
 
         async ValueTask<IReadOnlyList<PptxPositionedTextSpan>> AddEllipsisOverflowMarkersAsync()
