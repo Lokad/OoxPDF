@@ -1197,8 +1197,8 @@ internal sealed partial class PptxRenderer
             // Without a viewBox, fixed viewport dimensions define the source
             // coordinate system at the origin, with one user unit per pixel.
             var style = ReadSvgStyleDeclarations(root);
-            return TryReadSvgNumberOrPixels(ReadSvgPresentationAttribute(root, style, "width"), out width) &&
-                TryReadSvgNumberOrPixels(ReadSvgPresentationAttribute(root, style, "height"), out height);
+            return TryReadSvgLength(ReadSvgPresentationAttribute(root, style, "width"), out width) &&
+                TryReadSvgLength(ReadSvgPresentationAttribute(root, style, "height"), out height);
         }
 
         double[] values = SvgNumberRegex().Matches(viewBox)
@@ -1960,6 +1960,26 @@ internal sealed partial class PptxRenderer
             text = text[..^2];
         }
         return double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out value) && double.IsFinite(value);
+    }
+
+    private static bool TryReadSvgLength(ReadOnlySpan<char> text, out double value, double? relativeSize = null, bool allowPercent = false)
+    {
+        text = text.Trim();
+        double scale;
+        // CSS absolute units share a 96 px reference inch within the SVG viewport.
+        if (text.EndsWith("pt", StringComparison.OrdinalIgnoreCase)) { text = text[..^2]; scale = 96d / 72d; }
+        else if (text.EndsWith("pc", StringComparison.OrdinalIgnoreCase)) { text = text[..^2]; scale = 16d; }
+        else if (text.EndsWith("in", StringComparison.OrdinalIgnoreCase)) { text = text[..^2]; scale = 96d; }
+        else if (text.EndsWith("cm", StringComparison.OrdinalIgnoreCase)) { text = text[..^2]; scale = 96d / 2.54d; }
+        else if (text.EndsWith("mm", StringComparison.OrdinalIgnoreCase)) { text = text[..^2]; scale = 96d / 25.4d; }
+        else if (text.EndsWith("q", StringComparison.OrdinalIgnoreCase)) { text = text[..^1]; scale = 96d / 101.6d; }
+        else if (relativeSize is { } em && text.EndsWith("em", StringComparison.OrdinalIgnoreCase)) { text = text[..^2]; scale = em; }
+        else if (allowPercent && relativeSize is { } percent && text.EndsWith('%')) { text = text[..^1]; scale = percent / 100d; }
+        else return TryReadSvgNumberOrPixels(text, out value);
+
+        bool valid = double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out value);
+        value *= scale;
+        return valid && double.IsFinite(value);
     }
 
     private static double GetSvgNormalizedDiagonal(double width, double height) =>
@@ -2892,7 +2912,7 @@ internal sealed partial class PptxRenderer
     private static bool TryReadSvgViewportLength(XElement element, ReadOnlySpan<char> text, double percentageBasis, out double value)
     {
         text = text.Trim();
-        if (!text.EndsWith("%", StringComparison.Ordinal)) return TryReadSvgNumberOrPixels(text, out value);
+        if (!text.EndsWith("%", StringComparison.Ordinal)) return TryReadSvgLength(text, out value);
 
         value = 0d;
         // Nested viewports require their own dimensions.

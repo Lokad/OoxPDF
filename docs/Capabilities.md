@@ -108,6 +108,7 @@ and stroke width to their defaults. `initial` and `unset` restore full
 opacity on SVG objects and gradient stops.
 An SVG `font-size` reset restores the default for the label and its relative descendants.
 Basic shape geometry, stroke widths, dash lengths and dash offsets accept viewport percentages.
+These lengths and fixed viewport dimensions also accept absolute CSS units.
 Supported SVG labels accept viewport percentages, em and absolute units in
 single-value x, y, dx and dy attributes. Absolute units also work in font size.
 Line elements use stroke paint and ignore fill declarations.

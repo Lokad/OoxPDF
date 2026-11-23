@@ -664,6 +664,7 @@
     "=SvgPrimitivePercentagesMatchUserCoordinatesInBothFormats",
     "=SvgAutomaticShapeRadiiMatchExplicitPairsInBothFormats",
     "=SvgPercentageStrokeWidthsMatchViewportUnitsInBothFormats",
+    "=SvgAbsoluteViewportAndShapeLengthsMatchUserUnits",
     "=SvgPercentageDashLengthsMatchViewportUnitsInBothFormats",
     "=SvgPercentageDashOffsetsMatchViewportUnitsInBothFormats",
     "=SvgDashArrayXmlWhitespaceMatchesSpacesInBothFormats",

@@ -128,7 +128,7 @@ internal sealed partial class PptxRenderer
             if (value is null || InheritsSvgPropertyValue(value)) continue;
             if (IsSvgInitialValue(value))
                 size = initialFontSize;
-            else if (!TryReadSvgTextLength(value, size, out size, allowPercent: true))
+            else if (!TryReadSvgLength(value, out size, relativeSize: size, allowPercent: true))
                 return false;
         }
         if (size <= 0d || !TryReadPosition("x", viewWidth, out double x) ||
@@ -169,7 +169,7 @@ internal sealed partial class PptxRenderer
             string text = ((string?)element.Attribute(name) ?? "0").Trim();
             return text.EndsWith('%')
                 ? TryReadSvgViewportLength(element, text, percentageBasis, out value)
-                : TryReadSvgTextLength(text, size, out value);
+                : TryReadSvgLength(text, out value, relativeSize: size);
         }
     }
 
@@ -198,25 +198,6 @@ internal sealed partial class PptxRenderer
         (attribute.Name.LocalName is "id" or "class" or "role" ||
          attribute.Name.LocalName.StartsWith("aria-", StringComparison.Ordinal) ||
          attribute.Name.LocalName.StartsWith("data-", StringComparison.Ordinal));
-
-    private static bool TryReadSvgTextLength(ReadOnlySpan<char> text, double? relativeSize, out double value, bool allowPercent = false)
-    {
-        text = text.Trim();
-        double scale = 1d;
-        if (text.EndsWith("px", StringComparison.OrdinalIgnoreCase)) text = text[..^2];
-        // CSS absolute units share a 96 px reference inch within the SVG viewport.
-        else if (text.EndsWith("pt", StringComparison.OrdinalIgnoreCase)) { text = text[..^2]; scale = 96d / 72d; }
-        else if (text.EndsWith("pc", StringComparison.OrdinalIgnoreCase)) { text = text[..^2]; scale = 16d; }
-        else if (text.EndsWith("in", StringComparison.OrdinalIgnoreCase)) { text = text[..^2]; scale = 96d; }
-        else if (text.EndsWith("cm", StringComparison.OrdinalIgnoreCase)) { text = text[..^2]; scale = 96d / 2.54d; }
-        else if (text.EndsWith("mm", StringComparison.OrdinalIgnoreCase)) { text = text[..^2]; scale = 96d / 25.4d; }
-        else if (text.EndsWith("q", StringComparison.OrdinalIgnoreCase)) { text = text[..^1]; scale = 96d / 101.6d; }
-        else if (relativeSize is { } em && text.EndsWith("em", StringComparison.OrdinalIgnoreCase)) { text = text[..^2]; scale = em; }
-        else if (allowPercent && relativeSize is { } percent && text.EndsWith('%')) { text = text[..^1]; scale = percent / 100d; }
-        bool valid = double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out value);
-        value *= scale;
-        return valid && double.IsFinite(value);
-    }
 
     private static bool TryPaintSvgText(PdfGraphicsBuilder graphics, XElement element, Lazy<HashSet<string>> paintServerIds,
         IReadOnlyDictionary<FontRequest, SvgTextFont?>? fonts, SvgTransform transform, double viewWidth, double viewHeight,

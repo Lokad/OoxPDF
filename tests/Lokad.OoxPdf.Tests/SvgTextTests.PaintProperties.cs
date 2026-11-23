@@ -452,6 +452,27 @@ internal static partial class SvgTextTests
             "/S /Luminosity", "/Coords [-1 0 2 0]", "/Bounds [0.375 0.5]");
     }
 
+    public static void SvgAbsoluteViewportAndShapeLengthsMatchUserUnits()
+    {
+        string Picture(string width, string height, string rectangleWidth, string strokeWidth, string dash, string offset) => $"""
+            <svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" font-family="DejaVu Sans" overflow="hidden">
+              <text x="24" y="41" font-size="16" fill="#112233">NORTH</text>
+              <text x="72" y="65" font-size="16" fill="#2254b4">A B</text>
+              <rect x="24" y="84" width="{rectangleWidth}" height="20" fill="green"/>
+              <path d="M24 123H150" fill="none" stroke="red" stroke-width="{strokeWidth}"
+                    stroke-dasharray="{dash}" stroke-dashoffset="{offset}"/>
+              <rect x="152" y="56" width="9" height="9" fill="lime"/>
+            </svg>
+            """;
+        AssertSvgPaintInBothFormats(Picture("300", "160", "96", "4", "8 3", "2"),
+            [Picture("3.125in", "10pc", "96", "4", "8 3", "2"),
+             Picture("300", "160", "2.54cm", "3pt", "6pt 2.25pt", "1.5pt")], pdf =>
+        {
+            TestAssert.Equal(5, LabelPaths(pdf));
+            TestAssert.Equal(2, LabelPaths(pdf, "0.133 0.329 0.706 rg"));
+        }, "0 0.502 0 rg", "1 0 0 RG", " d", "0 1 0 rg");
+    }
+
     public static void SvgPercentageStrokeWidthsMatchViewportUnitsInBothFormats()
     {
         // A 170 x 70 viewBox has a normalized diagonal of 130 user units.
