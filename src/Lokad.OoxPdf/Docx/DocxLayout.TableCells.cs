@@ -167,9 +167,4 @@ internal sealed partial class DocxLayoutEngine
         return widths;
     }
 
-    private static IReadOnlyList<DocxParagraph> GetParagraphsFromBodyElements(IReadOnlyList<DocxBodyElement> bodyElements)
-    {
-        return DocxBlockTraversal.EnumerateDirectParagraphs(bodyElements).ToArray();
-    }
-
 }

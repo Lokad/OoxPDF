@@ -344,7 +344,6 @@ internal sealed record DocxTableCellLayout(
     IReadOnlyList<DocxTextLineLayout> TextLines,
     IReadOnlyList<DocxInlineImageLayout> InlineImages,
     bool IsVerticalMergeContinuation,
-    DocxTableCell? VerticalMergeOwnerCell,
     DocxVerticalMergeOwner? VerticalMergeOwner,
     DocxTableCellVisualOwnership VisualOwnership,
     IReadOnlyList<DocxTableRowLayout>? NestedTableRows)

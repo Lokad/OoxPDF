@@ -104,7 +104,7 @@ internal sealed partial class DocxLayoutEngine
             MathEquations: mathEquations,
             CancellationToken: cancellationToken);
         IReadOnlyList<DocxBodyElement> bodyElements = DocxTableCellContent.GetBodyElements(cell);
-        IReadOnlyList<DocxParagraph> paragraphs = GetParagraphsFromBodyElements(bodyElements);
+        IReadOnlyList<DocxParagraph> paragraphs = DocxBlockTraversal.EnumerateDirectParagraphs(bodyElements).ToArray();
         if (bodyElements.Count == 0)
         {
             return default;
@@ -352,7 +352,7 @@ internal sealed partial class DocxLayoutEngine
             MathEquations: mathEquations,
             CancellationToken: cancellationToken);
         IReadOnlyList<DocxBodyElement> bodyElements = DocxTableCellContent.GetBodyElements(cell);
-        IReadOnlyList<DocxParagraph> paragraphs = GetParagraphsFromBodyElements(bodyElements);
+        IReadOnlyList<DocxParagraph> paragraphs = DocxBlockTraversal.EnumerateDirectParagraphs(bodyElements).ToArray();
         if (bodyElements.Count == 0)
         {
             return ([], [], [], [], 0d, []);

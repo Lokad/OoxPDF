@@ -854,10 +854,10 @@ internal sealed partial record DocxLayoutSnapshot(
         DocxTextLineLayout? lastLine = cellLayout.TextLines.LastOrDefault();
         bool sharesSourceCell = ReferenceEquals(cell, visualCell);
         IReadOnlyList<DocxBodyElement> bodyElements = DocxTableCellContent.GetBodyElements(cell);
-        IReadOnlyList<DocxParagraph> paragraphs = GetParagraphsFromBodyElements(bodyElements);
+        IReadOnlyList<DocxParagraph> paragraphs = DocxBlockTraversal.EnumerateDirectParagraphs(bodyElements).ToArray();
         IReadOnlyList<DocxParagraph> visualParagraphs = sharesSourceCell
             ? paragraphs
-            : GetParagraphsFromBodyElements(DocxTableCellContent.GetBodyElements(visualCell));
+            : DocxBlockTraversal.EnumerateDirectParagraphs(DocxTableCellContent.GetBodyElements(visualCell)).ToArray();
         IReadOnlyList<double> spacingBeforePoints = paragraphs.Select(paragraph => paragraph.EffectiveProperties.SpacingBeforePoints).ToArray();
         IReadOnlyList<double> spacingAfterPoints = paragraphs.Select(paragraph => paragraph.EffectiveProperties.SpacingAfterPoints).ToArray();
         string cellText = string.Concat(paragraphs.SelectMany(paragraph => paragraph.Runs).Select(run => run.Text));
@@ -988,11 +988,6 @@ internal sealed partial record DocxLayoutSnapshot(
                 lowercaseCharacterCount,
                 longestBreakableTokenLength);
         }
-    }
-
-    private static IReadOnlyList<DocxParagraph> GetParagraphsFromBodyElements(IReadOnlyList<DocxBodyElement> bodyElements)
-    {
-        return DocxBlockTraversal.EnumerateDirectParagraphs(bodyElements).ToArray();
     }
 
     private static int ResolveLongestBreakableTokenLength(string text)

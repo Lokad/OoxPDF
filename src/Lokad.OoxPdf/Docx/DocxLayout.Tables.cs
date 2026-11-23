@@ -98,9 +98,9 @@ internal sealed partial class DocxLayoutEngine
                 cancellationToken.ThrowIfCancellationRequested();
                 var elements = DocxTableCellContent.GetBodyElements(cell.VisualCell);
                 if (elements.Any(element => element is not (DocxParagraphElement or DocxTableElement))) return false;
-                var paragraphs = GetParagraphsFromBodyElements(elements);
+                var paragraphs = DocxBlockTraversal.EnumerateDirectParagraphs(elements).ToArray();
                 if (cell.TextLines.Any(line => line.SourceParagraphIndex is not { } index || index < 0 ||
-                    index >= paragraphs.Count || !ReferenceEquals(line.SourceParagraph, paragraphs[index]))) return false;
+                    index >= paragraphs.Length || !ReferenceEquals(line.SourceParagraph, paragraphs[index]))) return false;
                 var tables = elements.OfType<DocxTableElement>().ToArray();
                 if (cell.NestedRows.Count != tables.Sum(element => element.Table.Rows.Count)) return false;
                 int offset = 0;
@@ -268,7 +268,7 @@ internal sealed partial class DocxLayoutEngine
     {
         inset = 0d;
         token.ThrowIfCancellationRequested();
-        IReadOnlyList<DocxParagraph> paragraphs = GetParagraphsFromBodyElements(DocxTableCellContent.GetBodyElements(cell.VisualCell));
+        IReadOnlyList<DocxParagraph> paragraphs = DocxBlockTraversal.EnumerateDirectParagraphs(DocxTableCellContent.GetBodyElements(cell.VisualCell)).ToArray();
         // Alignment translates an already measured inline frame; it does not
         // change which inset is nominal. Keep legacy-only and nested alignment
         // on their qualified fallback until their frames have the same ownership.
@@ -621,7 +621,7 @@ internal sealed partial class DocxLayoutEngine
                 // Keep only painted math boxes atomic until math-bearing row
                 // fragments have their own placement qualification.
                 if (textLines.Any(line => line.Math is not null || line.InlineMath.Count != 0)) { return false; }
-                IReadOnlyList<DocxParagraph> cellParagraphs = GetParagraphsFromBodyElements(DocxTableCellContent.GetBodyElements(cell));
+                IReadOnlyList<DocxParagraph> cellParagraphs = DocxBlockTraversal.EnumerateDirectParagraphs(DocxTableCellContent.GetBodyElements(cell)).ToArray();
                 double fragmentBaselineScale = ResolveTableRowFragmentBaselineScale(row, paragraphSpacingScale, fragmentCount: 2);
                 if (fragmentBaselineScale < 1d)
                 {
@@ -2298,9 +2298,8 @@ internal sealed partial class DocxLayoutEngine
             DocxVerticalMergeOwner? verticalMergeOwner = isVerticalMergeContinuation
                 ? FindVerticalMergeRestartOwner(table, rowIndex, gridColumnIndex)
                 : null;
-            DocxTableCell? verticalMergeOwnerCell = verticalMergeOwner?.Cell;
             DocxTableCellVisualOwnership visualOwnership = isVerticalMergeContinuation
-                ? verticalMergeOwnerCell is null
+                ? verticalMergeOwner is null
                     ? DocxTableCellVisualOwnership.MissingVerticalMergeOwner
                     : DocxTableCellVisualOwnership.VerticalMergeOwner
                 : DocxTableCellVisualOwnership.OwnCell;
@@ -2323,9 +2322,7 @@ internal sealed partial class DocxLayoutEngine
             int currentPageIndex = Math.Max(0, currentPageNumber - 1);
             int counterPageNumber = fieldPageNumber ?? currentPageNumber;
 
-            DocxTableCell contentCell = visualOwnership == DocxTableCellVisualOwnership.VerticalMergeOwner && verticalMergeOwnerCell is not null
-                ? verticalMergeOwnerCell
-                : cell;
+            DocxTableCell contentCell = verticalMergeOwner?.Cell ?? cell;
             double contentY = isVerticalMergeContinuation ? visualY : fullVisualY;
             double contentHeight = isVerticalMergeContinuation ? visualHeight : fullVisualHeight;
             double contentPaddingLeft = ResolveTableCellHorizontalEdgeInset(contentCell, "left", contentCell.Margins.LeftPoints, paragraphSpacingScale);
@@ -2344,7 +2341,7 @@ internal sealed partial class DocxLayoutEngine
             // admitted line is painted at the same position inside its clip.
             double fragmentBaselineScale = ResolveTableRowFragmentBaselineScale(row, paragraphSpacingScale, FragmentCount);
             double fragmentBaselineCorrection = fragmentBaselineScale < 1d && textMeasurer is not null
-                ? ResolveTableCellFirstBaselineInset(GetParagraphsFromBodyElements(DocxTableCellContent.GetBodyElements(contentCell)),
+                ? ResolveTableCellFirstBaselineInset(DocxBlockTraversal.EnumerateDirectParagraphs(DocxTableCellContent.GetBodyElements(contentCell)).ToArray(),
                     textMeasurer) * (1d - fragmentBaselineScale) : 0d;
             if (fragmentBaselineCorrection != 0d)
             {
@@ -2404,7 +2401,6 @@ internal sealed partial class DocxLayoutEngine
                 textLines,
                 inlineImages,
                 isVerticalMergeContinuation,
-                verticalMergeOwnerCell,
                 verticalMergeOwner,
                 visualOwnership,
                 nestedTableRows) with { InlineTextBoxes = inlineTextBoxes, DrawingAnchors = drawingAnchors });

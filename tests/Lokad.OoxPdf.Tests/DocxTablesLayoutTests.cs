@@ -319,9 +319,8 @@ internal static class DocxTablesLayoutTests
         TestAssert.Equal(DocxTableCellVisualOwnership.VerticalMergeOwner, continuationCell.VisualOwnership);
         TestAssert.Equal(1, continuationCell.VerticalMergeOwner?.RowIndex ?? -1);
         TestAssert.Equal(0, continuationCell.VerticalMergeOwner?.GridColumnIndex ?? -1);
-        TestAssert.True(ReferenceEquals(restart, continuationCell.VerticalMergeOwnerCell), "Continuation fragments should retain the restart cell as visual owner across pages.");
         TestAssert.True(ReferenceEquals(restart, continuationCell.VisualCell), "Continuation fragments should resolve their visual cell through layout ownership.");
-        TestAssert.Equal("D9EAD3", continuationCell.VerticalMergeOwnerCell?.FillHex ?? string.Empty);
+        TestAssert.Equal("D9EAD3", continuationCell.VisualCell.FillHex ?? string.Empty);
         TestAssert.Equal(60d, continuationCell.Y);
         TestAssert.Equal(30d, continuationCell.Height);
 
