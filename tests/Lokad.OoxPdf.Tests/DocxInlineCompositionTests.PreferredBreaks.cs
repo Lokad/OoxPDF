@@ -161,6 +161,56 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
+    public static void DocxImplicitDecimalCellTabsMatchExplicitFieldPlacement()
+    {
+        var resolver = new PortableRenderingTests.PinnedResolver();
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var renderer = new DocxRenderer(resolver, mode, CachedMathGeometry(mode));
+            foreach (var (composed, breaks) in new[] { (false, false), (false, true), (true, false) })
+            {
+                PdfPage explicitTab = Paint(authored: true);
+                PdfPage implicitTab = Paint(authored: false);
+                var number = PortableRenderingTests.ReadPaintedSourceLabel(implicitTab, "12.34");
+                var following = PortableRenderingTests.ReadPaintedSourceLabel(implicitTab, "After table.");
+                TestAssert.True(Math.Abs(number[2].Origin.X - following[0].Origin.X - 145d) < .02d,
+                    "The implicit leading field places its decimal separator at the cell's authored stop.");
+                TestAssert.True(number.SequenceEqual(PortableRenderingTests.ReadPaintedSourceLabel(explicitTab, "12.34")),
+                    "The whole implicit numeric field uses the explicit field's geometry.");
+                TestAssert.True(following.SequenceEqual(PortableRenderingTests.ReadPaintedSourceLabel(explicitTab, "After table.")),
+                    "The fitting tab keeps the following paragraph in its original flow.");
+                if (breaks)
+                {
+                    var continuation = PortableRenderingTests.ReadPaintedSourceLabel(implicitTab, "Second line.");
+                    TestAssert.True(continuation.SequenceEqual(PortableRenderingTests.ReadPaintedSourceLabel(explicitTab, "Second line.")),
+                        "Only the leading field consumes the implicit stop.");
+                }
+                if (composed)
+                {
+                    TestAssert.Equal(ReadPictureFractionRule(explicitTab), ReadPictureFractionRule(implicitTab));
+                    TestAssert.Equal(ReadPictureBounds(explicitTab).Single(), ReadPictureBounds(implicitTab).Single());
+                    TestAssert.Equal(explicitTab.Images.Single().Image.ResourceKey, implicitTab.Images.Single().Image.ResourceKey);
+                }
+
+                PdfPage Paint(bool authored)
+                {
+                    var document = ReadMutation("docx-run-picture-visible", mode, false, false, (xml, w, m) =>
+                    {
+                        var (paragraph, drawing) = CreateExactPictureCell(xml, w, 3600, 1320, 320, "After table.");
+                        paragraph.Element(w + "pPr")!.AddFirst(new XElement(w + "tabs", new XElement(w + "tab",
+                            new XAttribute(w + "val", "decimal"), new XAttribute(w + "pos", "2900"))));
+                        if (authored) paragraph.Add(PictureCellRun(w, new XElement(w + "tab")));
+                        if (composed) AddPictureFractionLabel(paragraph, drawing, w, m);
+                        paragraph.Add(PictureCellRun(w, PictureCellText(w, "12.34")));
+                        if (breaks)
+                            paragraph.Add(PictureCellRun(w, new XElement(w + "br"), PictureCellText(w, "Second line.")));
+                    });
+                    return renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
+                }
+            }
+        }
+    }
+
     public static void DocxLogicalParagraphEdgesMatchPhysicalAlignment()
     {
         const string styleId = "LogicalParagraphTest";

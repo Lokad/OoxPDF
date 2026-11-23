@@ -828,23 +828,24 @@ internal sealed partial class DocxLayoutEngine
         IReadOnlyList<DocxTabStop> tabStops,
         double defaultTabStopPoints,
         int? dynamicFieldPageNumber,
-        double lineImageWidth = 0d)
+        double lineImageWidth = 0d,
+        double? leadingTabAdvance = null)
     {
         double lineWidth = MeasureTextSpansForLayout(line.Spans, fontSize, textMeasurer, tabStops, defaultTabStopPoints, dynamicFieldPageNumber);
         double drawableLineWidth = MeasureDrawableTextSpansForLayout(line.Spans, fontSize, textMeasurer, tabStops, defaultTabStopPoints, dynamicFieldPageNumber);
-        bool justifyLine = (paragraph.ListLabel is null || !firstLine) &&
+        bool justifyLine = leadingTabAdvance is null && (paragraph.ListLabel is null || !firstLine) &&
             ShouldJustifyTextLine(paragraph.EffectiveProperties.Alignment, finalWrappedLine, drawableLineWidth, paragraphWidth, line.Spans);
         IReadOnlyList<DocxTextSegmentLayout> segments = firstLine && paragraph.ListLabel is not null
             ? CreateNumberedLineSegments(paragraph.ListLabel, line.Spans, firstRun)
             : justifyLine
                 ? CreateJustifiedTextSegments(line.Spans, lineX, drawableLineWidth, paragraphWidth, lineImageWidth, fontSize, textMeasurer, tabStops, defaultTabStopPoints)
-                : CreateTextSegments(line.Spans, lineX, fontSize, textMeasurer, tabStops, defaultTabStopPoints);
+                : CreateTextSegments(line.Spans, lineX + (leadingTabAdvance ?? 0d), fontSize, textMeasurer, tabStops, defaultTabStopPoints);
         double effectiveX = firstLine && paragraph.ListLabel is not null ? labelX : lineX;
         double effectiveWidth = firstLine && paragraph.ListLabel is not null
             ? Math.Max(lineX + lineWidth, labelX + MeasureListLabel(paragraph.ListLabel, firstRun, fontSize, textMeasurer)) - labelX
             : justifyLine
                 ? paragraphWidth
-                : lineWidth;
+                : lineWidth + (leadingTabAdvance ?? 0d);
         string GetListLabelTextSeparator(DocxListLabel label)
         {
             return label.SuffixValue switch

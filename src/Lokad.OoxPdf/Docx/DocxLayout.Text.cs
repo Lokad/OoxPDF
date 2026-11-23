@@ -635,6 +635,42 @@ internal sealed partial class DocxLayoutEngine
             : (stop, stop + fieldWidth);
     }
 
+    private static bool TryFitAlignedTabField(DocxResolvedTabStop stop, double fieldWidth, double? decimalAnchor,
+        double previousAdvance, double availableWidth, out double start)
+    {
+        start = GetAlignedTabFieldBounds(stop, fieldWidth, decimalAnchor).Start;
+        return double.IsFinite(start) && start >= previousAdvance && start + fieldWidth <= availableWidth;
+    }
+
+    private static double? ResolveImplicitCellDecimalStop(DocxTableCell cell, DocxParagraph paragraph,
+        double scale, CancellationToken cancellationToken)
+    {
+        // The cell supplies a leading tab for one effective decimal stop.
+        // Explicit tabs and numbered or fitted text retain their own layout.
+        if (cell.FitText || paragraph.ListLabel is not null) return null;
+        double? position = null;
+        foreach (var stop in paragraph.EffectiveProperties.TabStops)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (stop.Kind == DocxTabStopKind.Clear) continue;
+            if (position is not null || stop.Kind != DocxTabStopKind.Decimal ||
+                stop.PositionPoints is not { } points || !SupportsTabLeader(stop.LeaderValue)) return null;
+            double scaled = points * scale;
+            if (!double.IsFinite(scaled) || scaled <= .001d) return null;
+            position = scaled;
+        }
+        if (position is null) return null;
+        foreach (var run in paragraph.Runs)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (run.Text.Contains('\t')) return null;
+        }
+        return position;
+    }
+
+    private static bool SupportsTabLeader(string? leader) =>
+        leader is null || string.Equals(leader, "none", StringComparison.OrdinalIgnoreCase);
+
     private static double GetTextSpanFontSize(DocxTextSpan span, double fallbackFontSize)
     {
         double fontSize = span.StyleRun.EffectiveProperties.FontSize;

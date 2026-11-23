@@ -1055,6 +1055,7 @@
   ],
   "docx-shared-cell-content-portable": [
     "=DocxFittingDecimalTabsRetainMathPicturesAndNumericAnchors",
+    "=DocxImplicitDecimalCellTabsMatchExplicitFieldPlacement",
     "=DocxLogicalTabsPreserveComposedFractionsAndFieldPlacement",
     "=DocxLogicalParagraphEdgesMatchPhysicalAlignment",
     "=DocxInlineCompositionPreferredBreakKeepsTailInsideExactCell",
@@ -1362,6 +1363,7 @@
   ],
   "docx-static-tab-fields": [
     "=DocxFittingDecimalTabsRetainMathPicturesAndNumericAnchors",
+    "=DocxImplicitDecimalCellTabsMatchExplicitFieldPlacement",
     "=DocxLogicalTabsPreserveComposedFractionsAndFieldPlacement",
     "DocxStaticTabsShareBodyFieldOffsetsWithoutEquations",
     "DocxStaticTabsKeepFieldsLinksHiddenOwnersAndCancellation",

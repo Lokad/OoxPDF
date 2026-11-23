@@ -23,6 +23,7 @@ internal sealed record DocxMeasuredInlineLine(IReadOnlyList<DocxMeasuredInlineFr
     public double? DisplayGroupAdvance { get; init; }
     public bool IsDisplayGroup => DisplayAlignment is not null;
     public double TextBaselineInset { get; init; }
+    public double LeadingTabAdvance { get; init; }
     public DocxInlineSourceCursor EndCursor { get; init; }
     public IReadOnlyList<DocxTextSegmentLayout> ListLabelSegments { get; init; } = [];
 }
@@ -138,13 +139,16 @@ internal sealed partial class DocxLayoutEngine
         // strut. The nominal first-cell inset belongs to the legacy path.
         double baselineInset = paragraphInset * scale;
         double right = GetParagraphRightInset(paragraph, scale);
-        double firstWidth = ResolveTableCellTextWrapWidth(cell, textWidth - right -
-            GetParagraphFirstLineTextStartOffset(paragraph, fontSize, context.TextMeasurer, scale, context.DefaultTabStopPoints));
+        double firstFrameWidth = textWidth - right -
+            GetParagraphFirstLineTextStartOffset(paragraph, fontSize, context.TextMeasurer, scale, context.DefaultTabStopPoints);
+        double firstWidth = ResolveTableCellTextWrapWidth(cell, firstFrameWidth);
         double nextWidth = ResolveTableCellTextWrapWidth(cell, textWidth - right - GetParagraphTextStartOffset(paragraph, scale));
         return TryMeasureOrderedInlineContent(paragraph, context.MathEquations, context.TextMeasurer, fontSize,
             firstWidth, nextWidth, baselineInset, lineHeight, scale, context.CancellationToken, out lines,
             physicalTextBaselineInset: DocxPlainBodyFrame.HasFixedLineFlow(paragraph) ? baselineInset : null,
-            defaultTabStopPoints: context.DefaultTabStopPoints, pageNumber: context.PageNumber, pageCount: context.PageCount);
+            defaultTabStopPoints: context.DefaultTabStopPoints, pageNumber: context.PageNumber, pageCount: context.PageCount,
+            leadingDecimalTab: ResolveImplicitCellDecimalStop(cell, paragraph, scale, context.CancellationToken) is { } stop
+                ? (stop, firstFrameWidth) : null);
     }
 
     private static (DocxTextLineLayout Line, IReadOnlyList<DocxInlineImageLayout> Images,
@@ -162,7 +166,7 @@ internal sealed partial class DocxLayoutEngine
         var text = new System.Text.StringBuilder();
         if (measured.ListLabelSegments.Count != 0 && paragraph.ListLabel is { } label)
             text.Append(label.DisplayText).Append(label.SuffixValue switch { "nothing" => string.Empty, "space" => " ", _ => "\t" });
-        double offset = 0d;
+        double offset = measured.LeadingTabAdvance;
         foreach (var fragment in measured.Fragments)
         {
             offset += fragment.LeadingAdvance;
@@ -260,14 +264,14 @@ internal sealed partial class DocxLayoutEngine
         [NotNullWhen(true)] out IReadOnlyList<DocxMeasuredInlineLine>? lines,
         double? physicalTextBaselineInset = null, double defaultTabStopPoints = WordDefaultTabStopPoints,
         int? pageNumber = null, int? pageCount = null, bool allowStaticFallback = false,
-        bool includeInlineTextBoxes = true)
+        bool includeInlineTextBoxes = true, (double Position, double FrameWidth)? leadingDecimalTab = null)
     {
         lines = null;
         return double.IsFinite(firstWidth) && double.IsFinite(nextWidth) && firstWidth > 0d && nextWidth > 0d &&
             TryMeasureOrderedInlineAtoms(paragraph, equations, measurer, fontSize, baselineInset, lineHeight, scale,
                 token, out var atoms, defaultTabStopPoints, pageNumber, pageCount, allowStaticFallback, physicalTextBaselineInset,
                 includeInlineTextBoxes) &&
-            TryWrapOrderedInlineAtoms(atoms, firstWidth, nextWidth, token, out lines, physicalTextBaselineInset);
+            TryWrapOrderedInlineAtoms(atoms, firstWidth, nextWidth, token, out lines, physicalTextBaselineInset, leadingDecimalTab);
     }
 
     internal static bool TryMeasureOrderedInlineAtoms(DocxParagraph paragraph,
@@ -643,9 +647,9 @@ internal sealed partial class DocxLayoutEngine
 
     internal static bool TryWrapOrderedInlineAtoms(DocxMeasuredInlineAtoms atoms, double firstWidth, double nextWidth,
         CancellationToken token, [NotNullWhen(true)] out IReadOnlyList<DocxMeasuredInlineLine>? lines,
-        double? physicalTextBaselineInset = null)
+        double? physicalTextBaselineInset = null, (double Position, double FrameWidth)? leadingDecimalTab = null)
         => TryWrapOrderedInlineAtomsCore(atoms, firstWidth, nextWidth, token, out lines, physicalTextBaselineInset,
-            default, stopAfterFirstLine: false);
+            default, stopAfterFirstLine: false, leadingDecimalTab);
 
     internal static bool TryGetNextOrderedInlineLine(DocxMeasuredInlineAtoms atoms, DocxInlineSourceCursor cursor,
         double firstWidth, double nextWidth, CancellationToken token,
@@ -661,7 +665,8 @@ internal sealed partial class DocxLayoutEngine
 
     private static bool TryWrapOrderedInlineAtomsCore(DocxMeasuredInlineAtoms atoms, double firstWidth, double nextWidth,
         CancellationToken token, [NotNullWhen(true)] out IReadOnlyList<DocxMeasuredInlineLine>? lines,
-        double? physicalTextBaselineInset, DocxInlineSourceCursor cursor, bool stopAfterFirstLine)
+        double? physicalTextBaselineInset, DocxInlineSourceCursor cursor, bool stopAfterFirstLine,
+        (double Position, double FrameWidth)? leadingDecimalTab = null)
     {
         lines = null;
         if (!double.IsFinite(firstWidth) || !double.IsFinite(nextWidth) || firstWidth <= 0d || nextWidth <= 0d) return false;
@@ -711,7 +716,11 @@ internal sealed partial class DocxLayoutEngine
             return fragment;
         }
         var current = new List<DocxMeasuredInlineFragment>();
-        double advance = 0d, above = baselineInset, below = Math.Max(0d, lineHeight - baselineInset);
+        double? leadingTabAdvance = null;
+        if (leadingDecimalTab is { } leading && measured.Count != 0 && Atom(0).Source is not DocxInlineBreak &&
+            TryFitAlignedField(new(leading.Position, DocxTabStopKind.Decimal), 0, 0d, leading.FrameWidth, out double leadingStart))
+            leadingTabAdvance = leadingStart;
+        double advance = leadingTabAdvance ?? 0d, above = baselineInset, below = Math.Max(0d, lineHeight - baselineInset);
         bool authoredLineStart = cursor.AtomIndex == 0 && cursor.LineIndex == 0 ||
             cursor.AtomIndex > 0 && measured[cursor.AtomIndex - 1].Source is DocxInlineBreak;
         for (int index = cursor.AtomIndex; index < measured.Count;)
@@ -727,24 +736,14 @@ internal sealed partial class DocxLayoutEngine
             if (Atom(index).Source is DocxInlineTab)
             {
                 var tabStop = ResolveNextTabStop(advance, tabStops, defaultTabStopPoints * scale);
-                if (!CanMeasureOrderedTabStop(tabStop)) return false;
+                if (!SupportsTabLeader(tabStop.LeaderValue)) return false;
                 double stop = tabStop.PositionPoints;
                 double available = output.Count == 0 ? firstWidth : nextWidth;
-                bool decimalTab = tabStop.Kind == DocxTabStopKind.Decimal;
                 if (tabStop.Kind is DocxTabStopKind.Decimal or DocxTabStopKind.Right or DocxTabStopKind.Center)
                 {
-                    int fieldEnd = index + 1;
-                    while (fieldEnd < measured.Count && Atom(fieldEnd).Source is not (DocxInlineTab or DocxInlineBreak))
-                    {
-                        token.ThrowIfCancellationRequested();
-                        fieldEnd++;
-                    }
-                    var field = MeasureGroup(index + 1, fieldEnd, decimalTab);
-                    double? anchor = decimalTab ? field.DecimalOffset ?? field.Advance : null;
-                    double start = GetAlignedTabFieldBounds(tabStop, field.Advance, anchor).Start;
                     // The complete aligned field must fit without overlap. Its
                     // wrapping and leader variants retain their fallbacks.
-                    if (!double.IsFinite(start) || start < advance || start + field.Advance > available) return false;
+                    if (!TryFitAlignedField(tabStop, index + 1, advance, available, out double start)) return false;
                     current.Add(Atom(index) with { Advance = start - advance });
                     advance = start;
                     index++;
@@ -896,6 +895,20 @@ internal sealed partial class DocxLayoutEngine
         }
         lines = output; return true;
 
+        bool TryFitAlignedField(DocxResolvedTabStop stop, int startIndex, double lineAdvance, double available, out double start)
+        {
+            int end = startIndex;
+            while (end < measured.Count && Atom(end).Source is not (DocxInlineTab or DocxInlineBreak))
+            {
+                token.ThrowIfCancellationRequested();
+                end++;
+            }
+            bool decimalTab = stop.Kind == DocxTabStopKind.Decimal;
+            var field = MeasureGroup(startIndex, end, decimalTab);
+            double? anchor = decimalTab ? field.DecimalOffset ?? field.Advance : null;
+            return TryFitAlignedTabField(stop, field.Advance, anchor, lineAdvance, available, out start);
+        }
+
         bool HasPreferredBreak(int begin, int end)
         {
             for (int i = begin; i < end; i++)
@@ -1041,7 +1054,8 @@ internal sealed partial class DocxLayoutEngine
                     fragment.Source is DocxInlineText text &&
                     text.Run.Text.AsSpan(text.Start, text.Length).IsWhiteSpace());
             if (!displayGroup && paragraph.Alignment == DocxTextAlignment.Justified &&
-                !endCursor.IsComplete(atoms) && !current.Any(fragment => fragment.Source is DocxInlineTab))
+                leadingTabAdvance is null && !endCursor.IsComplete(atoms) &&
+                !current.Any(fragment => fragment.Source is DocxInlineTab))
             {
                 double available = output.Count == 0 ? firstWidth : nextWidth;
                 int spaces = 0;
@@ -1164,11 +1178,10 @@ internal sealed partial class DocxLayoutEngine
             output.Add(new(current.ToArray(), advance, above, above + below)
                 { DisplayAlignment = displayGroup ? atoms.DisplayAlignment : null,
                     ListLabelSegments = labelSegments, TextBaselineInset = textInset,
+                    LeadingTabAdvance = leadingTabAdvance ?? 0d,
                     EndCursor = endCursor with { LineIndex = cursor.LineIndex + output.Count + 1 } });
             current.Clear(); advance = 0d; above = baselineInset; below = Math.Max(0d, lineHeight - baselineInset);
+            leadingTabAdvance = null;
         }
     }
-
-    private static bool CanMeasureOrderedTabStop(DocxResolvedTabStop stop) =>
-        stop.LeaderValue is null || string.Equals(stop.LeaderValue, "none", StringComparison.OrdinalIgnoreCase);
 }
