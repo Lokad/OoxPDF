@@ -137,7 +137,7 @@ internal static partial class SvgTextTests
             TestAssert.Equal(5, LabelPaths(pdf));
             TestAssert.Equal(4, LabelPaths(pdf, "0.067 0.267 0.6 rg"));
             TestAssert.Equal(3, LabelPaths(pdf, "0.467 0.067 0.533 rg"));
-        }, "/Subtype /Image", "0 1 0 RG");
+        }, "/S /Luminosity", "0 1 0 RG");
     }
 
     public static void SvgInheritedGradientStrokeOpacityKeepsNumericFallbackContract()
