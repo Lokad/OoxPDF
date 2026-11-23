@@ -255,7 +255,10 @@ internal sealed partial class PptxRenderer
                 xAxisOptions = xAxisOptions with { CrossingValue = Math.Clamp(yPlacement.CrossingValue, xExtents.Min, xExtents.Max) };
                 yAxisOptions = yAxisOptions with { CrossingValue = Math.Clamp(xPlacement.CrossingValue, yExtents.Min, yExtents.Max) };
                 DrawHorizontalChartGridlines(graphics, plotBox.X, plotBox.Y, plotBox.Width, plotBox.Height, yExtents, yAxisOptions.Units, yAxisOptions.CrossingValue, yAxisOptions.Reversed, major: true, yAxisOptions.GridlineStyle.Major, hasMajorGridlineElement: true, yAxisOptions.TickPolicy, context: context);
-                RenderScatterChart(graphics, theme, colorMap, chartPalette, plotBox, bubbleSeries, connectLines: false, bubble: true, seriesFills, seriesStrokes, [], [], [], xExtents, yExtents, xAxisOptions, yAxisOptions, bubbleSizing);
+                double maxBubbleSize = bubbleSizing is null
+                    ? Math.Max(1d, bubbleSeries.SelectMany(item => item.Points).Max(point => point.Size))
+                    : 1d;
+                RenderScatterChart(graphics, theme, colorMap, chartPalette, plotBox, bubbleSeries, connectLines: false, bubble: true, seriesFills, seriesStrokes, [], [], [], xExtents, yExtents, xAxisOptions, yAxisOptions, bubbleSizing, maxBubbleSize);
                 await RenderScatterDataLabelsAsync(
                     theme,
                     colorMap,
@@ -271,7 +274,7 @@ internal sealed partial class PptxRenderer
                     ReadSceneDataLabelOptions(sceneChart, bubblePlot),
                     ReadSceneSeriesDataLabelOptions(sceneChart, bubblePlot),
                     ReadSharedChartSeriesNames(bubblePlot, workbook), fontResolver, fonts, context, sceneChart, linkAnnotations, reportedHyperlinkIds,
-                    bubbleSizing: bubbleSizing).ConfigureAwait(false);
+                    bubbleSizing: bubbleSizing, maxBubbleSize: maxBubbleSize).ConfigureAwait(false);
                 await RenderChartValueAxisLabelsAsync(theme, graphics, plotBox, sceneChart, xValueAxis.SceneAxis, xExtents, xAxisOptions.Units, xAxisOptions.Reversed, horizontalBars: true, rightSide: false, axisSideSlot: 0, manualPlotLayoutApplied: false, useTextSizedWidth: false, defaultNumberFormat: null, fontResolver: fontResolver, chartFonts: fonts, tickPolicy: xAxisOptions.TickPolicy, placement: xPlacement, context: context).ConfigureAwait(false);
                 await RenderChartValueAxisLabelsAsync(theme, graphics, plotBox, sceneChart, yValueAxis.SceneAxis, yExtents, yAxisOptions.Units, yAxisOptions.Reversed, horizontalBars: false, rightSide: false, axisSideSlot: 0, manualPlotLayoutApplied: false, useTextSizedWidth: false, defaultNumberFormat: null, fontResolver: fontResolver, chartFonts: fonts, tickPolicy: yAxisOptions.TickPolicy, placement: yPlacement, context: context).ConfigureAwait(false);
                 await RenderDefaultChartAxisTitlesAsync(theme, graphics, chartLayout, sceneChart, fontResolver, fonts, context, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false);

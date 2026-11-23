@@ -79,13 +79,12 @@ internal sealed partial class PptxRenderer
 
     private static bool IsLineHiddenSeries(int index, IReadOnlyList<bool>? hidden) => hidden is not null && index < hidden.Count && hidden[index];
 
-    private static void RenderScatterChart(PdfGraphicsBuilder graphics, PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, ChartPlotBox plotBox, IReadOnlyList<ScatterSeries> series, bool connectLines, bool bubble, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles, IReadOnlyList<ChartSeriesSmoothing> smoothSeries, IReadOnlyList<bool> seriesLineHidden, ChartValueExtents xExtents, ChartValueExtents yExtents, ChartValueAxisRenderOptions xAxisOptions, ChartValueAxisRenderOptions yAxisOptions, ChartBubbleSizing? bubbleSizing = null)
+    private static void RenderScatterChart(PdfGraphicsBuilder graphics, PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, ChartPlotBox plotBox, IReadOnlyList<ScatterSeries> series, bool connectLines, bool bubble, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles, IReadOnlyList<ChartSeriesSmoothing> smoothSeries, IReadOnlyList<bool> seriesLineHidden, ChartValueExtents xExtents, ChartValueExtents yExtents, ChartValueAxisRenderOptions xAxisOptions, ChartValueAxisRenderOptions yAxisOptions, ChartBubbleSizing? bubbleSizing = null, double maxBubbleSize = 1d)
     {
         double plotX = plotBox.X;
         double plotY = plotBox.Y;
         double plotWidth = plotBox.Width;
         double plotHeight = plotBox.Height;
-        double maxBubbleSize = Math.Max(1d, series.SelectMany(item => item.Points).Max(point => point.Size));
 
         graphics.SetStrokeRgb(90, 90, 90);
         graphics.SetLineWidth(0.75d);
@@ -116,15 +115,14 @@ internal sealed partial class PptxRenderer
                 ChartSeriesStroke scatterStroke = defaultSeriesStroke ? stroke with { Cap = stroke.Cap ?? 1, Join = stroke.Join ?? 1, Color = ApplyUnstyledLineStrokeTint(stroke.Color) } : stroke;
                 SetChartStroke(graphics, scatterStroke);
                 graphics.SetFillRgb(fill.Color.Red, fill.Color.Green, fill.Color.Blue);
-                var points = new List<(double X, double Y)>(sourcePoints.Count);
-                foreach (ScatterPoint point in sourcePoints)
-                {
-                    (double pointX, double pointY, _) = ResolveScatterPointGeometry(plotBox, point, bubble, xExtents, yExtents, maxBubbleSize, xAxisOptions.Reversed, yAxisOptions.Reversed, bubbleSizing);
-                    points.Add((pointX, pointY));
-                }
-
                 if (connectLines && !IsLineHiddenSeries(seriesIndex, seriesLineHidden))
                 {
+                    var points = new List<(double X, double Y)>(sourcePoints.Count);
+                    foreach (ScatterPoint point in sourcePoints)
+                    {
+                        (double pointX, double pointY, _) = ResolveScatterPointGeometry(plotBox, point, bubble, xExtents, yExtents, maxBubbleSize, xAxisOptions.Reversed, yAxisOptions.Reversed, bubbleSizing);
+                        points.Add((pointX, pointY));
+                    }
                     StrokeScatterChartPathInPlotClip(graphics, plotBox, points, IsSmoothSeries(seriesIndex, smoothSeries));
                 }
 

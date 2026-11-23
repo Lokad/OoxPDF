@@ -32,14 +32,14 @@ internal sealed partial class PptxRenderer
         List<PdfLinkAnnotation> linkAnnotations,
         HashSet<string> reportedHyperlinkIds,
         Action<OoxPdfDiagnostic>? diagnosticSink = null,
-        ChartBubbleSizing? bubbleSizing = null)
+        ChartBubbleSizing? bubbleSizing = null,
+        double maxBubbleSize = 1d)
     {
         if ((!labelOptions.HasVisibleText && !seriesLabelOptions.Any(options => options.HasVisibleText)) || series.Count == 0)
         {
             return;
         }
 
-        double maxBubbleSize = Math.Max(1d, series.SelectMany(item => item.Points).DefaultIfEmpty().Max(point => point.Size));
         var textMeasurer = new ChartTextMeasurer(fontResolver);
         var runs = new List<TextRun>();
         List<ChartTextRunLink>? labelLinks = chart?.Relationships is null ? null : new List<ChartTextRunLink>();
@@ -117,21 +117,18 @@ internal sealed partial class PptxRenderer
                     alignment = TextAlignment.Left;
                 }
 
-                if (!string.IsNullOrEmpty(label))
-                {
-                    await AddChartLabelRunsAsync(
-                        runs,
-                        label,
-                        effectiveOptions,
-                        textX,
-                        labelBox.Y,
-                        textWidth,
-                        labelBox.Height,
-                        plotBox,
-                        style,
-                        alignment,
-                        fontResolver, labelLinks).ConfigureAwait(false);
-                }
+                await AddChartLabelRunsAsync(
+                    runs,
+                    label,
+                    effectiveOptions,
+                    textX,
+                    labelBox.Y,
+                    textWidth,
+                    labelBox.Height,
+                    plotBox,
+                    style,
+                    alignment,
+                    fontResolver, labelLinks).ConfigureAwait(false);
             }
         }
 
