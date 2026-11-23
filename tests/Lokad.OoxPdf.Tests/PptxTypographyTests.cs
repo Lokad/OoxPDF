@@ -59,7 +59,7 @@ internal static class PptxTypographyTests
     // the 12pt clip rectangle emits no text operation.
     public static void PptxSyntheticTextClipDropsLineWithBaselineOutsideClip()
     {
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        using var input = TestFixtures.CreateZipPackage(new Dictionary<string, string>
         {
             ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
             ["_rels/.rels"] = PptxTests.PackageRelationship(),
@@ -87,13 +87,13 @@ internal static class PptxTypographyTests
                 </p:sld>
                 """
         });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, output);
-
-        string pdf = PptxTests.ReadPdfDecodedAscii(output);
-        TestAssert.Contains(" W* n", pdf);
-        TestAssert.Equal(0, PptxTests.CountTextMatrices(pdf));
+        using var package = OoxPackage.Open(input, default);
+        var document = new PptxReader().Read(package, default);
+        PdfPage page = new PptxRenderer(new TestFaceFontResolver())
+            .RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().Single();
+        TestAssert.Contains(" W* n", page.Content);
+        TestAssert.True(!Regex.IsMatch(page.Content, @"(?m)\b(?:Tj|TJ)[ \t]*\r?$"),
+            "A clipped line must emit no text show.");
     }
 
     public static void PptxSyntheticRotatedTextBoxProducesTransform()

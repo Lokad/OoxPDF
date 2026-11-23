@@ -361,54 +361,6 @@ internal static class PptxTests
         throw new InvalidOperationException($"Expected chart dictionary key '{key}'.");
     }
 
-    internal static string ReadPdfDecodedAscii(string path)
-    {
-        byte[] bytes = File.ReadAllBytes(path);
-        string pdf = Encoding.ASCII.GetString(bytes);
-        var text = new StringBuilder(pdf);
-        int searchStart = 0;
-        while (true)
-        {
-            int streamMarker = pdf.IndexOf("stream", searchStart, StringComparison.Ordinal);
-            if (streamMarker < 0)
-            {
-                break;
-            }
-
-            int streamStart = streamMarker + "stream".Length;
-            if (streamStart < bytes.Length && bytes[streamStart] == (byte)'\r')
-            {
-                streamStart++;
-            }
-
-            if (streamStart < bytes.Length && bytes[streamStart] == (byte)'\n')
-            {
-                streamStart++;
-            }
-
-            int streamEnd = pdf.IndexOf("endstream", streamStart, StringComparison.Ordinal);
-            if (streamEnd < 0)
-            {
-                break;
-            }
-
-            int dictionaryStart = Math.Max(0, pdf.LastIndexOf("<<", streamMarker, StringComparison.Ordinal));
-            string dictionary = pdf.Substring(dictionaryStart, streamMarker - dictionaryStart);
-            if (dictionary.Contains("/FlateDecode", StringComparison.Ordinal))
-            {
-                using var input = new MemoryStream(bytes, streamStart, streamEnd - streamStart);
-                using var deflate = new ZLibStream(input, CompressionMode.Decompress);
-                using var output = new MemoryStream();
-                deflate.CopyTo(output);
-                text.Append(Encoding.ASCII.GetString(output.ToArray()));
-            }
-
-            searchStart = streamEnd + "endstream".Length;
-        }
-
-        return text.ToString();
-    }
-
     internal static List<byte[]> ReadPdfDeviceRgbImageStreams(string path, int width, int height)
     {
         byte[] bytes = File.ReadAllBytes(path);

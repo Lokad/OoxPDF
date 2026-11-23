@@ -3528,20 +3528,49 @@ internal static class PptxChartRenderingTests
 
     public static void PptxPercentStackedColumnChartUsesPercentValueAxis()
     {
-        string input = TestFixtures.PublicCasePath("pptx-ladder-11-chart-column-100-stacked-port.pptx");
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-        var collector = new DiagnosticCollector();
+        string fixture = TestFixtures.PublicCasePath("pptx-ladder-11-chart-column-100-stacked-port.pptx");
+        using var original = File.OpenRead(fixture);
+        PdfPage page = Render(original);
+        TestAssert.Equal("0%|10%|20%|30%|40%|50%|60%|70%|80%|90%|100%", Labels(page, "CVA"));
 
-        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = collector.Add, FontResolver = new TestFaceFontResolver() });
+        // A percent sign painted by a category cannot stand in for the value-axis labels.
+        using var hiddenAxis = new MemoryStream();
+        original.Position = 0;
+        original.CopyTo(hiddenAxis);
+        hiddenAxis.Position = 0;
+        using (var archive = new ZipArchive(hiddenAxis, ZipArchiveMode.Update, leaveOpen: true))
+        {
+            var entry = archive.GetEntry("ppt/charts/chart1.xml")!;
+            XDocument chart;
+            using (var input = entry.Open()) chart = XDocument.Load(input);
+            XNamespace c = chart.Root!.Name.Namespace;
+            chart.Descendants(c + "valAx").Single().Element(c + "tickLblPos")!.SetAttributeValue("val", "none");
+            foreach (var category in chart.Descendants(c + "cat"))
+                category.Descendants(c + "v").First().Value = "A%";
+            entry.Delete();
+            using var output = archive.CreateEntry("ppt/charts/chart1.xml").Open();
+            chart.Save(output);
+        }
+        hiddenAxis.Position = 0;
+        PdfPage control = Render(hiddenAxis);
+        TestAssert.Equal("A%|B|C", Labels(control, "CCA"));
+        TestAssert.Equal(string.Empty, Labels(control, "CVA"));
 
-        string pdf = PptxTests.ReadPdfDecodedAscii(output);
-        TestAssert.True(
-            Regex.IsMatch(pdf, @"<[0-9A-F]{4}> <0025>"),
-            "Expected percent-stacked value-axis labels to include a percent sign by default.");
-        TestAssert.True(
-            !Regex.IsMatch(pdf, @"<[0-9A-F]{4}> <002E>"),
-            "Percent-stacked value-axis labels should not use the generic 0..1.2 decimal scale.");
-        TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"), "Percent-stacked column charts should not emit unsupported chart diagnostics.");
+        static PdfPage Render(Stream input)
+        {
+            using var package = OoxPackage.Open(input, default);
+            var diagnostics = new DiagnosticCollector();
+            var document = new PptxReader().Read(package, default, diagnostics.Add);
+            PdfPage page = new PptxRenderer(new TestFaceFontResolver())
+                .RenderPagesAsync(document, package, diagnostics.Add, default).ToBlockingEnumerable().Single();
+            TestAssert.True(diagnostics.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"),
+                "Percent-stacked column charts should not emit unsupported chart diagnostics.");
+            return page;
+        }
+
+        static string Labels(PdfPage page, string axis) => string.Join('|', DocxCommentsTests.ReadEmbeddedGlyphTextShows(
+            page, usePageCoordinates: false, fontResourceFilter: name => name.StartsWith(axis, StringComparison.Ordinal))
+            .Select(show => show.Text));
     }
 
     public static void PptxUnsupportedEffectDiagnosticsUseSceneChartEffects()
