@@ -115,7 +115,7 @@ internal sealed partial class PptxSceneBuilder
         };
     }
 
-    internal static PptxSceneChartPlotKind ParseChartPlotKind(string? kind)
+    private static PptxSceneChartPlotKind ParseChartPlotKind(string? kind)
     {
         return kind switch
         {

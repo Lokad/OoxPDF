@@ -222,7 +222,6 @@ internal sealed partial class PptxRenderer
         PptxSceneChartPlot? bubblePlot = ReadFirstSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Bubble);
         if (bubblePlot is not null)
         {
-            XElement bubbleChart = bubblePlot.Source;
             IReadOnlyList<ScatterSeries> bubbleSeries = ReadSceneScatterSeries(bubblePlot, readBubbleSize: true, workbook: workbook, plotVisibleOnly: plotVisibleOnly);
             if (bubbleSeries.Count != 0)
             {
@@ -238,7 +237,7 @@ internal sealed partial class PptxRenderer
                 var measured = MeasureScatterChartExtents(bubbleSeries, null, null, context.CancellationToken);
                 var (xExtents, xAxisOptions) = ReadChartPointValueAxisScale( xValueAxis, measured.DataX, measured.PathX, bubble: true, horizontal: true);
                 var (yExtents, yAxisOptions) = ReadChartPointValueAxisScale( yValueAxis, measured.DataY, measured.PathY, bubble: true, horizontal: false);
-                IReadOnlyList<ChartLegendEntry> legendEntries = BuildFillLegendEntries(theme, colorMap, chartPalette, bubblePlot, bubbleChart,
+                IReadOnlyList<ChartLegendEntry> legendEntries = BuildFillLegendEntries(theme, colorMap, chartPalette, bubblePlot,
                     seriesFills, seriesStrokes, paletteOffset: 0, workbook: workbook);
                 ChartBubbleSizing? bubbleSizing = null;
                 ChartLegendBox? preparedLegend = null;

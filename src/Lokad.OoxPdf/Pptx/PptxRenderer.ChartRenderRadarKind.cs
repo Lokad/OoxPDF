@@ -68,7 +68,7 @@ internal sealed partial class PptxRenderer
                         var horizontalLimits = (Left: Math.Max(frame.X, 0d),
                             Right: Math.Min(frame.X + frame.Width, document.SlideWidthPoints));
                         legendEntries = radarLayout.IsFilled
-                            ? BuildFillLegendEntries(theme, colorMap, chartPalette, radarPlot, radarPlot.Source,
+                            ? BuildFillLegendEntries(theme, colorMap, chartPalette, radarPlot,
                                 seriesFills, seriesStrokes, paletteOffset: 0, workbook)
                             : ReadSharedChartSeriesNames(radarPlot, workbook).Select((name, index) => new ChartLegendEntry(
                                 name.ActiveName, null, ResolveRadarSeriesStroke(theme, colorMap, chartPalette, seriesStrokes, index),

@@ -1,17 +1,15 @@
 using System.Globalization;
 using System.Text;
-using System.Xml.Linq;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Ooxml;
-using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
 using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static IReadOnlyList<ChartLegendEntry> BuildFillLegendEntries(PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, PptxSceneChartPlot plot, XElement chartElement, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?>? seriesStrokes, int paletteOffset, ChartWorkbookData? workbook, bool reverseOrder = false, IReadOnlySet<int>? deletedEntries = null)
+    private static IReadOnlyList<ChartLegendEntry> BuildFillLegendEntries(PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, PptxSceneChartPlot plot, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?>? seriesStrokes, int paletteOffset, ChartWorkbookData? workbook, bool reverseOrder = false, IReadOnlySet<int>? deletedEntries = null)
     {
         IReadOnlyList<ChartSeriesNameRecord> names = ReadSharedChartSeriesNames(plot, workbook);
         var entries = new List<ChartLegendEntry>(names.Count);
@@ -28,7 +26,7 @@ internal sealed partial class PptxRenderer
                 ? seriesStrokes[i]
                 : null;
             if (stroke is { } explicitStroke &&
-                PptxSceneBuilder.ParseChartPlotKind(chartElement.Name.LocalName) == PptxSceneChartPlotKind.Bar &&
+                plot.PlotKind == PptxSceneChartPlotKind.Bar &&
                 Math.Abs(explicitStroke.Width - ChartSeriesInheritedStrokeWidth) <= 0.001d)
             {
                 stroke = explicitStroke with { Width = ChartFilledSeriesInheritedStrokeWidth };

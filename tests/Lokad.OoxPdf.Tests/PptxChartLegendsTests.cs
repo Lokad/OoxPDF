@@ -496,66 +496,47 @@ internal static partial class PptxChartLegendsTests
 
     public static void PptxSyntheticBarChartOverlayLegendDoesNotReservePlotSpace()
     {
-        var parts = new Dictionary<string, byte[]>
+        const string legend = "<c:legend><c:legendPos val=\"b\"/><c:overlay val=\"{0}\"/></c:legend>";
+        string[] names = ["Series 1", "Series 2"];
+        var overlay = Render(string.Format(CultureInfo.InvariantCulture, legend, 1), names);
+        var absent = Render("", []);
+        var reserved = Render(string.Format(CultureInfo.InvariantCulture, legend, 0), names);
+
+        TestAssert.Equal(absent.Bounds, overlay.Bounds);
+        TestAssert.True(reserved.Height < overlay.Height, "A reserving legend reduces the authored cyan plot.");
+
+        static (string Bounds, double Height) Render(string legendXml, string[] expectedNames)
         {
-            ["[Content_Types].xml"] = TestFixtures.Utf8(PptxTests.BasicContentTypes()),
-            ["_rels/.rels"] = TestFixtures.Utf8(PptxTests.PackageRelationship()),
-            ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8(PptxTests.PresentationRelationship()),
-            ["ppt/presentation.xml"] = TestFixtures.Utf8(PptxTests.BasicPresentation()),
-            ["ppt/slides/_rels/slide1.xml.rels"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
-                </Relationships>
-                """),
-            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
-                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
-                       xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
-                       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-                  <p:cSld><p:spTree>
-                    <p:graphicFrame>
-                      <p:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="2743200"/></p:xfrm>
-                      <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic>
-                    </p:graphicFrame>
-                  </p:spTree></p:cSld>
-                </p:sld>
-                """),
-            ["ppt/charts/chart1.xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
+            string chart = $$"""
                 <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
                               xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
                   <c:chart><c:autoTitleDeleted val="1"/><c:plotArea>
                     <c:spPr><a:solidFill><a:srgbClr val="00FFFF"/></a:solidFill></c:spPr>
-                    <c:barChart>
-                      <c:ser><c:tx><c:v>Series</c:v></c:tx><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser>
+                    <c:barChart><c:barDir val="col"/>
+                      <c:ser><c:idx val="0"/><c:order val="0"/><c:tx><c:v>Series 1</c:v></c:tx><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser>
+                      <c:ser><c:idx val="1"/><c:order val="1"/><c:tx><c:v>Series 2</c:v></c:tx><c:val><c:numLit><c:pt idx="0"><c:v>3</c:v></c:pt></c:numLit></c:val></c:ser>
                     </c:barChart>
-                  </c:plotArea><c:legend><c:legendPos val="b"/><c:overlay/></c:legend></c:chart>
+                  </c:plotArea>{{legendXml}}</c:chart>
                 </c:chartSpace>
-                """)
-        };
-        string input = TestFixtures.WriteTempPackage(".pptx", parts);
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+                """;
+            using var input = PptxTests.CreateSingleChartPackageStream(chart);
+            using var package = OoxPackage.Open(input, default);
+            PptxDocument document = new PptxReader().Read(package, default);
+            PdfPage page = new PptxRenderer(new PortableRenderingTests.PinnedResolver())
+                .RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().Single();
 
-        OoxPdfConverter.Convert(input, output);
+            var names = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false,
+                fontResourceFilter: resource => resource.StartsWith("CL", StringComparison.Ordinal));
+            TestAssert.Equal(string.Concat(expectedNames), string.Concat(names.Select(show => show.Text)));
+            foreach (string name in expectedNames)
+            {
+                PortableRenderingTests.ReadPaintedSourceLabel(page, name, fontPrefix: "CL");
+            }
 
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("0 1 1 rg", pdf);
-        XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
-        XDocument chart = XDocument.Parse(Encoding.UTF8.GetString(parts["ppt/charts/chart1.xml"]));
-        chart.Descendants(c + "legend").Single().Remove();
-        parts["ppt/charts/chart1.xml"] = Encoding.UTF8.GetBytes(chart.ToString(SaveOptions.DisableFormatting));
-        string referenceInput = TestFixtures.WriteTempPackage(".pptx", parts);
-        string referenceOutput = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-        OoxPdfConverter.Convert(referenceInput, referenceOutput);
-        string referencePdf = File.ReadAllText(referenceOutput, Encoding.ASCII);
-        const string cyanPlot = @"0 1 1 rg\s+(?<rectangle>[-\d.]+ [-\d.]+ [-\d.]+ [-\d.]+ re f)";
-        Match overlayPlot = Regex.Match(pdf, cyanPlot);
-        Match referencePlot = Regex.Match(referencePdf, cyanPlot);
-        TestAssert.True(overlayPlot.Success && referencePlot.Success, "Both controls must paint their source cyan plot.");
-        TestAssert.Equal(referencePlot.Groups["rectangle"].Value, overlayPlot.Groups["rectangle"].Value);
-        File.Delete(input); File.Delete(output); File.Delete(referenceInput); File.Delete(referenceOutput);
+            Match plot = Regex.Matches(page.Content,
+                @"0 1 1 rg\s+(?<bounds>[-\d.]+ [-\d.]+ [-\d.]+ (?<height>[-\d.]+)) re f").Single();
+            return (plot.Groups["bounds"].Value, double.Parse(plot.Groups["height"].Value, CultureInfo.InvariantCulture));
+        }
     }
 
     public static void PptxSyntheticChartAutoTitleUsesOfficeScaledSize()

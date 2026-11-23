@@ -31,7 +31,6 @@ internal sealed partial class PptxRenderer
         PptxSceneChartPlot? areaPlot = ReadFirstSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Area);
         if (areaPlot is not null)
         {
-            XElement areaChart = areaPlot.Source;
             IReadOnlyList<ChartIndexedNumberVector> areaSeriesVectors = ReadSharedChartSeriesVectors(areaPlot, workbook, plotVisibleOnly);
             if (CountRenderableSeries(areaSeriesVectors) != 0)
             {
@@ -55,7 +54,7 @@ internal sealed partial class PptxRenderer
                 };
                 ChartAxesStyle axesStyle = ReadSceneChartAxesStyle(sceneChart, areaPlot);
                 ChartShapeStyle plotAreaStyle = ToChartShapeStyle(sceneChart.PlotAreaStyle);
-                IReadOnlyList<ChartLegendEntry> legendEntries = BuildFillLegendEntries(theme, colorMap, chartPalette, areaPlot, areaChart, seriesFills, seriesStrokes, paletteOffset: 0, workbook: workbook, reverseOrder: IsStackedChartGrouping(areaOptions.Grouping));
+                IReadOnlyList<ChartLegendEntry> legendEntries = BuildFillLegendEntries(theme, colorMap, chartPalette, areaPlot, seriesFills, seriesStrokes, paletteOffset: 0, workbook: workbook, reverseOrder: IsStackedChartGrouping(areaOptions.Grouping));
                 ChartTextStyle legendTextStyle = ReadSceneChartLegendTextStyle(theme, sceneChart);
                 ChartLegendBox? preparedLegendBox;
                 (chartLayout, preparedLegendBox) = await PrepareCartesianHorizontalLegendAsync(chartLayout,

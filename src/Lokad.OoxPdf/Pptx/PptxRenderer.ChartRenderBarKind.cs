@@ -81,7 +81,7 @@ internal sealed partial class PptxRenderer
                 IReadOnlySet<int>? deletedEntries = categoryLegend ? null : ResolveBarSeriesLegendDeletions(sceneChart, barPlot);
                 var legendEntries = new List<ChartLegendEntry>(categoryLegend
                     ? BuildBarCategoryLegendEntries(theme, colorMap, barPalette, barPlot, barSeriesVectors[0], barOptions, seriesFills, seriesStrokes, pointFills, pointStrokes, workbook, plotVisibleOnly)
-                    : BuildFillLegendEntries(theme, colorMap, barPalette, barPlot, barChart, seriesFills, seriesStrokes,
+                    : BuildFillLegendEntries(theme, colorMap, barPalette, barPlot, seriesFills, seriesStrokes,
                         paletteOffset: 0, workbook: workbook, deletedEntries: deletedEntries));
                 ChartLegendLayout sourceLegend = deletedEntries is not null && legendEntries.Count == 0
                     ? ChartLegendLayout.Hidden
@@ -106,13 +106,12 @@ internal sealed partial class PptxRenderer
                 foreach (PptxSceneChartPlot plot in barPlots.Skip(1))
                 {
                     context.CancellationToken.ThrowIfCancellationRequested();
-                    XElement element = plot.Source;
                     int count = CountRenderableSeries(ReadSharedChartSeriesVectors(plot, workbook, plotVisibleOnly));
                     if (count == 0) continue;
                     var fills = ReadSceneSeriesFills(plot);
                     var strokes = ReadSceneSeriesStrokes(plot, ChartFilledSeriesInheritedStrokeWidth);
                     legendEntries.AddRange(BuildFillLegendEntries(theme, colorMap, WithSourceSeries(chartPalette, plot),
-                        plot, element, fills, strokes, legendSeriesOffset, workbook));
+                        plot, fills, strokes, legendSeriesOffset, workbook));
                     legendSeriesOffset += count;
                 }
                 foreach (PptxSceneChartPlot plot in ReadSceneChartPlots(sceneChart, PptxSceneChartPlotKind.Line))
