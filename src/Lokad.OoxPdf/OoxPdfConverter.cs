@@ -105,8 +105,8 @@ public static class OoxPdfConverter
             ConvertCoreAsync(input, output, options, cancellationToken);
     }
 
-    private static void ConvertCore(string inputPath, string outputPath, OoxPdfOptions? options, CancellationToken cancellationToken, string? baseDirectory = null) =>
-        ConvertCoreAsync(inputPath, outputPath, options, cancellationToken, baseDirectory).GetAwaiter().GetResult();
+    private static void ConvertCore(string inputPath, string outputPath, OoxPdfOptions? options, CancellationToken cancellationToken) =>
+        ConvertCoreAsync(inputPath, outputPath, options, cancellationToken).GetAwaiter().GetResult();
 
     private static async Task ConvertCoreAsync(string inputPath, string outputPath, OoxPdfOptions? options, CancellationToken cancellationToken, string? baseDirectory = null)
     {
@@ -169,7 +169,7 @@ public static class OoxPdfConverter
                     await using (output.ConfigureAwait(false))
                     {
                         await PdfDocumentWriter.WriteStagedAsync(output, PreparePagesAsync(package, inputKind, options, diagnosticSink, cancellationToken),
-                            options.ConversionLimits ?? new OoxConversionLimits(), diagnosticSink, cancellationToken,
+                            scope.Budget.Limits, diagnosticSink, cancellationToken,
                             options.FixedCreationDate, temporaryStorage).ConfigureAwait(false);
                     }
                 }
@@ -252,7 +252,7 @@ public static class OoxPdfConverter
             {
                 using OoxPackage package = await OoxPackage.OpenAsync(input, cancellationToken).ConfigureAwait(false);
                 PdfStagedDocument staged = await PdfDocumentWriter.ProduceStagedPagesAsync(PreparePagesAsync(package, inputKind, options, diagnosticSink, cancellationToken),
-                    options.ConversionLimits ?? new OoxConversionLimits(), diagnosticSink, cancellationToken, options.TemporaryStorage).ConfigureAwait(false);
+                    scope.Budget.Limits, diagnosticSink, cancellationToken, options.TemporaryStorage).ConfigureAwait(false);
                 try
                 {
                     cancellationToken.ThrowIfCancellationRequested();

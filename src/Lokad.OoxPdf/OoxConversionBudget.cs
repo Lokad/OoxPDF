@@ -9,13 +9,12 @@ internal sealed class OoxConversionBudget
 {
     private static readonly AsyncLocal<OoxConversionBudget?> Storage = new();
     public static OoxConversionBudget? Current => Storage.Value;
-    private readonly OoxConversionLimits limits;
-
-    internal OoxConversionBudget(OoxConversionLimits? limits, IMemoryScope? memory = null)
+    private OoxConversionBudget(OoxConversionLimits? limits, IMemoryScope? memory)
     {
-        this.limits = limits ?? new();
+        Limits = limits ?? new();
         Memory = memory;
     }
+    internal OoxConversionLimits Limits { get; }
     internal IMemoryScope? Memory { get; }
     private IMemoryScope? models;
     private IMemoryReservation? placement;
@@ -70,11 +69,11 @@ internal sealed class OoxConversionBudget
         return new Scope(budget, prior);
     }
 
-    public void ChargePdfPages(long count) => Charge(count, limits.MaxPagesPerConversion, ref pdfPages, "page budget", "pages");
-    public void ChargePdfContentBytes(long count) => Charge(count, limits.MaxPdfContentBytesPerConversion, ref pdfContentBytes, "PDF content byte budget", "bytes");
-    public void ChargePdfOutputBytes(long count) => Charge(count, limits.MaxOutputBytesPerConversion, ref pdfOutputBytes, "output byte budget", "bytes");
-    public void ChargePdfFontBytes(long count) => Charge(count, limits.MaxPdfFontBytesPerConversion, ref pdfFontBytes, "PDF font byte budget", "bytes");
-    public void ChargePdfImageBytes(long count) => Charge(count, limits.MaxPdfImageBytesPerConversion, ref pdfImageBytes, "PDF image byte budget", "bytes");
+    public void ChargePdfPages(long count) => Charge(count, Limits.MaxPagesPerConversion, ref pdfPages, "page budget", "pages");
+    public void ChargePdfContentBytes(long count) => Charge(count, Limits.MaxPdfContentBytesPerConversion, ref pdfContentBytes, "PDF content byte budget", "bytes");
+    public void ChargePdfOutputBytes(long count) => Charge(count, Limits.MaxOutputBytesPerConversion, ref pdfOutputBytes, "output byte budget", "bytes");
+    public void ChargePdfFontBytes(long count) => Charge(count, Limits.MaxPdfFontBytesPerConversion, ref pdfFontBytes, "PDF font byte budget", "bytes");
+    public void ChargePdfImageBytes(long count) => Charge(count, Limits.MaxPdfImageBytesPerConversion, ref pdfImageBytes, "PDF image byte budget", "bytes");
 
     private static void Charge(long count, long maximum, ref long total, string resource, string units)
     {
@@ -88,9 +87,9 @@ internal sealed class OoxConversionBudget
 
     internal void ThrowIfLayoutPagesExceedBudget(int constructedPages)
     {
-        if (constructedPages > limits.MaxPagesPerConversion - PdfPages)
+        if (constructedPages > Limits.MaxPagesPerConversion - PdfPages)
         {
-            throw new OoxPdfLimitExceededException("Conversion exceeds the page budget of " + limits.MaxPagesPerConversion.ToString(System.Globalization.CultureInfo.InvariantCulture) + " pages during layout pagination.");
+            throw new OoxPdfLimitExceededException("Conversion exceeds the page budget of " + Limits.MaxPagesPerConversion.ToString(System.Globalization.CultureInfo.InvariantCulture) + " pages during layout pagination.");
         }
     }
 
