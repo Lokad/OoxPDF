@@ -122,6 +122,42 @@ internal static class DocxVmlTextBoxTests
         });
     }
 
+    public static void DocxVmlTextBoxesKeepIndependentFieldResults()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        foreach (bool inOuterResult in new[] { false, true })
+        {
+            var inner = new XElement(W + "p", Text(" VML box value "), FieldChar("begin"),
+                Instruction(" NUMPAGES "), FieldChar("separate"), Text("STALE INNER"),
+                FieldChar("end"), Text(" box tail "));
+            var box = Box(inner);
+            var paragraph = new XElement(W + "p", Text("Before "), FieldChar("begin"),
+                Instruction(" PAGE "), FieldChar("separate"), Text("STALE OUTER"),
+                inOuterResult ? box : null, FieldChar("end"), inOuterResult ? null : box, Text("4729 after"));
+            var geometry = mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout
+                : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup;
+            With(paragraph, mode, null, document =>
+            {
+                var fields = document.Paragraphs.Single().FieldReferences;
+                TestAssert.Equal(2, fields.Count);
+                TestAssert.True(fields.All(field => field is
+                    { NestingDepth: 0, UsesPlaceholder: true, HasCachedResult: true, RendersCachedResult: false }),
+                    "Both complete counters replace their own stored result.");
+                var page = new DocxRenderer(new PortableRenderingTests.PinnedResolver(), mode, geometry)
+                    .RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
+                TestAssert.Equal("Before 1 VML box value 1 box tail 4729 after",
+                    Normalize(DocxPageFootnoteNumberingTests.DecodeText(page)));
+            });
+        }
+
+        static XElement FieldChar(string type) =>
+            new(W + "r", new XElement(W + "fldChar", new XAttribute(W + "fldCharType", type)));
+
+        static XElement Instruction(string code) =>
+            new(W + "r", new XElement(W + "instrText", new XAttribute(XNamespace.Xml + "space", "preserve"), code));
+    }
+
     public static void DocxVmlTextBoxesKeepBlockBookmarkDestinations()
     {
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })

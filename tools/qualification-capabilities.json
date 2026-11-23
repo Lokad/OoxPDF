@@ -914,6 +914,7 @@
     "MemoryBudgetStagingRetainsCapacityThroughEmissionWithoutChangingPdf"
   ],
   "docx-vml-inline-content": [
+    "=DocxVmlTextBoxesKeepIndependentFieldResults",
     "DocxVmlTextBoxes",
     "DocxVmlHiddenDrawingRunSuppressesItsTextAndPictures",
     "DocxSyntheticVmlInlineTextboxRendersTextWithoutUnsupportedDiagnostic",

@@ -248,7 +248,7 @@ internal sealed partial class DocxReader
         }
 
         bool instructionContinues = continuesAfterBreak && complexFieldStack.Any(field => !field.InResult);
-        FinalizeOpenComplexFields();
+        FinalizeOpenComplexFields(continuesAfterBreak);
 
         bool keepsListMarker = !isContinuationFragment && sourceNumbering is { } numberingSource &&
             !string.IsNullOrWhiteSpace(numberingSource.Definition.Text);
@@ -904,50 +904,7 @@ internal sealed partial class DocxReader
                     Flush();
                     foreach (var box in textBoxes[shape])
                     foreach (var content in box.Elements(WordprocessingNamespace + "txbxContent"))
-                    {
-                        bool first = true;
-                        foreach (var nested in EnumerateBookmarkedBlocks(content.Elements(), markupMode, cancellationToken, revision))
-                        {
-                            if (nested.Element.Name != WordprocessingNamespace + "p") continue;
-                            if (!first) AddParagraphRun(new XElement(WordprocessingNamespace + "r", new XElement(WordprocessingNamespace + "br")), revision);
-                            first = false;
-                            if (nested.LeadingBookmarks is { } leading)
-                            {
-                                // The paragraph now starts within the enclosing flow.
-                                int textOffset = RelativeRunTextOffset(runs, sourceRunIndex);
-                                int inlineIndex = GetInlineItemCount();
-                                foreach (var anchor in leading)
-                                {
-                                    cancellationToken.ThrowIfCancellationRequested();
-                                    bookmarkAnchors.Add(anchor with { SourceRunIndex = sourceRunIndex,
-                                        TextRunIndex = runs.Count, TextOffset = textOffset, InlineItemIndex = inlineIndex });
-                                }
-                            }
-                            var nestedParagraph = nested.Element;
-                            var properties = nestedParagraph.Element(WordprocessingNamespace + "pPr");
-                            if (nested.Revision is { } nestedRevision && nestedRevision != revision && !paragraphRevisions.Contains(nestedRevision))
-                                paragraphRevisions.Add(nestedRevision);
-                            AddRevisions(paragraphRevisions, ReadPropertyChangeRevisions(properties));
-                            string? outerStyle = paragraphStyleId;
-                            var outerCellStyle = tableCellStyle;
-                            var outerListStyle = unmarkedListTextStyle;
-                            try
-                            {
-                                // Textboxes own their run-style cascade, not the
-                                // enclosing paragraph or table's formatting.
-                                paragraphStyleId = ReadEffectiveParagraphStyleId(properties, styles);
-                                tableCellStyle = null;
-                                foreach (var item in nestedParagraph.Elements())
-                                    if (item.Name != WordprocessingNamespace + "pPr") AddInlineContainerChild(item, nested.Revision);
-                            }
-                            finally
-                            {
-                                paragraphStyleId = outerStyle;
-                                tableCellStyle = outerCellStyle;
-                                unmarkedListTextStyle = outerListStyle;
-                            }
-                        }
-                    }
+                        AddVmlTextBoxContent(content, revision);
                 }
             }
             Flush();
@@ -966,6 +923,65 @@ internal sealed partial class DocxReader
                 }
                 fragment.Clear();
                 AddParagraphRun(view, revision);
+            }
+        }
+
+        void AddVmlTextBoxContent(XElement content, DocxRevisionInfo? revision)
+        {
+            // The fallback shares placement with its anchor, but fields belong to the box story.
+            var outerFields = complexFieldStack;
+            complexFieldStack = [];
+            try
+            {
+                bool first = true;
+                foreach (var nested in EnumerateBookmarkedBlocks(content.Elements(), markupMode, cancellationToken, revision))
+                {
+                    if (nested.Element.Name != WordprocessingNamespace + "p") continue;
+                    if (!first) AddParagraphRun(new XElement(WordprocessingNamespace + "r", new XElement(WordprocessingNamespace + "br")), revision);
+                    first = false;
+                    if (nested.LeadingBookmarks is { } leading)
+                    {
+                        // The paragraph now starts within the enclosing flow.
+                        int textOffset = RelativeRunTextOffset(runs, sourceRunIndex);
+                        int inlineIndex = GetInlineItemCount();
+                        foreach (var anchor in leading)
+                        {
+                            cancellationToken.ThrowIfCancellationRequested();
+                            bookmarkAnchors.Add(anchor with { SourceRunIndex = sourceRunIndex,
+                                TextRunIndex = runs.Count, TextOffset = textOffset, InlineItemIndex = inlineIndex });
+                        }
+                    }
+                    var nestedParagraph = nested.Element;
+                    var properties = nestedParagraph.Element(WordprocessingNamespace + "pPr");
+                    if (nested.Revision is { } nestedRevision && nestedRevision != revision && !paragraphRevisions.Contains(nestedRevision))
+                        paragraphRevisions.Add(nestedRevision);
+                    AddRevisions(paragraphRevisions, ReadPropertyChangeRevisions(properties));
+                    string? outerStyle = paragraphStyleId;
+                    var outerCellStyle = tableCellStyle;
+                    var outerListStyle = unmarkedListTextStyle;
+                    try
+                    {
+                        // Textboxes own their run-style cascade, not the
+                        // enclosing paragraph or table's formatting.
+                        paragraphStyleId = ReadEffectiveParagraphStyleId(properties, styles);
+                        tableCellStyle = null;
+                        foreach (var item in nestedParagraph.Elements())
+                            if (item.Name != WordprocessingNamespace + "pPr") AddInlineContainerChild(item, nested.Revision);
+                    }
+                    finally
+                    {
+                        paragraphStyleId = outerStyle;
+                        tableCellStyle = outerCellStyle;
+                        unmarkedListTextStyle = outerListStyle;
+                    }
+                }
+
+                if (complexFieldStack.Count != 0)
+                    FinalizeOpenComplexFields(continueInNextFragment: false);
+            }
+            finally
+            {
+                complexFieldStack = outerFields;
             }
         }
 
@@ -1164,14 +1180,14 @@ internal sealed partial class DocxReader
             }
         }
 
-        void FinalizeOpenComplexFields()
+        void FinalizeOpenComplexFields(bool continueInNextFragment)
         {
             int firstRun = runs.Count;
             for (int fieldIndex = complexFieldStack.Count - 1; fieldIndex >= 0; fieldIndex--)
             {
                 DocxComplexFieldState field = complexFieldStack[fieldIndex];
                 cancellationToken.ThrowIfCancellationRequested();
-                if (continuesAfterBreak)
+                if (continueInNextFragment)
                 {
                     // Preserve the unfinished instruction. An emitted value or
                     // stored result already has a placement owner in this frame.
@@ -1195,7 +1211,7 @@ internal sealed partial class DocxReader
                 }
             }
 
-            if (!continuesAfterBreak) complexFieldStack.Clear();
+            if (!continueInNextFragment) complexFieldStack.Clear();
             PublishInlineRunItems(firstRun, images.Count);
         }
 
