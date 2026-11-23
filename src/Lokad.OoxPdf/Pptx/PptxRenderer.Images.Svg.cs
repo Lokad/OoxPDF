@@ -217,7 +217,8 @@ internal sealed partial class PptxRenderer
             }
 
             IReadOnlyDictionary<string, string> style = ReadSvgStyleDeclarations(element);
-            if (IsHiddenSvgElement(element, style) ||
+            bool hidden = element.Name.LocalName == "text" ? IsSvgDisplaySuppressed(element, style) : IsHiddenSvgElement(element, style);
+            if (hidden ||
                 !TryCollectSvgOpacityGroups(element, pictureOpacity, opacityGroups, out bool strokeContainersQualified))
             {
                 continue;
@@ -762,12 +763,19 @@ internal sealed partial class PptxRenderer
     private static bool IsHiddenSvgElement(XElement element, IReadOnlyDictionary<string, string>? style = null)
     {
         style ??= ReadSvgStyleDeclarations(element);
-        string? visibility = ReadSvgInheritedAttribute(element, style, "visibility");
-        if (visibility?.Trim().ToLowerInvariant() is "hidden" or "collapse")
-        {
-            return true;
-        }
+        return IsSvgVisibilityHidden(ReadSvgInheritedAttribute(element, style, "visibility")) ||
+            IsSvgDisplaySuppressed(element, style);
+    }
 
+    private static bool IsSvgVisibilityHidden(string? value)
+    {
+        ReadOnlySpan<char> visibility = value.AsSpan().Trim();
+        return visibility.Equals("hidden", StringComparison.OrdinalIgnoreCase) ||
+            visibility.Equals("collapse", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsSvgDisplaySuppressed(XElement element, IReadOnlyDictionary<string, string> style)
+    {
         foreach (XElement source in element.AncestorsAndSelf())
         {
             var declarations = ReferenceEquals(source, element) ? style : ReadSvgStyleDeclarations(source);

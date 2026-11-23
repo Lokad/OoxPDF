@@ -1,7 +1,6 @@
 using System.Globalization;
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Fonts;
@@ -51,9 +50,10 @@ internal sealed partial class PptxRenderer
             foreach (XElement element in svg.Descendants().Where(e => e.Name.LocalName == "text"))
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (IsSvgDefinitionElement(element) || IsInFullyTransparentSvgContainer(element) || IsHiddenSvgElement(element) ||
+                if (IsSvgDefinitionElement(element) || IsInFullyTransparentSvgContainer(element) ||
+                    IsSvgDisplaySuppressed(element, ReadSvgStyleDeclarations(element)) ||
                     !TryReadSvgText(element, paintServerIds, viewWidth, viewHeight, cancellationToken, out SvgTextLabel? label) || label.Color is null ||
-                    label.Opacity == 0d || label.Text.Length == 0 || fonts.ContainsKey(label.Font)) continue;
+                    label.Opacity == 0d || !label.HasVisibleText || fonts.ContainsKey(label.Font)) continue;
                 FontFaceResolution resolution = resolver.Resolve(label.Font);
                 OpenTypeFont? font = await loadFont(resolution, cancellationToken).ConfigureAwait(false);
                 fonts.Add(label.Font, font is { HasTrueTypeOutlines: true } ? new SvgTextFont(font, resolution) : null);
@@ -66,8 +66,11 @@ internal sealed partial class PptxRenderer
         return fonts;
     }
 
-    private sealed record SvgTextLabel(string Text, FontRequest Font, double FontSize, double X, double Y,
-        string Anchor, RgbColor? Color, double Opacity, bool Kerning);
+    private sealed record SvgTextLabel(string Text, bool[]? HiddenCharacters, FontRequest Font, double FontSize, double X, double Y,
+        string Anchor, RgbColor? Color, double Opacity, bool Kerning)
+    {
+        public bool HasVisibleText => Text.Length != 0 && (HiddenCharacters is null || HiddenCharacters.AsSpan().Contains(false));
+    }
 
     private static bool HasSvgStylesheet(XDocument svg) =>
         svg.DescendantNodes().OfType<XProcessingInstruction>().Any(p => p.Target == "xml-stylesheet" && !p.Ancestors().Any(IsSvgMetadataElement)) ||
@@ -145,13 +148,8 @@ internal sealed partial class PptxRenderer
             if (!TryReadSvgSolidColor(element, style, fill, out RgbColor parsed, out colorOpacity)) return false;
             color = parsed;
         }
-        var characters = new StringBuilder();
-        if (!AppendPlainSvgText(element, characters, cancellationToken)) return false;
-        string valueText = characters.ToString();
-        bool preserve = element.AncestorsAndSelf().Select(e => (string?)e.Attribute(XNamespace.Xml + "space"))
-            .FirstOrDefault(v => v is not null) == "preserve";
-        valueText = preserve ? valueText.Replace('\r', ' ').Replace('\n', ' ').Replace('\t', ' ') :
-            Regex.Replace(valueText.Replace("\r", "").Replace("\n", "").Replace('\t', ' '), " +", " ").Trim();
+        if (!TryReadPlainSvgText(element, IsSvgVisibilityHidden(Inherited("visibility")), cancellationToken,
+                out string valueText, out bool[]? hiddenCharacters)) return false;
         if (OoxComplexScript.DetectNeeds(valueText) != OoxComplexScriptKind.None ||
             valueText.EnumerateRunes().Any(r => Rune.IsControl(r))) return false;
         string family = (Inherited("font-family") ?? "serif").Split(',')[0].Trim().Trim('\'', '"');
@@ -159,7 +157,7 @@ internal sealed partial class PptxRenderer
         if (family.Length == 0) return false;
         double opacity = colorOpacity * ReadSvgOpacityValue(Inherited("fill-opacity")) *
             ReadSvgOpacityValue(ReadSvgElementOpacity(element, style));
-        label = new(valueText, new FontRequest(family, bold, fontStyle != "normal"), size, x, y, anchor, color, opacity,
+        label = new(valueText, hiddenCharacters, new FontRequest(family, bold, fontStyle != "normal"), size, x, y, anchor, color, opacity,
             !string.Equals(Inherited("font-kerning"), "none", StringComparison.OrdinalIgnoreCase) &&
             Inherited("kerning") is not ("0" or "0px"));
         return true;
@@ -173,29 +171,74 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    // Stylesheet-driven text has already been excluded. Plain spans and spans
-    // carrying metadata share the parent's paint, positions and whitespace.
-    private static bool AppendPlainSvgText(XElement element, StringBuilder characters, CancellationToken cancellationToken)
+    // Plain spans share the label's metrics. Visibility controls which glyph
+    // outlines paint. Only display:none removes characters from layout.
+    private static bool TryReadPlainSvgText(XElement element, bool hidden, CancellationToken cancellationToken,
+        out string text, out bool[]? hiddenCharacters)
     {
+        text = string.Empty;
+        hiddenCharacters = null;
+        var characters = new StringBuilder();
+        List<bool>? visibility = null;
+        bool preserve = element.AncestorsAndSelf().Select(e => (string?)e.Attribute(XNamespace.Xml + "space"))
+            .FirstOrDefault(value => value is not null) == "preserve";
         XName spanName = element.Name.Namespace + "tspan";
-        foreach (XNode node in element.Nodes())
+        if (!Append(element, hidden)) return false;
+
+        string untrimmed = characters.ToString();
+        ReadOnlySpan<char> normalized = untrimmed.AsSpan();
+        int start = 0;
+        if (!preserve)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (node is XText text) { characters.Append(text.Value); continue; }
-            if (node is not XElement child || IsSvgMetadataElement(child)) continue;
-            if (child.Name != spanName) return false;
-            // A display:none span contributes neither characters nor advance.
-            if (IsSvgDisplayNone(child, ReadSvgStyleDeclarations(child))) continue;
-            if (child.Attributes().Any(attribute => !IsPlainSvgTextSpanAttribute(attribute)) ||
-                !AppendPlainSvgText(child, characters, cancellationToken)) return false;
+            ReadOnlySpan<char> trimmed = normalized.TrimStart();
+            start = normalized.Length - trimmed.Length;
+            normalized = trimmed.TrimEnd();
+        }
+        text = normalized.Length == untrimmed.Length ? untrimmed : normalized.ToString();
+        if (visibility is not null && text.Length != 0)
+        {
+            hiddenCharacters = new bool[text.Length];
+            visibility.CopyTo(start, hiddenCharacters, 0, text.Length);
         }
         return true;
+
+        bool Append(XElement owner, bool ownerHidden)
+        {
+            foreach (XNode node in owner.Nodes())
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (node is XText content)
+                {
+                    foreach (char source in content.Value)
+                    {
+                        if (!preserve && source is '\r' or '\n') continue;
+                        char character = source is '\r' or '\n' or '\t' ? ' ' : source;
+                        if (!preserve && character == ' ' && characters.Length != 0 && characters[^1] == ' ') continue;
+                        if (ownerHidden && visibility is null) visibility = [.. Enumerable.Repeat(false, characters.Length)];
+                        characters.Append(character);
+                        visibility?.Add(ownerHidden);
+                    }
+                    continue;
+                }
+                if (node is not XElement child || IsSvgMetadataElement(child)) continue;
+                if (child.Name != spanName) return false;
+                var style = ReadSvgStyleDeclarations(child);
+                if (IsSvgDisplayNone(child, style)) continue;
+                if (child.Attributes().Any(attribute => !IsPlainSvgTextSpanAttribute(attribute)) ||
+                    style.Keys.Any(property => property != "visibility")) return false;
+                string? localVisibility = ReadSvgPresentationAttribute(child, style, "visibility");
+                bool childHidden = string.IsNullOrWhiteSpace(localVisibility) || InheritsSvgPropertyValue(localVisibility)
+                    ? ownerHidden : IsSvgVisibilityHidden(localVisibility);
+                if (!Append(child, childHidden)) return false;
+            }
+            return true;
+        }
     }
 
     private static bool IsPlainSvgTextSpanAttribute(XAttribute attribute) =>
         attribute.IsNamespaceDeclaration ||
         attribute.Name.Namespace == XNamespace.None &&
-        (attribute.Name.LocalName is "id" or "class" or "role" ||
+        (attribute.Name.LocalName is "id" or "class" or "role" or "visibility" or "style" ||
          attribute.Name.LocalName.StartsWith("aria-", StringComparison.Ordinal) ||
          attribute.Name.LocalName.StartsWith("data-", StringComparison.Ordinal));
 
@@ -204,15 +247,15 @@ internal sealed partial class PptxRenderer
         double sourceMinX, double sourceMinY, double imageX, double imageY, double imageWidth, double imageHeight,
         double scaleX, double scaleY, Action<int> admitSamples, CancellationToken cancellationToken)
     {
-        if (IsHiddenSvgElement(element)) return true;
         if (!TryReadSvgText(element, paintServerIds, viewWidth, viewHeight, cancellationToken, out SvgTextLabel? label)) return false;
-        if (label.Color is not { } color || label.Opacity == 0d || label.Text.Length == 0) return true;
+        if (label.Color is not { } color || label.Opacity == 0d || !label.HasVisibleText) return true;
         if (fonts is null || !fonts.TryGetValue(label.Font, out SvgTextFont? prepared) || prepared is null) return false;
         OpenTypeFont font = prepared.Font;
         double unitScale = label.FontSize / font.UnitsPerEm;
         var glyphs = new List<(OpenTypeFont.OpenTypeGlyphOutline? Outline, double X)>();
         double advance = 0d;
         ushort previous = 0;
+        int characterIndex = 0;
         foreach (Rune rune in label.Text.EnumerateRunes())
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -220,7 +263,9 @@ internal sealed partial class PptxRenderer
             if (glyph == 0) return false;
             if (label.Kerning && previous != 0) advance += font.GetKerning(previous, glyph) * unitScale;
             OpenTypeFont.OpenTypeGlyphOutline? outline = null;
-            if (!Rune.IsWhiteSpace(rune))
+            bool hidden = label.HiddenCharacters?[characterIndex] ?? false;
+            characterIndex += rune.Utf16SequenceLength;
+            if (!hidden && !Rune.IsWhiteSpace(rune))
             {
                 if (!font.TryReadGlyphOutline(glyph, out var parsed) || parsed.Contours.Count == 0) return false;
                 outline = parsed;

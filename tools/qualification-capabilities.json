@@ -713,6 +713,7 @@
     "=SvgLabelsKeepTheirFillWhenStrokesDoNotPaint",
     "=SvgTransparentPaintMatchesExplicitZeroOpacity",
     "=SvgLabelsKeepTextAcrossPlainAndMetadataSpans",
+    "=SvgLabelsRetainVisibilityAndHiddenAdvances",
     "=SvgPercentageLabelPositionsMatchViewportUnits",
     "=SvgFontRelativeLabelPositionsMatchUserUnits",
     "=SvgAbsoluteLabelLengthsMatchUserUnits",

@@ -87,6 +87,8 @@ usable stored results rather than executing arbitrary instructions.
 PNG, supported JPEG/BMP and a bounded SVG subset share managed rendering. Ordinary
 SVG text, including plain spans with identifiers or descriptive metadata, can become glyph outlines.
 Spans with `display:none` contribute neither glyphs nor spacing.
+Plain spans with hidden visibility retain their advances. Descendant visibility
+can restore ink at its original placement.
 Complex SVG text, filters, masks/blends and
 unsupported constructs retain limitations. TrueType outlines embed; CFF faces
 require an embeddable fallback. Missing glyphs use diagnosed replacement.

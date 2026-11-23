@@ -376,6 +376,40 @@ internal static partial class SvgTextTests
             }, "0 1 0 rg");
     }
 
+    public static void SvgLabelsRetainVisibilityAndHiddenAdvances()
+    {
+        const string hiddenB = """A<tspan visibility="hidden">B</tspan>C D""";
+        const string explicitVisibility = """A<tspan visibility="visible">B</tspan>C D""";
+        const string inheritedVisibility = """  A<tspan visibility="collapse">B<tspan style="visibility:initial !important;visibility:hidden">C</tspan></tspan>  D  """;
+        string Picture(string value, string attributes = "") => Svg($"""
+            <text x="120" y="80" font-size="20" text-anchor="middle" fill="#112233" {attributes}>{value}</text>
+            <rect x="120" y="90" width="20" height="10" fill="lime"/>
+            """);
+
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        string[] complete = Glyphs(Paint(Picture("ABC D"), diagnostics).ToString());
+        TestAssert.Equal(4, complete.Length);
+        TestAssert.True(complete.SequenceEqual(Glyphs(Paint(Picture(explicitVisibility), diagnostics).ToString())),
+            "Explicit visibility on a plain span preserves every glyph.");
+        TestAssert.True(new[] { complete[0], complete[2], complete[3] }.SequenceEqual(Glyphs(Paint(Picture(hiddenB), diagnostics).ToString())),
+            "The hidden glyph retains its advance without changing the visible outlines or their centered positions.");
+        string revealed = Picture("""AB<tspan visibility="initial">C</tspan> D""", "visibility=\"hidden\"");
+        TestAssert.Equal(complete[2], Glyphs(Paint(revealed, diagnostics).ToString()).Single());
+        TestAssert.Equal(0, diagnostics.Count);
+
+        AssertSvgPaintInBothFormats(Picture(hiddenB), Picture(inheritedVisibility), pdf => TestAssert.Equal(3, LabelPaths(pdf)), "0 1 0 rg");
+
+        static string[] Glyphs(string content)
+        {
+            string normalized = content.ReplaceLineEndings("\n");
+            int color = normalized.IndexOf(LabelColor + "\n", StringComparison.Ordinal);
+            TestAssert.True(color >= 0, "The label must emit its authored paint.");
+            int first = color + LabelColor.Length + 1;
+            int end = normalized.IndexOf("\nQ", first, StringComparison.Ordinal);
+            return (normalized[first..end] + "\n").Split("\nf\n", StringSplitOptions.RemoveEmptyEntries);
+        }
+    }
+
     public static void SvgLabelsPrepareFontsOnlyForVisiblePictureUses()
     {
         const string family = "LABEL-FONT";
