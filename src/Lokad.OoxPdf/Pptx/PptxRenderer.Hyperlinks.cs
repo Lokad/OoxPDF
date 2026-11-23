@@ -55,30 +55,10 @@ internal sealed partial class PptxRenderer
             return;
         }
 
-        string partName = sourcePartName ?? context.SceneSlide.PartName;
-        string? relationshipId = node.HyperlinkClick.RelationshipId;
-        if (string.IsNullOrEmpty(relationshipId))
-        {
-            if (!string.IsNullOrEmpty(node.HyperlinkClick.Action))
-            {
-                EmitHyperlinkDiagnostic(context, partName, reportedIds, node.HyperlinkClick.Action,
-                    "PPTX_UNSUPPORTED_HYPERLINK_ACTION", $"Hyperlink action '{node.HyperlinkClick.Action}' is not supported and was ignored.");
-            }
-
-            return;
-        }
-
-        PptxHyperlinkResolution resolution = ResolveHyperlink(context, sourcePartName, relationshipId);
-        if (!resolution.Resolved)
-        {
-            EmitHyperlinkDiagnostic(context, partName, reportedIds, relationshipId, resolution.FailureId, resolution.FailureMessage);
-
-            return;
-        }
-
-        annotations.Add(resolution.Uri is not null
-            ? PdfLinkAnnotation.ToUri(x, y, width, height, resolution.Uri)
-            : PdfLinkAnnotation.ToDestination(x, y, width, height, resolution.Destination!.Value));
+        var click = node.HyperlinkClick;
+        var resolution = ResolveHyperlink(context, sourcePartName, click.RelationshipId, click.Action, reportedIds);
+        if (resolution.Resolved)
+            annotations.Add(resolution.CreateAnnotation(x, y, width, height));
     }
 
     // Each authored title, axis or label link covers the resolved glyph
@@ -96,7 +76,6 @@ internal sealed partial class PptxRenderer
             return;
         }
 
-        string partName = chart.TargetPartName ?? context.SceneSlide.PartName;
         foreach (ChartTextRunLink link in links)
         {
             context.CancellationToken.ThrowIfCancellationRequested();
@@ -104,23 +83,10 @@ internal sealed partial class PptxRenderer
             {
                 continue;
             }
-            if (string.IsNullOrEmpty(link.RelationshipId))
-            {
-                if (!string.IsNullOrEmpty(link.Action))
-                {
-                    EmitHyperlinkDiagnostic(context, partName, reportedIds, link.Action,
-                        "PPTX_UNSUPPORTED_HYPERLINK_ACTION", $"Hyperlink action '{link.Action}' is not supported and was ignored.");
-                }
-                continue;
-            }
-
-            PptxHyperlinkResolution resolution = ResolveHyperlink(context, relationships, link.RelationshipId);
+            var resolution = ResolveHyperlink(context, chart.TargetPartName, link.RelationshipId, link.Action,
+                reportedIds, relationships);
             if (!resolution.Resolved)
-            {
-                EmitHyperlinkDiagnostic(context, partName, reportedIds, link.RelationshipId,
-                    resolution.FailureId, resolution.FailureMessage);
                 continue;
-            }
 
             double left = double.PositiveInfinity, bottom = double.PositiveInfinity;
             double right = double.NegativeInfinity, top = double.NegativeInfinity;
@@ -144,9 +110,7 @@ internal sealed partial class PptxRenderer
 
             if (right > left && top > bottom)
             {
-                annotations.Add(resolution.Uri is not null
-                    ? PdfLinkAnnotation.ToUri(left, bottom, right - left, top - bottom, resolution.Uri)
-                    : PdfLinkAnnotation.ToDestination(left, bottom, right - left, top - bottom, resolution.Destination!.Value));
+                annotations.Add(resolution.CreateAnnotation(left, bottom, right - left, top - bottom));
             }
         }
     }
@@ -156,23 +120,42 @@ internal sealed partial class PptxRenderer
         string? Uri,
         PdfLinkDestination? Destination,
         string FailureId,
-        string FailureMessage);
+        string FailureMessage)
+    {
+        public PdfLinkAnnotation CreateAnnotation(double x, double y, double width, double height) => Uri is not null
+            ? PdfLinkAnnotation.ToUri(x, y, width, height, Uri)
+            : PdfLinkAnnotation.ToDestination(x, y, width, height, Destination!.Value);
+    }
 
     private static PptxHyperlinkResolution ResolveHyperlink(
         PptxRenderContext context,
         string? sourcePartName,
-        string relationshipId)
+        string? relationshipId,
+        string? action,
+        HashSet<string> reportedIds,
+        IReadOnlyDictionary<string, OoxRelationship>? relationships = null)
     {
-        return ResolveHyperlink(context, ResolvePartRelationships(context.SceneSlide, sourcePartName), relationshipId);
+        string partName = sourcePartName ?? context.SceneSlide.PartName;
+        if (string.IsNullOrEmpty(relationshipId))
+        {
+            if (!string.IsNullOrEmpty(action))
+                EmitHyperlinkDiagnostic(context, partName, reportedIds, action,
+                    "PPTX_UNSUPPORTED_HYPERLINK_ACTION", $"Hyperlink action '{action}' is not supported and was ignored.");
+            return default;
+        }
+
+        relationships ??= ResolvePartRelationships(context.SceneSlide, sourcePartName);
+        var resolution = ResolveHyperlinkTarget(context, relationships, relationshipId);
+        if (!resolution.Resolved)
+            EmitHyperlinkDiagnostic(context, partName, reportedIds, relationshipId, resolution.FailureId, resolution.FailureMessage);
+        return resolution;
     }
 
-    // Chart-text run clicks resolve against the chart part's own relationships (S08).
-    private static PptxHyperlinkResolution ResolveHyperlink(
+    private static PptxHyperlinkResolution ResolveHyperlinkTarget(
         PptxRenderContext context,
         IReadOnlyDictionary<string, OoxRelationship> relationships,
         string relationshipId)
     {
-
         if (!relationships.TryGetValue(relationshipId, out OoxRelationship? relationship))
         {
             return new PptxHyperlinkResolution(false, null, null, "PPTX_UNSUPPORTED_HYPERLINK", $"Hyperlink relationship '{relationshipId}' could not be resolved and was ignored.");

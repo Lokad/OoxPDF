@@ -5,7 +5,7 @@ namespace Lokad.OoxPdf.Pptx;
 internal sealed partial class PptxRenderer
 {
     // Carries the slide hyperlink state into text emission so run-level clicks in
-    // shape and table spans resolve against the owning part (S08).
+    // shape and table spans resolve against the owning part.
     private sealed record PptxTextHyperlinkScope(
         PptxRenderContext Context,
         string? SourcePartName,
@@ -29,42 +29,21 @@ internal sealed partial class PptxRenderer
             return;
         }
 
-        string? relationshipId = emissionSpan.SourceRun?.Style.HyperlinkClickId;
-        if (string.IsNullOrEmpty(relationshipId))
-        {
-            string? action = emissionSpan.SourceRun?.Style.HyperlinkClickAction;
-            if (emissionSpan.SourceRun?.Style.HasHyperlinkClick == true &&
-                !string.IsNullOrEmpty(action))
-            {
-                EmitHyperlinkDiagnostic(
-                    scope.Context,
-                    scope.SourcePartName ?? scope.Context.SceneSlide.PartName,
-                    scope.ReportedIds,
-                    action,
-                    "PPTX_UNSUPPORTED_HYPERLINK_ACTION",
-                    $"Hyperlink action '{action}' is not supported and was ignored.");
-            }
-
+        if (emissionSpan.SourceRun is not { } source)
             return;
-        }
 
-        PptxHyperlinkResolution resolution = ResolveHyperlink(scope.Context, scope.SourcePartName, relationshipId);
+        var style = source.Style;
+        var resolution = ResolveHyperlink(scope.Context, scope.SourcePartName, style.HyperlinkClickId,
+            style.HasHyperlinkClick ? style.HyperlinkClickAction : null, scope.ReportedIds);
         if (!resolution.Resolved)
-        {
-            EmitHyperlinkDiagnostic(scope.Context, scope.SourcePartName ?? scope.Context.SceneSlide.PartName,
-                scope.ReportedIds, relationshipId, resolution.FailureId, resolution.FailureMessage);
-
             return;
-        }
 
         if (!TryGetSpanLinkRect(run, embedded, scope.Context.Document, out double x, out double y, out double width, out double height))
         {
             return;
         }
 
-        scope.Annotations.Add(resolution.Uri is not null
-            ? PdfLinkAnnotation.ToUri(x, y, width, height, resolution.Uri)
-            : PdfLinkAnnotation.ToDestination(x, y, width, height, resolution.Destination!.Value));
+        scope.Annotations.Add(resolution.CreateAnnotation(x, y, width, height));
     }
 
     // Baseline-anchored box from the emitted font metrics (null means the standard
