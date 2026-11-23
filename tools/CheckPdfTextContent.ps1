@@ -73,10 +73,10 @@ foreach ($case in $cases) {
     $ops = Get-Content -Raw -LiteralPath (Join-Path $inspectDir "text-operations.json") | ConvertFrom-Json
     $missing = @(Get-MissingOrderedPdfTextPhrases $ops $case.Expected)
     foreach ($expected in $missing) {
-        Write-Host "[$($case.Name)] MISSING: $expected"
+        Write-Host "[$($case.Name)] No page-owned decoded witness: $expected"
     }
     $failures += $missing.Count
     if ($missing.Count -eq 0) { Write-Host "[$($case.Name)] ok" }
 }
-if ($failures -ne 0) { throw "$failures expected string(s) missing from extracted text." }
+if ($failures -ne 0) { throw "$failures expected string(s) lack page-owned decoded evidence." }
 Write-Host "Text-content gate passed for $($cases.Count) case(s)."

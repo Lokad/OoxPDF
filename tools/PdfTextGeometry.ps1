@@ -55,12 +55,17 @@ function Get-PdfTextFragmentRegion($Operation, $PageRegions) {
     $owner
 }
 
+# Only page-owned operations can attest to a phrase. The inspector can also
+# decode detached streams and Forms whose invocation it cannot resolve.
 # Keep paint order and emitted separators within each text fragment. Pages,
 # clear horizontal gaps and transitions between known regions end a fragment.
 # Unknown glyphs retain their placeholder.
 function Get-DecodedPdfTextFragments($Operations, $Regions, [switch] $SeparatePrintedLines, [switch] $SeparateBaselines) {
     $regionsByPage = ($Regions | Where-Object { $null -ne $_ } | Group-Object { [int]$_.Page } -AsHashTable) ?? @{}
-    $pages = @($Operations | Group-Object { $_.PageNumber } | Sort-Object { [int]$_.Name })
+    $pages = @($Operations | Where-Object {
+        $number = $_.PageNumber
+        ($number -is [int] -or $number -is [long]) -and $number -gt 0
+    } | Group-Object PageNumber | Sort-Object { [int]$_.Name })
     foreach ($page in $pages) {
         $pageRegions = $regionsByPage[[int]$page.Name]
         $text = [Text.StringBuilder]::new()

@@ -63,6 +63,12 @@ def words(value):
     return Counter(re.findall(r"[^\W_]+(?:'[^\W_]+)*", normalize(value).casefold()))
 
 
+def page_owned_operations(operations):
+    # Keep unassigned rows in the pinned inspection. Detached streams and
+    # unresolved Forms cannot attest to printed prose or math.
+    return [item for item in operations if type(item.get("PageNumber")) is int and item["PageNumber"] > 0]
+
+
 def operation_text(operations):
     """Keep paint order; join only text whose measured origins are contiguous.
 
@@ -575,10 +581,12 @@ def main():
         if not isinstance(operations, list):
             raise ValueError("Invalid candidate text operations: " + folder)
         office, office_ops_hash, pages, office_log_hash = inspect_reference(reference, inspector, args.cache.resolve())
+        operations = page_owned_operations(operations)
+        office = page_owned_operations(office)
         candidate_words = words(operation_text(operations))
         office_words = words(operation_text(office))
         page_deficits = []
-        for page in sorted({item["PageNumber"] for item in office + operations if item["PageNumber"] is not None}):
+        for page in sorted({item["PageNumber"] for item in office + operations}):
             expected_page = words(operation_text(item for item in office if item["PageNumber"] == page))
             observed_page = words(operation_text(item for item in operations if item["PageNumber"] == page))
             missing = deficits(expected_page, observed_page)

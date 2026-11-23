@@ -48,4 +48,16 @@ Assert-Missing @((New-TextShow 'First'), (New-TextShow 'Second' 682d)) @('First'
 Assert-Missing @((New-TextShow 'First'), (New-TextShow 'hand' 703d 92d)) @('First') @('First') 'small baseline change'
 Assert-Missing @(New-TextShow 'Alpha  beta   gamma') @('Alpha  beta   gamma') @() 'exact interior spaces'
 Assert-Missing @(New-TextShow 'Alpha beta gamma') @('Alpha  beta   gamma') @('Alpha  beta   gamma') 'collapsed spaces'
+
+$owned = New-TextShow 'Owned witness'
+$unassigned = New-TextShow 'Owned witness'
+$unassigned.PageNumber = $null
+$invalidPage = New-TextShow 'Owned witness'
+$invalidPage.PageNumber = 0
+Assert-Missing @($unassigned, $invalidPage) @('Owned witness') @('Owned witness') 'no owning page'
+Assert-Missing @($unassigned, $owned) @('Owned witness','Owned witness') @('Owned witness') 'only one page-owned copy'
+if (@(Get-MissingPdfTextPhrases @($unassigned, $owned) @('Owned witness')).Count -ne 0 -or
+    @(Get-MissingPdfTextPhrases @($unassigned, $invalidPage) @('Owned witness')).Count -ne 1) {
+    throw 'Unordered witnesses must come from page-owned text'
+}
 Write-Output 'Ordered source-text matching checks passed.'

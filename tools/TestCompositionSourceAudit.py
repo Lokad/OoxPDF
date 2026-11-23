@@ -10,7 +10,7 @@ import unittest
 from unittest.mock import patch
 from pathlib import Path
 from tempfile import TemporaryDirectory, gettempdir
-from AuditCompositionContent import (field_result_witnesses, inspect_reference, operation_text, reference_simple_math, resolve_reference,
+from AuditCompositionContent import (field_result_witnesses, inspect_reference, operation_text, page_owned_operations, reference_simple_math, resolve_reference,
                                      screen_picture_ink, sha, unresolved_fields, validate_outcome_modes, words)
 
 W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'
@@ -101,6 +101,19 @@ class OperationTextTests(unittest.TestCase):
             with self.subTest(change=change):
                 self.assertEqual({}, reference_simple_math(spans[:2] + [spans[2] | change], expected))
         self.assertEqual({}, reference_simple_math([self.operation('a+b')], expected))
+
+    def test_unassigned_rows_cannot_attest_to_prose_or_math(self):
+        page = [self.operation('Caption', PageNumber=2, Font='Body')]
+        formula = [self.operation('𝑎', x=110, PageNumber=None),
+                   self.operation('+', x=115, PageNumber=None),
+                   self.operation('𝑏', x=120, PageNumber=None)]
+        other = [self.operation('Orphan', PageNumber=value) for value in [None, 0, -1, True, '1']]
+        operations = page + formula + other
+        owned = page_owned_operations(operations)
+        self.assertEqual(page, owned)
+        self.assertEqual({'caption': 1}, words(operation_text(owned)))
+        self.assertEqual({}, reference_simple_math(owned, Counter({'a+b': 1})))
+        self.assertEqual(9, len(operations))
 
     def test_field_results_keep_candidate_page_and_line_ownership(self):
         expected = [{'Page': 2, 'Text': 'after formula. Page 2 of 2'}]

@@ -138,6 +138,9 @@ page and phrase pairs. The report retains missing paint spans, clipped
 glyphs and unresolved states. An unmet witness gives a nonzero exit status.
 Use this alongside decoded-text checks and raster review for occlusion,
 complex paint or text spread across multiple spans.
+Decoded phrase and token checks require a page assignment. The inspector
+retains unassigned text, including text in Forms whose invocation it cannot
+resolve. Check those phrases with independent page-level evidence.
 
 Measurement records declared formula and picture expectations. A positive
 expectation stays unverified until an audit supplies a witness. Pass the
