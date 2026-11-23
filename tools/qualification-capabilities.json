@@ -18407,7 +18407,6 @@
     "=DocxWordCompatibleMixedBalloonPreservesCompleteWrappedPrefixFallback"
   ],
   "docx-balloon-exhaustive": [
-    "DocxWordCompatibleMixedBalloonNormalizesExplicitParagraphSpacing",
     "DocxWordCompatibleMixedBalloonWrapsParagraphBodiesIndependently"
   ],
   "milestone-docx-single-math-annotations": [

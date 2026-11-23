@@ -5,7 +5,6 @@ internal static class TestRunner
     private static readonly HashSet<string> SlowTests = new(StringComparer.Ordinal)
     {
         // Exhaustive rendering products remain explicit milestone/slow coverage.
-        nameof(DocxCommentsTests.DocxWordCompatibleMixedBalloonNormalizesExplicitParagraphSpacing),
         nameof(DocxCommentsTests.DocxWordCompatibleMixedBalloonWrapsParagraphBodiesIndependently),
         nameof(PptxTypographyTests.PptxSyntheticRotatedTextBoxProducesTransform),
         nameof(PptxTypographyTests.PptxSyntheticTextBoxEmbedsFontAndDrawsGlyphs),

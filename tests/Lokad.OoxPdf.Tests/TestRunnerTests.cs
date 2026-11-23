@@ -58,7 +58,7 @@ internal static class TestRunnerTests
         TestAssert.Equal(1, noSlow.ExitCode);
         TestAssert.Contains("The speed filter excludes every selected test.", noSlow.Output);
         TestAssert.Equal(0, RunCaptured(["--group", "runner-probe", "--only-slow", "--list"], catalog).ExitCode);
-        string slowName = nameof(DocxCommentsTests.DocxWordCompatibleMixedBalloonNormalizesExplicitParagraphSpacing);
+        string slowName = nameof(DocxCommentsTests.DocxWordCompatibleMixedBalloonWrapsParagraphBodiesIndependently);
         var noFast = RunCaptured(["--test", slowName, "--skip-slow"], catalog);
         TestAssert.Equal(1, noFast.ExitCode);
         TestAssert.Contains("The speed filter excludes every selected test.", noFast.Output);

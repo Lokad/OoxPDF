@@ -1812,26 +1812,10 @@ internal static partial class DocxCommentsTests
         }
     }
 
-    public static void DocxWordCompatibleMixedBalloonNormalizesExplicitParagraphSpacing()
-    {
-        var boundaries = BalloonSpacingBoundaryCases().ToHashSet();
-        foreach (string? beforeAuto in new string?[] { null, "1", "0", "true", "false", "on", "off" })
-        foreach (string? afterAuto in new string?[] { null, "1", "0", "true", "false", "on", "off" })
-        foreach (string? beforeLines in new string?[] { null, "100", "200", "300" })
-        foreach (string? afterLines in new string?[] { null, "100", "200", "300" })
-        foreach (string value in new[] { "120", "0", "480", "4294967295" })
-        foreach (int spacingKind in new[] { 0, 1, 2 })
-        foreach (int bodyKind in new[] { 0, 1, 2 })
-        foreach (double rightMargin in new[] { 72d, 144d, 207d })
-        {
-            var test = new BalloonSpacingCase(beforeAuto, afterAuto, beforeLines, afterLines, value,
-                spacingKind, bodyKind, rightMargin);
-            if (!boundaries.Contains(test)) test.AssertLayout();
-        }
-    }
-
     public static void DocxWordCompatibleMixedBalloonSpacingBoundaries()
     {
+        // The token policy checks spelling combinations. Paint covers each
+        // spacing owner, body shape and margin with representative admitted tokens.
         foreach (var test in BalloonSpacingBoundaryCases()) test.AssertLayout();
         AssertMixedBalloonSpacingFallback();
     }
