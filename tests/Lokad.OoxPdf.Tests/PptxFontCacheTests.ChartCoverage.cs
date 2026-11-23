@@ -63,8 +63,10 @@ internal static partial class PptxFontCacheTests
                 FontFace("Primary", "coverage-primary", TestFontBuilder.CreateTestFont()),
                 FontFace("Fallback", "coverage-fallback", CoverageFont())));
             var diagnostics = new List<OoxPdfDiagnostic>();
-            var result = ((ValueTask<List<PptxRenderer.TextRun>>)split.Invoke(null,
-                [new[] { run }, resolver, (Action<OoxPdfDiagnostic>)diagnostics.Add, CancellationToken.None, null])!).GetAwaiter().GetResult();
+            List<PptxRenderer.TextRun> Split(CancellationToken token) =>
+                ((ValueTask<List<PptxRenderer.TextRun>>)split.Invoke(null,
+                    [new[] { run }, resolver, (Action<OoxPdfDiagnostic>)diagnostics.Add, token, null])!).GetAwaiter().GetResult();
+            var result = Split(CancellationToken.None);
             TestAssert.Equal(3, result.Count);
             TestAssert.True(result.Select(r => r.FontFamily).SequenceEqual(new[] { "Primary", "Fallback", "Primary" }), "Every glyph uses the face selected for measurement.");
             double[] advances = "A\u0141B".Select(c => full.GetAdvanceWidth(full.MapCodePoint(c)) * 12d / full.UnitsPerEm).ToArray();
@@ -80,9 +82,8 @@ internal static partial class PptxFontCacheTests
             }
             TestAssert.Equal(0, diagnostics.Count);
             using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
-            TestAssert.Equal(cancelled.Token, TestAssert.Throws<OperationCanceledException>(() =>
-                ((ValueTask<List<PptxRenderer.TextRun>>)split.Invoke(null,
-                    [new[] { run }, resolver, null, cancelled.Token])!).GetAwaiter().GetResult()).CancellationToken);
+            TestAssert.Equal(cancelled.Token,
+                TestAssert.Throws<OperationCanceledException>(() => Split(cancelled.Token)).CancellationToken);
         }
     }
 
