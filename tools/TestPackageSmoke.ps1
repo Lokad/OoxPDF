@@ -256,20 +256,13 @@ var options = new OoxPdfOptions
 };
 OoxPdfConverter.Convert(input, output, options);
 if (admission.Requests != 1 || admission.Releases != 1 || admission.Reserved != 0) { throw new InvalidOperationException("Packed admission ownership is unbalanced."); }
-byte[] header = new byte[5];
-using (FileStream stream = File.OpenRead(output))
-{
-    if (stream.Read(header, 0, header.Length) != header.Length)
-    {
-        throw new InvalidDataException("Smoke output is shorter than the PDF header.");
-    }
-}
-if (Encoding.ASCII.GetString(header) != "%PDF-")
+byte[] pdfBytes = File.ReadAllBytes(output);
+string pdf = Encoding.ASCII.GetString(pdfBytes);
+if (!pdf.StartsWith("%PDF-", StringComparison.Ordinal))
 {
     throw new InvalidDataException("Smoke output does not start with the PDF header.");
 }
-Console.WriteLine("Packed conversion produced " + new FileInfo(output).Length + " bytes.");
-string pdf = Encoding.ASCII.GetString(File.ReadAllBytes(output));
+Console.WriteLine("Packed conversion produced " + pdfBytes.Length + " bytes.");
 if (!pdf.Contains("/FontFile2", StringComparison.Ordinal) || !pdf.Contains("/ToUnicode", StringComparison.Ordinal))
 {
     throw new InvalidDataException("Smoke output must embed a TrueType font and its Unicode map.");
@@ -290,7 +283,7 @@ using (var streamOutput = new AsyncOnlySmokeOutput())
         InputKind = OoxPdfInputKind.Docx, FontResolver = options.FontResolver,
         FixedCreationDate = options.FixedCreationDate,
         MemoryBudget = asyncAdmission, TemporaryStorage = temporaryStorage, ConversionLimits = options.ConversionLimits });
-    if (!streamOutput.ToArray().AsSpan().SequenceEqual(File.ReadAllBytes(output)))
+    if (!streamOutput.ToArray().AsSpan().SequenceEqual(pdfBytes))
         throw new InvalidDataException("Packed async output/storage changed the PDF.");
     if (!streamInput.CanRead || !streamOutput.CanWrite || asyncAdmission.Reserved != 0 || asyncAdmission.Requests != 1 || asyncAdmission.Releases != 1)
         throw new InvalidOperationException("Packed async caller-stream/budget ownership is unbalanced.");
@@ -458,10 +451,6 @@ sealed class SmokeFontResolver(string path) : IFontResolver, IFontProgramSource
         throw "Smoke conversion failed with exit code $LASTEXITCODE."
     }
 
-    $pdfHeader = [Text.Encoding]::ASCII.GetString([IO.File]::ReadAllBytes($output)[0..4])
-    if ($pdfHeader -ne "%PDF-") {
-        throw "Smoke output does not start with the PDF header: $pdfHeader."
-    }
     if ((Get-FileHash -LiteralPath $package.FullName).Hash -ne $packageSha256) {
         throw 'Package changed during consumer qualification.'
     }
