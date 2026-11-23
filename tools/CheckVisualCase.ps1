@@ -22,8 +22,9 @@ $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $caseFull = (Resolve-Path -LiteralPath $Case).Path
 $caseDirectory = Split-Path -Parent $caseFull
-$caseSha256 = (Get-FileHash -LiteralPath $caseFull).Hash
-$manifest = Get-Content -Raw -LiteralPath $caseFull | ConvertFrom-Json
+$caseBinding = Read-VisualCaseManifest $caseFull
+$caseSha256 = $caseBinding.Sha256
+$manifest = $caseBinding.Manifest
 $gateIssue = Get-VisualChartGraphicsGateIssue $manifest.expected $manifest.id
 if ($gateIssue) { throw $gateIssue }
 

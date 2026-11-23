@@ -1,3 +1,15 @@
+function Read-VisualCaseManifest([string] $Path) {
+    $bytes = [IO.File]::ReadAllBytes($Path)
+    $reader = [IO.StreamReader]::new([IO.MemoryStream]::new($bytes, $false))
+    try { $manifest = $reader.ReadToEnd() | ConvertFrom-Json }
+    finally { $reader.Dispose() }
+    [pscustomobject]@{
+        Path = $Path
+        Manifest = $manifest
+        Sha256 = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($bytes))
+    }
+}
+
 function Test-VisualChartGraphicsGate($Expected) {
     $null -ne $Expected.maxChartGraphicsStructureBoundsDelta -or
         $null -ne $Expected.maxChartGraphicsStructureBoundsDeltaByKind

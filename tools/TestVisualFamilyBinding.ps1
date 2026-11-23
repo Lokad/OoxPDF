@@ -24,6 +24,10 @@ param($Case, $RunId, [switch]$SkipBuild, $CliPath, [switch]$CacheOnlyReference, 
 @{Case=$Case;RunId=$RunId;SkipBuild=[bool]$SkipBuild;CliPath=$CliPath;CacheOnlyReference=[bool]$CacheOnlyReference} |
     ConvertTo-Json -Compress | Add-Content (Join-Path (Split-Path $PSScriptRoot) 'cases.jsonl')
 if (!$SkipBuild -or !(Test-Path -LiteralPath $CliPath)) { throw 'Family did not bind an existing CLI without per-case builds' }
+if ($changeCaseAfterSelection) {
+    $source = Get-Content -LiteralPath $Case -Raw
+    [IO.File]::WriteAllText($Case, $source.Replace('approximate', 'needs-review'))
+}
 $id=(Get-Content -LiteralPath $Case -Raw | ConvertFrom-Json).id
 $run=Join-Path (Split-Path $PSScriptRoot) "artifacts/visual/$id/$RunId"
 New-Item -ItemType Directory -Path $run -Force | Out-Null
@@ -118,6 +122,25 @@ $catalog = Get-Content -LiteralPath $catalogPath -Raw | ConvertFrom-Json
 if (($catalog.cases.id -join ',') -cne 'probe-a,probe-b') { throw 'An overlapping family update lost a catalog row' }
 if (@(Get-ChildItem -LiteralPath (Split-Path -Parent $catalogPath) -Filter 'support-catalog.json.staging-*').Count) {
     throw 'A successful catalog update left staging files'
+}
+
+$manifestPath = Join-Path $repo 'visual-cases/cases/probe-a/case.json'
+$originalManifest = [IO.File]::ReadAllBytes($manifestPath)
+$familyReport = Join-Path $repo 'artifacts/visual/reports/probe.json'
+$reportHash = (Get-FileHash -LiteralPath $familyReport).Hash
+$changeCaseAfterSelection = $true
+try {
+    $failure = $null
+    try { & $script -Family probe -CasePattern probe-a -Tag approximate -CliPath $frozenCli -SkipBuild | Out-Null }
+    catch { $failure = $_.Exception.Message }
+    if ($failure -cne 'Visual case identity changed during the family run. probe-a' -or
+        (Get-FileHash -LiteralPath $familyReport).Hash -cne $reportHash) {
+        throw 'A changed case manifest invalidates selection and leaves the prior report intact'
+    }
+}
+finally {
+    $changeCaseAfterSelection = $false
+    [IO.File]::WriteAllBytes($manifestPath, $originalManifest)
 }
 
 # Cross the real case -> inspector boundary. Only native executions and Office/

@@ -112,9 +112,8 @@ function Get-CaseClassification($caseManifest) {
     return "unclassified"
 }
 
-function New-ReportRow($case, [bool]$passed, [string]$errorMessage, [string]$explicitRunRoot) {
-    $caseManifestPath = Join-Path $case.FullName "case.json"
-    $caseManifest = Get-Content -Raw -LiteralPath $caseManifestPath | ConvertFrom-Json
+function New-ReportRow($caseBinding, [bool]$passed, [string]$errorMessage, [string]$explicitRunRoot) {
+    $caseManifest = $caseBinding.Manifest
     $latestRun = if (-not [string]::IsNullOrWhiteSpace($explicitRunRoot) -and (Test-Path -LiteralPath $explicitRunRoot)) { Get-Item -LiteralPath $explicitRunRoot } else { $null }
     $runInfo = $null
     $metrics = @()
@@ -124,7 +123,8 @@ function New-ReportRow($case, [bool]$passed, [string]$errorMessage, [string]$exp
         if (Test-Path -LiteralPath $runInfoPath) {
             $runInfo = Get-Content -Raw -LiteralPath $runInfoPath | ConvertFrom-Json
             if ($runInfo.RunId -cne $latestRun.Name -or $runInfo.CaseId -cne $caseManifest.id -or
-                $runInfo.CaseSha256 -ne (Get-FileHash -LiteralPath $caseManifestPath).Hash -or
+                $runInfo.CaseSha256 -ne $caseBinding.Sha256 -or
+                (Get-FileHash -LiteralPath $caseBinding.Path).Hash -ne $caseBinding.Sha256 -or
                 $runInfo.CliSha256 -ne $cliHash -or $runInfo.LibrarySha256 -ne $libraryHash) {
                 throw "Visual case identity changed during the family run. $($caseManifest.id)"
             }
@@ -245,13 +245,15 @@ if ($CasePattern.Count -ne 0) {
     })
 }
 
+$caseBindings = [Collections.Generic.Dictionary[string, object]]::new([StringComparer]::Ordinal)
 if ($Tag.Count -ne 0) {
     $cases = @($cases | Where-Object {
-        $caseManifestPath = Join-Path $_.FullName "case.json"
-        $caseManifest = Get-Content -Raw -LiteralPath $caseManifestPath | ConvertFrom-Json
-        $caseTags = @($caseManifest.tags)
+        $caseBinding = Read-VisualCaseManifest (Join-Path $_.FullName "case.json")
+        $caseTags = @($caseBinding.Manifest.tags)
         $missingTags = @($Tag | Where-Object { $caseTags -notcontains $_ })
-        $missingTags.Count -eq 0
+        if ($missingTags.Count -ne 0) { return $false }
+        $caseBindings[$_.FullName] = $caseBinding
+        return $true
     })
 }
 
@@ -282,7 +284,10 @@ $inspectionThresholds = @('maxTextOperationPositionDelta', 'maxTextLineStartDelt
     'maxGraphicsOperationBoundsDelta', 'maxChartTextStructurePositionDelta',
     'maxChartTextStructurePositionDeltaByKind')
 foreach ($case in $cases) {
-    $manifest = Get-Content -LiteralPath (Join-Path $case.FullName 'case.json') -Raw | ConvertFrom-Json
+    if (!$caseBindings.ContainsKey($case.FullName)) {
+        $caseBindings[$case.FullName] = Read-VisualCaseManifest (Join-Path $case.FullName 'case.json')
+    }
+    $manifest = $caseBindings[$case.FullName].Manifest
     $expected = $manifest.expected
     $gateIssue = Get-VisualChartGraphicsGateIssue $expected $manifest.id
     if ($gateIssue) { throw $gateIssue }
@@ -332,19 +337,18 @@ if ($needsPdfInspection -and !$inspectorBinding) {
 }
 $rows = @()
 foreach ($case in $cases) {
-    $manifest = Join-Path $case.FullName "case.json"
+    $caseBinding = $caseBindings[$case.FullName]
     Write-Host ("==> {0}" -f $case.Name)
     # Explicit run binding: the family mints a collision-resistant run id and
     # hands the resulting run root to reporting instead of rediscovering the
     # latest run directory by mtime (which races concurrent and failed runs).
-    $caseManifestJson = Get-Content -Raw -LiteralPath $manifest | ConvertFrom-Json
     $caseRunId = "{0}-p{1}-{2}" -f (Get-Date -Format "yyyyMMdd-HHmmss-fff"), $PID, ([System.Guid]::NewGuid().ToString("N").Substring(0, 8))
-    $caseRunRoot = Join-Path $artifactRoot ([System.IO.Path]::Combine([string]$caseManifestJson.id, $caseRunId))
+    $caseRunRoot = Join-Path $artifactRoot ([System.IO.Path]::Combine([string]$caseBinding.Manifest.id, $caseRunId))
     $passed = $true
     $errorMessage = ""
     try {
         $caseArgs = @{
-            Case = $manifest
+            Case = $caseBinding.Path
             RunId = $caseRunId
             SkipBuild = $true
             CliPath = $CliPath
@@ -364,7 +368,7 @@ foreach ($case in $cases) {
         Write-Host ("FAILED {0}: {1}" -f $case.Name, $errorMessage)
     }
 
-    $rows += New-ReportRow $case $passed $errorMessage $caseRunRoot
+    $rows += New-ReportRow $caseBinding $passed $errorMessage $caseRunRoot
 }
 if ((Get-FileHash -LiteralPath $CliPath).Hash -ne $cliHash -or
     (Get-FileHash -LiteralPath $libraryPath).Hash -ne $libraryHash) {
