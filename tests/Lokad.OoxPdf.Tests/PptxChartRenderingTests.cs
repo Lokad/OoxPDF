@@ -2121,16 +2121,24 @@ internal static class PptxChartRenderingTests
         }
     }
 
-    public static void LineStyle26LegendExplicitMarkerOutlineStrokesRed()
+    public static void LineStyle26LegendExplicitMarkerOutlineStrokesRed() =>
+        AssertStyle26LegendExplicitMarkerPaint(stroke: true);
+
+    public static void LineStyle26LegendExplicitMarkerFillPaintsFlat() =>
+        AssertStyle26LegendExplicitMarkerPaint(stroke: false);
+
+    private static void AssertStyle26LegendExplicitMarkerPaint(bool stroke)
     {
-        string input = TestFixtures.WriteTempPackage(".pptx", ThemedBarChartPackage("""
+        const string red = """<a:solidFill><a:srgbClr val="FF0000"/></a:solidFill>""";
+        string markerPaint = stroke ? "<a:ln>" + red + "</a:ln>" : red;
+        var parts = ThemedBarChartPackage($$"""
             <?xml version="1.0" encoding="UTF-8"?>
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:style val="26"/><c:chart><c:plotArea><c:lineChart>
               <c:grouping val="standard"/>
               <c:varyColors val="0"/>
               <c:ser>
                 <c:tx><c:strLit><c:pt idx="0"><c:v>Demand</c:v></c:pt></c:strLit></c:tx>
-                <c:marker><c:symbol val="circle"/><c:size val="9"/><c:spPr><a:ln><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill></a:ln></c:spPr></c:marker>
+                <c:marker><c:symbol val="circle"/><c:size val="9"/><c:spPr>{{markerPaint}}</c:spPr></c:marker>
                 <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
                 <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt></c:numLit></c:val>
               </c:ser>
@@ -2141,11 +2149,53 @@ internal static class PptxChartRenderingTests
               </c:ser>
               <c:axId val="10"/><c:axId val="20"/>
             </c:lineChart><c:catAx><c:axId val="10"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="b"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:catAx><c:valAx><c:axId val="20"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="l"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:valAx></c:plotArea><c:legend><c:legendPos val="r"/><c:overlay val="0"/></c:legend></c:chart></c:chartSpace>
-            """));
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-        OoxPdfConverter.Convert(input, output);
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("1 0 0 RG", pdf);
+            """);
+        const string slidePart = "ppt/slides/slide1.xml";
+        // The unrelated red frame makes page-wide color checks insufficient.
+        const string frame = """
+            <p:sp><p:spPr>
+              <a:xfrm><a:off x="127000" y="127000"/><a:ext cx="381000" cy="254000"/></a:xfrm>
+              <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
+              <a:solidFill><a:srgbClr val="FF0000"/></a:solidFill>
+              <a:ln w="12700"><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill></a:ln>
+            </p:spPr></p:sp>
+            """;
+        parts[slidePart] = TestFixtures.Utf8(Encoding.UTF8.GetString(parts[slidePart])
+            .Replace("</p:spTree>", frame + "</p:spTree>", StringComparison.Ordinal));
+        using var stream = TestFixtures.CreateZipPackage(parts);
+        using var package = OoxPackage.Open(stream, default);
+        var renderer = new PptxRenderer(new PortableRenderingTests.PinnedResolver());
+        PdfPage page = renderer.RenderPagesAsync(new PptxReader().Read(package, default), package, null, default)
+            .ToBlockingEnumerable().Single();
+
+        var demand = PortableRenderingTests.ReadPaintedSourceLabel(page, "Demand", fontPrefix: "CL");
+        var supply = PortableRenderingTests.ReadPaintedSourceLabel(page, "Supply", fontPrefix: "CL");
+        string content = page.Content.ReplaceLineEndings("\n");
+        const string number = @"[-\d.]+";
+        string pair = number + " " + number;
+        string circle = $@"(?<x>{number}) (?<y>{number}) m\n(?:(?:{pair} ){{3}}c\n){{4}}h\n";
+        string color = stroke ? @"RG\n(?:[^\n]+ [wdJj]\n)*" : @"rg\n";
+        string operation = stroke ? @"S" : @"f";
+        MatchCollection painted = Regex.Matches(content, $@"(?m)^1 0 0 {color}{circle}{operation}$");
+        TestAssert.Equal(1, painted.Count);
+        double x = double.Parse(painted[0].Groups["x"].Value, CultureInfo.InvariantCulture);
+        double y = double.Parse(painted[0].Groups["y"].Value, CultureInfo.InvariantCulture);
+        TestAssert.True(demand[0].Origin.X - x is > 0d and < 9d &&
+            y > demand[0].Origin.Y && y < demand[0].Origin.Y + demand[0].Ink.Height &&
+            y > supply[0].Origin.Y + supply[0].Ink.Height,
+            "The red circle paints immediately beside Demand on its own legend row.");
+
+        var paths = new List<string>();
+        var paints = PptxChartPaletteTests.ReadColoredPaints(page.Content, paths.Add, strokes: true).ToArray();
+        var supplyKey = paints.Zip(paths).Single(paint => paint.First == new RgbColor(232, 109, 44) &&
+            paint.Second.EndsWith(" re S", StringComparison.Ordinal)).Second.Split(' ');
+        double right = double.Parse(supplyKey[0], CultureInfo.InvariantCulture) + double.Parse(supplyKey[2], CultureInfo.InvariantCulture);
+        double bottom = double.Parse(supplyKey[1], CultureInfo.InvariantCulture);
+        double top = bottom + double.Parse(supplyKey[3], CultureInfo.InvariantCulture);
+        TestAssert.True(supply[0].Origin.X - right is > 0d and < 9d &&
+            bottom < supply[0].Origin.Y && top > supply[0].Origin.Y &&
+            top < demand[0].Origin.Y,
+            "The independently styled Supply key stays on its own row.");
     }
 
     // RV04: explicit plus/square markers without a size element draw at the nominal
@@ -2189,36 +2239,6 @@ internal static class PptxChartRenderingTests
         }
         TestAssert.True(hasFivePointVertical, "Expected a 5pt vertical plus diameter.");
     }
-    // RV04: explicit marker fills win over gallery legend gradients (Office paints
-    // a red flat circle for a red-filled marker key under style-26 while the other keys
-    // keep their pattern fills; characterization pin of already-correct behavior).
-    public static void LineStyle26LegendExplicitMarkerFillPaintsFlat()
-    {
-        string input = TestFixtures.WriteTempPackage(".pptx", ThemedBarChartPackage("""
-            <?xml version="1.0" encoding="UTF-8"?>
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:style val="26"/><c:chart><c:plotArea><c:lineChart>
-              <c:grouping val="standard"/>
-              <c:varyColors val="0"/>
-              <c:ser>
-                <c:tx><c:strLit><c:pt idx="0"><c:v>Demand</c:v></c:pt></c:strLit></c:tx>
-                <c:marker><c:symbol val="circle"/><c:size val="9"/><c:spPr><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill></c:spPr></c:marker>
-                <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
-                <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt></c:numLit></c:val>
-              </c:ser>
-              <c:ser>
-                <c:tx><c:strLit><c:pt idx="0"><c:v>Supply</c:v></c:pt></c:strLit></c:tx>
-                <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
-                <c:val><c:numLit><c:pt idx="0"><c:v>1</c:v></c:pt><c:pt idx="1"><c:v>3</c:v></c:pt></c:numLit></c:val>
-              </c:ser>
-              <c:axId val="10"/><c:axId val="20"/>
-            </c:lineChart><c:catAx><c:axId val="10"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="b"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:catAx><c:valAx><c:axId val="20"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="l"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:valAx></c:plotArea><c:legend><c:legendPos val="r"/><c:overlay val="0"/></c:legend></c:chart></c:chartSpace>
-            """));
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-        OoxPdfConverter.Convert(input, output);
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("1 0 0 rg", pdf);
-    }
-
     public static void LinePlotSmoothZeroYieldsToExplicitSeriesSmooth() =>
         AssertLinePlotSmoothing(straightPlot: true);
 
