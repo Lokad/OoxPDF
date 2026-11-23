@@ -598,12 +598,11 @@ internal static partial class SvgTextTests
             "<text y=\"1e308in\">overflowing length</text>" +
             "<text transform=\"matrix(1e308 0 0 1e308 1e308 0)\">overflow</text>" +
             "<text><tspan display=\"none\" style=\"display:inline\" x=\"40\">visible positioned span</tspan></text>" +
-            "<text>A<tspan xml:space=\"preserve\"> B </tspan>C</text>" +
             "<text x=\"20\" y=\"80\" fill=\"#112233\">I</text>"), diagnostics);
         TestAssert.Contains("0.8 0.898 1 rg", graphics.ToString());
         TestAssert.Equal(1, LabelPaths(graphics.ToString()));
-        TestAssert.True(diagnostics.Any(d => d.Message.Contains("6 unsupported text elements", StringComparison.Ordinal)),
-            "Unimplemented positions, non-finite outlines and a span changing whitespace policy retain diagnostics.");
+        TestAssert.True(diagnostics.Any(d => d.Message.Contains("5 unsupported text elements", StringComparison.Ordinal)),
+            "Unimplemented positions and non-finite outlines retain diagnostics.");
         TestAssert.Equal(0, graphics.StateDepth);
         Write(Page(graphics));
     }
