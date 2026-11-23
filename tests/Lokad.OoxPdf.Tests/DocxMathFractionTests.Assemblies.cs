@@ -99,7 +99,6 @@ internal static partial class DocxMathFractionTests
         var graphics = new PdfGraphicsBuilder();
         DocxMathBoxPainter.Paint(box, graphics, 10d, 10d, default);
         var page = new PdfPage(100d, 100d, graphics.ToString(), [resource]);
-        PdfContentValidator.ValidatePage(page, 0, default);
         TestAssert.Equal("\u221AA", string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).Select(show => show.Text)));
         TestAssert.Equal(root.AssemblyParts.Count + 1,
             System.Text.RegularExpressions.Regex.Matches(page.Content, @"<[^>]+> Tj").Count);

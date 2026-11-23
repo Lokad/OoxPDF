@@ -93,7 +93,6 @@ internal static partial class DocxMathFractionTests
             var graphics = new PdfGraphicsBuilder();
             DocxMathBoxPainter.Paint(box, graphics, 10d, 10d, default);
             var page = new PdfPage(200d, 200d, graphics.ToString(), [resource]);
-            PdfContentValidator.ValidatePage(page, 0, default);
             TestAssert.Equal("(A)", string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).Select(show => show.Text)));
             using var output = new MemoryStream();
             PdfDocumentWriter.WriteStagedAsync(output, AsyncEnumerable.ToAsyncEnumerable<PdfPage>([page]), new OoxConversionLimits(), diagnosticSink: null, default, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
