@@ -1055,6 +1055,7 @@
   ],
   "docx-shared-cell-content-portable": [
     "=DocxInlineCompositionPreferredBreakKeepsTailInsideExactCell",
+    "=DocxHangingContinuationKeepsPrecedingFractionAndPicture",
     "DocxCellPageBreakAdmissionUsesComputedContentInsteadOfFieldCache",
     "DocxTableLayoutStageUsesCellBodyElementsForInlineImages",
     "DocxCellFlowWithoutFontMeasurementKeepsAuthoredPictureAdvance",

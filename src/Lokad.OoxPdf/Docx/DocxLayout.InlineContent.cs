@@ -770,17 +770,21 @@ internal sealed partial class DocxLayoutEngine
             }
             int end = index + 1;
             bool space = IsSpace(Atom(index));
+            bool text = Atom(index).Source is DocxInlineText;
             // A formatting/run boundary is not a word-break opportunity.
-            if (!space && Atom(index).Source is DocxInlineText)
+            if (!space && text)
                 while (end < measured.Count && Atom(end).Source is DocxInlineText && !IsSpace(Atom(end))) end++;
             double groupWidth = GroupAdvance(index, end);
             double width = output.Count == 0 ? firstWidth : nextWidth;
             double remainingWidth = width - advance - BoundaryBefore(Atom(index));
             bool wraps = current.Count != 0 && !FitsLineWidth(groupWidth, remainingWidth);
-            bool overwide = !FitsLineWidth(groupWidth, Math.Max(firstWidth, nextWidth));
+            // A moved word must fit the continuation frame. A wider first
+            // line cannot make a word on a hanging continuation fit.
+            double emptyLineWidth = text && (wraps || output.Count > 0) ? nextWidth : Math.Max(firstWidth, nextWidth);
+            bool overwide = !FitsLineWidth(groupWidth, emptyLineWidth);
             DocxWrappedTextLine[]? wrapped = null;
             DocxTextSpan[]? spans = null;
-            if (wraps && !space && remainingWidth > 0d && Atom(index).Source is DocxInlineText &&
+            if (wraps && !space && remainingWidth > 0d && text &&
                 HasPreferredBreak(index, end))
             {
                 // Fill the rest of an occupied line only at a preferred break.
@@ -793,7 +797,7 @@ internal sealed partial class DocxLayoutEngine
             {
                 if (wrapped is null)
                 {
-                    if (Atom(index).Source is not DocxInlineText) return false;
+                    if (!text) return false;
                     if (current.Count != 0)
                     {
                         Flush(new(index));
