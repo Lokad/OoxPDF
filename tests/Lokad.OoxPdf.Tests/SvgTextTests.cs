@@ -118,6 +118,28 @@ internal static partial class SvgTextTests
         }
     }
 
+    public static void SvgFontRelativeLabelPositionsMatchUserUnits()
+    {
+        const string expected = """
+            <g transform="translate(4 1)">
+              <text x="40" y="32" font-size="20" fill="#112233">NORTH</text>
+              <text x="45" y="60" dx="15" dy="-5" font-size="20" fill="#2254b4">A B</text>
+            </g>
+            """;
+        const string source = """
+            <g transform="translate(4 1)" font-size="16">
+              <text x="2em" y="32" font-size="125%" fill="#112233">NORTH</text>
+              <text x="45" y="3em" dx=".75em" dy="-.25em" font-size="125%" fill="#2254b4">A B</text>
+            </g>
+            """;
+        const string sibling = """<rect x="112" y="72" width="23" height="9" fill="green"/>""";
+        AssertSvgPaintInBothFormats(Svg(expected + sibling), Svg(source + sibling), pdf =>
+        {
+            TestAssert.Equal(5, LabelPaths(pdf));
+            TestAssert.Equal(2, LabelPaths(pdf, "0.133 0.329 0.706 rg"));
+        }, "0 0.502 0 rg");
+    }
+
     public static void SvgLabelTransformsUseThePictureCoordinateSystem()
     {
         const string transform = "matrix(0.965925826 0.258819045 -0.258819045 0.965925826 5 7)";

@@ -105,7 +105,7 @@ and stroke width to their defaults. `initial` and `unset` restore full
 opacity on SVG objects and gradient stops.
 An SVG `font-size` reset restores the default for the label and its relative descendants.
 Basic shape geometry, stroke widths, dash lengths and dash offsets accept viewport percentages.
-Supported SVG labels accept viewport percentages in single-value x, y, dx and dy attributes.
+Supported SVG labels accept viewport percentages and em units in single-value x, y, dx and dy attributes.
 Line elements use stroke paint and ignore fill declarations.
 Object opacity can compose a visible fill with a supported linear-gradient stroke.
 Translucent solid strokes retain the fill beneath them.

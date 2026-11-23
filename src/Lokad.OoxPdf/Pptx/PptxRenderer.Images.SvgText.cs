@@ -131,10 +131,10 @@ internal sealed partial class PptxRenderer
             else if (!TryReadSvgTextLength(value, size, out size, allowPercent: true))
                 return false;
         }
-        if (size <= 0d || !TryReadPosition("x", viewWidth, null, out double x) ||
-            !TryReadPosition("y", viewHeight, null, out double y) ||
-            !TryReadPosition("dx", viewWidth, size, out double dx) ||
-            !TryReadPosition("dy", viewHeight, size, out double dy)) return false;
+        if (size <= 0d || !TryReadPosition("x", viewWidth, out double x) ||
+            !TryReadPosition("y", viewHeight, out double y) ||
+            !TryReadPosition("dx", viewWidth, out double dx) ||
+            !TryReadPosition("dy", viewHeight, out double dy)) return false;
         x += dx; y += dy;
         if (!double.IsFinite(x) || !double.IsFinite(y)) return false;
         string fill = ResolveSvgPaintFallback(element, style, Inherited("fill") ?? "black", paintServerIds, out _);
@@ -164,12 +164,12 @@ internal sealed partial class PptxRenderer
             Inherited("kerning") is not ("0" or "0px"));
         return true;
 
-        bool TryReadPosition(string name, double percentageBasis, double? relativeSize, out double value)
+        bool TryReadPosition(string name, double percentageBasis, out double value)
         {
             string text = ((string?)element.Attribute(name) ?? "0").Trim();
             return text.EndsWith('%')
                 ? TryReadSvgViewportLength(element, text, percentageBasis, out value)
-                : TryReadSvgTextLength(text, relativeSize, out value);
+                : TryReadSvgTextLength(text, size, out value);
         }
     }
 
