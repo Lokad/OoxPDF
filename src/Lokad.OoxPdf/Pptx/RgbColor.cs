@@ -45,8 +45,11 @@ internal readonly record struct RgbColor(byte Red, byte Green, byte Blue)
         {
             return TryParseCssRgb(trimmed.AsSpan(functionLength, trimmed.Length - functionLength - 1), out color, out opacity);
         }
-        return CssColorKeywords.TryGetValue(trimmed, out color);
+        return TryResolveColorKeyword(trimmed, out color);
     }
+
+    internal static bool TryResolveColorKeyword(string name, out RgbColor color) =>
+        CssColorKeywords.TryGetValue(name, out color);
 
     private static bool TryParseCssHex(ReadOnlySpan<char> digits, out RgbColor color, out double opacity)
     {

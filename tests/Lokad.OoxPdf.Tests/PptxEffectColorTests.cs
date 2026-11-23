@@ -8,6 +8,65 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class PptxEffectColorTests
 {
+    public static void PptxDrawingMlPresetFillsMatchNumericPaint()
+    {
+        (string Preset, string Hex, string Operator)[] swatches =
+        [
+            ("DKBlue", "00008B", "0 0 0.545 rg"),
+            ("ltBlue", "ADD8E6", "0.678 0.847 0.902 rg"),
+            ("medPurple", "9370DB", "0.576 0.439 0.859 rg"),
+            ("dkSeaGreen", "8FBC8B", "0.561 0.737 0.545 rg"),
+            ("darkSeaGreen", "8FBC8F", "0.561 0.737 0.561 rg"),
+            ("ltGoldenrodYellow", "FAFA78", "0.98 0.98 0.471 rg"),
+            ("lightGoldenrodYellow", "FAFAD2", "0.98 0.98 0.824 rg")
+        ];
+        PdfPage numeric = RenderSwatches("srgbClr", swatches.Select(swatch => swatch.Hex));
+        PdfPage preset = RenderSwatches("prstClr", swatches.Select(swatch => swatch.Preset));
+        foreach (var swatch in swatches)
+            TestAssert.Contains(swatch.Operator, numeric.Content);
+        TestAssert.True(numeric.ExtGStates.Any(state => state.FillAlpha == .5d), "Swatches retain their authored opacity.");
+        TestAssert.Equal(numeric.Content, preset.Content);
+        TestAssert.True(numeric.ExtGStates.SequenceEqual(preset.ExtGStates), "Presets retain the same paint state.");
+
+        foreach (string invalid in new[] { "unknown-color", "dkRebeccaPurple", "RebeccaPurple", " dkBlue ", "#00008B", "rgb(0,0,139)" })
+            TestAssert.True(!PptxPresetColors.TryResolve(invalid, out _), "Only DrawingML color keywords resolve here: " + invalid);
+        TestAssert.True(RgbColor.TryParseCssColor(" RebeccaPurple ", out RgbColor css, out double opacity), "CSS retains its distinct keyword.");
+        TestAssert.Equal(new RgbColor(102, 51, 153), css);
+        TestAssert.Equal(1d, opacity);
+        TestAssert.True(!RgbColor.TryParseCssColor("dkBlue", out _, out _), "DrawingML abbreviations stay scoped to DrawingML.");
+
+        static PdfPage RenderSwatches(string colorElement, IEnumerable<string> values)
+        {
+            string shapes = string.Concat(values.Select((value, index) => $$"""
+                <p:sp><p:nvSpPr><p:cNvPr id="{{index + 2}}" name="Swatch"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+                  <p:spPr><a:xfrm><a:off x="{{914400 + 914400 * index}}" y="914400"/><a:ext cx="457200" cy="457200"/></a:xfrm>
+                    <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
+                    <a:solidFill><a:{{colorElement}} val="{{value}}"><a:alpha val="50000"/></a:{{colorElement}}></a:solidFill>
+                    <a:ln><a:noFill/></a:ln>
+                  </p:spPr>
+                </p:sp>
+                """));
+            using var input = TestFixtures.CreateZipPackage(new Dictionary<string, string>
+            {
+                ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
+                ["_rels/.rels"] = PptxTests.PackageRelationship(),
+                ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
+                ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
+                ["ppt/slides/slide1.xml"] = $$"""
+                    <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                      <p:cSld><p:spTree>{{shapes}}</p:spTree></p:cSld>
+                    </p:sld>
+                    """
+            });
+            using var package = OoxPackage.Open(input, default);
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var page = new PptxRenderer(new PortableRenderingTests.PinnedResolver())
+                .RenderPagesAsync(new PptxReader().Read(package, default), package, diagnostics.Add, default).ToBlockingEnumerable().Single();
+            TestAssert.Equal(0, diagnostics.Count);
+            return page;
+        }
+    }
+
     public static void PptxEffectColorFormsKeepPaintAcrossSupportedOwners()
     {
         string[] colors =

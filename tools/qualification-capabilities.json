@@ -153,6 +153,7 @@
     "PageMemoryPublicRefusalAndCancellationPreserveDestinations"
   ],
   "pptx-effect-color-owners": [
+    "PptxDrawingMlPresetFillsMatchNumericPaint",
     "PptxEffectColorFormsKeepPaintAcrossSupportedOwners",
     "PptxEffectColorFallbacksPreserveMissingPaintAndRecolorPolicy",
     "PptxSyntheticOuterShadowRendersOffsetShape",
@@ -2337,6 +2338,7 @@
     "DocxFloatingChildUnpreparedMathPreservesFixedPictureFallback"
   ],
   "docx-floating-nested-table": [
+    "DocxPresetBoxOutlinesMatchNumericPaintInFinalAndReview",
     "DocxFloatingBoxParagraphTopMatchesItsPrintedParagraphBackground",
     "DocxFloatingBoxReviewOutlinesShareThePrintedFrameWithTheirChildren",
     "DocxFloatingBoxOutlines",

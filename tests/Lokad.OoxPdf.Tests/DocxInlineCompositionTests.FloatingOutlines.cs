@@ -9,6 +9,27 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class DocxInlineCompositionTests
 {
+    public static void DocxPresetBoxOutlinesMatchNumericPaintInFinalAndReview()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var geometry = mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout
+                : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup;
+            PdfPage numeric = Render(("srgbClr", "00008B"));
+            PdfPage preset = Render(("prstClr", "dkBlue"));
+            TestAssert.Equal(2, numeric.Content.AsSpan().Count("0 0 0.545 RG"));
+            TestAssert.Equal(numeric.Content, preset.Content);
+            AssertSourceLabelsPaint(preset, mode, ["BOX TABLE NORTH", "BOX TABLE SOUTH", "INNER BOX LABEL"], "preset outline");
+
+            PdfPage Render((string Element, string Value) stroke)
+            {
+                var source = ReadFloatingOutlineSource("floating-cell-inline-box", mode, explicitInsets: true, omitOutline: false, stroke);
+                return new DocxRenderer(new PortableRenderingTests.PinnedResolver(), mode, geometry)
+                    .RenderPagesAsync(source, null, default).ToBlockingEnumerable().Single();
+            }
+        }
+    }
+
     public static void DocxFloatingBoxOutlinesKeepCompleteStrokesOutsideContentInsets()
     {
         // Retained Word floating-table-ordered PDF: all four .5pt edges paint
@@ -149,7 +170,7 @@ internal static partial class DocxInlineCompositionTests
     }
 
     private static DocxDocument ReadFloatingOutlineSource(string fixture, OoxPdfDocxMarkupMode mode,
-        bool explicitInsets, bool omitOutline) =>
+        bool explicitInsets, bool omitOutline, (string Element, string Value)? stroke = null) =>
         ReadMutation("TableGridOrigins/Containers/" + fixture, mode, false, false, (xml, _, _) =>
         {
             XNamespace wps = "http://schemas.microsoft.com/office/word/2010/wordprocessingShape";
@@ -162,6 +183,18 @@ internal static partial class DocxInlineCompositionTests
                     body.SetAttributeValue(name, points * 12700);
             }
             if (omitOutline) shape.Element(wps + "spPr")!.Element(a + "ln")!.Remove();
+            if (stroke is { } color)
+            {
+                var outlines = xml.Descendants(wps + "wsp")
+                    .Select(box => box.Element(wps + "spPr")!.Element(a + "ln")!.Element(a + "solidFill")!.Elements().Single())
+                    .ToArray();
+                TestAssert.Equal(2, outlines.Length);
+                foreach (var declaration in outlines)
+                {
+                    declaration.Name = a + color.Element;
+                    declaration.SetAttributeValue("val", color.Value);
+                }
+            }
         });
 
     internal static IEnumerable<(double[] Bounds, PdfRectangle Clip)> ReadFloatingOutline(PdfPage page, double height,
