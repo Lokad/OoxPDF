@@ -76,6 +76,7 @@ $rows=[Collections.Generic.Dictionary[string,object]]::new([StringComparer]::Ord
 $initialFailures=[Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
 $observedFailures=[Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
 $unexpectedSkips=[Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+$toolHashes=[Collections.Generic.Dictionary[string,string]]::new([StringComparer]::Ordinal)
 $sources=@();$methodAttempts=0
 foreach ($attempt in $attempts) {
     $reportHash=(Get-FileHash -LiteralPath $attempt.Report).Hash
@@ -87,6 +88,19 @@ foreach ($attempt in $attempts) {
     if ($report.provenance.LibrarySha256 -ne $pin.LibrarySha256 -or
         $report.provenance.TestAssemblySha256 -ne $pin.TestAssemblySha256) {
         throw 'Source report producing assemblies differ from the declared artifact'
+    }
+    $attemptTools=$report.provenance.ValidationTools
+    if ($null -ne $attemptTools -and $attemptTools -isnot [pscustomobject]) { throw 'Invalid validation tool evidence' }
+    foreach ($entry in $attemptTools.PSObject.Properties) {
+        $tool=$entry.Value
+        if ($tool.Path -isnot [string] -or [string]::IsNullOrWhiteSpace($tool.Path) -or
+            $tool.Sha256 -isnot [string] -or $tool.Sha256 -cnotmatch '^[0-9A-F]{64}$') {
+            throw ('Invalid validation tool evidence: ' + $entry.Name)
+        }
+        if ($toolHashes.ContainsKey($entry.Name) -and $toolHashes[$entry.Name] -cne $tool.Sha256) {
+            throw ('Source reports bind different validation tool bytes: ' + $entry.Name)
+        }
+        $toolHashes[$entry.Name]=$tool.Sha256
     }
     $seen=[Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
     $counts=@{passed=0;failed=0;skipped=0}
@@ -120,7 +134,7 @@ foreach ($attempt in $attempts) {
     }
     if ((Get-FileHash -LiteralPath $attempt.Report).Hash -ne $reportHash) { throw 'A source report changed during the join' }
     $sources += [ordered]@{Report=[ordered]@{Path=$attempt.Report;Sha256=$reportHash};ArtifactIdentity=(Pin (Join-Path $attempt.Artifact 'identity.json'));
-        Repair=$attempt.Repair;Counts=$counts}
+        Repair=$attempt.Repair;Counts=$counts;ValidationTools=$attemptTools}
 }
 if ($rows.Count -ne $expected.Count -or @($expected | Where-Object {!$rows.ContainsKey($_)}).Count) {
     throw 'The final exact selection is incomplete'

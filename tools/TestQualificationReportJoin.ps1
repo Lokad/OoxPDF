@@ -85,12 +85,65 @@ $rejections=@()
 $positiveInputs=@{}
 foreach ($path in @($manifest,(Join-Path $root 'initial.json'),(Join-Path $root 'repair.json'),(Join-Path $root 'selection.json'),
     (Join-Path $repo 'artifacts/after/identity.json'))) { $positiveInputs[$path]=[IO.File]::ReadAllBytes($path) }
-function Reject([string] $Name,[string] $Pattern) {
+function Reject([string] $Name,[string] $Pattern,[string] $ManifestPath=$manifest) {
     $path=Join-Path $root ($Name+'.json')
     $caught=$null
-    try { $null=& $join -Manifest $manifest -OutputPath $path } catch { $caught=$_.Exception.Message }
+    try { $null=& $join -Manifest $ManifestPath -OutputPath $path } catch { $caught=$_.Exception.Message }
     if (!$caught -or $caught -notmatch $Pattern -or (Test-Path -LiteralPath $path)) { throw ('Missing pre-publication rejection: '+$Name+' / '+$caught) }
     $script:rejections += $Name
+}
+$toolConfig=Get-Content -LiteralPath $manifest -Raw | ConvertFrom-Json -AsHashtable
+$toolConfig.Initial.Report='initial-with-tool.json'
+$initialTool=Get-Content -LiteralPath (Join-Path $root 'initial.json') -Raw | ConvertFrom-Json -AsHashtable
+$repairTool=Get-Content -LiteralPath (Join-Path $root 'repair.json') -Raw | ConvertFrom-Json -AsHashtable
+$binding='OOXPDF_TEST_PDF_INSPECTOR'
+$firstPath=Join-Path $root 'initial-tool/PdfInspect.dll'
+$secondPath=Join-Path $root 'repair-tool/PdfInspect.dll'
+Write-Text $firstPath 'one frozen validation tool'
+Write-Text $secondPath 'one frozen validation tool'
+$initialTool.provenance.ValidationTools=@{$binding=@{Path=$firstPath;Sha256=(Get-FileHash -LiteralPath $firstPath).Hash}}
+Write-Json (Join-Path $root $toolConfig.Initial.Report) $initialTool
+$repairTool.provenance.ValidationTools=@{$binding=@{Path=$secondPath;Sha256=(Get-FileHash -LiteralPath $secondPath).Hash}}
+$toolChecks=@()
+$toolPins=@()
+foreach ($case in 'relocated','disjoint','changed','malformed') {
+    $toolManifest=Join-Path $root ($case+'-tool-manifest.json')
+    $toolConfig.Repairs[0].Report=$case+'-repair-tool.json'
+    Write-Json $toolManifest $toolConfig
+    switch ($case) {
+        'disjoint' {
+            $secondPath=Join-Path $root 'repair-tool/VisualDiff.dll'
+            Write-Text $secondPath 'independent frozen validation tool'
+            $repairTool.provenance.ValidationTools=@{OOXPDF_TEST_VISUAL_DIFF=@{Path=$secondPath;Sha256=(Get-FileHash -LiteralPath $secondPath).Hash}}
+        }
+        'changed' {
+            $secondPath=Join-Path $root 'changed-tool/PdfInspect.dll'
+            Write-Text $secondPath 'different frozen validation tool'
+            $repairTool.provenance.ValidationTools=@{$binding=@{Path=$secondPath;Sha256=(Get-FileHash -LiteralPath $secondPath).Hash}}
+        }
+        'malformed' { $repairTool.provenance.ValidationTools[$binding].Sha256='missing' }
+    }
+    Write-Json (Join-Path $root $toolConfig.Repairs[0].Report) $repairTool
+    if ($case -eq 'changed') {
+        Reject 'changed-validation-tool' "Source reports bind different validation tool bytes: $binding" $toolManifest
+    }
+    elseif ($case -eq 'malformed') {
+        Reject 'malformed-validation-tool' "Invalid validation tool evidence: $binding" $toolManifest
+    }
+    else {
+        $toolOutput=Join-Path $root ($case+'-validation-tool.json')
+        $null=& $join -Manifest $toolManifest -OutputPath $toolOutput
+        $toolResult=Get-Content -LiteralPath $toolOutput -Raw | ConvertFrom-Json
+        $secondBinding=if ($case -eq 'disjoint') {'OOXPDF_TEST_VISUAL_DIFF'} else {$binding}
+        if ($toolResult.passed -ne 3 -or $toolResult.Sources[0].ValidationTools.$binding.Path -cne $firstPath -or
+            $toolResult.Sources[1].ValidationTools.$secondBinding.Path -cne $secondPath -or
+            $toolResult.Sources[1].ValidationTools.$secondBinding.Sha256 -cne (Get-FileHash -LiteralPath $secondPath).Hash) {
+            throw 'Joined report omitted the bound validation tool provenance'
+        }
+        $toolChecks+=$case
+        $toolPins+=@($toolResult.Manifest,$toolResult.Sources[0].Report,$toolResult.Sources[1].Report,
+            $toolResult.Sources[0].ValidationTools.$binding,$toolResult.Sources[1].ValidationTools.$secondBinding)
+    }
 }
 $repairPath=Join-Path $root 'repair.json'
 foreach ($fault in @('missing-provenance','wrong-harness','wrong-library')) {
@@ -263,14 +316,15 @@ $finalPin.Revision=[string](Invoke-Git @('rev-parse','HEAD'));Write-Json $finalP
 Reject 'changed-production' 'Production source or build inputs changed'
 foreach ($path in $positiveInputs.Keys) { [IO.File]::WriteAllBytes($path,$positiveInputs[$path]) }
 $positivePins=@($result.Manifest,$result.Selection,$result.Tool,$resolved.Manifest,$resolved.Selection,$resolved.Tool,
-    $copyResult.Manifest,$copyResult.Selection,$copyResult.Tool)
+    $copyResult.Manifest,$copyResult.Selection,$copyResult.Tool)+$toolPins
 foreach ($source in @($result.Sources)+@($resolved.Sources)+@($copyResult.Sources)) { $positivePins+=@($source.Report,$source.ArtifactIdentity) }
 foreach ($pin in $positivePins) {
     if ((Get-FileHash -LiteralPath $pin.Path).Hash -ne $pin.Sha256) { throw 'Negative fixtures invalidated retained positive provenance' }
 }
 Write-Json (Join-Path $root 'evidence.json') @{PositiveReportSha256=(Get-FileHash -LiteralPath $positive).Hash
     ResolvedRepairReportSha256=(Get-FileHash -LiteralPath $resolvedPath).Hash
-    TestedFinalCopyReportSha256=(Get-FileHash -LiteralPath $copyOutput).Hash;PositiveJoins=(3+$skipChecks.Count)
+    TestedFinalCopyReportSha256=(Get-FileHash -LiteralPath $copyOutput).Hash;PositiveJoins=(3+$skipChecks.Count+$toolChecks.Count)
+    ValidationToolPasses=$toolChecks
     SkipPolicyPasses=$skipChecks
     Rejections=$rejections;FilesRetained=$true;Builds=0;Conversions=0;RunnerInvocations=0}
-"Qualification report join checks pass: $(3+$skipChecks.Count) provenance-preserving joins, $($rejections.Count) pre-publication rejections; no builds/tests/conversions."
+"Qualification report join checks pass: $(3+$skipChecks.Count+$toolChecks.Count) provenance-preserving joins, $($rejections.Count) pre-publication rejections; no builds/tests/conversions."
