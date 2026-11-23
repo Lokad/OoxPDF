@@ -277,22 +277,6 @@ internal static partial class PdfWriterTests
         TestAssert.Contains("10 20 30 40 re f", pdf);
     }
 
-    public static void WritesScaledTilingPatternMatrix()
-    {
-        var graphics = new PdfGraphicsBuilder();
-        var pattern = new PdfTilingPattern(16d, 16d, 16d, 16d,
-            new PdfPatternMatrix(0.375d, 0d, 0d, 0.375d, 0d, 0d), 2, "0 0 m 16 16 l S\n", []);
-        graphics.FillRectangleWithTilingPattern(10, 20, 30, 40, pattern);
-        var page = new PdfPage(100, 100, graphics.ToString(), [], [], graphics.ExtGStates, graphics.Shadings, graphics.Patterns);
-
-        string pdf = WritePdfText([page]);
-
-        TestAssert.Contains("/TilingType 2", pdf);
-        TestAssert.Contains("/BBox [0 0 16 16]", pdf);
-        TestAssert.Contains("/Matrix [0.375 0 0 0.375 0 0]", pdf);
-        TestAssert.Contains("/XStep 16 /YStep 16", pdf);
-    }
-
     public static void WritesPct70WeaveBlockTilingPattern()
     {
         var graphics = new PdfGraphicsBuilder();
@@ -300,45 +284,36 @@ internal static partial class PdfWriterTests
         graphics.FillRectangleWithTilingPattern(10, 20, 30, 40, pattern);
         var page = new PdfPage(100, 100, graphics.ToString(), [], [], graphics.ExtGStates, graphics.Shadings, graphics.Patterns);
 
-        string pdf = WritePdfText([page]);
+        AssertPct70WeavePaint(Encoding.Latin1.GetString(WritePdfBytes([page])));
+    }
 
-        TestAssert.Contains("/TilingType 2", pdf);
-        TestAssert.Contains("/BBox [0 0 16 16]", pdf);
-        TestAssert.Contains("/Matrix [0.375 0 0 0.375 0 0]", pdf);
-        TestAssert.Contains("/XStep 16 /YStep 16", pdf);
+    private static void AssertPct70WeavePaint(string pdf)
+    {
+        var (pattern, image) = AssertImageBackedPatternPaint(pdf);
+        TestAssert.Contains("/BBox [0 0 16 16]", pattern);
+        TestAssert.Contains("/Matrix [0.375 0 0 0.375 0 0]", pattern);
+        TestAssert.Contains("/XStep 16 /YStep 16", pattern);
+        TestAssert.Contains("/Subtype /Image /Width 16 /Height 16", image);
+        TestAssert.Contains("/ColorSpace /DeviceRGB", image);
+        byte[] rgb = ReadFlateImagePayload(image);
+        TestAssert.Equal(16 * 16 * 3, rgb.Length);
 
-        // Weave mask matches the banked Office pct70 tile: 192 foreground cells with
-        // background where ((x - 4 * band) mod 8) < 2 over 2-row bands.
-        TestAssert.Equal(1, pattern.Images.Count);
-        TestAssert.Equal(16, pattern.Images[0].Image.Width);
-        TestAssert.Equal(16, pattern.Images[0].Image.Height);
-        byte[] rgb = DecompressWeaveBytes(pattern.Images[0].Image.Bytes);
-        TestAssert.Equal(768, rgb.Length);
-        int foreground = 0;
+        // The banked Office tile has 192 foreground cells and 64 background cells.
+        ReadOnlySpan<byte> foreground = [47, 133, 106];
+        ReadOnlySpan<byte> background = [191, 191, 191];
+        int foregroundCount = 0;
         for (int y = 0; y < 16; y++)
         {
             for (int x = 0; x < 16; x++)
             {
                 int index = (y * 16 + x) * 3;
-                bool isForeground = rgb[index] == 47 && rgb[index + 1] == 133 && rgb[index + 2] == 106;
-                bool expected = (((x - 4 * ((y / 2) % 2)) % 8) + 8) % 8 >= 2;
-                TestAssert.True(isForeground == expected, "Weave mask differs at " + x + "," + y);
-                if (isForeground)
-                {
-                    foreground++;
-                }
+                bool isForeground = (((x - 4 * ((y / 2) % 2)) % 8) + 8) % 8 >= 2;
+                ReadOnlySpan<byte> expected = isForeground ? foreground : background;
+                TestAssert.True(rgb.AsSpan(index, 3).SequenceEqual(expected), $"Weave RGB differs at ({x}, {y}).");
+                if (isForeground) foregroundCount++;
             }
         }
-        TestAssert.Equal(192, foreground);
-    }
-
-    private static byte[] DecompressWeaveBytes(byte[] bytes)
-    {
-        using var input = new System.IO.MemoryStream(bytes);
-        using var inflater = new System.IO.Compression.ZLibStream(input, System.IO.Compression.CompressionMode.Decompress);
-        using var output = new System.IO.MemoryStream();
-        inflater.CopyTo(output);
-        return output.ToArray();
+        TestAssert.Equal(192, foregroundCount);
     }
 
     public static void WritesLinkAnnotations()
@@ -422,7 +397,7 @@ internal static partial class PdfWriterTests
         AssertImageBackedPatternPaint(WritePdfText([page]));
     }
 
-    private static void AssertImageBackedPatternPaint(string pdf)
+    private static (string Pattern, string Image) AssertImageBackedPatternPaint(string pdf)
     {
         var pages = Regex.Match(pdf, @"/Type /Pages /Count 1 /Kids \[(\d+) 0 R\]");
         string page = ReadObject(pdf, pages.Groups[1].Value);
@@ -435,8 +410,10 @@ internal static partial class PdfWriterTests
         TestAssert.Contains("/PatternType 1", pattern);
         TestAssert.Contains("/TilingType 2", pattern);
         var images = Regex.Match(pattern, @"/Resources << /XObject << /ImPattern (\d+) 0 R >> >>");
-        TestAssert.Contains("/Subtype /Image", ReadObject(pdf, images.Groups[1].Value));
+        string image = ReadObject(pdf, images.Groups[1].Value);
+        TestAssert.Contains("/Subtype /Image", image);
         TestAssert.Contains("q 16 0 0 16 0 0 cm /ImPattern Do Q", pattern);
+        return (pattern, image);
     }
 
     public static void WritesJpegImageColorSpaceFromFrameMetadata()
@@ -487,13 +464,19 @@ internal static partial class PdfWriterTests
             string mask = ReadObject(pdf, Regex.Match(image, @"/SMask (\d+) 0 R").Groups[1].Value);
             TestAssert.Contains("/Subtype /Image /Width 2 /Height 1", mask);
             TestAssert.Contains("/ColorSpace /DeviceGray", mask);
-            var stream = Regex.Match(mask, @"/Length (\d+) >>\r?\nstream\r?\n");
-            TestAssert.True(stream.Success, $"{name} must reference a mask stream with a declared length.");
-            int length = int.Parse(stream.Groups[1].Value, CultureInfo.InvariantCulture);
-            byte[] compressed = Encoding.Latin1.GetBytes(mask.Substring(stream.Index + stream.Length, length));
-            TestAssert.True(TestFixtures.InflateZlib(compressed).AsSpan().SequenceEqual(alpha),
+            TestAssert.True(ReadFlateImagePayload(mask).AsSpan().SequenceEqual(alpha),
                 $"{name} must own its ordered alpha samples.");
         }
+    }
+
+    private static byte[] ReadFlateImagePayload(string image)
+    {
+        TestAssert.Contains("/Filter /FlateDecode", image);
+        var stream = Regex.Match(image, @"/Length (\d+) >>\r?\nstream\r?\n");
+        TestAssert.True(stream.Success, "The image must contain a stream with a declared length.");
+        int length = int.Parse(stream.Groups[1].Value, CultureInfo.InvariantCulture);
+        byte[] compressed = Encoding.Latin1.GetBytes(image.Substring(stream.Index + stream.Length, length));
+        return TestFixtures.InflateZlib(compressed);
     }
 
     public static void WritesStitchedAxialShadingFunctionForMultipleStops()
@@ -787,11 +770,16 @@ internal static partial class PdfWriterTests
         TestAssert.Throws<InvalidDataException>(() => WritePdfBytes([page]));
     }
 
-    public static void XrefTablePointsAtObjectHeaders()
+    public static void PdfCrossReferencesAndStreamLengthsMatchFileContents()
     {
         var creationDate = new DateTimeOffset(2026, 5, 4, 12, 0, 0, TimeSpan.Zero);
         byte[] pdf = WritePdfBytes(RichAuditDocument(), creationDate);
+        AssertCrossReferences(pdf);
+        AssertStreamLengths(pdf);
+    }
 
+    private static void AssertCrossReferences(byte[] pdf)
+    {
         TestAssert.True(StartsWithBytes(pdf, 0, "%PDF-1.7\n"), "File header must declare PDF 1.7.");
         TestAssert.True(EndsWithBytes(pdf, "%%EOF\n"), "File must end with %%EOF.");
 
@@ -835,9 +823,8 @@ internal static partial class PdfWriterTests
         TestAssert.Equal(xrefOffset, ParseDecimalLong(pdf, position, IndexOfByte(pdf, 10, position)));
     }
 
-    public static void StreamLengthsMatchPayloads()
+    private static void AssertStreamLengths(byte[] pdf)
     {
-        byte[] pdf = WritePdfBytes(RichAuditDocument(), new DateTimeOffset(2026, 5, 4, 12, 0, 0, TimeSpan.Zero));
         int validatedStreams = 0;
         int searchFrom = 0;
         while (true)

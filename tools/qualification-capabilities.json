@@ -70,8 +70,7 @@
     "VectorSoftMasksBindLocalFormsAcrossIndependentNamespaces",
     "VectorSoftMasksAdmitOnceAndRollbackResourcesTogether",
     "VectorSoftMasksRetainExactOutputAdmissionAndCancellationCleanup",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders",
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents",
     "DocxSvgImagePublishesGradientAndIsolationResources",
     "PptxSyntheticSvgFillOpacityEmitsTransparency",
     "PptxSvgCombinedPaintViewportPreservesStrokeWidthsAndAlpha",
@@ -101,8 +100,7 @@
     "PptxSparseChart",
     "ConvertPptxObservesCancellationAfterWorkBegins",
     "PortableRenderingOperationsDecksKeepCompleteLegendsAndPictures",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "test-temporary-ownership": [
     "TestTemporaryDirectory",
@@ -126,8 +124,7 @@
     "PptxManualBreaksKeepBlankAndSplitRunFrames",
     "PptxTextManualBreakSameStyleLineCoalesces",
     "PptxNumberedAutofitRunSplitUsesContinuationCharacterSpacingTextState",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "docx-shared-inspection": [
     "DocxCombinedInspection",
@@ -165,8 +162,7 @@
     "MemoryBudgetImageTransformsKeepSourcePixelsAndRefundTemporaryPlanes",
     "MemoryBudgetImageTransformsRefusalAndCancellationDoNotRecoverOrLeak",
     "MemoryBudgetImageTransformsPreservePublicationAndCallerStreams",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "docx-floating-picture-layers": [
     "PortableRenderingFloatingPictureLayersPreserveBooleanLexicalEquivalence",
@@ -179,8 +175,7 @@
     "PortableRenderingFooterDrawingKeepsOwnTextAndAbsolutePictureFrame",
     "DocxSvgImageRendersAnchoredPicturesAndHonorsCancellation",
     "PortableRenderingStaticPictureLinksRetainComposedFrames",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-chart-coverage-fallback": [
     "PptxChartCoverageFallbackKeepsShapeTitleAndLegendContent",
@@ -440,8 +435,7 @@
     "ModelAdmissionWorkbookOutlivesItsNestedPackage",
     "ModelAdmissionPublicRefusalPreservesDestinations",
     "ConvertPptxObservesCancellationAfterWorkBegins",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-picture-recolor-owners": [
     "PptxPictureRecolorKeepsPixelsAcrossPictureAndFillOwners",
@@ -473,8 +467,7 @@
     "DocxUnsupportedPngImageEmitsDiagnostic",
     "DocxPictureCropMapsRasterFallbackAndNegativePadding",
     "ConvertPptxObservesCancellationAfterWorkBegins",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-automatic-legend-ink": [
     "PptxAutomaticHorizontalLegendsPaintCompleteSourceNames",
@@ -501,8 +494,7 @@
     "PptxSyntheticBarChartsRenderNativeCharts",
     "ConvertPptxObservesCancellationAfterWorkBegins",
     "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-source-text-clip-placement": [
     "=PptxVerticalClipRetainsExplicitHorizontalOverflowInkAndLinks",
@@ -758,8 +750,7 @@
     "PptxChartAxisDatesRenderFromParsedDateContext",
     "PptxChartDataLabelDatesHonorChartSpaceDateSystem",
     "PortableRenderingOperationsDecksKeepCompleteLegendsAndPictures",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-run-effect-inheritance": [
     "PptxInheritancePartialParagraphDefaultsKeepInheritedTextMetrics",
@@ -804,8 +795,7 @@
     "PptxMergedTableNeighborsKeepAllSourceContent",
     "PptxMergedTableColumnsKeepStyleAndLinkOwnership",
     "PptxMergedTableHeightMatchesCompactRecovery",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "font-source-unicode-identity": [
     "PdfSourceUnicodeAliases",
@@ -1041,8 +1031,7 @@
       "PortableRenderingBarPalettesFollowIndependentOfficeSourceIndices",
       "ConvertPptxObservesCancellationAfterWorkBegins",
       "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
-      "StreamLengthsMatchPayloads",
-      "XrefTablePointsAtObjectHeaders",
+      "=PdfCrossReferencesAndStreamLengthsMatchFileContents",
       "PptxRightLegendAdmission",
       "PptxNumericCrossing",
       "PptxLineAndAreaCategoriesSharePhysicalSourceDirection",
@@ -1935,8 +1924,7 @@
     "DocxInlineBoxReviewFramesPreserveIndependentSourceContent",
     "DocxInlineBoxReviewStaticGlyphOriginsMatchIndependentWord",
     "ConvertObservesCancellationAfterWorkBegins",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "docx-section-revision-lane": [
     "DocxEarlierStaticRevisionOwnersKeepThePrintedPageLane",
@@ -2432,8 +2420,7 @@
       "PptxChartCffTextSubstitutesFallbackWithDiagnostic",
       "ConvertAsyncPptxReturnsWhileFallbackFontAcquisitionIsPending",
       "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
-      "StreamLengthsMatchPayloads",
-      "XrefTablePointsAtObjectHeaders"
+      "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-label-unit-visibility": [
       "PptxEmptyFormattedDataLabelsDoNotPaintKeys",
@@ -3170,8 +3157,7 @@
     "RejectsPackagePartPathTraversal",
     "ResolvesRelationshipTargets",
     "PortableRenderingPptxPreservesCompositeChartAndText",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-placed-scale-captions": [
     "PptxAutomaticColumnScaleRespondsToFrameAndSharesItsDataCoordinates",
@@ -3197,8 +3183,7 @@
     "PortableRenderingSharedAxisPlacesEveryPlotOnItsResolvedScale",
     "ConvertPptxObservesCancellationAfterWorkBegins",
     "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-scene-series-data": [
     "SeriesNamesUseParsedSourceValues",
@@ -3253,8 +3238,7 @@
     "PptxScatterStrokeLegendEntriesHideSuppressedLinesButKeepMarkers",
     "MemoryAdmissionRefusalLeavesFileAndStreamUntouched",
     "ConvertObservesCancellationAfterWorkBegins",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-scene-series-paint": [
     "BarScalarOptionsFollowSourceDefaultsAndClamps",
@@ -3300,8 +3284,7 @@
     "PptxSparseChartRefusalAndCancellationPreservePublication",
     "ConvertObservesCancellationAfterWorkBegins",
     "MemoryAdmissionRefusalLeavesFileAndStreamUntouched",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders",
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents",
     "PptxChartMarkerStylesPreserveDefinitionState",
     "PptxScatterStrokeLegendEntriesHideSuppressedLinesButKeepMarkers",
     "PptxChartExplosionsUseCachedPointCount",
@@ -3747,8 +3730,7 @@
     "ConvertObservesCancellationAfterWorkBegins",
     "MemoryAdmissionRefusalLeavesFileAndStreamUntouched",
     "MemoryAdmissionRefundsOnFailureCancellationAndObserverException",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders",
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents",
     "DocxCellInlinePagesKeepCompleteParagraphSourcesBeforePreparation",
     "DocxCellPageConversionKeepsFormulaPictureAndNavigationContent",
     "DocxInlineCompositionMergeSpansRequireCompleteStaticAdmissionAndKeepRowFloors",
@@ -3777,8 +3759,7 @@
     "ConvertObservesCancellationAfterWorkBegins",
     "MemoryAdmissionRefusalLeavesFileAndStreamUntouched",
     "MemoryAdmissionRefundsOnFailureCancellationAndObserverException",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-numeric-axis-owners": [
     "PptxChartAxisSelectionKeepsDeclaredOrderAndMissingSources",
@@ -3799,8 +3780,7 @@
     "PptxChartAxisTickExpansionConversionPropagatesLimitFailure",
     "ConvertObservesCancellationAfterWorkBegins",
     "MemoryAdmissionRefusalLeavesFileAndStreamUntouched",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders",
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents",
     "PptxNegativeOnlyAxesKeepOfficeRangeAndAuthoredBounds",
     "PptxPercentStackedColumnChartUsesPercentValueAxis",
     "PptxLineAuthoredMaximumAnchorsAutomaticMinimumAndGridlines",
@@ -3920,8 +3900,7 @@
     "DocxLayoutPlacesTableCellFootnoteOnOwningParagraphPage",
     "ConvertObservesCancellationAfterWorkBegins",
     "MemoryAdmissionRefusalLeavesFileAndStreamUntouched",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "docx-generated-note-owners": [
     "DocxNominalGlyphAdvanceRetainsPitchAndCompleteNoteNavigation",
@@ -3962,8 +3941,7 @@
     "DocxInlineCompositionCustomNotesRetainExactSourceOwnersAndFallbacks",
     "ConvertObservesCancellationAfterWorkBegins",
     "MemoryAdmissionRefusalLeavesFileAndStreamUntouched",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-chart-plot-selection": [
     "PptxRadarRightLegendPaintsCompleteNamesAndOwnedKeys",
@@ -4026,8 +4004,7 @@
     "PptxChartAxisTickExpansionConversionPropagatesLimitFailure",
     "ConvertObservesCancellationAfterWorkBegins",
     "MemoryAdmissionRefusalLeavesFileAndStreamUntouched",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-preset-arc-guides": [
     "PptxPresetArcClampsFiniteGuidesBeforeTracing",
@@ -4041,8 +4018,7 @@
     "PptxSyntheticCustomGeometryArcPathRendersCurve",
     "ConvertObservesCancellationAfterWorkBegins",
     "MemoryAdmissionRefusalLeavesFileAndStreamUntouched",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-overflow-category-wrapping": [
     "PptxVerticalWrappedCaptionsKeepTheirFittedSourceReferenceEdge",
@@ -4090,8 +4066,7 @@
     "PptxManualAxisAdmissionMovesLinkedLabelsWithTheirSourcePlot",
     "ConvertPptxObservesCancellationAfterWorkBegins",
     "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-inner-source-references": [
     "PptxInnerSourceReferencesPrecedeRestoredCaptions",
@@ -4114,8 +4089,7 @@
     "PptxOuterCategoryFittingSharesDefaultEllipsisAndOccupiedFrames",
     "PptxSkippedCategoryPaintKeepsLogicalReferenceEnds",
     "ConvertPptxObservesCancellationAfterWorkBegins",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-caption-fitting": [
     "PptxInnerCategoryEllipsisRetainsACompleteSourceCharacter",
@@ -4138,8 +4112,7 @@
     "PptxManualOuterLinkedLabelsFollowTheirAdmittedPlot",
     "ConvertPptxObservesCancellationAfterWorkBegins",
     "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-logical-caption-ends": [
     "PptxSkippedCategoryPaintKeepsLogicalReferenceEnds",
@@ -4152,8 +4125,7 @@
     "PptxManualOuterLinkedLabelsFollowTheirAdmittedPlot",
     "PptxManualOuterPlotFillUsesTheNativeDataRectangle",
     "PptxManualOuterEndpointsOwnTheirMeasuredCaptionFrames",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-rotated-caption-density": [
     "PptxShortRotatedCaptionsKeepFiniteSpacingAndAuthoredSkips",
@@ -4177,8 +4149,7 @@
     "PptxObliqueCategoryFramesShareDirectionAndEndpointPlacement",
     "ConvertPptxObservesCancellationAfterWorkBegins",
     "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-category-label-offsets": [
     "PptxCategoryOffsetsShareMeasuredUnitsAcrossPreparedContainers",
@@ -4197,8 +4168,7 @@
     "PptxManualOuterHiddenAxesRetainTheirIndependentMinimumBand",
     "PptxOuterCategoryAdmissionKeepsFillLegendAndLinkedLabelsTogether",
     "ConvertPptxObservesCancellationAfterWorkBegins",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-empty-caption-frames": [
     "ConvertPptxObservesCancellationAfterWorkBegins",
@@ -4229,8 +4199,7 @@
     "PptxOuterRotatedCaptionClearanceKeepsCompleteInkAndAngles",
     "PptxOuterRotatedCaptionOffsetUsesMeasuredLineHeight",
     "PptxRightLegendAdmissionKeepsAuthoredAndRotatedFallbacks",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-composed-axis-admission": [
       "ConvertPptxObservesCancellationAfterWorkBegins",
@@ -4281,8 +4250,7 @@
       "PptxSyntheticChartAxisTickLabelOptionsUsePortableFontSemantics",
       "PptxSyntheticChartSecondaryValueAxisStrokeUsesOwnAxisPosition",
       "PptxVerticalNumericCaptionsKeepFormattedGlyphsInsideTheirClips",
-      "StreamLengthsMatchPayloads",
-      "XrefTablePointsAtObjectHeaders"
+      "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-numeric-side-spacing": [
       "PptxChartCffTextSubstitutesFallbackWithDiagnostic",
@@ -4326,8 +4294,7 @@
       "PptxScatterCaptionAdmissionPreservesFrameAndNumericCenters",
       "PptxSyntheticChartAxisTickLabelOptionsUsePortableFontSemantics",
       "PptxVerticalNumericCaptionsKeepFormattedGlyphsInsideTheirClips",
-      "StreamLengthsMatchPayloads",
-      "XrefTablePointsAtObjectHeaders"
+      "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-label-set-deletion": [
       "ConvertPptxObservesCancellationAfterWorkBegins",
@@ -4396,8 +4363,7 @@
       "PptxSyntheticScatterChartConsumesChartWideDataLabelManualBox",
       "PptxSyntheticScatterChartRendersLegendKeyOnlyDataLabels",
       "PptxVerticalNumericCaptionsKeepFormattedGlyphsInsideTheirClips",
-      "StreamLengthsMatchPayloads",
-      "XrefTablePointsAtObjectHeaders"
+      "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-on-tick-columns": [
     "PptxOnTickColumnsKeepSourceClustersAndGaps",
@@ -4450,8 +4416,7 @@
     "PptxSyntheticBarLegendKeySwatchAnchorsToText",
     "PptxSyntheticBarLegendKeyUnitLeftCentersOnBar",
     "PptxSyntheticChartStackedColumnDataLabelsUseStackSegmentGeometry",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-rotated-outer-clearance": [
     "=PptxLogicalCaptionFramesPreserveSourceGeometryAndInk",
@@ -4475,8 +4440,7 @@
     "PptxRightLegendAdmissionKeepsAuthoredAndRotatedFallbacks",
     "ConvertPptxObservesCancellationAfterWorkBegins",
     "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders",
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents",
     "PptxOuterRotatedCaptionOffsetUsesMeasuredLineHeight"
   ],
   "pptx-numeric-caption-ink": [
@@ -4489,8 +4453,7 @@
     "PptxLineCategoryBoundaryMarkersKeepHorizontalInkAndNumericClipping",
     "ConvertPptxObservesCancellationAfterWorkBegins",
     "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-manual-axis-admission": [
     "PptxSyntheticChartManualLayoutMissingPositionUsesDefaultPlotBox",
@@ -4537,8 +4500,7 @@
     "PptxObliqueCategoryFramesShareDirectionAndEndpointPlacement",
     "PptxRightLegendAdmissionKeepsAuthoredAndRotatedFallbacks",
     "PptxRightLegendAdmissionMovesNumericBandsWithoutMovingLegend",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-horizontal-category-direction": [
     "ConvertPptxObservesCancellationAfterWorkBegins",
@@ -4565,8 +4527,7 @@
     "PptxReversedHorizontalLabelFramesAndKeysFollowTheirSourceBars",
     "PptxReversedHorizontalRichLabelLinksFollowTheirSourceRow",
     "PptxSingleCategoryMidpointOriginKeepsPointsCaptionsAndDirectionTogether",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "docx-explicit-page-events": [
     "=DocxSplitComputedFieldKeepsCachedPictureAfterHardBreak",
@@ -4602,8 +4563,7 @@
     "DocxPageFootnoteNumbersRestartWithoutChangingAuthoredDigits",
     "PdfPagesTripDuringLayoutPagination",
     "ConvertObservesCancellationAfterWorkBegins",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "docx-repeated-column-breaks": [
     "DocxRepeatedColumnBreaksKeepEventsAndOneParagraphMark",
@@ -4626,8 +4586,7 @@
     "DocxCellColumnsRetainParagraphMarksAndRealPageBreaks",
     "DocxCellInlinePagesKeepCompleteParagraphSourcesBeforePreparation",
     "ConvertObservesCancellationAfterWorkBegins",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "docx-break-only-metadata": [
     "DocxBreakOnlyMetadataPreservesParagraphFrames",
@@ -4644,8 +4603,7 @@
     "DocxHardBreaksUseInheritedVisibilityAndKeepVisibleOverrides",
     "DocxMarkupModesFilterSectionHeaderFooterAndBreakRevisions",
     "ConvertObservesCancellationAfterWorkBegins",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "docx-composed-breaks": [
     "PortableRenderingPageBreaksKeepMathPicturesAndNavigation",
@@ -4668,8 +4626,7 @@
     "DocxHiddenPicturesUseInheritedStylesAndExplicitFalse",
     "DocxParagraphLayoutSuppressesHiddenRunText",
     "ConvertObservesCancellationAfterWorkBegins",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "docx-hidden-inline-boxes": [
     "DocxHiddenInlineBoxesPreserveSiblingPaintAcrossContainers",
@@ -4695,8 +4652,7 @@
     "DocxReaderPreservesInlineTextBoxOutline",
     "DocxReaderReadsInlineTextBoxContent",
     "ConvertObservesCancellationAfterWorkBegins",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-scatter-edge-width": [
     "PptxScatterEdgeWidth",
@@ -4714,8 +4670,7 @@
     "PptxAutomaticTitlePlacementIgnoresManualPlotBox",
     "PptxPointLabelSizedEdgesPlaceOccupiedBounds",
     "ConvertPptxObservesCancellationAfterWorkBegins",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-workbook-range-storage": [
     "PptxWorkbookRangeConstructionFollowsResolvedSourceAndRefunds",
@@ -4724,8 +4679,7 @@
     "PptxWorkbookRangeRefusalAndCancellationPreservePublication",
     "ConvertPptxObservesCancellationAfterWorkBegins",
     "PortableRenderingPptxPreservesCompositeChartAndText",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-bubble-measured-geometry": [
     "PptxSparsePointSeriesKeepAuthoredLabelsLinksAndPaint",
@@ -4744,8 +4698,7 @@
     "PptxBubbleChart",
     "ConvertPptxObservesCancellationAfterWorkBegins",
     "PortableRenderingPptxPreservesCompositeChartAndText",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-scatter-automatic-y": [
     "PptxScatterAutomaticY",
@@ -4756,8 +4709,7 @@
     "PptxChartValueAxis",
     "PptxPointAxisFallback",
     "ConvertPptxObservesCancellationAfterWorkBegins",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-scatter-caption-admission": [
     "PptxScatterCaptionAdmissionPreservesFrameAndNumericCenters",
@@ -4781,8 +4733,7 @@
     "PptxScatterAutomaticIntervalsMatchIndependentOfficeGeometry",
     "PptxScatterAutomaticIntervalsPreserveSourceUnitsAndRejectedDeclarations",
     "ConvertPptxObservesCancellationAfterWorkBegins",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-scatter-automatic-intervals": [
     "PptxScatterAutomaticIntervalsMatchIndependentOfficeGeometry",
@@ -4856,8 +4807,7 @@
     "PptxChartMissingSceneAxesDoNotFallBackToMismatchedXmlAxes",
     "PortableRenderingPptxPreservesCompositeChartAndText",
     "ConvertPptxObservesCancellationAfterWorkBegins",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-label-text-scopes": [
     "PptxPointLabelOccupiedClearanceDoesNotScaleWithFont",
@@ -4915,8 +4865,7 @@
     "PptxSyntheticLineChartOmitsLegendKeyOnlyDataLabels",
     "PptxSyntheticScatterChartConsumesChartWideDataLabelManualBox",
     "PptxSyntheticScatterChartRendersLegendKeyOnlyDataLabels",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-sized-label-frame": [
     "PortableRenderingPptxPreservesCompositeChartAndText",
@@ -4950,8 +4899,7 @@
     "PptxSyntheticLineAndPieChartsRenderNativeCharts",
     "PptxSyntheticLineChartOmitsLegendKeyOnlyDataLabels",
     "PptxSyntheticScatterChartConsumesChartWideDataLabelManualBox",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-manual-label-frame": [
     "PortableRenderingPptxPreservesCompositeChartAndText",
@@ -4979,8 +4927,7 @@
     "PptxSyntheticLineAndPieChartsRenderNativeCharts",
     "PptxSyntheticLineChartOmitsLegendKeyOnlyDataLabels",
     "PptxSyntheticScatterChartConsumesChartWideDataLabelManualBox",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-point-label-defaults": [
     "PptxActivePlotPointsOwnDefaults",
@@ -5684,8 +5631,7 @@
     "PptxSyntheticScatterSmoothConnectUsesLineWidth",
     "PortableRenderingPptxPreservesCompositeChartAndText",
     "ConvertPptxObservesCancellationAfterWorkBegins",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders",
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents",
     "PptxAreaFrameMeasuresTitlesAndBottomLegendsTogether",
     "PptxAreaFrameAndCaptionsShareTheSourceCrossing",
     "PptxAreaPrimaryValueLabelsUseTheirMeasuredSide",
@@ -5742,8 +5688,7 @@
     "PptxSyntheticScatterSmoothConnectUsesLineWidth",
     "PortableRenderingPptxPreservesCompositeChartAndText",
     "ConvertPptxObservesCancellationAfterWorkBegins",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders",
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents",
     "PptxAreaFrameMeasuresTitlesAndBottomLegendsTogether",
     "PptxAreaFrameAndCaptionsShareTheSourceCrossing",
     "PptxAreaPrimaryValueLabelsUseTheirMeasuredSide",
@@ -5790,8 +5735,7 @@
     "PptxSyntheticScatterSmoothConnectUsesLineWidth",
     "PortableRenderingPptxPreservesCompositeChartAndText",
     "ConvertPptxObservesCancellationAfterWorkBegins",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders",
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents",
     "PptxAreaFrameMeasuresTitlesAndBottomLegendsTogether",
     "PptxAreaFrameAndCaptionsShareTheSourceCrossing",
     "PptxAreaPrimaryValueLabelsUseTheirMeasuredSide",
@@ -5834,8 +5778,7 @@
     "PptxSyntheticScatterSmoothConnectUsesLineWidth",
     "PortableRenderingPptxPreservesCompositeChartAndText",
     "ConvertPptxObservesCancellationAfterWorkBegins",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders",
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents",
     "PptxAreaFrameMeasuresTitlesAndBottomLegendsTogether",
     "PptxAreaFrameAndCaptionsShareTheSourceCrossing",
     "PptxAreaPrimaryValueLabelsUseTheirMeasuredSide",
@@ -5874,8 +5817,7 @@
     "PptxSyntheticScatterSmoothConnectUsesLineWidth",
     "PortableRenderingPptxPreservesCompositeChartAndText",
     "ConvertPptxObservesCancellationAfterWorkBegins",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-line-defaults": [
     "LineStyle18UsesRawFivePointSeriesStroke",
@@ -5935,8 +5877,7 @@
     "PortableRenderingPptxPreservesCompositeChartAndText",
     "ConvertPptxObservesCancellationAfterWorkBegins",
     "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-maximum-crossing": [
     "PptxAreaFillSharesCrossingAndStackLayerOwnership",
@@ -5959,8 +5900,7 @@
     "PortableRenderingPptxPreservesCompositeChartAndText",
     "ConvertPptxObservesCancellationAfterWorkBegins",
     "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-area-frames": [
     "PptxStandaloneLineAndAreaReserveUnpaintedRangeEndpoints",
@@ -5984,8 +5924,7 @@
     "PortableRenderingPptxPreservesCompositeChartAndText",
     "ConvertPptxObservesCancellationAfterWorkBegins",
     "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-category-slots": [
     "PptxSyntheticLineAndPieChartsRenderNativeCharts",
@@ -6011,8 +5950,7 @@
     "PortableRenderingPptxPreservesCompositeChartAndText",
     "ConvertPptxObservesCancellationAfterWorkBegins",
     "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-cartesian-source-intervals": [
     "PptxAuthoredUnitsOwnAutomaticCartesianBounds",
@@ -6035,8 +5973,7 @@
     "PortableRenderingPptxPreservesCompositeChartAndText",
     "ConvertPptxObservesCancellationAfterWorkBegins",
     "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders",
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents",
     "PptxSourceIntervalsShareAutomaticUnitsAcrossLineAndArea",
     "PptxChartValueAxisRenderOptionsUseSceneAuthoritativeDefaults"
   ],
@@ -6074,8 +6011,7 @@
     "ConvertAsyncPptxReturnsWhileFallbackFontAcquisitionIsPending",
     "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
     "PortableRenderingPptxPreservesCompositeChartAndText",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-line-caption-placement": [
     "PptxVerticalAxisMeasurementMatchesEquivalentAuthoredIntervals",
@@ -6096,8 +6032,7 @@
     "ConvertAsyncPptxReturnsWhileFallbackFontAcquisitionIsPending",
     "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
     "PortableRenderingPptxPreservesCompositeChartAndText",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders",
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents",
     "PptxLineCaptionPlacementSurvivesTitlesAndBottomLegends",
     "PptxLegendlessLineCategory",
     "PptxLegendlessLineTopCategoryOffsetKeepsBaseline",
@@ -6124,8 +6059,7 @@
     "ConvertAsyncPptxReturnsWhileFallbackFontAcquisitionIsPending",
     "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
     "PortableRenderingPptxPreservesCompositeChartAndText",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-category-direction": [
     "PptxColumnAxisPositionPreservesTheDataZeroOrigin",
@@ -6154,8 +6088,7 @@
     "ConvertAsyncPptxReturnsWhileFallbackFontAcquisitionIsPending",
     "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
     "PortableRenderingPptxPreservesCompositeChartAndText",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-axis-range": [
     "PptxNegativeOnlyAxesKeepOfficeRangeAndAuthoredBounds",
@@ -6189,8 +6122,7 @@
     "PptxBubbleChartRendersNativeAxesGridlinesLegendAndBubbles",
     "PptxSyntheticScatterChartRendersLegendKeyOnlyDataLabels",
     "PortableRenderingPptxPreservesCompositeChartAndText",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders",
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents",
     "ParsedAxisGridlineOptionsKeepVisibilityAndStroke",
     "PptxChartValueAxisRenderOptionsUseSceneAuthoritativeDefaults",
     "PptxBubbleSceneScaleAndRejectedDeclarationsKeepOwnership",
@@ -6249,8 +6181,7 @@
     "ConvertAsyncPptxReturnsWhileFallbackFontAcquisitionIsPending",
     "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
     "PortableRenderingPptxPreservesCompositeChartAndText",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-category-spacing": [
     "PptxSkippedCategoryLabelsUseSpaceBetweenVisibleTicks",
@@ -6267,8 +6198,7 @@
     "PptxChartCffTextSubstitutesFallbackWithDiagnostic",
     "ConvertAsyncPptxReturnsWhileFallbackFontAcquisitionIsPending",
     "PortableRenderingPptxPreservesCompositeChartAndText",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-legend-admission": [
     "PptxCrowdedLegendsPreservePlotSpaceAndDiagnoseUnadmittedRows",
@@ -6290,8 +6220,7 @@
     "ConvertAsyncPptxReturnsWhileFallbackFontAcquisitionIsPending",
     "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
     "PortableRenderingPptxPreservesCompositeChartAndText",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders",
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents",
     "PptxWrappedFillLegendsShareColumnsAndPreserveSourceOrder",
     "PptxNaturallyFittingFillLegendKeepsUnequalNamesOnOneRow"
   ],
@@ -6309,8 +6238,7 @@
     "PptxSyntheticChartValueAxisReversedOrientationMovesLineDataLabels",
     "PortableRenderingPptxPreservesCompositeChartAndText",
     "ConvertAsyncPptxReturnsWhileFallbackFontAcquisitionIsPending",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-color-owner": [
     "PptxScenePreservesChartColorStyleDeclarations",
@@ -6330,8 +6258,7 @@
     "ConvertAsyncPptxReturnsWhileFallbackFontAcquisitionIsPending",
     "MemoryBudgetXmlCacheRefusalCancellationAndMalformedInputRefundGrowth",
     "PortableRenderingPptxPreservesCompositeChartAndText",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-column-offset": [
     "PptxSyntheticChartCategoryAxisLabelOffsetRender",
@@ -6352,8 +6279,7 @@
     "PptxCffSubstitutionMatchesTrueTypeRendering",
     "ConvertAsyncPptxReturnsWhileFallbackFontAcquisitionIsPending",
     "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-column-footer": [
     "PptxColumnCategory",
@@ -6375,8 +6301,7 @@
     "PptxCffSubstitutionMatchesTrueTypeRendering",
     "ConvertAsyncPptxReturnsWhileFallbackFontAcquisitionIsPending",
     "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-cartesian-sides": [
     "PptxLegendlessLine",
@@ -6408,8 +6333,7 @@
     "PptxChartCffTextSubstitutesFallbackWithDiagnostic",
     "ConvertAsyncPptxReturnsWhileFallbackFontAcquisitionIsPending",
     "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders",
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents",
     "PptxScatterStrokeLegendEntriesHideSuppressedLinesButKeepMarkers",
     "PptxCffSubstitutionMatchesTrueTypeRendering",
     "CffChartUnresolvableRunesSubstituteQuestionMark"
@@ -6447,8 +6371,7 @@
     "PptxChartCffTextSubstitutesFallbackWithDiagnostic",
     "ConvertAsyncPptxReturnsWhileFallbackFontAcquisitionIsPending",
     "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders",
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents",
     "PptxScatterStrokeLegendEntriesHideSuppressedLinesButKeepMarkers",
     "PptxCffSubstitutionMatchesTrueTypeRendering",
     "CffChartUnresolvableRunesSubstituteQuestionMark",
@@ -6472,8 +6395,7 @@
     "PptxChartCffTextSubstitutesFallbackWithDiagnostic",
     "ConvertAsyncPptxReturnsWhileFallbackFontAcquisitionIsPending",
     "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-cartesian-header": [
       "PptxChartCffTextSubstitutesFallbackWithDiagnostic",
@@ -6491,8 +6413,7 @@
       "PptxAuthoredChartTitleSurvivesAutomaticTitleDeletion",
       "PptxInferredTitle",
       "PortableRenderingPptxPreservesCompositeChartAndText",
-      "StreamLengthsMatchPayloads",
-      "XrefTablePointsAtObjectHeaders",
+      "=PdfCrossReferencesAndStreamLengthsMatchFileContents",
       "PptxAutomaticTitlePlacement",
       "PptxHorizontalFrame",
       "PptxHorizontalLegend",
@@ -6523,8 +6444,7 @@
     "PptxAuthoredChartTitleSurvivesAutomaticTitleDeletion",
     "PptxInferredTitle",
     "PortableRenderingPptxPreservesCompositeChartAndText",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders",
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents",
     "PptxAutomaticTitlePlacement",
     "PptxHorizontalFrame",
     "PptxHorizontalLegend"
@@ -6539,8 +6459,7 @@
     "PptxAuthoredChartTitleSurvivesAutomaticTitleDeletion",
     "PptxInferredTitle",
     "PortableRenderingPptxPreservesCompositeChartAndText",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-horizontal-title": [
     "PptxHorizontalFrame",
@@ -6556,8 +6475,7 @@
     "PptxDefaultBottomAxisTitle",
     "PptxAutomaticColumnInsets",
     "PortableRenderingPptxPreservesCompositeChartAndText",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-horizontal-legend": [
     "PptxHorizontalFrame",
@@ -6569,8 +6487,7 @@
     "PptxSyntheticBarChartOverlayLegendDoesNotReservePlotSpace",
     "PptxSyntheticChartLegendManualBoxDrivesPlacement",
     "PortableRenderingPptxPreservesCompositeChartAndText",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-horizontal-frame": [
     "PptxHorizontalFrame",
@@ -6588,8 +6505,7 @@
     "PptxSyntheticBarChartOverlayLegendDoesNotReservePlotSpace",
     "PptxSyntheticChartLegendManualBoxDrivesPlacement",
     "PortableRenderingPptxPreservesCompositeChartAndText",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-builtin-palettes": [
     "PptxBuiltinPalettesMatchIndependentOfficeAcrossThemesAndPlotKinds",
@@ -6606,8 +6522,7 @@
     "PptxSyntheticBarChartOverlayLegendDoesNotReservePlotSpace",
     "PptxSyntheticChartLegendManualBoxDrivesPlacement",
     "PortableRenderingPptxPreservesCompositeChartAndText",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-point-legends": [
     "PptxPointLegendsMatchIndependentOfficeIdentityAndPaint",
@@ -6624,8 +6539,7 @@
     "PptxSyntheticBarChartOverlayLegendDoesNotReservePlotSpace",
     "PptxSyntheticChartLegendManualBoxDrivesPlacement",
     "PortableRenderingPptxPreservesCompositeChartAndText",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-automatic-insets": [
     "PptxAutomaticColumnInsets",
@@ -6644,8 +6558,7 @@
     "PptxSyntheticBarChartLegendSwatchesUseSeriesStroke",
     "PptxSyntheticBarChartSeriesLineWithoutWidthUsesFilledSeriesDefault",
     "PortableRenderingPptxPreservesCompositeChartAndText",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-clustered-spacing": [
     "PptxClusteredSpacingMatchesIndependentOfficeAcrossSeriesAndOverlap",
@@ -6654,8 +6567,7 @@
     "PptxVaryingBarCategoryLegends",
     "PptxNegativeBar",
     "PortableRenderingPptxPreservesCompositeChartAndText",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-authored-color": [
     "PptxAuthoredTintShade",
@@ -6673,8 +6585,7 @@
     "PptxSyntheticLinearGradientShapeUsesPdfShading",
     "PptxSyntheticMultiStopLinearGradientShapeUsesStitchedPdfShading",
     "PortableRenderingPptxPreservesCompositeChartAndText",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "package-async-input": [
     "ConvertAsyncInput",
@@ -6698,8 +6609,7 @@
     "ThrowingSummaryCallbackLeavesFileDestinationUntouched",
     "FinalSummaryCancellationPreventsPublication",
     "ConvertPreservesExistingDestinationWhenWriterRejectsPage",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders",
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents",
     "PortableRenderingDocxFinalPreservesMixedContent",
     "PortableRenderingDocxAllMarkupPreservesMixedContent",
     "PortableRenderingPptxPreservesCompositeChartAndText",
@@ -6727,8 +6637,7 @@
     "PdfEmbeddedFontPreservesZeroWidthMetrics",
     "MergeEqualDistinctSubsetsKeepsRemap",
     "PdfObjectWriterAdmitsEveryWriteMethodBeforeWriting",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders",
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents",
     "PdfOutput",
     "PdfFontsRespectFontByteBudget",
     "MemoryBudgetCompressionFontRefundsAfterItsActualStreamWrite",
@@ -6758,8 +6667,7 @@
     "PortableRenderingDocxFinalPreservesMixedContent",
     "PortableRenderingDocxAllMarkupPreservesMixedContent",
     "PortableRenderingStaticPictureLinksRetainComposedFrames",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pdf-to-unicode-streaming": [
     "PdfToUnicodeStreaming",
@@ -6770,8 +6678,7 @@
     "WritesFontFile2WithDecodedLength",
     "MemoryBudgetCompressionFontRefundsAfterItsActualStreamWrite",
     "MemoryBudgetCompressionPublicRefusalPreservesDestinationsAndCallerStreams",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders",
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents",
     "PdfObjectWriterAdmitsEveryWriteMethodBeforeWriting",
     "PdfFontsRespectFontByteBudget",
     "PdfOutput",
@@ -6842,8 +6749,7 @@
     "WritesFontFile2WithDecodedLength",
     "WritesDistinctImageObjectsForDifferentSoftMasks",
     "WritesImageBackedTilingPatternResources",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders",
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents",
     "ImageIdentityUsesFullDigests",
     "ImageContentEqualityIsExact",
     "DeduplicateImages",
@@ -6880,8 +6786,7 @@
     "PortableRenderingDocxFinalPreservesMixedContent",
     "PortableRenderingDocxAllMarkupPreservesMixedContent",
     "PortableRenderingPptxPreservesCompositeChartAndText",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "jpeg-decode-storage": [
     "MemoryBudgetJpeg",
@@ -6932,8 +6837,7 @@
     "TransparencyGroups",
     "VectorSoftMasks",
     "ShadingPatternsRetainSpillAndExactAdmissionAndCancellation",
-    "XrefTablePointsAtObjectHeaders",
-    "StreamLengthsMatchPayloads"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "font-program-storage": [
     "MemoryBudgetFont",
@@ -8668,8 +8572,7 @@
     "ConvertObservesCancellationAfterWorkBegins",
     "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
     "MemoryAdmissionRefusalLeavesFileAndStreamUntouched",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "docx-inline-picture-links": [
     "DocxPictureLinks",
@@ -11870,8 +11773,7 @@
     "DocxHiddenHardBreaksPreserveComposedPagesAndPaint",
     "DocxHiddenInlineBoxesRetainRevisionFieldAndOmissionOwnership",
     "ConvertObservesCancellationAfterWorkBegins",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "docx-empty-revision-owners": [
     "DocxHyperlinkScopesShareParsedSourceOwnership",
@@ -11917,8 +11819,7 @@
     "DocxDynamicFieldFormatUsesSourceOwnersAcrossSimpleComplexAndPreservedResults",
     "PortableRenderingDynamicFieldFormatsRetainValuesAndGlyphSizes",
     "ConvertObservesCancellationAfterWorkBegins",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "docx-hyperlink-source-owners": [
     "DocxHyperlinkScopesShareParsedSourceOwnership",
@@ -11934,8 +11835,7 @@
     "DocxMathCustomXmlKeepsStoredContentAnnotationsFallbacksAndCancellation",
     "DocxInlineMetadataWrappersKeepCancellationAndUnknownFallback",
     "ConvertObservesCancellationAfterWorkBegins",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "docx-revision-neutrality": [
     "DocxRevisionNeutrality",
@@ -17360,7 +17260,7 @@
     "StagedEmissionScratchStaysFlatAtN2N4N",
     "StagingCleansTempOnFailure",
     "StateIndexesRollBackWithContent",
-    "StreamLengthsMatchPayloads",
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents",
     "StreamMidWriteFailureKeepsAllowedPrefix",
     "SuppressedMasterShapesStayOutOfFontPreflight",
     "TableFrameComputedOncePerNode",
@@ -17398,15 +17298,13 @@
     "WritesMultipleBlankPagesWithPageSizes",
     "WritesEvenOddClippingOperators",
     "WritesPct70WeaveBlockTilingPattern",
-    "WritesScaledTilingPatternMatrix",
     "WritesSingleBlankPagePdfStructure",
     "WritesStitchedAxialShadingFunctionForMultipleStops",
     "WritesSubsetBaseFontWithSixLetterTagAndPlus",
     "WritesTilingPatternResources",
     "XmlAttributesAboveLimitThrow",
     "XmlAttributesAtLimitPass",
-    "XmlAttributesBelowLimitPass",
-    "XrefTablePointsAtObjectHeaders"
+    "XmlAttributesBelowLimitPass"
   ],
   "docx-table-grid-origins": [
     "DocxCompatGridAlignsOuterBorderAtMargin",
@@ -18543,7 +18441,7 @@
     "StagedDocumentAndContentStoreReleaseOwnedReferencesOnDispose",
     "StagedEmissionScratchStaysFlatAtN2N4N",
     "StagingCleansTempOnFailure",
-    "StreamLengthsMatchPayloads",
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents",
     "StreamMidWriteFailureKeepsAllowedPrefix",
     "ThrowingSpillObserverPropagatesAndCleansTemp",
     "TinyWindowMatchesDefaultBytesOnFileAndStream",
@@ -18588,12 +18486,10 @@
     "WritesLinkAnnotations",
     "WritesMultipleBlankPagesWithPageSizes",
     "WritesPct70WeaveBlockTilingPattern",
-    "WritesScaledTilingPatternMatrix",
     "WritesSingleBlankPagePdfStructure",
     "WritesStitchedAxialShadingFunctionForMultipleStops",
     "WritesSubsetBaseFontWithSixLetterTagAndPlus",
-    "WritesTilingPatternResources",
-    "XrefTablePointsAtObjectHeaders"
+    "WritesTilingPatternResources"
   ],
   "font-program-leases": [
     "FileFontProgramSourceConcurrentReadsReturnSameBytes",
@@ -19203,8 +19099,7 @@
     "ThrowingSummaryCallbackLeavesFileDestinationUntouched",
     "FinalSummaryCancellationPreventsPublication",
     "ConvertPreservesExistingDestinationWhenWriterRejectsPage",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders",
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents",
     "PortableRenderingDocxFinalPreservesMixedContent",
     "PortableRenderingDocxAllMarkupPreservesMixedContent",
     "PortableRenderingPptxPreservesCompositeChartAndText",
@@ -19268,8 +19163,7 @@
     "ThrowingSummaryCallbackLeavesFileDestinationUntouched",
     "FinalSummaryCancellationPreventsPublication",
     "ConvertPreservesExistingDestinationWhenWriterRejectsPage",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders",
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents",
     "PortableRenderingDocxFinalPreservesMixedContent",
     "PortableRenderingDocxAllMarkupPreservesMixedContent",
     "PortableRenderingPptxPreservesCompositeChartAndText",
@@ -19352,8 +19246,7 @@
     "PortableRenderingDocxFinalPreservesMixedContent",
     "PortableRenderingDocxAllMarkupPreservesMixedContent",
     "PortableRenderingPptxPreservesCompositeChartAndText",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "font-pack-metadata-admission": [
     "FontPack",
@@ -19362,8 +19255,7 @@
     "PortableRenderingDocxFinalPreservesMixedContent",
     "PortableRenderingDocxAllMarkupPreservesMixedContent",
     "PortableRenderingPptxPreservesCompositeChartAndText",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "docx-table-header-admission": [
     "LayoutAdmission",
@@ -19394,8 +19286,7 @@
     "PortableRenderingDocxFinalPreservesMixedContent",
     "PortableRenderingDocxAllMarkupPreservesMixedContent",
     "PortableRenderingPptxPreservesCompositeChartAndText",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders",
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents",
     "DocxTableLayoutStageRepeatsHeaderRowsAfterPageBreak",
     "DocxTableLayoutStageRepeatsHeaderRowsBeforeSplitRowContinuations",
     "DocxTableLayoutStageContinuesRowsInActiveColumnFrame",
@@ -19411,8 +19302,7 @@
     "PptxSvg",
     "PptxSyntheticSvg",
     "MemoryAdmission",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pdf-staged-vector-resources": [
       "VectorMemory",
@@ -19433,8 +19323,7 @@
       "RejectsDanglingShadingReference",
       "StagedDocumentAndContentStoreReleaseOwnedReferencesOnDispose",
       "PageContentStagingRoundTripsAndCleansTemp",
-      "StreamLengthsMatchPayloads",
-      "XrefTablePointsAtObjectHeaders"
+      "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "page-graphics-construction": [
       "PageMemory",
@@ -19450,8 +19339,7 @@
       "SharedTransparencyGroups",
       "VectorSoftMasks",
       "ShadingPatterns",
-      "StreamLengthsMatchPayloads",
-      "XrefTablePointsAtObjectHeaders",
+      "=PdfCrossReferencesAndStreamLengthsMatchFileContents",
       "PortableRenderingStaticPictureOnlyFramesRetainBodyAndResources",
       "PortableRenderingInlineBoxMathKeepsSourceContentAndResources"
   ],
@@ -19462,8 +19350,7 @@
       "CollectionDiscoverySpanCoversNeededTables",
       "DiscoveryResolvesSyntheticCollectionFromDirectory",
       "MemoryAdmission",
-      "StreamLengthsMatchPayloads",
-      "XrefTablePointsAtObjectHeaders"
+      "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pdf-page-descriptor-admission": [
       "StagedPageMemory",
@@ -19477,8 +19364,7 @@
       "ShadingPatterns",
       "StagedDocumentAndContentStoreReleaseOwnedReferencesOnDispose",
       "PageContentStagingRoundTripsAndCleansTemp",
-      "StreamLengthsMatchPayloads",
-      "XrefTablePointsAtObjectHeaders"
+      "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-justification": [
       "PptxJustifiedTextLayoutDistributesWrappedLines",
@@ -19500,8 +19386,7 @@
       "MemoReplaysAtChangedOrigin",
       "PageMemory",
       "MemoryAdmission",
-      "StreamLengthsMatchPayloads",
-      "XrefTablePointsAtObjectHeaders"
+      "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "docx-page-start-spacing": [
       "DocxExplicitPageStart",
@@ -19515,8 +19400,7 @@
       "DocxPageFootnoteNumbersUseCompleteCellOwnershipAndKeepTypographyScope",
       "DocxWrappedFootnoteNumbersRestartOnExactEarlyAndLaterSegments",
       "DocxWrappedFootnoteNumbersRetainActualTargetsAndLayoutPolicies",
-      "StreamLengthsMatchPayloads",
-      "XrefTablePointsAtObjectHeaders"
+      "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-horizontal-intervals": [
     "PptxLineAuthoredMaximum",
@@ -19575,8 +19459,7 @@
     "DocxParagraphShadingSpacingFollowsPlacedContainerBoundaries",
     "DocxParagraphShadingChangesPaintWithoutChangingTextGeometry",
     "DocxParagraphShadingUsesSourceIndentsAndFragmentLineBoxes",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "docx-mixed-terminal-paragraphs": [
     "DocxMixedTerminalParagraphsKeepBreaksAndPhysicalFacesAcrossCounts",
@@ -19595,8 +19478,7 @@
     "DocxWordCompatibleMixedBalloonWrapsParagraphsIndependently",
     "DocxReviewCommentAuthorsKeepTextOwnershipCaseAndCancellation",
     "MissingFontsPreserveWordCompatibleBalloonText",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-layout-oracle-portability": [
     "=PptxSyntheticTextAndShapesUseSiblingOrder",
@@ -19629,8 +19511,7 @@
     "PptxSyntheticChartValueAxisReversedOrientationMovesLineDataLabels",
     "PptxSyntheticLineChartConsumesDisplayBlanksAs",
     "PptxSyntheticLineAndPieChartsRenderNativeCharts",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-numeric-label-direction": [
     "PptxNumericCrossingOwnsPairedCategorySide",
@@ -19647,8 +19528,7 @@
     "PptxColumnCategoryGeometryIgnoresNumericCrossingEdits",
     "PptxSingleCategoryMidpointOriginKeepsPointsCaptionsAndDirectionTogether",
     "PptxLineCategoryBoundaryMarkersKeepHorizontalInkAndNumericClipping",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-right-legend-admission": [
     "PptxRightLegendAdmission",
@@ -19663,8 +19543,7 @@
     "PptxSyntheticChartComboLineUsesOwnValueAxisScale",
     "PptxSyntheticLineAndPieChartsRenderNativeCharts",
     "PptxSyntheticChartVisibleSecondaryAxisReservesInnerPlotStrips",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-side-legend-line-box": [
     "PptxAreaRightLegend",
@@ -19679,8 +19558,7 @@
     "PptxSyntheticChartComboLineUsesOwnValueAxisScale",
     "PptxSingleCategoryMidpointOriginKeepsPointsCaptionsAndDirectionTogether",
     "PptxCategorySlotsKeepSparseSourceIndexesAndStackedNeighbors",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-area-legend-paint": [
     "PptxBubbleLegendWhitespaceKeepsMeasuredInkCenter",
@@ -19697,8 +19575,7 @@
     "PptxSyntheticChartComboLineUsesOwnValueAxisScale",
     "PptxSingleCategoryMidpointOriginKeepsPointsCaptionsAndDirectionTogether",
     "PptxCategorySlotsKeepSparseSourceIndexesAndStackedNeighbors",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-typography-oracle-portability": [
     "PptxPortableManualBreakKeepsUnicodeAndCoalescedGlyphContent",
@@ -19710,8 +19587,7 @@
     "PortableRenderingPptxPreservesCompositeChartAndText",
     "PptxHorizontalClipPreservesVerticalOverflowInShapesAndCells",
     "PptxSyntheticTextBoxNoBreakSpaceKeepsWrappedClusterTogether",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-highlight-oracle-portability": [
     "PptxPortableHighlightContinuationKeepsSpacingAcrossWrappedLines",
@@ -19729,8 +19605,7 @@
     "PptxNumberedNoAutofitFramesEmitOfficeCharacterSpacingTextState",
     "PptxTextLeadingSpaceAfterStyleBoundaryUsesHiddenAdvance",
     "PortablePptxInspectionUsesTheRenderingFontSource",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-scatter-outer-target": [
     "PptxScatterOuterHiddenCaptionsUseNativeCenteredBounds",
@@ -19750,8 +19625,7 @@
     "PptxScatterCaptionAdmissionPreservesFrameAndNumericCenters",
     "PptxScatterCaptionAdmissionKeepsEndpointAndSeriesOwnership",
     "ConvertPptxObservesCancellationAfterWorkBegins",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders",
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents",
     "PptxBubbleMeasured",
     "PptxBubbleSubunit",
     "PptxBubbleCompound",
@@ -19770,8 +19644,7 @@
     "PptxSyntheticCustomGeometryOpenCubicStealthTailUsesFilledOutline",
     "PptxSyntheticCustomGeometryCubicPathRendersCurve",
     "PptxSyntheticCustomGeometryArcPathRendersCurve",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "docx-glyphless-anchors": [
     "DocxLayoutStageConsumesEmptyParagraphLineBox",
@@ -19795,8 +19668,7 @@
     "MemoryBudgetImageRefusalIsTerminalAcrossPublicConverters",
     "MemoryBudgetImagePlanesFollowDecodedOwnerAndCompressionBorrow",
     "MemoryBudgetImageRefusalAndCancellationReleaseConstruction",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "docx-comment-font-oracles": [
     "DocxWordCompatibleAllMarkupScalesLargeBodyTextWithoutCap",
@@ -19847,8 +19719,7 @@
       "PptxSyntheticPieLabelWordWrapPacksWords",
       "PptxSyntheticPieLabelLongWordSplitsGreedily",
       "ConvertPptxObservesCancellationAfterWorkBegins",
-      "StreamLengthsMatchPayloads",
-      "XrefTablePointsAtObjectHeaders",
+      "=PdfCrossReferencesAndStreamLengthsMatchFileContents",
       "PptxManualPiesKeepIndependentOfficeCentersAndRadii",
       "PptxPieFactorAndEdgePlacementKeepTheirOwnersAcrossViewportWidths",
       "PptxPieFactorOffsetsRetainBoundedSourceAndCompleteLegendContent",
@@ -19894,8 +19765,7 @@
     "PptxManualFactorAndEdgeSizesShareIndependentOfficeRectangles",
     "PptxSyntheticChartManualLayoutMissingPositionUsesDefaultPlotBox",
     "ConvertPptxObservesCancellationAfterWorkBegins",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-manual-plot-dimensions": [
     "PptxManualFactorAndEdgeSizesShareIndependentOfficeRectangles",
@@ -19912,8 +19782,7 @@
     "PortableRenderingAutomaticColumnLabelsKeepComposedValueSuffixes",
     "ConvertPptxObservesCancellationAfterWorkBegins",
     "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-column-label-wrapping": [
     "PptxSizedColumnLabelsKeepTextCenterAndKeyTopReferences",
@@ -19939,8 +19808,7 @@
     "PortableRenderingBarPalettesFollowIndependentOfficeSourceIndices",
     "ConvertPptxObservesCancellationAfterWorkBegins",
     "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-bar-source-palette": [
     "PortableRenderingBarPointKeysKeepSingleSeriesCategoryIdentity",
@@ -19950,8 +19818,7 @@
     "PortableRenderingSharedAxisPlacesEveryPlotOnItsResolvedScale",
     "ConvertPptxObservesCancellationAfterWorkBegins",
     "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-horizontal-numeric-side": [
     "ConvertPptxObservesCancellationAfterWorkBegins",
@@ -20006,8 +19873,7 @@
     "PptxVaryingBarCategoryLegendsWrapAndReservePlotSpace",
     "PptxWrappedFilledSeriesLegendsKeepIndependentOfficeColumns",
     "PptxWrappedFillLegendsShareColumnsAndPreserveSourceOrder",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-horizontal-source-scale": [
     "PptxSourceUnitBoundsPreserveSceneAuthorityAndFallbacks",
@@ -20032,8 +19898,7 @@
     "PortableRenderingBarPalettesFollowIndependentOfficeSourceIndices",
     "ConvertPptxObservesCancellationAfterWorkBegins",
     "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-shared-axis-scale": [
     "PortableRenderingSharedAxisFramesMatchIndependentOfficePairs",
@@ -20119,8 +19984,7 @@
     "PptxSyntheticScatterChartConsumesChartWideDataLabelManualBox",
     "PptxSyntheticScatterChartRendersLegendKeyOnlyDataLabels",
     "PptxUnformattedPointTextRetainsContainerStyleAcrossKinds",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "docx-math-center-group": [
     "DocxMathCenterGroupRetainsLocalAndGlobalAlignmentSources",
@@ -20157,8 +20021,7 @@
     "DocxNativeStaticMathRetainsStoryFlow",
     "ConvertObservesCancellationAfterWorkBegins",
     "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-automatic-column-scale": [
     "PptxAutomaticColumnScaleSeparatesAuthoredPlotPlacement",
@@ -20186,8 +20049,7 @@
     "PptxChartCffTextSubstitutesFallbackWithDiagnostic",
     "ConvertPptxObservesCancellationAfterWorkBegins",
     "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders",
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents",
     "PptxChartAxisRefusalAndCancellationPreservePublication",
     "PptxChartAxisTickExpansionRejectsNonprogressAndInvalidBounds",
     "PptxChartAxisTickExpansionConversionPropagatesLimitFailure",
@@ -20223,8 +20085,7 @@
     "PortableRenderingInlineBoxReviewFramesKeepMathOnPage",
     "ConvertObservesCancellationAfterWorkBegins",
     "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "docx-complete-endnote-rows": [
     "DocxPictureOnly",
@@ -20256,8 +20117,7 @@
     "PortableRenderingInlineBoxReviewFramesKeepMathOnPage",
     "ConvertObservesCancellationAfterWorkBegins",
     "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders",
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents",
     "DocxLaterEndnotePitchDoesNotDependOnEarlierTable",
     "DocxLaterEndnotesCollapseSourceBeforeAndAfterSpacing",
     "DocxCompleteEndnoteRowDefersWithoutClippingItsContent",
@@ -20311,8 +20171,7 @@
     "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
     "PdfPageBudgetAdmitsDuringRenderBeforeLaterDocxPages",
     "ConvertAsyncDocxFontCopyRefusalReleasesLeaseAndPreservesPublication",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "docx-diagnostic-fallback-wording": [
     "DocxUnsupportedStoryDiagnosticsPreferRelatedPartNames",
@@ -20492,8 +20351,7 @@
     "PptxSyntheticScatterChartConsumesChartWideDataLabelManualBox",
     "PptxSyntheticScatterChartRendersLegendKeyOnlyDataLabels",
     "PptxUnformattedPointTextRetainsContainerStyleAcrossKinds",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "docx-fixed-static-frames": [
     "DocxBuiltInFallbackKeepsPageLocalNotePaintsAndWarnings",
@@ -20573,8 +20431,7 @@
     "ConvertObservesCancellationAfterWorkBegins",
     "MemoryAdmissionRefusalLeavesFileAndStreamUntouched",
     "MemoryAdmissionRefundsOnFailureCancellationAndObserverException",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "docx-variable-column-widths": [
     "DocxOrderedInlineParagraphsHonorDefaultAndDisabledWidowControl",
@@ -20599,8 +20456,7 @@
     "ConvertObservesCancellationAfterWorkBegins",
     "MemoryAdmissionRefusalLeavesFileAndStreamUntouched",
     "MemoryAdmissionRefundsOnFailureCancellationAndObserverException",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders",
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents",
     "DocxMixedColumnFlow",
     "DocxInlineCompositionFixedPictureSkipsUnfitContinuationColumn",
     "DocxInlineCompositionSourceCursorConsumesTrailingWhitespace"
@@ -20825,8 +20681,7 @@
     "DocxMathParserUsesIterativeTraversalAndObservesCancellation",
     "DocxInlineMetadataWrappersKeepCancellationAndUnknownFallback",
     "ConvertObservesCancellationAfterWorkBegins",
-    "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "docx-math-run-metadata": [
     "=MathLiteralOperatorsKeepGlyphsAndUseOrdinarySpacing",
