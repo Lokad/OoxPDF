@@ -40,9 +40,10 @@ trailer and page tree. It supports text, paths, clipping, raster images/soft mas
 transparency groups, shadings/patterns and Link annotations. URI actions and explicit
 internal destinations implement supported navigation.
 
-Embedded TrueType fonts use Type0/Identity-H and CIDFontType2 with subset FontFile2,
-widths and ToUnicode mappings. Distinct source characters retain separate PDF
-character identities while sharing embedded outlines through a CID-to-glyph map.
+Embedded TrueType fonts use Type0/Identity-H and CIDFontType2 with widths, ToUnicode
+mappings and a FontFile2 program. The program is normally subset. Whole TrueType
+programs can be embedded when subsetting is unavailable. Distinct source characters
+retain separate PDF character identities while sharing embedded outlines through a CID-to-glyph map.
 Shared spaces still normalize to plain space when mixed with NBSP. Structural
 equation pieces can use ActualText. Unembedded standard Type1 fallback depends on viewer fonts. CFF
 outlines do not embed as FontFile3 and require a supported fallback.

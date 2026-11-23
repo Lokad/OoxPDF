@@ -516,24 +516,40 @@ internal static partial class SvgTextTests
         TestAssert.Contains("unparsable dash", diagnostics.Single().Message);
     }
 
-    public static void SvgPercentageDashOffsetsMatchViewportUnitsInBothFormats()
+    public static void SvgDashOffsetsAndWhitespacePreserveSignedStrokePhaseInBothFormats()
     {
+        const string dashArray = "stroke-dasharray:13 6.5";
         AssertSvgPaintInBothFormats(
             DashStrokeSvg("""stroke-dasharray="13 6.5" stroke-dashoffset="13" """,
-                "stroke-dasharray:13 6.5;stroke-dashoffset:-6.5px"),
-            DashStrokeSvg("""stroke-dasharray="13 6.5" stroke-dashoffset="10%" """,
-                "stroke-dasharray:13 6.5;stroke-dashoffset:-5%"),
-            "1 0 0 RG", "/PatternType 2", " d");
-    }
+                dashArray + ";stroke-dashoffset:-6.5px"),
+            [DashStrokeSvg("""stroke-dasharray="13 6.5" stroke-dashoffset="10%" """,
+                dashArray + ";stroke-dashoffset:-5%"),
+             DashStrokeSvg("""stroke-dasharray="13&#x9;6.5" stroke-dashoffset="13" """,
+                "stroke-dasharray:13&#xD;&#xA;6.5;stroke-dashoffset:-6.5px")],
+            AssertStrokePhases, "/PatternType 2");
 
-    public static void SvgDashArrayXmlWhitespaceMatchesSpacesInBothFormats()
-    {
-        AssertSvgPaintInBothFormats(
-            DashStrokeSvg("""stroke-dasharray="13 6.5" stroke-dashoffset="13" """,
-                "stroke-dasharray:13 6.5;stroke-dashoffset:-6.5px"),
-            DashStrokeSvg("""stroke-dasharray="13&#x9;6.5" stroke-dashoffset="13" """,
-                "stroke-dasharray:13&#xD;&#xA;6.5;stroke-dashoffset:-6.5px"),
-            "1 0 0 RG", "/PatternType 2", " d");
+        static void AssertStrokePhases(string pdf)
+        {
+            const string state = @"\r?\n(?<width>[\d.]+) w\r?\n\[(?<dash>[\d.]+) (?<gap>[\d.]+) \] (?<phase>-?[\d.]+) d\r?\n";
+            AssertStroke("red", "1 0 0 RG", 13d);
+            AssertStroke("gradient", @"/Pattern CS /Ps\d+ SCN", -6.5d);
+
+            void AssertStroke(string owner, string color, double authoredPhase)
+            {
+                Match match = Regex.Match(pdf, @"(?:^|\n)" + color + state + @"[^\r\n]+ M\r?\n[^\r\n]+ m\r?\n[^\r\n]+ l\r?\nS\r?\n");
+                TestAssert.True(match.Success, $"The {owner} line must carry its own dash state and stroke.");
+                double width = Read("width");
+                // This fixture uses a 4-unit stroke. The Office phase policy uses
+                // stroke-width units while the array lengths use source geometry.
+                TestAssert.True(Math.Abs(Read("dash") - width * 13d / 4d) < 0.003d &&
+                    Math.Abs(Read("gap") - width * 6.5d / 4d) < 0.003d,
+                    $"The {owner} line must keep the authored dash array.");
+                TestAssert.True(Math.Abs(Read("phase") - width * authoredPhase) < 0.008d,
+                    $"The {owner} line must keep its signed phase to within PDF rounding.");
+
+                double Read(string group) => double.Parse(match.Groups[group].Value, CultureInfo.InvariantCulture);
+            }
+        }
     }
 
     public static void SvgPointListsWithTrailingCoordinateKeepCompletePairsInBothFormats()

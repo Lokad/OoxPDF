@@ -147,26 +147,52 @@ internal static partial class OoxMemoryAdmissionTests
     {
         byte[] bytes = File.ReadAllBytes(Case("PortableFonts/DejaVuSans.ttf"));
         OpenTypeFont font = OpenTypeFont.Load(bytes);
-        ushort originalGlyph = font.MapCodePoint('é');
-        TestAssert.True(font.TryReadGlyphOutline(originalGlyph, out var expected) && expected.IsCompound,
-            "The pinned portable face supplies a real compound glyph.");
         var pool = new TestMemoryBudget();
         using (var conversion = OoxConversionBudget.BeginScope(null, pool))
         {
-            PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, [65, 'é', 0x1F600], default);
+            PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, [65, 'é', 'Â', 0x1F600], default);
+            TestAssert.True(embedded.UsesSubsetFontProgram, "Compound outlines must survive actual subsetting.");
             OpenTypeFont subset = OpenTypeFont.Load(embedded.FontProgramBytes.ToArray());
-            ushort glyph = subset.MapCodePoint('é');
-            TestAssert.True(subset.TryReadGlyphOutline(glyph, out var actual), "Remapped component references remain readable.");
-            TestAssert.Equal(expected.Bounds, actual.Bounds);
-            TestAssert.Equal(expected.Contours.Count, actual.Contours.Count);
-            for (int i = 0; i < expected.Contours.Count; i++)
-                TestAssert.True(expected.Contours[i].Points.SequenceEqual(actual.Contours[i].Points), "Compound contours preserve all source points.");
-            TestAssert.Equal(font.GetAdvanceWidth(originalGlyph), subset.GetAdvanceWidth(glyph));
+            foreach (char character in new[] { 'é', 'Â' })
+            {
+                ushort originalGlyph = font.MapCodePoint(character);
+                ushort glyph = subset.MapCodePoint(character);
+                TestAssert.True(font.TryReadGlyphOutline(originalGlyph, out var expected) && expected.IsCompound,
+                    "The pinned portable face supplies both compound glyphs.");
+                TestAssert.True(glyph != 0, "Each compound glyph remains mapped in the subset.");
+                TestAssert.True(subset.TryReadGlyphOutline(glyph, out var actual) && actual.IsCompound,
+                    "Remapped component references remain readable.");
+                TestAssert.Equal(expected.Bounds, actual.Bounds);
+                TestAssert.Equal(expected.Contours.Count, actual.Contours.Count);
+                for (int i = 0; i < expected.Contours.Count; i++)
+                    TestAssert.True(expected.Contours[i].Points.SequenceEqual(actual.Contours[i].Points), "Compound contours preserve all source points.");
+                TestAssert.Equal(font.GetAdvanceWidth(originalGlyph), subset.GetAdvanceWidth(glyph));
+            }
+            byte[] expectedInstructions = Convert.FromHexString("B4050D110A072B40050F0D0011025D31");
+            TestAssert.True(Instructions(font).SequenceEqual(expectedInstructions), "The pinned circumflex glyph supplies the expected instructions.");
+            TestAssert.True(Instructions(subset).SequenceEqual(expectedInstructions), "Remapping changes IDs without changing the circumflex instructions.");
             TestAssert.True(pool.Reserved > embedded.FontProgramBytes.Length,
                 "Compound-subset CID metadata remains funded with the program.");
         }
         TestAssert.Equal(0L, pool.Reserved);
         TestAssert.True(bytes.AsSpan().SequenceEqual(font.Bytes.Span), "Owned subset writes leave the original font unchanged.");
+
+        static ReadOnlySpan<byte> Instructions(OpenTypeFont face)
+        {
+            TestAssert.True(face.TryGetTable("head", out var head), "Expected a TrueType header.");
+            TestAssert.True(face.TryGetTable("loca", out var loca), "Expected glyph locations.");
+            TestAssert.True(face.TryGetTable("glyf", out var glyf), "Expected glyph bytes.");
+            var data = face.Bytes.Span;
+            TestAssert.Equal((short)1, OpenTypeFont.I16(data, head.Offset + 50));
+            int location = loca.Offset + 4 * face.MapCodePoint('Â');
+            int offset = glyf.Offset + checked((int)OpenTypeFont.U32(data, location));
+            // The pinned record has a ten-byte header and six- and eight-byte
+            // component records. Their flags and instruction length are fixed.
+            TestAssert.Equal((ushort)0x1226, OpenTypeFont.U16(data, offset + 10));
+            TestAssert.Equal((ushort)0x1107, OpenTypeFont.U16(data, offset + 16));
+            TestAssert.Equal((ushort)16, OpenTypeFont.U16(data, offset + 24));
+            return data.Slice(offset + 26, 16);
+        }
     }
 
     private static FontFaceResolution ProgramResolution(IFontProgramSource source, int face = 0) =>

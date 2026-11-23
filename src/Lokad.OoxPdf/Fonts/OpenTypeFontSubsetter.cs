@@ -509,56 +509,36 @@ internal static class OpenTypeFontSubsetter
             return false;
         }
 
-        short contourCount = OpenTypeFont.I16(source, glyphOffset);
+        ReadOnlySpan<byte> glyphData = source.Slice(glyphOffset, glyphLength);
+        short contourCount = OpenTypeFont.I16(glyphData, 0);
         if (contourCount >= 0)
         {
             return true;
         }
 
         var result = new List<ushort>();
-        int cursor = glyphOffset + 10;
-        int glyphEnd = glyphOffset + glyphLength;
+        int cursor = 10;
         ushort flags;
         do
         {
-            if (cursor + 4 > glyphEnd)
+            if (!TryReadCompoundComponent(glyphData, ref cursor, out flags, out ushort component))
             {
                 return false;
             }
 
-            flags = OpenTypeFont.U16(source, cursor);
-            result.Add(OpenTypeFont.U16(source, cursor + 2));
-            cursor += 4;
-            cursor += (flags & Arg1And2AreWords) != 0 ? 4 : 2;
-            if ((flags & WeHaveAScale) != 0)
-            {
-                cursor += 2;
-            }
-            else if ((flags & WeHaveAnXAndYScale) != 0)
-            {
-                cursor += 4;
-            }
-            else if ((flags & WeHaveATwoByTwo) != 0)
-            {
-                cursor += 8;
-            }
-
-            if (cursor > glyphEnd)
-            {
-                return false;
-            }
+            result.Add(component);
         }
         while ((flags & MoreComponents) != 0);
 
         if ((flags & WeHaveInstructions) != 0)
         {
-            if (cursor + 2 > glyphEnd)
+            if (cursor + 2 > glyphData.Length)
             {
                 return false;
             }
 
-            ushort instructionLength = OpenTypeFont.U16(source, cursor);
-            if (cursor + 2 + instructionLength > glyphEnd)
+            ushort instructionLength = OpenTypeFont.U16(glyphData, cursor);
+            if (cursor + 2 + instructionLength > glyphData.Length)
             {
                 return false;
             }
@@ -590,42 +570,47 @@ internal static class OpenTypeFontSubsetter
         ushort flags;
         do
         {
-            if (cursor + 4 > glyphData.Length)
+            int glyphIdOffset = cursor + 2;
+            if (!TryReadCompoundComponent(glyphData, ref cursor, out flags, out ushort originalComponent) ||
+                !cidByOriginalGlyph.TryGetValue(originalComponent, out ushort subsetComponent))
             {
                 return false;
             }
 
-            flags = OpenTypeFont.U16(glyphData, cursor);
-            ushort originalComponent = OpenTypeFont.U16(glyphData, cursor + 2);
-            if (!cidByOriginalGlyph.TryGetValue(originalComponent, out ushort subsetComponent))
-            {
-                return false;
-            }
-
-            OpenTypeFont.W16(glyphData, cursor + 2, subsetComponent);
-            cursor += 4;
-            cursor += (flags & Arg1And2AreWords) != 0 ? 4 : 2;
-            if ((flags & WeHaveAScale) != 0)
-            {
-                cursor += 2;
-            }
-            else if ((flags & WeHaveAnXAndYScale) != 0)
-            {
-                cursor += 4;
-            }
-            else if ((flags & WeHaveATwoByTwo) != 0)
-            {
-                cursor += 8;
-            }
-
-            if (cursor > glyphData.Length)
-            {
-                return false;
-            }
+            OpenTypeFont.W16(glyphData, glyphIdOffset, subsetComponent);
         }
         while ((flags & MoreComponents) != 0);
 
         return true;
+    }
+
+    private static bool TryReadCompoundComponent(ReadOnlySpan<byte> glyphData, ref int cursor,
+        out ushort flags, out ushort componentGlyph)
+    {
+        flags = 0;
+        componentGlyph = 0;
+        if (cursor + 4 > glyphData.Length)
+        {
+            return false;
+        }
+
+        flags = OpenTypeFont.U16(glyphData, cursor);
+        componentGlyph = OpenTypeFont.U16(glyphData, cursor + 2);
+        cursor += 4 + ((flags & Arg1And2AreWords) != 0 ? 4 : 2);
+        if ((flags & WeHaveAScale) != 0)
+        {
+            cursor += 2;
+        }
+        else if ((flags & WeHaveAnXAndYScale) != 0)
+        {
+            cursor += 4;
+        }
+        else if ((flags & WeHaveATwoByTwo) != 0)
+        {
+            cursor += 8;
+        }
+
+        return cursor <= glyphData.Length;
     }
 
     private static bool TryGetGlyphData(

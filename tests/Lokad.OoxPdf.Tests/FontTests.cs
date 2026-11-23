@@ -891,34 +891,6 @@ internal static partial class FontTests
         TestAssert.True(subset.MapCodePoint('z') != 0, "Expected the subset cmap to map lowercase z.");
     }
 
-    public static void PdfEmbeddedFontSubsetKeepsCompoundGlyphComponents()
-    {
-        string fontsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
-        string arial = Path.Combine(fontsDirectory, "arial.ttf");
-        if (!File.Exists(arial))
-        {
-            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
-        }
-
-        OpenTypeFont font = OpenTypeFont.Load(File.ReadAllBytes(arial));
-        ushort originalGlyph = font.MapCodePoint('é');
-        if (originalGlyph == 0 ||
-            !font.TryReadGlyphOutline(originalGlyph, out OpenTypeFont.OpenTypeGlyphOutline originalOutline) ||
-            !originalOutline.IsCompound)
-        {
-            TestAssert.Skip("Environmental precondition not met: (originalGlyph == 0 || !font.TryReadGlyphOutline(originalGlyph, out OpenTypeFont.OpenTypeGlyphOutline originalOutline) || !originalOutline.IsCompound)");
-        }
-
-        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, "é".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
-        OpenTypeFont subset = OpenTypeFont.Load(embedded.FontProgramBytes.ToArray());
-        ushort subsetGlyph = subset.MapCodePoint('é');
-
-        TestAssert.True(embedded.UsesSubsetFontProgram, "Expected compound glyph fixture to use a subset font program.");
-        TestAssert.True(subsetGlyph != 0, "Expected the subset cmap to map the compound glyph.");
-        TestAssert.True(subset.TryReadGlyphOutline(subsetGlyph, out OpenTypeFont.OpenTypeGlyphOutline subsetOutline), "Expected remapped compound glyph outline to be readable.");
-        TestAssert.True(subsetOutline.Contours.Count > 0, "Expected remapped compound glyph to keep component contours.");
-    }
-
     public static void OpenTypeParserLoadsTrueTypeCollections()
     {
         string fontsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");

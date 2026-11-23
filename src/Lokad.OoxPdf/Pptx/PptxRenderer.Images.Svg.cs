@@ -2060,7 +2060,7 @@ internal sealed partial class PptxRenderer
             {
                 // RV07-S7: Office paints an opaque rounded line when its
                 // entire path falls in dash gaps. Retain mixed painted paths.
-                graphics.SetLineDash(Array.Empty<double>(), 0d);
+                graphics.ClearLineDash();
                 graphics.SetLineCap(1);
                 foreach ((double x, double y, double endX, double endY) in dashPaint.SolidLines)
                 {
