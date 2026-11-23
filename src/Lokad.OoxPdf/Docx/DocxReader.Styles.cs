@@ -385,7 +385,9 @@ internal sealed partial class DocxReader
         return value switch
         {
             "center" => DocxTextAlignment.Center,
-            "right" => DocxTextAlignment.Right,
+            // Paragraph layout uses left-to-right frames.
+            "left" or "start" => DocxTextAlignment.Left,
+            "right" or "end" => DocxTextAlignment.Right,
             "both" => DocxTextAlignment.Justified,
             null => null,
             _ => DocxTextAlignment.Left

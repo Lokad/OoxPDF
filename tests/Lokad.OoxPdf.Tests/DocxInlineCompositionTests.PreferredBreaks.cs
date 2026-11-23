@@ -161,6 +161,65 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
+    public static void DocxLogicalParagraphEdgesMatchPhysicalAlignment()
+    {
+        const string styleId = "LogicalParagraphTest";
+        XNamespace word = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+        var resolver = new PortableRenderingTests.PinnedResolver();
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        foreach (bool body in new[] { false, true })
+        {
+            var renderer = new DocxRenderer(resolver, mode, CachedMathGeometry(mode));
+            PdfPage left = Paint("left");
+            PdfPage right = Paint("right");
+            foreach (var (control, logical) in new[] { (left, "start"), (right, "end") })
+            {
+                PdfPage actual = Paint(logical);
+                TestAssert.Equal(control.Content, actual.Content);
+                TestAssert.Equal(ReadPictureFractionRule(control), ReadPictureFractionRule(actual));
+                TestAssert.Equal(ReadPictureBounds(control).Single(), ReadPictureBounds(actual).Single());
+                TestAssert.Equal(control.Images.Single().Image.ResourceKey, actual.Images.Single().Image.ResourceKey);
+                TestAssert.Equal(3, PortableRenderingTests.ReadPaintedSourceLabel(actual, "123").Count);
+            }
+            var before = PortableRenderingTests.ReadPaintedSourceLabel(left, "Evidence");
+            var after = PortableRenderingTests.ReadPaintedSourceLabel(right, "Evidence");
+            TestAssert.True(after[0].Origin.X > before[0].Origin.X + 10d,
+                "The right-edge source moves complete paint within its owning paragraph frame.");
+
+            PdfPage Paint(string alignment)
+            {
+                var document = ReadMutation("docx-run-picture-visible", mode, false, false, (xml, w, m) =>
+                {
+                    var (paragraph, drawing) = CreateExactPictureCell(xml, w, 3600, 1320, 320, "After table.");
+                    var properties = paragraph.Element(w + "pPr")!;
+                    AddPictureFractionLabel(paragraph, drawing, w, m);
+                    paragraph.Add(PictureCellRun(w, PictureCellText(w, "123")));
+                    if (body)
+                    {
+                        properties.Add(Justification(alignment));
+                        MovePictureParagraphToBody(paragraph, w);
+                    }
+                    else
+                        properties.AddFirst(new XElement(w + "pStyle", new XAttribute(w + "val", styleId)));
+                }, packageChange: body ? null : zip =>
+                {
+                    var entry = zip.GetEntry("word/styles.xml")!;
+                    XDocument styles;
+                    using (var stream = entry.Open()) styles = XDocument.Load(stream);
+                    styles.Root!.Add(new XElement(word + "style", new XAttribute(word + "type", "paragraph"),
+                        new XAttribute(word + "styleId", styleId), new XElement(word + "name", new XAttribute(word + "val", styleId)),
+                        new XElement(word + "pPr", Justification(alignment))));
+                    entry.Delete();
+                    using var output = zip.CreateEntry("word/styles.xml").Open();
+                    styles.Save(output);
+                });
+                return renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
+            }
+        }
+
+        XElement Justification(string value) => new(word + "jc", new XAttribute(word + "val", value));
+    }
+
     private static PdfPage PaintPictureTabField(DocxRenderer renderer, OoxPdfDocxMarkupMode mode,
         string alignment, IReadOnlyList<string> number, bool body = false, bool composed = true)
     {
@@ -173,12 +232,7 @@ internal static partial class DocxInlineCompositionTests
             paragraph.Add(PictureCellRun(w, new XElement(w + "tab")));
             foreach (string part in number)
                 paragraph.Add(PictureCellRun(w, PictureCellText(w, part)));
-            if (body)
-            {
-                var table = paragraph.Ancestors(w + "tbl").Single();
-                paragraph.Remove();
-                table.ReplaceWith(paragraph);
-            }
+            if (body) MovePictureParagraphToBody(paragraph, w);
         });
         var diagnostics = new List<OoxPdfDiagnostic>();
         var page = renderer.RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().Single();
@@ -189,6 +243,13 @@ internal static partial class DocxInlineCompositionTests
                 $"The {alignment} stop keeps the fraction beside {string.Concat(number)} in {mode}. {equation.Message}");
         }
         return page;
+    }
+
+    private static void MovePictureParagraphToBody(XElement paragraph, XNamespace word)
+    {
+        var table = paragraph.Ancestors(word + "tbl").Single();
+        paragraph.Remove();
+        table.ReplaceWith(paragraph);
     }
 
     private static PdfRectangle ReadPictureFractionRule(PdfPage page)

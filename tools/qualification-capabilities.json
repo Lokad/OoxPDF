@@ -1056,6 +1056,7 @@
   "docx-shared-cell-content-portable": [
     "=DocxFittingDecimalTabsRetainMathPicturesAndNumericAnchors",
     "=DocxLogicalTabsPreserveComposedFractionsAndFieldPlacement",
+    "=DocxLogicalParagraphEdgesMatchPhysicalAlignment",
     "=DocxInlineCompositionPreferredBreakKeepsTailInsideExactCell",
     "=DocxHangingContinuationKeepsPrecedingFractionAndPicture",
     "DocxCellPageBreakAdmissionUsesComputedContentInsteadOfFieldCache",
@@ -1334,6 +1335,7 @@
     "DocxStaticParagraphFramesRetainHiddenOnlyFallbacks",
     "DocxStaticParagraphFramesShareBodyInsetsAndWrapping",
     "DocxStaticParagraphFramesPreserveNeutralInsetPaintAndOwners",
+    "=DocxLogicalParagraphEdgesMatchPhysicalAlignment",
     "DocxStaticTabsShareBodyFieldOffsetsWithoutEquations",
     "DocxStaticTabsKeepFieldsLinksHiddenOwnersAndCancellation",
     "DocxInlineCompositionLeftTabsMatchIndependentFieldOffsets",
