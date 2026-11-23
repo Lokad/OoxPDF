@@ -154,7 +154,7 @@ internal sealed partial class PptxSceneBuilder
             PptxTableStyleResolver.ReadCellTextStyle(tableStyle, rowIndex, columnIndex, rowCount, columnCount, theme, colorMap),
             textBody,
             TrimLeadingEmptyTableCellParagraphs(textBody),
-            HasUnsupportedTextOrientation(bodyProperties),
+            PptxRenderer.HasUnsupportedTextOrientation((string?)bodyProperties?.Attribute("vert")),
             HasUnsupportedTextVerticalOverflow(bodyProperties));
     }
 

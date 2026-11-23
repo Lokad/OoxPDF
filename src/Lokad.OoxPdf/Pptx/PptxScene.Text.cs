@@ -15,24 +15,17 @@ internal sealed partial class PptxSceneBuilder
 
         IReadOnlyList<XElement> inheritedPlaceholderShapes = PptxPlaceholderMatcher.FindInheritedPlaceholderShapes(element, placeholderSources);
         XElement? bodyProperties = textBody.Element(DrawingNamespace + "bodyPr");
+        string? orientation = (string?)bodyProperties?.Attribute("vert");
+        for (int index = inheritedPlaceholderShapes.Count - 1; orientation is null && index >= 0; index--)
+        {
+            orientation = (string?)inheritedPlaceholderShapes[index].Element(PresentationNamespace + "txBody")
+                ?.Element(DrawingNamespace + "bodyPr")?.Attribute("vert");
+        }
         return new PptxSceneTextBody(
             bodyProperties,
-            HasUnsupportedTextOrientation(bodyProperties),
+            PptxRenderer.HasUnsupportedTextOrientation(orientation),
             HasUnsupportedTextVerticalOverflow(bodyProperties),
             textBody.Elements(DrawingNamespace + "p").Select(paragraph => ReadParagraph(paragraph, element, textBody, inheritedPlaceholderShapes, placeholderSources, defaultTextStyle)).ToArray());
-    }
-
-    private static bool HasUnsupportedTextOrientation(XElement? bodyProperties)
-    {
-        string? orientation = (string?)bodyProperties?.Attribute("vert");
-        return !string.IsNullOrEmpty(orientation) &&
-            !orientation.Equals("horz", StringComparison.OrdinalIgnoreCase) &&
-            !orientation.Equals("vert", StringComparison.OrdinalIgnoreCase) &&
-            !orientation.Equals("vert270", StringComparison.OrdinalIgnoreCase) &&
-            !orientation.Equals("eaVert", StringComparison.OrdinalIgnoreCase) &&
-            !orientation.Equals("mongolianVert", StringComparison.OrdinalIgnoreCase) &&
-            !orientation.Equals("wordArtVert", StringComparison.OrdinalIgnoreCase) &&
-            !orientation.Equals("wordArtVertRtl", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool HasUnsupportedTextVerticalOverflow(XElement? bodyProperties)

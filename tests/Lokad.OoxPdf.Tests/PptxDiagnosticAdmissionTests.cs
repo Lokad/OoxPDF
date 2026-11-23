@@ -70,6 +70,50 @@ internal static class PptxDiagnosticAdmissionTests
         });
     }
 
+    public static void PptxDiagnosticAdmissionUsesTheEffectivePlaceholderOrientation()
+    {
+        const string unsupported = "PPTX_UNSUPPORTED_TEXT_ORIENTATION";
+        string template = PlaceholderText(" vert=\"futureVert\"", "");
+        var direct = Render(PlaceholderText(" vert=\"futureVert\"", "Orientation control"));
+        var inherited = Render(PlaceholderText("", "Orientation control"), layout: template);
+        var inheritedFromMaster = Render(PlaceholderText("", "Orientation control"),
+            layout: PlaceholderText("", ""), master: template);
+        var overridden = Render(PlaceholderText(" vert=\"HORZ\"", "Orientation control"), layout: template);
+        var unused = Render("", layout: template);
+
+        foreach (var item in new[] { direct, inherited, inheritedFromMaster })
+        {
+            var warning = item.Diagnostics.Single();
+            TestAssert.Equal(unsupported, warning.Id);
+            TestAssert.Equal("/ppt/slides/slide1.xml", warning.PartName);
+            TestAssert.Equal(1, warning.SlideIndex);
+            TestAssert.True(direct.Pdf.SequenceEqual(item.Pdf), "Direct and inherited origin must preserve identical visible fallback paint.");
+        }
+        TestAssert.Equal(0, overridden.Diagnostics.Count);
+        TestAssert.Equal(0, unused.Diagnostics.Count);
+        TestAssert.True(direct.Pdf.SequenceEqual(overridden.Pdf), "The recognized horizontal override paints the same fallback geometry.");
+
+        static string PlaceholderText(string bodyAttributes, string text) => Shape("<a:prstGeom prst=\"rect\"/>", placeholder: true)
+            .Replace("</p:sp>", $"<p:txBody><a:bodyPr{bodyAttributes}/><a:p><a:r><a:t>{text}</a:t></a:r></a:p></p:txBody></p:sp>", StringComparison.Ordinal);
+
+        static (byte[] Pdf, List<OoxPdfDiagnostic> Diagnostics) Render(string slide, string layout = "", string master = "")
+        {
+            using var output = new MemoryStream();
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            WithParts(slide: slide, layout: layout, master: master, check: path =>
+            {
+                using var input = File.OpenRead(path);
+                OoxPdfConverter.Convert(input, output, new OoxPdfOptions
+                {
+                    InputKind = OoxPdfInputKind.Pptx,
+                    FontResolver = new PortableRenderingTests.PinnedResolver(),
+                    DiagnosticSink = diagnostics.Add
+                });
+            });
+            return (output.ToArray(), diagnostics);
+        }
+    }
+
     public static void PptxLiveStylesHonorNoFillAndRetainLayoutSource()
     {
         string text = "<p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz=\"1800\"><a:noFill/><a:latin typeface=\"Arial\"/></a:rPr><a:t>A</a:t></a:r></a:p></p:txBody>";

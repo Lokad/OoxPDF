@@ -409,17 +409,8 @@ internal sealed partial class PptxRenderer
         return HasUnsupportedTextOrientation(orientation);
     }
 
-    private static bool HasUnsupportedTextOrientation(string? orientation)
-    {
-        return !string.IsNullOrEmpty(orientation) &&
-            !orientation.Equals("horz", StringComparison.OrdinalIgnoreCase) &&
-            !orientation.Equals("vert", StringComparison.OrdinalIgnoreCase) &&
-            !orientation.Equals("vert270", StringComparison.OrdinalIgnoreCase) &&
-            !orientation.Equals("eaVert", StringComparison.OrdinalIgnoreCase) &&
-            !orientation.Equals("mongolianVert", StringComparison.OrdinalIgnoreCase) &&
-            !orientation.Equals("wordArtVert", StringComparison.OrdinalIgnoreCase) &&
-            !orientation.Equals("wordArtVertRtl", StringComparison.OrdinalIgnoreCase);
-    }
+    internal static bool HasUnsupportedTextOrientation(string? orientation) =>
+        ParseTextOrientation(orientation) == PptxTextOrientation.Unknown;
 
     private static bool HasUnsupportedSceneTextOrientation(IEnumerable<PptxSceneNode> nodes)
     {
