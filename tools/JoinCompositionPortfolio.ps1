@@ -5,7 +5,8 @@ param(
     [Parameter(Mandatory=$true)] [string[]] $SourceDirectory,
     [Parameter(Mandatory=$true)] [string] $Manifest,
     [Parameter(Mandatory=$true)] [string] $OutputDirectory,
-    [ValidateSet('Both','Final','Review')] [string] $DocxPreset = 'Both'
+    [ValidateSet('Both','Final','Review')] [string] $DocxPreset = 'Both',
+    [string] $ContentAuditPath
 )
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'CompositionOutcomes.ps1')
@@ -23,6 +24,8 @@ $reports = @()
 $seenReports = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
 $jobs = [ordered]@{}
 $runtime = $null
+$loadedAudits = @{}
+$audit = if ($ContentAuditPath) { Read-PortfolioContentAudit $ContentAuditPath $loadedAudits }
 $files = @('candidate.pdf','diagnostics.json','convert.log','inspect.log',
     'inspect/font-resources.json','inspect/graphics-operations.json','inspect/text-operations.json')
 foreach ($directory in $SourceDirectory) {
@@ -61,7 +64,9 @@ foreach ($directory in $SourceDirectory) {
         $missing = @(Get-MissingPdfTextPhrases $textInspection.Operations $expectations.Text)
         if ($row.MissingExpectedText -isnot [Array] -or
             ![Linq.Enumerable]::SequenceEqual[string]([string[]]$row.MissingExpectedText, [string[]]$missing, [StringComparer]::Ordinal) -or
-            $row.ExpectedSourceEquations -ne $expectations.Equations -or $row.HeldOut -ne $case.HeldOut) {
+            $row.ExpectedSourceEquations -ne $expectations.Equations -or
+            ($row.Contains('ExpectedSourcePictures') -and $row.ExpectedSourcePictures -ne $expectations.Pictures) -or
+            $row.HeldOut -ne $case.HeldOut) {
             throw ('Content expectations differ; reinspect the candidate under the requested manifest: ' + $key)
         }
         $diagnosticsPath = Join-Path $run 'diagnostics.json'
@@ -73,7 +78,9 @@ foreach ($directory in $SourceDirectory) {
         }
         $row.MissingExpectedText = $missing
         $row.IgnoredEquationDiagnostics = $ignoredMath
-        $row.Severity = Get-PortfolioContentSeverity $missing $ignoredMath
+        $row.ExpectedSourcePictures = $expectations.Pictures
+        $row.ContentWitnesses = Get-PortfolioContentWitnesses $row $report $audit $loadedAudits
+        $row.Severity = Get-PortfolioContentSeverity $missing $ignoredMath $row.ContentWitnesses
         $copies = @(foreach ($name in $files) {
             $path = Join-Path $run $name
             if (Test-Path -LiteralPath $path -PathType Leaf) {

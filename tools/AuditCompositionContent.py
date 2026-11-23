@@ -462,6 +462,10 @@ def main():
     for outcome in outcomes["Rows"]:
         identifier, mode = outcome["Id"], outcome["Mode"]
         case, comparison = cases[identifier], compared[identifier, mode]
+        view = (case.get("ExpectedByMode") or {}).get(mode) or {}
+        expected_equations = view.get("ExpectedEquationCount", case.get("ExpectedEquationCount"))
+        expected_pictures = view.get("ExpectedInlineImageCount", case.get("ExpectedInlineImageCount"))
+        picture_case = {**case, "ExpectedInlineImageCount": expected_pictures}
         source = inputs / case["Input"]
         if not source.resolve().is_relative_to(public_cases):
             raise ValueError("Only public fixture inputs are supported")
@@ -502,14 +506,15 @@ def main():
         math_stream = re.sub(r"\s+", "", normalize("".join(item.get("DecodedText") or "" for item in operations
                                                            if item["Font"].startswith("Eq"))))
         observed_math = Counter({expression: math_stream.count(expression) for expression in expressions})
-        pictures = screen_picture_ink(source, pdf, reference, case, pymupdf) if args.screen_pictures else {
-            "Status": "Unverified" if "ExpectedInlineImageCount" in case else "No picture expectation"}
+        pictures = screen_picture_ink(source, pdf, reference, picture_case, pymupdf) if args.screen_pictures else {
+            "Status": "Unverified" if expected_pictures is not None else "No picture expectation"}
         if args.screen_pictures and (sha(pdf) != pdf_hash or sha(reference) != reference_hash):
             raise ValueError("PDF identities changed during picture screening: " + folder)
         rows.append({"Id": identifier, "Mode": mode, "HeldOut": case["HeldOut"], "InputSha256": sha(source),
                      "CandidatePdfSha256": pdf_hash, "ReferencePdfSha256": reference_hash,
                      "ReferenceSourceDirectory": str(reference.parent),
                      "CandidateOperationsSha256": operations_hash, "ReferenceOperationsSha256": office_ops_hash,
+                     "ExpectedSourceEquations": expected_equations, "ExpectedSourcePictures": expected_pictures,
                      "ReferenceInspectionLogSha256": office_log_hash,
                      "ReferencePages": pages, "CandidatePages": outcome["InspectedPages"],
                      "SourceProseTokens": sum(prose.values()), "SourceParts": parts,
@@ -523,7 +528,8 @@ def main():
                      "UnresolvedSourceFeatures": unresolved, "VisualGateFailures": comparison["Failures"]})
     if sha(library) != pin["LibrarySha256"] or sha(inspector) != inspector_hash:
         raise ValueError("Audit runtime changed")
-    report = {"Scope": "Public portfolio prose-token and simple-math screen with optional curated picture ink. Reading order, complete clipping and exact geometry require separate evidence.",
+    report = {"Schema": "ooxpdf-portfolio-content-audit/1",
+              "Scope": "Public portfolio prose-token and simple-math screen with optional curated picture ink. Reading order, complete clipping and exact geometry require separate evidence.",
               "ToolSha256": sha(Path(__file__)),
               "OutcomesSha256": sha(candidate / "outcomes.json"), "ComparisonsSha256": sha(candidate / "office-comparisons.json"),
               "FrozenRevision": pin["Revision"], "Framework": framework,

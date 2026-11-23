@@ -7,7 +7,8 @@ param(
     [ValidateSet('Both','Final','Review')] [string] $DocxPreset = 'Both',
     [string] $Manifest = (Join-Path $PSScriptRoot '../tests/Lokad.OoxPdf.Tests/Cases/Composition/portfolio.json'),
     [switch] $IncludeRawStreams,
-    [string] $ReuseCandidateDirectory
+    [string] $ReuseCandidateDirectory,
+    [string] $ContentAuditPath
 )
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'CompositionOutcomes.ps1')
@@ -21,6 +22,9 @@ $library = Join-Path (Split-Path $cli) 'Lokad.OoxPdf.dll'
 $libraryHash = (Get-FileHash -LiteralPath $library).Hash
 $cliHash = (Get-FileHash -LiteralPath $cli).Hash
 $inspectorHash = (Get-FileHash -LiteralPath $inspector).Hash
+$measurementIdentity = @{LibrarySha256=$libraryHash; InspectorSha256=$inspectorHash}
+$loadedAudits = @{}
+$audit = if ($ContentAuditPath) { Read-PortfolioContentAudit $ContentAuditPath $loadedAudits }
 if (Test-Path -LiteralPath $OutputDirectory) { throw 'A fresh portfolio output directory is required' }
 # Resolve every input before any conversion or output publication. A late stale
 # path must not invalidate an otherwise completed batch of expensive conversions.
@@ -118,8 +122,7 @@ foreach ($job in $jobs) {
             throw ('Reused PDF differs: ' + $key)
         }
         $inspect = Join-Path $run 'inspect'
-        # Text/graphics summaries suffice for routine content and geometry gates.
-        # Dump decoded font/image streams only for a focused byte-level audit.
+        # Keep text/graphics summaries for phrase checks and the independent content audit.
         $inspectArguments = @($pdf, $inspect)
         if (!$IncludeRawStreams) { $inspectArguments += '--text-only' }
         dotnet $inspector @inspectArguments *> (Join-Path $run 'inspect.log')
@@ -146,16 +149,19 @@ foreach ($job in $jobs) {
         }
         else { $diagnostics = @(Get-Content -LiteralPath $diagnosticsPath -Raw | ConvertFrom-Json) }
         $ignoredMath = Get-PortfolioIgnoredEquationCount $diagnostics
-        $rows += [ordered]@{
+        $row = [ordered]@{
             Id=$document.Id;Mode=$mode;HeldOut=$document.HeldOut;InputSha256=$document.Sha256
             PdfSha256=$pdfHash;TextOperationsSha256=$textInspection.Hash;ColdProcessElapsedMs=$elapsedMs
             MissingExpectedText=$missing;IgnoredEquationDiagnostics=$ignoredMath
             ExpectedSourceEquations=$expectations.Equations
+            ExpectedSourcePictures=$expectations.Pictures
             MathematicalTextOperations=@($textInspection.Operations | Where-Object Font -Like 'Eq*').Count
             InspectedPages=$pageCount
             Diagnostics=$diagnostics;VisualStatus='Pending independent Office comparison; no visual pass claimed'
-            Severity=Get-PortfolioContentSeverity $missing $ignoredMath
         }
+        $row.ContentWitnesses = Get-PortfolioContentWitnesses $row $measurementIdentity $audit $loadedAudits
+        $row.Severity = Get-PortfolioContentSeverity $missing $ignoredMath $row.ContentWitnesses
+        $rows += $row
         if ((Get-FileHash -LiteralPath $library).Hash -ne $libraryHash -or
             (Get-FileHash -LiteralPath $cli).Hash -ne $cliHash -or
             (Get-FileHash -LiteralPath $inspector).Hash -ne $inspectorHash) { throw 'A measured runtime changed' }

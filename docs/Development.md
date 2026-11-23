@@ -139,6 +139,15 @@ glyphs and unresolved states. An unmet witness gives a nonzero exit status.
 Use this alongside decoded-text checks and raster review for occlusion,
 complex paint or text spread across multiple spans.
 
+Measurement records declared formula and picture expectations. A positive
+expectation stays unverified until an audit supplies a witness. Pass the
+`AuditCompositionContent.py` report via `-ContentAuditPath` on measurement,
+join or comparison. A join retains the report's hash. Comparison checks the
+bound Office PDF and can reuse pixel metrics while reporting content misses
+separately. Simple formula witnesses check decoded expression text. Native
+picture witnesses check the curated paint regions. Exact placement, glyph ink
+and unsupported source scopes still need their own review.
+
 Portfolio joins check the selected modes and content
 expectations against the pinned text operations and verify the diagnostic
 sidecars. Reinspect existing PDFs with `-ReuseCandidateDirectory` when a join

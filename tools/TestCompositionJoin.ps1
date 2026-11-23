@@ -185,6 +185,50 @@ try {
     $docxData.Rows = @($presentationData.Rows[0],$docxData.Rows[1])
     $docxData | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $presentationSource 'outcomes.json')
     Reject 'unselected-docx-mode-on-pptx' 'Outcome mode does not match the input format' @($presentationSource) $presentationManifest
+
+    $auditManifest = Join-Path $root 'audit-manifest.json'
+    $auditCase = $cases[0].Clone()
+    $auditCase.ExpectedText = @()
+    $auditCase.ExpectedEquationCount = 1
+    $auditCase.ExpectedInlineImageCount = 1
+    ConvertTo-Json -InputObject @($auditCase) | Set-Content -LiteralPath $auditManifest
+    $reportPath = Join-Path $sources[0] 'outcomes.json'
+    $measured = Get-Content -LiteralPath $reportPath -Raw | ConvertFrom-Json -AsHashtable
+    $row = $measured.Rows[0]
+    $row.MissingExpectedText = @()
+    $row.ExpectedSourceEquations = 1
+    $row.ExpectedSourcePictures = 1
+    $measured | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $reportPath
+    $auditPath = Join-Path $root 'content-audit.json'
+    @{Schema='ooxpdf-portfolio-content-audit/1';ToolSha256=('F'*64);ManifestSha256=(Get-FileHash $auditManifest).Hash;
+      LibrarySha256=$measured.LibrarySha256;InspectorSha256=$measured.InspectorSha256;Rows=@(
+        @{Id=$row.Id;Mode=$row.Mode;InputSha256=$row.InputSha256;CandidatePdfSha256=$row.PdfSha256;
+          CandidateOperationsSha256=$row.TextOperationsSha256;ExpectedSourceEquations=1;ExpectedSourcePictures=1;
+          IgnoredEquationDiagnostics=0;ReferencePdfSha256=('9'*64);UnresolvedSourceFeatures=@();
+          ExpectedSimpleMath=@{'x+y'=1};MissingSimpleMath=@{};PictureInk=@{ExpectedSourcePictures=1;Status='Picture witnesses present'}}
+    )} | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $auditPath
+    $arguments = @{SourceDirectory=$sources[0];Manifest=$auditManifest;OutputDirectory=(Join-Path $root 'audited');
+        DocxPreset='Review';ContentAuditPath=$auditPath}
+    & $JoinScript @arguments | Out-Null
+    Join 'audited-again' @((Join-Path $root 'audited')) $auditManifest
+    $retained = (Get-Content -LiteralPath (Join-Path $root 'audited-again/outcomes.json') -Raw | ConvertFrom-Json).Rows[0]
+    if ($retained.Severity -cne 'Needs geometry and visual review' -or
+        $retained.ContentWitnesses.Equations -cne 'Witnesses present' -or $retained.ContentWitnesses.Pictures -cne 'Witnesses present' -or
+        $retained.ContentWitnesses.Audit.Sha256 -cne (Get-FileHash -LiteralPath $auditPath).Hash) {
+        throw 'Joined audit did not retain the identified positive witnesses'
+    }
+    Add-Content -LiteralPath $auditPath ' '
+    Reject 'changed-content-audit' 'Retained portfolio content audit changed' @((Join-Path $root 'audited')) $auditManifest
+    $pending = Get-Content -LiteralPath $auditPath -Raw | ConvertFrom-Json -AsHashtable
+    $pending.Rows[0].UnresolvedSourceFeatures = @(@{Part='word/document.xml';Feature='vanish'})
+    $pending.Rows[0].MissingSimpleMath = @{'x+y'=1}
+    $pending | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $auditPath
+    $arguments.OutputDirectory = Join-Path $root 'audit-unverified'
+    & $JoinScript @arguments | Out-Null
+    $unverified = (Get-Content -LiteralPath (Join-Path $arguments.OutputDirectory 'outcomes.json') -Raw | ConvertFrom-Json).Rows[0]
+    if ($unverified.ContentWitnesses.Equations -cne 'Unverified' -or $unverified.Severity -cne 'Content evidence incomplete') {
+        throw 'The audit claimed a visible omission in unresolved source content'
+    }
 }
 finally { Remove-Item Function:\dotnet }
 [ordered]@{Rejections=$rejections;Builds=0;Conversions=0;RunnerInvocations=0} |

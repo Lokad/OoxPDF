@@ -711,6 +711,8 @@ try {
     foreach ($row in $outcomes.Rows) {
         $row.MissingExpectedText = @()
         $row.IgnoredEquationDiagnostics = 0
+        $row.ExpectedSourceEquations = 0
+        $row.ExpectedSourcePictures = 0
         $row.Severity = 'Content blocker'
     }
     $outcomes.Rows[0].MissingExpectedText = @('Required phrase')
@@ -817,6 +819,53 @@ try {
     $result=Get-Content (Join-Path $case.CandidateDirectory 'office-comparisons.json') -Raw | ConvertFrom-Json
     if ($result.Rows[0].Failures -notcontains 'Pagination') { throw 'Stale legacy raster concealed the second page' }
     $passed+='legacy-raster-cannot-conceal-pagination'
+
+    $case = New-Case 'audited-content' 'legacy'
+    $measuredPath = Join-Path $case.CandidateDirectory 'outcomes.json'
+    $measured = Get-Content -LiteralPath $measuredPath -Raw | ConvertFrom-Json -AsHashtable
+    $measured.InspectorSha256 = 'D' * 64
+    $auditRows = @(foreach ($row in $measured.Rows) {
+        $key = $row.Id + '-' + $row.Mode
+        $textPath = Join-Path $case.CandidateDirectory "$key/inspect/text-operations.json"
+        New-Item -ItemType Directory -Path (Split-Path $textPath) | Out-Null
+        '[]' | Set-Content -LiteralPath $textPath
+        $row.TextOperationsSha256 = (Get-FileHash -LiteralPath $textPath).Hash
+        $row.MissingExpectedText = @()
+        $row.IgnoredEquationDiagnostics = 0
+        $row.ExpectedSourceEquations = 1
+        $row.ExpectedSourcePictures = 1
+        @{Id=$row.Id;Mode=$row.Mode;InputSha256=$row.InputSha256;CandidatePdfSha256=$row.PdfSha256;
+          CandidateOperationsSha256=$row.TextOperationsSha256;ExpectedSourceEquations=1;ExpectedSourcePictures=1;
+          IgnoredEquationDiagnostics=0;UnresolvedSourceFeatures=@();ExpectedSimpleMath=@{'x+y'=1};
+          MissingSimpleMath=if ($row.Id -eq 'first') {@{'x+y'=1}} else {@{}};
+          PictureInk=@{ExpectedSourcePictures=1;Status=if ($row.Id -eq 'first') {'Picture witnesses present'} else {'Missing picture ink'}};
+          ReferencePdfSha256=(Get-FileHash -LiteralPath (Join-Path $case.ReferenceDirectory "$key/reference.pdf")).Hash}
+    })
+    $measured | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $measuredPath
+    $auditPath = Join-Path $OutputDirectory 'content-audit.json'
+    $content = @{Schema='ooxpdf-portfolio-content-audit/1';ToolSha256=('E'*64);ManifestSha256=('F'*64);
+        LibrarySha256=$measured.LibrarySha256;InspectorSha256=$measured.InspectorSha256;Rows=$auditRows}
+    $content | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $auditPath
+    $arguments = @{CandidateDirectory=$case.CandidateDirectory;ReferenceDirectory=$case.ReferenceDirectory;
+        VisualDiffPath=$visualDiff;ValidationToolsDirectory=$tools;ContentAuditPath=$auditPath;
+        ReuseComparisonDirectory=$baseline.CandidateDirectory}
+    $beforeCalls = $comparisonProbeState.DiffCalls
+    & $script @arguments | Out-Null
+    $report = Get-Content -LiteralPath (Join-Path $case.CandidateDirectory 'office-comparisons.json') -Raw | ConvertFrom-Json
+    if ($comparisonProbeState.DiffCalls -ne $beforeCalls -or @($report.Rows | Where-Object {
+        !$_.ReusedComparison -or $_.Failures.Count -or $_.ContentSeverity -cne 'Content blocker'
+    }).Count -or $report.Rows[0].ContentWitnesses.Equations -cne 'Missing' -or
+        $report.Rows[1].ContentWitnesses.Pictures -cne 'Missing') {
+        throw 'Reused passing metrics concealed a bound content omission'
+    }
+    $passed += 'reused-raster-retains-audited-content-blockers'
+    $auditRows[1].ReferencePdfSha256 = '0' * 64
+    $content | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $auditPath
+    $failure = $null
+    try { & $script @arguments | Out-Null } catch { $failure = $_.Exception.Message }
+    if ($failure -cne 'Portfolio content audit identity differs: second/final-preserve' -or
+        $comparisonProbeState.DiffCalls -ne $beforeCalls) { throw 'Audit accepted an unrelated reference PDF' }
+    $passed += 'content-audit-reference-refusal'
 }
 finally { Remove-Item Function:\dotnet }
 @{Passed=$passed;LibraryBuilds=0;Conversions=0;NativeRasterizations=0;Scope='Fake PDF/page inputs; real preflight, reuse and comparison branches'} |

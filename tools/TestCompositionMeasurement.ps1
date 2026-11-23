@@ -116,8 +116,8 @@ foreach ($fault in @('runtime', 'input', 'pdf', 'missing', 'duplicate',
     $prior = Join-Path $case 'prior'
     New-Item -ItemType Directory -Path $prior -Force | Out-Null
     $manifest = Join-Path $case 'manifest.json'
-    $documents = @(@{Id='first';Input='first.docx';Sha256=$firstHash;ExpectedText=@('Retained source.');ExpectedEquationCount=0},
-        @{Id='second';Input='second.docx';Sha256=(Get-FileHash -LiteralPath $second).Hash;ExpectedText=@('Retained source.');ExpectedEquationCount=0})
+    $documents = @(@{Id='first';Input='first.docx';Sha256=$firstHash;ExpectedText=@('Retained source.');ExpectedEquationCount=0;ExpectedInlineImageCount=0},
+        @{Id='second';Input='second.docx';Sha256=(Get-FileHash -LiteralPath $second).Hash;ExpectedText=@('Retained source.');ExpectedEquationCount=1;ExpectedInlineImageCount=1})
     $documents | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $manifest
     $priorRows = @(foreach ($document in $documents) {
         foreach ($mode in @('final-preserve','all-word-compatible')) {
@@ -206,8 +206,11 @@ foreach ($fault in @('runtime', 'input', 'pdf', 'missing', 'duplicate',
             throw 'Reinspection changed candidate identity/timing or lost content'
         }
         $expectedDiagnostics = if ($row.Id -eq 'first') { 0 } else { 1 }
+        $expectedSeverity = if ($row.Id -eq 'first') { 'Needs geometry and visual review' } else { 'Content evidence incomplete' }
+        $expectedWitnesses = if ($row.Id -eq 'first') { 'No expectation' } else { 'Unverified' }
         if ($row.Diagnostics.Count -ne $expectedDiagnostics -or $row.IgnoredEquationDiagnostics -ne 0 -or
-            $row.Severity -ne 'Needs geometry and visual review' -or
+            $row.Severity -ne $expectedSeverity -or $row.ExpectedSourcePictures -ne $expectedDiagnostics -or
+            $row.ContentWitnesses.Equations -cne $expectedWitnesses -or $row.ContentWitnesses.Pictures -cne $expectedWitnesses -or
             ($expectedDiagnostics -and $row.Diagnostics[0].Message -ne 'Retained warning.')) {
             throw 'Reinspection changed retained diagnostics or content classification'
         }

@@ -9,7 +9,8 @@ param(
     [string[]] $ReuseComparisonDirectory = @(),
     [ValidateSet('OfficePdf','OfficeImage')] [string] $ReferenceKind = 'OfficePdf',
     [string] $RasterizerPath,
-    [string] $InspectorPath
+    [string] $InspectorPath,
+    [string] $ContentAuditPath
 )
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'ReferenceCache.ps1')
@@ -21,6 +22,8 @@ $candidate = (Resolve-Path -LiteralPath $CandidateDirectory).Path
 $references = @($ReferenceDirectory | ForEach-Object { (Resolve-Path -LiteralPath $_).Path } | Select-Object -Unique)
 $outcomes = Get-Content -LiteralPath (Join-Path $candidate 'outcomes.json') -Raw | ConvertFrom-Json
 if (!$outcomes.Rows) { throw 'A nonempty measured portfolio is required' }
+$loadedAudits = @{}
+$audit = if ($ContentAuditPath) { Read-PortfolioContentAudit $ContentAuditPath $loadedAudits }
 $docxThresholdSource = Join-Path $PSScriptRoot 'CompositionDocxThresholds.json'
 $pptxThresholdSource = Join-Path $PSScriptRoot 'CompositionPptxThresholds.json'
 $thresholds = @{
@@ -173,6 +176,10 @@ $jobs = @(foreach ($row in $outcomes.Rows) {
     if (@($sources.ImageHash | Select-Object -Unique).Count -ne 1) { throw ('Conflicting image references: '+$id) }
     $selected = $sources[0]
     $source = $selected.Source; $referencePdf = $selected.Pdf; $referenceHash = $selected.Hash
+    $witnesses = Get-PortfolioContentWitnesses $row $outcomes $audit $loadedAudits $referenceHash
+    if ($witnesses.Audit -and (Get-FileHash -LiteralPath (Join-Path $run 'inspect/text-operations.json')).Hash -cne $row.TextOperationsSha256) {
+        throw ('Portfolio content audit text inspection differs: ' + $id)
+    }
     $candidatePageCount = $row.InspectedPages
     if ($null -eq $candidatePageCount) { $candidatePageCount = Get-PortfolioPdfPageCount $pdf $row.PdfSha256 }
     if (($candidatePageCount -isnot [int] -and $candidatePageCount -isnot [long]) -or $candidatePageCount -lt 1) {
@@ -195,7 +202,7 @@ $jobs = @(foreach ($row in $outcomes.Rows) {
     [pscustomobject]@{Row=$row;Id=$id;Run=$run;Source=$source;Pdf=$pdf;
         ReferencePdf=$referencePdf;ReferenceHash=$referenceHash;Identity=$selected.Identity;IdentityHash=$selected.IdentityHash;
         ExportLog=$selected.ExportLog;ExportLogHash=$selected.ExportLogHash;Reuse=$reuse;ReuseFailures=$reuseFailures;Limits=$limits;Diff=$diff;
-        CandidatePageCount=$candidatePageCount;ReferencePageCount=$referencePageCount;
+        CandidatePageCount=$candidatePageCount;ReferencePageCount=$referencePageCount;ContentWitnesses=$witnesses;
         ImagePath=$selected.ImagePath;ImageHash=$selected.ImageHash;Dpi=$selected.Dpi;Calibration=$selected.Calibration}
 })
 # Match the reference cache's PDF/DPI/tool/page-hash convention. Legacy raster
@@ -243,7 +250,7 @@ foreach ($job in $jobs) {
     $row = $job.Row; $id = $job.Id; $run = $job.Run; $source = $job.Source
     $pdf = $job.Pdf; $referencePdf = $job.ReferencePdf; $referenceHash = $job.ReferenceHash
     $reuse = @($job.Reuse); $diff = $job.Diff
-    $contentSeverity = Get-PortfolioContentSeverity $row.MissingExpectedText $row.IgnoredEquationDiagnostics
+    $contentSeverity = Get-PortfolioContentSeverity $row.MissingExpectedText $row.IgnoredEquationDiagnostics $job.ContentWitnesses
     if ((Get-FileHash -LiteralPath $pdf).Hash -ne $row.PdfSha256 -or
         (Get-FileHash -LiteralPath $referencePdf).Hash -ne $referenceHash) { throw ('Comparison input changed: ' + $id) }
     if ((Get-FileHash -LiteralPath $job.Identity).Hash -ne $job.IdentityHash -or
@@ -258,9 +265,9 @@ foreach ($job in $jobs) {
             ReferenceKind=$ReferenceKind;ReferenceImageMetadataSha256=$job.ImageHash;ReferenceCalibrationStatus=$job.Calibration;
             RasterDpi=$job.Dpi;
             Failures=$job.ReuseFailures;Metrics=$prior.Metrics;Thresholds=$job.Limits;
-            ContentSeverity=$contentSeverity;ReusedComparison=$reuse[0].Path;
+            ContentSeverity=$contentSeverity;ContentWitnesses=$job.ContentWitnesses;ReusedComparison=$reuse[0].Path;
             ReusedComparisonSha256=(Get-FileHash $reuse[0].Path).Hash}
-        Write-Output ($id + ': reused pixel metrics and applied current thresholds')
+        Write-Output ("$id — $contentSeverity. Reused pixel metrics with current thresholds.")
         continue
     }
     $rasterFolder=if ($job.Dpi -eq 144) {'portfolio-raster'} else {'portfolio-raster-dpi'+$job.Dpi}
@@ -272,7 +279,7 @@ foreach ($job in $jobs) {
     $metrics = @(Get-Content (Join-Path $diff 'metrics.json') -Raw | ConvertFrom-Json)
     $limits = $job.Limits
     $failures = @(Get-ComparisonFailures $metrics $limits $job.CandidatePageCount $job.ReferencePageCount $id)
-    $rows += [ordered]@{Id=$row.Id;Mode=$row.Mode;HeldOut=$row.HeldOut;CandidatePdfSha256=$row.PdfSha256;ReferencePdfSha256=$referenceHash;ReferenceSourceDirectory=$source;ReferenceIdentitySha256=$job.IdentityHash;ReferenceExportLogSha256=$job.ExportLogHash;ReferenceKind=$ReferenceKind;ReferenceImageMetadataSha256=$job.ImageHash;ReferenceCalibrationStatus=$job.Calibration;RasterDpi=$job.Dpi;Failures=@($failures | Sort-Object -Unique);Metrics=$metrics;Thresholds=$limits;ContentSeverity=$contentSeverity}
+    $rows += [ordered]@{Id=$row.Id;Mode=$row.Mode;HeldOut=$row.HeldOut;CandidatePdfSha256=$row.PdfSha256;ReferencePdfSha256=$referenceHash;ReferenceSourceDirectory=$source;ReferenceIdentitySha256=$job.IdentityHash;ReferenceExportLogSha256=$job.ExportLogHash;ReferenceKind=$ReferenceKind;ReferenceImageMetadataSha256=$job.ImageHash;ReferenceCalibrationStatus=$job.Calibration;RasterDpi=$job.Dpi;Failures=@($failures | Sort-Object -Unique);Metrics=$metrics;Thresholds=$limits;ContentSeverity=$contentSeverity;ContentWitnesses=$job.ContentWitnesses}
     if ($ReferenceKind -eq 'OfficeImage') {
         if ((Get-FileHash $job.ImagePath).Hash -ne $job.ImageHash) { throw ('Image reference metadata changed: '+$id) }
         $null=Test-OfficeImageReference $source $row.InputSha256
@@ -283,7 +290,8 @@ foreach ($job in $jobs) {
         $job.ExportLogHash -and (Get-FileHash -LiteralPath $job.ExportLog).Hash -ne $job.ExportLogHash) {
         throw ('Comparison reference provenance changed: ' + $id)
     }
-    Write-Output ($id + ': ' + ($failures | Sort-Object -Unique) -join ', ')
+    $visualVerdict = if ($failures.Count) { ($failures | Sort-Object -Unique) -join ', ' } else { 'Visual thresholds met' }
+    Write-Output ("$id — $contentSeverity. $visualVerdict.")
 }
 if ((Get-FileHash -LiteralPath $VisualDiffPath).Hash -ne $comparisonPolicy.VisualDiffSha256 -or
     (Get-PortfolioRasterizerId) -ne $comparisonPolicy.RasterizerId -or
