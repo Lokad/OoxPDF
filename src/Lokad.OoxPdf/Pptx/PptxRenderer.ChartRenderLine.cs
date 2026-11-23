@@ -575,7 +575,6 @@ internal sealed partial class PptxRenderer
             {
                 ChartTextStyle tickStyle = default;
                 if (categoryPlot is not { } plot || resolvedValueExtents is not { } valueExtents) return (0d, tickStyle);
-                XElement plotElement = plot.Source;
                 var textMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
 
                 PptxSceneChartGrouping grouping = ReadSceneChartGrouping(plot, PptxSceneChartGrouping.Standard);
@@ -713,12 +712,11 @@ internal sealed partial class PptxRenderer
     private static bool HasExplicitChartValueAxisScale(PptxSceneChartAxis? axis) =>
         axis is { Minimum: not null, Maximum: not null, MajorUnit: not null };
 
-    private static ChartLayout GetBubbleChartLayout(PptxDocument document, PptxTheme theme, ShapeBounds bounds, PptxSceneChart sceneChart, PptxColorMap colorMap)
+    private static ChartLayout GetBubbleChartLayout(PptxDocument document, ShapeBounds bounds, PptxSceneChart sceneChart)
     {
         ChartFrameBox frame = GetChartFrameBox(document, bounds);
         string? title = sceneChart.Title.Text;
         ChartLegendLayout legend = ReadSceneChartLegendLayout(sceneChart);
-        ChartTextStyle legendTextStyle = ReadSceneChartLegendTextStyle(theme, sceneChart);
         ChartPlotLayout plotLayout = GetBubbleChartPlotLayout();
         return new ChartLayout(frame, plotLayout.PlotAreaBox, plotLayout.PlotBox, plotLayout.ManualLayoutTargetKind is not null, title, legend);
 

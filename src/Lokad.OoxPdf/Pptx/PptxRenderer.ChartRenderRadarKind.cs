@@ -1,4 +1,3 @@
-using System.Xml.Linq;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Pdf;
@@ -14,7 +13,6 @@ internal sealed partial class PptxRenderer
         PptxColorMap colorMap,
         ChartColorPalette chartPalette,
         ShapeBounds bounds,
-        XDocument chartXml,
         PptxSceneChart sceneChart,
         ChartWorkbookData? workbook,
         List<PdfFontResource> fonts,

@@ -227,7 +227,7 @@ internal sealed partial class PptxRenderer
             {
                 IReadOnlyList<ChartSeriesFill?> seriesFills = ReadSceneSeriesFills(bubblePlot);
                 IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadSceneSeriesStrokes(bubblePlot, null);
-                ChartLayout chartLayout = GetBubbleChartLayout(document, theme, bounds, sceneChart, colorMap);
+                ChartLayout chartLayout = GetBubbleChartLayout(document, bounds, sceneChart);
                 chartLayout = await PrepareDefaultAxisTitleBandsAsync(chartLayout, theme, sceneChart, fontResolver).ConfigureAwait(false);
                 RenderChartAreaStyle(graphics, document, bounds, sceneChart);
                 ChartPlotBox plotBox = chartLayout.PlotBox;
@@ -241,7 +241,7 @@ internal sealed partial class PptxRenderer
                     seriesFills, seriesStrokes, paletteOffset: 0, workbook: workbook);
                 ChartBubbleSizing? bubbleSizing = null;
                 ChartLegendBox? preparedLegend = null;
-                if (await TryPrepareBubbleGeometryAsync(theme, sceneChart, chartXml, chartLayout, bubblePlot, bubbleSeries,
+                if (await TryPrepareBubbleGeometryAsync(theme, sceneChart, chartLayout, bubblePlot, bubbleSeries,
                         legendEntries, xValueAxis, yValueAxis, measured.DataX, measured.DataY, fontResolver, context: context).ConfigureAwait(false) is { } prepared)
                 {
                     chartLayout = prepared.Layout;

@@ -1,4 +1,3 @@
-using System.Xml.Linq;
 using Lokad.OoxPdf.Fonts;
 
 namespace Lokad.OoxPdf.Pptx;
@@ -12,7 +11,7 @@ internal sealed partial class PptxRenderer
         ChartBubbleSizing Sizing, ChartLegendBox? LegendBox);
 
     private static async ValueTask<ChartBubbleGeometry?> TryPrepareBubbleGeometryAsync(PptxTheme theme,
-        PptxSceneChart chart, XDocument xml, ChartLayout fallback, PptxSceneChartPlot? plot,
+        PptxSceneChart chart, ChartLayout fallback, PptxSceneChartPlot? plot,
         IReadOnlyList<ScatterSeries> series, IReadOnlyList<ChartLegendEntry> entries,
         ChartAxisSource xAxis, ChartAxisSource yAxis, ChartValueExtents dataX, ChartValueExtents dataY,
         PresentationFontResolver resolver, PptxRenderContext? context = null)
