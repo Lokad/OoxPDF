@@ -721,15 +721,16 @@ internal sealed class PdfGraphicsBuilder
         return builder.ToString();
     }
 
-    // A structural symbol may use several glyph pieces while retaining one
-    // Unicode scalar for selection, copying and accessible text extraction.
-    public void BeginActualText(int sourceCodePoint)
+    // A structural symbol owns one Unicode scalar. An overprint has no text of its own.
+    public void BeginActualText(int? sourceCodePoint)
     {
-        if (!Rune.IsValid(sourceCodePoint)) throw new ArgumentOutOfRangeException(nameof(sourceCodePoint));
+        if (sourceCodePoint is int scalar && !Rune.IsValid(scalar)) throw new ArgumentOutOfRangeException(nameof(sourceCodePoint));
         if (actualTextOpen) throw new InvalidOperationException("ActualText spans cannot be nested.");
         AdmitTextConstruction(64);
-        string hex = Convert.ToHexString(Encoding.BigEndianUnicode.GetBytes(char.ConvertFromUtf32(sourceCodePoint)));
-        builder.Append("/Span << /ActualText <FEFF").Append(hex).AppendLine("> >> BDC");
+        builder.Append("/Span << /ActualText <FEFF");
+        if (sourceCodePoint is int codePoint)
+            builder.Append(Convert.ToHexString(Encoding.BigEndianUnicode.GetBytes(char.ConvertFromUtf32(codePoint))));
+        builder.AppendLine("> >> BDC");
         actualTextOpen = true;
     }
 

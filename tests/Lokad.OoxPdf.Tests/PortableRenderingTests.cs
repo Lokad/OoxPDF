@@ -16,6 +16,29 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static partial class PortableRenderingTests
 {
+    public static void PortableRenderingSyntheticBoldPaintsTwiceAndExtractsOnce()
+    {
+        DocxParagraph heading = DocxTests.CreateDocxLayoutParagraph("Heading");
+        heading = heading with { Runs = [heading.Runs[0] with { Bold = true }] };
+        var document = DocxTests.CreateLayoutTestDocument(
+            [new DocxParagraphElement(heading), new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Following"))], []);
+        PdfPage page = new DocxRenderer(new PinnedResolver(), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
+
+        var paint = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true, honorActualText: false)
+            .Where(show => !string.IsNullOrWhiteSpace(show.Text)).ToArray();
+        TestAssert.True(paint.Select(show => show.Text).SequenceEqual(["Heading", "Heading", "Following"]),
+            "Both heading paints and the following ordinary paragraph must remain in source order.");
+        TestAssert.True(Math.Abs(paint[1].X - paint[0].X - 0.35d) < 0.001d && paint[1].Y == paint[0].Y &&
+            ReferenceEquals(paint[1].Font, paint[0].Font), "The synthetic bold overprint must keep its face, baseline and offset.");
+
+        var logical = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true)
+            .Where(show => !string.IsNullOrWhiteSpace(show.Text)).ToArray();
+        TestAssert.True(logical.SequenceEqual([paint[0], paint[2]]),
+            "The first heading paint and the following paragraph each own their source text.");
+        CheckWrittenPages([page]);
+    }
+
     public static void PortableRenderingAutomaticColumnLabelsWrapInsideChartFrames() =>
         PptxColumnLabelWrappingTests.CheckAutomatic();
 

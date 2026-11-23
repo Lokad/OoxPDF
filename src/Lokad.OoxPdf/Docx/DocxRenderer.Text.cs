@@ -55,7 +55,9 @@ internal sealed partial class DocxRenderer
         DrawRunGlyphText(graphics, resource, segment.Text, segment.X, segment.BaselineY, color, plan, segment.SyntheticItalic);
         if (!segment.IsTerminalLineSpace && segment.SyntheticBold)
         {
+            graphics.BeginActualText(sourceCodePoint: null);
             DrawRunGlyphText(graphics, resource, segment.Text, segment.X + 0.35d, segment.BaselineY, color, plan, segment.SyntheticItalic);
+            graphics.EndActualText();
         }
 
         if (!segment.IsTerminalLineSpace)

@@ -30,7 +30,11 @@ internal static partial class PdfWriterTests
         graphics.BeginActualText(0x221A);
         graphics.FillRectangle(10d, 20d, 1d, 30d);
         graphics.EndActualText();
+        graphics.BeginActualText(sourceCodePoint: null);
+        graphics.FillRectangle(10.35d, 20d, 1d, 30d);
+        graphics.EndActualText();
         TestAssert.Contains("/ActualText <FEFF221A>", graphics.ToString());
+        TestAssert.Contains("/ActualText <FEFF>", graphics.ToString());
         PdfContentValidator.ValidatePage(new PdfPage(100d, 100d, graphics.ToString()), 0, default);
     }
 
