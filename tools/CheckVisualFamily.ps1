@@ -14,6 +14,10 @@ param(
 
     [string] $CliPath,
 
+    [string] $RasterizerPath,
+    [string] $VisualDiffPath,
+    [string] $PdfInspectorPath,
+
     [switch] $SkipBuild,
 
     [string[]] $CasePattern = @(),
@@ -123,6 +127,11 @@ function New-ReportRow($case, [bool]$passed, [string]$errorMessage, [string]$exp
                 $runInfo.CliSha256 -ne $cliHash -or $runInfo.LibrarySha256 -ne $libraryHash) {
                 throw "Visual case identity changed during the family run. $($caseManifest.id)"
             }
+            if (($rasterizerBinding -and $runInfo.RasterizerSha256 -ne $rasterizerBinding.Hash) -or
+                ($visualDiffBinding -and $runInfo.VisualDiffSha256 -ne $visualDiffBinding.Hash) -or
+                ($inspectorBinding -and $runInfo.PdfInspectorSha256 -ne $inspectorBinding.Hash)) {
+                throw "Visual case tool binding differs from the family run. $($caseManifest.id)"
+            }
         }
         $metricsPath = Join-Path $latestRun.FullName "comparison/metrics.json"
         if (Test-Path -LiteralPath $metricsPath) {
@@ -178,6 +187,7 @@ function New-ReportRow($case, [bool]$passed, [string]$errorMessage, [string]$exp
         referencePdfSha256 = $runInfo.ReferencePdfSha256
         visualDiffSha256 = $runInfo.VisualDiffSha256
         rasterizerSha256 = $runInfo.RasterizerSha256
+        pdfInspectorSha256 = $runInfo.PdfInspectorSha256
         pdfiumPinSha256 = $runInfo.PdfiumPinSha256
         dpi = $runInfo.Dpi
         docxMarkupGeometry = $runInfo.DocxMarkupGeometry
@@ -266,6 +276,9 @@ if ($cases.Count -eq 0) {
 }
 
 Write-Host ("Visual family: {0} ({1} cases)" -f $Family, $cases.Count)
+$rasterizerBinding = if ($RasterizerPath) { Get-FileHash -LiteralPath $RasterizerPath }
+$visualDiffBinding = if ($VisualDiffPath) { Get-FileHash -LiteralPath $VisualDiffPath }
+$inspectorBinding = if ($PdfInspectorPath) { Get-FileHash -LiteralPath $PdfInspectorPath }
 # Bind every case to the same CLI. A supplied frozen CLI never builds the library;
 # independent validation tools can still be built once unless -SkipBuild is set.
 if (!$CliPath) {
@@ -278,9 +291,11 @@ $CliPath = (Resolve-Path -LiteralPath $CliPath).Path
 $libraryPath = Join-Path (Split-Path $CliPath) 'Lokad.OoxPdf.dll'
 $cliHash = (Get-FileHash -LiteralPath $CliPath).Hash
 $libraryHash = (Get-FileHash -LiteralPath $libraryPath).Hash
-if (!$SkipBuild) {
-& (Join-Path $PSScriptRoot "EnsureDotnetBuild.ps1") -Framework $Framework -Project (Join-Path $repoRoot "tools/Lokad.OoxPdf.VisualDiff/Lokad.OoxPdf.VisualDiff.csproj") -OutputDll (Join-Path $repoRoot "tools/Lokad.OoxPdf.VisualDiff/bin/Debug/$Framework/Lokad.OoxPdf.VisualDiff.dll") -Description "VisualDiff"
-& (Join-Path $PSScriptRoot "EnsureDotnetBuild.ps1") -Framework $Framework -Project (Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfiumRasterizer/Lokad.OoxPdf.PdfiumRasterizer.csproj") -OutputDll (Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfiumRasterizer/bin/Debug/$Framework/Lokad.OoxPdf.PdfiumRasterizer.dll") -Description "PDFium rasterizer"
+if (!$SkipBuild -and !$visualDiffBinding) {
+    & (Join-Path $PSScriptRoot "EnsureDotnetBuild.ps1") -Framework $Framework -Project (Join-Path $repoRoot "tools/Lokad.OoxPdf.VisualDiff/Lokad.OoxPdf.VisualDiff.csproj") -OutputDll (Join-Path $repoRoot "tools/Lokad.OoxPdf.VisualDiff/bin/Debug/$Framework/Lokad.OoxPdf.VisualDiff.dll") -Description "VisualDiff"
+}
+if (!$SkipBuild -and !$rasterizerBinding) {
+    & (Join-Path $PSScriptRoot "EnsureDotnetBuild.ps1") -Framework $Framework -Project (Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfiumRasterizer/Lokad.OoxPdf.PdfiumRasterizer.csproj") -OutputDll (Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfiumRasterizer/bin/Debug/$Framework/Lokad.OoxPdf.PdfiumRasterizer.dll") -Description "PDFium rasterizer"
 }
 # Only inspection gates need this tool. Cases consume it prebuilt, just like the
 # rasterizer and VisualDiff, rather than invoking MSBuild for each inspected PDF.
@@ -299,7 +314,7 @@ foreach ($case in $cases) {
         $needsPdfInspection = $true
     }
 }
-if ($needsPdfInspection) {
+if ($needsPdfInspection -and !$inspectorBinding) {
     $inspector = Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfInspect/bin/Debug/$Framework/Lokad.OoxPdf.PdfInspect.dll"
     if (!$SkipBuild) {
         & (Join-Path $PSScriptRoot 'EnsureDotnetBuild.ps1') -Framework $Framework -Project (Join-Path $repoRoot 'tools/Lokad.OoxPdf.PdfInspect/Lokad.OoxPdf.PdfInspect.csproj') -OutputDll $inspector -Description 'PDF inspect'
@@ -330,6 +345,9 @@ foreach ($case in $cases) {
         if ($CacheOnlyReference) {
             $caseArgs.CacheOnlyReference = $true
         }
+        if ($rasterizerBinding) { $caseArgs.RasterizerPath = $rasterizerBinding.Path }
+        if ($visualDiffBinding) { $caseArgs.VisualDiffPath = $visualDiffBinding.Path }
+        if ($inspectorBinding) { $caseArgs.PdfInspectorPath = $inspectorBinding.Path }
 
         & (Join-Path $PSScriptRoot "CheckVisualCase.ps1") -Framework $Framework @caseArgs
     }
@@ -344,6 +362,11 @@ foreach ($case in $cases) {
 if ((Get-FileHash -LiteralPath $CliPath).Hash -ne $cliHash -or
     (Get-FileHash -LiteralPath $libraryPath).Hash -ne $libraryHash) {
     throw 'The family CLI or library changed during validation'
+}
+foreach ($binding in @($rasterizerBinding, $visualDiffBinding, $inspectorBinding)) {
+    if ($binding -and (Get-FileHash -LiteralPath $binding.Path).Hash -ne $binding.Hash) {
+        throw "Visual validation tool changed during the family: $($binding.Path)"
+    }
 }
 
 New-Item -ItemType Directory -Force -Path $reportRoot | Out-Null

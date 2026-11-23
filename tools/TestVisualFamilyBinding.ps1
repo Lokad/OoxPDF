@@ -129,14 +129,16 @@ $vendor=Join-Path $repo 'tools/vendor/pdfium/win-x64'
 New-Item -ItemType Directory -Path $vendor -Force | Out-Null
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'vendor/pdfium/win-x64/pdfium.sha256') -Destination $vendor
 @'
-param($InputPath,$OutputDirectory,$Dpi,$CaseId,[switch]$SkipBuild,$Framework,[switch]$CacheOnly,[string]$CacheVariant)
+param($InputPath,$OutputDirectory,$Dpi,$CaseId,[switch]$SkipBuild,$Framework,[switch]$CacheOnly,[string]$CacheVariant,$RasterizerPath)
 [IO.File]::WriteAllText((Join-Path $OutputDirectory 'reference.pdf'),'%PDF-fake reference')
 [IO.File]::WriteAllText((Join-Path $OutputDirectory 'page-001.png'),'synthetic raster')
 if ($CacheOnly) { [IO.File]::WriteAllText((Join-Path $OutputDirectory 'requested-variant.txt'),$CacheVariant) }
+if ($RasterizerPath) { [IO.File]::WriteAllText((Join-Path $OutputDirectory 'rasterizer-path.txt'),$RasterizerPath) }
 '@ | Set-Content (Join-Path $repo 'tools/RenderCachedReference.ps1')
 @'
-param($InputPdf,$OutputDirectory,$Dpi,[switch]$SkipBuild,$Framework)
+param($InputPdf,$OutputDirectory,$Dpi,[switch]$SkipBuild,$Framework,$RasterizerPath)
 [IO.File]::WriteAllText((Join-Path $OutputDirectory 'page-001.png'),'synthetic raster')
+if ($RasterizerPath) { [IO.File]::WriteAllText((Join-Path $OutputDirectory 'rasterizer-path.txt'),$RasterizerPath) }
 '@ | Set-Content (Join-Path $repo 'tools/RasterizePdf.ps1')
 foreach($id in @('probe-a','probe-b')) {
     $directory=Join-Path $repo "visual-cases/cases/$id"
@@ -148,6 +150,7 @@ foreach($id in @('probe-a','probe-b')) {
 $inspectionLog=Join-Path $repo 'inspection-calls.jsonl'
 $candidateBaseline = 700
 $emitGraphicsOperations = $true
+$mutateVisualDiff = $false
 $rasterPage = @{Page=1;DimensionsMatch=$true;MeanAbsoluteError=0;ChangedPixelRatioAtThreshold16=0;
     StructuralSimilarity=1;ForegroundColorHistogramCorrelation=1}
 $rasterMetrics = @($rasterPage)
@@ -159,6 +162,7 @@ function dotnet {
     } elseif($values[0] -like '*Lokad.OoxPdf.VisualDiff.dll') {
         ConvertTo-Json -InputObject $rasterMetrics -Compress |
             Set-Content (Join-Path $values[3] 'metrics.json')
+        if ($mutateVisualDiff) { [IO.File]::AppendAllText($values[0], 'changed') }
     } elseif($values[0] -like '*Lokad.OoxPdf.PdfInspect.dll') {
         $output=$values[2]
         $baseline=if($values[1] -like '*output.pdf') { $candidateBaseline } else { 700 }
@@ -171,7 +175,7 @@ function dotnet {
             }) | ConvertTo-Json -AsArray | Set-Content (Join-Path $output 'graphics-operations.json')
         }
         '[{"PageNumber":1,"ResourceName":"F1","Embedded":true,"HasToUnicode":true,"IsSubset":true}]' | Set-Content (Join-Path $output 'font-resources.json')
-        @{Inspector=$values[0];InspectorSha256=(Get-FileHash $values[0]).Hash;Output=$output} | ConvertTo-Json -Compress |
+        @{Inspector=$values[0];InspectorSha256=(Get-FileHash -LiteralPath $values[0]).Hash;Output=$output} | ConvertTo-Json -Compress |
             Add-Content $inspectionLog
     } else {throw 'Unexpected native execution request'}
     $global:LASTEXITCODE=0
@@ -325,10 +329,59 @@ try {
     $failure=$null
     try { & $realCase -Case $realManifest -CliPath $frozenCli -SkipBuild -RunId 'real-missing-tool' | Out-Null } catch {$failure=$_.Exception.Message}
     if($failure -notlike '*PDF inspect DLL is missing*' -or @(Get-Content $buildLog).Count -ne $before) {throw 'Real missing-tool case requested a build or ignored refusal'}
+
+    $frozenTools = Join-Path $repo 'Frozen tools [pinned]'
+    New-Item -ItemType Directory -Path $frozenTools | Out-Null
+    $overrides = @{}
+    foreach ($tool in @{
+        RasterizerPath='PdfiumRasterizer'; VisualDiffPath='VisualDiff'; PdfInspectorPath='PdfInspect'
+    }.GetEnumerator()) {
+        $name='Lokad.OoxPdf.' + $tool.Value
+        $path=Join-Path $frozenTools ($name + '.dll')
+        [IO.File]::WriteAllText($path, 'frozen ' + $name)
+        $overrides[$tool.Key]=$path
+        $local=Join-Path $repo "tools/$name/bin/Debug/net11.0/$name.dll"
+        if (Test-Path -LiteralPath $local) { [IO.File]::Delete($local) }
+    }
+    $boundHashes=@{}
+    foreach ($key in $overrides.Keys) { $boundHashes[$key]=(Get-FileHash -LiteralPath $overrides[$key]).Hash }
+    $beforeInspection=@(Get-Content $inspectionLog).Count
+    & $realCase -Case $realManifest -CliPath $frozenCli -SkipBuild -CacheOnlyReference -RunId 'real-frozen-tools' @overrides | Out-Null
+    & $script -Family probe -CliPath $frozenCli -CacheOnlyReference @overrides | Out-Null
+    $frozenReport=Get-Content -Raw -LiteralPath $reportPath | ConvertFrom-Json
+    if ($frozenReport.passedCount -ne 2 -or @($frozenReport.cases | Where-Object {
+        $_.visualDiffSha256 -ne $boundHashes.VisualDiffPath -or $_.rasterizerSha256 -ne $boundHashes.RasterizerPath -or
+        $_.pdfInspectorSha256 -ne $boundHashes.PdfInspectorPath
+    }).Count) { throw 'The frozen family did not bind its comparison tools for each case' }
+    $roots=@('artifacts/visual/probe-a/real-frozen-tools') + @($frozenReport.cases.runPath)
+    foreach ($root in $roots) {
+        $run=Join-Path $repo $root
+        $info=Get-Content -Raw -LiteralPath (Join-Path $run 'run-info.json') | ConvertFrom-Json
+        if ($info.VisualDiffDll -cne $overrides.VisualDiffPath -or $info.RasterizerDll -cne $overrides.RasterizerPath -or
+            $info.PdfInspectorDll -cne $overrides.PdfInspectorPath -or $info.VisualDiffSha256 -ne $boundHashes.VisualDiffPath -or
+            $info.RasterizerSha256 -ne $boundHashes.RasterizerPath -or $info.PdfInspectorSha256 -ne $boundHashes.PdfInspectorPath) {
+            throw 'The frozen case recorded a different tool binding'
+        }
+        foreach ($side in 'reference','candidate') {
+            if ([IO.File]::ReadAllText((Join-Path $run "$side/rasterizer-path.txt")) -cne $overrides.RasterizerPath) {
+                throw "The $side rasterizer did not use the frozen path"
+            }
+        }
+    }
+    $frozenInspections=@(Get-Content $inspectionLog | Select-Object -Skip $beforeInspection | ConvertFrom-Json)
+    if ($frozenInspections.Count -ne 6 -or @($frozenInspections | Where-Object {
+        $_.Inspector -cne $overrides.PdfInspectorPath -or $_.InspectorSha256 -ne $boundHashes.PdfInspectorPath
+    }).Count -or @(Get-Content $buildLog).Count -ne $before) { throw 'Frozen tools built or used a different inspector' }
+
+    $mutateVisualDiff=$true
+    $failure=$null
+    try { & $realCase -Case $realManifest -CliPath $frozenCli -SkipBuild -RunId 'real-changed-diff' @overrides | Out-Null }
+    catch { $failure=$_.Exception.Message }
+    if ($failure -notlike 'Visual validation tool changed during the case:*') { throw 'A changed visual tool must fail the case' }
 }
 finally {Remove-Item Function:/dotnet}
 $inspections=@(Get-Content (Join-Path $repo 'inspection-calls.jsonl') | ConvertFrom-Json)
-if($inspections.Count -ne 20) {throw 'Real inspection coverage is incomplete'}
+if($inspections.Count -ne 26) {throw 'Real inspection coverage is incomplete'}
 foreach($inspection in $inspections) {
     $record=Get-Content (Join-Path $inspection.Output 'pdf-inspect-build-info.json') -Raw | ConvertFrom-Json
     if($record.BuildRequested -ne $false -or $record.OutputSha256 -ne $inspection.InspectorSha256) {throw 'Inspector provenance or explicit prebuilt binding was lost'}
@@ -342,7 +395,7 @@ foreach($inspection in $inspections) {
     'Incomplete inspection refusal','Inspector provenance','Canonical markup cache key',
     'Bound visual report identity','Separate raster page counts','Measured failure identity',
     'Zero upper limits admit exact metrics','Missing upper-bound metrics fail independently','Raster dimensions fail independently',
-    'Empty raster report fails','Synthetic repository isolation');
+    'Empty raster report fails','Frozen comparison tools without local builds','Changed frozen tool refusal','Synthetic repository isolation');
     InspectionCapabilities=$inspectionKeys.Count;RealInspectionCalls=$inspections.Count;LibraryBuilds=0;LibraryExecutions=0;OfficeExports=0} |
     ConvertTo-Json | Set-Content (Join-Path $OutputDirectory 'evidence.json')
 Write-Output 'Visual-family and real case/inspector binding checks pass; no actual build, library execution or Office export.'

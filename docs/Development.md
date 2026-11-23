@@ -110,9 +110,13 @@ region metrics.
 With `-SkipRasterDiff`, cached markup comparisons use the verified reference
 PDF and its metadata directly. Legacy entries need a trusted re-import for this path.
 
-`CheckVisualCase.ps1 -CliPath <qualified.dll> -SkipBuild` reuses a frozen converter;
-`CheckVisualFamily.ps1` does the same for capability families. Keep independent
-Office references, producer/input/font identities and raw thresholds. Reuse
+`CheckVisualCase.ps1` and `CheckVisualFamily.ps1` accept `-CliPath`,
+`-RasterizerPath`, `-VisualDiffPath` and `-PdfInspectorPath` for prebuilt tools.
+Use `-SkipBuild -CacheOnlyReference` to reuse qualified binaries and cached
+Office references. The selected rasterizer supplies both page sets and uses
+its pinned PDFium dependency in the expected relative location.
+Keep independent Office references, producer/input/font identities and raw
+thresholds. Reuse
 comparisons only with verified matching identities. PDF/image exports do not
 calibrate Office application view; record view/zoom/markup settings separately.
 The visual-family comparison uses separate reference and candidate page counts.

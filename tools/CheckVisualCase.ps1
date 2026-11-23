@@ -9,14 +9,23 @@ param(
 
     [switch] $SkipBuild,
 
-    [string] $CliPath
+    [string] $CliPath,
+
+    [string] $RasterizerPath,
+    [string] $VisualDiffPath,
+    [string] $PdfInspectorPath
 )
 
 $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
+$rasterizerBinding = if ($RasterizerPath) { Get-FileHash -LiteralPath $RasterizerPath }
+$visualDiffBinding = if ($VisualDiffPath) { Get-FileHash -LiteralPath $VisualDiffPath }
+$inspectorBinding = if ($PdfInspectorPath) { Get-FileHash -LiteralPath $PdfInspectorPath }
+$rasterizerDll = $rasterizerBinding.Path ?? (Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfiumRasterizer/bin/Debug/$Framework/Lokad.OoxPdf.PdfiumRasterizer.dll")
+$visualDiffDll = $visualDiffBinding.Path ?? (Join-Path $repoRoot "tools/Lokad.OoxPdf.VisualDiff/bin/Debug/$Framework/Lokad.OoxPdf.VisualDiff.dll")
 $pdfInspectorProject = Join-Path $repoRoot 'tools/Lokad.OoxPdf.PdfInspect/Lokad.OoxPdf.PdfInspect.csproj'
-$pdfInspectorDll = Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfInspect/bin/Debug/$Framework/Lokad.OoxPdf.PdfInspect.dll"
+$pdfInspectorDll = $inspectorBinding.Path ?? (Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfInspect/bin/Debug/$Framework/Lokad.OoxPdf.PdfInspect.dll")
 $caseFull = (Resolve-Path -LiteralPath $Case).Path
 $caseDirectory = Split-Path -Parent $caseFull
 $caseSha256 = (Get-FileHash -LiteralPath $caseFull).Hash
@@ -58,15 +67,22 @@ function Invoke-RepoBuild([string] $Project, [string] $OutputDll, [string] $Desc
     & (Join-Path $repoRoot "tools/EnsureDotnetBuild.ps1") -Framework $Framework @params
 }
 $pdfInspections = @{}
+function Assert-VisualToolBinding($Binding) {
+    if ($Binding -and (Get-FileHash -LiteralPath $Binding.Path).Hash -ne $Binding.Hash) {
+        throw "Visual validation tool changed during the case: $($Binding.Path)"
+    }
+}
 function Get-ComparisonPdfInspection([ValidateSet('reference','candidate')][string] $Side) {
     if (!$pdfInspections.ContainsKey($Side)) {
-        if ($pdfInspections.Count -eq 0) {
+        if (!$inspectorBinding -and $pdfInspections.Count -eq 0) {
             Invoke-RepoBuild $pdfInspectorProject $pdfInspectorDll 'PDF inspect' (Join-Path $buildInfoDir 'pdf-inspect.json')
         }
+        Assert-VisualToolBinding $inspectorBinding
         $inputPdf = if ($Side -eq 'reference') { Join-Path $referenceDir 'reference.pdf' } else { $candidatePdf }
         $outputDirectory = Join-Path $comparisonDir "pdf-text/$Side"
         & (Join-Path $PSScriptRoot 'InspectPdf.ps1') -Framework $Framework -InputPdf $inputPdf `
             -OutputDirectory $outputDirectory -InspectorPath $pdfInspectorDll -SkipBuild | Out-Host
+        Assert-VisualToolBinding $inspectorBinding
         foreach ($reportName in 'text-operations.json', 'graphics-operations.json', 'font-resources.json') {
             if (!(Test-Path -LiteralPath (Join-Path $outputDirectory $reportName) -PathType Leaf)) {
                 throw "PDF inspection did not produce $reportName for the $Side PDF."
@@ -133,12 +149,12 @@ if ($LASTEXITCODE -ne 0) {
     throw "Candidate conversion failed with exit code $LASTEXITCODE."
 }
 
+$rasterArgs = @{ Framework = $Framework; Dpi = $dpi; SkipBuild = $SkipBuild }
+if ($rasterizerBinding) { $rasterArgs.RasterizerPath = $rasterizerDll }
 $referenceArgs = @{
     InputPath = $inputFull
     OutputDirectory = $referenceDir
-    Dpi = $dpi
     CaseId = $manifest.id
-    SkipBuild = $SkipBuild
 }
 if ($CacheOnlyReference) {
     $referenceArgs.CacheOnly = $true
@@ -148,18 +164,24 @@ if ($CacheOnlyReference) {
     }
 }
 Write-Host "[$((Get-Date).ToString('HH:mm:ss'))] Rendering reference...";
-& (Join-Path $PSScriptRoot "RenderCachedReference.ps1") -Framework $Framework @referenceArgs
+& (Join-Path $PSScriptRoot "RenderCachedReference.ps1") @rasterArgs @referenceArgs
+Assert-VisualToolBinding $rasterizerBinding
 Write-Host "[$((Get-Date).ToString('HH:mm:ss'))] Rasterizing candidate...";
-& (Join-Path $PSScriptRoot "RasterizePdf.ps1") -Framework $Framework -InputPdf $candidatePdf -OutputDirectory $candidateDir -Dpi $dpi -SkipBuild:$SkipBuild
+& (Join-Path $PSScriptRoot "RasterizePdf.ps1") -InputPdf $candidatePdf -OutputDirectory $candidateDir @rasterArgs
+Assert-VisualToolBinding $rasterizerBinding
 
-$visualDiffProject = Join-Path $repoRoot "tools/Lokad.OoxPdf.VisualDiff/Lokad.OoxPdf.VisualDiff.csproj"
-$visualDiffDll = Join-Path $repoRoot "tools/Lokad.OoxPdf.VisualDiff/bin/Debug/$Framework/Lokad.OoxPdf.VisualDiff.dll"
-Invoke-RepoBuild $visualDiffProject $visualDiffDll "VisualDiff" (Join-Path $buildInfoDir "visual-diff.json")
+if (!$visualDiffBinding) {
+    $visualDiffProject = Join-Path $repoRoot "tools/Lokad.OoxPdf.VisualDiff/Lokad.OoxPdf.VisualDiff.csproj"
+    Invoke-RepoBuild $visualDiffProject $visualDiffDll "VisualDiff" (Join-Path $buildInfoDir "visual-diff.json")
+}
+Assert-VisualToolBinding $visualDiffBinding
 Write-Host "[$((Get-Date).ToString('HH:mm:ss'))] Comparing pages...";
 dotnet $visualDiffDll $referenceDir $candidateDir $comparisonDir
 if ($LASTEXITCODE -ne 0) {
     throw "VisualDiff failed with exit code $LASTEXITCODE."
 }
+Assert-VisualToolBinding $visualDiffBinding
+Assert-VisualToolBinding $inspectorBinding
 
 $metricsPath = Join-Path $comparisonDir "metrics.json"
 $metrics = Get-Content -Raw -LiteralPath $metricsPath | ConvertFrom-Json
@@ -190,8 +212,11 @@ $runInfo = [ordered]@{
     CliSha256 = if (Test-Path -LiteralPath $cliDll) { (Get-FileHash -LiteralPath $cliDll -Algorithm SHA256).Hash.ToLowerInvariant() } else { $null }
     LibraryDll = $null
     VisualDiffDll = $visualDiffDll
-    VisualDiffSha256 = if (Test-Path -LiteralPath $visualDiffDll) { (Get-FileHash -LiteralPath $visualDiffDll -Algorithm SHA256).Hash.ToLowerInvariant() } else { $null }
+    VisualDiffSha256 = if ($visualDiffBinding) { $visualDiffBinding.Hash.ToLowerInvariant() }
+        elseif (Test-Path -LiteralPath $visualDiffDll) { (Get-FileHash -LiteralPath $visualDiffDll).Hash.ToLowerInvariant() }
     RasterizerDll = $null
+    PdfInspectorDll = $inspectorBinding.Path
+    PdfInspectorSha256 = if ($inspectorBinding) { $inspectorBinding.Hash.ToLowerInvariant() }
     GitCommit = $null
     GitDirty = $null
     GeneratedAtUtc = [DateTime]::UtcNow.ToString("O", [Globalization.CultureInfo]::InvariantCulture)
@@ -202,8 +227,11 @@ if (Test-Path -LiteralPath $libraryDll) {
     $runInfo.LibrarySha256 = (Get-FileHash -LiteralPath $libraryDll -Algorithm SHA256).Hash.ToLowerInvariant()
 }
 
-$rasterizerDll = Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfiumRasterizer/bin/Debug/$Framework/Lokad.OoxPdf.PdfiumRasterizer.dll"
-if (Test-Path -LiteralPath $rasterizerDll) {
+if ($rasterizerBinding) {
+    $runInfo.RasterizerDll = $rasterizerDll
+    $runInfo.RasterizerSha256 = $rasterizerBinding.Hash.ToLowerInvariant()
+}
+elseif (Test-Path -LiteralPath $rasterizerDll) {
     $runInfo.RasterizerDll = $rasterizerDll
     $runInfo.RasterizerSha256 = (Get-FileHash -LiteralPath $rasterizerDll -Algorithm SHA256).Hash.ToLowerInvariant()
 }
