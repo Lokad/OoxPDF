@@ -98,11 +98,9 @@ internal sealed partial class PptxRenderer
         bool IsDefault(string name, params string[] accepted) => Inherited(name) is not { } value ||
             accepted.Contains(value, StringComparer.OrdinalIgnoreCase);
         bool PreservesTextStyle(string name) => IsNeutralSvgTextStyle(name, Inherited(name));
-        if (!IsDefault("direction", "ltr") || !IsDefault("unicode-bidi", "normal") ||
-            !IsDefault("writing-mode", "lr", "lr-tb", "horizontal-tb") ||
-            !IsDefault("dominant-baseline", "auto", "alphabetic") ||
-            !IsDefault("alignment-baseline", "auto", "baseline", "alphabetic") ||
-            !IsDefault("baseline-shift", "baseline", "0", "0px") ||
+        if (!PreservesTextStyle("direction") || !PreservesTextStyle("unicode-bidi") ||
+            !PreservesTextStyle("writing-mode") || !PreservesTextStyle("dominant-baseline") ||
+            !PreservesTextStyle("alignment-baseline") || !PreservesTextStyle("baseline-shift") ||
             !PreservesTextStyle("font-variant") || !PreservesTextStyle("font-stretch") ||
             !PreservesTextStyle("letter-spacing") || !PreservesTextStyle("word-spacing") ||
             !PreservesTextStyle("text-decoration") || !IsDefault("font-kerning", "auto", "normal", "none") ||
@@ -156,13 +154,25 @@ internal sealed partial class PptxRenderer
     private static bool IsNeutralSvgTextStyle(string name, string? value)
     {
         ReadOnlySpan<char> token = value.AsSpan().Trim();
+        // A plain span's owners have already passed the default-style check.
+        bool reset = value is null || token.IsEmpty || IsSvgInitialValue(token) || InheritsSvgPropertyValue(value);
         return name switch
         {
-            "letter-spacing" or "word-spacing" => value is null || token is "0" ||
+            "letter-spacing" or "word-spacing" => reset || token is "0" ||
                 token.Equals("normal", StringComparison.OrdinalIgnoreCase) ||
                 token.Equals("0px", StringComparison.OrdinalIgnoreCase),
-            "font-variant" or "font-stretch" => value is null || token.Equals("normal", StringComparison.OrdinalIgnoreCase),
-            "text-decoration" => value is null || token.Equals("none", StringComparison.OrdinalIgnoreCase),
+            "font-variant" or "font-stretch" or "unicode-bidi" =>
+                reset || token.Equals("normal", StringComparison.OrdinalIgnoreCase),
+            "text-decoration" => reset || token.Equals("none", StringComparison.OrdinalIgnoreCase),
+            "direction" => reset || token.Equals("ltr", StringComparison.OrdinalIgnoreCase),
+            "writing-mode" => reset || token.Equals("horizontal-tb", StringComparison.OrdinalIgnoreCase) ||
+                token.Equals("lr", StringComparison.OrdinalIgnoreCase) || token.Equals("lr-tb", StringComparison.OrdinalIgnoreCase),
+            "dominant-baseline" => reset || token.Equals("auto", StringComparison.OrdinalIgnoreCase) ||
+                token.Equals("alphabetic", StringComparison.OrdinalIgnoreCase),
+            "alignment-baseline" => reset || token.Equals("auto", StringComparison.OrdinalIgnoreCase) ||
+                token.Equals("baseline", StringComparison.OrdinalIgnoreCase) || token.Equals("alphabetic", StringComparison.OrdinalIgnoreCase),
+            "baseline-shift" => reset || token is "0" || token.Equals("0px", StringComparison.OrdinalIgnoreCase) ||
+                token.Equals("baseline", StringComparison.OrdinalIgnoreCase),
             _ => false
         };
     }
@@ -335,9 +345,7 @@ internal sealed partial class PptxRenderer
                     ParseSvgOpacity(value) is { } opacity && double.IsFinite(opacity) &&
                     Math.Clamp(opacity, 0d, 1d) == appearance.FillOpacity,
                 "stroke" or "stroke-opacity" or "stroke-width" => !PaintsStroke(),
-                "letter-spacing" or "word-spacing" or "font-variant" or "font-stretch" or "text-decoration" =>
-                    IsNeutralSvgTextStyle(name, ReadSvgInheritedAttribute(child, style, name)),
-                _ => false,
+                _ => IsNeutralSvgTextStyle(name, value),
             };
 
             bool PaintsStroke() => (hasStroke ??= HasSvgTextStroke(child, style, paintServerIds)) == true;
