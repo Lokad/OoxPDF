@@ -291,7 +291,7 @@ internal static partial class SvgTextTests
         }
     }
 
-    public static void SvgLabelsKeepTextAcrossAttributeFreeSpans()
+    public static void SvgLabelsKeepTextAcrossPlainAndMetadataSpans()
     {
         string Picture(string name, string initials) => Svg($"""
             <text x="20" y="45" font-size="20" fill="#112233">{name}</text>
@@ -299,7 +299,8 @@ internal static partial class SvgTextTests
             <rect x="120" y="90" width="20" height="10" fill="lime"/>
             """);
         AssertSvgPaintInBothFormats(Picture("NORTH", "A B"),
-            Picture("NO<tspan>R<tspan>T</tspan></tspan>H", "A <tspan> B</tspan>"), pdf =>
+            Picture("""NO<tspan id="direction">R<tspan>T</tspan></tspan>H""",
+                """A <tspan class="caption" data-key="initials" role="presentation" aria-hidden="true"> B</tspan>"""), pdf =>
             {
                 TestAssert.Equal(5, LabelPaths(pdf));
                 TestAssert.Equal(2, LabelPaths(pdf, "0.067 0.267 0.6 rg"));

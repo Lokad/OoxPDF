@@ -163,8 +163,8 @@ internal sealed partial class PptxRenderer
         return true;
     }
 
-    // SafeXml bounds the nesting. Spans without local declarations share
-    // the parent's paint, positioning and whitespace processing.
+    // Stylesheet-driven text has already been excluded. Plain spans and spans
+    // carrying metadata share the parent's paint, positions and whitespace.
     private static bool AppendPlainSvgText(XElement element, StringBuilder characters, CancellationToken cancellationToken)
     {
         XName spanName = element.Name.Namespace + "tspan";
@@ -174,12 +174,19 @@ internal sealed partial class PptxRenderer
             if (node is XText text)
                 characters.Append(text.Value);
             else if (node is XElement child && !IsSvgMetadataElement(child) &&
-                (child.Name != spanName || child.Attributes().Any(attribute => !attribute.IsNamespaceDeclaration) ||
+                (child.Name != spanName || child.Attributes().Any(attribute => !IsPlainSvgTextSpanAttribute(attribute)) ||
                  !AppendPlainSvgText(child, characters, cancellationToken)))
                 return false;
         }
         return true;
     }
+
+    private static bool IsPlainSvgTextSpanAttribute(XAttribute attribute) =>
+        attribute.IsNamespaceDeclaration ||
+        attribute.Name.Namespace == XNamespace.None &&
+        (attribute.Name.LocalName is "id" or "class" or "role" ||
+         attribute.Name.LocalName.StartsWith("aria-", StringComparison.Ordinal) ||
+         attribute.Name.LocalName.StartsWith("data-", StringComparison.Ordinal));
 
     private static bool TryReadSvgTextLength(string text, double? relativeSize, out double value, bool allowPercent = false)
     {

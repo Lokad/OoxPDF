@@ -710,7 +710,7 @@
     "SvgZeroWidthStrokesKeepTheirIndependentFill",
     "=SvgLabelsKeepTheirFillWhenStrokesDoNotPaint",
     "=SvgTransparentPaintMatchesExplicitZeroOpacity",
-    "=SvgLabelsKeepTextAcrossAttributeFreeSpans",
+    "=SvgLabelsKeepTextAcrossPlainAndMetadataSpans",
     "SvgInheritedGradientStrokeOpacityKeepsNumericFallbackContract",
     "SvgInheritedPaintSurvivesDocxAndPptxContainers",
     "PptxSyntheticSvgGroupStrokeWidthInherits",
