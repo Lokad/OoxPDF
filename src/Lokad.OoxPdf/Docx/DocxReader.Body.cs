@@ -629,7 +629,7 @@ internal sealed partial class DocxReader
                 continue;
             }
 
-            // Closed ranges and empty stored fields can keep their metadata on this
+            // Closed ranges and empty inline containers can keep their metadata on this
             // paragraph's next fragment. Numbered first lines keep their frame.
             if (!part.EndsBeforeBreak || continuationIndex < 0 || retainFirstLine && part.IsFirstFragment)
                 continue;
@@ -654,8 +654,8 @@ internal sealed partial class DocxReader
         Func<XElement, bool> isHiddenBreak, OoxPdfDocxMarkupMode markupMode)
     {
         HashSet<(DocxRevisionKind Kind, string Id)>? open = null;
-        bool hasEmptyField = false;
-        return Visit(children) && (open is { Count: 0 } || open is null && hasEmptyField);
+        bool hasEmptyContainer = false;
+        return Visit(children) && (open is { Count: 0 } || open is null && hasEmptyContainer);
 
         bool Visit(IEnumerable<XElement> content)
         {
@@ -668,12 +668,10 @@ internal sealed partial class DocxReader
                 }
 
                 if (DocxSourceXml.IsNonPrintingMarker(child)) continue;
-                if (child.Name == WordprocessingNamespace + "fldSimple" &&
-                    !HasSimpleFieldPlaceholder(child) &&
-                    !child.Nodes().OfType<XText>().Any(text => !string.IsNullOrWhiteSpace(text.Value)) &&
-                    !DocxSourceXml.StoredChildren(child).Any(item => HasBreakSplitPayload(item, isHiddenBreak, markupMode)))
+                if ((child.Name == WordprocessingNamespace + "fldSimple" || child.Name == WordprocessingNamespace + "hyperlink") &&
+                    !HasBreakSplitPayload(child, isHiddenBreak, markupMode, keepEmptyFields: false))
                 {
-                    hasEmptyField = true;
+                    hasEmptyContainer = true;
                     continue;
                 }
                 if (!TrackNonPrintingMoveRangeBoundary(child, ref open))
@@ -763,9 +761,10 @@ internal sealed partial class DocxReader
         DocxSourceXml.StoredChildren(owner).Where(child => HasBreakSplitPayload(child, isHiddenBreak, markupMode));
 
     // Revisions need stored payload too, but their authored runs can own revision
-    // state without visible text. Fields and annotation boundaries remain owners.
+    // state without visible text. Preserve fields during splitting so their
+    // metadata can be assigned to a fragment after break positions are known.
     private static bool HasBreakSplitPayload(XElement child, Func<XElement, bool> isHiddenBreak,
-        OoxPdfDocxMarkupMode markupMode, bool preserveRevisionRuns = false)
+        OoxPdfDocxMarkupMode markupMode, bool preserveRevisionRuns = false, bool keepEmptyFields = true)
     {
         if (child.Name == WordprocessingNamespace + "r")
         {
@@ -778,10 +777,16 @@ internal sealed partial class DocxReader
         if (isRevision && markupMode == OoxPdfDocxMarkupMode.Original && !IsIncludedRevisionContainer(child, markupMode))
             return false;
 
-        if (isRevision || DocxSourceXml.IsTransparentInlineContainer(child) || child.Name == WordprocessingNamespace + "hyperlink")
+        bool isStoredField = !keepEmptyFields && child.Name == WordprocessingNamespace + "fldSimple";
+        bool isHyperlink = child.Name == WordprocessingNamespace + "hyperlink";
+        if (!keepEmptyFields && (isStoredField || isHyperlink) &&
+            (HasSimpleFieldPlaceholder(child) || child.Nodes().OfType<XText>().Any(text => !string.IsNullOrWhiteSpace(text.Value))))
+            return true;
+
+        if (isRevision || isStoredField || isHyperlink || DocxSourceXml.IsTransparentInlineContainer(child))
         {
             return DocxSourceXml.StoredChildren(child)
-                .Any(nested => HasBreakSplitPayload(nested, isHiddenBreak, markupMode, preserveRevisionRuns || isRevision));
+                .Any(nested => HasBreakSplitPayload(nested, isHiddenBreak, markupMode, preserveRevisionRuns || isRevision, keepEmptyFields));
         }
 
         return !DocxSourceXml.IsNonPrintingMarker(child);

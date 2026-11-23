@@ -145,7 +145,8 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.Contains("AUTHORED AFTER BREAK", string.Concat(
                 DocxCommentsTests.ReadEmbeddedGlyphTextShows(control[targetPage]).Select(show => show.Text)));
 
-            foreach (string fieldOwner in new[] { "empty-field", "hint-field", "locked-field", "nested-hint-field" })
+            foreach (string fieldOwner in new[] { "empty-field", "hint-field", "locked-field", "nested-hint-field",
+                "nested-empty-field", "linked-empty-field" })
             {
                 CheckNonprinting(Render(fieldOwner));
             }
@@ -154,6 +155,16 @@ internal static partial class DocxInlineCompositionTests
                 DocxCommentsTests.ReadEmbeddedGlyphTextShows(storedField[0]).Select(show => show.Text)));
             TestAssert.True(storedField[0].Annotations.Single().Destination is { PageIndex: 0, Left: < 200d },
                 "A visible stored result retains the bookmark before the break.");
+
+            foreach (var (fieldOwner, expectedText) in new[] { ("nested-visible-field", "VISIBLE NESTED RESULT"),
+                ("nested-computed-field", "1") })
+            {
+                PdfPage[] nestedField = Render(fieldOwner, retainLeadingFragment: true);
+                TestAssert.True(DocxCommentsTests.ReadEmbeddedGlyphTextShows(nestedField[0])
+                    .Any(show => show.Text.Trim() == expectedText), "The nested field still paints before the break.");
+                TestAssert.True(nestedField[0].Annotations.Single().Destination is { PageIndex: 0, Left: < 200d },
+                    "A nested result with visible content keeps its destination in the first fragment.");
+            }
 
             if (mode == OoxPdfDocxMarkupMode.Original)
             {
@@ -214,7 +225,7 @@ internal static partial class DocxInlineCompositionTests
             {
                 TestAssert.True(control.Select(page => page.Content).SequenceEqual(pages.Select(page => page.Content)),
                     "Nonprinting content preserves the authored pagination and paint.");
-                TestAssert.Equal(link, pages[0].Annotations.Single());
+                TestAssert.Equal(link, pages.SelectMany(page => page.Annotations).Single());
             }
 
             PdfPage[] Render(string wrapper, bool retainLeadingFragment = false, bool includeDrawings = false)
@@ -273,6 +284,11 @@ internal static partial class DocxInlineCompositionTests
                         "hint-field" => [StoredField("REF EmptyReference", HintRun()), run],
                         "locked-field" => [StoredField("PAGE", HintRun()), run],
                         "nested-hint-field" => [ContentControl(StoredField("REF EmptyReference", HintRun())), run],
+                        "nested-empty-field" => [StoredField("REF OuterReference", StoredField("REF EmptyReference", HintRun())), run],
+                        "linked-empty-field" => [Link(StoredField("REF EmptyReference", HintRun())), run],
+                        "nested-visible-field" => [StoredField("REF OuterReference", StoredField("REF InnerReference",
+                            new XElement(w + "r", Hint(), new XElement(w + "t", "VISIBLE NESTED RESULT")))), run],
+                        "nested-computed-field" => [StoredField("REF OuterReference", StoredField("PAGE", HintRun())), run],
                         "visible-field" => [StoredField("REF VisibleReference",
                             new XElement(w + "r", Hint(), new XElement(w + "t", "VISIBLE STORED FIELD"))), run],
                         "hidden-break" => [ContentControl(new XElement(w + "r", new XElement(w + "rPr", new XElement(w + "vanish")),
@@ -312,14 +328,18 @@ internal static partial class DocxInlineCompositionTests
                         section);
                 });
                 TestAssert.Equal(retainLeadingFragment ? 4 : 3, document.BodyElements.Count);
-                if (wrapper is "empty-field" or "hint-field" or "locked-field" or "nested-hint-field")
+                if (wrapper is "empty-field" or "hint-field" or "locked-field" or "nested-hint-field" or "nested-empty-field" or "linked-empty-field")
                 {
-                    var field = document.Paragraphs.Last().FieldReferences.Single();
+                    var fields = document.Paragraphs.Last().FieldReferences;
+                    var field = fields[0];
                     TestAssert.Equal(DocxFieldSourceKind.Simple, field.SourceKind);
                     TestAssert.Equal(wrapper == "locked-field" ? DocxFieldKind.Page : DocxFieldKind.Other, field.Kind);
                     TestAssert.Equal(wrapper == "locked-field" ? "PAGE" : "REF EmptyReference", field.Instruction);
-                    TestAssert.True(!field.RendersCachedResult && !field.UsesPlaceholder,
+                    TestAssert.True(fields.All(f => !f.RendersCachedResult && !f.UsesPlaceholder),
                         "The empty stored result retains its field metadata on the continuation.");
+                    TestAssert.Equal(wrapper == "nested-empty-field" ? 2 : 1, fields.Count);
+                    if (wrapper == "nested-empty-field")
+                        TestAssert.Equal("REF OuterReference", fields[1].Instruction);
                 }
                 if (wrapper is "closed-move-range" or "excluded-move-range")
                 {
