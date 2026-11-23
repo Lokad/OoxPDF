@@ -232,17 +232,17 @@ internal sealed partial class DocxReader
         {
             return null;
         }
-        string? previewId = ReadDrawingImageRelationshipId(drawing, cancellationToken);
+        XElement? previewBlip = FindDrawingOwnedBlip(drawing, cancellationToken);
         string? vectorId = ReadDrawingSvgRelationshipId(drawing, cancellationToken);
-        if (previewId is null && vectorId is null) return null;
+        string? previewId = (string?)previewBlip?.Attribute(RelationshipsNamespace + "embed") ?? vectorId;
+        if (previewId is null) return null;
         OoxPart? previewPart = ResolvePart(previewId);
         OoxPart? vectorPart = ResolvePart(vectorId);
         bool useVector = vectorPart?.ContentType.Equals("image/svg+xml", StringComparison.OrdinalIgnoreCase) == true;
         OoxPart? imagePart = useVector ? vectorPart : previewPart;
         double width = OoxUnits.EmuToPoints(OoxXml.ParseRequiredLong(extent, "cx", "DOCX"));
         double height = OoxUnits.EmuToPoints(OoxXml.ParseRequiredLong(extent, "cy", "DOCX"));
-        XElement? sourceRectangle = EnumerateDrawingOwnedElements(drawing, DrawingNamespace + "blip", cancellationToken).FirstOrDefault()
-            ?.Parent?.Element(DrawingNamespace + "srcRect");
+        XElement? sourceRectangle = previewBlip?.Parent?.Element(DrawingNamespace + "srcRect");
         var crop = new DocxPictureCrop(ReadCropFraction("l"), ReadCropFraction("t"),
             ReadCropFraction("r"), ReadCropFraction("b"));
         XElement? pictureTransform = EnumerateDrawingOwnedElements(drawing, XName.Get("spPr", "http://schemas.openxmlformats.org/drawingml/2006/picture"), cancellationToken)
@@ -265,7 +265,7 @@ internal sealed partial class DocxReader
         };
 
         DocxInlineImage Create(OoxPart? part) => new(width, height, part?.ContentType ?? string.Empty, part?.Bytes,
-            part?.Name ?? (relationships.TryGetValue(previewId ?? vectorId!, out var relationship) ? relationship.ResolvedTarget : null))
+            part?.Name ?? (relationships.TryGetValue(previewId, out var relationship) ? relationship.ResolvedTarget : null))
         {
             Revisions = RevisionList(revision), Crop = crop, ClickTarget = clickTarget,
             FlipHorizontal = OoxXml.ParseOptionalBool(pictureTransform, "flipH"),
@@ -287,12 +287,12 @@ internal sealed partial class DocxReader
             !relationship.IsExternal && relationship.ResolvedTarget is { } target ? package.GetPart(target) : null;
     }
 
-    private static string? ReadDrawingImageRelationshipId(XElement drawing, CancellationToken token = default)
-    {
-        return (string?)EnumerateDrawingOwnedElements(drawing, DrawingNamespace + "blip", token)
-            .FirstOrDefault()
-            ?.Attribute(RelationshipsNamespace + "embed") ?? ReadDrawingSvgRelationshipId(drawing, token);
-    }
+    private static XElement? FindDrawingOwnedBlip(XElement drawing, CancellationToken token) =>
+        EnumerateDrawingOwnedElements(drawing, DrawingNamespace + "blip", token).FirstOrDefault();
+
+    private static string? ReadDrawingImageRelationshipId(XElement drawing, CancellationToken token = default) =>
+        (string?)FindDrawingOwnedBlip(drawing, token)?.Attribute(RelationshipsNamespace + "embed") ??
+        ReadDrawingSvgRelationshipId(drawing, token);
 
     private static string? ReadDrawingSvgRelationshipId(XElement drawing, CancellationToken token = default) =>
         (string?)EnumerateDrawingOwnedElements(drawing, XName.Get("svgBlip", "http://schemas.microsoft.com/office/drawing/2016/SVG/main"), token)
