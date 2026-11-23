@@ -1846,8 +1846,7 @@ internal sealed partial class PptxRenderer
             colorOpacity = 0d;
             return true;
         }
-        colorOpacity = 1d;
-        return RgbColor.TryParseCssColor(value, out color);
+        return RgbColor.TryParseCssColor(value, out color, out colorOpacity);
     }
 
     private static string? ReadSvgPresentationAttribute(XElement path, IReadOnlyDictionary<string, string> style, string name)

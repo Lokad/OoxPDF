@@ -187,17 +187,17 @@ internal static partial class PptxImagesTests
         foreach (var pair in new[] { ("yellow", new RgbColor(255, 255, 0)), ("orange", new RgbColor(255, 165, 0)),
             ("purple", new RgbColor(128, 0, 128)), ("silver", new RgbColor(192, 192, 192)), ("maroon", new RgbColor(128, 0, 0)) })
         {
-            TestAssert.True(RgbColor.TryParseCssColor(pair.Item1, out var color), "A six-letter CSS keyword is not a malformed hex token.");
+            TestAssert.True(RgbColor.TryParseCssColor(pair.Item1, out var color, out _), "A six-letter CSS keyword is not a malformed hex token.");
             TestAssert.Equal(pair.Item2, color);
         }
         foreach (string invalid in new[] { "yellow", "GG0000", "00xx00", "0000zz", "-10000" })
             TestAssert.True(!RgbColor.TryParse(invalid, out _), "Invalid hex reports false instead of aborting the enclosing picture.");
         foreach (string invalid in new[] { "#GG0000", "#xyz", "nocolor" })
-            TestAssert.True(!RgbColor.TryParseCssColor(invalid, out _), "Malformed CSS paint retains the explicit unsupported-paint path.");
-        TestAssert.True(RgbColor.TryParseCssColor("#fF0", out var shortColor) && shortColor == new RgbColor(255, 255, 0), "Safe hex parsing preserves supported shorthand.");
+            TestAssert.True(!RgbColor.TryParseCssColor(invalid, out _, out _), "Malformed CSS paint retains the explicit unsupported-paint path.");
+        TestAssert.True(RgbColor.TryParseCssColor("#fF0", out var shortColor, out _) && shortColor == new RgbColor(255, 255, 0), "Safe hex parsing preserves supported shorthand.");
     }
 
-    public static void PptxSvgRgbFunctionsParseOpaqueSrgbChannels()
+    public static void PptxSvgRgbFunctionsParseSrgbChannelsAndOpacity()
     {
         foreach (var (value, expected) in new[]
         {
@@ -208,15 +208,30 @@ internal static partial class PptxImagesTests
             ("rgb(-5%\t45%\r\n115%)", new RgbColor(0, 115, 255))
         })
         {
-            TestAssert.True(RgbColor.TryParseCssColor(value, out RgbColor color), value);
+            TestAssert.True(RgbColor.TryParseCssColor(value, out RgbColor color, out double opacity), value);
             TestAssert.Equal(expected, color);
+            TestAssert.Equal(1d, opacity);
+        }
+
+        foreach (var (value, expectedOpacity) in new[]
+        {
+            ("rgba(255,0,0,.5)", .5d),
+            ("rgb(255 0 0/25%)", .25d),
+            ("RGBA(100% 0 0% / 250%)", 1d),
+            ("rgb(255,0,0,-10%)", 0d)
+        })
+        {
+            TestAssert.True(RgbColor.TryParseCssColor(value, out RgbColor color, out double opacity), value);
+            TestAssert.Equal(new RgbColor(255, 0, 0), color);
+            TestAssert.Equal(expectedOpacity, opacity);
         }
 
         foreach (string invalid in new[] { "rgb()", "rgb(255 0)", "rgb(255,0,0,)", "rgb(255,0%,0)",
             "rgb(255,0 0)", "rgb(255,0,0) trailing", "rgb(10 % 0 0)", "rgb(1e999 0 0)", "rgb(NaN 0 0)",
-            "rgb(255 0 0 / .5)", "rgba(255,0,0,0.5)" })
+            "rgb(255 0 0 /)", "rgba(255,0,0,1e999)", "rgb(255 0 0 / 50 %)", "rgba(255,0,0/.5)",
+            "rgb(255 0 0 / .5 / .5)", "rgba(255,0,0,.5,1)" })
         {
-            TestAssert.True(!RgbColor.TryParseCssColor(invalid, out _), $"Unsupported RGB color {invalid} must stay distinguishable from an opaque sRGB color.");
+            TestAssert.True(!RgbColor.TryParseCssColor(invalid, out _, out _), $"Malformed RGB color {invalid} must retain its fallback.");
         }
     }
 

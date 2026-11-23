@@ -97,7 +97,8 @@ actions retain an unsupported-content diagnostic. Numeric opacity on SVG roots,
 groups and link wrappers composes their children as a group for both presentation
 attributes and inline style.
 Explicit `inherit` on a shape, label or container uses its parent's opacity.
-SVG paint accepts opaque numeric `rgb()` colors, the `transparent` keyword and separate opacity properties.
+SVG paint accepts numeric `rgb()` and `rgba()` colors with alpha, the
+`transparent` keyword and separate opacity properties.
 Supported inline style declarations honor `!important` precedence, including
 zero opacity on SVG roots and groups. `unset` follows inheritance for supported
 paint, visibility and font properties. `initial` resets inherited fill, stroke

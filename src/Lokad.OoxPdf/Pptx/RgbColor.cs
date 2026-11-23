@@ -22,10 +22,10 @@ internal readonly record struct RgbColor(byte Red, byte Green, byte Blue)
         color = new RgbColor(red, green, blue);
         return true;
     }
-    // SVG paint uses opaque sRGB colors. Opacity is handled separately.
-    public static bool TryParseCssColor(string? text, out RgbColor color)
+    public static bool TryParseCssColor(string? text, out RgbColor color, out double opacity)
     {
         color = default;
+        opacity = 1d;
         if (string.IsNullOrWhiteSpace(text))
         {
             return false;
@@ -44,40 +44,59 @@ internal readonly record struct RgbColor(byte Red, byte Green, byte Blue)
         {
             return true;
         }
-        if (trimmed.StartsWith("rgb(", StringComparison.OrdinalIgnoreCase) && trimmed.EndsWith(')'))
+        int functionLength = trimmed.StartsWith("rgb(", StringComparison.OrdinalIgnoreCase) ? 4 :
+            trimmed.StartsWith("rgba(", StringComparison.OrdinalIgnoreCase) ? 5 : 0;
+        if (functionLength != 0 && trimmed.EndsWith(')'))
         {
-            return TryParseCssRgb(trimmed.AsSpan(4, trimmed.Length - 5), out color);
+            return TryParseCssRgb(trimmed.AsSpan(functionLength, trimmed.Length - functionLength - 1), out color, out opacity);
         }
         return CssColorKeywords.TryGetValue(trimmed, out color);
     }
 
-    private static bool TryParseCssRgb(ReadOnlySpan<char> arguments, out RgbColor color)
+    private static bool TryParseCssRgb(ReadOnlySpan<char> arguments, out RgbColor color, out double opacity)
     {
         color = default;
+        opacity = 1d;
         bool legacy = arguments.Contains(',');
-        Span<Range> components = stackalloc Range[4];
-        int count = legacy ? arguments.Split(components, ',', StringSplitOptions.TrimEntries) :
-            arguments.SplitAny(components, " \t\r\n\f", StringSplitOptions.RemoveEmptyEntries);
-        if (count != 3) return false;
+        int slash = legacy ? -1 : arguments.IndexOf('/');
+        ReadOnlySpan<char> rgb = slash < 0 ? arguments : arguments[..slash];
+        Span<Range> components = stackalloc Range[5];
+        int count = legacy ? rgb.Split(components, ',', StringSplitOptions.TrimEntries) :
+            rgb.SplitAny(components, " \t\r\n\f", StringSplitOptions.RemoveEmptyEntries);
+        bool legacyAlpha = legacy && count == 4;
+        if (count != 3 && !legacyAlpha) return false;
 
-        bool firstIsPercent = arguments[components[0]].EndsWith("%", StringComparison.Ordinal);
+        double alpha = 1d;
+        if (legacyAlpha || slash >= 0)
+        {
+            ReadOnlySpan<char> component = legacyAlpha ? arguments[components[3]] : arguments[(slash + 1)..].Trim();
+            if (!TryReadCssNumber(component, out double value, out bool percent)) return false;
+            alpha = Math.Clamp(percent ? value / 100d : value, 0d, 1d);
+        }
+
+        bool firstIsPercent = rgb[components[0]].EndsWith("%", StringComparison.Ordinal);
         Span<byte> channels = stackalloc byte[3];
         for (int index = 0; index < channels.Length; index++)
         {
-            ReadOnlySpan<char> component = arguments[components[index]];
-            bool percent = component.EndsWith("%", StringComparison.Ordinal);
-            if ((legacy && percent != firstIsPercent) || (percent && (component.Length == 1 || char.IsWhiteSpace(component[^2]))))
-                return false;
-
-            ReadOnlySpan<char> number = percent ? component[..^1] : component;
-            if (!double.TryParse(number, NumberStyles.Float, CultureInfo.InvariantCulture, out double value) || !double.IsFinite(value))
+            if (!TryReadCssNumber(rgb[components[index]], out double value, out bool percent) ||
+                (legacy && percent != firstIsPercent))
                 return false;
 
             double scaled = percent ? Math.Clamp(value, 0d, 100d) * 255d / 100d : Math.Clamp(value, 0d, 255d);
             channels[index] = (byte)Math.Round(scaled, MidpointRounding.AwayFromZero);
         }
         color = new RgbColor(channels[0], channels[1], channels[2]);
+        opacity = alpha;
         return true;
+    }
+
+    private static bool TryReadCssNumber(ReadOnlySpan<char> component, out double value, out bool percent)
+    {
+        value = 0d;
+        percent = component.EndsWith("%", StringComparison.Ordinal);
+        if (percent && (component.Length == 1 || char.IsWhiteSpace(component[^2]))) return false;
+        return double.TryParse(percent ? component[..^1] : component, NumberStyles.Float, CultureInfo.InvariantCulture,
+            out value) && double.IsFinite(value);
     }
 
     private static readonly Dictionary<string, RgbColor> CssColorKeywords = new(StringComparer.OrdinalIgnoreCase)

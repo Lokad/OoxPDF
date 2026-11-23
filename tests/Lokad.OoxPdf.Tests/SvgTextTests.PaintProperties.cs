@@ -1271,6 +1271,32 @@ internal static partial class SvgTextTests
             "1 0 0 rg", "0 0 1 RG", "/PatternType 2", "/ShadingType 3", LabelColor);
     }
 
+    public static void SvgFunctionalColorAlphaMatchesSeparatePaintOpacity()
+    {
+        string Picture(string firstStop, string lastStop, string fill, string stroke, string label) => Svg($"""
+            <defs><linearGradient id="alpha">
+              <stop offset="0" {firstStop}/>
+              <stop offset="1" {lastStop}/>
+            </linearGradient></defs>
+            <rect width="180" height="145" fill="white"/>
+            <rect x="10" y="10" width="40" height="30" {fill}/>
+            <path d="M70 10 L100 40" fill="none" stroke-width="4" {stroke}/>
+            <rect x="10" y="50" width="140" height="25" fill="url(#alpha)"/>
+            <text x="10" y="118" font-size="24" {label}>INK</text>
+            """);
+
+        string expected = Picture("""stop-color="red" stop-opacity=".25" """,
+            """stop-color="blue" stop-opacity=".75" """, """fill="red" fill-opacity=".25" """,
+            """stroke="blue" stroke-opacity=".5" """,
+            """fill="url(#missing) #112233" fill-opacity=".5" """);
+        string functional = Picture("""stop-color="rgba(255,0,0,.25)" """,
+            """stop-color="rgb(0 0 255/75%)" """, """fill="rgb(255 0 0/50%)" fill-opacity=".5" """,
+            """stroke="rgba(0,0,255,.5)" """,
+            """fill="url(#missing) rgb(17 34 51/50%)" stroke="rgba(255,0,0,0)" """);
+        AssertSvgPaintInBothFormats(expected, functional, pdf => TestAssert.Equal(3, LabelPaths(pdf)),
+            "1 0 0 rg", "0 0 1 RG", "/S /Luminosity", "/ca 0.25");
+    }
+
     public static void SvgGradientTemplateCyclesAndMissingTargetsKeepLocalDeclarations()
     {
         const string definitions = """
