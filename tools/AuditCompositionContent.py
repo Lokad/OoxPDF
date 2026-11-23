@@ -299,11 +299,14 @@ def screen_picture_ink(source, candidate, reference, case, fitz):
             "SvgColor": svg_color}
 
 
-def unresolved_fields(root):
-    """Recognize stored text results, without evaluating fields or page values."""
+def read_source_fields(root):
+    """Find unresolved field scopes and simple numeric page-counter caches."""
+    def field_opcode(value):
+        match = re.match(r"\s*([^\s\\]+)", value)
+        return match[1].upper() if match else ""
+
     def cached_instruction(value):
-        opcode = re.match(r"\s*([^\s\\]+)", value)
-        return bool(value.strip()) and (not opcode or opcode[1].upper() not in {"PAGE", "NUMPAGES"})
+        return bool(value.strip()) and field_opcode(value) not in page_counters
 
     def paragraph_items(paragraph):
         pending = list(reversed(list(paragraph)))
@@ -314,10 +317,20 @@ def unresolved_fields(root):
             yield item
             pending.extend(reversed(list(item)))
 
+    page_counters = {"PAGE", "NUMPAGES"}
     unresolved = set()
+    counter_caches = set()
     for field in root.iter(W + "fldSimple"):
-        if not cached_instruction(field.get(W + "instr", "")) or not any(item.text for item in field.iter(W + "t")):
+        instruction = field.get(W + "instr", "")
+        text = list(field.iter(W + "t"))
+        if not cached_instruction(instruction) or not any(item.text for item in text):
             unresolved.add("fldSimple")
+        if field_opcode(instruction) in page_counters and field.get(W + "fldLock", "").lower() in {"", "0", "false", "off"}:
+            # Only direct numeric run content is a counter cache. Keep nested
+            # prose and locked values in the ordinary source comparison.
+            value = "".join(item.text or "" for item in text).strip()
+            if text == field.findall(f"{W}r/{W}t") and re.fullmatch(r"[0-9]+", value):
+                counter_caches.update(text)
     visited = set()
     for paragraph in root.iter(W + "p"):
         stack = []
@@ -353,7 +366,7 @@ def unresolved_fields(root):
     for item in root.iter():
         if item.tag in {W + "fldChar", W + "instrText"} and item not in visited:
             unresolved.add(item.tag.removeprefix(W))
-    return sorted(unresolved)
+    return sorted(unresolved), counter_caches
 
 
 def source_content(path, mode, pages):
@@ -399,8 +412,9 @@ def source_content(path, mode, pages):
             for feature in ("del", "ins", "moveFrom", "moveTo", "vanish"):
                 if root.find(".//" + W + feature) is not None:
                     unresolved.append({"Part": name, "Feature": feature})
-            unresolved.extend({"Part": name, "Feature": feature} for feature in unresolved_fields(root))
-            counts = words(" ".join(item.text or "" for item in root.iter(tag)))
+            field_features, counter_caches = read_source_fields(root)
+            unresolved.extend({"Part": name, "Feature": feature} for feature in field_features)
+            counts = words(" ".join(item.text or "" for item in root.iter(tag) if item not in counter_caches))
             prose.update({token: count * weight for token, count in counts.items()})
             for equation in root.iter(M + "oMath"):
                 # The portfolio has literal and simple fraction expressions.
@@ -416,7 +430,10 @@ def source_content(path, mode, pages):
                     math[value] += weight
                 else:
                     unresolved.append({"Part": name, "Feature": "ambiguous-short-math"})
-            parts.append({"Part": name, "Occurrences": weight, "ProseTokens": sum(counts.values()) * weight})
+            part = {"Part": name, "Occurrences": weight, "ProseTokens": sum(counts.values()) * weight}
+            if counter_caches:
+                part["CachedPageCounterTokens"] = sum(bool(item.text and item.text.strip()) for item in counter_caches) * weight
+            parts.append(part)
     return prose, math, parts, unresolved
 
 

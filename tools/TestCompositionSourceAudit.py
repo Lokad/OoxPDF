@@ -10,10 +10,13 @@ import unittest
 from unittest.mock import patch
 from pathlib import Path
 from tempfile import TemporaryDirectory, gettempdir
-from AuditCompositionContent import (field_result_witnesses, inspect_reference, operation_text, page_owned_operations, reference_simple_math, resolve_reference,
-                                     screen_picture_ink, sha, unresolved_fields, validate_outcome_modes, words)
+from AuditCompositionContent import (field_result_witnesses, inspect_reference, operation_text, page_owned_operations, read_source_fields, reference_simple_math, resolve_reference,
+                                     screen_picture_ink, sha, validate_outcome_modes, words)
 
 W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'
+
+def unresolved_fields(root):
+    return read_source_fields(root)[0]
 
 class OperationTextTests(unittest.TestCase):
     def operation(self, text='r', x=108.226, y=73.499, advance=2.67732, **changes):
@@ -342,6 +345,26 @@ class CachedFieldAuditTests(unittest.TestCase):
         for opcode in ['PAGE', 'NUMPAGES', r'page \* MERGEFORMAT', r'page\* MERGEFORMAT']:
             self.assertTrue(unresolved_fields(document('<w:p>'+complex_field(instruction=opcode)+'</w:p>')))
             self.assertTrue(unresolved_fields(document(f'<w:p><w:fldSimple w:instr="{opcode}"><w:r><w:t>1</w:t></w:r></w:fldSimple></w:p>')))
+
+    def test_only_unlocked_simple_numeric_counter_runs_are_removed_from_prose(self):
+        root = document(r"""
+            <w:p>
+              <w:r><w:t>Literal 1</w:t></w:r>
+              <w:fldSimple w:instr=" page\* MERGEFORMAT ">
+                <w:r><w:t>1</w:t></w:r><w:r><w:t>2</w:t></w:r>
+              </w:fldSimple>
+              <w:fldSimple w:instr="NUMPAGES" w:fldLock="false"><w:r><w:t>3</w:t></w:r></w:fldSimple>
+              <w:fldSimple w:instr="PAGE" w:fldLock="1"><w:r><w:t>4</w:t></w:r></w:fldSimple>
+              <w:fldSimple w:instr="PAGE"><w:r><w:t>Prose</w:t></w:r></w:fldSimple>
+              <w:fldSimple w:instr="PAGE"><w:hyperlink><w:r><w:t>5</w:t></w:r></w:hyperlink></w:fldSimple>
+              <w:fldSimple w:instr="PAGE2"><w:r><w:t>6</w:t></w:r></w:fldSimple>
+            </w:p>
+            """)
+        features, caches = read_source_fields(root)
+        self.assertEqual(["fldSimple"], features)
+        self.assertEqual({"1", "2", "3"}, {item.text for item in caches})
+        self.assertEqual(["Literal 1", "4", "Prose", "5", "6"],
+                         [item.text for item in root.iter("{" + W + "}t") if item not in caches])
 
     def test_missing_cached_result(self):
         self.assertTrue(unresolved_fields(document('<w:p>'+complex_field(result='')+'</w:p>')))
