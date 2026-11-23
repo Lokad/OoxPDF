@@ -163,10 +163,18 @@ try {
             $actual=@(Get-Content -LiteralPath (Join-Path $output 'selected-methods.json') -Raw | ConvertFrom-Json)
             $wanted=@('ReportAlpha','ReportExplicitSlow','ReportGroupOnly','ReportNeighbor')
             if($actual.Count -ne 4 -or @(Compare-Object $wanted $actual).Count) {throw 'Union lost, repeated or admitted an unwanted slow method'}
-            if($case -ne 'list-only') {
+            if($case -eq 'list-only') {
+                $inventory=Get-Content -LiteralPath (Join-Path $root ($case+'.log')) -Raw | ConvertFrom-Json
+                if($inventory.RunnerInvocations -ne 0 -or
+                    (Test-Path -LiteralPath (Join-Path $output 'affected-tests.json'))) {
+                    throw 'List-only inventory must report zero test runs and publish no execution report'
+                }
+            }
+            else {
                 $report=Get-Content -LiteralPath (Join-Path $output 'affected-tests.json') -Raw | ConvertFrom-Json
                 $groupSkips=if($case -in @('group-skip','group-and-capability-skip')) {@('ReportGroupOnly')} else {@()}
                 if($report.provenance.GatePassed -ne $shouldPass -or $report.tests.Count -ne 4 -or
+                    $report.provenance.RunnerInvocations -ne 1 -or
                     @($report.provenance.GroupOnlySkips).Count -ne $groupSkips.Count -or
                     @($report.provenance.GroupOnlySkips | Where-Object { $_ -cnotin $groupSkips }).Count -or
                     $report.provenance.UnexpectedSkips.Count -ne $(if($case -eq 'capability-skip') {1} else {0})) {

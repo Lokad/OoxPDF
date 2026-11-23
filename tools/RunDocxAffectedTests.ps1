@@ -145,7 +145,7 @@ $inventory = [ordered]@{
     TestFilters = $filters
     SelectedMethods = @($selected | Sort-Object)
     UniqueSelectedMethods = $selected.Count
-    RunnerInvocations = 1
+    RunnerInvocations = 0
     LibrarySha256 = $libraryHash
     TestAssemblySha256 = $runnerHash
     CatalogueSha256 = (Get-FileHash -LiteralPath $catalogPath).Hash
@@ -182,6 +182,7 @@ if (@($catalog | Where-Object { $_.Group -eq 'cli' -and $selected.Contains($_.Na
 $path = Join-Path $output $rawReportName
 Assert-FrozenAssembly
 $exitCode = Invoke-FrozenTests @('--test-set', $selectionPath, '--report', $path) ($path + '.log')
+$inventory.RunnerInvocations++
 if (!(Test-Path -LiteralPath $path -PathType Leaf)) { throw 'Test runner did not produce its report' }
 $report = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
 $rows = @($report.tests)
