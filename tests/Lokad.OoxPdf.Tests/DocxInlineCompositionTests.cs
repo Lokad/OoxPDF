@@ -489,7 +489,7 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
-    public static void DocxInlineCompositionNormalNoteBaselinesMatchIndependentOffice()
+    public static void DocxInlineCompositionNormalNoteFramesAndWrappingMatchIndependentOffice()
     {
         if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent controls use installed Arial metrics.");
         string cases = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes"));
@@ -500,41 +500,28 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.Equal(row.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(input))));
             bool review = row.GetProperty("Mode").GetString() == "all-word-compatible";
             var mode = review ? OoxPdfDocxMarkupMode.AllMarkup : OoxPdfDocxMarkupMode.Final;
-            var document = DocxTests.ReadDocx(input, mode);
-            var lines = new DocxRenderer(null, mode, review ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
-                : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectTextEmission(document).Lines;
-            string kind = Path.GetFileName(input).Contains("-footnote-", StringComparison.Ordinal) ? "Footnote" : "Endnote";
-            var prose = lines.First(line => line.ContainerStoryKind == kind && line.TextLength > 1)
-                .Segments.First(segment => segment.TextLength > 1);
+            var renderer = new DocxRenderer(null, mode, review ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
+                : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+            bool footnote = Path.GetFileName(input).Contains("-footnote-", StringComparison.Ordinal);
+            string kind = footnote ? "Footnote" : "Endnote";
+            var noteLines = renderer.InspectTextEmission(DocxTests.ReadDocx(input, mode)).Lines
+                .Where(line => line.ContainerStoryKind == kind && line.TextLength > 1).ToArray();
+            var prose = noteLines.First().Segments.First(segment => segment.TextLength > 1);
             TestAssert.True(Math.Abs(prose.BaselineY - row.GetProperty("FirstProseBaseline").GetDouble()) < .5d,
                 $"Normal-note math retains the independent printed story frame: {input}/{mode}/baseline={prose.BaselineY}.");
             TestAssert.True(Math.Abs(prose.X - row.GetProperty("FirstProseX").GetDouble()) < .3d,
                 "Math and adjacent note prose share the printed horizontal frame.");
-        }
-    }
+            int expectedLineCount = row.GetProperty("ProseLineCount").GetInt32();
+            TestAssert.True(expectedLineCount == noteLines.Length,
+                $"The note with equations uses its owning section's design width before print scaling: {input}/{mode}.");
 
-    public static void DocxInlineCompositionNormalNotesMatchIndependentPrintedWrapping()
-    {
-        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent controls use installed Arial metrics.");
-        string cases = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes"));
-        using var references = JsonDocument.Parse(File.ReadAllText(Path.Combine(cases, "math-note-content-office-geometry.json")));
-        foreach (var row in references.RootElement.GetProperty("Rows").EnumerateArray())
-        foreach (bool removeMath in new[] { false, true })
-        {
-            string input = Path.Combine(cases, row.GetProperty("Id").GetString() + ".docx");
-            TestAssert.Equal(row.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(input))));
-            bool review = row.GetProperty("Mode").GetString() == "all-word-compatible";
-            var mode = review ? OoxPdfDocxMarkupMode.AllMarkup : OoxPdfDocxMarkupMode.Final;
             string fixture = "CompositionProbes/" + row.GetProperty("Id").GetString();
-            string noteKind = Path.GetFileName(input).Contains("-footnote-", StringComparison.Ordinal) ? "footnote" : "endnote";
-            var document = ReadMutation(fixture, mode, false, false,
-                (xml, w, m) => { if (removeMath) xml.Descendants(m + "oMath").Remove(); }, "word/" + noteKind + "s.xml");
-            var lines = new DocxRenderer(null, mode, review ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
-                : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectTextEmission(document).Lines;
-            string kind = Path.GetFileName(input).Contains("-footnote-", StringComparison.Ordinal) ? "Footnote" : "Endnote";
-            var noteLines = lines.Where(line => line.ContainerStoryKind == kind && line.TextLength > 1).ToArray();
-            TestAssert.True(row.GetProperty("ProseLineCount").GetInt32() == noteLines.Length,
-                $"The normal note inherits its owning section's design width before print scaling: {input}/{mode}.");
+            var withoutMath = ReadMutation(fixture, mode, false, false,
+                (xml, w, m) => xml.Descendants(m + "oMath").Remove(), footnote ? "word/footnotes.xml" : "word/endnotes.xml");
+            int lineCountWithoutMath = renderer.InspectTextEmission(withoutMath).Lines
+                .Count(line => line.ContainerStoryKind == kind && line.TextLength > 1);
+            TestAssert.True(expectedLineCount == lineCountWithoutMath,
+                $"The note without equations uses its owning section's design width before print scaling: {input}/{mode}.");
         }
     }
 
@@ -1421,34 +1408,14 @@ internal static partial class DocxInlineCompositionTests
     public static void DocxInlineCompositionFootnoteMarkersMatchIndependentPrintedOffsets() =>
         CheckAutomaticNoteMarkerGeometry("math-footnotes-office-markers.json");
 
-    public static void DocxInlineCompositionEndnoteMarkersMatchIndependentPrintedOffsets() =>
-        CheckAutomaticNoteMarkerGeometry("math-endnotes-office-markers.json");
+    public static void DocxInlineCompositionEndnoteMarkersAndStartMatchIndependentOffice() =>
+        CheckAutomaticNoteMarkerGeometry("math-endnotes-office-markers.json", includeEndnoteStart: true);
 
-    public static void DocxInlineCompositionEndnoteStartMatchesIndependentParagraphBoundary()
+    private static void CheckAutomaticNoteMarkerGeometry(string referenceFile, bool includeEndnoteStart = false)
     {
-        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent controls use installed Arial metrics.");
-        string cases = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes"));
-        using var references = JsonDocument.Parse(File.ReadAllText(Path.Combine(cases, "math-endnotes-office-markers.json")));
-        foreach (var row in references.RootElement.GetProperty("Rows").EnumerateArray())
-        {
-            string input = Path.Combine(cases, row.GetProperty("Id").GetString() + ".docx");
-            TestAssert.Equal(row.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(input))));
-            bool review = row.GetProperty("Mode").GetString() == "all-word-compatible";
-            var mode = review ? OoxPdfDocxMarkupMode.AllMarkup : OoxPdfDocxMarkupMode.Final;
-            var document = DocxTests.ReadDocx(input, mode);
-            var lines = new DocxRenderer(null, mode, review ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
-                : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectTextEmission(document).Lines;
-            var body = lines.Last(line => line.ContainerStoryKind == "Body");
-            var note = lines.Single(line => line.ContainerStoryKind == "Endnote" && line.TextLength > 1);
-            double gap = body.Segments[0].BaselineY - note.Segments.MaxBy(segment => segment.TextLength)!.BaselineY;
-            TestAssert.True(Math.Abs(gap - row.GetProperty("StoryBaselineGap").GetDouble()) < .25d,
-                $"The trailing paragraph owns the printed endnote start, including earlier tables and print scaling: {input}/{mode}/gap={gap}.");
-        }
-    }
-
-    private static void CheckAutomaticNoteMarkerGeometry(string referenceFile)
-    {
-        if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
+        bool checkStart = includeEndnoteStart && OperatingSystem.IsWindows();
+        bool checkMarkers = File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc"));
+        if (!checkStart && !checkMarkers)
             TestAssert.Skip("Installed Cambria Math is required for the independent note marker controls.");
         string cases = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes"));
         using var references = JsonDocument.Parse(File.ReadAllText(Path.Combine(cases, referenceFile)));
@@ -1461,7 +1428,17 @@ internal static partial class DocxInlineCompositionTests
             var document = DocxTests.ReadDocx(input, mode);
             var renderer = new DocxRenderer(null, mode, review ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
                 : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
-            var line = renderer.InspectTextEmission(document).Lines.Single(line =>
+            var lines = renderer.InspectTextEmission(document).Lines;
+            if (checkStart)
+            {
+                var body = lines.Last(line => line.ContainerStoryKind == "Body");
+                var note = lines.Single(line => line.ContainerStoryKind == "Endnote" && line.TextLength > 1);
+                double gap = body.Segments[0].BaselineY - note.Segments.MaxBy(segment => segment.TextLength)!.BaselineY;
+                TestAssert.True(Math.Abs(gap - row.GetProperty("StoryBaselineGap").GetDouble()) < .25d,
+                    $"The trailing paragraph owns the printed endnote start: {input}/{mode}/gap={gap}.");
+            }
+            if (!checkMarkers) continue;
+            var line = lines.Single(line =>
                 line.Segments.Any(segment => segment.TextLength == 1 &&
                     segment.FontSize < line.Segments.Max(s => s.FontSize) - .01d));
             var segments = line.Segments.Where(segment => !segment.IsTerminalLineSpace).ToArray();
@@ -1473,6 +1450,7 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.True(Math.Abs(marker.PdfFontSize / prose.PdfFontSize - row.GetProperty("MarkerFontRatio").GetDouble()) < .002d,
                 "The reference marker must keep its independently measured superscript font ratio.");
         }
+        if (!checkMarkers) TestAssert.Skip("Endnote starts checked. Installed Cambria Math is required for the independent marker offsets.");
     }
 
     public static void DocxInlineCompositionCommentsRetainOrderedRangeBoundaries()
