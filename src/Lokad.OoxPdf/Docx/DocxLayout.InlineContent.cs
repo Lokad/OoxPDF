@@ -775,20 +775,32 @@ internal sealed partial class DocxLayoutEngine
                 while (end < measured.Count && Atom(end).Source is DocxInlineText && !IsSpace(Atom(end))) end++;
             double groupWidth = GroupAdvance(index, end);
             double width = output.Count == 0 ? firstWidth : nextWidth;
-            if (!FitsLineWidth(groupWidth, Math.Max(firstWidth, nextWidth)))
+            double remainingWidth = width - advance - BoundaryBefore(Atom(index));
+            bool wraps = current.Count != 0 && !FitsLineWidth(groupWidth, remainingWidth);
+            bool overwide = !FitsLineWidth(groupWidth, Math.Max(firstWidth, nextWidth));
+            DocxWrappedTextLine[]? wrapped = null;
+            DocxTextSpan[]? spans = null;
+            if (wraps && !space && remainingWidth > 0d && Atom(index).Source is DocxInlineText &&
+                HasPreferredBreak(index, end))
             {
-                if (Atom(index).Source is not DocxInlineText) return false;
-                if (current.Count != 0)
+                // Fill the rest of an occupied line only at a preferred break.
+                // Emergency splitting still starts on an empty line.
+                spans = ReadTextGroup(index, end);
+                var preferred = WrapGroup(spans, remainingWidth, firstLineHasContent: true);
+                if (preferred.Length > 1 && preferred[0].EndsWithIntraTokenBreak) wrapped = preferred;
+            }
+            if (wrapped is not null || overwide)
+            {
+                if (wrapped is null)
                 {
-                    Flush(new(index));
-                    if (stopAfterFirstLine) { lines = output; return true; }
+                    if (Atom(index).Source is not DocxInlineText) return false;
+                    if (current.Count != 0)
+                    {
+                        Flush(new(index));
+                        if (stopAfterFirstLine) { lines = output; return true; }
+                    }
+                    wrapped = WrapGroup(spans ?? ReadTextGroup(index, end), output.Count == 0 ? firstWidth : nextWidth);
                 }
-                var spans = Enumerable.Range(index, end - index).SelectMany(atom => Atom(atom).Text).ToArray();
-                // Reuse the existing bounded break search, Unicode rules and
-                // authored character-wrap policy for an overwide text word.
-                var wrapped = WrapTextLines(spans, output.Count == 0 ? firstWidth : nextWidth, nextWidth,
-                    fontSize, measurer, [], 36d, ShouldAllowCharacterLevelWordWrap(paragraph), dynamicFieldPageNumber: null,
-                    cancellationToken: token).ToArray();
                 if (wrapped.Length == 0) return false;
                 for (int lineIndex = 0; lineIndex < wrapped.Length; lineIndex++)
                 {
@@ -834,8 +846,7 @@ internal sealed partial class DocxLayoutEngine
                 index = end;
                 continue;
             }
-            double boundary = BoundaryBefore(Atom(index));
-            if (current.Count != 0 && !FitsLineWidth(advance + boundary + groupWidth, width))
+            if (wraps)
             {
                 if (Atom(index).Math is { Box.AllowsInlineRelocation: false }) return false;
                 Flush(new(index));
@@ -885,6 +896,28 @@ internal sealed partial class DocxLayoutEngine
             }
         }
         lines = output; return true;
+
+        bool HasPreferredBreak(int begin, int end)
+        {
+            for (int i = begin; i < end; i++)
+            {
+                token.ThrowIfCancellationRequested();
+                if (Atom(i).Text.Any(span => DocxLineBreakOpportunities.ContainsOpportunity(span.Text))) return true;
+            }
+            return false;
+        }
+
+        DocxTextSpan[] ReadTextGroup(int begin, int end) =>
+            Enumerable.Range(begin, end - begin).SelectMany(index => Atom(index).Text).ToArray();
+
+        DocxWrappedTextLine[] WrapGroup(DocxTextSpan[] spans, double width, bool firstLineHasContent = false)
+        {
+            var wrapped = WrapTextLines(spans, width, nextWidth, fontSize, measurer, [], 36d,
+                ShouldAllowCharacterLevelWordWrap(paragraph), dynamicFieldPageNumber: null,
+                cancellationToken: token, firstLineHasContent: firstLineHasContent);
+            // Cursor mode needs the next source offset, not every later line.
+            return (stopAfterFirstLine ? wrapped.Take(2) : wrapped).ToArray();
+        }
 
         double GroupAdvance(int begin, int end)
         {

@@ -1053,6 +1053,7 @@
       "PptxSyntheticChartVisibleSecondaryAxisReservesInnerPlotStrips"
   ],
   "docx-shared-cell-content-portable": [
+    "=DocxInlineCompositionPreferredBreakKeepsTailInsideExactCell",
     "DocxCellPageBreakAdmissionUsesComputedContentInsteadOfFieldCache",
     "DocxTableLayoutStageUsesCellBodyElementsForInlineImages",
     "DocxCellFlowWithoutFontMeasurementKeepsAuthoredPictureAdvance",

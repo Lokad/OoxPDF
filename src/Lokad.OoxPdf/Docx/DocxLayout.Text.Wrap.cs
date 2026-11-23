@@ -152,7 +152,7 @@ internal sealed partial class DocxLayoutEngine
         int? dynamicFieldPageNumber,
         CancellationToken cancellationToken = default,
         IReadOnlyList<(int CharOffset, double Width)>? inlineImageWidths = null,
-        int sourceStartOffset = 0, DocxParagraph? sourceParagraph = null)
+        int sourceStartOffset = 0, DocxParagraph? sourceParagraph = null, bool firstLineHasContent = false)
     {
         string text = string.Concat(spans.Select(span => span.Text));
         int lineIndex = 0;
@@ -162,7 +162,7 @@ internal sealed partial class DocxLayoutEngine
             int breakIndex = text.IndexOf('\n', segmentStart);
             int segmentLength = breakIndex < 0 ? text.Length - segmentStart : breakIndex - segmentStart;
             bool yielded = false;
-            foreach (DocxWrappedTextLine line in WrapWords(text, spans, segmentStart, segmentLength, index => index == 0 && lineIndex == 0 ? firstLineMaxWidth : continuationLineMaxWidth, fontSize, textMeasurer, tabStops, defaultTabStopPoints, allowOverwideTokenBreaks, dynamicFieldPageNumber, cancellationToken, inlineImageWidths, sourceParagraph))
+            foreach (DocxWrappedTextLine line in WrapWords(text, spans, segmentStart, segmentLength, index => index == 0 && lineIndex == 0 ? firstLineMaxWidth : continuationLineMaxWidth, fontSize, textMeasurer, tabStops, defaultTabStopPoints, allowOverwideTokenBreaks, dynamicFieldPageNumber, cancellationToken, inlineImageWidths, sourceParagraph, firstLineHasContent && lineIndex == 0))
             {
                 yielded = true;
                 yield return line;
@@ -202,7 +202,8 @@ internal sealed partial class DocxLayoutEngine
         bool allowOverwideTokenBreaks,
         int? dynamicFieldPageNumber,
         CancellationToken cancellationToken,
-        IReadOnlyList<(int CharOffset, double Width)>? inlineImageWidths = null, DocxParagraph? sourceParagraph = null)
+        IReadOnlyList<(int CharOffset, double Width)>? inlineImageWidths = null, DocxParagraph? sourceParagraph = null,
+        bool firstLineHasContent = false)
     {
         // slice widths are memoized by text coordinates for this segment so
         // repeated measures of the same slice (whole-token checks, preferred/overwide
@@ -346,7 +347,8 @@ internal sealed partial class DocxLayoutEngine
                         defaultTabStopPoints, dynamicFieldPageNumber, measureMemo, segmentHasHiddenBreaks,
                         segmentHasDynamicFields, cancellationToken, spanStarts, chainAverages, breakOpportunities,
                         out int breakLength, out double? overflowAverage) ||
-                    (overflowAverage is double average && (allowOverwideTokenBreaks || CanEmergencyBreakWord(token)) &&
+                    ((lineIndex != 0 || !firstLineHasContent) && overflowAverage is double average &&
+                     (allowOverwideTokenBreaks || CanEmergencyBreakWord(token)) &&
                      TryFindEmergencyTokenBreak(text, spans, token, lineWidth, average, fontSize, textMeasurer,
                          tabStops, defaultTabStopPoints, dynamicFieldPageNumber, measureMemo, segmentHasHiddenBreaks,
                          segmentHasDynamicFields, cancellationToken, spanStarts, out breakLength)))
@@ -1061,10 +1063,10 @@ internal sealed partial class DocxLayoutEngine
 
     private static class DocxLineBreakOpportunities
     {
-        public static bool IsOpportunityAfter(char value)
-        {
-            return value is '-' or '/' or '\\' or '\u00AD' or '\u200B' or '\u2010' or '\u2012' or '\u2013' or '\u2014';
-        }
+        private const string Characters = "-/\\\u00AD\u200B\u2010\u2012\u2013\u2014";
+
+        public static bool IsOpportunityAfter(char value) => Characters.Contains(value);
+        public static bool ContainsOpportunity(string text) => text.AsSpan().ContainsAny(Characters);
     }
 
     private readonly record struct TextToken(int Start, int Length, bool IsBreakableWhitespace);
