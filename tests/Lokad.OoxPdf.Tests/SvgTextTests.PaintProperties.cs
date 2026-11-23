@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Docx;
+using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pdf;
 using Lokad.OoxPdf.Pptx;
@@ -699,6 +700,36 @@ internal static partial class SvgTextTests
         static string OnRoot(string svg, string attribute) => svg.Insert("<svg ".Length, attribute);
         static void AssertNoOverlay(string pdf) => TestAssert.True(!pdf.Contains(overlayPaint, StringComparison.Ordinal),
             "An invisible overlay must leave the neighboring paint visible.");
+    }
+
+    public static void SvgResourceDefinitionsKeepTheirChildrenOutOfVisiblePaint()
+    {
+        const string backdrop = """<rect width="140" height="70" fill="#136c9e"/>""";
+        const string content = """
+            <rect x="10" y="10" width="30" height="25" fill="red"/>
+            <text x="16" y="20" fill="blue" font-family="UninstantiatedDefinitionFace">Resource label</text>
+            """;
+        string[] resources = ["clipPath", "marker", "mask", "pattern", "symbol"];
+        string definitions = string.Concat(resources.Select(kind => $"<{kind}>{content}</{kind}>"));
+        var expected = Paint(Svg(backdrop + "<defs>" + definitions + "</defs>"));
+        byte[] unwrapped = Encoding.UTF8.GetBytes(Svg(backdrop + definitions));
+        var textFonts = PptxRenderer.PrepareSvgTextFontsAsync([unwrapped], new PortableRenderingTests.PinnedResolver(),
+            FontProgramLoader.LoadAsync, null, default).GetAwaiter().GetResult();
+        TestAssert.Equal(0, textFonts.Count);
+
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        var actual = new PdfGraphicsBuilder();
+        TestAssert.True(PptxRenderer.TryRenderSvgImage(actual, 0, 0, 400, 160, unwrapped,
+            diagnostics.Add, 1, "/test.svg", default, textFonts), "The visible backdrop remains paintable.");
+        AssertEquivalentSvgPaint(expected, actual, "Moving resource definitions outside defs must preserve visible paint.");
+        foreach (string kind in resources)
+        {
+            TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" &&
+                d.Message.Contains("unsupported " + kind + " element", StringComparison.Ordinal)),
+                $"The unsupported {kind} definition keeps its existing diagnostic.");
+        }
+        TestAssert.Equal(resources.Length, diagnostics.Count);
+        Write(Page(actual));
     }
 
     public static void SvgObjectOpacityMatchesGroupForFilledGradientStrokes()
