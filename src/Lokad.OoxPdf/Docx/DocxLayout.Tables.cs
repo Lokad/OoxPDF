@@ -609,6 +609,7 @@ internal sealed partial class DocxLayoutEngine
             int? currentPageCount = frame.Context.PageCount;
             var laidOutCells = new List<(IReadOnlyList<DocxParagraph> Paragraphs, IReadOnlyList<DocxTextLineLayout> TextLines, double UsedHeight)>();
             var splitLineBaselines = new List<double>();
+            double fragmentBaselineScale = ResolveTableRowFragmentBaselineScale(row, paragraphSpacingScale, fragmentCount: 2);
             for (int cellIndex = 0; cellIndex < row.Cells.Count; cellIndex++)
             {
                 DocxTableCell cell = row.Cells[cellIndex];
@@ -623,7 +624,6 @@ internal sealed partial class DocxLayoutEngine
                 // fragments have their own placement qualification.
                 if (textLines.Any(line => line.Math is not null || line.InlineMath.Count != 0)) { return false; }
                 IReadOnlyList<DocxParagraph> cellParagraphs = DocxBlockTraversal.EnumerateDirectParagraphs(DocxTableCellContent.GetBodyElements(cell)).ToArray();
-                double fragmentBaselineScale = ResolveTableRowFragmentBaselineScale(row, paragraphSpacingScale, fragmentCount: 2);
                 if (fragmentBaselineScale < 1d)
                 {
                     double correction = ResolveTableCellFirstBaselineInset(cellParagraphs, textMeasurer) * (1d - fragmentBaselineScale);
