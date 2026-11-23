@@ -13,19 +13,24 @@ internal sealed partial class DocxReader
     // Expected visible payloads drive omission diagnostics, not a raw XML census.
     // Empty display payloads still diagnose; visibility shares the reader's
     // existing revision and row decisions.
-    private static int CountSelectedEquationSources(XContainer source, OoxPdfDocxMarkupMode mode,
-        CancellationToken token, out bool hasSource)
+    private static (int Count, bool HasSource, bool HasDisplaySource) InspectEquationSources(
+        XContainer source, OoxPdfDocxMarkupMode mode, CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
         int count = 0;
-        hasSource = false;
+        bool hasSource = false;
+        bool hasDisplaySource = false;
         foreach (XElement element in source.Descendants())
         {
             token.ThrowIfCancellationRequested();
             bool equation = element.Name == MathNamespace + "oMath";
             if (!equation && element.Name != MathNamespace + "oMathPara") continue;
             hasSource = true;
-            if (!equation && element.Descendants(MathNamespace + "oMath").Any()) continue;
+            if (!equation)
+            {
+                hasDisplaySource = true;
+                if (element.Descendants(MathNamespace + "oMath").Any()) continue;
+            }
             bool included = true;
             bool retainsDeletedStructure = true;
             foreach (XElement ancestor in element.Ancestors())
@@ -43,7 +48,7 @@ internal sealed partial class DocxReader
             }
             if (included) count++;
         }
-        return count;
+        return (count, hasSource, hasDisplaySource);
     }
 
     private static bool RetainsDeletedMathStructure(XElement container, OoxPdfDocxMarkupMode mode) =>

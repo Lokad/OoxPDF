@@ -872,9 +872,9 @@ internal sealed partial class DocxReader
             if (!hidden) return ReadInlineDrawings(run, styles, numbering, documentSettings, package, relationships,
                 markupMode, revision, cancellationToken, index, recordPictureSource);
             foreach (var inline in EnumerateRunOwnedDrawings(run, WordprocessingDrawingNamespace + "inline", cancellationToken))
-                hiddenDrawingEquationSourceCount += CountSelectedEquationSources(inline, markupMode, cancellationToken, out _);
+                hiddenDrawingEquationSourceCount += InspectEquationSources(inline, markupMode, cancellationToken).Count;
             foreach (var textBox in EnumerateRunOwnedDrawings(run, VmlNamespace + "textbox", cancellationToken))
-                hiddenDrawingEquationSourceCount += CountSelectedEquationSources(textBox, markupMode, cancellationToken, out _);
+                hiddenDrawingEquationSourceCount += InspectEquationSources(textBox, markupMode, cancellationToken).Count;
             return new RunDrawings([], [], null);
         }
 

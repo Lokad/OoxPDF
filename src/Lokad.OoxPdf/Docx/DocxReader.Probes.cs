@@ -104,7 +104,7 @@ internal sealed partial class DocxReader
             // the source probe too, rather than retaining empty layout stories
             // merely to suppress their later warning.
             int equationSourceCount = knownEquationSourceCount ??
-                CountSelectedEquationSources(probeDocument, revisionFilteringMarkupMode, cancellationToken, out _);
+                InspectEquationSources(probeDocument, revisionFilteringMarkupMode, cancellationToken).Count;
             if (equationSourceCount != 0)
             {
                 Emit("DOCX_UNSUPPORTED_EQUATION", "equation", probePartName, "Ignored");

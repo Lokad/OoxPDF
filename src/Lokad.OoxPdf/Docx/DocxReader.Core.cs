@@ -36,9 +36,9 @@ internal sealed partial class DocxReader
             DocxMarkupContext markupContext = DocxMarkupContext.FromMode(markupMode).ApplyDocumentSettings(documentSettings);
             DocxCommentAnchorInventory commentAnchorInventory = ReadCommentAnchorInventory(document, revisionFilteringMarkupMode);
             var equationDiagnostics = new List<OoxPdfDiagnostic>();
-            int equationSourceCount = CountSelectedEquationSources(document, revisionFilteringMarkupMode, cancellationToken, out _);
+            var (equationSourceCount, _, hasDisplaySource) = InspectEquationSources(document, revisionFilteringMarkupMode, cancellationToken);
             Action<OoxPdfDiagnostic>? featureSink = diagnosticSink;
-            if (diagnosticSink is not null || equationSourceCount != 0 || document.Descendants(MathNamespace + "oMathPara").Any())
+            if (diagnosticSink is not null || equationSourceCount != 0 || hasDisplaySource)
             {
                 featureSink = diagnostic =>
                 {

@@ -23,7 +23,7 @@ internal sealed partial class DocxReader
             {
                 token.ThrowIfCancellationRequested();
                 if (part.Value.BodyElements is not { } body || part.Value.Xml is not { } xml) { continue; }
-                int count = CountSelectedEquationSources(xml, mode, token, out bool hasSource);
+                var (count, hasSource, _) = InspectEquationSources(xml, mode, token);
                 if (hasSource)
                     yield return new(part.Key, count, body) { FloatingDrawings = part.Value.Drawings ?? [] };
             }
@@ -491,7 +491,7 @@ internal sealed partial class DocxReader
         DocxCommentThreadMetadata? threadMetadata = paragraphId is not null && commentThreadMetadataByParagraphId is not null && commentThreadMetadataByParagraphId.TryGetValue(paragraphId, out DocxCommentThreadMetadata? metadata)
             ? metadata
             : null;
-        int sourceEquationCount = CountSelectedEquationSources(story, markupMode, cancellationToken, out _);
+        int sourceEquationCount = InspectEquationSources(story, markupMode, cancellationToken).Count;
         string? storyId = NormalizeDecimalId((string?)story.Attribute(WordprocessingNamespace + "id"));
         return new DocxRelatedStory(
             kind,
