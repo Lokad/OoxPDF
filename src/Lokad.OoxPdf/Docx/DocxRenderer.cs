@@ -631,54 +631,41 @@ internal sealed partial class DocxRenderer
     private DocxMarkupContext ResolveEffectiveMarkupContext(DocxDocument document, CancellationToken cancellationToken = default)
     {
         DocxMarkupContext effective = markupContext.ApplyDocumentSettings(document.Settings);
-        double printScale = ResolveWordCompatiblePrintScale(document, effective);
+        bool wordCompatible = UsesWordCompatibleAllMarkupTextProfile(effective);
+        bool? hasPrintedBalloons = wordCompatible ? HasWordCompatibleBalloonContent(document, effective) : null;
+        double printScale = ResolveWordCompatiblePrintScale(document, effective, hasPrintedBalloons);
         // Office: body X lands at margin times scale, so the uniform shift is margin times (scale - 1).
-        double xOffset = effective.Mode == OoxPdfDocxMarkupMode.AllMarkup &&
-            effective.GeometryMode == OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup &&
-            effective.ExpandsMarkupMargin
-            ? -document.MarginLeftPoints * (1d - printScale)
-            : 0d;
+        double xOffset = wordCompatible ? -document.MarginLeftPoints * (1d - printScale) : 0d;
         // The Y shift defaults to the fitted anchor here; scaled pages refine it from the
         // owning page's laid-out baseline once a layout exists (WithPageTextEmissionOffsets).
-        double yOffset = effective.Mode == OoxPdfDocxMarkupMode.AllMarkup &&
-            effective.GeometryMode == OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup &&
-            effective.ExpandsMarkupMargin
-            ? WordCompatibleTextYOffsetReferenceAnchorPoints
-            : 0d;
-        IReadOnlyDictionary<string, string>? markerLabels = UsesWordCompatibleAllMarkupTextProfile(effective) && effective.RendersCommentBalloons
+        double yOffset = wordCompatible ? WordCompatibleTextYOffsetReferenceAnchorPoints : 0d;
+        IReadOnlyDictionary<string, string>? markerLabels = wordCompatible && effective.RendersCommentBalloons
             ? BuildWordCompatibleCommentMarkerLabels(document, cancellationToken) : null;
-        IEnumerable<DocxParagraph> mainParagraphs = document.BodyElements.Count == 0
-            ? document.Paragraphs.Concat(document.Tables.SelectMany(DocxBlockTraversal.EnumerateTableParagraphs))
-            : DocxBlockTraversal.EnumerateBodyParagraphs(document);
-        IReadOnlySet<DocxParagraph>? visibleComments = UsesWordCompatibleAllMarkupTextProfile(effective)
-            ? new HashSet<DocxParagraph>(mainParagraphs.Where(paragraph =>
+        IReadOnlySet<DocxParagraph>? visibleComments = wordCompatible
+            ? new HashSet<DocxParagraph>(EnumerateMainStoryParagraphs(document).Where(paragraph =>
                 paragraph.InlineReferences.Any(reference => reference.Kind == DocxRelatedStoryKind.Comment) ||
                 paragraph.SplitComments is not null), ReferenceEqualityComparer.Instance)
             : null;
         return effective with { WordCompatiblePrintScale = printScale, WordCompatibleTextXOffset = xOffset,
             WordCompatibleTextYOffset = yOffset, CommentMarkerLabels = markerLabels,
             WordCompatibleMainStoryCommentParagraphs = visibleComments,
-            WordCompatibleHasPrintedBalloons = UsesWordCompatibleAllMarkupTextProfile(effective)
-                ? (effective.RendersCommentBalloons && HasBalloonableCommentAnchor(document)) ||
-                    (effective.RendersRevisionBalloons && HasAnyRevisionBalloon(document)) : null };
+            WordCompatibleHasPrintedBalloons = hasPrintedBalloons };
     }
 
     private const double WordCompatibleBalloonLaneWidthPoints = 266.5d;
 
-    internal static double ResolveWordCompatiblePrintScale(DocxDocument document, DocxMarkupContext markupContext)
+    internal static double ResolveWordCompatiblePrintScale(DocxDocument document, DocxMarkupContext markupContext,
+        bool? hasPrintedBalloons = null)
     {
-        // Office A/B (print-with-balloons probes across margins, orientations, and content):
-        // Word reserves a fixed balloon lane beside the body and scales the page so
-        // left margin + body + lane fits the paper width. Revisions alone balloon nothing
-        // and print unscaled.
-        if (markupContext.Mode != OoxPdfDocxMarkupMode.AllMarkup ||
-            markupContext.GeometryMode != OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup ||
-            !markupContext.ExpandsMarkupMargin ||
-            !HasWordCompatibleBalloonContent(document, markupContext))
+        if (!UsesWordCompatibleAllMarkupTextProfile(markupContext) ||
+            !(hasPrintedBalloons ?? HasWordCompatibleBalloonContent(document, markupContext)))
         {
             return 1d;
         }
 
+        // Office A/B (print-with-balloons probes across margins, orientations, and content):
+        // Word reserves a fixed balloon lane beside the body and scales the page so
+        // left margin + body + lane fits the paper width.
         double bodyWidth = document.PageWidthPoints - document.MarginLeftPoints - document.MarginRightPoints;
         double designWidth = document.MarginLeftPoints + bodyWidth + WordCompatibleBalloonLaneWidthPoints;
         if (designWidth <= 0d)
@@ -725,29 +712,13 @@ internal sealed partial class DocxRenderer
                 !DocxInlineContent.IsKnownEmptyCommentAnchor(paragraph, reference));
         }
 
-        bool TableHasCommentReference(DocxTable table)
-        {
-            foreach (DocxTableRow row in table.Rows)
-            {
-                foreach (DocxTableCell cell in row.Cells)
-                {
-                    if (DocxBlockTraversal.EnumerateBodyParagraphs(DocxTableCellContent.GetBodyElements(cell)).Any(HasCommentReference))
-                    {
-                        return true;
-                    }
-                }
-            }
-
-            return false;
-        }
-
-        if (document.Paragraphs.Any(HasCommentReference) || document.Tables.Any(TableHasCommentReference))
-        {
-            return true;
-        }
-
-        return false;
+        return EnumerateMainStoryParagraphs(document).Any(HasCommentReference);
     }
+
+    private static IEnumerable<DocxParagraph> EnumerateMainStoryParagraphs(DocxDocument document) =>
+        document.BodyElements.Count != 0
+            ? DocxBlockTraversal.EnumerateBodyParagraphs(document)
+            : document.FallbackParagraphs.Concat(document.FallbackTables.SelectMany(DocxBlockTraversal.EnumerateTableParagraphs));
 
     private static bool HasRevisionBalloon(IReadOnlyList<DocxRevisionInfo> revisions, bool isMainStory = true)
     {
@@ -759,20 +730,11 @@ internal sealed partial class DocxRenderer
     // stories do not independently place revision captions.
     private static bool HasAnyRevisionBalloon(DocxDocument document)
     {
-        if (HasStory(document.BodyElements, document.Paragraphs, document.Tables, isMainStory: true) ||
+        if (HasStory(document.BodyElements, document.FallbackParagraphs, document.FallbackTables, isMainStory: true) ||
             HasFloatingContent(document.FloatingDrawings))
         {
             return true;
         }
-
-        var references = DocxBlockTraversal.EnumerateBodyParagraphs(document)
-            .SelectMany(paragraph => paragraph.InlineReferences)
-            .Where(reference => reference.Id is not null &&
-                reference.Kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote)
-            .Select(reference => (reference.Kind, reference.Id))
-            .ToHashSet();
-        var notes = document.RelatedStories.Where(story => story.IsNormalStoryType &&
-            references.Contains((story.Kind, story.Id))).ToArray();
 
         foreach (var story in DocxBlockTraversal.EnumerateStaticStorySources(document, default))
         {
@@ -783,8 +745,14 @@ internal sealed partial class DocxRenderer
             }
         }
 
-        return notes.Any(story => HasStory(story.BodyElements, story.Paragraphs, story.Tables) ||
-            HasFloatingContent(story.FloatingDrawings));
+        var references = DocxBlockTraversal.EnumerateBodyParagraphs(document)
+            .SelectMany(paragraph => paragraph.InlineReferences)
+            .Where(reference => reference.Id is not null &&
+                reference.Kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote)
+            .Select(reference => (reference.Kind, reference.Id))
+            .ToHashSet();
+        return document.RelatedStories.Any(story => story.IsNormalStoryType && references.Contains((story.Kind, story.Id)) &&
+            (HasStory(story.BodyElements, story.FallbackParagraphs, story.FallbackTables) || HasFloatingContent(story.FloatingDrawings)));
 
         bool HasFloatingContent(IEnumerable<DocxFloatingDrawing> drawings) =>
             drawings.Any(drawing => HasContent(drawing.TextBoxBodyElements, isMainStory: false));
