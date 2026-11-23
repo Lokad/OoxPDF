@@ -94,7 +94,7 @@ Plain spans follow their nearest `xml:space` declaration. Preserved spaces
 and no-break spaces retain their advance at label edges.
 Plain spans and links also retain glyph paint with explicit `inherit` or `unset`
 for font family, size, style, weight, color, fill and fill opacity.
-They can restate the same font family list, slant, weight, resolved size or solid fill.
+They can restate the same font family list, slant, weight, resolved size, solid fill or fill opacity.
 Complex SVG text, filters, masks/blends and
 unsupported constructs retain limitations. TrueType outlines embed; CFF faces
 require an embeddable fallback. Missing glyphs use diagnosed replacement.

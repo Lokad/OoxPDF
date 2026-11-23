@@ -76,7 +76,8 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct SvgTextFill(RgbColor? Color, double Alpha);
 
-    private readonly record struct SvgTextAppearance(string FamilyList, string Slant, int Weight, double Size, SvgTextFill Fill);
+    private readonly record struct SvgTextAppearance(string FamilyList, string Slant, int Weight, double Size,
+        SvgTextFill Fill, double FillOpacity);
 
     private static bool HasSvgStylesheet(XDocument svg) =>
         svg.DescendantNodes().OfType<XProcessingInstruction>().Any(p => p.Target == "xml-stylesheet" && !p.Ancestors().Any(IsSvgMetadataElement)) ||
@@ -138,7 +139,8 @@ internal sealed partial class PptxRenderer
         if (!double.IsFinite(x) || !double.IsFinite(y)) return false;
         string fill = ResolveSvgPaintFallback(element, style, Inherited("fill") ?? "black", paintServerIds, out _);
         if (!TryReadSvgTextFill(element, style, fill, out var paint)) return false;
-        var appearance = new SvgTextAppearance(familyList, fontStyle, weight, size, paint);
+        double fillOpacity = ReadSvgOpacityValue(Inherited("fill-opacity"));
+        var appearance = new SvgTextAppearance(familyList, fontStyle, weight, size, paint, fillOpacity);
         if (!TryReadPlainSvgText(element, appearance, IsSvgVisibilityHidden(Inherited("visibility")), cancellationToken,
                 out string valueText, out bool[]? hiddenCharacters)) return false;
         if (OoxComplexScript.DetectNeeds(valueText) != OoxComplexScriptKind.None ||
@@ -146,7 +148,7 @@ internal sealed partial class PptxRenderer
         string family = familyList.Split(',')[0].Trim().Trim('\'', '"');
         family = family.ToLowerInvariant() switch { "serif" => "Times New Roman", "sans-serif" => "Arial", "monospace" => "Courier New", _ => family };
         if (family.Length == 0) return false;
-        double opacity = paint.Alpha * ReadSvgOpacityValue(Inherited("fill-opacity")) *
+        double opacity = paint.Alpha * fillOpacity *
             ReadSvgOpacityValue(ReadSvgElementOpacity(element, style));
         label = new(valueText, hiddenCharacters, new FontRequest(family, weight >= 600, fontStyle != "normal"), size, x, y, anchor, paint.Color, opacity,
             !string.Equals(Inherited("font-kerning"), "none", StringComparison.OrdinalIgnoreCase) &&
@@ -300,7 +302,10 @@ internal sealed partial class PptxRenderer
                 "font-size" => TryResolveSvgFontSize(value, appearance.Size, out double size) && size == appearance.Size,
                 "fill" => InheritsSvgPropertyValue(value) ||
                     TryReadSvgTextFill(child, style, value, out var fill) && fill == appearance.Fill,
-                "color" or "fill-opacity" => InheritsSvgPropertyValue(value),
+                "fill-opacity" => InheritsSvgPropertyValue(value) ||
+                    ParseSvgOpacity(value) is { } opacity && double.IsFinite(opacity) &&
+                    Math.Clamp(opacity, 0d, 1d) == appearance.FillOpacity,
+                "color" => InheritsSvgPropertyValue(value),
                 _ => false,
             };
         }
