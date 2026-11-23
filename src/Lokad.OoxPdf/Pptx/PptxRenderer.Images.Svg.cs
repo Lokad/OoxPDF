@@ -256,7 +256,7 @@ internal sealed partial class PptxRenderer
             {
                 unsupportedCommands.Add(badCommand.Value);
             }
-            string? opacityText = ReadSvgPresentationAttribute(element, style, "opacity");
+            string? opacityText = ReadSvgElementOpacity(element, style);
             double? authoredOpacity = ParseSvgOpacity(opacityText);
             double elementOpacity = Math.Clamp(authoredOpacity ?? 1d, 0d, 1d);
             bool allowGradientStroke = strokeContainersQualified &&
@@ -639,8 +639,7 @@ internal sealed partial class PptxRenderer
             string name = element.Name.LocalName;
             if (IsSvgOpacityContainer(name) && !IsSvgDefinitionElement(element) && !IsInFullyTransparentSvgContainer(element))
             {
-                IReadOnlyDictionary<string, string> style = ReadSvgStyleDeclarations(element);
-                string? opacity = style.TryGetValue("opacity", out string? value) ? value : (string?)element.Attribute("opacity");
+                string? opacity = ReadSvgElementOpacity(element, ReadSvgStyleDeclarations(element));
                 if (ReadSvgOpacityValue(opacity) < 1d && !admittedContainers.Contains(element)) { containerCount++; }
             }
         }
@@ -679,15 +678,26 @@ internal sealed partial class PptxRenderer
         }
 
         bool nestedSvg = name == "svg" && element.Parent is not null;
-        string? attribute = (string?)element.Attribute("opacity");
-        string? inlineOpacity = element.Attribute("style") is null
-            ? null : ReadSvgStyleDeclarations(element).GetValueOrDefault("opacity");
-        double? numeric = ReadUnitSvgOpacity(inlineOpacity ?? attribute);
+        string? opacity = ReadSvgElementOpacity(element, ReadSvgStyleDeclarations(element));
+        double? numeric = ReadUnitSvgOpacity(opacity);
         // Link wrappers previously painted their strokes at full opacity.
         // Keep that paint when an opacity declaration still needs fallback.
-        bool allowsGradientStroke = !nestedSvg &&
-            (numeric.HasValue || (inlineOpacity is null && attribute is null) || name == "a");
+        bool allowsGradientStroke = !nestedSvg && (numeric.HasValue || opacity is null || name == "a");
         return new(nestedSvg ? null : numeric, numeric == 0d, allowsGradientStroke);
+    }
+
+    private static string? ReadSvgElementOpacity(XElement element, IReadOnlyDictionary<string, string> style)
+    {
+        string? opacity = ReadSvgPresentationAttribute(element, style, "opacity");
+        // Each explicit inherit reads the parent's value. A missing declaration
+        // stops the chain because opacity defaults to one on that element.
+        while (opacity.AsSpan().Trim().Equals("inherit", StringComparison.OrdinalIgnoreCase))
+        {
+            if (element.Parent is not { } parent) return null;
+            element = parent;
+            opacity = ReadSvgPresentationAttribute(parent, ReadSvgStyleDeclarations(parent), "opacity");
+        }
+        return opacity;
     }
 
     private readonly record struct SvgContainerOpacity(double? GroupOpacity, bool IsTransparent, bool AllowsGradientStroke);

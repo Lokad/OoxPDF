@@ -156,7 +156,7 @@ internal sealed partial class PptxRenderer
         family = family.ToLowerInvariant() switch { "serif" => "Times New Roman", "sans-serif" => "Arial", "monospace" => "Courier New", _ => family };
         if (family.Length == 0) return false;
         double opacity = colorOpacity * ReadSvgOpacityValue(Inherited("fill-opacity")) *
-            ReadSvgOpacityValue(ReadSvgPresentationAttribute(element, style, "opacity"));
+            ReadSvgOpacityValue(ReadSvgElementOpacity(element, style));
         label = new(valueText, new FontRequest(family, bold, fontStyle != "normal"), size, x, y, anchor, color, opacity,
             !string.Equals(Inherited("font-kerning"), "none", StringComparison.OrdinalIgnoreCase) &&
             Inherited("kerning") is not ("0" or "0px"));

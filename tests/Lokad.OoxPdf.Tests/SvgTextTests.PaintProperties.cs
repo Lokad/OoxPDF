@@ -826,6 +826,38 @@ internal static partial class SvgTextTests
         static void AssertControl(string pdf) => TestAssert.Equal(5, LabelPaths(pdf));
     }
 
+    public static void SvgExplicitOpacityInheritanceMatchesComputedValues()
+    {
+        const string inherit = """style="opacity:inherit" """;
+        const string half = """opacity=".5" """;
+        const string unit = """opacity="1" """;
+
+        static string Picture(string root, string group, string leaf, string afterDefault) => Svg($"""
+            <defs><linearGradient id="stroke" gradientUnits="userSpaceOnUse" x1="16" x2="118">
+              <stop stop-color="blue"/><stop offset="1" stop-color="purple"/>
+            </linearGradient></defs>
+            <rect width="400" height="160" fill="white"/>
+            <g opacity=".5">
+              <g {group}>
+                <rect x="16" y="10" width="76" height="38" fill="red"/>
+                <rect x="51" y="20" width="67" height="35" fill="yellow"/>
+                <path d="M16 60H118" fill="none" stroke="url(#stroke)" stroke-width="6"/>
+              </g>
+              <path {leaf}d="M16 80H118" fill="none" stroke="url(#stroke)" stroke-width="6"/>
+              <text {leaf}x="16" y="118" font-size="18" fill="#112233">NORTH</text>
+              <g><g {afterDefault}>
+                <path d="M16 140H118" fill="none" stroke="url(#stroke)" stroke-width="6"/>
+              </g></g>
+            </g>
+            """).Insert("<svg ".Length, root);
+
+        AssertSvgPaintInBothFormats(Picture(unit, half, half, unit), Picture(inherit, inherit, inherit, inherit), pdf =>
+        {
+            TestAssert.Equal(3, Regex.Matches(pdf, @"(?m)^/Pattern CS /Ps\d+ SCN\r?$").Count);
+            TestAssert.Equal(5, LabelPaths(pdf));
+        }, "/ca 0.5 /CA 0.5", "/I true /K false");
+    }
+
     public static void SvgOpacityDefaultsKeepGradientStrokesAndStopMasksInBothFormats()
     {
         static string Picture(string value) => Svg($"""
