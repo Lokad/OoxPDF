@@ -765,6 +765,41 @@ internal static partial class SvgTextTests
             "An unusable link transform retains the transform diagnostic.");
     }
 
+    public static void SvgLinkWrapperOpacityKeepsVisibilityAndDiagnosedStrokeFallback()
+    {
+        const string backdrop = """<rect width="140" height="70" fill="blue"/>""";
+        const string definitions = """
+            <defs><linearGradient id="stroke" gradientUnits="userSpaceOnUse" x1="0" x2="64"><stop stop-color="blue"/><stop offset="1" stop-color="purple"/></linearGradient></defs>
+            """;
+        const string contents = """
+            <rect x="10" y="16" width="48" height="30" fill="red"/>
+            <path d="M12 25H60" fill="none" stroke="url(#stroke)" stroke-width="4"/>
+            """;
+        string Picture(string name, string opacity) =>
+            Svg(definitions + backdrop + $"<{name} {opacity} transform=\"translate(12 0)\">{contents}</{name}>");
+
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        var hidden = Paint(Picture("a", """style="opacity:0%" """), diagnostics);
+        AssertEquivalentSvgPaint(Paint(Svg(backdrop)), hidden, "A transparent link wrapper leaves its backdrop visible.");
+        TestAssert.Equal(0, diagnostics.Count);
+
+        var direct = Paint(Picture("g", """opacity=".5" """));
+        var half = Paint(Picture("a", """opacity=".5" """), diagnostics);
+        AssertEquivalentSvgPaint(direct, half, "A link wrapper composites its children as one opacity group.");
+        TestAssert.Equal(direct.Groups.Single().Group.Content, half.Groups.Single().Group.Content);
+        TestAssert.Equal(1, half.Groups.Single().Group.ShadingPatterns.Count);
+        TestAssert.Contains("unsupported a element", diagnostics.Single().Message);
+        Write(Page(half));
+
+        diagnostics.Clear();
+        var fallback = Paint(Picture("a", """style="opacity:.5" """), diagnostics);
+        AssertEquivalentSvgPaint(Paint(Picture("a", "")), fallback, "An unsupported inline opacity preserves its stroke paint.");
+        TestAssert.Equal(1, fallback.ShadingPatterns.Count);
+        TestAssert.Equal(0, fallback.Groups.Count);
+        TestAssert.True(diagnostics.Any(d => d.Message.Contains("ignores opacity on 1 container", StringComparison.Ordinal)),
+            "The inline opacity approximation remains diagnosed.");
+    }
+
     public static void SvgObjectOpacityMatchesGroupForFilledGradientStrokes()
     {
         AssertSvgPaintInBothFormats(Picture(groupOpacity: true), Picture(groupOpacity: false), pdf =>

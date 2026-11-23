@@ -636,7 +636,7 @@ internal sealed partial class PptxRenderer
         {
             cancellationToken.ThrowIfCancellationRequested();
             string name = element.Name.LocalName;
-            if (name is "svg" or "g" && !IsSvgDefinitionElement(element) && !IsInFullyTransparentSvgContainer(element))
+            if (IsSvgOpacityContainer(name) && !IsSvgDefinitionElement(element) && !IsInFullyTransparentSvgContainer(element))
             {
                 IReadOnlyDictionary<string, string> style = ReadSvgStyleDeclarations(element);
                 string? opacity = style.TryGetValue("opacity", out string? value) ? value : (string?)element.Attribute("opacity");
@@ -667,10 +667,12 @@ internal sealed partial class PptxRenderer
             PageIndex: null, SlideIndex: slideIndex, Feature: "svg", Fallback: "Partial"));
     }
 
+    private static bool IsSvgOpacityContainer(string name) => name is "svg" or "g" or "a";
+
     private static SvgContainerOpacity ReadSvgContainerOpacity(XElement element)
     {
         string name = element.Name.LocalName;
-        if (name is not ("svg" or "g"))
+        if (!IsSvgOpacityContainer(name))
         {
             return new(null, IsTransparent: false, AllowsGradientStroke: true);
         }
@@ -683,8 +685,11 @@ internal sealed partial class PptxRenderer
         // Inline zero hides the container and inline one needs no group.
         // Other inline values retain the existing partial-opacity fallback.
         if (inlineOpacity is not null && numeric is not (0d or 1d)) numeric = null;
-        return new(nestedSvg ? null : numeric, numeric == 0d,
-            !nestedSvg && (numeric.HasValue || (inlineOpacity is null && attribute is null)));
+        // Link wrappers previously painted their strokes at full opacity.
+        // Keep that paint when an opacity declaration still needs fallback.
+        bool allowsGradientStroke = !nestedSvg &&
+            (numeric.HasValue || (inlineOpacity is null && attribute is null) || name == "a");
+        return new(nestedSvg ? null : numeric, numeric == 0d, allowsGradientStroke);
     }
 
     private readonly record struct SvgContainerOpacity(double? GroupOpacity, bool IsTransparent, bool AllowsGradientStroke);
