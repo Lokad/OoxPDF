@@ -1,6 +1,8 @@
 # Fonts and portability
 
-OOXPDF embeds resolved OpenType font programs in generated PDFs when a font source is available. Font access is intentionally not hard-wired to the filesystem: an `IFontResolver` returns a `FontFaceResolution`, and that resolution carries an `IFontProgramSource`.
+Lokad.OoxPdf embeds supported fonts with TrueType outlines. CFF outlines use a
+diagnosed fallback. An `IFontResolver` returns a `FontFaceResolution` with an
+`IFontProgramSource`.
 
 An `IFontProgramSource` supplies immutable font bytes through an owned lease:
 
