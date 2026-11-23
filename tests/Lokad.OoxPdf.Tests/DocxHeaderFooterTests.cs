@@ -606,66 +606,13 @@ internal static partial class DocxHeaderFooterTests
 
     public static void DocxSyntheticHeaderAndFooterRenderOnPage()
     {
-        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
-        if (!File.Exists(arial))
-        {
-            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
-        }
-
-        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-                  <Default Extension="xml" ContentType="application/xml"/>
-                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
-                  <Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>
-                  <Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/>
-                </Types>
-                """,
-            ["_rels/.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
-                </Relationships>
-                """,
-            ["word/_rels/document.xml.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rIdHeader1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/>
-                  <Relationship Id="rIdFooter1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/>
-                </Relationships>
-                """,
-            ["word/header1.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:r><w:t>Header text</w:t></w:r></w:p></w:hdr>
-                """,
-            ["word/footer1.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:r><w:t>Footer text</w:t></w:r></w:p></w:ftr>
-                """,
-            ["word/document.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-                  <w:body>
-                    <w:p><w:r><w:t>Body text</w:t></w:r></w:p>
-                    <w:sectPr>
-                      <w:headerReference w:type="default" r:id="rIdHeader1"/>
-                      <w:footerReference w:type="default" r:id="rIdFooter1"/>
-                      <w:pgSz w:w="12240" w:h="15840"/>
-                    </w:sectPr>
-                  </w:body>
-                </w:document>
-                """
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, output);
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("/Subtype /Type0", pdf);
-        TestAssert.Equal(6, DocxTests.CountPdfTextShows(pdf));
+        var lines = ReadStaticStoryLines("text");
+        TestAssert.Equal(3, lines.Length);
+        TestAssert.Equal("Header text", lines[0].Text);
+        TestAssert.Equal("Body text", lines[1].Text);
+        TestAssert.Equal("Footer text", lines[2].Text);
+        TestAssert.True(lines.All(line => line.X == 72d && line.Y > 0d && line.Y < 792d),
+            "The three stories should start at the default left margin inside the authored page.");
     }
 
     public static void DocxSyntheticHeaderReferenceTypesSelectDefaultWhenNoFirstOrEvenSetting()
@@ -868,13 +815,22 @@ internal static partial class DocxHeaderFooterTests
 
     public static void DocxSyntheticHeaderFooterDistancesUsePageMarginTokens()
     {
-        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
-        if (!File.Exists(arial))
-        {
-            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
-        }
+        var lines = ReadStaticStoryLines("distance",
+            """<w:pgMar w:top="720" w:right="720" w:bottom="720" w:left="720" w:header="1440" w:footer="1080"/>""");
+        TestAssert.Equal(3, lines.Length);
+        TestAssert.Equal("Header distance", lines[0].Text);
+        TestAssert.Equal("Body text", lines[1].Text);
+        TestAssert.Equal("Footer distance", lines[2].Text);
+        TestAssert.True(lines.All(line => line.X == 36d), "All three stories should start at the authored left margin.");
+        TestAssert.True(lines[0].Y is > 704d and < 720d,
+            "The header baseline should be inset from the authored header distance.");
+        TestAssert.True(lines[2].Y is > 63d and < 70d,
+            "The footer baseline should include the trailing line remainder and paragraph spacing.");
+    }
 
-        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+    private static (string Text, double X, double Y)[] ReadStaticStoryLines(string suffix, string pageMargins = "")
+    {
+        using var input = TestFixtures.CreateZipPackage(new Dictionary<string, string>
         {
             ["[Content_Types].xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
@@ -886,12 +842,7 @@ internal static partial class DocxHeaderFooterTests
                   <Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/>
                 </Types>
                 """,
-            ["_rels/.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
-                </Relationships>
-                """,
+            ["_rels/.rels"] = TestFixtures.DocxPackageRelationships,
             ["word/_rels/document.xml.rels"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
@@ -899,15 +850,15 @@ internal static partial class DocxHeaderFooterTests
                   <Relationship Id="rIdFooter1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/>
                 </Relationships>
                 """,
-            ["word/header1.xml"] = """
+            ["word/header1.xml"] = $"""
                 <?xml version="1.0" encoding="UTF-8"?>
-                <w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:r><w:t>Header distance</w:t></w:r></w:p></w:hdr>
+                <w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:r><w:t>Header {suffix}</w:t></w:r></w:p></w:hdr>
                 """,
-            ["word/footer1.xml"] = """
+            ["word/footer1.xml"] = $"""
                 <?xml version="1.0" encoding="UTF-8"?>
-                <w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:r><w:t>Footer distance</w:t></w:r></w:p></w:ftr>
+                <w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:r><w:t>Footer {suffix}</w:t></w:r></w:p></w:ftr>
                 """,
-            ["word/document.xml"] = """
+            ["word/document.xml"] = $"""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
                   <w:body>
@@ -916,24 +867,24 @@ internal static partial class DocxHeaderFooterTests
                       <w:headerReference w:type="default" r:id="rIdHeader1"/>
                       <w:footerReference w:type="default" r:id="rIdFooter1"/>
                       <w:pgSz w:w="12240" w:h="15840"/>
-                      <w:pgMar w:top="720" w:right="720" w:bottom="720" w:left="720" w:header="1440" w:footer="1080"/>
+                      {pageMargins}
                     </w:sectPr>
                   </w:body>
                 </w:document>
                 """
         });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
 
-        OoxPdfConverter.Convert(input, output);
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        double[] leftAlignedBaselines = Regex.Matches(pdf, @"1 0 0 1 36(?:\.\d+)? (?<y>-?\d+(?:\.\d+)?) Tm")
-            .Select(match => double.Parse(match.Groups["y"].Value, CultureInfo.InvariantCulture))
+        using var package = OoxPackage.Open(input, default);
+        const OoxPdfDocxMarkupMode mode = OoxPdfDocxMarkupMode.Final;
+        DocxDocument document = new DocxReader().Read(package, null, default, mode);
+        var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(), mode,
+            OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        PdfPage page = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
+        return DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true, honorActualText: false)
+            .GroupBy(show => show.Y)
+            .OrderByDescending(line => line.Key)
+            .Select(line => (string.Concat(line.Select(show => show.Text)).Trim(), line.Min(show => show.X), line.Key))
             .ToArray();
-        TestAssert.True(leftAlignedBaselines.Any(y => y > 704d && y < 720d), "Header baseline should be inset from the raw header-distance top by resolved font ascender metrics.");
-        TestAssert.True(leftAlignedBaselines.Any(y => y > 63d && y < 70d), "Footer baseline should bottom-anchor the trailing cursor at the raw footer distance (R1: distance plus line-remainder plus after-spacing).");
-        TestAssert.DoesNotContain("1 0 0 1 36 720 Tm", pdf);
-        TestAssert.DoesNotContain("1 0 0 1 36 54 Tm", pdf);
     }
 
     public static void DocxSyntheticSectionHeadersUsePageLocalGeometry()
