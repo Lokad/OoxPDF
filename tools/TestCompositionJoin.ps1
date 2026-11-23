@@ -229,6 +229,15 @@ try {
     if ($unverified.ContentWitnesses.Equations -cne 'Unverified' -or $unverified.Severity -cne 'Content evidence incomplete') {
         throw 'The audit claimed a visible omission in unresolved source content'
     }
+    $pending.Rows[0].ReferenceConfirmedSimpleMath = @{'x+y'=1}
+    $pending.Rows[0].MissingReferenceConfirmedSimpleMath = @{'x+y'=1}
+    $pending | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $auditPath
+    $arguments.OutputDirectory = Join-Path $root 'audit-mixed'
+    & $JoinScript @arguments | Out-Null
+    $missing = (Get-Content -LiteralPath (Join-Path $arguments.OutputDirectory 'outcomes.json') -Raw | ConvertFrom-Json).Rows[0]
+    if ($missing.ContentWitnesses.Equations -cne 'Missing' -or $missing.Severity -cne 'Content blocker') {
+        throw 'The join suppressed a reference-confirmed omission beside unresolved source content'
+    }
 }
 finally { Remove-Item Function:\dotnet }
 [ordered]@{Rejections=$rejections;Builds=0;Conversions=0;RunnerInvocations=0} |

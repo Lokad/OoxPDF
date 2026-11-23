@@ -859,6 +859,17 @@ try {
         throw 'Reused passing metrics concealed a bound content omission'
     }
     $passed += 'reused-raster-retains-audited-content-blockers'
+    $auditRows[0].UnresolvedSourceFeatures = @(@{Part='word/footer1.xml';Feature='fldSimple'})
+    $auditRows[0].ReferenceConfirmedSimpleMath = @{'x+y'=1}
+    $auditRows[0].MissingReferenceConfirmedSimpleMath = @{'x+y'=1}
+    $content | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $auditPath
+    & $script @arguments | Out-Null
+    $mixed = (Get-Content -LiteralPath (Join-Path $case.CandidateDirectory 'office-comparisons.json') -Raw | ConvertFrom-Json).Rows[0]
+    if ($comparisonProbeState.DiffCalls -ne $beforeCalls -or !$mixed.ReusedComparison -or $mixed.Failures.Count -or
+        $mixed.ContentSeverity -cne 'Content blocker' -or $mixed.ContentWitnesses.Equations -cne 'Missing') {
+        throw 'Unresolved field content concealed a reference-confirmed equation omission'
+    }
+    $passed += 'unresolved-field-retains-confirmed-equation-blocker'
     $auditRows[1].ReferencePdfSha256 = '0' * 64
     $content | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $auditPath
     $failure = $null

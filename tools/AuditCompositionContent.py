@@ -108,6 +108,49 @@ def deficits(expected, actual):
     return dict(sorted((expected - actual).items()))
 
 
+def reference_simple_math(operations, source_expressions):
+    """Count exact source expressions in independently decoded Office math runs."""
+    counts = Counter()
+    chunks = []
+    previous = None
+    state_fields = ("PageNumber", "ObjectNumber", "Generation", "Font", "EffectiveY",
+                    "EffectiveA", "EffectiveD", "FontSize")
+
+    def finish_run():
+        text = "".join(chunks)
+        # Ordinary prose in the same document is not a math witness. Plain
+        # letters, vertical fractions and other ambiguous matches stay unresolved.
+        if any(0x1D400 <= ord(char) <= 0x1D7FF for char in text):
+            expression = re.sub(r"\s+", "", normalize(text))
+            if expression in source_expressions:
+                counts[expression] += 1
+        chunks.clear()
+
+    for item in operations:
+        text = item.get("DecodedText")
+        state = tuple(item.get(key) for key in state_fields)
+        x, advance = item.get("EffectiveX"), item.get("EmittedAdvancePoints")
+        y, a, d, size = state[4:]
+        numeric = (x, advance, y, a, d, size)
+        if (not text or not all(value is not None for value in state[:4])
+                or not all(isinstance(value, (int, float)) and math.isfinite(value) for value in numeric)
+                or min(advance, a, d, size) <= 0 or item.get("EffectiveB") != 0 or item.get("EffectiveC") != 0):
+            finish_run()
+            previous = None
+            continue
+        if previous is not None:
+            last_state, last_x, last_advance = previous
+            gap = x - (last_x + last_advance)
+            # Office positions operators separately. Keep short operator
+            # spacing within the run and stop at changes of line or text frame.
+            if state != last_state or x <= last_x or not -0.003 <= gap <= a * size:
+                finish_run()
+        chunks.append(text)
+        previous = state, x, a * advance
+    finish_run()
+    return counts & source_expressions
+
+
 def screen_picture_ink(source, candidate, reference, case, fitz):
     """Screen the public portfolio's opaque two-color PNGs and named SVG fill."""
     source_count = case.get("ExpectedInlineImageCount")
@@ -506,6 +549,7 @@ def main():
         math_stream = re.sub(r"\s+", "", normalize("".join(item.get("DecodedText") or "" for item in operations
                                                            if item["Font"].startswith("Eq"))))
         observed_math = Counter({expression: math_stream.count(expression) for expression in expressions})
+        reference_math = reference_simple_math(office, expressions) if unresolved else Counter()
         pictures = screen_picture_ink(source, pdf, reference, picture_case, pymupdf) if args.screen_pictures else {
             "Status": "Unverified" if expected_pictures is not None else "No picture expectation"}
         if args.screen_pictures and (sha(pdf) != pdf_hash or sha(reference) != reference_hash):
@@ -523,6 +567,8 @@ def main():
                      "OfficeTokensMissingCandidate": deficits(office_words, candidate_words),
                      "OfficeTokensMissingCandidateByPage": page_deficits,
                      "ExpectedSimpleMath": dict(expressions), "ObservedSimpleMath": dict(observed_math),
+                     "ReferenceConfirmedSimpleMath": dict(reference_math),
+                     "MissingReferenceConfirmedSimpleMath": deficits(reference_math, observed_math),
                      "MissingSimpleMath": deficits(expressions, observed_math), "PictureInk": pictures,
                      "IgnoredEquationDiagnostics": outcome["IgnoredEquationDiagnostics"],
                      "UnresolvedSourceFeatures": unresolved, "VisualGateFailures": comparison["Failures"]})

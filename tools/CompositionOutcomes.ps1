@@ -79,8 +79,13 @@ function Get-PortfolioContentWitnesses($Row, $Outcomes, $Audit, [hashtable] $Loa
     if ($Row.ExpectedSourceEquations -gt 0 -and $observed.ExpectedSimpleMath -is [Collections.IDictionary] -and
         $observed.ExpectedSimpleMath.get_Count() -gt 0 -and
         $observed.MissingSimpleMath -is [Collections.IDictionary] -and
-        $observed.UnresolvedSourceFeatures -is [array] -and !$observed.UnresolvedSourceFeatures.Count) {
-        $result.Equations = if ($observed.MissingSimpleMath.get_Count()) { 'Missing' } else { 'Witnesses present' }
+        $observed.UnresolvedSourceFeatures -is [array]) {
+        if (!$observed.UnresolvedSourceFeatures.Count) {
+            $result.Equations = if ($observed.MissingSimpleMath.get_Count()) { 'Missing' } else { 'Witnesses present' }
+        } elseif ($observed.MissingReferenceConfirmedSimpleMath -is [Collections.IDictionary] -and
+            $observed.MissingReferenceConfirmedSimpleMath.get_Count()) {
+            $result.Equations = 'Missing'
+        }
     }
     if ($Row.ExpectedSourcePictures -gt 0 -and $observed.PictureInk.ExpectedSourcePictures -ceq $Row.ExpectedSourcePictures) {
         $result.Pictures = switch -CaseSensitive ($observed.PictureInk.Status) {

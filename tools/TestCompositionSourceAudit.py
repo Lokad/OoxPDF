@@ -2,6 +2,7 @@
 import sys
 import json
 import subprocess
+from collections import Counter
 from zipfile import ZipFile
 sys.dont_write_bytecode = True
 from xml.etree import ElementTree as E
@@ -9,8 +10,8 @@ import unittest
 from unittest.mock import patch
 from pathlib import Path
 from tempfile import TemporaryDirectory, gettempdir
-from AuditCompositionContent import (inspect_reference, operation_text, resolve_reference, screen_picture_ink,
-                                     sha, unresolved_fields, validate_outcome_modes, words)
+from AuditCompositionContent import (inspect_reference, operation_text, reference_simple_math, resolve_reference,
+                                     screen_picture_ink, sha, unresolved_fields, validate_outcome_modes, words)
 
 W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'
 
@@ -83,6 +84,24 @@ class OperationTextTests(unittest.TestCase):
         self.assertEqual('rate', operation_text([left,self.operation('ate',x=110.90532)]))
         self.assertEqual('r ate', operation_text([left,self.operation('ate',x=110.90732)]))
         self.assertEqual('r ate', operation_text([left,self.operation('ate',x=110.90332,y=73.503)]))
+
+    def test_reference_math_confirms_a_source_subset_with_separate_operators(self):
+        spans = [self.operation('𝑎', x=110), self.operation('+', x=115), self.operation('𝑏', x=120)]
+        expected = Counter({'a+b': 3, 'x+y': 1})
+        second_page = [span | {'PageNumber': 2} for span in spans]
+        self.assertEqual({'a+b': 2}, reference_simple_math(spans + second_page, expected))
+        self.assertEqual({'a+b': 1}, reference_simple_math(spans + second_page, Counter({'a+b': 1})))
+        self.assertEqual({}, reference_simple_math(spans, Counter({'a+c': 1})))
+
+    def test_reference_math_does_not_join_unrelated_results(self):
+        spans = [self.operation('𝑎', x=110), self.operation('+', x=115), self.operation('𝑏', x=120)]
+        expected = Counter({'a+b': 1})
+        for change in ({'EffectiveX': 150}, {'EffectiveX': 114}, {'EffectiveY': 78}, {'Font': 'F2'},
+                       {'PageNumber': 2}, {'ObjectNumber': 5}, {'EffectiveB': 1}, {'DecodedText': ''}):
+            with self.subTest(change=change):
+                self.assertEqual({}, reference_simple_math(spans[:2] + [spans[2] | change], expected))
+        self.assertEqual({}, reference_simple_math([self.operation('a+b')], expected))
+
 
 class PictureInkTests(unittest.TestCase):
     def setUp(self):
