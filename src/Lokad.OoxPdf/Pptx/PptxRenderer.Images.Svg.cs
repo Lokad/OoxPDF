@@ -1787,7 +1787,8 @@ internal sealed partial class PptxRenderer
         }
         return TryReadSvgViewportLength(path, text, percentageBasis, out width) && width >= 0d;
     }
-    // Resolve the winning declaration on each element before following inheritance.
+    // A winning initial declaration ends inheritance. Callers supply the
+    // property's initial value when there is no remaining inherited value.
     // Whole-element opacity stays with the element or its compositing group.
     private static string? ReadSvgInheritedAttribute(XElement path, IReadOnlyDictionary<string, string> style, string name)
     {
@@ -1798,7 +1799,7 @@ internal sealed partial class PptxRenderer
             if (!string.IsNullOrWhiteSpace(value) && !InheritsSvgPropertyValue(value) &&
                 (name != "color" || !IsSvgCurrentColor(value)))
             {
-                return value;
+                return value.AsSpan().Trim().Equals("initial", StringComparison.OrdinalIgnoreCase) ? null : value;
             }
         }
         return null;

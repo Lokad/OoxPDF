@@ -155,6 +155,40 @@ internal static partial class SvgTextTests
         }, "1 0 0 rg", "0 1 0 rg", LabelColor, "/PatternType 2");
     }
 
+    public static void SvgInitialPaintResetsInheritedValuesInBothFormats()
+    {
+        static string Picture(bool initial)
+        {
+            string Value(string literal) => initial ? "InItIaL" : literal;
+            return Svg($"""
+                <g fill="#e91935" color="#e89100">
+                  <rect x="8" y="8" width="18" height="12" fill="fuchsia"
+                        style="fill:{Value("black")} !important; fill:red"/>
+                  <g style="fill:{Value("black")}">
+                    <rect x="33" y="8" width="18" height="12"/>
+                    <rect x="58" y="8" width="18" height="12" fill="lime"/>
+                  </g>
+                  <circle cx="92" cy="14" r="6" fill="currentColor" style="color:{Value("black")}"/>
+                </g>
+                <g stroke="#2254b4" stroke-width="0">
+                  <path d="M10 56H90" fill="none" style="stroke-width:{Value("1")}"/>
+                </g>
+                <g stroke="#e91935" stroke-width="8">
+                  <rect x="108" y="30" width="26" height="23" fill="lime" style="stroke:{Value("none")}"/>
+                  <text x="10" y="43" font-size="17" fill="#112233" style="stroke:{Value("none")}">INK</text>
+                </g>
+                """);
+        }
+
+        AssertSvgPaintInBothFormats(Picture(false), Picture(true), content =>
+        {
+            TestAssert.Equal(2, Regex.Matches(content,
+                @"(?m)^0 g\r?\n[-\d.]+ [-\d.]+ m(?:\r?\n[-\d.]+ [-\d.]+ l){3}\r?\nh\r?\nf\r?$").Count);
+            TestAssert.Equal(3, LabelPaths(content));
+            TestAssert.DoesNotContain("0.914 0.098 0.208 RG", content);
+        }, "0 1 0 rg", "0.133 0.329 0.706 RG");
+    }
+
     public static void SvgPrimitivePixelUnitsMatchUserCoordinates()
     {
         string Shapes(string unit) => $$"""
