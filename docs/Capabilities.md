@@ -87,6 +87,7 @@ usable stored results rather than executing arbitrary instructions.
 PNG, supported JPEG/BMP and a bounded SVG subset share managed rendering. Ordinary
 SVG text, including plain spans with identifiers or descriptive metadata, can become glyph outlines.
 Spans with `display:none` contribute neither glyphs nor spacing.
+Visible display declarations preserve plain span layout.
 Plain spans with hidden visibility retain their advances. Descendant visibility
 can restore ink at its original placement.
 Plain spans can restate the label's inherited `xml:space` policy. No-break spaces

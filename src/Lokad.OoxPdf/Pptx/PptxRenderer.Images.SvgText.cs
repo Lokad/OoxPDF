@@ -231,7 +231,7 @@ internal sealed partial class PptxRenderer
                 // Plain spans can restate the label's existing whitespace policy.
                 if (child.Attributes().Any(attribute => attribute.Name == spaceName
                         ? attribute.Value != spacePolicy : !IsPlainSvgTextSpanAttribute(attribute)) ||
-                    style.Keys.Any(property => property != "visibility")) return false;
+                    style.Keys.Any(property => property is not ("display" or "visibility"))) return false;
                 string? localVisibility = ReadSvgPresentationAttribute(child, style, "visibility");
                 bool childHidden = string.IsNullOrWhiteSpace(localVisibility) || InheritsSvgPropertyValue(localVisibility)
                     ? ownerHidden : IsSvgVisibilityHidden(localVisibility);
@@ -244,7 +244,7 @@ internal sealed partial class PptxRenderer
     private static bool IsPlainSvgTextSpanAttribute(XAttribute attribute) =>
         attribute.IsNamespaceDeclaration ||
         attribute.Name.Namespace == XNamespace.None &&
-        (attribute.Name.LocalName is "id" or "class" or "role" or "visibility" or "style" ||
+        (attribute.Name.LocalName is "id" or "class" or "role" or "display" or "visibility" or "style" ||
          attribute.Name.LocalName.StartsWith("aria-", StringComparison.Ordinal) ||
          attribute.Name.LocalName.StartsWith("data-", StringComparison.Ordinal));
 

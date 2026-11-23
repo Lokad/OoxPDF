@@ -381,6 +381,8 @@ internal static partial class SvgTextTests
         AssertSvgPaintInBothFormats(Picture("NORTH", "A B"),
             [Picture("""NO<tspan id="direction" xml:space="default">R<tspan>T</tspan></tspan>H""",
                 """A <tspan class="caption" data-key="initials" role="presentation" aria-hidden="true"> B</tspan>"""),
+             Picture("""NO<tspan display="block">RT</tspan>H""",
+                """A<tspan display="none" style="display:inline !important;display:none"> B</tspan>"""),
              Picture("""NO<tspan display="none" x="100"><tspan display="inline">HIDDEN</tspan></tspan>RTH""",
                 """A<tspan display="inline" style="display:none !important;display:inline">WRONG</tspan> B""")], pdf =>
             {
