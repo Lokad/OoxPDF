@@ -245,9 +245,7 @@ internal static class PptxSceneTextAgreementTests
 
     public static void SceneFedSpansMatchXmlPathForGroupedShape()
     {
-        // R14-deeper: grouped-shape text resolves identically through the group
-        // transform chain on both paths.
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        using var input = TestFixtures.CreateZipPackage(new Dictionary<string, string>
         {
             ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
             ["_rels/.rels"] = PptxTests.PackageRelationship(),
@@ -258,11 +256,11 @@ internal static class PptxSceneTextAgreementTests
                 <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
                   <p:cSld><p:spTree><p:grpSp>
                     <p:nvGrpSpPr><p:cNvPr id="10" name="Group"/><p:nvPr/></p:nvGrpSpPr>
-                    <p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="2743200" cy="1828800"/><a:chOff x="0" y="0"/><a:chExt cx="2743200" cy="1828800"/></a:xfrm></p:grpSpPr>
+                    <p:grpSpPr><a:xfrm><a:off x="228600" y="0"/><a:ext cx="2743200" cy="1828800"/><a:chOff x="0" y="0"/><a:chExt cx="2743200" cy="1828800"/></a:xfrm></p:grpSpPr>
                     <p:sp><p:nvSpPr><p:cNvPr id="11" name="GroupedShape"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
                       <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="1828800" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
                       <p:txBody>
-                        <a:bodyPr tIns="0" bIns="0"/><a:lstStyle/>
+                        <a:bodyPr lIns="0" tIns="0" bIns="0"/><a:lstStyle/>
                         <a:p><a:r><a:rPr sz="1800" b="1"><a:solidFill><a:srgbClr val="334455"/></a:solidFill></a:rPr><a:t>Grouped</a:t></a:r></a:p>
                       </p:txBody>
                     </p:sp>
@@ -271,24 +269,30 @@ internal static class PptxSceneTextAgreementTests
                 """
         });
 
-        using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        using var package = OoxPackage.Open(input, CancellationToken.None);
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
         PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
-        PptxSceneNode node = scene.Slides[0].SlideNodes[0].Children[0];
+        PptxSceneNode group = scene.Slides[0].SlideNodes.Single();
+        TestAssert.Equal(PptxSceneNodeKind.Group, group.Kind);
+        PptxSceneNode node = group.Children.Single();
+        PptxSceneTextBody body = TestAssert.NotNull(node.TextBody);
+        TestAssert.Equal("Grouped", body.Paragraphs.SelectMany(paragraph => paragraph.Runs).Single().Text);
 
-        IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> xmlSpans = ReadXmlSpans(node, document, scene);
-        var resolver = CreateCannedPresentationResolver("memory:r14-scene-fed-grouped");
-        IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> fedSpans = PptxRenderer.BuildSceneFedTextSpansAsync(node, document, scene.Slides[0].Theme, scene.Slides[0].SlideColorMap, 1, false, InheritedSources(scene), resolver, CancellationToken.None).GetAwaiter().GetResult();
-        TestAssert.Equal(xmlSpans.Count, fedSpans.Count);
-        TestAssert.True(xmlSpans.Count > 0, "Expected the grouped shape to exercise fed-path spans.");
-        for (int index = 0; index < xmlSpans.Count; index++)
-        {
-            TestAssert.Equal(xmlSpans[index].Run.Text, fedSpans[index].Run.Text);
-            TestAssert.Equal(xmlSpans[index].Run.X, fedSpans[index].Run.X);
-            TestAssert.Equal(xmlSpans[index].Run.Y, fedSpans[index].Run.Y);
-            TestAssert.Equal(xmlSpans[index].Run.FontSize, fedSpans[index].Run.FontSize);
-        }
+        var resolver = CreateCannedPresentationResolver("memory:grouped-text-agreement");
+        var xmlSpan = ReadXmlSpans(node, document, scene, resolver: resolver).Single();
+        var fedSpan = PptxRenderer.BuildSceneFedTextSpansAsync(node, document, scene.Slides[0].Theme,
+            scene.Slides[0].SlideColorMap, 1, false, InheritedSources(scene), resolver, CancellationToken.None)
+            .GetAwaiter().GetResult().Single();
+        var model = TestAssert.NotNull(xmlSpan.SourceRun);
+        TestAssert.Equal("Grouped", model.Text);
+        TestAssert.Equal(18d, model.Style.NominalFontSize);
+        TestAssert.Equal(new RgbColor(0x33, 0x44, 0x55), model.Style.Color);
+        TestAssert.True(model.Style.Bold, "The grouped run is explicitly bold.");
+        TestAssert.Equal(18d, xmlSpan.Run.X);
+        TestAssert.Equal(xmlSpan.Run.Text, fedSpan.Run.Text);
+        TestAssert.Equal(xmlSpan.Run.X, fedSpan.Run.X);
+        TestAssert.Equal(xmlSpan.Run.Y, fedSpan.Run.Y);
+        TestAssert.Equal(xmlSpan.Run.FontSize, fedSpan.Run.FontSize);
     }
 
     public static void TableCellSpansPreserveSourceContentAndDeclaredFrame()
@@ -1030,60 +1034,6 @@ internal static class PptxSceneTextAgreementTests
             TestAssert.Equal(shapeModels[i].Style.Bold, cellRuns[i].Style.Bold);
             TestAssert.Equal(shapeModels[i].Style.Italic, cellRuns[i].Style.Italic);
         }
-    }
-
-    public static void GroupedShapeTextAgreesBetweenSceneAndSpans()
-    {
-        // Source text and live rendering retain the declared formatting.
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
-            ["_rels/.rels"] = PptxTests.PackageRelationship(),
-            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
-            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
-            ["ppt/slides/slide1.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <p:cSld><p:spTree><p:grpSp>
-                    <p:nvGrpSpPr><p:cNvPr id="10" name="Group"/><p:nvPr/></p:nvGrpSpPr>
-                    <p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="2743200" cy="1828800"/><a:chOff x="0" y="0"/><a:chExt cx="2743200" cy="1828800"/></a:xfrm></p:grpSpPr>
-                    <p:sp><p:nvSpPr><p:cNvPr id="11" name="GroupedShape"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
-                      <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="1828800" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
-                      <p:txBody>
-                        <a:bodyPr tIns="0" bIns="0"/><a:lstStyle/>
-                        <a:p><a:r><a:rPr sz="1800" b="1"><a:solidFill><a:srgbClr val="334455"/></a:solidFill></a:rPr><a:t>Grouped</a:t></a:r></a:p>
-                      </p:txBody>
-                    </p:sp>
-                  </p:grpSp></p:spTree></p:cSld>
-                </p:sld>
-                """
-        });
-
-        using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
-        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
-        PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
-        PptxSceneNode group = scene.Slides[0].SlideNodes[0];
-        TestAssert.Equal(PptxSceneNodeKind.Group, group.Kind);
-        PptxSceneNode node = group.Children[0];
-        PptxSceneTextBody body = TestAssert.NotNull(node.TextBody);
-        PptxSceneTextRun[] sceneRuns = body.Paragraphs
-            .SelectMany(paragraph => paragraph.Runs)
-            .ToArray();
-        TestAssert.Equal(1, sceneRuns.Length);
-
-        IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> positioned = ReadXmlSpans(node, document, scene);
-        PptxRenderer.PptxTextRunModel[] spanRuns = positioned
-            .Select(span => span.SourceRun)
-            .Where(run => run is not null)
-            .Select(run => run!)
-            .Distinct()
-            .ToArray();
-        TestAssert.Equal(1, spanRuns.Length);
-        TestAssert.Equal("Grouped", spanRuns[0].Text);
-        TestAssert.Equal(18d, spanRuns[0].Style.NominalFontSize);
-        TestAssert.Equal(new RgbColor(0x33,0x44,0x55), spanRuns[0].Style.Color);
-        TestAssert.True(spanRuns[0].Style.Bold, "The grouped run is explicitly bold.");
     }
 
     public static void TableStyleTextAgreesBetweenSceneAndSpans()
