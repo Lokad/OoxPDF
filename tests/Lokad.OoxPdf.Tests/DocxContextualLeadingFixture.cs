@@ -1,12 +1,11 @@
 using System.IO.Compression;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Docx;
-using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Ooxml;
 
 namespace Lokad.OoxPdf.Tests;
 
-internal static class DocxElevenPointFixture
+internal static class DocxContextualLeadingFixture
 {
     internal static readonly XNamespace Word = OoxNamespaces.WordprocessingNamespace;
 
@@ -22,16 +21,7 @@ internal static class DocxElevenPointFixture
     internal static DocxRenderer Renderer(OoxPdfDocxMarkupGeometryMode mode) =>
         new(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup, mode);
 
-    internal static DocxLayout Layout(DocxDocument document)
-    {
-        var resolver = new TestFaceFontResolver();
-        var plan = DocxFontPlan.Create(document, resolver, CancellationToken.None);
-        var face = resolver.Resolve(new FontRequest("Calibri", false, false));
-        var measurer = DocxFontPlanTextMeasurer.CreateAsync(plan, face, CancellationToken.None, resolver).GetAwaiter().GetResult();
-        return new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, measurer, CancellationToken.None);
-    }
-
-    internal static DocxDocument Read(bool notes, Action<XDocument, XDocument>? modify = null, bool removeStyles = false)
+    internal static DocxDocument ReadContextual(bool notes, Action<XDocument, XDocument>? modify = null, bool removeStyles = false)
     {
         string name = notes ? "note-marked-minimum-line-20.docx" : "ordinary-minimum-line-20.docx";
         string input = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", name));
@@ -49,29 +39,6 @@ internal static class DocxElevenPointFixture
         var styles = XDocument.Parse(parts["word/styles.xml"]);
         foreach (XElement paragraph in Body(document))
         {
-            foreach (XElement run in paragraph.Elements(Word + "r"))
-            {
-                XElement? properties = run.Element(Word + "rPr");
-                if (properties is null)
-                {
-                    properties = new XElement(Word + "rPr");
-                    run.AddFirst(properties);
-                }
-
-                XElement? size = properties.Element(Word + "sz");
-                if (size is null)
-                {
-                    size = new XElement(Word + "sz");
-                    properties.Add(size);
-                }
-
-                size.SetAttributeValue(Word + "val", "22");
-                if (run.Element(Word + "t") is { } text)
-                {
-                    text.Value += " AB.";
-                }
-            }
-
             XElement spacing = Spacing(paragraph);
             spacing.SetAttributeValue(Word + "before", "80");
             spacing.SetAttributeValue(Word + "after", "80");
@@ -118,4 +85,36 @@ internal static class DocxElevenPointFixture
         using MemoryStream stream = TestFixtures.CreateZipPackage(parts);
         return DocxTests.ReadDocx(stream, OoxPdfDocxMarkupMode.AllMarkup);
     }
+
+    internal static DocxDocument ReadElevenPoint(bool notes, Action<XDocument, XDocument>? modify = null, bool removeStyles = false) =>
+        ReadContextual(notes, (document, styles) =>
+        {
+            foreach (XElement paragraph in Body(document))
+            {
+                foreach (XElement run in paragraph.Elements(Word + "r"))
+                {
+                    XElement? properties = run.Element(Word + "rPr");
+                    if (properties is null)
+                    {
+                        properties = new XElement(Word + "rPr");
+                        run.AddFirst(properties);
+                    }
+
+                    XElement? size = properties.Element(Word + "sz");
+                    if (size is null)
+                    {
+                        size = new XElement(Word + "sz");
+                        properties.Add(size);
+                    }
+
+                    size.SetAttributeValue(Word + "val", "22");
+                    if (run.Element(Word + "t") is { } text)
+                    {
+                        text.Value += " AB.";
+                    }
+                }
+            }
+
+            modify?.Invoke(document, styles);
+        }, removeStyles);
 }

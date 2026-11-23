@@ -1,6 +1,7 @@
 using System.Xml.Linq;
 using Lokad.OoxPdf.Docx;
-using static Lokad.OoxPdf.Tests.DocxElevenPointFixture;
+using static Lokad.OoxPdf.Tests.DocxContextualLeadingFixture;
+using static Lokad.OoxPdf.Tests.DocxMinimumBodyLineLeadingTests;
 
 namespace Lokad.OoxPdf.Tests;
 
@@ -10,7 +11,7 @@ internal static class DocxElevenPointBodyTests
     {
         foreach (bool notes in new[] { false, true })
         {
-            var source = Read(notes); var original = Layout(source);
+            var source = ReadElevenPoint(notes); var original = CreatePreserveLayout(source);
             TestAssert.True(DocxMinimumBodyLineLeading.TryCreateLayout(source, original, out var adjusted), "The complete regular 11pt frame admits minimum leading.");
             var before = Lines(original); var after = Lines(adjusted);
             TestAssert.Equal(before.Length, after.Length);
@@ -39,7 +40,7 @@ internal static class DocxElevenPointBodyTests
     {
         foreach (bool notes in new[] { false, true })
         {
-            var source = Read(notes, (xml, _) =>
+            var source = ReadElevenPoint(notes, (xml, _) =>
             {
                 var paragraphs = Body(xml);
                 string?[] thresholds = [null, "0", "28", "20"];
@@ -47,7 +48,7 @@ internal static class DocxElevenPointBodyTests
                 foreach (var rp in paragraphs[i].Descendants(Word + "rPr"))
                     if (thresholds[i % 4] is { } threshold) rp.Add(new XElement(Word + "kern", new XAttribute(Word + "val", threshold)));
             });
-            var original = Layout(source);
+            var original = CreatePreserveLayout(source);
             TestAssert.True(DocxPlainFootnoteKerning.TryCreateDocument(source, original, out var adjusted, out var pages), "Absent, zero, above and met thresholds use the measured logical 11pt policy.");
             foreach (var run in adjusted.Paragraphs.SelectMany(p => p.Runs).Where(r => r.Text.Any(char.IsLetter)))
                 TestAssert.Equal(run.KerningMinimumHalfPointsValue == "20", run.PairKerningEnabled);
@@ -66,7 +67,7 @@ internal static class DocxElevenPointBodyTests
         foreach (bool notes in new[] { false, true })
         foreach (string rule in new[] { "exact", "auto" })
         {
-            var source = Read(notes, (xml, _) =>
+            var source = ReadElevenPoint(notes, (xml, _) =>
             {
                 foreach (var p in Body(xml))
                 {
@@ -76,10 +77,10 @@ internal static class DocxElevenPointBodyTests
                     sp.SetAttributeValue(Word + "line", rule == "auto" ? "240" : "400");
                 }
             });
-            var original = Layout(source);
+            var original = CreatePreserveLayout(source);
             TestAssert.True(!DocxMinimumBodyLineLeading.TryCreateLayout(source, original, out var unchanged) && ReferenceEquals(original, unchanged), "Exact and automatic counterparts do not acquire minimum excess.");
             TestAssert.True(DocxPlainFootnoteKerning.TryCreateDocument(source, original, out var adjusted, out _), "The independently qualified pitch counterpart still normalizes kerning.");
-            var after = Lines(Layout(adjusted)); var before = Lines(original);
+            var after = Lines(CreatePreserveLayout(adjusted)); var before = Lines(original);
             TestAssert.Equal(before.Length, after.Length);
             for (int i = 0; i < before.Length; i++) Near(before[i].BaselineY, after[i].BaselineY, "Horizontal correction retains each exact or automatic baseline.");
         }
@@ -90,7 +91,7 @@ internal static class DocxElevenPointBodyTests
         foreach (bool notes in new[] { false, true })
         foreach (string guard in new[] { "missing-styles", "unknown-style", "ambiguous-defaults", "bold", "mixed-size", "mixed-family", "malformed-kern", "large-spacing", "auto-spacing", "keep", "wrapped", "columns", "center", "right" })
         {
-            var source = Read(notes, (xml, styles) =>
+            var source = ReadElevenPoint(notes, (xml, styles) =>
             {
                 var paragraphs = Body(xml); var first = paragraphs[0]; var rp = first.Descendants(Word + "rPr").First();
                 if (guard == "unknown-style") first.Element(Word + "pPr")!.AddFirst(new XElement(Word + "pStyle", new XAttribute(Word + "val", "PublicMissing")));
@@ -106,7 +107,7 @@ internal static class DocxElevenPointBodyTests
                 if (guard == "columns") xml.Descendants(Word + "sectPr").Single().Add(new XElement(Word + "cols", new XAttribute(Word + "num", "2")));
                 if (guard is "center" or "right") first.Element(Word + "pPr")!.Add(new XElement(Word + "jc", new XAttribute(Word + "val", guard)));
             }, removeStyles: guard == "missing-styles");
-            var layout = Layout(source);
+            var layout = CreatePreserveLayout(source);
             var first = Lines(layout)[0];
             DocxMinimumBodyLineLeading.TryCreateLayout(source, layout, out var placed);
             var actual = Lines(placed).First(line => line.SourceBlockIndex == first.SourceBlockIndex && line.SourceLineIndex == first.SourceLineIndex);
@@ -122,7 +123,7 @@ internal static class DocxElevenPointBodyTests
     {
         foreach (bool notes in new[] { false, true })
         {
-            var source = Read(notes, (xml, styles) =>
+            var source = ReadElevenPoint(notes, (xml, styles) =>
             {
                 AddStyle(styles, "PublicElevenPoint");
                 styles.Root!.Elements(Word + "style").Last().Add(new XElement(Word + "rPr", new XElement(Word + "sz", new XAttribute(Word + "val", "22"))));
@@ -133,7 +134,7 @@ internal static class DocxElevenPointBodyTests
                 }
             });
             TestAssert.True(source.Paragraphs.SelectMany(p => p.Runs).Where(r => r.Text.Length != 0).All(r => r.FontSize == 11), "Known paragraph font inheritance resolves logical 11pt.");
-            var layout = Layout(source);
+            var layout = CreatePreserveLayout(source);
             TestAssert.True(DocxMinimumBodyLineLeading.TryCreateLayout(source, layout, out var adjusted), "Inherited source size qualifies the complete frame.");
             var pages = Renderer(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(source, null, CancellationToken.None).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(notes ? 4 : 0, pages.Sum(p => p.Annotations.Count));

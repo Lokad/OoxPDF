@@ -1,7 +1,8 @@
 using System.IO.Compression;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Docx;
-using Lokad.OoxPdf.Fonts;
+using static Lokad.OoxPdf.Tests.DocxContextualLeadingFixture;
+using static Lokad.OoxPdf.Tests.DocxMinimumBodyLineLeadingTests;
 
 namespace Lokad.OoxPdf.Tests;
 
@@ -9,7 +10,7 @@ internal static class DocxMarkedMinimumLeadingTests
 {
     public static void DocxMarkedMinimumLeadingKeepsBodyMarkerAndSlotCoherent()
     {
-        var source = Read(); var before = Layout(source);
+        var source = Read(); var before = CreatePreserveLayout(source);
         TestAssert.True(DocxMinimumBodyLineLeading.TryCreateLayout(source, before, out var after), "Complete source-owned superscript markers qualify minimum leading.");
         var a = before.Pages.SelectMany(p => p.Items).OfType<DocxTextLineLayout>().First(l => l.SourceParagraph!.InlineReferences.Count != 0);
         var z = after.Pages.SelectMany(p => p.Items).OfType<DocxTextLineLayout>().Single(l => ReferenceEquals(l.SourceParagraph, a.SourceParagraph));
@@ -51,7 +52,7 @@ internal static class DocxMarkedMinimumLeadingTests
             var ps = Body(xml); foreach (var p in ps) p.Element(Word + "pPr")!.Element(Word + "spacing")!.SetAttributeValue(Word + "after", "160");
             for (int i = 0; i < 27; i++) { var spacer = new XElement(ps[0]); spacer.Descendants(Word + "t").First().Value = $"Public capacity spacer {i:00}."; ps[4].AddBeforeSelf(spacer); }
         });
-        var before = Layout(source);
+        var before = CreatePreserveLayout(source);
         TestAssert.True(DocxMinimumBodyLineLeading.TryCreateLayout(source, before, out var after), "Two-page owners qualify without repagination.");
         TestAssert.True(DocxPageFootnoteNumbering.HasStableCompleteNoteOwners(source, before, after), "Every complete actual note owner retains its page.");
         TestAssert.True(before.Pages.Zip(after.Pages).All(pair => ReferenceEquals(pair.First.PlacedRelatedStories, pair.Second.PlacedRelatedStories)), "Note regions and destinations retain their original placement.");
@@ -74,7 +75,7 @@ internal static class DocxMarkedMinimumLeadingTests
         ];
         foreach (var modify in guards)
         {
-            var source = Read(modify); var before = Layout(source);
+            var source = Read(modify); var before = CreatePreserveLayout(source);
             var paragraph = source.Paragraphs.First(p => p.InlineReferences.Count != 0);
             var excluded = before.Pages.SelectMany(p => p.Items).OfType<DocxTextLineLayout>().First(l => ReferenceEquals(l.SourceParagraph, paragraph));
             DocxMinimumBodyLineLeading.TryCreateLayout(source, before, out var after);
@@ -84,11 +85,7 @@ internal static class DocxMarkedMinimumLeadingTests
         TestAssert.Throws<InvalidDataException>(() => Read(xml => Body(xml)[1].Element(Word + "pPr")!.Element(Word + "spacing")!.SetAttributeValue(Word + "after", "bad")));
     }
 
-    private static DocxRenderer Renderer(OoxPdfDocxMarkupGeometryMode mode) => new(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup, mode);
     private static void Near(double expected, double actual, string message) => TestAssert.True(Math.Abs(expected - actual) < .00001d, message);
-    private static DocxLayout Layout(DocxDocument document) { var resolver = new TestFaceFontResolver(); var measurer = DocxFontPlanTextMeasurer.CreateAsync(DocxFontPlan.Create(document, resolver, CancellationToken.None), resolver.Resolve(new FontRequest("Calibri", false, false)), CancellationToken.None, resolver).GetAwaiter().GetResult(); return new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, measurer, CancellationToken.None); }
-    private static readonly XNamespace Word = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
-    private static XElement[] Body(XDocument xml) => xml.Root!.Element(Word + "body")!.Elements(Word + "p").ToArray();
     private static DocxDocument Read(Action<XDocument>? modify = null)
     {
         string input = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "note-marked-minimum-line-20.docx"));

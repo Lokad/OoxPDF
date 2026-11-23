@@ -5,7 +5,8 @@ using System.Xml.Linq;
 using Lokad.OoxPdf.Docx;
 using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Pdf;
-using static Lokad.OoxPdf.Tests.DocxElevenPointFixture;
+using static Lokad.OoxPdf.Tests.DocxContextualLeadingFixture;
+using static Lokad.OoxPdf.Tests.DocxMinimumBodyLineLeadingTests;
 
 namespace Lokad.OoxPdf.Tests;
 
@@ -38,7 +39,7 @@ internal static class DocxNominalGlyphAdvanceTests
         foreach (bool notes in new[] { false, true })
         foreach (string? threshold in new string?[] { null, "0", "28", "20" })
         {
-            var source = Read(notes, (xml, _) =>
+            var source = ReadElevenPoint(notes, (xml, _) =>
             {
                 if (threshold is null) return;
                 foreach (var rp in Body(xml).SelectMany(p => p.Descendants(Word + "rPr"))) rp.Add(new XElement(Word + "kern", new XAttribute(Word + "val", threshold)));
@@ -60,7 +61,7 @@ internal static class DocxNominalGlyphAdvanceTests
 
     public static void DocxNominalGlyphAdvanceCloneKeepsStyleAndPlannedEmissionProvenance()
     {
-        var source = Read(false);var layout = Layout(source);
+        var source = ReadElevenPoint(false);var layout = CreatePreserveLayout(source);
         TestAssert.True(DocxPlainFootnoteKerning.TryCreateDocument(source, layout, out var adjusted, out _), "Complete nominal 11pt source qualifies.");
         var run = adjusted.Paragraphs[0].Runs.First(r => r.Text.Any(char.IsLetter));
         TestAssert.True(run.UseLogicalSizeForPdfAdvances && !run.PairKerningEnabled, "The emission-only clone records nominal advance ownership.");
@@ -78,22 +79,22 @@ internal static class DocxNominalGlyphAdvanceTests
 
     public static void DocxNominalGlyphAdvanceDisablesOnlyOwnedElevenPointMarkerPairs()
     {
-        var metSource = Read(true, (xml, _) =>
+        var metSource = ReadElevenPoint(true, (xml, _) =>
         {
             foreach (var r in Body(xml).SelectMany(p => p.Elements(Word + "r")).Where(r => r.Element(Word + "t") is not null))
                 r.Element(Word + "rPr")!.Add(new XElement(Word + "kern", new XAttribute(Word + "val", "20")));
         });
-        TestAssert.True(DocxPlainFootnoteKerning.TryCreateDocument(metSource, Layout(metSource), out var metAdjusted, out _), "The accepted met-body-threshold frame still qualifies its legacy policy.");
+        TestAssert.True(DocxPlainFootnoteKerning.TryCreateDocument(metSource, CreatePreserveLayout(metSource), out var metAdjusted, out _), "The accepted met-body-threshold frame still qualifies its legacy policy.");
         TestAssert.True(metAdjusted.Paragraphs.SelectMany(p => p.Runs).Where(r => r.VerticalAlignment == DocxRunVerticalAlignment.Superscript).All(r => !r.PairKerningEnabled), "The diagnostic coupled met body model uses measured automatic-marker pairs.");
         foreach (string? threshold in new string?[] { null, "0", "12", "14", "16", "20", "28" })
         {
-            var source = Read(true, (xml, _) =>
+            var source = ReadElevenPoint(true, (xml, _) =>
             {
                 if (threshold is null) return;
                 foreach (var r in Body(xml).SelectMany(p => p.Elements(Word + "r")).Where(r => r.Element(Word + "footnoteReference") is not null))
                     r.Element(Word + "rPr")!.Add(new XElement(Word + "kern", new XAttribute(Word + "val", threshold)));
             });
-            TestAssert.True(DocxPlainFootnoteKerning.TryCreateDocument(source, Layout(source), out var adjusted, out _), "Complete source-owned 11pt note frame qualifies.");
+            TestAssert.True(DocxPlainFootnoteKerning.TryCreateDocument(source, CreatePreserveLayout(source), out var adjusted, out _), "Complete source-owned 11pt note frame qualifies.");
             var marks = adjusted.Paragraphs.SelectMany(p => p.Runs.Where(r => p.InlineReferences.Any(x => x.SourceRunIndex == r.SourceRunIndex))).ToArray();
             TestAssert.Equal(4, marks.Length);
             TestAssert.True(marks.All(r => !r.PairKerningEnabled && !r.UseLogicalSizeForPdfAdvances), "Automatic superscript marks keep physical widths without pair or logical body compensation.");
@@ -107,7 +108,7 @@ internal static class DocxNominalGlyphAdvanceTests
     {
         foreach (string rule in new[] { "atLeast", "exact", "auto" })
         {
-            var source = Read(true, (xml, _) =>
+            var source = ReadElevenPoint(true, (xml, _) =>
             {
                 foreach (var p in Body(xml))
                 {
@@ -116,9 +117,9 @@ internal static class DocxNominalGlyphAdvanceTests
                     sp.SetAttributeValue(Word + "lineRule", rule);sp.SetAttributeValue(Word + "line", rule == "auto" ? "240" : "400");
                 }
             });
-            var before = Layout(source);
+            var before = CreatePreserveLayout(source);
             TestAssert.True(DocxPlainFootnoteKerning.TryCreateDocument(source, before, out var adjusted, out var owners), "Qualified note frame normalizes the emission clone.");
-            var after = Layout(adjusted);
+            var after = CreatePreserveLayout(adjusted);
             TestAssert.Equal(before.Pages.Count, after.Pages.Count);
             TestAssert.True(DocxPageFootnoteNumbering.HasStablePages(adjusted, after, owners), "Every complete note retains its owner page.");
             var a = Lines(before);var z = Lines(after);TestAssert.Equal(a.Length, z.Length);

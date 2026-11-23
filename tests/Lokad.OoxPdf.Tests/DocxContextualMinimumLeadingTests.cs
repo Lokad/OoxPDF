@@ -1,7 +1,7 @@
-using System.IO.Compression;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Docx;
-using Lokad.OoxPdf.Fonts;
+using static Lokad.OoxPdf.Tests.DocxContextualLeadingFixture;
+using static Lokad.OoxPdf.Tests.DocxMinimumBodyLineLeadingTests;
 
 namespace Lokad.OoxPdf.Tests;
 
@@ -11,7 +11,7 @@ internal static class DocxContextualMinimumLeadingTests
     {
         foreach (string styleMode in new[] { "implicit", "named", "mixed-default" })
         {
-            var source = Read(false, (xml, styles) =>
+            var source = ReadContextual(false, (xml, styles) =>
             {
                 if (styleMode == "implicit") return;
                 AddStyle(styles, "PublicContextualA", styleMode == "mixed-default");
@@ -22,7 +22,7 @@ internal static class DocxContextualMinimumLeadingTests
             });
             TestAssert.True(source.Paragraphs.All(p => p.Spacing.ContextualSpacing == true && p.Spacing.BeforeValue == "80" && p.Spacing.AfterValue == "80"),
                 "Raw contextual flags and numeric tokens remain available.");
-            var original = Layout(source);
+            var original = CreatePreserveLayout(source);
             TestAssert.True(DocxMinimumBodyLineLeading.TryCreateLayout(source, original, out var adjusted), "Resolved contextual identities admit plain minimum leading.");
             var before = Lines(original); var after = Lines(adjusted);
             TestAssert.Equal(before.Length, after.Length);
@@ -50,7 +50,7 @@ internal static class DocxContextualMinimumLeadingTests
         foreach (var spec in new[] { (Mode: "same", Height: 20d), (Mode: "different", Height: 24d),
             (Mode: "predecessor-only", Height: 28d), (Mode: "current-only", Height: 20d) })
         {
-            var source = Read(true, (xml, styles) =>
+            var source = ReadContextual(true, (xml, styles) =>
             {
                 var paragraphs = Body(xml);
                 if (spec.Mode == "different") { AddStyle(styles, "PublicContextualA"); AddStyle(styles, "PublicContextualB"); }
@@ -63,7 +63,7 @@ internal static class DocxContextualMinimumLeadingTests
                 }
                 if (spec.Mode is "predecessor-only" or "current-only") Spacing(paragraphs[1]).SetAttributeValue(Word + "before", "160");
             });
-            var original = Layout(source);
+            var original = CreatePreserveLayout(source);
             TestAssert.True(DocxMinimumBodyLineLeading.TryCreateLayout(source, original, out var adjusted), "Complete contextual note owners admit the baseline correction.");
             TestAssert.True(DocxPageFootnoteNumbering.HasStableCompleteNoteOwners(source, original, adjusted), "Every actual source marker and complete note retains its page.");
             var pages = Renderer(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(source, null, CancellationToken.None).ToBlockingEnumerable().ToArray();
@@ -76,23 +76,46 @@ internal static class DocxContextualMinimumLeadingTests
         }
     }
 
-    public static void DocxContextualMinimumRejectsUnknownStyleIdentitiesAndRichFlow()
+    public static void DocxContextualMinimumDistinguishesMissingDefaultsFromLocalExclusions()
     {
         foreach (bool notes in new[] { false, true })
-        foreach (string guard in new[] { "missing-styles", "ambiguous-defaults", "unknown-named", "auto-spacing" })
         {
-            var source = Read(notes, (xml, styles) =>
+            foreach (bool removeStyles in new[] { true, false })
             {
-                var paragraphs = Body(xml);
-                if (guard == "ambiguous-defaults") { AddStyle(styles, "PublicContextualA", true); AddStyle(styles, "PublicContextualB", true); }
-                if (guard == "unknown-named") paragraphs[0].Element(Word + "pPr")!.AddFirst(new XElement(Word + "pStyle", new XAttribute(Word + "val", "PublicMissing")));
-                if (guard == "auto-spacing") Spacing(paragraphs[0]).SetAttributeValue(Word + "beforeAutospacing", "1");
-            }, removeStyles: guard == "missing-styles");
-            var original = Layout(source);
-            var excluded = Lines(original)[0];
-            DocxMinimumBodyLineLeading.TryCreateLayout(source, original, out var fallback);
-            TestAssert.True(Lines(fallback).Any(line => ReferenceEquals(line, excluded)),
-                "Unknown contextual identities retain their local line.");
+                var source = ReadContextual(notes, (_, styles) =>
+                {
+                    if (removeStyles) return;
+                    AddStyle(styles, "PublicContextualA", true);
+                    AddStyle(styles, "PublicContextualB", true);
+                }, removeStyles: removeStyles);
+                var original = CreatePreserveLayout(source);
+                TestAssert.True(!DocxMinimumBodyLineLeading.TryCreateLayout(source, original, out var fallback) &&
+                    ReferenceEquals(original, fallback), "Without a resolved default style, no contextual line is corrected.");
+            }
+
+            foreach (bool unknownStyle in new[] { true, false })
+            {
+                var source = ReadContextual(notes, (xml, _) =>
+                {
+                    var first = Body(xml)[0];
+                    if (unknownStyle)
+                        first.Element(Word + "pPr")!.AddFirst(new XElement(Word + "pStyle", new XAttribute(Word + "val", "PublicMissing")));
+                    else
+                        Spacing(first).SetAttributeValue(Word + "beforeAutospacing", "1");
+                });
+                var original = CreatePreserveLayout(source);
+                var excluded = Lines(original).Single(line => ReferenceEquals(line.SourceParagraph, source.Paragraphs[0]));
+                var neighbor = Lines(original).Single(line => ReferenceEquals(line.SourceParagraph, source.Paragraphs[2]));
+                double excess = neighbor.LineHeight!.Value - neighbor.SingleLineHeight!.Value;
+                TestAssert.True(excess > 0, "The adjacent minimum-height paragraph has measurable excess.");
+                TestAssert.True(DocxMinimumBodyLineLeading.TryCreateLayout(source, original, out var adjusted),
+                    "A local exclusion leaves the adjacent minimum-height paragraph eligible.");
+                var lines = Lines(adjusted);
+                TestAssert.True(lines.Any(line => ReferenceEquals(line, excluded)),
+                    "The excluded minimum-height paragraph keeps its original line.");
+                var corrected = lines.Single(line => ReferenceEquals(line.SourceParagraph, neighbor.SourceParagraph));
+                Near(excess, neighbor.BaselineY - corrected.BaselineY, "The adjacent baseline still moves by the excess.");
+            }
         }
     }
 
@@ -100,7 +123,7 @@ internal static class DocxContextualMinimumLeadingTests
     {
         foreach (bool notes in new[] { false, true })
         {
-            var source = Read(notes, (xml, styles) =>
+            var source = ReadContextual(notes, (xml, styles) =>
             {
                 var defaults = styles.Root!.Element(Word + "docDefaults")!;
                 defaults.Add(new XElement(Word + "pPrDefault", new XElement(Word + "pPr", new XElement(Word + "contextualSpacing"))));
@@ -113,7 +136,7 @@ internal static class DocxContextualMinimumLeadingTests
                 }
             });
             TestAssert.True(source.Paragraphs.All(p => p.Spacing.ContextualSpacing == true && p.ContextualSpacingDefaultStyleId == "Normal"), "Document-default flags retain a loaded implicit Normal identity.");
-            var original = Layout(source);
+            var original = CreatePreserveLayout(source);
             TestAssert.True(original.Pages.Count > 1, "The synthetic contextual frame exercises page boundaries.");
             TestAssert.True(DocxMinimumBodyLineLeading.TryCreateLayout(source, original, out var adjusted), "The complete inherited frame qualifies without repagination.");
             TestAssert.Equal(original.Pages.Count, adjusted.Pages.Count);
@@ -134,52 +157,11 @@ internal static class DocxContextualMinimumLeadingTests
         }
     }
 
-    private static readonly XNamespace Word = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
-    private static XElement[] Body(XDocument xml) => xml.Root!.Element(Word + "body")!.Elements(Word + "p").ToArray();
-    private static XElement Spacing(XElement p) => p.Element(Word + "pPr")!.Element(Word + "spacing")!;
-    private static DocxTextLineLayout[] Lines(DocxLayout layout) => layout.Pages.SelectMany(p => p.Items).OfType<DocxTextLineLayout>().ToArray();
-    private static DocxRenderer Renderer(OoxPdfDocxMarkupGeometryMode mode) => new(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup, mode);
     private static void Near(double expected, double actual, string message) => TestAssert.True(Math.Abs(expected - actual) < .00001d, message);
     private static void AddStyle(XDocument styles, string id, bool isDefault = false)
     {
         var style = new XElement(Word + "style", new XAttribute(Word + "type", "paragraph"), new XAttribute(Word + "styleId", id), new XElement(Word + "name", new XAttribute(Word + "val", id)));
         if (isDefault) style.SetAttributeValue(Word + "default", "1");
         styles.Root!.Add(style);
-    }
-    private static DocxLayout Layout(DocxDocument document)
-    {
-        var resolver = new TestFaceFontResolver();
-        var measurer = DocxFontPlanTextMeasurer.CreateAsync(DocxFontPlan.Create(document, resolver, CancellationToken.None), resolver.Resolve(new FontRequest("Calibri", false, false)), CancellationToken.None, resolver).GetAwaiter().GetResult();
-        return new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, measurer, CancellationToken.None);
-    }
-    private static DocxDocument Read(bool notes, Action<XDocument, XDocument>? modify = null, bool removeStyles = false)
-    {
-        string input = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", notes ? "note-marked-minimum-line-20.docx" : "ordinary-minimum-line-20.docx"));
-        var parts = new Dictionary<string, string>();
-        using (var zip = ZipFile.OpenRead(input))
-            foreach (var entry in zip.Entries) { using var reader = new StreamReader(entry.Open()); parts[entry.FullName] = reader.ReadToEnd(); }
-        var xml = XDocument.Parse(parts["word/document.xml"]); var styles = XDocument.Parse(parts["word/styles.xml"]);
-        foreach (var p in Body(xml))
-        {
-            Spacing(p).SetAttributeValue(Word + "before", "80"); Spacing(p).SetAttributeValue(Word + "after", "80");
-            p.Element(Word + "pPr")!.Add(new XElement(Word + "contextualSpacing"));
-        }
-        modify?.Invoke(xml, styles);
-        parts["word/document.xml"] = xml.ToString(); parts["word/styles.xml"] = styles.ToString();
-        if (notes)
-        {
-            var footnotes = XDocument.Parse(parts["word/footnotes.xml"]);
-            foreach (var p in footnotes.Descendants(Word + "p"))
-            {
-                var pr = p.Element(Word + "pPr"); if (pr is null) { pr = new XElement(Word + "pPr"); p.AddFirst(pr); }
-                var sp = pr.Element(Word + "spacing"); if (sp is null) { sp = new XElement(Word + "spacing"); pr.Add(sp); }
-                sp.SetAttributeValue(Word + "before", "0");
-                pr.Add(new XElement(Word + "contextualSpacing", new XAttribute(Word + "val", "0")));
-            }
-            parts["word/footnotes.xml"] = footnotes.ToString();
-        }
-        if (removeStyles) parts.Remove("word/styles.xml");
-        string temporary = TestFixtures.WriteTempPackage(".docx", parts);
-        try { return DocxTests.ReadDocx(temporary, OoxPdfDocxMarkupMode.AllMarkup); } finally { File.Delete(temporary); }
     }
 }

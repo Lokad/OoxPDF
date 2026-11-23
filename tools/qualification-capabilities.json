@@ -20203,7 +20203,7 @@
     "DocxHyperlinksPreserveContextualBodyAndMinimumCellSpacing",
     "DocxInlineCompositionFittingEndnotesOwnBoundariesWithoutChangingTypography",
     "DocxInlineCompositionFittingEndnotesRetainComplexFrameFallbacks",
-    "DocxContextualMinimumRejectsUnknownStyleIdentitiesAndRichFlow",
+    "DocxContextualMinimumDistinguishesMissingDefaultsFromLocalExclusions",
     "DocxNoteCellPictureRangesFollowExistingPaintAndTargets",
     "DocxNoteCellPictureRangesRetainClippedAndMergedFallbacks"
   ],
