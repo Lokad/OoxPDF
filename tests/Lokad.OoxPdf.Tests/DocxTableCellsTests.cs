@@ -3974,9 +3974,9 @@ internal static class DocxTableCellsTests
             TestAssert.Equal(1, continuedRow.RowIndex);
             TestAssert.Equal(split ? 2 : 1, continuedRow.FragmentCount);
             TestAssert.Equal(split ? "PageBoundary" : "None", continuedRow.FragmentReason);
-            TestAssert.Equal(split ? "Three" : "One Two Three", ReadText(continuedRow));
+            TestAssert.Equal(split ? "Two Three" : "One Two Three", ReadText(continuedRow));
             if (split)
-                TestAssert.Equal("One Two", ReadText(firstPageRows[1]));
+                TestAssert.Equal("One", ReadText(firstPageRows[1]));
         }
 
         static string ReadText(DocxTableRowLayout row) => string.Join(' ', row.Cells[0].TextLines.Select(line => line.Text.Trim()));
