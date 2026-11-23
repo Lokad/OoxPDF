@@ -22,21 +22,13 @@ internal static class OoxMissingFontTests
         string input = WritePageBreakDocx("First", "Second", "Third");
         var resolver = new MapFontResolver([], "Fallback");
         (string pdf, List<OoxPdfDiagnostic> diagnostics) = ConvertDocx(input, resolver);
-        TestAssert.Contains("/Type /Pages /Count 3", pdf);
-        TestAssert.Contains("BT", pdf);
-        TestAssert.Contains("/Font <<", pdf);
+        AssertFallbackPages(pdf);
         TestAssert.DoesNotContain("/FontFile2", pdf);
-        string extracted = ExtractWinAnsiText(pdf);
-        TestAssert.Contains("First", extracted);
-        TestAssert.Contains("Second", extracted);
-        TestAssert.Contains("Third", extracted);
         OoxPdfDiagnostic missing = diagnostics.Single(d => d.Id == "FONT_NO_USABLE_FACE");
         TestAssert.Equal(OoxPdfSeverity.Warning, missing.Severity);
         string repeat = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
         OoxPdfConverter.Convert(input, repeat, new OoxPdfOptions { InputKind = OoxPdfInputKind.Docx, FontResolver = resolver });
-        string first = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-        OoxPdfConverter.Convert(input, first, new OoxPdfOptions { InputKind = OoxPdfInputKind.Docx, FontResolver = resolver });
-        TestAssert.True(File.ReadAllBytes(first).SequenceEqual(File.ReadAllBytes(repeat)), "Fallback output must be deterministic.");
+        TestAssert.Equal(pdf, File.ReadAllText(repeat, Encoding.Latin1));
     }
 
     public static void MissingFontsKeepFittedDocxCellGlyphsInsideTheirClip()
@@ -109,12 +101,7 @@ internal static class OoxMissingFontTests
         // RV01: undecodable font programs take the same diagnosed fallback.
         string input = WritePageBreakDocx("First", "Second", "Third");
         (string pdf, List<OoxPdfDiagnostic> diagnostics) = ConvertDocx(input, new FixedBytesResolver(new byte[] { 1, 2, 3, 4 }));
-        TestAssert.Contains("/Type /Pages /Count 3", pdf);
-        TestAssert.Contains("BT", pdf);
-        TestAssert.Contains("/Font <<", pdf);
-        string extracted = ExtractWinAnsiText(pdf);
-        TestAssert.Contains("First", extracted);
-        TestAssert.Contains("Third", extracted);
+        AssertFallbackPages(pdf);
         TestAssert.Equal(OoxPdfSeverity.Warning, diagnostics.Single(d => d.Id == "FONT_NO_USABLE_FACE").Severity);
     }
 
@@ -123,13 +110,24 @@ internal static class OoxMissingFontTests
         // RV01: CFF outlines cannot embed, so their runs join the fallback.
         string input = WritePageBreakDocx("First", "Second", "Third");
         (string pdf, List<OoxPdfDiagnostic> diagnostics) = ConvertDocx(input, new FixedBytesResolver(TestFontBuilder.CreateCffKindFont()));
-        TestAssert.Contains("/Type /Pages /Count 3", pdf);
-        TestAssert.Contains("BT", pdf);
-        TestAssert.Contains("/Font <<", pdf);
-        string extracted = ExtractWinAnsiText(pdf);
-        TestAssert.Contains("First", extracted);
-        TestAssert.Contains("Third", extracted);
+        AssertFallbackPages(pdf);
         TestAssert.Equal(OoxPdfSeverity.Warning, diagnostics.Single(d => d.Id == "FONT_NO_USABLE_FACE").Severity);
+    }
+
+    private static void AssertFallbackPages(string pdf)
+    {
+        string[] expected = ["First", "Second", "Third"];
+        var tree = Regex.Match(pdf, @"/Type /Pages /Count 3 /Kids \[([^\]]+)\]");
+        var pages = Regex.Matches(tree.Groups[1].Value, @"(\d+) 0 R");
+        TestAssert.Equal(expected.Length, pages.Count);
+        for (int index = 0; index < pages.Count; index++)
+        {
+            string page = PdfWriterTests.ReadObject(pdf, pages[index].Groups[1].Value);
+            TestAssert.Contains("/Font <<", page);
+            string contentId = Regex.Match(page, @"/Contents (\d+) 0 R").Groups[1].Value;
+            string content = PdfWriterTests.ReadObject(pdf, contentId);
+            TestAssert.Equal(expected[index], ExtractWinAnsiText(content).Trim());
+        }
     }
 
     public static void PartiallyCoveredFontsSubstituteMissingGlyphs()

@@ -231,7 +231,7 @@ internal static partial class PdfWriterTests
         }
     }
 
-    private static string ReadObject(string pdf, string number)
+    internal static string ReadObject(string pdf, string number)
     {
         TestAssert.True(number.Length != 0, "Expected a PDF object reference.");
         var obj = Regex.Match(pdf, $@"(?ms)^{number} 0 obj\r?\n(.*?)^endobj\r?$");
