@@ -82,8 +82,9 @@ $reusedCandidates = 0
 foreach ($job in $jobs) {
     $document = $job.Document
     $inputPath = $job.InputPath
-    # Retain identity checks in case a source changes after preflight.
-    if ((Get-FileHash -LiteralPath $inputPath).Hash -ne $document.Sha256) { throw ('Portfolio input differs: ' + $document.Id) }
+    if ($ReuseCandidateDirectory -and (Get-FileHash -LiteralPath $inputPath).Hash -ne $document.Sha256) {
+        throw ('Portfolio input differs: ' + $document.Id)
+    }
     $modes = @(Get-PortfolioModes $document $DocxPreset)
     foreach ($mode in $modes) {
         $expectations = Get-PortfolioContentExpectations $document $mode
@@ -109,11 +110,18 @@ foreach ($job in $jobs) {
         else {
             $arguments = @('convert',$inputPath,$pdf,'--diagnostics',$diagnosticsPath)
             if ($mode -eq 'all-word-compatible') { $arguments += @('--docx-markup','all','--docx-markup-geometry','word-compatible') }
+            # Each mode opens the source independently. Check it on both sides of that conversion.
+            if ((Get-FileHash -LiteralPath $inputPath).Hash -ne $document.Sha256) {
+                throw ('Portfolio input differs: ' + $document.Id + '/' + $mode)
+            }
             $timer = [Diagnostics.Stopwatch]::StartNew()
             dotnet $cli @arguments *> (Join-Path $run 'convert.log')
             $exitCode = $LASTEXITCODE
             $timer.Stop()
             if ($exitCode -ne 0) { throw ('Portfolio conversion failed: ' + $document.Id + '/' + $mode) }
+            if ((Get-FileHash -LiteralPath $inputPath).Hash -ne $document.Sha256) {
+                throw ('Portfolio input changed during conversion: ' + $document.Id + '/' + $mode)
+            }
             $elapsedMs = $timer.Elapsed.TotalMilliseconds
             $conversions++
         }

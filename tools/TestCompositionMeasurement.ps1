@@ -1,4 +1,4 @@
-# Prove a late invalid input prevents all conversion work, without running .NET.
+# Exercise portfolio measurement and reinspection with stubbed .NET processes.
 [CmdletBinding()]
 param(
     [string] $OutputDirectory,
@@ -24,6 +24,8 @@ foreach ($file in @($cli, $inspector, (Join-Path $repo 'Lokad.OoxPdf.dll'))) {
 }
 $calls = [Collections.Generic.List[object]]::new()
 $inspectionOnly = $false
+$freshSource = $null
+$sourceChangeTiming = $null
 $inspectionOperations = @([pscustomobject]@{PageNumber=1;Font='Body';DecodedText='Retained source.'})
 $mutation = [pscustomobject]@{CopyPath=$null;InspectionSource=$null;InspectionDestination=$false;OmitTextOperations=$false;ChangePdf=$false}
 function Copy-Item {
@@ -36,7 +38,16 @@ function Copy-Item {
 }
 function dotnet {
     $calls.Add($args)
-    if ($inspectionOnly) {
+    if ($args[0] -eq $cli -and $freshSource) {
+        [IO.File]::WriteAllText($args[3], 'Candidate PDF from ' + [IO.File]::ReadAllText($args[2]))
+        [IO.File]::WriteAllText($args[5], '[]')
+        if ($sourceChangeTiming -eq 'during-review' -and $args -contains 'word-compatible') {
+            [IO.File]::WriteAllText($freshSource, 'Changed during Review conversion')
+        }
+        $global:LASTEXITCODE = 0
+        return
+    }
+    if ($inspectionOnly -or $freshSource) {
         if ($args[0] -ne $inspector) { throw 'Reinspection reached the converter' }
         $changed = '[{"Id":"DOCX_UNSUPPORTED_EQUATION","Severity":1,"Message":"Late change."}]'
         if ($mutation.InspectionSource) {
@@ -53,6 +64,9 @@ function dotnet {
                 Set-Content -LiteralPath (Join-Path $args[2] 'text-operations.json')
         }
         if ($mutation.ChangePdf) { [IO.File]::WriteAllText($args[1], 'PDF changed during inspection') }
+        if ($sourceChangeTiming -eq 'between-views' -and (Split-Path (Split-Path $args[1]) -Leaf) -eq 'fresh-final-preserve') {
+            [IO.File]::WriteAllText($freshSource, 'Changed after Final conversion')
+        }
         $global:LASTEXITCODE = 0
         $pages = if ($inspectionOperations.Count) { $inspectionOperations.PageNumber | Sort-Object -Unique } else { 1 }
         foreach ($page in $pages) {
@@ -106,6 +120,39 @@ foreach ($fault in @('empty', 'missing', 'hash', 'duplicate', 'duplicate-case', 
         }
     }
 }
+$freshSource = Join-Path $repo 'fresh.docx'
+foreach ($sourceChangeTiming in @('unchanged', 'between-views', 'during-review')) {
+    [IO.File]::WriteAllText($freshSource, 'Retained source.')
+    $freshInputHash = (Get-FileHash -LiteralPath $freshSource).Hash
+    $case = Join-Path $OutputDirectory ('fresh-' + $sourceChangeTiming)
+    New-Item -ItemType Directory -Path $case | Out-Null
+    $manifest = Join-Path $case 'manifest.json'
+    ConvertTo-Json -AsArray -InputObject @{Id='fresh';Input='fresh.docx';Sha256=$freshInputHash;ExpectedText=@('Retained source.');ExpectedEquationCount=0} |
+        Set-Content -LiteralPath $manifest
+    $output = Join-Path $case 'candidate'
+    $reportPath = Join-Path $output 'outcomes.json'
+    $calls.Clear()
+    $failure = $null
+    try { & $script -CliPath $cli -InspectorPath $inspector -Manifest $manifest -OutputDirectory $output | Out-Null }
+    catch { $failure = $_ }
+    if ($sourceChangeTiming -eq 'unchanged') {
+        if ($failure) { throw $failure }
+        $report = Get-Content -LiteralPath $reportPath -Raw | ConvertFrom-Json
+        if ($calls.Count -ne 4 -or $report.Conversions -ne 2 -or $report.ReusedCandidates -ne 0 -or
+            ($report.Rows.Mode -join ',') -cne 'final-preserve,all-word-compatible' -or
+            @($report.Rows | Where-Object { $_.InputSha256 -cne $freshInputHash -or $_.MissingExpectedText.Count }).Count) {
+            throw 'An unchanged source must produce two pinned outcomes with the expected text'
+        }
+        continue
+    }
+    $expected = if ($sourceChangeTiming -eq 'between-views') { 'Portfolio input differs: fresh/all-word-compatible' }
+        else { 'Portfolio input changed during conversion: fresh/all-word-compatible' }
+    $expectedCalls = if ($sourceChangeTiming -eq 'between-views') { 2 } else { 3 }
+    if ("$failure" -cne $expected -or $calls.Count -ne $expectedCalls -or (Test-Path -LiteralPath $reportPath)) {
+        throw ('The changed source must refuse before publishing outcomes: ' + $sourceChangeTiming + '; calls=' + $calls.Count + '; failure=' + $failure)
+    }
+}
+$freshSource = $sourceChangeTiming = $null
 $inspectionOnly = $true
 $preflightRejects = $lateRejects = $validReuses = 0
 foreach ($fault in @('runtime', 'input', 'pdf', 'missing', 'duplicate',
@@ -283,4 +330,4 @@ $missing = @(Get-MissingPortfolioTextPhrases $slideLabels $expectedLabels 'prese
 if (($missing -join ',') -cne 'Series 2,Series 1Series 10') {
     throw 'Slide phrase assembly did not preserve the same-line run or separate nonadjacent labels'
 }
-Write-Output "Measurement/reinspection passes: $preflightRejects invalid caches reject before output/work, $lateRejects late changes reject before report publication, $validReuses valid diagnostic batches and $($textCases.Count) text-assembly controls reuse without conversion. No .NET processes or library builds."
+Write-Output "Measurement/reinspection passes: two fresh source changes reject before publishing outcomes, an unchanged source produces both views, $preflightRejects invalid caches reject before output/work, $lateRejects late reuse changes reject before report publication, $validReuses valid diagnostic batches and $($textCases.Count) text-assembly controls reuse without conversion. No .NET processes or library builds."
