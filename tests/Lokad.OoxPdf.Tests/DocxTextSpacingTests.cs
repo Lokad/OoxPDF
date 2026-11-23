@@ -1834,8 +1834,8 @@ internal static class DocxTextSpacingTests
         // RV06 cellmidline size matrix (Word 16.0): first-line totals follow
         // max(hhea-aware inset, image height), so a 24-by-18 image dominates both
         // families equally while a smaller image leaves the hhea difference standing.
-        double tah = LayoutCellFirstBaselineWithMidlineImage("Tahoma", 24d, 18d);
-        double cal = LayoutCellFirstBaselineWithMidlineImage("Calibri", 24d, 18d);
+        double tah = LayoutImageCellWithFamily("Tahoma", 24d, 18d).TextLines.Single().BaselineY;
+        double cal = LayoutImageCellWithFamily("Calibri", 24d, 18d).TextLines.Single().BaselineY;
         TestAssert.True(Math.Abs(tah - cal) < 0.05d, "Image-dominated first baselines must match across families; tah=" + tah.ToString(CultureInfo.InvariantCulture) + " cal=" + cal.ToString(CultureInfo.InvariantCulture) + ".");
     }
 
@@ -1843,8 +1843,8 @@ internal static class DocxTextSpacingTests
     {
         // The 12-by-9 image sits below both hhea-aware insets, so the Tahoma minus
         // Calibri first-baseline gap keeps the 0.605 hhea excess instead of vanishing.
-        double tah = LayoutCellFirstBaselineWithMidlineImage("Tahoma", 12d, 9d);
-        double cal = LayoutCellFirstBaselineWithMidlineImage("Calibri", 12d, 9d);
+        double tah = LayoutImageCellWithFamily("Tahoma", 12d, 9d).TextLines.Single().BaselineY;
+        double cal = LayoutImageCellWithFamily("Calibri", 12d, 9d).TextLines.Single().BaselineY;
         TestAssert.True(Math.Abs((cal - tah) - 0.605d) < 0.05d, "Inset-dominated first baselines must keep the hhea gap; tah=" + tah.ToString(CultureInfo.InvariantCulture) + " cal=" + cal.ToString(CultureInfo.InvariantCulture) + ".");
     }
 
@@ -1852,7 +1852,7 @@ internal static class DocxTextSpacingTests
     {
         // RV06 cellmidline size matrix (Word 16.0, blue-bounds raster measurement): Office
         // cell image bottoms sit at the text baseline (Tahoma medium bounds 679.0 against
-        // baseline 678.82), while the renderer hangs a full image height below it.
+        // baseline 678.82).
         var cell = LayoutImageCellWithFamily("Tahoma", 24d, 18d);
         DocxTextLineLayout line = cell.TextLines.Single();
         DocxInlineImageLayout image = cell.InlineImages.Single();
@@ -1894,32 +1894,6 @@ internal static class DocxTextSpacingTests
         public double MeasureHheaLineHeight(DocxTextRun? run, double fontSize) => fontSize;
 
         public double MeasureHheaAscender(DocxTextRun? run, double fontSize) => string.Equals(run?.FontFamily, "Tahoma", StringComparison.Ordinal) ? fontSize * 1.0005d : fontSize * 0.75d;
-    }
-
-    private static double LayoutCellFirstBaselineWithMidlineImage(string family, double imageWidthPoints, double imageHeightPoints)
-    {
-        var runA = new DocxTextRun("Cell A", 10d, null, false, false, false, null, family) { SourceRunIndex = 0 };
-        var runB = new DocxTextRun(" tail B", 10d, null, false, false, false, null, family) { SourceRunIndex = 2 };
-        var image = new DocxInlineImage(imageWidthPoints, imageHeightPoints, "image/png", [0x89, 0x50, 0x4E, 0x47], "word/media/image1.png") { SourceRunIndex = 1 };
-        var paragraph = new DocxParagraph(
-            [runA, runB],
-            [image],
-            null,
-            DocxTextAlignment.Left,
-            null,
-            0d,
-            0d,
-            1.2d,
-            null,
-            DocxParagraphSpacing.Empty,
-            DocxParagraphKeepRules.Empty,
-            null);
-        var cell = new DocxTableCell([paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
-        DocxTable table = new(null, [90d], [new DocxTableRow([cell], null)]);
-        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
-        return new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-            .Create(document, new MidlineCellTextMeasurer(new DocxTests.FamilyWidthTextMeasurer()), CancellationToken.None)
-            .Pages.Single().Items.OfType<DocxTableRowLayout>().Single().Cells.Single().TextLines.Single().BaselineY;
     }
 
     private sealed class HheaLineHeightFontResolver : IFontResolver
