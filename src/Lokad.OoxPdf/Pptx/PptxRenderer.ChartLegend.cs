@@ -257,7 +257,6 @@ internal sealed partial class PptxRenderer
         bool automaticHorizontal = legendBox.Horizontal && !layout.Layout.HasGeometryValues;
         bool bottomLegend = layout.PositionKind == PptxSceneChartLegendPosition.Bottom;
         double textGap = packEntries ? ComputeHorizontalLegendTextGap(style.FontSize, bottomLegend) : 0d;
-        double entryPadding = packEntries ? ResolveHorizontalLegendInterEntryGap(entries, style, textMeasurer, bottomLegend) : 0d;
         double nextEntryX = legendBox.X;
         var runs = new List<TextRun>(admittedEntryCount);
         for (int i = 0; i < admittedEntryCount; i++)
@@ -269,7 +268,7 @@ internal sealed partial class PptxRenderer
             double textAdvance = packEntries || automaticHorizontal ? textMeasurer.Measure(entry.Name, style) : 0d;
             if (packEntries)
             {
-                entryWidth = GetPackedHorizontalLegendEntryWidth(textAdvance, legendBox.MarkerWidth, textGap, entryPadding);
+                entryWidth = GetPackedHorizontalLegendEntryWidth(textAdvance, legendBox.MarkerWidth, textGap, legendBox.PackedEntryPadding);
                 nextEntryX += entryWidth;
             }
             double y = ResolveLegendEntryBaseline(admissionBox, i);
@@ -296,17 +295,13 @@ internal sealed partial class PptxRenderer
                         graphics.SetAlpha(1d, fillStroke.Alpha);
                     }
 
-                    ChartSeriesStroke ResolveFilledLegendKeyStroke()
-                    {
-                        return fillStroke.Width > ChartFilledSeriesInheritedStrokeWidth
-                            ? fillStroke with { Width = ChartFilledSeriesInheritedStrokeWidth }
-                            : fillStroke;
-                    }
-
-                    SetChartStroke(graphics, ResolveFilledLegendKeyStroke());
+                    ChartSeriesStroke keyStroke = fillStroke.Width > ChartFilledSeriesInheritedStrokeWidth
+                        ? fillStroke with { Width = ChartFilledSeriesInheritedStrokeWidth }
+                        : fillStroke;
+                    SetChartStroke(graphics, keyStroke);
                     if (entry.Marker is { } outlinedMarker)
                         DrawChartMarkerStroke(graphics, keyX + legendBox.MarkerSize / 2d, markerY + legendBox.MarkerSize / 2d,
-                            outlinedMarker.SymbolKind, legendBox.MarkerSize, ResolveFilledLegendKeyStroke());
+                            outlinedMarker.SymbolKind, legendBox.MarkerSize, keyStroke);
                     else graphics.StrokeRectangle(keyX, markerY, legendBox.MarkerSize, legendBox.MarkerSize);
                     if (fillStroke.Alpha < 1d)
                     {
@@ -529,7 +524,9 @@ internal sealed partial class PptxRenderer
             return useDoughnutRightAnchor ? contentWidth : Math.Max(style.FontSize * PptxChartMetricRules.LegendSideFillMinimumWidthFactor, contentWidth);
         }
 
-        double horizontalEntryPadding = ResolveHorizontalLegendInterEntryGap(entries, style, textMeasurer, bottomLegend);
+        double horizontalEntryPadding = horizontal
+            ? ResolveHorizontalLegendInterEntryGap(entries, style, textMeasurer, bottomLegend)
+            : 0d;
 
         double GetPackedHorizontalLegendWidth()
         {
@@ -628,7 +625,8 @@ internal sealed partial class PptxRenderer
                 : manualBox.Y + manualBox.Height - lineHeight;
         }
 
-        return new ChartLegendBox(x, clipY, width, clipHeight, firstY, lineHeight, markerSize, markerWidth, textGap, horizontal, sideStrokeLegend);
+        return new ChartLegendBox(x, clipY, width, clipHeight, firstY, lineHeight, markerSize, markerWidth,
+            textGap, horizontal, sideStrokeLegend, PackedEntryPadding: horizontalEntryPadding);
     }
 
     private static double ComputeOverlayLegendVerticalShift(double markerSize, bool overlayLegend)

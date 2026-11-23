@@ -2981,7 +2981,9 @@ internal static class PptxChartRenderingTests
 
     public static void PptxSyntheticBarChartLegendSwatchesUseSeriesStroke()
     {
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
+        const string legendMarkup = "<c:legend><c:legendPos val=\"r\"/><c:overlay val=\"0\"/></c:legend>";
+        const string chartPart = "ppt/charts/chart1.xml";
+        var parts = new Dictionary<string, byte[]>
         {
             ["[Content_Types].xml"] = TestFixtures.Utf8(PptxTests.BasicContentTypes()),
             ["_rels/.rels"] = TestFixtures.Utf8(PptxTests.PackageRelationship()),
@@ -3004,7 +3006,7 @@ internal static class PptxChartRenderingTests
                   </p:spTree></p:cSld>
                 </p:sld>
                 """),
-            ["ppt/charts/chart1.xml"] = TestFixtures.Utf8("""
+            [chartPart] = TestFixtures.Utf8($$"""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:chart><c:plotArea><c:barChart>
                   <c:barDir val="col"/>
@@ -3023,20 +3025,73 @@ internal static class PptxChartRenderingTests
                     <c:val><c:numLit><c:pt idx="0"><c:v>3</c:v></c:pt><c:pt idx="1"><c:v>5</c:v></c:pt></c:numLit></c:val>
                   </c:ser>
                   <c:axId val="10"/><c:axId val="20"/>
-                </c:barChart><c:catAx><c:axId val="10"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="b"/><c:tickLblPos val="none"/><c:crossAx val="20"/></c:catAx><c:valAx><c:axId val="20"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="l"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:valAx></c:plotArea><c:legend><c:legendPos val="r"/><c:overlay val="0"/></c:legend></c:chart></c:chartSpace>
+                </c:barChart><c:catAx><c:axId val="10"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="b"/><c:tickLblPos val="none"/><c:crossAx val="20"/></c:catAx><c:valAx><c:axId val="20"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="l"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:valAx></c:plotArea>{{legendMarkup}}</c:chart></c:chartSpace>
                 """)
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-        var collector = new DiagnosticCollector();
+        };
+        PdfPage page = Render();
+        AssertSwatches(page);
 
-        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = collector.Add });
+        const string demandStroke = "0.071 0.204 0.337 RG\n";
+        const string supplyStroke = "0.396 0.263 0.129 RG\n";
+        const string temporaryStroke = "0.5 0 0.5 RG\n";
+        PdfPage swapped = page with { Content = page.Content.Replace(demandStroke, temporaryStroke, StringComparison.Ordinal)
+            .Replace(supplyStroke, demandStroke, StringComparison.Ordinal).Replace(temporaryStroke, supplyStroke, StringComparison.Ordinal) };
+        var failure = TestAssert.Throws<InvalidOperationException>(() => AssertSwatches(swapped));
+        TestAssert.Contains("Demand legend swatch stroke", failure.Message);
 
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("0.267 0.447 0.769 rg", pdf);
-        TestAssert.Contains("0.071 0.204 0.337 RG", pdf);
-        TestAssert.Contains("0.929 0.49 0.192 rg", pdf);
-        TestAssert.Contains("0.396 0.263 0.129 RG", pdf);
-        TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"), "Bar chart legends with stroked swatches should not emit unsupported chart diagnostics.");
+        parts[chartPart] = TestFixtures.Utf8(Encoding.UTF8.GetString(parts[chartPart]).Replace(legendMarkup, "", StringComparison.Ordinal));
+        PdfPage hiddenLegend = Render();
+        TestAssert.Equal(0, DocxCommentsTests.ReadEmbeddedGlyphTextShows(hiddenLegend).Count());
+        TestAssert.Equal(0, ReadRectangles(hiddenLegend, strokes: true).Length);
+        TestAssert.Equal(4, ReadRectangles(hiddenLegend, strokes: false).Length);
+
+        PdfPage Render()
+        {
+            using var input = TestFixtures.CreateZipPackage(parts);
+            using var package = OoxPackage.Open(input, default);
+            var diagnostics = new DiagnosticCollector();
+            var document = new PptxReader().Read(package, default);
+            PdfPage rendered = new PptxRenderer(new PortableRenderingTests.PinnedResolver())
+                .RenderPagesAsync(document, package, diagnostics.Add, default).ToBlockingEnumerable().Single();
+            TestAssert.True(diagnostics.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"),
+                "Both bar chart controls should render without unsupported chart diagnostics.");
+            return rendered;
+        }
+
+        static void AssertSwatches(PdfPage rendered)
+        {
+            var fills = ReadRectangles(rendered, strokes: false);
+            var strokes = ReadRectangles(rendered, strokes: true);
+            TestAssert.Equal(2, strokes.Length);
+            AssertSwatch("Demand", new RgbColor(68, 114, 196), new RgbColor(18, 52, 86));
+            AssertSwatch("Supply", new RgbColor(237, 125, 49), new RgbColor(101, 67, 33));
+
+            void AssertSwatch(string name, RgbColor expectedFill, RgbColor expectedStroke)
+            {
+                var firstGlyph = PortableRenderingTests.ReadPaintedSourceLabel(rendered, name, fontPrefix: "CL")[0];
+                var key = strokes.Single(paint =>
+                {
+                    PdfRectangle rect = paint.Rectangle;
+                    double gap = firstGlyph.Origin.X - (rect.X + rect.Width);
+                    return gap >= 0 && gap <= 2d * rect.Width && Math.Abs(firstGlyph.Origin.Y - rect.Y) <= rect.Height;
+                });
+                TestAssert.Equal(expectedFill, fills.Single(paint => paint.Rectangle == key.Rectangle).Color);
+                TestAssert.True(expectedStroke == key.Color, $"{name} legend swatch stroke must match its source series.");
+            }
+        }
+
+        static (RgbColor Color, PdfRectangle Rectangle)[] ReadRectangles(PdfPage rendered, bool strokes)
+        {
+            var operations = new List<string>();
+            RgbColor[] colors = PptxChartPaletteTests.ReadColoredPaints(rendered.Content, operations.Add, strokes).ToArray();
+            return colors.Zip(operations).Where(paint => paint.Second.EndsWith(strokes ? " re S" : " re f", StringComparison.Ordinal))
+                .Select(paint =>
+                {
+                    double[] bounds = paint.Second[..^5].Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                        .Select(value => double.Parse(value, CultureInfo.InvariantCulture)).ToArray();
+                    return (paint.First, new PdfRectangle(bounds[0], bounds[1], bounds[2], bounds[3]));
+                }).ToArray();
+        }
     }
 
     public static void PptxSyntheticLineChartOmitsLegendKeyOnlyDataLabels()

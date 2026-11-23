@@ -128,7 +128,8 @@ internal sealed partial class PptxRenderer
         bool bottom = layout.Legend.PositionKind == PptxSceneChartLegendPosition.Bottom;
         bool packedAsBottom = bottom || measuredBand;
         double gap = ComputeHorizontalLegendTextGap(style.FontSize, packedAsBottom);
-        double padding = ResolveHorizontalLegendInterEntryGap(entries, style, measure, packedAsBottom);
+        double padding = packedAsBottom == bottom ? box.PackedEntryPadding
+            : ResolveHorizontalLegendInterEntryGap(entries, style, measure, packedAsBottom);
         var lineBox = measuredBand ? await measure.MeasureLineBoxAsync(style).ConfigureAwait(false) : default;
         if (measuredBand)
             box = box with { LineHeight = authoredFrame ? lineBox.Height : lineBox.Height * HorizontalLegendLineBoxScale + HorizontalLegendRowPadding,
