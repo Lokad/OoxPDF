@@ -2863,19 +2863,32 @@ internal static partial class PptxImagesTests
         TestAssert.Equal(0, diagnostics.Count);
     }
 
-    public static void PptxSyntheticSvgInvalidUserSpacePercentVectorDiagnoses()
+    public static void PptxSyntheticSvgUnsupportedGradientUnitsKeepSiblingPaint()
     {
-        var diagnostics = new List<OoxPdfDiagnostic>();
-        string pdf = RenderSyntheticSvgPicture("""
-            <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
-              <defs><linearGradient id="g" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="bad%" y2="0"><stop offset="0" stop-color="#FF0000"/><stop offset="1" stop-color="#0000FF"/></linearGradient></defs>
-              <path d="M0 0H100V50H0Z" fill="url(#g)"/>
-              <rect x="20" y="10" width="40" height="20" fill="fuchsia"/>
-            </svg>
-            """, diagnostics: diagnostics);
-        TestAssert.Contains("1 0 1 rg", pdf);
-        TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("unresolvable", StringComparison.Ordinal)),
-            "A malformed percentage keeps the gradient diagnostic and sibling paint.");
+        foreach (var (units, coordinate) in new[]
+        {
+            ("userSpaceOnUse", "bad%"), ("userSpaceOnUse", "50px%"), ("userSpaceOnUse", "1e308in"),
+            ("objectBoundingBox", "1px"), ("objectBoundingBox", "0.75pt")
+        })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            string pdf = RenderSyntheticSvgPicture($$"""
+                <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+                  <defs>
+                    <linearGradient id="source" gradientUnits="userSpaceOnUse" x2="{{coordinate}}">
+                      <stop offset="0" stop-color="red"/><stop offset="1" stop-color="blue"/>
+                    </linearGradient>
+                    <linearGradient id="g" href="#source" gradientUnits="{{units}}"/>
+                  </defs>
+                  <path d="M0 0H100V50H0Z" fill="url(#g)"/>
+                  <rect x="20" y="10" width="40" height="20" fill="fuchsia"/>
+                </svg>
+                """, diagnostics: diagnostics);
+            TestAssert.Contains("1 0 1 rg", pdf);
+            TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" &&
+                d.Message.Contains("unresolvable gradient g.", StringComparison.Ordinal)),
+                $"{units} coordinate {coordinate} keeps the gradient diagnostic and sibling paint.");
+        }
     }
 
     // RV07: garbage opacities fall back to opaque instead of killing conversion.

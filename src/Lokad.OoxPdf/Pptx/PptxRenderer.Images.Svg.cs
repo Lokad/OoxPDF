@@ -1481,7 +1481,7 @@ internal sealed partial class PptxRenderer
         };
     }
 
-    private enum SvgGradientUnit { Unspecified, Number, Percent, Pixel, Invalid }
+    private enum SvgGradientUnit { Unspecified, Number, Percent, Absolute, Invalid }
 
     private readonly record struct SvgGradientCoordinate(double Value, SvgGradientUnit Unit)
     {
@@ -1494,7 +1494,7 @@ internal sealed partial class PptxRenderer
                 SvgGradientUnit.Percent => (Value / 100d) * (viewportBasis ?? 1d),
                 _ => Value
             };
-            return Unit != SvgGradientUnit.Invalid && (Unit != SvgGradientUnit.Pixel || viewportBasis.HasValue) && double.IsFinite(value);
+            return Unit != SvgGradientUnit.Invalid && (Unit != SvgGradientUnit.Absolute || viewportBasis.HasValue) && double.IsFinite(value);
         }
     }
 
@@ -1504,18 +1504,14 @@ internal sealed partial class PptxRenderer
         ReadOnlySpan<char> text = attribute.Value.AsSpan().Trim();
         if (text.IsEmpty) return default;
 
-        SvgGradientUnit unit = SvgGradientUnit.Number;
-        if (text.EndsWith("%", StringComparison.Ordinal))
+        if (text.EndsWith('%'))
         {
-            unit = SvgGradientUnit.Percent;
-            text = text[..^1];
+            return double.TryParse(text[..^1], NumberStyles.Float, CultureInfo.InvariantCulture, out double percent) && double.IsFinite(percent)
+                ? new SvgGradientCoordinate(percent, SvgGradientUnit.Percent) : new SvgGradientCoordinate(0d, SvgGradientUnit.Invalid);
         }
-        else if (text.EndsWith("px", StringComparison.OrdinalIgnoreCase))
-        {
-            unit = SvgGradientUnit.Pixel;
-            text = text[..^2];
-        }
-        return double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out double value) && double.IsFinite(value)
+
+        SvgGradientUnit unit = char.IsAsciiLetter(text[^1]) ? SvgGradientUnit.Absolute : SvgGradientUnit.Number;
+        return TryReadSvgLength(text, out double value)
             ? new SvgGradientCoordinate(value, unit) : new SvgGradientCoordinate(0d, SvgGradientUnit.Invalid);
     }
 

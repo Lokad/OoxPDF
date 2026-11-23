@@ -330,36 +330,30 @@ internal static partial class SvgTextTests
         AssertEquivalentSvgPaint(expected, actual, "The square rectangle and existing zero and invalid radius outcomes retain their paint.");
     }
 
-    public static void SvgUserSpaceGradientPixelUnitsMatchUserCoordinates()
+    public static void SvgUserSpaceGradientLengthsMatchUserCoordinates()
     {
-        string Picture(string unit) => Svg($$"""
+        string Picture(string linear, string radial) => Svg($$"""
             <defs>
-              <linearGradient id="linear" gradientUnits="userSpaceOnUse"
-                              x1="10{{unit}}" y1="15{{unit}}" x2="90{{unit}}" y2="15{{unit}}">
+              <linearGradient id="source" gradientUnits="userSpaceOnUse" {{linear}}>
                 <stop offset="0" stop-color="red"/><stop offset="1" stop-color="blue"/>
               </linearGradient>
-              <radialGradient id="radial" gradientUnits="userSpaceOnUse"
-                              cx="220{{unit}}" cy="45{{unit}}" r="35{{unit}}"
-                              fx="220{{unit}}" fy="45{{unit}}">
-                <stop offset="0" stop-color="yellow"/><stop offset="1" stop-color="green"/>
+              <linearGradient id="linear" href="#source"/>
+              <radialGradient id="radial" gradientUnits="userSpaceOnUse" {{radial}}>
+                <stop offset="0" stop-color="yellow"/><stop offset="1" stop-color="green" stop-opacity=".25"/>
               </radialGradient>
             </defs>
             <rect x="10" y="15" width="80" height="60" fill="url(#linear)"/>
             <rect x="20" y="103" width="60" height="36" fill="none" stroke="url(#linear)" stroke-width="6"/>
-            <circle cx="220" cy="45" r="35" fill="url(#radial)"/>
+            <circle cx="192" cy="48" r="48" fill="url(#radial)"/>
+            <rect x="250" y="20" width="24" height="24" fill="fuchsia"/>
             """);
 
-        var diagnostics = new List<OoxPdfDiagnostic>();
-        var expected = Paint(Picture(""), diagnostics);
-        var actual = Paint(Picture("px"), diagnostics);
-        TestAssert.Contains("0.988 0 0.012 rg", expected.ToString());
-        TestAssert.Contains("0.012 0 0.988 rg", expected.ToString());
-        TestAssert.Equal(1, expected.ShadingPatterns.Count);
-        TestAssert.Equal(1, expected.Shadings.Count);
-        AssertEquivalentSvgPaint(expected, actual, "User-space gradient coordinates give the same paint with pixel units.");
-        TestAssert.Equal(expected.ShadingPatterns[0].Pattern.ResourceKey, actual.ShadingPatterns.Single().Pattern.ResourceKey);
-        TestAssert.Equal(expected.Shadings[0].Shading.ResourceKey, actual.Shadings.Single().Shading.ResourceKey);
-        TestAssert.Equal(0, diagnostics.Count);
+        string coordinates = Picture("""x1="10" y1="15" x2="90" y2="15" """, """cx="192" cy="48" r="48" fx="192" fy="48" """);
+        string pixels = Picture("""x1="10px" y1="15px" x2="90px" y2="15px" """, """cx="192px" cy="48px" r="48px" fx="192px" fy="48px" """);
+        string physical = Picture("""x1="7.5pt" y1="11.25pt" x2="67.5pt" y2="11.25pt" """,
+            """cx="2in" cy="3pc" r="12.7mm" fx="5.08cm" fy="50.8Q" """);
+        AssertSvgPaintInBothFormats(coordinates, [pixels, physical], null,
+            "0.988 0 0.012 rg", "0.012 0 0.988 rg", "/PatternType 2", "/ShadingType 3", "/S /Luminosity", "1 0 1 rg");
     }
 
     public static void SvgConstantLinearGradientsMatchSolidPaintInBothFormats()
