@@ -350,28 +350,16 @@ internal sealed partial class PptxRenderer
         Dictionary<string, PdfImageXObject?>? imageCache,
         Action<OoxPdfDiagnostic>? diagnosticSink,
         int slideIndex,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
-        return GetOrCreateImage(imageResource.PartName, imageResource.ContentType, imageResource.Bytes, recolor, imageCache, diagnosticSink, slideIndex, cancellationToken);
-    }
-
-    private static PdfImageXObject? GetOrCreateImage(
-        string partName,
-        string contentType,
-        byte[] bytes,
-        PptxSceneImageRecolor recolor,
-        Dictionary<string, PdfImageXObject?>? imageCache,
-        Action<OoxPdfDiagnostic>? diagnosticSink,
-        int slideIndex,
-        CancellationToken cancellationToken = default)
-    {
-        string cacheKey = partName + "\u001f" + ImageRecolorCacheKey(recolor);
+        string cacheKey = imageResource.PartName + "\u001f" + ImageRecolorCacheKey(recolor);
         if (imageCache is not null && imageCache.TryGetValue(cacheKey, out PdfImageXObject? cached))
         {
             return cached;
         }
 
-        PdfImageXObject? image = CreateImage(partName, contentType, bytes, recolor, diagnosticSink, slideIndex, cancellationToken);
+        PdfImageXObject? image = CreateImage(imageResource.PartName, imageResource.ContentType, imageResource.Bytes,
+            recolor, diagnosticSink, slideIndex, cancellationToken);
         imageCache?.TryAdd(cacheKey, image);
         return image;
     }
@@ -387,8 +375,6 @@ internal sealed partial class PptxRenderer
     {
         try
         {
-            // D02: without recolor the dispatch is the shared decoder; the recolor
-            // fallback policy below stays PPTX-specific.
             if (IsNoImageRecolor(recolor))
             {
                 return OoxImageDecoder.Decode(contentType, bytes, cancellationToken);
@@ -397,7 +383,7 @@ internal sealed partial class PptxRenderer
             if (OoxImageDecoder.IsJpegContentType(contentType))
             {
                 JpegInfo info = JpegInfo.Read(bytes);
-                if (info.IsBaselineDct && info.BitsPerComponent == 8 && info.ComponentCount is 1 or 3)
+                if (info.IsBaselineDct && info.ComponentCount is 1 or 3)
                 {
                     try
                     {

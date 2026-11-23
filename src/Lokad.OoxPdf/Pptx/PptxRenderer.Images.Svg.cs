@@ -1666,8 +1666,8 @@ internal sealed partial class PptxRenderer
         UnparsableColor,
         UnparsableWidth
     }
-    // RV07: solid strokes paint over any fill; gradient strokes, unparsable
-    // colors/widths and dash/cap/join effects diagnose instead of vanishing.
+    // Solid and supported gradient strokes paint over the fill. Invalid paint,
+    // width and presentation values report fallbacks through the result flags.
     // Office uses the largest singular value of the element transform for
     // a uniform stroke width; the viewport separately stretches its normal.
     // vector-effect=non-scaling-stroke skips the element-transform factor;
