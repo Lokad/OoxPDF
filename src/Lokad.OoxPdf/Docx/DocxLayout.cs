@@ -1029,26 +1029,10 @@ internal sealed partial class DocxLayoutEngine
                         frameBottom: footnoteFrameBottom);
                 }
             }
-            else if (separatorLayout is null)
-            {
-                PlaceFootnoteStoriesWithoutSeparator(
-                    headScratchPages,
-                    0,
-                    templatePage,
-                    sharedBatch,
-                    continuationLayout,
-                    separatorMeasurer,
-                    paragraphSpacingScale,
-                    ResolveHeaderKeepOut,
-                    sharedSlicePlacement: true,
-                    inFlightNotes: inFlightNotes,
-                    pageNumberOverride: templatePageNumber,
-                    pageCountOverride: templatePageNumber,
-                    sharedContentTop: cursorY - Math.Max(0d, pendingSpacingAfter), footerKeepOut: footnoteFrameBottom,
-                    availableFooterKeepOut: availableFootnoteFrameBottom, cancellationToken: cancellationToken);
-            }
             else
             {
+                // The default separator path applies its own line charge.
+                double? authoredSeparatorHeight = separatorLayout is not null ? sourceSeparatorHeight : null;
                 PlaceFootnoteStories(
                     headScratchPages,
                     0,
@@ -1064,9 +1048,9 @@ internal sealed partial class DocxLayoutEngine
                     pageNumberOverride: templatePageNumber,
                     pageCountOverride: templatePageNumber,
                     sharedContentTop: cursorY - Math.Max(0d, pendingSpacingAfter) -
-                        (sourceSeparatorHeight ?? 0d), footerKeepOut: footnoteFrameBottom,
+                        (authoredSeparatorHeight ?? 0d), footerKeepOut: footnoteFrameBottom,
                         availableFooterKeepOut: availableFootnoteFrameBottom,
-                        hasSourceOwnedReserve: sourceSeparatorHeight is not null, cancellationToken: cancellationToken);
+                    hasSourceOwnedReserve: authoredSeparatorHeight is not null, cancellationToken: cancellationToken);
             }
 
             var harvestedStories = new List<DocxPlacedRelatedStoryLayout>();

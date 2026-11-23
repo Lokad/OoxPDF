@@ -1966,24 +1966,28 @@ internal sealed partial class DocxLayoutEngine
             return;
         }
 
-        // Normalize once, including when the separator-less path dispatches.
         bool ownedInlineFrame = ResolveOwnedInlineFootnoteFrame(page, footnoteStories, printScale,
             ref sharedContentTop, ref footerKeepOut, availableFooterKeepOut);
 
         DocxLayoutPage activePage = outputPages[outputIndex];
         int activePageIndex = outputIndex;
         List<DocxPlacedRelatedStoryLayout> activePlacedStories = activePage.PlacedRelatedStories.ToList();
-        double bodyHeight = footnoteStories.Sum(story => ResolvePlacedStoryHeight(story.StoryLayout, activePage));
-        var placementFooter = ResolveFootnotePlacementFooter(activePage, pageNumberOverride ?? outputIndex + 1,
-            pageCountOverride ?? outputPages.Count, footerKeepOut, availableFooterKeepOut);
-        double frameBottom = placementFooter?.Invoke(activePage, pageNumberOverride ?? (outputIndex + 1), pageCountOverride ?? outputPages.Count) ?? activePage.MarginBottom;
-        double cursorTop = frameBottom + bodyHeight;
+        int placementPageNumber = pageNumberOverride ?? outputIndex + 1;
+        int placementPageCount = pageCountOverride ?? outputPages.Count;
+        var (placementFooter, frameBottom, cursorTop) = ResolveFootnotePlacementFrame(
+            activePage, footnoteStories, placementPageNumber, placementPageCount, footerKeepOut, availableFooterKeepOut);
+        DocxRelatedStoryLayout[]? contentStories = null;
+        double? plainSeparatorHeight = null;
+
+        DocxRelatedStoryLayout[] ContentStories() => contentStories ??= footnoteStories.Select(story => story.StoryLayout).ToArray();
+        double PlainSeparatorHeight() => plainSeparatorHeight ??=
+            ResolvePlainNoteSeparatorHeight(separatorLayout, activePage, separatorMeasurer, ContentStories(), printScale);
+
         bool continuesHead = inFlightNotes is not null && footnoteStories[0].Location.Reference.Id is { } firstId &&
             inFlightNotes.TryGetValue((DocxRelatedStoryKind.Footnote, firstId), out InFlightRelatedStory? firstFlight) && firstFlight.SeparatorPlaced;
         bool plainSharedHead = placementFooter is not null && continuesHead;
         double separatorHeight = frameBottom > activePage.MarginBottom || plainSharedHead
-            ? ResolvePlainNoteSeparatorHeight(separatorLayout, activePage, separatorMeasurer,
-                footnoteStories.Select(s => s.StoryLayout).ToArray(), printScale)
+            ? PlainSeparatorHeight()
             : ResolvePlacedStoryHeight(separatorLayout, activePage);
         (DocxTextRun? gapRun, double gapFontSizePoints) = FindSeparatorMarkFont(separatorLayout.TextLines);
         double separatorGapPoints = ResolveSeparatorGapPoints(gapRun, gapFontSizePoints, separatorMeasurer);
@@ -1992,25 +1996,21 @@ internal sealed partial class DocxLayoutEngine
         // continuation uses the same nominal separator gap as a fresh head;
         // empty pages and unqualified sources retain their existing fallback.
         if (footerKeepOut is not null && CanUseNominalNoteSeparatorFlow(activePage,
-            separatorLayout, printScale, footnoteStories.Select(s => s.StoryLayout).ToArray()))
+            separatorLayout, printScale, ContentStories()))
             footnoteContentGapPoints = ResolveSourceInsetNoteContentGap(footnoteContentGapPoints,
                 gapRun, gapFontSizePoints, separatorMeasurer);
         double footnoteContentPushdownPoints = System.Math.Max(0d, footnoteContentGapPoints - separatorGapPoints);
-        double storiesTop = cursorTop;
-        double clampBodyBottom = ResolveFootnoteClampBodyBottom(page, pageNumberOverride ?? (outputIndex + 1), pageCountOverride ?? outputPages.Count, footnoteStories[0].StoryLayout, headerKeepOut);
+        double clampBodyBottom = ResolveFootnoteClampBodyBottom(page, placementPageNumber, placementPageCount, footnoteStories[0].StoryLayout, headerKeepOut);
         // The admitted shared frame already reserves the separator's flow charge.
         // Its physical clip can retain latent spacing without charging it again.
-        double separatorCharge = footerKeepOut is not null
-            ? ResolvePlainNoteSeparatorHeight(separatorLayout, activePage, separatorMeasurer,
-                footnoteStories.Select(s => s.StoryLayout).ToArray(), printScale) : separatorHeight;
-        storiesTop = Math.Min(cursorTop, clampBodyBottom - separatorCharge);
+        double separatorCharge = footerKeepOut is not null ? PlainSeparatorHeight() : separatorHeight;
+        double storiesTop = Math.Min(cursorTop, clampBodyBottom - separatorCharge);
         if (plainSharedHead && !ownedInlineFrame)
         {
             // Continued paragraph batches share the same measured rule capacity
             // as the single-story slicer, without charging a fresh-head inset.
             double frameTop = Math.Min(activePage.Height - activePage.MarginTop,
-                headerKeepOut?.Invoke(activePage, pageNumberOverride ?? outputIndex + 1,
-                    pageCountOverride ?? outputPages.Count) ?? double.PositiveInfinity);
+                headerKeepOut?.Invoke(activePage, placementPageNumber, placementPageCount) ?? double.PositiveInfinity);
             storiesTop = Math.Min(cursorTop, frameTop - ContinuationRuleOverhead(continuationSeparatorLayout, separatorMeasurer));
         }
         if (sharedContentTop is not null)
@@ -2024,7 +2024,7 @@ internal sealed partial class DocxLayoutEngine
             // its fallback. Derive it from placed content so admission's prior
             // separator reserve is not subtracted a second time.
             double headCharge = ResolveParagraphBoundarySeparatorHeight(separatorLayout, activePage,
-                separatorMeasurer, footnoteStories.Select(s => s.StoryLayout).ToArray());
+                separatorMeasurer, ContentStories());
             storiesTop = Math.Min(storiesTop, bodyBottom - headCharge);
         }
         // RV06 p1-position probes (Word 16.0): Office seats the overflowing head block
@@ -2110,6 +2110,17 @@ internal sealed partial class DocxLayoutEngine
         }
     }
 
+    private static (Func<DocxLayoutPage, int, int, double>? Footer, double Bottom, double Top)
+        ResolveFootnotePlacementFrame(DocxLayoutPage page, IReadOnlyList<DocxReferencedRelatedStoryLayout> stories,
+            int pageNumber, int pageCount, Func<DocxLayoutPage, int, int, double>? footerKeepOut,
+            Func<DocxLayoutPage, int, int, double>? availableFooterKeepOut)
+    {
+        double bodyHeight = stories.Sum(story => ResolvePlacedStoryHeight(story.StoryLayout, page));
+        var footer = ResolveFootnotePlacementFooter(page, pageNumber, pageCount, footerKeepOut, availableFooterKeepOut);
+        double bottom = footer?.Invoke(page, pageNumber, pageCount) ?? page.MarginBottom;
+        return (footer, bottom, bottom + bodyHeight);
+    }
+
     private static double ResolveDefaultFootnoteSeparatorFlowHeight(DocxRelatedStoryLayout firstLayout,
         IDocxTextMeasurer? measurer)
     {
@@ -2159,17 +2170,16 @@ internal sealed partial class DocxLayoutEngine
         DocxLayoutPage activePage = outputPages[outputIndex];
         int activePageIndex = outputIndex;
         List<DocxPlacedRelatedStoryLayout> activePlacedStories = activePage.PlacedRelatedStories.ToList();
-        double bodyHeight = footnoteStories.Sum(story => ResolvePlacedStoryHeight(story.StoryLayout, activePage));
-        var placementFooter = ResolveFootnotePlacementFooter(activePage, pageNumberOverride ?? outputIndex + 1,
-            pageCountOverride ?? outputPages.Count, footerKeepOut, availableFooterKeepOut);
-        double frameBottom = placementFooter?.Invoke(activePage, pageNumberOverride ?? (outputIndex + 1), pageCountOverride ?? outputPages.Count) ?? activePage.MarginBottom;
-        double cursorTop = frameBottom + bodyHeight;
+        int placementPageNumber = pageNumberOverride ?? outputIndex + 1;
+        int placementPageCount = pageCountOverride ?? outputPages.Count;
+        var (placementFooter, frameBottom, cursorTop) = ResolveFootnotePlacementFrame(
+            activePage, footnoteStories, placementPageNumber, placementPageCount, footerKeepOut, availableFooterKeepOut);
         double storiesTop = cursorTop;
         DocxRelatedStoryLayout firstLayout = footnoteStories[0].StoryLayout;
         double clampBodyBottom = ownedFrame
             ? Math.Min(page.Height - page.MarginTop,
-                headerKeepOut?.Invoke(page, pageNumberOverride ?? (outputIndex + 1), pageCountOverride ?? outputPages.Count) ?? double.PositiveInfinity)
-            : ResolveFootnoteClampBodyBottom(page, pageNumberOverride ?? (outputIndex + 1), pageCountOverride ?? outputPages.Count, firstLayout, headerKeepOut);
+                headerKeepOut?.Invoke(page, placementPageNumber, placementPageCount) ?? double.PositiveInfinity)
+            : ResolveFootnoteClampBodyBottom(page, placementPageNumber, placementPageCount, firstLayout, headerKeepOut);
         if (firstLayout.TextLines.Count != 0)
         {
             double firstBoxHeight = ownedFrame
