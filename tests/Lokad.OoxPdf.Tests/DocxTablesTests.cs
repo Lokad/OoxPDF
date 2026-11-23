@@ -508,8 +508,8 @@ internal static class DocxTablesTests
         {
             Hyperlinks =
             [
-                new DocxHyperlinkSpan("rIdExt", null, "https://example.invalid/", "External", null, 0, 1, 0, 1, 8),
-                new DocxHyperlinkSpan(null, "Bookmark", null, null, null, 1, 1, 1, 1, 8)
+                new DocxHyperlinkSpan(null, "https://example.invalid/", "External", null, 0, 1, 0, 1),
+                new DocxHyperlinkSpan("Bookmark", null, null, null, 1, 1, 1, 1)
             ]
         };
         var table = new DocxTable(
@@ -558,7 +558,7 @@ internal static class DocxTablesTests
         {
             Hyperlinks =
             [
-                new DocxHyperlinkSpan("rIdCell", null, "https://example.invalid/cell", "External", null, 1, 1, 1, 1, 4)
+                new DocxHyperlinkSpan(null, "https://example.invalid/cell", "External", null, 1, 1, 1, 1)
             ]
         };
         var table = new DocxTable(
@@ -649,7 +649,7 @@ internal static class DocxTablesTests
         {
             Hyperlinks =
             [
-                new DocxHyperlinkSpan("rIdCell", null, "https://example.invalid/cell-word-compatible", "External", null, 1, 1, 1, 1, linkText.Length)
+                new DocxHyperlinkSpan(null, "https://example.invalid/cell-word-compatible", "External", null, 1, 1, 1, 1)
             ]
         };
         var table = new DocxTable(
@@ -718,7 +718,7 @@ internal static class DocxTablesTests
         {
             Hyperlinks =
             [
-                new DocxHyperlinkSpan("rIdSplitCell", null, "https://example.invalid/split-cell", "External", null, 1, 1, 1, 1, 4)
+                new DocxHyperlinkSpan(null, "https://example.invalid/split-cell", "External", null, 1, 1, 1, 1)
             ]
         };
         var cell = new DocxTableCell([before, after], null, null, null, null, [], DocxTableCellMargins.Empty)
@@ -766,7 +766,7 @@ internal static class DocxTablesTests
         {
             Hyperlinks =
             [
-                new DocxHyperlinkSpan(null, "CellBookmarkTarget", null, null, null, 1, 1, 1, 1, 6)
+                new DocxHyperlinkSpan("CellBookmarkTarget", null, null, null, 1, 1, 1, 1)
             ]
         };
         DocxParagraph targetParagraph = DocxTests.CreateDocxLayoutParagraph("Bookmark target", 10d, 12d) with

@@ -501,7 +501,7 @@ internal sealed partial class DocxReader
                         else
                             AddCommentRangeEnd(boundary, openCommentRanges, commentRanges, sourceRunIndex, runs, inlineItems!.Count + 1);
                     }, readHyperlink: sourceEquation.RemoveDeletedText ? null : hyperlink =>
-                        AddHyperlinkSpan(hyperlink, sourceRunIndex, 0, runs.Count, 0, 0,
+                        AddHyperlinkSpan(hyperlink, sourceRunIndex, 0, runs.Count, 0,
                             inlineItems!.Count, inlineItems.Count + 1, hyperlinkSpans, relationships, mathContent: true),
                     authoredStory: paragraph.Annotation<DocxSourceXml.StoryOrigin>()?.Story,
                     equationHasDeletionOwner: sourceEquation.RemoveDeletedText || equationRevision?.Kind == DocxRevisionKind.Deletion);
@@ -1616,7 +1616,6 @@ internal sealed partial class DocxReader
         int sourceRunCount,
         int textRunStartIndex,
         int textRunCount,
-        int textLength,
         int inlineStart,
         int inlineEnd,
         List<DocxHyperlinkSpan> hyperlinkSpans,
@@ -1625,7 +1624,6 @@ internal sealed partial class DocxReader
         string? relationshipId = (string?)hyperlink.Attribute(RelationshipsNamespace + "id");
         relationships.TryGetValue(relationshipId ?? string.Empty, out OoxRelationship? relationship);
         var span = new DocxHyperlinkSpan(
-            relationshipId,
             (string?)hyperlink.Attribute(WordprocessingNamespace + "anchor"),
             relationship?.Target,
             relationship?.TargetMode,
@@ -1633,8 +1631,7 @@ internal sealed partial class DocxReader
             sourceRunStartIndex,
             sourceRunCount,
             textRunStartIndex,
-            textRunCount,
-            textLength)
+            textRunCount)
         {
             StartInlineItemIndex = inlineStart, EndInlineItemIndex = inlineEnd, IsMathContent = mathContent,
             IsMathRootContent = mathContent && hyperlink.Ancestors()
@@ -1657,7 +1654,6 @@ internal sealed partial class DocxReader
     {
         int sourceRunStartIndex = sourceRunIndex;
         int textRunStartIndex = runs.Count;
-        int textLengthStart = runs.Sum(run => run.Text.Length);
         int inlineStart = getInlineItemCount();
         bool hasSource = false;
         foreach (XElement hyperlinkChild in hyperlink.Elements())
@@ -1671,7 +1667,6 @@ internal sealed partial class DocxReader
             sourceRunIndex - sourceRunStartIndex,
             textRunStartIndex,
             runs.Count - textRunStartIndex,
-            runs.Sum(run => run.Text.Length) - textLengthStart,
             inlineStart,
             getInlineItemCount(),
             hyperlinkSpans,

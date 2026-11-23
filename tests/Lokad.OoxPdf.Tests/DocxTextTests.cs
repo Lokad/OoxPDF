@@ -1950,7 +1950,6 @@ internal static partial class DocxTextTests
         TestAssert.True(runs[1].Underline, "Expected hyperlink character style underline to survive.");
         TestAssert.Equal(" After", runs[2].Text);
         DocxHyperlinkSpan link = paragraph.Hyperlinks.Single();
-        TestAssert.Equal("rId2", link.RelationshipId ?? string.Empty);
         TestAssert.Equal("https://example.invalid/", link.Target ?? string.Empty);
         TestAssert.Equal("External", link.TargetMode ?? string.Empty);
         TestAssert.True(link.ResolvedTarget is null, "External hyperlinks should keep their target without pretending to be package-local parts.");
@@ -1958,7 +1957,7 @@ internal static partial class DocxTextTests
         TestAssert.Equal(1, link.SourceRunCount);
         TestAssert.Equal(1, link.TextRunStartIndex);
         TestAssert.Equal(1, link.TextRunCount);
-        TestAssert.Equal(4, link.TextLength);
+        TestAssert.Equal("Link", string.Concat(runs.Skip(link.TextRunStartIndex).Take(link.TextRunCount).Select(run => run.Text)));
 
         DocxStructureSnapshot snapshot = DocxStructureSnapshot.FromDocument(document);
         DocxStructureBlockSnapshot block = snapshot.Blocks.Single(block => block.Kind == "Paragraph");

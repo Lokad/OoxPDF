@@ -127,7 +127,7 @@ internal static class DocxNestedCellEndTests
             var table = Outer([new DocxTableElement(Nested()), new DocxParagraphElement(mark)]);
             var jump = Paragraph("Jump");
             jump = jump with { Runs = [jump.Runs[0] with { SourceRunIndex = 0 }],
-                Hyperlinks = [new(null, "CellEnd", null, null, null, 0, 1, 0, 1, 4)] };
+                Hyperlinks = [new("CellEnd", null, null, null, 0, 1, 0, 1)] };
             var source = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table), new DocxParagraphElement(jump)], [table]);
             var pages = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup, mode)
                 .RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();

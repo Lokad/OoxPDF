@@ -11,8 +11,8 @@ internal static partial class DocxMathTests
         var equation = EditingMarkerFraction();
         var children = equation.Elements().ToArray(); equation.RemoveNodes();
         equation.Add(new XElement(WordprocessingNamespace + "hyperlink", children));
-        var link = new DocxHyperlinkSpan("rMath", null, "https://example.org/math", "External", null,
-            0, 0, 0, 0, 0) { IsMathContent = true, StartInlineItemIndex = 0, EndInlineItemIndex = 1 };
+        var link = new DocxHyperlinkSpan(null, "https://example.org/math", "External", null,
+            0, 0, 0, 0) { IsMathContent = true, StartInlineItemIndex = 0, EndInlineItemIndex = 1 };
         int sources = 0;
         var parsed = DocxMathParser.Read(equation, (_, text) => PlainRun(text), default,
             readHyperlink: _ => { sources++; return link; });

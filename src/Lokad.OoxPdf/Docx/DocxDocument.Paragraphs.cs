@@ -290,7 +290,6 @@ internal sealed record DocxFieldReference(
 }
 
 internal sealed record DocxHyperlinkSpan(
-    string? RelationshipId,
     string? Anchor,
     string? Target,
     string? TargetMode,
@@ -298,8 +297,7 @@ internal sealed record DocxHyperlinkSpan(
     int SourceRunStartIndex,
     int SourceRunCount,
     int TextRunStartIndex,
-    int TextRunCount,
-    int TextLength)
+    int TextRunCount)
 {
     // Mathematical source ranges stay distinct from prose-run ranges.
     public bool IsMathContent { get; init; }

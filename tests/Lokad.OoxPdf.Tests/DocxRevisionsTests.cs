@@ -1274,10 +1274,10 @@ internal static class DocxRevisionsTests
         DocxParagraph paragraph = document.Paragraphs.Single();
         TestAssert.Equal("Nested", string.Concat(paragraph.Runs.Select(run => run.Text)));
         TestAssert.Equal(1, paragraph.BookmarkAnchors.Count);
-        TestAssert.Equal(1, paragraph.Hyperlinks.Count);
-        TestAssert.Equal(1, paragraph.Hyperlinks[0].SourceRunCount);
-        TestAssert.Equal(1, paragraph.Hyperlinks[0].TextRunCount);
-        TestAssert.Equal(6, paragraph.Hyperlinks[0].TextLength);
+        DocxHyperlinkSpan nestedLink = paragraph.Hyperlinks.Single();
+        TestAssert.Equal(1, nestedLink.SourceRunCount);
+        TestAssert.Equal("Nested", paragraph.Runs[nestedLink.TextRunStartIndex].Text);
+        TestAssert.Equal(1, nestedLink.TextRunCount);
     }
 
     public static void DocxReaderPreservesMoveToFinalViewRuns()
@@ -1378,23 +1378,25 @@ internal static class DocxRevisionsTests
         TestAssert.Equal("Before Link new field-new After", DocxTests.ParagraphTexts(simpleDocument));
         TestAssert.Equal("Before Link old new field-old field-new After", DocxTests.ParagraphTexts(allDocument));
 
-        AssertHyperlinkAndFieldSpan(finalDocument.Paragraphs.Single(), expectedHyperlinkTextLength: "Link new ".Length, expectedHyperlinkTextRunCount: 2, expectedFieldTextLength: "field-new ".Length, expectedFieldTextRunCount: 1);
-        AssertHyperlinkAndFieldSpan(originalDocument.Paragraphs.Single(), expectedHyperlinkTextLength: "Link old ".Length, expectedHyperlinkTextRunCount: 2, expectedFieldTextLength: "field-old ".Length, expectedFieldTextRunCount: 1);
-        AssertHyperlinkAndFieldSpan(allDocument.Paragraphs.Single(), expectedHyperlinkTextLength: "Link old new ".Length, expectedHyperlinkTextRunCount: 3, expectedFieldTextLength: "field-old field-new ".Length, expectedFieldTextRunCount: 2);
+        AssertHyperlinkAndFieldSpan(finalDocument.Paragraphs.Single(), expectedHyperlinkText: "Link new ", expectedHyperlinkTextRunCount: 2, expectedFieldTextLength: "field-new ".Length, expectedFieldTextRunCount: 1);
+        AssertHyperlinkAndFieldSpan(originalDocument.Paragraphs.Single(), expectedHyperlinkText: "Link old ", expectedHyperlinkTextRunCount: 2, expectedFieldTextLength: "field-old ".Length, expectedFieldTextRunCount: 1);
+        AssertHyperlinkAndFieldSpan(allDocument.Paragraphs.Single(), expectedHyperlinkText: "Link old new ", expectedHyperlinkTextRunCount: 3, expectedFieldTextLength: "field-old field-new ".Length, expectedFieldTextRunCount: 2);
         TestAssert.True(allDocument.Paragraphs.Single().Hyperlinks.Single().SourceRunCount == 3, "All-markup hyperlink source span should cover each visible revised run inside the hyperlink.");
         TestAssert.True(finalDocument.Paragraphs.Single().Hyperlinks.Single().SourceRunCount == 2, "Final hyperlink source span should stay valid after deleted hyperlink content is filtered.");
         TestAssert.True(originalDocument.Paragraphs.Single().Hyperlinks.Single().SourceRunCount == 2, "Original hyperlink source span should stay valid after inserted hyperlink content is filtered.");
 
         static void AssertHyperlinkAndFieldSpan(
             DocxParagraph paragraph,
-            int expectedHyperlinkTextLength,
+            string expectedHyperlinkText,
             int expectedHyperlinkTextRunCount,
             int expectedFieldTextLength,
             int expectedFieldTextRunCount)
         {
             DocxHyperlinkSpan hyperlink = paragraph.Hyperlinks.Single();
             DocxFieldReference field = paragraph.FieldReferences.Single();
-            TestAssert.Equal(expectedHyperlinkTextLength, hyperlink.TextLength);
+            string hyperlinkText = string.Concat(paragraph.Runs.Skip(hyperlink.TextRunStartIndex)
+                .Take(hyperlink.TextRunCount).Select(run => run.Text));
+            TestAssert.Equal(expectedHyperlinkText, hyperlinkText);
             TestAssert.Equal(expectedHyperlinkTextRunCount, hyperlink.TextRunCount);
             TestAssert.Equal(expectedFieldTextLength, field.TextLength);
             TestAssert.Equal(expectedFieldTextRunCount, field.TextRunCount);

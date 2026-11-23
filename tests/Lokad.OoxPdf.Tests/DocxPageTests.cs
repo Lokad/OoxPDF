@@ -209,7 +209,7 @@ internal static class DocxPageTests
         {
             Hyperlinks =
             [
-                new DocxHyperlinkSpan("rIdHeader", null, "https://example.invalid/header", "External", null, 1, 1, 1, 1, 4)
+                new DocxHyperlinkSpan(null, "https://example.invalid/header", "External", null, 1, 1, 1, 1)
             ]
         };
         DocxPageSettings pageSettings = DocxPageSettings.Empty with
@@ -264,7 +264,7 @@ internal static class DocxPageTests
         {
             Hyperlinks =
             [
-                new DocxHyperlinkSpan("rIdFooter", null, "https://example.invalid/footer", "External", null, 1, 1, 1, 1, 4)
+                new DocxHyperlinkSpan(null, "https://example.invalid/footer", "External", null, 1, 1, 1, 1)
             ]
         };
         DocxPageSettings pageSettings = DocxPageSettings.Empty with
