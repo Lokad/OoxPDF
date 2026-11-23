@@ -391,6 +391,41 @@ internal static partial class SvgTextTests
             }, "0 1 0 rg");
     }
 
+    public static void SvgTextChildrenKeepInheritedFontAndFill()
+    {
+        string Picture(string north, string south, string northAttributes = "") => Svg($"""
+            <text x="95" y="45" text-anchor="middle" font-size="20" fill="currentColor" color="#112233" {northAttributes}>{north}</text>
+            <text x="20" y="80" xml:space="preserve" font-size="20" fill="#114499" fill-opacity=".75">{south}</text>
+            <rect id="marker" x="120" y="90" width="20" height="10" fill="lime"/>
+            """);
+        const string plainSouth = "&#160;SOUTH";
+        const string northSpan = """NO<tspan font-family="inherit" font-size="unset" color="inherit" fill="inherit">RT</tspan>H""";
+        const string southSpan = """&#160;SO<tspan fill="red" style="FILL:inherit !important;fill:lime;fill-opacity:unset;font-size:inherit">UT</tspan>H""";
+        string control = Picture("NORTH", plainSouth);
+        AssertSvgPaintInBothFormats(control, Picture(northSpan, southSpan), pdf =>
+        {
+            TestAssert.Equal(5, LabelPaths(pdf));
+            TestAssert.Equal(5, LabelPaths(pdf, "0.067 0.267 0.6 rg"));
+        }, "0 1 0 rg");
+
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        string link = northSpan.Replace("<tspan ", """<a href="#marker" """, StringComparison.Ordinal)
+            .Replace("</tspan>", "</a>", StringComparison.Ordinal);
+        AssertEquivalentSvgPaint(Paint(control), Paint(Picture(link, southSpan), diagnostics),
+            "A link uses the same inherited glyph paint as a span.");
+        TestAssert.Contains("unsupported a element", diagnostics.Single().Message);
+
+        foreach (var (attribute, parent) in new[] { ("""fill="inherit" style="fill:red" """, ""), ("""opacity="inherit" """, """opacity=".5" """) })
+        {
+            diagnostics.Clear();
+            var fallback = Paint(Picture($"""NO<tspan {attribute}>RT</tspan>H""", plainSouth, parent), diagnostics);
+            TestAssert.DoesNotContain(LabelColor, fallback.ToString());
+            TestAssert.Equal(5, LabelPaths(fallback.ToString(), "0.067 0.267 0.6 rg"));
+            TestAssert.True(diagnostics.Any(d => d.Message.Contains("unsupported text element", StringComparison.Ordinal)),
+                "A local paint change retains the diagnosed fallback.");
+        }
+    }
+
     public static void SvgInlineLinkTextKeepsPaintAndDiagnosesActions()
     {
         string Picture(string north, string south) => Svg($"""

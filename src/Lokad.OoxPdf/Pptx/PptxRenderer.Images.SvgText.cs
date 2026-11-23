@@ -232,8 +232,8 @@ internal sealed partial class PptxRenderer
                 if (IsSvgDisplayNone(child, style)) continue;
                 // A child can restate the label's existing whitespace policy.
                 if (child.Attributes().Any(attribute => attribute.Name == spaceName
-                        ? attribute.Value != spacePolicy : !IsPlainSvgTextChildAttribute(attribute, isLink)) ||
-                    style.Keys.Any(property => property is not ("display" or "visibility"))) return false;
+                        ? attribute.Value != spacePolicy : !IsPlainSvgTextChildAttribute(attribute, style, isLink)) ||
+                    style.Any(declaration => !IsPlainSvgTextChildProperty(declaration.Key.ToLowerInvariant(), declaration.Value))) return false;
                 string? localVisibility = ReadSvgPresentationAttribute(child, style, "visibility");
                 bool childHidden = string.IsNullOrWhiteSpace(localVisibility) || InheritsSvgPropertyValue(localVisibility)
                     ? ownerHidden : IsSvgVisibilityHidden(localVisibility);
@@ -243,14 +243,22 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static bool IsPlainSvgTextChildAttribute(XAttribute attribute, bool isLink) =>
+    private static bool IsPlainSvgTextChildAttribute(XAttribute attribute, IReadOnlyDictionary<string, string> style, bool isLink) =>
         attribute.IsNamespaceDeclaration ||
         (isLink && attribute.Name.LocalName == "href" &&
          (attribute.Name.Namespace == XNamespace.None || attribute.Name.NamespaceName == "http://www.w3.org/1999/xlink")) ||
         attribute.Name.Namespace == XNamespace.None &&
-        (attribute.Name.LocalName is "id" or "class" or "role" or "display" or "visibility" or "style" ||
+        (attribute.Name.LocalName is "id" or "class" or "role" or "style" ||
          attribute.Name.LocalName.StartsWith("aria-", StringComparison.Ordinal) ||
-         attribute.Name.LocalName.StartsWith("data-", StringComparison.Ordinal));
+         attribute.Name.LocalName.StartsWith("data-", StringComparison.Ordinal) ||
+         IsPlainSvgTextChildProperty(attribute.Name.LocalName, style.GetValueOrDefault(attribute.Name.LocalName, attribute.Value)));
+
+    // Explicit inheritance leaves the supported label's face and paint intact.
+    // Position lists and whole-element opacity have their own local semantics.
+    private static bool IsPlainSvgTextChildProperty(string name, string value) =>
+        name is "display" or "visibility" ||
+        (name is "color" or "fill" or "fill-opacity" or "font-family" or "font-size" or "font-style" or "font-weight") &&
+        InheritsSvgPropertyValue(value);
 
     private static bool TryPaintSvgText(PdfGraphicsBuilder graphics, XElement element, Lazy<HashSet<string>> paintServerIds,
         IReadOnlyDictionary<FontRequest, SvgTextFont?>? fonts, SvgTransform transform, double viewWidth, double viewHeight,
