@@ -1189,154 +1189,28 @@ internal static partial class DocxCommentsTests
 
     public static void DocxWordCompatibleAllMarkupRendersCommentRangeBracketsAcrossTextFlows()
     {
-        DocxParagraph bodyParagraph = DocxTests.CreateCommentRangeParagraph("Body range", "1");
-        DocxTests.AssertWordCompatibleCommentRangeMarkerRendered(
-            DocxTests.CreateCommentMarkerFlowDocument([new DocxParagraphElement(bodyParagraph)], [], DocxPageSettings.Empty, []) with
-            {
-                MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
-            },
-            "body text");
-
-        DocxParagraph tableParagraph = DocxTests.CreateCommentRangeParagraph("Table range", "2");
-        var tableCell = new DocxTableCell(
-            [tableParagraph],
-            FillHex: null,
-            ShadingValue: null,
-            ShadingColor: null,
-            VerticalAlignmentValue: null,
-            Borders: [],
-            DocxTableCellMargins.Empty);
-        var table = new DocxTable(
-            LayoutValue: null,
-            ColumnWidthsPoints: [100d],
-            Rows: [new DocxTableRow([tableCell], HeightPoints: 18d)]);
-        DocxTests.AssertWordCompatibleCommentRangeMarkerRendered(
-            DocxTests.CreateCommentMarkerFlowDocument([new DocxTableElement(table)], [], DocxPageSettings.Empty, []) with
-            {
-                MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
-            },
-            "table cell text");
-
-        DocxParagraph headerParagraph = DocxTests.CreateCommentRangeParagraph("Header range", "3");
-        DocxPageSettings headerSettings = DocxPageSettings.Empty with
+        var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+            OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        foreach (var (source, text, wordRangeVisible) in DocxTests.CreateCommentMarkerFlows(DocxTests.CreateCommentRangeParagraph, "range"))
         {
-            HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
+            DocxDocument document = source with { MarkupMode = OoxPdfDocxMarkupMode.AllMarkup };
+            PdfPage page = Render(document);
+            DocxTests.AssertWordCompatibleCommentRangeMarkerRendered(page, text, wordRangeVisible);
+
+            // Remove the anchored owner while leaving its ordinary body text.
+            if (document.FloatingDrawings.Count != 0 || document.RelatedStories.Count != 0)
             {
-                ["default"] = [new DocxParagraphElement(headerParagraph)]
+                PdfPage omitted = Render(document with { FloatingDrawings = [], RelatedStories = [] });
+                DocxTests.AssertCommentMarkerFlowText(omitted,
+                    document.FloatingDrawings.Count != 0 ? "Drawing anchor" : "note marker");
+                var failure = TestAssert.Throws<InvalidOperationException>(() =>
+                    DocxTests.AssertWordCompatibleCommentRangeMarkerRendered(omitted, text, expectedVisible: false));
+                TestAssert.Equal($"Expected text '{text}' in the rendered comment flow.", failure.Message);
             }
-        };
-        DocxTests.AssertWordCompatibleCommentRangeMarkerRendered(
-            DocxTests.CreateCommentMarkerFlowDocument([], [], headerSettings, []) with
-            {
-                MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
-            },
-            "static header text", expectedVisible: false);
+        }
 
-        DocxParagraph drawingAnchor = DocxTests.CreateDocxLayoutParagraph("Drawing anchor", 10d, 12d);
-        DocxParagraph textBoxParagraph = DocxTests.CreateCommentRangeParagraph("Text box range", "4");
-        var floatingDrawing = new DocxFloatingDrawing(
-            DistanceTopValue: "0",
-            DistanceBottomValue: "0",
-            DistanceLeftValue: "0",
-            DistanceRightValue: "0",
-            SimplePositionValue: "0",
-            RelativeHeightValue: "0",
-            BehindDocumentValue: "0",
-            LockedValue: "0",
-            LayoutInCellValue: "1",
-            AllowOverlapValue: "1",
-            ExtentCxValue: "1371600",
-            ExtentCyValue: "457200",
-            HorizontalRelativeFromValue: "page",
-            HorizontalAlignValue: null,
-            HorizontalOffsetValue: "914400",
-            VerticalRelativeFromValue: "page",
-            VerticalAlignValue: null,
-            VerticalOffsetValue: "3657600",
-            WrapKind: DocxFloatingWrapKind.None,
-            WrapTextValue: null,
-            SourceParagraphIndex: 0,
-            SourceBlockIndex: 0, ImageRelationshipId: null, Image: null)
-        {
-            TextBoxBodyElements = [new DocxParagraphElement(textBoxParagraph)]
-        };
-        DocxTests.AssertWordCompatibleCommentRangeMarkerRendered(
-            DocxTests.CreateCommentMarkerFlowDocument([new DocxParagraphElement(drawingAnchor)], [floatingDrawing], DocxPageSettings.Empty, []) with
-            {
-                MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
-            },
-            "floating text-box text", expectedVisible: false);
-
-        DocxParagraph staticTextBoxParagraph = DocxTests.CreateCommentRangeParagraph("Static text box range", "5");
-        DocxPageSettings staticFloatingSettings = DocxPageSettings.Empty with
-        {
-            HeaderFloatingDrawingsByType = new Dictionary<string, IReadOnlyList<DocxFloatingDrawing>>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["default"] = [DocxTests.CreateFloatingTextBoxDrawing([new DocxParagraphElement(staticTextBoxParagraph)])]
-            }
-        };
-        DocxTests.AssertWordCompatibleCommentRangeMarkerRendered(
-            DocxTests.CreateCommentMarkerFlowDocument([], [], staticFloatingSettings, []) with
-            {
-                MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
-            },
-            "static floating text-box text", expectedVisible: false);
-
-        DocxParagraph footnoteAnchor = DocxTests.CreateDocxLayoutParagraph("Body note marker", 10d, 12d) with
-        {
-            InlineReferences =
-            [
-                new DocxInlineReference(
-                    DocxRelatedStoryKind.Footnote,
-                    "21",
-                    CustomMarkFollowsValue: null,
-                    DisplayText: "1",
-                    SourceRunIndex: 0,
-                    RunChildIndex: 1,
-                    TextOffsetInRun: 4)
-            ]
-        };
-        DocxParagraph footnoteRangeParagraph = DocxTests.CreateCommentRangeParagraph("Footnote range", "6");
-        DocxRelatedStory footnoteStory = new(
-            DocxRelatedStoryKind.Footnote,
-            "/word/footnotes.xml",
-            "21",
-            [new DocxParagraphElement(footnoteRangeParagraph)], null);
-        DocxTests.AssertWordCompatibleCommentRangeMarkerRendered(
-            DocxTests.CreateCommentMarkerFlowDocument([new DocxParagraphElement(footnoteAnchor)], [], DocxPageSettings.Empty, []) with
-            {
-                RelatedStories = [footnoteStory],
-                MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
-            },
-            "placed footnote text", expectedVisible: false);
-
-        DocxParagraph endnoteAnchor = DocxTests.CreateDocxLayoutParagraph("Body endnote marker", 10d, 12d) with
-        {
-            InlineReferences =
-            [
-                new DocxInlineReference(
-                    DocxRelatedStoryKind.Endnote,
-                    "22",
-                    CustomMarkFollowsValue: null,
-                    DisplayText: "i",
-                    SourceRunIndex: 0,
-                    RunChildIndex: 1,
-                    TextOffsetInRun: 4)
-            ]
-        };
-        DocxParagraph endnoteRangeParagraph = DocxTests.CreateCommentRangeParagraph("Endnote range", "7");
-        DocxRelatedStory endnoteStory = new(
-            DocxRelatedStoryKind.Endnote,
-            "/word/endnotes.xml",
-            "22",
-            [new DocxParagraphElement(endnoteRangeParagraph)], null);
-        DocxTests.AssertWordCompatibleCommentRangeMarkerRendered(
-            DocxTests.CreateCommentMarkerFlowDocument([new DocxParagraphElement(endnoteAnchor)], [], DocxPageSettings.Empty, []) with
-            {
-                RelatedStories = [endnoteStory],
-                MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
-            },
-            "placed endnote text", expectedVisible: false);
+        PdfPage Render(DocxDocument document) =>
+            renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
     }
 
     public static void DocxWordCompatibleAllMarkupRendersWrappedCommentRangeContinuationMarkers()

@@ -25,8 +25,7 @@ internal static class DocxTests
     internal static DocxDocument CreateCommentMarkerFlowDocument(
         IReadOnlyList<DocxBodyElement> bodyElements,
         IReadOnlyList<DocxFloatingDrawing> floatingDrawings,
-        DocxPageSettings settings,
-        IReadOnlyList<DocxTable> fallbackTables)
+        DocxPageSettings settings)
     {
         return new DocxDocument(
             300d,
@@ -45,64 +44,102 @@ internal static class DocxTests
         };
     }
 
-    internal static void AssertSimpleMarkupCommentMarkerRendered(DocxDocument document, string flowName)
+    internal static IEnumerable<(DocxDocument Document, string Text, bool WordRangeVisible)> CreateCommentMarkerFlows(
+        Func<string, string, DocxParagraph> createParagraph, string suffix)
     {
-        DocxLayoutSnapshot layout = new DocxRenderer(null, OoxPdfDocxMarkupMode.SimpleMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectLayout(document);
-        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.SimpleMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
+        string body = "Body " + suffix;
+        yield return (CreateCommentMarkerFlowDocument([Paragraph(body, "1")], [], DocxPageSettings.Empty), body, true);
 
-        TestAssert.True(page.Content.AsSpan().Count("1 0.753 0 rg") >= 1, "Comment markers should use the expected marker fill color for " + flowName + ".");
-        TestAssert.True(page.Content.AsSpan().Count("0.851 0.592 0 RG") >= 1, "Comment markers should use the expected marker outline color for " + flowName + ".");
-        TestAssert.True(page.Content.AsSpan().Count(" re f") >= 1, "Simple-markup rendering should emit a filled comment marker rectangle for " + flowName + ".");
-        TestAssert.True(page.Content.AsSpan().Count(" re S") >= 1, "Simple-markup rendering should emit a stroked comment marker outline for " + flowName + ".");
-        TestAssert.True(
-            layout.Pages[0].TextLineCount +
-            layout.Pages[0].StaticTextLineCount +
-            layout.Pages[0].StaticTableRowCount +
-            layout.Pages[0].PlacedRelatedStoryTextLineCount +
-            layout.Pages[0].PlacedRelatedStoryTableRowCount +
-            layout.Pages[0].TableRows.Sum(row => row.TextLineCount) +
-            layout.FloatingDrawings.Sum(drawing => drawing.TextBoxTextLineCount) +
-            layout.FloatingDrawings.Sum(drawing => drawing.TextBoxTableRowCount) +
-            layout.StaticFloatingDrawings.Sum(drawing => drawing.TextBoxTableRowCount) +
-            layout.StaticFloatingDrawings.Sum(drawing => drawing.TextBoxTextLineCount) > 0,
-            "The " + flowName + " fixture should include a laid-out text line.");
+        string cell = "Table " + suffix;
+        var table = new DocxTableElement(CreateCommentMarkerTable(createParagraph(cell, "2")));
+        yield return (CreateCommentMarkerFlowDocument([table], [], DocxPageSettings.Empty), cell, true);
+
+        string header = "Header " + suffix;
+        var headerSettings = DocxPageSettings.Empty with
+        {
+            HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [Paragraph(header, "3")]
+            }
+        };
+        yield return (CreateCommentMarkerFlowDocument([], [], headerSettings), header, false);
+
+        string textBox = "Text box " + suffix;
+        var drawing = CreateFloatingTextBoxDrawing([Paragraph(textBox, "4")]) with { VerticalOffsetValue = "3657600" };
+        var drawingAnchor = new DocxParagraphElement(CreateDocxLayoutParagraph("Drawing anchor", 10d, 12d));
+        yield return (CreateCommentMarkerFlowDocument([drawingAnchor], [drawing], DocxPageSettings.Empty), textBox, false);
+
+        string staticTextBox = "Static text box " + suffix;
+        var staticSettings = DocxPageSettings.Empty with
+        {
+            HeaderFloatingDrawingsByType = new Dictionary<string, IReadOnlyList<DocxFloatingDrawing>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [CreateFloatingTextBoxDrawing([Paragraph(staticTextBox, "5")])]
+            }
+        };
+        yield return (CreateCommentMarkerFlowDocument([], [], staticSettings), staticTextBox, false);
+
+        string footnote = "Footnote " + suffix;
+        yield return (CreateCommentMarkerNoteDocument(DocxRelatedStoryKind.Footnote, "21", Paragraph(footnote, "6")), footnote, false);
+
+        string endnote = "Endnote " + suffix;
+        yield return (CreateCommentMarkerNoteDocument(DocxRelatedStoryKind.Endnote, "22", Paragraph(endnote, "7")), endnote, false);
+
+        DocxParagraphElement Paragraph(string text, string id) => new(createParagraph(text, id));
     }
 
-    internal static void AssertWordCompatibleCommentRangeMarkerRendered(DocxDocument document, string flowName, bool expectedVisible = true)
+    internal static DocxDocument CreateCommentMarkerNoteDocument(DocxRelatedStoryKind kind, string id, DocxBodyElement content)
     {
-        var renderer = new DocxRenderer(
-            fontResolver: null,
-            markupMode: OoxPdfDocxMarkupMode.AllMarkup,
-            markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-        DocxLayoutSnapshot layout = renderer.InspectLayout(document);
-        PdfPage page = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
+        bool footnote = kind == DocxRelatedStoryKind.Footnote;
+        var anchor = CreateDocxLayoutParagraph(footnote ? "Body note marker" : "Body endnote marker", 10d, 12d) with
+        {
+            InlineReferences = [
+                new DocxInlineReference(kind, id, CustomMarkFollowsValue: null, DisplayText: footnote ? "1" : "i",
+                    SourceRunIndex: 0, RunChildIndex: 1, TextOffsetInRun: 4)
+            ]
+        };
+        var story = new DocxRelatedStory(kind, footnote ? "/word/footnotes.xml" : "/word/endnotes.xml", id, [content], null);
+        return CreateCommentMarkerFlowDocument([new DocxParagraphElement(anchor)], [], DocxPageSettings.Empty) with
+        {
+            RelatedStories = [story]
+        };
+    }
+
+    internal static void AssertSimpleMarkupCommentMarkerRendered(PdfPage page, string expectedText)
+    {
+        AssertCommentMarkerFlowText(page, expectedText);
+
+        TestAssert.Contains("1 0.753 0 rg", page.Content);
+        TestAssert.Contains("0.851 0.592 0 RG", page.Content);
+        TestAssert.Contains(" re f", page.Content);
+        TestAssert.Contains(" re S", page.Content);
+    }
+
+    internal static void AssertWordCompatibleCommentRangeMarkerRendered(PdfPage page, string expectedText, bool expectedVisible)
+    {
+        AssertCommentMarkerFlowText(page, expectedText);
 
         if (!expectedVisible)
         {
             TestAssert.True(!page.Content.Contains("0.973 0.863 0.867 rg", StringComparison.Ordinal) &&
                 !page.Content.Contains("0.82 0.204 0.22 RG", StringComparison.Ordinal),
-                "Word-compatible all-markup must omit comment range markers for " + flowName + ".");
-            TestAssert.True(CountPdfTextShows(page.Content) > 0,
-                "Suppressing comment markers must retain the text in " + flowName + ".");
+                $"Word-compatible all-markup must omit comment range markers for '{expectedText}'.");
             return;
         }
 
         TestAssert.True(
             CountWordCompatibleCommentRangeFills(page.Content) >= 1,
-            "Word-compatible all-markup should emit comment range fill geometry for " + flowName + ".");
+            $"Word-compatible all-markup should emit comment range fill geometry for '{expectedText}'.");
         TestAssert.Contains("0.82 0.204 0.22 RG", page.Content);
-        TestAssert.True(
-            layout.Pages[0].TextLineCount +
-            layout.Pages[0].StaticTextLineCount +
-            layout.Pages[0].StaticTableRowCount +
-            layout.Pages[0].PlacedRelatedStoryTextLineCount +
-            layout.Pages[0].PlacedRelatedStoryTableRowCount +
-            layout.Pages[0].TableRows.Sum(row => row.TextLineCount) +
-            layout.FloatingDrawings.Sum(drawing => drawing.TextBoxTextLineCount) +
-            layout.FloatingDrawings.Sum(drawing => drawing.TextBoxTableRowCount) +
-            layout.StaticFloatingDrawings.Sum(drawing => drawing.TextBoxTableRowCount) +
-            layout.StaticFloatingDrawings.Sum(drawing => drawing.TextBoxTextLineCount) > 0,
-            "The " + flowName + " fixture should include a laid-out text line.");
+    }
+
+    internal static void AssertCommentMarkerFlowText(PdfPage page, string expectedText)
+    {
+        // Simple Markup can paint numeric badges between the lines of a wrapped phrase.
+        string paintedText = string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false,
+            honorActualText: false).Where(show => !show.Text.All(char.IsAsciiDigit)).Select(show => show.Text));
+        TestAssert.True(Regex.Replace(paintedText, @"\s+", "").Contains(Regex.Replace(expectedText, @"\s+", ""), StringComparison.Ordinal),
+            $"Expected text '{expectedText}' in the rendered comment flow.");
     }
 
     internal static int CountWordCompatibleCommentRangeFills(string content) => Regex.Matches(content,
@@ -110,9 +147,11 @@ internal static class DocxTests
         .Count(match => double.Parse(match.Groups["w"].Value, CultureInfo.InvariantCulture) > 0d &&
             double.Parse(match.Groups["h"].Value, CultureInfo.InvariantCulture) > 0d);
 
-    internal static DocxTable CreateCommentRangeTable(string text, string commentId)
+    internal static DocxTable CreateCommentRangeTable(string text, string commentId) =>
+        CreateCommentMarkerTable(CreateCommentRangeParagraph(text, commentId));
+
+    private static DocxTable CreateCommentMarkerTable(DocxParagraph paragraph)
     {
-        DocxParagraph paragraph = CreateCommentRangeParagraph(text, commentId);
         var cell = new DocxTableCell(
             [paragraph],
             FillHex: null,

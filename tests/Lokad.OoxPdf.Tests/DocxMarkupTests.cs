@@ -2310,138 +2310,15 @@ internal static class DocxMarkupTests
 
     public static void DocxSimpleMarkupRendererDrawsCommentMarkersAcrossTextFlows()
     {
-        DocxParagraph bodyParagraph = DocxTests.CreateCommentMarkerParagraph("Body marker", "1");
-        DocxTests.AssertSimpleMarkupCommentMarkerRendered(
-            DocxTests.CreateCommentMarkerFlowDocument([new DocxParagraphElement(bodyParagraph)], [], DocxPageSettings.Empty, []),
-            "body text");
-
-        DocxParagraph tableParagraph = DocxTests.CreateCommentMarkerParagraph("Table marker", "2");
-        var tableCell = new DocxTableCell(
-            [tableParagraph],
-            FillHex: null,
-            ShadingValue: null,
-            ShadingColor: null,
-            VerticalAlignmentValue: null,
-            Borders: [],
-            DocxTableCellMargins.Empty);
-        var table = new DocxTable(
-            LayoutValue: null,
-            ColumnWidthsPoints: [100d],
-            Rows: [new DocxTableRow([tableCell], HeightPoints: 18d)]);
-        DocxTests.AssertSimpleMarkupCommentMarkerRendered(
-            DocxTests.CreateCommentMarkerFlowDocument([new DocxTableElement(table)], [], DocxPageSettings.Empty, []),
-            "table cell text");
-
-        DocxParagraph headerParagraph = DocxTests.CreateCommentMarkerParagraph("Header marker", "3");
-        DocxPageSettings headerSettings = DocxPageSettings.Empty with
+        var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(), OoxPdfDocxMarkupMode.SimpleMarkup,
+            OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        foreach (var (document, text, _) in DocxTests.CreateCommentMarkerFlows(DocxTests.CreateCommentMarkerParagraph, "marker"))
         {
-            HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["default"] = [new DocxParagraphElement(headerParagraph)]
-            }
-        };
-        DocxTests.AssertSimpleMarkupCommentMarkerRendered(
-            DocxTests.CreateCommentMarkerFlowDocument([], [], headerSettings, []),
-            "static header text");
-
-        DocxParagraph drawingAnchor = DocxTests.CreateDocxLayoutParagraph("Drawing anchor", 10d, 12d);
-        DocxParagraph textBoxParagraph = DocxTests.CreateCommentMarkerParagraph("Text box marker", "4");
-        var floatingDrawing = new DocxFloatingDrawing(
-            DistanceTopValue: "0",
-            DistanceBottomValue: "0",
-            DistanceLeftValue: "0",
-            DistanceRightValue: "0",
-            SimplePositionValue: "0",
-            RelativeHeightValue: "0",
-            BehindDocumentValue: "0",
-            LockedValue: "0",
-            LayoutInCellValue: "1",
-            AllowOverlapValue: "1",
-            ExtentCxValue: "1371600",
-            ExtentCyValue: "457200",
-            HorizontalRelativeFromValue: "page",
-            HorizontalAlignValue: null,
-            HorizontalOffsetValue: "914400",
-            VerticalRelativeFromValue: "page",
-            VerticalAlignValue: null,
-            VerticalOffsetValue: "3657600",
-            WrapKind: DocxFloatingWrapKind.None,
-            WrapTextValue: null,
-            SourceParagraphIndex: 0,
-            SourceBlockIndex: 0, ImageRelationshipId: null, Image: null)
-        {
-            TextBoxBodyElements = [new DocxParagraphElement(textBoxParagraph)]
-        };
-        DocxTests.AssertSimpleMarkupCommentMarkerRendered(
-            DocxTests.CreateCommentMarkerFlowDocument([new DocxParagraphElement(drawingAnchor)], [floatingDrawing], DocxPageSettings.Empty, []),
-            "floating text-box text");
-
-        DocxParagraph staticTextBoxParagraph = DocxTests.CreateCommentMarkerParagraph("Static text box marker", "5");
-        DocxPageSettings staticFloatingSettings = DocxPageSettings.Empty with
-        {
-            HeaderFloatingDrawingsByType = new Dictionary<string, IReadOnlyList<DocxFloatingDrawing>>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["default"] = [DocxTests.CreateFloatingTextBoxDrawing([new DocxParagraphElement(staticTextBoxParagraph)])]
-            }
-        };
-        DocxTests.AssertSimpleMarkupCommentMarkerRendered(
-            DocxTests.CreateCommentMarkerFlowDocument([], [], staticFloatingSettings, []),
-            "static floating text-box text");
-
-        DocxParagraph footnoteAnchor = DocxTests.CreateDocxLayoutParagraph("Body note marker", 10d, 12d) with
-        {
-            InlineReferences =
-            [
-                new DocxInlineReference(
-                    DocxRelatedStoryKind.Footnote,
-                    "21",
-                    CustomMarkFollowsValue: null,
-                    DisplayText: "1",
-                    SourceRunIndex: 0,
-                    RunChildIndex: 1,
-                    TextOffsetInRun: 4)
-            ]
-        };
-        DocxParagraph footnoteParagraph = DocxTests.CreateCommentMarkerParagraph("Footnote marker", "6");
-        DocxRelatedStory footnoteStory = new(
-            DocxRelatedStoryKind.Footnote,
-            "/word/footnotes.xml",
-            "21",
-            [new DocxParagraphElement(footnoteParagraph)], null);
-        DocxTests.AssertSimpleMarkupCommentMarkerRendered(
-            DocxTests.CreateCommentMarkerFlowDocument([new DocxParagraphElement(footnoteAnchor)], [], DocxPageSettings.Empty, []) with
-            {
-                RelatedStories = [footnoteStory]
-            },
-            "placed footnote text");
-
-        DocxParagraph endnoteAnchor = DocxTests.CreateDocxLayoutParagraph("Body endnote marker", 10d, 12d) with
-        {
-            InlineReferences =
-            [
-                new DocxInlineReference(
-                    DocxRelatedStoryKind.Endnote,
-                    "22",
-                    CustomMarkFollowsValue: null,
-                    DisplayText: "i",
-                    SourceRunIndex: 0,
-                    RunChildIndex: 1,
-                    TextOffsetInRun: 4)
-            ]
-        };
-        DocxParagraph endnoteParagraph = DocxTests.CreateCommentMarkerParagraph("Endnote marker", "7");
-        DocxRelatedStory endnoteStory = new(
-            DocxRelatedStoryKind.Endnote,
-            "/word/endnotes.xml",
-            "22",
-            [new DocxParagraphElement(endnoteParagraph)], null);
-        DocxTests.AssertSimpleMarkupCommentMarkerRendered(
-            DocxTests.CreateCommentMarkerFlowDocument([new DocxParagraphElement(endnoteAnchor)], [], DocxPageSettings.Empty, []) with
-            {
-                RelatedStories = [endnoteStory]
-            },
-            "placed endnote text");
+            PdfPage page = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
+            DocxTests.AssertSimpleMarkupCommentMarkerRendered(page, text);
+        }
     }
+
     public static void DocxWordCompatibleAllMarkupScalesTabStopPositions()
     {
         // Office A/B (w6-tabstop probe, Word-COM rendered): tab stops are margin-relative

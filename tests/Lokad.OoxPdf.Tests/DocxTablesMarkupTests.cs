@@ -1579,48 +1579,30 @@ internal static class DocxTablesMarkupTests
 
     public static void DocxWordCompatibleAllMarkupOmitsCommentRangeBracketsInStoryTables()
     {
-        DocxTable staticTable = DocxTests.CreateCommentRangeTable("Static table range", "8");
-        DocxPageSettings staticSettings = DocxPageSettings.Empty with
+        var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+            OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        const string staticText = "Static table range";
+        var staticTable = DocxTests.CreateCommentRangeTable(staticText, "8");
+        var staticSettings = DocxPageSettings.Empty with
         {
             HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
             {
                 ["default"] = [new DocxTableElement(staticTable)]
             }
         };
-        DocxTests.AssertWordCompatibleCommentRangeMarkerRendered(
-            DocxTests.CreateCommentMarkerFlowDocument([], [], staticSettings, []) with
-            {
-                MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
-            },
-            "static header table cell text", expectedVisible: false);
+        Check(DocxTests.CreateCommentMarkerFlowDocument([], [], staticSettings), staticText);
 
-        DocxParagraph footnoteAnchor = DocxTests.CreateDocxLayoutParagraph("Body note marker", 10d, 12d) with
+        const string footnoteText = "Footnote table range";
+        var footnoteTable = DocxTests.CreateCommentRangeTable(footnoteText, "9");
+        Check(DocxTests.CreateCommentMarkerNoteDocument(DocxRelatedStoryKind.Footnote, "23", new DocxTableElement(footnoteTable)),
+            footnoteText);
+
+        void Check(DocxDocument source, string text)
         {
-            InlineReferences =
-            [
-                new DocxInlineReference(
-                    DocxRelatedStoryKind.Footnote,
-                    "23",
-                    CustomMarkFollowsValue: null,
-                    DisplayText: "1",
-                    SourceRunIndex: 0,
-                    RunChildIndex: 1,
-                    TextOffsetInRun: 4)
-            ]
-        };
-        DocxTable footnoteTable = DocxTests.CreateCommentRangeTable("Footnote table range", "9");
-        DocxRelatedStory footnoteStory = new(
-            DocxRelatedStoryKind.Footnote,
-            "/word/footnotes.xml",
-            "23",
-            [new DocxTableElement(footnoteTable)], null);
-        DocxTests.AssertWordCompatibleCommentRangeMarkerRendered(
-            DocxTests.CreateCommentMarkerFlowDocument([new DocxParagraphElement(footnoteAnchor)], [], DocxPageSettings.Empty, []) with
-            {
-                RelatedStories = [footnoteStory],
-                MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
-            },
-            "placed footnote table cell text", expectedVisible: false);
+            var document = source with { MarkupMode = OoxPdfDocxMarkupMode.AllMarkup };
+            PdfPage page = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
+            DocxTests.AssertWordCompatibleCommentRangeMarkerRendered(page, text, expectedVisible: false);
+        }
     }
 
     public static void DocxWordCompatibleAllMarkupOmitsStoryTableCommentConnectors()
@@ -1638,7 +1620,7 @@ internal static class DocxTablesMarkupTests
                 ["default"] = [new DocxTableElement(staticTable)]
             }
         };
-        DocxDocument staticDocument = DocxTests.CreateCommentMarkerFlowDocument([], [], staticSettings, []) with
+        DocxDocument staticDocument = DocxTests.CreateCommentMarkerFlowDocument([], [], staticSettings) with
         {
             RelatedStories =
             [
