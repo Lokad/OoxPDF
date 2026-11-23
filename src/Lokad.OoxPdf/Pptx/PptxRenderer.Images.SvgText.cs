@@ -127,8 +127,7 @@ internal sealed partial class PptxRenderer
             !TryReadPosition("dy", viewHeight, out double dy)) return false;
         x += dx; y += dy;
         if (!double.IsFinite(x) || !double.IsFinite(y)) return false;
-        string fill = ResolveSvgPaintFallback(element, style, Inherited("fill") ?? "black", paintServerIds, out _);
-        if (!TryReadSvgTextFill(element, style, fill, out var paint)) return false;
+        if (!TryReadSvgTextFill(element, style, paintServerIds, out var paint)) return false;
         double fillOpacity = ReadSvgOpacityValue(Inherited("fill-opacity"));
         var appearance = new SvgTextAppearance(familyList, fontStyle, weight, size, paint, fillOpacity);
         if (!TryReadPlainSvgText(element, appearance, paintServerIds, IsSvgVisibilityHidden(Inherited("visibility")), cancellationToken,
@@ -186,8 +185,10 @@ internal sealed partial class PptxRenderer
     }
 
     private static bool TryReadSvgTextFill(XElement element, IReadOnlyDictionary<string, string> style,
-        string value, out SvgTextFill fill)
+        Lazy<HashSet<string>> paintServerIds, out SvgTextFill fill)
     {
+        string value = ResolveSvgPaintFallback(element, style,
+            ReadSvgInheritedAttribute(element, style, "fill")?.Trim() ?? "black", paintServerIds, out _);
         if (value.AsSpan().Trim().Equals("none", StringComparison.OrdinalIgnoreCase))
         {
             fill = new(null, 1d);
@@ -282,6 +283,7 @@ internal sealed partial class PptxRenderer
 
         bool IsPlainChild(XElement child, IReadOnlyDictionary<string, string> style, bool isLink)
         {
+            bool? hasLabelFill = null;
             bool? hasStroke = null;
             return child.Attributes().All(IsPlainAttribute) &&
                 style.All(declaration => RetainsLabelStyle(declaration.Key.ToLowerInvariant(), declaration.Value));
@@ -306,16 +308,17 @@ internal sealed partial class PptxRenderer
                 "font-weight" => InheritsSvgPropertyValue(value) ||
                     TryReadSvgTextWeight(value, out int weight) && weight == appearance.Weight,
                 "font-size" => TryResolveSvgFontSize(value, appearance.Size, out double size) && size == appearance.Size,
-                "fill" => InheritsSvgPropertyValue(value) ||
-                    TryReadSvgTextFill(child, style, value, out var fill) && fill == appearance.Fill,
+                "fill" or "color" =>
+                    (hasLabelFill ??= TryReadSvgTextFill(child, style, paintServerIds, out var fill) &&
+                        fill == appearance.Fill) == true && !PaintsStroke(),
                 "fill-opacity" => InheritsSvgPropertyValue(value) ||
                     ParseSvgOpacity(value) is { } opacity && double.IsFinite(opacity) &&
                     Math.Clamp(opacity, 0d, 1d) == appearance.FillOpacity,
-                "stroke" or "stroke-opacity" or "stroke-width" =>
-                    (hasStroke ??= HasSvgTextStroke(child, style, paintServerIds)) == false,
-                "color" => InheritsSvgPropertyValue(value),
+                "stroke" or "stroke-opacity" or "stroke-width" => !PaintsStroke(),
                 _ => false,
             };
+
+            bool PaintsStroke() => (hasStroke ??= HasSvgTextStroke(child, style, paintServerIds)) == true;
         }
 
         void AppendCharacter(char character, bool characterHidden)

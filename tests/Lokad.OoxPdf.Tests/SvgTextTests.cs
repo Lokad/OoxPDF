@@ -436,6 +436,9 @@ internal static partial class SvgTextTests
         const string sameTypefaceSouth = """&#160;SO<tspan font-weight="900" style="font-weight:400 !important;font-weight:bold">UT</tspan>H""";
         const string sameOpacityNorth = """NO<tspan fill-opacity="initial"><tspan fill-opacity="100%">RT</tspan></tspan>H""";
         const string sameOpacitySouth = """&#160;SO<tspan fill-opacity=".2" style="fill-opacity:75% !important;fill-opacity:.3">UT</tspan>H""";
+        const string sameColorNorth = """NO<tspan color="red" style="color:rgb(17,34,51) !important;color:green">RT</tspan>H""";
+        const string literalColorNorth = """NO<tspan color="green" fill="#112233"><tspan color="blue">RT</tspan></tspan>H""";
+        const string literalColorSouth = """&#160;SO<tspan color="red">UT</tspan>H""";
         const string noStrokeNorth = """NO<tspan stroke="none">RT</tspan>H""";
         const string noStrokeSouth = """&#160;SO<tspan stroke="red" style="stroke-opacity:0% !important;stroke-opacity:.3">UT</tspan>H""";
         const string zeroWidthNorth = """NO<tspan stroke="red"><tspan stroke="blue">RT</tspan></tspan>H""";
@@ -444,6 +447,7 @@ internal static partial class SvgTextTests
             [Picture(northSpan, southSpan), Picture(sameSizeNorth, sameSizeSouth),
                 Picture(sameFillNorth, sameFillSouth), Picture(sameTypefaceNorth, sameTypefaceSouth),
                 Picture(sameOpacityNorth, sameOpacitySouth),
+                Picture(sameColorNorth, literalColorSouth), Picture(literalColorNorth, plainSouth),
                 Picture(noStrokeNorth, noStrokeSouth), Picture(zeroWidthNorth, plainSouth, """stroke-width="0" """)], pdf =>
         {
             TestAssert.Equal(5, LabelPaths(pdf));
@@ -461,6 +465,8 @@ internal static partial class SvgTextTests
         {
             ("""fill="inherit" style="fill:red" """, ""),
             ("""fill="rgba(17,34,51,.5)" """, ""),
+            ("""color="red" """, ""),
+            ("""color="red" """, """style="color:transparent;fill:#112233" stroke="currentColor" """),
             ("""fill-opacity="50%" """, ""),
             ("""fill-opacity="initial" """, """fill-opacity=".5" """),
             ("""fill-opacity="NaN" """, ""),

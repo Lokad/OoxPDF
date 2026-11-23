@@ -95,6 +95,7 @@ and no-break spaces retain their advance at label edges.
 Plain spans and links also retain glyph paint with explicit `inherit` or `unset`
 for font family, size, style, weight, color, fill and fill opacity.
 They can restate the same font family list, slant, weight, resolved size, solid fill or fill opacity.
+Local color declarations preserve labels when the resolved fill stays the same and the stroke stays nonpainting.
 Nonpainting stroke declarations also preserve the glyph fill.
 Complex SVG text, filters, masks/blends and
 unsupported constructs retain limitations. TrueType outlines embed; CFF faces
