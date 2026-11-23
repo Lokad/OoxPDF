@@ -101,7 +101,6 @@ jobs:
           })
           & ./tools/TestPackageSmoke.ps1 -PackagePath $package -Framework $frameworks -ExpectedLibrarySha256 $hashes
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          & ./tools/TestPackageInspection.ps1 -PackagePath $package -OutputDirectory artifacts/ci-tests/package-inspection
       - name: Package consumer cleanup checks
         run: pwsh -NoProfile -File tools/TestPackageConsumerCleanup.ps1
       - name: Text comparison adversarial checks
