@@ -68,9 +68,10 @@ These are payload limits, not cumulative work quotas; use cancellation for work.
 
 `ReportResourceUsage` emits `CONVERSION_RESOURCE_SUMMARY`: `pages`, `pdfPages`,
 `pdfContentBytes`, `pdfOutputBytes`, `pdfFontBytes`, `pdfImageBytes` and
-`pageContentSpilledBytes`. It does not measure memory. Stream summaries precede
-serialization and therefore have zero writer-stage totals. File summaries precede
-atomic publication. A throwing observer aborts conversion.
+`pageContentSpilledBytes`. Stream summaries report page, content and spill totals
+before serialization, with zero output, font and image bytes at that point.
+File summaries include completed serialization and precede atomic publication.
+These counters measure PDF payloads and staging. A throwing observer aborts conversion.
 
 Input, font, temporary-storage and output I/O are awaited; layout and drawing are
 synchronous. On .NET 10, bounded async intake copies even seekable input before
