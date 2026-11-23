@@ -58,6 +58,7 @@ internal static partial class DocxMathParser
         HasOnlyWhitespaceText(control) && control.Elements().Count() <= 1 &&
         control.Elements().All(p => p.Name == WordprocessingNamespace + "rPr" &&
             p.Attributes().All(a => a.IsNamespaceDeclaration) && HasOnlyWhitespaceText(p) &&
+            !p.Elements(WordprocessingNamespace + "rPrChange").Skip(1).Any() &&
             p.Elements().All(HasKnownControlProperty));
 
     private static bool HasOnlyWhitespaceText(XElement element) =>

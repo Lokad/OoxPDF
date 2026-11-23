@@ -285,6 +285,63 @@ internal static partial class PortableRenderingTests
         }
     }
 
+    public static void PortableRenderingMathControlFormattingHistoryKeepsCurrentFractions()
+    {
+        const string fixture = "CompositionProbes/composed-static-svg-report";
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var renderer = new DocxRenderer(new PinnedResolver(mathFont: true), mode,
+                mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
+                    OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var baseline = Render(withHistory: false, hasPreviousProperties: false);
+            var changed = Render(withHistory: true, hasPreviousProperties: true);
+            string text = string.Concat(changed.Pages.Select(ReadPortableEquationGlyphs));
+            TestAssert.Equal(3, text.Split("x+2y", StringSplitOptions.None).Length - 1);
+            TestAssert.Equal(baseline.Pages.Length, changed.Pages.Length);
+            for (int i = 0; i < changed.Pages.Length; i++)
+            {
+                TestAssert.Equal(baseline.Pages[i].Content, changed.Pages[i].Content);
+                TestAssert.True(baseline.Pages[i].Annotations.SequenceEqual(changed.Pages[i].Annotations),
+                    "Control formatting history preserves the current fractions' navigation.");
+            }
+
+            string revisionId = mode == OoxPdfDocxMarkupMode.Final ? "DOCX_UNSUPPORTED_FORMATTING_REVISIONS" :
+                "DOCX_APPROXIMATED_FORMATTING_REVISIONS";
+            TestAssert.Equal(1, changed.Diagnostics.Count(diagnostic => diagnostic.Id == revisionId));
+            TestAssert.True(baseline.Diagnostics.SequenceEqual(changed.Diagnostics.Where(diagnostic => diagnostic.Id != revisionId)),
+                "Only the formatting-revision diagnostic distinguishes the current paint controls.");
+            CheckWrittenPages(changed.Pages);
+
+            var malformed = Render(withHistory: true, hasPreviousProperties: false);
+            TestAssert.True(malformed.Diagnostics.Any(diagnostic => diagnostic.Id == "DOCX_UNSUPPORTED_EQUATION"),
+                "A change without its former property record stays unsupported.");
+
+            (PdfPage[] Pages, List<OoxPdfDiagnostic> Diagnostics) Render(bool withHistory, bool hasPreviousProperties)
+            {
+                var diagnostics = new List<OoxPdfDiagnostic>();
+                var document = DocxInlineCompositionTests.ReadMutation(fixture, mode, false, false, (xml, w, m) =>
+                {
+                    XElement[] fractions = xml.Descendants(m + "f").ToArray();
+                    TestAssert.Equal(3, fractions.Length);
+                    for (int i = 0; i < fractions.Length; ++i)
+                    {
+                        var properties = new XElement(w + "rPr", new XElement(w + "color", new XAttribute(w + "val", "1964AE")));
+                        if (withHistory)
+                        {
+                            var history = new XElement(w + "rPrChange", new XAttribute(w + "id", 700 + i),
+                                new XAttribute(w + "author", "Public Reviewer"));
+                            if (hasPreviousProperties)
+                                history.Add(new XElement(w + "rPr", new XElement(w + "color", new XAttribute(w + "val", "CC0000"))));
+                            properties.Add(history);
+                        }
+                        fractions[i].AddFirst(new XElement(m + "fPr", new XElement(m + "ctrlPr", properties)));
+                    }
+                }, diagnosticSink: diagnostics.Add);
+                return (renderer.RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray(), diagnostics);
+            }
+        }
+    }
+
     public static void PortableRenderingMathRunPaginationHintsKeepComposedContent()
     {
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
