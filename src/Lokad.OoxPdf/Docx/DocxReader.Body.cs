@@ -607,11 +607,12 @@ internal sealed partial class DocxReader
         }
 
         AddParagraphPart(endsBeforeBreak: false);
-        AttachClosedMoveRangesToContinuation(parts, retainFirstLine);
+        AttachNonprintingMetadataToContinuation(parts, retainFirstLine, isHiddenBreak, markupMode);
         return parts;
     }
 
-    private static void AttachClosedMoveRangesToContinuation(List<ParagraphBreakPart> parts, bool retainFirstLine)
+    private static void AttachNonprintingMetadataToContinuation(List<ParagraphBreakPart> parts, bool retainFirstLine,
+        Func<XElement, bool> isHiddenBreak, OoxPdfDocxMarkupMode markupMode)
     {
         int continuationIndex = -1;
         bool removedFragment = false;
@@ -622,14 +623,14 @@ internal sealed partial class DocxReader
             var children = DocxSourceXml.StoredChildren(paragraph)
                 .Where(child => child.Name != WordprocessingNamespace + "pPr");
             if (!children.Any()) continue;
-            if (!ContainsOnlyClosedMoveRanges(children))
+            if (!ContainsOnlyNonprintingBreakMetadata(children, isHiddenBreak, markupMode))
             {
                 continuationIndex = i;
                 continue;
             }
 
-            // A closed range with no payload can travel to this source paragraph's
-            // next fragment. Standalone marks and numbered first lines keep their frame.
+            // Closed ranges and empty stored fields can keep their metadata on this
+            // paragraph's next fragment. Numbered first lines keep their frame.
             if (!part.EndsBeforeBreak || continuationIndex < 0 || retainFirstLine && part.IsFirstFragment)
                 continue;
 
@@ -649,10 +650,12 @@ internal sealed partial class DocxReader
             parts.RemoveAll(part => part.Paragraph is null && part.BreakValue is null);
     }
 
-    private static bool ContainsOnlyClosedMoveRanges(IEnumerable<XElement> children)
+    private static bool ContainsOnlyNonprintingBreakMetadata(IEnumerable<XElement> children,
+        Func<XElement, bool> isHiddenBreak, OoxPdfDocxMarkupMode markupMode)
     {
         HashSet<(DocxRevisionKind Kind, string Id)>? open = null;
-        return Visit(children) && open is { Count: 0 };
+        bool hasEmptyField = false;
+        return Visit(children) && (open is { Count: 0 } || open is null && hasEmptyField);
 
         bool Visit(IEnumerable<XElement> content)
         {
@@ -665,6 +668,14 @@ internal sealed partial class DocxReader
                 }
 
                 if (DocxSourceXml.IsNonPrintingMarker(child)) continue;
+                if (child.Name == WordprocessingNamespace + "fldSimple" &&
+                    !HasSimpleFieldPlaceholder(child) &&
+                    !child.Nodes().OfType<XText>().Any(text => !string.IsNullOrWhiteSpace(text.Value)) &&
+                    !DocxSourceXml.StoredChildren(child).Any(item => HasBreakSplitPayload(item, isHiddenBreak, markupMode)))
+                {
+                    hasEmptyField = true;
+                    continue;
+                }
                 if (!TrackNonPrintingMoveRangeBoundary(child, ref open))
                     return false;
             }

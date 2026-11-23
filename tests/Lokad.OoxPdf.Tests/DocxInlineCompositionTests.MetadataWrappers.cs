@@ -145,6 +145,16 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.Contains("AUTHORED AFTER BREAK", string.Concat(
                 DocxCommentsTests.ReadEmbeddedGlyphTextShows(control[targetPage]).Select(show => show.Text)));
 
+            foreach (string fieldOwner in new[] { "empty-field", "hint-field", "locked-field", "nested-hint-field" })
+            {
+                CheckNonprinting(Render(fieldOwner));
+            }
+            PdfPage[] storedField = Render("visible-field", retainLeadingFragment: true);
+            TestAssert.Contains("VISIBLE STORED FIELD", string.Concat(
+                DocxCommentsTests.ReadEmbeddedGlyphTextShows(storedField[0]).Select(show => show.Text)));
+            TestAssert.True(storedField[0].Annotations.Single().Destination is { PageIndex: 0, Left: < 200d },
+                "A visible stored result retains the bookmark before the break.");
+
             if (mode == OoxPdfDocxMarkupMode.Original)
             {
                 CheckNonprinting(Render("hidden-break"));
@@ -236,6 +246,8 @@ internal static partial class DocxInlineCompositionTests
                     XElement ContentControl(params XElement[] items) => new(w + "sdt",
                         new XElement(w + "sdtPr", new XElement(w + "alias", new XAttribute(w + "val", "Break probe"))),
                         new XElement(w + "sdtContent", items));
+                    XElement StoredField(string instruction, params XElement[] items) =>
+                        new(w + "fldSimple", new XAttribute(w + "instr", instruction), items);
                     XElement Metadata(string kind, XElement item) => MetadataWrapper(w, kind, new XElement(w + (kind + "Pr")), item);
                     if (wrapper == "run-hint")
                     {
@@ -257,6 +269,12 @@ internal static partial class DocxInlineCompositionTests
                             new XElement(w + "proofErr", new XAttribute(w + "type", "spellStart")))), run],
                         "visible-revision" => [Revision("ins", new XElement(w + "r", new XElement(w + "t", "VISIBLE REVISION"))), run],
                         "empty-revision-run" => [Revision("ins", ContentControl(new XElement(w + "r"))), run],
+                        "empty-field" => [StoredField("REF EmptyReference"), run],
+                        "hint-field" => [StoredField("REF EmptyReference", HintRun()), run],
+                        "locked-field" => [StoredField("PAGE", HintRun()), run],
+                        "nested-hint-field" => [ContentControl(StoredField("REF EmptyReference", HintRun())), run],
+                        "visible-field" => [StoredField("REF VisibleReference",
+                            new XElement(w + "r", Hint(), new XElement(w + "t", "VISIBLE STORED FIELD"))), run],
                         "hidden-break" => [ContentControl(new XElement(w + "r", new XElement(w + "rPr", new XElement(w + "vanish")),
                             new XElement(w + "br", new XAttribute(w + "type", type)))), run],
                         "excluded-insertion" => [Revision("ins", new XElement(w + "r", new XElement(w + "t", "EXCLUDED INSERTION"))), run],
@@ -283,6 +301,8 @@ internal static partial class DocxInlineCompositionTests
                             run, new XElement(w + "permEnd", new XAttribute(w + "id", 50)))],
                         _ => [Metadata(wrapper, run)]
                     };
+                    if (wrapper == "locked-field")
+                        content[0].SetAttributeValue(w + "fldLock", "true");
                     body.ReplaceNodes(
                         new XElement(w + "p", new XElement(w + "hyperlink", new XAttribute(w + "anchor", "destination"),
                             new XElement(w + "r", new XElement(w + "t", "JUMP TO BREAK DESTINATION")))),
@@ -292,6 +312,15 @@ internal static partial class DocxInlineCompositionTests
                         section);
                 });
                 TestAssert.Equal(retainLeadingFragment ? 4 : 3, document.BodyElements.Count);
+                if (wrapper is "empty-field" or "hint-field" or "locked-field" or "nested-hint-field")
+                {
+                    var field = document.Paragraphs.Last().FieldReferences.Single();
+                    TestAssert.Equal(DocxFieldSourceKind.Simple, field.SourceKind);
+                    TestAssert.Equal(wrapper == "locked-field" ? DocxFieldKind.Page : DocxFieldKind.Other, field.Kind);
+                    TestAssert.Equal(wrapper == "locked-field" ? "PAGE" : "REF EmptyReference", field.Instruction);
+                    TestAssert.True(!field.RendersCachedResult && !field.UsesPlaceholder,
+                        "The empty stored result retains its field metadata on the continuation.");
+                }
                 if (wrapper is "closed-move-range" or "excluded-move-range")
                 {
                     DocxRevisionRange range = document.Paragraphs.Last().RevisionRanges.Single();
