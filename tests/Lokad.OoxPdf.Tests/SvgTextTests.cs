@@ -401,7 +401,7 @@ internal static partial class SvgTextTests
     {
         var diagnostics = new List<OoxPdfDiagnostic>();
         var graphics = Paint(Svg("<rect width=\"400\" height=\"160\" fill=\"#cce5ff\"/>" +
-            "<text x=\"10 20\">array positions</text><text dx=\"10%\">viewport percentage</text>" +
+            "<text x=\"10 20\">array positions</text><text dx=\"10% 20%\">percentage positions</text>" +
             "<text transform=\"matrix(1e308 0 0 1e308 1e308 0)\">overflow</text>" +
             "<text x=\"20\" y=\"80\" fill=\"#112233\">I</text>"), diagnostics);
         TestAssert.Contains("0.8 0.898 1 rg", graphics.ToString());
