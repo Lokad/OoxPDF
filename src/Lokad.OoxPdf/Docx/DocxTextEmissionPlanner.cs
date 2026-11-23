@@ -291,7 +291,8 @@ internal static class DocxTextEmissionPlanner
         };
     }
 
-    public static DocxTextEmissionGlyphAdvanceSignature CreateGlyphAdvanceSignature(string text, PdfEmbeddedFont embedded, bool pairKerningEnabled = true)
+    public static DocxTextEmissionGlyphAdvanceSignature CreateGlyphAdvanceSignature(
+        string text, PdfEmbeddedFont? embedded, PdfFallbackFont? fallback, bool pairKerningEnabled)
     {
         const ulong fnvOffset = 14695981039346656037UL;
         const ulong fnvPrime = 1099511628211UL;
@@ -311,19 +312,34 @@ internal static class DocxTextEmissionPlanner
         int pairRightAdvanceMinUnits = 0;
         int pairRightAdvanceMaxUnits = 0;
         ulong pairHash = fnvOffset;
-        int unitsPerEm = Math.Max(1, (int)embedded.Font.UnitsPerEm);
+        var font = embedded?.Font;
+        int unitsPerEm = font is not null ? Math.Max(1, (int)font.UnitsPerEm) : PdfFallbackFont.UnitsPerEm;
         ushort previousGlyph = 0;
-        ushort previousAdvance = 0;
+        int previousAdvance = 0;
         foreach (Rune rune in text.EnumerateRunes())
         {
-            ushort glyph = embedded.Font.MapCodePoint(rune.Value);
-            if (glyph == 0)
+            ushort glyph;
+            int advance;
+            short kerning = 0;
+            if (font is not null)
             {
-                continue;
+                glyph = font.MapCodePoint(rune.Value);
+                if (glyph == 0) continue;
+                advance = font.GetAdvanceWidth(glyph);
+                if (previousGlyph != 0 && pairKerningEnabled) kerning = font.GetKerning(previousGlyph, glyph);
+            }
+            else if (fallback is not null)
+            {
+                // Retain the substituted WinAnsi code and its fallback advance.
+                PdfFallbackFont.TryEncodeWinAnsi(rune.Value, out byte code);
+                glyph = code;
+                advance = (int)fallback.MeasureAdvanceEm(rune.Value);
+            }
+            else
+            {
+                break;
             }
 
-            ushort advance = embedded.Font.GetAdvanceWidth(glyph);
-            short kerning = previousGlyph == 0 || !pairKerningEnabled ? (short)0 : embedded.Font.GetKerning(previousGlyph, glyph);
             if (previousGlyph != 0)
             {
                 glyphPairCount++;
@@ -345,7 +361,7 @@ internal static class DocxTextEmissionPlanner
 
             advanceUnits += advance;
             hash = AppendHash(hash, glyph, fnvPrime);
-            hash = AppendHash(hash, advance, fnvPrime);
+            hash = AppendHash(hash, unchecked((ushort)advance), fnvPrime);
             hash = AppendHash(hash, unchecked((ushort)kerning), fnvPrime);
             previousGlyph = glyph;
             previousAdvance = advance;
@@ -433,101 +449,6 @@ internal static class DocxTextEmissionPlanner
             naturalResidualPerGap,
             roundedResidualPerGap,
             plannedEmittedResidualPerGap);
-    }
-
-    // RV01: fallback glyph signature over WinAnsi bytes and fallback advances.
-    public static DocxTextEmissionGlyphAdvanceSignature CreateGlyphAdvanceSignature(
-        string text,
-        PdfEmbeddedFont? embedded,
-        PdfFallbackFont? fallback, bool pairKerningEnabled = true)
-    {
-        if (embedded is not null)
-        {
-            return CreateGlyphAdvanceSignature(text, embedded, pairKerningEnabled);
-        }
-
-        const ulong fnvOffset = 14695981039346656037UL;
-        const ulong fnvPrime = 1099511628211UL;
-
-        ulong hash = fnvOffset;
-        int glyphCount = 0;
-        int glyphPairCount = 0;
-        int advanceUnits = 0;
-        int kerningUnits = 0;
-        int pairAdvanceUnits = 0;
-        int pairLeftAdvanceUnits = 0;
-        int pairRightAdvanceUnits = 0;
-        int pairAdvanceMinUnits = 0;
-        int pairAdvanceMaxUnits = 0;
-        int pairLeftAdvanceMinUnits = 0;
-        int pairLeftAdvanceMaxUnits = 0;
-        int pairRightAdvanceMinUnits = 0;
-        int pairRightAdvanceMaxUnits = 0;
-        ulong pairHash = fnvOffset;
-        const int unitsPerEm = PdfFallbackFont.UnitsPerEm;
-        ushort previousGlyph = 0;
-        int previousAdvance = 0;
-        if (fallback is not null)
-        {
-            foreach (Rune rune in text.EnumerateRunes())
-            {
-                PdfFallbackFont.TryEncodeWinAnsi(rune.Value, out byte code);
-                ushort glyph = code;
-                int advance = (int)fallback.MeasureAdvanceEm(rune.Value);
-                if (previousGlyph != 0)
-                {
-                    glyphPairCount++;
-                    int pairAdvance = previousAdvance + advance;
-                    pairAdvanceUnits += pairAdvance;
-                    pairLeftAdvanceUnits += previousAdvance;
-                    pairRightAdvanceUnits += advance;
-                    pairAdvanceMinUnits = glyphPairCount == 1 ? pairAdvance : Math.Min(pairAdvanceMinUnits, pairAdvance);
-                    pairAdvanceMaxUnits = glyphPairCount == 1 ? pairAdvance : Math.Max(pairAdvanceMaxUnits, pairAdvance);
-                    pairLeftAdvanceMinUnits = glyphPairCount == 1 ? previousAdvance : Math.Min(pairLeftAdvanceMinUnits, previousAdvance);
-                    pairLeftAdvanceMaxUnits = glyphPairCount == 1 ? previousAdvance : Math.Max(pairLeftAdvanceMaxUnits, previousAdvance);
-                    pairRightAdvanceMinUnits = glyphPairCount == 1 ? advance : Math.Min(pairRightAdvanceMinUnits, advance);
-                    pairRightAdvanceMaxUnits = glyphPairCount == 1 ? advance : Math.Max(pairRightAdvanceMaxUnits, advance);
-                    pairHash = AppendHash(pairHash, previousGlyph, fnvPrime);
-                    pairHash = AppendHash(pairHash, glyph, fnvPrime);
-                    pairHash = AppendHash(pairHash, unchecked((ushort)pairAdvance), fnvPrime);
-                }
-
-                advanceUnits += advance;
-                hash = AppendHash(hash, glyph, fnvPrime);
-                hash = AppendHash(hash, unchecked((ushort)advance), fnvPrime);
-                hash = AppendHash(hash, unchecked((ushort)0), fnvPrime);
-                previousGlyph = glyph;
-                previousAdvance = advance;
-                glyphCount++;
-            }
-        }
-
-        return new(
-            glyphCount,
-            glyphPairCount,
-            unitsPerEm,
-            advanceUnits,
-            kerningUnits,
-            pairAdvanceUnits,
-            pairLeftAdvanceUnits,
-            pairRightAdvanceUnits,
-            pairAdvanceMinUnits,
-            pairAdvanceMaxUnits,
-            pairLeftAdvanceMinUnits,
-            pairLeftAdvanceMaxUnits,
-            pairRightAdvanceMinUnits,
-            pairRightAdvanceMaxUnits,
-            (double)pairAdvanceUnits / unitsPerEm,
-            (double)pairLeftAdvanceUnits / unitsPerEm,
-            (double)pairRightAdvanceUnits / unitsPerEm,
-            (double)pairAdvanceMinUnits / unitsPerEm,
-            (double)pairAdvanceMaxUnits / unitsPerEm,
-            (double)pairLeftAdvanceMinUnits / unitsPerEm,
-            (double)pairLeftAdvanceMaxUnits / unitsPerEm,
-            (double)pairRightAdvanceMinUnits / unitsPerEm,
-            (double)pairRightAdvanceMaxUnits / unitsPerEm,
-            pairHash.ToString("X16", CultureInfo.InvariantCulture),
-            hash.ToString("X16", CultureInfo.InvariantCulture));
     }
 
     public static IReadOnlyList<DocxTextEmissionPart> SplitOfficeTextOperationParts(
