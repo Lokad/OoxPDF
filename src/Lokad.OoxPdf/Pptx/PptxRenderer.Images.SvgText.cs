@@ -11,6 +11,8 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
+    private const double SvgInitialFontSize = 16d;
+
     // Borrow the conversion's prepared font programs. SVG labels are picture
     // outlines, so even isolated alpha groups remain vector-only and need no
     // independent font subsets, PDF resources or font cache.
@@ -123,16 +125,11 @@ internal sealed partial class PptxRenderer
             if (!int.TryParse(weight, NumberStyles.None, CultureInfo.InvariantCulture, out int numeric) || numeric is < 100 or > 900) return false;
             bold = numeric >= 600;
         }
-        const double initialFontSize = 16d;
-        double size = initialFontSize;
+        double size = SvgInitialFontSize;
         foreach (XElement owner in element.AncestorsAndSelf().Reverse())
         {
             string? value = ReadSvgPresentationAttribute(owner, ReadSvgStyleDeclarations(owner), "font-size");
-            if (value is null || InheritsSvgPropertyValue(value)) continue;
-            if (IsSvgInitialValue(value))
-                size = initialFontSize;
-            else if (!TryReadSvgLength(value, out size, relativeSize: size, allowPercent: true))
-                return false;
+            if (!TryResolveSvgFontSize(value, size, out size)) return false;
         }
         if (size <= 0d || !TryReadPosition("x", viewWidth, out double x) ||
             !TryReadPosition("y", viewHeight, out double y) ||
@@ -148,7 +145,7 @@ internal sealed partial class PptxRenderer
             if (!TryReadSvgSolidColor(element, style, fill, out RgbColor parsed, out colorOpacity)) return false;
             color = parsed;
         }
-        if (!TryReadPlainSvgText(element, IsSvgVisibilityHidden(Inherited("visibility")), cancellationToken,
+        if (!TryReadPlainSvgText(element, size, IsSvgVisibilityHidden(Inherited("visibility")), cancellationToken,
                 out string valueText, out bool[]? hiddenCharacters)) return false;
         if (OoxComplexScript.DetectNeeds(valueText) != OoxComplexScriptKind.None ||
             valueText.EnumerateRunes().Any(r => Rune.IsControl(r))) return false;
@@ -171,9 +168,24 @@ internal sealed partial class PptxRenderer
         }
     }
 
+    private static bool TryResolveSvgFontSize(string? value, double inheritedSize, out double size)
+    {
+        if (value is null || InheritsSvgPropertyValue(value))
+        {
+            size = inheritedSize;
+            return true;
+        }
+        if (IsSvgInitialValue(value))
+        {
+            size = SvgInitialFontSize;
+            return true;
+        }
+        return TryReadSvgLength(value, out size, relativeSize: inheritedSize, allowPercent: true);
+    }
+
     // Plain spans and link text share the label's metrics. Visibility controls
     // which outlines paint. Only display:none removes characters from layout.
-    private static bool TryReadPlainSvgText(XElement element, bool hidden, CancellationToken cancellationToken,
+    private static bool TryReadPlainSvgText(XElement element, double fontSize, bool hidden, CancellationToken cancellationToken,
         out string text, out bool[]? hiddenCharacters)
     {
         text = string.Empty;
@@ -225,8 +237,8 @@ internal sealed partial class PptxRenderer
                 if (IsSvgDisplayNone(child, style)) continue;
                 string? localSpace = (string?)child.Attribute(spaceName);
                 if (localSpace is not (null or "default" or "preserve") ||
-                    child.Attributes().Any(attribute => attribute.Name != spaceName && !IsPlainSvgTextChildAttribute(attribute, style, isLink)) ||
-                    style.Any(declaration => !IsPlainSvgTextChildProperty(declaration.Key.ToLowerInvariant(), declaration.Value))) return false;
+                    child.Attributes().Any(attribute => attribute.Name != spaceName && !IsPlainSvgTextChildAttribute(attribute, style, isLink, fontSize)) ||
+                    style.Any(declaration => !IsPlainSvgTextChildProperty(declaration.Key.ToLowerInvariant(), declaration.Value, fontSize))) return false;
                 string? localVisibility = ReadSvgPresentationAttribute(child, style, "visibility");
                 bool childHidden = string.IsNullOrWhiteSpace(localVisibility) || InheritsSvgPropertyValue(localVisibility)
                     ? ownerHidden : IsSvgVisibilityHidden(localVisibility);
@@ -243,7 +255,7 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static bool IsPlainSvgTextChildAttribute(XAttribute attribute, IReadOnlyDictionary<string, string> style, bool isLink) =>
+    private static bool IsPlainSvgTextChildAttribute(XAttribute attribute, IReadOnlyDictionary<string, string> style, bool isLink, double fontSize) =>
         attribute.IsNamespaceDeclaration ||
         (isLink && attribute.Name.LocalName == "href" &&
          (attribute.Name.Namespace == XNamespace.None || attribute.Name.NamespaceName == "http://www.w3.org/1999/xlink")) ||
@@ -251,14 +263,16 @@ internal sealed partial class PptxRenderer
         (attribute.Name.LocalName is "id" or "class" or "role" or "style" ||
          attribute.Name.LocalName.StartsWith("aria-", StringComparison.Ordinal) ||
          attribute.Name.LocalName.StartsWith("data-", StringComparison.Ordinal) ||
-         IsPlainSvgTextChildProperty(attribute.Name.LocalName, style.GetValueOrDefault(attribute.Name.LocalName, attribute.Value)));
+         IsPlainSvgTextChildProperty(attribute.Name.LocalName, style.GetValueOrDefault(attribute.Name.LocalName, attribute.Value), fontSize));
 
-    // Explicit inheritance leaves the supported label's face and paint intact.
-    // Position lists and whole-element opacity have their own local semantics.
-    private static bool IsPlainSvgTextChildProperty(string name, string value) =>
-        name is "display" or "visibility" ||
-        (name is "color" or "fill" or "fill-opacity" or "font-family" or "font-size" or "font-style" or "font-weight") &&
-        InheritsSvgPropertyValue(value);
+    // The plain walk applies visibility and accepts sizes that preserve the label's metrics.
+    private static bool IsPlainSvgTextChildProperty(string name, string value, double fontSize) => name switch
+    {
+        "display" or "visibility" => true,
+        "font-size" => TryResolveSvgFontSize(value, fontSize, out double size) && size == fontSize,
+        "color" or "fill" or "fill-opacity" or "font-family" or "font-style" or "font-weight" => InheritsSvgPropertyValue(value),
+        _ => false,
+    };
 
     private static bool TryPaintSvgText(PdfGraphicsBuilder graphics, XElement element, Lazy<HashSet<string>> paintServerIds,
         IReadOnlyDictionary<FontRequest, SvgTextFont?>? fonts, SvgTransform transform, double viewWidth, double viewHeight,

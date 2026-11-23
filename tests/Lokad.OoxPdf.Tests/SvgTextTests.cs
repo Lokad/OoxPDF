@@ -428,8 +428,10 @@ internal static partial class SvgTextTests
         const string plainSouth = "&#160;SOUTH";
         const string northSpan = """NO<tspan font-family="inherit" font-size="unset" color="inherit" fill="inherit">RT</tspan>H""";
         const string southSpan = """&#160;SO<tspan fill="red" style="FILL:inherit !important;fill:lime;fill-opacity:unset;font-size:inherit">UT</tspan>H""";
+        const string sameSizeNorth = """NO<tspan font-size="20px"><tspan style="font-size:1em">RT</tspan></tspan>H""";
+        const string sameSizeSouth = """&#160;SO<tspan font-size="11" style="font-size:100% !important;font-size:120%">UT</tspan>H""";
         string control = Picture("NORTH", plainSouth);
-        AssertSvgPaintInBothFormats(control, Picture(northSpan, southSpan), pdf =>
+        AssertSvgPaintInBothFormats(control, [Picture(northSpan, southSpan), Picture(sameSizeNorth, sameSizeSouth)], pdf =>
         {
             TestAssert.Equal(5, LabelPaths(pdf));
             TestAssert.Equal(5, LabelPaths(pdf, "0.067 0.267 0.6 rg"));
@@ -442,14 +444,20 @@ internal static partial class SvgTextTests
             "A link uses the same inherited glyph paint as a span.");
         TestAssert.Contains("unsupported a element", diagnostics.Single().Message);
 
-        foreach (var (attribute, parent) in new[] { ("""fill="inherit" style="fill:red" """, ""), ("""opacity="inherit" """, """opacity=".5" """) })
+        foreach (var (attribute, parent) in new[]
+        {
+            ("""fill="inherit" style="fill:red" """, ""),
+            ("""opacity="inherit" """, """opacity=".5" """),
+            ("""font-size="2em" """, ""),
+            ("""font-size="initial" """, ""),
+        })
         {
             diagnostics.Clear();
             var fallback = Paint(Picture($"""NO<tspan {attribute}>RT</tspan>H""", plainSouth, parent), diagnostics);
             TestAssert.DoesNotContain(LabelColor, fallback.ToString());
             TestAssert.Equal(5, LabelPaths(fallback.ToString(), "0.067 0.267 0.6 rg"));
             TestAssert.True(diagnostics.Any(d => d.Message.Contains("unsupported text element", StringComparison.Ordinal)),
-                "A local paint change retains the diagnosed fallback.");
+                "A local size or paint change retains the diagnosed fallback.");
         }
     }
 

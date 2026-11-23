@@ -1970,6 +1970,7 @@ internal sealed partial class PptxRenderer
     {
         text = text.Trim();
         double scale;
+        double divisor = 1d;
         // CSS absolute units share a 96 px reference inch within the SVG viewport.
         if (text.EndsWith("pt", StringComparison.OrdinalIgnoreCase)) { text = text[..^2]; scale = 96d / 72d; }
         else if (text.EndsWith("pc", StringComparison.OrdinalIgnoreCase)) { text = text[..^2]; scale = 16d; }
@@ -1978,11 +1979,11 @@ internal sealed partial class PptxRenderer
         else if (text.EndsWith("mm", StringComparison.OrdinalIgnoreCase)) { text = text[..^2]; scale = 96d / 25.4d; }
         else if (text.EndsWith("q", StringComparison.OrdinalIgnoreCase)) { text = text[..^1]; scale = 96d / 101.6d; }
         else if (relativeSize is { } em && text.EndsWith("em", StringComparison.OrdinalIgnoreCase)) { text = text[..^2]; scale = em; }
-        else if (allowPercent && relativeSize is { } percent && text.EndsWith('%')) { text = text[..^1]; scale = percent / 100d; }
+        else if (allowPercent && relativeSize is { } percent && text.EndsWith('%')) { text = text[..^1]; scale = percent; divisor = 100d; }
         else return TryReadSvgNumberOrPixels(text, out value);
 
         bool valid = double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out value);
-        value *= scale;
+        value = (value / divisor) * scale;
         return valid && double.IsFinite(value);
     }
 
