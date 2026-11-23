@@ -147,6 +147,9 @@ bound Office PDF and can reuse pixel metrics while reporting content misses
 separately. Simple formula witnesses check decoded expression text. Native
 picture witnesses check the curated paint regions. Exact placement, glyph ink
 and unsupported source scopes still need their own review.
+For selected field results, declare contextual phrases and page numbers in
+`ExpectedFieldResults`. The audit checks each phrase in both PDFs and reports
+missing results separately from unresolved field behavior.
 
 Portfolio joins check the selected modes and content
 expectations against the pinned text operations and verify the diagnostic

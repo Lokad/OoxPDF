@@ -66,6 +66,7 @@ foreach ($directory in $SourceDirectory) {
             ![Linq.Enumerable]::SequenceEqual[string]([string[]]$row.MissingExpectedText, [string[]]$missing, [StringComparer]::Ordinal) -or
             $row.ExpectedSourceEquations -ne $expectations.Equations -or
             ($row.Contains('ExpectedSourcePictures') -and $row.ExpectedSourcePictures -ne $expectations.Pictures) -or
+            !(Test-PortfolioFieldExpectations $row.ExpectedFieldResults $expectations.FieldResults) -or
             $row.HeldOut -ne $case.HeldOut) {
             throw ('Content expectations differ; reinspect the candidate under the requested manifest: ' + $key)
         }

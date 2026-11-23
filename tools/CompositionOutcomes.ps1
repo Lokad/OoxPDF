@@ -13,7 +13,15 @@ function Get-PortfolioContentExpectations($Document, [string] $Mode) {
         Text = if ($override -and $override.Contains('ExpectedText')) { $override.ExpectedText } else { $Document.ExpectedText }
         Equations = if ($override -and $override.Contains('ExpectedEquationCount')) { $override.ExpectedEquationCount } else { $Document.ExpectedEquationCount }
         Pictures = if ($override -and $override.Contains('ExpectedInlineImageCount')) { $override.ExpectedInlineImageCount } else { $Document.ExpectedInlineImageCount }
+        FieldResults = $Document.ExpectedFieldResults
     }
+}
+
+function Test-PortfolioFieldExpectations($Actual, $Expected) {
+    if ($null -eq $Actual -or $null -eq $Expected) { return $null -eq $Actual -and $null -eq $Expected }
+    $actualJson = [Text.Json.Nodes.JsonNode]::Parse((ConvertTo-Json -InputObject $Actual -Depth 4 -Compress))
+    $expectedJson = [Text.Json.Nodes.JsonNode]::Parse((ConvertTo-Json -InputObject $Expected -Depth 4 -Compress))
+    [Text.Json.Nodes.JsonNode]::DeepEquals($actualJson, $expectedJson)
 }
 
 function Get-MissingPortfolioTextPhrases($Operations, $ExpectedText, [string] $Mode) {
@@ -58,6 +66,7 @@ function Get-PortfolioContentWitnesses($Row, $Outcomes, $Audit, [hashtable] $Loa
     $equations = if ([object]::Equals($Row.ExpectedSourceEquations, 0L)) { 'No expectation' } else { 'Unverified' }
     $pictures = if ([object]::Equals($Row.ExpectedSourcePictures, 0L)) { 'No expectation' } else { 'Unverified' }
     $result = [ordered]@{Equations=$equations; Pictures=$pictures}
+    if ($Row.ExpectedFieldResults) { $result.FieldResults = 'Unverified' }
     if (!$Audit -and $Row.ContentWitnesses.Audit) {
         $pin = $Row.ContentWitnesses.Audit
         $Audit = Read-PortfolioContentAudit $pin.Path $Loaded
@@ -74,6 +83,7 @@ function Get-PortfolioContentWitnesses($Row, $Outcomes, $Audit, [hashtable] $Loa
         !$Row.TextOperationsSha256 -or $observed.CandidateOperationsSha256 -cne $Row.TextOperationsSha256 -or
         $observed.ExpectedSourceEquations -cne $Row.ExpectedSourceEquations -or
         $observed.ExpectedSourcePictures -cne $Row.ExpectedSourcePictures -or
+        !(Test-PortfolioFieldExpectations $observed.FieldResults.Expected $Row.ExpectedFieldResults) -or
         $observed.IgnoredEquationDiagnostics -cne $Row.IgnoredEquationDiagnostics -or
         $observed.ReferencePdfSha256 -notmatch '^[A-F0-9]{64}$' -or
         ($ReferenceSha256 -and $observed.ReferencePdfSha256 -cne $ReferenceSha256)) {
@@ -99,6 +109,11 @@ function Get-PortfolioContentWitnesses($Row, $Outcomes, $Audit, [hashtable] $Loa
             default { 'Unverified' }
         }
     }
+    if ($Row.ExpectedFieldResults -and $observed.FieldResults.Missing -is [array] -and
+        $observed.FieldResults.Unverified -is [array]) {
+        if ($observed.FieldResults.Missing.Count) { $result.FieldResults = 'Missing' }
+        elseif (!$observed.FieldResults.Unverified.Count) { $result.FieldResults = 'Witnesses present' }
+    }
     return $result
 }
 
@@ -108,12 +123,13 @@ function Get-PortfolioContentSeverity($MissingExpectedText, $IgnoredEquationDiag
     $hasEquationCheck = ($IgnoredEquationDiagnostics -is [int] -or $IgnoredEquationDiagnostics -is [long]) -and
         $IgnoredEquationDiagnostics -ge 0
     if (($hasTextCheck -and $MissingExpectedText.Count) -or ($hasEquationCheck -and $IgnoredEquationDiagnostics) -or
-        $Witnesses.Equations -ceq 'Missing' -or $Witnesses.Pictures -ceq 'Missing') {
+        $Witnesses.Equations -ceq 'Missing' -or $Witnesses.Pictures -ceq 'Missing' -or $Witnesses.FieldResults -ceq 'Missing') {
         return 'Content blocker'
     }
     if ($hasTextCheck -and $hasEquationCheck -and
         $Witnesses.Equations -cin @('No expectation','Witnesses present') -and
-        $Witnesses.Pictures -cin @('No expectation','Witnesses present')) { return 'Needs geometry and visual review' }
+        $Witnesses.Pictures -cin @('No expectation','Witnesses present') -and
+        $Witnesses.FieldResults -cne 'Unverified') { return 'Needs geometry and visual review' }
     return 'Content evidence incomplete'
 }
 

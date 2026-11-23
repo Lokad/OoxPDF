@@ -173,6 +173,14 @@
       "Calculation:",
       "Footer:"
     ],
+    "ExpectedFieldResults": [
+      {"Page": 1, "Text": "The trend marker accompanies the calculation"},
+      {"Page": 1, "Text": "See calculation."},
+      {"Page": 1, "Text": "on page 1 (page 1)"},
+      {"Page": 1, "Text": "i on page 1"},
+      {"Page": 1, "Text": "after formula. Page 1 of 2"},
+      {"Page": 2, "Text": "after formula. Page 2 of 2"}
+    ],
     "Features": [
       "image/math/comment/link/bookmark in one paragraph",
       "math/endnote reference in a table cell",

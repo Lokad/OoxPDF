@@ -6,6 +6,7 @@ Token presence is not a test of reading order, glyph ink, clipping or placement.
 import argparse
 from collections import Counter
 import hashlib
+from itertools import groupby
 import json
 import math
 from pathlib import Path
@@ -106,6 +107,41 @@ def operation_text(operations):
 
 def deficits(expected, actual):
     return dict(sorted((expected - actual).items()))
+
+
+def field_result_witnesses(expected, candidate, reference):
+    """Compare declared contextual phrases on their respective PDF pages."""
+    def phrase(value):
+        return re.sub(r"\s+([.)])", r"\1", " ".join(normalize(value).split()))
+
+    def lines(operations):
+        by_page = {}
+        for (page, _, _, y), run in groupby(operations, lambda item: (
+                item.get("PageNumber"), item.get("ObjectNumber"), item.get("Generation"), item.get("EffectiveY"))):
+            if page is not None and y is not None:
+                by_page.setdefault(page, []).append(phrase(operation_text(run)))
+        return by_page
+
+    candidate_lines, reference_lines = lines(candidate), lines(reference)
+    missing, unverified, seen = [], [], set()
+    if not isinstance(expected, list) or not expected:
+        raise ValueError("ExpectedFieldResults must be a nonempty list")
+    for witness in expected:
+        if (not isinstance(witness, dict) or witness.keys() != {"Page", "Text"}
+                or type(witness["Page"]) is not int or witness["Page"] < 1 or not isinstance(witness["Text"], str)):
+            raise ValueError("Field result witness requires a positive page and text")
+        page, text = witness["Page"], phrase(witness["Text"])
+        if not text or (page, text) in seen:
+            raise ValueError("Field result witnesses must be nonempty and distinct on each page")
+        seen.add((page, text))
+        pattern = re.compile(r"(?<!\w)" + re.escape(text) + r"(?!\w)")
+        office_matches = sum(len(pattern.findall(line)) for line in reference_lines.get(page, ()))
+        actual_matches = sum(len(pattern.findall(line)) for line in candidate_lines.get(page, ()))
+        if office_matches != 1 or actual_matches > 1:
+            unverified.append(witness)
+        elif not actual_matches:
+            missing.append(witness)
+    return {"Expected": expected, "Missing": missing, "Unverified": unverified}
 
 
 def reference_simple_math(operations, source_expressions):
@@ -508,6 +544,9 @@ def main():
         view = (case.get("ExpectedByMode") or {}).get(mode) or {}
         expected_equations = view.get("ExpectedEquationCount", case.get("ExpectedEquationCount"))
         expected_pictures = view.get("ExpectedInlineImageCount", case.get("ExpectedInlineImageCount"))
+        expected_fields = case.get("ExpectedFieldResults")
+        if expected_fields != outcome.get("ExpectedFieldResults"):
+            raise ValueError("Field result expectations differ: " + identifier + "/" + mode)
         picture_case = {**case, "ExpectedInlineImageCount": expected_pictures}
         source = inputs / case["Input"]
         if not source.resolve().is_relative_to(public_cases):
@@ -550,6 +589,7 @@ def main():
                                                            if item["Font"].startswith("Eq"))))
         observed_math = Counter({expression: math_stream.count(expression) for expression in expressions})
         reference_math = reference_simple_math(office, expressions) if unresolved else Counter()
+        fields = field_result_witnesses(expected_fields, operations, office) if expected_fields is not None else None
         pictures = screen_picture_ink(source, pdf, reference, picture_case, pymupdf) if args.screen_pictures else {
             "Status": "Unverified" if expected_pictures is not None else "No picture expectation"}
         if args.screen_pictures and (sha(pdf) != pdf_hash or sha(reference) != reference_hash):
@@ -570,6 +610,7 @@ def main():
                      "ReferenceConfirmedSimpleMath": dict(reference_math),
                      "MissingReferenceConfirmedSimpleMath": deficits(reference_math, observed_math),
                      "MissingSimpleMath": deficits(expressions, observed_math), "PictureInk": pictures,
+                     "FieldResults": fields,
                      "IgnoredEquationDiagnostics": outcome["IgnoredEquationDiagnostics"],
                      "UnresolvedSourceFeatures": unresolved, "VisualGateFailures": comparison["Failures"]})
     if sha(library) != pin["LibrarySha256"] or sha(inspector) != inspector_hash:
@@ -592,6 +633,7 @@ def main():
     failed = sum(bool(row["SourceTokensMissingOffice"] or row["SourceTokensMissingCandidate"] or
                       row["OfficeTokensMissingCandidate"] or row["OfficeTokensMissingCandidateByPage"] or row["MissingSimpleMath"] or row["UnresolvedSourceFeatures"] or
                       row["IgnoredEquationDiagnostics"] or row["ReferencePages"] != row["CandidatePages"] or
+                      (row["FieldResults"] and (row["FieldResults"]["Missing"] or row["FieldResults"]["Unverified"])) or
                       (args.screen_pictures and row["PictureInk"]["Status"] not in
                        {"Picture witnesses present", "No picture expectation"})) for row in rows)
     print(f"{len(rows)} mode outcomes; {failed} deficit/unresolved screens. No conversions or library builds.")

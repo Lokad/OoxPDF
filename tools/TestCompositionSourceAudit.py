@@ -10,7 +10,7 @@ import unittest
 from unittest.mock import patch
 from pathlib import Path
 from tempfile import TemporaryDirectory, gettempdir
-from AuditCompositionContent import (inspect_reference, operation_text, reference_simple_math, resolve_reference,
+from AuditCompositionContent import (field_result_witnesses, inspect_reference, operation_text, reference_simple_math, resolve_reference,
                                      screen_picture_ink, sha, unresolved_fields, validate_outcome_modes, words)
 
 W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'
@@ -101,6 +101,33 @@ class OperationTextTests(unittest.TestCase):
             with self.subTest(change=change):
                 self.assertEqual({}, reference_simple_math(spans[:2] + [spans[2] | change], expected))
         self.assertEqual({}, reference_simple_math([self.operation('a+b')], expected))
+
+    def test_field_results_keep_candidate_page_and_line_ownership(self):
+        expected = [{'Page': 2, 'Text': 'after formula. Page 2 of 2'}]
+        prefix = self.operation('after formula', x=30, PageNumber=2, Font='Body', advance=40)
+        result = self.operation('. Page 2 of 2', x=70, PageNumber=2, Font='Body')
+        reference = [prefix, result]
+        self.assertEqual([], field_result_witnesses(reference=reference, candidate=reference, expected=expected)['Missing'])
+        for altered in [
+            [prefix, result | {'PageNumber': 1}],
+            [prefix, result | {'EffectiveY': 102}],
+            [prefix, result | {'DecodedText': '. Page 2 of 20'}],
+            [prefix],
+        ]:
+            with self.subTest(altered=altered):
+                proved = field_result_witnesses(expected, altered, reference)
+                self.assertEqual(expected, proved['Missing'])
+                self.assertEqual([], proved['Unverified'])
+
+    def test_reference_absence_and_duplicate_field_results_are_unverified(self):
+        expected = [{'Page': 1, 'Text': 'Footer: Page 1'}]
+        first = self.operation('Footer: Page 1')
+        second = first | {'EffectiveY': 100}
+        for candidate, reference in [([], []), ([first], [first, second]), ([first, second], [first])]:
+            with self.subTest(candidate=candidate, reference=reference):
+                proved = field_result_witnesses(expected, candidate, reference)
+                self.assertEqual([], proved['Missing'])
+                self.assertEqual(expected, proved['Unverified'])
 
 
 class PictureInkTests(unittest.TestCase):

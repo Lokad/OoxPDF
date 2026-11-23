@@ -870,6 +870,30 @@ try {
         throw 'Unresolved field content concealed a reference-confirmed equation omission'
     }
     $passed += 'unresolved-field-retains-confirmed-equation-blocker'
+    $expectedFieldResults = @(@{Page=2;Text='Page 2 of 2'})
+    $measured.Rows[1].ExpectedFieldResults = $expectedFieldResults
+    $measured | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $measuredPath
+    $auditRows[1].PictureInk.Status = 'Picture witnesses present'
+    $auditRows[1].FieldResults = @{Expected=$expectedFieldResults;Missing=$expectedFieldResults;Unverified=@()}
+    $content | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $auditPath
+    & $script @arguments | Out-Null
+    $field = (Get-Content -LiteralPath (Join-Path $case.CandidateDirectory 'office-comparisons.json') -Raw | ConvertFrom-Json).Rows[1]
+    if ($comparisonProbeState.DiffCalls -ne $beforeCalls -or !$field.ReusedComparison -or $field.Failures.Count -or
+        $field.ContentSeverity -cne 'Content blocker' -or $field.ContentWitnesses.FieldResults -cne 'Missing' -or
+        $field.ContentWitnesses.Equations -cne 'Witnesses present' -or $field.ContentWitnesses.Pictures -cne 'Witnesses present') {
+        throw 'Reused metrics concealed a field result omission independent of equation and picture witnesses'
+    }
+    $passed += 'reused-raster-retains-field-result-blocker'
+    $auditRows[1].FieldResults.Expected = @(@{Page=1;Text='Page 2 of 2'})
+    $content | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $auditPath
+    $failure = $null
+    try { & $script @arguments | Out-Null } catch { $failure = $_.Exception.Message }
+    if ($failure -cne 'Portfolio content audit identity differs: second/final-preserve' -or
+        $comparisonProbeState.DiffCalls -ne $beforeCalls) {
+        throw 'Audit accepted changed field result expectations'
+    }
+    $passed += 'content-audit-field-expectation-refusal'
+    $auditRows[1].FieldResults.Expected = $expectedFieldResults
     $auditRows[1].ReferencePdfSha256 = '0' * 64
     $content | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $auditPath
     $failure = $null

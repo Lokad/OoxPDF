@@ -159,6 +159,7 @@ foreach ($job in $jobs) {
             InspectedPages=$pageCount
             Diagnostics=$diagnostics;VisualStatus='Pending independent Office comparison; no visual pass claimed'
         }
+        if ($null -ne $expectations.FieldResults) { $row.ExpectedFieldResults = $expectations.FieldResults }
         $row.ContentWitnesses = Get-PortfolioContentWitnesses $row $measurementIdentity $audit $loadedAudits
         $row.Severity = Get-PortfolioContentSeverity $missing $ignoredMath $row.ContentWitnesses
         $rows += $row
