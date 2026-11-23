@@ -43,45 +43,22 @@ internal static class PptxTests
 
     internal static string RenderLineChartWithDisplayBlanksAs(string displayBlanksAs)
     {
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
-        {
-            ["[Content_Types].xml"] = TestFixtures.Utf8(BasicContentTypes()),
-            ["_rels/.rels"] = TestFixtures.Utf8(PackageRelationship()),
-            ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8(PresentationRelationship()),
-            ["ppt/presentation.xml"] = TestFixtures.Utf8(BasicPresentation()),
-            ["ppt/slides/_rels/slide1.xml.rels"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
-                </Relationships>
-                """),
-            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
-                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
-                       xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
-                       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-                  <p:cSld><p:spTree>
-                    <p:graphicFrame><p:xfrm><a:off x="914400" y="914400"/><a:ext cx="5486400" cy="3657600"/></p:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic></p:graphicFrame>
-                  </p:spTree></p:cSld>
-                </p:sld>
-                """),
-            ["ppt/charts/chart1.xml"] = TestFixtures.Utf8($$"""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:chart><c:plotArea><c:lineChart>
-                  <c:grouping val="standard"/>
-                  <c:marker val="0"/>
-                  <c:ser>
-                    <c:spPr><a:ln w="25400"><a:solidFill><a:srgbClr val="12AB34"/></a:solidFill></a:ln></c:spPr>
-                    <c:marker><c:symbol val="none"/></c:marker>
-                    <c:cat><c:strLit><c:ptCount val="3"/><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt><c:pt idx="2"><c:v>C</c:v></c:pt></c:strLit></c:cat>
-                    <c:val><c:numLit><c:ptCount val="3"/><c:pt idx="0"><c:v>10</c:v></c:pt><c:pt idx="2"><c:v>20</c:v></c:pt></c:numLit></c:val>
-                  </c:ser>
-                  <c:axId val="10"/><c:axId val="20"/>
-                </c:lineChart><c:catAx><c:axId val="10"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="b"/><c:tickLblPos val="none"/><c:crossAx val="20"/></c:catAx><c:valAx><c:axId val="20"/><c:scaling><c:orientation val="minMax"/><c:min val="0"/><c:max val="20"/></c:scaling><c:axPos val="l"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:valAx></c:plotArea><c:dispBlanksAs val="{{displayBlanksAs}}"/></c:chart></c:chartSpace>
-                """)
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        string chart = $$"""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:chart><c:plotArea><c:lineChart>
+              <c:grouping val="standard"/>
+              <c:marker val="0"/>
+              <c:ser>
+                <c:spPr><a:ln w="25400"><a:solidFill><a:srgbClr val="12AB34"/></a:solidFill></a:ln></c:spPr>
+                <c:marker><c:symbol val="none"/></c:marker>
+                <c:cat><c:strLit><c:ptCount val="3"/><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt><c:pt idx="2"><c:v>C</c:v></c:pt></c:strLit></c:cat>
+                <c:val><c:numLit><c:ptCount val="3"/><c:pt idx="0"><c:v>10</c:v></c:pt><c:pt idx="2"><c:v>20</c:v></c:pt></c:numLit></c:val>
+              </c:ser>
+              <c:axId val="10"/><c:axId val="20"/>
+            </c:lineChart><c:catAx><c:axId val="10"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="b"/><c:tickLblPos val="none"/><c:crossAx val="20"/></c:catAx><c:valAx><c:axId val="20"/><c:scaling><c:orientation val="minMax"/><c:min val="0"/><c:max val="20"/></c:scaling><c:axPos val="l"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:valAx></c:plotArea><c:dispBlanksAs val="{{displayBlanksAs}}"/></c:chart></c:chartSpace>
+            """;
+        string input = TestFixtures.WriteTempPackage(".pptx", CreateSingleChartParts(chart, frameWidth: 5486400, frameHeight: 3657600));
+        string output = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pdf");
         var collector = new DiagnosticCollector();
 
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = collector.Add });
@@ -124,36 +101,11 @@ internal static class PptxTests
               <Override PartName="/ppt/charts/chart1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/>
             </Types>
             """);
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = contentTypes,
-            ["_rels/.rels"] = PackageRelationship(),
-            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
-            ["ppt/presentation.xml"] = BasicPresentation(),
-            ["ppt/slides/_rels/slide1.xml.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rIdChart" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
-                </Relationships>
-                """,
-            ["ppt/slides/slide1.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
-                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
-                       xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
-                       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-                  <p:cSld><p:spTree>
-                    <p:graphicFrame>
-                      <p:nvGraphicFramePr><p:cNvPr id="2" name="Chart"/><p:nvPr/></p:nvGraphicFramePr>
-                      <p:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="2286000"/></p:xfrm>
-                      <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rIdChart"/></a:graphicData></a:graphic>
-                    </p:graphicFrame>
-                  </p:spTree></p:cSld>
-                </p:sld>
-                """,
-            ["ppt/charts/chart1.xml"] = chartXml
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var parts = CreateSingleChartParts(chartXml, frameWidth: 3657600, frameHeight: 2286000,
+            frameProperties: """<p:nvGraphicFramePr><p:cNvPr id="2" name="Chart"/><p:nvPr/></p:nvGraphicFramePr>""");
+        parts["[Content_Types].xml"] = TestFixtures.Utf8(contentTypes);
+        string input = TestFixtures.WriteTempPackage(".pptx", parts);
+        string output = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pdf");
         var diagnostics = new List<OoxPdfDiagnostic>();
 
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
@@ -184,7 +136,21 @@ internal static class PptxTests
     internal static MemoryStream CreateSingleChartPackageStream(string chartXml,
         IReadOnlyDictionary<string, byte[]>? additionalParts = null)
     {
-        var parts = new Dictionary<string, byte[]>
+        var parts = CreateSingleChartParts(chartXml, frameWidth: 3657600, frameHeight: 2743200);
+        if (additionalParts is not null)
+        {
+            foreach (KeyValuePair<string, byte[]> part in additionalParts)
+            {
+                parts[part.Key] = part.Value;
+            }
+        }
+
+        return TestFixtures.CreateZipPackage(parts);
+    }
+
+    private static Dictionary<string, byte[]> CreateSingleChartParts(string chartXml, int frameWidth, int frameHeight,
+        string frameProperties = "") =>
+        new()
         {
             ["[Content_Types].xml"] = TestFixtures.Utf8(BasicContentTypes()),
             ["_rels/.rels"] = TestFixtures.Utf8(PackageRelationship()),
@@ -196,7 +162,7 @@ internal static class PptxTests
                   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
                 </Relationships>
                 """),
-            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
+            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8(FormattableString.Invariant($$"""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
                        xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
@@ -204,24 +170,15 @@ internal static class PptxTests
                        xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
                   <p:cSld><p:spTree>
                     <p:graphicFrame>
-                      <p:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="2743200"/></p:xfrm>
+                      {{frameProperties}}
+                      <p:xfrm><a:off x="914400" y="914400"/><a:ext cx="{{frameWidth}}" cy="{{frameHeight}}"/></p:xfrm>
                       <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic>
                     </p:graphicFrame>
                   </p:spTree></p:cSld>
                 </p:sld>
-                """),
+                """)),
             ["ppt/charts/chart1.xml"] = TestFixtures.Utf8(chartXml)
         };
-        if (additionalParts is not null)
-        {
-            foreach (KeyValuePair<string, byte[]> part in additionalParts)
-            {
-                parts[part.Key] = part.Value;
-            }
-        }
-
-        return TestFixtures.CreateZipPackage(parts);
-    }
 
     internal static bool ChartBooleanOptionValue(object option)
     {
