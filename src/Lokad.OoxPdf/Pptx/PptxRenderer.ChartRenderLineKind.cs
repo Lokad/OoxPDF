@@ -57,7 +57,7 @@ internal sealed partial class PptxRenderer
                     nearMaximumHeadroomRatio: PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
                 ChartValueAxisRenderOptions valueAxisOptions = ReadSceneChartValueAxisRenderOptions(valueAxis.SceneAxis, valueExtents, lineOptions.PercentStacked) with
                 { TickPolicy = ReadCartesianChartAxisTickPolicy(sceneChart, valueAxis.SceneAxis, valueExtents, lineOptions.PercentStacked) };
-                ChartLayout chartLayout = (await GetCartesianChartLayoutAsync(document, theme, bounds, chartXml, sceneChart, colorMap, workbook, plotVisibleOnly, fontResolver, resolvedValueExtents: valueExtents, context: context).ConfigureAwait(false));
+                ChartLayout chartLayout = (await GetCartesianChartLayoutAsync(document, theme, bounds, sceneChart, workbook, plotVisibleOnly, fontResolver, resolvedValueExtents: valueExtents, context: context).ConfigureAwait(false));
                 chartLayout = await PrepareDefaultAxisTitleBandsAsync(chartLayout, theme, sceneChart, fontResolver).ConfigureAwait(false);
                 bool pointLegend = sceneChart.Plots.Count == 1 && sourceSeries.Count == 1 && pointAppearance is not null;
                 IReadOnlyList<ChartLegendEntry> legendEntries = pointLegend && pointAppearance is not null
@@ -94,14 +94,14 @@ internal sealed partial class PptxRenderer
                     double? labelAxisY = labelPlacement is { } placement
                         ? plotBox.Y + plotBox.Height * placement.LabelPlotRatio
                         : null;
-                    await RenderChartCategoryLabelsAsync(theme, graphics, chartLayout.Frame, plotBox, chartXml, sceneChart, categoryAxis.SceneAxis, categoryLabels, horizontalBars: false, axisCoordinate: labelAxisY, categoryLabelsOnTickMarks: categoryPointsOnTickMarks, labelsHighSide: labelPlacement?.LabelsHighSide ?? false, fontResolver: fontResolver, chartFonts: fonts, categoryLabelOffsetAdjustment: chartLayout.CategoryLabelOffsetAdjustment, prepared: chartLayout.CategoryLabels, categoryAxisReversed: categoryAxisReversed).ConfigureAwait(false);
+                    await RenderChartCategoryLabelsAsync(theme, graphics, chartLayout.Frame, plotBox, sceneChart, categoryAxis.SceneAxis, categoryLabels, horizontalBars: false, axisCoordinate: labelAxisY, categoryLabelsOnTickMarks: categoryPointsOnTickMarks, labelsHighSide: labelPlacement?.LabelsHighSide ?? false, fontResolver: fontResolver, chartFonts: fonts, categoryLabelOffsetAdjustment: chartLayout.CategoryLabelOffsetAdjustment, prepared: chartLayout.CategoryLabels, categoryAxisReversed: categoryAxisReversed).ConfigureAwait(false);
                 }
 
                 if (axesStyle.ValueAxisVisible && IsSceneChartAxisLabelVisible(valueAxis.SceneAxis))
                 {
-                    await RenderChartValueAxisLabelsAsync(theme, graphics, plotBox, chartXml, sceneChart, valueAxis.SceneAxis, valueExtents, valueAxisOptions.Units, valueAxisOptions.Reversed, horizontalBars: false, rightSide: axesStyle.ValueAxisRightSide, axisSideSlot: 0, manualPlotLayoutApplied: false, useTextSizedWidth: false, defaultNumberFormat: lineOptions.PercentStacked ? "0%" : null, fontResolver: fontResolver, chartFonts: fonts, tickPolicy: valueAxisOptions.TickPolicy, context: context).ConfigureAwait(false);
+                    await RenderChartValueAxisLabelsAsync(theme, graphics, plotBox, sceneChart, valueAxis.SceneAxis, valueExtents, valueAxisOptions.Units, valueAxisOptions.Reversed, horizontalBars: false, rightSide: axesStyle.ValueAxisRightSide, axisSideSlot: 0, manualPlotLayoutApplied: false, useTextSizedWidth: false, defaultNumberFormat: lineOptions.PercentStacked ? "0%" : null, fontResolver: fontResolver, chartFonts: fonts, tickPolicy: valueAxisOptions.TickPolicy, context: context).ConfigureAwait(false);
                 }
-                await RenderSecondaryChartValueAxisLabelsAsync(theme, graphics, plotBox, chartXml, sceneChart, dataExtents,
+                await RenderSecondaryChartValueAxisLabelsAsync(theme, graphics, plotBox, sceneChart, dataExtents,
                     fontResolver, chartFonts: fonts, primarySceneAxis: valueAxis.SceneAxis, context: context).ConfigureAwait(false);
                 // Major value tick marks (Office honors out/in/cross at value gridlines).
                 if (axesStyle.ValueAxisVisible)

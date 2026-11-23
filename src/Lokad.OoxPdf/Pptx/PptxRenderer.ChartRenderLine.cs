@@ -353,7 +353,7 @@ internal sealed partial class PptxRenderer
         return Math.Min(presetRight, frameRight - reserveWidth);
     }
 
-    private static async ValueTask<ChartLayout> GetCartesianChartLayoutAsync(PptxDocument document, PptxTheme theme, ShapeBounds bounds, XDocument chartXml, PptxSceneChart sceneChart, PptxColorMap colorMap, ChartWorkbookData? workbook, bool plotVisibleOnly, PresentationFontResolver? fontResolver, ChartValueExtents? resolvedValueExtents, double? scatterXTickTargetCount = null, PptxRenderContext? context = null)
+    private static async ValueTask<ChartLayout> GetCartesianChartLayoutAsync(PptxDocument document, PptxTheme theme, ShapeBounds bounds, PptxSceneChart sceneChart, ChartWorkbookData? workbook, bool plotVisibleOnly, PresentationFontResolver? fontResolver, ChartValueExtents? resolvedValueExtents, double? scatterXTickTargetCount = null, PptxRenderContext? context = null)
     {
         ChartFrameBox frame = GetChartFrameBox(document, bounds);
         string? title = sceneChart.Title.Text;
@@ -414,7 +414,7 @@ internal sealed partial class PptxRenderer
             bool hasRightLegend = legend.Visible && !legend.Overlay && legend.PositionKind == PptxSceneChartLegendPosition.Right;
             bool hasLineChart = categoryPlotKind == PptxSceneChartPlotKind.Line && categoryPlotElement is not null;
             ChartPlotBox defaultPlotBox = !hasTitle && hasRightLegend
-                ? (await GetCartesianNoTitleRightLegendPlotBoxAsync(frame, theme, chartXml, sceneChart, workbook, plotVisibleOnly, fontResolver, legendTextStyle, scatterXTickTargetCount, context: context).ConfigureAwait(false))
+                ? (await GetCartesianNoTitleRightLegendPlotBoxAsync(frame, theme, sceneChart, workbook, plotVisibleOnly, fontResolver, legendTextStyle, scatterXTickTargetCount, context: context).ConfigureAwait(false))
                 : hasTitle && hasRightLegend && hasLineChart
                     ? (await GetLineTitleRightLegendPlotBoxAsync().ConfigureAwait(false))
                     : GetDefaultChartPlotBox(frame);
@@ -620,21 +620,20 @@ internal sealed partial class PptxRenderer
                 frameWidth * PptxChartMetricRules.LineRightLegendValueAxisFrameWidthPaddingRatio);
     }
 
-    private static async ValueTask<ChartPlotBox> GetCartesianNoTitleRightLegendPlotBoxAsync(ChartFrameBox frame, PptxTheme theme, XDocument chartXml, PptxSceneChart sceneChart, ChartWorkbookData? workbook, bool plotVisibleOnly, PresentationFontResolver? fontResolver, ChartTextStyle legendTextStyle, double? scatterXTickTargetCount, PptxRenderContext? context = null)
+    private static async ValueTask<ChartPlotBox> GetCartesianNoTitleRightLegendPlotBoxAsync(ChartFrameBox frame, PptxTheme theme, PptxSceneChart sceneChart, ChartWorkbookData? workbook, bool plotVisibleOnly, PresentationFontResolver? fontResolver, ChartTextStyle legendTextStyle, double? scatterXTickTargetCount, PptxRenderContext? context = null)
     {
         PptxSceneChartPlot? plot = ReadFirstSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Line)
             ?? ReadFirstSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Area)
             ?? ReadFirstSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Scatter);
         if (plot is null)
             return GetChartPlotBoxPreset(frame, ChartPlotBoxPreset.LineNoTitleRightLegend);
-        XElement plotElement = plot.Source;
         PptxSceneChartPlotKind plotKind = plot.PlotKind;
         IReadOnlyList<ChartSeriesNameRecord> seriesNames = ReadSharedChartSeriesNames(plot, workbook);
         double lastCategoryLabelWidth = plotKind == PptxSceneChartPlotKind.Area
-            ? (await MeasureLastCategoryLabelWidthAsync(theme, sceneChart, chartXml, plot, plotElement, workbook, plotVisibleOnly, fontResolver).ConfigureAwait(false))
+            ? (await MeasureLastCategoryLabelWidthAsync(theme, sceneChart, plot, workbook, plotVisibleOnly, fontResolver).ConfigureAwait(false))
             : 0d;
         double lastXLabelWidth = plotKind == PptxSceneChartPlotKind.Scatter
-            ? (await MeasureScatterLegendEndLabelWidthAsync(theme, sceneChart, chartXml, plot, plotElement, workbook, plotVisibleOnly, fontResolver, scatterXTickTargetCount, context: context).ConfigureAwait(false))
+            ? (await MeasureScatterLegendEndLabelWidthAsync(theme, sceneChart, plot, workbook, plotVisibleOnly, fontResolver, scatterXTickTargetCount, context: context).ConfigureAwait(false))
             : 0d;
         double rightLegendWidth = (await ResolveRightLegendWidthAsync(
             seriesNames,
@@ -772,7 +771,7 @@ internal sealed partial class PptxRenderer
     // Width of the last visible category label for the area right-legend reserve: the
     // legend swatch clears the end of that edge label by a fixed lead, so the reserve
     // grows with half of it. A blank or missing last label contributes nothing.
-    private static async ValueTask<double> MeasureLastCategoryLabelWidthAsync(PptxTheme theme, PptxSceneChart sceneChart, XDocument chartXml, PptxSceneChartPlot plot, XElement plotElement, ChartWorkbookData? workbook, bool plotVisibleOnly, PresentationFontResolver? fontResolver)
+    private static async ValueTask<double> MeasureLastCategoryLabelWidthAsync(PptxTheme theme, PptxSceneChart sceneChart, PptxSceneChartPlot plot, ChartWorkbookData? workbook, bool plotVisibleOnly, PresentationFontResolver? fontResolver)
     {
         ChartAxisSource categoryAxis = ReadChartCategoryAxisForPlot(sceneChart, plot);
         ChartTextStyle categoryStyle = ReadSceneChartTextStyle(theme, sceneChart, categoryAxis.SceneAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
@@ -798,7 +797,7 @@ internal sealed partial class PptxRenderer
 
     // Legend-only clearance keeps its marker-key fallback when a series hides
     // its line. Axis/plot admission measures captions independently of series paint.
-    private static async ValueTask<double> MeasureScatterLegendEndLabelWidthAsync(PptxTheme theme, PptxSceneChart sceneChart, XDocument chartXml, PptxSceneChartPlot plot, XElement plotElement, ChartWorkbookData? workbook, bool plotVisibleOnly, PresentationFontResolver? fontResolver, double? scatterXTickTargetCount, PptxRenderContext? context = null)
+    private static async ValueTask<double> MeasureScatterLegendEndLabelWidthAsync(PptxTheme theme, PptxSceneChart sceneChart, PptxSceneChartPlot plot, ChartWorkbookData? workbook, bool plotVisibleOnly, PresentationFontResolver? fontResolver, double? scatterXTickTargetCount, PptxRenderContext? context = null)
     {
         IReadOnlyList<ChartAxisSource> valueAxes = ReadChartValueAxesForPlot(sceneChart, plot);
         ChartAxisSource xValueAxis = valueAxes.Count > 0 ? valueAxes[0] : default;

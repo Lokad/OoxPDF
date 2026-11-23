@@ -1,6 +1,5 @@
 using System.Globalization;
 using System.Text;
-using System.Xml.Linq;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Ooxml;
@@ -184,11 +183,8 @@ internal sealed partial class PptxRenderer
         PptxDocument document,
         PptxTheme theme,
         ShapeBounds bounds,
-        XDocument chartXml,
         PptxSceneChart sceneChart,
-        PptxColorMap colorMap,
         PptxSceneChartPlot barPlot,
-        XElement barChart,
         ChartBarPlotOptions barOptions,
         ChartWorkbookData? workbook,
         bool plotVisibleOnly,
@@ -210,7 +206,7 @@ internal sealed partial class PptxRenderer
             barOptions.BarDirection == PptxSceneChartBarDirection.Bar && UsesAutomaticBarFrame(barOptions, sceneChart, legend) &&
             !axisTitles.HasHorizontalTitle && !axisTitles.HasVerticalTitle)
             titleHeight = (await MeasureChartTitleAsync(theme, sceneChart, fontResolver).ConfigureAwait(false)).Height;
-        ChartPlotLayout plotLayout = (await GetBarChartPlotLayoutAsync(theme, colorMap, frame, chartXml, sceneChart, barPlot, barChart, title, plotLegend, barOptions, workbook, plotVisibleOnly, categoryLabels, fontResolver: fontResolver, ignoreManualPlotLayout: false, measuredTitleHeight: titleHeight, categoryPlacement: categoryPlacement, context: context, resolvedValueScale: resolvedValueScale, numericPlacement: numericPlacement).ConfigureAwait(false));
+        ChartPlotLayout plotLayout = (await GetBarChartPlotLayoutAsync(theme, frame, sceneChart, barPlot, title, plotLegend, barOptions, workbook, plotVisibleOnly, categoryLabels, fontResolver: fontResolver, ignoreManualPlotLayout: false, measuredTitleHeight: titleHeight, categoryPlacement: categoryPlacement, context: context, resolvedValueScale: resolvedValueScale, numericPlacement: numericPlacement).ConfigureAwait(false));
         return new ChartLayout(frame, plotLayout.PlotAreaBox, plotLayout.PlotBox, plotLayout.ManualLayoutTargetKind is not null, title, legend,
             plotLayout.CategoryLabelOffsetAdjustment,
             // Resolved ranges serve admitted single/shared horizontal plots and
@@ -282,12 +278,9 @@ internal sealed partial class PptxRenderer
 
     private static async ValueTask<ChartPlotLayout> GetBarChartPlotLayoutAsync(
         PptxTheme theme,
-        PptxColorMap colorMap,
         ChartFrameBox frame,
-        XDocument chartXml,
         PptxSceneChart sceneChart,
         PptxSceneChartPlot barPlot,
-        XElement barChart,
         string? title,
         ChartLegendLayout legend,
         ChartBarPlotOptions barOptions,
@@ -342,7 +335,7 @@ internal sealed partial class PptxRenderer
         else if (!hasTitle && legend.PositionKind == PptxSceneChartLegendPosition.Bottom)
         {
             defaultPlotBox = GetChartPlotBoxPreset(frame, ChartPlotBoxPreset.BarNoTitleBottomLegend);
-            defaultPlotBox = AdjustNoTitleBottomLegendPlotBoxForMeasuredContent(defaultPlotBox, frame, theme, colorMap, sceneChart, chartXml, barPlot, barChart, horizontalBars, usesMeasuredAxisInsets);
+            defaultPlotBox = AdjustNoTitleBottomLegendPlotBoxForMeasuredContent(defaultPlotBox, frame, theme, sceneChart, barPlot, horizontalBars, usesMeasuredAxisInsets);
         }
         else if (horizontalBars && hasTitle && !hasLegend)
         {
@@ -961,7 +954,7 @@ internal sealed partial class PptxRenderer
             }
             else
             {
-                requiredReserve = (await EstimateVerticalValueAxisLabelStripWidthAsync(theme, sceneChart, chartXml, valueAxis.SceneAxis, valueExtents, axisUnits, defaultNumberFormat, fontResolver, context: context).ConfigureAwait(false));
+                requiredReserve = (await EstimateVerticalValueAxisLabelStripWidthAsync(theme, sceneChart, valueAxis.SceneAxis, valueExtents, axisUnits, defaultNumberFormat, fontResolver, context: context).ConfigureAwait(false));
             }
             double leftReserve = plotBox.X - frame.X;
             double rightReserve = frame.X + frame.Width - plotBox.X - plotBox.Width;
@@ -1018,7 +1011,6 @@ internal sealed partial class PptxRenderer
                 ChartValueAxisStripMeasure strip = (await MeasureVerticalValueAxisLabelStripAsync(
                     theme,
                     sceneChart,
-                    chartXml,
                     valueAxis.SceneAxis,
                     extents,
                     units,
@@ -1285,11 +1277,8 @@ internal sealed partial class PptxRenderer
         ChartPlotBox plotBox,
         ChartFrameBox frame,
         PptxTheme theme,
-        PptxColorMap colorMap,
         PptxSceneChart sceneChart,
-        XDocument chartXml,
         PptxSceneChartPlot barPlot,
-        XElement barChart,
         bool horizontalBars,
         bool usesMeasuredAxisInsets)
     {
@@ -1368,12 +1357,12 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct ChartValueAxisStripMeasure(double MaxLabelWidth, double FontSize, double StripWidth, double SideGap);
 
-    private static async ValueTask<double> EstimateVerticalValueAxisLabelStripWidthAsync(PptxTheme theme, PptxSceneChart sceneChart, XDocument chartXml, PptxSceneChartAxis? sceneAxis, ChartValueExtents extents, ChartAxisUnits units, string? defaultNumberFormat, PresentationFontResolver? fontResolver, PptxRenderContext? context = null)
+    private static async ValueTask<double> EstimateVerticalValueAxisLabelStripWidthAsync(PptxTheme theme, PptxSceneChart sceneChart, PptxSceneChartAxis? sceneAxis, ChartValueExtents extents, ChartAxisUnits units, string? defaultNumberFormat, PresentationFontResolver? fontResolver, PptxRenderContext? context = null)
     {
-        return (await MeasureVerticalValueAxisLabelStripAsync(theme, sceneChart, chartXml, sceneAxis, extents, units, defaultNumberFormat, fontResolver, context: context).ConfigureAwait(false)).StripWidth;
+        return (await MeasureVerticalValueAxisLabelStripAsync(theme, sceneChart, sceneAxis, extents, units, defaultNumberFormat, fontResolver, context: context).ConfigureAwait(false)).StripWidth;
     }
 
-    private static async ValueTask<ChartValueAxisStripMeasure> MeasureVerticalValueAxisLabelStripAsync(PptxTheme theme, PptxSceneChart sceneChart, XDocument chartXml, PptxSceneChartAxis? sceneAxis, ChartValueExtents extents, ChartAxisUnits units, string? defaultNumberFormat, PresentationFontResolver? fontResolver, PptxRenderContext? context = null)
+    private static async ValueTask<ChartValueAxisStripMeasure> MeasureVerticalValueAxisLabelStripAsync(PptxTheme theme, PptxSceneChart sceneChart, PptxSceneChartAxis? sceneAxis, ChartValueExtents extents, ChartAxisUnits units, string? defaultNumberFormat, PresentationFontResolver? fontResolver, PptxRenderContext? context = null)
     {
         ChartTextStyle style = ReadSceneChartTextStyle(theme, sceneChart, sceneAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
         double fontSize = style.FontSize;

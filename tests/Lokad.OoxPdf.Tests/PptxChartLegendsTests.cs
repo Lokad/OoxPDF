@@ -1471,8 +1471,10 @@ internal static partial class PptxChartLegendsTests
             binder: null,
             [typeof(PptxTheme), typeof(PptxSceneChart)],
             modifiers: null) ?? throw new InvalidOperationException("Expected chart legend text-style bridge.");
-        object smallLegendStyle = readLegendTextStyle.Invoke(null, [PptxTheme.Empty, TestAssert.NotNull(PptxTests.BuildSingleChartScene(smallLegendChart.ToString()))]) ?? throw new InvalidOperationException("Expected small legend style.");
-        object largeLegendStyle = readLegendTextStyle.Invoke(null, [PptxTheme.Empty, TestAssert.NotNull(PptxTests.BuildSingleChartScene(largeLegendChart.ToString()))]) ?? throw new InvalidOperationException("Expected large legend style.");
+        PptxSceneChart smallLegendScene = TestAssert.NotNull(PptxTests.BuildSingleChartScene(smallLegendChart.ToString()));
+        object smallLegendStyle = readLegendTextStyle.Invoke(null, [PptxTheme.Empty, smallLegendScene]) ?? throw new InvalidOperationException("Expected small legend style.");
+        PptxSceneChart largeLegendScene = TestAssert.NotNull(PptxTests.BuildSingleChartScene(largeLegendChart.ToString()));
+        object largeLegendStyle = readLegendTextStyle.Invoke(null, [PptxTheme.Empty, largeLegendScene]) ?? throw new InvalidOperationException("Expected large legend style.");
 
         Type frameType = typeof(PptxRenderer).GetNestedType(
             "ChartFrameBox",
@@ -1482,8 +1484,8 @@ internal static partial class PptxChartLegendsTests
             "GetCartesianNoTitleRightLegendPlotBoxAsync",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected right-legend plot-box resolver.");
 
-        object smallPlotBox = AwaitPrivatePlotBox(getPlotBox.Invoke(null, [frame, PptxTheme.Empty, smallLegendChart, PptxTests.BuildSingleChartScene(smallLegendChart.ToString())!, null, true, null, smallLegendStyle, null, null])!) ?? throw new InvalidOperationException("Expected small legend plot box.");
-        object largePlotBox = AwaitPrivatePlotBox(getPlotBox.Invoke(null, [frame, PptxTheme.Empty, largeLegendChart, PptxTests.BuildSingleChartScene(largeLegendChart.ToString())!, null, true, null, largeLegendStyle, null, null])!) ?? throw new InvalidOperationException("Expected large legend plot box.");
+        object smallPlotBox = AwaitPrivatePlotBox(getPlotBox.Invoke(null, [frame, PptxTheme.Empty, smallLegendScene, null, true, null, smallLegendStyle, null, null])!) ?? throw new InvalidOperationException("Expected small legend plot box.");
+        object largePlotBox = AwaitPrivatePlotBox(getPlotBox.Invoke(null, [frame, PptxTheme.Empty, largeLegendScene, null, true, null, largeLegendStyle, null, null])!) ?? throw new InvalidOperationException("Expected large legend plot box.");
         double smallWidth = (double)(smallPlotBox.GetType().GetProperty("Width")?.GetValue(smallPlotBox) ?? 0d);
         double largeWidth = (double)(largePlotBox.GetType().GetProperty("Width")?.GetValue(largePlotBox) ?? 0d);
 
@@ -1518,7 +1520,8 @@ internal static partial class PptxChartLegendsTests
             binder: null,
             [typeof(PptxTheme), typeof(PptxSceneChart)],
             modifiers: null) ?? throw new InvalidOperationException("Expected chart legend text-style bridge.");
-        object legendStyle = readLegendTextStyle.Invoke(null, [PptxTheme.Empty, TestAssert.NotNull(PptxTests.BuildSingleChartScene(chartXml.ToString()))]) ?? throw new InvalidOperationException("Expected legend style.");
+        PptxSceneChart lineScene = TestAssert.NotNull(PptxTests.BuildSingleChartScene(chartXml.ToString()));
+        object legendStyle = readLegendTextStyle.Invoke(null, [PptxTheme.Empty, lineScene]) ?? throw new InvalidOperationException("Expected legend style.");
         Type frameType = typeof(PptxRenderer).GetNestedType(
             "ChartFrameBox",
             System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart frame box.");
@@ -1526,7 +1529,7 @@ internal static partial class PptxChartLegendsTests
         System.Reflection.MethodInfo getPlotBox = typeof(PptxRenderer).GetMethod(
             "GetCartesianNoTitleRightLegendPlotBoxAsync",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected right-legend plot-box resolver.");
-        object plotBox = AwaitPrivatePlotBox(getPlotBox.Invoke(null, [frame, PptxTheme.Empty, chartXml, PptxTests.BuildSingleChartScene(chartXml.ToString())!, null, true, null, legendStyle, null, null])!) ?? throw new InvalidOperationException("Expected plot box.");
+        object plotBox = AwaitPrivatePlotBox(getPlotBox.Invoke(null, [frame, PptxTheme.Empty, lineScene, null, true, null, legendStyle, null, null])!) ?? throw new InvalidOperationException("Expected plot box.");
         double y = (double)(plotBox.GetType().GetProperty("Y")?.GetValue(plotBox) ?? 0d);
         double height = (double)(plotBox.GetType().GetProperty("Height")?.GetValue(plotBox) ?? 0d);
         TestAssert.True(Math.Abs(y - 75.90d) < 0.05d, "Plot bottom should sit 39.9pt below the frame top, on the Office category-axis line. Got " + y);
@@ -1565,7 +1568,9 @@ internal static partial class PptxChartLegendsTests
             binder: null,
             [typeof(PptxTheme), typeof(PptxSceneChart)],
             modifiers: null) ?? throw new InvalidOperationException("Expected chart legend text-style bridge.");
-        object legendStyle = readLegendTextStyle.Invoke(null, [PptxTheme.Empty, TestAssert.NotNull(PptxTests.BuildSingleChartScene(smallAxisChart.ToString()))]) ?? throw new InvalidOperationException("Expected legend style.");
+        PptxSceneChart smallAxisScene = TestAssert.NotNull(PptxTests.BuildSingleChartScene(smallAxisChart.ToString()));
+        PptxSceneChart largeAxisScene = TestAssert.NotNull(PptxTests.BuildSingleChartScene(largeAxisChart.ToString()));
+        object legendStyle = readLegendTextStyle.Invoke(null, [PptxTheme.Empty, smallAxisScene]) ?? throw new InvalidOperationException("Expected legend style.");
         Type frameType = typeof(PptxRenderer).GetNestedType(
             "ChartFrameBox",
             System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart frame box.");
@@ -1574,8 +1579,8 @@ internal static partial class PptxChartLegendsTests
             "GetCartesianNoTitleRightLegendPlotBoxAsync",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected right-legend plot-box resolver.");
 
-        object smallPlotBox = AwaitPrivatePlotBox(getPlotBox.Invoke(null, [frame, PptxTheme.Empty, smallAxisChart, PptxTests.BuildSingleChartScene(smallAxisChart.ToString())!, null, true, null, legendStyle, null, null])!) ?? throw new InvalidOperationException("Expected small axis plot box.");
-        object largePlotBox = AwaitPrivatePlotBox(getPlotBox.Invoke(null, [frame, PptxTheme.Empty, largeAxisChart, PptxTests.BuildSingleChartScene(largeAxisChart.ToString())!, null, true, null, legendStyle, null, null])!) ?? throw new InvalidOperationException("Expected large axis plot box.");
+        object smallPlotBox = AwaitPrivatePlotBox(getPlotBox.Invoke(null, [frame, PptxTheme.Empty, smallAxisScene, null, true, null, legendStyle, null, null])!) ?? throw new InvalidOperationException("Expected small axis plot box.");
+        object largePlotBox = AwaitPrivatePlotBox(getPlotBox.Invoke(null, [frame, PptxTheme.Empty, largeAxisScene, null, true, null, legendStyle, null, null])!) ?? throw new InvalidOperationException("Expected large axis plot box.");
         double smallX = (double)(smallPlotBox.GetType().GetProperty("X")?.GetValue(smallPlotBox) ?? 0d);
         double largeX = (double)(largePlotBox.GetType().GetProperty("X")?.GetValue(largePlotBox) ?? 0d);
 
