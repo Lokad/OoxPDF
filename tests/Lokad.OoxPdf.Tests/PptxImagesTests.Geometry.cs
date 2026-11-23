@@ -192,9 +192,19 @@ internal static partial class PptxImagesTests
         }
         foreach (string invalid in new[] { "yellow", "GG0000", "00xx00", "0000zz", "-10000" })
             TestAssert.True(!RgbColor.TryParse(invalid, out _), "Invalid hex reports false instead of aborting the enclosing picture.");
-        foreach (string invalid in new[] { "#GG0000", "#xyz", "nocolor" })
+        foreach (string invalid in new[] { "#GG0000", "#xyz", "#abcg", "#112233g0", "#1 223344", "#12345", "nocolor" })
             TestAssert.True(!RgbColor.TryParseCssColor(invalid, out _, out _), "Malformed CSS paint retains the explicit unsupported-paint path.");
         TestAssert.True(RgbColor.TryParseCssColor("#fF0", out var shortColor, out _) && shortColor == new RgbColor(255, 255, 0), "Safe hex parsing preserves supported shorthand.");
+        foreach (string value in new[] { "#F0a6", "#ff00AA66" })
+        {
+            TestAssert.True(RgbColor.TryParseCssColor(value, out RgbColor color, out double opacity), value);
+            TestAssert.Equal(new RgbColor(255, 0, 170), color);
+            TestAssert.Equal(.4d, opacity);
+        }
+        TestAssert.True(RgbColor.TryParseCssColor("#aBc0", out _, out double transparent) && transparent == 0d,
+            "An explicit zero alpha hides the paint.");
+        TestAssert.True(RgbColor.TryParseCssColor("#aabbccFF", out _, out double opaque) && opaque == 1d,
+            "A full alpha preserves opaque paint.");
     }
 
     public static void PptxSvgRgbFunctionsParseSrgbChannelsAndOpacity()

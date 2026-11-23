@@ -1271,7 +1271,7 @@ internal static partial class SvgTextTests
             "1 0 0 rg", "0 0 1 RG", "/PatternType 2", "/ShadingType 3", LabelColor);
     }
 
-    public static void SvgFunctionalColorAlphaMatchesSeparatePaintOpacity()
+    public static void SvgSrgbColorAlphaMatchesSeparatePaintOpacity()
     {
         string Picture(string firstStop, string lastStop, string fill, string stroke, string label) => Svg($"""
             <defs><linearGradient id="alpha">
@@ -1285,16 +1285,20 @@ internal static partial class SvgTextTests
             <text x="10" y="118" font-size="24" {label}>INK</text>
             """);
 
-        string expected = Picture("""stop-color="red" stop-opacity=".25" """,
-            """stop-color="blue" stop-opacity=".75" """, """fill="red" fill-opacity=".25" """,
-            """stroke="blue" stroke-opacity=".5" """,
-            """fill="url(#missing) #112233" fill-opacity=".5" """);
-        string functional = Picture("""stop-color="rgba(255,0,0,.25)" """,
-            """stop-color="rgb(0 0 255/75%)" """, """fill="rgb(255 0 0/50%)" fill-opacity=".5" """,
-            """stroke="rgba(0,0,255,.5)" """,
-            """fill="url(#missing) rgb(17 34 51/50%)" stroke="rgba(255,0,0,0)" """);
-        AssertSvgPaintInBothFormats(expected, functional, pdf => TestAssert.Equal(3, LabelPaths(pdf)),
-            "1 0 0 rg", "0 0 1 RG", "/S /Luminosity", "/ca 0.25");
+        string expected = Picture("""stop-color="red" stop-opacity=".2" """,
+            """stop-color="blue" stop-opacity=".8" """, """fill="red" fill-opacity=".2" """,
+            """stroke="blue" stroke-opacity=".6" """,
+            """fill="url(#missing) #112233" fill-opacity=".4" """);
+        string functional = Picture("""stop-color="rgba(255,0,0,.2)" """,
+            """stop-color="rgb(0 0 255/80%)" """, """fill="rgb(255 0 0/40%)" fill-opacity=".5" """,
+            """stroke="rgba(0,0,255,.6)" """,
+            """fill="url(#missing) rgb(17 34 51/40%)" stroke="rgba(255,0,0,0)" """);
+        string hexadecimal = Picture("""stop-color="#f003" """,
+            """stop-color="#0000FFcc" """, """fill="#f006" fill-opacity=".5" """,
+            """stroke="#00f9" """,
+            """fill="url(#missing) #11223366" stroke="#f000" """);
+        AssertSvgPaintInBothFormats(expected, [functional, hexadecimal], pdf => TestAssert.Equal(3, LabelPaths(pdf)),
+            "1 0 0 rg", "0 0 1 RG", "/S /Luminosity", "/ca 0.2");
     }
 
     public static void SvgGradientTemplateCyclesAndMissingTargetsKeepLocalDeclarations()
@@ -1359,6 +1363,10 @@ internal static partial class SvgTextTests
         => AssertSvgPaintInBothFormats(expected, actual, null, expectedMarkers);
 
     private static void AssertSvgPaintInBothFormats(string expected, string actual, Action<string>? assertControl,
+        params string[] expectedMarkers) =>
+        AssertSvgPaintInBothFormats(expected, [actual], assertControl, expectedMarkers);
+
+    private static void AssertSvgPaintInBothFormats(string expected, IReadOnlyList<string> variants, Action<string>? assertControl,
         params string[] expectedMarkers)
     {
         foreach (var (kind, view, geometry) in new[] {
@@ -1387,8 +1395,11 @@ internal static partial class SvgTextTests
                 TestAssert.Contains(marker, content);
             }
             assertControl?.Invoke(content);
-            TestAssert.True(control.AsSpan().SequenceEqual(Render(actual)),
-                $"{kind} {view} must emit the same paint and resources as the control.");
+            foreach (string variant in variants)
+            {
+                TestAssert.True(control.AsSpan().SequenceEqual(Render(variant)),
+                    $"{kind} {view} must emit the same paint and resources as the control.");
+            }
             TestAssert.Equal(0, diagnostics.Count);
         }
     }

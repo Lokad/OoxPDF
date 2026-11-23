@@ -33,12 +33,7 @@ internal readonly record struct RgbColor(byte Red, byte Green, byte Blue)
         string trimmed = text.Trim();
         if (trimmed.StartsWith("#", StringComparison.Ordinal))
         {
-            string hex = trimmed.Substring(1);
-            if (hex.Length == 3)
-            {
-                hex = new string(new[] { hex[0], hex[0], hex[1], hex[1], hex[2], hex[2] });
-            }
-            return hex.Length == 6 && TryParse(hex, out color);
+            return TryParseCssHex(trimmed.AsSpan(1), out color, out opacity);
         }
         if (trimmed.Length == 6 && TryParse(trimmed, out color))
         {
@@ -51,6 +46,28 @@ internal readonly record struct RgbColor(byte Red, byte Green, byte Blue)
             return TryParseCssRgb(trimmed.AsSpan(functionLength, trimmed.Length - functionLength - 1), out color, out opacity);
         }
         return CssColorKeywords.TryGetValue(trimmed, out color);
+    }
+
+    private static bool TryParseCssHex(ReadOnlySpan<char> digits, out RgbColor color, out double opacity)
+    {
+        color = default;
+        opacity = 1d;
+        if (digits.Length is not (3 or 4 or 6 or 8)) return false;
+
+        int width = digits.Length < 6 ? 1 : 2;
+        int count = digits.Length / width;
+        Span<byte> components = stackalloc byte[4];
+        for (int index = 0; index < count; index++)
+        {
+            if (!byte.TryParse(digits.Slice(index * width, width), NumberStyles.AllowHexSpecifier,
+                    CultureInfo.InvariantCulture, out byte component))
+                return false;
+            components[index] = width == 1 ? (byte)(component * 17) : component;
+        }
+
+        color = new RgbColor(components[0], components[1], components[2]);
+        if (count == 4) opacity = components[3] / 255d;
+        return true;
     }
 
     private static bool TryParseCssRgb(ReadOnlySpan<char> arguments, out RgbColor color, out double opacity)
