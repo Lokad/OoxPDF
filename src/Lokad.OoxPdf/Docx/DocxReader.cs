@@ -48,13 +48,15 @@ internal sealed partial class DocxReader
 
     private sealed class DocxComplexFieldState
     {
-        public DocxComplexFieldState(int sourceRunIndex, int textRunIndex, int textLengthStart, int nestingDepth, bool isLocked)
+        public DocxComplexFieldState(int sourceRunIndex, int textRunIndex, int textLengthStart, int nestingDepth,
+            bool isLocked, bool usesOriginalInstruction)
         {
             SourceRunIndex = sourceRunIndex;
             TextRunIndex = textRunIndex;
             TextLengthStart = textLengthStart;
             NestingDepth = nestingDepth;
             IsLocked = isLocked;
+            UsesOriginalInstruction = usesOriginalInstruction;
         }
 
         public StringBuilder Instruction { get; } = new();
@@ -64,6 +66,7 @@ internal sealed partial class DocxReader
         public int TextLengthStart { get; private set; }
         public int NestingDepth { get; }
         public bool IsLocked { get; }
+        public bool UsesOriginalInstruction { get; }
         public bool HasSeparate { get; set; }
         public bool InResult { get; set; }
         public bool HasCachedResult { get; set; }
@@ -103,6 +106,7 @@ internal sealed partial class DocxReader
     // because the pre-scan runs before (and independently of) paragraph parsing.
     private sealed record DocxComplexFieldScanState(
         StringBuilder Instruction,
+        bool UsesOriginalInstruction,
         bool HasSeparate,
         bool InResult,
         bool HasCachedResult);

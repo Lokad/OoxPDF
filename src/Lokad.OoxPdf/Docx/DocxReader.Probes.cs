@@ -94,7 +94,7 @@ internal sealed partial class DocxReader
                 }
             }
             cancellationToken.ThrowIfCancellationRequested();
-            if (HasUnsupportedComplexFields(probeDocument))
+            if (HasUnsupportedComplexFields(probeDocument, revisionFilteringMarkupMode))
             {
                 Emit("DOCX_UNSUPPORTED_COMPLEX_FIELD", "complex field", probePartName, "Ignored");
             }
@@ -724,7 +724,7 @@ internal sealed partial class DocxReader
         return formattingRevisionElements.Any(name => document.Descendants(name).Any());
     }
 
-    private static bool HasUnsupportedComplexFields(XDocument document)
+    private static bool HasUnsupportedComplexFields(XDocument document, OoxPdfDocxMarkupMode markupMode)
     {
             bool IsSupportedComplexFieldRunChild(XElement element)
             {
@@ -744,7 +744,7 @@ internal sealed partial class DocxReader
         var fields = new List<DocxComplexFieldScanState>();
         foreach (XElement paragraph in document.Descendants(WordprocessingNamespace + "p"))
         {
-            if (HasUnsupportedComplexFieldInInlineChildren(paragraph, fields))
+            if (HasUnsupportedComplexFieldInInlineChildren(paragraph, fields, markupMode))
             {
                 return true;
             }
@@ -755,8 +755,7 @@ internal sealed partial class DocxReader
             return true;
         }
 
-        return document.Descendants(WordprocessingNamespace + "fldChar").Any(fieldChar => !IsSupportedComplexFieldRunChild(fieldChar)) ||
-            document.Descendants(WordprocessingNamespace + "instrText").Any(instruction => !IsSupportedComplexFieldRunChild(instruction));
+        return document.Descendants().Any(element => IsComplexFieldMarkupElement(element) && !IsSupportedComplexFieldRunChild(element));
     }
 
     private static bool IsVisibleInlineContainer(XElement? element)
@@ -783,7 +782,8 @@ internal sealed partial class DocxReader
 
     private static bool HasUnsupportedComplexFieldInInlineChildren(
         XElement container,
-        List<DocxComplexFieldScanState> fields)
+        List<DocxComplexFieldScanState> fields,
+        OoxPdfDocxMarkupMode markupMode)
     {
         foreach (XElement child in container.Elements())
         {
@@ -791,7 +791,7 @@ internal sealed partial class DocxReader
             {
                 foreach (XElement runChild in child.Elements())
                 {
-                    if (ProcessComplexFieldRunChild(runChild, fields))
+                    if (ProcessComplexFieldRunChild(runChild, fields, markupMode))
                     {
                         return true;
                     }
@@ -803,7 +803,7 @@ internal sealed partial class DocxReader
             if (IsFieldResultContent(child))
             {
                 // Equations live beside runs. The same result stack owns both.
-                ProcessComplexFieldRunChild(child, fields);
+                ProcessComplexFieldRunChild(child, fields, markupMode);
                 continue;
             }
 
@@ -811,7 +811,7 @@ internal sealed partial class DocxReader
             {
                 foreach (XElement content in child.Elements(WordprocessingNamespace + "sdtContent"))
                 {
-                    if (HasUnsupportedComplexFieldInInlineChildren(content, fields))
+                    if (HasUnsupportedComplexFieldInInlineChildren(content, fields, markupMode))
                     {
                         return true;
                     }
@@ -821,7 +821,7 @@ internal sealed partial class DocxReader
             }
 
             if (IsComplexFieldInlineContainer(child) &&
-                HasUnsupportedComplexFieldInInlineChildren(child, fields))
+                HasUnsupportedComplexFieldInInlineChildren(child, fields, markupMode))
             {
                 return true;
             }
@@ -832,7 +832,8 @@ internal sealed partial class DocxReader
 
     private static bool ProcessComplexFieldRunChild(
         XElement child,
-        List<DocxComplexFieldScanState> fields)
+        List<DocxComplexFieldScanState> fields,
+        OoxPdfDocxMarkupMode markupMode)
     {
         if (child.Name == WordprocessingNamespace + "fldChar")
         {
@@ -844,7 +845,9 @@ internal sealed partial class DocxReader
                     return true;
                 }
 
-                fields.Add(new DocxComplexFieldScanState(new StringBuilder(), HasSeparate: false, InResult: false, HasCachedResult: false));
+                bool deletedField = child.Ancestors(WordprocessingNamespace + "del").Any();
+                fields.Add(new DocxComplexFieldScanState(new StringBuilder(), UsesOriginalFieldInstruction(markupMode, deletedField),
+                    HasSeparate: false, InResult: false, HasCachedResult: false));
                 return false;
             }
 
@@ -855,8 +858,7 @@ internal sealed partial class DocxReader
                     return true;
                 }
 
-                (StringBuilder instruction, _, _, bool hasCachedResult) = fields[^1];
-                fields[^1] = new DocxComplexFieldScanState(instruction, HasSeparate: true, InResult: true, hasCachedResult);
+                fields[^1] = fields[^1] with { HasSeparate = true, InResult = true };
                 return false;
             }
 
@@ -867,10 +869,10 @@ internal sealed partial class DocxReader
                     return true;
                 }
 
-                (StringBuilder instruction, bool hasSeparate, _, _) = fields[^1];
+                var field = fields[^1];
                 // A closed result may be intentionally empty. An instruction
                 // without a result boundary is still unsupported.
-                if (ResolveFieldPlaceholder(instruction.ToString()) is null && !hasSeparate)
+                if (ResolveFieldPlaceholder(field.Instruction.ToString()) is null && !field.HasSeparate)
                 {
                     return true;
                 }
@@ -885,7 +887,11 @@ internal sealed partial class DocxReader
         bool inFieldResult = fields.Count != 0 && fields[^1].InResult;
         if (fields.Count != 0 && !inFieldResult && IsFieldInstructionText(child))
         {
-            fields[^1].Instruction.Append((string?)child);
+            var field = fields[^1];
+            bool inserted = field.UsesOriginalInstruction && child.Ancestors().Any(element =>
+                element.Name == WordprocessingNamespace + "ins" || element.Name == WordprocessingNamespace + "moveTo");
+            if (IncludesFieldInstruction(child, field.UsesOriginalInstruction, inserted))
+                field.Instruction.Append((string?)child);
             return false;
         }
 
@@ -893,11 +899,9 @@ internal sealed partial class DocxReader
         {
             for (int fieldIndex = 0; fieldIndex < fields.Count; fieldIndex++)
             {
-                (StringBuilder instruction, bool hasSeparate, bool inResult, bool _) = fields[fieldIndex];
-                if (inResult)
-                {
-                    fields[fieldIndex] = new DocxComplexFieldScanState(instruction, hasSeparate, inResult, HasCachedResult: true);
-                }
+                var field = fields[fieldIndex];
+                if (field.InResult && !field.HasCachedResult)
+                    fields[fieldIndex] = field with { HasCachedResult = true };
             }
         }
 

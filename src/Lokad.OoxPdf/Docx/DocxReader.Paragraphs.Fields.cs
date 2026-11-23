@@ -56,7 +56,16 @@ internal sealed partial class DocxReader
     }
 
     private static bool IsFieldInstructionText(XElement element) =>
-        element.Name == WordprocessingNamespace + "instrText";
+        element.Name == WordprocessingNamespace + "instrText" ||
+        element.Name == WordprocessingNamespace + "delInstrText";
+
+    // Review uses the current opcode on a current field. A deleted field
+    // shown in Review keeps the opcode it had before the deletion.
+    private static bool UsesOriginalFieldInstruction(OoxPdfDocxMarkupMode mode, bool deletedField) =>
+        mode == OoxPdfDocxMarkupMode.Original || deletedField;
+
+    private static bool IncludesFieldInstruction(XElement instruction, bool usesOriginalInstruction, bool inserted) =>
+        instruction.Name == WordprocessingNamespace + "delInstrText" ? usesOriginalInstruction : !usesOriginalInstruction || !inserted;
 
     private static bool IsComplexFieldMarkupElement(XElement element) =>
         element.Name == WordprocessingNamespace + "fldChar" || IsFieldInstructionText(element);

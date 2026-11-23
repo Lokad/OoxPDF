@@ -1100,20 +1100,24 @@ internal sealed partial class DocxReader
                 if (fieldPictureChildren?.Contains(child) == true) RecordComplexFieldResult();
                 DocxComplexFieldState? field = CurrentComplexField();
                 bool isInstructionText = IsFieldInstructionText(child);
-                // Outside a complex field's code region, instrText is regular text.
+                // Outside a complex field's code region, instruction text follows the ordinary text rules.
                 string childText = ReadRunTextChild(child, includeInstructionText: field is not { InResult: false });
                 if (child.Name == WordprocessingNamespace + "fldChar")
                 {
                     var position = field?.PendingPlaceholder is { SourceRunIndex: < 0 }
                         ? (Offset: textOffset, (positions ??= ReadRunInlinePositions(run, cancellationToken))[child].Order)
                         : (Offset: 0, Order: 0);
-                    ApplyComplexFieldChar(child, currentSourceRunIndex, position);
+                    ApplyComplexFieldChar(child, currentSourceRunIndex, position, revision);
                 }
                 else if (isInstructionText && field is { InResult: false })
                 {
-                    var position = (positions ??= ReadRunInlinePositions(run, cancellationToken))[child];
-                    AddComplexFieldInstruction(field, child, currentSourceRunIndex, textOffset, position.Order,
-                        resolvedRun, runStyleResolution, revision, revisions);
+                    if (IncludesFieldInstruction(child, field.UsesOriginalInstruction, revision?.Kind is
+                        DocxRevisionKind.Insertion or DocxRevisionKind.MoveTo))
+                    {
+                        var position = (positions ??= ReadRunInlinePositions(run, cancellationToken))[child];
+                        AddComplexFieldInstruction(field, child, currentSourceRunIndex, textOffset, position.Order,
+                            resolvedRun, runStyleResolution, revision, revisions);
+                    }
                 }
                 else if (IsInlineReferenceElement(child))
                 {
@@ -1185,7 +1189,8 @@ internal sealed partial class DocxReader
                 }).ToArray(), drawings.Positions);
         }
 
-        void ApplyComplexFieldChar(XElement fieldChar, int currentSourceRunIndex, (int Offset, int Order) position)
+        void ApplyComplexFieldChar(XElement fieldChar, int currentSourceRunIndex, (int Offset, int Order) position,
+            DocxRevisionInfo? revision)
         {
             string? fieldCharType = (string?)fieldChar.Attribute(WordprocessingNamespace + "fldCharType");
             if (string.Equals(fieldCharType, "begin", StringComparison.OrdinalIgnoreCase))
@@ -1195,7 +1200,8 @@ internal sealed partial class DocxReader
                     runs.Count,
                     runs.Sum(run => run.Text.Length),
                     complexFieldStack.Count,
-                    OoxBoolean.IsTrue((string?)fieldChar.Attribute(WordprocessingNamespace + "fldLock"))));
+                    OoxBoolean.IsTrue((string?)fieldChar.Attribute(WordprocessingNamespace + "fldLock")),
+                    UsesOriginalFieldInstruction(markupMode, revision?.Kind == DocxRevisionKind.Deletion)));
                 return;
             }
 

@@ -166,6 +166,96 @@ internal static class DocxFieldInstructionTests
         static string Compact(string text) => string.Concat(text.Where(character => !char.IsWhiteSpace(character)));
     }
 
+    public static void DocxLiteralDeletedInstructionTextFollowsDeletedTextVisibility()
+    {
+        foreach (var mode in Modes)
+        {
+            var literal = Render("delText");
+            var instruction = Render("delInstrText");
+            TestAssert.Equal(mode is OoxPdfDocxMarkupMode.Original or OoxPdfDocxMarkupMode.AllMarkup
+                ? "BeforeDeletedwords4729after" : "Before4729after",
+                string.Concat(instruction.Text.Where(character => !char.IsWhiteSpace(character))));
+            TestAssert.Equal(literal.Text, instruction.Text);
+            TestAssert.Equal(literal.Content, instruction.Content);
+
+            (string Text, string Content) Render(string name)
+            {
+                var diagnostics = new List<OoxPdfDiagnostic>();
+                var source = Read([Run("Before "), Revision("del", 1, RunText(name, "Deleted words ")), Run("4729 after")],
+                    mode, diagnosticSink: diagnostics.Add);
+                TestAssert.Equal(0, source.Paragraphs[0].FieldReferences.Count);
+                TestAssert.Equal(0, diagnostics.Count);
+                var page = RenderRevisionPages(source, mode)[0];
+                return (DocxPageFootnoteNumberingTests.DecodeText(page), page.Content);
+            }
+        }
+    }
+
+    public static void DocxFieldRevisionCodesSelectViewAndKeepLockedResults()
+    {
+        foreach (var mode in Modes)
+        {
+            bool showsDeleted = mode is OoxPdfDocxMarkupMode.Original or OoxPdfDocxMarkupMode.AllMarkup;
+            foreach (bool locked in new[] { false, true })
+            {
+                var deleted = Revision("del", 1, Marker("begin", locked), RunText("delInstrText", " PAGE "),
+                    Marker("separate"), RunText("delText", "7811 "), Marker("end"));
+                AssertField([deleted], showsDeleted ? DocxFieldKind.Page : null,
+                    showsDeleted ? locked ? "7811" : "1" : "", computes: showsDeleted && !locked);
+            }
+
+            bool original = mode == OoxPdfDocxMarkupMode.Original;
+            var former = Revision("del", 1, RunText("delInstrText", " PA"), RunText("delInstrText", "GE "));
+            var current = Revision("ins", 2, RunText("instrText", " NUM"), RunText("instrText", "PAGES "));
+            AssertField([Marker("begin"), former, current, Marker("separate"), Run("7811 "), Marker("end")],
+                original ? DocxFieldKind.Page : DocxFieldKind.NumPages, original ? "1" : "2", computes: true);
+            AssertField([Marker("begin"), former, current, Marker("end")],
+                original ? DocxFieldKind.Page : DocxFieldKind.NumPages, original ? "1" : "2", computes: true);
+
+            void AssertField(XElement[] contents, DocxFieldKind? expected, string visibleResult, bool computes)
+            {
+                var diagnostics = new List<OoxPdfDiagnostic>();
+                var source = Read([Run("Before "), .. contents, Run(" 4729 after")], mode,
+                    target: true, diagnosticSink: diagnostics.Add);
+                TestAssert.Equal(0, diagnostics.Count);
+                var fields = source.Paragraphs[0].FieldReferences;
+                if (expected.HasValue)
+                {
+                    var field = fields.Single();
+                    TestAssert.Equal(expected.Value, field.Kind);
+                    TestAssert.Equal(computes, field.UsesPlaceholder);
+                }
+                else
+                {
+                    TestAssert.Equal(0, fields.Count);
+                }
+                PdfPage[] pages = RenderRevisionPages(source, mode);
+                TestAssert.Equal(2, pages.Length);
+                string actual = string.Concat(DocxPageFootnoteNumberingTests.DecodeText(pages[0]).Where(c => !char.IsWhiteSpace(c)));
+                TestAssert.Equal("Before" + visibleResult + "4729after", actual);
+            }
+        }
+
+        static XElement Marker(string kind, bool locked = false) => new(W + "r",
+            new XElement(W + "fldChar", new XAttribute(W + "fldCharType", kind),
+                locked ? new XAttribute(W + "fldLock", "1") : null));
+    }
+
+    private static PdfPage[] RenderRevisionPages(DocxDocument document, OoxPdfDocxMarkupMode mode)
+    {
+        var geometry = mode == OoxPdfDocxMarkupMode.AllMarkup
+            ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
+            : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout;
+        return new DocxRenderer(new PortableRenderingTests.PinnedResolver(), mode, geometry)
+            .RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
+    }
+
+    private static XElement Revision(string kind, int id, params XElement[] runs) =>
+        new(W + kind, new XAttribute(W + "id", id), new XAttribute(W + "author", "Reviewer"), runs);
+
+    private static XElement RunText(string kind, string value) =>
+        new(W + "r", new XElement(W + kind, new XAttribute(XNamespace.Xml + "space", "preserve"), value));
+
     public static void DocxFieldInstructionBoundariesConfirmRealCountersAndKeepFollowingNumbers()
     {
         foreach (var mode in Modes)
