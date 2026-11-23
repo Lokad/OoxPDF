@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Globalization;
 
 namespace Lokad.OoxPdf.Docx;
@@ -95,7 +96,7 @@ internal sealed partial record DocxStructureSnapshot(
                     || (block.SectionColumnDefinitionCount ?? 0) > 0;
             }
 
-            string GetBlockKind(DocxBodyElement element)
+            static string GetBlockKind(DocxBodyElement element)
             {
                 return element switch
                 {
@@ -105,7 +106,7 @@ internal sealed partial record DocxStructureSnapshot(
                     DocxPageBreakElement => "PageBreak",
                     DocxManualBreakElement => "ManualBreak",
                     DocxSectionBreakElement => "SectionBreak",
-                    _ => "Unknown"
+                    _ => throw new UnreachableException("A DOCX body element has no structure snapshot kind.")
                 };
             }
 
@@ -143,8 +144,7 @@ internal sealed partial record DocxStructureSnapshot(
                     blocks.Add(FromSectionBreak(blockIndex, previousKind, nextKind, sectionBreak));
                     break;
                 default:
-                    blocks.Add(DocxStructureBlockSnapshot.ForUnknown(blockIndex, previousKind, nextKind));
-                    break;
+                    throw new UnreachableException("A DOCX body element has no structure snapshot.");
             }
         }
 
