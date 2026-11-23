@@ -14,6 +14,31 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxTablesLayoutTests
 {
+    public static void DocxPercentageTableGridAtContainerWidthIncludesOuterCellInsets()
+    {
+        DocxTable seed = DocxTests.CreateSingleCellTable("Width control", rowHeight: 20d);
+        DocxTableRow sourceRow = seed.Rows.Single();
+        DocxTableCell sourceCell = sourceRow.Cells.Single();
+        DocxTableCell cell = sourceCell with { Margins = sourceCell.Margins with { LeftPoints = 5.4d, RightPoints = 5.4d } };
+        foreach ((double authoredWidth, double expectedWidth) in new[] { (179.95d, 190.8d), (180d, 190.8d), (180.05d, 180d) })
+        {
+            DocxTable table = seed with
+            {
+                LayoutValue = "fixed",
+                ColumnWidthsPoints = [authoredWidth],
+                PreferredWidthType = "pct",
+                PreferredWidthValue = "5000",
+                Rows = [sourceRow with { Cells = [cell] }]
+            };
+            DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+            DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+                .Create(document, new DocxTests.FamilyWidthTextMeasurer(), default);
+            var row = layout.Pages.Single().Items.OfType<DocxTableRowLayout>().Single();
+            TestAssert.True(Math.Abs(row.Table.ResolvedColumnWidths.Single() - expectedWidth) < 0.001d,
+                $"The {authoredWidth}pt grid must resolve to {expectedWidth}pt.");
+        }
+    }
+
     public static void DocxTableLayoutStageLineFitIgnoresRoundoffAndKeepsActualOverflow()
     {
         foreach (string text in new[] { "Alpha Beta", "Alphabeta", "Alpha-Beta" })

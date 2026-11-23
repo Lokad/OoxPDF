@@ -1276,7 +1276,9 @@ internal sealed partial class DocxLayoutEngine
                 {
                     double normalPercentageWidth = tableAvailableWidth * fiftiethsPercent / 5000d;
                     double explicitGridWidth = table.HasExplicitGrid ? gridTableWidth : 0d;
-                    double percentageBasis = explicitGridWidth > 0d && explicitGridWidth < normalPercentageWidth - 0.001d
+                    // Reserve room for outer cell insets when the grid fits the
+                    // requested percentage width, including an exact match.
+                    double percentageBasis = explicitGridWidth > 0d && explicitGridWidth <= normalPercentageWidth + 0.001d
                         ? tableAvailableWidth + ResolveOuterTableCellContentInset()
                         : tableAvailableWidth;
                     return Math.Max(0d, percentageBasis * fiftiethsPercent / 5000d);

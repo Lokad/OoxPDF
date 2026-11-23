@@ -17311,6 +17311,7 @@
     "XmlAttributesBelowLimitPass"
   ],
   "docx-table-grid-origins": [
+    "=DocxPercentageTableGridAtContainerWidthIncludesOuterCellInsets",
     "DocxCompatGridAlignsOuterBorderAtMargin",
     "DocxCompatIndentAlignsOuterBorderAtIndentedMargin",
     "DocxDirectMarginsReplaceStyleMarginsForTextOffset",
