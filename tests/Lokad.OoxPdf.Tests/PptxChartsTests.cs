@@ -1748,7 +1748,7 @@ internal static partial class PptxChartsTests
         PptxSceneChartManualLayout FactorLayout(double? x, double? y) => new(
             HasLayout: true, X: x, XValue: "", Y: y, YValue: "",
             Width: null, WidthValue: "", Height: null, HeightValue: "",
-            LayoutTargetKind: PptxSceneChartManualLayoutTarget.Unknown, LayoutTarget: "",
+            LayoutTargetKind: PptxSceneChartManualLayoutTarget.Unknown,
             XModeKind: PptxSceneChartManualLayoutMode.Unknown, XMode: "",
             YModeKind: PptxSceneChartManualLayoutMode.Unknown, YMode: "",
             WidthModeKind: PptxSceneChartManualLayoutMode.Unknown, WidthMode: "",

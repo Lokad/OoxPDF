@@ -444,7 +444,7 @@ internal sealed partial class PptxSceneBuilder
                 tickLabelSkipValue,
                 ReadChartAxisNumberFormat(axis),
                 ReadChartNumberFormat(axis),
-                ReadChartTitleElement(axis.Element(ChartNamespace + "title"), theme, colorMap, null, "", null),
+                ReadChartTitleElement(axis.Element(ChartNamespace + "title"), theme, colorMap),
                 hasLogarithmicScale: hasLogarithmicScale) with
             {
                 TextBodyProperties = ReadChartTextBodyProperties(axis)
@@ -493,7 +493,6 @@ internal sealed partial class PptxSceneBuilder
         (double? y, string yValue) = ReadChartManualLayoutFactorWithValue(manualLayout, "y");
         (double? width, string widthValue) = ReadChartManualLayoutFactorWithValue(manualLayout, "w");
         (double? height, string heightValue) = ReadChartManualLayoutFactorWithValue(manualLayout, "h");
-        string layoutTarget = ReadChartElementValue(manualLayout, "layoutTarget");
         string xMode = ReadChartElementValue(manualLayout, "xMode");
         string yMode = ReadChartElementValue(manualLayout, "yMode");
         string widthMode = ReadChartElementValue(manualLayout, "wMode");
@@ -508,8 +507,7 @@ internal sealed partial class PptxSceneBuilder
             widthValue,
             height,
             heightValue,
-            ParseChartManualLayoutTarget(layoutTarget),
-            layoutTarget,
+            ParseChartManualLayoutTarget(ReadChartElementValue(manualLayout, "layoutTarget")),
             ParseChartManualLayoutMode(xMode),
             xMode,
             ParseChartManualLayoutMode(yMode),
