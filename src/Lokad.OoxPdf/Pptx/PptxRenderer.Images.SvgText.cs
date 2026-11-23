@@ -76,6 +76,8 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct SvgTextFill(RgbColor? Color, double Alpha);
 
+    private readonly record struct SvgTextAppearance(string FamilyList, string Slant, int Weight, double Size, SvgTextFill Fill);
+
     private static bool HasSvgStylesheet(XDocument svg) =>
         svg.DescendantNodes().OfType<XProcessingInstruction>().Any(p => p.Target == "xml-stylesheet" && !p.Ancestors().Any(IsSvgMetadataElement)) ||
         svg.Descendants().Any(e => e.Name.LocalName == "style" && !string.IsNullOrWhiteSpace(e.Value) &&
@@ -120,13 +122,8 @@ internal sealed partial class PptxRenderer
         if (anchor is not ("start" or "middle" or "end")) return false;
         string fontStyle = Inherited("font-style")?.ToLowerInvariant() ?? "normal";
         if (fontStyle is not ("normal" or "italic" or "oblique")) return false;
-        string weight = Inherited("font-weight")?.ToLowerInvariant() ?? "normal";
-        bool bold = weight == "bold";
-        if (weight is not ("normal" or "bold"))
-        {
-            if (!int.TryParse(weight, NumberStyles.None, CultureInfo.InvariantCulture, out int numeric) || numeric is < 100 or > 900) return false;
-            bold = numeric >= 600;
-        }
+        if (!TryReadSvgTextWeight(Inherited("font-weight") ?? "normal", out int weight)) return false;
+        string familyList = Inherited("font-family") ?? "serif";
         double size = SvgInitialFontSize;
         foreach (XElement owner in element.AncestorsAndSelf().Reverse())
         {
@@ -141,16 +138,17 @@ internal sealed partial class PptxRenderer
         if (!double.IsFinite(x) || !double.IsFinite(y)) return false;
         string fill = ResolveSvgPaintFallback(element, style, Inherited("fill") ?? "black", paintServerIds, out _);
         if (!TryReadSvgTextFill(element, style, fill, out var paint)) return false;
-        if (!TryReadPlainSvgText(element, size, paint, IsSvgVisibilityHidden(Inherited("visibility")), cancellationToken,
+        var appearance = new SvgTextAppearance(familyList, fontStyle, weight, size, paint);
+        if (!TryReadPlainSvgText(element, appearance, IsSvgVisibilityHidden(Inherited("visibility")), cancellationToken,
                 out string valueText, out bool[]? hiddenCharacters)) return false;
         if (OoxComplexScript.DetectNeeds(valueText) != OoxComplexScriptKind.None ||
             valueText.EnumerateRunes().Any(r => Rune.IsControl(r))) return false;
-        string family = (Inherited("font-family") ?? "serif").Split(',')[0].Trim().Trim('\'', '"');
+        string family = familyList.Split(',')[0].Trim().Trim('\'', '"');
         family = family.ToLowerInvariant() switch { "serif" => "Times New Roman", "sans-serif" => "Arial", "monospace" => "Courier New", _ => family };
         if (family.Length == 0) return false;
         double opacity = paint.Alpha * ReadSvgOpacityValue(Inherited("fill-opacity")) *
             ReadSvgOpacityValue(ReadSvgElementOpacity(element, style));
-        label = new(valueText, hiddenCharacters, new FontRequest(family, bold, fontStyle != "normal"), size, x, y, anchor, paint.Color, opacity,
+        label = new(valueText, hiddenCharacters, new FontRequest(family, weight >= 600, fontStyle != "normal"), size, x, y, anchor, paint.Color, opacity,
             !string.Equals(Inherited("font-kerning"), "none", StringComparison.OrdinalIgnoreCase) &&
             Inherited("kerning") is not ("0" or "0px"));
         return true;
@@ -162,6 +160,22 @@ internal sealed partial class PptxRenderer
                 ? TryReadSvgViewportLength(element, text, percentageBasis, out value)
                 : TryReadSvgLength(text, out value, relativeSize: size);
         }
+    }
+
+    private static bool TryReadSvgTextWeight(ReadOnlySpan<char> value, out int weight)
+    {
+        value = value.Trim();
+        if (value.Equals("normal", StringComparison.OrdinalIgnoreCase))
+        {
+            weight = 400;
+            return true;
+        }
+        if (value.Equals("bold", StringComparison.OrdinalIgnoreCase))
+        {
+            weight = 700;
+            return true;
+        }
+        return int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out weight) && weight is >= 100 and <= 900;
     }
 
     private static bool TryResolveSvgFontSize(string? value, double inheritedSize, out double size)
@@ -198,7 +212,7 @@ internal sealed partial class PptxRenderer
 
     // Plain spans and link text share the label's metrics. Visibility controls
     // which outlines paint. Only display:none removes characters from layout.
-    private static bool TryReadPlainSvgText(XElement element, double fontSize, SvgTextFill labelFill, bool hidden, CancellationToken cancellationToken,
+    private static bool TryReadPlainSvgText(XElement element, SvgTextAppearance appearance, bool hidden, CancellationToken cancellationToken,
         out string text, out bool[]? hiddenCharacters)
     {
         text = string.Empty;
@@ -277,10 +291,16 @@ internal sealed partial class PptxRenderer
             bool RetainsLabelStyle(string name, string value) => name switch
             {
                 "display" or "visibility" => true,
-                "font-size" => TryResolveSvgFontSize(value, fontSize, out double size) && size == fontSize,
+                "font-family" => InheritsSvgPropertyValue(value) ||
+                    value.AsSpan().Trim().Equals(appearance.FamilyList, StringComparison.OrdinalIgnoreCase),
+                "font-style" => InheritsSvgPropertyValue(value) ||
+                    value.AsSpan().Trim().Equals(appearance.Slant, StringComparison.OrdinalIgnoreCase),
+                "font-weight" => InheritsSvgPropertyValue(value) ||
+                    TryReadSvgTextWeight(value, out int weight) && weight == appearance.Weight,
+                "font-size" => TryResolveSvgFontSize(value, appearance.Size, out double size) && size == appearance.Size,
                 "fill" => InheritsSvgPropertyValue(value) ||
-                    TryReadSvgTextFill(child, style, value, out var fill) && fill == labelFill,
-                "color" or "fill-opacity" or "font-family" or "font-style" or "font-weight" => InheritsSvgPropertyValue(value),
+                    TryReadSvgTextFill(child, style, value, out var fill) && fill == appearance.Fill,
+                "color" or "fill-opacity" => InheritsSvgPropertyValue(value),
                 _ => false,
             };
         }

@@ -432,9 +432,12 @@ internal static partial class SvgTextTests
         const string sameSizeSouth = """&#160;SO<tspan font-size="11" style="font-size:100% !important;font-size:120%">UT</tspan>H""";
         const string sameFillNorth = """NO<tspan fill="rgb(17,34,51)"><tspan fill="currentColor">RT</tspan></tspan>H""";
         const string sameFillSouth = """&#160;SO<tspan fill="red" style="fill:#114499 !important;fill:lime">UT</tspan>H""";
+        const string sameTypefaceNorth = """NO<tspan font-family="dejavu sans" font-style="normal">RT</tspan>H""";
+        const string sameTypefaceSouth = """&#160;SO<tspan font-weight="900" style="font-weight:400 !important;font-weight:bold">UT</tspan>H""";
         string control = Picture("NORTH", plainSouth);
         AssertSvgPaintInBothFormats(control,
-            [Picture(northSpan, southSpan), Picture(sameSizeNorth, sameSizeSouth), Picture(sameFillNorth, sameFillSouth)], pdf =>
+            [Picture(northSpan, southSpan), Picture(sameSizeNorth, sameSizeSouth),
+                Picture(sameFillNorth, sameFillSouth), Picture(sameTypefaceNorth, sameTypefaceSouth)], pdf =>
         {
             TestAssert.Equal(5, LabelPaths(pdf));
             TestAssert.Equal(5, LabelPaths(pdf, "0.067 0.267 0.6 rg"));
@@ -454,6 +457,9 @@ internal static partial class SvgTextTests
             ("""opacity="inherit" """, """opacity=".5" """),
             ("""font-size="2em" """, ""),
             ("""font-size="initial" """, ""),
+            ("""font-family="monospace" """, ""),
+            ("""font-weight="700" """, ""),
+            ("""font-style="italic" """, ""),
         })
         {
             diagnostics.Clear();
@@ -461,7 +467,7 @@ internal static partial class SvgTextTests
             TestAssert.DoesNotContain(LabelColor, fallback.ToString());
             TestAssert.Equal(5, LabelPaths(fallback.ToString(), "0.067 0.267 0.6 rg"));
             TestAssert.True(diagnostics.Any(d => d.Message.Contains("unsupported text element", StringComparison.Ordinal)),
-                "A local size or paint change retains the diagnosed fallback.");
+                "A local typeface, size or paint change retains the diagnosed fallback.");
         }
     }
 
