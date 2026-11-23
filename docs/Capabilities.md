@@ -90,8 +90,8 @@ Spans with `display:none` contribute neither glyphs nor spacing.
 Visible display declarations preserve plain span layout.
 Plain spans with hidden visibility retain their advances. Descendant visibility
 can restore ink at its original placement.
-Plain spans can restate the label's inherited `xml:space` policy. No-break spaces
-retain their advance at label edges.
+Plain spans follow their nearest `xml:space` declaration. Preserved spaces
+and no-break spaces retain their advance at label edges.
 Plain spans and links also retain glyph paint with explicit `inherit` or `unset`
 for font family, size, style, weight, color, fill and fill opacity.
 Complex SVG text, filters, masks/blends and

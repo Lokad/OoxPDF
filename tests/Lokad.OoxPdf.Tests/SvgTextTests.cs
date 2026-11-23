@@ -391,6 +391,33 @@ internal static partial class SvgTextTests
             }, "0 1 0 rg");
     }
 
+    public static void SvgTextChildrenKeepMixedWhitespacePolicies()
+    {
+        string Picture(string north, string edge, string inner, string northSpace = "default", string edgeSpace = "default") => Svg($"""
+            <text x="95" y="32" xml:space="{northSpace}" text-anchor="middle" font-size="20" fill="#112233">{north}</text>
+            <text x="95" y="64" xml:space="{edgeSpace}" text-anchor="middle" font-size="20" fill="#114499">{edge}</text>
+            <text x="95" y="96" xml:space="preserve" text-anchor="middle" font-size="20" fill="#6a3caa">{inner}</text>
+            <rect x="120" y="118" width="20" height="10" fill="lime"/>
+            """);
+        const string north = """N <tspan xml:space="preserve">  OR  <tspan display="none" x="200">INVISIBLE</tspan></tspan> TH""";
+        const string edge = """ <tspan xml:space="preserve">  EDGE  </tspan> """;
+        const string inner = """<tspan xml:space="default">  EDGE  </tspan>""";
+        string control = Picture("N   OR   TH", "  EDGE  ", "EDGE", "preserve", "preserve");
+        AssertSvgPaintInBothFormats(control, Picture(north, edge, inner), pdf =>
+        {
+            TestAssert.Equal(5, LabelPaths(pdf));
+            TestAssert.Equal(4, LabelPaths(pdf, "0.067 0.267 0.6 rg"));
+            TestAssert.Equal(4, LabelPaths(pdf, "0.416 0.235 0.667 rg"));
+        }, "0 1 0 rg");
+
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        var hiddenControl = Paint(Picture("""N   <tspan visibility="hidden">OR</tspan>   TH""", "  EDGE  ", "EDGE", "preserve", "preserve"));
+        var hidden = Paint(Picture("""N <tspan xml:space="preserve">  <tspan visibility="hidden">OR</tspan>  </tspan> TH""", edge, inner), diagnostics);
+        AssertEquivalentSvgPaint(hiddenControl, hidden, "Hidden glyphs retain their advances through changes in whitespace policy.");
+        TestAssert.Equal(3, LabelPaths(hidden.ToString()));
+        TestAssert.Equal(0, diagnostics.Count);
+    }
+
     public static void SvgTextChildrenKeepInheritedFontAndFill()
     {
         string Picture(string north, string south, string northAttributes = "") => Svg($"""

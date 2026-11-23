@@ -714,6 +714,7 @@
     "=SvgLabelsKeepTheirFillWhenStrokesDoNotPaint",
     "=SvgTransparentPaintMatchesExplicitZeroOpacity",
     "=SvgLabelsKeepTextAcrossPlainAndMetadataSpans",
+    "=SvgTextChildrenKeepMixedWhitespacePolicies",
     "=SvgTextChildrenKeepInheritedFontAndFill",
     "=SvgLabelsRetainVisibilityAndHiddenAdvances",
     "=SvgPercentageLabelPositionsMatchViewportUnits",
@@ -20937,6 +20938,7 @@
   ],
   "svg-text-labels": [
     "SvgLabelsRetainEveryGlyphInDocxAndPptxPictures",
+    "=SvgTextChildrenKeepMixedWhitespacePolicies",
     "=SvgTextChildrenKeepInheritedFontAndFill",
     "=SvgInlineLinkTextKeepsPaintAndDiagnosesActions",
     "SvgLabelsPrepareFontsOnlyForVisiblePictureUses",

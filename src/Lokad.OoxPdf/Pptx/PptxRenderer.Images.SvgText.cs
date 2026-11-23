@@ -180,34 +180,19 @@ internal sealed partial class PptxRenderer
         hiddenCharacters = null;
         var characters = new StringBuilder();
         List<bool>? visibility = null;
+        bool? pendingSpaceHidden = null;
         XName spaceName = XNamespace.Xml + "space";
         bool preserve = element.AncestorsAndSelf().Select(e => (string?)e.Attribute(spaceName))
             .FirstOrDefault(value => value is not null) == "preserve";
-        string spacePolicy = preserve ? "preserve" : "default";
         XName spanName = element.Name.Namespace + "tspan";
         XName linkName = element.Name.Namespace + "a";
-        if (!Append(element, hidden)) return false;
+        if (!Append(element, hidden, preserve)) return false;
 
-        string untrimmed = characters.ToString();
-        ReadOnlySpan<char> normalized = untrimmed.AsSpan();
-        int start = 0;
-        if (!preserve)
-        {
-            // Tabs and XML line endings have already been normalized. Other
-            // characters such as no-break spaces still own glyph advances.
-            ReadOnlySpan<char> trimmed = normalized.TrimStart(' ');
-            start = normalized.Length - trimmed.Length;
-            normalized = trimmed.TrimEnd(' ');
-        }
-        text = normalized.Length == untrimmed.Length ? untrimmed : normalized.ToString();
-        if (visibility is not null && text.Length != 0)
-        {
-            hiddenCharacters = new bool[text.Length];
-            visibility.CopyTo(start, hiddenCharacters, 0, text.Length);
-        }
+        text = characters.ToString();
+        hiddenCharacters = visibility?.ToArray();
         return true;
 
-        bool Append(XElement owner, bool ownerHidden)
+        bool Append(XElement owner, bool ownerHidden, bool preserveSpace)
         {
             foreach (XNode node in owner.Nodes())
             {
@@ -216,12 +201,20 @@ internal sealed partial class PptxRenderer
                 {
                     foreach (char source in content.Value)
                     {
-                        if (!preserve && source is '\r' or '\n') continue;
+                        if (!preserveSpace && source is '\r' or '\n') continue;
                         char character = source is '\r' or '\n' or '\t' ? ' ' : source;
-                        if (!preserve && character == ' ' && characters.Length != 0 && characters[^1] == ' ') continue;
-                        if (ownerHidden && visibility is null) visibility = [.. Enumerable.Repeat(false, characters.Length)];
-                        characters.Append(character);
-                        visibility?.Add(ownerHidden);
+                        if (!preserveSpace && character == ' ')
+                        {
+                            // Hold a collapsed space until there is content on both sides.
+                            if (characters.Length != 0) pendingSpaceHidden ??= ownerHidden;
+                            continue;
+                        }
+                        if (pendingSpaceHidden is { } spaceHidden)
+                        {
+                            AppendCharacter(' ', spaceHidden);
+                            pendingSpaceHidden = null;
+                        }
+                        AppendCharacter(character, ownerHidden);
                     }
                     continue;
                 }
@@ -230,16 +223,23 @@ internal sealed partial class PptxRenderer
                 if (child.Name != spanName && !isLink) return false;
                 var style = ReadSvgStyleDeclarations(child);
                 if (IsSvgDisplayNone(child, style)) continue;
-                // A child can restate the label's existing whitespace policy.
-                if (child.Attributes().Any(attribute => attribute.Name == spaceName
-                        ? attribute.Value != spacePolicy : !IsPlainSvgTextChildAttribute(attribute, style, isLink)) ||
+                string? localSpace = (string?)child.Attribute(spaceName);
+                if (localSpace is not (null or "default" or "preserve") ||
+                    child.Attributes().Any(attribute => attribute.Name != spaceName && !IsPlainSvgTextChildAttribute(attribute, style, isLink)) ||
                     style.Any(declaration => !IsPlainSvgTextChildProperty(declaration.Key.ToLowerInvariant(), declaration.Value))) return false;
                 string? localVisibility = ReadSvgPresentationAttribute(child, style, "visibility");
                 bool childHidden = string.IsNullOrWhiteSpace(localVisibility) || InheritsSvgPropertyValue(localVisibility)
                     ? ownerHidden : IsSvgVisibilityHidden(localVisibility);
-                if (!Append(child, childHidden)) return false;
+                if (!Append(child, childHidden, localSpace is null ? preserveSpace : localSpace == "preserve")) return false;
             }
             return true;
+        }
+
+        void AppendCharacter(char character, bool characterHidden)
+        {
+            if (characterHidden && visibility is null) visibility = [.. Enumerable.Repeat(false, characters.Length)];
+            characters.Append(character);
+            visibility?.Add(characterHidden);
         }
     }
 
