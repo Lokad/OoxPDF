@@ -140,6 +140,28 @@ internal static partial class SvgTextTests
         }, "0 0.502 0 rg");
     }
 
+    public static void SvgAbsoluteLabelLengthsMatchUserUnits()
+    {
+        const string expected = """
+            <g font-size="16">
+              <text x="24" y="48" fill="#112233">NORTH</text>
+              <text x="48" y="32" dx="24" dy="-12" font-size="16" fill="#2254b4">A B</text>
+            </g>
+            """;
+        const string source = """
+            <g font-size="1pc">
+              <text x=".25in" y="1.27CM" fill="#112233">NORTH</text>
+              <text x="12.7mm" y="2pc" dx="25.4Q" dy="-.125in" font-size="12pt" fill="#2254b4">A B</text>
+            </g>
+            """;
+        const string sibling = """<rect x="112" y="72" width="23" height="9" fill="green"/>""";
+        AssertSvgPaintInBothFormats(Svg(expected + sibling), Svg(source + sibling), pdf =>
+        {
+            TestAssert.Equal(5, LabelPaths(pdf));
+            TestAssert.Equal(2, LabelPaths(pdf, "0.133 0.329 0.706 rg"));
+        }, "0 0.502 0 rg");
+    }
+
     public static void SvgLabelTransformsUseThePictureCoordinateSystem()
     {
         const string transform = "matrix(0.965925826 0.258819045 -0.258819045 0.965925826 5 7)";
@@ -424,11 +446,12 @@ internal static partial class SvgTextTests
         var diagnostics = new List<OoxPdfDiagnostic>();
         var graphics = Paint(Svg("<rect width=\"400\" height=\"160\" fill=\"#cce5ff\"/>" +
             "<text x=\"10 20\">array positions</text><text dx=\"10% 20%\">percentage positions</text>" +
+            "<text y=\"1e308in\">overflowing length</text>" +
             "<text transform=\"matrix(1e308 0 0 1e308 1e308 0)\">overflow</text>" +
             "<text x=\"20\" y=\"80\" fill=\"#112233\">I</text>"), diagnostics);
         TestAssert.Contains("0.8 0.898 1 rg", graphics.ToString());
         TestAssert.Equal(1, LabelPaths(graphics.ToString()));
-        TestAssert.True(diagnostics.Any(d => d.Message.Contains("3 unsupported text elements", StringComparison.Ordinal)),
+        TestAssert.True(diagnostics.Any(d => d.Message.Contains("4 unsupported text elements", StringComparison.Ordinal)),
             "Unimplemented positions and non-finite mapped outlines must diagnose while supported siblings survive.");
         TestAssert.Equal(0, graphics.StateDepth);
         Write(Page(graphics));
