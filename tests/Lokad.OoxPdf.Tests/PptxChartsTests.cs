@@ -1745,22 +1745,13 @@ internal static partial class PptxChartsTests
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
         TestAssert.True(method is not null, "Expected pie manual-leader validity helper to remain inspectable by the Office evidence guard.");
 
-        PptxSceneChartManualLayout FactorLayout(double? x, double? y) => new(
-            HasLayout: true, X: x, XValue: "", Y: y, YValue: "",
-            Width: null, WidthValue: "", Height: null, HeightValue: "",
-            LayoutTargetKind: PptxSceneChartManualLayoutTarget.Unknown,
-            XModeKind: PptxSceneChartManualLayoutMode.Unknown, XMode: "",
-            YModeKind: PptxSceneChartManualLayoutMode.Unknown, YMode: "",
-            WidthModeKind: PptxSceneChartManualLayoutMode.Unknown, WidthMode: "",
-            HeightModeKind: PptxSceneChartManualLayoutMode.Unknown, HeightMode: "");
-
-        object?[] inRange = [FactorLayout(0.07, 0.54), 0d];
+        object?[] inRange = [PieFactorLayout(0.07, 0.54), 0d];
         TestAssert.True(((bool?)method!.Invoke(null, inRange) ?? false) && Math.Abs((double)(inRange[1] ?? 0d) - 0.07) < 0.000001d, "In-range factor manuals should stay eligible with their x factor.");
-        object?[] wideY = [FactorLayout(0.03, 1.93), 0d];
+        object?[] wideY = [PieFactorLayout(0.03, 1.93), 0d];
         TestAssert.True(!(bool)method.Invoke(null, wideY)!, "Out-of-range y factor should drop the manual layout (ladder Delta falls back to auto).");
-        object?[] wideX = [FactorLayout(1.5, 0.2), 0d];
+        object?[] wideX = [PieFactorLayout(1.5, 0.2), 0d];
         TestAssert.True(!(bool)method.Invoke(null, wideX)!, "Out-of-range x factor should drop the manual layout.");
-        PptxSceneChartManualLayout edge = FactorLayout(0.07, 0.54) with { XModeKind = PptxSceneChartManualLayoutMode.Edge };
+        PptxSceneChartManualLayout edge = PieFactorLayout(0.07, 0.54) with { XModeKind = PptxSceneChartManualLayoutMode.Edge };
         object?[] edgeArgs = [edge, 0d];
         TestAssert.True(!(bool)method.Invoke(null, edgeArgs)!, "Edge-mode manuals carry points, not factors, and stay out of the pick.");
     }
@@ -1769,27 +1760,29 @@ internal static partial class PptxChartsTests
     {
         var renderer = typeof(PptxRenderer);
         var flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static;
-        var layoutType = renderer.Assembly.GetType("Lokad.OoxPdf.Pptx.PptxSceneChartManualLayout") ?? throw new InvalidOperationException("Expected manual layout.");
         var method = renderer.GetMethod("ResolvePieManualDataLabelBox", flags);
         TestAssert.True(method is not null, "Expected pie manual-anchor helper to remain inspectable by the Office evidence guard.");
-        var targetType = renderer.Assembly.GetType("Lokad.OoxPdf.Pptx.PptxSceneChartManualLayoutTarget")!;
-        var modeType = renderer.Assembly.GetType("Lokad.OoxPdf.Pptx.PptxSceneChartManualLayoutMode")!;
-        object Layout(double? x, double? y)
-        {
-            return System.Activator.CreateInstance(layoutType, [true, x, "", y, "", null, "", null, "", System.Enum.ToObject(targetType, 0), "", System.Enum.ToObject(modeType, 0), "", System.Enum.ToObject(modeType, 0), "", System.Enum.ToObject(modeType, 0), "", System.Enum.ToObject(modeType, 0), ""])!;
-        }
         var plotBoxType = renderer.GetNestedType("ChartPlotBox", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected plot box.");
         object plotBox = System.Activator.CreateInstance(plotBoxType, [144d, 120d, 520d, 360d])!;
-        object right = method!.Invoke(null, [plotBox, Layout(-0.77024, -0.36990), 558.46d, 309.72d, 0.06279d, 0.99803d, 404d, 88.64d, 24.97d, 24.97d])!;
-        object left = method.Invoke(null, [plotBox, Layout(0.66015, -0.73512), 320.98d, 169.40d, -0.84385d, -0.53644d, 404d, 79.43d, 24.97d, 24.97d])!;
+        object right = method!.Invoke(null, [plotBox, PieFactorLayout(-0.77024, -0.36990), 558.46d, 309.72d, 0.06279d, 0.99803d, 404d, 88.64d, 24.97d, 24.97d])!;
+        object left = method.Invoke(null, [plotBox, PieFactorLayout(0.66015, -0.73512), 320.98d, 169.40d, -0.84385d, -0.53644d, 404d, 79.43d, 24.97d, 24.97d])!;
         (double rx, double ry) = ReadLayoutBoxXY(right);
         (double lx, double ly) = ReadLayoutBoxXY(left);
         TestAssert.True(Math.Abs(rx - 157.94d) < 0.5d && Math.Abs(ry - 431.18d) < 0.5d, "Right-side anchor reads away from the circle (Office Alpha 158.0/431.0). Got " + rx + "/" + ry);
         TestAssert.True(Math.Abs(lx - 584.83d) < 0.5d && Math.Abs(ly - 411.02d) < 0.5d, "Left-side anchor reads toward the circle past the full width (Office Beta 584.6/411.0). Got " + lx + "/" + ly);
-        object straight = method!.Invoke(null, [plotBox, Layout(0.63844, 0.87143), 294d, 174d, -1d, 0d, 294d, 40d, 24.3d, 24.3d])!;
+        object straight = method!.Invoke(null, [plotBox, PieFactorLayout(0.63844, 0.87143), 294d, 174d, -1d, 0d, 294d, 40d, 24.3d, 24.3d])!;
         (double sx, double sy) = ReadLayoutBoxXY(straight);
         TestAssert.True(Math.Abs(sx - 606.0d) < 0.5d, "Straight up/down slices should center the box on the rim midpoint. Got " + sx + "/" + sy);
     }
+
+    private static PptxSceneChartManualLayout PieFactorLayout(double x, double y) => new(
+        HasLayout: true, X: x, XValue: "", Y: y, YValue: "",
+        Width: null, WidthValue: "", Height: null, HeightValue: "",
+        LayoutTargetKind: PptxSceneChartManualLayoutTarget.Unknown,
+        XModeKind: PptxSceneChartManualLayoutMode.Unknown, XMode: "",
+        YModeKind: PptxSceneChartManualLayoutMode.Unknown, YMode: "",
+        WidthModeKind: PptxSceneChartManualLayoutMode.Unknown, WidthMode: "",
+        HeightModeKind: PptxSceneChartManualLayoutMode.Unknown, HeightMode: "");
 
     public static void PptxSyntheticPieLabelClipExpandsForOverflow()
     {

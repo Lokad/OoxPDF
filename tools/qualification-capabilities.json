@@ -19886,6 +19886,8 @@
       "PptxSyntheticChartManualLayoutMissingPositionUsesDefaultPlotBox"
   ],
   "pptx-pie-factor-placement": [
+    "=PptxSyntheticPieManualAnchorRidesCirclePastRim",
+    "=PptxSyntheticPieManualLeaderRejectsOutOfRangeFactors",
     "PptxManualPiesKeepIndependentOfficeCentersAndRadii",
     "PptxPieFactorAndEdgePlacementKeepTheirOwnersAcrossViewportWidths",
     "PptxPieFactorOffsetsRetainBoundedSourceAndCompleteLegendContent",
