@@ -16,7 +16,7 @@ internal static class PptxAffineGeometryTests
             (Angle: 45, Flip: true, Expected: new PdfRectangle(96.966991411, 386.966991411, 106.066017178, 106.066017178))
         })
         {
-            var annotation = RenderAffineLink(sample.Angle, sample.Flip, grouped: false);
+            var annotation = RenderAffineLinkPage(sample.Angle, sample.Flip, grouped: false).Annotations.Single();
             AssertFrame(sample.Expected, annotation);
         }
     }
@@ -25,7 +25,7 @@ internal static class PptxAffineGeometryTests
     {
         // The group doubles child X/width and translates by (36,54) points.
         // The 240x30 leaf then rotates about its own center (336,386 in PDF).
-        var annotation = RenderAffineLink(90, false, grouped: true);
+        var annotation = RenderAffineLinkPage(90, false, grouped: true).Annotations.Single();
         AssertFrame(new PdfRectangle(321, 266, 30, 240), annotation);
     }
 
@@ -78,18 +78,26 @@ internal static class PptxAffineGeometryTests
     {
         foreach (bool chart in new[] { false, true })
         {
-            string data = chart
-                ? "<a:graphicData uri=\"http://schemas.openxmlformats.org/drawingml/2006/chart\"><c:chart xmlns:c=\"http://schemas.openxmlformats.org/drawingml/2006/chart\" r:id=\"chart\"/></a:graphicData>"
-                : "<a:graphicData uri=\"http://schemas.openxmlformats.org/drawingml/2006/table\"><a:tbl><a:tblGrid><a:gridCol w=\"1524000\"/></a:tblGrid><a:tr h=\"381000\"><a:tc><a:txBody><a:bodyPr/><a:lstStyle/><a:p/></a:txBody><a:tcPr><a:solidFill><a:srgbClr val=\"00FF00\"/></a:solidFill></a:tcPr></a:tc></a:tr></a:tbl></a:graphicData>";
-            Dictionary<string, string>? extra = chart ? new() {
-                ["ppt/charts/chart1.xml"] = "<c:chartSpace xmlns:c=\"http://schemas.openxmlformats.org/drawingml/2006/chart\"><c:chart><c:plotArea><c:pieChart><c:ser><c:idx val=\"0\"/><c:order val=\"0\"/><c:val><c:numLit><c:ptCount val=\"1\"/><c:pt idx=\"0\"><c:v>1</c:v></c:pt></c:numLit></c:val></c:ser></c:pieChart></c:plotArea></c:chart></c:chartSpace>"
-            } : null;
-            PdfPage Render(int angle) => RenderLinkPage($"<p:graphicFrame><p:nvGraphicFramePr><p:cNvPr id=\"2\" name=\"Frame\"><a:hlinkClick r:id=\"link\"/></p:cNvPr><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr><p:xfrm rot=\"{angle * 60000}\"><a:off x=\"1143000\" y=\"1079500\"/><a:ext cx=\"1524000\" cy=\"381000\"/></p:xfrm><a:graphic>{data}</a:graphic></p:graphicFrame>", extra,
-                chart ? "<Relationship Id=\"chart\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart\" Target=\"../charts/chart1.xml\"/>" : "");
-            var ordinary = Render(0);
-            var rotated = Render(90);
+            var ordinary = RenderGraphicFrameLinkPage(chart, 0, 90);
+            var rotated = RenderGraphicFrameLinkPage(chart, 90, 90);
             TestAssert.Equal(ordinary.Content, rotated.Content);
             AssertFrame(new PdfRectangle(90, 425, 120, 30), rotated.Annotations.Single());
+        }
+    }
+
+    public static void PptxNodeHyperlinksKeepOnlyPhysicalSlideCoverage()
+    {
+        // The rotated 120x30pt shape occupies x=695..725 on a 720pt slide.
+        var rotated = RenderAffineLinkPage(90, false, grouped: false, left: 650);
+        AssertFrame(new PdfRectangle(695, 380, 25, 120), rotated.Annotations.Single());
+        TestAssert.Equal(0, RenderAffineLinkPage(90, false, grouped: false, left: 690).Annotations.Count);
+
+        foreach (bool chart in new[] { false, true })
+        {
+            // The chart and table retain their existing unrotated frame.
+            var partial = RenderGraphicFrameLinkPage(chart, 90, 700);
+            AssertFrame(new PdfRectangle(700, 425, 20, 30), partial.Annotations.Single());
+            TestAssert.Equal(0, RenderGraphicFrameLinkPage(chart, 90, 730).Annotations.Count);
         }
     }
 
@@ -141,17 +149,37 @@ internal static class PptxAffineGeometryTests
             $"Node link must cover the independently specified transformed frame {expected}; got {actual}.");
     }
 
-    private static PdfLinkAnnotation RenderAffineLink(int angle, bool flip, bool grouped)
+    private static PdfPage RenderAffineLinkPage(int angle, bool flip, bool grouped, int left = 90)
     {
         string shape = $$"""
             <p:sp><p:nvSpPr><p:cNvPr id="2" name="Linked frame"><a:hlinkClick r:id="link"/></p:cNvPr><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
-              <p:spPr><a:xfrm rot="{{angle * 60000}}" flipH="{{(flip ? "1" : "0")}}"><a:off x="1143000" y="1079500"/><a:ext cx="1524000" cy="381000"/></a:xfrm>
+              <p:spPr><a:xfrm rot="{{angle * 60000}}" flipH="{{(flip ? "1" : "0")}}"><a:off x="{{left * 12700}}" y="1079500"/><a:ext cx="1524000" cy="381000"/></a:xfrm>
               <a:prstGeom prst="rect"/><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill><a:ln><a:noFill/></a:ln></p:spPr></p:sp>
             """;
         if (grouped) shape = "<p:grpSp><p:nvGrpSpPr><p:cNvPr id=\"3\" name=\"Group\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr><a:xfrm>" +
             "<a:off x=\"457200\" y=\"685800\"/><a:ext cx=\"6096000\" cy=\"3810000\"/><a:chOff x=\"0\" y=\"0\"/><a:chExt cx=\"3048000\" cy=\"3810000\"/>" +
             "</a:xfrm></p:grpSpPr>" + shape + "</p:grpSp>";
-        return RenderLinkPage(shape).Annotations.Single();
+        return RenderLinkPage(shape);
+    }
+
+    private static PdfPage RenderGraphicFrameLinkPage(bool chart, int angle, int left)
+    {
+        string data = chart
+            ? "<a:graphicData uri=\"http://schemas.openxmlformats.org/drawingml/2006/chart\"><c:chart xmlns:c=\"http://schemas.openxmlformats.org/drawingml/2006/chart\" r:id=\"chart\"/></a:graphicData>"
+            : "<a:graphicData uri=\"http://schemas.openxmlformats.org/drawingml/2006/table\"><a:tbl><a:tblGrid><a:gridCol w=\"1524000\"/></a:tblGrid><a:tr h=\"381000\"><a:tc><a:txBody><a:bodyPr/><a:lstStyle/><a:p/></a:txBody><a:tcPr><a:solidFill><a:srgbClr val=\"00FF00\"/></a:solidFill></a:tcPr></a:tc></a:tr></a:tbl></a:graphicData>";
+        Dictionary<string, string>? extra = chart ? new() {
+            ["ppt/charts/chart1.xml"] = "<c:chartSpace xmlns:c=\"http://schemas.openxmlformats.org/drawingml/2006/chart\"><c:chart><c:plotArea><c:pieChart><c:ser><c:idx val=\"0\"/><c:order val=\"0\"/><c:val><c:numLit><c:ptCount val=\"1\"/><c:pt idx=\"0\"><c:v>1</c:v></c:pt></c:numLit></c:val></c:ser></c:pieChart></c:plotArea></c:chart></c:chartSpace>"
+        } : null;
+        string frame = $"""
+            <p:graphicFrame>
+              <p:nvGraphicFramePr><p:cNvPr id="2" name="Frame"><a:hlinkClick r:id="link"/></p:cNvPr><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr>
+              <p:xfrm rot="{angle * 60000}"><a:off x="{left * 12700}" y="1079500"/><a:ext cx="1524000" cy="381000"/></p:xfrm>
+              <a:graphic>{data}</a:graphic>
+            </p:graphicFrame>
+            """;
+        return RenderLinkPage(frame, extra, chart
+            ? "<Relationship Id=\"chart\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart\" Target=\"../charts/chart1.xml\"/>"
+            : "");
     }
 
     private static PdfPage RenderLinkPage(string shape, Dictionary<string, string>? extra = null, string extraRelationships = "")

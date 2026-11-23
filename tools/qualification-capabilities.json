@@ -833,6 +833,7 @@
   "pptx-affine-paint-navigation": [
     "PptxUnrotatedFramePaintersKeepLinkFallback",
     "PptxNodeHyperlinkBounds",
+    "=PptxNodeHyperlinksKeepOnlyPhysicalSlideCoverage",
     "PptxRotatedTextPaintKeepsDeclaredDeviceClip",
     "PptxRotatedRunHyperlinkUsesTransformedBox",
     "PptxFallbackRunHyperlinksFollowClippedText",
