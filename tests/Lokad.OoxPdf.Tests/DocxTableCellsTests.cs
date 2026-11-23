@@ -4099,27 +4099,14 @@ internal static class DocxTableCellsTests
         });
     }
 
-    public static void DocxTableCellTextStartsAtMaxBorderMarginInset()
+    public static void DocxTableBordersAndTextFollowGridOrigins()
     {
         if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent raw PDF geometry uses installed Windows Arial metrics.");
         // Office A/B (w63/w65 border-size probes, Word-COM rendered plus PdfInspect):
         // first-column text starts at grid + max(borderHalf, margin) with unset
         // margins defaulting to 0.48pt: sz4 text at 72.504 for grid 72.024 while
         // the layout stacked margin + borderHalf, placing sz4 text at 72.24 here.
-        string input = WriteW68TablePackage("");
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, output);
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("1 0 0 1 72.48 709.202 Tm", pdf);
-    }
-
-    public static void DocxTableVerticalBordersCenterOnGridLines()
-    {
-        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent raw PDF geometry uses installed Windows Arial metrics.");
-        // Office A/B (w63 border-size probe, Word-COM rendered plus PdfInspect):
-        // vertical border bands center on grid lines: sz4 outer-left at 71.784
+        // Vertical border bands center on grid lines: sz4 outer-left at 71.784
         // for grid 72.024 with top bands butting from grid + half width, while
         // the renderer hung every band right of its edge (72.0 here).
         string input = WriteW68TablePackage("");
@@ -4128,6 +4115,7 @@ internal static class DocxTableCellsTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("1 0 0 1 72.48 709.202 Tm", pdf);
         TestAssert.Contains("71.76 704.387 0.48 15.613 re f", pdf);
         TestAssert.DoesNotContain("72 704.387 0.48 15.613 re f", pdf);
         TestAssert.Contains("72.24 719.52 119.76 0.48 re f", pdf);

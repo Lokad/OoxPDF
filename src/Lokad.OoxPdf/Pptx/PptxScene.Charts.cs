@@ -484,16 +484,6 @@ internal sealed partial class PptxSceneBuilder
         return entry.Line;
     }
 
-    internal static PptxSceneLineStyle ReadChartAxisLine(XElement axis, PptxTheme theme)
-    {
-        return ReadChartAxisLine(axis, theme, PptxColorMap.Default);
-    }
-
-    internal static PptxSceneLineStyle ReadChartAxisLine(XElement axis, PptxTheme theme, PptxColorMap colorMap)
-    {
-        return ReadChartAxisLine(axis, theme, colorMap, default);
-    }
-
     private static PptxSceneLineStyle ReadChartAxisLine(XElement axis, PptxTheme theme, PptxColorMap colorMap, PptxSceneLineStyle inheritedLine)
     {
         PptxSceneLineStyle line = ReadChartLineWithInheritedProperties(axis.Element(ChartNamespace + "spPr"), theme, colorMap, inheritedLine);
