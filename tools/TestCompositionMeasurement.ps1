@@ -271,4 +271,16 @@ foreach ($fault in @('OmitTextOperations', 'ChangePdf')) {
         throw ('Unexpected inspection result: ' + $fault + '; failure=' + $failure)
     }
 }
+. (Join-Path $PSScriptRoot 'CompositionOutcomes.ps1')
+$slideLabels = @(
+    @{PageNumber=1;Font='Body';FontSize=10;DecodedText='Sales Overview';EffectiveX=10;EffectiveY=400;EffectiveA=1;EffectiveB=0;EmittedAdvancePoints=70}
+    @{PageNumber=1;Font='Body';FontSize=10;DecodedText='Ser';EffectiveX=10;EffectiveY=100;EffectiveA=1;EffectiveB=0;EmittedAdvancePoints=12}
+    @{PageNumber=1;Font='Body';FontSize=10;DecodedText='ies 1';EffectiveX=22;EffectiveY=100;EffectiveA=1;EffectiveB=0;EmittedAdvancePoints=18}
+    @{PageNumber=1;Font='Body';FontSize=10;DecodedText='Series 10';EffectiveX=40;EffectiveY=180;EffectiveA=1;EffectiveB=0;EmittedAdvancePoints=35}
+)
+$expectedLabels = @('Sales Overview','Series 1','Series 2','Series 1Series 10')
+$missing = @(Get-MissingPortfolioTextPhrases $slideLabels $expectedLabels 'presentation')
+if (($missing -join ',') -cne 'Series 2,Series 1Series 10') {
+    throw 'Slide phrase assembly did not preserve the same-line run or separate nonadjacent labels'
+}
 Write-Output "Measurement/reinspection passes: $preflightRejects invalid caches reject before output/work, $lateRejects late changes reject before report publication, $validReuses valid diagnostic batches and $($textCases.Count) text-assembly controls reuse without conversion. No .NET processes or library builds."

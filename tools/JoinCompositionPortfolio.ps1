@@ -61,7 +61,7 @@ foreach ($directory in $SourceDirectory) {
         $textInspection = Read-PortfolioTextOperations $textPath $key
         if ($textInspection.Hash -cne $row.TextOperationsSha256) { throw ('Candidate text inspection differs: ' + $key) }
         $expectations = Get-PortfolioContentExpectations $case $row.Mode
-        $missing = @(Get-MissingPdfTextPhrases $textInspection.Operations $expectations.Text)
+        $missing = @(Get-MissingPortfolioTextPhrases $textInspection.Operations $expectations.Text $row.Mode)
         if ($row.MissingExpectedText -isnot [Array] -or
             ![Linq.Enumerable]::SequenceEqual[string]([string[]]$row.MissingExpectedText, [string[]]$missing, [StringComparer]::Ordinal) -or
             $row.ExpectedSourceEquations -ne $expectations.Equations -or

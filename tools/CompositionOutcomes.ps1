@@ -16,6 +16,11 @@ function Get-PortfolioContentExpectations($Document, [string] $Mode) {
     }
 }
 
+function Get-MissingPortfolioTextPhrases($Operations, $ExpectedText, [string] $Mode) {
+    # Slide labels and table cells can paint in an order unrelated to their baselines.
+    Get-MissingPdfTextPhrases $Operations $ExpectedText -SeparateBaselines:($Mode -ceq 'presentation')
+}
+
 function Read-PortfolioTextOperations([string] $Path, [string] $Id) {
     $bytes = [IO.File]::ReadAllBytes($Path)
     $operations = ConvertFrom-Json -NoEnumerate -InputObject ([Text.Encoding]::UTF8.GetString($bytes).TrimStart([char]0xFEFF))

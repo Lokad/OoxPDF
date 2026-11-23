@@ -11,7 +11,7 @@ function Select-NonWhitespacePdfTextOperations($Operations) {
     }
 }
 
-function Test-PdfTextFragmentSeparation($Previous, $Current, [bool] $SeparatePrintedLines) {
+function Test-PdfTextFragmentSeparation($Previous, $Current, [bool] $SeparatePrintedLines, [bool] $SeparateBaselines) {
     if ($null -eq $Previous.DecodedText -or $null -eq $Current.DecodedText -or
         $null -eq $Previous.EffectiveX -or $null -eq $Current.EffectiveX -or
         $null -eq $Previous.EffectiveY -or $null -eq $Current.EffectiveY -or
@@ -26,7 +26,7 @@ function Test-PdfTextFragmentSeparation($Previous, $Current, [bool] $SeparatePri
     if ([Math]::Abs($baselineDrop) -gt 0.1d) {
         # Exact ordered witnesses occupy printed lines. A leftward reset on
         # a baseline at least one em lower can separate otherwise joined text.
-        return $SeparatePrintedLines -and $baselineDrop -ge $em -and $Current.EffectiveX -le $Previous.EffectiveX
+        return $SeparateBaselines -or ($SeparatePrintedLines -and $baselineDrop -ge $em -and $Current.EffectiveX -le $Previous.EffectiveX)
     }
 
     # Reserve a full em after the previous advance before declaring a region
@@ -58,7 +58,7 @@ function Get-PdfTextFragmentRegion($Operation, $PageRegions) {
 # Keep paint order and emitted separators within each text fragment. Pages,
 # clear horizontal gaps and transitions between known regions end a fragment.
 # Unknown glyphs retain their placeholder.
-function Get-DecodedPdfTextFragments($Operations, $Regions, [switch] $SeparatePrintedLines) {
+function Get-DecodedPdfTextFragments($Operations, $Regions, [switch] $SeparatePrintedLines, [switch] $SeparateBaselines) {
     $regionsByPage = ($Regions | Where-Object { $null -ne $_ } | Group-Object { [int]$_.Page } -AsHashTable) ?? @{}
     $pages = @($Operations | Group-Object { $_.PageNumber } | Sort-Object { [int]$_.Name })
     foreach ($page in $pages) {
@@ -73,7 +73,7 @@ function Get-DecodedPdfTextFragments($Operations, $Regions, [switch] $SeparatePr
             $changedRegion = $null -ne $region -and $null -ne $previousRegion -and
                 ![object]::ReferenceEquals($region, $previousRegion)
             if ($changedRegion -or ($null -ne $previous -and
-                (Test-PdfTextFragmentSeparation $previous $operation $SeparatePrintedLines))) {
+                (Test-PdfTextFragmentSeparation $previous $operation $SeparatePrintedLines $SeparateBaselines))) {
                 $text.ToString()
                 [void]$text.Clear()
             }
@@ -98,13 +98,14 @@ function New-PdfTextPhrasePattern([string] $Text) {
     return [regex]$pattern
 }
 
-function Get-MissingPdfTextPhrases($Operations, $ExpectedText, $Regions) {
+function Get-MissingPdfTextPhrases($Operations, $ExpectedText, $Regions, [switch] $SeparateBaselines) {
     function Normalize-PdfTextPhrase([string] $Text) {
         [regex]::Replace($Text.Normalize([Text.NormalizationForm]::FormKC), '\s+', ' ').Trim()
     }
     # Keep fragment boundaries out of the normalized phrase. Word edges are
     # significant; punctuation such as a label's colon already separates text.
-    $fragments = @(Get-DecodedPdfTextFragments $Operations $Regions | ForEach-Object { Normalize-PdfTextPhrase $_ })
+    $fragments = @(Get-DecodedPdfTextFragments $Operations $Regions -SeparateBaselines:$SeparateBaselines |
+        ForEach-Object { Normalize-PdfTextPhrase $_ })
     foreach ($expected in $ExpectedText) {
         $phrase = Normalize-PdfTextPhrase $expected
         if (!$phrase) { continue }

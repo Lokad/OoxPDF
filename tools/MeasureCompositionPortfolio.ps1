@@ -138,7 +138,7 @@ foreach ($job in $jobs) {
         # Page objects count image-only and blank pages even with an empty text report.
         $pageCount = @(Get-Content -LiteralPath (Join-Path $run 'inspect.log') | Where-Object { $_ -match '^\d+ \d+ obj: page$' }).Count
         if ($pageCount -lt 1) { throw ('No inspected PDF pages: ' + $document.Id) }
-        $missing = @(Get-MissingPdfTextPhrases $textInspection.Operations $expectations.Text)
+        $missing = @(Get-MissingPortfolioTextPhrases $textInspection.Operations $expectations.Text $mode)
         if ($ReuseCandidateDirectory) {
             if ((Get-FileHash -LiteralPath $diagnosticsPath).Hash -ne $priorDiagnosticsHashes[$key] -or
                 (Get-FileHash -LiteralPath (Join-Path $source 'diagnostics.json')).Hash -ne $priorDiagnosticsHashes[$key] -or
