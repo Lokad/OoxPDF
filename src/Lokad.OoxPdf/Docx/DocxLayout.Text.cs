@@ -595,7 +595,7 @@ internal sealed partial class DocxLayoutEngine
         for (int i = 0; i < spans.Count; i++)
         {
             DocxTextSpan span = spans[i];
-            int decimalIndex = IndexOfDecimalSeparator(span.Text);
+            int decimalIndex = FindDecimalTabSeparator(span.Text);
             double spanFontSize = GetTextSpanFontSize(span, fontSize);
             if (decimalIndex >= 0)
             {
@@ -611,20 +611,9 @@ internal sealed partial class DocxLayoutEngine
         }
 
         return width;
-
-        int IndexOfDecimalSeparator(string text)
-        {
-            for (int i = 0; i < text.Length; i++)
-            {
-                if (text[i] is '.' or ',')
-                {
-                    return i;
-                }
-            }
-
-            return -1;
-        }
     }
+
+    private static int FindDecimalTabSeparator(ReadOnlySpan<char> text) => text.IndexOfAny('.', ',');
 
     private static double GetAlignedTabFieldStart(DocxResolvedTabStop tabStop, double fieldWidth, double? decimalAlignmentWidth)
     {

@@ -79,11 +79,8 @@ internal static partial class DocxInlineCompositionTests
                     var properties = paragraph.Element(w + "pPr")!;
                     properties.AddFirst(new XElement(w + "wordWrap", new XAttribute(w + "val", "0")));
                     properties.Add(new XElement(w + "ind", new XAttribute(w + "left", "1340"), new XAttribute(w + "hanging", "1340")));
-                    XElement FractionPart(string kind, string value) =>
-                        new(m + kind, new XElement(m + "r", new XElement(m + "t", value)));
-                    paragraph.Add(PictureCellRun(w, PictureCellText(w, "Evidence ")), PictureCellRun(w, drawing),
-                        new XElement(m + "oMath", new XElement(m + "f", FractionPart("num", "437"), FractionPart("den", "293"))),
-                        PictureCellRun(w, new XElement(w + "br")));
+                    AddPictureFractionLabel(paragraph, drawing, w, m);
+                    paragraph.Add(PictureCellRun(w, new XElement(w + "br")));
                     if (authoredSplit)
                         paragraph.Add(PictureCellRun(w, PictureCellText(w, "RENDERING"), new XElement(w + "br")),
                             PictureCellRun(w, PictureCellText(w, "ORDER")));
@@ -98,6 +95,61 @@ internal static partial class DocxInlineCompositionTests
                 return page;
             }
         }
+    }
+
+    public static void DocxFittingDecimalTabsRetainMathPicturesAndNumericAnchors()
+    {
+        var resolver = new PortableRenderingTests.PinnedResolver();
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            PdfPage right = Paint("right", "123");
+            PdfPage integer = Paint("decimal", "123");
+            TestAssert.Equal(right.Content, integer.Content);
+            TestAssert.Equal(3, PortableRenderingTests.ReadPaintedSourceLabel(integer, "123").Count);
+
+            foreach (var (number, parts) in new[] { ("12.34", new[] { "12.34" }), ("12,34", new[] { "12", ",34" }) })
+            {
+                PdfPage page = Paint("decimal", parts);
+                var glyphs = PortableRenderingTests.ReadPaintedSourceLabel(page, number);
+                var label = PortableRenderingTests.ReadPaintedSourceLabel(page, "Evidence");
+                TestAssert.Equal(5, glyphs.Count);
+                TestAssert.True(Math.Abs(glyphs[2].Origin.X - label[0].Origin.X - 120d) < .02d,
+                    "The decimal separator paints at the authored 120pt tab stop.");
+                foreach (string value in new[] { "437", "293" })
+                    TestAssert.True(PortableRenderingTests.ReadPaintedSourceLabel(right, value, mathOnly: true).SequenceEqual(
+                        PortableRenderingTests.ReadPaintedSourceLabel(page, value, mathOnly: true)),
+                        "Decimal positioning must preserve the preceding fraction's complete glyph paint.");
+                TestAssert.Equal(ReadPaintedPictureFrame(right), ReadPaintedPictureFrame(page));
+                TestAssert.Equal(right.Images.Single().Image.ResourceKey, page.Images.Single().Image.ResourceKey);
+            }
+
+            PdfPage Paint(string alignment, params string[] number)
+            {
+                var document = ReadMutation("docx-run-picture-visible", mode, false, false, (xml, w, m) =>
+                {
+                    var (paragraph, drawing) = CreateExactPictureCell(xml, w, 2800, 1320, 320, "After table.");
+                    paragraph.Element(w + "pPr")!.AddFirst(new XElement(w + "tabs", new XElement(w + "tab",
+                        new XAttribute(w + "val", alignment), new XAttribute(w + "pos", "2400"))));
+                    AddPictureFractionLabel(paragraph, drawing, w, m);
+                    paragraph.Add(PictureCellRun(w, new XElement(w + "tab")));
+                    foreach (string part in number)
+                        paragraph.Add(PictureCellRun(w, PictureCellText(w, part)));
+                });
+                var diagnostics = new List<OoxPdfDiagnostic>();
+                var page = new DocxRenderer(resolver, mode, CachedMathGeometry(mode))
+                    .RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().Single();
+                TestAssert.Equal("DOCX_APPROXIMATED_EQUATION", diagnostics.Single(d => d.Feature == "equation").Id);
+                return page;
+            }
+        }
+    }
+
+    private static void AddPictureFractionLabel(XElement paragraph, XElement drawing, XNamespace w, XNamespace m)
+    {
+        XElement FractionPart(string kind, string value) =>
+            new(m + kind, new XElement(m + "r", new XElement(m + "t", value)));
+        paragraph.Add(PictureCellRun(w, PictureCellText(w, "Evidence ")), PictureCellRun(w, drawing),
+            new XElement(m + "oMath", new XElement(m + "f", FractionPart("num", "437"), FractionPart("den", "293"))));
     }
 
     private static (XElement Paragraph, XElement Drawing) CreateExactPictureCell(XDocument xml, XNamespace w,

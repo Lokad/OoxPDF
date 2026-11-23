@@ -1054,6 +1054,7 @@
       "PptxSyntheticChartVisibleSecondaryAxisReservesInnerPlotStrips"
   ],
   "docx-shared-cell-content-portable": [
+    "=DocxFittingDecimalTabsRetainMathPicturesAndNumericAnchors",
     "=DocxInlineCompositionPreferredBreakKeepsTailInsideExactCell",
     "=DocxHangingContinuationKeepsPrecedingFractionAndPicture",
     "DocxCellPageBreakAdmissionUsesComputedContentInsteadOfFieldCache",
@@ -1357,6 +1358,7 @@
     "DocxSyntheticHeaderFooterDistancesUsePageMarginTokens"
   ],
   "docx-static-tab-fields": [
+    "=DocxFittingDecimalTabsRetainMathPicturesAndNumericAnchors",
     "DocxStaticTabsShareBodyFieldOffsetsWithoutEquations",
     "DocxStaticTabsKeepFieldsLinksHiddenOwnersAndCancellation",
     "DocxInlineCompositionLeftTabsMatchIndependentFieldOffsets",

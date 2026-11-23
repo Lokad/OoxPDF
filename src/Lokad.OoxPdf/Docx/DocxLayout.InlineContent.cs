@@ -734,7 +734,8 @@ internal sealed partial class DocxLayoutEngine
                 if (!CanMeasureOrderedTabStop(tabStop)) return false;
                 double stop = tabStop.PositionPoints;
                 double available = output.Count == 0 ? firstWidth : nextWidth;
-                if (string.Equals(tabStop.Value, "right", StringComparison.OrdinalIgnoreCase) ||
+                bool decimalTab = string.Equals(tabStop.Value, "decimal", StringComparison.OrdinalIgnoreCase);
+                if (decimalTab || string.Equals(tabStop.Value, "right", StringComparison.OrdinalIgnoreCase) ||
                     string.Equals(tabStop.Value, "center", StringComparison.OrdinalIgnoreCase))
                 {
                     int fieldEnd = index + 1;
@@ -743,11 +744,12 @@ internal sealed partial class DocxLayoutEngine
                         token.ThrowIfCancellationRequested();
                         fieldEnd++;
                     }
-                    double fieldWidth = GroupAdvance(index + 1, fieldEnd);
-                    double start = GetAlignedTabFieldStart(tabStop, fieldWidth, null);
+                    var field = MeasureGroup(index + 1, fieldEnd, decimalTab);
+                    double? anchor = decimalTab ? field.DecimalOffset ?? field.Advance : null;
+                    double start = GetAlignedTabFieldStart(tabStop, field.Advance, anchor);
                     // The complete aligned field must fit without overlap. Its
-                    // wrapping/leader/decimal variants remain staged fallbacks.
-                    if (!double.IsFinite(start) || start < advance || start + fieldWidth > available) return false;
+                    // wrapping and leader variants retain their fallbacks.
+                    if (!double.IsFinite(start) || start < advance || start + field.Advance > available) return false;
                     current.Add(Atom(index) with { Advance = start - advance });
                     advance = start;
                     index++;
@@ -757,10 +759,8 @@ internal sealed partial class DocxLayoutEngine
                 {
                     Flush(new(index));
                     if (stopAfterFirstLine) { lines = output; return true; }
-                    tabStop = ResolveNextTabStop(0d, tabStops, defaultTabStopPoints * scale);
-                    if (!CanMeasureOrderedTabStop(tabStop)) return false;
-                    stop = tabStop.PositionPoints;
-                    available = nextWidth;
+                    // The new line may select an earlier aligned stop.
+                    continue;
                 }
                 if (!double.IsFinite(stop) || stop < advance || stop > available) return false;
                 current.Add(Atom(index) with { Advance = stop - advance });
@@ -774,7 +774,7 @@ internal sealed partial class DocxLayoutEngine
             // A formatting/run boundary is not a word-break opportunity.
             if (!space && text)
                 while (end < measured.Count && Atom(end).Source is DocxInlineText && !IsSpace(Atom(end))) end++;
-            double groupWidth = GroupAdvance(index, end);
+            double groupWidth = MeasureGroup(index, end).Advance;
             double width = output.Count == 0 ? firstWidth : nextWidth;
             double remainingWidth = width - advance - BoundaryBefore(Atom(index));
             bool wraps = current.Count != 0 && !FitsLineWidth(groupWidth, remainingWidth);
@@ -855,7 +855,7 @@ internal sealed partial class DocxLayoutEngine
                 if (Atom(index).Math is { Box.AllowsInlineRelocation: false }) return false;
                 Flush(new(index));
                 if (stopAfterFirstLine) { lines = output; return true; }
-                groupWidth = GroupAdvance(index, end);
+                groupWidth = MeasureGroup(index, end).Advance;
             }
             if (current.Count == 0 && !FitsLineWidth(groupWidth, output.Count == 0 ? firstWidth : nextWidth))
             {
@@ -923,19 +923,29 @@ internal sealed partial class DocxLayoutEngine
             return (stopAfterFirstLine ? wrapped.Take(2) : wrapped).ToArray();
         }
 
-        double GroupAdvance(int begin, int end)
+        (double Advance, double? DecimalOffset) MeasureGroup(int begin, int end, bool locateDecimal = false)
         {
             double width = 0d;
+            double? decimalOffset = null;
             DocxMeasuredInlineFragment? previous = null;
             for (int index = begin; index < end; index++)
             {
                 token.ThrowIfCancellationRequested();
                 var fragment = Atom(index);
                 if (previous is not null) width += InlineBoundaryAdvance(previous, fragment);
+                if (locateDecimal && decimalOffset is null && fragment.Text is [var span])
+                {
+                    int separator = FindDecimalTabSeparator(span.Text);
+                    if (separator >= 0)
+                    {
+                        var prefix = NormalizeHiddenBreakSpans([span with { Text = span.Text[..separator] }], false);
+                        decimalOffset = width + MeasureTextFieldSpans(prefix, fontSize, measurer);
+                    }
+                }
                 width += fragment.Advance;
                 if (!IsEmptyInlineText(fragment)) previous = fragment;
             }
-            return width;
+            return (width, decimalOffset);
         }
 
         // A separate run containing only nonprinting break characters keeps its
@@ -1165,6 +1175,5 @@ internal sealed partial class DocxLayoutEngine
     }
 
     private static bool CanMeasureOrderedTabStop(DocxResolvedTabStop stop) =>
-        !string.Equals(stop.Value, "decimal", StringComparison.OrdinalIgnoreCase) &&
-        (stop.LeaderValue is null || string.Equals(stop.LeaderValue, "none", StringComparison.OrdinalIgnoreCase));
+        stop.LeaderValue is null || string.Equals(stop.LeaderValue, "none", StringComparison.OrdinalIgnoreCase);
 }

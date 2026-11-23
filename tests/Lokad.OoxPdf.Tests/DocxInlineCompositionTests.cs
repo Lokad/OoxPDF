@@ -1671,7 +1671,7 @@ internal static partial class DocxInlineCompositionTests
         }
         foreach (var stop in new[] { new DocxTabStop(72d, null, "right", null), new(72d, null, "center", null),
             new(72d, null, "decimal", null), new(72d, null, "bar", null), new(72d, null, "left", "dot") })
-            TestAssert.True(!Measure(paragraph with { TabStops = [stop] }, 300d, 1d, out _), "Overlapping aligned fields, decimal/bar stops and leaders retain explicit fallback.");
+            TestAssert.True(!Measure(paragraph with { TabStops = [stop] }, 300d, 1d, out _), "Overlapping aligned fields, bar stops and leaders retain explicit fallback.");
         TestAssert.True(!Measure(paragraph with { TabStops = [new(400d, null, "left", null)] }, 100d, 1d, out _), "An out-of-frame stop retains fallback.");
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();
