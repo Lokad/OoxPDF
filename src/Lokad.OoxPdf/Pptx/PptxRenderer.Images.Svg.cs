@@ -680,10 +680,9 @@ internal sealed partial class PptxRenderer
         string? inlineOpacity = element.Attribute("style") is null
             ? null : ReadSvgStyleDeclarations(element).GetValueOrDefault("opacity");
         double? numeric = ReadUnitSvgOpacity(inlineOpacity ?? attribute);
-        // A fully opaque inline style needs no group and admits the same stroke
-        // paint as an opaque presentation attribute.
-        if (inlineOpacity is not null && numeric != 1d) numeric = null;
-        // A numeric zero also hides descendants of a nested SVG viewport.
+        // Inline zero hides the container and inline one needs no group.
+        // Other inline values retain the existing partial-opacity fallback.
+        if (inlineOpacity is not null && numeric is not (0d or 1d)) numeric = null;
         return new(nestedSvg ? null : numeric, numeric == 0d,
             !nestedSvg && (numeric.HasValue || (inlineOpacity is null && attribute is null)));
     }
@@ -723,7 +722,7 @@ internal sealed partial class PptxRenderer
     }
 
     private static bool IsFullyTransparentSvgContainer(XElement element) =>
-        element.Attribute("opacity") is not null && ReadSvgContainerOpacity(element).IsTransparent;
+        ReadSvgContainerOpacity(element).IsTransparent;
 
     private static bool IsInFullyTransparentSvgContainer(XElement element)
     {

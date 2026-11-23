@@ -666,6 +666,41 @@ internal static partial class SvgTextTests
         AssertSvgPaintInBothFormats(expected, groupStyle, "/Pattern CS /Ps1 SCN");
     }
 
+    public static void SvgZeroOpacityContainerStylesHidePaintAndDiagnostics()
+    {
+        const string backdrop = """<rect x="10" y="10" width="90" height="60" fill="#136c9e"/>""";
+        const string hidden = """
+            <rect x="13" y="13" width="68" height="54" fill="#e91935"/>
+            <text x="24" y="49" font-size="18" font-family="HiddenOpacityWitness">Hidden label</text>
+            <use href="#absent"/>
+            """;
+        const string backdropPaint = "0.075 0.424 0.62 rg";
+        const string overlayPaint = "0.914 0.098 0.208 rg";
+
+        string root = Svg(backdrop + hidden);
+        AssertSvgPaintInBothFormats(OnRoot(root, """opacity="0" """), OnRoot(root, """style="opacity:0%" """), pdf =>
+        {
+            TestAssert.True(!pdf.Contains(backdropPaint, StringComparison.Ordinal), "A hidden root paints no backdrop.");
+            AssertNoOverlay(pdf);
+        });
+        AssertSvgPaintInBothFormats(
+            Svg(backdrop + $"""<g opacity="0">{hidden}</g>"""),
+            Svg(backdrop + $"""<g opacity=".75" style="opacity:0 !important; opacity:.5">{hidden}</g>"""),
+            AssertNoOverlay, backdropPaint);
+        AssertSvgPaintInBothFormats(
+            Svg(backdrop + $"""<svg width="150" height="80" opacity="0">{hidden}</svg>"""),
+            Svg(backdrop + $"""<svg width="150" height="80" style="opacity:0">{hidden}</svg>"""),
+            AssertNoOverlay, backdropPaint);
+
+        const string visible = """<rect x="13" y="13" width="68" height="54" fill="#e91935"/>""";
+        AssertSvgPaintInBothFormats(Svg(backdrop + $"""<g opacity="1">{visible}</g>"""),
+            Svg(backdrop + $"""<g opacity="0" style="opacity:1">{visible}</g>"""), backdropPaint, overlayPaint);
+
+        static string OnRoot(string svg, string attribute) => svg.Insert("<svg ".Length, attribute);
+        static void AssertNoOverlay(string pdf) => TestAssert.True(!pdf.Contains(overlayPaint, StringComparison.Ordinal),
+            "An invisible overlay must leave the neighboring paint visible.");
+    }
+
     public static void SvgObjectOpacityMatchesGroupForFilledGradientStrokes()
     {
         AssertSvgPaintInBothFormats(Picture(groupOpacity: true), Picture(groupOpacity: false), pdf =>
