@@ -421,11 +421,12 @@ internal sealed partial class DocxRenderer
             graphics.ClipRectangle(ancestor.X, ancestor.Y, ancestor.Width, ancestor.Height);
         // The frame owns its outer stroke; only its children acquire the inset
         // content clip, as for inline text boxes. Clipping first hides the frame.
-        if (TryResolveTextBoxStroke(drawing.Drawing, width, height, out double strokeWidth, out byte strokeRed, out byte strokeGreen, out byte strokeBlue))
+        if (TryResolveTextBoxStroke(drawing.Drawing.TextBoxStrokeWidthEmuValue, drawing.Drawing.TextBoxStrokeColorHex,
+                width, height, out double strokeWidth, out RgbColor strokeColor))
         {
             var frame = uniformMap ? map.MapRectangle(placedX, placedTop, width, height)
                 : (X: placedX, Y: placedTop - height, Width: width, Height: height);
-            graphics.SetStrokeRgb(strokeRed, strokeGreen, strokeBlue);
+            graphics.SetStrokeRgb(strokeColor.Red, strokeColor.Green, strokeColor.Blue);
             graphics.SetLineWidth(uniformMap ? map.ScaleExtent(strokeWidth) : strokeWidth);
             graphics.StrokeRectangle(frame.X, frame.Y, frame.Width, frame.Height);
         }
@@ -454,35 +455,14 @@ internal sealed partial class DocxRenderer
         .OrderByDescending(ResolveLayoutItemTop)
         .ToArray();
 
-    private static bool TryResolveTextBoxStroke(DocxFloatingDrawing drawing, double width, double height, out double strokeWidth, out byte strokeRed, out byte strokeGreen, out byte strokeBlue)
-    {
-        return TryResolveTextBoxStrokeGeometry(drawing.TextBoxStrokeWidthEmuValue, drawing.TextBoxStrokeColorHex, width, height, out strokeWidth, out strokeRed, out strokeGreen, out strokeBlue);
-    }
-
-    private static bool TryResolveInlineTextBoxStroke(DocxInlineTextBox textBox, double width, double height, out double strokeWidth, out byte strokeRed, out byte strokeGreen, out byte strokeBlue)
-    {
-        return TryResolveTextBoxStrokeGeometry(textBox.TextBoxStrokeWidthEmuValue, textBox.TextBoxStrokeColorHex, width, height, out strokeWidth, out strokeRed, out strokeGreen, out strokeBlue);
-    }
-
-    private static bool TryResolveTextBoxStrokeGeometry(string? strokeWidthEmuValue, string? strokeColorHex, double width, double height, out double strokeWidth, out byte strokeRed, out byte strokeGreen, out byte strokeBlue)
+    private static bool TryResolveTextBoxStroke(string? strokeWidthEmuValue, string? strokeColorHex,
+        double width, double height, out double strokeWidth, out RgbColor strokeColor)
     {
         strokeWidth = 0d;
-        strokeRed = 0;
-        strokeGreen = 0;
-        strokeBlue = 0;
-        if (width <= 0d || height <= 0d || string.IsNullOrEmpty(strokeColorHex) || strokeColorHex.Length != 6)
-        {
-            return false;
-        }
-
-        if (!long.TryParse(strokeWidthEmuValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out long strokeEmu) || strokeEmu <= 0L)
-        {
-            return false;
-        }
-
-        if (!byte.TryParse(strokeColorHex.Substring(0, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out strokeRed) ||
-            !byte.TryParse(strokeColorHex.Substring(2, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out strokeGreen) ||
-            !byte.TryParse(strokeColorHex.Substring(4, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out strokeBlue))
+        strokeColor = default;
+        if (width <= 0d || height <= 0d ||
+            !long.TryParse(strokeWidthEmuValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out long strokeEmu) || strokeEmu <= 0L ||
+            !RgbColor.TryParse(strokeColorHex, out strokeColor))
         {
             return false;
         }
@@ -535,7 +515,8 @@ internal sealed partial class DocxRenderer
         graphics.SaveState();
         // RV05 inline-box probe (Word COM reference edge-inlinebox): stroked inline
         // frames paint their outline under the text like floating boxes.
-        if (TryResolveInlineTextBoxStroke(box.TextBox, box.BoxWidth, box.BoxHeight, out double inlineStrokeWidth, out byte inlineStrokeRed, out byte inlineStrokeGreen, out byte inlineStrokeBlue))
+        if (TryResolveTextBoxStroke(box.TextBox.TextBoxStrokeWidthEmuValue, box.TextBox.TextBoxStrokeColorHex,
+                box.BoxWidth, box.BoxHeight, out double inlineStrokeWidth, out RgbColor inlineStrokeColor))
         {
             double strokeWidth = inlineStrokeWidth * box.PrintScale;
             if (cellClip is not null)
@@ -555,7 +536,7 @@ internal sealed partial class DocxRenderer
                 graphics.ClipRectangle(clipX - strokeWidth / 2d, viewportBottom,
                     box.BoxWidth + strokeWidth, Math.Max(0d, clipTop + strokeWidth / 2d - viewportBottom));
             }
-            graphics.SetStrokeRgb(inlineStrokeRed, inlineStrokeGreen, inlineStrokeBlue);
+            graphics.SetStrokeRgb(inlineStrokeColor.Red, inlineStrokeColor.Green, inlineStrokeColor.Blue);
             graphics.SetLineWidth(strokeWidth);
             graphics.StrokeRectangle(clipX, clipTop - box.BoxHeight, box.BoxWidth, box.BoxHeight);
             if (hasViewport) graphics.RestoreState();
