@@ -158,6 +158,43 @@ internal static class DocxVmlTextBoxTests
             new(W + "r", new XElement(W + "instrText", new XAttribute(XNamespace.Xml + "space", "preserve"), code));
     }
 
+    public static void DocxComputedSimpleFieldKeepsVmlStoryBetweenCachedPictures()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        foreach (bool packed in new[] { false, true })
+        {
+            var box = Box(new XElement(W + "p", Text(" Box value "),
+                new XElement(W + "fldSimple", new XAttribute(W + "instr", "NUMPAGES"), Text("STALE INNER")),
+                Text(" box tail ")));
+            XElement[] cache = [Text("STALE OUTER"), Picture(), box, Picture()];
+            XElement[] cachedRuns = packed ? [new XElement(W + "r", cache.SelectMany(run => run.Elements()))] : cache;
+            var field = new XElement(W + "fldSimple", new XAttribute(W + "instr", " PAGE "), cachedRuns);
+            var source = new XElement(W + "p", Text("Before "), field, Text("4729 after"));
+            var geometry = mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout
+                : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup;
+
+            With(source, mode, null, document =>
+            {
+                var paragraph = document.Paragraphs.Single();
+                var items = TestAssert.NotNull(paragraph.InlineContent);
+                var pictures = Enumerable.Range(0, items.Count).Where(index => items[index] is DocxInlinePicture).ToArray();
+                TestAssert.Equal(2, pictures.Length);
+                var story = items.Skip(pictures[0] + 1).Take(pictures[1] - pictures[0] - 1).OfType<DocxInlineText>();
+                TestAssert.Equal(" Box value {NUMPAGES} box tail ", string.Concat(story.Select(item => item.Run.Text)));
+                TestAssert.Equal(2, paragraph.FieldReferences.Count);
+                TestAssert.True(paragraph.FieldReferences.All(reference => reference.UsesPlaceholder && !reference.RendersCachedResult),
+                    "Both counters replace their own cached text.");
+
+                var page = new DocxRenderer(new PortableRenderingTests.PinnedResolver(), mode, geometry)
+                    .RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
+                TestAssert.Equal(2, page.Content.Split(" Do", StringSplitOptions.None).Length - 1);
+                TestAssert.Equal("Before 1 Box value 1 box tail 4729 after",
+                    Normalize(DocxPageFootnoteNumberingTests.DecodeText(page)));
+            });
+        }
+    }
+
     public static void DocxVmlTextBoxesKeepBlockBookmarkDestinations()
     {
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })

@@ -591,9 +591,11 @@ internal sealed partial class DocxReader
                 // The computed result replaces its cached runs and owns one
                 // source position, including when there is no stored result.
                 sourceRunIndex++;
-                // The computed value owns one source position. Cached drawings
-                // keep their order across run splits, using each run's visibility.
+                DocxTextRun? counterRun = publishesCounter ? runs[fieldTextRunIndex] : null;
+                int? drawingSourceIndex = fieldSourceRunIndex;
                 int resultTextOffset = 0, resultDrawingOrder = 0;
+                int pendingRun = fieldTextRunIndex, pendingImage = fieldImageIndex, pendingBox = fieldBoxIndex;
+                bool hasVmlStory = false;
                 for (; hasStoredRun; hasStoredRun = storedRuns.MoveNext())
                 {
                     cancellationToken.ThrowIfCancellationRequested();
@@ -601,21 +603,69 @@ internal sealed partial class DocxReader
                     XElement resultRun = storedScope.Element;
                     var resultStyle = ResolveRunProperties(resultRun.Element(WordprocessingNamespace + "rPr"),
                         paragraphStyleId, ReadCharacterStyleId(resultRun), styles, tableCellStyle?.Run, out var resultResolution);
-                    bool hidden = resultStyle.Hidden == true;
-                    RunDrawings stored = ReadRunDrawings(resultRun, fieldSourceRunIndex, hidden, storedScope.Revision);
-                    if (!hidden)
+                    if (resultStyle.Hidden == true || SplitVmlTextBoxRun(resultRun) is not { } pieces)
                     {
-                        if ((stored.Pictures.Count != 0 || stored.TextBoxes.Count != 0) &&
-                            storedScope.Revision is { } drawingRevision && !ReferenceEquals(drawingRevision, revision) &&
-                            !paragraphRevisions.Contains(drawingRevision, ReferenceEqualityComparer.Instance))
-                            paragraphRevisions.Add(drawingRevision);
-                        DocxTextRun? pictureOwner = null;
-                        if (stored.Pictures.Count != 0 && storedScope.Revision is { Kind: DocxRevisionKind.Insertion } owner)
+                        AddCachedDrawings(resultRun, storedScope.Revision, resultStyle, resultResolution);
+                        continue;
+                    }
+
+                    foreach (XElement piece in pieces)
+                    {
+                        if (piece.Name == WordprocessingNamespace + "txbxContent")
                         {
-                            pictureOwner = owner == revision && runs.Count > fieldTextRunIndex
-                                ? runs[fieldTextRunIndex]
-                                : CreateResolvedTextRun(string.Empty, ApplyMarkupRevisionStyle(resultStyle, owner, markupMode),
-                                    resultResolution, complexScript: false, fieldSourceRunIndex, resultTextOffset, owner, RevisionList(owner));
+                            // A flattened box is placed between the cached drawings
+                            // on each side. Publish the prefix before visiting it.
+                            PublishInlineRunItems(pendingRun, pendingImage, pendingBox);
+                            RetainDrawingRevision(storedScope.Revision);
+                            AddVmlTextBoxContent(piece, storedScope.Revision);
+                            pendingRun = runs.Count;
+                            pendingImage = images.Count;
+                            pendingBox = inlineTextBoxes.Count;
+                            drawingSourceIndex = null;
+                            resultTextOffset = 0;
+                            resultDrawingOrder = 0;
+                            hasVmlStory = true;
+                        }
+                        else
+                        {
+                            AddCachedDrawings(piece, storedScope.Revision, resultStyle, resultResolution);
+                        }
+                    }
+                }
+                if (ownsCounter)
+                {
+                    AddFieldReference(
+                        kind,
+                        DocxFieldSourceKind.Simple,
+                        instruction,
+                        placeholder,
+                        fieldSourceRunIndex,
+                        fieldTextRunIndex,
+                        fieldTextLengthStart,
+                        hasCachedResult,
+                        rendersCachedResult: false,
+                        usesPlaceholder: publishesCounter, hasSeparate: false, nestingDepth: 0, instructionRunCount: 0, resultRunCount: 0,
+                        fieldReferences: fieldReferences,
+                        runs: runs);
+                }
+                PublishInlineRunItems(pendingRun, pendingImage, pendingBox);
+                return ownsCounter || hasVmlStory || images.Count != fieldImageIndex || inlineTextBoxes.Count != fieldBoxIndex;
+
+                void AddCachedDrawings(XElement resultRun, DocxRevisionInfo? runRevision,
+                    DocxResolvedRunProperties resultStyle, DocxRunStyleResolution resultResolution)
+                {
+                    int ownerIndex = drawingSourceIndex ?? sourceRunIndex;
+                    RunDrawings stored = ReadRunDrawings(resultRun, ownerIndex, resultStyle.Hidden == true, runRevision);
+                    if (stored.Pictures.Count != 0 || stored.TextBoxes.Count != 0)
+                    {
+                        RetainDrawingRevision(runRevision);
+                        drawingSourceIndex ??= sourceRunIndex++;
+                        DocxTextRun? pictureOwner = null;
+                        if (stored.Pictures.Count != 0 && runRevision is { Kind: DocxRevisionKind.Insertion } owner)
+                        {
+                            pictureOwner = (owner == revision ? counterRun : null) ??
+                                CreateResolvedTextRun(string.Empty, ApplyMarkupRevisionStyle(resultStyle, owner, markupMode),
+                                    resultResolution, complexScript: false, ownerIndex, resultTextOffset, owner, RevisionList(owner));
                         }
                         var drawings = new List<DocxInlineItem>();
                         DocxInlineContent.AppendRun(drawings, [], stored.Pictures, cancellationToken, stored.TextBoxes);
@@ -639,24 +689,13 @@ internal sealed partial class DocxReader
                     }
                     resultTextOffset += ReadRunText(resultRun).Length;
                 }
-                if (ownsCounter)
+
+                void RetainDrawingRevision(DocxRevisionInfo? drawingRevision)
                 {
-                    AddFieldReference(
-                        kind,
-                        DocxFieldSourceKind.Simple,
-                        instruction,
-                        placeholder,
-                        fieldSourceRunIndex,
-                        fieldTextRunIndex,
-                        fieldTextLengthStart,
-                        hasCachedResult,
-                        rendersCachedResult: false,
-                        usesPlaceholder: publishesCounter, hasSeparate: false, nestingDepth: 0, instructionRunCount: 0, resultRunCount: 0,
-                        fieldReferences: fieldReferences,
-                        runs: runs);
+                    if (drawingRevision is not null && !ReferenceEquals(drawingRevision, revision) &&
+                        !paragraphRevisions.Contains(drawingRevision, ReferenceEqualityComparer.Instance))
+                        paragraphRevisions.Add(drawingRevision);
                 }
-                PublishInlineRunItems(fieldTextRunIndex, fieldImageIndex, fieldBoxIndex);
-                return ownsCounter || images.Count != fieldImageIndex || inlineTextBoxes.Count != fieldBoxIndex;
             }
 
             bool hasSource = false;
@@ -755,8 +794,15 @@ internal sealed partial class DocxReader
                 paragraphStyleId, characterStyleId, styles, tableCellStyle?.Run, resolvedRun);
             AddRevisions(paragraphRevisions, runRevisions);
             IReadOnlyList<DocxRevisionInfo> effectiveRevisions = MergeRevisionLists(revision, runRevisions);
-            if (resolvedRun.Hidden != true && TryAddVmlTextBoxRun(run, revision))
+            if (resolvedRun.Hidden != true && SplitVmlTextBoxRun(run) is { } pieces)
             {
+                foreach (XElement piece in pieces)
+                {
+                    if (piece.Name == WordprocessingNamespace + "txbxContent")
+                        AddVmlTextBoxContent(piece, revision);
+                    else
+                        AddParagraphRun(piece, revision);
+                }
                 if (sourceRunIndex == currentSourceRunIndex) sourceRunIndex++;
                 RetainNonRenderingRunOwner(currentSourceRunIndex, runRevisions);
                 return;
@@ -877,42 +923,43 @@ internal sealed partial class DocxReader
             return new RunDrawings([], [], null);
         }
 
-        bool TryAddVmlTextBoxRun(XElement run, DocxRevisionInfo? revision)
+        IEnumerable<XElement>? SplitVmlTextBoxRun(XElement run)
         {
+            if (run.Element(WordprocessingNamespace + "pict") is null) return null;
             var textBoxes = EnumerateRunOwnedDrawings(run, VmlNamespace + "textbox", cancellationToken)
                 .Where(box => box.Ancestors(WordprocessingNamespace + "pict").Any(pict => ReferenceEquals(pict.Parent, run)))
                 .ToLookup(box => box.Ancestors().First(owner => owner.Parent?.Name == WordprocessingNamespace + "pict" && ReferenceEquals(owner.Parent.Parent, run)));
-            if (textBoxes.Count == 0) return false;
+            return textBoxes.Count == 0 ? null : Split();
 
-            // Keep the established paragraph-flow fallback, while feeding each
-            // source item through the same reader as ordinary inline content.
-            // Splitting the surrounding run preserves its before/after order.
-            var fragment = new List<XElement>();
-            foreach (var child in run.Elements())
+            IEnumerable<XElement> Split()
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                if (child.Name == WordprocessingNamespace + "rPr") continue;
-                if (child.Name != WordprocessingNamespace + "pict") { fragment.Add(child); continue; }
-                foreach (var shape in child.Elements())
+                // Split only at VML stories. Ordinary runs and the computed-field
+                // drawing path keep their own decisions about the other children.
+                var fragment = new List<XElement>();
+                foreach (var child in run.Elements())
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    if (!textBoxes.Contains(shape))
+                    if (child.Name == WordprocessingNamespace + "rPr") continue;
+                    if (child.Name != WordprocessingNamespace + "pict") { fragment.Add(child); continue; }
+                    foreach (var shape in child.Elements())
                     {
-                        fragment.Add(new XElement(child.Name, child.Attributes(), new XElement(shape)));
-                        continue;
+                        cancellationToken.ThrowIfCancellationRequested();
+                        if (!textBoxes.Contains(shape))
+                        {
+                            fragment.Add(new XElement(child.Name, child.Attributes(), new XElement(shape)));
+                            continue;
+                        }
+                        if (fragment.Count != 0) yield return CopyFragment(fragment);
+                        foreach (var box in textBoxes[shape])
+                        foreach (var content in box.Elements(WordprocessingNamespace + "txbxContent"))
+                            yield return content;
                     }
-                    Flush();
-                    foreach (var box in textBoxes[shape])
-                    foreach (var content in box.Elements(WordprocessingNamespace + "txbxContent"))
-                        AddVmlTextBoxContent(content, revision);
                 }
+                if (fragment.Count != 0) yield return CopyFragment(fragment);
             }
-            Flush();
-            return true;
 
-            void Flush()
+            XElement CopyFragment(List<XElement> fragment)
             {
-                if (fragment.Count == 0) return;
                 var view = new XElement(run.Name, run.Attributes(),
                     run.Element(WordprocessingNamespace + "rPr") is { } properties ? new XElement(properties) : null);
                 foreach (var source in fragment)
@@ -922,7 +969,7 @@ internal sealed partial class DocxReader
                     view.Add(copy);
                 }
                 fragment.Clear();
-                AddParagraphRun(view, revision);
+                return view;
             }
         }
 

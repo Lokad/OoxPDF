@@ -915,6 +915,7 @@
   ],
   "docx-vml-inline-content": [
     "=DocxVmlTextBoxesKeepIndependentFieldResults",
+    "=DocxComputedSimpleFieldKeepsVmlStoryBetweenCachedPictures",
     "DocxVmlTextBoxes",
     "DocxVmlHiddenDrawingRunSuppressesItsTextAndPictures",
     "DocxSyntheticVmlInlineTextboxRendersTextWithoutUnsupportedDiagnostic",
