@@ -1488,50 +1488,31 @@ internal static class DocxRevisionsTests
         DocxDocument originalDocument = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Original);
         DocxDocument allDocument = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
 
-        AssertMarkupStoryText(
-            StaticStoryText(finalDocument) + "|" + RelatedStoryText(finalDocument),
-            visible: ["Header inserted", "Footer inserted", "Comment inserted", "Footnote inserted", "Endnote inserted"],
-            hidden: ["Header deleted", "Footer deleted", "Comment deleted", "Footnote deleted", "Endnote deleted"]);
-        AssertMarkupStoryText(
-            StaticStoryText(originalDocument) + "|" + RelatedStoryText(originalDocument),
-            visible: ["Header deleted", "Footer deleted", "Comment deleted", "Footnote deleted", "Endnote deleted"],
-            hidden: ["Header inserted", "Footer inserted", "Comment inserted", "Footnote inserted", "Endnote inserted"]);
-        AssertMarkupStoryText(
-            StaticStoryText(allDocument) + "|" + RelatedStoryText(allDocument),
-            visible: ["Header inserted", "Header deleted", "Footer inserted", "Footer deleted", "Comment inserted", "Comment deleted", "Footnote inserted", "Footnote deleted", "Endnote inserted", "Endnote deleted"],
-            hidden: []);
+        foreach (var (mode, document) in new[]
+        {
+            (OoxPdfDocxMarkupMode.Final, finalDocument),
+            (OoxPdfDocxMarkupMode.Original, originalDocument),
+            (OoxPdfDocxMarkupMode.AllMarkup, allDocument)
+        })
+        {
+            var header = DocxBlockTraversal.EnumerateBodyParagraphs(document.HeaderBodyElementsByType["default"]).Single();
+            var footer = DocxBlockTraversal.EnumerateBodyParagraphs(document.FooterBodyElementsByType["default"]).Single();
+            DocxTests.AssertStoryRevisionText(header, mode, "Header", hasBaseText: true);
+            DocxTests.AssertStoryRevisionText(footer, mode, "Footer", hasBaseText: true);
+
+            foreach (var (kind, id, label) in new[]
+            {
+                (DocxRelatedStoryKind.Comment, "1", "Comment"),
+                (DocxRelatedStoryKind.Footnote, "2", "Footnote"),
+                (DocxRelatedStoryKind.Endnote, "3", "Endnote")
+            })
+            {
+                var story = document.RelatedStories.Single(story => !story.IsSynthetic && story.Kind == kind && story.Id == id);
+                DocxTests.AssertStoryRevisionText(DocxBlockTraversal.EnumerateBodyParagraphs(story).Single(), mode, label, hasBaseText: true);
+            }
+        }
 
         TestAssert.True(allDocument.RelatedStories.Where(story => !story.IsSynthetic).All(story => story.Paragraphs.All(paragraph => paragraph.Revisions.Count != 0 || paragraph.Runs.Any(run => run.Revision is not null))), "All-markup related story revisions should preserve private-safe provenance after filtering; the synthetic default separator carries no source revisions.");
-
-        static string StaticStoryText(DocxDocument document)
-        {
-            IEnumerable<DocxParagraph> headers = DocxBlockTraversal.EnumerateStaticStoryParagraphs(document.HeaderBodyElementsByType, document.HeaderParagraphsByType);
-            IEnumerable<DocxParagraph> footers = DocxBlockTraversal.EnumerateStaticStoryParagraphs(document.FooterBodyElementsByType, document.FooterParagraphsByType);
-            return string.Join("|", headers.Concat(footers).Select(ParagraphText));
-        }
-
-        static string RelatedStoryText(DocxDocument document)
-        {
-            return string.Join("|", document.RelatedStories.SelectMany(story => DocxBlockTraversal.EnumerateBodyParagraphs(story)).Select(ParagraphText));
-        }
-
-        static string ParagraphText(DocxParagraph paragraph)
-        {
-            return string.Concat(paragraph.Runs.Select(run => run.Text));
-        }
-
-        static void AssertMarkupStoryText(string text, IReadOnlyList<string> visible, IReadOnlyList<string> hidden)
-        {
-            foreach (string expected in visible)
-            {
-                TestAssert.Contains(expected, text);
-            }
-
-            foreach (string unexpected in hidden)
-            {
-                TestAssert.DoesNotContain(unexpected, text);
-            }
-        }
     }
 
     public static void DocxReaderPreservesMoveRevisionRanges()

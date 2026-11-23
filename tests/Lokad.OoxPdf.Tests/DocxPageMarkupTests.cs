@@ -259,54 +259,30 @@ internal static class DocxPageMarkupTests
         DocxDocument originalDocument = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Original);
         DocxDocument allDocument = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
 
-        string finalStaticText = StaticStoryText(finalDocument);
-        string originalStaticText = StaticStoryText(originalDocument);
-        string allStaticText = StaticStoryText(allDocument);
+        foreach (var (mode, document) in new[]
+        {
+            (OoxPdfDocxMarkupMode.Final, finalDocument),
+            (OoxPdfDocxMarkupMode.Original, originalDocument),
+            (OoxPdfDocxMarkupMode.AllMarkup, allDocument)
+        })
+        {
+            foreach (var (variant, label) in new[] { ("default", "Default"), ("even", "Even"), ("first", "First") })
+            {
+                var header = DocxBlockTraversal.EnumerateBodyParagraphs(document.HeaderBodyElementsByType[variant]).ToArray();
+                var footer = DocxBlockTraversal.EnumerateBodyParagraphs(document.FooterBodyElementsByType[variant]).Single();
+                TestAssert.Equal(variant == "first" ? 2 : 1, header.Length);
+                DocxTests.AssertStoryRevisionText(header[0], mode, label + " header");
+                DocxTests.AssertStoryRevisionText(footer, mode, label + " footer");
+            }
+        }
 
-        AssertMarkupStoryText(
-            finalStaticText,
-            visible: ["Default header inserted", "Even header inserted", "First header inserted", "Default footer inserted", "Even footer inserted", "First footer inserted"],
-            hidden: ["Default header deleted", "Even header deleted", "First header deleted", "Default footer deleted", "Even footer deleted", "First footer deleted"]);
-        AssertMarkupStoryText(
-            originalStaticText,
-            visible: ["Default header deleted", "Even header deleted", "First header deleted", "Default footer deleted", "Even footer deleted", "First footer deleted"],
-            hidden: ["Default header inserted", "Even header inserted", "First header inserted", "Default footer inserted", "Even footer inserted", "First footer inserted"]);
-        AssertMarkupStoryText(
-            allStaticText,
-            visible: ["Default header inserted", "Default header deleted", "Even header inserted", "Even header deleted", "First header inserted", "First header deleted", "Default footer inserted", "Default footer deleted", "Even footer inserted", "Even footer deleted", "First footer inserted", "First footer deleted"],
-            hidden: []);
-
-        TestAssert.True(StaticStoryParagraphs(allDocument).Any(paragraph => paragraph.CommentRanges.Any(range => range.Id == "1") && paragraph.InlineReferences.Any(reference => reference.Kind == DocxRelatedStoryKind.Comment && reference.Id == "1")), "Comments anchored in first/even/default static stories should survive all-markup filtering.");
+        var firstHeader = DocxBlockTraversal.EnumerateBodyParagraphs(allDocument.HeaderBodyElementsByType["first"]);
+        TestAssert.True(firstHeader.Any(paragraph => paragraph.CommentRanges.Any(range => range.Id == "1") && paragraph.InlineReferences.Any(reference => reference.Kind == DocxRelatedStoryKind.Comment && reference.Id == "1")), "The comment anchor should survive on the first-page header in all-markup.");
         TestAssert.True(finalDocument.BodyElements.OfType<DocxPageBreakElement>().Any(element => element.Revisions.Any(revision => revision.Kind == DocxRevisionKind.Insertion && revision.Id == "801")), "Inserted run page breaks should survive final view as revision-provenance break elements.");
         TestAssert.True(!finalDocument.BodyElements.OfType<DocxManualBreakElement>().Any(element => element.Value == "column" && element.Revisions.Any(revision => revision.Id == "802")), "Deleted column breaks should be hidden from final view.");
         TestAssert.True(originalDocument.BodyElements.OfType<DocxManualBreakElement>().Any(element => element.Value == "column" && element.Revisions.Any(revision => revision.Kind == DocxRevisionKind.Deletion && revision.Id == "802")), "Deleted run column breaks should survive original view as revision-provenance break elements.");
         TestAssert.True(!originalDocument.BodyElements.OfType<DocxSectionBreakElement>().Any(element => element.Revisions.Any(revision => revision.Id == "803")), "Inserted section breaks should be hidden from original view.");
         TestAssert.True(allDocument.BodyElements.OfType<DocxSectionBreakElement>().Any(element => element.Revisions.Any(revision => revision.Kind == DocxRevisionKind.Insertion && revision.Id == "803")), "Inserted section breaks should retain inherited revision provenance in all-markup view.");
-
-        static string StaticStoryText(DocxDocument document)
-        {
-            return string.Join("|", StaticStoryParagraphs(document).Select(paragraph => string.Concat(paragraph.Runs.Select(run => run.Text))));
-        }
-
-        static IEnumerable<DocxParagraph> StaticStoryParagraphs(DocxDocument document)
-        {
-            return DocxBlockTraversal
-                .EnumerateStaticStoryParagraphs(document.HeaderBodyElementsByType, document.HeaderParagraphsByType)
-                .Concat(DocxBlockTraversal.EnumerateStaticStoryParagraphs(document.FooterBodyElementsByType, document.FooterParagraphsByType));
-        }
-
-        static void AssertMarkupStoryText(string text, IReadOnlyList<string> visible, IReadOnlyList<string> hidden)
-        {
-            foreach (string expected in visible)
-            {
-                TestAssert.Contains(expected, text);
-            }
-
-            foreach (string unexpected in hidden)
-            {
-                TestAssert.DoesNotContain(unexpected, text);
-            }
-        }
     }
 
     public static void DocxMarkupReserveMarginUsesSectionSpecificPageGeometry()

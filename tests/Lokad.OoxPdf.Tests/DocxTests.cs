@@ -1121,6 +1121,19 @@ internal static class DocxTests
         });
     }
 
+    internal static void AssertStoryRevisionText(DocxParagraph paragraph, OoxPdfDocxMarkupMode mode, string label, bool hasBaseText = false)
+    {
+        string expected = mode switch
+        {
+            OoxPdfDocxMarkupMode.Final => $"{label} inserted",
+            OoxPdfDocxMarkupMode.Original => $"{label} deleted",
+            OoxPdfDocxMarkupMode.AllMarkup => $"{label} inserted{label} deleted",
+            _ => throw new ArgumentOutOfRangeException(nameof(mode))
+        };
+        if (hasBaseText) expected = $"{label} base " + expected;
+        TestAssert.Equal(expected, string.Concat(paragraph.Runs.Select(run => run.Text)));
+    }
+
     internal static string WriteStaticAndRelatedStoryRevisionProbeDocx()
     {
         return TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
