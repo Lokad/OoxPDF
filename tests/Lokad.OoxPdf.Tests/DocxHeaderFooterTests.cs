@@ -880,187 +880,127 @@ internal static partial class DocxHeaderFooterTests
         var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(), mode,
             OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
         PdfPage page = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
-        return DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true, honorActualText: false)
+        return ReadStaticStoryLines(page);
+    }
+
+    private static (string Text, double X, double Y)[] ReadStaticStoryLines(PdfPage page) =>
+        DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true, honorActualText: false)
             .GroupBy(show => show.Y)
             .OrderByDescending(line => line.Key)
-            .Select(line => (string.Concat(line.Select(show => show.Text)).Trim(), line.Min(show => show.X), line.Key))
+            .Select(line => (Text: string.Concat(line.Select(show => show.Text)).Trim(), X: line.Min(show => show.X), Y: line.Key))
+            .Where(line => line.Text.Length > 0)
             .ToArray();
-    }
 
     public static void DocxSyntheticSectionHeadersUsePageLocalGeometry()
     {
-        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
-        if (!File.Exists(arial))
-        {
-            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
-        }
-
-        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-                  <Default Extension="xml" ContentType="application/xml"/>
-                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
-                  <Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>
-                  <Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/>
-                  <Override PartName="/word/header2.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>
-                  <Override PartName="/word/footer2.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/>
-                </Types>
-                """,
-            ["_rels/.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
-                </Relationships>
-                """,
-            ["word/_rels/document.xml.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rIdHeader1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/>
-                  <Relationship Id="rIdFooter1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/>
-                  <Relationship Id="rIdHeader2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header2.xml"/>
-                  <Relationship Id="rIdFooter2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer2.xml"/>
-                </Relationships>
-                """,
-            ["word/header1.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:r><w:rPr><w:color w:val="FF0000"/></w:rPr><w:t>Section header</w:t></w:r></w:p></w:hdr>
-                """,
-            ["word/footer1.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:r><w:rPr><w:color w:val="0000FF"/></w:rPr><w:t>Section footer</w:t></w:r></w:p></w:ftr>
-                """,
-            ["word/header2.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:r><w:rPr><w:color w:val="00FF00"/></w:rPr><w:t>Final header</w:t></w:r></w:p></w:hdr>
-                """,
-            ["word/footer2.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:r><w:rPr><w:color w:val="FF00FF"/></w:rPr><w:t>Final footer</w:t></w:r></w:p></w:ftr>
-                """,
-            ["word/document.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-                  <w:body>
-                    <w:p><w:r><w:t>First body</w:t></w:r></w:p>
-                    <w:p>
-                      <w:pPr>
-                        <w:sectPr>
-                          <w:headerReference w:type="default" r:id="rIdHeader1"/>
-                          <w:footerReference w:type="default" r:id="rIdFooter1"/>
-                          <w:pgSz w:w="4000" w:h="4000"/>
-                          <w:pgMar w:top="720" w:right="360" w:bottom="720" w:left="360" w:header="360" w:footer="360"/>
-                          <w:type w:val="nextPage"/>
-                        </w:sectPr>
-                      </w:pPr>
-                    </w:p>
-                    <w:p><w:r><w:t>Second body</w:t></w:r></w:p>
-                    <w:sectPr>
-                      <w:headerReference w:type="default" r:id="rIdHeader2"/>
-                      <w:footerReference w:type="default" r:id="rIdFooter2"/>
-                      <w:pgSz w:w="6000" w:h="6000"/>
-                      <w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="1080" w:footer="1080"/>
-                    </w:sectPr>
-                  </w:body>
-                </w:document>
-                """
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, output);
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        double[] firstSectionLeftBaselines = DocxTests.ExtractTextBaselinesAtX(pdf, 18d);
-        double[] finalSectionLeftBaselines = DocxTests.ExtractTextBaselinesAtX(pdf, 72d);
-        TestAssert.True(firstSectionLeftBaselines.Any(y => y > 168d && y < 182d), "First-section header should use the first section header distance and left margin.");
-        TestAssert.True(firstSectionLeftBaselines.Any(y => y > 27d && y < 34d), "First-section footer should bottom-anchor its trailing cursor at the first section footer distance.");
-        TestAssert.True(finalSectionLeftBaselines.Any(y => y > 232d && y < 246d), "Final-section header should use the final section header distance and left margin.");
-        TestAssert.True(finalSectionLeftBaselines.Any(y => y > 63d && y < 70d), "Final-section footer should bottom-anchor its trailing cursor at the final section footer distance.");
-        TestAssert.Contains("1 0 0 rg", pdf);
-        TestAssert.Contains("0 0 1 rg", pdf);
-        TestAssert.Contains("0 1 0 rg", pdf);
-        TestAssert.Contains("1 0 1 rg", pdf);
+        PdfPage[] pages = RenderSyntheticSectionStories(firstSectionHasStories: true);
+        var lines = ReadStaticStoryLines(pages[0]);
+        AssertSectionStory(lines, "Section header", 18d, 168d, 182d);
+        AssertSectionStory(lines, "Section footer", 18d, 27d, 34d);
+        TestAssert.Contains("1 0 0 rg", pages[0].Content);
+        TestAssert.Contains("0 0 1 rg", pages[0].Content);
+        AssertFinalSectionStories(pages[1]);
     }
 
     public static void DocxSyntheticSectionHeadersDoNotBackfillEarlierSectionsFromFinalReferences()
     {
-        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
-        if (!File.Exists(arial))
-        {
-            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
-        }
+        PdfPage[] pages = RenderSyntheticSectionStories(firstSectionHasStories: false);
+        TestAssert.Equal("First body", ReadStaticStoryLines(pages[0]).Single().Text);
+        AssertFinalSectionStories(pages[1]);
+    }
 
-        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+    private static void AssertFinalSectionStories(PdfPage page)
+    {
+        var lines = ReadStaticStoryLines(page);
+        AssertSectionStory(lines, "Final header", 72d, 232d, 246d);
+        AssertSectionStory(lines, "Final footer", 72d, 63d, 70d);
+        TestAssert.Contains("0 1 0 rg", page.Content);
+        TestAssert.Contains("1 0 1 rg", page.Content);
+    }
+
+    private static void AssertSectionStory((string Text, double X, double Y)[] lines,
+        string text, double x, double lowerBaseline, double upperBaseline)
+    {
+        var story = lines.Single(line => line.Text == text);
+        TestAssert.Equal(x, story.X);
+        TestAssert.True(story.Y > lowerBaseline && story.Y < upperBaseline,
+            $"The painted {text} baseline {story.Y} belongs inside its authored section frame.");
+    }
+
+    private static PdfPage[] RenderSyntheticSectionStories(bool firstSectionHasStories)
+    {
+        string firstReferences = firstSectionHasStories ? StoryReferences(1) : string.Empty;
+        var parts = new Dictionary<string, string>
         {
-            ["[Content_Types].xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-                  <Default Extension="xml" ContentType="application/xml"/>
-                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
-                  <Override PartName="/word/header2.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>
-                  <Override PartName="/word/footer2.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/>
-                </Types>
-                """,
-            ["_rels/.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
-                </Relationships>
-                """,
-            ["word/_rels/document.xml.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rIdHeader2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header2.xml"/>
-                  <Relationship Id="rIdFooter2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer2.xml"/>
-                </Relationships>
-                """,
-            ["word/header2.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:r><w:rPr><w:color w:val="00FF00"/></w:rPr><w:t>Final header</w:t></w:r></w:p></w:hdr>
-                """,
-            ["word/footer2.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:r><w:rPr><w:color w:val="FF00FF"/></w:rPr><w:t>Final footer</w:t></w:r></w:p></w:ftr>
-                """,
-            ["word/document.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+            ["_rels/.rels"] = TestFixtures.DocxPackageRelationships,
+            ["word/document.xml"] = $$"""
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+                            xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
                   <w:body>
                     <w:p><w:r><w:t>First body</w:t></w:r></w:p>
-                    <w:p>
-                      <w:pPr>
-                        <w:sectPr>
-                          <w:pgSz w:w="4000" w:h="4000"/>
-                          <w:pgMar w:top="720" w:right="360" w:bottom="720" w:left="360" w:header="360" w:footer="360"/>
-                          <w:type w:val="nextPage"/>
-                        </w:sectPr>
-                      </w:pPr>
-                    </w:p>
+                    <w:p><w:pPr><w:sectPr>
+                      {{firstReferences}}
+                      <w:pgSz w:w="4000" w:h="4000"/>
+                      <w:pgMar w:top="720" w:right="360" w:bottom="720" w:left="360" w:header="360" w:footer="360"/>
+                      <w:type w:val="nextPage"/>
+                    </w:sectPr></w:pPr></w:p>
                     <w:p><w:r><w:t>Second body</w:t></w:r></w:p>
                     <w:sectPr>
-                      <w:headerReference w:type="default" r:id="rIdHeader2"/>
-                      <w:footerReference w:type="default" r:id="rIdFooter2"/>
+                      {{StoryReferences(2)}}
                       <w:pgSz w:w="6000" w:h="6000"/>
                       <w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="1080" w:footer="1080"/>
                     </w:sectPr>
                   </w:body>
                 </w:document>
                 """
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        };
+        if (firstSectionHasStories)
+        {
+            parts.Add("word/header1.xml", StoryXml("hdr", "Section header", "FF0000"));
+            parts.Add("word/footer1.xml", StoryXml("ftr", "Section footer", "0000FF"));
+        }
+        parts.Add("word/header2.xml", StoryXml("hdr", "Final header", "00FF00"));
+        parts.Add("word/footer2.xml", StoryXml("ftr", "Final footer", "FF00FF"));
 
-        OoxPdfConverter.Convert(input, output);
+        var stories = new[] { 1, 2 }.Where(index => index == 2 || firstSectionHasStories)
+            .SelectMany(index => new[] { (Kind: "header", Index: index), (Kind: "footer", Index: index) }).ToArray();
+        string overrides = string.Concat(stories.Select(story =>
+            $"""<Override PartName="/word/{story.Kind}{story.Index}.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.{story.Kind}+xml"/>"""));
+        parts.Add("[Content_Types].xml", $$"""
+            <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+              <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+              <Default Extension="xml" ContentType="application/xml"/>
+              <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+              {{overrides}}
+            </Types>
+            """);
+        string relationships = string.Concat(stories.Select(story =>
+            $"""<Relationship Id="{story.Kind}{story.Index}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/{story.Kind}" Target="{story.Kind}{story.Index}.xml"/>"""));
+        parts.Add("word/_rels/document.xml.rels", $$"""
+            <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+              {{relationships}}
+            </Relationships>
+            """);
 
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        double[] firstSectionLeftBaselines = DocxTests.ExtractTextBaselinesAtX(pdf, 18d);
-        double[] finalSectionLeftBaselines = DocxTests.ExtractTextBaselinesAtX(pdf, 72d);
-        TestAssert.True(!firstSectionLeftBaselines.Any(y => y > 168d && y < 182d), "Final-section header should not backfill the earlier section that omits a header reference.");
-        TestAssert.True(!firstSectionLeftBaselines.Any(y => y > 18d && y < 30d), "Final-section footer should not backfill the earlier section that omits a footer reference.");
-        TestAssert.True(finalSectionLeftBaselines.Any(y => y > 232d && y < 246d), "Final-section header should still render on its owning section.");
-        TestAssert.True(finalSectionLeftBaselines.Any(y => y > 63d && y < 70d), "Final-section footer should still render on its owning section.");
+        using var input = TestFixtures.CreateZipPackage(parts);
+        using var package = OoxPackage.Open(input, default);
+        const OoxPdfDocxMarkupMode mode = OoxPdfDocxMarkupMode.Final;
+        var document = new DocxReader().Read(package, null, default, mode);
+        var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(), mode,
+            OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        PdfPage[] pages = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
+        TestAssert.Equal(2, pages.Length);
+        return pages;
+
+        static string StoryReferences(int index) => $$"""
+            <w:headerReference w:type="default" r:id="header{{index}}"/>
+            <w:footerReference w:type="default" r:id="footer{{index}}"/>
+            """;
+        static string StoryXml(string root, string text, string color) => $$"""
+            <w:{{root}} xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+              <w:p><w:r><w:rPr><w:color w:val="{{color}}"/></w:rPr><w:t>{{text}}</w:t></w:r></w:p>
+            </w:{{root}}>
+            """;
     }
 
     public static void DocxEmptyHeaderDisplacesNothing()
