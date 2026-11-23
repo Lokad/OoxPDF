@@ -17,8 +17,16 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+. (Join-Path $PSScriptRoot 'VisualCaseGates.ps1')
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
+$caseFull = (Resolve-Path -LiteralPath $Case).Path
+$caseDirectory = Split-Path -Parent $caseFull
+$caseSha256 = (Get-FileHash -LiteralPath $caseFull).Hash
+$manifest = Get-Content -Raw -LiteralPath $caseFull | ConvertFrom-Json
+$gateIssue = Get-VisualChartGraphicsGateIssue $manifest.expected $manifest.id
+if ($gateIssue) { throw $gateIssue }
+
 $rasterizerBinding = if ($RasterizerPath) { Get-FileHash -LiteralPath $RasterizerPath }
 $visualDiffBinding = if ($VisualDiffPath) { Get-FileHash -LiteralPath $VisualDiffPath }
 $inspectorBinding = if ($PdfInspectorPath) { Get-FileHash -LiteralPath $PdfInspectorPath }
@@ -26,10 +34,6 @@ $rasterizerDll = $rasterizerBinding.Path ?? (Join-Path $repoRoot "tools/Lokad.Oo
 $visualDiffDll = $visualDiffBinding.Path ?? (Join-Path $repoRoot "tools/Lokad.OoxPdf.VisualDiff/bin/Debug/$Framework/Lokad.OoxPdf.VisualDiff.dll")
 $pdfInspectorProject = Join-Path $repoRoot 'tools/Lokad.OoxPdf.PdfInspect/Lokad.OoxPdf.PdfInspect.csproj'
 $pdfInspectorDll = $inspectorBinding.Path ?? (Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfInspect/bin/Debug/$Framework/Lokad.OoxPdf.PdfInspect.dll")
-$caseFull = (Resolve-Path -LiteralPath $Case).Path
-$caseDirectory = Split-Path -Parent $caseFull
-$caseSha256 = (Get-FileHash -LiteralPath $caseFull).Hash
-$manifest = Get-Content -Raw -LiteralPath $caseFull | ConvertFrom-Json
 $runId = if (-not [string]::IsNullOrWhiteSpace($RunId)) { ($RunId -replace '[^A-Za-z0-9_.-]', '-') } else { "{0}-p{1}-{2}" -f (Get-Date -Format "yyyyMMdd-HHmmss-fff"), $PID, ([System.Guid]::NewGuid().ToString("N").Substring(0, 8)) }
 if ($runId -in '.', '..') { throw 'RunId must name a run directory.' }
 $runRoot = Join-Path $repoRoot ("artifacts/visual/{0}/{1}" -f $manifest.id, $runId)
@@ -433,10 +437,8 @@ if ($manifest.expected.maxGraphicsOperationBoundsDelta -ne $null) {
     }
 }
 
-$hasChartGraphicsStructureGlobalBoundsTolerance = $manifest.expected.maxChartGraphicsStructureBoundsDelta -ne $null
-$hasChartGraphicsStructureKindBoundsTolerances = $manifest.expected.maxChartGraphicsStructureBoundsDeltaByKind -ne $null
 $chartGraphicsOptions = $null
-if ($hasChartGraphicsStructureGlobalBoundsTolerance -or $hasChartGraphicsStructureKindBoundsTolerances) {
+if (Test-VisualChartGraphicsGate $manifest.expected) {
     $chartGraphicsOptions = @{}
     if ($null -ne $manifest.expected.compareChartGraphicsStructurePageNumber) {
         $chartGraphicsOptions.PageNumber = [int]$manifest.expected.compareChartGraphicsStructurePageNumber
@@ -461,11 +463,11 @@ if ($hasChartGraphicsStructureGlobalBoundsTolerance -or $hasChartGraphicsStructu
         Candidate = $candidateChartStructures
         MatchByBounds = $true
     }
-    if ($hasChartGraphicsStructureGlobalBoundsTolerance) {
+    if ($null -ne $manifest.expected.maxChartGraphicsStructureBoundsDelta) {
         $compareChartArgs.BoundsTolerance = [double]$manifest.expected.maxChartGraphicsStructureBoundsDelta
         $compareChartArgs.UseBoundsToleranceForUnlistedKinds = $true
     }
-    if ($hasChartGraphicsStructureKindBoundsTolerances) {
+    if ($null -ne $manifest.expected.maxChartGraphicsStructureBoundsDeltaByKind) {
         $boundsToleranceByKind = @{}
         foreach ($entry in $manifest.expected.maxChartGraphicsStructureBoundsDeltaByKind.PSObject.Properties) {
             $boundsToleranceByKind[[string]$entry.Name] = [double]$entry.Value

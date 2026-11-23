@@ -12,12 +12,6 @@
     "maxMeanAbsoluteError": 4.5,
     "minForegroundRecall": 0.52,
     "maxChangedPixelRatioAtThreshold16": 0.05,
-    "maxChartGraphicsStructureLineWidthDelta": 0.3,
-    "compareChartGraphicsStructureKinds": ["ChartSeriesLineCandidate", "GridlineAxisPlotBoxCandidate", "HorizontalGridlineGroupCandidate", "HorizontalLine"],
-    "compareChartGraphicsStructureOperators": true,
-    "compareChartGraphicsStructureSegmentCounts": true,
-    "compareChartGraphicsStructurePathCommandCounts": true,
-    "compareChartGraphicsStructurePathOperators": true,
     "requiredDiagnostics": [
       "PPTX_CHART_MISSING_CACHED_DATA"
     ]

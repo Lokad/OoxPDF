@@ -3,6 +3,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+. (Join-Path $PSScriptRoot 'VisualCaseGates.ps1')
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $caseRoot = Join-Path $repoRoot "visual-cases/cases"
@@ -168,6 +169,8 @@ foreach ($caseDirectory in $caseDirectories) {
     if ($null -eq $manifest.expected) {
         Add-Issue $issues "Case '$($manifest.id)' has no expected gates object."
     }
+    $gateIssue = Get-VisualChartGraphicsGateIssue $manifest.expected $manifest.id
+    if ($gateIssue) { Add-Issue $issues $gateIssue }
 
     foreach ($tag in @($manifest.tags)) {
         if ($tag -is [string] -and $tag.Length -ne 0 -and $tag -notmatch $idPattern) {

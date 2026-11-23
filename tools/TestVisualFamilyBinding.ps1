@@ -7,7 +7,9 @@ if (Test-Path -LiteralPath $OutputDirectory) { throw 'Use a fresh test directory
 $repo = Join-Path $OutputDirectory 'repository'
 New-Item -ItemType Directory -Path (Join-Path $repo 'tools') -Force | Out-Null
 $repo = (Resolve-Path -LiteralPath $repo).Path
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'CheckVisualFamily.ps1') -Destination (Join-Path $repo 'tools')
+foreach ($name in 'CheckVisualFamily.ps1', 'ValidateVisualCases.ps1', 'VisualCaseGates.ps1') {
+    Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination (Join-Path $repo 'tools')
+}
 $buildLog = Join-Path $repo 'builds.jsonl'
 $caseLog = Join-Path $repo 'cases.jsonl'
 @'
@@ -149,6 +151,7 @@ foreach($id in @('probe-a','probe-b')) {
 }
 $inspectionLog=Join-Path $repo 'inspection-calls.jsonl'
 $candidateBaseline = 700
+$candidateChartPageTwoDelta = 0
 $emitGraphicsOperations = $true
 $mutateVisualDiff = $false
 $rasterPage = @{Page=1;DimensionsMatch=$true;MeanAbsoluteError=0;ChangedPixelRatioAtThreshold16=0;
@@ -170,7 +173,8 @@ function dotnet {
             @{PageNumber=2;X=150;Y=150;DecodedText='42'}) | ConvertTo-Json -AsArray | Set-Content (Join-Path $output 'text-operations.json')
         if ($emitGraphicsOperations) {
             @(foreach ($page in 1, 2) {
-                @{PageNumber=$page;Kind='Stroke';Operator='S';SegmentCount=1;MoveCount=1;LineCount=1;CurveCount=0;CloseCount=0;LineWidth=1;MinX=100;MinY=100;MaxX=300;MaxY=100}
+                $maxX = if ($page -eq 2 -and $values[1] -like '*output.pdf') {300 + $candidateChartPageTwoDelta} else {300}
+                @{PageNumber=$page;Kind='Stroke';Operator='S';SegmentCount=1;MoveCount=1;LineCount=1;CurveCount=0;CloseCount=0;LineWidth=1;MinX=100;MinY=100;MaxX=$maxX;MaxY=100}
                 @{PageNumber=$page;Kind='Stroke';Operator='S';SegmentCount=1;MoveCount=1;LineCount=1;CurveCount=0;CloseCount=0;LineWidth=1;MinX=100;MinY=100;MaxX=100;MaxY=300}
             }) | ConvertTo-Json -AsArray | Set-Content (Join-Path $output 'graphics-operations.json')
         }
@@ -283,6 +287,44 @@ try {
             }
         }
     }
+    $chart = $combined.Clone()
+    $chart.expected = @{additionalChartGraphicsStructureComparisons=@(@{pageNumber=2;maxBoundsDelta=0;kinds=@('HorizontalLine')})}
+    $chart | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $realManifest
+    $familyPath = Join-Path $repo 'visual-cases/families/probe.json'
+    @{id='probe';kind='docx';casePatterns=@('probe-*')} | ConvertTo-Json | Set-Content -LiteralPath $familyPath
+    $validator = Join-Path $repo 'tools/ValidateVisualCases.ps1'
+    $caseRoot = Join-Path $repo 'artifacts/visual/probe-a'
+    $beforeRuns = @(Get-ChildItem -LiteralPath $caseRoot -Directory).Count
+    $beforeBuilds = @(Get-Content $buildLog).Count
+    foreach ($entry in @(
+        @{Script=$realCase;Arguments=@{Case=$realManifest;RunId='real-unbound-chart'}},
+        @{Script=$script;Arguments=@{Family='probe'}},
+        @{Script=$validator;Arguments=@{}}
+    )) {
+        $arguments = $entry.Arguments
+        $failure = $null
+        try { & $entry.Script @arguments | Out-Null } catch { $failure = $_.Exception.Message }
+        if ($failure -cne "Visual case 'probe-a' requires maxChartGraphicsStructureBoundsDelta or maxChartGraphicsStructureBoundsDeltaByKind for additionalChartGraphicsStructureComparisons.") {
+            throw "Missing chart bounds preflight failed unexpectedly: $failure"
+        }
+    }
+    if (@(Get-ChildItem -LiteralPath $caseRoot -Directory).Count -ne $beforeRuns -or
+        @(Get-Content $buildLog).Count -ne $beforeBuilds) { throw 'Incomplete chart gates started work before rejection' }
+    $chart.expected.maxChartGraphicsStructureBoundsDelta = 0
+    $chart | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $realManifest
+    & $validator | Out-Null
+    & $realCase -Case $realManifest -CliPath $frozenCli -SkipBuild -RunId 'real-chart-zero' | Out-Null
+    $chart.expected.Remove('maxChartGraphicsStructureBoundsDelta')
+    $chart.expected.maxChartGraphicsStructureBoundsDeltaByKind = @{HorizontalLine=2}
+    $chart | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $realManifest
+    $candidateChartPageTwoDelta = 1
+    $failure = $null
+    try { & $realCase -Case $realManifest -CliPath $frozenCli -SkipBuild -RunId 'real-chart-page-two' | Out-Null }
+    catch { $failure = $_.Exception.Message }
+    finally { $candidateChartPageTwoDelta = 0 }
+    if ($failure -cne 'Additional PDF chart graphics structure gate failed.') {
+        throw "The page-two chart gate did not enforce its separate zero bound: $failure"
+    }
     $fontOnly = $combined.Clone()
     $fontOnly.expected = @{candidateFontsMustBeEmbedded=$true}
     $fontOnly | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $realManifest
@@ -293,7 +335,8 @@ try {
         throw 'A font-only case should inspect only its candidate'
     }
     $rasterOnly = $combined.Clone()
-    $rasterOnly.expected = @{pageCountMustMatch=$true;dimensionsMustMatch=$true;maxMeanAbsoluteError=0;maxChangedPixelRatioAtThreshold16=0}
+    $rasterOnly.expected = @{pageCountMustMatch=$true;dimensionsMustMatch=$true;maxMeanAbsoluteError=0;maxChangedPixelRatioAtThreshold16=0;
+        compareChartGraphicsStructurePathGeometry=$false;additionalChartGraphicsStructureComparisons=@()}
     $rasterOnly | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $realManifest
     & $realCase -Case $realManifest -CliPath $frozenCli -SkipBuild -RunId 'real-zero-raster-errors' | Out-Null
     foreach ($control in @(
@@ -381,7 +424,7 @@ try {
 }
 finally {Remove-Item Function:/dotnet}
 $inspections=@(Get-Content (Join-Path $repo 'inspection-calls.jsonl') | ConvertFrom-Json)
-if($inspections.Count -ne 26) {throw 'Real inspection coverage is incomplete'}
+if($inspections.Count -ne 30) {throw 'Real inspection coverage is incomplete'}
 foreach($inspection in $inspections) {
     $record=Get-Content (Join-Path $inspection.Output 'pdf-inspect-build-info.json') -Raw | ConvertFrom-Json
     if($record.BuildRequested -ne $false -or $record.OutputSha256 -ne $inspection.InspectorSha256) {throw 'Inspector provenance or explicit prebuilt binding was lost'}
@@ -391,7 +434,8 @@ foreach($inspection in $inspections) {
     'No unused inspector','Missing prebuilt tool preflight','Real case/inspector forwarding',
     'Real once-only preparation','Real family reuse','Real missing-tool refusal','Occupied run refusal and evidence integrity',
     'Fresh shifted PDF fails the manifest Y bound','Combined gates inspect each PDF once',
-    'Chart classification reuse and independent page scopes','Candidate-only font inspection',
+    'Chart classification reuse and independent page scopes','Shared chart gate preflight',
+    'Zero chart bounds admit equal page scopes','Secondary page-two bound rejects displaced chart ink','Candidate-only font inspection',
     'Incomplete inspection refusal','Inspector provenance','Canonical markup cache key',
     'Bound visual report identity','Separate raster page counts','Measured failure identity',
     'Zero upper limits admit exact metrics','Missing upper-bound metrics fail independently','Raster dimensions fail independently',

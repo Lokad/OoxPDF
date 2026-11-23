@@ -28,6 +28,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+. (Join-Path $PSScriptRoot 'VisualCaseGates.ps1')
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $familyPath = Join-Path $repoRoot ("visual-cases/families/{0}.json" -f $Family)
@@ -275,6 +276,27 @@ if ($cases.Count -eq 0) {
     throw "Visual family '$Family' did not match any cases."
 }
 
+# Inspect complete selected manifests before preparing tools or starting any case.
+$needsPdfInspection = $false
+$inspectionThresholds = @('maxTextOperationPositionDelta', 'maxTextLineStartDelta',
+    'maxGraphicsOperationBoundsDelta', 'maxChartTextStructurePositionDelta',
+    'maxChartTextStructurePositionDeltaByKind')
+foreach ($case in $cases) {
+    $manifest = Get-Content -LiteralPath (Join-Path $case.FullName 'case.json') -Raw | ConvertFrom-Json
+    $expected = $manifest.expected
+    $gateIssue = Get-VisualChartGraphicsGateIssue $expected $manifest.id
+    if ($gateIssue) { throw $gateIssue }
+    if ((Test-VisualChartGraphicsGate $expected) -or
+        $expected.candidateFontsMustBeEmbedded -eq $true -or
+        $expected.candidateFontsMustHaveToUnicode -eq $true -or
+        $expected.candidateFontsMustBeSubset -eq $true) {
+        $needsPdfInspection = $true
+    }
+    foreach ($key in $inspectionThresholds) {
+        if ($null -ne $expected.$key) { $needsPdfInspection = $true }
+    }
+}
+
 Write-Host ("Visual family: {0} ({1} cases)" -f $Family, $cases.Count)
 $rasterizerBinding = if ($RasterizerPath) { Get-FileHash -LiteralPath $RasterizerPath }
 $visualDiffBinding = if ($VisualDiffPath) { Get-FileHash -LiteralPath $VisualDiffPath }
@@ -299,21 +321,6 @@ if (!$SkipBuild -and !$rasterizerBinding) {
 }
 # Only inspection gates need this tool. Cases consume it prebuilt, just like the
 # rasterizer and VisualDiff, rather than invoking MSBuild for each inspected PDF.
-$needsPdfInspection = $false
-$inspectionThresholds = @('maxTextOperationPositionDelta', 'maxTextLineStartDelta',
-    'maxGraphicsOperationBoundsDelta', 'maxChartGraphicsStructureBoundsDelta',
-    'maxChartGraphicsStructureBoundsDeltaByKind', 'maxChartTextStructurePositionDelta',
-    'maxChartTextStructurePositionDeltaByKind')
-foreach ($case in $cases) {
-    $expected = (Get-Content -LiteralPath (Join-Path $case.FullName 'case.json') -Raw | ConvertFrom-Json).expected
-    foreach ($key in $inspectionThresholds) {
-        if ($null -ne $expected.$key) { $needsPdfInspection = $true }
-    }
-    if ($expected.candidateFontsMustBeEmbedded -eq $true -or
-        $expected.candidateFontsMustHaveToUnicode -eq $true -or $expected.candidateFontsMustBeSubset -eq $true) {
-        $needsPdfInspection = $true
-    }
-}
 if ($needsPdfInspection -and !$inspectorBinding) {
     $inspector = Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfInspect/bin/Debug/$Framework/Lokad.OoxPdf.PdfInspect.dll"
     if (!$SkipBuild) {
