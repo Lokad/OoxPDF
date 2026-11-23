@@ -22,9 +22,7 @@ internal sealed partial class PptxSceneBuilder
                 ?.Element(DrawingNamespace + "bodyPr")?.Attribute("vert");
         }
         return new PptxSceneTextBody(
-            bodyProperties,
             PptxRenderer.HasUnsupportedTextOrientation(orientation),
-            HasUnsupportedTextVerticalOverflow(bodyProperties),
             textBody.Elements(DrawingNamespace + "p").Select(paragraph => ReadParagraph(paragraph, element, textBody, inheritedPlaceholderShapes, placeholderSources, defaultTextStyle)).ToArray());
     }
 

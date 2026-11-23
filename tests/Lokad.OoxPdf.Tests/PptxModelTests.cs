@@ -1661,7 +1661,6 @@ internal static class PptxModelTests
             TextParagraphCount = textParagraphCount,
             TextRunCount = textRunCount,
             TextHasUnsupportedOrientation = node.TextBody?.HasUnsupportedTextOrientation ?? false,
-            TextHasUnsupportedVerticalOverflow = node.TextBody?.HasUnsupportedVerticalOverflow ?? false,
             HasPicture = node.Picture is not null,
             PictureRecolorKind = recolor?.Kind.ToString() ?? string.Empty,
             HasTable = node.Table is not null,

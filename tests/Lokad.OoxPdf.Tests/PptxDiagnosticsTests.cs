@@ -235,7 +235,7 @@ internal static class PptxDiagnosticsTests
             "EmitUnsupportedFeatureDiagnostics",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected unsupported feature diagnostic emitter.");
         Action<OoxPdfDiagnostic> sink = diagnostics.Add;
-        emitDiagnostics.Invoke(null, [sceneSlide, slideXmlWithoutMedia, "/ppt/slides/slide1.xml", 1, sink, new HashSet<string>(StringComparer.Ordinal)]);
+        emitDiagnostics.Invoke(null, [sceneSlide, slideXmlWithoutMedia, "/ppt/slides/slide1.xml", 1, sink, new HashSet<string>(StringComparer.Ordinal), null]);
 
         string ids = string.Join("|", diagnostics.Select(d => d.Id));
         TestAssert.Contains("PPTX_UNSUPPORTED_AUDIO", ids);
@@ -283,7 +283,7 @@ internal static class PptxDiagnosticsTests
             "EmitUnsupportedFeatureDiagnostics",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected unsupported feature diagnostic emitter.");
         Action<OoxPdfDiagnostic> sink = diagnostics.Add;
-        emitDiagnostics.Invoke(null, [sceneSlide, slideXmlWithoutSmartArt, "/ppt/slides/slide1.xml", 1, sink, new HashSet<string>(StringComparer.Ordinal)]);
+        emitDiagnostics.Invoke(null, [sceneSlide, slideXmlWithoutSmartArt, "/ppt/slides/slide1.xml", 1, sink, new HashSet<string>(StringComparer.Ordinal), null]);
 
         string ids = string.Join("|", diagnostics.Select(d => d.Id));
         TestAssert.Contains("PPTX_UNSUPPORTED_SMARTART", ids);
@@ -329,7 +329,7 @@ internal static class PptxDiagnosticsTests
             "EmitUnsupportedFeatureDiagnostics",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected unsupported feature diagnostic emitter.");
         Action<OoxPdfDiagnostic> sink = diagnostics.Add;
-        emitDiagnostics.Invoke(null, [sceneSlide, slideXmlWithoutDynamicFeatures, "/ppt/slides/slide1.xml", 1, sink, new HashSet<string>(StringComparer.Ordinal)]);
+        emitDiagnostics.Invoke(null, [sceneSlide, slideXmlWithoutDynamicFeatures, "/ppt/slides/slide1.xml", 1, sink, new HashSet<string>(StringComparer.Ordinal), null]);
 
         string ids = string.Join("|", diagnostics.Select(d => d.Id));
         TestAssert.Contains("PPTX_UNSUPPORTED_ANIMATION", ids);
@@ -381,7 +381,7 @@ internal static class PptxDiagnosticsTests
             "EmitUnsupportedFeatureDiagnostics",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected unsupported feature diagnostic emitter.");
         Action<OoxPdfDiagnostic> sink = diagnostics.Add;
-        emitDiagnostics.Invoke(null, [sceneSlide, slideXmlWithoutAlpha, "/ppt/slides/slide1.xml", 1, sink, new HashSet<string>(StringComparer.Ordinal)]);
+        emitDiagnostics.Invoke(null, [sceneSlide, slideXmlWithoutAlpha, "/ppt/slides/slide1.xml", 1, sink, new HashSet<string>(StringComparer.Ordinal), null]);
 
         TestAssert.Contains("PPTX_UNSUPPORTED_TRANSPARENCY", string.Join("|", diagnostics.Select(d => d.Id)));
     }
@@ -492,13 +492,12 @@ internal static class PptxDiagnosticsTests
             PptxSceneTextBody textBody = new PptxSceneBuilder().Build(document, package, CancellationToken.None).Slides[0].SlideNodes[0].TextBody
                 ?? throw new InvalidOperationException("Expected shape text body scene node.");
             TestAssert.True(textBody.HasUnsupportedTextOrientation, "Expected unsupported shape text orientation state to remain scene-owned.");
-            TestAssert.True(textBody.HasUnsupportedVerticalOverflow, "Expected unsupported shape text overflow state to remain scene-owned.");
         }
 
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
 
         TestAssert.True(diagnostics.Any(d => d.Id == "PPTX_UNSUPPORTED_TEXT_ORIENTATION"), "Unsupported shape text orientation should be diagnostic-covered from scene-owned text-body provenance.");
-        TestAssert.True(diagnostics.Any(d => d.Id == "PPTX_UNSUPPORTED_TEXT_OVERFLOW"), "Unsupported shape text overflow should be diagnostic-covered from scene-owned text-body provenance.");
+        TestAssert.True(diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_TEXT_OVERFLOW"), "An unplaced text shape has no observed ellipsis fallback.");
     }
 
     public static void PptxUnsupportedTableTextDiagnosticsUseSceneCellBodyProperties()
@@ -859,7 +858,7 @@ internal static class PptxDiagnosticsTests
             "EmitUnsupportedFeatureDiagnostics",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected unsupported feature diagnostic emitter.");
         Action<OoxPdfDiagnostic> sink = diagnostics.Add;
-        emitDiagnostics.Invoke(null, [sceneSlide, slideXmlWithoutShapes, "/ppt/slides/slide1.xml", 1, sink, new HashSet<string>(StringComparer.Ordinal)]);
+        emitDiagnostics.Invoke(null, [sceneSlide, slideXmlWithoutShapes, "/ppt/slides/slide1.xml", 1, sink, new HashSet<string>(StringComparer.Ordinal), null]);
         return (sceneSlide, diagnostics);
     }
 }

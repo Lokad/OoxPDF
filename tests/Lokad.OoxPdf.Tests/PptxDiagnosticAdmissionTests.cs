@@ -74,12 +74,12 @@ internal static class PptxDiagnosticAdmissionTests
     {
         const string unsupported = "PPTX_UNSUPPORTED_TEXT_ORIENTATION";
         string template = PlaceholderText(" vert=\"futureVert\"", "");
-        var direct = Render(PlaceholderText(" vert=\"futureVert\"", "Orientation control"));
-        var inherited = Render(PlaceholderText("", "Orientation control"), layout: template);
-        var inheritedFromMaster = Render(PlaceholderText("", "Orientation control"),
+        var direct = RenderWithParts(PlaceholderText(" vert=\"futureVert\"", "Orientation control"));
+        var inherited = RenderWithParts(PlaceholderText("", "Orientation control"), layout: template);
+        var inheritedFromMaster = RenderWithParts(PlaceholderText("", "Orientation control"),
             layout: PlaceholderText("", ""), master: template);
-        var overridden = Render(PlaceholderText(" vert=\"HORZ\"", "Orientation control"), layout: template);
-        var unused = Render("", layout: template);
+        var overridden = RenderWithParts(PlaceholderText(" vert=\"HORZ\"", "Orientation control"), layout: template);
+        var unused = RenderWithParts("", layout: template);
 
         foreach (var item in new[] { direct, inherited, inheritedFromMaster })
         {
@@ -95,23 +95,68 @@ internal static class PptxDiagnosticAdmissionTests
 
         static string PlaceholderText(string bodyAttributes, string text) => Shape("<a:prstGeom prst=\"rect\"/>", placeholder: true)
             .Replace("</p:sp>", $"<p:txBody><a:bodyPr{bodyAttributes}/><a:p><a:r><a:t>{text}</a:t></a:r></a:p></p:txBody></p:sp>", StringComparison.Ordinal);
+    }
 
-        static (byte[] Pdf, List<OoxPdfDiagnostic> Diagnostics) Render(string slide, string layout = "", string master = "")
+    public static void PptxDiagnosticAdmissionWarnsOnlyForObservedShapeEllipsisFallback()
+    {
+        const string warningId = "PPTX_UNSUPPORTED_TEXT_OVERFLOW";
+        const string vertical = " vert=\"vert\"";
+        const string ellipsis = " vertOverflow=\"ellipsis\"";
+        const int cropWidth = 368300;
+        const int fitWidth = 1587500;
+
+        var direct = RenderWithParts(PlaceholderText(vertical + ellipsis, cropWidth, hasText: true));
+        var inherited = RenderWithParts(PlaceholderText("", cropWidth, hasText: true),
+            layout: PlaceholderText(vertical + ellipsis, cropWidth));
+        var split = RenderWithParts(PlaceholderText(ellipsis, cropWidth, hasText: true),
+            layout: PlaceholderText(vertical, cropWidth));
+        foreach (var item in new[] { direct, inherited, split })
         {
-            using var output = new MemoryStream();
-            var diagnostics = new List<OoxPdfDiagnostic>();
-            WithParts(slide: slide, layout: layout, master: master, check: path =>
-            {
-                using var input = File.OpenRead(path);
-                OoxPdfConverter.Convert(input, output, new OoxPdfOptions
-                {
-                    InputKind = OoxPdfInputKind.Pptx,
-                    FontResolver = new PortableRenderingTests.PinnedResolver(),
-                    DiagnosticSink = diagnostics.Add
-                });
-            });
-            return (output.ToArray(), diagnostics);
+            var warning = item.Diagnostics.Single();
+            TestAssert.Equal(warningId, warning.Id);
+            TestAssert.Equal("/ppt/slides/slide1.xml", warning.PartName);
+            TestAssert.Equal(1, warning.SlideIndex);
+            TestAssert.True(direct.Pdf.SequenceEqual(item.Pdf), "The declaration owner must preserve the same cropped text and warning.");
         }
+
+        var fits = RenderWithParts(PlaceholderText(vertical + ellipsis, fitWidth, hasText: true));
+        var fitsInherited = RenderWithParts(PlaceholderText("", fitWidth, hasText: true),
+            layout: PlaceholderText(vertical + ellipsis, fitWidth));
+        var empty = RenderWithParts(PlaceholderText(vertical + ellipsis, cropWidth));
+        var clip = RenderWithParts(PlaceholderText(" vertOverflow=\"clip\"", cropWidth, hasText: true),
+            layout: PlaceholderText(vertical + ellipsis, cropWidth));
+        foreach (var item in new[] { fits, fitsInherited, empty, clip })
+            TestAssert.Equal(0, item.Diagnostics.Count);
+        TestAssert.True(fits.Pdf.SequenceEqual(fitsInherited.Pdf), "Effective fitting frames must paint identically.");
+
+        static string PlaceholderText(string attributes, int width, bool hasText = false)
+        {
+            const string words = """
+                <a:p><a:r><a:rPr sz="1800"/><a:t>Visible</a:t></a:r></a:p>
+                <a:p><a:r><a:rPr sz="1800"/><a:t>Second</a:t></a:r></a:p>
+                <a:p><a:r><a:rPr sz="1800"/><a:t>Third</a:t></a:r></a:p>
+                """;
+            return Shape("<a:prstGeom prst=\"rect\"/>", placeholder: true)
+                .Replace("cx=\"1828800\" cy=\"914400\"", FormattableString.Invariant($"cx=\"{width}\" cy=\"2032000\""), StringComparison.Ordinal)
+                .Replace("</p:sp>", $"<p:txBody><a:bodyPr lIns=\"0\" rIns=\"0\" tIns=\"0\" bIns=\"0\"{attributes}/>{(hasText ? words : "<a:p/>")}</p:txBody></p:sp>", StringComparison.Ordinal);
+        }
+    }
+
+    private static (byte[] Pdf, List<OoxPdfDiagnostic> Diagnostics) RenderWithParts(string slide, string layout = "", string master = "")
+    {
+        using var output = new MemoryStream();
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        WithParts(slide: slide, layout: layout, master: master, check: path =>
+        {
+            using var input = File.OpenRead(path);
+            OoxPdfConverter.Convert(input, output, new OoxPdfOptions
+            {
+                InputKind = OoxPdfInputKind.Pptx,
+                FontResolver = new PortableRenderingTests.PinnedResolver(),
+                DiagnosticSink = diagnostics.Add
+            });
+        });
+        return (output.ToArray(), diagnostics);
     }
 
     public static void PptxLiveStylesHonorNoFillAndRetainLayoutSource()

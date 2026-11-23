@@ -8,7 +8,8 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static void EmitUnsupportedFeatureDiagnostics(PptxSceneSlide sceneSlide, XDocument slideXml, string partName, int slideIndex, Action<OoxPdfDiagnostic>? diagnosticSink, HashSet<string> warnedParts)
+    private static void EmitUnsupportedFeatureDiagnostics(PptxSceneSlide sceneSlide, XDocument slideXml, string partName, int slideIndex, Action<OoxPdfDiagnostic>? diagnosticSink, HashSet<string> warnedParts,
+        IReadOnlyDictionary<PptxTextSpanMemoKey, IReadOnlyList<PptxPositionedTextSpan>>? textSpanMemo)
     {
         if (diagnosticSink is null)
         {
@@ -107,10 +108,10 @@ internal sealed partial class PptxRenderer
 
         if (sceneSlide.ShowMasterShapes)
         {
-            EmitNodeDiagnostics(sceneSlide.MasterNodes, false, sceneSlide.MasterPartName ?? partName);
+            EmitNodeDiagnostics(sceneSlide.MasterNodes, sceneSlide.MasterColorMap, false, sceneSlide.MasterPartName ?? partName);
         }
-        EmitNodeDiagnostics(sceneSlide.LayoutNodes, false, sceneSlide.LayoutPartName ?? partName);
-        EmitNodeDiagnostics(sceneSlide.SlideNodes, true, partName);
+        EmitNodeDiagnostics(sceneSlide.LayoutNodes, sceneSlide.LayoutColorMap, false, sceneSlide.LayoutPartName ?? partName);
+        EmitNodeDiagnostics(sceneSlide.SlideNodes, sceneSlide.SlideColorMap, true, partName);
 
         // Non-scene fallbacks retain background and orphan-content diagnostics,
         // while drawing-owned content shares scene visibility, including groups.
@@ -130,7 +131,7 @@ internal sealed partial class PptxRenderer
         IEnumerable<XElement> VisibleSlideElements(XName name) =>
             slideXml.Descendants(name).Where(PptxSceneBuilder.IsVisibleDrawingContent);
 
-        void EmitNodeDiagnostics(IReadOnlyList<PptxSceneNode> nodes, bool renderPlaceholders, string nodePartName)
+        void EmitNodeDiagnostics(IReadOnlyList<PptxSceneNode> nodes, PptxColorMap colorMap, bool renderPlaceholders, string nodePartName)
         {
             // The same node admission as painting, without cloning the scene or
             // discarding the master XML used for text/style inheritance.
@@ -141,7 +142,7 @@ internal sealed partial class PptxRenderer
                 Emit("PPTX_UNSUPPORTED_PATTERN_FILL", "pattern fill", nodePartName);
             if (HasUnsupportedSceneTextOrientation(renderedNodes))
                 Emit("PPTX_UNSUPPORTED_TEXT_ORIENTATION", "vertical text", nodePartName);
-            if (HasUnsupportedSceneTextVerticalOverflow(renderedNodes))
+            if (HasUnsupportedSceneTextVerticalOverflow(renderedNodes, colorMap, renderPlaceholders, textSpanMemo))
                 EmitTextOverflow(nodePartName);
             if (HasUnsupportedPictureFill(renderedNodes))
                 Emit("PPTX_UNSUPPORTED_PICTURE_FILL", "picture fill", nodePartName);
@@ -463,11 +464,12 @@ internal sealed partial class PptxRenderer
         return overflow?.Equals("ellipsis", StringComparison.OrdinalIgnoreCase) == true;
     }
 
-    private static bool HasUnsupportedSceneTextVerticalOverflow(IEnumerable<PptxSceneNode> nodes)
+    private static bool HasUnsupportedSceneTextVerticalOverflow(IEnumerable<PptxSceneNode> nodes, PptxColorMap colorMap, bool renderPlaceholders,
+        IReadOnlyDictionary<PptxTextSpanMemoKey, IReadOnlyList<PptxPositionedTextSpan>>? textSpanMemo)
     {
         foreach (PptxSceneNode node in nodes)
         {
-            if (SceneTextBodyNeedsVerticalOverflowDiagnostic(node.TextBody) ||
+            if (HasUnmarkedShapeTextOverflow(node) ||
                 HasUnsupportedTableTextVerticalOverflow(node.Table) ||
                 HasUnsupportedChartTextVerticalOverflow(node.Chart))
             {
@@ -476,6 +478,14 @@ internal sealed partial class PptxRenderer
         }
 
         return false;
+
+        bool HasUnmarkedShapeTextOverflow(PptxSceneNode node)
+        {
+            return node.TextBody is not null && textSpanMemo is not null &&
+                textSpanMemo.TryGetValue(new PptxTextSpanMemoKey(node, colorMap, renderPlaceholders), out var spans) &&
+                spans.Count > 0 && spans[0].FrameVerticalOverflowMode == PptxTextVerticalOverflow.Ellipsis &&
+                spans.Any(UsesEllipsisClipFallback);
+        }
 
         bool HasUnsupportedChartTextVerticalOverflow(PptxSceneChart? chart)
         {
@@ -492,10 +502,20 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static bool SceneTextBodyNeedsVerticalOverflowDiagnostic(PptxSceneTextBody? textBody)
+    private static bool UsesEllipsisClipFallback(PptxPositionedTextSpan span)
     {
-        return textBody?.HasUnsupportedVerticalOverflow == true &&
-            TextBodyOrientationNeedsOverflowDiagnostic(textBody.BodyProperties);
+        TextRun run = span.Run;
+        if (!HasTextTransform(run) || string.IsNullOrWhiteSpace(run.Text) ||
+            (run.Alpha <= 0d && run.Outline is not { Alpha: > 0d }))
+        {
+            return false;
+        }
+
+        // Transformed text bypasses the ordinary ellipsis baseline filter. Its
+        // baseline and the retained frame clip still share writing coordinates.
+        double baseline = run.Y + run.BaselineOffset;
+        return baseline < span.FrameClipY - PptxTextMetricRules.TextStateTolerance ||
+            baseline > span.FrameClipY + span.FrameClipHeight + PptxTextMetricRules.TextStateTolerance;
     }
 
     private static bool TextBodyOrientationNeedsOverflowDiagnostic(XElement? bodyProperties)
