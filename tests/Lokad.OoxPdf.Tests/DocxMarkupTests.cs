@@ -1090,7 +1090,7 @@ internal static class DocxMarkupTests
         TestAssert.Equal(375d, layout.Pages[1].ColumnFrames[0].Width);
     }
 
-    public static void DocxMarkupWordCompatibleGeometryUsesReserveMarginFallback()
+    public static void DocxMarkupWordCompatibleGeometryUsesDistinctPrintScale()
     {
         string input = DocxTests.WriteTrackedChangeModeProbeDocx();
         DocxDocument readDocument = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);

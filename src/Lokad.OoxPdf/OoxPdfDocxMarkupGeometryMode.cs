@@ -16,8 +16,8 @@ public enum OoxPdfDocxMarkupGeometryMode
     ReserveMarkupMargin = 1,
 
     /// <summary>
-    /// Selects the Office-compatible all-markup print layout profile. Until the source package exposes enough
-    /// Word print-view data, this profile falls back to the reserved markup-margin geometry.
+    /// Uses an approximate Word print-review profile when supported balloons print in AllMarkup.
+    /// The profile scales the body into the review frame. Otherwise, the authored body layout is preserved.
     /// </summary>
     WordCompatibleAllMarkup = 2
 }
