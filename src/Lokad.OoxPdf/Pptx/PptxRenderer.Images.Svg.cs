@@ -236,7 +236,7 @@ internal sealed partial class PptxRenderer
             if (element.Name.LocalName == "text")
             {
                 if (!hasStylesheet && TryReadSvgPathTransform(element, out SvgTransform textTransform) &&
-                    TryPaintSvgText(graphics, element, paintServerIds, textFonts, textTransform, sourceMinX, sourceMinY,
+                    TryPaintSvgText(graphics, element, paintServerIds, textFonts, textTransform, viewWidth, viewHeight, sourceMinX, sourceMinY,
                         imageX, imageY, imageWidth, imageHeight, scaleX, scaleY, AdmitSamples, cancellationToken))
                     paintedText.Add(element);
                 continue;

@@ -95,6 +95,29 @@ internal static partial class SvgTextTests
         });
     }
 
+    public static void SvgPercentageLabelPositionsMatchViewportUnits()
+    {
+        foreach (string frame in new[] { "width=\"300\" height=\"160\" viewBox=\"10 10 150 80\"", "width=\"150\" height=\"80\"" })
+        {
+            string Picture(string x, string y, string dx, string dy) => $"""
+                <svg xmlns="http://www.w3.org/2000/svg" {frame} font-family="DejaVu Sans">
+                  <g transform="translate(4 1)">
+                    <text x="{x}" y="{y}" font-size="14" fill="#112233">NORTH</text>
+                    <text x="45" y="56" dx="{dx}" dy="{dy}" font-size="14" fill="#2254b4">A B</text>
+                  </g>
+                  <rect x="112" y="62" width="23" height="9" fill="green"/>
+                </svg>
+                """;
+
+            AssertSvgPaintInBothFormats(Picture("45", "30", "15", "4"),
+                Picture("30%", "37.5%", "10%", "5%"), pdf =>
+                {
+                    TestAssert.Equal(5, LabelPaths(pdf));
+                    TestAssert.Equal(2, LabelPaths(pdf, "0.133 0.329 0.706 rg"));
+                }, "0 0.502 0 rg");
+        }
+    }
+
     public static void SvgLabelTransformsUseThePictureCoordinateSystem()
     {
         const string transform = "matrix(0.965925826 0.258819045 -0.258819045 0.965925826 5 7)";

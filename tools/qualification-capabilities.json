@@ -711,6 +711,7 @@
     "=SvgLabelsKeepTheirFillWhenStrokesDoNotPaint",
     "=SvgTransparentPaintMatchesExplicitZeroOpacity",
     "=SvgLabelsKeepTextAcrossPlainAndMetadataSpans",
+    "=SvgPercentageLabelPositionsMatchViewportUnits",
     "SvgInheritedGradientStrokeOpacityKeepsNumericFallbackContract",
     "SvgInheritedPaintSurvivesDocxAndPptxContainers",
     "PptxSyntheticSvgGroupStrokeWidthInherits",

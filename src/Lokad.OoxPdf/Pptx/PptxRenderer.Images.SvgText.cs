@@ -44,13 +44,15 @@ internal sealed partial class PptxRenderer
             XDocument svg;
             try { using var stream = new MemoryStream(bytes); svg = SafeXml.Load(stream, cancellationToken); }
             catch (InvalidDataException) { continue; } // The paint path owns the existing parse diagnostic/fallback.
-            if (HasSvgStylesheet(svg)) continue;
+            if (HasSvgStylesheet(svg) ||
+                !TryReadSvgSourceFrame(svg.Root, out _, out _, out double viewWidth, out double viewHeight) ||
+                viewWidth <= 0d || viewHeight <= 0d) continue;
             var paintServerIds = CreateSvgPaintServerIdLookup(svg, cancellationToken);
             foreach (XElement element in svg.Descendants().Where(e => e.Name.LocalName == "text"))
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 if (IsSvgDefinitionElement(element) || IsInFullyTransparentSvgContainer(element) || IsHiddenSvgElement(element) ||
-                    !TryReadSvgText(element, paintServerIds, cancellationToken, out SvgTextLabel? label) || label.Color is null ||
+                    !TryReadSvgText(element, paintServerIds, viewWidth, viewHeight, cancellationToken, out SvgTextLabel? label) || label.Color is null ||
                     label.Opacity == 0d || label.Text.Length == 0 || fonts.ContainsKey(label.Font)) continue;
                 FontFaceResolution resolution = resolver.Resolve(label.Font);
                 OpenTypeFont? font = await loadFont(resolution, cancellationToken).ConfigureAwait(false);
@@ -76,7 +78,7 @@ internal sealed partial class PptxRenderer
         element.Name.LocalName is "title" or "desc" or "metadata";
 
     private static bool TryReadSvgText(XElement element, Lazy<HashSet<string>> paintServerIds,
-        CancellationToken cancellationToken, [NotNullWhen(true)] out SvgTextLabel? label)
+        double viewWidth, double viewHeight, CancellationToken cancellationToken, [NotNullWhen(true)] out SvgTextLabel? label)
     {
         label = null;
         if (element.AncestorsAndSelf().Any(e => ReadSvgStyleDeclarations(e).ContainsKey("font")) ||
@@ -129,10 +131,10 @@ internal sealed partial class PptxRenderer
             else if (!TryReadSvgTextLength(value, size, out size, allowPercent: true))
                 return false;
         }
-        if (size <= 0d || !TryReadSvgTextLength((string?)element.Attribute("x") ?? "0", null, out double x) ||
-            !TryReadSvgTextLength((string?)element.Attribute("y") ?? "0", null, out double y) ||
-            !TryReadSvgTextLength((string?)element.Attribute("dx") ?? "0", size, out double dx) ||
-            !TryReadSvgTextLength((string?)element.Attribute("dy") ?? "0", size, out double dy)) return false;
+        if (size <= 0d || !TryReadPosition("x", viewWidth, null, out double x) ||
+            !TryReadPosition("y", viewHeight, null, out double y) ||
+            !TryReadPosition("dx", viewWidth, size, out double dx) ||
+            !TryReadPosition("dy", viewHeight, size, out double dy)) return false;
         x += dx; y += dy;
         if (!double.IsFinite(x) || !double.IsFinite(y)) return false;
         string fill = ResolveSvgPaintFallback(element, style, Inherited("fill") ?? "black", paintServerIds, out _);
@@ -161,6 +163,14 @@ internal sealed partial class PptxRenderer
             !string.Equals(Inherited("font-kerning"), "none", StringComparison.OrdinalIgnoreCase) &&
             Inherited("kerning") is not ("0" or "0px"));
         return true;
+
+        bool TryReadPosition(string name, double percentageBasis, double? relativeSize, out double value)
+        {
+            string text = ((string?)element.Attribute(name) ?? "0").Trim();
+            return text.EndsWith('%')
+                ? TryReadSvgViewportLength(element, text, percentageBasis, out value)
+                : TryReadSvgTextLength(text, relativeSize, out value);
+        }
     }
 
     // Stylesheet-driven text has already been excluded. Plain spans and spans
@@ -202,12 +212,12 @@ internal sealed partial class PptxRenderer
     }
 
     private static bool TryPaintSvgText(PdfGraphicsBuilder graphics, XElement element, Lazy<HashSet<string>> paintServerIds,
-        IReadOnlyDictionary<FontRequest, SvgTextFont?>? fonts, SvgTransform transform,
+        IReadOnlyDictionary<FontRequest, SvgTextFont?>? fonts, SvgTransform transform, double viewWidth, double viewHeight,
         double sourceMinX, double sourceMinY, double imageX, double imageY, double imageWidth, double imageHeight,
         double scaleX, double scaleY, Action<int> admitSamples, CancellationToken cancellationToken)
     {
         if (IsHiddenSvgElement(element)) return true;
-        if (!TryReadSvgText(element, paintServerIds, cancellationToken, out SvgTextLabel? label)) return false;
+        if (!TryReadSvgText(element, paintServerIds, viewWidth, viewHeight, cancellationToken, out SvgTextLabel? label)) return false;
         if (label.Color is not { } color || label.Opacity == 0d || label.Text.Length == 0) return true;
         if (fonts is null || !fonts.TryGetValue(label.Font, out SvgTextFont? prepared) || prepared is null) return false;
         OpenTypeFont font = prepared.Font;
