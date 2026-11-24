@@ -79,7 +79,7 @@ internal static partial class DocxInlineCompositionTests
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
         {
             DocxDocument Read(bool insideEquation, bool mathRun, string? type = null, int breakCount = 1, bool proofing = false,
-                bool? bookmarkStartsAfterBreaks = null) => ReadMutation(
+                bool? bookmarkStartsAfterBreaks = null, string? paginationHint = null) => ReadMutation(
                 "CompositionProbes/math-explicit-display-same-group", mode, false, false, (xml, w, m) =>
                 {
                     var group = xml.Descendants(m + "oMathPara").Single();
@@ -89,8 +89,13 @@ internal static partial class DocxInlineCompositionTests
                         string? breakType = index == 0 ? type : "textWrapping";
                         var lineBreak = new XElement(w + "br", breakType is null ? null : new XAttribute(w + "type", breakType));
                         var run = new XElement((mathRun ? m : w) + "r", lineBreak);
+                        if (index == 0 && paginationHint is ("inside" or "malformed"))
+                            run.Add(new XElement(w + "lastRenderedPageBreak",
+                                paginationHint == "malformed" ? new XAttribute(w + "future", "1") : null));
                         if (insideEquation) equations[0].Add(run);
                         else equations[1].AddBeforeSelf(run);
+                        if (index == 0 && paginationHint == "between")
+                            run.AddAfterSelf(new XElement(m + "r", new XElement(w + "lastRenderedPageBreak")));
                     }
                     if (proofing)
                     {
@@ -142,14 +147,25 @@ internal static partial class DocxInlineCompositionTests
                 var nested = CheckMathBreaks(Read(true, true, breakCount: 2, bookmarkStartsAfterBreaks: startsAfterBreaks), expectedTwo);
                 var target = control.Annotations.Single(link => link.IsDestination);
                 TestAssert.Equal(target, nested.Annotations.Single(link => link.IsDestination));
+                if (startsAfterBreaks)
+                {
+                    foreach (string hint in new[] { "inside", "between" })
+                    {
+                        var withHint = CheckMathBreaks(Read(true, true, breakCount: 2,
+                            bookmarkStartsAfterBreaks: true, paginationHint: hint), expectedTwo);
+                        TestAssert.Equal(target, withHint.Annotations.Single(link => link.IsDestination));
+                    }
+                }
             }
 
-            var unsupported = new List<OoxPdfDiagnostic>();
-            var pageBreak = renderer.RenderPagesAsync(Read(insideEquation: true, mathRun: true, type: "page"), unsupported.Add, default)
-                .ToBlockingEnumerable().Single();
-            TestAssert.Equal("δ+ε=ζ", string.Concat(MathShows(pageBreak).Select(show => show.Text)).Normalize(NormalizationForm.FormKC));
-            TestAssert.True(unsupported.Any(d => d.Id == "DOCX_UNSUPPORTED_EQUATION"),
-                "An in-equation page break keeps its diagnosed fallback.");
+            foreach (var document in new[] { Read(true, true, type: "page"), Read(true, true, paginationHint: "malformed") })
+            {
+                var unsupported = new List<OoxPdfDiagnostic>();
+                var page = renderer.RenderPagesAsync(document, unsupported.Add, default).ToBlockingEnumerable().Single();
+                TestAssert.Equal("δ+ε=ζ", string.Concat(MathShows(page).Select(show => show.Text)).Normalize(NormalizationForm.FormKC));
+                TestAssert.True(unsupported.Any(d => d.Id == "DOCX_UNSUPPORTED_EQUATION"),
+                    "An authored page break or malformed hint keeps its diagnosed fallback.");
+            }
 
             PdfPage CheckMathBreaks(DocxDocument document, (string Text, double X, double Y, double Size)[] control)
             {

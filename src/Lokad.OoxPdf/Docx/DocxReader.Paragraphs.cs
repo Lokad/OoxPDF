@@ -541,9 +541,12 @@ internal sealed partial class DocxReader
                     {
                         cancellationToken.ThrowIfCancellationRequested();
                         // Route range markers at their actual position in the
-                        // paragraph stream, alongside the relocated breaks.
-                        AddSourceContainerChild(item.Name == MathNamespace + "r" ? AsParagraphBreakRun(item) : item,
-                            source.Revision, removeDeletedText: false);
+                        // paragraph stream. Only authored breaks advance lines.
+                        bool mathRun = item.Name == MathNamespace + "r";
+                        if (mathRun && item.Element(WordprocessingNamespace + "br") is null)
+                            continue;
+                        AddSourceContainerChild(mathRun ? AsParagraphBreakRun(item) : item, source.Revision,
+                            removeDeletedText: false);
                     }
                 }
             }

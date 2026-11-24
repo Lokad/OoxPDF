@@ -30,14 +30,19 @@ internal sealed partial class DocxReader
         static bool IsBoundary(XElement element) =>
             DocxSourceXml.IsNonPrintingMarker(element) ||
             DocxMathParser.IsBookmarkMarker(element) ||
-            DocxMathParser.IsCommentBoundary(element);
+            DocxMathParser.IsCommentBoundary(element) ||
+            (element.Name == MathNamespace + "r" &&
+             element.Attributes().All(attribute => attribute.IsNamespaceDeclaration) &&
+             element.Elements().All(DocxSourceXml.IsLastRenderedPageBreakHint) &&
+             element.Nodes().OfType<XText>().All(text => string.IsNullOrWhiteSpace(text.Value)));
     }
 
     private static bool IsDisplayMathLineBreakRun(XElement? run)
     {
         if (run is null || run.Name != MathNamespace + "r" ||
             run.Element(WordprocessingNamespace + "br") is not { } lineBreak ||
-            run.Elements().Any(child => child != lineBreak && child.Name != WordprocessingNamespace + "rPr") ||
+            run.Elements().Any(child => child != lineBreak && child.Name != WordprocessingNamespace + "rPr" &&
+                !DocxSourceXml.IsLastRenderedPageBreakHint(child)) ||
             run.Nodes().OfType<XText>().Any(text => !string.IsNullOrWhiteSpace(text.Value))) return false;
 
         return !lineBreak.HasElements && string.IsNullOrWhiteSpace(lineBreak.Value) &&
