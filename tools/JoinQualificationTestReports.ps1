@@ -19,6 +19,23 @@ function Resolve-Input([string] $Name) {
     (Resolve-Path -LiteralPath $path).Path
 }
 function Pin([string] $Path) { [ordered]@{Path=$Path;Sha256=(Get-FileHash -LiteralPath $Path).Hash} }
+$fixtureDirectory='tests/Lokad.OoxPdf.Tests/Cases'
+function Get-BoundInputSnapshot([string] $Artifact, $Identity) {
+    $declared=$Identity.InputSnapshot
+    if ($declared -isnot [string] -or ![IO.Path]::IsPathFullyQualified($declared)) { return }
+    $entry=Get-Item -LiteralPath (Join-Path $Artifact $fixtureDirectory) -Force -ErrorAction Ignore
+    if ($entry -isnot [IO.DirectoryInfo] -or !$entry.LinkType) { return }
+    try {
+        $snapshot=[IO.Path]::TrimEndingDirectorySeparator([IO.Path]::GetFullPath($declared))
+        $target=$entry.ResolveLinkTarget($false)
+        if ($target -is [IO.DirectoryInfo] -and $target.FullName -ceq (Join-Path $snapshot $fixtureDirectory)) {
+            return $snapshot
+        }
+    }
+    catch [ArgumentException], [IO.IOException], [NotSupportedException] {
+        # Older or relocated assets still use their own literal input paths.
+    }
+}
 $selectionPath=Resolve-Input $config.ExpectedSelection
 $expected=[Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
 foreach ($name in @(Get-Content -LiteralPath $selectionPath -Raw | ConvertFrom-Json)) {
@@ -45,6 +62,10 @@ $framework=if ($first.Framework) {$first.Framework} else {'net10.0'}
 if ($framework -notin @('net10.0','net11.0')) { throw 'Unknown frozen target framework' }
 $runtime=@($first.Assets.Keys | Where-Object {$_ -notmatch '/Lokad\.OoxPdf\.Tests\.(dll|exe|pdb)$'})
 if (!$runtime.Count -or !$first.Inputs.Count) { throw 'Frozen runtime and public input identities are required' }
+$canShareInputs=!@($first.Inputs.Keys | Where-Object {
+    !$_.StartsWith($fixtureDirectory+'/', [StringComparison]::Ordinal) -or $_ -cmatch '(^|/)\.\.?[ ]*(/|$)|[\\:]'
+}).Count
+$boundSnapshots=[Collections.Generic.Dictionary[string,string]]::new([StringComparer]::Ordinal)
 foreach ($artifact in $pins.Keys) {
     $pin=$pins[$artifact]
     $selected=if ($pin.Framework) {$pin.Framework} else {'net10.0'}
@@ -63,9 +84,16 @@ foreach ($artifact in $pins.Keys) {
     foreach ($name in $pin.Assets.Keys) {
         if ((Get-FileHash -LiteralPath (Join-Path $artifact $name)).Hash -ne $pin.Assets[$name]) { throw 'A pinned runtime file differs' }
     }
-    foreach ($name in $pin.Inputs.Keys) {
-        if ((Get-FileHash -LiteralPath (Join-Path $artifact $name)).Hash -ne $pin.Inputs[$name]) { throw 'A pinned public input differs' }
+    # A snapshot name alone cannot identify the bytes a runner reads. Reuse only
+    # when its fixture link points there and the complete pinned input maps agree.
+    $snapshot=if ($canShareInputs) { Get-BoundInputSnapshot $artifact $pin }
+    if (!$snapshot -or !$boundSnapshots.ContainsValue($snapshot)) {
+        $inputRoot=if ($snapshot) { $snapshot } else { $artifact }
+        foreach ($name in $pin.Inputs.Keys) {
+            if ((Get-FileHash -LiteralPath (Join-Path $inputRoot $name)).Hash -ne $pin.Inputs[$name]) { throw 'A pinned public input differs' }
+        }
     }
+    if ($snapshot) { $boundSnapshots.Add($artifact,$snapshot) }
 }
 # Earlier passes may retain their original harness, but the declared final
 # harness must be the one used by the final supplied run, wherever it is stored.
@@ -145,6 +173,11 @@ if (@($rows.Values | Where-Object {$_.outcome -eq 'failed'}).Count -or
 }
 if ($unexpectedSkips.Count) {
     throw ('Unexpected skips remain in the final selection: ' + (($unexpectedSkips | Sort-Object) -join ', '))
+}
+foreach ($artifact in $boundSnapshots.Keys) {
+    if ((Get-BoundInputSnapshot $artifact $pins[$artifact]) -cne $boundSnapshots[$artifact]) {
+        throw 'A shared public input binding changed during the join'
+    }
 }
 $result=[ordered]@{
     Scope='Join reviewed test-only repairs; declared corrected methods still require source review.'

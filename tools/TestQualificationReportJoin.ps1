@@ -199,6 +199,65 @@ if ($copyResult.TestAssemblySha256 -ne $result.TestAssemblySha256 -or $copyResul
     ($copyResult.tests | Where-Object name -eq 'Unchanged').SourceTestAssemblySha256 -eq $copyResult.TestAssemblySha256) {
     throw 'Equivalent final copies must preserve tested identity and earlier-pass provenance'
 }
+$snapshot=Join-Path $repo 'artifacts/shared-inputs'
+$snapshotInput=Join-Path $snapshot $inputName
+$otherInput=Join-Path (Join-Path $repo 'artifacts/other-inputs') $inputName
+Write-Text $snapshotInput 'same public input'
+Write-Text $otherInput 'changed public input'
+$linkType=if ($IsWindows) {'Junction'} else {'SymbolicLink'}
+function Write-SnapshotArtifact([string] $Name, [string] $From, [string] $InputTarget) {
+    $source=Join-Path $repo ('artifacts/'+$From)
+    $directory=Join-Path $repo ('artifacts/'+$Name)
+    $pin=Get-Content -LiteralPath (Join-Path $source 'identity.json') -Raw | ConvertFrom-Json -AsHashtable
+    $pin.InputSnapshot=$snapshot
+    foreach ($asset in $pin.Assets.Keys) {
+        $file=Join-Path $directory $asset
+        New-Item -ItemType Directory -Force -Path (Split-Path -Parent $file) | Out-Null
+        Copy-Item -LiteralPath (Join-Path $source $asset) -Destination $file
+    }
+    $inputFile=Join-Path $directory $inputName
+    if ($InputTarget) {
+        $leaf=Split-Path -Parent $inputFile
+        New-Item -ItemType Directory -Force -Path (Split-Path -Parent $leaf) | Out-Null
+        New-Item -ItemType $linkType -Path $leaf -Target (Split-Path -Parent $InputTarget) | Out-Null
+    } else {
+        Write-Text $inputFile 'same public input'
+    }
+    Write-Json (Join-Path $directory 'identity.json') $pin
+}
+Write-SnapshotArtifact 'linked-first' 'before' $snapshotInput
+Write-SnapshotArtifact 'linked-repair' 'after' $snapshotInput
+Write-SnapshotArtifact 'standalone' 'after' ''
+Write-SnapshotArtifact 'retargeted' 'after' $otherInput
+$snapshotChecks=@()
+foreach ($repair in 'linked-repair','standalone','retargeted') {
+    $linkConfig=$config.Clone()
+    $linkConfig.Initial=@{Artifact='repo/artifacts/linked-first';Report='initial.json'}
+    $linkConfig.FinalArtifact='repo/artifacts/'+$repair
+    $linkConfig.Repairs=@(@{Artifact=$linkConfig.FinalArtifact;Report='repair.json'})
+    $linkManifest=Join-Path $root ($repair+'-manifest.json')
+    Write-Json $linkManifest $linkConfig
+    if ($repair -eq 'retargeted') {
+        Reject 'retargeted-fixture-link' 'A pinned public input differs' $linkManifest
+        continue
+    }
+    $reads=[Collections.Generic.List[string]]::new()
+    $linkOutput=Join-Path $root ($repair+'-join.json')
+    & {
+        function Get-FileHash([string] $LiteralPath) {
+            if ($LiteralPath.Replace('\','/').EndsWith('/'+$inputName,[StringComparison]::Ordinal)) { $reads.Add($LiteralPath) }
+            Microsoft.PowerShell.Utility\Get-FileHash -LiteralPath $LiteralPath
+        }
+        $null=& $join -Manifest $linkManifest -OutputPath $linkOutput
+    }
+    $expectedReads=@($snapshotInput)
+    if ($repair -eq 'standalone') { $expectedReads+=Join-Path $repo ('artifacts/standalone/'+$inputName) }
+    $linked=Get-Content -LiteralPath $linkOutput -Raw | ConvertFrom-Json
+    if ($reads.Count -ne $expectedReads.Count -or @(Compare-Object $expectedReads $reads -CaseSensitive).Count -or
+        $linked.passed -ne $result.passed -or $linked.MethodAttempts -ne $result.MethodAttempts -or
+        $linked.InputsUnchanged -ne 1) { throw 'Fixture ownership changed hash coverage or the joined result' }
+    $snapshotChecks+=@{Artifact=$repair;FixtureReads=$reads.Count;Report=(Get-FileHash -LiteralPath $linkOutput).Hash}
+}
 # A retained skip follows the policy of the report that produced it.
 $skipChecks=@()
 foreach ($policy in @('unexpected','undeclared','expected','fast-group-only')) {
@@ -323,8 +382,8 @@ foreach ($pin in $positivePins) {
 }
 Write-Json (Join-Path $root 'evidence.json') @{PositiveReportSha256=(Get-FileHash -LiteralPath $positive).Hash
     ResolvedRepairReportSha256=(Get-FileHash -LiteralPath $resolvedPath).Hash
-    TestedFinalCopyReportSha256=(Get-FileHash -LiteralPath $copyOutput).Hash;PositiveJoins=(3+$skipChecks.Count+$toolChecks.Count)
+    TestedFinalCopyReportSha256=(Get-FileHash -LiteralPath $copyOutput).Hash;PositiveJoins=(3+$skipChecks.Count+$toolChecks.Count+$snapshotChecks.Count)
     ValidationToolPasses=$toolChecks
     SkipPolicyPasses=$skipChecks
-    Rejections=$rejections;FilesRetained=$true;Builds=0;Conversions=0;RunnerInvocations=0}
-"Qualification report join checks pass: $(3+$skipChecks.Count+$toolChecks.Count) provenance-preserving joins, $($rejections.Count) pre-publication rejections; no builds/tests/conversions."
+    SnapshotChecks=$snapshotChecks;Rejections=$rejections;FilesRetained=$true;Builds=0;Conversions=0;RunnerInvocations=0}
+"Qualification report join checks pass: $(3+$skipChecks.Count+$toolChecks.Count+$snapshotChecks.Count) provenance-preserving joins, $($rejections.Count) pre-publication rejections; no builds/tests/conversions."
