@@ -267,7 +267,7 @@ internal static class TestCatalog
         nameof(PortableRenderingTests.PortableRenderingRichChartTitleKeepsAuthoredLinesAndTheirLinks) or
         nameof(PortableRenderingTests.PortableRenderingChartSeriesOrderSurvivesXmlReordering) or
         nameof(PortableRenderingTests.PortableRenderingAutomaticColumnLabelsWrapInsideChartFrames) or
-        nameof(PortableRenderingTests.PortableRenderingAutomaticColumnLabelsKeepComposedValueSuffixes) or
+        nameof(PortableRenderingTests.PortableRenderingComposedColumnsKeepOwnedLabelsAndOfficeColors) or
         nameof(PortableRenderingTests.PortableRenderingColumnLabelWrappingKeepsUnicodeAndBreaks) or
         nameof(PortableRenderingTests.PortableRenderingBarPointKeysKeepSingleSeriesCategoryIdentity) or
         nameof(PortableRenderingTests.PortableRenderingBarPalettesFollowIndependentOfficeSourceIndices) or

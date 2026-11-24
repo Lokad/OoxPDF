@@ -1,6 +1,7 @@
 using System.IO.Compression;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pdf;
@@ -20,28 +21,39 @@ internal static class PptxColumnLabelWrappingTests
         {
             string id = control.GetProperty("Id").GetString()!;
             PdfPage page = Render(File.ReadAllBytes(Path.Combine(Cases, "ColumnLabelWrapping", id + ".pptx")));
-            string text = Normalize(string.Concat(Shows(page).Select(show => show.Text)));
+            var shows = Shows(page).ToArray();
+            string text = Normalize(string.Concat(shows.Select(show => show.Text)));
             foreach (var label in control.GetProperty("Labels").EnumerateArray())
                 TestAssert.True(text.Contains(Normalize(label.GetProperty("Text").GetString()!), StringComparison.Ordinal),
                     id + ": every Office source label survives automatic wrapping.");
             var shape = control.GetProperty("Shape");
-            CheckFrames(page, shape.GetProperty("ShapeLeft").GetDouble(),
+            CheckFrames(shows, shape.GetProperty("ShapeLeft").GetDouble(),
                 page.Height - shape.GetProperty("ShapeTop").GetDouble() - shape.GetProperty("ShapeHeight").GetDouble(),
                 shape.GetProperty("ShapeWidth").GetDouble(), shape.GetProperty("ShapeHeight").GetDouble(), id);
         }
     }
 
-    internal static void CheckComposition()
+    internal static void CheckComposedLabels(PdfPage page, string id)
     {
-        foreach (string name in new[] { "keys-point-override-valid", "fixed-series-negative-keys", "authored-series-point-keys" })
+        var shows = Shows(page, honorActualText: false).ToArray();
+        string text = Normalize(string.Concat(shows.Select(show => show.Text)));
+        var labels = Regex.Matches(text, @"(?<![A-Za-z])(?:Other)?ColumnSource,W[0-9]+,-?[0-9]+")
+            .Select(match => match.Value).ToArray();
+        (string Series, int[] Values)[] expected =
+        [
+            ("ColumnSource", [id == "fixed-series-negative-keys" ? -82 : 82, 85, 79, 91, 88, 94, 87, 96]),
+            ("OtherColumnSource", [131, 134, 128, 140, 137, 143, 136, 145])
+        ];
+        foreach (var (series, values) in expected)
         {
-            byte[] input = File.ReadAllBytes(Path.Combine(Cases, "ComposedBarPalettes", name + ".pptx"));
-            PdfPage page = Render(input);
-            string text = string.Concat(Shows(page).Select(show => show.Text));
-            TestAssert.True(text.Contains("96", StringComparison.Ordinal) && text.Contains("145", StringComparison.Ordinal),
-                name + ": both final automatic value suffixes remain encoded.");
-            CheckFrames(page, 72d, 72d, 720d, 432d, name, positiveOnly: true);
+            for (int i = 0; i < values.Length; i++)
+            {
+                string label = FormattableString.Invariant($"{series},W{i + 1},{values[i]}");
+                TestAssert.True(labels.Contains(label, StringComparer.Ordinal), $"{id}: missing data label {label}.");
+            }
         }
+        TestAssert.True(labels.Length == 16, $"{id}: expected 16 data labels, found {labels.Length}.");
+        CheckFrames(shows, 72d, 72d, 720d, 432d, id, positiveOnly: true);
     }
 
     public static void PptxColumnLabelSourceRetainsExplicitWrappingConstraints()
@@ -408,9 +420,10 @@ internal static class PptxColumnLabelWrappingTests
             "A combining sequence remains on one measured line.");
     }
 
-    private static void CheckFrames(PdfPage page, double x, double y, double width, double height, string id, bool positiveOnly = false)
+    private static void CheckFrames(IEnumerable<(PdfEmbeddedFont Font, string Text, double Size, double X, double Y)> shows,
+        double x, double y, double width, double height, string id, bool positiveOnly = false)
     {
-        foreach (var show in Shows(page))
+        foreach (var show in shows)
         {
             // Count advances independently from layout. Ignoring negative kerning
             // gives a conservative upper bound; 2pt covers that difference, not
@@ -425,8 +438,9 @@ internal static class PptxColumnLabelWrappingTests
     }
 
     private static string Normalize(string text) => string.Concat(text.Where(c => !char.IsWhiteSpace(c)));
-    private static IEnumerable<(PdfEmbeddedFont Font, string Text, double Size, double X, double Y)> Shows(PdfPage page) =>
-        DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, false, fontResourceFilter: resource => resource.StartsWith("CBD", StringComparison.Ordinal));
+    private static IEnumerable<(PdfEmbeddedFont Font, string Text, double Size, double X, double Y)> Shows(PdfPage page, bool honorActualText = true) =>
+        DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, false, honorActualText: honorActualText,
+            fontResourceFilter: resource => resource.StartsWith("CBD", StringComparison.Ordinal));
 
     private static PdfPage Render(byte[] bytes)
     {

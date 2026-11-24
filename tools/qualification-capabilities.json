@@ -978,7 +978,7 @@
       "PortableRenderingOperationsDecksKeepCompleteLegendsAndPictures",
       "PortableRenderingPptxPreservesCompositeChartAndText",
       "PortableRenderingAutomaticColumnLabelsWrapInsideChartFrames",
-      "PortableRenderingAutomaticColumnLabelsKeepComposedValueSuffixes",
+      "PortableRenderingComposedColumnsKeepOwnedLabelsAndOfficeColors",
       "PortableRenderingColumnLabelWrappingKeepsUnicodeAndBreaks"
   ],
   "composition-independent-records": [
@@ -1021,7 +1021,7 @@
       "PptxAutomaticColumnNoWrapKeysKeepParagraphAndSwatchReferences",
       "PptxAutomaticColumnOverfullGlyphsKeepFittedReferenceWidths",
       "PortableRenderingAutomaticColumnLabelsWrapInsideChartFrames",
-      "PortableRenderingAutomaticColumnLabelsKeepComposedValueSuffixes",
+      "PortableRenderingComposedColumnsKeepOwnedLabelsAndOfficeColors",
       "PortableRenderingColumnLabelWrappingKeepsUnicodeAndBreaks",
       "PptxColumnLabelSourceRetainsExplicitWrappingConstraints",
       "PptxSyntheticBarLegendKey",
@@ -4392,7 +4392,7 @@
   "pptx-column-source-direction": [
     "ConvertPptxObservesCancellationAfterWorkBegins",
     "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
-    "PortableRenderingAutomaticColumnLabelsKeepComposedValueSuffixes",
+    "PortableRenderingComposedColumnsKeepOwnedLabelsAndOfficeColors",
     "PortableRenderingAutomaticColumnLabelsWrapInsideChartFrames",
     "PortableRenderingBarPaletteIndicesKeepBoundsAndFallbacks",
     "PortableRenderingBarPalettesFollowIndependentOfficeSourceIndices",
@@ -4521,6 +4521,7 @@
     "ConvertPptxObservesCancellationAfterWorkBegins",
     "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
     "PortableRenderingBarPalettesFollowIndependentOfficeSourceIndices",
+    "PortableRenderingComposedColumnsKeepOwnedLabelsAndOfficeColors",
     "PortableRenderingSharedAxisFramesMatchIndependentOfficePairs",
     "PortableRenderingSharedAxisPlacesEveryPlotOnItsResolvedScale",
     "PptxCenteredHorizontalLabelFramesFollowPaintedBars",
@@ -8203,7 +8204,8 @@
     "PortableRenderingInlineMetadataWrappersRetainParentFrames",
     "PortableRenderingStaticSvgFramesPreserveBodyAndVectorPaint",
     "PortableRenderingPptxPreservesCompositeChartAndText",
-    "PortableRenderingBarPalettesFollowIndependentOfficeSourceIndices"
+    "PortableRenderingBarPalettesFollowIndependentOfficeSourceIndices",
+    "PortableRenderingComposedColumnsKeepOwnedLabelsAndOfficeColors"
   ],
   "preview-inert-pptx": [
     "PortableRenderingPptxPreservesCompositeChartAndText",
@@ -18687,7 +18689,7 @@
     "=PptxChartSeriesNamesPreferCacheThenWorkbookText",
     "=PptxWorkbookPhoneticsAndStorageKeepCachedChartPaint",
     "=PptxColumnFontFallbackKeepsCaptionAnchorsInsideTheFrame",
-    "=PortableRenderingAutomaticColumnLabelsKeepComposedValueSuffixes",
+    "=PortableRenderingComposedColumnsKeepOwnedLabelsAndOfficeColors",
     "=PortableRenderingColumnLabelWrappingKeepsUnicodeAndBreaks",
     "=PptxAreaLabelsKeepDefaultComponentsDeletionAndCustomText",
     "=PptxBubbleLegendWhitespaceKeepsMeasuredInkCenter",
@@ -19582,7 +19584,7 @@
     "PptxScenePreservesChartManualLayoutNumericOptionTokens",
     "PptxPointLabelManualLinksTranslateWithPaint",
     "PortableRenderingAutomaticColumnLabelsWrapInsideChartFrames",
-    "PortableRenderingAutomaticColumnLabelsKeepComposedValueSuffixes",
+    "PortableRenderingComposedColumnsKeepOwnedLabelsAndOfficeColors",
     "ConvertPptxObservesCancellationAfterWorkBegins",
     "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
     "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
@@ -19598,7 +19600,7 @@
     "PptxAutomaticColumnNoWrapKeysKeepParagraphAndSwatchReferences",
     "PptxAutomaticColumnOverfullGlyphsKeepFittedReferenceWidths",
     "PortableRenderingAutomaticColumnLabelsWrapInsideChartFrames",
-    "PortableRenderingAutomaticColumnLabelsKeepComposedValueSuffixes",
+    "PortableRenderingComposedColumnsKeepOwnedLabelsAndOfficeColors",
     "PortableRenderingColumnLabelWrappingKeepsUnicodeAndBreaks",
     "PptxColumnLabelSourceRetainsExplicitWrappingConstraints",
     "PptxSyntheticBarLegendKey",
@@ -19616,6 +19618,7 @@
   "pptx-bar-source-palette": [
     "PortableRenderingBarPointKeysKeepSingleSeriesCategoryIdentity",
     "PortableRenderingBarPalettesFollowIndependentOfficeSourceIndices",
+    "PortableRenderingComposedColumnsKeepOwnedLabelsAndOfficeColors",
     "PortableRenderingBarPaletteIndicesKeepBoundsAndFallbacks",
     "PortableRenderingSharedAxisFramesMatchIndependentOfficePairs",
     "PortableRenderingSharedAxisPlacesEveryPlotOnItsResolvedScale",
@@ -19627,6 +19630,7 @@
     "ConvertPptxObservesCancellationAfterWorkBegins",
     "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
     "PortableRenderingBarPalettesFollowIndependentOfficeSourceIndices",
+    "PortableRenderingComposedColumnsKeepOwnedLabelsAndOfficeColors",
     "PortableRenderingComposedAxisLabelsRetainSourceVisibility",
     "PortableRenderingComposedPlotsShareOnePrimaryAxisLabelStrip",
     "PortableRenderingSharedAxisFramesMatchIndependentOfficePairs",
@@ -19699,6 +19703,7 @@
     "PortableRenderingComposedAxisLabelsRetainSourceVisibility",
     "PptxInnerFactorPlotOriginsMatchIndependentOfficeControls",
     "PortableRenderingBarPalettesFollowIndependentOfficeSourceIndices",
+    "PortableRenderingComposedColumnsKeepOwnedLabelsAndOfficeColors",
     "ConvertPptxObservesCancellationAfterWorkBegins",
     "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
     "=PdfCrossReferencesAndStreamLengthsMatchFileContents"

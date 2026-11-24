@@ -15,15 +15,25 @@ internal static class PptxComposedPaletteTests
     private static string Cases => Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,
         "..", "..", "..", "Cases", "ComposedBarPalettes"));
 
-    internal static void CheckColors()
+    internal static void CheckColors(bool composedColumns)
     {
         using var oracle = JsonDocument.Parse(File.ReadAllText(Path.Combine(Cases, "office.json")));
+        int checkedColumns = 0;
         foreach (var row in oracle.RootElement.GetProperty("Rows").EnumerateArray())
         {
+            string id = row.GetProperty("Id").GetString()!;
+            bool hasColumnLabels = id is "keys-point-override-valid" or "fixed-series-negative-keys" or "authored-series-point-keys";
+            if (hasColumnLabels != composedColumns) continue;
             byte[] bytes = File.ReadAllBytes(Path.Combine(Cases, row.GetProperty("Input").GetString()!));
             TestAssert.Equal(row.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(bytes)));
+            PdfPage page = Render(bytes);
+            if (hasColumnLabels)
+            {
+                PptxColumnLabelWrappingTests.CheckComposedLabels(page, id);
+                checkedColumns++;
+            }
             bool horizontal = row.GetProperty("Horizontal").GetBoolean();
-            var rectangles = ReadFilledRectangles(Render(bytes)).ToArray();
+            var rectangles = ReadFilledRectangles(page).ToArray();
             foreach (bool keys in new[] { false, true })
             {
                 var expected = row.GetProperty(keys ? "KeyColors" : "BarColors").EnumerateArray().ToArray();
@@ -33,18 +43,19 @@ internal static class PptxComposedPaletteTests
                     : horizontal ? r.Width > 50d && r.Height is > 1d and < 80d
                         : r.Width is > 1d and < 80d && r.Height > 50d)
                     .GroupBy(r => r.Color).ToDictionary(group => group.Key, group => group.Count());
-                string id = row.GetProperty("Id").GetString()! + (keys ? "/keys" : "/bars");
-                TestAssert.True(expected.Length == actual.Count, id + ": distinct native colors");
+                string paint = id + (keys ? "/keys" : "/bars");
+                TestAssert.True(expected.Length == actual.Count, paint + ": distinct native colors");
                 foreach (var color in expected)
                 {
                     int[] rgb = color.GetProperty("Rgb").EnumerateArray().Select(v => v.GetInt32()).ToArray();
                     var matches = actual.Where(pair => Math.Abs(pair.Key.Red - rgb[0]) <= 1 &&
                         Math.Abs(pair.Key.Green - rgb[1]) <= 1 && Math.Abs(pair.Key.Blue - rgb[2]) <= 1).ToArray();
-                    TestAssert.True(matches.Length == 1, id + ": native color " + string.Join(',', rgb));
-                    TestAssert.True(color.GetProperty("Count").GetInt32() == matches[0].Value, id + ": native paint count");
+                    TestAssert.True(matches.Length == 1, paint + ": native color " + string.Join(',', rgb));
+                    TestAssert.True(color.GetProperty("Count").GetInt32() == matches[0].Value, paint + ": native paint count");
                 }
             }
         }
+        if (composedColumns) TestAssert.Equal(3, checkedColumns);
     }
 
     internal static void CheckIndexBoundsAndFallbacks()

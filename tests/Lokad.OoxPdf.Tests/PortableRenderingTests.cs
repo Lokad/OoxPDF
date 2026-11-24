@@ -42,8 +42,8 @@ internal static partial class PortableRenderingTests
     public static void PortableRenderingAutomaticColumnLabelsWrapInsideChartFrames() =>
         PptxColumnLabelWrappingTests.CheckAutomatic();
 
-    public static void PortableRenderingAutomaticColumnLabelsKeepComposedValueSuffixes() =>
-        PptxColumnLabelWrappingTests.CheckComposition();
+    public static void PortableRenderingComposedColumnsKeepOwnedLabelsAndOfficeColors() =>
+        PptxComposedPaletteTests.CheckColors(composedColumns: true);
 
     public static void PortableRenderingColumnLabelWrappingKeepsUnicodeAndBreaks() =>
         PptxColumnLabelWrappingTests.CheckUnicode();
@@ -52,7 +52,7 @@ internal static partial class PortableRenderingTests
         PptxComposedPaletteTests.CheckSingleSeriesKeys();
 
     public static void PortableRenderingBarPalettesFollowIndependentOfficeSourceIndices() =>
-        PptxComposedPaletteTests.CheckColors();
+        PptxComposedPaletteTests.CheckColors(composedColumns: false);
 
     public static void PortableRenderingBarPaletteIndicesKeepBoundsAndFallbacks() =>
         PptxComposedPaletteTests.CheckIndexBoundsAndFallbacks();
