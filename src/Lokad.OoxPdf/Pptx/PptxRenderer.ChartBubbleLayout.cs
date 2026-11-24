@@ -70,11 +70,13 @@ internal sealed partial class PptxRenderer
         ChartFrameBox frame = fallback.Frame;
         double inset = PptxChartMetricRules.ChartContentFrameInset;
         double margin = PptxChartMetricRules.ColumnPlotRightReserve;
-        var outerHeader = await MeasureCartesianHeaderReserveAsync(theme, chart, resolver, 0d).ConfigureAwait(false);
-        var innerHeader = await MeasureCartesianHeaderReserveAsync(theme, chart, resolver, yLine.Value).ConfigureAwait(false);
+        double titleReserve = await MeasureCartesianTitleReserveAsync(theme, chart, resolver).ConfigureAwait(false);
+        double outerHeaderReserve = CartesianAxisEndClearance(0d) + titleReserve;
+        double numericClearance = CartesianAxisEndClearance(yLine.Value);
+        double innerHeaderReserve = numericClearance + titleReserve;
         double right = legendWidth > 0d ? margin + inset + legendWidth : margin;
         var outer = new ChartLayoutBox(frame.X + margin, frame.Y + margin,
-            frame.Width - margin - right, frame.Height - outerHeader.Reserve - margin);
+            frame.Width - margin - right, frame.Height - outerHeaderReserve - margin);
         if (!(outer.Width > 0d) || !(outer.Height > 0d)) return null;
         // Reserve the diameter from the nominal container before applying the
         // thirty-percent scale: R=.15*s*(N-2R). All painting uses this one radius.
@@ -109,9 +111,9 @@ internal sealed partial class PptxRenderer
                     PptxChartMetricRules.AxisNiceTickTargetCount, yOptions.TickPolicy, null, reserveEndpoints: true, context: context).ConfigureAwait(false);
                 sideSlot = Math.Max(0d, ComputeCartesianAxisLabelSideReserve(captions.MaximumWidth, yStyle.FontSize) - margin);
             }
-            double captionReserve = xLabels ? ComputeCartesianLabelStripBottomReserve(xStyle.FontSize) : innerHeader.NumericClearance;
-            var vertical = ResolveCartesianCategoryReserves(frame.Height, innerHeader.Reserve, captionReserve,
-                innerHeader.NumericClearance, xPlacement);
+            double captionReserve = xLabels ? ComputeCartesianLabelStripBottomReserve(xStyle.FontSize) : numericClearance;
+            var vertical = ResolveCartesianCategoryReserves(frame.Height, innerHeaderReserve, captionReserve,
+                numericClearance, xPlacement);
             var desired = new ChartPlotBox(outer.X, frame.Y + vertical.Bottom, outer.Width,
                 frame.Height - vertical.Top - vertical.Bottom);
             var admissionFrame = new ChartFrameBox(outer.X - inset, frame.Y, outer.Width + 2d * inset, frame.Height);

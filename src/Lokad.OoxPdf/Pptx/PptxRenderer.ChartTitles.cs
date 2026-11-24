@@ -535,14 +535,17 @@ internal sealed partial class PptxRenderer
         PptxTheme theme, PptxSceneChart chart, PresentationFontResolver? resolver, double numericLineHeight)
     {
         double numericClearance = CartesianAxisEndClearance(numericLineHeight);
-        double reserve = numericClearance;
-        if (!string.IsNullOrWhiteSpace(chart.Title.Text) && chart.Title.Overlay != true)
-        {
-            var title = await MeasureChartTitleAsync(theme, chart, resolver).ConfigureAwait(false);
-            reserve += PptxChartMetricRules.ChartContentFrameInset +
-                2d * PptxChartMetricRules.ChartTitleLinePadding + title.Height;
-        }
-        return (reserve, numericClearance);
+        double titleReserve = await MeasureCartesianTitleReserveAsync(theme, chart, resolver).ConfigureAwait(false);
+        return (numericClearance + titleReserve, numericClearance);
+    }
+
+    private static async ValueTask<double> MeasureCartesianTitleReserveAsync(
+        PptxTheme theme, PptxSceneChart chart, PresentationFontResolver? resolver)
+    {
+        if (string.IsNullOrWhiteSpace(chart.Title.Text) || chart.Title.Overlay == true) return 0d;
+        var title = await MeasureChartTitleAsync(theme, chart, resolver).ConfigureAwait(false);
+        return PptxChartMetricRules.ChartContentFrameInset +
+            2d * PptxChartMetricRules.ChartTitleLinePadding + title.Height;
     }
 
     private static double CartesianAxisEndClearance(double lineHeight) =>
