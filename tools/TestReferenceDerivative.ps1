@@ -13,6 +13,10 @@ foreach ($name in @('ReferenceCache.ps1','PathHelpers.ps1','RenderCachedReferenc
 }
 @'
 param($InputPdf,$OutputDirectory,$Dpi,[switch]$SkipBuild,$Framework,$RasterizerPath)
+if (Test-Path -LiteralPath (Join-Path $PSScriptRoot 'forbid-cache-worker')) {
+    'raster' | Add-Content -LiteralPath (Join-Path $PSScriptRoot 'unexpected-cache-workers.log')
+    throw 'Unexpected rasterization during a cache-only refusal.'
+}
 New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
 if ($RasterizerPath) {
     @{ Framework = $Framework; SkipBuild = [bool]$SkipBuild; Dpi = $Dpi; RasterizerPath = $RasterizerPath } |
@@ -180,30 +184,77 @@ if ((Test-ReferenceDerivative $cache (Get-ReferenceDerivativeName 72) $pdfHash).
     (Test-ReferenceDerivative $cache $name $pdfHash).State -cne 'Complete') { throw 'DPI derivatives did not coexist' }
 $checks+='second-dpi-reuses-pdf'
 
-$legacyInput=Join-Path $root 'legacy.docx'
-[IO.File]::WriteAllText($legacyInput,'Unique flat-cache input')
-$legacyDir=Join-Path (Get-ReferenceCacheRoot) (Get-ReferenceCacheKey $legacyInput 144 '')
-New-Item -ItemType Directory -Path $legacyDir | Out-Null
-Copy-Item -LiteralPath $sourcePdf -Destination (Join-Path $legacyDir 'reference.pdf')
-Copy-Item -LiteralPath $page -Destination (Join-Path $legacyDir 'page-001.png')
-[IO.File]::WriteAllText((Join-Path $legacyDir 'complete.txt'),"input=$legacyInput`ndpi=144`nvariant=`n")
-$legacyOutputs=@('adopted-first','adopted-second' | ForEach-Object { Join-Path $root $_ })
-$servedLegacy=@($legacyOutputs | ForEach-Object -Parallel {
-    $ErrorActionPreference='Stop'
-    & $using:render -InputPath $using:legacyInput -OutputDirectory $_ -CaseId 'legacy-control' -CacheOnly -SkipBuild *> ($_+'.log')
-    $_
-} -ThrottleLimit 2 -TimeoutSeconds 20)
-$adopted=Resolve-ReferenceCacheEntry $legacyInput 144 ''
-if ($servedLegacy.Count -ne 2 -or (Test-Path -LiteralPath $legacyDir) -or $adopted.Outcome -cne 'Hit' -or
-    $adopted.Derivative.State -cne 'Complete' -or $adopted.Metadata.Producer -cne 'legacy-adopted' -or
-    $adopted.Metadata.CaseId -cne 'legacy-control') { throw 'Concurrent flat reference adoption lost bytes or provenance' }
-foreach ($output in $legacyOutputs) {
-    if ((Get-FileHash -LiteralPath (Join-Path $output 'reference.pdf')).Hash.ToLowerInvariant() -cne $pdfHash -or
-        (Get-FileHash -LiteralPath (Join-Path $output 'page-001.png')).Hash -cne (Get-FileHash -LiteralPath $page).Hash) {
-        throw 'An adopting reader received a different PDF or raster'
+New-Item -ItemType File -Path (Join-Path $tools 'forbid-cache-worker') | Out-Null
+@'
+'office' | Add-Content -LiteralPath (Join-Path $PSScriptRoot 'unexpected-cache-workers.log')
+throw 'Unexpected Office worker during a cache refusal.'
+'@ | Set-Content -LiteralPath (Join-Path $tools 'RenderReference.ps1') -Encoding utf8
+
+function Assert-ReferenceRefusal($inputPath, $output, $message, [switch] $AllowRender) {
+    $caught=$null
+    try { & $render -InputPath $inputPath -OutputDirectory $output -CacheOnly:(!$AllowRender) -SkipBuild *> ($output+'.log') }
+    catch { $caught=$_.Exception.Message }
+    if (!$caught -or !$caught.Contains($message) -or
+        (Test-Path -LiteralPath (Join-Path $output 'reference.pdf')) -or
+        @(Get-ChildItem -LiteralPath $output -Filter 'page-*.png' -ErrorAction SilentlyContinue).Count -or
+        (Test-Path -LiteralPath (Join-Path $tools 'unexpected-cache-workers.log'))) {
+        throw "Reference refusal lost its bounds for '$output'. Received '$caught'."
     }
 }
-$checks+='concurrent-flat-entry-adoption'
+
+foreach ($kind in @('pre-v1-path-only-edited','pre-v1-hash-edited','pre-v1-hash-current','v1-flat-current')) {
+    $legacyInput=Join-Path $root "$kind.docx"
+    [IO.File]::WriteAllText($legacyInput,"Original $kind input")
+    $originalHash=(Get-FileHash -LiteralPath $legacyInput).Hash.ToLowerInvariant()
+    $keySuffix=if ($kind -eq 'v1-flat-current') {'v1'} else {'deadbeef'}
+    $legacyDir=Join-Path (Get-ReferenceCacheRoot) "docx-$($originalHash.Substring(0,24))-$keySuffix-dpi144"
+    New-Item -ItemType Directory -Path $legacyDir | Out-Null
+    Copy-Item -LiteralPath $sourcePdf -Destination (Join-Path $legacyDir 'reference.pdf')
+    Copy-Item -LiteralPath $page -Destination (Join-Path $legacyDir 'page-001.png')
+    $marker="input=$legacyInput`ndpi=144`nvariant=`n"
+    if ($kind.StartsWith('pre-v1-hash')) { $marker+="inputSha256=$originalHash`n" }
+    [IO.File]::WriteAllText((Join-Path $legacyDir 'complete.txt'),$marker)
+    if ($kind.EndsWith('-edited')) { [IO.File]::WriteAllText($legacyInput,"Edited $kind input") }
+    $currentKey=Get-ReferenceIdentityKey $legacyInput ''
+    Assert-ReferenceRefusal $legacyInput (Join-Path $root "refused-$kind") 'Reference cache miss'
+    if ((Test-Path -LiteralPath (Join-Path (Get-ReferenceCacheRoot) $currentKey)) -or
+        (Get-FileHash -LiteralPath (Join-Path $legacyDir 'reference.pdf')).Hash -cne (Get-FileHash -LiteralPath $sourcePdf).Hash -or
+        (Get-FileHash -LiteralPath (Join-Path $legacyDir 'page-001.png')).Hash -cne (Get-FileHash -LiteralPath $page).Hash -or
+        [IO.File]::ReadAllText((Join-Path $legacyDir 'complete.txt')) -cne $marker) {
+        throw "Refusing old cache entry '$kind' changed retained reference files."
+    }
+    $checks+="ignore-$kind"
+}
+
+foreach ($kind in @('missing-metadata','legacy-adopted')) {
+    $inputPath=Join-Path $root "$kind.docx"
+    [IO.File]::WriteAllText($inputPath,"Historic $kind input")
+    $inputHash=(Get-FileHash -LiteralPath $inputPath).Hash.ToLowerInvariant()
+    $key=Get-ReferenceIdentityKey $inputPath ''
+    $entryDir=Join-Path (Get-ReferenceCacheRoot) $key
+    New-Item -ItemType Directory -Path $entryDir | Out-Null
+    $entryPdf=Join-Path $entryDir 'reference.pdf'
+    Copy-Item -LiteralPath $sourcePdf -Destination $entryPdf
+    if ($kind -eq 'legacy-adopted') {
+        $null=Write-ReferenceIdentityMetadata $entryDir $key $inputPath $inputHash '' 'old' @{Producer='legacy-adopted'} 'Synthetic old adoption'
+    } else {
+        [IO.File]::WriteAllText((Join-Path $entryDir 'complete.txt'),"input=$inputPath")
+    }
+    $entryHashes=@(Get-ChildItem -LiteralPath $entryDir -File | Get-FileHash | Sort-Object Path)
+    Assert-ReferenceRefusal $inputPath (Join-Path $root "refused-$kind") 'trusted reference'
+    Assert-ReferenceRefusal $inputPath (Join-Path $root "refused-render-$kind") 'trusted reference' -AllowRender
+    $pdfOnlyOutput=(New-Item -ItemType Directory -Path (Join-Path $root "refused-pdf-only-$kind")).FullName
+    $caught=$null
+    try { Copy-VerifiedCachedReferencePdf $inputPath $pdfOnlyOutput '' }
+    catch { $caught=$_.Exception.Message }
+    if (!$caught -or !$caught.Contains('trusted reference') -or
+        @(Get-ChildItem -LiteralPath $pdfOnlyOutput -Force).Count -or
+        (Compare-Object $entryHashes @(Get-ChildItem -LiteralPath $entryDir -File | Get-FileHash | Sort-Object Path) -Property Hash,Path)) {
+        throw "Refusing '$kind' changed files or served an unverified PDF."
+    }
+    $checks+="refuse-v2-$kind"
+}
+Remove-Item -LiteralPath (Join-Path $tools 'forbid-cache-worker')
 
 $raceInput=Join-Path $root 'race.docx'
 [IO.File]::WriteAllText($raceInput,'Concurrent reference input')

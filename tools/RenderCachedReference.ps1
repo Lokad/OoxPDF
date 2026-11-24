@@ -3,9 +3,8 @@
 # Cache identity (protocol v2) is the reference PDF itself: input hash,
 # extension, variant, and rendering protocol. Rasterizer/DPI page PNGs are
 # derivatives of that identity, verified against recorded page hashes on every
-# hit. Pre-v2 flat entries resolve as legacy hits and are adopted into the v2
-# layout. Corrupt or incomplete entries never satisfy a hit: CacheOnly throws a
-# corrupt-entry error, while rendering mode replaces it after a successful render.
+# hit. Flat historical caches require a trusted re-import. A v2 entry without
+# verified source provenance stays on disk and requires a trusted re-import.
 
 param(
     [ValidateSet('net10.0','net11.0')] [string] $Framework = 'net11.0',
@@ -73,16 +72,10 @@ $resolution = Use-ReferenceCacheLock $identityKey {
     if ($entry.IdentityKey -cne $identityKey) {
         throw 'Reference input changed during cache lookup'
     }
-    if ($entry.Outcome -eq 'LegacyHit') {
-        Write-Host ("Reference cache legacy entry ($($entry.Reason)): $($entry.CacheDirectory)")
-        $legacyDerivativeName = if ($RasterizerPath) { Get-ReferenceDerivativeName $Dpi } else { $derivativeName }
-        Move-LegacyReferenceEntry $entry.CacheDirectory (Join-Path (Get-ReferenceCacheRoot) $identityKey) $inputFull $Dpi $legacyDerivativeName $CacheVariant $CaseId
-        $entry = Resolve-ReferenceCacheEntry $inputFull $Dpi $CacheVariant $derivativeName
-        if ($entry.IdentityKey -cne $identityKey) {
-            throw 'Reference input changed during cache adoption'
-        }
-    }
     if ($entry.Outcome -eq 'Hit') { return $entry }
+    if ($entry.Outcome -eq 'Unverified') {
+        throw "Reference cache entry is unverified. $($entry.Reason) Entry: $($entry.CacheDirectory)"
+    }
 
     if ($entry.Outcome -eq 'Corrupt') {
         if ($CacheOnly) {

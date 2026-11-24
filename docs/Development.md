@@ -110,7 +110,9 @@ alongside the pinned CLI and inspectors. The cached reference derivative uses
 the supplied rasterizer's identity, and one comparison produces both page and
 region metrics.
 With `-SkipRasterDiff`, cached markup comparisons use the verified reference
-PDF and its metadata directly. Legacy entries need a trusted re-import for this path.
+PDF and its metadata directly. Cached comparisons require v2 metadata bound to
+the input and PDF digests. Flat legacy entries and entries previously adopted
+from them require a trusted re-import for the exact input and Office view.
 
 `CheckVisualCase.ps1` and `CheckVisualFamily.ps1` accept `-CliPath`,
 `-RasterizerPath`, `-VisualDiffPath` and `-PdfInspectorPath` for prebuilt tools.

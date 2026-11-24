@@ -2,14 +2,14 @@
 # copying key logic: cache keys carry an explicit rendering-protocol version so
 # cosmetic script edits no longer orphan every cached reference. Bump
 # $ReferenceCacheProtocol only when the rendered reference bytes meaningfully
-# change (Office export flags, raster handling, variant semantics).
+# change (Office export flags or variant semantics).
 #
 # Layout (protocol v2): reference PDF identity is separated from rasterizer/DPI
 # derivatives. One identity directory holds reference.pdf plus
 # reference-metadata.json; each rasterized derivative lives under
 # raster/dpi<Dpi>-<rasterizerId>/ with page hashes bound to the PDF hash.
-# Pre-v2 entries (flat page-*.png next to reference.pdf, DPI baked into the
-# directory key) resolve as legacy hits and are adopted into the v2 layout.
+# Cache hits require source-bound v2 metadata. Use the trusted import commands
+# to recover an independently verified historical reference.
 
 $ReferenceCacheProtocol = "v2"
 $ReferenceMetadataSchema = "ooxpdf-reference-metadata/2"
@@ -24,23 +24,6 @@ function Get-ShortSha256([byte[]] $Bytes, [int] $Length = 12) {
     finally {
         $sha256.Dispose()
     }
-}
-
-function Get-ReferenceCacheKey(
-    [string] $InputPath,
-    [int] $DpiValue,
-    [string] $CacheVariant)
-{
-    # Legacy v1 key (DPI baked in). Kept only to resolve pre-v2 entries.
-    $inputHash = (Get-FileHash -LiteralPath $InputPath -Algorithm SHA256).Hash.ToLowerInvariant()
-    $extension = [System.IO.Path]::GetExtension($InputPath).TrimStart(".").ToLowerInvariant()
-    $variantKeyPart = ""
-    if (-not [string]::IsNullOrWhiteSpace($CacheVariant)) {
-        $variantHash = Get-ShortSha256 ([System.Text.Encoding]::UTF8.GetBytes($CacheVariant.Trim().ToLowerInvariant())) 12
-        $variantKeyPart = "-variant" + $variantHash
-    }
-
-    "{0}-{1}-v1{2}-dpi{3}" -f $extension, $inputHash.Substring(0, 24), $variantKeyPart, $DpiValue
 }
 
 function Get-ReferenceVariantKeyPart([string] $CacheVariant) {
@@ -147,23 +130,6 @@ function Read-ReferenceMetadata([string] $CacheDir) {
     }
 }
 
-function Read-CompleteMarker([string] $CacheDir) {
-    $markerPath = Join-Path $CacheDir "complete.txt"
-    if (-not (Test-Path -LiteralPath $markerPath)) {
-        return $null
-    }
-
-    $fields = @{}
-    foreach ($line in (Get-Content -LiteralPath $markerPath)) {
-        $match = [regex]::Match($line, '^(?<key>[A-Za-z]+)=(?<value>.*)$')
-        if ($match.Success) {
-            $fields[$match.Groups["key"].Value] = $match.Groups["value"].Value
-        }
-    }
-
-    return $fields
-}
-
 function Test-ReferencePdfBytes([string] $PdfPath) {
     if (-not (Test-Path -LiteralPath $PdfPath)) {
         return "missing reference.pdf"
@@ -193,20 +159,19 @@ function Test-ReferencePdfBytes([string] $PdfPath) {
 }
 
 function Test-ReferenceIdentityEntry([string] $CacheDir, [string] $InputSha256, [string] $CacheVariant) {
-    $marker = Read-CompleteMarker $CacheDir
-    if ($null -eq $marker) {
+    if (!(Test-Path -LiteralPath (Join-Path $CacheDir "complete.txt") -PathType Leaf)) {
         return [pscustomobject]@{ State = "Incomplete"; Reason = "missing complete.txt (interrupted publish?)"; Metadata = $null }
     }
 
     $metadata = Read-ReferenceMetadata $CacheDir
-    $pdfPath = Join-Path $CacheDir "reference.pdf"
-    if ($null -eq $metadata) {
-        $problem = Test-ReferencePdfBytes $pdfPath
-        if ($null -ne $problem) {
-            return [pscustomobject]@{ State = "Corrupt"; Reason = $problem; Metadata = $null }
+    # The old adopter recorded the hash at migration time. That hash does not
+    # establish which source produced the earlier reference.
+    if ($null -eq $metadata -or $metadata.Producer -eq 'legacy-adopted') {
+        return [pscustomobject]@{
+            State = "Unverified"
+            Reason = "Missing source provenance. Preserve this entry and re-import a trusted reference for the exact input and view."
+            Metadata = $metadata
         }
-
-        return [pscustomobject]@{ State = "Legacy"; Reason = "no reference-metadata.json (pre-v2 provenance gap)"; Metadata = $null }
     }
 
     if ([string]$metadata.Protocol -ne $ReferenceCacheProtocol) {
@@ -221,6 +186,7 @@ function Test-ReferenceIdentityEntry([string] $CacheDir, [string] $InputSha256, 
         return [pscustomobject]@{ State = "Corrupt"; Reason = "metadata variant does not match requested variant"; Metadata = $metadata }
     }
 
+    $pdfPath = Join-Path $CacheDir "reference.pdf"
     $problem = Test-ReferencePdfBytes $pdfPath
     if ($null -ne $problem) {
         return [pscustomobject]@{ State = "Corrupt"; Reason = $problem; Metadata = $metadata }
@@ -300,51 +266,6 @@ function Test-ReferenceDerivative([string] $CacheDir, [string] $DerivativeName, 
     return [pscustomobject]@{ State = "Complete"; Reason = $null; Directory = $derivativeDir }
 }
 
-function Find-PreV1LegacyEntry([string] $InputPath, [int] $DpiValue, [string] $CacheVariant) {
-    # Pre-v1 keys baked an irreproducible tool hash into the directory name, so
-    # fall back to scanning complete.txt markers. Only used when v2/v1 lookups miss.
-    $cacheRoot = Get-ReferenceCacheRoot
-    if (-not (Test-Path -LiteralPath $cacheRoot)) {
-        return $null
-    }
-
-    $inputFull = (Resolve-Path -LiteralPath $InputPath).Path
-    $extension = [System.IO.Path]::GetExtension($inputFull).TrimStart(".").ToLowerInvariant()
-    $candidates = @(Get-ChildItem -LiteralPath $cacheRoot -Directory -ErrorAction SilentlyContinue |
-        Where-Object { $_.Name -like "$extension-*-dpi$DpiValue" } |
-        Sort-Object Name)
-    foreach ($candidate in $candidates) {
-        $marker = Read-CompleteMarker $candidate.FullName
-        if ($null -eq $marker -or $marker.ContainsKey("protocol")) {
-            continue
-        }
-
-        $matchesInput = $false
-        if ($marker.ContainsKey("inputSha256")) {
-            $inputHash = (Get-FileHash -LiteralPath $inputFull -Algorithm SHA256).Hash.ToLowerInvariant()
-            $matchesInput = ([string]$marker["inputSha256"] -eq $inputHash)
-        }
-        elseif ($marker.ContainsKey("input")) {
-            try {
-                $matchesInput = ([System.IO.Path]::GetFullPath($marker["input"]) -eq $inputFull)
-            }
-            catch {
-                $matchesInput = $false
-            }
-        }
-
-        if (-not $matchesInput -or [string]$marker["variant"] -ne [string]$CacheVariant) {
-            continue
-        }
-
-        if (Test-Path -LiteralPath (Join-Path $candidate.FullName "reference.pdf")) {
-            return $candidate.FullName
-        }
-    }
-
-    return $null
-}
-
 function Resolve-ReferenceCacheEntry([string] $InputPath, [int] $DpiValue, [string] $CacheVariant, [string] $DerivativeName) {
     $inputFull = (Resolve-Path -LiteralPath $InputPath).Path
     $inputHash = (Get-FileHash -LiteralPath $inputFull -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -367,9 +288,9 @@ function Resolve-ReferenceCacheEntry([string] $InputPath, [int] $DpiValue, [stri
             }
         }
 
-        if ($entry.State -eq "Corrupt") {
+        if ($entry.State -in @("Corrupt", "Unverified")) {
             return [pscustomobject]@{
-                Outcome = "Corrupt"
+                Outcome = $entry.State
                 IdentityKey = $identityKey
                 CacheDirectory = $cacheDir
                 Reason = $entry.Reason
@@ -377,45 +298,10 @@ function Resolve-ReferenceCacheEntry([string] $InputPath, [int] $DpiValue, [stri
             }
         }
 
-        if ($entry.State -eq "Legacy") {
-            return [pscustomobject]@{
-                Outcome = "LegacyHit"
-                IdentityKey = $identityKey
-                CacheDirectory = $cacheDir
-                DerivativeName = $derivativeName
-                Reason = $entry.Reason
-                Metadata = $null
-            }
-        }
-
         return [pscustomobject]@{ Outcome = "Miss"; IdentityKey = $identityKey; CacheDirectory = $cacheDir; Reason = $entry.Reason }
     }
 
-    $legacyV1Dir = Join-Path $cacheRoot (Get-ReferenceCacheKey $inputFull $DpiValue $CacheVariant)
-    if ((Test-Path -LiteralPath (Join-Path $legacyV1Dir "complete.txt")) -and (Test-Path -LiteralPath (Join-Path $legacyV1Dir "reference.pdf"))) {
-        return [pscustomobject]@{
-            Outcome = "LegacyHit"
-            IdentityKey = $identityKey
-            CacheDirectory = $legacyV1Dir
-            DerivativeName = $derivativeName
-            Reason = "v1 flat entry (DPI baked into key, limited provenance)"
-            Metadata = (Read-ReferenceMetadata $legacyV1Dir)
-        }
-    }
-
-    $preV1 = Find-PreV1LegacyEntry $inputFull $DpiValue $CacheVariant
-    if ($null -ne $preV1) {
-        return [pscustomobject]@{
-            Outcome = "LegacyHit"
-            IdentityKey = $identityKey
-            CacheDirectory = $preV1
-            DerivativeName = $derivativeName
-            Reason = "pre-v1 flat entry (tool-hash key, provenance gap)"
-            Metadata = $null
-        }
-    }
-
-    return [pscustomobject]@{ Outcome = "Miss"; IdentityKey = $identityKey; CacheDirectory = (Join-Path $cacheRoot $identityKey); Reason = "no complete entry" }
+    return [pscustomobject]@{ Outcome = "Miss"; IdentityKey = $identityKey; CacheDirectory = $cacheDir; Reason = "no complete entry" }
 }
 
 function Write-ReferenceIdentityMetadata(
@@ -519,57 +405,6 @@ function Publish-ReferenceStagedDirectory([string] $StagedDirectory, [string] $C
     }
 
     Move-Item -LiteralPath $StagedDirectory -Destination $CacheDirectory
-}
-
-function Move-LegacyReferenceEntry(
-    [string] $LegacyDirectory,
-    [string] $CacheDirectory,
-    [string] $InputPath,
-    [int] $DpiValue,
-    [string] $DerivativeName,
-    [string] $CacheVariant,
-    [string] $CaseId) {
-    # Adopt a flat legacy entry into the v2 layout. The PDF becomes the identity;
-    # existing same-DPI rasters move under the derivative directory with an
-    # honest legacy-provenance note (their exact rasterizer is unverifiable).
-    $pdfSource = Join-Path $LegacyDirectory "reference.pdf"
-    $problem = Test-ReferencePdfBytes $pdfSource
-    if ($null -ne $problem) {
-        throw "Cannot adopt legacy reference entry: $problem."
-    }
-
-    $inputHash = (Get-FileHash -LiteralPath $InputPath -Algorithm SHA256).Hash.ToLowerInvariant()
-    $staging = Join-Path (Split-Path -Parent $CacheDirectory) ("_adopt-" + [System.Guid]::NewGuid().ToString("N"))
-    New-Item -ItemType Directory -Force -Path $staging | Out-Null
-    try {
-        Copy-Item -LiteralPath $pdfSource -Destination (Join-Path $staging "reference.pdf") -Force
-        $derivativeDir = Join-Path (Join-Path $staging "raster") $DerivativeName
-        New-Item -ItemType Directory -Force -Path $derivativeDir | Out-Null
-        foreach ($page in @(Get-ChildItem -LiteralPath $LegacyDirectory -Filter "page-*.png" -ErrorAction SilentlyContinue | Sort-Object Name)) {
-            Copy-Item -LiteralPath $page.FullName -Destination (Join-Path $derivativeDir $page.Name) -Force
-        }
-
-        $legacyMetadata = Read-ReferenceMetadata $LegacyDirectory
-        $adoptedCaseId = $CaseId
-        if ([string]::IsNullOrWhiteSpace($adoptedCaseId) -and $null -ne $legacyMetadata -and -not [string]::IsNullOrWhiteSpace([string]$legacyMetadata.CaseId)) {
-            $adoptedCaseId = [string]$legacyMetadata.CaseId
-        }
-
-        $identityKey = Split-Path -Leaf $CacheDirectory
-        $null = Write-ReferenceIdentityMetadata $staging $identityKey $InputPath $inputHash $CacheVariant $adoptedCaseId @{ Producer = "legacy-adopted" } ("adopted from flat legacy entry " + (Split-Path -Leaf $LegacyDirectory))
-        Publish-ReferenceStagedDirectory $staging $CacheDirectory
-        Add-ReferenceDerivativeRecord $CacheDirectory $DerivativeName $DpiValue ("legacy-" + (Get-RasterizerId).Substring(0, 8))
-        if ((Resolve-Path -LiteralPath $LegacyDirectory).Path -ne (Resolve-Path -LiteralPath $CacheDirectory).Path -and (Test-Path -LiteralPath $LegacyDirectory)) {
-            Remove-Item -LiteralPath $LegacyDirectory -Recurse -Force
-        }
-
-        Write-Host ("Adopted legacy reference entry into v2 layout: {0}" -f $CacheDirectory)
-    }
-    finally {
-        if (Test-Path -LiteralPath $staging) {
-            Remove-Item -LiteralPath $staging -Recurse -Force
-        }
-    }
 }
 
 function Import-ReferenceCacheEntry(
