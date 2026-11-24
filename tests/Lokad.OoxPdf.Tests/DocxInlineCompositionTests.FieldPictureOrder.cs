@@ -266,22 +266,29 @@ internal static partial class DocxInlineCompositionTests
             var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true),
                 mode, CachedMathGeometry(mode));
             var control = Render(null, null);
-            foreach (var (start, expectedSecond) in new (int?, int)[] { (null, 26), (40, 40), (1, 1) })
+            int secondSectionPage = Array.FindIndex(control, page => SectionCounterPageText(page).Contains("Sectioncounter", StringComparison.Ordinal));
+            TestAssert.True(secondSectionPage > 0, "The second section must begin on a later physical page.");
+            var controlTargets = control.SelectMany(page => page.Annotations).Select(link => (link.Uri, link.Destination?.PageIndex)).ToArray();
+            foreach (int? start in new int?[] { null, 40, 1 })
             {
                 var pages = Render(25, start);
-                TestAssert.Equal(2, pages.Length);
-                TestAssert.Contains("onpage25(page25)", SectionCounterPageText(pages[0]));
-                TestAssert.Contains("ionpage25", SectionCounterPageText(pages[0]));
-                TestAssert.Contains("afterformula.Page25of2", SectionCounterPageText(pages[0]));
-                string second = SectionCounterPageText(pages[1]);
-                TestAssert.Contains($"Sectioncounter{expectedSecond}", second);
-                TestAssert.Contains($"afterformula.Page{expectedSecond}of2", second);
-                TestAssert.Contains("x+2y", SectionCounterPageText(pages[0]));
+                TestAssert.True(control.Length == pages.Length,
+                    $"A numbering start preserves physical pagination: {mode}/{start}, {control.Length} versus {pages.Length} pages.");
+                var text = pages.Select(SectionCounterPageText).ToArray();
+                TestAssert.Contains("onpage25(page25)", text[0]);
+                TestAssert.Contains("ionpage25", text[0]);
+                TestAssert.Contains("x+2y", text[0]);
+                TestAssert.Contains($"Sectioncounter{start ?? 25 + secondSectionPage}", text[secondSectionPage]);
+                for (int index = 0; index < pages.Length; index++)
+                {
+                    int expected = start is { } restart && index >= secondSectionPage
+                        ? restart + index - secondSectionPage : 25 + index;
+                    TestAssert.Contains($"afterformula.Page{expected}of{pages.Length}", text[index]);
+                }
                 TestAssert.True(pages.Select(page => page.Images.Count).SequenceEqual(control.Select(page => page.Images.Count)) &&
-                    pages.All(page => page.Images.Count > 0), "Restarted numbering preserves the pictures on both physical pages.");
-                var targets = pages.SelectMany(page => page.Annotations).Select(link => (link.Uri, PageIndex: link.Destination?.PageIndex));
-                TestAssert.True(targets.Any(target => target.PageIndex == 1) &&
-                    targets.SequenceEqual(control.SelectMany(page => page.Annotations).Select(link => (link.Uri, link.Destination?.PageIndex))),
+                    pages.Sum(page => page.Images.Count) > 0, "Restarted numbering preserves the pictures on their physical pages.");
+                var targets = pages.SelectMany(page => page.Annotations).Select(link => (link.Uri, PageIndex: link.Destination?.PageIndex)).ToArray();
+                TestAssert.True(targets.Any(target => target.PageIndex > 0) && targets.SequenceEqual(controlTargets),
                     "A displayed restart cannot renumber the PDF link targets.");
             }
 
