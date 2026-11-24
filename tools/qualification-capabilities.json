@@ -1503,6 +1503,7 @@
     "=DocxParityStartsFollowInsertedEndnotePages",
     "=DocxParityStartsFollowInFlightFootnoteContinuations",
     "DocxNextColumnSectionStartsKeepTextInItsColumnAndPage",
+    "=DocxNextColumnFallbackRestartsOwnedPageNumber",
     "=DocxSharedSectionPagesAdoptIncomingGridAndDefaultStories",
     "DocxSectionStartsKeepPictureAndTableContentOnOwnedPages",
     "DocxSectionStartsKeepCommentAndMixedContentOnOwnedPages",

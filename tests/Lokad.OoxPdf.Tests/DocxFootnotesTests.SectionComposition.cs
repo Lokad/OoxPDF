@@ -92,6 +92,38 @@ internal static partial class DocxFootnotesTests
             PhysicalSectionGlyphs(page).Single(glyphs => glyphs.Text == label);
     }
 
+    public static void DocxNextColumnFallbackRestartsOwnedPageNumber()
+    {
+        XNamespace w = NoteWord;
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        foreach (var (columns, exhausted) in new[] { (2, true), (1, false) })
+        {
+            var source = ReadComposedSections("nextPage", "nextColumn", "picture", mode, editBody: body =>
+            {
+                var first = body.Elements(w + "p").First();
+                var second = body.Elements(w + "p").Last();
+                var final = body.Element(w + "sectPr")!;
+                first.Descendants(w + "sectPr").Single().Add(SectionColumns(2));
+                final.Add(new XElement(w + "pgNumType", new XAttribute(w + "start", 40)), SectionColumns(columns));
+                if (exhausted)
+                    first.Descendants(w + "r").First().AddFirst(new XElement(w + "br", new XAttribute(w + "type", "column")));
+                const string target = "NumberedSection";
+                first.Add(new XElement(w + "hyperlink", new XAttribute(w + "anchor", target), Run("Follow")));
+                second.AddFirst(new XElement(w + "bookmarkStart", new XAttribute(w + "id", 1), new XAttribute(w + "name", target)));
+                second.Add(Run(" BODY PAGE "), Field("PAGE"), Run(" OF "), Field("NUMPAGES"),
+                    new XElement(w + "bookmarkEnd", new XAttribute(w + "id", 1)));
+            });
+            var pages = SectionCompositionRenderer(mode).RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
+            TestAssert.Equal(2, pages.Length);
+            TestAssert.Equal(1, pages[0].Images.Count);
+            TestAssert.Equal(1, pages[0].Annotations.Single().Destination?.PageIndex);
+            TestAssert.Contains("BODY PAGE 40 OF 2", DocxPageFootnoteNumberingTests.DecodeText(pages[1]));
+        }
+
+        XElement Run(string text) => new(w + "r", new XElement(w + "t", new XAttribute(XNamespace.Xml + "space", "preserve"), text));
+        XElement Field(string instruction) => new(w + "fldSimple", new XAttribute(w + "instr", instruction), Run("900"));
+    }
+
     public static void DocxSharedSectionPagesAdoptIncomingGridAndDefaultStories()
     {
         XNamespace w = NoteWord;

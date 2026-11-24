@@ -1413,10 +1413,10 @@ internal sealed partial class DocxLayoutEngine
                     }
                 }
 
-                bool startsColumnSection = following is not null && boundaryType == DocxSectionBreakType.NextColumn;
+                bool columnStartsNewPage = following is not null && boundaryType == DocxSectionBreakType.NextColumn && !advanceSectionColumn;
                 bool continuous = boundaryType == DocxSectionBreakType.Continuous;
                 bool startsNewPage = boundaryType is null or DocxSectionBreakType.NextPage or DocxSectionBreakType.OddPage or DocxSectionBreakType.EvenPage ||
-                    (startsColumnSection && !advanceSectionColumn) ||
+                    columnStartsNewPage ||
                     (useSimpleSectionFootnoteAdmission && admitBoundary && continuous &&
                      (sectionBreak.PageSettings.FootnoteReferenceSettings.PositionValue is null or "pageBottom") &&
                      HasCurrentSectionFootnoteMarkers(elementIndex));
@@ -1456,7 +1456,7 @@ internal sealed partial class DocxLayoutEngine
                     // Bind the displayed restart after the physical filler decision.
                     bool incomingParityStart = following is not null &&
                         boundaryType is DocxSectionBreakType.OddPage or DocxSectionBreakType.EvenPage;
-                    ApplySectionAfterBreak(section, ordinaryPageStart || incomingParityStart);
+                    ApplySectionAfterBreak(section, ordinaryPageStart || incomingParityStart || columnStartsNewPage);
                 }
                 else if (following is not null && (continuous || advanceSectionColumn))
                 {
