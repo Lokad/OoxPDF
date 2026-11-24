@@ -3040,12 +3040,12 @@ internal static class DocxTablesTests
     {
         string word = new string('X', 30);
         foreach (int preferredWidth in new[] { 100, 210 })
-        foreach (bool nonbreaking in new[] { false, true })
+        foreach (string separator in new[] { " ", "\u00A0", " \u2060", " \uFEFF" })
         foreach (bool splitRuns in new[] { false, true })
         {
             string leftRuns = splitRuns
-                ? $"<w:r><w:t>AA{(nonbreaking ? '\u00A0' : ' ')}{word[..15]}</w:t></w:r><w:r><w:rPr><w:b/></w:rPr><w:t>{word[15..]}</w:t></w:r>"
-                : $"<w:r><w:t>AA{(nonbreaking ? '\u00A0' : ' ')}{word}</w:t></w:r>";
+                ? $"<w:r><w:t>AA{separator}{word[..15]}</w:t></w:r><w:r><w:rPr><w:b/></w:rPr><w:t>{word[15..]}</w:t></w:r>"
+                : $"<w:r><w:t>AA{separator}{word}</w:t></w:r>";
             string rightText = string.Join(" ", Enumerable.Repeat("bb", 8));
             string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
             {
@@ -3067,7 +3067,7 @@ internal static class DocxTablesTests
                 .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
             DocxTableRowLayout row = layout.Pages.SelectMany(page => page.Items).OfType<DocxTableRowLayout>().Single();
             DocxTableCellLayout left = row.Cells[0];
-            double minimumWordWidth = (nonbreaking ? word.Length + 3 : word.Length) * 5d;
+            double minimumWordWidth = (separator == " " ? word.Length : word.Length + 2 + separator.Length) * 5d;
             TestAssert.True(left.Width - left.ContentPaddingLeft - left.ContentPaddingRight >= minimumWordWidth - 0.000001d,
                 "Autofit compression must reserve the unbreakable word width across run boundaries and nonbreaking spaces.");
             TestAssert.True(left.TextLines.Any(line => line.Text.Contains(word, StringComparison.Ordinal)),

@@ -9,6 +9,13 @@ internal static class DocxTextBreakRules
 
     internal static bool IsWordJoiner(char value) => value is '\u2060' or '\uFEFF';
 
+    internal static int EndOfBreakableSpaces(string text, int start, int end)
+    {
+        int next = start + 1;
+        while (next < end && IsBreakableWhitespaceChar(text[next])) next++;
+        return next;
+    }
+
     /// <summary>
     /// Returns true for whitespace characters that may end a line.
     /// </summary>

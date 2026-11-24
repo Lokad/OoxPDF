@@ -723,6 +723,8 @@ internal sealed partial class DocxLayoutEngine
         double advance = leadingTabAdvance ?? 0d, above = baselineInset, below = Math.Max(0d, lineHeight - baselineInset);
         bool authoredLineStart = cursor.AtomIndex == 0 && cursor.LineIndex == 0 ||
             cursor.AtomIndex > 0 && measured[cursor.AtomIndex - 1].Source is DocxInlineBreak;
+        int spaceRunStart = 0, spaceRunEnd = 0;
+        bool spaceRunBreaks = true;
         for (int index = cursor.AtomIndex; index < measured.Count;)
         {
             token.ThrowIfCancellationRequested();
@@ -763,11 +765,11 @@ internal sealed partial class DocxLayoutEngine
                 continue;
             }
             int end = index + 1;
-            bool space = IsSpace(Atom(index));
+            bool space = IsBreakableSpace(index);
             bool text = Atom(index).Source is DocxInlineText;
             // A formatting/run boundary is not a word-break opportunity.
             if (!space && text)
-                while (end < measured.Count && Atom(end).Source is DocxInlineText && !IsSpace(Atom(end))) end++;
+                while (end < measured.Count && Atom(end).Source is DocxInlineText && !IsBreakableSpace(end)) end++;
             double groupWidth = MeasureGroup(index, end).Advance;
             double width = output.Count == 0 ? firstWidth : nextWidth;
             double remainingWidth = width - advance - BoundaryBefore(Atom(index));
@@ -995,6 +997,27 @@ internal sealed partial class DocxLayoutEngine
             return offset == 0 ? new(end) : null;
         }
 
+        bool IsBreakableSpace(int index)
+        {
+            if (!IsSpace(Atom(index))) return false;
+            if (index < spaceRunStart || index >= spaceRunEnd)
+            {
+                // Several formatted runs can contribute to the same space.
+                // Inspect the following source once for the entire space run.
+                spaceRunStart = index;
+                spaceRunEnd = index + 1;
+                while (spaceRunEnd < measured.Count && IsSpace(measured[spaceRunEnd]))
+                {
+                    token.ThrowIfCancellationRequested();
+                    spaceRunEnd++;
+                }
+                spaceRunBreaks = spaceRunEnd == measured.Count ||
+                    measured[spaceRunEnd].Source is not DocxInlineText { Length: > 0 } next ||
+                    !DocxTextBreakRules.IsWordJoiner(next.Run.Text[next.Start]);
+            }
+            return spaceRunBreaks;
+        }
+
         static bool IsSpace(DocxMeasuredInlineFragment fragment) => fragment.Source is DocxInlineText { Length: > 0 } text &&
             DocxTextBreakRules.IsBreakableWhitespaceChar(text.Run.Text[text.Start]);
         double InlineBoundaryAdvance(DocxMeasuredInlineFragment left, DocxMeasuredInlineFragment right)
@@ -1038,7 +1061,7 @@ internal sealed partial class DocxLayoutEngine
             if (endCursor.TextOffset == 0 && endCursor.AtomIndex <= measured.Count &&
                 (endCursor.AtomIndex == 0 || measured[endCursor.AtomIndex - 1].Source is not DocxInlineBreak))
             {
-                while (endCursor.AtomIndex < measured.Count && IsSpace(measured[endCursor.AtomIndex]))
+                while (endCursor.AtomIndex < measured.Count && IsBreakableSpace(endCursor.AtomIndex))
                     endCursor = endCursor with { AtomIndex = endCursor.AtomIndex + 1 };
                 if (endCursor.AtomIndex == measured.Count)
                     endCursor = endCursor with { AtomIndex = measured.Count + 1 };

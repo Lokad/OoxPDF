@@ -224,6 +224,7 @@
     "DocxLayoutStageResolvesStaticHeaderFloatingTextBoxNumPagesFieldFromPageCount",
     "DocxLayoutStageOwnsStaticHeaderInlineImages",
     "DocxInlineCompositionWordWrappingSharesBreakRulesAcrossRunSplits",
+    "DocxInlineCompositionKeepsWordJoinersAcrossSpaceRuns",
     "PortableRenderingStaticPictureLinksRetainComposedFrames"
   ],
   "svg-fill-winding": [

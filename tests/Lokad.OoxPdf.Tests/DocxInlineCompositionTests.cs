@@ -2908,6 +2908,65 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
+    public static void DocxInlineCompositionKeepsWordJoinersAcrossSpaceRuns()
+    {
+        foreach (char joiner in new[] { '\u2060', '\uFEFF' })
+        foreach (bool split in new[] { false, true })
+        foreach (bool equationFirst in new[] { false, true })
+        {
+            string joinedSpace = (equationFirst ? "  " : "AB  ") + joiner + "C";
+            string prefix = equationFirst ? string.Empty : "X ";
+            string[] runs = [prefix + joinedSpace];
+            if (split)
+                runs = equationFirst ? [" ", " ", joiner + "C"] : ["X ", "AB", " ", " ", joiner + "C"];
+            var document = ReadMutation("Composition/report", OoxPdfDocxMarkupMode.Final, false, false, (source, w, m) =>
+            {
+                var sourceEquation = new XElement(source.Descendants(m + "oMath").First());
+                var paragraph = new XElement(w + "p");
+                if (equationFirst) paragraph.Add(sourceEquation);
+                foreach (string run in runs)
+                {
+                    paragraph.Add(new XElement(w + "r", new XElement(w + "t",
+                        new XAttribute(XNamespace.Xml + "space", "preserve"), run)));
+                }
+                if (!equationFirst) paragraph.Add(sourceEquation);
+                source.Root!.Element(w + "body")!.ReplaceNodes(paragraph);
+            });
+            var paragraph = document.Paragraphs.Single();
+            var equation = paragraph.Equations.Single();
+            var math = new Dictionary<DocxEquation, DocxPreparedMathParagraph>(ReferenceEqualityComparer.Instance)
+            {
+                [equation] = new(equation, new DocxMathBox(18d, 10d, 4d, []), 11d, 16d)
+            };
+            TestAssert.True(DocxLayoutEngine.TryMeasureOrderedInlineAtoms(paragraph, math,
+                new DocxTests.FamilyWidthTextMeasurer(), 11d, 9d, 12d, 1d, default, out var atoms),
+                "The wrap must keep the ordered text and equation.");
+            var measuredAtoms = TestAssert.NotNull(atoms);
+            TestAssert.True(DocxLayoutEngine.TryWrapOrderedInlineAtoms(measuredAtoms, 30d, 30d, default, out var measured),
+                "The joined text and equation must fit the wrapped lines.");
+            var lines = TestAssert.NotNull(measured);
+            string[] expected = equationFirst ? [joinedSpace] : ["X", joinedSpace];
+            TestAssert.True(lines.Select(Text).Where(text => text.Length > 0).SequenceEqual(expected),
+                "The preceding spaces keep their joined word across authored run boundaries.");
+            TestAssert.Equal(1, lines.SelectMany(line => line.Fragments).Count(fragment => fragment.Math is not null));
+
+            // Page admission resumes from the cursor produced at the line break.
+            DocxInlineSourceCursor cursor = default;
+            foreach (var line in lines)
+            {
+                TestAssert.True(DocxLayoutEngine.TryGetNextOrderedInlineLine(measuredAtoms, cursor, 30d, 30d, default, out var next),
+                    "The source cursor must resume each line.");
+                var resumed = TestAssert.NotNull(next);
+                TestAssert.Equal(Text(line), Text(resumed));
+                cursor = resumed.EndCursor;
+            }
+            TestAssert.True(cursor.IsComplete(measuredAtoms), "Cursor wrapping consumes the complete source.");
+        }
+
+        static string Text(DocxMeasuredInlineLine line) =>
+            string.Concat(line.Fragments.SelectMany(fragment => fragment.Text).Select(span => span.Text));
+    }
+
     public static void DocxInlineCompositionMixedObjectsSurviveBodyCellHeaderAndFooterPlacement()
     {
         if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))

@@ -866,6 +866,18 @@ internal static class DocxTextWrapTests
             var atZeroWidthSpace = WrapSpans(explicitBreak, SingleSpan(explicitBreak), 3d, false, measurer, default);
             TestAssert.Equal("AB", atZeroWidthSpace[0].Text);
             TestAssert.True(atZeroWidthSpace[1].Text.StartsWith(joiner), "An explicit zero-width space takes precedence.");
+
+            string joinedSpace = "AB  " + joiner + "C";
+            string beforeJoiner = "X " + joinedSpace;
+            var joinedLines = WrapSpans(beforeJoiner, SingleSpan(beforeJoiner), 6d, false, measurer, default);
+            TestAssert.True(joinedLines.Select(line => line.Text).SequenceEqual(["X ", joinedSpace]),
+                "A space run before a word joiner moves with the following text.");
+
+            string beforeSpace = "X AB" + joiner + " ";
+            string afterJoiner = beforeSpace + "C";
+            var separated = WrapSpans(afterJoiner, SingleSpan(afterJoiner), 6d, false, measurer, default);
+            TestAssert.True(separated.Select(line => line.Text).SequenceEqual([beforeSpace, "C"]),
+                "A word joiner still allows a later break after a space.");
         }
         string longWord = new('a', 20000);
         var continued = WrapSpans(longWord, SingleSpan(longWord), 10d, false, measurer, default);

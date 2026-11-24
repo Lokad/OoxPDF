@@ -232,7 +232,7 @@ internal sealed partial class DocxLayoutEngine
         // return their input unchanged when there is nothing to rewrite).
         bool segmentHasHiddenBreaks = text.AsSpan(segmentStart, segmentLength).ContainsAny("\u00AD\u200B");
         bool segmentHasDynamicFields = SpansOverlapDynamicField(spans, segmentStart, segmentLength);
-        List<TextToken> tokens = TokenizeSpaces(text, segmentStart, segmentLength).ToList();
+        List<TextToken> tokens = TokenizeSpaces(text, segmentStart, segmentLength);
         // Layout markers represent atomic objects. Split their token boundaries
         // so an object can move without splitting or reordering adjacent prose.
         int markerStart = 0;
@@ -957,33 +957,38 @@ internal sealed partial class DocxLayoutEngine
             (value != '\u00AD' || !preserveTerminalSoftHyphen);
     }
 
-    private static IReadOnlyList<TextToken> TokenizeSpaces(string text, int start, int length)
+    private static List<TextToken> TokenizeSpaces(string text, int start, int length)
     {
-        // R07.2: tokenize by range over the segment string: no per-token substring
-        // copies, and whitespace-ness rides the token instead of rescanning text.
-        if (length == 0)
-        {
-            return [];
-        }
-
+        // Keep source ranges, including spaces that a joiner binds to adjacent text.
         var tokens = new List<TextToken>();
         int end = start + length;
-        int tokenStart = start;
-        bool inBreakableWhitespace = DocxTextBreakRules.IsBreakableWhitespaceChar(text[start]);
-        for (int i = start + 1; i < end; i++)
+        for (int index = start; index < end;)
         {
-            bool breakableWhitespace = DocxTextBreakRules.IsBreakableWhitespaceChar(text[i]);
-            if (breakableWhitespace == inBreakableWhitespace)
+            int next;
+            bool space = DocxTextBreakRules.IsBreakableWhitespaceChar(text[index]);
+            if (space)
             {
-                continue;
+                next = DocxTextBreakRules.EndOfBreakableSpaces(text, index, end);
+                space = next == end || !DocxTextBreakRules.IsWordJoiner(text[next]);
+            }
+            else
+            {
+                next = index + 1;
+                while (next < end && !DocxTextBreakRules.IsBreakableWhitespaceChar(text[next])) next++;
             }
 
-            tokens.Add(new TextToken(tokenStart, i - tokenStart, inBreakableWhitespace));
-            tokenStart = i;
-            inBreakableWhitespace = breakableWhitespace;
+            if (tokens.Count > 0 && tokens[^1].IsBreakableWhitespace == space)
+            {
+                var preceding = tokens[^1];
+                tokens[^1] = preceding with { Length = next - preceding.Start };
+            }
+            else
+            {
+                tokens.Add(new TextToken(index, next - index, space));
+            }
+            index = next;
         }
 
-        tokens.Add(new TextToken(tokenStart, end - tokenStart, inBreakableWhitespace));
         return tokens;
     }
 

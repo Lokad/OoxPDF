@@ -1703,13 +1703,21 @@ internal sealed partial class DocxLayoutEngine
             int start = 0;
             for (int index = 0; index < text.Length; index++)
             {
-                bool whitespace = DocxTextBreakRules.IsBreakableWhitespaceChar(text[index]);
-                if (!whitespace && !DocxLineBreakOpportunities.IsOpportunityAt(text, index + 1))
+                if (DocxTextBreakRules.IsBreakableWhitespaceChar(text[index]))
                 {
-                    continue;
+                    int afterSpaces = DocxTextBreakRules.EndOfBreakableSpaces(text, index, text.Length);
+                    if (afterSpaces == text.Length || !DocxTextBreakRules.IsWordJoiner(text[afterSpaces]))
+                    {
+                        MeasureWord(index, false);
+                        start = afterSpaces;
+                    }
+                    index = afterSpaces - 1;
                 }
-                MeasureWord(whitespace ? index : index + 1, !whitespace);
-                start = index + 1;
+                else if (DocxLineBreakOpportunities.IsOpportunityAt(text, index + 1))
+                {
+                    MeasureWord(index + 1, true);
+                    start = index + 1;
+                }
             }
             MeasureWord(text.Length, false);
             foreach (DocxEquation equation in paragraph.Equations)
