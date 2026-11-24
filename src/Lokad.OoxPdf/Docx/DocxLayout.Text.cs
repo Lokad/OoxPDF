@@ -645,15 +645,16 @@ internal sealed partial class DocxLayoutEngine
     private static double? ResolveImplicitCellDecimalStop(DocxTableCell cell, DocxParagraph paragraph,
         double scale, CancellationToken cancellationToken)
     {
-        // The cell supplies a leading tab for one effective decimal stop.
+        // The cell supplies a leading tab for one effective decimal positioning stop.
         // Explicit tabs and numbered or fitted text retain their own layout.
         if (cell.FitText || paragraph.ListLabel is not null) return null;
         double? position = null;
         foreach (var stop in paragraph.EffectiveProperties.TabStops)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (stop.Kind == DocxTabStopKind.Clear) continue;
-            if (position is not null || stop.Kind != DocxTabStopKind.Decimal ||
+            DocxTabStopKind kind = stop.Kind;
+            if (!IsPositioningTabStop(kind)) continue;
+            if (position is not null || kind != DocxTabStopKind.Decimal ||
                 stop.PositionPoints is not { } points || !SupportsTabLeader(stop.LeaderValue)) return null;
             double scaled = points * scale;
             if (!double.IsFinite(scaled) || scaled <= .001d) return null;
@@ -670,6 +671,9 @@ internal sealed partial class DocxLayoutEngine
 
     private static bool SupportsTabLeader(string? leader) =>
         leader is null || string.Equals(leader, "none", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsPositioningTabStop(DocxTabStopKind kind) =>
+        kind is not (DocxTabStopKind.Bar or DocxTabStopKind.Clear);
 
     private static double GetTextSpanFontSize(DocxTextSpan span, double fallbackFontSize)
     {
@@ -692,7 +696,7 @@ internal sealed partial class DocxLayoutEngine
             if (tabStop.PositionPoints is { } position && position > width + 0.001d)
             {
                 DocxTabStopKind kind = tabStop.Kind;
-                if (kind is not (DocxTabStopKind.Bar or DocxTabStopKind.Clear))
+                if (IsPositioningTabStop(kind))
                 {
                     return new DocxResolvedTabStop(position, kind, tabStop.LeaderValue);
                 }
