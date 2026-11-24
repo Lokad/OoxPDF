@@ -48,7 +48,8 @@ internal static class PptxBreakCompositionTests
             var topInk = PortableRenderingTests.ReadPaintedSourceLabel(top, "Alpha Beta Gamma", requiredClip: frame);
             var bottomInk = PortableRenderingTests.ReadPaintedSourceLabel(bottom, "Alpha Beta Gamma", requiredClip: frame);
             TestAssert.Equal(14, bottomInk.Count);
-            TestAssert.True(bottomInk.All(glyph => glyph.Size == 24d));
+            TestAssert.True(bottomInk.All(glyph => glyph.Size == 24d),
+                "Bottom alignment preserves the authored font size.");
             TestAssert.True(topInk[0].Origin.Y - bottomInk[0].Origin.Y > 60d,
                 "Bottom alignment still places the fitting line near the bottom of the same clip.");
         }
