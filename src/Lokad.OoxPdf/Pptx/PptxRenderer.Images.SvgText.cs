@@ -77,7 +77,7 @@ internal sealed partial class PptxRenderer
     private readonly record struct SvgTextFill(RgbColor? Color, double Alpha);
 
     private readonly record struct SvgTextAppearance(string FamilyList, string Slant, int Weight, double Size,
-        SvgTextFill Fill, double FillOpacity);
+        SvgTextFill Fill, double FillOpacity, bool Kerning);
 
     private static bool HasSvgStylesheet(XDocument svg) =>
         svg.DescendantNodes().OfType<XProcessingInstruction>().Any(p => p.Target == "xml-stylesheet" && !p.Ancestors().Any(IsSvgMetadataElement)) ||
@@ -103,8 +103,7 @@ internal sealed partial class PptxRenderer
             !PreservesTextStyle("alignment-baseline") || !PreservesTextStyle("baseline-shift") ||
             !PreservesTextStyle("font-variant") || !PreservesTextStyle("font-stretch") ||
             !PreservesTextStyle("letter-spacing") || !PreservesTextStyle("word-spacing") ||
-            !PreservesTextStyle("text-decoration") || !IsDefault("font-kerning", "auto", "normal", "none") ||
-            !IsDefault("kerning", "auto", "0", "0px") ||
+            !PreservesTextStyle("text-decoration") || !TryReadSvgTextKerning(element, style, out bool kerning) ||
             !IsDefault("clip-path", "none") || !IsDefault("mask", "none") || !IsDefault("filter", "none")) return false;
         if (HasSvgTextStroke(element, style, paintServerIds)) return false;
         string anchor = Inherited("text-anchor")?.ToLowerInvariant() ?? "start";
@@ -127,7 +126,7 @@ internal sealed partial class PptxRenderer
         if (!double.IsFinite(x) || !double.IsFinite(y)) return false;
         if (!TryReadSvgTextFill(element, style, paintServerIds, out var paint)) return false;
         double fillOpacity = ReadSvgOpacityValue(Inherited("fill-opacity"));
-        var appearance = new SvgTextAppearance(familyList, fontStyle, weight, size, paint, fillOpacity);
+        var appearance = new SvgTextAppearance(familyList, fontStyle, weight, size, paint, fillOpacity, kerning);
         if (!TryReadPlainSvgText(element, appearance, paintServerIds, IsSvgVisibilityHidden(Inherited("visibility")), cancellationToken,
                 out string valueText, out bool[]? hiddenCharacters)) return false;
         if (OoxComplexScript.DetectNeeds(valueText) != OoxComplexScriptKind.None ||
@@ -137,9 +136,7 @@ internal sealed partial class PptxRenderer
         if (family.Length == 0) return false;
         double opacity = paint.Alpha * fillOpacity *
             ReadSvgOpacityValue(ReadSvgElementOpacity(element, style));
-        label = new(valueText, hiddenCharacters, new FontRequest(family, weight >= 600, fontStyle != "normal"), size, x, y, anchor, paint.Color, opacity,
-            !string.Equals(Inherited("font-kerning"), "none", StringComparison.OrdinalIgnoreCase) &&
-            Inherited("kerning") is not ("0" or "0px"));
+        label = new(valueText, hiddenCharacters, new FontRequest(family, weight >= 600, fontStyle != "normal"), size, x, y, anchor, paint.Color, opacity, kerning);
         return true;
 
         bool TryReadPosition(string name, double percentageBasis, out double value)
@@ -149,6 +146,18 @@ internal sealed partial class PptxRenderer
                 ? TryReadSvgViewportLength(element, text, percentageBasis, out value)
                 : TryReadSvgLength(text, out value, relativeSize: size);
         }
+    }
+
+    private static bool TryReadSvgTextKerning(XElement element, IReadOnlyDictionary<string, string> style, out bool enabled)
+    {
+        ReadOnlySpan<char> fontKerning = ReadSvgInheritedAttribute(element, style, "font-kerning").AsSpan().Trim();
+        ReadOnlySpan<char> legacyKerning = ReadSvgInheritedAttribute(element, style, "kerning").AsSpan().Trim();
+        bool fontDisabled = fontKerning.Equals("none", StringComparison.OrdinalIgnoreCase);
+        bool legacyDisabled = legacyKerning is "0" || legacyKerning.Equals("0px", StringComparison.OrdinalIgnoreCase);
+        enabled = !fontDisabled && !legacyDisabled;
+        return (fontDisabled || fontKerning.IsEmpty || fontKerning.Equals("auto", StringComparison.OrdinalIgnoreCase) ||
+                fontKerning.Equals("normal", StringComparison.OrdinalIgnoreCase)) &&
+            (legacyDisabled || legacyKerning.IsEmpty || legacyKerning.Equals("auto", StringComparison.OrdinalIgnoreCase));
     }
 
     private static bool IsNeutralSvgTextStyle(string name, string? value)
@@ -313,6 +322,7 @@ internal sealed partial class PptxRenderer
         bool IsPlainChild(XElement child, IReadOnlyDictionary<string, string> style, bool isLink)
         {
             bool? hasLabelFill = null;
+            bool? hasLabelKerning = null;
             bool? hasStroke = null;
             return child.Attributes().All(IsPlainAttribute) &&
                 style.All(declaration => RetainsLabelStyle(declaration.Key.ToLowerInvariant(), declaration.Value));
@@ -342,6 +352,8 @@ internal sealed partial class PptxRenderer
                         fill == appearance.Fill) == true && !PaintsStroke(),
                 "fill-opacity" => InheritsSvgPropertyValue(value) || ParseSvgOpacity(value) == appearance.FillOpacity,
                 "stroke" or "stroke-opacity" or "stroke-width" => !PaintsStroke(),
+                "font-kerning" or "kerning" =>
+                    (hasLabelKerning ??= TryReadSvgTextKerning(child, style, out bool kerning) && kerning == appearance.Kerning) == true,
                 _ => IsNeutralSvgTextStyle(name, value),
             };
 

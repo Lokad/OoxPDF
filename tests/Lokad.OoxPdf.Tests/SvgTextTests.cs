@@ -510,6 +510,48 @@ internal static partial class SvgTextTests
         }
     }
 
+    public static void SvgTextChildrenKeepEffectiveKerning()
+    {
+        static string Picture(string defaultLabel, string disabledLabel, string legacyLabel) => Svg($"""
+            <text x="20" y="45" font-size="24" fill="#112233">{defaultLabel}</text>
+            <g font-kerning="none"><text x="20" y="85" font-size="24" fill="#2254b4">{disabledLabel}</text></g>
+            <g kerning="0px"><text x="20" y="125" font-size="24" fill="#a02a20">{legacyLabel}</text></g>
+            <rect x="200" y="100" width="20" height="10" fill="lime"/>
+            """);
+
+        const string word = "AVAIL";
+        AssertSvgPaintInBothFormats(Picture(word, word, word),
+            Picture("""A<tspan style="font-kerning: auto">V</tspan>AIL""",
+                """A<tspan font-kerning="normal" style="font-kerning: inherit !important; font-kerning: normal"><tspan font-kerning="unset">V</tspan></tspan>AIL""",
+                """A<tspan font-kerning="auto" kerning="0PX">V</tspan>AIL"""), pdf =>
+            {
+                TestAssert.Equal(5, LabelPaths(pdf));
+                TestAssert.Equal(5, LabelPaths(pdf, "0.133 0.329 0.706 rg"));
+                TestAssert.Equal(5, LabelPaths(pdf, "0.627 0.165 0.125 rg"));
+            }, "0 1 0 rg");
+
+        string enabled = Paint(Svg("""<text x="20" y="45" font-size="24" fill="#112233">AVAIL</text>""")).ToString();
+        string disabled = Paint(Svg("""<text x="20" y="45" font-size="24" fill="#112233" font-kerning="none">AVAIL</text>""")).ToString();
+        TestAssert.True(enabled != disabled, "The pinned face must produce different positions with kerning disabled.");
+
+        foreach (var (defaultLabel, disabledLabel, removedColor) in new[]
+        {
+            ("""A<tspan font-kerning="none">V</tspan>AIL""", word, LabelColor),
+            (word, """A<tspan style="font-kerning: initial">V</tspan>AIL""", "0.133 0.329 0.706 rg"),
+            ("""A<tspan kerning="1px">V</tspan>AIL""", word, LabelColor)
+        })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            string paint = Paint(Picture(defaultLabel, disabledLabel, word), diagnostics).ToString();
+            TestAssert.DoesNotContain(removedColor, paint);
+            TestAssert.Equal(5, LabelPaths(paint, removedColor == LabelColor ? "0.133 0.329 0.706 rg" : LabelColor));
+            TestAssert.Contains("0 1 0 rg", paint);
+            OoxPdfDiagnostic warning = diagnostics.Single();
+            TestAssert.Equal("SVG_UNSUPPORTED_CONTENT", warning.Id);
+            TestAssert.Contains("1 unsupported text element", warning.Message);
+        }
+    }
+
     public static void SvgInlineLinkTextKeepsPaintAndDiagnosesActions()
     {
         string Picture(string north, string south) => Svg($"""

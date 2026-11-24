@@ -138,6 +138,8 @@ Basic shape geometry, stroke widths, dash lengths and dash offsets accept viewpo
 These lengths and fixed viewport dimensions also accept absolute CSS units.
 Supported SVG labels accept viewport percentages, em and absolute units in
 single-value x, y, dx and dy attributes. Absolute units also work in font size.
+Plain spans retain the label when their explicit kerning settings preserve its
+kerning behavior. Mixed kerning within a label remains unsupported.
 Line elements use stroke paint and ignore fill declarations.
 Object opacity can compose a visible fill with a supported linear-gradient stroke.
 Translucent solid strokes retain the fill beneath them.
