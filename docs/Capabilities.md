@@ -64,9 +64,10 @@ nondecimal numbering and zero-numbered title pages remain outside this support.
 - Uses authored slide dimensions and absolute shape/group transforms, supported
   slide/layout/master inheritance, themes, text, bullets, tables, pictures,
   fills, strokes, transparency and external/internal hyperlinks.
-- Solid and uniform-alpha linear backgrounds use slide, layout and master
-  precedence. Mixed-alpha and title-relative background gradients remain
-  outside this subset.
+- Direct solid fills, solid theme fill references and direct uniform-alpha
+  linear gradients use slide, layout and master background precedence.
+  Theme references to other paints, mixed-alpha gradients and title-relative
+  gradients use the inherited fallback and report a warning when selected.
 - Highlights and explicit bullet colors retain supported DrawingML colors and
   opacity transforms. Follow-text bullet opacity retains the current opaque
   fallback; its Office behavior is uncalibrated.

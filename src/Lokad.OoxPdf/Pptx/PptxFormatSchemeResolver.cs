@@ -30,12 +30,12 @@ internal static class PptxFormatSchemeResolver
             : new PptxFormatSchemeReference(reference, index, null);
     }
 
-    public static int ReadIndex(XElement? reference)
+    public static int ReadIndex(XElement? reference, int defaultValue = 0)
     {
         return reference?.Attribute("idx") is { } attribute &&
             int.TryParse(attribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int index)
             ? index
-            : 0;
+            : defaultValue;
     }
 }
 

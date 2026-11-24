@@ -36,9 +36,7 @@ internal sealed partial class PptxRenderer
     {
         // Backgrounds are inherited alternatives, not composited source layers.
         // A transparent override must not reveal the overridden master/layout.
-        PptxSceneSlide slide = context.SceneSlide;
-        PptxSceneBackground background = slide.SlideBackground.HasFill ? slide.SlideBackground
-            : slide.LayoutBackground.HasFill ? slide.LayoutBackground : slide.MasterBackground;
+        PptxSceneBackground background = context.SceneSlide.BackgroundCandidates().Last().Background;
         graphics.SaveState();
         ClipSlideBoundsEvenOdd(context.Document, graphics);
         double width = context.Document.SlideWidthPoints;

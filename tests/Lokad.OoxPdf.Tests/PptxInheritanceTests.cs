@@ -16,6 +16,12 @@ internal static partial class PptxInheritanceTests
     private static readonly XNamespace P = "http://schemas.openxmlformats.org/presentationml/2006/main";
     private static readonly XNamespace A = "http://schemas.openxmlformats.org/drawingml/2006/main";
     private static readonly XNamespace R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+    private static readonly (string Part, string Color, string Paint)[] BackgroundLayers =
+    [
+        ("ppt/slideMasters/slideMaster1.xml", "FF0000", "1 0 0 rg"),
+        ("ppt/slideLayouts/slideLayout1.xml", "00FF00", "0 1 0 rg"),
+        ("ppt/slides/slide1.xml", "0000FF", "0 0 1 rg")
+    ];
 
     public static void PptxInheritanceOfficeBackgroundOverridesMaster()
     {
@@ -35,29 +41,95 @@ internal static partial class PptxInheritanceTests
         foreach (bool transparent in new[] { false, true })
         {
             var parts = Parts("background-inheritance");
-            string[] colors = ["FF0000", "00FF00", "0000FF"];
-            string[] names = ["ppt/slideMasters/slideMaster1.xml", "ppt/slideLayouts/slideLayout1.xml", "ppt/slides/slide1.xml"];
-            for (int index = 0; index < names.Length; index++)
+            for (int index = 0; index < BackgroundLayers.Length; index++)
             {
-                int source = index;
-                Edit(parts, names[index], xml =>
-                {
-                    var story = xml.Root!.Element(P + "cSld")!;
-                    story.Elements(P + "bg").Remove();
-                    if (source > owner) return;
-                    var color = new XElement(A + "srgbClr", new XAttribute("val", colors[source]));
-                    if (transparent) color.Add(new XElement(A + "alpha", new XAttribute("val", "50000")));
-                    story.AddFirst(new XElement(P + "bg", new XElement(P + "bgPr", new XElement(A + "solidFill", color))));
-                });
+                SetBackground(parts, BackgroundLayers[index].Part, index <= owner ? SolidBackground(index, transparent) : null);
             }
             WithDeck(parts, (document, package) => CheckBackground(Render(document, package)[0],
-                owner switch { 0 => "1 0 0 rg", 1 => "0 1 0 rg", 2 => "0 0 1 rg", _ => "1 g" }));
+                owner < 0 ? "1 g" : BackgroundLayers[owner].Paint));
         }
+    }
+
+    public static void PptxInheritanceResolvesSolidBackgroundStyleReferences()
+    {
+        (int Owner, string Index, bool Overridden, string Paint, string? Warning, double? Alpha)[] cases =
+        [
+            (0, "1001", false, "1 0 1 rg", null, null),
+            (1, "1", false, "0 1 1 rg", null, null),
+            (2, "1002", false, "1 0 1 rg", null, .25d),
+            (2, "2", false, "0 g", null, null),
+            (2, "0", false, "0 1 0 rg", null, null),
+            (2, "1000", false, "0 1 0 rg", null, null),
+            (2, "3", false, "0 1 0 rg", null, null),
+            (0, "invalid", false, "1 g", BackgroundLayers[0].Part, null),
+            (1, "1003", false, "1 0 0 rg", BackgroundLayers[1].Part, null),
+            (2, "1004", false, "0 1 0 rg", BackgroundLayers[2].Part, null),
+            (1, "1003", true, "0 0 1 rg", null, null)
+        ];
+        var template = Parts("background-inheritance");
+        Edit(template, "ppt/theme/theme1.xml", xml =>
+        {
+            var scheme = xml.Descendants(A + "clrScheme").Single();
+            scheme.Element(A + "accent1")!.ReplaceNodes(new XElement(A + "srgbClr", new XAttribute("val", "FF00FF")));
+            scheme.Element(A + "accent2")!.ReplaceNodes(new XElement(A + "srgbClr", new XAttribute("val", "00FFFF")));
+            var format = xml.Descendants(A + "fmtScheme").Single();
+            format.Element(A + "fillStyleLst")!.ReplaceNodes(PlaceholderFill(),
+                new XElement(A + "solidFill", new XElement(A + "srgbClr", new XAttribute("val", "000000"))),
+                new XElement(A + "noFill"));
+            var backgrounds = format.Element(A + "bgFillStyleLst")!;
+            var gradient = new XElement(backgrounds.Element(A + "gradFill")!);
+            backgrounds.ReplaceNodes(PlaceholderFill(), PlaceholderFill(withAlpha: true), gradient);
+        });
+        foreach (var (owner, styleIndex, overridden, paint, warning, alpha) in cases)
+        {
+            var parts = new Dictionary<string, byte[]>(template);
+            for (int index = 0; index < BackgroundLayers.Length; index++)
+            {
+                XElement? background = index < owner || (overridden && index == 2) ? SolidBackground(index) : null;
+                if (index == owner)
+                {
+                    var color = new XElement(A + "schemeClr", new XAttribute("val", "accent1"));
+                    if (alpha.HasValue) color.Add(HalfAlpha());
+                    background = new XElement(P + "bgRef", new XAttribute("idx", styleIndex), color);
+                }
+                SetBackground(parts, BackgroundLayers[index].Part, background);
+            }
+            if (styleIndex == "1")
+            {
+                var masterMap = XDocument.Parse(Encoding.UTF8.GetString(parts[BackgroundLayers[0].Part])).Root!
+                    .Element(P + "clrMap")!;
+                for (int index = 1; index <= 2; index++)
+                {
+                    var map = new XElement(A + "overrideClrMapping", masterMap.Attributes());
+                    map.SetAttributeValue("accent1", index == 1 ? "accent2" : "accent3");
+                    Edit(parts, BackgroundLayers[index].Part, xml =>
+                    {
+                        xml.Root!.Elements(P + "clrMapOvr").Remove();
+                        xml.Root.Element(P + "cSld")!.AddAfterSelf(new XElement(P + "clrMapOvr", map));
+                    });
+                }
+            }
+            WithDeck(parts, (document, package) =>
+            {
+                var diagnostics = new List<OoxPdfDiagnostic>();
+                var page = Render(document, package, diagnostics)[0];
+                CheckBackground(page, paint);
+                TestAssert.Equal(0, page.Shadings.Count);
+                var diagnostic = diagnostics.SingleOrDefault(item => item.SlideIndex == 1);
+                TestAssert.Equal(warning is null ? null : "/" + warning, diagnostic?.PartName);
+                TestAssert.Equal(warning is null ? null : "PPTX_UNSUPPORTED_BACKGROUND_STYLE", diagnostic?.Id);
+                if (alpha is { } expected)
+                    TestAssert.True(page.ExtGStates.Any(state => state.FillAlpha == expected), "Reference and style opacity both apply.");
+            });
+        }
+
+        static XElement PlaceholderFill(bool withAlpha = false) =>
+            new(A + "solidFill", new XElement(A + "schemeClr", new XAttribute("val", "phClr"), withAlpha ? HalfAlpha() : null));
+        static XElement HalfAlpha() => new(A + "alpha", new XAttribute("val", "50000"));
     }
 
     public static void PptxInheritanceLinearBackgroundsPaintOneShading()
     {
-        string[] partsInOrder = ["ppt/slideMasters/slideMaster1.xml", "ppt/slideLayouts/slideLayout1.xml", "ppt/slides/slide1.xml"];
         foreach (var (owner, fallback, overridden) in new[]
         {
             (0, "", false), (1, "", false), (2, "", false),
@@ -67,25 +139,19 @@ internal static partial class PptxInheritanceTests
         })
         {
             var parts = Parts("background-inheritance");
-            for (int index = 0; index < partsInOrder.Length; index++)
+            for (int index = 0; index < BackgroundLayers.Length; index++)
             {
-                int source = index;
-                Edit(parts, partsInOrder[index], xml =>
+                XElement? background = index < owner || (overridden && index == 2) ? SolidBackground(index) : null;
+                if (index == owner)
                 {
-                    var story = xml.Root!.Element(P + "cSld")!;
-                    story.Elements(P + "bg").Remove();
-                    if (source > owner && !(overridden && source == 2)) return;
-                    var properties = new XElement(P + "bgPr",
-                        source == owner
-                            ? new XElement(A + "gradFill",
-                                new XElement(A + "gsLst", Stop(0, "FF0000", 50000),
-                                    Stop(100000, fallback == "invalid-color" ? "NOTRGB" : "0000FF",
-                                        fallback == "mixed-alpha" ? 100000 : 50000)),
-                                new XElement(A + "lin", new XAttribute("ang", 5400000)))
-                            : new XElement(A + "solidFill", new XElement(A + "srgbClr", new XAttribute("val", "00FF00"))));
-                    if (source == owner && fallback == "title") properties.SetAttributeValue("shadeToTitle", "1");
-                    story.AddFirst(new XElement(P + "bg", properties));
-                });
+                    background = new XElement(P + "bgPr", new XElement(A + "gradFill",
+                        new XElement(A + "gsLst", Stop(0, "FF0000", 50000),
+                            Stop(100000, fallback == "invalid-color" ? "NOTRGB" : "0000FF",
+                                fallback == "mixed-alpha" ? 100000 : 50000)),
+                        new XElement(A + "lin", new XAttribute("ang", 5400000))));
+                    if (fallback == "title") background.SetAttributeValue("shadeToTitle", "1");
+                }
+                SetBackground(parts, BackgroundLayers[index].Part, background);
             }
 
             WithDeck(parts, (document, package) =>
@@ -93,12 +159,13 @@ internal static partial class PptxInheritanceTests
                 var diagnostics = new List<OoxPdfDiagnostic>();
                 var page = Render(document, package, diagnostics)[0];
                 var gradientWarning = diagnostics.SingleOrDefault(d => d.SlideIndex == 1 && d.Id == "PPTX_UNSUPPORTED_GRADIENT_FILL");
-                string? expectedOwner = fallback.Length != 0 && !overridden ? "/" + partsInOrder[owner] : null;
+                string? expectedOwner = fallback.Length != 0 && !overridden ? "/" + BackgroundLayers[owner].Part : null;
                 TestAssert.Equal(expectedOwner, gradientWarning?.PartName);
                 if (fallback.Length != 0)
                 {
                     TestAssert.Equal(0, page.Shadings.Count);
-                    CheckBackground(page, owner == 0 ? "1 g" : "0 1 0 rg");
+                    int paintedOwner = overridden ? 2 : owner - 1;
+                    CheckBackground(page, paintedOwner < 0 ? "1 g" : BackgroundLayers[paintedOwner].Paint);
                     return;
                 }
 
@@ -111,7 +178,7 @@ internal static partial class PptxInheritanceTests
                 TestAssert.Equal(new PdfShadingStop(0d, 255, 0, 0), fill.Stops.First());
                 TestAssert.Equal(new PdfShadingStop(1d, 0, 0, 255), fill.Stops.Last());
                 TestAssert.Contains("/" + resource.ResourceName + " sh", page.Content);
-                TestAssert.DoesNotContain("0 1 0 rg", page.Content);
+                TestAssert.DoesNotContain(FullSlideFill(page), page.Content);
                 TestAssert.True(page.ExtGStates.Any(state => state.FillAlpha == .5d), "The selected background retains its uniform alpha.");
             });
         }
@@ -187,9 +254,27 @@ internal static partial class PptxInheritanceTests
     private static void CheckBackground(PdfPage page, string expected)
     {
         TestAssert.Equal(expected, Regex.Match(page.Content, @"(?m)^(?:[\d.]+ [\d.]+ [\d.]+ rg|[\d.]+ g)\r?$").Value.TrimEnd('\r'));
-        string rectangle = "0 0 " + PdfDocumentWriter.FormatNumber(page.Width) + " " + PdfDocumentWriter.FormatNumber(page.Height) + " re f*";
+        string rectangle = FullSlideFill(page);
         TestAssert.Equal(1, page.Content.Split('\n').Count(line => line.TrimEnd('\r') == rectangle));
     }
+
+    private static string FullSlideFill(PdfPage page) =>
+        "0 0 " + PdfDocumentWriter.FormatNumber(page.Width) + " " + PdfDocumentWriter.FormatNumber(page.Height) + " re f*";
+
+    private static XElement SolidBackground(int owner, bool transparent = false)
+    {
+        var color = new XElement(A + "srgbClr", new XAttribute("val", BackgroundLayers[owner].Color));
+        if (transparent) color.Add(new XElement(A + "alpha", new XAttribute("val", "50000")));
+        return new XElement(P + "bgPr", new XElement(A + "solidFill", color));
+    }
+
+    private static void SetBackground(Dictionary<string, byte[]> parts, string part, XElement? background) =>
+        Edit(parts, part, xml =>
+        {
+            var story = xml.Root!.Element(P + "cSld")!;
+            story.Elements(P + "bg").Remove();
+            if (background is not null) story.AddFirst(new XElement(P + "bg", background));
+        });
     private static PdfPage[] Render(PptxDocument document, OoxPackage package, List<OoxPdfDiagnostic>? diagnostics = null) =>
         new PptxRenderer(new PortableRenderingTests.PinnedResolver()).RenderPagesAsync(document, package, diagnostics is null ? null : diagnostics.Add, default).ToBlockingEnumerable().ToArray();
     private static Dictionary<string, byte[]> Parts(string id)

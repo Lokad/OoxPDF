@@ -15,6 +15,7 @@ internal sealed class PptxTheme
         string? minorEastAsianFont,
         string? minorComplexScriptFont,
         IReadOnlyList<XElement> fillStyles,
+        IReadOnlyList<XElement> backgroundFillStyles,
         IReadOnlyList<XElement> lineStyles,
         IReadOnlyList<XElement> effectStyles)
     {
@@ -26,6 +27,7 @@ internal sealed class PptxTheme
         MinorEastAsianFont = minorEastAsianFont;
         MinorComplexScriptFont = minorComplexScriptFont;
         FillStyles = fillStyles;
+        this.backgroundFillStyles = backgroundFillStyles;
         LineStyles = lineStyles;
         EffectStyles = effectStyles;
     }
@@ -46,11 +48,13 @@ internal sealed class PptxTheme
 
     public IReadOnlyList<XElement> FillStyles { get; }
 
+    private readonly IReadOnlyList<XElement> backgroundFillStyles;
+
     public IReadOnlyList<XElement> LineStyles { get; }
 
     public IReadOnlyList<XElement> EffectStyles { get; }
 
-    public static PptxTheme Empty { get; } = new(new Dictionary<string, RgbColor>(), null, null, null, null, null, null, [], [], []);
+    public static PptxTheme Empty { get; } = new(new Dictionary<string, RgbColor>(), null, null, null, null, null, null, [], [], [], []);
 
     public static PptxTheme Parse(XDocument document, CancellationToken cancellationToken)
     {
@@ -104,6 +108,11 @@ internal sealed class PptxTheme
             .Elements()
             .Select(element => new XElement(element))
             .ToArray() ?? [];
+        IReadOnlyList<XElement> backgroundFillStyles = formatScheme?
+            .Element(DrawingNamespace + "bgFillStyleLst")?
+            .Elements()
+            .Select(element => new XElement(element))
+            .ToArray() ?? [];
         IReadOnlyList<XElement> lineStyles = formatScheme?
             .Element(DrawingNamespace + "lnStyleLst")?
             .Elements(DrawingNamespace + "ln")
@@ -115,7 +124,8 @@ internal sealed class PptxTheme
             .Select(element => new XElement(element))
             .ToArray() ?? [];
 
-        return new PptxTheme(colors, majorLatin, majorEastAsian, majorComplexScript, minorLatin, minorEastAsian, minorComplexScript, fillStyles, lineStyles, effectStyles);
+        return new PptxTheme(colors, majorLatin, majorEastAsian, majorComplexScript, minorLatin, minorEastAsian, minorComplexScript,
+            fillStyles, backgroundFillStyles, lineStyles, effectStyles);
     }
 
     public bool TryResolveColor(string schemeColor, PptxColorMap colorMap, out RgbColor color)
@@ -154,6 +164,15 @@ internal sealed class PptxTheme
 
         fillStyle = null;
         return false;
+    }
+
+    public XElement? GetBackgroundFillStyle(int index)
+    {
+        if (index < 1000)
+            return TryGetFillStyle(index, out XElement? fillStyle) ? fillStyle : null;
+
+        int slot = index - 1001;
+        return slot >= 0 && slot < backgroundFillStyles.Count ? backgroundFillStyles[slot] : null;
     }
 
     public bool TryGetLineStyle(int index, [NotNullWhen(true)] out XElement? lineStyle)

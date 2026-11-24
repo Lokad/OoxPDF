@@ -116,15 +116,14 @@ internal sealed partial class PptxRenderer
         // Non-scene fallbacks retain background and orphan-content diagnostics,
         // while drawing-owned content shares scene visibility, including groups.
         // Part-level compatibility, timing and transition checks stay independent.
-        if (sceneSlide.SlideBackground.HasUnsupportedGradient ||
-            VisibleSlideElements(DrawingNamespace + "gradFill").Any(IsUnsupportedNonShapeGradientFill))
+        if (VisibleSlideElements(DrawingNamespace + "gradFill").Any(IsUnsupportedNonShapeGradientFill))
             Emit("PPTX_UNSUPPORTED_GRADIENT_FILL", "gradient fill");
-        else if (!sceneSlide.SlideBackground.HasFill)
+        foreach (var (background, owner) in sceneSlide.BackgroundCandidates())
         {
-            if (sceneSlide.LayoutBackground.HasUnsupportedGradient)
-                Emit("PPTX_UNSUPPORTED_GRADIENT_FILL", "gradient fill", sceneSlide.LayoutPartName);
-            else if (!sceneSlide.LayoutBackground.HasFill && sceneSlide.MasterBackground.HasUnsupportedGradient)
-                Emit("PPTX_UNSUPPORTED_GRADIENT_FILL", "gradient fill", sceneSlide.MasterPartName);
+            if (background.HasUnsupportedGradient)
+                Emit("PPTX_UNSUPPORTED_GRADIENT_FILL", "gradient fill", owner);
+            if (background.HasUnsupportedStyleReference)
+                Emit("PPTX_UNSUPPORTED_BACKGROUND_STYLE", "background style reference", owner);
         }
         if (VisibleSlideElements(DrawingNamespace + "pattFill").Any(IsUnsupportedNonShapePatternFill))
             Emit("PPTX_UNSUPPORTED_PATTERN_FILL", "pattern fill");
@@ -132,7 +131,10 @@ internal sealed partial class PptxRenderer
             Emit("PPTX_UNSUPPORTED_TEXT_ORIENTATION", "vertical text");
         if (VisibleSlideElements(DrawingNamespace + "bodyPr").Any(IsUnsupportedNonShapeTextVerticalOverflow))
             EmitTextOverflow();
-        if (PptxSceneBuilder.HasUnsupportedAlpha(slideXml, IsVisibleNonShapeColor))
+        XElement? backgroundReference = slideXml.Root?.Element(PresentationNamespace + "cSld")?
+            .Element(PresentationNamespace + "bg")?.Element(PresentationNamespace + "bgRef");
+        if (PptxSceneBuilder.HasUnsupportedAlpha(slideXml, color =>
+            (backgroundReference is null || !ReferenceEquals(color.Parent, backgroundReference)) && IsVisibleNonShapeColor(color)))
             Emit("PPTX_UNSUPPORTED_TRANSPARENCY", "transparency");
 
         IEnumerable<XElement> VisibleSlideElements(XName name) =>

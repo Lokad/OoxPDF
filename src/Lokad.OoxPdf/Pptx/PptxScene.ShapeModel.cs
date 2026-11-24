@@ -29,7 +29,19 @@ internal sealed record PptxSceneSlide(
     bool ShowMasterShapes,
     IReadOnlyList<PptxSceneNode> MasterNodes,
     IReadOnlyList<PptxSceneNode> LayoutNodes,
-    IReadOnlyList<PptxSceneNode> SlideNodes);
+    IReadOnlyList<PptxSceneNode> SlideNodes)
+{
+    public IEnumerable<(PptxSceneBackground Background, string? PartName)> BackgroundCandidates()
+    {
+        yield return (SlideBackground, PartName);
+        if (SlideBackground.HasFill) yield break;
+
+        yield return (LayoutBackground, LayoutPartName);
+        if (LayoutBackground.HasFill) yield break;
+
+        yield return (MasterBackground, MasterPartName);
+    }
+}
 
 internal readonly record struct PptxSceneBackground(
     bool HasFill,
@@ -38,6 +50,7 @@ internal readonly record struct PptxSceneBackground(
     PptxSceneGradientFill? GradientFill = null)
 {
     public bool HasUnsupportedGradient { get; init; }
+    public bool HasUnsupportedStyleReference { get; init; }
 }
 
 // Scene creation and image preparation validate kind/payload combinations through
