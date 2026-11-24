@@ -1527,20 +1527,33 @@ internal static partial class DocxInlineCompositionTests
             var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true), mode,
                 mode == OoxPdfDocxMarkupMode.AllMarkup ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
                     : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
-            var direct = Render(false);
-            var nested = Render(true);
+            var direct = Render(false).Page;
+            var nested = Render(true).Page;
             string text = DocxPageFootnoteNumberingTests.DecodeText(nested);
             TestAssert.Contains("CompanionBefore", text);
             TestAssert.Contains("CompanionAfter", text);
             TestAssert.Equal(1, nested.Images.Count);
             TestAssert.Equal(direct.Content, nested.Content);
 
-            PdfPage Render(bool nestedRuns)
+            var wordRun = Render(nestedRuns: true, withBreak: true);
+            var mathRun = Render(nestedRuns: true, withBreak: true, mathContainer: true);
+            TestAssert.Contains("Stored companion", DocxPageFootnoteNumberingTests.DecodeText(mathRun.Page));
+            TestAssert.Equal(1, mathRun.Page.Images.Count);
+            TestAssert.Equal(wordRun.Page.Content, mathRun.Page.Content);
+            TestAssert.True(wordRun.Diagnostics.SequenceEqual(mathRun.Diagnostics),
+                "An authored break and its WordprocessingML companions share paragraph paint and diagnostics.");
+
+            (PdfPage Page, List<OoxPdfDiagnostic> Diagnostics) Render(bool nestedRuns, bool withBreak = false,
+                bool mathContainer = false)
             {
                 var document = ReadMutation(fixture, mode, false, false, (xml, w, m) =>
                 {
                     var display = xml.Descendants(m + "oMathPara").First();
                     var picture = display.Parent!.Elements(w + "r").Single();
+                    if (withBreak)
+                        picture.Element(w + "drawing")!.AddBeforeSelf(new XElement(w + "br"),
+                            new XElement(w + "t", "Stored companion"));
+                    if (mathContainer) picture.Name = m + "r";
                     var before = new XElement(w + "r", new XElement(w + "t", "CompanionBefore"));
                     var after = new XElement(w + "r", new XElement(w + "t", "CompanionAfter"));
                     if (nestedRuns)
@@ -1554,7 +1567,9 @@ internal static partial class DocxInlineCompositionTests
                         picture.AddAfterSelf(after);
                     }
                 });
-                return renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
+                var diagnostics = new List<OoxPdfDiagnostic>();
+                var page = renderer.RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().Single();
+                return (page, diagnostics);
             }
         }
     }

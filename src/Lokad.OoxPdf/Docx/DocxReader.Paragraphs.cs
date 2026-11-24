@@ -487,7 +487,7 @@ internal sealed partial class DocxReader
                 XElement equation = source.Element;
                 if (!IsEquationPayload(equation))
                 {
-                    var inlineSource = IsDisplayMathRun(equation) ? AsParagraphBreakRun(equation) : equation;
+                    var inlineSource = IsDisplayMathRun(equation) ? AsParagraphRun(equation) : equation;
                     AddSourceContainerChild(inlineSource, source.Revision, source.RemoveDeletedText);
                     continue;
                 }
@@ -545,13 +545,13 @@ internal sealed partial class DocxReader
                         bool mathRun = item.Name == MathNamespace + "r";
                         if (mathRun && item.Element(WordprocessingNamespace + "br") is null)
                             continue;
-                        AddSourceContainerChild(mathRun ? AsParagraphBreakRun(item) : item, source.Revision,
+                        AddSourceContainerChild(mathRun ? AsParagraphRun(item) : item, source.Revision,
                             removeDeletedText: false);
                     }
                 }
             }
 
-            static XElement AsParagraphBreakRun(XElement run) => new(WordprocessingNamespace + "r", run.Elements());
+            static XElement AsParagraphRun(XElement run) => new(WordprocessingNamespace + "r", run.Elements());
 
             DocxTextRun ReadMathRun(XElement run, string text)
             {

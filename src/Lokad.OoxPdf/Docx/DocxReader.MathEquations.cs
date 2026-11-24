@@ -11,7 +11,8 @@ internal sealed partial class DocxReader
          DocxSourceXml.IsRevisionContainer(owner) && owner.Parent?.Name == MathNamespace + "oMathPara");
 
     private static bool IsEquationPayload(XElement element) =>
-        element.Name == MathNamespace + "oMath" || IsDisplayMathRun(element) && !IsDisplayMathLineBreakRun(element);
+        element.Name == MathNamespace + "oMath" ||
+        IsDisplayMathRun(element) && !IsDisplayMathLineBreakRun(element, allowCompanions: true);
 
     private static XElement? FindFirstTrailingDisplayMathBreak(XElement equation, CancellationToken cancellationToken)
     {
@@ -37,12 +38,16 @@ internal sealed partial class DocxReader
              element.Nodes().OfType<XText>().All(text => string.IsNullOrWhiteSpace(text.Value)));
     }
 
-    private static bool IsDisplayMathLineBreakRun(XElement run)
+    private static bool IsDisplayMathLineBreakRun(XElement run, bool allowCompanions = false)
     {
+        // Direct display runs can carry ordinary paragraph content alongside
+        // a break. A run inside the equation can lift only its pure break.
         return run.Name == MathNamespace + "r" &&
             run.Element(WordprocessingNamespace + "br") is not null &&
             run.Elements().All(child => child.Name == WordprocessingNamespace + "rPr" ||
-                DocxSourceXml.IsLastRenderedPageBreakHint(child) || IsLineBreak(child)) &&
+                DocxSourceXml.IsLastRenderedPageBreakHint(child) || IsLineBreak(child) ||
+                allowCompanions && (child.Name == WordprocessingNamespace + "drawing" ||
+                    child.Name == WordprocessingNamespace + "t" && !child.HasElements)) &&
             run.Nodes().OfType<XText>().All(text => string.IsNullOrWhiteSpace(text.Value));
 
         static bool IsLineBreak(XElement element) =>
