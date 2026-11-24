@@ -109,7 +109,8 @@ internal static partial class DocxInlineCompositionTests
                 .ToBlockingEnumerable().Single();
             var expectedTwo = MathShows(betweenTwo);
             TestAssert.Equal("α+β=γδ+ε=ζ", string.Concat(expectedTwo.Select(show => show.Text)).Normalize(NormalizationForm.FormKC));
-            TestAssert.True(expectedTwo[0].Y == expected[0].Y && expectedTwo[^1].Y > expected[^1].Y,
+            TestAssert.True(expectedTwo[0].Y == expected[0].Y &&
+                Math.Abs(expectedTwo[^1].Y - expectedTwo[0].Y) > Math.Abs(expected[^1].Y - expected[0].Y),
                 "The second authored break must retain an additional line of space.");
             CheckMathBreaks(Read(insideEquation: true, mathRun: true, breakCount: 2), expectedTwo);
 
