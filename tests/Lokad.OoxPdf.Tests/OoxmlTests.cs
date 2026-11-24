@@ -352,33 +352,9 @@ internal static partial class OoxmlTests
         TestAssert.True(!document.Descendants().Any(e => e.Name.LocalName == "AlternateContent"), "Fallback-less unknown blocks should vanish.");
     }
 
-    public static void AlternateContentRendersExactlyOneRepresentation()
+    public static void AlternateContentPrintsOnlySelectedChoiceAndFallback()
     {
-        string input = WriteAlternateContentProbeDocx("wpc", "http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas", "ChoiceText", "FallbackText");
-
-        using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
-        Lokad.OoxPdf.Docx.DocxDocument document = new Lokad.OoxPdf.Docx.DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
-
-        string text = string.Concat(document.Paragraphs.SelectMany(p => p.Runs).Select(r => r.Text));
-        TestAssert.Equal("FallbackText", text);
-    }
-
-    public static void AlternateContentUnderstoodChoiceRenders()
-    {
-        string input = WriteAlternateContentProbeDocx("w", "http://schemas.openxmlformats.org/wordprocessingml/2006/main", "ChoiceText", "FallbackText");
-
-        using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
-        Lokad.OoxPdf.Docx.DocxDocument document = new Lokad.OoxPdf.Docx.DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
-
-        string text = string.Concat(document.Paragraphs.SelectMany(p => p.Runs).Select(r => r.Text));
-        TestAssert.Equal("ChoiceText", text);
-    }
-
-    private static string WriteAlternateContentProbeDocx(string choicePrefix, string choiceNamespace, string choiceText, string fallbackText)
-    {
-        return TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        using var stream = TestFixtures.CreateZipPackage(new Dictionary<string, string>
         {
             ["[Content_Types].xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
@@ -394,20 +370,33 @@ internal static partial class OoxmlTests
                   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
                 </Relationships>
                 """,
-            ["word/document.xml"] = $$"""
+            ["word/document.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
-                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006">
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+                    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                    xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas">
                   <w:body>
                     <w:p>
                       <mc:AlternateContent>
-                        <mc:Choice Requires="{{choicePrefix}}" xmlns:{{choicePrefix}}="{{choiceNamespace}}"><w:r><w:t>{{choiceText}}</w:t></w:r></mc:Choice>
-                        <mc:Fallback><w:r><w:t>{{fallbackText}}</w:t></w:r></mc:Fallback>
+                        <mc:Choice Requires="wpc"><w:r><w:t>Unknown choice</w:t></w:r></mc:Choice>
+                        <mc:Fallback><w:r><w:t>Selected fallback</w:t></w:r></mc:Fallback>
+                      </mc:AlternateContent>
+                      <w:r><w:t xml:space="preserve"> then </w:t></w:r>
+                      <mc:AlternateContent>
+                        <mc:Choice Requires="w"><w:r><w:t>selected choice</w:t></w:r></mc:Choice>
+                        <mc:Fallback><w:r><w:t>Unused fallback</w:t></w:r></mc:Fallback>
                       </mc:AlternateContent>
                     </w:p>
                   </w:body>
                 </w:document>
                 """
         });
+        using var package = OoxPackage.Open(stream, CancellationToken.None);
+        var document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
+        var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(), OoxPdfDocxMarkupMode.Final,
+            OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        var page = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
+        TestAssert.Equal("Selected fallback then selected choice", DocxPageFootnoteNumberingTests.DecodeText(page));
     }
 
     public static void StrictRelationshipTypesNormalizeToTransitional()
