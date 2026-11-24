@@ -270,7 +270,8 @@ internal sealed partial class PptxRenderer
                 "PPTX table grid exceeds the maximum supported cell count of " + MaxTableGridSegments + ".");
         }
 
-        var (rowHeights, textMeasurements) = await ResolveTableRowHeightsAsync(context, table, rawColumnWidths, rawRowHeights, columnScale, frameHeight, colorMap).ConfigureAwait(false);
+        var (rowHeights, textMeasurements) = await ResolveTableRowHeightsAsync(context, table, rawColumnWidths, rawRowHeights,
+            columnScale, frameHeight, tableHeightSlackFactor, colorMap).ConfigureAwait(false);
         double yTop = frameTop;
         var rowTops = new double[rows.Count + 1];
         var skippedVerticalGridSegments = new bool[rawColumnWidths.Count + 1, rows.Count];
@@ -395,20 +396,16 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<double> rawRowHeights,
         double columnScale,
         double frameHeight,
+        double rowHeightSlackFactor,
         PptxColorMap colorMap)
     {
         // Large frame slack keeps declared heights (Office keeps declared rows at
         // 1.2x-3x frame slack); content minimums below can still expand rows, and
         // overflow shrinking is unchanged.
         double[] rowHeights = rawRowHeights.Select(height => height * OoxUnits.PointsPerInch / OoxUnits.EmusPerInch).ToArray();
-        double rowHeightSlackFactor = frameHeight / Math.Max(PptxTextMetricRules.TextStateTolerance, rawRowHeights.Sum() * OoxUnits.PointsPerInch / OoxUnits.EmusPerInch);
         if (rowHeightSlackFactor <= OfficeTableRowContentExpansionSlackFactor)
         {
-            if (TryDistributeSmallPositiveTableRowSlack(rawRowHeights, frameHeight, rowHeightSlackFactor, out double[] slackAdjustedRows))
-            {
-                return (slackAdjustedRows, null);
-            }
-
+            DistributeSmallPositiveTableRowSlack(rowHeights, frameHeight, rowHeightSlackFactor);
             return (rowHeights, null);
         }
 
@@ -502,48 +499,37 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static bool TryDistributeSmallPositiveTableRowSlack(
-        IReadOnlyList<double> rawRowHeights,
-        double frameHeight,
-        double rowHeightSlackFactor,
-        out double[] rowHeights)
+    private static void DistributeSmallPositiveTableRowSlack(double[] rowHeights, double frameHeight, double rowHeightSlackFactor)
     {
-        rowHeights = [];
-        if (rawRowHeights.Count <= 1 ||
+        if (rowHeights.Length <= 1 ||
             rowHeightSlackFactor <= 1d + PptxTextMetricRules.TextStateTolerance ||
             rowHeightSlackFactor > OfficeTableRowSmallPositiveSlackFactor)
         {
-            return false;
+            return;
         }
 
-        double[] declaredRows = rawRowHeights
-            .Select(height => height * OoxUnits.PointsPerInch / OoxUnits.EmusPerInch)
-            .ToArray();
-        double declaredTotal = declaredRows.Sum();
+        double declaredTotal = rowHeights.Sum();
         double slack = frameHeight - declaredTotal;
         if (slack <= PptxTextMetricRules.CoordinateTolerance)
         {
-            return false;
+            return;
         }
 
-        double shortestRow = declaredRows.Min();
-        int shortestCount = declaredRows.Count(height => Math.Abs(height - shortestRow) <= PptxTextMetricRules.CoordinateTolerance);
-        if (shortestCount <= 1 || shortestCount >= declaredRows.Length)
+        double shortestRow = rowHeights.Min();
+        int shortestCount = rowHeights.Count(height => Math.Abs(height - shortestRow) <= PptxTextMetricRules.CoordinateTolerance);
+        if (shortestCount <= 1 || shortestCount >= rowHeights.Length)
         {
-            return false;
+            return;
         }
 
         double slackPerShortestRow = slack / shortestCount;
-        for (int i = 0; i < declaredRows.Length; i++)
+        for (int i = 0; i < rowHeights.Length; i++)
         {
-            if (Math.Abs(declaredRows[i] - shortestRow) <= PptxTextMetricRules.CoordinateTolerance)
+            if (Math.Abs(rowHeights[i] - shortestRow) <= PptxTextMetricRules.CoordinateTolerance)
             {
-                declaredRows[i] += slackPerShortestRow;
+                rowHeights[i] += slackPerShortestRow;
             }
         }
-
-        rowHeights = declaredRows;
-        return true;
     }
 
     private static void RenderTableFrameLayout(PdfGraphicsBuilder graphics, TableFrameLayout layout)
