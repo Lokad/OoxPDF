@@ -1,4 +1,3 @@
-using System.Text;
 using Lokad.OoxPdf.Pdf;
 using static Lokad.OoxPdf.Docx.DocxBalloonParagraphPolicy;
 
@@ -48,52 +47,47 @@ internal sealed partial class DocxRenderer
         return new(leading, parts, markResource);
     }
 
-    private sealed record DocxMarkupFittingMixedTerminalRows(
+    private sealed record DocxMarkupMixedTerminalRows(
         DocxMarkupMixedTerminalParagraph Paragraphs,
-        DocxUniformBalloonRow[][] LeadingRows, double[] Pitches, double[] Transitions)
+        DocxMarkupParagraphRows Leading, DocxMarkupWrappedTerminalRows? Wrapped)
     {
-        public double ContinuationsHeight => Enumerable.Range(0, Paragraphs.Leading.Count)
-            .Sum(index => (LeadingRows[index].Length - 1) * Pitches[index]) + Transitions.Sum();
+        public double ContinuationsHeight
+        {
+            get
+            {
+                double height = Leading.ContinuationsHeight;
+                return Wrapped is { } wrapped
+                    ? height + (wrapped.TerminalRows.Length - (wrapped.HasClosingRow ? 1 : 2)) * wrapped.TerminalPitch +
+                        wrapped.FinalPitch + (wrapped.PartialClosingSuffix is null ? 0d : wrapped.MixedTerminalPitch - wrapped.TerminalPitch)
+                    : height;
+            }
+        }
     }
 
-    private static DocxMarkupFittingMixedTerminalRows? ResolveWordCompatibleFittingMixedTerminalRows(
+    private static DocxMarkupMixedTerminalRows? ResolveWordCompatibleMixedTerminalRows(
         DocxMarkupMixedTerminalParagraph? paragraphs, double size, double firstWidth,
         double continuationWidth, CancellationToken cancellationToken)
     {
-        if (paragraphs is null || !double.IsFinite(firstWidth) || firstWidth <= 0d ||
-            !double.IsFinite(continuationWidth) || continuationWidth <= 0d) { return null; }
-        int leadingCount = paragraphs.Leading.Count;
-        if (leadingCount < 1) { return null; }
-        var rows = new DocxUniformBalloonRow[leadingCount][];
-        var pitches = new double[leadingCount];
-        var transitions = new double[leadingCount];
-        for (int index = 0; index < leadingCount; index++)
+        if (paragraphs is null ||
+            ResolveWordCompatibleParagraphRows(paragraphs.Leading, size, firstWidth, continuationWidth,
+                cancellationToken, hasMixedTerminal: true) is not { } leading) { return null; }
+        if (MeasureFittingTerminalTransition(paragraphs, size, continuationWidth) is double finalStep)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            var body = paragraphs.Leading[index].Body;
-            var font = body.Resource.Embedded.Font;
-            double width = body.Resource.Embedded.MeasureTextPoints(body.Text, size);
-            double pitch = DocxLineMetrics.MeasureHheaLineHeight(font, size);
-            if (font.UnitsPerEm <= 0 || !double.IsFinite(width) || width <= 0d || !double.IsFinite(pitch) || pitch <= 0d) { return null; }
-            int scalarIndex = 0;
-            foreach (Rune rune in body.Text.EnumerateRunes())
-            {
-                if ((scalarIndex++ & 255) == 0) { cancellationToken.ThrowIfCancellationRequested(); }
-                double scalarWidth = font.GetAdvanceWidth(font.MapCodePoint(rune.Value)) * size / font.UnitsPerEm;
-                if (!double.IsFinite(scalarWidth) || scalarWidth > continuationWidth) { return null; }
-            }
-            rows[index] = WrapUniformBalloonWords(body.Text, body.Resource.Embedded, size,
-                index == 0 ? firstWidth : continuationWidth, continuationWidth, cancellationToken,
-                reserveFirstRowBreakSpace: false);
-            if (rows[index].Length == 0 || rows[index][0].Text.Length == 0) { return null; }
-            pitches[index] = pitch;
-            if (index > 0)
-            {
-                double? step = MeasureWordCompatibleParagraphTransition(paragraphs.Leading[index - 1], paragraphs.Leading[index], size);
-                if (step is null) { return null; }
-                transitions[index - 1] = step.Value;
-            }
+            leading.Transitions[^1] = finalStep;
+            var fitting = new DocxMarkupMixedTerminalRows(paragraphs, leading, null);
+            if (double.IsFinite(fitting.ContinuationsHeight)) { return fitting; }
         }
+        var wrapped = ResolveWordCompatibleWrappedTerminalRows(paragraphs, size, continuationWidth, cancellationToken,
+            out double firstStep);
+        if (wrapped is null) { return null; }
+        leading.Transitions[^1] = firstStep;
+        var result = new DocxMarkupMixedTerminalRows(paragraphs, leading, wrapped);
+        return double.IsFinite(result.ContinuationsHeight) ? result : null;
+    }
+
+    private static double? MeasureFittingTerminalTransition(
+        DocxMarkupMixedTerminalParagraph paragraphs, double size, double continuationWidth)
+    {
         double totalWidth = 0d;
         double nextAscent = double.NegativeInfinity;
         foreach (var part in paragraphs.Parts)
@@ -107,26 +101,30 @@ internal sealed partial class DocxRenderer
             nextAscent = Math.Max(nextAscent, (font.Hhea.HorizontalAscender + font.Hhea.HorizontalLineGap) / (double)font.UnitsPerEm);
         }
         if (!double.IsFinite(totalWidth) || totalWidth > continuationWidth) { return null; }
-        var previous = paragraphs.Leading[leadingCount - 1].Body.Resource.Embedded.Font;
+        var previous = paragraphs.Leading[^1].Body.Resource.Embedded.Font;
         double finalStep = (-previous.Hhea.HorizontalDescender / (double)previous.UnitsPerEm + nextAscent) * size;
-        if (!double.IsFinite(finalStep) || finalStep <= 0d) { return null; }
-        transitions[leadingCount - 1] = finalStep;
-        var result = new DocxMarkupFittingMixedTerminalRows(paragraphs, rows, pitches, transitions);
-        return double.IsFinite(result.ContinuationsHeight) ? result : null;
+        return double.IsFinite(finalStep) && finalStep > 0d ? finalStep : null;
     }
 
-    private static void RenderWordCompatibleFittingMixedTerminalRows(
-        DocxMarkupFittingMixedTerminalRows rows, DocxMarkupBalloonPlacement placement, PdfGraphicsBuilder graphics,
+    private static void RenderWordCompatibleMixedTerminalRows(
+        DocxMarkupMixedTerminalRows rows, DocxMarkupBalloonPlacement placement, PdfGraphicsBuilder graphics,
         double firstX, double continuationX, double firstY, double size, CancellationToken cancellationToken)
     {
         double y = firstY;
-        for (int index = 0; index < rows.Paragraphs.Leading.Count; index++)
+        var leading = rows.Leading;
+        for (int index = 0; index < leading.Paragraphs.Count; index++)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var paragraph = rows.Paragraphs.Leading[index];
-            RenderUniformBalloonRows(rows.LeadingRows[index], placement, graphics, paragraph.Body.Resource, paragraph.Mark,
-                index == 0 ? firstX : continuationX, continuationX, y, rows.Pitches[index], size, cancellationToken);
-            y -= (rows.LeadingRows[index].Length - 1) * rows.Pitches[index] + rows.Transitions[index];
+            var paragraph = leading.Paragraphs[index];
+            RenderUniformBalloonRows(leading.BodyRows[index], placement, graphics, paragraph.Body.Resource, paragraph.Mark,
+                index == 0 ? firstX : continuationX, continuationX, y, leading.Pitches[index], size, cancellationToken);
+            y -= (leading.BodyRows[index].Length - 1) * leading.Pitches[index] + leading.Transitions[index];
+        }
+        if (rows.Wrapped is { } wrapped)
+        {
+            RenderWordCompatibleWrappedTerminalRows(rows.Paragraphs, wrapped, placement, graphics,
+                continuationX, y, size, cancellationToken);
+            return;
         }
         double x = continuationX;
         foreach (var part in rows.Paragraphs.Parts)

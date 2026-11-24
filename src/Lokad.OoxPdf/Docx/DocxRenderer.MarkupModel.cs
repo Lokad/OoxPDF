@@ -97,7 +97,7 @@ internal sealed partial class DocxRenderer
 
     private sealed record DocxMarkupBalloonLaneBand(
         int Index,
-        IReadOnlyList<DocxMarkupBalloonCandidate> Candidates,
+        IReadOnlyList<(DocxMarkupBalloonCandidate Candidate, double Height, double PreferredTop)> Candidates,
         double TopLimit,
         double MinimumTop,
         int CandidateCount);

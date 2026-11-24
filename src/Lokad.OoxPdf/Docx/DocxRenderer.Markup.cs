@@ -522,11 +522,11 @@ internal sealed partial class DocxRenderer
             nextTop = Math.Min(nextTop, bandTopLimit);
             var overflowCandidates = new List<DocxMarkupBalloonCandidate>();
             var placedBandCandidates = new List<DocxMarkupBalloonCandidate>();
-            foreach (DocxMarkupBalloonCandidate candidate in laneBand.Candidates)
+            foreach (var (candidate, height, preferredTop) in laneBand.Candidates)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 double connectorAnchorY = ResolveMarkupBalloonAnchorY(candidate.AnchorY, page, markupContext, candidate.WordCompatibleAnchorDepthPoints);
-                double height = ResolveMarkupBalloonHeight(candidate, markupContext, labelEmbedded, bodyEmbedded, fallbackFont, area.Width, cancellationToken);
-                double desiredTop = Math.Min(nextTop, ResolveMarkupBalloonPreferredTop(candidate, page, markupContext, labelEmbedded, bodyEmbedded));
+                double desiredTop = Math.Min(nextTop, preferredTop);
                 double y = desiredTop - height;
                 double bottom = candidate.WordCompatiblePlacementBottomY ?? page.MarginBottom;
                 if (y < bottom)
@@ -612,13 +612,14 @@ internal sealed partial class DocxRenderer
         IReadOnlyList<DocxMarkupBalloonLaneBand> BuildMarkupBalloonLaneBands()
         {
             var bands = new List<DocxMarkupBalloonLaneBand>();
-            var current = new List<DocxMarkupBalloonCandidate>();
+            var current = new List<(DocxMarkupBalloonCandidate Candidate, double Height, double PreferredTop)>();
             double currentTopLimit = 0d;
             double currentBottom = 0d;
             double currentMinimumTop = 0d;
 
             foreach (DocxMarkupBalloonCandidate candidate in candidates)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 double height = ResolveMarkupBalloonHeight(candidate, markupContext, labelEmbedded, bodyEmbedded, fallbackFont, area.Width, cancellationToken);
                 double preferredTop = ResolveMarkupBalloonPreferredTop(candidate, page, markupContext, labelEmbedded, bodyEmbedded);
                 double preferredBottom = preferredTop - height;
@@ -643,7 +644,7 @@ internal sealed partial class DocxRenderer
                         (candidate.WordCompatiblePlacementBottomY ?? page.MarginBottom) + height);
                 }
 
-                current.Add(candidate);
+                current.Add((candidate, height, preferredTop));
             }
 
             AddCurrentBand();
@@ -662,7 +663,7 @@ internal sealed partial class DocxRenderer
                     current.ToArray(),
                     currentTopLimit,
                     currentMinimumTop,
-                    current.Sum(candidate => candidate.CandidateCount)));
+                    current.Sum(item => item.Candidate.CandidateCount)));
             }
         }
 
@@ -1128,13 +1129,9 @@ internal sealed partial class DocxRenderer
                     candidate.WordCompatibleParagraphs, out var insets);
                 double titleWidth = labelEmbedded.MeasureTextPoints(title, fontSize);
                 ComputeWordCompatibleBalloonWrapWidths(titleWidth, balloonWidth, markupContext.WordCompatiblePrintScale, out double firstLineWidth, out double continuationWidth);
-                if (ResolveWordCompatibleFittingMixedTerminalRows(candidate.WordCompatibleMixedTerminal, fontSize, firstLineWidth, continuationWidth, cancellationToken) is { } mixedTerminalRows)
+                if (ResolveWordCompatibleMixedTerminalRows(candidate.WordCompatibleMixedTerminal, fontSize, firstLineWidth, continuationWidth, cancellationToken) is { } mixedTerminalRows)
                 {
                     return insets.Top + mixedTerminalRows.ContinuationsHeight + insets.Bottom;
-                }
-                if (ResolveWordCompatibleWrappedMixedTerminalRows(candidate.WordCompatibleMixedTerminal, fontSize, firstLineWidth, continuationWidth, cancellationToken) is { } wrappedMixedTerminalRows)
-                {
-                    return insets.Top + wrappedMixedTerminalRows.ContinuationsHeight + insets.Bottom;
                 }
                 if (ResolveWordCompatibleParagraphRows(candidate.WordCompatibleParagraphs, fontSize, firstLineWidth, continuationWidth, cancellationToken) is { } plainParagraphRows)
                 {
@@ -1654,15 +1651,9 @@ internal sealed partial class DocxRenderer
         double titleWidth = labelResource.Embedded.MeasureTextPoints(title, fontSize);
         ComputeWordCompatibleBalloonWrapWidths(titleWidth, placement.Width, wordCompatiblePrintScale, out double firstLineWidth, out double continuationWidth);
         double bodyFirstLineX = textX + titleWidth;
-        if (ResolveWordCompatibleFittingMixedTerminalRows(placement.WordCompatibleMixedTerminal, fontSize, firstLineWidth, continuationWidth, cancellationToken) is { } mixedTerminalRows)
+        if (ResolveWordCompatibleMixedTerminalRows(placement.WordCompatibleMixedTerminal, fontSize, firstLineWidth, continuationWidth, cancellationToken) is { } mixedTerminalRows)
         {
-            RenderWordCompatibleFittingMixedTerminalRows(mixedTerminalRows, placement, graphics, bodyFirstLineX, textX,
-                firstBaselineY, fontSize, cancellationToken);
-            return;
-        }
-        if (ResolveWordCompatibleWrappedMixedTerminalRows(placement.WordCompatibleMixedTerminal, fontSize, firstLineWidth, continuationWidth, cancellationToken) is { } wrappedMixedTerminalRows)
-        {
-            RenderWordCompatibleWrappedMixedTerminalRows(wrappedMixedTerminalRows, placement, graphics, bodyFirstLineX, textX,
+            RenderWordCompatibleMixedTerminalRows(mixedTerminalRows, placement, graphics, bodyFirstLineX, textX,
                 firstBaselineY, fontSize, cancellationToken);
             return;
         }

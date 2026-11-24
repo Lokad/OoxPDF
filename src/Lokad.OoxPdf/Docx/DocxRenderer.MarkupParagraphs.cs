@@ -63,39 +63,29 @@ internal sealed partial class DocxRenderer
     }
 
     private sealed record DocxMarkupParagraphRows(
-        DocxMarkupBalloonParagraph[] Paragraphs, DocxUniformBalloonRow[][] BodyRows,
+        IReadOnlyList<DocxMarkupBalloonParagraph> Paragraphs, DocxUniformBalloonRow[][] BodyRows,
         double[] Pitches, double[] Transitions)
     {
-        public double ContinuationsHeight => Enumerable.Range(0, Paragraphs.Length)
+        public double ContinuationsHeight => Enumerable.Range(0, Paragraphs.Count)
             .Sum(index => (BodyRows[index].Length - 1) * Pitches[index]) + Transitions.Sum();
     }
 
     private static DocxMarkupParagraphRows? ResolveWordCompatibleParagraphRows(
         IReadOnlyList<DocxMarkupBalloonParagraph>? paragraphs, double fontSize,
-        double firstWidth, double continuationWidth, CancellationToken cancellationToken)
+        double firstWidth, double continuationWidth, CancellationToken cancellationToken,
+        bool hasMixedTerminal = false)
     {
-        if (paragraphs is null || paragraphs.Count < 2 || !double.IsFinite(firstWidth) || firstWidth <= 0d ||
+        if (paragraphs is null || paragraphs.Count < (hasMixedTerminal ? 1 : 2) || !double.IsFinite(firstWidth) || firstWidth <= 0d ||
             !double.IsFinite(continuationWidth) || continuationWidth <= 0d) { return null; }
         var bodies = new DocxUniformBalloonRow[paragraphs.Count][];
         var pitches = new double[paragraphs.Count];
-        var transitions = new double[paragraphs.Count - 1];
+        var transitions = new double[paragraphs.Count - (hasMixedTerminal ? 0 : 1)];
         for (int index = 0; index < paragraphs.Count; index++)
         {
             cancellationToken.ThrowIfCancellationRequested();
             DocxMarkupBalloonParagraph paragraph = paragraphs[index];
-            var font = paragraph.Body.Resource.Embedded.Font;
-            double width = paragraph.Body.Resource.Embedded.MeasureTextPoints(paragraph.Body.Text, fontSize);
-            if (font.UnitsPerEm <= 0 || !double.IsFinite(width) || width <= 0d) { return null; }
-            int scalarIndex = 0;
-            foreach (Rune rune in paragraph.Body.Text.EnumerateRunes())
-            {
-                if ((scalarIndex++ & 255) == 0) { cancellationToken.ThrowIfCancellationRequested(); }
-                double scalarWidth = font.GetAdvanceWidth(font.MapCodePoint(rune.Value)) * fontSize / font.UnitsPerEm;
-                if (!double.IsFinite(scalarWidth) || scalarWidth > continuationWidth) { return null; }
-            }
-            double pitch = DocxLineMetrics.MeasureHheaLineHeight(font, fontSize);
-            if (!double.IsFinite(pitch) || pitch <= 0d) { return null; }
-            pitches[index] = pitch;
+            if (!TryMeasureBalloonParagraphBody(paragraph.Body, fontSize, continuationWidth, cancellationToken,
+                out pitches[index])) { return null; }
             bodies[index] = WrapUniformBalloonWords(paragraph.Body.Text, paragraph.Body.Resource.Embedded, fontSize,
                 index == 0 ? firstWidth : continuationWidth, continuationWidth, cancellationToken,
                 reserveFirstRowBreakSpace: false);
@@ -107,8 +97,26 @@ internal sealed partial class DocxRenderer
                 transitions[index - 1] = transition.Value;
             }
         }
-        var result = new DocxMarkupParagraphRows(paragraphs.ToArray(), bodies, pitches, transitions);
+        var result = new DocxMarkupParagraphRows(paragraphs, bodies, pitches, transitions);
         return double.IsFinite(result.ContinuationsHeight) ? result : null;
+    }
+
+    private static bool TryMeasureBalloonParagraphBody(DocxMarkupBalloonBodyPart body, double size,
+        double continuationWidth, CancellationToken cancellationToken, out double pitch)
+    {
+        var font = body.Resource.Embedded.Font;
+        double width = body.Resource.Embedded.MeasureTextPoints(body.Text, size);
+        pitch = DocxLineMetrics.MeasureHheaLineHeight(font, size);
+        if (font.UnitsPerEm <= 0 || !double.IsFinite(width) || width <= 0d ||
+            !double.IsFinite(pitch) || pitch <= 0d) { return false; }
+        int index = 0;
+        foreach (Rune rune in body.Text.EnumerateRunes())
+        {
+            if ((index++ & 255) == 0) { cancellationToken.ThrowIfCancellationRequested(); }
+            double scalarWidth = font.GetAdvanceWidth(font.MapCodePoint(rune.Value)) * size / font.UnitsPerEm;
+            if (!double.IsFinite(scalarWidth) || scalarWidth > continuationWidth) { return false; }
+        }
+        return true;
     }
 
     private static void RenderWordCompatibleParagraphRows(
@@ -116,7 +124,7 @@ internal sealed partial class DocxRenderer
         double firstX, double continuationX, double firstY, double fontSize, CancellationToken cancellationToken)
     {
         double y = firstY;
-        for (int index = 0; index < rows.Paragraphs.Length; index++)
+        for (int index = 0; index < rows.Paragraphs.Count; index++)
         {
             cancellationToken.ThrowIfCancellationRequested();
             DocxMarkupBalloonParagraph paragraph = rows.Paragraphs[index];
