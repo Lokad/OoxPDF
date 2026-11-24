@@ -7,6 +7,15 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
+    private static IEnumerable<(IReadOnlyList<PptxSceneNode> Nodes, PptxColorMap ColorMap, string? PartName, bool RenderPlaceholders)>
+        EnumerateScenePaintSources(PptxSceneSlide slide)
+    {
+        if (slide.ShowMasterShapes)
+            yield return (slide.MasterNodes, slide.MasterColorMap, slide.MasterPartName, false);
+        yield return (slide.LayoutNodes, slide.LayoutColorMap, slide.LayoutPartName, false);
+        yield return (slide.SlideNodes, slide.SlideColorMap, slide.PartName, true);
+    }
+
     private static bool ShouldRenderSceneNode(PptxSceneNode node, bool renderPlaceholders)
     {
         return node.Kind != PptxSceneNodeKind.Shape || renderPlaceholders || !node.IsPlaceholder;

@@ -85,7 +85,9 @@ foreach (PptxSlide slide in slides)
     try
     {
     int slideNumber = slide.Index + 1;
-    var (frameModels, textLayout) = PptxRenderer.InspectShapeText(document, package, slide.Index, scene, inspectionFonts);
+    var context = PptxRenderer.TryLoadTextInspectionContext(document, package, slide.Index, scene, inspectionFonts);
+    if (context is null) continue;
+    var (frameModels, textLayout) = PptxRenderer.InspectShapeText(context);
     for (int frameIndex = 0; frameIndex < frameModels.Count; frameIndex++)
     {
         PptxTextFrameModelSnapshot frame = frameModels[frameIndex];
@@ -97,7 +99,7 @@ foreach (PptxSlide slide in slides)
         }
     }
 
-    IReadOnlyList<PptxTextFrameModelSnapshot> tableFrameModels = PptxRenderer.InspectTableTextFrameModels(document, package, slide.Index, scene, inspectionFonts);
+    IReadOnlyList<PptxTextFrameModelSnapshot> tableFrameModels = PptxRenderer.InspectTableTextFrameModels(context);
     for (int frameIndex = 0; frameIndex < tableFrameModels.Count; frameIndex++)
     {
         PptxTextFrameModelSnapshot frame = tableFrameModels[frameIndex];
@@ -171,7 +173,7 @@ foreach (PptxSlide slide in slides)
         }
     }
 
-    foreach (PptxTextGlyphRunSnapshot run in PptxRenderer.InspectTextGlyphRuns(document, package, slide.Index, scene, inspectionFonts))
+    foreach (PptxTextGlyphRunSnapshot run in PptxRenderer.InspectTextGlyphRuns(context))
     {
         GlyphCategoryCounts categories = CountGlyphCategories(run.Text);
         records.Add(new PptxGlyphRunRecord(

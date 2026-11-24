@@ -82,7 +82,9 @@ internal sealed partial class PptxRenderer
             var reportedHyperlinkIds = new HashSet<string>(StringComparer.Ordinal);
             var orderedChartFonts = new List<PdfFontResource>();
             int imageIndex = 1;
-            IReadOnlyList<PptxPositionedTextSpan> tableTextSpans = (await ReadSceneTableTextSpansAsync(context, includeMasterNodes: sceneSlide.ShowMasterShapes).ConfigureAwait(false));
+            var tableTextSpans = new List<PptxPositionedTextSpan>();
+            await foreach (TableFrameLayout table in ReadSceneTableLayoutsAsync(context).ConfigureAwait(false))
+                tableTextSpans.AddRange(table.TextSpans);
             cancellationToken.ThrowIfCancellationRequested();
             // Prepare the faces used by measured glyphs, rather than reporting a
             // primary-face gap for text that already has an allowed fallback.
@@ -93,13 +95,12 @@ internal sealed partial class PptxRenderer
             await AddSplitFallbackFacesAsync(slideFonts, shapeTextSpans.Concat(tableTextSpans), fontResolver, diagnosticSink, cancellationToken, slideResources, "F").ConfigureAwait(false);
             renderedFonts = new RenderedFonts(slideFonts, slideResources);
 
-            // Hidden master shapes stay unpainted when the slide opts out (S01).
-            if (sceneSlide.ShowMasterShapes)
+            foreach (var source in EnumerateScenePaintSources(sceneSlide))
             {
-                imageIndex = await RenderOrderedSceneNodesAsync(sceneSlide.MasterNodes, context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, linkAnnotations, reportedHyperlinkIds, sceneSlide.MasterPartName, sceneSlide.MasterColorMap, imageIndex, GroupTransform.Identity, renderPlaceholders: false, cancellationToken: cancellationToken).ConfigureAwait(false);
+                imageIndex = await RenderOrderedSceneNodesAsync(source.Nodes, context, graphics, renderedFonts.Fonts, orderedImages,
+                    orderedChartFonts, linkAnnotations, reportedHyperlinkIds, source.PartName, source.ColorMap, imageIndex,
+                    GroupTransform.Identity, source.RenderPlaceholders, cancellationToken).ConfigureAwait(false);
             }
-            imageIndex = await RenderOrderedSceneNodesAsync(sceneSlide.LayoutNodes, context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, linkAnnotations, reportedHyperlinkIds, sceneSlide.LayoutPartName, sceneSlide.LayoutColorMap, imageIndex, GroupTransform.Identity, renderPlaceholders: false, cancellationToken: cancellationToken).ConfigureAwait(false);
-            imageIndex = await RenderOrderedSceneNodesAsync(sceneSlide.SlideNodes, context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, linkAnnotations, reportedHyperlinkIds, sceneSlide.PartName, sceneSlide.SlideColorMap, imageIndex, GroupTransform.Identity, renderPlaceholders: true, cancellationToken: cancellationToken).ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
             string content = graphics.ToString();
             IReadOnlySet<string> usedFonts = graphics.UsedFontResourceNames;

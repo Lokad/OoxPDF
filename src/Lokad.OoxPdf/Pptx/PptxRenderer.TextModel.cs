@@ -23,28 +23,26 @@ internal sealed partial class PptxRenderer
 
     private static async ValueTask<IReadOnlyList<PptxTextFrameModel>> ReadSceneShapeTextFramesAsync(PptxRenderContext context)
     {
-        PptxSceneSlide slide = context.SceneSlide;
         var frames = new List<PptxTextFrameModel>();
-        if (slide.ShowMasterShapes)
-            frames.AddRange(await BuildTextFrameModelsAsync(context, slide.MasterNodes, slide.MasterColorMap,
-                includePlaceholders: false, placeholderSources: []).ConfigureAwait(false));
-        frames.AddRange(await BuildTextFrameModelsAsync(context, slide.LayoutNodes, slide.LayoutColorMap,
-            includePlaceholders: false, placeholderSources: []).ConfigureAwait(false));
-        // Suppressed master paint can still supply slide placeholder defaults.
-        frames.AddRange(await BuildTextFrameModelsAsync(context, slide.SlideNodes, slide.SlideColorMap,
-            includePlaceholders: true, context.InheritedXml).ConfigureAwait(false));
+        foreach (var source in EnumerateScenePaintSources(context.SceneSlide))
+        {
+            // Suppressed master paint can still supply slide placeholder defaults.
+            frames.AddRange(await BuildTextFrameModelsAsync(context, source.Nodes, source.ColorMap,
+                source.RenderPlaceholders, source.RenderPlaceholders ? context.InheritedXml : []).ConfigureAwait(false));
+        }
         return frames;
     }
 
     internal static IReadOnlyList<PptxTextFrameModelSnapshot> InspectTableTextFrameModels(PptxDocument document, OoxPackage package, int slideIndex, PptxScene? sharedScene = null, PresentationFontResolver? inspectionFonts = null)
     {
         PptxRenderContext? context = TryLoadTextInspectionContext(document, package, slideIndex, sharedScene, inspectionFonts);
-        if (context is null)
-        {
-            return [];
-        }
+        return context is null ? [] : InspectTableTextFrameModels(context);
+    }
 
-        return (ReadSceneTableTextFramesAsync(context).GetAwaiter().GetResult())
+    internal static IReadOnlyList<PptxTextFrameModelSnapshot> InspectTableTextFrameModels(PptxRenderContext context)
+    {
+        return ReadSceneTableLayoutsAsync(context).ToBlockingEnumerable()
+            .SelectMany(layout => layout.TextFrames)
             .Select(tableFrame => BuildTableCellTextFrameModelAsync(tableFrame, context).GetAwaiter().GetResult())
             .Select(ToSnapshot)
             .ToArray();

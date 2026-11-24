@@ -100,7 +100,8 @@ internal static class PptxVisibilityTests
                 PptxDocument document = new PptxReader().Read(package, default);
                 var fonts = new PresentationFontResolver(new PortableRenderingTests.PinnedResolver());
                 var scene = new PptxSceneBuilder().Build(document, package, default);
-                var (models, layout) = PptxRenderer.InspectShapeText(document, package, 0, scene, fonts);
+                var context = TestAssert.NotNull(PptxRenderer.TryLoadTextInspectionContext(document, package, 0, scene, fonts));
+                var (models, layout) = PptxRenderer.InspectShapeText(context);
                 var flow = PptxRenderer.InspectTextFlow(document, package, 0, scene, fonts);
                 var glyphs = PptxRenderer.InspectTextGlyphRuns(document, package, 0, scene, fonts);
                 int admittedFrames = 1 + (showMaster ? 1 : 0) + (hidden ? 0 : 1);
@@ -156,10 +157,16 @@ internal static class PptxVisibilityTests
                 using OoxPackage package = OoxPackage.Open(input, default);
                 PptxDocument document = new PptxReader().Read(package, default);
                 var fonts = new PresentationFontResolver(new PortableRenderingTests.PinnedResolver());
-                var models = PptxRenderer.InspectTableTextFrameModels(document, package, 0, inspectionFonts: fonts);
+                var context = TestAssert.NotNull(PptxRenderer.TryLoadTextInspectionContext(document, package, 0, inspectionFonts: fonts));
+                var models = PptxRenderer.InspectTableTextFrameModels(context);
                 TestAssert.Equal(showMaster, models.Count > 0);
                 string modelText = string.Concat(models.SelectMany(frame => frame.Paragraphs).SelectMany(paragraph => paragraph.Runs).Select(run => run.Text));
-                string glyphText = string.Concat(PptxRenderer.InspectTextGlyphRuns(document, package, 0, inspectionFonts: fonts).Select(run => run.Text));
+                var tableMemo = TestAssert.NotNull(context.TableFrameMemo);
+                var inspectedLayouts = tableMemo.Values.ToArray();
+                TestAssert.Equal(showMaster ? 1 : 0, inspectedLayouts.Length);
+                string glyphText = string.Concat(PptxRenderer.InspectTextGlyphRuns(context).Select(run => run.Text));
+                TestAssert.True(inspectedLayouts.SequenceEqual(tableMemo.Values, ReferenceEqualityComparer.Instance),
+                    "Frame and glyph inspection must share the admitted table layouts.");
                 PdfPage painted = new PptxRenderer(new PortableRenderingTests.PinnedResolver())
                     .RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().Single();
                 foreach (string text in new[] { modelText, glyphText, DocxPageFootnoteNumberingTests.DecodeText(painted) })

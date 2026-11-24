@@ -65,86 +65,37 @@ internal sealed partial class PptxRenderer
         bool[,] SkippedVerticalSegments,
         bool[,] SkippedHorizontalSegments);
 
-    private static async ValueTask<IReadOnlyList<PptxPositionedTextSpan>> ReadSceneTableTextSpansAsync(PptxRenderContext context, bool includeMasterNodes = true)
+    private static async IAsyncEnumerable<TableFrameLayout> ReadSceneTableLayoutsAsync(PptxRenderContext context)
     {
-        var textSpans = new List<PptxPositionedTextSpan>();
-        // same visibility rule as shape preflight (see ReadSceneShapeTextSpansAsync).
-        if (includeMasterNodes)
+        foreach (var source in EnumerateScenePaintSources(context.SceneSlide))
         {
-            await AddSceneTableTextSpansAsync(context.SceneSlide.MasterNodes, context, textSpans, GroupTransform.Identity, context.SceneSlide.MasterColorMap).ConfigureAwait(false);
+            foreach (var (node, bounds) in EnumerateTableFrames(source.Nodes, GroupTransform.Identity, context.CancellationToken))
+            {
+                if (await GetOrBuildTableFrameLayoutAsync(context, bounds, node, source.ColorMap).ConfigureAwait(false) is { } layout)
+                    yield return layout;
+            }
         }
-        await AddSceneTableTextSpansAsync(context.SceneSlide.LayoutNodes, context, textSpans, GroupTransform.Identity, context.SceneSlide.LayoutColorMap).ConfigureAwait(false);
-        await AddSceneTableTextSpansAsync(context.SceneSlide.SlideNodes, context, textSpans, GroupTransform.Identity, context.SceneSlide.SlideColorMap).ConfigureAwait(false);
-
-        return textSpans;
     }
 
-    private static async ValueTask<IReadOnlyList<PptxTableCellTextFrame>> ReadSceneTableTextFramesAsync(PptxRenderContext context)
-    {
-        var textFrames = new List<PptxTableCellTextFrame>();
-        if (context.SceneSlide.ShowMasterShapes)
-            await AddSceneTableTextFramesAsync(context.SceneSlide.MasterNodes, context, textFrames, GroupTransform.Identity, context.SceneSlide.MasterColorMap).ConfigureAwait(false);
-        await AddSceneTableTextFramesAsync(context.SceneSlide.LayoutNodes, context, textFrames, GroupTransform.Identity, context.SceneSlide.LayoutColorMap).ConfigureAwait(false);
-        await AddSceneTableTextFramesAsync(context.SceneSlide.SlideNodes, context, textFrames, GroupTransform.Identity, context.SceneSlide.SlideColorMap).ConfigureAwait(false);
-
-        return textFrames;
-    }
-
-    private static async ValueTask AddSceneTableTextSpansAsync(
-        IReadOnlyList<PptxSceneNode> nodes,
-        PptxRenderContext context,
-        List<PptxPositionedTextSpan> textSpans,
-        GroupTransform transform,
-        PptxColorMap colorMap)
+    private static IEnumerable<(PptxSceneNode Node, ShapeBounds? Bounds)> EnumerateTableFrames(
+        IReadOnlyList<PptxSceneNode> nodes, GroupTransform transform, CancellationToken cancellationToken)
     {
         foreach (PptxSceneNode node in nodes)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (node.Kind == PptxSceneNodeKind.Table)
+                yield return (node, GetTableFrameBounds(node, transform));
+            else if (node.Kind == PptxSceneNodeKind.Group)
             {
-                textSpans.AddRange((await ReadTableFrameTextSpansAsync(context, node, transform, colorMap).ConfigureAwait(false)));
-                continue;
-            }
-
-            if (node.Kind == PptxSceneNodeKind.Group)
-            {
-                await AddSceneTableTextSpansAsync(node.Children, context, textSpans, transform.Combine(ToGroupTransform(node.GroupTransform)), colorMap).ConfigureAwait(false);
+                foreach (var table in EnumerateTableFrames(node.Children,
+                    transform.Combine(ToGroupTransform(node.GroupTransform)), cancellationToken))
+                    yield return table;
             }
         }
     }
 
-    private static async ValueTask AddSceneTableTextFramesAsync(
-        IReadOnlyList<PptxSceneNode> nodes,
-        PptxRenderContext context,
-        List<PptxTableCellTextFrame> textFrames,
-        GroupTransform transform,
-        PptxColorMap colorMap)
-    {
-        foreach (PptxSceneNode node in nodes)
-        {
-            if (node.Kind == PptxSceneNodeKind.Table)
-            {
-                ShapeBounds? bounds = node.Bounds is { } rawBounds
-                    ? transform.Apply(ToShapeBounds(rawBounds))
-                    : null;
-                IReadOnlyList<PptxTableCellTextFrame> tableTextFrames = (await GetOrBuildTableFrameLayoutAsync(context, bounds, node, colorMap).ConfigureAwait(false))?.TextFrames ?? [];
-                textFrames.AddRange(tableTextFrames);
-                continue;
-            }
-
-            if (node.Kind == PptxSceneNodeKind.Group)
-            {
-                await AddSceneTableTextFramesAsync(node.Children, context, textFrames, transform.Combine(ToGroupTransform(node.GroupTransform)), colorMap).ConfigureAwait(false);
-            }
-        }
-    }
-
-    private static async ValueTask<IReadOnlyList<PptxPositionedTextSpan>> ReadTableFrameTextSpansAsync(PptxRenderContext context, PptxSceneNode node, GroupTransform transform, PptxColorMap colorMap)
-    {
-        ShapeBounds? bounds = node.Bounds is { } rawBounds
-            ? transform.Apply(ToShapeBounds(rawBounds))
-            : null;
-        return (await GetOrBuildTableFrameLayoutAsync(context, bounds, node, colorMap).ConfigureAwait(false))?.TextSpans ?? [];
-    }
+    private static ShapeBounds? GetTableFrameBounds(PptxSceneNode node, GroupTransform transform) =>
+        node.Bounds is { } rawBounds ? transform.Apply(ToShapeBounds(rawBounds)) : null;
 
     // font collection rebuilt fills, borders, row metrics, frames, and spans
     // that painting rebuilds again. The layout is a pure function of (node, bounds,
@@ -191,9 +142,7 @@ internal sealed partial class PptxRenderer
 
     private static IReadOnlyList<PptxPositionedTextSpan> RenderTableFrame(PptxRenderContext context, PptxSceneNode node, PdfGraphicsBuilder graphics, GroupTransform transform, PptxColorMap colorMap)
     {
-        ShapeBounds? bounds = node.Bounds is { } rawBounds
-            ? transform.Apply(ToShapeBounds(rawBounds))
-            : null;
+        ShapeBounds? bounds = GetTableFrameBounds(node, transform);
         // The style diagnostic keeps its paint-order emission (once per painted table);
         // the layout itself comes from the shared per-slide computation.
         if (bounds is not null && node.Table is not null)

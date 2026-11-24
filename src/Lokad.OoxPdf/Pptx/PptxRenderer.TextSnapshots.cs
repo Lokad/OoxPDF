@@ -11,49 +11,34 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static IReadOnlyList<PptxPositionedTextSpan> ReadSlideTextSpansForInspection(PptxDocument document, OoxPackage package, int slideIndex, PptxScene? sharedScene = null, PresentationFontResolver? inspectionFonts = null)
+    private static IReadOnlyList<PptxPositionedTextSpan> ReadSlideTextSpansForInspection(PptxRenderContext context)
     {
-        PptxRenderContext? context = TryLoadTextInspectionContext(document, package, slideIndex, sharedScene, inspectionFonts);
-        if (context is null)
-        {
-            return [];
-        }
-
         var spans = new List<PptxPositionedTextSpan>();
         int nextFrameIndex = 0;
         // Painting coalesces each node separately. Cached node spans have local
         // frame indexes, so assign distinct inspection indexes before combining
         // them. Keep shape/table ordering aligned with font preflight.
-        foreach (bool shapes in new[] { true, false })
+        foreach (var source in EnumerateScenePaintSources(context.SceneSlide))
         {
-            if (context.SceneSlide.ShowMasterShapes)
-                Add(context.SceneSlide.MasterNodes, context.SceneSlide.MasterColorMap, false, shapes, GroupTransform.Identity);
-            Add(context.SceneSlide.LayoutNodes, context.SceneSlide.LayoutColorMap, false, shapes, GroupTransform.Identity);
-            Add(context.SceneSlide.SlideNodes, context.SceneSlide.SlideColorMap, true, shapes, GroupTransform.Identity);
+            foreach (PptxSceneNode node in EnumerateRenderedSceneNodes(source.Nodes, source.RenderPlaceholders))
+            {
+                if (node.Kind != PptxSceneNodeKind.Shape) continue;
+                Append(ReadTextSpansForSceneNodeAsync(node, context, source.ColorMap, source.RenderPlaceholders).GetAwaiter().GetResult());
+            }
         }
+        foreach (TableFrameLayout table in ReadSceneTableLayoutsAsync(context).ToBlockingEnumerable())
+            Append(table.TextSpans);
         return spans;
 
-        void Add(IReadOnlyList<PptxSceneNode> nodes, PptxColorMap colorMap, bool placeholders, bool shapes, GroupTransform transform)
+        void Append(IReadOnlyList<PptxPositionedTextSpan> frame)
         {
-            foreach (PptxSceneNode node in nodes)
+            int frameCount = 0;
+            foreach (PptxPositionedTextSpan span in frame)
             {
-                if (node.Kind == PptxSceneNodeKind.Group)
-                {
-                    Add(node.Children, colorMap, placeholders, shapes, transform.Combine(ToGroupTransform(node.GroupTransform)));
-                    continue;
-                }
-                if (node.Kind != (shapes ? PptxSceneNodeKind.Shape : PptxSceneNodeKind.Table)) continue;
-                var frame = new List<PptxPositionedTextSpan>();
-                if (shapes) AddSceneShapeTextSpansAsync([node], context, frame, colorMap, placeholders).GetAwaiter().GetResult();
-                else AddSceneTableTextSpansAsync([node], context, frame, transform, colorMap).GetAwaiter().GetResult();
-                int frameCount = 0;
-                foreach (PptxPositionedTextSpan span in frame)
-                {
-                    spans.Add(span with { FrameIndex = nextFrameIndex + span.FrameIndex });
-                    frameCount = Math.Max(frameCount, span.FrameIndex + 1);
-                }
-                nextFrameIndex += frameCount;
+                spans.Add(span with { FrameIndex = nextFrameIndex + span.FrameIndex });
+                frameCount = Math.Max(frameCount, span.FrameIndex + 1);
             }
+            nextFrameIndex += frameCount;
         }
     }
 
@@ -70,12 +55,8 @@ internal sealed partial class PptxRenderer
     }
 
     internal static (IReadOnlyList<PptxTextFrameModelSnapshot> Frames, PptxTextLayoutSnapshot Layout) InspectShapeText(
-        PptxDocument document, OoxPackage package, int slideIndex, PptxScene sharedScene, PresentationFontResolver inspectionFonts)
+        PptxRenderContext context)
     {
-        PptxRenderContext? context = TryLoadTextInspectionContext(document, package, slideIndex, sharedScene, inspectionFonts);
-        if (context is null)
-            return ([], new PptxTextLayoutSnapshot([]));
-
         var frames = ReadSceneShapeTextFramesAsync(context).GetAwaiter().GetResult();
         var layout = BuildTextLayoutModelAsync(context, frames).GetAwaiter().GetResult();
         return (frames.Select(ToSnapshot).ToArray(), ToSnapshot(layout));
@@ -279,9 +260,14 @@ internal sealed partial class PptxRenderer
 
     internal static IReadOnlyList<PptxTextGlyphRunSnapshot> InspectTextGlyphRuns(PptxDocument document, OoxPackage package, int slideIndex, PptxScene? sharedScene = null, PresentationFontResolver? inspectionFonts = null)
     {
-        inspectionFonts ??= new PresentationFontResolver(null);
-        IReadOnlyList<PptxPositionedTextSpan> textSpans = ReadSlideTextSpansForInspection(document, package, slideIndex, sharedScene, inspectionFonts);
-        RenderedFonts renderedFonts = CreateRenderedFontsAsync(textSpans, [], inspectionFonts, "F", CancellationToken.None).GetAwaiter().GetResult();
+        PptxRenderContext? context = TryLoadTextInspectionContext(document, package, slideIndex, sharedScene, inspectionFonts);
+        return context is null ? [] : InspectTextGlyphRuns(context);
+    }
+
+    internal static IReadOnlyList<PptxTextGlyphRunSnapshot> InspectTextGlyphRuns(PptxRenderContext context)
+    {
+        IReadOnlyList<PptxPositionedTextSpan> textSpans = ReadSlideTextSpansForInspection(context);
+        RenderedFonts renderedFonts = CreateRenderedFontsAsync(textSpans, [], context.FontResolver, "F", context.CancellationToken).GetAwaiter().GetResult();
         textSpans = SplitLeadingSpacesAtHighlightBoundaries(textSpans);
         textSpans = CoalesceAdjacentTextSpans(textSpans, compareHighlight: true);
         textSpans = CoalesceUnderlineSpans(textSpans);
