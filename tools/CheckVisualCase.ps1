@@ -125,10 +125,11 @@ $cliDll = if ($CliPath) { (Resolve-Path -LiteralPath $CliPath).Path } else {
 $buildInfoDir = Join-Path $runRoot "build-info"
 New-Item -ItemType Directory -Force -Path $buildInfoDir | Out-Null
 if (!$CliPath) { Invoke-RepoBuild $cliProject $cliDll "CLI" (Join-Path $buildInfoDir "cli.json") }
-else {
-    $explicitLibrary = Join-Path (Split-Path -Parent $cliDll) 'Lokad.OoxPdf.dll'
-    [ordered]@{CliDll=$cliDll;CliSha256=(Get-FileHash -LiteralPath $cliDll).Hash;
-        LibraryDll=$explicitLibrary;LibrarySha256=(Get-FileHash -LiteralPath $explicitLibrary).Hash;
+$cliBinding = Get-FileHash -LiteralPath $cliDll
+$libraryBinding = Get-FileHash -LiteralPath (Join-Path (Split-Path -Parent $cliDll) 'Lokad.OoxPdf.dll')
+if ($CliPath) {
+    [ordered]@{CliDll=$cliBinding.Path;CliSha256=$cliBinding.Hash;
+        LibraryDll=$libraryBinding.Path;LibrarySha256=$libraryBinding.Hash;
         InputSha256=$inputSha256;CaseSha256=$caseSha256;
         BuildRequested=$false} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $buildInfoDir 'explicit-cli.json') -Encoding utf8
 }
@@ -198,6 +199,8 @@ if ((Get-FileHash -LiteralPath $inputFull).Hash -ne $inputSha256 -or
     (Get-FileHash -LiteralPath $caseFull).Hash -ne $caseSha256) {
     throw "Source or case manifest changed during the visual run."
 }
+Assert-VisualToolBinding $cliBinding
+Assert-VisualToolBinding $libraryBinding
 $runInfo = [ordered]@{
     Schema = "ooxpdf-visual-run-info/1"
     RunId = $runId
@@ -213,9 +216,10 @@ $runInfo = [ordered]@{
     Dpi = $dpi
     DocxMarkup = $docxMarkup
     DocxMarkupGeometry = $docxMarkupGeometry
-    CliDll = $cliDll
-    CliSha256 = if (Test-Path -LiteralPath $cliDll) { (Get-FileHash -LiteralPath $cliDll -Algorithm SHA256).Hash.ToLowerInvariant() } else { $null }
-    LibraryDll = $null
+    CliDll = $cliBinding.Path
+    CliSha256 = $cliBinding.Hash.ToLowerInvariant()
+    LibraryDll = $libraryBinding.Path
+    LibrarySha256 = $libraryBinding.Hash.ToLowerInvariant()
     VisualDiffDll = $visualDiffDll
     VisualDiffSha256 = if ($visualDiffBinding) { $visualDiffBinding.Hash.ToLowerInvariant() }
         elseif (Test-Path -LiteralPath $visualDiffDll) { (Get-FileHash -LiteralPath $visualDiffDll).Hash.ToLowerInvariant() }
@@ -225,11 +229,6 @@ $runInfo = [ordered]@{
     GitCommit = $null
     GitDirty = $null
     GeneratedAtUtc = [DateTime]::UtcNow.ToString("O", [Globalization.CultureInfo]::InvariantCulture)
-}
-$libraryDll = Join-Path (Split-Path -Parent $cliDll) "Lokad.OoxPdf.dll"
-if (Test-Path -LiteralPath $libraryDll) {
-    $runInfo.LibraryDll = $libraryDll
-    $runInfo.LibrarySha256 = (Get-FileHash -LiteralPath $libraryDll -Algorithm SHA256).Hash.ToLowerInvariant()
 }
 
 if ($rasterizerBinding) {

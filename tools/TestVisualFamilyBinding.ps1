@@ -210,6 +210,7 @@ param($InputPath,$OutputDirectory,$Dpi,$CaseId,[switch]$SkipBuild,$Framework,[sw
 [IO.File]::WriteAllText((Join-Path $OutputDirectory 'page-001.png'),'synthetic raster')
 if ($CacheOnly) { [IO.File]::WriteAllText((Join-Path $OutputDirectory 'requested-variant.txt'),$CacheVariant) }
 if ($RasterizerPath) { [IO.File]::WriteAllText((Join-Path $OutputDirectory 'rasterizer-path.txt'),$RasterizerPath) }
+if ($replaceRendererAfterConversion) { [IO.File]::AppendAllText($replaceRendererAfterConversion, 'replacement build') }
 '@ | Set-Content (Join-Path $repo 'tools/RenderCachedReference.ps1')
 @'
 param($InputPdf,$OutputDirectory,$Dpi,[switch]$SkipBuild,$Framework,$RasterizerPath)
@@ -228,6 +229,7 @@ $candidateBaseline = 700
 $candidateChartPageTwoDelta = 0
 $emitGraphicsOperations = $true
 $mutateVisualDiff = $false
+$replaceRendererAfterConversion = $null
 $replaceFamilyComparatorBeforeSecondCase = $null
 $rasterPage = @{Page=1;DimensionsMatch=$true;MeanAbsoluteError=0;ChangedPixelRatioAtThreshold16=0;
     StructuralSimilarity=1;ForegroundColorHistogramCorrelation=1}
@@ -274,6 +276,33 @@ try {
     }
     $priorPdf = Join-Path $priorRun 'candidate/output.pdf'
     $priorReport = Join-Path $priorRun 'run-info.json'
+    $priorIdentity = Get-Content -LiteralPath $priorReport -Raw | ConvertFrom-Json
+    if ($priorIdentity.CliSha256 -ne (Get-FileHash -LiteralPath $frozenCli).Hash -or
+        $priorIdentity.LibrarySha256 -ne (Get-FileHash -LiteralPath $frozenLibrary).Hash) {
+        throw 'The standalone case lost its renderer identity'
+    }
+    foreach ($control in @(
+        @{RunId='real-changed-library'; Path=$frozenLibrary; Arguments=@{CliPath=$frozenCli}},
+        @{RunId='real-changed-default-cli'; Path=$defaultCli; Arguments=@{}}
+    )) {
+        $replaceRendererAfterConversion = $control.Path
+        $originalBytes = [IO.File]::ReadAllBytes($control.Path)
+        $arguments = $control.Arguments
+        $failure = $null
+        try { & $realCase -Case $realManifest -SkipBuild -RunId $control.RunId @arguments | Out-Null }
+        catch { $failure = $_.Exception.Message }
+        finally {
+            [IO.File]::WriteAllBytes($control.Path, $originalBytes)
+            $replaceRendererAfterConversion = $null
+        }
+        $run = Join-Path $repo "artifacts/visual/probe-a/$($control.RunId)"
+        if ($failure -cne "Visual validation tool changed during the case: $($control.Path)" -or
+            !(Test-Path -LiteralPath (Join-Path $run 'candidate/output.pdf') -PathType Leaf) -or
+            (Test-Path -LiteralPath (Join-Path $run 'run-info.json')) -or
+            (Test-Path -LiteralPath (Join-Path $run 'assessment.md'))) {
+            throw "The standalone case published results for a changed renderer. $($control.RunId): $failure"
+        }
+    }
     $priorPdfHash = (Get-FileHash -LiteralPath $priorPdf).Hash
     $priorReportHash = (Get-FileHash -LiteralPath $priorReport).Hash
     $beforeInspection = @(Get-Content $inspectionLog).Count
@@ -539,6 +568,7 @@ foreach($inspection in $inspections) {
     'Zero chart bounds admit equal page scopes','Secondary page-two bound rejects displaced chart ink','Candidate-only font inspection',
     'Incomplete inspection refusal','Inspector provenance','Canonical markup cache key',
     'Bound visual report identity','Separate raster page counts','Measured failure identity',
+    'Changed standalone explicit library and default CLI refused',
     'Zero upper limits admit exact metrics','Missing upper-bound metrics fail independently','Raster dimensions fail independently',
     'Empty raster report fails','Default tool identity and between-case replacement refusal','Frozen comparison tools without local builds',
     'Changed frozen tool refusal','Synthetic repository isolation');
