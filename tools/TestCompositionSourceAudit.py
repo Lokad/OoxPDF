@@ -186,6 +186,19 @@ class PictureInkTests(unittest.TestCase):
                                        fill=tuple(channel / 255 for channel in fill))
                 if kind == 'corner-overlap':
                     page.draw_rect(self.fitz.Rect(10, 10, 20, 20), color=None, fill=(1, 1, 1))
+                if kind in ('backdrop', 'masked-backdrop', 'clipped-backdrop'):
+                    colors = [(47, 128, 237), (39, 174, 96)]
+                    for x, fill in zip((10, 40), colors):
+                        page.draw_rect(self.fitz.Rect(x, 10, x + 30, 40), color=None,
+                                       fill=tuple(channel / 255 for channel in fill))
+                    if kind == 'masked-backdrop':
+                        mask = self.fitz.Pixmap(self.fitz.csGRAY, 2, 1, bytes(2), False).tobytes('png')
+                        page.insert_image(rect, stream=self.png, mask=mask)
+                    elif kind == 'clipped-backdrop':
+                        solid = self.fitz.Pixmap(self.fitz.csRGB, 2, 1, bytes(colors[0] * 2), False).tobytes('png')
+                        page.insert_image(rect, stream=solid)
+                        xref = page.get_contents()[-1]
+                        doc.update_stream(xref, b'q 10 60 30 30 re W n\n' + doc.xref_stream(xref) + b'\nQ')
                 if kind == 'rotated':
                     page.set_rotation(90)
             doc.save(path)
@@ -227,6 +240,22 @@ class PictureInkTests(unittest.TestCase):
                 candidate = self.write_pdf(kind, [kind])
                 self.assertEqual('Picture witnesses present',
                                  screen_picture_ink(self.source, candidate, reference, expected, self.fitz)['Status'])
+
+    def test_backdrop_paint_cannot_supply_png_witness_colors(self):
+        self.write_source()
+        expected = {'ExpectedInlineImageCount': 1}
+        reference = self.write_pdf('office', ['png'])
+        backdrop = self.write_pdf('backdrop', ['backdrop'])
+        for kind, status in [('masked-backdrop', 'Unverified candidate picture witnesses'),
+                             ('clipped-backdrop', 'Missing picture ink')]:
+            with self.subTest(kind=kind):
+                candidate = self.write_pdf(kind, [kind])
+                with self.fitz.open(candidate) as document, self.fitz.open(backdrop) as without_picture:
+                    self.assertEqual(1, len(document[0].get_image_info()))
+                    self.assertEqual(document[0].get_pixmap().samples, without_picture[0].get_pixmap().samples)
+                result = screen_picture_ink(self.source, candidate, reference, expected, self.fitz)
+                self.assertEqual(status, result['Status'])
+                self.assertEqual({}, result['CandidateByPage'])
 
     def test_repeated_static_svg_witnesses_follow_their_reference_pages(self):
         self.write_source(svg=True)

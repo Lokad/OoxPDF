@@ -245,6 +245,15 @@ def screen_picture_ink(source, candidate, reference, case, fitz):
         paint = [(kind, fitz.Rect(box) * rotation) for kind, box in page.get_bboxlog()
                  if kind != "ignore-text"]
         images = {tuple(box): index for index, (kind, box) in enumerate(paint) if kind == "fill-image"}
+        if not images:
+            return 0, 0
+        # Bind the paint bounds to a single decoded image occurrence. Colors
+        # from a backdrop cannot substitute for the image's own opaque samples.
+        image_blocks = {}
+        for block in page.get_text("dict", flags=fitz.TEXT_PRESERVE_IMAGES, clip=fitz.INFINITE_RECT())["blocks"]:
+            if block["type"] == 1:
+                box = tuple(fitz.Rect(block["bbox"]) * rotation)
+                image_blocks[box] = block if box not in image_blocks else None
         neutral = next((value, value, value) for value in range(3) if (value, value, value) not in palette)
         visible = uncertain = 0
         for box, index in images.items():
@@ -254,6 +263,21 @@ def screen_picture_ink(source, candidate, reference, case, fitz):
             bitmap = render_region(page, rect)
             if not has_colors(bitmap, palette):
                 continue
+            block = image_blocks.get(box)
+            if block is None or "mask" not in block:
+                uncertain += 1
+                continue
+            image = fitz.Pixmap(block["image"])
+            if image.colorspace is None or image.colorspace.n != 3 or image.alpha:
+                uncertain += 1
+                continue
+            if not has_colors(image, palette):
+                continue
+            if block["mask"]:
+                mask = fitz.Pixmap(block["mask"])
+                if mask.n != 1 or any(sample != 255 for sample in mask.samples):
+                    uncertain += 1
+                    continue
             covered = False
             for _, later in paint[index + 1:]:
                 overlap = rect & later
