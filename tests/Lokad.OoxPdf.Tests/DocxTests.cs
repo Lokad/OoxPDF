@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -2007,6 +2008,20 @@ internal static class DocxTests
         }
 
         return units * fontSize / font.UnitsPerEm;
+    }
+
+    internal sealed class TallHheaFontResolver : IFontResolver
+    {
+        public FontFaceResolution Resolve(FontRequest request)
+        {
+            byte[] bytes = TestFontBuilder.CreateTestFont();
+            var (offset, _) = TestFontBuilder.GetTableRange(bytes, "hhea");
+            // Keep the 1.5em horizontal line height above the fixture's 1.15em single line.
+            BinaryPrimitives.WriteInt16BigEndian(bytes.AsSpan(offset + 4, 2), 1100);
+            BinaryPrimitives.WriteInt16BigEndian(bytes.AsSpan(offset + 6, 2), -400);
+            return new FontFaceResolution(request.FamilyName, "HheaFace", new FontStyleKey(request.Bold, request.Italic),
+                new MemoryFontProgramSource("test:hheaface", bytes), IsFallback: false);
+        }
     }
 
     internal sealed class SingleResolutionFontResolver(FontFaceResolution resolution) : IFontResolver

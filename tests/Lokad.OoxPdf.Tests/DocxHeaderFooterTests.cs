@@ -1762,7 +1762,7 @@ internal static partial class DocxHeaderFooterTests
             }
         };
         DocxDocument document = new(200d, 200d, 10d, 10d, 10d, 10d, settings, [], [], [], [new DocxParagraphElement(body)]);
-        var resolver = new StaticHheaFontResolver();
+        var resolver = new DocxTests.TallHheaFontResolver();
         DocxFontPlan fontPlan = DocxFontPlan.Create(document, resolver, CancellationToken.None);
         var measurer = DocxFontPlanTextMeasurer.CreateAsync(fontPlan, resolver.Resolve(new FontRequest("HheaFace")), CancellationToken.None, resolver).GetAwaiter().GetResult();
         DocxTextLineLayout[] staticLines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
@@ -1770,36 +1770,6 @@ internal static partial class DocxHeaderFooterTests
             .Pages[0].StaticTextLines.ToArray();
         TestAssert.Equal(1, staticLines.Length);
         TestAssert.True(Math.Abs(staticLines[0].BaselineY - 171.0d) < 0.000001d, "Header first baseline must follow max hhea ascender when larger; observed baseline=" + staticLines[0].BaselineY.ToString(CultureInfo.InvariantCulture));
-    }
-
-    private sealed class StaticHheaFontResolver : IFontResolver
-    {
-        public FontFaceResolution Resolve(FontRequest request)
-        {
-            byte[] faceBytes = TestFontBuilder.CreateTestFont();
-            PatchHheaMetrics(faceBytes, ascender: 1100, descender: -400);
-            return new FontFaceResolution(request.FamilyName, "HheaFace", new FontStyleKey(request.Bold, request.Italic), new MemoryFontProgramSource("test:statichhea", faceBytes), IsFallback: false);
-        }
-
-        private static void PatchHheaMetrics(byte[] faceBytes, short ascender, short descender)
-        {
-            int tableCount = (faceBytes[4] << 8) | faceBytes[5];
-            for (int tableIndex = 0; tableIndex < tableCount; tableIndex++)
-            {
-                int record = 12 + 16 * tableIndex;
-                if (faceBytes[record] == 0x68 && faceBytes[record + 1] == 0x68 && faceBytes[record + 2] == 0x65 && faceBytes[record + 3] == 0x61)
-                {
-                    int offset = (faceBytes[record + 8] << 24) | (faceBytes[record + 9] << 16) | (faceBytes[record + 10] << 8) | faceBytes[record + 11];
-                    faceBytes[offset + 4] = (byte)((ascender >> 8) & 0xFF);
-                    faceBytes[offset + 5] = (byte)(ascender & 0xFF);
-                    faceBytes[offset + 6] = (byte)((descender >> 8) & 0xFF);
-                    faceBytes[offset + 7] = (byte)(descender & 0xFF);
-                    return;
-                }
-            }
-
-            throw new InvalidOperationException("Synthetic test font is missing the hhea table.");
-        }
     }
 
     public static void DocxStaticHeaderFirstBaselineFollowsMaxHheaRun()

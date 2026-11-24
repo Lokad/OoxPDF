@@ -1497,7 +1497,7 @@ internal static class DocxTextSpacingTests
             document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
         }
 
-        var resolver = new HheaLineHeightFontResolver();
+        var resolver = new DocxTests.TallHheaFontResolver();
         DocxFontPlan fontPlan = DocxFontPlan.Create(document, resolver, CancellationToken.None);
         var measurer = DocxFontPlanTextMeasurer.CreateAsync(fontPlan, resolver.Resolve(new FontRequest("HheaFace")), CancellationToken.None, resolver).GetAwaiter().GetResult();
         DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
@@ -1782,7 +1782,7 @@ internal static class DocxTextSpacingTests
             document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
         }
 
-        var resolver = new HheaLineHeightFontResolver();
+        var resolver = new DocxTests.TallHheaFontResolver();
         DocxFontPlan fontPlan = DocxFontPlan.Create(document, resolver, CancellationToken.None);
         var measurer = DocxFontPlanTextMeasurer.CreateAsync(fontPlan, resolver.Resolve(new FontRequest("HheaFace")), CancellationToken.None, resolver).GetAwaiter().GetResult();
         DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
@@ -1820,7 +1820,7 @@ internal static class DocxTextSpacingTests
         DocxTable table = new(null, [90d], [new DocxTableRow([cell], null)]);
         DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
-        var resolver = new HheaLineHeightFontResolver();
+        var resolver = new DocxTests.TallHheaFontResolver();
         DocxFontPlan fontPlan = DocxFontPlan.Create(document, resolver, CancellationToken.None);
         var measurer = DocxFontPlanTextMeasurer.CreateAsync(fontPlan, resolver.Resolve(new FontRequest("HheaFace")), CancellationToken.None, resolver).GetAwaiter().GetResult();
         double baselineY = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
@@ -1894,45 +1894,6 @@ internal static class DocxTextSpacingTests
         public double MeasureHheaLineHeight(DocxTextRun? run, double fontSize) => fontSize;
 
         public double MeasureHheaAscender(DocxTextRun? run, double fontSize) => string.Equals(run?.FontFamily, "Tahoma", StringComparison.Ordinal) ? fontSize * 1.0005d : fontSize * 0.75d;
-    }
-
-    private sealed class HheaLineHeightFontResolver : IFontResolver
-    {
-        public FontFaceResolution Resolve(FontRequest request)
-        {
-            byte[] faceBytes = TestFontBuilder.CreateTestFont();
-            PatchHheaMetrics(faceBytes, ascender: 1100, descender: -400);
-            return new FontFaceResolution(
-                request.FamilyName,
-                "HheaFace",
-                new FontStyleKey(request.Bold, request.Italic),
-                new MemoryFontProgramSource("test:hheaface", faceBytes),
-                IsFallback: false);
-        }
-
-        private static void PatchHheaMetrics(byte[] faceBytes, short ascender, short descender)
-        {
-            // The shared synthetic face (upm 1000, hhea 800/-200/0, typo 800/-200/0,
-            // win 900/200) floors singleLine at 1.15em; pin the hhea sum at 1.5em so
-            // the horizontal-header maximum discriminates from singleLine alone.
-            // hhea ascender/descender are signed FWords at table offsets 4 and 6.
-            int tableCount = (faceBytes[4] << 8) | faceBytes[5];
-            for (int tableIndex = 0; tableIndex < tableCount; tableIndex++)
-            {
-                int record = 12 + 16 * tableIndex;
-                if (faceBytes[record] == 0x68 && faceBytes[record + 1] == 0x68 && faceBytes[record + 2] == 0x65 && faceBytes[record + 3] == 0x61)
-                {
-                    int offset = (faceBytes[record + 8] << 24) | (faceBytes[record + 9] << 16) | (faceBytes[record + 10] << 8) | faceBytes[record + 11];
-                    faceBytes[offset + 4] = (byte)((ascender >> 8) & 0xFF);
-                    faceBytes[offset + 5] = (byte)(ascender & 0xFF);
-                    faceBytes[offset + 6] = (byte)((descender >> 8) & 0xFF);
-                    faceBytes[offset + 7] = (byte)(descender & 0xFF);
-                    return;
-                }
-            }
-
-            throw new InvalidOperationException("Synthetic test font is missing the hhea table.");
-        }
     }
 
 }
