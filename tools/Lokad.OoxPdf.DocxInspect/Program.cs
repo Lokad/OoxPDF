@@ -335,13 +335,6 @@ File.WriteAllText(
             })
             .ToArray()
     }, options));
-File.WriteAllText(
-    Path.Combine(outputDirectory, "block-sequence.json"),
-    JsonSerializer.Serialize(structure.Blocks, options));
-File.WriteAllText(
-    Path.Combine(outputDirectory, "table-adjacency-summary.json"),
-    JsonSerializer.Serialize(structure.TableAdjacency, options));
-
 static object ToFloatingDrawingSummary(string streamKind, DocxFloatingDrawingLayoutSnapshot drawing)
 {
     return new

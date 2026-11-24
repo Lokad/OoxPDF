@@ -82,6 +82,7 @@ validation tools, including the PDFium rasterizer, remain outside the library.
 - `tools/NewVisualCase.ps1`: scaffold a visual case.
 - `tools/CheckPrivateDocxMarkup.ps1`: candidate-only DOCX markup check for private cases (no Office/COM).
 - `tools/InspectDocx.ps1`: dump DOCX layout/mode inspection JSON; accepts InspectorPath/SkipBuild and an expected library hash.
+  Read block order and table adjacency from `Blocks` and `TableAdjacency` in `structure-snapshot.json`.
 - `tools/ComparePdfTextLineStarts.ps1`: compare PDF text line starts (helper used by CheckVisualCase).
 - `tools/RenderCachedReference.ps1`: render cached Office reference PDFs (helper for cache-only gates).
 - `tools/SummarizePdfGraphicsOperations.ps1`: summarize PDF graphics-operation rollups across runs.
