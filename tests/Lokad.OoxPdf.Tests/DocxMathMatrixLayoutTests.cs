@@ -430,7 +430,7 @@ internal static class DocxMathMatrixLayoutTests
             "A late missing cell encoding cannot publish earlier cells or rows.");
         foreach (var invalid in new[] { matrix with { HasUnsupportedProperties = true }, matrix with { Rows = [matrix.Rows[0], new([new([Run("B")])])] },
             matrix with { Rows = [new([new([]), new([Run("B")])])] },
-            matrix with { Rows = [new([new([new DocxMathUnsupported("future", "test", "<future/>", [])])])] },
+            matrix with { Rows = [new([new([new DocxMathUnsupported("future", "test", [])])])] },
             matrix with { ControlText = new("", double.NaN, null, false, false, false, null, "TestFont") } })
             TestAssert.True(!DocxMathLayout.TryMeasure(Equation(invalid), _ => resource, CancellationToken.None, out var rejected, out _,
                 resolveControlMetrics: _ => font) && rejected is null, "Unsupported rows, empty placeholders, properties and invalid metrics retain complete fallback.");

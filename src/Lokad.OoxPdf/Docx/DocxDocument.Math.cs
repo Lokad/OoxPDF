@@ -132,5 +132,5 @@ internal sealed record DocxMathFunction(DocxMathRow Name, DocxMathRow Argument) 
     public DocxTextRun? ControlText { get; init; }
     public string? ControlFontFamily { get; init; }
 }
-internal sealed record DocxMathUnsupported(string ElementName, string NamespaceName, string? SourceXml,
+internal sealed record DocxMathUnsupported(string ElementName, string NamespaceName,
     IReadOnlyList<DocxMathChild> Children) : DocxMathNode;

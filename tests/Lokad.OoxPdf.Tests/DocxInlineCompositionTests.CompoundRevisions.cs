@@ -1,5 +1,6 @@
 using System.Xml.Linq;
 using Lokad.OoxPdf.Docx;
+using Lokad.OoxPdf.Ooxml;
 
 namespace Lokad.OoxPdf.Tests;
 
@@ -41,7 +42,8 @@ internal static partial class DocxInlineCompositionTests
         });
         var retained = deleted.Paragraphs.First().Equations.Single();
         TestAssert.True(!DocxMathLayout.TryGetRuns(retained, default, out _) &&
-            retained.Content.Children.Single() is DocxMathUnsupported { ElementName: "del", SourceXml: null, Children.Count: 3 },
+            retained.Content.Children.Single() is DocxMathUnsupported { ElementName: "del", Children.Count: 3 } deletion &&
+            deletion.NamespaceName == OoxNamespaces.WordprocessingNamespace.NamespaceName,
             "Unsupported deeper compound deletion retains traversed source and an explicit fallback instead of silently dropping structural paint.");
         foreach (bool nested in new[] { false, true })
         {

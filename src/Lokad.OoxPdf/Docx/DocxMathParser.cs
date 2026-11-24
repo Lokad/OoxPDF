@@ -148,9 +148,7 @@ internal static partial class DocxMathParser
             }
             else
             {
-                // Do not serialize already traversed subtrees again: malformed
-                // nested constructs must retain linear work and storage.
-                node = new DocxMathUnsupported(name, element.Name.NamespaceName, null,
+                node = new DocxMathUnsupported(name, element.Name.NamespaceName,
                     ContentChildren(element).Select(child => new DocxMathChild(
                         child.Name.LocalName, child.Name.NamespaceName, nodes[child])).ToArray());
             }
@@ -159,7 +157,7 @@ internal static partial class DocxMathParser
                 var retained = DocxMathLayout.RemoveDeletedLiteralMathText(
                     new(new([node]), 0, 0, false, null, null), cancellationToken);
                 node = retained is not null ? retained.Children.Count == 1 ? retained.Children[0] : retained :
-                    new DocxMathUnsupported(name, element.Name.NamespaceName, null,
+                    new DocxMathUnsupported(name, element.Name.NamespaceName,
                         ContentChildren(element).Select(child => new DocxMathChild(
                             child.Name.LocalName, child.Name.NamespaceName, nodes[child])).ToArray());
             }
@@ -385,7 +383,7 @@ internal static partial class DocxMathParser
                 HasUnsupportedProperties = !supported
             };
         }
-        return Unsupported(element);
+        return new DocxMathUnsupported(element.Name.LocalName, element.Name.NamespaceName, []);
     }
 
     private static (bool? NormalText, bool LiteralText, bool Supported) ReadRunProperties(XElement run)
@@ -411,7 +409,4 @@ internal static partial class DocxMathParser
             flag.Attributes().All(attribute => attribute.IsNamespaceDeclaration || attribute.Name == MathNamespace + "val");
         return (enabled, supported);
     }
-
-    private static DocxMathUnsupported Unsupported(XElement element) =>
-        new(element.Name.LocalName, element.Name.NamespaceName, element.ToString(SaveOptions.DisableFormatting), []);
 }

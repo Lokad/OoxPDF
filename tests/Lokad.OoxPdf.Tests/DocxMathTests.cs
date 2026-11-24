@@ -171,11 +171,13 @@ internal static partial class DocxMathTests
 
     public static void DocxMathMatrixMalformedAndOrphanRowsRetainTraversedSource()
     {
-        foreach (string contents in new[] { "", "<m:mr/>", "<m:e/>", "<m:mr><m:e/></m:mr><m:future/>", "<m:mr><m:r><m:t>x</m:t></m:r></m:mr>" })
+        foreach (var (contents, childCount) in new[] { ("", 0), ("<m:mr/>", 1), ("<m:e/>", 1),
+            ("<m:mr><m:e/></m:mr><m:future/>", 2), ("<m:mr><m:r><m:t>x</m:t></m:r></m:mr>", 1) })
             TestAssert.True(Parse(XElement.Parse($"<m:oMath xmlns:m='{MathNamespace}'><m:m>{contents}</m:m></m:oMath>")).Children.Single()
-                is DocxMathUnsupported { ElementName: "m", SourceXml: null }, "Malformed roles retain traversed nodes without repeatedly serializing raw subtrees.");
+                is DocxMathUnsupported { ElementName: "m" } matrix && matrix.Children.Count == childCount,
+                "Malformed matrix roles retain their traversed children.");
         var orphan = Parse(XElement.Parse($"<m:oMath xmlns:m='{MathNamespace}'><m:mr><m:e><m:r><m:t>x</m:t></m:r></m:e></m:mr></m:oMath>"));
-        TestAssert.True(orphan.Children.Single() is DocxMathUnsupported { ElementName: "mr", SourceXml: null, Children.Count: 1 },
+        TestAssert.True(orphan.Children.Single() is DocxMathUnsupported { ElementName: "mr", Children.Count: 1 },
             "A matrix row requires its matrix owner and cannot become an ordinary renderable sequence.");
         foreach (string attributes in new[] { " extra='1'", "" })
         {
@@ -194,7 +196,8 @@ internal static partial class DocxMathTests
         TestAssert.True(matrix.HasUnsupportedProperties && matrix.Rows.Count == 2 && matrix.Rows[0].Cells.Count == 2 && matrix.Rows[1].Cells.Count == 1,
             "Unequal row widths remain explicitly unqualified without dropping or padding source cells.");
         TestAssert.True(matrix.Rows[0].Cells[0].Children.Count == 0 && matrix.Rows[0].Cells[1].Children.Single()
-            is DocxMathUnsupported { ElementName: "future", SourceXml: not null }, "Empty slots and unknown nested leaf content retain their distinct owners.");
+            is DocxMathUnsupported { ElementName: "future", Children.Count: 0 } unknown && unknown.NamespaceName == MathNamespace.NamespaceName,
+            "The unknown leaf keeps its source identity without interpreting its nested run.");
         var empty = (DocxMathMatrix)Parse(XElement.Parse($"<m:oMath xmlns:m='{MathNamespace}'><m:m><m:mr><m:e/><m:e/></m:mr></m:m></m:oMath>")).Children.Single();
         TestAssert.True(!empty.HasUnsupportedProperties && empty.Rows.Single().Cells.All(c => c.Children.Count == 0),
             "Empty matrix arguments are source slots, not missing rows or cells.");
@@ -260,9 +263,11 @@ internal static partial class DocxMathTests
             TestAssert.True(function.HasUnsupportedProperties && function.PropertiesXml.Count > 0, "Unknown or duplicate function properties stay explicit.");
             TestAssert.Equal("sin", RowText(function.Name)); TestAssert.Equal("x", RowText(function.Argument));
         }
-        foreach (string roles in new[] { "<m:e/>", "<m:fName/>", "<m:fName/><m:fName/><m:e/>", "<m:fName/><m:e/><m:future/>" })
+        foreach (var (roles, childCount) in new[] { ("<m:e/>", 1), ("<m:fName/>", 1),
+            ("<m:fName/><m:fName/><m:e/>", 3), ("<m:fName/><m:e/><m:future/>", 3) })
             TestAssert.True(Parse(XElement.Parse($"<m:oMath xmlns:m='{MathNamespace}'><m:func>" + roles + "</m:func></m:oMath>")).Children.Single()
-                is DocxMathUnsupported { ElementName: "func", SourceXml: null }, "Malformed roles preserve traversed children without repeated raw subtree serialization.");
+                is DocxMathUnsupported { ElementName: "func" } unknown && unknown.Children.Count == childCount,
+                "Malformed function roles retain their traversed children.");
         var malformedRole = (DocxMathFunction)Parse(XElement.Parse($"<m:oMath xmlns:m='{MathNamespace}'><m:func><m:fName extra='1'/><m:e/></m:func></m:oMath>")).Children.Single();
         TestAssert.True(malformedRole.HasUnsupportedProperties, "Unqualified role attributes cannot silently claim known function semantics.");
     }
@@ -270,12 +275,12 @@ internal static partial class DocxMathTests
     public static void DocxMathFunctionNamesRequireTheirOwnerAndPreserveUnknownNestedContent()
     {
         var orphan = Parse(XElement.Parse($"<m:oMath xmlns:m='{MathNamespace}'><m:fName><m:r><m:t>sin</m:t></m:r></m:fName></m:oMath>"));
-        TestAssert.True(orphan.Children.Single() is DocxMathUnsupported { ElementName: "fName", SourceXml: null, Children.Count: 1 },
+        TestAssert.True(orphan.Children.Single() is DocxMathUnsupported { ElementName: "fName", Children.Count: 1 },
             "An orphan function-name role retains its source instead of becoming an ordinary renderable row.");
         var row = Parse(XElement.Parse($"<m:oMath xmlns:m='{MathNamespace}'><m:func><m:fName><m:limLow><m:e><m:r><m:t>lim</m:t></m:r></m:e><m:lim><m:r><m:t>n</m:t></m:r></m:lim></m:limLow></m:fName><m:e><m:r><m:t>x</m:t></m:r></m:e></m:func></m:oMath>"));
         var function = (DocxMathFunction)row.Children.Single();
-        TestAssert.True(function.Name.Children.Single() is DocxMathUnsupported { ElementName: "limLow", SourceXml: not null },
-            "Unqualified function-name structures retain their original leaf source.");
+        TestAssert.True(function.Name.Children.Single() is DocxMathUnsupported { ElementName: "limLow", Children.Count: 0 } unknown &&
+            unknown.NamespaceName == MathNamespace.NamespaceName, "Unqualified function-name structures remain unsupported leaves.");
         TestAssert.Equal("x", RowText(function.Argument));
     }
 
@@ -343,11 +348,11 @@ internal static partial class DocxMathTests
             TestAssert.True(nary.HasUnsupportedProperties,"Unknown/malformed n-ary values retain explicit unsupported ownership.");
             TestAssert.Equal("body",RowText(nary.Body));TestAssert.Equal("lower",RowText(nary.Subscript));
         }
-        foreach(string roles in new[]{"<m:e/>","<m:sub/><m:sub/><m:sup/><m:e/>"})
+        foreach (var (roles, childCount) in new[] { ("<m:e/>", 1), ("<m:sub/><m:sub/><m:sup/><m:e/>", 4) })
         {
             var row=Parse(XElement.Parse($"<m:oMath xmlns:m='{MathNamespace}'><m:nary>"+roles+"</m:nary></m:oMath>"));
-            TestAssert.True(row.Children.Single() is DocxMathUnsupported { ElementName:"nary",SourceXml:null },
-                "Missing/duplicate roles preserve traversed source without overlapping raw subtree copies.");
+            TestAssert.True(row.Children.Single() is DocxMathUnsupported { ElementName: "nary" } unknown && unknown.Children.Count == childCount,
+                "Missing and duplicate n-ary roles retain their traversed children.");
         }
     }
 
@@ -400,11 +405,11 @@ internal static partial class DocxMathTests
             TestAssert.True(delimiter.HasUnsupportedProperties,"Unknown, duplicate, malformed and revision-bearing values cannot become silently supported delimiters.");
             TestAssert.Equal("kept",RowText(delimiter.Arguments.Single()));
         }
-        foreach(string content in new[]{"<m:dPr/>","<m:e/><m:r><m:t>kept</m:t></m:r>"})
+        foreach (var (content, childCount) in new[] { ("<m:dPr/>", 0), ("<m:e/><m:r><m:t>kept</m:t></m:r>", 2) })
         {
             var row=Parse(XElement.Parse($"<m:oMath xmlns:m='{MathNamespace}'><m:d>"+content+"</m:d></m:oMath>"));
-            TestAssert.True(row.Children.Single() is DocxMathUnsupported { ElementName:"d",SourceXml:null },
-                "Missing/unknown roles retain traversed children without repeated raw subtree serialization.");
+            TestAssert.True(row.Children.Single() is DocxMathUnsupported { ElementName: "d" } unknown && unknown.Children.Count == childCount,
+                "Missing and unknown delimiter roles retain their traversed children.");
         }
     }
 
@@ -757,7 +762,7 @@ internal static partial class DocxMathTests
         TestAssert.True(row.Children.All(node => node is DocxMathUnsupported), "Incomplete constructs must remain explicit fallbacks.");
         var root = (DocxMathUnsupported)row.Children[0];
         TestAssert.Equal("rad", root.ElementName);
-        TestAssert.True(root.SourceXml is null, "Traversed radical children must not be serialized again into overlapping raw subtrees.");
+        TestAssert.Equal(MathNamespace.NamespaceName, root.NamespaceName);
         TestAssert.Equal("e",root.Children.Single().ElementName);
         TestAssert.Equal("root",RowText((DocxMathRow)root.Children.Single().Content));
         var missingDenominator = (DocxMathUnsupported)row.Children[1];

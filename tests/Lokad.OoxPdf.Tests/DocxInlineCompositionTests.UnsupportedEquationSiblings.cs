@@ -29,7 +29,7 @@ internal static partial class DocxInlineCompositionTests
         var literal = DocxMathLayout.EnumerateRetainedSources(equation.Content, default)
             .OfType<DocxMathRun>().Single(item => item.Text.Text == "z");
         var empty = equation with { Content = new([literal with { Text = literal.Text with { Text = string.Empty } },
-            new DocxMathUnsupported("acc", "urn:unknown", null, [])]) };
+            new DocxMathUnsupported("acc", "urn:unknown", [])]) };
         TestAssert.True(!DocxInlineContent.TryGetEquationRevisionOwners(empty, default, out _),
             "An empty literal alone still cannot establish an unsupported equation's revision owner.");
         using var canceled = new CancellationTokenSource();
