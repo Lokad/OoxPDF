@@ -49,7 +49,6 @@ internal static partial class DocxInlineCompositionTests
             int displayStart = implicitPrefix ? 1 : 0;
             TestAssert.Equal(first, owner.Equations[displayStart].AlignmentValue);
             TestAssert.Equal(later, owner.Equations[displayStart + 1].AlignmentValue);
-            string?[] properties = owner.Equations.Select(equation => equation.PropertiesXml).ToArray();
             var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true), mode,
                 mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
                     OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
@@ -68,9 +67,8 @@ internal static partial class DocxInlineCompositionTests
             }
             TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
                 "Differently justified display groups retain supported formulas.");
-            TestAssert.True(properties.SequenceEqual(owner.Equations.Select(equation => equation.PropertiesXml)) &&
-                owner.Equations[displayStart].AlignmentValue == first && owner.Equations[displayStart + 1].AlignmentValue == later,
-                "Effective paragraph ownership preserves authored group properties.");
+            TestAssert.Equal(first, owner.Equations[displayStart].AlignmentValue);
+            TestAssert.Equal(later, owner.Equations[displayStart + 1].AlignmentValue);
         }
     }
 }

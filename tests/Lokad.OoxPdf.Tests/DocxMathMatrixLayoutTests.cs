@@ -443,7 +443,7 @@ internal static class DocxMathMatrixLayoutTests
 
     private static DocxMathRun Run(string text, string? color = null) => new(new(text, 12d, color, false, false, false, null, "TestFont"), "p", null) { NormalTextValue = true };
     private static DocxMathMatrix Matrix(DocxMathRun[] first, DocxMathRun[] second) => new([new(first.Select(r => new DocxMathRow([r])).ToArray()), new(second.Select(r => new DocxMathRow([r])).ToArray())]);
-    private static DocxEquation Equation(DocxMathMatrix matrix) => new(new([matrix]), 0, 0, true, null, null, null) { ParentFontSize = 12d };
+    private static DocxEquation Equation(DocxMathMatrix matrix) => new(new([matrix]), 0, 0, true, null, null) { ParentFontSize = 12d };
     private static PdfFontResource Resource(string name, OpenTypeFont font, string text) => new(name, PdfEmbeddedFont.Create(font, text.Select(c => (int)c), CancellationToken.None));
     private static OpenTypeFont MathFont(bool withPlaceholder = false)
     {

@@ -109,7 +109,7 @@ internal static partial class DocxInlineCompositionTests
         }
         var absent = new Dictionary<DocxEquation, DocxPreparedMathParagraph>();
         TestAssert.True(!Measure(paragraph, absent, out _), "Entirely unavailable body math keeps its existing fallback.");
-        var foreign = new DocxEquation(new([]), 999, 999, false, null, null, null);
+        var foreign = new DocxEquation(new([]), 999, 999, false, null, null);
         absent.Add(foreign, new(foreign, new(18d, 10d, 4d, []), 11d, 16d));
         TestAssert.True(!Measure(paragraph, absent, out _), "Another paragraph's prepared equation is not a ready sibling.");
         TestAssert.True(DocxLayoutEngine.TryMeasureOrderedInlineAtoms(paragraph, absent, new TrackingMeasurer(),

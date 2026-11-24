@@ -24,7 +24,7 @@ internal static partial class DocxMathTests
             readBookmark: bookmarks.Add, readCommentBoundary: item => comments.Add(item.Name.LocalName));
         TestAssert.Equal("commentRangeStart|commentRangeEnd", string.Join("|", comments));
         TestAssert.Equal("WrappedMath", bookmarks.Single().Name);
-        TestAssert.True(DocxMathLayout.TryGetRuns(new(parsed, 0, 0, false, null, null, null), default, out var runs) &&
+        TestAssert.True(DocxMathLayout.TryGetRuns(new(parsed, 0, 0, false, null, null), default, out var runs) &&
             string.Concat(runs.Select(item => item.Run.Text.Text)) == "a+bc",
             "Custom-XML properties cannot supply glyphs;stored content keeps annotations and operands.");
         using var cancellation = new CancellationTokenSource();
@@ -41,7 +41,7 @@ internal static partial class DocxMathTests
         {
             var unknown = new XElement(MathNamespace + "oMath", new XElement(WordprocessingNamespace + "customXml", unsupported));
             var result = DocxMathParser.Read(unknown, (_, text) => PlainRun(text), default, includeRevision: _ => true);
-            TestAssert.True(!DocxMathLayout.TryGetRuns(new(result, 0, 0, false, null, null, null), default, out _),
+            TestAssert.True(!DocxMathLayout.TryGetRuns(new(result, 0, 0, false, null, null), default, out _),
                 "Metadata cannot create missing argument/revision owners or erase unknown content.");
         }
     }

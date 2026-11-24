@@ -29,7 +29,7 @@ internal static class DocxSkewedFractionTests
         {
             var fraction = new DocxMathFraction(Literal("B"), Literal("C"), "skw")
                 { ControlText = new("", 20d, "FF0000", false, false, false, null, "Math") };
-            var equation = new DocxEquation(new([fraction]), 0, 0, display, null, null, null) { ParentFontSize = 11d };
+            var equation = new DocxEquation(new([fraction]), 0, 0, display, null, null) { ParentFontSize = 11d };
             TestAssert.True(DocxMathLayout.TryGetRuns(equation, default, out var sources) && sources.Count == 2 &&
                 sources.All(source => source.ScriptLevel == 0) && ReferenceEquals(fraction, sources[0].ControlOwner),
                 "The actual slash control is discovered without reducing its literal children to script style.");

@@ -633,7 +633,7 @@ internal static class DocxTableMathTests
     {
         var run = new DocxTextRun("A+B", 10d, null, false, false, false, null, "TestFont");
         var row = new DocxMathRow([new DocxMathRun(run, "p", null)]);
-        var equation = new DocxEquation(row, 0, 0, true, null, null, null) { ParentFontSize = 10d };
+        var equation = new DocxEquation(row, 0, 0, true, null, null) { ParentFontSize = 10d };
         var font = new PdfFontResource("Eq1", PdfEmbeddedFont.Create(TestFontBuilder.LoadTestFont(),
             run.Text.EnumerateRunes().Select(rune => rune.Value), CancellationToken.None));
         TestAssert.True(DocxMathRowLayout.TryMeasure(row, _ => font, CancellationToken.None, out var box, out _), "Expected portable math glyphs.");

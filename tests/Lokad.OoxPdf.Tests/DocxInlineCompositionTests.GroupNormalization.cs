@@ -97,7 +97,7 @@ internal static partial class DocxInlineCompositionTests
                 .Single(value => value.PartName == "/" + part).BodyElements).Single(p => p.Equations.Count == count);
             TestAssert.Equal(count, DocxMathParagraphPolicy.GetPreparationEquations(paragraph).Count);
             TestAssert.Equal(inline ? 0 : count, DocxMathParagraphPolicy.GetDisplaySourceEquations(paragraph, default).Count);
-            var metadata = paragraph.Equations.Select(eq => (eq.Display, eq.AlignmentValue, eq.PropertiesXml)).ToArray();
+            var metadata = paragraph.Equations.Select(eq => (eq.Display, eq.AlignmentValue, eq.EffectiveAlignmentValue)).ToArray();
             var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true), mode,
                 mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
                     OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
@@ -118,8 +118,8 @@ internal static partial class DocxInlineCompositionTests
                     Regex.Matches(after[index].Content, @"/" + Regex.Escape(image.ResourceName) + @"\s+Do\b").Count));
             }
             TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"), "Known group formatting cannot discard supported formulas.");
-            TestAssert.True(metadata.SequenceEqual(paragraph.Equations.Select(eq => (eq.Display, eq.AlignmentValue, eq.PropertiesXml))),
-                "Effective grouping does not overwrite source properties.");
+            TestAssert.True(metadata.SequenceEqual(paragraph.Equations.Select(eq => (eq.Display, eq.AlignmentValue, eq.EffectiveAlignmentValue))),
+                "Effective grouping preserves the authored display and alignment.");
         }
     }
 

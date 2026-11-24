@@ -74,7 +74,7 @@ internal static class DocxMarkupTests
                 Runs = [cell.Paragraphs.Single().Runs.Single() with { Text = text }],
                 KeepRules = DocxParagraphKeepRules.Empty with { WidowControl = widow },
                 Equations = unsupportedMath ? [new DocxEquation(new DocxMathRow([])
-                    { PropertiesXml = ["<unsupported-math/>"] }, 0, 0, false, null, null, null)] : []
+                    { PropertiesXml = ["<unsupported-math/>"] }, 0, 0, false, null, null)] : []
             };
             table = table with { Rows = [table.Rows.Single() with { Cells = [cell with { Paragraphs = [paragraph] }] }] };
             var document = source with

@@ -70,7 +70,7 @@ internal static partial class DocxMathFractionTests
         {
             var delimiter = new DocxMathDelimiter([literal]) { GrowValue = grow,
                 ControlText = new("", 12d, "FF0000", false, false, false, null, "Math") };
-            var equation = new DocxEquation(new([delimiter]), 0, 0, false, null, null, null) { ParentFontSize = 11d };
+            var equation = new DocxEquation(new([delimiter]), 0, 0, false, null, null) { ParentFontSize = 11d };
             TestAssert.True(DocxMathLayout.TryMeasure(equation, _ => resource, default, out var measured, out var reason,
                 resolveControlFont: _ => resource), reason ?? "A growing delimiter can use its complete assembly.");
             var box = TestAssert.NotNull(measured);

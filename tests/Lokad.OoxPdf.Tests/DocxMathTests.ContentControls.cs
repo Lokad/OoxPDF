@@ -22,7 +22,7 @@ internal static partial class DocxMathTests
             readBookmark: bookmarks.Add, readCommentBoundary: item => comments.Add(item.Name.LocalName));
         TestAssert.Equal("commentRangeStart|commentRangeEnd", string.Join("|", comments));
         TestAssert.Equal("ControlledMath", bookmarks.Single().Name);
-        TestAssert.True(DocxMathLayout.TryGetRuns(new(parsed, 0, 0, false, null, null, null), default, out var runs) &&
+        TestAssert.True(DocxMathLayout.TryGetRuns(new(parsed, 0, 0, false, null, null), default, out var runs) &&
             string.Concat(runs.Select(item => item.Run.Text.Text)) == "a+bc",
             "Only sdtContent supplies stored math;control properties cannot inject glyphs.");
         using var cancellation = new CancellationTokenSource();
@@ -43,12 +43,12 @@ internal static partial class DocxMathTests
             var xml = new XElement(MathNamespace + "oMath", new XElement(WordprocessingNamespace + "sdt",
                 new XElement(WordprocessingNamespace + "sdtContent", child)));
             var parsed = DocxMathParser.Read(xml, (_, text) => PlainRun(text), default, includeRevision: _ => true);
-            TestAssert.True(!DocxMathLayout.TryGetRuns(new(parsed, 0, 0, false, null, null, null), default, out _),
+            TestAssert.True(!DocxMathLayout.TryGetRuns(new(parsed, 0, 0, false, null, null), default, out _),
                 "Content controls preserve stored content without creating missing role/revision owners.");
         }
         var orphan = new XElement(MathNamespace + "oMath", new XElement(WordprocessingNamespace + "sdtContent",
             new XElement(MathNamespace + "r", new XElement(MathNamespace + "t", "Orphan"))));
-        TestAssert.True(!DocxMathLayout.TryGetRuns(new(Parse(orphan), 0, 0, false, null, null, null), default, out _),
+        TestAssert.True(!DocxMathLayout.TryGetRuns(new(Parse(orphan), 0, 0, false, null, null), default, out _),
             "sdtContent needs its actual content-control parent.");
     }
 }

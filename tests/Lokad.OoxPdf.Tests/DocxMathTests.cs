@@ -121,7 +121,7 @@ internal static partial class DocxMathTests
         var large = Read("<m:mc><m:mcPr><m:count m:val='255'/></m:mcPr></m:mc>");
         TestAssert.True(!large.HasUnsupportedProperties && large.ColumnGroups is [ { CountValue: 255 } ],
             "A schema-valid count remains one scalar declaration; actual-grid resolution owns its admission.");
-        TestAssert.True(!DocxMathLayout.TryGetRuns(new(new([large]), 0, 0, true, null, null, null), CancellationToken.None, out _),
+        TestAssert.True(!DocxMathLayout.TryGetRuns(new(new([large]), 0, 0, true, null, null), CancellationToken.None, out _),
             "An overdeclared group keeps complete fallback without allocating 255 column slots for three source cells.");
     }
 
@@ -525,7 +525,7 @@ internal static partial class DocxMathTests
             TestAssert.Equal(hidden,radical.DegreeHidden);TestAssert.Equal(unsupported,radical.HasUnsupportedProperties);
             TestAssert.Equal("3",((DocxMathRun)radical.Degree.Children[0]).Text.Text);
             TestAssert.Equal("x+1",((DocxMathRun)radical.Radicand.Children[0]).Text.Text);
-            var equation=new DocxEquation(row,0,0,true,null,null,null);
+            var equation=new DocxEquation(row,0,0,true,null,null);
             TestAssert.Equal(!unsupported && hidden!=true,DocxMathLayout.TryGetRuns(equation,CancellationToken.None,out _));
         }
     }
@@ -660,7 +660,7 @@ internal static partial class DocxMathTests
                 body.Replace("{0}", properties, StringComparison.Ordinal) + "</m:oMath>"));
             foreach (bool display in new[] { false, true })
             {
-                var equation = new DocxEquation(row, 0, 0, display, null, null, null);
+                var equation = new DocxEquation(row, 0, 0, display, null, null);
                 TestAssert.True(DocxMathLayout.TryGetRuns(equation, CancellationToken.None, out var runs),
                     "Neutral argument properties share the same literal/structured source discovery.");
                 TestAssert.True(runs.Count != 0, "Source meaning must remain discoverable.");

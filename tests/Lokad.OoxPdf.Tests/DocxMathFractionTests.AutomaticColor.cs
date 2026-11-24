@@ -14,7 +14,7 @@ internal static partial class DocxMathFractionTests
             DocxMathRow Child(string text) => new([new DocxMathRun(new(text, 12d, declared,
                 false, false, false, null, "TestFont"), null, null) { NormalTextValue = true }]);
             var fraction = new DocxMathFraction(Child("B"), Child("C"), "bar");
-            var equation = new DocxEquation(new([fraction]), 0, 0, false, null, null, null) { ParentFontSize = 12d };
+            var equation = new DocxEquation(new([fraction]), 0, 0, false, null, null) { ParentFontSize = 12d };
             TestAssert.True(DocxMathLayout.TryMeasure(equation, _ => resource, default, out var box, out var reason), reason ?? "Expected supported fraction.");
             var measured = TestAssert.NotNull(box);
             RgbColor? authored = DocxTextColor.Read(declared);

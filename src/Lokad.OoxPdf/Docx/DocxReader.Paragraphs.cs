@@ -475,7 +475,9 @@ internal sealed partial class DocxReader
         {
             EnsureInlineContent();
             bool display = container.Name == MathNamespace + "oMathPara";
-            XElement? properties = display ? container.Element(MathNamespace + "oMathParaPr") : null;
+            string? alignment = display
+                ? (string?)container.Element(MathNamespace + "oMathParaPr")?.Element(MathNamespace + "jc")?.Attribute(MathNamespace + "val")
+                : null;
             Dictionary<XElement, DocxRevisionInfo>? mathRunRevisions = null;
             bool hasMathRunRevisions = false;
             DocxRevisionInfo? equationRevision = revision;
@@ -511,15 +513,13 @@ internal sealed partial class DocxReader
                     equationHasDeletionOwner: source.RemoveDeletedText || equationRevision?.Kind == DocxRevisionKind.Deletion);
                 if (source.RemoveDeletedText)
                 {
-                    var deletedEquation = new DocxEquation(content, runs.Count, sourceRunIndex, display, null, null, null);
+                    var deletedEquation = new DocxEquation(content, runs.Count, sourceRunIndex, display, null, null);
                     if (DocxMathLayout.RemoveDeletedLiteralMathText(deletedEquation, cancellationToken) is not { } empty) continue;
                     content = empty;
                 }
                 equations.Add(new DocxEquation(
                     content,
-                    runs.Count, sourceRunIndex, display,
-                    (string?)properties?.Element(MathNamespace + "jc")?.Attribute(MathNamespace + "val"),
-                    properties?.ToString(SaveOptions.DisableFormatting), equationRevision)
+                    runs.Count, sourceRunIndex, display, alignment, equationRevision)
                 {
                     ParentFontSize = ResolveRunProperties(null, paragraphStyleId, null, styles, tableCellStyle?.Run, out _).FontSize
                         ?? DocxDefaults.UnstyledRunFontSizePoints,

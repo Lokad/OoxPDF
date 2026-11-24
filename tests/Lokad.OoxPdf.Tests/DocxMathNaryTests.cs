@@ -176,7 +176,7 @@ internal static partial class DocxMathNaryTests
     private static IEnumerable<DocxMathGlyphPlacement> PaintPlacements(DocxMathBox box) =>
         box.Glyphs.Select(glyph => glyph with { ControlOwner = null });
 
-    private static DocxEquation Equation(DocxMathNary nary) => new(new([nary]), 0, 0, true, null, null, null) { ParentFontSize = 12d };
+    private static DocxEquation Equation(DocxMathNary nary) => new(new([nary]), 0, 0, true, null, null) { ParentFontSize = 12d };
     public static void MathFontNaryExplicitGrowthFitsBodyHeightAndRetainsBoundedVariantFallback()
     {
         var font = OpenTypeFont.Load(FontBytes(0x2211, growthVariants: true));

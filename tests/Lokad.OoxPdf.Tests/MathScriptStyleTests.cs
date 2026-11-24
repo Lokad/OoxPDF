@@ -28,7 +28,7 @@ internal static class MathScriptStyleTests
         TestAssert.True(ReferenceEquals(glyph.Font, childResource) && Math.Abs(glyph.FontSize - 8.52d) < 1e-9,
             "Parent scaling cannot replace the child's text face or subset ownership.");
         var basis = new DocxMathRow([new DocxMathRun(new("A", 12d, null, false, false, false, null, "TestFont"), "p", null)]);
-        var equation = new DocxEquation(new([new DocxMathScripts(basis, argument, null)]), 0, 0, true, null, null, null);
+        var equation = new DocxEquation(new([new DocxMathScripts(basis, argument, null)]), 0, 0, true, null, null);
         TestAssert.True(DocxMathLayout.TryMeasure(equation, run => run.NormalText ? childResource : parentResource,
             CancellationToken.None, out var composed, out _), "Mixed normal-text child faces share the parent script geometry.");
         TestAssert.True(TestAssert.NotNull(composed).Glyphs[1].BaselineY < 0d, "The normal-text child retains its subscript role.");
@@ -52,7 +52,7 @@ internal static class MathScriptStyleTests
                 "<m:r><m:rPr><m:sty m:val='p'/></m:rPr><m:t>B</m:t></m:r></m:sub></m:sSub></m:oMath>";
             DocxMathRow row = DocxMathParser.Read(System.Xml.Linq.XElement.Parse(xml),
                 (_, text) => new(text, 12d, null, false, false, false, null, "TestFont"), CancellationToken.None);
-            var equation = new DocxEquation(row, 0, 0, true, null, null, null);
+            var equation = new DocxEquation(row, 0, 0, true, null, null);
             TestAssert.True(DocxMathLayout.TryGetRuns(equation, CancellationToken.None, out var runs),
                 "Known source increments must discover the role's actual style.");
             TestAssert.Equal(expectedLevel, runs.Single(source => source.Run.Text.Text == "B").ScriptLevel);
@@ -294,7 +294,7 @@ internal static class MathScriptStyleTests
             new[] { (font.MapCodePoint('A'), (int)'A'), ((ushort)36, (int)'A'), (font.MapCodePoint('B'), (int)'B') }, CancellationToken.None));
         DocxMathRow Row(string text) => new([new DocxMathRun(new(text, 12d, null, false, false, false, null, "TestFont"), "p", null)]);
         var scripts = new DocxMathScripts(Row("A"), Row("A"), Row("B"));
-        var equation = new DocxEquation(new([scripts]), 0, 0, true, "center", null, null);
+        var equation = new DocxEquation(new([scripts]), 0, 0, true, "center", null);
         TestAssert.True(DocxMathLayout.TryMeasure(equation, _ => resource, CancellationToken.None, out DocxMathBox? box, out string? reason),
             reason ?? "Expected a script box.");
         DocxMathBox measured = TestAssert.NotNull(box);

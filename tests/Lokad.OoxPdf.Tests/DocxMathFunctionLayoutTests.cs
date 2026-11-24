@@ -202,7 +202,7 @@ internal static class DocxMathFunctionLayoutTests
         new(new(text, 12d, color, false, false, false, null, "TestFont"), "p", null) { NormalTextValue = normal };
     private static DocxMathFunction Function(DocxMathRow name, DocxMathRow argument, double size = 12d) =>
         new(name, argument) { ControlText = new("", size, "FF0000", false, false, false, null, "TestFont") };
-    private static DocxEquation Equation(DocxMathFunction function) => new(new([function]), 0, 0, true, null, null, null) { ParentFontSize = 12d };
+    private static DocxEquation Equation(DocxMathFunction function) => new(new([function]), 0, 0, true, null, null) { ParentFontSize = 12d };
     private static PdfFontResource Resource(string name, OpenTypeFont font, string text) =>
         new(name, PdfEmbeddedFont.Create(font, text.Select(c => (int)c), CancellationToken.None));
     private static byte[] MathFontBytes()

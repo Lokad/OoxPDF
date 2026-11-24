@@ -16,7 +16,7 @@ internal static partial class DocxMathFractionTests
         var content = new DocxMathRow([Row("B+").Children[0], matrix, Row("+C").Children[0]]);
         DocxMathBox Measure(double sourceSize, double? ownerSize)
         {
-            var equation = new DocxEquation(content, 0, 0, false, null, null, null) { ParentFontSize = sourceSize };
+            var equation = new DocxEquation(content, 0, 0, false, null, null) { ParentFontSize = sourceSize };
             TestAssert.True(DocxMathLayout.TryMeasure(equation, _ => resource, default, out var box, out var reason,
                 resolveControlMetrics: _ => font, rowControlSize: ownerSize), reason ?? "Expected a bounded mixed matrix row.");
             return TestAssert.NotNull(box);
@@ -121,7 +121,7 @@ internal static partial class DocxMathFractionTests
             var fraction = new DocxMathFraction(Literal("B"), Literal("C"), stack ? "noBar" : "bar");
             var delimiter = new DocxMathDelimiter([new([fraction]), Literal("B")])
                 { GrowValue = false, ControlText = new("", 12d, "008000", false, false, false, null, "TestFont") };
-            var equation = new DocxEquation(new([delimiter]), 0, 0, display, null, null, null) { ParentFontSize = 12d };
+            var equation = new DocxEquation(new([delimiter]), 0, 0, display, null, null) { ParentFontSize = 12d };
             TestAssert.True(DocxMathLayout.TryGetRuns(equation, CancellationToken.None, out var sources) && sources.Count == 3 &&
                 sources[0].ScriptLevel == (display ? 0 : 1) && sources[1].ScriptLevel == sources[0].ScriptLevel &&
                 sources[2].ScriptLevel == 0 && ReferenceEquals(sources[0].ControlOwner, delimiter),
@@ -141,7 +141,7 @@ internal static partial class DocxMathFractionTests
             TestAssert.True(!DocxMathLayout.TryGetRuns(deeper, CancellationToken.None, out _), "Fraction children remain literal and discovery does not expand arbitrary nesting.");
         }
         var growing = new DocxEquation(new([new DocxMathDelimiter([new([new DocxMathFraction(Literal("B"), Literal("C"), "bar")])])]),
-            0, 0, true, null, null, null) { ParentFontSize = 12d };
+            0, 0, true, null, null) { ParentFontSize = 12d };
         TestAssert.True(DocxMathLayout.TryMeasure(growing, _ => resource, CancellationToken.None, out var grown, out var growthReason) &&
             TestAssert.NotNull(grown).Glyphs[0].OriginalGlyph == 128,
             growthReason ?? "A fraction's complete enclosure height must fit its ready-made variant without an extra symmetric-axis expansion.");
@@ -158,7 +158,7 @@ internal static partial class DocxMathFractionTests
         DocxMathRow Child(string text, double size = 12d) => new([new DocxMathRun(new(text, size, "0000FF", false, false, false, null, "TestFont"), "p", null)]);
         var first = new DocxMathDelimiter([Child("B", 20d)]) { ControlText = new("", 12d, "008000", false, false, false, null, "TestFont") };
         var second = first with { Arguments = [Child("C", 20d)], GrowValue = false };
-        var equation = new DocxEquation(new([Child("B+"), first, Child("+"), second, Child("=C")]), 0, 0, true, null, null, null) { ParentFontSize = 12d };
+        var equation = new DocxEquation(new([Child("B+"), first, Child("+"), second, Child("=C")]), 0, 0, true, null, null) { ParentFontSize = 12d };
         TestAssert.True(DocxMathLayout.TryGetRuns(equation, CancellationToken.None, out var sources) && sources.Count == 5 &&
             sources.Count(s => s.ControlOwner is not null) == 2 && sources.Any(s => ReferenceEquals(s.ControlOwner, first)) &&
             sources.Any(s => ReferenceEquals(s.ControlOwner, second)), "Each delimiter retains its own source control inside one bounded row.");
@@ -191,7 +191,7 @@ internal static partial class DocxMathFractionTests
         {
             var delimiter=new DocxMathDelimiter([Child("B",12d,"FF0000"),Child("C",20d,"0000FF")])
                 { GrowValue=!fixedSize,SeparatorCharacterValue=empty?"":"|",ControlText=new("",12d,"008000",false,false,false,null,"TestFont") };
-            var equation=new DocxEquation(new([delimiter]),0,0,true,null,null,null) { ParentFontSize=12d };
+            var equation=new DocxEquation(new([delimiter]),0,0,true,null,null) { ParentFontSize=12d };
             TestAssert.True(DocxMathLayout.TryGetRuns(equation,CancellationToken.None,out var sources) && sources.Count==2 &&
                 ReferenceEquals(sources[0].ControlOwner,delimiter) && sources[1].ControlOwner is null,
                 "One control owner covers all independently measured literal argument rows.");
@@ -258,7 +258,7 @@ internal static partial class DocxMathFractionTests
             { GrowValue=false,ControlText=new("",12d,null,false,false,false,null,"TestFont") };
         foreach(double size in new[]{20d,100d})
         {
-            var delimiter=Delimiter(size);var equation=new DocxEquation(new([delimiter]),0,0,true,null,null,null) { ParentFontSize=12d };
+            var delimiter=Delimiter(size);var equation=new DocxEquation(new([delimiter]),0,0,true,null,null) { ParentFontSize=12d };
             TestAssert.True(DocxMathLayout.TryMeasure(equation,_=>resource,CancellationToken.None,out var box,out var reason),
                 reason??"A non-growing character does not request an assembly around a larger authored child.");
             var measured=TestAssert.NotNull(box);
@@ -288,7 +288,7 @@ internal static partial class DocxMathFractionTests
             new[]{((ushort)9,40),((ushort)10,41),((ushort)128,40),((ushort)127,41),(parent.MapCodePoint('B'),(int)'B')},CancellationToken.None));
         var child=new DocxMathRow([new DocxMathRun(new("B",20d,null,false,false,false,null,"TestFont"),"p",null)]);
         var delimiter=new DocxMathDelimiter([child]) { ControlText=new("",12d,null,false,false,false,null,"TestFont") };
-        var equation=new DocxEquation(new([delimiter]),0,0,true,null,null,null) { ParentFontSize=12d };
+        var equation=new DocxEquation(new([delimiter]),0,0,true,null,null) { ParentFontSize=12d };
         TestAssert.True(DocxMathLayout.TryMeasure(equation,_=>resource,CancellationToken.None,out var box,out var reason),reason??"Expected a larger independently sized child.");
         var measured=TestAssert.NotNull(box);
         TestAssert.True(DocxMathLayout.TryGetLineMetrics(measured,CancellationToken.None,out double above,out _),"Expected a valid owned line frame.");
@@ -307,7 +307,7 @@ internal static partial class DocxMathFractionTests
         var text=new PdfFontResource("Child",PdfEmbeddedFont.Create(TestFontBuilder.LoadTestFont(),"B+C".Select(c=>(int)c),CancellationToken.None));
         var child=new DocxMathRow([new DocxMathRun(new("B+C",12d,"FF0000",false,false,false,null,"TestFont"),null,null) { NormalTextValue=true }]);
         var delimiter=new DocxMathDelimiter([child]) { ControlText=new("",12d,"008000",false,false,false,null,"TestFont") };
-        var equation=new DocxEquation(new([delimiter]),0,0,true,null,null,null) { ParentFontSize=12d };
+        var equation=new DocxEquation(new([delimiter]),0,0,true,null,null) { ParentFontSize=12d };
         TestAssert.True(DocxMathLayout.TryGetRuns(equation,CancellationToken.None,out var runs) && ReferenceEquals(runs[0].ControlOwner,delimiter),
             "The first child discovers its own implicit operator owner without taking over child text fonts.");
         TestAssert.True(DocxMathLayout.TryMeasure(equation,_=>text,CancellationToken.None,out var box,out var reason,resolveControlFont:_=>parent),
@@ -433,7 +433,7 @@ internal static partial class DocxMathFractionTests
         DocxMathRow Child(string value)=>new([new DocxMathRun(new(value,8d,"FF0000",false,false,false,null,"TestFont"),null,null) { NormalTextValue=true }]);
         var fraction=new DocxMathFraction(Child("B+C"),Child("C"),"bar");
         var root=new DocxMathRadical(new([fraction]),new([]),true) { ControlText=new("",12d,"000000",false,false,false,null,"TestFont") };
-        var equation=new DocxEquation(new([root]),0,0,false,null,null,null) { ParentFontSize=12d };
+        var equation=new DocxEquation(new([root]),0,0,false,null,null) { ParentFontSize=12d };
         TestAssert.True(DocxMathLayout.TryMeasure(equation,_=>text,CancellationToken.None,out var box,out var reason,
             resolveControlFont:_=>parent),reason??"The root supplies existing fraction parent metrics without adopting its child text face.");
         var measured=TestAssert.NotNull(box);
@@ -625,7 +625,7 @@ internal static partial class DocxMathFractionTests
         var child=new DocxMathRun(new("B+C",20d,"FF0000",false,false,false,null,"TestFont"),null,null) { NormalTextValue=true };
         var radical=new DocxMathRadical(new([child]),new([]),true)
             { ControlText=new("",12d,"000000",false,false,false,null,"TestFont") };
-        var source=new DocxEquation(new([radical]),0,0,true,null,null,null) { ParentFontSize=12d };
+        var source=new DocxEquation(new([radical]),0,0,true,null,null) { ParentFontSize=12d };
         TestAssert.True(!DocxMathLayout.TryMeasure(source,_=>text,CancellationToken.None,out _,out _,parent.Font.Font),
             "Metrics alone cannot encode a parent root glyph in a child text-face resource.");
         TestAssert.True(DocxMathLayout.TryMeasure(source,_=>text,CancellationToken.None,out var box,out var reason,parent.Font.Font,_=>parent),
@@ -727,7 +727,7 @@ internal static partial class DocxMathFractionTests
     }
 
     private static DocxEquation RadicalEquation(double size)=>new(new([new DocxMathRadical(
-        new([new DocxMathRun(new("B+C",size,null,false,false,false,null,"TestFont"),"p",null)]),new([]),true)]),0,0,true,null,null,null)
+        new([new DocxMathRun(new("B+C",size,null,false,false,false,null,"TestFont"),"p",null)]),new([]),true)]),0,0,true,null,null)
         { ParentFontSize=12d };
 
     private static PdfFontResource RadicalResource()
@@ -789,7 +789,7 @@ internal static partial class DocxMathFractionTests
         DocxMathRow Normal(string value) => new([new DocxMathRun(new(value, 12d, null, false, false, false, null, "TestFont"),
             null, null) { NormalTextValue = true }]);
         var fraction = new DocxMathFraction(Normal("A+B"), Normal("C"), "bar");
-        var one = new DocxEquation(new([fraction]), 0, 0, true, null, null, null) { ParentFontSize = 12d };
+        var one = new DocxEquation(new([fraction]), 0, 0, true, null, null) { ParentFontSize = 12d };
         var source = one with { Content = new([fraction, Normal("+"), fraction]) };
         TestAssert.True(DocxMathLayout.TryMeasure(one, _ => text, CancellationToken.None, out var child, out _, parent), "Expected existing normal-child fraction.");
         TestAssert.True(DocxMathLayout.TryMeasure(source, _ => text, CancellationToken.None, out var box, out _, parent), "Expected normal-child sequence.");
@@ -1061,7 +1061,7 @@ internal static partial class DocxMathFractionTests
         var child = new PdfFontResource("Text1", PdfEmbeddedFont.Create(text, "A+BC".Select(c => (int)c), CancellationToken.None));
         DocxMathRow Normal(string value) => new([new DocxMathRun(new(value, 12d, null, false, false, false, null, "TestFont"),
             null, null) { NormalTextValue = true }]);
-        var equation = new DocxEquation(new([new DocxMathFraction(Normal("A+B"), Normal("C"), null)]), 0, 0, false, null, null, null)
+        var equation = new DocxEquation(new([new DocxMathFraction(Normal("A+B"), Normal("C"), null)]), 0, 0, false, null, null)
             { ParentFontSize = 12d };
         TestAssert.True(!DocxMathLayout.TryMeasure(equation, _ => child, CancellationToken.None, out _, out _),
             "Text faces cannot invent parent MATH fraction constants.");
@@ -1194,7 +1194,7 @@ internal static partial class DocxMathFractionTests
         }
     }
 
-    private static DocxEquation Fraction() => new(new([new DocxMathFraction(Row("A+B"), Row("C"), null)]), 0, 0, true, "center", null, null);
+    private static DocxEquation Fraction() => new(new([new DocxMathFraction(Row("A+B"), Row("C"), null)]), 0, 0, true, "center", null);
     private static DocxMathRow Row(string text) => new([new DocxMathRun(new(text, 12d, null, false, false, false, null, "TestFont"), "p", null)]);
     private static PdfFontResource Resource(byte[] bytes) => new("Math1", PdfEmbeddedFont.Create(OpenTypeFont.Load(bytes), "A+BC".Select(c => (int)c), CancellationToken.None));
     private static byte[] Constants(short thickness = 40)

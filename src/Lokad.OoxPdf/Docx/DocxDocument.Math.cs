@@ -17,7 +17,6 @@ internal sealed record DocxEquation(
     int SourceRunIndex,
     bool Display,
     string? AlignmentValue,
-    string? PropertiesXml,
     DocxRevisionInfo? Revision)
 {
     // Discovery hint only; eligibility still verifies actual retained source owners.

@@ -17,9 +17,9 @@ internal static partial class DocxMathTests
         var parsed = DocxMathParser.Read(equation, (_, text) => PlainRun(text), default,
             readHyperlink: _ => { sources++; return link; });
         TestAssert.Equal(1, sources);
-        TestAssert.True(DocxMathLayout.TryGetRuns(new(parsed, 0, 0, false, null, null, null), default, out var runs) &&
+        TestAssert.True(DocxMathLayout.TryGetRuns(new(parsed, 0, 0, false, null, null), default, out var runs) &&
             runs.All(item => ReferenceEquals(item.Run.Hyperlink, link)) &&
-            DocxMathLayout.GetControlSources(new(parsed, 0, 0, false, null, null, null), default)
+            DocxMathLayout.GetControlSources(new(parsed, 0, 0, false, null, null), default)
                 .All(item => ReferenceEquals(((DocxMathNode)item).Hyperlink, link)),
             "Literal and structural paint retain the actual resolved source hyperlink.");
         using var cancellation = new CancellationTokenSource();
@@ -36,7 +36,7 @@ internal static partial class DocxMathTests
             var xml = new XElement(MathNamespace + "oMath", new XElement(WordprocessingNamespace + "hyperlink", unknown));
             var result = DocxMathParser.Read(xml, (_, text) => PlainRun(text), default,
                 includeRevision: _ => true, readHyperlink: _ => link);
-            TestAssert.True(!DocxMathLayout.TryGetRuns(new(result, 0, 0, false, null, null, null), default, out _),
+            TestAssert.True(!DocxMathLayout.TryGetRuns(new(result, 0, 0, false, null, null), default, out _),
                 "Navigation cannot create argument/revision owners or hide unknown mathematical content.");
         }
     }

@@ -78,7 +78,7 @@ internal static partial class DocxMathFractionTests
             { NormalTextValue = true }]);
         var radical = new DocxMathRadical(body, new([]), true)
             { ControlText = new("", 12d, "FF0000", false, false, false, null, "Math") };
-        var equation = new DocxEquation(new([radical]), 0, 0, false, null, null, null) { ParentFontSize = 11d };
+        var equation = new DocxEquation(new([radical]), 0, 0, false, null, null) { ParentFontSize = 11d };
         TestAssert.True(DocxMathLayout.TryMeasure(equation, _ => resource, default, out var measured, out var reason,
             resolveControlFont: _ => resource), reason ?? "The font-defined root assembly must enclose its larger literal child.");
         var box = TestAssert.NotNull(measured);
