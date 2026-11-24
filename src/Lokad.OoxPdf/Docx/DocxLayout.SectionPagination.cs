@@ -33,9 +33,12 @@ internal sealed partial class DocxLayoutEngine
         current.PageSettings.EndnoteReferenceSettings == next.PageSettings.EndnoteReferenceSettings;
 
     private static bool HasMatchingSectionPageBox(DocxPageGeometry current, DocxPageGeometry next) =>
-        Math.Abs(next.Width - current.Width) < 0.001d && Math.Abs(next.Height - current.Height) < 0.001d &&
+        HasMatchingSectionPaperSize(current, next) &&
         Math.Abs(next.MarginLeft - current.MarginLeft) < 0.001d && Math.Abs(next.MarginRight - current.MarginRight) < 0.001d &&
         Math.Abs(next.MarginTop - current.MarginTop) < 0.001d && Math.Abs(next.MarginBottom - current.MarginBottom) < 0.001d;
+
+    private static bool HasMatchingSectionPaperSize(DocxPageGeometry current, DocxPageGeometry next) =>
+        Math.Abs(next.Width - current.Width) < 0.001d && Math.Abs(next.Height - current.Height) < 0.001d;
 
     private static bool HasStaticSectionContent(DocxPageSettings settings) =>
         settings.HeaderParagraphsByType.Keys.Concat(settings.FooterParagraphsByType.Keys)

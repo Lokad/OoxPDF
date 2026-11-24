@@ -1362,40 +1362,46 @@ internal sealed partial class DocxLayoutEngine
                 {
                     following = FindSectionSettingsAtOrAfter(document.BodyElements, elementIndex + 1, sectionSettingsByElementIndex) ?? finalSectionSettings;
                     DocxSectionBreakType? followingType = DocxSectionBreakTypeExtensions.FromValue(following.SectionProperties.BreakTypeValue);
-                    if (followingType is null or DocxSectionBreakType.NextPage)
-                    {
-                        // A page-separated section owns its start regardless
-                        // of whether the two sections could share a frame.
-                        boundaryType = followingType;
-                    }
-                    else if (followingType == DocxSectionBreakType.NextColumn || sectionBreak.TypeValue == DocxSectionBreakType.NextColumn)
+                    if (followingType == DocxSectionBreakType.NextColumn)
                     {
                         boundaryType = followingType;
-                        if (followingType == DocxSectionBreakType.NextColumn && useSourceSectionStarts &&
-                            activeColumnIndex + 1 < page.ColumnFrames.Count)
+                        if (useSourceSectionStarts && activeColumnIndex + 1 < page.ColumnFrames.Count)
                         {
                             DocxPageGeometry nextGeometry = ResolveSectionGeometry(document, following, reserveMarkupMargin,
                                 retuneReserveToPrintScale, reservePrintScale, pages.Count + 1);
                             advanceSectionColumn = CanShareSectionColumn(page, nextGeometry);
                         }
                     }
-                    else if (followingType is DocxSectionBreakType.OddPage or DocxSectionBreakType.EvenPage ||
-                        sectionBreak.TypeValue is DocxSectionBreakType.OddPage or DocxSectionBreakType.EvenPage)
+                    else if (followingType != DocxSectionBreakType.Continuous)
                     {
-                        // The incoming section declares its start. A continuous
-                        // transition from a parity section retains page separation.
-                        boundaryType = followingType is DocxSectionBreakType.Continuous ? null : followingType;
+                        boundaryType = followingType;
                     }
-                    else if (useSourceSectionStarts && page.ColumnFrames.Count == 1)
+                    else
                     {
                         DocxPageGeometry nextGeometry = ResolveSectionGeometry(document, following, reserveMarkupMargin,
                             retuneReserveToPrintScale, reservePrintScale, pages.Count + 1);
-                        admitBoundary = nextGeometry.ColumnFrames.Count == 1 &&
-                            !HasStaticSectionContent(sectionBreak.PageSettings) && !HasStaticSectionContent(following.PageSettings) &&
-                            HasMatchingSectionPageBox(page, nextGeometry);
-                        if (admitBoundary)
+                        if (!HasMatchingSectionPaperSize(page, nextGeometry))
+                        {
+                            // Each physical page has one paper size.
+                            boundaryType = DocxSectionBreakType.NextPage;
+                        }
+                        else if (sectionBreak.TypeValue == DocxSectionBreakType.NextColumn)
                         {
                             boundaryType = followingType;
+                        }
+                        else if (sectionBreak.TypeValue is DocxSectionBreakType.OddPage or DocxSectionBreakType.EvenPage)
+                        {
+                            boundaryType = null;
+                        }
+                        else if (useSourceSectionStarts && page.ColumnFrames.Count == 1)
+                        {
+                            admitBoundary = nextGeometry.ColumnFrames.Count == 1 &&
+                                !HasStaticSectionContent(sectionBreak.PageSettings) && !HasStaticSectionContent(following.PageSettings) &&
+                                HasMatchingSectionPageBox(page, nextGeometry);
+                            if (admitBoundary)
+                            {
+                                boundaryType = followingType;
+                            }
                         }
                     }
                 }

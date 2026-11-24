@@ -22,7 +22,7 @@ internal static partial class DocxFootnotesTests
         const string third = "THIRD SECTION WORDS";
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
         {
-            var samePage = Render(afterColumns: 2, lastColumn: false, addNextPage: false);
+            var samePage = Render(afterColumns: 2, lastColumn: false);
             TestAssert.Equal(1, samePage.Length);
             var firstGlyphs = Find(samePage[0], first);
             var secondGlyphs = Find(samePage[0], second);
@@ -30,21 +30,35 @@ internal static partial class DocxFootnotesTests
             TestAssert.True(Math.Abs(secondGlyphs.Y - firstGlyphs.Y) < 0.01d, "The next column starts at the shared top.");
             TestAssert.Equal(1, samePage[0].Images.Count);
 
-            var nextPage = Render(afterColumns: 2, lastColumn: false, addNextPage: true);
+            var nextPage = Render(2, false, "nextPage", paperWidth: 540);
             TestAssert.Equal(2, nextPage.Length);
             TestAssert.Equal(secondGlyphs.X, Find(nextPage[0], second).X);
             TestAssert.Equal(firstGlyphs.X, Find(nextPage[1], third).X);
 
             foreach (var (afterColumns, lastColumn) in new[] { (2, true), (1, false) })
             {
-                var paged = Render(afterColumns, lastColumn, addNextPage: false);
+                var paged = Render(afterColumns, lastColumn);
                 TestAssert.Equal(2, paged.Length);
                 TestAssert.Equal(lastColumn ? secondGlyphs.X : firstGlyphs.X, Find(paged[0], first).X);
                 TestAssert.Equal(firstGlyphs.X, Find(paged[1], second).X);
                 TestAssert.Equal(1, paged.Sum(page => page.Images.Count));
             }
 
-            PdfPage[] Render(int afterColumns, bool lastColumn, bool addNextPage)
+            var continuous = Render(2, false, "continuous");
+            TestAssert.Equal(1, continuous.Length);
+            TestAssert.Equal(secondGlyphs.X, Find(continuous[0], third).X);
+            TestAssert.Equal(0, continuous[0].Annotations.Single().Destination?.PageIndex);
+
+            var differentPaper = Render(2, false, "continuous", paperWidth: 540);
+            TestAssert.Equal(2, differentPaper.Length);
+            TestAssert.Equal(612d, differentPaper[0].Width);
+            TestAssert.Equal(540d, differentPaper[1].Width);
+            TestAssert.Equal(1, differentPaper[0].Images.Count);
+            TestAssert.Equal(secondGlyphs, Find(differentPaper[0], second));
+            TestAssert.Equal(Find(nextPage[1], third), Find(differentPaper[1], third));
+            TestAssert.Equal(1, differentPaper[0].Annotations.Single().Destination?.PageIndex);
+
+            PdfPage[] Render(int afterColumns, bool lastColumn, string? thirdStart = null, int paperWidth = 612)
             {
                 DocxDocument source = ReadComposedSections("nextPage", "nextColumn", "picture", mode, editBody: body =>
                 {
@@ -56,11 +70,18 @@ internal static partial class DocxFootnotesTests
                     {
                         body.Descendants(w + "r").First().AddFirst(new XElement(w + "br", new XAttribute(w + "type", "column")));
                     }
-                    if (addNextPage)
+                    if (thirdStart is not null)
                     {
+                        const string target = "PublicThirdSection";
+                        body.Elements(w + "p").First().Add(new XElement(w + "hyperlink", new XAttribute(w + "anchor", target),
+                            new XElement(w + "r", new XElement(w + "t", "Follow"))));
                         body.Elements(w + "p").Last().AddFirst(new XElement(w + "pPr", new XElement(finalSection)));
-                        finalSection.Element(w + "type")!.SetAttributeValue(w + "val", "nextPage");
-                        finalSection.AddBeforeSelf(new XElement(w + "p", new XElement(w + "r", new XElement(w + "t", third))));
+                        finalSection.Element(w + "type")!.SetAttributeValue(w + "val", thirdStart);
+                        finalSection.Element(w + "pgSz")!.SetAttributeValue(w + "w", paperWidth * 20);
+                        finalSection.AddBeforeSelf(new XElement(w + "p",
+                            new XElement(w + "bookmarkStart", new XAttribute(w + "id", "1"), new XAttribute(w + "name", target)),
+                            new XElement(w + "r", new XElement(w + "t", third)),
+                            new XElement(w + "bookmarkEnd", new XAttribute(w + "id", "1"))));
                     }
                 });
                 return SectionCompositionRenderer(mode).RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
