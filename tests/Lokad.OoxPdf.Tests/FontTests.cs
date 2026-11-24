@@ -605,7 +605,7 @@ internal static partial class FontTests
         }
     }
 
-    private sealed class FamilyFontResolver(IReadOnlyDictionary<string, byte[]> fontsByFamily, string fallbackFamily) : IFontResolver
+    internal sealed class FamilyFontResolver(IReadOnlyDictionary<string, byte[]> fontsByFamily, string fallbackFamily) : IFontResolver
     {
         public FontFaceResolution Resolve(FontRequest request)
         {

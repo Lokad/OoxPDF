@@ -261,137 +261,93 @@ internal static class DocxFontRenderingTests
         TestAssert.Equal("Wide", lines[1].Segments.Single().StyleRun.FontFamily ?? string.Empty);
     }
 
+    private const string SelectedFace = "Selection Test Face";
+    private const string FallbackFace = "Selection Fallback Face";
+
     public static void DocxRendererUsesThemeTypefaceForThemeOnlyDefaultRun()
     {
-        var resolver = new WindowsFontResolver(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts"));
-        string defaultFamily = resolver.Resolve(new FontRequest(DocxRenderer.DefaultDocumentTypefaceRequest)).FamilyName;
-        (FontFaceResolution Resolution, OpenTypeFont Font)? font = DocxTests.FindUsableInstalledFontExcept(defaultFamily);
-        if (font is null)
-        {
-            TestAssert.Skip("Environmental precondition not met: (font is null)");
-        }
-
-        string family = System.Security.SecurityElement.Escape(font.Value.Resolution.FamilyName) ?? font.Value.Resolution.FamilyName;
-        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-                  <Default Extension="xml" ContentType="application/xml"/>
-                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
-                  <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
-                  <Override PartName="/word/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>
-                </Types>
-                """,
-            ["_rels/.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
-                </Relationships>
-                """,
-            ["word/_rels/document.xml.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
-                  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/>
-                </Relationships>
-                """,
-            ["word/styles.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
+        AssertSelectedFontPaint("<w:r><w:t>Theme default</w:t></w:r>", "Theme default",
+            ("styles", "styles.xml", "wordprocessingml.styles",
+                """
                 <w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
                   <w:docDefaults>
                     <w:rPrDefault><w:rPr><w:rFonts w:asciiTheme="minorHAnsi" w:hAnsiTheme="minorHAnsi"/></w:rPr></w:rPrDefault>
                   </w:docDefaults>
                 </w:styles>
-                """,
-            ["word/theme/theme1.xml"] = $$"""
-                <?xml version="1.0" encoding="UTF-8"?>
+                """),
+            ("theme", "theme/theme1.xml", "theme",
+                $$"""
                 <a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="Theme">
                   <a:themeElements>
                     <a:fontScheme name="Theme Fonts">
-                      <a:majorFont><a:latin typeface="{{family}}"/></a:majorFont>
-                      <a:minorFont><a:latin typeface="{{family}}"/></a:minorFont>
+                      <a:majorFont><a:latin typeface="{{FallbackFace}}"/></a:majorFont>
+                      <a:minorFont><a:latin typeface="{{SelectedFace}}"/></a:minorFont>
                     </a:fontScheme>
                   </a:themeElements>
                 </a:theme>
-                """,
-            ["word/document.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-                  <w:body>
-                    <w:p><w:r><w:t>Theme default</w:t></w:r></w:p>
-                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
-                  </w:body>
-                </w:document>
-                """
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { FontResolver = resolver });
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("/BaseFont /", pdf); TestAssert.Contains("+" + PdfEmbeddedFont.SanitizeName(font.Value.Resolution.FamilyName), pdf);
+                """));
     }
 
     public static void DocxRendererUsesFontCatalogAlternateBeforeResolverFallback()
     {
-        var resolver = new WindowsFontResolver(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts"));
-        string defaultFamily = resolver.Resolve(new FontRequest(DocxRenderer.DefaultDocumentTypefaceRequest)).FamilyName;
-        (FontFaceResolution Resolution, OpenTypeFont Font)? font = DocxTests.FindUsableInstalledFontExcept(defaultFamily);
-        if (font is null)
-        {
-            TestAssert.Skip("Environmental precondition not met: (font is null)");
-        }
-
-        string family = System.Security.SecurityElement.Escape(font.Value.Resolution.FamilyName) ?? font.Value.Resolution.FamilyName;
-        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-                  <Default Extension="xml" ContentType="application/xml"/>
-                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
-                  <Override PartName="/word/fontTable.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.fontTable+xml"/>
-                </Types>
-                """,
-            ["_rels/.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
-                </Relationships>
-                """,
-            ["word/_rels/document.xml.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rIdFontTable" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/fontTable" Target="fontTable.xml"/>
-                </Relationships>
-                """,
-            ["word/fontTable.xml"] = $$"""
-                <?xml version="1.0" encoding="UTF-8"?>
+        AssertSelectedFontPaint("""
+            <w:r><w:rPr><w:rFonts w:ascii="Unavailable Corporate Face" w:hAnsi="Unavailable Corporate Face"/></w:rPr><w:t>Alternate font</w:t></w:r>
+            """, "Alternate font",
+            ("fontTable", "fontTable.xml", "wordprocessingml.fontTable",
+                $$"""
                 <w:fonts xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-                  <w:font w:name="Unavailable Corporate Face">
-                    <w:altName w:val="{{family}}"/>
-                  </w:font>
+                  <w:font w:name="Unavailable Corporate Face"><w:altName w:val="{{SelectedFace}}"/></w:font>
                 </w:fonts>
+                """));
+    }
+
+    private static void AssertSelectedFontPaint(string run, string text,
+        params (string Relationship, string Target, string ContentType, string Xml)[] parts)
+    {
+        var entries = new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = TestFixtures.DocxContentTypes.Replace("</Types>", string.Concat(parts.Select(part =>
+                $"""<Override PartName="/word/{part.Target}" ContentType="application/vnd.openxmlformats-officedocument.{part.ContentType}+xml"/>""")) + "</Types>"),
+            ["_rels/.rels"] = TestFixtures.DocxPackageRelationships,
+            ["word/_rels/document.xml.rels"] = $$"""
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                {{string.Concat(parts.Select(part => $"""<Relationship Id="{part.Relationship}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/{part.Relationship}" Target="{part.Target}"/>"""))}}
+                </Relationships>
                 """,
-            ["word/document.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
+            ["word/document.xml"] = $$"""
                 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
                   <w:body>
-                    <w:p><w:r><w:rPr><w:rFonts w:ascii="Unavailable Corporate Face" w:hAnsi="Unavailable Corporate Face"/></w:rPr><w:t>Alternate font</w:t></w:r></w:p>
+                    <w:p>{{run}}</w:p>
+                    <w:p><w:r><w:rPr><w:rFonts w:ascii="{{SelectedFace}}" w:hAnsi="{{SelectedFace}}"/></w:rPr><w:t>Independent face</w:t></w:r></w:p>
+                    <w:p><w:r><w:rPr><w:rFonts w:ascii="{{FallbackFace}}" w:hAnsi="{{FallbackFace}}"/></w:rPr><w:t>Fallback control</w:t></w:r></w:p>
                     <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
                   </w:body>
                 </w:document>
                 """
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        };
+        foreach (var part in parts)
+            entries.Add("word/" + part.Target, part.Xml);
 
-        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { FontResolver = resolver });
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("/BaseFont /", pdf); TestAssert.Contains("+" + PdfEmbeddedFont.SanitizeName(font.Value.Resolution.FamilyName), pdf);
+        using var stream = TestFixtures.CreateZipPackage(entries);
+        using var package = OoxPackage.Open(stream, CancellationToken.None);
+        var document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
+        var resolver = new FontTests.FamilyFontResolver(new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase)
+        {
+            [SelectedFace] = TestFontBuilder.CreateFontWithFamilyNames((0x0409, SelectedFace)),
+            [FallbackFace] = TestFontBuilder.CreateFontWithFamilyNames((0x0409, FallbackFace))
+        }, FallbackFace);
+        var page = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
+        var rows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true, honorActualText: false)
+            .Where(show => show.Text.Length != 0).GroupBy(show => show.Y).ToArray();
+        (string Text, string Family)[] expected = [(text, SelectedFace), ("Independent face", SelectedFace), ("Fallback control", FallbackFace)];
+        TestAssert.Equal(expected.Length, rows.Length);
+        for (int i = 0; i < rows.Length; i++)
+        {
+            TestAssert.Equal(expected[i].Text, string.Concat(rows[i].Select(show => show.Text)).TrimEnd(' '));
+            TestAssert.True(rows[i].All(show => show.Font.Font.FamilyName == expected[i].Family),
+                $"'{expected[i].Text}' must paint with the embedded {expected[i].Family}.");
+        }
     }
 
     public static void DocxRendererEmbedsResolvedTrueTypeCollectionFace()

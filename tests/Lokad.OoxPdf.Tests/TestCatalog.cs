@@ -172,7 +172,9 @@ internal static class TestCatalog
         .. FromType("docx-tables", typeof(DocxTablesMarkupTests)),
         .. FromType("docx-core", typeof(DocxCoreTests)),
         .. FromType("docx-core", typeof(DocxHyperlinksTests)),
-        .. FromType("docx-core", typeof(DocxFontRenderingTests)),
+        .. FromType(name => name is nameof(DocxFontRenderingTests.DocxRendererUsesThemeTypefaceForThemeOnlyDefaultRun)
+            or nameof(DocxFontRenderingTests.DocxRendererUsesFontCatalogAlternateBeforeResolverFallback)
+            ? "docx-composition-portable" : "docx-core", typeof(DocxFontRenderingTests)),
         .. FromType("docx-core", typeof(DocxFontCacheTests)),
         .. FromType("docx-core", typeof(DocxFieldsTests)),
         .. FromType("docx-core", typeof(DocxDynamicFieldFormatTests)),
