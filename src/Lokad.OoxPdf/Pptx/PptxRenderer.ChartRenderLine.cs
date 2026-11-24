@@ -563,7 +563,7 @@ internal sealed partial class PptxRenderer
                 double right = presetRight;
                 if (categoryPlot is { } titleLegendPlot)
                 {
-                    IReadOnlyList<ChartSeriesNameRecord> titleLegendSeriesNames = ReadSharedChartSeriesNames(titleLegendPlot, workbook);
+                    IReadOnlyList<string> titleLegendSeriesNames = ReadSharedChartSeriesNames(titleLegendPlot, workbook);
                     double titleLegendWidth = (await ResolveRightLegendWidthAsync(titleLegendSeriesNames, legendTextStyle, includeAreaReserve: false, fontResolver, lastCategoryLabelWidth: 0d).ConfigureAwait(false));
                     right = ResolveTitledRightLegendPlotRight(presetRight, frame.X + frame.Width, titleLegendWidth);
                 }
@@ -628,7 +628,7 @@ internal sealed partial class PptxRenderer
         if (plot is null)
             return GetChartPlotBoxPreset(frame, ChartPlotBoxPreset.LineNoTitleRightLegend);
         PptxSceneChartPlotKind plotKind = plot.PlotKind;
-        IReadOnlyList<ChartSeriesNameRecord> seriesNames = ReadSharedChartSeriesNames(plot, workbook);
+        IReadOnlyList<string> seriesNames = ReadSharedChartSeriesNames(plot, workbook);
         double lastCategoryLabelWidth = plotKind == PptxSceneChartPlotKind.Area
             ? (await MeasureLastCategoryLabelWidthAsync(theme, sceneChart, plot, workbook, plotVisibleOnly, fontResolver).ConfigureAwait(false))
             : 0d;
@@ -841,16 +841,16 @@ internal sealed partial class PptxRenderer
         return measurer.Measure(lastLabel, style);
     }
 
-    private static async ValueTask<double> ResolveRightLegendWidthAsync(IReadOnlyList<ChartSeriesNameRecord> seriesNames, ChartTextStyle legendTextStyle, bool includeAreaReserve, PresentationFontResolver? fontResolver, double lastCategoryLabelWidth, double lastXLabelWidth = 0d)
+    private static async ValueTask<double> ResolveRightLegendWidthAsync(IReadOnlyList<string> seriesNames, ChartTextStyle legendTextStyle, bool includeAreaReserve, PresentationFontResolver? fontResolver, double lastCategoryLabelWidth, double lastXLabelWidth = 0d)
     {
         double legendFontSize = legendTextStyle.FontSize;
         // Legend layout measures unkerned advances like the emission (Office legend advances
         // equal natural widths; the kerned default under-reads kern-heavy names and narrows reserves).
         var textMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
-        await textMeasurer.PrepareAsync(seriesNames.Select(name => name.ActiveName), legendTextStyle).ConfigureAwait(false);
+        await textMeasurer.PrepareAsync(seriesNames, legendTextStyle).ConfigureAwait(false);
         double maxLegendTextWidth = seriesNames.Count == 0
             ? 0d
-            : seriesNames.Max(name => textMeasurer.Measure(name.ActiveName, legendTextStyle));
+            : seriesNames.Max(name => textMeasurer.Measure(name, legendTextStyle));
         double rightReserve = maxLegendTextWidth +
             ComputeRightLegendReservePadding(legendFontSize, includeAreaReserve, lastCategoryLabelWidth, lastXLabelWidth);
 

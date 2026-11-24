@@ -24,7 +24,7 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<ChartSeriesFill?> seriesFills,
         ChartDataLabelOptions labelOptions,
         IReadOnlyList<ChartDataLabelOptions> seriesLabelOptions,
-        IReadOnlyList<ChartSeriesNameRecord> seriesNames,
+        IReadOnlyList<string> seriesNames,
         PresentationFontResolver? fontResolver,
         List<PdfFontResource> chartFonts,
         PptxRenderContext context,
@@ -145,7 +145,7 @@ internal sealed partial class PptxRenderer
         ScatterPoint point,
         int seriesIndex,
         ChartDataLabelOptions options,
-        IReadOnlyList<ChartSeriesNameRecord> seriesNames)
+        IReadOnlyList<string> seriesNames)
     {
         if (!string.IsNullOrWhiteSpace(options.CustomText))
         {

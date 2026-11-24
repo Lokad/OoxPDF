@@ -506,21 +506,8 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct ChartNumberFormat(bool IsDefined, string FormatCode, bool? SourceLinked, string SourceLinkedValue);
 
-    internal enum ChartSeriesNameSource
-    {
-        Default,
-        Cache,
-        Workbook
-    }
-
-    // R16: internal so the per-frame shared series-name memo carries the record type.
-    internal readonly record struct ChartSeriesNameRecord(
-        string ActiveName,
-        ChartSeriesNameSource ActiveNameSource,
-        PptxSceneChartDataSource Source,
-        IReadOnlyList<ChartIndexedTextPoint> WorkbookPoints);
-
-    private readonly record struct ChartLegendEntry(string Name, ChartSeriesFill? Fill, ChartSeriesStroke? Stroke, ChartMarkerStyle? Marker, ChartSeriesNameRecord? SeriesName, bool LineHidden, int? ChartStyleId = null, RgbColor? MarkerColor = null);
+    private readonly record struct ChartLegendEntry(string Name, ChartSeriesFill? Fill, ChartSeriesStroke? Stroke,
+        ChartMarkerStyle? Marker, bool IsSeriesKey, bool LineHidden, int? ChartStyleId = null, RgbColor? MarkerColor = null);
 
     private enum ChartLegendPlacement
     {

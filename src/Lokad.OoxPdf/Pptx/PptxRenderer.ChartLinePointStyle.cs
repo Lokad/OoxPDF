@@ -81,7 +81,7 @@ internal sealed partial class PptxRenderer
             marker = marker with { Stroke = marker.Stroke ?? new ChartSeriesStroke(point.MarkerOutlineColor, 1d,
                 point.MarkerOutlineWidth ?? (IsGalleryLineChartStyle(styleId) ? PptxChartMarkerMetricRules.StyleLineMarkerOutlineWidth : PptxChartMarkerMetricRules.DefaultMarkerOutlineWidth)) with { Join = 1 } };
             entries.Add(new ChartLegendEntry(index < labels.Count ? labels[index]?.Text ?? string.Empty : string.Empty,
-                null, point.Stroke, marker, null, false, styleId, point.MarkerColor));
+                null, point.Stroke, marker, IsSeriesKey: false, LineHidden: false, styleId, point.MarkerColor));
         }
         return entries;
     }

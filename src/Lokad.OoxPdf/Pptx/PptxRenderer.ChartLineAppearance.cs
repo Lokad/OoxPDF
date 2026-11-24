@@ -85,7 +85,7 @@ internal sealed partial class PptxRenderer
             var marker = themeWidth is null ? ResolveStrokeLegendMarker(paint.Marker, i, styleId)!.Value : paint.Marker;
             marker = marker with { Stroke = marker.Stroke ?? new ChartSeriesStroke(paint.MarkerOutlineColor, 1d,
                 paint.MarkerOutlineWidth ?? (IsGalleryLineChartStyle(styleId) ? PptxChartMarkerMetricRules.StyleLineMarkerOutlineWidth : PptxChartMarkerMetricRules.DefaultMarkerOutlineWidth)) with { Join = 1 } };
-            entries.Add(new(names[i].ActiveName, null, stroke, marker, names[i], paint.Stroke.Alpha <= .001d, styleId, paint.MarkerColor));
+            entries.Add(new(names[i], null, stroke, marker, IsSeriesKey: true, paint.Stroke.Alpha <= .001d, styleId, paint.MarkerColor));
         }
         if (reverseOrder) entries.Reverse();
         return entries;

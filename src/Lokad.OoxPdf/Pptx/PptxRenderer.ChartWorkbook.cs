@@ -129,7 +129,7 @@ internal sealed partial class PptxRenderer
         // nothing accumulates across frames or charts.
         private readonly Dictionary<(PptxSceneChartPlot Plot, bool PlotVisibleOnly), IReadOnlyList<ChartIndexedTextPoint?>> labelMemo = new();
 
-        private readonly Dictionary<PptxSceneChartPlot, IReadOnlyList<ChartSeriesNameRecord>> seriesNameMemo = new();
+        private readonly Dictionary<PptxSceneChartPlot, IReadOnlyList<string>> seriesNameMemo = new();
 
         private readonly Dictionary<(PptxSceneChartPlot Plot, bool PlotVisibleOnly), IReadOnlyList<ChartIndexedNumberVector>> seriesVectorsMemo = new();
 
@@ -150,16 +150,16 @@ internal sealed partial class PptxRenderer
             lineValueExtentsMemo.Clear();
         }
 
-        internal IReadOnlyList<ChartSeriesNameRecord> GetOrAddSeriesNames(
+        internal IReadOnlyList<string> GetOrAddSeriesNames(
             PptxSceneChartPlot plot,
-            Func<IReadOnlyList<ChartSeriesNameRecord>> factory)
+            Func<IReadOnlyList<string>> factory)
         {
-            if (seriesNameMemo.TryGetValue(plot, out IReadOnlyList<ChartSeriesNameRecord>? cached))
+            if (seriesNameMemo.TryGetValue(plot, out IReadOnlyList<string>? cached))
             {
                 return cached;
             }
 
-            IReadOnlyList<ChartSeriesNameRecord> names = factory();
+            IReadOnlyList<string> names = factory();
             seriesNameMemo[plot] = names;
             return names;
         }

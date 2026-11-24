@@ -63,7 +63,7 @@ internal sealed partial class PptxRenderer
         ChartDataLabelOptions labelOptions,
         ChartDataLabelOptions[] seriesLabelOptions,
         ChartIndexedTextVector categoryLabels,
-        IReadOnlyList<ChartSeriesNameRecord> seriesNames,
+        IReadOnlyList<string> seriesNames,
         PresentationFontResolver? fontResolver,
         List<PdfFontResource> chartFonts,
         PptxRenderContext context,

@@ -614,7 +614,7 @@ internal sealed partial class PptxRenderer
         string? valueFormatCode,
         ChartDataLabelOptions options,
         IReadOnlyDictionary<int, string> categoryLabelIndex,
-        IReadOnlyList<ChartSeriesNameRecord> seriesNames)
+        IReadOnlyList<string> seriesNames)
     {
         var parts = FormatCategoryDataLabelParts(value, seriesIndex, categoryIndex, workbookPoint ?? point,
             valueFormatCode, options, categoryLabelIndex, seriesNames);
@@ -629,7 +629,7 @@ internal sealed partial class PptxRenderer
         string? valueFormatCode,
         ChartDataLabelOptions options,
         IReadOnlyDictionary<int, string> categoryLabelIndex,
-        IReadOnlyList<ChartSeriesNameRecord> seriesNames,
+        IReadOnlyList<string> seriesNames,
         double? polarTotal = null)
     {
         if (!string.IsNullOrWhiteSpace(options.CustomText))
@@ -665,10 +665,10 @@ internal sealed partial class PptxRenderer
         return parts;
     }
 
-    private static string GetActiveSeriesName(IReadOnlyList<ChartSeriesNameRecord> seriesNames, int seriesIndex)
+    private static string GetActiveSeriesName(IReadOnlyList<string> seriesNames, int seriesIndex)
     {
         return seriesIndex >= 0 && seriesIndex < seriesNames.Count
-            ? seriesNames[seriesIndex].ActiveName
+            ? seriesNames[seriesIndex]
             : string.Empty;
     }
 

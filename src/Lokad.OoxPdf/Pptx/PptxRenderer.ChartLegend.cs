@@ -11,7 +11,7 @@ internal sealed partial class PptxRenderer
 {
     private static IReadOnlyList<ChartLegendEntry> BuildFillLegendEntries(PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, PptxSceneChartPlot plot, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?>? seriesStrokes, int paletteOffset, ChartWorkbookData? workbook, bool reverseOrder = false, IReadOnlySet<int>? deletedEntries = null)
     {
-        IReadOnlyList<ChartSeriesNameRecord> names = ReadSharedChartSeriesNames(plot, workbook);
+        IReadOnlyList<string> names = ReadSharedChartSeriesNames(plot, workbook);
         var entries = new List<ChartLegendEntry>(names.Count);
         for (int i = 0; i < names.Count; i++)
         {
@@ -32,7 +32,7 @@ internal sealed partial class PptxRenderer
                 stroke = explicitStroke with { Width = ChartFilledSeriesInheritedStrokeWidth };
             }
 
-            entries.Add(new ChartLegendEntry(names[i].ActiveName, fill, stroke, null, names[i], LineHidden: false));
+            entries.Add(new ChartLegendEntry(names[i], fill, stroke, null, IsSeriesKey: true, LineHidden: false));
         }
 
         // Stacked area legends list top-of-stack first (area-stacked Office reference
@@ -68,7 +68,7 @@ internal sealed partial class PptxRenderer
             ChartSeriesFill fill = resolveFill is not null ? resolveFill(point.Index) : pointFills.TryGetValue(point.Index, out ChartSeriesFill pointFill)
                 ? pointFill
                 : new ChartSeriesFill(ChartPalette(chartPalette, theme, colorMap, point.Index, valuePointCount), 1d, null, null);
-            entries.Add(new ChartLegendEntry(point.Text, fill, resolveStroke?.Invoke(point.Index), null, null, LineHidden: false));
+            entries.Add(new ChartLegendEntry(point.Text, fill, resolveStroke?.Invoke(point.Index), null, IsSeriesKey: false, LineHidden: false));
         }
 
         // Value points without category text still draw swatch-only legend rows
@@ -84,7 +84,7 @@ internal sealed partial class PptxRenderer
             ChartSeriesFill valueFill = resolveFill is not null ? resolveFill(valueIndex) : pointFills.TryGetValue(valueIndex, out ChartSeriesFill valuePointFill)
                 ? valuePointFill
                 : new ChartSeriesFill(ChartPalette(chartPalette, theme, colorMap, valueIndex, valuePointCount), 1d, null, null);
-            entries.Add(new ChartLegendEntry(string.Empty, valueFill, resolveStroke?.Invoke(valueIndex), null, null, LineHidden: false));
+            entries.Add(new ChartLegendEntry(string.Empty, valueFill, resolveStroke?.Invoke(valueIndex), null, IsSeriesKey: false, LineHidden: false));
         }
 
         return entries;
@@ -100,7 +100,7 @@ internal sealed partial class PptxRenderer
 
     private static IReadOnlyList<ChartLegendEntry> BuildStrokeLegendEntries(PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, PptxSceneChartPlot plot, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle>? markerStyles, bool reverseOrder, ChartWorkbookData? workbook, IReadOnlyList<bool>? seriesLineHidden = null, int? chartStyleId = null)
     {
-        IReadOnlyList<ChartSeriesNameRecord> names = ReadSharedChartSeriesNames(plot, workbook);
+        IReadOnlyList<string> names = ReadSharedChartSeriesNames(plot, workbook);
         var entries = new List<ChartLegendEntry>(names.Count);
         for (int i = 0; i < names.Count; i++)
         {
@@ -125,7 +125,7 @@ internal sealed partial class PptxRenderer
                     keyStroke = keyStroke with { Width = ResolveStyleLineSeriesWidth(chartStyleId, false) };
                 }
             }
-            entries.Add(new ChartLegendEntry(names[i].ActiveName, null, keyStroke, marker, names[i], LineHidden: lineHidden, ChartStyleId: chartStyleId));
+            entries.Add(new ChartLegendEntry(names[i], null, keyStroke, marker, IsSeriesKey: true, LineHidden: lineHidden, ChartStyleId: chartStyleId));
         }
 
         if (reverseOrder)
@@ -143,30 +143,19 @@ internal sealed partial class PptxRenderer
                 Size = PptxChartMarkerMetricRules.StyleLegendMarkerSize }
             : marker;
 
-    private static IReadOnlyList<ChartSeriesNameRecord> ReadSceneChartSeriesNameRecords(PptxSceneChartPlot plot, ChartWorkbookData? workbook)
+    private static IReadOnlyList<string> ReadSceneChartSeriesNames(PptxSceneChartPlot plot, ChartWorkbookData? workbook)
     {
         return plot.Series
             .Select((series, index) =>
             {
-                IReadOnlyList<ChartIndexedTextPoint> workbookPoints = ReadWorkbookTextPoints(workbook, series.DataSources.Name);
                 if (!string.IsNullOrWhiteSpace(series.Name))
                 {
-                    return new ChartSeriesNameRecord(
-                        series.Name.Trim(),
-                        ChartSeriesNameSource.Cache,
-                        series.DataSources.Name,
-                        workbookPoints);
+                    return series.Name.Trim();
                 }
 
-                string? workbookName = workbookPoints
-                    .Where(value => value.HasText)
-                    .Select(value => value.Text)
-                    .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
-                return new ChartSeriesNameRecord(
-                    string.IsNullOrWhiteSpace(workbookName) ? $"Series {index + 1}" : workbookName.Trim(),
-                    string.IsNullOrWhiteSpace(workbookName) ? ChartSeriesNameSource.Default : ChartSeriesNameSource.Workbook,
-                    series.DataSources.Name,
-                    workbookPoints);
+                string? workbookName = workbook?.ReadRangeCells(series.DataSources.Name.Formula)
+                    .FirstOrDefault(cell => cell.HasValue && !string.IsNullOrWhiteSpace(cell.Text)).Text;
+                return string.IsNullOrWhiteSpace(workbookName) ? $"Series {index + 1}" : workbookName.Trim();
             })
             .ToArray();
     }
@@ -670,7 +659,7 @@ internal sealed partial class PptxRenderer
         {
             return ComputeHorizontalLegendInterEntryGap(style.FontSize, advanceRange: 0d, bottomLegend: false);
         }
-        if (entries.Count > 0 && entries.All(entry => entry.SeriesName is not null && entry.Fill is not null && entry.Stroke is null))
+        if (entries.Count > 0 && entries.All(entry => entry.IsSeriesKey && entry.Fill is not null && entry.Stroke is null))
         {
             return ComputePerSeriesHorizontalLegendInterEntryGap(style.FontSize, ComputeHorizontalLegendAdvanceMean(entries, style, textMeasurer));
         }

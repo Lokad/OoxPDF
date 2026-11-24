@@ -388,18 +388,18 @@ internal sealed partial class PptxRenderer
 
     // R15: per-frame shared series names behind one call shape, mirroring shared
     // category labels. Workbook-less charts read directly.
-    private static IReadOnlyList<ChartSeriesNameRecord> ReadSharedChartSeriesNames(
+    internal static IReadOnlyList<string> ReadSharedChartSeriesNames(
         PptxSceneChartPlot plot,
         ChartWorkbookData? workbook)
     {
         if (workbook is null)
         {
-            return ReadSceneChartSeriesNameRecords(plot, workbook);
+            return ReadSceneChartSeriesNames(plot, workbook);
         }
 
         return workbook.GetOrAddSeriesNames(
             plot,
-            () => ReadSceneChartSeriesNameRecords(plot, workbook));
+            () => ReadSceneChartSeriesNames(plot, workbook));
     }
 
     // R15: per-frame shared series vectors behind one call shape, mirroring shared

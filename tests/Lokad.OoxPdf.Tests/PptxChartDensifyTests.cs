@@ -237,22 +237,22 @@ internal static class PptxChartDensifyTests
     public static void SeriesNameMemoSharesResultsWithinFrame()
     {
         var (workbook, plot, otherPlot) = CreateMemoContext();
-        IReadOnlyList<PptxRenderer.ChartSeriesNameRecord> firstResult = [new("First", PptxRenderer.ChartSeriesNameSource.Cache, default, [])];
-        IReadOnlyList<PptxRenderer.ChartSeriesNameRecord> otherResult = [new("Other", PptxRenderer.ChartSeriesNameSource.Cache, default, [])];
+        IReadOnlyList<string> firstResult = ["First"];
+        IReadOnlyList<string> otherResult = ["Other"];
         TestAssert.True(!ReferenceEquals(firstResult, otherResult), "Factory results must be independently distinguishable.");
         int computations = 0;
-        Func<IReadOnlyList<PptxRenderer.ChartSeriesNameRecord>> firstFactory = () => { computations++; return firstResult; };
-        Func<IReadOnlyList<PptxRenderer.ChartSeriesNameRecord>> otherFactory = () => { computations++; return otherResult; };
+        Func<IReadOnlyList<string>> firstFactory = () => { computations++; return firstResult; };
+        Func<IReadOnlyList<string>> otherFactory = () => { computations++; return otherResult; };
         var first = workbook.GetOrAddSeriesNames(plot, firstFactory);
         var repeat = workbook.GetOrAddSeriesNames(plot, otherFactory);
         TestAssert.True(ReferenceEquals(first, repeat) && ReferenceEquals(first, firstResult), "The same plot shares its names.");
-        TestAssert.Equal("First", repeat.Single().ActiveName);
+        TestAssert.Equal("First", repeat.Single());
         TestAssert.Equal(1, computations);
         TestAssert.True(ReferenceEquals(otherResult, workbook.GetOrAddSeriesNames(otherPlot, otherFactory)), "Another plot owns its names.");
         workbook.ClearRangeMemo();
         var next = workbook.GetOrAddSeriesNames(plot, otherFactory);
         TestAssert.True(ReferenceEquals(next, otherResult), "Clearing recomputes the original key.");
-        TestAssert.Equal("Other", next.Single().ActiveName);
+        TestAssert.Equal("Other", next.Single());
         TestAssert.Equal(3, computations);
     }
 
@@ -525,15 +525,12 @@ internal static class PptxChartDensifyTests
         Type optionsType = typeof(PptxRenderer).GetNestedType("ChartDataLabelOptions", BindingFlags.NonPublic)
             ?? throw new InvalidOperationException("Expected label options type.");
         object options = Activator.CreateInstance(optionsType)!;
-        Type namesType = typeof(PptxRenderer).GetNestedType("ChartSeriesNameRecord", BindingFlags.NonPublic)
-            ?? throw new InvalidOperationException("Expected series name type.");
-        Array names = Array.CreateInstance(namesType, 0);
         MethodInfo format = typeof(PptxRenderer).GetMethod("FormatCartesianDataLabel", BindingFlags.NonPublic | BindingFlags.Static)
             ?? throw new InvalidOperationException("Expected cartesian label formatter.");
         string label;
         try
         {
-            label = (string)format.Invoke(null, [1.5, 0, 0, null, null, null, options, new ThrowingCategoryIndex(), names])!;
+            label = (string)format.Invoke(null, [1.5, 0, 0, null, null, null, options, new ThrowingCategoryIndex(), Array.Empty<string>()])!;
         }
         catch (TargetInvocationException ex)
         {

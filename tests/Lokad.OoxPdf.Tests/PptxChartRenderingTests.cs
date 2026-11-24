@@ -1260,78 +1260,48 @@ internal static class PptxChartRenderingTests
             </c:chartSpace>
             """)).Plots.Single();
 
-    public static void PptxChartSeriesNamesPreserveWorkbookSidecarPoints()
+    public static void PptxChartSeriesNamesPreferCacheThenWorkbookText()
     {
-        const string chartXml = """
-            <?xml version="1.0" encoding="UTF-8"?>
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
-              <c:chart><c:plotArea><c:lineChart>
-                <c:ser>
-                  <c:tx><c:strRef><c:f>Sheet1!$B$1</c:f><c:strCache><c:pt idx="0"><c:v>Cached Name</c:v></c:pt></c:strCache></c:strRef></c:tx>
-                  <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat>
-                  <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val>
-                </c:ser>
-              </c:lineChart></c:plotArea></c:chart>
-            </c:chartSpace>
-            """;
-        PptxSceneChartPlot plot = PptxTests.BuildSingleChartScene(chartXml)?.Plots.Single()
-            ?? throw new InvalidOperationException("Expected one chart plot.");
+        var cached = BuildChart("<c:strCache><c:pt idx=\"0\"><c:v>  Cached Name  </c:v></c:pt></c:strCache>");
+        var uncached = BuildChart(string.Empty);
+        PptxSceneChartDataSource name = cached.Plots.Single().Series.Single().DataSources.Name;
+        TestAssert.Equal("Sheet1!$B$1:$B$4", name.Formula);
+        TestAssert.Equal(PptxSceneChartDataSourceReferenceKind.StringReference, name.ReferenceKindValue);
+        TestAssert.Equal(PptxSceneChartDataSourceCacheKind.StringCache, name.CacheKindValue);
+        TestAssert.True(name.HasCachedPoints, "The parsed chart retains its name cache.");
+
         var sheets = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase)
         {
             ["Sheet1"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                ["B1"] = "Workbook Name"
+                ["B1"] = "   ", ["B3"] = "  Workbook Name  ", ["B4"] = "Later Name"
             }
         };
-        object workbook = PptxChartRangeTests.ReadWorkbookCells(sheets);
-        System.Reflection.MethodInfo readNameRecords = typeof(PptxRenderer).GetMethod(
-            "ReadSceneChartSeriesNameRecords",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected series-name record reader.");
+        var workbook = PptxChartRangeTests.ReadWorkbookCells(sheets);
+        TestAssert.True(workbook.EstimateRangeConstruction(cached, default) < workbook.EstimateRangeConstruction(uncached, default),
+            "Only the uncached name adds a workbook range to the frame admission estimate.");
+        TestAssert.Equal("Cached Name", PptxRenderer.ReadSharedChartSeriesNames(cached.Plots.Single(), workbook).Single());
+        TestAssert.Equal("Workbook Name", PptxRenderer.ReadSharedChartSeriesNames(uncached.Plots.Single(), workbook).Single());
 
-        object[] records = (((System.Collections.IEnumerable?)readNameRecords.Invoke(null, [plot, workbook])) ?? throw new InvalidOperationException("Expected series-name records.")).Cast<object>().ToArray();
+        using var cancellation = new CancellationTokenSource();
+        var cancelledWorkbook = PptxChartRangeTests.ReadWorkbookCells(sheets, cancellation.Token);
+        cancellation.Cancel();
+        TestAssert.Equal("Cached Name", PptxRenderer.ReadSharedChartSeriesNames(cached.Plots.Single(), cancelledWorkbook).Single());
+        var failure = TestAssert.Throws<OperationCanceledException>(() =>
+            PptxRenderer.ReadSharedChartSeriesNames(uncached.Plots.Single(), cancelledWorkbook));
+        TestAssert.Equal(cancellation.Token, failure.CancellationToken);
 
-        TestAssert.True(records.Length == 1, "Expected one series-name record.");
-        TestAssert.Equal("Cached Name", (string?)records[0].GetType().GetProperty("ActiveName")?.GetValue(records[0]) ?? string.Empty);
-        TestAssert.Equal("Cache", records[0].GetType().GetProperty("ActiveNameSource")?.GetValue(records[0])?.ToString() ?? string.Empty);
-        object[] workbookPoints = (((System.Collections.IEnumerable?)records[0].GetType().GetProperty("WorkbookPoints")?.GetValue(records[0])) ?? throw new InvalidOperationException("Expected workbook series-name sidecar points.")).Cast<object>().ToArray();
-        TestAssert.True(workbookPoints.Length == 1, "Expected series-name sidecar to preserve the workbook source name.");
-        TestAssert.Equal("Workbook Name", (string?)workbookPoints[0].GetType().GetProperty("Text")?.GetValue(workbookPoints[0]) ?? string.Empty);
-        object workbookCell = workbookPoints[0].GetType().GetProperty("WorkbookCell")?.GetValue(workbookPoints[0]) ?? throw new InvalidOperationException("Expected series-name workbook cell provenance.");
-        TestAssert.Equal("Workbook Name", ((PptxRenderer.ChartWorkbookRangeCell)workbookCell).Text);
-        TestAssert.Equal(0, ((PptxRenderer.ChartWorkbookRangeCell)workbookCell).Index);
-        Array typedRecords = Array.CreateInstance(records[0].GetType(), records.Length);
-        typedRecords.SetValue(records[0], 0);
-        System.Reflection.MethodInfo getActiveSeriesName = typeof(PptxRenderer).GetMethod(
-            "GetActiveSeriesName",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected active series-name helper.");
-        string activeSeriesName = (string?)getActiveSeriesName.Invoke(null, [typedRecords, 0]) ?? string.Empty;
-        TestAssert.Equal("Cached Name", activeSeriesName);
-
-        object source = records[0].GetType().GetProperty("Source")?.GetValue(records[0]) ?? throw new InvalidOperationException("Expected parsed series-name source metadata.");
-        TestAssert.Equal("Sheet1!$B$1", (string?)source.GetType().GetProperty("Formula")?.GetValue(source) ?? string.Empty);
-        TestAssert.Equal(PptxSceneChartDataSourceReferenceKind.StringReference, (PptxSceneChartDataSourceReferenceKind?)source.GetType().GetProperty("ReferenceKindValue")?.GetValue(source) ?? default);
-        TestAssert.Equal("strRef", (string?)source.GetType().GetProperty("ReferenceKind")?.GetValue(source) ?? string.Empty);
-        TestAssert.Equal(PptxSceneChartDataSourceCacheKind.StringCache, (PptxSceneChartDataSourceCacheKind?)source.GetType().GetProperty("CacheKindValue")?.GetValue(source) ?? default);
-        TestAssert.Equal("strCache", (string?)source.GetType().GetProperty("CacheKind")?.GetValue(source) ?? string.Empty);
-        TestAssert.True((bool?)source.GetType().GetProperty("HasCachedPoints")?.GetValue(source) == true, "Expected parsed series-name cache point presence to survive scene parsing.");
-
-        const string noCacheChartXml = """
-            <?xml version="1.0" encoding="UTF-8"?>
+        static PptxSceneChart BuildChart(string cache) => TestAssert.NotNull(PptxTests.BuildSingleChartScene($$"""
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
               <c:chart><c:plotArea><c:lineChart>
                 <c:ser>
-                  <c:tx><c:strRef><c:f>Sheet1!$B$1</c:f></c:strRef></c:tx>
+                  <c:tx><c:strRef><c:f>Sheet1!$B$1:$B$4</c:f>{{cache}}</c:strRef></c:tx>
                   <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat>
                   <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val>
                 </c:ser>
               </c:lineChart></c:plotArea></c:chart>
             </c:chartSpace>
-            """;
-        PptxSceneChartPlot noCachePlot = PptxTests.BuildSingleChartScene(noCacheChartXml)?.Plots.Single()
-            ?? throw new InvalidOperationException("Expected one no-cache chart plot.");
-        object[] noCacheSceneRecords = (((System.Collections.IEnumerable?)readNameRecords.Invoke(null, [noCachePlot, workbook])) ?? throw new InvalidOperationException("Expected no-cache scene series-name records.")).Cast<object>().ToArray();
-        TestAssert.Equal("Workbook Name", (string?)noCacheSceneRecords[0].GetType().GetProperty("ActiveName")?.GetValue(noCacheSceneRecords[0]) ?? string.Empty);
-        TestAssert.Equal("Workbook", noCacheSceneRecords[0].GetType().GetProperty("ActiveNameSource")?.GetValue(noCacheSceneRecords[0])?.ToString() ?? string.Empty);
+            """));
     }
 
     public static void PptxChartCategoryAxisSourceAcceptsDateAxes()

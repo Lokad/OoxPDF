@@ -374,22 +374,18 @@ internal static class PptxChartPlotOptionsAgreementTests
 
     public static void SeriesNamesUseParsedSourceValues()
     {
-        (string Xml, string Expected, string Source)[] cases =
+        (string Xml, string Expected)[] cases =
         [
-            ("", "Series 1", "Default"),
-            ("<c:tx><c:v>Solo</c:v></c:tx>", "Solo", "Cache"),
-            ("<c:tx><c:v>  Padded  </c:v></c:tx>", "Padded", "Cache"),
-            ("<c:tx><c:strRef><c:f>Sheet1!$A$1</c:f><c:strCache><c:ptCount val=\"1\"/><c:pt idx=\"0\"><c:v>Cached</c:v></c:pt></c:strCache></c:strRef></c:tx>", "Cached", "Cache"),
-            ("<c:tx><c:strRef><c:f>Sheet1!$A$1</c:f></c:strRef></c:tx>", "Series 1", "Default")
+            ("", "Series 1"),
+            ("<c:tx><c:v>Solo</c:v></c:tx>", "Solo"),
+            ("<c:tx><c:v>  Padded  </c:v></c:tx>", "Padded"),
+            ("<c:tx><c:strRef><c:f>Sheet1!$A$1</c:f><c:strCache><c:ptCount val=\"1\"/><c:pt idx=\"0\"><c:v>Cached</c:v></c:pt></c:strCache></c:strRef></c:tx>", "Cached"),
+            ("<c:tx><c:strRef><c:f>Sheet1!$A$1</c:f></c:strRef></c:tx>", "Series 1")
         ];
-        Type workbookType = TestAssert.NotNull(typeof(PptxRenderer).Assembly.GetType("Lokad.OoxPdf.Pptx.PptxRenderer+ChartWorkbookData"));
         foreach (var test in cases)
         {
             PptxSceneChartPlot plot = LoadPlot("barChart", "", test.Xml);
-            object record = ((System.Collections.IEnumerable)TestAssert.NotNull(Invoke("ReadSceneChartSeriesNameRecords",
-                [typeof(PptxSceneChartPlot), workbookType], [plot, null]))).Cast<object>().Single();
-            TestAssert.Equal(test.Expected, (string?)record.GetType().GetProperty("ActiveName")?.GetValue(record) ?? string.Empty);
-            TestAssert.Equal(test.Source, record.GetType().GetProperty("ActiveNameSource")?.GetValue(record)?.ToString() ?? string.Empty);
+            TestAssert.Equal(test.Expected, PptxRenderer.ReadSharedChartSeriesNames(plot, null).Single());
         }
     }
 

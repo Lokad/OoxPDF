@@ -69,8 +69,8 @@ internal sealed partial class PptxRenderer
                             ? BuildFillLegendEntries(theme, colorMap, chartPalette, radarPlot,
                                 seriesFills, seriesStrokes, paletteOffset: 0, workbook)
                             : ReadSharedChartSeriesNames(radarPlot, workbook).Select((name, index) => new ChartLegendEntry(
-                                name.ActiveName, null, ResolveRadarSeriesStroke(theme, colorMap, chartPalette, seriesStrokes, index),
-                                null, name, LineHidden: false)).ToArray();
+                                name, null, ResolveRadarSeriesStroke(theme, colorMap, chartPalette, seriesStrokes, index),
+                                null, IsSeriesKey: true, LineHidden: false)).ToArray();
                         legendStyle = ReadSceneChartLegendTextStyle(theme, sceneChart);
                         legendBox = await PrepareRadarSideLegendAsync(frame, plotBox, legend, legendEntries,
                             legendStyle, fontResolver, horizontalLimits, document.SlideHeightPoints, legendOnLeft).ConfigureAwait(false);

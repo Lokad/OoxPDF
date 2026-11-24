@@ -27,7 +27,11 @@ internal sealed partial class PptxRenderer
                 foreach (var series in plot.Series)
                 {
                     var source = series.DataSources;
-                    Count(source.Name); Count(source.Values); Count(source.Categories);
+                    if (string.IsNullOrWhiteSpace(series.Name))
+                    {
+                        Count(source.Name);
+                    }
+                    Count(source.Values); Count(source.Categories);
                     Count(source.XValues); Count(source.YValues); Count(source.BubbleSizes);
                 }
             }
