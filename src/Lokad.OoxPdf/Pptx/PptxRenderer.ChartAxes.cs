@@ -50,19 +50,10 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct ChartAxisDeclaration(double? Minimum, double? Maximum, double? MajorUnit);
 
-    private static ChartAxisDeclaration? ReadChartAxisDeclaration(PptxSceneChartAxis? axis)
-    {
-        if (axis is not { HasScaling: true, HasLogarithmicScale: false }) return null;
-        var minimum = (axis.Minimum, axis.MinimumValue);
-        var maximum = (axis.Maximum, axis.MaximumValue);
-        var major = (axis.MajorUnit, axis.MajorUnitValue);
-        if (minimum.Item1 is null && !string.IsNullOrEmpty(minimum.Item2) ||
-            maximum.Item1 is null && !string.IsNullOrEmpty(maximum.Item2) ||
-            major.Item1 is null && !string.IsNullOrEmpty(major.Item2) ||
-            minimum.Item1 is { } low && !double.IsFinite(low) || maximum.Item1 is { } high && !double.IsFinite(high) ||
-            major.Item1 is { } unit && (!(unit > 0d) || !double.IsFinite(unit))) return null;
-        return new(minimum.Item1, maximum.Item1, major.Item1);
-    }
+    private static ChartAxisDeclaration? ReadChartAxisDeclaration(PptxSceneChartAxis? axis) =>
+        axis is { HasScaling: true, HasLogarithmicScale: false, HasInvalidScaleValues: false }
+            ? new(axis.Minimum, axis.Maximum, axis.MajorUnit)
+            : null;
 
     private static ChartValueExtents IncludePointAxisZero(ChartValueExtents occupied, double? minimum, double? maximum)
     {
@@ -608,9 +599,9 @@ internal sealed partial class PptxRenderer
         // Unpaired, date/numeric and interior crossings retain their declared fallback.
         PptxSceneChartAxis? category = ReadScenePairedCategoryAxis(chart, sceneAxis);
         if (category is null || sceneAxis?.CrossesAt is not null) return declaredSide;
-        PptxSceneChartAxisCrosses crosses = string.IsNullOrEmpty(sceneAxis?.Crosses)
-            ? PptxSceneChartAxisCrosses.AutoZero
-            : sceneAxis?.CrossesKind ?? PptxSceneChartAxisCrosses.Unknown;
+        var crosses = sceneAxis is { HasCrossesValue: true }
+            ? sceneAxis.CrossesKind
+            : PptxSceneChartAxisCrosses.AutoZero;
         bool reversed = ReadSceneValueAxisReversed(category);
         return crosses switch
         {

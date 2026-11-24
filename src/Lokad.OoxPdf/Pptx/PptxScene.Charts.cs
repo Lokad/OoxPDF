@@ -329,7 +329,7 @@ internal sealed partial class PptxSceneBuilder
             : (null, value);
     }
 
-    internal static (double? Value, string RawValue) ReadChartElementDoubleWithValue(XElement element, string childName)
+    internal static (double? Value, string RawValue) ReadChartElementDoubleWithValue(XElement? element, string childName)
     {
         string value = ReadChartElementValue(element, childName);
         return double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed)
@@ -393,20 +393,21 @@ internal sealed partial class PptxSceneBuilder
             string axisPosition = ReadChartElementValue(axis, "axPos");
             string crosses = ReadChartElementValue(axis, "crosses");
             string crossBetween = ReadChartElementValue(axis, "crossBetween");
-            string orientation = ReadChartElementValue(axis.Element(ChartNamespace + "scaling"), "orientation");
+            XElement? scaling = axis.Element(ChartNamespace + "scaling");
+            string orientation = ReadChartElementValue(scaling, "orientation");
             string tickLabelPosition = ReadChartElementValue(axis, "tickLblPos");
             string majorTickMark = ReadChartElementValue(axis, "majorTickMark");
             double? crossesAt = ReadChartElementDoubleWithValue(axis, "crossesAt").Value;
-            (double? minimum, string minimumValue) = ReadChartAxisScalingValueWithValue(axis, "min");
-            (double? maximum, string maximumValue) = ReadChartAxisScalingValueWithValue(axis, "max");
-            (double? majorUnit, string majorUnitValue) = ReadChartAxisUnitValueWithValue(axis, "majorUnit");
+            var minimum = ReadChartElementDoubleWithValue(scaling, "min");
+            var maximum = ReadChartElementDoubleWithValue(scaling, "max");
+            var majorUnit = ReadChartAxisUnitValueWithValue(axis, "majorUnit");
             double? minorUnit = ReadChartAxisUnitValueWithValue(axis, "minorUnit").Value;
             int? labelOffset = ReadChartElementIntWithValue(axis, "lblOffset").Value;
             (int? tickLabelSkip, string tickLabelSkipValue) = ReadChartElementIntWithValue(axis, "tickLblSkip");
             bool? isDeleted = ReadOptionalChartBoolean(axis, "delete");
             XElement? majorGridlines = axis.Element(ChartNamespace + "majorGridlines");
             XElement? minorGridlines = axis.Element(ChartNamespace + "minorGridlines");
-            bool hasLogarithmicScale = axis.Element(ChartNamespace + "scaling")?.Element(ChartNamespace + "logBase") is not null;
+            bool hasLogarithmicScale = scaling?.Element(ChartNamespace + "logBase") is not null;
             axes.Add(PptxSceneChartAxis.Defined(
                 id,
                 axis.Name.LocalName,
@@ -417,13 +418,11 @@ internal sealed partial class PptxSceneBuilder
                 crossBetween,
                 orientation,
                 isDeleted,
-                axis.Element(ChartNamespace + "scaling") is not null,
-                minimum,
-                minimumValue,
-                maximum,
-                maximumValue,
-                majorUnit,
-                majorUnitValue,
+                scaling is not null,
+                IsInvalidAxisNumber(minimum) || IsInvalidAxisNumber(maximum) || IsInvalidAxisNumber(majorUnit),
+                minimum.Value,
+                maximum.Value,
+                majorUnit.Value,
                 minorUnit,
                 IsChartGridlineVisible(majorGridlines),
                 IsChartGridlineVisible(minorGridlines),
@@ -438,7 +437,7 @@ internal sealed partial class PptxSceneBuilder
                 majorTickMark,
                 labelOffset,
                 tickLabelSkip,
-                tickLabelSkipValue,
+                tickLabelSkipValue.Length != 0,
                 ReadChartNumberFormat(axis),
                 ReadChartTitleElement(axis.Element(ChartNamespace + "title"), theme, colorMap),
                 hasLogarithmicScale: hasLogarithmicScale) with
@@ -448,6 +447,11 @@ internal sealed partial class PptxSceneBuilder
         }
 
         return axes;
+
+        // Empty values retain automatic layout. Parsed values are also used by
+        // the existing fallback paths when a linear declaration is rejected.
+        static bool IsInvalidAxisNumber((double? Value, string RawValue) number) =>
+            number.RawValue.Length != 0 && (number.Value is not double value || !double.IsFinite(value));
     }
 
     private static PptxSceneLineStyle ReadChartStyleRoleLine(PptxSceneChartStyle stylePart, string role)
@@ -577,20 +581,10 @@ internal sealed partial class PptxSceneBuilder
         return resolved.Width < 0d ? ReadChartLine(shapeProperties, theme, colorMap) : resolved;
     }
 
-    internal static (double? Value, string RawValue) ReadChartAxisScalingValueWithValue(XElement axis, string elementName)
+    private static (double? Value, string RawValue) ReadChartAxisUnitValueWithValue(XElement axis, string elementName)
     {
-        string value = ReadChartElementValue(axis.Element(ChartNamespace + "scaling"), elementName);
-        return double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed)
-            ? (parsed, value)
-            : (null, value);
-    }
-
-    internal static (double? Value, string RawValue) ReadChartAxisUnitValueWithValue(XElement axis, string elementName)
-    {
-        string value = ReadChartElementValue(axis, elementName);
-        return double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed) && parsed > 0d
-            ? (parsed, value)
-            : (null, value);
+        var (unit, value) = ReadChartElementDoubleWithValue(axis, elementName);
+        return (unit is > 0d ? unit : null, value);
     }
 
     private static bool IsChartGridlineVisible(XElement? gridlines)

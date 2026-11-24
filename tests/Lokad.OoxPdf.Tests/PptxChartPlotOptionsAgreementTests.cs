@@ -518,7 +518,7 @@ internal static class PptxChartPlotOptionsAgreementTests
 
     public static void ParsedAxisPairsKeepCrossingAndLabelSideOwners()
     {
-        (string Kind, string Orientation, string Cross, bool Reciprocal, string Label,
+        (string Kind, string Orientation, string? Cross, bool Reciprocal, string Label,
             string CrossAt, bool ExpectedSide, bool ExpectedLabelSide)[] cases =
         [
             ("catAx", "maxMin", "max", true, "low", "", false, true),
@@ -526,16 +526,18 @@ internal static class PptxChartPlotOptionsAgreementTests
             ("catAx", "maxMin", "min", true, "high", "", true, false),
             ("catAx", "maxMin", "max", false, "low", "", true, false),
             ("dateAx", "maxMin", "max", true, "low", "", true, false),
-            ("catAx", "maxMin", "", true, "high", "<c:crossesAt val=\"2\"/>", true, false),
+            ("catAx", "maxMin", null, true, "high", "<c:crossesAt val=\"2\"/>", true, false),
             ("catAx", "minMax", "bogus", true, "nextTo", "", true, true),
-            ("catAx", "minMax", "", true, "nextTo", "", false, true)
+            ("catAx", "minMax", null, true, "nextTo", "", false, true),
+            ("catAx", "minMax", "", true, "nextTo", "", false, true),
+            ("catAx", "minMax", "autoZero", true, "nextTo", "", false, true)
         ];
         bool Resolve(string method, PptxSceneChart? chart, PptxSceneChartAxis? axis, bool fallback) =>
             (bool)TestAssert.NotNull(Invoke(method,
                 [typeof(PptxSceneChart), typeof(PptxSceneChartAxis), typeof(bool)], [chart, axis, fallback]));
         foreach (var test in cases)
         {
-            string cross = test.Cross.Length == 0 ? "" : $"<c:crosses val=\"{test.Cross}\"/>";
+            string cross = test.Cross is null ? "" : $"<c:crosses val=\"{test.Cross}\"/>";
             PptxSceneChart chart = TestAssert.NotNull(PptxTests.BuildSingleChartScene(ChartSpace($$"""
                 <c:barChart><c:axId val="10"/><c:axId val="20"/></c:barChart>
                 <c:{{test.Kind}}><c:axId val="10"/><c:crossAx val="{{(test.Reciprocal ? "20" : "99")}}"/>
@@ -544,6 +546,7 @@ internal static class PptxChartPlotOptionsAgreementTests
                   {{cross}}{{test.CrossAt}}<c:tickLblPos val="{{test.Label}}"/></c:valAx>
                 """, "")));
             PptxSceneChartAxis axis = chart.Axes.Single(axis => axis.AxisKind == PptxSceneChartAxisKind.Value);
+            TestAssert.Equal(!string.IsNullOrEmpty(test.Cross), axis.HasCrossesValue);
             TestAssert.Equal(test.ExpectedSide, Resolve("ResolveSceneValueAxisRightSide", chart, axis, true));
             TestAssert.Equal(test.ExpectedLabelSide, Resolve("ResolveSceneValueAxisLabelsRightSide", chart, axis, true));
         }

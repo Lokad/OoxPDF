@@ -870,9 +870,10 @@ internal static partial class PptxChartLegendsTests
         TestAssert.Equal("futurePointExplosion", series.PointStyles[1].ExplosionValue);
     }
 
-    public static void PptxScenePreservesChartAxisNumericOptionTokens()
+    public static void PptxSceneRetainsChartAxisNumericOptionsAndAdmission()
     {
-        PptxSceneChart? chart = PptxTests.BuildSingleChartScene("""
+        static PptxSceneChartAxis ReadAxis(string bounds, string unit, string skip) =>
+            TestAssert.NotNull(PptxTests.BuildSingleChartScene($$"""
             <?xml version="1.0" encoding="UTF-8"?>
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
               <c:chart><c:plotArea>
@@ -883,29 +884,55 @@ internal static partial class PptxChartLegendsTests
                 <c:catAx><c:axId val="10"/><c:crossAx val="20"/></c:catAx>
                 <c:valAx>
                   <c:axId val="20"/>
-                  <c:scaling><c:min val="futureMin"/><c:max val="42.5"/></c:scaling>
+                  <c:scaling>{{bounds}}</c:scaling>
                   <c:crossAx val="10"/>
-                  <c:majorUnit val="futureMajor"/>
+                  {{unit}}
                   <c:minorUnit val="-1"/>
                   <c:lblOffset val="futureOffset"/>
-                  <c:tickLblSkip val="2"/>
+                  {{skip}}
                 </c:valAx>
               </c:plotArea></c:chart>
             </c:chartSpace>
-            """);
+            """)).Axes.Single(item => item.AxisKind == PptxSceneChartAxisKind.Value);
 
-        PptxSceneChartAxis axis = chart?.Axes.First(item => item.AxisKind == PptxSceneChartAxisKind.Value)
-            ?? throw new InvalidOperationException("Expected value axis.");
-        TestAssert.Equal(null, axis.Minimum);
-        TestAssert.Equal("futureMin", axis.MinimumValue);
+        var axis = ReadAxis("""<c:min val="-3.5"/><c:max val="42.5"/>""",
+            """<c:majorUnit val="2.5"/>""", """<c:tickLblSkip val="2"/>""");
+        TestAssert.Equal(false, axis.HasInvalidScaleValues);
+        TestAssert.Equal(-3.5d, axis.Minimum ?? double.NaN);
         TestAssert.Equal(42.5d, axis.Maximum ?? double.NaN);
-        TestAssert.Equal("42.5", axis.MaximumValue);
-        TestAssert.Equal(null, axis.MajorUnit);
-        TestAssert.Equal("futureMajor", axis.MajorUnitValue);
+        TestAssert.Equal(2.5d, axis.MajorUnit ?? double.NaN);
         TestAssert.Equal(null, axis.MinorUnit);
         TestAssert.Equal(null, axis.LabelOffset);
         TestAssert.Equal(2, axis.TickLabelSkip ?? 0);
-        TestAssert.Equal("2", axis.TickLabelSkipValue);
+        TestAssert.Equal(true, axis.HasTickLabelSkipValue);
+
+        var omitted = ReadAxis("", "", "");
+        var empty = ReadAxis("""<c:min val=""/><c:max val=""/>""",
+            """<c:majorUnit val=""/>""", """<c:tickLblSkip val=""/>""");
+        foreach (var automatic in new[] { omitted, empty })
+        {
+            TestAssert.Equal(false, automatic.HasInvalidScaleValues);
+            TestAssert.Equal(null, automatic.Minimum);
+            TestAssert.Equal(null, automatic.Maximum);
+            TestAssert.Equal(null, automatic.MajorUnit);
+            TestAssert.Equal(null, automatic.TickLabelSkip);
+            TestAssert.Equal(false, automatic.HasTickLabelSkipValue);
+        }
+
+        foreach (var (bounds, unit) in new[]
+        {
+            ("""<c:min val="futureMin"/>""", ""),
+            ("""<c:max val="NaN"/>""", ""),
+            ("""<c:max val=" "/>""", ""),
+            ("", """<c:majorUnit val="futureMajor"/>"""),
+            ("", """<c:majorUnit val="0"/>"""),
+            ("", """<c:majorUnit val="Infinity"/>""")
+        })
+            TestAssert.Equal(true, ReadAxis(bounds, unit, "").HasInvalidScaleValues);
+
+        var invalidSkip = ReadAxis("", "", """<c:tickLblSkip val="future"/>""");
+        TestAssert.Equal(null, invalidSkip.TickLabelSkip);
+        TestAssert.Equal(true, invalidSkip.HasTickLabelSkipValue);
     }
 
     public static void PptxScenePreservesChartManualLayoutNumericOptionTokens()

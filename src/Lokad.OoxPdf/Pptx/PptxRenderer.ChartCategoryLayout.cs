@@ -511,8 +511,7 @@ internal sealed partial class PptxRenderer
         bool automaticAngle = body.RotationValue == "-60000000" ||
             string.IsNullOrEmpty(body.RotationValue) && string.IsNullOrEmpty(body.OrientationValue);
         double angle = body.RotationDegrees is >= -90d and <= 90d ? body.RotationDegrees.Value : 0d;
-        string skipSpelling = axis.SceneAxis?.TickLabelSkipValue ?? string.Empty;
-        bool automaticSkip = string.IsNullOrEmpty(skipSpelling);
+        bool automaticSkip = axis.SceneAxis?.HasTickLabelSkipValue != true;
         int skip = ResolveSceneCategoryAxisTickLabelSkip(axis.SceneAxis);
         var measure = new ChartTextMeasurer(resolver, kerningEnabled: false);
         // Office's chart font getter quantizes hundredths of a point to twips.

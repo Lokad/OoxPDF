@@ -726,10 +726,8 @@ internal static class PptxModelTests
         TestAssert.Equal(PptxSceneChartAxisKind.Category, slide.SlideNodes[4].Chart?.Axes[0].AxisKind);
         TestAssert.Equal(PptxSceneChartAxisPosition.Left, slide.SlideNodes[4].Chart?.Axes[1].PositionKind);
         TestAssert.Equal("20", slide.SlideNodes[4].Chart?.Axes[0].CrossAxisId ?? string.Empty);
-        TestAssert.Equal("autoZero", slide.SlideNodes[4].Chart?.Axes[0].Crosses ?? string.Empty);
         TestAssert.Equal(PptxSceneChartAxisCrosses.AutoZero, slide.SlideNodes[4].Chart?.Axes[0].CrossesKind);
         TestAssert.Equal("10", slide.SlideNodes[4].Chart?.Axes[1].CrossAxisId ?? string.Empty);
-        TestAssert.Equal("max", slide.SlideNodes[4].Chart?.Axes[1].Crosses ?? string.Empty);
         TestAssert.Equal(PptxSceneChartAxisCrosses.Maximum, slide.SlideNodes[4].Chart?.Axes[1].CrossesKind);
         TestAssert.Equal(2.5d, slide.SlideNodes[4].Chart?.Axes[1].CrossesAt ?? 0d);
         TestAssert.Equal(PptxSceneChartAxisCrossBetween.Between, slide.SlideNodes[4].Chart?.Axes[1].CrossBetweenKind);
