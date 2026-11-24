@@ -239,16 +239,15 @@ def screen_picture_ink(source, candidate, reference, case, fitz):
         return count
 
     def count_pngs(page):
-        # The paint log supplies the order of the image and any foreground paint.
-        # Bounds are conservative. An obscured witness may remain unverified.
+        # Paint bounds conservatively identify pixels that other operations could supply.
         rotation = page.rotation_matrix
         paint = [(kind, fitz.Rect(box) * rotation) for kind, box in page.get_bboxlog()
                  if kind != "ignore-text"]
         images = {tuple(box): index for index, (kind, box) in enumerate(paint) if kind == "fill-image"}
         if not images:
             return 0, 0
-        # Bind the paint bounds to a single decoded image occurrence. Colors
-        # from a backdrop cannot substitute for the image's own opaque samples.
+        # Bind the paint bounds to a single decoded image occurrence and verify
+        # its opaque samples before attributing any page pixels to it.
         image_blocks = {}
         for block in page.get_text("dict", flags=fitz.TEXT_PRESERVE_IMAGES, clip=fitz.INFINITE_RECT())["blocks"]:
             if block["type"] == 1:
@@ -278,12 +277,16 @@ def screen_picture_ink(source, candidate, reference, case, fitz):
                 if mask.n != 1 or any(sample != 255 for sample in mask.samples):
                     uncertain += 1
                     continue
-            covered = False
-            for _, later in paint[index + 1:]:
-                overlap = rect & later
+            overlaps = False
+            # The image bounds can include pixels outside the active clip. Even
+            # opaque image samples there can be supplied entirely by earlier paint.
+            for other_index, (_, bounds) in enumerate(paint):
+                if other_index == index:
+                    continue
+                overlap = rect & bounds
                 if not overlap.is_empty:
-                    covered |= bitmap.set_rect((overlap * scale).irect, neutral)
-            if covered and not has_colors(bitmap, palette):
+                    overlaps |= bitmap.set_rect((overlap * scale).irect, neutral)
+            if overlaps and not has_colors(bitmap, palette):
                 uncertain += 1
             else:
                 visible += 1

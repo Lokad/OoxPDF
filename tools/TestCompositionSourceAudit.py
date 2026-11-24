@@ -172,7 +172,9 @@ class PictureInkTests(unittest.TestCase):
             for kind in pictures:
                 page = doc.new_page(width=100, height=100)
                 rect = self.fitz.Rect(10, 10, 70, 40)
-                if kind in ('png', 'clipped', 'covered', 'corner-overlap', 'rotated'):
+                if kind == 'backdrop-corner':
+                    page.draw_rect(self.fitz.Rect(10, 10, 20, 20), color=None, fill=(0, 0, 0))
+                if kind in ('png', 'clipped', 'covered', 'corner-overlap', 'backdrop-corner', 'rotated'):
                     page.insert_image(rect, stream=self.png)
                 elif kind == 'svg':
                     page.draw_rect(rect, color=None, fill=(0., 170 / 255, 102 / 255))
@@ -186,7 +188,8 @@ class PictureInkTests(unittest.TestCase):
                                        fill=tuple(channel / 255 for channel in fill))
                 if kind == 'corner-overlap':
                     page.draw_rect(self.fitz.Rect(10, 10, 20, 20), color=None, fill=(1, 1, 1))
-                if kind in ('backdrop', 'masked-backdrop', 'clipped-backdrop'):
+                if kind in ('backdrop', 'masked-backdrop', 'clipped-backdrop',
+                            'fully-clipped-png-backdrop', 'partially-clipped-png-backdrop'):
                     colors = [(47, 128, 237), (39, 174, 96)]
                     for x, fill in zip((10, 40), colors):
                         page.draw_rect(self.fitz.Rect(x, 10, x + 30, 40), color=None,
@@ -194,11 +197,14 @@ class PictureInkTests(unittest.TestCase):
                     if kind == 'masked-backdrop':
                         mask = self.fitz.Pixmap(self.fitz.csGRAY, 2, 1, bytes(2), False).tobytes('png')
                         page.insert_image(rect, stream=self.png, mask=mask)
-                    elif kind == 'clipped-backdrop':
-                        solid = self.fitz.Pixmap(self.fitz.csRGB, 2, 1, bytes(colors[0] * 2), False).tobytes('png')
-                        page.insert_image(rect, stream=solid)
+                    elif kind != 'backdrop':
+                        image = self.png
+                        if kind == 'clipped-backdrop':
+                            image = self.fitz.Pixmap(self.fitz.csRGB, 2, 1, bytes(colors[0] * 2), False).tobytes('png')
+                        page.insert_image(rect, stream=image)
                         xref = page.get_contents()[-1]
-                        doc.update_stream(xref, b'q 10 60 30 30 re W n\n' + doc.xref_stream(xref) + b'\nQ')
+                        clip = b'80 0 10 10' if kind == 'fully-clipped-png-backdrop' else b'10 60 30 30'
+                        doc.update_stream(xref, b'q ' + clip + b' re W n\n' + doc.xref_stream(xref) + b'\nQ')
                 if kind == 'rotated':
                     page.set_rotation(90)
             doc.save(path)
@@ -235,7 +241,7 @@ class PictureInkTests(unittest.TestCase):
                          screen_picture_ink(self.source, cover_alone, reference, expected, self.fitz)['Status'])
         self.assertEqual('Unverified Office picture witnesses',
                          screen_picture_ink(self.source, reference, covered, expected, self.fitz)['Status'])
-        for kind in ('corner-overlap', 'rotated'):
+        for kind in ('corner-overlap', 'backdrop-corner', 'rotated'):
             with self.subTest(kind=kind):
                 candidate = self.write_pdf(kind, [kind])
                 self.assertEqual('Picture witnesses present',
@@ -247,7 +253,9 @@ class PictureInkTests(unittest.TestCase):
         reference = self.write_pdf('office', ['png'])
         backdrop = self.write_pdf('backdrop', ['backdrop'])
         for kind, status in [('masked-backdrop', 'Unverified candidate picture witnesses'),
-                             ('clipped-backdrop', 'Missing picture ink')]:
+                             ('clipped-backdrop', 'Missing picture ink'),
+                             ('fully-clipped-png-backdrop', 'Unverified candidate picture witnesses'),
+                             ('partially-clipped-png-backdrop', 'Unverified candidate picture witnesses')]:
             with self.subTest(kind=kind):
                 candidate = self.write_pdf(kind, [kind])
                 with self.fitz.open(candidate) as document, self.fitz.open(backdrop) as without_picture:
@@ -256,6 +264,8 @@ class PictureInkTests(unittest.TestCase):
                 result = screen_picture_ink(self.source, candidate, reference, expected, self.fitz)
                 self.assertEqual(status, result['Status'])
                 self.assertEqual({}, result['CandidateByPage'])
+                self.assertEqual({1: 1} if status.startswith('Unverified') else {},
+                                 result['UnverifiedCandidatePngsByPage'])
 
     def test_repeated_static_svg_witnesses_follow_their_reference_pages(self):
         self.write_source(svg=True)
