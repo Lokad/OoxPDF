@@ -27,39 +27,54 @@ internal sealed partial class DocxRenderer
         {
             cancellationToken.ThrowIfCancellationRequested();
             DocxTableCellLayout cellLayout = row.Cells[cellIndex];
-            if (!ShouldRenderTableCellVisualFragment(cellLayout))
+            bool paintsCell = ShouldRenderTableCellVisualFragment(cellLayout);
+            if (!paintsCell && cellLayout.VerticalMergeOwner?.CoveredBottom is null)
             {
                 continue;
             }
 
-            if (previousRow is null && ShouldRenderTableRowEdge(row, top: true))
-            {
-                RenderHorizontalTableCellBorder(cellLayout, "top", graphics);
-            }
-
-            if (nextRow is null && ShouldRenderTableRowEdge(row, top: false))
-            {
-                RenderHorizontalTableCellBorder(cellLayout, "bottom", graphics);
-            }
-
             DocxTableCell visualCell = cellLayout.VisualCell;
-            DocxTableCellBorder? left = DocxTableBorderGeometry.Find(visualCell.Borders, "left") ?? DocxTableBorderGeometry.Find(visualCell.Borders, "start");
-            if (cellIndex == 0)
+            if (paintsCell)
             {
-                RenderVerticalTableCellBorder(cellLayout.X, cellLayout.Y, cellLayout.Height, left, graphics);
+                if (previousRow is null && ShouldRenderTableRowEdge(row, top: true))
+                    RenderHorizontalTableCellBorder(cellLayout, "top", graphics);
+
+                if (nextRow is null && ShouldRenderTableRowEdge(row, top: false))
+                    RenderHorizontalTableCellBorder(cellLayout, "bottom", graphics);
+
+                if (cellIndex == 0)
+                {
+                    DocxTableCellBorder? left = DocxTableBorderGeometry.Find(visualCell.Borders, "left") ?? DocxTableBorderGeometry.Find(visualCell.Borders, "start");
+                    RenderVerticalTableCellBorder(cellLayout.X, cellLayout.Y, cellLayout.Height, left, graphics);
+                }
             }
 
             DocxTableCellBorder? right = DocxTableBorderGeometry.Find(visualCell.Borders, "right") ?? DocxTableBorderGeometry.Find(visualCell.Borders, "end");
             if (cellIndex == row.Cells.Count - 1)
             {
-                RenderVerticalTableCellBorder(cellLayout.X + cellLayout.Width, cellLayout.Y, cellLayout.Height, right, graphics);
+                if (paintsCell)
+                    RenderVerticalTableCellBorder(cellLayout.X + cellLayout.Width, cellLayout.Y, cellLayout.Height, right, graphics);
                 continue;
             }
 
             DocxTableCellLayout nextCell = row.Cells[cellIndex + 1];
+            // A shared edge belongs to both cells. A covered continuation
+            // may meet a different neighbor even though it has no own paint.
+            // Same-row restarts already painted their common span together.
+            if (!paintsCell &&
+                (nextCell.VisualOwnership == DocxTableCellVisualOwnership.MissingVerticalMergeOwner ||
+                 nextCell.VerticalMergeOwner is { CoveredBottom: not null } rightOwner &&
+                 cellLayout.VerticalMergeOwner!.RowIndex == rightOwner.RowIndex))
+                continue;
+
+            double bottom = Math.Max(cellLayout.Y, nextCell.Y);
+            double height = Math.Min(cellLayout.Height - (bottom - cellLayout.Y), nextCell.Height - (bottom - nextCell.Y));
+            if (height <= 0d)
+                continue;
+
             DocxTableCell nextVisualCell = nextCell.VisualCell;
             DocxTableCellBorder? nextLeft = DocxTableBorderGeometry.Find(nextVisualCell.Borders, "left") ?? DocxTableBorderGeometry.Find(nextVisualCell.Borders, "start");
-            RenderSharedVerticalTableBorder(cellLayout.X + cellLayout.Width, cellLayout.Y, cellLayout.Height, right, nextLeft, graphics);
+            RenderSharedVerticalTableBorder(cellLayout.X + cellLayout.Width, bottom, height, right, nextLeft, graphics);
         }
 
         if (sharedPlan is not null)

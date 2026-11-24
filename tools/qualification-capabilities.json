@@ -16403,6 +16403,8 @@
   ],
   "docx-merged-source-consumption": [
     "=DocxMergedCellOnOnePagePaintsItsSourceAndShadingOnce",
+    "=DocxMergedSharedBordersRetainEachNeighborRow",
+    "=WideAlignedTableRendersOneStripPerOverlap",
     "DocxInlineCompositionMergedCellMathRetainsIndependentRelativeWordGeometry",
     "DocxInlineCompositionMergedMathPreparationKeepsOwningSourcesAndPlacementFallbacks",
     "PortableRenderingMergedMathCellsKeepOwnerContent",

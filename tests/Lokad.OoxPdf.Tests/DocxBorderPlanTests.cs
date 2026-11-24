@@ -1,4 +1,6 @@
+using System.Globalization;
 using System.Text;
+using System.Text.RegularExpressions;
 using Lokad.OoxPdf;
 using Lokad.OoxPdf.Docx;
 using Lokad.OoxPdf.Ooxml;
@@ -12,26 +14,22 @@ internal static class DocxBorderPlanTests
         foreach (int cols in new[] { 8, 16, 32 })
         {
             (DocxTableRowLayout row, DocxTableRowLayout next) = LayoutAlignedPair(cols);
-            DocxRenderer.RowPairBorderPlan plan = TestAssert.NotNull(DocxRenderer.RowPairBorderPlan.TryBuild(row, next, CancellationToken.None), "Aligned consecutive rows must produce a plan.");
-            TestAssert.Equal(cols, plan.Overlaps.Length);
-            (double X, double Right)[] expected = BruteForcePairs(row, next);
-            TestAssert.Equal(expected.Length, plan.Overlaps.Length);
-            for (int k = 0; k < expected.Length; k++)
-            {
-                TestAssert.Equal(expected[k].X, plan.Overlaps[k].X);
-                TestAssert.Equal(expected[k].Right, plan.Overlaps[k].Right);
-            }
+            AssertOverlapPlan(row, next, cols);
         }
     }
 
     public static void SharedBorderPlanMatchesNestedEnumerationMerged()
     {
         (DocxTableRowLayout row, DocxTableRowLayout next) = LayoutMergedPair();
-        TestAssert.Equal(1, row.Cells.Count);
-        TestAssert.Equal(2, next.Cells.Count);
-        DocxRenderer.RowPairBorderPlan plan = TestAssert.NotNull(DocxRenderer.RowPairBorderPlan.TryBuild(row, next, CancellationToken.None), "Merged consecutive rows must produce a plan.");
+        AssertOverlapPlan(row, next, 2);
+    }
+
+    private static void AssertOverlapPlan(DocxTableRowLayout row, DocxTableRowLayout next, int count)
+    {
+        DocxRenderer.RowPairBorderPlan plan = TestAssert.NotNull(
+            DocxRenderer.RowPairBorderPlan.TryBuild(row, next, CancellationToken.None), "Consecutive rows must produce a plan.");
         (double X, double Right)[] expected = BruteForcePairs(row, next);
-        TestAssert.Equal(2, expected.Length);
+        TestAssert.Equal(count, expected.Length);
         TestAssert.Equal(expected.Length, plan.Overlaps.Length);
         for (int k = 0; k < expected.Length; k++)
         {
@@ -46,7 +44,89 @@ internal static class DocxBorderPlanTests
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
         OoxPdfConverter.Convert(input, output);
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Equal(4, pdf.Split("0 0 1 rg", StringSplitOptions.None).Length - 1);
+        var strips = ReadFills(pdf).Where(fill => fill.Color == "0 0 1").ToArray();
+        TestAssert.Equal(4, strips.Length);
+        for (int index = 0; index < strips.Length; index++)
+        {
+            var strip = strips[index];
+            TestAssert.Equal(36d + index * 72d, strip.X);
+            TestAssert.Equal(72d, strip.Width);
+            TestAssert.True(Math.Abs(strip.Y + strip.Height - 708d) < .1d && strip.Height is > 0d and < 2d,
+                "The filled strips meet the authored boundary one 48pt row below the top margin.");
+        }
+    }
+
+    public static void DocxMergedSharedBordersRetainEachNeighborRow()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            string?[] colors = ["FF0000", "00FF00", "0000FF"];
+            var plain = ReadFills(RenderBorderNeighbors(mode, merge: false, colors));
+            var merged = ReadFills(RenderBorderNeighbors(mode, merge: true, colors));
+            TestAssert.Equal(3, plain.Length);
+            TestAssert.Equal(3, merged.Length);
+            for (int index = 0; index < merged.Length; index++)
+            {
+                TestAssert.Equal(plain[index], merged[index]);
+                TestAssert.Equal(48d, merged[index].Height);
+            }
+            TestAssert.Equal("1 0 0", merged[0].Color);
+            TestAssert.Equal("0 1 0", merged[1].Color);
+            TestAssert.Equal("0 0 1", merged[2].Color);
+            TestAssert.Equal(merged[0].Y, merged[1].Y + merged[1].Height);
+            TestAssert.Equal(merged[1].Y, merged[2].Y + merged[2].Height);
+            TestAssert.Equal(plain[2], ReadFills(RenderBorderNeighbors(mode, merge: true, [null, null, "0000FF"])).Single());
+
+            var aligned = ReadFills(RenderBorderNeighbors(mode, merge: true, ["FF0000", null, null], rightMergeStart: 0)).Single();
+            TestAssert.Equal(("1 0 0", plain[0].X, plain[2].Y, plain[0].Width, 144d), aligned);
+            var staggered = ReadFills(RenderBorderNeighbors(mode, merge: true, ["FF0000", "00FF00", null], rightMergeStart: 1));
+            TestAssert.Equal(3, staggered.Length);
+            TestAssert.Equal(plain[0], staggered[0]);
+            TestAssert.Equal(plain[1], staggered[1]);
+            TestAssert.Equal(("0 1 0", plain[2].X, plain[2].Y, plain[2].Width, 48d), staggered[2]);
+        }
+    }
+
+    private static string RenderBorderNeighbors(OoxPdfDocxMarkupMode mode, bool merge, string?[] colors, int? rightMergeStart = null)
+    {
+        string rows = string.Concat(colors.Select((color, index) => $$"""
+            <w:tr>
+              <w:trPr><w:trHeight w:val="960" w:hRule="exact"/></w:trPr>
+              <w:tc><w:tcPr>{{Merge(index, merge ? 0 : null)}}</w:tcPr><w:p/></w:tc>
+              <w:tc><w:tcPr>{{Merge(index, rightMergeStart)}}{{(color is null ? "" : $"<w:tcBorders><w:left w:val=\"single\" w:sz=\"24\" w:color=\"{color}\"/></w:tcBorders>")}}</w:tcPr><w:p/></w:tc>
+            </w:tr>
+            """));
+        using var input = TestFixtures.CreateZipPackage(new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = TestFixtures.DocxContentTypes,
+            ["_rels/.rels"] = TestFixtures.DocxPackageRelationships,
+            ["word/document.xml"] = $$"""
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>
+                  <w:tbl><w:tblPr><w:tblLayout w:type="fixed"/></w:tblPr>
+                    <w:tblGrid><w:gridCol w:w="3000"/><w:gridCol w:w="3000"/></w:tblGrid>{{rows}}</w:tbl>
+                  <w:sectPr><w:pgSz w:w="8640" w:h="6000"/>
+                    <w:pgMar w:top="480" w:bottom="480" w:left="720" w:right="720"/></w:sectPr>
+                </w:body></w:document>
+                """
+        });
+        using var package = OoxPackage.Open(input, default);
+        var document = new DocxReader().Read(package, null, default, markupMode: mode);
+        var geometry = mode == OoxPdfDocxMarkupMode.Final
+            ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup;
+        return new DocxRenderer(new TestFaceFontResolver(), mode, geometry)
+            .RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single().Content;
+
+        static string Merge(int row, int? start) => row == start ? "<w:vMerge w:val=\"restart\"/>" :
+            row > start ? "<w:vMerge/>" : string.Empty;
+    }
+
+    private static (string Color, double X, double Y, double Width, double Height)[] ReadFills(string content)
+    {
+        return Regex.Matches(content, @"(?m)^(?<rgb>[01] [01] [01]) rg\r?\n(?<x>-?[\d.]+) (?<y>-?[\d.]+) (?<w>[\d.]+) (?<h>[\d.]+) re f\r?$")
+            .Select(m => (m.Groups["rgb"].Value, Number(m, "x"), Number(m, "y"), Number(m, "w"), Number(m, "h")))
+            .ToArray();
+
+        static double Number(Match match, string name) => double.Parse(match.Groups[name].Value, CultureInfo.InvariantCulture);
     }
 
     private static (DocxTableRowLayout Row, DocxTableRowLayout Next) LayoutAlignedPair(int cols)
@@ -165,13 +245,14 @@ internal static class DocxBorderPlanTests
         var body = new StringBuilder();
         body.Append("<w:tbl><w:tblPr><w:tblBorders><w:insideH w:val=\"single\" w:color=\"0000FF\" w:sz=\"8\"/></w:tblBorders></w:tblPr>");
         body.Append("<w:tblGrid>").Append(grid).Append("</w:tblGrid>");
-        body.Append("<w:tr>").Append(firstRow).Append("</w:tr>");
+        const string rowOpen = "<w:tr><w:trPr><w:trHeight w:val=\"960\" w:hRule=\"exact\"/></w:trPr>";
+        body.Append(rowOpen).Append(firstRow).Append("</w:tr>");
         for (int r = 1; r < rows; r++)
         {
-            body.Append("<w:tr>").Append(otherRow).Append("</w:tr>");
+            body.Append(rowOpen).Append(otherRow).Append("</w:tr>");
         }
 
-        body.Append("</w:tbl><w:sectPr><w:pgSz w:w=\"12240\" w:h=\"15840\"/></w:sectPr>");
+        body.Append("</w:tbl><w:sectPr><w:pgSz w:w=\"12240\" w:h=\"15840\"/><w:pgMar w:top=\"720\" w:bottom=\"720\" w:left=\"720\" w:right=\"720\"/></w:sectPr>");
         return TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
         {
             ["[Content_Types].xml"] = """
