@@ -100,7 +100,7 @@ $catalog = @(foreach ($line in Get-Content -LiteralPath $catalogPath) {
 if (!$catalog.Count -or @($catalog.Name | Sort-Object -Unique).Count -ne $catalog.Count) {
     throw 'Test catalogue is empty or ambiguous'
 }
-$filters = if ($AllDocx) { @('Docx', 'Balloon', 'PortableRendering') }
+$filters = if ($AllDocx) { @('Docx', 'Balloon') }
 elseif ($Capability) {
     $SelectionManifest = (Resolve-Path -LiteralPath $SelectionManifest).Path
     $manifestSource = Read-QualificationJsonSource $SelectionManifest
@@ -117,7 +117,8 @@ if (!$AllDocx -and @($filters | Where-Object { $_ -in @('Docx', 'Balloon', '') }
 }
 $selected = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
 if ($AllDocx) {
-    # Retain the name selectors for neighboring tests in shared groups.
+    # DOCX-specific portable tests carry their format in the registered group.
+    # Retain the legacy selectors for neighboring tests in shared groups.
     $docxMembers = @($catalog | Where-Object { $_.Group.StartsWith('docx-', [StringComparison]::Ordinal) })
     foreach ($test in $docxMembers) { $null = $selected.Add($test.Name) }
 }

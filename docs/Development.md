@@ -42,6 +42,8 @@ of exact method names). `tools/RunDocxAffectedTests.ps1` selects capabilities fr
 `tools/qualification-capabilities.json` and runs each selected method once.
 Use `=MethodName` in the manifest or `-TestFilter` to select one exact,
 case-sensitive name. Bare selectors match case-insensitive substrings.
+`-AllDocx` includes the DOCX groups, including `docx-composition-portable`
+and `docx-math-portable`, plus shared DOCX and balloon tests.
 `-FastGroup` adds fast methods from the named groups. Skips from methods selected
 only by a fast group appear under `GroupOnlySkips`. Use `-ExpectedSkip` with exact
 method names for the primary selection, including methods also in a fast group.

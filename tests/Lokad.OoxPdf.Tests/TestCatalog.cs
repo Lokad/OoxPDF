@@ -11,7 +11,7 @@ internal static class TestCatalog
         .. FromType("api", typeof(PublicApiTests)),
         .. FromType("api", typeof(TestRunnerTests)),
         .. FromType("api", typeof(TestTemporaryDirectoryTests)),
-        .. FromType("rendering-portable", typeof(PortableRenderingTests)),
+        .. FromType(PortableCompositionGroup, typeof(PortableRenderingTests)),
         .. FromType("rendering-portable", typeof(PptxScalarCapsTests)),
         .. FromType("rendering-portable", typeof(PptxBreakCompositionTests)),
         .. FromType("rendering-portable", typeof(PptxPictureRecolorTests)),
@@ -119,12 +119,12 @@ internal static class TestCatalog
         .. FromType("docx-math", typeof(DocxInlineCompositionTests)),
         .. FromType("docx-math", typeof(DocxTableMathTests)),
         .. FromType(name => name.StartsWith("MathFont", StringComparison.Ordinal) ? "fonts" : "docx-math", typeof(DocxMathBoxTests)),
-        .. FromType("fonts", typeof(DocxMathFractionTests)),
-        .. FromType("fonts", typeof(DocxSkewedFractionTests)),
-        .. FromType("fonts", typeof(DocxMathNaryTests)),
-        .. FromType("fonts", typeof(DocxMathFunctionLayoutTests)),
-        .. FromType("fonts", typeof(DocxMathMatrixLayoutTests)),
-        .. FromType("fonts", typeof(MathScriptStyleTests)),
+        .. FromType("docx-math-portable", typeof(DocxMathFractionTests)),
+        .. FromType("docx-math-portable", typeof(DocxSkewedFractionTests)),
+        .. FromType("docx-math-portable", typeof(DocxMathNaryTests)),
+        .. FromType("docx-math-portable", typeof(DocxMathFunctionLayoutTests)),
+        .. FromType("docx-math-portable", typeof(DocxMathMatrixLayoutTests)),
+        .. FromType("docx-math-portable", typeof(MathScriptStyleTests)),
         .. FromType("docx-numbering", typeof(DocxNumberingTests)),
         .. FromType("docx-numbering", typeof(DocxListKeepLeadingTests)),
         .. FromType("docx-text", typeof(DocxTextTests)),
@@ -253,6 +253,32 @@ internal static class TestCatalog
         .. FromType("fonts", typeof(FontFormatTests)),
         .. FromType("fonts", typeof(FontTests))
     ];
+
+    // The shared fixture class also contains standalone presentation tests.
+    // These stay in the portable suite without entering the DOCX milestone.
+    private static string PortableCompositionGroup(string name) => name switch
+    {
+        nameof(PortableRenderingTests.PortableRenderingPptxJustificationPreservesWordAndGlyphGeometry) or
+        nameof(PortableRenderingTests.PortableRenderingPptxPreservesCompositeChartAndText) or
+        nameof(PortableRenderingTests.PortableRenderingOperationsDecksKeepCompleteLegendsAndPictures) or
+        nameof(PortableRenderingTests.PortableRenderingChartCachedFieldsKeepWordsAndHyperlinksAcrossTextOwners) or
+        nameof(PortableRenderingTests.PortableRenderingRichChartTitleKeepsAuthoredLinesAndTheirLinks) or
+        nameof(PortableRenderingTests.PortableRenderingChartSeriesOrderSurvivesXmlReordering) or
+        nameof(PortableRenderingTests.PortableRenderingAutomaticColumnLabelsWrapInsideChartFrames) or
+        nameof(PortableRenderingTests.PortableRenderingAutomaticColumnLabelsKeepComposedValueSuffixes) or
+        nameof(PortableRenderingTests.PortableRenderingColumnLabelWrappingKeepsUnicodeAndBreaks) or
+        nameof(PortableRenderingTests.PortableRenderingBarPointKeysKeepSingleSeriesCategoryIdentity) or
+        nameof(PortableRenderingTests.PortableRenderingBarPalettesFollowIndependentOfficeSourceIndices) or
+        nameof(PortableRenderingTests.PortableRenderingBarPaletteIndicesKeepBoundsAndFallbacks) or
+        nameof(PortableRenderingTests.PortableRenderingSharedAxisFramesMatchIndependentOfficePairs) or
+        nameof(PortableRenderingTests.PortableRenderingSharedAxisPlacesEveryPlotOnItsResolvedScale) or
+        nameof(PortableRenderingTests.PortableRenderingComposedPlotsShareOnePrimaryAxisLabelStrip) or
+        nameof(PortableRenderingTests.PortableRenderingComposedAxisLabelsRetainSourceVisibility) or
+        nameof(PortableRenderingTests.PortableRenderingComposedSameSideAxesFitAutomaticContainer) or
+        nameof(PortableRenderingTests.PortableRenderingComposedAutoAxesUseTheirOwningScale) or
+        nameof(PortableRenderingTests.PortableRenderingComposedOppositeAxesKeepIndependentBands) => "rendering-portable",
+        _ => "docx-composition-portable"
+    };
 
     private static IReadOnlyList<TestCase> FromType(string group, Type type)
     {

@@ -31,7 +31,8 @@ function dotnet {
         'FAST selection item';'FAST selection İtemNeighbor'
         'FAST cli CliFixture'
         'FAST docx-tables ReplayCellMemo';'SLOW docx-text WrapEmergencyToken'
-        'FAST docx-tables DocxTableControl';'FAST rendering-portable PortableRenderingSharedControl'
+        'FAST docx-tables DocxTableControl';'FAST docx-composition-portable PortableRenderingSharedControl'
+        'FAST docx-math-portable MathFontSharedControl';'FAST rendering-portable PortableRenderingPptxControl'
         'FAST rendering-portable BalloonSharedControl';'FAST pptx-typography LayoutSlide'
         $global:LASTEXITCODE=0;return
     }
@@ -237,7 +238,7 @@ try {
         $listOnly=$case -eq 'milestone-list'
         & (Join-Path $PSScriptRoot 'RunDocxAffectedTests.ps1') -RunnerPath $runner -OutputDirectory $output -AllDocx -ListOnly:$listOnly *> (Join-Path $root ($case+'.log'))
         $actual=@(Get-Content -LiteralPath (Join-Path $output 'selected-methods.json') -Raw | ConvertFrom-Json)
-        $wanted=@('ReplayCellMemo','WrapEmergencyToken','DocxTableControl','PortableRenderingSharedControl','BalloonSharedControl')
+        $wanted=@('ReplayCellMemo','WrapEmergencyToken','DocxTableControl','PortableRenderingSharedControl','MathFontSharedControl','BalloonSharedControl')
         if ($actual.Count -ne $wanted.Count -or @(Compare-Object $wanted $actual -CaseSensitive).Count -or
             $global:ooxPdfAffectedReportCalls -ne [int]!$listOnly) {
             throw 'DOCX milestones must include the registered groups and shared neighbors once'
