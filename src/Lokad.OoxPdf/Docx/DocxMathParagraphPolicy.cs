@@ -279,6 +279,7 @@ internal static class DocxMathParagraphPolicy
                     if (linked?.Contains(math.Equation) == true) hasInlineOwner = hasOtherContent = true;
                     break;
                 case DocxInlineText:
+                case DocxInlineTab:
                 case DocxInlinePicture:
                 case DocxInlineBox:
                     hasInlineOwner = true;

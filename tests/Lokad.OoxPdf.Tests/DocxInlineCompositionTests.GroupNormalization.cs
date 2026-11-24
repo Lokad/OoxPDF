@@ -162,6 +162,22 @@ internal static partial class DocxInlineCompositionTests
                 TestAssert.Equal("x+2y", string.Concat(math.Select(show => show.Text)).Normalize(NormalizationForm.FormKC));
                 TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"), "Ordinary source characters cannot discard the formula.");
             }
+
+            DocxDocument ReadTabMath(bool display) => ReadMutation("docx-omml-literal-after", mode, false, false, (xml, w, m) =>
+            {
+                var group = xml.Descendants(m + "oMathPara").Single();
+                group.AddBeforeSelf(new XElement(w + "r", new XElement(w + "tab")));
+                if (!display) group.ReplaceWith(new XElement(group.Elements(m + "oMath").Single()));
+            });
+            var inline = renderer.RenderPagesAsync(ReadTabMath(false), null, default).ToBlockingEnumerable().Single();
+            var tabDiagnostics = new List<OoxPdfDiagnostic>();
+            var explicitDisplay = renderer.RenderPagesAsync(ReadTabMath(true), tabDiagnostics.Add, default).ToBlockingEnumerable().Single();
+            var inlineMath = MathShows(inline);
+            TestAssert.Equal("α+β=γ", string.Concat(inlineMath.Select(show => show.Text)).Normalize(NormalizationForm.FormKC));
+            TestAssert.True(inlineMath.SequenceEqual(MathShows(explicitDisplay)),
+                "A tab occupying the explicit display row must preserve the complete formula at the inline tab position.");
+            TestAssert.True(tabDiagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                "A visible tab must not trigger the ignored-equation fallback.");
         }
     }
 
