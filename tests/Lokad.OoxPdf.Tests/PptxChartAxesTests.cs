@@ -1591,7 +1591,6 @@ internal static class PptxChartAxesTests
             """) ?? throw new InvalidOperationException("Expected chart scene.");
         PptxSceneChartAxis valueAxis = chart.Axes.First(axis => axis.AxisKind == PptxSceneChartAxisKind.Value);
         TestAssert.Equal(PptxSceneChartAxisOrientation.Unknown, valueAxis.OrientationKind);
-        TestAssert.Equal("bogus", valueAxis.Orientation);
 
         XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
         XElement alternateSource = XDocument.Parse("""

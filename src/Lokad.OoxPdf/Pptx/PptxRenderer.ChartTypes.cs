@@ -516,7 +516,6 @@ internal sealed partial class PptxRenderer
     // R16: internal so the per-frame shared series-name memo carries the record type.
     internal readonly record struct ChartSeriesNameRecord(
         string ActiveName,
-        string CacheName,
         ChartSeriesNameSource ActiveNameSource,
         PptxSceneChartDataSource Source,
         IReadOnlyList<ChartIndexedTextPoint> WorkbookPoints);

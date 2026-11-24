@@ -1358,7 +1358,6 @@ internal static class PptxChartRenderingTests
         PptxSceneChartAxis rebuiltAxis = (PptxSceneChartAxis)TestAssert.NotNull(rebuiltSource.GetType().GetProperty("SceneAxis")!.GetValue(rebuiltSource));
 
         TestAssert.Equal(PptxSceneChartAxisKind.Date, sceneAxis.AxisKind);
-        TestAssert.Equal("dateAx", sceneAxis.Kind);
         TestAssert.Equal("10", sceneAxis.Id);
         TestAssert.Equal(PptxSceneChartAxisKind.Date, rebuiltAxis.AxisKind);
     }

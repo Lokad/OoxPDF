@@ -722,10 +722,8 @@ internal static class PptxModelTests
         TestAssert.Equal("diamond", slide.SlideNodes[4].Chart?.Plots[2].Series[0].Marker.Symbol ?? string.Empty);
         TestAssert.Equal(PptxSceneChartMarkerSymbol.Diamond, slide.SlideNodes[4].Chart?.Plots[2].Series[0].Marker.SymbolKind);
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[2].Series[0].Smooth == false, "Expected explicit smooth disable to remain distinct from a missing smooth element.");
-        TestAssert.Equal("valAx", slide.SlideNodes[4].Chart?.Axes[1].Kind ?? string.Empty);
         TestAssert.Equal(PptxSceneChartAxisKind.Value, slide.SlideNodes[4].Chart?.Axes[1].AxisKind);
         TestAssert.Equal(PptxSceneChartAxisKind.Category, slide.SlideNodes[4].Chart?.Axes[0].AxisKind);
-        TestAssert.Equal("l", slide.SlideNodes[4].Chart?.Axes[1].Position ?? string.Empty);
         TestAssert.Equal(PptxSceneChartAxisPosition.Left, slide.SlideNodes[4].Chart?.Axes[1].PositionKind);
         TestAssert.Equal("20", slide.SlideNodes[4].Chart?.Axes[0].CrossAxisId ?? string.Empty);
         TestAssert.Equal("autoZero", slide.SlideNodes[4].Chart?.Axes[0].Crosses ?? string.Empty);
@@ -748,7 +746,6 @@ internal static class PptxModelTests
         TestAssert.Equal("1200000", slide.SlideNodes[4].Chart?.Axes[0].Title.TextBodyProperties.RotationValue ?? string.Empty);
         TestAssert.True(slide.SlideNodes[4].Chart?.Axes[1].IsDeleted == false, "Expected chart axis delete flag in the scene model.");
         TestAssert.True(slide.SlideNodes[4].Chart?.Axes[1].HasScaling == true, "Expected chart axis scaling ownership in the scene model.");
-        TestAssert.Equal("maxMin", slide.SlideNodes[4].Chart?.Axes[1].Orientation ?? string.Empty);
         TestAssert.Equal(PptxSceneChartAxisOrientation.MaximumMinimum, slide.SlideNodes[4].Chart?.Axes[1].OrientationKind);
         TestAssert.Equal(0d, slide.SlideNodes[4].Chart?.Axes[1].Minimum ?? -1d);
         TestAssert.Equal(20d, slide.SlideNodes[4].Chart?.Axes[1].Maximum ?? 0d);

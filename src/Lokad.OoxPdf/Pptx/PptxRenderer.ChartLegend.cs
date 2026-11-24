@@ -153,7 +153,6 @@ internal sealed partial class PptxRenderer
                 {
                     return new ChartSeriesNameRecord(
                         series.Name.Trim(),
-                        series.Name.Trim(),
                         ChartSeriesNameSource.Cache,
                         series.DataSources.Name,
                         workbookPoints);
@@ -165,7 +164,6 @@ internal sealed partial class PptxRenderer
                     .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
                 return new ChartSeriesNameRecord(
                     string.IsNullOrWhiteSpace(workbookName) ? $"Series {index + 1}" : workbookName.Trim(),
-                    string.Empty,
                     string.IsNullOrWhiteSpace(workbookName) ? ChartSeriesNameSource.Default : ChartSeriesNameSource.Workbook,
                     series.DataSources.Name,
                     workbookPoints);

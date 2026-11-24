@@ -1211,14 +1211,14 @@ internal static partial class PptxChartLegendsTests
         TestAssert.True(label.NumberFormatInfo.SourceLinked == true, "Expected sourceLinked=true to survive data-label override parsing.");
         TestAssert.Equal("1", label.NumberFormatInfo.SourceLinkedValue);
 
-        PptxSceneChartAxis categoryAxis = chart.Axes.First(axis => axis.Kind == "catAx");
+        PptxSceneChartAxis categoryAxis = chart.Axes.Single(axis => axis.AxisKind == PptxSceneChartAxisKind.Category);
         TestAssert.Equal("m/d/yy", categoryAxis.NumberFormat ?? string.Empty);
         TestAssert.True(categoryAxis.NumberFormatInfo.IsDefined, "Expected category-axis number format metadata to be explicit.");
         TestAssert.Equal("m/d/yy", categoryAxis.NumberFormatInfo.FormatCode);
         TestAssert.True(categoryAxis.NumberFormatInfo.SourceLinked == true, "Expected sourceLinked=true to survive category-axis parsing.");
         TestAssert.Equal("true", categoryAxis.NumberFormatInfo.SourceLinkedValue);
 
-        PptxSceneChartAxis valueAxis = chart.Axes.First(axis => axis.Kind == "valAx");
+        PptxSceneChartAxis valueAxis = chart.Axes.Single(axis => axis.AxisKind == PptxSceneChartAxisKind.Value);
         TestAssert.Equal("0.0%", valueAxis.NumberFormat ?? string.Empty);
         TestAssert.True(valueAxis.NumberFormatInfo.IsDefined, "Expected value-axis number format metadata to be explicit.");
         TestAssert.Equal("0.0%", valueAxis.NumberFormatInfo.FormatCode);

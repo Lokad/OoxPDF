@@ -237,8 +237,8 @@ internal static class PptxChartDensifyTests
     public static void SeriesNameMemoSharesResultsWithinFrame()
     {
         var (workbook, plot, otherPlot) = CreateMemoContext();
-        IReadOnlyList<PptxRenderer.ChartSeriesNameRecord> firstResult = [new("First", "First", PptxRenderer.ChartSeriesNameSource.Cache, default, [])];
-        IReadOnlyList<PptxRenderer.ChartSeriesNameRecord> otherResult = [new("Other", "Other", PptxRenderer.ChartSeriesNameSource.Cache, default, [])];
+        IReadOnlyList<PptxRenderer.ChartSeriesNameRecord> firstResult = [new("First", PptxRenderer.ChartSeriesNameSource.Cache, default, [])];
+        IReadOnlyList<PptxRenderer.ChartSeriesNameRecord> otherResult = [new("Other", PptxRenderer.ChartSeriesNameSource.Cache, default, [])];
         TestAssert.True(!ReferenceEquals(firstResult, otherResult), "Factory results must be independently distinguishable.");
         int computations = 0;
         Func<IReadOnlyList<PptxRenderer.ChartSeriesNameRecord>> firstFactory = () => { computations++; return firstResult; };

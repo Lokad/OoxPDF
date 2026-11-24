@@ -769,20 +769,14 @@ internal sealed record PptxSceneChartPointStyle(
          marker.Line.HasLine || marker.Line.NoFill || marker.Line.WidthSpecified);
 }
 
-// T02: axis kind/position/crossing/orientation/tick enums derive from their raw
-// spellings inside Defined, so an axis cannot carry an enum that disagrees with
-// its stored spelling.
+// Defined parses axis options once before the scene is used for layout and paint.
 internal sealed record PptxSceneChartAxis
 {
     public string Id { get; }
 
     public PptxSceneChartAxisKind AxisKind { get; }
 
-    public string Kind { get; }
-
     public PptxSceneChartAxisPosition PositionKind { get; }
-
-    public string Position { get; }
 
     public string CrossAxisId { get; }
 
@@ -795,8 +789,6 @@ internal sealed record PptxSceneChartAxis
     public PptxSceneChartAxisCrossBetween CrossBetweenKind { get; }
 
     public PptxSceneChartAxisOrientation OrientationKind { get; }
-
-    public string Orientation { get; }
 
     public bool? IsDeleted { get; }
 
@@ -857,16 +849,13 @@ internal sealed record PptxSceneChartAxis
     private PptxSceneChartAxis(
         string id,
         PptxSceneChartAxisKind axisKind,
-        string kind,
         PptxSceneChartAxisPosition positionKind,
-        string position,
         string crossAxisId,
         PptxSceneChartAxisCrosses crossesKind,
         string crosses,
         double? crossesAt,
         PptxSceneChartAxisCrossBetween crossBetweenKind,
         PptxSceneChartAxisOrientation orientationKind,
-        string orientation,
         bool? isDeleted,
         bool hasScaling,
         double? minimum,
@@ -896,16 +885,13 @@ internal sealed record PptxSceneChartAxis
     {
         Id = id;
         AxisKind = axisKind;
-        Kind = kind;
         PositionKind = positionKind;
-        Position = position;
         CrossAxisId = crossAxisId;
         CrossesKind = crossesKind;
         Crosses = crosses;
         CrossesAt = crossesAt;
         CrossBetweenKind = crossBetweenKind;
         OrientationKind = orientationKind;
-        Orientation = orientation;
         IsDeleted = isDeleted;
         HasScaling = hasScaling;
         Minimum = minimum;
@@ -974,16 +960,13 @@ internal sealed record PptxSceneChartAxis
         return new PptxSceneChartAxis(
             id,
             PptxSceneBuilder.ParseChartAxisKind(kind),
-            kind,
             PptxSceneBuilder.ParseChartAxisPosition(position),
-            position,
             crossAxisId,
             PptxSceneBuilder.ParseChartAxisCrosses(crosses),
             crosses,
             crossesAt,
             PptxSceneBuilder.ParseChartAxisCrossBetween(crossBetween),
             PptxSceneBuilder.ParseChartAxisOrientation(orientation),
-            orientation,
             isDeleted,
             hasScaling,
             minimum,
