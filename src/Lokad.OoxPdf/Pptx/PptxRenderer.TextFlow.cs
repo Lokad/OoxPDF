@@ -393,7 +393,7 @@ internal sealed partial class PptxRenderer
         verticalOffset = slack * multiplier;
         if (verticalOffset > 0d && frame.BodyProperties.VerticalAnchor == TextVerticalAnchor.Bottom &&
             frame.BodyProperties.VerticalOverflow == PptxTextVerticalOverflow.Clip &&
-            !verticalAnchorPath && !frame.TableRowIndex.HasValue && !frame.TextFlipVertical &&
+            !verticalAnchorPath && !frame.TableRowIndex.HasValue &&
             frame.TextRotationDegrees == 0d)
         {
             verticalOffset = LimitBottomAnchorOffsetToInk(lines, frame.TextClipY, verticalOffset, advanceEstimator);

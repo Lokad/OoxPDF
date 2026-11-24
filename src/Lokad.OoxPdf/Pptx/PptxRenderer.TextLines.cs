@@ -322,7 +322,7 @@ internal sealed partial class PptxRenderer
             paragraph.Bullet.Kind == PptxParagraphBulletKind.None && paragraph.Style.TabStops.Count == 0 &&
             !paragraph.HasManualLineBreak && frame.Orientation == PptxTextOrientation.Horizontal &&
             Math.Abs(frame.TextRotationDegrees) <= PptxTextMetricRules.CoordinateTolerance &&
-            !frame.TextFlipHorizontal && !frame.TextFlipVertical && !frame.TableRowIndex.HasValue &&
+            !frame.TableRowIndex.HasValue &&
             frame.ColumnCount == 1 && frame.BodyProperties.AutofitMode == PptxTextAutofitMode.None &&
             frame.BodyProperties.WrapMode == PptxTextWrapMode.None &&
             paragraph.Runs.All(run => run.Text.All(character => character is >= ' ' and <= '~'));

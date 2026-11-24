@@ -277,9 +277,6 @@ internal sealed partial class PptxRenderer
 
         double textRotationDegrees = (bodyProperties.RotationDegrees ?? DefaultShapeTextRotationDegrees(bounds.Value)) + orientationRotation;
 
-        bool textFlipHorizontal = false;
-        bool textFlipVertical = false;
-
         // Vertical text wraps and centers against the top/bottom insets: the flow column
         // spans the shape height, so Office measures it with the vertical insets (six Office
         // renders agree on tokens and centering). Tables keep Left/Right (unobserved).
@@ -287,7 +284,6 @@ internal sealed partial class PptxRenderer
         double columnInsetEnd = orientation == PptxTextOrientation.Vertical ? insets.Bottom : insets.Right;
         double textX = flowX + columnInsetStart;
         double textWidth = Math.Max(1d, flowWidth - columnInsetStart - columnInsetEnd);
-        double textWrapWidth = bodyProperties.ExplicitWrapWidth ?? textWidth;
         double textHeight = Math.Max(1d, flowHeight - insets.Top - insets.Bottom);
         int columnCount = bodyProperties.ColumnCount;
         double columnSpacing = bodyProperties.ColumnSpacing;
@@ -336,8 +332,8 @@ internal sealed partial class PptxRenderer
         TextVerticalAnchor anchorForEstimate = orientation == PptxTextOrientation.Vertical ? TextVerticalAnchor.Top : bodyProperties.VerticalAnchor;
         double verticalOffset = anchorForEstimate switch
         {
-            TextVerticalAnchor.Middle => Math.Max(0d, (textHeight - (await EstimateTextHeightAsync(paragraphs, textWrapWidth, bodyProperties, fontResolver, cancellationToken).ConfigureAwait(false))) / 2d),
-            TextVerticalAnchor.Bottom => Math.Max(0d, textHeight - (await EstimateTextHeightAsync(paragraphs, textWrapWidth, bodyProperties, fontResolver, cancellationToken).ConfigureAwait(false))),
+            TextVerticalAnchor.Middle => Math.Max(0d, (textHeight - (await EstimateTextHeightAsync(paragraphs, textWidth, bodyProperties, fontResolver, cancellationToken).ConfigureAwait(false))) / 2d),
+            TextVerticalAnchor.Bottom => Math.Max(0d, textHeight - (await EstimateTextHeightAsync(paragraphs, textWidth, bodyProperties, fontResolver, cancellationToken).ConfigureAwait(false))),
             _ => 0d
         };
 
@@ -363,7 +359,7 @@ internal sealed partial class PptxRenderer
             lineSpacingScale,
             textX,
             textWidth,
-            textWrapWidth,
+            TextWrapWidth: textWidth,
             textHeight,
             textClipX,
             textClipWidth,
@@ -374,8 +370,6 @@ internal sealed partial class PptxRenderer
             rotationCenterX,
             rotationCenterY,
             textRotationDegrees,
-            textFlipHorizontal,
-            textFlipVertical,
             useOfficeBaselineFloor,
             flowYTop,
             verticalOffset,
@@ -439,8 +433,7 @@ internal sealed partial class PptxRenderer
             VerticalOverflow = PptxTextVerticalOverflow.Clip,
             VerticalOverflowValue = "clip",
             VerticalOverflowSource = PptxTextBodyPropertySource.TableCellStyle,
-            ClipsHorizontalOverflow = true,
-            ExplicitWrapWidth = Math.Max(1d, tableFrame.Width - tableFrame.Insets.Left - tableFrame.Insets.Right)
+            ClipsHorizontalOverflow = true
         };
 
         long shapeX = PointsToEmu(tableFrame.X);
@@ -462,28 +455,15 @@ internal sealed partial class PptxRenderer
         var (flowX, flowYTop, flowWidth, flowHeight) = ResolveTextFlowRectangle(x, yTop, width, height,
             document.SlideHeightPoints - rotationCenterY, orientationRotation);
         double textRotationDegrees = (bodyProperties.RotationDegrees ?? 0d) + orientationRotation;
-        bool textFlipHorizontal = false;
-        bool textFlipVertical = false;
-
         double textX = flowX + insets.Left;
         double textWidth = Math.Max(1d, flowWidth - insets.Left - insets.Right);
-        double textWrapWidth = bodyProperties.ExplicitWrapWidth ?? textWidth;
+        // Keep wrapping on the cell's original width before the bounds round through EMUs.
+        double textWrapWidth = Math.Max(1d, tableFrame.Width - insets.Left - insets.Right);
         double textHeight = Math.Max(1d, flowHeight - insets.Top - insets.Bottom);
         int columnCount = bodyProperties.ColumnCount;
         double columnSpacing = bodyProperties.ColumnSpacing;
-        bool clipsVerticalOverflow = ClipsTextVerticalOverflow(bodyProperties.VerticalOverflow);
-        bool clipsTextLocally = bodyProperties.ClipsTextHorizontally;
-        double textClipX = clipsTextLocally ? flowX : 0d;
-        double textClipWidth = clipsTextLocally ? flowWidth : document.SlideWidthPoints;
-        double textClipY = 0d;
-        double textClipHeight = document.SlideHeightPoints;
-        if (clipsVerticalOverflow)
-        {
-            (textClipY, textClipHeight) = IntersectVerticalTextClipWithSlide(
-                document.SlideHeightPoints - flowYTop - flowHeight,
-                flowHeight,
-                document.SlideHeightPoints);
-        }
+        var (textClipY, textClipHeight) = IntersectVerticalTextClipWithSlide(
+            document.SlideHeightPoints - flowYTop - flowHeight, flowHeight, document.SlideHeightPoints);
 
         IReadOnlyList<PptxTextParagraphModel> paragraphs = measurement?.Paragraphs ?? BuildParagraphModels(
             textBody,
@@ -533,8 +513,8 @@ internal sealed partial class PptxRenderer
             textWidth,
             textWrapWidth,
             textHeight,
-            textClipX,
-            textClipWidth,
+            TextClipX: flowX,
+            TextClipWidth: flowWidth,
             textClipY,
             textClipHeight,
             columnCount,
@@ -542,8 +522,6 @@ internal sealed partial class PptxRenderer
             rotationCenterX,
             rotationCenterY,
             textRotationDegrees,
-            textFlipHorizontal,
-            textFlipVertical,
             UseOfficeBaselineFloor: bodyProperties.VerticalAnchor == TextVerticalAnchor.Top,
             flowYTop,
             verticalOffset,

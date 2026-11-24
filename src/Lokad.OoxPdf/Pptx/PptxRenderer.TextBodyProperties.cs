@@ -65,8 +65,7 @@ internal sealed partial class PptxRenderer
             compatibleLineSpacingSource,
             ParseTextBodyRotationDegrees(rotation),
             rotation,
-            rotationSource,
-            ExplicitWrapWidth: null)
+            rotationSource)
         {
             AutofitMode = ParseTextAutofitMode(autofitMode),
             ClipsHorizontalOverflow = string.Equals(horizontalOverflow, "clip", StringComparison.OrdinalIgnoreCase) ? true :

@@ -225,8 +225,6 @@ internal sealed partial class PptxRenderer
         double RotationCenterX,
         double RotationCenterY,
         double TextRotationDegrees,
-        bool TextFlipHorizontal,
-        bool TextFlipVertical,
         bool UseOfficeBaselineFloor,
         double FlowYTop,
         double VerticalOffset,
@@ -296,8 +294,7 @@ internal sealed partial class PptxRenderer
         PptxTextBodyPropertySource CompatibleLineSpacingSource,
         double? RotationDegrees,
         string? RotationValue,
-        PptxTextBodyPropertySource RotationDegreesSource,
-        double? ExplicitWrapWidth)
+        PptxTextBodyPropertySource RotationDegreesSource)
     {
         public PptxTextAutofitMode AutofitMode { get; init; } = PptxTextAutofitMode.Absent;
         public bool? ClipsHorizontalOverflow { get; init; }
