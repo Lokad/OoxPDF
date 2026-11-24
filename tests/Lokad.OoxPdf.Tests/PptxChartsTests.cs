@@ -1866,11 +1866,11 @@ internal static partial class PptxChartsTests
         (double ux, double uy, double ur) = ReadPolarGeometry(unlabeled);
         (double lx, double ly, double lr) = ReadPolarGeometry(labeled);
         TestAssert.True(Math.Abs(ux - 404d) < 0.01d && Math.Abs(uy - 300d) < 0.01d && Math.Abs(ur - 156.24d) < 0.01d, "Untitled, unreserved pies use the plot midpoint and keep their tall radius. Got " + ux + "/" + uy + "/" + ur);
-        TestAssert.True(Math.Abs(lx - 404d) < 0.01d && Math.Abs(ly - 300d) < 0.01d && Math.Abs(lr - 146.5d) < 0.01d, "Labeled pies center with the tall radius (leader probes 146.50). Got " + lx + "/" + ly + "/" + lr);
+        TestAssert.True(Math.Abs(lx - 404d) < 0.01d && Math.Abs(ly - 300d) < 0.01d && Math.Abs(lr / 360d - 0.40694d) < 0.00001d, "Labeled pies center with the tall radius (leader probes 146.50). Got " + lx + "/" + ly + "/" + lr);
         object shortPlotBox = System.Activator.CreateInstance(plotBoxType, [84d, 144d, 420d, 300d])!;
         object shortLabeled = method.Invoke(null, [pie, shortPlotBox, empty, hidden, true, false, 0d, 0d, false])!;
         (double qx, double qy, double qr) = ReadPolarGeometry(shortLabeled);
-        TestAssert.True(Math.Abs(qx - 294d) < 0.01d && Math.Abs(qy - 294d) < 0.01d && Math.Abs(qr - 120.25d) < 0.01d, "Short labeled pies use the short radius (offset probe 120.25). Got " + qx + "/" + qy + "/" + qr);
+        TestAssert.True(Math.Abs(qx - 294d) < 0.01d && Math.Abs(qy - 294d) < 0.01d && Math.Abs(qr / 300d - 0.40083d) < 0.00001d, "Short labeled pies use the short radius (offset probe 120.25). Got " + qx + "/" + qy + "/" + qr);
         object doughnut = System.Enum.ToObject(kindType, 1);
         object narrowPlot = System.Activator.CreateInstance(plotBoxType, [144d, 72d, 246d, 432d])!;
         object narrowDoughnut = method.Invoke(null, [doughnut, narrowPlot, empty, hidden, false, false, 0d, 0d, false])!;
@@ -1898,82 +1898,60 @@ internal static partial class PptxChartsTests
 
     public static void PptxSyntheticExplodedDoughnutLayoutTranslatesRigidly()
     {
-        var renderer = typeof(PptxRenderer);
-        var flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static;
-        var method = renderer.GetMethod("ResolvePieOrDoughnutLayout", flags);
-        TestAssert.True(method is not null, "Expected polar layout helper to remain inspectable by the Office evidence guard.");
-        var kindType = renderer.GetNestedType("ChartPolarKind", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected polar kind.");
-        var plotBoxType = renderer.GetNestedType("ChartPlotBox", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected plot box.");
-        var legendType = renderer.GetNestedType("ChartLegendLayout", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected legend layout.");
-        var instanceFlags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance;
-        object doughnut = System.Enum.ToObject(kindType, 1);
-        object plotBox = System.Activator.CreateInstance(plotBoxType, [144d, 72d, 576d, 432d])!;
-        object hidden = legendType.GetProperty("Hidden", flags | System.Reflection.BindingFlags.Public)!.GetValue(null)!;
-        object manual = legendType.GetProperty("Layout", instanceFlags)!.GetValue(hidden)!;
-        object textBody = legendType.GetProperty("TextBodyProperties", instanceFlags)!.GetValue(hidden)!;
-        object shape = legendType.GetProperty("ShapeStyle", instanceFlags)!.GetValue(hidden)!;
-        object rightVisible = System.Activator.CreateInstance(legendType, [PptxSceneChartLegendPosition.Right, "r", false, true, manual, textBody, shape])!;
         var explosions = new Dictionary<int, double> { [0] = 0.1d };
-        object legacy = method!.Invoke(null, [doughnut, plotBox, explosions, rightVisible, false, false, 0d, 0d, false])!;
-        object shifted = method.Invoke(null, [doughnut, plotBox, explosions, rightVisible, false, false, 42.83d, 0d, false])!;
-        (double lx, double ly, double lr) = ReadPolarGeometry(legacy);
-        (double sx, double sy, double sr) = ReadPolarGeometry(shifted);
-        TestAssert.True(Math.Abs(sr - lr) < 0.000001d && Math.Abs(sy - ly) < 0.000001d, "The reserve must not resize the ring, only translate it. Got " + sr + "/" + sy);
-        TestAssert.True(Math.Abs((lx - sx) - 42.83d / 2d) < 0.01d, "The ring translates by half the reserve (1:2 ring:legend rule). Got " + (lx - sx));
+        var (lx, ly, lr) = ReadRightLegendDoughnutGeometry(72d, 432d, explosions: explosions);
+        var (sx, sy, sr) = ReadRightLegendDoughnutGeometry(72d, 432d, reserve: 42.83d, explosions: explosions);
+        TestAssert.True(Math.Abs(sr - lr) < 0.000001d && Math.Abs(sy - ly) < 0.000001d,
+            "The reserve must translate the ring without resizing it. Got " + sr + "/" + sy);
+        TestAssert.True(Math.Abs((lx - sx) - 42.83d / 2d) < 0.01d,
+            "The ring translates by half the reserve. Got " + (lx - sx));
     }
-
 
     public static void PptxSyntheticDoughnutTitledBandLowersRingCenter()
     {
-        var renderer = typeof(PptxRenderer);
-        var flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static;
-        var method = renderer.GetMethod("ResolvePieOrDoughnutLayout", flags);
-        TestAssert.True(method is not null, "Expected polar layout helper to remain inspectable by the Office evidence guard.");
-        var kindType = renderer.GetNestedType("ChartPolarKind", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected polar kind.");
-        var plotBoxType = renderer.GetNestedType("ChartPlotBox", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected plot box.");
-        var legendType = renderer.GetNestedType("ChartLegendLayout", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected legend layout.");
-        var instanceFlags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance;
-        object doughnut = System.Enum.ToObject(kindType, 1);
-        object plotBox = System.Activator.CreateInstance(plotBoxType, [144d, 72d, 576d, 432d])!;
-        object hidden = legendType.GetProperty("Hidden", flags | System.Reflection.BindingFlags.Public)!.GetValue(null)!;
-        object manual = legendType.GetProperty("Layout", instanceFlags)!.GetValue(hidden)!;
-        object textBody = legendType.GetProperty("TextBodyProperties", instanceFlags)!.GetValue(hidden)!;
-        object shape = legendType.GetProperty("ShapeStyle", instanceFlags)!.GetValue(hidden)!;
-        object rightVisible = System.Activator.CreateInstance(legendType, [PptxSceneChartLegendPosition.Right, "r", false, true, manual, textBody, shape])!;
-        var empty = new Dictionary<int, double>();
-        object untitled = method!.Invoke(null, [doughnut, plotBox, empty, rightVisible, false, false, 0d, 0d, false])!;
-        object titled = method.Invoke(null, [doughnut, plotBox, empty, rightVisible, false, false, 0d, 0d, true])!;
-        (double ux, double uy, double ur) = ReadPolarGeometry(untitled);
-        (double tx, double ty, double tr) = ReadPolarGeometry(titled);
+        var (ux, uy, _) = ReadRightLegendDoughnutGeometry(72d, 432d);
+        var (tx, ty, tr) = ReadRightLegendDoughnutGeometry(72d, 432d, hasTitle: true);
         TestAssert.True(Math.Abs(ty - 270.32d) < 0.01d, "Titled rings must sit on the Office band center (270.32). Got " + ty);
         TestAssert.True(Math.Abs(uy - 269.86d) < 0.01d, "Untitled right rings keep the legacy ratio center (unobserved Office case frozen). Got " + uy);
         TestAssert.True(Math.Abs(tx - ux) < 0.000001d, "The band must not move the ring horizontally. Got " + tx + " vs " + ux);
         TestAssert.True(Math.Abs(tr - 187.35d) < 0.01d, "Titled rings must fit between band and margin (Office 187.32). Got " + tr);
     }
+
     public static void PptxSyntheticDoughnutShortPlotRadiusFitsBand()
+    {
+        var (_, centerY, radius) = ReadRightLegendDoughnutGeometry(288d, 216d, hasTitle: true);
+        TestAssert.True(Math.Abs(radius - 79.35d) < 0.01d,
+            "Short titled rings must fit between band and margin (Office 79.32). Got " + radius);
+        TestAssert.True(Math.Abs(centerY - 378.32d) < 0.01d,
+            "Short titled rings must center below the band (Office 378.32). Got " + centerY);
+    }
+
+    private static (double CenterX, double CenterY, double Radius) ReadRightLegendDoughnutGeometry(
+        double plotY, double plotHeight, bool hasTitle = false, double reserve = 0d,
+        IReadOnlyDictionary<int, double>? explosions = null)
     {
         var renderer = typeof(PptxRenderer);
         var flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static;
-        var method = renderer.GetMethod("ResolvePieOrDoughnutLayout", flags);
-        TestAssert.True(method is not null, "Expected polar layout helper to remain inspectable by the Office evidence guard.");
-        var kindType = renderer.GetNestedType("ChartPolarKind", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected polar kind.");
-        var plotBoxType = renderer.GetNestedType("ChartPlotBox", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected plot box.");
-        var legendType = renderer.GetNestedType("ChartLegendLayout", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected legend layout.");
+        var method = renderer.GetMethod("ResolvePieOrDoughnutLayout", flags)
+            ?? throw new InvalidOperationException("Expected polar layout helper.");
+        var kindType = renderer.GetNestedType("ChartPolarKind", System.Reflection.BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("Expected polar kind.");
+        var plotBoxType = renderer.GetNestedType("ChartPlotBox", System.Reflection.BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("Expected plot box.");
+        var legendType = renderer.GetNestedType("ChartLegendLayout", System.Reflection.BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("Expected legend layout.");
         var instanceFlags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance;
         object doughnut = System.Enum.ToObject(kindType, 1);
-        object shortPlot = System.Activator.CreateInstance(plotBoxType, [144d, 288d, 576d, 216d])!;
+        object plot = System.Activator.CreateInstance(plotBoxType, [144d, plotY, 576d, plotHeight])!;
         object hidden = legendType.GetProperty("Hidden", flags | System.Reflection.BindingFlags.Public)!.GetValue(null)!;
         object manual = legendType.GetProperty("Layout", instanceFlags)!.GetValue(hidden)!;
         object textBody = legendType.GetProperty("TextBodyProperties", instanceFlags)!.GetValue(hidden)!;
         object shape = legendType.GetProperty("ShapeStyle", instanceFlags)!.GetValue(hidden)!;
-        object rightVisible = System.Activator.CreateInstance(legendType, [PptxSceneChartLegendPosition.Right, "r", false, true, manual, textBody, shape])!;
-        var empty = new Dictionary<int, double>();
-        object shortTitled = method!.Invoke(null, [doughnut, shortPlot, empty, rightVisible, false, false, 0d, 0d, true])!;
-        (double sx, double sy, double sr) = ReadPolarGeometry(shortTitled);
-        TestAssert.True(Math.Abs(sr - 79.35d) < 0.01d, "Short titled rings must fit between band and margin (Office 79.32). Got " + sr);
-        TestAssert.True(Math.Abs(sy - 378.32d) < 0.01d, "Short titled rings must center below the band (Office 378.32). Got " + sy);
+        object rightVisible = System.Activator.CreateInstance(legendType,
+            [PptxSceneChartLegendPosition.Right, "r", false, true, manual, textBody, shape])!;
+        return ReadPolarGeometry(method.Invoke(null,
+            [doughnut, plot, explosions ?? new Dictionary<int, double>(), rightVisible, false, false, reserve, 0d, hasTitle])!);
     }
-
 
     public static void PptxSyntheticPieAutoLabelConstantsKeepOfficeCalibration()
     {
@@ -1985,19 +1963,6 @@ internal static partial class PptxChartsTests
         double pitch = (double)rules.GetField("PieDataLabelLinePitchFactor")!.GetValue(null)!;
         TestAssert.True(Math.Abs(pitch - 1.22d) < 0.000001d, "Pie wrap pitch should stay at the measured line step. Got " + pitch);
     }
-
-    public static void PptxSyntheticPieLabeledRadiusGateKeepsPlotHeight()
-    {
-        var method = typeof(PptxRenderer).GetMethod(
-            "SelectPieLabeledRadiusRatio",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-        TestAssert.True(method is not null, "Expected pie labeled-radius helper to remain inspectable by the Office evidence guard.");
-        double shortPlot = (double)method!.Invoke(null, [300d])!;
-        double tallPlot = (double)method.Invoke(null, [360d])!;
-        TestAssert.True(Math.Abs(shortPlot - 0.40083d) < 0.00001d, "300H labeled pies should use the short radius ratio (Office 0.40083). Got " + shortPlot);
-        TestAssert.True(Math.Abs(tallPlot - 0.40694d) < 0.00001d, "360H labeled pies should use the tall radius ratio (Office 0.40694). Got " + tallPlot);
-    }
-
 
     public static void PptxSyntheticPieManualBoxHeightKeepsOfficeCalibration()
     {
