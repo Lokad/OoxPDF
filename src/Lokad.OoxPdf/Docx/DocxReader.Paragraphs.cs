@@ -495,8 +495,9 @@ internal sealed partial class DocxReader
                 hasMathRunRevisions = false;
                 // Trailing text-wrapping breaks belong to the paragraph lines.
                 // The preceding operands keep their original equation owner.
-                XElement? firstTrailingBreak = display && !source.RemoveDeletedText
-                    ? FindFirstTrailingDisplayMathBreak(equation, cancellationToken) : null;
+                var firstTrailingBreak = display && !source.RemoveDeletedText
+                    ? FindFirstTrailingDisplayMathBreak(equation, equationRevision?.Kind == DocxRevisionKind.Deletion,
+                        cancellationToken) : null;
                 var content = DocxMathParser.Read(equation, ReadMathRun, cancellationToken,
                     wrapper => IsIncludedRevisionContainer(wrapper, markupMode), preserveDeletedStructure: markupMode == OoxPdfDocxMarkupMode.Final,
                     readBookmark: source.RemoveDeletedText ? null : bookmark =>
@@ -516,7 +517,7 @@ internal sealed partial class DocxReader
                             inlineItems!.Count, inlineItems.Count + 1, hyperlinkSpans, relationships, mathContent: true),
                     authoredStory: paragraph.Annotation<DocxSourceXml.StoryOrigin>()?.Story,
                     equationHasDeletionOwner: source.RemoveDeletedText || equationRevision?.Kind == DocxRevisionKind.Deletion,
-                    firstTrailingBreakRun: firstTrailingBreak);
+                    trailingBreaks: firstTrailingBreak);
                 if (source.RemoveDeletedText)
                 {
                     var deletedEquation = new DocxEquation(content, runs.Count, sourceRunIndex, display, null, null);
@@ -535,9 +536,9 @@ internal sealed partial class DocxReader
                 });
                 inlineItems!.Add(new DocxInlineEquation(equations[^1]));
                 RecordComplexFieldResult();
-                if (firstTrailingBreak is not null)
+                if (firstTrailingBreak is { } trailing)
                 {
-                    foreach (var item in firstTrailingBreak.ElementsAfterSelf().Prepend(firstTrailingBreak))
+                    foreach (var item in trailing.Run.ElementsAfterSelf().Prepend(trailing.Run))
                     {
                         cancellationToken.ThrowIfCancellationRequested();
                         // Route range markers at their actual position in the
@@ -545,13 +546,14 @@ internal sealed partial class DocxReader
                         bool mathRun = item.Name == MathNamespace + "r";
                         if (mathRun && item.Element(WordprocessingNamespace + "br") is null)
                             continue;
-                        AddSourceContainerChild(mathRun ? AsParagraphRun(item) : item, source.Revision,
-                            removeDeletedText: false);
+                        var inlineSource = mathRun ? AsParagraphRun(item, item == trailing.Run ? trailing.FirstBreakInRun : null) : item;
+                        AddSourceContainerChild(inlineSource, source.Revision, removeDeletedText: false);
                     }
                 }
             }
 
-            static XElement AsParagraphRun(XElement run) => new(WordprocessingNamespace + "r", run.Elements());
+            static XElement AsParagraphRun(XElement run, XElement? firstChild = null) => new(WordprocessingNamespace + "r",
+                firstChild is null ? run.Elements() : firstChild.ElementsAfterSelf().Prepend(firstChild));
 
             DocxTextRun ReadMathRun(XElement run, string text)
             {

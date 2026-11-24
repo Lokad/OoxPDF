@@ -14,7 +14,8 @@ internal static partial class DocxMathParser
         CancellationToken cancellationToken, Func<XElement, bool>? includeRevision = null,
         bool preserveDeletedStructure = false, Action<DocxMathBookmark>? readBookmark = null,
         Action<XElement>? readCommentBoundary = null, Func<XElement, DocxHyperlinkSpan>? readHyperlink = null,
-        XElement? authoredStory = null, bool equationHasDeletionOwner = false, XElement? firstTrailingBreakRun = null)
+        XElement? authoredStory = null, bool equationHasDeletionOwner = false,
+        (XElement Run, XElement? FirstBreakInRun)? trailingBreaks = null)
     {
         var pending = new Stack<(XElement Element, bool Expanded, XName? RevisionOwner, bool IncludeAnnotations, DocxHyperlinkSpan? Hyperlink)>();
         var nodes = new Dictionary<XElement, DocxMathNode>();
@@ -52,7 +53,8 @@ internal static partial class DocxMathParser
             if (!revisionRow && !sourceContainer && (element.Name.Namespace != MathNamespace || !IsContainer(name)))
             {
                 bool allowsDeletedText = item.RevisionOwner is null ? equationHasDeletionOwner : item.RevisionOwner == deletion;
-                nodes.Add(element, ReadLeaf(element, readRun, allowsDeletedText) with
+                XElement? firstBreakInRun = element == trailingBreaks?.Run ? trailingBreaks?.FirstBreakInRun : null;
+                nodes.Add(element, ReadLeaf(element, readRun, allowsDeletedText, firstBreakInRun) with
                     { Hyperlink = item.IncludeAnnotations ? item.Hyperlink : null });
                 continue;
             }
@@ -189,8 +191,21 @@ internal static partial class DocxMathParser
         return nodes[equation] as DocxMathRow ?? new DocxMathRow([nodes[equation]]);
 
         IEnumerable<XElement> WithoutTrailingBreaks(XElement element, IEnumerable<XElement> children) =>
-            element != equation || firstTrailingBreakRun is null
-                ? children : children.TakeWhile(child => child != firstTrailingBreakRun);
+            element == equation && trailingBreaks is { } trailing ? BeforeBreakRun(children, trailing) : children;
+
+        static IEnumerable<XElement> BeforeBreakRun(IEnumerable<XElement> children,
+            (XElement Run, XElement? FirstBreakInRun) trailing)
+        {
+            foreach (XElement child in children)
+            {
+                if (child == trailing.Run)
+                {
+                    if (trailing.FirstBreakInRun is not null) yield return child;
+                    yield break;
+                }
+                yield return child;
+            }
+        }
 
         DocxMathRow? Role(XElement element, string name)
         {
@@ -340,11 +355,14 @@ internal static partial class DocxMathParser
     // Revision admission and leaf parsing share the same zero-content run shape.
     // Visible unknown payloads retain their former deferred fallback; an empty
     // unknown payload cannot become a supported revision owner.
-    private static bool IsReadableRun(XElement element, bool allowsDeletedText) =>
-        element.Name == MathNamespace + "r" && element.Elements().All(child =>
+    internal static bool IsReadableRun(XElement element, bool allowsDeletedText, XElement? firstBreakInRun = null) =>
+        element.Name == MathNamespace + "r" && RunContent(element, firstBreakInRun).All(child =>
             ReadLiteralRunText(child, allowsDeletedText) is not null ||
             child.Name == MathNamespace + "rPr" || child.Name == WordprocessingNamespace + "rPr" ||
             DocxSourceXml.IsNonPrintingMarker(child));
+
+    private static IEnumerable<XElement> RunContent(XElement run, XElement? firstBreakInRun) =>
+        firstBreakInRun is null ? run.Elements() : run.Elements().TakeWhile(child => child != firstBreakInRun);
 
     private static string? ReadLiteralRunText(XElement element, bool allowsDeletedText)
     {
@@ -361,14 +379,15 @@ internal static partial class DocxMathParser
         };
     }
 
-    private static DocxMathNode ReadLeaf(XElement element, Func<XElement, string, DocxTextRun> readRun, bool allowsDeletedText)
+    private static DocxMathNode ReadLeaf(XElement element, Func<XElement, string, DocxTextRun> readRun, bool allowsDeletedText,
+        XElement? firstBreakInRun)
     {
-        if (IsReadableRun(element, allowsDeletedText))
+        if (IsReadableRun(element, allowsDeletedText, firstBreakInRun))
         {
             var (normalText, literalText, supported) = ReadRunProperties(element);
             // Native equations wrap at operator boundaries. Optional break
             // markers contribute neither ink nor advance to the unbroken text.
-            string text = string.Concat(element.Elements().Select(child => ReadLiteralRunText(child, allowsDeletedText)));
+            string text = string.Concat(RunContent(element, firstBreakInRun).Select(child => ReadLiteralRunText(child, allowsDeletedText)));
             if (text.Any(DocxTextBreakRules.IsOptionalBreakMarker))
                 text = new string(text.Where(IsMathLiteralCharacter).ToArray());
             return new DocxMathRun(

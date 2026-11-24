@@ -14,19 +14,28 @@ internal sealed partial class DocxReader
         element.Name == MathNamespace + "oMath" ||
         IsDisplayMathRun(element) && !IsDisplayMathLineBreakRun(element, allowCompanions: true);
 
-    private static XElement? FindFirstTrailingDisplayMathBreak(XElement equation, CancellationToken cancellationToken)
+    private static (XElement Run, XElement? FirstBreakInRun)? FindFirstTrailingDisplayMathBreak(
+        XElement equation, bool allowsDeletedText, CancellationToken cancellationToken)
     {
-        if (equation.LastNode is XElement last &&
-            !IsDisplayMathLineBreakRun(last) && !IsBoundary(last)) return null;
+        if (equation.Name != MathNamespace + "oMath") return null;
+        if (equation.LastNode is XElement last && !IsDisplayMathLineBreakRun(last) && !IsBoundary(last))
+            return ReadPackedBreak(last);
 
-        XElement? first = null;
+        (XElement Run, XElement? FirstBreakInRun)? first = null;
         foreach (XElement child in equation.Elements())
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (IsDisplayMathLineBreakRun(child)) first ??= child;
-            else if (!IsBoundary(child)) first = null;
+            if (IsDisplayMathLineBreakRun(child)) first ??= (child, null);
+            else if (!IsBoundary(child)) first = ReadPackedBreak(child);
         }
         return first;
+
+        // A trailing break can share the last operand's run. Keep the
+        // readable prefix under its original formatting owner.
+        (XElement, XElement?)? ReadPackedBreak(XElement run) =>
+            run.Name == MathNamespace + "r" && run.Element(WordprocessingNamespace + "br") is { } split &&
+            HasOnlyWhitespaceRunText(run) && split.ElementsAfterSelf().Prepend(split).All(IsBreakOrPaginationHint) &&
+            DocxMathParser.IsReadableRun(run, allowsDeletedText, split) ? (run, split) : null;
 
         static bool IsBoundary(XElement element) =>
             DocxSourceXml.IsNonPrintingMarker(element) ||
@@ -35,7 +44,7 @@ internal sealed partial class DocxReader
             (element.Name == MathNamespace + "r" &&
              element.Attributes().All(attribute => attribute.IsNamespaceDeclaration) &&
              element.Elements().All(DocxSourceXml.IsLastRenderedPageBreakHint) &&
-             element.Nodes().OfType<XText>().All(text => string.IsNullOrWhiteSpace(text.Value)));
+             HasOnlyWhitespaceRunText(element));
     }
 
     private static bool IsDisplayMathLineBreakRun(XElement run, bool allowCompanions = false)
@@ -45,18 +54,22 @@ internal sealed partial class DocxReader
         return run.Name == MathNamespace + "r" &&
             run.Element(WordprocessingNamespace + "br") is not null &&
             run.Elements().All(child => child.Name == WordprocessingNamespace + "rPr" ||
-                DocxSourceXml.IsLastRenderedPageBreakHint(child) || IsLineBreak(child) ||
+                IsBreakOrPaginationHint(child) ||
                 allowCompanions && (child.Name == WordprocessingNamespace + "drawing" ||
                     child.Name == WordprocessingNamespace + "t" && !child.HasElements)) &&
-            run.Nodes().OfType<XText>().All(text => string.IsNullOrWhiteSpace(text.Value));
-
-        static bool IsLineBreak(XElement element) =>
-            element.Name == WordprocessingNamespace + "br" &&
-            !element.HasElements && string.IsNullOrWhiteSpace(element.Value) &&
-            element.Attributes().All(attribute => attribute.IsNamespaceDeclaration ||
-                attribute.Name == WordprocessingNamespace + "type" && attribute.Value == "textWrapping" ||
-                attribute.Name == WordprocessingNamespace + "clear" && attribute.Value == "none");
+            HasOnlyWhitespaceRunText(run);
     }
+
+    private static bool HasOnlyWhitespaceRunText(XElement run) =>
+        run.Nodes().OfType<XText>().All(text => string.IsNullOrWhiteSpace(text.Value));
+
+    private static bool IsBreakOrPaginationHint(XElement element) =>
+        DocxSourceXml.IsLastRenderedPageBreakHint(element) ||
+        element.Name == WordprocessingNamespace + "br" &&
+        !element.HasElements && string.IsNullOrWhiteSpace(element.Value) &&
+        element.Attributes().All(attribute => attribute.IsNamespaceDeclaration ||
+            attribute.Name == WordprocessingNamespace + "type" && attribute.Value == "textWrapping" ||
+            attribute.Name == WordprocessingNamespace + "clear" && attribute.Value == "none");
 
     private static IEnumerable<(XElement Element, DocxRevisionInfo? Revision, bool RemoveDeletedText)> EnumerateMathParagraphSources(
         XElement container, DocxRevisionInfo? inheritedRevision, bool removeDeletedText,

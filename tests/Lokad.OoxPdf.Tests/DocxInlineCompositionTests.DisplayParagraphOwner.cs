@@ -79,7 +79,8 @@ internal static partial class DocxInlineCompositionTests
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
         {
             DocxDocument Read(bool insideEquation, bool mathRun, string? type = null, int breakCount = 1, bool proofing = false,
-                bool? bookmarkStartsAfterBreaks = null, string? paginationHint = null, bool packBreaks = false) => ReadMutation(
+                bool? bookmarkStartsAfterBreaks = null, string? paginationHint = null, bool packBreaks = false,
+                bool shareOperandRun = false) => ReadMutation(
                 "CompositionProbes/math-explicit-display-same-group", mode, false, false, (xml, w, m) =>
                 {
                     var group = xml.Descendants(m + "oMathPara").Single();
@@ -99,7 +100,12 @@ internal static partial class DocxInlineCompositionTests
                         if (index == 0 && paginationHint is ("inside" or "malformed"))
                             run.Add(new XElement(w + "lastRenderedPageBreak",
                                 paginationHint == "malformed" ? new XAttribute(w + "future", "1") : null));
-                        if (insideEquation) equations[0].Add(run);
+                        if (shareOperandRun)
+                        {
+                            packedRun = equations[0].Elements(m + "r").Last();
+                            packedRun.Add(run.Elements());
+                        }
+                        else if (insideEquation) equations[0].Add(run);
                         else equations[1].AddBeforeSelf(run);
                         if (index == 0 && paginationHint == "between")
                             run.AddAfterSelf(new XElement(m + "r", new XElement(w + "lastRenderedPageBreak")));
@@ -169,11 +175,16 @@ internal static partial class DocxInlineCompositionTests
                             packBreaks: true), expectedTwo);
                         TestAssert.Equal(target, packed.Annotations.Single(link => link.IsDestination));
                     }
+                    var sharedOperand = CheckMathBreaks(Read(true, true, breakCount: 2,
+                        bookmarkStartsAfterBreaks: true, paginationHint: "inside", shareOperandRun: true), expectedTwo);
+                    TestAssert.True(control.Annotations.SequenceEqual(sharedOperand.Annotations),
+                        "Terminal breaks sharing the operand run preserve the link and its destination.");
                 }
             }
 
             foreach (var document in new[] { Read(true, true, type: "page"), Read(true, true, paginationHint: "malformed"),
-                Read(true, true, type: "page", breakCount: 2, packBreaks: true) })
+                Read(true, true, type: "page", breakCount: 2, packBreaks: true),
+                Read(true, true, type: "page", breakCount: 2, shareOperandRun: true) })
             {
                 var unsupported = new List<OoxPdfDiagnostic>();
                 var page = renderer.RenderPagesAsync(document, unsupported.Add, default).ToBlockingEnumerable().Single();
