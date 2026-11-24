@@ -21,8 +21,10 @@ internal sealed partial class DocxReader
         while (pending.TryPop(out var source))
         {
             token.ThrowIfCancellationRequested();
-            // Word can store range boundaries alongside the displayed equations.
+            // Wordprocessing runs and range boundaries share the ordered
+            // paragraph source with the displayed equations.
             if (source.Element.Name == MathNamespace + "oMath" ||
+                source.Element.Name == WordprocessingNamespace + "r" ||
                 source.Element.Name == WordprocessingNamespace + "bookmarkStart" ||
                 source.Element.Name == WordprocessingNamespace + "bookmarkEnd" ||
                 source.Element.Name == WordprocessingNamespace + "commentRangeStart" ||

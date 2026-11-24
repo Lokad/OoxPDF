@@ -1518,6 +1518,47 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
+    public static void DocxDisplayMathRetainsCompanionRunsAndPictures()
+    {
+        foreach (string container in new[] { "body", "cell" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            string fixture = "CompositionProbes/math-display-image-" + container + "-between";
+            var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true), mode,
+                mode == OoxPdfDocxMarkupMode.AllMarkup ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
+                    : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+            var direct = Render(false);
+            var nested = Render(true);
+            string text = DocxPageFootnoteNumberingTests.DecodeText(nested);
+            TestAssert.Contains("CompanionBefore", text);
+            TestAssert.Contains("CompanionAfter", text);
+            TestAssert.Equal(1, nested.Images.Count);
+            TestAssert.Equal(direct.Content, nested.Content);
+
+            PdfPage Render(bool nestedRuns)
+            {
+                var document = ReadMutation(fixture, mode, false, false, (xml, w, m) =>
+                {
+                    var display = xml.Descendants(m + "oMathPara").First();
+                    var picture = display.Parent!.Elements(w + "r").Single();
+                    var before = new XElement(w + "r", new XElement(w + "t", "CompanionBefore"));
+                    var after = new XElement(w + "r", new XElement(w + "t", "CompanionAfter"));
+                    if (nestedRuns)
+                    {
+                        picture.Remove();
+                        display.Add(before, picture, after);
+                    }
+                    else
+                    {
+                        picture.AddBeforeSelf(before);
+                        picture.AddAfterSelf(after);
+                    }
+                });
+                return renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
+            }
+        }
+    }
+
     public static void DocxInlineCompositionCommentsPreserveMathematicsAndCaptions()
     {
         if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
