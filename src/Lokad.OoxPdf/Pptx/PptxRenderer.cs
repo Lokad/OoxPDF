@@ -60,7 +60,9 @@ internal sealed partial class PptxRenderer
             var graphics = new PdfGraphicsBuilder(construction, svgSourceBytes);
             var textSpanMemo = new Dictionary<PptxTextSpanMemoKey, IReadOnlyList<PptxPositionedTextSpan>>(PptxTextSpanMemoKeyComparer.Instance);
             var tableFrameMemo = new Dictionary<PptxTableFrameMemoKey, TableFrameLayout?>(PptxTableFrameMemoKeyComparer.Instance);
-            PptxRenderContext context = CreateRenderContext(document, slide, sceneSlide, fontResolver, imageCache, diagnosticSink, cancellationToken, chartWorkbookCache, textSpanMemo, tableFrameMemo);
+            cancellationToken.ThrowIfCancellationRequested();
+            var context = new PptxRenderContext(document, slide, sceneSlide, fontResolver, imageCache, diagnosticSink,
+                cancellationToken, chartWorkbookCache, textSpanMemo, tableFrameMemo);
             IReadOnlyList<PptxPositionedTextSpan> shapeTextSpans = await ReadSceneShapeTextSpansAsync(context, includeMasterNodes: sceneSlide.ShowMasterShapes).ConfigureAwait(false);
             EmitUnsupportedFeatureDiagnostics(sceneSlide, slideXml, slide.PartName, slideIndex + 1, diagnosticSink, warnedMustUnderstandParts, textSpanMemo);
             cancellationToken.ThrowIfCancellationRequested();
@@ -120,17 +122,13 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static PptxRenderContext? TryLoadRenderContext(
+    private static PptxRenderContext? TryLoadTextInspectionContext(
         PptxDocument document,
         OoxPackage package,
         int slideIndex,
-        Dictionary<string, PdfImageXObject?> imageCache,
-        Action<OoxPdfDiagnostic>? diagnosticSink,
-        CancellationToken cancellationToken,
         PptxScene? sharedScene = null,
         PresentationFontResolver? inspectionFonts = null)
     {
-        cancellationToken.ThrowIfCancellationRequested();
         if (slideIndex < 0 || slideIndex >= document.Slides.Count)
         {
             return null;
@@ -139,33 +137,17 @@ internal sealed partial class PptxRenderer
         PptxSlide slide = document.Slides[slideIndex];
         // inspection sessions share one scene per conversion instead of
         // rebuilding it per slide per entry point. Rendering still builds its own.
-        PptxScene scene = sharedScene ?? new PptxSceneBuilder().Build(document, package, cancellationToken);
+        PptxScene scene = sharedScene ?? new PptxSceneBuilder().Build(document, package, CancellationToken.None);
         PptxSceneSlide sceneSlide = scene.Slides[slideIndex];
         if (sceneSlide.SlideXml.Root is null)
         {
             return null;
         }
 
-        return CreateRenderContext(document, slide, sceneSlide, inspectionFonts ?? new PresentationFontResolver(null), imageCache, diagnosticSink, cancellationToken);
-    }
-
-    private static PptxRenderContext CreateRenderContext(
-        PptxDocument document,
-        PptxSlide slide,
-        PptxSceneSlide sceneSlide,
-        PresentationFontResolver fontResolver,
-        Dictionary<string, PdfImageXObject?> imageCache,
-        Action<OoxPdfDiagnostic>? diagnosticSink,
-        CancellationToken cancellationToken,
-        Dictionary<string, ChartWorkbookData?>? chartWorkbookCache = null,
-        Dictionary<PptxTextSpanMemoKey, IReadOnlyList<PptxPositionedTextSpan>>? textSpanMemo = null,
-        Dictionary<PptxTableFrameMemoKey, TableFrameLayout?>? tableFrameMemo = null)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-        return new PptxRenderContext(document, slide, sceneSlide, fontResolver, imageCache, diagnosticSink, cancellationToken,
-            chartWorkbookCache ?? new Dictionary<string, ChartWorkbookData?>(StringComparer.Ordinal),
-            textSpanMemo ?? new Dictionary<PptxTextSpanMemoKey, IReadOnlyList<PptxPositionedTextSpan>>(PptxTextSpanMemoKeyComparer.Instance),
-            tableFrameMemo ?? new Dictionary<PptxTableFrameMemoKey, TableFrameLayout?>(PptxTableFrameMemoKeyComparer.Instance));
+        return new PptxRenderContext(document, slide, sceneSlide, inspectionFonts ?? new PresentationFontResolver(null),
+            ImageCache: null, DiagnosticSink: null, CancellationToken: CancellationToken.None,
+            TextSpanMemo: new(PptxTextSpanMemoKeyComparer.Instance),
+            TableFrameMemo: new(PptxTableFrameMemoKeyComparer.Instance));
     }
 
     private static ShapeBounds? ReadShapeBounds(XElement shape, IReadOnlyList<XElement> inheritedPlaceholders,

@@ -10,7 +10,7 @@ internal sealed record PptxRenderContext(
     PptxSlide Slide,
     PptxSceneSlide SceneSlide,
     PresentationFontResolver FontResolver,
-    Dictionary<string, PdfImageXObject?> ImageCache,
+    Dictionary<string, PdfImageXObject?>? ImageCache,
     Action<OoxPdfDiagnostic>? DiagnosticSink,
     CancellationToken CancellationToken,
     // R16: caches ride as typed dictionaries with explicit null-negative contracts

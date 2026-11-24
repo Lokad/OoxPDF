@@ -4,7 +4,6 @@ using System.Xml.Linq;
 using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Ooxml;
 using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
-using Lokad.OoxPdf.Pdf;
 using static Lokad.OoxPdf.Pptx.PptxRunTextAttributeReaders;
 
 namespace Lokad.OoxPdf.Pptx;
@@ -13,7 +12,7 @@ internal sealed partial class PptxRenderer
 {
     internal static IReadOnlyList<PptxTextFrameModelSnapshot> InspectTextFrameModels(PptxDocument document, OoxPackage package, int slideIndex, PptxScene? sharedScene = null, PresentationFontResolver? inspectionFonts = null)
     {
-        PptxRenderContext? context = TryLoadRenderContext(document, package, slideIndex, new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase), diagnosticSink: null, cancellationToken: CancellationToken.None, sharedScene: sharedScene, inspectionFonts: inspectionFonts);
+        PptxRenderContext? context = TryLoadTextInspectionContext(document, package, slideIndex, sharedScene, inspectionFonts);
         if (context is null)
         {
             return [];
@@ -42,7 +41,7 @@ internal sealed partial class PptxRenderer
 
     internal static IReadOnlyList<PptxTextFrameModelSnapshot> InspectTableTextFrameModels(PptxDocument document, OoxPackage package, int slideIndex, PptxScene? sharedScene = null, PresentationFontResolver? inspectionFonts = null)
     {
-        PptxRenderContext? context = TryLoadRenderContext(document, package, slideIndex, new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase), diagnosticSink: null, cancellationToken: CancellationToken.None, sharedScene: sharedScene, inspectionFonts: inspectionFonts);
+        PptxRenderContext? context = TryLoadTextInspectionContext(document, package, slideIndex, sharedScene, inspectionFonts);
         if (context is null)
         {
             return [];

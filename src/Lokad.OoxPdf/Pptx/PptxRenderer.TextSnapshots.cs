@@ -13,7 +13,7 @@ internal sealed partial class PptxRenderer
 {
     private static IReadOnlyList<PptxPositionedTextSpan> ReadSlideTextSpansForInspection(PptxDocument document, OoxPackage package, int slideIndex, PptxScene? sharedScene = null, PresentationFontResolver? inspectionFonts = null)
     {
-        PptxRenderContext? context = TryLoadRenderContext(document, package, slideIndex, new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase), diagnosticSink: null, cancellationToken: CancellationToken.None, sharedScene: sharedScene, inspectionFonts: inspectionFonts);
+        PptxRenderContext? context = TryLoadTextInspectionContext(document, package, slideIndex, sharedScene, inspectionFonts);
         if (context is null)
         {
             return [];
@@ -59,7 +59,7 @@ internal sealed partial class PptxRenderer
 
     internal static PptxTextLayoutSnapshot InspectTextLayout(PptxDocument document, OoxPackage package, int slideIndex, PptxScene? sharedScene = null, PresentationFontResolver? inspectionFonts = null)
     {
-        PptxRenderContext? context = TryLoadRenderContext(document, package, slideIndex, new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase), diagnosticSink: null, cancellationToken: CancellationToken.None, sharedScene: sharedScene, inspectionFonts: inspectionFonts);
+        PptxRenderContext? context = TryLoadTextInspectionContext(document, package, slideIndex, sharedScene, inspectionFonts);
         if (context is null)
         {
             return new PptxTextLayoutSnapshot([]);
@@ -79,7 +79,7 @@ internal sealed partial class PptxRenderer
 
     internal static PptxTextFlowSnapshot InspectTextFlow(PptxDocument document, OoxPackage package, int slideIndex, PptxScene? sharedScene = null, PresentationFontResolver? inspectionFonts = null)
     {
-        PptxRenderContext? context = TryLoadRenderContext(document, package, slideIndex, new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase), diagnosticSink: null, cancellationToken: CancellationToken.None, sharedScene: sharedScene, inspectionFonts: inspectionFonts);
+        PptxRenderContext? context = TryLoadTextInspectionContext(document, package, slideIndex, sharedScene, inspectionFonts);
         if (context is null)
         {
             return new PptxTextFlowSnapshot([]);

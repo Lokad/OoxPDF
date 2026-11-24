@@ -63,7 +63,7 @@ internal sealed partial class PptxRenderer
         int slideIndex,
         GroupTransform transform,
         List<PdfImageResource> images,
-        Dictionary<string, PdfImageXObject?> imageCache,
+        Dictionary<string, PdfImageXObject?>? imageCache,
         ref int index,
         string targetPartName,
         PptxSceneImageResource? imageResource,

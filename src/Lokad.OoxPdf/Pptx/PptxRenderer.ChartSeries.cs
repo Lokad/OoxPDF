@@ -101,7 +101,7 @@ internal sealed partial class PptxRenderer
     }
 
     // One bounded model per embedded workbook, shared by chart frames for this
-    // conversion. Inspection can disable sharing with a null cache.
+    // conversion. A null cache disables sharing.
     private static ChartWorkbookData? GetOrCreateChartWorkbook(
         Dictionary<string, ChartWorkbookData?>? cache,
         PptxSceneChartExternalData externalData,
@@ -112,7 +112,6 @@ internal sealed partial class PptxRenderer
             return null;
         }
 
-        // A null cache (inspection contexts) disables sharing without changing behavior.
         if (cache is null)
         {
             return ReadEmbeddedChartWorkbookData(externalData, cancellationToken);
