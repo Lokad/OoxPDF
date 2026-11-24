@@ -68,7 +68,6 @@ internal sealed partial class PptxSceneBuilder
                 ReadEffects(shapeProperties),
                 seriesMarker,
                 ReadChartPointStyles(seriesElement, theme, colorMap, plotKind, seriesIndex, seriesMarker),
-                ReadRejectedChartNonNegativeIndexValues(seriesElement, "dPt"),
                 explosion,
                 explosionValue,
                 ReadOptionalChartBoolean(seriesElement, "smooth"),
@@ -207,20 +206,6 @@ internal sealed partial class PptxSceneBuilder
         indexValue = ReadChartElementValue(element, "idx");
         return int.TryParse(indexValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out index) &&
             index >= 0;
-    }
-
-    private static IReadOnlyList<string> ReadRejectedChartNonNegativeIndexValues(XElement parent, string elementName)
-    {
-        var rejected = new List<string>();
-        foreach (XElement element in parent.Elements(ChartNamespace + elementName))
-        {
-            if (!TryReadChartNonNegativeIndex(element, out _, out string indexValue))
-            {
-                rejected.Add(indexValue);
-            }
-        }
-
-        return rejected;
     }
 
     private static PptxSceneFillStyle ReadChartPointFill(XElement? shapeProperties, PptxTheme theme, PptxColorMap colorMap)

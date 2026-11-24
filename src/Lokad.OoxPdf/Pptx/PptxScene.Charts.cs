@@ -177,7 +177,6 @@ internal sealed partial class PptxSceneBuilder
                 textStyle: new PptxSceneChartTextStyleOverride(null, null, null, null, null, null, null, null),
                 textBodyProperties: default,
                 shapeStyle: new PptxSceneChartShapeStyle(false, default, default, default, default, default, default, default, default),
-                rejectedOverrideIndexValues: [],
                 overrides: [],
                 isDefined: false);
         }
@@ -200,7 +199,6 @@ internal sealed partial class PptxSceneBuilder
                 ReadChartTextStyleOverride(labels, theme, colorMap),
                 ReadChartTextBodyProperties(labels),
                 ReadChartShapeStyle(labels.Element(ChartNamespace + "spPr"), theme, colorMap),
-                ReadRejectedChartNonNegativeIndexValues(labels, "dLbl"),
                 ReadChartDataLabelOverrides(labels, theme, colorMap),
                 isDefined: true,
                 isDeleted: ReadOptionalChartBoolean(labels, "delete"));

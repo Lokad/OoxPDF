@@ -378,8 +378,6 @@ internal sealed record PptxSceneChartDataLabels
 
     public PptxSceneChartShapeStyle ShapeStyle { get; }
 
-    public IReadOnlyList<string> RejectedOverrideIndexValues { get; }
-
     public IReadOnlyList<PptxSceneChartDataLabelOverride> Overrides { get; }
 
     public bool IsDefined { get; }
@@ -402,7 +400,6 @@ internal sealed record PptxSceneChartDataLabels
         PptxSceneChartTextStyleOverride textStyle,
         PptxSceneChartTextBodyProperties textBodyProperties,
         PptxSceneChartShapeStyle shapeStyle,
-        IReadOnlyList<string> rejectedOverrideIndexValues,
         IReadOnlyList<PptxSceneChartDataLabelOverride> overrides,
         bool isDefined,
         bool? isDeleted)
@@ -425,7 +422,6 @@ internal sealed record PptxSceneChartDataLabels
         TextStyle = textStyle;
         TextBodyProperties = textBodyProperties;
         ShapeStyle = shapeStyle;
-        RejectedOverrideIndexValues = rejectedOverrideIndexValues;
         Overrides = overrides;
         IsDefined = isDefined;
     }
@@ -447,7 +443,6 @@ internal sealed record PptxSceneChartDataLabels
         PptxSceneChartTextStyleOverride textStyle,
         PptxSceneChartTextBodyProperties textBodyProperties,
         PptxSceneChartShapeStyle shapeStyle,
-        IReadOnlyList<string> rejectedOverrideIndexValues,
         IReadOnlyList<PptxSceneChartDataLabelOverride> overrides,
         bool isDefined,
         bool? isDeleted = null)
@@ -470,7 +465,6 @@ internal sealed record PptxSceneChartDataLabels
             textStyle,
             textBodyProperties,
             shapeStyle,
-            rejectedOverrideIndexValues,
             overrides,
             isDefined,
             isDeleted);
@@ -655,7 +649,6 @@ internal sealed record PptxSceneChartSeries(
     PptxSceneEffectFamily Effects,
     PptxSceneChartMarker Marker,
     IReadOnlyList<PptxSceneChartPointStyle> PointStyles,
-    IReadOnlyList<string> RejectedPointStyleIndexValues,
     double? Explosion,
     string ExplosionValue,
     bool? Smooth,

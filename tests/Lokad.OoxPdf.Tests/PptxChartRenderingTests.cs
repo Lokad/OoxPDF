@@ -3424,34 +3424,7 @@ internal static class PptxChartRenderingTests
         TestAssert.Equal(0.25d, explosions[2]);
     }
 
-    public static void PptxChartPointExplosionReaderRejectsNegativeIndices()
-    {
-        const string chartXml = """
-            <?xml version="1.0" encoding="UTF-8"?>
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
-              <c:chart><c:plotArea><c:doughnutChart>
-                <c:ser>
-                  <c:dPt><c:idx val="-1"/><c:explosion val="80"/></c:dPt>
-                  <c:dPt><c:idx val="0"/><c:explosion val="25"/></c:dPt>
-                </c:ser>
-              </c:doughnutChart></c:plotArea></c:chart>
-            </c:chartSpace>
-            """;
-        PptxSceneChartPlot plot = PptxTests.BuildSingleChartScene(chartXml)?.Plots.Single()
-            ?? throw new InvalidOperationException("Expected one chart plot.");
-        System.Reflection.MethodInfo readExplosions = typeof(PptxRenderer).GetMethod(
-            "ReadSceneChartPointExplosions",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected point-explosion helper.");
-
-        var explosions = (IReadOnlyDictionary<int, double>)(readExplosions.Invoke(null, [plot, null])
-            ?? throw new InvalidOperationException("Expected point explosions."));
-
-        TestAssert.Equal(1, explosions.Count);
-        TestAssert.True(!explosions.ContainsKey(-1), "Expected negative keyed point explosions to be rejected.");
-        TestAssert.Equal(0.25d, explosions[0]);
-    }
-
-    public static void PptxScenePreservesRejectedChartKeyedOverrideIndices()
+    public static void PptxChartInvalidKeyedOverridesLeaveValidPointAndLabelPaint()
     {
         const string chartXml = """
             <?xml version="1.0" encoding="UTF-8"?>
@@ -3459,42 +3432,56 @@ internal static class PptxChartRenderingTests
               <c:chart><c:plotArea>
                 <c:pieChart>
                   <c:ser>
-                    <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val>
-                    <c:marker><c:symbol val="circle"/><c:size val="7"/></c:marker>
-                    <c:dPt><c:idx val="0"/><c:explosion val="25"/><c:spPr><a:solidFill><a:srgbClr val="AA0000"/></a:solidFill></c:spPr></c:dPt>
-                    <c:dPt><c:idx val="-1"/><c:spPr><a:solidFill><a:srgbClr val="00AA00"/></a:solidFill></c:spPr></c:dPt>
+                    <c:val><c:numLit><c:ptCount val="2"/><c:pt idx="0"><c:v>37</c:v></c:pt><c:pt idx="1"><c:v>63</c:v></c:pt></c:numLit></c:val>
+                    <c:dPt><c:idx val="00"/><c:explosion val="25"/><c:spPr><a:solidFill><a:srgbClr val="AA0000"/></a:solidFill></c:spPr></c:dPt>
+                    <c:dPt><c:idx val="-1"/><c:explosion val="80"/><c:spPr><a:solidFill><a:srgbClr val="00AA00"/></a:solidFill></c:spPr></c:dPt>
                     <c:dPt><c:idx val="futurePoint"/><c:spPr><a:solidFill><a:srgbClr val="0000AA"/></a:solidFill></c:spPr></c:dPt>
                     <c:dPt><c:spPr><a:solidFill><a:srgbClr val="999999"/></a:solidFill></c:spPr></c:dPt>
                   </c:ser>
                   <c:dLbls>
-                    <c:dLbl><c:idx val="0"/><c:layout><c:manualLayout><c:x val="0.1"/><c:y val="0.2"/></c:manualLayout></c:layout><c:showVal val="1"/></c:dLbl>
-                    <c:dLbl><c:idx val="-1"/><c:showVal val="1"/></c:dLbl>
-                    <c:dLbl><c:idx val="futureLabel"/><c:showVal val="1"/></c:dLbl>
-                    <c:dLbl><c:showVal val="1"/></c:dLbl>
+                    <c:dLbl><c:idx val="00"/><c:layout><c:manualLayout><c:x val="0.1"/><c:y val="0.2"/></c:manualLayout></c:layout><c:showVal val="1"/></c:dLbl>
+                    <c:dLbl><c:idx val="-1"/><c:delete val="1"/></c:dLbl>
+                    <c:dLbl><c:idx val="futureLabel"/><c:delete val="1"/></c:dLbl>
+                    <c:dLbl><c:delete val="1"/></c:dLbl>
                   </c:dLbls>
                 </c:pieChart>
               </c:plotArea></c:chart>
             </c:chartSpace>
             """;
-        PptxSceneChart chart = PptxTests.BuildSingleChartScene(chartXml) ?? throw new InvalidOperationException("Expected chart scene.");
+        var plot = TestAssert.NotNull(PptxTests.BuildSingleChartScene(chartXml)).Plots.Single();
+        var point = plot.Series.Single().PointStyles.Single();
+        TestAssert.Equal((0, "00"), (point.Index, point.IndexValue));
+        TestAssert.Equal(new RgbColor(0xAA, 0, 0), point.Fill.Color);
+        TestAssert.Equal(25d, point.Explosion ?? -1d);
+        var label = plot.DataLabels.Overrides.Single();
+        TestAssert.Equal((0, "00"), (label.Index, label.IndexValue));
+        TestAssert.True(label.ShowValue == true && label.Layout.HasLayout, "The valid manual label remains defined.");
+        TestAssert.Equal(0.1d, label.Layout.X ?? -1d);
+        TestAssert.Equal(0.2d, label.Layout.Y ?? -1d);
 
-        PptxSceneChartSeries series = chart.Plots[0].Series[0];
-        TestAssert.True(series.Marker.IsDefined, "Expected explicit chart marker to remain observable.");
-        TestAssert.Equal(1, series.PointStyles.Count);
-        TestAssert.Equal(25d, series.PointStyles[0].Explosion ?? -1d);
-        TestAssert.Equal(3, series.RejectedPointStyleIndexValues.Count);
-        TestAssert.Equal("-1", series.RejectedPointStyleIndexValues[0]);
-        TestAssert.Equal("futurePoint", series.RejectedPointStyleIndexValues[1]);
-        TestAssert.Equal(string.Empty, series.RejectedPointStyleIndexValues[2]);
+        var control = XDocument.Parse(chartXml);
+        XNamespace chartNamespace = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+        control.Descendants(chartNamespace + "dPt").Concat(control.Descendants(chartNamespace + "dLbl"))
+            .Where(element => (string?)element.Element(chartNamespace + "idx")?.Attribute("val") != "00").Remove();
+        var resolver = new PortableRenderingTests.PinnedResolver();
+        var actualDiagnostics = new DiagnosticCollector();
+        PdfPage actual = Render(chartXml, actualDiagnostics);
+        TestAssert.Contains("0.667 0 0 rg", actual.Content);
+        TestAssert.Equal("37", string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(actual).Select(show => show.Text)));
 
-        TestAssert.Equal(1, chart.Plots[0].DataLabels.Overrides.Count);
-        TestAssert.True(chart.Plots[0].DataLabels.Overrides[0].Layout.HasLayout, "Expected data-label manual layout to remain observable.");
-        TestAssert.Equal(3, chart.Plots[0].DataLabels.RejectedOverrideIndexValues.Count);
-        TestAssert.Equal("-1", chart.Plots[0].DataLabels.RejectedOverrideIndexValues[0]);
-        TestAssert.Equal("futureLabel", chart.Plots[0].DataLabels.RejectedOverrideIndexValues[1]);
-        TestAssert.Equal(string.Empty, chart.Plots[0].DataLabels.RejectedOverrideIndexValues[2]);
-        TestAssert.True(chart.Plots.Single().DataLabels.IsDefined, "Expected a plot-level data-label definition.");
-        TestAssert.Equal(1, chart.Plots.Single().Series.Count);
+        var controlDiagnostics = new DiagnosticCollector();
+        PdfPage clean = Render(control.ToString(), controlDiagnostics);
+        TestAssert.Equal(clean.Content, actual.Content);
+        TestAssert.True(controlDiagnostics.Diagnostics.SequenceEqual(actualDiagnostics.Diagnostics),
+            "Removing invalid overrides preserves the diagnostics of the valid chart.");
+
+        PdfPage Render(string xml, DiagnosticCollector diagnostics)
+        {
+            using var stream = PptxTests.CreateSingleChartPackageStream(xml);
+            using var package = OoxPackage.Open(stream, default);
+            return new PptxRenderer(resolver).RenderPagesAsync(new PptxReader().Read(package, default),
+                package, diagnostics.Add, default).ToBlockingEnumerable().Single();
+        }
     }
 
     public static void PptxScenePreservesChartColorStyleDeclarations()
