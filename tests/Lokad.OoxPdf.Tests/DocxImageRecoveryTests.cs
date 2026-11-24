@@ -20,11 +20,11 @@ internal static class DocxImageRecoveryTests
     {
         foreach (var mode in Modes)
         {
-            var present = Render(Case("ImageRecovery/picture-present.docx"), mode);
+            var present = Render(TestFixtures.PublicCasePath("ImageRecovery/picture-present.docx"), mode);
             foreach (string variant in new[] { "missing", "corrupt" })
             {
-                var actual = Render(Case("ImageRecovery/picture-"+variant+".docx"), mode);
-                SameTextGeometry(present.Pages, actual.Pages);
+                var actual = Render(TestFixtures.PublicCasePath($"ImageRecovery/picture-{variant}.docx"), mode);
+                AssertSameTextGeometry(present.Pages, actual.Pages, "Inline image", "After picture");
                 TestAssert.Equal(0, actual.Pages.Sum(page => page.Images.Count));
                 TestAssert.Equal(1, actual.Diagnostics.Count);
                 var diagnostic = actual.Diagnostics.Single();
@@ -41,66 +41,78 @@ internal static class DocxImageRecoveryTests
     public static void DocxMissingPicturePreservesCellAndStaticStoryGeometry()
     {
         foreach (var mode in Modes)
-        foreach (string source in new[] { "docx-static-image-header.docx", "docx-static-image-footer.docx",
-            "CompositionProbes/justified-linked-image-cell.docx" })
+        foreach (var (source, linkedCell) in new[]
         {
-            var present = Render(Case(source), mode);
-            var pictureTargets = DocxBlockTraversal.EnumerateSourceParagraphs(DocxTests.ReadDocx(Case(source), mode))
+            ("docx-static-image-header.docx", false),
+            ("docx-static-image-footer.docx", false),
+            ("CompositionProbes/justified-linked-image-cell.docx", true)
+        })
+        {
+            string input = TestFixtures.PublicCasePath(source);
+            var document = DocxTests.ReadDocx(input, mode);
+            var present = Render(document, mode);
+            var pictureTargets = DocxBlockTraversal.EnumerateSourceParagraphs(document)
                 .SelectMany(p => p.Images).Select(image => image.ClickTarget).Where(target => target is not null).ToHashSet();
             TestAssert.True(present.Pages.Sum(page => page.Images.Count) > 0, "Control must paint its picture.");
-            Mutate(Case(source), parts => {
+            Mutate(input, parts => {
                 foreach (string name in parts.Keys.Where(name => name.StartsWith("word/media/") && name.EndsWith(".png")).ToArray())
                     parts.Remove(name);
             }, path => {
                 var missing = Render(path, mode);
-                SameTextGeometry(present.Pages, missing.Pages);
+                AssertSameTextGeometry(present.Pages, missing.Pages, linkedCell
+                    ? ["Observed series.", "calculation", "Following prose."]
+                    : ["Before", "After", "Following body."]);
                 TestAssert.Equal(0, missing.Pages.Sum(page => page.Images.Count));
                 TestAssert.Equal(1, missing.Diagnostics.Count(d => d.Id == "IMAGE_MISSING_PART"));
-                TestAssert.Equal(string.Join("\n", present.Pages.SelectMany(page => page.Annotations)
-                    .Where(link => !pictureTargets.Contains(link.Uri)).Select(link => link.Uri)),
-                    string.Join("\n", missing.Pages.SelectMany(page => page.Annotations).Select(link => link.Uri)));
+                var survivingLinks = missing.Pages.SelectMany(page => page.Annotations).ToArray();
+                var controlLinks = present.Pages.SelectMany(page => page.Annotations)
+                    .Where(link => !pictureTargets.Contains(link.Uri));
+                TestAssert.True(controlLinks.Select(link => (link.Uri, link.Destination))
+                    .SequenceEqual(survivingLinks.Select(link => (link.Uri, link.Destination))),
+                    "Picture recovery must retain the neighboring link targets.");
+                if (linkedCell)
+                {
+                    TestAssert.True(survivingLinks.Any(link => link.IsDestination && link.Width > 0 && link.Height > 0),
+                        "The authored cell hyperlink must retain a measurable destination after picture recovery.");
+                }
             });
         }
     }
 
     public static void DocxMissingPicturePreservesDanglingAndVmlFrames()
     {
-        foreach (bool vml in new[] { false, true })
+        string source = TestFixtures.PublicCasePath("ImageRecovery/picture-present.docx");
+        AssertMissingPartKeepsFrame(source, parts => {
+            const string relsPart = "word/_rels/document.xml.rels";
+            var rels = XDocument.Parse(Encoding.UTF8.GetString(parts[relsPart]));
+            rels.Root!.Elements().Single(e => (string?)e.Attribute("Id") == "rId4").Remove();
+            parts[relsPart] = Encoding.UTF8.GetBytes(rels.ToString());
+        });
+        Mutate(source, parts => {
+            XNamespace v = "urn:schemas-microsoft-com:vml";
+            const string documentPart = "word/document.xml";
+            var xml = XDocument.Parse(Encoding.UTF8.GetString(parts[documentPart]));
+            xml.Descendants(W + "drawing").Single().ReplaceWith(new XElement(W + "pict",
+                new XElement(v + "shape", new XAttribute("style", "width:72pt;height:36pt"),
+                    new XElement(v + "imagedata", new XAttribute(R + "id", "rId4")))));
+            parts[documentPart] = Encoding.UTF8.GetBytes(xml.ToString());
+        }, vml => AssertMissingPartKeepsFrame(vml, parts => parts.Remove("word/media/image1.png")));
+
+        static void AssertMissingPartKeepsFrame(string source, Action<Dictionary<string, byte[]>> change)
         {
-            Action<Dictionary<string, byte[]>> change = parts => {
-                var xml = XDocument.Parse(Encoding.UTF8.GetString(parts["word/document.xml"]));
-                if (vml)
-                {
-                    XNamespace v = "urn:schemas-microsoft-com:vml";
-                    xml.Descendants(W+"drawing").Single().ReplaceWith(new XElement(W+"pict",
-                        new XElement(v+"shape", new XAttribute("style", "width:72pt;height:36pt"),
-                            new XElement(v+"imagedata", new XAttribute(R+"id", "rId4")))));
-                    parts["word/document.xml"] = Encoding.UTF8.GetBytes(xml.ToString());
-                }
-            };
-            Mutate(Case("ImageRecovery/picture-present.docx"), change, presentPath => {
-                var present = Render(presentPath, OoxPdfDocxMarkupMode.Final);
-                Mutate(presentPath, parts => {
-                    if (vml) parts.Remove("word/media/image1.png");
-                    else
-                    {
-                        var rels = XDocument.Parse(Encoding.UTF8.GetString(parts["word/_rels/document.xml.rels"]));
-                        rels.Root!.Elements().Where(e => (string?)e.Attribute("Id") == "rId4").Remove();
-                        parts["word/_rels/document.xml.rels"] = Encoding.UTF8.GetBytes(rels.ToString());
-                    }
-                }, missingPath => {
-                    var missing = Render(missingPath, OoxPdfDocxMarkupMode.Final);
-                    SameTextGeometry(present.Pages, missing.Pages);
-                    TestAssert.Equal(1, missing.Diagnostics.Count(d => d.Id == "IMAGE_MISSING_PART"));
-                    TestAssert.Equal(0, missing.Pages.Sum(page => page.Images.Count));
-                });
+            var present = Render(source, OoxPdfDocxMarkupMode.Final);
+            Mutate(source, change, path => {
+                var missing = Render(path, OoxPdfDocxMarkupMode.Final);
+                AssertSameTextGeometry(present.Pages, missing.Pages, "Inline image", "After picture");
+                TestAssert.Equal(1, missing.Diagnostics.Count(d => d.Id == "IMAGE_MISSING_PART"));
+                TestAssert.Equal(0, missing.Pages.Sum(page => page.Images.Count));
             });
         }
     }
 
     public static void DocxMissingPictureReusesFailureAndOmitsItsLinks()
     {
-        Mutate(Case("ImageRecovery/picture-missing.docx"), parts => {
+        Mutate(TestFixtures.PublicCasePath("ImageRecovery/picture-missing.docx"), parts => {
             var xml = XDocument.Parse(Encoding.UTF8.GetString(parts["word/document.xml"]));
             var picture = xml.Descendants(WP+"inline").Single();
             picture.Element(WP+"docPr")!.Add(new XElement(A+"hlinkClick", new XAttribute(R+"id", "pictureLink")));
@@ -121,28 +133,33 @@ internal static class DocxImageRecoveryTests
         });
     }
 
-    private static (PdfPage[] Pages, List<OoxPdfDiagnostic> Diagnostics) Render(string path, OoxPdfDocxMarkupMode mode)
+    private static (PdfPage[] Pages, List<OoxPdfDiagnostic> Diagnostics) Render(string path, OoxPdfDocxMarkupMode mode) =>
+        Render(DocxTests.ReadDocx(path, mode), mode);
+
+    private static (PdfPage[] Pages, List<OoxPdfDiagnostic> Diagnostics) Render(DocxDocument document, OoxPdfDocxMarkupMode mode)
     {
         var diagnostics = new List<OoxPdfDiagnostic>();
-        var document = DocxTests.ReadDocx(path, mode);
         var pages = new DocxRenderer(new TestFaceFontResolver(), mode, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
         return (pages, diagnostics);
     }
 
-    private static void SameTextGeometry(PdfPage[] expected, PdfPage[] actual)
+    private static void AssertSameTextGeometry(PdfPage[] expected, PdfPage[] actual, params string[] authoredText)
     {
         TestAssert.Equal(expected.Length, actual.Length);
-        for (int i=0; i<expected.Length; i++)
+        var text = new string[expected.Length];
+        for (int i = 0; i < expected.Length; i++)
         {
-            TestAssert.Equal(DocxPageFootnoteNumberingTests.DecodeText(expected[i]), DocxPageFootnoteNumberingTests.DecodeText(actual[i]));
+            text[i] = DocxPageFootnoteNumberingTests.DecodeText(actual[i]);
+            TestAssert.Equal(DocxPageFootnoteNumberingTests.DecodeText(expected[i]), text[i]);
             string Matrices(PdfPage page) => string.Join("\n", Regex.Matches(page.Content, @"[-\d.]+ [-\d.]+ [-\d.]+ [-\d.]+ [-\d.]+ [-\d.]+ Tm").Select(m => m.Value));
             TestAssert.True(Matrices(expected[i]).Length > 0, "Control must contain positioned text.");
             TestAssert.Equal(Matrices(expected[i]), Matrices(actual[i]));
         }
+        string documentText = string.Join("\n", text);
+        foreach (string phrase in authoredText) TestAssert.Contains(phrase, documentText);
     }
 
-    private static string Case(string path) => Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", path));
     private static void Mutate(string source, Action<Dictionary<string, byte[]>> change, Action<string> check)
     {
         using var archive = ZipFile.OpenRead(source);
