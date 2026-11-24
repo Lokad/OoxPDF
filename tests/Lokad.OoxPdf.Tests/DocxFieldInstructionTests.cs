@@ -339,12 +339,18 @@ internal static class DocxFieldInstructionTests
     public static void DocxFieldInstructionUnclosedCountersKeepOrderedSourceFallback()
     {
         var math = new XElement(M + "oMath", new XElement(M + "r", new XElement(M + "t", "x")));
-        var paragraph = Read([math, .. Field(["PAGE"], null, separate: false, end: false)],
+        var unclosed = Read([math, .. Field(["PAGE"], null, separate: false, end: false)],
             OoxPdfDocxMarkupMode.Final).Paragraphs.Single();
-        TestAssert.Equal("{PAGE}", paragraph.Runs.Single().Text);
-        TestAssert.True(paragraph.InlineContent?.OfType<DocxInlineText>().Any(item => item.Run.FieldKind == DocxFieldKind.Page) == true,
-            "The existing unclosed-counter fallback must publish its late run into ordered source.");
-        TestAssert.True(paragraph.FieldReferences.Single().UsesPlaceholder, "The source field retains its dynamic identity.");
+        TestAssert.True(unclosed.Runs.All(run => run.Text.Length == 0), "Unclosed code must not synthesize a counter.");
+        TestAssert.Equal(1, unclosed.Equations.Count);
+        TestAssert.Equal(0, unclosed.FieldReferences.Count);
+
+        var closed = Read([new XElement(math), .. Field(["PAGE"], null, separate: false)],
+            OoxPdfDocxMarkupMode.Final).Paragraphs.Single();
+        TestAssert.Equal("{PAGE}", closed.Runs.Single().Text);
+        TestAssert.True(closed.InlineContent?.OfType<DocxInlineText>().Any(item => item.Run.FieldKind == DocxFieldKind.Page) == true,
+            "A matching end must publish the late counter run into ordered source.");
+        TestAssert.True(closed.FieldReferences.Single().UsesPlaceholder, "The closed field retains its dynamic identity.");
     }
 
     private static IEnumerable<XElement> Field(string[] instruction, string? cached, bool separate = true, bool end = true)
