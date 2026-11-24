@@ -20217,6 +20217,7 @@
   ],
   "docx-note-placement-work": [
     "=DocxParityStartsFollowInsertedEndnotePages",
+    "=DocxFirstBodyPageCounterFollowsFootnoteOnlyPages",
     "DocxInlineCompositionMappedNoteBandBottomMatchesIndependentWord",
     "DocxDeferredMixedEndnoteConsumesSeparatorDeficitOnce",
     "DocxDeferredMixedEndnoteUsesResolvedSeparatorFirstLineOrigin",
@@ -20245,6 +20246,7 @@
   ],
   "docx-counter-spacing": [
     "=DocxSingleSectionPageNumberStartBindsComposedCounters",
+    "=DocxFirstBodyPageCounterFollowsFootnoteOnlyPages",
     "=DocxSingleSectionPageNumberStartSelectsStaticStoryParity",
     "=DocxSectionPageCountersAccountForInsertedEndnotePages",
     "DocxEndnoteCounterPrefix",

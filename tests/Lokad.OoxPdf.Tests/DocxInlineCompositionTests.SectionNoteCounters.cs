@@ -158,6 +158,58 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
+    public static void DocxFirstBodyPageCounterFollowsFootnoteOnlyPages()
+    {
+        const int wordCount = 2100;
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            XNamespace w = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+            const string anchor = "PublicFollowingFootnoteSection";
+            var document = ReadMutation("CompositionProbes/linked-footnote-picture-report", mode, false, false,
+                (xml, _, _) =>
+                {
+                    var body = xml.Root!.Element(w + "body")!;
+                    var section = body.Element(w + "sectPr")!;
+                    var reference = body.Elements(w + "p").Single(p => p.Descendants(w + "footnoteReference").Any());
+                    reference.AddFirst(new XElement(w + "pPr", new XElement(section)));
+                    section.Elements().Where(e => e.Name == w + "headerReference" || e.Name == w + "footerReference").Remove();
+                    section.AddBeforeSelf(new XElement(w + "p",
+                        new XElement(w + "bookmarkStart", new XAttribute(w + "id", 951), new XAttribute(w + "name", anchor)),
+                        Run("Following section PAGE "),
+                        new XElement(w + "fldSimple", new XAttribute(w + "instr", " PAGE "), Run("900")),
+                        new XElement(w + "bookmarkEnd", new XAttribute(w + "id", 951))));
+                    body.Elements(w + "p").First().Add(new XElement(w + "hyperlink", new XAttribute(w + "anchor", anchor),
+                        Run(" following section")));
+                },
+                packageChange: zip =>
+                {
+                    var entry = zip.GetEntry("word/footnotes.xml")!;
+                    XDocument notes;
+                    using (var input = entry.Open()) notes = XDocument.Load(input);
+                    notes.Root!.Elements(w + "footnote").Single(note => (string?)note.Attribute(w + "id") == "1")
+                        .Element(w + "p")!.Add(Run(" " + string.Join(" ", Enumerable.Range(0, wordCount)
+                            .Select(index => "footitem" + index.ToString("D4", CultureInfo.InvariantCulture)))));
+                    entry.Delete();
+                    using var output = zip.CreateEntry("word/footnotes.xml").Open();
+                    notes.Save(output);
+                });
+            var pages = PictureRangeRenderer(mode).RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
+            var text = pages.Select(SectionCounterPageText).ToArray();
+            int following = Array.FindIndex(text, page => page.Contains("FollowingsectionPAGE", StringComparison.Ordinal));
+            TestAssert.True(following >= 4, "The footnote has body-free continuation pages before the next section.");
+            TestAssert.Equal((following + 1).ToString(CultureInfo.InvariantCulture),
+                Regex.Match(text[following], @"FollowingsectionPAGE([0-9]+)").Groups[1].Value);
+            TestAssert.True(pages[0].Annotations.Any(link => link.Destination?.PageIndex == following),
+                "The bookmark reaches the physical body page.");
+            var words = text.SelectMany(page => Regex.Matches(page, @"footitem[0-9]{4}(?![0-9])").Select(match => match.Value));
+            TestAssert.True(words.SequenceEqual(Enumerable.Range(0, wordCount)
+                .Select(index => "footitem" + index.ToString("D4", CultureInfo.InvariantCulture))),
+                "Each authored footnote word paints once in source order.");
+
+            XElement Run(string text) => new(w + "r", new XElement(w + "t", new XAttribute(XNamespace.Xml + "space", "preserve"), text));
+        }
+    }
+
     public static void DocxEndnotePlacementUsesDocumentPositionAndPreservesSectionMetadata()
     {
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })

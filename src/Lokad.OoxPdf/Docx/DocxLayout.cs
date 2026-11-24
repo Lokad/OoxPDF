@@ -1848,7 +1848,8 @@ internal sealed partial class DocxLayoutEngine
                 }
             }
 
-            IReadOnlyList<DocxTextSpan> textSpans = textMeasurer is null ? [] : CreateTextSpans(paragraph.Runs, CurrentPageNumber(), null);
+            DocxPageNumber wrappedPage = CurrentPageNumber();
+            IReadOnlyList<DocxTextSpan> textSpans = textMeasurer is null ? [] : CreateTextSpans(paragraph.Runs, wrappedPage, null);
             DocxMidLinePlan? midLinePlan = null;
             if (textMeasurer is not null && textSpans.Count > 0)
             {
@@ -1868,14 +1869,27 @@ internal sealed partial class DocxLayoutEngine
                         paragraphFontSize, textMeasurer, paragraphSpacingScale, defaultTabStopPoints, CurrentPageNumber(), cancellationToken)
                     : null;
                 bool canResumeText = paragraph.Equations.Count == 0 && paragraph.Images.Count == 0 && paragraph.InlineTextBoxes.Count == 0;
+                bool HasMovedPageCounter(int index) => index == 0 && wrappedPage != CurrentPageNumber() &&
+                    paragraph.Runs.Any(run => run.FieldKind == DocxFieldKind.Page);
+                bool NeedsRewrap(int index) => canResumeText && (width != wrappedFrameWidth || HasMovedPageCounter(index));
                 void RewrapRemainingText(int index)
                 {
+                    int sourceStart = lines[index].SourceTextStart;
+                    if (HasMovedPageCounter(index))
+                    {
+                        // Admission can advance through note-only pages before
+                        // consuming the first line. Start from the source run
+                        // so a changed page number can also change line breaks.
+                        wrappedPage = CurrentPageNumber();
+                        textSpans = CreateTextSpans(paragraph.Runs, wrappedPage, null);
+                        sourceStart = 0;
+                    }
                     double firstWidth = Math.Max(1d, width - (index == 0 ? textStartOffset : continuationTextStartOffset) - rightInset);
                     double nextWidth = Math.Max(1d, width - continuationTextStartOffset - rightInset);
                     var remaining = WrapTextLines(textSpans, firstWidth, nextWidth, paragraphFontSize, textMeasurer,
                         ScaleTabStopPositions(effective.TabStops, paragraphSpacingScale), defaultTabStopPoints * paragraphSpacingScale,
                         ShouldAllowCharacterLevelWordWrap(paragraph), CurrentPageNumber(), cancellationToken,
-                        sourceStartOffset: lines[index].SourceTextStart);
+                        sourceStartOffset: sourceStart);
                     lines = lines.Take(index).Concat(remaining).ToArray();
                     wrappedFrameWidth = width;
                 }
@@ -1896,7 +1910,7 @@ internal sealed partial class DocxLayoutEngine
                 for (int lineIndex = 0; lineIndex < lines.Length; lineIndex++)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    if (canResumeText && width != wrappedFrameWidth) RewrapRemainingText(lineIndex);
+                    if (NeedsRewrap(lineIndex)) RewrapRemainingText(lineIndex);
                     DocxWrappedTextLine line = lines[lineIndex];
                     DocxParagraph metricParagraph = useLineMetrics ? GetBodyTextLineMetricParagraph(paragraph, line) ?? paragraph : paragraph;
                     double lineFontSize = ReferenceEquals(metricParagraph, paragraph) ? paragraphFontSize : GetParagraphFontSize(metricParagraph);
@@ -1942,7 +1956,7 @@ internal sealed partial class DocxLayoutEngine
                         (HasCurrentColumnContent() || CanDrainFootnoteReserve()))
                     {
                         AdvanceForOverflowingItem(extraAbove + extraBelow + admissionAdvance, elementIndex, () => CurrentParagraphFrameBottom(admissionAfter));
-                        if (canResumeText && width != wrappedFrameWidth)
+                        if (NeedsRewrap(lineIndex))
                         {
                             // The rejected line consumed no source. Measure it in
                             // the admitted frame before committing its metrics.
@@ -2437,18 +2451,10 @@ internal sealed partial class DocxLayoutEngine
             return headerLayout;
         }
 
-        static bool ContinuationHeaderHasVisibleContent(DocxStaticStoryLayoutResult headerLayout)
-        {
-            return headerLayout.TextLines.Count != 0 ||
-                headerLayout.InlineImages.Count != 0 ||
-                headerLayout.TableRows.Count != 0 ||
-                headerLayout.InlineTextBoxes.Count != 0;
-        }
-
         double ResolveHeaderKeepOut(DocxLayoutPage templatePage, int pageNumber, int pageCount)
         {
             DocxStaticStoryLayoutResult? headerLayout = GetContinuationHeader(templatePage, pageNumber, pageCount);
-            if (headerLayout is null || !ContinuationHeaderHasVisibleContent(headerLayout))
+            if (headerLayout is null)
             {
                 return double.PositiveInfinity;
             }
