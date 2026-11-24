@@ -84,8 +84,6 @@ internal static class PptxSceneTextAgreementTests
 
     public static void SceneFedSpansMatchXmlPathForPlainShape()
     {
-        // R14-deeper: the scene-fed builder must reproduce the XML-path positioned
-        // spans exactly for plain shapes (same retained inputs through shared readers).
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
         {
             ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
@@ -115,6 +113,9 @@ internal static class PptxSceneTextAgreementTests
         IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> xmlSpans = ReadXmlSpans(node, document, scene);
         var resolver = CreateCannedPresentationResolver("memory:r14-scene-fed");
         IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> fedSpans = PptxRenderer.BuildSceneFedTextSpansAsync(node, document, scene.Slides[0].Theme, scene.Slides[0].SlideColorMap, 1, false, InheritedSources(scene), resolver, CancellationToken.None).GetAwaiter().GetResult();
+        TestAssert.Equal("Alpha Beta\nGamma", string.Join("\n", xmlSpans
+            .GroupBy(span => span.ParagraphIndex)
+            .Select(paragraph => string.Concat(paragraph.Select(span => span.Run.Text)))));
         TestAssert.Equal(xmlSpans.Count, fedSpans.Count);
         for (int index = 0; index < xmlSpans.Count; index++)
         {
@@ -171,8 +172,6 @@ internal static class PptxSceneTextAgreementTests
 
     public static void SceneFedSpansMatchXmlPathForLinksAndFields()
     {
-        // R14-deeper: hyperlink clicks resolve from retained run properties and
-        // fields resolve identically on both paths.
         string slideRels = """
             <?xml version="1.0" encoding="UTF-8"?>
             <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
@@ -199,47 +198,40 @@ internal static class PptxSceneTextAgreementTests
             ["ppt/slides/_rels/slide1.xml.rels"] = slideRels,
         });
 
-        CompareXmlAndFedSpans(input, "Link");
+        CompareXmlAndFedSpans(input,
+            ("Link", PptxRenderer.PptxTextRunKind.Text, "rIdLink"),
+            ("Plain", PptxRenderer.PptxTextRunKind.Text, null));
         string fieldInput = TestFixtures.PublicCasePath("pptx-ladder-04-field-text.pptx");
-        CompareXmlAndFedSpans(fieldInput, null);
+        CompareXmlAndFedSpans(fieldInput, ("1", PptxRenderer.PptxTextRunKind.Field, null));
     }
 
-    private static void CompareXmlAndFedSpans(string input, string? requiredText)
+    private static void CompareXmlAndFedSpans(string input,
+        params (string Text, PptxRenderer.PptxTextRunKind Kind, string? ClickId)[] expected)
     {
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        using OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
         PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
+        PptxSceneSlide slide = scene.Slides.Single();
+        PptxSceneNode node = slide.SlideNodes.Single(shape => shape.TextBody is not null);
         var resolver = CreateCannedPresentationResolver("memory:r14-scene-fed-links-fields");
-        int comparedSpans = 0;
-        var seenTexts = new List<string>();
-        foreach (PptxSceneNode node in scene.Slides[0].SlideNodes)
+        IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> xmlSpans = ReadXmlSpans(node, document, scene);
+        IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> fedSpans = PptxRenderer.BuildSceneFedTextSpansAsync(
+            node, document, slide.Theme, slide.SlideColorMap, 1, false, InheritedSources(scene),
+            resolver, CancellationToken.None).GetAwaiter().GetResult();
+        TestAssert.Equal(expected.Length, xmlSpans.Count);
+        TestAssert.Equal(expected.Length, fedSpans.Count);
+        for (int index = 0; index < expected.Length; index++)
         {
-            if (node.TextBody is null)
-            {
-                continue;
-            }
-
-            IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> xmlSpans = ReadXmlSpans(node, document, scene);
-            IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> fedSpans = PptxRenderer.BuildSceneFedTextSpansAsync(node, document, scene.Slides[0].Theme, scene.Slides[0].SlideColorMap, 1, false, InheritedSources(scene), resolver, CancellationToken.None).GetAwaiter().GetResult();
-            comparedSpans += xmlSpans.Count;
-            TestAssert.Equal(xmlSpans.Count, fedSpans.Count);
-            for (int index = 0; index < xmlSpans.Count; index++)
-            {
-                TestAssert.True(xmlSpans[index].SourceRun is not null && fedSpans[index].SourceRun is not null, "Expected compared spans to carry source runs.");
-                TestAssert.Equal(xmlSpans[index].Run.Text, fedSpans[index].Run.Text);
-                TestAssert.Equal(xmlSpans[index].Run.X, fedSpans[index].Run.X);
-                TestAssert.Equal(xmlSpans[index].Run.Y, fedSpans[index].Run.Y);
-                TestAssert.Equal(xmlSpans[index].Run.FontSize, fedSpans[index].Run.FontSize);
-                seenTexts.Add(xmlSpans[index].Run.Text);
-                TestAssert.Equal(xmlSpans[index].SourceRun!.Style.HyperlinkClickId ?? string.Empty, fedSpans[index].SourceRun!.Style.HyperlinkClickId ?? string.Empty);
-            }
-        }
-
-        TestAssert.True(comparedSpans > 0, "Expected inputs to exercise fed-path spans.");
-        if (requiredText is not null)
-        {
-            TestAssert.True(seenTexts.Contains(requiredText, StringComparer.Ordinal), "Expected the required run text to be exercised.");
+            var xml = xmlSpans[index];
+            var fed = fedSpans[index];
+            var xmlSource = TestAssert.NotNull(xml.SourceRun);
+            var fedSource = TestAssert.NotNull(fed.SourceRun);
+            TestAssert.Equal(expected[index], (xml.Run.Text, xmlSource.Kind, xmlSource.Style.HyperlinkClickId));
+            TestAssert.Equal(expected[index], (fed.Run.Text, fedSource.Kind, fedSource.Style.HyperlinkClickId));
+            TestAssert.Equal(xml.Run.X, fed.Run.X);
+            TestAssert.Equal(xml.Run.Y, fed.Run.Y);
+            TestAssert.Equal(xml.Run.FontSize, fed.Run.FontSize);
         }
     }
 
