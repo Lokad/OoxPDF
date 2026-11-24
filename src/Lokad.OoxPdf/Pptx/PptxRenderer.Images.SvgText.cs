@@ -165,9 +165,9 @@ internal sealed partial class PptxRenderer
         bool reset = value is null || token.IsEmpty || IsSvgInitialValue(token) || InheritsSvgPropertyValue(value);
         return name switch
         {
-            "letter-spacing" or "word-spacing" => reset || token is "0" ||
+            "letter-spacing" or "word-spacing" => reset ||
                 token.Equals("normal", StringComparison.OrdinalIgnoreCase) ||
-                token.Equals("0px", StringComparison.OrdinalIgnoreCase),
+                IsZeroLength(token),
             "font-variant" or "font-stretch" or "unicode-bidi" =>
                 reset || token.Equals("normal", StringComparison.OrdinalIgnoreCase),
             "text-decoration" or "clip-path" or "mask" or "filter" =>
@@ -179,10 +179,13 @@ internal sealed partial class PptxRenderer
                 token.Equals("alphabetic", StringComparison.OrdinalIgnoreCase),
             "alignment-baseline" => reset || token.Equals("auto", StringComparison.OrdinalIgnoreCase) ||
                 token.Equals("baseline", StringComparison.OrdinalIgnoreCase) || token.Equals("alphabetic", StringComparison.OrdinalIgnoreCase),
-            "baseline-shift" => reset || token is "0" || token.Equals("0px", StringComparison.OrdinalIgnoreCase) ||
-                token.Equals("baseline", StringComparison.OrdinalIgnoreCase),
+            "baseline-shift" => reset || token.Equals("baseline", StringComparison.OrdinalIgnoreCase) ||
+                IsZeroLength(token, allowPercent: true),
             _ => false
         };
+
+        static bool IsZeroLength(ReadOnlySpan<char> token, bool allowPercent = false) =>
+            TryReadSvgLength(token, out double length, relativeSize: 1d, allowPercent: allowPercent) && length == 0d;
     }
 
     private static bool TryReadSvgTextWeight(ReadOnlySpan<char> value, out int weight)

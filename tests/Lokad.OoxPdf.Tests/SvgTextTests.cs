@@ -439,12 +439,12 @@ internal static partial class SvgTextTests
         const string sameColorNorth = """NO<tspan color="red" style="color:rgb(17,34,51) !important;color:green">RT</tspan>H""";
         const string literalColorNorth = """NO<tspan color="green" fill="#112233"><tspan color="blue">RT</tspan></tspan>H""";
         const string literalColorSouth = """&#160;SO<tspan color="red">UT</tspan>H""";
-        const string neutralSpacingNorth = """NO<tspan letter-spacing="0">RT</tspan>H""";
-        const string neutralSpacingSouth = """&#160;SO<tspan word-spacing="2px" style="word-spacing:0px !important;word-spacing:3px">UT</tspan>H""";
+        const string neutralSpacingNorth = """NO<tspan letter-spacing="0em">RT</tspan>H""";
+        const string neutralSpacingSouth = """&#160;SO<tspan word-spacing="2px" style="word-spacing:0.0pt !important;word-spacing:3px">UT</tspan>H""";
         const string neutralTypographyNorth = """NO<tspan style="font-variant:normal;text-decoration:none"><tspan font-stretch="normal">RT</tspan></tspan>H""";
         const string neutralDirectionNorth = """NO<tspan direction="ltr" unicode-bidi="normal">RT</tspan>H""";
         const string neutralWritingSouth = """&#160;SO<tspan writing-mode="vertical-rl" style="writing-mode:horizontal-tb !important;writing-mode:vertical-lr">UT</tspan>H""";
-        const string neutralBaselineNorth = """NO<tspan style="dominant-baseline:alphabetic;alignment-baseline:baseline"><tspan baseline-shift="0px">RT</tspan></tspan>H""";
+        const string neutralBaselineNorth = """NO<tspan style="dominant-baseline:alphabetic;alignment-baseline:baseline"><tspan baseline-shift="0%">RT</tspan></tspan>H""";
         const string noStrokeNorth = """NO<tspan stroke="none">RT</tspan>H""";
         const string noStrokeSouth = """&#160;SO<tspan stroke="red" style="stroke-opacity:0% !important;stroke-opacity:.3">UT</tspan>H""";
         const string zeroWidthNorth = """NO<tspan stroke="red"><tspan stroke="blue">RT</tspan></tspan>H""";
@@ -454,7 +454,8 @@ internal static partial class SvgTextTests
                 Picture(sameFillNorth, sameFillSouth), Picture(sameTypefaceNorth, sameTypefaceSouth),
                 Picture(sameOpacityNorth, sameOpacitySouth),
                 Picture(sameColorNorth, literalColorSouth), Picture(literalColorNorth, plainSouth),
-                Picture(neutralSpacingNorth, neutralSpacingSouth), Picture(neutralTypographyNorth, plainSouth),
+                Picture(neutralSpacingNorth, neutralSpacingSouth, """style="letter-spacing:0mm;word-spacing:0em;baseline-shift:0pt" """),
+                Picture(neutralTypographyNorth, plainSouth),
                 Picture(neutralDirectionNorth, neutralWritingSouth), Picture(neutralBaselineNorth, plainSouth),
                 Picture(noStrokeNorth, noStrokeSouth), Picture(zeroWidthNorth, plainSouth, """stroke-width="0" """)], pdf =>
         {
