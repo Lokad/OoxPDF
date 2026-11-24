@@ -1498,6 +1498,8 @@
     "DocxFontSlotsKeepSourceOffsetsAndLinkRevisionOwnership"
   ],
   "docx-section-start-ownership": [
+    "=DocxPageSeparatedSectionStartsBindSharedStoriesAndPhysicalDestinations",
+    "=DocxParityStartsFollowInsertedEndnotePages",
     "DocxNextColumnSectionStartsKeepTextInItsColumnAndPage",
     "DocxSectionStartsKeepPictureAndTableContentOnOwnedPages",
     "DocxSectionStartsKeepCommentAndMixedContentOnOwnedPages",
@@ -20214,6 +20216,7 @@
     "DocxNoteCellPictureRangesRetainClippedAndMergedFallbacks"
   ],
   "docx-note-placement-work": [
+    "=DocxParityStartsFollowInsertedEndnotePages",
     "DocxInlineCompositionMappedNoteBandBottomMatchesIndependentWord",
     "DocxDeferredMixedEndnoteConsumesSeparatorDeficitOnce",
     "DocxDeferredMixedEndnoteUsesResolvedSeparatorFirstLineOrigin",
@@ -20243,6 +20246,7 @@
   "docx-counter-spacing": [
     "=DocxSingleSectionPageNumberStartBindsComposedCounters",
     "=DocxSingleSectionPageNumberStartSelectsStaticStoryParity",
+    "=DocxSectionPageCountersAccountForInsertedEndnotePages",
     "DocxEndnoteCounterPrefix",
     "=DocxLaterSectionEndnoteUsesReferencePageAfterEarlierContinuation",
     "DocxNoteMathFieldsReferenceBindingIsIndependentOfStaticTypography",

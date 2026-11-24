@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Docx;
 
@@ -112,7 +113,11 @@ internal static partial class DocxInlineCompositionTests
             {
                 var source = ReadSectionCounter(mode, count, null);
                 var control = Render(DocxSectionBreakType.NextPage);
-                TestAssert.Contains("Publicfollowingsection", SectionCounterPageText(control[^1]));
+                var controlText = control.Select(SectionCounterPageText).ToArray();
+                var expectedNoteWords = Enumerable.Range(0, count)
+                    .Select(index => "item" + index.ToString("D3", CultureInfo.InvariantCulture)).ToArray();
+                AssertNoteWords(controlText, DocxSectionBreakType.NextPage);
+                TestAssert.Contains("Publicfollowingsection", controlText[^1]);
                 TestAssert.True(control.Length >= 4, "The control retains the four body pages.");
                 shiftedParity |= control.Length % 2 == 1;
 
@@ -120,16 +125,26 @@ internal static partial class DocxInlineCompositionTests
                 {
                     bool needsFiller = (control.Length % 2 == 1) != (type == DocxSectionBreakType.OddPage);
                     var pages = Render(type);
+                    var pageText = pages.Select(SectionCounterPageText).ToArray();
+                    AssertNoteWords(pageText, type);
                     TestAssert.Equal(control.Length + (needsFiller ? 1 : 0), pages.Length);
-                    TestAssert.Contains("Publicfollowingsection", SectionCounterPageText(pages[^1]));
+                    TestAssert.Contains("Publicfollowingsection", pageText[^1]);
                     if (needsFiller)
                     {
                         TestAssert.Equal(string.Empty, pages[^2].Content);
                         TestAssert.Equal(0, pages[^2].Annotations.Count);
                     }
-                    TestAssert.True(control.Select(SectionCounterPageText).SequenceEqual(
-                        pages.Where((_, index) => !needsFiller || index != pages.Length - 2).Select(SectionCounterPageText)),
-                        "The parity boundary preserves the entire note on the same occupied pages.");
+                    TestAssert.True(controlText.SequenceEqual(
+                        pageText.Where((_, index) => !needsFiller || index != pages.Length - 2)),
+                        "The parity boundary preserves the text on the same occupied pages.");
+                }
+
+                void AssertNoteWords(string[] pageText, DocxSectionBreakType type)
+                {
+                    var paintedWords = pageText.SelectMany(text =>
+                        Regex.Matches(text, @"item[0-9]{3}(?![0-9])").Select(match => match.Value));
+                    TestAssert.True(expectedNoteWords.SequenceEqual(paintedWords),
+                        $"Every authored note word paints once and in order: {mode}/{count}/{type}.");
                 }
 
                 Lokad.OoxPdf.Pdf.PdfPage[] Render(DocxSectionBreakType type)
