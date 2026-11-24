@@ -434,54 +434,68 @@ internal static class PptxChartRenderingTests
 
     public static void PptxSyntheticPieAutoLabelsEmitNoLeaders()
     {
-        // Office draws no leaders for styled auto pie labels (auto-radius reference
-        // carries a red 2.25pt leader style yet zero leader strokes); only manual
-        // labels keep them.
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
+        // The Office auto-radius reference has a red leader style and paints
+        // both automatic labels without a leader. The manual-label test owns
+        // the positive leader-stroke check.
+        PdfPage authored = Render();
+        TestAssert.Equal("30|70", PieLabels(authored));
+        foreach (string label in new[] { "30", "70" })
         {
-            ["[Content_Types].xml"] = TestFixtures.Utf8(PptxTests.BasicContentTypes()),
-            ["_rels/.rels"] = TestFixtures.Utf8(PptxTests.PackageRelationship()),
-            ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8(PptxTests.PresentationRelationship()),
-            ["ppt/presentation.xml"] = TestFixtures.Utf8(PptxTests.BasicPresentation()),
-            ["ppt/slides/_rels/slide1.xml.rels"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
-                </Relationships>
-                """),
-            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
-                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
-                       xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
-                       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-                  <p:cSld><p:spTree>
-                    <p:graphicFrame>
-                      <p:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="2743200"/></p:xfrm>
-                      <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic>
-                    </p:graphicFrame>
-                  </p:spTree></p:cSld>
-                </p:sld>
-                """),
-            ["ppt/charts/chart1.xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
+            var glyphs = PortableRenderingTests.ReadPaintedSourceLabel(authored, label, fontPrefix: "CP");
+            TestAssert.True(glyphs.All(glyph => glyph.Ink.X >= 72d && glyph.Ink.X + glyph.Ink.Width <= 360d &&
+                glyph.Ink.Y >= authored.Height - 288d && glyph.Ink.Y + glyph.Ink.Height <= authored.Height - 72d),
+                "Both digits must paint inside the chart frame for label " + label);
+        }
+        TestAssert.True(!PptxChartPaletteTests.ReadColoredPaints(authored.Content, strokes: true)
+            .Contains(new RgbColor(255, 0, 0)), "Automatic labels must not paint the authored red leader stroke.");
+
+        PdfPage oneLabel = Render(pointOverride: """<c:dLbl><c:idx val="0"/><c:delete val="1"/></c:dLbl>""");
+        TestAssert.Equal("70", PieLabels(oneLabel));
+
+        // Even the correct values in a separate text box cannot stand in for pie labels.
+        PdfPage slideTextOnly = Render(showValue: false, siblingShapes: """
+            <p:sp>
+              <p:nvSpPr><p:cNvPr id="2" name="Unrelated shape"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+              <p:spPr><a:xfrm><a:off x="457200" y="152400"/><a:ext cx="3048000" cy="457200"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+              <p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="1800"/><a:t>Unrelated 30 70</a:t></a:r></a:p></p:txBody>
+            </p:sp>
+            """);
+        TestAssert.Equal(string.Empty, PieLabels(slideTextOnly));
+        var unrelated = PortableRenderingTests.ReadPaintedSourceLabel(slideTextOnly, "Unrelated 30 70");
+        TestAssert.True(unrelated.All(glyph => glyph.Ink.Y >= slideTextOnly.Height - 72d),
+            "The unrelated text paints above the chart.");
+
+        static string PieLabels(PdfPage page) => string.Join('|', DocxCommentsTests.ReadEmbeddedGlyphTextShows(page,
+            usePageCoordinates: false, honorActualText: false,
+            fontResourceFilter: name => name.StartsWith("CP", StringComparison.Ordinal)).Select(show => show.Text));
+
+        static PdfPage Render(bool showValue = true, string pointOverride = "", string siblingShapes = "")
+        {
+            string chart = $$"""
                 <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
                               xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
                   <c:chart><c:plotArea><c:pieChart>
                     <c:ser>
-                      <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
-                      <c:val><c:numLit><c:pt idx="0"><c:v>30</c:v></c:pt><c:pt idx="1"><c:v>70</c:v></c:pt></c:numLit></c:val>
-                      <c:dLbls><c:showVal val="1"/><c:showLeaderLines val="1"/><c:leaderLines><c:spPr><a:ln w="28575"><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill></a:ln></c:spPr></c:leaderLines></c:dLbls>
+                      <c:val><c:numLit><c:ptCount val="2"/><c:pt idx="0"><c:v>30</c:v></c:pt><c:pt idx="1"><c:v>70</c:v></c:pt></c:numLit></c:val>
+                      <c:dLbls>
+                        {{pointOverride}}
+                        <c:showLegendKey val="0"/><c:showVal val="{{(showValue ? 1 : 0)}}"/>
+                        <c:showCatName val="0"/><c:showSerName val="0"/><c:showPercent val="0"/><c:showBubbleSize val="0"/>
+                        <c:showLeaderLines val="1"/><c:leaderLines><c:spPr><a:ln w="28575"><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill></a:ln></c:spPr></c:leaderLines>
+                      </c:dLbls>
                     </c:ser>
                   </c:pieChart></c:plotArea></c:chart>
                 </c:chartSpace>
-                """)
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-        OoxPdfConverter.Convert(input, output);
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.DoesNotContain("1 0 0 RG", pdf);
-        TestAssert.Contains("BT", pdf);
+                """;
+            using var stream = PptxTests.CreateSingleChartPackageStream(chart, siblingShapes: siblingShapes);
+            using var package = OoxPackage.Open(stream, default);
+            var diagnostics = new DiagnosticCollector();
+            var document = new PptxReader().Read(package, default, diagnostics.Add);
+            PdfPage page = new PptxRenderer(new PortableRenderingTests.PinnedResolver())
+                .RenderPagesAsync(document, package, diagnostics.Add, default).ToBlockingEnumerable().Single();
+            TestAssert.True(diagnostics.Diagnostics.Count == 0, "The chart and its controls must render without diagnostics.");
+            return page;
+        }
     }
 
     public static void PptxSyntheticAreaScatterRadarAndDoughnutChartsRenderNativeCharts()

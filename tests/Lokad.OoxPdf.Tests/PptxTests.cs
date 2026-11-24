@@ -134,9 +134,9 @@ internal static class PptxTests
     }
 
     internal static MemoryStream CreateSingleChartPackageStream(string chartXml,
-        IReadOnlyDictionary<string, byte[]>? additionalParts = null)
+        IReadOnlyDictionary<string, byte[]>? additionalParts = null, string siblingShapes = "")
     {
-        var parts = CreateSingleChartParts(chartXml, frameWidth: 3657600, frameHeight: 2743200);
+        var parts = CreateSingleChartParts(chartXml, frameWidth: 3657600, frameHeight: 2743200, siblingShapes: siblingShapes);
         if (additionalParts is not null)
         {
             foreach (KeyValuePair<string, byte[]> part in additionalParts)
@@ -149,7 +149,7 @@ internal static class PptxTests
     }
 
     private static Dictionary<string, byte[]> CreateSingleChartParts(string chartXml, int frameWidth, int frameHeight,
-        string frameProperties = "") =>
+        string frameProperties = "", string siblingShapes = "") =>
         new()
         {
             ["[Content_Types].xml"] = TestFixtures.Utf8(BasicContentTypes()),
@@ -173,7 +173,7 @@ internal static class PptxTests
                       {{frameProperties}}
                       <p:xfrm><a:off x="914400" y="914400"/><a:ext cx="{{frameWidth}}" cy="{{frameHeight}}"/></p:xfrm>
                       <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic>
-                    </p:graphicFrame>
+                    </p:graphicFrame>{{siblingShapes}}
                   </p:spTree></p:cSld>
                 </p:sld>
                 """)),
