@@ -453,7 +453,7 @@ internal sealed partial class DocxLayoutEngine
                         context.DefaultTabStopPoints, () => pageIndex + 1, rowTop, rowHeight, rowTop,
                         FragmentIndex: 0, FragmentCount: 1, FragmentReason: "None", Story: null,
                         pageCount: context.PageCount, paragraphSpacingScale: context.ParagraphSpacingScale,
-                        cellMemo: cellMemo, fieldPageNumber: context.PageNumber));
+                        cellMemo: cellMemo, fieldPageNumber: context.PageNumber, previousRow: nestedRows.LastOrDefault()));
                     cursorY -= rowHeight;
                 }
                 continue;

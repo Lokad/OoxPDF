@@ -16401,6 +16401,7 @@
     "PortableRenderingLinkedMixedNoteFramesRetainSourceAndInk"
   ],
   "docx-merged-source-consumption": [
+    "=DocxMergedCellOnOnePagePaintsItsSourceAndShadingOnce",
     "DocxInlineCompositionMergedCellMathRetainsIndependentRelativeWordGeometry",
     "DocxInlineCompositionMergedMathPreparationKeepsOwningSourcesAndPlacementFallbacks",
     "PortableRenderingMergedMathCellsKeepOwnerContent",

@@ -3,11 +3,60 @@ using System.Text.Json;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Docx;
 using Lokad.OoxPdf.Fonts;
+using Lokad.OoxPdf.Ooxml;
 
 namespace Lokad.OoxPdf.Tests;
 
 internal static partial class DocxInlineCompositionTests
 {
+    public static void DocxMergedCellOnOnePagePaintsItsSourceAndShadingOnce()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        foreach (string alignment in new[] { "top", "center", "bottom" })
+        {
+            const string label = "MERGED OWNER";
+            string rows = string.Concat(Enumerable.Range(1, 3).Select(index => $$"""
+                <w:tr><w:trPr><w:cantSplit/><w:trHeight w:val="960" w:hRule="exact"/></w:trPr>
+                  <w:tc><w:tcPr><w:tcW w:w="3000" w:type="dxa"/>
+                    {{(index == 1 ? "<w:vMerge w:val=\"restart\"/>" : "<w:vMerge/>")}}
+                    <w:shd w:val="clear" w:fill="204060"/><w:vAlign w:val="{{alignment}}"/>
+                  </w:tcPr>{{(index == 1 ? Text(label) : "<w:p/>")}}</w:tc>
+                  <w:tc><w:tcPr><w:tcW w:w="3000" w:type="dxa"/></w:tcPr>{{Text($"ROW {index}")}}</w:tc>
+                </w:tr>
+                """));
+            using var input = TestFixtures.CreateZipPackage(new Dictionary<string, string>
+            {
+                ["[Content_Types].xml"] = TestFixtures.DocxContentTypes,
+                ["_rels/.rels"] = TestFixtures.DocxPackageRelationships,
+                ["word/document.xml"] = $$"""
+                    <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>
+                      <w:tbl><w:tblPr><w:tblW w:w="6000" w:type="dxa"/><w:tblLayout w:type="fixed"/></w:tblPr>
+                        <w:tblGrid><w:gridCol w:w="3000"/><w:gridCol w:w="3000"/></w:tblGrid>{{rows}}</w:tbl>
+                      <w:sectPr><w:pgSz w:w="8640" w:h="6000"/>
+                        <w:pgMar w:top="480" w:bottom="480" w:left="720" w:right="720" w:header="240" w:footer="240" w:gutter="0"/>
+                      </w:sectPr>
+                    </w:body></w:document>
+                    """
+            });
+            using var package = OoxPackage.Open(input, default);
+            var source = new DocxReader().Read(package, null, default, markupMode: mode);
+            var geometry = mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup;
+            var page = new DocxRenderer(new PortableRenderingTests.PinnedResolver(), mode, geometry)
+                .RenderPagesAsync(source, null, default).ToBlockingEnumerable().Single();
+            string text = DocxPageFootnoteNumberingTests.DecodeText(page);
+            foreach (string value in new[] { label, "ROW 1", "ROW 2", "ROW 3" })
+                TestAssert.Equal(1, text.Split(value, StringSplitOptions.None).Length - 1);
+            TestAssert.Equal(1, page.Content.Split("0.125 0.251 0.376 rg", StringSplitOptions.None).Length - 1);
+        }
+
+        static string Text(string value) => $"""
+            <w:p><w:pPr><w:spacing w:before="0" w:after="0"/></w:pPr>
+              <w:r><w:rPr><w:sz w:val="24"/></w:rPr><w:t>{value}</w:t></w:r>
+            </w:p>
+            """;
+    }
+
     public static void DocxInlineCompositionAdmittedMergeContentAppearsOnceAcrossRowsAndPages()
     {
         if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent merged-source anchors require installed Windows fonts.");

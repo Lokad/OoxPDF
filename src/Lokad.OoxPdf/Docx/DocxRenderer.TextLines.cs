@@ -296,14 +296,12 @@ internal sealed partial class DocxRenderer
                 }
                 if (current[index] is not DocxTableRowLayout row) continue;
                 var rowOwner = owner ?? row.Story;
-                var previous = index > 0 ? current[index - 1] as DocxTableRowLayout : null;
-                if (!IsAdjacentTableRow(previous, row)) previous = null;
                 var geometry = ResolveTablePaintGeometry(row, xOffset, yOffset);
                 for (int cellIndex = 0; cellIndex < row.Cells.Count; cellIndex++)
                 {
                     token.ThrowIfCancellationRequested();
                     var cell = row.Cells[cellIndex];
-                    if (!ShouldRenderTableCellContentFragment(cell, previous)) continue;
+                    if (!ShouldRenderTableCellVisualFragment(cell)) continue;
                     var clip = ResolveTableCellContentClip(geometry, geometry.Cells[cellIndex]);
                     var cellFrame = new PdfRectangle(clip.X, clip.Y, clip.Width, clip.Height);
                     var cellViewport = parent is { } enclosing ? IntersectPaintViewports(enclosing, cellFrame) : cellFrame;

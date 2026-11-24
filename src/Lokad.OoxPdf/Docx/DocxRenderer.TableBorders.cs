@@ -27,7 +27,7 @@ internal sealed partial class DocxRenderer
         {
             cancellationToken.ThrowIfCancellationRequested();
             DocxTableCellLayout cellLayout = row.Cells[cellIndex];
-            if (!ShouldRenderTableCellVisualFragment(cellLayout, previousRow))
+            if (!ShouldRenderTableCellVisualFragment(cellLayout))
             {
                 continue;
             }
@@ -635,35 +635,9 @@ internal sealed partial class DocxRenderer
         Vertical
     }
 
-    private static bool ShouldRenderTableCellContentFragment(
-        DocxTableCellLayout cellLayout,
-        DocxTableRowLayout? previousRow)
-    {
-        return cellLayout.VisualOwnership == DocxTableCellVisualOwnership.OwnCell ||
-            cellLayout.VisualOwnership == DocxTableCellVisualOwnership.VerticalMergeOwner &&
-            ShouldRenderTableCellVisualFragment(cellLayout, previousRow);
-    }
-
-    private static bool ShouldRenderTableCellVisualFragment(
-        DocxTableCellLayout cellLayout,
-        DocxTableRowLayout? previousRow)
-    {
-        if (cellLayout.VisualOwnership == DocxTableCellVisualOwnership.OwnCell)
-        {
-            return true;
-        }
-
-        if (cellLayout.VisualOwnership == DocxTableCellVisualOwnership.MissingVerticalMergeOwner)
-        {
-            return false;
-        }
-
-        return previousRow is null || !previousRow.Cells.Any(previousCell =>
-            !previousCell.IsVerticalMergeContinuation &&
-            HorizontalOverlap(previousCell, cellLayout) > 0d &&
-            previousCell.Y <= cellLayout.Y + 0.001d &&
-            previousCell.Y + previousCell.Height >= cellLayout.Y + cellLayout.Height - 0.001d);
-    }
+    private static bool ShouldRenderTableCellVisualFragment(DocxTableCellLayout cellLayout) =>
+        cellLayout.VisualOwnership != DocxTableCellVisualOwnership.MissingVerticalMergeOwner &&
+        cellLayout.VerticalMergeOwner?.CoveredBottom is null;
 
     // R11: one ordered row-pair overlap plan shared by the horizontal stroke and
     // junction painters. Both painters previously rescanned next-row cells per
@@ -709,14 +683,14 @@ internal sealed partial class DocxRenderer
             for (int i = 0; i < row.Cells.Count; i++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                currentVisible[i] = ShouldRenderTableCellVisualFragment(row.Cells[i], previousRow: null);
+                currentVisible[i] = ShouldRenderTableCellVisualFragment(row.Cells[i]);
             }
 
             bool[] nextVisible = new bool[nextRow.Cells.Count];
             for (int j = 0; j < nextRow.Cells.Count; j++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                nextVisible[j] = ShouldRenderTableCellVisualFragment(nextRow.Cells[j], row);
+                nextVisible[j] = ShouldRenderTableCellVisualFragment(nextRow.Cells[j]);
             }
 
             double[] nextLefts = new double[nextRow.Cells.Count];

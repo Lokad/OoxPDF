@@ -127,6 +127,30 @@ internal sealed partial class DocxLayoutEngine
         return height;
     }
 
+    private static double? CoveringMergeBottom(DocxVerticalMergeOwner merge, DocxTableRowLayout? previousRow,
+        DocxTableLayoutContext table, int rowIndex, double x, double width, double y, double height)
+    {
+        // The preceding physical row may carry the same covering restart frame.
+        // A new page or a disjoint frame keeps the existing continuation path.
+        if (previousRow is null || previousRow.Table.TableIndex != table.TableIndex ||
+            previousRow.Table.SourceBlockIndex != table.SourceBlockIndex || previousRow.RowIndex + 1 != rowIndex)
+            return null;
+
+        const double roundoff = 0.001d;
+        foreach (DocxTableCellLayout previous in previousRow.Cells)
+        {
+            if (previous.X > x + roundoff || previous.X + previous.Width < x + width - roundoff ||
+                previous.Y + previous.Height < y + height - roundoff)
+                continue;
+
+            double? bottom = ReferenceEquals(previous.Cell, merge.Cell) && !previous.IsVerticalMergeContinuation
+                ? previous.Y
+                : ReferenceEquals(previous.VerticalMergeOwner?.Cell, merge.Cell) ? previous.VerticalMergeOwner?.CoveredBottom : null;
+            if (bottom is { } coveredBottom && coveredBottom <= y + roundoff) return coveredBottom;
+        }
+        return null;
+    }
+
     private static bool TryGetCellAtGridColumn(DocxTableRow row, int gridColumnIndex, out DocxTableCell? cell)
     {
         int currentGridColumnIndex = row.GridBefore;

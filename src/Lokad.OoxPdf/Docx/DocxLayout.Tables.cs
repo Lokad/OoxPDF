@@ -332,7 +332,7 @@ internal sealed partial class DocxLayoutEngine
                 frame.RowHeights, frame.EffectiveColumns, frame.Scale, textMeasurer, defaultTabStopPoints,
                 getPageNumber, cursorY, rowHeight, cursorY, FragmentIndex: 0, FragmentCount: 1,
                 FragmentReason: "None", Story: staticStory, pageCount: pageCount,
-                paragraphSpacingScale: paragraphSpacingScale, cellMemo: cellMemo);
+                paragraphSpacingScale: paragraphSpacingScale, cellMemo: cellMemo, previousRow: rows.LastOrDefault());
             // A related story lays out in its own frame and projects the contained baselines.
             rows.Add(staticStory is null
                 ? ProjectContainedTableBaselines(row, textMeasurer, paragraphSpacingScale, cancellationToken)
@@ -2040,7 +2040,8 @@ internal sealed partial class DocxLayoutEngine
             paragraphSpacingScale: paragraphSpacingScale,
             cellMemo: cellMemo,
             adjustAtLeastBodySpacing: true,
-            fieldPageNumber: fieldPageNumber));
+            fieldPageNumber: fieldPageNumber,
+            previousRow: currentItems.LastOrDefault() as DocxTableRowLayout));
         cursorY -= rowHeight;
     }
 
@@ -2106,7 +2107,8 @@ internal sealed partial class DocxLayoutEngine
                 paragraphSpacingScale: paragraphSpacingScale,
                 cellMemo: cellMemo,
                 adjustAtLeastBodySpacing: true,
-                cellSources: cellFragments?[fragmentIndex].Cells) with {
+                cellSources: cellFragments?[fragmentIndex].Cells,
+                previousRow: currentItems.LastOrDefault() as DocxTableRowLayout) with {
                     FootnoteReservations = cellFragments?[fragmentIndex].FootnoteReservations ?? []
                 });
             cursorY -= fragmentHeight;
@@ -2287,7 +2289,8 @@ internal sealed partial class DocxLayoutEngine
         DocxTableCellTextLinesMemo? cellMemo = null,
         bool adjustAtLeastBodySpacing = false,
         IReadOnlyList<DocxCellSourceWindow>? cellSources = null,
-        DocxPageNumber? fieldPageNumber = null)
+        DocxPageNumber? fieldPageNumber = null,
+        DocxTableRowLayout? previousRow = null)
     {
         double[] cellWidths = GetTableRowCellWidths(row, effectiveColumns, scale);
         double rowTopPadding = ResolveTableRowTopPadding(row, paragraphSpacingScale);
@@ -2326,6 +2329,10 @@ internal sealed partial class DocxLayoutEngine
                     visualY = fullVisualY;
                 }
             }
+
+            if (verticalMergeOwner is { } merge &&
+                CoveringMergeBottom(merge, previousRow, tableContext, rowIndex, cellX, cellWidth, visualY, visualHeight) is { } bottom)
+                verticalMergeOwner = merge with { CoveredBottom = bottom };
 
             var currentPageNumber = getPageNumber();
             int currentPageIndex = Math.Max(0, currentPageNumber.Physical - 1);

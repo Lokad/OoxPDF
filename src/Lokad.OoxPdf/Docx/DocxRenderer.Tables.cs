@@ -177,7 +177,7 @@ internal sealed partial class DocxRenderer
         foreach (DocxTableCellLayout cellLayout in geometryRow.Cells)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (!ShouldRenderTableCellVisualFragment(cellLayout, geometryPreviousRow))
+            if (!ShouldRenderTableCellVisualFragment(cellLayout))
             {
                 continue;
             }
@@ -230,7 +230,7 @@ internal sealed partial class DocxRenderer
         {
             cancellationToken.ThrowIfCancellationRequested();
             DocxTableCellLayout cellLayout = row.Cells[cellIndex];
-            if (!ShouldRenderTableCellContentFragment(cellLayout, previousRow))
+            if (!ShouldRenderTableCellVisualFragment(cellLayout))
             {
                 continue;
             }
@@ -341,7 +341,7 @@ internal sealed partial class DocxRenderer
         CancellationToken cancellationToken,
         RowPairBorderPlan? sharedPlan)
     {
-        DocxTableBorderBoundary[] rowBoundaries = ResolveVisibleVerticalBoundaries(row, previousRow, cancellationToken);
+        DocxTableBorderBoundary[] rowBoundaries = ResolveVisibleVerticalBoundaries(row, cancellationToken);
         if (rowBoundaries.Length == 0)
         {
             return;
@@ -352,7 +352,7 @@ internal sealed partial class DocxRenderer
         foreach (DocxTableCellLayout cellLayout in row.Cells)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (!ShouldRenderTableCellVisualFragment(cellLayout, previousRow))
+            if (!ShouldRenderTableCellVisualFragment(cellLayout))
             {
                 continue;
             }
@@ -370,12 +370,12 @@ internal sealed partial class DocxRenderer
 
         if (previousRow is null && ShouldRenderTableRowEdge(row, top: true))
         {
-            RenderOuterHorizontalFragmentCornerJunctions(row, previousRow, rowBoundaries, "top", graphics);
+            RenderOuterHorizontalFragmentCornerJunctions(row, rowBoundaries, "top", graphics);
         }
 
         if (nextRow is null && ShouldRenderTableRowEdge(row, top: false))
         {
-            RenderOuterHorizontalFragmentCornerJunctions(row, previousRow, rowBoundaries, "bottom", graphics);
+            RenderOuterHorizontalFragmentCornerJunctions(row, rowBoundaries, "bottom", graphics);
         }
 
         if (sharedPlan is not null)
@@ -386,13 +386,12 @@ internal sealed partial class DocxRenderer
 
     private static void RenderOuterHorizontalFragmentCornerJunctions(
         DocxTableRowLayout row,
-        DocxTableRowLayout? previousRow,
         IReadOnlyList<DocxTableBorderBoundary> boundaries,
         string edge,
         PdfGraphicsBuilder graphics)
     {
-        DocxTableCellLayout? firstCell = row.Cells.FirstOrDefault(cell => ShouldRenderTableCellVisualFragment(cell, previousRow));
-        DocxTableCellLayout? lastCell = row.Cells.LastOrDefault(cell => ShouldRenderTableCellVisualFragment(cell, previousRow));
+        DocxTableCellLayout? firstCell = row.Cells.FirstOrDefault(ShouldRenderTableCellVisualFragment);
+        DocxTableCellLayout? lastCell = row.Cells.LastOrDefault(ShouldRenderTableCellVisualFragment);
         if (firstCell is null || lastCell is null)
         {
             return;
@@ -425,7 +424,7 @@ internal sealed partial class DocxRenderer
         HashSet<(double X, double Y)> emittedJunctions,
         CancellationToken cancellationToken)
     {
-        DocxTableBorderBoundary[] nextRowBoundaries = ResolveVisibleVerticalBoundaries(plan.NextRow, plan.Row, cancellationToken);
+        DocxTableBorderBoundary[] nextRowBoundaries = ResolveVisibleVerticalBoundaries(plan.NextRow, cancellationToken);
         OrderedBoundaryIndex mergedBoundaries = OrderedBoundaryIndex.Build(rowBoundaries, nextRowBoundaries);
         int pairIndex = 0;
         for (int cellIndex = 0; cellIndex < plan.Row.Cells.Count; cellIndex++)
@@ -517,14 +516,14 @@ internal sealed partial class DocxRenderer
         }
     }
 
-    private static DocxTableBorderBoundary[] ResolveVisibleVerticalBoundaries(DocxTableRowLayout row, DocxTableRowLayout? previousRow, CancellationToken cancellationToken)
+    private static DocxTableBorderBoundary[] ResolveVisibleVerticalBoundaries(DocxTableRowLayout row, CancellationToken cancellationToken)
     {
         var boundaries = new List<DocxTableBorderBoundary>();
         for (int cellIndex = 0; cellIndex < row.Cells.Count; cellIndex++)
         {
             cancellationToken.ThrowIfCancellationRequested();
             DocxTableCellLayout cellLayout = row.Cells[cellIndex];
-            if (!ShouldRenderTableCellVisualFragment(cellLayout, previousRow))
+            if (!ShouldRenderTableCellVisualFragment(cellLayout))
             {
                 continue;
             }

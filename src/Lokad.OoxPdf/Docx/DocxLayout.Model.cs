@@ -372,7 +372,11 @@ internal readonly record struct DocxPlacedDrawingAnchor(DocxStaticDrawingOwner O
         anchors.Count == 0 || delta == 0d ? anchors : anchors.Select(anchor => anchor.TranslateY(delta)).ToArray();
 }
 
-internal sealed record DocxVerticalMergeOwner(DocxTableCell Cell, int RowIndex, int GridColumnIndex);
+internal sealed record DocxVerticalMergeOwner(DocxTableCell Cell, int RowIndex, int GridColumnIndex)
+{
+    // Set only when the previously placed restart frame covers this cell.
+    public double? CoveredBottom { get; init; }
+}
 
 internal enum DocxTableCellVisualOwnership
 {
