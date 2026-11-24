@@ -159,14 +159,4 @@ internal sealed partial class PptxRenderer
         double Y,
         double TangentX,
         double TangentY);
-
-    private readonly record struct CurvedConnectorFillPath(
-        IReadOnlyList<(double X, double Y)> Points,
-        IReadOnlyList<(double X, double Y)>? TailSubpath,
-        double TipX,
-        double TipY,
-        double DirectionX,
-        double DirectionY,
-        double NormalX,
-        double NormalY);
 }

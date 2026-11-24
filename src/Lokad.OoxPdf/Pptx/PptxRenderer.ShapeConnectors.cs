@@ -429,121 +429,100 @@ internal sealed partial class PptxRenderer
         double lineWidth,
         LineEndStyle tailEnd)
     {
-        CurvedConnectorFillPath? path = BuildOfficeCurvedConnectorFillPath();
-        if (path is null)
+        int samplesPerSegment = tailEnd.Kind switch
+        {
+            LineEndKind.Arrow => OfficeArrowTailConnectorSamplesPerSegment,
+            LineEndKind.Stealth => OfficeStealthTailConnectorSamplesPerSegment,
+            _ => OfficeTriangleTailConnectorSamplesPerSegment
+        };
+        List<CurveSample> samples = SampleBezierSegments(segments, samplesPerSegment);
+        return TryFillSampledCurveLineEndOutline(graphics, samples, lineWidth, tailEnd);
+    }
+
+    private static bool TryFillSampledCurveLineEndOutline(PdfGraphicsBuilder graphics,
+        IReadOnlyList<CurveSample> samples, double lineWidth, LineEndStyle tailEnd)
+    {
+        if (samples.Count < 2)
         {
             return false;
         }
 
-        LineEndKind tailKind = tailEnd.Kind;
-        if (tailKind == LineEndKind.Arrow)
+        double[] cumulativeLengths = BuildCumulativeSampleLengths(samples, out double totalLength);
+        double markerLength = tailEnd.Kind switch
         {
-            AppendClosedLinePath(graphics, path.Value.Points, explicitClosingLine: true);
+            LineEndKind.Arrow => lineWidth * OfficeArrowheadLengthFactor * tailEnd.LengthScale,
+            LineEndKind.Stealth => lineWidth * OfficeStraightStealthLineEndLengthFactor * tailEnd.LengthScale,
+            _ => Math.Max(OfficeTriangleTailMinimumLength, lineWidth * OfficeTriangleTailLengthFactor) * tailEnd.LengthScale
+        };
+        double baseDistance = Math.Max(0d, totalLength - markerLength);
+        CurveSample baseSample = SampleAtDistance(samples, cumulativeLengths, baseDistance);
+        List<CurveSample> bodySamples = SelectBodySamples(samples, cumulativeLengths, baseDistance, baseSample);
+        if (bodySamples.Count < 2)
+        {
+            return false;
+        }
+
+        (double X, double Y) direction = Normalize(baseSample.TangentX, baseSample.TangentY);
+        if (Math.Abs(direction.X) <= 0.000001d && Math.Abs(direction.Y) <= 0.000001d)
+        {
+            return false;
+        }
+
+        double halfWidth = Math.Max(0.1d, lineWidth / 2d);
+        var points = new List<(double X, double Y)>(bodySamples.Count * 2);
+        foreach (CurveSample sample in bodySamples)
+        {
+            (double X, double Y) normal = NormalForSample(sample);
+            points.Add((sample.X + normal.X * halfWidth, sample.Y + normal.Y * halfWidth));
+        }
+
+        for (int i = bodySamples.Count - 1; i >= 0; i--)
+        {
+            CurveSample sample = bodySamples[i];
+            (double X, double Y) normal = NormalForSample(sample);
+            points.Add((sample.X - normal.X * halfWidth, sample.Y - normal.Y * halfWidth));
+        }
+
+        AppendClosedLinePath(graphics, points, explicitClosingLine: true);
+        (double X, double Y) tip = (samples[^1].X, samples[^1].Y);
+        (double X, double Y) normalAtBase = (-direction.Y, direction.X);
+        if (tailEnd.Kind == LineEndKind.Arrow)
+        {
             AppendOfficeArrowHeadPath(
                 graphics,
-                path.Value.TipX,
-                path.Value.TipY,
-                -path.Value.DirectionX,
-                -path.Value.DirectionY,
-                -path.Value.NormalX,
-                -path.Value.NormalY,
+                tip.X,
+                tip.Y,
+                -direction.X,
+                -direction.Y,
+                -normalAtBase.X,
+                -normalAtBase.Y,
                 lineWidth,
                 splitTrailingCurve: true);
-            graphics.FillCurrentPath();
+        }
+        else if (tailEnd.Kind == LineEndKind.Stealth)
+        {
+            double markerWidth = lineWidth * OfficeStraightStealthLineEndWidthFactor * tailEnd.WidthScale;
+            AppendClosedLinePath(graphics,
+            [
+                tip,
+                (baseSample.X + normalAtBase.X * markerWidth / 2d, baseSample.Y + normalAtBase.Y * markerWidth / 2d),
+                (tip.X - direction.X * markerLength * OfficeStraightStealthLineEndNotchFactor, tip.Y - direction.Y * markerLength * OfficeStraightStealthLineEndNotchFactor),
+                (baseSample.X - normalAtBase.X * markerWidth / 2d, baseSample.Y - normalAtBase.Y * markerWidth / 2d)],
+            false);
         }
         else
         {
-            AppendClosedLinePath(graphics, path.Value.Points, explicitClosingLine: true);
-            if (path.Value.TailSubpath is { } tailSubpath)
-            {
-                AppendClosedLinePath(graphics, tailSubpath, false);
-            }
-
-            graphics.FillCurrentPath();
+            double arrowHalfWidth = markerLength * OfficeTriangleTailHalfWidthFactor * tailEnd.WidthScale;
+            AppendClosedLinePath(graphics,
+            [
+                tip,
+                (baseSample.X + normalAtBase.X * arrowHalfWidth, baseSample.Y + normalAtBase.Y * arrowHalfWidth),
+                (baseSample.X - normalAtBase.X * arrowHalfWidth, baseSample.Y - normalAtBase.Y * arrowHalfWidth)],
+            false);
         }
 
+        graphics.FillCurrentPath();
         return true;
-
-        CurvedConnectorFillPath? BuildOfficeCurvedConnectorFillPath()
-        {
-            LineEndKind fillTailKind = tailEnd.Kind;
-            int samplesPerSegment = fillTailKind switch
-            {
-                LineEndKind.Arrow => OfficeArrowTailConnectorSamplesPerSegment,
-                LineEndKind.Stealth => OfficeStealthTailConnectorSamplesPerSegment,
-                _ => OfficeTriangleTailConnectorSamplesPerSegment
-            };
-            List<CurveSample> samples = SampleBezierSegments(segments, samplesPerSegment);
-            if (samples.Count < 2)
-            {
-                return null;
-            }
-
-            double[] cumulativeLengths = BuildCumulativeSampleLengths(samples, out double totalLength);
-            double markerLength = fillTailKind switch
-            {
-                LineEndKind.Arrow => lineWidth * OfficeArrowheadLengthFactor * tailEnd.LengthScale,
-                LineEndKind.Stealth => lineWidth * OfficeStraightStealthLineEndLengthFactor * tailEnd.LengthScale,
-                _ => Math.Max(OfficeTriangleTailMinimumLength, lineWidth * OfficeTriangleTailLengthFactor) * tailEnd.LengthScale
-            };
-            double baseDistance = Math.Max(0d, totalLength - markerLength);
-            CurveSample baseSample = SampleAtDistance(samples, cumulativeLengths, baseDistance);
-            double halfWidth = Math.Max(0.1d, lineWidth / 2d);
-            List<CurveSample> bodySamples = SelectBodySamples(samples, cumulativeLengths, baseDistance, baseSample);
-            if (bodySamples.Count < 2)
-            {
-                return null;
-            }
-
-            (double X, double Y) direction = Normalize(baseSample.TangentX, baseSample.TangentY);
-            if (Math.Abs(direction.X) <= 0.000001d && Math.Abs(direction.Y) <= 0.000001d)
-            {
-                return null;
-            }
-
-            (double X, double Y) normal = (-direction.Y, direction.X);
-            (double X, double Y) tip = (samples[^1].X, samples[^1].Y);
-            var points = new List<(double X, double Y)>(bodySamples.Count * 2);
-            foreach (CurveSample sample in bodySamples)
-            {
-                (double X, double Y) sampleNormal = NormalForSample(sample);
-                points.Add((sample.X + sampleNormal.X * halfWidth, sample.Y + sampleNormal.Y * halfWidth));
-            }
-
-            for (int i = bodySamples.Count - 1; i >= 0; i--)
-            {
-                CurveSample sample = bodySamples[i];
-                (double X, double Y) sampleNormal = NormalForSample(sample);
-                points.Add((sample.X - sampleNormal.X * halfWidth, sample.Y - sampleNormal.Y * halfWidth));
-            }
-
-            IReadOnlyList<(double X, double Y)>? tailSubpath = null;
-            if (fillTailKind == LineEndKind.Stealth)
-            {
-                double markerWidth = lineWidth * OfficeStraightStealthLineEndWidthFactor * tailEnd.WidthScale;
-                tailSubpath =
-                [
-                    tip,
-                    (baseSample.X + normal.X * markerWidth / 2d, baseSample.Y + normal.Y * markerWidth / 2d),
-                    (tip.X - direction.X * markerLength * OfficeStraightStealthLineEndNotchFactor, tip.Y - direction.Y * markerLength * OfficeStraightStealthLineEndNotchFactor),
-                    (baseSample.X - normal.X * markerWidth / 2d, baseSample.Y - normal.Y * markerWidth / 2d)
-                ];
-            }
-            else if (fillTailKind != LineEndKind.Arrow)
-            {
-                double arrowHalfWidth = markerLength *
-                    OfficeTriangleTailHalfWidthFactor *
-                    tailEnd.WidthScale;
-                tailSubpath =
-                [
-                    tip,
-                    (baseSample.X + normal.X * arrowHalfWidth, baseSample.Y + normal.Y * arrowHalfWidth),
-                    (baseSample.X - normal.X * arrowHalfWidth, baseSample.Y - normal.Y * arrowHalfWidth)
-                ];
-            }
-
-            return new CurvedConnectorFillPath(points, tailSubpath, tip.X, tip.Y, direction.X, direction.Y, normal.X, normal.Y);
-        }
     }
 
     private static List<CurveSample> SampleBezierSegments(IReadOnlyList<BezierSegment> segments, int samplesPerSegment)
