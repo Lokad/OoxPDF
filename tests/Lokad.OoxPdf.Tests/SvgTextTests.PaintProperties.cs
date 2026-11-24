@@ -1374,7 +1374,7 @@ internal static partial class SvgTextTests
     public static void SvgGradientTemplateChainsPreserveStopsAndOpacityDiagnostics()
     {
         const int chainLength = 1024;
-        const string palette = "<linearGradient id=\"end\" x2=\".6\"><stop offset=\"0\" stop-color=\"red\" stop-opacity=\"-50%\"/>" +
+        const string palette = "<linearGradient id=\"end\" x2=\".6\" spreadMethod=\"reflect\"><stop offset=\"0\" stop-color=\"red\" stop-opacity=\".25\"/>" +
             "<stop offset=\"1\" stop-color=\"blue\"/></linearGradient>";
         const string picture = "<rect width=\"60\" height=\"60\" fill=\"url(#end)\"/>";
         var chain = new StringBuilder();
