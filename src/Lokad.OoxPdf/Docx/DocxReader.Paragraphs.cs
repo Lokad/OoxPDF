@@ -27,7 +27,7 @@ internal sealed partial class DocxReader
         bool isContinuationFragment = false,
         IReadOnlyList<DocxBookmarkAnchor>? leadingBookmarks = null,
         DocxCellBookmarkScope? cellBookmarks = null,
-        List<DocxComplexFieldState>? splitFields = null,
+        List<DocxComplexFieldState>? flowFields = null,
         bool continuesAfterBreak = false,
         bool retainEmptyColumnMark = false,
         bool retainUnmatchedCommentStarts = false,
@@ -84,8 +84,8 @@ internal sealed partial class DocxReader
         bool? originalNumberingIncluded = knownNumberingMark ? numberingMarkInsertion is null : null;
         bool hasDeletedParagraphMark = paragraphMarkRevisions.Any(revision => revision.Kind == DocxRevisionKind.Deletion && revision.SourceElement == "del");
         AddRevisions(paragraphRevisions, paragraphMarkRevisions);
-        var complexFieldStack = splitFields ?? new List<DocxComplexFieldState>();
-        bool startsInsideComputedField = complexFieldStack.Any(field => field.PlaceholderEmitted);
+        var complexFieldStack = flowFields ?? new List<DocxComplexFieldState>();
+        bool startsInsideComputedField = isContinuationFragment && complexFieldStack.Any(field => field.PlaceholderEmitted);
         int sourceRunIndex = 0;
         long contentSourcePosition = 0;
         HashSet<DocxRevisionInfo>? nonPrintingRangeMarkers = null;
@@ -248,7 +248,7 @@ internal sealed partial class DocxReader
         }
 
         bool instructionContinues = continuesAfterBreak && complexFieldStack.Any(field => !field.InResult);
-        FinalizeOpenComplexFields(continuesAfterBreak);
+        FinalizeOpenComplexFields(flowFields is not null);
 
         bool keepsListMarker = !isContinuationFragment && sourceNumbering is { } numberingSource &&
             !string.IsNullOrWhiteSpace(numberingSource.Definition.Text);

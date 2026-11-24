@@ -70,6 +70,50 @@ internal static class DocxLockedFieldTests
         TestAssert.Equal(0L, output.Length);
     }
 
+    public static void DocxComplexCountersOwnStoredResultsAcrossAuthoredParagraphs()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        foreach (var (kind, fieldLock, computed) in new[] { ("PAGE", (string?)null, true), ("PAGE", "1", false), ("REF", null, false) })
+        {
+            XElement[] body = Paragraphs("Body", kind, fieldLock);
+            XElement[] cell = Paragraphs("Cell", kind, fieldLock);
+            string footerKind = kind == "PAGE" ? "NUMPAGES" : kind;
+            var table = new XElement(W + "tbl", new XElement(W + "tblGrid",
+                new XElement(W + "gridCol", new XAttribute(W + "w", 4200))),
+                new XElement(W + "tr", new XElement(W + "tc", cell)));
+            var footer = new XElement(W + "ftr", Paragraphs("Footer", footerKind, fieldLock));
+            var document = DocxTests.ReadDocx(Write([.. body, table], footer: footer), mode);
+
+            var bodyField = document.Paragraphs.SelectMany(paragraph => paragraph.FieldReferences).Single();
+            var footerField = document.FooterParagraphs.SelectMany(paragraph => paragraph.FieldReferences).Single();
+            foreach (var field in new[] { bodyField, footerField })
+            {
+                TestAssert.Equal(computed, field.UsesPlaceholder);
+                TestAssert.Equal(!computed, field.RendersCachedResult);
+                TestAssert.True(field.HasCachedResult, "The reference owns cached text from the later paragraphs.");
+            }
+            TestAssert.Equal(computed ? string.Empty : "Body old middle", string.Concat(document.Paragraphs[1].Runs.Select(run => run.Text)));
+
+            string ink = Compact(RenderText(document, mode));
+            foreach (string story in new[] { "Body", "Cell", "Footer" })
+            {
+                string middle = computed ? "1" : story + " old middle " + story + " old tail";
+                TestAssert.Contains(Compact(story + " before " + middle + " " + story + " after"), ink);
+            }
+        }
+
+        static XElement[] Paragraphs(string label, string kind, string? fieldLock)
+        {
+            XElement[] field = Field(kind, label + " old middle", fieldLock, simple: false).ToArray();
+            return
+            [
+                new XElement(W + "p", Run(label + " before "), field[..^2]),
+                new XElement(W + "p", field[^2]),
+                new XElement(W + "p", Run(label + " old tail "), field[^1], Run(label + " after"))
+            ];
+        }
+    }
+
     private static void CheckWord(string file)
     {
         using var gold = JsonDocument.Parse(File.ReadAllText(Case("locked-page-fields-office.json")));

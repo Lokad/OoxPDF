@@ -71,6 +71,7 @@ internal sealed partial class DocxReader
         Dictionary<XElement, int>? floatingBlocks = null)
     {
         var bodyElements = new List<DocxBodyElement>();
+        var flowFields = new List<DocxComplexFieldState>();
         bool mergeDeletedMarks = !DocxMarkupContext.FromMode(markupMode).IncludesDeletions;
         foreach (var (scopedElement, tableFragments) in EnumerateLogicalTableBlocks(elements, styles, markupMode, cancellationToken))
         {
@@ -80,7 +81,7 @@ internal sealed partial class DocxReader
             if (element.Name == WordprocessingNamespace + "p")
             {
                 DocxParagraph? paragraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, tableCellStyle: null, inlineReferenceCounters: null, documentSettings: documentSettings, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken, retainBalloonParagraphMark: retainBalloonParagraphMark,
-                    leadingBookmarks: scopedElement.LeadingBookmarks);
+                    leadingBookmarks: scopedElement.LeadingBookmarks, flowFields: flowFields);
                 if (paragraph is not null)
                 {
                     int blockIndex = AppendFlowParagraph(bodyElements, paragraph,
@@ -88,13 +89,17 @@ internal sealed partial class DocxReader
                     BindFloatingDrawingBlocks(element, null, floatingBlocks, blockIndex, cancellationToken);
                 }
             }
-            else if (element.Name == WordprocessingNamespace + "tbl")
+            else
             {
-                DocxTable? table = ReadTable(scopedElement, styles, numbering, numberingCounters, package, relationships, inlineReferenceCounters: null, documentSettings: documentSettings, markupMode: markupMode, cancellationToken: cancellationToken, fragments: tableFragments);
-                if (table is not null)
+                flowFields.Clear();
+                if (element.Name == WordprocessingNamespace + "tbl")
                 {
-                    BindFloatingDrawingBlocks(element, tableFragments, floatingBlocks, bodyElements.Count, cancellationToken);
-                    bodyElements.Add(DocxBodyElementFactory.CreateTable(table));
+                    DocxTable? table = ReadTable(scopedElement, styles, numbering, numberingCounters, package, relationships, inlineReferenceCounters: null, documentSettings: documentSettings, markupMode: markupMode, cancellationToken: cancellationToken, fragments: tableFragments);
+                    if (table is not null)
+                    {
+                        BindFloatingDrawingBlocks(element, tableFragments, floatingBlocks, bodyElements.Count, cancellationToken);
+                        bodyElements.Add(DocxBodyElementFactory.CreateTable(table));
+                    }
                 }
             }
         }

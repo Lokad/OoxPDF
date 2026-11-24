@@ -451,6 +451,7 @@ internal sealed partial class DocxReader
         bool projectCommentSelections)
     {
         var elements = new List<DocxBodyElement>();
+        var flowFields = new List<DocxComplexFieldState>();
         var comments = projectCommentSelections ? new DocxCommentProjection(elements) : null;
         bool mergeDeletedMarks = !DocxMarkupContext.FromMode(markupMode).IncludesDeletions;
         List<DocxTableColumnBookmark>? deferred = null;
@@ -536,6 +537,7 @@ internal sealed partial class DocxReader
                             isContinuationFragment: !part.IsFirstFragment,
                             leadingBookmarks: leadingBookmarks,
                             cellBookmarks: bookmarkScope,
+                            flowFields: flowFields,
                             retainUnmatchedCommentStarts: projectCommentSelections);
                         leadingBookmarks = null;
                         if (splitParagraph is not null)
@@ -563,6 +565,7 @@ internal sealed partial class DocxReader
                     cancellationToken: cancellationToken,
                     leadingBookmarks: leadingBookmarks,
                     cellBookmarks: bookmarkScope,
+                    flowFields: flowFields,
                     retainUnmatchedCommentStarts: projectCommentSelections,
                     leadingInlineCommentBoundaries: inlineCommentBoundaries);
                 if (parsed is not null)
@@ -572,6 +575,7 @@ internal sealed partial class DocxReader
             }
             else
             {
+                flowFields.Clear();
                 if (child.Name == WordprocessingNamespace + "tbl")
                 {
                     DocxTable? nestedTable = ReadTable(scopedChild, styles, numbering, numberingCounters, package, relationships,

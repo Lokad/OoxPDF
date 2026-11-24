@@ -43,6 +43,7 @@ internal sealed partial class DocxReader
             }
 
         var elements = new List<DocxBodyElement>();
+        var flowFields = new List<DocxComplexFieldState>();
         var comments = projectCommentSelections ? new DocxCommentProjection(elements) : null;
         bool mergeDeletedMarks = !DocxMarkupContext.FromMode(markupMode).IncludesDeletions;
         var numberingCounters = new DocxNumberingCounters();
@@ -113,7 +114,7 @@ internal sealed partial class DocxReader
                 if (isPageBreakOnly)
                 {
                     DocxParagraph? breakParagraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, tableCellStyle: null, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken,
-                        leadingBookmarks: leadingBookmarks, retainUnmatchedCommentStarts: projectCommentSelections);
+                        leadingBookmarks: leadingBookmarks, flowFields: flowFields, retainUnmatchedCommentStarts: projectCommentSelections);
                     int breakCount = element.Elements().SelectMany(child => EnumerateVisibleRunBreaks(child, VisiblePageBreak, markupMode)).Count();
                     elements.Add(DocxBodyElementFactory.CreatePageBreak(DocxBreakSourceKind.RunBreak, "page", breakParagraph, null, breakCount));
                     comments?.TrackParagraph(breakParagraph, cancellationToken);
@@ -129,7 +130,7 @@ internal sealed partial class DocxReader
                 if (isColumnBreakOnly)
                 {
                     DocxParagraph? breakParagraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, tableCellStyle: null, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken,
-                        leadingBookmarks: leadingBookmarks, retainUnmatchedCommentStarts: projectCommentSelections);
+                        leadingBookmarks: leadingBookmarks, flowFields: flowFields, retainUnmatchedCommentStarts: projectCommentSelections);
                     int breakCount = element.Elements().SelectMany(child => EnumerateVisibleRunBreaks(child, VisibleColumnBreak, markupMode)).Count();
                     elements.Add(DocxBodyElementFactory.CreateManualBreak(DocxBreakSourceKind.RunBreak, "column", breakParagraph, breakCount));
                     comments?.TrackParagraph(breakParagraph, cancellationToken);
@@ -148,7 +149,6 @@ internal sealed partial class DocxReader
                         EnumerateSplitFloatingAnchors(element).GetEnumerator();
                     bool matchesSourceAnchors = sourceAnchors is not null;
                     var bookmarksForFragment = leadingBookmarks;
-                    var splitFields = new List<DocxComplexFieldState>();
                     var paragraphs = new DocxParagraph?[parts.Count];
                     ParagraphBreakPart? lastParagraph = parts.LastOrDefault(part => part.Paragraph is not null);
                     // A layout break does not end an authored field. Finish its
@@ -162,7 +162,7 @@ internal sealed partial class DocxReader
                             string.Equals(parts[i - 1].BreakValue, "column", StringComparison.OrdinalIgnoreCase);
                         paragraphs[i] = ReadParagraph(part.Paragraph, styles, numbering, numberingCounters, package, relationships, tableCellStyle: null, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken,
                             isContinuationFragment: !part.IsFirstFragment, leadingBookmarks: bookmarksForFragment,
-                            splitFields: splitFields, continuesAfterBreak: !ReferenceEquals(part, lastParagraph),
+                            flowFields: flowFields, continuesAfterBreak: !ReferenceEquals(part, lastParagraph),
                             retainEmptyColumnMark: retainColumnMark, retainUnmatchedCommentStarts: projectCommentSelections,
                             leadingInlineCommentBoundaries: i == 0 ? inlineCommentBoundaries : null);
                         bookmarksForFragment = null;
@@ -227,7 +227,7 @@ internal sealed partial class DocxReader
                 }
 
                 DocxParagraph? paragraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, tableCellStyle: null, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken,
-                    leadingBookmarks: leadingBookmarks, retainUnmatchedCommentStarts: projectCommentSelections,
+                    leadingBookmarks: leadingBookmarks, flowFields: flowFields, retainUnmatchedCommentStarts: projectCommentSelections,
                     leadingInlineCommentBoundaries: inlineCommentBoundaries);
                 if (paragraph is not null)
                 {
@@ -243,6 +243,7 @@ internal sealed partial class DocxReader
             }
             else
             {
+                flowFields.Clear();
                 // A table or external import interrupts the projected paragraph
                 // sequence. Its content needs its own selection ownership.
                 if (element.Name == WordprocessingNamespace + "tbl")
