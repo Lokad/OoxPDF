@@ -494,7 +494,7 @@ internal sealed partial class DocxLayoutEngine
             width = frame.Width;
         }
 
-        void FinishPage()
+        void FinishPage(bool isSectionParityFiller = false)
         {
             OoxConversionBudget.Current?.AdmitDocxLayoutPages(pages.Count + 1);
             cancellationToken.ThrowIfCancellationRequested();
@@ -518,6 +518,7 @@ internal sealed partial class DocxLayoutEngine
                 MarkupLaneDesignBodyEnd = page.MarkupLaneDesignBodyEnd,
                 SectionFirstPageNumber = ProjectPageNumber(sectionFirstPageNumber),
                 BodyFlowPageNumber = pages.Count + 1,
+                IsSectionParityFiller = isSectionParityFiller,
                 PageNumberOffset = pageNumberOffset
             });
             PlaceInFlightFootnotesOnCompletingPage();
@@ -1347,7 +1348,7 @@ internal sealed partial class DocxLayoutEngine
 
             if (element is DocxSectionBreakElement sectionBreak)
             {
-                DocxSectionBreakElement boundary = sectionBreak;
+                DocxSectionBreakType? boundaryType = sectionBreak.TypeValue;
                 bool admitBoundary = false;
                 bool advanceSectionColumn = false;
                 DocxEffectiveSectionSettings? following = null;
@@ -1361,7 +1362,7 @@ internal sealed partial class DocxLayoutEngine
                     DocxSectionBreakType? followingType = DocxSectionBreakTypeExtensions.FromValue(following.SectionProperties.BreakTypeValue);
                     if (followingType == DocxSectionBreakType.NextColumn || sectionBreak.TypeValue == DocxSectionBreakType.NextColumn)
                     {
-                        boundary = sectionBreak with { TypeValue = followingType };
+                        boundaryType = followingType;
                         if (followingType == DocxSectionBreakType.NextColumn && useSourceSectionStarts &&
                             activeColumnIndex + 1 < page.ColumnFrames.Count)
                         {
@@ -1369,6 +1370,13 @@ internal sealed partial class DocxLayoutEngine
                                 retuneReserveToPrintScale, reservePrintScale, pages.Count + 1);
                             advanceSectionColumn = CanShareSectionColumn(page, nextGeometry);
                         }
+                    }
+                    else if (followingType is DocxSectionBreakType.OddPage or DocxSectionBreakType.EvenPage ||
+                        sectionBreak.TypeValue is DocxSectionBreakType.OddPage or DocxSectionBreakType.EvenPage)
+                    {
+                        // The incoming section declares its start. A continuous
+                        // transition from a parity section retains page separation.
+                        boundaryType = followingType is DocxSectionBreakType.Continuous ? null : followingType;
                     }
                     else if (useSourceSectionStarts && page.ColumnFrames.Count == 1 &&
                         (sectionBreak.TypeValue is null or DocxSectionBreakType.NextPage or DocxSectionBreakType.Continuous) &&
@@ -1381,15 +1389,16 @@ internal sealed partial class DocxLayoutEngine
                             HasMatchingSectionPageBox(page, nextGeometry);
                         if (admitBoundary)
                         {
-                            boundary = sectionBreak with { TypeValue = followingType };
+                            boundaryType = followingType;
                         }
                     }
                 }
 
-                bool startsColumnSection = following is not null && boundary.TypeValue == DocxSectionBreakType.NextColumn;
-                bool startsNewPage = ShouldStartNewPageForSectionBreak(boundary) ||
+                bool startsColumnSection = following is not null && boundaryType == DocxSectionBreakType.NextColumn;
+                bool continuous = boundaryType == DocxSectionBreakType.Continuous;
+                bool startsNewPage = boundaryType is null or DocxSectionBreakType.NextPage or DocxSectionBreakType.OddPage or DocxSectionBreakType.EvenPage ||
                     (startsColumnSection && !advanceSectionColumn) ||
-                    (useSimpleSectionFootnoteAdmission && admitBoundary && IsContinuousSectionBreak(boundary) &&
+                    (useSimpleSectionFootnoteAdmission && admitBoundary && continuous &&
                      (sectionBreak.PageSettings.FootnoteReferenceSettings.PositionValue is null or "pageBottom") &&
                      HasCurrentSectionFootnoteMarkers(elementIndex));
                 if (startsNewPage && HasPageContent())
@@ -1397,9 +1406,9 @@ internal sealed partial class DocxLayoutEngine
                     FinishPage();
                 }
 
-                if (ShouldInsertParityBlankPage(boundary, pages.Count + 1))
+                if (ShouldInsertParityBlankPage(boundaryType, pages.Count + 1))
                 {
-                    FinishPage();
+                    FinishPage(isSectionParityFiller: true);
                 }
 
                 if (advanceSectionColumn)
@@ -1410,11 +1419,11 @@ internal sealed partial class DocxLayoutEngine
                     activeSectionSettings = following!;
                     sectionFirstPageNumber = pages.Count + 1;
                 }
-                else if (startsNewPage || (IsContinuousSectionBreak(boundary) && !HasPageContent()))
+                else if (startsNewPage || (continuous && !HasPageContent()))
                 {
                     var section = following ?? FindSectionSettingsAtOrAfter(document.BodyElements,
                         elementIndex + 1, sectionSettingsByElementIndex) ?? finalSectionSettings;
-                    ApplySectionAfterBreak(section, boundary.TypeValue is null or DocxSectionBreakType.NextPage &&
+                    ApplySectionAfterBreak(section, boundaryType is null or DocxSectionBreakType.NextPage &&
                         DocxSectionBreakTypeExtensions.FromValue(section.SectionProperties.BreakTypeValue) is null or DocxSectionBreakType.NextPage);
                 }
 
@@ -1474,7 +1483,7 @@ internal sealed partial class DocxLayoutEngine
                         AdvanceColumnOrPage();
                         tableActiveFrameHasContent = false;
                     }
-                    : FinishPage;
+                    : () => FinishPage();
                 // Complete rows own the same printed frame on every page.
                 // Text-only fragment admission is a separate eligibility policy.
                 Action advanceTableBoundary = projectsReviewTableFrames && textMeasurer is not null

@@ -34,6 +34,7 @@ internal static class DocxPlainBodyFrame
         for (int index = 0; index < layout.Pages.Count; index++)
         {
             var page = layout.Pages[index];
+            if (page.IsBlankParityPage) continue;
             if (page.MarkupMarginReservePoints != 0d ||
                 page.StaticTableRows.Count != 0 || page.StaticInlineTextBoxes.Count != 0 ||
                 !layout.HeaderContentBottomByPage.TryGetValue(index, out double headerBottom) ||

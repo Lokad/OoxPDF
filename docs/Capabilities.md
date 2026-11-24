@@ -55,6 +55,8 @@ sections. Header and footer parity follows the displayed number. NUMPAGES and
 PDF link destinations use physical pages. Restarts across continuous, next-column
 or parity section breaks, nondecimal numbering and zero-numbered title pages
 remain outside this support.
+With physical page numbering, odd and even section starts insert blank pages
+where needed. Those pages count toward NUMPAGES.
 
 ## PPTX
 

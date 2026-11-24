@@ -79,6 +79,58 @@ internal static class DocxSectionNavigationTests
         });
     }
 
+    public static void DocxIncomingSectionParityKeepsBlankPagesAndPhysicalTargets()
+    {
+        foreach (var mode in Modes)
+        foreach (var (outgoing, incoming, extraBodyPage, pageCount, blankPage) in new[]
+        {
+            ("nextPage", "oddPage", false, 3, 1),
+            ("oddPage", "nextPage", false, 2, -1),
+            ("nextPage", "evenPage", true, 4, 2),
+            ("evenPage", "nextPage", true, 3, -1),
+            ("nextPage", "evenPage", false, 2, -1)
+        })
+        WithMutation("two-title", (parts, xml) =>
+        {
+            var body = xml.Root!.Element(W + "body")!;
+            var paragraphs = body.Elements(W + "p").ToArray();
+            var first = paragraphs[0].Element(W + "pPr")!.Element(W + "sectPr")!;
+            var following = body.Element(W + "sectPr")!;
+            first.Element(W + "type")!.SetAttributeValue(W + "val", outgoing);
+            following.Element(W + "type")!.SetAttributeValue(W + "val", incoming);
+            AddFooter(parts, first, "default", "PUBLIC PARITY FOOTER");
+            paragraphs[0].Add(new XElement(W + "hyperlink", new XAttribute(W + "anchor", "PublicParityTarget"),
+                new XElement(W + "r", new XElement(W + "t", "Follow"))));
+            paragraphs[1].AddFirst(new XElement(W + "bookmarkStart", new XAttribute(W + "id", "9"),
+                new XAttribute(W + "name", "PublicParityTarget")));
+            paragraphs[1].Add(new XElement(W + "bookmarkEnd", new XAttribute(W + "id", "9")));
+            if (extraBodyPage)
+            {
+                first.Remove();
+                var extra = Paragraph("PUBLIC EXTRA BODY PAGE");
+                extra.AddFirst(new XElement(W + "pPr", first));
+                paragraphs[0].AddAfterSelf(Break(), extra);
+            }
+        }, path =>
+        {
+            var pages = Renderer(mode).RenderPagesAsync(DocxTests.ReadDocx(path, mode), null, default)
+                .ToBlockingEnumerable().ToArray();
+            TestAssert.Equal(pageCount, pages.Length);
+            TestAssert.Contains("PUBLIC PARITY FOOTER", Text(pages[0]));
+            TestAssert.Contains("SECTION TWO", Text(pages[^1]));
+            TestAssert.Contains("SECOND SECTION FIRST", Text(pages[^1]));
+            TestAssert.Equal(pageCount - 1, pages[0].Annotations.Single().Destination?.PageIndex);
+            if (extraBodyPage) TestAssert.Contains("PUBLIC EXTRA BODY PAGE", Text(pages[1]));
+            if (blankPage >= 0)
+            {
+                var blank = pages[blankPage];
+                TestAssert.Equal(string.Empty, blank.Content);
+                TestAssert.Equal(0, blank.Images.Count);
+                TestAssert.Equal(0, blank.Annotations.Count);
+            }
+        });
+    }
+
     public static void DocxParagraphEndBookmarksFollowTheFinalWrappedPage()
     {
         foreach (var mode in Modes)

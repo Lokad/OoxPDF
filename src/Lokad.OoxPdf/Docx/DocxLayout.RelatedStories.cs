@@ -1327,6 +1327,7 @@ internal sealed partial class DocxLayoutEngine
             return template with
             {
                 BodyFlowPageNumber = 0,
+                IsSectionParityFiller = false,
                 StaticTextLines = [],
                 StaticInlineImages = [],
                 StaticTableRows = [],

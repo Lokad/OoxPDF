@@ -24,7 +24,8 @@ internal sealed partial class DocxRenderer
             {
                 token.ThrowIfCancellationRequested();
                 var page = layout.Pages[index];
-                string variant = DocxLayoutEngine.GetStaticStoryVariant(page.PageSettings, page.GetPageNumber(index + 1), page.SectionFirstPageNumber);
+                string? variant = page.IsBlankParityPage ? null :
+                    DocxLayoutEngine.GetStaticStoryVariant(page.PageSettings, page.GetPageNumber(index + 1), page.SectionFirstPageNumber);
                 RecordVariants(page.PageSettings.HeaderBodyElementsByType, variant);
                 RecordVariants(page.PageSettings.FooterBodyElementsByType, variant);
             }
@@ -73,9 +74,9 @@ internal sealed partial class DocxRenderer
                 SlideIndex: null, PageIndex: null, Feature: "equation", Fallback: "Approximated"));
         }
 
-        void RecordVariants(IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> bodies, string variant)
+        void RecordVariants(IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> bodies, string? variant)
         {
-            bodies.TryGetValue(variant, out var selected);
+            var selected = variant is null ? null : bodies.GetValueOrDefault(variant);
             foreach (var body in bodies.Values)
             {
                 token.ThrowIfCancellationRequested();

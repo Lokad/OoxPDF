@@ -452,29 +452,10 @@ internal sealed partial class DocxLayoutEngine
             : null;
     }
 
-    private static bool ShouldStartNewPageForSectionBreak(DocxSectionBreakElement sectionBreak)
+    private static bool ShouldInsertParityBlankPage(DocxSectionBreakType? boundary, int nextPageNumber) => boundary switch
     {
-        return sectionBreak.TypeValue is null ||
-            sectionBreak.TypeValue is DocxSectionBreakType.NextPage or DocxSectionBreakType.OddPage or DocxSectionBreakType.EvenPage;
-    }
-
-    private static bool IsContinuousSectionBreak(DocxSectionBreakElement sectionBreak)
-    {
-        return sectionBreak.TypeValue == DocxSectionBreakType.Continuous;
-    }
-
-    private static bool ShouldInsertParityBlankPage(DocxSectionBreakElement sectionBreak, int nextPageNumber)
-    {
-        if (sectionBreak.TypeValue == DocxSectionBreakType.OddPage)
-        {
-            return nextPageNumber % 2 == 0;
-        }
-
-        if (sectionBreak.TypeValue == DocxSectionBreakType.EvenPage)
-        {
-            return nextPageNumber % 2 != 0;
-        }
-
-        return false;
-    }
+        DocxSectionBreakType.OddPage => nextPageNumber % 2 == 0,
+        DocxSectionBreakType.EvenPage => nextPageNumber % 2 != 0,
+        _ => false
+    };
 }

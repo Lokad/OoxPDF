@@ -999,6 +999,11 @@ internal sealed partial class DocxRenderer
             // and images never produce past the trip.
             OoxConversionBudget.Current?.ChargePdfPages(1);
             DocxLayoutPage layoutPage = layout.Pages[pageIndex];
+            if (layoutPage.IsBlankParityPage)
+            {
+                yield return new PdfPage(layoutPage.Width, layoutPage.Height);
+                continue;
+            }
             markupContext = WithPageTextEmissionOffsets(markupContext, layout, pageIndex, separatePlainHeaderOrigins);
             textEmissionBaselineOffset = ResolveTextEmissionBaselineOffset(markupContext);
             textEmissionXOffset = ResolveTextEmissionXOffset(markupContext);

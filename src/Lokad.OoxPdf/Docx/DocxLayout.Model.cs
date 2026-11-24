@@ -29,6 +29,8 @@ internal sealed record DocxLayoutPage(
     public int SectionFirstPageNumber { get; init; } = 1;
     // Ordinal before late note pages are inserted. Their shells have no body ordinal.
     public int BodyFlowPageNumber { get; init; }
+    public bool IsSectionParityFiller { get; init; }
+    public bool IsBlankParityPage => IsSectionParityFiller && Items.Count == 0 && PlacedRelatedStories.Count == 0;
     public int PageNumberOffset { get; init; }
     public DocxPageNumber GetPageNumber(int physicalPageNumber) => new(physicalPageNumber, PageNumberOffset);
     public IReadOnlyList<DocxInlineTextBoxLayout> StaticInlineTextBoxes { get; init; } = [];

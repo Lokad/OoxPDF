@@ -146,6 +146,7 @@ internal sealed partial class DocxLayoutEngine
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 DocxLayoutPage page = pages[pageIndex];
+                if (page.IsBlankParityPage) continue;
                 string variant = GetStaticStoryVariant(page.PageSettings, page.GetPageNumber(pageIndex + 1), page.SectionFirstPageNumber);
                 AddDrawings(page, pageIndex, true, SelectStaticHeaderFooterDrawings(page.PageSettings, header: true, variant), null);
                 AddDrawings(page, pageIndex, false, SelectStaticHeaderFooterDrawings(page.PageSettings, header: false, variant), null);
@@ -163,6 +164,13 @@ internal sealed partial class DocxLayoutEngine
         {
             cancellationToken.ThrowIfCancellationRequested();
             DocxLayoutPage page = pages[pageIndex];
+            if (page.IsBlankParityPage)
+            {
+                pagesWithStaticText[pageIndex] = page;
+                headerBottomCursors[pageIndex] = double.PositiveInfinity;
+                footerTopEdges[pageIndex] = double.NegativeInfinity;
+                continue;
+            }
             var pageNumber = page.GetPageNumber(pageIndex + 1);
             double bodyWidth = Math.Max(1d, page.Width - page.MarginLeft - page.MarginRight);
             string variant = GetStaticStoryVariant(page.PageSettings, pageNumber, page.SectionFirstPageNumber);
