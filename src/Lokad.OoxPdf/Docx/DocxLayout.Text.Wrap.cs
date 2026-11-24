@@ -430,120 +430,51 @@ internal sealed partial class DocxLayoutEngine
             ? Math.Clamp((int)(maxWidth / averageCharWidth), 1, token.Length - 1)
             : 1;
         int candidate = estimatedFit;
-        while (candidate > 1 && !IsSafeEmergencyTokenBreak(candidate))
+        while (candidate > 1 && !IsSafeEmergencyTokenBreak(text, token, candidate))
         {
             cancellationToken.ThrowIfCancellationRequested();
             candidate--;
         }
 
-        if (candidate <= 0 || !IsSafeEmergencyTokenBreak(candidate))
+        if (!IsSafeEmergencyTokenBreak(text, token, candidate))
         {
             breakLength = 0;
             return false;
         }
 
-        bool candidatePreserveTerminalSoftHyphen = text[token.Start + candidate - 1] == '\u00AD';
-        double candidateWidth = MeasureWrapSlice(measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, spans, token.Start, candidate, fontSize, textMeasurer, tabStops, defaultTabStopPoints, candidatePreserveTerminalSoftHyphen, dynamicFieldPageNumber, spanStarts);
-        if (FitsLineWidth(candidateWidth, maxWidth))
+        breakLength = FindFittingTokenBreak(text, spans, token, maxWidth, candidate, preferredBreaksOnly: false,
+            fontSize, textMeasurer, tabStops, defaultTabStopPoints, dynamicFieldPageNumber, measureMemo,
+            segmentHasHiddenBreaks, segmentHasDynamicFields, cancellationToken, spanStarts, out _);
+        return breakLength != 0;
+    }
+
+    private static bool IsSafeEmergencyTokenBreak(string text, TextToken token, int length)
+    {
+        if (length <= 0 || length >= token.Length)
         {
-            int best = candidate;
-            int next = candidate + 1;
-            while (next < token.Length)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                if (!IsSafeEmergencyTokenBreak(next))
-                {
-                    next++;
-                    continue;
-                }
-
-                bool nextPreserveTerminalSoftHyphen = text[token.Start + next - 1] == '\u00AD';
-                double nextWidth = MeasureWrapSlice(measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, spans, token.Start, next, fontSize, textMeasurer, tabStops, defaultTabStopPoints, nextPreserveTerminalSoftHyphen, dynamicFieldPageNumber, spanStarts);
-                if (FitsLineWidth(nextWidth, maxWidth))
-                {
-                    best = next;
-                    next++;
-                }
-                else
-                {
-                    break;
-                }
-            }
-
-            // RV13: the scan reached the end of the token with every proper
-            // prefix fitting (overflow exits keep next short of the
-            // end). The skipped full measure may have estimated overflow on a
-            // mixed-width chain, so confirm: a fitting whole remainder needs
-            // no break. Uses the same unpreserved fit question as the gate.
-            if (next >= token.Length)
-            {
-                double fullWidth = MeasureWrapSlice(measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, spans, token.Start, token.Length, fontSize, textMeasurer, tabStops, defaultTabStopPoints, preserveTerminalSoftHyphen: false, dynamicFieldPageNumber, spanStarts);
-                if (FitsLineWidth(fullWidth, maxWidth))
-                {
-                    breakLength = 0;
-                    return false;
-                }
-            }
-
-            breakLength = best;
-            return true;
-        }
-        else
-        {
-            int current = candidate - 1;
-            while (current > 0)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                if (!IsSafeEmergencyTokenBreak(current))
-                {
-                    current--;
-                    continue;
-                }
-
-                bool currentPreserveTerminalSoftHyphen = text[token.Start + current - 1] == '\u00AD';
-                double currentWidth = MeasureWrapSlice(measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, spans, token.Start, current, fontSize, textMeasurer, tabStops, defaultTabStopPoints, currentPreserveTerminalSoftHyphen, dynamicFieldPageNumber, spanStarts);
-                if (FitsLineWidth(currentWidth, maxWidth))
-                {
-                    breakLength = current;
-                    return true;
-                }
-
-                current--;
-            }
-
-            breakLength = 0;
             return false;
         }
 
-
-        bool IsSafeEmergencyTokenBreak(int length)
+        int breakIndex = token.Start + length;
+        char before = text[breakIndex - 1];
+        char after = text[breakIndex];
+        if (char.IsHighSurrogate(before) && char.IsLowSurrogate(after))
         {
-            if (length <= 0 || length >= token.Length)
-            {
-                return false;
-            }
-
-            int breakIndex = token.Start + length;
-            char before = text[breakIndex - 1];
-            char after = text[breakIndex];
-            if (char.IsHighSurrogate(before) && char.IsLowSurrogate(after))
-            {
-                return false;
-            }
-
-            if (before == '\u2011' ||
-                after == '\u2011' ||
-                DocxTextBreakRules.IsNoBreakWhitespaceChar(before) ||
-                DocxTextBreakRules.IsNoBreakWhitespaceChar(after))
-            {
-                return false;
-            }
-
-            UnicodeCategory afterCategory = char.GetUnicodeCategory(after);
-            return afterCategory is not UnicodeCategory.NonSpacingMark and
-                not UnicodeCategory.SpacingCombiningMark and
-                not UnicodeCategory.EnclosingMark;
+            return false;
         }
+
+        if (before == '\u2011' ||
+            after == '\u2011' ||
+            DocxTextBreakRules.IsNoBreakWhitespaceChar(before) ||
+            DocxTextBreakRules.IsNoBreakWhitespaceChar(after))
+        {
+            return false;
+        }
+
+        UnicodeCategory afterCategory = char.GetUnicodeCategory(after);
+        return afterCategory is not UnicodeCategory.NonSpacingMark and
+            not UnicodeCategory.SpacingCombiningMark and
+            not UnicodeCategory.EnclosingMark;
     }
 
     private static int[] FindBreakOpportunities(string text, int segmentStart, int segmentLength)
@@ -672,78 +603,85 @@ internal sealed partial class DocxLayoutEngine
             return false;
         }
 
-        bool preferredCandidatePreserve = text[token.Start + preferredCandidate - 1] == '\u00AD';
-        double preferredCandidateWidth = MeasureWrapSlice(measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, spans, token.Start, preferredCandidate, fontSize, textMeasurer, tabStops, defaultTabStopPoints, preferredCandidatePreserve, dynamicFieldPageNumber, spanStarts);
-        if (FitsLineWidth(preferredCandidateWidth, maxWidth))
+        breakLength = FindFittingTokenBreak(text, spans, token, maxWidth, preferredCandidate, preferredBreaksOnly: true,
+            fontSize, textMeasurer, tabStops, defaultTabStopPoints, dynamicFieldPageNumber, measureMemo,
+            segmentHasHiddenBreaks, segmentHasDynamicFields, cancellationToken, spanStarts, out bool wholeTokenFits);
+        if (wholeTokenFits)
         {
-            int bestPreferred = preferredCandidate;
-            int nextPreferred = preferredCandidate + 1;
-            while (nextPreferred < token.Length)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                if (!DocxLineBreakOpportunities.IsOpportunityAfter(text[token.Start + nextPreferred - 1]))
-                {
-                    nextPreferred++;
-                    continue;
-                }
-
-                bool nextPreferredPreserve = text[token.Start + nextPreferred - 1] == '\u00AD';
-                double nextPreferredWidth = MeasureWrapSlice(measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, spans, token.Start, nextPreferred, fontSize, textMeasurer, tabStops, defaultTabStopPoints, nextPreferredPreserve, dynamicFieldPageNumber, spanStarts);
-                if (FitsLineWidth(nextPreferredWidth, maxWidth))
-                {
-                    bestPreferred = nextPreferred;
-                    nextPreferred++;
-                }
-                else
-                {
-                    break;
-                }
-            }
-
-            // RV13: same fitting-tail confirmation as the emergency search: a
-            // whole remainder that fits needs no preferred break either.
-            if (nextPreferred >= token.Length)
-            {
-                double fullPreferredWidth = MeasureWrapSlice(measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, spans, token.Start, token.Length, fontSize, textMeasurer, tabStops, defaultTabStopPoints, preserveTerminalSoftHyphen: false, dynamicFieldPageNumber, spanStarts);
-                if (FitsLineWidth(fullPreferredWidth, maxWidth))
-                {
-                    breakLength = 0;
-                    overflowAverage = null;
-                    return false;
-                }
-            }
-
-            breakLength = bestPreferred;
-            return true;
-        }
-        else
-        {
-            int currentPreferred = preferredCandidate - 1;
-            while (currentPreferred > 0)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                if (!DocxLineBreakOpportunities.IsOpportunityAfter(text[token.Start + currentPreferred - 1]))
-                {
-                    currentPreferred--;
-                    continue;
-                }
-
-                bool currentPreferredPreserve = text[token.Start + currentPreferred - 1] == '\u00AD';
-
-                double currentPreferredWidth = MeasureWrapSlice(measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, spans, token.Start, currentPreferred, fontSize, textMeasurer, tabStops, defaultTabStopPoints, currentPreferredPreserve, dynamicFieldPageNumber, spanStarts);
-                if (FitsLineWidth(currentPreferredWidth, maxWidth))
-                {
-                    breakLength = currentPreferred;
-                    return true;
-                }
-
-                currentPreferred--;
-            }
-
-            breakLength = 0;
-            return false;
+            overflowAverage = null;
         }
 
+        return breakLength != 0;
+    }
+
+    private static int FindFittingTokenBreak(
+        string text,
+        IReadOnlyList<DocxTextSpan> spans,
+        TextToken token,
+        double maxWidth,
+        int candidate,
+        bool preferredBreaksOnly,
+        double fontSize,
+        IDocxTextMeasurer textMeasurer,
+        IReadOnlyList<DocxTabStop> tabStops,
+        double defaultTabStopPoints,
+        DocxPageNumber? dynamicFieldPageNumber,
+        Dictionary<(int Start, int Length, bool PreserveTerminalSoftHyphen), double> measureMemo,
+        bool segmentHasHiddenBreaks,
+        bool segmentHasDynamicFields,
+        CancellationToken cancellationToken,
+        int[] spanStarts,
+        out bool wholeTokenFits)
+    {
+        wholeTokenFits = false;
+        if (!PrefixFits(candidate, atBreak: true))
+        {
+            for (int length = candidate - 1; length > 0; length--)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (IsBreakCandidate(length) && PrefixFits(length, atBreak: true))
+                {
+                    return length;
+                }
+            }
+
+            return 0;
+        }
+
+        int best = candidate;
+        for (int length = candidate + 1; length < token.Length; length++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!IsBreakCandidate(length))
+            {
+                continue;
+            }
+
+            if (!PrefixFits(length, atBreak: true))
+            {
+                return best;
+            }
+
+            best = length;
+        }
+
+        // An estimate can flag a fitting mixed-width remainder as overwide.
+        // Measure the full token with any terminal discretionary hyphen hidden.
+        wholeTokenFits = PrefixFits(token.Length, atBreak: false);
+        return wholeTokenFits ? 0 : best;
+
+        bool IsBreakCandidate(int length) => preferredBreaksOnly
+            ? DocxLineBreakOpportunities.IsOpportunityAfter(text[token.Start + length - 1])
+            : IsSafeEmergencyTokenBreak(text, token, length);
+
+        bool PrefixFits(int length, bool atBreak)
+        {
+            bool preserve = atBreak && text[token.Start + length - 1] == '\u00AD';
+            double width = MeasureWrapSlice(measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields,
+                spans, token.Start, length, fontSize, textMeasurer, tabStops, defaultTabStopPoints, preserve,
+                dynamicFieldPageNumber, spanStarts);
+            return FitsLineWidth(width, maxWidth);
+        }
     }
 
     private static double MeasureWrapSlice(
