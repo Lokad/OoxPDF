@@ -65,7 +65,7 @@ internal sealed partial class PptxRenderer
         bool[,] SkippedVerticalSegments,
         bool[,] SkippedHorizontalSegments);
 
-    private static async IAsyncEnumerable<TableFrameLayout> ReadSceneTableLayoutsAsync(PptxRenderContext context)
+    internal static async IAsyncEnumerable<TableFrameLayout> ReadSceneTableLayoutsAsync(PptxRenderContext context)
     {
         foreach (var source in EnumerateScenePaintSources(context.SceneSlide))
         {

@@ -995,27 +995,9 @@ internal static class PptxSceneTextAgreementTests
             .ToArray();
         TestAssert.Equal(2, shapeRuns.Length);
 
-        var tableResolver = CreateCannedPresentationResolver("memory:r14-table");
-        var context = new PptxRenderContext(
-            document,
-            document.Slides[0],
-            scene.Slides[0],
-            tableResolver,
-            new Dictionary<string, PdfImageXObject?>(),
-            null,
-            CancellationToken.None);
-        MethodInfo readTableSpans = typeof(PptxRenderer).GetMethod("ReadTableFrameTextSpansAsync", BindingFlags.NonPublic | BindingFlags.Static)
-            ?? throw new InvalidOperationException("Expected table span reader.");
-        object? tableSpans;
-        try { tableSpans = ((ValueTask<IReadOnlyList<PptxRenderer.PptxPositionedTextSpan>>)readTableSpans.Invoke(null, [context, tableNode, PptxRenderer.GroupTransform.Identity, scene.Slides[0].SlideColorMap])!).GetAwaiter().GetResult(); }
-        catch (TargetInvocationException ex) { throw ex.InnerException ?? ex; }
-        PptxRenderer.PptxTextRunModel[] cellRuns = ((System.Collections.IList)tableSpans!)
-            .Cast<PptxRenderer.PptxPositionedTextSpan>()
-            .Select(span => span.SourceRun)
-            .Where(run => run is not null)
-            .Select(run => run!)
-            .Distinct()
-            .ToArray();
+        var context = TestAssert.NotNull(PptxRenderer.TryLoadTextInspectionContext(document, package, 0, scene,
+            CreateCannedPresentationResolver("memory:r14-table")));
+        PptxRenderer.PptxTextRunModel[] cellRuns = ReadTableCellRuns(context);
         TestAssert.Equal(2, cellRuns.Length);
         var shapeModels = ReadXmlSpans(shapeNode, document, scene).Select(span => span.SourceRun!).Distinct().ToArray();
         for (int i = 0; i < shapeRuns.Length; i++)
@@ -1099,26 +1081,9 @@ internal static class PptxSceneTextAgreementTests
         PptxSceneTable table = TestAssert.NotNull(tableNode.Table);
         PptxSceneTableCell headerCell = table.Rows[0].Cells[0];
         PptxSceneTableCell bodyCell = table.Rows[0].Cells[1];
-        var context = new PptxRenderContext(
-            document,
-            document.Slides[0],
-            scene.Slides[0],
-            CreateCannedPresentationResolver("memory:r14-tablestyle"),
-            new Dictionary<string, PdfImageXObject?>(),
-            null,
-            CancellationToken.None);
-        MethodInfo readTableSpans = typeof(PptxRenderer).GetMethod("ReadTableFrameTextSpansAsync", BindingFlags.NonPublic | BindingFlags.Static)
-            ?? throw new InvalidOperationException("Expected table span reader.");
-        object? tableSpans;
-        try { tableSpans = ((ValueTask<IReadOnlyList<PptxRenderer.PptxPositionedTextSpan>>)readTableSpans.Invoke(null, [context, tableNode, PptxRenderer.GroupTransform.Identity, scene.Slides[0].SlideColorMap])!).GetAwaiter().GetResult(); }
-        catch (TargetInvocationException ex) { throw ex.InnerException ?? ex; }
-        PptxRenderer.PptxTextRunModel[] cellRuns = ((System.Collections.IList)tableSpans!)
-            .Cast<PptxRenderer.PptxPositionedTextSpan>()
-            .Select(span => span.SourceRun)
-            .Where(run => run is not null)
-            .Select(run => run!)
-            .Distinct()
-            .ToArray();
+        var context = TestAssert.NotNull(PptxRenderer.TryLoadTextInspectionContext(document, package, 0, scene,
+            CreateCannedPresentationResolver("memory:r14-tablestyle")));
+        PptxRenderer.PptxTextRunModel[] cellRuns = ReadTableCellRuns(context);
         TestAssert.Equal(2, cellRuns.Length);
         TestAssert.Equal("Head", cellRuns[0].Text);
         TestAssert.Equal("Body", cellRuns[1].Text);
@@ -1127,7 +1092,14 @@ internal static class PptxSceneTextAgreementTests
         TestAssert.Equal(bodyCell.StyleText.Color, cellRuns[1].Style.Color);
         TestAssert.True(headerCell.StyleText.Color.HasValue || headerCell.StyleText.Bold, "Expected the table style to resolve header text styling.");
         TestAssert.Equal(bodyCell.StyleText.Bold, cellRuns[1].Style.Bold);
-   }
+    }
+
+    private static PptxRenderer.PptxTextRunModel[] ReadTableCellRuns(PptxRenderContext context) =>
+        PptxRenderer.ReadSceneTableLayoutsAsync(context).ToBlockingEnumerable().Single().TextSpans
+            .Select(span => span.SourceRun)
+            .OfType<PptxRenderer.PptxTextRunModel>()
+            .Distinct()
+            .ToArray();
 
 
     public static void SchemeColorRunsAgreeBetweenSceneAndSpans()
