@@ -2077,46 +2077,72 @@ internal static partial class PptxChartsTests
 
     public static void PptxSyntheticChartPieArcKeepsMathConvention()
     {
-        var method = typeof(PptxRenderer).GetMethod(
-            "AppendCircularArc",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-        TestAssert.True(method is not null, "Expected pie arc helper to remain inspectable by the Office evidence guard.");
-
-        var graphics = new PdfGraphicsBuilder();
-        method!.Invoke(null, [graphics, 100d, 200d, 50d, System.Math.PI / 2d, -System.Math.PI, true]);
-        string path = graphics.ToString();
-        var points = new System.Collections.Generic.List<(double X, double Y)>();
-        var pending = new System.Collections.Generic.List<double>();
-        foreach (string token in path.Split(new[] { (char)32, (char)10, (char)13, (char)9 }, System.StringSplitOptions.RemoveEmptyEntries))
+        foreach (bool doughnut in new[] { false, true })
         {
-            if (double.TryParse(token, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double value))
+            string plot = doughnut ? "doughnutChart" : "pieChart";
+            string hole = doughnut ? "<c:holeSize val=\"50\"/>" : "";
+            using var input = PptxTests.CreateSingleChartPackageStream($$"""
+                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+                              xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <c:chart><c:plotArea><c:{{plot}}>
+                    <c:ser><c:idx val="0"/><c:order val="0"/>
+                      <c:dPt><c:idx val="0"/><c:spPr>
+                        <a:solidFill><a:srgbClr val="FF0000"/></a:solidFill>
+                        <a:ln w="12700"><a:solidFill><a:srgbClr val="0000FF"/></a:solidFill></a:ln>
+                      </c:spPr></c:dPt>
+                      <c:val><c:numLit><c:ptCount val="2"/><c:pt idx="0"><c:v>1</c:v></c:pt><c:pt idx="1"><c:v>1</c:v></c:pt></c:numLit></c:val>
+                    </c:ser>
+                    <c:firstSliceAng val="0"/>{{hole}}
+                  </c:{{plot}}></c:plotArea></c:chart>
+                </c:chartSpace>
+                """);
+            using var package = OoxPackage.Open(input, default);
+            PptxDocument document = new PptxReader().Read(package, default);
+            var page = new PptxRenderer(new TestFaceFontResolver()).RenderPagesAsync(document, package, null, default)
+                .ToBlockingEnumerable().Single();
+            string[] lines = page.Content.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+            string[] fill = DrawnPath(lines, "1 0 0 rg", "f*");
+            string[] stroke = DrawnPath(lines, "0 0 1 RG", "S");
+            TestAssert.True(fill.SequenceEqual(stroke), "Fill and stroke must consume the same closed slice path.");
+            TestAssert.Equal(doughnut ? "m c c l c c h" : "m c c l h", string.Join(' ', fill.Select(line => line.Split(' ')[^1])));
+
+            (double centerX, double top) = EndPoint(fill[0]);
+            double centerY = (top + EndPoint(fill[2]).Y) / 2d;
+            double radius = top - centerY;
+            TestAssert.True(radius > 1d, "The first slice must have a positive vertical radius from its top to its bottom.");
+            AssertPoint(fill[1], centerX + radius, centerY);
+            AssertPoint(fill[2], centerX, centerY - radius);
+            if (doughnut)
             {
-                pending.Add(value);
-                continue;
+                AssertPoint(fill[3], centerX, centerY - radius / 2d);
+                AssertPoint(fill[4], centerX + radius / 2d, centerY);
+                AssertPoint(fill[5], centerX, centerY + radius / 2d);
             }
-            if ((token == "m" || token == "l") && pending.Count >= 2)
-            {
-                points.Add((pending[pending.Count - 2], pending[pending.Count - 1]));
-            }
-            if (token == "c" && pending.Count >= 6)
-            {
-                points.Add((pending[pending.Count - 2], pending[pending.Count - 1]));
-            }
-            pending.Clear();
+            else
+                AssertPoint(fill[3], centerX, centerY);
         }
 
-        TestAssert.True(points.Count > 0, "Expected emitted arc points, got: " + path);
-        foreach ((double X, double Y) in points)
+        static string[] DrawnPath(string[] content, string color, string paint)
         {
-            double radius = System.Math.Sqrt((X - 100d) * (X - 100d) + (Y - 200d) * (Y - 200d));
-            TestAssert.True(System.Math.Abs(radius - 50d) < 0.6d, "Arc endpoint should stay on the circle, got radius " + radius);
+            int begin = Array.IndexOf(content, color) + 1;
+            TestAssert.True(begin > 0, $"Expected the authored slice color {color}.");
+            int end = Array.IndexOf(content, paint, begin);
+            TestAssert.True(end > begin, $"Expected slice paint operator {paint} after {color}.");
+            return content[begin..end].SkipWhile(line => !line.EndsWith(" m", StringComparison.Ordinal)).ToArray();
         }
-        (double firstX, double firstY) = points[0];
-        TestAssert.True(System.Math.Abs(firstX - 100d) < 0.6d && System.Math.Abs(firstY - 250d) < 0.6d, "Semicircle should start at the top, got " + firstX + "," + firstY);
-        (double lastX, double lastY) = points[points.Count - 1];
-        TestAssert.True(System.Math.Abs(lastX - 100d) < 0.6d && System.Math.Abs(lastY - 150d) < 0.6d, "Clockwise semicircle should end at the bottom, got " + lastX + "," + lastY);
-        double maxX = points.Max(p => p.X);
-        TestAssert.True(System.Math.Abs(maxX - 150d) < 0.6d, "Clockwise semicircle should pass through the right point, got maxX " + maxX);
+
+        static (double X, double Y) EndPoint(string operation)
+        {
+            string[] parts = operation.Split(' ');
+            return (double.Parse(parts[^3], CultureInfo.InvariantCulture), double.Parse(parts[^2], CultureInfo.InvariantCulture));
+        }
+
+        static void AssertPoint(string operation, double x, double y)
+        {
+            var actual = EndPoint(operation);
+            TestAssert.True(Math.Abs(x - actual.X) < .002d && Math.Abs(y - actual.Y) < .002d,
+                $"Expected endpoint ({x}, {y}) in {operation}.");
+        }
     }
 
     public static void PptxSyntheticChartValueGridlinesExcludeCrossingTick()

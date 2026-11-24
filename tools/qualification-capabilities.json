@@ -19550,6 +19550,7 @@
       "PptxSyntheticChartManualLayoutMissingPositionUsesDefaultPlotBox"
   ],
   "pptx-pie-factor-placement": [
+    "=PptxSyntheticChartPieArcKeepsMathConvention",
     "=PptxSyntheticPieManualAnchorRidesCirclePastRim",
     "=PptxSyntheticPieManualLeaderRejectsOutOfRangeFactors",
     "PptxManualPiesKeepIndependentOfficeCentersAndRadii",

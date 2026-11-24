@@ -103,28 +103,22 @@ internal sealed partial class PptxRenderer
 
     private static void AppendPieOrDoughnutSlicePath(PdfGraphicsBuilder graphics, double centerX, double centerY, double outerRadius, double innerRadius, double startAngle, double sweepAngle)
     {
-        double outerStartX = centerX + Math.Cos(startAngle) * outerRadius;
-        double outerStartY = centerY + Math.Sin(startAngle) * outerRadius;
+        graphics.MoveTo(centerX + Math.Cos(startAngle) * outerRadius, centerY + Math.Sin(startAngle) * outerRadius);
+        AppendCircularArc(graphics, centerX, centerY, outerRadius, startAngle, sweepAngle);
         if (innerRadius <= 0d)
         {
-            graphics.MoveTo(outerStartX, outerStartY);
-            AppendCircularArc(graphics, centerX, centerY, outerRadius, startAngle, sweepAngle, moveToStart: false);
             graphics.LineTo(centerX, centerY);
-            graphics.ClosePath();
-            return;
         }
-
-        double endAngle = startAngle + sweepAngle;
-        double innerEndX = centerX + Math.Cos(endAngle) * innerRadius;
-        double innerEndY = centerY + Math.Sin(endAngle) * innerRadius;
-        graphics.MoveTo(outerStartX, outerStartY);
-        AppendCircularArc(graphics, centerX, centerY, outerRadius, startAngle, sweepAngle, moveToStart: false);
-        graphics.LineTo(innerEndX, innerEndY);
-        AppendCircularArc(graphics, centerX, centerY, innerRadius, endAngle, -sweepAngle, moveToStart: false);
+        else
+        {
+            double endAngle = startAngle + sweepAngle;
+            graphics.LineTo(centerX + Math.Cos(endAngle) * innerRadius, centerY + Math.Sin(endAngle) * innerRadius);
+            AppendCircularArc(graphics, centerX, centerY, innerRadius, endAngle, -sweepAngle);
+        }
         graphics.ClosePath();
     }
 
-    private static void AppendCircularArc(PdfGraphicsBuilder graphics, double centerX, double centerY, double radius, double startAngle, double sweepAngle, bool moveToStart)
+    private static void AppendCircularArc(PdfGraphicsBuilder graphics, double centerX, double centerY, double radius, double startAngle, double sweepAngle)
     {
         int segmentCount = Math.Max(1, (int)Math.Ceiling(Math.Abs(sweepAngle) / (Math.PI / 2d)));
         double segmentSweep = sweepAngle / segmentCount;
@@ -141,7 +135,7 @@ internal sealed partial class PptxRenderer
                 // angles (y-up) so the emitted arc matches the MoveTo/LineTo endpoints.
                 -segmentStart * 180d / Math.PI,
                 -segmentSweep * 180d / Math.PI,
-                moveToStart && segment == 0);
+                moveToStart: false);
         }
     }
 
