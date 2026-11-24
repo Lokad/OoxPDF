@@ -2450,7 +2450,6 @@
       "PptxPointLabelKeysAlignWithMeasuredTextAcrossSizes",
       "PptxPointLabelBackgroundContainsTextAndExcludesKey",
       "PptxPointMarkersPaintPlotAndKeysWithoutColorVariation",
-      "PptxAreaLabelsKeepDefaultComponentsDeletionAndCustomText",
       "=PptxLogicalCaptionFramesPreserveSourceGeometryAndInk",
       "PptxDisabledCartesianPlotsSuppressPointRequestsButKeepSource",
       "PptxDisabledPlotDefaultRenderingOmitsPointContentAndKeys",
@@ -9120,7 +9119,14 @@
     "DocxWordCompatibleAllMarkupScalesKeepNextTableEstimate"
   ],
   "docx-numbered-math": [
-    "PortableRendering",
+    "=PortableRenderingNumberedMathPreservesFourStoryContent",
+    "=PortableRenderingNumberedExplicitMathRetainsAuthoredRowOwnership",
+    "=PortableRenderingNumberingCounterPaintsKeepVisibleContent",
+    "=PortableRenderingNumberingContinuationKeepsVisibleContent",
+    "=PortableRenderingNumberingMarkDecorationsKeepSourceOwners",
+    "=PortableRenderingNumberingMarkOwnersKeepVisibleContent",
+    "=PortableRenderingListLabelFamiliesKeepSourceOwners",
+    "=PortableRenderingSingleMathAnnotationsPreserveFrames",
     "DocxInlineCompositionNumberedMathPreservesFourStoryContent",
     "DocxInlineCompositionBookmarkAndRunSplitting",
     "DocxInlineCompositionHyperlinkPreservesSingleMathFrame",
@@ -9152,7 +9158,6 @@
     "DocxSyntheticNumberingSpaceSuffixPlacesTextAfterLabel",
     "DocxNumberingSeparatorUsesBodyRunStyle",
     "DocxSyntheticNumberingWrapsContinuationLinesWithHangingWidth",
-    "DocxWordCompatibleAllMarkupPositionsNumberingInNarrowedBodyFrame",
     "DocxStyleAndNumberingLayoutRisksEmitDiagnostics",
     "DocxSupportedNumberingLeftHangingTabsDoNotEmitIndentDiagnostic",
     "DocxSupportedNumberingFirstLineIndentDoesNotEmitIndentDiagnostic"
@@ -13469,8 +13474,7 @@
     "DocxDeferredMixedEndnote",
     "DocxContinuedMixedEndnote",
     "DocxInlineCompositionTerminalTableNotesKeepIndependentParagraphFlow",
-    "PortableRenderingTerminalTableNotesPreserveContentAndDestinations",
-    "PortableRenderingEndnoteStartUsesLocalParagraphSpacing"
+    "PortableRenderingTerminalTableNotesPreserveContentAndDestinations"
   ],
   "docx-page-note-math": [
     "DocxMeasuredFootnoteOwners",
@@ -16546,7 +16550,6 @@
     "PortableRenderingMergedSourceRowFloors",
     "VerticalMerge",
     "DocxTableMinimum",
-    "DocxTableRowHeight",
     "DocxUnsupportedTableCellTextDirectionEmitsDiagnostic",
     "DocxReaderTableCellPreservesFitTextToken",
     "DocxReaderTableCellPreservesTextDirectionToken"
@@ -16595,7 +16598,6 @@
     "PortableRenderingMergedSourceRowFloors",
     "VerticalMerge",
     "DocxTableMinimum",
-    "DocxTableRowHeight",
     "DocxUnsupportedTableCellTextDirectionEmitsDiagnostic",
     "DocxReaderTableCellPreservesFitTextToken",
     "DocxReaderTableCellPreservesTextDirectionToken",
@@ -16945,7 +16947,6 @@
     "PngStreamingObservesCancellationBetweenShortReadsAndScanlines",
     "PngStreamingPreservesGrayscaleTransparencyAndValidatesZlibTrailer",
     "PngStreamingRejectsExtraInflatedBytesAndInvalidFilters",
-    "PngTruncatedFilterByteThrowsInvalidData",
     "PngTruncatedRowSpanThrowsInvalidData",
     "PortableRenderingStructuralPaintRetainsWorkBounds",
     "PptxChartAreaOptionsUseSceneAuthoritativeDefaults",
@@ -17102,7 +17103,6 @@
     "WritesJpegImageColorSpaceFromFrameMetadata",
     "WritesLinkAnnotations",
     "WritesMultipleBlankPagesWithPageSizes",
-    "WritesEvenOddClippingOperators",
     "WritesPct70WeaveBlockTilingPattern",
     "WritesSingleBlankPagePdfStructure",
     "WritesStitchedAxialShadingFunctionForMultipleStops",
