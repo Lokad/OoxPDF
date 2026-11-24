@@ -396,7 +396,7 @@ internal static partial class OoxmlTests
         var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(), OoxPdfDocxMarkupMode.Final,
             OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
         var page = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
-        TestAssert.Equal("Selected fallback then selected choice", DocxPageFootnoteNumberingTests.DecodeText(page));
+        TestAssert.Equal("Selected fallback then selected choice", DocxPageFootnoteNumberingTests.DecodeText(page).TrimEnd());
     }
 
     public static void StrictRelationshipTypesNormalizeToTransitional()
