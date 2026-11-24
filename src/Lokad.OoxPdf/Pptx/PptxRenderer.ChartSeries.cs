@@ -576,7 +576,6 @@ internal sealed partial class PptxRenderer
     {
         return new ChartIndexedNumberPoint(
             point.Index,
-            point.HasParsedIndex ? ChartPointIndexSource.OoxmlIndex : ChartPointIndexSource.OrdinalFallback,
             point.Value,
             point.Text,
             point.HasValueElement,
@@ -604,7 +603,6 @@ internal sealed partial class PptxRenderer
     {
         return new ChartIndexedTextPoint(
             point.Index,
-            point.HasParsedIndex ? ChartPointIndexSource.OoxmlIndex : ChartPointIndexSource.OrdinalFallback,
             point.Text,
             point.HasText,
             default);
@@ -616,7 +614,6 @@ internal sealed partial class PptxRenderer
             .ReadRangeCells(source.Formula)
             .Select(cell => new ChartIndexedNumberPoint(
                 cell.Index,
-                ChartPointIndexSource.WorkbookRange,
                 double.TryParse(cell.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out double value) ? value : null,
                 cell.Text,
                 cell.HasValue,
@@ -628,7 +625,7 @@ internal sealed partial class PptxRenderer
     {
         return workbook?
             .ReadRangeCells(source.Formula)
-            .Select(cell => new ChartIndexedTextPoint(cell.Index, ChartPointIndexSource.WorkbookRange, cell.Text, cell.HasValue && !string.IsNullOrWhiteSpace(cell.Text), cell))
+            .Select(cell => new ChartIndexedTextPoint(cell.Index, cell.Text, cell.HasValue && !string.IsNullOrWhiteSpace(cell.Text), cell))
             .ToArray() ?? [];
     }
 

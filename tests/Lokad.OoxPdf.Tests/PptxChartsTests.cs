@@ -3969,13 +3969,8 @@ internal static partial class PptxChartsTests
         System.Type plotBoxType = renderer.GetNestedType("ChartPlotBox", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart plot box.");
         System.Type extentsType = renderer.GetNestedType("ChartValueExtents", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart value extents.");
         System.Type pointType = renderer.GetNestedType("ScatterPoint", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected scatter point.");
-        System.Type indexedPointType = renderer.GetNestedType("ChartIndexedNumberPoint", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected indexed number point.");
-        System.Type cellType = renderer.GetNestedType("ChartWorkbookRangeCell", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected workbook range cell.");
-        System.Type sourceType = renderer.GetNestedType("ChartPointIndexSource", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected point index source.");
         System.Reflection.MethodInfo geometry = renderer.GetMethod("ResolveScatterPointGeometry", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected scatter geometry helper.");
-        object indexSource = System.Enum.GetValues(sourceType).GetValue(0) ?? throw new InvalidOperationException("Expected index source value.");
-        object cell = System.Activator.CreateInstance(cellType) ?? throw new InvalidOperationException("Expected default cell.");
-        object indexed = System.Activator.CreateInstance(indexedPointType, [0, indexSource, null, "", false, cell]) ?? throw new InvalidOperationException("Expected indexed point.");
+        var indexed = new PptxRenderer.ChartIndexedNumberPoint(0, null, "", false, default);
         object plot = System.Activator.CreateInstance(plotBoxType, [0d, 0d, 200d, 100d]) ?? throw new InvalidOperationException("Expected plot box.");
         object extents = System.Activator.CreateInstance(extentsType, [0d, 10d]) ?? throw new InvalidOperationException("Expected extents.");
         double RadiusOf(object point, bool reversed = false)

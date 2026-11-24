@@ -54,7 +54,7 @@ internal sealed partial class PptxRenderer
         bool PlotVisibleOnly)
     {
         // Compact value slots preserve holes and last-wins duplicates. Full
-        // provenance remains in Points and its rendering-time sparse index.
+        // point and workbook data remain in Points and its sparse index.
         public double?[] DenseValues()
         {
             IReadOnlyList<ChartIndexedNumberPoint> points = Points ?? [];
@@ -149,7 +149,6 @@ internal sealed partial class PptxRenderer
 
     internal readonly record struct ChartIndexedNumberPoint(
         int Index,
-        ChartPointIndexSource IndexSource,
         double? Value,
         string Text,
         bool HasValue,
@@ -201,20 +200,12 @@ internal sealed partial class PptxRenderer
     }
 
     // R16: internal so the per-frame shared dense label memo carries the point type.
-    // Dense slots share immutable source provenance; empty slots own no record.
+    // Dense slots share immutable points. Empty slots own no record.
     internal sealed record ChartIndexedTextPoint(
         int Index,
-        ChartPointIndexSource IndexSource,
         string Text,
         bool HasText,
         ChartWorkbookRangeCell WorkbookCell);
-
-    internal enum ChartPointIndexSource
-    {
-        OrdinalFallback,
-        OoxmlIndex,
-        WorkbookRange
-    }
 
     private readonly record struct ChartSeriesFill(RgbColor Color, double Alpha, string? PatternPreset, RgbColor? BackgroundColor);
 

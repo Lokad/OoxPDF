@@ -13,16 +13,15 @@ internal static class PptxChartDensifyTests
     public static void PresenceChecksMatchDensifiedResults()
     {
         Type vectorType = NumberVectorType();
-        Type pointType = NumberPointType();
-        object empty = BuildNumberVector(vectorType, pointType, [], null);
+        object empty = BuildNumberVector(vectorType, [], null);
         TestAssert.True(!InvokeHasAnyValue(vectorType, empty), "Empty vectors must report no value.");
         TestAssert.Equal(0, InvokeDenseLength(vectorType, empty));
 
-        object sparse = BuildNumberVector(vectorType, pointType, [(0, 5d), (2, null)], null);
+        object sparse = BuildNumberVector(vectorType, [(0, 5d), (2, null)], null);
         TestAssert.True(InvokeHasAnyValue(vectorType, sparse), "A sparse valued point must report a value.");
         TestAssert.Equal(3, InvokeDenseLength(vectorType, sparse));
 
-        object allNull = BuildNumberVector(vectorType, pointType, [(0, null), (1, null)], 5);
+        object allNull = BuildNumberVector(vectorType, [(0, null), (1, null)], 5);
         TestAssert.True(!InvokeHasAnyValue(vectorType, allNull), "All-null values must report no value.");
         TestAssert.Equal(5, InvokeDenseLength(vectorType, allNull));
     }
@@ -71,8 +70,7 @@ internal static class PptxChartDensifyTests
     public static void PresenceChecksPreserveDenseCaps()
     {
         Type vectorType = NumberVectorType();
-        Type pointType = NumberPointType();
-        object huge = BuildNumberVector(vectorType, pointType, [], 200000);
+        object huge = BuildNumberVector(vectorType, [], 200000);
         TestAssert.Throws<OoxPdfLimitExceededException>(() => InvokeHasAnyValueThrowing(vectorType, huge));
         TestAssert.Throws<OoxPdfLimitExceededException>(() => ((PptxRenderer.ChartIndexedNumberVector)huge).DensePointCount());
     }
@@ -90,20 +88,19 @@ internal static class PptxChartDensifyTests
         // R15: the sparse max-dense-count probe must agree with densify-then-max,
         // including sparse, declared, empty, negative-index, and over-cap cases.
         Type vectorType = NumberVectorType();
-        Type pointType = NumberPointType();
         Array series = Array.CreateInstance(vectorType, 5);
-        series.SetValue(BuildNumberVector(vectorType, pointType, [], null), 0);
-        series.SetValue(BuildNumberVector(vectorType, pointType, [(0, 5d), (2, null)], null), 1);
-        series.SetValue(BuildNumberVector(vectorType, pointType, [(0, null), (1, null)], 5), 2);
-        series.SetValue(BuildNumberVector(vectorType, pointType, [], 4), 3);
-        series.SetValue(BuildNumberVector(vectorType, pointType, [(-1, 1d)], null), 4);
+        series.SetValue(BuildNumberVector(vectorType, [], null), 0);
+        series.SetValue(BuildNumberVector(vectorType, [(0, 5d), (2, null)], null), 1);
+        series.SetValue(BuildNumberVector(vectorType, [(0, null), (1, null)], 5), 2);
+        series.SetValue(BuildNumberVector(vectorType, [], 4), 3);
+        series.SetValue(BuildNumberVector(vectorType, [(-1, 1d)], null), 4);
         TestAssert.Equal(5, InvokeMaxDensePointCount(series));
         TestAssert.Equal(InvokeDensifiedMaxCount(series), InvokeMaxDensePointCount(series));
 
         Array empty = Array.CreateInstance(vectorType, 0);
         TestAssert.Equal(0, InvokeMaxDensePointCount(empty));
 
-        object huge = BuildNumberVector(vectorType, pointType, [], 200000);
+        object huge = BuildNumberVector(vectorType, [], 200000);
         Array hugeSeries = Array.CreateInstance(vectorType, 1);
         hugeSeries.SetValue(huge, 0);
         TestAssert.Throws<OoxPdfLimitExceededException>(() => InvokeMaxDensePointCount(hugeSeries));
@@ -120,7 +117,7 @@ internal static class PptxChartDensifyTests
     // tolerance. The sparse counts only need the declared slots and the one point.
     private static PptxRenderer.ChartIndexedNumberVector[] CreateSparseCountProbe() =>
     [
-        new([new(0, default, 1d, "1", true, default)], null, null, null, default, [], false),
+        new([new(0, 1d, "1", true, default)], null, null, null, default, [], false),
         new([], null, null, null, default, [], false),
         new([], PptxRenderer.MaxChartDensePoints, null, null, default, [], false)
     ];
@@ -188,10 +185,9 @@ internal static class PptxChartDensifyTests
     public static void RadarBuildKeepsEmptySeriesPositionsWithoutDensifying()
     {
         Type vectorType = NumberVectorType();
-        Type pointType = NumberPointType();
         Array series = Array.CreateInstance(vectorType, 2);
-        series.SetValue(BuildNumberVector(vectorType, pointType, [(0, null), (1, null)], 5), 0);
-        series.SetValue(BuildNumberVector(vectorType, pointType, [(0, 1d)], null), 1);
+        series.SetValue(BuildNumberVector(vectorType, [(0, null), (1, null)], 5), 0);
+        series.SetValue(BuildNumberVector(vectorType, [(0, 1d)], null), 1);
         MethodInfo build = typeof(PptxRenderer).GetMethod("BuildRadarSeries", BindingFlags.NonPublic | BindingFlags.Static)
             ?? throw new InvalidOperationException("Expected radar builder.");
         {
@@ -215,9 +211,9 @@ internal static class PptxChartDensifyTests
     {
         var (workbook, plot, otherPlot) = CreateMemoContext();
         IReadOnlyList<PptxRenderer.ChartIndexedTextPoint?> firstResult =
-            [new(0, PptxRenderer.ChartPointIndexSource.OoxmlIndex, "First", true, default)];
+            [new(0, "First", true, default)];
         IReadOnlyList<PptxRenderer.ChartIndexedTextPoint?> otherResult =
-            [new(0, PptxRenderer.ChartPointIndexSource.OoxmlIndex, "Other", true, default)];
+            [new(0, "Other", true, default)];
         TestAssert.True(!ReferenceEquals(firstResult, otherResult), "Factory results must be independently distinguishable.");
         int computations = 0;
         Func<IReadOnlyList<PptxRenderer.ChartIndexedTextPoint?>> firstFactory = () => { computations++; return firstResult; };
@@ -260,9 +256,9 @@ internal static class PptxChartDensifyTests
     {
         var (workbook, plot, otherPlot) = CreateMemoContext();
         IReadOnlyList<PptxRenderer.ChartIndexedNumberVector> firstResult =
-            [new([new(0, PptxRenderer.ChartPointIndexSource.OoxmlIndex, 5d, "5", true, default)], 1, null, "0", default, [], false)];
+            [new([new(0, 5d, "5", true, default)], 1, null, "0", default, [], false)];
         IReadOnlyList<PptxRenderer.ChartIndexedNumberVector> otherResult =
-            [new([new(0, PptxRenderer.ChartPointIndexSource.OoxmlIndex, 9d, "9", true, default)], 1, null, "0", default, [], false)];
+            [new([new(0, 9d, "9", true, default)], 1, null, "0", default, [], false)];
         TestAssert.True(!ReferenceEquals(firstResult, otherResult), "Factory results must be independently distinguishable.");
         int computations = 0;
         Func<IReadOnlyList<PptxRenderer.ChartIndexedNumberVector>> firstFactory = () => { computations++; return firstResult; };
@@ -337,53 +333,33 @@ internal static class PptxChartDensifyTests
             ?? throw new InvalidOperationException("Expected number vector type.");
     }
 
-    private static Type NumberPointType()
+    private static object BuildNumberVector(Type vectorType, (int Index, double? Value)[] entries, int? pointCount)
     {
-        return typeof(PptxRenderer).GetNestedType("ChartIndexedNumberPoint", BindingFlags.NonPublic)
-            ?? throw new InvalidOperationException("Expected number point type.");
-    }
-
-    private static object BuildNumberVector(Type vectorType, Type pointType, (int Index, double? Value)[] entries, int? pointCount)
-    {
-        ConstructorInfo pointCtor = pointType.GetConstructors().Single();
-        ParameterInfo[] pointParams = pointCtor.GetParameters();
-        Array points = Array.CreateInstance(pointType, entries.Length);
-        for (int i = 0; i < entries.Length; i++)
-        {
-            object?[] args = pointParams.Select(p => p.ParameterType.IsValueType ? Activator.CreateInstance(p.ParameterType) : null).ToArray();
-            args[0] = entries[i].Index;
-            args[2] = entries[i].Value;
-            points.SetValue(pointCtor.Invoke(args), i);
-        }
-
+        var points = entries.Select(entry => new PptxRenderer.ChartIndexedNumberPoint(
+            entry.Index, entry.Value, string.Empty, entry.Value.HasValue, default)).ToArray();
         return BuildVector(vectorType, points, pointCount);
     }
 
-    private static object BuildVector(Type vectorType, Array points, int? pointCount)
+    private static object BuildVector(Type vectorType, object points, int? pointCount)
     {
         ConstructorInfo ctor = vectorType.GetConstructors().Single();
         object?[] args = ctor.GetParameters().Select(p => p.ParameterType.IsValueType ? Activator.CreateInstance(p.ParameterType) : null).ToArray();
         args[0] = points;
         args[1] = pointCount;
-        return ctor.Invoke(args) ?? throw new InvalidOperationException("Expected vector instance.");
+        try
+        {
+            return ctor.Invoke(args) ?? throw new InvalidOperationException("Expected vector instance.");
+        }
+        catch (TargetInvocationException ex)
+        {
+            throw ex.InnerException ?? ex;
+        }
     }
 
     private static object BuildTextVector(Type vectorType, (int Index, string Text, bool HasText)[] entries, int? pointCount)
     {
-        Type pointType = typeof(PptxRenderer).GetNestedType("ChartIndexedTextPoint", BindingFlags.NonPublic)
-            ?? throw new InvalidOperationException("Expected text point type.");
-        ConstructorInfo pointCtor = pointType.GetConstructors().Single();
-        ParameterInfo[] pointParams = pointCtor.GetParameters();
-        Array points = Array.CreateInstance(pointType, entries.Length);
-        for (int i = 0; i < entries.Length; i++)
-        {
-            object?[] args = pointParams.Select(p => p.ParameterType.IsValueType ? Activator.CreateInstance(p.ParameterType) : null).ToArray();
-            args[0] = entries[i].Index;
-            args[2] = entries[i].Text;
-            args[3] = entries[i].HasText;
-            points.SetValue(pointCtor.Invoke(args), i);
-        }
-
+        var points = entries.Select(entry => new PptxRenderer.ChartIndexedTextPoint(
+            entry.Index, entry.Text, entry.HasText, default)).ToArray();
         return BuildVector(vectorType, points, pointCount);
     }
 
@@ -466,11 +442,11 @@ internal static class PptxChartDensifyTests
         var inner = new List<PptxRenderer.ChartIndexedTextPoint>(count);
         for (int i = 0; i < count; i++)
         {
-            inner.Add(new PptxRenderer.ChartIndexedTextPoint(i, default, "label" + i, true, default));
+            inner.Add(new PptxRenderer.ChartIndexedTextPoint(i, "label" + i, true, default));
         }
 
         var counting = new CountingTextPoints(inner);
-        object vector = BuildTextVectorWithPoints(vectorType, counting, null);
+        object vector = BuildVector(vectorType, counting, null);
         MethodInfo build = typeof(PptxRenderer).GetMethod("BuildCategoryLabelIndex", BindingFlags.NonPublic | BindingFlags.Static)
             ?? throw new InvalidOperationException("Expected category label index builder.");
         Dictionary<int, string> index;
@@ -545,7 +521,7 @@ internal static class PptxChartDensifyTests
     public static void DenseNumberValueViewPreservesSparseSlots()
     {
         Type vectorType = NumberVectorType();
-        object vector = BuildNumberVector(vectorType, NumberPointType(),
+        object vector = BuildNumberVector(vectorType,
             [(0, 5d), (2, null), (5, 7d), (5, 9d), (-1, 1d)], 8);
         double?[] values = InvokeDenseValues(vectorType, vector);
         double?[] expected = [5d, null, null, null, null, 9d, null, null];
@@ -562,15 +538,14 @@ internal static class PptxChartDensifyTests
     public static void DenseNumberValueViewAllocationPerSlotIsCompact()
     {
         Type vectorType = NumberVectorType();
-        Type pointType = NumberPointType();
         foreach (int count in new[] { 1000, 2000, 4000 })
         {
-            object vector = BuildNumberVector(vectorType, pointType, [], count);
+            object vector = BuildNumberVector(vectorType, [], count);
             long allocated = MeasureDenseValuesAllocation(vectorType, vector);
             TestAssert.True(allocated <= 32L * count, string.Format("Compact dense values must stay near 16 bytes per slot, allocated {0} bytes for {1} slots.", allocated, count));
         }
 
-        object sparse = BuildNumberVector(vectorType, pointType, [(0, 1d), (3999, 2d)], 4000);
+        object sparse = BuildNumberVector(vectorType, [(0, 1d), (3999, 2d)], 4000);
         long sparseAllocated = MeasureDenseValuesAllocation(vectorType, sparse);
         TestAssert.True(sparseAllocated <= 32L * 4000, string.Format("Sparse compact dense values must stay compact, allocated {0} bytes.", sparseAllocated));
     }
@@ -578,7 +553,7 @@ internal static class PptxChartDensifyTests
     public static void DenseNumberPointIndexPreservesSparseProvenance()
     {
         Type vectorType = NumberVectorType();
-        object vector = BuildNumberVector(vectorType, NumberPointType(),
+        object vector = BuildNumberVector(vectorType,
             [(0, 5d), (2, null), (5, 7d), (5, 9d), (-1, 1d)], 8);
         MethodInfo build = typeof(PptxRenderer).GetMethod("BuildDensePointIndex", BindingFlags.NonPublic | BindingFlags.Static)
             ?? throw new InvalidOperationException("Expected rendering provenance index.");
@@ -617,22 +592,6 @@ internal static class PptxChartDensifyTests
         long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
         GC.KeepAlive(values);
         return allocated;
-    }
-
-    private static object BuildTextVectorWithPoints(Type vectorType, object points, int? pointCount)
-    {
-        ConstructorInfo ctor = vectorType.GetConstructors().Single();
-        object?[] args = ctor.GetParameters().Select(p => p.ParameterType.IsValueType ? Activator.CreateInstance(p.ParameterType) : null).ToArray();
-        args[0] = points;
-        args[1] = pointCount;
-        try
-        {
-            return ctor.Invoke(args) ?? throw new InvalidOperationException("Expected vector instance.");
-        }
-        catch (TargetInvocationException ex)
-        {
-            throw ex.InnerException ?? ex;
-        }
     }
 
     private sealed class CountingTextPoints(IReadOnlyList<PptxRenderer.ChartIndexedTextPoint> inner) : IReadOnlyList<PptxRenderer.ChartIndexedTextPoint>
