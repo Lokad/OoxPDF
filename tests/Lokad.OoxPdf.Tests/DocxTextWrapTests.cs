@@ -979,26 +979,7 @@ internal static class DocxTextWrapTests
         TestAssert.Equal("aaaa bbbb cccc  ", lines[0].Text);
     }
 
-    // count-based scaling tests plus R07 linear gate: deterministic unit-width measurer, line
-    // width 10pt, emergency (allowOverwideTokenBreaks) wrapping. Pre-fix baselines
-    // measured 2026-09-21 on this code (artifacts/wrap-baseline.txt, ignored):
-    // L=128: 795 calls / 40,798 chars; L=256: 3,228 / 303,593; L=512: 13,008 /
-    // 2,334,038 (matching the pre-fix probe baselines above). R07 estimates fit via average char width
-    // plus local grow/shrink among safe breaks, so 128/256/512 thresholds below enforce linear
-    // growth (2x per doubling, not 4x); golden lengths pin identical line breaking.
-    internal sealed class CountingUnitMeasurer : IDocxTextMeasurer
-    {
-        public int MeasureCalls;
-        public long CharsMeasured;
-
-        public double MeasureText(DocxTextRun? run, string text, double fontSize)
-        {
-            MeasureCalls++;
-            CharsMeasured += text.Length;
-            return text.Length * 1d;
-        }
-    }
-
+    // Unit advances make measurement counts and break positions independent of installed fonts.
     public static void EmergencyWrapLongUnbrokenTokenBoundsWork()
     {
         AssertWrapScaling(new string((char)97, 128), 200, new[] { 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 8 });
@@ -1028,18 +1009,13 @@ internal static class DocxTextWrapTests
 
         IReadOnlyList<DocxWrappedTextLine> lines = WrapWithCounting(token.ToString(), 10d, true, out int calls);
         TestAssert.True(calls <= 14000, $"Soft-hyphen token must stay bounded, saw {calls} measures.");
-        // 16-char soft-hyphen period breaks as 10+6 lines with the hyphen preserved
-        // visibly at each break; 15 visible hyphens + 240 base chars = 255 covered.
+        // Each 16-character period breaks into two lines. The final soft hyphen stays hidden.
         TestAssert.Equal(32, lines.Count);
-        int covered = 0;
         for (int i = 0; i < lines.Count; i++)
         {
-            // The final line drops its terminal soft hyphen (no intra-token break).
-            TestAssert.Equal(i == 31 ? 5 : i % 2 == 0 ? 10 : 6, lines[i].Text.Length);
-            covered += lines[i].Text.Length;
+            string expected = i % 2 == 0 ? "cccccccccc" : i == 31 ? "ccccc" : "ccccc\u00AD";
+            TestAssert.Equal(expected, lines[i].Text);
         }
-
-        TestAssert.Equal(255, covered);
     }
 
     public static void EmergencyWrapMultiRunTokenKeepsStarts()
@@ -1056,7 +1032,9 @@ internal static class DocxTextWrapTests
             new DocxTextSpan(second, run2, 1, 0),
             new DocxTextSpan(third, run3, 2, 0),
         };
-        IReadOnlyList<DocxWrappedTextLine> lines = WrapSpansWithCounting(first + second + third, spans, 10d, true, out int calls);
+        string token = first + second + third;
+        IReadOnlyList<DocxWrappedTextLine> lines = WrapSpansWithCounting(token, spans, 10d, true, out int calls);
+        AssertPreservesSourceText(token, lines);
         TestAssert.Equal(30, lines.Count);
         foreach (DocxWrappedTextLine line in lines)
         {
@@ -1071,16 +1049,12 @@ internal static class DocxTextWrapTests
         // Surrogate pairs and combining marks must never split across lines.
         string token = "ab\U0001F600cdef" + new string('a', 60);
         IReadOnlyList<DocxWrappedTextLine> lines = WrapWithCounting(token, 10d, true, out _);
-        int covered = 0;
+        AssertPreservesSourceText(token, lines);
         foreach (DocxWrappedTextLine line in lines)
         {
-            TestAssert.True(line.Text.Length > 0, "No empty lines.");
             TestAssert.True(!char.IsLowSurrogate(line.Text[0]), "Line must not start inside a surrogate pair.");
             TestAssert.True(!char.IsHighSurrogate(line.Text[^1]), "Line must not end inside a surrogate pair.");
-            covered += line.Text.Length;
         }
-
-        TestAssert.Equal(token.Length, covered);
 
         foreach (string mark in new[] { "\u0301", "\U0001E000" })
         {
@@ -1089,7 +1063,7 @@ internal static class DocxTextWrapTests
             TestAssert.Equal("ab", wrapped[0].Text);
             TestAssert.True(wrapped[1].Text.StartsWith("c" + mark, StringComparison.Ordinal),
                 "An emergency break keeps the combining mark with its base.");
-            TestAssert.Equal(marked, string.Concat(wrapped.Select(line => line.Text)));
+            AssertPreservesSourceText(marked, wrapped);
         }
     }
 
@@ -1100,7 +1074,7 @@ internal static class DocxTextWrapTests
         string token = new string('H', 10) + new string('a', 15000);
         var measurer = new ProfilingMeasurer((run, text) => text.Sum(c => c == 'H' ? 100d : 0.01d));
         IReadOnlyList<DocxWrappedTextLine> lines = WrapSpansWithWidths(token, SingleSpan(token), _ => 10d, true, measurer);
-        AssertCoverage(token, lines);
+        AssertPreservesSourceText(token, lines);
         TestAssert.Equal(1, lines.Count);
         TestAssert.Equal(token, lines[0].Text);
     }
@@ -1122,7 +1096,7 @@ internal static class DocxTextWrapTests
         static double Width(DocxTextRun? run, string text) => text.Sum(c => c == 'W' ? 4d : 1d);
         var measurer = new ProfilingMeasurer(Width);
         IReadOnlyList<DocxWrappedTextLine> lines = WrapSpansWithWidths(token, SingleSpan(token), _ => 700d, true, measurer);
-        AssertCoverage(token, lines);
+        AssertPreservesSourceText(token, lines);
         AssertAllLinesFit(lines, _ => 700d, Width);
         TestAssert.Equal(head, lines[0].Text);
     }
@@ -1149,34 +1123,27 @@ internal static class DocxTextWrapTests
     {
         using var cancelled = new CancellationTokenSource();
         cancelled.Cancel();
-        var measurer = new CountingUnitMeasurer();
+        var measurer = new ProfilingMeasurer(UnitWidth);
         string token = new string((char)97, 512);
         var run = new DocxTextRun(token, 11d, null, false, false, false, null, "Test");
         var spans = new[] { new DocxTextSpan(token, run, 0, 0) };
         TestAssert.Throws<OperationCanceledException>(() => WrapSpans(token, spans, 10d, true, measurer, cancelled.Token));
     }
 
-    // R07.1 characterization: work instrumentation beyond call counts. Records calls,
-    // measured characters, distinct slices (a memo-effectiveness proxy), and per-run
-    // attribution, so scaling tests pin work volume rather than bare call counts.
-    // Shaping stays stubbed by design (deterministic unit widths); real-shaping
-    // equivalence belongs to R07.2 layout semantics plus visual gates.
+    // Count both calls and measured characters to distinguish probe overhead from probe length.
     internal sealed class ProfilingMeasurer(Func<DocxTextRun?, string, double> width) : IDocxTextMeasurer
     {
         public int MeasureCalls;
         public long CharsMeasured;
-        public readonly HashSet<string> DistinctSlices = new(StringComparer.Ordinal);
-        public readonly Dictionary<string, int> CallsByRun = new(StringComparer.Ordinal);
         public double MeasureText(DocxTextRun? run, string text, double fontSize)
         {
             MeasureCalls++;
             CharsMeasured += text.Length;
-            DistinctSlices.Add(text);
-            string key = run?.FontFamily ?? "(null)";
-            CallsByRun[key] = CallsByRun.TryGetValue(key, out int count) ? count + 1 : 1;
             return width(run, text);
         }
     }
+
+    private static double UnitWidth(DocxTextRun? run, string text) => text.Length;
     // Strongly uneven advances: narrow stems with very wide rounds defeat the
     // average-width fit estimate, exercising grow/shrink search depth.
     private static double AlternatingWidth(DocxTextRun? run, string text)
@@ -1220,7 +1187,7 @@ internal static class DocxTextWrapTests
         IReadOnlyList<DocxWrappedTextLine> lines = WrapSpansWithWidths(token.ToString(), SingleSpan(token.ToString()), _ => 10d, true, measurer);
         TestAssert.True(measurer.MeasureCalls <= 1200, string.Format("Uneven advances must stay bounded, saw {0} measures.", measurer.MeasureCalls));
         TestAssert.True(measurer.CharsMeasured <= 60000, string.Format("Uneven advances must bound measured characters, saw {0}.", measurer.CharsMeasured));
-        AssertCoverage(token.ToString(), lines);
+        AssertPreservesSourceText(token.ToString(), lines);
         AssertAllLinesFit(lines, _ => 10d, AlternatingWidth);
     }
     // R07.1: AV-kerning makes prefix widths non-monotonic at 10pt capacity (43 calls /
@@ -1236,21 +1203,17 @@ internal static class DocxTextWrapTests
         IReadOnlyList<DocxWrappedTextLine> lines = WrapSpansWithWidths(token.ToString(), SingleSpan(token.ToString()), _ => 10d, true, measurer);
         TestAssert.True(measurer.MeasureCalls <= 200, string.Format("Negative tracking must stay bounded, saw {0} measures.", measurer.MeasureCalls));
         TestAssert.True(measurer.CharsMeasured <= 10000, string.Format("Negative tracking must bound measured characters, saw {0}.", measurer.CharsMeasured));
-        AssertCoverage(token.ToString(), lines);
+        AssertPreservesSourceText(token.ToString(), lines);
         AssertAllLinesFit(lines, _ => 10d, KernedWidth);
     }
     // R07.1: run count varies independently at fixed 256-char length (8/16/32 runs).
     public static void EmergencyWrapManyShortRunsBoundsWork()
     {
-        int calls8 = WrapFamilyRuns(8, out _);
-        int calls16 = WrapFamilyRuns(16, out IReadOnlyList<DocxWrappedTextLine> lines16);
-        int calls32 = WrapFamilyRuns(32, out _);
+        int calls8 = WrapFamilyRuns(8);
+        int calls16 = WrapFamilyRuns(16);
+        int calls32 = WrapFamilyRuns(32);
         TestAssert.True(calls16 <= 3 * calls8, string.Format("Doubling runs must scale calls linearly, saw {0} then {1}.", calls8, calls16));
         TestAssert.True(calls32 <= 3 * calls16, string.Format("Doubling runs must scale calls linearly, saw {0} then {1}.", calls16, calls32));
-        foreach (DocxWrappedTextLine line in lines16)
-        {
-            TestAssert.True(line.Text.Length > 0, "No empty lines.");
-        }
     }
     // R07.1: line capacity varies independently on one 256-char uniform token.
     public static void EmergencyWrapCapacityScalingBoundsWork()
@@ -1261,45 +1224,29 @@ internal static class DocxTextWrapTests
         int calls40 = WrapUniformWithWidths(token, _ => 40d, out _);
         TestAssert.True(calls20 <= calls10, string.Format("Doubling capacity must not add work, saw {0} then {1}.", calls10, calls20));
         TestAssert.True(calls40 <= calls20, string.Format("Doubling capacity must not add work, saw {0} then {1}.", calls20, calls40));
-        AssertCoverage(token, lines10);
-        AssertCoverage(token, lines20);
+        AssertPreservesSourceText(token, lines10);
+        AssertPreservesSourceText(token, lines20);
     }
     // R07.1: N/2N/4N allocation evidence above fixed setup costs. GC bytes are exact
     // (not sampled), so ratios pin the growth shape deterministically.
     public static void EmergencyWrapAllocationScalesLinearly()
     {
-        long alloc128 = WrapAllocated(new string((char)97, 128));
-        long alloc256 = WrapAllocated(new string((char)97, 256));
-        long alloc512 = WrapAllocated(new string((char)97, 512));
+        MeasureUniformWrap(128);
+        long alloc128 = MeasureUniformWrap(128).AllocatedBytes;
+        long alloc256 = MeasureUniformWrap(256).AllocatedBytes;
+        long alloc512 = MeasureUniformWrap(512).AllocatedBytes;
         TestAssert.True(alloc256 - alloc128 > 0, "Growth must be observable above setup.");
         TestAssert.True(alloc512 - alloc256 <= (long)(2.5d * (alloc256 - alloc128)), string.Format("Allocations must scale linearly, saw deltas {0} then {1}.", alloc256 - alloc128, alloc512 - alloc256));
     }
-    // RV13: measured characters must scale linearly at thousands of characters,
-    // not fourfold per doubling (per-line full-remainder measurement).
-    public static void EmergencyWrapMeasuredCharactersScaleLinearly()
+    // The same layout supplies both work-volume and allocation measurements.
+    public static void EmergencyWrapLargeInputsScaleLinearly()
     {
-        long chars2048 = WrapUnitChars(2048);
-        long chars4096 = WrapUnitChars(4096);
-        long chars8192 = WrapUnitChars(8192);
+        MeasureUniformWrap(128);
+        var (alloc2048, chars2048) = MeasureUniformWrap(2048);
+        var (alloc4096, chars4096) = MeasureUniformWrap(4096);
+        var (alloc8192, chars8192) = MeasureUniformWrap(8192);
         TestAssert.True(chars4096 <= 3L * chars2048, $"Measured characters must scale linearly, saw {chars2048} then {chars4096}.");
         TestAssert.True(chars8192 <= 3L * chars4096, $"Measured characters must scale linearly, saw {chars4096} then {chars8192}.");
-    }
-
-    private static long WrapUnitChars(int length)
-    {
-        string token = new string((char)97, length);
-        var measurer = new ProfilingMeasurer((run, text) => text.Length * 1d);
-        IReadOnlyList<DocxWrappedTextLine> lines = WrapSpansWithWidths(token, SingleSpan(token), _ => 10d, true, measurer);
-        TestAssert.True(lines.Count > 0, "Token must produce lines.");
-        return measurer.CharsMeasured;
-    }
-
-    // RV13: allocations must scale linearly at thousands of characters.
-    public static void EmergencyWrapLargeAllocationScalesLinearly()
-    {
-        long alloc2048 = WrapAllocated(new string((char)97, 2048));
-        long alloc4096 = WrapAllocated(new string((char)97, 4096));
-        long alloc8192 = WrapAllocated(new string((char)97, 8192));
         TestAssert.True(alloc2048 > 0, "Growth must be observable above setup.");
         TestAssert.True(alloc4096 <= (long)(3.5d * alloc2048), $"Allocations must scale linearly, saw {alloc2048} then {alloc4096}.");
         TestAssert.True(alloc8192 <= (long)(3.5d * alloc4096), $"Allocations must scale linearly, saw {alloc4096} then {alloc8192}.");
@@ -1325,7 +1272,7 @@ internal static class DocxTextWrapTests
         string token = new string((char)72, 10) + new string((char)108, 10);
         var measurer = new ProfilingMeasurer(HeadWideTailNarrowWidth);
         IReadOnlyList<DocxWrappedTextLine> lines = WrapSpansWithWidths(token, SingleSpan(token), _ => 10d, true, measurer);
-        AssertCoverage(token, lines);
+        AssertPreservesSourceText(token, lines);
         TestAssert.Equal(11, lines.Count);
         TestAssert.Equal(new string((char)108, 10), lines[10].Text);
         AssertAllLinesFit(lines, _ => 10d, HeadWideTailNarrowWidth);
@@ -1337,7 +1284,7 @@ internal static class DocxTextWrapTests
         string token = new string((char)72, 10) + "-" + new string((char)108, 10);
         var measurer = new ProfilingMeasurer(HeadWideTailNarrowWidth);
         IReadOnlyList<DocxWrappedTextLine> lines = WrapSpansWithWidths(token, SingleSpan(token), _ => 15d, true, measurer);
-        AssertCoverage(token, lines);
+        AssertPreservesSourceText(token, lines);
         TestAssert.Equal(11, lines.Count);
         TestAssert.Equal("H-", lines[9].Text);
         TestAssert.Equal(new string((char)108, 10), lines[10].Text);
@@ -1382,7 +1329,7 @@ internal static class DocxTextWrapTests
         string token = new string((char)97, 128);
         var measurer = new ProfilingMeasurer((run, text) => text.Length * 1d);
         IReadOnlyList<DocxWrappedTextLine> lines = WrapSpansWithWidths(token, SingleSpan(token), lineIndex => lineIndex == 0 ? 6d : 10d, true, measurer);
-        AssertCoverage(token, lines);
+        AssertPreservesSourceText(token, lines);
         TestAssert.Equal(6, lines[0].Text.Length);
         for (int i = 1; i < lines.Count - 1; i++)
         {
@@ -1405,7 +1352,7 @@ internal static class DocxTextWrapTests
         }
     }
 
-    private static int WrapFamilyRuns(int runs, out IReadOnlyList<DocxWrappedTextLine> lines)
+    private static int WrapFamilyRuns(int runs)
     {
         int partLength = 256 / runs;
         var text = new System.Text.StringBuilder();
@@ -1418,26 +1365,33 @@ internal static class DocxTextWrapTests
             spans.Add(new DocxTextSpan(part, run, i, 0));
         }
         var measurer = new ProfilingMeasurer(FamilyWidth);
-        lines = WrapSpansWithWidths(text.ToString(), spans.ToArray(), _ => 10d, true, measurer);
-        AssertCoverage(text.ToString(), lines);
+        string token = text.ToString();
+        var lines = WrapSpansWithWidths(token, spans.ToArray(), _ => 10d, true, measurer);
+        AssertPreservesSourceText(token, lines);
         AssertAllLinesFit(lines, _ => 10d, FamilyWidth);
         return measurer.MeasureCalls;
     }
 
     private static int WrapUniformWithWidths(string token, Func<int, double> widths, out IReadOnlyList<DocxWrappedTextLine> lines)
     {
-        var measurer = new ProfilingMeasurer((run, text) => text.Length * 1d);
+        var measurer = new ProfilingMeasurer(UnitWidth);
         lines = WrapSpansWithWidths(token, SingleSpan(token), widths, true, measurer);
-        AssertAllLinesFit(lines, widths, (run, text) => text.Length * 1d);
+        AssertAllLinesFit(lines, widths, UnitWidth);
         return measurer.MeasureCalls;
     }
 
-    private static long WrapAllocated(string token)
+    private static (long AllocatedBytes, long MeasuredCharacters) MeasureUniformWrap(int length)
     {
-        WrapUniformWithWidths(token, _ => 10d, out _);
+        string token = new('a', length);
+        var spans = SingleSpan(token);
+        var measurer = new ProfilingMeasurer(UnitWidth);
+        Func<int, double> widths = static _ => 10d;
         long before = GC.GetAllocatedBytesForCurrentThread();
-        WrapUniformWithWidths(token, _ => 10d, out _);
-        return GC.GetAllocatedBytesForCurrentThread() - before;
+        var lines = WrapSpansWithWidths(token, spans, widths, true, measurer);
+        long bytes = GC.GetAllocatedBytesForCurrentThread() - before;
+        AssertPreservesSourceText(token, lines);
+        AssertAllLinesFit(lines, widths, UnitWidth);
+        return (bytes, measurer.CharsMeasured);
     }
 
     // RV13: the opportunity index must preserve exact break decisions on mixed
@@ -1455,7 +1409,7 @@ internal static class DocxTextWrapTests
         string token = builder.ToString();
         var measurer = new ProfilingMeasurer((run, text) => text.Length * 1d);
         IReadOnlyList<DocxWrappedTextLine> lines = WrapSpansWithWidths(token, SingleSpan(token), _ => 10d, true, measurer);
-        AssertCoverage(token, lines);
+        AssertPreservesSourceText(token, lines);
         AssertAllLinesFit(lines, _ => 10d, (run, text) => text.Length * 1d);
         TestAssert.Equal(106, lines.Count);
         TestAssert.Equal(token.Substring(0, 10), lines[0].Text);
@@ -1470,26 +1424,27 @@ internal static class DocxTextWrapTests
         return new[] { new DocxTextSpan(token, run, 0, 0) };
     }
 
-    private static void AssertCoverage(string token, IReadOnlyList<DocxWrappedTextLine> lines)
+    private static void AssertPreservesSourceText(string token, IReadOnlyList<DocxWrappedTextLine> lines)
     {
-        int covered = 0;
+        int offset = 0;
         foreach (DocxWrappedTextLine line in lines)
         {
             TestAssert.True(line.Text.Length > 0, "No empty lines.");
-            covered += line.Text.Length;
+            TestAssert.True(token.AsSpan(offset).StartsWith(line.Text, StringComparison.Ordinal),
+                $"Wrapped text differs from source at the line starting at offset {offset}.");
+            offset += line.Text.Length;
         }
-        TestAssert.Equal(token.Length, covered);
+        TestAssert.Equal(token.Length, offset);
     }
 
     private static void AssertAllLinesFit(IReadOnlyList<DocxWrappedTextLine> lines, Func<int, double> widths, Func<DocxTextRun?, string, double> width)
     {
-        var verifier = new ProfilingMeasurer(width);
         for (int i = 0; i < lines.Count; i++)
         {
             double lineWidth = 0d;
             foreach (DocxTextSpan span in lines[i].Spans)
             {
-                lineWidth += verifier.MeasureText(span.StyleRun, span.Text, 11d);
+                lineWidth += width(span.StyleRun, span.Text);
             }
             TestAssert.True(lineWidth <= widths(i) + 1e-9, string.Format("Line {0} must fit: {1} exceeds {2}.", i, lineWidth, widths(i)));
         }
@@ -1507,13 +1462,7 @@ internal static class DocxTextWrapTests
             }
         }
 
-        int covered = 0;
-        foreach (DocxWrappedTextLine line in lines)
-        {
-            covered += line.Text.Length;
-        }
-
-        TestAssert.Equal(token.Length, covered);
+        AssertPreservesSourceText(token, lines);
     }
 
     private static IReadOnlyList<DocxWrappedTextLine> WrapWithCounting(string token, double width, bool allowOverwide, out int calls)
@@ -1525,7 +1474,7 @@ internal static class DocxTextWrapTests
 
     private static IReadOnlyList<DocxWrappedTextLine> WrapSpansWithCounting(string token, DocxTextSpan[] spans, double width, bool allowOverwide, out int calls)
     {
-        var measurer = new CountingUnitMeasurer();
+        var measurer = new ProfilingMeasurer(UnitWidth);
         IReadOnlyList<DocxWrappedTextLine> lines = WrapSpans(token, spans, width, allowOverwide, measurer, CancellationToken.None);
         calls = measurer.MeasureCalls;
         return lines;
