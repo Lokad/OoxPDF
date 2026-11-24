@@ -794,8 +794,6 @@ internal sealed record PptxSceneChartAxis
 
     public PptxSceneChartAxisCrossBetween CrossBetweenKind { get; }
 
-    public string CrossBetween { get; }
-
     public PptxSceneChartAxisOrientation OrientationKind { get; }
 
     public string Orientation { get; }
@@ -842,11 +840,7 @@ internal sealed record PptxSceneChartAxis
 
     public PptxSceneChartTickLabelPosition TickLabelPositionKind { get; }
 
-    public string TickLabelPosition { get; }
-
     public PptxSceneChartAxisTickMark MajorTickMarkKind { get; }
-
-    public string MajorTickMark { get; }
 
     public int? LabelOffset { get; }
 
@@ -871,7 +865,6 @@ internal sealed record PptxSceneChartAxis
         string crosses,
         double? crossesAt,
         PptxSceneChartAxisCrossBetween crossBetweenKind,
-        string crossBetween,
         PptxSceneChartAxisOrientation orientationKind,
         string orientation,
         bool? isDeleted,
@@ -893,9 +886,7 @@ internal sealed record PptxSceneChartAxis
         PptxSceneLineStyle minorGridlineStyleLine,
         PptxSceneChartTextStyleOverride textStyle,
         PptxSceneChartTickLabelPosition tickLabelPositionKind,
-        string tickLabelPosition,
         PptxSceneChartAxisTickMark majorTickMarkKind,
-        string majorTickMark,
         int? labelOffset,
         int? tickLabelSkip,
         string tickLabelSkipValue,
@@ -913,7 +904,6 @@ internal sealed record PptxSceneChartAxis
         Crosses = crosses;
         CrossesAt = crossesAt;
         CrossBetweenKind = crossBetweenKind;
-        CrossBetween = crossBetween;
         OrientationKind = orientationKind;
         Orientation = orientation;
         IsDeleted = isDeleted;
@@ -935,9 +925,7 @@ internal sealed record PptxSceneChartAxis
         MinorGridlineStyleLine = minorGridlineStyleLine;
         TextStyle = textStyle;
         TickLabelPositionKind = tickLabelPositionKind;
-        TickLabelPosition = tickLabelPosition;
         MajorTickMarkKind = majorTickMarkKind;
-        MajorTickMark = majorTickMark;
         LabelOffset = labelOffset;
         TickLabelSkip = tickLabelSkip;
         TickLabelSkipValue = tickLabelSkipValue;
@@ -994,7 +982,6 @@ internal sealed record PptxSceneChartAxis
             crosses,
             crossesAt,
             PptxSceneBuilder.ParseChartAxisCrossBetween(crossBetween),
-            crossBetween,
             PptxSceneBuilder.ParseChartAxisOrientation(orientation),
             orientation,
             isDeleted,
@@ -1016,9 +1003,7 @@ internal sealed record PptxSceneChartAxis
             minorGridlineStyleLine,
             textStyle,
             PptxSceneBuilder.ParseChartTickLabelPosition(tickLabelPosition),
-            tickLabelPosition,
             PptxSceneBuilder.ParseChartAxisTickMark(majorTickMark),
-            majorTickMark,
             labelOffset,
             tickLabelSkip,
             tickLabelSkipValue,

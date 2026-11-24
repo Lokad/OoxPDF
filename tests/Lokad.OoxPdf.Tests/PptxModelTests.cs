@@ -734,9 +734,7 @@ internal static class PptxModelTests
         TestAssert.Equal("max", slide.SlideNodes[4].Chart?.Axes[1].Crosses ?? string.Empty);
         TestAssert.Equal(PptxSceneChartAxisCrosses.Maximum, slide.SlideNodes[4].Chart?.Axes[1].CrossesKind);
         TestAssert.Equal(2.5d, slide.SlideNodes[4].Chart?.Axes[1].CrossesAt ?? 0d);
-        TestAssert.Equal("between", slide.SlideNodes[4].Chart?.Axes[1].CrossBetween ?? string.Empty);
         TestAssert.Equal(PptxSceneChartAxisCrossBetween.Between, slide.SlideNodes[4].Chart?.Axes[1].CrossBetweenKind);
-        TestAssert.Equal("out", slide.SlideNodes[4].Chart?.Axes[0].MajorTickMark ?? string.Empty);
         TestAssert.Equal(PptxSceneChartAxisTickMark.Outside, slide.SlideNodes[4].Chart?.Axes[0].MajorTickMarkKind);
         TestAssert.Equal(PptxSceneChartTickLabelPosition.Low, slide.SlideNodes[4].Chart?.Axes[0].TickLabelPositionKind);
         TestAssert.Equal(100, slide.SlideNodes[4].Chart?.Axes[0].LabelOffset ?? 0);
@@ -791,7 +789,7 @@ internal static class PptxModelTests
         TestAssert.Equal(new RgbColor(101, 67, 33), slide.SlideNodes[4].Chart?.Axes[1].TextStyle.Color ?? default);
         TestAssert.True(slide.SlideNodes[4].Chart?.Axes[1].TextStyle.Bold == true, "Expected axis bold style in the scene model.");
         TestAssert.True(slide.SlideNodes[4].Chart?.Axes[1].TextStyle.Italic == true, "Expected axis italic style in the scene model.");
-        TestAssert.Equal("high", slide.SlideNodes[4].Chart?.Axes[1].TickLabelPosition ?? string.Empty);
+        TestAssert.Equal(PptxSceneChartTickLabelPosition.High, slide.SlideNodes[4].Chart?.Axes[1].TickLabelPositionKind);
         TestAssert.Equal("$#,##0", slide.SlideNodes[4].Chart?.Axes[1].NumberFormat ?? string.Empty);
         TestAssert.Equal("Value", slide.SlideNodes[4].Chart?.Axes[1].Title.Text ?? string.Empty);
         TestAssert.True(slide.SlideNodes[4].Chart?.Axes[1].Title.Overlay is null, "Expected missing chart axis-title overlay metadata to remain distinct from an explicit disable.");

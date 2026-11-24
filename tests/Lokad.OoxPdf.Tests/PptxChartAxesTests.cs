@@ -1711,7 +1711,6 @@ internal static class PptxChartAxesTests
             """) ?? throw new InvalidOperationException("Expected chart scene.");
         PptxSceneChartAxis valueAxis = chart.Axes.First(axis => axis.AxisKind == PptxSceneChartAxisKind.Value);
         TestAssert.Equal(PptxSceneChartAxisCrossBetween.Unknown, valueAxis.CrossBetweenKind);
-        TestAssert.Equal("bogus", valueAxis.CrossBetween);
 
         XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
         XDocument source = TestAssert.NotNull(chart.ChartXml);
@@ -1745,7 +1744,6 @@ internal static class PptxChartAxesTests
             """) ?? throw new InvalidOperationException("Expected chart scene.");
         PptxSceneChartAxis categoryAxis = chart.Axes.First(axis => axis.AxisKind == PptxSceneChartAxisKind.Category);
         TestAssert.Equal(PptxSceneChartTickLabelPosition.Unknown, categoryAxis.TickLabelPositionKind);
-        TestAssert.Equal("bogus", categoryAxis.TickLabelPosition);
 
         System.Reflection.MethodInfo labelVisible = typeof(PptxRenderer).GetMethod(
             "IsSceneChartAxisLabelVisible",
@@ -1772,7 +1770,6 @@ internal static class PptxChartAxesTests
             """) ?? throw new InvalidOperationException("Expected chart scene.");
         PptxSceneChartAxis categoryAxis = chart.Axes.First(axis => axis.AxisKind == PptxSceneChartAxisKind.Category);
         TestAssert.Equal(PptxSceneChartAxisTickMark.Unknown, categoryAxis.MajorTickMarkKind);
-        TestAssert.Equal(string.Empty, categoryAxis.MajorTickMark);
 
         System.Reflection.MethodInfo readMajorTickMark = typeof(PptxRenderer).GetMethod(
             "ReadSceneChartAxisMajorTickMark",
