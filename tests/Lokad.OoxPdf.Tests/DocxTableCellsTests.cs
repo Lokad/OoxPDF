@@ -43,7 +43,7 @@ internal static class DocxTableCellsTests
                     TestAssert.True(Math.Abs((cell.TextLines.Single().BaselineY - cell.Y - cell.Height) -
                         (before.TextLines.Single().BaselineY - before.Y - before.Height)) < .000001d,
                         "Every row retains its baseline relative to its slot top.");
-                    var clip = DocxRenderer.ResolveTableCellContentClip(row, cell);
+                    var clip = DocxTableCellClipGeometry.Resolve(row, cell);
                     double terminal = i == 2 ? .96d : 0d;
                     TestAssert.True(clip.Admitted && Math.Abs(clip.Y - cell.Y - bottom - terminal) < .000001d &&
                         Math.Abs(clip.Height - cell.Height + top + .96d + bottom + terminal) < .000001d,
@@ -78,7 +78,7 @@ internal static class DocxTableCellsTests
             if (variant == "nonpositive" && rule is null or "auto") continue;
             foreach (var row in layout.Pages.SelectMany(p => p.Items.OfType<DocxTableRowLayout>()))
             foreach (var cell in row.Cells)
-                TestAssert.True(!DocxRenderer.ResolveTableCellContentClip(row, cell).Admitted,
+                TestAssert.True(!DocxTableCellClipGeometry.Resolve(row, cell).Admitted,
                     $"Excluded uniform three-row layout retains fallback: variant={variant}, rule={rule}.");
         }
     }
@@ -100,7 +100,7 @@ internal static class DocxTableCellsTests
                 bool admitted = row.RowIndex != dominatedIndex;
                 TestAssert.Equal(admitted ? 12d : 0d, row.Table.AlignedMinimumRowBottomMargins[row.RowIndex]);
                 foreach (var cell in row.Cells)
-                    TestAssert.True(DocxRenderer.ResolveTableCellContentClip(row, cell).Admitted == admitted,
+                    TestAssert.True(DocxTableCellClipGeometry.Resolve(row, cell).Admitted == admitted,
                         "A content-dominated minimum row retains fallback independently of adjacent declared rows.");
             }
         }
@@ -146,7 +146,7 @@ internal static class DocxTableCellsTests
                     TestAssert.True(Math.Abs((cell.TextLines.Single().BaselineY - cell.Y - cell.Height) -
                         (before.TextLines.Single().BaselineY - before.Y - before.Height)) < .000001d,
                         "Each paragraph keeps its qualified baseline relative to the top of its slot.");
-                    var clip = DocxRenderer.ResolveTableCellContentClip(row, cell);
+                    var clip = DocxTableCellClipGeometry.Resolve(row, cell);
                     double terminal = i == 2 ? .96d : 0d;
                     TestAssert.True(clip.Admitted && Math.Abs(clip.Y - cell.Y - bottom - terminal) < .000001d &&
                         Math.Abs(clip.Height - cell.Height + top + .96d + bottom + terminal) < .000001d,
@@ -179,7 +179,7 @@ internal static class DocxTableCellsTests
                 rowHeightRules: heights, borderSize: variant == "wide-border" ? "32" : null);
             foreach (var row in layout.Pages.SelectMany(p => p.Items.OfType<DocxTableRowLayout>()))
             foreach (var cell in row.Cells)
-                TestAssert.True(!DocxRenderer.ResolveTableCellContentClip(row, cell).Admitted,
+                TestAssert.True(!DocxTableCellClipGeometry.Resolve(row, cell).Admitted,
                     "Unqualified three-row compositions retain fallback: " + variant);
         }
     }
@@ -202,7 +202,7 @@ internal static class DocxTableCellsTests
                 bool admitted = row.RowIndex == automaticIndex || row.RowIndex == exactIndex;
                 TestAssert.Equal(row.RowIndex == exactIndex ? 12d : 0d, row.Table.AlignedMinimumRowBottomMargins[row.RowIndex]);
                 foreach (var cell in row.Cells)
-                    TestAssert.True(DocxRenderer.ResolveTableCellContentClip(row, cell).Admitted == admitted,
+                    TestAssert.True(DocxTableCellClipGeometry.Resolve(row, cell).Admitted == admitted,
                         "A content-dominated minimum row cannot borrow another row's qualified mask or margin advance.");
             }
         }
@@ -226,7 +226,7 @@ internal static class DocxTableCellsTests
                 pageHeight: variant == "frame" ? 160d : 2400d, rowHeightRules: heights);
             foreach (var row in layout.Pages.SelectMany(p => p.Items.OfType<DocxTableRowLayout>()))
             foreach (var cell in row.Cells)
-                TestAssert.True(!DocxRenderer.ResolveTableCellContentClip(row, cell).Admitted,
+                TestAssert.True(!DocxTableCellClipGeometry.Resolve(row, cell).Admitted,
                     "Unqualified mixed top rows retain their masks: " + variant);
         }
     }
@@ -277,7 +277,7 @@ internal static class DocxTableCellsTests
                             TestAssert.True(Math.Abs((before.TextLines.Single().BaselineY - before.Y - before.Height) -
                                 (after.TextLines.Single().BaselineY - after.Y - after.Height)) < .000001d,
                                 "Each row keeps its accepted paragraph baseline relative to the top of its content slot.");
-                            var clip = DocxRenderer.ResolveTableCellContentClip(actual, after);
+                            var clip = DocxTableCellClipGeometry.Resolve(actual, after);
                             double terminalBand = i == 1 ? .96d : 0d;
                             TestAssert.True(clip.Admitted && Math.Abs(clip.Y - after.Y - bottom - terminalBand) < .000001d &&
                                 Math.Abs(clip.Height - after.Height + top + .96d + bottom + terminalBand) < .000001d,
@@ -309,7 +309,7 @@ internal static class DocxTableCellsTests
                 pageHeight: variant == "frame" ? 160d : 2400d, rowHeightRules: heights);
             foreach (var row in layout.Pages.SelectMany(p => p.Items.OfType<DocxTableRowLayout>()))
             foreach (var cell in row.Cells)
-                TestAssert.True(!DocxRenderer.ResolveTableCellContentClip(row, cell).Admitted,
+                TestAssert.True(!DocxTableCellClipGeometry.Resolve(row, cell).Admitted,
                     "Unqualified mixed top rows retain their masks: " + variant);
         }
     }
@@ -330,12 +330,12 @@ internal static class DocxTableCellsTests
             foreach (var row in rows)
                 TestAssert.Equal(columnCount, row.Cells.Count);
             foreach (var cell in rows[automaticIndex].Cells)
-                TestAssert.True(DocxRenderer.ResolveTableCellContentClip(rows[automaticIndex], cell).Admitted,
+                TestAssert.True(DocxTableCellClipGeometry.Resolve(rows[automaticIndex], cell).Admitted,
                     "The independently qualified automatic mask remains admitted beside a content-dominated minimum row.");
             var fallback = rows[1 - automaticIndex];
             TestAssert.Equal(0d, fallback.Table.AlignedMinimumRowBottomMargins[fallback.RowIndex]);
             foreach (var cell in fallback.Cells)
-                TestAssert.True(!DocxRenderer.ResolveTableCellContentClip(fallback, cell).Admitted,
+                TestAssert.True(!DocxTableCellClipGeometry.Resolve(fallback, cell).Admitted,
                     "Content-dominated minimum rows retain their recorded margin and mask fallback.");
         }
     }
@@ -359,7 +359,7 @@ internal static class DocxTableCellsTests
                     "Word advances declared top rows by the bottom margin outside the paragraph slot.");
                 foreach (var cell in row.Cells)
                 {
-                    var clip = DocxRenderer.ResolveTableCellContentClip(row, cell);
+                    var clip = DocxTableCellClipGeometry.Resolve(row, cell);
                     TestAssert.True(clip.Admitted &&
                         Math.Abs(clip.X - cell.X - .48d) < .000001d &&
                         Math.Abs(clip.Y - cell.Y - 12d - terminalBand) < .000001d &&
@@ -388,7 +388,7 @@ internal static class DocxTableCellsTests
                 pageHeight: variant == "frame" ? 160d : 2400d);
             foreach (var row in layout.Pages.SelectMany(p => p.Items.OfType<DocxTableRowLayout>()))
             foreach (var cell in row.Cells)
-                TestAssert.True(!DocxRenderer.ResolveTableCellContentClip(row, cell).Admitted,
+                TestAssert.True(!DocxTableCellClipGeometry.Resolve(row, cell).Admitted,
                     "Unqualified declared top rows retain their content masks: " + variant);
         }
     }
@@ -426,7 +426,7 @@ internal static class DocxTableCellsTests
             foreach (var row in layout.Pages[0].Items.OfType<DocxTableRowLayout>())
             foreach (var cell in row.Cells)
             {
-                var clip = DocxRenderer.ResolveTableCellContentClip(row, cell);
+                var clip = DocxTableCellClipGeometry.Resolve(row, cell);
                 double bottom = 12d + (row.RowIndex == rows - 1 ? .96d : 0d);
                 TestAssert.True(clip.Admitted, "Qualified top-aligned automatic rows expose their inner content masks.");
                 TestAssert.True(Math.Abs(clip.X - cell.X - .48d) < .000001d &&
@@ -452,14 +452,14 @@ internal static class DocxTableCellsTests
                 pageHeight: variant == "frame" ? 160d : 2400d);
             foreach (var row in layout.Pages.SelectMany(p => p.Items.OfType<DocxTableRowLayout>()))
             foreach (var cell in row.Cells)
-                TestAssert.True(!DocxRenderer.ResolveTableCellContentClip(row, cell).Admitted,
+                TestAssert.True(!DocxTableCellClipGeometry.Resolve(row, cell).Admitted,
                     "Unqualified top-mask shapes, metrics and complex/frame-boundary paths retain full-cell fallback: " + variant);
         }
         var admitted = CreateParagraphMinimumLayout("min-single", full, verticalAlignment: "top")
             .Pages[0].Items.OfType<DocxTableRowLayout>().Single();
         foreach (var row in new[] { admitted with { FragmentCount = 2 }, admitted with { ReviewBorderPrintScale = .95d } })
         foreach (var cell in row.Cells)
-            TestAssert.True(!DocxRenderer.ResolveTableCellContentClip(row, cell).Admitted,
+            TestAssert.True(!DocxTableCellClipGeometry.Resolve(row, cell).Admitted,
                 "Fragmented/scaled top rows retain the full-cell mask.");
     }
 
@@ -473,7 +473,7 @@ internal static class DocxTableCellsTests
                 rowCount: 2, columnCount: rule is null ? 2 : 3, rowHeightRules: heights);
             foreach (var row in layout.Pages[0].Items.OfType<DocxTableRowLayout>())
             foreach (var cell in row.Cells)
-                TestAssert.True(!DocxRenderer.ResolveTableCellContentClip(row, cell).Admitted,
+                TestAssert.True(!DocxTableCellClipGeometry.Resolve(row, cell).Admitted,
                     "Default declared rules and larger mixed top tables retain their unqualified masks.");
         }
     }
@@ -575,7 +575,7 @@ internal static class DocxTableCellsTests
                 .Pages[0].Items.OfType<DocxTableRowLayout>().ElementAt(automaticIndex);
             foreach (var cell in row.Cells)
             {
-                var clip = DocxRenderer.ResolveTableCellContentClip(row, cell);
+                var clip = DocxTableCellClipGeometry.Resolve(row, cell);
                 double bottom = 12d + (automaticIndex == 1 ? .96d : 0d);
                 TestAssert.True(clip.Admitted, "Qualified automatic rows in a mixed grid expose their content masks.");
                 TestAssert.True(Math.Abs(clip.X - cell.X - .48d) < .000001d &&
@@ -605,7 +605,7 @@ internal static class DocxTableCellsTests
             {
                 TestAssert.True(cell.TextLines.All(l => l.BodyLineBoxBaselineInsetPoints is null),
                     "Unqualified mixed-grid shapes and complex/frame-boundary paths retain placement fallback: " + variant);
-                TestAssert.True(!DocxRenderer.ResolveTableCellContentClip(row, cell).Admitted,
+                TestAssert.True(!DocxTableCellClipGeometry.Resolve(row, cell).Admitted,
                     "Unqualified mixed-grid masks retain full-cell fallback.");
             }
         }
@@ -772,7 +772,7 @@ internal static class DocxTableCellsTests
             var row = rows[ri] with { Cells = cells };
             for (int ci = 0; ci < 2; ci++)
             {
-                var clip = DocxRenderer.ResolveTableCellContentClip(row, cells[ci]);
+                var clip = DocxTableCellClipGeometry.Resolve(row, cells[ci]);
                 TestAssert.True(clip.Admitted, "Every qualified automatic grid row must expose its content mask.");
                 TestAssert.True(Math.Abs(clip.X - (73.44d + ci * 234d)) < .000001d &&
                     Math.Abs(clip.Y - (ri == 0 ? 609.12d : 486.24d)) < .000001d &&
@@ -794,7 +794,7 @@ internal static class DocxTableCellsTests
             {
                 TestAssert.True(cell.TextLines.All(line => line.BodyLineBoxBaselineInsetPoints is null),
                     "Complex grids and tables that do not fit their complete current frame retain placement fallback.");
-                TestAssert.True(!DocxRenderer.ResolveTableCellContentClip(row, cell).Admitted,
+                TestAssert.True(!DocxTableCellClipGeometry.Resolve(row, cell).Admitted,
                     "Unqualified automatic grid masks retain full-cell clipping.");
             }
         }
@@ -802,7 +802,7 @@ internal static class DocxTableCellsTests
             .Pages[0].Items.OfType<DocxTableRowLayout>().First();
         foreach (var row in new[] { admitted with { FragmentCount = 2 }, admitted with { ReviewBorderPrintScale = .95d } })
             foreach (var cell in row.Cells)
-                TestAssert.True(!DocxRenderer.ResolveTableCellContentClip(row, cell).Admitted,
+                TestAssert.True(!DocxTableCellClipGeometry.Resolve(row, cell).Admitted,
                     "Fragmented and scaled automatic grid masks retain fallback.");
     }
 
@@ -847,7 +847,7 @@ internal static class DocxTableCellsTests
         var row = layout.Pages[0].Items.OfType<DocxTableRowLayout>().Single();
         var cell = row.Cells.Single();
         TestAssert.Equal(1d, DocxTableBorderGeometry.ResolveNominalWidth(cell.Cell.Borders.Single(border => border.Edge == "top")));
-        TestAssert.True(!DocxRenderer.ResolveTableCellContentClip(row, cell).Admitted,
+        TestAssert.True(!DocxTableCellClipGeometry.Resolve(row, cell).Admitted,
             "Mixed double/single styles must retain the prior band widths and complete cell mask.");
         // Unprojected borders also retain their raw widths in static/related stories.
         TestAssert.Equal(.96d, DocxTableBorderGeometry.ResolveVisibleWidth(new DocxTableCellBorder("top", "double", "000000", "8")));
@@ -857,7 +857,7 @@ internal static class DocxTableCellsTests
                 new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer()), CancellationToken.None);
             var fallbackRow = fallback.Pages[0].Items.OfType<DocxTableRowLayout>().Single();
             var fallbackCell = fallbackRow.Cells.Single();
-            TestAssert.True(!DocxRenderer.ResolveTableCellContentClip(fallbackRow, fallbackCell).Admitted,
+            TestAssert.True(!DocxTableCellClipGeometry.Resolve(fallbackRow, fallbackCell).Admitted,
                 "Omitted/invalid/nonpositive authored widths must retain the prior mask.");
             TestAssert.Equal(size == "0" ? .25d : .75d, DocxTableBorderGeometry.ResolveNominalWidth(fallbackCell.Cell.Borders[0]));
         }
@@ -885,7 +885,7 @@ internal static class DocxTableCellsTests
             var cell = row.Cells.Single() with { Cell = row.Cells.Single().Cell with {
                 Borders = [new DocxTableCellBorder("top", "double", "000000", "8")] } };
             row = row with { Cells = [cell] };
-            TestAssert.True(!DocxRenderer.ResolveTableCellContentClip(row, cell).Admitted,
+            TestAssert.True(!DocxTableCellClipGeometry.Resolve(row, cell).Admitted,
                 "Double width correction must not broaden the body/frame admission.");
         }
         var automatic = CreateParagraphMinimumLayout("min", full, verticalAlignment: "center")
@@ -894,7 +894,7 @@ internal static class DocxTableCellsTests
             Borders = [new DocxTableCellBorder("bottom", "double", "000000", "8")] } };
         foreach (var row in new[] { automatic with { Cells = [automaticCell], FragmentCount = 2 },
             automatic with { Cells = [automaticCell], ReviewBorderPrintScale = .95d } })
-            TestAssert.True(!DocxRenderer.ResolveTableCellContentClip(row, automaticCell).Admitted,
+            TestAssert.True(!DocxTableCellClipGeometry.Resolve(row, automaticCell).Admitted,
                 "Fragmented and scaled masks retain fallback after the double width fix.");
     }
 
@@ -918,7 +918,7 @@ internal static class DocxTableCellsTests
                 Cell = row.Cells.Single().Cell with { Borders = new[] { "top", "left", "bottom", "right" }
                     .Select(edge => new DocxTableCellBorder(edge, style, "000000", size)).ToArray() } };
             row = row with { Cells = [cell] };
-            var clip = DocxRenderer.ResolveTableCellContentClip(row, cell);
+            var clip = DocxTableCellClipGeometry.Resolve(row, cell);
             TestAssert.True(clip.Admitted, "Eligible automatic cells must use the independent Word content bounds.");
             TestAssert.True(Math.Abs(clip.X - x) < .000001d && Math.Abs(clip.Y - y) < .000001d &&
                 Math.Abs(clip.Width - width) < .000001d && Math.Abs(clip.Height - clipHeight) < .000001d,
@@ -959,7 +959,7 @@ internal static class DocxTableCellsTests
                 pageHeight: pageHeight, rowCount: rows, columnCount: columns);
             foreach (var row in layout.Pages.SelectMany(page => page.Items.OfType<DocxTableRowLayout>()))
             foreach (var cell in row.Cells)
-                TestAssert.True(!DocxRenderer.ResolveTableCellContentClip(row, cell).Admitted,
+                TestAssert.True(!DocxTableCellClipGeometry.Resolve(row, cell).Admitted,
                     "Complex and frame-boundary automatic cells must retain the full mask.");
         }
         DocxTableRowLayout admitted = CreateParagraphMinimumLayout("min", full, verticalAlignment: "center")
@@ -975,7 +975,7 @@ internal static class DocxTableCellsTests
             if (variant == "width") cell = cell with { Width = 0d };
             if (variant == "height") cell = cell with { Height = 1d, ContentPaddingTop = 6d, ContentPaddingBottom = 12d };
             row = row with { Cells = [cell] };
-            var clip = DocxRenderer.ResolveTableCellContentClip(row, cell);
+            var clip = DocxTableCellClipGeometry.Resolve(row, cell);
             TestAssert.True(!clip.Admitted && clip.X == cell.X && clip.Y == cell.Y && clip.Width == cell.Width && clip.Height == cell.Height,
                 "Unsupported or collapsed masks retain their exact full-cell bounds: " + variant);
         }

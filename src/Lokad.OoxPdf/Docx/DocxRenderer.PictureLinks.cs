@@ -134,8 +134,8 @@ internal sealed partial class DocxRenderer
                 var cell = row.Cells[index];
                 if (!OwnsUnmergedPictureCell(cell)) continue;
                 if (!cell.InlineImages.Any(image => select(image.Image)) && cell.NestedRows.Count == 0) continue;
-                geometryRow ??= xOffset == 0d && yOffset == 0d ? row : ShiftTableRowGeometry(row, xOffset, yOffset);
-                var cellClip = ResolveTableCellContentClip(geometryRow, geometryRow.Cells[index]);
+                geometryRow ??= ResolveTablePaintGeometry(row, xOffset, yOffset);
+                var cellClip = DocxTableCellClipGeometry.Resolve(geometryRow, geometryRow.Cells[index]);
                 var clip = IntersectPaintViewports(parent, new PdfRectangle(cellClip.X, cellClip.Y, cellClip.Width, cellClip.Height));
                 foreach (var image in cell.InlineImages)
                 {

@@ -1329,6 +1329,76 @@ internal static class DocxSectionNavigationTests
             new XElement(W + "tblGrid", new XElement(W + "gridCol", new XAttribute(W + "w", "3000"))), children);
     }
 
+    public static void DocxNestedRowBookmarksFollowThePaintedMergeRestart()
+    {
+        foreach (var mode in Modes)
+        {
+            PdfPage plain = RenderTable(mode, merge: false).Single();
+            PdfPage merged = RenderTable(mode, merge: true).Single();
+            const string expectedText = "JUMP NESTED NEIGHBOR 1 NEIGHBOR 2 NEIGHBOR 3";
+            TestAssert.Equal(expectedText, string.Join(' ', Text(plain).Split(' ', StringSplitOptions.RemoveEmptyEntries)));
+            TestAssert.Equal(expectedText, string.Join(' ', Text(merged).Split(' ', StringSplitOptions.RemoveEmptyEntries)));
+            PdfLinkAnnotation expected = plain.Annotations.Single();
+            TestAssert.True(expected.Destination is { PageIndex: 0, Left: > 0d, Top: > 0d } target &&
+                target.Top <= plain.Height, "The unmerged control targets the visible nested row on page one.");
+            TestAssert.Equal(expected, merged.Annotations.Single());
+
+            var split = RenderTable(mode, merge: true, pageHeight: 2300);
+            TestAssert.Contains("JUMP", Text(split[0]));
+            TestAssert.True(split.Skip(1).Any(page => Text(page).Contains("NEIGHBOR 3", StringComparison.Ordinal)),
+                "The merge reaches a later physical page.");
+            TestAssert.Equal(0, split.Sum(page => page.Annotations.Count));
+
+            PdfPage clipped = RenderTable(mode, merge: true, clipNestedRow: true).Single();
+            TestAssert.Contains("BEFORE TARGET", Text(clipped));
+            TestAssert.DoesNotContain("NESTED", Text(clipped));
+            TestAssert.Equal(0, clipped.Annotations.Count);
+        }
+
+        static PdfPage[] RenderTable(OoxPdfDocxMarkupMode mode, bool merge, int pageHeight = 6000, bool clipNestedRow = false)
+        {
+            var nested = Table(2000, 1,
+                clipNestedRow ? Row(3600, new XElement(W + "tc", Paragraph("BEFORE TARGET"))) : null,
+                new XElement(W + "bookmarkStart", new XAttribute(W + "id", 14), new XAttribute(W + "name", "NestedDestination")),
+                new XElement(W + "tr", new XElement(W + "tc", Paragraph("NESTED"))),
+                new XElement(W + "bookmarkEnd", new XAttribute(W + "id", 14)));
+            var rows = Enumerable.Range(1, 3).Select(number => Row(960,
+                new XElement(W + "tc",
+                    merge ? new XElement(W + "tcPr", new XElement(W + "vMerge",
+                        number == 1 ? new XAttribute(W + "val", "restart") : null)) : null,
+                    number == 1 ? nested : null,
+                    new XElement(W + "p")),
+                new XElement(W + "tc", Paragraph($"NEIGHBOR {number}"))));
+            var document = new XElement(W + "document", new XElement(W + "body",
+                new XElement(W + "p", new XElement(W + "hyperlink", new XAttribute(W + "anchor", "NestedDestination"),
+                    new XElement(W + "r", new XElement(W + "t", "JUMP")))),
+                Table(3000, 2, rows),
+                new XElement(W + "sectPr",
+                    new XElement(W + "pgSz", new XAttribute(W + "w", 8640), new XAttribute(W + "h", pageHeight)),
+                    new XElement(W + "pgMar", new XAttribute(W + "top", 480), new XAttribute(W + "bottom", 480),
+                        new XAttribute(W + "left", 720), new XAttribute(W + "right", 720)))));
+            using var input = TestFixtures.CreateZipPackage(new Dictionary<string, string>
+            {
+                ["[Content_Types].xml"] = TestFixtures.DocxContentTypes,
+                ["_rels/.rels"] = TestFixtures.DocxPackageRelationships,
+                ["word/document.xml"] = document.ToString(SaveOptions.DisableFormatting)
+            });
+            using var package = OoxPackage.Open(input, default);
+            var source = new DocxReader().Read(package, null, default, markupMode: mode);
+            return Renderer(mode).RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
+        }
+
+        static XElement Row(int height, params XElement[] cells) => new(W + "tr",
+            new XElement(W + "trPr", new XElement(W + "cantSplit"),
+                new XElement(W + "trHeight", new XAttribute(W + "val", height), new XAttribute(W + "hRule", "exact"))),
+            cells);
+
+        static XElement Table(int width, int columns, params object?[] children) => new(W + "tbl",
+            new XElement(W + "tblPr", new XElement(W + "tblLayout", new XAttribute(W + "type", "fixed"))),
+            new XElement(W + "tblGrid", Enumerable.Range(0, columns)
+                .Select(_ => new XElement(W + "gridCol", new XAttribute(W + "w", width)))), children);
+    }
+
     public static void DocxCellBoundaryBookmarksKeepThePaintedCellDestination()
     {
         foreach (var mode in Modes)

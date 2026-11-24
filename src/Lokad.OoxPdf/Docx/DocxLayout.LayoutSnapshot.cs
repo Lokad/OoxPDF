@@ -865,7 +865,7 @@ internal sealed partial record DocxLayoutSnapshot(
             ? cellText
             : string.Concat(visualParagraphs.SelectMany(paragraph => paragraph.Runs).Select(run => run.Text));
         TextProfile textProfile = BuildTextProfile();
-        DocxTableCellClipSnapshot clip = DocxRenderer.ResolveTableCellContentClip(row, cellLayout);
+        DocxTableCellClipSnapshot clip = DocxTableCellClipGeometry.Resolve(row, cellLayout);
         return new DocxTableCellSnapshot(
             cellIndex,
             cellLayout.X,

@@ -302,7 +302,7 @@ internal sealed partial class DocxRenderer
                     token.ThrowIfCancellationRequested();
                     var cell = row.Cells[cellIndex];
                     if (!ShouldRenderTableCellVisualFragment(cell)) continue;
-                    var clip = ResolveTableCellContentClip(geometry, geometry.Cells[cellIndex]);
+                    var clip = DocxTableCellClipGeometry.Resolve(geometry, geometry.Cells[cellIndex]);
                     var cellFrame = new PdfRectangle(clip.X, clip.Y, clip.Width, clip.Height);
                     var cellViewport = parent is { } enclosing ? IntersectPaintViewports(enclosing, cellFrame) : cellFrame;
                     foreach (var line in cell.TextLines) yield return (line, cellViewport, rowOwner);

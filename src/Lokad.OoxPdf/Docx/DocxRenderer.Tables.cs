@@ -135,11 +135,22 @@ internal sealed partial class DocxRenderer
                 token.ThrowIfCancellationRequested();
                 var cell = row.Cells[i];
                 if ((cell.NestedRows.Count == 0 && cell.InlineTextBoxes.Count == 0) ||
-                    cell.VisualOwnership != DocxTableCellVisualOwnership.OwnCell ||
-                    cell.Cell.HasVerticalMerge)
+                    cell.VisualOwnership != DocxTableCellVisualOwnership.OwnCell)
                     continue;
-                geometryRow ??= xOffset == 0d && yOffset == 0d ? row : ShiftTableRowGeometry(row, xOffset, yOffset);
-                var clip = DocxTableCellClipGeometry.Resolve(geometryRow, geometryRow.Cells[i], parentClip ?? pageClip);
+                geometryRow ??= ResolveTablePaintGeometry(row, xOffset, yOffset);
+                var geometryCell = geometryRow.Cells[i];
+                var viewport = parentClip ?? pageClip;
+                if (cell.Cell.HasVerticalMerge)
+                {
+                    // Borrowed rows never own a destination. For a restart,
+                    // descend only when its full painted frame fits the viewport.
+                    viewport = DocxTableCellClipGeometry.Intersect(viewport, pageClip);
+                    if (row.FragmentCount != 1 ||
+                        !DocxTableCellClipGeometry.ContainsHorizontalRange(viewport, geometryCell.X, geometryCell.Width) ||
+                        !DocxTableCellClipGeometry.ContainsVerticalRange(viewport, geometryCell.Y, geometryCell.Y + geometryCell.Height))
+                        continue;
+                }
+                var clip = DocxTableCellClipGeometry.Resolve(geometryRow, geometryCell, viewport);
                 foreach (var nested in cell.NestedRows)
                     AddTargets(nested, clip);
                 foreach (var box in cell.InlineTextBoxes)
@@ -241,7 +252,7 @@ internal sealed partial class DocxRenderer
             {
                 DocxTableCellLayout geometryCell = geometryRow.Cells[cellIndex];
                 graphics.SaveState();
-                DocxTableCellClipSnapshot clip = ResolveTableCellContentClip(geometryRow, geometryCell);
+                DocxTableCellClipSnapshot clip = DocxTableCellClipGeometry.Resolve(geometryRow, geometryCell);
                 graphics.ClipRectangle(clip.X, clip.Y, clip.Width, clip.Height);
                 bool ownsCompleteCell = row.FragmentCount == 1 && OwnsUnmergedPictureCell(cellLayout);
                 var cellNavigation = navigation.ClipTo(new PdfRectangle(clip.X, clip.Y, clip.Width, clip.Height)) with
