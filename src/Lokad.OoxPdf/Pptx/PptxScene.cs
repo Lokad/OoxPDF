@@ -232,8 +232,19 @@ internal sealed partial class PptxSceneBuilder
             .Element(PresentationNamespace + "cSld")?
             .Element(PresentationNamespace + "bg")?
             .Element(PresentationNamespace + "bgPr");
-        return PptxColorResolver.TryReadSolidColorWithAlpha(background, theme, colorMap, out RgbColor color, out double alpha)
-            ? new PptxSceneBackground(true, color, alpha)
+        if (PptxColorResolver.TryReadSolidColorWithAlpha(background, theme, colorMap, out RgbColor color, out double alpha))
+        {
+            return new PptxSceneBackground(true, color, alpha);
+        }
+
+        if (background?.Element(DrawingNamespace + "gradFill") is null)
+        {
+            return default;
+        }
+
+        PptxSceneGradientFill gradient = ReadLinearGradientFill(background, theme, colorMap);
+        return gradient is { HasGradient: true, HasUnsupportedGradient: false }
+            ? new PptxSceneBackground(true, default, 1d, gradient)
             : default;
     }
 

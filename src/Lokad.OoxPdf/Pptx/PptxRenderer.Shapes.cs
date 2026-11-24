@@ -41,20 +41,29 @@ internal sealed partial class PptxRenderer
             : slide.LayoutBackground.HasFill ? slide.LayoutBackground : slide.MasterBackground;
         graphics.SaveState();
         ClipSlideBoundsEvenOdd(context.Document, graphics);
-        if (background.HasFill)
+        double width = context.Document.SlideWidthPoints;
+        double height = context.Document.SlideHeightPoints;
+        if (background.GradientFill is { } sourceGradient && ToGradientFill(sourceGradient) is { } gradient)
         {
-            if (background.Alpha < 0.999d)
-            {
-                graphics.SetAlpha(background.Alpha, 1d);
-            }
-
-            graphics.SetFillRgb(background.Color.Red, background.Color.Green, background.Color.Blue);
+            DrawLinearGradientFill(graphics, gradient, 0d, 0d, width, height);
         }
         else
         {
-            graphics.SetFillRgb(255, 255, 255);
+            if (background.HasFill)
+            {
+                if (background.Alpha < 0.999d)
+                {
+                    graphics.SetAlpha(background.Alpha, 1d);
+                }
+
+                graphics.SetFillRgb(background.Color.Red, background.Color.Green, background.Color.Blue);
+            }
+            else
+            {
+                graphics.SetFillRgb(255, 255, 255);
+            }
+            graphics.FillRectangleEvenOdd(0, 0, width, height);
         }
-        graphics.FillRectangleEvenOdd(0, 0, context.Document.SlideWidthPoints, context.Document.SlideHeightPoints);
         graphics.RestoreState();
     }
 

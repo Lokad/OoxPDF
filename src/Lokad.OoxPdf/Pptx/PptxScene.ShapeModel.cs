@@ -34,7 +34,8 @@ internal sealed record PptxSceneSlide(
 internal readonly record struct PptxSceneBackground(
     bool HasFill,
     RgbColor Color,
-    double Alpha);
+    double Alpha,
+    PptxSceneGradientFill? GradientFill = null);
 
 // Scene creation and image preparation validate kind/payload combinations through
 // the same factory. TextBody and Bounds can accompany any kind. Scene traversal

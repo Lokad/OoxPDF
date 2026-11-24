@@ -6,16 +6,16 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxSceneBuilder
 {
-    internal static PptxSceneGradientFill ReadShapeGradientFill(XElement? shapeProperties, PptxTheme theme, PptxColorMap colorMap)
+    internal static PptxSceneGradientFill ReadLinearGradientFill(XElement? properties, PptxTheme theme, PptxColorMap colorMap)
     {
-        XElement? gradientFill = shapeProperties?.Element(DrawingNamespace + "gradFill");
+        XElement? gradientFill = properties?.Element(DrawingNamespace + "gradFill");
         XElement? gradientStopList = gradientFill?.Element(DrawingNamespace + "gsLst");
         if (gradientFill is null)
         {
             return new PptxSceneGradientFill(false, false, 0d, []);
         }
 
-        if (gradientStopList is null)
+        if (gradientStopList is null || UsesTitleShading(properties))
         {
             return new PptxSceneGradientFill(false, true, 0d, []);
         }
@@ -45,6 +45,7 @@ internal sealed partial class PptxSceneBuilder
     {
         XName? ownerName = gradientFill.Parent?.Name;
         if ((ownerName != PresentationNamespace + "spPr" && ownerName != PresentationNamespace + "bgPr") ||
+            UsesTitleShading(gradientFill.Parent) ||
             gradientFill.Element(DrawingNamespace + "lin") is null ||
             gradientFill.Element(DrawingNamespace + "gsLst") is not { } stopList)
         {
@@ -56,6 +57,10 @@ internal sealed partial class PptxSceneBuilder
             stops.All(stop => stop.Elements().Any(PptxColorResolver.IsDrawingColorElement)) &&
             PptxColorResolver.HasSupportedGradientStopAlpha(stops);
     }
+
+    private static bool UsesTitleShading(XElement? properties) =>
+        properties?.Name == PresentationNamespace + "bgPr" &&
+        OoxBoolean.ParseAttribute(properties, "shadeToTitle", false);
 
     private static bool TryReadGradientStop(XElement gradientStop, PptxTheme theme, PptxColorMap colorMap, out PptxSceneGradientStop stop)
     {

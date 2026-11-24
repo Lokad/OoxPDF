@@ -272,7 +272,7 @@ internal sealed partial class PptxSceneBuilder
         return new PptxSceneChartShapeStyle(
             noFill,
             fill,
-            noFill ? new PptxSceneGradientFill(false, false, 0d, []) : ReadShapeGradientFill(shapeProperties, theme, colorMap),
+            noFill ? new PptxSceneGradientFill(false, false, 0d, []) : ReadLinearGradientFill(shapeProperties, theme, colorMap),
             noFill ? default : ReadChartPatternFill(shapeProperties, theme, colorMap),
             noFill ? default : ReadChartPictureFill(shapeProperties),
             ReadChartLine(shapeProperties, theme, colorMap),

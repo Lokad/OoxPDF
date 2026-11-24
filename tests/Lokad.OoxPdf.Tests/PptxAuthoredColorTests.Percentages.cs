@@ -55,7 +55,7 @@ internal static partial class PptxAuthoredColorTests
         var recolor = PptxSceneBuilder.ReadImageRecolor(picture, PptxTheme.Empty, PptxColorMap.Default);
         TestAssert.Equal(-.25d, recolor.Brightness); TestAssert.Equal(.5d, recolor.Contrast);
         var gradient = XElement.Parse($"<p:spPr xmlns:p=\"{p}\" xmlns:a=\"{a}\"><a:gradFill><a:gsLst><a:gs pos=\"0%\"><a:srgbClr val=\"FF0000\"/></a:gs><a:gs pos=\"100%\"><a:srgbClr val=\"0000FF\"/></a:gs></a:gsLst><a:lin/></a:gradFill></p:spPr>");
-        var fill = PptxSceneBuilder.ReadShapeGradientFill(gradient, PptxTheme.Empty, PptxColorMap.Default);
+        var fill = PptxSceneBuilder.ReadLinearGradientFill(gradient, PptxTheme.Empty, PptxColorMap.Default);
         TestAssert.True(fill.HasGradient && !fill.HasUnsupportedGradient, "Percent stop offsets are supported source values.");
         TestAssert.Equal(0d, fill.Stops[0].Offset); TestAssert.Equal(1d, fill.Stops[1].Offset);
     }

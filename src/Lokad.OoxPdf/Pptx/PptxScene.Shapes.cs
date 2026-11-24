@@ -64,7 +64,7 @@ internal sealed partial class PptxSceneBuilder
             shapeProperties?.Element(DrawingNamespace + "noFill") is not null,
             shapeProperties?.Element(DrawingNamespace + "ln")?.Element(DrawingNamespace + "noFill") is not null,
             fill,
-            ReadShapeGradientFill(shapeProperties, theme, colorMap),
+            ReadLinearGradientFill(shapeProperties, theme, colorMap),
             ReadShapePatternFill(shapeProperties, theme, colorMap),
             ReadShapePictureFill(shapeProperties, package, relationships, theme, colorMap),
             HasUnsupportedAlpha(shapeProperties),

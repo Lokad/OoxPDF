@@ -55,6 +55,64 @@ internal static partial class PptxInheritanceTests
         }
     }
 
+    public static void PptxInheritanceLinearBackgroundsPaintOneShading()
+    {
+        string[] partsInOrder = ["ppt/slideMasters/slideMaster1.xml", "ppt/slideLayouts/slideLayout1.xml", "ppt/slides/slide1.xml"];
+        foreach (var (owner, fallback) in new[] { (0, ""), (1, ""), (2, ""), (2, "mixed-alpha"), (2, "title") })
+        {
+            var parts = Parts("background-inheritance");
+            for (int index = 0; index < partsInOrder.Length; index++)
+            {
+                int source = index;
+                Edit(parts, partsInOrder[index], xml =>
+                {
+                    var story = xml.Root!.Element(P + "cSld")!;
+                    story.Elements(P + "bg").Remove();
+                    if (source > owner) return;
+                    var properties = new XElement(P + "bgPr",
+                        source == owner
+                            ? new XElement(A + "gradFill",
+                                new XElement(A + "gsLst", Stop(0, "FF0000", 50000),
+                                    Stop(100000, "0000FF", fallback == "mixed-alpha" ? 100000 : 50000)),
+                                new XElement(A + "lin", new XAttribute("ang", 5400000)))
+                            : new XElement(A + "solidFill", new XElement(A + "srgbClr", new XAttribute("val", "00FF00"))));
+                    if (source == owner && fallback == "title") properties.SetAttributeValue("shadeToTitle", "1");
+                    story.AddFirst(new XElement(P + "bg", properties));
+                });
+            }
+
+            WithDeck(parts, (document, package) =>
+            {
+                var diagnostics = new List<OoxPdfDiagnostic>();
+                var page = Render(document, package, diagnostics)[0];
+                bool gradientWarning = diagnostics.Any(d => d.SlideIndex == 1 && d.Id == "PPTX_UNSUPPORTED_GRADIENT_FILL");
+                TestAssert.Equal(fallback.Length != 0, gradientWarning);
+                if (fallback.Length != 0)
+                {
+                    TestAssert.Equal(0, page.Shadings.Count);
+                    CheckBackground(page, "0 1 0 rg");
+                    return;
+                }
+
+                PdfShadingResource resource = page.Shadings.Single();
+                var fill = (PdfAxialShading)resource.Shading;
+                TestAssert.True(Math.Abs(fill.X0 - page.Width / 2d) < 1e-8 &&
+                    Math.Abs(fill.X1 - page.Width / 2d) < 1e-8 &&
+                    Math.Abs(fill.Y0 - page.Height) < 1e-8 && Math.Abs(fill.Y1) < 1e-8,
+                    "The background gradient uses the full slide frame.");
+                TestAssert.Equal(new PdfShadingStop(0d, 255, 0, 0), fill.Stops.First());
+                TestAssert.Equal(new PdfShadingStop(1d, 0, 0, 255), fill.Stops.Last());
+                TestAssert.Contains("/" + resource.ResourceName + " sh", page.Content);
+                TestAssert.DoesNotContain("0 1 0 rg", page.Content);
+                TestAssert.True(page.ExtGStates.Any(state => state.FillAlpha == .5d), "The selected background retains its uniform alpha.");
+            });
+        }
+
+        static XElement Stop(int offset, string rgb, int alpha) =>
+            new(A + "gs", new XAttribute("pos", offset),
+                new XElement(A + "srgbClr", new XAttribute("val", rgb), new XElement(A + "alpha", new XAttribute("val", alpha))));
+    }
+
     public static void PptxInheritanceOfficeLayoutAndSlideMasterPermissions()
     {
         using var gold = JsonDocument.Parse(File.ReadAllText(Case("pptx-inheritance-office.json")));
