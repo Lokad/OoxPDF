@@ -23,17 +23,20 @@ internal static partial class SvgTextTests
 
         static string Picture(string hidden) => Svg($"""
             <text x="20" y="40" font-size="24" font-kerning="none" fill="#112233">NOR<tspan visibility="hidden">{hidden}</tspan>TH</text>
-            <text x="160" y="80" font-size="24" font-kerning="none" text-anchor="middle" fill="#112233">W<tspan opacity="0">{hidden}</tspan>EST</text>
+            <text x="160" y="80" font-size="24" font-kerning="none" text-anchor="middle" fill="#2254b4">W<tspan opacity="0">{hidden}</tspan>EST</text>
             <rect x="200" y="100" width="20" height="10" fill="lime"/>
             """);
 
-        AssertSvgPaintInBothFormats(Picture(hiddenControl), Picture(missing),
-            pdf => TestAssert.Equal(9, LabelPaths(pdf)), "0 1 0 rg");
+        AssertSvgPaintInBothFormats(Picture(hiddenControl), Picture(missing), pdf =>
+        {
+            TestAssert.Equal(5, LabelPaths(pdf));
+            TestAssert.Equal(4, LabelPaths(pdf, "0.133 0.329 0.706 rg"));
+        }, "0 1 0 rg");
 
         var diagnostics = new List<OoxPdfDiagnostic>();
-        var visible = Paint(Svg($"""<text x="20" y="40" fill="#112233">NOR{missing}TH</text><rect width="10" height="10" fill="lime"/>"""), diagnostics);
-        TestAssert.Equal(0, LabelPaths(visible.ToString()));
-        TestAssert.Contains("0 1 0 rg", visible.ToString());
+        string visible = Paint(Svg($"""<text x="20" y="40" fill="#112233">NOR{missing}TH</text><rect width="10" height="10" fill="lime"/>"""), diagnostics).ToString();
+        TestAssert.DoesNotContain(LabelColor, visible);
+        TestAssert.Contains("0 1 0 rg", visible);
         TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" &&
             d.Message.Contains("unsupported text element", StringComparison.Ordinal)), "An unmapped visible glyph keeps the existing diagnostic.");
     }
