@@ -36,7 +36,8 @@ if (-not (Test-Path -LiteralPath $familyPath)) {
     throw "Unknown visual family '$Family'. Expected $familyPath."
 }
 
-$familyManifest = Get-Content -Raw -LiteralPath $familyPath | ConvertFrom-Json
+$familyBinding = Read-VisualCaseManifest $familyPath
+$familyManifest = $familyBinding.Manifest
 $caseRoot = Join-Path $repoRoot "visual-cases/cases"
 $artifactRoot = Join-Path $repoRoot "artifacts/visual"
 $reportRoot = Join-Path $artifactRoot "reports"
@@ -260,8 +261,13 @@ if ($Tag.Count -ne 0) {
 if ($OnlyUnsupported) {
     $supportCatalog = Use-SupportCatalogLock { Read-SupportCatalog }
     $cases = @($cases | Where-Object {
-        $id = $_.Name
-        -not $supportCatalog.ContainsKey($id) -or $supportCatalog[$id].status -ne "supported"
+        $previous = $supportCatalog[$_.Name]
+        if ($previous.status -ne "supported" -or $previous.family -cne $Family -or
+            $previous.familySha256 -cne $familyBinding.Sha256) { return $true }
+        if (!$caseBindings.ContainsKey($_.FullName)) {
+            $caseBindings[$_.FullName] = Read-VisualCaseManifest (Join-Path $_.FullName 'case.json')
+        }
+        $previous.caseSha256 -cne $caseBindings[$_.FullName].Sha256
     })
 }
 
@@ -412,6 +418,8 @@ if ($UpdateCatalog) {
             $supportCatalog[$row.id] = [pscustomobject]@{
                 id = $row.id
                 family = $row.family
+                familySha256 = $familyBinding.Sha256
+                caseSha256 = $row.caseSha256
                 kind = $row.kind
                 classification = $row.classification
                 status = $row.status

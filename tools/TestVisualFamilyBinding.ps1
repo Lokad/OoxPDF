@@ -39,6 +39,12 @@ if ($VisualDiffPath) { $identity.VisualDiffSha256 = (Get-FileHash -LiteralPath $
 if ($RasterizerPath) { $identity.RasterizerSha256 = (Get-FileHash -LiteralPath $RasterizerPath).Hash }
 if ($PdfInspectorPath) { $identity.PdfInspectorSha256 = (Get-FileHash -LiteralPath $PdfInspectorPath).Hash }
 $identity | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $run 'run-info.json')
+if ($recordCatalogMetrics) {
+    $comparison = Join-Path $run 'comparison'
+    New-Item -ItemType Directory -Path $comparison | Out-Null
+    '[{"DimensionsMatch":true,"StructuralSimilarity":0.997,"ForegroundColorHistogramCorrelation":1}]' |
+        Set-Content -LiteralPath (Join-Path $comparison 'metrics.json')
+}
 if ($overlapCatalogUpdates -and $id -ceq 'probe-a') {
     & (Join-Path $PSScriptRoot 'CheckVisualFamily.ps1') -Family probe -CasePattern probe-b -CliPath $CliPath -SkipBuild -UpdateCatalog | Out-Null
 }
@@ -118,9 +124,11 @@ if(@(Get-Content $buildLog).Count -ne $before+2) {throw 'A false font flag cause
 
 # Interleave disjoint writers deterministically. The nested family publishes
 # probe-b while the first family still has probe-a in progress.
+$recordCatalogMetrics = $true
 $overlapCatalogUpdates = $true
 & $script -Family probe -CasePattern probe-a -Tag approximate -CliPath $frozenCli -SkipBuild -OnlyUnsupported -UpdateCatalog | Out-Null
 $overlapCatalogUpdates = $false
+$recordCatalogMetrics = $false
 $catalogPath = Join-Path $repo 'artifacts/visual/support-catalog.json'
 $catalog = Get-Content -LiteralPath $catalogPath -Raw | ConvertFrom-Json
 if (($catalog.cases.id -join ',') -cne 'probe-a,probe-b') { throw 'An overlapping family update lost a catalog row' }
@@ -130,6 +138,45 @@ if (@(Get-ChildItem -LiteralPath (Split-Path -Parent $catalogPath) -Filter 'supp
 
 $manifestPath = Join-Path $repo 'visual-cases/cases/probe-a/case.json'
 $originalManifest = [IO.File]::ReadAllBytes($manifestPath)
+$familyManifestPath = Join-Path $repo 'visual-cases/families/probe.json'
+$originalFamily = [IO.File]::ReadAllBytes($familyManifestPath)
+$originalCatalog = [IO.File]::ReadAllBytes($catalogPath)
+$buildCount = @(Get-Content $buildLog).Count
+$caseCount = @(Get-Content $caseLog).Count
+if (@($catalog.cases | Where-Object status -ne 'supported').Count -or
+    @(& $script -Family probe -List -OnlyUnsupported).Count) {
+    throw 'Unchanged manifests must retain the prior supported verdicts'
+}
+$case = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json -AsHashtable
+$case.support = @{minStructuralSimilarity=0.999}
+try {
+    $case | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $manifestPath
+    if ((@(& $script -Family probe -List -OnlyUnsupported) -join ',') -cne 'probe-a') {
+        throw 'A changed case threshold must invalidate only its own verdict'
+    }
+}
+finally { [IO.File]::WriteAllBytes($manifestPath, $originalManifest) }
+try {
+    '{"casePatterns":["probe-*"],"support":{"minStructuralSimilarity":0.999}}' |
+        Set-Content -LiteralPath $familyManifestPath
+    if ((@(& $script -Family probe -List -OnlyUnsupported) -join ',') -cne 'probe-a,probe-b') {
+        throw 'A changed family threshold must invalidate its verdicts'
+    }
+}
+finally { [IO.File]::WriteAllBytes($familyManifestPath, $originalFamily) }
+try {
+    $catalog.cases[0].PSObject.Properties.Remove('caseSha256')
+    $catalog.cases[0].PSObject.Properties.Remove('familySha256')
+    $catalog | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $catalogPath
+    if ((@(& $script -Family probe -List -OnlyUnsupported) -join ',') -cne 'probe-a') {
+        throw 'An unbound legacy verdict must keep the case eligible'
+    }
+}
+finally { [IO.File]::WriteAllBytes($catalogPath, $originalCatalog) }
+if (@(Get-Content $buildLog).Count -ne $buildCount -or @(Get-Content $caseLog).Count -ne $caseCount) {
+    throw 'Listing unsupported cases must stay free of builds and conversions'
+}
+
 $familyReport = Join-Path $repo 'artifacts/visual/reports/probe.json'
 $reportHash = (Get-FileHash -LiteralPath $familyReport).Hash
 $changeCaseAfterSelection = $true
