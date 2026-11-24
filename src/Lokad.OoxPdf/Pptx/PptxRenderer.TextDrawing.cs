@@ -464,45 +464,42 @@ internal sealed partial class PptxRenderer
         string resourcePrefix)
     {
         var embeddableUses = new List<TextFontUse>();
-        foreach (PptxPositionedTextSpan emissionSpan in spans.SelectMany(SplitSpanByGlyphTypeface))
+        foreach (PptxPositionedTextSpan span in spans)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            TextRun run = emissionSpan.Run;
-            var key = FontRequestForRun(run);
-            if (fonts.ContainsKey(key))
+            TextRun run = span.Run;
+            IReadOnlyList<PptxTextGlyphLayout> glyphs = span.GlyphSpan.Glyphs;
+            foreach (var (typeface, start, count) in GlyphTypefaceRanges(glyphs, run.FontFamily))
             {
-                continue;
-            }
-
-            bool hasRenderable = false;
-            foreach (Rune rune in run.Text.EnumerateRunes())
-            {
-                if (!PdfFallbackFont.IsNonRenderedControl(rune))
+                cancellationToken.ThrowIfCancellationRequested();
+                var key = new FontRequest(PptxFontFallbackRules.ResolveDefaultLatinTypeface(typeface), run.Bold, run.Italic);
+                if (fonts.ContainsKey(key))
                 {
-                    hasRenderable = true;
-                    break;
+                    continue;
                 }
-            }
 
-            if (!hasRenderable)
-            {
-                continue;
-            }
+                IEnumerable<int> codePoints = Enumerable.Range(start, count).Select(index => glyphs[index].CodePoint);
+                bool hasRenderable = count == 0
+                    ? run.Text.EnumerateRunes().Any(rune => !PdfFallbackFont.IsNonRenderedControl(rune))
+                    : codePoints.Any(codePoint => !PdfFallbackFont.IsNonRenderedControl(codePoint));
+                if (!hasRenderable)
+                {
+                    continue;
+                }
 
-            (FontFaceResolution Resolution, OpenTypeFont Font)? resolved = await fontResolver.ResolvePresentationOpenTypeFontAsync(key, cancellationToken).ConfigureAwait(false);
-            if (resolved is not null && resolved.Value.Font.HasTrueTypeOutlines)
-            {
-                // RV01 residual follow-up: resolvable split families that were never prepared
-                // get embedded subsets instead of vanishing at emission.
-                embeddableUses.Add(new TextFontUse(key.FamilyName, key.Bold, key.Italic, emissionSpan.GlyphSpan.Glyphs.Select(glyph => glyph.CodePoint).ToArray()));
-                continue;
-            }
+                (FontFaceResolution Resolution, OpenTypeFont Font)? resolved = await fontResolver.ResolvePresentationOpenTypeFontAsync(key, cancellationToken).ConfigureAwait(false);
+                if (resolved is not null && resolved.Value.Font.HasTrueTypeOutlines)
+                {
+                    embeddableUses.Add(new TextFontUse(key.FamilyName, key.Bold, key.Italic, codePoints.ToArray()));
+                    continue;
+                }
 
-            PdfFallbackFont face = PdfFallbackFont.ForStyle(key.Bold, key.Italic);
-            string fallbackName = PdfFallbackFont.ResourceNameFor(key.Bold, key.Italic);
-            var fallbackResolution = new FontFaceResolution(key.FamilyName, face.FaceName, new FontStyleKey(key.Bold, key.Italic), new MemoryFontProgramSource("fallback:" + face.FaceName, ReadOnlyMemory<byte>.Empty), IsFallback: true);
-            fonts[key] = new RenderedFont(fallbackName, null, fallbackResolution, false, false, new PdfFallbackFontResource(fallbackName, face));
-            ReportMissingFontFallback(key.FamilyName, fontResolver, diagnosticSink);
+                PdfFallbackFont face = PdfFallbackFont.ForStyle(key.Bold, key.Italic);
+                string fallbackName = PdfFallbackFont.ResourceNameFor(key.Bold, key.Italic);
+                var fallbackResolution = new FontFaceResolution(key.FamilyName, face.FaceName, new FontStyleKey(key.Bold, key.Italic), new MemoryFontProgramSource("fallback:" + face.FaceName, ReadOnlyMemory<byte>.Empty), IsFallback: true);
+                fonts[key] = new RenderedFont(fallbackName, null, fallbackResolution, false, false, new PdfFallbackFontResource(fallbackName, face));
+                ReportMissingFontFallback(key.FamilyName, fontResolver, diagnosticSink);
+            }
         }
 
         if (embeddableUses.Count != 0)

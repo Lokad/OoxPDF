@@ -317,20 +317,9 @@ internal sealed partial class PptxRenderer
         }
 
         double cursor = span.Run.X;
-        int index = 0;
-        while (index < span.GlyphSpan.Glyphs.Count)
+        foreach (var (typeface, start, count) in GlyphTypefaceRanges(span.GlyphSpan.Glyphs, span.Run.FontFamily))
         {
-            PptxTextGlyphLayout first = span.GlyphSpan.Glyphs[index];
-            string typeface = string.IsNullOrWhiteSpace(first.Typeface) ? PptxFontFallbackRules.ResolveDefaultLatinTypeface(span.Run.FontFamily) : first.Typeface;
-            int start = index;
-            index++;
-            while (index < span.GlyphSpan.Glyphs.Count &&
-                string.Equals(span.GlyphSpan.Glyphs[index].Typeface ?? PptxFontFallbackRules.ResolveDefaultLatinTypeface(span.Run.FontFamily), typeface, StringComparison.OrdinalIgnoreCase))
-            {
-                index++;
-            }
-
-            PptxTextGlyphLayout[] glyphs = span.GlyphSpan.Glyphs.Skip(start).Take(index - start).ToArray();
+            PptxTextGlyphLayout[] glyphs = span.GlyphSpan.Glyphs.Skip(start).Take(count).ToArray();
             double leadingOffset = start == 0 ? 0d : glyphs[0].AdjustmentBefore;
             if (start != 0 && Math.Abs(leadingOffset) > PptxTextMetricRules.TextStateTolerance)
             {
@@ -368,6 +357,32 @@ internal sealed partial class PptxRenderer
             };
 
             cursor = x + naturalWidth;
+        }
+    }
+
+    private static IEnumerable<(string Typeface, int Start, int Count)> GlyphTypefaceRanges(
+        IReadOnlyList<PptxTextGlyphLayout> glyphs, string? fontFamily)
+    {
+        string defaultTypeface = PptxFontFallbackRules.ResolveDefaultLatinTypeface(fontFamily);
+        if (glyphs.Count == 0)
+        {
+            yield return (defaultTypeface, 0, 0);
+            yield break;
+        }
+
+        int index = 0;
+        while (index < glyphs.Count)
+        {
+            int start = index;
+            string? firstTypeface = glyphs[index++].Typeface;
+            string typeface = string.IsNullOrWhiteSpace(firstTypeface) ? defaultTypeface : firstTypeface;
+            while (index < glyphs.Count &&
+                string.Equals(glyphs[index].Typeface ?? defaultTypeface, typeface, StringComparison.OrdinalIgnoreCase))
+            {
+                index++;
+            }
+
+            yield return (typeface, start, index - start);
         }
     }
 }
