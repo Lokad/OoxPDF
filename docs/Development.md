@@ -161,7 +161,7 @@ expectations against the pinned text operations and verify the diagnostic
 sidecars. Reinspect existing PDFs with `-ReuseCandidateDirectory` when a join
 reports changed expectations or a missing text-inspection hash. Numerical visual limits live in
 `tools/CompositionDocxThresholds.json` and `tools/CompositionPptxThresholds.json`.
-Comparisons always check page counts and page dimensions. Reports record the limit
+Comparisons check page counts and raster dimensions at the selected resolution. Reports record the limit
 file identities and apply current limits to reused pixel metrics. Null recall on
 a matched page requires a measured zero reference foreground count. Review the
 conversion diagnostics in the measured outcomes alongside visual and content
