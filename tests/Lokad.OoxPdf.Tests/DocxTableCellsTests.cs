@@ -1880,117 +1880,104 @@ internal static class DocxTableCellsTests
 
     public static void DocxSyntheticThreeDTableBorderStylesRenderWithoutDiagnostic()
     {
-        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        string pdf = RenderHorizontalTableBorders("threeDEmboss", "threeDEngrave");
+        var strips = Regex.Matches(pdf, @"(?m)^([\d.]+) ([\d.]+) ([\d.]+) rg\r?\n([\d.]+) ([\d.]+) ([\d.]+) ([\d.]+) re f\r?$")
+            .Select(match => (Color: (Red: BorderNumber(match, 1), Green: BorderNumber(match, 2), Blue: BorderNumber(match, 3)),
+                X: BorderNumber(match, 4), Y: BorderNumber(match, 5), Width: BorderNumber(match, 6), Height: BorderNumber(match, 7)))
+            .ToArray();
+        TestAssert.Equal(4, strips.Length);
+        TestAssert.True(strips.All(strip => strip.X == 72d && strip.Width == 72d && strip.Height > 0d),
+            "Each relief strip must span the authored cell.");
+
+        var emboss = ReadEdgeColors(720d);
+        var engrave = ReadEdgeColors(684d);
+        TestAssert.True(emboss.Lower.Red > 0.2d && emboss.Lower.Green > 0.4d && emboss.Lower.Blue > 0.6d &&
+            emboss.Upper.Red < 0.2d && emboss.Upper.Green < 0.4d && emboss.Upper.Blue < 0.6d,
+            "The embossed top edge must place the highlight below the shadow.");
+        TestAssert.Equal(emboss.Upper, engrave.Lower);
+        TestAssert.Equal(emboss.Lower, engrave.Upper);
+
+        ((double Red, double Green, double Blue) Lower, (double Red, double Green, double Blue) Upper) ReadEdgeColors(double edgeY)
         {
-            ["[Content_Types].xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-                  <Default Extension="xml" ContentType="application/xml"/>
-                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
-                </Types>
-                """,
-            ["_rels/.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
-                </Relationships>
-                """,
-            ["word/document.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-                  <w:body>
-                    <w:tbl>
-                      <w:tblGrid><w:gridCol w:w="1440"/></w:tblGrid>
-                      <w:tr>
-                        <w:tc>
-                          <w:tcPr>
-                            <w:tcBorders>
-                              <w:top w:val="threeDEmboss" w:color="336699" w:sz="16"/>
-                              <w:bottom w:val="threeDEngrave" w:color="336699" w:sz="16"/>
-                            </w:tcBorders>
-                          </w:tcPr>
-                          <w:p/>
-                        </w:tc>
-                      </w:tr>
-                    </w:tbl>
-                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
-                  </w:body>
-                </w:document>
-                """
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-        var diagnostics = new List<OoxPdfDiagnostic>();
-
-        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
-
-        string ids = string.Join("|", diagnostics.Select(d => d.Id).Order(StringComparer.Ordinal));
-        TestAssert.DoesNotContain("DOCX_TABLE_BORDER_STYLE", ids);
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.True(pdf.Split(" re f", StringSplitOptions.None).Length - 1 >= 4, "3D table borders should render light/dark relief strips instead of flattening to one solid fill.");
-        TestAssert.True(pdf.Split(" rg", StringSplitOptions.None).Length - 1 >= 4, "3D table borders should emit separate light and dark fill colors.");
-
-        using FileStream stream = File.OpenRead(input);
-        DocxStructureTableSnapshot table = DocxStructureSnapshot.FromDocument(new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, OoxPdfDocxMarkupMode.Final)).Tables.Single();
-        TestAssert.Equal(2, table.VisibleBorderCount);
-        TestAssert.Equal(0, table.OtherBorderStyleCount);
+            var edge = strips.Where(strip => Math.Abs(strip.Y - edgeY) < 2d).OrderBy(strip => strip.Y).ToArray();
+            TestAssert.Equal(2, edge.Length);
+            TestAssert.True(Math.Abs(edge[0].Y + edge[0].Height - edge[1].Y) < 0.01d,
+                "The light and dark bands must meet inside their own edge.");
+            return (edge[0].Color, edge[1].Color);
+        }
     }
 
     public static void DocxSyntheticWaveTableBorderStylesRenderWithoutDiagnostic()
     {
+        string pdf = RenderHorizontalTableBorders("wave", "doubleWave");
+        var segments = Regex.Matches(pdf, @"(?m)^([\d.]+) ([\d.]+) m ([\d.]+) ([\d.]+) l S\r?$")
+            .Select(match => (FromX: BorderNumber(match, 1), FromY: BorderNumber(match, 2),
+                ToX: BorderNumber(match, 3), ToY: BorderNumber(match, 4)))
+            .ToArray();
+
+        AssertWaveTraces(720d, 1);
+        AssertWaveTraces(684d, 2);
+
+        void AssertWaveTraces(double edgeY, int expected)
+        {
+            var edge = segments.Where(line => Math.Abs(line.FromY - edgeY) < 2d &&
+                Math.Abs(line.ToY - edgeY) < 2d).ToArray();
+            var starts = edge.Where(line => line.FromX == 72d).ToArray();
+            var ends = edge.Where(line => line.ToX == 144d).ToArray();
+            TestAssert.Equal(expected, starts.Length);
+            TestAssert.Equal(expected, ends.Length);
+            TestAssert.Equal(expected, starts.Select(line => line.FromY).Distinct().Count());
+            TestAssert.Equal(expected, ends.Select(line => line.ToY).Distinct().Count());
+            TestAssert.Equal(expected, edge.Count(line => line.FromX <= 108d && line.ToX > 108d));
+            TestAssert.True(edge.Any(line => line.ToY > line.FromY) && edge.Any(line => line.ToY < line.FromY),
+                "A wave edge must rise and fall across its span.");
+        }
+    }
+
+    private static double BorderNumber(Match match, int group) =>
+        double.Parse(match.Groups[group].Value, CultureInfo.InvariantCulture);
+
+    private static string RenderHorizontalTableBorders(string top, string bottom)
+    {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
         {
-            ["[Content_Types].xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-                  <Default Extension="xml" ContentType="application/xml"/>
-                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
-                </Types>
-                """,
-            ["_rels/.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
-                </Relationships>
-                """,
-            ["word/document.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
+            ["[Content_Types].xml"] = TestFixtures.DocxContentTypes,
+            ["_rels/.rels"] = TestFixtures.DocxPackageRelationships,
+            ["word/document.xml"] = $"""
                 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
                   <w:body>
                     <w:tbl>
                       <w:tblGrid><w:gridCol w:w="1440"/></w:tblGrid>
                       <w:tr>
+                        <w:trPr><w:trHeight w:val="720" w:hRule="exact"/></w:trPr>
                         <w:tc>
                           <w:tcPr>
                             <w:tcBorders>
-                              <w:top w:val="wave" w:color="336699" w:sz="16"/>
-                              <w:bottom w:val="doubleWave" w:color="336699" w:sz="16"/>
+                              <w:top w:val="{top}" w:color="336699" w:sz="16"/>
+                              <w:bottom w:val="{bottom}" w:color="336699" w:sz="16"/>
                             </w:tcBorders>
                           </w:tcPr>
                           <w:p/>
                         </w:tc>
                       </w:tr>
                     </w:tbl>
-                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:left="1440"/></w:sectPr>
                   </w:body>
                 </w:document>
                 """
         });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        string output = TestFixtures.NewTemporaryPath(".pdf");
         var diagnostics = new List<OoxPdfDiagnostic>();
-
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
-
-        string ids = string.Join("|", diagnostics.Select(d => d.Id).Order(StringComparer.Ordinal));
-        TestAssert.DoesNotContain("DOCX_TABLE_BORDER_STYLE", ids);
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.True(pdf.AsSpan().Count(" l S") >= 8, "Wave table borders should render as repeated stroked wave segments.");
+        TestAssert.True(diagnostics.All(d => d.Id != "DOCX_TABLE_BORDER_STYLE"), "Both cell border styles must be supported.");
 
         using FileStream stream = File.OpenRead(input);
-        DocxStructureTableSnapshot table = DocxStructureSnapshot.FromDocument(new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, OoxPdfDocxMarkupMode.Final)).Tables.Single();
+        using var package = OoxPackage.Open(stream, CancellationToken.None);
+        var document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
+        DocxStructureTableSnapshot table = DocxStructureSnapshot.FromDocument(document).Tables.Single();
         TestAssert.Equal(2, table.VisibleBorderCount);
         TestAssert.Equal(0, table.OtherBorderStyleCount);
+        return File.ReadAllText(output, Encoding.ASCII);
     }
 
     public static void DocxSyntheticTripleTableBorderStyleRendersWithoutDiagnostic()
