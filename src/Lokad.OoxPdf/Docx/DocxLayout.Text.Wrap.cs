@@ -471,7 +471,7 @@ internal sealed partial class DocxLayoutEngine
             return false;
         }
 
-        UnicodeCategory afterCategory = char.GetUnicodeCategory(after);
+        UnicodeCategory afterCategory = CharUnicodeInfo.GetUnicodeCategory(text, breakIndex);
         return afterCategory is not UnicodeCategory.NonSpacingMark and
             not UnicodeCategory.SpacingCombiningMark and
             not UnicodeCategory.EnclosingMark;

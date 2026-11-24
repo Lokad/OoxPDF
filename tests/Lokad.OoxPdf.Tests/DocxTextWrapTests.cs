@@ -1036,7 +1036,7 @@ internal static class DocxTextWrapTests
     public static void EmergencyWrapUnicodeBoundariesAreSafe()
     {
         // Surrogate pairs and combining marks must never split across lines.
-        string token = "ab\U0001F600cde\u0301f" + new string((char)97, 60);
+        string token = "ab\U0001F600cdef" + new string('a', 60);
         IReadOnlyList<DocxWrappedTextLine> lines = WrapWithCounting(token, 10d, true, out _);
         int covered = 0;
         foreach (DocxWrappedTextLine line in lines)
@@ -1048,6 +1048,16 @@ internal static class DocxTextWrapTests
         }
 
         TestAssert.Equal(token.Length, covered);
+
+        foreach (string mark in new[] { "\u0301", "\U0001E000" })
+        {
+            string marked = "abc" + mark + "defgh";
+            var wrapped = WrapWithCounting(marked, 3d, true, out _);
+            TestAssert.Equal("ab", wrapped[0].Text);
+            TestAssert.True(wrapped[1].Text.StartsWith("c" + mark, StringComparison.Ordinal),
+                "An emergency break keeps the combining mark with its base.");
+            TestAssert.Equal(marked, string.Concat(wrapped.Select(line => line.Text)));
+        }
     }
 
     public static void EmergencyWrapUnfittingGlyphPreservesSource()
