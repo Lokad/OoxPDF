@@ -90,7 +90,7 @@ internal sealed partial class DocxReader
                 bool isColumnBreakOnly = hasVisibleBreak && !hasListMarker && !isPageBreakOnly &&
                     IsRunBreakOnlyParagraph(element, VisibleColumnBreak, HiddenBreak, markupMode, keepsBreakParagraph: true);
                 var parts = hasVisibleBreak && !isPageBreakOnly && !isColumnBreakOnly
-                    ? SplitParagraphAtRunBreaks(element, markupMode, VisibleBreak, HiddenBreak,
+                    ? SplitParagraphAtRunBreaks(element, markupMode, VisibleBreak, HiddenBreak, cancellationToken,
                         retainEmptyColumnTail: true, retainFirstLine: hasListMarker)
                     : null;
 
@@ -544,12 +544,15 @@ internal sealed partial class DocxReader
     }
 
     private static IReadOnlyList<ParagraphBreakPart> SplitParagraphAtRunBreaks(XElement paragraph, OoxPdfDocxMarkupMode markupMode,
-        Func<XElement, bool> isBreak, Func<XElement, bool> isHiddenBreak, bool retainEmptyColumnTail = false, bool retainFirstLine = false,
+        Func<XElement, bool> isBreak, Func<XElement, bool> isHiddenBreak, CancellationToken cancellationToken,
+        bool retainEmptyColumnTail = false, bool retainFirstLine = false,
         IReadOnlyList<XElement>? leadingCommentBoundaries = null)
     {
         var parts = new List<ParagraphBreakPart>();
         var currentChildren = new List<XElement>();
         var authoredStory = DocxSourceXml.FindStoryRoot(paragraph) is { } story ? new DocxSourceXml.StoryOrigin(story) : null;
+        var unclosed = paragraph.Descendants(WordprocessingNamespace + "fldChar").Any()
+            ? ReadUnclosedFieldBegins(authoredStory?.Story, markupMode, cancellationToken) : null;
         XElement? paragraphProperties = paragraph.Element(WordprocessingNamespace + "pPr");
         bool startsAfterBreak = false;
         bool hasParagraphPart = false;
@@ -593,17 +596,18 @@ internal sealed partial class DocxReader
 
             if (IsVisibleRunContainer(child, markupMode) && HasVisibleRunBreak(child, isBreak, markupMode))
             {
-                SplitRunBreakContainer(child, currentChildren, AddParagraphPart, parts, ref startsAfterBreak, markupMode, isBreak, isHiddenBreak);
+                SplitRunBreakContainer(child, currentChildren, AddParagraphPart, parts, ref startsAfterBreak,
+                    markupMode, isBreak, isHiddenBreak, unclosed);
                 continue;
             }
 
             if (child.Name != WordprocessingNamespace + "r")
             {
-                currentChildren.Add(new XElement(child));
+                currentChildren.Add(CopyFieldAwareFragment(child, unclosed));
                 continue;
             }
 
-            SplitRunAtBreaks(child, currentChildren, AddParagraphPart, parts, ref startsAfterBreak, isBreak, isHiddenBreak);
+            SplitRunAtBreaks(child, currentChildren, AddParagraphPart, parts, ref startsAfterBreak, isBreak, isHiddenBreak, unclosed);
         }
 
         AddParagraphPart(endsBeforeBreak: false);
@@ -699,7 +703,8 @@ internal sealed partial class DocxReader
         Action<bool> flushOwnerAndParagraph,
         List<ParagraphBreakPart> parts,
         ref bool startsAfterBreak,
-        OoxPdfDocxMarkupMode markupMode, Func<XElement, bool> isBreak, Func<XElement, bool> isHiddenBreak)
+        OoxPdfDocxMarkupMode markupMode, Func<XElement, bool> isBreak, Func<XElement, bool> isHiddenBreak,
+        IReadOnlySet<XElement>? unclosed)
     {
         var containerChildren = new List<XElement>();
         XElement? computedField = HasSimpleFieldPlaceholder(sourceContainer) ? sourceContainer : null;
@@ -740,17 +745,18 @@ internal sealed partial class DocxReader
                 if (IsVisibleRunContainer(containerChild, markupMode) && HasVisibleRunBreak(containerChild, isBreak, markupMode))
                 {
                     SplitRunBreakContainer(containerChild, containerChildren, FlushThisContainerAndParagraph, parts, ref startsAfterBreak,
-                        markupMode, isBreak, isHiddenBreak);
+                        markupMode, isBreak, isHiddenBreak, unclosed);
                 }
                 else
                 {
-                    containerChildren.Add(new XElement(containerChild));
+                    containerChildren.Add(CopyFieldAwareFragment(containerChild, unclosed));
                 }
 
                 continue;
             }
 
-            SplitRunAtBreaks(containerChild, containerChildren, FlushThisContainerAndParagraph, parts, ref startsAfterBreak, isBreak, isHiddenBreak);
+            SplitRunAtBreaks(containerChild, containerChildren, FlushThisContainerAndParagraph, parts, ref startsAfterBreak,
+                isBreak, isHiddenBreak, unclosed);
         }
 
         AddContainerPart();
@@ -794,7 +800,7 @@ internal sealed partial class DocxReader
 
     private static void SplitRunAtBreaks(XElement run, List<XElement> ownerChildren,
         Action<bool> flushOwnerAndParagraph, List<ParagraphBreakPart> parts, ref bool startsAfterBreak,
-        Func<XElement, bool> isBreak, Func<XElement, bool> isHiddenBreak)
+        Func<XElement, bool> isBreak, Func<XElement, bool> isHiddenBreak, IReadOnlySet<XElement>? unclosed)
     {
         XElement? properties = run.Element(WordprocessingNamespace + "rPr");
         var content = new List<XElement>();
@@ -804,7 +810,8 @@ internal sealed partial class DocxReader
             if (content.Count != 0)
             {
                 // Adding attached children clones them, keeping the source run intact.
-                ownerChildren.Add(new XElement(run.Name, properties, content));
+                ownerChildren.Add(new XElement(run.Name, properties, unclosed is { Count: > 0 }
+                    ? content.Select(child => CopyFieldAwareFragment(child, unclosed)) : content));
                 content.Clear();
             }
         }

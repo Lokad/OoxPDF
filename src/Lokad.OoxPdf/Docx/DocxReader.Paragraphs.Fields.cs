@@ -6,11 +6,11 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxReader
 {
-    // A lock preserves the stored result, including an empty result, while the
-    // opcode remains available for source inspection. Nested fields own their locks.
-    private static string? ResolveFieldPlaceholder(string? instruction, bool isLocked = false,
+    // A lock or an unclosed field keeps the result literal. The opcode remains
+    // available for source inspection.
+    private static string? ResolveFieldPlaceholder(string? instruction, bool preserveStoredResult = false,
         bool requireOpcodeTerminator = false)
-        => isLocked ? null : DocxFieldText.Placeholder(ResolveFieldKind(instruction, requireOpcodeTerminator));
+        => preserveStoredResult ? null : DocxFieldText.Placeholder(ResolveFieldKind(instruction, requireOpcodeTerminator));
 
     private static string? ResolveSimpleFieldPlaceholder(XElement field, DocxFieldKind kind) =>
         OoxBoolean.IsTrue((string?)field.Attribute(WordprocessingNamespace + "fldLock"))
@@ -21,6 +21,52 @@ internal sealed partial class DocxReader
         ResolveSimpleFieldPlaceholder(element, ResolveFieldKind((string?)element.Attribute(WordprocessingNamespace + "instr"))) is not null;
 
     private sealed record ComputedSimpleFieldFragment(XElement Source, bool OwnsCounter);
+
+    private sealed record ComplexFieldClosure(OoxPdfDocxMarkupMode Mode, IReadOnlySet<XElement> Unclosed);
+    private sealed class UnclosedFieldBegin;
+
+    // Pair visible field boundaries in their authored story before a counter
+    // can replace its stored result. A generated page fragment is not a story.
+    private static IReadOnlySet<XElement>? ReadUnclosedFieldBegins(XElement? story, OoxPdfDocxMarkupMode markupMode,
+        CancellationToken token)
+    {
+        if (story is null) return null;
+        foreach (var cached in story.Annotations<ComplexFieldClosure>())
+            if (cached.Mode == markupMode) return cached.Unclosed;
+
+        var open = new Stack<XElement>();
+        foreach (XElement marker in story.Descendants())
+        {
+            token.ThrowIfCancellationRequested();
+            if (marker.Name != WordprocessingNamespace + "fldChar" || marker.Parent?.Name != WordprocessingNamespace + "r" ||
+                DocxSourceXml.FindStoryRoot(marker) != story ||
+                IsInsideExcludedRevisionContainer(marker, markupMode)) continue;
+            XElement? container = marker.Parent.Parent;
+            while (container is not null && IsVisibleRunContainer(container, markupMode))
+                container = container.Parent;
+            if (container?.Name != WordprocessingNamespace + "p") continue;
+
+            string? type = (string?)marker.Attribute(WordprocessingNamespace + "fldCharType");
+            if (string.Equals(type, "begin", StringComparison.OrdinalIgnoreCase))
+                open.Push(marker);
+            else if (string.Equals(type, "end", StringComparison.OrdinalIgnoreCase))
+                open.TryPop(out _);
+        }
+        token.ThrowIfCancellationRequested();
+        var unclosed = open.ToHashSet();
+        story.AddAnnotation(new ComplexFieldClosure(markupMode, unclosed));
+        return unclosed;
+    }
+
+    private static XElement CopyFieldAwareFragment(XElement source, IReadOnlySet<XElement>? unclosed)
+    {
+        var copy = new XElement(source);
+        if (unclosed is not { Count: > 0 }) return copy;
+        foreach (var (original, marker) in source.DescendantsAndSelf(WordprocessingNamespace + "fldChar")
+                     .Zip(copy.DescendantsAndSelf(WordprocessingNamespace + "fldChar")))
+            if (unclosed.Contains(original)) marker.AddAnnotation(new UnclosedFieldBegin());
+        return copy;
+    }
 
     private static bool UsesDefaultDynamicFieldFormatting(string? instruction, DocxFieldKind kind) => kind switch
     {

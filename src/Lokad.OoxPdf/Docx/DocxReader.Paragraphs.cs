@@ -1203,12 +1203,14 @@ internal sealed partial class DocxReader
             string? fieldCharType = (string?)fieldChar.Attribute(WordprocessingNamespace + "fldCharType");
             if (string.Equals(fieldCharType, "begin", StringComparison.OrdinalIgnoreCase))
             {
+                bool unclosed = fieldChar.Annotation<UnclosedFieldBegin>() is not null ||
+                    ReadUnclosedFieldBegins(DocxSourceXml.FindStoryRoot(fieldChar), markupMode, cancellationToken)?.Contains(fieldChar) == true;
                 complexFieldStack.Add(new DocxComplexFieldState(
                     currentSourceRunIndex,
                     runs.Count,
                     runs.Sum(run => run.Text.Length),
                     complexFieldStack.Count,
-                    OoxBoolean.IsTrue((string?)fieldChar.Attribute(WordprocessingNamespace + "fldLock")),
+                    unclosed || OoxBoolean.IsTrue((string?)fieldChar.Attribute(WordprocessingNamespace + "fldLock")),
                     UsesOriginalFieldInstruction(markupMode, revision?.Kind == DocxRevisionKind.Deletion)));
                 return;
             }
@@ -1264,7 +1266,7 @@ internal sealed partial class DocxReader
 
                 EmitPendingFieldPlaceholder(field, Math.Max(0, sourceRunIndex - 1));
                 string instruction = field.Instruction.ToString();
-                string? placeholder = ResolveFieldPlaceholder(instruction, field.IsLocked);
+                string? placeholder = ResolveFieldPlaceholder(instruction, field.PreserveStoredResult);
                 if (field.PublishedReference is not null || placeholder is not null ||
                     field.HasSeparate && field.HasCachedResult)
                 {
@@ -1294,7 +1296,7 @@ internal sealed partial class DocxReader
                 return;
             }
 
-            placeholder ??= ResolveFieldPlaceholder(instruction, field.IsLocked);
+            placeholder ??= ResolveFieldPlaceholder(instruction, field.PreserveStoredResult);
             int textRunIndex = field.ResultRunCount == 0 && !field.PlaceholderEmitted
                 ? runs.Count
                 : field.TextRunIndex;
@@ -1339,7 +1341,7 @@ internal sealed partial class DocxReader
 
             field.Instruction.Append(instructionText);
             field.InstructionRunCount++;
-            string? fieldPlaceholder = ResolveFieldPlaceholder(field.Instruction.ToString(), field.IsLocked);
+            string? fieldPlaceholder = ResolveFieldPlaceholder(field.Instruction.ToString(), field.PreserveStoredResult);
             if (!field.PlaceholderEmitted)
             {
                 // A run boundary does not finish the opcode: PAGE + REF is
@@ -1352,7 +1354,7 @@ internal sealed partial class DocxReader
                         runStyleResolution, false, currentSourceRunIndex, sourceTextOffset, revision, revisions,
                         ResolveFieldKind(field.Instruction.ToString()))
                         with { SourceDrawingIndexInRun = sourceDrawingIndex };
-                    if (ResolveFieldPlaceholder(field.Instruction.ToString(), field.IsLocked,
+                    if (ResolveFieldPlaceholder(field.Instruction.ToString(), field.PreserveStoredResult,
                         requireOpcodeTerminator: true) is not null)
                         EmitPendingFieldPlaceholder(field, currentSourceRunIndex, sourceTextOffset, sourceDrawingIndex);
                 }

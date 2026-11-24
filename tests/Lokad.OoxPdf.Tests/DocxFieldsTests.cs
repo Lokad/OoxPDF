@@ -826,6 +826,54 @@ internal static class DocxFieldsTests
         TestAssert.Equal("cached-ref After".Length, field.TextLength);
     }
 
+    public static void DocxUnclosedComplexCountersPreserveStoredProseAcrossBreaks()
+    {
+        const string intro = "Dispatch status: ";
+        const string result = "Stored dispatch instructions.";
+        var resolver = new PortableRenderingTests.PinnedResolver();
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        foreach (bool pageBreak in new[] { false, true })
+        {
+            var geometry = mode == OoxPdfDocxMarkupMode.AllMarkup ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
+                : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout;
+            var document = ReadField(closed: false);
+            var stored = document.Paragraphs.SelectMany(paragraph => paragraph.FieldReferences).Single();
+            TestAssert.Equal(DocxFieldKind.Page, stored.Kind);
+            TestAssert.True(stored.RendersCachedResult && !stored.UsesPlaceholder,
+                "An unclosed counter must retain its stored runs.");
+            string[] lines = Paint(document);
+            TestAssert.Equal(pageBreak ? 2 : 1, lines.Length);
+            TestAssert.Equal(pageBreak ? intro.TrimEnd() : intro + result, lines[0]);
+            TestAssert.Equal(pageBreak ? result : intro + result, lines[^1]);
+
+            var closed = ReadField(closed: true);
+            TestAssert.True(closed.Paragraphs.SelectMany(paragraph => paragraph.FieldReferences).Single().UsesPlaceholder,
+                "The matching end must still admit the computed counter.");
+            TestAssert.Equal(intro + "1", Paint(closed)[0]);
+
+            string[] Paint(DocxDocument input) => new DocxRenderer(resolver, mode, geometry)
+                .RenderPagesAsync(input, null, CancellationToken.None).ToBlockingEnumerable()
+                .Select(page => string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, true)
+                    .Select(show => show.Text)).Trim()).ToArray();
+
+            DocxDocument ReadField(bool closed) => DocxInlineCompositionTests.ReadMutation("Composition/report",
+                mode, false, false, (xml, w, _) =>
+                {
+                    XElement body = xml.Root!.Element(w + "body")!;
+                    XElement Run(XElement child) => new(w + "r", child);
+                    XElement Text(string value) => new(w + "t", new XAttribute(XNamespace.Xml + "space", "preserve"), value);
+                    XElement Boundary(string type) => Run(new XElement(w + "fldChar", new XAttribute(w + "fldCharType", type)));
+                    var paragraph = new XElement(w + "p", Run(Text(intro)), Boundary("begin"),
+                        Run(new XElement(w + "instrText", " PAGE ")), Boundary("separate"));
+                    if (pageBreak)
+                        paragraph.Add(Run(new XElement(w + "br", new XAttribute(w + "type", "page"))));
+                    paragraph.Add(Run(Text(result)));
+                    if (closed) paragraph.Add(Boundary("end"));
+                    body.ReplaceNodes(paragraph);
+                });
+        }
+    }
+
     public static void DocxReaderPreservesInlineReferencesInsideRunContainers()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>

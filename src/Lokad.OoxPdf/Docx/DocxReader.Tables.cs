@@ -506,7 +506,7 @@ internal sealed partial class DocxReader
                     // Put a consumed boundary before the break, exactly as an
                     // authored inline marker in the fragment that merges.
                     foreach (ParagraphBreakPart part in SplitParagraphAtRunBreaks(child, markupMode, VisiblePageBreak,
-                        HiddenBreak, retainFirstLine: hasListMarker, leadingCommentBoundaries: inlineCommentBoundaries))
+                        HiddenBreak, cancellationToken, retainFirstLine: hasListMarker, leadingCommentBoundaries: inlineCommentBoundaries))
                     {
                         cancellationToken.ThrowIfCancellationRequested();
                         if (part.BreakValue is not null)
