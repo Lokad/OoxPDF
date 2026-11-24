@@ -355,7 +355,9 @@ internal sealed partial class DocxLayoutEngine
         var inFlightNotes = new Dictionary<(DocxRelatedStoryKind Kind, string Id), InFlightRelatedStory>();
         var placedStoryKeys = new HashSet<(DocxRelatedStoryKind Kind, string Id)>();
         Dictionary<int, List<DocxInlineReferenceLocation>> locationsByBlock = BuildInlineReferenceLocationsByBlock(document, cancellationToken);
-        var storyLookupByWidth = new Dictionary<double, Dictionary<(DocxRelatedStoryKind Kind, string Id), DocxRelatedStoryLayout>>();
+        var footnoteLookupByWidth = new Dictionary<double, (
+            Dictionary<(DocxRelatedStoryKind Kind, string Id), DocxRelatedStoryLayout> Stories,
+            DocxRelatedStoryLayout? Separator, DocxRelatedStoryLayout? Continuation)>();
         var keepLookaheadYielded = new HashSet<(DocxRelatedStoryKind Kind, string Id)>();
         var footnotePlacedLinesAtLastYield = new Dictionary<(DocxRelatedStoryKind Kind, string Id), int>();
         var continuationHeaderByPage = new Dictionary<(DocxPageSettings, double, DocxPageNumber, int, int), DocxStaticStoryLayoutResult?>();
@@ -405,24 +407,21 @@ internal sealed partial class DocxLayoutEngine
         var relatedStoryLayoutsByBodyWidth = PlacementRelatedStoryMeasurements ??
             new Dictionary<double, IReadOnlyList<DocxRelatedStoryLayout>>();
 
-        IReadOnlyList<DocxRelatedStoryLayout> GetFootnoteStoryLayouts(DocxPageGeometry geometry)
+        (Dictionary<(DocxRelatedStoryKind Kind, string Id), DocxRelatedStoryLayout> Stories,
+            DocxRelatedStoryLayout? Separator, DocxRelatedStoryLayout? Continuation) GetFootnoteStoryLookup()
         {
-            return GetRelatedStoryLayouts(FootnoteStoryLayoutWidth(geometry));
-        }
-
-        (IReadOnlyList<DocxRelatedStoryLayout> Layouts,
-            Dictionary<(DocxRelatedStoryKind Kind, string Id), DocxRelatedStoryLayout> Lookup) GetFootnoteStoryLookup()
-        {
-            var layouts = GetFootnoteStoryLayouts(page);
             // A fixed review lane can give different note widths the same
             // body width. Match the width used by the measurement memo.
             double key = Math.Round(Math.Max(1d, FootnoteStoryLayoutWidth(page)), 3);
-            if (!storyLookupByWidth.TryGetValue(key, out var lookup))
+            if (!footnoteLookupByWidth.TryGetValue(key, out var lookup))
             {
-                lookup = CreateRelatedStoryLookup(layouts);
-                storyLookupByWidth[key] = lookup;
+                var layouts = GetRelatedStoryLayouts(key);
+                var separator = FindSpecialRelatedStoryLayout(layouts, DocxRelatedStoryKind.Footnote, DocxRelatedStoryType.Separator);
+                var continuation = FindSpecialRelatedStoryLayout(layouts, DocxRelatedStoryKind.Footnote, DocxRelatedStoryType.ContinuationSeparator) ?? separator;
+                lookup = (CreateRelatedStoryLookup(layouts), separator, continuation);
+                footnoteLookupByWidth[key] = lookup;
             }
-            return (layouts, lookup);
+            return lookup;
         }
 
         // RV06 interleaving (Word 16.0, edge-footlong-mixed WC): Office keeps normal-note
@@ -727,7 +726,7 @@ internal sealed partial class DocxLayoutEngine
 
                     // Endnotes and already consumed references do not need a
                     // footnote measurement at this body's width.
-                    var (pageStoryLayouts, storyByKey) = GetFootnoteStoryLookup();
+                    var (storyByKey, separatorLayout, continuationLayout) = GetFootnoteStoryLookup();
                     if (!storyByKey.TryGetValue(key, out DocxRelatedStoryLayout? storyLayout) || storyLayout.ContentHeight <= 0d)
                     {
                         continue;
@@ -739,8 +738,6 @@ internal sealed partial class DocxLayoutEngine
                     }
 
                     keepLookaheadYielded.Add(key);
-                    DocxRelatedStoryLayout? separatorLayout = FindSpecialRelatedStoryLayout(pageStoryLayouts, DocxRelatedStoryKind.Footnote, DocxRelatedStoryType.Separator);
-                    DocxRelatedStoryLayout? continuationLayout = FindSpecialRelatedStoryLayout(pageStoryLayouts, DocxRelatedStoryKind.Footnote, DocxRelatedStoryType.ContinuationSeparator) ?? separatorLayout;
                     var transient = new InFlightRelatedStory(storyLayout, separatorLayout, continuationLayout, chainBlock, location);
                     reserve += FootnoteRemainderHeight(transient, GetStoryTextLineBoxHeights(storyLayout), separatorMeasurerForNotes);
                 }
@@ -805,14 +802,12 @@ internal sealed partial class DocxLayoutEngine
                     continue;
                 }
 
-                var (pageStoryLayouts, storyByKey) = GetFootnoteStoryLookup();
+                var (storyByKey, separatorLayout, continuationLayout) = GetFootnoteStoryLookup();
                 if (!storyByKey.TryGetValue(key, out DocxRelatedStoryLayout? storyLayout) || storyLayout.ContentHeight <= 0d)
                 {
                     continue;
                 }
 
-                DocxRelatedStoryLayout? separatorLayout = FindSpecialRelatedStoryLayout(pageStoryLayouts, DocxRelatedStoryKind.Footnote, DocxRelatedStoryType.Separator);
-                DocxRelatedStoryLayout? continuationLayout = FindSpecialRelatedStoryLayout(pageStoryLayouts, DocxRelatedStoryKind.Footnote, DocxRelatedStoryType.ContinuationSeparator) ?? separatorLayout;
                 inFlightNotes[key] = new InFlightRelatedStory(storyLayout, separatorLayout, continuationLayout, sourceBlockIndex, location);
             }
 
@@ -943,7 +938,7 @@ internal sealed partial class DocxLayoutEngine
                         continue;
                     }
 
-                    var (_, storyByKey) = GetFootnoteStoryLookup();
+                    var storyByKey = GetFootnoteStoryLookup().Stories;
                     if (!storyByKey.TryGetValue(key, out DocxRelatedStoryLayout? storyLayout) ||
                         storyLayout.ContentHeight <= 0d || storyLayout.TextLines.Count == 0)
                     {
@@ -1025,9 +1020,7 @@ internal sealed partial class DocxLayoutEngine
             }
 
             var headScratchPages = new List<DocxLayoutPage> { templatePage };
-            var (pageStoryLayouts, _) = GetFootnoteStoryLookup();
-            DocxRelatedStoryLayout? separatorLayout = FindSpecialRelatedStoryLayout(pageStoryLayouts, DocxRelatedStoryKind.Footnote, DocxRelatedStoryType.Separator);
-            DocxRelatedStoryLayout? continuationLayout = FindSpecialRelatedStoryLayout(pageStoryLayouts, DocxRelatedStoryKind.Footnote, DocxRelatedStoryType.ContinuationSeparator) ?? separatorLayout;
+            var (_, separatorLayout, continuationLayout) = GetFootnoteStoryLookup();
             IDocxTextMeasurer? separatorMeasurer = unscaledTextMeasurer ?? textMeasurer;
             Func<DocxLayoutPage, int, int, double> availableFootnoteFrameBottom =
                 (p, _, _) => ResolveNoteFooterKeepOut(p, projectedTemplatePageNumber, projectedTemplatePageNumber);

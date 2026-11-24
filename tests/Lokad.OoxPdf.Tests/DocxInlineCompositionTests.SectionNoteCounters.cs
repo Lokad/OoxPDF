@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Docx;
+using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Tests;
 
@@ -21,6 +22,8 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.Contains("Public following section", DocxPageFootnoteNumberingTests.DecodeText(counter[^1]));
             TestAssert.True(!DocxPageFootnoteNumberingTests.DecodeText(counter[^1]).Contains("Count ", StringComparison.Ordinal),
                 "Section-owned note continuations precede the following body section.");
+            AssertNoteDestination(literal);
+            AssertNoteDestination(counter);
             for (int index = 0; index < literal.Length; index++)
             {
                 var a = DocxCommentsTests.ReadEmbeddedGlyphTextShows(literal[index], usePageCoordinates: true)
@@ -31,8 +34,13 @@ internal static partial class DocxInlineCompositionTests
                 TestAssert.True(literal[index].Annotations.SequenceEqual(counter[index].Annotations),
                     "The reference and following-section destinations retain their placement.");
             }
+        }
 
-
+        static void AssertNoteDestination(PdfPage[] pages)
+        {
+            var link = pages[1].Annotations.Single();
+            TestAssert.True(link.Destination is { PageIndex: 2 }, "The reference on page 2 reaches the endnote on physical page 3.");
+            TestAssert.Contains("Public section note", DocxPageFootnoteNumberingTests.DecodeText(pages[2]));
         }
     }
 
@@ -147,7 +155,7 @@ internal static partial class DocxInlineCompositionTests
                         $"Every authored note word paints once and in order: {mode}/{count}/{type}.");
                 }
 
-                Lokad.OoxPdf.Pdf.PdfPage[] Render(DocxSectionBreakType type)
+                PdfPage[] Render(DocxSectionBreakType type)
                 {
                     var final = new DocxSectionBreakElement(source.PageSettings, type, null, null, null, []);
                     return renderer.RenderPagesAsync(source with { FinalSectionBreak = final }, null, default)
@@ -219,7 +227,7 @@ internal static partial class DocxInlineCompositionTests
 
     private const int FootnoteBoundaryWordCount = 2100;
 
-    private static int AssertFootnoteBoundaryContent(Lokad.OoxPdf.Pdf.PdfPage[] pages, string[] text)
+    private static int AssertFootnoteBoundaryContent(PdfPage[] pages, string[] text)
     {
         int following = Array.FindIndex(text, page => page.Contains("FollowingsectionPAGE", StringComparison.Ordinal));
         TestAssert.True(following >= 4, "The footnote has body-free continuation pages before the next section.");
