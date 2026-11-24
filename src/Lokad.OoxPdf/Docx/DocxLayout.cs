@@ -522,7 +522,8 @@ internal sealed partial class DocxLayoutEngine
                 IsSectionParityFiller = isSectionParityFiller,
                 PageNumberOffset = pageNumberOffset
             });
-            PlaceInFlightFootnotesOnCompletingPage(projectedPageNumber);
+            if (!isSectionParityFiller)
+                PlaceInFlightFootnotesOnCompletingPage(projectedPageNumber);
             if (completeFootnoteAdmission is not null)
                 foreach (var key in inFlightNotes.Where(note => note.Value.RemainingLineCount == 0).Select(note => note.Key).ToArray())
                     inFlightNotes.Remove(key);
@@ -1407,9 +1408,22 @@ internal sealed partial class DocxLayoutEngine
                     FinishPage();
                 }
 
-                if (ShouldInsertParityBlankPage(boundaryType, ProjectCurrentPageNumber()))
+                if (boundaryType is DocxSectionBreakType.OddPage or DocxSectionBreakType.EvenPage)
                 {
-                    FinishPage(isSectionParityFiller: true);
+                    // The outgoing references own their pending footnote
+                    // continuations. Admit those pages before deciding which
+                    // physical page can start the incoming parity section.
+                    int beforeContinuations = pages.Count;
+                    DrainRemainingInFlightFootnotes();
+                    if (pages.Count != beforeContinuations)
+                    {
+                        page = ResolveSectionGeometry(document, activeSectionSettings, reserveMarkupMargin,
+                            retuneReserveToPrintScale, reservePrintScale, pages.Count + 1);
+                        ApplyActiveColumnFrame();
+                        currentPageFootnoteReserveHeight = FootnoteRemainderTotal();
+                    }
+                    if (ShouldInsertParityBlankPage(boundaryType, ProjectCurrentPageNumber()))
+                        FinishPage(isSectionParityFiller: true);
                 }
 
                 if (advanceSectionColumn)
@@ -2560,18 +2574,20 @@ internal sealed partial class DocxLayoutEngine
         actualNotePageShifts = null;
         if (pagesWithRelatedStories.Length != pages.Count)
         {
-            int notePagesBeforeBody = 0;
-            foreach (var placed in pagesWithRelatedStories)
+            int originalIndex = 0;
+            for (int placedIndex = 0; placedIndex < pagesWithRelatedStories.Length; placedIndex++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                // Parity fillers are chosen again in the second layout.
-                // Count only note pages before each body page so a changed
-                // filler cannot change the identity used for verification.
-                if (placed.IsSectionParityFiller) continue;
-                if (placed.BodyFlowPageNumber == 0)
-                    notePagesBeforeBody++;
-                else if (notePagesBeforeBody != 0)
-                    (actualNotePageShifts ??= new int[bodyFlowPageCount])[placed.BodyFlowPageNumber - 1] = notePagesBeforeBody;
+                int ordinal = pagesWithRelatedStories[placedIndex].BodyFlowPageNumber;
+                if (ordinal == 0) continue;
+                // Early continuations and parity fillers are already in the
+                // body placement. Compare the same owner before and after the
+                // late note pass so only newly inserted pages are projected.
+                while (pages[originalIndex].BodyFlowPageNumber != ordinal)
+                    originalIndex++;
+                int lateShift = placedIndex - originalIndex++;
+                if (lateShift != 0)
+                    (actualNotePageShifts ??= new int[bodyFlowPageCount])[ordinal - 1] = lateShift;
             }
         }
         OoxConversionBudget.Current?.AdmitDocxLayoutPages(pagesWithRelatedStories.Length);

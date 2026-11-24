@@ -1500,6 +1500,7 @@
   "docx-section-start-ownership": [
     "=DocxPageSeparatedSectionStartsBindSharedStoriesAndPhysicalDestinations",
     "=DocxParityStartsFollowInsertedEndnotePages",
+    "=DocxParityStartsFollowInFlightFootnoteContinuations",
     "DocxNextColumnSectionStartsKeepTextInItsColumnAndPage",
     "DocxSectionStartsKeepPictureAndTableContentOnOwnedPages",
     "DocxSectionStartsKeepCommentAndMixedContentOnOwnedPages",
@@ -20217,6 +20218,7 @@
   ],
   "docx-note-placement-work": [
     "=DocxParityStartsFollowInsertedEndnotePages",
+    "=DocxParityStartsFollowInFlightFootnoteContinuations",
     "=DocxFirstBodyPageCounterFollowsFootnoteOnlyPages",
     "DocxInlineCompositionMappedNoteBandBottomMatchesIndependentWord",
     "DocxDeferredMixedEndnoteConsumesSeparatorDeficitOnce",
