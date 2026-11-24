@@ -95,8 +95,6 @@ internal sealed partial class PptxRenderer
             element.Attributes().Any(a => a.Name.LocalName is "rotate" or "textLength" or "lengthAdjust")) return false;
         var style = ReadSvgStyleDeclarations(element);
         string? Inherited(string name) => ReadSvgInheritedAttribute(element, style, name)?.Trim();
-        bool IsDefault(string name, params string[] accepted) => Inherited(name) is not { } value ||
-            accepted.Contains(value, StringComparer.OrdinalIgnoreCase);
         bool PreservesTextStyle(string name) => IsNeutralSvgTextStyle(name, Inherited(name));
         if (!PreservesTextStyle("direction") || !PreservesTextStyle("unicode-bidi") ||
             !PreservesTextStyle("writing-mode") || !PreservesTextStyle("dominant-baseline") ||
@@ -104,7 +102,7 @@ internal sealed partial class PptxRenderer
             !PreservesTextStyle("font-variant") || !PreservesTextStyle("font-stretch") ||
             !PreservesTextStyle("letter-spacing") || !PreservesTextStyle("word-spacing") ||
             !PreservesTextStyle("text-decoration") || !TryReadSvgTextKerning(element, style, out bool kerning) ||
-            !IsDefault("clip-path", "none") || !IsDefault("mask", "none") || !IsDefault("filter", "none")) return false;
+            !PreservesTextStyle("clip-path") || !PreservesTextStyle("mask") || !PreservesTextStyle("filter")) return false;
         if (HasSvgTextStroke(element, style, paintServerIds)) return false;
         string anchor = Inherited("text-anchor")?.ToLowerInvariant() ?? "start";
         if (anchor is not ("start" or "middle" or "end")) return false;
@@ -172,7 +170,8 @@ internal sealed partial class PptxRenderer
                 token.Equals("0px", StringComparison.OrdinalIgnoreCase),
             "font-variant" or "font-stretch" or "unicode-bidi" =>
                 reset || token.Equals("normal", StringComparison.OrdinalIgnoreCase),
-            "text-decoration" => reset || token.Equals("none", StringComparison.OrdinalIgnoreCase),
+            "text-decoration" or "clip-path" or "mask" or "filter" =>
+                reset || token.Equals("none", StringComparison.OrdinalIgnoreCase),
             "direction" => reset || token.Equals("ltr", StringComparison.OrdinalIgnoreCase),
             "writing-mode" => reset || token.Equals("horizontal-tb", StringComparison.OrdinalIgnoreCase) ||
                 token.Equals("lr", StringComparison.OrdinalIgnoreCase) || token.Equals("lr-tb", StringComparison.OrdinalIgnoreCase),

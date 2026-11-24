@@ -140,6 +140,8 @@ Supported SVG labels accept viewport percentages, em and absolute units in
 single-value x, y, dx and dy attributes. Absolute units also work in font size.
 Plain spans retain the label when their explicit kerning settings preserve its
 kerning behavior. Mixed kerning within a label remains unsupported.
+Plain spans accept default clipping, masking and filtering declarations.
+Active clips, masks and filters on SVG labels remain outside this subset.
 Line elements use stroke paint and ignore fill declarations.
 Object opacity can compose a visible fill with a supported linear-gradient stroke.
 Translucent solid strokes retain the fill beneath them.

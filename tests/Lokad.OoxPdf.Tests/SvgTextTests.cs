@@ -551,6 +551,38 @@ internal static partial class SvgTextTests
         }
     }
 
+    public static void SvgTextChildrenKeepNeutralEffects()
+    {
+        static string Picture(string north, string west, string east) => Svg($"""
+            <text x="20" y="45" font-size="24" fill="#112233">{north}</text>
+            <text x="20" y="85" font-size="24" fill="#2254b4">{west}</text>
+            <text x="20" y="125" font-size="24" fill="#a02a20">{east}</text>
+            <rect x="200" y="100" width="20" height="10" fill="lime"/>
+            """);
+
+        const string westColor = "0.133 0.329 0.706 rg";
+        AssertSvgPaintInBothFormats(Picture("NORTH", "WEST", "EAST"),
+            Picture("""NO<tspan clip-path="none">RT</tspan>H""",
+                """WE<tspan mask="none">S</tspan>T""",
+                """E<tspan filter="blur(1px)" style="filter: initial">AS</tspan>T"""), pdf =>
+            {
+                TestAssert.Equal(5, LabelPaths(pdf));
+                TestAssert.Equal(4, LabelPaths(pdf, westColor));
+                TestAssert.Equal(4, LabelPaths(pdf, "0.627 0.165 0.125 rg"));
+            }, "0 1 0 rg");
+
+        foreach (string effect in new[] { "style=\"clip-path: inset(10%)\"", "mask=\"url(#mask)\"", "filter=\"blur(1px)\"" })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            string paint = Paint(Picture($"NO<tspan {effect}>RT</tspan>H", "WEST", "EAST"), diagnostics).ToString();
+            TestAssert.DoesNotContain(LabelColor, paint);
+            TestAssert.Equal(4, LabelPaths(paint, westColor));
+            TestAssert.Contains("0 1 0 rg", paint);
+            TestAssert.Equal(1, diagnostics.Count(d => d.Id == "SVG_UNSUPPORTED_CONTENT" &&
+                d.Message == "SVG picture omits 1 unsupported text element."));
+        }
+    }
+
     public static void SvgInlineLinkTextKeepsPaintAndDiagnosesActions()
     {
         string Picture(string north, string south) => Svg($"""
