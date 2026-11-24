@@ -83,10 +83,41 @@ internal static class PptxVisibleDiagnosticTests
         var result = Convert(parts);
         TestAssert.Equal(0, result.Diagnostics.Count);
         TestAssert.True(baseline.Pdf.AsSpan().SequenceEqual(result.Pdf), "Extension markup leaves the visible words and static poster intact.");
+    }
 
-        static XElement Extension(XNamespace ns, params XElement[] contents) =>
-            new(ns + "extLst", new XElement(ns + "ext", new XAttribute("uri", "{5D154C70-1063-4818-8DFE-C915C125A6AD}"),
-                new XElement(XName.Get("data", "urn:ooxpdf:test"), contents)));
+    public static void PptxVisibleDiagnosticsPreserveChartAndTablePayloads()
+    {
+        const string slidePart = "ppt/slides/slide1.xml";
+        XNamespace preview = "urn:ooxpdf:test";
+        foreach (var (file, previewUri, chart) in new[] {
+            ("pptx-ladder-10-composite-table-port.pptx", "urn:ooxpdf:preview", false),
+            ("pptx-ladder-11-composite-chart-port.pptx", "http://schemas.openxmlformats.org/drawingml/2006/diagram", true)
+        })
+        {
+            var parts = ReadParts(file);
+            var baseline = Convert(parts);
+            TestAssert.Equal(0, baseline.Diagnostics.Count);
+            var slide = XDocument.Parse(System.Text.Encoding.UTF8.GetString(parts[slidePart]));
+            var frame = slide.Root!.Element(P + "cSld")!.Element(P + "spTree")!.Elements(P + "graphicFrame").Single();
+            var metadata = frame.Element(P + "nvGraphicFramePr")!.Element(P + "nvPr")!;
+            var extension = Extension(P, new XElement(A + "graphicData", new XAttribute("uri", previewUri)));
+            metadata.Add(extension);
+            AssertUnchanged("A preview in nonvisual metadata must leave the authored frame intact.");
+            if (chart)
+            {
+                extension.Remove();
+                var payload = frame.Element(A + "graphic")!.Element(A + "graphicData")!;
+                payload.Add(new XElement(preview + "preview", new XElement(A + "tbl")));
+                AssertUnchanged("A nested table preview must leave the authored chart intact.");
+            }
+
+            void AssertUnchanged(string message)
+            {
+                parts[slidePart] = TestFixtures.Utf8(slide.ToString());
+                var candidate = Convert(parts);
+                TestAssert.True(candidate.Diagnostics.Count == 0 && baseline.Pdf.AsSpan().SequenceEqual(candidate.Pdf), message);
+            }
+        }
     }
 
     public static void PptxVisibleDiagnosticsCancelBeforeAtomicPublication()
@@ -123,9 +154,7 @@ internal static class PptxVisibleDiagnosticTests
 
     private static Dictionary<string, byte[]> Parts(string? kind, string hidden, bool group)
     {
-        string path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "pptx-images.pptx"));
-        using var archive = ZipFile.OpenRead(path);
-        var parts = archive.Entries.ToDictionary(entry => entry.FullName, entry => { using var stream = entry.Open(); using var bytes = new MemoryStream(); stream.CopyTo(bytes); return bytes.ToArray(); });
+        var parts = ReadParts("pptx-images.pptx");
         var original = XDocument.Parse(System.Text.Encoding.UTF8.GetString(parts["ppt/slides/slide1.xml"]));
         var source = XDocument.Parse($$"""
             <p:sld xmlns:p="{{P}}" xmlns:a="{{A}}" showMasterSp="0"><p:cSld><p:spTree>
@@ -170,5 +199,20 @@ internal static class PptxVisibleDiagnosticTests
         }
         parts["ppt/slides/slide1.xml"] = TestFixtures.Utf8(source.ToString());
         return parts;
+    }
+
+    private static XElement Extension(XNamespace ns, params XElement[] contents) =>
+        new(ns + "extLst", new XElement(ns + "ext", new XAttribute("uri", "{5D154C70-1063-4818-8DFE-C915C125A6AD}"),
+            new XElement(XName.Get("data", "urn:ooxpdf:test"), contents)));
+
+    private static Dictionary<string, byte[]> ReadParts(string file)
+    {
+        using var archive = ZipFile.OpenRead(TestFixtures.PublicCasePath(file));
+        return archive.Entries.ToDictionary(entry => entry.FullName, entry => {
+            using var stream = entry.Open();
+            using var bytes = new MemoryStream();
+            stream.CopyTo(bytes);
+            return bytes.ToArray();
+        });
     }
 }

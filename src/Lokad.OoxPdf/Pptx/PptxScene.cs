@@ -289,7 +289,7 @@ internal sealed partial class PptxSceneBuilder
                 ReadNonVisualId(nonVisualProperties),
                 ReadNonVisualName(nonVisualProperties),
                 IsPlaceholder(child),
-                kind == PptxSceneNodeKind.UnknownGraphicFrame && IsSmartArtGraphicFrame(child),
+                kind == PptxSceneNodeKind.UnknownGraphicFrame && IsSmartArtGraphicData(GetGraphicData(child)),
                 ReadHyperlinkClick(nonVisualProperties),
                 ReadBounds(child),
                 kind is PptxSceneNodeKind.Shape or PptxSceneNodeKind.Connector ? ReadShape(child, theme, colorMap, package, relationships) : null,
@@ -305,7 +305,7 @@ internal sealed partial class PptxSceneBuilder
         return nodes;
     }
 
-    internal static PptxSceneNodeKind ReadNodeKind(XElement element)
+    private static PptxSceneNodeKind ReadNodeKind(XElement element)
     {
         if (element.Name == PresentationNamespace + "sp")
         {
@@ -332,11 +332,18 @@ internal sealed partial class PptxSceneBuilder
             return PptxSceneNodeKind.Unknown;
         }
 
-        XElement? graphicData = element
-            .Descendants(DrawingNamespace + "graphicData")
-            .FirstOrDefault();
+        return ReadGraphicFrameKind(GetGraphicData(element));
+    }
+
+    // Nonvisual extensions may contain previews of other graphics. Only the
+    // frame's direct graphic owns the payload used for drawing and diagnostics.
+    internal static XElement? GetGraphicData(XElement frame) =>
+        frame.Element(DrawingNamespace + "graphic")?.Element(DrawingNamespace + "graphicData");
+
+    internal static PptxSceneNodeKind ReadGraphicFrameKind(XElement? graphicData)
+    {
         string uri = (string?)graphicData?.Attribute("uri") ?? string.Empty;
-        if (graphicData?.Descendants(DrawingNamespace + "tbl").Any() == true)
+        if (graphicData?.Element(DrawingNamespace + "tbl") is not null)
         {
             return PptxSceneNodeKind.Table;
         }
@@ -346,13 +353,8 @@ internal sealed partial class PptxSceneBuilder
             : PptxSceneNodeKind.UnknownGraphicFrame;
     }
 
-    internal static bool IsSmartArtGraphicFrame(XElement graphicFrame)
-    {
-        return graphicFrame
-            .Descendants(DrawingNamespace + "graphicData")
-            .Select(element => (string?)element.Attribute("uri"))
-            .Any(uri => uri?.Contains("drawingml/2006/diagram", StringComparison.OrdinalIgnoreCase) == true);
-    }
+    internal static bool IsSmartArtGraphicData(XElement? graphicData) =>
+        ((string?)graphicData?.Attribute("uri"))?.Contains("drawingml/2006/diagram", StringComparison.OrdinalIgnoreCase) == true;
 
     // Raw diagnostic scans can encounter drawing markup copied into extensions.
     internal static bool IsVisibleDrawingContent(XElement element) =>

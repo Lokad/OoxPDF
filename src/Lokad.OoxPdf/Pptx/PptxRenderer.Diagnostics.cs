@@ -425,17 +425,10 @@ internal sealed partial class PptxRenderer
 
     private static bool IsUnsupportedGraphicFrame(XElement graphicFrame)
     {
-        XElement? graphicData = graphicFrame
-            .Descendants(DrawingNamespace + "graphicData")
-            .FirstOrDefault();
-        if (graphicData is null || PptxSceneBuilder.IsSmartArtGraphicFrame(graphicFrame))
-        {
-            return false;
-        }
-
-        string uri = (string?)graphicData.Attribute("uri") ?? string.Empty;
-        return !uri.Contains("chart", StringComparison.OrdinalIgnoreCase) &&
-            !graphicData.Descendants(DrawingNamespace + "tbl").Any();
+        XElement? graphicData = PptxSceneBuilder.GetGraphicData(graphicFrame);
+        return graphicData is not null &&
+            PptxSceneBuilder.ReadGraphicFrameKind(graphicData) == PptxSceneNodeKind.UnknownGraphicFrame &&
+            !PptxSceneBuilder.IsSmartArtGraphicData(graphicData);
     }
 
     private static bool HasSmartArtGraphicFrame(IReadOnlyList<PptxSceneNode> nodes)

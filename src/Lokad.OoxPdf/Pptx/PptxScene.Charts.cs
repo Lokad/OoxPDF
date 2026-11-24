@@ -16,10 +16,7 @@ internal sealed partial class PptxSceneBuilder
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        XElement? graphicData = frame
-            .Element(DrawingNamespace + "graphic")
-            ?.Element(DrawingNamespace + "graphicData");
-        string? relationshipId = (string?)graphicData
+        string? relationshipId = (string?)GetGraphicData(frame)
             ?.Element(ChartNamespace + "chart")
             ?.Attribute(RelationshipsNamespace + "id");
         string? targetPartName = relationshipId is not null &&

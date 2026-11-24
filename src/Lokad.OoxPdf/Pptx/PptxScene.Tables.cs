@@ -9,7 +9,7 @@ internal sealed partial class PptxSceneBuilder
 {
     private static PptxSceneTable ReadTable(XElement frame, PptxTheme theme, PptxColorMap colorMap)
     {
-        XElement? table = ReadTableElement(frame);
+        XElement? table = GetGraphicData(frame)?.Element(DrawingNamespace + "tbl");
         IReadOnlyList<double> columnWidths = ReadTableColumnWidths(table);
         IReadOnlyList<double> rowHeights = ReadTableRowHeights(table);
         PptxSceneTableStyle style = ReadTableStyle(table);
@@ -19,14 +19,6 @@ internal sealed partial class PptxSceneBuilder
             ReadTableRows(table, theme, colorMap, style, rowHeights.Count, columnWidths.Count),
             style,
             table);
-    }
-
-    internal static XElement? ReadTableElement(XElement frame)
-    {
-        return frame
-            .Element(DrawingNamespace + "graphic")
-            ?.Element(DrawingNamespace + "graphicData")
-            ?.Element(DrawingNamespace + "tbl");
     }
 
     internal static IReadOnlyList<double> ReadTableColumnWidths(XElement? table)
