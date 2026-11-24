@@ -132,7 +132,7 @@ internal sealed partial record DocxStructureSnapshot(
                     tableIndex++;
                     break;
                 case DocxImplicitParagraphElement implicitParagraph:
-                    blocks.Add(DocxStructureBlockSnapshot.ForImplicitParagraph(blockIndex, previousKind, nextKind, implicitParagraph));
+                    blocks.Add(FromImplicitParagraph(blockIndex, previousKind, nextKind, implicitParagraph));
                     break;
                 case DocxPageBreakElement pageBreak:
                     blocks.Add(FromPageBreak(blockIndex, previousKind, nextKind, pageBreak));

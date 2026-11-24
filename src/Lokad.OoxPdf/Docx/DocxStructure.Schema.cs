@@ -1,547 +1,102 @@
 namespace Lokad.OoxPdf.Docx;
 
-internal sealed record DocxStructureBlockSnapshot(
-    int Index,
-    string Kind,
-    string? PreviousKind,
-    string? NextKind,
-    string? ParagraphStyleId,
-    bool? ParagraphStyleFound,
-    int? ParagraphStyleDepth,
-    bool? HasDocumentDefaultParagraphProperties,
-    bool? HasDirectParagraphProperties,
-    bool? HasTableStyleParagraphProperties,
-    int RunCount,
-    int TextLength,
-    bool HasVisibleText,
-    int RevisionCount,
-    int InsertionRevisionCount,
-    int DeletionRevisionCount,
-    int MoveFromRevisionCount,
-    int MoveToRevisionCount,
-    int OtherRevisionCount,
-    int RevisionRangeCount,
-    string? ListFormatValue,
-    int InlineImageCount,
-    int InlineReferenceCount,
-    int AnchoredInlineReferenceCount,
-    int ResolvedInlineReferenceCount,
-    int MaxInlineReferenceTextOffsetInRun,
-    int CommentReferenceCount,
-    int FootnoteReferenceCount,
-    int EndnoteReferenceCount,
-    int FieldReferenceCount,
-    int PageFieldReferenceCount,
-    int NumPagesFieldReferenceCount,
-    int OtherFieldReferenceCount,
-    int ComplexFieldReferenceCount,
-    int CachedResultFieldReferenceCount,
-    int RenderedCachedResultFieldReferenceCount,
-    int PlaceholderFieldReferenceCount,
-    int NestedFieldReferenceCount,
-    int BookmarkAnchorCount,
-    int HyperlinkCount,
-    int ExternalHyperlinkCount,
-    int InternalHyperlinkCount,
-    int TableRowCount,
-    int? TableIndex,
-    double? SpacingBeforePoints,
-    double? SpacingAfterPoints,
-    double? LineSpacingPoints,
-    double? LineSpacingFactor,
-    bool HasBeforeSpacingToken,
-    bool HasAfterSpacingToken,
-    string? BeforeAutoSpacingValue,
-    string? AfterAutoSpacingValue,
-    bool? ContextualSpacing,
-    bool? KeepNext,
-    bool? KeepLines,
-    bool? WidowControl,
-    bool? WordWrap,
-    string? WordWrapValue,
-    int? TableMaxColumnCount,
-    double? TablePreferredWidthPoints,
-    string? TablePreferredWidthType,
-    double? TableIndentPoints,
-    double? TableCellSpacingPoints,
-    string? TableLayoutValue,
-    string? PageBreakSourceKind,
-    string? PageBreakValue,
-    string? ManualBreakSourceKind,
-    string? ManualBreakValue,
-    string? ImplicitSourceKind,
-    string? SectionBreakTypeValue,
-    string? SectionColumnCountValue,
-    string? SectionColumnEqualWidthValue,
-    string? SectionColumnSpaceValue,
-    int? SectionColumnDefinitionCount,
-    int? SectionColumnDefinitionWidthTokenCount,
-    int? SectionColumnDefinitionSpaceTokenCount,
-    double? ParagraphIndentLeftPoints,
-    double? ParagraphIndentRightPoints,
-    double? ParagraphIndentFirstLinePoints,
-    double? ParagraphIndentHangingPoints,
-    int? WhitespaceDelimitedTokenCount,
-    int? LongestWhitespaceDelimitedTokenLength,
-    int? SpaceCharacterCount,
-    int? NonAsciiCharacterCount,
-    int? PunctuationCharacterCount,
-    int? DigitCharacterCount,
-    int? UppercaseCharacterCount,
-    int? LowercaseCharacterCount,
-    int? TabStopCount,
-    bool? SnapToGrid,
-    string? SnapToGridValue,
-    bool? PageBreakConsumesParagraphLine,
-    double? PageBreakLineSpacingPoints,
-    double? PageBreakLineSpacingFactor,
-    bool? ManualBreakConsumesParagraphLine,
-    double? ManualBreakLineSpacingPoints,
-    double? ManualBreakLineSpacingFactor)
+internal sealed record DocxStructureBlockSnapshot(int Index, string Kind, string? PreviousKind, string? NextKind)
 {
+    public string? ParagraphStyleId { get; init; }
+    public bool? ParagraphStyleFound { get; init; }
+    public int? ParagraphStyleDepth { get; init; }
+    public bool? HasDocumentDefaultParagraphProperties { get; init; }
+    public bool? HasDirectParagraphProperties { get; init; }
+    public bool? HasTableStyleParagraphProperties { get; init; }
+    public int RunCount { get; init; }
+    public int TextLength { get; init; }
+    public bool HasVisibleText { get; init; }
+    public int RevisionCount { get; init; }
+    public int InsertionRevisionCount { get; init; }
+    public int DeletionRevisionCount { get; init; }
+    public int MoveFromRevisionCount { get; init; }
+    public int MoveToRevisionCount { get; init; }
+    public int OtherRevisionCount { get; init; }
+    public int RevisionRangeCount { get; init; }
+    public string? ListFormatValue { get; init; }
+    public int InlineImageCount { get; init; }
+    public int InlineReferenceCount { get; init; }
+    public int AnchoredInlineReferenceCount { get; init; }
+    public int ResolvedInlineReferenceCount { get; init; }
+    public int MaxInlineReferenceTextOffsetInRun { get; init; }
+    public int CommentReferenceCount { get; init; }
+    public int FootnoteReferenceCount { get; init; }
+    public int EndnoteReferenceCount { get; init; }
+    public int FieldReferenceCount { get; init; }
+    public int PageFieldReferenceCount { get; init; }
+    public int NumPagesFieldReferenceCount { get; init; }
+    public int OtherFieldReferenceCount { get; init; }
+    public int ComplexFieldReferenceCount { get; init; }
+    public int CachedResultFieldReferenceCount { get; init; }
+    public int RenderedCachedResultFieldReferenceCount { get; init; }
+    public int PlaceholderFieldReferenceCount { get; init; }
+    public int NestedFieldReferenceCount { get; init; }
+    public int BookmarkAnchorCount { get; init; }
+    public int HyperlinkCount { get; init; }
+    public int ExternalHyperlinkCount { get; init; }
+    public int InternalHyperlinkCount { get; init; }
+    public int TableRowCount { get; init; }
+    public int? TableIndex { get; init; }
+    public double? SpacingBeforePoints { get; init; }
+    public double? SpacingAfterPoints { get; init; }
+    public double? LineSpacingPoints { get; init; }
+    public double? LineSpacingFactor { get; init; }
+    public bool HasBeforeSpacingToken { get; init; }
+    public bool HasAfterSpacingToken { get; init; }
+    public string? BeforeAutoSpacingValue { get; init; }
+    public string? AfterAutoSpacingValue { get; init; }
+    public bool? ContextualSpacing { get; init; }
+    public bool? KeepNext { get; init; }
+    public bool? KeepLines { get; init; }
+    public bool? WidowControl { get; init; }
+    public bool? WordWrap { get; init; }
+    public string? WordWrapValue { get; init; }
+    public int? TableMaxColumnCount { get; init; }
+    public double? TablePreferredWidthPoints { get; init; }
+    public string? TablePreferredWidthType { get; init; }
+    public double? TableIndentPoints { get; init; }
+    public double? TableCellSpacingPoints { get; init; }
+    public string? TableLayoutValue { get; init; }
+    public string? PageBreakSourceKind { get; init; }
+    public string? PageBreakValue { get; init; }
+    public string? ManualBreakSourceKind { get; init; }
+    public string? ManualBreakValue { get; init; }
+    public string? ImplicitSourceKind { get; init; }
+    public string? SectionBreakTypeValue { get; init; }
+    public string? SectionColumnCountValue { get; init; }
+    public string? SectionColumnEqualWidthValue { get; init; }
+    public string? SectionColumnSpaceValue { get; init; }
+    public int? SectionColumnDefinitionCount { get; init; }
+    public int? SectionColumnDefinitionWidthTokenCount { get; init; }
+    public int? SectionColumnDefinitionSpaceTokenCount { get; init; }
+    public double? ParagraphIndentLeftPoints { get; init; }
+    public double? ParagraphIndentRightPoints { get; init; }
+    public double? ParagraphIndentFirstLinePoints { get; init; }
+    public double? ParagraphIndentHangingPoints { get; init; }
+    public int? WhitespaceDelimitedTokenCount { get; init; }
+    public int? LongestWhitespaceDelimitedTokenLength { get; init; }
+    public int? SpaceCharacterCount { get; init; }
+    public int? NonAsciiCharacterCount { get; init; }
+    public int? PunctuationCharacterCount { get; init; }
+    public int? DigitCharacterCount { get; init; }
+    public int? UppercaseCharacterCount { get; init; }
+    public int? LowercaseCharacterCount { get; init; }
+    public int? TabStopCount { get; init; }
+    public bool? SnapToGrid { get; init; }
+    public string? SnapToGridValue { get; init; }
+    public bool? PageBreakConsumesParagraphLine { get; init; }
+    public double? PageBreakLineSpacingPoints { get; init; }
+    public double? PageBreakLineSpacingFactor { get; init; }
+    public bool? ManualBreakConsumesParagraphLine { get; init; }
+    public double? ManualBreakLineSpacingPoints { get; init; }
+    public double? ManualBreakLineSpacingFactor { get; init; }
     public int? SourceBreakCount { get; init; }
-
-    public static DocxStructureBlockSnapshot ForImplicitParagraph(
-        int blockIndex,
-        string? previousKind,
-        string? nextKind,
-        DocxImplicitParagraphElement implicitParagraph)
-    {
-        return new DocxStructureBlockSnapshot(
-            blockIndex,
-            "ImplicitParagraph",
-            previousKind,
-            nextKind,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            0,
-            0,
-            false,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            null,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            null,
-            null,
-            null,
-            null,
-            null,
-            false,
-            false,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            implicitParagraph.SourceKind.ToValueString(),
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null
-        );
-    }
-
-    public static DocxStructureBlockSnapshot ForPageBreak(
-        int blockIndex,
-        string? previousKind,
-        string? nextKind,
-        DocxPageBreakElement pageBreak)
-    {
-        return new DocxStructureBlockSnapshot(
-            blockIndex,
-            "PageBreak",
-            previousKind,
-            nextKind,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            0,
-            0,
-            false,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            null,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            null,
-            null,
-            null,
-            null,
-            null,
-            false,
-            false,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            pageBreak.SourceKind.ToValueString(),
-            pageBreak.Value,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            pageBreak.BreakParagraph is not null,
-            pageBreak.BreakParagraph?.EffectiveProperties.LineSpacingPoints,
-            pageBreak.BreakParagraph?.EffectiveProperties.LineSpacingFactor,
-            null,
-            null,
-            null
-        );
-    }
-
-    public static DocxStructureBlockSnapshot ForManualBreak(
-        int blockIndex,
-        string? previousKind,
-        string? nextKind,
-        DocxManualBreakElement manualBreak)
-    {
-        return new DocxStructureBlockSnapshot(
-            blockIndex,
-            "ManualBreak",
-            previousKind,
-            nextKind,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            0,
-            0,
-            false,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            null,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            null,
-            null,
-            null,
-            null,
-            null,
-            false,
-            false,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            manualBreak.SourceKind.ToValueString(),
-            manualBreak.Value,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            manualBreak.BreakParagraph is not null,
-            manualBreak.BreakParagraph?.EffectiveProperties.LineSpacingPoints,
-            manualBreak.BreakParagraph?.EffectiveProperties.LineSpacingFactor
-        );
-    }
-
-    public static DocxStructureBlockSnapshot ForSectionBreak(
-        int blockIndex,
-        string? previousKind,
-        string? nextKind,
-        int revisionCount,
-        int insertionRevisionCount,
-        int deletionRevisionCount,
-        int moveFromRevisionCount,
-        int moveToRevisionCount,
-        int otherRevisionCount,
-        DocxSectionBreakType? typeValue,
-        string? columnCountValue,
-        string? columnEqualWidthValue,
-        string? columnSpaceValue,
-        int? definitionCount,
-        int? widthTokenCount,
-        int? spaceTokenCount)
-    {
-        return new DocxStructureBlockSnapshot(
-            blockIndex,
-            "SectionBreak",
-            previousKind,
-            nextKind,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            0,
-            0,
-            false,
-            revisionCount,
-            insertionRevisionCount,
-            deletionRevisionCount,
-            moveFromRevisionCount,
-            moveToRevisionCount,
-            otherRevisionCount,
-            0,
-            null,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            null,
-            null,
-            null,
-            null,
-            null,
-            false,
-            false,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            typeValue?.ToValueString(),
-            columnCountValue,
-            columnEqualWidthValue,
-            columnSpaceValue,
-            definitionCount,
-            widthTokenCount,
-            spaceTokenCount,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null
-        );
-    }
-
-};
+}
 
 internal sealed record DocxStructureStorySnapshot(
     string Kind,
