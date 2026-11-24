@@ -7,7 +7,7 @@ internal enum DocxCounterDependencies { None = 0, PageNumber = 1, PageCount = 2 
 
 // PAGE uses the section's numbering. Layout geometry and navigation use the
 // one-based physical ordinal, even when the two values differ.
-internal readonly record struct DocxPageNumber(int Physical, int Offset = 0)
+internal readonly record struct DocxPageNumber(int Physical, long Offset = 0)
 {
     public long Displayed => (long)Physical + Offset;
     public static implicit operator DocxPageNumber(int physical) => new(physical);

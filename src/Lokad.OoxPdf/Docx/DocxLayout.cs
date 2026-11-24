@@ -322,6 +322,33 @@ internal sealed partial class DocxLayoutEngine
     {
         cancellationToken.ThrowIfCancellationRequested();
         document = DocxFinalSectionParagraph.Materialize(document, cancellationToken, paragraphSpacingScale);
+        DocxLayout first = CreateLayout(document, textMeasurer, cancellationToken, unscaledTextMeasurer,
+            headerOverflowDisplacementByPage, footerFrameBottomDisplacementByPage, mathEquations, null, out var notePageShifts);
+        if (notePageShifts is null ||
+            (!first.Pages.Any(page => page.PageSettings.DecimalPageNumberStart is not null) &&
+                !HasPageField(document.BodyElements) &&
+                !document.RelatedStories.Any(story => story.IsNormalStoryType && HasPageField(story.BodyElements))))
+            return first;
+
+        // A late note page can change the number measured in a body field or
+        // move the physical origin of a restart. Confirm the observed shifts
+        // once after remeasuring, since the new field widths can change wrapping.
+        DocxLayout adjusted = CreateLayout(document, textMeasurer, cancellationToken, unscaledTextMeasurer,
+            headerOverflowDisplacementByPage, footerFrameBottomDisplacementByPage, mathEquations, notePageShifts,
+            out var confirmedShifts);
+        return confirmedShifts is not null && notePageShifts.AsSpan().SequenceEqual(confirmedShifts) ? adjusted : first;
+
+        bool HasPageField(IReadOnlyList<DocxBodyElement> elements) =>
+            (DocxFieldText.GetDependencies(elements, cancellationToken) & DocxCounterDependencies.PageNumber) != 0;
+    }
+
+    private DocxLayout CreateLayout(DocxDocument document, IDocxTextMeasurer? textMeasurer, CancellationToken cancellationToken,
+        IDocxTextMeasurer? unscaledTextMeasurer, IReadOnlyDictionary<int, double>? headerOverflowDisplacementByPage,
+        IReadOnlyDictionary<int, double>? footerFrameBottomDisplacementByPage,
+        IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations, int[]? projectedNotePageShifts,
+        out int[]? actualNotePageShifts)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
         var pages = new List<DocxLayoutPage>();
         var currentItems = new List<DocxLayoutItem>();
         var inFlightNotes = new Dictionary<(DocxRelatedStoryKind Kind, string Id), InFlightRelatedStory>();
@@ -354,7 +381,12 @@ internal sealed partial class DocxLayoutEngine
         }
         DocxEffectiveSectionSettings activeSectionSettings = FindSectionSettingsAtOrAfter(document.BodyElements, 0, sectionSettingsByElementIndex) ?? finalSectionSettings;
         int pageNumberOffset = (activeSectionSettings.PageSettings.DecimalPageNumberStart ?? 1) - 1;
-        DocxPageNumber CurrentPageNumber() => new(pages.Count + 1, pageNumberOffset);
+        int ProjectPageNumber(int physicalPageNumber) => physicalPageNumber +
+            (projectedNotePageShifts is not null && physicalPageNumber <= projectedNotePageShifts.Length
+                ? projectedNotePageShifts[physicalPageNumber - 1] : 0);
+        DocxPageNumber MeasurePageNumber(int physicalPageNumber) =>
+            new(physicalPageNumber, (long)ProjectPageNumber(physicalPageNumber) - physicalPageNumber + pageNumberOffset);
+        DocxPageNumber CurrentPageNumber() => MeasurePageNumber(pages.Count + 1);
         DocxPageGeometry page = ResolveSectionGeometry(document, activeSectionSettings, reserveMarkupMargin, retuneReserveToPrintScale, reservePrintScale, pageNumber: 1);
         int activeColumnIndex = 0;
         double x = ResolveActiveColumnFrame(page, activeColumnIndex).X;
@@ -484,7 +516,8 @@ internal sealed partial class DocxLayoutEngine
                 currentItems.ToArray())
             {
                 MarkupLaneDesignBodyEnd = page.MarkupLaneDesignBodyEnd,
-                SectionFirstPageNumber = sectionFirstPageNumber,
+                SectionFirstPageNumber = ProjectPageNumber(sectionFirstPageNumber),
+                BodyFlowPageNumber = pages.Count + 1,
                 PageNumberOffset = pageNumberOffset
             });
             PlaceInFlightFootnotesOnCompletingPage();
@@ -515,7 +548,8 @@ internal sealed partial class DocxLayoutEngine
             {
                 // Footnote content is seated above this selected footer edge;
                 // its body reserve occupies the same frame, rather than overlapping it.
-                return ResolveFooterKeepOut(footerFrame, pages.Count + 1, pages.Count + 1) + noteReserve;
+                int pageNumber = ProjectPageNumber(pages.Count + 1);
+                return ResolveFooterKeepOut(footerFrame, pageNumber, pageNumber) + noteReserve;
             }
             // Office A/B (w48 multi-line footer plus long body, Word-COM rendered): body
             // breaks before footer content instead of overlapping it, so an overflowing
@@ -560,7 +594,7 @@ internal sealed partial class DocxLayoutEngine
                 var candidate = new DocxLayoutPage(page.Width, page.Height, page.MarginLeft, page.MarginRight,
                     page.MarkupMarginReservePoints, page.MarginTop, page.MarginBottom, page.PageSettings,
                     page.SectionProperties, page.ColumnFrames, [], [], [], [], [])
-                { SectionFirstPageNumber = sectionFirstPageNumber, PageNumberOffset = pageNumberOffset };
+                { SectionFirstPageNumber = ProjectPageNumber(sectionFirstPageNumber), PageNumberOffset = pageNumberOffset };
                 frame = CanUsePlainFootnoteStaticFrame(document, candidate, unscaledTextMeasurer ?? textMeasurer,
                     paragraphSpacingScale, cancellationToken) ? candidate : null;
                 plainFootnoteFooterFrames[key] = frame;
@@ -586,7 +620,7 @@ internal sealed partial class DocxLayoutEngine
             double displacement = 0d;
             if (displacementByPage is not null)
             {
-                if (!displacementByPage.TryGetValue(pageIndex ?? pages.Count, out displacement) &&
+                if (!displacementByPage.TryGetValue(pageIndex ?? (ProjectPageNumber(pages.Count + 1) - 1), out displacement) &&
                     displacementByPage.Count != 0)
                 {
                     displacementByPage.TryGetValue(displacementByPage.Count - 1, out displacement);
@@ -916,7 +950,7 @@ internal sealed partial class DocxLayoutEngine
                     // The body reference is now placed. Measure counters and all
                     // inline content together before slicing the note; keep this
                     // page-bound result out of the shared width-only memo.
-                    DocxRelatedStoryLayout boundLayout = BindRelatedStoryPage(storyLayout, FootnoteStoryLayoutWidth(page), new DocxPageNumber(pages.Count, pageNumberOffset));
+                    DocxRelatedStoryLayout boundLayout = BindRelatedStoryPage(storyLayout, FootnoteStoryLayoutWidth(page), MeasurePageNumber(pages.Count));
                     if (!ReferenceEquals(boundLayout, storyLayout))
                     {
                         if (inFlightNotes.TryGetValue(key, out InFlightRelatedStory? pending) &&
@@ -970,6 +1004,7 @@ internal sealed partial class DocxLayoutEngine
 
             DocxLayoutPage templatePage = pages[^1];
             int templatePageNumber = pages.Count;
+            int projectedTemplatePageNumber = ProjectPageNumber(templatePageNumber);
             var sharedBatch = new List<DocxReferencedRelatedStoryLayout>(continuedStories.Count + pageFootnoteStories.Count);
             sharedBatch.AddRange(continuedStories);
             sharedBatch.AddRange(pageFootnoteStories);
@@ -992,7 +1027,7 @@ internal sealed partial class DocxLayoutEngine
             DocxRelatedStoryLayout? continuationLayout = FindSpecialRelatedStoryLayout(pageStoryLayouts, DocxRelatedStoryKind.Footnote, DocxRelatedStoryType.ContinuationSeparator) ?? separatorLayout;
             IDocxTextMeasurer? separatorMeasurer = unscaledTextMeasurer ?? textMeasurer;
             Func<DocxLayoutPage, int, int, double> availableFootnoteFrameBottom =
-                (p, _, _) => ResolveNoteFooterKeepOut(p, templatePageNumber, templatePageNumber);
+                (p, _, _) => ResolveNoteFooterKeepOut(p, projectedTemplatePageNumber, projectedTemplatePageNumber);
             Func<DocxLayoutPage, int, int, double>? footnoteFrameBottom =
                 CanUsePlainFootnoteStaticFrame(document, templatePage, separatorMeasurer, paragraphSpacingScale, cancellationToken)
                     ? availableFootnoteFrameBottom : null;
@@ -1021,7 +1056,8 @@ internal sealed partial class DocxLayoutEngine
                 DocxLayoutPage slicePage = headScratchPages[0];
                 int slicePageIndex = 0;
                 var slicePlacedStories = templatePage.PlacedRelatedStories.ToList();
-                double sliceCursorTop = Math.Min(templatePage.Height - templatePage.MarginTop, ResolveHeaderKeepOut(templatePage, templatePageNumber, templatePageNumber));
+                double sliceCursorTop = Math.Min(templatePage.Height - templatePage.MarginTop,
+                    ResolveHeaderKeepOut(templatePage, projectedTemplatePageNumber, projectedTemplatePageNumber));
                 foreach (DocxReferencedRelatedStoryLayout continuedStory in sharedBatch)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
@@ -1182,7 +1218,7 @@ internal sealed partial class DocxLayoutEngine
         {
             sectionFirstPageNumber = pages.Count + 1;
             if (applyPageNumberStart && section.PageSettings.DecimalPageNumberStart is { } start)
-                pageNumberOffset = start - sectionFirstPageNumber;
+                pageNumberOffset = start - ProjectPageNumber(sectionFirstPageNumber);
             activeSectionSettings = section;
             page = ResolveSectionGeometry(document, activeSectionSettings, reserveMarkupMargin, retuneReserveToPrintScale, reservePrintScale, pages.Count + 1);
             activeColumnIndex = 0;
@@ -2505,6 +2541,17 @@ internal sealed partial class DocxLayoutEngine
             GetRelatedStoryLayouts, BindRelatedStoryPage, HasCompleteEndnoteFrame, cancellationToken,
             paragraphSpacingScale, unscaledTextMeasurer ?? textMeasurer, ResolveHeaderKeepOut, placedStoryKeys,
             ResolveFooterKeepOut, ResolveNoteFooterKeepOut, MapBodyBoundaryToNoteDesign).ToArray();
+        actualNotePageShifts = null;
+        if (pagesWithRelatedStories.Length != pages.Count)
+        {
+            for (int index = 0; index < pagesWithRelatedStories.Length; index++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                int original = pagesWithRelatedStories[index].BodyFlowPageNumber;
+                if (original == 0 || original == index + 1) continue;
+                (actualNotePageShifts ??= new int[pages.Count])[original - 1] = index + 1 - original;
+            }
+        }
         OoxConversionBudget.Current?.AdmitDocxLayoutPages(pagesWithRelatedStories.Length);
         cancellationToken.ThrowIfCancellationRequested();
         var staticContent = AddStaticContent(pagesWithRelatedStories, textMeasurer, defaultTabStopPoints, paragraphSpacingScale, unscaledTextMeasurer, cancellationToken, mathEquations);

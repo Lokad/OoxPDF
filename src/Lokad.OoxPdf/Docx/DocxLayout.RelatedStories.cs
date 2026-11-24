@@ -62,6 +62,7 @@ internal sealed partial class DocxLayoutEngine
         {
             cancellationToken.ThrowIfCancellationRequested();
             DocxLayoutPage page = pages[pageIndex];
+            int outputIndex = pageIndex + outputShift;
             double bodyWidth = ResolvePageBodyWidth(page);
             if (!storyLayoutsByWidth.TryGetValue(bodyWidth, out IReadOnlyList<DocxRelatedStoryLayout>? pageRelatedStoryLayouts))
             {
@@ -132,13 +133,12 @@ internal sealed partial class DocxLayoutEngine
                         continue;
                     }
 
-                    storyLayout = bindRelatedStoryPage(storyLayout, footnoteWidth, page.GetPageNumber(pageIndex + 1));
+                    storyLayout = bindRelatedStoryPage(storyLayout, footnoteWidth, page.GetPageNumber(outputIndex + 1));
                     placedStoryKeys.Add((reference.Kind, reference.Id));
                     pageFootnoteStories.Add(new DocxReferencedRelatedStoryLayout(location, storyLayout));
                 }
             }
 
-            int outputIndex = pageIndex + outputShift;
             int countBefore = outputPages.Count;
             DocxRelatedStoryLayout? footnoteContinuationLayout = FindSpecialRelatedStoryLayout(footnoteLayouts, DocxRelatedStoryKind.Footnote, DocxRelatedStoryType.ContinuationSeparator) ?? footnoteSeparatorLayout;
             PlaceFootnoteStories(outputPages, outputIndex, page, pageFootnoteStories, footnoteSeparatorLayout, footnoteContinuationLayout, separatorMeasurer, printScale, headerKeepOut,
@@ -1326,6 +1326,7 @@ internal sealed partial class DocxLayoutEngine
         {
             return template with
             {
+                BodyFlowPageNumber = 0,
                 StaticTextLines = [],
                 StaticInlineImages = [],
                 StaticTableRows = [],

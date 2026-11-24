@@ -62,6 +62,46 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
+    public static void DocxSectionPageCountersAccountForInsertedEndnotePages()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var renderer = PictureRangeRenderer(mode);
+            var source = WithNoteMathStaticStory(ReadSectionCounter(mode, 900, null), true,
+                CounterParagraph("Public footer ", includePageCount: true));
+            var body = source.BodyElements.Take(source.BodyElements.Count - 1).ToArray();
+            var boundary = (DocxSectionBreakElement)body[^1];
+            body[^1] = boundary with { PageSettings = boundary.PageSettings with { DecimalPageNumberStart = 25 } };
+            source = source with { BodyElements = [.. body, new DocxParagraphElement(CounterParagraph("Public following section "))] };
+            foreach (int? restart in new int?[] { 40, null })
+            {
+                var document = source with { PageSettings = source.PageSettings with { DecimalPageNumberStart = restart } };
+                var pages = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
+                var text = pages.Select(SectionCounterPageText).ToArray();
+                int following = Array.FindIndex(text, page => page.Contains("Publicfollowingsection", StringComparison.Ordinal));
+                TestAssert.True(following >= 4, "A late endnote continuation precedes the next section.");
+                TestAssert.Contains("item899", string.Concat(text.Take(following)));
+                TestAssert.Contains($"Publicfollowingsection{restart ?? 25 + following}", text[following]);
+                for (int index = 0; index < pages.Length; index++)
+                {
+                    int number = restart is { } start && index >= following
+                        ? start + index - following : 25 + index;
+                    TestAssert.Contains($"Publicfooter{number}of{pages.Length}", text[index]);
+                }
+            }
+        }
+
+        static DocxParagraph CounterParagraph(string label, bool includePageCount = false)
+        {
+            var paragraph = DocxTests.CreateDocxLayoutParagraph(label, 12d, 14d);
+            var style = paragraph.Runs.Single();
+            var page = style with { Text = "{PAGE}", FieldKind = DocxFieldKind.Page };
+            return paragraph with { Runs = includePageCount
+                ? [style, page, style with { Text = " of " }, style with { Text = "{NUMPAGES}", FieldKind = DocxFieldKind.NumPages }]
+                : [style, page] };
+        }
+    }
+
     public static void DocxEndnotePlacementUsesDocumentPositionAndPreservesSectionMetadata()
     {
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })

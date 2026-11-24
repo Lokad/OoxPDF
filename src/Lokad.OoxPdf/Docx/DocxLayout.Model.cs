@@ -27,6 +27,8 @@ internal sealed record DocxLayoutPage(
 {
     // Physical page on which this section begins; continuation templates retain it.
     public int SectionFirstPageNumber { get; init; } = 1;
+    // Ordinal before late note pages are inserted. Their shells have no body ordinal.
+    public int BodyFlowPageNumber { get; init; }
     public int PageNumberOffset { get; init; }
     public DocxPageNumber GetPageNumber(int physicalPageNumber) => new(physicalPageNumber, PageNumberOffset);
     public IReadOnlyList<DocxInlineTextBoxLayout> StaticInlineTextBoxes { get; init; } = [];
