@@ -1442,8 +1442,12 @@ internal sealed partial class DocxLayoutEngine
                 {
                     var section = following ?? FindSectionSettingsAtOrAfter(document.BodyElements,
                         elementIndex + 1, sectionSettingsByElementIndex) ?? finalSectionSettings;
-                    ApplySectionAfterBreak(section, boundaryType is null or DocxSectionBreakType.NextPage &&
-                        DocxSectionBreakTypeExtensions.FromValue(section.SectionProperties.BreakTypeValue) is null or DocxSectionBreakType.NextPage);
+                    bool ordinaryPageStart = boundaryType is null or DocxSectionBreakType.NextPage &&
+                        DocxSectionBreakTypeExtensions.FromValue(section.SectionProperties.BreakTypeValue) is null or DocxSectionBreakType.NextPage;
+                    // Bind the displayed restart after the physical filler decision.
+                    bool incomingParityStart = following is not null &&
+                        boundaryType is DocxSectionBreakType.OddPage or DocxSectionBreakType.EvenPage;
+                    ApplySectionAfterBreak(section, ordinaryPageStart || incomingParityStart);
                 }
 
                 pendingSpacingAfter = 0d;

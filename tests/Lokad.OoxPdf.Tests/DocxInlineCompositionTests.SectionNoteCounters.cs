@@ -195,43 +195,48 @@ internal static partial class DocxInlineCompositionTests
                 FooterBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>> { ["first"] = [new DocxParagraphElement(footer)] }
             };
             var renderer = PictureRangeRenderer(mode);
-            var occupied = new List<string[]>();
-            int fillers = 0;
-            foreach (var type in new[] { DocxSectionBreakType.OddPage, DocxSectionBreakType.EvenPage })
+            foreach (bool restartNumbering in new[] { false, true })
             {
-                var document = source with { PageSettings = settings,
-                    FinalSectionBreak = source.FinalSectionBreak! with { TypeValue = type, PageSettings = settings } };
-                var pages = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
-                var text = pages.Select(SectionCounterPageText).ToArray();
-                int following = AssertFootnoteBoundaryContent(pages, text);
-                TestAssert.Equal(pages.Length - 1, following);
-                TestAssert.Equal(type == DocxSectionBreakType.OddPage ? 1 : 0, (following + 1) % 2);
-                TestAssert.Contains("Publicfirstpageheader", text[following]);
-                TestAssert.True(text.Take(following).All(page => !page.Contains("Publicfirstpageheader", StringComparison.Ordinal)),
-                    "The first-page header belongs to the admitted section body.");
-                TestAssert.Contains($"Publicfirstfooter{following + 1}of{pages.Length}", text[following]);
-                bool hasFiller = pages[following - 1].Content.Length == 0;
-                if (hasFiller)
+                var occupied = new List<string[]>();
+                int fillers = 0;
+                foreach (var (type, start) in new[] { (DocxSectionBreakType.OddPage, 41), (DocxSectionBreakType.EvenPage, 40) })
                 {
-                    TestAssert.Equal(0, pages[following - 1].Images.Count);
-                    TestAssert.Equal(0, pages[following - 1].Annotations.Count);
-                    fillers++;
+                    int? restart = restartNumbering ? start : null;
+                    var incoming = settings with { DecimalPageNumberStart = restart };
+                    var document = source with { PageSettings = incoming,
+                        FinalSectionBreak = source.FinalSectionBreak! with { TypeValue = type, PageSettings = incoming } };
+                    var pages = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
+                    var text = pages.Select(SectionCounterPageText).ToArray();
+                    int following = AssertFootnoteBoundaryContent(pages, text, restart);
+                    TestAssert.Equal(pages.Length - 1, following);
+                    TestAssert.Equal(type == DocxSectionBreakType.OddPage ? 1 : 0, (following + 1) % 2);
+                    TestAssert.Contains("Publicfirstpageheader", text[following]);
+                    TestAssert.True(text.Take(following).All(page => !page.Contains("Publicfirstpageheader", StringComparison.Ordinal)),
+                        "The first-page header belongs to the admitted section body.");
+                    TestAssert.Contains($"Publicfirstfooter{restart ?? following + 1}of{pages.Length}", text[following]);
+                    bool hasFiller = pages[following - 1].Content.Length == 0;
+                    if (hasFiller)
+                    {
+                        TestAssert.Equal(0, pages[following - 1].Images.Count);
+                        TestAssert.Equal(0, pages[following - 1].Annotations.Count);
+                        fillers++;
+                    }
+                    occupied.Add(text.Take(hasFiller ? following - 1 : following).ToArray());
                 }
-                occupied.Add(text.Take(hasFiller ? following - 1 : following).ToArray());
+                TestAssert.Equal(1, fillers);
+                TestAssert.True(occupied[0].SequenceEqual(occupied[1]),
+                    "Changing the incoming parity preserves the outgoing content on every occupied page.");
             }
-            TestAssert.Equal(1, fillers);
-            TestAssert.True(occupied[0].SequenceEqual(occupied[1]),
-                "Changing the incoming parity preserves the outgoing content on every occupied page.");
         }
     }
 
     private const int FootnoteBoundaryWordCount = 2100;
 
-    private static int AssertFootnoteBoundaryContent(PdfPage[] pages, string[] text)
+    private static int AssertFootnoteBoundaryContent(PdfPage[] pages, string[] text, int? restart = null)
     {
         int following = Array.FindIndex(text, page => page.Contains("FollowingsectionPAGE", StringComparison.Ordinal));
         TestAssert.True(following >= 4, "The footnote has body-free continuation pages before the next section.");
-        TestAssert.Equal((following + 1).ToString(CultureInfo.InvariantCulture),
+        TestAssert.Equal((restart ?? following + 1).ToString(CultureInfo.InvariantCulture),
             Regex.Match(text[following], @"FollowingsectionPAGE([0-9]+)").Groups[1].Value);
         TestAssert.True(pages[0].Annotations.Any(link => link.Destination?.PageIndex == following),
             "The bookmark reaches the physical body page.");
