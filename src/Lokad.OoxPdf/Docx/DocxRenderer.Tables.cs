@@ -363,17 +363,12 @@ internal sealed partial class DocxRenderer
         foreach (DocxTableCellLayout cellLayout in row.Cells)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (!ShouldRenderTableCellVisualFragment(cellLayout))
-            {
-                continue;
-            }
-
-            if (previousRow is null && ShouldRenderTableRowEdge(row, top: true))
+            if (previousRow is null && ShouldRenderTableCellVisualFragment(cellLayout) && ShouldRenderTableRowEdge(row, top: true))
             {
                 RenderHorizontalBorderJunctions(cellLayout.X, cellLayout.X + cellLayout.Width, cellLayout.Y + cellLayout.Height, cellLayout.VisualCell, "top", rowBoundaryIndex.SliceRaw(cellLayout.X, cellLayout.X + cellLayout.Width, cancellationToken), graphics, emittedJunctions);
             }
 
-            if (nextRow is null && ShouldRenderTableRowEdge(row, top: false))
+            if (nextRow is null && OwnsHorizontalBottom(cellLayout) && ShouldRenderTableRowEdge(row, top: false))
             {
                 RenderHorizontalBorderJunctions(cellLayout.X, cellLayout.X + cellLayout.Width, cellLayout.Y, cellLayout.VisualCell, "bottom", rowBoundaryIndex.SliceRaw(cellLayout.X, cellLayout.X + cellLayout.Width, cancellationToken), graphics, emittedJunctions);
             }
@@ -401,8 +396,10 @@ internal sealed partial class DocxRenderer
         string edge,
         PdfGraphicsBuilder graphics)
     {
-        DocxTableCellLayout? firstCell = row.Cells.FirstOrDefault(ShouldRenderTableCellVisualFragment);
-        DocxTableCellLayout? lastCell = row.Cells.LastOrDefault(ShouldRenderTableCellVisualFragment);
+        bool top = string.Equals(edge, "top", StringComparison.Ordinal);
+        Func<DocxTableCellLayout, bool> ownsEdge = top ? ShouldRenderTableCellVisualFragment : OwnsHorizontalBottom;
+        DocxTableCellLayout? firstCell = row.Cells.FirstOrDefault(ownsEdge);
+        DocxTableCellLayout? lastCell = row.Cells.LastOrDefault(ownsEdge);
         if (firstCell is null || lastCell is null)
         {
             return;
@@ -412,9 +409,7 @@ internal sealed partial class DocxRenderer
         DocxTableCellBorder? lastHorizontal = DocxTableBorderGeometry.Find(lastCell.VisualCell.Borders, edge);
         DocxTableBorderBoundary? firstBoundary = boundaries.OrderBy(boundary => boundary.X).FirstOrDefault();
         DocxTableBorderBoundary? lastBoundary = boundaries.OrderByDescending(boundary => boundary.X).FirstOrDefault();
-        double y = string.Equals(edge, "top", StringComparison.Ordinal)
-            ? firstCell.Y + firstCell.Height
-            : firstCell.Y;
+        double y = top ? firstCell.Y + firstCell.Height : firstCell.Y;
 
         if (firstBoundary is not null && firstHorizontal is not null && !DocxTableBorderGeometry.IsSuppressed(firstHorizontal))
         {
@@ -441,7 +436,7 @@ internal sealed partial class DocxRenderer
         for (int cellIndex = 0; cellIndex < plan.Row.Cells.Count; cellIndex++)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (!plan.CurrentVisible[cellIndex])
+            if (!plan.CurrentBottomEdges[cellIndex])
             {
                 continue;
             }
@@ -534,7 +529,7 @@ internal sealed partial class DocxRenderer
         {
             cancellationToken.ThrowIfCancellationRequested();
             DocxTableCellLayout cellLayout = row.Cells[cellIndex];
-            if (!ShouldRenderTableCellVisualFragment(cellLayout))
+            if (cellLayout.VisualOwnership == DocxTableCellVisualOwnership.MissingVerticalMergeOwner)
             {
                 continue;
             }

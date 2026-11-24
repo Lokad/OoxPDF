@@ -2332,7 +2332,10 @@ internal sealed partial class DocxLayoutEngine
 
             if (verticalMergeOwner is { } merge &&
                 CoveringMergeBottom(merge, previousRow, tableContext, rowIndex, cellX, cellWidth, visualY, visualHeight) is { } bottom)
-                verticalMergeOwner = merge with { CoveredBottom = bottom };
+                verticalMergeOwner = merge with {
+                    CoveredBottom = bottom,
+                    EndsAtRowBottom = Math.Abs(visualY - bottom) <= .001d
+                };
 
             var currentPageNumber = getPageNumber();
             int currentPageIndex = Math.Max(0, currentPageNumber.Physical - 1);

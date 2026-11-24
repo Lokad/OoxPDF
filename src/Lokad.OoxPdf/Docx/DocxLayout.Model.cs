@@ -376,6 +376,8 @@ internal sealed record DocxVerticalMergeOwner(DocxTableCell Cell, int RowIndex, 
 {
     // Set only when the previously placed restart frame covers this cell.
     public double? CoveredBottom { get; init; }
+    // Whether this row reaches that frame's bottom, before print transforms.
+    public bool EndsAtRowBottom { get; init; }
 }
 
 internal enum DocxTableCellVisualOwnership

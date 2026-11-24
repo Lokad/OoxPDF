@@ -34,19 +34,16 @@ internal sealed partial class DocxRenderer
             }
 
             DocxTableCell visualCell = cellLayout.VisualCell;
-            if (paintsCell)
+            if (paintsCell && previousRow is null && ShouldRenderTableRowEdge(row, top: true))
+                RenderHorizontalTableCellBorder(cellLayout, "top", graphics);
+
+            if (nextRow is null && OwnsHorizontalBottom(cellLayout) && ShouldRenderTableRowEdge(row, top: false))
+                RenderHorizontalTableCellBorder(cellLayout, "bottom", graphics);
+
+            if (paintsCell && cellIndex == 0)
             {
-                if (previousRow is null && ShouldRenderTableRowEdge(row, top: true))
-                    RenderHorizontalTableCellBorder(cellLayout, "top", graphics);
-
-                if (nextRow is null && ShouldRenderTableRowEdge(row, top: false))
-                    RenderHorizontalTableCellBorder(cellLayout, "bottom", graphics);
-
-                if (cellIndex == 0)
-                {
-                    DocxTableCellBorder? left = DocxTableBorderGeometry.Find(visualCell.Borders, "left") ?? DocxTableBorderGeometry.Find(visualCell.Borders, "start");
-                    RenderVerticalTableCellBorder(cellLayout.X, cellLayout.Y, cellLayout.Height, left, graphics);
-                }
+                DocxTableCellBorder? left = DocxTableBorderGeometry.Find(visualCell.Borders, "left") ?? DocxTableBorderGeometry.Find(visualCell.Borders, "start");
+                RenderVerticalTableCellBorder(cellLayout.X, cellLayout.Y, cellLayout.Height, left, graphics);
             }
 
             DocxTableCellBorder? right = DocxTableBorderGeometry.Find(visualCell.Borders, "right") ?? DocxTableBorderGeometry.Find(visualCell.Borders, "end");
@@ -101,7 +98,7 @@ internal sealed partial class DocxRenderer
         for (int cellIndex = 0; cellIndex < plan.Row.Cells.Count; cellIndex++)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (!plan.CurrentVisible[cellIndex])
+            if (!plan.CurrentBottomEdges[cellIndex])
             {
                 continue;
             }
@@ -654,6 +651,9 @@ internal sealed partial class DocxRenderer
         cellLayout.VisualOwnership != DocxTableCellVisualOwnership.MissingVerticalMergeOwner &&
         cellLayout.VerticalMergeOwner?.CoveredBottom is null;
 
+    private static bool OwnsHorizontalBottom(DocxTableCellLayout cell) =>
+        ShouldRenderTableCellVisualFragment(cell) || cell.VerticalMergeOwner?.EndsAtRowBottom == true;
+
     // R11: one ordered row-pair overlap plan shared by the horizontal stroke and
     // junction painters. Both painters previously rescanned next-row cells per
     // current-row cell (O(C^2) overlap searches plus a per-cell overlap allocation),
@@ -667,7 +667,7 @@ internal sealed partial class DocxRenderer
 
         public DocxTableRowLayout NextRow { get; }
 
-        public bool[] CurrentVisible { get; }
+        public bool[] CurrentBottomEdges { get; }
 
         public int[] OverlapCounts { get; }
 
@@ -676,13 +676,13 @@ internal sealed partial class DocxRenderer
         private RowPairBorderPlan(
             DocxTableRowLayout row,
             DocxTableRowLayout nextRow,
-            bool[] currentVisible,
+            bool[] currentBottomEdges,
             int[] overlapCounts,
             (DocxTableCellLayout Current, DocxTableCellLayout Next, double X, double Right)[] overlaps)
         {
             Row = row;
             NextRow = nextRow;
-            CurrentVisible = currentVisible;
+            CurrentBottomEdges = currentBottomEdges;
             OverlapCounts = overlapCounts;
             Overlaps = overlaps;
         }
@@ -694,18 +694,25 @@ internal sealed partial class DocxRenderer
                 return null;
             }
 
-            bool[] currentVisible = new bool[row.Cells.Count];
-            for (int i = 0; i < row.Cells.Count; i++)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                currentVisible[i] = ShouldRenderTableCellVisualFragment(row.Cells[i]);
-            }
-
+            HashSet<DocxTableCell>? nextCoveredOwners = null;
             bool[] nextVisible = new bool[nextRow.Cells.Count];
             for (int j = 0; j < nextRow.Cells.Count; j++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                nextVisible[j] = ShouldRenderTableCellVisualFragment(nextRow.Cells[j]);
+                var cell = nextRow.Cells[j];
+                nextVisible[j] = ShouldRenderTableCellVisualFragment(cell);
+                if (cell.VerticalMergeOwner is { CoveredBottom: not null } merge && merge.Cell.GridSpan == cell.Cell.GridSpan)
+                    (nextCoveredOwners ??= new(ReferenceEqualityComparer.Instance)).Add(merge.Cell);
+            }
+
+            bool[] currentBottomEdges = new bool[row.Cells.Count];
+            for (int i = 0; i < row.Cells.Count; i++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var cell = row.Cells[i];
+                // The covered row at the bottom paints the shared edge at
+                // its physical boundary. The restart still owns its content.
+                currentBottomEdges[i] = OwnsHorizontalBottom(cell) && nextCoveredOwners?.Contains(cell.Cell) != true;
             }
 
             double[] nextLefts = new double[nextRow.Cells.Count];
@@ -733,7 +740,7 @@ internal sealed partial class DocxRenderer
                 for (int i = 0; i < row.Cells.Count; i++)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    if (!currentVisible[i])
+                    if (!currentBottomEdges[i])
                     {
                         continue;
                     }
@@ -742,7 +749,7 @@ internal sealed partial class DocxRenderer
                     double right = left + row.Cells[i].Width;
                     if (!double.IsFinite(left) || !double.IsFinite(right))
                     {
-                        AddNestedPairs(row, nextRow, currentVisible, nextVisible, i, pairs);
+                        AddNestedPairs(row, nextRow, currentBottomEdges, nextVisible, i, pairs);
                         continue;
                     }
 
@@ -783,7 +790,7 @@ internal sealed partial class DocxRenderer
                 for (int i = 0; i < row.Cells.Count; i++)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    AddNestedPairs(row, nextRow, currentVisible, nextVisible, i, pairs);
+                    AddNestedPairs(row, nextRow, currentBottomEdges, nextVisible, i, pairs);
                 }
             }
 
@@ -801,18 +808,18 @@ internal sealed partial class DocxRenderer
                 overlaps[k] = (row.Cells[pairs[k].CurrentIndex], nextRow.Cells[pairs[k].NextIndex], pairs[k].X, pairs[k].Right);
             }
 
-            return new RowPairBorderPlan(row, nextRow, currentVisible, overlapCounts, overlaps);
+            return new RowPairBorderPlan(row, nextRow, currentBottomEdges, overlapCounts, overlaps);
         }
 
         private static void AddNestedPairs(
             DocxTableRowLayout row,
             DocxTableRowLayout nextRow,
-            bool[] currentVisible,
+            bool[] currentBottomEdges,
             bool[] nextVisible,
             int currentIndex,
             List<(int CurrentIndex, int NextIndex, double X, double Right)> pairs)
         {
-            if (!currentVisible[currentIndex])
+            if (!currentBottomEdges[currentIndex])
             {
                 return;
             }

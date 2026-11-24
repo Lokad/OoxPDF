@@ -87,15 +87,60 @@ internal static class DocxBorderPlanTests
         }
     }
 
+    public static void DocxMergedBottomBorderMeetsNextRowAtPhysicalEdge()
+    {
+        const double mergeBottom = 300d - 24d - 3 * 48d;
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var nextTop = ReadFills(RenderBorderTable(mode, Rows(merge: false, withNext: true, ownerBottom: false))).Single();
+            TestAssert.Equal("1 0 0", nextTop.Color);
+            TestAssert.Equal(150d, nextTop.Width);
+            TestAssert.True(Math.Abs(nextTop.Y + nextTop.Height - mergeBottom) < .2d,
+                "The lower cell's top border joins at the end of the three 48pt rows.");
+            TestAssert.Equal(nextTop, ReadFills(RenderBorderTable(mode, Rows(merge: true, withNext: true, ownerBottom: false))).Single());
+
+            var shared = ReadFills(RenderBorderTable(mode, Rows(merge: false, withNext: true, ownerBottom: true))).Single();
+            TestAssert.Equal("0 1 0", shared.Color);
+            TestAssert.Equal(shared, ReadFills(RenderBorderTable(mode, Rows(merge: true, withNext: true, ownerBottom: true))).Single());
+
+            var terminal = ReadFills(RenderBorderTable(mode, Rows(merge: true, withNext: false, ownerBottom: true))).Single();
+            TestAssert.Equal(("0 1 0", shared.X, mergeBottom, shared.Width, shared.Height), terminal);
+        }
+
+        static string Rows(bool merge, bool withNext, bool ownerBottom) =>
+            string.Concat(Enumerable.Range(0, withNext ? 4 : 3).Select(index =>
+            {
+                string marker = merge && index < 3 ? MergeMarker(index, 0) : string.Empty;
+                string border = index == 3
+                    ? "<w:top w:val=\"single\" w:sz=\"24\" w:color=\"FF0000\"/>"
+                    : ownerBottom && index == (merge ? 0 : 2)
+                        ? "<w:bottom w:val=\"single\" w:sz=\"32\" w:color=\"00FF00\"/>" : string.Empty;
+                return $$"""
+                    <w:tr><w:trPr><w:trHeight w:val="960" w:hRule="exact"/></w:trPr>
+                      <w:tc><w:tcPr>{{marker}}<w:tcBorders>{{border}}</w:tcBorders></w:tcPr><w:p/></w:tc>
+                      <w:tc><w:p/></w:tc>
+                    </w:tr>
+                    """;
+            }));
+    }
+
     private static string RenderBorderNeighbors(OoxPdfDocxMarkupMode mode, bool merge, string?[] colors, int? rightMergeStart = null)
     {
         string rows = string.Concat(colors.Select((color, index) => $$"""
             <w:tr>
               <w:trPr><w:trHeight w:val="960" w:hRule="exact"/></w:trPr>
-              <w:tc><w:tcPr>{{Merge(index, merge ? 0 : null)}}</w:tcPr><w:p/></w:tc>
-              <w:tc><w:tcPr>{{Merge(index, rightMergeStart)}}{{(color is null ? "" : $"<w:tcBorders><w:left w:val=\"single\" w:sz=\"24\" w:color=\"{color}\"/></w:tcBorders>")}}</w:tcPr><w:p/></w:tc>
+              <w:tc><w:tcPr>{{MergeMarker(index, merge ? 0 : null)}}</w:tcPr><w:p/></w:tc>
+              <w:tc><w:tcPr>{{MergeMarker(index, rightMergeStart)}}{{(color is null ? "" : $"<w:tcBorders><w:left w:val=\"single\" w:sz=\"24\" w:color=\"{color}\"/></w:tcBorders>")}}</w:tcPr><w:p/></w:tc>
             </w:tr>
             """));
+        return RenderBorderTable(mode, rows);
+    }
+
+    private static string MergeMarker(int row, int? start) =>
+        row == start ? "<w:vMerge w:val=\"restart\"/>" : row > start ? "<w:vMerge/>" : string.Empty;
+
+    private static string RenderBorderTable(OoxPdfDocxMarkupMode mode, string rows)
+    {
         using var input = TestFixtures.CreateZipPackage(new Dictionary<string, string>
         {
             ["[Content_Types].xml"] = TestFixtures.DocxContentTypes,
@@ -115,9 +160,6 @@ internal static class DocxBorderPlanTests
             ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup;
         return new DocxRenderer(new TestFaceFontResolver(), mode, geometry)
             .RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single().Content;
-
-        static string Merge(int row, int? start) => row == start ? "<w:vMerge w:val=\"restart\"/>" :
-            row > start ? "<w:vMerge/>" : string.Empty;
     }
 
     private static (string Color, double X, double Y, double Width, double Height)[] ReadFills(string content)
