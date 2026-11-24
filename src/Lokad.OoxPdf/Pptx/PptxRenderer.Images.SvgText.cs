@@ -373,12 +373,14 @@ internal sealed partial class PptxRenderer
         foreach (Rune rune in label.Text.EnumerateRunes())
         {
             cancellationToken.ThrowIfCancellationRequested();
-            ushort glyph = font.MapCodePoint(rune.Value);
-            if (glyph == 0) return false;
-            if (label.Kerning && previous != 0) advance += font.GetKerning(previous, glyph) * unitScale;
-            OpenTypeFont.OpenTypeGlyphOutline? outline = null;
             bool hidden = label.HiddenCharacters?[characterIndex] ?? false;
             characterIndex += rune.Utf16SequenceLength;
+            ushort glyph = font.MapCodePoint(rune.Value);
+            // Hidden text still takes space. An unmapped hidden character uses
+            // the face's missing-glyph advance and needs no outline.
+            if (glyph == 0 && !hidden) return false;
+            if (label.Kerning && previous != 0 && glyph != 0) advance += font.GetKerning(previous, glyph) * unitScale;
+            OpenTypeFont.OpenTypeGlyphOutline? outline = null;
             if (!hidden && !Rune.IsWhiteSpace(rune))
             {
                 if (!font.TryReadGlyphOutline(glyph, out var parsed) || parsed.Contours.Count == 0) return false;

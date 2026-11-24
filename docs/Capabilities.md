@@ -102,6 +102,8 @@ Full-opacity spans keep their glyphs. Zero-opacity spans retain their advances
 and suppress all descendant ink.
 Plain spans follow their nearest `xml:space` declaration. Preserved spaces
 and no-break spaces retain their advance at label edges.
+Unmapped characters in hidden spans retain the selected face's missing-glyph
+advance while visible neighbors still paint.
 Plain spans and links also retain glyph paint with explicit `inherit` or `unset`
 for font family, size, style, weight, color, fill and fill opacity.
 They can restate the same font family list, slant, weight, resolved size, solid fill or fill opacity.
