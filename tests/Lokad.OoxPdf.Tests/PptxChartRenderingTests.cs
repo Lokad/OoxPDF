@@ -3439,10 +3439,15 @@ internal static class PptxChartRenderingTests
                     <c:dPt><c:spPr><a:solidFill><a:srgbClr val="999999"/></a:solidFill></c:spPr></c:dPt>
                   </c:ser>
                   <c:dLbls>
-                    <c:dLbl><c:idx val="00"/><c:layout><c:manualLayout><c:x val="0.1"/><c:y val="0.2"/></c:manualLayout></c:layout><c:showVal val="1"/></c:dLbl>
+                    <c:dLbl><c:idx val="00"/><c:layout><c:manualLayout><c:x val="0.1"/><c:y val="0.2"/></c:manualLayout></c:layout>
+                      <c:showVal val="1"/><c:showPercent val="0"/><c:showCatName val="0"/>
+                      <c:showSerName val="0"/><c:showLegendKey val="0"/><c:showBubbleSize val="0"/>
+                    </c:dLbl>
                     <c:dLbl><c:idx val="-1"/><c:delete val="1"/></c:dLbl>
                     <c:dLbl><c:idx val="futureLabel"/><c:delete val="1"/></c:dLbl>
                     <c:dLbl><c:delete val="1"/></c:dLbl>
+                    <c:showVal val="0"/><c:showPercent val="0"/><c:showCatName val="0"/>
+                    <c:showSerName val="0"/><c:showLegendKey val="0"/><c:showBubbleSize val="0"/>
                   </c:dLbls>
                 </c:pieChart>
               </c:plotArea></c:chart>
