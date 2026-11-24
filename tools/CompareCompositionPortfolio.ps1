@@ -136,13 +136,17 @@ $historical = @()
 # Reapply the active limits below, retaining source hashes in the new report.
 $cached = @(foreach ($directory in $ReuseComparisonDirectory) {
     $path = Join-Path (Resolve-Path -LiteralPath $directory).Path $reportName
-    $report = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
+    $bytes = [IO.File]::ReadAllBytes($path)
+    $reader = [IO.StreamReader]::new([IO.MemoryStream]::new($bytes))
+    try { $report = ConvertFrom-Json -InputObject ($reader.ReadToEnd()) }
+    finally { $reader.Dispose() }
+    $hash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($bytes))
     if ($report.ComparisonPolicy.Schema -eq $comparisonPolicy.Schema -and
         $report.ComparisonPolicy.VisualDiffSha256 -eq $comparisonPolicy.VisualDiffSha256 -and
         $report.ComparisonPolicy.RasterizerId -eq $comparisonPolicy.RasterizerId) {
-        foreach ($prior in $report.Rows) { [pscustomobject]@{Path=$path;Row=$prior} }
+        foreach ($prior in $report.Rows) { [pscustomobject]@{Path=$path;Sha256=$hash;Row=$prior} }
     }
-    else { $historical += [ordered]@{Path=$path;Sha256=(Get-FileHash -LiteralPath $path).Hash;Reason='Unbound or different comparison policy; historical metrics only'} }
+    else { $historical += [ordered]@{Path=$path;Sha256=$hash;Reason='Unbound or different comparison policy; historical metrics only'} }
 })
 $ids = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
 # Validate the complete batch before raster/diff stages create any output. A
@@ -246,6 +250,7 @@ function Get-PortfolioRaster([string] $Pdf, [string] $Folder, [int] $Dpi=144) {
     return $Folder
 }
 $rows = @()
+$usedReports = [Collections.Generic.Dictionary[string,string]]::new([StringComparer]::Ordinal)
 foreach ($job in $jobs) {
     $row = $job.Row; $id = $job.Id; $run = $job.Run; $source = $job.Source
     $pdf = $job.Pdf; $referencePdf = $job.ReferencePdf; $referenceHash = $job.ReferenceHash
@@ -258,15 +263,16 @@ foreach ($job in $jobs) {
         throw ('Comparison reference provenance changed: ' + $id)
     }
     if ($reuse.Count) {
-        $prior = $reuse[0].Row
+        $prior = $reuse[0]
+        $usedReports[$prior.Path] = $prior.Sha256
         $rows += [ordered]@{Id=$row.Id;Mode=$row.Mode;HeldOut=$row.HeldOut;
             CandidatePdfSha256=$row.PdfSha256;ReferencePdfSha256=$referenceHash;
             ReferenceSourceDirectory=$source;ReferenceIdentitySha256=$job.IdentityHash;ReferenceExportLogSha256=$job.ExportLogHash;
             ReferenceKind=$ReferenceKind;ReferenceImageMetadataSha256=$job.ImageHash;ReferenceCalibrationStatus=$job.Calibration;
             RasterDpi=$job.Dpi;
-            Failures=$job.ReuseFailures;Metrics=$prior.Metrics;Thresholds=$job.Limits;
-            ContentSeverity=$contentSeverity;ContentWitnesses=$job.ContentWitnesses;ReusedComparison=$reuse[0].Path;
-            ReusedComparisonSha256=(Get-FileHash $reuse[0].Path).Hash}
+            Failures=$job.ReuseFailures;Metrics=$prior.Row.Metrics;Thresholds=$job.Limits;
+            ContentSeverity=$contentSeverity;ContentWitnesses=$job.ContentWitnesses;ReusedComparison=$prior.Path;
+            ReusedComparisonSha256=$prior.Sha256}
         Write-Output ("$id — $contentSeverity. Reused pixel metrics with current thresholds.")
         continue
     }
@@ -297,6 +303,12 @@ if ((Get-FileHash -LiteralPath $VisualDiffPath).Hash -ne $comparisonPolicy.Visua
     (Get-PortfolioRasterizerId) -ne $comparisonPolicy.RasterizerId -or
     ($inspectedPageCounts.Count -and (Get-FileHash -LiteralPath $inspectorDll).Hash -ne $inspectorHash)) {
     throw 'Comparison tools changed during the batch; retained attempts are not a qualified report'
+}
+foreach ($prior in $usedReports.GetEnumerator()) {
+    if (!(Test-Path -LiteralPath $prior.Key -PathType Leaf) -or
+        (Get-FileHash -LiteralPath $prior.Key).Hash -cne $prior.Value) {
+        throw ('Reused comparison report changed: ' + $prior.Key)
+    }
 }
 [ordered]@{
     CandidateLibrarySha256=$outcomes.LibrarySha256

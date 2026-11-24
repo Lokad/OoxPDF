@@ -105,9 +105,11 @@ function Write-ControlPdfInspection([string] $Pdf) {
     for ($i=1; $i -le $count; $i++) { Write-Output "$i 0 obj: page" }
     $global:LASTEXITCODE = 0
 }
+$inspectionProbe = @{AfterRead=$null}
 function dotnet {
     if ($args[0] -ne $inspector -or $args[2] -ne '--text-only') { throw 'Unexpected tool invocation during comparison preflight' }
     Write-ControlPdfInspection $args[1]
+    if ($inspectionProbe.AfterRead) { & $inspectionProbe.AfterRead }
 }
 $passed = @()
 foreach ($fault in @('empty', 'missing-reference', 'candidate-hash', 'existing-comparison', 'duplicate')) {
@@ -166,16 +168,44 @@ function Test-ComparisonPolicyFixture {
 }
 $case = New-Case 'identity-reuse' 'legacy'
 $cache = New-ReuseCache $case
+$priorPath = Join-Path $cache 'office-comparisons.json'
+$priorHash = (Get-FileHash -LiteralPath $priorPath).Hash
 & $script -CandidateDirectory $case.CandidateDirectory -ReferenceDirectory $case.ReferenceDirectory `
     -VisualDiffPath $visualDiff -ValidationToolsDirectory $tools -ReuseComparisonDirectory $cache | Out-Null
 $report = Get-Content -LiteralPath (Join-Path $case.CandidateDirectory 'office-comparisons.json') -Raw | ConvertFrom-Json
 if ($report.Rows.Count -ne 2 -or @($report.Rows | Where-Object {
-    !$_.ReusedComparison -or $_.Failures.Count -ne 1 -or $_.Failures[0] -ne 'ForegroundRecall' -or
+    $_.ReusedComparison -ne $priorPath -or $_.ReusedComparisonSha256 -cne $priorHash -or
+    $_.Metrics[0].ForegroundRecall -ne .5 -or $_.Failures.Count -ne 1 -or $_.Failures[0] -ne 'ForegroundRecall' -or
     $_.ContentSeverity -cne 'Content evidence incomplete'
 }).Count -or @(Get-ChildItem -LiteralPath $case.Directory -Recurse -Filter '*.called').Count) {
     throw 'Identical comparisons must reuse retained failures without rendering'
 }
 $passed += 'identity-reuse'
+$case = New-Case 'reuse-report-changed' 'legacy'
+$cache = New-ReuseCache $case
+$priorPath = Join-Path $cache 'office-comparisons.json'
+$prior = Get-Content -LiteralPath $priorPath -Raw | ConvertFrom-Json -AsHashtable
+foreach ($row in $prior.Rows) { $row.Metrics[0].ForegroundRecall = 1 }
+$replacement = ConvertTo-Json -InputObject $prior -Depth 10
+$inspectionProbe.AfterRead = {
+    [IO.File]::WriteAllText($priorPath, $replacement)
+    $inspectionProbe.AfterRead = $null
+}
+$rejected = $false
+try {
+    & $script -CandidateDirectory $case.CandidateDirectory -ReferenceDirectory $case.ReferenceDirectory `
+        -VisualDiffPath $visualDiff -ValidationToolsDirectory $tools -ReuseComparisonDirectory $cache | Out-Null
+}
+catch {
+    if (!$_.Exception.Message.StartsWith('Reused comparison report changed:', [StringComparison]::Ordinal)) { throw }
+    $rejected = $true
+}
+if (!$rejected -or $inspectionProbe.AfterRead -or
+    (Test-Path -LiteralPath (Join-Path $case.CandidateDirectory 'office-comparisons.json')) -or
+    @(Get-ChildItem -LiteralPath $case.Directory -Recurse -Filter '*.called').Count) {
+    throw 'Changed comparison report must refuse publication without rendering'
+}
+$passed += 'reuse-report-changed'
 $case = New-Case 'reused-content-severity' 'legacy'
 $cache = New-ReuseCache $case
 $priorPath = Join-Path $cache 'office-comparisons.json'
