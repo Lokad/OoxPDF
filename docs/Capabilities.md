@@ -50,8 +50,8 @@ fonts and coverage matter.
 Floating charts, SmartArt, OLE, macros, external images and general Word field
 execution are unsupported. Supported counters are computed; other fields retain
 usable stored results rather than executing arbitrary instructions.
-PAGE uses the physical page number. Section numbering starts and formats are
-unsupported.
+PAGE respects a positive decimal numbering start in single-section documents.
+Additional section restarts and nondecimal page-number formats remain unsupported.
 
 ## PPTX
 

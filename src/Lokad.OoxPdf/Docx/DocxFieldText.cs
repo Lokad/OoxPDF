@@ -65,12 +65,16 @@ internal static class DocxFieldText
     public static bool CanResolve(DocxFieldKind kind, int? pageNumber, int? pageCount) =>
         Value(kind, pageNumber, pageCount) is not null;
 
+    internal static long DisplayedPageNumber(int physicalPageNumber, int offset) =>
+        (long)physicalPageNumber + offset;
+
     public static bool TryResolve(DocxTextRun run, string text, int? pageNumber, int? pageCount, out string resolved)
     {
         resolved = text;
         if (run.FieldKind is not { } kind || Value(kind, pageNumber, pageCount) is not { } value ||
             Placeholder(kind) is not { } placeholder) return false;
-        resolved = text.Replace(placeholder, value.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal);
+        long displayedValue = kind == DocxFieldKind.Page ? DisplayedPageNumber(value, run.PageNumberOffset) : value;
+        resolved = text.Replace(placeholder, displayedValue.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal);
         return true;
     }
 

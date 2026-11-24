@@ -210,6 +210,60 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
+    public static void DocxSingleSectionPageNumberStartBindsComposedCounters()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true),
+                mode, CachedMathGeometry(mode));
+            var document = ReadSectionCounterReport(mode, start: 25, evenAndOdd: false);
+            var diagnostics = new List<Lokad.OoxPdf.Diagnostics.OoxPdfDiagnostic>();
+            var pages = renderer.RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
+            TestAssert.Equal(2, pages.Length);
+            string first = SectionCounterPageText(pages[0]);
+            TestAssert.Contains("onpage25(page25)", first);
+            TestAssert.Contains("ionpage25", first);
+            TestAssert.Contains("afterformula.Page25of2", first);
+            TestAssert.Contains("afterformula.Page26of2", SectionCounterPageText(pages[1]));
+            TestAssert.Equal(4, PortableRenderingTests.ReadPaintedSourceLabel(pages[0], "x+2y", mathOnly: true).Count);
+            TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                "The new field values preserve the adjacent formulas.");
+        }
+    }
+
+    public static void DocxSingleSectionPageNumberStartSelectsStaticStoryParity()
+    {
+        var mode = OoxPdfDocxMarkupMode.Final;
+        var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true),
+            mode, CachedMathGeometry(mode));
+        const string header = "Quarterlyoperationsreport";
+        foreach (int start in new[] { 25, 26 })
+        {
+            var document = ReadSectionCounterReport(mode, start, evenAndOdd: true);
+            var pages = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
+            TestAssert.Equal(2, pages.Length);
+            int oddPage = start % 2 == 1 ? 0 : 1;
+            string oddText = SectionCounterPageText(pages[oddPage]);
+            TestAssert.Contains(header, oddText);
+            TestAssert.Contains($"afterformula.Page{start + oddPage}of2", oddText);
+            // A missing even variant leaves the selected static frame empty.
+            string evenText = SectionCounterPageText(pages[1 - oddPage]);
+            TestAssert.DoesNotContain(header, evenText);
+            TestAssert.DoesNotContain("afterformula.Page", evenText);
+        }
+    }
+
+    private static DocxDocument ReadSectionCounterReport(OoxPdfDocxMarkupMode mode, int start, bool evenAndOdd) =>
+        ReadMutation("Composition/composed-static-cell-report", mode, false, false, (xml, w, _) =>
+        {
+            XElement section = xml.Descendants(w + "sectPr").Single();
+            section.Add(new XElement(w + "pgNumType", new XAttribute(w + "start", start)));
+            if (evenAndOdd) section.Add(new XElement(w + "evenAndOddHeaders"));
+        });
+
+    private static string SectionCounterPageText(Lokad.OoxPdf.Pdf.PdfPage page) =>
+        Regex.Replace(DocxPageFootnoteNumberingTests.DecodeText(page), @"\s+", string.Empty);
+
     public static void DocxComputedSimpleFieldPicturesSurviveCacheRunSplitsAcrossStories()
     {
         var resolver = new PortableRenderingTests.PinnedResolver(mathFont: true);

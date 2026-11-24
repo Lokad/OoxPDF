@@ -20241,6 +20241,8 @@
       "RelatedStoryPageIndexMatchesLegacyMatching"
   ],
   "docx-counter-spacing": [
+    "=DocxSingleSectionPageNumberStartBindsComposedCounters",
+    "=DocxSingleSectionPageNumberStartSelectsStaticStoryParity",
     "DocxEndnoteCounterPrefix",
     "=DocxLaterSectionEndnoteUsesReferencePageAfterEarlierContinuation",
     "DocxNoteMathFieldsReferenceBindingIsIndependentOfStaticTypography",
