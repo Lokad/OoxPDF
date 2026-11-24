@@ -1474,6 +1474,50 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
+    public static void DocxInlineCompositionCommentsRetainDisplayParagraphBoundaries()
+    {
+        foreach (string container in new[] { "body", "cell" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var direct = Read(false);
+            var nested = Read(true);
+            var owner = DocxBlockTraversal.EnumerateBodyParagraphs(nested).Single(p => p.Equations.Count != 0);
+            var range = owner.CommentRanges.Single();
+            int itemStart = range.StartInlineItemIndex!.Value;
+            TestAssert.Equal(itemStart + 1, range.EndInlineItemIndex!.Value);
+            TestAssert.True(owner.InlineContent![itemStart] is DocxInlineEquation { Equation.Display: true },
+                "The range must select the displayed formula before the separate comment reference.");
+
+            var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true), mode,
+                mode == OoxPdfDocxMarkupMode.AllMarkup ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
+                    : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+            var expected = renderer.RenderPagesAsync(direct, null, default).ToBlockingEnumerable().Single();
+            var actual = renderer.RenderPagesAsync(nested, null, default).ToBlockingEnumerable().Single();
+            TestAssert.Equal(expected.Content, actual.Content);
+            if (mode == OoxPdfDocxMarkupMode.AllMarkup)
+                TestAssert.Contains("Check composed calculation.", DocxPageFootnoteNumberingTests.DecodeText(actual));
+
+            DocxDocument Read(bool nestedMarkers) => ReadMutation("CompositionProbes/math-comment-formula-" + container,
+                mode, false, false, (xml, w, m) =>
+                {
+                    var first = xml.Descendants(m + "oMath").First();
+                    var paragraph = first.Parent!;
+                    var start = paragraph.Element(w + "commentRangeStart")!;
+                    var end = paragraph.Element(w + "commentRangeEnd")!;
+                    var display = new XElement(m + "oMathPara");
+                    first.ReplaceWith(display);
+                    display.Add(first);
+                    if (nestedMarkers)
+                    {
+                        start.Remove();
+                        end.Remove();
+                        display.AddFirst(start);
+                        display.Add(end);
+                    }
+                });
+        }
+    }
+
     public static void DocxInlineCompositionCommentsPreserveMathematicsAndCaptions()
     {
         if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))

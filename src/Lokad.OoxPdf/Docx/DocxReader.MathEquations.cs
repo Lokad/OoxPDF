@@ -21,10 +21,12 @@ internal sealed partial class DocxReader
         while (pending.TryPop(out var source))
         {
             token.ThrowIfCancellationRequested();
-            // Word can store bookmark boundaries alongside the displayed equations.
+            // Word can store range boundaries alongside the displayed equations.
             if (source.Element.Name == MathNamespace + "oMath" ||
                 source.Element.Name == WordprocessingNamespace + "bookmarkStart" ||
-                source.Element.Name == WordprocessingNamespace + "bookmarkEnd")
+                source.Element.Name == WordprocessingNamespace + "bookmarkEnd" ||
+                source.Element.Name == WordprocessingNamespace + "commentRangeStart" ||
+                source.Element.Name == WordprocessingNamespace + "commentRangeEnd")
             {
                 yield return (source.Element, source.Revision, source.RemoveDeletedText);
                 continue;
