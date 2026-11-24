@@ -1306,7 +1306,7 @@ internal static class PptxTextSpacingTests
         foreach (IFontResolver resolver in new IFontResolver[] { new PortableRenderingTests.PinnedResolver(), new TestFaceFontResolver() })
         {
             var inspectionFonts = new PresentationFontResolver(resolver);
-            string input = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "pptx-ladder-04-highlighted-headline-runs.pptx"));
+            string input = TestFixtures.PublicCasePath("pptx-ladder-04-highlighted-headline-runs.pptx");
             using var stream = File.OpenRead(input);
             using var package = OoxPackage.Open(stream, default);
             var document = new PptxReader().Read(package, default);
@@ -1318,6 +1318,7 @@ internal static class PptxTextSpacingTests
             TestAssert.True(glyphs.All(g => g.LineIndex >= 0 && g.LineIndex < lines.Length &&
                 g.SpanIndex >= 0 && g.SpanIndex < lines[g.LineIndex].Spans.Count && g.LineSpanCount == lines[g.LineIndex].Spans.Count), "Glyph inspection retains layout line/span ownership.");
             var highlighted = glyphs.Single(g => g.Text == "highlighted");
+            TestAssert.Equal("noAutofit", highlighted.FrameAutofitMode);
             TestAssert.True(highlighted.HighlightColor is { } color && color.Equals(new RgbColor(255, 255, 0)), "Retain the authored yellow highlight.");
             TestAssert.True(highlighted.HighlightX is { } x && double.IsFinite(x) && highlighted.HighlightY is { } y && double.IsFinite(y), "Highlight rectangle origins remain finite.");
             TestAssert.True(highlighted.HighlightWidth is { } width && Math.Abs(width - highlighted.Width) < 0.01d, "The positioned span owns highlight width.");

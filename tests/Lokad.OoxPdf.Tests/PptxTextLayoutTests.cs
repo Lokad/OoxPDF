@@ -1750,30 +1750,6 @@ internal static class PptxTextLayoutTests
             "Expected a first-paragraph highlight to leave Office's PDF character-spacing state at zero.");
     }
 
-    public static void PptxNoAutofitHeadlineHighlightDoesNotStartContinuationTextState()
-    {
-        var inspectionFonts = new PresentationFontResolver(new PortableRenderingTests.PinnedResolver());
-        string input = Path.GetFullPath(Path.Combine(
-            AppContext.BaseDirectory,
-            "..",
-            "..",
-            "..",
-            "Cases",
-            "pptx-ladder-04-highlighted-headline-runs.pptx"));
-        using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
-        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
-
-        PptxTextGlyphRunSnapshot[] glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0, inspectionFonts: inspectionFonts).ToArray();
-
-        TestAssert.True(
-            glyphRuns.Any(run => run.FrameAutofitMode == "noAutofit" && run.HighlightColor is not null),
-            "Expected the probe to contain highlighted noAutofit headline runs.");
-        TestAssert.True(
-            glyphRuns.All(run => Math.Abs(run.PdfCharacterSpacing) < 0.001d),
-            "Expected highlighted noAutofit headline text to keep Office's PDF character-spacing state at zero.");
-    }
-
     public static void PptxTextGlyphRunInspectionReportsInterGlyphAdjustmentAggregates()
     {
         string input = Path.GetFullPath(Path.Combine(
