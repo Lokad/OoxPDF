@@ -64,8 +64,8 @@ internal static partial class DocxFootnotesTests
                 {
                     XElement closingSection = body.Descendants(w + "sectPr").First();
                     XElement finalSection = body.Element(w + "sectPr")!;
-                    closingSection.Add(Columns(2));
-                    finalSection.Add(Columns(afterColumns));
+                    closingSection.Add(SectionColumns(2));
+                    finalSection.Add(SectionColumns(afterColumns));
                     if (lastColumn)
                     {
                         body.Descendants(w + "r").First().AddFirst(new XElement(w + "br", new XAttribute(w + "type", "column")));
@@ -88,10 +88,78 @@ internal static partial class DocxFootnotesTests
             }
         }
 
-        XElement Columns(int count) => new(w + "cols", new XAttribute(w + "num", count), new XAttribute(w + "space", 720));
         static (string Text, double Size, double X, double Y) Find(PdfPage page, string label) =>
             PhysicalSectionGlyphs(page).Single(glyphs => glyphs.Text == label);
     }
+
+    public static void DocxSharedSectionPagesAdoptIncomingGridAndDefaultStories()
+    {
+        XNamespace w = NoteWord;
+        const string shared = "SHARED SECTION BODY";
+        const string headerText = "CONTINUOUS SECTION HEADER";
+        const string footerText = "CONTINUOUS FOOTER ";
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var source = ReadComposedSections("nextPage", "nextColumn", "picture", mode, editBody: body =>
+            {
+                var first = body.Elements(w + "p").First();
+                var second = body.Elements(w + "p").Last();
+                var final = body.Element(w + "sectPr")!;
+                first.Descendants(w + "sectPr").Single().Add(SectionColumns(2));
+                final.Add(SectionColumns(2));
+                second.AddFirst(new XElement(w + "pPr", new XElement(final)));
+                final.Element(w + "type")!.SetAttributeValue(w + "val", "continuous");
+                final.Element(w + "cols")!.SetAttributeValue(w + "num", 1);
+                final.Element(w + "pgMar")!.SetAttributeValue(w + "left", 1920);
+                final.AddBeforeSelf(Paragraph(shared));
+                for (int page = 2; page <= 3; page++)
+                {
+                    var continuation = Paragraph($"FINAL SECTION PAGE {page}");
+                    continuation.AddFirst(new XElement(w + "pPr", new XElement(w + "pageBreakBefore")));
+                    if (page == 3)
+                    {
+                        continuation.Element(w + "r")!.AddBeforeSelf(new XElement(w + "bookmarkStart",
+                            new XAttribute(w + "id", 1), new XAttribute(w + "name", "FinalBody")));
+                        continuation.Add(new XElement(w + "bookmarkEnd", new XAttribute(w + "id", 1)));
+                    }
+                    final.AddBeforeSelf(continuation);
+                }
+                first.Add(new XElement(w + "hyperlink", new XAttribute(w + "anchor", "FinalBody"),
+                    new XElement(w + "r", new XElement(w + "t", "Follow"))));
+            });
+            var header = DocxTests.CreateDocxLayoutParagraph(headerText, 12d, 14d);
+            var footer = DocxTests.CreateDocxLayoutParagraph(footerText, 12d, 14d);
+            var run = footer.Runs.Single();
+            footer = footer with { Runs = [run, run with { Text = "{PAGE}", FieldKind = DocxFieldKind.Page },
+                run with { Text = " OF " }, run with { Text = "{NUMPAGES}", FieldKind = DocxFieldKind.NumPages }] };
+            var settings = source.PageSettings with
+            {
+                HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>> { ["default"] = [header] },
+                FooterParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>> { ["default"] = [footer] }
+            };
+            var document = source with { PageSettings = settings, FinalSectionBreak = source.FinalSectionBreak! with { PageSettings = settings } };
+            var pages = SectionCompositionRenderer(mode).RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
+            TestAssert.Equal(3, pages.Length);
+            TestAssert.Equal(1, pages[0].Images.Count);
+            var sharedPage = PhysicalSectionGlyphs(pages[0]);
+            TestAssert.Equal(sharedPage.Single(g => g.Text == "SECOND SECTION WORDS").X, sharedPage.Single(g => g.Text == shared).X);
+            TestAssert.DoesNotContain(headerText, DocxPageFootnoteNumberingTests.DecodeText(pages[0]));
+            TestAssert.Equal(2, pages[0].Annotations.Single().Destination?.PageIndex);
+            for (int index = 1; index < pages.Length; index++)
+            {
+                string text = DocxPageFootnoteNumberingTests.DecodeText(pages[index]);
+                TestAssert.Contains(headerText, text);
+                TestAssert.Contains($"{footerText}{index + 1} OF 3", text);
+                var body = PhysicalSectionGlyphs(pages[index]).Single(g => g.Text == $"FINAL SECTION PAGE {index + 1}");
+                TestAssert.True(Math.Abs(body.X - 96d) < .01d, "Later pages use the incoming section's authored left margin.");
+            }
+        }
+
+        XElement Paragraph(string text) => new(w + "p", new XElement(w + "r", new XElement(w + "t", text)));
+    }
+
+    private static XElement SectionColumns(int count) => new(NoteWord + "cols",
+        new XAttribute(NoteWord + "num", count), new XAttribute(NoteWord + "space", 720));
 
     private static void CheckComposedSectionStarts(string[] contents)
     {

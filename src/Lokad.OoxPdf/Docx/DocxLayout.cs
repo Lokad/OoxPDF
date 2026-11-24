@@ -371,6 +371,7 @@ internal sealed partial class DocxLayoutEngine
              Math.Abs(paragraphSpacingScale - WordCompatibleAllMarkupParagraphSpacingScale) < 0.000001d);
         int currentSectionStartIndex = 0;
         int sectionFirstPageNumber = 1;
+        int pageSectionFirstPageNumber = 1;
         int bodyFlowPageCount = 0;
 
         IReadOnlyDictionary<int, DocxEffectiveSectionSettings> sectionSettingsByElementIndex = BuildEffectiveSectionSettings(document, out DocxEffectiveSectionSettings finalSectionSettings, cancellationToken);
@@ -493,6 +494,12 @@ internal sealed partial class DocxLayoutEngine
             width = frame.Width;
         }
 
+        void ResolveActiveSectionPage()
+        {
+            page = ResolveSectionGeometry(document, activeSectionSettings, reserveMarkupMargin, retuneReserveToPrintScale, reservePrintScale, pages.Count + 1);
+            pageSectionFirstPageNumber = sectionFirstPageNumber;
+        }
+
         void FinishPage(bool isSectionParityFiller = false)
         {
             OoxConversionBudget.Current?.AdmitDocxLayoutPages(pages.Count + 1);
@@ -516,7 +523,7 @@ internal sealed partial class DocxLayoutEngine
                 currentItems.ToArray())
             {
                 MarkupLaneDesignBodyEnd = page.MarkupLaneDesignBodyEnd,
-                SectionFirstPageNumber = sectionFirstPageNumber,
+                SectionFirstPageNumber = pageSectionFirstPageNumber,
                 BodyFlowPageNumber = isSectionParityFiller ? 0 : ++bodyFlowPageCount,
                 IsSectionParityFiller = isSectionParityFiller,
                 PageNumberOffset = pageNumberOffset
@@ -532,7 +539,7 @@ internal sealed partial class DocxLayoutEngine
             OoxConversionBudget.Current?.ThrowIfLayoutPagesExceedBudget(pages.Count);
             currentItems = [];
             activeColumnIndex = 0;
-            page = ResolveSectionGeometry(document, activeSectionSettings, reserveMarkupMargin, retuneReserveToPrintScale, reservePrintScale, pages.Count + 1);
+            ResolveActiveSectionPage();
             ApplyActiveColumnFrame();
             cursorY = ResolvePageStartCursor();
             pendingSpacingAfter = 0d;
@@ -590,13 +597,13 @@ internal sealed partial class DocxLayoutEngine
         DocxLayoutPage? GetCurrentPlainFootnoteFooterFrame()
         {
             var key = (page.PageSettings, page.Width, page.Height, page.MarginLeft, page.MarginRight,
-                page.MarginTop, page.MarginBottom, page.ColumnFrames.Count, sectionFirstPageNumber);
+                page.MarginTop, page.MarginBottom, page.ColumnFrames.Count, pageSectionFirstPageNumber);
             if (!plainFootnoteFooterFrames.TryGetValue(key, out DocxLayoutPage? frame))
             {
                 var candidate = new DocxLayoutPage(page.Width, page.Height, page.MarginLeft, page.MarginRight,
                     page.MarkupMarginReservePoints, page.MarginTop, page.MarginBottom, page.PageSettings,
                     page.SectionProperties, page.ColumnFrames, [], [], [], [], [])
-                { SectionFirstPageNumber = sectionFirstPageNumber, PageNumberOffset = pageNumberOffset };
+                { SectionFirstPageNumber = pageSectionFirstPageNumber, PageNumberOffset = pageNumberOffset };
                 frame = CanUsePlainFootnoteStaticFrame(document, candidate, unscaledTextMeasurer ?? textMeasurer,
                     paragraphSpacingScale, cancellationToken) ? candidate : null;
                 plainFootnoteFooterFrames[key] = frame;
@@ -1223,7 +1230,7 @@ internal sealed partial class DocxLayoutEngine
             if (applyPageNumberStart && section.PageSettings.DecimalPageNumberStart is { } start)
                 pageNumberOffset = start - sectionFirstPageNumber;
             activeSectionSettings = section;
-            page = ResolveSectionGeometry(document, activeSectionSettings, reserveMarkupMargin, retuneReserveToPrintScale, reservePrintScale, pages.Count + 1);
+            ResolveActiveSectionPage();
             activeColumnIndex = 0;
             ApplyActiveColumnFrame();
             activeColumnHasContent = false;
@@ -1427,8 +1434,7 @@ internal sealed partial class DocxLayoutEngine
                     DrainRemainingInFlightFootnotes();
                     if (pages.Count != beforeContinuations)
                     {
-                        page = ResolveSectionGeometry(document, activeSectionSettings, reserveMarkupMargin,
-                            retuneReserveToPrintScale, reservePrintScale, pages.Count + 1);
+                        ResolveActiveSectionPage();
                         ApplyActiveColumnFrame();
                         currentPageFootnoteReserveHeight = FootnoteRemainderTotal();
                     }
@@ -1438,13 +1444,10 @@ internal sealed partial class DocxLayoutEngine
 
                 if (advanceSectionColumn)
                 {
-                    // The current page owns its existing frame. Later pages use
-                    // the section that begins in the next column.
                     AdvanceColumnOrPage();
-                    activeSectionSettings = following!;
-                    sectionFirstPageNumber = ProjectCurrentPageNumber();
                 }
-                else if (startsNewPage || (continuous && !HasPageContent()))
+
+                if (startsNewPage || (continuous && !HasPageContent()))
                 {
                     var section = following ?? FindSectionSettingsAtOrAfter(document.BodyElements,
                         elementIndex + 1, sectionSettingsByElementIndex) ?? finalSectionSettings;
@@ -1454,6 +1457,13 @@ internal sealed partial class DocxLayoutEngine
                     bool incomingParityStart = following is not null &&
                         boundaryType is DocxSectionBreakType.OddPage or DocxSectionBreakType.EvenPage;
                     ApplySectionAfterBreak(section, ordinaryPageStart || incomingParityStart);
+                }
+                else if (following is not null && (continuous || advanceSectionColumn))
+                {
+                    // Keep the open page's frame and static story selection.
+                    // New pages use the section now supplying body content.
+                    activeSectionSettings = following;
+                    sectionFirstPageNumber = ProjectCurrentPageNumber();
                 }
 
                 pendingSpacingAfter = 0d;
