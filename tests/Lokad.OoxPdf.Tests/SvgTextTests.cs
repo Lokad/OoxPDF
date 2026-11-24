@@ -546,9 +546,8 @@ internal static partial class SvgTextTests
             TestAssert.DoesNotContain(removedColor, paint);
             TestAssert.Equal(5, LabelPaths(paint, removedColor == LabelColor ? "0.133 0.329 0.706 rg" : LabelColor));
             TestAssert.Contains("0 1 0 rg", paint);
-            OoxPdfDiagnostic warning = diagnostics.Single();
-            TestAssert.Equal("SVG_UNSUPPORTED_CONTENT", warning.Id);
-            TestAssert.Contains("1 unsupported text element", warning.Message);
+            TestAssert.Equal(1, diagnostics.Count(d => d.Id == "SVG_UNSUPPORTED_CONTENT" &&
+                d.Message == "SVG picture omits 1 unsupported text element."));
         }
     }
 
