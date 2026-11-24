@@ -20,7 +20,8 @@ New-Item -ItemType Directory -Path (Split-Path $OutputDll) -Force | Out-Null
 if ($Description -eq 'CLI') { [IO.File]::WriteAllText((Join-Path (Split-Path $OutputDll) 'Lokad.OoxPdf.dll'), 'fake library') }
 '@ | Set-Content (Join-Path $repo 'tools/EnsureDotnetBuild.ps1')
 @'
-param($Case, $RunId, [switch]$SkipBuild, $CliPath, [switch]$CacheOnlyReference, $Framework)
+param($Case, $RunId, [switch]$SkipBuild, $CliPath, [switch]$CacheOnlyReference, $Framework,
+    $VisualDiffPath, $RasterizerPath, $PdfInspectorPath)
 @{Case=$Case;RunId=$RunId;SkipBuild=[bool]$SkipBuild;CliPath=$CliPath;CacheOnlyReference=[bool]$CacheOnlyReference} |
     ConvertTo-Json -Compress | Add-Content (Join-Path (Split-Path $PSScriptRoot) 'cases.jsonl')
 if (!$SkipBuild -or !(Test-Path -LiteralPath $CliPath)) { throw 'Family did not bind an existing CLI without per-case builds' }
@@ -31,10 +32,13 @@ if ($changeCaseAfterSelection) {
 $id=(Get-Content -LiteralPath $Case -Raw | ConvertFrom-Json).id
 $run=Join-Path (Split-Path $PSScriptRoot) "artifacts/visual/$id/$RunId"
 New-Item -ItemType Directory -Path $run -Force | Out-Null
-@{RunId=$RunId;CaseId=$id;CaseSha256=(Get-FileHash -LiteralPath $Case).Hash;
+$identity=@{RunId=$RunId;CaseId=$id;CaseSha256=(Get-FileHash -LiteralPath $Case).Hash;
     CliSha256=(Get-FileHash -LiteralPath $CliPath).Hash;
-    LibrarySha256=(Get-FileHash -LiteralPath (Join-Path (Split-Path $CliPath) 'Lokad.OoxPdf.dll')).Hash} |
-    ConvertTo-Json | Set-Content -LiteralPath (Join-Path $run 'run-info.json')
+    LibrarySha256=(Get-FileHash -LiteralPath (Join-Path (Split-Path $CliPath) 'Lokad.OoxPdf.dll')).Hash}
+if ($VisualDiffPath) { $identity.VisualDiffSha256 = (Get-FileHash -LiteralPath $VisualDiffPath).Hash }
+if ($RasterizerPath) { $identity.RasterizerSha256 = (Get-FileHash -LiteralPath $RasterizerPath).Hash }
+if ($PdfInspectorPath) { $identity.PdfInspectorSha256 = (Get-FileHash -LiteralPath $PdfInspectorPath).Hash }
+$identity | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $run 'run-info.json')
 if ($overlapCatalogUpdates -and $id -ceq 'probe-a') {
     & (Join-Path $PSScriptRoot 'CheckVisualFamily.ps1') -Family probe -CasePattern probe-b -CliPath $CliPath -SkipBuild -UpdateCatalog | Out-Null
 }
@@ -103,7 +107,7 @@ Remove-Item -LiteralPath $inspector
 $caseCount=@(Get-Content $caseLog).Count
 $failure=$null
 try { & $script -Family probe -CliPath $frozenCli -SkipBuild | Out-Null } catch {$failure=$_.Exception.Message}
-if($failure -notlike '*PDF inspector is missing*' -or @(Get-Content $buildLog).Count -ne $before -or @(Get-Content $caseLog).Count -ne $caseCount) {throw 'Missing prebuilt inspector did not fail before cases/builds'}
+if($failure -notlike '*PDF inspect DLL is missing*' -or @(Get-Content $buildLog).Count -ne $before -or @(Get-Content $caseLog).Count -ne $caseCount) {throw 'Missing prebuilt inspector did not fail before cases/builds'}
 [IO.File]::WriteAllText($inspector,'prebuilt synthetic PDF inspector')
 foreach($id in @('probe-a','probe-b')) {
     @{id=$id;kind='docx';tags=@('approximate');expected=@{candidateFontsMustBeEmbedded=$false}} | ConvertTo-Json -Depth 4 |
@@ -177,12 +181,16 @@ $candidateBaseline = 700
 $candidateChartPageTwoDelta = 0
 $emitGraphicsOperations = $true
 $mutateVisualDiff = $false
+$replaceFamilyComparatorBeforeSecondCase = $null
 $rasterPage = @{Page=1;DimensionsMatch=$true;MeanAbsoluteError=0;ChangedPixelRatioAtThreshold16=0;
     StructuralSimilarity=1;ForegroundColorHistogramCorrelation=1}
 $rasterMetrics = @($rasterPage)
 function dotnet {
     $values=@($args)
     if($values[0] -like '*Lokad.OoxPdf.Cli.dll') {
+        if ($replaceFamilyComparatorBeforeSecondCase -and (Split-Path -Leaf (Split-Path -Parent $values[2])) -ceq 'probe-b') {
+            [IO.File]::AppendAllText($replaceFamilyComparatorBeforeSecondCase, 'different comparator')
+        }
         [IO.File]::WriteAllText($values[3],"%PDF-fake candidate baseline $candidateBaseline")
         [IO.File]::WriteAllText($values[5],'[]')
     } elseif($values[0] -like '*Lokad.OoxPdf.VisualDiff.dll') {
@@ -267,6 +275,9 @@ try {
         if ($row.referencePageCount -ne 1 -or $row.candidatePageCount -ne 1 -or $row.pageCount -ne 1 -or
             $info.ReferencePageCount -ne 1 -or $info.CandidatePageCount -ne 1) {
             throw 'The case and family report did not retain separate raster page counts'
+        }
+        if ($row.pdfInspectorSha256 -ne (Get-FileHash -LiteralPath $inspector).Hash) {
+            throw 'The default inspector must use the family binding'
         }
     }
     & (Join-Path $PSScriptRoot 'CompareVisualReports.ps1') -Baseline $reportPath -Current $reportPath | Out-Null
@@ -396,6 +407,26 @@ try {
     try { & $realCase -Case $realManifest -CliPath $frozenCli -SkipBuild -RunId 'real-missing-tool' | Out-Null } catch {$failure=$_.Exception.Message}
     if($failure -notlike '*PDF inspect DLL is missing*' -or @(Get-Content $buildLog).Count -ne $before) {throw 'Real missing-tool case requested a build or ignored refusal'}
 
+    [IO.File]::WriteAllText($inspector, 'prebuilt synthetic PDF inspector')
+    $defaultDiff = Join-Path $repo 'tools/Lokad.OoxPdf.VisualDiff/bin/Debug/net11.0/Lokad.OoxPdf.VisualDiff.dll'
+    $diffBytes = [IO.File]::ReadAllBytes($defaultDiff)
+    $priorFamilyHash = (Get-FileHash -LiteralPath $reportPath).Hash
+    $priorReportCount = @(Get-ChildItem -LiteralPath (Split-Path -Parent $reportPath) -Filter 'probe-*.json').Count
+    $replaceFamilyComparatorBeforeSecondCase = $defaultDiff
+    try {
+        $failure = $null
+        try { & $script -Family probe -CliPath $frozenCli -SkipBuild | Out-Null } catch { $failure = $_.Exception.Message }
+        if ($failure -cne "Visual validation tool changed during the family: $defaultDiff" -or
+            (Get-FileHash -LiteralPath $reportPath).Hash -ne $priorFamilyHash -or
+            @(Get-ChildItem -LiteralPath (Split-Path -Parent $reportPath) -Filter 'probe-*.json').Count -ne $priorReportCount) {
+            throw "A replaced default comparator must abort the family without publishing a report. Outcome: $failure"
+        }
+    }
+    finally {
+        $replaceFamilyComparatorBeforeSecondCase = $null
+        [IO.File]::WriteAllBytes($defaultDiff, $diffBytes)
+    }
+
     $frozenTools = Join-Path $repo 'Frozen tools [pinned]'
     New-Item -ItemType Directory -Path $frozenTools | Out-Null
     $overrides = @{}
@@ -447,7 +478,7 @@ try {
 }
 finally {Remove-Item Function:/dotnet}
 $inspections=@(Get-Content (Join-Path $repo 'inspection-calls.jsonl') | ConvertFrom-Json)
-if($inspections.Count -ne 30) {throw 'Real inspection coverage is incomplete'}
+if($inspections.Count -ne 32) {throw 'Real inspection coverage is incomplete'}
 foreach($inspection in $inspections) {
     $record=Get-Content (Join-Path $inspection.Output 'pdf-inspect-build-info.json') -Raw | ConvertFrom-Json
     if($record.BuildRequested -ne $false -or $record.OutputSha256 -ne $inspection.InspectorSha256) {throw 'Inspector provenance or explicit prebuilt binding was lost'}
@@ -462,7 +493,8 @@ foreach($inspection in $inspections) {
     'Incomplete inspection refusal','Inspector provenance','Canonical markup cache key',
     'Bound visual report identity','Separate raster page counts','Measured failure identity',
     'Zero upper limits admit exact metrics','Missing upper-bound metrics fail independently','Raster dimensions fail independently',
-    'Empty raster report fails','Frozen comparison tools without local builds','Changed frozen tool refusal','Synthetic repository isolation');
+    'Empty raster report fails','Default tool identity and between-case replacement refusal','Frozen comparison tools without local builds',
+    'Changed frozen tool refusal','Synthetic repository isolation');
     InspectionCapabilities=$inspectionKeys.Count;RealInspectionCalls=$inspections.Count;LibraryBuilds=0;LibraryExecutions=0;OfficeExports=0} |
     ConvertTo-Json | Set-Content (Join-Path $OutputDirectory 'evidence.json')
 Write-Output 'Visual-family and real case/inspector binding checks pass; no actual build, library execution or Office export.'

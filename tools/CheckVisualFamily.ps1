@@ -302,10 +302,22 @@ foreach ($case in $cases) {
     }
 }
 
+function Get-FamilyToolBinding([string] $ToolPath, [string] $Name, [string] $Description) {
+    if (!$ToolPath) {
+        $projectDirectory = Join-Path $repoRoot "tools/Lokad.OoxPdf.$Name"
+        $ToolPath = Join-Path $projectDirectory "bin/Debug/$Framework/Lokad.OoxPdf.$Name.dll"
+        if (!$SkipBuild) {
+            $project = Join-Path $projectDirectory "Lokad.OoxPdf.$Name.csproj"
+            & (Join-Path $PSScriptRoot 'EnsureDotnetBuild.ps1') -Framework $Framework -Project $project -OutputDll $ToolPath -Description $Description | Out-Host
+        }
+        elseif (!(Test-Path -LiteralPath $ToolPath -PathType Leaf)) {
+            throw "$Description DLL is missing and -SkipBuild was requested: $ToolPath"
+        }
+    }
+    Get-FileHash -LiteralPath $ToolPath
+}
+
 Write-Host ("Visual family: {0} ({1} cases)" -f $Family, $cases.Count)
-$rasterizerBinding = if ($RasterizerPath) { Get-FileHash -LiteralPath $RasterizerPath }
-$visualDiffBinding = if ($VisualDiffPath) { Get-FileHash -LiteralPath $VisualDiffPath }
-$inspectorBinding = if ($PdfInspectorPath) { Get-FileHash -LiteralPath $PdfInspectorPath }
 # Bind every case to the same CLI. A supplied frozen CLI never builds the library;
 # independent validation tools can still be built once unless -SkipBuild is set.
 if (!$CliPath) {
@@ -318,22 +330,10 @@ $CliPath = (Resolve-Path -LiteralPath $CliPath).Path
 $libraryPath = Join-Path (Split-Path $CliPath) 'Lokad.OoxPdf.dll'
 $cliHash = (Get-FileHash -LiteralPath $CliPath).Hash
 $libraryHash = (Get-FileHash -LiteralPath $libraryPath).Hash
-if (!$SkipBuild -and !$visualDiffBinding) {
-    & (Join-Path $PSScriptRoot "EnsureDotnetBuild.ps1") -Framework $Framework -Project (Join-Path $repoRoot "tools/Lokad.OoxPdf.VisualDiff/Lokad.OoxPdf.VisualDiff.csproj") -OutputDll (Join-Path $repoRoot "tools/Lokad.OoxPdf.VisualDiff/bin/Debug/$Framework/Lokad.OoxPdf.VisualDiff.dll") -Description "VisualDiff"
-}
-if (!$SkipBuild -and !$rasterizerBinding) {
-    & (Join-Path $PSScriptRoot "EnsureDotnetBuild.ps1") -Framework $Framework -Project (Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfiumRasterizer/Lokad.OoxPdf.PdfiumRasterizer.csproj") -OutputDll (Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfiumRasterizer/bin/Debug/$Framework/Lokad.OoxPdf.PdfiumRasterizer.dll") -Description "PDFium rasterizer"
-}
-# Only inspection gates need this tool. Cases consume it prebuilt, just like the
-# rasterizer and VisualDiff, rather than invoking MSBuild for each inspected PDF.
-if ($needsPdfInspection -and !$inspectorBinding) {
-    $inspector = Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfInspect/bin/Debug/$Framework/Lokad.OoxPdf.PdfInspect.dll"
-    if (!$SkipBuild) {
-        & (Join-Path $PSScriptRoot 'EnsureDotnetBuild.ps1') -Framework $Framework -Project (Join-Path $repoRoot 'tools/Lokad.OoxPdf.PdfInspect/Lokad.OoxPdf.PdfInspect.csproj') -OutputDll $inspector -Description 'PDF inspect'
-    }
-    elseif (!(Test-Path -LiteralPath $inspector -PathType Leaf)) {
-        throw ('PDF inspector is missing and -SkipBuild was requested: ' + $inspector)
-    }
+$visualDiffBinding = Get-FamilyToolBinding $VisualDiffPath 'VisualDiff' 'VisualDiff'
+$rasterizerBinding = Get-FamilyToolBinding $RasterizerPath 'PdfiumRasterizer' 'PDFium rasterizer'
+$inspectorBinding = if ($needsPdfInspection -or $PdfInspectorPath) {
+    Get-FamilyToolBinding $PdfInspectorPath 'PdfInspect' 'PDF inspect'
 }
 $rows = @()
 foreach ($case in $cases) {
@@ -352,12 +352,12 @@ foreach ($case in $cases) {
             RunId = $caseRunId
             SkipBuild = $true
             CliPath = $CliPath
+            RasterizerPath = $rasterizerBinding.Path
+            VisualDiffPath = $visualDiffBinding.Path
         }
         if ($CacheOnlyReference) {
             $caseArgs.CacheOnlyReference = $true
         }
-        if ($rasterizerBinding) { $caseArgs.RasterizerPath = $rasterizerBinding.Path }
-        if ($visualDiffBinding) { $caseArgs.VisualDiffPath = $visualDiffBinding.Path }
         if ($inspectorBinding) { $caseArgs.PdfInspectorPath = $inspectorBinding.Path }
 
         & (Join-Path $PSScriptRoot "CheckVisualCase.ps1") -Framework $Framework @caseArgs
