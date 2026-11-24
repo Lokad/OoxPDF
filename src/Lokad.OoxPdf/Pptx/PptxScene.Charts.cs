@@ -345,12 +345,12 @@ internal sealed partial class PptxSceneBuilder
             : (null, value);
     }
 
-    internal static (int? Value, string RawValue) ReadChartCachePointCount(XElement? cache)
+    private static int? ReadChartCachePointCount(XElement? cache)
     {
         string value = ReadChartValueAttribute(cache?.Element(ChartNamespace + "ptCount"));
         return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed) && parsed >= 0
-            ? (parsed, value)
-            : (null, value);
+            ? parsed
+            : null;
     }
 
     private static IReadOnlyList<PptxSceneChartAxis> ReadChartAxes(XDocument? chartXml, PptxTheme theme, PptxColorMap colorMap,

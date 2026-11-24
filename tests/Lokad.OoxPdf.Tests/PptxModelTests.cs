@@ -263,6 +263,8 @@ internal static class PptxModelTests
                   </cs:gridlineMajor>
                   <cs:gridlineMinor>
                     <cs:lnRef idx="0"/>
+                    <cs:fillRef idx="futureIndex"/>
+                    <cs:effectRef idx="0"/>
                     <cs:spPr><a:ln w="6350"><a:solidFill><a:srgbClr val="203040"><a:alpha val="70000"/></a:srgbClr></a:solidFill></a:ln></cs:spPr>
                   </cs:gridlineMinor>
                   <cs:title>
@@ -498,14 +500,11 @@ internal static class PptxModelTests
         TestAssert.Equal(1, majorGridlineStyle.SourceIndex);
         TestAssert.Equal("http://schemas.microsoft.com/office/drawing/2012/chartStyle", majorGridlineStyle.NamespaceUri);
         TestAssert.Equal(1, majorGridlineStyle.LineReferenceIndex ?? 0);
-        TestAssert.Equal("1", majorGridlineStyle.LineReferenceIndexValue);
         TestAssert.Equal(2, majorGridlineStyle.FillReferenceIndex ?? 0);
-        TestAssert.Equal("2", majorGridlineStyle.FillReferenceIndexValue);
         TestAssert.True(majorGridlineStyle.FillReferenceFill.HasFill, "Expected chart style fill-reference theme resolution in the scene model.");
         TestAssert.Equal(new RgbColor(187, 221, 238), majorGridlineStyle.FillReferenceFill.Color);
         TestAssert.Equal(0.65d, majorGridlineStyle.FillReferenceFill.Alpha);
         TestAssert.Equal(1, majorGridlineStyle.EffectReferenceIndex ?? 0);
-        TestAssert.Equal("1", majorGridlineStyle.EffectReferenceIndexValue);
         TestAssert.True(majorGridlineStyle.EffectReferenceEffects.HasEffectList, "Expected chart style effect-reference theme resolution in the scene model.");
         TestAssert.Equal("blur", majorGridlineStyle.EffectReferenceEffects.UnsupportedEffectNames[0]);
         TestAssert.True(majorGridlineStyle.Line.HasLine, "Expected chart style-part line-reference ownership in the scene model.");
@@ -529,9 +528,16 @@ internal static class PptxModelTests
         TestAssert.Equal(0.75d, majorGridlineStyle.ShapeStyle.Fill.Alpha);
         PptxSceneChartStyleEntry minorGridlineStyle = slide.SlideNodes[4].Chart?.StylePart.Entries.FirstOrDefault(entry => entry.Role == "gridlineMinor") ?? default;
         TestAssert.Equal(null, minorGridlineStyle.LineReferenceIndex);
-        TestAssert.Equal("0", minorGridlineStyle.LineReferenceIndexValue);
+        TestAssert.Equal(null, minorGridlineStyle.FillReferenceIndex);
+        TestAssert.Equal(null, minorGridlineStyle.EffectReferenceIndex);
+        TestAssert.True(!minorGridlineStyle.Line.HasLine && !minorGridlineStyle.FillReferenceFill.HasFill &&
+            !minorGridlineStyle.EffectReferenceEffects.HasEffectList, "Invalid or zero references should leave theme paint unresolved.");
+        TestAssert.True(minorGridlineStyle.ShapeLine.HasLine, "A zero line reference must preserve the role's explicit line.");
         PptxSceneChartStyleEntry titleStyle = slide.SlideNodes[4].Chart?.StylePart.Entries.FirstOrDefault(entry => entry.Role == "title") ?? default;
         TestAssert.Equal("title", titleStyle.Role ?? string.Empty);
+        TestAssert.Equal(null, titleStyle.LineReferenceIndex);
+        TestAssert.Equal(null, titleStyle.FillReferenceIndex);
+        TestAssert.Equal(null, titleStyle.EffectReferenceIndex);
         TestAssert.Equal("major", titleStyle.FontReferenceIndex);
         TestAssert.Equal("Arial", titleStyle.TextStyle.FontFamily ?? string.Empty);
         TestAssert.Equal("+mj-lt", titleStyle.TextStyle.RequestedTypeface ?? string.Empty);

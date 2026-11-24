@@ -1026,7 +1026,6 @@ internal static partial class PptxChartLegendsTests
         TestAssert.Equal(2, lineSeries.CategoryPoints.Count(point => !string.IsNullOrWhiteSpace(point.Text)));
         TestAssert.Equal(4, lineSeries.CategoryPoints.Count);
         TestAssert.Equal(6, lineSeries.CategoryPointCount ?? 0);
-        TestAssert.Equal("6", lineSeries.CategoryPointCountValue);
         TestAssert.Equal(0, lineSeries.CategoryPoints[0].Index);
         TestAssert.Equal("0", lineSeries.CategoryPoints[0].IndexValue);
         TestAssert.True(lineSeries.CategoryPoints[0].HasParsedIndex, "Expected valid category cache point index tokens to remain marked parsed.");
@@ -1045,7 +1044,6 @@ internal static partial class PptxChartLegendsTests
         TestAssert.Equal(2, lineSeries.ValuePoints.Count(point => point.Value is { } value && !double.IsNaN(value)));
         TestAssert.Equal(5, lineSeries.ValuePoints.Count);
         TestAssert.Equal(6, lineSeries.ValuePointCount ?? 0);
-        TestAssert.Equal("6", lineSeries.ValuePointCountValue);
         TestAssert.Equal("0.00", lineSeries.ValueFormatCode ?? string.Empty);
         TestAssert.Equal(0, lineSeries.ValuePoints[0].Index);
         TestAssert.Equal("0", lineSeries.ValuePoints[0].IndexValue);
@@ -1070,17 +1068,14 @@ internal static partial class PptxChartLegendsTests
 
         PptxSceneChartSeries scatterSeries = chart?.Plots[1].Series[0] ?? throw new InvalidOperationException("Expected scatter chart series.");
         TestAssert.Equal(8, scatterSeries.XValuePointCount ?? 0);
-        TestAssert.Equal("8", scatterSeries.XValuePointCountValue);
         TestAssert.Equal("General", scatterSeries.XValueFormatCode ?? string.Empty);
         TestAssert.Equal(7, scatterSeries.XValuePoints[0].Index);
         TestAssert.Equal(9d, scatterSeries.XValuePoints[0].Value ?? 0d);
         TestAssert.Equal(8, scatterSeries.YValuePointCount ?? 0);
-        TestAssert.Equal("8", scatterSeries.YValuePointCountValue);
         TestAssert.Equal("0.0%", scatterSeries.YValueFormatCode ?? string.Empty);
         TestAssert.Equal(7, scatterSeries.YValuePoints[0].Index);
         TestAssert.True(scatterSeries.YValuePoints[0].Value is null, "Expected blank y-value point to remain explicit.");
         TestAssert.Equal(8, scatterSeries.BubbleSizePointCount ?? 0);
-        TestAssert.Equal("8", scatterSeries.BubbleSizePointCountValue);
         TestAssert.Equal("0", scatterSeries.BubbleSizeFormatCode ?? string.Empty);
         TestAssert.Equal(7, scatterSeries.BubbleSizePoints[0].Index);
         TestAssert.Equal(16d, scatterSeries.BubbleSizePoints[0].Value ?? 0d);
@@ -1102,11 +1097,19 @@ internal static partial class PptxChartLegendsTests
                   <c:pt><c:v>2</c:v></c:pt>
                   <c:pt idx="4"><c:v>3</c:v></c:pt>
                 </c:numLit></c:val>
+              </c:ser><c:ser>
+                <c:cat><c:strLit><c:ptCount val="0"/></c:strLit></c:cat>
+                <c:val><c:numLit><c:ptCount val="futureCount"/></c:numLit></c:val>
               </c:ser></c:lineChart></c:plotArea></c:chart>
             </c:chartSpace>
             """);
 
-        PptxSceneChartSeries series = chart?.Plots[0].Series[0] ?? throw new InvalidOperationException("Expected chart series.");
+        IReadOnlyList<PptxSceneChartSeries> seriesList = TestAssert.NotNull(chart).Plots[0].Series;
+        PptxSceneChartSeries series = seriesList[0];
+        TestAssert.Equal(null, series.CategoryPointCount);
+        TestAssert.Equal(null, series.ValuePointCount);
+        TestAssert.Equal<int?>(0, seriesList[1].CategoryPointCount);
+        TestAssert.Equal(null, seriesList[1].ValuePointCount);
         TestAssert.Equal(0, series.CategoryPoints[0].Index);
         TestAssert.Equal("futureCategory", series.CategoryPoints[0].IndexValue);
         TestAssert.True(!series.CategoryPoints[0].HasParsedIndex, "Expected malformed category cache point index to be marked as an ordinal fallback.");
@@ -1154,7 +1157,6 @@ internal static partial class PptxChartLegendsTests
         TestAssert.Equal(PptxSceneChartDataSourceReferenceKind.MultiLevelStringReference, series.DataSources.Categories.ReferenceKindValue);
         TestAssert.True(series.DataSources.Categories.HasCachedPoints, "Expected multi-level category cache point presence to survive scene parsing.");
         TestAssert.Equal(3, series.CategoryPointCount ?? 0);
-        TestAssert.Equal("3", series.CategoryPointCountValue);
         TestAssert.Equal(5, series.CategoryPoints.Count);
         TestAssert.Equal(2, series.CategoryLevels.Count);
         TestAssert.Equal(2, series.CategoryLevels[0].Count);

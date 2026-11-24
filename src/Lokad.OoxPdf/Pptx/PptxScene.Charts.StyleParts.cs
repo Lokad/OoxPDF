@@ -181,33 +181,27 @@ internal sealed partial class PptxSceneBuilder
             XElement? lineReference = roleElement
                 .Descendants()
                 .FirstOrDefault(element => element.Name.LocalName == "lnRef");
-            string lineReferenceIndexRaw = (string?)lineReference?.Attribute("idx") ?? string.Empty;
-            int lineReferenceIndexValue = lineReference is null ? 0 : OoxXml.ReadOptionalInt(lineReference, "idx", 0);
-            int? lineReferenceIndex = lineReferenceIndexValue > 0 ? lineReferenceIndexValue : null;
+            int lineReferenceIndex = PptxFormatSchemeResolver.ReadIndex(lineReference);
             XElement? fillReference = roleElement
                 .Elements()
                 .FirstOrDefault(element => element.Name.LocalName == "fillRef");
-            string fillReferenceIndexRaw = (string?)fillReference?.Attribute("idx") ?? string.Empty;
-            int fillReferenceIndexValue = fillReference is null ? 0 : OoxXml.ReadOptionalInt(fillReference, "idx", 0);
-            int? fillReferenceIndex = fillReferenceIndexValue > 0 ? fillReferenceIndexValue : null;
-            PptxSceneFillStyle fillReferenceFill = ReadChartStyleFillReference(fillReference, theme, colorMap);
+            int fillReferenceIndex = PptxFormatSchemeResolver.ReadIndex(fillReference);
+            PptxSceneFillStyle fillReferenceFill = ReadChartStyleFillReference(fillReference, fillReferenceIndex, theme, colorMap);
             XElement? effectReference = roleElement
                 .Elements()
                 .FirstOrDefault(element => element.Name.LocalName == "effectRef");
-            string effectReferenceIndexRaw = (string?)effectReference?.Attribute("idx") ?? string.Empty;
-            int effectReferenceIndexValue = effectReference is null ? 0 : OoxXml.ReadOptionalInt(effectReference, "idx", 0);
-            int? effectReferenceIndex = effectReferenceIndexValue > 0 ? effectReferenceIndexValue : null;
-            PptxSceneEffectFamily effectReferenceEffects = ReadChartStyleEffectReference(effectReference, theme);
+            int effectReferenceIndex = PptxFormatSchemeResolver.ReadIndex(effectReference);
+            PptxSceneEffectFamily effectReferenceEffects = ReadChartStyleEffectReference(effectReferenceIndex, theme);
             string fontReferenceIndex = (string?)roleElement
                 .Elements()
                 .FirstOrDefault(element => element.Name.LocalName == "fontRef")
                 ?.Attribute("idx") ?? string.Empty;
-            PptxSceneLineStyle line = lineReferenceIndex is not null &&
+            PptxSceneLineStyle line = lineReferenceIndex > 0 &&
                 lineReference is not null &&
                 TryReadThemeLineReference(
                     new PptxFormatSchemeReference(
                         lineReference,
-                        PptxFormatSchemeResolver.ReadIndex(lineReference),
+                        lineReferenceIndex,
                         null),
                     theme,
                     colorMap,
@@ -243,13 +237,10 @@ internal sealed partial class PptxSceneBuilder
                 roleElement.Name.LocalName,
                 sourceIndex,
                 roleElement.Name.NamespaceName,
-                lineReferenceIndex,
-                lineReferenceIndexRaw,
-                fillReferenceIndex,
-                fillReferenceIndexRaw,
+                lineReferenceIndex > 0 ? lineReferenceIndex : null,
+                fillReferenceIndex > 0 ? fillReferenceIndex : null,
                 fillReferenceFill,
-                effectReferenceIndex,
-                effectReferenceIndexRaw,
+                effectReferenceIndex > 0 ? effectReferenceIndex : null,
                 effectReferenceEffects,
                 fontReferenceIndex,
                 line,
@@ -277,9 +268,9 @@ internal sealed partial class PptxSceneBuilder
         }
     }
 
-    private static PptxSceneFillStyle ReadChartStyleFillReference(XElement? fillReference, PptxTheme theme, PptxColorMap colorMap)
+    private static PptxSceneFillStyle ReadChartStyleFillReference(XElement? fillReference, int fillReferenceIndex,
+        PptxTheme theme, PptxColorMap colorMap)
     {
-        int fillReferenceIndex = PptxFormatSchemeResolver.ReadIndex(fillReference);
         XElement? fillStyle = null;
         if (fillReferenceIndex > 0)
         {
@@ -298,9 +289,8 @@ internal sealed partial class PptxSceneBuilder
             : default;
     }
 
-    private static PptxSceneEffectFamily ReadChartStyleEffectReference(XElement? effectReference, PptxTheme theme)
+    private static PptxSceneEffectFamily ReadChartStyleEffectReference(int effectReferenceIndex, PptxTheme theme)
     {
-        int effectReferenceIndex = PptxFormatSchemeResolver.ReadIndex(effectReference);
         return effectReferenceIndex > 0 &&
             theme.TryGetEffectStyle(effectReferenceIndex, out XElement? effectStyle)
             ? ReadEffects(effectStyle)
