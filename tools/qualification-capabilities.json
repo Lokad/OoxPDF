@@ -17137,7 +17137,6 @@
     "PdfPagesTripDuringLayoutPagination",
     "PdfWriterEscapesLongUnicodeUriWithoutStackGrowth",
     "PercentEncodesNonAsciiLinkUris",
-    "PngDecodeScratchStaysProportionalToPlanes",
     "PngDecodeTemporaryStorageIsBoundedByRowWidth",
     "PngImageReadsAdam7TruecolorAlphaPixels",
     "PngImageReadsGrayscalePixels",

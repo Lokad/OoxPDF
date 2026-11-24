@@ -1,28 +1,12 @@
 namespace Lokad.OoxPdf.Imaging;
 
-internal sealed class PngImage
+internal static class PngImage
 {
     private static readonly byte[] Signature = [137, 80, 78, 71, 13, 10, 26, 10];
     private static readonly int[] Adam7StartX = [0, 4, 0, 2, 0, 1, 0];
     private static readonly int[] Adam7StartY = [0, 0, 4, 0, 2, 0, 1];
     private static readonly int[] Adam7StepX = [8, 8, 4, 4, 2, 2, 1];
     private static readonly int[] Adam7StepY = [8, 8, 8, 4, 4, 2, 2];
-
-    private PngImage(int width, int height, byte[] rgb, byte[]? alpha)
-    {
-        Width = width;
-        Height = height;
-        Rgb = rgb;
-        Alpha = alpha;
-    }
-
-    public int Width { get; }
-
-    public int Height { get; }
-
-    public byte[] Rgb { get; }
-
-    public byte[]? Alpha { get; }
 
     public static DecodedPixels ReadOwned(byte[] bytes, CancellationToken cancellationToken = default)
     {
@@ -120,7 +104,7 @@ internal sealed class PngImage
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
-            PngImage decoded;
+            (byte[] Rgb, byte[]? Alpha) decoded;
             {
                 // Keep exact-sized IDAT staging and streaming scanline decode.
                 byte[] compressed = new byte[checked((int)compressedTotal)];
@@ -140,7 +124,7 @@ internal sealed class PngImage
                 }
                 using var input = new MemoryStream(compressed, 0, compressed.Length, writable: false);
                 using var zlib = new System.IO.Compression.ZLibStream(input, System.IO.Compression.CompressionMode.Decompress);
-                decoded = Decode(zlib, width, height, bitDepth, colorType, interlace, palette, transparency, cancellationToken);
+                decoded = DecodeScanlines(zlib, width, height, bitDepth, colorType, interlace, palette, transparency, cancellationToken);
                 cancellationToken.ThrowIfCancellationRequested();
                 if (zlib.ReadByte() != -1)
                 {
@@ -149,7 +133,7 @@ internal sealed class PngImage
             }
             // Inflater and scanline users have finished; only planes escape.
             OoxMemory.Resize(storage, planeBytes);
-            var result = new DecodedPixels(decoded.Width, decoded.Height, decoded.Rgb, decoded.Alpha, storage);
+            var result = new DecodedPixels(width, height, decoded.Rgb, decoded.Alpha, storage);
             storage = null;
             return result;
         }
@@ -178,7 +162,9 @@ internal sealed class PngImage
         _ => throw new NotSupportedException($"Unsupported PNG color type {colorType}.")
     };
 
-    private static PngImage Decode(Stream decompressed, int width, int height, int bitDepth, int colorType, int interlace, ReadOnlyMemory<byte>? palette, ReadOnlyMemory<byte>? transparency, CancellationToken cancellationToken)
+    internal static (byte[] Rgb, byte[]? Alpha) DecodeScanlines(Stream decompressed, int width, int height,
+        int bitDepth, int colorType, int interlace, ReadOnlyMemory<byte>? palette, ReadOnlyMemory<byte>? transparency,
+        CancellationToken cancellationToken)
     {
         if (colorType == 3 && (palette is null || palette.Value.Length % 3 != 0))
         {
@@ -228,7 +214,7 @@ internal sealed class PngImage
                 (previous, current) = (current, previous);
             }
         }
-        return new PngImage(width, height, rgb, alpha);
+        return (rgb, alpha);
     }
 
     private static void ReadScanline(Stream source, Span<byte> current, ReadOnlySpan<byte> previous,

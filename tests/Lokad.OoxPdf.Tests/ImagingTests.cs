@@ -390,35 +390,6 @@ internal static class ImagingTests
         TestAssert.Equal(6, borrowed.Length); // Borrowed managed arrays remain valid.
     }
 
-    public static void PngDecodeScratchStaysProportionalToPlanes()
-    {
-        // Retain the original exact-capacity allocation ceiling as a compatibility
-        // guard; the row-width test below imposes the tighter streaming bound.
-        uint s = 0x12345678u;
-        byte[] noise = new byte[512 * 512 * 4];
-        for (int i = 0; i < noise.Length; i++)
-        {
-            s ^= s << 13;
-            s ^= s >> 17;
-            s ^= s << 5;
-            noise[i] = (byte)s;
-        }
-
-        byte[] noisy = TestFixtures.CreateRgbaPng(512, 512, noise);
-        byte[] flat = TestFixtures.CreateRgbaPng(512, 512, new byte[512 * 512 * 4]);
-        foreach (byte[] png in new[] { noisy, flat })
-        {
-            GC.Collect();
-            GC.WaitForPendingFinalizers();
-            GC.Collect();
-            long start = GC.GetAllocatedBytesForCurrentThread();
-            using DecodedPixels owned = PngImage.ReadOwned(png, CancellationToken.None);
-            long allocated = GC.GetAllocatedBytesForCurrentThread() - start;
-            long planes = (long)owned.Rgb.Length + (owned.Alpha?.Length ?? 0);
-            TestAssert.True(allocated <= planes * 4L, "PNG decode scratch must stay proportional to planes; allocated=" + allocated + " planes=" + planes + ".");
-        }
-    }
-
     public static void PngDecodeTemporaryStorageIsBoundedByRowWidth()
     {
         foreach ((int width, int height) in new[] { (1024, 1024), (128, 4096), (4096, 128) })
@@ -589,17 +560,14 @@ internal static class ImagingTests
 
     public static void PngStreamingObservesCancellationBetweenShortReadsAndScanlines()
     {
-        var decode = typeof(PngImage).GetMethod("Decode", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
-            ?? throw new InvalidOperationException("Scanline decoder must exist.");
         // Trigger cancellation deterministically while consuming a short row or
         // exactly after its last byte; avoid timer-dependent large-image tests.
         foreach (int cancelAt in new[] { 2, 4 })
         {
             using var cancellation = new CancellationTokenSource();
             using var stream = new CancellingScanlineStream([0, 10, 20, 30, 40, 50, 60, 0, 70, 80, 90, 100, 110, 120], cancellation, cancelAt);
-            var failure = TestAssert.Throws<System.Reflection.TargetInvocationException>(
-                () => decode.Invoke(null, [stream, 2, 2, 8, 2, 0, null, null, cancellation.Token]));
-            TestAssert.True(failure.InnerException is OperationCanceledException, "Cancellation must escape the scanline decoder.");
+            TestAssert.Throws<OperationCanceledException>(
+                () => PngImage.DecodeScanlines(stream, 2, 2, 8, 2, 0, null, null, cancellation.Token));
             TestAssert.Equal(cancelAt, stream.ReadCalls);
             TestAssert.True(stream.Position < stream.Length, "Cancellation stops consumption before the second row is decoded.");
         }
