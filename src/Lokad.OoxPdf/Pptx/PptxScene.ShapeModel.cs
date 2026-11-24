@@ -247,7 +247,6 @@ internal readonly record struct PptxSceneFillStyle(
 
 internal sealed record PptxSceneGradientFill(
     bool HasGradient,
-    bool HasGradientSource,
     bool HasUnsupportedGradient,
     double AngleDegrees,
     IReadOnlyList<PptxSceneGradientStop> Stops);
@@ -259,7 +258,6 @@ internal readonly record struct PptxSceneGradientStop(
 
 internal readonly record struct PptxScenePatternFill(
     bool HasPattern,
-    bool HasPatternSource,
     bool HasUnsupportedPattern,
     string Preset,
     RgbColor Foreground,

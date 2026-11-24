@@ -6,26 +6,18 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxSceneBuilder
 {
-    private static PptxSceneGradientFill ReadShapeGradientFill(XElement? shapeProperties, PptxTheme theme, PptxColorMap colorMap)
-    {
-        TryReadShapeGradientFill(shapeProperties, theme, colorMap, out PptxSceneGradientFill fill);
-        return fill;
-    }
-
-    internal static bool TryReadShapeGradientFill(XElement? shapeProperties, PptxTheme theme, PptxColorMap colorMap, out PptxSceneGradientFill fill)
+    internal static PptxSceneGradientFill ReadShapeGradientFill(XElement? shapeProperties, PptxTheme theme, PptxColorMap colorMap)
     {
         XElement? gradientFill = shapeProperties?.Element(DrawingNamespace + "gradFill");
         XElement? gradientStopList = gradientFill?.Element(DrawingNamespace + "gsLst");
         if (gradientFill is null)
         {
-            fill = new PptxSceneGradientFill(false, false, false, 0d, []);
-            return false;
+            return new PptxSceneGradientFill(false, false, 0d, []);
         }
 
         if (gradientStopList is null)
         {
-            fill = new PptxSceneGradientFill(false, true, true, 0d, []);
-            return false;
+            return new PptxSceneGradientFill(false, true, 0d, []);
         }
 
         XElement[] rawStops = gradientStopList
@@ -39,16 +31,14 @@ internal sealed partial class PptxSceneBuilder
         if (stops.Length < 2 ||
             gradientFill.Element(DrawingNamespace + "lin") is not { } linear)
         {
-            fill = new PptxSceneGradientFill(false, true, true, 0d, []);
-            return false;
+            return new PptxSceneGradientFill(false, true, 0d, []);
         }
 
         double angleDegrees = OoxXml.ParseOptionalLong(linear, "ang", 0) / 60000d;
         bool hasUnsupportedGradient =
             stops.Length != rawStops.Length ||
             !PptxColorResolver.HasUniformGradientAlpha(stops, static stop => stop.Alpha);
-        fill = new PptxSceneGradientFill(true, true, hasUnsupportedGradient, angleDegrees, stops);
-        return true;
+        return new PptxSceneGradientFill(true, hasUnsupportedGradient, angleDegrees, stops);
     }
 
     private static bool TryReadGradientStop(XElement gradientStop, PptxTheme theme, PptxColorMap colorMap, out PptxSceneGradientStop stop)
@@ -76,7 +66,7 @@ internal sealed partial class PptxSceneBuilder
         string? preset = (string?)patternFill.Attribute("prst");
         if (preset is null || !IsSupportedDiagonalPatternFill(preset))
         {
-            return new PptxScenePatternFill(false, true, true, preset ?? string.Empty, default, default);
+            return new PptxScenePatternFill(false, true, preset ?? string.Empty, default, default);
         }
 
         return ReadPatternFill(patternFill, preset, theme, colorMap);
@@ -91,7 +81,7 @@ internal sealed partial class PptxSceneBuilder
         RgbColor background = PptxColorResolver.TryReadSolidColorWithAlpha(patternFill.Element(DrawingNamespace + "bgClr"), theme, colorMap, out RgbColor backgroundColor, out _)
             ? backgroundColor
             : new RgbColor(255, 255, 255);
-        return new PptxScenePatternFill(true, true, false, preset, foreground, background);
+        return new PptxScenePatternFill(true, false, preset, foreground, background);
     }
 
     internal static bool IsSupportedDiagonalPatternFill(string? preset)

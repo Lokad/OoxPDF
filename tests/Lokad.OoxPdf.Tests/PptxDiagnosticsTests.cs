@@ -413,7 +413,7 @@ internal static class PptxDiagnosticsTests
             PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
             PptxSceneShape shape = new PptxSceneBuilder().Build(document, package, CancellationToken.None).Slides[0].SlideNodes[0].Shape
                 ?? throw new InvalidOperationException("Expected shape scene node.");
-            TestAssert.True(shape.GradientFill.HasGradientSource, "Expected unsupported shape gradient provenance to remain scene-owned.");
+            TestAssert.Equal(false, shape.GradientFill.HasGradient);
             TestAssert.True(shape.GradientFill.HasUnsupportedGradient, "Expected unsupported shape gradient state to remain scene-owned.");
         }
 
@@ -449,7 +449,7 @@ internal static class PptxDiagnosticsTests
             PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
             PptxSceneShape shape = new PptxSceneBuilder().Build(document, package, CancellationToken.None).Slides[0].SlideNodes[0].Shape
                 ?? throw new InvalidOperationException("Expected shape scene node.");
-            TestAssert.True(shape.PatternFill.HasPatternSource, "Expected unsupported shape pattern provenance to remain scene-owned.");
+            TestAssert.Equal(false, shape.PatternFill.HasPattern);
             TestAssert.True(shape.PatternFill.HasUnsupportedPattern, "Expected unsupported shape pattern state to remain scene-owned.");
         }
 
