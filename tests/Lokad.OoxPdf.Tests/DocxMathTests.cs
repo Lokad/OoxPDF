@@ -822,7 +822,7 @@ internal static partial class DocxMathTests
             TestAssert.Equal("cell", RowText(cell.Content));
             TestAssert.True(cell.Display, "Cell display structure must be retained.");
             TestAssert.Equal("left", cell.AlignmentValue);
-            TestAssert.Contains("left", TestAssert.NotNull(cell.PropertiesXml));
+            TestAssert.Equal("left", cell.EffectiveAlignmentValue);
             TestAssert.Equal("header", RowText(result.HeaderParagraphs.Single().Equations.Single().Content));
             TestAssert.Equal("footer", RowText(result.FooterParagraphs.Single().Equations.Single().Content));
         }
