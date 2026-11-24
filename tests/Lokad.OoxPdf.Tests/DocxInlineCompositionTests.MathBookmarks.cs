@@ -61,6 +61,41 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
+    public static void DocxInnerMathBookmarksRetainDisplayParagraphBoundaries()
+    {
+        const string fixture = "CompositionProbes/math-explicit-display-linked-fraction";
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var direct = ReadMutation(fixture, mode, false, false);
+            var nested = ReadMutation(fixture, mode, false, false, (xml, w, m) =>
+            {
+                var start = xml.Descendants(w + "bookmarkStart").Single();
+                var end = xml.Descendants(w + "bookmarkEnd").Single();
+                var display = xml.Descendants(m + "oMathPara").Single();
+                start.Remove();
+                end.Remove();
+                display.AddFirst(start);
+                display.Add(end);
+            });
+
+            var owner = nested.Paragraphs.Single(paragraph => paragraph.Equations.Count != 0);
+            var bookmark = owner.BookmarkAnchors.Single();
+            TestAssert.Equal("PublicCalculation", bookmark.Name);
+            TestAssert.True(bookmark.InlineItemIndex is int index && owner.InlineContent![index] is DocxInlineEquation,
+                "The display bookmark targets its following equation.");
+
+            var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true), mode,
+                mode == OoxPdfDocxMarkupMode.AllMarkup ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
+                    : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+            var expected = renderer.RenderPagesAsync(direct, null, default).ToBlockingEnumerable().Single();
+            var actual = renderer.RenderPagesAsync(nested, null, default).ToBlockingEnumerable().Single();
+            TestAssert.Equal(expected.Content, actual.Content);
+            var link = expected.Annotations.Single();
+            TestAssert.Equal(0, link.Destination!.Value.PageIndex);
+            TestAssert.Equal(link, actual.Annotations.Single());
+        }
+    }
+
     public static void DocxInnerMathBookmarksMatchIndependentWordViewports()
     {
         if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent viewport geometry uses installed Windows math fonts.");

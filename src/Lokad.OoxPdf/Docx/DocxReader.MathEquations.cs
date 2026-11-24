@@ -5,7 +5,7 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxReader
 {
-    private static IEnumerable<(XElement Element, DocxRevisionInfo? Revision, bool RemoveDeletedText)> EnumerateMathEquations(
+    private static IEnumerable<(XElement Element, DocxRevisionInfo? Revision, bool RemoveDeletedText)> EnumerateMathParagraphSources(
         XElement container, DocxRevisionInfo? inheritedRevision, bool removeDeletedText,
         OoxPdfDocxMarkupMode mode, CancellationToken token)
     {
@@ -21,7 +21,10 @@ internal sealed partial class DocxReader
         while (pending.TryPop(out var source))
         {
             token.ThrowIfCancellationRequested();
-            if (source.Element.Name == MathNamespace + "oMath")
+            // Word can store bookmark boundaries alongside the displayed equations.
+            if (source.Element.Name == MathNamespace + "oMath" ||
+                source.Element.Name == WordprocessingNamespace + "bookmarkStart" ||
+                source.Element.Name == WordprocessingNamespace + "bookmarkEnd")
             {
                 yield return (source.Element, source.Revision, source.RemoveDeletedText);
                 continue;

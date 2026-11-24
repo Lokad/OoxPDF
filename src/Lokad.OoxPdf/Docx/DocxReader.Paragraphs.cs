@@ -479,19 +479,24 @@ internal sealed partial class DocxReader
             Dictionary<XElement, DocxRevisionInfo>? mathRunRevisions = null;
             bool hasMathRunRevisions = false;
             DocxRevisionInfo? equationRevision = revision;
-            foreach (var sourceEquation in EnumerateMathEquations(container, revision, removeDeletedText, markupMode, cancellationToken))
+            foreach (var source in EnumerateMathParagraphSources(container, revision, removeDeletedText, markupMode, cancellationToken))
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                XElement equation = sourceEquation.Element;
-                equationRevision = sourceEquation.Revision;
+                XElement equation = source.Element;
+                if (equation.Name != MathNamespace + "oMath")
+                {
+                    AddSourceContainerChild(equation, source.Revision, source.RemoveDeletedText);
+                    continue;
+                }
+                equationRevision = source.Revision;
                 hasMathRunRevisions = false;
                 var content = DocxMathParser.Read(equation, ReadMathRun, cancellationToken,
                     wrapper => IsIncludedRevisionContainer(wrapper, markupMode), preserveDeletedStructure: markupMode == OoxPdfDocxMarkupMode.Final,
-                    readBookmark: sourceEquation.RemoveDeletedText ? null : bookmark =>
+                    readBookmark: source.RemoveDeletedText ? null : bookmark =>
                         bookmarkAnchors.Add(new DocxBookmarkAnchor(bookmark.Id, bookmark.Name, sourceRunIndex, runs.Count,
                             RelativeRunTextOffset(runs, sourceRunIndex))
                             { InlineItemIndex = inlineItems!.Count, MathSource = bookmark }),
-                    readCommentBoundary: sourceEquation.RemoveDeletedText ? null : boundary =>
+                    readCommentBoundary: source.RemoveDeletedText ? null : boundary =>
                     {
                         // Keep the equation item as the frame owner, even when
                         // the marker itself belongs to a fraction argument.
@@ -499,15 +504,15 @@ internal sealed partial class DocxReader
                             AddCommentRangeStart(boundary, openCommentRanges, sourceRunIndex, runs, inlineItems!.Count);
                         else
                             AddCommentRangeEnd(boundary, openCommentRanges, commentRanges, sourceRunIndex, runs, inlineItems!.Count + 1);
-                    }, readHyperlink: sourceEquation.RemoveDeletedText ? null : hyperlink =>
+                    }, readHyperlink: source.RemoveDeletedText ? null : hyperlink =>
                         AddHyperlinkSpan(hyperlink, sourceRunIndex, 0, runs.Count, 0,
                             inlineItems!.Count, inlineItems.Count + 1, hyperlinkSpans, relationships, mathContent: true),
                     authoredStory: paragraph.Annotation<DocxSourceXml.StoryOrigin>()?.Story,
-                    equationHasDeletionOwner: sourceEquation.RemoveDeletedText || equationRevision?.Kind == DocxRevisionKind.Deletion);
-                if (sourceEquation.RemoveDeletedText)
+                    equationHasDeletionOwner: source.RemoveDeletedText || equationRevision?.Kind == DocxRevisionKind.Deletion);
+                if (source.RemoveDeletedText)
                 {
-                    var source = new DocxEquation(content, runs.Count, sourceRunIndex, display, null, null, null);
-                    if (DocxMathLayout.RemoveDeletedLiteralMathText(source, cancellationToken) is not { } empty) continue;
+                    var deletedEquation = new DocxEquation(content, runs.Count, sourceRunIndex, display, null, null, null);
+                    if (DocxMathLayout.RemoveDeletedLiteralMathText(deletedEquation, cancellationToken) is not { } empty) continue;
                     content = empty;
                 }
                 equations.Add(new DocxEquation(
