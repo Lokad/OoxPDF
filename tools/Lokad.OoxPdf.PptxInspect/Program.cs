@@ -85,7 +85,7 @@ foreach (PptxSlide slide in slides)
     try
     {
     int slideNumber = slide.Index + 1;
-    IReadOnlyList<PptxTextFrameModelSnapshot> frameModels = PptxRenderer.InspectTextFrameModels(document, package, slide.Index, scene, inspectionFonts);
+    var (frameModels, textLayout) = PptxRenderer.InspectShapeText(document, package, slide.Index, scene, inspectionFonts);
     for (int frameIndex = 0; frameIndex < frameModels.Count; frameIndex++)
     {
         PptxTextFrameModelSnapshot frame = frameModels[frameIndex];
@@ -108,7 +108,6 @@ foreach (PptxSlide slide in slides)
         }
     }
 
-    PptxTextLayoutSnapshot textLayout = PptxRenderer.InspectTextLayout(document, package, slide.Index, scene, inspectionFonts);
     for (int frameIndex = 0; frameIndex < textLayout.Frames.Count; frameIndex++)
     {
         PptxTextFrameLayoutSnapshot frame = textLayout.Frames[frameIndex];

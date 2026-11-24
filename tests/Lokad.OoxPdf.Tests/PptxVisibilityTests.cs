@@ -65,29 +65,44 @@ internal static class PptxVisibilityTests
 
     public static void PptxGlyphEmissionInspectionUsesSceneVisibilityAndMasterAdmission()
     {
+        XNamespace p = OoxNamespaces.PresentationNamespace;
+        XNamespace a = OoxNamespaces.DrawingNamespace;
         foreach (bool showMaster in new[] { false, true })
         foreach (bool hidden in new[] { false, true })
         {
             string input = WriteMasterShapePackage(showMaster ? "1" : "0", withText: true);
-            if (hidden)
+            using (var zip = ZipFile.Open(input, ZipArchiveMode.Update))
             {
-                using var zip = System.IO.Compression.ZipFile.Open(input, System.IO.Compression.ZipArchiveMode.Update);
-                var entry = zip.GetEntry("ppt/slides/slide1.xml")!;
-                string xml;
-                using (var reader = new StreamReader(entry.Open())) { xml = reader.ReadToEnd(); }
-                entry.Delete();
-                using var writer = new StreamWriter(zip.CreateEntry("ppt/slides/slide1.xml").Open());
-                writer.Write(xml.Replace("<p:sp>", "<p:sp><p:nvSpPr><p:cNvPr id=\"9\" name=\"Hidden\" hidden=\"1\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>", StringComparison.Ordinal));
+                const string slidePart = "ppt/slides/slide1.xml";
+                foreach (string part in new[] { slidePart, "ppt/slideLayouts/slideLayout1.xml", "ppt/slideMasters/slideMaster1.xml" })
+                {
+                    var entry = zip.GetEntry(part)!;
+                    XDocument xml;
+                    using (var reader = entry.Open()) xml = XDocument.Load(reader);
+                    var tree = xml.Descendants(p + "spTree").Single();
+                    var shape = tree.Element(p + "sp")!;
+                    var extensionShape = new XElement(shape);
+                    extensionShape.Descendants(a + "t").Single().Value = "Extension text";
+                    tree.Add(new XElement(p + "extLst", new XElement(p + "ext", new XAttribute("uri", "{5D154C70-1063-4818-8DFE-C915C125A6AD}"),
+                        new XElement(XName.Get("payload", "urn:ooxpdf:test"), extensionShape))));
+                    if (hidden && part == slidePart)
+                        shape.AddFirst(new XElement(p + "nvSpPr",
+                            new XElement(p + "cNvPr", new XAttribute("id", "9"), new XAttribute("name", "Hidden"), new XAttribute("hidden", "1")),
+                            new XElement(p + "cNvSpPr"), new XElement(p + "nvPr")));
+                    entry.Delete();
+                    using var writer = zip.CreateEntry(part).Open();
+                    xml.Save(writer);
+                }
             }
             try
             {
                 using OoxPackage package = OoxPackage.Open(input, default);
                 PptxDocument document = new PptxReader().Read(package, default);
                 var fonts = new PresentationFontResolver(new PortableRenderingTests.PinnedResolver());
-                var models = PptxRenderer.InspectTextFrameModels(document, package, 0, inspectionFonts: fonts);
-                var layout = PptxRenderer.InspectTextLayout(document, package, 0, inspectionFonts: fonts);
-                var flow = PptxRenderer.InspectTextFlow(document, package, 0, inspectionFonts: fonts);
-                var glyphs = PptxRenderer.InspectTextGlyphRuns(document, package, 0, inspectionFonts: fonts);
+                var scene = new PptxSceneBuilder().Build(document, package, default);
+                var (models, layout) = PptxRenderer.InspectShapeText(document, package, 0, scene, fonts);
+                var flow = PptxRenderer.InspectTextFlow(document, package, 0, scene, fonts);
+                var glyphs = PptxRenderer.InspectTextGlyphRuns(document, package, 0, scene, fonts);
                 int admittedFrames = 1 + (showMaster ? 1 : 0) + (hidden ? 0 : 1);
                 TestAssert.Equal(admittedFrames, models.Count);
                 TestAssert.Equal(admittedFrames, layout.Frames.Count);
@@ -106,6 +121,7 @@ internal static class PptxVisibilityTests
                     TestAssert.Equal(showMaster, text.Contains("Master text", StringComparison.Ordinal));
                     TestAssert.Equal(!hidden, text.Contains("Slide text", StringComparison.Ordinal));
                     TestAssert.Contains("Layout text", text);
+                    TestAssert.DoesNotContain("Extension text", text);
                 }
             }
             finally { File.Delete(input); }

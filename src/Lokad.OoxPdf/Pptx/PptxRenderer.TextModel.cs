@@ -18,25 +18,22 @@ internal sealed partial class PptxRenderer
             return [];
         }
 
-        PptxSceneSlide slide = context.SceneSlide;
-        var slideFrames = BuildTextFrameModelsAsync(context, slide.SlideXml, slide.SlideColorMap,
-            includePlaceholders: true, context.InheritedXml).GetAwaiter().GetResult();
-        return EnumerateInheritedPaintSources(slide)
-            .SelectMany(source => BuildTextFrameModelsAsync(context, source.Xml, source.ColorMap,
-                includePlaceholders: false, placeholderSources: []).GetAwaiter().GetResult())
-            .Concat(slideFrames)
-            .Select(ToSnapshot)
-            .ToArray();
+        return ReadSceneShapeTextFramesAsync(context).GetAwaiter().GetResult().Select(ToSnapshot).ToArray();
     }
 
-    // Inherited XML still supplies placeholder defaults when master paint is
-    // suppressed. Only placed inspection content follows the paint selection.
-    private static IEnumerable<(XDocument Xml, PptxColorMap ColorMap)> EnumerateInheritedPaintSources(PptxSceneSlide slide)
+    private static async ValueTask<IReadOnlyList<PptxTextFrameModel>> ReadSceneShapeTextFramesAsync(PptxRenderContext context)
     {
-        if (slide.ShowMasterShapes && slide.MasterXml is { } master)
-            yield return (master, slide.MasterColorMap);
-        if (slide.LayoutXml is { } layout)
-            yield return (layout, slide.LayoutColorMap);
+        PptxSceneSlide slide = context.SceneSlide;
+        var frames = new List<PptxTextFrameModel>();
+        if (slide.ShowMasterShapes)
+            frames.AddRange(await BuildTextFrameModelsAsync(context, slide.MasterNodes, slide.MasterColorMap,
+                includePlaceholders: false, placeholderSources: []).ConfigureAwait(false));
+        frames.AddRange(await BuildTextFrameModelsAsync(context, slide.LayoutNodes, slide.LayoutColorMap,
+            includePlaceholders: false, placeholderSources: []).ConfigureAwait(false));
+        // Suppressed master paint can still supply slide placeholder defaults.
+        frames.AddRange(await BuildTextFrameModelsAsync(context, slide.SlideNodes, slide.SlideColorMap,
+            includePlaceholders: true, context.InheritedXml).ConfigureAwait(false));
+        return frames;
     }
 
     internal static IReadOnlyList<PptxTextFrameModelSnapshot> InspectTableTextFrameModels(PptxDocument document, OoxPackage package, int slideIndex, PptxScene? sharedScene = null, PresentationFontResolver? inspectionFonts = null)
@@ -199,31 +196,21 @@ internal sealed partial class PptxRenderer
             run.Style.Highlight?.Color);
     }
 
-    private static ValueTask<IReadOnlyList<PptxTextFrameModel>> BuildTextFrameModelsAsync(
-        PptxRenderContext context,
-        XDocument source,
-        PptxColorMap colorMap,
-        bool includePlaceholders,
-        IReadOnlyList<XDocument> placeholderSources) =>
-        BuildTextFrameModelsAsync(source, context.Document, context.Theme, colorMap, context.DisplayedSlideNumber,
-            includePlaceholders, placeholderSources, context.FontResolver, context.CancellationToken);
-
     private static async ValueTask<IReadOnlyList<PptxTextFrameModel>> BuildTextFrameModelsAsync(
-        XDocument slideXml,
-        PptxDocument document,
-        PptxTheme theme,
+        PptxRenderContext context,
+        IReadOnlyList<PptxSceneNode> nodes,
         PptxColorMap colorMap,
-        long slideNumber,
         bool includePlaceholders,
-        IReadOnlyList<XDocument> placeholderSources,
-        PresentationFontResolver? fontResolver = null,
-        CancellationToken cancellationToken = default)
+        IReadOnlyList<XDocument> placeholderSources)
     {
         var frames = new List<PptxTextFrameModel>();
-        foreach (XElement shape in slideXml.Descendants(PresentationNamespace + "sp"))
+        foreach (PptxSceneNode node in EnumerateRenderedSceneNodes(nodes, includePlaceholders))
         {
-            if (!PptxSceneBuilder.IsVisibleDrawingContent(shape)) continue;
-            PptxTextFrameModel? frame = (await BuildTextFrameModelAsync(shape, document, theme, colorMap, slideNumber, includePlaceholders, placeholderSources, fontResolver, cancellationToken).ConfigureAwait(false));
+            context.CancellationToken.ThrowIfCancellationRequested();
+            if (node.Kind != PptxSceneNodeKind.Shape || !PptxSceneBuilder.IsVisibleDrawingContent(node.Source)) continue;
+            PptxTextFrameModel? frame = await BuildTextFrameModelAsync(node.Source, context.Document, context.Theme, colorMap,
+                context.DisplayedSlideNumber, includePlaceholders, placeholderSources, context.FontResolver,
+                context.CancellationToken).ConfigureAwait(false);
             if (frame is not null)
             {
                 frames.Add(frame);

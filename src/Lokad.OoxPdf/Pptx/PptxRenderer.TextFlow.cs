@@ -52,35 +52,15 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static ValueTask<PptxTextLayoutModel> BuildTextLayoutModelAsync(
-        PptxRenderContext context,
-        XDocument source,
-        PptxColorMap colorMap,
-        bool includePlaceholders,
-        IReadOnlyList<XDocument> placeholderSources) =>
-        BuildTextLayoutModelAsync(source, context.Document, context.Theme, colorMap, context.DisplayedSlideNumber,
-            includePlaceholders, placeholderSources, context.FontResolver, context.CancellationToken);
-
     private static async ValueTask<PptxTextLayoutModel> BuildTextLayoutModelAsync(
-        XDocument slideXml,
-        PptxDocument document,
-        PptxTheme theme,
-        PptxColorMap colorMap,
-        long slideNumber,
-        bool includePlaceholders,
-        IReadOnlyList<XDocument> placeholderSources,
-        PresentationFontResolver? fontResolver,
-        CancellationToken cancellationToken)
+        PptxRenderContext context, IReadOnlyList<PptxTextFrameModel> frameModels)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-        fontResolver ??= new PresentationFontResolver(await WindowsFontResolver.CreateAsync(cancellationToken).ConfigureAwait(false), cancellationToken);
-        var advanceEstimator = new TextAdvanceEstimator(fontResolver, cancellationToken);
-        var frames = new List<PptxTextFrameLayout>();
-        IReadOnlyList<PptxTextFrameModel> frameModels = (await BuildTextFrameModelsAsync(slideXml, document, theme, colorMap, slideNumber, includePlaceholders, placeholderSources, fontResolver, cancellationToken).ConfigureAwait(false));
+        var advanceEstimator = new TextAdvanceEstimator(context.FontResolver, context.CancellationToken);
+        var frames = new List<PptxTextFrameLayout>(frameModels.Count);
         foreach (PptxTextFrameModel frameModel in frameModels)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            frames.Add((await BuildTextFrameLayoutAsync(frameModel, document, advanceEstimator).ConfigureAwait(false)));
+            context.CancellationToken.ThrowIfCancellationRequested();
+            frames.Add(await BuildTextFrameLayoutAsync(frameModel, context.Document, advanceEstimator).ConfigureAwait(false));
         }
 
         return new PptxTextLayoutModel(frames);
@@ -162,14 +142,9 @@ internal sealed partial class PptxRenderer
     }
 
     private static async ValueTask<PptxTextFlowModel> BuildTextFlowModelAsync(
-        PptxRenderContext context,
-        XDocument source,
-        PptxColorMap colorMap,
-        bool includePlaceholders,
-        IReadOnlyList<XDocument> placeholderSources)
+        PptxRenderContext context)
     {
-        IReadOnlyList<PptxTextFrameModel> frames = await BuildTextFrameModelsAsync(context, source, colorMap,
-            includePlaceholders, placeholderSources).ConfigureAwait(false);
+        IReadOnlyList<PptxTextFrameModel> frames = await ReadSceneShapeTextFramesAsync(context).ConfigureAwait(false);
         var advanceEstimator = new TextAdvanceEstimator(context.FontResolver, context.CancellationToken);
         var flowFrames = new List<PptxTextFlowFrame>(frames.Count);
         foreach (PptxTextFrameModel frame in frames)

@@ -1220,14 +1220,14 @@ internal static class PptxSceneTextAgreementTests
         const BindingFlags flags = BindingFlags.NonPublic | BindingFlags.Static;
         try
         {
-            // Exercise the live independent XML layout on the original fixture;
-            // do not retain the obsolete shape-cloning production wrapper.
-            MethodInfo build = typeof(PptxRenderer).GetMethods(flags)
-                .Single(method => method.Name == "BuildTextLayoutModelAsync" && method.GetParameters().Length == 9);
-            object pending = build.Invoke(null, [TestAssert.NotNull(node.Source.Document), document, scene.Slides[0].Theme, scene.Slides[0].SlideColorMap, 1, includePlaceholders, InheritedSources(scene), resolver, CancellationToken.None])!;
-            var task = (Task)pending.GetType().GetMethod("AsTask")!.Invoke(pending, null)!;
-            task.GetAwaiter().GetResult();
-            object layout = task.GetType().GetProperty("Result")!.GetValue(task)!;
+            // Keep the independent XML text projection for the same admitted
+            // shape. The scene-fed path resolves its own paragraph models.
+            var context = new PptxRenderContext(document, document.Slides[0], scene.Slides[0], resolver, null, null, default);
+            MethodInfo read = typeof(PptxRenderer).GetMethod("BuildTextFrameModelsAsync", flags)!;
+            object frameModels = AwaitResult(read.Invoke(null,
+                [context, new[] { node }, context.SceneSlide.SlideColorMap, includePlaceholders, context.InheritedXml])!);
+            MethodInfo build = typeof(PptxRenderer).GetMethod("BuildTextLayoutModelAsync", flags)!;
+            object layout = AwaitResult(build.Invoke(null, [context, frameModels])!);
             var frames = (System.Collections.IEnumerable)layout.GetType().GetProperty("Frames")!.GetValue(layout)!;
             TestAssert.True(frames.Cast<object>().All(frame =>
             {
@@ -1242,6 +1242,13 @@ internal static class PptxSceneTextAgreementTests
         catch (TargetInvocationException ex)
         {
             throw ex.InnerException ?? ex;
+        }
+
+        static object AwaitResult(object pending)
+        {
+            var task = (Task)pending.GetType().GetMethod("AsTask")!.Invoke(pending, null)!;
+            task.GetAwaiter().GetResult();
+            return task.GetType().GetProperty("Result")!.GetValue(task)!;
         }
     }
 
