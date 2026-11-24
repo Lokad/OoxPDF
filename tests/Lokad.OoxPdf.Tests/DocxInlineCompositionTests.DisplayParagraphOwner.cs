@@ -77,7 +77,7 @@ internal static partial class DocxInlineCompositionTests
     {
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
         {
-            DocxDocument Read(bool insideEquation, bool mathRun, string? type = null, int breakCount = 1) => ReadMutation(
+            DocxDocument Read(bool insideEquation, bool mathRun, string? type = null, int breakCount = 1, bool proofing = false) => ReadMutation(
                 "CompositionProbes/math-explicit-display-same-group", mode, false, false, (xml, w, m) =>
                 {
                     var group = xml.Descendants(m + "oMathPara").Single();
@@ -89,6 +89,11 @@ internal static partial class DocxInlineCompositionTests
                         var run = new XElement((mathRun ? m : w) + "r", lineBreak);
                         if (insideEquation) equations[0].Add(run);
                         else equations[1].AddBeforeSelf(run);
+                    }
+                    if (proofing)
+                    {
+                        equations[0].AddFirst(new XElement(w + "proofErr", new XAttribute(w + "type", "spellStart")));
+                        equations[0].Add(new XElement(w + "proofErr", new XAttribute(w + "type", "spellEnd")));
                     }
                 });
 
@@ -113,6 +118,7 @@ internal static partial class DocxInlineCompositionTests
                 Math.Abs(expectedTwo[^1].Y - expectedTwo[0].Y) > Math.Abs(expected[^1].Y - expected[0].Y),
                 "The second authored break must retain an additional line of space.");
             CheckMathBreaks(Read(insideEquation: true, mathRun: true, breakCount: 2), expectedTwo);
+            CheckMathBreaks(Read(insideEquation: true, mathRun: true, breakCount: 2, proofing: true), expectedTwo);
 
             var unsupported = new List<OoxPdfDiagnostic>();
             var pageBreak = renderer.RenderPagesAsync(Read(insideEquation: true, mathRun: true, type: "page"), unsupported.Add, default)

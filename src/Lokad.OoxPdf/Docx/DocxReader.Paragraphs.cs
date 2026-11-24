@@ -540,7 +540,8 @@ internal sealed partial class DocxReader
                     foreach (var run in firstTrailingBreak.ElementsAfterSelf().Prepend(firstTrailingBreak))
                     {
                         cancellationToken.ThrowIfCancellationRequested();
-                        AddSourceContainerChild(AsParagraphBreakRun(run), source.Revision, false);
+                        if (!DocxSourceXml.IsNonPrintingMarker(run))
+                            AddSourceContainerChild(AsParagraphBreakRun(run), source.Revision, false);
                     }
                 }
             }
