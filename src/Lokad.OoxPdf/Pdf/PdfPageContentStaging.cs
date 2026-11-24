@@ -16,7 +16,7 @@ internal sealed class PdfPageContentStaging : IAsyncDisposable
     private readonly IOoxPdfTemporaryStorage? temporaryStorage;
     private readonly IMemoryReservation? storage;
     private byte[]? scratch;
-    private long residentBytes, bufferedBytes, retainedResourceBytes;
+    private long residentBytes, retainedResourceBytes;
     private Stream? spillStream;
     private bool disposed;
     private MemoryPage? pendingPage;
@@ -87,7 +87,7 @@ internal sealed class PdfPageContentStaging : IAsyncDisposable
         cancellationToken.ThrowIfCancellationRequested();
         if (pendingPage is null) throw new InvalidOperationException("No staged page is open.");
         if (count == 0) return;
-        if (spillStream is null && bufferedBytes + pendingLength + count > windowBytes)
+        if (spillStream is null && residentBytes + count > windowBytes)
             await EscalateAsync(cancellationToken).ConfigureAwait(false);
         if (spillStream is { } stream)
         {
@@ -136,7 +136,6 @@ internal sealed class PdfPageContentStaging : IAsyncDisposable
         {
             pendingPage.Length = checked((int)pendingLength);
             memory.Add(pendingPage);
-            bufferedBytes += pendingLength;
         }
         pendingPage = null;
         pendingLength = 0;
@@ -249,7 +248,6 @@ internal sealed class PdfPageContentStaging : IAsyncDisposable
             OoxMemory.Resize(storage, checked(retainedResourceBytes + residentBytes + (scratch?.Length ?? 0)));
         }
         memory.Clear();
-        bufferedBytes = 0;
         if (pendingPage is { Segments.Count: > 0 })
         {
             pendingOffset = created.Position;
@@ -277,7 +275,7 @@ internal sealed class PdfPageContentStaging : IAsyncDisposable
         disposed = true;
         memory.Clear();
         pendingPage?.Segments.Clear(); pendingPage = null;
-        spillOffsets.Clear(); bufferedBytes = residentBytes = retainedResourceBytes = 0;
+        spillOffsets.Clear(); residentBytes = retainedResourceBytes = 0;
         scratch = null;
         try
         {
