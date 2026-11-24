@@ -117,7 +117,9 @@ internal static partial class DocxFootnotesTests
             TestAssert.Equal(2, pages.Length);
             TestAssert.Equal(1, pages[0].Images.Count);
             TestAssert.Equal(1, pages[0].Annotations.Single().Destination?.PageIndex);
-            TestAssert.Contains("BODY PAGE 40 OF 2", DocxPageFootnoteNumberingTests.DecodeText(pages[1]));
+            var text = DocxPageFootnoteNumberingTests.DecodeText(pages[1]);
+            TestAssert.True(Regex.Replace(text, @"\s+", "").Contains("BODYPAGE40OF2", StringComparison.Ordinal),
+                $"Expected BODY PAGE 40 OF 2 on the owned page, got '{text}'.");
         }
 
         XElement Run(string text) => new(w + "r", new XElement(w + "t", new XAttribute(XNamespace.Xml + "space", "preserve"), text));
