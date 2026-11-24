@@ -231,28 +231,6 @@ internal static class DocxTableCellsTests
         }
     }
 
-    public static void DocxTableOneColumnMixedTopContentDominanceIsAdmittedPerRow()
-    {
-        var full = new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer());
-        foreach (int automaticIndex in new[] { 0, 1 })
-        {
-            var heights = new (double? Height, string? Rule)[2];
-            heights[automaticIndex] = (null, null); heights[1 - automaticIndex] = (10d, "atLeast");
-            var margins = DocxTableCellMargins.Empty with { TopPoints = 6d, BottomPoints = 12d };
-            var layout = CreateParagraphMinimumLayout("min-single", full, verticalAlignment: "top",
-                cellMargins: margins, rowCount: 2, columnCount: 1, borderSize: "8", rowHeightRules: heights);
-            var rows = layout.Pages[0].Items.OfType<DocxTableRowLayout>().ToArray();
-            foreach (var cell in rows[automaticIndex].Cells)
-                TestAssert.True(DocxRenderer.ResolveTableCellContentClip(rows[automaticIndex], cell).Admitted,
-                    "The independently qualified automatic mask remains admitted beside a content-dominated minimum row.");
-            var fallback = rows[1 - automaticIndex];
-            TestAssert.Equal(0d, fallback.Table.AlignedMinimumRowBottomMargins[fallback.RowIndex]);
-            foreach (var cell in fallback.Cells)
-                TestAssert.True(!DocxRenderer.ResolveTableCellContentClip(fallback, cell).Admitted,
-                    "Content-dominated minimum rows retain their recorded margin and mask fallback.");
-        }
-    }
-
     public static void DocxTableMixedTopRowsReuseQualifiedGeometryAndFollowingFlow() =>
         CheckMixedTopRowsReuseQualifiedGeometryAndFollowingFlow(2);
 
@@ -339,14 +317,18 @@ internal static class DocxTableCellsTests
     public static void DocxTableMixedTopContentDominanceIsAdmittedPerRow()
     {
         var full = new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer());
+        foreach (int columnCount in new[] { 1, 2 })
         foreach (int automaticIndex in new[] { 0, 1 })
         {
             var heights = new (double? Height, string? Rule)[2];
             heights[automaticIndex] = (null, null); heights[1 - automaticIndex] = (10d, "atLeast");
             var margins = DocxTableCellMargins.Empty with { TopPoints = 6d, BottomPoints = 12d };
             var layout = CreateParagraphMinimumLayout("min-single", full, verticalAlignment: "top",
-                cellMargins: margins, rowCount: 2, columnCount: 2, borderSize: "8", rowHeightRules: heights);
+                cellMargins: margins, rowCount: 2, columnCount: columnCount, borderSize: "8", rowHeightRules: heights);
             var rows = layout.Pages[0].Items.OfType<DocxTableRowLayout>().ToArray();
+            TestAssert.Equal(2, rows.Length);
+            foreach (var row in rows)
+                TestAssert.Equal(columnCount, row.Cells.Count);
             foreach (var cell in rows[automaticIndex].Cells)
                 TestAssert.True(DocxRenderer.ResolveTableCellContentClip(rows[automaticIndex], cell).Admitted,
                     "The independently qualified automatic mask remains admitted beside a content-dominated minimum row.");
