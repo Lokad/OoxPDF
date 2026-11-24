@@ -973,6 +973,10 @@ internal static class PptxChartRenderingTests
             .GetMethods(System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
             .Single(method => method.Name == "ReadSceneCategoryLabelVector" && method.GetParameters().Length == 3);
 
+        static IReadOnlyList<T> ReadPoints<T>(object vector, string property) =>
+            vector.GetType().GetProperty(property)?.GetValue(vector) as IReadOnlyList<T>
+            ?? throw new InvalidOperationException($"Expected indexed vector to expose {property}.");
+
         XElement values = XElement.Parse("""
             <c:val xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
               <c:numRef>
@@ -990,17 +994,18 @@ internal static class PptxChartRenderingTests
         PptxSceneChartPlot numberPlot = ParsePlot(new XElement(c + "barChart", new XElement(c + "ser", values)));
         object numberVector = ((System.Collections.IEnumerable)(readNumberVector.Invoke(null, [numberPlot, workbook, true])
             ?? throw new InvalidOperationException("Expected parsed number vectors."))).Cast<object>().Single();
-        object[] cacheNumberPoints = ((System.Collections.IEnumerable?)numberVector.GetType().GetProperty("Points")?.GetValue(numberVector))?.Cast<object>().ToArray() ?? [];
-        object[] workbookNumberPoints = ((System.Collections.IEnumerable?)numberVector.GetType().GetProperty("WorkbookPoints")?.GetValue(numberVector))?.Cast<object>().ToArray() ?? [];
-        TestAssert.True(cacheNumberPoints.Length == 2, "Expected parsed vector rendering points to stay bound to the chart cache.");
-        TestAssert.True((int?)cacheNumberPoints[0].GetType().GetProperty("Index")?.GetValue(cacheNumberPoints[0]) == 2, "Expected parsed numeric cache point index to survive.");
-        TestAssert.Equal("OoxmlIndex", cacheNumberPoints[0].GetType().GetProperty("IndexSource")?.GetValue(cacheNumberPoints[0])?.ToString() ?? string.Empty);
-        TestAssert.Equal(100d, (double?)cacheNumberPoints[0].GetType().GetProperty("Value")?.GetValue(cacheNumberPoints[0]) ?? 0d);
-        TestAssert.True((int?)cacheNumberPoints[1].GetType().GetProperty("Index")?.GetValue(cacheNumberPoints[1]) == 1, "Expected malformed raw numeric cache point index to keep the ordinal fallback.");
-        TestAssert.Equal("OrdinalFallback", cacheNumberPoints[1].GetType().GetProperty("IndexSource")?.GetValue(cacheNumberPoints[1])?.ToString() ?? string.Empty);
-        TestAssert.True(workbookNumberPoints.Length == 3, "Expected parsed numeric vector to keep workbook sidecar points without promoting them to renderable cache points.");
-        TestAssert.Equal("WorkbookRange", workbookNumberPoints[0].GetType().GetProperty("IndexSource")?.GetValue(workbookNumberPoints[0])?.ToString() ?? string.Empty);
-        TestAssert.Equal("1.4", (string?)workbookNumberPoints[2].GetType().GetProperty("Text")?.GetValue(workbookNumberPoints[2]) ?? string.Empty);
+        var cacheNumberPoints = ReadPoints<PptxRenderer.ChartIndexedNumberPoint>(numberVector, "Points");
+        var workbookNumberPoints = ReadPoints<PptxRenderer.ChartIndexedNumberPoint>(numberVector, "WorkbookPoints");
+        TestAssert.Equal(2, cacheNumberPoints.Count);
+        TestAssert.True(cacheNumberPoints[0] is { Index: 2, Value: 100d }, "The authored numeric slot and cache value reach rendering.");
+        TestAssert.True(cacheNumberPoints[1] is { Index: 1, Value: 200d }, "The malformed numeric index uses its source ordinal.");
+        TestAssert.Equal(3, workbookNumberPoints.Count);
+        TestAssert.True(workbookNumberPoints[0] is { Index: 0, Value: 8.2, WorkbookCell: { Index: 0, Text: "8.2", HasValue: true } },
+            "The first workbook numeric value retains its cell.");
+        TestAssert.True(workbookNumberPoints[1] is { Index: 1, Value: null, WorkbookCell: { Index: 1, HasValue: false } },
+            "The blank workbook cell retains its numeric slot.");
+        TestAssert.True(workbookNumberPoints[2] is { Index: 2, Text: "1.4", WorkbookCell: { Index: 2, HasValue: true } },
+            "The last workbook numeric value retains its slot after the blank.");
 
         XElement chart = XElement.Parse("""
             <c:barChart xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
@@ -1019,16 +1024,18 @@ internal static class PptxChartRenderingTests
             </c:barChart>
             """);
         object categoryVector = readCategoryVector.Invoke(null, [ParsePlot(chart), workbook, true]) ?? throw new InvalidOperationException("Expected parsed category vector.");
-        object[] cacheTextPoints = ((System.Collections.IEnumerable?)categoryVector.GetType().GetProperty("Points")?.GetValue(categoryVector))?.Cast<object>().ToArray() ?? [];
-        object[] workbookTextPoints = ((System.Collections.IEnumerable?)categoryVector.GetType().GetProperty("WorkbookPoints")?.GetValue(categoryVector))?.Cast<object>().ToArray() ?? [];
-        TestAssert.True(cacheTextPoints.Length == 2, "Expected parsed category rendering points to stay bound to the chart cache.");
-        TestAssert.Equal("Cached", (string?)cacheTextPoints[0].GetType().GetProperty("Text")?.GetValue(cacheTextPoints[0]) ?? string.Empty);
-        TestAssert.Equal("OoxmlIndex", cacheTextPoints[0].GetType().GetProperty("IndexSource")?.GetValue(cacheTextPoints[0])?.ToString() ?? string.Empty);
-        TestAssert.True((int?)cacheTextPoints[1].GetType().GetProperty("Index")?.GetValue(cacheTextPoints[1]) == 1, "Expected malformed raw text cache point index to keep the ordinal fallback.");
-        TestAssert.Equal("OrdinalFallback", cacheTextPoints[1].GetType().GetProperty("IndexSource")?.GetValue(cacheTextPoints[1])?.ToString() ?? string.Empty);
-        TestAssert.True(workbookTextPoints.Length == 3, "Expected parsed category vector to keep workbook sidecar text points.");
-        TestAssert.Equal("WorkbookRange", workbookTextPoints[0].GetType().GetProperty("IndexSource")?.GetValue(workbookTextPoints[0])?.ToString() ?? string.Empty);
-        TestAssert.Equal("West", (string?)workbookTextPoints[2].GetType().GetProperty("Text")?.GetValue(workbookTextPoints[2]) ?? string.Empty);
+        var cacheTextPoints = ReadPoints<PptxRenderer.ChartIndexedTextPoint>(categoryVector, "Points");
+        var workbookTextPoints = ReadPoints<PptxRenderer.ChartIndexedTextPoint>(categoryVector, "WorkbookPoints");
+        TestAssert.Equal(2, cacheTextPoints.Count);
+        TestAssert.True(cacheTextPoints[0] is { Index: 2, Text: "Cached" }, "The authored category slot and cache text reach rendering.");
+        TestAssert.True(cacheTextPoints[1] is { Index: 1, Text: "Fallback" }, "The malformed category index uses its source ordinal.");
+        TestAssert.Equal(3, workbookTextPoints.Count);
+        TestAssert.True(workbookTextPoints[0] is { Index: 0, Text: "North", WorkbookCell: { Index: 0, HasValue: true } },
+            "The first workbook category retains its cell.");
+        TestAssert.True(workbookTextPoints[1] is { Index: 1, HasText: false, WorkbookCell: { Index: 1, HasValue: false } },
+            "The blank workbook cell retains its category slot.");
+        TestAssert.True(workbookTextPoints[2] is { Index: 2, Text: "West", WorkbookCell: { Index: 2, HasValue: true } },
+            "The last workbook category retains its slot after the blank.");
     }
 
     public static void PptxChartWorkbookRangesPreserveValuesVisibilityAndFormats()
