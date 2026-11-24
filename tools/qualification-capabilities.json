@@ -2816,6 +2816,7 @@
     "DocxWordCompatibleAllMarkupSkipsVoidPropertyChangeBalloons"
   ],
   "docx-empty-field-results": [
+    "=DocxComplexCounterReferencesFollowDeletedParagraphMarks",
     "=DocxComplexCountersOwnStoredResultsAcrossAuthoredParagraphs",
     "=DocxUnclosedComplexCountersPreserveStoredProseAcrossBreaks",
     "DocxPictureRevisionEligibilityRequiresActualImageOwnership",

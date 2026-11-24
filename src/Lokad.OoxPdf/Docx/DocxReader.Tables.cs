@@ -543,7 +543,7 @@ internal sealed partial class DocxReader
                         if (splitParagraph is not null)
                         {
                             AppendFlowParagraph(elements, AdjustBreakParagraphFragment(splitParagraph, part, sourceNumbering?.Definition.Indent),
-                                mergeDeletedMarks, cancellationToken, comments);
+                                mergeDeletedMarks, flowFields, cancellationToken, comments);
                         }
                     }
 
@@ -570,7 +570,7 @@ internal sealed partial class DocxReader
                     leadingInlineCommentBoundaries: inlineCommentBoundaries);
                 if (parsed is not null)
                 {
-                    AppendFlowParagraph(elements, parsed, mergeDeletedMarks, cancellationToken, comments);
+                    AppendFlowParagraph(elements, parsed, mergeDeletedMarks, flowFields, cancellationToken, comments);
                 }
             }
             else

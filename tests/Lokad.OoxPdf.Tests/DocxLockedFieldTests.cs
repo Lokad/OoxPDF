@@ -114,6 +114,41 @@ internal static class DocxLockedFieldTests
         }
     }
 
+    public static void DocxComplexCounterReferencesFollowDeletedParagraphMarks()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        foreach (bool fieldInSecondParagraph in new[] { false, true })
+        {
+            XElement[] field = Field("PAGE", "Stale continuation", locked: null, simple: false).ToArray();
+            var start = new XElement(W + "p", Run("Counter: "), field[..^2]);
+            var middle = new XElement(W + "p", field[^2]);
+            var end = new XElement(W + "p", field[^1], Run("Complete."));
+            XElement[] paragraphs = fieldInSecondParagraph
+                ? [new XElement(W + "p", Run("Prefix "), Field("PAGE", "99", "1", simple: true)), start, middle, end]
+                : [start, middle, end];
+            paragraphs[0].AddFirst(new XElement(W + "pPr", new XElement(W + "rPr",
+                new XElement(W + "del", new XAttribute(W + "id", "1"), new XAttribute(W + "author", "Reviewer")))));
+
+            var document = DocxTests.ReadDocx(Write(paragraphs), mode);
+            TestAssert.Equal(paragraphs.Length - (mode == OoxPdfDocxMarkupMode.Final ? 1 : 0), document.Paragraphs.Count);
+            var owner = document.Paragraphs.Single(paragraph => paragraph.FieldReferences.Any(reference => reference.UsesPlaceholder));
+            var reference = owner.FieldReferences.Single(reference => reference.UsesPlaceholder);
+            TestAssert.True(reference.HasCachedResult && !reference.RendersCachedResult,
+                "The placed reference must record the suppressed continuation after its paragraph merges.");
+            TestAssert.Equal(DocxFieldKind.Page, owner.Runs[reference.TextRunIndex].FieldKind);
+            string ink = Compact(RenderText(document, mode));
+            if (fieldInSecondParagraph)
+            {
+                TestAssert.True(document.Paragraphs[0].FieldReferences.Single(field => !field.UsesPlaceholder).RendersCachedResult,
+                    "The preceding locked reference must remain bound to its own cache.");
+                TestAssert.Contains("Prefix99", ink);
+            }
+            TestAssert.Contains("Counter:1", ink);
+            TestAssert.Contains("Complete.", ink);
+            TestAssert.DoesNotContain("Stalecontinuation", ink);
+        }
+    }
+
     private static void CheckWord(string file)
     {
         using var gold = JsonDocument.Parse(File.ReadAllText(Case("locked-page-fields-office.json")));

@@ -85,7 +85,7 @@ internal sealed partial class DocxReader
                 if (paragraph is not null)
                 {
                     int blockIndex = AppendFlowParagraph(bodyElements, paragraph,
-                        mergeDeletedMarks, cancellationToken);
+                        mergeDeletedMarks, flowFields, cancellationToken);
                     BindFloatingDrawingBlocks(element, null, floatingBlocks, blockIndex, cancellationToken);
                 }
             }

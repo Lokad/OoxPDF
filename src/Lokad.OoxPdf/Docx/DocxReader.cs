@@ -75,7 +75,7 @@ internal sealed partial class DocxReader
         public DocxTextRun? PendingPlaceholder { get; set; }
         public int InstructionRunCount { get; set; }
         public int ResultRunCount { get; set; }
-        public (List<DocxFieldReference> References, int Index)? PublishedReference { get; set; }
+        public (IList<DocxFieldReference> References, int Index)? PublishedReference { get; set; }
 
         public void ContinueInNextFragment()
         {

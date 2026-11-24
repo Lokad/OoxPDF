@@ -195,7 +195,7 @@ internal sealed partial class DocxReader
                         {
                             blockIndex = AppendFlowParagraph(elements,
                                 AdjustBreakParagraphFragment(splitParagraph, part, sourceNumbering?.Definition.Indent),
-                                mergeDeletedMarks, cancellationToken, comments);
+                                mergeDeletedMarks, flowFields, cancellationToken, comments);
                         }
                         if (matchesSourceAnchors)
                         {
@@ -231,7 +231,7 @@ internal sealed partial class DocxReader
                     leadingInlineCommentBoundaries: inlineCommentBoundaries);
                 if (paragraph is not null)
                 {
-                    int blockIndex = AppendFlowParagraph(elements, paragraph, mergeDeletedMarks, cancellationToken, comments);
+                    int blockIndex = AppendFlowParagraph(elements, paragraph, mergeDeletedMarks, flowFields, cancellationToken, comments);
                     BindFloatingDrawingBlocks(element, null, floatingBlocks, blockIndex, cancellationToken);
                 }
 
@@ -306,12 +306,12 @@ internal sealed partial class DocxReader
             ? previous : null;
 
     private static int AppendFlowParagraph(List<DocxBodyElement> elements, DocxParagraph paragraph,
-        bool mergeDeletedMarks, CancellationToken cancellationToken, DocxCommentProjection? comments = null)
+        bool mergeDeletedMarks, List<DocxComplexFieldState> flowFields, CancellationToken cancellationToken, DocxCommentProjection? comments = null)
     {
         if (FindMergePredecessor(elements, mergeDeletedMarks) is { } previous)
         {
             elements[^1] = DocxBodyElementFactory.CreateParagraph(
-                MergeParagraphsAcrossDeletedMark(previous.Paragraph, paragraph, cancellationToken));
+                MergeParagraphsAcrossDeletedMark(previous.Paragraph, paragraph, flowFields, cancellationToken));
         }
         else
         {
@@ -322,7 +322,7 @@ internal sealed partial class DocxReader
     }
 
     private static DocxParagraph MergeParagraphsAcrossDeletedMark(DocxParagraph first, DocxParagraph second,
-        CancellationToken token)
+        List<DocxComplexFieldState> flowFields, CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
         int sourceRunOffset = MaxSourceRunIndex(first) + 1;
@@ -393,6 +393,19 @@ internal sealed partial class DocxReader
             anchor.InlineItemIndex is null && itemCount is not null && anchor.TextRunIndex == paragraph.Runs.Count &&
                 paragraph.Equations.Count == 0 && paragraph.Images.Count == 0 && paragraph.InlineTextBoxes.Count == 0
                 ? anchor with { InlineItemIndex = itemCount } : anchor;
+        var fieldReferences = first.FieldReferences
+            .Concat(second.FieldReferences.Select(field => ShiftFieldReference(field, sourceRunOffset, textRunOffset))).ToArray();
+        // A matching end in a later paragraph must update the published
+        // reference in the merged paragraph, including its shifted run span.
+        foreach (var field in flowFields)
+        {
+            token.ThrowIfCancellationRequested();
+            if (field.PublishedReference is not { } owner) continue;
+            if (ReferenceEquals(owner.References, first.FieldReferences))
+                field.PublishedReference = (fieldReferences, owner.Index);
+            else if (ReferenceEquals(owner.References, second.FieldReferences))
+                field.PublishedReference = (fieldReferences, first.FieldReferences.Count + owner.Index);
+        }
         return first with
         {
             Runs = first.Runs.Concat(second.Runs.Select(ShiftRun)).ToArray(),
@@ -409,7 +422,7 @@ internal sealed partial class DocxReader
                 DisplayRun = reference.DisplayRun is { } run ? ShiftRun(run) : null })).ToArray(),
             CommentRanges = first.CommentRanges.Concat(second.CommentRanges.Select(range => ShiftCommentRange(range, sourceRunOffset, itemOffset))).ToArray(),
             RevisionRanges = first.RevisionRanges.Concat(second.RevisionRanges.Select(range => ShiftRevisionRange(range, sourceRunOffset, textOffset))).ToArray(),
-            FieldReferences = first.FieldReferences.Concat(second.FieldReferences.Select(field => ShiftFieldReference(field, sourceRunOffset, textRunOffset))).ToArray(),
+            FieldReferences = fieldReferences,
             Hyperlinks = first.Hyperlinks.Concat(second.Hyperlinks.Select(link => ShiftHyperlink(link, sourceRunOffset, textRunOffset, itemOffset))).ToArray(),
             BookmarkAnchors = first.BookmarkAnchors.Select(anchor => BindTerminalBookmark(first, anchor, hasItems ? itemOffset : null))
                 .Concat(second.BookmarkAnchors.Select(anchor => ShiftBookmarkAnchor(
