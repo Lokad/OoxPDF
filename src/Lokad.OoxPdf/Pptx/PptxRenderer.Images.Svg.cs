@@ -258,10 +258,10 @@ internal sealed partial class PptxRenderer
                 unsupportedCommands.Add(badCommand.Value);
             }
             string? opacityText = ReadSvgElementOpacity(element, style);
-            double? authoredOpacity = ParseSvgOpacity(opacityText);
-            double elementOpacity = Math.Clamp(authoredOpacity ?? 1d, 0d, 1d);
+            double? computedOpacity = ParseSvgOpacity(opacityText);
+            double elementOpacity = computedOpacity ?? 1d;
             bool allowGradientStroke = strokeContainersQualified &&
-                (string.IsNullOrWhiteSpace(opacityText) || authoredOpacity is >= 0d and <= 1d);
+                (string.IsNullOrWhiteSpace(opacityText) || computedOpacity.HasValue);
             bool hasFill = TryReadSvgFill(element, style, gradients, radialGradients, paintServerIds, elementOpacity,
                 out SvgPaint paint, out SvgFillFailure fillFailure, out string? gradientId, out SvgRadialGradient? radial);
             SvgStroke stroke = ReadSvgStroke(element, style, gradients, radialGradients, paintServerIds,
@@ -680,7 +680,7 @@ internal sealed partial class PptxRenderer
 
         bool nestedSvg = name == "svg" && element.Parent is not null;
         string? opacity = ReadSvgElementOpacity(element, ReadSvgStyleDeclarations(element));
-        double? numeric = ReadUnitSvgOpacity(opacity);
+        double? numeric = ParseSvgOpacity(opacity);
         // Link wrappers previously painted their strokes at full opacity.
         // Keep that paint when an opacity declaration still needs fallback.
         bool allowsGradientStroke = !nestedSvg && (numeric.HasValue || opacity is null || name == "a");
@@ -729,12 +729,6 @@ internal sealed partial class PptxRenderer
         return true;
     }
 
-    private static double? ReadUnitSvgOpacity(string? text)
-    {
-        double? opacity = ParseSvgOpacity(text);
-        return opacity is >= 0d and <= 1d ? opacity : null;
-    }
-
     private static bool IsFullyTransparentSvgContainer(XElement element) =>
         ReadSvgContainerOpacity(element).IsTransparent;
 
@@ -757,7 +751,7 @@ internal sealed partial class PptxRenderer
             if (!hasPaint) return null;
             opacity = styledOpacity;
         }
-        return opacity is null ? 1d : ReadUnitSvgOpacity(opacity);
+        return opacity is null ? 1d : ParseSvgOpacity(opacity);
     }
 
     private static bool IsHiddenSvgElement(XElement element, IReadOnlyDictionary<string, string>? style = null)
@@ -1571,8 +1565,7 @@ internal sealed partial class PptxRenderer
         return declarations;
     }
 
-    private static double ReadSvgOpacityValue(string? text) =>
-        Math.Clamp(ParseSvgOpacity(text) ?? 1d, 0d, 1d);
+    private static double ReadSvgOpacityValue(string? text) => ParseSvgOpacity(text) ?? 1d;
 
     private static double? ParseSvgOpacity(string? text)
     {
@@ -1581,8 +1574,10 @@ internal sealed partial class PptxRenderer
         if (IsSvgNonInheritedDefault(token)) return 1d;
         bool percent = token.Length != 0 && token[^1] == '%';
         if (percent) token = token[..^1];
-        if (!double.TryParse(token, NumberStyles.Float, CultureInfo.InvariantCulture, out double opacity)) return null;
-        return percent ? opacity / 100d : opacity;
+        if (!double.TryParse(token, NumberStyles.Float, CultureInfo.InvariantCulture, out double opacity) ||
+            !double.IsFinite(opacity)) return null;
+        // SVG clamps computed alpha before multiplying it by other paint opacity.
+        return Math.Clamp(percent ? opacity / 100d : opacity, 0d, 1d);
     }
 
     private static bool TryReadSvgFill(XElement path, IReadOnlyDictionary<string, string> style,
@@ -1716,7 +1711,7 @@ internal sealed partial class PptxRenderer
             }
             else
             {
-                if (!allowGradientStroke || (!string.IsNullOrWhiteSpace(strokeOpacity) && ReadUnitSvgOpacity(strokeOpacity) is null)
+                if (!allowGradientStroke || (!string.IsNullOrWhiteSpace(strokeOpacity) && ParseSvgOpacity(strokeOpacity) is null)
                     || gradient is null || gradient.UniformStopOpacity is null || !gradient.HasNumericStopOpacity
                     || !gradient.HasPositiveUniformGradientTransform || gradient.Spread != SvgGradientSpread.Pad)
                 {

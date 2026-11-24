@@ -1209,6 +1209,9 @@ internal static partial class SvgTextTests
         AssertSvgPaintInBothFormats(
             Picture(".8", ".25", ".75", ".5", "0"), Picture("80%", "25%", "75%", "50%", "0%"),
             "/S /Luminosity", "/PatternType 2", "/Subtype /Form", "/ca 0.8 /CA 0.8", "/ca 0.5 /CA 0.5");
+        AssertSvgPaintInBothFormats(
+            Picture("1", "0", "1", "1", "0"), Picture("150%", "-50%", "1.5", "150%", "-.25"),
+            "/S /Luminosity", "/PatternType 2");
 
         static string Picture(string root, string first, string last, string half, string zero) => $"""
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120" opacity="{root}">
@@ -1229,7 +1232,7 @@ internal static partial class SvgTextTests
               <g opacity="{half}">
                 <rect x="10" y="61" width="42" height="26" fill="green"/>
                 <rect x="31" y="61" width="42" height="26" fill="green"/>
-                <path d="M113 73h71v8h-71z" fill="none" stroke="url(#opaque)" stroke-width="5"/>
+                <path d="M113 73h71v8h-71z" fill="none" stroke="url(#opaque)" stroke-width="5" opacity="{half}"/>
               </g>
               <g opacity="{zero}"><rect x="12" y="96" width="24" height="14"/></g>
             </svg>

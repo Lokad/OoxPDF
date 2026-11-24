@@ -303,9 +303,8 @@ internal sealed partial class PptxRenderer
                     ? ownerHidden : IsSvgVisibilityHidden(localVisibility);
                 string? authoredOpacity = ReadSvgElementOpacity(child, style);
                 double? opacity = authoredOpacity is null ? 1d : ParseSvgOpacity(authoredOpacity);
-                if (opacity is not double localOpacity || !double.IsFinite(localOpacity) ||
-                    localOpacity is > 0d and < 1d) return false;
-                bool childTransparent = ownerTransparent || localOpacity <= 0d;
+                if (opacity is not double localOpacity || localOpacity is > 0d and < 1d) return false;
+                bool childTransparent = ownerTransparent || localOpacity == 0d;
                 if (!Append(child, childHidden, childTransparent, localSpace is null ? preserveSpace : localSpace == "preserve")) return false;
             }
             return true;
@@ -341,9 +340,7 @@ internal sealed partial class PptxRenderer
                 "fill" or "color" =>
                     (hasLabelFill ??= TryReadSvgTextFill(child, style, paintServerIds, out var fill) &&
                         fill == appearance.Fill) == true && !PaintsStroke(),
-                "fill-opacity" => InheritsSvgPropertyValue(value) ||
-                    ParseSvgOpacity(value) is { } opacity && double.IsFinite(opacity) &&
-                    Math.Clamp(opacity, 0d, 1d) == appearance.FillOpacity,
+                "fill-opacity" => InheritsSvgPropertyValue(value) || ParseSvgOpacity(value) == appearance.FillOpacity,
                 "stroke" or "stroke-opacity" or "stroke-width" => !PaintsStroke(),
                 _ => IsNeutralSvgTextStyle(name, value),
             };

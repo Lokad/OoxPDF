@@ -120,7 +120,8 @@ SVG link wrappers preserve transforms on their shapes and text. Plain links
 within a label preserve its glyphs and advances. Embedded SVG link actions retain
 an unsupported-content diagnostic. Numeric opacity on SVG roots,
 groups and link wrappers composes their children as a group for both presentation
-attributes and inline style.
+attributes and inline style. Numeric and percentage opacity values clamp to the
+fully transparent and fully opaque endpoints.
 Explicit `inherit` on a shape, label or container uses its parent's opacity.
 SVG paint accepts numeric `rgb()` and `rgba()` colors and three-, four-, six-,
 and eight-digit hex colors. Color alpha combines with separate opacity properties.
