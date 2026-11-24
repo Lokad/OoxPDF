@@ -230,27 +230,16 @@ internal sealed partial class PptxRenderer
         string attributeName,
         long defaultEmu)
     {
-        if (bodyProperties?.Attribute(attributeName) is { } directAttribute)
+        string? value = (string?)bodyProperties?.Attribute(attributeName);
+        PptxTextBodyPropertySource source = PptxTextBodyPropertySource.DirectBodyPr;
+        if (value is null)
         {
-            if (long.TryParse(directAttribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long emu))
-            {
-                return (OoxUnits.EmuToPoints(emu), PptxTextBodyPropertySource.DirectBodyPr, directAttribute.Value);
-            }
-
-            return (OoxUnits.EmuToPoints(defaultEmu), PptxTextBodyPropertySource.DirectBodyPr, directAttribute.Value);
+            value = (string?)inheritedBodyProperties?.Attribute(attributeName);
+            source = value is null ? PptxTextBodyPropertySource.DefaultValue : PptxTextBodyPropertySource.InheritedBodyPr;
         }
 
-        if (inheritedBodyProperties?.Attribute(attributeName) is { } inheritedAttribute)
-        {
-            if (long.TryParse(inheritedAttribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long emu))
-            {
-                return (OoxUnits.EmuToPoints(emu), PptxTextBodyPropertySource.InheritedBodyPr, inheritedAttribute.Value);
-            }
-
-            return (OoxUnits.EmuToPoints(defaultEmu), PptxTextBodyPropertySource.InheritedBodyPr, inheritedAttribute.Value);
-        }
-
-        return (OoxUnits.EmuToPoints(defaultEmu), PptxTextBodyPropertySource.DefaultValue, null);
+        long inset = long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long emu) ? emu : defaultEmu;
+        return (OoxUnits.EmuToPoints(inset), source, value);
     }
 
     private static double ReadParagraphSpacing(

@@ -1163,7 +1163,7 @@ internal static class PptxModelTests
                   <p:cSld><p:spTree><p:sp>
                     <p:nvSpPr><p:cNvPr id="3" name="Slide Title"/><p:nvPr><p:ph type="title"/></p:nvPr></p:nvSpPr>
                     <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="5486400" cy="1371600"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
-                    <p:txBody><a:bodyPr lIns="0" tIns="0" rIns="0" bIns="0"/><a:lstStyle/><a:p><a:r><a:rPr sz="1800"/><a:t>Master anchored title</a:t></a:r></a:p></p:txBody>
+                    <p:txBody><a:bodyPr lIns="invalid" tIns="0" rIns="0"/><a:lstStyle/><a:p><a:r><a:rPr sz="1800"/><a:t>Master anchored title</a:t></a:r></a:p></p:txBody>
                   </p:sp></p:spTree></p:cSld>
                 </p:sld>
                 """,
@@ -1173,14 +1173,20 @@ internal static class PptxModelTests
                   <p:cSld><p:spTree><p:sp>
                     <p:nvSpPr><p:cNvPr id="1" name="Master Title"/><p:nvPr><p:ph type="title"/></p:nvPr></p:nvSpPr>
                     <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="5486400" cy="1371600"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
-                    <p:txBody><a:bodyPr anchor="ctr" lIns="91440" tIns="45720" rIns="91440" bIns="45720"><a:noAutofit/></a:bodyPr><a:lstStyle/><a:p/></p:txBody>
+                    <p:txBody><a:bodyPr anchor="ctr" lIns="127000" tIns="45720" rIns="91440" bIns="invalid"><a:noAutofit/></a:bodyPr><a:lstStyle/><a:p/></p:txBody>
                   </p:sp></p:spTree></p:cSld>
                 </p:sldMaster>
                 """);
 
         TestAssert.Equal(2, frame.InheritedPlaceholderCount);
+        TestAssert.Equal(7.2d, frame.InsetLeft);
+        TestAssert.Equal("invalid", frame.InsetLeftValue);
+        TestAssert.Equal("DirectBodyPr", frame.InsetLeftSource);
         TestAssert.Equal(0d, frame.InsetTop);
         TestAssert.Equal("DirectBodyPr", frame.InsetTopSource);
+        TestAssert.Equal(3.6d, frame.InsetBottom);
+        TestAssert.Equal("invalid", frame.InsetBottomValue);
+        TestAssert.Equal("InheritedBodyPr", frame.InsetBottomSource);
         TestAssert.Equal("Middle", frame.VerticalAnchor);
         TestAssert.Equal("ctr", frame.VerticalAnchorValue ?? string.Empty);
         TestAssert.Equal("InheritedBodyPr", frame.VerticalAnchorSource);

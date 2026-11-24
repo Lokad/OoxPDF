@@ -248,34 +248,21 @@ internal sealed partial class PptxSceneBuilder
         string cellAttributeName,
         long defaultEmu)
     {
-        (double bodyValue, PptxSceneTableCellTextInsetSource bodySource, string? bodyRawValue) =
-            ReadTableCellBodyInset(bodyProperties, bodyAttributeName, defaultEmu);
-        if (cellProperties?.Attribute(cellAttributeName) is { } cellAttribute)
+        string? cellValue = (string?)cellProperties?.Attribute(cellAttributeName);
+        if (long.TryParse(cellValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out long cellEmu))
         {
-            double cellValue = long.TryParse(cellAttribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long cellEmus)
-                ? OoxUnits.EmuToPoints(cellEmus)
-                : bodyValue;
-            return (cellValue, PptxSceneTableCellTextInsetSource.CellProperties, cellAttribute.Value);
+            return (OoxUnits.EmuToPoints(cellEmu), PptxSceneTableCellTextInsetSource.CellProperties, cellValue);
         }
 
-        return (bodyValue, bodySource, bodyRawValue);
-    }
-
-    private static (double Value, PptxSceneTableCellTextInsetSource Source, string? RawValue) ReadTableCellBodyInset(
-        XElement? bodyProperties,
-        string attributeName,
-        long defaultEmu)
-    {
-        double defaultValue = OoxUnits.EmuToPoints(defaultEmu);
-        if (bodyProperties?.Attribute(attributeName) is { } bodyAttribute)
+        string? bodyValue = (string?)bodyProperties?.Attribute(bodyAttributeName);
+        double points = OoxUnits.EmuToPoints(long.TryParse(bodyValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out long bodyEmu)
+            ? bodyEmu : defaultEmu);
+        if (cellValue is not null)
         {
-            double value = long.TryParse(bodyAttribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long bodyEmus)
-                ? OoxUnits.EmuToPoints(bodyEmus)
-                : defaultValue;
-            return (value, PptxSceneTableCellTextInsetSource.BodyProperties, bodyAttribute.Value);
+            return (points, PptxSceneTableCellTextInsetSource.CellProperties, cellValue);
         }
 
-        return (defaultValue, PptxSceneTableCellTextInsetSource.Default, null);
+        return (points, bodyValue is null ? PptxSceneTableCellTextInsetSource.Default : PptxSceneTableCellTextInsetSource.BodyProperties, bodyValue);
     }
 
     private static (PptxSceneTableCellVerticalAnchor Anchor, string? Value, PptxSceneTableCellVerticalAnchorSource Source) ReadTableCellVerticalAnchorInfo(XElement cell)

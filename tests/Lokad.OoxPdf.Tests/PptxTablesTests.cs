@@ -373,8 +373,8 @@ internal static class PptxTablesTests
                             <a:tblGrid><a:gridCol w="1828800"/><a:gridCol w="1828800"/></a:tblGrid>
                             <a:tr h="914400">
                               <a:tc>
-                                <a:txBody><a:bodyPr tIns="45720"/><a:lstStyle/><a:p><a:r><a:t>Explicit</a:t></a:r></a:p></a:txBody>
-                                <a:tcPr marL="182880" anchor="ctr"/>
+                                <a:txBody><a:bodyPr lIns="254000" rIns="38100" tIns="45720" bIns="127000"/><a:lstStyle/><a:p><a:r><a:t>Explicit</a:t></a:r></a:p></a:txBody>
+                                <a:tcPr marL="182880" marR="invalid" marB="0" anchor="ctr"/>
                               </a:tc>
                               <a:tc>
                                 <a:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>Default</a:t></a:r></a:p></a:txBody>
@@ -400,8 +400,15 @@ internal static class PptxTablesTests
         PptxTextFrameModelSnapshot defaultCell = tableFrames.Single(frame => frame.Paragraphs.Any(paragraph => paragraph.Runs.Any(run => run.Text == "Default")));
         TestAssert.Equal("TableCellProperties", explicitCell.InsetLeftSource);
         TestAssert.Equal("182880", explicitCell.InsetLeftValue ?? string.Empty);
+        TestAssert.Equal(14.4d, explicitCell.InsetLeft);
+        TestAssert.Equal("TableCellProperties", explicitCell.InsetRightSource);
+        TestAssert.Equal("invalid", explicitCell.InsetRightValue);
+        TestAssert.Equal(3d, explicitCell.InsetRight);
         TestAssert.Equal("DirectBodyPr", explicitCell.InsetTopSource);
         TestAssert.Equal("45720", explicitCell.InsetTopValue ?? string.Empty);
+        TestAssert.Equal("TableCellProperties", explicitCell.InsetBottomSource);
+        TestAssert.Equal("0", explicitCell.InsetBottomValue);
+        TestAssert.Equal(0d, explicitCell.InsetBottom);
         TestAssert.Equal("TableCellProperties", explicitCell.VerticalAnchorSource);
         TestAssert.Equal("ctr", explicitCell.VerticalAnchorValue ?? string.Empty);
         TestAssert.True(Math.Abs((explicitCell.TableDeclaredRowHeight ?? 0d) - 72d) < 0.001d, $"Expected table frame inspection to preserve the 72pt declared row height, got {(explicitCell.TableDeclaredRowHeight ?? 0d).ToString("0.###", CultureInfo.InvariantCulture)}pt.");
