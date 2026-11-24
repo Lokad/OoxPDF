@@ -41,6 +41,10 @@ internal static class DocxSourceXml
     public static XElement? FindStoryRoot(XElement source) =>
         source.AncestorsAndSelf().FirstOrDefault(IsStoryRoot);
 
+    public static XElement? FindFieldFlowOwner(XElement source) =>
+        source.AncestorsAndSelf().FirstOrDefault(element =>
+            element.Name == WordprocessingNamespace + "tc" || IsStoryRoot(element));
+
     private static bool IsStoryRoot(XElement element) =>
         element.Name.Namespace == WordprocessingNamespace &&
         element.Name.LocalName is "body" or "hdr" or "ftr" or "footnote" or "endnote" or "comment" or "txbxContent";

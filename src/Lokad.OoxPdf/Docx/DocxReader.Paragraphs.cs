@@ -1204,7 +1204,8 @@ internal sealed partial class DocxReader
             if (string.Equals(fieldCharType, "begin", StringComparison.OrdinalIgnoreCase))
             {
                 bool unclosed = fieldChar.Annotation<UnclosedFieldBegin>() is not null ||
-                    ReadUnclosedFieldBegins(DocxSourceXml.FindStoryRoot(fieldChar), markupMode, cancellationToken)?.Contains(fieldChar) == true;
+                    DocxSourceXml.FindFieldFlowOwner(fieldChar) is { } owner &&
+                    ReadComplexFieldFlow(owner, markupMode, cancellationToken).Unclosed.Contains(fieldChar);
                 complexFieldStack.Add(new DocxComplexFieldState(
                     currentSourceRunIndex,
                     runs.Count,

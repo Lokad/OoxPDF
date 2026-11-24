@@ -6,6 +6,9 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxReader
 {
+    private static readonly XName[] ParagraphFlowBlocks =
+        [WordprocessingNamespace + "p", WordprocessingNamespace + "tbl", WordprocessingNamespace + "altChunk"];
+
     // Keep original XML/source scopes: grouping must not move or clone paragraphs,
     // drawings, references or revision owners. Only joined tables need a list.
     private static IEnumerable<(DocxRevisionScopedElement Scope, IReadOnlyList<DocxRevisionScopedElement>? Tables)>
@@ -49,7 +52,7 @@ internal sealed partial class DocxReader
         XName commentEndName = WordprocessingNamespace + "commentRangeEnd";
         XName[] includedNames = tableChildName is not null
             ? [tableChildName, bookmarkStartName, bookmarkEndName]
-            : [WordprocessingNamespace + "p", WordprocessingNamespace + "tbl", importedContentName, bookmarkStartName, bookmarkEndName];
+            : [.. ParagraphFlowBlocks, bookmarkStartName, bookmarkEndName];
         if (readCommentBoundaries)
             includedNames = [.. includedNames, commentStartName, commentEndName];
         List<XElement>? commentBoundaries = null;

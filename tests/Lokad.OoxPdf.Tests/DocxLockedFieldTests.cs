@@ -2,6 +2,7 @@ using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Xml.Linq;
+using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Docx;
 using Lokad.OoxPdf.Ooxml;
 
@@ -147,6 +148,45 @@ internal static class DocxLockedFieldTests
             TestAssert.Contains("Complete.", ink);
             TestAssert.DoesNotContain("Stalecontinuation", ink);
         }
+    }
+
+    public static void DocxComplexCountersKeepCachedTextAtFlowBoundaries()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        foreach (string boundary in new[] { "body-table", "body-after-table", "adjacent-cells", "nested-table", "footer-table", "import" })
+        {
+            XElement[] field = Field("PAGE", "Stored instructions.", locked: null, simple: false).ToArray();
+            var start = new XElement(W + "p", Run("Before "), field[..^1]);
+            var end = new XElement(W + "p", field[^1], Run("After boundary."));
+            var intervening = new XElement(W + "p", Run("Independent cell content."));
+            XElement? footer = boundary == "footer-table" ? new XElement(W + "ftr", start, Table(Cell(end))) : null;
+            XElement[] body = boundary switch
+            {
+                "body-table" => [start, Table(Cell(end))],
+                "body-after-table" => [start, Table(Cell(intervening)), end],
+                "adjacent-cells" => [Table(Cell(start), Cell(end))],
+                "nested-table" => [Table(Cell(start, Table(Cell(intervening)), end))],
+                "import" => [start, new XElement(W + "altChunk"), end],
+                _ => [new XElement(W + "p", Run("Body control."))]
+            };
+
+            using var stream = File.OpenRead(Write(body, footer: footer));
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var document = new DocxReader().Read(OoxPackage.Open(stream, default), diagnostics.Add, default, mode);
+            string ink = Compact(RenderText(document, mode));
+            TestAssert.Contains("BeforeStoredinstructions.", ink);
+            TestAssert.Contains("Afterboundary.", ink);
+            TestAssert.DoesNotContain("Before1", ink);
+            if (boundary is "body-after-table" or "nested-table")
+                TestAssert.Contains("Independentcellcontent.", ink);
+            var warning = diagnostics.Single(d => d.Id == "DOCX_UNSUPPORTED_COMPLEX_FIELD");
+            TestAssert.Equal(footer is null ? "/word/document.xml" : "/word/footer.xml", warning.PartName);
+        }
+
+        static XElement Cell(params XElement[] blocks) => new(W + "tc", blocks);
+        static XElement Table(params XElement[] cells) => new(W + "tbl",
+            new XElement(W + "tblGrid", cells.Select(_ => new XElement(W + "gridCol", new XAttribute(W + "w", 4000)))),
+            new XElement(W + "tr", cells));
     }
 
     private static void CheckWord(string file)

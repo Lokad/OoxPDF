@@ -1,6 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
-using System.Text;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Ooxml;
@@ -94,7 +93,7 @@ internal sealed partial class DocxReader
                 }
             }
             cancellationToken.ThrowIfCancellationRequested();
-            if (HasUnsupportedComplexFields(probeDocument, revisionFilteringMarkupMode))
+            if (HasUnsupportedComplexFields(probeDocument, revisionFilteringMarkupMode, cancellationToken))
             {
                 Emit("DOCX_UNSUPPORTED_COMPLEX_FIELD", "complex field", probePartName, "Ignored");
             }
@@ -724,40 +723,6 @@ internal sealed partial class DocxReader
         return formattingRevisionElements.Any(name => document.Descendants(name).Any());
     }
 
-    private static bool HasUnsupportedComplexFields(XDocument document, OoxPdfDocxMarkupMode markupMode)
-    {
-            bool IsSupportedComplexFieldRunChild(XElement element)
-            {
-                XElement? run = element.Parent;
-                XElement? container = run?.Parent;
-                return run?.Name == WordprocessingNamespace + "r" &&
-                    (container?.Name == WordprocessingNamespace + "p" || IsComplexFieldInlineContainer(container));
-            }
-
-            bool IsUnsupportedUnclosedComplexField(
-                DocxComplexFieldScanState field)
-            {
-                return ResolveFieldPlaceholder(field.Instruction.ToString()) is null &&
-                    (!field.HasSeparate || !field.HasCachedResult);
-            }
-
-        var fields = new List<DocxComplexFieldScanState>();
-        foreach (XElement paragraph in document.Descendants(WordprocessingNamespace + "p"))
-        {
-            if (HasUnsupportedComplexFieldInInlineChildren(paragraph, fields, markupMode))
-            {
-                return true;
-            }
-        }
-
-        if (fields.Any(IsUnsupportedUnclosedComplexField))
-        {
-            return true;
-        }
-
-        return document.Descendants().Any(element => IsComplexFieldMarkupElement(element) && !IsSupportedComplexFieldRunChild(element));
-    }
-
     private static bool IsVisibleInlineContainer(XElement? element)
     {
         return element is not null &&
@@ -765,147 +730,6 @@ internal sealed partial class DocxReader
             element.Name == WordprocessingNamespace + "fldSimple" ||
             element.Name == WordprocessingNamespace + "ins" ||
             element.Name == WordprocessingNamespace + "moveTo");
-    }
-
-    private static bool IsComplexFieldInlineContainer(XElement? element)
-    {
-        return IsVisibleInlineContainer(element) ||
-            element?.Name == WordprocessingNamespace + "del" ||
-            element?.Name == WordprocessingNamespace + "moveFrom" ||
-            element?.Name == WordprocessingNamespace + "sdtContent" ||
-            element is not null && DocxSourceXml.IsInlineMetadataContainer(element);
-    }
-
-
-
-
-
-    private static bool HasUnsupportedComplexFieldInInlineChildren(
-        XElement container,
-        List<DocxComplexFieldScanState> fields,
-        OoxPdfDocxMarkupMode markupMode)
-    {
-        foreach (XElement child in container.Elements())
-        {
-            if (child.Name == WordprocessingNamespace + "r")
-            {
-                foreach (XElement runChild in child.Elements())
-                {
-                    if (ProcessComplexFieldRunChild(runChild, fields, markupMode))
-                    {
-                        return true;
-                    }
-                }
-
-                continue;
-            }
-
-            if (IsFieldResultContent(child))
-            {
-                // Equations live beside runs. The same result stack owns both.
-                ProcessComplexFieldRunChild(child, fields, markupMode);
-                continue;
-            }
-
-            if (child.Name == WordprocessingNamespace + "sdt")
-            {
-                foreach (XElement content in child.Elements(WordprocessingNamespace + "sdtContent"))
-                {
-                    if (HasUnsupportedComplexFieldInInlineChildren(content, fields, markupMode))
-                    {
-                        return true;
-                    }
-                }
-
-                continue;
-            }
-
-            if (IsComplexFieldInlineContainer(child) &&
-                HasUnsupportedComplexFieldInInlineChildren(child, fields, markupMode))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private static bool ProcessComplexFieldRunChild(
-        XElement child,
-        List<DocxComplexFieldScanState> fields,
-        OoxPdfDocxMarkupMode markupMode)
-    {
-        if (child.Name == WordprocessingNamespace + "fldChar")
-        {
-            string? fieldCharType = (string?)child.Attribute(WordprocessingNamespace + "fldCharType");
-            if (string.Equals(fieldCharType, "begin", StringComparison.OrdinalIgnoreCase))
-            {
-                if (fields.Count != 0 && !fields[^1].InResult)
-                {
-                    return true;
-                }
-
-                bool deletedField = child.Ancestors(WordprocessingNamespace + "del").Any();
-                fields.Add(new DocxComplexFieldScanState(new StringBuilder(), UsesOriginalFieldInstruction(markupMode, deletedField),
-                    HasSeparate: false, InResult: false, HasCachedResult: false));
-                return false;
-            }
-
-            if (string.Equals(fieldCharType, "separate", StringComparison.OrdinalIgnoreCase))
-            {
-                if (fields.Count == 0)
-                {
-                    return true;
-                }
-
-                fields[^1] = fields[^1] with { HasSeparate = true, InResult = true };
-                return false;
-            }
-
-            if (string.Equals(fieldCharType, "end", StringComparison.OrdinalIgnoreCase))
-            {
-                if (fields.Count == 0)
-                {
-                    return true;
-                }
-
-                var field = fields[^1];
-                // A closed result may be intentionally empty. An instruction
-                // without a result boundary is still unsupported.
-                if (ResolveFieldPlaceholder(field.Instruction.ToString()) is null && !field.HasSeparate)
-                {
-                    return true;
-                }
-
-                fields.RemoveAt(fields.Count - 1);
-                return false;
-            }
-
-            return true;
-        }
-
-        bool inFieldResult = fields.Count != 0 && fields[^1].InResult;
-        if (fields.Count != 0 && !inFieldResult && IsFieldInstructionText(child))
-        {
-            var field = fields[^1];
-            bool inserted = field.UsesOriginalInstruction && child.Ancestors().Any(element =>
-                element.Name == WordprocessingNamespace + "ins" || element.Name == WordprocessingNamespace + "moveTo");
-            if (IncludesFieldInstruction(child, field.UsesOriginalInstruction, inserted))
-                field.Instruction.Append((string?)child);
-            return false;
-        }
-
-        if (IsFieldResultContent(child, inFieldResult))
-        {
-            for (int fieldIndex = 0; fieldIndex < fields.Count; fieldIndex++)
-            {
-                var field = fields[fieldIndex];
-                if (field.InResult && !field.HasCachedResult)
-                    fields[fieldIndex] = field with { HasCachedResult = true };
-            }
-        }
-
-        return false;
     }
 
     private static bool IsTableBorderContainer(XElement? element)

@@ -2817,6 +2817,7 @@
   ],
   "docx-empty-field-results": [
     "=DocxComplexCounterReferencesFollowDeletedParagraphMarks",
+    "=DocxComplexCountersKeepCachedTextAtFlowBoundaries",
     "=DocxComplexCountersOwnStoredResultsAcrossAuthoredParagraphs",
     "=DocxUnclosedComplexCountersPreserveStoredProseAcrossBreaks",
     "DocxPictureRevisionEligibilityRequiresActualImageOwnership",

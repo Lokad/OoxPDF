@@ -1,3 +1,4 @@
+using System.Text;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Ooxml;
 using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
@@ -22,40 +23,88 @@ internal sealed partial class DocxReader
 
     private sealed record ComputedSimpleFieldFragment(XElement Source, bool OwnsCounter);
 
-    private sealed record ComplexFieldClosure(OoxPdfDocxMarkupMode Mode, IReadOnlySet<XElement> Unclosed);
+    private sealed record ComplexFieldFlow(OoxPdfDocxMarkupMode Mode, IReadOnlySet<XElement> Unclosed, bool HasUnsupported);
+    private sealed record DocxComplexFieldScanState(XElement Begin, StringBuilder Instruction,
+        bool UsesOriginalInstruction, bool HasSeparate, bool HasCachedResult);
     private sealed class UnclosedFieldBegin;
 
-    // Pair visible field boundaries in their authored story before a counter
-    // can replace its stored result. A generated page fragment is not a story.
-    private static IReadOnlySet<XElement>? ReadUnclosedFieldBegins(XElement? story, OoxPdfDocxMarkupMode markupMode,
-        CancellationToken token)
+    private static bool HasUnsupportedComplexFields(XDocument document, OoxPdfDocxMarkupMode markupMode, CancellationToken token)
     {
-        if (story is null) return null;
-        foreach (var cached in story.Annotations<ComplexFieldClosure>())
-            if (cached.Mode == markupMode) return cached.Unclosed;
-
-        var open = new Stack<XElement>();
-        foreach (XElement marker in story.Descendants())
+        var inspected = new HashSet<XElement>();
+        foreach (XElement marker in document.Descendants())
         {
             token.ThrowIfCancellationRequested();
-            if (marker.Name != WordprocessingNamespace + "fldChar" || marker.Parent?.Name != WordprocessingNamespace + "r" ||
-                DocxSourceXml.FindStoryRoot(marker) != story ||
-                IsInsideExcludedRevisionContainer(marker, markupMode)) continue;
+            if (!IsComplexFieldMarkupElement(marker) || IsInsideExcludedRevisionContainer(marker, markupMode)) continue;
+            if (marker.Parent?.Name != WordprocessingNamespace + "r") return true;
             XElement? container = marker.Parent.Parent;
             while (container is not null && IsVisibleRunContainer(container, markupMode))
                 container = container.Parent;
-            if (container?.Name != WordprocessingNamespace + "p") continue;
-
-            string? type = (string?)marker.Attribute(WordprocessingNamespace + "fldCharType");
-            if (string.Equals(type, "begin", StringComparison.OrdinalIgnoreCase))
-                open.Push(marker);
-            else if (string.Equals(type, "end", StringComparison.OrdinalIgnoreCase))
-                open.TryPop(out _);
+            if (container?.Name != WordprocessingNamespace + "p") return true;
+            if (DocxSourceXml.FindFieldFlowOwner(container) is { } owner && inspected.Add(owner) &&
+                ReadComplexFieldFlow(owner, markupMode, token).HasUnsupported) return true;
         }
-        token.ThrowIfCancellationRequested();
-        var unclosed = open.ToHashSet();
-        story.AddAnnotation(new ComplexFieldClosure(markupMode, unclosed));
-        return unclosed;
+        return false;
+    }
+
+    // A field can span projected paragraphs and generated page fragments.
+    // A cell, nested story or intervening nonparagraph block ends that flow.
+    private static ComplexFieldFlow ReadComplexFieldFlow(XElement owner, OoxPdfDocxMarkupMode markupMode,
+        CancellationToken token)
+    {
+        foreach (var cached in owner.Annotations<ComplexFieldFlow>())
+            if (cached.Mode == markupMode) return cached;
+
+        var fields = new List<DocxComplexFieldScanState>();
+        var unclosed = new HashSet<XElement>();
+        bool unsupported = false;
+        foreach (var block in EnumerateRevisionScopedChildren(owner.Elements(), markupMode, token, ParagraphFlowBlocks))
+        {
+            if (block.Element.Name == WordprocessingNamespace + "p")
+                ScanFieldChildren(block.Element);
+            else
+                FinishFlow();
+        }
+        FinishFlow();
+        var result = new ComplexFieldFlow(markupMode, unclosed, unsupported);
+        owner.AddAnnotation(result);
+        return result;
+
+        void FinishFlow()
+        {
+            foreach (var field in fields)
+            {
+                token.ThrowIfCancellationRequested();
+                unclosed.Add(field.Begin);
+                if ((!field.HasSeparate || !field.HasCachedResult) && ResolveFieldPlaceholder(field.Instruction.ToString()) is null)
+                    unsupported = true;
+            }
+            fields.Clear();
+        }
+
+        void ScanFieldChildren(XElement container)
+        {
+            foreach (XElement child in DocxSourceXml.StoredChildren(container))
+            {
+                token.ThrowIfCancellationRequested();
+                if (child.Name == WordprocessingNamespace + "r")
+                {
+                    foreach (XElement part in child.Elements())
+                    {
+                        token.ThrowIfCancellationRequested();
+                        unsupported |= ProcessComplexFieldRunChild(part, fields, markupMode);
+                    }
+                }
+                else if (fields.Count != 0 && IsFieldResultContent(child))
+                {
+                    // Equations live beside runs and share the active result.
+                    ProcessComplexFieldRunChild(child, fields, markupMode);
+                }
+                else if (IsVisibleRunContainer(child, markupMode) && !HasSimpleFieldPlaceholder(child))
+                {
+                    ScanFieldChildren(child);
+                }
+            }
+        }
     }
 
     private static XElement CopyFieldAwareFragment(XElement source, IReadOnlySet<XElement>? unclosed)
@@ -128,4 +177,73 @@ internal sealed partial class DocxReader
         element.Name == WordprocessingNamespace + "drawing" || element.Name == WordprocessingNamespace + "pict";
 
     private static bool FieldHasCachedResultContent(XElement field) => field.Descendants().Any(element => IsFieldResultContent(element));
+
+    private static bool ProcessComplexFieldRunChild(
+        XElement child,
+        List<DocxComplexFieldScanState> fields,
+        OoxPdfDocxMarkupMode markupMode)
+    {
+        if (child.Name == WordprocessingNamespace + "fldChar")
+        {
+            string? fieldCharType = (string?)child.Attribute(WordprocessingNamespace + "fldCharType");
+            if (string.Equals(fieldCharType, "begin", StringComparison.OrdinalIgnoreCase))
+            {
+                bool nestedInInstruction = fields.Count != 0 && !fields[^1].HasSeparate;
+                bool deletedField = child.Ancestors(WordprocessingNamespace + "del").Any();
+                fields.Add(new DocxComplexFieldScanState(child, new StringBuilder(), UsesOriginalFieldInstruction(markupMode, deletedField),
+                    HasSeparate: false, HasCachedResult: false));
+                return nestedInInstruction;
+            }
+
+            if (string.Equals(fieldCharType, "separate", StringComparison.OrdinalIgnoreCase))
+            {
+                if (fields.Count == 0)
+                {
+                    return true;
+                }
+
+                fields[^1] = fields[^1] with { HasSeparate = true };
+                return false;
+            }
+
+            if (string.Equals(fieldCharType, "end", StringComparison.OrdinalIgnoreCase))
+            {
+                if (fields.Count == 0)
+                {
+                    return true;
+                }
+
+                var field = fields[^1];
+                // A closed result may be intentionally empty. An instruction
+                // without a result boundary is still unsupported.
+                fields.RemoveAt(fields.Count - 1);
+                return !field.HasSeparate && ResolveFieldPlaceholder(field.Instruction.ToString()) is null;
+            }
+
+            return true;
+        }
+
+        bool inFieldResult = fields.Count != 0 && fields[^1].HasSeparate;
+        if (fields.Count != 0 && !inFieldResult && IsFieldInstructionText(child))
+        {
+            var field = fields[^1];
+            bool inserted = field.UsesOriginalInstruction && child.Ancestors().Any(element =>
+                element.Name == WordprocessingNamespace + "ins" || element.Name == WordprocessingNamespace + "moveTo");
+            if (IncludesFieldInstruction(child, field.UsesOriginalInstruction, inserted))
+                field.Instruction.Append((string?)child);
+            return false;
+        }
+
+        if (fields.Count != 0 && IsFieldResultContent(child, inFieldResult))
+        {
+            for (int fieldIndex = 0; fieldIndex < fields.Count; fieldIndex++)
+            {
+                var field = fields[fieldIndex];
+                if (field.HasSeparate && !field.HasCachedResult)
+                    fields[fieldIndex] = field with { HasCachedResult = true };
+            }
+        }
+
+        return false;
+    }
 }

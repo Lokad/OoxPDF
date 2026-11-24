@@ -565,8 +565,9 @@ internal sealed partial class DocxReader
         var parts = new List<ParagraphBreakPart>();
         var currentChildren = new List<XElement>();
         var authoredStory = DocxSourceXml.FindStoryRoot(paragraph) is { } story ? new DocxSourceXml.StoryOrigin(story) : null;
-        var unclosed = paragraph.Descendants(WordprocessingNamespace + "fldChar").Any()
-            ? ReadUnclosedFieldBegins(authoredStory?.Story, markupMode, cancellationToken) : null;
+        var unclosed = paragraph.Descendants(WordprocessingNamespace + "fldChar").Any() &&
+            DocxSourceXml.FindFieldFlowOwner(paragraph) is { } owner
+            ? ReadComplexFieldFlow(owner, markupMode, cancellationToken).Unclosed : null;
         XElement? paragraphProperties = paragraph.Element(WordprocessingNamespace + "pPr");
         bool startsAfterBreak = false;
         bool hasParagraphPart = false;

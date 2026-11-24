@@ -100,17 +100,6 @@ internal sealed partial class DocxReader
         }
     }
 
-    // Scan-phase projection of complex-field open/close tracking, used only by the
-    // unsupported-field pre-scan (HasUnsupportedComplexFields family). The full parse
-    // carries richer per-field indices in DocxComplexFieldState; this stays separate
-    // because the pre-scan runs before (and independently of) paragraph parsing.
-    private sealed record DocxComplexFieldScanState(
-        StringBuilder Instruction,
-        bool UsesOriginalInstruction,
-        bool HasSeparate,
-        bool InResult,
-        bool HasCachedResult);
-
     private const string MainDocumentContentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml";
     private const string StylesRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles";
     private const string NumberingRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering";
