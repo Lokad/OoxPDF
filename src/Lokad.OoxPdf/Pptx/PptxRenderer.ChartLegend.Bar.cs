@@ -42,7 +42,7 @@ internal sealed partial class PptxRenderer
         int slot = 0;
         foreach (XElement series in plot.Source.Elements(ChartNamespace + "ser"))
         {
-            if (!PptxSceneBuilder.TryReadChartNonNegativeIndex(series, out int index, out _) || index != slot ||
+            if (!PptxSceneBuilder.TryReadChartNonNegativeIndex(series, out int index) || index != slot ||
                 PptxSceneBuilder.ReadChartElementIntWithValue(series, "order").Value != slot)
                 return null;
             slot++;

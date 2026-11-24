@@ -86,7 +86,7 @@ internal sealed partial class PptxSceneBuilder
         Dictionary<int, bool>? points = null;
         foreach (XElement point in series.Elements(ChartNamespace + "dPt"))
         {
-            if (TryReadChartNonNegativeIndex(point, out int index, out _))
+            if (TryReadChartNonNegativeIndex(point, out int index))
             {
                 points ??= new Dictionary<int, bool>();
                 // A point declaration has its own enabled default, including
@@ -163,7 +163,7 @@ internal sealed partial class PptxSceneBuilder
         var styles = new List<PptxSceneChartPointStyle>();
         foreach (XElement point in series.Elements(ChartNamespace + "dPt"))
         {
-            if (!TryReadChartNonNegativeIndex(point, out int index, out string indexValue))
+            if (!TryReadChartNonNegativeIndex(point, out int index))
             {
                 continue;
             }
@@ -185,7 +185,6 @@ internal sealed partial class PptxSceneBuilder
             (double? explosion, string explosionValue) = ReadChartElementDoubleWithValue(point, "explosion");
             styles.Add(new PptxSceneChartPointStyle(
                 index,
-                indexValue,
                 ReadChartPointFill(shapeProperties, theme, colorMap),
                 ReadChartPatternFill(shapeProperties, theme, colorMap),
                 ReadChartLine(shapeProperties, theme, colorMap),
@@ -201,10 +200,9 @@ internal sealed partial class PptxSceneBuilder
         return styles;
     }
 
-    internal static bool TryReadChartNonNegativeIndex(XElement element, out int index, out string indexValue)
+    internal static bool TryReadChartNonNegativeIndex(XElement element, out int index)
     {
-        indexValue = ReadChartElementValue(element, "idx");
-        return int.TryParse(indexValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out index) &&
+        return int.TryParse(ReadChartElementValue(element, "idx"), NumberStyles.Integer, CultureInfo.InvariantCulture, out index) &&
             index >= 0;
     }
 

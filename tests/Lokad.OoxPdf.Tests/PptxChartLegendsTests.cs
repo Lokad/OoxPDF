@@ -863,10 +863,10 @@ internal static partial class PptxChartLegendsTests
         TestAssert.Equal("futureSeriesExplosion", series.ExplosionValue);
         TestAssert.Equal(2, series.PointStyles.Count);
         TestAssert.Equal(35d, series.PointStyles[0].Explosion ?? double.NaN);
-        TestAssert.Equal("0", series.PointStyles[0].IndexValue);
+        TestAssert.Equal(0, series.PointStyles[0].Index);
         TestAssert.Equal("35", series.PointStyles[0].ExplosionValue);
         TestAssert.Equal(null, series.PointStyles[1].Explosion);
-        TestAssert.Equal("1", series.PointStyles[1].IndexValue);
+        TestAssert.Equal(1, series.PointStyles[1].Index);
         TestAssert.Equal("futurePointExplosion", series.PointStyles[1].ExplosionValue);
     }
 
@@ -1204,7 +1204,6 @@ internal static partial class PptxChartLegendsTests
 
         PptxSceneChartDataLabelOverride label = labels.Overrides[0];
         TestAssert.Equal(1, label.Index);
-        TestAssert.Equal("1", label.IndexValue);
         TestAssert.Equal("0%", label.NumberFormat);
         TestAssert.True(label.NumberFormatInfo.IsDefined, "Expected per-label number format metadata to be explicit.");
         TestAssert.Equal("0%", label.NumberFormatInfo.FormatCode);

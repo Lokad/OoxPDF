@@ -3469,11 +3469,11 @@ internal static class PptxChartRenderingTests
             """;
         var plot = TestAssert.NotNull(PptxTests.BuildSingleChartScene(chartXml)).Plots.Single();
         var point = plot.Series.Single().PointStyles.Single();
-        TestAssert.Equal((0, "00"), (point.Index, point.IndexValue));
+        TestAssert.Equal(0, point.Index);
         TestAssert.Equal(new RgbColor(0xAA, 0, 0), point.Fill.Color);
         TestAssert.Equal(25d, point.Explosion ?? -1d);
         var label = plot.DataLabels.Overrides.Single();
-        TestAssert.Equal((0, "00"), (label.Index, label.IndexValue));
+        TestAssert.Equal(0, label.Index);
         TestAssert.True(label.ShowValue == true && label.Layout.HasLayout, "The valid manual label remains defined.");
         TestAssert.Equal(0.1d, label.Layout.X ?? -1d);
         TestAssert.Equal(0.2d, label.Layout.Y ?? -1d);

@@ -475,7 +475,6 @@ internal enum PptxSceneChartPointTextScope { Container, Chart, ImplicitTextBody 
 
 internal sealed record PptxSceneChartDataLabelOverride(
     int Index,
-    string IndexValue,
     bool? IsDeleted,
     bool? ShowValue,
     bool? ShowPercent,
@@ -744,7 +743,6 @@ internal enum PptxSceneChartMarkerSymbol
 
 internal sealed record PptxSceneChartPointStyle(
     int Index,
-    string IndexValue,
     PptxSceneFillStyle Fill,
     PptxScenePatternFill PatternFill,
     PptxSceneLineStyle Line,

@@ -217,7 +217,7 @@ internal sealed partial class PptxSceneBuilder
         var overrides = new List<PptxSceneChartDataLabelOverride>();
         foreach (XElement label in labels.Elements(ChartNamespace + "dLbl"))
         {
-            if (!TryReadChartNonNegativeIndex(label, out int index, out string indexValue))
+            if (!TryReadChartNonNegativeIndex(label, out int index))
             {
                 continue;
             }
@@ -225,7 +225,6 @@ internal sealed partial class PptxSceneBuilder
             PptxSceneChartNumberFormat numberFormat = ReadChartNumberFormat(label);
             overrides.Add(new PptxSceneChartDataLabelOverride(
                 index,
-                indexValue,
                 ReadOptionalChartBoolean(label, "delete"),
                 ReadOptionalChartBoolean(label, "showVal"),
                 ReadOptionalChartBoolean(label, "showPercent"),

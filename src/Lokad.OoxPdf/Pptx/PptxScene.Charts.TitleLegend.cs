@@ -93,7 +93,7 @@ internal sealed partial class PptxSceneBuilder
             foreach (XElement entry in legend.Elements(ChartNamespace + "legendEntry"))
             {
                 if (IsOoxmlBooleanElementEnabled(entry.Element(ChartNamespace + "delete")) &&
-                    TryReadChartNonNegativeIndex(entry, out int index, out _))
+                    TryReadChartNonNegativeIndex(entry, out int index))
                 {
                     (deletedEntryIndices ??= []).Add(index);
                 }
