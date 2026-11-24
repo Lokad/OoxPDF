@@ -20,8 +20,12 @@ internal static partial class PptxCartesianSideTests
         using var controls = ReadManualControls();
         string[] passive = ["inner-factor-zero", "inner-factor-down", "inner-factor-up", "inner-factor-h45", "inner-factor-h80",
             "inner-factor-edge-height", "inner-edge-edge-height", "inner-factor-edge-height-up", "line-valid-edge-y16"];
-        foreach (var row in controls.RootElement.EnumerateArray().Where(row => passive.Contains(row.GetProperty("Id").GetString())))
+        var rows = controls.RootElement.EnumerateArray().ToDictionary(row => row.GetProperty("Id").GetString()!, StringComparer.Ordinal);
+        foreach (string id in passive)
+        {
+            TestAssert.True(rows.TryGetValue(id, out var row), $"The manual chart reference is missing '{id}'.");
             CheckManualRectangle(RenderManual(row), row);
+        }
     }
 
     public static void PptxManualScatterEdgeHeightKeepsIndependentOfficeRectangle()

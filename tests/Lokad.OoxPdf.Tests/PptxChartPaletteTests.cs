@@ -7,6 +7,21 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class PptxChartPaletteTests
 {
+    internal static JsonElement.ArrayEnumerator ReadRequiredPaintReferenceRows(JsonDocument reference, string name, params string[] requiredIds)
+    {
+        JsonElement rows = reference.RootElement.GetProperty("Rows");
+        TestAssert.True(rows.GetArrayLength() > 0, $"The reference '{name}' has no cases.");
+        var ids = new HashSet<string>(StringComparer.Ordinal);
+        foreach (JsonElement row in rows.EnumerateArray())
+        {
+            string? id = row.GetProperty("Id").GetString();
+            TestAssert.True(!string.IsNullOrWhiteSpace(id) && ids.Add(id), $"The reference '{name}' has an empty or duplicate case ID.");
+        }
+        foreach (string id in requiredIds)
+            TestAssert.True(ids.Contains(id), $"The reference '{name}' is missing case '{id}'.");
+        return rows.EnumerateArray();
+    }
+
     public static void PptxAutomaticBarPalettesMatchIndependentOfficeAcrossCountsAndThemes()
     {
         string path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "chart-auto-palette-office.json"));

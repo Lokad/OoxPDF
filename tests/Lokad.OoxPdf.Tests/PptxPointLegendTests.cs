@@ -12,7 +12,8 @@ internal static class PptxPointLegendTests
         string directory = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "PointLegends"));
         using var reference = JsonDocument.Parse(File.ReadAllText(Path.Combine(directory, "office.json")));
         var resolver = new PortableRenderingTests.PinnedResolver();
-        foreach (var row in reference.RootElement.GetProperty("Rows").EnumerateArray())
+        foreach (var row in PptxChartPaletteTests.ReadRequiredPaintReferenceRows(reference, "PointLegends/office.json",
+            "no-points", "different-points", "same-points", "no-fill", "stroke-only", "multiple-series"))
         {
             string id = row.GetProperty("Id").GetString()!;
             using var stream = File.OpenRead(Path.Combine(directory, row.GetProperty("Input").GetString()!));

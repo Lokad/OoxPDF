@@ -7,16 +7,18 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class PptxBuiltinPaletteTests
 {
-    public static void PptxBuiltinPalettesMatchIndependentOfficeAcrossThemesAndPlotKinds() => Check("office.json");
+    public static void PptxBuiltinPalettesMatchIndependentOfficeAcrossThemesAndPlotKinds() => Check("office.json",
+        "style-6", "multi-6", "theme-style6", "preferred106-fallback2", "legacy6-only", "count-varying-points",
+        "pie-vary", "doughnut-vary", "line-3", "area-3");
 
-    public static void PptxLineDataLabelKeysMatchIndependentOfficePalette() => Check("label-keys-office.json");
+    public static void PptxLineDataLabelKeysMatchIndependentOfficePalette() => Check("label-keys-office.json", "line-single-accent-value-keys");
 
-    private static void Check(string referenceFile)
+    private static void Check(string referenceFile, params string[] requiredIds)
     {
         string directory = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "BuiltinPalettes"));
         using var reference = JsonDocument.Parse(File.ReadAllText(Path.Combine(directory, referenceFile)));
         var resolver = new PortableRenderingTests.PinnedResolver();
-        foreach (var row in reference.RootElement.GetProperty("Rows").EnumerateArray())
+        foreach (var row in PptxChartPaletteTests.ReadRequiredPaintReferenceRows(reference, referenceFile, requiredIds))
         {
             string id = row.GetProperty("Id").GetString()!;
             using var stream = File.OpenRead(Path.Combine(directory, row.GetProperty("Input").GetString()!));
