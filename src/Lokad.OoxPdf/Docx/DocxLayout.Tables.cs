@@ -1704,7 +1704,7 @@ internal sealed partial class DocxLayoutEngine
             for (int index = 0; index < text.Length; index++)
             {
                 bool whitespace = DocxTextBreakRules.IsBreakableWhitespaceChar(text[index]);
-                if (!whitespace && !DocxLineBreakOpportunities.IsOpportunityAfter(text[index]))
+                if (!whitespace && !DocxLineBreakOpportunities.IsOpportunityAt(text, index + 1))
                 {
                     continue;
                 }

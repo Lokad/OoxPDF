@@ -846,6 +846,27 @@ internal static class DocxTextWrapTests
         }
         foreach (string value in new[] { "ABC\u2011DEFG", "ABC\u00A0DEFG", "ABC\u2060DEFG" })
             TestAssert.Equal(1, WrapSpans(value, SingleSpan(value), 5d, false, measurer, default).Count);
+        foreach (char joiner in new[] { '\u2060', '\uFEFF' })
+        {
+            string word = "ABC" + joiner + "DEFG";
+            foreach (double width in new[] { 3d, 4d })
+            {
+                var joined = WrapSpans(word, SingleSpan(word), width, true, measurer, default);
+                TestAssert.Equal("AB", joined[0].Text);
+                TestAssert.True(joined[1].Text.StartsWith("C" + joiner + "D", StringComparison.Ordinal),
+                    "Character wrapping keeps both neighbors of a word joiner on the same line.");
+                TestAssert.Equal(word, string.Concat(joined.Select(line => line.Text)));
+            }
+
+            string hyphen = "AB-" + joiner + "CDEFG";
+            var protectedHyphen = WrapSpans(hyphen, SingleSpan(hyphen), 3d, false, measurer, default);
+            TestAssert.Equal(hyphen, protectedHyphen.Single().Text);
+
+            string explicitBreak = "AB\u200B" + joiner + "CDEFG";
+            var atZeroWidthSpace = WrapSpans(explicitBreak, SingleSpan(explicitBreak), 3d, false, measurer, default);
+            TestAssert.Equal("AB", atZeroWidthSpace[0].Text);
+            TestAssert.True(atZeroWidthSpace[1].Text.StartsWith(joiner), "An explicit zero-width space takes precedence.");
+        }
         string longWord = new('a', 20000);
         var continued = WrapSpans(longWord, SingleSpan(longWord), 10d, false, measurer, default);
         TestAssert.Equal(2000, continued.Count);

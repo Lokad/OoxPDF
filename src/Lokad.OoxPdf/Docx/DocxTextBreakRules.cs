@@ -7,6 +7,8 @@ internal static class DocxTextBreakRules
 {
     internal static bool IsOptionalBreakMarker(char value) => value is '\u00AD' or '\u200B';
 
+    internal static bool IsWordJoiner(char value) => value is '\u2060' or '\uFEFF';
+
     /// <summary>
     /// Returns true for whitespace characters that may end a line.
     /// </summary>

@@ -465,6 +465,8 @@ internal sealed partial class DocxLayoutEngine
 
         if (before == '\u2011' ||
             after == '\u2011' ||
+            DocxTextBreakRules.IsWordJoiner(before) ||
+            DocxTextBreakRules.IsWordJoiner(after) ||
             DocxTextBreakRules.IsNoBreakWhitespaceChar(before) ||
             DocxTextBreakRules.IsNoBreakWhitespaceChar(after))
         {
@@ -483,7 +485,7 @@ internal sealed partial class DocxLayoutEngine
         int end = segmentStart + segmentLength;
         for (int i = segmentStart; i < end; i++)
         {
-            if (DocxLineBreakOpportunities.IsOpportunityAfter(text[i]))
+            if (DocxLineBreakOpportunities.IsOpportunityAt(text, i + 1))
             {
                 positions.Add(i);
             }
@@ -671,7 +673,7 @@ internal sealed partial class DocxLayoutEngine
         return wholeTokenFits ? 0 : best;
 
         bool IsBreakCandidate(int length) => preferredBreaksOnly
-            ? DocxLineBreakOpportunities.IsOpportunityAfter(text[token.Start + length - 1])
+            ? DocxLineBreakOpportunities.IsOpportunityAt(text, token.Start + length)
             : IsSafeEmergencyTokenBreak(text, token, length);
 
         bool PrefixFits(int length, bool atBreak)
@@ -1003,7 +1005,14 @@ internal sealed partial class DocxLayoutEngine
     {
         private const string Characters = "-/\\\u00AD\u200B\u2010\u2012\u2013\u2014";
 
-        public static bool IsOpportunityAfter(char value) => Characters.Contains(value);
+        public static bool IsOpportunityAt(string text, int boundary)
+        {
+            char before = text[boundary - 1];
+            // An explicit zero-width space takes precedence over a word joiner.
+            return Characters.Contains(before) &&
+                (before == '\u200B' || boundary == text.Length || !DocxTextBreakRules.IsWordJoiner(text[boundary]));
+        }
+
         public static bool ContainsOpportunity(string text) => text.AsSpan().ContainsAny(Characters);
     }
 
