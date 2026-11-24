@@ -18,36 +18,12 @@ internal static partial class PptxShapesTests
 {
     public static void PptxSyntheticShapesProduceDrawingOperators()
     {
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        using var input = TestFixtures.CreateZipPackage(new Dictionary<string, string>
         {
-            ["[Content_Types].xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-                  <Default Extension="xml" ContentType="application/xml"/>
-                  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
-                  <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
-                </Types>
-                """,
-            ["_rels/.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/>
-                </Relationships>
-                """,
-            ["ppt/_rels/presentation.xml.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/>
-                </Relationships>
-                """,
-            ["ppt/presentation.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:presentation xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-                  <p:sldSz cx="9144000" cy="6858000"/>
-                  <p:sldIdLst><p:sldId id="256" r:id="rId1"/></p:sldIdLst>
-                </p:presentation>
-                """,
+            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
+            ["_rels/.rels"] = PptxTests.PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
+            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
             ["ppt/slides/slide1.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
@@ -98,23 +74,25 @@ internal static partial class PptxShapesTests
                 </p:sld>
                 """
         });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        string content = Regex.Replace(PptxTests.RenderSingleSlideContent(input), @"\s+", " ");
+        TestAssert.Contains("1 g 0 0 720 540 re f* Q", content);
+        TestAssert.Contains("1 0 0 rg 72 396 144 72 re f* 0 0 1 RG 2 w 72 396 144 72 re S Q", content);
 
-        OoxPdfConverter.Convert(input, output);
+        string ellipse = Regex.Match(content, @"(?:^| )0 1 0 rg (?<path>[^qQ]+) Q\b").Groups["path"].Value;
+        TestAssert.True(ellipse.StartsWith("360 432 m ", StringComparison.Ordinal) &&
+            ellipse.EndsWith("360 432 c h f*", StringComparison.Ordinal),
+            "The green shape must close and fill an ellipse at its authored frame.");
+        TestAssert.Equal(4, Regex.Matches(ellipse, " c ").Count);
+        TestAssert.Contains("324 468 c ", ellipse);
+        TestAssert.Contains("288 432 c ", ellipse);
+        TestAssert.Contains("324 396 c ", ellipse);
 
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("1 g", pdf);
-        TestAssert.Contains("0 0 720 540 re f", pdf);
-        TestAssert.Contains("1 0 0 rg", pdf);
-        TestAssert.Contains("72 396 144 72 re f*", pdf);
-        TestAssert.Contains("0 0 1 RG", pdf);
-        TestAssert.Contains("0 1 0 rg", pdf);
-        TestAssert.Contains(" c", pdf);
-        TestAssert.Contains("72 252 m 216 180 l S", pdf);
-        TestAssert.Contains("360 240 m", pdf);
-        TestAssert.Contains("0.933 g", pdf);
-        TestAssert.Contains("0.184 0.522 0.416 RG", pdf);
-        TestAssert.Contains(" re W n", pdf);
+        TestAssert.Contains("0 G 1 w 72 252 m 216 180 l S", content);
+        string rounded = Regex.Match(content, @"(?:^| )0 G 1 w (?<path>360 240 m [^qQ]+) Q\b").Groups["path"].Value;
+        TestAssert.True(rounded.EndsWith("360 192 c h S", StringComparison.Ordinal),
+            "The rounded rectangle must close and stroke its own frame.");
+        TestAssert.Equal(4, Regex.Matches(rounded, " c ").Count);
+        TestAssert.Contains("0.933 g 468 180 72 72 re f* q 468 180 72 72 re W n 0.184 0.522 0.416 RG", content);
     }
 
     public static void PptxSyntheticFilledStrokedShapeRepeatsSlideClipBeforeFill()
@@ -1547,34 +1525,10 @@ internal static partial class PptxShapesTests
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
         {
-            ["[Content_Types].xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-                  <Default Extension="xml" ContentType="application/xml"/>
-                  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
-                  <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
-                </Types>
-                """,
-            ["_rels/.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/>
-                </Relationships>
-                """,
-            ["ppt/_rels/presentation.xml.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/>
-                </Relationships>
-                """,
-            ["ppt/presentation.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:presentation xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-                  <p:sldSz cx="9144000" cy="6858000"/>
-                  <p:sldIdLst><p:sldId id="256" r:id="rId1"/></p:sldIdLst>
-                </p:presentation>
-                """,
+            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
+            ["_rels/.rels"] = PptxTests.PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
+            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
             ["ppt/slides/slide1.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
