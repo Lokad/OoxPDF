@@ -235,18 +235,10 @@ internal static partial class DocxNoteClippingTests
             ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup,
         FixedCreationDate = DateTimeOffset.UnixEpoch, DiagnosticSink = sink };
 
-    private static MemoryStream BoundaryInput(bool math, bool overflow, bool exact, bool picture = false)
+    private static MemoryStream BoundaryInput(bool math, bool overflow, bool exact, bool picture = false) => CreateRowInput(exact, row =>
     {
-        using var seed = Input(0, false);
-        using var archive = new ZipArchive(seed, ZipArchiveMode.Read);
-        var parts = archive.Entries.ToDictionary(entry => entry.FullName, entry => {
-            using var source = entry.Open(); using var copy = new MemoryStream(); source.CopyTo(copy); return copy.ToArray(); });
-        using var xmlStream = new MemoryStream(parts["word/endnotes.xml"]);
-        var xml = XDocument.Load(xmlStream);
-        XNamespace w = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
-        XNamespace m = "http://schemas.openxmlformats.org/officeDocument/2006/math";
-        var note = xml.Root!.Elements(w + "endnote").Single(note => (string?)note.Attribute(w + "id") == "37");
-        var row = note.Element(w + "tbl")!.Element(w + "tr")!;
+        XNamespace w = OoxNamespaces.WordprocessingNamespace;
+        XNamespace m = OoxNamespaces.MathNamespace;
         var cell = row.Element(w + "tc")!;
         var drawing = picture ? new XElement(cell.Descendants(w + "drawing").Single()) : null;
         cell.Elements().Where(element => element.Name != w + "tcPr").Remove();
@@ -278,40 +270,46 @@ internal static partial class DocxNoteClippingTests
         else paragraph.Add(new XElement(w + "r", new XElement(w + "rPr",
             new XElement(w + "rFonts", new XAttribute(w + "ascii", "Arial"), new XAttribute(w + "hAnsi", "Arial")),
             new XElement(w + "sz", new XAttribute(w + "val", overflow ? "1200" : "24"))), new XElement(w + "t", "g")));
-        if (exact)
-        {
-            var properties = row.Element(w + "trPr");
-            if (properties is null) { properties = new XElement(w + "trPr"); row.AddFirst(properties); }
-            properties.Elements(w + "trHeight").Remove();
-            properties.Add(new XElement(w + "trHeight", new XAttribute(w + "val", "16000"), new XAttribute(w + "hRule", "exact")));
-        }
-        using var updated = new MemoryStream(); xml.Save(updated, SaveOptions.DisableFormatting);
-        parts["word/endnotes.xml"] = updated.ToArray();
-        return TestFixtures.CreateZipPackage(parts);
-    }
+    });
 
-    private static MemoryStream Input(int tokens, bool exact)
+    private static MemoryStream Input(int tokens, bool exact) => CreateRowInput(exact, row =>
     {
-        string path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases",
-            "CompositionProbes/mixed-note-endnote-table.docx"));
-        using var archive = ZipFile.OpenRead(path);
-        var parts = archive.Entries.ToDictionary(entry => entry.FullName, entry => {
-            using var source = entry.Open(); using var copy = new MemoryStream(); source.CopyTo(copy); return copy.ToArray(); });
-        using var xmlStream = new MemoryStream(parts["word/endnotes.xml"]); var xml = XDocument.Load(xmlStream);
-        XNamespace w = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
-        var note = xml.Root!.Elements(w + "endnote").Single(note => (string?)note.Attribute(w + "id") == "37");
-        var row = note.Element(w + "tbl")!.Element(w + "tr")!;
+        XNamespace w = OoxNamespaces.WordprocessingNamespace;
         row.Descendants(w + "p").Single().Add(new XElement(w + "r", new XElement(w + "t",
             " " + string.Join(" ", Enumerable.Range(0, tokens).Select(i => $"PublicRow{i:000}")))));
+    });
+
+    private static MemoryStream CreateRowInput(bool exact, Action<XElement> editRow)
+    {
+        const string notePart = "word/endnotes.xml";
+        string path = TestFixtures.PublicCasePath("CompositionProbes/mixed-note-endnote-table.docx");
+        using var archive = ZipFile.OpenRead(path);
+        var parts = archive.Entries.ToDictionary(entry => entry.FullName, entry => {
+            using var source = entry.Open();
+            using var copy = new MemoryStream();
+            source.CopyTo(copy);
+            return copy.ToArray();
+        });
+        using var xmlStream = new MemoryStream(parts[notePart]);
+        var xml = XDocument.Load(xmlStream);
+        XNamespace w = OoxNamespaces.WordprocessingNamespace;
+        var note = xml.Root!.Elements(w + "endnote").Single(note => (string?)note.Attribute(w + "id") == "37");
+        var row = note.Element(w + "tbl")!.Element(w + "tr")!;
+        editRow(row);
         if (exact)
         {
             var properties = row.Element(w + "trPr");
-            if (properties is null) { properties = new XElement(w + "trPr"); row.AddFirst(properties); }
+            if (properties is null)
+            {
+                properties = new XElement(w + "trPr");
+                row.AddFirst(properties);
+            }
             properties.Elements(w + "trHeight").Remove();
             properties.Add(new XElement(w + "trHeight", new XAttribute(w + "val", "16000"), new XAttribute(w + "hRule", "exact")));
         }
-        using var updated = new MemoryStream(); xml.Save(updated, SaveOptions.DisableFormatting);
-        parts["word/endnotes.xml"] = updated.ToArray();
+        using var updated = new MemoryStream();
+        xml.Save(updated, SaveOptions.DisableFormatting);
+        parts[notePart] = updated.ToArray();
         return TestFixtures.CreateZipPackage(parts);
     }
 }
