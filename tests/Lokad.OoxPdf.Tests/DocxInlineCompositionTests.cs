@@ -1559,6 +1559,43 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
+    public static void DocxDisplayMathRetainsDirectMathRuns()
+    {
+        foreach (string container in new[] { "body", "cell" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        foreach (bool standalone in new[] { false, true })
+        {
+            string fixture = "CompositionProbes/math-display-image-" + container + "-between";
+            var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true), mode,
+                mode == OoxPdfDocxMarkupMode.AllMarkup ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
+                    : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+            var expected = Render(wrapped: true);
+            var actual = Render(wrapped: false);
+            TestAssert.Equal(5, PortableRenderingTests.ReadPaintedSourceLabel(actual.Page, "98765", mathOnly: true).Count);
+            TestAssert.Equal(1, actual.Page.Images.Count);
+            TestAssert.Equal(expected.Page.Content, actual.Page.Content);
+            TestAssert.True(expected.Diagnostics.SequenceEqual(actual.Diagnostics),
+                "A direct math run and its equivalent wrapped formula report the same rendering outcome.");
+            TestAssert.True(!actual.Diagnostics.Any(diagnostic => diagnostic.Id == "DOCX_UNSUPPORTED_EQUATION"),
+                "A supported display run must count as a rendered equation source.");
+
+            (PdfPage Page, List<OoxPdfDiagnostic> Diagnostics) Render(bool wrapped)
+            {
+                var document = ReadMutation(fixture, mode, false, false, (xml, w, m) =>
+                {
+                    var display = xml.Descendants(m + "oMathPara").First();
+                    if (standalone)
+                        display.Element(m + "oMath")!.Remove();
+                    var run = new XElement(m + "r", new XElement(m + "t", "98765"));
+                    display.Add(wrapped ? new XElement(m + "oMath", run) : run);
+                });
+                var diagnostics = new List<OoxPdfDiagnostic>();
+                var page = renderer.RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().Single();
+                return (page, diagnostics);
+            }
+        }
+    }
+
     public static void DocxInlineCompositionCommentsPreserveMathematicsAndCaptions()
     {
         if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))

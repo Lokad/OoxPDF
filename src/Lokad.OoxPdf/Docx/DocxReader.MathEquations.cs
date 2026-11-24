@@ -5,6 +5,14 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxReader
 {
+    private static bool IsDisplayMathRun(XElement element) =>
+        element.Name == MathNamespace + "r" && element.Parent is { } owner &&
+        (owner.Name == MathNamespace + "oMathPara" ||
+         DocxSourceXml.IsRevisionContainer(owner) && owner.Parent?.Name == MathNamespace + "oMathPara");
+
+    private static bool IsEquationPayload(XElement element) =>
+        element.Name == MathNamespace + "oMath" || IsDisplayMathRun(element);
+
     private static IEnumerable<(XElement Element, DocxRevisionInfo? Revision, bool RemoveDeletedText)> EnumerateMathParagraphSources(
         XElement container, DocxRevisionInfo? inheritedRevision, bool removeDeletedText,
         OoxPdfDocxMarkupMode mode, CancellationToken token)
@@ -21,9 +29,9 @@ internal sealed partial class DocxReader
         while (pending.TryPop(out var source))
         {
             token.ThrowIfCancellationRequested();
-            // Wordprocessing runs and range boundaries share the ordered
-            // paragraph source with the displayed equations.
-            if (source.Element.Name == MathNamespace + "oMath" ||
+            // Math and Wordprocessing runs keep their authored order
+            // alongside the displayed equations and range boundaries.
+            if (IsEquationPayload(source.Element) ||
                 source.Element.Name == WordprocessingNamespace + "r" ||
                 source.Element.Name == WordprocessingNamespace + "bookmarkStart" ||
                 source.Element.Name == WordprocessingNamespace + "bookmarkEnd" ||

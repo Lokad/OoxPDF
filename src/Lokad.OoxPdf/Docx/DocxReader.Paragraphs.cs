@@ -483,7 +483,7 @@ internal sealed partial class DocxReader
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 XElement equation = source.Element;
-                if (equation.Name != MathNamespace + "oMath")
+                if (!IsEquationPayload(equation))
                 {
                     AddSourceContainerChild(equation, source.Revision, source.RemoveDeletedText);
                     continue;
@@ -534,7 +534,8 @@ internal sealed partial class DocxReader
             DocxTextRun ReadMathRun(XElement run, string text)
             {
                 DocxRevisionInfo? owner = equationRevision;
-                XElement? wrapper = run.Ancestors().TakeWhile(parent => parent.Name != MathNamespace + "oMath")
+                XElement? wrapper = IsDisplayMathRun(run) ? null :
+                    run.Ancestors().TakeWhile(parent => parent.Name != MathNamespace + "oMath")
                     .FirstOrDefault(DocxSourceXml.IsRevisionContainer);
                 if (wrapper is not null && !IsIncludedRevisionContainer(wrapper, markupMode)) owner = null;
                 else if (wrapper is not null)

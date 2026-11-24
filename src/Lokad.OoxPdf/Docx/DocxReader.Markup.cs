@@ -23,13 +23,13 @@ internal sealed partial class DocxReader
         foreach (XElement element in source.Descendants())
         {
             token.ThrowIfCancellationRequested();
-            bool equation = element.Name == MathNamespace + "oMath";
+            bool equation = IsEquationPayload(element);
             if (!equation && element.Name != MathNamespace + "oMathPara") continue;
             hasSource = true;
             if (!equation)
             {
                 hasDisplaySource = true;
-                if (element.Descendants(MathNamespace + "oMath").Any()) continue;
+                if (element.Descendants().Any(IsEquationPayload)) continue;
             }
             bool included = true;
             bool retainsDeletedStructure = true;

@@ -19993,6 +19993,7 @@
   ],
   "docx-math-center-group": [
     "=DocxDisplayMathRetainsCompanionRunsAndPictures",
+    "=DocxDisplayMathRetainsDirectMathRuns",
     "DocxMathCenterGroupRetainsLocalAndGlobalAlignmentSources",
     "DocxMathCenterGroupMeasuresMaximumRowsAndEndsAtProse",
     "DocxMathCenterGroupPlacesBodyCellsAndFootersWithoutMovingBaselines",
