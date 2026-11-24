@@ -6,16 +6,19 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxSceneBuilder
 {
-    internal static PptxSceneGradientFill ReadLinearGradientFill(XElement? properties, PptxTheme theme, PptxColorMap colorMap)
+    internal static PptxSceneGradientFill ReadLinearGradientFill(XElement? properties, PptxTheme theme, PptxColorMap colorMap) =>
+        ReadLinearGradient(properties?.Element(DrawingNamespace + "gradFill"), theme, colorMap);
+
+    private static PptxSceneGradientFill ReadLinearGradient(XElement? gradientFill, PptxTheme theme, PptxColorMap colorMap,
+        XElement? placeholderColor = null)
     {
-        XElement? gradientFill = properties?.Element(DrawingNamespace + "gradFill");
         XElement? gradientStopList = gradientFill?.Element(DrawingNamespace + "gsLst");
         if (gradientFill is null)
         {
             return new PptxSceneGradientFill(false, false, 0d, []);
         }
 
-        if (gradientStopList is null || UsesTitleShading(properties))
+        if (gradientStopList is null || UsesTitleShading(gradientFill.Parent))
         {
             return new PptxSceneGradientFill(false, true, 0d, []);
         }
@@ -24,7 +27,7 @@ internal sealed partial class PptxSceneBuilder
             .Elements(DrawingNamespace + "gs")
             .ToArray();
         PptxSceneGradientStop[] stops = rawStops
-            .Select(stop => TryReadGradientStop(stop, theme, colorMap, out PptxSceneGradientStop parsed) ? parsed : (PptxSceneGradientStop?)null)
+            .Select(stop => TryReadGradientStop(stop, theme, colorMap, placeholderColor, out PptxSceneGradientStop parsed) ? parsed : (PptxSceneGradientStop?)null)
             .OfType<PptxSceneGradientStop>()
             .OrderBy(stop => stop.Offset)
             .ToArray();
@@ -62,9 +65,10 @@ internal sealed partial class PptxSceneBuilder
         properties?.Name == PresentationNamespace + "bgPr" &&
         OoxBoolean.ParseAttribute(properties, "shadeToTitle", false);
 
-    private static bool TryReadGradientStop(XElement gradientStop, PptxTheme theme, PptxColorMap colorMap, out PptxSceneGradientStop stop)
+    private static bool TryReadGradientStop(XElement gradientStop, PptxTheme theme, PptxColorMap colorMap,
+        XElement? placeholderColor, out PptxSceneGradientStop stop)
     {
-        if (!PptxColorResolver.TryReadSolidColorWithAlpha(gradientStop, theme, colorMap, out RgbColor color, out double alpha))
+        if (!PptxColorResolver.TryReadSolidColorWithAlpha(gradientStop, theme, colorMap, placeholderColor, out RgbColor color, out double alpha))
         {
             stop = default;
             return false;

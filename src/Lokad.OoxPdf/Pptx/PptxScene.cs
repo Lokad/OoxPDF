@@ -232,7 +232,9 @@ internal sealed partial class PptxSceneBuilder
             .Element(PresentationNamespace + "cSld")?
             .Element(PresentationNamespace + "bg");
         XElement? properties = background?.Element(PresentationNamespace + "bgPr");
-        if (properties is null && background?.Element(PresentationNamespace + "bgRef") is { } reference)
+        XElement? reference = properties is null ? background?.Element(PresentationNamespace + "bgRef") : null;
+        XElement? gradientSource = properties?.Element(DrawingNamespace + "gradFill");
+        if (reference is not null)
         {
             int index = PptxFormatSchemeResolver.ReadIndex(reference, defaultValue: -1);
             if (index is 0 or 1000)
@@ -242,26 +244,23 @@ internal sealed partial class PptxSceneBuilder
             if (style?.Name == DrawingNamespace + "noFill")
                 return default;
 
-            return style?.Name == DrawingNamespace + "solidFill" &&
-                PptxColorResolver.TryReadSolidColorWithAlpha(style, theme, colorMap, reference, out RgbColor referencedColor, out double referencedAlpha)
-                ? new PptxSceneBackground(true, referencedColor, referencedAlpha)
-                : new PptxSceneBackground { HasUnsupportedStyleReference = true };
+            properties = style?.Name == DrawingNamespace + "solidFill" ? style : null;
+            gradientSource = style?.Name == DrawingNamespace + "gradFill" ? style : null;
         }
 
-        if (PptxColorResolver.TryReadSolidColorWithAlpha(properties, theme, colorMap, out RgbColor color, out double alpha))
+        if (PptxColorResolver.TryReadSolidColorWithAlpha(properties, theme, colorMap, reference, out RgbColor color, out double alpha))
         {
             return new PptxSceneBackground(true, color, alpha);
         }
 
-        if (properties?.Element(DrawingNamespace + "gradFill") is null)
+        if (gradientSource is not null &&
+            ReadLinearGradient(gradientSource, theme, colorMap, reference) is { HasGradient: true, HasUnsupportedGradient: false } gradient)
         {
-            return default;
+            return new PptxSceneBackground(true, default, 1d, gradient);
         }
 
-        PptxSceneGradientFill gradient = ReadLinearGradientFill(properties, theme, colorMap);
-        return gradient is { HasGradient: true, HasUnsupportedGradient: false }
-            ? new PptxSceneBackground(true, default, 1d, gradient)
-            : new PptxSceneBackground { HasUnsupportedGradient = true };
+        return reference is not null ? new PptxSceneBackground { HasUnsupportedStyleReference = true }
+            : new PptxSceneBackground { HasUnsupportedGradient = gradientSource is not null };
     }
 
     private static IReadOnlyList<PptxSceneNode> ReadChildNodes(

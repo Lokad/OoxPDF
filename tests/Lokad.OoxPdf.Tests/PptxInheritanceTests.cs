@@ -78,6 +78,7 @@ internal static partial class PptxInheritanceTests
                 new XElement(A + "noFill"));
             var backgrounds = format.Element(A + "bgFillStyleLst")!;
             var gradient = new XElement(backgrounds.Element(A + "gradFill")!);
+            gradient.Element(A + "gsLst")!.Elements(A + "gs").First().Element(A + "schemeClr")!.Add(HalfAlpha());
             backgrounds.ReplaceNodes(PlaceholderFill(), PlaceholderFill(withAlpha: true), gradient);
         });
         foreach (var (owner, styleIndex, overridden, paint, warning, alpha) in cases)
@@ -130,6 +131,7 @@ internal static partial class PptxInheritanceTests
 
     public static void PptxInheritanceLinearBackgroundsPaintOneShading()
     {
+        var template = Parts("background-inheritance");
         foreach (var (owner, fallback, overridden) in new[]
         {
             (0, "", false), (1, "", false), (2, "", false),
@@ -137,19 +139,33 @@ internal static partial class PptxInheritanceTests
             (0, "invalid-color", false), (1, "invalid-color", false), (2, "invalid-color", false),
             (1, "invalid-color", true)
         })
+        foreach (bool referenced in fallback.Length == 0 ? new[] { false, true } : new[] { false })
         {
-            var parts = Parts("background-inheritance");
+            var parts = new Dictionary<string, byte[]>(template);
             for (int index = 0; index < BackgroundLayers.Length; index++)
             {
                 XElement? background = index < owner || (overridden && index == 2) ? SolidBackground(index) : null;
                 if (index == owner)
                 {
-                    background = new XElement(P + "bgPr", new XElement(A + "gradFill",
+                    var gradient = new XElement(A + "gradFill",
                         new XElement(A + "gsLst", Stop(0, "FF0000", 50000),
                             Stop(100000, fallback == "invalid-color" ? "NOTRGB" : "0000FF",
                                 fallback == "mixed-alpha" ? 100000 : 50000)),
-                        new XElement(A + "lin", new XAttribute("ang", 5400000))));
-                    if (fallback == "title") background.SetAttributeValue("shadeToTitle", "1");
+                        new XElement(A + "lin", new XAttribute("ang", 5400000)));
+                    if (referenced)
+                    {
+                        XElement firstStop = gradient.Element(A + "gsLst")!.Elements(A + "gs").First();
+                        XElement referenceColor = firstStop.Elements().Single();
+                        referenceColor.ReplaceWith(new XElement(A + "schemeClr", new XAttribute("val", "phClr")));
+                        Edit(parts, "ppt/theme/theme1.xml", xml =>
+                            xml.Descendants(A + "bgFillStyleLst").Single().Elements(A + "gradFill").Single().ReplaceWith(gradient));
+                        background = new XElement(P + "bgRef", new XAttribute("idx", "1003"), referenceColor);
+                    }
+                    else
+                    {
+                        background = new XElement(P + "bgPr", gradient);
+                        if (fallback == "title") background.SetAttributeValue("shadeToTitle", "1");
+                    }
                 }
                 SetBackground(parts, BackgroundLayers[index].Part, background);
             }
@@ -158,6 +174,8 @@ internal static partial class PptxInheritanceTests
             {
                 var diagnostics = new List<OoxPdfDiagnostic>();
                 var page = Render(document, package, diagnostics)[0];
+                TestAssert.True(!diagnostics.Any(d => d.SlideIndex == 1 && d.Id == "PPTX_UNSUPPORTED_BACKGROUND_STYLE"),
+                    "A supported theme gradient paints without a background style warning.");
                 var gradientWarning = diagnostics.SingleOrDefault(d => d.SlideIndex == 1 && d.Id == "PPTX_UNSUPPORTED_GRADIENT_FILL");
                 string? expectedOwner = fallback.Length != 0 && !overridden ? "/" + BackgroundLayers[owner].Part : null;
                 TestAssert.Equal(expectedOwner, gradientWarning?.PartName);
