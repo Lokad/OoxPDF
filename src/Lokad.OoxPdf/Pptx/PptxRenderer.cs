@@ -122,7 +122,7 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static PptxRenderContext? TryLoadTextInspectionContext(
+    internal static PptxRenderContext? TryLoadTextInspectionContext(
         PptxDocument document,
         OoxPackage package,
         int slideIndex,

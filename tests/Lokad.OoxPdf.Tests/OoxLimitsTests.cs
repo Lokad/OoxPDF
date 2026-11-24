@@ -1871,7 +1871,7 @@ internal static partial class OoxLimitsTests
     {
         (OoxPackage package, PptxDocument document) = W02Package();
         PptxRenderContext context = W02Context(document, package);
-        PptxSceneSlide slide = new PptxSceneBuilder().Build(document, package, CancellationToken.None).Slides[0];
+        PptxSceneSlide slide = context.SceneSlide;
         PptxSceneNode node = slide.SlideNodes.First(candidate => candidate.Kind == PptxSceneNodeKind.Shape && candidate.TextBody is not null);
         MethodInfo read = typeof(PptxRenderer).GetMethod(
             "ReadTextSpansForSceneNodeAsync",
@@ -1904,7 +1904,7 @@ internal static partial class OoxLimitsTests
     {
         (OoxPackage package, PptxDocument document) = W02Package();
         PptxRenderContext context = W02Context(document, package);
-        PptxSceneSlide slide = new PptxSceneBuilder().Build(document, package, CancellationToken.None).Slides[0];
+        PptxSceneSlide slide = context.SceneSlide;
         PptxSceneNode node = slide.SlideNodes.First(candidate => candidate.Kind == PptxSceneNodeKind.Table);
         MethodInfo toBounds = typeof(PptxRenderer).GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
             .First(method => method.Name == "ToShapeBounds");
@@ -2003,25 +2003,8 @@ internal static partial class OoxLimitsTests
         return (package, new PptxReader().Read(package, CancellationToken.None));
     }
 
-    private static PptxRenderContext W02Context(PptxDocument document, OoxPackage package)
-    {
-        // Supply declared optional defaults rather than pinning the private arity.
-        MethodInfo tryLoad = typeof(PptxRenderer).GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
-            .Where(method => method.Name == "TryLoadRenderContext" && method.GetParameters().Length >= 6)
-            .OrderBy(method => method.GetParameters().Length)
-            .First();
-        object?[] args = [document, package, 0, new Dictionary<string, PdfImageXObject?>(), null, CancellationToken.None];
-        args = [.. args, .. tryLoad.GetParameters().Skip(args.Length).Select(parameter => parameter.DefaultValue)];
-
-        try
-        {
-            return (PptxRenderContext)tryLoad.Invoke(null, args)!;
-        }
-        catch (TargetInvocationException ex)
-        {
-            throw ex.InnerException ?? ex;
-        }
-    }
+    private static PptxRenderContext W02Context(PptxDocument document, OoxPackage package) =>
+        TestAssert.NotNull(PptxRenderer.TryLoadTextInspectionContext(document, package, 0));
 
     private static object ReadSceneShapeTextSpansReflect(PptxRenderContext context, bool includeMasterNodes)
     {
