@@ -487,7 +487,8 @@ internal sealed partial class DocxReader
                 XElement equation = source.Element;
                 if (!IsEquationPayload(equation))
                 {
-                    AddSourceContainerChild(equation, source.Revision, source.RemoveDeletedText);
+                    var inlineSource = IsDisplayMathRun(equation) ? AsParagraphBreakRun(equation) : equation;
+                    AddSourceContainerChild(inlineSource, source.Revision, source.RemoveDeletedText);
                     continue;
                 }
                 equationRevision = source.Revision;
@@ -536,8 +537,10 @@ internal sealed partial class DocxReader
                 inlineItems!.Add(new DocxInlineEquation(equations[^1]));
                 RecordComplexFieldResult();
                 if (trailingBreak is not null)
-                    AddSourceContainerChild(new XElement(WordprocessingNamespace + "r", trailingBreak.Elements()), source.Revision, false);
+                    AddSourceContainerChild(AsParagraphBreakRun(trailingBreak), source.Revision, false);
             }
+
+            static XElement AsParagraphBreakRun(XElement run) => new(WordprocessingNamespace + "r", run.Elements());
 
             DocxTextRun ReadMathRun(XElement run, string text)
             {

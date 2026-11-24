@@ -11,20 +11,25 @@ internal sealed partial class DocxReader
          DocxSourceXml.IsRevisionContainer(owner) && owner.Parent?.Name == MathNamespace + "oMathPara");
 
     private static bool IsEquationPayload(XElement element) =>
-        element.Name == MathNamespace + "oMath" || IsDisplayMathRun(element);
+        element.Name == MathNamespace + "oMath" || IsDisplayMathRun(element) && !IsDisplayMathLineBreakRun(element);
 
     private static XElement? FindTrailingDisplayMathBreak(XElement equation)
     {
-        if (equation.Elements().LastOrDefault() is not { } run || run.Name != MathNamespace + "r" ||
+        var run = equation.Elements().LastOrDefault();
+        return IsDisplayMathLineBreakRun(run) ? run : null;
+    }
+
+    private static bool IsDisplayMathLineBreakRun(XElement? run)
+    {
+        if (run is null || run.Name != MathNamespace + "r" ||
             run.Element(WordprocessingNamespace + "br") is not { } lineBreak ||
             run.Elements().Any(child => child != lineBreak && child.Name != WordprocessingNamespace + "rPr") ||
-            run.Nodes().OfType<XText>().Any(text => !string.IsNullOrWhiteSpace(text.Value))) return null;
+            run.Nodes().OfType<XText>().Any(text => !string.IsNullOrWhiteSpace(text.Value))) return false;
 
         return !lineBreak.HasElements && string.IsNullOrWhiteSpace(lineBreak.Value) &&
             lineBreak.Attributes().All(attribute => attribute.IsNamespaceDeclaration ||
                 attribute.Name == WordprocessingNamespace + "type" && attribute.Value == "textWrapping" ||
-                attribute.Name == WordprocessingNamespace + "clear" && attribute.Value == "none")
-            ? run : null;
+                attribute.Name == WordprocessingNamespace + "clear" && attribute.Value == "none");
     }
 
     private static IEnumerable<(XElement Element, DocxRevisionInfo? Revision, bool RemoveDeletedText)> EnumerateMathParagraphSources(
@@ -45,7 +50,7 @@ internal sealed partial class DocxReader
             token.ThrowIfCancellationRequested();
             // Math and Wordprocessing runs keep their authored order
             // alongside the displayed equations and range boundaries.
-            if (IsEquationPayload(source.Element) ||
+            if (source.Element.Name == MathNamespace + "oMath" || IsDisplayMathRun(source.Element) ||
                 source.Element.Name == WordprocessingNamespace + "r" ||
                 source.Element.Name == WordprocessingNamespace + "bookmarkStart" ||
                 source.Element.Name == WordprocessingNamespace + "bookmarkEnd" ||
