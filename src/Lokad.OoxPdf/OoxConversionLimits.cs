@@ -30,8 +30,10 @@ public sealed class OoxConversionLimits
 
     /// <summary>
     /// Maximum page/group content retained in the staging store (default 64 MiB).
-    /// Additional content spills to a delete-on-close file. This bounds the
-    /// store's byte payload, not the complete conversion working set.
+    /// Additional content requires temporary storage. File conversion supplies
+    /// filesystem storage by default. Stream conversion requires a provider in
+    /// <see cref="OoxPdfOptions.TemporaryStorage"/> to spill beyond this window.
+    /// This bounds the staging store's byte payload.
     /// </summary>
     public long MaxResidentPageContentBytesPerConversion { get; init; } = 67_108_864;
 
