@@ -13,10 +13,18 @@ internal sealed partial class DocxReader
     private static bool IsEquationPayload(XElement element) =>
         element.Name == MathNamespace + "oMath" || IsDisplayMathRun(element) && !IsDisplayMathLineBreakRun(element);
 
-    private static XElement? FindTrailingDisplayMathBreak(XElement equation)
+    private static XElement? FindFirstTrailingDisplayMathBreak(XElement equation, CancellationToken cancellationToken)
     {
-        var run = equation.Elements().LastOrDefault();
-        return IsDisplayMathLineBreakRun(run) ? run : null;
+        if (equation.LastNode is XElement last && !IsDisplayMathLineBreakRun(last)) return null;
+
+        XElement? first = null;
+        foreach (XElement run in equation.Elements())
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (IsDisplayMathLineBreakRun(run)) first ??= run;
+            else first = null;
+        }
+        return first;
     }
 
     private static bool IsDisplayMathLineBreakRun(XElement? run)

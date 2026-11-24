@@ -493,11 +493,10 @@ internal sealed partial class DocxReader
                 }
                 equationRevision = source.Revision;
                 hasMathRunRevisions = false;
-                // A terminal text-wrapping break in display math owns the
-                // boundary between paragraph lines. The preceding operands
-                // keep their original source and equation owner.
-                XElement? trailingBreak = display && !source.RemoveDeletedText
-                    ? FindTrailingDisplayMathBreak(equation) : null;
+                // Trailing text-wrapping breaks belong to the paragraph lines.
+                // The preceding operands keep their original equation owner.
+                XElement? firstTrailingBreak = display && !source.RemoveDeletedText
+                    ? FindFirstTrailingDisplayMathBreak(equation, cancellationToken) : null;
                 var content = DocxMathParser.Read(equation, ReadMathRun, cancellationToken,
                     wrapper => IsIncludedRevisionContainer(wrapper, markupMode), preserveDeletedStructure: markupMode == OoxPdfDocxMarkupMode.Final,
                     readBookmark: source.RemoveDeletedText ? null : bookmark =>
@@ -517,7 +516,7 @@ internal sealed partial class DocxReader
                             inlineItems!.Count, inlineItems.Count + 1, hyperlinkSpans, relationships, mathContent: true),
                     authoredStory: paragraph.Annotation<DocxSourceXml.StoryOrigin>()?.Story,
                     equationHasDeletionOwner: source.RemoveDeletedText || equationRevision?.Kind == DocxRevisionKind.Deletion,
-                    trailingBreakRun: trailingBreak);
+                    firstTrailingBreakRun: firstTrailingBreak);
                 if (source.RemoveDeletedText)
                 {
                     var deletedEquation = new DocxEquation(content, runs.Count, sourceRunIndex, display, null, null);
@@ -536,8 +535,14 @@ internal sealed partial class DocxReader
                 });
                 inlineItems!.Add(new DocxInlineEquation(equations[^1]));
                 RecordComplexFieldResult();
-                if (trailingBreak is not null)
-                    AddSourceContainerChild(AsParagraphBreakRun(trailingBreak), source.Revision, false);
+                if (firstTrailingBreak is not null)
+                {
+                    foreach (var run in firstTrailingBreak.ElementsAfterSelf().Prepend(firstTrailingBreak))
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        AddSourceContainerChild(AsParagraphBreakRun(run), source.Revision, false);
+                    }
+                }
             }
 
             static XElement AsParagraphBreakRun(XElement run) => new(WordprocessingNamespace + "r", run.Elements());

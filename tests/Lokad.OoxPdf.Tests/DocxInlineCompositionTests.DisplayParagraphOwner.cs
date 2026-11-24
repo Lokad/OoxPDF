@@ -77,15 +77,19 @@ internal static partial class DocxInlineCompositionTests
     {
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
         {
-            DocxDocument Read(bool insideEquation, bool mathRun, string? type = null) => ReadMutation(
+            DocxDocument Read(bool insideEquation, bool mathRun, string? type = null, int breakCount = 1) => ReadMutation(
                 "CompositionProbes/math-explicit-display-same-group", mode, false, false, (xml, w, m) =>
                 {
                     var group = xml.Descendants(m + "oMathPara").Single();
                     var equations = group.Elements(m + "oMath").ToArray();
-                    var lineBreak = new XElement(w + "br", type is null ? null : new XAttribute(w + "type", type));
-                    var run = new XElement((mathRun ? m : w) + "r", lineBreak);
-                    if (insideEquation) equations[0].Add(run);
-                    else equations[1].AddBeforeSelf(run);
+                    for (int index = 0; index < breakCount; index++)
+                    {
+                        string? breakType = index == 0 ? type : "textWrapping";
+                        var lineBreak = new XElement(w + "br", breakType is null ? null : new XAttribute(w + "type", breakType));
+                        var run = new XElement((mathRun ? m : w) + "r", lineBreak);
+                        if (insideEquation) equations[0].Add(run);
+                        else equations[1].AddBeforeSelf(run);
+                    }
                 });
 
             var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true), mode,
@@ -98,14 +102,16 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.Equal(2, expected.Select(show => show.Y).Distinct().Count());
             foreach ((bool insideEquation, string? type) in new[] { (true, (string?)null), (true, "textWrapping"), (false, null) })
             {
-                var diagnostics = new List<OoxPdfDiagnostic>();
-                var wrapped = renderer.RenderPagesAsync(Read(insideEquation, mathRun: true, type: type), diagnostics.Add, default)
-                    .ToBlockingEnumerable().Single();
-                TestAssert.True(expected.SequenceEqual(MathShows(wrapped)),
-                    "A math-run line break must preserve both formulas at their ordinary line-break positions.");
-                TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
-                    "The display break must not discard its equation.");
+                CheckMathBreaks(Read(insideEquation, mathRun: true, type), expected);
             }
+
+            var betweenTwo = renderer.RenderPagesAsync(Read(false, false, breakCount: 2), null, default)
+                .ToBlockingEnumerable().Single();
+            var expectedTwo = MathShows(betweenTwo);
+            TestAssert.Equal("α+β=γδ+ε=ζ", string.Concat(expectedTwo.Select(show => show.Text)).Normalize(NormalizationForm.FormKC));
+            TestAssert.True(expectedTwo[0].Y == expected[0].Y && expectedTwo[^1].Y > expected[^1].Y,
+                "The second authored break must retain an additional line of space.");
+            CheckMathBreaks(Read(insideEquation: true, mathRun: true, breakCount: 2), expectedTwo);
 
             var unsupported = new List<OoxPdfDiagnostic>();
             var pageBreak = renderer.RenderPagesAsync(Read(insideEquation: true, mathRun: true, type: "page"), unsupported.Add, default)
@@ -113,6 +119,16 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.Equal("δ+ε=ζ", string.Concat(MathShows(pageBreak).Select(show => show.Text)).Normalize(NormalizationForm.FormKC));
             TestAssert.True(unsupported.Any(d => d.Id == "DOCX_UNSUPPORTED_EQUATION"),
                 "An in-equation page break keeps its diagnosed fallback.");
+
+            void CheckMathBreaks(DocxDocument document, (string Text, double X, double Y, double Size)[] control)
+            {
+                var diagnostics = new List<OoxPdfDiagnostic>();
+                var page = renderer.RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().Single();
+                TestAssert.True(control.SequenceEqual(MathShows(page)),
+                    "Math-run line breaks must preserve both formulas at their ordinary line-break positions.");
+                TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                    "The display breaks must preserve their equation.");
+            }
         }
     }
 }
