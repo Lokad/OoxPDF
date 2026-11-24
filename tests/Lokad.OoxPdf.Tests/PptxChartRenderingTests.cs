@@ -3781,12 +3781,18 @@ internal static class PptxChartRenderingTests
                   </a:gradFill>
                 </c:spPr>
                 <c:lineChart>
-                  <c:ser><c:val><c:numLit><c:pt idx="0"><c:v>1</c:v></c:pt></c:numLit></c:val></c:ser>
+                  <c:ser>
+                    <c:dLbls><c:dLbl><c:idx val="0"/>
+                      <c:spPr><a:blipFill><a:blip/><a:stretch><a:fillRect/></a:stretch></a:blipFill></c:spPr>
+                    </c:dLbl></c:dLbls>
+                    <c:val><c:numLit><c:pt idx="0"><c:v>1</c:v></c:pt></c:numLit></c:val>
+                  </c:ser>
                 </c:lineChart>
               </c:plotArea></c:chart>
             </c:chartSpace>
             """;
         (PptxDocument document, OoxPackage package) = PptxTests.BuildSingleChartPackage(chartXml);
+        using var ownedPackage = package;
         PptxSceneSlide sceneSlide = new PptxSceneBuilder().Build(document, package, CancellationToken.None).Slides[0];
         PptxSceneChart chart = sceneSlide.SlideNodes[0].Chart
             ?? throw new InvalidOperationException("Expected chart scene node.");
@@ -3794,21 +3800,10 @@ internal static class PptxChartRenderingTests
         TestAssert.True(chart.ChartAreaStyle.GradientFill?.HasUnsupportedGradient == true, "Expected chart-area variable-alpha gradient state to remain scene-owned.");
         TestAssert.True(chart.PlotAreaStyle.GradientFill?.HasUnsupportedGradient == true, "Expected plot-area variable-alpha gradient state to remain scene-owned.");
 
-        var diagnostics = new List<OoxPdfDiagnostic>();
-        XDocument slideXmlWithoutGradients = XDocument.Parse("""
-            <?xml version="1.0" encoding="UTF-8"?>
-            <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
-                   xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-              <p:cSld><p:spTree/></p:cSld>
-            </p:sld>
-            """);
-        System.Reflection.MethodInfo emitDiagnostics = typeof(PptxRenderer).GetMethod(
-            "EmitUnsupportedFeatureDiagnostics",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected unsupported feature diagnostic emitter.");
-        Action<OoxPdfDiagnostic> sink = diagnostics.Add;
-        emitDiagnostics.Invoke(null, [sceneSlide, slideXmlWithoutGradients, "/ppt/slides/slide1.xml", 1, sink, new HashSet<string>(StringComparer.Ordinal), null]);
-
-        TestAssert.True(diagnostics.Any(d => d.Id == "PPTX_UNSUPPORTED_GRADIENT_FILL"), "Unsupported chart shape-style gradients should be diagnostic-covered from scene-owned gradient provenance.");
+        var label = chart.Plots.Single().Series.Single().DataLabels.Overrides.Single();
+        TestAssert.Equal(0, label.Index);
+        TestAssert.True(label.ShapeStyle.PictureFill.HasPicture, "The second warning belongs to the point label override.");
+        CheckChartFillDiagnostics(document, package, "PPTX_UNSUPPORTED_GRADIENT_FILL", "PPTX_UNSUPPORTED_PICTURE_FILL");
     }
 
     public static void PptxUnsupportedPictureFillDiagnosticsUseSceneChartShapeStylePictureFill()
@@ -3839,6 +3834,7 @@ internal static class PptxChartRenderingTests
             </c:chartSpace>
             """;
         (PptxDocument document, OoxPackage package) = PptxTests.BuildSingleChartPackage(chartXml);
+        using var ownedPackage = package;
         PptxSceneSlide sceneSlide = new PptxSceneBuilder().Build(document, package, CancellationToken.None).Slides[0];
         PptxSceneChart chart = sceneSlide.SlideNodes[0].Chart
             ?? throw new InvalidOperationException("Expected chart scene node.");
@@ -3846,21 +3842,18 @@ internal static class PptxChartRenderingTests
         TestAssert.True(chart.ChartAreaStyle.PictureFill.HasPicture, "Expected chart-area picture-fill state to remain scene-owned.");
         TestAssert.True(chart.PlotAreaStyle.PictureFill.HasPicture, "Expected plot-area picture-fill state to remain scene-owned.");
 
-        var diagnostics = new List<OoxPdfDiagnostic>();
-        XDocument slideXmlWithoutPictureFills = XDocument.Parse("""
-            <?xml version="1.0" encoding="UTF-8"?>
-            <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
-                   xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-              <p:cSld><p:spTree/></p:cSld>
-            </p:sld>
-            """);
-        System.Reflection.MethodInfo emitDiagnostics = typeof(PptxRenderer).GetMethod(
-            "EmitUnsupportedFeatureDiagnostics",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected unsupported feature diagnostic emitter.");
-        Action<OoxPdfDiagnostic> sink = diagnostics.Add;
-        emitDiagnostics.Invoke(null, [sceneSlide, slideXmlWithoutPictureFills, "/ppt/slides/slide1.xml", 1, sink, new HashSet<string>(StringComparer.Ordinal), null]);
+        CheckChartFillDiagnostics(document, package, "PPTX_UNSUPPORTED_PICTURE_FILL");
+    }
 
-        TestAssert.True(diagnostics.Any(d => d.Id == "PPTX_UNSUPPORTED_PICTURE_FILL"), "Unsupported chart shape-style picture fills should be diagnostic-covered from scene-owned picture-fill provenance.");
+    private static void CheckChartFillDiagnostics(PptxDocument document, OoxPackage package, params string[] expected)
+    {
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        var renderer = new PptxRenderer(new PortableRenderingTests.PinnedResolver());
+        TestAssert.Equal(1, renderer.RenderPagesAsync(document, package, diagnostics.Add, default).ToBlockingEnumerable().Count());
+        var warnings = diagnostics.Where(item => item.Id is "PPTX_UNSUPPORTED_GRADIENT_FILL" or "PPTX_UNSUPPORTED_PICTURE_FILL");
+        var actual = warnings.Select(item => (item.Id, item.PartName, item.SlideIndex, item.Severity));
+        TestAssert.True(actual.SequenceEqual(expected.Select(id => (id, (string?)"/ppt/slides/slide1.xml", (int?)1, OoxPdfSeverity.Warning))),
+            "Both warning kinds must retain their order and slide owner.");
     }
 
     public static void PptxUnsupportedTextDiagnosticsUseSceneChartTextBodyProperties()

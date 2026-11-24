@@ -148,11 +148,20 @@ internal sealed partial class PptxRenderer
             foreach (PptxSceneNode node in EnumerateRenderedSceneNodes(nodes, renderPlaceholders))
             {
                 var shape = node.Shape;
-                gradient = gradient || shape is { GradientFill.HasUnsupportedGradient: true } || HasUnsupportedChartGradientFill(node.Chart);
+                gradient = gradient || shape is { GradientFill.HasUnsupportedGradient: true };
                 pattern = pattern || shape is { PatternFill.HasUnsupportedPattern: true };
                 orientation = orientation || HasUnsupportedSceneTextOrientation(node);
                 overflow = overflow || HasUnsupportedSceneTextVerticalOverflow(node, colorMap, renderPlaceholders, textSpanMemo);
-                pictureFill = pictureFill || HasUnsupportedPictureFill(node);
+                pictureFill = pictureFill || HasUnsupportedShapePictureFill(shape);
+                if ((!gradient || !pictureFill) && node.Chart is { } chart)
+                {
+                    foreach (PptxSceneChartShapeStyle style in EnumerateChartShapeStyles(chart))
+                    {
+                        gradient |= style.GradientFill?.HasUnsupportedGradient == true;
+                        pictureFill |= style.PictureFill.HasPicture;
+                        if (gradient && pictureFill) break;
+                    }
+                }
                 tile = tile || node.Picture?.HasTile == true || shape?.PictureFill.HasTile == true;
                 transparency = transparency || shape is { HasUnsupportedTransparency: true };
                 effect = effect || HasUnsupportedEffect(node);
@@ -185,46 +194,37 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static bool HasUnsupportedPictureFill(PptxSceneNode node)
+    private static bool HasUnsupportedShapePictureFill(PptxSceneShape? shape)
     {
-        return (node.Shape is { PictureFill.HasPicture: true } shape &&
+        return shape is { PictureFill.HasPicture: true } &&
             (shape.CustomGeometry.HasGeometry
                 ? !TryResolveCustomPictureFillPath(shape.CustomGeometry, out _)
-                : !CanRenderPictureFillPreset(shape.Preset))) ||
-            HasUnsupportedChartPictureFill(node.Chart);
+                : !CanRenderPictureFillPreset(shape.Preset));
     }
 
-    private static bool HasUnsupportedChartPictureFill(PptxSceneChart? chart)
+    private static IEnumerable<PptxSceneChartShapeStyle> EnumerateChartShapeStyles(PptxSceneChart chart)
     {
-        return chart is not null &&
-            (HasUnsupportedChartPictureFill(chart.ChartAreaStyle) ||
-                HasUnsupportedChartPictureFill(chart.PlotAreaStyle) ||
-                HasUnsupportedChartPictureFill(chart.Title.ShapeStyle) ||
-                HasUnsupportedChartPictureFill(chart.Legend.ShapeStyle) ||
-                chart.StylePart.Entries.Any(entry => HasUnsupportedChartPictureFill(entry.ShapeStyle)) ||
-                chart.Plots.Any(HasUnsupportedChartPictureFill));
-    }
+        yield return chart.ChartAreaStyle;
+        yield return chart.PlotAreaStyle;
+        yield return chart.Title.ShapeStyle;
+        yield return chart.Legend.ShapeStyle;
+        foreach (PptxSceneChartStyleEntry entry in chart.StylePart.Entries)
+            yield return entry.ShapeStyle;
+        foreach (PptxSceneChartPlot plot in chart.Plots)
+        {
+            foreach (PptxSceneChartShapeStyle style in EnumerateLabelStyles(plot.DataLabels))
+                yield return style;
+            foreach (PptxSceneChartSeries series in plot.Series)
+                foreach (PptxSceneChartShapeStyle style in EnumerateLabelStyles(series.DataLabels))
+                    yield return style;
+        }
 
-    private static bool HasUnsupportedChartPictureFill(PptxSceneChartPlot plot)
-    {
-        return HasUnsupportedChartPictureFill(plot.DataLabels) ||
-            plot.Series.Any(HasUnsupportedChartPictureFill);
-    }
-
-    private static bool HasUnsupportedChartPictureFill(PptxSceneChartSeries series)
-    {
-        return HasUnsupportedChartPictureFill(series.DataLabels);
-    }
-
-    private static bool HasUnsupportedChartPictureFill(PptxSceneChartDataLabels labels)
-    {
-        return HasUnsupportedChartPictureFill(labels.ShapeStyle) ||
-            labels.Overrides.Any(label => HasUnsupportedChartPictureFill(label.ShapeStyle));
-    }
-
-    private static bool HasUnsupportedChartPictureFill(PptxSceneChartShapeStyle style)
-    {
-        return style.PictureFill.HasPicture;
+        static IEnumerable<PptxSceneChartShapeStyle> EnumerateLabelStyles(PptxSceneChartDataLabels labels)
+        {
+            yield return labels.ShapeStyle;
+            foreach (PptxSceneChartDataLabelOverride label in labels.Overrides)
+                yield return label.ShapeStyle;
+        }
     }
 
     private static bool IsUnsupportedCalloutPreset(string? preset)
@@ -259,39 +259,6 @@ internal sealed partial class PptxRenderer
         }
 
         return false;
-    }
-
-    private static bool HasUnsupportedChartGradientFill(PptxSceneChart? chart)
-    {
-        return chart is not null &&
-            (HasUnsupportedChartGradientFill(chart.ChartAreaStyle) ||
-                HasUnsupportedChartGradientFill(chart.PlotAreaStyle) ||
-                HasUnsupportedChartGradientFill(chart.Title.ShapeStyle) ||
-                HasUnsupportedChartGradientFill(chart.Legend.ShapeStyle) ||
-                chart.StylePart.Entries.Any(entry => HasUnsupportedChartGradientFill(entry.ShapeStyle)) ||
-                chart.Plots.Any(HasUnsupportedChartGradientFill));
-    }
-
-    private static bool HasUnsupportedChartGradientFill(PptxSceneChartPlot plot)
-    {
-        return HasUnsupportedChartGradientFill(plot.DataLabels) ||
-            plot.Series.Any(HasUnsupportedChartGradientFill);
-    }
-
-    private static bool HasUnsupportedChartGradientFill(PptxSceneChartSeries series)
-    {
-        return HasUnsupportedChartGradientFill(series.DataLabels);
-    }
-
-    private static bool HasUnsupportedChartGradientFill(PptxSceneChartDataLabels labels)
-    {
-        return HasUnsupportedChartGradientFill(labels.ShapeStyle) ||
-            labels.Overrides.Any(label => HasUnsupportedChartGradientFill(label.ShapeStyle));
-    }
-
-    private static bool HasUnsupportedChartGradientFill(PptxSceneChartShapeStyle style)
-    {
-        return style.GradientFill?.HasUnsupportedGradient == true;
     }
 
     private static bool IsUnsupportedNonShapeGradientFill(XElement gradientFill)
