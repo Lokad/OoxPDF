@@ -457,11 +457,6 @@ internal sealed partial class DocxRenderer
                     continue;
                 }
 
-                if (right <= x)
-                {
-                    continue;
-                }
-
                 DocxTableBorderBoundary[] boundaries = mergedBoundaries.SliceGrouped(x, right, cancellationToken);
                 RenderBorderJunctions(boundaries, current.Y - DocxTableBorderGeometry.ResolveVisibleWidth(horizontal) / 2d, horizontal, graphics, emittedJunctions);
             }

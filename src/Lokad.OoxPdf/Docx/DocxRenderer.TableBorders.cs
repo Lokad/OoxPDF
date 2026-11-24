@@ -111,7 +111,8 @@ internal sealed partial class DocxRenderer
 
             for (int k = 0; k < plan.OverlapCounts[cellIndex]; k++, pairIndex++)
             {
-                RenderSharedHorizontalTableBorderSegment(plan.Overlaps[pairIndex].Current, plan.Overlaps[pairIndex].Next, graphics);
+                var (current, next, x, right) = plan.Overlaps[pairIndex];
+                RenderSharedHorizontalTableBorderSegment(current, next, x, right, graphics);
             }
         }
     }
@@ -119,6 +120,8 @@ internal sealed partial class DocxRenderer
     private static void RenderSharedHorizontalTableBorderSegment(
         DocxTableCellLayout cellLayout,
         DocxTableCellLayout nextRowCell,
+        double x,
+        double right,
         PdfGraphicsBuilder graphics)
     {
         DocxTableCellBorder? border = ResolveSharedHorizontalBorder(cellLayout, nextRowCell);
@@ -130,13 +133,6 @@ internal sealed partial class DocxRenderer
         RgbColor color = ReadColor(border.Color);
         graphics.SetFillRgb(color.Red, color.Green, color.Blue);
         double width = DocxTableBorderGeometry.ResolveVisibleWidth(border);
-        double x = Math.Max(cellLayout.X, nextRowCell.X);
-        double right = Math.Min(cellLayout.X + cellLayout.Width, nextRowCell.X + nextRowCell.Width);
-        if (right <= x)
-        {
-            return;
-        }
-
         double leftBorderWidth = ResolveLeftVerticalBorderWidth(cellLayout);
         double segmentX = Math.Min(right, x + leftBorderWidth / 2d);
         if (right <= segmentX)
@@ -160,11 +156,6 @@ internal sealed partial class DocxRenderer
         return DocxTableBorderGeometry.IsSuppressed(bottom) || DocxTableBorderGeometry.IsSuppressed(nextTop)
             ? null
             : DocxTableBorderGeometry.SelectStronger(bottom, nextTop);
-    }
-
-    private static double HorizontalOverlap(DocxTableCellLayout first, DocxTableCellLayout second)
-    {
-        return Math.Min(first.X + first.Width, second.X + second.Width) - Math.Max(first.X, second.X);
     }
 
     private static void RenderHorizontalTableCellBorder(DocxTableCellLayout cellLayout, string edge, PdfGraphicsBuilder graphics)
