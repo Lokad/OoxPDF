@@ -204,12 +204,24 @@ internal static class PdfTransparencyGroupTests
     private static async Task TransparencyGroupsSharedReferencesStageAndEmitOnceAsync()
     {
         var leaf = new PdfTransparencyGroup(Bounds, "0 g\n", [], [], []);
-        PdfPage[] pages = [GroupPage(leaf), GroupPage(leaf)];
+        PdfShadingPattern pattern = StrokePattern();
+        var group = new PdfTransparencyGroup(Bounds, "/Gs1 gs\n/Sh1 sh\n/Pattern cs /Ps1 scn\n/Child Do\n",
+            [new("Gs1", .5, .5)], [new("Sh1", pattern.Shading)], [new("Child", leaf)], [new("Ps1", pattern)]);
+        PdfPage[] pages = [GroupPage(group), GroupPage(group)];
         await using PdfStagedDocument staged = await PdfDocumentWriter.ProduceStagedPagesAsync(AsyncEnumerable.ToAsyncEnumerable<PdfPage>(pages), new OoxConversionLimits(), null, CancellationToken.None, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath()));
-        TestAssert.Equal(1, staged.GroupEntries.Count);
+        TestAssert.Equal(2, staged.GroupEntries.Count);
+        PdfTransparencyGroup descriptor = staged.Pages[0].Groups.Single().Group;
+        TestAssert.True(ReferenceEquals(descriptor, staged.Pages[1].Groups.Single().Group), "Both pages must reuse the staged Form.");
+        TestAssert.True(ReferenceEquals(group.ExtGStates, descriptor.ExtGStates), "Staging must reuse the graphics-state snapshot.");
+        TestAssert.True(ReferenceEquals(group.Shadings, descriptor.Shadings), "Staging must reuse the shading snapshot.");
+        TestAssert.True(ReferenceEquals(group.ShadingPatterns, descriptor.ShadingPatterns), "Staging must reuse the shading-pattern snapshot.");
+        PdfTransparencyGroupResource child = descriptor.Groups.Single();
+        TestAssert.Equal("Child", child.ResourceName);
+        TestAssert.True(staged.GroupEntries.ContainsKey(child.Group), "The child binding must point to a staged Form.");
+        TestAssert.Equal(string.Empty, child.Group.Content);
         using var output = new MemoryStream();
         await PdfDocumentWriter.EmitStagedAsync(output, staged, CancellationToken.None);
-        TestAssert.Equal(1, Count(Encoding.ASCII.GetString(output.ToArray()), "/Subtype /Form"));
+        TestAssert.Equal(2, Count(Encoding.ASCII.GetString(output.ToArray()), "/Subtype /Form"));
     }
 
     public static void SharedTransparencyGroupsRetainFullInvocationDepthLimit()

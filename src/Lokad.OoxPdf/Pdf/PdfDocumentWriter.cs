@@ -124,7 +124,7 @@ internal sealed class PdfDocumentWriter
                 staging.BeginPage(cancellationToken);
                 await AppendEncodedPageContentAsync(staging, group.Content, cancellationToken).ConfigureAwait(false);
                 await staging.EndPageAsync(cancellationToken).ConfigureAwait(false);
-                var descriptor = new PdfTransparencyGroup(group.Bounds, string.Empty, group.ExtGStates, group.Shadings, children, group.ShadingPatterns);
+                var descriptor = new PdfTransparencyGroup(group, stagedChildren: children);
                 stagedGroups.Add(group, descriptor);
                 groupEntries.Add(descriptor, entry);
                 return descriptor;
