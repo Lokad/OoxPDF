@@ -37,8 +37,24 @@ internal sealed partial class PptxSceneBuilder
         double angleDegrees = OoxXml.ParseOptionalLong(linear, "ang", 0) / 60000d;
         bool hasUnsupportedGradient =
             stops.Length != rawStops.Length ||
-            !PptxColorResolver.HasUniformGradientAlpha(stops, static stop => stop.Alpha);
+            !PptxColorResolver.TryGetUniformGradientAlpha(stops, static stop => stop.Alpha, out _);
         return new PptxSceneGradientFill(true, hasUnsupportedGradient, angleDegrees, stops);
+    }
+
+    internal static bool HasSupportedAuthoredGradientFill(XElement gradientFill)
+    {
+        XName? ownerName = gradientFill.Parent?.Name;
+        if ((ownerName != PresentationNamespace + "spPr" && ownerName != PresentationNamespace + "bgPr") ||
+            gradientFill.Element(DrawingNamespace + "lin") is null ||
+            gradientFill.Element(DrawingNamespace + "gsLst") is not { } stopList)
+        {
+            return false;
+        }
+
+        XElement[] stops = stopList.Elements(DrawingNamespace + "gs").ToArray();
+        return stops.Length >= 2 &&
+            stops.All(stop => stop.Elements().Any(PptxColorResolver.IsDrawingColorElement)) &&
+            PptxColorResolver.HasSupportedGradientStopAlpha(stops);
     }
 
     private static bool TryReadGradientStop(XElement gradientStop, PptxTheme theme, PptxColorMap colorMap, out PptxSceneGradientStop stop)

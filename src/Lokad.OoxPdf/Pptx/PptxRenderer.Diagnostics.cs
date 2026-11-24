@@ -124,8 +124,7 @@ internal sealed partial class PptxRenderer
             Emit("PPTX_UNSUPPORTED_TEXT_ORIENTATION", "vertical text");
         if (VisibleSlideElements(DrawingNamespace + "bodyPr").Any(IsUnsupportedNonShapeTextVerticalOverflow))
             EmitTextOverflow();
-        if (slideXml.Descendants().Where(PptxColorResolver.IsDrawingColorElement)
-            .Where(PptxSceneBuilder.IsVisibleDrawingContent).Any(IsUnsupportedNonShapeAlpha))
+        if (PptxSceneBuilder.HasUnsupportedAlpha(slideXml, IsVisibleNonShapeColor))
             Emit("PPTX_UNSUPPORTED_TRANSPARENCY", "transparency");
 
         IEnumerable<XElement> VisibleSlideElements(XName name) =>
@@ -252,28 +251,6 @@ internal sealed partial class PptxRenderer
         return false;
     }
 
-    private static bool IsUnsupportedGradientFill(XElement gradientFill)
-    {
-        XName? ownerName = gradientFill.Parent?.Name;
-        if (ownerName != PresentationNamespace + "spPr" && ownerName != PresentationNamespace + "bgPr")
-        {
-            return true;
-        }
-
-        if (gradientFill.Element(DrawingNamespace + "lin") is null)
-        {
-            return true;
-        }
-
-        XElement[] stops = gradientFill
-            .Element(DrawingNamespace + "gsLst")
-            ?.Elements(DrawingNamespace + "gs")
-            .ToArray() ?? [];
-        return stops.Length < 2 ||
-            stops.Any(stop => stop.Elements().FirstOrDefault(PptxColorResolver.IsDrawingColorElement) is null) ||
-            !PptxColorResolver.HasSupportedGradientStopAlpha(stops);
-    }
-
     private static bool HasUnsupportedChartGradientFill(PptxSceneChart? chart)
     {
         return chart is not null &&
@@ -310,7 +287,7 @@ internal sealed partial class PptxRenderer
     private static bool IsUnsupportedNonShapeGradientFill(XElement gradientFill)
     {
         return gradientFill.Parent?.Name != PresentationNamespace + "spPr" &&
-            IsUnsupportedGradientFill(gradientFill);
+            !PptxSceneBuilder.HasSupportedAuthoredGradientFill(gradientFill);
     }
 
     private static bool HasUnsupportedEffect(PptxSceneNode node)
@@ -511,15 +488,9 @@ internal sealed partial class PptxRenderer
         return false;
     }
 
-    private static bool IsUnsupportedNonShapeAlpha(XElement color)
-    {
-        return !IsShapeAlpha() && PptxSceneBuilder.IsUnsupportedColorAlpha(color);
-
-        bool IsShapeAlpha()
-        {
-            return color.Ancestors().Any(ancestor =>
-                ancestor.Name == PresentationNamespace + "sp" ||
-                ancestor.Name == PresentationNamespace + "cxnSp");
-        }
-    }
+    private static bool IsVisibleNonShapeColor(XElement color) =>
+        PptxSceneBuilder.IsVisibleDrawingContent(color) &&
+        !color.Ancestors().Any(ancestor =>
+            ancestor.Name == PresentationNamespace + "sp" ||
+            ancestor.Name == PresentationNamespace + "cxnSp");
 }

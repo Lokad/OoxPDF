@@ -76,30 +76,41 @@ internal sealed partial class PptxSceneBuilder
             ReadLineEnd(shapeProperties, "tailEnd"));
     }
 
-    internal static bool HasUnsupportedAlpha(XElement? container)
+    internal static bool HasUnsupportedAlpha(XContainer? container, Func<XElement, bool>? includeColor = null)
     {
-        return container?.Descendants().Where(PptxColorResolver.IsDrawingColorElement).Any(IsUnsupportedColorAlpha) == true;
+        XElement? lastSupportedGradient = null;
+        foreach (XElement color in container?.Descendants() ?? [])
+        {
+            if (PptxColorResolver.IsDrawingColorElement(color) &&
+                includeColor?.Invoke(color) != false &&
+                IsUnsupportedColorAlpha(color, ref lastSupportedGradient))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
-    internal static bool IsUnsupportedColorAlpha(XElement color)
+    private static bool IsUnsupportedColorAlpha(XElement color, ref XElement? lastSupportedGradient)
     {
         if (PptxColorResolver.ReadAlpha(color) >= 1d)
         {
             return false;
         }
 
-        XElement? fill = color?.Parent;
+        XElement? fill = color.Parent;
         XElement? owner = fill?.Parent;
         XElement? lineOwner = owner?.Parent;
-        XElement? gradientStopList = fill?.Parent;
-        XElement? gradientFill = gradientStopList?.Parent;
-        XElement? gradientOwner = gradientFill?.Parent;
-        bool supportedUniformGradientFill = fill?.Name == DrawingNamespace + "gs" &&
-            gradientStopList?.Name == DrawingNamespace + "gsLst" &&
-            gradientFill?.Name == DrawingNamespace + "gradFill" &&
-            gradientOwner?.Name is { } ownerName &&
-            (ownerName == PresentationNamespace + "spPr" || ownerName == PresentationNamespace + "bgPr") &&
-            IsSupportedAlphaGradientFill();
+        if (fill?.Name == DrawingNamespace + "gs" &&
+            owner?.Name == DrawingNamespace + "gsLst" &&
+            lineOwner is { } gradient && gradient.Name == DrawingNamespace + "gradFill" &&
+            (ReferenceEquals(gradient, lastSupportedGradient) || HasSupportedAuthoredGradientFill(gradient)))
+        {
+            lastSupportedGradient = gradient;
+            return false;
+        }
+
         bool supportedShapeFill = fill?.Name == DrawingNamespace + "solidFill" &&
             owner?.Name == PresentationNamespace + "spPr";
         bool supportedBackgroundFill = fill?.Name == DrawingNamespace + "solidFill" &&
@@ -120,23 +131,7 @@ internal sealed partial class PptxSceneBuilder
             owner?.Name == DrawingNamespace + "effectLst";
         bool supportedGlow = fill?.Name == DrawingNamespace + "glow" &&
             owner?.Name == DrawingNamespace + "effectLst";
-        return !supportedUniformGradientFill && !supportedShapeFill && !supportedBackgroundFill && !supportedShapeLine && !supportedTextFill && !supportedTableCellFill && !supportedTableBorder && !supportedOuterShadow && !supportedGlow;
-
-        bool IsSupportedAlphaGradientFill()
-        {
-            if (gradientFill.Element(DrawingNamespace + "gsLst") is not { } alphaStopList ||
-                gradientFill.Element(DrawingNamespace + "lin") is not { })
-            {
-                return false;
-            }
-
-            XElement[] stops = alphaStopList
-                .Elements(DrawingNamespace + "gs")
-                .ToArray();
-            return stops.Length >= 2 &&
-                stops.All(stop => stop.Elements().FirstOrDefault(PptxColorResolver.IsDrawingColorElement) is not null) &&
-                PptxColorResolver.HasSupportedGradientStopAlpha(stops);
-        }
+        return !supportedShapeFill && !supportedBackgroundFill && !supportedShapeLine && !supportedTextFill && !supportedTableCellFill && !supportedTableBorder && !supportedOuterShadow && !supportedGlow;
     }
 
     private static string ReadPresetGeometry(XElement? shapeProperties) =>

@@ -95,6 +95,17 @@ internal static partial class PptxAuthoredColorTests
         var stops = new[] { quarter, "<a:alpha val=\"25%\"/>" }.Select(alpha => XElement.Parse(
             $"<a:gs xmlns:a=\"{a}\"><a:srgbClr val=\"FF0000\">{alpha}</a:srgbClr></a:gs>")).ToArray();
         TestAssert.True(PptxColorResolver.HasSupportedGradientStopAlpha(stops), "Equivalent effective stop alpha shares the existing uniform-gradient rule.");
+        XNamespace p = OoxNamespaces.PresentationNamespace;
+        XElement ReadGradient(bool uniform) => XElement.Parse(gradient(uniform).Replace("<a:gradFill>", $"<a:gradFill xmlns:a=\"{a}\">", StringComparison.Ordinal));
+        var mixedBackground = new XElement(p + "bgPr", ReadGradient(false));
+        var owners = new XElement(p + "cSld",
+            new XElement(p + "spPr", ReadGradient(true)),
+            new XElement(p + "bgPr", ReadGradient(true)),
+            mixedBackground);
+        TestAssert.Equal(false, PptxSceneBuilder.HasUnsupportedAlpha(owners,
+            color => !color.Ancestors().Contains(mixedBackground)));
+        TestAssert.True(PptxSceneBuilder.HasUnsupportedAlpha(owners),
+            "A following mixed background cannot inherit a preceding gradient's support.");
         var unsupported = XElement.Parse($"<p:spPr xmlns:p=\"{OoxNamespaces.PresentationNamespace}\" xmlns:a=\"{a}\"><a:pattFill><a:fgClr><a:srgbClr val=\"FF0000\"><a:alphaMod val=\"50%\"/></a:srgbClr></a:fgClr></a:pattFill></p:spPr>");
         TestAssert.True(PptxSceneBuilder.HasUnsupportedAlpha(unsupported), "Modulation alone must not hide unsupported pattern transparency.");
     }

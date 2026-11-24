@@ -279,9 +279,6 @@ internal static class PptxColorResolver
         return new RgbColor(ToByte((r1 + match) * 255d), ToByte((g1 + match) * 255d), ToByte((b1 + match) * 255d));
     }
 
-    // Shared gradient-stop alpha checks. The scene builder, the diagnostics pass,
-    // and shape rendering each carried their own uniform-alpha copy over the same
-    // Office 0-100000 alpha scale, so the tolerance below covers all three callers.
     public static bool IsDrawingColorElement(XElement element)
     {
         if (element.Name.Namespace != DrawingNamespace)
@@ -294,13 +291,7 @@ internal static class PptxColorResolver
 
     public static bool HasSupportedGradientStopAlpha(IReadOnlyList<XElement> stops)
     {
-        return HasUniformGradientAlpha(stops, ReadAlpha);
-    }
-
-    public static bool HasUniformGradientAlpha<T>(IReadOnlyList<T> stops, Func<T, double> alpha)
-    {
-        double first = alpha(stops[0]);
-        return stops.All(stop => Math.Abs(alpha(stop) - first) <= 0.001d);
+        return TryGetUniformGradientAlpha(stops, ReadAlpha, out _);
     }
 
     public static bool TryGetUniformGradientAlpha<T>(IReadOnlyList<T> stops, Func<T, double> selector, out double alpha)
