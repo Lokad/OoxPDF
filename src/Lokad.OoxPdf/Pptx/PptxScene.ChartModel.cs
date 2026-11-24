@@ -36,12 +36,12 @@ internal readonly record struct PptxSceneChartExternalData
     public bool IsDefined { get; }
     public string? RelationshipId { get; }
     public string? TargetPartName { get; }
-    public PptxScenePackageResource? Resource { get; }
+    public OoxPart? Resource { get; }
 
     private PptxSceneChartExternalData(
         string? relationshipId,
         string? targetPartName,
-        PptxScenePackageResource? resource)
+        OoxPart? resource)
     {
         IsDefined = true;
         RelationshipId = relationshipId;
@@ -52,7 +52,7 @@ internal readonly record struct PptxSceneChartExternalData
     public static PptxSceneChartExternalData Defined(
         string? relationshipId,
         string? targetPartName,
-        PptxScenePackageResource? resource) => new(relationshipId, targetPartName, resource);
+        OoxPart? resource) => new(relationshipId, targetPartName, resource);
 }
 
 internal readonly record struct PptxSceneChartOptions(

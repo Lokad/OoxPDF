@@ -102,29 +102,28 @@ internal sealed partial class PptxRenderer
 
     // One bounded model per embedded workbook, shared by chart frames for this
     // conversion. A null cache disables sharing.
-    private static ChartWorkbookData? GetOrCreateChartWorkbook(
+    internal static ChartWorkbookData? GetOrCreateChartWorkbook(
         Dictionary<string, ChartWorkbookData?>? cache,
         PptxSceneChartExternalData externalData,
         CancellationToken cancellationToken)
     {
-        if (!externalData.IsDefined || externalData.Resource is null)
+        if (externalData.Resource is not { } part)
         {
             return null;
         }
 
         if (cache is null)
         {
-            return ReadEmbeddedChartWorkbookData(externalData, cancellationToken);
+            return ReadEmbeddedChartWorkbookData(part, cancellationToken);
         }
 
-        string key = externalData.TargetPartName ?? externalData.Resource.PartName;
-        if (cache.TryGetValue(key, out ChartWorkbookData? cached))
+        if (cache.TryGetValue(part.Name, out ChartWorkbookData? cached))
         {
             return cached;
         }
 
-        ChartWorkbookData? model = ReadEmbeddedChartWorkbookData(externalData, cancellationToken);
-        cache[key] = model;
+        ChartWorkbookData? model = ReadEmbeddedChartWorkbookData(part, cancellationToken);
+        cache.Add(part.Name, model);
         return model;
     }
 

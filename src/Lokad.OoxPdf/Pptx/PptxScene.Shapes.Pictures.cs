@@ -43,19 +43,6 @@ internal sealed partial class PptxSceneBuilder
             : new PptxSceneImageResource(imagePart.Name, imagePart.ContentType, imagePart.Bytes);
     }
 
-    private static PptxScenePackageResource? ReadPackageResource(OoxPackage package, string? targetPartName)
-    {
-        if (targetPartName is null)
-        {
-            return null;
-        }
-
-        OoxPart? packagePart = package.GetPart(targetPartName);
-        return packagePart is null
-            ? null
-            : new PptxScenePackageResource(packagePart.Name, packagePart.ContentType, packagePart.Bytes);
-    }
-
     private static string? ResolveRelationshipTarget(
         string? relationshipId,
         IReadOnlyDictionary<string, OoxRelationship> relationships)

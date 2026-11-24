@@ -377,11 +377,6 @@ internal sealed record PptxSceneImageResource(
     string ContentType,
     byte[] Bytes);
 
-internal sealed record PptxScenePackageResource(
-    string PartName,
-    string ContentType,
-    byte[] Bytes);
-
 internal readonly record struct PptxSceneGroupTransform(
     long OffsetX,
     long OffsetY,

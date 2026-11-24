@@ -32,7 +32,7 @@ internal sealed partial class PptxSceneBuilder
         return PptxSceneChartExternalData.Defined(
             relationshipId,
             targetPartName,
-            ReadPackageResource(package, targetPartName));
+            targetPartName is null ? null : package.GetPart(targetPartName));
     }
 
     private static PptxSceneChartColorStyle ReadChartColorStyle(

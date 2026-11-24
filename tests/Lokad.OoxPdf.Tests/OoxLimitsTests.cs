@@ -1577,45 +1577,42 @@ internal static partial class OoxLimitsTests
 
     public static void ChartWorkbookSharedAcrossFrames()
     {
-        byte[] xlsx = MinimalEmbeddedWorkbook();
-        var resource = new PptxScenePackageResource("/xl/embed.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", xlsx);
-        var external = PptxSceneChartExternalData.Defined("rId9", "/xl/embed.xlsx", resource);
-        var cache = new Dictionary<string, PptxRenderer.ChartWorkbookData?>(StringComparer.Ordinal);
-        MethodInfo getOrCreate = typeof(PptxRenderer).GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
-            .First(method => method.Name == "GetOrCreateChartWorkbook");
-        object? Invoke(Dictionary<string, PptxRenderer.ChartWorkbookData?>? shared, PptxSceneChartExternalData data)
+        using var input = TestFixtures.CreateZipPackage(new Dictionary<string, byte[]>
         {
-            try
-            {
-                return getOrCreate.Invoke(null, [shared, data, CancellationToken.None]);
-            }
-            catch (TargetInvocationException ex)
-            {
-                throw ex.InnerException ?? ex;
-            }
-        }
+            ["[Content_Types].xml"] = TestFixtures.Utf8("""
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="xlsx" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"/>
+                </Types>
+                """),
+            ["ppt/embeddings/shared.xlsx"] = MinimalEmbeddedWorkbook("5"),
+            ["ppt/embeddings/other.xlsx"] = MinimalEmbeddedWorkbook("9")
+        });
+        using var package = OoxPackage.Open(input, default);
+        PptxSceneChartExternalData ExternalData(string target) =>
+            PptxSceneChartExternalData.Defined("rId9", target, package.GetPart(target));
+        var cache = new Dictionary<string, PptxRenderer.ChartWorkbookData?>(StringComparer.Ordinal);
 
-        // Same embedded part across frames parses once: shared instance, no reparse.
-        object? first = Invoke(cache, external);
-        object? second = Invoke(cache, external);
-        TestAssert.NotNull(first);
-        TestAssert.True(ReferenceEquals(first, second), "Same embedded workbook part must resolve to one shared model.");
+        var original = ExternalData("/ppt/embeddings/shared.xlsx");
+        var recased = ExternalData("/PPT/EMBEDDINGS/SHARED.XLSX");
+        var first = TestAssert.NotNull(PptxRenderer.GetOrCreateChartWorkbook(cache, original, default));
+        var second = PptxRenderer.GetOrCreateChartWorkbook(cache, recased, default);
+        TestAssert.True(ReferenceEquals(first, second), "Both spellings resolve to one embedded workbook model.");
+        TestAssert.Equal("5", first.ReadRangeCells("Sheet1!A1").Single().Text);
+        TestAssert.Equal(1, cache.Count);
 
-        // A different part key parses independently.
-        var other = PptxSceneChartExternalData.Defined("rId9", "/xl/other.xlsx", resource);
-        object? third = Invoke(cache, other);
-        TestAssert.NotNull(third);
-        TestAssert.True(!ReferenceEquals(first, third), "Different embedded parts must not alias models.");
+        var other = ExternalData("/ppt/embeddings/other.xlsx");
+        var third = TestAssert.NotNull(PptxRenderer.GetOrCreateChartWorkbook(cache, other, default));
+        TestAssert.Equal("9", third.ReadRangeCells("Sheet1!A1").Single().Text);
 
-        // Undefined external data resolves to null without polluting the cache.
-        object? missing = Invoke(cache, default);
-        TestAssert.True(missing is null, "Undefined external data must resolve to null.");
+        TestAssert.True(PptxRenderer.GetOrCreateChartWorkbook(cache, default, default) is null,
+            "A chart without an external-data declaration has no workbook.");
+        TestAssert.True(PptxRenderer.GetOrCreateChartWorkbook(cache, ExternalData("/ppt/embeddings/missing.xlsx"), default) is null,
+            "A missing package part has no workbook.");
         TestAssert.Equal(2, cache.Count);
 
-        // A null cache disables sharing without changing results.
-        object? uncached = Invoke(null, external);
-        TestAssert.NotNull(uncached);
+        var uncached = TestAssert.NotNull(PptxRenderer.GetOrCreateChartWorkbook(null, original, default));
         TestAssert.True(!ReferenceEquals(first, uncached), "Uncached resolution must reparse.");
+        TestAssert.Equal("5", uncached.ReadRangeCells("Sheet1!A1").Single().Text);
     }
 
     public static void ChartRangeMemoReusesExpansionWithinFrame()
@@ -1630,7 +1627,7 @@ internal static partial class OoxLimitsTests
         TestAssert.Equal(first.Length, third.Length);
     }
 
-    private static byte[] MinimalEmbeddedWorkbook()
+    private static byte[] MinimalEmbeddedWorkbook(string value)
     {
         const string spreadsheet = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
         const string officeRels = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
@@ -1655,7 +1652,7 @@ internal static partial class OoxLimitsTests
                 "<Relationship Id=\"rId1\" Type=\"" + officeRels + "/worksheet\" Target=\"worksheets/sheet1.xml\"/></Relationships>",
             ["xl/worksheets/sheet1.xml"] =
                 "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
-                "<worksheet xmlns=\"" + spreadsheet + "\"><sheetData><row r=\"1\"><c r=\"A1\"><v>5</v></c></row></sheetData></worksheet>",
+                "<worksheet xmlns=\"" + spreadsheet + "\"><sheetData><row r=\"1\"><c r=\"A1\"><v>" + value + "</v></c></row></sheetData></worksheet>",
         });
         return packageStream.ToArray();
     }

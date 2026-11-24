@@ -11,16 +11,10 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static ChartWorkbookData? ReadEmbeddedChartWorkbookData(PptxSceneChartExternalData sceneExternalData, CancellationToken cancellationToken)
+    private static ChartWorkbookData? ReadEmbeddedChartWorkbookData(OoxPart part, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        if (!sceneExternalData.IsDefined ||
-            sceneExternalData.Resource is null)
-        {
-            return null;
-        }
-
-        using var stream = new MemoryStream(sceneExternalData.Resource.Bytes, writable: false);
+        using Stream stream = part.OpenRead();
         using OoxPackage workbookPackage = OoxPackage.Open(stream, cancellationToken);
         return ReadWorkbookDataCore(workbookPackage, cancellationToken);
     }
