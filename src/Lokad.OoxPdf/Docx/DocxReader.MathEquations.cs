@@ -37,16 +37,18 @@ internal sealed partial class DocxReader
              element.Nodes().OfType<XText>().All(text => string.IsNullOrWhiteSpace(text.Value)));
     }
 
-    private static bool IsDisplayMathLineBreakRun(XElement? run)
+    private static bool IsDisplayMathLineBreakRun(XElement run)
     {
-        if (run is null || run.Name != MathNamespace + "r" ||
-            run.Element(WordprocessingNamespace + "br") is not { } lineBreak ||
-            run.Elements().Any(child => child != lineBreak && child.Name != WordprocessingNamespace + "rPr" &&
-                !DocxSourceXml.IsLastRenderedPageBreakHint(child)) ||
-            run.Nodes().OfType<XText>().Any(text => !string.IsNullOrWhiteSpace(text.Value))) return false;
+        return run.Name == MathNamespace + "r" &&
+            run.Element(WordprocessingNamespace + "br") is not null &&
+            run.Elements().All(child => child.Name == WordprocessingNamespace + "rPr" ||
+                DocxSourceXml.IsLastRenderedPageBreakHint(child) || IsLineBreak(child)) &&
+            run.Nodes().OfType<XText>().All(text => string.IsNullOrWhiteSpace(text.Value));
 
-        return !lineBreak.HasElements && string.IsNullOrWhiteSpace(lineBreak.Value) &&
-            lineBreak.Attributes().All(attribute => attribute.IsNamespaceDeclaration ||
+        static bool IsLineBreak(XElement element) =>
+            element.Name == WordprocessingNamespace + "br" &&
+            !element.HasElements && string.IsNullOrWhiteSpace(element.Value) &&
+            element.Attributes().All(attribute => attribute.IsNamespaceDeclaration ||
                 attribute.Name == WordprocessingNamespace + "type" && attribute.Value == "textWrapping" ||
                 attribute.Name == WordprocessingNamespace + "clear" && attribute.Value == "none");
     }

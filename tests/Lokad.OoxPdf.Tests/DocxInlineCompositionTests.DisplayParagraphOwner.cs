@@ -79,16 +79,23 @@ internal static partial class DocxInlineCompositionTests
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
         {
             DocxDocument Read(bool insideEquation, bool mathRun, string? type = null, int breakCount = 1, bool proofing = false,
-                bool? bookmarkStartsAfterBreaks = null, string? paginationHint = null) => ReadMutation(
+                bool? bookmarkStartsAfterBreaks = null, string? paginationHint = null, bool packBreaks = false) => ReadMutation(
                 "CompositionProbes/math-explicit-display-same-group", mode, false, false, (xml, w, m) =>
                 {
                     var group = xml.Descendants(m + "oMathPara").Single();
                     var equations = group.Elements(m + "oMath").ToArray();
+                    XElement? packedRun = null;
                     for (int index = 0; index < breakCount; index++)
                     {
                         string? breakType = index == 0 ? type : "textWrapping";
                         var lineBreak = new XElement(w + "br", breakType is null ? null : new XAttribute(w + "type", breakType));
+                        if (packedRun is not null)
+                        {
+                            packedRun.Add(lineBreak);
+                            continue;
+                        }
                         var run = new XElement((mathRun ? m : w) + "r", lineBreak);
+                        if (packBreaks) packedRun = run;
                         if (index == 0 && paginationHint is ("inside" or "malformed"))
                             run.Add(new XElement(w + "lastRenderedPageBreak",
                                 paginationHint == "malformed" ? new XAttribute(w + "future", "1") : null));
@@ -155,10 +162,18 @@ internal static partial class DocxInlineCompositionTests
                             bookmarkStartsAfterBreaks: true, paginationHint: hint), expectedTwo);
                         TestAssert.Equal(target, withHint.Annotations.Single(link => link.IsDestination));
                     }
+                    foreach (bool insideEquation in new[] { false, true })
+                    {
+                        var packed = CheckMathBreaks(Read(insideEquation, mathRun: true, breakCount: 2,
+                            bookmarkStartsAfterBreaks: true, paginationHint: insideEquation ? "inside" : null,
+                            packBreaks: true), expectedTwo);
+                        TestAssert.Equal(target, packed.Annotations.Single(link => link.IsDestination));
+                    }
                 }
             }
 
-            foreach (var document in new[] { Read(true, true, type: "page"), Read(true, true, paginationHint: "malformed") })
+            foreach (var document in new[] { Read(true, true, type: "page"), Read(true, true, paginationHint: "malformed"),
+                Read(true, true, type: "page", breakCount: 2, packBreaks: true) })
             {
                 var unsupported = new List<OoxPdfDiagnostic>();
                 var page = renderer.RenderPagesAsync(document, unsupported.Add, default).ToBlockingEnumerable().Single();
