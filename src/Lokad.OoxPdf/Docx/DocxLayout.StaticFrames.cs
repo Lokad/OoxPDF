@@ -81,7 +81,7 @@ internal sealed partial class DocxLayoutEngine
 
     private static DocxStaticStoryLayoutResult CreatePageStaticStoryLayout(
         DocxLayoutPage page, DocxSelectedStaticStory story, double x, double width, double startY,
-        bool isHeader, int pageNumber, int pageCount, IDocxTextMeasurer textMeasurer,
+        bool isHeader, DocxPageNumber pageNumber, int pageCount, IDocxTextMeasurer textMeasurer,
         IDocxStaticTextMetricsProvider staticMetrics, double defaultTabStopPoints, double scale,
         IDocxLineMetricsProvider? unscaledLineMetrics, CancellationToken token,
         IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations,

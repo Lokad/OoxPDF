@@ -451,7 +451,7 @@ internal sealed partial class DocxLayoutEngine
         foreach (int number in variants)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            string variant = GetStaticStoryVariant(settings, number);
+            string variant = GetStaticStoryVariant(settings, page.GetPageNumber(number));
             var headerLayout = Layout(true, number, variant);
             var footerLayout = Layout(false, number, variant);
             // Body and continuation notes share the selected static flow edges.

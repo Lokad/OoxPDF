@@ -237,7 +237,7 @@ internal sealed partial class DocxRenderer
     private static IReadOnlyList<DocxTextEmissionSegment> CreateTextEmissionSegments(
         DocxTextLineLayout line,
         DocxFontResources fontResources,
-        int pageNumber,
+        DocxPageNumber pageNumber,
         int pageCount,
         double fontScale,
         double baselineOffsetY,
@@ -614,7 +614,7 @@ internal sealed partial class DocxRenderer
         PdfGraphicsBuilder graphics,
         DocxFontResources fontResources,
         DocxMarkupContext markupContext,
-        int pageNumber,
+        DocxPageNumber pageNumber,
         int pageCount,
         CancellationToken cancellationToken,
         RgbColor? background = null)

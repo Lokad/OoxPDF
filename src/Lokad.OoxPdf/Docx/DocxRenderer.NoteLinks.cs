@@ -35,7 +35,7 @@ internal sealed partial class DocxRenderer
     }
 
     private static IEnumerable<PdfLinkAnnotation> CreateNoteReferenceAnnotations(
-        DocxLayoutPage page, int pageNumber, int pageCount, DocxFontResources fontResources,
+        DocxLayoutPage page, DocxPageNumber pageNumber, int pageCount, DocxFontResources fontResources,
         DocxMarkupContext markupContext,
         IReadOnlyDictionary<(DocxRelatedStoryKind Kind, string Id), PdfLinkDestination> destinations,
         IReadOnlyDictionary<DocxParagraph, NoteReferenceSpacing> noteSpacingParagraphs,

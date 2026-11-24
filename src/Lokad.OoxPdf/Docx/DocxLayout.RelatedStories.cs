@@ -15,7 +15,7 @@ internal sealed partial class DocxLayoutEngine
         IReadOnlyList<DocxLayoutPage> pages,
         IReadOnlyDictionary<int, List<DocxInlineReferenceLocation>> locationsByBlock,
         Func<double, IReadOnlyList<DocxRelatedStoryLayout>> resolveRelatedStoryLayouts,
-        Func<DocxRelatedStoryLayout, double, int, DocxRelatedStoryLayout> bindRelatedStoryPage,
+        Func<DocxRelatedStoryLayout, double, DocxPageNumber, DocxRelatedStoryLayout> bindRelatedStoryPage,
         Func<DocxLayoutPage, int, int, bool> hasCompleteEndnoteFrame,
         CancellationToken cancellationToken,
         double printScale = 1d,
@@ -132,7 +132,7 @@ internal sealed partial class DocxLayoutEngine
                         continue;
                     }
 
-                    storyLayout = bindRelatedStoryPage(storyLayout, footnoteWidth, pageIndex + 1);
+                    storyLayout = bindRelatedStoryPage(storyLayout, footnoteWidth, page.GetPageNumber(pageIndex + 1));
                     placedStoryKeys.Add((reference.Kind, reference.Id));
                     pageFootnoteStories.Add(new DocxReferencedRelatedStoryLayout(location, storyLayout));
                 }
@@ -268,7 +268,7 @@ internal sealed partial class DocxLayoutEngine
                     cancellationToken.ThrowIfCancellationRequested();
                     int referencePage = referenceIndex.FindFirstPageWithReference(story.Location, requireRendered: true);
                     return referencePage < 0 ? story.StoryLayout :
-                        bindRelatedStoryPage(story.StoryLayout, width, referencePage + 1);
+                        bindRelatedStoryPage(story.StoryLayout, width, outputPages[referencePage].GetPageNumber(referencePage + 1));
                 }).ToList();
             }
 
@@ -2457,7 +2457,7 @@ internal sealed partial class DocxLayoutEngine
         IDocxTextMeasurer textMeasurer,
         double defaultTabStopPoints,
         double paragraphSpacingScale,
-        int? pageNumber,
+        DocxPageNumber? pageNumber,
         int? pageCount,
         CancellationToken cancellationToken,
         IDocxTextMeasurer? unscaledTextMeasurer = null,

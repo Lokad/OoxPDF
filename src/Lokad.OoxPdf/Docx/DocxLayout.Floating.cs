@@ -236,7 +236,7 @@ internal sealed partial class DocxLayoutEngine
         double beforeSpacing,
         IDocxTextMeasurer textMeasurer,
         double defaultTabStopPoints,
-        int? pageNumber,
+        DocxPageNumber? pageNumber,
         int? pageCount,
         double? firstStoryBaselineOffset = null,
         double transitionScale = 1d,
@@ -674,7 +674,7 @@ internal sealed partial class DocxLayoutEngine
         IDocxTextMeasurer? textMeasurer,
         double defaultTabStopPoints,
         double paragraphSpacingScale,
-        int pageNumber,
+        DocxPageNumber pageNumber,
         CancellationToken cancellationToken,
         int sourceParagraphIndex = 0,
         IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations = null,
@@ -726,7 +726,7 @@ internal sealed partial class DocxLayoutEngine
             boxHeight,
             ShiftTextLines(storyLayout.TextLines, contentTop, contentX),
             storyLayout.InlineImages
-                .Select(image => image.Relocate(contentX + image.X, contentTop + image.Y, pageNumber))
+                .Select(image => image.Relocate(contentX + image.X, contentTop + image.Y, pageNumber.Physical))
                 .ToArray(),
             ShiftTableRows(storyLayout.TableRows, contentTop, contentX),
             sourceBlockIndex,
@@ -778,7 +778,7 @@ internal sealed partial class DocxLayoutEngine
         double? placedTop = verticalPlacement.Position;
         DocxWrapExclusionFrame? wrapExclusion = CreateWrapExclusionFrame();
         DocxRelatedStoryLayout? textBoxLayout = CreateFloatingTextBoxLayout(
-            anchorPageIndex is null ? null : anchorPageIndex.Value + 1);
+            anchorPageIndex is { } index ? anchorPage?.GetPageNumber(index + 1) ?? new DocxPageNumber(index + 1) : null);
         return new DocxFloatingDrawingLayout(
             drawing,
             pageStartIndex,
@@ -810,7 +810,7 @@ internal sealed partial class DocxLayoutEngine
             story,
             textBoxLayout) { AnchorTextLine = sourceBlock?.AnchorTextLine };
 
-        DocxRelatedStoryLayout? CreateFloatingTextBoxLayout(int? pageNumber)
+        DocxRelatedStoryLayout? CreateFloatingTextBoxLayout(DocxPageNumber? pageNumber)
         {
             if (textMeasurer is null ||
                 drawing.TextBoxBodyElements.Count == 0 ||

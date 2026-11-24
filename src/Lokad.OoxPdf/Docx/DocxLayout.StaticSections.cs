@@ -10,10 +10,10 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxLayoutEngine
 {
-    internal static string GetStaticStoryVariant(DocxPageSettings settings, int pageNumber, int sectionFirstPageNumber = 1) =>
-        IsStaticStoryVariantEnabled(settings, "first") && pageNumber == sectionFirstPageNumber ? "first" :
+    internal static string GetStaticStoryVariant(DocxPageSettings settings, DocxPageNumber pageNumber, int sectionFirstPageNumber = 1) =>
+        IsStaticStoryVariantEnabled(settings, "first") && pageNumber.Physical == sectionFirstPageNumber ? "first" :
         IsStaticStoryVariantEnabled(settings, "even") &&
-        DocxFieldText.DisplayedPageNumber(pageNumber, settings.PageNumberOffset) % 2 == 0 ? "even" : "default";
+        pageNumber.Displayed % 2 == 0 ? "even" : "default";
 
     // Pre-layout ownership can exclude disabled variants without predicting a
     // section's page count. Placement applies first-page/parity selection below.

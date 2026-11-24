@@ -5,6 +5,14 @@ namespace Lokad.OoxPdf.Docx;
 [Flags]
 internal enum DocxCounterDependencies { None = 0, PageNumber = 1, PageCount = 2 }
 
+// PAGE uses the section's numbering. Layout geometry and navigation use the
+// one-based physical ordinal, even when the two values differ.
+internal readonly record struct DocxPageNumber(int Physical, int Offset = 0)
+{
+    public long Displayed => (long)Physical + Offset;
+    public static implicit operator DocxPageNumber(int physical) => new(physical);
+}
+
 internal static class DocxFieldText
 {
     public static DocxCounterDependencies Dependencies(DocxFieldKind? kind) => kind switch
@@ -14,7 +22,7 @@ internal static class DocxFieldText
         _ => DocxCounterDependencies.None
     };
 
-    public static bool HasInputs(DocxCounterDependencies dependencies, int? pageNumber, int? pageCount) =>
+    public static bool HasInputs(DocxCounterDependencies dependencies, DocxPageNumber? pageNumber, int? pageCount) =>
         ((dependencies & DocxCounterDependencies.PageNumber) == 0 || pageNumber is not null) &&
         ((dependencies & DocxCounterDependencies.PageCount) == 0 || pageCount is not null);
 
@@ -55,29 +63,25 @@ internal static class DocxFieldText
         _ => null
     };
 
-    private static int? Value(DocxFieldKind? kind, int? pageNumber, int? pageCount) => kind switch
+    private static long? Value(DocxFieldKind? kind, DocxPageNumber? pageNumber, int? pageCount) => kind switch
     {
-        DocxFieldKind.Page => pageNumber,
+        DocxFieldKind.Page => pageNumber?.Displayed,
         DocxFieldKind.NumPages => pageCount,
         _ => null
     };
 
-    public static bool CanResolve(DocxFieldKind kind, int? pageNumber, int? pageCount) =>
+    public static bool CanResolve(DocxFieldKind kind, DocxPageNumber? pageNumber, int? pageCount) =>
         Value(kind, pageNumber, pageCount) is not null;
 
-    internal static long DisplayedPageNumber(int physicalPageNumber, int offset) =>
-        (long)physicalPageNumber + offset;
-
-    public static bool TryResolve(DocxTextRun run, string text, int? pageNumber, int? pageCount, out string resolved)
+    public static bool TryResolve(DocxTextRun run, string text, DocxPageNumber? pageNumber, int? pageCount, out string resolved)
     {
         resolved = text;
         if (run.FieldKind is not { } kind || Value(kind, pageNumber, pageCount) is not { } value ||
             Placeholder(kind) is not { } placeholder) return false;
-        long displayedValue = kind == DocxFieldKind.Page ? DisplayedPageNumber(value, run.PageNumberOffset) : value;
-        resolved = text.Replace(placeholder, displayedValue.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal);
+        resolved = text.Replace(placeholder, value.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal);
         return true;
     }
 
-    public static string Resolve(DocxTextRun run, string text, int? pageNumber, int? pageCount) =>
+    public static string Resolve(DocxTextRun run, string text, DocxPageNumber? pageNumber, int? pageCount) =>
         TryResolve(run, text, pageNumber, pageCount, out string resolved) ? resolved : text;
 }

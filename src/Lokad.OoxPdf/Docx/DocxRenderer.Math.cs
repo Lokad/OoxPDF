@@ -24,7 +24,7 @@ internal sealed partial class DocxRenderer
             {
                 token.ThrowIfCancellationRequested();
                 var page = layout.Pages[index];
-                string variant = DocxLayoutEngine.GetStaticStoryVariant(page.PageSettings, index + 1, page.SectionFirstPageNumber);
+                string variant = DocxLayoutEngine.GetStaticStoryVariant(page.PageSettings, page.GetPageNumber(index + 1), page.SectionFirstPageNumber);
                 RecordVariants(page.PageSettings.HeaderBodyElementsByType, variant);
                 RecordVariants(page.PageSettings.FooterBodyElementsByType, variant);
             }

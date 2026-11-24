@@ -149,7 +149,7 @@ internal sealed partial class DocxLayoutEngine
         IReadOnlyList<DocxTabStop> tabStops,
         double defaultTabStopPoints,
         bool allowOverwideTokenBreaks,
-        int? dynamicFieldPageNumber,
+        DocxPageNumber? dynamicFieldPageNumber,
         CancellationToken cancellationToken = default,
         IReadOnlyList<(int CharOffset, double Width)>? inlineImageWidths = null,
         int sourceStartOffset = 0, DocxParagraph? sourceParagraph = null, bool firstLineHasContent = false)
@@ -200,7 +200,7 @@ internal sealed partial class DocxLayoutEngine
         IReadOnlyList<DocxTabStop> tabStops,
         double defaultTabStopPoints,
         bool allowOverwideTokenBreaks,
-        int? dynamicFieldPageNumber,
+        DocxPageNumber? dynamicFieldPageNumber,
         CancellationToken cancellationToken,
         IReadOnlyList<(int CharOffset, double Width)>? inlineImageWidths = null, DocxParagraph? sourceParagraph = null,
         bool firstLineHasContent = false)
@@ -414,7 +414,7 @@ internal sealed partial class DocxLayoutEngine
         IDocxTextMeasurer textMeasurer,
         IReadOnlyList<DocxTabStop> tabStops,
         double defaultTabStopPoints,
-        int? dynamicFieldPageNumber,
+        DocxPageNumber? dynamicFieldPageNumber,
         Dictionary<(int Start, int Length, bool PreserveTerminalSoftHyphen), double> measureMemo,
         bool segmentHasHiddenBreaks,
         bool segmentHasDynamicFields,
@@ -616,7 +616,7 @@ internal sealed partial class DocxLayoutEngine
         IDocxTextMeasurer textMeasurer,
         IReadOnlyList<DocxTabStop> tabStops,
         double defaultTabStopPoints,
-        int? dynamicFieldPageNumber,
+        DocxPageNumber? dynamicFieldPageNumber,
         Dictionary<(int Start, int Length, bool PreserveTerminalSoftHyphen), double> measureMemo,
         bool segmentHasHiddenBreaks,
         bool segmentHasDynamicFields,
@@ -758,7 +758,7 @@ internal sealed partial class DocxLayoutEngine
         IReadOnlyList<DocxTabStop> tabStops,
         double defaultTabStopPoints,
         bool preserveTerminalSoftHyphen,
-        int? dynamicFieldPageNumber,
+        DocxPageNumber? dynamicFieldPageNumber,
         int[]? spanStarts = null)
     {
         var key = (start, length, preserveTerminalSoftHyphen);
@@ -928,7 +928,7 @@ internal sealed partial class DocxLayoutEngine
         IReadOnlyList<DocxTabStop> tabStops,
         double defaultTabStopPoints,
         bool preserveTerminalSoftHyphen,
-        int? dynamicFieldPageNumber)
+        DocxPageNumber? dynamicFieldPageNumber)
     {
         return MeasureTextSpans(
             NormalizeDynamicFieldMeasurementSpans(NormalizeHiddenBreakSpans(spans, preserveTerminalSoftHyphen), dynamicFieldPageNumber),
@@ -940,7 +940,7 @@ internal sealed partial class DocxLayoutEngine
 
     private static IReadOnlyList<DocxTextSpan> NormalizeDynamicFieldMeasurementSpans(
         IReadOnlyList<DocxTextSpan> spans,
-        int? pageNumber)
+        DocxPageNumber? pageNumber)
     {
         if (pageNumber is null ||
             !spans.Any(span => span.StyleRun.FieldKind == DocxFieldKind.NumPages))
@@ -948,7 +948,7 @@ internal sealed partial class DocxLayoutEngine
             return spans;
         }
 
-        string proxy = pageNumber.Value.ToString(CultureInfo.InvariantCulture);
+        string proxy = pageNumber.Value.Physical.ToString(CultureInfo.InvariantCulture);
         return spans
             .Select(span => span.StyleRun.FieldKind == DocxFieldKind.NumPages
                 ? span with { Text = span.Text.Replace("{NUMPAGES}", proxy, StringComparison.Ordinal) }

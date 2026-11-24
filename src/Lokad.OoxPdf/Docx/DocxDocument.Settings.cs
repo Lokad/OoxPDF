@@ -14,7 +14,6 @@ internal sealed record DocxDocumentSettings(
     public string? MathFontFamily { get; init; }
     public string? MathParagraphAlignmentValue { get; init; }
     public DocxMathLimitSettings MathLimitSettings { get; init; } = DocxMathLimitSettings.Empty;
-    internal int PageNumberOffset { get; init; }
     public static DocxDocumentSettings Empty { get; } = new(null, DocxRevisionViewSettings.Empty,
         DocxNoteReferenceSettings.Empty, DocxNoteReferenceSettings.Empty, null, null, HasCompatibilityMode: false);
 }
@@ -67,7 +66,7 @@ internal sealed record DocxPageSettings(
 
     public double? GutterDistancePoints { get; init; }
     public string? GutterDistanceValue { get; init; }
-    internal int PageNumberOffset { get; init; }
+    internal int? DecimalPageNumberStart { get; init; }
     public DocxNoteReferenceSettings FootnoteReferenceSettings { get; init; } = DocxNoteReferenceSettings.Empty;
     public DocxNoteReferenceSettings EndnoteReferenceSettings { get; init; } = DocxNoteReferenceSettings.Empty;
 

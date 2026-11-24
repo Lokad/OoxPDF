@@ -649,7 +649,7 @@ internal sealed partial class DocxRenderer
         string? containerStoryVariantType,
         DocxTextLineLayout line,
         DocxFontResources fontResources,
-        int pageNumber,
+        DocxPageNumber pageNumber,
         int pageCount,
         double fontScale,
         double baselineOffsetY,

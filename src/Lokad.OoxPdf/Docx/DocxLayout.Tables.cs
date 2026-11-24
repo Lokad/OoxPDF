@@ -311,7 +311,7 @@ internal sealed partial class DocxLayoutEngine
         IDocxTextMeasurer textMeasurer,
         double defaultTabStopPoints,
         double paragraphSpacingScale,
-        int? pageNumber,
+        DocxPageNumber? pageNumber,
         int? pageCount,
         IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations,
         bool anchorAuthoredCellText,
@@ -322,8 +322,8 @@ internal sealed partial class DocxLayoutEngine
             x, width, UnpagedRelatedStoryCanvasHeightPoints, textMeasurer, defaultTabStopPoints, cancellationToken,
             pageNumber, pageCount, paragraphSpacingScale, mathEquations: mathEquations,
             anchorAuthoredCellText: anchorAuthoredCellText);
-        int rowPageNumber = pageNumber ?? 1;
-        Func<int> getPageNumber = () => rowPageNumber;
+        DocxPageNumber rowPageNumber = pageNumber ?? new DocxPageNumber(1);
+        Func<DocxPageNumber> getPageNumber = () => rowPageNumber;
         for (int rowIndex = 0; rowIndex < table.Rows.Count; rowIndex++)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -468,7 +468,7 @@ internal sealed partial class DocxLayoutEngine
         double maximumPageContentHeight,
         IDocxTextMeasurer? textMeasurer,
         double defaultTabStopPoints,
-        Func<int> getPageNumber,
+        Func<DocxPageNumber> getPageNumber,
         ref List<DocxLayoutItem> currentItems,
         ref double cursorY,
         Func<DocxTableLayoutFrame> resolveFrame,
@@ -477,7 +477,7 @@ internal sealed partial class DocxLayoutEngine
         Action markBoundaryContent,
         CancellationToken cancellationToken,
         double paragraphSpacingScale,
-        int[] headerSourcePages,
+        DocxPageNumber?[] headerSourcePages,
         DocxTableCellTextLinesMemo? cellMemo = null,
         Func<DocxTableRow, IReadOnlyList<IReadOnlyList<DocxTextLineLayout>>, DocxTableNoteFragmentPlan?>? resolveNoteFragments = null)
     {
@@ -605,7 +605,7 @@ internal sealed partial class DocxLayoutEngine
             bool defaultWidowControl = !CanUseNaturalTextRowFragments(row);
             double[] cellWidths = GetTableRowCellWidths(row, frame.EffectiveColumns, frame.Scale);
             double rowTopPadding = ResolveTableRowTopPadding(row, paragraphSpacingScale);
-            int currentPageNumber = getPageNumber();
+            var currentPageNumber = getPageNumber();
             int? currentPageCount = frame.Context.PageCount;
             var laidOutCells = new List<(IReadOnlyList<DocxParagraph> Paragraphs, IReadOnlyList<DocxTextLineLayout> TextLines, double UsedHeight)>();
             var splitLineBaselines = new List<double>();
@@ -1031,10 +1031,10 @@ internal sealed partial class DocxLayoutEngine
         return true;
     }
 
-    private static int? ResolveTableHeaderPageNumber(int rowIndex, int? pageNumber,
-        IReadOnlyList<int>? headerSourcePages) =>
-        headerSourcePages is not null && rowIndex < headerSourcePages.Count && headerSourcePages[rowIndex] > 0
-            ? headerSourcePages[rowIndex] : pageNumber;
+    private static DocxPageNumber? ResolveTableHeaderPageNumber(int rowIndex, DocxPageNumber? pageNumber,
+        IReadOnlyList<DocxPageNumber?>? headerSourcePages) =>
+        headerSourcePages is not null && rowIndex < headerSourcePages.Count && headerSourcePages[rowIndex] is { } headerPage
+            ? headerPage : pageNumber;
 
     private static DocxTableLayoutFrame CreateTableLayoutFrame(
         DocxTable table,
@@ -1046,7 +1046,7 @@ internal sealed partial class DocxLayoutEngine
         IDocxTextMeasurer? textMeasurer,
         double defaultTabStopPoints,
         CancellationToken cancellationToken,
-        int? pageNumber,
+        DocxPageNumber? pageNumber,
         int? pageCount,
         double paragraphSpacingScale,
         IReadOnlyDictionary<string, string>? commentMarkerLabels = null,
@@ -1055,7 +1055,7 @@ internal sealed partial class DocxLayoutEngine
         bool allowAutomaticMinimumGridPlacement = false,
         IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations = null,
         bool anchorAuthoredCellText = true,
-        IReadOnlyList<int>? headerSourcePages = null)
+        IReadOnlyList<DocxPageNumber?>? headerSourcePages = null)
     {
         DocxResolvedTableGrid grid = ResolveTableGrid(table, x, availableWidth, paragraphSpacingScale, textMeasurer, defaultTabStopPoints, pageNumber, pageCount, commentMarkerLabels, mathEquations, cancellationToken, anchorAuthoredCellText, headerSourcePages);
         var sourceMeasurements = paragraphSpacingScale is > 0d and < 1d
@@ -1089,7 +1089,7 @@ internal sealed partial class DocxLayoutEngine
         bool[] declaredTopContentClips = allowDeclaredTopMargins ? new bool[table.Rows.Count] : [];
         double MeasureTableRowHeight(DocxTableRow row, IReadOnlyList<double> effectiveColumns, double scale, bool isLastRow, int rowIndex)
         {
-            int? rowPageNumber = ResolveTableHeaderPageNumber(rowIndex, pageNumber, headerSourcePages);
+            var rowPageNumber = ResolveTableHeaderPageNumber(rowIndex, pageNumber, headerSourcePages);
             double[] cellWidths = GetTableRowCellWidths(row, effectiveColumns, scale);
             double rowTopPadding = ResolveTableRowTopPadding(row, paragraphSpacingScale);
             bool canDiscardAfter = CanDiscardTableRowAfterSpacing(row);
@@ -1197,7 +1197,7 @@ internal sealed partial class DocxLayoutEngine
         { BoundaryMinimumRowHeights = boundaryMinimumRowHeights };
     }
 
-    private static DocxResolvedTableGrid ResolveTableGrid(DocxTable table, double x, double availableWidth, double fixedScale, IDocxTextMeasurer? textMeasurer, double defaultTabStopPoints, int? pageNumber, int? pageCount, IReadOnlyDictionary<string, string>? commentMarkerLabels = null, IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations = null, CancellationToken cancellationToken = default, bool anchorAuthoredCellText = true, IReadOnlyList<int>? headerSourcePages = null)
+    private static DocxResolvedTableGrid ResolveTableGrid(DocxTable table, double x, double availableWidth, double fixedScale, IDocxTextMeasurer? textMeasurer, double defaultTabStopPoints, DocxPageNumber? pageNumber, int? pageCount, IReadOnlyDictionary<string, string>? commentMarkerLabels = null, IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations = null, CancellationToken cancellationToken = default, bool anchorAuthoredCellText = true, IReadOnlyList<DocxPageNumber?>? headerSourcePages = null)
     {
         // W6-a1: fixed table geometry joins scaled space (fixed lengths times the layout
         // scale) so the uniform shift-composition maps frames like body text. Percent and
@@ -1401,13 +1401,13 @@ internal sealed partial class DocxLayoutEngine
         double availableTableWidth,
         IDocxTextMeasurer? textMeasurer,
         double defaultTabStopPoints,
-        int? pageNumber,
+        DocxPageNumber? pageNumber,
         int? pageCount,
         double fixedScale,
         IReadOnlyDictionary<string, string>? commentMarkerLabels,
         IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations,
         CancellationToken cancellationToken,
-        IReadOnlyList<int>? headerSourcePages)
+        IReadOnlyList<DocxPageNumber?>? headerSourcePages)
     {
         if (textMeasurer is null)
         {
@@ -1506,7 +1506,7 @@ internal sealed partial class DocxLayoutEngine
         for (int rowIndex = 0; rowIndex < table.Rows.Count; rowIndex++)
         {
             DocxTableRow row = table.Rows[rowIndex];
-            int? rowPageNumber = ResolveTableHeaderPageNumber(rowIndex, pageNumber, headerSourcePages);
+            var rowPageNumber = ResolveTableHeaderPageNumber(rowIndex, pageNumber, headerSourcePages);
             int start = 0;
             foreach (DocxTableCell cell in row.Cells)
             {
@@ -1603,7 +1603,7 @@ internal sealed partial class DocxLayoutEngine
             for (int rowIndex = 0; rowIndex < table.Rows.Count; rowIndex++)
             {
                 DocxTableRow row = table.Rows[rowIndex];
-                int? rowPageNumber = ResolveTableHeaderPageNumber(rowIndex, pageNumber, headerSourcePages);
+                var rowPageNumber = ResolveTableHeaderPageNumber(rowIndex, pageNumber, headerSourcePages);
                 int start = 0;
                 foreach (DocxTableCell cell in row.Cells)
                 {
@@ -1660,7 +1660,7 @@ internal sealed partial class DocxLayoutEngine
     private static double? MeasureTableCellMinContentWidth(
         DocxTableCell cell,
         IDocxTextMeasurer measurer,
-        int? pageNumber,
+        DocxPageNumber? pageNumber,
         int? pageCount,
         double fixedScale,
         IReadOnlyDictionary<string, string>? markerLabels,
@@ -1744,7 +1744,7 @@ internal sealed partial class DocxLayoutEngine
         DocxTableCell cell,
         IDocxTextMeasurer textMeasurer,
         double defaultTabStopPoints,
-        int? pageNumber,
+        DocxPageNumber? pageNumber,
         int? pageCount,
         double fixedScale,
         IReadOnlyDictionary<string, string>? commentMarkerLabels,
@@ -2001,13 +2001,13 @@ internal sealed partial class DocxLayoutEngine
         double scale,
         IDocxTextMeasurer? textMeasurer,
         double defaultTabStopPoints,
-        Func<int> getPageNumber,
+        Func<DocxPageNumber> getPageNumber,
         ref List<DocxLayoutItem> currentItems,
         ref double cursorY,
         double paragraphSpacingScale,
         DocxTableCellTextLinesMemo? cellMemo = null,
         double? admittedHeight = null,
-        int? fieldPageNumber = null)
+        DocxPageNumber? fieldPageNumber = null)
     {
         double rowHeight = admittedHeight ?? rowHeights[rowIndex];
         currentItems.Add(CreateTableRowLayout(
@@ -2041,10 +2041,10 @@ internal sealed partial class DocxLayoutEngine
         DocxTableRow row,
         int rowIndex,
         IReadOnlyList<(DocxTableRow Row, int RowIndex)> headerRows,
-        IReadOnlyList<int> headerSourcePages,
+        IReadOnlyList<DocxPageNumber?> headerSourcePages,
         IDocxTextMeasurer? textMeasurer,
         double defaultTabStopPoints,
-        Func<int> getPageNumber,
+        Func<DocxPageNumber> getPageNumber,
         ref List<DocxLayoutItem> currentItems,
         ref double cursorY,
         Func<DocxTableLayoutFrame> resolveFrame,
@@ -2121,19 +2121,19 @@ internal sealed partial class DocxLayoutEngine
         DocxTableLayoutContext tableContext,
         IReadOnlyList<double> rowHeights,
         IReadOnlyList<(DocxTableRow Row, int RowIndex)> headerRows,
-        IReadOnlyList<int> headerSourcePages,
+        IReadOnlyList<DocxPageNumber?> headerSourcePages,
         IReadOnlyList<double> effectiveColumns,
         double scale,
         IDocxTextMeasurer? textMeasurer,
         double defaultTabStopPoints,
-        Func<int> getPageNumber,
+        Func<DocxPageNumber> getPageNumber,
         ref List<DocxLayoutItem> currentItems,
         ref double cursorY,
         double paragraphSpacingScale)
     {
         CancellationToken cancellationToken = tableContext.CancellationToken;
         cancellationToken.ThrowIfCancellationRequested();
-        OoxConversionBudget.Current?.AdmitDocxLayoutPages(getPageNumber());
+        OoxConversionBudget.Current?.AdmitDocxLayoutPages(getPageNumber().Physical);
         cancellationToken.ThrowIfCancellationRequested();
         foreach ((DocxTableRow headerRow, int headerRowIndex) in headerRows)
         {
@@ -2266,7 +2266,7 @@ internal sealed partial class DocxLayoutEngine
         double scale,
         IDocxTextMeasurer? textMeasurer,
         double defaultTabStopPoints,
-        Func<int> getPageNumber,
+        Func<DocxPageNumber> getPageNumber,
         double cursorY,
         double rowHeight,
         double logicalRowTopY,
@@ -2279,7 +2279,7 @@ internal sealed partial class DocxLayoutEngine
         DocxTableCellTextLinesMemo? cellMemo = null,
         bool adjustAtLeastBodySpacing = false,
         IReadOnlyList<DocxCellSourceWindow>? cellSources = null,
-        int? fieldPageNumber = null)
+        DocxPageNumber? fieldPageNumber = null)
     {
         double[] cellWidths = GetTableRowCellWidths(row, effectiveColumns, scale);
         double rowTopPadding = ResolveTableRowTopPadding(row, paragraphSpacingScale);
@@ -2319,9 +2319,9 @@ internal sealed partial class DocxLayoutEngine
                 }
             }
 
-            int currentPageNumber = getPageNumber();
-            int currentPageIndex = Math.Max(0, currentPageNumber - 1);
-            int counterPageNumber = fieldPageNumber ?? currentPageNumber;
+            var currentPageNumber = getPageNumber();
+            int currentPageIndex = Math.Max(0, currentPageNumber.Physical - 1);
+            var counterPageNumber = fieldPageNumber ?? currentPageNumber;
 
             DocxTableCell contentCell = verticalMergeOwner?.Cell ?? cell;
             double contentY = isVerticalMergeContinuation ? visualY : fullVisualY;

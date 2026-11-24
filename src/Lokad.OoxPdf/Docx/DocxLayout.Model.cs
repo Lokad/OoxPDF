@@ -27,6 +27,8 @@ internal sealed record DocxLayoutPage(
 {
     // Physical page on which this section begins; continuation templates retain it.
     public int SectionFirstPageNumber { get; init; } = 1;
+    public int PageNumberOffset { get; init; }
+    public DocxPageNumber GetPageNumber(int physicalPageNumber) => new(physicalPageNumber, PageNumberOffset);
     public IReadOnlyList<DocxInlineTextBoxLayout> StaticInlineTextBoxes { get; init; } = [];
     // The scaled review lane keeps this authored edge when the body mirrors.
     public double? MarkupLaneDesignBodyEnd { get; init; }

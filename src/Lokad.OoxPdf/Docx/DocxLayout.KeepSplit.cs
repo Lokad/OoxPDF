@@ -501,7 +501,7 @@ internal sealed partial class DocxLayoutEngine
         double availableWidth,
         IDocxTextMeasurer textMeasurer,
         double defaultTabStopPoints,
-        int? pageNumber,
+        DocxPageNumber? pageNumber,
         double paragraphSpacingScale,
         bool scaleExactBodyAdvances,
         double availableHeight,
@@ -654,7 +654,7 @@ internal sealed partial class DocxLayoutEngine
         return false;
     }
 
-    private static double EstimateParagraphContentHeight(DocxParagraph paragraph, double availableWidth, IDocxTextMeasurer textMeasurer, double defaultTabStopPoints, int? pageNumber, double fixedScale, bool scaleExactBodyAdvances,
+    private static double EstimateParagraphContentHeight(DocxParagraph paragraph, double availableWidth, IDocxTextMeasurer textMeasurer, double defaultTabStopPoints, DocxPageNumber? pageNumber, double fixedScale, bool scaleExactBodyAdvances,
         bool scaleMinimumBodyAdvances = false, CancellationToken cancellationToken = default,
         IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations = null, int? pageCount = null)
     {
@@ -827,7 +827,7 @@ internal sealed partial class DocxLayoutEngine
         IDocxTextMeasurer textMeasurer,
         IReadOnlyList<DocxTabStop> tabStops,
         double defaultTabStopPoints,
-        int? dynamicFieldPageNumber,
+        DocxPageNumber? dynamicFieldPageNumber,
         double lineImageWidth = 0d,
         double? leadingTabAdvance = null)
     {

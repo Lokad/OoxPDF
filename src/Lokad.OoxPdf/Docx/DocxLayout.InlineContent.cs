@@ -40,7 +40,7 @@ internal sealed record DocxMeasuredInlineAtoms(DocxParagraph Paragraph,
     double FontSize, double BaselineInset, double LineHeight, double Scale, double DefaultTabStopPoints,
     IReadOnlyList<DocxTabStop> TabStops, IReadOnlyList<int> CounterFragmentIndices)
 {
-    public int? BoundPageNumber { get; init; }
+    public DocxPageNumber? BoundPageNumber { get; init; }
     public int? BoundPageCount { get; init; }
     public IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? MathEquations { get; init; }
     public DocxMathDisplayAlignment? DisplayAlignment { get; init; }
@@ -263,7 +263,7 @@ internal sealed partial class DocxLayoutEngine
         double baselineInset, double lineHeight, double scale, CancellationToken token,
         [NotNullWhen(true)] out IReadOnlyList<DocxMeasuredInlineLine>? lines,
         double? physicalTextBaselineInset = null, double defaultTabStopPoints = WordDefaultTabStopPoints,
-        int? pageNumber = null, int? pageCount = null, bool allowStaticFallback = false,
+        DocxPageNumber? pageNumber = null, int? pageCount = null, bool allowStaticFallback = false,
         bool includeInlineTextBoxes = true, (double Position, double FrameWidth)? leadingDecimalTab = null)
     {
         lines = null;
@@ -278,7 +278,7 @@ internal sealed partial class DocxLayoutEngine
         IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? equations,
         IDocxTextMeasurer measurer, double fontSize, double baselineInset, double lineHeight, double scale,
         CancellationToken token, [NotNullWhen(true)] out DocxMeasuredInlineAtoms? atoms,
-        double defaultTabStopPoints = WordDefaultTabStopPoints, int? pageNumber = null, int? pageCount = null,
+        double defaultTabStopPoints = WordDefaultTabStopPoints, DocxPageNumber? pageNumber = null, int? pageCount = null,
         bool allowStaticFallback = false, double? physicalTextBaselineInset = null, bool includeInlineTextBoxes = true)
     {
         atoms = null;
@@ -599,7 +599,7 @@ internal sealed partial class DocxLayoutEngine
         }
     }
 
-    internal static bool TryRebindInlineCounters(DocxMeasuredInlineAtoms atoms, int? pageNumber, int? pageCount,
+    internal static bool TryRebindInlineCounters(DocxMeasuredInlineAtoms atoms, DocxPageNumber? pageNumber, int? pageCount,
         CancellationToken token, [NotNullWhen(true)] out DocxMeasuredInlineAtoms? rebound, int firstUnplacedFragment = 0)
     {
         rebound = null;

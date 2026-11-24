@@ -56,7 +56,6 @@ internal sealed partial class DocxReader
             // Current sections belong to the body or a paragraph's properties.
             // Revision snapshots also contain sectPr, but do not own page geometry.
             XElement? sectionProperties = null;
-            int sectionCount = 0;
             foreach (XElement section in document.Descendants(WordprocessingNamespace + "sectPr"))
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -65,20 +64,7 @@ internal sealed partial class DocxReader
                      section.Parent?.Parent?.Name == WordprocessingNamespace + "p"))
                 {
                     sectionProperties = section;
-                    sectionCount++;
                 }
-            }
-            // One section gives every placed story the same decimal origin.
-            // Later restarts require a placed-page owner for shared static stories.
-            if (sectionCount == 1 && sectionProperties?.Parent?.Name == WordprocessingNamespace + "body" &&
-                sectionProperties.Element(WordprocessingNamespace + "pgNumType") is { } pageNumbering &&
-                (string?)pageNumbering.Attribute(WordprocessingNamespace + "fmt") is null or "decimal" &&
-                pageNumbering.Attribute(WordprocessingNamespace + "chapStyle") is null &&
-                int.TryParse((string?)pageNumbering.Attribute(WordprocessingNamespace + "start"),
-                    NumberStyles.Integer, CultureInfo.InvariantCulture, out int pageNumberStart) &&
-                pageNumberStart > 1)
-            {
-                documentSettings = documentSettings with { PageNumberOffset = pageNumberStart - 1 };
             }
             XElement? pageSize = sectionProperties?.Element(WordprocessingNamespace + "pgSz");
             XElement? pageMargins = sectionProperties?.Element(WordprocessingNamespace + "pgMar");
@@ -564,6 +550,12 @@ internal sealed partial class DocxReader
         XElement? pageSize = sectionProperties?.Element(WordprocessingNamespace + "pgSz");
         XElement? pageMargins = sectionProperties?.Element(WordprocessingNamespace + "pgMar");
         XElement? titlePage = sectionProperties?.Element(WordprocessingNamespace + "titlePg");
+        XElement? pageNumbering = sectionProperties?.Element(WordprocessingNamespace + "pgNumType");
+        int? decimalPageNumberStart = pageNumbering is not null &&
+            (string?)pageNumbering.Attribute(WordprocessingNamespace + "fmt") is null or "decimal" &&
+            pageNumbering.Attribute(WordprocessingNamespace + "chapStyle") is null &&
+            int.TryParse((string?)pageNumbering.Attribute(WordprocessingNamespace + "start"),
+                NumberStyles.Integer, CultureInfo.InvariantCulture, out int start) && start > 0 ? start : null;
         // Office A/B (w53 even-pages probe, Word-COM rendered): Word honors the
         // section-level flag; settings.xml stays as a fallback for packages that carry
         // it there (mirrors the titlePg section lookup above).
@@ -584,7 +576,7 @@ internal sealed partial class DocxReader
         {
             GutterDistancePoints = ReadTwipsAttribute(pageMargins, WordprocessingNamespace + "gutter"),
             GutterDistanceValue = (string?)pageMargins?.Attribute(WordprocessingNamespace + "gutter"),
-            PageNumberOffset = storyCache.DocumentSettings.PageNumberOffset,
+            DecimalPageNumberStart = decimalPageNumberStart,
             FootnoteReferenceSettings = ReadNoteReferenceSettings(sectionProperties?.Element(WordprocessingNamespace + "footnotePr")),
             EndnoteReferenceSettings = ReadNoteReferenceSettings(sectionProperties?.Element(WordprocessingNamespace + "endnotePr"))
         };

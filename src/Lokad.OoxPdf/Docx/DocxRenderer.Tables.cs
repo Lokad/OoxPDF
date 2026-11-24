@@ -157,7 +157,7 @@ internal sealed partial class DocxRenderer
         DocxFontResources fontResources,
         DocxMarkupContext markupContext,
         Action<OoxPdfDiagnostic>? diagnosticSink,
-        int pageNumber,
+        DocxPageNumber pageNumber,
         int pageCount,
         CancellationToken cancellationToken,
         Dictionary<string, PdfImageXObject?> imageCache,

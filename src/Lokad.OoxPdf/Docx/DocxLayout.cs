@@ -330,8 +330,8 @@ internal sealed partial class DocxLayoutEngine
         var storyLookupByWidth = new Dictionary<double, Dictionary<(DocxRelatedStoryKind Kind, string Id), DocxRelatedStoryLayout>>();
         var keepLookaheadYielded = new HashSet<(DocxRelatedStoryKind Kind, string Id)>();
         var footnotePlacedLinesAtLastYield = new Dictionary<(DocxRelatedStoryKind Kind, string Id), int>();
-        var continuationHeaderByPage = new Dictionary<(DocxPageSettings, double, int, int, int), DocxStaticStoryLayoutResult?>();
-        var continuationFooterTopByPage = new Dictionary<(DocxPageSettings, double, int, int, int), (double Body, double Note, double? Physical, bool CompleteContent)>();
+        var continuationHeaderByPage = new Dictionary<(DocxPageSettings, double, DocxPageNumber, int, int), DocxStaticStoryLayoutResult?>();
+        var continuationFooterTopByPage = new Dictionary<(DocxPageSettings, double, DocxPageNumber, int, int), (double Body, double Note, double? Physical, bool CompleteContent)>();
         var plainFootnoteFooterFrames = new Dictionary<(DocxPageSettings, double, double, double, double, double, double, int, int), DocxLayoutPage?>();
         bool useSourceSectionStarts = document.FinalSectionBreak is not null &&
             document.Settings.MirrorMargins != true && document.FloatingDrawings.Count == 0;
@@ -353,6 +353,8 @@ internal sealed partial class DocxLayoutEngine
             cancellationToken.ThrowIfCancellationRequested();
         }
         DocxEffectiveSectionSettings activeSectionSettings = FindSectionSettingsAtOrAfter(document.BodyElements, 0, sectionSettingsByElementIndex) ?? finalSectionSettings;
+        int pageNumberOffset = (activeSectionSettings.PageSettings.DecimalPageNumberStart ?? 1) - 1;
+        DocxPageNumber CurrentPageNumber() => new(pages.Count + 1, pageNumberOffset);
         DocxPageGeometry page = ResolveSectionGeometry(document, activeSectionSettings, reserveMarkupMargin, retuneReserveToPrintScale, reservePrintScale, pageNumber: 1);
         int activeColumnIndex = 0;
         double x = ResolveActiveColumnFrame(page, activeColumnIndex).X;
@@ -435,7 +437,7 @@ internal sealed partial class DocxLayoutEngine
             return layouts;
         }
 
-        DocxRelatedStoryLayout BindRelatedStoryPage(DocxRelatedStoryLayout layout, double bodyWidth, int pageNumber)
+        DocxRelatedStoryLayout BindRelatedStoryPage(DocxRelatedStoryLayout layout, double bodyWidth, DocxPageNumber pageNumber)
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (textMeasurer is null || layout.HasResolvedCounterInputs ||
@@ -482,7 +484,8 @@ internal sealed partial class DocxLayoutEngine
                 currentItems.ToArray())
             {
                 MarkupLaneDesignBodyEnd = page.MarkupLaneDesignBodyEnd,
-                SectionFirstPageNumber = sectionFirstPageNumber
+                SectionFirstPageNumber = sectionFirstPageNumber,
+                PageNumberOffset = pageNumberOffset
             });
             PlaceInFlightFootnotesOnCompletingPage();
             if (completeFootnoteAdmission is not null)
@@ -557,7 +560,7 @@ internal sealed partial class DocxLayoutEngine
                 var candidate = new DocxLayoutPage(page.Width, page.Height, page.MarginLeft, page.MarginRight,
                     page.MarkupMarginReservePoints, page.MarginTop, page.MarginBottom, page.PageSettings,
                     page.SectionProperties, page.ColumnFrames, [], [], [], [], [])
-                { SectionFirstPageNumber = sectionFirstPageNumber };
+                { SectionFirstPageNumber = sectionFirstPageNumber, PageNumberOffset = pageNumberOffset };
                 frame = CanUsePlainFootnoteStaticFrame(document, candidate, unscaledTextMeasurer ?? textMeasurer,
                     paragraphSpacingScale, cancellationToken) ? candidate : null;
                 plainFootnoteFooterFrames[key] = frame;
@@ -913,7 +916,7 @@ internal sealed partial class DocxLayoutEngine
                     // The body reference is now placed. Measure counters and all
                     // inline content together before slicing the note; keep this
                     // page-bound result out of the shared width-only memo.
-                    DocxRelatedStoryLayout boundLayout = BindRelatedStoryPage(storyLayout, FootnoteStoryLayoutWidth(page), pages.Count);
+                    DocxRelatedStoryLayout boundLayout = BindRelatedStoryPage(storyLayout, FootnoteStoryLayoutWidth(page), new DocxPageNumber(pages.Count, pageNumberOffset));
                     if (!ReferenceEquals(boundLayout, storyLayout))
                     {
                         if (inFlightNotes.TryGetValue(key, out InFlightRelatedStory? pending) &&
@@ -1175,9 +1178,11 @@ internal sealed partial class DocxLayoutEngine
             FinishPage();
         }
 
-        void ApplySectionAfterBreak(DocxEffectiveSectionSettings section)
+        void ApplySectionAfterBreak(DocxEffectiveSectionSettings section, bool applyPageNumberStart)
         {
             sectionFirstPageNumber = pages.Count + 1;
+            if (applyPageNumberStart && section.PageSettings.DecimalPageNumberStart is { } start)
+                pageNumberOffset = start - sectionFirstPageNumber;
             activeSectionSettings = section;
             page = ResolveSectionGeometry(document, activeSectionSettings, reserveMarkupMargin, retuneReserveToPrintScale, reservePrintScale, pages.Count + 1);
             activeColumnIndex = 0;
@@ -1371,8 +1376,10 @@ internal sealed partial class DocxLayoutEngine
                 }
                 else if (startsNewPage || (IsContinuousSectionBreak(boundary) && !HasPageContent()))
                 {
-                    ApplySectionAfterBreak(following ??
-                        FindSectionSettingsAtOrAfter(document.BodyElements, elementIndex + 1, sectionSettingsByElementIndex) ?? finalSectionSettings);
+                    var section = following ?? FindSectionSettingsAtOrAfter(document.BodyElements,
+                        elementIndex + 1, sectionSettingsByElementIndex) ?? finalSectionSettings;
+                    ApplySectionAfterBreak(section, boundary.TypeValue is null or DocxSectionBreakType.NextPage &&
+                        DocxSectionBreakTypeExtensions.FromValue(section.SectionProperties.BreakTypeValue) is null or DocxSectionBreakType.NextPage);
                 }
 
                 pendingSpacingAfter = 0d;
@@ -1451,7 +1458,7 @@ internal sealed partial class DocxLayoutEngine
                 // A repeated table header paints the same source row again.
                 // Its fields retain the page where that row was first admitted;
                 // physical page indices still belong to the current placement.
-                var headerSourcePages = new int[bodyTable.Rows.TakeWhile(row => row.IsHeader).Count()];
+                var headerSourcePages = new DocxPageNumber?[bodyTable.Rows.TakeWhile(row => row.IsHeader).Count()];
                 DocxTableLayoutFrame ResolveCurrentTableFrame()
                 {
                     if (admittedCompleteTableFrame is not null) return admittedCompleteTableFrame;
@@ -1465,7 +1472,7 @@ internal sealed partial class DocxLayoutEngine
                         textMeasurer,
                         defaultTabStopPoints,
                         cancellationToken,
-                        pageNumber: pages.Count + 1,
+                        pageNumber: CurrentPageNumber(),
                         pageCount: knownPageCount,
                         paragraphSpacingScale: paragraphSpacingScale,
                         commentMarkerLabels: commentMarkerLabels,
@@ -1485,7 +1492,7 @@ internal sealed partial class DocxLayoutEngine
                 }
 
                 LayoutTable(bodyTable, CurrentTableFrameBottom, continuationTableHeight, page.Height - page.MarginTop - page.MarginBottom,
-                    textMeasurer, defaultTabStopPoints, () => pages.Count + 1, ref currentItems, ref cursorY, ResolveCurrentTableFrame, advanceTableBoundary, hasTableBoundaryContent, MarkTableBoundaryContent, cancellationToken, paragraphSpacingScale, headerSourcePages, new DocxTableCellTextLinesMemo(),
+                    textMeasurer, defaultTabStopPoints, CurrentPageNumber, ref currentItems, ref cursorY, ResolveCurrentTableFrame, advanceTableBoundary, hasTableBoundaryContent, MarkTableBoundaryContent, cancellationToken, paragraphSpacingScale, headerSourcePages, new DocxTableCellTextLinesMemo(),
                     resolveNoteFragments: noteAdmission is null ? null : (row, fragments) => noteAdmission.TryPlan(row, fragments,
                         NoteFrameBottom, cursorY, page.Height - page.MarginTop, cancellationToken));
                 if (scaleBaselineOffsetTransitions &&
@@ -1578,7 +1585,7 @@ internal sealed partial class DocxLayoutEngine
                 {
                     double keepBottom = Math.Max(CurrentParagraphFrameBottom(), page.MarginBottom + KeepChainFootnoteReserve(elementIndex, keepBlocks));
                     double keepHeight = EstimateKeepChainHeight(document.BodyElements, keepBlocks, paragraph,
-                        width, textMeasurer, defaultTabStopPoints, pages.Count + 1, paragraphSpacingScale,
+                        width, textMeasurer, defaultTabStopPoints, CurrentPageNumber(), paragraphSpacingScale,
                         scaleBaselineOffsetTransitions && page.ColumnFrames.Count <= 1,
                         availableHeight: cursorY - keepBottom, pageContentHeight: page.Height - page.MarginTop - keepBottom,
                         allowAutomaticMinimumGridPlacement: page.ColumnFrames.Count <= 1,
@@ -1635,7 +1642,7 @@ internal sealed partial class DocxLayoutEngine
                 }
                 if (TryMeasureOrderedInlineAtoms(paragraph, mathEquations, textMeasurer, paragraphFontSize,
                     baseInset, lineHeight, paragraphSpacingScale, cancellationToken, out var atoms,
-                    defaultTabStopPoints: defaultTabStopPoints, pageNumber: pages.Count + 1, pageCount: knownPageCount,
+                    defaultTabStopPoints: defaultTabStopPoints, pageNumber: CurrentPageNumber(), pageCount: knownPageCount,
                     physicalTextBaselineInset: baseInset * paragraphSpacingScale) &&
                     TryWrapOrderedInlineAtoms(atoms, Math.Max(1d, width - firstInset - rightInset),
                         Math.Max(1d, width - nextInset - rightInset), cancellationToken, out var measured,
@@ -1647,7 +1654,7 @@ internal sealed partial class DocxLayoutEngine
                     firstDocumentBodyBaselineOffset ??= baseInset;
                     var sourceCursor = new DocxInlineSourceCursor();
                     var bound = atoms;
-                    int boundPage = pages.Count + 1;
+                    var boundPage = CurrentPageNumber();
                     int referenceLine = 0;
                     double measuredWidth = width;
                     int? admittedLineCount = null;
@@ -1665,13 +1672,13 @@ internal sealed partial class DocxLayoutEngine
                         double textInset = index == 0 ? firstInset : nextInset;
                         // Preparation admitted only fields whose inputs are
                         // available here. Losing one is an internal invariant.
-                        if (boundPage != pages.Count + 1)
+                        if (boundPage != CurrentPageNumber())
                         {
-                            if (!TryRebindInlineCounters(atoms, pages.Count + 1, knownPageCount, cancellationToken, out var rebound,
+                            if (!TryRebindInlineCounters(atoms, CurrentPageNumber(), knownPageCount, cancellationToken, out var rebound,
                                 firstUnplacedFragment: sourceCursor.AtomIndex))
                                 throw new InvalidOperationException("An admitted body counter has no page input.");
                             bound = rebound;
-                            boundPage = pages.Count + 1;
+                            boundPage = CurrentPageNumber();
                         }
                         if (admittedLineCount is null && DocxParagraphFragmentPolicy.HasWidowControl(paragraph))
                         {
@@ -1795,7 +1802,7 @@ internal sealed partial class DocxLayoutEngine
                 }
             }
 
-            IReadOnlyList<DocxTextSpan> textSpans = textMeasurer is null ? [] : CreateTextSpans(paragraph.Runs, pages.Count + 1, null);
+            IReadOnlyList<DocxTextSpan> textSpans = textMeasurer is null ? [] : CreateTextSpans(paragraph.Runs, CurrentPageNumber(), null);
             DocxMidLinePlan? midLinePlan = null;
             if (textMeasurer is not null && textSpans.Count > 0)
             {
@@ -1808,11 +1815,11 @@ internal sealed partial class DocxLayoutEngine
                 DocxTextRun firstRun = paragraph.Runs[0];
                 bool firstLine = true;
                 double continuationParagraphWidth = Math.Max(1d, width - continuationTextStartOffset - rightInset);
-                DocxWrappedTextLine[] lines = WrapTextLines(textSpans, paragraphWidth, continuationParagraphWidth, paragraphFontSize, textMeasurer, ScaleTabStopPositions(effective.TabStops, paragraphSpacingScale), defaultTabStopPoints * paragraphSpacingScale, allowOverwideTokenBreaks: ShouldAllowCharacterLevelWordWrap(paragraph), dynamicFieldPageNumber: pages.Count + 1, cancellationToken, inlineImageWidths: ResolveInlineImageWrapWidths(paragraph, textSpans, paragraphSpacingScale), sourceParagraph: paragraph).ToArray();
+                DocxWrappedTextLine[] lines = WrapTextLines(textSpans, paragraphWidth, continuationParagraphWidth, paragraphFontSize, textMeasurer, ScaleTabStopPositions(effective.TabStops, paragraphSpacingScale), defaultTabStopPoints * paragraphSpacingScale, allowOverwideTokenBreaks: ShouldAllowCharacterLevelWordWrap(paragraph), dynamicFieldPageNumber: CurrentPageNumber(), cancellationToken, inlineImageWidths: ResolveInlineImageWrapWidths(paragraph, textSpans, paragraphSpacingScale), sourceParagraph: paragraph).ToArray();
                 DocxMidLineMath? inlineMath = TryGetSinglePreparedMath(paragraph, mathEquations, out var preparedMath) &&
                     !preparedMath.Equation.Display
                     ? WrapInlineMath(paragraph, preparedMath, textSpans, ref lines, paragraphWidth, continuationParagraphWidth,
-                        paragraphFontSize, textMeasurer, paragraphSpacingScale, defaultTabStopPoints, pages.Count + 1, cancellationToken)
+                        paragraphFontSize, textMeasurer, paragraphSpacingScale, defaultTabStopPoints, CurrentPageNumber(), cancellationToken)
                     : null;
                 bool canResumeText = paragraph.Equations.Count == 0 && paragraph.Images.Count == 0 && paragraph.InlineTextBoxes.Count == 0;
                 void RewrapRemainingText(int index)
@@ -1821,7 +1828,7 @@ internal sealed partial class DocxLayoutEngine
                     double nextWidth = Math.Max(1d, width - continuationTextStartOffset - rightInset);
                     var remaining = WrapTextLines(textSpans, firstWidth, nextWidth, paragraphFontSize, textMeasurer,
                         ScaleTabStopPositions(effective.TabStops, paragraphSpacingScale), defaultTabStopPoints * paragraphSpacingScale,
-                        ShouldAllowCharacterLevelWordWrap(paragraph), pages.Count + 1, cancellationToken,
+                        ShouldAllowCharacterLevelWordWrap(paragraph), CurrentPageNumber(), cancellationToken,
                         sourceStartOffset: lines[index].SourceTextStart);
                     lines = lines.Take(index).Concat(remaining).ToArray();
                     wrappedFrameWidth = width;
@@ -1904,11 +1911,11 @@ internal sealed partial class DocxLayoutEngine
                     double paragraphX = x + (firstLine ? textStartOffset : continuationTextStartOffset);
                     paragraphWidth = Math.Max(1d, width - (firstLine ? textStartOffset : continuationTextStartOffset) - rightInset);
                     double lineInlineWidth = (midLinePlan?.LineImageWidths[lineIndex] ?? 0d) + (inlineMath?.LineIndex == lineIndex ? inlineMath.Width : 0d);
-                    double lineWidth = MeasureTextSpansForLayout(line.Spans, paragraphFontSize, textMeasurer, ScaleTabStopPositions(effective.TabStops, paragraphSpacingScale), defaultTabStopPoints * paragraphSpacingScale, pages.Count + 1) + lineInlineWidth;
+                    double lineWidth = MeasureTextSpansForLayout(line.Spans, paragraphFontSize, textMeasurer, ScaleTabStopPositions(effective.TabStops, paragraphSpacingScale), defaultTabStopPoints * paragraphSpacingScale, CurrentPageNumber()) + lineInlineWidth;
                     // RV06 align matrix: Office centers/rights the drawable text, letting
                     // authored and added trailing spaces overflow past the edge.
                     double lineAlignWidth = effective.Alignment is DocxTextAlignment.Center or DocxTextAlignment.Right
-                        ? MeasureDrawableTextSpansForLayout(line.Spans, paragraphFontSize, textMeasurer, ScaleTabStopPositions(effective.TabStops, paragraphSpacingScale), defaultTabStopPoints * paragraphSpacingScale, pages.Count + 1) + lineInlineWidth
+                        ? MeasureDrawableTextSpansForLayout(line.Spans, paragraphFontSize, textMeasurer, ScaleTabStopPositions(effective.TabStops, paragraphSpacingScale), defaultTabStopPoints * paragraphSpacingScale, CurrentPageNumber()) + lineInlineWidth
                         : lineWidth;
                     double lineX = effective.Alignment switch
                     {
@@ -1977,7 +1984,7 @@ internal sealed partial class DocxLayoutEngine
                         textMeasurer,
                         ScaleTabStopPositions(effective.TabStops, paragraphSpacingScale),
                         defaultTabStopPoints * paragraphSpacingScale,
-                        pages.Count + 1, (midLinePlan?.LineImageWidths[lineIndex] ?? 0d) +
+                        CurrentPageNumber(), (midLinePlan?.LineImageWidths[lineIndex] ?? 0d) +
                             (inlineMath?.LineIndex == lineIndex ? inlineMath.Width : 0d));
                     IReadOnlyList<DocxTextSegmentLayout> emissionSegments = lineShape.Segments;
                     DocxEquationLayout? lineMath = null;
@@ -1986,7 +1993,7 @@ internal sealed partial class DocxLayoutEngine
                         double before = MeasureMidLineBeforeWidth(line.Spans, inlineMath.LineCharOffset, paragraph,
                             firstLine, lineIndex == lines.Length - 1, paragraphWidth, paragraphFontSize, textMeasurer,
                             ScaleTabStopPositions(effective.TabStops, paragraphSpacingScale), defaultTabStopPoints * paragraphSpacingScale,
-                            pages.Count + 1, inlineMath.Width);
+                            CurrentPageNumber(), inlineMath.Width);
                         emissionSegments = ShiftSegmentsPastMidLineImages(emissionSegments, line.Spans, paragraph, firstLine,
                             lineX, [(before, inlineMath.Width)]);
                         lineMath = new DocxEquationLayout(inlineMath.Math, lineX + before, cursorY - baselineOffset,
@@ -2001,7 +2008,7 @@ internal sealed partial class DocxLayoutEngine
                         lineImages = new List<DocxInlineImageLayout>();
                         foreach (DocxMidLineImage placed in midLinePlan.ImagesByLine[lineIndex])
                         {
-                            double beforeWidth = MeasureMidLineBeforeWidth(line.Spans, placed.LineCharOffset, paragraph, firstLine, lineIndex == lines.Length - 1, paragraphWidth, paragraphFontSize, textMeasurer, ScaleTabStopPositions(effective.TabStops, paragraphSpacingScale), defaultTabStopPoints * paragraphSpacingScale, pages.Count + 1, midLinePlan?.LineImageWidths[lineIndex] ?? 0d);
+                            double beforeWidth = MeasureMidLineBeforeWidth(line.Spans, placed.LineCharOffset, paragraph, firstLine, lineIndex == lines.Length - 1, paragraphWidth, paragraphFontSize, textMeasurer, ScaleTabStopPositions(effective.TabStops, paragraphSpacingScale), defaultTabStopPoints * paragraphSpacingScale, CurrentPageNumber(), midLinePlan?.LineImageWidths[lineIndex] ?? 0d);
                             imageShifts.Add((beforeWidth, placed.Width));
                             // RV05 calibration (Word 16.0 fnimg probe): Office image bottoms sit
                             // at the text baseline, so midline images anchor by the line baseline
@@ -2336,7 +2343,7 @@ internal sealed partial class DocxLayoutEngine
                     textMeasurer,
                     defaultTabStopPoints,
                     paragraphSpacingScale,
-                    pages.Count + 1,
+                    CurrentPageNumber(),
                     cancellationToken,
                     mathEquations: mathEquations, pageCount: knownPageCount);
                 DocxInlineTextBoxLayout? textBoxLayout = PlaceTextBox();
@@ -2374,7 +2381,7 @@ internal sealed partial class DocxLayoutEngine
         {
             OoxConversionBudget.Current?.AdmitDocxLayoutPages(pageNumber);
             cancellationToken.ThrowIfCancellationRequested();
-            var headerKey = (templatePage.PageSettings, Math.Max(1d, templatePage.Width - templatePage.MarginLeft - templatePage.MarginRight), pageNumber, pageCount, templatePage.SectionFirstPageNumber);
+            var headerKey = (templatePage.PageSettings, Math.Max(1d, templatePage.Width - templatePage.MarginLeft - templatePage.MarginRight), templatePage.GetPageNumber(pageNumber), pageCount, templatePage.SectionFirstPageNumber);
             if (!continuationHeaderByPage.TryGetValue(headerKey, out DocxStaticStoryLayoutResult? headerLayout))
             {
                 headerLayout = LayoutContinuationStaticStory(templatePage, pageNumber, pageCount, textMeasurer, defaultTabStopPoints, paragraphSpacingScale, unscaledTextMeasurer, cancellationToken, header: true, mathEquations: mathEquations);
@@ -2435,7 +2442,7 @@ internal sealed partial class DocxLayoutEngine
             cancellationToken.ThrowIfCancellationRequested();
             OoxConversionBudget.Current?.AdmitDocxLayoutPages(pageNumber);
             cancellationToken.ThrowIfCancellationRequested();
-            var key = (templatePage.PageSettings, Math.Max(1d, templatePage.Width - templatePage.MarginLeft - templatePage.MarginRight), pageNumber, pageCount, templatePage.SectionFirstPageNumber);
+            var key = (templatePage.PageSettings, Math.Max(1d, templatePage.Width - templatePage.MarginLeft - templatePage.MarginRight), templatePage.GetPageNumber(pageNumber), pageCount, templatePage.SectionFirstPageNumber);
             if (!continuationFooterTopByPage.TryGetValue(key, out var bounds))
             {
                 var footer = LayoutContinuationStaticStory(templatePage, pageNumber, pageCount, textMeasurer,
@@ -2446,7 +2453,7 @@ internal sealed partial class DocxLayoutEngine
                 // remain in design coordinates until their common print map.
                 double noteTop = footer?.PhysicalFooterFrameTop is { } physicalTop
                     ? new DocxPrintedPageFrame(templatePage.Height, paragraphSpacingScale).UnmapY(physicalTop) : top;
-                string variant = GetStaticStoryVariant(templatePage.PageSettings, pageNumber, templatePage.SectionFirstPageNumber);
+                string variant = GetStaticStoryVariant(templatePage.PageSettings, templatePage.GetPageNumber(pageNumber), templatePage.SectionFirstPageNumber);
                 var footerSource = SelectStaticHeaderFooter(templatePage.PageSettings, header: false, variant);
                 bounds = (top, noteTop, footer?.PhysicalFooterFrameTop,
                     HasCompleteStaticContent(footer, footerSource.BodyElements, templatePage,
@@ -2463,7 +2470,7 @@ internal sealed partial class DocxLayoutEngine
         {
             cancellationToken.ThrowIfCancellationRequested();
             var settings = page.PageSettings;
-            string variant = GetStaticStoryVariant(settings, pageNumber, page.SectionFirstPageNumber);
+            string variant = GetStaticStoryVariant(settings, page.GetPageNumber(pageNumber), page.SectionFirstPageNumber);
             var (header, footer, headerDrawings, footerDrawings) = GetStaticFrameSources(settings, variant);
             if (!DocxPlainBodyFrame.HasPlainStaticSource(header, headerDrawings, cancellationToken, mathEquations) ||
                 !DocxPlainBodyFrame.HasPlainStaticSource(footer, footerDrawings, cancellationToken, mathEquations)) return false;

@@ -28,7 +28,7 @@ internal sealed partial class DocxLayoutEngine
             double defaultTabStopPoints,
             double rowTopPadding,
             double paragraphSpacingScale,
-            int? pageNumber,
+            DocxPageNumber? pageNumber,
             int? pageCount,
             DocxCounterDependencies dependencies,
             out IReadOnlyList<DocxTextLineLayout> relativeLines,
@@ -68,7 +68,7 @@ internal sealed partial class DocxLayoutEngine
             double defaultTabStopPoints,
             double rowTopPadding,
             double paragraphSpacingScale,
-            int? pageNumber,
+            DocxPageNumber? pageNumber,
             int? pageCount,
             DocxCounterDependencies dependencies,
             IReadOnlyList<DocxTextLineLayout> absoluteLines,
@@ -91,8 +91,8 @@ internal sealed partial class DocxLayoutEngine
                     DocxPlacedDrawingAnchor.TranslateY(absoluteAnchors ?? [], -originY));
         }
 
-        private static (int? PageNumber, int? PageCount) ResolveCounterInputs(
-            int? pageNumber, int? pageCount, DocxCounterDependencies dependencies) =>
+        private static (DocxPageNumber? PageNumber, int? PageCount) ResolveCounterInputs(
+            DocxPageNumber? pageNumber, int? pageCount, DocxCounterDependencies dependencies) =>
             ((dependencies & DocxCounterDependencies.PageNumber) != 0 ? pageNumber : null,
              (dependencies & DocxCounterDependencies.PageCount) != 0 ? pageCount : null);
 
@@ -156,9 +156,9 @@ internal sealed partial class DocxLayoutEngine
 
         private sealed class StoredLines(IReadOnlyList<DocxTextLineLayout> lines, IReadOnlyList<DocxInlineImageLayout> placedImages,
             IReadOnlyList<DocxInlineTextBoxLayout> placedBoxes, IReadOnlyList<DocxTableRowLayout> nestedRows, double usedHeight,
-            (int? PageNumber, int? PageCount) counterInputs, IReadOnlyList<DocxPlacedDrawingAnchor> drawingAnchors)
+            (DocxPageNumber? PageNumber, int? PageCount) counterInputs, IReadOnlyList<DocxPlacedDrawingAnchor> drawingAnchors)
         {
-            public (int? PageNumber, int? PageCount) CounterInputs { get; } = counterInputs;
+            public (DocxPageNumber? PageNumber, int? PageCount) CounterInputs { get; } = counterInputs;
 
             public IReadOnlyList<DocxInlineTextBoxLayout> PlacedBoxes { get; } = placedBoxes;
             public IReadOnlyList<DocxTextLineLayout> Lines { get; } = lines;

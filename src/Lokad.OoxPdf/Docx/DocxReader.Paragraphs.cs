@@ -782,8 +782,7 @@ internal sealed partial class DocxReader
             CaptureUnmarkedListTextStyle(text, resolvedRun, runStyleResolution, sourceRunIndex, revision);
             AddResolvedTextRuns(runs, DocxTextRun.ResolveDisplayText(text, resolvedRun.AllCaps == true),
                 ApplyMarkupRevisionStyle(resolvedRun, revision, markupMode), runStyleResolution, sourceRunIndex,
-                sourceTextOffsetInRun: 0, revision, MergeRevisionLists(revision, runRevisions), placeholderKind,
-                documentSettings?.PageNumberOffset ?? 0);
+                sourceTextOffsetInRun: 0, revision, MergeRevisionLists(revision, runRevisions), placeholderKind);
         }
 
         void AddParagraphRun(XElement run, DocxRevisionInfo? revision)
@@ -1351,7 +1350,7 @@ internal sealed partial class DocxReader
                 {
                     field.PendingPlaceholder ??= CreateResolvedTextRun(fieldPlaceholder, resolvedRun,
                         runStyleResolution, false, currentSourceRunIndex, sourceTextOffset, revision, revisions,
-                        ResolveFieldKind(field.Instruction.ToString()), documentSettings?.PageNumberOffset ?? 0)
+                        ResolveFieldKind(field.Instruction.ToString()))
                         with { SourceDrawingIndexInRun = sourceDrawingIndex };
                     if (ResolveFieldPlaceholder(field.Instruction.ToString(), field.IsLocked,
                         requireOpcodeTerminator: true) is not null)
@@ -1899,8 +1898,7 @@ internal sealed partial class DocxReader
 
     private static void AddResolvedTextRuns(List<DocxTextRun> runs, string text, DocxResolvedRunProperties resolvedRun,
         DocxRunStyleResolution styleResolution, int sourceRunIndex, int sourceTextOffsetInRun,
-        DocxRevisionInfo? revision, IReadOnlyList<DocxRevisionInfo>? revisions, DocxFieldKind? fieldKind = null,
-        int pageNumberOffset = 0)
+        DocxRevisionInfo? revision, IReadOnlyList<DocxRevisionInfo>? revisions, DocxFieldKind? fieldKind = null)
     {
         var segment = new StringBuilder();
         DocxFontSlot? currentSlot = null;
@@ -1914,7 +1912,7 @@ internal sealed partial class DocxReader
                 string segmentText = segment.ToString();
                 AddResolvedTextRun(runs, segmentText, resolvedRun, styleResolution,
                     currentSlot.Value == DocxFontSlot.ComplexScript, sourceRunIndex, segmentSourceOffset,
-                    revision, revisions, fieldKind, pageNumberOffset);
+                    revision, revisions, fieldKind);
                 segmentSourceOffset += segmentText.Length;
                 segment.Clear();
             }
@@ -1927,23 +1925,21 @@ internal sealed partial class DocxReader
         {
             AddResolvedTextRun(runs, segment.ToString(), resolvedRun, styleResolution,
                 currentSlot.Value == DocxFontSlot.ComplexScript, sourceRunIndex, segmentSourceOffset,
-                revision, revisions, fieldKind, pageNumberOffset);
+                revision, revisions, fieldKind);
         }
     }
 
     private static void AddResolvedTextRun(List<DocxTextRun> runs, string text, DocxResolvedRunProperties resolvedRun,
         DocxRunStyleResolution styleResolution, bool complexScript, int sourceRunIndex, int sourceTextOffsetInRun,
-        DocxRevisionInfo? revision, IReadOnlyList<DocxRevisionInfo>? revisions, DocxFieldKind? fieldKind = null,
-        int pageNumberOffset = 0)
+        DocxRevisionInfo? revision, IReadOnlyList<DocxRevisionInfo>? revisions, DocxFieldKind? fieldKind = null)
     {
         runs.Add(CreateResolvedTextRun(text, resolvedRun, styleResolution, complexScript, sourceRunIndex,
-            sourceTextOffsetInRun, revision, revisions, fieldKind, pageNumberOffset));
+            sourceTextOffsetInRun, revision, revisions, fieldKind));
     }
 
     private static DocxTextRun CreateResolvedTextRun(string text, DocxResolvedRunProperties resolvedRun,
         DocxRunStyleResolution styleResolution, bool complexScript, int sourceRunIndex, int sourceTextOffsetInRun,
-        DocxRevisionInfo? revision, IReadOnlyList<DocxRevisionInfo>? revisions, DocxFieldKind? fieldKind = null,
-        int pageNumberOffset = 0)
+        DocxRevisionInfo? revision, IReadOnlyList<DocxRevisionInfo>? revisions, DocxFieldKind? fieldKind = null)
     {
         bool bold = complexScript
             ? resolvedRun.ComplexScriptBold ?? resolvedRun.Bold ?? false
@@ -1985,7 +1981,6 @@ internal sealed partial class DocxReader
             Fonts = resolvedRun.Fonts,
             KerningMinimumHalfPointsValue = resolvedRun.KerningMinimumHalfPointsValue,
             FieldKind = fieldKind,
-            PageNumberOffset = fieldKind == DocxFieldKind.Page ? pageNumberOffset : 0,
             ScriptBaseFontSize = isScriptShiftedRun && resolvedRun.FontSize is null ? DocxDefaults.FontSizePoints : null,
             StyleResolution = styleResolution,
             SourceRunIndex = sourceRunIndex,

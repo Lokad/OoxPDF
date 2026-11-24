@@ -10,7 +10,7 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxLayoutEngine
 {
-    private static DocxTextSpan[] CreateTextSpans(IReadOnlyList<DocxTextRun> runs, int? pageNumber, int? pageCount)
+    private static DocxTextSpan[] CreateTextSpans(IReadOnlyList<DocxTextRun> runs, DocxPageNumber? pageNumber, int? pageCount)
     {
         if (runs.Count != 0 && runs.All(run => run.Text.Length == 0 || run.EffectiveProperties.Hidden))
         {
@@ -157,7 +157,7 @@ internal sealed partial class DocxLayoutEngine
         IDocxTextMeasurer textMeasurer,
         IReadOnlyList<DocxTabStop> tabStops,
         double defaultTabStopPoints,
-        int? dynamicFieldPageNumber)
+        DocxPageNumber? dynamicFieldPageNumber)
     {
         return MeasureTextSpans(
             NormalizeDynamicFieldMeasurementSpans(spans, dynamicFieldPageNumber),
@@ -173,7 +173,7 @@ internal sealed partial class DocxLayoutEngine
         IDocxTextMeasurer textMeasurer,
         IReadOnlyList<DocxTabStop> tabStops,
         double defaultTabStopPoints,
-        int? dynamicFieldPageNumber)
+        DocxPageNumber? dynamicFieldPageNumber)
     {
         int length = spans.Sum(span => span.Text.Length);
         int drawableLength = FindDrawableTextLength(spans);
@@ -198,7 +198,7 @@ internal sealed partial class DocxLayoutEngine
         IDocxTextMeasurer textMeasurer,
         IReadOnlyList<DocxTabStop> tabStops,
         double defaultTabStopPoints,
-        int? dynamicFieldPageNumber,
+        DocxPageNumber? dynamicFieldPageNumber,
         double lineImageWidth = 0d)
     {
         double plainWidth = MeasureTextSpansForLayout(SliceTextSpans(lineSpans, 0, lineCharOffset), fontSize, textMeasurer, tabStops, defaultTabStopPoints, dynamicFieldPageNumber);

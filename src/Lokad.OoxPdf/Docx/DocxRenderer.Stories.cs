@@ -102,7 +102,7 @@ internal sealed partial class DocxRenderer
         DocxFontResources fontResources,
         DocxMarkupContext markupContext,
         Action<OoxPdfDiagnostic>? diagnosticSink,
-        int pageNumber,
+        DocxPageNumber pageNumber,
         int pageCount,
         CancellationToken cancellationToken,
         Dictionary<string, PdfImageXObject?> imageCache,
@@ -143,7 +143,7 @@ internal sealed partial class DocxRenderer
             : story.TextLines;
         var items = (mapStory ? storyTextLines.Select(line => storyMap.PrecompensateLine(line, 0d, 0d)) : storyTextLines)
             .Cast<DocxLayoutItem>()
-            .Concat(mapStory ? story.InlineImages.Select(image => storyMap.PrecompensateImage(image, pageNumber)) : story.InlineImages)
+            .Concat(mapStory ? story.InlineImages.Select(image => storyMap.PrecompensateImage(image, pageNumber.Physical)) : story.InlineImages)
             .Concat(story.TableRows.Select(row => ResolvePlacedStoryTablePaintFrame(story, row, mapStory ? storyMap : null, cancellationToken)))
             .OrderByDescending(ResolveLayoutItemTop)
             .ToArray();
@@ -161,7 +161,7 @@ internal sealed partial class DocxRenderer
                 HasClippedNoteTableContent(row, tableClip, ResolveTextEmissionBaselineOffset(markupContext), cancellationToken))
                 diagnosticSink(new OoxPdfDiagnostic("DOCX_CLIPPED_NOTE_TABLE_ROW", OoxPdfSeverity.Warning,
                     "A note-table row exceeds its available frame; content is clipped. Row fragmentation for this content is unsupported.",
-                    story.StoryLayout.Story.PartName, PageIndex: pageNumber, Feature: "note table row", Fallback: "Clipped"));
+                    story.StoryLayout.Story.PartName, PageIndex: pageNumber.Physical, Feature: "note table row", Fallback: "Clipped"));
             RenderLayoutItem(item, previousRow, nextRow, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, pageCount, cancellationToken, imageCache, ref imageIndex,
                 storyNavigation.ClipTo(tableViewport ? tableClip : clip));
             if (tableViewport) SetClip(clip);
@@ -246,7 +246,7 @@ internal sealed partial class DocxRenderer
         List<PdfImageResource> pageImages,
         DocxFontResources fontResources,
         DocxMarkupContext markupContext,
-        int pageNumber,
+        DocxPageNumber pageNumber,
         int pageCount,
         Action<OoxPdfDiagnostic>? diagnosticSink,
         CancellationToken cancellationToken,
@@ -270,7 +270,7 @@ internal sealed partial class DocxRenderer
         List<PdfImageResource> pageImages,
         DocxFontResources fontResources,
         DocxMarkupContext markupContext,
-        int pageNumber,
+        DocxPageNumber pageNumber,
         int pageCount,
         Action<OoxPdfDiagnostic>? diagnosticSink,
         CancellationToken cancellationToken,
@@ -307,7 +307,7 @@ internal sealed partial class DocxRenderer
         List<PdfImageResource> pageImages,
         DocxFontResources fontResources,
         DocxMarkupContext markupContext,
-        int pageNumber,
+        DocxPageNumber pageNumber,
         int pageCount,
         Action<OoxPdfDiagnostic>? diagnosticSink,
         CancellationToken cancellationToken,
@@ -394,7 +394,7 @@ internal sealed partial class DocxRenderer
         List<PdfImageResource> pageImages,
         DocxFontResources fontResources,
         DocxMarkupContext markupContext,
-        int pageNumber,
+        DocxPageNumber pageNumber,
         int pageCount,
         Action<OoxPdfDiagnostic>? diagnosticSink,
         CancellationToken cancellationToken,
@@ -484,7 +484,7 @@ internal sealed partial class DocxRenderer
         DocxFontResources fontResources,
         DocxMarkupContext markupContext,
         Action<OoxPdfDiagnostic>? diagnosticSink,
-        int pageNumber,
+        DocxPageNumber pageNumber,
         int pageCount,
         CancellationToken cancellationToken,
         Dictionary<string, PdfImageXObject?> imageCache,
@@ -500,7 +500,7 @@ internal sealed partial class DocxRenderer
                 if (element is not DocxParagraphElement { Paragraph.InlineTextBoxes.Count: > 0 }) continue;
                 diagnosticSink(new OoxPdfDiagnostic("DOCX_UNSUPPORTED_NESTED_INLINE_TEXTBOX", OoxPdfSeverity.Warning,
                     "Nested inline text boxes in a text-box paragraph were ignored; surrounding supported content is retained.",
-                    PartName: null, SlideIndex: null, PageIndex: pageNumber - 1,
+                    PartName: null, SlideIndex: null, PageIndex: pageNumber.Physical - 1,
                     Feature: "nested-inline-textbox", Fallback: "Ignored"));
                 break;
             }

@@ -44,7 +44,7 @@ internal static class DocxPlainBodyFrame
                     line.SourceParagraph is not { } paragraph || !IsPlainStaticContent(paragraph)) ||
                 page.StaticInlineImages.Any(image => !IsIndependentMarginImage(image, page))) return false;
             var settings = page.PageSettings;
-            string variant = DocxLayoutEngine.GetStaticStoryVariant(settings, index + 1, page.SectionFirstPageNumber);
+            string variant = DocxLayoutEngine.GetStaticStoryVariant(settings, page.GetPageNumber(index + 1), page.SectionFirstPageNumber);
             if (validatedSources.Add((settings, variant)))
             {
                 // Selection belongs to the same container rule as painting.

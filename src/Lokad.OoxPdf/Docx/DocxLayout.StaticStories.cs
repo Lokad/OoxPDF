@@ -37,7 +37,7 @@ internal sealed partial class DocxLayoutEngine
         IDocxLineMetricsProvider? unscaledLineMetrics =
             (unscaledTextMeasurer as IDocxLineMetricsProvider) ?? (textMeasurer as IDocxLineMetricsProvider);
         double bodyWidth = Math.Max(1d, templatePage.Width - templatePage.MarginLeft - templatePage.MarginRight);
-        string variant = GetStaticStoryVariant(templatePage.PageSettings, pageNumber, templatePage.SectionFirstPageNumber);
+        string variant = GetStaticStoryVariant(templatePage.PageSettings, templatePage.GetPageNumber(pageNumber), templatePage.SectionFirstPageNumber);
         DocxSelectedStaticStory selectedStory = SelectStaticHeaderFooter(templatePage.PageSettings, header, variant);
         DocxStaticStoryLayoutResult layout = CreatePageStaticStoryLayout(
             templatePage, selectedStory,
@@ -45,7 +45,7 @@ internal sealed partial class DocxLayoutEngine
             bodyWidth,
             header ? templatePage.Height - ResolveHeaderDistance(templatePage) : ResolveFooterDistance(templatePage),
             header,
-            pageNumber,
+            templatePage.GetPageNumber(pageNumber),
             pageCount,
             textMeasurer,
             staticMetrics,
@@ -146,7 +146,7 @@ internal sealed partial class DocxLayoutEngine
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 DocxLayoutPage page = pages[pageIndex];
-                string variant = GetStaticStoryVariant(page.PageSettings, pageIndex + 1, page.SectionFirstPageNumber);
+                string variant = GetStaticStoryVariant(page.PageSettings, page.GetPageNumber(pageIndex + 1), page.SectionFirstPageNumber);
                 AddDrawings(page, pageIndex, true, SelectStaticHeaderFooterDrawings(page.PageSettings, header: true, variant), null);
                 AddDrawings(page, pageIndex, false, SelectStaticHeaderFooterDrawings(page.PageSettings, header: false, variant), null);
             }
@@ -163,7 +163,7 @@ internal sealed partial class DocxLayoutEngine
         {
             cancellationToken.ThrowIfCancellationRequested();
             DocxLayoutPage page = pages[pageIndex];
-            int pageNumber = pageIndex + 1;
+            var pageNumber = page.GetPageNumber(pageIndex + 1);
             double bodyWidth = Math.Max(1d, page.Width - page.MarginLeft - page.MarginRight);
             string variant = GetStaticStoryVariant(page.PageSettings, pageNumber, page.SectionFirstPageNumber);
             var selectedHeader = SelectStaticHeaderFooter(page.PageSettings, header: true, variant);
@@ -249,7 +249,7 @@ internal sealed partial class DocxLayoutEngine
         double width,
         double startY,
         bool isHeader,
-        int pageNumber,
+        DocxPageNumber pageNumber,
         int pageCount,
         IDocxTextMeasurer textMeasurer,
         IDocxStaticTextMetricsProvider staticMetrics,
@@ -360,7 +360,7 @@ internal sealed partial class DocxLayoutEngine
                         double available = Math.Max(1d, width - inset - rightInset);
                         double align = ResolveOrderedInlineAlignment(line, paragraph.Alignment, available);
                         var placed = PlaceOrderedInlineLine(paragraph, line, x + inset + align, x, cursorY,
-                            size, paragraphSpacingScale, pageNumber, null, paragraphIndex, index,
+                            size, paragraphSpacingScale, pageNumber.Physical, null, paragraphIndex, index,
                             DocxStoryId.HeaderOrFooter(isHeader, story.VariantType));
                         lines.Add(placed.Line with { SingleLineHeight = sourceHeight,
                             ParagraphShadingFrame = CreateParagraphShadingFrame(paragraph, HasFollowingParagraphShading(story.BodyElements, elementIndex), x, width, placed.Line.X,
@@ -591,7 +591,7 @@ internal sealed partial class DocxLayoutEngine
                                     ? staticBaselineY : staticBaselineY - placed.Height,
                                 placed.Width,
                                 placed.Height,
-                                pageNumber,
+                                pageNumber.Physical,
                                 SourceBlockIndex: null,
                                 SourceParagraphIndex: paragraphIndex,
                                 Story: DocxStoryId.HeaderOrFooter(isHeader, story.VariantType))
@@ -630,7 +630,7 @@ internal sealed partial class DocxLayoutEngine
                     cursorY - imageHeight,
                     imageWidth,
                     imageHeight,
-                    pageNumber,
+                    pageNumber.Physical,
                     SourceBlockIndex: null,
                     SourceParagraphIndex: paragraphIndex,
                     Story: DocxStoryId.HeaderOrFooter(isHeader, story.VariantType))

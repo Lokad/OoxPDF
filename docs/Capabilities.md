@@ -50,8 +50,11 @@ fonts and coverage matter.
 Floating charts, SmartArt, OLE, macros, external images and general Word field
 execution are unsupported. Supported counters are computed; other fields retain
 usable stored results rather than executing arbitrary instructions.
-PAGE respects a positive decimal numbering start in single-section documents.
-Additional section restarts and nondecimal page-number formats remain unsupported.
+PAGE respects positive decimal starts and restarts across ordinary next-page
+sections. Header and footer parity follows the displayed number. NUMPAGES and
+PDF link destinations use physical pages. Restarts across continuous, next-column
+or parity section breaks, nondecimal numbering and zero-numbered title pages
+remain outside this support.
 
 ## PPTX
 

@@ -300,7 +300,7 @@ internal sealed partial class DocxRenderer
         {
             cancellationToken.ThrowIfCancellationRequested();
             DocxLayoutPage page = layout.Pages[pageIndex];
-            int pageNumber = pageIndex + 1;
+            var pageNumber = page.GetPageNumber(pageIndex + 1);
             effectiveMarkupContext = WithPageTextEmissionOffsets(effectiveMarkupContext, layout, pageIndex, separatePlainHeaderOrigins);
             textEmissionBaselineOffset = ResolveTextEmissionBaselineOffset(effectiveMarkupContext);
             textEmissionXOffset = ResolveTextEmissionXOffset(effectiveMarkupContext);
@@ -1012,7 +1012,7 @@ internal sealed partial class DocxRenderer
             // as raster resources; no payload or decode result is copied here.
             var navigation = new PictureNavigation(new PdfRectangle(0d, 0d, layoutPage.Width, layoutPage.Height),
                 new HashSet<DocxInlineImage>(ReferenceEqualityComparer.Instance), []);
-            int pageNumber = pageIndex + 1;
+            var pageNumber = layoutPage.GetPageNumber(pageIndex + 1);
             RenderWordCompatibleMarkupLaneBackground(layoutPage, graphics, markupContext);
             RenderFloatingDrawings(
                 drawingPages.Floating.Get(pageIndex).Behind,
@@ -1145,7 +1145,7 @@ internal sealed partial class DocxRenderer
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 DocxLayoutPage page = layout.Pages[pageIndex];
-                int pageNumber = pageIndex + 1;
+                var pageNumber = page.GetPageNumber(pageIndex + 1);
                 DocxMarkupContext pageMarkupContext = WithPageTextEmissionOffsets(markupContext, layout, pageIndex, separatePlainHeaderOrigins);
                 double pageTextEmissionBaselineOffset = ResolveTextEmissionBaselineOffset(pageMarkupContext);
                 double pageTextEmissionXOffset = ResolveTextEmissionXOffset(pageMarkupContext);
@@ -1208,7 +1208,7 @@ internal sealed partial class DocxRenderer
                             // Legacy text wrapping still owns ordinary placement.
                             // Borrow its actual picture, including container transforms,
                             // rather than substituting a following prose segment.
-                            foreach (var (image, _) in EnumeratePlacedPictureFrames(page, pageNumber,
+                            foreach (var (image, _) in EnumeratePlacedPictureFrames(page, pageNumber.Physical,
                                 EnumerateStaticLayoutItems(page, pageMarkupContext), pageMarkupContext,
                                 sourceImage => ReferenceEquals(sourceImage, targetPicture.Image), cancellationToken))
                             {
@@ -1377,7 +1377,7 @@ internal sealed partial class DocxRenderer
             }
         }
 
-        IReadOnlyList<PdfLinkAnnotation> CreateHyperlinkAnnotations(DocxLayoutPage page, int pageIndex, int pageNumber, int pageCount,
+        IReadOnlyList<PdfLinkAnnotation> CreateHyperlinkAnnotations(DocxLayoutPage page, int pageIndex, DocxPageNumber pageNumber, int pageCount,
             IReadOnlySet<DocxInlineImage> paintedPictures, IReadOnlyList<DocxLayoutItem> staticItems,
             IReadOnlyList<PlacedNoteTableFrame?>? noteTables, IReadOnlyList<PdfLinkAnnotation> drawingUris)
         {
@@ -1652,7 +1652,7 @@ internal sealed partial class DocxRenderer
                         bottom - textEmissionBaselineOffset - equation.SourceParagraph.SpacingAfterPoints * scale, clip);
                 EmitMathLinks(equation.Math, equation.X, equation.BaselineY, equation.Scale, rootMathLink);
             }
-            annotations.AddRange(CreateInlinePictureAnnotations(page, pageNumber, staticItems, paintedPictures, markupContext, cancellationToken));
+            annotations.AddRange(CreateInlinePictureAnnotations(page, pageNumber.Physical, staticItems, paintedPictures, markupContext, cancellationToken));
             annotations.AddRange(drawingUris);
             annotations.AddRange(CreateNoteReferenceAnnotations(page, pageNumber, pageCount, fontResources,
                 markupContext, noteDestinations, noteSpacingParagraphs, cancellationToken));
@@ -1715,7 +1715,7 @@ internal sealed partial class DocxRenderer
             // reservation per placed item. Repeated placements are ambiguous and
             // retain glyph-only bounds rather than selecting an arbitrary frame.
             var frames = new Dictionary<DocxInlineImage, DocxInlineImageLayout?>(ReferenceEqualityComparer.Instance);
-            foreach (var image in EnumerateLinkedPictureFrames(page, pageNumber, staticItems, paintedPictures,
+            foreach (var image in EnumerateLinkedPictureFrames(page, pageNumber.Physical, staticItems, paintedPictures,
                 markupContext, requested.Contains, cancellationToken))
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -2031,7 +2031,7 @@ internal sealed partial class DocxRenderer
         DocxFontResources fontResources,
         DocxMarkupContext markupContext,
         Action<OoxPdfDiagnostic>? diagnosticSink,
-        int pageNumber,
+        DocxPageNumber pageNumber,
         int pageCount,
         CancellationToken cancellationToken,
         Dictionary<string, PdfImageXObject?> imageCache,

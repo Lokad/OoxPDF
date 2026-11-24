@@ -6,7 +6,7 @@ internal sealed partial class DocxLayoutEngine
 
     private static DocxMidLineMath? WrapInlineMath(DocxParagraph paragraph, DocxPreparedMathParagraph math,
         IReadOnlyList<DocxTextSpan> spans, ref DocxWrappedTextLine[] lines, double firstWidth, double continuationWidth,
-        double fontSize, IDocxTextMeasurer measurer, double scale, double defaultTabStop, int pageNumber,
+        double fontSize, IDocxTextMeasurer measurer, double scale, double defaultTabStop, DocxPageNumber pageNumber,
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -84,7 +84,7 @@ internal sealed partial class DocxLayoutEngine
 
     private static DocxMidLineMath? CreateMidLineMath(DocxParagraph paragraph, DocxPreparedMathParagraph math,
         IReadOnlyList<DocxTextSpan> spans, DocxWrappedTextLine[] lines, double firstWidth, double continuationWidth,
-        double fontSize, IDocxTextMeasurer measurer, double scale, double defaultTabStop, int pageNumber)
+        double fontSize, IDocxTextMeasurer measurer, double scale, double defaultTabStop, DocxPageNumber pageNumber)
     {
         var source = FindMathSourceLine(paragraph, math.Equation, spans, lines);
         if (source is null) { return null; }

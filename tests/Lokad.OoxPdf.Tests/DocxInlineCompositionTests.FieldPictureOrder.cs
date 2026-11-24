@@ -259,6 +259,69 @@ internal static partial class DocxInlineCompositionTests
                 .Where(show => page.Height - show.Y < 60d).Select(show => show.Text)));
     }
 
+    public static void DocxPageSeparatedSectionStartsBindSharedStoriesAndPhysicalDestinations()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true),
+                mode, CachedMathGeometry(mode));
+            var control = Render(null, null);
+            foreach (var (start, expectedSecond) in new (int?, int)[] { (null, 26), (40, 40), (1, 1) })
+            {
+                var pages = Render(25, start);
+                TestAssert.Equal(2, pages.Length);
+                TestAssert.Contains("onpage25(page25)", SectionCounterPageText(pages[0]));
+                TestAssert.Contains("ionpage25", SectionCounterPageText(pages[0]));
+                TestAssert.Contains("afterformula.Page25of2", SectionCounterPageText(pages[0]));
+                string second = SectionCounterPageText(pages[1]);
+                TestAssert.Contains($"Sectioncounter{expectedSecond}", second);
+                TestAssert.Contains($"afterformula.Page{expectedSecond}of2", second);
+                TestAssert.Contains("x+2y", SectionCounterPageText(pages[0]));
+                TestAssert.True(pages.Select(page => page.Images.Count).SequenceEqual(control.Select(page => page.Images.Count)) &&
+                    pages.All(page => page.Images.Count > 0), "Restarted numbering preserves the pictures on both physical pages.");
+                var targets = pages.SelectMany(page => page.Annotations).Select(link => (link.Uri, PageIndex: link.Destination?.PageIndex));
+                TestAssert.True(targets.Any(target => target.PageIndex == 1) &&
+                    targets.SequenceEqual(control.SelectMany(page => page.Annotations).Select(link => (link.Uri, link.Destination?.PageIndex))),
+                    "A displayed restart cannot renumber the PDF link targets.");
+            }
+
+            Lokad.OoxPdf.Pdf.PdfPage[] Render(int? firstStart, int? secondStart)
+            {
+                var doc = ReadMutation("Composition/composed-static-cell-report", mode, false, false, (xml, w, _) =>
+                {
+                    var body = xml.Root!.Element(w + "body")!;
+                    var final = body.Element(w + "sectPr")!;
+                    var first = new XElement(final);
+                    final.Elements().Where(element => element.Name == w + "headerReference" ||
+                        element.Name == w + "footerReference").Remove();
+                    var boundary = Paragraph("Review section 6.");
+                    var properties = boundary.Element(w + "pPr");
+                    if (properties is null)
+                    {
+                        properties = new XElement(w + "pPr");
+                        boundary.AddFirst(properties);
+                    }
+                    properties.Add(first);
+                    Start(first, firstStart);
+                    Start(final, secondStart);
+                    Paragraph("Review section 7.").Add(
+                        new XElement(w + "r", new XElement(w + "t", new XAttribute(XNamespace.Xml + "space", "preserve"), " Section counter ")),
+                        new XElement(w + "fldSimple", new XAttribute(w + "instr", " PAGE "),
+                            new XElement(w + "r", new XElement(w + "t", "900"))));
+
+                    XElement Paragraph(string prefix) => body.Elements(w + "p").Single(paragraph =>
+                        string.Concat(paragraph.Descendants(w + "t").Select(text => text.Value)).StartsWith(prefix, StringComparison.Ordinal));
+                    void Start(XElement section, int? value)
+                    {
+                        if (value is { } number)
+                            section.Add(new XElement(w + "pgNumType", new XAttribute(w + "start", number)));
+                    }
+                });
+                return renderer.RenderPagesAsync(doc, null, default).ToBlockingEnumerable().ToArray();
+            }
+        }
+    }
+
     private static DocxDocument ReadSectionCounterReport(OoxPdfDocxMarkupMode mode, int start, bool evenAndOdd) =>
         ReadMutation("Composition/composed-static-cell-report", mode, false, false, (xml, w, _) =>
         {
