@@ -52,9 +52,9 @@ internal static partial class DocxInlineCompositionTests
         foreach (string kind in new[] { "hint", "trimmed", "picture", "box", "empty" })
         {
             var renderer = new DocxRenderer(resolver, mode, CachedMathGeometry(mode));
-            var expected = renderer.RenderPagesAsync(ReadRevisedNontextRun(story, kind, mode, revised: false),
+            var expected = renderer.RenderPagesAsync(ReadRevisedNontextRun(story, kind, mode, revised: false, linkEquation: true),
                 null, default).ToBlockingEnumerable().ToArray();
-            var document = ReadRevisedNontextRun(story, kind, mode, revised: true);
+            var document = ReadRevisedNontextRun(story, kind, mode, revised: true, linkEquation: true);
             var diagnostics = new List<OoxPdfDiagnostic>();
             var actual = renderer.RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
             string expectedMath = ReadEquationText(expected);
@@ -64,18 +64,36 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.Equal(expected.Sum(page => page.Images.Count), actual.Sum(page => page.Images.Count));
             TestAssert.True(diagnostics.All(item => item.Id != "DOCX_UNSUPPORTED_EQUATION"),
                 "Run history cannot remove supported math: " + story + "/" + kind + "/" + mode);
-            var expectedLinks = expected.SelectMany(page => page.Annotations).ToArray();
-            var links = actual.SelectMany(page => page.Annotations).ToArray();
-            TestAssert.True(expectedLinks.Where(link => link.IsUri).Select(link => link.Uri).Distinct().Order()
-                .SequenceEqual(links.Where(link => link.IsUri).Select(link => link.Uri).Distinct().Order()),
-                "Every source URI target survives nontext-run ownership.");
-            TestAssert.True(links.Count(link => link.IsDestination) >= expectedLinks.Count(link => link.IsDestination),
-                "Source bookmark links retain their painted fragments.");
+            AssertRevisionNavigation(expected, actual, hasMethodLink: kind != "box", $"{story}/{kind}/{mode}");
+        }
+    }
+
+    private static void AssertRevisionNavigation(PdfPage[] control, PdfPage[] revised, bool hasMethodLink, string context)
+    {
+        int controlFragments = CheckSourceTargets(control);
+        TestAssert.True(CheckSourceTargets(revised) >= controlFragments,
+            "The revised bookmark link retains its painted fragments: " + context);
+
+        int CheckSourceTargets(PdfPage[] pages)
+        {
+            string[] expectedUris = hasMethodLink ? ["https://example.org/method"] : [];
+            var links = pages.SelectMany(page => page.Annotations).ToArray();
+            TestAssert.True(expectedUris.SequenceEqual(links.Where(link => link.IsUri).Select(link => link.Uri).Distinct()),
+                "The fixture's authored URI targets must survive independently: " + context);
+            TestAssert.True(pages[0].Annotations.Any(link => link.Destination is { PageIndex: 0 }),
+                "The linked equation must reach its bookmark on physical page one: " + context);
             TestAssert.True(links.All(link => double.IsFinite(link.X + link.Y + link.Width + link.Height) &&
                 link.Width > 0d && link.Height > 0d && (link.Destination is not { } target ||
-                    target.PageIndex >= 0 && target.PageIndex < actual.Length)),
-                "Navigation retains finite rectangles and admitted destination pages.");
+                    target.PageIndex >= 0 && target.PageIndex < pages.Length)),
+                "Navigation retains finite rectangles and admitted destination pages: " + context);
+            return links.Count(link => link.IsDestination);
         }
+    }
+
+    private static void LinkFirstRevisionEquation(XDocument xml, XNamespace w, XNamespace m)
+    {
+        var equation = xml.Descendants(m + "oMath").First();
+        equation.ReplaceWith(new XElement(w + "hyperlink", new XAttribute(w + "anchor", "PublicCalculation"), new XElement(equation)));
     }
 
     private static string ReadEquationText(IEnumerable<PdfPage> pages) => string.Concat(pages.SelectMany(page =>
@@ -83,14 +101,16 @@ internal static partial class DocxInlineCompositionTests
             font.ResourceName.StartsWith("Eq", StringComparison.Ordinal) && ReferenceEquals(font.Font, show.Font))))
         .Select(show => show.Text)).Normalize(NormalizationForm.FormKC);
 
-    private static DocxDocument ReadRevisedNontextRun(string story, string kind, OoxPdfDocxMarkupMode mode, bool revised, bool inserted = false)
+    private static DocxDocument ReadRevisedNontextRun(string story, string kind, OoxPdfDocxMarkupMode mode,
+        bool revised, bool inserted = false, bool linkEquation = false)
     {
         bool box = kind == "box";
         string fixture = box ? "InlineBoxMath/" + (story == "body" ? "inline-box-body-equation-inline-box-valid" : "inline-box-math-" + story)
             : "CompositionProbes/math-composition-unnumbered" + (story == "body" ? "" : "-" + story);
         string? part = story is "header" or "footer" ? box ? "word/inline-box-" + story + ".xml" : "word/" + story + "1.xml" : null;
-        return ReadMutation(fixture, mode, true, true, (xml, w, _) =>
+        return ReadMutation(fixture, mode, true, true, (xml, w, m) =>
         {
+            if (linkEquation) LinkFirstRevisionEquation(xml, w, m);
             var drawing = box ? xml.Descendants(w + "drawing").First(element => element.Descendants(w + "txbxContent").Any())
                 : xml.Descendants(w + "drawing").Single();
             var source = drawing.Parent!;

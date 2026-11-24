@@ -46,8 +46,9 @@ internal static partial class DocxInlineCompositionTests
         {
             var renderer = new DocxRenderer(resolver, mode, CachedMathGeometry(mode));
             var expected = renderer.RenderPagesAsync(ReadRevisedFieldCode(story, "PAGE", mode, slot,
-                revised: false, splitInstruction: splitInstruction), null, default).ToBlockingEnumerable().ToArray();
-            var document = ReadRevisedFieldCode(story, "PAGE", mode, slot, revised: true, splitInstruction: splitInstruction);
+                revised: false, splitInstruction: splitInstruction, linkEquation: true), null, default).ToBlockingEnumerable().ToArray();
+            var document = ReadRevisedFieldCode(story, "PAGE", mode, slot, revised: true,
+                splitInstruction: splitInstruction, linkEquation: true);
             var diagnostics = new List<OoxPdfDiagnostic>();
             var actual = renderer.RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
             string expectedMath = ReadEquationText(expected);
@@ -57,25 +58,16 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.Equal(1, actual.Sum(page => page.Images.Count));
             TestAssert.True(diagnostics.All(item => item.Id != "DOCX_UNSUPPORTED_EQUATION"),
                 "Nonpainting field history cannot remove formulas: " + story + "/" + slot + "/" + splitInstruction + "/" + mode);
-            var expectedLinks = expected.SelectMany(page => page.Annotations).ToArray();
-            var links = actual.SelectMany(page => page.Annotations).ToArray();
-            TestAssert.True(expectedLinks.Where(link => link.IsUri).Select(link => link.Uri).Distinct().Order()
-                .SequenceEqual(links.Where(link => link.IsUri).Select(link => link.Uri).Distinct().Order()),
-                "All source URI targets survive field-code formatting history.");
-            TestAssert.True(links.Count(link => link.IsDestination) >= expectedLinks.Count(link => link.IsDestination),
-                "Source bookmark links retain their painted fragments.");
-            TestAssert.True(links.All(link => double.IsFinite(link.X + link.Y + link.Width + link.Height) &&
-                link.Width > 0d && link.Height > 0d && (link.Destination is not { } target ||
-                    target.PageIndex >= 0 && target.PageIndex < actual.Length)),
-                "Navigation keeps finite rectangles and admitted destination pages.");
+            AssertRevisionNavigation(expected, actual, hasMethodLink: true, $"{story}/{slot}/{splitInstruction}/{mode}");
         }
     }
 
     private static DocxDocument ReadRevisedFieldCode(string story, string instruction, OoxPdfDocxMarkupMode mode,
-        string slot, bool revised, bool locked = false, bool splitInstruction = false) =>
+        string slot, bool revised, bool locked = false, bool splitInstruction = false, bool linkEquation = false) =>
         ReadMutation("CompositionProbes/math-composition-unnumbered" + (story == "body" ? "" : "-" + story),
-            mode, true, true, (xml, w, _) =>
+            mode, true, true, (xml, w, m) =>
             {
+                if (linkEquation) LinkFirstRevisionEquation(xml, w, m);
                 var drawing = xml.Descendants(w + "drawing").Single();
                 var field = CachedMathField(w, new XElement(w + "r", new XElement(drawing)), complex: true, instruction, locked);
                 if (splitInstruction)
