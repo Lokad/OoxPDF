@@ -641,7 +641,7 @@ internal static class DocxTablesMarkupTests
 
         IReadOnlyList<DocxBodyElement> headerElements = document.HeaderBodyElementsByType["default"];
         TestAssert.True(headerElements.Count == 1 && headerElements.Single() is DocxTableElement, "Static header parts should preserve tables as body elements instead of dropping them from the paragraph inventory.");
-        TestAssert.Equal(0, document.HeaderParagraphsByType["default"].Count);
+        TestAssert.Equal(0, document.HeaderParagraphs.Count);
         TestAssert.Equal(1, document.PageSettings.HeaderBodyElementsByType["default"].Count);
 
         DocxStructureStorySnapshot headerStory = DocxStructureSnapshot.FromDocument(document).Stories.Single(story => story.Kind == "Header" && story.VariantType == "default");

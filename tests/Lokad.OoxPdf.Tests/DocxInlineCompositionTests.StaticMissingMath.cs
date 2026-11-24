@@ -20,8 +20,7 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.Equal(row.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))));
             var mode = final ? OoxPdfDocxMarkupMode.Final : OoxPdfDocxMarkupMode.AllMarkup;
             var document = DocxTests.ReadDocx(path, mode);
-            var paragraphs = document.HeaderParagraphsByType.Values.Concat(document.FooterParagraphsByType.Values)
-                .SelectMany(value => value).ToArray();
+            var paragraphs = EnumerateDirectStaticParagraphs(document).ToArray();
             var owners = paragraphs.SelectMany(paragraph => paragraph.Runs).ToArray();
             var diagnostics = new List<OoxPdfDiagnostic>();
             var page = new DocxRenderer(resolver, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout

@@ -99,17 +99,14 @@ internal static partial class DocxInlineCompositionTests
         var settings = StaticVariantSettings(source.PageSettings, story, "first", enabled: true);
         var plain = DocxTests.CreateDocxLayoutParagraph("Later plain story.", 12d, 12d);
         var originalBodies = story == "header" ? settings.HeaderBodyElementsByType : settings.FooterBodyElementsByType;
-        var originalParagraphs = story == "header" ? settings.HeaderParagraphsByType : settings.FooterParagraphsByType;
-        var body = originalBodies["first"]; var paragraphs = originalParagraphs["first"];
+        var body = originalBodies["first"];
         // The same cached part is also referenced by an inactive variant. The
         // last page selects a distinct plain story; earlier selection must win.
         string[] variants = reverse ? ["default", "even", "first"] : ["first", "even", "default"];
         var bodies = variants.ToDictionary(key => key, key => key == "default" ?
             (IReadOnlyList<DocxBodyElement>)[new DocxParagraphElement(plain)] : body, StringComparer.OrdinalIgnoreCase);
-        var paras = variants.ToDictionary(key => key, key => key == "default" ?
-            (IReadOnlyList<DocxParagraph>)[plain] : paragraphs, StringComparer.OrdinalIgnoreCase);
-        settings = story == "header" ? settings with { HeaderBodyElementsByType = bodies, HeaderParagraphsByType = paras } :
-            settings with { FooterBodyElementsByType = bodies, FooterParagraphsByType = paras };
+        settings = story == "header" ? settings with { HeaderBodyElementsByType = bodies } :
+            settings with { FooterBodyElementsByType = bodies };
         source = WithStaticVariantSettings(source, settings);
         return source with { BodyElements = source.BodyElements.Concat<DocxBodyElement>(
             [new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null),

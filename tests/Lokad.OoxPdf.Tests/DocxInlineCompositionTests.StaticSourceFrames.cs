@@ -27,8 +27,7 @@ internal static partial class DocxInlineCompositionTests
             string path = Path.Combine(folder, row.GetProperty("File").GetString()!);
             TestAssert.Equal(row.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))));
             var document = DocxTests.ReadDocx(path, OoxPdfDocxMarkupMode.AllMarkup);
-            var paragraphs = document.HeaderParagraphsByType.Values.Concat(document.FooterParagraphsByType.Values)
-                .SelectMany(value => value).ToArray();
+            var paragraphs = EnumerateDirectStaticParagraphs(document).ToArray();
             var owners = paragraphs.SelectMany(paragraph => paragraph.Runs).ToArray();
             var page = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
                 .RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
@@ -76,4 +75,8 @@ internal static partial class DocxInlineCompositionTests
                 "Header balloons continue following the changed paragraph; the existing absolute header residual remains separate.");
         }
     }
+
+    private static IEnumerable<DocxParagraph> EnumerateDirectStaticParagraphs(DocxDocument document) =>
+        document.HeaderBodyElementsByType.Values.Concat(document.FooterBodyElementsByType.Values)
+            .SelectMany(DocxBlockTraversal.EnumerateDirectParagraphs);
 }

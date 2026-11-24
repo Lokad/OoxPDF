@@ -120,12 +120,10 @@ internal static partial class DocxInlineCompositionTests
         return story == "header" ? settings with
         {
             HeaderBodyElementsByType = settings.HeaderBodyElementsByType.ToDictionary(_ => variant, pair => pair.Value, StringComparer.OrdinalIgnoreCase),
-            HeaderParagraphsByType = settings.HeaderParagraphsByType.ToDictionary(_ => variant, pair => pair.Value, StringComparer.OrdinalIgnoreCase),
             HeaderFloatingDrawingsByType = settings.HeaderFloatingDrawingsByType.ToDictionary(_ => variant, pair => pair.Value, StringComparer.OrdinalIgnoreCase)
         } : settings with
         {
             FooterBodyElementsByType = settings.FooterBodyElementsByType.ToDictionary(_ => variant, pair => pair.Value, StringComparer.OrdinalIgnoreCase),
-            FooterParagraphsByType = settings.FooterParagraphsByType.ToDictionary(_ => variant, pair => pair.Value, StringComparer.OrdinalIgnoreCase),
             FooterFloatingDrawingsByType = settings.FooterFloatingDrawingsByType.ToDictionary(_ => variant, pair => pair.Value, StringComparer.OrdinalIgnoreCase)
         };
     }
@@ -134,7 +132,6 @@ internal static partial class DocxInlineCompositionTests
     {
         PageSettings = settings, HeaderParagraphs = [], FooterParagraphs = [],
         HeaderBodyElementsByType = settings.HeaderBodyElementsByType, FooterBodyElementsByType = settings.FooterBodyElementsByType,
-        HeaderParagraphsByType = settings.HeaderParagraphsByType, FooterParagraphsByType = settings.FooterParagraphsByType,
         HeaderFloatingDrawingsByType = settings.HeaderFloatingDrawingsByType, FooterFloatingDrawingsByType = settings.FooterFloatingDrawingsByType
     };
 }

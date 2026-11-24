@@ -683,7 +683,7 @@ internal static partial class DocxHeaderFooterTests
         {
             OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
             DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
-            TestAssert.Equal(3, document.HeaderParagraphsByType.Count);
+            TestAssert.Equal(3, document.HeaderBodyElementsByType.Count);
             TestAssert.Equal(1, document.HeaderParagraphs.Count);
         }
 
@@ -781,10 +781,13 @@ internal static partial class DocxHeaderFooterTests
         OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
         DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
-        foreach (var paragraphsByType in new[] { document.HeaderParagraphsByType, document.PageSettings.HeaderParagraphsByType })
-        {
-            TestAssert.Equal("Selected header", string.Concat(paragraphsByType["default"].Single().Runs.Select(run => run.Text)));
-        }
+        var headerBlocks = document.HeaderBodyElementsByType["default"];
+        TestAssert.True(ReferenceEquals(headerBlocks, document.PageSettings.HeaderBodyElementsByType["default"]),
+            "The document and section references share the parsed header blocks.");
+        var header = DocxBlockTraversal.EnumerateDirectParagraphs(headerBlocks).Single();
+        TestAssert.Equal("Selected header", string.Concat(header.Runs.Select(run => run.Text)));
+        TestAssert.Equal(0, document.HeaderParagraphsByType.Count);
+        TestAssert.Equal(0, document.PageSettings.HeaderParagraphsByType.Count);
         DocxFloatingDrawing drawing = document.HeaderFloatingDrawingsByType["default"].Single();
         TestAssert.Equal(1, document.PageSettings.HeaderFloatingDrawingsByType["default"].Count);
         TestAssert.Equal("rIdHeaderImage1", drawing.ImageRelationshipId ?? string.Empty);

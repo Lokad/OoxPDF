@@ -88,17 +88,15 @@ internal static partial class DocxInlineCompositionTests
             var current = source.PageSettings;
             var owner = section.PageSettings with
             {
-                HeaderParagraphsByType = current.HeaderParagraphsByType, HeaderBodyElementsByType = current.HeaderBodyElementsByType,
-                FooterParagraphsByType = current.FooterParagraphsByType, FooterBodyElementsByType = current.FooterBodyElementsByType
+                HeaderBodyElementsByType = current.HeaderBodyElementsByType,
+                FooterBodyElementsByType = current.FooterBodyElementsByType
             };
             DocxDocument WithSection(DocxPageSettings settings, DocxDocument document) => document with
             { BodyElements = document.BodyElements.Select(item => ReferenceEquals(item, section) ? section with { PageSettings = settings } : item).ToArray() };
             TestAssert.True(!DocxPlainBodyFrame.HasNoSelectableStaticStories(WithSection(owner with { TitlePage = true }, source)),
                 "An earlier active story is not hidden by the final section's disabled title page.");
             var final = current with { TitlePage = true,
-                HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(),
                 HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(),
-                FooterParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(),
                 FooterBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>() };
             var inherited = WithSection(owner with { TitlePage = false }, WithStaticVariantSettings(source, final));
             TestAssert.True(!DocxPlainBodyFrame.HasNoSelectableStaticStories(inherited),

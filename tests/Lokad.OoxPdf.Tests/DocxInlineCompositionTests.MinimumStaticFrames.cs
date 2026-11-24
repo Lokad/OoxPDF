@@ -41,8 +41,7 @@ internal static partial class DocxInlineCompositionTests
                         paragraph.AddFirst(new XElement(w + "bookmarkStart", new XAttribute(w + "id", "41"), new XAttribute(w + "name", "StaticSource")));
                         paragraph.Add(new XElement(w + "bookmarkEnd", new XAttribute(w + "id", "41")));
                     }, row.GetProperty("Part").GetString());
-                var owners = document.HeaderParagraphsByType.Values.Concat(document.FooterParagraphsByType.Values)
-                    .SelectMany(p => p).SelectMany(p => p.Runs).ToArray();
+                var owners = EnumerateDirectStaticParagraphs(document).SelectMany(p => p.Runs).ToArray();
                 var page = new DocxRenderer(resolver, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
                     OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
                 var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true).ToArray();
@@ -56,8 +55,8 @@ internal static partial class DocxInlineCompositionTests
                 if (original is not null) TestAssert.True(original.SequenceEqual(rows.Select(s => s.Y)),
                     "Neutral source metadata and run splits preserve static baseline geometry.");
                 original = rows.Select(s => s.Y).ToArray();
-                TestAssert.True(owners.SequenceEqual(document.HeaderParagraphsByType.Values.Concat(document.FooterParagraphsByType.Values)
-                    .SelectMany(p => p).SelectMany(p => p.Runs), ReferenceEqualityComparer.Instance), "Placement retains the original static source runs.");
+                TestAssert.True(owners.SequenceEqual(EnumerateDirectStaticParagraphs(document)
+                    .SelectMany(p => p.Runs), ReferenceEqualityComparer.Instance), "Placement retains the original static source runs.");
                 if (resolver is not null) continue;
                 foreach (var pair in rows.Zip(row.GetProperty("StaticY").EnumerateArray()))
                     TestAssert.True(Math.Abs(pair.First.Y - pair.Second.GetDouble()) < 1d,

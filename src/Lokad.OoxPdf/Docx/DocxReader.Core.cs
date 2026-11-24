@@ -97,10 +97,8 @@ internal sealed partial class DocxReader
             var (footerBodyElementsByType, footerDrawingsByType) = ReadReferencedStaticStories(
                 document, package, internalRelationships, styles, numbering, FooterRelationshipType, "footerReference",
                 revisionFilteringMarkupMode, cancellationToken, storyCache, diagnosticSink, warnedMustUnderstandParts);
-            IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> headersByType = ToStaticParagraphsByType(headerBodyElementsByType);
-            IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> footersByType = ToStaticParagraphsByType(footerBodyElementsByType);
-            IReadOnlyList<DocxParagraph> headers = SelectDefaultHeaderFooterParagraphs(headersByType);
-            IReadOnlyList<DocxParagraph> footers = SelectDefaultHeaderFooterParagraphs(footersByType);
+            IReadOnlyList<DocxParagraph> headers = SelectDefaultHeaderFooterParagraphs(headerBodyElementsByType);
+            IReadOnlyList<DocxParagraph> footers = SelectDefaultHeaderFooterParagraphs(footerBodyElementsByType);
             IReadOnlyList<DocxRelatedStory> relatedStories = ReadRelatedStories(package, documentPart.Name, styles, numbering, documentSettings, revisionFilteringMarkupMode, cancellationToken, diagnosticSink, warnedMustUnderstandParts, bodyElements, settings, modelStorage);
             IReadOnlyList<DocxFloatingDrawing> floatingDrawings = floatingBlocks is null ? [] :
                 ReadFloatingDrawings(document, package, relationships, styles, numbering, documentSettings, revisionFilteringMarkupMode, cancellationToken, floatingBlocks);
@@ -173,8 +171,6 @@ internal sealed partial class DocxReader
                 EquationParts = ReadEquationParts(),
                 EquationDiagnostics = equationDiagnostics,
                 StyleCatalog = includeStyleCatalog ? ToStyleCatalog(styles) : DocxStyleCatalog.Empty,
-                HeaderParagraphsByType = headersByType,
-                FooterParagraphsByType = footersByType,
                 HeaderBodyElementsByType = headerBodyElementsByType,
                 FooterBodyElementsByType = footerBodyElementsByType,
                 HeaderFloatingDrawingsByType = headerDrawingsByType,
@@ -596,8 +592,6 @@ internal sealed partial class DocxReader
         {
             HeaderBodyElementsByType = headerBodyElementsByType,
             FooterBodyElementsByType = footerBodyElementsByType,
-            HeaderParagraphsByType = ToStaticParagraphsByType(headerBodyElementsByType),
-            FooterParagraphsByType = ToStaticParagraphsByType(footerBodyElementsByType),
             HeaderFloatingDrawingsByType = headerDrawingsByType,
             FooterFloatingDrawingsByType = footerDrawingsByType
         };

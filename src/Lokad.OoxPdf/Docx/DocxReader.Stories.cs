@@ -165,19 +165,11 @@ internal sealed partial class DocxReader
         return (bodyElementsByType, drawingsByType);
     }
 
-    private static IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> ToStaticParagraphsByType(
+    private static IReadOnlyList<DocxParagraph> SelectDefaultHeaderFooterParagraphs(
         IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> bodyElementsByType)
     {
-        return bodyElementsByType.ToDictionary(
-            pair => pair.Key,
-            pair => (IReadOnlyList<DocxParagraph>)DocxBlockTraversal.EnumerateDirectParagraphs(pair.Value).ToArray(),
-            StringComparer.OrdinalIgnoreCase);
-    }
-
-    private static IReadOnlyList<DocxParagraph> SelectDefaultHeaderFooterParagraphs(IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> paragraphsByType)
-    {
-        return paragraphsByType.TryGetValue("default", out IReadOnlyList<DocxParagraph>? paragraphs)
-            ? paragraphs
+        return bodyElementsByType.TryGetValue("default", out var bodyElements)
+            ? DocxBlockTraversal.EnumerateDirectParagraphs(bodyElements).ToArray()
             : [];
     }
 

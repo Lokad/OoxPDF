@@ -149,7 +149,9 @@ internal sealed partial class DocxLayoutEngine
                 ? document.FooterBodyElementsByType
                 : settings.FooterBodyElementsByType;
 
-            if (headersByType.Count == 0 && document.HeaderParagraphs.Count > 0)
+            // Paragraph-only inputs can supply a default. A body map already
+            // owns its variants, including explicit empty stories and tables.
+            if (headerBodyElementsByType.Count == 0 && headersByType.Count == 0 && document.HeaderParagraphs.Count > 0)
             {
                 headersByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
                 {
@@ -158,7 +160,7 @@ internal sealed partial class DocxLayoutEngine
                 headerBodyElementsByType = ToStaticBodyElementsByType(headersByType);
             }
 
-            if (footersByType.Count == 0 && document.FooterParagraphs.Count > 0)
+            if (footerBodyElementsByType.Count == 0 && footersByType.Count == 0 && document.FooterParagraphs.Count > 0)
             {
                 footersByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
                 {

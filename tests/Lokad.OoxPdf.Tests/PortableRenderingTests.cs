@@ -318,7 +318,8 @@ internal static partial class PortableRenderingTests
                     .SelectMany(Ink).Min();
                 TestAssert.True(noteBottom > footerTop,
                     "Actual note prose and footer glyph ink must remain vertically disjoint, including empty continuation pages.");
-                var staticParagraphs = document.FooterParagraphsByType.Values.SelectMany(value => value).ToArray();
+                var staticParagraphs = document.FooterBodyElementsByType.Values
+                    .SelectMany(DocxBlockTraversal.EnumerateDirectParagraphs).ToArray();
                 TestAssert.Equal(3, staticParagraphs.Length);
                 TestAssert.True(staticParagraphs.All(p => p.LineSpacingPoints == 20d), "Placement cannot rewrite authored minima to repair clearance.");
             }

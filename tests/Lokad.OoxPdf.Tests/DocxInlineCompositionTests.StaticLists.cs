@@ -25,8 +25,7 @@ internal static partial class DocxInlineCompositionTests
             bool final = row.GetProperty("Mode").GetString() == "final-preserve";
             var mode = final ? OoxPdfDocxMarkupMode.Final : OoxPdfDocxMarkupMode.AllMarkup;
             var document = DocxTests.ReadDocx(path, mode);
-            var paragraphs = document.HeaderParagraphsByType.Values.Concat(document.FooterParagraphsByType.Values)
-                .SelectMany(value => value).ToArray();
+            var paragraphs = EnumerateDirectStaticParagraphs(document).ToArray();
             var sourceRuns = paragraphs.SelectMany(paragraph => paragraph.Runs).ToArray();
             var page = new DocxRenderer(resolver, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout
                 : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();

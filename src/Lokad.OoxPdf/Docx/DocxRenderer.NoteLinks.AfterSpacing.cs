@@ -51,10 +51,7 @@ internal sealed partial class DocxRenderer
     {
         var candidates = new Dictionary<DocxParagraph, NoteReferenceSpacing>(ReferenceEqualityComparer.Instance);
         if (Math.Abs(ResolveTextEmissionFontScale(context) - 1d) > .000001d ||
-            document.FloatingDrawings.Count != 0 || document.HeaderParagraphs.Count != 0 || document.FooterParagraphs.Count != 0 ||
-            document.HeaderParagraphsByType.Count != 0 || document.FooterParagraphsByType.Count != 0 ||
-            document.HeaderBodyElementsByType.Count != 0 || document.FooterBodyElementsByType.Count != 0 ||
-            document.HeaderFloatingDrawingsByType.Count != 0 || document.FooterFloatingDrawingsByType.Count != 0 ||
+            document.FloatingDrawings.Count != 0 || !DocxPlainBodyFrame.HasNoStaticStories(document) ||
             document.Settings.MirrorMargins == true ||
             document.BodyElements.Any(e => e.Revisions.Count != 0) ||
             layout.Pages.Any(p => p.ColumnFrames.Count != 1 || p.StaticTextLines.Count != 0 ||
