@@ -48,6 +48,22 @@ function Assert-FrozenAssembly {
         throw 'The frozen CLI changed during qualification'
     }
 }
+function Read-QualificationJsonSource([string] $Path) {
+    $bytes = [IO.File]::ReadAllBytes($Path)
+    $reader = [IO.StreamReader]::new([IO.MemoryStream]::new($bytes))
+    try {
+        [pscustomobject]@{
+            Text = $reader.ReadToEnd()
+            Hash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($bytes))
+        }
+    }
+    finally { $reader.Dispose() }
+}
+function Assert-SelectionManifest {
+    if ($Capability -and (Get-FileHash -LiteralPath $SelectionManifest).Hash -cne $manifestSource.Hash) {
+        throw 'The capability selection manifest changed during qualification'
+    }
+}
 function Invoke-FrozenTests([string[]] $Arguments, [string] $Log) {
     Assert-PhysicalDirectory $output
     # One test-set invocation owns this fresh leaf; existing files are never ours.
@@ -86,7 +102,9 @@ if (!$catalog.Count -or @($catalog.Name | Sort-Object -Unique).Count -ne $catalo
 }
 $filters = if ($AllDocx) { @('Docx', 'Balloon', 'PortableRendering') }
 elseif ($Capability) {
-    $manifest = Get-Content -LiteralPath $SelectionManifest -Raw | ConvertFrom-Json -AsHashtable
+    $SelectionManifest = (Resolve-Path -LiteralPath $SelectionManifest).Path
+    $manifestSource = Read-QualificationJsonSource $SelectionManifest
+    $manifest = ConvertFrom-Json -InputObject $manifestSource.Text -AsHashtable
     @(foreach ($key in $Capability) {
         if (!$manifest.ContainsKey($key)) { throw ('Unknown capability: ' + $key) }
         if (!$manifest[$key].Count) { throw ('Empty capability: ' + $key) }
@@ -158,13 +176,17 @@ if ($AllDocx) {
 }
 if ($Capability) {
     $inventory.Capabilities = $Capability
-    $inventory.SelectionManifestSha256 = (Get-FileHash -LiteralPath $SelectionManifest).Hash
+    $inventory.SelectionManifestSha256 = $manifestSource.Hash
 }
 if ($FastGroup.Count) {
     $inventory.FastGroups = @($FastGroup | Sort-Object -Unique -CaseSensitive)
     $inventory.SkipValidationMethods = @($skipValidated | Sort-Object)
 }
-if ($ListOnly) { $inventory | ConvertTo-Json -Depth 5; return }
+if ($ListOnly) {
+    Assert-SelectionManifest
+    $inventory | ConvertTo-Json -Depth 5
+    return
+}
 if (@($catalog | Where-Object { $_.Group -eq 'cli' -and $selected.Contains($_.Name) }).Count) {
     if ([string]::IsNullOrWhiteSpace($env:OOXPDF_TEST_CLI_ASSEMBLY)) {
         throw 'CLI tests require OOXPDF_TEST_CLI_ASSEMBLY bound to the matching frozen CLI; implicit CLI builds are not qualification.'
@@ -184,7 +206,8 @@ Assert-FrozenAssembly
 $exitCode = Invoke-FrozenTests @('--test-set', $selectionPath, '--report', $path) ($path + '.log')
 $inventory.RunnerInvocations++
 if (!(Test-Path -LiteralPath $path -PathType Leaf)) { throw 'Test runner did not produce its report' }
-$report = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
+$reportSource = Read-QualificationJsonSource $path
+$report = ConvertFrom-Json -InputObject $reportSource.Text
 $rows = @($report.tests)
 $seen = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
 $counts = @{ passed = 0; failed = 0; skipped = 0 }
@@ -221,7 +244,7 @@ if ($null -ne $report.validationTools) {
 
 $inventory.CompletedUtc = [DateTime]::UtcNow.ToString('o')
 $inventory.UniqueExecutedMethods = $rows.Count
-$inventory.SourceReports = @([pscustomobject]@{ Selection = $selectionPath; Report = $path; Sha256 = (Get-FileHash -LiteralPath $path).Hash })
+$inventory.SourceReports = @([pscustomobject]@{ Selection = $selectionPath; Report = $path; Sha256 = $reportSource.Hash })
 $inventory.RunnerExitCode = $exitCode
 $inventory.UnexpectedSkips = @($rows | Where-Object {
     $_.outcome -eq 'skipped' -and $skipValidated.Contains($_.name) -and $_.name -cnotin $ExpectedSkip
@@ -232,6 +255,10 @@ if ($FastGroup.Count) {
     } | ForEach-Object name)
 }
 $inventory.GatePassed = $exitCode -eq 0 -and $report.failed -eq 0 -and !$inventory.UnexpectedSkips.Count
+Assert-SelectionManifest
+if ((Get-FileHash -LiteralPath $path).Hash -cne $reportSource.Hash) {
+    throw 'The raw test report changed during qualification'
+}
 $inventory.TemporaryFilesRetained = Test-Path -LiteralPath $temporaryDirectory
 if ($inventory.GatePassed -and $inventory.TemporaryFilesRetained) {
     try {

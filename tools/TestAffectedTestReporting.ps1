@@ -10,6 +10,18 @@ $runner=Join-Path $root 'Lokad.OoxPdf.Tests.dll'
 [IO.File]::WriteAllText((Join-Path $root 'Lokad.OoxPdf.dll'),'Fake library identity')
 $global:ooxPdfAffectedReportFault=''
 $global:ooxPdfAffectedReportCalls=0
+function Get-FileHash {
+    param([string] $LiteralPath)
+    $name = [IO.Path]::GetFileName($LiteralPath)
+    # Replace only probe inputs when the wrapper verifies their current digest.
+    if ($name -ceq 'mutable-capabilities.json' -and $global:ooxPdfAffectedReportFault -in @('changed-manifest','changed-list-manifest')) {
+        [IO.File]::WriteAllText($LiteralPath, '{"union":["=SelectionOther"]}')
+    }
+    if ($name -ceq 'selection-000.json' -and $global:ooxPdfAffectedReportFault -eq 'changed-raw-report') {
+        [IO.File]::WriteAllText($LiteralPath, '{"passed":0,"failed":1,"skipped":0,"tests":[{"name":"ReportAlpha","outcome":"failed"}]}')
+    }
+    Microsoft.PowerShell.Utility\Get-FileHash -LiteralPath $LiteralPath
+}
 function dotnet {
     if($args -contains '--list') {
         'FAST fixture ReportAlpha';'FAST fixture ReportNeighbor';'FAST auxiliary ReportGroupOnly'
@@ -139,7 +151,8 @@ try {
     $checks+=@{Case=$case;GatePassed=$false;Error=$caught;RawReportSha256=$rawHash;RunnerInvocations=$global:ooxPdfAffectedReportCalls}
 
     $manifest=Join-Path $root 'union-capabilities.json'
-    @{union=@('=ReportAlpha','ReportExplicitSlow')} | ConvertTo-Json | Set-Content -LiteralPath $manifest -Encoding utf8
+    @{union=@('=ReportAlpha','ReportExplicitSlow')} | ConvertTo-Json | Set-Content -LiteralPath $manifest -Encoding unicode
+    $manifestHash=(Get-FileHash -LiteralPath $manifest).Hash
     foreach($case in @('union','group-skip','capability-skip','group-and-capability-skip','unknown-group','slow-only-group','list-only')) {
         $global:ooxPdfAffectedReportFault=$case
         $global:ooxPdfAffectedReportCalls=0
@@ -165,7 +178,7 @@ try {
             if($actual.Count -ne 4 -or @(Compare-Object $wanted $actual).Count) {throw 'Union lost, repeated or admitted an unwanted slow method'}
             if($case -eq 'list-only') {
                 $inventory=Get-Content -LiteralPath (Join-Path $root ($case+'.log')) -Raw | ConvertFrom-Json
-                if($inventory.RunnerInvocations -ne 0 -or
+                if($inventory.RunnerInvocations -ne 0 -or $inventory.SelectionManifestSha256 -cne $manifestHash -or
                     (Test-Path -LiteralPath (Join-Path $output 'affected-tests.json'))) {
                     throw 'List-only inventory must report zero test runs and publish no execution report'
                 }
@@ -174,6 +187,8 @@ try {
                 $report=Get-Content -LiteralPath (Join-Path $output 'affected-tests.json') -Raw | ConvertFrom-Json
                 $groupSkips=if($case -in @('group-skip','group-and-capability-skip')) {@('ReportGroupOnly')} else {@()}
                 if($report.provenance.GatePassed -ne $shouldPass -or $report.tests.Count -ne 4 -or
+                    $report.provenance.SelectionManifestSha256 -cne $manifestHash -or
+                    $report.provenance.SourceReports[0].Sha256 -cne (Get-FileHash -LiteralPath (Join-Path $output 'selection-000.json')).Hash -or
                     $report.provenance.RunnerInvocations -ne 1 -or
                     @($report.provenance.GroupOnlySkips).Count -ne $groupSkips.Count -or
                     @($report.provenance.GroupOnlySkips | Where-Object { $_ -cnotin $groupSkips }).Count -or
@@ -183,6 +198,36 @@ try {
             }
         }
         $checks+=@{Case=$case;GatePassed=$shouldPass;Error=$caught;RunnerInvocations=$global:ooxPdfAffectedReportCalls}
+    }
+
+    foreach ($case in @('changed-manifest','changed-list-manifest','changed-raw-report')) {
+        $global:ooxPdfAffectedReportCalls=0
+        $output=Join-Path $root $case
+        $parameters=@{RunnerPath=$runner;OutputDirectory=$output}
+        $listOnly=$case -eq 'changed-list-manifest'
+        $rawChanges=$case -eq 'changed-raw-report'
+        if ($rawChanges) { $parameters.TestFilter='=ReportAlpha' }
+        else {
+            $mutable=Join-Path $root 'mutable-capabilities.json'
+            [IO.File]::Copy($manifest,$mutable,$true)
+            $parameters.Capability='union'
+            $parameters.SelectionManifest=$mutable
+            $parameters.ListOnly=$listOnly
+        }
+        $expected=if ($rawChanges) { 'The raw test report changed during qualification' }
+            else { 'The capability selection manifest changed during qualification' }
+        $global:ooxPdfAffectedReportFault=$case
+        $caught=$null
+        try { & (Join-Path $PSScriptRoot 'RunDocxAffectedTests.ps1') @parameters *> (Join-Path $root ($case+'.log')) }
+        catch { $caught=$_.Exception.Message }
+        $raw=Join-Path $output 'selection-000.json'
+        if ($caught -cne $expected -or $global:ooxPdfAffectedReportCalls -ne [int](!$listOnly) -or
+            (Test-Path -LiteralPath (Join-Path $output 'affected-tests.json')) -or
+            (Test-Path -LiteralPath (Join-Path $output 'evidence.json')) -or
+            (Test-Path -LiteralPath $raw -PathType Leaf) -eq $listOnly) {
+            throw ('Changed qualification input was accepted or its raw evidence was lost: ' + $case)
+        }
+        $checks+=@{Case=$case;GatePassed=$false;Error=$caught;RunnerInvocations=$global:ooxPdfAffectedReportCalls}
     }
 
     foreach($case in @('milestone-list','milestone-run')) {
@@ -339,6 +384,6 @@ try {
         $checks+=@{Case=$case;Error=$caught;RunnerInvocations=$global:ooxPdfAffectedReportCalls;UnownedTargetRetained=$true}
     }
 }
-finally {Remove-Item Function:dotnet; Remove-Variable ooxPdfAffectedReportFault,ooxPdfAffectedReportCalls -Scope Global}
+finally {Remove-Item Function:dotnet,Function:Get-FileHash; Remove-Variable ooxPdfAffectedReportFault,ooxPdfAffectedReportCalls -Scope Global}
 @{Checks=$checks;Builds=0;Conversions=0;RealTestsReplayed=0} | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $root 'evidence.json') -Encoding utf8
 "Affected reporting: $($checks.Count) checks pass; no builds or test replay."
