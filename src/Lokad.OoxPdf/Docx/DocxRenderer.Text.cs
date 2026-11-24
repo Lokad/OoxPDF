@@ -246,9 +246,25 @@ internal sealed partial class DocxRenderer
         CancellationToken cancellationToken = default,
         RgbColor? background = null)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         IReadOnlyList<DocxTextSegmentLayout> segments = line.Segments.Count == 0
             ? [new DocxTextSegmentLayout(line.Text, line.StyleRun, line.X, line.Width, null, 0d, 0d, DocxTextStateCharacterSpacingSource.None, true, -1, 0, DocxTextSegmentRole.Text)]
             : line.Segments;
+        DocxTextSegmentLayout? terminalSource = FindTerminalSpaceSource(line, segments);
+        DocxRunFontResource? terminalResource = null;
+        PdfFallbackFontResource? terminalFallback = null;
+        if (terminalSource is not null)
+        {
+            terminalResource = ResolveFontResource(terminalSource.StyleRun, fontResources);
+            if (line.EmitsTerminalParagraphMark)
+            {
+                fontResources.FallbackFaces.TryGetValue(terminalSource.StyleRun, out terminalFallback);
+            }
+        }
+
+        bool measureTerminalAdvance = (terminalResource is not null || terminalFallback is not null) &&
+            ShouldUseWordCompatibleAllMarkupEmittedTerminalAdvance(segments, line, fontScale, useWordCompatibleTextProfile);
+        double terminalTextEnd = double.NegativeInfinity;
         var emissionSegments = new List<DocxTextEmissionSegment>(segments.Count + 1);
         double substitutedFieldXAdjustment = 0d;
         foreach (DocxTextSegmentLayout segment in segments)
@@ -271,6 +287,22 @@ internal sealed partial class DocxRenderer
             int partSourceTextOffset = segment.SourceTextOffsetInRun;
             foreach (DocxTextEmissionPart part in DocxTextEmissionPlanner.SplitOfficeTextOperationParts(segment, fontSize, fontResources.TextMeasurer))
             {
+                double partX = part.X + xOffset;
+                if (measureTerminalAdvance)
+                {
+                    // The Review terminal uses the original part and base face, before
+                    // counter substitution, shifting, and coverage fallback.
+                    double advance = part.Width;
+                    if (resource is not null)
+                    {
+                        var plan = DocxTextEmissionPlanner.CreateForEmissionSegment(
+                            segment.StyleRun, fontSize, segment.PdfCharacterSpacing, segment.PdfCharacterSpacingSource,
+                            segment.CompensatePdfCharacterSpacing, isTerminalLineSpace: false, fontScale);
+                        advance = DocxTextEmissionPlanner.MeasureAdvanceProfile(part.Text, resource.Embedded, part.Width, plan).PlannedEmittedAdvance;
+                    }
+                    terminalTextEnd = Math.Max(terminalTextEnd, partX + advance);
+                }
+
                 int currentPartSourceTextOffset = partSourceTextOffset;
                 partSourceTextOffset += part.Text.Length;
                 DocxEffectiveRunProperties emissionEffective = segment.StyleRun.EffectiveProperties;
@@ -285,7 +317,7 @@ internal sealed partial class DocxRenderer
                     segment.StyleRun,
                     resource,
                     textColor,
-                    part.X + xOffset + substitutedFieldXAdjustment,
+                    partX + substitutedFieldXAdjustment,
                     baselineY,
                     emittedWidth,
                     fontSize,
@@ -304,70 +336,48 @@ internal sealed partial class DocxRenderer
             }
         }
 
-        if (line.EndsWithIntraTokenBreak || segments.Count == 0)
+        if (terminalSource is { } terminal && (terminalResource is not null || terminalFallback is not null))
         {
-            return emissionSegments;
-        }
-
-        if (line.EmitsTerminalParagraphMark)
-        {
-            DocxTextSegmentLayout segment = segments[^1];
-            DocxRunFontResource? resource = ResolveFontResource(segment.StyleRun, fontResources);
-            fontResources.FallbackFaces.TryGetValue(segment.StyleRun, out PdfFallbackFontResource? fallbackFace);
-            if (resource is not null || fallbackFace is not null)
+            cancellationToken.ThrowIfCancellationRequested();
+            if (double.IsNegativeInfinity(terminalTextEnd))
             {
-                AddTerminalLineSpace(segment, resource, fallbackFace);
+                terminalTextEnd = segments[^1].X + segments[^1].Width + xOffset;
             }
-            return emissionSegments;
-        }
-
-        for (int i = segments.Count - 1; i >= 0; i--)
-        {
-            DocxTextSegmentLayout segment = segments[i];
-            if (string.IsNullOrWhiteSpace(segment.Text))
+            if (line.InlineObjectEndOffsetX is double objectEnd)
             {
-                continue;
+                terminalTextEnd = Math.Max(terminalTextEnd, line.X + objectEnd + xOffset);
             }
 
-            if (!char.IsWhiteSpace(segment.Text[^1]) && ResolveFontResource(segment.StyleRun, fontResources) is { } resource)
-            {
-                AddTerminalLineSpace(segment, resource, fallbackFace: null);
-            }
-            break;
-        }
-
-        return emissionSegments;
-
-        void AddTerminalLineSpace(DocxTextSegmentLayout segment, DocxRunFontResource? resource, PdfFallbackFontResource? fallbackFace)
-        {
-            DocxEffectiveRunProperties effective = segment.StyleRun.EffectiveProperties;
+            DocxEffectiveRunProperties effective = terminal.StyleRun.EffectiveProperties;
             RgbColor color = ResolveRunTextColor(effective, background);
             if (!line.EmitsTerminalParagraphMark)
             {
-                color = ResolveTextEmissionColor(segment.StyleRun, useWordCompatibleTextProfile, color, segment.Role);
+                color = ResolveTextEmissionColor(terminal.StyleRun, useWordCompatibleTextProfile, color, terminal.Role);
             }
 
             emissionSegments.Add(new DocxTextEmissionSegment(
                 " ",
-                segment.StyleRun,
-                resource,
+                terminal.StyleRun,
+                terminalResource,
                 color,
-                ResolveTerminalLineSpaceX(segments, line, fontResources, fontScale, xOffset, useWordCompatibleTextProfile, cancellationToken),
-                GetSegmentBaselineY(segment, line.BaselineY) - baselineOffsetY,
+                terminalTextEnd,
+                GetSegmentBaselineY(terminal, line.BaselineY) - baselineOffsetY,
                 0d,
-                ResolveTerminalLineSpaceFontSize(segment, line, fontScale, useWordCompatibleTextProfile),
+                ResolveTerminalLineSpaceFontSize(terminal, line, fontScale, useWordCompatibleTextProfile),
                 PdfCharacterSpacing: 0d,
                 PdfCharacterSpacingSource: DocxTextStateCharacterSpacingSource.TerminalLineSpace,
                 CompensatePdfCharacterSpacing: true,
                 SyntheticBold: false,
-                SyntheticItalic: resource is not null && effective.Italic && !resource.Resolution.Italic,
+                SyntheticItalic: terminalResource is not null && effective.Italic && !terminalResource.Resolution.Italic,
                 IsTerminalLineSpace: true,
-                segment.SourceTextRunIndex,
-                segment.SourceTextOffsetInRun + segment.Text.Length,
-                segment.Role,
-                FallbackFace: fallbackFace,
+                terminal.SourceTextRunIndex,
+                terminal.SourceTextOffsetInRun + terminal.Text.Length,
+                terminal.Role,
+                FallbackFace: terminalFallback,
                 FontScale: fontScale));
         }
+
+        return emissionSegments;
     }
 
     private static RgbColor ResolvePaintedRevisionColor(DocxTextEmissionSegment segment, DocxMarkupContext context)
@@ -467,84 +477,29 @@ internal sealed partial class DocxRenderer
             : fontSize;
     }
 
-    private static double ResolveTerminalLineSpaceX(
-        IReadOnlyList<DocxTextSegmentLayout> segments,
+    private static DocxTextSegmentLayout? FindTerminalSpaceSource(
         DocxTextLineLayout line,
-        DocxFontResources fontResources,
-        double fontScale,
-        double xOffset,
-        bool useWordCompatibleTextProfile,
-        CancellationToken cancellationToken)
+        IReadOnlyList<DocxTextSegmentLayout> segments)
     {
-        if (segments.Count == 0)
+        if (line.EndsWithIntraTokenBreak || segments.Count == 0)
         {
-            return line.X + xOffset;
+            return null;
+        }
+        if (line.EmitsTerminalParagraphMark)
+        {
+            return segments[^1];
         }
 
-        DocxTextSegmentLayout terminalSegment = segments[^1];
-        if (!ShouldUseWordCompatibleAllMarkupEmittedTerminalAdvance(segments, line, fontScale, useWordCompatibleTextProfile))
+        for (int i = segments.Count - 1; i >= 0; i--)
         {
-            return IncludeInlineObjectEnd(terminalSegment.X + terminalSegment.Width + xOffset);
-        }
-
-        double? emittedEndX = TryResolveWordCompatibleAllMarkupTextEmissionEndX(
-            segments,
-            line,
-            fontResources,
-            fontScale,
-            xOffset,
-            cancellationToken);
-        return IncludeInlineObjectEnd(emittedEndX ?? terminalSegment.X + terminalSegment.Width + xOffset);
-
-        double IncludeInlineObjectEnd(double textEnd) => line.InlineObjectEndOffsetX is double objectEnd
-            ? Math.Max(textEnd, line.X + objectEnd + xOffset) : textEnd;
-    }
-
-    private static double? TryResolveWordCompatibleAllMarkupTextEmissionEndX(
-        IReadOnlyList<DocxTextSegmentLayout> segments,
-        DocxTextLineLayout line,
-        DocxFontResources fontResources,
-        double fontScale,
-        double xOffset,
-        CancellationToken cancellationToken)
-    {
-        double emittedEndX = double.NegativeInfinity;
-        foreach (DocxTextSegmentLayout segment in segments)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            DocxRunFontResource? resource = ResolveFontResource(segment.StyleRun, fontResources);
-            PdfFallbackFontResource? fallbackFace = null;
-            if (resource is null)
+            DocxTextSegmentLayout segment = segments[i];
+            if (!string.IsNullOrWhiteSpace(segment.Text))
             {
-                fontResources.FallbackFaces.TryGetValue(segment.StyleRun, out fallbackFace);
-            }
-
-            if (resource is null && fallbackFace is null)
-            {
-                continue;
-            }
-
-            double fontSize = ResolveTextEmissionSegmentFontSize(segment, line, fontScale);
-            foreach (DocxTextEmissionPart part in DocxTextEmissionPlanner.SplitOfficeTextOperationParts(segment, fontSize, fontResources.TextMeasurer))
-            {
-                DocxTextEmissionPlan plan = DocxTextEmissionPlanner.CreateForEmissionSegment(
-                    segment.StyleRun,
-                    fontSize,
-                    segment.PdfCharacterSpacing,
-                    segment.PdfCharacterSpacingSource,
-                    segment.CompensatePdfCharacterSpacing,
-                    isTerminalLineSpace: false,
-                    fontScale);
-                double partX = part.X + xOffset;
-                // RV01: fallback runs have no advance profile; measured part width stands in.
-                double partAdvance = resource is not null
-                    ? DocxTextEmissionPlanner.MeasureAdvanceProfile(part.Text, resource.Embedded, part.Width, plan).PlannedEmittedAdvance
-                    : part.Width;
-                emittedEndX = Math.Max(emittedEndX, partX + partAdvance);
+                return char.IsWhiteSpace(segment.Text[^1]) ? null : segment;
             }
         }
 
-        return double.IsNegativeInfinity(emittedEndX) ? null : emittedEndX;
+        return null;
     }
 
     private static bool ShouldUseWordCompatibleAllMarkupEmittedTerminalAdvance(
