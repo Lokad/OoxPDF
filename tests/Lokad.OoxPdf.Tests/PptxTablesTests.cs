@@ -66,12 +66,6 @@ internal static class PptxTablesTests
 
     public static void PptxSyntheticTableRendersGridAndText()
     {
-        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
-        if (!File.Exists(arial))
-        {
-            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
-        }
-
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
         {
             ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
@@ -124,7 +118,7 @@ internal static class PptxTablesTests
         });
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
 
-        OoxPdfConverter.Convert(input, output);
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { FontResolver = new PortableRenderingTests.PinnedResolver() });
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0.851 0.918 0.827 rg", pdf);
