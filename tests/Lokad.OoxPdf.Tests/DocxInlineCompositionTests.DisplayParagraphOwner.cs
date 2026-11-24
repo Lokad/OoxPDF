@@ -2,6 +2,7 @@ using System.Text;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Docx;
+using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Tests;
 
@@ -77,7 +78,8 @@ internal static partial class DocxInlineCompositionTests
     {
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
         {
-            DocxDocument Read(bool insideEquation, bool mathRun, string? type = null, int breakCount = 1, bool proofing = false) => ReadMutation(
+            DocxDocument Read(bool insideEquation, bool mathRun, string? type = null, int breakCount = 1, bool proofing = false,
+                bool? bookmarkStartsAfterBreaks = null) => ReadMutation(
                 "CompositionProbes/math-explicit-display-same-group", mode, false, false, (xml, w, m) =>
                 {
                     var group = xml.Descendants(m + "oMathPara").Single();
@@ -94,6 +96,21 @@ internal static partial class DocxInlineCompositionTests
                     {
                         equations[0].AddFirst(new XElement(w + "proofErr", new XAttribute(w + "type", "spellStart")));
                         equations[0].Add(new XElement(w + "proofErr", new XAttribute(w + "type", "spellEnd")));
+                    }
+                    if (bookmarkStartsAfterBreaks is { } startsAfterBreaks)
+                    {
+                        var start = new XElement(w + "bookmarkStart", new XAttribute(w + "id", 55),
+                            new XAttribute(w + "name", "MathBreakAnchor"));
+                        var end = new XElement(w + "bookmarkEnd", new XAttribute(w + "id", 55));
+                        XElement afterBreaks = startsAfterBreaks ? start : end;
+                        if (insideEquation) equations[0].Add(afterBreaks);
+                        else equations[1].AddBeforeSelf(afterBreaks);
+                        if (startsAfterBreaks) equations[1].AddAfterSelf(end);
+                        else equations[0].AddFirst(start);
+
+                        group.Parent!.AddAfterSelf(new XElement(w + "p",
+                            new XElement(w + "hyperlink", new XAttribute(w + "anchor", "MathBreakAnchor"),
+                                new XElement(w + "r", new XElement(w + "t", "Go to formula")))));
                     }
                 });
 
@@ -119,6 +136,13 @@ internal static partial class DocxInlineCompositionTests
                 "The second authored break must retain an additional line of space.");
             CheckMathBreaks(Read(insideEquation: true, mathRun: true, breakCount: 2), expectedTwo);
             CheckMathBreaks(Read(insideEquation: true, mathRun: true, breakCount: 2, proofing: true), expectedTwo);
+            foreach (bool startsAfterBreaks in new[] { false, true })
+            {
+                var control = CheckMathBreaks(Read(false, false, breakCount: 2, bookmarkStartsAfterBreaks: startsAfterBreaks), expectedTwo);
+                var nested = CheckMathBreaks(Read(true, true, breakCount: 2, bookmarkStartsAfterBreaks: startsAfterBreaks), expectedTwo);
+                var target = control.Annotations.Single(link => link.IsDestination);
+                TestAssert.Equal(target, nested.Annotations.Single(link => link.IsDestination));
+            }
 
             var unsupported = new List<OoxPdfDiagnostic>();
             var pageBreak = renderer.RenderPagesAsync(Read(insideEquation: true, mathRun: true, type: "page"), unsupported.Add, default)
@@ -127,7 +151,7 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.True(unsupported.Any(d => d.Id == "DOCX_UNSUPPORTED_EQUATION"),
                 "An in-equation page break keeps its diagnosed fallback.");
 
-            void CheckMathBreaks(DocxDocument document, (string Text, double X, double Y, double Size)[] control)
+            PdfPage CheckMathBreaks(DocxDocument document, (string Text, double X, double Y, double Size)[] control)
             {
                 var diagnostics = new List<OoxPdfDiagnostic>();
                 var page = renderer.RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().Single();
@@ -135,6 +159,7 @@ internal static partial class DocxInlineCompositionTests
                     "Math-run line breaks must preserve both formulas at their ordinary line-break positions.");
                 TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
                     "The display breaks must preserve their equation.");
+                return page;
             }
         }
     }

@@ -16,16 +16,21 @@ internal sealed partial class DocxReader
     private static XElement? FindFirstTrailingDisplayMathBreak(XElement equation, CancellationToken cancellationToken)
     {
         if (equation.LastNode is XElement last &&
-            !IsDisplayMathLineBreakRun(last) && !DocxSourceXml.IsNonPrintingMarker(last)) return null;
+            !IsDisplayMathLineBreakRun(last) && !IsBoundary(last)) return null;
 
         XElement? first = null;
         foreach (XElement child in equation.Elements())
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (IsDisplayMathLineBreakRun(child)) first ??= child;
-            else if (!DocxSourceXml.IsNonPrintingMarker(child)) first = null;
+            else if (!IsBoundary(child)) first = null;
         }
         return first;
+
+        static bool IsBoundary(XElement element) =>
+            DocxSourceXml.IsNonPrintingMarker(element) ||
+            DocxMathParser.IsBookmarkMarker(element) ||
+            DocxMathParser.IsCommentBoundary(element);
     }
 
     private static bool IsDisplayMathLineBreakRun(XElement? run)

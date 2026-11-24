@@ -537,11 +537,13 @@ internal sealed partial class DocxReader
                 RecordComplexFieldResult();
                 if (firstTrailingBreak is not null)
                 {
-                    foreach (var run in firstTrailingBreak.ElementsAfterSelf().Prepend(firstTrailingBreak))
+                    foreach (var item in firstTrailingBreak.ElementsAfterSelf().Prepend(firstTrailingBreak))
                     {
                         cancellationToken.ThrowIfCancellationRequested();
-                        if (!DocxSourceXml.IsNonPrintingMarker(run))
-                            AddSourceContainerChild(AsParagraphBreakRun(run), source.Revision, false);
+                        // Route range markers at their actual position in the
+                        // paragraph stream, alongside the relocated breaks.
+                        AddSourceContainerChild(item.Name == MathNamespace + "r" ? AsParagraphBreakRun(item) : item,
+                            source.Revision, removeDeletedText: false);
                     }
                 }
             }

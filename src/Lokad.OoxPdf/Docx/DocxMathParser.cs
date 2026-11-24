@@ -268,11 +268,11 @@ internal static partial class DocxMathParser
          element.Name == WordprocessingNamespace + "sdtContent" && element.Parent?.Name == WordprocessingNamespace + "sdt");
     private static bool IsContainer(string name) => IsRow(name) || IsControl(name) || name == "mr";
     private static bool IsProperty(XElement element) => element.Name.Namespace == MathNamespace && element.Name.LocalName.EndsWith("Pr", StringComparison.Ordinal);
-    private static bool IsBookmarkMarker(XElement element) =>
+    internal static bool IsBookmarkMarker(XElement element) =>
         element.Name.Namespace == WordprocessingNamespace &&
         element.Name.LocalName is "bookmarkStart" or "bookmarkEnd" &&
         !element.HasElements && string.IsNullOrWhiteSpace(element.Value);
-    private static bool IsCommentBoundary(XElement element) =>
+    internal static bool IsCommentBoundary(XElement element) =>
         element.Name.Namespace == WordprocessingNamespace &&
         element.Name.LocalName is "commentRangeStart" or "commentRangeEnd" &&
         !element.HasElements && string.IsNullOrWhiteSpace(element.Value);
