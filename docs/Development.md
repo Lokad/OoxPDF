@@ -164,7 +164,11 @@ Portfolio joins check the selected modes and content
 expectations against the pinned text operations and verify the diagnostic
 sidecars. Font and graphics summaries stay with the source inspection in
 `JoinedFrom.RunDirectory`. Reinspect existing PDFs with `-ReuseCandidateDirectory`
-when a join reports changed expectations or a missing text-inspection hash. Numerical visual limits live in
+when a join reports changed expectations or a text-inspection hash is missing.
+Measurements pin the inspector's logical page count and log. Comparison
+recounts older PDFs when their measured count lacks a pin. Reinspect existing
+PDFs before a content audit when the measurement lacks a page-inspection pin.
+Numerical visual limits live in
 `tools/CompositionDocxThresholds.json` and `tools/CompositionPptxThresholds.json`.
 Comparisons check page counts and raster dimensions at the selected resolution. Reports record the limit
 file identities and apply current limits to reused pixel metrics. Null recall on

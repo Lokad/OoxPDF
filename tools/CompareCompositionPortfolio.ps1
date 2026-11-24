@@ -42,8 +42,12 @@ $inspectedPageCounts = @{}
 function Get-PortfolioPdfPageCount([string] $Pdf, [string] $PdfHash) {
     if (!$inspectedPageCounts.ContainsKey($PdfHash)) {
         if (!$inspectorHash) { throw 'PDF inspector is missing. Supply an existing build with -InspectorPath.' }
-        $pageCount = @(dotnet $inspectorDll $Pdf --text-only | Where-Object { $_ -match '^\d+ \d+ obj: page$' }).Count
-        if ($LASTEXITCODE -ne 0 -or !$pageCount) { throw ('Could not inspect portfolio PDF pages: ' + $Pdf) }
+        $lines = @(dotnet $inspectorDll $Pdf --page-count)
+        if ($LASTEXITCODE -ne 0) { throw ('Could not inspect portfolio PDF pages: ' + $Pdf) }
+        $pageCount = Get-LogicalPdfPageCount $lines $Pdf
+        if ((Get-FileHash -LiteralPath $Pdf).Hash -cne $PdfHash) {
+            throw ('Portfolio PDF changed during page inspection: ' + $Pdf)
+        }
         $inspectedPageCounts[$PdfHash] = $pageCount
     }
     return $inspectedPageCounts[$PdfHash]
@@ -184,11 +188,9 @@ $jobs = @(foreach ($row in $outcomes.Rows) {
     if ($witnesses.Audit -and (Get-FileHash -LiteralPath (Join-Path $run 'inspect/text-operations.json')).Hash -cne $row.TextOperationsSha256) {
         throw ('Portfolio content audit text inspection differs: ' + $id)
     }
-    $candidatePageCount = $row.InspectedPages
-    if ($null -eq $candidatePageCount) { $candidatePageCount = Get-PortfolioPdfPageCount $pdf $row.PdfSha256 }
-    if (($candidatePageCount -isnot [int] -and $candidatePageCount -isnot [long]) -or $candidatePageCount -lt 1) {
-        throw ('Comparison page metrics incomplete: ' + $id + ' / candidate page count')
-    }
+    $pageInspection = Get-VerifiedPortfolioPageInspection (Join-Path $run 'inspect.log') $row
+    $candidatePageCount = if ($pageInspection) { $pageInspection.PageCount }
+        else { Get-PortfolioPdfPageCount $pdf $row.PdfSha256 }
     $referencePageCount = if ($ReferenceKind -eq 'OfficeImage') { $selected.ImagePages }
         else { Get-PortfolioPdfPageCount $referencePdf $referenceHash }
     $reuse = @($cached | Where-Object {

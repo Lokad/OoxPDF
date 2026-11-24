@@ -7,15 +7,21 @@ using System.Text.RegularExpressions;
 
 if (args.Length < 1)
 {
-    Console.Error.WriteLine("Usage: Lokad.OoxPdf.PdfInspect <input.pdf> [output-directory] [--text-only] [--page <number>]... [--max-total-decoded-bytes <n>] [--max-objects <n>]");
+    Console.Error.WriteLine("Usage: Lokad.OoxPdf.PdfInspect <input.pdf> [output-directory | --page-count] [--text-only] [--page <number>]... [--max-total-decoded-bytes <n>] [--max-objects <n>]");
     return 2;
 }
 
 string inputPath = Path.GetFullPath(args[0]);
 bool textOnly = args.Any(arg => string.Equals(arg, "--text-only", StringComparison.Ordinal));
+bool pageCountOnly = args.Contains("--page-count", StringComparer.Ordinal);
 HashSet<int>? pageFilter = ReadPageFilter(args);
 string? outputDirectory = ReadOutputDirectory(args);
 outputDirectory = outputDirectory is null ? null : Path.GetFullPath(outputDirectory);
+if (pageCountOnly && (outputDirectory is not null || pageFilter is not null))
+{
+    Console.Error.WriteLine("--page-count requires the complete page tree without an output directory or page filter.");
+    return 2;
+}
 if (outputDirectory is not null)
 {
     Directory.CreateDirectory(outputDirectory);
@@ -54,7 +60,7 @@ string pdf = Encoding.Latin1.GetString(bytes);
 IReadOnlyList<PdfObject> objects;
 try
 {
-    objects = PdfObject.ParseAll(pdf, bytes, skipImageDecode: textOnly, maxTotalDecodedBytes: maxTotalDecodedBytes, maxObjects: maxObjects);
+    objects = PdfObject.ParseAll(pdf, bytes, skipImageDecode: textOnly || pageCountOnly, maxTotalDecodedBytes: maxTotalDecodedBytes, maxObjects: maxObjects);
 }
 catch (InvalidDataException ex)
 {
@@ -68,7 +74,7 @@ if (pageFilter is not null)
     Console.WriteLine(FormattableString.Invariant($"Page filter: {string.Join(",", pageFilter.Order())}"));
 }
 
-if (outputDirectory is null)
+if (outputDirectory is null && !pageCountOnly)
 {
     foreach (PdfObject item in objects)
     {
@@ -79,7 +85,11 @@ else
 {
     try
     {
-        WriteInspection(objects, outputDirectory, textOnly, pageFilter);
+        var objectByNumber = objects.ToDictionary(item => item.Number);
+        IReadOnlyList<PdfObject> pages = ReadLogicalPages(objects, objectByNumber);
+        if (outputDirectory is not null)
+            WriteInspection(objects, objectByNumber, pages, outputDirectory, textOnly, pageFilter);
+        Console.WriteLine(FormattableString.Invariant($"Logical pages: {pages.Count}"));
     }
     catch (InvalidDataException ex)
     {
@@ -100,10 +110,9 @@ static void WriteObjectSummary(PdfObject item)
     Console.WriteLine(FormattableString.Invariant($"{item.Number} {item.Generation} obj: {Classify(item.Body)}{streamNote}"));
 }
 
-static void WriteInspection(IReadOnlyList<PdfObject> objects, string outputDirectory, bool textOnly, HashSet<int>? pageFilter)
+static void WriteInspection(IReadOnlyList<PdfObject> objects, IReadOnlyDictionary<int, PdfObject> objectByNumber,
+    IReadOnlyList<PdfObject> pages, string outputDirectory, bool textOnly, HashSet<int>? pageFilter)
 {
-    var objectByNumber = objects.ToDictionary(item => item.Number);
-    IReadOnlyList<PdfObject> pages = ReadLogicalPages(objects, objectByNumber);
     Dictionary<int, int> contentPageNumbers = BuildContentPageMap(pages);
     var (fontResources, fontUnicodeMaps, fontWidthMaps) = BuildPageFonts(pages, objectByNumber);
     HashSet<int>? filteredContentObjects = pageFilter is null
@@ -212,7 +221,7 @@ static string? ReadOutputDirectory(string[] args)
     for (int i = 1; i < args.Length; i++)
     {
         string arg = args[i];
-        if (string.Equals(arg, "--text-only", StringComparison.Ordinal))
+        if (arg is "--text-only" or "--page-count")
         {
             continue;
         }

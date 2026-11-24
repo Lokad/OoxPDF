@@ -36,6 +36,36 @@ function Read-PortfolioTextOperations([string] $Path, [string] $Id) {
     [pscustomobject]@{Operations=$operations;Hash=[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($bytes))}
 }
 
+function Get-LogicalPdfPageCount([string[]] $Lines, [string] $Source) {
+    $markers = @($Lines | Where-Object { $_.StartsWith('Logical pages:', [StringComparison]::Ordinal) })
+    [int] $count = 0
+    if ($markers.Count -ne 1 -or $markers[0] -cnotmatch '^Logical pages: ([0-9]+)$' -or
+        ![int]::TryParse($Matches[1], [ref]$count) -or $count -lt 1) {
+        throw ('Missing or invalid logical PDF page count: ' + $Source)
+    }
+    return $count
+}
+
+function Read-PortfolioPageInspection([string] $Path) {
+    $bytes = [IO.File]::ReadAllBytes($Path)
+    $text = [Text.Encoding]::UTF8.GetString($bytes).TrimStart([char]0xFEFF)
+    [pscustomobject]@{
+        PageCount = Get-LogicalPdfPageCount ($text -split '\r?\n') $Path
+        Hash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($bytes))
+    }
+}
+
+function Get-VerifiedPortfolioPageInspection([string] $Path, $Row) {
+    if ($null -eq $Row.InspectionLogSha256) { return }
+    $inspection = Read-PortfolioPageInspection $Path
+    if ($inspection.Hash -cne $Row.InspectionLogSha256 -or
+        ($Row.InspectedPages -isnot [int] -and $Row.InspectedPages -isnot [long]) -or
+        $inspection.PageCount -ne $Row.InspectedPages) {
+        throw ('Candidate page inspection differs: ' + $Path)
+    }
+    return $inspection
+}
+
 function Get-PortfolioIgnoredEquationCount($Diagnostics) {
     @($Diagnostics | Where-Object { $_.Id -eq 'DOCX_UNSUPPORTED_EQUATION' }).Count
 }

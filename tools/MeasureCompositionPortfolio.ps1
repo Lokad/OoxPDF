@@ -133,7 +133,8 @@ foreach ($job in $jobs) {
         # Keep text/graphics summaries for phrase checks and the independent content audit.
         $inspectArguments = @($pdf, $inspect)
         if (!$IncludeRawStreams) { $inspectArguments += '--text-only' }
-        dotnet $inspector @inspectArguments *> (Join-Path $run 'inspect.log')
+        $inspectionLog = Join-Path $run 'inspect.log'
+        dotnet $inspector @inspectArguments *> $inspectionLog
         if ($LASTEXITCODE -ne 0) { throw ('Portfolio inspection failed: ' + $document.Id) }
         $textReport = Join-Path $inspect 'text-operations.json'
         if (!(Test-Path -LiteralPath $textReport -PathType Leaf)) {
@@ -143,9 +144,7 @@ foreach ($job in $jobs) {
         if ((Get-FileHash -LiteralPath $pdf).Hash -ne $pdfHash) {
             throw ('Candidate PDF changed during inspection: ' + $document.Id + '/' + $mode)
         }
-        # Page objects count image-only and blank pages even with an empty text report.
-        $pageCount = @(Get-Content -LiteralPath (Join-Path $run 'inspect.log') | Where-Object { $_ -match '^\d+ \d+ obj: page$' }).Count
-        if ($pageCount -lt 1) { throw ('No inspected PDF pages: ' + $document.Id) }
+        $pageInspection = Read-PortfolioPageInspection $inspectionLog
         $missing = @(Get-MissingPortfolioTextPhrases $textInspection.Operations $expectations.Text $mode)
         if ($ReuseCandidateDirectory) {
             if ((Get-FileHash -LiteralPath $diagnosticsPath).Hash -ne $priorDiagnosticsHashes[$key] -or
@@ -164,7 +163,7 @@ foreach ($job in $jobs) {
             ExpectedSourceEquations=$expectations.Equations
             ExpectedSourcePictures=$expectations.Pictures
             MathematicalTextOperations=@($textInspection.Operations | Where-Object Font -Like 'Eq*').Count
-            InspectedPages=$pageCount
+            InspectedPages=$pageInspection.PageCount;InspectionLogSha256=$pageInspection.Hash
             Diagnostics=$diagnostics;VisualStatus='Pending independent Office comparison; no visual pass claimed'
         }
         if ($null -ne $expectations.FieldResults) { $row.ExpectedFieldResults = $expectations.FieldResults }

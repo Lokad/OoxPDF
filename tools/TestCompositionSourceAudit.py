@@ -416,7 +416,8 @@ class ReferenceInspectionTests(unittest.TestCase):
                     self.assertEqual(subprocess.STDOUT, stderr)
                     self.assertTrue(check)
                     (Path(argv[3]) / "text-operations.json").write_text("[]", encoding="utf-8")
-                    stdout.write("2 0 obj: pages\n" + "".join(f"{3 + index} 0 obj: page\n" for index in range(page_count)))
+                    stdout.write("2 0 obj: pages\n3 0 obj: page\n9 0 obj: page\n" +
+                                 f"Logical pages: {page_count}\n")
 
                 with patch("AuditCompositionContent.subprocess.run", side_effect=inspect) as process:
                     result = inspect_reference(pdf, inspector, cache, **pins)
@@ -452,7 +453,7 @@ class ReferenceInspectionTests(unittest.TestCase):
                 stdout.write("2 0 obj: pages\n")
 
             with patch("AuditCompositionContent.subprocess.run", side_effect=inspect):
-                with self.assertRaisesRegex(ValueError, "No inspected reference pages"):
+                with self.assertRaisesRegex(ValueError, "Missing or invalid logical PDF page count"):
                     inspect_reference(pdf, inspector, cache, **pins)
             self.assertEqual([], list(cache.iterdir()))
 
@@ -520,13 +521,15 @@ class AuditFrameworkBindingTests(unittest.TestCase):
                 ops = cache / 'text-operations.json'
                 ops.write_text('[]', encoding='utf-8')
                 log = cache / 'inspect.log'
-                log.write_text('2 0 obj: pages\n3 0 obj: page\n', encoding='utf-8')
+                log.write_text('2 0 obj: pages\n3 0 obj: page\n8 0 obj: page\nLogical pages: 1\n', encoding='utf-8')
+                candidate_log = run / 'inspect.log'
+                candidate_log.write_bytes(log.read_bytes())
                 (cache / 'identity.json').write_text(json.dumps(dict(PdfSha256=sha(reference), InspectorSha256=sha(inspector),
                                                                     OperationsSha256=sha(ops),
                                                                     InspectionLogSha256=sha(log))), encoding='utf-8')
                 row = dict(Id='control', Mode='presentation', InputSha256=sha(source), PdfSha256=sha(pdf),
                            TextOperationsSha256=sha(operations),
-                           InspectedPages=1, IgnoredEquationDiagnostics=0)
+                           InspectedPages=1, InspectionLogSha256=sha(candidate_log), IgnoredEquationDiagnostics=0)
                 (candidate / 'outcomes.json').write_text(json.dumps(dict(LibrarySha256=sha(library), ManifestSha256=sha(manifest),
                                                                        InspectorSha256=sha(inspector), Rows=[row])), encoding='utf-8')
                 comparison = dict(Id='control', Mode='presentation', CandidatePdfSha256=sha(pdf), ReferencePdfSha256=sha(reference), Failures=[])
@@ -541,6 +544,7 @@ class AuditFrameworkBindingTests(unittest.TestCase):
                 report = json.loads(output.read_text(encoding='utf-8'))
                 self.assertEqual(selected, report.get('Framework', 'net10.0'))
                 self.assertEqual(0, report['LibraryBuilds'])
+                self.assertEqual((1, 1), (report['Rows'][0]['CandidatePages'], report['Rows'][0]['ReferencePages']))
                 if framework == 'net11.0':
                     # A report from another PDF, even with valid operations,
                     # cannot replace a pinned, legitimately empty inspection.
@@ -557,6 +561,14 @@ class AuditFrameworkBindingTests(unittest.TestCase):
                     result = subprocess.run(arguments, capture_output=True, text=True)
                     self.assertEqual(1, result.returncode)
                     self.assertIn('reinspect the candidate PDF', result.stderr)
+                    self.assertFalse((root / 'refused.json').exists())
+                    legacy['Rows'][0] = row
+                    outcomes.write_text(json.dumps(legacy), encoding='utf-8')
+                    operations.write_text('[]', encoding='utf-8')
+                    candidate_log.write_text('Logical pages: 2\n', encoding='utf-8')
+                    result = subprocess.run(arguments, capture_output=True, text=True)
+                    self.assertEqual(1, result.returncode)
+                    self.assertIn('Candidate page inspection differs', result.stderr)
                     self.assertFalse((root / 'refused.json').exists())
                 # Never borrow another installed target when the selected asset changes.
                 library.write_bytes(b'wrong-selected-asset')

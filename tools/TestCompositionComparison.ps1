@@ -39,6 +39,12 @@ foreach ($name in $thresholdNames) {
     New-Item -ItemType Directory -Path (Split-Path $target) -Force | Out-Null
     Copy-Item -LiteralPath (Join-Path (Split-Path $PSScriptRoot) $relative) -Destination $target
 }
+function Set-ControlMeasuredPages([string] $Run, $Row, [int] $Count) {
+    $log = Join-Path $Run 'inspect.log'
+    Set-Content -LiteralPath $log -Value @('3 0 obj: page','9 0 obj: page',"Logical pages: $Count")
+    $Row.InspectedPages = $Count
+    $Row.InspectionLogSha256 = (Get-FileHash -LiteralPath $log).Hash
+}
 function New-Case([string] $Name, [string] $Fault, [string] $Mode='final-preserve', [switch] $ExtraReferencePage) {
     $directory = Join-Path $OutputDirectory $Name
     $candidate = Join-Path $directory 'candidate'
@@ -81,10 +87,15 @@ function New-Case([string] $Name, [string] $Fault, [string] $Mode='final-preserv
             }
             $pin | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $source 'source-identity.json')
         }
-        [pscustomobject]@{Id=$id;Mode=$Mode;HeldOut=$false;
-            InputSha256=('0' * 64);PdfSha256=(Get-FileHash -LiteralPath $pdf).Hash;InspectedPages=1;Severity='Test fixture'}
+        $row = [pscustomobject]@{Id=$id;Mode=$Mode;HeldOut=$false;
+            InputSha256=('0' * 64);PdfSha256=(Get-FileHash -LiteralPath $pdf).Hash;
+            InspectedPages=$null;InspectionLogSha256=$null;Severity='Test fixture'}
+        Set-ControlMeasuredPages $run $row 1
+        $row
     })
     if ($Fault -eq 'candidate-hash') { $rows[1].PdfSha256 = '0' * 64 }
+    if ($Fault -eq 'page-log-hash') { Set-Content -LiteralPath (Join-Path $candidate ('second-' + $Mode + '/inspect.log')) 'Logical pages: 1' }
+    if ($Fault -eq 'page-log-value') { $rows[1].InspectedPages = 2 }
     if ($Fault -eq 'existing-comparison') {
         $diff = Join-Path $candidate 'second-final-preserve/office-diff'
         New-Item -ItemType Directory -Path $diff | Out-Null
@@ -102,17 +113,18 @@ function Snapshot([string] $Directory) {
 }
 function Write-ControlPdfInspection([string] $Pdf) {
     $count = if ([IO.File]::ReadAllText($Pdf).Contains('two pages')) { 2 } else { 1 }
-    for ($i=1; $i -le $count; $i++) { Write-Output "$i 0 obj: page" }
+    Write-Output "Logical pages: $count"
     $global:LASTEXITCODE = 0
 }
-$inspectionProbe = @{AfterRead=$null}
+$inspectionProbe = @{AfterRead=$null;CandidateReads=0}
 function dotnet {
-    if ($args[0] -ne $inspector -or $args[2] -ne '--text-only') { throw 'Unexpected tool invocation during comparison preflight' }
+    if ($args[0] -ne $inspector -or $args[2] -ne '--page-count') { throw 'Unexpected tool invocation during comparison preflight' }
+    if ((Split-Path $args[1] -Leaf) -eq 'candidate.pdf') { $inspectionProbe.CandidateReads++ }
     Write-ControlPdfInspection $args[1]
     if ($inspectionProbe.AfterRead) { & $inspectionProbe.AfterRead }
 }
 $passed = @()
-foreach ($fault in @('empty', 'missing-reference', 'candidate-hash', 'existing-comparison', 'duplicate')) {
+foreach ($fault in @('empty', 'missing-reference', 'candidate-hash', 'existing-comparison', 'duplicate','page-log-hash','page-log-value')) {
     $case = New-Case $fault $fault
     $before = Snapshot $case.Directory
     $rejected = $false
@@ -127,6 +139,7 @@ foreach ($fault in @('empty', 'missing-reference', 'candidate-hash', 'existing-c
             'candidate-hash' { 'Candidate identity differs: second-final-preserve' }
             'existing-comparison' { 'Comparison already exists: second-final-preserve' }
             'duplicate' { 'Duplicate comparison outcome: first-final-preserve' }
+            {$_ -in @('page-log-hash','page-log-value')} { 'Candidate page inspection differs:' }
         }
         if (!$_.Exception.Message.Contains($expected)) { throw }
         $rejected = $true
@@ -461,7 +474,7 @@ foreach ($fault in (@('empty-metrics','missing-metric','null-error','nonfinite-m
         'truncated-pages' {
             $outcomesPath=Join-Path $case.CandidateDirectory 'outcomes.json'
             $outcomes=Get-Content $outcomesPath -Raw | ConvertFrom-Json
-            $outcomes.Rows[1].InspectedPages=2
+            Set-ControlMeasuredPages (Join-Path $case.CandidateDirectory 'second-final-preserve') $outcomes.Rows[1] 2
             $outcomes | ConvertTo-Json -Depth 6 | Set-Content $outcomesPath
         }
         'truncated-reference-pages' { $metric.ForegroundRecall=1 }
@@ -493,7 +506,7 @@ foreach ($fault in (@('empty-metrics','missing-metric','null-error','nonfinite-m
     $passed+=$fault
 }
 foreach ($control in @('cleared-summary','obsolete-failure','blank-reference','unverified-recall','zero-recall','dimension-mismatch',
-    'near-dimensions-with-recall-failure','reference-extra-page','candidate-extra-page','legacy-missing-page-count','threshold-boundary',
+    'near-dimensions-with-recall-failure','reference-extra-page','candidate-extra-page','legacy-stale-page-count','threshold-boundary',
     'metric-domain-minima','metric-domain-maxima')) {
     $case=New-Case $control 'legacy' -ExtraReferencePage:($control -eq 'reference-extra-page')
     $cache=New-ReuseCache $case
@@ -524,16 +537,17 @@ foreach ($control in @('cleared-summary','obsolete-failure','blank-reference','u
                 $extra.ReferenceFile=$null
                 $outcomesPath=Join-Path $case.CandidateDirectory 'outcomes.json'
                 $outcomes=Get-Content $outcomesPath -Raw | ConvertFrom-Json
-                $outcomes.Rows[1].InspectedPages=2
+                Set-ControlMeasuredPages (Join-Path $case.CandidateDirectory 'second-final-preserve') $outcomes.Rows[1] 2
                 $outcomes | ConvertTo-Json -Depth 6 | Set-Content $outcomesPath
             }
             $prior.Rows[1].Metrics=@($metric,$extra)
             $expectedFailures=@('Pagination')
         }
-        'legacy-missing-page-count' {
+        'legacy-stale-page-count' {
             $outcomesPath = Join-Path $case.CandidateDirectory 'outcomes.json'
             $outcomes = Get-Content -LiteralPath $outcomesPath -Raw | ConvertFrom-Json -AsHashtable
-            $outcomes.Rows[1].Remove('InspectedPages')
+            $outcomes.Rows[1].Remove('InspectionLogSha256')
+            $outcomes.Rows[1].InspectedPages = 2
             $outcomes | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $outcomesPath
             $expectedFailures=@('ForegroundRecall')
         }
@@ -557,10 +571,13 @@ foreach ($control in @('cleared-summary','obsolete-failure','blank-reference','u
     }
     $prior | ConvertTo-Json -Depth 10 | Set-Content $path
     $before=Snapshot $case.ReferenceDirectory
+    $beforeReads = $inspectionProbe.CandidateReads
     & $script -CandidateDirectory $case.CandidateDirectory -ReferenceDirectory $case.ReferenceDirectory `
         -VisualDiffPath $visualDiff -ValidationToolsDirectory $tools -ReuseComparisonDirectory $cache | Out-Null
     $result=Get-Content (Join-Path $case.CandidateDirectory 'office-comparisons.json') -Raw | ConvertFrom-Json
     $actual=$result.Rows[1]
+    $expectedReads = if ($control -eq 'legacy-stale-page-count') { 1 } else { 0 }
+    if ($inspectionProbe.CandidateReads -ne $beforeReads + $expectedReads) { throw 'Only an unpinned count needs reinspection' }
     if ((@($actual.Failures) -join ',') -cne ($expectedFailures -join ',') -or !$actual.ReusedComparison -or
         $actual.Thresholds.minForegroundRecall -ne .99 -or (Snapshot $case.ReferenceDirectory) -ne $before -or
         @(Get-ChildItem -LiteralPath $case.Directory -Recurse -Filter '*.called').Count) {
@@ -635,6 +652,7 @@ $global:LASTEXITCODE=0
 $comparisonProbeState=@{DiffCalls=0;AfterDiff=$null;BlankReference=$false}
 function dotnet {
     if ($args[0] -eq $inspector) {
+        if ($args[2] -ne '--page-count') { throw 'Unexpected PDF inspector mode' }
         Write-ControlPdfInspection $args[1]
         return
     }
@@ -841,7 +859,7 @@ try {
     Add-Content (Join-Path $run 'candidate.pdf') 'two pages'
     $outcomes=Get-Content (Join-Path $case.CandidateDirectory 'outcomes.json') -Raw | ConvertFrom-Json
     $outcomes.Rows[0].PdfSha256=(Get-FileHash (Join-Path $run 'candidate.pdf')).Hash
-    $outcomes.Rows[0].InspectedPages=2
+    Set-ControlMeasuredPages $run $outcomes.Rows[0] 2
     $outcomes | ConvertTo-Json -Depth 6 | Set-Content (Join-Path $case.CandidateDirectory 'outcomes.json')
     New-Item -ItemType Directory -Path (Join-Path $run 'raster') | Out-Null
     Set-Content (Join-Path $run 'raster/page-001.png') 'stale one-page legacy raster'

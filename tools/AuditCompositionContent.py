@@ -474,18 +474,22 @@ def read_reference_inspection(folder, pdf_hash, inspector_hash, *, creating=Fals
                 "OperationsSha256": sha_bytes(operations), "InspectionLogSha256": sha_bytes(log)}
     if not creating and read(pin) != identity:
         raise ValueError("Reference text cache identity differs: " + str(folder))
-    # Page objects include empty and trailing blank pages. Text-operation page
-    # numbers cannot establish the size of an empty reference document.
-    log_text = log.decode("utf-8-sig").replace("\r\n", "\n")
-    pages = len(re.findall(r"^\d+ \d+ obj: page$", log_text, re.MULTILINE))
-    if pages < 1:
-        raise ValueError("No inspected reference pages: " + str(folder))
+    pages = logical_page_count(log, folder)
     records = json.loads(operations.decode("utf-8-sig"))
     if not isinstance(records, list):
         raise ValueError("Invalid reference text operations: " + str(folder))
     if creating:
         pin.write_text(json.dumps(identity, indent=2) + "\n", encoding="utf-8")
     return records, identity["OperationsSha256"], pages, identity["InspectionLogSha256"]
+
+
+def logical_page_count(log, source):
+    markers = [line for line in log.decode("utf-8-sig").splitlines() if line.startswith("Logical pages:")]
+    match = re.fullmatch(r"Logical pages: ([0-9]{1,10})", markers[0]) if len(markers) == 1 else None
+    count = int(match[1]) if match else 0
+    if not 0 < count <= 2_147_483_647:
+        raise ValueError("Missing or invalid logical PDF page count: " + str(source))
+    return count
 
 
 def validate_outcome_modes(cases, outcomes, comparisons):
@@ -600,6 +604,16 @@ def main():
         operations = json.loads(operations_bytes.decode("utf-8-sig"))
         if not isinstance(operations, list):
             raise ValueError("Invalid candidate text operations: " + folder)
+        inspection_pin = outcome.get("InspectionLogSha256")
+        if not inspection_pin:
+            raise ValueError("Page inspection identity is missing; reinspect the candidate PDF: " + folder)
+        inspection_log = run / "inspect.log"
+        log_bytes = inspection_log.read_bytes()
+        if sha_bytes(log_bytes) != inspection_pin:
+            raise ValueError("Candidate page inspection differs: " + folder)
+        candidate_pages = logical_page_count(log_bytes, inspection_log)
+        if type(outcome.get("InspectedPages")) is not int or outcome["InspectedPages"] != candidate_pages:
+            raise ValueError("Candidate page inspection differs: " + folder)
         office, office_ops_hash, pages, office_log_hash = inspect_reference(
             reference, inspector, args.cache.resolve(), pdf_hash=reference_hash, inspector_hash=inspector_hash)
         operations = page_owned_operations(operations)
@@ -629,7 +643,7 @@ def main():
                      "CandidateOperationsSha256": operations_hash, "ReferenceOperationsSha256": office_ops_hash,
                      "ExpectedSourceEquations": expected_equations, "ExpectedSourcePictures": expected_pictures,
                      "ReferenceInspectionLogSha256": office_log_hash,
-                     "ReferencePages": pages, "CandidatePages": outcome["InspectedPages"],
+                     "ReferencePages": pages, "CandidatePages": candidate_pages,
                      "SourceProseTokens": sum(prose.values()), "SourceParts": parts,
                      "SourceTokensMissingOffice": deficits(prose, office_words),
                      "SourceTokensMissingCandidate": deficits(prose, candidate_words),

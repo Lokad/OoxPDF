@@ -6,6 +6,7 @@
 param([string] $OutputDirectory, [string] $InspectorPath)
 $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
+. (Join-Path $PSScriptRoot 'CompositionOutcomes.ps1')
 $scratch = if ($OutputDirectory) { [IO.Path]::GetFullPath($OutputDirectory) }
     else { Join-Path $repoRoot ('artifacts/content-tokenize-probe-' + [Guid]::NewGuid().ToString('N')) }
 if (Test-Path -LiteralPath $scratch) { throw 'Use a fresh tokenizer-check directory' }
@@ -83,6 +84,9 @@ else { & (Join-Path $repoRoot "tools/InspectPdf.ps1") -InputPdf $pdfPath -Output
 if ($LASTEXITCODE -ne 0) {
     throw "PdfInspect failed with exit code $LASTEXITCODE."
 }
+if (!$InspectorPath) {
+    $InspectorPath = (Get-Content (Join-Path $inspectDir 'pdf-inspect-build-info.json') -Raw | ConvertFrom-Json).OutputDll
+}
 
 $failures = @()
 function Assert-Near([string] $Name, [double] $Actual, [double] $Expected) {
@@ -134,6 +138,7 @@ foreach ($probe in @(
     @{Name='empty-stream';Pages=1;HasContents=$true;Text='';TextCount=0},
     @{Name='no-content';Pages=1;HasContents=$false;Text='';TextCount=0},
     @{Name='trailing-blank';Pages=2;HasContents=$true;Text='BT /F1 12 Tf (Visible) Tj ET';TextCount=1},
+    @{Name='unlisted-page';Pages=1;HasContents=$false;Text='';TextCount=0;UnlistedPage=$true},
     @{Name='single-byte-cmap';Pages=1;HasContents=$true;Text='BT /F1 12 Tf <41> Tj <8042> Tj [<41> -120 <42>] TJ ET';
         TextCount=3;ExpectedText=@('A', ([string][char]0x20ac + 'B'), 'AB');Codespace='<20> <FF>';Mappings='<41> <0041> <42> <0042> <80> <20AC>'},
     @{Name='two-byte-cmap';Pages=1;HasContents=$true;Text='BT /F1 12 Tf <0041> Tj <00410042> Tj ET';
@@ -180,6 +185,10 @@ foreach ($probe in @(
             $bodies.Add('<< /Type /Font /Subtype /CIDFontType2 /BaseFont /Probe /CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >> >>')
         }
     }
+    if ($probe.UnlistedPage) {
+        $bodies[0] = '<< /Type /Catalog /Pages 2 0 R /ProbeExtraPage ' + ($bodies.Count + 1) + ' 0 R >>'
+        $bodies.Add('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 200] >>')
+    }
     $pdfBuilder = [Text.StringBuilder]::new("%PDF-1.7`n")
     $indices = @(0..($bodies.Count - 1))
     if ($probe.ReorderPages) { $indices[3] = 5; $indices[5] = 3 }
@@ -195,8 +204,7 @@ foreach ($probe in @(
     $probePdf = Join-Path $scratch ($probe.Name + '.pdf')
     [IO.File]::WriteAllText($probePdf, $pdfBuilder.ToString(), [Text.Encoding]::ASCII)
     $probeDirectory = Join-Path $scratch $probe.Name
-    if ($InspectorPath) { dotnet $InspectorPath $probePdf $probeDirectory *> ($probeDirectory+'.log') }
-    else { & (Join-Path $repoRoot 'tools/InspectPdf.ps1') -InputPdf $probePdf -OutputDirectory $probeDirectory *> ($probeDirectory+'.log') }
+    dotnet $InspectorPath $probePdf $probeDirectory *> ($probeDirectory+'.log')
     if ($LASTEXITCODE -ne 0) { throw ('Empty-page inspection failed: ' + $probe.Name) }
     $textReport = Join-Path $probeDirectory 'text-operations.json'
     $graphicsReport = Join-Path $probeDirectory 'graphics-operations.json'
@@ -211,8 +219,15 @@ foreach ($probe in @(
     if ($probe.ExpectedText -and ($operations.DecodedText -join '|') -cne ($probe.ExpectedText -join '|')) {
         throw ('Incorrect CMap decoding for ' + $probe.Name + ': ' + ($operations.DecodedText -join '|'))
     }
-    $pageCount = @(Get-Content -LiteralPath ($probeDirectory+'.log') | Where-Object { $_ -match '^\d+ \d+ obj: page$' }).Count
+    $pageCount = (Read-PortfolioPageInspection ($probeDirectory+'.log')).PageCount
     if ($pageCount -ne $probe.Pages) { throw ('Incorrect inspected pages: ' + $probe.Name) }
+    if ($probe.UnlistedPage -or $probe.Name -eq 'trailing-blank') {
+        $countLog = @(dotnet $InspectorPath $probePdf --page-count)
+        if ($LASTEXITCODE -ne 0 -or (Get-LogicalPdfPageCount $countLog $probePdf) -ne $probe.Pages -or
+            @($countLog | Where-Object { $_ -match ' obj: ' }).Count) {
+            throw ('Incorrect count-only result: ' + $probe.Name)
+        }
+    }
     if ($probe.ReorderPages) {
         $fonts = @(Get-Content -LiteralPath (Join-Path $probeDirectory 'font-resources.json') -Raw | ConvertFrom-Json)
         if (($operations.PageNumber -join ',') -cne '1,2' -or $graphics[0].PageNumber -ne 1 -or
@@ -222,9 +237,11 @@ foreach ($probe in @(
             throw 'Reordered objects changed logical page ownership of text, graphics or fonts.'
         }
         $filtered = Join-Path $scratch 'logical-page-one'
-        if ($InspectorPath) { dotnet $InspectorPath $probePdf $filtered --text-only --page 1 | Out-Null }
-        else { & (Join-Path $repoRoot 'tools/InspectPdf.ps1') -InputPdf $probePdf -OutputDirectory $filtered -TextOnly -Page 1 | Out-Null }
+        $filteredLog = @(dotnet $InspectorPath $probePdf $filtered --text-only --page 1)
         if ($LASTEXITCODE -ne 0) { throw 'Page-one inspection failed.' }
+        if ((Get-LogicalPdfPageCount $filteredLog $probePdf) -ne $probe.Pages) {
+            throw 'Filtering operations changed the full logical page count.'
+        }
         $filteredText = @(Get-Content -LiteralPath (Join-Path $filtered 'text-operations.json') -Raw | ConvertFrom-Json)
         $filteredGraphics = @(Get-Content -LiteralPath (Join-Path $filtered 'graphics-operations.json') -Raw | ConvertFrom-Json)
         if ($filteredText.Count -ne 1 -or $filteredText[0].DecodedText -cne 'Z' -or $filteredText[0].PageNumber -ne 1 -or
@@ -242,12 +259,16 @@ if ($cycle -ceq $cycleSource) { throw 'Could not construct the cyclic page tree 
 [IO.File]::WriteAllText($cyclic, $cycle, [Text.Encoding]::ASCII)
 $cycleOutput = Join-Path $scratch 'cyclic-page-tree'
 $cycleLog = Join-Path $scratch 'cyclic-page-tree.log'
-if ($InspectorPath) { dotnet $InspectorPath $cyclic $cycleOutput --text-only *> $cycleLog }
-else { & (Join-Path $repoRoot 'tools/InspectPdf.ps1') -InputPdf $cyclic -OutputDirectory $cycleOutput -TextOnly *> $cycleLog }
+dotnet $InspectorPath $cyclic $cycleOutput --text-only *> $cycleLog
 if ($LASTEXITCODE -eq 0 -or !(Select-String -LiteralPath $cycleLog -SimpleMatch 'repeated PDF page-tree reference') -or
     (Test-Path -LiteralPath (Join-Path $cycleOutput 'graphics-operations.json'))) {
     throw 'A cyclic page tree produced a successful or partial operation report.'
 }
 Write-Host 'PASS: cyclic page trees fail before publishing operation reports'
+dotnet $InspectorPath $cyclic --page-count *> ($cycleLog + '.count')
+if ($LASTEXITCODE -eq 0 -or !(Select-String -LiteralPath ($cycleLog + '.count') -SimpleMatch 'repeated PDF page-tree reference') -or
+    (Select-String -LiteralPath ($cycleLog + '.count') -SimpleMatch 'Logical pages:')) {
+    throw 'A cyclic page tree produced a count.'
+}
 
 Write-Host "Content tokenization checks passed."

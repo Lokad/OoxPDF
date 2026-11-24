@@ -22,7 +22,7 @@ foreach ($id in @('one','two')) {
     $run = Join-Path $source ($id+'-all-word-compatible')
     foreach ($folder in @('inspect','raster','office-diff')) { New-Item -ItemType Directory -Path (Join-Path $run $folder) -Force | Out-Null }
     [IO.File]::WriteAllText((Join-Path $run 'candidate.pdf'), 'fake PDF '+$id)
-    [IO.File]::WriteAllText((Join-Path $run 'inspect.log'), 'one page')
+    [IO.File]::WriteAllText((Join-Path $run 'inspect.log'), "3 0 obj: page`n7 0 obj: page`nLogical pages: 1`n")
     [IO.File]::WriteAllText((Join-Path $run 'inspect/text-operations.json'), '[]')
     foreach ($name in $sourceOnlyReports.Keys) {
         [IO.File]::WriteAllText((Join-Path $run $name), $sourceOnlyReports[$name])
@@ -33,6 +33,7 @@ foreach ($id in @('one','two')) {
     [ordered]@{LibrarySha256=('C'*64);CliSha256=('D'*64);InspectorSha256=('E'*64);Rows=@(
         @{Id=$id;Mode='all-word-compatible';InputSha256=$(if ($id -eq 'one') {'A'*64} else {'B'*64});
           PdfSha256=(Get-FileHash (Join-Path $run 'candidate.pdf')).Hash;
+          InspectedPages=1;InspectionLogSha256=(Get-FileHash (Join-Path $run 'inspect.log')).Hash;
           TextOperationsSha256=(Get-FileHash (Join-Path $run 'inspect/text-operations.json')).Hash;
           MissingExpectedText=@('retained raw flag');ExpectedSourceEquations=0;Diagnostics=@();IgnoredEquationDiagnostics=0;
           Severity='Needs geometry and visual review'}
@@ -72,6 +73,9 @@ try {
         if ($row.TextOperationsSha256 -cne (Get-FileHash (Join-Path $run 'inspect/text-operations.json')).Hash) {
             throw 'Joined text inspection is not pinned'
         }
+        if ($row.InspectedPages -ne 1 -or $row.InspectionLogSha256 -cne (Get-FileHash (Join-Path $run 'inspect.log')).Hash) {
+            throw 'Joined logical page inspection is not pinned'
+        }
     }
     $original = Join-Path $sources[0] 'one-all-word-compatible/candidate.pdf'
     $hash = (Get-FileHash -LiteralPath $original).Hash
@@ -85,6 +89,11 @@ try {
     [IO.File]::WriteAllText($textReport, '[{"DecodedText":"Other PDF"}]')
     Reject 'stale-text-inspection' 'Candidate text inspection differs'
     [IO.File]::WriteAllBytes($textReport, $textBytes)
+    $pageLog = Join-Path $sources[1] 'two-all-word-compatible/inspect.log'
+    $pageLogBytes = [IO.File]::ReadAllBytes($pageLog)
+    [IO.File]::WriteAllText($pageLog, 'Logical pages: 2')
+    Reject 'stale-page-inspection' 'Candidate page inspection differs'
+    [IO.File]::WriteAllBytes($pageLog, $pageLogBytes)
     $legacy = Get-Content -LiteralPath $report -Raw | ConvertFrom-Json -AsHashtable
     $legacy.Rows[0].Remove('TextOperationsSha256')
     $legacy | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $report

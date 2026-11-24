@@ -81,12 +81,14 @@ foreach ($directory in $SourceDirectory) {
         $row.ExpectedSourcePictures = $expectations.Pictures
         $row.ContentWitnesses = Get-PortfolioContentWitnesses $row $report $audit $loadedAudits
         $row.Severity = Get-PortfolioContentSeverity $missing $ignoredMath $row.ContentWitnesses
+        $pageInspection = Get-VerifiedPortfolioPageInspection (Join-Path $run 'inspect.log') $row
         $copies = @(foreach ($name in $files) {
             $path = Join-Path $run $name
             if (Test-Path -LiteralPath $path -PathType Leaf) {
                 $hash = switch ($name) {
                     'inspect/text-operations.json' { $textInspection.Hash }
                     'diagnostics.json' { $diagnosticsHash }
+                    'inspect.log' { if ($pageInspection) { $pageInspection.Hash } else { (Get-FileHash -LiteralPath $path).Hash } }
                     default { (Get-FileHash -LiteralPath $path).Hash }
                 }
                 [pscustomobject]@{Name=$name;Path=$path;Hash=$hash}

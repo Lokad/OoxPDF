@@ -27,7 +27,7 @@ $inspectionOnly = $false
 $freshSource = $null
 $sourceChangeTiming = $null
 $inspectionOperations = @([pscustomobject]@{PageNumber=1;Font='Body';DecodedText='Retained source.'})
-$mutation = [pscustomobject]@{CopyPath=$null;InspectionSource=$null;InspectionDestination=$false;OmitTextOperations=$false;ChangePdf=$false}
+$mutation = [pscustomobject]@{CopyPath=$null;InspectionSource=$null;InspectionDestination=$false;OmitTextOperations=$false;ChangePdf=$false;PageCountLines=$null}
 function Copy-Item {
     param([string] $LiteralPath, [string] $Destination)
     if ($mutation.CopyPath -and [IO.Path]::GetFullPath($LiteralPath) -eq [IO.Path]::GetFullPath($mutation.CopyPath)) {
@@ -68,10 +68,9 @@ function dotnet {
             [IO.File]::WriteAllText($freshSource, 'Changed after Final conversion')
         }
         $global:LASTEXITCODE = 0
-        $pages = if ($inspectionOperations.Count) { $inspectionOperations.PageNumber | Sort-Object -Unique } else { 1 }
-        foreach ($page in $pages) {
-            Write-Output ($page.ToString() + ' 0 obj: page')
-        }
+        Write-Output '3 0 obj: page', '7 0 obj: page'
+        if ($null -ne $mutation.PageCountLines) { Write-Output $mutation.PageCountLines }
+        else { Write-Output 'Logical pages: 1' }
         return
     }
     throw 'Sentinel conversion reached'
@@ -142,6 +141,12 @@ foreach ($sourceChangeTiming in @('unchanged', 'between-views', 'during-review')
             ($report.Rows.Mode -join ',') -cne 'final-preserve,all-word-compatible' -or
             @($report.Rows | Where-Object { $_.InputSha256 -cne $freshInputHash -or $_.MissingExpectedText.Count }).Count) {
             throw 'An unchanged source must produce two pinned outcomes with the expected text'
+        }
+        foreach ($row in $report.Rows) {
+            $log = Join-Path $output ('fresh-' + $row.Mode + '/inspect.log')
+            if ($row.InspectedPages -ne 1 -or $row.InspectionLogSha256 -cne (Get-FileHash $log).Hash) {
+                throw 'Measurement did not pin the logical count over the extra object summary'
+            }
         }
         continue
     }
@@ -316,6 +321,22 @@ foreach ($fault in @('OmitTextOperations', 'ChangePdf')) {
     $expected = if ($fault -eq 'OmitTextOperations') { '*did not publish text operations*' } else { '*PDF changed during inspection*' }
     if (!$failure -or "$failure" -notlike $expected -or (Test-Path -LiteralPath (Join-Path $output 'outcomes.json'))) {
         throw ('Unexpected inspection result: ' + $fault + '; failure=' + $failure)
+    }
+}
+foreach ($test in @(
+    @{Name='missing-logical-count';Lines=@()},
+    @{Name='duplicate-logical-count';Lines=@('Logical pages: 1','Logical pages: 2')},
+    @{Name='zero-logical-count';Lines=@('Logical pages: 0')}
+)) {
+    $mutation.PageCountLines = $test.Lines
+    $output = Join-Path $OutputDirectory $test.Name
+    $failure = $null
+    try { & $script -CliPath $cli -InspectorPath $inspector -Manifest $manifest -OutputDirectory $output -ReuseCandidateDirectory $prior | Out-Null }
+    catch { $failure = $_ }
+    finally { $mutation.PageCountLines = $null }
+    if ("$failure" -notlike 'Missing or invalid logical PDF page count:*' -or
+        (Test-Path -LiteralPath (Join-Path $output 'outcomes.json'))) {
+        throw ('Incorrect handling of PDF page count evidence: ' + $test.Name)
     }
 }
 . (Join-Path $PSScriptRoot 'CompositionOutcomes.ps1')
