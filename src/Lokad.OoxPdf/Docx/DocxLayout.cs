@@ -325,14 +325,15 @@ internal sealed partial class DocxLayoutEngine
         DocxLayout first = CreateLayout(document, textMeasurer, cancellationToken, unscaledTextMeasurer,
             headerOverflowDisplacementByPage, footerFrameBottomDisplacementByPage, mathEquations, null, out var notePageShifts);
         if (notePageShifts is null ||
-            (!first.Pages.Any(page => page.PageSettings.DecimalPageNumberStart is not null) &&
+            (!first.Pages.Any(page => page.PageSettings.DecimalPageNumberStart is not null ||
+                page.SectionProperties.BreakTypeValue is "oddPage" or "evenPage") &&
                 !HasPageField(document.BodyElements) &&
                 !document.RelatedStories.Any(story => story.IsNormalStoryType && HasPageField(story.BodyElements))))
             return first;
 
-        // A late note page can change the number measured in a body field or
-        // move the physical origin of a restart. Confirm the observed shifts
-        // once after remeasuring, since the new field widths can change wrapping.
+        // Late note pages can change PAGE, a section's origin or its starting
+        // parity. Confirm the note shifts after remeasuring, since counter
+        // widths or the added space can change how many pages fit.
         DocxLayout adjusted = CreateLayout(document, textMeasurer, cancellationToken, unscaledTextMeasurer,
             headerOverflowDisplacementByPage, footerFrameBottomDisplacementByPage, mathEquations, notePageShifts,
             out var confirmedShifts);
@@ -368,6 +369,7 @@ internal sealed partial class DocxLayoutEngine
              Math.Abs(paragraphSpacingScale - WordCompatibleAllMarkupParagraphSpacingScale) < 0.000001d);
         int currentSectionStartIndex = 0;
         int sectionFirstPageNumber = 1;
+        int bodyFlowPageCount = 0;
 
         IReadOnlyDictionary<int, DocxEffectiveSectionSettings> sectionSettingsByElementIndex = BuildEffectiveSectionSettings(document, out DocxEffectiveSectionSettings finalSectionSettings, cancellationToken);
         if (OoxConversionBudget.Current is { Memory: not null } budget)
@@ -381,12 +383,10 @@ internal sealed partial class DocxLayoutEngine
         }
         DocxEffectiveSectionSettings activeSectionSettings = FindSectionSettingsAtOrAfter(document.BodyElements, 0, sectionSettingsByElementIndex) ?? finalSectionSettings;
         int pageNumberOffset = (activeSectionSettings.PageSettings.DecimalPageNumberStart ?? 1) - 1;
-        int ProjectPageNumber(int physicalPageNumber) => physicalPageNumber +
-            (projectedNotePageShifts is not null && physicalPageNumber <= projectedNotePageShifts.Length
-                ? projectedNotePageShifts[physicalPageNumber - 1] : 0);
-        DocxPageNumber MeasurePageNumber(int physicalPageNumber) =>
-            new(physicalPageNumber, (long)ProjectPageNumber(physicalPageNumber) - physicalPageNumber + pageNumberOffset);
-        DocxPageNumber CurrentPageNumber() => MeasurePageNumber(pages.Count + 1);
+        int CurrentNotePageShift() => projectedNotePageShifts is not null && bodyFlowPageCount < projectedNotePageShifts.Length
+            ? projectedNotePageShifts[bodyFlowPageCount] : 0;
+        int ProjectCurrentPageNumber() => pages.Count + 1 + CurrentNotePageShift();
+        DocxPageNumber CurrentPageNumber() => new(pages.Count + 1, (long)CurrentNotePageShift() + pageNumberOffset);
         DocxPageGeometry page = ResolveSectionGeometry(document, activeSectionSettings, reserveMarkupMargin, retuneReserveToPrintScale, reservePrintScale, pageNumber: 1);
         int activeColumnIndex = 0;
         double x = ResolveActiveColumnFrame(page, activeColumnIndex).X;
@@ -498,6 +498,7 @@ internal sealed partial class DocxLayoutEngine
         {
             OoxConversionBudget.Current?.AdmitDocxLayoutPages(pages.Count + 1);
             cancellationToken.ThrowIfCancellationRequested();
+            int projectedPageNumber = ProjectCurrentPageNumber();
             pages.Add(new DocxLayoutPage(
                 page.Width,
                 page.Height,
@@ -516,12 +517,12 @@ internal sealed partial class DocxLayoutEngine
                 currentItems.ToArray())
             {
                 MarkupLaneDesignBodyEnd = page.MarkupLaneDesignBodyEnd,
-                SectionFirstPageNumber = ProjectPageNumber(sectionFirstPageNumber),
-                BodyFlowPageNumber = pages.Count + 1,
+                SectionFirstPageNumber = sectionFirstPageNumber,
+                BodyFlowPageNumber = isSectionParityFiller ? 0 : ++bodyFlowPageCount,
                 IsSectionParityFiller = isSectionParityFiller,
                 PageNumberOffset = pageNumberOffset
             });
-            PlaceInFlightFootnotesOnCompletingPage();
+            PlaceInFlightFootnotesOnCompletingPage(projectedPageNumber);
             if (completeFootnoteAdmission is not null)
                 foreach (var key in inFlightNotes.Where(note => note.Value.RemainingLineCount == 0).Select(note => note.Key).ToArray())
                     inFlightNotes.Remove(key);
@@ -549,7 +550,7 @@ internal sealed partial class DocxLayoutEngine
             {
                 // Footnote content is seated above this selected footer edge;
                 // its body reserve occupies the same frame, rather than overlapping it.
-                int pageNumber = ProjectPageNumber(pages.Count + 1);
+                int pageNumber = ProjectCurrentPageNumber();
                 return ResolveFooterKeepOut(footerFrame, pageNumber, pageNumber) + noteReserve;
             }
             // Office A/B (w48 multi-line footer plus long body, Word-COM rendered): body
@@ -595,7 +596,7 @@ internal sealed partial class DocxLayoutEngine
                 var candidate = new DocxLayoutPage(page.Width, page.Height, page.MarginLeft, page.MarginRight,
                     page.MarkupMarginReservePoints, page.MarginTop, page.MarginBottom, page.PageSettings,
                     page.SectionProperties, page.ColumnFrames, [], [], [], [], [])
-                { SectionFirstPageNumber = ProjectPageNumber(sectionFirstPageNumber), PageNumberOffset = pageNumberOffset };
+                { SectionFirstPageNumber = sectionFirstPageNumber, PageNumberOffset = pageNumberOffset };
                 frame = CanUsePlainFootnoteStaticFrame(document, candidate, unscaledTextMeasurer ?? textMeasurer,
                     paragraphSpacingScale, cancellationToken) ? candidate : null;
                 plainFootnoteFooterFrames[key] = frame;
@@ -621,7 +622,7 @@ internal sealed partial class DocxLayoutEngine
             double displacement = 0d;
             if (displacementByPage is not null)
             {
-                if (!displacementByPage.TryGetValue(pageIndex ?? (ProjectPageNumber(pages.Count + 1) - 1), out displacement) &&
+                if (!displacementByPage.TryGetValue(pageIndex ?? (ProjectCurrentPageNumber() - 1), out displacement) &&
                     displacementByPage.Count != 0)
                 {
                     displacementByPage.TryGetValue(displacementByPage.Count - 1, out displacement);
@@ -863,7 +864,7 @@ internal sealed partial class DocxLayoutEngine
                 : Math.Max(currentPageFootnoteReserveHeight, Math.Max(0d, retainedReserve));
         }
 
-        void PlaceInFlightFootnotesOnCompletingPage()
+        void PlaceInFlightFootnotesOnCompletingPage(int projectedTemplatePageNumber)
         {
             if (inFlightNotes.Count == 0)
             {
@@ -951,7 +952,8 @@ internal sealed partial class DocxLayoutEngine
                     // The body reference is now placed. Measure counters and all
                     // inline content together before slicing the note; keep this
                     // page-bound result out of the shared width-only memo.
-                    DocxRelatedStoryLayout boundLayout = BindRelatedStoryPage(storyLayout, FootnoteStoryLayoutWidth(page), MeasurePageNumber(pages.Count));
+                    var referencePage = new DocxPageNumber(pages.Count, (long)projectedTemplatePageNumber - pages.Count + pageNumberOffset);
+                    DocxRelatedStoryLayout boundLayout = BindRelatedStoryPage(storyLayout, FootnoteStoryLayoutWidth(page), referencePage);
                     if (!ReferenceEquals(boundLayout, storyLayout))
                     {
                         if (inFlightNotes.TryGetValue(key, out InFlightRelatedStory? pending) &&
@@ -1005,7 +1007,6 @@ internal sealed partial class DocxLayoutEngine
 
             DocxLayoutPage templatePage = pages[^1];
             int templatePageNumber = pages.Count;
-            int projectedTemplatePageNumber = ProjectPageNumber(templatePageNumber);
             var sharedBatch = new List<DocxReferencedRelatedStoryLayout>(continuedStories.Count + pageFootnoteStories.Count);
             sharedBatch.AddRange(continuedStories);
             sharedBatch.AddRange(pageFootnoteStories);
@@ -1217,9 +1218,9 @@ internal sealed partial class DocxLayoutEngine
 
         void ApplySectionAfterBreak(DocxEffectiveSectionSettings section, bool applyPageNumberStart)
         {
-            sectionFirstPageNumber = pages.Count + 1;
+            sectionFirstPageNumber = ProjectCurrentPageNumber();
             if (applyPageNumberStart && section.PageSettings.DecimalPageNumberStart is { } start)
-                pageNumberOffset = start - ProjectPageNumber(sectionFirstPageNumber);
+                pageNumberOffset = start - sectionFirstPageNumber;
             activeSectionSettings = section;
             page = ResolveSectionGeometry(document, activeSectionSettings, reserveMarkupMargin, retuneReserveToPrintScale, reservePrintScale, pages.Count + 1);
             activeColumnIndex = 0;
@@ -1406,7 +1407,7 @@ internal sealed partial class DocxLayoutEngine
                     FinishPage();
                 }
 
-                if (ShouldInsertParityBlankPage(boundaryType, pages.Count + 1))
+                if (ShouldInsertParityBlankPage(boundaryType, ProjectCurrentPageNumber()))
                 {
                     FinishPage(isSectionParityFiller: true);
                 }
@@ -1417,7 +1418,7 @@ internal sealed partial class DocxLayoutEngine
                     // the section that begins in the next column.
                     AdvanceColumnOrPage();
                     activeSectionSettings = following!;
-                    sectionFirstPageNumber = pages.Count + 1;
+                    sectionFirstPageNumber = ProjectCurrentPageNumber();
                 }
                 else if (startsNewPage || (continuous && !HasPageContent()))
                 {
@@ -2553,12 +2554,18 @@ internal sealed partial class DocxLayoutEngine
         actualNotePageShifts = null;
         if (pagesWithRelatedStories.Length != pages.Count)
         {
-            for (int index = 0; index < pagesWithRelatedStories.Length; index++)
+            int notePagesBeforeBody = 0;
+            foreach (var placed in pagesWithRelatedStories)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                int original = pagesWithRelatedStories[index].BodyFlowPageNumber;
-                if (original == 0 || original == index + 1) continue;
-                (actualNotePageShifts ??= new int[pages.Count])[original - 1] = index + 1 - original;
+                // Parity fillers are chosen again in the second layout.
+                // Count only note pages before each body page so a changed
+                // filler cannot change the identity used for verification.
+                if (placed.IsSectionParityFiller) continue;
+                if (placed.BodyFlowPageNumber == 0)
+                    notePagesBeforeBody++;
+                else if (notePagesBeforeBody != 0)
+                    (actualNotePageShifts ??= new int[bodyFlowPageCount])[placed.BodyFlowPageNumber - 1] = notePagesBeforeBody;
             }
         }
         OoxConversionBudget.Current?.AdmitDocxLayoutPages(pagesWithRelatedStories.Length);

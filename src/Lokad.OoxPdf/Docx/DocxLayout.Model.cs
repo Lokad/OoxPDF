@@ -27,7 +27,7 @@ internal sealed record DocxLayoutPage(
 {
     // Physical page on which this section begins; continuation templates retain it.
     public int SectionFirstPageNumber { get; init; } = 1;
-    // Ordinal before late note pages are inserted. Their shells have no body ordinal.
+    // Ordinal among body pages, before late notes and excluding parity fillers.
     public int BodyFlowPageNumber { get; init; }
     public bool IsSectionParityFiller { get; init; }
     public bool IsBlankParityPage => IsSectionParityFiller && Items.Count == 0 && PlacedRelatedStories.Count == 0;

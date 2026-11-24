@@ -102,6 +102,47 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
+    public static void DocxParityStartsFollowInsertedEndnotePages()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            bool shiftedParity = false;
+            var renderer = PictureRangeRenderer(mode);
+            foreach (int count in new[] { 450, 900 })
+            {
+                var source = ReadSectionCounter(mode, count, null);
+                var control = Render(DocxSectionBreakType.NextPage);
+                TestAssert.Contains("Publicfollowingsection", SectionCounterPageText(control[^1]));
+                TestAssert.True(control.Length >= 4, "The control retains the four body pages.");
+                shiftedParity |= control.Length % 2 == 1;
+
+                foreach (var type in new[] { DocxSectionBreakType.OddPage, DocxSectionBreakType.EvenPage })
+                {
+                    bool needsFiller = (control.Length % 2 == 1) != (type == DocxSectionBreakType.OddPage);
+                    var pages = Render(type);
+                    TestAssert.Equal(control.Length + (needsFiller ? 1 : 0), pages.Length);
+                    TestAssert.Contains("Publicfollowingsection", SectionCounterPageText(pages[^1]));
+                    if (needsFiller)
+                    {
+                        TestAssert.Equal(string.Empty, pages[^2].Content);
+                        TestAssert.Equal(0, pages[^2].Annotations.Count);
+                    }
+                    TestAssert.True(control.Select(SectionCounterPageText).SequenceEqual(
+                        pages.Where((_, index) => !needsFiller || index != pages.Length - 2).Select(SectionCounterPageText)),
+                        "The parity boundary preserves the entire note on the same occupied pages.");
+                }
+
+                Lokad.OoxPdf.Pdf.PdfPage[] Render(DocxSectionBreakType type)
+                {
+                    var final = new DocxSectionBreakElement(source.PageSettings, type, null, null, null, []);
+                    return renderer.RenderPagesAsync(source with { FinalSectionBreak = final }, null, default)
+                        .ToBlockingEnumerable().ToArray();
+                }
+            }
+            TestAssert.True(shiftedParity, "At least one note must flip the original even start of the following section.");
+        }
+    }
+
     public static void DocxEndnotePlacementUsesDocumentPositionAndPreservesSectionMetadata()
     {
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
