@@ -957,28 +957,29 @@ internal static class PptxModelTests
 
     public static void PptxSyntheticTextBoxUsesThemeHyperlinkColor()
     {
-        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
-        if (!File.Exists(arial))
-        {
-            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
-        }
+        string installedFonts = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
+        using WindowsFontResolver? arial = OperatingSystem.IsWindows() && File.Exists(Path.Combine(installedFonts, "arial.ttf"))
+            ? new WindowsFontResolver(installedFonts) : null;
+        IFontResolver fonts = (IFontResolver?)arial ?? new PortableRenderingTests.PinnedResolver();
+        // Retain the Office Arial check and use the pinned DejaVu Sans post metric elsewhere.
+        double expectedThickness = 24d * (arial is null ? 90d : 150d) / 2048d;
 
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
+        var parts = new Dictionary<string, string>
         {
-            ["[Content_Types].xml"] = TestFixtures.Utf8(PptxTests.BasicContentTypes().Replace(
+            ["[Content_Types].xml"] = PptxTests.BasicContentTypes().Replace(
                 "</Types>",
                 "  <Override PartName=\"/ppt/theme/theme1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.theme+xml\"/>\r\n</Types>",
-                StringComparison.Ordinal)),
-            ["_rels/.rels"] = TestFixtures.Utf8(PptxTests.PackageRelationship()),
-            ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8("""
+                StringComparison.Ordinal),
+            ["_rels/.rels"] = PptxTests.PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
                   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/>
                   <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/>
                 </Relationships>
-                """),
-            ["ppt/presentation.xml"] = TestFixtures.Utf8(PptxTests.BasicPresentation()),
-            ["ppt/theme/theme1.xml"] = TestFixtures.Utf8("""
+                """,
+            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
+            ["ppt/theme/theme1.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="HyperlinkTheme">
                   <a:themeElements>
@@ -990,46 +991,90 @@ internal static class PptxModelTests
                     <a:fontScheme name="HyperlinkTheme"><a:majorFont><a:latin typeface="Arial"/></a:majorFont><a:minorFont><a:latin typeface="Arial"/></a:minorFont></a:fontScheme>
                   </a:themeElements>
                 </a:theme>
-                """),
-            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
+                """
+        };
+        const string link = """
+            <p:sp>
+              <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="5486400" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+              <p:txBody>
+                <a:bodyPr/><a:lstStyle/>
+                <a:p><a:r><a:rPr sz="2400"><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill><a:hlinkClick r:id="rIdHyper"/></a:rPr><a:t>Link</a:t></a:r></a:p>
+              </p:txBody>
+            </p:sp>
+            """;
+
+        PdfPage linked = Render(includeLink: true);
+        TestAssert.Equal("Link|Control", BlueText(linked));
+        AssertUnderline(linked, "Link", 72d);
+        PdfPage control = Render(includeLink: false);
+        TestAssert.Equal("Control", BlueText(control));
+        AssertUnderline(control, "Control", 216d);
+
+        PdfPage Render(bool includeLink)
+        {
+            parts["ppt/slides/slide1.xml"] = $$"""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
                        xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
                        xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-                  <p:cSld><p:spTree><p:sp>
-                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="5486400" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
-                    <p:txBody>
-                      <a:bodyPr/><a:lstStyle/>
-                      <a:p><a:r><a:rPr sz="2400"><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill><a:hlinkClick r:id="rIdHyper"/></a:rPr><a:t>Link</a:t></a:r></a:p>
-                    </p:txBody>
-                  </p:sp></p:spTree></p:cSld>
+                  <p:cSld><p:spTree>
+                    {{(includeLink ? link : string.Empty)}}
+                    <p:sp>
+                      <p:spPr><a:xfrm><a:off x="914400" y="2743200"/><a:ext cx="5486400" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                      <p:txBody>
+                        <a:bodyPr/><a:lstStyle/>
+                        <a:p><a:r><a:rPr sz="2400" u="sng"><a:solidFill><a:srgbClr val="0000FF"/></a:solidFill></a:rPr><a:t>Control</a:t></a:r></a:p>
+                      </p:txBody>
+                    </p:sp>
+                  </p:spTree></p:cSld>
                 </p:sld>
-                """)
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+                """;
+            using MemoryStream stream = TestFixtures.CreateZipPackage(parts);
+            using OoxPackage package = OoxPackage.Open(stream, default);
+            PptxDocument document = new PptxReader().Read(package, default);
+            if (includeLink)
+            {
+                var inspectionFonts = new PresentationFontResolver(fonts);
+                PptxTextRunModelSnapshot run = PptxRenderer.InspectTextFrameModels(document, package, 0, inspectionFonts: inspectionFonts)
+                    .SelectMany(frame => frame.Paragraphs).SelectMany(paragraph => paragraph.Runs).Single(item => item.Text == "Link");
+                TestAssert.True(run.HasHyperlinkClick, "The source run retains its hyperlink click.");
+                TestAssert.Equal("rIdHyper", run.HyperlinkClickId ?? string.Empty);
+                TestAssert.Equal("ThemeHyperlink", run.ColorSource);
+                TestAssert.True(run.Underline, "The link defaults to a single underline.");
+                TestAssert.Equal("sng", run.UnderlineValue ?? string.Empty);
+                var glyphRun = PptxRenderer.InspectTextGlyphRuns(document, package, 0, inspectionFonts: inspectionFonts)
+                    .Single(item => item.Text == "Link");
+                TestAssert.True(Math.Abs(glyphRun.UnderlineHeight.GetValueOrDefault() - expectedThickness) < .01d,
+                    "Underline thickness comes from the face's full post-table metric.");
+            }
+            return new PptxRenderer(fonts).RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().Single();
+        }
 
-        OoxPdfConverter.Convert(input, output);
+        static string BlueText(PdfPage page) => string.Join('|', DocxNoteClippingTests.ReadPhysicalPaintFrames(page)
+            .Where(frame => frame.VisibleTextPaint is true && Regex.IsMatch(frame.Block, @"(?m)^0 0 1 rg\r?$"))
+            .SelectMany(frame => DocxCommentsTests.ReadEmbeddedGlyphTextShows(
+                new PdfPage(page.Width, page.Height, frame.Block, page.Fonts), usePageCoordinates: false, honorActualText: false))
+            .Select(show => show.Text));
 
-        using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
-        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
-        PptxTextRunModelSnapshot linkRun = PptxRenderer.InspectTextFrameModels(document, package, 0)
-            .SelectMany(frame => frame.Paragraphs)
-            .SelectMany(paragraph => paragraph.Runs)
-            .Single(run => run.Text == "Link");
-        TestAssert.True(linkRun.HasHyperlinkClick, "Expected the text model to preserve hyperlink-click source state before color resolution.");
-        TestAssert.Equal("rIdHyper", linkRun.HyperlinkClickId ?? string.Empty);
-        TestAssert.Equal("ThemeHyperlink", linkRun.ColorSource);
-        TestAssert.True(linkRun.Underline, "Office applies a single underline to hyperlink runs when no underline override is authored.");
-        TestAssert.Equal("sng", linkRun.UnderlineValue ?? string.Empty);
-        PptxTextGlyphRunSnapshot glyphRun = PptxRenderer.InspectTextGlyphRuns(document, package, 0).Single(run => run.Text == "Link");
-        double underlineHeight = glyphRun.UnderlineHeight.GetValueOrDefault();
-        TestAssert.True(Math.Abs(underlineHeight - 24d * 150d / 2048d) < 0.01d, "Expected hyperlink underline thickness to use the full Arial post-table metric (150/2048 em), matching the 2.64pt Office bar at 36pt.");
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("0 0 1 rg", pdf);
-        TestAssert.Contains("re f*", pdf);
-        TestAssert.Contains(" TJ", pdf);
+        void AssertUnderline(PdfPage page, string word, double top)
+        {
+            var glyphs = PortableRenderingTests.ReadPaintedSourceLabel(page, word);
+            TestAssert.True(glyphs.All(glyph => glyph.Ink.X >= 72d && glyph.Ink.X + glyph.Ink.Width <= 504d &&
+                glyph.Ink.Y >= page.Height - top - 72d && glyph.Ink.Y + glyph.Ink.Height <= page.Height - top),
+                "The complete word paints in its authored text box: " + word);
+            var start = glyphs[0].Origin;
+            // These untransformed text boxes use one filled polygon per underline.
+            var bluePaths = Regex.Matches(page.Content, @"(?m)^0 0 1 rg\r?\n(?<points>(?:[-\d.]+ [-\d.]+ [ml]\r?\n)+)h\r?\nf\*\r?$");
+            TestAssert.True(bluePaths.Any(path =>
+            {
+                var points = path.Groups["points"].Value.TrimEnd().Split('\n').Select(line => line.Split(' ')).ToArray();
+                double[] x = points.Select(point => double.Parse(point[0], CultureInfo.InvariantCulture)).ToArray();
+                double[] y = points.Select(point => double.Parse(point[1], CultureInfo.InvariantCulture)).ToArray();
+                return Math.Abs(x.Min() - start.X) < .01d && x.Max() > glyphs[^1].Origin.X &&
+                    y.Max() <= start.Y && y.Max() > start.Y - glyphs[0].Size &&
+                    Math.Abs(y.Max() - y.Min() - expectedThickness) < .01d;
+            }), "A blue underline with the expected thickness paints beneath " + word);
+        }
     }
 
     public static void PptxTextModelInheritsPlaceholderBodyProperties()
