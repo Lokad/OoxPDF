@@ -428,18 +428,15 @@ internal sealed partial class PptxRenderer
         PptxSceneChartPlot plot,
         PptxSceneChartGrouping grouping,
         ChartWorkbookData? workbook,
-        bool plotVisibleOnly)
+        bool plotVisibleOnly,
+        IReadOnlyList<ChartIndexedNumberVector>? seriesVectors = null)
     {
-        if (workbook is null)
-        {
-            return GetBarChartValueExtents(ReadSceneChartSeriesVectors(plot, workbook, plotVisibleOnly), grouping);
-        }
+        return workbook is null
+            ? GetExtents()
+            : workbook.GetOrAddValueExtents(plot, grouping, plotVisibleOnly, GetExtents);
 
-        return workbook.GetOrAddValueExtents(
-            plot,
-            grouping,
-            plotVisibleOnly,
-            () => GetBarChartValueExtents(ReadSharedChartSeriesVectors(plot, workbook, plotVisibleOnly), grouping));
+        ChartValueExtents GetExtents() => GetBarChartValueExtents(
+            seriesVectors ?? ReadSharedChartSeriesVectors(plot, workbook, plotVisibleOnly), grouping);
     }
 
     // R15: per-frame shared line value extents behind one call shape, mirroring

@@ -45,9 +45,12 @@ internal sealed partial class PptxRenderer
                 PptxSceneChartAxis? valueSceneAxis = valueAxisSource.SceneAxis;
                 bool percentStacked = IsPercentStackedChartGrouping(barOptions.Grouping);
                 bool sharedValueAxis = HasSharedCartesianChartValueAxis(sceneChart, valueSceneAxis);
-                ChartValueExtents dataExtents = GetSharedBarChartValueExtents(barPlot, barOptions.Grouping, workbook, plotVisibleOnly);
-                if (sharedValueAxis) dataExtents = GetSharedCartesianChartValueExtents(sceneChart, barPlot, dataExtents,
-                    workbook, plotVisibleOnly, context.CancellationToken);
+                ChartValueExtents primaryDataExtents = GetSharedBarChartValueExtents(
+                    barPlot, barOptions.Grouping, workbook, plotVisibleOnly, barSeriesVectors);
+                ChartValueExtents dataExtents = sharedValueAxis
+                    ? GetSharedCartesianChartValueExtents(sceneChart, barPlot, primaryDataExtents,
+                        workbook, plotVisibleOnly, context.CancellationToken)
+                    : primaryDataExtents;
                 ChartValueExtents valueExtents = ReadCartesianChartValueAxisExtents(sceneChart, valueSceneAxis, dataExtents, percentStacked, ResolveBarValueAxisHeadroom(horizontalBars, percentStacked), PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
                 ChartValueAxisRenderOptions valueAxisOptions = ReadSceneChartValueAxisRenderOptions(valueSceneAxis, valueExtents, percentStacked);
                 valueAxisOptions = valueAxisOptions with { TickPolicy = ReadCartesianChartAxisTickPolicy(sceneChart, valueSceneAxis, valueExtents, percentStacked) };
@@ -234,7 +237,11 @@ internal sealed partial class PptxRenderer
                     ChartAxisSource extraValueAxisSource = ReadChartValueAxesForPlot(sceneChart, extraBarPlot).FirstOrDefault();
                     PptxSceneChartAxis? extraValueSceneAxis = extraValueAxisSource.SceneAxis;
                     bool extraPercentStacked = IsPercentStackedChartGrouping(extraBarOptions.Grouping);
-                    ChartValueExtents extraValueExtents = sharedValueAxis ? valueExtents : ReadPercentStackedAwareValueAxisExtents(extraValueSceneAxis, GetSharedBarChartValueExtents(extraBarPlot, extraBarOptions.Grouping, workbook, plotVisibleOnly), extraPercentStacked, ResolveBarValueAxisHeadroom(extraHorizontalBars, extraPercentStacked), PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
+                    ChartValueExtents extraValueExtents = sharedValueAxis ? valueExtents : ReadPercentStackedAwareValueAxisExtents(
+                        extraValueSceneAxis,
+                        GetSharedBarChartValueExtents(extraBarPlot, extraBarOptions.Grouping, workbook, plotVisibleOnly, extraSeriesVectors),
+                        extraPercentStacked, ResolveBarValueAxisHeadroom(extraHorizontalBars, extraPercentStacked),
+                        PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
                     ChartValueAxisRenderOptions extraValueAxisOptions = ReadSceneChartValueAxisRenderOptions(extraValueSceneAxis, extraValueExtents, extraPercentStacked);
                     IReadOnlyList<ChartSeriesFill?> extraSeriesFills = ReadSceneSeriesFills(extraBarPlot);
                     IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> extraPointFills = ReadSceneSeriesPointFills(extraBarPlot);
@@ -394,7 +401,9 @@ internal sealed partial class PptxRenderer
                         }
                         else
                         {
-                            await RenderSecondaryChartValueAxisLabelsAsync(theme, graphics, plotBox, sceneChart, GetSharedBarChartValueExtents(barPlot, barOptions.Grouping, workbook, plotVisibleOnly), fontResolver, chartFonts: fonts, primarySceneAxis: valueSceneAxis, context: context).ConfigureAwait(false);
+                            await RenderSecondaryChartValueAxisLabelsAsync(theme, graphics, plotBox, sceneChart,
+                                primaryDataExtents, fontResolver, chartFonts: fonts, primarySceneAxis: valueSceneAxis,
+                                context: context).ConfigureAwait(false);
                         }
                     }
                 }
