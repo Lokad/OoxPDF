@@ -136,59 +136,16 @@ internal static class PptxTablesTests
 
     public static void PptxSyntheticTableExpandsSlackRowsFromCellText()
     {
-        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
-        if (!File.Exists(arial))
-        {
-            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
-        }
+        PdfPage page = RenderWrappedHeaderTable(2286000);
+        var (headerY, headerHeight) = ReadRowSlackHeaderFill(page);
+        TestAssert.True(headerY < 448d, $"Expected expanded first row to move the lower edge below 448pt, got {headerY}pt.");
+        TestAssert.True(headerHeight > 20d, $"Expected expanded first row to exceed 20pt, got {headerHeight}pt.");
+        TestAssert.DoesNotContain("72 457.412 144 10.588 re f", page.Content);
 
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
-            ["_rels/.rels"] = PptxTests.PackageRelationship(),
-            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
-            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
-            ["ppt/slides/slide1.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <p:cSld><p:spTree>
-                    <p:graphicFrame>
-                      <p:xfrm><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="2286000"/></p:xfrm>
-                      <a:graphic>
-                        <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table">
-                          <a:tbl>
-                            <a:tblGrid><a:gridCol w="1828800"/></a:tblGrid>
-                            <a:tr h="127000">
-                              <a:tc>
-                                <a:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="1800"/><a:t>Alpha Beta Gamma Delta Epsilon Zeta</a:t></a:r></a:p></a:txBody>
-                                <a:tcPr><a:solidFill><a:srgbClr val="D9EAD3"/></a:solidFill></a:tcPr>
-                              </a:tc>
-                            </a:tr>
-                            <a:tr h="1016000"><a:tc><a:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>Second</a:t></a:r></a:p></a:txBody><a:tcPr/></a:tc></a:tr>
-                            <a:tr h="1016000"><a:tc><a:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>Third</a:t></a:r></a:p></a:txBody><a:tcPr/></a:tc></a:tr>
-                          </a:tbl>
-                        </a:graphicData>
-                      </a:graphic>
-                    </p:graphicFrame>
-                  </p:spTree></p:cSld>
-                </p:sld>
-                """
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, output);
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        Match headerFill = Regex.Matches(pdf, @"72 (?<y>[0-9.]+) 144 (?<height>[0-9.]+) re f")
-            .Cast<Match>()
-            .FirstOrDefault(match => double.Parse(match.Groups["height"].Value, CultureInfo.InvariantCulture) > 20d) ?? Match.Empty;
-
-        TestAssert.True(headerFill.Success, "Expected text minimum height to expand a slack table's first row beyond its declared proportional height.");
-        double headerY = double.Parse(headerFill.Groups["y"].Value, CultureInfo.InvariantCulture);
-        double headerHeight = double.Parse(headerFill.Groups["height"].Value, CultureInfo.InvariantCulture);
-        TestAssert.True(headerY < 448d, $"Expected expanded first row to move the lower edge well below the proportional 457.412pt row boundary, got y={headerY.ToString("0.###", CultureInfo.InvariantCulture)}.");
-        TestAssert.True(headerHeight > 20d, $"Expected expanded first row to exceed 20pt, got {headerHeight.ToString("0.###", CultureInfo.InvariantCulture)}pt.");
-        TestAssert.DoesNotContain("72 457.412 144 10.588 re f", pdf);
+        AssertRowSlackText(page, WrappedHeaderText, headerY, 468d);
+        double middleRowBottom = (headerY + 288d) / 2d;
+        AssertRowSlackText(page, "Second", middleRowBottom, headerY);
+        AssertRowSlackText(page, "Third", 288d, middleRowBottom);
     }
 
     public static void PptxSyntheticTableKeepsDeclaredRowsUnderLargeFrameSlack()
@@ -237,161 +194,107 @@ internal static class PptxTablesTests
 
     public static void PptxSyntheticTableKeepsDeclaredRowsWithoutMaterialSlack()
     {
-        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
-        if (!File.Exists(arial))
-        {
-            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
-        }
+        PdfPage page = RenderWrappedHeaderTable(2095500);
+        var (headerY, headerHeight) = ReadRowSlackHeaderFill(page);
+        TestAssert.True(headerY > 455d, $"Expected the low-slack first-row lower edge above 455pt, got {headerY}pt.");
+        TestAssert.True(headerHeight < 20d, $"Expected the low-slack first row to remain under 20pt, got {headerHeight}pt.");
+        TestAssert.DoesNotContain("72 420", page.Content);
 
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
-            ["_rels/.rels"] = PptxTests.PackageRelationship(),
-            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
-            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
-            ["ppt/slides/slide1.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <p:cSld><p:spTree>
-                    <p:graphicFrame>
-                      <p:xfrm><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="2095500"/></p:xfrm>
-                      <a:graphic>
-                        <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table">
-                          <a:tbl>
-                            <a:tblGrid><a:gridCol w="1828800"/></a:tblGrid>
-                            <a:tr h="127000">
-                              <a:tc>
-                                <a:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="1800"/><a:t>Alpha Beta Gamma Delta Epsilon Zeta</a:t></a:r></a:p></a:txBody>
-                                <a:tcPr><a:solidFill><a:srgbClr val="D9EAD3"/></a:solidFill></a:tcPr>
-                              </a:tc>
-                            </a:tr>
-                            <a:tr h="1016000"><a:tc><a:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>Second</a:t></a:r></a:p></a:txBody><a:tcPr/></a:tc></a:tr>
-                            <a:tr h="1016000"><a:tc><a:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>Third</a:t></a:r></a:p></a:txBody><a:tcPr/></a:tc></a:tr>
-                          </a:tbl>
-                        </a:graphicData>
-                      </a:graphic>
-                    </p:graphicFrame>
-                  </p:spTree></p:cSld>
-                </p:sld>
-                """
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, output);
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        Match headerFill = Regex.Matches(pdf, @"72 (?<y>[0-9.]+) 144 (?<height>[0-9.]+) re f")
-            .Cast<Match>()
-            .FirstOrDefault() ?? Match.Empty;
-
-        TestAssert.True(headerFill.Success, "Expected the first table row fill rectangle to be emitted.");
-        double headerY = double.Parse(headerFill.Groups["y"].Value, CultureInfo.InvariantCulture);
-        double headerHeight = double.Parse(headerFill.Groups["height"].Value, CultureInfo.InvariantCulture);
-        TestAssert.True(headerY > 455d, $"Expected low-slack table to keep the declared proportional first row boundary, got y={headerY.ToString("0.###", CultureInfo.InvariantCulture)}.");
-        TestAssert.True(headerHeight < 20d, $"Expected low-slack table to keep the compact declared first row height, got {headerHeight.ToString("0.###", CultureInfo.InvariantCulture)}pt.");
-        TestAssert.DoesNotContain("72 420", pdf);
+        // The short first row's expected ink needs a PowerPoint comparison.
+        AssertRowSlackText(page, "Second", 378d, 458d);
+        AssertRowSlackText(page, "Third", 298d, 378d);
     }
 
     public static void PptxSyntheticTableKeepsDeclaredRowsForSmallPositiveUniqueSlack()
     {
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
-            ["_rels/.rels"] = PptxTests.PackageRelationship(),
-            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
-            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
-            ["ppt/slides/slide1.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <p:cSld><p:spTree>
-                    <p:graphicFrame>
-                      <p:xfrm><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="1929136"/></p:xfrm>
-                      <a:graphic>
-                        <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table">
-                          <a:tbl>
-                            <a:tblGrid><a:gridCol w="1828800"/></a:tblGrid>
-                            <a:tr h="914400">
-                              <a:tc>
-                                <a:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="1200"/><a:t>First</a:t></a:r></a:p></a:txBody>
-                                <a:tcPr><a:solidFill><a:srgbClr val="D9EAD3"/></a:solidFill></a:tcPr>
-                              </a:tc>
-                            </a:tr>
-                            <a:tr h="965200"><a:tc><a:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="1200"/><a:t>Second</a:t></a:r></a:p></a:txBody><a:tcPr/></a:tc></a:tr>
-                          </a:tbl>
-                        </a:graphicData>
-                      </a:graphic>
-                    </p:graphicFrame>
-                  </p:spTree></p:cSld>
-                </p:sld>
-                """
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        PdfPage page = RenderRowSlackTable(1929136, (914400, "First", 1200), (965200, "Second", 1200));
+        var (headerY, headerHeight) = ReadRowSlackHeaderFill(page);
+        TestAssert.True(Math.Abs(headerY - 396d) < 0.01d, $"Expected the first-row lower edge at 396pt, got {headerY}pt.");
+        TestAssert.True(Math.Abs(headerHeight - 72d) < 0.01d, $"Expected the first-row height at 72pt, got {headerHeight}pt.");
+        TestAssert.DoesNotContain("72 394.", page.Content);
 
-        OoxPdfConverter.Convert(input, output);
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        Match headerFill = Regex.Matches(pdf, @"72 (?<y>[0-9.]+) 144 (?<height>[0-9.]+) re f")
-            .Cast<Match>()
-            .FirstOrDefault() ?? Match.Empty;
-
-        TestAssert.True(headerFill.Success, "Expected the first table row fill rectangle to be emitted.");
-        double headerY = double.Parse(headerFill.Groups["y"].Value, CultureInfo.InvariantCulture);
-        double headerHeight = double.Parse(headerFill.Groups["height"].Value, CultureInfo.InvariantCulture);
-        TestAssert.True(Math.Abs(headerY - 396d) < 0.01d, $"Expected small positive unique slack to keep the declared first-row lower edge at 396pt, got y={headerY.ToString("0.###", CultureInfo.InvariantCulture)}.");
-        TestAssert.True(Math.Abs(headerHeight - 72d) < 0.01d, $"Expected small positive unique slack to keep the declared first-row height at 72pt, got {headerHeight.ToString("0.###", CultureInfo.InvariantCulture)}pt.");
-        TestAssert.DoesNotContain("72 394.", pdf);
+        AssertRowSlackText(page, "First", 396d, 468d);
+        AssertRowSlackText(page, "Second", 320d, 396d);
     }
 
     public static void PptxSyntheticTableKeepsDeclaredRowsForModerateSlack()
     {
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        PdfPage page = RenderRowSlackTable(1955800, (914400, "First", 1200), (914400, "Second", 1200));
+        var (headerY, headerHeight) = ReadRowSlackHeaderFill(page);
+        TestAssert.True(headerY > 394d, $"Expected the first-row lower edge above 394pt, got {headerY}pt.");
+        TestAssert.True(headerHeight < 74d, $"Expected the first-row height below 74pt, got {headerHeight}pt.");
+        TestAssert.DoesNotContain("72 390.", page.Content);
+
+        AssertRowSlackText(page, "First", 396d, 468d);
+        AssertRowSlackText(page, "Second", 324d, 396d);
+
+        PdfPage blankSecond = RenderRowSlackTable(1955800, (914400, "First", 1200), (914400, "", 1200));
+        TestAssert.Equal((headerY, headerHeight), ReadRowSlackHeaderFill(blankSecond));
+        AssertRowSlackText(blankSecond, "First", 396d, 468d);
+        var missing = TestAssert.Throws<InvalidOperationException>(() => AssertRowSlackText(blankSecond, "Second", 324d, 396d));
+        TestAssert.Contains("Each complete source label paints once: Second", missing.Message);
+    }
+
+    private const string WrappedHeaderText = "Alpha Beta Gamma Delta Epsilon Zeta";
+
+    private static PdfPage RenderWrappedHeaderTable(int frameHeight) =>
+        RenderRowSlackTable(frameHeight, (127000, WrappedHeaderText, 1800), (1016000, "Second", null), (1016000, "Third", null));
+
+    private static PdfPage RenderRowSlackTable(int frameHeight, params (int Height, string Text, int? Size)[] rows)
+    {
+        var tableRows = new StringBuilder();
+        for (int index = 0; index < rows.Length; index++)
+        {
+            var (height, text, size) = rows[index];
+            string runProperties = size is int declaredSize ? FormattableString.Invariant($"""<a:rPr sz="{declaredSize}"/>""") : "";
+            string run = text.Length == 0 ? "" : $"<a:r>{runProperties}<a:t>{text}</a:t></a:r>";
+            string properties = index == 0 ? """<a:tcPr><a:solidFill><a:srgbClr val="D9EAD3"/></a:solidFill></a:tcPr>""" : "<a:tcPr/>";
+            tableRows.Append(FormattableString.Invariant($"""
+                <a:tr h="{height}"><a:tc>
+                  <a:txBody><a:bodyPr/><a:lstStyle/><a:p>{run}</a:p></a:txBody>
+                  {properties}
+                </a:tc></a:tr>
+                """));
+        }
+
+        using var input = TestFixtures.CreateZipPackage(new Dictionary<string, string>
         {
             ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
             ["_rels/.rels"] = PptxTests.PackageRelationship(),
             ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
             ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
-            ["ppt/slides/slide1.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
+            ["ppt/slides/slide1.xml"] = FormattableString.Invariant($$"""
                 <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <p:cSld><p:spTree>
-                    <p:graphicFrame>
-                      <p:xfrm><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="1955800"/></p:xfrm>
-                      <a:graphic>
-                        <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table">
-                          <a:tbl>
-                            <a:tblGrid><a:gridCol w="1828800"/></a:tblGrid>
-                            <a:tr h="914400">
-                              <a:tc>
-                                <a:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="1200"/><a:t>First</a:t></a:r></a:p></a:txBody>
-                                <a:tcPr><a:solidFill><a:srgbClr val="D9EAD3"/></a:solidFill></a:tcPr>
-                              </a:tc>
-                            </a:tr>
-                            <a:tr h="914400">
-                              <a:tc><a:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="1200"/><a:t>Second</a:t></a:r></a:p></a:txBody><a:tcPr/></a:tc>
-                            </a:tr>
-                          </a:tbl>
-                        </a:graphicData>
-                      </a:graphic>
-                    </p:graphicFrame>
-                  </p:spTree></p:cSld>
+                  <p:cSld><p:spTree><p:graphicFrame>
+                    <p:xfrm><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="{{frameHeight}}"/></p:xfrm>
+                    <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table"><a:tbl>
+                      <a:tblGrid><a:gridCol w="1828800"/></a:tblGrid>
+                      {{tableRows}}
+                    </a:tbl></a:graphicData></a:graphic>
+                  </p:graphicFrame></p:spTree></p:cSld>
                 </p:sld>
-                """
+                """)
         });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        using var package = OoxPackage.Open(input, default);
+        return new PptxRenderer(new PortableRenderingTests.PinnedResolver())
+            .RenderPagesAsync(new PptxReader().Read(package, default), package, null, default)
+            .ToBlockingEnumerable().Single();
+    }
 
-        OoxPdfConverter.Convert(input, output);
+    private static (double Y, double Height) ReadRowSlackHeaderFill(PdfPage page)
+    {
+        Match fill = Regex.Match(page.Content, @"(?m)^72 (?<y>[\d.]+) 144 (?<height>[\d.]+) re f\*?\r?$");
+        TestAssert.True(fill.Success, "The first table row must paint its fill.");
+        return (double.Parse(fill.Groups["y"].Value, CultureInfo.InvariantCulture),
+            double.Parse(fill.Groups["height"].Value, CultureInfo.InvariantCulture));
+    }
 
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        Match headerFill = Regex.Matches(pdf, @"72 (?<y>[0-9.]+) 144 (?<height>[0-9.]+) re f")
-            .Cast<Match>()
-            .FirstOrDefault() ?? Match.Empty;
-
-        TestAssert.True(headerFill.Success, "Expected the first table row fill rectangle to be emitted.");
-        double headerY = double.Parse(headerFill.Groups["y"].Value, CultureInfo.InvariantCulture);
-        double headerHeight = double.Parse(headerFill.Groups["height"].Value, CultureInfo.InvariantCulture);
-        TestAssert.True(headerY > 394d, $"Expected moderate slack to keep the declared first row boundary near 396pt, got y={headerY.ToString("0.###", CultureInfo.InvariantCulture)}.");
-        TestAssert.True(headerHeight < 74d, $"Expected moderate slack to keep the declared first row height near 72pt, got {headerHeight.ToString("0.###", CultureInfo.InvariantCulture)}pt.");
-        TestAssert.DoesNotContain("72 390.", pdf);
+    private static void AssertRowSlackText(PdfPage page, string label, double bottom, double top)
+    {
+        var glyphs = PortableRenderingTests.ReadPaintedSourceLabel(page, label);
+        TestAssert.True(glyphs.All(glyph => glyph.Ink.X >= 72d && glyph.Ink.X + glyph.Ink.Width <= 216d &&
+            glyph.Ink.Y >= bottom && glyph.Ink.Y + glyph.Ink.Height <= top),
+            "The complete label must paint inside its own row: " + label);
     }
 
     public static void PptxSyntheticTableKeepsOverflowingContentMinimumRowsUnscaled()
