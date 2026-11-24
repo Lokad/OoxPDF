@@ -35,7 +35,10 @@ internal readonly record struct PptxSceneBackground(
     bool HasFill,
     RgbColor Color,
     double Alpha,
-    PptxSceneGradientFill? GradientFill = null);
+    PptxSceneGradientFill? GradientFill = null)
+{
+    public bool HasUnsupportedGradient { get; init; }
+}
 
 // Scene creation and image preparation validate kind/payload combinations through
 // the same factory. TextBody and Bounds can accompany any kind. Scene traversal

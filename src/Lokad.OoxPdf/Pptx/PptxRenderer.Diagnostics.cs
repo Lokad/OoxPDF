@@ -116,8 +116,16 @@ internal sealed partial class PptxRenderer
         // Non-scene fallbacks retain background and orphan-content diagnostics,
         // while drawing-owned content shares scene visibility, including groups.
         // Part-level compatibility, timing and transition checks stay independent.
-        if (VisibleSlideElements(DrawingNamespace + "gradFill").Any(IsUnsupportedNonShapeGradientFill))
+        if (sceneSlide.SlideBackground.HasUnsupportedGradient ||
+            VisibleSlideElements(DrawingNamespace + "gradFill").Any(IsUnsupportedNonShapeGradientFill))
             Emit("PPTX_UNSUPPORTED_GRADIENT_FILL", "gradient fill");
+        else if (!sceneSlide.SlideBackground.HasFill)
+        {
+            if (sceneSlide.LayoutBackground.HasUnsupportedGradient)
+                Emit("PPTX_UNSUPPORTED_GRADIENT_FILL", "gradient fill", sceneSlide.LayoutPartName);
+            else if (!sceneSlide.LayoutBackground.HasFill && sceneSlide.MasterBackground.HasUnsupportedGradient)
+                Emit("PPTX_UNSUPPORTED_GRADIENT_FILL", "gradient fill", sceneSlide.MasterPartName);
+        }
         if (VisibleSlideElements(DrawingNamespace + "pattFill").Any(IsUnsupportedNonShapePatternFill))
             Emit("PPTX_UNSUPPORTED_PATTERN_FILL", "pattern fill");
         if (VisibleSlideElements(DrawingNamespace + "bodyPr").Any(IsUnsupportedNonShapeTextOrientation))

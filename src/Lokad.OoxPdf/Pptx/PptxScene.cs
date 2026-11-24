@@ -245,7 +245,7 @@ internal sealed partial class PptxSceneBuilder
         PptxSceneGradientFill gradient = ReadLinearGradientFill(background, theme, colorMap);
         return gradient is { HasGradient: true, HasUnsupportedGradient: false }
             ? new PptxSceneBackground(true, default, 1d, gradient)
-            : default;
+            : new PptxSceneBackground { HasUnsupportedGradient = true };
     }
 
     private static IReadOnlyList<PptxSceneNode> ReadChildNodes(

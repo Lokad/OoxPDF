@@ -58,7 +58,13 @@ internal static partial class PptxInheritanceTests
     public static void PptxInheritanceLinearBackgroundsPaintOneShading()
     {
         string[] partsInOrder = ["ppt/slideMasters/slideMaster1.xml", "ppt/slideLayouts/slideLayout1.xml", "ppt/slides/slide1.xml"];
-        foreach (var (owner, fallback) in new[] { (0, ""), (1, ""), (2, ""), (2, "mixed-alpha"), (2, "title") })
+        foreach (var (owner, fallback, overridden) in new[]
+        {
+            (0, "", false), (1, "", false), (2, "", false),
+            (0, "mixed-alpha", false), (2, "mixed-alpha", false), (2, "title", false),
+            (0, "invalid-color", false), (1, "invalid-color", false), (2, "invalid-color", false),
+            (1, "invalid-color", true)
+        })
         {
             var parts = Parts("background-inheritance");
             for (int index = 0; index < partsInOrder.Length; index++)
@@ -68,12 +74,13 @@ internal static partial class PptxInheritanceTests
                 {
                     var story = xml.Root!.Element(P + "cSld")!;
                     story.Elements(P + "bg").Remove();
-                    if (source > owner) return;
+                    if (source > owner && !(overridden && source == 2)) return;
                     var properties = new XElement(P + "bgPr",
                         source == owner
                             ? new XElement(A + "gradFill",
                                 new XElement(A + "gsLst", Stop(0, "FF0000", 50000),
-                                    Stop(100000, "0000FF", fallback == "mixed-alpha" ? 100000 : 50000)),
+                                    Stop(100000, fallback == "invalid-color" ? "NOTRGB" : "0000FF",
+                                        fallback == "mixed-alpha" ? 100000 : 50000)),
                                 new XElement(A + "lin", new XAttribute("ang", 5400000)))
                             : new XElement(A + "solidFill", new XElement(A + "srgbClr", new XAttribute("val", "00FF00"))));
                     if (source == owner && fallback == "title") properties.SetAttributeValue("shadeToTitle", "1");
@@ -85,12 +92,13 @@ internal static partial class PptxInheritanceTests
             {
                 var diagnostics = new List<OoxPdfDiagnostic>();
                 var page = Render(document, package, diagnostics)[0];
-                bool gradientWarning = diagnostics.Any(d => d.SlideIndex == 1 && d.Id == "PPTX_UNSUPPORTED_GRADIENT_FILL");
-                TestAssert.Equal(fallback.Length != 0, gradientWarning);
+                var gradientWarning = diagnostics.SingleOrDefault(d => d.SlideIndex == 1 && d.Id == "PPTX_UNSUPPORTED_GRADIENT_FILL");
+                string? expectedOwner = fallback.Length != 0 && !overridden ? "/" + partsInOrder[owner] : null;
+                TestAssert.Equal(expectedOwner, gradientWarning?.PartName);
                 if (fallback.Length != 0)
                 {
                     TestAssert.Equal(0, page.Shadings.Count);
-                    CheckBackground(page, "0 1 0 rg");
+                    CheckBackground(page, owner == 0 ? "1 g" : "0 1 0 rg");
                     return;
                 }
 
