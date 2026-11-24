@@ -949,6 +949,45 @@ internal static partial class SvgTextTests
         }
     }
 
+    public static void SvgExplicitStopInheritanceKeepsGradientPaintInBothFormats()
+    {
+        static string Picture(string firstAlpha, string lastAlpha, string radialColor, string missingParent,
+            string currentColor) => Svg($"""
+            <defs stop-opacity="55%" stop-color="orange">
+              <linearGradient id="stroke" gradientUnits="userSpaceOnUse" x1="12" x2="134"
+                              style="stop-opacity:inherit">
+                <stop stop-color="#cc2244" {firstAlpha}/>
+                <stop offset="1" stop-color="#3344cc" {lastAlpha}/>
+              </linearGradient>
+              <radialGradient id="fade" stop-color="green" style="stop-color:#cc2244">
+                <stop {radialColor}/><stop offset="1" stop-color="#3344cc" stop-opacity=".2"/>
+              </radialGradient>
+              <linearGradient id="default">
+                <stop {missingParent}/><stop offset="1" stop-color="green"/>
+              </linearGradient>
+              <linearGradient id="color-keyword" color="red" stop-color="currentColor">
+                <stop color="blue" {currentColor}/><stop offset="1" stop-color="white"/>
+              </linearGradient>
+            </defs>
+            <rect width="150" height="80" fill="#fff4e8"/>
+            <path d="M12 12H134" fill="none" stroke="url(#stroke)" stroke-width="8"/>
+            <rect x="10" y="26" width="46" height="44" fill="url(#fade)"/>
+            <rect x="64" y="26" width="30" height="44" fill="url(#default)"/>
+            <rect x="100" y="26" width="34" height="44" fill="url(#color-keyword)"/>
+            <rect x="141" y="62" width="7" height="8" fill="lime"/>
+            """);
+
+        string direct = Picture("""stop-opacity=".55" """, """stop-opacity=".55" """, """stop-color="#cc2244" """,
+            """stop-color="black" stop-opacity="1" """, """stop-color="currentColor" """);
+        string inherited = Picture("""stop-opacity="inherit" """,
+            """stop-opacity=".1" style="stop-opacity:InHeRiT !important; stop-opacity:0" """,
+            """stop-color="blue" style="stop-color:inherit" """,
+            """stop-color="inherit" stop-opacity="inherit" """, """stop-color="inherit" """);
+
+        AssertSvgPaintInBothFormats(direct, inherited,
+            "/PatternType 2", "/CA 0.55", "/ShadingType 3", "/S /Luminosity", "0 1 0 rg");
+    }
+
     public static void SvgZeroOpacityContainerStylesHidePaintAndDiagnostics()
     {
         const string backdrop = """<rect x="10" y="10" width="90" height="60" fill="#136c9e"/>""";

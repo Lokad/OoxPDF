@@ -687,18 +687,20 @@ internal sealed partial class PptxRenderer
         return new(nestedSvg ? null : numeric, numeric == 0d, allowsGradientStroke);
     }
 
-    private static string? ReadSvgElementOpacity(XElement element, IReadOnlyDictionary<string, string> style)
+    private static string? ReadSvgElementOpacity(XElement element, IReadOnlyDictionary<string, string> style) =>
+        ReadSvgExplicitlyInheritedAttribute(element, style, "opacity");
+
+    private static string? ReadSvgExplicitlyInheritedAttribute(XElement element, IReadOnlyDictionary<string, string> style, string name)
     {
-        string? opacity = ReadSvgPresentationAttribute(element, style, "opacity");
-        // Each explicit inherit reads the parent's value. A missing declaration
-        // stops the chain because opacity defaults to one on that element.
-        while (opacity.AsSpan().Trim().Equals("inherit", StringComparison.OrdinalIgnoreCase))
+        string? value = ReadSvgPresentationAttribute(element, style, name);
+        // A missing declaration ends inheritance for these properties.
+        while (IsSvgExplicitInherit(value))
         {
             if (element.Parent is not { } parent) return null;
             element = parent;
-            opacity = ReadSvgPresentationAttribute(parent, ReadSvgStyleDeclarations(parent), "opacity");
+            value = ReadSvgPresentationAttribute(parent, ReadSvgStyleDeclarations(parent), name);
         }
-        return opacity;
+        return value;
     }
 
     private readonly record struct SvgContainerOpacity(double? GroupOpacity, bool IsTransparent, bool AllowsGradientStroke);
@@ -739,19 +741,6 @@ internal sealed partial class PptxRenderer
             if (IsFullyTransparentSvgContainer(ancestor)) { return true; }
         }
         return false;
-    }
-
-    private static double? ReadNumericSvgStopOpacity(XElement stop, IReadOnlyDictionary<string, string> style,
-        bool hasPaint)
-    {
-        string? opacity = (string?)stop.Attribute("stop-opacity");
-        if (style.TryGetValue("stop-opacity", out string? styledOpacity))
-        {
-            // A discarded style-bearing stop still prevents alpha admission.
-            if (!hasPaint) return null;
-            opacity = styledOpacity;
-        }
-        return opacity is null ? 1d : ParseSvgOpacity(opacity);
     }
 
     private static bool IsHiddenSvgElement(XElement element, IReadOnlyDictionary<string, string>? style = null)
@@ -1397,13 +1386,15 @@ internal sealed partial class PptxRenderer
             stops ??= new List<SvgGradientStop>();
             IReadOnlyDictionary<string, string> style = ReadSvgStyleDeclarations(stop);
             bool hasPaint = TryReadSvgStopPaint(stop, style, out double offset, out RgbColor color, out double colorOpacity);
+            string? authoredOpacity = ReadSvgExplicitlyInheritedAttribute(stop, style, "stop-opacity");
             // Opacity admission considers all authored stops, including those discarded for paint.
-            double? opacity = ReadNumericSvgStopOpacity(stop, style, hasPaint) * colorOpacity;
+            double? opacity = authoredOpacity is null ? 1d : ParseSvgOpacity(authoredOpacity);
+            if (!hasPaint && style.ContainsKey("stop-opacity")) opacity = null;
+            opacity *= colorOpacity;
             hasNumericOpacity &= opacity.HasValue;
             firstNumericOpacity ??= opacity;
             hasUniformOpacity &= opacity == firstNumericOpacity;
-            if ((opacity ?? colorOpacity * ReadSvgOpacityValue(style.GetValueOrDefault("stop-opacity") ??
-                (string?)stop.Attribute("stop-opacity"))) < 1d)
+            if ((opacity ?? colorOpacity * ReadSvgOpacityValue(authoredOpacity)) < 1d)
             {
                 fallbackOpacityCount++;
             }
@@ -1437,15 +1428,33 @@ internal sealed partial class PptxRenderer
     private static bool TryReadSvgStopColor(XElement stop, IReadOnlyDictionary<string, string> style,
         out RgbColor color, out double colorOpacity)
     {
-        if (style.TryGetValue("stop-color", out string? inlineColor) &&
-            TryReadColor(inlineColor, out color, out colorOpacity))
+        XElement source = stop;
+        IReadOnlyDictionary<string, string> declarations = style;
+        while (true)
         {
-            return true;
+            string? value = declarations.GetValueOrDefault("stop-color");
+            if (!IsSvgExplicitInherit(value))
+            {
+                if (value is not null && TryReadColor(value, out color, out colorOpacity))
+                {
+                    return true;
+                }
+
+                value = (string?)source.Attribute("stop-color");
+                if (!IsSvgExplicitInherit(value))
+                {
+                    return TryReadColor(value, out color, out colorOpacity);
+                }
+            }
+            if (source.Parent is not { } parent)
+            {
+                return TryReadColor(null, out color, out colorOpacity);
+            }
+            source = parent;
+            declarations = ReadSvgStyleDeclarations(source);
         }
 
-        // Keep the presentation color when the inline declaration cannot be used.
-        return TryReadColor((string?)stop.Attribute("stop-color"), out color, out colorOpacity);
-
+        // An inherited currentColor uses the color of the stop when painted.
         bool TryReadColor(string? value, out RgbColor result, out double opacity) =>
             TryReadSvgSolidColor(stop, style,
                 string.IsNullOrWhiteSpace(value) || IsSvgNonInheritedDefault(value) ? "black" : value, out result, out opacity);
@@ -1826,6 +1835,9 @@ internal sealed partial class PptxRenderer
         return keyword.Equals("inherit", StringComparison.OrdinalIgnoreCase) ||
             keyword.Equals("unset", StringComparison.OrdinalIgnoreCase);
     }
+
+    private static bool IsSvgExplicitInherit(string? value) =>
+        value.AsSpan().Trim().Equals("inherit", StringComparison.OrdinalIgnoreCase);
 
     private static bool IsSvgInitialValue(ReadOnlySpan<char> value) =>
         value.Trim().Equals("initial", StringComparison.OrdinalIgnoreCase);

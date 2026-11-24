@@ -675,6 +675,7 @@
     "=SvgFractionalContainerStylesMatchPresentationOpacity",
     "=SvgExplicitOpacityInheritanceMatchesComputedValues",
     "=SvgOpacityDefaultsKeepGradientStrokesAndStopMasksInBothFormats",
+    "=SvgExplicitStopInheritanceKeepsGradientPaintInBothFormats",
     "=SvgZeroOpacityContainerStylesHidePaintAndDiagnostics",
     "=SvgResourceDefinitionsKeepTheirChildrenOutOfVisiblePaint",
     "=SvgLinkWrapperTransformsKeepShapeAndLabelPaint",
