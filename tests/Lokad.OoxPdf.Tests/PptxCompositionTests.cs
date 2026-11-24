@@ -100,148 +100,67 @@ internal static class PptxCompositionTests
 
     public static void PptxGarbageGradientVectorDiagnosesAndKeepsSiblings()
     {
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
-        {
-            ["[Content_Types].xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-                  <Default Extension="xml" ContentType="application/xml"/>
-                  <Default Extension="svg" ContentType="image/svg+xml"/>
-                  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
-                  <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
-                </Types>
-                """),
-            ["_rels/.rels"] = TestFixtures.Utf8(PptxTests.PackageRelationship()),
-            ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8(PptxTests.PresentationRelationship()),
-            ["ppt/presentation.xml"] = TestFixtures.Utf8(PptxTests.BasicPresentation()),
-            ["ppt/slides/_rels/slide1.xml.rels"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image1.svg"/>
-                </Relationships>
-                """),
-            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
-                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
-                       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
-                       xmlns:asvg="http://schemas.microsoft.com/office/drawing/2016/SVG/main">
-                  <p:cSld><p:spTree>
-                    <p:pic>
-                      <p:nvPicPr><p:cNvPr id="2" name="Malformed SVG"/><p:cNvPicPr/><p:nvPr/></p:nvPicPr>
-                      <p:blipFill><a:blip><a:extLst><a:ext uri="{96DAC541-7B7A-43D3-8B79-37D633B846F1}"><asvg:svgBlip r:embed="rId1"/></a:ext></a:extLst></a:blip></p:blipFill>
-                      <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="914400" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
-                    </p:pic>
-                    <p:sp>
-                      <p:nvSpPr><p:cNvPr id="3" name="Sibling"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
-                      <p:spPr>
-                        <a:xfrm><a:off x="1828800" y="914400"/><a:ext cx="914400" cy="914400"/></a:xfrm>
-                        <a:prstGeom prst="rect"/>
-                        <a:solidFill><a:srgbClr val="00FF00"/></a:solidFill>
-                      </p:spPr>
-                    </p:sp>
-                  </p:spTree></p:cSld>
-                </p:sld>
-                """),
-            ["ppt/media/image1.svg"] = TestFixtures.Utf8("""
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10">
-                  <defs>
-                    <linearGradient id="g" x1="bad">
-                      <stop offset="0" stop-color="#FF0000"/>
-                    </linearGradient>
-                  </defs>
-                  <path fill="url(#g)" d="M 0 0 L 10 0 L 10 10 L 0 10 Z"/>
-                </svg>
-                """)
-        });
+        string input = WriteGarbageGradientDeck("""
+            <p:pic>
+              <p:nvPicPr><p:cNvPr id="2" name="Malformed SVG"/><p:cNvPicPr/><p:nvPr/></p:nvPicPr>
+              <p:blipFill><a:blip><a:extLst><a:ext uri="{96DAC541-7B7A-43D3-8B79-37D633B846F1}"><asvg:svgBlip r:embed="rId1"/></a:ext></a:extLst></a:blip></p:blipFill>
+              <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="914400" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+            </p:pic>
+            <p:sp>
+              <p:nvSpPr><p:cNvPr id="3" name="Sibling"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+              <p:spPr>
+                <a:xfrm><a:off x="1828800" y="914400"/><a:ext cx="914400" cy="914400"/></a:xfrm>
+                <a:prstGeom prst="rect"/>
+                <a:solidFill><a:srgbClr val="00FF00"/></a:solidFill>
+              </p:spPr>
+            </p:sp>
+            """);
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
         var diagnostics = new List<OoxPdfDiagnostic>();
 
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
 
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("0 1 0 rg", pdf);
-        // Garbage gradient vectors skip the gradient (consistent with unparseable
-        // gradientTransform handling) so the referencing path diagnoses instead of
-        // failing the whole picture node; previously x1="bad" threw FormatException
-        // out of the node.
-        TestAssert.True(
-            diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("unresolvable", StringComparison.Ordinal)),
-            "Garbage gradient vectors must diagnose as unresolvable.");
-        TestAssert.True(
-            !diagnostics.Any(d => d.Id == "PPTX_NODE_RENDER_FAILED"),
-            "Graceful gradient fallback must not fail the picture node.");
+        TestAssert.Contains("0 1 0 rg", File.ReadAllText(output, Encoding.ASCII));
+        AssertGarbageGradientDiagnostic(diagnostics);
     }
 
     public static void PptxGroupHyperlinkSurvivesDiagnosedChildFallback()
     {
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
-        {
-            ["[Content_Types].xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-                  <Default Extension="xml" ContentType="application/xml"/>
-                  <Default Extension="svg" ContentType="image/svg+xml"/>
-                  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
-                  <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
-                </Types>
-                """),
-            ["_rels/.rels"] = TestFixtures.Utf8(PptxTests.PackageRelationship()),
-            ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8(PptxTests.PresentationRelationship()),
-            ["ppt/presentation.xml"] = TestFixtures.Utf8(PptxTests.BasicPresentation()),
-            ["ppt/slides/_rels/slide1.xml.rels"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image1.svg"/>
-                  <Relationship Id="rIdLink" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.invalid/group" TargetMode="External"/>
-                </Relationships>
-                """),
-            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
-                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
-                       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
-                       xmlns:asvg="http://schemas.microsoft.com/office/drawing/2016/SVG/main">
-                  <p:cSld><p:spTree><p:grpSp>
-                    <p:nvGrpSpPr><p:cNvPr id="10" name="Group"><a:hlinkClick r:id="rIdLink"/></p:cNvPr><p:nvPr/></p:nvGrpSpPr>
-                    <p:grpSpPr><a:xfrm><a:off x="914400" y="457200"/><a:ext cx="3657600" cy="1828800"/><a:chOff x="0" y="0"/><a:chExt cx="4572000" cy="2286000"/></a:xfrm></p:grpSpPr>
-                    <p:sp>
-                      <p:nvSpPr><p:cNvPr id="11" name="GroupedSibling"/><p:nvPr/></p:nvSpPr>
-                      <p:spPr>
-                        <a:xfrm><a:off x="914400" y="457200"/><a:ext cx="1828800" cy="914400"/></a:xfrm>
-                        <a:prstGeom prst="rect"/>
-                        <a:solidFill><a:srgbClr val="00FF00"/></a:solidFill>
-                      </p:spPr>
-                    </p:sp>
-                    <p:pic>
-                      <p:nvPicPr><p:cNvPr id="12" name="Malformed SVG"/><p:cNvPicPr/><p:nvPr/></p:nvPicPr>
-                      <p:blipFill><a:blip><a:extLst><a:ext uri="{96DAC541-7B7A-43D3-8B79-37D633B846F1}"><asvg:svgBlip r:embed="rId1"/></a:ext></a:extLst></a:blip></p:blipFill>
-                      <p:spPr><a:xfrm><a:off x="2743200" y="457200"/><a:ext cx="914400" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
-                    </p:pic>
-                  </p:grpSp></p:spTree></p:cSld>
-                </p:sld>
-                """),
-            ["ppt/media/image1.svg"] = TestFixtures.Utf8("""
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10">
-                  <defs>
-                    <linearGradient id="g" x1="bad">
-                      <stop offset="0" stop-color="#FF0000"/>
-                    </linearGradient>
-                  </defs>
-                  <path fill="url(#g)" d="M 0 0 L 10 0 L 10 10 L 0 10 Z"/>
-                </svg>
-                """)
-        });
+        const string link = "https://example.invalid/group";
+        string input = WriteGarbageGradientDeck("""
+            <p:grpSp>
+              <p:nvGrpSpPr><p:cNvPr id="10" name="Group"><a:hlinkClick r:id="rIdLink"/></p:cNvPr><p:nvPr/></p:nvGrpSpPr>
+              <p:grpSpPr><a:xfrm><a:off x="914400" y="457200"/><a:ext cx="3657600" cy="1828800"/><a:chOff x="0" y="0"/><a:chExt cx="4572000" cy="2286000"/></a:xfrm></p:grpSpPr>
+              <p:sp>
+                <p:nvSpPr><p:cNvPr id="11" name="GroupedSibling"/><p:nvPr/></p:nvSpPr>
+                <p:spPr>
+                  <a:xfrm><a:off x="914400" y="457200"/><a:ext cx="1828800" cy="914400"/></a:xfrm>
+                  <a:prstGeom prst="rect"/>
+                  <a:solidFill><a:srgbClr val="00FF00"/></a:solidFill>
+                </p:spPr>
+              </p:sp>
+              <p:pic>
+                <p:nvPicPr><p:cNvPr id="12" name="Malformed SVG"/><p:cNvPicPr/><p:nvPr/></p:nvPicPr>
+                <p:blipFill><a:blip><a:extLst><a:ext uri="{96DAC541-7B7A-43D3-8B79-37D633B846F1}"><asvg:svgBlip r:embed="rId1"/></a:ext></a:extLst></a:blip></p:blipFill>
+                <p:spPr><a:xfrm><a:off x="2743200" y="457200"/><a:ext cx="914400" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+              </p:pic>
+            </p:grpSp>
+            """, $"""
+            <Relationship Id="rIdLink" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="{link}" TargetMode="External"/>
+            """);
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        using OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
         var diagnostics = new List<OoxPdfDiagnostic>();
-        List<PdfPage> pages = new PptxRenderer(null).RenderPagesAsync(document, package, diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().ToList();
+        PdfPage page = new PptxRenderer(null).RenderPagesAsync(document, package, diagnostics.Add, CancellationToken.None)
+            .ToBlockingEnumerable().Single();
 
-        PdfLinkAnnotation annotation = pages.Single().Annotations.Single();
-        TestAssert.Equal("https://example.invalid/group", annotation.Uri);
+        TestAssert.Equal(link, page.Annotations.Single().Uri);
+        AssertGarbageGradientDiagnostic(diagnostics);
+    }
+
+    private static void AssertGarbageGradientDiagnostic(List<OoxPdfDiagnostic> diagnostics)
+    {
         TestAssert.True(
             diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("unresolvable", StringComparison.Ordinal)),
             "Garbage gradient vectors must diagnose as unresolvable.");
@@ -249,6 +168,38 @@ internal static class PptxCompositionTests
             !diagnostics.Any(d => d.Id == "PPTX_NODE_RENDER_FAILED"),
             "Graceful gradient fallback must not fail the picture node.");
     }
+
+    private static string WriteGarbageGradientDeck(string items, string extraRelationships = "") =>
+        TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = PptxTests.BasicContentTypes().Replace("</Types>",
+                "<Default Extension=\"svg\" ContentType=\"image/svg+xml\"/></Types>", StringComparison.Ordinal),
+            ["_rels/.rels"] = PptxTests.PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
+            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
+            ["ppt/slides/_rels/slide1.xml.rels"] = $"""
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image1.svg"/>
+                  {extraRelationships}
+                </Relationships>
+                """,
+            ["ppt/slides/slide1.xml"] = $"""
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+                       xmlns:asvg="http://schemas.microsoft.com/office/drawing/2016/SVG/main">
+                  <p:cSld><p:spTree>{items}</p:spTree></p:cSld>
+                </p:sld>
+                """,
+            ["ppt/media/image1.svg"] = """
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10">
+                  <defs><linearGradient id="g" x1="bad" x2="1">
+                    <stop offset="0" stop-color="#FF0000"/><stop offset="1" stop-color="#0000FF"/>
+                  </linearGradient></defs>
+                  <path fill="url(#g)" d="M0 0H10V10H0Z"/>
+                </svg>
+                """
+        });
 
     public static void PptxSyntheticSlideShapesRenderAbovePictures()
     {

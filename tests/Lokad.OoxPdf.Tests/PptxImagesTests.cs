@@ -2780,23 +2780,6 @@ internal static partial class PptxImagesTests
         }
     }
 
-    // RV07: garbage gradient vectors diagnose instead of killing conversion.
-    public static void PptxSyntheticSvgGarbageGradientVectorDiagnoses()
-    {
-        string input = WriteSvgGradientDeck("""
-            <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
-              <defs><linearGradient id="g" x1="bogus" x2="1"><stop offset="0" stop-color="#FF0000"/><stop offset="1" stop-color="#0000FF"/></linearGradient></defs>
-              <path d="M0 0H100V50H0Z" fill="url(#g)"/>
-            </svg>
-            """);
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-        var diagnostics = new List<OoxPdfDiagnostic>();
-
-        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
-
-        TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("unresolvable", StringComparison.Ordinal)), "Garbage gradient vectors must diagnose.");
-    }
-
     // RV07: percentage gradient vectors resolve as fractions in bounding boxes.
     public static void PptxSyntheticSvgPercentGradientVectorRenders()
     {
