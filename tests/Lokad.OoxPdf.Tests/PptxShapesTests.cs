@@ -420,7 +420,7 @@ internal static partial class PptxShapesTests
         TestAssert.Contains("h" + Environment.NewLine + "f", pdf);
     }
 
-    public static void PptxSyntheticVerticalTriangleConnectorUsesOfficeMarkerWidth()
+    public static void PptxSyntheticTriangleConnectorsPaintTheirOfficeMarkerWidths()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
         {
@@ -428,70 +428,43 @@ internal static partial class PptxShapesTests
             ["_rels/.rels"] = PptxTests.PackageRelationship(),
             ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
             ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
-            ["ppt/slides/slide1.xml"] = """
+            ["ppt/slides/slide1.xml"] = $$"""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
                   <p:cSld>
                     <p:spTree>
-                      <p:cxnSp>
-                        <p:spPr>
-                          <a:xfrm><a:off x="3657600" y="914400"/><a:ext cx="0" cy="914400"/></a:xfrm>
-                          <a:prstGeom prst="line"/>
-                          <a:ln w="38100"><a:solidFill><a:srgbClr val="156082"/></a:solidFill><a:headEnd type="triangle" w="med" len="med"/></a:ln>
-                        </p:spPr>
-                      </p:cxnSp>
+                      {{Connector("line", "3657600")}}
+                      {{Connector("straightConnector1", "5486400")}}
                     </p:spTree>
                   </p:cSld>
                 </p:sld>
                 """
         });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        string output = Path.ChangeExtension(input, ".pdf");
 
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("288 468 m", pdf);
-        TestAssert.Contains("283.5 456 l", pdf);
-        TestAssert.Contains("292.5 456 l", pdf);
-        TestAssert.DoesNotContain("282 456 l", pdf);
-        TestAssert.DoesNotContain("294 456 l", pdf);
-    }
-
-    public static void PptxSyntheticStraightConnectorTriangleUsesOfficeMarkerWidth()
-    {
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        var markers = Regex.Matches(pdf,
+            @"(?m)^(?<tip>288|432) 468 m\r?\n(?<first>[\d.]+) 456 l\r?\n(?<second>[\d.]+) 456 l\r?\nh\r?\nf\r?$");
+        TestAssert.Equal(2, markers.Count);
+        foreach ((string tip, string left, string right) in new[] { ("288", "283.5", "292.5"), ("432", "426", "438") })
         {
-            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
-            ["_rels/.rels"] = PptxTests.PackageRelationship(),
-            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
-            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
-            ["ppt/slides/slide1.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <p:cSld>
-                    <p:spTree>
-                      <p:cxnSp>
-                        <p:spPr>
-                          <a:xfrm><a:off x="3657600" y="914400"/><a:ext cx="0" cy="914400"/></a:xfrm>
-                          <a:prstGeom prst="straightConnector1"/>
-                          <a:ln w="38100"><a:solidFill><a:srgbClr val="156082"/></a:solidFill><a:headEnd type="triangle" w="med" len="med"/></a:ln>
-                        </p:spPr>
-                      </p:cxnSp>
-                    </p:spTree>
-                  </p:cSld>
-                </p:sld>
-                """
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+            var marker = markers.Single(match => match.Groups["tip"].Value == tip);
+            string[] edges = [marker.Groups["first"].Value, marker.Groups["second"].Value];
+            TestAssert.True(edges.Order(StringComparer.Ordinal).SequenceEqual([left, right]),
+                "Each filled triangle must retain its connector's authored marker width.");
+        }
 
-        OoxPdfConverter.Convert(input, output);
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("288 468 m", pdf);
-        TestAssert.Contains("282 456 l", pdf);
-        TestAssert.Contains("294 456 l", pdf);
-        TestAssert.DoesNotContain("283.5 456 l", pdf);
-        TestAssert.DoesNotContain("292.5 456 l", pdf);
+        static string Connector(string preset, string x) => $$"""
+            <p:cxnSp>
+              <p:spPr>
+                <a:xfrm><a:off x="{{x}}" y="914400"/><a:ext cx="0" cy="914400"/></a:xfrm>
+                <a:prstGeom prst="{{preset}}"/>
+                <a:ln w="38100"><a:solidFill><a:srgbClr val="156082"/></a:solidFill><a:headEnd type="triangle" w="med" len="med"/></a:ln>
+              </p:spPr>
+            </p:cxnSp>
+            """;
     }
 
     public static void PptxSyntheticCurvedConnectorRendersCurve()

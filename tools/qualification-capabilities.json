@@ -279,7 +279,7 @@
     "PptxSyntheticShapeExplicitLineWithoutWidthUsesOfficeDefault",
     "PptxSyntheticConnectorExplicitLineWidthInheritsStyleLineColor",
     "PptxSyntheticArrowAndConnectorShapesRender",
-    "PptxSyntheticStraightConnectorTriangleUsesOfficeMarkerWidth",
+    "=PptxSyntheticTriangleConnectorsPaintTheirOfficeMarkerWidths",
     "PptxSyntheticCurvedConnectorArrowTailUsesFilledOutline",
     "PptxSyntheticCustomGeometryOpenCubicStealthTailUsesFilledOutline",
     "PptxSyntheticFullyUnsupportedCustomGeometryFallsBackToRectangle",
