@@ -266,9 +266,8 @@ internal sealed partial class DocxReader
 
         IEnumerable<XElement> EnumerateSplitFloatingAnchors(XElement paragraph)
         {
-            foreach (XElement anchor in paragraph.Descendants(WordprocessingDrawingNamespace + "anchor"))
+            foreach (XElement anchor in EnumerateFloatingAnchors(paragraph, cancellationToken))
             {
-                cancellationToken.ThrowIfCancellationRequested();
                 if (markupMode != OoxPdfDocxMarkupMode.Original || !IsInsideExcludedRevisionContainer(anchor, markupMode))
                     yield return anchor;
             }
@@ -293,9 +292,8 @@ internal sealed partial class DocxReader
 
         void Bind(XElement scope)
         {
-            foreach (XElement anchor in scope.Descendants(WordprocessingDrawingNamespace + "anchor"))
+            foreach (XElement anchor in EnumerateFloatingAnchors(scope, cancellationToken))
             {
-                cancellationToken.ThrowIfCancellationRequested();
                 floatingBlocks[anchor] = blockIndex;
             }
         }

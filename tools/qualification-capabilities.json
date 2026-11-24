@@ -7793,6 +7793,7 @@
   "docx-image-recovery": [
     "DocxMissingPicture",
     "=DocxPictureMetadataPreservesRasterAndSvgPaint",
+    "=DocxPictureMetadataKeepsPreviewDrawingsAndWarningsOutOfOutput",
     "DocxStaticStoryInlineImagesShareTheTextBaseline",
     "DocxStaticStoryDeclaredFramesClipInlineImages",
     "DocxFooterInlineImageReservesItsVisibleHeight",

@@ -14,11 +14,11 @@ internal static class DocxImageRecoveryTests
     private static readonly XNamespace R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
     private static readonly XNamespace A = "http://schemas.openxmlformats.org/drawingml/2006/main";
     private static readonly XNamespace WP = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing";
+    private static readonly XNamespace Pic = "http://schemas.openxmlformats.org/drawingml/2006/picture";
     private static readonly OoxPdfDocxMarkupMode[] Modes = [OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup];
 
     public static void DocxPictureMetadataPreservesRasterAndSvgPaint()
     {
-        XNamespace pic = "http://schemas.openxmlformats.org/drawingml/2006/picture";
         XNamespace svg = "http://schemas.microsoft.com/office/drawing/2016/SVG/main";
         foreach (var (file, storyParts, vector) in new[]
         {
@@ -31,41 +31,87 @@ internal static class DocxImageRecoveryTests
                 foreach (string part in storyParts)
                 {
                     var xml = XDocument.Parse(Encoding.UTF8.GetString(parts[part]));
-                    var properties = xml.Descendants(pic + "pic").Single().Element(pic + "nvPicPr")!.Element(pic + "cNvPr")!;
                     var decoy = vector ? new XElement(svg + "svgBlip", new XAttribute(R + "embed", "ignoredPreview"))
                         : new XElement(A + "blip");
-                    properties.Add(new XElement(A + "extLst", new XElement(A + "ext",
-                        new XAttribute("uri", "{5D154C70-1063-4818-8DFE-C915C125A6AD}"),
-                        new XElement(XName.Get("preview", "urn:ooxpdf:test"), decoy))));
+                    AddPicturePreview(xml.Descendants(Pic + "pic").Single(), decoy);
                     parts[part] = TestFixtures.Utf8(xml.ToString());
                 }
             }, changed => {
                 foreach (var mode in Modes)
                 {
-                    var baseline = Convert(source, mode);
-                    var actual = Convert(changed, mode);
+                    var baseline = ConvertPictureTest(source, mode);
+                    var actual = ConvertPictureTest(changed, mode);
                     TestAssert.True(baseline.Pdf.AsSpan().SequenceEqual(actual.Pdf), $"Picture paint or layout changed in {file}, {mode}.");
                     TestAssert.True(baseline.Diagnostics.SequenceEqual(actual.Diagnostics), $"Picture diagnostics changed in {file}, {mode}.");
                 }
             });
         }
+    }
 
-        static (byte[] Pdf, List<OoxPdfDiagnostic> Diagnostics) Convert(string path, OoxPdfDocxMarkupMode mode)
-        {
-            var diagnostics = new List<OoxPdfDiagnostic>();
-            using var input = File.OpenRead(path);
-            using var output = new MemoryStream();
-            OoxPdfConverter.Convert(input, output, new OoxPdfOptions {
-                FontResolver = new PortableRenderingTests.PinnedResolver(mathFont: true),
-                InputKind = OoxPdfInputKind.Docx,
-                DocxMarkupMode = mode,
-                DocxMarkupGeometryMode = mode == OoxPdfDocxMarkupMode.AllMarkup
-                    ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout,
-                FixedCreationDate = DateTimeOffset.UnixEpoch,
-                DiagnosticSink = diagnostics.Add
-            });
-            return (output.ToArray(), diagnostics);
-        }
+    public static void DocxPictureMetadataKeepsPreviewDrawingsAndWarningsOutOfOutput()
+    {
+        const string document = "word/document.xml";
+        const string relationships = "word/_rels/document.xml.rels";
+        string source = TestFixtures.PublicCasePath("ImageRecovery/picture-present.docx");
+        Mutate(source, parts => {
+            var xml = XDocument.Parse(Encoding.UTF8.GetString(parts[document]));
+            var inline = xml.Descendants(WP + "inline").Single();
+            var graphic = inline.Element(A + "graphic")!;
+            var anchor = new XElement(WP + "anchor",
+                new XAttribute("simplePos", "0"), new XAttribute("relativeHeight", "1"),
+                new XAttribute("behindDoc", "0"), new XAttribute("locked", "0"),
+                new XAttribute("layoutInCell", "1"), new XAttribute("allowOverlap", "1"),
+                new XElement(WP + "simplePos", new XAttribute("x", "0"), new XAttribute("y", "0")),
+                new XElement(WP + "positionH", new XAttribute("relativeFrom", "margin"), new XElement(WP + "posOffset", 0)),
+                new XElement(WP + "positionV", new XAttribute("relativeFrom", "page"), new XElement(WP + "posOffset", 3810000)),
+                inline.Element(WP + "extent"), new XElement(WP + "wrapNone"), inline.Element(WP + "docPr"), graphic);
+            AddPicturePreview(graphic.Descendants(Pic + "pic").Single(), new XElement(inline), anchor,
+                new XElement(A + "blip", new XAttribute(R + "link", "previewExternal")),
+                new XElement(XName.Get("chart", "http://schemas.openxmlformats.org/drawingml/2006/chart")),
+                new XElement(XName.Get("relIds", "http://schemas.openxmlformats.org/drawingml/2006/diagram")),
+                new XElement(XName.Get("rect", "urn:schemas-microsoft-com:vml")), new XElement(W + "object"));
+            parts[document] = TestFixtures.Utf8(xml.ToString());
+
+            var rels = XDocument.Parse(Encoding.UTF8.GetString(parts[relationships]));
+            rels.Root!.Add(new XElement(rels.Root.Name.Namespace + "Relationship", new XAttribute("Id", "previewExternal"),
+                new XAttribute("Type", R.NamespaceName + "/image"), new XAttribute("TargetMode", "External"),
+                new XAttribute("Target", "https://example.org/preview.png")));
+            parts[relationships] = TestFixtures.Utf8(rels.ToString());
+        }, changed => {
+            foreach (var mode in Modes)
+            {
+                var baseline = ConvertPictureTest(source, mode);
+                var actual = ConvertPictureTest(changed, mode);
+                TestAssert.True(baseline.Pdf.AsSpan().IndexOf("/Subtype /Image"u8) >= 0, "The source picture must remain present.");
+                TestAssert.True(baseline.Pdf.AsSpan().SequenceEqual(actual.Pdf), $"Copied drawing frames changed the PDF in {mode}.");
+                TestAssert.Equal(0, baseline.Diagnostics.Count);
+                TestAssert.Equal(0, actual.Diagnostics.Count);
+            }
+        });
+    }
+
+    private static void AddPicturePreview(XElement picture, params XElement[] payload)
+    {
+        picture.Element(Pic + "nvPicPr")!.Element(Pic + "cNvPr")!.Add(new XElement(A + "extLst", new XElement(A + "ext",
+            new XAttribute("uri", "{5D154C70-1063-4818-8DFE-C915C125A6AD}"),
+            new XElement(XName.Get("preview", "urn:ooxpdf:test"), payload))));
+    }
+
+    private static (byte[] Pdf, List<OoxPdfDiagnostic> Diagnostics) ConvertPictureTest(string path, OoxPdfDocxMarkupMode mode)
+    {
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        using var input = File.OpenRead(path);
+        using var output = new MemoryStream();
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions {
+            FontResolver = new PortableRenderingTests.PinnedResolver(mathFont: true),
+            InputKind = OoxPdfInputKind.Docx,
+            DocxMarkupMode = mode,
+            DocxMarkupGeometryMode = mode == OoxPdfDocxMarkupMode.AllMarkup
+                ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout,
+            FixedCreationDate = DateTimeOffset.UnixEpoch,
+            DiagnosticSink = diagnostics.Add
+        });
+        return (output.ToArray(), diagnostics);
     }
 
     public static void DocxMissingPicturePreservesIndependentControlFrames()

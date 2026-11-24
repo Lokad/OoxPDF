@@ -78,7 +78,7 @@ internal sealed partial class DocxReader
             DocxSectionBreakElement? finalSectionBreak = sectionProperties is null
                 ? null
                 : ReadSectionBreak(sectionProperties, package, internalRelationships, styles, numbering, settings, revisionFilteringMarkupMode, cancellationToken, storyCache, null);
-            Dictionary<XElement, int>? floatingBlocks = CreateFloatingBlockMap(document);
+            Dictionary<XElement, int>? floatingBlocks = CreateFloatingBlockMap(document, cancellationToken);
             IReadOnlyList<DocxBodyElement> bodyElements = ReadBodyElements(document, styles, numbering, package, relationships, settings, documentSettings,
                 revisionFilteringMarkupMode, cancellationToken, storyCache, floatingBlocks,
                 projectCommentSelections: markupMode == OoxPdfDocxMarkupMode.AllMarkup && markupContext.DrawsCommentMarkers &&
@@ -325,9 +325,8 @@ internal sealed partial class DocxReader
         Dictionary<XElement, int>? paragraphIndexes = null;
         Dictionary<XElement, int>? blockIndexes = null;
         var drawings = new List<DocxFloatingDrawing>();
-        foreach (XElement anchor in source.Descendants(WordprocessingDrawingNamespace + "anchor"))
+        foreach (XElement anchor in EnumerateFloatingAnchors(source, cancellationToken))
         {
-            cancellationToken.ThrowIfCancellationRequested();
             if (IsInsideExcludedRevisionContainer(anchor, markupMode) ||
                 anchor.Ancestors(WordprocessingNamespace + "tr")
                     .Any(row => !IsIncludedTableRow(row, markupMode, cancellationToken)))
@@ -336,7 +335,7 @@ internal sealed partial class DocxReader
             }
 
             // Ordinals belong to the authored source, including hidden siblings.
-            paragraphIndexes ??= IndexSources(source.Descendants(WordprocessingNamespace + "p"));
+            paragraphIndexes ??= IndexSources(EnumerateDrawingPayload(source, WordprocessingNamespace + "p", cancellationToken));
             blockIndexes ??= IndexSources(sourceBlocks);
             drawings.Add(ReadFloatingDrawing(
                 anchor,
@@ -367,8 +366,8 @@ internal sealed partial class DocxReader
         }
     }
 
-    private static Dictionary<XElement, int>? CreateFloatingBlockMap(XContainer source) =>
-        source.Descendants(WordprocessingDrawingNamespace + "anchor").Any()
+    private static Dictionary<XElement, int>? CreateFloatingBlockMap(XContainer source, CancellationToken token) =>
+        EnumerateFloatingAnchors(source, token).Any()
             ? new(ReferenceEqualityComparer.Instance)
             : null;
 

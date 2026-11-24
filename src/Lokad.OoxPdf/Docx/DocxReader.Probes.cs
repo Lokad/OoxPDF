@@ -110,17 +110,17 @@ internal sealed partial class DocxReader
             }
 
             cancellationToken.ThrowIfCancellationRequested();
-            if (probeDocument.Descendants(WordprocessingNamespace + "object").Any())
+            if (EnumerateDrawingPayload(probeDocument, WordprocessingNamespace + "object", cancellationToken).Any())
             {
                 Emit("DOCX_UNSUPPORTED_OLE_OBJECT", "OLE object", probePartName, "Ignored");
             }
             cancellationToken.ThrowIfCancellationRequested();
-            if (probeDocument.Descendants(ChartNamespace + "chart").Any())
+            if (EnumerateDrawingPayload(probeDocument, ChartNamespace + "chart", cancellationToken).Any())
             {
                 Emit("DOCX_UNSUPPORTED_CHART", "chart drawing payload", probePartName, "Ignored");
             }
             cancellationToken.ThrowIfCancellationRequested();
-            if (probeDocument.Descendants().Any(element => element.Name.Namespace == DiagramNamespace))
+            if (probeDocument.Descendants().Any(element => element.Name.Namespace == DiagramNamespace && !IsInDrawingExtension(element)))
             {
                 Emit("DOCX_UNSUPPORTED_SMARTART", "SmartArt diagram payload", probePartName, "Ignored");
             }
@@ -131,20 +131,20 @@ internal sealed partial class DocxReader
             IReadOnlyDictionary<string, OoxRelationship> probeRelationships)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (probeDocument.Descendants(WordprocessingDrawingNamespace + "anchor")
-                .Any(anchor => IsUnsupportedFloatingDrawingAnchor(anchor, probeRelationships)))
+            if (EnumerateFloatingAnchors(probeDocument, cancellationToken)
+                .Any(anchor => IsUnsupportedFloatingDrawingAnchor(anchor, probeRelationships, cancellationToken)))
             {
                 Emit("DOCX_UNSUPPORTED_FLOATING_DRAWING", "floating drawing", probePartName, "Ignored");
             }
 
             cancellationToken.ThrowIfCancellationRequested();
-            if (HasUnsupportedVml(probeDocument, probeRelationships))
+            if (HasUnsupportedVml(probeDocument, probeRelationships, cancellationToken))
             {
                 Emit("DOCX_UNSUPPORTED_VML", "VML drawing payload", probePartName, "Ignored");
             }
 
             cancellationToken.ThrowIfCancellationRequested();
-            if (HasExternalDrawingImage(probeDocument, probeRelationships))
+            if (HasExternalDrawingImage(probeDocument, probeRelationships, cancellationToken))
             {
                 Emit("DOCX_UNSUPPORTED_EXTERNAL_IMAGE", "external drawing image", probePartName, "Ignored");
             }
@@ -337,7 +337,8 @@ internal sealed partial class DocxReader
         }
     }
 
-    private static bool IsUnsupportedFloatingDrawingAnchor(XElement anchor, IReadOnlyDictionary<string, OoxRelationship> relationships)
+    private static bool IsUnsupportedFloatingDrawingAnchor(XElement anchor, IReadOnlyDictionary<string, OoxRelationship> relationships,
+        CancellationToken token)
     {
         XElement? extent = anchor.Element(WordprocessingDrawingNamespace + "extent");
         if (!HasPositiveEmuAttribute(extent, "cx") || !HasPositiveEmuAttribute(extent, "cy"))
@@ -345,8 +346,8 @@ internal sealed partial class DocxReader
             return true;
         }
 
-        if (!HasSupportedFloatingDrawingImage(anchor, relationships) &&
-            !HasTextBoxContent(anchor))
+        if (!HasSupportedFloatingDrawingImage(anchor, relationships, token) &&
+            !EnumerateDrawingPayload(anchor, WordprocessingNamespace + "txbxContent", token).Any(content => content.HasElements))
         {
             return true;
         }
@@ -356,18 +357,20 @@ internal sealed partial class DocxReader
             !IsSupportedFloatingWrap(anchor);
     }
 
-    private static bool HasSupportedFloatingDrawingImage(XElement anchor, IReadOnlyDictionary<string, OoxRelationship> relationships)
+    private static bool HasSupportedFloatingDrawingImage(XElement anchor, IReadOnlyDictionary<string, OoxRelationship> relationships,
+        CancellationToken token)
     {
-        string? relationshipId = ReadDrawingImageRelationshipId(anchor);
+        string? relationshipId = ReadDrawingImageRelationshipId(anchor, token);
         return relationshipId is not null &&
             relationships.TryGetValue(relationshipId, out OoxRelationship? relationship) &&
             !relationship.IsExternal &&
             relationship.ResolvedTarget is not null;
     }
 
-    private static bool HasExternalDrawingImage(XDocument document, IReadOnlyDictionary<string, OoxRelationship> relationships)
+    private static bool HasExternalDrawingImage(XDocument document, IReadOnlyDictionary<string, OoxRelationship> relationships,
+        CancellationToken token)
     {
-        foreach (XElement blip in document.Descendants(DrawingNamespace + "blip"))
+        foreach (XElement blip in EnumerateDrawingPayload(document, DrawingNamespace + "blip", token))
         {
             string? relationshipId =
                 (string?)blip.Attribute(RelationshipsNamespace + "link") ??
@@ -383,11 +386,13 @@ internal sealed partial class DocxReader
         return false;
     }
 
-    private static bool HasUnsupportedVml(XDocument document, IReadOnlyDictionary<string, OoxRelationship> relationships)
+    private static bool HasUnsupportedVml(XDocument document, IReadOnlyDictionary<string, OoxRelationship> relationships,
+        CancellationToken token)
     {
         foreach (XElement element in document.Descendants().Where(element => element.Name.Namespace == VmlNamespace))
         {
-            if (!IsSupportedVmlElement(element, relationships))
+            token.ThrowIfCancellationRequested();
+            if (!IsInDrawingExtension(element) && !IsSupportedVmlElement(element, relationships))
             {
                 return true;
             }
@@ -462,13 +467,6 @@ internal sealed partial class DocxReader
                 .Descendants()
                 .Where(element => element.Name.Namespace == VmlNamespace)
                 .All(element => element.Name == VmlNamespace + "imagedata");
-    }
-
-    private static bool HasTextBoxContent(XElement anchor)
-    {
-        return anchor
-            .Descendants(WordprocessingNamespace + "txbxContent")
-            .Any(content => content.Elements().Any());
     }
 
     private static bool IsSupportedHorizontalAnchorPosition(XElement? position)

@@ -218,7 +218,8 @@ internal sealed partial class DocxReader
             foreach (XElement source in child.DescendantsAndSelf())
             {
                 token.ThrowIfCancellationRequested();
-                if (source.Name == WordprocessingDrawingNamespace + "inline" || source.Name == VmlNamespace + "shape")
+                if ((source.Name == WordprocessingDrawingNamespace + "inline" || source.Name == VmlNamespace + "shape") &&
+                    !IsInDrawingExtension(source))
                     positions[source] = (textOffset, order++);
             }
             textOffset += ReadRunTextChild(child).Length;
@@ -295,7 +296,7 @@ internal sealed partial class DocxReader
     private static XElement? FindDrawingOwnedBlip(XElement drawing, CancellationToken token) =>
         EnumerateDrawingOwnedElements(drawing, DrawingNamespace + "blip", token).FirstOrDefault();
 
-    private static string? ReadDrawingImageRelationshipId(XElement drawing, CancellationToken token = default)
+    private static string? ReadDrawingImageRelationshipId(XElement drawing, CancellationToken token)
     {
         XElement? blip = FindDrawingOwnedBlip(drawing, token);
         return (string?)blip?.Attribute(RelationshipsNamespace + "embed") ?? ReadDrawingSvgRelationshipId(blip, token);
@@ -318,26 +319,38 @@ internal sealed partial class DocxReader
     // must not turn the enclosing textbox into an image or be read twice.
     private static IEnumerable<XElement> EnumerateRunOwnedDrawings(XElement run, XName name, CancellationToken token)
     {
-        foreach (var element in run.Descendants(name))
+        foreach (XElement element in EnumerateDrawingPayload(run, name, token))
         {
-            token.ThrowIfCancellationRequested();
             if (ReferenceEquals(element.Ancestors(WordprocessingNamespace + "r").FirstOrDefault(), run))
                 yield return element;
         }
     }
 
-    private static IEnumerable<XElement> EnumerateDrawingOwnedElements(XElement drawing, XName name, CancellationToken token = default)
+    private static IEnumerable<XElement> EnumerateDrawingOwnedElements(XElement drawing, XName name, CancellationToken token)
     {
-        foreach (var element in drawing.Descendants(name))
+        foreach (XElement element in EnumerateDrawingPayload(drawing, name, token))
         {
-            token.ThrowIfCancellationRequested();
-            // Nested frames and extension lists own their payload separately.
             if (ReferenceEquals(element.Ancestors().FirstOrDefault(owner =>
-                owner.Name == WordprocessingDrawingNamespace + "inline" || owner.Name == WordprocessingDrawingNamespace + "anchor" ||
-                owner.Name == DrawingNamespace + "extLst"), drawing))
+                owner.Name == WordprocessingDrawingNamespace + "inline" || owner.Name == WordprocessingDrawingNamespace + "anchor"), drawing))
                 yield return element;
         }
     }
+
+    // Drawing extensions can carry copies of otherwise renderable XML. A
+    // recognized extension, such as the selected blip's SVG, has its own reader.
+    private static bool IsInDrawingExtension(XElement element) => element.Ancestors(DrawingNamespace + "extLst").Any();
+
+    private static IEnumerable<XElement> EnumerateDrawingPayload(XContainer source, XName name, CancellationToken token)
+    {
+        foreach (XElement element in source.Descendants(name))
+        {
+            token.ThrowIfCancellationRequested();
+            if (!IsInDrawingExtension(element)) yield return element;
+        }
+    }
+
+    private static IEnumerable<XElement> EnumerateFloatingAnchors(XContainer source, CancellationToken token) =>
+        EnumerateDrawingPayload(source, WordprocessingDrawingNamespace + "anchor", token);
 
     private static DocxInlineImage? ReadVmlInlineImage(
         XElement shape,

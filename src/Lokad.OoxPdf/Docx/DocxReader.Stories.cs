@@ -129,9 +129,8 @@ internal sealed partial class DocxReader
                 var tagged = new List<XElement>();
                 try
                 {
-                    foreach (var anchor in parsed.Xml.Descendants(WordprocessingDrawingNamespace + "anchor"))
+                    foreach (XElement anchor in EnumerateFloatingAnchors(parsed.Xml, cancellationToken))
                     {
-                        cancellationToken.ThrowIfCancellationRequested();
                         if (!string.Equals((string?)anchor.Element(WordprocessingDrawingNamespace + "positionV")?.Attribute("relativeFrom"),
                                 "paragraph", StringComparison.OrdinalIgnoreCase) ||
                             anchor.Ancestors(WordprocessingNamespace + "txbxContent").Any() ||
@@ -451,7 +450,7 @@ internal sealed partial class DocxReader
             }
 
         cancellationToken.ThrowIfCancellationRequested();
-        Dictionary<XElement, int>? floatingBlocks = CreateFloatingBlockMap(story);
+        Dictionary<XElement, int>? floatingBlocks = CreateFloatingBlockMap(story, cancellationToken);
         IReadOnlyList<DocxBodyElement> bodyElements = ReadRelatedStoryBodyElements(
             story.Elements(),
             styles,
