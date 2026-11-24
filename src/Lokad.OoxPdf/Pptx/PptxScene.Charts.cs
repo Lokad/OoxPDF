@@ -442,7 +442,6 @@ internal sealed partial class PptxSceneBuilder
                 labelOffset,
                 tickLabelSkip,
                 tickLabelSkipValue,
-                ReadChartAxisNumberFormat(axis),
                 ReadChartNumberFormat(axis),
                 ReadChartTitleElement(axis.Element(ChartNamespace + "title"), theme, colorMap),
                 hasLogarithmicScale: hasLogarithmicScale) with
@@ -603,14 +602,6 @@ internal sealed partial class PptxSceneBuilder
             .Element(ChartNamespace + "spPr")
             ?.Element(DrawingNamespace + "ln");
         return gridlines is not null && line?.Element(DrawingNamespace + "noFill") is null;
-    }
-
-    private static string? ReadChartAxisNumberFormat(XElement axis)
-    {
-        string? format = (string?)axis
-            .Element(ChartNamespace + "numFmt")
-            ?.Attribute("formatCode");
-        return string.IsNullOrWhiteSpace(format) ? null : format;
     }
 
     internal static bool IsOoxmlBooleanElementEnabled(XElement? element)

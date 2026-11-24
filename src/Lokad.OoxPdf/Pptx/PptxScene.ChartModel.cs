@@ -840,8 +840,6 @@ internal sealed record PptxSceneChartAxis
 
     public string TickLabelSkipValue { get; }
 
-    public string? NumberFormat { get; }
-
     public PptxSceneChartNumberFormat NumberFormatInfo { get; }
 
     public PptxSceneChartTitle Title { get; }
@@ -879,7 +877,6 @@ internal sealed record PptxSceneChartAxis
         int? labelOffset,
         int? tickLabelSkip,
         string tickLabelSkipValue,
-        string? numberFormat,
         PptxSceneChartNumberFormat numberFormatInfo,
         PptxSceneChartTitle title)
     {
@@ -915,7 +912,6 @@ internal sealed record PptxSceneChartAxis
         LabelOffset = labelOffset;
         TickLabelSkip = tickLabelSkip;
         TickLabelSkipValue = tickLabelSkipValue;
-        NumberFormat = numberFormat;
         NumberFormatInfo = numberFormatInfo;
         Title = title;
     }
@@ -952,7 +948,6 @@ internal sealed record PptxSceneChartAxis
         int? labelOffset,
         int? tickLabelSkip,
         string tickLabelSkipValue,
-        string? numberFormat,
         PptxSceneChartNumberFormat numberFormatInfo,
         PptxSceneChartTitle title,
         bool hasLogarithmicScale = false)
@@ -990,7 +985,6 @@ internal sealed record PptxSceneChartAxis
             labelOffset,
             tickLabelSkip,
             tickLabelSkipValue,
-            numberFormat,
             numberFormatInfo,
             title) { HasLogarithmicScale = hasLogarithmicScale };
     }

@@ -787,7 +787,7 @@ internal static class PptxModelTests
         TestAssert.True(slide.SlideNodes[4].Chart?.Axes[1].TextStyle.Bold == true, "Expected axis bold style in the scene model.");
         TestAssert.True(slide.SlideNodes[4].Chart?.Axes[1].TextStyle.Italic == true, "Expected axis italic style in the scene model.");
         TestAssert.Equal(PptxSceneChartTickLabelPosition.High, slide.SlideNodes[4].Chart?.Axes[1].TickLabelPositionKind);
-        TestAssert.Equal("$#,##0", slide.SlideNodes[4].Chart?.Axes[1].NumberFormat ?? string.Empty);
+        TestAssert.Equal("$#,##0", slide.SlideNodes[4].Chart?.Axes[1].NumberFormatInfo.FormatCode ?? string.Empty);
         TestAssert.Equal("Value", slide.SlideNodes[4].Chart?.Axes[1].Title.Text ?? string.Empty);
         TestAssert.True(slide.SlideNodes[4].Chart?.Axes[1].Title.Overlay is null, "Expected missing chart axis-title overlay metadata to remain distinct from an explicit disable.");
         TestAssert.True(slide.SlideNodes[4].Chart?.Axes[1].Title.Layout.HasLayout == true, "Expected chart value-axis title layout in the scene model.");
