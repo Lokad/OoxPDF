@@ -14,7 +14,7 @@ internal static partial class DocxMathParser
         CancellationToken cancellationToken, Func<XElement, bool>? includeRevision = null,
         bool preserveDeletedStructure = false, Action<DocxMathBookmark>? readBookmark = null,
         Action<XElement>? readCommentBoundary = null, Func<XElement, DocxHyperlinkSpan>? readHyperlink = null,
-        XElement? authoredStory = null, bool equationHasDeletionOwner = false)
+        XElement? authoredStory = null, bool equationHasDeletionOwner = false, XElement? trailingBreakRun = null)
     {
         var pending = new Stack<(XElement Element, bool Expanded, XName? RevisionOwner, bool IncludeAnnotations, DocxHyperlinkSpan? Hyperlink)>();
         var nodes = new Dictionary<XElement, DocxMathNode>();
@@ -66,7 +66,7 @@ internal static partial class DocxMathParser
                 XName? revisionOwner = revisionRow ? element.Name : item.RevisionOwner;
                 // Comment ranges need source order, including boundaries in
                 // different nested rows. They are events, not math operands.
-                foreach (XElement child in TraversalChildren(element).Reverse())
+                foreach (XElement child in WithoutTrailingBreak(TraversalChildren(element)).Reverse())
                 {
                     pending.Push((child, false, revisionOwner,
                         item.IncludeAnnotations && included, hyperlink));
@@ -81,7 +81,7 @@ internal static partial class DocxMathParser
                 (name != "deg" || element.Parent?.Name == MathNamespace + "rad") &&
                 (name != "fName" || element.Parent?.Name == MathNamespace + "func"))
             {
-                node = new DocxMathRow(ContentChildren(element).Select(child => nodes[child]).ToArray())
+                node = new DocxMathRow(WithoutTrailingBreak(ContentChildren(element)).Select(child => nodes[child]).ToArray())
                 { ArgumentProperties = ReadArgumentProperties(element) };
             }
             else if (name == "mr" && element.Parent?.Name == MathNamespace + "m" && ContentChildren(element).Any() &&
@@ -180,7 +180,7 @@ internal static partial class DocxMathParser
                             readBookmark?.Invoke(bookmark);
                         }
                     }
-                    else if (!IsProperty(child) && !IsNonPrintingSourceMarker(child) && !IsCommentBoundary(child)) childIndex++;
+                    else if (child != trailingBreakRun && !IsProperty(child) && !IsNonPrintingSourceMarker(child) && !IsCommentBoundary(child)) childIndex++;
                 }
                 if (bookmarks is not null) node = sourceRow with { Bookmarks = bookmarks };
             }
@@ -189,6 +189,9 @@ internal static partial class DocxMathParser
         }
 
         return nodes[equation] as DocxMathRow ?? new DocxMathRow([nodes[equation]]);
+
+        IEnumerable<XElement> WithoutTrailingBreak(IEnumerable<XElement> children) =>
+            trailingBreakRun is null ? children : children.Where(child => child != trailingBreakRun);
 
         DocxMathRow? Role(XElement element, string name)
         {

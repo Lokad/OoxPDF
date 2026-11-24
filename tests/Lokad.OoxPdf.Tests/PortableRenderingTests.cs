@@ -87,6 +87,9 @@ internal static partial class PortableRenderingTests
     public static void PortableRenderingFirstDisplayGroupOwnsParagraphJustification() =>
         DocxInlineCompositionTests.CheckDisplayParagraphOwner();
 
+    public static void PortableRenderingDisplayMathRunBreakKeepsBothFormulas() =>
+        DocxInlineCompositionTests.CheckDisplayMathRunBreak();
+
     public static void PortableRenderingPageBreaksKeepMathPicturesAndNavigation() =>
         DocxInlineCompositionTests.CheckComposedRunPageBreaks();
 

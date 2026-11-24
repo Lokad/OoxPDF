@@ -1,3 +1,4 @@
+using System.Text;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Docx;
@@ -69,6 +70,45 @@ internal static partial class DocxInlineCompositionTests
                 "Differently justified display groups retain supported formulas.");
             TestAssert.Equal(first, owner.Equations[displayStart].AlignmentValue);
             TestAssert.Equal(later, owner.Equations[displayStart + 1].AlignmentValue);
+        }
+    }
+
+    internal static void CheckDisplayMathRunBreak()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            DocxDocument Read(bool inside, string? type = null) => ReadMutation(
+                "CompositionProbes/math-explicit-display-same-group", mode, false, false, (xml, w, m) =>
+                {
+                    var group = xml.Descendants(m + "oMathPara").Single();
+                    var equations = group.Elements(m + "oMath").ToArray();
+                    var lineBreak = new XElement(w + "br", type is null ? null : new XAttribute(w + "type", type));
+                    if (inside) equations[0].Add(new XElement(m + "r", lineBreak));
+                    else equations[1].AddBeforeSelf(new XElement(w + "r", lineBreak));
+                });
+
+            var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true), mode,
+                mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
+                    OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var between = renderer.RenderPagesAsync(Read(false), null, default).ToBlockingEnumerable().Single();
+            var expected = MathShows(between);
+            TestAssert.Equal("α+β=γδ+ε=ζ", string.Concat(expected.Select(show => show.Text)).Normalize(NormalizationForm.FormKC));
+            TestAssert.Equal(2, expected.Select(show => show.Y).Distinct().Count());
+            foreach (string? type in new[] { null, "textWrapping" })
+            {
+                var diagnostics = new List<OoxPdfDiagnostic>();
+                var wrapped = renderer.RenderPagesAsync(Read(true, type), diagnostics.Add, default).ToBlockingEnumerable().Single();
+                TestAssert.True(expected.SequenceEqual(MathShows(wrapped)),
+                    "A math-run line break must preserve both formulas at their ordinary line-break positions.");
+                TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                    "The display break must not discard its equation.");
+            }
+
+            var unsupported = new List<OoxPdfDiagnostic>();
+            var pageBreak = renderer.RenderPagesAsync(Read(true, "page"), unsupported.Add, default).ToBlockingEnumerable().Single();
+            TestAssert.Equal("δ+ε=ζ", string.Concat(MathShows(pageBreak).Select(show => show.Text)).Normalize(NormalizationForm.FormKC));
+            TestAssert.True(unsupported.Any(d => d.Id == "DOCX_UNSUPPORTED_EQUATION"),
+                "An in-equation page break keeps its diagnosed fallback.");
         }
     }
 }

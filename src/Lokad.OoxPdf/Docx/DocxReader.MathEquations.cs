@@ -13,6 +13,20 @@ internal sealed partial class DocxReader
     private static bool IsEquationPayload(XElement element) =>
         element.Name == MathNamespace + "oMath" || IsDisplayMathRun(element);
 
+    private static XElement? FindTrailingDisplayMathBreak(XElement equation)
+    {
+        if (equation.Elements().LastOrDefault() is not { } run || run.Name != MathNamespace + "r" ||
+            run.Element(WordprocessingNamespace + "br") is not { } lineBreak ||
+            run.Elements().Any(child => child != lineBreak && child.Name != WordprocessingNamespace + "rPr") ||
+            run.Nodes().OfType<XText>().Any(text => !string.IsNullOrWhiteSpace(text.Value))) return null;
+
+        return !lineBreak.HasElements && string.IsNullOrWhiteSpace(lineBreak.Value) &&
+            lineBreak.Attributes().All(attribute => attribute.IsNamespaceDeclaration ||
+                attribute.Name == WordprocessingNamespace + "type" && attribute.Value == "textWrapping" ||
+                attribute.Name == WordprocessingNamespace + "clear" && attribute.Value == "none")
+            ? run : null;
+    }
+
     private static IEnumerable<(XElement Element, DocxRevisionInfo? Revision, bool RemoveDeletedText)> EnumerateMathParagraphSources(
         XElement container, DocxRevisionInfo? inheritedRevision, bool removeDeletedText,
         OoxPdfDocxMarkupMode mode, CancellationToken token)
