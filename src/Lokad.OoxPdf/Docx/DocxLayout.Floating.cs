@@ -596,7 +596,7 @@ internal sealed partial class DocxLayoutEngine
                 foreach (var cell in row.Cells)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    if (cell.VisualOwnership != DocxTableCellVisualOwnership.OwnCell || cell.Cell.HasVerticalMerge)
+                    if (cell.VisualOwnership != DocxTableCellVisualOwnership.OwnCell)
                         continue;
                     var clip = DocxTableCellClipGeometry.Resolve(row, cell, parent);
                     if (!(clip.Width > 0d && clip.Height > 0d)) continue;

@@ -809,7 +809,31 @@ internal static class DocxSectionNavigationTests
                 "The short cell clips all of the linked ink.");
             TestAssert.Equal(0, shortCell.Annotations.Count(annotation => annotation.Uri == uri));
 
-            PdfPage Render(int width, int height)
+            PdfPage merged = Render(300, 85, merge: true);
+            var mergedLabel = PortableRenderingTests.ReadPaintedSourceLabel(merged, label);
+            var mergedSuffix = PortableRenderingTests.ReadPaintedSourceLabel(merged, suffix);
+            TestAssert.Equal(fittingLabel.Count, mergedLabel.Count);
+            TestAssert.Equal(fittingSuffix.Count, mergedSuffix.Count);
+            var mergedLink = merged.Annotations.Single(annotation => annotation.Uri == uri);
+            TestAssert.True(mergedLabel.All(glyph => glyph.Ink.X >= mergedLink.X - .002d &&
+                glyph.Ink.Y >= mergedLink.Y - .002d &&
+                glyph.Ink.X + glyph.Ink.Width <= mergedLink.X + mergedLink.Width + .002d &&
+                glyph.Ink.Y + glyph.Ink.Height <= mergedLink.Y + mergedLink.Height + .002d),
+                "The restored link covers its visible label inside the merged cell.");
+            if (mode == OoxPdfDocxMarkupMode.Final)
+            {
+                TestAssert.True(fittingLabel.SequenceEqual(mergedLabel) && fittingSuffix.SequenceEqual(mergedSuffix),
+                    "Final keeps the ordinary-cell printed glyph geometry.");
+                TestAssert.Equal(fitting.Annotations.Single(annotation => annotation.Uri == uri), mergedLink);
+                TestAssert.Equal(ReadLabelClip(fitting), ReadLabelClip(merged));
+            }
+
+            PdfPage shortMerge = Render(300, 36, merge: true);
+            TestAssert.True(ReadLabelClip(shortMerge).Y > mergedLabel.Max(glyph => glyph.Ink.Y + glyph.Ink.Height),
+                "The short merge clips the linked ink.");
+            TestAssert.Equal(0, shortMerge.Annotations.Count(annotation => annotation.Uri == uri));
+
+            PdfPage Render(int width, int height, bool merge = false)
             {
                 PdfPage? result = null;
                 WithDocumentMutation(fixture, (parts, document) =>
@@ -833,13 +857,20 @@ internal static class DocxSectionNavigationTests
                     owner.Add(new XElement(anchor.Ancestors(W + "r").First()));
                     anchor.Ancestors(W + "p").First().Remove();
                     int cellWidth = width * 20;
+                    int rowCount = merge ? 3 : 1;
+                    int rowHeight = height * 20 / rowCount;
+                    var rows = Enumerable.Range(0, rowCount).Select(row => new XElement(W + "tr",
+                        new XElement(W + "trPr", new XElement(W + "trHeight",
+                            new XAttribute(W + "val", row == rowCount - 1 ? height * 20 - row * rowHeight : rowHeight),
+                            new XAttribute(W + "hRule", "exact"))),
+                        new XElement(W + "tc", new XElement(W + "tcPr",
+                            new XElement(W + "tcW", new XAttribute(W + "w", cellWidth), new XAttribute(W + "type", "dxa")),
+                            merge ? new XElement(W + "vMerge", row == 0 ? new XAttribute(W + "val", "restart") : null) : null),
+                            row == 0 ? owner : new XElement(W + "p"))));
                     var table = new XElement(W + "tbl",
                         new XElement(W + "tblPr", new XElement(W + "tblLayout", new XAttribute(W + "type", "fixed"))),
                         new XElement(W + "tblGrid", new XElement(W + "gridCol", new XAttribute(W + "w", cellWidth))),
-                        new XElement(W + "tr", new XElement(W + "trPr", new XElement(W + "trHeight",
-                            new XAttribute(W + "val", height * 20), new XAttribute(W + "hRule", "exact"))),
-                            new XElement(W + "tc", new XElement(W + "tcPr", new XElement(W + "tcW",
-                                new XAttribute(W + "w", cellWidth), new XAttribute(W + "type", "dxa"))), owner)));
+                        rows);
                     document.Descendants(W + "sectPr").Single().AddFirst(new XElement(W + "headerReference",
                         new XAttribute(W + "type", "default"), new XAttribute(R + "id", name)));
                     AddStoryPart(parts, name, "header", new XElement(W + "hdr", table));
