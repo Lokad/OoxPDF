@@ -225,6 +225,7 @@
     "DocxLayoutStageOwnsStaticHeaderInlineImages",
     "DocxInlineCompositionWordWrappingSharesBreakRulesAcrossRunSplits",
     "DocxInlineCompositionKeepsWordJoinersAcrossSpaceRuns",
+    "=DocxInlineCompositionAlignedTabsContinueWithBothFractions",
     "PortableRenderingStaticPictureLinksRetainComposedFrames"
   ],
   "svg-fill-winding": [

@@ -700,7 +700,7 @@ internal sealed partial class DocxLayoutEngine
         }
         var output = new List<DocxMeasuredInlineLine>();
         bool fitFixedPictures = HasCapturedOrdinaryInlineContent(paragraph) && DocxPlainBodyFrame.HasFixedLineFlow(paragraph);
-        DocxMeasuredInlineFragment Atom(int index)
+        DocxMeasuredInlineFragment Atom(int index, double? availableWidth = null)
         {
             var fragment = index == cursor.AtomIndex && partial is not null ? partial : measured[index];
             if (fitFixedPictures && fragment.Source is DocxInlinePicture picture &&
@@ -709,7 +709,8 @@ internal sealed partial class DocxLayoutEngine
                 // Preserve the legacy width-fitted paint of an overhanging
                 // fixed-slot picture. Its source still consumes advance before
                 // the next word; the declared row never grows to contain ink.
-                var (width, height) = ResolveInlineImageSize(picture.Image, output.Count == 0 ? firstWidth : nextWidth, scale);
+                var (width, height) = ResolveInlineImageSize(picture.Image,
+                    availableWidth ?? (output.Count == 0 ? firstWidth : nextWidth), scale);
                 return fragment with { Advance = width, BaselineInset = height,
                     OccupiedHeight = height + fragment.OccupiedHeight - fragment.BaselineInset };
             }
@@ -737,30 +738,23 @@ internal sealed partial class DocxLayoutEngine
             }
             if (Atom(index).Source is DocxInlineTab)
             {
-                var tabStop = ResolveNextTabStop(advance, tabStops, defaultTabStopPoints * scale);
+                double defaultStop = defaultTabStopPoints * scale;
+                var tabStop = ResolveNextTabStop(advance, tabStops, defaultStop);
                 if (!SupportsTabLeader(tabStop.LeaderValue)) return false;
-                double stop = tabStop.PositionPoints;
                 double available = output.Count == 0 ? firstWidth : nextWidth;
-                if (tabStop.Kind is DocxTabStopKind.Decimal or DocxTabStopKind.Right or DocxTabStopKind.Center)
+                if (!TryPlaceTab(tabStop, index + 1, advance, available, out double start))
                 {
-                    // The complete aligned field must fit without overlap. Its
-                    // wrapping and leader variants retain their fallbacks.
-                    if (!TryFitAlignedField(tabStop, index + 1, advance, available, out double start)) return false;
-                    current.Add(Atom(index) with { Advance = start - advance });
-                    advance = start;
-                    index++;
-                    continue;
-                }
-                if (stop > available && current.Count != 0)
-                {
+                    if (current.Count == 0) return false;
+                    // The cursor resumes at the tab. Resolve it from the start
+                    // of the next line just as a resumed layout would.
+                    var nextStop = ResolveNextTabStop(0d, tabStops, defaultStop);
+                    if (!SupportsTabLeader(nextStop.LeaderValue) ||
+                        !TryPlaceTab(nextStop, index + 1, 0d, nextWidth, out start)) return false;
                     Flush(new(index));
                     if (stopAfterFirstLine) { lines = output; return true; }
-                    // The new line may select an earlier aligned stop.
-                    continue;
                 }
-                if (!double.IsFinite(stop) || stop < advance || stop > available) return false;
-                current.Add(Atom(index) with { Advance = stop - advance });
-                advance = stop;
+                current.Add(Atom(index) with { Advance = start - advance });
+                advance = start;
                 index++;
                 continue;
             }
@@ -897,6 +891,14 @@ internal sealed partial class DocxLayoutEngine
         }
         lines = output; return true;
 
+        bool TryPlaceTab(DocxResolvedTabStop stop, int fieldIndex, double lineAdvance, double available, out double start)
+        {
+            if (stop.Kind is DocxTabStopKind.Decimal or DocxTabStopKind.Right or DocxTabStopKind.Center)
+                return TryFitAlignedField(stop, fieldIndex, lineAdvance, available, out start);
+            start = stop.PositionPoints;
+            return double.IsFinite(start) && start >= lineAdvance && start <= available;
+        }
+
         bool TryFitAlignedField(DocxResolvedTabStop stop, int startIndex, double lineAdvance, double available, out double start)
         {
             int end = startIndex;
@@ -906,7 +908,7 @@ internal sealed partial class DocxLayoutEngine
                 end++;
             }
             bool decimalTab = stop.Kind == DocxTabStopKind.Decimal;
-            var field = MeasureGroup(startIndex, end, decimalTab);
+            var field = MeasureGroup(startIndex, end, decimalTab, available);
             double? anchor = decimalTab ? field.DecimalOffset ?? field.Advance : null;
             return TryFitAlignedTabField(stop, field.Advance, anchor, lineAdvance, available, out start);
         }
@@ -933,7 +935,8 @@ internal sealed partial class DocxLayoutEngine
             return (stopAfterFirstLine ? wrapped.Take(2) : wrapped).ToArray();
         }
 
-        (double Advance, double? DecimalOffset) MeasureGroup(int begin, int end, bool locateDecimal = false)
+        (double Advance, double? DecimalOffset) MeasureGroup(int begin, int end, bool locateDecimal = false,
+            double? availableWidth = null)
         {
             double width = 0d;
             double? decimalOffset = null;
@@ -941,7 +944,7 @@ internal sealed partial class DocxLayoutEngine
             for (int index = begin; index < end; index++)
             {
                 token.ThrowIfCancellationRequested();
-                var fragment = Atom(index);
+                var fragment = Atom(index, availableWidth);
                 if (previous is not null) width += InlineBoundaryAdvance(previous, fragment);
                 if (locateDecimal && decimalOffset is null && fragment.Text is [var span])
                 {

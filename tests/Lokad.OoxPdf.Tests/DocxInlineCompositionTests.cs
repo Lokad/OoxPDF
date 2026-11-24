@@ -1766,12 +1766,14 @@ internal static partial class DocxInlineCompositionTests
         foreach (double width in new[] { 110d, 80d })
         {
             TestAssert.True(Measure(paragraph, width, 1d, out var wrapped), "Default tabs must retain wrapping.");
-            TestAssert.True(TestAssert.NotNull(wrapped).Count > 1 && wrapped.All(line => line.Advance <= width), "Each wrapped row must fit.");
-            TestAssert.Equal(2, wrapped.SelectMany(line => line.Fragments).Count(fragment => fragment.Math is not null));
+            var rows = TestAssert.NotNull(wrapped);
+            TestAssert.True(rows.Count > 1 && rows.All(line => line.Advance <= width), "Each wrapped row must fit.");
+            TestAssert.Equal(2, rows.SelectMany(line => line.Fragments).Count(fragment => fragment.Math is not null));
         }
-        foreach (var stop in new[] { new DocxTabStop(72d, null, "right", null), new(72d, null, "center", null),
-            new(72d, null, "decimal", null), new(72d, null, "bar", null), new(72d, null, "left", "dot") })
-            TestAssert.True(!Measure(paragraph with { TabStops = [stop] }, 300d, 1d, out _), "Overlapping aligned fields, bar stops and leaders retain explicit fallback.");
+        foreach (var stop in new[] { new DocxTabStop(720d, null, "right", null), new(720d, null, "center", null),
+            new(720d, null, "decimal", null), new(72d, null, "bar", null), new(72d, null, "left", "dot") })
+            TestAssert.True(!Measure(paragraph with { TabStops = [stop] }, 300d, 1d, out _),
+                "Out-of-frame aligned fields, bar stops and leaders retain explicit fallback.");
         TestAssert.True(!Measure(paragraph with { TabStops = [new(400d, null, "left", null)] }, 100d, 1d, out _), "An out-of-frame stop retains fallback.");
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();
@@ -1809,9 +1811,27 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.True(!Measure(100d, out lines) && lines is null,
                 "An aligned field that exceeds the frame keeps the whole-owner fallback.");
             var overlap = paragraph with { TabStops = [new((35d + 18d * scale) / scale, null, alignment, null)] };
-            TestAssert.True(!DocxLayoutEngine.TryMeasureOrderedInlineContent(overlap, equations,
-                new TrackingMeasurer(), 12d, 600d, 600d, 9d, 16d, scale, default, out _),
-                "An aligned field cannot overlap already placed inline content.");
+            TestAssert.True(DocxLayoutEngine.TryMeasureOrderedInlineAtoms(overlap, equations,
+                new TrackingMeasurer(), 12d, 9d, 16d, scale, default, out var atoms, defaultTabStopPoints: 18d),
+                "An overlapping aligned field still has measurable source content.");
+            var measuredAtoms = TestAssert.NotNull(atoms);
+            TestAssert.True(DocxLayoutEngine.TryWrapOrderedInlineAtoms(measuredAtoms, 600d, 600d, default, out var wrapped),
+                "The complete field fits on a new line.");
+            var continuation = TestAssert.NotNull(wrapped);
+            TestAssert.Equal(2, continuation.Count);
+            DocxInlineSourceCursor cursor = default;
+            foreach (var row in continuation)
+            {
+                TestAssert.Equal(1, row.Fragments.Count(fragment => fragment.Math is not null));
+                TestAssert.True(DocxLayoutEngine.TryGetNextOrderedInlineLine(measuredAtoms, cursor, 600d, 600d, default,
+                    out var resumed), "The tab must resume from the line cursor.");
+                var next = TestAssert.NotNull(resumed);
+                TestAssert.Equal(row.Advance, next.Advance);
+                TestAssert.Equal(row.EndCursor, next.EndCursor);
+                cursor = next.EndCursor;
+            }
+            TestAssert.True(continuation[1].Fragments[0].Source is DocxInlineTab &&
+                cursor.IsComplete(measuredAtoms), "The tab owns the continuation without losing source.");
         }
     }
 

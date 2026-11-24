@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Numerics;
+using System.Text;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Docx;
@@ -127,6 +128,47 @@ internal static partial class DocxInlineCompositionTests
                 TestAssert.Equal(ReadPaintedPictureFrame(right), ReadPaintedPictureFrame(page));
                 TestAssert.Equal(right.Images.Single().Image.ResourceKey, page.Images.Single().Image.ResourceKey);
                 TestAssert.Equal(rule, ReadPictureFractionRule(page));
+            }
+        }
+    }
+
+    public static void DocxInlineCompositionAlignedTabsContinueWithBothFractions()
+    {
+        var resolver = new PortableRenderingTests.PinnedResolver();
+        foreach (string id in new[] { "math-tabs-right108-body", "math-tabs-right108-cell", "math-tabs-center108-footer" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var manual = MathPaint(authoredBreak: true);
+            var wrapped = MathPaint(authoredBreak: false);
+            TestAssert.Equal("ratetimeratetime", string.Concat(wrapped.Select(glyph => glyph.Text)).Normalize(NormalizationForm.FormKC));
+            TestAssert.Equal(16, wrapped.Length);
+            TestAssert.True(manual.SequenceEqual(wrapped),
+                "Both complete fractions retain the authored continuation's glyph positions in " + id + "/" + mode);
+            TestAssert.True(wrapped[0].Y > wrapped[8].Y,
+                "The second fraction moves to the continuation before the aligned field can overlap preceding content.");
+
+            (string Text, double X, double Y)[] MathPaint(bool authoredBreak)
+            {
+                var document = ReadMutation("CompositionProbes/" + id, mode, false, false, (xml, w, m) =>
+                {
+                    XElement paragraph = xml.Descendants(w + "p").Single(p => p.Elements(m + "oMath").Any());
+                    // With the pinned font, the complete field fits within this
+                    // stop only when it starts on a fresh line.
+                    paragraph.Element(w + "pPr")!.Element(w + "tabs")!.Elements(w + "tab").First()
+                        .SetAttributeValue(w + "pos", "1440");
+                    if (authoredBreak)
+                        paragraph.Elements(w + "r").First(run => run.Element(w + "tab") is not null)
+                            .AddBeforeSelf(new XElement(w + "r", new XElement(w + "br")));
+                }, partOverride: id.EndsWith("footer", StringComparison.Ordinal) ? "word/math-tabs-footer.xml" : null);
+                var diagnostics = new List<OoxPdfDiagnostic>();
+                PdfPage page = new DocxRenderer(resolver, mode, CachedMathGeometry(mode))
+                    .RenderPagesAsync(document, diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
+                TestAssert.True(diagnostics.All(item => item.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                    $"A fitting continuation must preserve both equations in {id}/{mode} (authored break: {authoredBreak}).");
+                var fonts = page.Fonts.Where(resource => resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal))
+                    .Select(resource => resource.Font).ToHashSet();
+                return DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true)
+                    .Where(glyph => fonts.Contains(glyph.Font)).Select(glyph => (glyph.Text, VisibleTextStartX(glyph), glyph.Y)).ToArray();
             }
         }
     }
