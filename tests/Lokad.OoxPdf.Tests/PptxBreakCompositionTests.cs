@@ -38,20 +38,51 @@ internal static class PptxBreakCompositionTests
         }
     }
 
+    public static void PptxBottomAnchorKeepsDescendersInsideFixedLineSpacingClip()
+    {
+        foreach (string spacing in new[] { "fixed-prose", "natural-prose" })
+        {
+            PdfPage top = Render(table: false, "t", autofit: true, spacing, literal: false, height: 96);
+            PdfPage bottom = Render(table: false, "b", autofit: true, spacing, literal: false, height: 96);
+            PdfRectangle frame = new(72, 372, 288, 96);
+            var topInk = PortableRenderingTests.ReadPaintedSourceLabel(top, "Alpha Beta Gamma", requiredClip: frame);
+            var bottomInk = PortableRenderingTests.ReadPaintedSourceLabel(bottom, "Alpha Beta Gamma", requiredClip: frame);
+            TestAssert.Equal(14, bottomInk.Count);
+            TestAssert.True(bottomInk.All(glyph => glyph.Size == 24d));
+            TestAssert.True(topInk[0].Origin.Y - bottomInk[0].Origin.Y > 60d,
+                "Bottom alignment still places the fitting line near the bottom of the same clip.");
+        }
+    }
+
     private static void CheckPair(bool table, string anchor, bool autofit, string variant)
     {
         double height = variant == "ordinary" ? 96 : 224;
         PdfPage element = Render(table, anchor, autofit, variant, literal: false, height);
         PdfPage literal = Render(table, anchor, autofit, variant, literal: true, height);
+        var baselines = new List<double>();
         foreach (string word in new[] { "Alpha", "Beta", "Gamma" })
         {
             var expected = PortableRenderingTests.ReadPaintedSourceLabel(element, word);
             var actual = PortableRenderingTests.ReadPaintedSourceLabel(literal, word);
+            baselines.Add(expected[0].Origin.Y);
             TestAssert.Equal(expected.Count, actual.Count);
             for (int i = 0; i < actual.Count; i++)
                 TestAssert.True(System.Numerics.Vector2.Distance(expected[i].Origin, actual[i].Origin) < .002f &&
                     Math.Abs(expected[i].Size - actual[i].Size) < .001d,
                     "Equivalent breaks retain every source glyph's size and anchor: " + word);
+        }
+
+        if (variant == "mixed-size")
+        {
+            TestAssert.True(baselines[0] > baselines[1] && baselines[1] > baselines[2],
+                "Mixed-size spans retain three separate lines in source order.");
+        }
+        else
+        {
+            double firstStep = variant == "blank" ? 48d : 24d;
+            TestAssert.True(Math.Abs(baselines[0] - baselines[1] - firstStep) < .002d &&
+                Math.Abs(baselines[1] - baselines[2] - 24d) < .002d,
+                "The authored line grid includes the intermediate blank line when present.");
         }
     }
 
@@ -66,12 +97,14 @@ internal static class PptxBreakCompositionTests
             "blank" => Break() + Run("Alpha") + Break() + Break() + Run("Beta") + Break() + Run("Gamma") + Break(),
             "mixed-size" when literal => Run("Alpha&#xA;", 12) + Run("Beta&#xA;", 18) + Run("Gamma"),
             "mixed-size" => Run("Alpha", 12) + Break(12) + Run("Beta", 18) + Break(18) + Run("Gamma"),
+            "fixed-prose" or "natural-prose" => Run("Alpha Beta Gamma"),
             _ when literal => Run("Alpha&#xA;Beta&#xA;Gamma"),
             _ => Run("Alpha") + Break() + Run("Beta") + Break() + Run("Gamma")
         };
+        string spacing = variant == "natural-prose" ? "" : """<a:lnSpc><a:spcPts val="2400"/></a:lnSpc>""";
         string body = $$"""
             <a:bodyPr anchor="{{anchor}}" vertOverflow="clip" lIns="0" rIns="0" tIns="0" bIns="0">{{(autofit ? "<a:noAutofit/>" : "")}}</a:bodyPr><a:lstStyle/>
-            <a:p><a:pPr><a:lnSpc><a:spcPts val="2400"/></a:lnSpc><a:defRPr sz="2400"><a:latin typeface="DejaVu Sans"/></a:defRPr></a:pPr>{{text}}</a:p>
+            <a:p><a:pPr>{{spacing}}<a:defRPr sz="2400"><a:latin typeface="DejaVu Sans"/></a:defRPr></a:pPr>{{text}}</a:p>
             """;
         string emuHeight = ((int)(height * 12700)).ToString(System.Globalization.CultureInfo.InvariantCulture);
         string content = table ? $$"""

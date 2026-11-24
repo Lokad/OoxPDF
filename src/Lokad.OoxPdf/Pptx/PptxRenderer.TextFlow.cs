@@ -334,7 +334,7 @@ internal sealed partial class PptxRenderer
         TextAdvanceEstimator advanceEstimator,
         bool allowWrapping)
     {
-        if (!TryResolveActualVerticalAnchorOffset(layout, out double verticalOffset) ||
+        if (!TryResolveActualVerticalAnchorOffset(layout, advanceEstimator, out double verticalOffset) ||
             Math.Abs(verticalOffset - layout.Model.VerticalOffset) <= PptxTextMetricRules.CoordinateTolerance)
         {
             return layout;
@@ -344,7 +344,8 @@ internal sealed partial class PptxRenderer
         return (await BuildTextFrameLayoutAsync((await BuildTextFlowFrameAsync(anchored, document, advanceEstimator).ConfigureAwait(false)), document, advanceEstimator, allowWrapping).ConfigureAwait(false));
     }
 
-    private static bool TryResolveActualVerticalAnchorOffset(PptxTextFrameLayout layout, out double verticalOffset)
+    private static bool TryResolveActualVerticalAnchorOffset(PptxTextFrameLayout layout,
+        TextAdvanceEstimator advanceEstimator, out double verticalOffset)
     {
         verticalOffset = 0d;
         PptxTextFrameModel frame = layout.Model;
@@ -390,7 +391,50 @@ internal sealed partial class PptxRenderer
         }
 
         verticalOffset = slack * multiplier;
+        if (verticalOffset > 0d && frame.BodyProperties.VerticalAnchor == TextVerticalAnchor.Bottom &&
+            frame.BodyProperties.VerticalOverflow == PptxTextVerticalOverflow.Clip &&
+            !verticalAnchorPath && !frame.TableRowIndex.HasValue && !frame.TextFlipVertical &&
+            frame.TextRotationDegrees == 0d)
+        {
+            verticalOffset = LimitBottomAnchorOffsetToInk(lines, frame.TextClipY, verticalOffset, advanceEstimator);
+        }
         return true;
+    }
+
+    private static double LimitBottomAnchorOffsetToInk(IReadOnlyList<PptxTextLineLayout> lines,
+        double clipBottom, double offset, TextAdvanceEstimator advanceEstimator)
+    {
+        // Fixed spacing advances the line grid but can leave less room beneath
+        // the baseline than the glyphs need. Offset only ink that fits before
+        // alignment and keep the authored clip and interline spacing.
+        double limited = offset;
+        foreach (PptxTextLineLayout line in lines)
+        {
+            if (!line.Box.LineSpacing.IsAbsolute)
+                continue;
+
+            foreach (PptxTextSpanLayout span in line.Spans)
+            {
+                TextRun run = span.Run;
+                if (run.Alpha <= 0d || run.GlyphRotationQuarterTurns != 0)
+                    continue;
+
+                double baseline = run.Y + run.BaselineOffset;
+                foreach (PptxTextGlyphLayout glyph in span.GlyphSpan.Glyphs)
+                {
+                    if (glyph.GlyphId == 0 ||
+                        advanceEstimator.ResolveGlyphFont(run.FontFamily, run.Bold, run.Italic, glyph.CodePoint)
+                            is not { Font: { } font } ||
+                        !font.TryGetGlyphBounds(glyph.GlyphId, out var bounds))
+                        continue;
+
+                    double room = baseline + bounds.YMin * run.FontSize / font.UnitsPerEm - clipBottom;
+                    if (room >= 0d)
+                        limited = Math.Min(limited, room);
+                }
+            }
+        }
+        return limited;
     }
 
     private static double ResolveLayoutMaxFontSize(PptxTextFrameLayout layout)

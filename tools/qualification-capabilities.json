@@ -20756,6 +20756,7 @@
     "PptxManualBreaksKeepAnchoredTableContent"
   ],
   "pptx-manual-break-anchors": [
+    "=PptxBottomAnchorKeepsDescendersInsideFixedLineSpacingClip",
     "PptxManualBreaksKeepAnchoredTextboxContent",
     "PptxManualBreaksKeepAnchoredTableContent",
     "PptxManualBreaksKeepBlankAndSplitRunFrames",
