@@ -94,7 +94,7 @@ internal sealed partial class PptxSceneBuilder
 
     private static bool IsUnsupportedColorAlpha(XElement color, ref XElement? lastSupportedGradient)
     {
-        if (PptxColorResolver.ReadAlpha(color) >= 1d)
+        if (PptxColorResolver.ReadAlpha(color) >= 1d || !IsVisibleDrawingContent(color))
         {
             return false;
         }

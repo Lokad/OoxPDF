@@ -134,7 +134,7 @@ internal sealed partial class PptxRenderer
         XElement? backgroundReference = slideXml.Root?.Element(PresentationNamespace + "cSld")?
             .Element(PresentationNamespace + "bg")?.Element(PresentationNamespace + "bgRef");
         if (PptxSceneBuilder.HasUnsupportedAlpha(slideXml, color =>
-            (backgroundReference is null || !ReferenceEquals(color.Parent, backgroundReference)) && IsVisibleNonShapeColor(color)))
+            (backgroundReference is null || !ReferenceEquals(color.Parent, backgroundReference)) && IsNonShapeColor(color)))
             Emit("PPTX_UNSUPPORTED_TRANSPARENCY", "transparency");
 
         IEnumerable<XElement> VisibleSlideElements(XName name) =>
@@ -465,8 +465,7 @@ internal sealed partial class PptxRenderer
         return false;
     }
 
-    private static bool IsVisibleNonShapeColor(XElement color) =>
-        PptxSceneBuilder.IsVisibleDrawingContent(color) &&
+    private static bool IsNonShapeColor(XElement color) =>
         !color.Ancestors().Any(ancestor =>
             ancestor.Name == PresentationNamespace + "sp" ||
             ancestor.Name == PresentationNamespace + "cxnSp");

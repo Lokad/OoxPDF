@@ -154,10 +154,7 @@ internal sealed partial class PptxSceneBuilder
             return slideXml.Descendants(PresentationNamespace + "oleObj").Any(IsVisibleDrawingContent);
         }
 
-        bool HasSlideTiming(XDocument slideXml)
-        {
-            return slideXml.Descendants(PresentationNamespace + "timing").Any();
-        }
+        bool HasSlideTiming(XDocument slideXml) => slideXml.Root?.Element(PresentationNamespace + "timing") is not null;
 
         // Both owners must allow master artwork. PowerPoint keeps a layout's
         // suppression even when the slide explicitly allows it; absent means show.
@@ -167,10 +164,7 @@ internal sealed partial class PptxSceneBuilder
                 !OoxBoolean.IsOff((string?)layoutXml?.Root?.Attribute("showMasterSp"));
         }
 
-        bool HasSlideTransition(XDocument slideXml)
-        {
-            return slideXml.Descendants(PresentationNamespace + "transition").Any();
-        }
+        bool HasSlideTransition(XDocument slideXml) => slideXml.Root?.Element(PresentationNamespace + "transition") is not null;
     }
 
     private static PptxColorMap ReadMasterColorMap(XDocument? xml)
@@ -360,8 +354,11 @@ internal sealed partial class PptxSceneBuilder
             .Any(uri => uri?.Contains("drawingml/2006/diagram", StringComparison.OrdinalIgnoreCase) == true);
     }
 
+    // Raw diagnostic scans can encounter drawing markup copied into extensions.
     internal static bool IsVisibleDrawingContent(XElement element) =>
-        !element.AncestorsAndSelf().Any(owner => IsHiddenNonVisualProperties(ReadNonVisualProperties(owner)));
+        !element.AncestorsAndSelf().Any(owner =>
+            owner.Name == PresentationNamespace + "extLst" || owner.Name == DrawingNamespace + "extLst" ||
+            IsHiddenNonVisualProperties(ReadNonVisualProperties(owner)));
 
     private static bool IsHiddenNonVisualProperties(XElement? properties) =>
         properties is not null && OoxXml.ReadBool(properties, "hidden");
@@ -490,14 +487,14 @@ internal sealed partial class PptxSceneBuilder
 
         bool HasPictureAudio()
         {
-            return picture.Descendants(PresentationNamespace + "audio").Any() ||
-                picture.Descendants(DrawingNamespace + "audioFile").Any();
+            return picture.Descendants(PresentationNamespace + "audio").Any(IsVisibleDrawingContent) ||
+                picture.Descendants(DrawingNamespace + "audioFile").Any(IsVisibleDrawingContent);
         }
 
         bool HasPictureVideo()
         {
-            return picture.Descendants(PresentationNamespace + "video").Any() ||
-                picture.Descendants(DrawingNamespace + "videoFile").Any();
+            return picture.Descendants(PresentationNamespace + "video").Any(IsVisibleDrawingContent) ||
+                picture.Descendants(DrawingNamespace + "videoFile").Any(IsVisibleDrawingContent);
         }
     }
 }

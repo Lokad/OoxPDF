@@ -54,6 +54,41 @@ internal static class PptxVisibleDiagnosticTests
         TestAssert.True(result.Diagnostics.All(item => item.Id != "PPTX_UNSUPPORTED_VIDEO"), "The unrelated hidden video remains excluded.");
     }
 
+    public static void PptxExtensionPayloadKeepsOrdinaryPaintAndDiagnostics()
+    {
+        const string slidePart = "ppt/slides/slide1.xml";
+        var parts = Parts("video", "0", false);
+        var source = XDocument.Parse(System.Text.Encoding.UTF8.GetString(parts[slidePart]));
+        var root = source.Root!;
+        var tree = root.Element(P + "cSld")!.Element(P + "spTree")!;
+        var picture = tree.Element(P + "pic")!;
+        var media = picture.Descendants(A + "videoFile").Single();
+        var mediaOwner = media.Parent!;
+        var active = Convert(parts);
+        TestAssert.True(active.Diagnostics.Any(item => item.Id == "PPTX_UNSUPPORTED_VIDEO"), "A visible picture retains its video warning.");
+        media.Remove();
+        parts[slidePart] = TestFixtures.Utf8(source.ToString());
+        var baseline = Convert(parts);
+        TestAssert.Equal(0, baseline.Diagnostics.Count);
+        TestAssert.True(active.Pdf.AsSpan().SequenceEqual(baseline.Pdf), "The same static poster survives without the active media declaration.");
+
+        mediaOwner.Add(Extension(P, media));
+        root.Add(Extension(P, new XElement(P + "transition"), new XElement(P + "timing"), new XElement(P + "oleObj"),
+            new XElement(A + "audioFile"), new XElement(A + "gradFill"),
+            new XElement(A + "pattFill", new XAttribute("prst", "pct5")), new XElement(A + "bodyPr", new XAttribute("vertOverflow", "ellipsis"))));
+        tree.Element(P + "sp")!.Element(P + "spPr")!.Add(Extension(A,
+            new XElement(A + "solidFill", new XElement(A + "srgbClr", new XAttribute("val", "CC0033"),
+                new XElement(A + "alpha", new XAttribute("val", "40000"))))));
+        parts[slidePart] = TestFixtures.Utf8(source.ToString());
+        var result = Convert(parts);
+        TestAssert.Equal(0, result.Diagnostics.Count);
+        TestAssert.True(baseline.Pdf.AsSpan().SequenceEqual(result.Pdf), "Extension markup leaves the visible words and static poster intact.");
+
+        static XElement Extension(XNamespace ns, params XElement[] contents) =>
+            new(ns + "extLst", new XElement(ns + "ext", new XAttribute("uri", "{5D154C70-1063-4818-8DFE-C915C125A6AD}"),
+                new XElement(XName.Get("data", "urn:ooxpdf:test"), contents)));
+    }
+
     public static void PptxVisibleDiagnosticsCancelBeforeAtomicPublication()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", Parts("video", "false", false));
