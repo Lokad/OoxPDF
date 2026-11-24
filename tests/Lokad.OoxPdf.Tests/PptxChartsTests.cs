@@ -2739,7 +2739,7 @@ internal static partial class PptxChartsTests
         });
 
         using var output = new MemoryStream();
-        OoxPdfConverter.Convert(input, output, options: null);
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { InputKind = OoxPdfInputKind.Pptx });
 
         var strokes = Regex.Matches(Encoding.ASCII.GetString(output.ToArray()),
                 @"(?<x1>[0-9.]+) (?<y1>[0-9.]+) m (?<x2>[0-9.]+) (?<y2>[0-9.]+) l S")
