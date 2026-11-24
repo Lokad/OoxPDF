@@ -19,7 +19,7 @@ fallbacks, but visible content and geometry must also be checked independently.
 
 | Area | Supported surface | Important limits |
 |---|---|---|
-| Text | Paragraph/run styles, common formatting, tabs, Latin wrapping, alignment, spacing, lists and supported fonts | General complex-script shaping and full Word typography are not provided. |
+| Text | Paragraph/run styles, common formatting, tabs, Latin wrapping, alignment, spacing, lists and supported fonts | Bar tab decorations and general complex-script shaping are unsupported. Word typography remains approximate. |
 | Lists | Decimal/padded decimal, Roman 1–3999, Latin letters, referenced-level formats, overrides and legal decimal references | Unknown formats use decimal fallback; locale alphabets and custom `lvlRestart` policies are unqualified. |
 | Pagination | Page/column breaks, section frames, supported keep/widow rules, repeated table headers and page fields | Column section starts can share a page when their frames and page-level ownership agree. Other mixed sections, oversized/fragmented content and complex page ownership retain restrictions. |
 | Tables | Fixed grids, supported widths, merges, borders, padding, vertical alignment, nested tables and mixed cell content. Eligible automatic-height plain-text rows can continue at whole-line boundaries. | Automatic sizing is approximate. Explicit widths can extend past the page edge and be cropped. Exact heights keep their clips, and complex rows have limited fragmentation. |

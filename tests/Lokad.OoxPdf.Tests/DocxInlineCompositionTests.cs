@@ -1694,6 +1694,41 @@ internal static partial class DocxInlineCompositionTests
         CheckTabOffsets(null);
     }
 
+    public static void DocxInlineCompositionLeftTabsIgnoreDecorativeAndUnconsumedStops()
+    {
+        var fonts = new PortableRenderingTests.PinnedResolver(mathFont: true);
+        foreach (string owner in new[] { "body", "cell", "header", "footer" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            string? part = owner is "header" or "footer" ? $"word/math-tabs-{owner}.xml" : null;
+            var geometry = mode == OoxPdfDocxMarkupMode.AllMarkup
+                ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout;
+            var renderer = new DocxRenderer(fonts, mode, geometry);
+            var expected = Render(null);
+            string text = string.Concat(expected.Pages.Select(DocxPageFootnoteNumberingTests.DecodeText))
+                .Normalize(NormalizationForm.FormKC);
+            TestAssert.Equal(2, text.Split("ratetime", StringSplitOptions.None).Length - 1);
+            foreach (var (kind, position) in new[] { ("bar", "360"), ("num", "4320") })
+            {
+                var actual = Render((document, w, _) => document.Descendants(w + "tabs").Single().Add(
+                    new XElement(w + "tab", new XAttribute(w + "val", kind), new XAttribute(w + "pos", position))));
+                TestAssert.True(expected.Pages.Select(page => page.Content).SequenceEqual(actual.Pages.Select(page => page.Content)),
+                    $"The {kind} stop does not own a tab. Both fractions and their surrounding paint stay in place in {owner}/{mode}.");
+                TestAssert.True(expected.Diagnostics.SequenceEqual(actual.Diagnostics),
+                    "The additional stop keeps the original equation diagnostics.");
+            }
+
+            (PdfPage[] Pages, List<OoxPdfDiagnostic> Diagnostics) Render(Action<XDocument, XNamespace, XNamespace>? change)
+            {
+                var diagnostics = new List<OoxPdfDiagnostic>();
+                var document = ReadMutation($"CompositionProbes/math-tabs-left72-{owner}", mode, false, false,
+                    change, partOverride: part, diagnosticSink: diagnostics.Add);
+                var pages = renderer.RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
+                return (pages, diagnostics);
+            }
+        }
+    }
+
     internal static void CheckTabOffsets(Lokad.OoxPdf.Fonts.IFontResolver? resolver, string referenceFile = "math-tabs-office-offsets.json")
     {
         string cases = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes"));
@@ -1749,7 +1784,8 @@ internal static partial class DocxInlineCompositionTests
                 if (fragment.Source is DocxInlineTab) TestAssert.Equal(++stopIndex * 108d * scale, advance);
             }
             foreach (var unused in new[] { new DocxTabStop(720d, null, "decimal", null), new(720d, null, "left", "dot"),
-                new(-36d, null, "decimal", null), new(720d, null, "clear", "dot") })
+                new(-36d, null, "decimal", null), new(720d, null, "clear", "dot"), new(72d, null, "bar", null),
+                new(720d, null, "num", null), new(720d, null, "unknown", null) })
             {
                 var changed = explicitStops with { TabStops = explicitStops.TabStops.Append(unused).ToArray() };
                 TestAssert.True(Measure(changed, 300d, scale, out var unchanged), "An unconsumed positioning stop cannot discard supported inline content.");
@@ -1771,9 +1807,10 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.Equal(2, rows.SelectMany(line => line.Fragments).Count(fragment => fragment.Math is not null));
         }
         foreach (var stop in new[] { new DocxTabStop(720d, null, "right", null), new(720d, null, "center", null),
-            new(720d, null, "decimal", null), new(72d, null, "bar", null), new(72d, null, "left", "dot") })
+            new(720d, null, "decimal", null), new(72d, null, "num", null), new(72d, null, "unknown", null),
+            new(72d, null, "left", "dot") })
             TestAssert.True(!Measure(paragraph with { TabStops = [stop] }, 300d, 1d, out _),
-                "Out-of-frame aligned fields, bar stops and leaders retain explicit fallback.");
+                "Out-of-frame aligned fields and selected unsupported stops retain explicit fallback.");
         TestAssert.True(!Measure(paragraph with { TabStops = [new(400d, null, "left", null)] }, 100d, 1d, out _), "An out-of-frame stop retains fallback.");
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();

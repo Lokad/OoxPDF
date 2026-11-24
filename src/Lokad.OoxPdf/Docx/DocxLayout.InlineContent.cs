@@ -325,10 +325,6 @@ internal sealed partial class DocxLayoutEngine
             items ??= DocxInlineContent.FromPrefix(paragraph.Runs, paragraph.Images, token);
         }
         bool hasTabs = items.Any(item => item is DocxInlineTab tab && !tab.Run.EffectiveProperties.Hidden);
-        // Bars can draw without consuming a tab, and unknown kinds have no
-        // placement contract. Positioning stops are checked when consumed.
-        if (hasTabs && paragraph.TabStops.Any(stop => stop.Kind is
-            DocxTabStopKind.Bar or DocxTabStopKind.Numbering or DocxTabStopKind.Unknown)) return false;
         if (!double.IsFinite(scale) || scale <= 0d) return false;
         if (DocxPlainBodyFrame.HasFixedLineFlow(paragraph))
         {
@@ -739,8 +735,10 @@ internal sealed partial class DocxLayoutEngine
             if (Atom(index).Source is DocxInlineTab)
             {
                 double defaultStop = defaultTabStopPoints * scale;
+                // Resolve only positioning stops. Bar stops are decorative, and
+                // an unused stop cannot affect admission of this inline content.
                 var tabStop = ResolveNextTabStop(advance, tabStops, defaultStop);
-                if (!SupportsTabLeader(tabStop.LeaderValue)) return false;
+                if (!SupportsOrderedTabStop(tabStop)) return false;
                 double available = output.Count == 0 ? firstWidth : nextWidth;
                 if (!TryPlaceTab(tabStop, index + 1, advance, available, out double start))
                 {
@@ -748,7 +746,7 @@ internal sealed partial class DocxLayoutEngine
                     // The cursor resumes at the tab. Resolve it from the start
                     // of the next line just as a resumed layout would.
                     var nextStop = ResolveNextTabStop(0d, tabStops, defaultStop);
-                    if (!SupportsTabLeader(nextStop.LeaderValue) ||
+                    if (!SupportsOrderedTabStop(nextStop) ||
                         !TryPlaceTab(nextStop, index + 1, 0d, nextWidth, out start)) return false;
                     Flush(new(index));
                     if (stopAfterFirstLine) { lines = output; return true; }
@@ -890,6 +888,10 @@ internal sealed partial class DocxLayoutEngine
             }
         }
         lines = output; return true;
+
+        static bool SupportsOrderedTabStop(DocxResolvedTabStop stop) =>
+            (stop.Kind is DocxTabStopKind.Left or DocxTabStopKind.Center or DocxTabStopKind.Right or DocxTabStopKind.Decimal) &&
+            SupportsTabLeader(stop.LeaderValue);
 
         bool TryPlaceTab(DocxResolvedTabStop stop, int fieldIndex, double lineAdvance, double available, out double start)
         {
