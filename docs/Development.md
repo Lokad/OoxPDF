@@ -158,8 +158,9 @@ missing results separately from unresolved field behavior.
 
 Portfolio joins check the selected modes and content
 expectations against the pinned text operations and verify the diagnostic
-sidecars. Reinspect existing PDFs with `-ReuseCandidateDirectory` when a join
-reports changed expectations or a missing text-inspection hash. Numerical visual limits live in
+sidecars. Font and graphics summaries stay with the source inspection in
+`JoinedFrom.RunDirectory`. Reinspect existing PDFs with `-ReuseCandidateDirectory`
+when a join reports changed expectations or a missing text-inspection hash. Numerical visual limits live in
 `tools/CompositionDocxThresholds.json` and `tools/CompositionPptxThresholds.json`.
 Comparisons check page counts and raster dimensions at the selected resolution. Reports record the limit
 file identities and apply current limits to reused pixel metrics. Null recall on

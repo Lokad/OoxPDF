@@ -1,5 +1,5 @@
-# Join already measured outcomes; copy only independent PDFs/logs/inspection summaries.
-# Raster and comparison evidence stays at its original path and is reused by Compare.
+# Join measured outcomes with independent PDFs, diagnostics, logs and text operations.
+# Auxiliary inspections, rasters and comparisons stay with their source run.
 [CmdletBinding()]
 param(
     [Parameter(Mandatory=$true)] [string[]] $SourceDirectory,
@@ -26,8 +26,7 @@ $jobs = [ordered]@{}
 $runtime = $null
 $loadedAudits = @{}
 $audit = if ($ContentAuditPath) { Read-PortfolioContentAudit $ContentAuditPath $loadedAudits }
-$files = @('candidate.pdf','diagnostics.json','convert.log','inspect.log',
-    'inspect/font-resources.json','inspect/graphics-operations.json','inspect/text-operations.json')
+$files = @('candidate.pdf','diagnostics.json','convert.log','inspect.log','inspect/text-operations.json')
 foreach ($directory in $SourceDirectory) {
     $source = (Resolve-Path -LiteralPath $directory).Path
     $reportPath = Join-Path $source 'outcomes.json'
@@ -134,4 +133,4 @@ foreach ($key in $jobs.Keys) {
     MeasurementScope='Joined prior measured outcomes. Summary severity derives from verified content observations. No new conversion or visual pass.'
     Rows=$rows
 } | ConvertTo-Json -Depth 18 | Set-Content -LiteralPath (Join-Path $output 'outcomes.json') -Encoding utf8
-Write-Output "$($rows.Count) outcomes joined with independent PDFs/summaries; no build, conversion, raster or comparison replay."
+Write-Output "$($rows.Count) outcomes joined with independent PDFs, diagnostics, logs and text operations."

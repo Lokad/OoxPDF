@@ -53,7 +53,7 @@ validation tools, including the PDFium rasterizer, remain outside the library.
 - Its `-FastGroup` option adds fast groups to a capability union once per method; capability skips stay strict, and group-only environment skips remain reported.
 - The console owns test scratch. The wrapper removes its empty temporary directory after a passing gate and keeps retained scratch.
 - `tools/JoinQualificationTestReports.ps1`: join reviewed harness repairs from a manifest after checking unchanged production source, runtime assets, public inputs and complete exact-test coverage; retain failed attempts.
-- `tools/JoinCompositionPortfolio.ps1`: join measured outcomes from one runtime using a manifest; copy independent PDFs/inspection summaries and reuse source comparisons instead of copying raster/diff trees.
+- `tools/JoinCompositionPortfolio.ps1`: join measured outcomes from one runtime. Copy PDFs, diagnostics, logs and pinned text operations. Reuse comparisons from the source runs.
 - `tools/SummarizeDocxTableCellGeometry.ps1`: supplement raw graphics gates with source-backed table-cell clip mapping and unresolved counts.
 - `tools/SummarizeDocxInlineFrameGeometry.py`: compare pinned math/prose origins, picture rectangles and textbox frames; retain per-axis residuals and Office thresholds (PyMuPDF validation only).
 - `tools/CheckVisualCase.ps1`: run a public visual case; `-CliPath <qualified.dll> -SkipBuild` reuses a frozen CLI without building.

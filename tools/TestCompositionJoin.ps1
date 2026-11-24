@@ -13,6 +13,10 @@ $cases |
     ConvertTo-Json | Set-Content -LiteralPath $manifest
 $sources = @()
 $rejections = @()
+$sourceOnlyReports = [ordered]@{
+    'inspect/font-resources.json' = '[{"PageNumber":87,"ResourceName":"F1"}]'
+    'inspect/graphics-operations.json' = '[{"PageNumber":87,"Operator":"f"}]'
+}
 foreach ($id in @('one','two')) {
     $source = Join-Path $root $id
     $run = Join-Path $source ($id+'-all-word-compatible')
@@ -20,6 +24,9 @@ foreach ($id in @('one','two')) {
     [IO.File]::WriteAllText((Join-Path $run 'candidate.pdf'), 'fake PDF '+$id)
     [IO.File]::WriteAllText((Join-Path $run 'inspect.log'), 'one page')
     [IO.File]::WriteAllText((Join-Path $run 'inspect/text-operations.json'), '[]')
+    foreach ($name in $sourceOnlyReports.Keys) {
+        [IO.File]::WriteAllText((Join-Path $run $name), $sourceOnlyReports[$name])
+    }
     [IO.File]::WriteAllText((Join-Path $run 'diagnostics.json'), '[]')
     [IO.File]::WriteAllText((Join-Path $run 'raster/page-001.png'), 'raster remains at its original path')
     [IO.File]::WriteAllText((Join-Path $run 'office-diff/metrics.json'), 'metrics remain at their original path')
@@ -55,6 +62,12 @@ try {
         if (Test-Path -LiteralPath (Join-Path $run 'raster')) { throw 'A raster tree was copied' }
         if (Test-Path -LiteralPath (Join-Path $run 'office-diff')) { throw 'A comparison tree was copied' }
         if (!$row.JoinedFrom.ReportSha256 -or $row.MissingExpectedText[0] -ne 'retained raw flag') { throw 'Provenance or original classification lost' }
+        foreach ($name in $sourceOnlyReports.Keys) {
+            if ((Test-Path -LiteralPath (Join-Path $run $name)) -or
+                [IO.File]::ReadAllText((Join-Path $row.JoinedFrom.RunDirectory $name)) -cne $sourceOnlyReports[$name]) {
+                throw 'Auxiliary inspection reports must remain with their source'
+            }
+        }
         if ($row.Severity -cne 'Content blocker') { throw 'Joined severity must follow the verified missing text' }
         if ($row.TextOperationsSha256 -cne (Get-FileHash (Join-Path $run 'inspect/text-operations.json')).Hash) {
             throw 'Joined text inspection is not pinned'
