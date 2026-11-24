@@ -26,22 +26,18 @@ internal static class PptxPlaceholderMatcher
             CultureInfo.InvariantCulture, out uint numericIndex);
         foreach (XDocument source in placeholderSources)
         {
-            XElement[] candidates = source.Descendants(PresentationNamespace + "sp").ToArray();
-            XElement? match = FindMatchingPlaceholderShape(candidates);
-            if (match is not null)
-            {
+            if (PptxSceneBuilder.GetShapeTree(source) is { } tree && FindMatchingPlaceholderShape(tree) is { } match)
                 matches.Add(match);
-            }
         }
 
         return matches;
 
-        XElement? FindMatchingPlaceholderShape(IReadOnlyList<XElement> candidates)
+        XElement? FindMatchingPlaceholderShape(XElement tree)
         {
             XElement? indexMatch = null;
             XElement? typeMatch = null;
             string normalizedType = NormalizePlaceholderType(type);
-            foreach (XElement candidate in candidates)
+            foreach (XElement candidate in EnumerateShapes(tree))
             {
                 XElement? candidatePlaceholder = candidate
                     .Element(PresentationNamespace + "nvSpPr")
@@ -78,6 +74,22 @@ internal static class PptxPlaceholderMatcher
             }
 
             return indexMatch ?? typeMatch;
+        }
+    }
+
+    // Template placeholders can provide defaults even when their own paint is
+    // suppressed. Walk drawing groups without entering unrelated markup.
+    private static IEnumerable<XElement> EnumerateShapes(XElement owner)
+    {
+        foreach (XElement element in owner.Elements())
+        {
+            if (element.Name == PresentationNamespace + "sp")
+                yield return element;
+            else if (element.Name == PresentationNamespace + "grpSp")
+            {
+                foreach (XElement shape in EnumerateShapes(element))
+                    yield return shape;
+            }
         }
     }
 

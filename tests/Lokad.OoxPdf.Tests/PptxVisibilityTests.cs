@@ -84,7 +84,8 @@ internal static class PptxVisibilityTests
                     var extensionShape = new XElement(shape);
                     extensionShape.Descendants(a + "t").Single().Value = "Extension text";
                     tree.Add(new XElement(p + "extLst", new XElement(p + "ext", new XAttribute("uri", "{5D154C70-1063-4818-8DFE-C915C125A6AD}"),
-                        new XElement(XName.Get("payload", "urn:ooxpdf:test"), extensionShape))));
+                        new XElement(XName.Get("payload", "urn:ooxpdf:test"), new XElement(extensionShape),
+                            new XElement(p + "spTree", extensionShape)))));
                     if (hidden && part == slidePart)
                         shape.AddFirst(new XElement(p + "nvSpPr",
                             new XElement(p + "cNvPr", new XAttribute("id", "9"), new XAttribute("name", "Hidden"), new XAttribute("hidden", "1")),

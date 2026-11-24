@@ -51,6 +51,17 @@ internal static partial class PptxInheritanceTests
                 TestAssert.Equal(0d, frame.FrameHeight);
                 TestAssert.True(!frame.UsesInheritedShapeBounds, "A complete direct zero-size frame retains its owner.");
             });
+
+        string master = PlaceholderShape("1", PlaceholderFrame(40));
+        string slide = PlaceholderShape("1", "", "INHERITED", link: true);
+        string layoutExtension = "<p:extLst><p:ext uri='{5D154C70-1063-4818-8DFE-C915C125A6AD}'>" +
+            "<case:payload xmlns:case='urn:ooxpdf:test'>" + PlaceholderShape("1", PlaceholderFrame(270)) +
+            "</case:payload></p:ext></p:extLst>";
+        PdfPage noLayoutMatch = RenderPlaceholderFrames(master, "", slide);
+        PdfPage extension = RenderPlaceholderFrames(master, layoutExtension, slide);
+        TestAssert.Equal(noLayoutMatch.Content, extension.Content);
+        TestAssert.Equal(noLayoutMatch.Annotations.Single(), extension.Annotations.Single());
+        TestAssert.Equal(40d, extension.Annotations.Single().X);
     }
 
     public static void PptxPlaceholderIndicesKeepNumericOwnersAndExplicitFallbacks()

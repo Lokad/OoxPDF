@@ -216,15 +216,14 @@ internal sealed partial class PptxSceneBuilder
         CancellationToken cancellationToken,
         XElement? defaultTextStyle)
     {
-        var nodes = new List<PptxSceneNode>();
-        foreach (XElement shapeTree in xml.Descendants(PresentationNamespace + "spTree"))
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            nodes.AddRange(ReadChildNodes(shapeTree, placeholderSources, theme, colorMap, package, relationships, cancellationToken, defaultTextStyle));
-        }
-
-        return nodes;
+        return GetShapeTree(xml) is { } shapeTree
+            ? ReadChildNodes(shapeTree, placeholderSources, theme, colorMap, package, relationships, cancellationToken, defaultTextStyle)
+            : [];
     }
+
+    // Each slide, layout or master owns its scene through common slide data.
+    internal static XElement? GetShapeTree(XDocument source) =>
+        source.Root?.Element(PresentationNamespace + "cSld")?.Element(PresentationNamespace + "spTree");
 
     private static PptxSceneBackground ReadBackground(XDocument? xml, PptxTheme theme, PptxColorMap colorMap)
     {
