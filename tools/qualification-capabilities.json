@@ -1499,6 +1499,7 @@
   ],
   "docx-section-start-ownership": [
     "=DocxPageSeparatedSectionStartsBindSharedStoriesAndPhysicalDestinations",
+    "=DocxIncomingNextPageKeepsPaperAndNumberingAfterContinuousSection",
     "=DocxParityStartsFollowInsertedEndnotePages",
     "=DocxParityStartsFollowInFlightFootnoteContinuations",
     "DocxNextColumnSectionStartsKeepTextInItsColumnAndPage",

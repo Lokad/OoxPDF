@@ -1369,7 +1369,13 @@ internal sealed partial class DocxLayoutEngine
                 {
                     following = FindSectionSettingsAtOrAfter(document.BodyElements, elementIndex + 1, sectionSettingsByElementIndex) ?? finalSectionSettings;
                     DocxSectionBreakType? followingType = DocxSectionBreakTypeExtensions.FromValue(following.SectionProperties.BreakTypeValue);
-                    if (followingType == DocxSectionBreakType.NextColumn || sectionBreak.TypeValue == DocxSectionBreakType.NextColumn)
+                    if (followingType is null or DocxSectionBreakType.NextPage)
+                    {
+                        // A page-separated section owns its start regardless
+                        // of whether the two sections could share a frame.
+                        boundaryType = followingType;
+                    }
+                    else if (followingType == DocxSectionBreakType.NextColumn || sectionBreak.TypeValue == DocxSectionBreakType.NextColumn)
                     {
                         boundaryType = followingType;
                         if (followingType == DocxSectionBreakType.NextColumn && useSourceSectionStarts &&
@@ -1387,9 +1393,7 @@ internal sealed partial class DocxLayoutEngine
                         // transition from a parity section retains page separation.
                         boundaryType = followingType is DocxSectionBreakType.Continuous ? null : followingType;
                     }
-                    else if (useSourceSectionStarts && page.ColumnFrames.Count == 1 &&
-                        (sectionBreak.TypeValue is null or DocxSectionBreakType.NextPage or DocxSectionBreakType.Continuous) &&
-                        (followingType is null or DocxSectionBreakType.NextPage or DocxSectionBreakType.Continuous))
+                    else if (useSourceSectionStarts && page.ColumnFrames.Count == 1)
                     {
                         DocxPageGeometry nextGeometry = ResolveSectionGeometry(document, following, reserveMarkupMargin,
                             retuneReserveToPrintScale, reservePrintScale, pages.Count + 1);

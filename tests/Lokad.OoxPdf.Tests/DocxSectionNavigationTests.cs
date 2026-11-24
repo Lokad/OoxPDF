@@ -99,11 +99,7 @@ internal static class DocxSectionNavigationTests
             first.Element(W + "type")!.SetAttributeValue(W + "val", outgoing);
             following.Element(W + "type")!.SetAttributeValue(W + "val", incoming);
             AddFooter(parts, first, "default", "PUBLIC PARITY FOOTER");
-            paragraphs[0].Add(new XElement(W + "hyperlink", new XAttribute(W + "anchor", "PublicParityTarget"),
-                new XElement(W + "r", new XElement(W + "t", "Follow"))));
-            paragraphs[1].AddFirst(new XElement(W + "bookmarkStart", new XAttribute(W + "id", "9"),
-                new XAttribute(W + "name", "PublicParityTarget")));
-            paragraphs[1].Add(new XElement(W + "bookmarkEnd", new XAttribute(W + "id", "9")));
+            LinkToSection(paragraphs[0], paragraphs[1], "PublicParityTarget");
             if (extraBodyPage)
             {
                 first.Remove();
@@ -129,6 +125,59 @@ internal static class DocxSectionNavigationTests
                 TestAssert.Equal(0, blank.Annotations.Count);
             }
         });
+    }
+
+    public static void DocxIncomingNextPageKeepsPaperAndNumberingAfterContinuousSection()
+    {
+        foreach (var mode in Modes)
+        foreach (bool explicitType in new[] { true, false })
+        WithMutation("two-title", (parts, xml) =>
+        {
+            var body = xml.Root!.Element(W + "body")!;
+            var paragraphs = body.Elements(W + "p").ToArray();
+            var first = paragraphs[0].Element(W + "pPr")!.Element(W + "sectPr")!;
+            var following = body.Element(W + "sectPr")!;
+            first.Element(W + "type")!.SetAttributeValue(W + "val", "continuous");
+            if (explicitType)
+                following.Element(W + "type")!.SetAttributeValue(W + "val", "nextPage");
+            else
+                following.Element(W + "type")!.Remove();
+            following.Element(W + "pgSz")!.SetAttributeValue(W + "w", "10800");
+            following.Add(new XElement(W + "pgNumType", new XAttribute(W + "start", "40")));
+            paragraphs[1].Add(RunText(" BODY PAGE "), Field("PAGE"), RunText(" END"));
+            LinkToSection(paragraphs[0], paragraphs[1], "PublicNextPageTarget");
+            following.AddFirst(new XElement(W + "footerReference", new XAttribute(W + "type", "first"),
+                new XAttribute(R + "id", "first-page-counter")));
+            AddStoryPart(parts, "first-page-counter", "footer",
+                new XElement(W + "ftr", new XElement(W + "p", RunText("FOOTER "), Field("PAGE"),
+                    RunText(" OF "), Field("NUMPAGES"))));
+        }, path =>
+        {
+            var pages = Renderer(mode).RenderPagesAsync(DocxTests.ReadDocx(path, mode), null, default)
+                .ToBlockingEnumerable().ToArray();
+            TestAssert.Equal(2, pages.Length);
+            TestAssert.Equal(612d, pages[0].Width);
+            TestAssert.Equal(540d, pages[1].Width);
+            TestAssert.Contains("FIRST SECTION DEFAULT", Text(pages[0]));
+            string following = Text(pages[1]);
+            TestAssert.Contains("SECOND SECTION FIRST", following);
+            TestAssert.Contains("BODY PAGE 40 END", following);
+            TestAssert.Contains("FOOTER 40 OF 2", following);
+            TestAssert.Equal(1, pages[0].Annotations.Single().Destination?.PageIndex);
+        });
+
+        static XElement RunText(string text) => new(W + "r",
+            new XElement(W + "t", new XAttribute(XNamespace.Xml + "space", "preserve"), text));
+        static XElement Field(string instruction) =>
+            new(W + "fldSimple", new XAttribute(W + "instr", instruction), RunText("900"));
+    }
+
+    private static void LinkToSection(XElement from, XElement to, string anchor)
+    {
+        from.Add(new XElement(W + "hyperlink", new XAttribute(W + "anchor", anchor),
+            new XElement(W + "r", new XElement(W + "t", "Follow"))));
+        to.AddFirst(new XElement(W + "bookmarkStart", new XAttribute(W + "id", "9"), new XAttribute(W + "name", anchor)));
+        to.Add(new XElement(W + "bookmarkEnd", new XAttribute(W + "id", "9")));
     }
 
     public static void DocxParagraphEndBookmarksFollowTheFinalWrappedPage()
