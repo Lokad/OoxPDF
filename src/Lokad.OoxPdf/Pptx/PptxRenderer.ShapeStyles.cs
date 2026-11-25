@@ -554,7 +554,7 @@ internal sealed partial class PptxRenderer
         public bool HasNumericStopOpacity { get; init; }
         public bool HasPositiveUniformGradientTransform { get; init; }
         public int IgnoredStopOpacityCount { get; init; }
-        public SvgGradientStop? ConstantStop => HasNumericStopOpacity && Stops.Count == 1 ? Stops[0] : null;
+        public SvgGradientStop? ConstantStop { get; init; }
     }
 
     private readonly record struct SvgGradientStop(double Offset, RgbColor Color, double? Opacity = 1d);

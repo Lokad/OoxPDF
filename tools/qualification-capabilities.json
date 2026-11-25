@@ -690,6 +690,7 @@
     "=SvgPercentageOpacityMatchesUnitOpacityInBothFormats",
     "=SvgConstantLinearGradientsMatchSolidPaintInBothFormats",
     "=SvgSingleStopRadialGradientsMatchSolidPaintInBothFormats",
+    "=SvgZeroRadiusRadialGradientsKeepLastStopPaint",
     "=SvgQuotedLocalPaintServersMatchUnquotedReferencesInBothFormats",
     "=SvgEncodedLocalFragmentsKeepGradientPaintAndFallbacks",
     "=SvgDecreasingStopsKeepNativePaintAndOpacityInBothFormats",

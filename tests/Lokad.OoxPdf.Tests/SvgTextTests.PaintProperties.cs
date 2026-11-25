@@ -402,6 +402,31 @@ internal static partial class SvgTextTests
         AssertSvgPaintInBothFormats(expected, actual, "0 0 1 rg", "0 0.502 0 rg", "0 0 1 RG");
     }
 
+    public static void SvgZeroRadiusRadialGradientsKeepLastStopPaint()
+    {
+        string Picture(string fill, string boundsStroke, string flatStroke, string userStroke) => Svg($"""
+            <defs>
+              <radialGradient id="base" r="0%">
+                <stop offset=".2" stop-color="red" stop-opacity=".75"/>
+                <stop offset="1" stop-color="blue" stop-opacity=".5"/>
+              </radialGradient>
+              <radialGradient id="bounds" href="#base"/>
+              <radialGradient id="user" href="#base" gradientUnits="userSpaceOnUse"/>
+            </defs>
+            <rect width="400" height="160" fill="yellow"/>
+            <rect x="20" y="20" width="60" height="60" {fill}/>
+            <path d="M105 20 L165 20 L165 80" fill="none" stroke-width="8" {boundsStroke}/>
+            <path d="M190 20 L250 20" transform="rotate(10 190 20)" fill="none" stroke-width="8" {flatStroke}/>
+            <path d="M275 20 L335 20" fill="none" stroke-width="8" {userStroke}/>
+            """);
+        string plainStroke = """stroke="blue" stroke-opacity=".4" """;
+        string boxStroke = """stroke="url(#bounds)" stroke-opacity=".8" """;
+        string expected = Picture("""fill="blue" fill-opacity=".4" """, plainStroke, """stroke="none" """, plainStroke);
+        string actual = Picture("""fill="url(#bounds)" fill-opacity=".8" """, boxStroke, boxStroke,
+            """stroke="url(#user)" stroke-opacity=".8" """);
+        AssertSvgPaintInBothFormats(expected, actual, "0 0 1 rg", "0 0 1 RG");
+    }
+
     public static void SvgQuotedLocalPaintServersMatchUnquotedReferencesInBothFormats()
     {
         string Picture(string linear, string stroke, string radial, string missing) => Svg($"""

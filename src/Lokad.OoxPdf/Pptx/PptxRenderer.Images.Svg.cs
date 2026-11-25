@@ -271,8 +271,22 @@ internal sealed partial class PptxRenderer
                 allowGradientStroke, elementOpacity, strokePercentageBasis, out SvgStrokeFailure strokeFailure,
                 out bool invalidStrokePresentation, out bool hasVectorEffect, out bool nonScalingStroke);
 
-            (IReadOnlyList<SvgPathCommand> pathCommands, bool completePath) =
-                hasFill || stroke.HasPaint ? ReadTransformedSvgPath(data, transform) : ([], false);
+            IReadOnlyList<SvgPathCommand> pathCommands = [];
+            bool completePath = false;
+            if (hasFill || stroke.HasPaint)
+            {
+                var (sourcePath, complete) = ParseSvgPathData(data);
+                // Object-bounding-box paint needs two source dimensions even
+                // when the paint server reduces to a solid color.
+                if (stroke.RequiresObjectBounds && complete &&
+                    TryReadSvgPathBounds(sourcePath, out SvgPathBounds objectBounds, out _) &&
+                    (objectBounds.MinX == objectBounds.MaxX || objectBounds.MinY == objectBounds.MaxY))
+                {
+                    stroke = default;
+                }
+                completePath = complete;
+                pathCommands = TransformSvgCommands(sourcePath, transform);
+            }
             if ((hasFill || fillFailure != SvgFillFailure.None) && completePath && !SvgPathMayHaveInterior(pathCommands))
             {
                 hasFill = false;
@@ -1663,7 +1677,7 @@ internal sealed partial class PptxRenderer
         return false;
     }
 
-    private readonly record struct SvgStroke(RgbColor? Color, double Width, double Opacity, int LineCap, int LineJoin, double[]? DashPattern, double DashOffset, double MiterLimit, SvgGradient? Gradient = null, string? GradientId = null)
+    private readonly record struct SvgStroke(RgbColor? Color, double Width, double Opacity, int LineCap, int LineJoin, double[]? DashPattern, double DashOffset, double MiterLimit, SvgGradient? Gradient, string? GradientId, bool RequiresObjectBounds)
     {
         public bool HasPaint => Color is not null || Gradient is not null;
     }
@@ -1711,15 +1725,16 @@ internal sealed partial class PptxRenderer
         if (strokePaint.Equals("none", StringComparison.OrdinalIgnoreCase)) return default;
         SvgGradient? strokeGradient = null;
         RgbColor? color = null;
+        bool requiresObjectBounds = false;
         if (gradientId is not null)
         {
             SvgGradient? gradient = gradients.GetValueOrDefault(gradientId);
-            SvgGradientStop? constant = gradient is null
-                ? radialGradients.GetValueOrDefault(gradientId)?.ConstantStop : gradient.ConstantStop;
-            if (constant is { Opacity: double stopOpacity } stop)
+            SvgRadialGradient? radial = gradient is null ? radialGradients.GetValueOrDefault(gradientId) : null;
+            if ((gradient?.ConstantStop ?? radial?.ConstantStop) is { Opacity: double stopOpacity } stop)
             {
                 color = stop.Color;
                 opacity *= stopOpacity;
+                requiresObjectBounds = gradient is { IsUserSpace: false } || radial is { IsUserSpace: false };
                 gradientId = null;
             }
             else
@@ -1763,7 +1778,8 @@ internal sealed partial class PptxRenderer
             invalidPresentation = true;
             miterLimit = 4d;
         }
-        return new SvgStroke(color, width, opacity, lineCap, lineJoin, dash, offset, miterLimit, strokeGradient, gradientId);
+        return new SvgStroke(color, width, opacity, lineCap, lineJoin, dash, offset, miterLimit, strokeGradient, gradientId,
+            requiresObjectBounds);
     }
 
     private static IEnumerable<XNode> EnumerateSvgContent(XElement root, CancellationToken cancellationToken)
@@ -2287,7 +2303,7 @@ internal sealed partial class PptxRenderer
             || !definition.Radius.TryResolve((diagonal ?? 1d) / 2d, diagonal, out double radius)
             || !definition.Fx.TryResolve(cx, width, out double fx)
             || !definition.Fy.TryResolve(cy, height, out double fy)
-            || radius <= 0d)
+            || radius < 0d || radius == 0d && !ramp.HasNumericOpacity)
         {
             return null;
         }
@@ -2311,7 +2327,8 @@ internal sealed partial class PptxRenderer
             UniformStopOpacity = ramp.UniformOpacity,
             HasNumericStopOpacity = ramp.HasNumericOpacity,
             HasPositiveUniformGradientTransform = uniformGradientScale,
-            IgnoredStopOpacityCount = ramp.IgnoredOpacityCount
+            IgnoredStopOpacityCount = ramp.IgnoredOpacityCount,
+            ConstantStop = ramp.HasNumericOpacity && (radius == 0d || ramp.Stops.Length == 1) ? ramp.Stops[^1] : null
         };
     }
     private static bool TryRenderSvgRadialGradientPath(PdfGraphicsBuilder graphics, IReadOnlyList<SvgPathCommand> commands, SvgRadialGradient radial, SvgTransform transform, bool evenOddFill, double opacity, SvgPathBounds pathBounds, double minX, double minY, double imageX, double imageY, double imageHeight, double scaleX, double scaleY, bool allowAlphaMask, out bool varyingAlphaAdmitted, Action<int> admitSamples, CancellationToken cancellationToken)
@@ -2497,12 +2514,6 @@ internal sealed partial class PptxRenderer
     }
 
     private readonly record struct SvgPathCommand(char Kind, double[] Arguments);
-
-    private static (List<SvgPathCommand> Commands, bool Complete) ReadTransformedSvgPath(string data, SvgTransform transform)
-    {
-        var (commands, complete) = ParseSvgPathData(data);
-        return (TransformSvgCommands(commands, transform), complete);
-    }
 
     private static bool SvgPathMayHaveInterior(IReadOnlyList<SvgPathCommand> commands)
     {
