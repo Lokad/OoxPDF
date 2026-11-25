@@ -421,6 +421,29 @@ internal static partial class SvgTextTests
         AssertSvgPaintInBothFormats(expected, actual, "/PatternType 2", "/ShadingType 3", "0 0.502 0 rg", LabelColor);
     }
 
+    public static void SvgEncodedLocalFragmentsKeepGradientPaintAndFallbacks()
+    {
+        string Picture(string fill, string stroke, string template, string missing, string percentId) => Svg($"""
+            <defs>
+              <linearGradient id="red"><stop stop-color="red"/></linearGradient>
+              <linearGradient id="café"><stop stop-color="blue"/></linearGradient>
+              <linearGradient id="template"><stop stop-color="yellow"/></linearGradient>
+              <linearGradient id="linked" href="{template}"/>
+              <linearGradient id="tag%61"><stop stop-color="lime"/></linearGradient>
+              <linearGradient id="taga"><stop stop-color="orange"/></linearGradient>
+            </defs>
+            <rect x="10" y="20" width="40" height="50" fill="{fill} green"/>
+            <path d="M 60 25 L 100 45" fill="none" stroke="{stroke} orange" stroke-width="6"/>
+            <rect x="110" y="20" width="40" height="50" fill="url(#linked) purple"/>
+            <rect x="160" y="20" width="40" height="50" fill="{percentId}"/>
+            <text x="20" y="130" font-size="36" fill="{missing} #112233">I</text>
+            """);
+
+        string expected = Picture("url(#red)", "url(#café)", "#template", "url(#missing)", "lime");
+        string actual = Picture("url('#r%65d')", "url(#caf%C3%A9)", "#tem%70late", "url(#mi%73sing)", "url(#tag%2561) black");
+        AssertSvgPaintInBothFormats(expected, actual, "1 0 0 rg", "0 0 1 RG", "1 1 0 rg", "0 1 0 rg", LabelColor);
+    }
+
     public static void SvgDecreasingStopsKeepNativePaintAndOpacityInBothFormats()
     {
         string Picture(string last) => Svg($"""

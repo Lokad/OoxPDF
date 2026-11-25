@@ -692,6 +692,7 @@
     "=SvgConstantLinearGradientsMatchSolidPaintInBothFormats",
     "=SvgSingleStopRadialGradientsMatchSolidPaintInBothFormats",
     "=SvgQuotedLocalPaintServersMatchUnquotedReferencesInBothFormats",
+    "=SvgEncodedLocalFragmentsKeepGradientPaintAndFallbacks",
     "=SvgDecreasingStopsKeepNativePaintAndOpacityInBothFormats",
     "=SvgGradientTemplatesMatchExpandedPaintInBothFormats",
     "=SvgOpaqueRgbMatchesHexPaintInBothFormats",

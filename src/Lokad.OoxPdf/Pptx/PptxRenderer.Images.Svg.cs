@@ -1271,7 +1271,9 @@ internal sealed partial class PptxRenderer
             chain.Add(current);
             string? href = ((string?)current.Attribute("href") ??
                 (string?)current.Attribute(XName.Get("href", "http://www.w3.org/1999/xlink")))?.Trim();
-            current = href is { Length: > 1 } && href[0] == '#' ? byId.GetValueOrDefault(href[1..]) : null;
+            current = href is { Length: > 1 } && href[0] == '#'
+                ? byId.GetValueOrDefault(DecodeSvgFragmentId(href[1..]))
+                : null;
         }
 
         int index = chain.Count - 1;
@@ -1819,17 +1821,20 @@ internal sealed partial class PptxRenderer
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex SvgLocalPaintServerRegex();
 
+    // Decode the identifier after admitting a fragment-only reference.
+    private static string DecodeSvgFragmentId(string id) => id.Contains('%') ? Uri.UnescapeDataString(id) : id;
+
     private static string ResolveSvgPaintFallback(XElement element, IReadOnlyDictionary<string, string> style,
         string paint, Lazy<HashSet<string>> paintServerIds, out string? gradientId)
     {
         gradientId = null;
         if (!paint.AsSpan().TrimStart().StartsWith("url(", StringComparison.OrdinalIgnoreCase)) return paint;
         Match reference = SvgLocalPaintServerRegex().Match(paint);
-        gradientId = reference.Success ? reference.Groups["id"].Value : null;
+        gradientId = reference.Success ? DecodeSvgFragmentId(reference.Groups["id"].Value) : null;
         if (gradientId is null) return paint;
 
         ReadOnlySpan<char> suffix = paint.AsSpan(reference.Length);
-        if (suffix.IsEmpty || !char.IsWhiteSpace(suffix[0]) || gradientId.Contains('%')) return paint;
+        if (suffix.IsEmpty || !char.IsWhiteSpace(suffix[0])) return paint;
 
         // An absent or wrong-type target admits the authored fallback. A
         // declared paint server retains its existing paint and diagnostics.
