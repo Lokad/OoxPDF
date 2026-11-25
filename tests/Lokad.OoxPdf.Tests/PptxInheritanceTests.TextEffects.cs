@@ -1,6 +1,8 @@
 using System.Xml.Linq;
 using Lokad.OoxPdf.Pdf;
 
+using static Lokad.OoxPdf.Tests.PptxInheritanceFixture;
+
 namespace Lokad.OoxPdf.Tests;
 
 internal static partial class PptxInheritanceTests

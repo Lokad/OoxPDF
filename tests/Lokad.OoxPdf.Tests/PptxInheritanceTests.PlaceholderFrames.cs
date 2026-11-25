@@ -3,6 +3,8 @@ using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pdf;
 using Lokad.OoxPdf.Pptx;
 
+using static Lokad.OoxPdf.Tests.PptxInheritanceFixture;
+
 namespace Lokad.OoxPdf.Tests;
 
 internal static partial class PptxInheritanceTests

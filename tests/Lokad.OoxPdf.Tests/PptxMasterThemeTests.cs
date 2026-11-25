@@ -1,10 +1,7 @@
-using System.IO.Compression;
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using System.Xml.Linq;
-using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pptx;
+using static Lokad.OoxPdf.Tests.PptxInheritanceFixture;
 
 namespace Lokad.OoxPdf.Tests;
 
@@ -19,8 +16,8 @@ internal static class PptxMasterThemeTests
         foreach (var expected in gold.RootElement.GetProperty("Rows").EnumerateArray().Where(row => row.GetProperty("OfficeApp").GetString() == "PowerPoint"))
         {
             string path = Case(expected.GetProperty("File").GetString()!);
-            TestAssert.Equal(expected.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))));
-            WithDeck(Parts(path), (document, package) =>
+            var parts = ReadParts(path, TestAssert.NotNull(expected.GetProperty("InputSha256").GetString()));
+            WithDeck(parts, (document, package) =>
             {
                 var pages = new PptxRenderer(new PortableRenderingTests.PinnedResolver()).RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().ToArray();
                 TestAssert.Equal(2, pages.Length);
@@ -168,22 +165,6 @@ internal static class PptxMasterThemeTests
     }
 
     private static bool IsTheme(XElement element) => ((string?)element.Attribute("Type"))?.EndsWith("/theme", StringComparison.Ordinal) == true;
-    private static Dictionary<string, byte[]> Parts(string? path = null)
-    {
-        using var zip = ZipFile.OpenRead(path ?? Case("pptx-master-themes-distinct.pptx"));
-        return zip.Entries.ToDictionary(entry => entry.FullName, entry => { using var data = new MemoryStream(); using var stream = entry.Open(); stream.CopyTo(data); return data.ToArray(); });
-    }
-    private static void Edit(Dictionary<string, byte[]> parts, string name, Action<XDocument> edit)
-    {
-        var xml = XDocument.Parse(Encoding.UTF8.GetString(parts[name]));
-        edit(xml);
-        parts[name] = Encoding.UTF8.GetBytes(xml.ToString());
-    }
-    private static void WithDeck(Dictionary<string, byte[]> parts, Action<PptxDocument, OoxPackage> check)
-    {
-        using var stream = TestFixtures.CreateZipPackage(parts);
-        using var package = OoxPackage.Open(stream, default);
-        check(new PptxReader().Read(package, default), package);
-    }
+    private static Dictionary<string, byte[]> Parts() => ReadParts(Case("pptx-master-themes-distinct.pptx"));
     private static string Case(string name) => Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", name));
 }

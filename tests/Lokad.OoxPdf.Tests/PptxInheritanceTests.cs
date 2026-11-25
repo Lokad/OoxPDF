@@ -1,5 +1,3 @@
-using System.IO.Compression;
-using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -8,6 +6,7 @@ using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pdf;
 using Lokad.OoxPdf.Pptx;
+using static Lokad.OoxPdf.Tests.PptxInheritanceFixture;
 
 namespace Lokad.OoxPdf.Tests;
 
@@ -300,20 +299,7 @@ internal static partial class PptxInheritanceTests
         using var gold = JsonDocument.Parse(File.ReadAllText(Case("pptx-inheritance-office.json")));
         var row = gold.RootElement.GetProperty("Rows").EnumerateArray().Single(row => row.GetProperty("Id").GetString() == id);
         string path = Case(row.GetProperty("File").GetString()!);
-        TestAssert.Equal(row.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))));
-        using var zip = ZipFile.OpenRead(path);
-        return zip.Entries.ToDictionary(entry => entry.FullName, entry => { using var buffer = new MemoryStream(); using var input = entry.Open(); input.CopyTo(buffer); return buffer.ToArray(); });
-    }
-    private static void Edit(Dictionary<string, byte[]> parts, string name, Action<XDocument> edit)
-    {
-        var xml = XDocument.Parse(Encoding.UTF8.GetString(parts[name])); edit(xml);
-        parts[name] = Encoding.UTF8.GetBytes(xml.ToString());
-    }
-    private static void WithDeck(Dictionary<string, byte[]> parts, Action<PptxDocument, OoxPackage> check)
-    {
-        using var input = TestFixtures.CreateZipPackage(parts);
-        using var package = OoxPackage.Open(input, default);
-        check(new PptxReader().Read(package, default), package);
+        return ReadParts(path, TestAssert.NotNull(row.GetProperty("InputSha256").GetString()));
     }
     private static string Case(string name) => Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", name));
 }
