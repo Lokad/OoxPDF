@@ -759,23 +759,27 @@ internal static partial class SvgTextTests
         }
     }
 
-    public static void SvgRadialGradientResourcesPreserveTranslatedAndUniformlyScaledPaint()
+    public static void SvgRadialGradientTransformsPreservePaint()
     {
         foreach (bool boundingBox in new[] { false, true })
         {
             double shiftX = boundingBox ? 0.125d : 8d;
             double shiftY = boundingBox ? 0.25d : 6d;
-            string direct = Svg(Figure("left", 0, boundingBox, 1d, 0d, 0d) + Figure("right", 180, boundingBox, 1d, 0d, 0d));
-            string transformed = Svg(Figure("left", 0, boundingBox, 1d, shiftX, shiftY) +
-                Figure("right", 180, boundingBox, 2d, shiftX, shiftY));
-            AssertSvgPaintInBothFormats(direct, transformed, pdf =>
+            string direct = Svg(GradientFigure("left", 0, boundingBox, 1d, 0d, 0d) +
+                GradientFigure("right", 180, boundingBox, 1d, 0d, 0d));
+            string transformed = Svg(GradientFigure("left", 0, boundingBox, 1d, shiftX, shiftY) +
+                GradientFigure("right", 180, boundingBox, 2d, shiftX, shiftY));
+            string[] variants = boundingBox
+                ? [transformed]
+                : [transformed, Svg(GroupFigure("left", 0, 1, -8, 6) + GroupFigure("right", 180, 2, 188, 6))];
+            AssertSvgPaintInBothFormats(direct, variants, pdf =>
             {
                 TestAssert.Equal(3, Regex.Matches(pdf, "/ShadingType 3").Count);
                 TestAssert.Equal(2, Regex.Matches(pdf, "/S /Luminosity").Count);
             }, "0 0.502 0 rg");
         }
 
-        static string Figure(string id, int offset, bool boundingBox, double scale, double shiftX, double shiftY)
+        static string GradientFigure(string id, int offset, bool boundingBox, double scale, double shiftX, double shiftY)
         {
             string units = boundingBox ? "objectBoundingBox" : "userSpaceOnUse";
             double X(int center) => ((boundingBox ? .5d : center + offset) - shiftX) / scale;
@@ -798,24 +802,11 @@ internal static partial class SvgTextTests
                 <rect x="{offset + 130}" y="68" width="11" height="9" fill="green"/>
                 """);
         }
-    }
 
-    public static void SvgUserSpaceRadialGradientsFollowTranslatedAndUniformlyScaledGroups()
-    {
-        string direct = Svg(Figure("left", 0, 1, 0, 0) + Figure("right", 180, 1, 0, 0));
-        string transformed = Svg(Figure("left", 0, 1, -8, 6) + Figure("right", 180, 2, 188, 6));
-        AssertSvgPaintInBothFormats(direct, transformed, pdf =>
-        {
-            TestAssert.Equal(3, Regex.Matches(pdf, "/ShadingType 3").Count);
-            TestAssert.Equal(2, Regex.Matches(pdf, "/S /Luminosity").Count);
-        }, "0 0.502 0 rg");
-
-        static string Figure(string id, int offset, int scale, int translateX, int translateY)
+        static string GroupFigure(string id, int offset, int scale, int translateX, int translateY)
         {
             int X(int x) => (x + offset - translateX) / scale;
             int Y(int y) => (y - translateY) / scale;
-            string transform = scale == 1 && translateX == 0 && translateY == 0
-                ? "" : FormattableString.Invariant($"""transform="translate({translateX} {translateY}) scale({scale})" """);
             return FormattableString.Invariant($"""
                 <defs>
                   <radialGradient id="{id}-alpha" gradientUnits="userSpaceOnUse" cx="{X(40)}" cy="{Y(40)}" r="{22 / scale}">
@@ -826,7 +817,7 @@ internal static partial class SvgTextTests
                   </radialGradient>
                 </defs>
                 <rect x="{offset + 12}" y="12" width="62" height="56" fill="aqua"/>
-                <g {transform}>
+                <g transform="translate({translateX} {translateY}) scale({scale})">
                   <rect x="{X(14)}" y="{Y(14)}" width="{58 / scale}" height="{52 / scale}" fill="url(#{id}-alpha)"/>
                   <rect x="{X(78)}" y="{Y(14)}" width="{58 / scale}" height="{52 / scale}" fill="url(#{id}-opaque)"/>
                 </g>
