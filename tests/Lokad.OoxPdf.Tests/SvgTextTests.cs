@@ -759,6 +759,75 @@ internal static partial class SvgTextTests
         }
     }
 
+    public static void SvgRootAdmissionPreservesAuthoredFallbackAndValidPaint()
+    {
+        const string rectangle = """<rect width="40" height="30" fill="red"/>""";
+        const string label = """<text x="60" y="85" fill="#112233">NORTH</text>""";
+        string valid = Svg(rectangle + label);
+        string wrongName = valid.Replace("<svg ", "<g ", StringComparison.Ordinal)
+            .Replace("</svg>", "</g>", StringComparison.Ordinal);
+        string foreignRoot = valid.Replace("<svg ", """<author:svg xmlns:author="urn:authoring-metadata" """, StringComparison.Ordinal)
+            .Replace("</svg>", "</author:svg>", StringComparison.Ordinal);
+        var cases = new[]
+        {
+            (Svg: valid, HasPaint: true, InvalidRoot: false),
+            (Svg: valid.Replace(" xmlns=\"http://www.w3.org/2000/svg\"", "", StringComparison.Ordinal), HasPaint: true, InvalidRoot: false),
+            (Svg: Svg(""), HasPaint: false, InvalidRoot: false),
+            (Svg: wrongName, HasPaint: false, InvalidRoot: true),
+            (Svg: foreignRoot, HasPaint: false, InvalidRoot: true)
+        };
+
+        foreach (var (kind, mode, geometry) in new[]
+        {
+            (OoxPdfInputKind.Docx, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout),
+            (OoxPdfInputKind.Docx, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup),
+            (OoxPdfInputKind.Pptx, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+        })
+        foreach (var (svg, hasPaint, invalidRoot) in cases)
+        {
+            bool docx = kind == OoxPdfInputKind.Docx;
+            string path = Input(docx, svg);
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            try
+            {
+                using var input = File.OpenRead(path);
+                using var output = new MemoryStream();
+                OoxPdfConverter.Convert(input, output, new OoxPdfOptions
+                {
+                    InputKind = kind, DocxMarkupMode = mode, DocxMarkupGeometryMode = geometry,
+                    FontResolver = new PortableRenderingTests.PinnedResolver(), DiagnosticSink = diagnostics.Add
+                });
+                string pdf = Encoding.Latin1.GetString(output.ToArray());
+                if (hasPaint)
+                {
+                    TestAssert.Contains("1 0 0 rg", pdf);
+                    TestAssert.Equal(5, LabelPaths(pdf));
+                }
+                else
+                {
+                    TestAssert.DoesNotContain("1 0 0 rg", pdf);
+                    TestAssert.DoesNotContain(LabelColor, pdf);
+                }
+                TestAssert.Equal(invalidRoot && docx ? 1 : 0, Regex.Matches(pdf, @"/Im\d+ Do\b").Count);
+                if (!invalidRoot)
+                {
+                    TestAssert.Equal(0, diagnostics.Count);
+                    continue;
+                }
+                OoxPdfDiagnostic diagnostic = diagnostics.Single();
+                TestAssert.Equal("SVG_UNSUPPORTED_CONTENT", diagnostic.Id);
+                TestAssert.Contains("no supported SVG root", diagnostic.Message);
+                TestAssert.True(diagnostic.PartName?.EndsWith(".svg", StringComparison.Ordinal) == true,
+                    "The rejection identifies the SVG source part.");
+                TestAssert.Equal(docx ? "RasterImage" : "Ignored", diagnostic.Fallback);
+                TestAssert.Equal(docx ? OoxPdfSeverity.Warning : OoxPdfSeverity.Error, diagnostic.Severity);
+                TestAssert.Equal(docx ? (int?)1 : null, diagnostic.PageIndex);
+                TestAssert.Equal(docx ? null : (int?)1, diagnostic.SlideIndex);
+            }
+            finally { File.Delete(path); }
+        }
+    }
+
     public static void SvgLabelsRejectUnsupportedPositioningAndNonFinitePaintWithoutLosingShapes()
     {
         var diagnostics = new List<OoxPdfDiagnostic>();

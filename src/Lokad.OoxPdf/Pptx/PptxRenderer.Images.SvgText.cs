@@ -45,9 +45,10 @@ internal sealed partial class PptxRenderer
             XDocument svg;
             try { using var stream = new MemoryStream(bytes); svg = SafeXml.Load(stream, cancellationToken); }
             catch (InvalidDataException) { continue; } // The paint path owns the existing parse diagnostic/fallback.
-            var content = EnumerateSvgContent(svg, cancellationToken);
-            if (!TryReadSvgSourceFrame(svg.Root, out _, out _, out double viewWidth, out double viewHeight) ||
-                viewWidth <= 0d || viewHeight <= 0d || HasSvgStylesheet(content)) continue;
+            XElement? root = ReadSvgRoot(svg);
+            if (root is null || !TryReadSvgSourceFrame(root, out _, out _, out double viewWidth, out double viewHeight)) continue;
+            var content = EnumerateSvgContent(root, cancellationToken);
+            if (HasSvgStylesheet(content)) continue;
             var elements = content.OfType<XElement>();
             var paintServerIds = CreateSvgPaintServerIdLookup(EnumerateSvgPaintServers(elements), cancellationToken);
             foreach (XElement element in elements.Where(e => e.Name.LocalName == "text"))

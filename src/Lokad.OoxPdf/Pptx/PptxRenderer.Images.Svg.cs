@@ -77,14 +77,14 @@ internal sealed partial class PptxRenderer
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        if (!TryReadSvgSourceFrame(svg.Root, out double minX, out double minY, out double viewWidth, out double viewHeight) ||
-            viewWidth <= 0d ||
-            viewHeight <= 0d)
+        XElement? root = ReadSvgRoot(svg);
+        if (root is null || !TryReadSvgSourceFrame(root, out double minX, out double minY, out double viewWidth, out double viewHeight))
         {
             diagnosticSink?.Invoke(new OoxPdfDiagnostic(
                 "SVG_UNSUPPORTED_CONTENT",
                 OoxPdfSeverity.Error,
-                "SVG picture has no usable viewBox and was ignored.",
+                root is null ? "SVG picture has no supported SVG root and was ignored." :
+                    "SVG picture has no usable viewBox and was ignored.",
                 partName,
                 PageIndex: null,
                 SlideIndex: slideIndex,
@@ -140,8 +140,8 @@ internal sealed partial class PptxRenderer
         if (picturePreset != "rect")
             ClipToPresetShape(graphics, picturePreset, x, y, width, height, pictureAdjustments);
 
-        string? overflow = !hasViewportClip && svg.Root is { } outerSvg
-            ? ReadSvgPresentationAttribute(outerSvg, ReadSvgStyleDeclarations(outerSvg), "overflow")?.Trim()
+        string? overflow = !hasViewportClip
+            ? ReadSvgPresentationAttribute(root, ReadSvgStyleDeclarations(root), "overflow")?.Trim()
             : null;
         bool clipViewport = !crop.IsEmpty || picturePlacement.HasValue ||
             string.Equals(overflow, "hidden", StringComparison.OrdinalIgnoreCase) ||
@@ -152,13 +152,13 @@ internal sealed partial class PptxRenderer
             graphics.ClipRectangle(imageX, imageY, imageWidth, imageHeight);
         }
 
-        if (pictureOpacity <= 0d || svg.Root is { } root && IsFullyTransparentSvgContainer(root))
+        if (pictureOpacity <= 0d || IsFullyTransparentSvgContainer(root))
         {
             graphics.RestoreState();
             return true;
         }
 
-        var content = EnumerateSvgContent(svg, cancellationToken);
+        var content = EnumerateSvgContent(root, cancellationToken);
         var elements = content.OfType<XElement>();
         var paintServers = EnumerateSvgPaintServers(elements).ToArray();
         var (gradients, radialGradients) = ReadSvgGradients(paintServers, viewWidth, viewHeight, cancellationToken);
@@ -1176,22 +1176,25 @@ internal sealed partial class PptxRenderer
         return result;
     }
 
-    private static bool TryReadSvgSourceFrame(XElement? root, out double minX, out double minY, out double width, out double height)
+    private static XElement? ReadSvgRoot(XDocument svg) =>
+        svg.Root is { Name.LocalName: "svg" } root &&
+        (root.Name.Namespace == XNamespace.None || root.Name.NamespaceName == "http://www.w3.org/2000/svg") ? root : null;
+
+    private static bool TryReadSvgSourceFrame(XElement root, out double minX, out double minY, out double width, out double height)
     {
         minX = 0d;
         minY = 0d;
         width = 0d;
         height = 0d;
-        if (root is null) return false;
         string? viewBox = (string?)root.Attribute("viewBox");
         if (viewBox is null)
         {
-            if (root.Name.LocalName != "svg") return false;
             // Without a viewBox, fixed viewport dimensions define the source
             // coordinate system at the origin, with one user unit per pixel.
             var style = ReadSvgStyleDeclarations(root);
             return TryReadSvgLength(ReadSvgPresentationAttribute(root, style, "width"), out width) &&
-                TryReadSvgLength(ReadSvgPresentationAttribute(root, style, "height"), out height);
+                TryReadSvgLength(ReadSvgPresentationAttribute(root, style, "height"), out height) &&
+                width > 0d && height > 0d;
         }
 
         double[] values = SvgNumberRegex().Matches(viewBox)
@@ -1208,7 +1211,7 @@ internal sealed partial class PptxRenderer
         minY = values[1];
         width = values[2];
         height = values[3];
-        return true;
+        return width > 0d && height > 0d;
     }
 
     private static (Dictionary<string, SvgGradient> Linear, Dictionary<string, SvgRadialGradient> Radial)
@@ -1761,15 +1764,13 @@ internal sealed partial class PptxRenderer
         return new SvgStroke(color, width, opacity, lineCap, lineJoin, dash, offset, miterLimit, strokeGradient, gradientId);
     }
 
-    private static IEnumerable<XNode> EnumerateSvgContent(XDocument svg, CancellationToken cancellationToken)
+    private static IEnumerable<XNode> EnumerateSvgContent(XElement root, CancellationToken cancellationToken)
     {
-        if (svg.Root is not { } root) yield break;
         XNamespace ns = root.Name.Namespace;
-        if (ns != XNamespace.None && ns.NamespaceName != "http://www.w3.org/2000/svg") yield break;
 
         // Walk the owned SVG tree in source order. Keep document-level
         // stylesheet instructions and leave closed subtrees unvisited.
-        XNode? node = svg.FirstNode;
+        XNode? node = root.Document?.FirstNode ?? root;
         while (node is not null)
         {
             cancellationToken.ThrowIfCancellationRequested();
