@@ -59,7 +59,12 @@ internal static class DocxTableMathTests
                     {
                         if (direction is null) return;
                         var cell = xml.Descendants(w + "tc").First(candidate => candidate.Descendants(m + "f").Any());
-                        var properties = cell.Element(w + "tcPr")!;
+                        var properties = cell.Element(w + "tcPr");
+                        if (properties is null)
+                        {
+                            properties = new XElement(w + "tcPr");
+                            cell.AddFirst(properties);
+                        }
                         var value = new XElement(w + "textDirection", new XAttribute(w + "val", direction));
                         var following = properties.Elements().FirstOrDefault(child => child.Name.LocalName is
                             "tcFitText" or "vAlign" or "hideMark" or "cellIns" or "cellDel" or "cellMerge" or "tcPrChange");
