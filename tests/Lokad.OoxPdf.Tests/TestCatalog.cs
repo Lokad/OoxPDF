@@ -195,6 +195,7 @@ internal static class TestCatalog
         .. FromType("pptx-shapes", typeof(PptxShapesTests)),
         .. FromType("pptx-shapes", typeof(PptxSceneTextAgreementTests)),
         .. FromType(name => name is nameof(PptxVisibilityTests.PptxHiddenObjectsLeaveNoPaintResourcesOrLinks)
+            or nameof(PptxVisibilityTests.PptxMasterShapeVisibilityPreservesOwnedFills)
             or nameof(PptxVisibilityTests.PptxGlyphEmissionInspectionUsesSceneVisibilityAndMasterAdmission)
             or nameof(PptxVisibilityTests.PptxTableInspectionUsesMasterAdmission)
             ? "rendering-portable" : "pptx-composition", typeof(PptxVisibilityTests)),

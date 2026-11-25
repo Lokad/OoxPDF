@@ -224,21 +224,38 @@ internal static class PptxVisibilityTests
         TestAssert.Equal(0, scene.MasterNodes.Count);
     }
 
-    public static void PptxHiddenMasterShapesStayUnpainted() => AssertMasterShapePaint("0", expectsMaster: false);
-    public static void PptxShownMasterShapesPaintByDefault() => AssertMasterShapePaint(null, expectsMaster: true);
-    public static void PptxExplicitShownMasterShapesPaint() => AssertMasterShapePaint("1", expectsMaster: true);
-
-    private static void AssertMasterShapePaint(string? showMasterSp, bool expectsMaster)
+    public static void PptxMasterShapeVisibilityPreservesOwnedFills()
     {
-        string input = WriteMasterShapePackage(showMasterSp);
-        string output = Path.ChangeExtension(input, ".pdf");
+        var resolver = new PortableRenderingTests.PinnedResolver();
+        foreach (string? flag in new string?[] { null, "0", "1" })
+        {
+            string input = WriteMasterShapePackage(flag);
+            try
+            {
+                using var package = OoxPackage.Open(input, default);
+                PptxDocument document = new PptxReader().Read(package, default);
+                if (flag == "1")
+                {
+                    // The explicit true case uses the same admitted scene
+                    // artwork as the default, whose paint is checked below.
+                    TestAssert.True(new PptxSceneBuilder().Build(document, package, default).Slides.Single().ShowMasterShapes,
+                        "An explicitly visible master must be admitted.");
+                    continue;
+                }
 
-        OoxPdfConverter.Convert(input, output);
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Equal(expectsMaster, pdf.Contains("1 0 0 rg", StringComparison.Ordinal));
-        TestAssert.Contains("0 1 0 rg", pdf);
-        TestAssert.Contains("0 0 1 rg", pdf);
+                PdfPage page = new PptxRenderer(resolver).RenderPagesAsync(document, package, null, default)
+                    .ToBlockingEnumerable().Single();
+                var actual = Regex.Matches(page.Content,
+                    @"(?m)^(?<color>1 0 0|0 1 0|0 0 1) rg\r?\n(?<bounds>[-\d.]+ [-\d.]+ [\d.]+ [\d.]+) re f\*?\r?$")
+                    .Select(match => (match.Groups["color"].Value, match.Groups["bounds"].Value));
+                (string Color, string Bounds)[] expected = flag is null
+                    ? [("1 0 0", "72 396 72 72"), ("0 1 0", "144 324 72 72"), ("0 0 1", "216 252 72 72")]
+                    : [("0 1 0", "144 324 72 72"), ("0 0 1", "216 252 72 72")];
+                TestAssert.True(actual.SequenceEqual(expected),
+                    "The admitted master, layout and slide must fill their own rectangles in layer order.");
+            }
+            finally { File.Delete(input); }
+        }
     }
 
     public static void PptxHiddenSlidesAreSkipped()
