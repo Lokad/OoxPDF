@@ -2042,7 +2042,7 @@ internal sealed partial class DocxReader
         return text.ToString();
     }
 
-    private static bool TryReadSymbol(XElement symbol, [NotNullWhen(true)] out string? font, out char character)
+    internal static bool TryReadSymbol(XElement symbol, [NotNullWhen(true)] out string? font, out char character)
     {
         font = (string?)symbol.Attribute(WordprocessingNamespace + "font");
         ReadOnlySpan<char> code = ((string?)symbol.Attribute(WordprocessingNamespace + "char"))

@@ -56,8 +56,8 @@ internal static partial class DocxMathParser
                 bool allowsDeletedText = item.RevisionOwner is null ? equationHasDeletionOwner : item.RevisionOwner == deletion;
                 XElement? firstBreakInRun = element == trailingBreaks?.Run ? trailingBreaks?.FirstBreakInRun : null;
                 var readRevision = item.RevisionOwner is null ? includeRevision : null;
-                nodes.Add(element, ReadLeaf(element, readRun, allowsDeletedText, firstBreakInRun, readRevision, cancellationToken) with
-                    { Hyperlink = item.IncludeAnnotations ? item.Hyperlink : null });
+                nodes.Add(element, ReadLeaf(element, readRun, allowsDeletedText, firstBreakInRun, readRevision,
+                    item.IncludeAnnotations ? item.Hyperlink : null, cancellationToken));
                 continue;
             }
 
@@ -275,7 +275,7 @@ internal static partial class DocxMathParser
             HasMathRunText(element.Elements(), allowsDeletedText));
 
     private static bool HasMathRunText(IEnumerable<XElement> children, bool allowsDeletedText) =>
-        children.Any(child => ReadLiteralRunText(child, allowsDeletedText)?.Any(IsMathLiteralCharacter) == true);
+        children.Any(child => ReadLiteralRunText(child, allowsDeletedText, out _)?.Any(IsMathLiteralCharacter) == true);
 
     private static bool IsMathLiteralCharacter(char value) => !OoxTextBreakRules.IsNonPrintingBreakControl(value);
     // Revision admission and structural retention see the same stored content
@@ -378,17 +378,26 @@ internal static partial class DocxMathParser
 
     private static bool HasReadableRunChildren(IEnumerable<XElement> children, bool allowsDeletedText) =>
         children.All(child =>
-            ReadLiteralRunText(child, allowsDeletedText) is not null ||
+            ReadLiteralRunText(child, allowsDeletedText, out _) is not null ||
             child.Name == MathNamespace + "rPr" || child.Name == WordprocessingNamespace + "rPr" ||
             DocxSourceXml.IsNonPrintingMarker(child));
 
     private static IEnumerable<XElement> RunContent(XElement run, XElement? firstBreakInRun) =>
         firstBreakInRun is null ? run.Elements() : run.Elements().TakeWhile(child => child != firstBreakInRun);
 
-    private static string? ReadLiteralRunText(XElement element, bool allowsDeletedText)
+    private static string? ReadLiteralRunText(XElement element, bool allowsDeletedText, out string? symbolFont)
     {
+        symbolFont = null;
         if (element.Name == MathNamespace + "t") return element.Value;
         if (element.HasElements || element.Name.Namespace != WordprocessingNamespace) return null;
+        if (element.Name.LocalName == "sym" && string.IsNullOrWhiteSpace(element.Value) &&
+            element.Attributes().All(attribute => attribute.IsNamespaceDeclaration ||
+                attribute.Name == WordprocessingNamespace + "font" || attribute.Name == WordprocessingNamespace + "char") &&
+            DocxReader.TryReadSymbol(element, out string? font, out char symbol))
+        {
+            symbolFont = font;
+            return symbol.ToString();
+        }
         return element.Name.LocalName switch
         {
             "t" => element.Value,
@@ -437,7 +446,7 @@ internal static partial class DocxMathParser
         source.Element(name) ?? (DocxSourceXml.IsPackedMathRunRevision(source) ? source.Parent?.Element(name) : null);
 
     private static DocxMathNode ReadLeaf(XElement element, Func<XElement, string, DocxTextRun> readRun, bool allowsDeletedText,
-        XElement? firstBreakInRun, Func<XElement, bool>? includeRevision, CancellationToken token)
+        XElement? firstBreakInRun, Func<XElement, bool>? includeRevision, DocxHyperlinkSpan? hyperlink, CancellationToken token)
     {
         if (element.Name != MathNamespace + "r") return new DocxMathUnsupported(element.Name.LocalName, element.Name.NamespaceName, []);
         XElement? revision = includeRevision is not null && firstBreakInRun is null ? ReadRunRevision(element, token) : null;
@@ -448,37 +457,80 @@ internal static partial class DocxMathParser
             return new DocxMathUnsupported(element.Name.LocalName, element.Name.NamespaceName, []);
         if (revision is not null && !includeRevision!(revision)) return new DocxMathRow([]);
 
-        // Optional breaks carry no ink in math. Word joiners also carry
-        // no ink, and protect their boundaries from an operator break.
-        string text = string.Concat(children.Select(child => ReadLiteralRunText(child, allowsDeletedText)));
-        List<int>? joinerOffsets = null;
-        if (text.Any(character => !IsMathLiteralCharacter(character)))
+        List<(int Offset, string Font)>? symbols = null;
+        int offset = 0;
+        string text = string.Concat(children.Select(child =>
         {
-            var literal = new StringBuilder(text.Length);
-            foreach (char character in text)
-            {
-                token.ThrowIfCancellationRequested();
-                if (IsMathLiteralCharacter(character))
-                    literal.Append(character);
-                else if (OoxTextBreakRules.IsWordJoiner(character) &&
-                    (joinerOffsets is null || joinerOffsets[^1] != literal.Length))
-                    (joinerOffsets ??= []).Add(literal.Length);
-            }
-            text = literal.ToString();
-        }
+            token.ThrowIfCancellationRequested();
+            string? value = ReadLiteralRunText(child, allowsDeletedText, out string? font);
+            if (font is not null) (symbols ??= []).Add((offset, font));
+            offset += value?.Length ?? 0;
+            return value;
+        }));
         XElement? mathProperties = ReadRunProperty(owner, MathNamespace + "rPr");
         var (normalText, literalText, supported) = ReadRunProperties(mathProperties, text);
         var fonts = ReadWordRunProperties(owner)?.Element(WordprocessingNamespace + "rFonts");
-        return new DocxMathRun(readRun(owner, text), PropertyValue(mathProperties, "sty"), PropertyValue(mathProperties, "scr"))
+        string? family = (string?)fonts?.Attribute(WordprocessingNamespace + "ascii")
+            ?? (string?)fonts?.Attribute(WordprocessingNamespace + "hAnsi");
+        string? style = PropertyValue(mathProperties, "sty");
+        string? script = PropertyValue(mathProperties, "scr");
+        var properties = ReadProperties(mathProperties?.Parent ?? owner);
+        DocxTextRun? resolvedRun = null;
+        if (symbols is null) return CreateRun(text, 0);
+
+        // A symbol selects one font-relative glyph inside the authored run.
+        // Keep neighboring mathematical text in its original style and order.
+        var fragments = new List<DocxMathNode>();
+        int start = 0;
+        foreach (var (position, font) in symbols)
         {
-            WordJoinerOffsets = joinerOffsets is null ? [] : joinerOffsets,
-            PropertiesXml = ReadProperties(mathProperties?.Parent ?? owner),
-            NormalTextValue = normalText,
-            LiteralText = literalText,
-            ExplicitFontFamily = (string?)fonts?.Attribute(WordprocessingNamespace + "ascii")
-                ?? (string?)fonts?.Attribute(WordprocessingNamespace + "hAnsi"),
-            HasUnsupportedProperties = !supported
-        };
+            token.ThrowIfCancellationRequested();
+            if (position > start) fragments.Add(CreateRun(text[start..position], start));
+            fragments.Add(CreateRun(text.Substring(position, 1), position, font));
+            start = position + 1;
+        }
+        if (start < text.Length) fragments.Add(CreateRun(text[start..], start));
+        return fragments.Count == 1 ? fragments[0] : new DocxMathRow(fragments);
+
+        DocxMathRun CreateRun(string value, int sourceOffset, string? symbolFont = null)
+        {
+            // Optional breaks have no ink. Word joiners retain their boundary
+            // even if a symbol splits the source run into several fragments.
+            List<int>? joinerOffsets = null;
+            if (value.Any(character => !IsMathLiteralCharacter(character)))
+            {
+                var literal = new StringBuilder(value.Length);
+                foreach (char character in value)
+                {
+                    token.ThrowIfCancellationRequested();
+                    if (IsMathLiteralCharacter(character))
+                        literal.Append(character);
+                    else if (OoxTextBreakRules.IsWordJoiner(character) &&
+                        (joinerOffsets is null || joinerOffsets[^1] != literal.Length))
+                        (joinerOffsets ??= []).Add(literal.Length);
+                }
+                value = literal.ToString();
+            }
+
+            var run = resolvedRun ??= readRun(owner, value);
+            if (symbolFont is not null)
+            {
+                run = run with { FontFamily = symbolFont, Fonts = new(symbolFont, symbolFont, symbolFont, symbolFont, null, null, null, null),
+                    AllCaps = false, SmallCaps = false };
+            }
+            if (sourceOffset != 0 || run.Text != value)
+                run = run with { Text = value, SourceTextOffsetInRun = run.SourceTextOffsetInRun + sourceOffset };
+            return new DocxMathRun(run, style, script)
+            {
+                Hyperlink = hyperlink,
+                WordJoinerOffsets = joinerOffsets is null ? [] : joinerOffsets,
+                PropertiesXml = properties,
+                NormalTextValue = symbolFont is not null ? true : normalText,
+                LiteralText = literalText,
+                ExplicitFontFamily = symbolFont ?? family,
+                HasUnsupportedProperties = !supported
+            };
+        }
     }
 
     private static (bool? NormalText, bool LiteralText, bool Supported) ReadRunProperties(XElement? properties, string text = "")
@@ -502,7 +554,9 @@ internal static partial class DocxMathParser
         // A leading letter or digit is a literal operand. Keep the fallback
         // for operator-led runs and other starts whose interpretation is unknown.
         XName alignAt = MathNamespace + "alnAt";
-        return Rune.TryGetRuneAt(text, 0, out Rune first) && Rune.IsLetterOrDigit(first) &&
+        int indexOfFirst = 0;
+        while (indexOfFirst < text.Length && !IsMathLiteralCharacter(text[indexOfFirst])) indexOfFirst++;
+        return indexOfFirst < text.Length && Rune.TryGetRuneAt(text, indexOfFirst, out Rune first) && Rune.IsLetterOrDigit(first) &&
             !instruction.HasElements && string.IsNullOrWhiteSpace(instruction.Value) &&
             instruction.Attributes().All(attribute => attribute.IsNamespaceDeclaration || attribute.Name == alignAt) &&
             ((string?)instruction.Attribute(alignAt) is not { } value ||

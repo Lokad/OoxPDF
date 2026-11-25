@@ -26,6 +26,7 @@
     "PptxSyntheticTextBoxHonorsBulletColorAndSize"
   ],
   "docx-symbol-content": [
+    "=DocxMathSymbolsKeepFontFractionInkAndNavigation",
     "DocxSymbolsKeepFontCodesAndSourceOwners",
     "DocxSymbolsPaintTheSameGlyphsAcrossSupportedContainers",
     "DocxSymbolsRetainHiddenRevisionAndNavigationSelection",
@@ -8656,6 +8657,7 @@
   "docx-math-editing-markers": [
     "DocxMathEditingMarkers",
     "=DocxDisabledMathEffectsKeepControlAndArgumentPaint",
+    "=DocxMathSymbolsKeepFontFractionInkAndNavigation",
     "DocxMathParserUsesIterativeTraversalAndObservesCancellation",
     "DocxMathMatrixMalformedAndOrphanRowsRetainTraversedSource",
     "DocxInlineCompositionEmptyFractionKeepsOnlyStructuralOwnership",
