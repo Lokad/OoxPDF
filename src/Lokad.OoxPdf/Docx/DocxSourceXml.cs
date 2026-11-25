@@ -178,17 +178,27 @@ internal static class DocxSourceXml
         element.Name == WordprocessingNamespace + "br" &&
         (string?)element.Attribute(WordprocessingNamespace + "type") is null or "" or "textWrapping";
 
-    // Editing boundaries and stored math pagination positions have no payload.
+    // Editing boundaries and ignored math-run controls have no payload.
     // Content-bearing, unknown and misplaced children retain their source owner.
     public static bool IsNonPrintingMarker(XElement element) =>
-        element.Parent?.Name == MathNamespace + "r" && IsLastRenderedPageBreakHint(element) ||
+        IsNonPrintingMathRunControl(element) ||
         element.Name.Namespace == WordprocessingNamespace &&
         element.Name.LocalName is "proofErr" or "permStart" or "permEnd" &&
         !element.HasElements && string.IsNullOrWhiteSpace(element.Value);
 
+    // Word ignores tabs inside math runs. Ordinary WordprocessingML runs
+    // still use tabs for positioning.
+    public static bool IsNonPrintingMathRunControl(XElement element) =>
+        element.Parent?.Name == MathNamespace + "r" &&
+        (IsLastRenderedPageBreakHint(element) ||
+         element.Name == WordprocessingNamespace + "tab" && IsEmptyRunControl(element));
+
     public static bool IsLastRenderedPageBreakHint(XElement element) =>
         element.Name == WordprocessingNamespace + "lastRenderedPageBreak" &&
         (element.Parent?.Name == WordprocessingNamespace + "r" || element.Parent?.Name == MathNamespace + "r") &&
+        IsEmptyRunControl(element);
+
+    private static bool IsEmptyRunControl(XElement element) =>
         !element.HasElements && string.IsNullOrWhiteSpace(element.Value) &&
         element.Attributes().All(attribute => attribute.IsNamespaceDeclaration);
 

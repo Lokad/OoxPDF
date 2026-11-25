@@ -172,7 +172,7 @@ internal static partial class DocxMathTests
 
     public static void DocxMathRunNonPrintingMarkersRetainTextAndFallbacks()
     {
-        foreach (string marker in new[] { "lastRenderedPageBreak", "proofErr", "permStart", "permEnd" })
+        foreach (string marker in new[] { "lastRenderedPageBreak", "proofErr", "permStart", "permEnd", "tab" })
         {
             var xml = EditingMarkerFraction();
             foreach (var run in xml.Descendants(MathNamespace + "r"))
@@ -190,7 +190,10 @@ internal static partial class DocxMathTests
             "<w:lastRenderedPageBreak extra='future'/>",
             "<w:lastRenderedPageBreak>Visible</w:lastRenderedPageBreak>",
             "<w:lastRenderedPageBreak><m:t>Visible</m:t></w:lastRenderedPageBreak>",
-            "<x:lastRenderedPageBreak xmlns:x='urn:future'/>"
+            "<x:lastRenderedPageBreak xmlns:x='urn:future'/>",
+            "<w:tab x:payload='future' xmlns:x='urn:future'/>",
+            "<w:tab>Visible</w:tab>",
+            "<x:tab xmlns:x='urn:future'/>"
         })
         {
             var xml = EditingMarkerFraction();
@@ -201,9 +204,12 @@ internal static partial class DocxMathTests
                 "Unknown or content-bearing run metadata retains the explicit fallback.");
         }
 
-        var misplaced = EditingMarkerFraction();
-        misplaced.Descendants(MathNamespace + "num").Single().AddFirst(new XElement(WordprocessingNamespace + "lastRenderedPageBreak"));
-        TestAssert.True(((DocxMathFraction)Parse(misplaced).Children.Single()).Numerator.Children[0] is DocxMathUnsupported,
-            "A cached run position does not become a valid mathematical argument.");
+        foreach (string marker in new[] { "lastRenderedPageBreak", "tab" })
+        {
+            var misplaced = EditingMarkerFraction();
+            misplaced.Descendants(MathNamespace + "num").Single().AddFirst(new XElement(WordprocessingNamespace + marker));
+            TestAssert.True(((DocxMathFraction)Parse(misplaced).Children.Single()).Numerator.Children[0] is DocxMathUnsupported,
+                "A nonprinting run control does not become a valid mathematical argument.");
+        }
     }
 }

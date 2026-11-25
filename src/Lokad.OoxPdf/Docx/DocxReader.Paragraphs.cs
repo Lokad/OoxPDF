@@ -554,7 +554,8 @@ internal sealed partial class DocxReader
             }
 
             static XElement AsParagraphRun(XElement run, XElement? firstChild = null) => new(WordprocessingNamespace + "r",
-                firstChild is null ? run.Elements() : firstChild.ElementsAfterSelf().Prepend(firstChild));
+                (firstChild is null ? run.Elements() : firstChild.ElementsAfterSelf().Prepend(firstChild))
+                    .Where(child => !DocxSourceXml.IsNonPrintingMathRunControl(child)));
 
             DocxTextRun ReadMathRun(XElement run, string text)
             {

@@ -86,7 +86,7 @@ internal static partial class DocxInlineCompositionTests
         {
             DocxDocument Read(bool insideEquation, bool mathRun, XElement? firstBreak = null, int breakCount = 1, bool proofing = false,
                 bool? bookmarkStartsAfterBreaks = null, string? paginationHint = null, bool packBreaks = false,
-                bool shareOperandRun = false, bool trailingMoveRanges = false) => ReadMutation(
+                bool shareOperandRun = false, bool trailingMoveRanges = false, Action<XElement>? editEquation = null) => ReadMutation(
                 "CompositionProbes/math-explicit-display-same-group", mode, false, false, (xml, w, m) =>
                 {
                     var group = xml.Descendants(m + "oMathPara").Single();
@@ -147,6 +147,7 @@ internal static partial class DocxInlineCompositionTests
                                 new XElement(w + (kind + "RangeEnd"), new XAttribute(w + "id", "+0" + id)));
                         }
                     }
+                    editEquation?.Invoke(equations[0]);
                 });
 
             var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true), mode,
@@ -205,6 +206,19 @@ internal static partial class DocxInlineCompositionTests
                             bookmarkStartsAfterBreaks: true, shareOperandRun: shareOperandRun), expectedTwo);
                         TestAssert.True(control.Annotations.SequenceEqual(variant.Annotations),
                             "Both break layouts must preserve the authored bookmark destination.");
+                    }
+                    foreach (bool separateTabRun in new[] { false, true })
+                    {
+                        var tabbed = CheckMathBreaks(Read(true, true, breakCount: 2, bookmarkStartsAfterBreaks: true,
+                            shareOperandRun: true, editEquation: equation =>
+                            {
+                                var lastRun = equation.Elements(MathNamespace + "r").Last();
+                                var tab = new XElement(word + "tab");
+                                if (separateTabRun) lastRun.AddAfterSelf(new XElement(lastRun.Name, tab));
+                                else lastRun.Add(tab);
+                            }), expectedTwo);
+                        TestAssert.True(control.Annotations.SequenceEqual(tabbed.Annotations),
+                            "An ignored math tab after the breaks must preserve the bookmark destination.");
                     }
                 }
             }

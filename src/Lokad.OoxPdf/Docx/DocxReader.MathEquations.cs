@@ -34,7 +34,7 @@ internal sealed partial class DocxReader
         // readable prefix under its original formatting owner.
         (XElement, XElement?)? ReadPackedBreak(XElement run) =>
             run.Name == MathNamespace + "r" && run.Elements().FirstOrDefault(IsDisplayMathBreak) is { } split &&
-            HasOnlyWhitespaceRunText(run) && split.ElementsAfterSelf().Prepend(split).All(IsBreakOrPaginationHint) &&
+            HasOnlyWhitespaceRunText(run) && split.ElementsAfterSelf().Prepend(split).All(IsBreakOrNonPrintingMathControl) &&
             DocxMathParser.IsReadableRun(run, allowsDeletedText, split) ? (run, split) : null;
 
         static bool IsBoundary(XElement element) =>
@@ -43,7 +43,7 @@ internal sealed partial class DocxReader
             DocxMathParser.IsCommentBoundary(element) ||
             (element.Name == MathNamespace + "r" &&
              element.Attributes().All(attribute => attribute.IsNamespaceDeclaration) &&
-             element.Elements().All(DocxSourceXml.IsLastRenderedPageBreakHint) &&
+             element.Elements().All(DocxSourceXml.IsNonPrintingMathRunControl) &&
              HasOnlyWhitespaceRunText(element));
     }
 
@@ -54,7 +54,7 @@ internal sealed partial class DocxReader
         return run.Name == MathNamespace + "r" &&
             run.Elements().Any(IsDisplayMathBreak) &&
             run.Elements().All(child => child.Name == WordprocessingNamespace + "rPr" ||
-                IsBreakOrPaginationHint(child) ||
+                IsBreakOrNonPrintingMathControl(child) ||
                 allowCompanions && (child.Name == WordprocessingNamespace + "drawing" ||
                     child.Name == WordprocessingNamespace + "t" && !child.HasElements)) &&
             HasOnlyWhitespaceRunText(run);
@@ -63,8 +63,8 @@ internal sealed partial class DocxReader
     private static bool HasOnlyWhitespaceRunText(XElement run) =>
         run.Nodes().OfType<XText>().All(text => string.IsNullOrWhiteSpace(text.Value));
 
-    private static bool IsBreakOrPaginationHint(XElement element) =>
-        DocxSourceXml.IsLastRenderedPageBreakHint(element) || IsDisplayMathBreak(element);
+    private static bool IsBreakOrNonPrintingMathControl(XElement element) =>
+        DocxSourceXml.IsNonPrintingMathRunControl(element) || IsDisplayMathBreak(element);
 
     // Keep the authored break attributes when passing the control to paragraph
     // layout. Only a recognized, empty source control can leave the math run.
