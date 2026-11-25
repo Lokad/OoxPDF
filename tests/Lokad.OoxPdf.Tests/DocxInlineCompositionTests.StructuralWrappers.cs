@@ -59,14 +59,17 @@ internal static partial class DocxInlineCompositionTests
         XNamespace w = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
         // Exercise the live deferred visitor without publishing a test-only API.
         var visit = typeof(DocxReader).GetMethod("EnumerateRevisionScopedChildren", BindingFlags.Static | BindingFlags.NonPublic)!;
-        foreach (bool inlineContent in new[] { false, true })
+        foreach ((bool inlineContent, bool nestedFieldResults) in new[] { (false, false), (true, false), (true, true) })
         {
             XName owner = w + (inlineContent ? "r" : "p");
-            var source = new[] { new XElement(owner), MetadataWrapper(w, "customXml",
-                MetadataWrapper(w, "customXml", new XElement(w + "customXmlPr"))), new XElement(owner) };
+            var metadata = MetadataWrapper(w, "customXml",
+                MetadataWrapper(w, "customXml", new XElement(w + "customXmlPr")));
+            if (nestedFieldResults)
+                metadata = new XElement(w + "fldSimple", new XAttribute(w + "instr", "REF Cache"), metadata);
+            var source = new[] { new XElement(owner), metadata, new XElement(owner) };
             using var cancelled = new CancellationTokenSource();
             var sequence = (IEnumerable)visit.Invoke(null,
-                [source, OoxPdfDocxMarkupMode.Final, cancelled.Token, new XName[] { owner }, null, inlineContent])!;
+                [source, OoxPdfDocxMarkupMode.Final, cancelled.Token, new XName[] { owner }, null, inlineContent, nestedFieldResults])!;
             var iterator = sequence.GetEnumerator();
             try
             {

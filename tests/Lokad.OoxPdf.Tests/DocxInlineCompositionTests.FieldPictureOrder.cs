@@ -436,30 +436,33 @@ internal static partial class DocxInlineCompositionTests
         foreach (string revision in new[] { "none", "ins", "del" })
         foreach (bool hidden in new[] { false, true })
         foreach (bool locked in new[] { false, true })
-        foreach (string container in new[] { "customXml", "smartTag", "sdt", "nested", "hyperlink" })
         {
             var control = ReadComputedSimpleFieldPictures("body", "PAGE", mode, true, 2, hidden, locked, revision);
-            var wrapped = ReadComputedSimpleFieldPictures("body", "PAGE", mode, true, 2, hidden, locked, revision, container);
             var expectedParagraphs = DocxBlockTraversal.EnumerateBodyParagraphs(control).ToArray();
-            var paragraphs = DocxBlockTraversal.EnumerateBodyParagraphs(wrapped).ToArray();
-            TestAssert.Equal(expectedParagraphs.Length, paragraphs.Length);
-            for (int index = 0; index < paragraphs.Length; index++)
+            foreach (string container in new[] { "customXml", "smartTag", "sdt", "nested", "hyperlink", "nested-field" })
             {
-                var expected = expectedParagraphs[index];
-                var paragraph = paragraphs[index];
-                TestAssert.Equal(expected.Images.Count, paragraph.Images.Count);
-                TestAssert.Equal(expected.FieldReferences.Count, paragraph.FieldReferences.Count);
-                TestAssert.True(paragraph.Images.Select(image => image.SourceTextOffsetInRun)
-                    .SequenceEqual(expected.Images.Select(image => image.SourceTextOffsetInRun)),
-                    "Transparent cache containers retain each picture's source text offset.");
-                TestAssert.True(paragraph.Images.Select(image => image.SourceOrderInRun)
-                    .SequenceEqual(expected.Images.Select(image => image.SourceOrderInRun)),
-                    "Transparent cache containers retain picture order at equal source offsets.");
-                TestAssert.Equal(DocxInlineContent.HasSupportedParagraphRevisionOwners(expected, default),
-                    DocxInlineContent.HasSupportedParagraphRevisionOwners(paragraph, default));
+                var wrapped = ReadComputedSimpleFieldPictures("body", "PAGE", mode, true, 2, hidden, locked, revision, container);
+                var paragraphs = DocxBlockTraversal.EnumerateBodyParagraphs(wrapped).ToArray();
+                TestAssert.Equal(expectedParagraphs.Length, paragraphs.Length);
+                for (int index = 0; index < paragraphs.Length; index++)
+                {
+                    var expected = expectedParagraphs[index];
+                    var paragraph = paragraphs[index];
+                    TestAssert.Equal(expected.Images.Count, paragraph.Images.Count);
+                    int nestedFields = locked && container == "nested-field" && expected.FieldReferences.Count != 0 ? 1 : 0;
+                    TestAssert.Equal(expected.FieldReferences.Count + nestedFields, paragraph.FieldReferences.Count);
+                    TestAssert.True(paragraph.Images.Select(image => image.SourceTextOffsetInRun)
+                        .SequenceEqual(expected.Images.Select(image => image.SourceTextOffsetInRun)),
+                        "Cache containers retain each picture's source text offset.");
+                    TestAssert.True(paragraph.Images.Select(image => image.SourceOrderInRun)
+                        .SequenceEqual(expected.Images.Select(image => image.SourceOrderInRun)),
+                        "Cache containers retain picture order at equal source offsets.");
+                    TestAssert.Equal(DocxInlineContent.HasSupportedParagraphRevisionOwners(expected, default),
+                        DocxInlineContent.HasSupportedParagraphRevisionOwners(paragraph, default));
+                }
             }
         }
-        foreach (string container in new[] { "unknown", "foreign", "nested-field", "directional", "misplaced-property" })
+        foreach (string container in new[] { "unknown", "foreign", "directional", "misplaced-property" })
         {
             var document = ReadComputedSimpleFieldPictures("body", "PAGE", OoxPdfDocxMarkupMode.Final, true, 2,
                 container: container);
