@@ -3659,6 +3659,7 @@
   ],
   "docx-math-revision-boundaries": [
     "=PortableRenderingPackedMathRunRevisionsKeepEquivalentPaint",
+    "=DocxDisplayRowKeepsDrawingCompanionsInTrackedChanges",
     "DocxEmptyMoveRangesPreserveMixedContentAcrossStories",
     "DocxMoveRangesRetainUnknownContentOpenAndLegacyFallbacks",
     "DocxInlineCompositionControlRevisions",
@@ -19828,6 +19829,7 @@
   ],
   "docx-math-center-group": [
     "=DocxDisplayRowKeepsCommentRangeThroughDrawing",
+    "=DocxDisplayRowKeepsDrawingCompanionsInTrackedChanges",
     "=DocxDisplayRowKeepsBookmarkAcrossDrawingCompanions",
     "=DocxDisplayRowKeepsAdjacentOperandsAroundDrawingCompanions",
     "=DocxDisplayMathRetainsCompanionRunsAndPictures",

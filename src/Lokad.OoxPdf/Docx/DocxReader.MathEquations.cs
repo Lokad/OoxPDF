@@ -11,7 +11,10 @@ internal sealed partial class DocxReader
     private static readonly DisplayMathRunLayout UnsplitMathRun = new(false, 1, true, true);
 
     private static bool IsDisplayMathRun(XElement element) =>
-        element.Name == MathNamespace + "r" && element.Parent is { } owner &&
+        element.Name == MathNamespace + "r" && HasDisplayMathParagraphOwner(element);
+
+    private static bool HasDisplayMathParagraphOwner(XElement element) =>
+        element.Parent is { } owner &&
         (owner.Name == MathNamespace + "oMathPara" ||
          DocxSourceXml.IsRevisionContainer(owner) && owner.Parent?.Name == MathNamespace + "oMathPara");
 
@@ -91,7 +94,7 @@ internal sealed partial class DocxReader
             {
                 usesParagraphLayout = true;
             }
-            else if (!(child.Name == WordprocessingNamespace + "t" && !child.HasElements) &&
+            else if (!IsDisplayMathWordText(child, run) &&
                 !DocxMathParser.TryReadSymbol(child, out _, out _))
             {
                 return UnsplitMathRun;
@@ -108,11 +111,17 @@ internal sealed partial class DocxReader
         return layout;
     }
 
+    private static bool IsDisplayMathWordText(XElement element, XElement run) =>
+        !element.HasElements &&
+        (element.Name == WordprocessingNamespace + "t" ||
+         element.Name == WordprocessingNamespace + "delText" &&
+         run.Ancestors().FirstOrDefault(DocxSourceXml.IsRevisionContainer)?.Name == WordprocessingNamespace + "del");
+
     // Keep consecutive mathematical atoms in one row on each side of an
     // inline drawing. The existing trailing-break path still owns math breaks.
     private static int? CountDisplayDrawingRow(XElement equation, CancellationToken token)
     {
-        if (equation.Parent?.Name != MathNamespace + "oMathPara" ||
+        if (!HasDisplayMathParagraphOwner(equation) ||
             equation.Attributes().Any(attribute => !attribute.IsNamespaceDeclaration) ||
             !HasOnlyWhitespaceRunText(equation)) return null;
 

@@ -18,6 +18,12 @@ internal static partial class DocxInlineCompositionTests
     public static void DocxDisplayRowKeepsBookmarkAcrossDrawingCompanions() =>
         CheckDisplayDrawingCompanions(withBreak: false, explicitRow: true, withBookmark: true);
 
+    public static void DocxDisplayRowKeepsDrawingCompanionsInTrackedChanges()
+    {
+        foreach (var revision in new[] { DocxRevisionKind.Insertion, DocxRevisionKind.Deletion })
+            CheckDisplayDrawingCompanions(withBreak: false, explicitRow: true, revision: revision);
+    }
+
     public static void DocxDisplayRowKeepsCommentRangeThroughDrawing()
     {
         foreach (string container in new[] { "body", "cell" })
@@ -77,13 +83,32 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
-    private static void CheckDisplayDrawingCompanions(bool withBreak, bool explicitRow, bool withBookmark = false)
+    private static void CheckDisplayDrawingCompanions(bool withBreak, bool explicitRow, bool withBookmark = false,
+        DocxRevisionKind? revision = null)
     {
+        OoxPdfDocxMarkupMode[] modes = revision is null
+            ? [OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup]
+            : [OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.Original, OoxPdfDocxMarkupMode.AllMarkup];
         foreach (string container in new[] { "body", "cell" })
-        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        foreach (var mode in modes)
         {
+            bool visible = (revision, mode) is not
+                ((DocxRevisionKind.Insertion, OoxPdfDocxMarkupMode.Original) or (DocxRevisionKind.Deletion, OoxPdfDocxMarkupMode.Final));
             var expected = Render(packed: false);
             var actual = Render(packed: true);
+            TestAssert.Equal(expected.Page.Content, actual.Page.Content);
+            TestAssert.True(expected.Diagnostics.SequenceEqual(actual.Diagnostics),
+                "Packing should preserve the diagnostics for the same revision view.");
+            TestAssert.Equal(expected.SourceEquationCount, actual.SourceEquationCount);
+            if (!visible)
+            {
+                TestAssert.Equal(0, actual.Page.Images.Count);
+                string painted = DocxPageFootnoteNumberingTests.DecodeText(actual.Page);
+                foreach (string label in new[] { "17", "314", "793", "28", "QA", "Ω" })
+                    TestAssert.DoesNotContain(label, painted);
+                continue;
+            }
+
             TestAssert.Equal(3, PortableRenderingTests.ReadPaintedSourceLabel(actual.Page, "314", mathOnly: true).Count);
             TestAssert.Equal(3, PortableRenderingTests.ReadPaintedSourceLabel(actual.Page, "793", mathOnly: true).Count);
             if (explicitRow)
@@ -108,11 +133,8 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.Equal(2, PortableRenderingTests.ReadPaintedSourceLabel(actual.Page, "QA").Count);
             TestAssert.Equal(1, PortableRenderingTests.ReadPaintedSourceLabel(actual.Page, "Ω").Count);
             TestAssert.Equal(1, actual.Page.Images.Count);
-            TestAssert.Equal(expected.Page.Content, actual.Page.Content);
-            TestAssert.True(expected.Diagnostics.SequenceEqual(actual.Diagnostics) &&
-                !actual.Diagnostics.Contains("DOCX_UNSUPPORTED_EQUATION"),
+            TestAssert.True(!actual.Diagnostics.Contains("DOCX_UNSUPPORTED_EQUATION"),
                 "Every projected equation fragment must have a matching source count.");
-            TestAssert.Equal(expected.SourceEquationCount, actual.SourceEquationCount);
 
             (PdfPage Page, List<string> Diagnostics, int SourceEquationCount) Render(bool packed)
             {
@@ -128,7 +150,7 @@ internal static partial class DocxInlineCompositionTests
                         var wordProperties = new XElement(w + "rPr", new XElement(w + "color", new XAttribute(w + "val", "005599")));
                         var leftOperand = new XElement(m + "t", "314");
                         var rightOperand = new XElement(m + "t", "793");
-                        var label = new XElement(w + "t", "QA");
+                        var label = new XElement(w + (revision == DocxRevisionKind.Deletion ? "delText" : "t"), "QA");
                         var symbol = new XElement(w + "sym", new XAttribute(w + "font", "Arial"), new XAttribute(w + "char", "03A9"));
                         var lineBreak = withBreak ? new XElement(w + "br") : null;
                         var leftNeighbor = explicitRow ? MathRun(new XElement(m + "t", "17")) : null;
@@ -145,16 +167,23 @@ internal static partial class DocxInlineCompositionTests
                                 new XElement(w + "hyperlink", new XAttribute(w + "anchor", name),
                                     new XElement(w + "r", new XElement(w + "t", "Jump row"))));
                         }
+                        XElement owner = display;
+                        if (revision is not null)
+                        {
+                            owner = new XElement(w + (revision == DocxRevisionKind.Insertion ? "ins" : "del"),
+                                new XAttribute(w + "id", "412"), new XAttribute(w + "author", "QA Reviewer"));
+                            display.Add(owner);
+                        }
                         if (packed)
                         {
                             var run = MathRun(leftOperand, lineBreak, label, symbol, drawing, rightOperand);
-                            display.Add(explicitRow ? new XElement(m + "oMath", bookmarkStart, leftNeighbor, run, rightNeighbor, bookmarkEnd) : run);
+                            owner.Add(explicitRow ? new XElement(m + "oMath", bookmarkStart, leftNeighbor, run, rightNeighbor, bookmarkEnd) : run);
                         }
                         else
                         {
                             var leftRun = MathRun(leftOperand);
                             var rightRun = MathRun(rightOperand);
-                            display.Add(bookmarkStart,
+                            owner.Add(bookmarkStart,
                                 explicitRow ? new XElement(m + "oMath", leftNeighbor, leftRun) : leftRun,
                                 new XElement(w + "r", wordProperties, lineBreak, label, symbol, drawing),
                                 explicitRow ? new XElement(m + "oMath", rightRun, rightNeighbor) : rightRun,
@@ -166,6 +195,21 @@ internal static partial class DocxInlineCompositionTests
                             new XElement(mathProperties), new XElement(wordProperties), content);
                     }, diagnosticSink: Record);
 
+                if (!visible)
+                {
+                    TestAssert.True(!DocxBlockTraversal.EnumerateBodyParagraphs(source).Any(p => p.Images.Count != 0),
+                        "The excluded revision cannot contribute a picture to layout.");
+                }
+                else
+                {
+                    CheckInlineOrder(source, packed);
+                }
+                var page = PictureRangeRenderer(mode).RenderPagesAsync(source, Record, default).ToBlockingEnumerable().Single();
+                return (page, diagnostics, source.EquationParts.Sum(part => part.SourceCount));
+            }
+
+            void CheckInlineOrder(DocxDocument source, bool packed)
+            {
                 var paragraph = DocxBlockTraversal.EnumerateBodyParagraphs(source).Single(p => p.Images.Count != 0);
                 var items = TestAssert.NotNull(paragraph.InlineContent).ToArray();
                 string[] before = explicitRow ? ["17", "314"] : ["314"];
@@ -176,6 +220,13 @@ internal static partial class DocxInlineCompositionTests
                 TestAssert.True(first >= 0 && first < picture && picture < last,
                     "Both operands and the drawing retain their source order in the paragraph.");
                 TestAssert.Equal(withBreak, items[(first + 1)..picture].Any(item => item is DocxInlineBreak));
+                if (revision is not null)
+                {
+                    TestAssert.Equal(revision, ((DocxInlineEquation)items[first]).Equation.Revision?.Kind);
+                    TestAssert.Equal(revision, ((DocxInlineEquation)items[last]).Equation.Revision?.Kind);
+                    var pictureRevision = ((DocxInlinePicture)items[picture]).Image.Revisions.Single(r => r.Id == "412");
+                    TestAssert.Equal(revision, pictureRevision.Kind);
+                }
                 if (withBookmark && packed)
                 {
                     var owner = ((DocxInlineEquation)items[first]).Equation.Content.Bookmarks.Single();
@@ -184,9 +235,6 @@ internal static partial class DocxInlineCompositionTests
                     TestAssert.True(ReferenceEquals(anchor.MathSource, owner.Source),
                         "The original bookmark remains bound to the mathematical source before the drawing.");
                 }
-                var page = PictureRangeRenderer(mode).RenderPagesAsync(source, Record, default).ToBlockingEnumerable().Single();
-                return (page, diagnostics, source.EquationParts.Sum(part => part.SourceCount));
-
                 static bool Matches(DocxInlineItem item, string[] labels) => item is DocxInlineEquation math &&
                     math.Equation.Content.Children.Count == labels.Length &&
                     math.Equation.Content.Children.OfType<DocxMathRun>().Select(run => run.Text.Text).SequenceEqual(labels);
