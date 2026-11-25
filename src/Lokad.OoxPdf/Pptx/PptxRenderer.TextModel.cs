@@ -176,7 +176,7 @@ internal sealed partial class PptxRenderer
             run.RunIndex,
             run.Kind.ToString(),
             run.Text,
-            run.Cascade.Sources.Count(source => source is not null),
+            run.Cascade.Layers.Count(layer => layer.Source is not null),
             run.Cascade.Layers.Select(layer => layer.Name).ToArray(),
             run.Cascade.Layers.Select(layer => layer.Kind.ToString()).ToArray(),
             run.Style.FontSize,
@@ -752,7 +752,6 @@ internal sealed partial class PptxRenderer
                 runs.Add(new PptxTextRunModel(
                     runs.Count,
                     PptxTextRunKind.Break,
-                    child,
                     breakProperties,
                     breakCascade,
                     "\n",
@@ -770,7 +769,6 @@ internal sealed partial class PptxRenderer
             runs.Add(new PptxTextRunModel(
                 runs.Count,
                 child.Name == DrawingNamespace + "fld" ? PptxTextRunKind.Field : PptxTextRunKind.Text,
-                child,
                 runProperties,
                 textRunCascade,
                 ReadTextElementText(child, slideNumber),

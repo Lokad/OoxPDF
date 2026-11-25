@@ -401,7 +401,6 @@ internal sealed partial class PptxRenderer
     internal sealed record PptxTextRunModel(
         int RunIndex,
         PptxTextRunKind Kind,
-        XElement Source,
         XElement? Properties,
         PptxRunStyleCascade Cascade,
         string Text,
@@ -411,8 +410,6 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<PptxRunStyleLayer> Layers,
         XElement? ResolvedDefaultProperties)
     {
-        public IReadOnlyList<XElement?> Sources => Layers.Select(layer => layer.Source).ToArray();
-
         public XElement? DirectProperties => Layers.FirstOrDefault(layer => layer.Kind == PptxRunStyleLayerKind.RunProperties)?.Source;
     }
 

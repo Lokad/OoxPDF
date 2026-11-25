@@ -11,45 +11,17 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static async ValueTask<IReadOnlyList<PptxPositionedTextSpan>> ReadSceneShapeTextSpansAsync(PptxRenderContext context, bool includeMasterNodes = true)
+    private static async ValueTask<IReadOnlyList<PptxPositionedTextSpan>> ReadSceneShapeTextSpansAsync(PptxRenderContext context)
     {
         var textSpans = new List<PptxPositionedTextSpan>();
-        // font preflight traversed master nodes even when the slide suppresses
-        // their paint, laying out invisible shapes and embedding orphan fonts. Honor
-        // visibility consistently with painting.
-        if (includeMasterNodes)
+        foreach (var source in EnumerateScenePaintSources(context.SceneSlide))
+        foreach (var node in EnumerateRenderedSceneNodes(source.Nodes, source.RenderPlaceholders))
         {
-            await AddSceneShapeTextSpansAsync(context.SceneSlide.MasterNodes, context, textSpans, context.SceneSlide.MasterColorMap, renderPlaceholders: false).ConfigureAwait(false);
-        }
-        await AddSceneShapeTextSpansAsync(context.SceneSlide.LayoutNodes, context, textSpans, context.SceneSlide.LayoutColorMap, renderPlaceholders: false).ConfigureAwait(false);
-        await AddSceneShapeTextSpansAsync(context.SceneSlide.SlideNodes, context, textSpans, context.SceneSlide.SlideColorMap, renderPlaceholders: true).ConfigureAwait(false);
-        return textSpans;
-    }
-
-    private static async ValueTask AddSceneShapeTextSpansAsync(
-        IReadOnlyList<PptxSceneNode> nodes,
-        PptxRenderContext context,
-        List<PptxPositionedTextSpan> textSpans,
-        PptxColorMap colorMap,
-        bool renderPlaceholders)
-    {
-        foreach (PptxSceneNode node in nodes)
-        {
+            context.CancellationToken.ThrowIfCancellationRequested();
             if (node.Kind == PptxSceneNodeKind.Shape)
-            {
-                if (ShouldRenderSceneNode(node, renderPlaceholders))
-                {
-                    textSpans.AddRange((await ReadTextSpansForSceneNodeAsync(node, context, colorMap, renderPlaceholders).ConfigureAwait(false)));
-                }
-
-                continue;
-            }
-
-            if (node.Kind == PptxSceneNodeKind.Group)
-            {
-                await AddSceneShapeTextSpansAsync(node.Children, context, textSpans, colorMap, renderPlaceholders).ConfigureAwait(false);
-            }
+                textSpans.AddRange(await ReadTextSpansForSceneNodeAsync(node, context, source.ColorMap, source.RenderPlaceholders).ConfigureAwait(false));
         }
+        return textSpans;
     }
 
     private static async ValueTask<PptxTextLayoutModel> BuildTextLayoutModelAsync(

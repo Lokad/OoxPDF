@@ -16,9 +16,8 @@ internal sealed partial class PptxRenderer
         long chartExpansion = 0;
         long axisSites = 0;
         long svgBytes = 0;
-        if (slide.ShowMasterShapes) Nodes(slide.MasterNodes, renderPlaceholders: false);
-        Nodes(slide.LayoutNodes, renderPlaceholders: false);
-        Nodes(slide.SlideNodes, renderPlaceholders: true);
+        foreach (var source in EnumerateScenePaintSources(slide))
+            Nodes(source.Nodes, source.RenderPlaceholders);
         token.ThrowIfCancellationRequested();
         axisConstructionSites = Math.Max(1L, axisSites);
         svgSourceBytes = svgBytes;

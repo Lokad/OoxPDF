@@ -63,7 +63,7 @@ internal sealed partial class PptxRenderer
             cancellationToken.ThrowIfCancellationRequested();
             var context = new PptxRenderContext(document, slide, sceneSlide, fontResolver, imageCache, diagnosticSink,
                 cancellationToken, chartWorkbookCache, textSpanMemo, tableFrameMemo);
-            IReadOnlyList<PptxPositionedTextSpan> shapeTextSpans = await ReadSceneShapeTextSpansAsync(context, includeMasterNodes: sceneSlide.ShowMasterShapes).ConfigureAwait(false);
+            IReadOnlyList<PptxPositionedTextSpan> shapeTextSpans = await ReadSceneShapeTextSpansAsync(context).ConfigureAwait(false);
             EmitUnsupportedFeatureDiagnostics(sceneSlide, slideXml, slide.PartName, slideIndex + 1, diagnosticSink, warnedMustUnderstandParts, textSpanMemo);
             cancellationToken.ThrowIfCancellationRequested();
             context = context with

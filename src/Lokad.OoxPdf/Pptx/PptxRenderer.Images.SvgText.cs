@@ -20,10 +20,8 @@ internal sealed partial class PptxRenderer
 
     private static IEnumerable<byte[]> EnumerateSvgPictureSources(PptxSceneSlide slide)
     {
-        IEnumerable<PptxSceneNode> nodes = EnumerateRenderedSceneNodes(slide.LayoutNodes, false)
-            .Concat(EnumerateRenderedSceneNodes(slide.SlideNodes, true));
-        if (slide.ShowMasterShapes) nodes = EnumerateRenderedSceneNodes(slide.MasterNodes, false).Concat(nodes);
-        foreach (PptxSceneNode node in nodes)
+        foreach (var source in EnumerateScenePaintSources(slide))
+        foreach (var node in EnumerateRenderedSceneNodes(source.Nodes, source.RenderPlaceholders))
             if (node.Picture is { Alpha: > 0d, Resource: { } image } &&
                 image.ContentType.Equals("image/svg+xml", StringComparison.OrdinalIgnoreCase))
                 yield return image.Bytes;

@@ -106,12 +106,8 @@ internal sealed partial class PptxRenderer
             Emit("PPTX_UNSUPPORTED_GRAPHIC_FRAME", "graphic frame");
         }
 
-        if (sceneSlide.ShowMasterShapes)
-        {
-            EmitNodeDiagnostics(sceneSlide.MasterNodes, sceneSlide.MasterColorMap, false, sceneSlide.MasterPartName ?? partName);
-        }
-        EmitNodeDiagnostics(sceneSlide.LayoutNodes, sceneSlide.LayoutColorMap, false, sceneSlide.LayoutPartName ?? partName);
-        EmitNodeDiagnostics(sceneSlide.SlideNodes, sceneSlide.SlideColorMap, true, partName);
+        foreach (var source in EnumerateScenePaintSources(sceneSlide))
+            EmitNodeDiagnostics(source.Nodes, source.ColorMap, source.RenderPlaceholders, source.PartName ?? partName);
 
         // Non-scene fallbacks retain background and orphan-content diagnostics,
         // while drawing-owned content shares scene visibility, including groups.
