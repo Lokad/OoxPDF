@@ -9,6 +9,7 @@ New-Item -ItemType Directory -Path (Join-Path $inputs nested) -Force | Out-Null
 $inputs = (Resolve-Path -LiteralPath $inputs).Path
 [IO.File]::WriteAllBytes((Join-Path $inputs a.bin), [byte[]](1,2,3,4,5))
 [IO.File]::WriteAllBytes((Join-Path $inputs nested/c.bin), [byte[]](6,7,8))
+Copy-Item -LiteralPath (Join-Path $inputs a.bin) -Destination (Join-Path $inputs nested/separate-copy.bin)
 New-Item -ItemType HardLink -Path (Join-Path $inputs nested/b.bin) -Target (Join-Path $inputs a.bin) | Out-Null
 $linkType = if ($IsWindows) { 'Junction' } else { 'SymbolicLink' }
 New-Item -ItemType $linkType -Path (Join-Path $inputs loop) -Target $inputs | Out-Null
@@ -26,8 +27,8 @@ try {
 }
 if (!$rejected -or (Test-Path -LiteralPath $misspelledReport)) { throw 'Unknown measurement argument was not refused before writing a report' }
 $report = & (Join-Path $PSScriptRoot 'MeasureWorkspaceFootprint.ps1') -Path $inputs -ReportPath $path
-if ($report.Bytes -ne 9 -or $report.LogicalBytes -ne 14 -or $report.SharedHardLinkBytes -ne 5) { throw 'Shared or long-path content was counted incorrectly' }
-if ($report.Files -ne 4 -or $report.Directories -ne 3 -or $report.SkippedLinks -ne 1 -or $report.Errors.Count) { throw 'Input/link/long-path traversal differs' }
+if ($report.Bytes -ne 14 -or $report.LogicalBytes -ne 19 -or $report.SharedHardLinkBytes -ne 5) { throw 'File lengths, separate copies or hard links were counted incorrectly' }
+if ($report.Files -ne 5 -or $report.Directories -ne 3 -or $report.SkippedLinks -ne 1 -or $report.Errors.Count) { throw 'Input/link/long-path traversal differs' }
 $stored = Get-Content $path -Raw | ConvertFrom-Json
 if ($stored.Bytes -ne $report.Bytes -or $stored.Root -ne $inputs) { throw 'Persisted footprint report differs' }
-Write-Output 'Argument refusal, unique bytes, logical bytes, hard-link aliases, directory loops and long paths passed.'
+Write-Output 'Argument refusal, file lengths, separate copies, hard-link aliases, directory loops and long paths passed.'

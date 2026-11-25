@@ -1,7 +1,8 @@
-"""Count unique file content once, skipping symbolic links and reparse points.
+"""Measure file lengths, skipping symbolic links and reparse points.
 
 The byte count uses file lengths, not allocated clusters, compression or heap use.
-Hard-link aliases count as files, but share one content charge by device/file ID.
+Hard-link aliases count as files and share one charge by device/file ID.
+Separate copies are charged individually even when their bytes match.
 """
 import datetime
 import json
