@@ -40,6 +40,25 @@ internal static partial class DocxInlineCompositionTests
             });
         TestAssert.True(!DocxMathLayout.TryGetRuns(mixed.Paragraphs.First().Equations.Single(), default, out _),
             "An unchanged literal and a revision cannot be merged under the same owner.");
+        foreach (bool wordProperties in new[] { false, true })
+        {
+            var conflicting = ReadMutation("CompositionProbes/math-run-revision-body-ins", OoxPdfDocxMarkupMode.AllMarkup, false, false,
+                (xml, w, m) =>
+                {
+                    XElement revision = xml.Descendants(w + "ins").Single();
+                    XName property = (wordProperties ? w : m) + "rPr";
+                    XElement outer = wordProperties
+                        ? new XElement(property, new XElement(w + "color", new XAttribute(w + "val", "1840A0")))
+                        : new XElement(property, new XElement(m + "sty", new XAttribute(m + "val", "p")));
+                    XElement inner = wordProperties
+                        ? new XElement(property, new XElement(w + "color", new XAttribute(w + "val", "A04018")))
+                        : new XElement(property, new XElement(m + "sty", new XAttribute(m + "val", "i")));
+                    revision.ReplaceWith(new XElement(m + "r", outer,
+                        new XElement(w + "ins", revision.Attributes(), inner, new XElement(m + "t", "x+2"))));
+                });
+            TestAssert.True(!DocxMathLayout.TryGetRuns(conflicting.Paragraphs.First().Equations.Single(), default, out _),
+                "Conflicting declarations of the same property kind retain the diagnosed fallback.");
+        }
         var deleted = ReadMutation("CompositionProbes/math-run-revision-body-del", OoxPdfDocxMarkupMode.Final, false, false);
         var visible = deleted.Paragraphs.First();
         TestAssert.True(visible.Revisions.Count == 0 && !visible.Equations.Single().HasRunRevisions &&

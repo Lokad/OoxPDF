@@ -578,8 +578,8 @@ internal sealed partial class DocxReader
                     hasMathRunRevisions = true;
                     AddRevision(paragraphRevisions, owner);
                 }
-                XElement? runProperties = run.Element(WordprocessingNamespace + "rPr");
-                string? characterStyleId = ReadCharacterStyleId(run);
+                XElement? runProperties = DocxMathParser.ReadWordRunProperties(run);
+                string? characterStyleId = ReadCharacterStyleIdFromProperties(runProperties);
                 DocxResolvedRunProperties resolved = ResolveRunProperties(runProperties, paragraphStyleId,
                     characterStyleId, styles, tableCellStyle?.Run, out DocxRunStyleResolution resolution);
                 return CreateResolvedTextRun(text, resolved, resolution,

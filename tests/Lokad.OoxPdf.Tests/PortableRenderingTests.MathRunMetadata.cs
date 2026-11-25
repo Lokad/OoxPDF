@@ -15,28 +15,41 @@ internal static partial class PortableRenderingTests
         foreach (var mode in Enum.GetValues<OoxPdfDocxMarkupMode>())
         {
             var beforeDiagnostics = new List<OoxPdfDiagnostic>();
-            var afterDiagnostics = new List<OoxPdfDiagnostic>();
             var before = Render(packed: false, beforeDiagnostics);
-            var after = Render(packed: true, afterDiagnostics);
             string expected = RevisionBodyEquationText(kind, mode);
             TestAssert.Equal(expected, ReadPortableEquationGlyphs(before));
-            TestAssert.Equal(expected, ReadPortableEquationGlyphs(after));
-            TestAssert.Equal(before.Content, after.Content);
-            TestAssert.True(before.Annotations.SequenceEqual(after.Annotations),
-                "Moving the revision boundary keeps the same navigation.");
-            TestAssert.True(beforeDiagnostics.SequenceEqual(afterDiagnostics),
-                "Moving the revision boundary keeps the same equation and review diagnostics.");
-            PdfContentValidator.ValidatePage(after, 0, default);
+            CheckPackedPaint();
+            if ((story, kind) is ("body", "ins") or ("header", "del"))
+            {
+                CheckPackedPaint(outerMathProperties: true);
+                CheckPackedPaint(outerWordProperties: true);
+                CheckPackedPaint(outerMathProperties: true, outerWordProperties: true);
+            }
 
-            PdfPage Render(bool packed, List<OoxPdfDiagnostic> diagnostics)
+            void CheckPackedPaint(bool outerMathProperties = false, bool outerWordProperties = false)
+            {
+                var diagnostics = new List<OoxPdfDiagnostic>();
+                var page = Render(packed: true, diagnostics, outerMathProperties, outerWordProperties);
+                TestAssert.Equal(expected, ReadPortableEquationGlyphs(page));
+                TestAssert.Equal(before.Content, page.Content);
+                TestAssert.True(before.Annotations.SequenceEqual(page.Annotations),
+                    "Moving the revision boundary keeps the same navigation.");
+                TestAssert.True(beforeDiagnostics.SequenceEqual(diagnostics),
+                    "Moving the revision boundary keeps the same equation and review diagnostics.");
+                PdfContentValidator.ValidatePage(page, 0, default);
+            }
+
+            PdfPage Render(bool packed, List<OoxPdfDiagnostic> diagnostics,
+                bool outerMathProperties = false, bool outerWordProperties = false)
             {
                 var document = DocxInlineCompositionTests.ReadMutation($"CompositionProbes/math-run-revision-{story}-{kind}",
                     mode, false, false, (xml, w, m) =>
                     {
                         XElement revision = xml.Descendants(w + kind).Single();
                         XElement run = revision.Element(m + "r")!;
-                        run.AddFirst(new XElement(m + "rPr", new XElement(m + "sty", new XAttribute(m + "val", "p"))),
-                            new XElement(w + "rPr", new XElement(w + "color", new XAttribute(w + "val", "1840A0"))));
+                        var mathProperties = new XElement(m + "rPr", new XElement(m + "sty", new XAttribute(m + "val", "p")));
+                        var wordProperties = new XElement(w + "rPr", new XElement(w + "color", new XAttribute(w + "val", "1840A0")));
+                        run.AddFirst(mathProperties, wordProperties);
                         if (!packed) return;
 
                         if (kind == "del") run.Element(m + "t")!.Name = w + "delText";
@@ -46,6 +59,16 @@ internal static partial class PortableRenderingTests
                         revision.ReplaceWith(run);
                         revision.Add(content);
                         run.Add(revision);
+                        if (outerMathProperties)
+                        {
+                            mathProperties.Remove();
+                            revision.AddBeforeSelf(mathProperties);
+                        }
+                        if (outerWordProperties)
+                        {
+                            wordProperties.Remove();
+                            revision.AddBeforeSelf(wordProperties);
+                        }
                     }, partOverride: part, diagnosticSink: diagnostics.Add);
                 var renderer = new DocxRenderer(new PinnedResolver(mathFont: true), mode,
                     mode == OoxPdfDocxMarkupMode.AllMarkup ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup :

@@ -19,7 +19,7 @@ internal static partial class DocxMathParser
         }
         XElement? control = owner?.Element(MathNamespace + "ctrlPr");
         DocxTextRun text = readRun(control ?? element, string.Empty);
-        return new(numerator, denominator, PropertyValue(element, "fPr", "type"))
+        return new(numerator, denominator, PropertyValue(element.Element(MathNamespace + "fPr"), "type"))
         { HasUnsupportedProperties = !valid, ControlText = text, ControlFontFamily = ControlFontFamily(control, text),
             ControlFontSize = control?.Element(WordprocessingNamespace + "rPr") is { } properties &&
                 (properties.Element(WordprocessingNamespace + "sz") is not null ||

@@ -142,13 +142,11 @@ internal sealed partial class DocxReader
         return DocxFieldKind.Other;
     }
 
-    private static string? ReadCharacterStyleId(XElement run)
-    {
-        return (string?)run
-            .Element(WordprocessingNamespace + "rPr")
-            ?.Element(WordprocessingNamespace + "rStyle")
-            ?.Attribute(WordprocessingNamespace + "val");
-    }
+    private static string? ReadCharacterStyleId(XElement run) =>
+        ReadCharacterStyleIdFromProperties(run.Element(WordprocessingNamespace + "rPr"));
+
+    private static string? ReadCharacterStyleIdFromProperties(XElement? properties) =>
+        (string?)properties?.Element(WordprocessingNamespace + "rStyle")?.Attribute(WordprocessingNamespace + "val");
 
     private static bool IsFieldInstructionText(XElement element) =>
         element.Name == WordprocessingNamespace + "instrText" ||

@@ -253,7 +253,7 @@ internal static partial class DocxMathParser
         {
             if (IsRevisionContent(child, allowsDeletedText))
                 hasContent = true;
-            else if (!IsReadableRun(child, allowsDeletedText) || !ReadRunProperties(child).Supported)
+            else if (!IsReadableRun(child, allowsDeletedText) || !ReadRunProperties(child.Element(MathNamespace + "rPr")).Supported)
                 return false;
         }
         return hasContent;
@@ -314,8 +314,8 @@ internal static partial class DocxMathParser
         XElement[] children = ContentChildren(element).ToArray();
         return children.Length == roles.Length && children.All(child => child.Name.Namespace == MathNamespace && roles.Contains(child.Name.LocalName));
     }
-    private static string? PropertyValue(XElement element, string property, string value) =>
-        (string?)element.Element(MathNamespace + property)?.Element(MathNamespace + value)?.Attribute(MathNamespace + "val");
+    private static string? PropertyValue(XElement? properties, string value) =>
+        (string?)properties?.Element(MathNamespace + value)?.Attribute(MathNamespace + "val");
     private static string[] ReadProperties(XElement element) => DocxSourceXml.StoredChildren(element).Where(IsProperty)
         .Select(child => child.ToString(SaveOptions.DisableFormatting)).ToArray();
 
@@ -391,13 +391,34 @@ internal static partial class DocxMathParser
 
     private static XElement? ReadRunRevision(XElement run)
     {
-        // Word may put the run's properties and text directly inside its
-        // single insertion or deletion. Mixed owners still need separate layout.
-        XElement? child = run.Elements().FirstOrDefault();
-        return child is not null && child.Name.Namespace == WordprocessingNamespace &&
-            child.Name.LocalName is ("ins" or "del") && !child.ElementsAfterSelf().Any() &&
-            HasOnlyWhitespaceText(run) && HasOnlyWhitespaceText(child) ? child : null;
+        // The revision owns all literal text. Each property kind can be kept
+        // on the enclosing run or packed inside the revision with the text.
+        XElement? mathProperties = null;
+        XElement? wordProperties = null;
+        foreach (XElement child in run.Elements())
+        {
+            if (child.Name == MathNamespace + "rPr" && mathProperties is null)
+                mathProperties = child;
+            else if (child.Name == WordprocessingNamespace + "rPr" && wordProperties is null)
+                wordProperties = child;
+            else
+                return IsPackedRunRevision(child) && !child.ElementsAfterSelf().Any() &&
+                    (mathProperties is null || child.Element(mathProperties.Name) is null) &&
+                    (wordProperties is null || child.Element(wordProperties.Name) is null) &&
+                    HasOnlyWhitespaceText(run) && HasOnlyWhitespaceText(child) ? child : null;
+        }
+        return null;
     }
+
+    private static bool IsPackedRunRevision(XElement element) =>
+        element.Name.Namespace == WordprocessingNamespace && element.Name.LocalName is "ins" or "del";
+
+    internal static XElement? ReadWordRunProperties(XElement source) =>
+        ReadRunProperty(source, WordprocessingNamespace + "rPr");
+
+    private static XElement? ReadRunProperty(XElement source, XName name) =>
+        source.Element(name) ?? (IsPackedRunRevision(source) && source.Parent is { } run &&
+            run.Name == MathNamespace + "r" ? run.Element(name) : null);
 
     private static DocxMathNode ReadLeaf(XElement element, Func<XElement, string, DocxTextRun> readRun, bool allowsDeletedText,
         XElement? firstBreakInRun, Func<XElement, bool>? includeRevision, CancellationToken token)
@@ -429,12 +450,13 @@ internal static partial class DocxMathParser
             }
             text = literal.ToString();
         }
-        var (normalText, literalText, supported) = ReadRunProperties(owner, text);
-        var fonts = owner.Element(WordprocessingNamespace + "rPr")?.Element(WordprocessingNamespace + "rFonts");
-        return new DocxMathRun(readRun(owner, text), PropertyValue(owner, "rPr", "sty"), PropertyValue(owner, "rPr", "scr"))
+        XElement? mathProperties = ReadRunProperty(owner, MathNamespace + "rPr");
+        var (normalText, literalText, supported) = ReadRunProperties(mathProperties, text);
+        var fonts = ReadWordRunProperties(owner)?.Element(WordprocessingNamespace + "rFonts");
+        return new DocxMathRun(readRun(owner, text), PropertyValue(mathProperties, "sty"), PropertyValue(mathProperties, "scr"))
         {
             WordJoinerOffsets = joinerOffsets is null ? [] : joinerOffsets,
-            PropertiesXml = ReadProperties(owner),
+            PropertiesXml = ReadProperties(mathProperties?.Parent ?? owner),
             NormalTextValue = normalText,
             LiteralText = literalText,
             ExplicitFontFamily = (string?)fonts?.Attribute(WordprocessingNamespace + "ascii")
@@ -443,9 +465,8 @@ internal static partial class DocxMathParser
         };
     }
 
-    private static (bool? NormalText, bool LiteralText, bool Supported) ReadRunProperties(XElement run, string text = "")
+    private static (bool? NormalText, bool LiteralText, bool Supported) ReadRunProperties(XElement? properties, string text = "")
     {
-        XElement? properties = run.Element(MathNamespace + "rPr");
         var (normalText, normalSupported) = ReadRunFlag(properties, MathNamespace + "nor");
         var (literalText, literalSupported) = ReadRunFlag(properties, MathNamespace + "lit");
         var (alignment, alignmentSupported) = ReadRunFlag(properties, MathNamespace + "aln");
