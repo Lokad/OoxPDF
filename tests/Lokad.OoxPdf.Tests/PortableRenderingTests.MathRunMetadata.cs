@@ -24,12 +24,13 @@ internal static partial class PortableRenderingTests
                 CheckPackedPaint(outerMathProperties: true);
                 CheckPackedPaint(outerWordProperties: true);
                 CheckPackedPaint(outerMathProperties: true, outerWordProperties: true);
+                CheckPackedPaint(outerMathProperties: true, outerWordProperties: true, withEditingMarkers: true);
             }
 
-            void CheckPackedPaint(bool outerMathProperties = false, bool outerWordProperties = false)
+            void CheckPackedPaint(bool outerMathProperties = false, bool outerWordProperties = false, bool withEditingMarkers = false)
             {
                 var diagnostics = new List<OoxPdfDiagnostic>();
-                var page = Render(packed: true, diagnostics, outerMathProperties, outerWordProperties);
+                var page = Render(packed: true, diagnostics, outerMathProperties, outerWordProperties, withEditingMarkers);
                 TestAssert.Equal(expected, ReadPortableEquationGlyphs(page));
                 TestAssert.Equal(before.Content, page.Content);
                 TestAssert.True(before.Annotations.SequenceEqual(page.Annotations),
@@ -40,7 +41,7 @@ internal static partial class PortableRenderingTests
             }
 
             PdfPage Render(bool packed, List<OoxPdfDiagnostic> diagnostics,
-                bool outerMathProperties = false, bool outerWordProperties = false)
+                bool outerMathProperties = false, bool outerWordProperties = false, bool withEditingMarkers = false)
             {
                 var document = DocxInlineCompositionTests.ReadMutation($"CompositionProbes/math-run-revision-{story}-{kind}",
                     mode, false, false, (xml, w, m) =>
@@ -68,6 +69,11 @@ internal static partial class PortableRenderingTests
                         {
                             wordProperties.Remove();
                             revision.AddBeforeSelf(wordProperties);
+                        }
+                        if (withEditingMarkers)
+                        {
+                            revision.AddBeforeSelf(new XElement(w + "tab"));
+                            revision.AddAfterSelf(new XElement(w + "lastRenderedPageBreak"));
                         }
                     }, partOverride: part, diagnosticSink: diagnostics.Add);
                 var renderer = new DocxRenderer(new PinnedResolver(mathFont: true), mode,

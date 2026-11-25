@@ -389,25 +389,34 @@ internal static partial class DocxMathParser
         };
     }
 
-    private static XElement? ReadRunRevision(XElement run)
+    private static XElement? ReadRunRevision(XElement run, CancellationToken token)
     {
         // The revision owns all literal text. Each property kind can be kept
         // on the enclosing run or packed inside the revision with the text.
+        // Nonprinting markers can surround the revision without owning text.
         XElement? mathProperties = null;
         XElement? wordProperties = null;
+        XElement? revision = null;
         foreach (XElement child in run.Elements())
         {
+            token.ThrowIfCancellationRequested();
+            if (DocxSourceXml.IsNonPrintingMarker(child)) continue;
+            if (revision is not null) return null;
+
             if (child.Name == MathNamespace + "rPr" && mathProperties is null)
                 mathProperties = child;
             else if (child.Name == WordprocessingNamespace + "rPr" && wordProperties is null)
                 wordProperties = child;
+            else if (IsPackedRunRevision(child))
+                revision = child;
             else
-                return IsPackedRunRevision(child) && !child.ElementsAfterSelf().Any() &&
-                    (mathProperties is null || child.Element(mathProperties.Name) is null) &&
-                    (wordProperties is null || child.Element(wordProperties.Name) is null) &&
-                    HasOnlyWhitespaceText(run) && HasOnlyWhitespaceText(child) ? child : null;
+                return null;
         }
-        return null;
+
+        return revision is not null &&
+            (mathProperties is null || revision.Element(mathProperties.Name) is null) &&
+            (wordProperties is null || revision.Element(wordProperties.Name) is null) &&
+            HasOnlyWhitespaceText(run) && HasOnlyWhitespaceText(revision) ? revision : null;
     }
 
     private static bool IsPackedRunRevision(XElement element) =>
@@ -424,7 +433,7 @@ internal static partial class DocxMathParser
         XElement? firstBreakInRun, Func<XElement, bool>? includeRevision, CancellationToken token)
     {
         if (element.Name != MathNamespace + "r") return new DocxMathUnsupported(element.Name.LocalName, element.Name.NamespaceName, []);
-        XElement? revision = includeRevision is not null && firstBreakInRun is null ? ReadRunRevision(element) : null;
+        XElement? revision = includeRevision is not null && firstBreakInRun is null ? ReadRunRevision(element, token) : null;
         XElement owner = revision ?? element;
         if (revision is not null) allowsDeletedText = revision.Name == WordprocessingNamespace + "del";
         var children = RunContent(owner, firstBreakInRun);
