@@ -12,22 +12,32 @@ internal sealed partial class PptxSceneBuilder
         IReadOnlyDictionary<string, OoxRelationship> relationships,
         PptxTheme theme, PptxColorMap colorMap)
     {
-        XElement? blipFill = shapeProperties?.Element(DrawingNamespace + "blipFill");
-        XElement? blip = blipFill?.Element(DrawingNamespace + "blip");
-        string? relationshipId = (string?)blip?.Attribute(RelationshipsNamespace + "embed");
+        var (style, relationshipId, samplingBlip) = ReadDrawingPictureFill(shapeProperties);
+        if (!style.HasPicture) return style;
         string? targetPartName = ResolveRelationshipTarget(relationshipId, relationships);
-        return blipFill is null || shapeProperties is null
-            ? default
-            : new PptxSceneShapePictureFill(
-                true,
-                relationshipId ?? string.Empty,
-                targetPartName,
-                ReadImageResource(package, targetPartName),
-                ReadPictureCrop(shapeProperties),
-                ReadPictureFill(shapeProperties),
-                ReadPictureAlpha(shapeProperties),
-                ReadPictureAlphaValue(shapeProperties),
-                HasPictureTile(shapeProperties)) { Recolor = ReadImageRecolor(shapeProperties, theme, colorMap) };
+        return style with
+        {
+            TargetPartName = targetPartName,
+            Resource = ReadImageResource(package, targetPartName),
+            Recolor = ReadImageRecolor(samplingBlip, theme, colorMap)
+        };
+    }
+
+    // Charts use the same source projection and resolve the relationship later.
+    private static (PptxSceneShapePictureFill Style, string? RelationshipId, XElement? SamplingBlip)
+        ReadDrawingPictureFill(XElement? shapeProperties)
+    {
+        if (shapeProperties?.Element(DrawingNamespace + "blipFill") is not { } blipFill) return default;
+
+        XElement samplingFill = shapeProperties.Element(PresentationNamespace + "blipFill") ?? blipFill;
+        XElement? relationshipBlip = blipFill.Element(DrawingNamespace + "blip");
+        XElement? samplingBlip = ReferenceEquals(samplingFill, blipFill)
+            ? relationshipBlip : samplingFill.Element(DrawingNamespace + "blip");
+        string? relationshipId = (string?)relationshipBlip?.Attribute(RelationshipsNamespace + "embed");
+        var sampling = ReadPictureSampling(samplingFill, samplingBlip);
+        var style = new PptxSceneShapePictureFill(true, relationshipId ?? string.Empty,
+            null, null, sampling.Crop, sampling.Fill, sampling.Alpha, sampling.AlphaValue, sampling.HasTile);
+        return (style, relationshipId, samplingBlip);
     }
 
     private static PptxSceneImageResource? ReadImageResource(OoxPackage package, string? targetPartName)
@@ -54,66 +64,20 @@ internal sealed partial class PptxSceneBuilder
             : null;
     }
 
-    internal static PptxSceneRect ReadPictureCrop(XElement picture)
+    internal static (PptxSceneRect Crop, PptxSceneRect Fill, double Alpha, string? AlphaValue, bool HasTile)
+        ReadPictureSampling(XElement? blipFill, XElement? blip)
     {
-        XElement? blipFill = picture.Element(PresentationNamespace + "blipFill") ??
-            picture.Element(DrawingNamespace + "blipFill");
-        XElement? sourceRectangle = blipFill?.Element(DrawingNamespace + "srcRect");
-        return sourceRectangle is null
-            ? default
-            : ReadPercentageRectangle(sourceRectangle);
+        XElement? crop = blipFill?.Element(DrawingNamespace + "srcRect");
+        XElement? fill = blipFill?.Element(DrawingNamespace + "stretch")?.Element(DrawingNamespace + "fillRect");
+        string? alphaValue = (string?)blip?.Element(DrawingNamespace + "alphaModFix")?.Attribute("amt");
+        double alpha = OoxXml.TryParsePercentage(alphaValue, out double parsed) ? Math.Clamp(parsed, 0d, 1d) : 1d;
+        return (crop is null ? default : ReadPercentageRectangle(crop),
+            fill is null ? default : ReadPercentageRectangle(fill),
+            alpha, alphaValue, blipFill?.Element(DrawingNamespace + "tile") is not null);
     }
 
-    internal static PptxSceneRect ReadPictureFill(XElement picture)
+    internal static PptxSceneImageRecolor ReadImageRecolor(XElement? blip, PptxTheme theme, PptxColorMap colorMap)
     {
-        XElement? blipFill = picture.Element(PresentationNamespace + "blipFill") ??
-            picture.Element(DrawingNamespace + "blipFill");
-        XElement? fillRectangle = blipFill
-            ?.Element(DrawingNamespace + "stretch")
-            ?.Element(DrawingNamespace + "fillRect");
-        return fillRectangle is null
-            ? default
-            : ReadPercentageRectangle(fillRectangle);
-    }
-
-    internal static bool HasPictureTile(XElement picture)
-    {
-        XElement? blipFill = picture.Element(PresentationNamespace + "blipFill") ??
-            picture.Element(DrawingNamespace + "blipFill");
-        return blipFill?.Element(DrawingNamespace + "tile") is not null;
-    }
-
-    internal static double ReadPictureAlpha(XElement picture)
-    {
-        XElement? blip = ReadPictureBlip(picture);
-        XElement? alphaModFix = blip?.Element(DrawingNamespace + "alphaModFix");
-        if (alphaModFix?.Attribute("amt") is { } amount &&
-            OoxXml.TryParsePercentage(amount.Value, out double parsedAmount))
-        {
-            return Math.Clamp(parsedAmount, 0d, 1d);
-        }
-
-        return 1d;
-    }
-
-    internal static string? ReadPictureAlphaValue(XElement picture)
-    {
-        XElement? blip = ReadPictureBlip(picture);
-        return (string?)blip
-            ?.Element(DrawingNamespace + "alphaModFix")
-            ?.Attribute("amt");
-    }
-
-    private static XElement? ReadPictureBlip(XElement picture)
-    {
-        XElement? blipFill = picture.Element(PresentationNamespace + "blipFill") ??
-            picture.Element(DrawingNamespace + "blipFill");
-        return blipFill?.Element(DrawingNamespace + "blip");
-    }
-
-    internal static PptxSceneImageRecolor ReadImageRecolor(XElement picture, PptxTheme theme, PptxColorMap colorMap)
-    {
-        XElement? blip = ReadPictureBlip(picture);
         if (blip is null)
         {
             return PptxSceneImageRecolor.None;

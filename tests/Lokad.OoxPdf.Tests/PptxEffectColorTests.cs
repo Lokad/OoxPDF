@@ -127,7 +127,8 @@ internal static class PptxEffectColorTests
               <p:blipFill><a:blip><a:duotone><a:prstClr val="unknown-color"/><a:prstClr val="white"/></a:duotone></a:blip></p:blipFill>
             </p:pic>
             """);
-        TestAssert.Equal(PptxSceneImageRecolorKind.None, PptxSceneBuilder.ReadImageRecolor(recolor, PptxTheme.Empty, PptxColorMap.Default).Kind);
+        XElement blip = recolor.Descendants(a + "blip").Single();
+        TestAssert.Equal(PptxSceneImageRecolorKind.None, PptxSceneBuilder.ReadImageRecolor(blip, PptxTheme.Empty, PptxColorMap.Default).Kind);
     }
 
     public static void PptxEffectRasterStorageRefundsOnCompletionRefusalAndCancellation()

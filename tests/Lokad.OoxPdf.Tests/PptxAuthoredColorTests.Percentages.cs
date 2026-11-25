@@ -48,11 +48,13 @@ internal static partial class PptxAuthoredColorTests
                 new XElement(a + "lum", new XAttribute("bright", "-25%"), new XAttribute("contrast", "50%"))),
             new XElement(a + "srcRect", new XAttribute("l", "25%"), new XAttribute("r", "25%")),
             new XElement(a + "stretch", new XElement(a + "fillRect", new XAttribute("t", "12.5%")))));
-        var crop = PptxSceneBuilder.ReadPictureCrop(picture);
-        TestAssert.Equal(.25d, crop.Left); TestAssert.Equal(.25d, crop.Right);
-        TestAssert.Equal(.125d, PptxSceneBuilder.ReadPictureFill(picture).Top);
-        TestAssert.Equal(.25d, PptxSceneBuilder.ReadPictureAlpha(picture));
-        var recolor = PptxSceneBuilder.ReadImageRecolor(picture, PptxTheme.Empty, PptxColorMap.Default);
+        XElement pictureFill = picture.Element(p + "blipFill")!;
+        XElement? blip = pictureFill.Element(a + "blip");
+        var sampling = PptxSceneBuilder.ReadPictureSampling(pictureFill, blip);
+        TestAssert.Equal(.25d, sampling.Crop.Left); TestAssert.Equal(.25d, sampling.Crop.Right);
+        TestAssert.Equal(.125d, sampling.Fill.Top);
+        TestAssert.Equal(.25d, sampling.Alpha);
+        var recolor = PptxSceneBuilder.ReadImageRecolor(blip, PptxTheme.Empty, PptxColorMap.Default);
         TestAssert.Equal(-.25d, recolor.Brightness); TestAssert.Equal(.5d, recolor.Contrast);
         var gradient = XElement.Parse($"<p:spPr xmlns:p=\"{p}\" xmlns:a=\"{a}\"><a:gradFill><a:gsLst><a:gs pos=\"0%\"><a:srgbClr val=\"FF0000\"/></a:gs><a:gs pos=\"100%\"><a:srgbClr val=\"0000FF\"/></a:gs></a:gsLst><a:lin/></a:gradFill></p:spPr>");
         var fill = PptxSceneBuilder.ReadLinearGradientFill(gradient, PptxTheme.Empty, PptxColorMap.Default);

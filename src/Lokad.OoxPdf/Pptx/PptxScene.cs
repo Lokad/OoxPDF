@@ -447,7 +447,9 @@ internal sealed partial class PptxSceneBuilder
         CancellationToken cancellationToken)
     {
         XElement? presentationFill = picture.Element(PresentationNamespace + "blipFill");
-        XElement? blip = (presentationFill ?? picture.Element(DrawingNamespace + "blipFill"))?.Element(DrawingNamespace + "blip");
+        XElement? blipFill = presentationFill ?? picture.Element(DrawingNamespace + "blipFill");
+        XElement? blip = blipFill?.Element(DrawingNamespace + "blip");
+        var sampling = ReadPictureSampling(blipFill, blip);
         string? svgRelationshipId = OoxXml.ReadDrawingSvgRelationshipId(blip, cancellationToken);
         string? relationshipId = (presentationFill is null ? null : (string?)blip?.Attribute(RelationshipsNamespace + "embed"))
             ?? svgRelationshipId;
@@ -458,14 +460,14 @@ internal sealed partial class PptxSceneBuilder
             relationshipId,
             targetPartName,
             ReadImageResource(package, targetPartName),
-            ReadPictureCrop(picture),
-            ReadPictureFill(picture),
-            ReadPictureAlpha(picture),
-            ReadPictureAlphaValue(picture),
-            ReadImageRecolor(picture, theme, colorMap),
+            sampling.Crop,
+            sampling.Fill,
+            sampling.Alpha,
+            sampling.AlphaValue,
+            ReadImageRecolor(blip, theme, colorMap),
             HasPictureVideo(),
             HasPictureAudio(),
-            HasPictureTile(picture),
+            sampling.HasTile,
             line,
             TryReadOuterShadow(shapeProperties, theme, colorMap, out PptxSceneOuterShadow outerShadow) ? outerShadow : default,
             ReadPresetGeometry(shapeProperties),

@@ -271,35 +271,11 @@ internal sealed partial class PptxSceneBuilder
             fill,
             noFill ? new PptxSceneGradientFill(false, false, 0d, []) : ReadLinearGradientFill(shapeProperties, theme, colorMap),
             noFill ? default : ReadChartPatternFill(shapeProperties, theme, colorMap),
-            noFill ? default : ReadChartPictureFill(shapeProperties),
+            noFill ? default : ReadDrawingPictureFill(shapeProperties).Style,
             ReadChartLine(shapeProperties, theme, colorMap),
             TryReadGlow(shapeProperties, theme, colorMap, out PptxSceneGlow glow) ? glow : default,
             TryReadOuterShadow(shapeProperties, theme, colorMap, out PptxSceneOuterShadow outerShadow) ? outerShadow : default,
             ReadEffects(shapeProperties));
-    }
-
-    private static PptxSceneShapePictureFill ReadChartPictureFill(XElement? shapeProperties)
-    {
-        XElement? blipFill = shapeProperties?.Element(DrawingNamespace + "blipFill");
-        if (blipFill is null || shapeProperties is null)
-        {
-            return default;
-        }
-
-        string relationshipId = (string?)blipFill
-            .Element(DrawingNamespace + "blip")
-            ?.Attribute(RelationshipsNamespace + "embed")
-            ?? string.Empty;
-        return new PptxSceneShapePictureFill(
-            true,
-            relationshipId,
-            null,
-            null,
-            ReadPictureCrop(shapeProperties),
-            ReadPictureFill(shapeProperties),
-            ReadPictureAlpha(shapeProperties),
-            ReadPictureAlphaValue(shapeProperties),
-            HasPictureTile(shapeProperties));
     }
 
     internal static string ReadChartElementValue(XElement? element, string childName)

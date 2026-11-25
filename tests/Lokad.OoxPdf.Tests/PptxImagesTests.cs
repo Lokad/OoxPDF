@@ -28,7 +28,8 @@ internal static partial class PptxImagesTests
               </p:blipFill>
             </p:pic>
             """);
-        PptxSceneImageRecolor luminance = PptxSceneBuilder.ReadImageRecolor(luminancePicture, PptxTheme.Empty, PptxColorMap.Default);
+        XElement luminanceBlip = luminancePicture.Descendants(OoxNamespaces.DrawingNamespace + "blip").Single();
+        PptxSceneImageRecolor luminance = PptxSceneBuilder.ReadImageRecolor(luminanceBlip, PptxTheme.Empty, PptxColorMap.Default);
         TestAssert.Equal(PptxSceneImageRecolorKind.Luminance, luminance.Kind);
         TestAssert.Equal("lum", luminance.KindValue ?? string.Empty);
         TestAssert.Equal("25000", luminance.BrightnessValue ?? string.Empty);
@@ -46,7 +47,8 @@ internal static partial class PptxImagesTests
               </p:blipFill>
             </p:pic>
             """);
-        PptxSceneImageRecolor biLevel = PptxSceneBuilder.ReadImageRecolor(biLevelPicture, PptxTheme.Empty, PptxColorMap.Default);
+        XElement biLevelBlip = biLevelPicture.Descendants(OoxNamespaces.DrawingNamespace + "blip").Single();
+        PptxSceneImageRecolor biLevel = PptxSceneBuilder.ReadImageRecolor(biLevelBlip, PptxTheme.Empty, PptxColorMap.Default);
         TestAssert.Equal(PptxSceneImageRecolorKind.BiLevel, biLevel.Kind);
         TestAssert.Equal("biLevel", biLevel.KindValue ?? string.Empty);
         TestAssert.Equal("62500", biLevel.ThresholdValue ?? string.Empty);
@@ -64,14 +66,16 @@ internal static partial class PptxImagesTests
               </p:blipFill>
             </p:pic>
             """);
-        TestAssert.True(PptxSceneBuilder.HasPictureTile(tiledPicture), "The slide picture requests tiling.");
         XElement fill = tiledPicture.Elements().Single();
         XNamespace drawing = fill.Elements().First().Name.Namespace;
+        TestAssert.True(PptxSceneBuilder.ReadPictureSampling(fill, fill.Element(drawing + "blip")).HasTile,
+            "The slide picture requests tiling.");
         var shapeFill = new XElement(drawing + "blipFill", fill.Elements());
-        var shape = new XElement(tiledPicture.Name.Namespace + "spPr", shapeFill);
-        TestAssert.True(PptxSceneBuilder.HasPictureTile(shape), "The shape picture fill requests tiling.");
+        TestAssert.True(PptxSceneBuilder.ReadPictureSampling(shapeFill, shapeFill.Element(drawing + "blip")).HasTile,
+            "The shape picture fill requests tiling.");
         shapeFill.Element(drawing + "tile")!.ReplaceWith(new XElement(drawing + "stretch"));
-        TestAssert.True(!PptxSceneBuilder.HasPictureTile(shape), "The shape picture fill requests stretch.");
+        TestAssert.True(!PptxSceneBuilder.ReadPictureSampling(shapeFill, shapeFill.Element(drawing + "blip")).HasTile,
+            "The shape picture fill requests stretch.");
     }
 
     public static void PptxImageAlphaPreservesRawOoxmlTokens()
@@ -84,8 +88,10 @@ internal static partial class PptxImagesTests
               </p:blipFill>
             </p:pic>
             """);
-        TestAssert.Equal(0.375d, PptxSceneBuilder.ReadPictureAlpha(slidePicture));
-        TestAssert.Equal("37500", PptxSceneBuilder.ReadPictureAlphaValue(slidePicture) ?? string.Empty);
+        XElement slideFill = slidePicture.Elements().Single();
+        var picture = PptxSceneBuilder.ReadPictureSampling(slideFill, slideFill.Element(OoxNamespaces.DrawingNamespace + "blip"));
+        TestAssert.Equal(0.375d, picture.Alpha);
+        TestAssert.Equal("37500", picture.AlphaValue ?? string.Empty);
 
         XElement shapePictureFill = XElement.Parse("""
             <p:spPr xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
@@ -95,8 +101,10 @@ internal static partial class PptxImagesTests
               </a:blipFill>
             </p:spPr>
             """);
-        TestAssert.Equal(0.625d, PptxSceneBuilder.ReadPictureAlpha(shapePictureFill));
-        TestAssert.Equal("62500", PptxSceneBuilder.ReadPictureAlphaValue(shapePictureFill) ?? string.Empty);
+        XElement shapeFill = shapePictureFill.Elements().Single();
+        var shape = PptxSceneBuilder.ReadPictureSampling(shapeFill, shapeFill.Element(OoxNamespaces.DrawingNamespace + "blip"));
+        TestAssert.Equal(0.625d, shape.Alpha);
+        TestAssert.Equal("62500", shape.AlphaValue ?? string.Empty);
     }
 
     public static void PptxSyntheticPngPictureRendersImageXObject() =>
