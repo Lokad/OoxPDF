@@ -122,10 +122,9 @@ internal static class PptxEffectColorTests
         TestAssert.True(style.Glow.HasGlow && style.OuterShadow.HasShadow, "Chart furniture consumes the same supported effect colors.");
         TestAssert.Equal(new RgbColor(255, 0, 0), style.Glow.Color);
         TestAssert.Equal(new RgbColor(255, 0, 0), style.OuterShadow.Color);
-        // This cleanup must not silently extend the separate duotone policy.
         XElement recolor = XElement.Parse($$"""
             <p:pic xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="{{a}}">
-              <p:blipFill><a:blip><a:duotone><a:prstClr val="red"/><a:prstClr val="white"/></a:duotone></a:blip></p:blipFill>
+              <p:blipFill><a:blip><a:duotone><a:prstClr val="unknown-color"/><a:prstClr val="white"/></a:duotone></a:blip></p:blipFill>
             </p:pic>
             """);
         TestAssert.Equal(PptxSceneImageRecolorKind.None, PptxSceneBuilder.ReadImageRecolor(recolor, PptxTheme.Empty, PptxColorMap.Default).Kind);

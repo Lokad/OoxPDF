@@ -20,7 +20,10 @@ internal static class PptxPictureRecolorTests
             ("<a:biLevel thresh=\"50%\"/>", [0, 0, 0, 0, 0, 0]),
             ("<a:lum bright=\"100%\"/>", [255, 255, 255, 255, 255, 255]),
             ("<a:lum bright=\"0%\" contrast=\"0%\"/>", [255, 0, 0, 0, 0, 255]),
-            ("<a:grayscl/><a:alphaModFix amt=\"50%\"/>", [54, 54, 54, 18, 18, 18])
+            ("<a:grayscl/><a:alphaModFix amt=\"50%\"/>", [54, 54, 54, 18, 18, 18]),
+            ("<a:duotone><a:prstClr val=\"red\"/><a:prstClr val=\"white\"/></a:duotone>", [255, 54, 54, 255, 18, 18]),
+            ("<a:duotone><a:prstClr val=\"black\"/><a:prstClr val=\"white\"><a:shade val=\"50000\"/></a:prstClr></a:duotone>",
+                [40, 40, 40, 14, 14, 14])
         ];
         var nodes = new System.Text.StringBuilder();
         foreach (bool fill in new[] { false, true })
@@ -61,7 +64,7 @@ internal static class PptxPictureRecolorTests
             TestAssert.Equal(2, image.Width);
             TestAssert.Equal(1, image.Height);
             TestAssert.True(TestFixtures.InflateZlib(image.Bytes).AsSpan().SequenceEqual(treatments[i % treatments.Length].Rgb),
-                "Each picture owner retains its literal source-pixel treatment when sharing one image part.");
+                $"Image {i} must retain the pixels for treatment {treatments[i % treatments.Length].Effect}.");
             TestAssert.True(TestFixtures.InflateZlib(TestAssert.NotNull(image.Alpha)).AsSpan().SequenceEqual(new byte[] { 255, 128 }),
                 "Recoloring retains the image's authored alpha plane.");
         }

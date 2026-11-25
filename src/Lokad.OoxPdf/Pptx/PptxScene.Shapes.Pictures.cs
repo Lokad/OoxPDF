@@ -154,31 +154,14 @@ internal sealed partial class PptxSceneBuilder
         {
             XElement[] colors = duotone.Elements().Take(2).ToArray();
             if (colors.Length == 2 &&
-                TryReadImageRecolorColor(colors[0], theme, colorMap, out RgbColor dark) &&
-                TryReadImageRecolorColor(colors[1], theme, colorMap, out RgbColor light))
+                PptxColorResolver.TryReadColorDeclarationWithAlpha(colors[0], theme, colorMap, out RgbColor dark, out _) &&
+                PptxColorResolver.TryReadColorDeclarationWithAlpha(colors[1], theme, colorMap, out RgbColor light, out _))
             {
                 return PptxSceneImageRecolor.Duotone(dark, light, duotone.Name.LocalName);
             }
         }
 
         return PptxSceneImageRecolor.None;
-    }
-
-    private static bool TryReadImageRecolorColor(XElement colorElement, PptxTheme theme, PptxColorMap colorMap, out RgbColor color)
-    {
-        if (colorElement.Name == DrawingNamespace + "prstClr")
-        {
-            string? preset = (string?)colorElement.Attribute("val");
-            color = preset switch
-            {
-                "black" => new RgbColor(0, 0, 0),
-                "white" => new RgbColor(255, 255, 255),
-                _ => default
-            };
-            return preset is "black" or "white";
-        }
-
-        return PptxColorResolver.TryReadColorDeclarationWithAlpha(colorElement, theme, colorMap, out color, out _);
     }
 
     private static PptxSceneRect ReadPercentageRectangle(XElement element)
