@@ -1,4 +1,5 @@
 # Transfer an already qualified artifact and run only explicit integration smoke jobs.
+# Smoke jobs default to ExpectedExitCode 0. Exit 3 also requires DiagnosticsSha256.
 [CmdletBinding()]
 param(
     [Parameter(Mandatory=$true)] [string] $ArtifactDirectory,
@@ -7,6 +8,7 @@ param(
     [Parameter(Mandatory=$true)] [string] $OutputDirectory
 )
 $ErrorActionPreference = 'Stop'
+$PSNativeCommandUseErrorActionPreference = $false
 . (Join-Path $PSScriptRoot 'QualificationBuildIdentity.ps1')
 $repo = Split-Path -Parent $PSScriptRoot
 $artifact = (Resolve-Path -LiteralPath $ArtifactDirectory).Path
@@ -40,6 +42,16 @@ foreach ($name in $pin.Assets.Keys) {
 }
 foreach ($job in $jobs) {
     if ((Get-FileHash -LiteralPath $job.Input).Hash -ne $job.InputSha256) { throw 'Smoke input differs' }
+    $expectedExit = $job.ExpectedExitCode ?? 0
+    if (($expectedExit -isnot [int] -and $expectedExit -isnot [long]) -or $expectedExit -notin @(0,3)) {
+        throw 'Smoke expected exit must be 0 or 3'
+    }
+    if ($expectedExit -eq 3 -or $null -ne $job.DiagnosticsSha256) {
+        if ($job.DiagnosticsSha256 -isnot [string] -or $job.DiagnosticsSha256 -notmatch '^[0-9a-f]{64}$') {
+            throw 'Smoke diagnostics require a SHA-256 pin'
+        }
+        if ($job.Arguments -contains '--diagnostics') { throw 'Smoke diagnostics path is owned by the transfer' }
+    }
 }
 New-Item -ItemType Directory -Path $OutputDirectory | Out-Null
 foreach ($name in $pin.Assets.Keys) {
@@ -69,9 +81,20 @@ foreach ($name in $pin.Assets.Keys) {
 $cli = Join-Path $repo "src/Lokad.OoxPdf.Cli/bin/Release/$framework/Lokad.OoxPdf.Cli.dll"
 $rows = @()
 foreach ($job in $jobs) {
-    $pdf = Join-Path $OutputDirectory ($rows.Count.ToString() + '.pdf')
-    dotnet $cli convert $job.Input $pdf @($job.Arguments) *> ($pdf+'.log')
-    if ($LASTEXITCODE -ne 0 -or (Get-FileHash $pdf).Hash -ne $job.PdfSha256) { throw 'Transfer smoke PDF differs' }
+    $outputBase = Join-Path $OutputDirectory ($rows.Count.ToString())
+    $pdf = $outputBase + '.pdf'
+    $arguments = @($job.Arguments)
+    if ($job.DiagnosticsSha256) {
+        $diagnostics = $outputBase + '.diagnostics.json'
+        $arguments += @('--diagnostics', $diagnostics)
+    }
+    dotnet $cli convert $job.Input $pdf @arguments *> ($pdf+'.log')
+    if ($LASTEXITCODE -ne ($job.ExpectedExitCode ?? 0)) { throw 'Transfer smoke exit differs' }
+    if (!(Test-Path -LiteralPath $pdf -PathType Leaf) -or (Get-FileHash -LiteralPath $pdf).Hash -ne $job.PdfSha256) {
+        throw 'Transfer smoke PDF differs'
+    }
+    if ($job.DiagnosticsSha256 -and (!(Test-Path -LiteralPath $diagnostics -PathType Leaf) -or
+        (Get-FileHash -LiteralPath $diagnostics).Hash -ne $job.DiagnosticsSha256)) { throw 'Transfer smoke diagnostics differ' }
     $rows += $job
 }
 [ordered]@{FrozenRevision=$pin.Revision;Framework=$framework;LibrarySha256=$pin.LibrarySha256;AssetsVerified=$pin.Assets.Count;Rebuilt=$false;RepeatedSuite=$false;Smoke=$rows} |
