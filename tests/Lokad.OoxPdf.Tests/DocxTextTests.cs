@@ -575,7 +575,7 @@ internal static partial class DocxTextTests
                 DocxParagraphKeepRules.Empty,
                 null);
             DocxDocument document = DocxTests.CreateLayoutTestDocument(
-                [new DocxParagraphElement(paragraph)], []);
+                [new DocxParagraphElement(paragraph)]);
             DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
                 .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
             return layout.Pages[0].Items.OfType<DocxTextLineLayout>().Single().BaselineY;
@@ -873,7 +873,7 @@ internal static partial class DocxTextTests
             DocxParagraphSpacing.Empty,
             DocxParagraphKeepRules.Empty,
             null);
-        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(paragraph)], []);
+        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(paragraph)]);
 
         DocxTextLineLayout line = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, new DocxTests.FontSizeWidthTextMeasurer(), CancellationToken.None)
@@ -909,7 +909,7 @@ internal static partial class DocxTextTests
             DocxParagraphSpacing.Empty,
             DocxParagraphKeepRules.Empty,
             null);
-        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(paragraph)], []);
+        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(paragraph)]);
 
         DocxTextLineLayout line = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, new DocxTests.FontSizeWidthTextMeasurer(), CancellationToken.None)

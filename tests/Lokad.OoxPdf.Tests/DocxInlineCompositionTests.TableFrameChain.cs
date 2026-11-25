@@ -61,7 +61,7 @@ internal static partial class DocxInlineCompositionTests
             elements.Add(new DocxTableElement(first));
             if (separator) elements.Add(new DocxParagraphElement(Prose("Between tables", 11d)));
             elements.Add(new DocxTableElement(second)); elements.Add(new DocxParagraphElement(tail));
-            var source = DocxTests.CreateLayoutTestDocument(elements, [first, second]) with
+            var source = DocxTests.CreateLayoutTestDocument(elements) with
             { PageWidthPoints = 612d, PageHeightPoints = 792d, MarginLeftPoints = 72d, MarginRightPoints = 72d,
                 MarginTopPoints = 72d, MarginBottomPoints = 72d };
             var natural = new DocxTests.FamilyWidthTextMeasurer();

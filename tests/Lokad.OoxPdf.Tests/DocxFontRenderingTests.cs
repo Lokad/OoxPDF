@@ -82,7 +82,7 @@ internal static class DocxFontRenderingTests
             DocxParagraphSpacing.Empty,
             DocxParagraphKeepRules.Empty,
             null);
-        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(paragraph)], []);
+        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(paragraph)]);
 
         DocxTextLineLayout line = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
@@ -155,7 +155,7 @@ internal static class DocxFontRenderingTests
             DocxParagraphSpacing.Empty,
             DocxParagraphKeepRules.Empty,
             null);
-        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(paragraph)], []);
+        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(paragraph)]);
 
         DocxTextLineLayout line = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)

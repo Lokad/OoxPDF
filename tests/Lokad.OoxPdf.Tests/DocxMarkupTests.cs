@@ -1658,8 +1658,7 @@ internal static class DocxMarkupTests
         DocxParagraph floatingTextBoxParagraph = CreateMoveRevisionParagraph();
         DocxFloatingDrawing floatingDrawing = DocxTests.CreateFloatingTextBoxDrawing([new DocxParagraphElement(floatingTextBoxParagraph)]);
         DocxDocument floatingDocument = DocxTests.CreateLayoutTestDocument(
-            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Drawing anchor", 10d, 12d))],
-            []) with
+            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Drawing anchor", 10d, 12d))]) with
         {
             FloatingDrawings = [floatingDrawing],
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
@@ -1678,8 +1677,7 @@ internal static class DocxMarkupTests
             }
         };
         DocxDocument staticDocument = DocxTests.CreateLayoutTestDocument(
-            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Body", 10d, 12d))],
-            []) with
+            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Body", 10d, 12d))]) with
         {
             PageSettings = staticSettings,
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
@@ -1708,7 +1706,7 @@ internal static class DocxMarkupTests
             "/word/footnotes.xml",
             "91",
             [new DocxParagraphElement(CreateMoveRevisionParagraph())], null);
-        DocxDocument footnoteDocument = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(footnoteAnchor)], [])
+        DocxDocument footnoteDocument = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(footnoteAnchor)])
             with
             {
                 RelatedStories = [footnoteStory],
@@ -1738,7 +1736,7 @@ internal static class DocxMarkupTests
             "/word/endnotes.xml",
             "92",
             [new DocxParagraphElement(CreateMoveRevisionParagraph())], null);
-        DocxDocument endnoteDocument = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(endnoteAnchor)], [])
+        DocxDocument endnoteDocument = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(endnoteAnchor)])
             with
             {
                 RelatedStories = [endnoteStory],
@@ -2112,7 +2110,7 @@ internal static class DocxMarkupTests
                 new DocxTextRun(" revision", 10d, null, false, false, false, null, null)
             ]
         };
-        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(paragraph)], []) with
+        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(paragraph)]) with
         {
             MarkupMode = OoxPdfDocxMarkupMode.SimpleMarkup
         };
@@ -2169,7 +2167,7 @@ internal static class DocxMarkupTests
             "/word/footnotes.xml",
             "19",
             [new DocxParagraphElement(footnoteParagraph)], null);
-        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(bodyParagraph)], [])
+        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(bodyParagraph)])
             with
             {
                 RelatedStories = [footnoteStory],
@@ -2213,7 +2211,7 @@ internal static class DocxMarkupTests
             "/word/endnotes.xml",
             "29",
             [new DocxParagraphElement(endnoteParagraph)], null);
-        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(bodyParagraph)], [])
+        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(bodyParagraph)])
             with
             {
                 RelatedStories = [endnoteStory],
@@ -2247,8 +2245,7 @@ internal static class DocxMarkupTests
         };
         DocxFloatingDrawing drawing = DocxTests.CreateFloatingTextBoxDrawing([new DocxParagraphElement(textBoxParagraph)]);
         DocxDocument document = DocxTests.CreateLayoutTestDocument(
-            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Drawing anchor", 10d, 12d))],
-            []) with
+            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Drawing anchor", 10d, 12d))]) with
         {
             FloatingDrawings = [drawing],
             MarkupMode = OoxPdfDocxMarkupMode.SimpleMarkup
@@ -2281,7 +2278,7 @@ internal static class DocxMarkupTests
                 ["default"] = [DocxTests.CreateFloatingTextBoxDrawing([new DocxParagraphElement(textBoxParagraph)])]
             }
         };
-        DocxDocument document = DocxTests.CreateLayoutTestDocument([], []) with
+        DocxDocument document = DocxTests.CreateLayoutTestDocument([]) with
         {
             PageSettings = settings,
             MarkupMode = OoxPdfDocxMarkupMode.SimpleMarkup

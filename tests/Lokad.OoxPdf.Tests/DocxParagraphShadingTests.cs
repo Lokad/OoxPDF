@@ -89,7 +89,7 @@ internal static partial class DocxParagraphShadingTests
             Shading = new("222222", "clear", null), SpacingAfterPoints = 9d,
             Spacing = DocxParagraphSpacing.Empty with { LineValue = "360", LineRuleValue = "exact", AfterValue = "180" }
         };
-        var document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(paragraph)], []);
+        var document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(paragraph)]);
         var layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, new DocxTests.FamilyWidthTextMeasurer(), default);
         var lines = layout.Pages.SelectMany(page => page.Items).OfType<DocxTextLineLayout>().ToArray();
@@ -189,8 +189,8 @@ internal static partial class DocxParagraphShadingTests
                     Spacing = source.Spacing with { BeforeValue = (before * 20d).ToString(CultureInfo.InvariantCulture) } };
                 var cell = new DocxTableCell([previous, paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
                 var table = new DocxTable(null, [120d], [new DocxTableRow([cell], 90d)]);
-                var document = inCell ? DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table])
-                    : DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(previous), new DocxParagraphElement(paragraph)], []);
+                var document = inCell ? DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)])
+                    : DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(previous), new DocxParagraphElement(paragraph)]);
                 var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: source.Equations.Count != 0),
                     OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
                 var pages = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
@@ -235,8 +235,8 @@ internal static partial class DocxParagraphShadingTests
         var cell = new DocxTableCell([paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
         var table = new DocxTable(null, [120d], [new DocxTableRow([cell], 60d)]);
         foreach (var document in new[] {
-            DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(paragraph)], []),
-            DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]) })
+            DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(paragraph)]),
+            DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)]) })
         {
             var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(),
                 OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);

@@ -2152,7 +2152,7 @@ internal static class DocxTests
             [new DocxTableRow([new DocxTableCell(paragraphs, null, null, null, null, [], DocxTableCellMargins.Empty)], rowHeight)]);
     }
 
-    internal static DocxDocument CreateLayoutTestDocument(IReadOnlyList<DocxBodyElement> bodyElements, IReadOnlyList<DocxTable> tables)
+    internal static DocxDocument CreateLayoutTestDocument(IReadOnlyList<DocxBodyElement> bodyElements)
     {
         return new DocxDocument(
             200d,
@@ -2216,15 +2216,6 @@ internal static class DocxTests
     internal static double[] ExtractTextBaselines(string pdf)
     {
         return Regex.Matches(pdf, @"1 0 0 1 [0-9.]+ (?<y>[0-9.]+) Tm")
-            .Select(match => double.Parse(match.Groups["y"].Value, CultureInfo.InvariantCulture))
-            .Distinct()
-            .ToArray();
-    }
-
-    internal static double[] ExtractTextBaselinesAtX(string pdf, double x)
-    {
-        string escapedX = Regex.Escape(x.ToString("0.###", CultureInfo.InvariantCulture));
-        return Regex.Matches(pdf, $@"1 0 0 1 {escapedX}(?:\.\d+)? (?<y>-?\d+(?:\.\d+)?) Tm")
             .Select(match => double.Parse(match.Groups["y"].Value, CultureInfo.InvariantCulture))
             .Distinct()
             .ToArray();

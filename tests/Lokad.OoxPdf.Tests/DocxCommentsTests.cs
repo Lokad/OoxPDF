@@ -555,7 +555,7 @@ internal static partial class DocxCommentsTests
             "/word/comments.xml",
             "2",
             [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Footnote comment body", 10d, 12d))], null);
-        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(bodyParagraph)], [])
+        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(bodyParagraph)])
             with
             {
                 RelatedStories = [footnoteStory, commentStory],
@@ -593,7 +593,7 @@ internal static partial class DocxCommentsTests
             "/word/comments.xml",
             "12",
             [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Endnote comment body", 10d, 12d))], null);
-        DocxDocument endnoteDocument = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(endnoteAnchor)], [])
+        DocxDocument endnoteDocument = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(endnoteAnchor)])
             with
             {
                 RelatedStories = [endnoteStory, endnoteCommentStory],
@@ -635,7 +635,7 @@ internal static partial class DocxCommentsTests
             "/word/footnotes.xml",
             "10",
             [new DocxParagraphElement(footnoteParagraph)], null);
-        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(bodyParagraph)], [])
+        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(bodyParagraph)])
             with
             {
                 RelatedStories = [footnoteStory],
@@ -675,7 +675,7 @@ internal static partial class DocxCommentsTests
             "/word/endnotes.xml",
             "11",
             [new DocxParagraphElement(endnoteParagraph)], null);
-        DocxDocument endnoteDocument = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(endnoteAnchor)], [])
+        DocxDocument endnoteDocument = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(endnoteAnchor)])
             with
             {
                 RelatedStories = [endnoteStory],

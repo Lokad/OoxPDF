@@ -15,7 +15,7 @@ internal static class DocxImageParagraphAdvanceTests
             DocxParagraph first = ImageParagraph(height, type) with { SpacingAfterPoints = after };
             DocxParagraph second = ImageParagraph(height, type) with { SpacingBeforePoints = before };
             DocxDocument document = DocxTests.CreateLayoutTestDocument(
-                [new DocxParagraphElement(first), new DocxParagraphElement(second)], []);
+                [new DocxParagraphElement(first), new DocxParagraphElement(second)]);
             DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
                 .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
             DocxInlineImageLayout[] images = layout.Pages.Single().Items.OfType<DocxInlineImageLayout>().ToArray();
@@ -37,7 +37,7 @@ internal static class DocxImageParagraphAdvanceTests
             };
             DocxParagraph next = DocxTests.CreateDocxLayoutParagraph("Next", 10d, nextHeight);
             DocxDocument document = DocxTests.CreateLayoutTestDocument(
-                [new DocxParagraphElement(filler), new DocxParagraphElement(image), new DocxParagraphElement(next)], [])
+                [new DocxParagraphElement(filler), new DocxParagraphElement(image), new DocxParagraphElement(next)])
                 with { PageHeightPoints = 80d };
             DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
                 .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);

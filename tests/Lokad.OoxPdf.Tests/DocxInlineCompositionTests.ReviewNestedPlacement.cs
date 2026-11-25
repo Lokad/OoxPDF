@@ -58,7 +58,7 @@ internal static partial class DocxInlineCompositionTests
                     { BodyElements = [new DocxParagraphElement(head), new DocxTableElement(table), new DocxParagraphElement(tail)] };
                 table = new DocxTable(null, [468d], [new DocxTableRow([cell], null)]);
             }
-            var source = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+            var source = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)]);
             var natural = new DocxTests.FamilyWidthTextMeasurer();
             var measured = new DocxRenderer.ScaledDocxTextMeasurer(natural, scale, scale);
             var layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, wordCompatiblePrintScale: scale)

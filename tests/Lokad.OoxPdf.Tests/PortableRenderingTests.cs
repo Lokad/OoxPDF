@@ -21,7 +21,7 @@ internal static partial class PortableRenderingTests
         DocxParagraph heading = DocxTests.CreateDocxLayoutParagraph("Heading");
         heading = heading with { Runs = [heading.Runs[0] with { Bold = true }] };
         var document = DocxTests.CreateLayoutTestDocument(
-            [new DocxParagraphElement(heading), new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Following"))], []);
+            [new DocxParagraphElement(heading), new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Following"))]);
         PdfPage page = new DocxRenderer(new PinnedResolver(), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
 

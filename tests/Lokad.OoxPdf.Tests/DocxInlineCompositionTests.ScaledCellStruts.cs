@@ -19,7 +19,7 @@ internal static partial class DocxInlineCompositionTests
             var table = new DocxTable(null, [240d], [new DocxTableRow([cell], null)]);
             if (nested) table = new DocxTable(null, [240d], [new DocxTableRow([cell with
                 { Paragraphs = [], BodyElements = [new DocxTableElement(table)] }], null)]);
-            var source = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+            var source = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)]);
             var natural = new DocxTests.FamilyWidthTextMeasurer();
             var measurer = new DocxRenderer.ScaledDocxTextMeasurer(natural, scale, scale);
             var layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, wordCompatiblePrintScale: scale)

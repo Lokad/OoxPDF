@@ -2476,8 +2476,7 @@ internal static class DocxPageTests
                     new DocxParagraphElement(SizedLine("Alpha", 12d)),
                     new DocxParagraphElement(SizedLine("Beta", 15d)),
                     new DocxParagraphElement(SizedLine("Gamma", 12d))
-                ],
-                []);
+                ]);
             DocxTextLineLayout[] lines = new DocxLayoutEngine(mode, scale)
                 .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
                 .Pages.Single().Items.OfType<DocxTextLineLayout>().ToArray();
@@ -2505,7 +2504,7 @@ internal static class DocxPageTests
         {
             Spacing = new DocxParagraphSpacing(null, null, null, null, null, null, null, "exact", null)
         };
-        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(paragraph)], []);
+        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(paragraph)]);
 
         double baselineY = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
@@ -2537,7 +2536,7 @@ internal static class DocxPageTests
             [tailRun], [], null, DocxTextAlignment.Left, null, 0d, 0d, 1d, 20d,
             new DocxParagraphSpacing(null, null, null, null, null, null, null, "exact", null),
             DocxParagraphKeepRules.Empty, null)));
-        DocxDocument document = DocxTests.CreateLayoutTestDocument(bodyElements, []);
+        DocxDocument document = DocxTests.CreateLayoutTestDocument(bodyElements);
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
         TestAssert.Equal(3, layout.Pages.Count);
@@ -2573,7 +2572,7 @@ internal static class DocxPageTests
             [tailRun], [], null, DocxTextAlignment.Left, null, 0d, 0d, 1d, 20d,
             new DocxParagraphSpacing(null, null, null, null, null, null, null, "exact", null),
             DocxParagraphKeepRules.Empty, null)));
-        DocxDocument document = DocxTests.CreateLayoutTestDocument(bodyElements, []);
+        DocxDocument document = DocxTests.CreateLayoutTestDocument(bodyElements);
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
         TestAssert.Equal(2, layout.Pages.Count);
@@ -2607,7 +2606,7 @@ internal static class DocxPageTests
             [tailRun], [], null, DocxTextAlignment.Left, null, 0d, 0d, 1d, 20d,
             new DocxParagraphSpacing(null, null, null, null, null, null, null, "exact", null),
             DocxParagraphKeepRules.Empty, null)));
-        DocxDocument document = DocxTests.CreateLayoutTestDocument(bodyElements, []);
+        DocxDocument document = DocxTests.CreateLayoutTestDocument(bodyElements);
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
         TestAssert.Equal(3, layout.Pages.Count);
@@ -2636,7 +2635,7 @@ internal static class DocxPageTests
             new DocxParagraphElement(tail)
         };
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-            .Create(DocxTests.CreateLayoutTestDocument(spillElements, []), new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+            .Create(DocxTests.CreateLayoutTestDocument(spillElements), new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
         TestAssert.Equal(2, layout.Pages.Count);
         DocxTextLineLayout[] firstPageLines = layout.Pages[0].Items.OfType<DocxTextLineLayout>().ToArray();
         DocxTextLineLayout markerLine = firstPageLines.Single(line => line.Text.StartsWith("Marker sized nine", StringComparison.Ordinal));
@@ -2660,7 +2659,7 @@ internal static class DocxPageTests
             new DocxParagraphElement(marker),
             new DocxParagraphElement(tail)
         };
-        DocxDocument document = DocxTests.CreateLayoutTestDocument(spillElements, []);
+        DocxDocument document = DocxTests.CreateLayoutTestDocument(spillElements);
         // This emission contract requires an embedded font, including on Linux.
         var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(),
             OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);

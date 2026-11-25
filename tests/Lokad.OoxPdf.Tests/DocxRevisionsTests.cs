@@ -439,7 +439,7 @@ internal static class DocxRevisionsTests
             "fixed",
             [16d],
             [new DocxTableRow([cell], 10d)]) with {PreferredWidthPoints = 16d };
-        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)]);
         var renderer = new DocxRenderer(new DocxTests.SingleResolutionFontResolver(font.Value.Resolution), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
 
         DocxTextEmissionSnapshot snapshot = renderer.InspectTextEmission(document);
@@ -477,7 +477,7 @@ internal static class DocxRevisionsTests
             DocxParagraphSpacing.Empty,
             DocxParagraphKeepRules.Empty,
             null);
-        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(paragraph)], []);
+        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(paragraph)]);
         var renderer = new DocxRenderer(new DocxTests.SingleResolutionFontResolver(font.Value.Resolution), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
 
         DocxTextEmissionLineSnapshot line = renderer.InspectTextEmission(document).Lines.Single(line => !line.IsStaticStory);
@@ -525,7 +525,7 @@ internal static class DocxRevisionsTests
             null,
             [40d, 40d],
             [new DocxTableRow([cell], 20d) with {IsHeader = true,HeaderValue = "1",HeightValue = "400",HeightRuleValue = "atLeast" }]) with { PreferredWidthPoints = 84d, PreferredWidthValue = "1680", PreferredWidthType = "dxa", IndentPoints = 6d, CellSpacingPoints = 1d };
-        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)]);
 
         DocxLayoutSnapshot snapshot = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectLayout(document);
 
@@ -643,7 +643,7 @@ internal static class DocxRevisionsTests
     public static void DocxLayoutSnapshotReportsBreakableTokenLengthWithHiddenBreaks()
     {
         DocxTable table = DocxTests.CreateSingleCellTable("Alpha\u00ADBeta Gamma\u200BDelta", 20d);
-        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)]);
 
         DocxLayoutSnapshot snapshot = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectLayout(document);
 
@@ -753,8 +753,7 @@ internal static class DocxRevisionsTests
             Indent = new DocxParagraphIndent(120d, null, null, null, null, null, null, null)
         };
         DocxDocument document = DocxTests.CreateLayoutTestDocument(
-            [new DocxParagraphElement(first), new DocxParagraphElement(second)],
-            []);
+            [new DocxParagraphElement(first), new DocxParagraphElement(second)]);
 
         DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None));
         DocxLayoutItemSnapshot[] textLines = snapshot.Pages[0].Items

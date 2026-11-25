@@ -250,7 +250,7 @@ internal static class DocxTablesTests
     public static void DocxFontPlanIncludesPlainTableCellText()
     {
         DocxTable table = DocxTests.CreateSingleCellTable("Cell text", 12d);
-        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)]);
         var resolver = new MapFontResolver(["Body Sans"], "Resolver Fallback");
 
         DocxResolvedRunTypeface resolved = DocxFontPlan.Create(document, resolver, CancellationToken.None).Runs.Single();
@@ -273,7 +273,7 @@ internal static class DocxTablesTests
             BodyElements = [new DocxTableElement(nestedTable)]
         };
         var outerTable = new DocxTable(null, [60d], [new DocxTableRow([outerCell], 30d)]);
-        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(outerTable)], [outerTable]);
+        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(outerTable)]);
         var resolver = new MapFontResolver(["Arial"], "Resolver Fallback");
 
         DocxParagraph[] paragraphs = DocxBlockTraversal.EnumerateBodyParagraphs(document).ToArray();
@@ -484,7 +484,7 @@ internal static class DocxTablesTests
     public static void DocxStructureSnapshotNormalizesPlainTableCellText()
     {
         DocxTable table = DocxTests.CreateSingleCellTable("Plain 123", 20d);
-        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)]);
 
         DocxStructureSnapshot snapshot = DocxStructureSnapshot.FromDocument(document);
 
@@ -516,7 +516,7 @@ internal static class DocxTablesTests
             null,
             [80d],
             [new DocxTableRow([new DocxTableCell([cellParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 20d)]);
-        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)]);
 
         DocxStructureTableSnapshot tableSnapshot = DocxStructureSnapshot.FromDocument(document)
             .Tables
@@ -565,7 +565,7 @@ internal static class DocxTablesTests
             null,
             [100d],
             [new DocxTableRow([new DocxTableCell([paragraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 24d)]);
-        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)]);
 
         PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 
@@ -731,7 +731,7 @@ internal static class DocxTablesTests
             ]
         };
         DocxTable table = new(null, [90d], [new DocxTableRow([cell], null)]);
-        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)]);
         var renderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
 
         PdfPage[] pages = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().ToArray();
@@ -784,7 +784,7 @@ internal static class DocxTablesTests
                     [new DocxTableCell([linkParagraph, targetParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)],
                     36d)
             ]);
-        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)]);
 
         var renderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
         PdfPage page = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
@@ -2878,8 +2878,7 @@ internal static class DocxTablesTests
             var table = new DocxTable(null, [180d], [new DocxTableRow([first], null), new DocxTableRow([last], null)]);
             DocxParagraph after = DocxTests.CreateDocxLayoutParagraph("After", 10d, 10d);
             DocxDocument document = DocxTests.CreateLayoutTestDocument(
-                [new DocxTableElement(table), new DocxParagraphElement(after)],
-                [table]);
+                [new DocxTableElement(table), new DocxParagraphElement(after)]);
             DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
                 .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
             DocxTableRowLayout[] rows = layout.Pages[0].Items.OfType<DocxTableRowLayout>().ToArray();
@@ -2905,7 +2904,7 @@ internal static class DocxTablesTests
         var paragraph = DocxTests.CreateDocxLayoutParagraph("A", 10d, 10d);
         var cell = new DocxTableCell([paragraph], null, null, null, null, [new DocxTableCellBorder("bottom", "single", "auto", "8")], DocxTableCellMargins.Empty);
         var table = new DocxTable(null, [80d], [new DocxTableRow([cell], 10d) with {HeightValue = "200", HeightRuleValue = "exact" }]);
-        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)]);
 
         DocxTableRowLayout row = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)

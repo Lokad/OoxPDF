@@ -77,7 +77,7 @@ internal static partial class DocxInlineCompositionTests
         var style = paragraph.Runs[0];
         var counter = style with { Text = DocxFieldText.Placeholder(kind)!, FieldKind = kind };
         paragraph = paragraph with { Runs = warnings ? [style with { Text = "\u05D0 " }, counter] : [counter] };
-        return DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(paragraph)], []);
+        return DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(paragraph)]);
     }
 
     private sealed class PreparationCountingResolver(IFontResolver inner) : IFontResolver

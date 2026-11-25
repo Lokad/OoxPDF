@@ -35,7 +35,7 @@ internal static class DocxAutomaticReviewRowTests
                 IReadOnlyList<DocxBodyElement> elements = prefix
                     ? [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Anchor", 10d, 12d)), new DocxTableElement(table)]
                     : [new DocxTableElement(table)];
-                var document = DocxTests.CreateLayoutTestDocument(elements, [table]);
+                var document = DocxTests.CreateLayoutTestDocument(elements);
                 return new DocxLayoutEngine(mode, wordCompatiblePrintScale: .75d)
                     .Create(document, new DocxTests.FamilyWidthTextMeasurer(), default);
             }

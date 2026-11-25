@@ -2159,7 +2159,7 @@ internal static partial class DocxFootnotesTests
             "/word/footnotes.xml",
             "32",
             [new DocxParagraphElement(secondFootnote)], null);
-        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(anchor)], []) with
+        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(anchor)]) with
         {
             RelatedStories = [firstStory, secondStory]
         };

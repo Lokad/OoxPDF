@@ -39,7 +39,7 @@ internal static partial class DocxInlineCompositionTests
         foreach (double scale in new[] { 1d, .75d })
         {
             var table = sourceTable with { Rows = [sourceTable.Rows.Single() with { HeightRuleValue = rule }] };
-            var document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+            var document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)]);
             var row = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, scale)
                 .Create(document, new TrackingMeasurer(), default).Pages.Single().Items.OfType<DocxTableRowLayout>().Single();
             TestAssert.True(Math.Abs(row.Height - 144d * scale) < .001d && row.DeclaredHeightPoints == 144d,

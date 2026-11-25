@@ -33,7 +33,7 @@ internal static class DocxTextSpacingTests
             DocxParagraphSpacing.Empty,
             DocxParagraphKeepRules.Empty,
             null);
-        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(paragraph)], []);
+        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(paragraph)]);
         PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(File.ReadAllBytes(arial)), " Alpha Beta".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
 
         DocxTextLineLayout line = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
@@ -448,8 +448,7 @@ internal static class DocxTextSpacingTests
             null);
         DocxParagraph second = DocxTests.CreateDocxLayoutParagraph("Beta", 10d, 10d);
         DocxDocument document = DocxTests.CreateLayoutTestDocument(
-            [new DocxParagraphElement(first), new DocxParagraphElement(empty), new DocxParagraphElement(second)],
-            []);
+            [new DocxParagraphElement(first), new DocxParagraphElement(empty), new DocxParagraphElement(second)]);
 
         DocxTextLineLayout[] allLines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
@@ -514,7 +513,7 @@ internal static class DocxTextSpacingTests
             KeepRules = DocxParagraphKeepRules.Empty with { KeepNext = true } };
         var current = intro with { Runs = [new DocxTextRun("Alpha", 10d, null, false, false, false, null, null)], SpacingBeforePoints = 12d };
         DocxDocument document = DocxTests.CreateLayoutTestDocument(
-            [new DocxParagraphElement(intro), new DocxParagraphElement(previous), new DocxParagraphElement(current)], [])
+            [new DocxParagraphElement(intro), new DocxParagraphElement(previous), new DocxParagraphElement(current)])
             with { PageHeightPoints = 58d, MarginTopPoints = 10d, MarginBottomPoints = 10d };
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
@@ -532,7 +531,7 @@ internal static class DocxTextSpacingTests
             Spacing = previous.Spacing with { ContextualSpacing = true } };
         var body = previous with { Runs = [new DocxTextRun("Body", 10d, null, false, false, false, null, null)],
             SpacingAfterPoints = 0d };
-        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(body)], []) with
+        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(body)]) with
         {
             PageSettings = DocxPageSettings.Empty with
             {
@@ -572,7 +571,7 @@ internal static class DocxTextSpacingTests
         var next = current with { Runs = [new DocxTextRun("Bravo", 10d, null, false, false, false, null, null)],
             SpacingBeforePoints = 0d, SpacingAfterPoints = 0d, Spacing = DocxParagraphSpacing.Empty };
         DocxDocument document = DocxTests.CreateLayoutTestDocument(
-            [new DocxParagraphElement(previous), new DocxParagraphElement(current), new DocxParagraphElement(next)], []);
+            [new DocxParagraphElement(previous), new DocxParagraphElement(current), new DocxParagraphElement(next)]);
         return new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages.SelectMany(p => p.Items.OfType<DocxTextLineLayout>()).ToArray();
@@ -654,8 +653,7 @@ internal static class DocxTextSpacingTests
             null);
         var second = first with { Runs = [new DocxTextRun("Second", 10d, null, false, false, false, null, null)] };
         DocxDocument document = DocxTests.CreateLayoutTestDocument(
-            [new DocxParagraphElement(first), new DocxParagraphElement(second)],
-            []);
+            [new DocxParagraphElement(first), new DocxParagraphElement(second)]);
 
         DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
@@ -757,8 +755,7 @@ internal static class DocxTextSpacingTests
             DocxParagraphKeepRules.Empty,
             null);
         DocxDocument document = DocxTests.CreateLayoutTestDocument(
-            [new DocxParagraphElement(smallMinimum), new DocxParagraphElement(largeMinimum)],
-            []);
+            [new DocxParagraphElement(smallMinimum), new DocxParagraphElement(largeMinimum)]);
 
         DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
@@ -907,8 +904,7 @@ internal static class DocxTextSpacingTests
             DocxParagraphKeepRules.Empty,
             null);
         DocxDocument document = DocxTests.CreateLayoutTestDocument(
-            [new DocxParagraphElement(flooredList), new DocxParagraphElement(listWithoutBeforeSpacing), new DocxParagraphElement(explicit115List), new DocxParagraphElement(defaultAutoList), new DocxParagraphElement(plainParagraph)],
-            []);
+            [new DocxParagraphElement(flooredList), new DocxParagraphElement(listWithoutBeforeSpacing), new DocxParagraphElement(explicit115List), new DocxParagraphElement(defaultAutoList), new DocxParagraphElement(plainParagraph)]);
 
         DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None));
         DocxLayoutItemSnapshot[] textLines = snapshot.Pages[0].Items
@@ -997,8 +993,7 @@ internal static class DocxTextSpacingTests
             DocxParagraphKeepRules.Empty,
             plainLabel);
         DocxDocument document = DocxTests.CreateLayoutTestDocument(
-            [new DocxParagraphElement(plainListHead), new DocxParagraphElement(tallList), new DocxParagraphElement(plainList)],
-            []);
+            [new DocxParagraphElement(plainListHead), new DocxParagraphElement(tallList), new DocxParagraphElement(plainList)]);
 
         DocxLayoutItemSnapshot[] textLines = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None))
             .Pages[0]
@@ -1047,7 +1042,7 @@ internal static class DocxTextSpacingTests
             new DocxParagraphSpacing(null, null, null, null, null, null, "276", "auto", null),
             DocxParagraphKeepRules.Empty,
             label);
-        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(paragraph)], []);
+        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(paragraph)]);
 
         DocxLayoutItemSnapshot line = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None))
             .Pages[0]
@@ -1561,7 +1556,7 @@ internal static class DocxTextSpacingTests
                 BookmarkAnchors = [new DocxBookmarkAnchor("1", "Target", 0, 0, 0)],
                 Hyperlinks = [new DocxHyperlinkSpan("Target", null, null, null, 0, 1, 0, 1)]
             };
-            DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(paragraph)], []);
+            DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(paragraph)]);
             var renderer = new DocxRenderer(new WindowsExtentsFontResolver(useTypographicMetrics, gap),
                 OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
             DocxTextEmissionSegmentSnapshot glyph = renderer.InspectTextEmission(document).Lines.Single().Segments.First();
@@ -1818,7 +1813,7 @@ internal static class DocxTextSpacingTests
             null);
         var cell = new DocxTableCell([paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
         DocxTable table = new(null, [90d], [new DocxTableRow([cell], null)]);
-        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)]);
 
         var resolver = new DocxTests.TallHheaFontResolver();
         DocxFontPlan fontPlan = DocxFontPlan.Create(document, resolver, CancellationToken.None);
@@ -1879,7 +1874,7 @@ internal static class DocxTextSpacingTests
             null);
         var cell = new DocxTableCell([paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
         DocxTable table = new(null, [90d], [new DocxTableRow([cell], null)]);
-        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)]);
         return new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, new MidlineCellTextMeasurer(new DocxTests.FamilyWidthTextMeasurer()), CancellationToken.None)
             .Pages.Single().Items.OfType<DocxTableRowLayout>().Single().Cells.Single();

@@ -785,7 +785,7 @@ internal static class DocxImagesTests
             Runs = [],
             Images = [image]
         };
-        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(imageParagraph)], []);
+        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(imageParagraph)]);
 
         DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None));
 
@@ -1626,7 +1626,7 @@ internal static class DocxImagesTests
         var afterRun = new DocxTextRun("AFTER", 10d, null, false, false, false, null, null) { SourceRunIndex = 2 };
         var image = new DocxInlineImage(24d, 18d, "image/png", [0x89, 0x50, 0x4E, 0x47], "word/media/image1.png") { SourceRunIndex = 1 };
         DocxParagraph paragraph = DocxTests.CreateDocxLayoutParagraph("BEFORE", 10d, 12d) with { Runs = [beforeRun, afterRun], Images = [image] };
-        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(paragraph)], []);
+        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(paragraph)]);
         DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None));
         DocxLayoutItemSnapshot textItem = snapshot.Pages[0].Items.Single(item => item.Kind == "TextLine");
         DocxLayoutItemSnapshot imageItem = snapshot.Pages[0].Items.Single(item => item.Kind == "InlineImage");
@@ -1644,12 +1644,12 @@ internal static class DocxImagesTests
         var tallImage = new DocxInlineImage(24d, 18d, "image/png", new byte[] { 0x89, 0x50, 0x4E, 0x47 }, "word/media/image1.png") { SourceRunIndex = 1 };
         DocxParagraph imageParagraph = DocxTests.CreateDocxLayoutParagraph("BEFORE", 10d, 10d) with { Runs = new[] { beforeRun, afterRun }, Images = new[] { tallImage }, LineSpacingPoints = null };
         DocxParagraph secondParagraph = DocxTests.CreateDocxLayoutParagraph("SECOND", 10d, 10d) with { LineSpacingPoints = null };
-        DocxDocument imageDocument = DocxTests.CreateLayoutTestDocument(new DocxBodyElement[] { new DocxParagraphElement(imageParagraph), new DocxParagraphElement(secondParagraph) }, new DocxTable[0]);
+        DocxDocument imageDocument = DocxTests.CreateLayoutTestDocument(new DocxBodyElement[] { new DocxParagraphElement(imageParagraph), new DocxParagraphElement(secondParagraph) });
         DocxLayoutSnapshot imageSnapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(imageDocument, new DocxTests.FamilyWidthTextMeasurer(), System.Threading.CancellationToken.None));
         DocxLayoutItemSnapshot firstLine = imageSnapshot.Pages[0].Items.Where(item => item.Kind == "TextLine").First();
         DocxLayoutItemSnapshot secondLine = imageSnapshot.Pages[0].Items.Where(item => item.Kind == "TextLine").Skip(1).First();
         DocxParagraph plainParagraph = DocxTests.CreateDocxLayoutParagraph("BEFOREAFTER", 10d, 10d) with { LineSpacingPoints = null };
-        DocxDocument plainDocument = DocxTests.CreateLayoutTestDocument(new DocxBodyElement[] { new DocxParagraphElement(plainParagraph), new DocxParagraphElement(secondParagraph) }, new DocxTable[0]);
+        DocxDocument plainDocument = DocxTests.CreateLayoutTestDocument(new DocxBodyElement[] { new DocxParagraphElement(plainParagraph), new DocxParagraphElement(secondParagraph) });
         DocxLayoutSnapshot plainSnapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(plainDocument, new DocxTests.FamilyWidthTextMeasurer(), System.Threading.CancellationToken.None));
         DocxLayoutItemSnapshot naturalFirst = plainSnapshot.Pages[0].Items.Where(item => item.Kind == "TextLine").First();
         // Occupied height includes ink above the baseline. The independent
@@ -1726,7 +1726,7 @@ internal static class DocxImagesTests
         var tailRun = new DocxTextRun("BBBBB CCCCC DDDDD EEEEE FFFFF GGGGG", 10d, null, false, false, false, null, null) { SourceRunIndex = 2 };
         var breakImage = new DocxInlineImage(24d, 18d, "image/png", new byte[] { 0x89, 0x50, 0x4E, 0x47 }, "word/media/image1.png") { SourceRunIndex = 1 };
         DocxParagraph paragraph = DocxTests.CreateDocxLayoutParagraph("AAAA", 10d, 10d) with { Runs = new[] { wideRun, tailRun }, Images = new[] { breakImage }, LineSpacingPoints = null };
-        DocxDocument document = DocxTests.CreateLayoutTestDocument(new DocxBodyElement[] { new DocxParagraphElement(paragraph) }, new DocxTable[0]);
+        DocxDocument document = DocxTests.CreateLayoutTestDocument(new DocxBodyElement[] { new DocxParagraphElement(paragraph) });
         var layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
         DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(layout);

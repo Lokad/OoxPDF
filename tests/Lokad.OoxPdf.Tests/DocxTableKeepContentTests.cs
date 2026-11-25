@@ -317,6 +317,6 @@ internal static class DocxTableKeepContentTests
         rows.Add(new([cells], declaredRule is null or "header" ? null : 600d)
             { HeightRuleValue = declaredRule == "header" ? null : declaredRule, IsHeader = declaredRule == "header" });
         var table = new DocxTable("fixed", [160d], rows);
-        return DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+        return DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)]);
     }
 }

@@ -62,7 +62,7 @@ internal static partial class DocxInlineCompositionTests
             // Keep the authored grid inside the natural page width: otherwise
             // different width clamping changes wrapping and invalidates a pure
             // vertical scaling comparison.
-            var source = DocxTests.CreateLayoutTestDocument([new DocxTableElement(outer)], [outer]) with
+            var source = DocxTests.CreateLayoutTestDocument([new DocxTableElement(outer)]) with
             { PageWidthPoints = 612d, PageHeightPoints = 792d, MarginLeftPoints = 72d, MarginRightPoints = 72d,
                 MarginTopPoints = 72d, MarginBottomPoints = 72d };
             var natural = new DocxTests.FamilyWidthTextMeasurer();

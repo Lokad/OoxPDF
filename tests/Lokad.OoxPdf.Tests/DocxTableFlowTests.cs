@@ -21,7 +21,7 @@ internal static class DocxTableFlowTests
         var cell = new DocxTableCell([], null, null, null, null, [], DocxTableCellMargins.Empty)
         { BodyElements = [new DocxParagraphElement(Picture(first)), new DocxParagraphElement(Picture(second))] };
         var table = new DocxTable(null, [80d], [new DocxTableRow([cell], 80d)]);
-        var document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+        var document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)]);
         var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
         var placed = engine.Create(document, embedded: null, default).Pages.Single().Items.OfType<DocxTableRowLayout>().Single().Cells.Single();
         TestAssert.Equal(0, placed.TextLines.Count);

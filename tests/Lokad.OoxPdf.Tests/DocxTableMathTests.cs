@@ -23,7 +23,7 @@ internal static class DocxTableMathTests
             var last = first with { Runs = [first.Runs[0] with { Text = "Last static row." }] };
             var paragraphs = new Dictionary<string, IReadOnlyList<DocxParagraph>> { ["default"] = [first, last] };
             var document = DocxTests.CreateLayoutTestDocument(
-                [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Body.", 10d, 10d))], []) with
+                [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Body.", 10d, 10d))]) with
             {
                 PageSettings = DocxPageSettings.Empty with
                 {
@@ -365,7 +365,7 @@ internal static class DocxTableMathTests
                 FooterParagraphsByType = header ? new Dictionary<string, IReadOnlyList<DocxParagraph>>() : sources
             };
             DocxDocument document = DocxTests.CreateLayoutTestDocument(
-                [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Body.", 10d, 10d))], []) with { PageSettings = settings };
+                [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Body.", 10d, 10d))]) with { PageSettings = settings };
             DocxLayout Layout(double height) => new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
                 .Create(document, new DocxTests.FamilyWidthTextMeasurer(), default, mathEquations:
                     new Dictionary<DocxEquation, DocxPreparedMathParagraph>(ReferenceEqualityComparer.Instance) { [paragraph.Equations.Single()] = math with { LineHeight = height } });
@@ -402,7 +402,7 @@ internal static class DocxTableMathTests
                 FooterParagraphsByType = header ? new Dictionary<string, IReadOnlyList<DocxParagraph>>() : paragraphs
             };
             DocxDocument document = DocxTests.CreateLayoutTestDocument(
-                [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Body.", 10d, 10d))], []) with { PageSettings = settings };
+                [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Body.", 10d, 10d))]) with { PageSettings = settings };
             DocxLayout Layout(double height) => new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, scale)
                 .Create(document, new DocxRenderer.ScaledDocxTextMeasurer(measurer, scale, scale), default, measurer,
                     mathEquations: new Dictionary<DocxEquation, DocxPreparedMathParagraph>(ReferenceEqualityComparer.Instance)
@@ -444,7 +444,7 @@ internal static class DocxTableMathTests
             };
             var cell = new DocxTableCell([footer], null, null, null, null, [], DocxTableCellMargins.Empty);
             DocxDocument document = guard == "table-first" ? TableDocument(new DocxTableRow([cell], null)) :
-                DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Body.", 10d, 10d))], []);
+                DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Body.", 10d, 10d))]);
             document = document with { PageSettings = settings };
             DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, .75d)
                 .Create(document, new DocxRenderer.ScaledDocxTextMeasurer(measurer, .75d, .75d), default,
@@ -478,7 +478,7 @@ internal static class DocxTableMathTests
             DocxPageSettings settings = DocxPageSettings.Empty with
             { HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>> { ["default"] = [paragraph] } };
             DocxDocument document = DocxTests.CreateLayoutTestDocument(
-                [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Body.", 10d, 10d))], []) with { PageSettings = settings };
+                [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Body.", 10d, 10d))]) with { PageSettings = settings };
             DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, .75d)
                 .Create(document, new DocxRenderer.ScaledDocxTextMeasurer(measurer, .75d, .75d), default, measurer);
             var line = layout.Pages.Single().StaticTextLines.Single();
@@ -577,7 +577,7 @@ internal static class DocxTableMathTests
                 HeaderBodyElementsByType = header ? stories : new Dictionary<string, IReadOnlyList<DocxBodyElement>>(),
                 FooterBodyElementsByType = header ? new Dictionary<string, IReadOnlyList<DocxBodyElement>>() : stories
             };
-            var document = DocxTests.CreateLayoutTestDocument([], []) with
+            var document = DocxTests.CreateLayoutTestDocument([]) with
             {
                 PageSettings = guard == "note" ? DocxPageSettings.Empty : settings,
                 EquationParts = [new DocxEquationPartSource(guard == "note" ? "/word/footnotes.xml" : "/word/static.xml", 1, elements)]
@@ -602,7 +602,7 @@ internal static class DocxTableMathTests
         foreach (bool header in new[] { true, false })
         {
             var document = DocxTests.CreateLayoutTestDocument(
-                [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Body.", 10d, 10d))], []) with
+                [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Body.", 10d, 10d))]) with
             {
                 PageSettings = DocxPageSettings.Empty with
                 {
@@ -646,6 +646,6 @@ internal static class DocxTableMathTests
     {
         var table = new DocxTable(null, [100d], [row]) { PreferredWidthPoints = 100d };
         return DocxTests.CreateLayoutTestDocument([new DocxTableElement(table),
-            new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Following body.", 10d, 10d))], [table]);
+            new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Following body.", 10d, 10d))]);
     }
 }

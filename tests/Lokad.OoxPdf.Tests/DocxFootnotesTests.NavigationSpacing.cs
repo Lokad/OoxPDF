@@ -600,7 +600,7 @@ internal static partial class DocxFootnotesTests
             DocxParagraph current = source.Paragraphs[1] with
             { Runs = [new DocxTextRun("Current", 10d, null, false, false, false, null, null)],
               SpacingAfterPoints = 0d, LineSpacingPoints = 10d, InlineReferences = [] };
-            DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(previous), new DocxParagraphElement(current)], []);
+            DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(previous), new DocxParagraphElement(current)]);
             DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
                 .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
                 .Pages[0].Items.OfType<DocxTextLineLayout>().ToArray();
@@ -685,7 +685,7 @@ internal static partial class DocxFootnotesTests
             { Runs = [new DocxTextRun("Current", 10d, null, false, false, false, null, null)],
               SpacingBeforePoints = beforeLarger ? 12d : 6d, SpacingAfterPoints = 0d, LineSpacingPoints = 10d, InlineReferences = [] };
             DocxDocument document = DocxTests.CreateLayoutTestDocument(
-                [new DocxParagraphElement(previous), new DocxParagraphElement(current)], []);
+                [new DocxParagraphElement(previous), new DocxParagraphElement(current)]);
             DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
                 .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
                 .Pages[0].Items.OfType<DocxTextLineLayout>().ToArray();

@@ -64,7 +64,7 @@ internal static class DocxNestedCellEndTests
             table = table with { Rows = rows };
             var after = Paragraph("After");
             var document = DocxTests.CreateLayoutTestDocument(
-                [new DocxTableElement(table), new DocxParagraphElement(after)], [table]);
+                [new DocxTableElement(table), new DocxParagraphElement(after)]);
             var layout = Engine(mode).Create(document, new Measurer(), default);
             TestAssert.Equal(2, layout.Pages.Count);
             TestAssert.True(layout.Pages[^1].Items.OfType<DocxTextLineLayout>().Any(line => ReferenceEquals(after, line.SourceParagraph)),
@@ -101,7 +101,7 @@ internal static class DocxNestedCellEndTests
             var childParagraph = Paragraph("Child") with { LineSpacingPoints = null };
             var child = new DocxTable("fixed", [80d], [new([Cell(childParagraph)], null)]);
             var table = Outer([new DocxTableElement(child), new DocxParagraphElement(mark)]);
-            var source = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+            var source = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)]);
             var measurer = new Measurer(naturalMetrics: true);
             var layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, .75d)
                 .Create(source, measurer, default);
@@ -128,7 +128,7 @@ internal static class DocxNestedCellEndTests
             var jump = Paragraph("Jump");
             jump = jump with { Runs = [jump.Runs[0] with { SourceRunIndex = 0 }],
                 Hyperlinks = [new("CellEnd", null, null, null, 0, 1, 0, 1)] };
-            var source = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table), new DocxParagraphElement(jump)], [table]);
+            var source = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table), new DocxParagraphElement(jump)]);
             var pages = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup, mode)
                 .RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
             var destination = pages.SelectMany(page => page.Annotations).Single(annotation => annotation.Destination is not null)
@@ -143,7 +143,7 @@ internal static class DocxNestedCellEndTests
         [OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup];
     private static DocxLayoutEngine Engine(OoxPdfDocxMarkupGeometryMode mode) => new(mode, wordCompatiblePrintScale: 1d);
     private static DocxLayout Layout(DocxTable table, OoxPdfDocxMarkupGeometryMode mode) =>
-        Engine(mode).Create(DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]), new Measurer(), default);
+        Engine(mode).Create(DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)]), new Measurer(), default);
     private sealed class Measurer(bool naturalMetrics = false) : IDocxTextMeasurer, IDocxStaticTextMetricsProvider
     {
         public double MeasureText(DocxTextRun? run, string text, double size) => text.Length * 5d;

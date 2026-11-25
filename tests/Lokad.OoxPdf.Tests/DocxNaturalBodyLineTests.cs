@@ -82,7 +82,7 @@ internal static class DocxNaturalBodyLineTests
     }
 
     private static DocxDocument Document(DocxParagraph[] paragraphs, double height) =>
-        DocxTests.CreateLayoutTestDocument(paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p)).ToArray(), [])
+        DocxTests.CreateLayoutTestDocument(paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p)).ToArray())
             with { PageHeightPoints = height };
 
     private static DocxLayout Layout(DocxParagraph[] paragraphs, double height = 200d) =>

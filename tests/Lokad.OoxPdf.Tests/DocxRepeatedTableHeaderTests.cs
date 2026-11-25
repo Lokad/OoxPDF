@@ -78,7 +78,7 @@ internal static class DocxRepeatedTableHeaderTests
         if (heading) blocks.Add(new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Kept heading", 10d, 10d) with
             { KeepRules = DocxParagraphKeepRules.Empty with { KeepNext = keep } }));
         blocks.Add(new DocxTableElement(table));
-        return DocxTests.CreateLayoutTestDocument(blocks, blocks.OfType<DocxTableElement>().Select(block => block.Table).ToArray());
+        return DocxTests.CreateLayoutTestDocument(blocks);
     }
 
     public static void DocxRepeatedTableHeaderFieldsRetainSourcePagesAndBodyPlacement()
@@ -120,7 +120,7 @@ internal static class DocxRepeatedTableHeaderTests
                 [Cell(DocxTests.CreateDocxLayoutParagraph("Before", 10d, 10d))], 175d)
                 { HeightRuleValue = "exact", HeightValue = "3500", CantSplit = true }]);
             var source = DocxTests.CreateLayoutTestDocument(
-                [new DocxTableElement(before), new DocxTableElement(table)], [before, table]);
+                [new DocxTableElement(before), new DocxTableElement(table)]);
             var layout = Layout(source, mode);
             TestAssert.Equal(175d, layout.Pages[0].Items.OfType<DocxTableRowLayout>().Single().Height);
             var headers = layout.Pages.SelectMany(p => p.Items.OfType<DocxTableRowLayout>().Where(r => r.IsHeader)).ToArray();
@@ -240,7 +240,7 @@ internal static class DocxRepeatedTableHeaderTests
             blocks.Add(new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null));
         }
         blocks.Add(new DocxTableElement(table));
-        return DocxTests.CreateLayoutTestDocument(blocks, [table]);
+        return DocxTests.CreateLayoutTestDocument(blocks);
     }
 
     private static string Text(DocxTableRowLayout row) => string.Concat(row.Cells[0].TextLines.Select(line => line.Text));

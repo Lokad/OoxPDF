@@ -15,7 +15,7 @@ internal static class DocxAutofitSpanTests
 
     private static DocxTableRowLayout[] Layout(DocxTable table)
     {
-        var document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+        var document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)]);
         return new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, new DocxTests.FamilyWidthTextMeasurer(), default).Pages
             .SelectMany(page => page.Items).OfType<DocxTableRowLayout>().ToArray();

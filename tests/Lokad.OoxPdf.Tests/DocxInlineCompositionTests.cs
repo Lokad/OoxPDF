@@ -2920,7 +2920,7 @@ internal static partial class DocxInlineCompositionTests
         var before = DocxTests.CreateDocxLayoutParagraph("Before", 10d, 10d) with { SpacingAfterPoints = 24d };
         var after = DocxTests.CreateDocxLayoutParagraph("Following", 10d, 10d);
         var document = DocxTests.CreateLayoutTestDocument([
-            new DocxParagraphElement(before), new DocxParagraphElement(paragraph), new DocxParagraphElement(after)], [])
+            new DocxParagraphElement(before), new DocxParagraphElement(paragraph), new DocxParagraphElement(after)])
             with { PageHeightPoints = 100d };
         var math = new Dictionary<DocxEquation, DocxPreparedMathParagraph>(ReferenceEqualityComparer.Instance);
         foreach (var equation in paragraph.Equations)
