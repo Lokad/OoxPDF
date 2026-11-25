@@ -215,53 +215,49 @@ internal sealed record DocxLayoutSourceBlockSnapshot(
     double ConsumedHeightSum,
     double AppliedBeforeSpacingSum);
 
-internal sealed record DocxLayoutItemSnapshot(
-    string Kind,
-    double X,
-    double Y,
-    double Width,
-    double Height,
-    int TextLength,
-    int CellCount,
-    int? ColumnIndex,
-    int? SourceBlockIndex,
-    int? SourceParagraphIndex,
-    int? SourceLineIndex,
-    double? LineHeightPoints,
-    double? AppliedBeforeSpacingPoints,
-    double? SingleLineHeightPoints,
-    double? ListLabelSingleLineHeightPoints,
-    double? BodyWindowsLineHeightPoints,
-    double? ListLabelWindowsLineHeightPoints,
-    double? EffectiveLineSpacingFactor,
-    bool? LineSpacingFactorFloorApplied,
-    bool? IsFirstParagraphLine,
-    double? PendingAfterSpacingPoints,
-    double? ParagraphBeforeSpacingPoints,
-    double? ParagraphAfterSpacingPoints,
-    bool? ContextualSpacingSuppressed,
-    string? StoryVariantType,
-    IReadOnlyList<DocxLayoutItemSnapshot>? TextLines,
-    string? ParagraphStyleId,
-    bool? ParagraphStyleFound,
-    int? ParagraphStyleDepth,
-    bool? HasDocumentDefaultParagraphProperties,
-    bool? HasDirectParagraphProperties,
-    bool? HasTableStyleParagraphProperties,
-    int? CharacterStyleTextSegmentCount,
-    int? DirectRunPropertyTextSegmentCount,
-    int? ParagraphStyleRunPropertyTextSegmentCount,
-    int? TableStyleRunPropertyTextSegmentCount,
-    int? DocumentDefaultRunPropertyTextSegmentCount,
-    string? LineHeightSource,
-    int RevisionCount,
-    int InsertionRevisionCount,
-    int DeletionRevisionCount,
-    int MoveFromRevisionCount,
-    int MoveToRevisionCount,
-    int OtherRevisionCount,
-    int CommentReferenceCount)
+internal sealed record DocxLayoutItemSnapshot(string Kind, double X, double Y, double Width, double Height)
 {
+    public int TextLength { get; init; }
+    public int CellCount { get; init; }
+    public int? ColumnIndex { get; init; }
+    public int? SourceBlockIndex { get; init; }
+    public int? SourceParagraphIndex { get; init; }
+    public int? SourceLineIndex { get; init; }
+    public double? LineHeightPoints { get; init; }
+    public double? AppliedBeforeSpacingPoints { get; init; }
+    public double? SingleLineHeightPoints { get; init; }
+    public double? ListLabelSingleLineHeightPoints { get; init; }
+    public double? BodyWindowsLineHeightPoints { get; init; }
+    public double? ListLabelWindowsLineHeightPoints { get; init; }
+    public double? EffectiveLineSpacingFactor { get; init; }
+    public bool? LineSpacingFactorFloorApplied { get; init; }
+    public bool? IsFirstParagraphLine { get; init; }
+    public double? PendingAfterSpacingPoints { get; init; }
+    public double? ParagraphBeforeSpacingPoints { get; init; }
+    public double? ParagraphAfterSpacingPoints { get; init; }
+    public bool? ContextualSpacingSuppressed { get; init; }
+    public string? StoryVariantType { get; init; }
+    public IReadOnlyList<DocxLayoutItemSnapshot>? TextLines { get; init; }
+    public string? ParagraphStyleId { get; init; }
+    public bool? ParagraphStyleFound { get; init; }
+    public int? ParagraphStyleDepth { get; init; }
+    public bool? HasDocumentDefaultParagraphProperties { get; init; }
+    public bool? HasDirectParagraphProperties { get; init; }
+    public bool? HasTableStyleParagraphProperties { get; init; }
+    public int? CharacterStyleTextSegmentCount { get; init; }
+    public int? DirectRunPropertyTextSegmentCount { get; init; }
+    public int? ParagraphStyleRunPropertyTextSegmentCount { get; init; }
+    public int? TableStyleRunPropertyTextSegmentCount { get; init; }
+    public int? DocumentDefaultRunPropertyTextSegmentCount { get; init; }
+    public string? LineHeightSource { get; init; }
+    public int RevisionCount { get; init; }
+    public int InsertionRevisionCount { get; init; }
+    public int DeletionRevisionCount { get; init; }
+    public int MoveFromRevisionCount { get; init; }
+    public int MoveToRevisionCount { get; init; }
+    public int OtherRevisionCount { get; init; }
+    public int CommentReferenceCount { get; init; }
+
     // Present for standalone equation frames; X/Y/Width/Height bound the structural box.
     public double? BaselineYPoints { get; init; }
 }
