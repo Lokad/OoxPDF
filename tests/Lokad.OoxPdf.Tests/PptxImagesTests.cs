@@ -3366,44 +3366,32 @@ internal static partial class PptxImagesTests
     }
 
     // RV07: repeating gradients wrap strip offsets instead of clamping.
-    public static void PptxSyntheticSvgRepeatSpreadWrapsStripOffsets()
-    {
-        string input = WriteSvgGradientDeck("""
-            <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-              <linearGradient id="g" x1="0" y1="0" x2="50" y2="0" gradientUnits="userSpaceOnUse" spreadMethod="repeat">
-                <stop offset="0" stop-color="#FF0000"/>
-                <stop offset="1" stop-color="#0000FF"/>
-              </linearGradient>
-              <path d="M60 0 H100 V20 H60 Z" fill="url(#g)"/>
-            </svg>
-            """);
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, output);
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        // 1.3 wraps to 0.30000000000000004 in floating point, hence the trailing 2.
-        TestAssert.Contains("0.698 0 0.302 rg", pdf);
-    }
+    public static void PptxSyntheticSvgRepeatSpreadWrapsStripOffsets() =>
+        AssertSvgSpreadPaint("repeat", left: "0.698 0 0.302", right: "0.298 0 0.698");
 
     // RV07: reflecting gradients mirror strip offsets instead of clamping.
-    public static void PptxSyntheticSvgReflectSpreadMirrorsStripOffsets()
+    public static void PptxSyntheticSvgReflectSpreadMirrorsStripOffsets() =>
+        AssertSvgSpreadPaint("reflect", left: "0.298 0 0.698", right: "0.698 0 0.302");
+
+    private static void AssertSvgSpreadPaint(string spread, string left, string right)
     {
-        string input = WriteSvgGradientDeck("""
+        string input = WriteSvgGradientDeck($$"""
             <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-              <linearGradient id="g" x1="0" y1="0" x2="50" y2="0" gradientUnits="userSpaceOnUse" spreadMethod="reflect">
+              <linearGradient id="g" x1="0" y1="0" x2="50" y2="0" gradientUnits="userSpaceOnUse" spreadMethod="{{spread}}">
                 <stop offset="0" stop-color="#FF0000"/>
                 <stop offset="1" stop-color="#0000FF"/>
               </linearGradient>
               <path d="M60 0 H100 V20 H60 Z" fill="url(#g)"/>
             </svg>
             """);
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
+        string output = TestFixtures.NewTemporaryPath(".pdf");
         OoxPdfConverter.Convert(input, output);
 
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("0.298 0 0.698 rg", pdf);
+        string pdf = File.ReadAllText(output, Encoding.ASCII).ReplaceLineEndings("\n");
+        // Both strips must paint inside the authored polygon on the page.
+        TestAssert.Contains("\n158.4 468 m\n216 468 l\n216 453.6 l\n158.4 453.6 l\nh\nW n\n", pdf);
+        TestAssert.Contains($"\n{left} rg\n164.16 396 2.88 72 re f\n", pdf);
+        TestAssert.Contains($"\n{right} rg\n192.96 396 2.88 72 re f\n", pdf);
     }
 
     // RV07: a missing stop-color defaults to black (PowerPoint normalizes black stops by
