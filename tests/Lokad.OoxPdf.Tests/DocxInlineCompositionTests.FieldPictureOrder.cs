@@ -439,7 +439,9 @@ internal static partial class DocxInlineCompositionTests
         {
             var control = ReadComputedSimpleFieldPictures("body", "PAGE", mode, true, 2, hidden, locked, revision);
             var expectedParagraphs = DocxBlockTraversal.EnumerateBodyParagraphs(control).ToArray();
-            foreach (string container in new[] { "customXml", "smartTag", "sdt", "nested", "hyperlink", "nested-field" })
+            if (revision == "none")
+                TestAssert.Equal(hidden ? 1 : 2, expectedParagraphs.Sum(paragraph => paragraph.Images.Count));
+            foreach (string container in new[] { "customXml", "smartTag", "sdt", "nested", "hyperlink", "nested-field", "directional" })
             {
                 var wrapped = ReadComputedSimpleFieldPictures("body", "PAGE", mode, true, 2, hidden, locked, revision, container);
                 var paragraphs = DocxBlockTraversal.EnumerateBodyParagraphs(wrapped).ToArray();
@@ -462,7 +464,7 @@ internal static partial class DocxInlineCompositionTests
                 }
             }
         }
-        foreach (string container in new[] { "unknown", "foreign", "directional", "misplaced-property" })
+        foreach (string container in new[] { "unknown", "foreign", "misplaced-property" })
         {
             var document = ReadComputedSimpleFieldPictures("body", "PAGE", OoxPdfDocxMarkupMode.Final, true, 2,
                 container: container);
