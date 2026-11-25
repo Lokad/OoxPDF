@@ -12,14 +12,12 @@ internal sealed class PptxReader
 
     public PptxDocument Read(OoxPackage package, CancellationToken cancellationToken, Action<OoxPdfDiagnostic>? diagnosticSink = null)
     {
-        OoxPart presentationPart = package.FindMainPart(PresentationContentType, cancellationToken)
-            ?? throw new InvalidDataException("PPTX package does not contain a presentation part.");
+        OoxPart presentationPart = ReadPresentationPart(package, cancellationToken);
         XDocument document = package.LoadXml(presentationPart, cancellationToken);
         IMemoryReservation? modelStorage = OoxMemory.ReserveModel(document, cancellationToken);
         PptxDocument? result = null;
         try
         {
-
             // Strict OOXML (ISO 29500) parts read as blank under transitional queries;
             // fail visibly once per document instead of converting silently empty (O02).
             if (diagnosticSink is not null && OoxNamespaces.HasStrictOoxmlOrigin(document))
@@ -54,36 +52,12 @@ internal sealed class PptxReader
             long firstSlideNumber = OoxXml.ReadOptionalLong(document.Root, "firstSlideNum", 1);
             if (firstSlideNumber is < 0 or > uint.MaxValue) firstSlideNumber = 1;
 
-            var relationships = package.GetRelationshipDictionary(presentationPart.Name, cancellationToken);
-
             var slides = new List<PptxSlide>();
-            XElement? slideList = document.Root?.Element(PresentationNamespace + "sldIdLst");
-            int sourceIndex = -1;
-            if (slideList is not null)
+            foreach (var (target, sourceIndex) in ReadSlideSources(package, presentationPart, document, cancellationToken))
             {
-                foreach (XElement slideId in slideList.Elements(PresentationNamespace + "sldId"))
+                if (!IsHiddenSlide(package, target, cancellationToken))
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    sourceIndex++;
-                    string? relationshipId = (string?)slideId.Attribute(RelationshipsNamespace + "id");
-                    if (relationshipId is not null && relationships.TryGetValue(relationshipId, out OoxRelationship? relationship) &&
-                        SlideTarget(relationship) is { } target)
-                    {
-                        AddVisibleSlide(target);
-                    }
-                }
-            }
-            else
-            {
-                // With no slide list, only eligible relationships own a source position.
-                foreach (OoxRelationship relationship in relationships.Values)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    if (SlideTarget(relationship) is { } target)
-                    {
-                        sourceIndex++;
-                        AddVisibleSlide(target);
-                    }
+                    slides.Add(new PptxSlide(target, slides.Count) { SourceIndex = sourceIndex });
                 }
             }
 
@@ -92,23 +66,53 @@ internal sealed class PptxReader
                 FirstSlideNumber = firstSlideNumber,
                 DefaultTextStyle = document.Root?.Element(PresentationNamespace + "defaultTextStyle")
             };
-
-            static string? SlideTarget(OoxRelationship relationship) =>
-                !relationship.IsExternal && relationship.Type == SlideRelationshipType ? relationship.ResolvedTarget : null;
-
-            void AddVisibleSlide(string target)
-            {
-                if (!IsHiddenSlide(package, target, cancellationToken))
-                {
-                    slides.Add(new PptxSlide(target, slides.Count) { SourceIndex = sourceIndex });
-                }
-            }
         }
         finally
         {
             if (result is null) modelStorage?.Dispose();
             else if (modelStorage is not null) OoxMemory.Resize(modelStorage, modelStorage.Bytes / 2);
         }
+    }
+
+    internal static OoxPart ReadPresentationPart(OoxPackage package, CancellationToken cancellationToken) =>
+        package.FindMainPart(PresentationContentType, cancellationToken)
+        ?? throw new InvalidDataException("PPTX package does not contain a presentation part.");
+
+    internal static IEnumerable<(string PartName, int SourceIndex)> ReadSlideSources(
+        OoxPackage package, OoxPart presentationPart, XDocument document, CancellationToken cancellationToken)
+    {
+        var relationships = package.GetRelationshipDictionary(presentationPart.Name, cancellationToken);
+        var slideList = document.Root?.Element(PresentationNamespace + "sldIdLst");
+        int sourceIndex = 0;
+        if (slideList is not null)
+        {
+            // Every authored entry owns an index, including unresolved entries.
+            foreach (XElement slideId in slideList.Elements(PresentationNamespace + "sldId"))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                string? relationshipId = (string?)slideId.Attribute(RelationshipsNamespace + "id");
+                if (relationshipId is not null && relationships.TryGetValue(relationshipId, out OoxRelationship? relationship) &&
+                    SlideTarget(relationship) is { } target)
+                {
+                    yield return (target, sourceIndex);
+                }
+                sourceIndex++;
+            }
+            yield break;
+        }
+
+        // With no slide list, only eligible relationships own a source position.
+        foreach (OoxRelationship relationship in relationships.Values)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (SlideTarget(relationship) is { } target)
+            {
+                yield return (target, sourceIndex++);
+            }
+        }
+
+        static string? SlideTarget(OoxRelationship relationship) =>
+            !relationship.IsExternal && relationship.Type == SlideRelationshipType ? relationship.ResolvedTarget : null;
     }
 
     // Hidden slides (unprefixed p:sld flag, verified against PowerPoint-saved
@@ -125,6 +129,4 @@ internal sealed class PptxReader
         XDocument slideXml = package.LoadXml(part, cancellationToken);
         return OoxBoolean.IsOff((string?)slideXml.Root?.Attribute("show"));
     }
-
-
 }

@@ -71,6 +71,8 @@ jobs:
           pwsh -NoProfile -File tools/TestFrozenMarkupBinding.ps1
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           pwsh -NoProfile -File tools/TestCliDiagnosticsPublication.ps1 -CliPath artifacts/ci-candidate/src/Lokad.OoxPdf.Cli/bin/Release/net11.0/Lokad.OoxPdf.Cli.dll
+      - name: PPTX source inventory ownership
+        run: pwsh -NoProfile -File tools/TestPptxSourceInventory.ps1 -InspectorPath tools/Lokad.OoxPdf.PptxInspect/bin/Release/net11.0/Lokad.OoxPdf.PptxInspect.dll
       - name: Text content gate
         if: runner.os == 'Windows'
         run: |

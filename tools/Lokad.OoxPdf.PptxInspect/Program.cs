@@ -2,14 +2,31 @@ using System.Globalization;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
+using System.Xml;
 
 using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Pptx;
 
-if (args.Length < 2)
+if (args is ["--source-inventory", var presentationPath])
+{
+    try
+    {
+        using OoxPackage source = OoxPackage.Open(presentationPath, CancellationToken.None);
+        Console.WriteLine(JsonSerializer.Serialize(PptxSourceInventory.Read(source)));
+        return 0;
+    }
+    catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException or XmlException)
+    {
+        Console.Error.WriteLine($"Cannot inventory PPTX package: {ex.Message}");
+        return 1;
+    }
+}
+
+if (args.Length < 2 || args[0] == "--source-inventory")
 {
     Console.Error.WriteLine("Usage: Lokad.OoxPdf.PptxInspect <input.pptx> <output-directory> [--slide <number>]... [--include-text] [--font-directory <path>]");
+    Console.Error.WriteLine("       Lokad.OoxPdf.PptxInspect --source-inventory <input.pptx>");
     return 2;
 }
 

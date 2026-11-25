@@ -66,7 +66,7 @@ validation tools, including the PDFium rasterizer, remain outside the library.
 - `tools/CompareCachedDocxMarkupReference.ps1`: compare DOCX markup candidate PDFs against cached Office references; use CliPath/DocxInspectorPath/SkipBuild for frozen qualification.
 - `tools/CheckPrivateCase.ps1`: run a private, ignored visual case.
 - `tools/SummarizePrivateCase.ps1`: summarize ignored private-case metrics without document content.
-- `tools/InventoryPptxSlides.ps1`: produce private-safe PPTX slide feature counts.
+- `tools/InventoryPptxSlides.ps1`: count authored PPTX features in private mode, including hidden slides. Use `-InspectorPath -SkipBuild` with the frozen inspector.
 - `tools/RenderReference.ps1`: render Office reference output through COM.
 - `tools/RasterizePdf.ps1`: rasterize PDFs through local PDFium.
 - `tools/InspectPdf.ps1`: inspect Office/candidate PDF objects and streams.
