@@ -4,11 +4,81 @@ using Lokad.OoxPdf.Docx;
 using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Pdf;
 using System.Text;
+using System.Xml.Linq;
 
 namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxTableMathTests
 {
+    public static void DocxHorizontalCellDirectionSpellingsKeepMathAndNavigation()
+    {
+        foreach (var (fixture, part, body) in new[]
+        {
+            ("inline-math-navigation-cell", "word/document.xml", true),
+            ("table-math-revision-header-row-ins", "word/header1.xml", false)
+        })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var baseline = Render(null);
+            int glyphs = CountEquationGlyphs(baseline.Pages);
+            TestAssert.True(glyphs > 0, "The source fixture must paint its formulas.");
+            int destinations = baseline.Pages.Sum(page => page.Annotations.Count(a => a.IsDestination));
+            TestAssert.True(!body || destinations > 0, "The body fixture must publish formula destinations.");
+            foreach (string token in new[] { "lrTb", "tb", "tbRl", "TB", "LRTB" })
+            {
+                var actual = Render(token);
+                bool horizontal = token is "lrTb" or "tb";
+                string context = $"{fixture}/{mode}/{token}";
+                TestAssert.Equal(body && !horizontal, actual.Diagnostics.Contains("DOCX_TABLE_TEXT_DIRECTION"));
+                TestAssert.Equal(!horizontal, actual.Diagnostics.Contains("DOCX_UNSUPPORTED_EQUATION"));
+                if (!horizontal)
+                {
+                    TestAssert.True(CountEquationGlyphs(actual.Pages) < glyphs,
+                        "Vertical and malformed values retain the equation fallback: " + context);
+                    continue;
+                }
+
+                TestAssert.True(actual.Diagnostics.SequenceEqual(baseline.Diagnostics),
+                    "Equivalent horizontal direction preserves diagnostics: " + context);
+                TestAssert.Equal(baseline.Pages.Length, actual.Pages.Length);
+                foreach (var (expected, observed) in baseline.Pages.Zip(actual.Pages))
+                {
+                    TestAssert.True(string.Equals(expected.Content, observed.Content, StringComparison.Ordinal),
+                        "Equivalent horizontal direction preserves paint: " + context);
+                    TestAssert.True(expected.Annotations.SequenceEqual(observed.Annotations),
+                        "Equivalent horizontal direction preserves annotation placement: " + context);
+                }
+            }
+
+            (PdfPage[] Pages, List<string> Diagnostics) Render(string? direction)
+            {
+                var diagnostics = new List<string>();
+                void Record(Lokad.OoxPdf.Diagnostics.OoxPdfDiagnostic diagnostic) => diagnostics.Add(diagnostic.Id);
+                var source = DocxInlineCompositionTests.ReadMutation("CompositionProbes/" + fixture, mode, false, false,
+                    (xml, w, m) =>
+                    {
+                        if (direction is null) return;
+                        var cell = xml.Descendants(w + "tc").First(candidate => candidate.Descendants(m + "f").Any());
+                        var properties = cell.Element(w + "tcPr")!;
+                        var value = new XElement(w + "textDirection", new XAttribute(w + "val", direction));
+                        var following = properties.Elements().FirstOrDefault(child => child.Name.LocalName is
+                            "tcFitText" or "vAlign" or "hideMark" or "cellIns" or "cellDel" or "cellMerge" or "tcPrChange");
+                        if (following is null) properties.Add(value);
+                        else following.AddBeforeSelf(value);
+                    }, partOverride: part, diagnosticSink: Record);
+                var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true), mode,
+                    mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
+                    OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+                return (renderer.RenderPagesAsync(source, Record, default).ToBlockingEnumerable().ToArray(), diagnostics);
+            }
+        }
+
+        static int CountEquationGlyphs(IEnumerable<PdfPage> pages) => pages.Sum(page =>
+            DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true, honorActualText: false,
+                fontResourceFilter: name => name.StartsWith("Eq", StringComparison.Ordinal))
+                .Sum(show => show.Text.Length));
+    }
+
     public static void DocxStaticDeclaredFramesMapCompleteSourceAndRetainUnknownFallbacks()
     {
         const double scale = .75d;

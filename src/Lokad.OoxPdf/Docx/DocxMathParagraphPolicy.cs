@@ -131,7 +131,7 @@ internal static class DocxMathParagraphPolicy
     internal static bool HasSupportedCellContentProperties(DocxTableCell cell) =>
         !cell.FitText &&
         HasSupportedTableContentRevisions(cell.Revisions, DocxRevisionKind.TableCellPropertiesChange) &&
-        cell.TextDirectionValue is null or "lrTb";
+        cell.HasHorizontalTextDirection;
 
     // The reader selects visible rows before layout. Row insertion/deletion
     // markers and resolved property changes do not replace child source owners.

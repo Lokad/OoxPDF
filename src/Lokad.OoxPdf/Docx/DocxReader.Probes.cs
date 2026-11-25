@@ -671,7 +671,7 @@ internal sealed partial class DocxReader
     private static bool IsUnsupportedTableCellTextDirection(XElement textDirection)
     {
         string? value = (string?)textDirection.Attribute(WordprocessingNamespace + "val");
-        return value is not null && !value.Equals("lrTb", StringComparison.OrdinalIgnoreCase);
+        return !DocxTableCell.IsHorizontalTextDirection(value);
     }
 
     private static bool HasUnsupportedTrackedChanges(XDocument document, bool reviewApproximation, CancellationToken token)

@@ -1985,7 +1985,7 @@ internal sealed partial class DocxLayoutEngine
         foreach (var cell in row.Cells)
         {
             if (cell.HasVerticalMerge || cell.FitText || cell.GridSpan > 1 ||
-                cell.TextDirectionValue is not (null or "lrTb") ||
+                !cell.HasHorizontalTextDirection ||
                 cell.VerticalAlignmentValue is not (null or "top")) return false;
             var elements = DocxTableCellContent.GetBodyElements(cell);
             if (elements.Count != 1 || elements[0] is not DocxParagraphElement element) return false;

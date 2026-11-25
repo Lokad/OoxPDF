@@ -152,6 +152,11 @@ internal sealed record DocxTableCell(
 
     public DocxTableWidthKind PreferredWidthKind => DocxTable.ParseTableWidthKind(PreferredWidthType);
 
+    public bool HasHorizontalTextDirection => IsHorizontalTextDirection(TextDirectionValue);
+
+    // ISO/IEC 29500 defines the Transitional lrTb spelling as equivalent to tb.
+    public static bool IsHorizontalTextDirection(string? value) => value is null or "lrTb" or "tb";
+
     public static DocxTableCellVerticalAlignment ParseVerticalAlignment(string? value)
     {
         if (string.Equals(value, "bottom", StringComparison.OrdinalIgnoreCase))

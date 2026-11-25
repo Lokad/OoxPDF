@@ -129,7 +129,7 @@ internal sealed partial class DocxLayoutEngine
             table.Revisions.Count != 0 || row.Revisions.Count != 0 || cell.Revisions.Count != 0 ||
             table.CellSpacingPoints is > 0d || table.UseLegacyTableGrid || cell.GridSpan != 1 ||
             cell.HasVerticalMerge || cell.NoWrap || cell.FitText ||
-            cell.TextDirectionValue is not (null or "lrTb") ||
+            !cell.HasHorizontalTextDirection ||
             cell.Paragraphs.Count == 0 || cell.BodyElements.Count != cell.Paragraphs.Count ||
             cell.BodyElements.Any(e => e is not DocxParagraphElement || e.Revisions.Count != 0) ||
             cell.Paragraphs.Any(p => !IsPlainContextualSpacingParagraph(p, allowSourceAffinedImages: true)) ||

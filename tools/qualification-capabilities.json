@@ -1058,6 +1058,7 @@
       "PptxSyntheticChartVisibleSecondaryAxisReservesInnerPlotStrips"
   ],
   "docx-shared-cell-content-portable": [
+    "=DocxHorizontalCellDirectionSpellingsKeepMathAndNavigation",
     "=DocxFittingDecimalTabsRetainMathPicturesAndNumericAnchors",
     "=DocxImplicitDecimalCellTabsMatchExplicitFieldPlacement",
     "=DocxLogicalTabsPreserveComposedFractionsAndFieldPlacement",

@@ -19,7 +19,7 @@ internal sealed partial class DocxRenderer
                 sourceCell.BodyElements.Any(e => e is not DocxParagraphElement || e.Revisions.Count != 0) ||
                 sourceCell.GridSpan != 1 || sourceCell.HasVerticalMerge || sourceCell.NoWrap || sourceCell.FitText ||
                 sourceCell.VerticalAlignment != DocxTableCellVerticalAlignment.Top ||
-                sourceCell.TextDirectionValue is not (null or "lrTb") || sourceCell.Revisions.Count != 0)
+                !sourceCell.HasHorizontalTextDirection || sourceCell.Revisions.Count != 0)
                 continue;
             DocxParagraph previous = sourceCell.Paragraphs[0];
             DocxParagraph current = sourceCell.Paragraphs[1];
