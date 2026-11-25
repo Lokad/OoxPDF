@@ -13,7 +13,8 @@
   reports its fallback.
 - Hosting: awaits I/O, uses immutable font leases, explicit stream staging and
   optional shared-memory budgets. Custom resolvers define the complete font universe.
-- PDF text preserves distinct Unicode characters when fonts share glyph outlines.
+- PDF text preserves distinct Unicode characters that share a glyph outline.
+  Plain space and NBSP still normalize to plain space when they share a glyph.
 - Breaking API changes require recompilation; see [migration](docs/Migration.md).
 
 See [rendering scope and limitations](docs/Capabilities.md) for approximate
