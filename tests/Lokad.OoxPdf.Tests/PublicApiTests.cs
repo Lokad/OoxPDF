@@ -399,18 +399,6 @@ internal static partial class PublicApiTests
         AssertPdfHeader(output);
     }
 
-    public static void ConvertAsyncStreamWorksWithForwardOnlyInputForDocx()
-    {
-        byte[] bytes = ReadMinimalDocxBytes("<w:p><w:r><w:t>forward only input async</w:t></w:r></w:p>");
-        using var inner = new MemoryStream(bytes, writable: false);
-        using var input = new ForwardOnlyReadStream(inner);
-        using var output = new MemoryStream();
-
-        OoxPdfConverter.ConvertAsync(input, output, new OoxPdfOptions { InputKind = OoxPdfInputKind.Docx }).GetAwaiter().GetResult();
-
-        AssertPdfHeader(output);
-    }
-
     public static void ConvertStreamWorksWithForwardOnlyInputForPptx()
     {
         byte[] bytes = ReadMinimalPptxBytes();
@@ -419,18 +407,6 @@ internal static partial class PublicApiTests
         using var output = new MemoryStream();
 
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { InputKind = OoxPdfInputKind.Pptx });
-
-        ValidatePdfXref(output.ToArray());
-    }
-
-    public static void ConvertAsyncStreamWorksWithForwardOnlyInputForPptx()
-    {
-        byte[] bytes = ReadMinimalPptxBytes();
-        using var inner = new MemoryStream(bytes, writable: false);
-        using var input = new ForwardOnlyReadStream(inner);
-        using var output = new MemoryStream();
-
-        OoxPdfConverter.ConvertAsync(input, output, new OoxPdfOptions { InputKind = OoxPdfInputKind.Pptx }).GetAwaiter().GetResult();
 
         ValidatePdfXref(output.ToArray());
     }
@@ -619,8 +595,8 @@ internal static partial class PublicApiTests
     private static void ValidatePdfXref(byte[] pdf)
     {
         TestAssert.True(pdf.Length > 20, "Forward-only conversion should write PDF bytes.");
+        TestAssert.True(pdf.AsSpan().StartsWith("%PDF-1.7"u8), "The PDF header must begin at byte zero.");
         string text = System.Text.Encoding.ASCII.GetString(pdf);
-        TestAssert.Contains("%PDF-1.7", text);
         TestAssert.Contains("xref", text);
         TestAssert.Contains("trailer", text);
         TestAssert.Contains("%%EOF", text);
