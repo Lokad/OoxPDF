@@ -20528,6 +20528,8 @@
     "=MathLiteralOperatorsKeepGlyphsAndUseOrdinarySpacing",
     "=DocxMathRunAlignmentAdmitsDisabledFlags",
     "=PortableRenderingDisabledMathAlignmentKeepsComposedFractions",
+    "=DocxMathRunBreakDistinguishesLiteralOperatorsAndMalformedProperties",
+    "=PortableRenderingLiteralMathRunBreakKeepsComposedFractions",
     "=DocxMathArgumentControlsRequireTrailingPrintNeutralProperties",
     "=PortableRenderingNeutralMathArgumentControlsKeepComposedFractions",
     "=PortableRenderingMathControlFormattingHistoryKeepsCurrentFractions",

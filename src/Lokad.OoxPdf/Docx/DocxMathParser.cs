@@ -387,7 +387,6 @@ internal static partial class DocxMathParser
     {
         if (IsReadableRun(element, allowsDeletedText, firstBreakInRun))
         {
-            var (normalText, literalText, supported) = ReadRunProperties(element);
             // Optional breaks carry no ink in math. Word joiners also carry
             // no ink, and protect their boundaries from an operator break.
             string text = string.Concat(RunContent(element, firstBreakInRun).Select(child => ReadLiteralRunText(child, allowsDeletedText)));
@@ -406,6 +405,7 @@ internal static partial class DocxMathParser
                 }
                 text = literal.ToString();
             }
+            var (normalText, literalText, supported) = ReadRunProperties(element, text);
             return new DocxMathRun(
                 readRun(element, text),
                 PropertyValue(element, "rPr", "sty"), PropertyValue(element, "rPr", "scr"))
@@ -422,17 +422,34 @@ internal static partial class DocxMathParser
         return new DocxMathUnsupported(element.Name.LocalName, element.Name.NamespaceName, []);
     }
 
-    private static (bool? NormalText, bool LiteralText, bool Supported) ReadRunProperties(XElement run)
+    private static (bool? NormalText, bool LiteralText, bool Supported) ReadRunProperties(XElement run, string text = "")
     {
         XElement? properties = run.Element(MathNamespace + "rPr");
         var (normalText, normalSupported) = ReadRunFlag(properties, MathNamespace + "nor");
         var (literalText, literalSupported) = ReadRunFlag(properties, MathNamespace + "lit");
         var (alignment, alignmentSupported) = ReadRunFlag(properties, MathNamespace + "aln");
+        XElement? manualBreak = properties?.Element(MathNamespace + "brk");
+        bool ignoresBreak = manualBreak is not null && IsIgnoredManualRunBreak(manualBreak, text);
         bool propertiesSupported = properties?.Elements().All(property =>
-            property.Name.Namespace == MathNamespace && property.Name.LocalName is "sty" or "scr" or "nor" or "lit" or "aln") != false;
+            property.Name.Namespace == MathNamespace &&
+            (property.Name.LocalName is "sty" or "scr" or "nor" or "lit" or "aln" || ignoresBreak && property == manualBreak)) != false;
         // Disabled alignment has no layout effect. Active alignment points still need their own placement rule.
         return (normalText, literalText == true, propertiesSupported && normalSupported && literalSupported &&
             alignmentSupported && alignment != true);
+    }
+
+    private static bool IsIgnoredManualRunBreak(XElement instruction, string text)
+    {
+        // Word ignores m:brk when the run does not begin with an operator.
+        // A leading letter or digit is a literal operand. Keep the fallback
+        // for operator-led runs and other starts whose interpretation is unknown.
+        XName alignAt = MathNamespace + "alnAt";
+        return Rune.TryGetRuneAt(text, 0, out Rune first) && Rune.IsLetterOrDigit(first) &&
+            !instruction.HasElements && string.IsNullOrWhiteSpace(instruction.Value) &&
+            instruction.Attributes().All(attribute => attribute.IsNamespaceDeclaration || attribute.Name == alignAt) &&
+            ((string?)instruction.Attribute(alignAt) is not { } value ||
+                int.TryParse(value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture,
+                    out int index) && index is >= 1 and <= 255);
     }
 
     private static (bool? Value, bool Supported) ReadRunFlag(XElement? properties, XName name)

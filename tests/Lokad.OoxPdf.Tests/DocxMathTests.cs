@@ -592,6 +592,31 @@ internal static partial class DocxMathTests
         }
     }
 
+    public static void DocxMathRunBreakDistinguishesLiteralOperatorsAndMalformedProperties()
+    {
+        foreach (var (text, property, ignored) in new[]
+        {
+            ("x+2", "<m:brk/>", true),
+            ("2+x", "<m:brk m:alnAt='1'/>", true),
+            ("α+2", "<m:brk/>", true),
+            ("+x", "<m:brk/>", false),
+            ("×x", "<m:brk/>", false),
+            ("x+2", "<m:brk m:alnAt='256'/>", false),
+            ("x+2", "<m:brk m:val='1'/>", false),
+            ("x+2", "<m:brk>text</m:brk>", false),
+            ("x+2", "<m:brk/><m:brk/>", false)
+        })
+        {
+            var row = Parse(XElement.Parse($"""
+                <m:oMath xmlns:m="{MathNamespace}"><m:r><m:rPr>{property}</m:rPr><m:t>{text}</m:t></m:r></m:oMath>
+                """));
+            var run = (DocxMathRun)row.Children.Single();
+            TestAssert.Equal(text, run.Text.Text);
+            TestAssert.Equal(!ignored, run.HasUnsupportedProperties);
+            TestAssert.Equal(ignored, DocxMathRowLayout.TryGetRenderCodePoints(row, default, out _, out _));
+        }
+    }
+
     public static void DocxMathArgumentPropertiesPreserveTypedSizeAndConservativeEligibility()
     {
         foreach ((string properties, int? size, bool unsupported, bool eligible) in new (string, int?, bool, bool)[]

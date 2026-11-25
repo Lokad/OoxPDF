@@ -189,6 +189,18 @@ internal static partial class PortableRenderingTests
             }
         });
 
+    public static void PortableRenderingLiteralMathRunBreakKeepsComposedFractions() =>
+        CheckComposedMathRunContent("x+2", (numerators, _, m) =>
+        {
+            for (int index = 0; index < numerators.Length; index++)
+            {
+                XElement run = numerators[index].Parent!;
+                XElement properties = run.Element(m + "rPr") ?? new XElement(m + "rPr");
+                if (properties.Parent is null) run.AddFirst(properties);
+                properties.Add(new XElement(m + "brk", index == 1 ? new XAttribute(m + "alnAt", "1") : null));
+            }
+        });
+
     public static void PortableRenderingNeutralMathArgumentControlsKeepComposedFractions() =>
         CheckComposedMathRunContent("x+2", (numerators, w, m) =>
         {
