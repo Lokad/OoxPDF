@@ -708,7 +708,7 @@ internal static class DocxSectionNavigationTests
         })
         foreach (var mode in Modes)
         {
-            int offset = story == "footer" ? -62 : 30;
+            int offset = nestedAnchor ? 22 : story == "footer" ? -62 : 30;
             string context = $"{story}/{height}/{mode}, nested anchor = {nestedAnchor}";
             WithDocumentMutation(fixture, (parts, xml) =>
             {
@@ -735,9 +735,14 @@ internal static class DocxSectionNavigationTests
                     new XElement(W + "tcW", new XAttribute(W + "w", "6000"), new XAttribute(W + "type", "dxa"))), paragraph);
                 if (!exact) paragraph.AddBeforeSelf(Paragraph("EARLIER CELL PARAGRAPH"));
                 if (nestedAnchor)
+                {
+                    var child = Paragraph("NESTED CELL CONTENT");
+                    child.AddFirst(new XElement(W + "pPr",
+                        new XElement(W + "jc", new XAttribute(W + "val", "center"))));
                     paragraph.AddBeforeSelf(new XElement(W + "tbl", new XElement(W + "tblPr"),
                         new XElement(W + "tblGrid", new XElement(W + "gridCol", new XAttribute(W + "w", "4800"))),
-                        new XElement(W + "tr", new XElement(W + "tc", Paragraph("NESTED CELL CONTENT")))));
+                        new XElement(W + "tr", new XElement(W + "tc", child))));
+                }
                 var row = new XElement(W + "tr", cell);
                 if (height != 0) row.AddFirst(new XElement(W + "trPr", new XElement(W + "trHeight",
                     new XAttribute(W + "val", height), new XAttribute(W + "hRule", exact ? "exact" : "atLeast"))));
@@ -757,7 +762,8 @@ internal static class DocxSectionNavigationTests
                 if (!exact)
                 {
                     DocxInlineCompositionTests.AssertSourceLabelsPaint(page, mode,
-                        ["BOX TABLE NORTH", "BOX TABLE SOUTH", nestedAnchor ? "NESTED CELL CONTENT" : "STATIC CELL OWNER"], context);
+                        nestedAnchor ? ["BOX TABLE NORTH", "BOX TABLE SOUTH"]
+                            : ["BOX TABLE NORTH", "BOX TABLE SOUTH", "STATIC CELL OWNER"], context);
                     var target = DocxParagraphShadingTests.ReadRectangles(page.Content).Single(rect => rect.Color == "CC9944");
                     TestAssert.True(page.Annotations.Any(link => link.Destination is { PageIndex: 0, Left: double x, Top: double y } &&
                         Math.Abs(x - target.X) < .002d && Math.Abs(y - target.Y - target.Height) < .002d),
