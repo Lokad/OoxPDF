@@ -1,4 +1,3 @@
-using System.Xml.Linq;
 using System.Text;
 using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Pdf;
@@ -24,7 +23,7 @@ internal sealed partial class PptxRenderer
             Math.Abs(sin) + category.LineHeight * cos) + PptxChartMetricRules.OuterPlotCaptionPadding;
 
     private static async ValueTask<ChartLayout> PrepareCartesianCategoryFramesAsync(ChartLayout layout,
-        PptxTheme theme, PptxSceneChart chart, XDocument xml, ChartAxisSource valueAxis,
+        PptxTheme theme, PptxSceneChart chart, ChartAxisSource valueAxis,
         ChartValueExtents extents, ChartValueAxisRenderOptions options, double tickTarget,
         bool defaultRightSide, ChartAxisSource categoryAxis, IReadOnlyList<ChartIndexedTextPoint?> labels, double categoryRatio, bool categoryHighSide,
         PresentationFontResolver resolver, PptxRenderContext context, ChartLegendBox? legendBox = null, string? defaultNumberFormat = null)
@@ -64,13 +63,13 @@ internal sealed partial class PptxRenderer
         (double Left, double Right,
             (double NumericStart, double NumericLength, double OuterStart, double OuterLength)? Vertical)? sourceReferences = null;
         if (categoryVisible)
-            (layout, sourceReferences) = await PrepareCategoryLabelLayoutAsync(layout, theme, chart, xml, categoryAxis, labels,
+            (layout, sourceReferences) = await PrepareCategoryLabelLayoutAsync(layout, theme, chart, categoryAxis, labels,
                 onTickMarks, categoryHighSide, categoryRatio, resolver, legendBox,
                 outer ? Math.Max(0d, source.Height - 2d * numericClearance) : null,
                 admitInnerCaptions, numericClearance, options.Reversed).ConfigureAwait(false);
         if (!innerTarget && !outer) return layout;
         if (layout.CategoryLabels?.Labels.Values.Any(parts => parts.Length != 1) == true)
-            return outer ? (await PrepareCategoryLabelLayoutAsync(original, theme, chart, xml, categoryAxis, labels,
+            return outer ? (await PrepareCategoryLabelLayoutAsync(original, theme, chart, categoryAxis, labels,
                 onTickMarks, categoryHighSide, categoryRatio, resolver, legendBox).ConfigureAwait(false)).Layout : layout;
         if (innerTarget)
         {
@@ -160,7 +159,7 @@ internal sealed partial class PptxRenderer
             }
             else bands = AdmitChartCaptionBands(source.Width, source.Width, RequiredBands);
             if (bands is null)
-                return (await PrepareCategoryLabelLayoutAsync(original, theme, chart, xml, categoryAxis, labels,
+                return (await PrepareCategoryLabelLayoutAsync(original, theme, chart, categoryAxis, labels,
                     onTickMarks, categoryHighSide, categoryRatio, resolver, legendBox).ConfigureAwait(false)).Layout;
             var verticalBand = AdmitChartCaptionInterval(source.Y, source.Height, source.Y, source.Height,
                 numericClearance, numericClearance, categoryBand, new(0d, categoryRatio, categoryHighSide, categoryHighSide));
@@ -492,7 +491,7 @@ internal sealed partial class PptxRenderer
     // the inner plot. Office PDF/API controls distinguish these two owners.
     private static async ValueTask<(ChartLayout Layout, (double Left, double Right,
         (double NumericStart, double NumericLength, double OuterStart, double OuterLength)? Vertical)? SourceReferences)> PrepareCategoryLabelLayoutAsync(
-        ChartLayout layout, PptxTheme theme, PptxSceneChart chart, XDocument xml,
+        ChartLayout layout, PptxTheme theme, PptxSceneChart chart,
         ChartAxisSource axis, IReadOnlyList<ChartIndexedTextPoint?> labels,
         bool onTickMarks, bool topSide, double axisRatio,
         PresentationFontResolver resolver, ChartLegendBox? legendBox = null, double? availableCaptionHeight = null,

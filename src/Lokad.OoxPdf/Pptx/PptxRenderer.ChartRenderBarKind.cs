@@ -1,6 +1,5 @@
 using System.Globalization;
 using System.Text;
-using System.Xml.Linq;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Ooxml;
@@ -18,7 +17,6 @@ internal sealed partial class PptxRenderer
         PptxColorMap colorMap,
         ChartColorPalette chartPalette,
         ShapeBounds bounds,
-        XDocument chartXml,
         PptxSceneChart sceneChart,
         ChartWorkbookData? workbook,
         List<PdfFontResource> fonts,
@@ -189,7 +187,7 @@ internal sealed partial class PptxRenderer
                     ResolveChartAxisLabelPlacement(categoryAxis.SceneAxis,
                         GetChartValuePlotRatio(valueExtents, valueAxisOptions.CrossingValue ?? 0d, valueAxisOptions.Reversed), valueAxisOptions.Reversed);
                 if (!horizontalBars)
-                    chartLayout = await PrepareCartesianCategoryFramesAsync(chartLayout, theme, sceneChart, chartXml,
+                    chartLayout = await PrepareCartesianCategoryFramesAsync(chartLayout, theme, sceneChart,
                         valueAxisSource, valueExtents, valueAxisOptions,
                         GetValueAxisAutoTickTargetCount(false, true, chartLayout.ManualPlotLayoutApplied), axesStyle.ValueAxisRightSide,
                         categoryAxis, categoryLabels, categoryPlacement.LabelPlotRatio, categoryPlacement.LabelsHighSide,

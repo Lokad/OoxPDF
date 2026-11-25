@@ -1,6 +1,5 @@
 using System.Globalization;
 using System.Text;
-using System.Xml.Linq;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Ooxml;
@@ -25,7 +24,7 @@ internal sealed partial class PptxRenderer
     // through ChartMarkerOutlineStroke, which only applies when no explicit line exists.
     private const double ChartMarkerInheritedStrokeWidth = 1d;
 
-    private static async ValueTask<bool> TryRenderChartAsync(PdfGraphicsBuilder graphics, PptxDocument document, PptxTheme theme, PptxColorMap colorMap, ShapeBounds bounds, XDocument chartXml, PptxSceneChart sceneChart, ChartWorkbookData? workbook, List<PdfFontResource> fonts, PresentationFontResolver fontResolver,
+    private static async ValueTask<bool> TryRenderChartAsync(PdfGraphicsBuilder graphics, PptxDocument document, PptxTheme theme, PptxColorMap colorMap, ShapeBounds bounds, PptxSceneChart sceneChart, ChartWorkbookData? workbook, List<PdfFontResource> fonts, PresentationFontResolver fontResolver,
         PptxRenderContext context,
         List<PdfLinkAnnotation> linkAnnotations,
         HashSet<string> reportedHyperlinkIds)
@@ -33,19 +32,19 @@ internal sealed partial class PptxRenderer
         ChartColorPalette palette = ResolveChartColorPalette(sceneChart, theme, colorMap, context.CancellationToken);
         bool plotVisibleOnly = sceneChart.Options.PlotVisibleOnly ?? true;
         if ((await TryRenderBarChartKindAsync(
-            graphics, document, theme, colorMap, palette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly, context, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false)))
+            graphics, document, theme, colorMap, palette, bounds, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly, context, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false)))
         {
             return true;
         }
 
         if ((await TryRenderLineChartKindAsync(
-            graphics, document, theme, colorMap, palette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly, context, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false)))
+            graphics, document, theme, colorMap, palette, bounds, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly, context, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false)))
         {
             return true;
         }
 
         if ((await TryRenderAreaChartKindAsync(
-            graphics, document, theme, colorMap, palette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly, context, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false)))
+            graphics, document, theme, colorMap, palette, bounds, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly, context, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false)))
         {
             return true;
         }

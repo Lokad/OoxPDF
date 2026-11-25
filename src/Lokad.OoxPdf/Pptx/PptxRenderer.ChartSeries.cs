@@ -141,7 +141,7 @@ internal sealed partial class PptxRenderer
     {
         PptxColorMap chartColorMap = sceneChart.ColorMap;
 
-        if ((await TryRenderChartAsync(graphics, context.Document, context.Theme, chartColorMap, bounds, resolvedChartXml, sceneChart, chartWorkbook, fonts, context.FontResolver, context, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false)))
+        if ((await TryRenderChartAsync(graphics, context.Document, context.Theme, chartColorMap, bounds, sceneChart, chartWorkbook, fonts, context.FontResolver, context, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false)))
         {
             EmitUnrenderedDefaultChartAxisTitleDiagnostics(sceneChart, context.DiagnosticSink, chartPartName, context.SlideNumber);
             EmitUnsupportedChartNumberFormatDiagnostics(resolvedChartXml, sceneChart, context.DiagnosticSink, chartPartName, context.SlideNumber);
