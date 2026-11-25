@@ -7193,6 +7193,8 @@
       "DocxMinimumBodyFlowRichAndCombiningSourcesKeepFallback"
   ],
   "pptx-chart-titles": [
+      "=PptxDefaultAxisTitlesReportMissingGlyphsAcrossPlacementPaths",
+      "=PptxChartAxisTitleExternalHyperlinkEmitsUriAnnotation",
       "=PptxDefaultAxisTitlesKeepAuthoredLinesInTheirBands",
       "=PptxDefaultBarTopAxisTitleUsesMeasuredInkBand",
       "=PptxManualAxisTitleKeepsAuthoredLinesAndLinkedInk",

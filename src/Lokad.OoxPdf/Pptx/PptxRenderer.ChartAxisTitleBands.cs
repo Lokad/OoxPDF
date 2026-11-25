@@ -169,13 +169,11 @@ internal sealed partial class PptxRenderer
         };
     }
 
-    private static async ValueTask RenderDefaultAxisTitleBandAsync(PdfGraphicsBuilder graphics,
-        PptxSceneChart chart, PptxSceneChartAxis axis, DefaultAxisTitleBand band,
-        PresentationFontResolver fontResolver, List<PdfFontResource> chartFonts, PptxRenderContext context,
-        List<PdfLinkAnnotation> linkAnnotations, HashSet<string> reportedHyperlinkIds)
+    private static async ValueTask PlaceDefaultAxisTitleInBandAsync(PdfGraphicsBuilder graphics,
+        PptxSceneChartAxis axis, DefaultAxisTitleBand band, PresentationFontResolver fontResolver,
+        List<TextRun> runs, List<ChartTextRunLink>? links)
     {
         ChartLayoutBox box = band.Box;
-        if (box.Width <= 0d || box.Height <= 0d) return;
 
         bool vertical = axis.PositionKind is PptxSceneChartAxisPosition.Left or PptxSceneChartAxisPosition.Right;
         double centerX = box.X + box.Width / 2d;
@@ -183,8 +181,6 @@ internal sealed partial class PptxRenderer
         double inlineExtent = vertical ? box.Height : box.Width;
         double crossExtent = vertical ? box.Width : box.Height;
         double lineTop = centerY + Math.Min(crossExtent, band.Height) / 2d;
-        var runs = new List<TextRun>();
-        List<ChartTextRunLink>? links = chart.Relationships is null ? null : [];
         await AddChartTitleLinesAsync(runs, axis.Title.Text!, band.Lines, band.Style, centerX - inlineExtent / 2d,
             inlineExtent, lineTop, null, box, fontResolver, links).ConfigureAwait(false);
 
@@ -201,8 +197,5 @@ internal sealed partial class PptxRenderer
 
         if (vertical)
             RotateChartAxisTitle(runs, centerX, centerY);
-        var axisPaint = await RenderChartTextRunsAsync(runs, graphics, chartFonts, "CAT", fontResolver,
-            context.DiagnosticSink, links).ConfigureAwait(false);
-        AddChartTextRunHyperlinkAnnotations(links, chart, context, axisPaint, linkAnnotations, reportedHyperlinkIds);
     }
 }

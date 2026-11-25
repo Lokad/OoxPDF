@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Numerics;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Fonts;
@@ -159,19 +160,70 @@ internal static partial class PptxChartTextHyperlinksTests
 
     public static void PptxChartAxisTitleExternalHyperlinkEmitsUriAnnotation()
     {
-        foreach (IFontResolver? resolver in new IFontResolver?[] { null, new MissingTestFontResolver() })
+        const string caption = "Y axis";
+        foreach (IFontResolver resolver in new IFontResolver[] { new PortableRenderingTests.PinnedResolver(), new MissingTestFontResolver() })
         {
             (IReadOnlyList<PdfPage> pages, List<OoxPdfDiagnostic> diagnostics) = RenderChartTitlePage(
-                "", AxisTitleRelationships, AxisTitleChart("l", """
-                    <a:r><a:rPr><a:hlinkClick r:id="rIdLink"/></a:rPr><a:t>Y axis</a:t></a:r>
+                "", AxisTitleRelationships, AxisTitleChart("l", $"""
+                    <a:r><a:rPr><a:hlinkClick r:id="rIdLink"/></a:rPr><a:t>{caption}</a:t></a:r>
                     """), fontResolver: resolver);
 
-            PdfLinkAnnotation annotation = pages.Single().Annotations.Single();
+            PdfPage page = pages.Single();
+            PdfLinkAnnotation annotation = page.Annotations.Single();
             TestAssert.Equal("https://example.invalid/chart-axis", annotation.Uri);
             TestAssert.True(annotation.Width > 0d && annotation.Height > 0d, "Chart axis title links need a non-degenerate box.");
             TestAssert.True(annotation.X >= 60d && annotation.X + annotation.Width <= 216d, "Chart axis title links must sit in the left title zone.");
             TestAssert.True(annotation.Y >= 252d && annotation.Y + annotation.Height <= 468d, "Chart axis title links must sit inside the chart frame vertically.");
             TestAssert.True(diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_HYPERLINK" && d.Id != "PPTX_UNSUPPORTED_HYPERLINK_ACTION"), "A resolvable chart axis title hyperlink should not emit hyperlink diagnostics.");
+
+            if (resolver is MissingTestFontResolver)
+            {
+                var frame = DocxNoteClippingTests.ReadPhysicalPaintFrames(page).Single(frame =>
+                    new string(FallbackFontMetricsTests.ReadGlyphs(frame.Block).Select(glyph => (char)glyph.Code).ToArray()) == caption);
+                TestAssert.True(frame.VisibleTextPaint is true, "The standard-font title has a visible paint operation.");
+                foreach (var glyph in FallbackFontMetricsTests.ReadGlyphs(frame.Block).Where(glyph => glyph.Code != ' '))
+                {
+                    var origin = Vector2.Transform(new((float)glyph.X, (float)glyph.Y), frame.Transform);
+                    TestAssert.True(Covers(origin.X, origin.Y), "The link covers each rotated standard-font glyph origin.");
+                }
+            }
+            else
+            {
+                var glyphs = PortableRenderingTests.ReadPaintedSourceLabel(page, caption, fontPrefix: "CAT");
+                TestAssert.True(glyphs.All(glyph => Covers(glyph.Ink.X, glyph.Ink.Y) &&
+                    Covers(glyph.Ink.X + glyph.Ink.Width, glyph.Ink.Y + glyph.Ink.Height)),
+                    "The link covers all of the rotated title ink.");
+            }
+
+            bool Covers(double x, double y) =>
+                x >= annotation.X - .01d && x <= annotation.X + annotation.Width + .01d &&
+                y >= annotation.Y - .01d && y <= annotation.Y + annotation.Height + .01d;
+        }
+    }
+
+    public static void PptxDefaultAxisTitlesReportMissingGlyphsAcrossPlacementPaths()
+    {
+        const string missing = "\U0003FFFD";
+        var resolver = new PortableRenderingTests.PinnedResolver();
+        foreach (string side in new[] { "l", "b" })
+        foreach (bool multiline in new[] { false, true })
+        foreach (bool substitutes in new[] { false, true })
+        {
+            string runs = $"""
+                <a:r><a:rPr sz="1200" b="0"/><a:t>Y{(substitutes ? missing : "?")} axis</a:t></a:r>
+                """;
+            if (multiline)
+                runs += """<a:br/><a:r><a:rPr sz="1200" b="0"/><a:t>Second</a:t></a:r>""";
+            var (pages, diagnostics) = RenderChartTitlePage("", null, AxisTitleChart(side, runs), resolver);
+            var warnings = diagnostics.Where(diagnostic => diagnostic.Id == "FONT_MISSING_GLYPHS").ToArray();
+            TestAssert.Equal(substitutes ? 1 : 0, warnings.Length);
+            if (substitutes)
+                TestAssert.True(warnings[0].Message.Contains("U+3FFFD", StringComparison.Ordinal),
+                    "The warning identifies the unsupported code point in the caption.");
+            PdfPage page = pages.Single();
+            TestAssert.Equal(6, PortableRenderingTests.ReadPaintedSourceLabel(page, "Y? axis", fontPrefix: "CAT").Count);
+            if (multiline)
+                TestAssert.Equal(6, PortableRenderingTests.ReadPaintedSourceLabel(page, "Second", fontPrefix: "CAT").Count);
         }
     }
 
