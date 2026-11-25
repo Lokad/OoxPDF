@@ -1,17 +1,10 @@
+using System.Reflection;
+
 namespace Lokad.OoxPdf.Tests;
 
 internal static class TestRunner
 {
-    private static readonly HashSet<string> SlowTests = new(StringComparer.Ordinal)
-    {
-        // Exhaustive rendering products remain explicit milestone/slow coverage.
-        nameof(DocxCommentsTests.DocxWordCompatibleMixedBalloonWrapsParagraphBodiesIndependently),
-        nameof(PptxTypographyTests.PptxSyntheticRotatedTextBoxProducesTransform),
-        nameof(PptxTypographyTests.PptxSyntheticTextBoxEmbedsFontAndDrawsGlyphs),
-        nameof(FontTests.DiscoveryHeadersMatchFullLoadAcrossWindowsFonts)
-    };
-
-    public static int Run(string[] args, IEnumerable<TestCase> tests)
+    public static int Run(string[] args, IEnumerable<TestCase> tests, Assembly? coverageAssembly)
     {
         Dictionary<string, string?>? options = ReadOptions(args);
         if (options is null) return 1;
@@ -72,7 +65,7 @@ internal static class TestRunner
             Console.WriteLine($"Unknown test group '{group}'. Available groups: {availableGroups}");
             return 1;
         }
-        IReadOnlyList<string> catalogProblems = TestCatalogValidator.Validate(testCases, exactNames);
+        IReadOnlyList<string> catalogProblems = TestCatalogValidator.Validate(testCases, exactNames, coverageAssembly);
         if (catalogProblems.Count != 0)
         {
             foreach (string problem in catalogProblems)
@@ -111,7 +104,7 @@ internal static class TestRunner
             return 1;
         }
         if (!list && (group is not null || name is not null || exactNames is not null) &&
-            (skipSlow || onlySlow) && selected.All(testCase => IsFilteredBySpeed(SlowTests.Contains(testCase.Action.Method.Name))))
+            (skipSlow || onlySlow) && selected.All(testCase => IsFilteredBySpeed(testCase.IsSlow)))
         {
             Console.WriteLine("The speed filter excludes every selected test.");
             return 1;
@@ -121,7 +114,7 @@ internal static class TestRunner
         foreach (TestCase testCase in selected)
         {
             Action test = testCase.Action;
-            bool isSlow = SlowTests.Contains(test.Method.Name);
+            bool isSlow = testCase.IsSlow;
 
             if (list)
             {

@@ -2,7 +2,7 @@ using System.Reflection;
 
 namespace Lokad.OoxPdf.Tests;
 
-internal sealed record TestCase(string Group, Action Action);
+internal sealed record TestCase(string Group, Action Action, bool IsSlow = false);
 
 internal static class TestCatalog
 {
@@ -293,7 +293,14 @@ internal static class TestCatalog
             .GetMethods(BindingFlags.Public | BindingFlags.Static)
             .Where(method => method.ReturnType == typeof(void) && method.GetParameters().Length == 0)
             .OrderBy(method => method.MetadataToken)
-            .Select(method => new TestCase(classify(method.Name), (Action)Delegate.CreateDelegate(typeof(Action), method)))
+            .Select(method => new TestCase(classify(method.Name), (Action)Delegate.CreateDelegate(typeof(Action), method),
+                IsSlowTest(method.Name)))
             .ToArray();
     }
+
+    private static bool IsSlowTest(string name) => name is
+        nameof(DocxCommentsTests.DocxWordCompatibleMixedBalloonWrapsParagraphBodiesIndependently) or
+        nameof(PptxTypographyTests.PptxSyntheticRotatedTextBoxProducesTransform) or
+        nameof(PptxTypographyTests.PptxSyntheticTextBoxEmbedsFontAndDrawsGlyphs) or
+        nameof(FontTests.DiscoveryHeadersMatchFullLoadAcrossWindowsFonts);
 }

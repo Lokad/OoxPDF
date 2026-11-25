@@ -45,7 +45,8 @@ internal static class TestRunnerTests
         var calls = new List<int>();
         Action first = () => calls.Add(1);
         Action second = () => calls.Add(2);
-        TestCase[] catalog = [.. TestCatalog.All, new("runner-probe", first), new("runner-probe", second)];
+        Action slow = () => calls.Add(3);
+        TestCase[] catalog = [new("runner-probe", first), new("runner-probe", second), new("runner-slow", slow, IsSlow: true)];
         var list = RunCaptured(["--group", "runner-probe", "--list"], catalog);
         TestAssert.Equal(0, list.ExitCode);
         TestAssert.Contains(first.Method.Name, list.Output);
@@ -58,7 +59,10 @@ internal static class TestRunnerTests
         TestAssert.Equal(1, noSlow.ExitCode);
         TestAssert.Contains("The speed filter excludes every selected test.", noSlow.Output);
         TestAssert.Equal(0, RunCaptured(["--group", "runner-probe", "--only-slow", "--list"], catalog).ExitCode);
-        string slowName = nameof(DocxCommentsTests.DocxWordCompatibleMixedBalloonWrapsParagraphBodiesIndependently);
+        string slowName = slow.Method.Name;
+        var slowList = RunCaptured(["--group", "runner-slow", "--list"], catalog);
+        TestAssert.Equal(0, slowList.ExitCode);
+        TestAssert.Contains($"SLOW runner-slow {slowName}", slowList.Output);
         var noFast = RunCaptured(["--test", slowName, "--skip-slow"], catalog);
         TestAssert.Equal(1, noFast.ExitCode);
         TestAssert.Contains("The speed filter excludes every selected test.", noFast.Output);
@@ -130,7 +134,7 @@ internal static class TestRunnerTests
     {
         int calls = 0;
         Action probe = () => calls++;
-        TestCase[] catalog = [.. TestCatalog.All, new("runner-probe", probe), new("other-probe", probe)];
+        TestCase[] catalog = [new("runner-probe", probe), new("other-probe", probe)];
         foreach (string[] args in new string[][] { ["--list"], ["--group", "runner-probe"] })
         {
             var result = RunCaptured(args, catalog);
@@ -182,7 +186,7 @@ internal static class TestRunnerTests
         try
         {
             Console.SetOut(writer);
-            return (TestRunner.Run(args, tests), writer.ToString());
+            return (TestRunner.Run(args, tests, coverageAssembly: null), writer.ToString());
         }
         finally { Console.SetOut(previous); }
     }

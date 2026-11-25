@@ -4,7 +4,8 @@ internal sealed record TestResult(string Group, string Name, string Outcome, lon
 internal sealed class TestSkippedException(string message) : Exception(message);
 internal static class TestCatalogValidator
 {
-    public static IReadOnlyList<string> Validate(IReadOnlyList<TestCase> catalog, IReadOnlySet<string>? exactNames)
+    public static IReadOnlyList<string> Validate(IReadOnlyList<TestCase> catalog, IReadOnlySet<string>? exactNames,
+        Assembly? coverageAssembly)
     {
         var problems = new List<string>();
         var registered = new Dictionary<string, MethodInfo>(catalog.Count, StringComparer.Ordinal);
@@ -20,11 +21,10 @@ internal static class TestCatalogValidator
                 if (!registered.ContainsKey(name))
                     problems.Add($"Unknown exact test name '{name}'.");
         }
-        if (problems.Count != 0)
+        if (problems.Count != 0 || coverageAssembly is null)
             return problems;
 
-        Assembly assembly = typeof(TestCatalogValidator).Assembly;
-        foreach (Type type in assembly.GetTypes())
+        foreach (Type type in coverageAssembly.GetTypes())
         {
             if (!type.IsClass || !type.Name.EndsWith("Tests", StringComparison.Ordinal))
             {
