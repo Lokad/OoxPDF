@@ -161,7 +161,7 @@ internal sealed partial class PdfEmbeddedFont
 
     private static PdfEmbeddedFont CreateFromOriginalGlyphs(
         OpenTypeFont font,
-        IReadOnlyDictionary<ushort, int> unicodeByOriginalGlyph,
+        SortedDictionary<ushort, int> ownedGlyphs,
         CancellationToken cancellationToken,
         SortedSet<(ushort Glyph, int Unicode)>? aliases = null)
     {
@@ -173,7 +173,7 @@ internal sealed partial class PdfEmbeddedFont
             ? OoxMemory.Reserve(OoxConversionBudget.Current?.Memory, 256L * aliases.Count) : null;
         try
         {
-            if (!OpenTypeFontSubsetter.TryCreate(font, unicodeByOriginalGlyph, cancellationToken, out OpenTypeFontSubset? subset, out string? subsetFailure))
+            if (!OpenTypeFontSubsetter.TryCreate(font, ownedGlyphs, cancellationToken, out OpenTypeFontSubset? subset, out string? subsetFailure))
             {
                 // Whole-TrueType fallback is only valid for TrueType outlines: embedding
                 // another format (e.g. CFF) as FontFile2/CIDFontType2 would silently
@@ -195,18 +195,11 @@ internal sealed partial class PdfEmbeddedFont
 
                 subset = null;
             }
-            var sortedGlyphs = new SortedDictionary<ushort, int>();
-            foreach ((ushort glyph, int codePoint) in unicodeByOriginalGlyph)
-            {
-                sortedGlyphs[glyph] = codePoint;
-            }
-
-            // the codepoint-set hash was computed twice per subset (once for the
-            // base-font tag, once in the constructor). Compute it once here and share it.
-            string setHash = ComputeResourceMappingHash(font, sortedGlyphs);
+            // Each caller transfers its new, sorted map to the PDF font resource.
+            string setHash = ComputeResourceMappingHash(font, ownedGlyphs);
             if (aliases is { Count: > 0 }) setHash += "A" + ComputeAliasHash(aliases, cancellationToken);
             string baseFontName = CreateBaseFontName(font, setHash, subset is not null);
-            var embedded = new PdfEmbeddedFont(font, baseFontName, setHash, sortedGlyphs, subset, aliases, cancellationToken);
+            var embedded = new PdfEmbeddedFont(font, baseFontName, setHash, ownedGlyphs, subset, aliases, cancellationToken);
             // The conversion scope retains font resources until emission finishes.
             aliasStorage = null;
             return embedded;

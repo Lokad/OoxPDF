@@ -1230,25 +1230,10 @@ internal static partial class FontTests
         PdfEmbeddedFont second = PdfEmbeddedFont.Create(font, "ABCDEF".Select(c => (int)c), CancellationToken.None);
 
         TestAssert.Equal(first.ResourceKey, second.ResourceKey);
+        TestAssert.Equal(first.EncodeGlyphHex("ABCDEF"), second.EncodeGlyphHex("ABCDEF"));
+        TestAssert.Equal(PdfWriterTests.ReadWidthArray(first), PdfWriterTests.ReadWidthArray(second));
         PdfEmbeddedFont merged = PdfEmbeddedFont.Merge([first, second], CancellationToken.None);
-        TestAssert.Equal(first.ResourceKey, merged.ResourceKey);
-        TestAssert.Equal(first.EncodeGlyphHex("ABCDEF"), merged.EncodeGlyphHex("ABCDEF"));
-        TestAssert.Equal(PdfWriterTests.ReadWidthArray(first), PdfWriterTests.ReadWidthArray(merged));
-    }
-    public static void PdfEmbeddedFontMapsSharedSpaceGlyphToPlainSpace()
-    {
-        string fontsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
-        string calibri = Path.Combine(fontsDirectory, "calibri.ttf");
-        if (!File.Exists(calibri))
-        {
-            TestAssert.Skip("Environmental precondition not met: (!File.Exists(calibri))");
-        }
-        OpenTypeFont font = OpenTypeFont.Load(File.ReadAllBytes(calibri));
-        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, new[] { 65, 32, 160, 66 }, CancellationToken.None);
-        string cmap = PdfWriterTests.ReadToUnicodeCMap(embedded);
-        TestAssert.Contains("<0020>", cmap);
-        TestAssert.DoesNotContain("<00A0>", cmap);
-        TestAssert.True(embedded.EncodeGlyphHex(" \u00A0").Length > 0, "Both space variants must still encode (shared subset glyph).");
+        TestAssert.True(ReferenceEquals(first, merged), "Identical remaps on distinct subsets should reuse the first resource.");
     }
 
 

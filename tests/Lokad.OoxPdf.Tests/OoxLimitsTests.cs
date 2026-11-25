@@ -779,19 +779,6 @@ internal static partial class OoxLimitsTests
         TestAssert.True(ReferenceEquals(subset, merged), "Merging identical subset instances must not rebuild dictionaries or re-subset.");
     }
 
-    public static void MergeEqualDistinctSubsetsKeepsRemap()
-    {
-        // RV21: subset merge semantics are font-independent, so the synthetic
-        // test face runs everywhere instead of skipping off Windows.
-        OpenTypeFont font = TestFontBuilder.LoadTestFont();
-        PdfEmbeddedFont first = PdfEmbeddedFont.Create(font, "ABCDEF".Select(c => (int)c), CancellationToken.None);
-        PdfEmbeddedFont second = PdfEmbeddedFont.Create(font, "ABCDEF".Select(c => (int)c), CancellationToken.None);
-        PdfEmbeddedFont merged = PdfEmbeddedFont.Merge([first, second], CancellationToken.None);
-        TestAssert.Equal(first.ResourceKey, merged.ResourceKey);
-        TestAssert.Equal(first.EncodeGlyphHex("ABCDEF"), merged.EncodeGlyphHex("ABCDEF"));
-        TestAssert.Equal(PdfWriterTests.ReadWidthArray(first), PdfWriterTests.ReadWidthArray(merged));
-    }
-
     private static void AssertDiscoveryHeadersEqual(OpenTypeFont.FontDiscoveryHeaders expected, OpenTypeFont.FontDiscoveryHeaders actual)
     {
         TestAssert.Equal(expected.FamilyName, actual.FamilyName);

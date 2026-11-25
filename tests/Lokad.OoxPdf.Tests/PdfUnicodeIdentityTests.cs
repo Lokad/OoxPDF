@@ -41,10 +41,11 @@ internal static class PdfUnicodeIdentityTests
             TestAssert.Equal("[<" + expected + ">]", embedded.EncodeGlyphPositioningArray(AliasedText, 0, 24, true, false));
             byte[] map = ReadGlyphMap(embedded);
             TestAssert.Equal(embedded.CidToGidMapLength, map.Length);
+            string widths = PdfWriterTests.ReadWidthArray(embedded);
             foreach (ushort cid in cids)
             {
                 TestAssert.Equal(outline, BinaryPrimitives.ReadUInt16BigEndian(map.AsSpan(2 * cid)));
-                TestAssert.Contains(cid + " [" + Math.Round(font.GetAdvanceWidth(glyph) * 1000d / font.UnitsPerEm) + "]", PdfWriterTests.ReadWidthArray(embedded));
+                TestAssert.Contains(cid + " [" + Math.Round(font.GetAdvanceWidth(glyph) * 1000d / font.UnitsPerEm) + "]", widths);
             }
             PdfEmbeddedFont merged = PdfEmbeddedFont.Merge([PdfEmbeddedFont.Create(font, ['A'], default),
                 PdfEmbeddedFont.Create(font, [0x391, 0x1F600], default)], default);
@@ -69,9 +70,15 @@ internal static class PdfUnicodeIdentityTests
         {
             var spaces = PdfEmbeddedFont.Create(font, order, default);
             TestAssert.Equal(0, spaces.CidToGidMapLength);
-            TestAssert.Equal(spaces.EncodeGlyphHex(" "), spaces.EncodeGlyphHex("\u00A0"));
-            TestAssert.True(spaces.TryGetEncodedCid(font.MapCodePoint(' '), out ushort cid), "The shared space still encodes.");
+            ushort glyph = font.MapCodePoint(' ');
+            TestAssert.Equal(glyph, font.MapCodePoint(0xA0));
+            TestAssert.True(spaces.TryGetEncodedCid(glyph, out ushort cid), "The shared space still encodes.");
+            string encoded = cid.ToString("X4", CultureInfo.InvariantCulture);
+            TestAssert.Equal(encoded + encoded, spaces.EncodeGlyphHex(" \u00A0"));
             TestAssert.Equal(0x20, spaces.UnicodeByCid[cid]);
+            string toUnicode = PdfWriterTests.ReadToUnicodeCMap(spaces);
+            TestAssert.Contains("<" + encoded + "> <0020>", toUnicode);
+            TestAssert.DoesNotContain("<00A0>", toUnicode);
         }
     }
 
