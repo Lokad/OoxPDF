@@ -134,6 +134,12 @@ $batchPins = @{}
 foreach ($targetFramework in $batch.Keys) {
     $identity = Get-Content -LiteralPath (Join-Path $batch[$targetFramework] 'identity.json') -Raw | ConvertFrom-Json
     $runtime = "src/Lokad.OoxPdf/bin/Release/$targetFramework/Lokad.OoxPdf.dll"
+    $sourceLibrary = Join-Path $repo $runtime
+    # The synthetic revision read hashes the same file as the real PE reader.
+    # Its digest serves preflight, with a separate hash at the copy boundary.
+    if (@($hashReads | Where-Object { $_ -eq $sourceLibrary }).Count -ne 2) {
+        throw 'Primary library must be hashed once in preflight and once at freeze time'
+    }
     if ($identity.Framework -cne $targetFramework -or $identity.Revision -ne $first.Revision -or
         $identity.InputSnapshot -ne $first.InputSnapshot -or $identity.InputTree -ne $first.InputTree -or
         $identity.InputSnapshotIdentitySha256 -ne $first.InputSnapshotIdentitySha256 -or

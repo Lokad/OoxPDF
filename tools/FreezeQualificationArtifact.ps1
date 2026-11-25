@@ -47,15 +47,20 @@ $buildLibraryHashes = @{}
 $compiled = @{}
 $verifiedProductionRevisions = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
 foreach ($targetFramework in $outputs.Keys) {
-    $libraryCopies = $projects |
-        ForEach-Object { (Get-FileHash -LiteralPath (Join-Path $repo ($_ + "/bin/Release/$targetFramework/Lokad.OoxPdf.dll"))).Hash }
-    if (@($libraryCopies | Sort-Object -Unique).Count -ne 1) {
-        throw 'Release library copies differ; refresh the dependent outputs before freezing'
+    $libraryFile = "bin/Release/$targetFramework/Lokad.OoxPdf.dll"
+    $primaryName = "$($projects[0])/$libraryFile"
+    # Bind the source revision and the primary library digest to the same read.
+    $compiled[$primaryName] = Read-QualificationAssemblyIdentity (Join-Path $repo $primaryName)
+    $libraryHash = $compiled[$primaryName].Sha256
+    foreach ($project in $projects[1..($projects.Count - 1)]) {
+        if ((Get-FileHash -LiteralPath (Join-Path $repo "$project/$libraryFile")).Hash -cne $libraryHash) {
+            throw 'Release library copies differ; refresh the dependent outputs before freezing'
+        }
     }
-    $buildLibraryHashes[$targetFramework] = $libraryCopies[0]
+    $buildLibraryHashes[$targetFramework] = $libraryHash
     foreach ($project in $projects) {
         $name = "$project/bin/Release/$targetFramework/$(Split-Path $project -Leaf).dll"
-        $assembly = Read-QualificationAssemblyIdentity (Join-Path $repo $name)
+        $assembly = $compiled[$name] ?? (Read-QualificationAssemblyIdentity (Join-Path $repo $name))
         if ($assembly.Revision -cne $revision) {
             if ($project -eq $testProject) { throw 'Release test assembly was compiled for another source revision' }
             # A newly built harness can reuse production bytes when the source
@@ -65,9 +70,6 @@ foreach ($targetFramework in $outputs.Keys) {
             }
         }
         $compiled[$name] = $assembly
-    }
-    if ($compiled["src/Lokad.OoxPdf/bin/Release/$targetFramework/Lokad.OoxPdf.dll"].Sha256 -ne $libraryCopies[0]) {
-        throw 'Release library changed during preflight'
     }
 }
 $inputRoot = 'tests/Lokad.OoxPdf.Tests/Cases'
