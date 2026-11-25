@@ -1539,8 +1539,9 @@ internal static partial class DocxInlineCompositionTests
             {
                 var wordRun = Render(nestedRuns: true, withCompanions: true, withBreak: withBreak);
                 var mathRun = Render(nestedRuns: true, withCompanions: true, withBreak: withBreak, mathContainer: true);
-                TestAssert.Equal("Storedcompanion".Length,
-                    PortableRenderingTests.ReadPaintedSourceLabel(mathRun.Page, "Stored companion").Count);
+                // The pinned font wraps these words in the breakless cell.
+                TestAssert.Equal("Stored".Length, PortableRenderingTests.ReadPaintedSourceLabel(mathRun.Page, "Stored").Count);
+                TestAssert.Equal("companion".Length, PortableRenderingTests.ReadPaintedSourceLabel(mathRun.Page, "companion").Count);
                 TestAssert.Equal(1, PortableRenderingTests.ReadPaintedSourceLabel(mathRun.Page, "Ω").Count);
                 TestAssert.Equal(1, mathRun.Page.Images.Count);
                 TestAssert.Equal(wordRun.Page.Content, mathRun.Page.Content);
