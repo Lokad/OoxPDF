@@ -2347,6 +2347,7 @@
   ],
   "docx-floating-nested-table": [
     "DocxPresetBoxOutlinesMatchNumericPaintInFinalAndReview",
+    "=DocxFloatingBoxFollowsPrintedBodyCellOwner",
     "DocxFloatingBoxParagraphTopMatchesItsPrintedParagraphBackground",
     "DocxFloatingBoxReviewOutlinesShareThePrintedFrameWithTheirChildren",
     "DocxFloatingBoxOutlines",
@@ -7452,6 +7453,7 @@
     "DocxGrowingInlineBoxFrameOwnsBothVerticalInsets",
     "DocxSectionScopedInlineBoxesKeepTheirActualFontSources",
     "DocxSectionScopedInlineBoxesKeepVisibleLabelsInBothViews",
+    "=DocxFloatingBoxFollowsPrintedBodyCellOwner",
     "DocxFloatingBoxParagraphTopMatchesItsPrintedParagraphBackground",
     "DocxFloatingBoxReviewOutlinesShareThePrintedFrameWithTheirChildren",
     "DocxFloatingBoxOutlines",

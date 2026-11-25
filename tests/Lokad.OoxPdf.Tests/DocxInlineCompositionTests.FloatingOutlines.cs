@@ -169,6 +169,55 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
+    public static void DocxFloatingBoxFollowsPrintedBodyCellOwner()
+    {
+        const int offset = 16;
+        const string owner = "BODY CELL OWNER";
+        const string north = "BOX TABLE NORTH";
+        const OoxPdfDocxMarkupMode mode = OoxPdfDocxMarkupMode.AllMarkup;
+        const OoxPdfDocxMarkupGeometryMode geometry = OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup;
+        var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(), mode, geometry);
+        foreach (bool nested in new[] { false, true })
+        {
+            var source = ReadMutation("TableGridOrigins/Containers/floating-table-ordered", mode, false, false, (xml, w, _) =>
+            {
+                XNamespace wp = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing";
+                var anchor = xml.Descendants(wp + "anchor").Single();
+                anchor.SetAttributeValue("layoutInCell", "0");
+                anchor.Element(wp + "positionV")!.Element(wp + "posOffset")!.SetValue(offset * 12700);
+                var paragraph = anchor.Ancestors(w + "p").First();
+                var properties = paragraph.Element(w + "pPr") ?? new XElement(w + "pPr");
+                if (properties.Parent is null) paragraph.AddFirst(properties);
+                properties.Add(new XElement(w + "shd", new XAttribute(w + "val", "clear"), new XAttribute(w + "fill", "DDEECC")));
+                properties.AddAfterSelf(new XElement(w + "r", new XElement(w + "t", owner)));
+
+                var table = Table(5000, new XElement(paragraph));
+                paragraph.ReplaceWith(nested ? Table(6000,
+                    new XElement(w + "p", new XElement(w + "r", new XElement(w + "t", "PRECEDING NESTED PARAGRAPH"))),
+                    table, new XElement(w + "p")) : table);
+
+                XElement Table(int width, params XElement[] blocks) => new(w + "tbl",
+                    new XElement(w + "tblPr", new XElement(w + "tblLayout", new XAttribute(w + "type", "fixed"))),
+                    new XElement(w + "tblGrid", new XElement(w + "gridCol", new XAttribute(w + "w", width))),
+                    new XElement(w + "tr", new XElement(w + "tc", new XElement(w + "tcPr",
+                        new XElement(w + "tcW", new XAttribute(w + "w", width), new XAttribute(w + "type", "dxa"))), blocks)));
+            });
+            double scale = DocxRenderer.ResolveWordCompatiblePrintScale(source, DocxMarkupContext.FromMode(mode, geometry));
+            TestAssert.True(scale is > 0d and < .99d, "The authored comment triggers scaled Review print.");
+            var page = renderer.RenderPagesAsync(source, null, default).ToBlockingEnumerable().Single();
+            string context = nested ? "nested body cell" : "body cell";
+            AssertSourceLabelsPaint(page, mode, [owner, north, "BOX TABLE SOUTH"], context);
+            var fill = DocxParagraphShadingTests.ReadRectangles(page.Content).Single(rect => rect.Color == "DDEECC");
+            var outline = ReadFloatingOutline(page, 60d * scale, 216d * scale, .02d).Single().Bounds;
+            double residual = outline[1] + outline[3] - (fill.Y + fill.Height - offset * scale);
+            TestAssert.True(Math.Abs(residual) < .003d, $"The box follows its printed {context} paragraph. Residual: {residual} pt.");
+            var target = page.Annotations.Single(link => link.Destination.HasValue).Destination!.Value;
+            TestAssert.Equal(0, target.PageIndex);
+            double inkY = PortableRenderingTests.ReadPaintedSourceLabel(page, north)[0].Origin.Y;
+            TestAssert.True(target.Top > inkY && target.Top < inkY + 30d, "The jump reaches the painted row inside the box.");
+        }
+    }
+
     private static DocxDocument ReadFloatingOutlineSource(string fixture, OoxPdfDocxMarkupMode mode,
         bool explicitInsets, bool omitOutline, (string Element, string Value)? stroke = null) =>
         ReadMutation("TableGridOrigins/Containers/" + fixture, mode, false, false, (xml, _, _) =>

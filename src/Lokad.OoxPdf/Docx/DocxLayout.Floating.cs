@@ -500,7 +500,7 @@ internal sealed partial class DocxLayoutEngine
             DocxLayoutSourceBlockBounds? sourceBlock = null;
             if (drawing.ParagraphOwner is { } owner)
             {
-                cellAnchors ??= IndexBodyCellDrawingAnchors(pages, cancellationToken);
+                cellAnchors ??= IndexBodyCellDrawingAnchors(pages, paragraphSpacingScale < 1d, cancellationToken);
                 cellAnchors.TryGetValue(owner, out sourceBlock);
             }
             if (sourceBlock is null && (drawing.LayoutBlockIndex ?? drawing.SourceBlockIndex) is { } blockIndex)
@@ -533,7 +533,7 @@ internal sealed partial class DocxLayoutEngine
     }
 
     private static Dictionary<DocxParagraphDrawingOwner, DocxLayoutSourceBlockBounds> IndexBodyCellDrawingAnchors(
-        IReadOnlyList<DocxLayoutPage> pages, CancellationToken cancellationToken)
+        IReadOnlyList<DocxLayoutPage> pages, bool usePrintedLines, CancellationToken cancellationToken)
     {
         var anchors = new Dictionary<DocxParagraphDrawingOwner, DocxLayoutSourceBlockBounds>();
         for (int pageIndex = 0; pageIndex < pages.Count; pageIndex++)
@@ -545,8 +545,22 @@ internal sealed partial class DocxLayoutEngine
                 cancellationToken.ThrowIfCancellationRequested();
                 if (item is not DocxTableRowLayout row) continue;
                 int? column = ResolveItemColumnIndex(page, row);
+                bool admitted = false;
                 foreach (var (anchor, _, _) in EnumerateCellDrawingAnchors(row, null, cancellationToken))
-                    anchors.TryAdd(anchor.Owner, new(pageIndex, pageIndex, column, column, anchor.Top, anchor.Bottom));
+                    admitted |= anchors.TryAdd(anchor.Owner, new(pageIndex, pageIndex, column, column, anchor.Top, anchor.Bottom));
+                if (!usePrintedLines || !admitted) continue;
+
+                // The row's finalized lines include its Review projection and
+                // any movement inherited from nested tables or page fragments.
+                foreach (var (line, _) in DocxTableCellClipGeometry.EnumerateCellLines(row, null, cancellationToken))
+                {
+                    if (line is not { IsFirstParagraphLine: true, SourceParagraph: { } paragraph }) continue;
+                    foreach (var owner in paragraph.DrawingOwners)
+                    {
+                        if (anchors.TryGetValue(owner, out var bounds) && bounds.FirstPageIndex == pageIndex && bounds.AnchorTextLine is null)
+                            anchors[owner] = bounds with { AnchorTextLine = line };
+                    }
+                }
             }
         }
         return anchors;

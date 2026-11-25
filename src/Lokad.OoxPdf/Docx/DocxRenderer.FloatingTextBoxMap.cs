@@ -22,10 +22,14 @@ internal sealed partial class DocxRenderer
                 drawing.PageStartIndex != drawing.PageEndIndex ||
                 !string.Equals(drawing.Drawing.VerticalRelativeFromValue, "paragraph", StringComparison.OrdinalIgnoreCase) ||
                 drawing.VerticalPlacementSource != DocxAnchorPlacementSource.Offset ||
-                drawing.AnchorTextLine is not { BodyLineBoxBaselineInsetPoints: double printedInset } line ||
+                drawing.AnchorTextLine is not { } line ||
                 drawing.AnchorPageIndex is not int pageIndex || drawing.VerticalReferenceTop is not double oldTop ||
                 drawing.AnchorBlockVerticalBottom is not double blockBottom || drawing.PlacedTop is not double placedTop)
                 continue;
+            double? inset = line.BodyLineBoxBaselineInsetPoints;
+            if (line.Story?.Kind == DocxStoryKind.TableCell)
+                inset ??= line.InlineFrame?.BaselineInset ?? line.OccupiedLineBox?.BaselineInset;
+            if (inset is not double printedInset) continue;
             var offsets = PageContext(pageIndex);
             var frame = new DocxPrintedPageFrame(layout.Pages[pageIndex].Height, offsets.WordCompatiblePrintScale);
             double top = frame.UnmapY(line.BaselineY - offsets.WordCompatibleTextYOffset + printedInset);
