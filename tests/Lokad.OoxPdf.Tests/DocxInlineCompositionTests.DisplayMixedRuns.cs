@@ -288,6 +288,18 @@ internal static partial class DocxInlineCompositionTests
                 $"Metadata preserves the linked revision's paint and navigation for {container}, linkOutside={linkOutside}, {mode}.");
             TestAssert.Equal(actual.Equations, wrapped.Equations);
             TestAssert.True(!wrapped.Diagnostics.Contains("DOCX_UNSUPPORTED_EQUATION"), "Metadata preserves the drawing projection's source count.");
+            if (visible && linkOutside)
+            {
+                var directed = Render(inner: true, withMetadata: true, withDirection: true);
+                TestAssert.Equal(wrapped.Page.Content, directed.Page.Content);
+                TestAssert.True(wrapped.Page.Annotations.SequenceEqual(directed.Page.Annotations),
+                    "The source-order fallback keeps the link and its picture coverage.");
+                TestAssert.Equal(wrapped.Equations, directed.Equations);
+                const string directionWarning = "DOCX_INLINE_BIDI_APPROXIMATION";
+                TestAssert.Equal(1, directed.Diagnostics.Count(id => id == directionWarning));
+                TestAssert.True(wrapped.Diagnostics.SequenceEqual(directed.Diagnostics.Where(id => id != directionWarning)),
+                    "Direction adds the source-order warning while preserving the existing diagnostics.");
+            }
             TestAssert.True(expected.Page.Content == actual.Page.Content,
                 $"Packed and split paint agree for {container}, {revisionName}, linkOutside={linkOutside}, {mode}.");
             TestAssert.Equal(expected.Equations, actual.Equations);
@@ -316,7 +328,7 @@ internal static partial class DocxInlineCompositionTests
                     "The revised picture retains full link coverage and the original target.");
             }
 
-            (PdfPage Page, int Equations, List<string> Diagnostics) Render(bool inner, bool withMetadata = false)
+            (PdfPage Page, int Equations, List<string> Diagnostics) Render(bool inner, bool withMetadata = false, bool withDirection = false)
             {
                 var diagnostics = new List<string>();
                 void Record(Lokad.OoxPdf.Diagnostics.OoxPdfDiagnostic item) => diagnostics.Add(item.Id);
@@ -357,6 +369,8 @@ internal static partial class DocxInlineCompositionTests
                         if (withMetadata)
                         {
                             var run = middle.Single();
+                            if (withDirection)
+                                run = new XElement(w + (display ? "bdo" : "dir"), new XAttribute(w + "val", display ? "rtl" : "ltr"), run);
                             middle[0] = display ? MetadataWrapper(w, "smartTag", run) :
                                 new XElement(w + "sdt", new XElement(w + "sdtPr", new XElement(w + "id", new XAttribute(w + "val", "541"))),
                                     new XElement(w + "sdtContent", MetadataWrapper(w, "customXml", run)));

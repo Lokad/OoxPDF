@@ -203,12 +203,12 @@ internal sealed partial class DocxReader
             token.ThrowIfCancellationRequested();
             XElement child = source.Element;
             DrawingEquationScope scope = source.Scope;
-            if (DocxMathParser.IsMathMetadataContainer(child) && HasOnlyWhitespaceRunText(child))
+            if (DocxMathParser.IsMathStoredContentContainer(child) && HasOnlyWhitespaceRunText(child))
             {
                 PushChildren(child, scope);
             }
-            // Transparent metadata inherits the current scope. At most one
-            // authored hyperlink and one revision can own each fragment.
+            // Stored content inherits the current scope. At most one authored
+            // hyperlink and one revision can own each fragment.
             else if (child.Name == WordprocessingNamespace + "hyperlink" && scope.Hyperlink is null &&
                 !(hasOuterLink ??= equation.Ancestors(WordprocessingNamespace + "hyperlink").Any()) && HasOnlyWhitespaceRunText(child))
             {
