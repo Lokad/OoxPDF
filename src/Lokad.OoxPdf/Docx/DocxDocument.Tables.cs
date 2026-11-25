@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace Lokad.OoxPdf.Docx;
 
 internal sealed record DocxTable(
@@ -43,6 +45,25 @@ internal sealed record DocxTable(
         }
 
         return DocxTableWidthKind.Auto;
+    }
+
+    public static bool TryReadPercentWidth(string? value, out int fiftiethsOfPercent)
+    {
+        ReadOnlySpan<char> text = value.AsSpan().Trim();
+        if (text.IsEmpty || text[^1] != '%')
+            return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out fiftiethsOfPercent);
+
+        // Use the same units and rounding as Strict table-width normalization.
+        if (decimal.TryParse(text[..^1], NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint,
+            CultureInfo.InvariantCulture, out decimal percent) &&
+            percent >= int.MinValue / 50m && percent <= int.MaxValue / 50m)
+        {
+            fiftiethsOfPercent = (int)decimal.Round(percent * 50m, 0, MidpointRounding.AwayFromZero);
+            return true;
+        }
+
+        fiftiethsOfPercent = 0;
+        return false;
     }
 }
 

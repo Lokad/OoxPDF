@@ -1,5 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using System.Globalization;
 using System.Text;
 using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Ooxml;
@@ -1271,7 +1270,7 @@ internal sealed partial class DocxLayoutEngine
                 }
         
                 if (table.PreferredWidthKind == DocxTableWidthKind.Percent &&
-                    int.TryParse(table.PreferredWidthValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out int fiftiethsPercent))
+                    DocxTable.TryReadPercentWidth(table.PreferredWidthValue, out int fiftiethsPercent))
                 {
                     double normalPercentageWidth = tableAvailableWidth * fiftiethsPercent / 5000d;
                     double explicitGridWidth = table.HasExplicitGrid ? gridTableWidth : 0d;
@@ -1329,7 +1328,7 @@ internal sealed partial class DocxLayoutEngine
                         }
                 
                         if (cell.PreferredWidthKind == DocxTableWidthKind.Percent &&
-                            int.TryParse(cell.PreferredWidthValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out int fiftiethsPercent))
+                            DocxTable.TryReadPercentWidth(cell.PreferredWidthValue, out int fiftiethsPercent))
                         {
                             return Math.Max(0d, preferredTableWidth * fiftiethsPercent / 5000d);
                         }
@@ -1653,7 +1652,7 @@ internal sealed partial class DocxLayoutEngine
         }
 
         return cell.PreferredWidthKind == DocxTableWidthKind.Percent &&
-            int.TryParse(cell.PreferredWidthValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out int fiftiethsPercent) &&
+            DocxTable.TryReadPercentWidth(cell.PreferredWidthValue, out int fiftiethsPercent) &&
             fiftiethsPercent > 0;
     }
 

@@ -740,25 +740,30 @@ internal static class DocxTablesLayoutTests
 
     public static void DocxTableLayoutStageUsesPercentageCellPreferredWidths()
     {
-        var table = new DocxTable(
-            null,
-            [100d, 100d],
-            [new DocxTableRow([
-                new DocxTableCell([DocxTests.CreateDocxLayoutParagraph("left")], null, null, null, null, [], DocxTableCellMargins.Empty) with {PreferredWidthValue = "1250",PreferredWidthType = "pct" },
-                new DocxTableCell([DocxTests.CreateDocxLayoutParagraph("right")], null, null, null, null, [], DocxTableCellMargins.Empty) with {PreferredWidthValue = "3750",PreferredWidthType = "pct" }
-            ], 20d)]);
-        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)]);
+        foreach (var (left, right) in new[] { ("1250", "3750"), ("25.0%", "75.00%") })
+        {
+            var table = new DocxTable(
+                null,
+                [100d, 100d],
+                [new DocxTableRow([
+                    new DocxTableCell([DocxTests.CreateDocxLayoutParagraph("left")], null, null, null, null, [], DocxTableCellMargins.Empty) with
+                        { PreferredWidthValue = left, PreferredWidthType = "pct" },
+                    new DocxTableCell([DocxTests.CreateDocxLayoutParagraph("right")], null, null, null, null, [], DocxTableCellMargins.Empty) with
+                        { PreferredWidthValue = right, PreferredWidthType = "pct" }
+                ], 20d)]);
+            DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)]);
 
-        DocxTableRowLayout row = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-            .Create(document, embedded: null, cancellationToken: CancellationToken.None)
-            .Pages[0]
-            .Items
-            .OfType<DocxTableRowLayout>()
-            .Single();
+            DocxTableRowLayout row = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+                .Create(document, embedded: null, cancellationToken: CancellationToken.None)
+                .Pages[0]
+                .Items
+                .OfType<DocxTableRowLayout>()
+                .Single();
 
-        TestAssert.Equal(45d, row.Cells[0].Width);
-        TestAssert.Equal(55d, row.Cells[1].X);
-        TestAssert.Equal(135d, row.Cells[1].Width);
+            TestAssert.Equal(45d, row.Cells[0].Width);
+            TestAssert.Equal(55d, row.Cells[1].X);
+            TestAssert.Equal(135d, row.Cells[1].Width);
+        }
     }
 
     public static void DocxTableLayoutStageAppliesGridSpanWidths()

@@ -10,6 +10,42 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxTableMathTests
 {
+    public static void DocxPercentageTableWidthSpellingsKeepFormulasOnPaper()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var numeric = Render("4750");
+            var percent = Render("95%");
+            var glyphs = DocxCommentsTests.ReadEmbeddedGlyphTextShows(numeric, usePageCoordinates: true,
+                honorActualText: false, fontResourceFilter: name => name.StartsWith("Eq", StringComparison.Ordinal)).ToArray();
+            TestAssert.True(glyphs.Length > 0 && glyphs.All(show => show.X >= 0d && show.X < numeric.Width),
+                "The numeric control places the equation glyphs on paper.");
+            TestAssert.True(numeric.Annotations.Any(link => link.IsDestination),
+                "The source fixture must retain its formula navigation.");
+            TestAssert.True(numeric.Content == percent.Content && numeric.Annotations.SequenceEqual(percent.Annotations),
+                "A percentage table width keeps the same visible content and destinations: " + mode);
+
+            PdfPage Render(string width)
+            {
+                var source = DocxInlineCompositionTests.ReadMutation("CompositionProbes/inline-math-navigation-cell",
+                    mode, false, false, (xml, w, _) =>
+                    {
+                        var table = xml.Descendants(w + "tbl").First();
+                        var preferred = table.Element(w + "tblPr")!.Element(w + "tblW")!;
+                        preferred.SetAttributeValue(w + "type", "pct");
+                        preferred.SetAttributeValue(w + "w", width);
+                        foreach (var column in table.Element(w + "tblGrid")!.Elements(w + "gridCol"))
+                            column.SetAttributeValue(w + "w", "12000");
+                    });
+                TestAssert.Equal(width, source.Tables[0].PreferredWidthValue);
+                return new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true), mode,
+                    mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
+                    OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                    .RenderPagesAsync(source, null, default).ToBlockingEnumerable().Single();
+            }
+        }
+    }
+
     public static void DocxHorizontalCellDirectionSpellingsKeepMathAndNavigation()
     {
         foreach (var (fixture, part, body) in new[]
