@@ -158,12 +158,14 @@ internal sealed partial class PptxRenderer
             return true;
         }
 
-        var paintServers = EnumerateSvgPaintServers(svg, cancellationToken).ToArray();
+        var content = EnumerateSvgContent(svg, cancellationToken);
+        var elements = content.OfType<XElement>();
+        var paintServers = EnumerateSvgPaintServers(elements).ToArray();
         var (gradients, radialGradients) = ReadSvgGradients(paintServers, viewWidth, viewHeight, cancellationToken);
         double strokePercentageBasis = GetSvgNormalizedDiagonal(viewWidth, viewHeight);
         var paintServerIds = CreateSvgPaintServerIdLookup(paintServers, cancellationToken);
         var paintedText = new HashSet<XElement>();
-        bool hasStylesheet = HasSvgStylesheet(svg);
+        bool hasStylesheet = HasSvgStylesheet(content);
         var unsupportedCommands = new SortedSet<char>();
         int unreadablePaths = 0;
         var missingGradients = new SortedSet<string>(StringComparer.Ordinal);
@@ -207,7 +209,7 @@ internal sealed partial class PptxRenderer
             graphics = entry.Parent;
             graphics.DrawTransparencyGroup(entry.Child, paintBounds ?? pictureFrame, entry.Opacity);
         }
-        foreach (XElement element in svg.Descendants().Where(candidate => IsSvgPaintableElement(candidate) || candidate.Name.LocalName == "text"))
+        foreach (XElement element in elements.Where(candidate => IsSvgPaintableElement(candidate) || candidate.Name.LocalName == "text"))
         {
             cancellationToken.ThrowIfCancellationRequested();
             // RV07-D2: definition descendants supply reusable paint resources;
@@ -581,9 +583,9 @@ internal sealed partial class PptxRenderer
             if (objectFrame.HasValue) { CloseGroup(objectFrame); }
         }
         while (isolation.Count > 0) { CloseGroup(); }
-        ReportUnsupportedSvgElements(svg, diagnosticSink, slideIndex, partName, paintedText);
+        ReportUnsupportedSvgElements(elements, diagnosticSink, slideIndex, partName, paintedText);
         ReportSkippedSvgPaths(unsupportedCommands, unreadablePaths, missingGradients, unpaintablePaths, unsupportedTransforms, gradientStrokes, unpaintableStrokes, invalidStrokePresentations, vectorEffectStrokes, focalRadialGradients, nonFiniteGradientPaths, diagnosticSink, slideIndex, partName);
-        ReportIgnoredSvgOpacity(svg, gradients, radialGradients, usedGradientIds, admittedContainers,
+        ReportIgnoredSvgOpacity(elements, gradients, radialGradients, usedGradientIds, admittedContainers,
             admittedGradientAlpha, fallbackGradientAlpha, diagnosticSink, slideIndex, partName, cancellationToken);
 
         graphics.RestoreState();
@@ -594,7 +596,7 @@ internal sealed partial class PptxRenderer
     // vanishing. One diagnostic per element kind (with occurrence count),
     // restricted to paintable content outside definitions (inert definitions
     // are correctly skipped).
-    private static void ReportUnsupportedSvgElements(XDocument svg, Action<OoxPdfDiagnostic>? diagnosticSink, int slideIndex, string? partName,
+    private static void ReportUnsupportedSvgElements(IEnumerable<XElement> elements, Action<OoxPdfDiagnostic>? diagnosticSink, int slideIndex, string? partName,
         HashSet<XElement> paintedText)
     {
         if (diagnosticSink is null)
@@ -603,7 +605,7 @@ internal sealed partial class PptxRenderer
         }
 
         var counts = new SortedDictionary<string, int>(StringComparer.Ordinal);
-        foreach (XElement element in svg.Descendants())
+        foreach (XElement element in elements)
         {
             string name = element.Name.LocalName;
             if (IsSupportedSvgElement(name) || paintedText.Contains(element) ||
@@ -628,16 +630,15 @@ internal sealed partial class PptxRenderer
                 Fallback: "Partial"));
         }
     }
-    private static void ReportIgnoredSvgOpacity(XDocument svg, IReadOnlyDictionary<string, SvgGradient> gradients,
+    private static void ReportIgnoredSvgOpacity(IEnumerable<XElement> elements, IReadOnlyDictionary<string, SvgGradient> gradients,
         IReadOnlyDictionary<string, SvgRadialGradient> radialGradients, HashSet<string>? usedGradientIds,
         HashSet<XElement> admittedContainers, HashSet<string> admittedGradientAlpha, HashSet<string> fallbackGradientAlpha,
         Action<OoxPdfDiagnostic>? diagnosticSink, int slideIndex, string? partName, CancellationToken cancellationToken)
     {
         if (diagnosticSink is null || usedGradientIds is null) { return; }
         int containerCount = 0;
-        foreach (XElement element in svg.Descendants())
+        foreach (XElement element in elements)
         {
-            cancellationToken.ThrowIfCancellationRequested();
             string name = element.Name.LocalName;
             if (IsSvgOpacityContainer(name) && !IsSvgDefinitionElement(element) && !IsInFullyTransparentSvgContainer(element))
             {
@@ -777,7 +778,7 @@ internal sealed partial class PptxRenderer
 
     private static bool IsSupportedSvgElement(string name)
     {
-        return name is "svg" or "defs" or "g" or "title" or "desc" or "metadata" or "style" or "path" or "rect" or "circle" or "ellipse" or "line" or "polyline" or "polygon" or "linearGradient" or "radialGradient" or "stop";
+        return name is "svg" or "defs" or "g" or "style" or "path" or "rect" or "circle" or "ellipse" or "line" or "polyline" or "polygon" or "linearGradient" or "radialGradient" or "stop";
     }
     private static bool IsSvgDefinitionElement(XElement element)
     {
@@ -785,7 +786,7 @@ internal sealed partial class PptxRenderer
         {
             string name = parent.Name.LocalName;
             if (name is "defs" or "linearGradient" or "radialGradient" or "style" or
-                "clipPath" or "marker" or "mask" or "pattern" or "symbol" || IsSvgMetadataElement(parent))
+                "clipPath" or "marker" or "mask" or "pattern" or "symbol")
             {
                 return true;
             }
@@ -1760,25 +1761,43 @@ internal sealed partial class PptxRenderer
         return new SvgStroke(color, width, opacity, lineCap, lineJoin, dash, offset, miterLimit, strokeGradient, gradientId);
     }
 
-    private static IEnumerable<(string Id, XElement Element)> EnumerateSvgPaintServers(
-        XDocument svg, CancellationToken cancellationToken)
+    private static IEnumerable<XNode> EnumerateSvgContent(XDocument svg, CancellationToken cancellationToken)
     {
         if (svg.Root is not { } root) yield break;
         XNamespace ns = root.Name.Namespace;
         if (ns != XNamespace.None && ns.NamespaceName != "http://www.w3.org/2000/svg") yield break;
 
-        // The SVG namespace, or the namespace-free form used by older inputs,
-        // owns definitions. Descriptive metadata and foreign subtrees are data.
-        foreach (XElement element in root.Descendants())
+        // Walk the owned SVG tree in source order. Keep document-level
+        // stylesheet instructions and leave closed subtrees unvisited.
+        XNode? node = svg.FirstNode;
+        while (node is not null)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (element.Name.Namespace != ns ||
-                element.Name.LocalName is not ("linearGradient" or "radialGradient" or "pattern") ||
-                (string?)element.Attribute("id") is not { } id || string.IsNullOrWhiteSpace(id) ||
-                element.Ancestors().Any(parent => parent.Name.Namespace != ns ||
-                    IsSvgMetadataElement(parent) || parent.Name.LocalName == "foreignObject"))
-                continue;
-            yield return (id, element);
+            if (node is XElement element && element.Name.Namespace == ns && !IsSvgMetadataElement(element))
+            {
+                if (!ReferenceEquals(element, root)) yield return element;
+                if (element.Name.LocalName is not ("style" or "foreignObject") && element.FirstNode is { } child)
+                {
+                    node = child;
+                    continue;
+                }
+            }
+            else if (node is XProcessingInstruction)
+            {
+                yield return node;
+            }
+            while (node.NextNode is null && node.Parent is { } parent) node = parent;
+            node = node.NextNode;
+        }
+    }
+
+    private static IEnumerable<(string Id, XElement Element)> EnumerateSvgPaintServers(IEnumerable<XElement> elements)
+    {
+        foreach (var element in elements)
+        {
+            if (element.Name.LocalName is "linearGradient" or "radialGradient" or "pattern" &&
+                (string?)element.Attribute("id") is { } id && !string.IsNullOrWhiteSpace(id))
+                yield return (id, element);
         }
     }
 

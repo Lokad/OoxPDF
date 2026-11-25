@@ -651,6 +651,7 @@
     "=PptxSvgGradientStopColorsUseLocalDeclarationsAndCurrentColor",
     "SvgMissingPaintServersUseAuthoredFallback",
     "=SvgMetadataAndForeignPaintServersPreserveFallbackInBothFormats",
+    "=SvgForeignContentPreservesAuthoredPaintAndLabelsInBothFormats",
     "SvgCurrentColorUsesEachPaintedElementsColor",
     "SvgPrimitivePixelUnitsMatchUserCoordinates",
     "=SvgUserSpaceGradientLengthsMatchUserCoordinates",

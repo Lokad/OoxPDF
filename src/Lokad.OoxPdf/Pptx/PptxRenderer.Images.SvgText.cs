@@ -45,11 +45,12 @@ internal sealed partial class PptxRenderer
             XDocument svg;
             try { using var stream = new MemoryStream(bytes); svg = SafeXml.Load(stream, cancellationToken); }
             catch (InvalidDataException) { continue; } // The paint path owns the existing parse diagnostic/fallback.
-            if (HasSvgStylesheet(svg) ||
-                !TryReadSvgSourceFrame(svg.Root, out _, out _, out double viewWidth, out double viewHeight) ||
-                viewWidth <= 0d || viewHeight <= 0d) continue;
-            var paintServerIds = CreateSvgPaintServerIdLookup(EnumerateSvgPaintServers(svg, cancellationToken), cancellationToken);
-            foreach (XElement element in svg.Descendants().Where(e => e.Name.LocalName == "text"))
+            var content = EnumerateSvgContent(svg, cancellationToken);
+            if (!TryReadSvgSourceFrame(svg.Root, out _, out _, out double viewWidth, out double viewHeight) ||
+                viewWidth <= 0d || viewHeight <= 0d || HasSvgStylesheet(content)) continue;
+            var elements = content.OfType<XElement>();
+            var paintServerIds = CreateSvgPaintServerIdLookup(EnumerateSvgPaintServers(elements), cancellationToken);
+            foreach (XElement element in elements.Where(e => e.Name.LocalName == "text"))
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 if (IsSvgDefinitionElement(element) || IsInFullyTransparentSvgContainer(element) ||
@@ -79,10 +80,14 @@ internal sealed partial class PptxRenderer
     private readonly record struct SvgTextAppearance(string FamilyList, string Slant, int Weight, double Size,
         SvgTextFill Fill, double FillOpacity, bool Kerning);
 
-    private static bool HasSvgStylesheet(XDocument svg) =>
-        svg.DescendantNodes().OfType<XProcessingInstruction>().Any(p => p.Target == "xml-stylesheet" && !p.Ancestors().Any(IsSvgMetadataElement)) ||
-        svg.Descendants().Any(e => e.Name.LocalName == "style" && !string.IsNullOrWhiteSpace(e.Value) &&
-            !e.Ancestors().Any(IsSvgMetadataElement));
+    private static bool HasSvgStylesheet(IEnumerable<XNode> content) =>
+        content.Any(node => node switch
+        {
+            XProcessingInstruction instruction => instruction.Target == "xml-stylesheet",
+            XElement element => element.Name.LocalName == "style" &&
+                element.Nodes().OfType<XText>().Any(text => !string.IsNullOrWhiteSpace(text.Value)),
+            _ => false
+        });
 
     private static bool IsSvgMetadataElement(XElement element) =>
         element.Name.LocalName is "title" or "desc" or "metadata";
@@ -301,7 +306,8 @@ internal sealed partial class PptxRenderer
                     }
                     continue;
                 }
-                if (node is not XElement child || IsSvgMetadataElement(child)) continue;
+                if (node is not XElement child || child.Name.Namespace != owner.Name.Namespace ||
+                    IsSvgMetadataElement(child)) continue;
                 bool isLink = child.Name == linkName;
                 if (child.Name != spanName && !isLink) return false;
                 var style = ReadSvgStyleDeclarations(child);

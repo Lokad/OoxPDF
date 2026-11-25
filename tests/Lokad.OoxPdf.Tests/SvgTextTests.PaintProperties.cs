@@ -1648,6 +1648,40 @@ internal static partial class SvgTextTests
             "0 0 1 RG");
     }
 
+    public static void SvgForeignContentPreservesAuthoredPaintAndLabelsInBothFormats()
+    {
+        const string rectangle = """<rect x="10" y="15" width="55" height="32" fill="red"/>""";
+        const string label = """<text x="120" y="85" font-size="20" fill="#112233">NORTH</text>""";
+        const string foreignStyle = """
+            <author:style xmlns:author="urn:authoring-metadata">text { fill: yellow }</author:style>
+            """;
+        const string foreignShape = """
+            <author:rect xmlns:author="urn:authoring-metadata" x="230" y="30" width="55" height="40" fill="yellow"/>
+            """;
+        const string foreignBranch = """
+            <author:payload xmlns:author="urn:authoring-metadata">
+              <?xml-stylesheet href="authoring.css" type="text/css"?>
+              <g opacity=".3"><rect x="230" y="30" width="55" height="40" fill="yellow"/></g>
+              <image width="5" height="5" href="authoring.png"/>
+            </author:payload>
+            """;
+        string foreignSpan = label.Replace("NORTH",
+            """NO<author:tspan xmlns:author="urn:authoring-metadata">EXTRA</author:tspan>RTH""",
+            StringComparison.Ordinal);
+        AssertSvgPaintInBothFormats(Svg(rectangle + label),
+            [Svg(foreignStyle + rectangle + label), Svg(rectangle + label + foreignShape),
+             Svg(rectangle + foreignBranch + label), Svg(rectangle + foreignSpan)],
+            pdf => TestAssert.Equal(5, LabelPaths(pdf)), "1 0 0 rg");
+
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        var artwork = Paint(Svg(rectangle + label));
+        var withForeignObject = Paint(Svg(rectangle + """
+            <foreignObject x="0" y="0" width="100" height="100"><rect width="80" height="80" fill="yellow"/></foreignObject>
+            """ + label), diagnostics);
+        AssertEquivalentSvgPaint(artwork, withForeignObject, "Embedded content leaves the surrounding approved SVG paint intact.");
+        TestAssert.Contains("1 unsupported foreignObject element", diagnostics.Single().Message);
+    }
+
     private static void AssertEquivalentSvgPaint(PdfGraphicsBuilder expected, PdfGraphicsBuilder actual, string reason)
     {
         TestAssert.Equal(expected.ToString(), actual.ToString());
