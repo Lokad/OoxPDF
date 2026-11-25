@@ -301,6 +301,16 @@ if ($retried.passed -ne 3 -or $retried.skipped -ne 0 -or $retried.Sources.Count 
     throw 'A later pass must resolve an unexpected skip and retain both source reports'
 }
 $skipChecks+='unexpected-skip-retried'
+Write-BoundReport 'skip-all-initial.json' @{passed=0;failed=0;skipped=1;provenance=@{ExpectedSkips=@('Unchanged')};tests=@(
+    @{name='Unchanged';outcome='skipped'})} 'before'
+Write-BoundReport 'skip-all-repair.json' @{passed=0;failed=0;skipped=2;provenance=@{ExpectedSkips=@('Corrected','Neighbor')};tests=@(
+    @{name='Corrected';outcome='skipped'},@{name='Neighbor';outcome='skipped'})}
+$skipOnly=$config.Clone()
+$skipOnly.Initial=@{Artifact='repo/artifacts/before';Report='skip-all-initial.json'}
+$skipOnly.Repairs=@(@{Artifact='repo/artifacts/after';Report='skip-all-repair.json'})
+$skipOnlyManifest=Join-Path $root 'skip-all-manifest.json'
+Write-Json $skipOnlyManifest $skipOnly
+Reject 'final-skip-all' 'No selected qualification test passed' $skipOnlyManifest
 # A method first failing during a repair must also finish with a real pass.
 Write-BoundReport 'repair-failed.json' @{passed=1;failed=1;skipped=0;tests=@(
     @{name='Corrected';outcome='passed'},@{name='Neighbor';outcome='failed';detail='failure during repair'})}

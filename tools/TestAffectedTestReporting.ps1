@@ -49,7 +49,8 @@ function dotnet {
     $methods=@(Get-Content -LiteralPath $selection -Raw | ConvertFrom-Json)
     $rows=@(foreach($method in $methods) {
         $outcome=if($method -eq 'ReportAlpha' -and $global:ooxPdfAffectedReportFault -eq 'failed') {'failed'}
-            elseif(($method -eq 'ReportAlpha' -and $global:ooxPdfAffectedReportFault -in @('expected-skip','unexpected-skip','capability-skip','group-and-capability-skip')) -or
+            elseif($global:ooxPdfAffectedReportFault -eq 'all-expected-skips' -or
+                ($method -eq 'ReportAlpha' -and $global:ooxPdfAffectedReportFault -in @('expected-skip','unexpected-skip','capability-skip','group-and-capability-skip')) -or
                 ($method -eq 'ReportGroupOnly' -and $global:ooxPdfAffectedReportFault -in @('group-skip','group-and-capability-skip'))) {'skipped'}
             else {'passed'}
         @{name=$method;outcome=$outcome}
@@ -89,12 +90,13 @@ function dotnet {
 }
 $checks=@()
 try {
-    foreach($case in @('pass','expected-skip','unexpected-skip','failed','unknown-expected','incomplete','duplicate','wrong-name-case','miscount','missing-report')) {
+    foreach($case in @('pass','expected-skip','all-expected-skips','unexpected-skip','failed','unknown-expected','incomplete','duplicate','wrong-name-case','miscount','missing-report')) {
         $global:ooxPdfAffectedReportFault=$case
         $global:ooxPdfAffectedReportCalls=0
         $output=Join-Path $root $case
         $expected=@()
         if($case -in @('expected-skip','failed')) {$expected=@('ReportAlpha')}
+        if($case -eq 'all-expected-skips') {$expected=@('ReportAlpha','ReportNeighbor')}
         if($case -eq 'unknown-expected') {$expected=@('NotSelected')}
         $caught=$null
         $beforeTmpDir=[Environment]::GetEnvironmentVariable('TMPDIR')
@@ -114,13 +116,19 @@ try {
         if ($case -eq 'missing-report' -and $caught -ne 'Test runner did not produce its report') {
             throw 'Successful exit with a missing raw report must fail qualification'
         }
+        if ($case -eq 'all-expected-skips' -and $caught -notlike 'No selected qualification test passed*') {
+            throw 'A successful runner exit with only expected skips must report no passing witness'
+        }
         $retained=Test-Path (Join-Path $output 'affected-tests.json')
-        if($retained -ne ($case -in @('pass','expected-skip','unexpected-skip','failed'))) {throw ($case+': incorrect complete-report retention')}
+        if($retained -ne ($case -in @('pass','expected-skip','all-expected-skips','unexpected-skip','failed'))) {throw ($case+': incorrect complete-report retention')}
         if($retained) {
             $report=Get-Content (Join-Path $output 'affected-tests.json') -Raw | ConvertFrom-Json
             if($report.provenance.GatePassed -ne $shouldPass -or $report.tests.Count -ne 2 -or
+                $report.provenance.UniqueExecutedMethods -ne 2 -or $report.provenance.UniquePassedMethods -ne $report.passed -or
                 $report.failed -ne $(if($case -eq 'failed') {1} else {0}) -or
-                $report.skipped -ne $(if($case -in @('expected-skip','unexpected-skip')) {1} else {0})) {throw 'Reported outcomes were reclassified'}
+                $report.skipped -ne $(if($case -eq 'all-expected-skips') {2} elseif($case -in @('expected-skip','unexpected-skip')) {1} else {0})) {
+                throw 'Reported outcomes were reclassified'
+            }
             if($report.provenance.TemporaryFilesRetained -eq $shouldPass) {throw 'Passing and failed temporary ownership changed'}
         }
         if($global:ooxPdfAffectedReportCalls -gt 0 -and

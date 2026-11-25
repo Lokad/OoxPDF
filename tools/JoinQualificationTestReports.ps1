@@ -174,6 +174,10 @@ if (@($rows.Values | Where-Object {$_.outcome -eq 'failed'}).Count -or
 if ($unexpectedSkips.Count) {
     throw ('Unexpected skips remain in the final selection: ' + (($unexpectedSkips | Sort-Object) -join ', '))
 }
+$passed = @($rows.Values | Where-Object {$_.outcome -eq 'passed'}).Count
+if (!$passed) {
+    throw 'No selected qualification test passed in the joined result.'
+}
 foreach ($artifact in $boundSnapshots.Keys) {
     if ((Get-BoundInputSnapshot $artifact $pins[$artifact]) -cne $boundSnapshots[$artifact]) {
         throw 'A shared public input binding changed during the join'
@@ -183,7 +187,7 @@ $result=[ordered]@{
     Scope='Join reviewed test-only repairs; declared corrected methods still require source review.'
     Platform=$config.Platform;Framework=$framework;FrozenRevision=$last.Revision
     LibrarySha256=$last.LibrarySha256;TestAssemblySha256=$last.TestAssemblySha256
-    passed=@($rows.Values | Where-Object {$_.outcome -eq 'passed'}).Count
+    passed=$passed
     failed=0;skipped=@($rows.Values | Where-Object {$_.outcome -eq 'skipped'}).Count
     UniqueMethods=$rows.Count;MethodAttempts=$methodAttempts
     RuntimeAssetsUnchanged=$runtime.Count;InputsUnchanged=$first.Inputs.Count

@@ -244,7 +244,9 @@ if ($null -ne $report.validationTools) {
 }
 
 $inventory.CompletedUtc = [DateTime]::UtcNow.ToString('o')
+# Keep the legacy row count, including skipped methods, alongside actual passes.
 $inventory.UniqueExecutedMethods = $rows.Count
+$inventory.UniquePassedMethods = $report.passed
 $inventory.SourceReports = @([pscustomobject]@{ Selection = $selectionPath; Report = $path; Sha256 = $reportSource.Hash })
 $inventory.RunnerExitCode = $exitCode
 $inventory.UnexpectedSkips = @($rows | Where-Object {
@@ -255,7 +257,8 @@ if ($FastGroup.Count) {
         $_.outcome -eq 'skipped' -and !$skipValidated.Contains($_.name)
     } | ForEach-Object name)
 }
-$inventory.GatePassed = $exitCode -eq 0 -and $report.failed -eq 0 -and !$inventory.UnexpectedSkips.Count
+$runnerAccepted = $exitCode -eq 0 -and $report.failed -eq 0 -and !$inventory.UnexpectedSkips.Count
+$inventory.GatePassed = $runnerAccepted -and $report.passed -gt 0
 Assert-SelectionManifest
 if ((Get-FileHash -LiteralPath $path).Hash -cne $reportSource.Hash) {
     throw 'The raw test report changed during qualification'
@@ -283,5 +286,6 @@ $reportPath = Join-Path $output 'affected-tests.json'
 } | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $reportPath -Encoding utf8
 $inventory.AffectedReportSha256 = (Get-FileHash -LiteralPath $reportPath).Hash
 $inventory | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $output 'evidence.json') -Encoding utf8
-if (!$inventory.GatePassed) { throw 'Capability qualification failed or had unexpected skips; see retained affected-tests.json and selection log' }
+if (!$runnerAccepted) { throw 'Capability qualification failed or had unexpected skips; see retained affected-tests.json and selection log' }
+if (!$inventory.GatePassed) { throw 'No selected qualification test passed. Expected skips are retained in affected-tests.json.' }
 Write-Output "$($rows.Count) unique qualification checks: $($report.passed) pass / $($report.skipped) skip in 1 runner invocation."
