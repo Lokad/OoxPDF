@@ -159,7 +159,8 @@ internal sealed partial class DocxReader
             if (!inMath) count++;
             inMath = true;
         }
-        return hasDrawing && count != 0 ? count : null;
+        // A drawing can be the only content of the equation zone.
+        return hasDrawing ? count : null;
     }
 
     private static IEnumerable<XElement> SplitEquationAtDrawings(XElement equation, CancellationToken token)

@@ -18,6 +18,52 @@ internal static partial class DocxInlineCompositionTests
     public static void DocxInlineEquationKeepsDrawingCompanionsBetweenTextRuns() =>
         CheckDisplayDrawingCompanions(withBreak: false, explicitRow: true, inlineEquation: true);
 
+    public static void DocxEquationZonesKeepDrawingsWithoutMathOperands()
+    {
+        foreach (string container in new[] { "body", "cell" })
+        foreach (bool inDisplay in new[] { false, true })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var expected = Render(packed: false);
+            var actual = Render(packed: true);
+            TestAssert.Equal(2, PortableRenderingTests.ReadPaintedSourceLabel(actual.Page, "QA").Count);
+            TestAssert.Equal(1, PortableRenderingTests.ReadPaintedSourceLabel(actual.Page, "Ω").Count);
+            TestAssert.Contains($"/{actual.Page.Images.Single().ResourceName} Do", actual.Page.Content);
+            TestAssert.Equal(expected.Page.Content, actual.Page.Content);
+            TestAssert.Equal(expected.Equations, actual.Equations);
+            TestAssert.True(expected.Diagnostics.SequenceEqual(actual.Diagnostics) &&
+                !actual.Diagnostics.Contains("DOCX_UNSUPPORTED_EQUATION"),
+                "A drawing with no operands keeps its ordinary paint and contributes no equation to the count.");
+
+            (PdfPage Page, int Equations, List<string> Diagnostics) Render(bool packed)
+            {
+                var diagnostics = new List<string>();
+                void Record(Lokad.OoxPdf.Diagnostics.OoxPdfDiagnostic diagnostic) => diagnostics.Add(diagnostic.Id);
+                var source = ReadMutation("CompositionProbes/math-display-image-" + container + "-between", mode,
+                    false, false, (xml, w, m) =>
+                    {
+                        var display = xml.Descendants(m + "oMathPara").First();
+                        var picture = display.Parent!.Elements(w + "r").Single();
+                        var drawing = picture.Element(w + "drawing")!;
+                        var companion = new XElement((packed ? m : w) + "r", new XElement(w + "t", "QA"),
+                            new XElement(w + "sym", new XAttribute(w + "font", "Arial"), new XAttribute(w + "char", "03A9")), drawing);
+                        XElement representation = packed ? new XElement(m + "oMath", companion) : companion;
+                        if (inDisplay)
+                        {
+                            display.Add(representation);
+                            picture.Remove();
+                        }
+                        else
+                        {
+                            picture.ReplaceWith(representation);
+                        }
+                    }, diagnosticSink: Record);
+                var page = PictureRangeRenderer(mode).RenderPagesAsync(source, Record, default).ToBlockingEnumerable().Single();
+                return (page, source.EquationParts.Sum(part => part.SourceCount), diagnostics);
+            }
+        }
+    }
+
     public static void DocxStaticInlineEquationKeepsDrawingCompanions()
     {
         foreach (string story in new[] { "header", "footer" })

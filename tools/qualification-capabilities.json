@@ -19817,6 +19817,7 @@
     "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "docx-math-center-group": [
+    "=DocxEquationZonesKeepDrawingsWithoutMathOperands",
     "=DocxDisplayRowKeepsCommentRangeThroughDrawing",
     "=DocxInlineEquationKeepsDrawingCompanionsBetweenTextRuns",
     "=DocxDisplayRowKeepsDrawingCompanionsInTrackedChanges",

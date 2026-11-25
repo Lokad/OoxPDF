@@ -116,7 +116,8 @@ internal static class TestCatalog
         .. FromType("docx-images", typeof(DocxImageParagraphAdvanceTests)),
         .. FromType("docx-math", typeof(DocxMathTests)),
         .. FromType("docx-math", typeof(DocxNativeMathTests)),
-        .. FromType("docx-math", typeof(DocxInlineCompositionTests)),
+        .. FromType(name => name == nameof(DocxInlineCompositionTests.DocxEquationZonesKeepDrawingsWithoutMathOperands)
+            ? "docx-math-portable" : "docx-math", typeof(DocxInlineCompositionTests)),
         .. FromType("docx-math", typeof(DocxTableMathTests)),
         .. FromType(name => name.StartsWith("MathFont", StringComparison.Ordinal) ? "fonts" : "docx-math", typeof(DocxMathBoxTests)),
         .. FromType("docx-math-portable", typeof(DocxMathFractionTests)),

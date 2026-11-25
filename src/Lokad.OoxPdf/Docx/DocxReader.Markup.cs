@@ -29,8 +29,8 @@ internal sealed partial class DocxReader
             if (equations == 0)
             {
                 hasDisplaySource = true;
-                // Every explicit equation supplies a payload. Counting its
-                // fragments belongs to the main pass over that element.
+                // Explicit zones are classified separately, including when
+                // they supply only paragraph companions.
                 if (element.Descendants().Any(child => child.Name == MathNamespace + "oMath" ||
                     IsDisplayMathRun(child) && ClassifyDisplayMathRun(child, token).EquationCount != 0)) continue;
                 equations = 1;
