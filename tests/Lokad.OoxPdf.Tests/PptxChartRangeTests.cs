@@ -239,19 +239,25 @@ internal static class PptxChartRangeTests
 
     public static void WorkbookSheetsBeyondBudgetThrow()
     {
-        var sheets = new System.Text.StringBuilder();
-        var rels = new System.Text.StringBuilder();
-        for (int i = 1; i <= 1025; i++)
+        const int maxSheets = 1024;
+        string preceding = string.Concat(Enumerable.Range(1, maxSheets - 1).Select(i =>
+            $"<sheet name='Missing{i}' sheetId='{i}' r:id='unresolved'/>"));
+        string tail = $"<sheet name=' Tail ' sheetId='{maxSheets}' r:id=' valid '/>";
+        string localName = $"<definedNames><definedName name='AtLimit' localSheetId='{maxSheets - 1}'>Tail!$A$1</definedName></definedNames>";
+        const string relationships = """
+            <Relationship Id="valid" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/tail.xml"/>
+            """;
+        var sheetBodies = new Dictionary<string, string>
         {
-            sheets.Append("<sheet name=\"S" + i + "\" sheetId=\"" + i + "\" r:id=\"rId" + i + "\"/>");
-            rels.Append("<Relationship Id=\"rId" + i + "\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet" + i + ".xml\"/>");
-        }
+            ["xl/worksheets/tail.xml"] = "<sheetData><row r='1'><c r='A1'><v>42</v></c></row></sheetData>"
+        };
 
-        TestAssert.Throws<IOException>(() => ReadWorkbookPackage(
-            "<sheets>" + sheets.ToString() + "</sheets>",
-            rels.ToString(),
-            new Dictionary<string, string>(),
-            null));
+        var exact = ReadWorkbookPackage($"<sheets>{preceding}{tail}</sheets>{localName}", relationships, sheetBodies, null);
+        TestAssert.Equal("42", exact.ReadRangeCells("Tail!AtLimit").Single().Text);
+        var refusal = TestAssert.Throws<OoxPdfLimitExceededException>(() => ReadWorkbookPackage(
+            $"<sheets>{preceding}{tail}<sheet name='TooMany' sheetId='1025' r:id='unresolved'/></sheets>{localName}",
+            relationships, sheetBodies, null));
+        TestAssert.Contains("more sheets than the maximum supported count", refusal.Message);
     }
     public static void WorkbookCellFormatsBeyondBudgetThrow()
     {

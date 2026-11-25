@@ -38,11 +38,7 @@ internal sealed partial class PptxRenderer
             var workbookRelationships = workbookPackage.GetRelationshipDictionary(workbookPart.Name, cancellationToken);
             string[] sharedStrings = ReadWorkbookSharedStrings(workbookPackage, workbookRelationships.Values, cancellationToken, modelStorage);
             ChartWorkbookStyles styles = ReadWorkbookStyles(workbookPackage, workbookRelationships.Values, cancellationToken, modelStorage);
-            ChartWorkbookSheet[] workbookSheets = ReadWorkbookSheetRecords(workbookXml);
-            if (workbookSheets.Length > MaxWorkbookSheets)
-            {
-                throw new OoxPdfLimitExceededException("Chart workbook declares more sheets than the maximum supported count.");
-            }
+            var workbookSheets = ReadWorkbookSheetRecords(workbookXml, cancellationToken);
             var (definedNames, localNames) = ReadWorkbookDefinedNames(workbookXml, workbookSheets, cancellationToken);
             var tables = new Dictionary<string, ChartWorkbookTable>(StringComparer.OrdinalIgnoreCase);
             var sheets = new Dictionary<string, ChartWorksheetData>(StringComparer.OrdinalIgnoreCase);
@@ -156,19 +152,22 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static ChartWorkbookSheet[] ReadWorkbookSheetRecords(XDocument workbookXml)
+    private static IReadOnlyList<ChartWorkbookSheet> ReadWorkbookSheetRecords(XDocument workbookXml, CancellationToken cancellationToken)
     {
-        return workbookXml.Root?
-            .Element(SpreadsheetNamespace + "sheets")
-            ?.Elements(SpreadsheetNamespace + "sheet")
-            .Select(sheet =>
+        cancellationToken.ThrowIfCancellationRequested();
+        var records = new List<ChartWorkbookSheet>();
+        foreach (var sheet in workbookXml.Root?.Element(SpreadsheetNamespace + "sheets")?.Elements(SpreadsheetNamespace + "sheet") ?? [])
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (records.Count == MaxWorkbookSheets)
             {
-                string relationshipId = ((string?)sheet.Attribute(RelationshipsNamespace + "id") ?? string.Empty).Trim();
-                return new ChartWorkbookSheet(
-                    ((string?)sheet.Attribute("name") ?? string.Empty).Trim(),
-                    relationshipId);
-            })
-            .ToArray() ?? [];
+                throw new OoxPdfLimitExceededException("Chart workbook declares more sheets than the maximum supported count.");
+            }
+            // Local defined names use declaration order, including unresolved sheets.
+            records.Add(new(((string?)sheet.Attribute("name") ?? string.Empty).Trim(),
+                ((string?)sheet.Attribute(RelationshipsNamespace + "id") ?? string.Empty).Trim()));
+        }
+        return records;
     }
 
     private static (IReadOnlyDictionary<string, string> Global, IReadOnlyList<ChartWorkbookLocalName> Local)
