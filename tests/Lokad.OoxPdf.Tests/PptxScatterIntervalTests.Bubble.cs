@@ -44,15 +44,17 @@ internal static partial class PptxScatterIntervalTests
 
     public static void PptxBubbleMeasuredScalesPreserveNativeIntervalsAndContent()
     {
+        var maxima = new Dictionary<int, double>();
         foreach (BubbleCase sample in BubbleCases())
         {
             PdfPage page = RenderBubble(sample);
+            var circles = BubbleCircles(page);
             TestAssert.Equal("0.5,1.75,3,4.25,5.5,6.75,8," + string.Join(",", sample.ExpectedYLabels), string.Join(",", AutoLabels(page)));
-            TestAssert.Equal(sample.ExpectedCircles, BubbleCircles(page).Count(c => c.Radius > 8d));
+            TestAssert.Equal(sample.ExpectedCircles, circles.Count(c => c.Radius > 8d));
             TestAssert.True(BubbleText(page, "CSD").Contains(sample.ExpectedValueLabel), sample.Id + ": source value label must survive.");
+            if (sample.YFactor == 1d && sample.YShift == 0d && sample.Input == "bubble-measured-source.pptx" && sample.Scale > 0)
+                maxima.Add(sample.Scale, circles.Max(circle => circle.Radius));
         }
-        var maxima = BubbleCases().Where(c => c.YFactor == 1d && c.YShift == 0d && c.Input == "bubble-measured-source.pptx" && c.Scale > 0)
-            .ToDictionary(c => c.Scale, c => BubbleCircles(RenderBubble(c)).Max(circle => circle.Radius));
         // Ratios are independent native observations on an unchanged container.
         TestAssert.True(Math.Abs(maxima[50] / maxima[100] - 13d / 23d) < .001d, "Native50% circle ratio.");
         TestAssert.True(Math.Abs(maxima[125] / maxima[100] - 13d / 11d) < .001d, "Native125% circle ratio.");
@@ -65,6 +67,7 @@ internal static partial class PptxScatterIntervalTests
         BubbleCase scaled = BubbleCases().Single(c => c.Id == "bubble-heldout-subunit");
         var before = BubbleCircles(RenderBubble(original)).Where(c => c.Radius > 8d).ToArray();
         var after = BubbleCircles(RenderBubble(scaled)).Where(c => c.Radius > 8d).ToArray();
+        TestAssert.Equal(4, before.Length);
         TestAssert.Equal(4, after.Length);
         for (int i = 0; i < before.Length; i++)
         {
@@ -81,14 +84,40 @@ internal static partial class PptxScatterIntervalTests
         PdfPage actual = RenderBubble(compound);
         TestAssert.Equal("Markets,Supply", string.Join(",", BubbleText(actual, "CL")));
         TestAssert.True(BubbleText(actual, "CSD").Contains("79"), "Splitting a series must preserve its authored value label.");
-        TestAssert.Equal(2, BubbleCircles(actual).Count(c => c.Radius <= 8d));
+        var actualCircles = BubbleCircles(actual);
+        TestAssert.Equal(2, actualCircles.Count(c => c.Radius <= 8d));
         var before = BubbleCircles(single).Where(c => c.Radius > 8d).ToArray();
-        var after = BubbleCircles(actual).Where(c => c.Radius > 8d).ToArray();
+        var after = actualCircles.Where(c => c.Radius > 8d).ToArray();
+        TestAssert.Equal(4, before.Length);
         TestAssert.Equal(4, after.Length);
         for (int i = 0; i < before.Length; i++)
             TestAssert.True(Math.Abs(before[i].Radius - after[i].Radius) < .002d &&
                 Math.Abs(before[i].X - after[i].X) < .002d && Math.Abs(before[i].Y - after[i].Y) < .002d,
                 "Series composition must keep the shared source geometry.");
+    }
+
+    public static void PptxBubbleMeasuredGeometryAcceptsEquivalentFalseFlags()
+    {
+        BubbleCase sample = BubbleCases().Single(c => c.Id == "bubble-query-base");
+        PdfPage measured = RenderBubble(sample);
+        PdfPage fallback = RenderWithFlag("1");
+        foreach (PdfPage page in new[] { measured, fallback })
+        {
+            TestAssert.Equal(4, BubbleCircles(page).Count(c => c.Radius > 8d));
+            TestAssert.True(BubbleText(page, "CSD").Contains("79"), "Both layouts retain the authored value label.");
+        }
+        TestAssert.True(!AutoLabels(measured).SequenceEqual(AutoLabels(fallback)), "The measured and fallback axis ticks must differ in this fixture.");
+        foreach (string value in new[] { "false", " 0 ", " \tfalse\r\n " })
+        {
+            TestAssert.Equal(measured.Content, RenderWithFlag(value).Content);
+        }
+        foreach (string value in new[] { "off", "FALSE", "\u00a0false\u00a0" })
+        {
+            TestAssert.Equal(fallback.Content, RenderWithFlag(value).Content);
+        }
+
+        PdfPage RenderWithFlag(string value) => RenderBubble(sample, xml =>
+            xml.Descendants(CurveC + "showNegBubbles").Single().SetAttributeValue("val", value));
     }
 
     public static void PptxBubbleSceneScaleAndRejectedDeclarationsKeepOwnership()
@@ -132,6 +161,8 @@ internal static partial class PptxScatterIntervalTests
         TestAssert.Equal("0.5,1.75,3,4.25,5.5,6.75,8,-7,18,43,68,93", string.Join(",", AutoLabels(reverse)));
         var before = BubbleCircles(normal).Where(c => c.Radius > 8d).ToArray();
         var after = BubbleCircles(reverse).Where(c => c.Radius > 8d).ToArray();
+        TestAssert.Equal(4, before.Length);
+        TestAssert.Equal(4, after.Length);
         var first = BubblePlot(normal); var second = BubblePlot(reverse);
         for (int i = 0; i < before.Length; i++)
         {

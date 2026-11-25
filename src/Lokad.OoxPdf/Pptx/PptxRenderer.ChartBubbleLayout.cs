@@ -1,4 +1,5 @@
 using Lokad.OoxPdf.Fonts;
+using Lokad.OoxPdf.Ooxml;
 
 namespace Lokad.OoxPdf.Pptx;
 
@@ -22,7 +23,7 @@ internal sealed partial class PptxRenderer
             chart.Title.Layout.HasGeometryValues || fallback.Legend.Layout.HasGeometryValues ||
             fallback.Legend.Visible && (fallback.Legend.Overlay || fallback.Legend.PositionKind != PptxSceneChartLegendPosition.Right) ||
             !string.IsNullOrEmpty(plot.BubbleSizeRepresents) && !plot.BubbleSizeRepresents.Equals("area", StringComparison.OrdinalIgnoreCase) ||
-            !string.IsNullOrEmpty(plot.ShowNegativeBubblesValue) && plot.ShowNegativeBubblesValue is not ("0" or "false") ||
+            !string.IsNullOrEmpty(plot.ShowNegativeBubblesValue) && !OoxBoolean.IsXmlFalse(plot.ShowNegativeBubblesValue, StringComparison.Ordinal) ||
             ReadChartAxisDeclaration(xAxis.SceneAxis) is not { } xSource || ReadChartAxisDeclaration(yAxis.SceneAxis) is not { } ySource ||
             xSource.Minimum is null || xSource.Maximum is null || xSource.MajorUnit is null)
             return null;
