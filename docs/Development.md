@@ -87,7 +87,8 @@ When changing the shared build helper, use `tools/TestBuildIncrementality.ps1`
 to check imported MSBuild properties, output provenance and stale DLL refusal.
 
 `TestPackageSmoke.ps1 -PackagePath <nupkg> -Framework <tfm>
--ExpectedLibrarySha256 <hash>` consumes existing package bytes without rebuilding.
+-ExpectedLibrarySha256 <hash>` requires an existing package and its qualified
+library hash. Pack separately with the command above.
 Use the same package on both hosts/frameworks. `-InspectOnly` checks metadata and
 packaged documentation without restoring or executing a consumer. In PowerShell,
 pass matching framework and hash arrays in the same order to inspect the archive

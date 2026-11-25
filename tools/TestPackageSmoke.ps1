@@ -1,8 +1,6 @@
-# Package smoke test (T08): packs the library, or reuses -PackagePath, then checks
-# DOCX/PPTX conversion and failure contracts through the packed package only:
-# no project references, no tools,
-# no Office/COM, and no reference cache. Reused packages stay in their original
-# local feed. Each run owns its restore cache and verifies the restored archive.
+# Check DOCX/PPTX conversion and failure contracts through a pinned package.
+# The package stays in its original local feed. Each run owns its restore cache
+# and verifies the restored archive before running the consumer.
 # On hosts without Windows fonts,
 # pass an embeddable TrueType font through -FontPath to exercise a custom resolver.
 # -InspectOnly requires a pinned existing package and performs metadata/docs checks
@@ -12,8 +10,7 @@
 param(
     [string] $Configuration = "Release",
     [string] $FontPath = "",
-    [switch] $NoBuild,
-    [string] $PackagePath = "",
+    [string] $PackagePath,
     [string[]] $ExpectedLibrarySha256 = @(),
     [switch] $InspectOnly,
     [ValidateNotNullOrEmpty()]
@@ -63,43 +60,23 @@ function Remove-CompletedPackageConsumerCaches([string]$ConsumerDirectory, [stri
         return $false
     }
 }
-$repoRoot = Split-Path -Parent $PSScriptRoot
-if ($InspectOnly -and -not $PackagePath) { throw 'InspectOnly requires an existing PackagePath.' }
-if ($PackagePath) {
-    $PackagePath = (Resolve-Path -LiteralPath $PackagePath).Path
-    if (!$ExpectedLibrarySha256.Count -or @($ExpectedLibrarySha256 | Where-Object { [string]::IsNullOrEmpty($_) }).Count) {
-        throw 'Reusing a package requires the qualified library hash.'
-    }
-}
+if ([string]::IsNullOrWhiteSpace($PackagePath)) { throw 'Supply an existing PackagePath.' }
 if (@($Framework | Sort-Object -Unique).Count -ne $Framework.Count) {
     throw 'Each consumer framework must be selected once.'
 }
-if ($ExpectedLibrarySha256.Count -and $ExpectedLibrarySha256.Count -ne $Framework.Count) {
-    throw 'Supply one expected library hash per framework, in the same order.'
+if ($ExpectedLibrarySha256.Count -ne $Framework.Count -or
+    @($ExpectedLibrarySha256 | Where-Object { $_ -notmatch '\A[0-9a-f]{64}\z' }).Count) {
+    throw 'Supply one qualified library SHA-256 per framework, in the same order.'
 }
 if (-not [string]::IsNullOrWhiteSpace($FontPath)) {
     $FontPath = (Resolve-Path -LiteralPath $FontPath).Path
 }
 
-$libraryProject = Join-Path $repoRoot "src/Lokad.OoxPdf/Lokad.OoxPdf.csproj"
-if ($PackagePath) {
-    $packages = @(Get-Item -LiteralPath $PackagePath)
+$repoRoot = Split-Path -Parent $PSScriptRoot
+$package = Get-Item -LiteralPath $PackagePath
+if ($package -isnot [IO.FileInfo] -or $package.Name -notlike 'Lokad.OoxPdf.?*.nupkg') {
+    throw 'PackagePath must identify a Lokad.OoxPdf package file.'
 }
-else {
-    $packDirectory = Join-Path $repoRoot ("artifacts/nuget/package-smoke/" + [Guid]::NewGuid().ToString("N"))
-    New-Item -ItemType Directory -Force -Path $packDirectory | Out-Null
-    $packArguments = @("pack", $libraryProject, "-c", $Configuration, "--nologo", "--output", $packDirectory)
-    if ($NoBuild) { $packArguments += "--no-build" }
-    & dotnet @packArguments
-    if ($LASTEXITCODE -ne 0) {
-        throw "Library packing failed with exit code $LASTEXITCODE."
-    }
-    $packages = @(Get-ChildItem -LiteralPath $packDirectory -Filter "Lokad.OoxPdf.*.nupkg")
-}
-if ($packages.Count -ne 1 -or $packages[0] -isnot [IO.FileInfo] -or $packages[0].Name -notlike 'Lokad.OoxPdf.?*.nupkg') {
-    throw "Expected exactly one Lokad.OoxPdf package, found $($packages.Count) candidates."
-}
-$package = $packages[0]
 $packageSha256 = (Get-FileHash -LiteralPath $package.FullName).Hash
 Write-Host ("Smoking package {0}." -f $package.Name)
 
@@ -176,8 +153,8 @@ $consumers = @(for ($index = 0; $index -lt $Framework.Count; $index++) {
     $target = $Framework[$index]
     $selected = @($libraryIdentities | Where-Object Entry -CEQ "lib/$target/Lokad.OoxPdf.dll")
     if ($selected.Count -ne 1) { throw "Packed library DLL is missing or duplicated. Framework: $target." }
-    [string] $expectedHash = if ($ExpectedLibrarySha256.Count) { $ExpectedLibrarySha256[$index] }
-    if ($expectedHash -and $selected[0].Sha256 -ne $expectedHash) {
+    $expectedHash = $ExpectedLibrarySha256[$index]
+    if ($selected[0].Sha256 -ne $expectedHash) {
         throw "Packed library differs from the qualified artifact. Framework: $target."
     }
     [pscustomobject]@{Framework=$target;LibrarySha256=$selected[0].Sha256;ExpectedLibrarySha256=$expectedHash}
@@ -457,8 +434,8 @@ sealed class SmokeFontResolver(string path) : IFontResolver, IFontProgramSource
     Write-Host "Package smoke test passed through the packed library."
     [ordered]@{
         Framework = $consumer.Framework
-        LibraryRebuilt = -not $NoBuild -and -not $PackagePath
-        ReusedPackage = [bool]$PackagePath
+        LibraryRebuilt = $false
+        ReusedPackage = $true
         ExpectedLibrarySha256 = $consumer.ExpectedLibrarySha256
         MemoryAdmissionChecked = $true
         PptxConversionChecked = $true

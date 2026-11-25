@@ -155,9 +155,12 @@ $singleReport=Check 'single-framework-accepted' $single $hashes['net11.0'] 'net1
 if ($singleReport.FrameworkIdentities.Count -ne 1) { throw 'Single framework result differs' }
 $null=Check 'missing-framework-refused' $single $hashes['net10.0'] 'net10.0' 'Packed library DLL is missing or duplicated.'
 $null=Check 'wrong-qualified-hash-refused' $package ('0'*64) 'net11.0' 'Packed library differs from the qualified artifact.'
-$null=Check 'missing-package-refused' '' $hashes['net11.0'] 'net11.0' 'InspectOnly requires an existing PackagePath.'
-$null=Check 'missing-qualified-hash-refused' $package '' 'net11.0' 'Reusing a package requires the qualified library hash.'
-$null=Check 'missing-batch-hash-refused' $package $pins[0] $frameworks 'Supply one expected library hash per framework, in the same order.'
+$null=Check 'missing-package-refused' '' $hashes['net11.0'] 'net11.0' 'Supply an existing PackagePath.'
+$null=Check 'missing-package-refused-before-restore' '' $hashes['net11.0'] 'net11.0' 'Supply an existing PackagePath.' -ConsumerBoundary
+$null=Check 'missing-qualified-hash-refused' $package '' 'net11.0' 'Supply one qualified library SHA-256 per framework, in the same order.'
+$null=Check 'missing-qualified-hash-refused-before-restore' $package '' 'net11.0' 'Supply one qualified library SHA-256 per framework, in the same order.' -ConsumerBoundary
+$null=Check 'missing-batch-hash-refused' $package $pins[0] $frameworks 'Supply one qualified library SHA-256 per framework, in the same order.'
+$null=Check 'malformed-hash-refused' $package ('X'*64) 'net11.0' 'Supply one qualified library SHA-256 per framework, in the same order.'
 $null=Check 'duplicate-consumer-refused' $package $pins @('net11.0','net11.0') 'Each consumer framework must be selected once.'
 $null=Check 'second-hash-refused-before-restore' $package @($pins[0],('0'*64)) $frameworks 'Packed library differs from the qualified artifact. Framework: net10.0.' -ConsumerBoundary
 $differentRestoreArchive=$single
