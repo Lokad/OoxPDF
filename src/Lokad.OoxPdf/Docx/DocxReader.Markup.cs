@@ -23,13 +23,14 @@ internal sealed partial class DocxReader
         foreach (XElement element in source.Descendants())
         {
             token.ThrowIfCancellationRequested();
-            bool equation = IsEquationPayload(element, token);
-            if (!equation && element.Name != MathNamespace + "oMathPara") continue;
+            int equations = CountEquationPayloads(element, token);
+            if (equations == 0 && element.Name != MathNamespace + "oMathPara") continue;
             hasSource = true;
-            if (!equation)
+            if (equations == 0)
             {
                 hasDisplaySource = true;
-                if (element.Descendants().Any(child => IsEquationPayload(child, token))) continue;
+                if (element.Descendants().Any(child => CountEquationPayloads(child, token) != 0)) continue;
+                equations = 1;
             }
             bool included = true;
             bool retainsDeletedStructure = true;
@@ -46,7 +47,7 @@ internal sealed partial class DocxReader
                 retainsDeletedStructure &= ancestor.Name == MathNamespace + "oMathPara" ||
                     DocxSourceXml.IsTransparentInlineContainer(ancestor);
             }
-            if (included) count++;
+            if (included) count += equations;
         }
         return (count, hasSource, hasDisplaySource);
     }

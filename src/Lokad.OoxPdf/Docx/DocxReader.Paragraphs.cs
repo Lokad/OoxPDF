@@ -486,10 +486,9 @@ internal sealed partial class DocxReader
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 XElement equation = source.Element;
-                if (!IsEquationPayload(equation, cancellationToken))
+                if (!source.IsEquation)
                 {
-                    var inlineSource = IsDisplayMathRun(equation) ? AsParagraphRun(equation) : equation;
-                    AddSourceContainerChild(inlineSource, source.Revision, source.RemoveDeletedText);
+                    AddSourceContainerChild(equation, source.Revision, source.RemoveDeletedText);
                     continue;
                 }
                 equationRevision = source.Revision;
@@ -552,10 +551,6 @@ internal sealed partial class DocxReader
                     }
                 }
             }
-
-            static XElement AsParagraphRun(XElement run, XElement? firstChild = null) => new(WordprocessingNamespace + "r",
-                (firstChild is null ? run.Elements() : firstChild.ElementsAfterSelf().Prepend(firstChild))
-                    .Where(child => !DocxSourceXml.IsNonPrintingMathRunControl(child)));
 
             DocxTextRun ReadMathRun(XElement run, string text)
             {
