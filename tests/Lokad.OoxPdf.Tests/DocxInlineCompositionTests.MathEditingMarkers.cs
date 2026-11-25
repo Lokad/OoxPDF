@@ -6,6 +6,77 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class DocxInlineCompositionTests
 {
+    public static void DocxDisabledMathEffectsKeepControlAndArgumentPaint()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        foreach (string owner in new[] { "cell", "header", "argument" })
+        {
+            var renderer = PictureRangeRenderer(mode);
+            var baseline = Render(null, null);
+            int glyphs = CountMathGlyphs(baseline.Page);
+            TestAssert.True(glyphs > 0, "The control must paint equations.");
+            TestAssert.True(owner == "header" || baseline.Page.Annotations.Any(annotation => annotation.IsDestination),
+                "The body fixture must emit formula destinations.");
+
+            (string Property, string Value)[] effects = owner == "cell"
+                ? [("shadow", "off"), ("outline", "false"), ("emboss", "0"), ("imprint", "false")]
+                : [("shadow", "off")];
+            foreach (var (property, value) in effects)
+            {
+                var observed = Render(property, value);
+                TestAssert.Equal(baseline.Page.Content, observed.Page.Content);
+                TestAssert.True(baseline.Page.Annotations.SequenceEqual(observed.Page.Annotations),
+                    "A disabled visual effect preserves the control's destinations.");
+                TestAssert.True(baseline.Diagnostics.SequenceEqual(observed.Diagnostics),
+                    "A disabled visual effect preserves the control's diagnostic outcome.");
+            }
+
+            var active = Render("shadow", null);
+            TestAssert.True(active.Diagnostics.Contains("DOCX_UNSUPPORTED_EQUATION") && CountMathGlyphs(active.Page) < glyphs,
+                "An active unsupported effect retains the equation fallback.");
+            if (owner == "cell")
+            {
+                var invalid = Render("shadow", "unrecognized");
+                TestAssert.Equal(active.Page.Content, invalid.Page.Content);
+                TestAssert.True(invalid.Diagnostics.SequenceEqual(active.Diagnostics),
+                    "An invalid value is excluded from the print-neutral rule.");
+            }
+
+            (PdfPage Page, List<string> Diagnostics) Render(string? property, string? value)
+            {
+                var diagnostics = new List<string>();
+                void Record(Lokad.OoxPdf.Diagnostics.OoxPdfDiagnostic item) => diagnostics.Add(item.Id);
+                const string navigation = "CompositionProbes/inline-math-navigation-cell";
+                const string headerTable = "CompositionProbes/table-math-revision-header-row-ins";
+                var source = ReadMutation(owner == "header" ? headerTable : navigation, mode, false, false,
+                    (xml, w, m) =>
+                    {
+                        if (property is null) return;
+                        var fraction = xml.Descendants(w + "tbl").First().Descendants(m + "f").First();
+                        var holder = owner == "argument" ? fraction.Element(m + "num")! :
+                            fraction.Element(m + "fPr") ?? Add(fraction, new(m + "fPr"), first: true);
+                        var control = holder.Element(m + "ctrlPr") ?? Add(holder, new(m + "ctrlPr"));
+                        var run = control.Element(w + "rPr") ?? Add(control, new(w + "rPr"));
+                        var flag = new XElement(w + property, value is null ? null : new XAttribute(w + "val", value));
+                        if (run.Element(w + "sz") is { } size) size.AddBeforeSelf(flag);
+                        else run.Add(flag);
+                    }, partOverride: owner == "header" ? "word/header1.xml" : "word/document.xml", diagnosticSink: Record);
+                return (renderer.RenderPagesAsync(source, Record, default).ToBlockingEnumerable().Single(), diagnostics);
+            }
+        }
+
+        static XElement Add(XElement parent, XElement child, bool first = false)
+        {
+            if (first) parent.AddFirst(child);
+            else parent.Add(child);
+            return child;
+        }
+
+        static int CountMathGlyphs(PdfPage page) => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page,
+            usePageCoordinates: true, honorActualText: false, fontResourceFilter: font => font.StartsWith("Eq", StringComparison.Ordinal))
+            .Sum(show => show.Text.Length);
+    }
+
     public static void DocxMathEditingMarkersKeepPortablePaintAcrossContainers()
     {
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })

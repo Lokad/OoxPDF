@@ -234,11 +234,20 @@ internal static partial class DocxMathParser
             {
                 "rFonts" or "sz" or "szCs" or "color" or "i" or "iCs" or "b" or "bCs" or "lang" or "rStyle" or
                     "u" or "strike" or "dstrike" or "vanish" or "caps" or "smallCaps" or "vertAlign" or "spacing" or "highlight" or "shd" => true,
-                // Proofing and web-view flags preserve the control's paginated paint.
-                "noProof" or "webHidden" => HasBooleanValue((string?)property.Attribute(WordprocessingNamespace + "val")) &&
-                    property.Attributes().All(a => a.IsNamespaceDeclaration || a.Name == WordprocessingNamespace + "val"),
-                _ => false
+                _ => IsPrintNeutralControlProperty(property)
             });
+    }
+
+    private static bool IsPrintNeutralControlProperty(XElement property)
+    {
+        string? value = (string?)property.Attribute(WordprocessingNamespace + "val");
+        bool neutral = property.Name.LocalName switch
+        {
+            "noProof" or "webHidden" => HasBooleanValue(value),
+            "outline" or "shadow" or "emboss" or "imprint" => OoxBoolean.IsOff(value),
+            _ => false
+        };
+        return neutral && property.Attributes().All(a => a.IsNamespaceDeclaration || a.Name == WordprocessingNamespace + "val");
     }
     // A single control has the same grammar inside an admitted revision wrapper.
     // Role rows and orphan matrix rows still require their actual source parent.
@@ -333,7 +342,7 @@ internal static partial class DocxMathParser
                 !HasKnownControl(control))
                 return new(null, true);
             if (control.Element(WordprocessingNamespace + "rPr") is { } runProperties &&
-                (runProperties.Elements().Any(property => property.Name.LocalName is not ("noProof" or "webHidden")) ||
+                (runProperties.Elements().Any(property => !IsPrintNeutralControlProperty(property)) ||
                  runProperties.Elements().GroupBy(property => property.Name).Any(group => group.Skip(1).Any())))
                 return new(null, true);
             argumentPropertyCount--;

@@ -8655,6 +8655,7 @@
   ],
   "docx-math-editing-markers": [
     "DocxMathEditingMarkers",
+    "=DocxDisabledMathEffectsKeepControlAndArgumentPaint",
     "DocxMathParserUsesIterativeTraversalAndObservesCancellation",
     "DocxMathMatrixMalformedAndOrphanRowsRetainTraversedSource",
     "DocxInlineCompositionEmptyFractionKeepsOnlyStructuralOwnership",
