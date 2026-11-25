@@ -283,6 +283,11 @@ internal static partial class DocxInlineCompositionTests
                 mode == (revisionName == "ins" ? OoxPdfDocxMarkupMode.Final : OoxPdfDocxMarkupMode.Original);
             var expected = Render(inner: false);
             var actual = Render(inner: true);
+            var wrapped = Render(inner: true, withMetadata: true);
+            TestAssert.True(actual.Page.Content == wrapped.Page.Content && actual.Page.Annotations.SequenceEqual(wrapped.Page.Annotations),
+                $"Metadata preserves the linked revision's paint and navigation for {container}, linkOutside={linkOutside}, {mode}.");
+            TestAssert.Equal(actual.Equations, wrapped.Equations);
+            TestAssert.True(!wrapped.Diagnostics.Contains("DOCX_UNSUPPORTED_EQUATION"), "Metadata preserves the drawing projection's source count.");
             TestAssert.True(expected.Page.Content == actual.Page.Content,
                 $"Packed and split paint agree for {container}, {revisionName}, linkOutside={linkOutside}, {mode}.");
             TestAssert.Equal(expected.Equations, actual.Equations);
@@ -311,7 +316,7 @@ internal static partial class DocxInlineCompositionTests
                     "The revised picture retains full link coverage and the original target.");
             }
 
-            (PdfPage Page, int Equations, List<string> Diagnostics) Render(bool inner)
+            (PdfPage Page, int Equations, List<string> Diagnostics) Render(bool inner, bool withMetadata = false)
             {
                 var diagnostics = new List<string>();
                 void Record(Lokad.OoxPdf.Diagnostics.OoxPdfDiagnostic item) => diagnostics.Add(item.Id);
@@ -349,6 +354,13 @@ internal static partial class DocxInlineCompositionTests
                         XElement[] middle = inner
                             ? [new XElement(m + "r", new XElement(m + "t", "314"), caption, symbol, drawing, new XElement(m + "t", "793"))]
                             : [Frame(MathRun("314")), new XElement(w + "r", caption, symbol, drawing), Frame(MathRun("793"))];
+                        if (withMetadata)
+                        {
+                            var run = middle.Single();
+                            middle[0] = display ? MetadataWrapper(w, "smartTag", run) :
+                                new XElement(w + "sdt", new XElement(w + "sdtPr", new XElement(w + "id", new XAttribute(w + "val", "541"))),
+                                    new XElement(w + "sdtContent", MetadataWrapper(w, "customXml", run)));
+                        }
                         XElement innerOwner = linkOutside ? revision : link;
                         XElement outerOwner = linkOutside ? link : revision;
                         innerOwner.Add(middle);

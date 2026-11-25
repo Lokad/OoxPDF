@@ -196,35 +196,41 @@ internal sealed partial class DocxReader
     {
         bool? hasOuterRevision = null;
         bool? hasOuterLink = null;
-        return ReadChildren(equation, new(null, null, true, false));
-
-        IEnumerable<DrawingEquationSource> ReadChildren(XElement parent, DrawingEquationScope scope)
+        var pending = new Stack<DrawingEquationSource>();
+        PushChildren(equation, new(null, null, true, false));
+        while (pending.TryPop(out var source))
         {
-            foreach (XElement child in parent.Elements())
+            token.ThrowIfCancellationRequested();
+            XElement child = source.Element;
+            DrawingEquationScope scope = source.Scope;
+            if (DocxMathParser.IsMathMetadataContainer(child) && HasOnlyWhitespaceRunText(child))
+            {
+                PushChildren(child, scope);
+            }
+            // Transparent metadata inherits the current scope. At most one
+            // authored hyperlink and one revision can own each fragment.
+            else if (child.Name == WordprocessingNamespace + "hyperlink" && scope.Hyperlink is null &&
+                !(hasOuterLink ??= equation.Ancestors(WordprocessingNamespace + "hyperlink").Any()) && HasOnlyWhitespaceRunText(child))
+            {
+                PushChildren(child, scope with { Hyperlink = child });
+            }
+            else if ((child.Name == WordprocessingNamespace + "ins" || child.Name == WordprocessingNamespace + "del") &&
+                scope.Revision is null && !(hasOuterRevision ??= equation.Ancestors().Any(DocxSourceXml.IsRevisionContainer)) &&
+                HasOnlyWhitespaceRunText(child))
+            {
+                bool included = IsIncludedRevisionContainer(child, mode);
+                PushChildren(child, scope with { Revision = child, Included = included, RemovesDeletedText = !included && RetainsDeletedMathStructure(child, mode) });
+            }
+            else
+                yield return source;
+        }
+
+        void PushChildren(XElement parent, DrawingEquationScope scope)
+        {
+            foreach (XElement child in DocxSourceXml.StoredChildren(parent).Reverse())
             {
                 token.ThrowIfCancellationRequested();
-                DrawingEquationScope nested;
-                // At most one hyperlink and one revision can own each part.
-                // Recursion is bounded by these two distinct source roles.
-                if (child.Name == WordprocessingNamespace + "hyperlink" && scope.Hyperlink is null &&
-                    !(hasOuterLink ??= equation.Ancestors(WordprocessingNamespace + "hyperlink").Any()) && HasOnlyWhitespaceRunText(child))
-                {
-                    nested = scope with { Hyperlink = child };
-                }
-                else if ((child.Name == WordprocessingNamespace + "ins" || child.Name == WordprocessingNamespace + "del") &&
-                    scope.Revision is null && !(hasOuterRevision ??= equation.Ancestors().Any(DocxSourceXml.IsRevisionContainer)) &&
-                    HasOnlyWhitespaceRunText(child))
-                {
-                    bool included = IsIncludedRevisionContainer(child, mode);
-                    nested = scope with { Revision = child, Included = included, RemovesDeletedText = !included && RetainsDeletedMathStructure(child, mode) };
-                }
-                else
-                {
-                    yield return new(child, scope);
-                    continue;
-                }
-                foreach (var source in ReadChildren(child, nested))
-                    yield return source;
+                pending.Push(new(child, scope));
             }
         }
     }
