@@ -184,7 +184,7 @@ internal sealed partial class DocxReader
                         ?.Element(WordprocessingNamespace + "vAlign")
                         ?.Attribute(WordprocessingNamespace + "val")
                         ?? conditionalStyle.VerticalAlignmentValue;
-                    XElement? cellWidth = cellProperties?.Element(WordprocessingNamespace + "tcW");
+                    var cellWidth = ReadPreferredWidth(cellProperties?.Element(WordprocessingNamespace + "tcW"));
                     XElement? verticalMerge = cellProperties?.Element(WordprocessingNamespace + "vMerge");
                     XElement? noWrap = cellProperties?.Element(WordprocessingNamespace + "noWrap");
                     XElement? fitText = cellProperties?.Element(WordprocessingNamespace + "tcFitText");
@@ -241,9 +241,9 @@ internal sealed partial class DocxReader
                         verticalAlignment,
                         borders,
                         margins,
-                        ReadDxaWidth(cellWidth),
-                        (string?)cellWidth?.Attribute(WordprocessingNamespace + "w"),
-                        (string?)cellWidth?.Attribute(WordprocessingNamespace + "type"),
+                        cellWidth?.Points,
+                        cellWidth?.Value,
+                        cellWidth?.Type,
                         gridSpan,
                         (string?)cellProperties
                             ?.Element(WordprocessingNamespace + "gridSpan")
@@ -328,14 +328,15 @@ internal sealed partial class DocxReader
             columns = Enumerable.Repeat(72d, inferredGridColumns).ToArray();
         }
 
+        var preferredWidth = ReadPreferredWidth(tableWidth) ?? tableStyle.Table.PreferredWidth;
         return new DocxTable(
             layoutValue ?? tableStyle.Table.LayoutValue,
             columns,
             rows,
             tableStyleId,
-            tableWidth is not null ? ReadDxaWidth(tableWidth) : tableStyle.Table.PreferredWidthPoints,
-            tableWidth is not null ? (string?)tableWidth.Attribute(WordprocessingNamespace + "w") : tableStyle.Table.PreferredWidthValue,
-            tableWidth is not null ? (string?)tableWidth.Attribute(WordprocessingNamespace + "type") : tableStyle.Table.PreferredWidthType,
+            preferredWidth?.Points,
+            preferredWidth?.Value,
+            preferredWidth?.Type,
             resolvedTableIndentPoints,
             tableIndent is not null ? (string?)tableIndent.Attribute(WordprocessingNamespace + "w") : tableStyle.Table.IndentValue,
             tableIndent is not null ? (string?)tableIndent.Attribute(WordprocessingNamespace + "type") : tableStyle.Table.IndentType,
@@ -361,6 +362,18 @@ internal sealed partial class DocxReader
                 !IsIncludedRevisionContainer(revision, mode)) return false;
         }
         return true;
+    }
+
+    private static (double? Points, string? Value, string? Type)? ReadPreferredWidth(XElement? width)
+    {
+        if (width is null)
+            return null;
+
+        string? value = (string?)width.Attribute(WordprocessingNamespace + "w");
+        string? type = (string?)width.Attribute(WordprocessingNamespace + "type");
+        double? points = DocxTable.ParseTableWidthKind(type, value) == DocxTableWidthKind.Percent
+            ? null : ReadDxaWidth(width);
+        return (points, value, type);
     }
 
     private static double? ReadDxaWidth(XElement? width)

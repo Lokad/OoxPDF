@@ -30,21 +30,19 @@ internal sealed record DocxTable(
     }
     public IReadOnlyList<DocxRevisionInfo> Revisions { get; init; } = [];
 
-    public DocxTableWidthKind PreferredWidthKind => ParseTableWidthKind(PreferredWidthType);
+    public DocxTableWidthKind PreferredWidthKind => ParseTableWidthKind(PreferredWidthType, PreferredWidthValue);
 
-    public static DocxTableWidthKind ParseTableWidthKind(string? value)
+    public static DocxTableWidthKind ParseTableWidthKind(string? type, string? value = null)
     {
-        if (string.Equals(value, "dxa", StringComparison.OrdinalIgnoreCase))
-        {
-            return DocxTableWidthKind.Dxa;
-        }
-
-        if (string.Equals(value, "pct", StringComparison.OrdinalIgnoreCase))
+        // A percent literal carries its unit even when the declared type differs.
+        if (string.Equals(type, "pct", StringComparison.OrdinalIgnoreCase) ||
+            TryReadPercentWidthLiteral(value.AsSpan().Trim(), out _))
         {
             return DocxTableWidthKind.Percent;
         }
 
-        return DocxTableWidthKind.Auto;
+        return string.Equals(type, "dxa", StringComparison.OrdinalIgnoreCase)
+            ? DocxTableWidthKind.Dxa : DocxTableWidthKind.Auto;
     }
 
     public static bool TryReadPercentWidth(string? value, out int fiftiethsOfPercent)
@@ -53,8 +51,13 @@ internal sealed record DocxTable(
         if (text.IsEmpty || text[^1] != '%')
             return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out fiftiethsOfPercent);
 
-        // Use the same units and rounding as Strict table-width normalization.
-        if (decimal.TryParse(text[..^1], NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint,
+        return TryReadPercentWidthLiteral(text, out fiftiethsOfPercent);
+    }
+
+    private static bool TryReadPercentWidthLiteral(ReadOnlySpan<char> text, out int fiftiethsOfPercent)
+    {
+        if (!text.IsEmpty && text[^1] == '%' &&
+            decimal.TryParse(text[..^1], NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint,
             CultureInfo.InvariantCulture, out decimal percent) &&
             percent >= int.MinValue / 50m && percent <= int.MaxValue / 50m)
         {
@@ -67,11 +70,7 @@ internal sealed record DocxTable(
     }
 }
 
-// R17: parsed table width kinds. The raw w:type spelling stays on
-// PreferredWidthType as provenance (snapshots and inspection read it); execution
-// switches on the parsed enum instead of re-comparing strings per layout. Unknown
-// spellings fall back to Auto, matching the legacy comparisons, which only
-// special-cased dxa and pct.
+// Keep the authored width and type for inspection alongside the effective unit.
 internal enum DocxTableWidthKind
 {
     Auto,
@@ -171,7 +170,7 @@ internal sealed record DocxTableCell(
 
     public DocxTableCellVerticalAlignment VerticalAlignment => ParseVerticalAlignment(VerticalAlignmentValue);
 
-    public DocxTableWidthKind PreferredWidthKind => DocxTable.ParseTableWidthKind(PreferredWidthType);
+    public DocxTableWidthKind PreferredWidthKind => DocxTable.ParseTableWidthKind(PreferredWidthType, PreferredWidthValue);
 
     public bool HasHorizontalTextDirection => IsHorizontalTextDirection(TextDirectionValue);
 

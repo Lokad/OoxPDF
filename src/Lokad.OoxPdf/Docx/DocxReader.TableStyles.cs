@@ -58,9 +58,7 @@ internal sealed partial class DocxReader
 
     private sealed record DocxTableStyleProperties(
         string? LayoutValue,
-        double? PreferredWidthPoints,
-        string? PreferredWidthValue,
-        string? PreferredWidthType,
+        (double? Points, string? Value, string? Type)? PreferredWidth,
         double? IndentPoints,
         string? IndentValue,
         string? IndentType,
@@ -70,15 +68,13 @@ internal sealed partial class DocxReader
         int? RowBandSize,
         int? ColumnBandSize)
     {
-        public static DocxTableStyleProperties Empty { get; } = new(null, null, null, null, null, null, null, null, null, null, null, null);
+        public static DocxTableStyleProperties Empty { get; } = new(null, null, null, null, null, null, null, null, null, null);
 
         public DocxTableStyleProperties Merge(DocxTableStyleProperties other)
         {
             return new DocxTableStyleProperties(
                 other.LayoutValue ?? LayoutValue,
-                other.PreferredWidthPoints ?? PreferredWidthPoints,
-                other.PreferredWidthValue ?? PreferredWidthValue,
-                other.PreferredWidthType ?? PreferredWidthType,
+                other.PreferredWidth ?? PreferredWidth,
                 other.IndentPoints ?? IndentPoints,
                 other.IndentValue ?? IndentValue,
                 other.IndentType ?? IndentType,
@@ -190,9 +186,7 @@ internal sealed partial class DocxReader
             (string?)tableProperties
                 ?.Element(WordprocessingNamespace + "tblLayout")
                 ?.Attribute(WordprocessingNamespace + "type"),
-            ReadDxaWidth(tableWidth),
-            (string?)tableWidth?.Attribute(WordprocessingNamespace + "w"),
-            (string?)tableWidth?.Attribute(WordprocessingNamespace + "type"),
+            ReadPreferredWidth(tableWidth),
             ReadDxaWidth(tableIndent),
             (string?)tableIndent?.Attribute(WordprocessingNamespace + "w"),
             (string?)tableIndent?.Attribute(WordprocessingNamespace + "type"),

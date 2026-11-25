@@ -33,7 +33,7 @@ internal static class OoxmlStrictDocxTests
         TestAssert.Equal("120", (string?)document.Descendants(w + "spacing").Single().Attribute(w + "after"));
         TestAssert.Equal("720", (string?)document.Descendants(w + "ind").Single().Attribute(w + "start"));
         TestAssert.Equal("22", (string?)document.Descendants(w + "sz").Single().Attribute(w + "val"));
-        TestAssert.Equal("2500", (string?)document.Descendants(w + "tblW").Single().Attribute(w + "w"));
+        TestAssert.Equal("50%", (string?)document.Descendants(w + "tblW").Single().Attribute(w + "w"));
         TestAssert.Equal("link", (string?)document.Descendants(w + "hyperlink").Single().Attribute(OoxNamespaces.RelationshipsNamespace + "id"));
         TestAssert.Equal("63000", (string?)document.Descendants(OoxNamespaces.DrawingNamespace + "alpha").Single().Attribute("val"));
         TestAssert.Equal("Literal 50%", (string?)document.Descendants(OoxNamespaces.DrawingNamespace + "alpha").Single().Attribute(XName.Get("val", "urn:unhandled")));

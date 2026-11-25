@@ -1,3 +1,4 @@
+using System.IO.Compression;
 using System.Text.Json;
 using System.Security.Cryptography;
 using Lokad.OoxPdf.Docx;
@@ -12,37 +13,111 @@ internal static class DocxTableMathTests
 {
     public static void DocxPercentageTableWidthSpellingsKeepFormulasOnPaper()
     {
+        foreach (string owner in new[] { "table", "cell", "table-style" })
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
         {
-            var numeric = Render("4750");
-            var percent = Render("95%");
+            bool cellWidth = owner == "cell";
+            bool styleWidth = owner == "table-style";
+            var numeric = Render(cellWidth ? "2500" : "4750", "pct", strict: false);
             var glyphs = DocxCommentsTests.ReadEmbeddedGlyphTextShows(numeric, usePageCoordinates: true,
                 honorActualText: false, fontResourceFilter: name => name.StartsWith("Eq", StringComparison.Ordinal)).ToArray();
             TestAssert.True(glyphs.Length > 0 && glyphs.All(show => show.X >= 0d && show.X < numeric.Width),
                 "The numeric control places the equation glyphs on paper.");
             TestAssert.True(numeric.Annotations.Any(link => link.IsDestination),
                 "The source fixture must retain its formula navigation.");
-            TestAssert.True(numeric.Content == percent.Content && numeric.Annotations.SequenceEqual(percent.Annotations),
-                "A percentage table width keeps the same visible content and destinations: " + mode);
+            foreach (bool strict in new[] { false, true })
+            foreach (string? type in new[] { "pct", "dxa", "auto", null })
+            {
+                var percent = Render(cellWidth ? "50%" : "95%", type, strict);
+                TestAssert.True(numeric.Content == percent.Content && numeric.Annotations.SequenceEqual(percent.Annotations),
+                    $"A percent literal keeps the numeric control's paint and links: {owner}/{mode}/{type ?? "implicit"}/strict={strict}.");
+            }
 
-            PdfPage Render(string width)
+            PdfPage Render(string width, string? type, bool strict)
             {
                 var source = DocxInlineCompositionTests.ReadMutation("CompositionProbes/inline-math-navigation-cell",
                     mode, false, false, (xml, w, _) =>
                     {
                         var table = xml.Descendants(w + "tbl").First();
-                        var preferred = table.Element(w + "tblPr")!.Element(w + "tblW")!;
-                        preferred.SetAttributeValue(w + "type", "pct");
-                        preferred.SetAttributeValue(w + "w", width);
-                        foreach (var column in table.Element(w + "tblGrid")!.Elements(w + "gridCol"))
-                            column.SetAttributeValue(w + "w", "12000");
-                    });
-                TestAssert.Equal(width, source.Tables[0].PreferredWidthValue);
+                        var properties = table.Element(w + "tblPr")!;
+                        if (styleWidth)
+                        {
+                            properties.Element(w + "tblStyle")?.Remove();
+                            properties.AddFirst(new XElement(w + "tblStyle", new XAttribute(w + "val", "ProbeWidth")));
+                            properties.Element(w + "tblW")!.Remove();
+                        }
+                        else if (cellWidth)
+                        {
+                            foreach (var cell in table.Descendants(w + "tc"))
+                            {
+                                var cellProperties = cell.Element(w + "tcPr");
+                                if (cellProperties is null)
+                                {
+                                    cellProperties = new XElement(w + "tcPr");
+                                    cell.AddFirst(cellProperties);
+                                }
+                                cellProperties.Element(w + "tcW")?.Remove();
+                                cellProperties.AddFirst(Width(w, "tcW", width, type));
+                            }
+                        }
+                        else
+                        {
+                            properties.Element(w + "tblW")!.ReplaceWith(Width(w, "tblW", width, type));
+                        }
+
+                        var columns = table.Element(w + "tblGrid")!.Elements(w + "gridCol").ToArray();
+                        columns[0].SetAttributeValue(w + "w", cellWidth ? "8400" : "12000");
+                        columns[1].SetAttributeValue(w + "w", cellWidth ? "600" : "12000");
+                        if (strict) UseStrictNamespace(xml, w);
+                    }, packageChange: styleWidth ? zip => SetWidthStyles(zip, width, type, strict) : null);
+
+                var table = source.Tables[0];
+                if (cellWidth)
+                {
+                    foreach (var cell in table.Rows.SelectMany(row => row.Cells))
+                    {
+                        TestAssert.Equal(width, cell.PreferredWidthValue);
+                        TestAssert.Equal(type, cell.PreferredWidthType);
+                        TestAssert.True(cell.PreferredWidthPoints is null, "A percentage cell width carries no physical width.");
+                    }
+                }
+                else
+                {
+                    TestAssert.Equal(width, table.PreferredWidthValue);
+                    TestAssert.Equal(type, table.PreferredWidthType);
+                    TestAssert.True(table.PreferredWidthPoints is null, "A percentage table width carries no physical width.");
+                }
+
                 return new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true), mode,
                     mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
                     OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
                     .RenderPagesAsync(source, null, default).ToBlockingEnumerable().Single();
             }
+        }
+
+        static XElement Width(XNamespace w, string element, string value, string? type) =>
+            new(w + element, new XAttribute(w + "w", value), type is null ? null : new XAttribute(w + "type", type));
+
+        static void UseStrictNamespace(XDocument document, XNamespace w) => document.Root!.ReplaceWith(
+            XElement.Parse(document.Root.ToString(SaveOptions.DisableFormatting).Replace(w.NamespaceName,
+                "http://purl.oclc.org/ooxml/wordprocessingml/main", StringComparison.Ordinal)));
+
+        static void SetWidthStyles(ZipArchive zip, string width, string? type, bool strict)
+        {
+            var entry = zip.GetEntry("word/styles.xml")!;
+            XDocument document;
+            using (var input = entry.Open()) document = XDocument.Load(input);
+            XNamespace w = document.Root!.Name.Namespace;
+            document.Root.Add(
+                new XElement(w + "style", new XAttribute(w + "type", "table"), new XAttribute(w + "styleId", "ProbeWidthBase"),
+                    new XElement(w + "tblPr", Width(w, "tblW", "2600", "dxa"))),
+                new XElement(w + "style", new XAttribute(w + "type", "table"), new XAttribute(w + "styleId", "ProbeWidth"),
+                    new XElement(w + "basedOn", new XAttribute(w + "val", "ProbeWidthBase")),
+                    new XElement(w + "tblPr", Width(w, "tblW", width, type))));
+            if (strict) UseStrictNamespace(document, w);
+            entry.Delete();
+            using var output = zip.CreateEntry("word/styles.xml").Open();
+            document.Save(output);
         }
     }
 

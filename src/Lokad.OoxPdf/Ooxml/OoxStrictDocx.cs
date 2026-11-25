@@ -76,7 +76,12 @@ internal static class OoxStrictDocx
         if (value.EndsWith('%'))
         {
             if (attribute == "w" && IsTableWidth(local))
-                return Scale(value.AsSpan(0, value.Length - 1), 50m);
+            {
+                string scaled = Scale(value.AsSpan(0, value.Length - 1), 50m);
+                // Keep the unit after validating it. The preferred-width reader
+                // needs the suffix to interpret the value independently of w:type.
+                return local is "tblW" or "tcW" ? value : scaled;
+            }
             if (local == "zoom" && attribute == "percent")
                 return Scale(value.AsSpan(0, value.Length - 1), 1m);
             return value;
