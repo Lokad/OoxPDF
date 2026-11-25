@@ -84,7 +84,7 @@ internal static class PptxSceneTextAgreementTests
 
     public static void SceneFedSpansMatchXmlPathForPlainShape()
     {
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        using var stream = TestFixtures.CreateZipPackage(new Dictionary<string, string>
         {
             ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
             ["_rels/.rels"] = PptxTests.PackageRelationship(),
@@ -104,8 +104,7 @@ internal static class PptxSceneTextAgreementTests
                 """
         });
 
-        using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        using OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
         PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
         PptxSceneNode node = scene.Slides[0].SlideNodes[0];
@@ -129,6 +128,42 @@ internal static class PptxSceneTextAgreementTests
             TestAssert.Equal(xmlSpans[index].ParagraphIndex, fedSpans[index].ParagraphIndex);
             TestAssert.Equal(xmlSpans[index].LineIndex, fedSpans[index].LineIndex);
         }
+
+        PptxSceneTextBody body = TestAssert.NotNull(node.TextBody);
+        PptxSceneTextRun[] sceneRuns = body.Paragraphs
+            .SelectMany(paragraph => paragraph.Runs)
+            .ToArray();
+
+        var chunks = new List<(PptxRenderer.PptxTextRunModel Model, StringBuilder Text)>();
+        foreach (PptxRenderer.PptxPositionedTextSpan span in xmlSpans)
+        {
+            TestAssert.True(span.SourceRun is not null, "Expected every span of the plain shape to carry its source run.");
+            PptxRenderer.PptxTextRunModel model = span.SourceRun!;
+            if (chunks.Count > 0 && ReferenceEquals(chunks[^1].Model, model))
+            {
+                chunks[^1].Text.Append(span.Run.Text);
+            }
+            else
+            {
+                chunks.Add((model, new StringBuilder(span.Run.Text)));
+            }
+        }
+
+        TestAssert.Equal("Alpha |Beta|Gamma", string.Join("|", sceneRuns.Select(run => run.Text)));
+        TestAssert.Equal(sceneRuns.Length, chunks.Count);
+        for (int i = 0; i < sceneRuns.Length; i++)
+        {
+            TestAssert.Equal(sceneRuns[i].Text, chunks[i].Text.ToString());
+        }
+        TestAssert.Equal(18d, chunks[0].Model.Style.NominalFontSize);
+        TestAssert.True(chunks[0].Model.Style.Bold, "Alpha is explicitly bold.");
+        TestAssert.Equal(new RgbColor(0x11,0x22,0x33), chunks[0].Model.Style.Color);
+        TestAssert.Equal(12d, chunks[1].Model.Style.NominalFontSize);
+        TestAssert.True(chunks[1].Model.Style.Italic, "Beta is explicitly italic.");
+        TestAssert.Equal(new RgbColor(0x44,0x55,0x66), chunks[1].Model.Style.Color);
+        TestAssert.Equal(14d, chunks[2].Model.Style.NominalFontSize);
+        TestAssert.True(chunks[2].Model.Style.Underline && chunks[2].Model.Style.Strike, "Gamma retains both decorations.");
+        TestAssert.Equal(new RgbColor(0x77,0x88,0x99), chunks[2].Model.Style.Color);
     }
 
     public static void SceneFedSpansMatchXmlPathForPlaceholders()
@@ -314,72 +349,6 @@ internal static class PptxSceneTextAgreementTests
                     "Cell baselines must stay within the authored row.");
             }
         }
-    }
-
-    public static void PlainShapeRunTextAndStyleAgree()
-    {
-        // Source text and live rendering retain the declared formatting.
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
-            ["_rels/.rels"] = PptxTests.PackageRelationship(),
-            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
-            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
-            ["ppt/slides/slide1.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <p:cSld><p:spTree><p:sp><p:nvSpPr><p:cNvPr id="21" name="Probe21"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="4572000" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
-                    <p:txBody>
-                      <a:bodyPr tIns="0" bIns="0"/><a:lstStyle/>
-                      <a:p><a:r><a:rPr sz="1800" b="1"><a:solidFill><a:srgbClr val="112233"/></a:solidFill></a:rPr><a:t>Alpha </a:t></a:r><a:r><a:rPr sz="1200" i="1"><a:solidFill><a:srgbClr val="445566"/></a:solidFill></a:rPr><a:t>Beta</a:t></a:r></a:p>
-                      <a:p><a:r><a:rPr sz="1400" u="sng" strike="sngStrike"><a:solidFill><a:srgbClr val="778899"/></a:solidFill></a:rPr><a:t>Gamma</a:t></a:r></a:p>
-                    </p:txBody>
-                  </p:sp></p:spTree></p:cSld>
-                </p:sld>
-                """
-        });
-
-        using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
-        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
-        PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
-        PptxSceneNode node = scene.Slides[0].SlideNodes[0];
-        PptxSceneTextBody body = TestAssert.NotNull(node.TextBody);
-        PptxSceneTextRun[] sceneRuns = body.Paragraphs
-            .SelectMany(paragraph => paragraph.Runs)
-            .ToArray();
-
-        IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> positioned = ReadXmlSpans(node, document, scene);
-        var chunks = new List<(PptxRenderer.PptxTextRunModel Model, StringBuilder Text)>();
-        foreach (PptxRenderer.PptxPositionedTextSpan span in positioned)
-        {
-            TestAssert.True(span.SourceRun is not null, "Expected every span of the plain shape to carry its source run.");
-            PptxRenderer.PptxTextRunModel model = span.SourceRun!;
-            if (chunks.Count > 0 && ReferenceEquals(chunks[^1].Model, model))
-            {
-                chunks[^1].Text.Append(span.Run.Text);
-            }
-            else
-            {
-                chunks.Add((model, new StringBuilder(span.Run.Text)));
-            }
-        }
-
-        TestAssert.Equal("Alpha |Beta|Gamma", string.Join("|", sceneRuns.Select(run => run.Text)));
-        TestAssert.Equal(sceneRuns.Length, chunks.Count);
-        for (int i = 0; i < sceneRuns.Length; i++)
-        {
-            TestAssert.Equal(sceneRuns[i].Text, chunks[i].Text.ToString());
-        }
-        TestAssert.Equal(18d, chunks[0].Model.Style.NominalFontSize);
-        TestAssert.True(chunks[0].Model.Style.Bold, "Alpha is explicitly bold.");
-        TestAssert.Equal(new RgbColor(0x11,0x22,0x33), chunks[0].Model.Style.Color);
-        TestAssert.Equal(12d, chunks[1].Model.Style.NominalFontSize);
-        TestAssert.True(chunks[1].Model.Style.Italic, "Beta is explicitly italic.");
-        TestAssert.Equal(new RgbColor(0x44,0x55,0x66), chunks[1].Model.Style.Color);
-        TestAssert.Equal(14d, chunks[2].Model.Style.NominalFontSize);
-        TestAssert.True(chunks[2].Model.Style.Underline && chunks[2].Model.Style.Strike, "Gamma retains both decorations.");
-        TestAssert.Equal(new RgbColor(0x77,0x88,0x99), chunks[2].Model.Style.Color);
     }
 
     public static void PlainShapeFullRunStyleAgrees()
