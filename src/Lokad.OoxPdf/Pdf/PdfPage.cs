@@ -2,52 +2,29 @@ namespace Lokad.OoxPdf.Pdf;
 
 internal readonly record struct PdfPage
 {
-    public PdfPage(double width, double height)
-        : this(width, height, string.Empty)
-    {
-    }
-
-    public PdfPage(double width, double height, string content)
-        : this(width, height, content, [])
-    {
-    }
-
-    public PdfPage(double width, double height, string content, IReadOnlyList<PdfFontResource> fonts)
-        : this(width, height, content, fonts, [])
-    {
-    }
-
-    public PdfPage(double width, double height, string content, IReadOnlyList<PdfFontResource> fonts, IReadOnlyList<PdfImageResource> images)
-        : this(width, height, content, fonts, images, [])
-    {
-    }
-
-    public PdfPage(double width, double height, string content, IReadOnlyList<PdfFontResource> fonts, IReadOnlyList<PdfImageResource> images, IReadOnlyList<PdfExtGStateResource> extGStates)
-        : this(width, height, content, fonts, images, extGStates, [])
-    {
-    }
-
-    public PdfPage(double width, double height, string content, IReadOnlyList<PdfFontResource> fonts, IReadOnlyList<PdfImageResource> images, IReadOnlyList<PdfExtGStateResource> extGStates, IReadOnlyList<PdfShadingResource> shadings)
-        : this(width, height, content, fonts, images, extGStates, shadings, [])
-    {
-    }
-
-    public PdfPage(double width, double height, string content, IReadOnlyList<PdfFontResource> fonts, IReadOnlyList<PdfImageResource> images, IReadOnlyList<PdfExtGStateResource> extGStates, IReadOnlyList<PdfShadingResource> shadings, IReadOnlyList<PdfTilingPatternResource> patterns)
-        : this(width, height, content, fonts, images, extGStates, shadings, patterns, [])
-    {
-    }
-
-    public PdfPage(double width, double height, string content, IReadOnlyList<PdfFontResource> fonts, IReadOnlyList<PdfImageResource> images, IReadOnlyList<PdfExtGStateResource> extGStates, IReadOnlyList<PdfShadingResource> shadings, IReadOnlyList<PdfTilingPatternResource> patterns, IReadOnlyList<PdfLinkAnnotation> annotations, IReadOnlyList<PdfFallbackFontResource>? fallbackFonts = null, IReadOnlyList<PdfTransparencyGroupResource>? groups = null, IReadOnlyList<PdfShadingPatternResource>? shadingPatterns = null)
+    public PdfPage(
+        double width,
+        double height,
+        string content = "",
+        IReadOnlyList<PdfFontResource>? fonts = null,
+        IReadOnlyList<PdfImageResource>? images = null,
+        IReadOnlyList<PdfExtGStateResource>? extGStates = null,
+        IReadOnlyList<PdfShadingResource>? shadings = null,
+        IReadOnlyList<PdfTilingPatternResource>? patterns = null,
+        IReadOnlyList<PdfLinkAnnotation>? annotations = null,
+        IReadOnlyList<PdfFallbackFontResource>? fallbackFonts = null,
+        IReadOnlyList<PdfTransparencyGroupResource>? groups = null,
+        IReadOnlyList<PdfShadingPatternResource>? shadingPatterns = null)
     {
         Width = width;
         Height = height;
         Content = content;
-        Fonts = fonts;
-        Images = images;
-        ExtGStates = extGStates;
-        Shadings = shadings;
-        Patterns = patterns;
-        Annotations = annotations;
+        Fonts = fonts ?? [];
+        Images = images ?? [];
+        ExtGStates = extGStates ?? [];
+        Shadings = shadings ?? [];
+        Patterns = patterns ?? [];
+        Annotations = annotations ?? [];
         FallbackFonts = fallbackFonts ?? [];
         Groups = groups ?? [];
         ShadingPatterns = shadingPatterns ?? [];
