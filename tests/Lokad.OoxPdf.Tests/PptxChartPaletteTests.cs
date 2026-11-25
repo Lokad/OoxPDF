@@ -7,7 +7,7 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class PptxChartPaletteTests
 {
-    internal static JsonElement.ArrayEnumerator ReadRequiredPaintReferenceRows(JsonDocument reference, string name, params string[] requiredIds)
+    internal static JsonElement.ArrayEnumerator ReadRequiredChartReferenceRows(JsonDocument reference, string name, params string[] requiredIds)
     {
         JsonElement rows = reference.RootElement.GetProperty("Rows");
         TestAssert.True(rows.GetArrayLength() > 0, $"The reference '{name}' has no cases.");

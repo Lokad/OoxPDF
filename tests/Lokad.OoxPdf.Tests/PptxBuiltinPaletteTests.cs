@@ -18,7 +18,7 @@ internal static class PptxBuiltinPaletteTests
         string directory = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "BuiltinPalettes"));
         using var reference = JsonDocument.Parse(File.ReadAllText(Path.Combine(directory, referenceFile)));
         var resolver = new PortableRenderingTests.PinnedResolver();
-        foreach (var row in PptxChartPaletteTests.ReadRequiredPaintReferenceRows(reference, referenceFile, requiredIds))
+        foreach (var row in PptxChartPaletteTests.ReadRequiredChartReferenceRows(reference, referenceFile, requiredIds))
         {
             string id = row.GetProperty("Id").GetString()!;
             using var stream = File.OpenRead(Path.Combine(directory, row.GetProperty("Input").GetString()!));

@@ -14,6 +14,7 @@ internal static partial class PptxColumnIntervalTests
 
     private const string LogicalCaptionBaseline = "outer-high45-no-data-labels";
     private const string LogicalCaptionLiteralAlias = "outer-high45-literal";
+    private const string LogicalCaptionReference = "LogicalCaptionFrames/office.json";
     private static readonly string[] LogicalCaptionUnrelatedRoles =
     [
         "outer-high45-no-legend", "reference-root12", "reference-root36",
@@ -46,7 +47,7 @@ internal static partial class PptxColumnIntervalTests
         using var oracle = LogicalCaptionOracle();
         var geometryCases = LogicalCaptionFrameCases();
         var bounds = new Dictionary<string, (double Left, double Top, double Right, double Bottom)>(StringComparer.Ordinal);
-        foreach (var row in oracle.RootElement.GetProperty("Rows").EnumerateArray())
+        foreach (var row in PptxChartPaletteTests.ReadRequiredChartReferenceRows(oracle, LogicalCaptionReference, geometryCases.ToArray()))
         {
             string id = row.GetProperty("Id").GetString()!;
             if (!geometryCases.Contains(id))
@@ -116,7 +117,12 @@ internal static partial class PptxColumnIntervalTests
     {
         using var oracle = LogicalCaptionOracle();
         var geometryCases = LogicalCaptionFrameCases();
-        foreach (var row in oracle.RootElement.GetProperty("Rows").EnumerateArray())
+        var rows = PptxChartPaletteTests.ReadRequiredChartReferenceRows(oracle, LogicalCaptionReference,
+            "outer-high45-thin", "outer-high45-wide", "outer-high45-align-left", "outer-high45-align-right",
+            "reference-root18-axis18", "reference-negative30-last-wide", "reference-negative45-wide",
+            "logical-hidden-numeric30", "logical-numeric-right", "logical-reversed", "logical-hidden-negative30",
+            "logical-negative-first-wide", "logical-times-negative30", "logical-wide-source30", "logical-hidden-wide-source30");
+        foreach (var row in rows)
         {
             string id = row.GetProperty("Id").GetString()!;
             // The Office literal alias has the same authored bytes as LogicalCaptionBaseline.
