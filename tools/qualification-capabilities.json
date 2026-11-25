@@ -506,7 +506,7 @@
     "MatchedPlaceholderInheritanceAgrees",
     "PlaceholderTextAgreesBetweenSceneAndSpans",
     "SceneFedSpansMatchXmlPathForGroupedShape",
-    "SceneFedSpansMatchXmlPathForLinksAndFields",
+    "=SceneFedSpansMatchXmlPathForField",
     "SceneFedSpansMatchXmlPathForPlaceholders",
     "SchemeColorRunsAgreeBetweenSceneAndSpans",
     "UnstyledRunsInheritParagraphDefaults",
@@ -7655,7 +7655,7 @@
       "PptxHiddenSlidesAreSkipped",
       "PptxLinksToHiddenSlidesAreDiagnosed",
       "FieldRunsAgreeBetweenSceneAndSpans",
-      "SceneFedSpansMatchXmlPathForLinksAndFields"
+      "=SceneFedSpansMatchXmlPathForField"
   ],
   "docx-paragraph-reference-identity": [
       "DocxParagraphIdentity",
@@ -7684,7 +7684,7 @@
       "SceneCascadeLayersMatchRendererSnapshot",
       "SceneFedSpansMatchXmlPathForPlainShape",
       "SceneFedSpansMatchXmlPathForPlaceholders",
-      "SceneFedSpansMatchXmlPathForLinksAndFields",
+      "=SceneFedSpansMatchXmlPathForField",
       "SceneFedSpansMatchXmlPathForGroupedShape",
       "TableCellSpansPreserveSourceContentAndDeclaredFrame",
       "PlainShapeFullRunStyleAgrees",
@@ -7991,7 +7991,7 @@
     "SceneCascadeLayersMatchRendererSnapshot",
     "SceneFedSpansMatchXmlPathForPlainShape",
     "SceneFedSpansMatchXmlPathForPlaceholders",
-    "SceneFedSpansMatchXmlPathForLinksAndFields",
+    "=SceneFedSpansMatchXmlPathForField",
     "SceneFedSpansMatchXmlPathForGroupedShape",
     "TableCellSpansPreserveSourceContentAndDeclaredFrame",
     "PlainShapeFullRunStyleAgrees",

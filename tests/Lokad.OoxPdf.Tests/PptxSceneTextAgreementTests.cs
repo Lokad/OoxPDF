@@ -205,42 +205,13 @@ internal static class PptxSceneTextAgreementTests
         }
     }
 
-    public static void SceneFedSpansMatchXmlPathForLinksAndFields()
+    public static void SceneFedSpansMatchXmlPathForField()
     {
-        string slideRels = """
-            <?xml version="1.0" encoding="UTF-8"?>
-            <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-              <Relationship Id="rIdLink" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.invalid/" TargetMode="External"/>
-            </Relationships>
-            """;
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
-            ["_rels/.rels"] = PptxTests.PackageRelationship(),
-            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
-            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
-            ["ppt/slides/slide1.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-                  <p:cSld><p:spTree><p:sp><p:nvSpPr><p:cNvPr id="26" name="LinkProbe"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="4572000" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
-                    <p:txBody>
-                      <a:bodyPr tIns="0" bIns="0"/><a:lstStyle/>
-                      <a:p><a:r><a:rPr sz="1800"><a:hlinkClick r:id="rIdLink"/></a:rPr><a:t>Link</a:t></a:r><a:r><a:rPr sz="1800"/><a:t>Plain</a:t></a:r></a:p>
-                    </p:txBody>
-                  </p:sp></p:spTree></p:cSld>
-                </p:sld>
-                """,
-            ["ppt/slides/_rels/slide1.xml.rels"] = slideRels,
-        });
-
-        CompareXmlAndFedSpans(input,
-            ("Link", PptxRenderer.PptxTextRunKind.Text, "rIdLink"),
-            ("Plain", PptxRenderer.PptxTextRunKind.Text, null));
         string fieldInput = TestFixtures.PublicCasePath("pptx-ladder-04-field-text.pptx");
         CompareXmlAndFedSpans(fieldInput, ("1", PptxRenderer.PptxTextRunKind.Field, null));
     }
 
-    private static void CompareXmlAndFedSpans(string input,
+    private static (PptxSceneTextBody Body, IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> XmlSpans) CompareXmlAndFedSpans(string input,
         params (string Text, PptxRenderer.PptxTextRunKind Kind, string? ClickId)[] expected)
     {
         using FileStream stream = File.OpenRead(input);
@@ -250,7 +221,7 @@ internal static class PptxSceneTextAgreementTests
         PptxSceneSlide slide = scene.Slides.Single();
         PptxSceneNode node = slide.SlideNodes.Single(shape => shape.TextBody is not null);
         var resolver = CreateCannedPresentationResolver("memory:r14-scene-fed-links-fields");
-        IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> xmlSpans = ReadXmlSpans(node, document, scene);
+        IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> xmlSpans = ReadXmlSpans(node, document, scene, resolver: resolver);
         IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> fedSpans = PptxRenderer.BuildSceneFedTextSpansAsync(
             node, document, slide.Theme, slide.SlideColorMap, 1, false, InheritedSources(scene),
             resolver, CancellationToken.None).GetAwaiter().GetResult();
@@ -268,6 +239,7 @@ internal static class PptxSceneTextAgreementTests
             TestAssert.Equal(xml.Run.Y, fed.Run.Y);
             TestAssert.Equal(xml.Run.FontSize, fed.Run.FontSize);
         }
+        return (TestAssert.NotNull(node.TextBody), xmlSpans);
     }
 
     public static void SceneFedSpansMatchXmlPathForGroupedShape()
@@ -704,33 +676,19 @@ internal static class PptxSceneTextAgreementTests
             ["ppt/slides/_rels/slide1.xml.rels"] = slideRels,
         });
 
-        using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
-        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
-        PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
-        PptxSceneNode node = scene.Slides[0].SlideNodes[0];
-        PptxSceneTextBody body = TestAssert.NotNull(node.TextBody);
-        PptxSceneTextRun[] sceneRuns = body.Paragraphs
-            .SelectMany(paragraph => paragraph.Runs)
-            .ToArray();
-        TestAssert.Equal(2, sceneRuns.Length);
-
-        IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> positioned = ReadXmlSpans(node, document, scene);
-        PptxRenderer.PptxTextRunModel[] spanRuns = positioned
-            .Select(span => span.SourceRun)
-            .Where(run => run is not null)
-            .Select(run => run!)
-            .Distinct()
-            .ToArray();
-        TestAssert.Equal(2, spanRuns.Length);
-        TestAssert.Equal("Link", spanRuns[0].Text);
-        TestAssert.True(spanRuns[0].Style.HasHyperlinkClick, "Expected the linked run to carry a hyperlink click.");
-        TestAssert.Equal("rIdLink", spanRuns[0].Style.HyperlinkClickId);
-        TestAssert.True(!spanRuns[1].Style.HasHyperlinkClick, "Expected the plain run to carry no hyperlink click.");
-        TestAssert.True(spanRuns[0].Style.Underline, "Hyperlinks receive the default underline.");
+        var (body, xmlSpans) = CompareXmlAndFedSpans(input,
+            ("Link", PptxRenderer.PptxTextRunKind.Text, "rIdLink"),
+            ("Plain", PptxRenderer.PptxTextRunKind.Text, null));
+        TestAssert.Equal(2, body.Paragraphs.Sum(paragraph => paragraph.Runs.Count));
+        var linked = TestAssert.NotNull(xmlSpans[0].SourceRun);
+        var plain = TestAssert.NotNull(xmlSpans[1].SourceRun);
+        TestAssert.Equal("Link", linked.Text);
+        TestAssert.True(linked.Style.HasHyperlinkClick, "Expected the linked run to carry a hyperlink click.");
+        TestAssert.True(!plain.Style.HasHyperlinkClick, "Expected the plain run to carry no hyperlink click.");
+        TestAssert.True(linked.Style.Underline, "Hyperlinks receive the default underline.");
         // This fixture intentionally has no theme part: default underline is
         // preserved, while the unresolved theme hyperlink color falls back.
-        TestAssert.Equal(PptxRenderer.PptxRunTextColorSource.FallbackBlack, spanRuns[0].Style.ColorSource);
+        TestAssert.Equal(PptxRenderer.PptxRunTextColorSource.FallbackBlack, linked.Style.ColorSource);
     }
 
     public static void UnstyledRunsInheritParagraphDefaults()
