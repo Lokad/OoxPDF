@@ -262,7 +262,7 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog, IDispo
             return result;
         }
 
-        result = string.Compare(left.RelativeFontFile, right.RelativeFontFile, StringComparison.Ordinal);
+        result = string.Compare(left.File.RelativePath, right.File.RelativePath, StringComparison.Ordinal);
         if (result != 0)
         {
             return result;
@@ -462,7 +462,7 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog, IDispo
             string requestedFamily = RequiredText(family.RequestedFamily, "requested font family");
             string resolvedFamily = RequiredText(family.ResolvedFamily, "resolved font family");
             string relativeFontFile = ValidateRelativePath(family.RelativeFontFile, "font family file");
-            if (!files.ContainsKey(relativeFontFile))
+            if (!files.TryGetValue(relativeFontFile, out FontPackFile? file))
             {
                 throw InvalidManifest($"Font family '{requestedFamily}' references missing file '{relativeFontFile}'.");
             }
@@ -483,14 +483,13 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog, IDispo
             faces.Add(new FontPackFace(
                 requestedFamily,
                 resolvedFamily,
-                relativeFontFile,
                 new FontStyleKey(
                     Bold: weight >= 600,
                     Italic: italic,
                     WeightClass: weight,
                     FaceIndex: faceIndex,
                     HasMathTable: family.HasMathTable ?? false),
-                files[relativeFontFile]));
+                file));
         }
 
         if (faces.Count == 0)
@@ -803,7 +802,6 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog, IDispo
     private sealed record FontPackFace(
         string RequestedFamily,
         string ResolvedFamily,
-        string RelativeFontFile,
         FontStyleKey Style,
         FontPackFile File)
     {

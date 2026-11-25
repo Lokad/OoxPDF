@@ -1691,14 +1691,17 @@ internal static partial class OoxLimitsTests
         byte[] fontBytes = TestFontBuilder.CreateTestFont();
         string sha256 = Convert.ToHexString(SHA256.HashData(fontBytes));
         string manifest = "{\"packId\":\"test-pack\"," +
-            "\"files\":[{\"relativePath\":\"a.ttf\",\"byteSize\":" + fontBytes.Length + ",\"sha256\":\"" + sha256 + "\"}],\"families\":[" +
+            "\"files\":[{\"relativePath\":\"a.ttf\",\"byteSize\":" + fontBytes.Length + ",\"sha256\":\"" + sha256 + "\"}," +
+            "{\"relativePath\":\"A.ttf\",\"byteSize\":" + fontBytes.Length + ",\"sha256\":\"" + sha256 + "\"}],\"families\":[" +
             "{\"requestedFamily\":\"PackAlpha\",\"resolvedFamily\":\"PackAlpha\",\"relativeFontFile\":\"a.ttf\",\"weight\":400,\"italic\":false,\"faceIndex\":0}," +
+            "{\"requestedFamily\":\"PackAlpha\",\"resolvedFamily\":\"PackAlpha\",\"relativeFontFile\":\"A.ttf\",\"weight\":400,\"italic\":false,\"faceIndex\":0}," +
             "{\"requestedFamily\":\"PackAlpha\",\"resolvedFamily\":\"PackAlpha\",\"relativeFontFile\":\"a.ttf\",\"weight\":700,\"italic\":false,\"faceIndex\":0}]," +
             "\"fallbacks\":[{\"family\":\"PackAlpha\"}]}";
         var responses = new Dictionary<string, byte[]>(StringComparer.Ordinal)
         {
             ["/ooxpdf-fonts/test-pack/manifest.json"] = Encoding.UTF8.GetBytes(manifest),
             ["/ooxpdf-fonts/test-pack/a.ttf"] = fontBytes,
+            ["/ooxpdf-fonts/test-pack/A.ttf"] = fontBytes,
         };
         var handler = new CountingFontHandler(responses);
         OoxPdfFontPackResolver resolver = OoxPdfFontPackResolver.CreateHttpAsync(
@@ -1712,6 +1715,10 @@ internal static partial class OoxLimitsTests
         TestAssert.Equal(400, regular.WeightClass);
         TestAssert.Equal(700, bold.WeightClass);
         TestAssert.True(!regular.IsFallback && !bold.IsFallback, "Pack families must resolve exactly.");
+        TestAssert.True(TestFontPrograms.CopyAsync(regular.Source).GetAwaiter().GetResult().Span.SequenceEqual(fontBytes),
+            "The equal-ranked face resolves to its declared font file.");
+        TestAssert.Equal(1, handler.Hits.GetValueOrDefault("/ooxpdf-fonts/test-pack/A.ttf"));
+        TestAssert.Equal(0, handler.Hits.GetValueOrDefault("/ooxpdf-fonts/test-pack/a.ttf"));
         FontFaceResolution missing = resolver.Resolve(new FontRequest("Nope"));
         TestAssert.True(missing.IsFallback, "Unknown family must fall back.");
         TestAssert.Equal("Nope", missing.RequestedFamily);
