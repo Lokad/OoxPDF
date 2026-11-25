@@ -279,6 +279,7 @@
     "PptxSyntheticConnectorExplicitLineWidthInheritsStyleLineColor",
     "PptxSyntheticArrowAndConnectorShapesRender",
     "=PptxSyntheticTriangleConnectorsPaintTheirOfficeMarkerWidths",
+    "=PptxStraightConnectorStrokeRetainsAuthoredEndMarkers",
     "PptxSyntheticCurvedConnectorArrowTailUsesFilledOutline",
     "PptxSyntheticCustomGeometryOpenCubicStealthTailUsesFilledOutline",
     "PptxSyntheticFullyUnsupportedCustomGeometryFallsBackToRectangle",
@@ -19448,6 +19449,7 @@
     "PptxBubbleChart"
   ],
   "pptx-connector-operator-portability": [
+    "=PptxStraightConnectorStrokeRetainsAuthoredEndMarkers",
     "PptxSyntheticCurvedConnectorRendersCurve",
     "PptxSyntheticCurvedConnector2RendersCurve",
     "PptxSyntheticCurvedConnector2LoopUsesQuarterTurnTangents",

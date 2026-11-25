@@ -445,6 +445,72 @@ internal static partial class PptxShapesTests
             """;
     }
 
+    public static void PptxStraightConnectorStrokeRetainsAuthoredEndMarkers()
+    {
+        using var input = TestFixtures.CreateZipPackage(new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
+            ["_rels/.rels"] = PptxTests.PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
+            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = $$"""
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree>
+                    {{Connector(1, dash: true, tail: "triangle")}}
+                    {{Connector(2, dash: true, tail: "arrow")}}
+                    {{Connector(3, round: true, tail: "triangle")}}
+                    {{Connector(4, head: "diamond", tail: "triangle")}}
+                    {{Connector(5, head: "diamond", tail: "arrow")}}
+                    {{Connector(6, dash: true, head: "arrow", tail: "triangle")}}
+                  </p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+        using var output = new MemoryStream();
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions
+        {
+            InputKind = OoxPdfInputKind.Pptx,
+            DiagnosticSink = diagnostics.Add
+        });
+
+        TestAssert.Equal(0, diagnostics.Count);
+        string pdf = Encoding.ASCII.GetString(output.ToArray()).ReplaceLineEndings("\n");
+        foreach (int y in new[] { 468, 396, 324, 252, 180, 108 })
+            TestAssert.Contains(FormattableString.Invariant($"72 {y} m 216 {y} l S"), pdf);
+
+        foreach (int y in new[] { 468, 324, 252, 108 })
+            TestAssert.Contains(FormattableString.Invariant($"216 {y} m\n200 {y + 8} l\n200 {y - 8} l\nh\nf\n"), pdf);
+
+        foreach ((string x, int y) in new[] { ("216.01", 396), ("216.01", 180), ("71.99", 108) })
+        {
+            string marker = FormattableString.Invariant($@"(?m)^\S+ \S+ m\n{Regex.Escape(x)} {y} l\n(?:[^\n]+ [lc]\n)+h\nf$");
+            TestAssert.True(Regex.IsMatch(pdf, marker), $"Expected a filled arrow at ({x}, {y}).");
+        }
+        foreach (int y in new[] { 252, 180 })
+            TestAssert.Contains(FormattableString.Invariant($"72 {y} m\n80 {y - 6.4d} l\n88 {y} l\n80 {y + 6.4d} l\nh\nf\n"), pdf);
+
+        TestAssert.Equal(3, Regex.Matches(pdf, @"(?m)^\[[\d .]+\] 0 d$").Count);
+        TestAssert.Equal(3, Regex.Matches(pdf, @"(?m)^\[\] 0 d$").Count);
+        TestAssert.Contains("1 J\n1 j\n72 324 m 216 324 l S", pdf);
+        TestAssert.Contains("0 J\n0 j", pdf);
+
+        static string Connector(int row, bool dash = false, bool round = false, string? head = null, string? tail = null)
+        {
+            string cap = round ? """ cap="rnd" """ : "";
+            string dashElement = dash ? """<a:prstDash val="dash"/>""" : "";
+            string headElement = head is null ? "" : $$"""<a:headEnd type="{{head}}"/>""";
+            string tailElement = tail is null ? "" : $$"""<a:tailEnd type="{{tail}}"/>""";
+            return FormattableString.Invariant($$"""
+                <p:cxnSp><p:spPr>
+                  <a:xfrm><a:off x="914400" y="{{row * 914400}}"/><a:ext cx="1828800" cy="0"/></a:xfrm>
+                  <a:prstGeom prst="straightConnector1"/>
+                  <a:ln w="50800"{{cap}}><a:solidFill><a:srgbClr val="CC1133"/></a:solidFill>{{dashElement}}{{headElement}}{{tailElement}}</a:ln>
+                </p:spPr></p:cxnSp>
+                """);
+        }
+    }
+
     public static void PptxSyntheticCurvedConnectorRendersCurve()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>

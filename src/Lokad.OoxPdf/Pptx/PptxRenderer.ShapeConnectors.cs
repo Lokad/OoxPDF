@@ -9,52 +9,45 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static void FillLineArrowhead(PdfGraphicsBuilder graphics, double tipX, double tipY, double directionX, double directionY, double lineWidth)
+    private static void FillLineEndMarker(PdfGraphicsBuilder graphics, LineEndStyle style, double tipX, double tipY,
+        (double X, double Y) outward, double lineWidth, double? straightTriangleHalfWidthFactor = null)
     {
-        double length = Math.Sqrt(directionX * directionX + directionY * directionY);
+        if (style.IsNone)
+        {
+            return;
+        }
+
+        double length = Math.Sqrt(outward.X * outward.X + outward.Y * outward.Y);
         if (length <= 0.001d)
         {
             return;
         }
 
-        double ux = directionX / length;
-        double uy = directionY / length;
+        double ux = outward.X / length;
+        double uy = outward.Y / length;
         double nx = -uy;
         double ny = ux;
-        double size = Math.Max(5d, lineWidth * 3.5d);
-        double baseX = tipX - ux * size;
-        double baseY = tipY - uy * size;
-        double halfWidth = size * OfficeTriangleTailHalfWidthFactor;
-        graphics.FillPolygon(
-        [
-            (tipX, tipY),
-            (baseX + nx * halfWidth, baseY + ny * halfWidth),
-            (baseX - nx * halfWidth, baseY - ny * halfWidth)
-        ]);
-    }
 
-    private static void FillLineArrowhead(PdfGraphicsBuilder graphics, double tipX, double tipY, (double X, double Y) direction, double lineWidth)
-    {
-        FillLineArrowhead(graphics, tipX, tipY, direction.X, direction.Y, lineWidth);
-    }
-
-    private static void FillLineEndMarker(PdfGraphicsBuilder graphics, LineEndStyle style, double tipX, double tipY, double directionX, double directionY, double lineWidth)
-    {
-        if (style.IsNone || style.Kind is LineEndKind.Triangle or LineEndKind.Arrow)
+        if (style.Kind == LineEndKind.Arrow)
         {
+            AppendOfficeArrowHeadPath(graphics, tipX, tipY, -ux, -uy, -nx, -ny, lineWidth, false);
+            graphics.FillCurrentPath();
             return;
         }
 
-        double length = Math.Sqrt(directionX * directionX + directionY * directionY);
-        if (length <= 0.001d)
+        if (style.Kind == LineEndKind.Triangle)
         {
+            double size = straightTriangleHalfWidthFactor.HasValue
+                ? lineWidth * OfficeStraightTriangleLineEndLengthFactor
+                : Math.Max(OfficeTriangleTailMinimumLength, lineWidth * OfficeTriangleTailLengthFactor);
+            double halfWidth = straightTriangleHalfWidthFactor is { } factor
+                ? lineWidth * factor
+                : size * OfficeTriangleTailHalfWidthFactor;
+            AppendTriangle(graphics, tipX, tipY, tipX - ux * size, tipY - uy * size, nx, ny, halfWidth);
+            graphics.FillCurrentPath();
             return;
         }
 
-        double ux = directionX / length;
-        double uy = directionY / length;
-        double nx = -uy;
-        double ny = ux;
         double markerLength = style.Kind == LineEndKind.Stealth
             ? GetStraightStealthLineEndLength(lineWidth, style)
             : Math.Max(6.5d, lineWidth * 4d) * style.LengthScale;
@@ -374,10 +367,10 @@ internal sealed partial class PptxRenderer
 
         if (!headEnd.IsNone)
         {
-            FillCurvedConnectorEndMarker(
+            graphics.SetFillRgb(stroke.Red, stroke.Green, stroke.Blue);
+            FillLineEndMarker(
                 graphics,
                 headEnd,
-                stroke,
                 first.StartX,
                 first.StartY,
                 ResolveEndpointDirection(first.StartX, first.StartY, first.Control1X, first.Control1Y, first.Control2X, first.Control2Y),
@@ -386,10 +379,10 @@ internal sealed partial class PptxRenderer
 
         if (!tailEnd.IsNone)
         {
-            FillCurvedConnectorEndMarker(
+            graphics.SetFillRgb(stroke.Red, stroke.Green, stroke.Blue);
+            FillLineEndMarker(
                 graphics,
                 tailEnd,
-                stroke,
                 last.EndX,
                 last.EndY,
                 ResolveEndpointDirection(last.EndX, last.EndY, last.Control2X, last.Control2Y, last.Control1X, last.Control1Y),
@@ -658,47 +651,6 @@ internal sealed partial class PptxRenderer
     private static double Lerp(double a, double b, double t)
     {
         return a + (b - a) * t;
-    }
-
-    private static void FillCurvedConnectorEndMarker(
-        PdfGraphicsBuilder graphics,
-        LineEndStyle style,
-        RgbColor stroke,
-        double tipX,
-        double tipY,
-        (double X, double Y) awayDirection,
-        double lineWidth)
-    {
-        if (style.Kind is LineEndKind.None)
-        {
-            return;
-        }
-
-        graphics.SetFillRgb(stroke.Red, stroke.Green, stroke.Blue);
-        if (style.Kind == LineEndKind.Arrow)
-        {
-            double length = Math.Sqrt(awayDirection.X * awayDirection.X + awayDirection.Y * awayDirection.Y);
-            if (length <= 0.001d)
-            {
-                return;
-            }
-
-            double ux = -awayDirection.X / length;
-            double uy = -awayDirection.Y / length;
-            double nx = -uy;
-            double ny = ux;
-            AppendOfficeArrowHeadPath(graphics, tipX, tipY, ux, uy, nx, ny, lineWidth, false);
-            graphics.FillCurrentPath();
-            return;
-        }
-
-        if (style.Kind == LineEndKind.Triangle)
-        {
-            FillLineArrowhead(graphics, tipX, tipY, awayDirection, lineWidth);
-            return;
-        }
-
-        FillLineEndMarker(graphics, style, tipX, tipY, awayDirection.X, awayDirection.Y, lineWidth);
     }
 
     private static List<BezierSegment> CreateCurvedConnector2Segments(double x, double yTop, double width, double height, double slideHeight)

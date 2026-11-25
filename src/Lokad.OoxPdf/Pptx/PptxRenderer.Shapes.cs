@@ -262,6 +262,9 @@ internal sealed partial class PptxRenderer
                 bool hasHeadArrow = IsFilledTriangleArrow(headEnd);
                 bool hasTailArrow = IsFilledTriangleArrow(tailEnd);
                 bool hasStealthEnd = headEnd.Kind == LineEndKind.Stealth || tailEnd.Kind == LineEndKind.Stealth;
+                double triangleHalfWidthFactor = preset == "straightConnector1"
+                    ? OfficeStraightConnectorTriangleLineEndHalfWidthFactor
+                    : OfficeStraightTriangleLineEndHalfWidthFactor;
                 // Office fills stealth-tailed straight bodies (seven renders); unflipped straight
                 // connectors take the filled body too while transformed (grouped or rotated)
                 // shapes keep the legacy stroked path for lack of Office evidence there.
@@ -278,9 +281,6 @@ internal sealed partial class PptxRenderer
                 {
                     graphics.SetFillRgb(stroke.Red, stroke.Green, stroke.Blue);
                     bool usesOfficeArrowType = headEnd.Kind == LineEndKind.Arrow || tailEnd.Kind == LineEndKind.Arrow;
-                    double triangleHalfWidthFactor = string.Equals(preset, "straightConnector1", StringComparison.Ordinal)
-                        ? OfficeStraightConnectorTriangleLineEndHalfWidthFactor
-                        : OfficeStraightTriangleLineEndHalfWidthFactor;
                     FillStraightArrowedLine(graphics, x1, y1, x2, y2, lineWidth,
                         hasHeadArrow, hasTailArrow, usesOfficeArrowType, triangleHalfWidthFactor);
                 }
@@ -301,8 +301,8 @@ internal sealed partial class PptxRenderer
 
                     graphics.StrokeLine(x1, y1, x2, y2);
                     graphics.SetFillRgb(stroke.Red, stroke.Green, stroke.Blue);
-                    FillLineEndMarker(graphics, headEnd, x1, y1, x1 - x2, y1 - y2, lineWidth);
-                    FillLineEndMarker(graphics, tailEnd, x2, y2, x2 - x1, y2 - y1, lineWidth);
+                    FillLineEndMarker(graphics, headEnd, x1, y1, (x1 - x2, y1 - y2), lineWidth, triangleHalfWidthFactor);
+                    FillLineEndMarker(graphics, tailEnd, x2, y2, (x2 - x1, y2 - y1), lineWidth, triangleHalfWidthFactor);
                     if (hasDash)
                     {
                         graphics.ClearLineDash();
