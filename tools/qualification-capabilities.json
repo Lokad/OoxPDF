@@ -691,6 +691,7 @@
     "=SvgConstantLinearGradientsMatchSolidPaintInBothFormats",
     "=SvgSingleStopRadialGradientsMatchSolidPaintInBothFormats",
     "=SvgZeroRadiusRadialGradientsKeepLastStopPaint",
+    "=SvgLabelsReuseConstantGradientPaintInBothFormats",
     "=SvgQuotedLocalPaintServersMatchUnquotedReferencesInBothFormats",
     "=SvgEncodedLocalFragmentsKeepGradientPaintAndFallbacks",
     "=SvgDecreasingStopsKeepNativePaintAndOpacityInBothFormats",
@@ -20614,6 +20615,7 @@
   ],
   "svg-text-labels": [
     "SvgLabelsRetainEveryGlyphInDocxAndPptxPictures",
+    "=SvgLabelsReuseConstantGradientPaintInBothFormats",
     "=SvgTextChildrenKeepMixedWhitespacePolicies",
     "=SvgTextChildrenKeepInheritedFontAndFill",
     "=SvgTextChildrenKeepEffectiveKerning",

@@ -160,10 +160,8 @@ internal sealed partial class PptxRenderer
 
         var content = EnumerateSvgContent(root, cancellationToken);
         var elements = content.OfType<XElement>();
-        var paintServers = EnumerateSvgPaintServers(elements).ToArray();
-        var (gradients, radialGradients) = ReadSvgGradients(paintServers, viewWidth, viewHeight, cancellationToken);
+        var paintServers = new SvgPaintServers(elements, viewWidth, viewHeight, cancellationToken);
         double strokePercentageBasis = GetSvgNormalizedDiagonal(viewWidth, viewHeight);
-        var paintServerIds = CreateSvgPaintServerIdLookup(paintServers, cancellationToken);
         var paintedText = new HashSet<XElement>();
         bool hasStylesheet = HasSvgStylesheet(content);
         var unsupportedCommands = new SortedSet<char>();
@@ -240,7 +238,7 @@ internal sealed partial class PptxRenderer
             if (element.Name.LocalName == "text")
             {
                 if (!hasStylesheet && TryReadSvgPathTransform(element, out SvgTransform textTransform) &&
-                    TryPaintSvgText(graphics, element, paintServerIds, textFonts, textTransform, viewWidth, viewHeight, sourceMinX, sourceMinY,
+                    TryPaintSvgText(graphics, element, paintServers, textFonts, textTransform, viewWidth, viewHeight, sourceMinX, sourceMinY,
                         imageX, imageY, imageWidth, imageHeight, scaleX, scaleY, AdmitSamples, cancellationToken))
                     paintedText.Add(element);
                 continue;
@@ -265,9 +263,9 @@ internal sealed partial class PptxRenderer
             double elementOpacity = computedOpacity ?? 1d;
             bool allowGradientStroke = strokeContainersQualified &&
                 (string.IsNullOrWhiteSpace(opacityText) || computedOpacity.HasValue);
-            bool hasFill = TryReadSvgFill(element, style, gradients, radialGradients, paintServerIds, elementOpacity,
+            bool hasFill = TryReadSvgFill(element, style, paintServers, elementOpacity,
                 out SvgPaint paint, out SvgFillFailure fillFailure, out string? gradientId, out SvgRadialGradient? radial);
-            SvgStroke stroke = ReadSvgStroke(element, style, gradients, radialGradients, paintServerIds,
+            SvgStroke stroke = ReadSvgStroke(element, style, paintServers,
                 allowGradientStroke, elementOpacity, strokePercentageBasis, out SvgStrokeFailure strokeFailure,
                 out bool invalidStrokePresentation, out bool hasVectorEffect, out bool nonScalingStroke);
 
@@ -599,7 +597,7 @@ internal sealed partial class PptxRenderer
         while (isolation.Count > 0) { CloseGroup(); }
         ReportUnsupportedSvgElements(elements, diagnosticSink, slideIndex, partName, paintedText);
         ReportSkippedSvgPaths(unsupportedCommands, unreadablePaths, missingGradients, unpaintablePaths, unsupportedTransforms, gradientStrokes, unpaintableStrokes, invalidStrokePresentations, vectorEffectStrokes, focalRadialGradients, nonFiniteGradientPaths, diagnosticSink, slideIndex, partName);
-        ReportIgnoredSvgOpacity(elements, gradients, radialGradients, usedGradientIds, admittedContainers,
+        ReportIgnoredSvgOpacity(elements, paintServers, usedGradientIds, admittedContainers,
             admittedGradientAlpha, fallbackGradientAlpha, diagnosticSink, slideIndex, partName, cancellationToken);
 
         graphics.RestoreState();
@@ -644,8 +642,8 @@ internal sealed partial class PptxRenderer
                 Fallback: "Partial"));
         }
     }
-    private static void ReportIgnoredSvgOpacity(IEnumerable<XElement> elements, IReadOnlyDictionary<string, SvgGradient> gradients,
-        IReadOnlyDictionary<string, SvgRadialGradient> radialGradients, HashSet<string>? usedGradientIds,
+    private static void ReportIgnoredSvgOpacity(IEnumerable<XElement> elements, SvgPaintServers paintServers,
+        HashSet<string>? usedGradientIds,
         HashSet<XElement> admittedContainers, HashSet<string> admittedGradientAlpha, HashSet<string> fallbackGradientAlpha,
         Action<OoxPdfDiagnostic>? diagnosticSink, int slideIndex, string? partName, CancellationToken cancellationToken)
     {
@@ -667,8 +665,8 @@ internal sealed partial class PptxRenderer
             cancellationToken.ThrowIfCancellationRequested();
             if (!admittedGradientAlpha.Contains(id) || fallbackGradientAlpha.Contains(id))
             {
-                stopCount += gradients.GetValueOrDefault(id)?.IgnoredStopOpacityCount ??
-                    radialGradients.GetValueOrDefault(id)?.IgnoredStopOpacityCount ?? 0;
+                var (linear, radial, _) = paintServers.FindGradient(id);
+                stopCount += linear?.IgnoredStopOpacityCount ?? radial?.IgnoredStopOpacityCount ?? 0;
             }
         }
         if (containerCount > 0)
@@ -1607,9 +1605,7 @@ internal sealed partial class PptxRenderer
         return Math.Clamp(percent ? opacity / 100d : opacity, 0d, 1d);
     }
 
-    private static bool TryReadSvgFill(XElement path, IReadOnlyDictionary<string, string> style,
-        IReadOnlyDictionary<string, SvgGradient> gradients,
-        IReadOnlyDictionary<string, SvgRadialGradient> radialGradients, Lazy<HashSet<string>> paintServerIds,
+    private static bool TryReadSvgFill(XElement path, IReadOnlyDictionary<string, string> style, SvgPaintServers paintServers,
         double elementOpacity, out SvgPaint paint, out SvgFillFailure failure, out string? gradientId, out SvgRadialGradient? radial)
     {
         gradientId = null;
@@ -1631,7 +1627,7 @@ internal sealed partial class PptxRenderer
             failure = SvgFillFailure.None;
             return true;
         }
-        fill = ResolveSvgPaintFallback(path, style, fill, paintServerIds, out gradientId);
+        fill = ResolveSvgPaintFallback(path, style, fill, paintServers, out gradientId);
         if (fill.Equals("none", StringComparison.OrdinalIgnoreCase))
         {
             paint = default;
@@ -1640,9 +1636,8 @@ internal sealed partial class PptxRenderer
         }
         if (gradientId is not null)
         {
-            SvgGradient? svgGradient = gradients.GetValueOrDefault(gradientId);
-            SvgRadialGradient? svgRadial = svgGradient is null ? radialGradients.GetValueOrDefault(gradientId) : null;
-            if ((svgGradient?.ConstantStop ?? svgRadial?.ConstantStop) is { Opacity: double stopOpacity } stop)
+            var (svgGradient, svgRadial, constantStop) = paintServers.FindGradient(gradientId);
+            if (constantStop is { Opacity: double stopOpacity } stop)
             {
                 paint = new SvgPaint(stop.Color, null, opacity * stopOpacity);
                 gradientId = null;
@@ -1694,9 +1689,7 @@ internal sealed partial class PptxRenderer
     // a uniform stroke width; the viewport separately stretches its normal.
     // vector-effect=non-scaling-stroke skips the element-transform factor;
     // any other effect value stays diagnosed with the scaled stroke.
-    private static SvgStroke ReadSvgStroke(XElement path, IReadOnlyDictionary<string, string> style,
-        IReadOnlyDictionary<string, SvgGradient> gradients,
-        IReadOnlyDictionary<string, SvgRadialGradient> radialGradients, Lazy<HashSet<string>> paintServerIds,
+    private static SvgStroke ReadSvgStroke(XElement path, IReadOnlyDictionary<string, string> style, SvgPaintServers paintServers,
         bool allowGradientStroke, double elementOpacity, double percentageBasis, out SvgStrokeFailure failure,
         out bool invalidPresentation, out bool hasVectorEffect, out bool nonScalingStroke)
     {
@@ -1721,16 +1714,15 @@ internal sealed partial class PptxRenderer
         // Zero means no stroke, before paint-server lookup or any positive PDF
         // width clamp. A fill on the same source remains independently paintable.
         if (width == 0d) { return default; }
-        strokePaint = ResolveSvgPaintFallback(path, style, strokePaint, paintServerIds, out string? gradientId);
+        strokePaint = ResolveSvgPaintFallback(path, style, strokePaint, paintServers, out string? gradientId);
         if (strokePaint.Equals("none", StringComparison.OrdinalIgnoreCase)) return default;
         SvgGradient? strokeGradient = null;
         RgbColor? color = null;
         bool requiresObjectBounds = false;
         if (gradientId is not null)
         {
-            SvgGradient? gradient = gradients.GetValueOrDefault(gradientId);
-            SvgRadialGradient? radial = gradient is null ? radialGradients.GetValueOrDefault(gradientId) : null;
-            if ((gradient?.ConstantStop ?? radial?.ConstantStop) is { Opacity: double stopOpacity } stop)
+            var (gradient, radial, constantStop) = paintServers.FindGradient(gradientId);
+            if (constantStop is { Opacity: double stopOpacity } stop)
             {
                 color = stop.Color;
                 opacity *= stopOpacity;
@@ -1820,18 +1812,40 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static Lazy<HashSet<string>> CreateSvgPaintServerIdLookup(
-        IEnumerable<(string Id, XElement Element)> paintServers, CancellationToken cancellationToken) =>
-        new(() =>
+    // Font preparation and painting each own their parsed picture. Plain colors
+    // need no definitions, and a missing-server fallback needs only the IDs.
+    private sealed class SvgPaintServers(IEnumerable<XElement> elements, double viewWidth, double viewHeight,
+        CancellationToken cancellationToken)
+    {
+        private (string Id, XElement Element)[]? definitions;
+        private HashSet<string>? ids;
+        private (Dictionary<string, SvgGradient> Linear, Dictionary<string, SvgRadialGradient> Radial)? gradients;
+
+        private (string Id, XElement Element)[] Definitions => definitions ??= EnumerateSvgPaintServers(elements).ToArray();
+
+        public bool Contains(string id)
         {
-            var ids = new HashSet<string>(StringComparer.Ordinal);
-            foreach (var (id, _) in paintServers)
+            if (ids is null)
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                ids.Add(id);
+                var discovered = new HashSet<string>(StringComparer.Ordinal);
+                foreach (var (name, _) in Definitions)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    discovered.Add(name);
+                }
+                ids = discovered;
             }
-            return ids;
-        });
+            return ids.Contains(id);
+        }
+
+        public (SvgGradient? Linear, SvgRadialGradient? Radial, SvgGradientStop? ConstantStop) FindGradient(string id)
+        {
+            var (linear, radial) = gradients ??= ReadSvgGradients(Definitions, viewWidth, viewHeight, cancellationToken);
+            SvgGradient? linearGradient = linear.GetValueOrDefault(id);
+            SvgRadialGradient? radialGradient = linearGradient is null ? radial.GetValueOrDefault(id) : null;
+            return (linearGradient, radialGradient, linearGradient?.ConstantStop ?? radialGradient?.ConstantStop);
+        }
+    }
 
     [GeneratedRegex("""^\s*url\(\s*(?:"#(?<id>[^"\s\\]+)"|'#(?<id>[^'\s\\]+)'|#(?<id>[^()\s"'\\]+))\s*\)""",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
@@ -1841,7 +1855,7 @@ internal sealed partial class PptxRenderer
     private static string DecodeSvgFragmentId(string id) => id.Contains('%') ? Uri.UnescapeDataString(id) : id;
 
     private static string ResolveSvgPaintFallback(XElement element, IReadOnlyDictionary<string, string> style,
-        string paint, Lazy<HashSet<string>> paintServerIds, out string? gradientId)
+        string paint, SvgPaintServers paintServers, out string? gradientId)
     {
         gradientId = null;
         if (!paint.AsSpan().TrimStart().StartsWith("url(", StringComparison.OrdinalIgnoreCase)) return paint;
@@ -1856,7 +1870,7 @@ internal sealed partial class PptxRenderer
         // declared paint server retains its existing paint and diagnostics.
         string fallback = suffix.Trim().ToString();
         if ((!fallback.Equals("none", StringComparison.OrdinalIgnoreCase) &&
-             !TryReadSvgSolidColor(element, style, fallback, out _, out _)) || paintServerIds.Value.Contains(gradientId)) return paint;
+             !TryReadSvgSolidColor(element, style, fallback, out _, out _)) || paintServers.Contains(gradientId)) return paint;
         gradientId = null;
         return fallback;
     }

@@ -123,6 +123,8 @@ require an embeddable fallback. Missing glyphs use diagnosed replacement.
 Local SVG gradient templates reuse the authored stops and their source colors.
 Supported user-space linear and radial gradients accept absolute CSS lengths.
 Zero-radius radial gradients use the final stop's color and opacity.
+SVG labels accept gradients that resolve to a single color and opacity.
+A fully transparent constant gradient stroke preserves the label's fill.
 Explicit `initial` and `unset` on `stop-color` restore black.
 Missing or wrong-type local paint references use the authored fallback color or `none`.
 SVG link wrappers preserve transforms on their shapes and text. Plain links

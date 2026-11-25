@@ -50,13 +50,13 @@ internal sealed partial class PptxRenderer
             var content = EnumerateSvgContent(root, cancellationToken);
             if (HasSvgStylesheet(content)) continue;
             var elements = content.OfType<XElement>();
-            var paintServerIds = CreateSvgPaintServerIdLookup(EnumerateSvgPaintServers(elements), cancellationToken);
+            var paintServers = new SvgPaintServers(elements, viewWidth, viewHeight, cancellationToken);
             foreach (XElement element in elements.Where(e => e.Name.LocalName == "text"))
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 if (IsSvgDefinitionElement(element) || IsInFullyTransparentSvgContainer(element) ||
                     IsSvgDisplaySuppressed(element, ReadSvgStyleDeclarations(element)) ||
-                    !TryReadSvgText(element, paintServerIds, viewWidth, viewHeight, cancellationToken, out SvgTextLabel? label) || label.Color is null ||
+                    !TryReadSvgText(element, paintServers, viewWidth, viewHeight, cancellationToken, out SvgTextLabel? label) || label.Color is null ||
                     label.Opacity == 0d || !label.HasVisibleText || fonts.ContainsKey(label.Font)) continue;
                 FontFaceResolution resolution = resolver.Resolve(label.Font);
                 OpenTypeFont? font = await loadFont(resolution, cancellationToken).ConfigureAwait(false);
@@ -76,10 +76,10 @@ internal sealed partial class PptxRenderer
         public bool HasVisibleText => Text.Length != 0 && (HiddenCharacters is null || HiddenCharacters.AsSpan().Contains(false));
     }
 
-    private readonly record struct SvgTextFill(RgbColor? Color, double Alpha);
+    private readonly record struct SvgTextPaint(RgbColor? Color, double Alpha);
 
     private readonly record struct SvgTextAppearance(string FamilyList, string Slant, int Weight, double Size,
-        SvgTextFill Fill, double FillOpacity, bool Kerning);
+        SvgTextPaint Fill, double FillOpacity, bool Kerning);
 
     private static bool HasSvgStylesheet(IEnumerable<XNode> content) =>
         content.Any(node => node switch
@@ -93,7 +93,7 @@ internal sealed partial class PptxRenderer
     private static bool IsSvgMetadataElement(XElement element) =>
         element.Name.LocalName is "title" or "desc" or "metadata";
 
-    private static bool TryReadSvgText(XElement element, Lazy<HashSet<string>> paintServerIds,
+    private static bool TryReadSvgText(XElement element, SvgPaintServers paintServers,
         double viewWidth, double viewHeight, CancellationToken cancellationToken, [NotNullWhen(true)] out SvgTextLabel? label)
     {
         label = null;
@@ -110,7 +110,7 @@ internal sealed partial class PptxRenderer
             !PreservesTextStyle("letter-spacing") || !PreservesTextStyle("word-spacing") ||
             !PreservesTextStyle("text-decoration") || !TryReadSvgTextKerning(element, style, out bool kerning) ||
             !PreservesTextStyle("clip-path") || !PreservesTextStyle("mask") || !PreservesTextStyle("filter")) return false;
-        if (HasSvgTextStroke(element, style, paintServerIds)) return false;
+        if (HasSvgTextStroke(element, style, paintServers)) return false;
         string anchor = Inherited("text-anchor")?.ToLowerInvariant() ?? "start";
         if (anchor is not ("start" or "middle" or "end")) return false;
         string fontStyle = Inherited("font-style")?.ToLowerInvariant() ?? "normal";
@@ -129,10 +129,10 @@ internal sealed partial class PptxRenderer
             !TryReadPosition("dy", viewHeight, out double dy)) return false;
         x += dx; y += dy;
         if (!double.IsFinite(x) || !double.IsFinite(y)) return false;
-        if (!TryReadSvgTextFill(element, style, paintServerIds, out var paint)) return false;
+        if (!TryReadSvgTextFill(element, style, paintServers, out var paint)) return false;
         double fillOpacity = ReadSvgOpacityValue(Inherited("fill-opacity"));
         var appearance = new SvgTextAppearance(familyList, fontStyle, weight, size, paint, fillOpacity, kerning);
-        if (!TryReadPlainSvgText(element, appearance, paintServerIds, IsSvgVisibilityHidden(Inherited("visibility")), cancellationToken,
+        if (!TryReadPlainSvgText(element, appearance, paintServers, IsSvgVisibilityHidden(Inherited("visibility")), cancellationToken,
                 out string valueText, out bool[]? hiddenCharacters)) return false;
         if (OoxComplexScript.DetectNeeds(valueText) != OoxComplexScriptKind.None ||
             valueText.EnumerateRunes().Any(r => Rune.IsControl(r))) return false;
@@ -227,42 +227,52 @@ internal sealed partial class PptxRenderer
     }
 
     private static bool TryReadSvgTextFill(XElement element, IReadOnlyDictionary<string, string> style,
-        Lazy<HashSet<string>> paintServerIds, out SvgTextFill fill)
+        SvgPaintServers paintServers, out SvgTextPaint paint) =>
+        TryReadSvgTextPaint(element, style, paintServers, ReadSvgInheritedAttribute(element, style, "fill") ?? "black", out paint);
+
+    private static bool TryReadSvgTextPaint(XElement element, IReadOnlyDictionary<string, string> style,
+        SvgPaintServers paintServers, string value, out SvgTextPaint paint)
     {
-        string value = ResolveSvgPaintFallback(element, style,
-            ReadSvgInheritedAttribute(element, style, "fill")?.Trim() ?? "black", paintServerIds, out _);
+        value = ResolveSvgPaintFallback(element, style, value, paintServers, out string? gradientId);
         if (value.AsSpan().Trim().Equals("none", StringComparison.OrdinalIgnoreCase))
         {
-            fill = new(null, 1d);
+            paint = new(null, 1d);
             return true;
         }
-        if (TryReadSvgSolidColor(element, style, value, out var color, out double alpha))
+        if (gradientId is not null)
         {
-            fill = new(color, alpha);
+            if (paintServers.FindGradient(gradientId).ConstantStop is { Opacity: double opacity } stop)
+            {
+                paint = new(stop.Color, opacity);
+                return true;
+            }
+        }
+        else if (TryReadSvgSolidColor(element, style, value, out var color, out double alpha))
+        {
+            paint = new(color, alpha);
             return true;
         }
-        fill = default;
+        paint = default;
         return false;
     }
 
     // A nonpainting stroke leaves the glyph fill intact. Any positive
     // percentage basis is enough to recognize a zero stroke width.
     private static bool HasSvgTextStroke(XElement element, IReadOnlyDictionary<string, string> style,
-        Lazy<HashSet<string>> paintServerIds)
+        SvgPaintServers paintServers)
     {
         if (ReadSvgInheritedAttribute(element, style, "stroke") is not { } stroke ||
             ReadSvgOpacityValue(ReadSvgInheritedAttribute(element, style, "stroke-opacity")) == 0d ||
             (TryReadSvgStrokeWidth(style, element, percentageBasis: 1d, out double width) && width == 0d))
             return false;
-        string paint = ResolveSvgPaintFallback(element, style, stroke, paintServerIds, out _);
-        return !paint.Equals("none", StringComparison.OrdinalIgnoreCase) &&
-            (!TryReadSvgSolidColor(element, style, paint, out _, out double colorAlpha) || colorAlpha > 0d);
+        return !TryReadSvgTextPaint(element, style, paintServers, stroke, out var paint) ||
+            paint.Color is not null && paint.Alpha > 0d;
     }
 
     // Plain spans and link text share the label's metrics. Visibility and
     // zero opacity suppress outlines while retaining the glyph advances.
     private static bool TryReadPlainSvgText(XElement element, SvgTextAppearance appearance,
-        Lazy<HashSet<string>> paintServerIds, bool hidden, CancellationToken cancellationToken,
+        SvgPaintServers paintServers, bool hidden, CancellationToken cancellationToken,
         out string text, out bool[]? hiddenCharacters)
     {
         text = string.Empty;
@@ -363,7 +373,7 @@ internal sealed partial class PptxRenderer
                     TryReadSvgTextWeight(value, out int weight) && weight == appearance.Weight,
                 "font-size" => TryResolveSvgFontSize(value, appearance.Size, out double size) && size == appearance.Size,
                 "fill" or "color" =>
-                    (hasLabelFill ??= TryReadSvgTextFill(child, style, paintServerIds, out var fill) &&
+                    (hasLabelFill ??= TryReadSvgTextFill(child, style, paintServers, out var fill) &&
                         fill == appearance.Fill) == true && !PaintsStroke(),
                 "fill-opacity" => InheritsSvgPropertyValue(value) || ParseSvgOpacity(value) == appearance.FillOpacity,
                 "stroke" or "stroke-opacity" or "stroke-width" => !PaintsStroke(),
@@ -372,7 +382,7 @@ internal sealed partial class PptxRenderer
                 _ => IsNeutralSvgTextStyle(name, value),
             };
 
-            bool PaintsStroke() => (hasStroke ??= HasSvgTextStroke(child, style, paintServerIds)) == true;
+            bool PaintsStroke() => (hasStroke ??= HasSvgTextStroke(child, style, paintServers)) == true;
         }
 
         void AppendCharacter(char character, bool characterHidden)
@@ -383,12 +393,12 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static bool TryPaintSvgText(PdfGraphicsBuilder graphics, XElement element, Lazy<HashSet<string>> paintServerIds,
+    private static bool TryPaintSvgText(PdfGraphicsBuilder graphics, XElement element, SvgPaintServers paintServers,
         IReadOnlyDictionary<FontRequest, SvgTextFont?>? fonts, SvgTransform transform, double viewWidth, double viewHeight,
         double sourceMinX, double sourceMinY, double imageX, double imageY, double imageWidth, double imageHeight,
         double scaleX, double scaleY, Action<int> admitSamples, CancellationToken cancellationToken)
     {
-        if (!TryReadSvgText(element, paintServerIds, viewWidth, viewHeight, cancellationToken, out SvgTextLabel? label)) return false;
+        if (!TryReadSvgText(element, paintServers, viewWidth, viewHeight, cancellationToken, out SvgTextLabel? label)) return false;
         if (label.Color is not { } color || label.Opacity == 0d || !label.HasVisibleText) return true;
         if (fonts is null || !fonts.TryGetValue(label.Font, out SvgTextFont? prepared) || prepared is null) return false;
         OpenTypeFont font = prepared.Font;

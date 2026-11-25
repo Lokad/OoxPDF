@@ -427,6 +427,52 @@ internal static partial class SvgTextTests
         AssertSvgPaintInBothFormats(expected, actual, "0 0 1 rg", "0 0 1 RG");
     }
 
+    public static void SvgLabelsReuseConstantGradientPaintInBothFormats()
+    {
+        const string definitions = """
+            <defs>
+              <linearGradient id="one"><stop stop-color="#112233"/></linearGradient>
+              <linearGradient id="coincident" x1=".2" x2=".2">
+                <stop stop-color="yellow"/><stop offset="1" stop-color="purple"/>
+              </linearGradient>
+              <radialGradient id="base" r="0">
+                <stop stop-color="red"/><stop offset="1" stop-color="blue" stop-opacity=".5"/>
+              </radialGradient>
+              <radialGradient id="zero" href="#base"/>
+              <radialGradient id="clear"><stop stop-color="red" stop-opacity="0"/></radialGradient>
+            </defs>
+            """;
+        string Picture(string first, string second, string secondSpan, string third, string stroke) => Svg($"""
+            {definitions}
+            <rect x="12" y="12" width="25" height="18" fill="lime"/>
+            <text x="12" y="88" font-size="24" fill="{first}">LABEL</text>
+            <text x="112" y="88" font-size="24" {second}><tspan fill="{secondSpan}">BRAVO</tspan></text>
+            <text x="212" y="88" font-size="24" fill="{third}">DELTA</text>
+            <text x="312" y="88" font-size="24" fill="green" stroke-width="2" stroke="{stroke}">INK</text>
+            """);
+        string expected = Picture("#112233", """fill="blue" fill-opacity=".4" """, "blue", "purple", "none");
+        string actual = Picture("url(#one)", """fill="url(#zero)" fill-opacity=".8" """, "url(#zero)", "url(#coincident)", "url(#clear)");
+        AssertSvgPaintInBothFormats(expected, actual, pdf =>
+        {
+            TestAssert.Equal(5, LabelPaths(pdf));
+            TestAssert.Equal(5, LabelPaths(pdf, "0 0 1 rg"));
+            TestAssert.Equal(5, LabelPaths(pdf, "0.502 0 0.502 rg"));
+            TestAssert.Equal(3, LabelPaths(pdf, "0 0.502 0 rg"));
+        }, "0 1 0 rg");
+
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        var unsupported = Paint(Svg(definitions + """
+            <defs>
+              <linearGradient id="varying"><stop stop-color="red"/><stop offset="1" stop-color="blue"/></linearGradient>
+            </defs>
+            <text x="12" y="88" fill="url(#varying)">varying fill</text>
+            <text x="112" y="88" stroke="url(#one)">painting stroke</text>
+            <text x="212" y="88" fill="#112233">INK</text>
+            """), diagnostics);
+        TestAssert.Equal(3, LabelPaths(unsupported.ToString()));
+        TestAssert.Contains("omits 2 unsupported text elements", diagnostics.Single().Message);
+    }
+
     public static void SvgQuotedLocalPaintServersMatchUnquotedReferencesInBothFormats()
     {
         string Picture(string linear, string stroke, string radial, string missing) => Svg($"""
