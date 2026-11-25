@@ -710,17 +710,13 @@ internal static class DocxSectionNavigationTests
             PdfPage first = Render(ownerFirst: true, adjacentHeight: 96).Single();
             PdfPage second = Render(ownerFirst: false, adjacentHeight: 96).Single();
             PdfPage[] split = Render(ownerFirst: false, adjacentHeight: 172);
-            TestAssert.Equal(2, split.Length);
-            TestAssert.DoesNotContain(ownerLabel, Text(split[0]));
-            TestAssert.DoesNotContain(north, Text(split[0]));
-            TestAssert.Contains(ownerLabel, Text(split[1]));
+            CheckTwoPageBox(split, 1);
             TestAssert.Contains("ADJACENT ROW LABEL", Text(split[0]));
 
             float originalY = CheckBox(first, first, 0);
             float shiftedY = CheckBox(second, second, 0);
             TestAssert.True(Math.Abs(originalY - shiftedY - 96d) < .01d,
                 "Putting a 96-point row before the owning paragraph moves the box with it.");
-            CheckBox(split[1], split[0], 1);
 
             double earlyOffset = CheckFragment(ownerIndex: 1, pageIndex: 0);
             double lateOffset = CheckFragment(ownerIndex: 13, pageIndex: 1);
@@ -730,19 +726,38 @@ internal static class DocxSectionNavigationTests
             TestAssert.True(Math.Abs(earlyOffset - continuingOffset) < .01d,
                 "A paragraph that continues on the next page keeps its drawing with its first line.");
 
+            foreach (var (reference, offset) in new[] { ("page", 40), ("margin", 16) })
+            {
+                PdfPage control = Render(ownerFirst: true, adjacentHeight: 96,
+                    verticalReference: reference, verticalOffset: offset).Single();
+                float origin = CheckBox(control, control, 0);
+                float wholeRowOrigin = CheckTwoPageBox(Render(ownerFirst: false, adjacentHeight: 172,
+                    verticalReference: reference, verticalOffset: offset), 1);
+                float fragmentOrigin = CheckTwoPageBox(Render(ownerFirst: false, adjacentHeight: 0,
+                    fragmentOwnerIndex: 13, verticalReference: reference, verticalOffset: offset), 1);
+                TestAssert.True(Math.Abs(origin - wholeRowOrigin) < .01d && Math.Abs(origin - fragmentOrigin) < .01d,
+                    $"The {reference} offset stays fixed when the owner moves between physical pages.");
+            }
+
             double CheckFragment(int ownerIndex, int pageIndex, int? lastOwnerLine = null)
             {
                 PdfPage[] fragments = Render(ownerFirst: false, adjacentHeight: 0, fragmentOwnerIndex: ownerIndex, lastOwnerLine: lastOwnerLine);
-                TestAssert.Equal(2, fragments.Length);
+                float boxY = CheckTwoPageBox(fragments, pageIndex);
                 TestAssert.Contains("ROW PARAGRAPH 00", Text(fragments[0]));
                 TestAssert.Contains("ROW PARAGRAPH 16", Text(fragments[1]));
                 if (lastOwnerLine is int line) TestAssert.Contains($"ROW PARAGRAPH {line:D2}", Text(fragments[1]));
-                TestAssert.DoesNotContain(ownerLabel, Text(fragments[1 - pageIndex]));
-                TestAssert.DoesNotContain(north, Text(fragments[1 - pageIndex]));
-                TestAssert.DoesNotContain("BOX TABLE SOUTH", Text(fragments[1 - pageIndex]));
-                PdfPage ownerPage = fragments[pageIndex];
-                float boxY = CheckBox(ownerPage, fragments[0], pageIndex);
-                return boxY - PortableRenderingTests.ReadPaintedSourceLabel(ownerPage, ownerLabel)[0].Origin.Y;
+                return boxY - PortableRenderingTests.ReadPaintedSourceLabel(fragments[pageIndex], ownerLabel)[0].Origin.Y;
+            }
+
+            float CheckTwoPageBox(PdfPage[] pages, int pageIndex)
+            {
+                TestAssert.Equal(2, pages.Length);
+                string otherPageText = Text(pages[1 - pageIndex]);
+                TestAssert.DoesNotContain(ownerLabel, otherPageText);
+                TestAssert.DoesNotContain(north, otherPageText);
+                TestAssert.DoesNotContain("BOX TABLE SOUTH", otherPageText);
+                TestAssert.Contains(ownerLabel, Text(pages[pageIndex]));
+                return CheckBox(pages[pageIndex], pages[0], pageIndex);
             }
 
             float CheckBox(PdfPage boxPage, PdfPage jumpPage, int pageIndex)
@@ -756,7 +771,8 @@ internal static class DocxSectionNavigationTests
                 return ink[0].Origin.Y;
             }
 
-            PdfPage[] Render(bool ownerFirst, int adjacentHeight, int? fragmentOwnerIndex = null, int? lastOwnerLine = null)
+            PdfPage[] Render(bool ownerFirst, int adjacentHeight, int? fragmentOwnerIndex = null, int? lastOwnerLine = null,
+                string verticalReference = "paragraph", int verticalOffset = 16)
             {
                 PdfPage[]? pages = null;
                 WithDocumentMutation(fixture, (_, xml) =>
@@ -766,8 +782,8 @@ internal static class DocxSectionNavigationTests
                     var anchor = body.Descendants(wp + "anchor").Single();
                     anchor.SetAttributeValue("layoutInCell", "0");
                     var position = anchor.Element(wp + "positionV")!;
-                    position.SetAttributeValue("relativeFrom", "paragraph");
-                    position.Element(wp + "posOffset")!.SetValue(16 * 12700);
+                    position.SetAttributeValue("relativeFrom", verticalReference);
+                    position.Element(wp + "posOffset")!.SetValue(verticalOffset * 12700);
                     var owner = Paragraph(ownerLabel);
                     owner.Add(new XElement(anchor.Ancestors(W + "r").First()));
                     var table = new XElement(W + "tbl",

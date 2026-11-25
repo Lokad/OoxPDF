@@ -381,11 +381,16 @@ internal sealed partial class DocxReader
         foreach (XElement anchor in EnumerateFloatingAnchors(source, cancellationToken))
         {
             hasDrawings = true;
-            if (!string.Equals((string?)anchor.Element(WordprocessingDrawingNamespace + "positionV")?.Attribute("relativeFrom"),
-                    "paragraph", StringComparison.OrdinalIgnoreCase) ||
-                anchor.Ancestors(WordprocessingNamespace + "txbxContent").Any() ||
-                anchor.Ancestors(WordprocessingNamespace + "p").FirstOrDefault() is not { } paragraph ||
-                cellOnly && !paragraph.Ancestors(WordprocessingNamespace + "tc").Any())
+            if (anchor.Ancestors(WordprocessingNamespace + "txbxContent").Any() ||
+                anchor.Ancestors(WordprocessingNamespace + "p").FirstOrDefault() is not { } paragraph)
+                continue;
+            // A body-cell paragraph determines the physical page for every
+            // coordinate frame. Static stories already have a selected page.
+            bool needsPlacedOwner = cellOnly
+                ? paragraph.Ancestors(WordprocessingNamespace + "tc").Any()
+                : string.Equals((string?)anchor.Element(WordprocessingDrawingNamespace + "positionV")?.Attribute("relativeFrom"),
+                    "paragraph", StringComparison.OrdinalIgnoreCase);
+            if (!needsPlacedOwner)
                 continue;
             tagged ??= [];
             if (paragraph.Annotation<DocxParagraphDrawingOwner>() is not { } owner)
