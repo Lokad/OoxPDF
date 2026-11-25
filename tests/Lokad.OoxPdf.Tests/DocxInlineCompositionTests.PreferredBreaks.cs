@@ -353,7 +353,23 @@ internal static partial class DocxInlineCompositionTests
     {
         var numerator = PortableRenderingTests.ReadPaintedSourceLabel(page, "437", mathOnly: true);
         var denominator = PortableRenderingTests.ReadPaintedSourceLabel(page, "293", mathOnly: true);
-        var rules = new List<PdfRectangle>();
+        return ReadVisibleFractionRule(ReadVisibleFilledRectangles(page), numerator[0].Origin, numerator[^1].Origin,
+            denominator[0].Origin, denominator[^1].Origin);
+    }
+
+    private static PdfRectangle ReadVisibleFractionRule(IEnumerable<PdfRectangle> rectangles,
+        Vector2 numeratorStart, Vector2 numeratorEnd, Vector2 denominatorStart, Vector2 denominatorEnd)
+    {
+        var rules = rectangles.Where(rectangle =>
+            rectangle.X <= Math.Min(numeratorStart.X, denominatorStart.X) &&
+            rectangle.X + rectangle.Width > Math.Max(numeratorEnd.X, denominatorEnd.X) &&
+            rectangle.Y > denominatorStart.Y && rectangle.Y + rectangle.Height < numeratorStart.Y).ToArray();
+        TestAssert.True(rules.Length == 1, "The fraction paints one complete visible rule between its arguments.");
+        return rules[0];
+    }
+
+    private static IEnumerable<PdfRectangle> ReadVisibleFilledRectangles(PdfPage page)
+    {
         foreach (var (block, clip, transform) in DocxNoteClippingTests.ReadPhysicalPaintFrames(page, includeVisibleFills: true))
         {
             if (!block.EndsWith(" re f", StringComparison.Ordinal)) continue;
@@ -361,16 +377,11 @@ internal static partial class DocxInlineCompositionTests
             float Number(int index) => float.Parse(tokens[index], CultureInfo.InvariantCulture);
             var start = Vector2.Transform(new Vector2(Number(0), Number(1)), transform);
             var end = Vector2.Transform(new Vector2(Number(0) + Number(2), Number(1) + Number(3)), transform);
-            if (start.X <= Math.Min(numerator[0].Origin.X, denominator[0].Origin.X) &&
-                end.X > Math.Max(numerator[^1].Origin.X, denominator[^1].Origin.X) &&
-                start.Y > denominator[0].Origin.Y && end.Y < numerator[0].Origin.Y &&
-                start.X >= clip.X && end.X <= clip.X + clip.Width &&
+            if (start.X >= clip.X && end.X <= clip.X + clip.Width &&
                 start.Y >= clip.Y && end.Y <= clip.Y + clip.Height &&
                 end.Y > start.Y && end.X > start.X)
-                rules.Add(new PdfRectangle(start.X, start.Y, end.X - start.X, end.Y - start.Y));
+                yield return new PdfRectangle(start.X, start.Y, end.X - start.X, end.Y - start.Y);
         }
-        TestAssert.True(rules.Count == 1, "The fraction paints one complete visible rule between its arguments.");
-        return rules[0];
     }
 
     private static void AddPictureFractionLabel(XElement paragraph, XElement drawing, XNamespace w, XNamespace m)
