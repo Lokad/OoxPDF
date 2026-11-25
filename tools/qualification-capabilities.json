@@ -1059,6 +1059,7 @@
   ],
   "docx-shared-cell-content-portable": [
     "=DocxPercentageTableWidthSpellingsKeepFormulasOnPaper",
+    "=DocxPhysicalPreferredWidthsMatchTwipControls",
     "=DocxHorizontalCellDirectionSpellingsKeepMathAndNavigation",
     "=DocxFittingDecimalTabsRetainMathPicturesAndNumericAnchors",
     "=DocxImplicitDecimalCellTabsMatchExplicitFieldPlacement",

@@ -371,8 +371,13 @@ internal sealed partial class DocxReader
 
         string? value = (string?)width.Attribute(WordprocessingNamespace + "w");
         string? type = (string?)width.Attribute(WordprocessingNamespace + "type");
-        double? points = DocxTable.ParseTableWidthKind(type, value) == DocxTableWidthKind.Percent
-            ? null : ReadDxaWidth(width);
+        double? points = DocxTable.ParseTableWidthKind(type, value) switch
+        {
+            DocxTableWidthKind.Percent => null,
+            DocxTableWidthKind.Dxa when OoxUnits.ReadPhysicalMeasure(value.AsSpan(), (decimal)OoxUnits.TwipsPerPoint) is { } twips
+                => OoxUnits.TwipsToPoints(twips),
+            _ => ReadDxaWidth(width)
+        };
         return (points, value, type);
     }
 

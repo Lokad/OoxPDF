@@ -67,7 +67,7 @@ internal static class OoxStrictDocx
     {
         if (element.Name.Namespace == DrawingNamespace && name.Namespace == XNamespace.None && value.EndsWith('%') &&
             IsDrawingPercentage(element.Name.LocalName, name.LocalName))
-            return Scale(value.AsSpan(0, value.Length - 1), 1000m);
+            return OoxUnits.ReadScaledMeasure(value.AsSpan(0, value.Length - 1), 1000m).ToString(CultureInfo.InvariantCulture);
         if (element.Name.Namespace != WordprocessingNamespace || name.Namespace != WordprocessingNamespace)
             return value;
 
@@ -77,13 +77,13 @@ internal static class OoxStrictDocx
         {
             if (attribute == "w" && IsTableWidth(local))
             {
-                string scaled = Scale(value.AsSpan(0, value.Length - 1), 50m);
+                long scaled = OoxUnits.ReadScaledMeasure(value.AsSpan(0, value.Length - 1), 50m);
                 // Keep the unit after validating it. The preferred-width reader
                 // needs the suffix to interpret the value independently of w:type.
-                return local is "tblW" or "tcW" ? value : scaled;
+                return local is "tblW" or "tcW" ? value : scaled.ToString(CultureInfo.InvariantCulture);
             }
             if (local == "zoom" && attribute == "percent")
-                return Scale(value.AsSpan(0, value.Length - 1), 1m);
+                return OoxUnits.ReadScaledMeasure(value.AsSpan(0, value.Length - 1), 1m).ToString(CultureInfo.InvariantCulture);
             return value;
         }
         if (value.Length < 3) return value;
@@ -102,18 +102,8 @@ internal static class OoxStrictDocx
             (_, "w") when IsTableWidth(local) => 20m,
             _ => null
         };
-        if (unitsPerPoint is null) return value;
-        decimal? pointsPerUnit = value.AsSpan(value.Length - 2) switch
-        {
-            "pt" => 1m,
-            "in" => 72m,
-            "cm" => 72m / 2.54m,
-            "mm" => 72m / 25.4m,
-            "pc" or "pi" => 12m,
-            _ => null
-        };
-        return pointsPerUnit is { } factor
-            ? Scale(value.AsSpan(0, value.Length - 2), factor * unitsPerPoint.Value) : value;
+        return unitsPerPoint is { } scale && OoxUnits.ReadPhysicalMeasure(value, scale) is { } scaledMeasure
+            ? scaledMeasure.ToString(CultureInfo.InvariantCulture) : value;
     }
 
     private static bool IsTableWidth(string element) => element is
@@ -131,20 +121,4 @@ internal static class OoxStrictDocx
             "blue" or "blueMod" or "blueOff", "val") => true,
         _ => false
     };
-
-    private static string Scale(ReadOnlySpan<char> number, decimal factor)
-    {
-        if (!decimal.TryParse(number, NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint,
-            CultureInfo.InvariantCulture, out decimal value))
-            throw new InvalidDataException("Malformed Strict OOXML measure.");
-        try
-        {
-            long result = checked((long)decimal.Round(value * factor, 0, MidpointRounding.AwayFromZero));
-            return result.ToString(CultureInfo.InvariantCulture);
-        }
-        catch (OverflowException ex)
-        {
-            throw new InvalidDataException("Strict OOXML measure is outside the supported range.", ex);
-        }
-    }
 }
