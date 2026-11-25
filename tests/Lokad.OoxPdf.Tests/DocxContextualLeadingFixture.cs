@@ -9,6 +9,17 @@ internal static class DocxContextualLeadingFixture
 {
     internal static readonly XNamespace Word = OoxNamespaces.WordprocessingNamespace;
 
+    internal static void AddStyle(XDocument styles, string id, bool isDefault = false)
+    {
+        var style = new XElement(Word + "style", new XAttribute(Word + "type", "paragraph"),
+            new XAttribute(Word + "styleId", id), new XElement(Word + "name", new XAttribute(Word + "val", id)));
+        if (isDefault) style.SetAttributeValue(Word + "default", "1");
+        styles.Root!.Add(style);
+    }
+
+    internal static void Near(double expected, double actual, string message) =>
+        TestAssert.True(Math.Abs(expected - actual) < .00001d, message);
+
     internal static XElement[] Body(XDocument document) =>
         document.Root!.Element(Word + "body")!.Elements(Word + "p").ToArray();
 

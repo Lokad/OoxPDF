@@ -146,13 +146,4 @@ internal static class DocxElevenPointBodyTests
             }
         }
     }
-
-    private static void Near(double expected, double actual, string message) => TestAssert.True(Math.Abs(expected - actual) < .00001d, message);
-
-    private static void AddStyle(XDocument styles, string id, bool isDefault = false)
-    {
-        var style = new XElement(Word + "style", new XAttribute(Word + "type", "paragraph"), new XAttribute(Word + "styleId", id), new XElement(Word + "name", new XAttribute(Word + "val", id)));
-        if (isDefault) style.SetAttributeValue(Word + "default", "1");
-        styles.Root!.Add(style);
-    }
 }
