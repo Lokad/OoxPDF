@@ -11,6 +11,10 @@ internal static class DocxSourceXml
         element.Name.Namespace == WordprocessingNamespace &&
         element.Name.LocalName is "ins" or "del" or "moveFrom" or "moveTo";
 
+    public static bool IsPackedMathRunRevision(XElement? element) =>
+        element is not null && element.Name.Namespace == WordprocessingNamespace &&
+        element.Name.LocalName is "ins" or "del" && element.Parent?.Name == MathNamespace + "r";
+
     public static bool TryResolveRevisionRangeMarker(XElement element, [NotNullWhen(true)] out DocxRevisionKind? kind, out bool isStart)
     {
         (DocxRevisionKind? Kind, bool IsStart) marker = element.Name.Namespace == WordprocessingNamespace
@@ -186,12 +190,13 @@ internal static class DocxSourceXml
         element.Name.LocalName is "proofErr" or "permStart" or "permEnd" &&
         !element.HasElements && string.IsNullOrWhiteSpace(element.Value);
 
-    // Word ignores tabs inside math runs. Ordinary WordprocessingML runs
-    // still use tabs for positioning.
+    // The math run owns these controls even when its revision stores them.
+    // Ordinary WordprocessingML runs still use tabs for positioning.
     public static bool IsNonPrintingMathRunControl(XElement element) =>
-        element.Parent?.Name == MathNamespace + "r" &&
-        (IsLastRenderedPageBreakHint(element) ||
-         element.Name == WordprocessingNamespace + "tab" && IsEmptyRunControl(element));
+        element.Name.Namespace == WordprocessingNamespace &&
+        element.Name.LocalName is "lastRenderedPageBreak" or "tab" &&
+        (element.Parent?.Name == MathNamespace + "r" || IsPackedMathRunRevision(element.Parent)) &&
+        IsEmptyRunControl(element);
 
     public static bool IsLastRenderedPageBreakHint(XElement element) =>
         element.Name == WordprocessingNamespace + "lastRenderedPageBreak" &&

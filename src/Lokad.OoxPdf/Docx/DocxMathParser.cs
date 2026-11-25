@@ -407,7 +407,7 @@ internal static partial class DocxMathParser
                 mathProperties = child;
             else if (child.Name == WordprocessingNamespace + "rPr" && wordProperties is null)
                 wordProperties = child;
-            else if (IsPackedRunRevision(child))
+            else if (DocxSourceXml.IsPackedMathRunRevision(child))
                 revision = child;
             else
                 return null;
@@ -419,15 +419,11 @@ internal static partial class DocxMathParser
             HasOnlyWhitespaceText(run) && HasOnlyWhitespaceText(revision) ? revision : null;
     }
 
-    private static bool IsPackedRunRevision(XElement element) =>
-        element.Name.Namespace == WordprocessingNamespace && element.Name.LocalName is "ins" or "del";
-
     internal static XElement? ReadWordRunProperties(XElement source) =>
         ReadRunProperty(source, WordprocessingNamespace + "rPr");
 
     private static XElement? ReadRunProperty(XElement source, XName name) =>
-        source.Element(name) ?? (IsPackedRunRevision(source) && source.Parent is { } run &&
-            run.Name == MathNamespace + "r" ? run.Element(name) : null);
+        source.Element(name) ?? (DocxSourceXml.IsPackedMathRunRevision(source) ? source.Parent?.Element(name) : null);
 
     private static DocxMathNode ReadLeaf(XElement element, Func<XElement, string, DocxTextRun> readRun, bool allowsDeletedText,
         XElement? firstBreakInRun, Func<XElement, bool>? includeRevision, CancellationToken token)

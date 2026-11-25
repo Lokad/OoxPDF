@@ -24,13 +24,23 @@ internal static partial class PortableRenderingTests
                 CheckPackedPaint(outerMathProperties: true);
                 CheckPackedPaint(outerWordProperties: true);
                 CheckPackedPaint(outerMathProperties: true, outerWordProperties: true);
-                CheckPackedPaint(outerMathProperties: true, outerWordProperties: true, withEditingMarkers: true);
+                CheckPackedPaint(outerMathProperties: true, outerWordProperties: true, addMarkers: (revision, w) =>
+                {
+                    revision.AddBeforeSelf(new XElement(w + "tab"));
+                    revision.AddAfterSelf(new XElement(w + "lastRenderedPageBreak"));
+                });
+                CheckPackedPaint(outerMathProperties: true, outerWordProperties: true, addMarkers: (revision, w) =>
+                {
+                    revision.AddFirst(new XElement(w + "tab"));
+                    revision.Add(new XElement(w + "lastRenderedPageBreak"));
+                });
             }
 
-            void CheckPackedPaint(bool outerMathProperties = false, bool outerWordProperties = false, bool withEditingMarkers = false)
+            void CheckPackedPaint(bool outerMathProperties = false, bool outerWordProperties = false,
+                Action<XElement, XNamespace>? addMarkers = null)
             {
                 var diagnostics = new List<OoxPdfDiagnostic>();
-                var page = Render(packed: true, diagnostics, outerMathProperties, outerWordProperties, withEditingMarkers);
+                var page = Render(packed: true, diagnostics, outerMathProperties, outerWordProperties, addMarkers);
                 TestAssert.Equal(expected, ReadPortableEquationGlyphs(page));
                 TestAssert.Equal(before.Content, page.Content);
                 TestAssert.True(before.Annotations.SequenceEqual(page.Annotations),
@@ -41,7 +51,7 @@ internal static partial class PortableRenderingTests
             }
 
             PdfPage Render(bool packed, List<OoxPdfDiagnostic> diagnostics,
-                bool outerMathProperties = false, bool outerWordProperties = false, bool withEditingMarkers = false)
+                bool outerMathProperties = false, bool outerWordProperties = false, Action<XElement, XNamespace>? addMarkers = null)
             {
                 var document = DocxInlineCompositionTests.ReadMutation($"CompositionProbes/math-run-revision-{story}-{kind}",
                     mode, false, false, (xml, w, m) =>
@@ -70,11 +80,7 @@ internal static partial class PortableRenderingTests
                             wordProperties.Remove();
                             revision.AddBeforeSelf(wordProperties);
                         }
-                        if (withEditingMarkers)
-                        {
-                            revision.AddBeforeSelf(new XElement(w + "tab"));
-                            revision.AddAfterSelf(new XElement(w + "lastRenderedPageBreak"));
-                        }
+                        addMarkers?.Invoke(revision, w);
                     }, partOverride: part, diagnosticSink: diagnostics.Add);
                 var renderer = new DocxRenderer(new PinnedResolver(mathFont: true), mode,
                     mode == OoxPdfDocxMarkupMode.AllMarkup ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup :
