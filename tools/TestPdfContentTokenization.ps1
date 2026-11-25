@@ -143,6 +143,10 @@ foreach ($probe in @(
         TextCount=3;ExpectedText=@('A', ([string][char]0x20ac + 'B'), 'AB');Codespace='<20> <FF>';Mappings='<41> <0041> <42> <0042> <80> <20AC>'},
     @{Name='two-byte-cmap';Pages=1;HasContents=$true;Text='BT /F1 12 Tf <0041> Tj <00410042> Tj ET';
         TextCount=2;ExpectedText=@('X', 'XY');Codespace='<0000> <FFFF>';Mappings='<0041> <0058> <0042> <0059>';Composite=$true},
+    @{Name='partial-cmap';Pages=1;HasContents=$true;Text='BT /F1 12 Tf <00410042> Tj ET';
+        TextCount=1;ExpectedText=@('X' + [char]0xfffd);Codespace='<0000> <FFFF>';Mappings='<0041> <0058>';Composite=$true},
+    @{Name='unmapped-hex';Pages=1;HasContents=$true;Text='BT /F1 12 Tf <0041> Tj <0042> Tj ET';
+        TextCount=2;ExpectedText=@([string][char]0xfffd, [string][char]0xfffd);Composite=$true},
     @{Name='logical-page-order';Pages=2;HasContents=$true;Text="10 20 30 40 re f`nBT /F1 12 Tf <41> Tj ET";
         ReorderPages=$true;TextCount=2;GraphicCount=1;ExpectedText=@('Z','B');Codespace='<20> <FF>';Mappings='<41> <005A>'}
 )) {
@@ -156,7 +160,9 @@ foreach ($probe in @(
         $mapNumber++
         $bodies.Add("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding /FirstChar 65 /LastChar 65 /Widths [300] /ToUnicode $mapNumber 0 R >>")
     } elseif ($probe.Composite) {
-        $bodies.Add('<< /Type /Font /Subtype /Type0 /BaseFont /Probe /Encoding /Identity-H /DescendantFonts [' + ($mapNumber+1) + ' 0 R] /ToUnicode ' + $mapNumber + ' 0 R >>')
+        $descendant = $mapNumber + [int][bool]$probe.Codespace
+        $toUnicode = if ($probe.Codespace) { ' /ToUnicode ' + $mapNumber + ' 0 R' } else { '' }
+        $bodies.Add('<< /Type /Font /Subtype /Type0 /BaseFont /Probe /Encoding /Identity-H /DescendantFonts [' + $descendant + ' 0 R]' + $toUnicode + ' >>')
     } elseif ($probe.Codespace) {
         $bodies.Add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding /ToUnicode ' + $mapNumber + ' 0 R >>')
     } else {
@@ -181,9 +187,9 @@ foreach ($probe in @(
             'endcmap', 'CMapName currentdict /CMap defineresource pop', 'end', 'end'
         ) -join "`n"
         $bodies.Add('<< /Length ' + $stream.Length + " >>`nstream`n" + $stream + "`nendstream")
-        if ($probe.Composite) {
-            $bodies.Add('<< /Type /Font /Subtype /CIDFontType2 /BaseFont /Probe /CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >> >>')
-        }
+    }
+    if ($probe.Composite) {
+        $bodies.Add('<< /Type /Font /Subtype /CIDFontType2 /BaseFont /Probe /CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >> >>')
     }
     if ($probe.UnlistedPage) {
         $bodies[0] = '<< /Type /Catalog /Pages 2 0 R /ProbeExtraPage ' + ($bodies.Count + 1) + ' 0 R >>'

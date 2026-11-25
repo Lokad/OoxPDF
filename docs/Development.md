@@ -147,6 +147,10 @@ complex paint or text spread across multiple spans.
 Decoded phrase and token checks require a page assignment. The inspector
 retains unassigned text, including text in Forms whose invocation it cannot
 resolve. Check those phrases with independent page-level evidence.
+`compareDecodedTextOperations` requires resolved text on both sides. The
+inspector marks unmapped hex glyph codes with a replacement character and
+retains the original tokens for diagnosis. Reinspect the PDFs when an older
+report may contain guessed text.
 
 Measurement records declared formula and picture expectations. A positive
 expectation stays unverified until an audit supplies a witness. Pass the

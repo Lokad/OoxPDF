@@ -1535,7 +1535,7 @@ internal sealed record PdfTextOperation(
 
         if (unicodeMap is null && hex.Length % codeHexLength != 0)
         {
-            return Encoding.Latin1.GetString(Convert.FromHexString(hex));
+            codeHexLength = 2;
         }
 
         for (int index = 0; index + codeHexLength - 1 < hex.Length; index += codeHexLength)
@@ -1547,10 +1547,13 @@ internal sealed record PdfTextOperation(
             }
             else
             {
-                builder.Append(char.ConvertFromUtf32(code));
+                // A font code carries no Unicode identity without a mapping.
+                // The operation retains the original payload for inspection.
+                builder.Append('\uFFFD');
             }
         }
 
+        if (hex.Length % codeHexLength != 0) builder.Append('\uFFFD');
         return builder.ToString();
     }
 

@@ -26,7 +26,7 @@ function New-Op($X, $Y, $Text, $EffX = $null, $EffY = $null) {
 }
 
 $failures = @()
-function Invoke-Case([string] $Name, [object[]] $Reference, [object[]] $Candidate, [int] $ExpectedExit, [int] $ExpectedMissing, [string] $ExtraArgs = "", [switch] $ByIndex) {
+function Invoke-Case([string] $Name, [object[]] $Reference, [object[]] $Candidate, [int] $ExpectedExit, [int] $ExpectedMissing, [string] $ExtraArgs = "", [switch] $ByIndex, [int] $ExpectedUnresolved = 0) {
     $refPath = Write-Ops ($Name + "-ref") $Reference
     $candPath = Write-Ops ($Name + "-cand") $Candidate
     $outPath = Join-Path $scratch ($Name + "-out.txt")
@@ -42,8 +42,13 @@ function Invoke-Case([string] $Name, [object[]] $Reference, [object[]] $Candidat
     if ($report.ReferenceSha256 -ne (Get-FileHash -LiteralPath $refPath).Hash -or
         $report.CandidateSha256 -ne (Get-FileHash -LiteralPath $candPath).Hash -or
         @($report.Rows | Where-Object Status -ne 'ok').Count -ne $report.FailureCount -or
+        @($report.Rows | Where-Object UnresolvedText).Count -ne $report.UnresolvedTextCount -or
         ($report.FailureCount -eq 0) -ne ($code -eq 0)) {
         throw ('Structured comparison report differs: ' + $Name)
+    }
+    if ($report.UnresolvedTextCount -ne $ExpectedUnresolved -or
+        @($report.Rows | Where-Object { $_.UnresolvedText -and $_.Status -notin @('unresolved', 'missing') }).Count) {
+        throw ('Incorrect unresolved text outcome: ' + $Name)
     }
     $missing = @(Get-Content -LiteralPath $outPath | Where-Object { $_ -match "^\s*\d+\s+missing\b" }).Count
     if ($code -ne $ExpectedExit -or $missing -ne $ExpectedMissing) {
@@ -118,8 +123,23 @@ Invoke-Case 'blank-line-moved' @($whole, $blank) @((New-MetricOp 10 99 'Hello wo
 Invoke-Case 'blank-line-missing-text' @($whole, $blank) @($blank) 1 1 $visibleArgs
 $unknown = New-MetricOp 10 80 $null 3
 $unknown.Payload = 'undecoded'
-Invoke-Case 'blank-line-unknown' @($unknown) @($blank) 1 1 $visibleArgs
-Invoke-Case 'blank-line-partly-unknown' @($unknown, (New-MetricOp 13 80 ' ' 3)) @($blank) 1 1 $visibleArgs
+Invoke-Case 'blank-line-unknown' @($unknown) @($blank) 1 1 $visibleArgs -ExpectedUnresolved 1
+Invoke-Case 'blank-line-partly-unknown' @($unknown, (New-MetricOp 13 80 ' ' 3)) @($blank) 1 1 $visibleArgs -ExpectedUnresolved 1
+Invoke-Case 'unresolved-indexed' @($unknown) @($unknown) 1 0 '-CompareDecodedText' -ByIndex -ExpectedUnresolved 1
+$mixed = New-MetricOp 10 80 ('Visible' + [char]0xfffd) 30
+Invoke-Case 'partial-decoding-nearest' @($mixed) @($mixed) 1 0 '-CompareDecodedText' -ExpectedUnresolved 1
+$partlyUnknown = @($unknown, (New-MetricOp 13 80 ' body' 25))
+Invoke-Case 'unresolved-in-merged-line' $partlyUnknown $partlyUnknown 1 0 $visibleArgs -ExpectedUnresolved 1
+Invoke-Case 'unresolved-geometry-only' @($unknown) @($unknown) 0 0
+$empty = New-MetricOp 10 80 '' 3
+$empty.Payload = '<0001>'
+Invoke-Case 'empty-decoded-continuation' @($empty) @($empty) 0 0 '-CompareDecodedText'
+
+$rawReport = Get-Content -LiteralPath (Join-Path $scratch 'unresolved-indexed-report.json') -Raw | ConvertFrom-Json
+if ($null -ne $rawReport.Rows[0].RefText -or $null -ne $rawReport.Rows[0].CandText -or
+    $rawReport.Rows[0].RefPayload -cne $unknown.Payload -or $rawReport.Rows[0].CandPayload -cne $unknown.Payload) {
+    throw 'Unresolved decoded text must preserve raw evidence in its own fields.'
+}
 
 $tool = Join-Path $PSScriptRoot 'ComparePdfTextOperations.ps1'
 $referencePath = Join-Path $scratch 'deleted-ref.json'

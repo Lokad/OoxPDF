@@ -41,12 +41,9 @@ function TextCharacterSpacing($op) {
     return [double]$op.CharacterSpacing * [Math]::Sqrt($a*$a + $b*$b)
 }
 
-function TextContent($op) {
-    if ($op.DecodedText -ne $null) {
-        return [string]$op.DecodedText
-    }
-
-    return [string]$op.Payload
+function Test-ResolvedText($text) {
+    # Empty strings can carry an ActualText continuation or advance only.
+    return $text -is [string] -and !$text.Contains([char]0xfffd)
 }
 
 $referenceOps = Read-JsonArray $Reference
@@ -62,6 +59,7 @@ if ($IgnoreWhitespaceOnlyLines) {
 }
 $rows = New-Object System.Collections.Generic.List[object]
 $failures = 0
+$unresolvedTextCount = 0
 
 if ($MatchByPosition) {
     $unmatched = New-Object System.Collections.Generic.List[object]
@@ -72,12 +70,15 @@ if ($MatchByPosition) {
     $pairs = New-Object System.Collections.Generic.List[object]
     $remainingCandidates = New-Object System.Collections.Generic.List[object]
     function Find-ReferenceIndex($cand, [bool] $RequireSameText) {
+        $candidateText = $cand.DecodedText
+        if ($RequireSameText -and !(Test-ResolvedText $candidateText)) { return -1 }
         $bestIndex = -1
         $bestScore = [double]::PositiveInfinity
         for ($j = 0; $j -lt $unmatched.Count; $j++) {
             $candidateRef = $unmatched[$j]
             if ($candidateRef.PageNumber -ne $cand.PageNumber) { continue }
-            if ($RequireSameText -and (TextContent $candidateRef) -cne (TextContent $cand)) { continue }
+            if ($RequireSameText -and ($candidateRef.DecodedText -isnot [string] -or
+                $candidateRef.DecodedText -cne $candidateText)) { continue }
             $score = [Math]::Abs((Get-PdfTextOperationY $cand $effective) - (Get-PdfTextOperationY $candidateRef $effective)) * 1000d +
                 [Math]::Abs((Get-PdfTextOperationX $cand $effective) - (Get-PdfTextOperationX $candidateRef $effective))
             if ($score -lt $bestScore) {
@@ -105,7 +106,7 @@ if ($MatchByPosition) {
     }
 
     # Reserve exact decoded matches before geometry fallbacks can consume a
-    # neighboring column's reference. Changed/missing content still reports.
+    # neighboring column's reference. Changed and unresolved content still reports.
     foreach ($pending in $remainingCandidates) {
         $bestIndex = Find-ReferenceIndex $pending.Candidate $false
         $ref = if ($bestIndex -ge 0) { $unmatched[$bestIndex] } else { $null }
@@ -133,6 +134,12 @@ foreach ($pair in $pairs) {
     $i = $pair.Index
     $ref = $pair.Reference
     $cand = $pair.Candidate
+    $refText = if ($CompareDecodedText) { $ref.DecodedText }
+    $candText = if ($CompareDecodedText) { $cand.DecodedText }
+    $unresolvedText = $CompareDecodedText -and (
+        ($null -ne $ref -and !(Test-ResolvedText $refText)) -or
+        ($null -ne $cand -and !(Test-ResolvedText $candText)))
+    if ($unresolvedText) { $unresolvedTextCount++ }
     if ($null -eq $ref -or $null -eq $cand) {
         $failures++
         $refX = if ($null -eq $ref) { $null } else { Get-PdfTextOperationX $ref $effective }
@@ -143,8 +150,6 @@ foreach ($pair in $pairs) {
         $candTc = if ($null -eq $cand) { $null } else { TextCharacterSpacing $cand }
         $refPayload = if ($null -eq $ref) { $null } else { $ref.Payload }
         $candPayload = if ($null -eq $cand) { $null } else { $cand.Payload }
-        $refText = if ($null -eq $ref -or -not $CompareDecodedText) { $null } else { TextContent $ref }
-        $candText = if ($null -eq $cand -or -not $CompareDecodedText) { $null } else { TextContent $cand }
         $rows.Add([pscustomobject]@{
             Index = $i
             Status = "missing"
@@ -168,6 +173,7 @@ foreach ($pair in $pairs) {
             CandPayload = $candPayload
             RefText = $refText
             CandText = $candText
+            UnresolvedText = [bool]$unresolvedText
         })
         continue
     }
@@ -188,8 +194,10 @@ foreach ($pair in $pairs) {
     $positionOk = $pageOk -and [Math]::Abs($deltaX) -le $PositionTolerance -and [Math]::Abs($deltaY) -le $PositionTolerance
     $fontSizeOk = [Math]::Abs($deltaSize) -le $FontSizeTolerance
     $tcOk = [Math]::Abs($deltaTc) -le $CharacterSpacingTolerance
-    $decodedTextOk = -not $CompareDecodedText -or (TextContent $ref) -ceq (TextContent $cand)
-    $status = if ($positionOk -and $fontSizeOk -and $tcOk -and $decodedTextOk) { "ok" } else { "delta" }
+    $decodedTextOk = -not $CompareDecodedText -or $refText -ceq $candText
+    $status = if ($unresolvedText) { 'unresolved' }
+        elseif ($positionOk -and $fontSizeOk -and $tcOk -and $decodedTextOk) { 'ok' }
+        else { 'delta' }
     if ($status -ne "ok") {
         $failures++
     }
@@ -215,8 +223,9 @@ foreach ($pair in $pairs) {
         DeltaTc = $deltaTc
         RefPayload = $ref.Payload
         CandPayload = $cand.Payload
-        RefText = if ($CompareDecodedText) { TextContent $ref } else { $null }
-        CandText = if ($CompareDecodedText) { TextContent $cand } else { $null }
+        RefText = $refText
+        CandText = $candText
+        UnresolvedText = [bool]$unresolvedText
     })
 }
 
@@ -233,7 +242,7 @@ if ($OutputPath) {
         ReferenceSha256 = (Get-FileHash -LiteralPath $Reference).Hash
         CandidateSha256 = (Get-FileHash -LiteralPath $Candidate).Hash
         MatchByPosition = [bool]$MatchByPosition
-        MatchingMethod = if (!$MatchByPosition) { 'Indexed' } elseif ($CompareDecodedText) { 'Page-local decoded text, then nearest position for unresolved operations' } else { 'Page-local nearest position' }
+        MatchingMethod = if (!$MatchByPosition) { 'Indexed' } elseif ($CompareDecodedText) { 'Page-local decoded text, then nearest position for unmatched operations' } else { 'Page-local nearest position' }
         UseEffectiveMatrix = [bool]$UseEffectiveMatrix
         CompareDecodedText = [bool]$CompareDecodedText
         MergeSameLineOperations = [bool]$MergeSameLineOperations
@@ -244,6 +253,7 @@ if ($OutputPath) {
         ReferenceCount = $referenceOps.Count
         CandidateCount = $candidateOps.Count
         FailureCount = $failures
+        UnresolvedTextCount = $unresolvedTextCount
         Rows = $rows.ToArray()
     } | ConvertTo-Json -Depth 7 | Set-Content -LiteralPath $OutputPath -Encoding utf8
 }
@@ -256,7 +266,7 @@ if ($UseEffectiveMatrix) {
     Write-Host "Coordinates: effective text matrix"
 }
 if ($CompareDecodedText) {
-    Write-Host "Text content: decoded text"
+    Write-Host "Text content: decoded text ($unresolvedTextCount unresolved)"
 }
 
 if ($failures -ne 0) {
