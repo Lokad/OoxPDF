@@ -217,7 +217,6 @@ internal sealed partial class PptxRenderer
 
     private static async ValueTask<RenderedFonts> CreateRenderedFontsAsync(
         IReadOnlyList<PptxPositionedTextSpan> textSpans,
-        IReadOnlyList<TextRun> legacyTextRuns,
         PresentationFontResolver fontResolver,
         string resourcePrefix,
         CancellationToken cancellationToken,
@@ -243,14 +242,6 @@ internal sealed partial class PptxRenderer
             {
                 uses.Add(new TextFontUse(group.Key, span.GlyphSpan.Bold, span.GlyphSpan.Italic, group.Select(glyph => glyph.CodePoint).ToArray()));
             }
-        }
-
-        foreach (TextRun run in legacyTextRuns)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (run.Text.Length == 0) continue;
-            string familyName = PptxFontFallbackRules.ResolveDefaultLatinTypeface(run.FontFamily);
-            uses.Add(new TextFontUse(familyName, run.Bold, run.Italic, run.Text.EnumerateRunes().Select(rune => rune.Value).ToArray()));
         }
 
         return await CreateRenderedFontsAsync(uses, fontResolver, resourcePrefix, cancellationToken,

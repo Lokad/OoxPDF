@@ -267,7 +267,7 @@ internal sealed partial class PptxRenderer
     internal static IReadOnlyList<PptxTextGlyphRunSnapshot> InspectTextGlyphRuns(PptxRenderContext context)
     {
         IReadOnlyList<PptxPositionedTextSpan> textSpans = ReadSlideTextSpansForInspection(context);
-        RenderedFonts renderedFonts = CreateRenderedFontsAsync(textSpans, [], context.FontResolver, "F", context.CancellationToken).GetAwaiter().GetResult();
+        RenderedFonts renderedFonts = CreateRenderedFontsAsync(textSpans, context.FontResolver, "F", context.CancellationToken).GetAwaiter().GetResult();
         textSpans = SplitLeadingSpacesAtHighlightBoundaries(textSpans);
         textSpans = CoalesceAdjacentTextSpans(textSpans, compareHighlight: true);
         textSpans = CoalesceUnderlineSpans(textSpans);
