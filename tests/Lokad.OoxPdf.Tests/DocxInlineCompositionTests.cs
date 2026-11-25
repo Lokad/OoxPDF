@@ -1535,27 +1535,32 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.Equal(1, nested.Images.Count);
             TestAssert.Equal(direct.Content, nested.Content);
 
-            var wordRun = Render(nestedRuns: true, withBreak: true);
-            var mathRun = Render(nestedRuns: true, withBreak: true, mathContainer: true);
-            TestAssert.Equal("StoredcompanionΩ".Length,
-                PortableRenderingTests.ReadPaintedSourceLabel(mathRun.Page, "Stored companionΩ").Count);
-            TestAssert.Equal(1, mathRun.Page.Images.Count);
-            TestAssert.Equal(wordRun.Page.Content, mathRun.Page.Content);
-            TestAssert.True(wordRun.Diagnostics.SequenceEqual(mathRun.Diagnostics),
-                "An authored break and its WordprocessingML companions share paragraph paint and diagnostics.");
-            var malformed = Render(nestedRuns: true, withBreak: true, mathContainer: true, malformedSymbol: true);
+            foreach (bool withBreak in new[] { false, true })
+            {
+                var wordRun = Render(nestedRuns: true, withCompanions: true, withBreak: withBreak);
+                var mathRun = Render(nestedRuns: true, withCompanions: true, withBreak: withBreak, mathContainer: true);
+                TestAssert.Equal("StoredcompanionΩ".Length,
+                    PortableRenderingTests.ReadPaintedSourceLabel(mathRun.Page, "Stored companionΩ").Count);
+                TestAssert.Equal(1, mathRun.Page.Images.Count);
+                TestAssert.Equal(wordRun.Page.Content, mathRun.Page.Content);
+                TestAssert.True(wordRun.Diagnostics.SequenceEqual(mathRun.Diagnostics),
+                    "A display drawing and its ordinary companions share paragraph paint and diagnostics with either run owner.");
+            }
+            var malformed = Render(nestedRuns: true, withCompanions: true, withBreak: true, mathContainer: true, malformedSymbol: true);
             TestAssert.True(malformed.Diagnostics.Any(diagnostic => diagnostic.Id == "DOCX_UNSUPPORTED_EQUATION"),
                 "A malformed symbol retains the diagnosed display-run fallback.");
 
-            (PdfPage Page, List<OoxPdfDiagnostic> Diagnostics) Render(bool nestedRuns, bool withBreak = false,
+            (PdfPage Page, List<OoxPdfDiagnostic> Diagnostics) Render(bool nestedRuns, bool withCompanions = false, bool withBreak = false,
                 bool mathContainer = false, bool malformedSymbol = false)
             {
                 var document = ReadMutation(fixture, mode, false, false, (xml, w, m) =>
                 {
                     var display = xml.Descendants(m + "oMathPara").First();
                     var picture = display.Parent!.Elements(w + "r").Single();
-                    if (withBreak)
-                        picture.Element(w + "drawing")!.AddBeforeSelf(new XElement(w + "br"),
+                    var drawing = picture.Element(w + "drawing")!;
+                    if (withBreak) drawing.AddBeforeSelf(new XElement(w + "br"));
+                    if (withCompanions)
+                        drawing.AddBeforeSelf(
                             new XElement(w + "t", "Stored companion"),
                             new XElement(w + "sym", new XAttribute(w + "font", "Arial"),
                                 new XAttribute(w + "char", malformedSymbol ? "ZZZZ" : "03A9")));

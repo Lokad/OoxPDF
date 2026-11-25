@@ -10,9 +10,9 @@ internal sealed partial class DocxReader
         (owner.Name == MathNamespace + "oMathPara" ||
          DocxSourceXml.IsRevisionContainer(owner) && owner.Parent?.Name == MathNamespace + "oMathPara");
 
-    private static bool IsEquationPayload(XElement element) =>
+    private static bool IsEquationPayload(XElement element, CancellationToken token) =>
         element.Name == MathNamespace + "oMath" ||
-        IsDisplayMathRun(element) && !IsDisplayMathLineBreakRun(element, allowCompanions: true);
+        IsDisplayMathRun(element) && !IsDisplayMathParagraphRun(element, token);
 
     private static (XElement Run, XElement? FirstBreakInRun)? FindFirstTrailingDisplayMathBreak(
         XElement equation, bool allowsDeletedText, CancellationToken cancellationToken)
@@ -47,19 +47,36 @@ internal sealed partial class DocxReader
              HasOnlyWhitespaceRunText(element));
     }
 
-    private static bool IsDisplayMathLineBreakRun(XElement run, bool allowCompanions = false)
+    private static bool IsDisplayMathParagraphRun(XElement run, CancellationToken token)
     {
-        // Direct display runs can carry ordinary paragraph content alongside
-        // a break. A run inside the equation can lift only its pure break.
-        return run.Name == MathNamespace + "r" &&
+        // A direct display companion with a drawing or wrapping break needs
+        // paragraph layout. Preserve ordinary text and symbols that share it.
+        bool usesParagraphLayout = false;
+        foreach (var child in run.Elements())
+        {
+            token.ThrowIfCancellationRequested();
+            if (child.Name == WordprocessingNamespace + "drawing" || IsDisplayMathBreak(child))
+            {
+                usesParagraphLayout = true;
+            }
+            else if (child.Name != WordprocessingNamespace + "rPr" &&
+                !(child.Name == WordprocessingNamespace + "t" && !child.HasElements) &&
+                !DocxSourceXml.IsNonPrintingMathRunControl(child) &&
+                !DocxMathParser.TryReadSymbol(child, out _, out _))
+            {
+                return false;
+            }
+        }
+        return usesParagraphLayout && HasOnlyWhitespaceRunText(run);
+    }
+
+    // Within an equation, only a pure trailing break can move to paragraph layout.
+    private static bool IsDisplayMathLineBreakRun(XElement run) =>
+        run.Name == MathNamespace + "r" &&
             run.Elements().Any(IsDisplayMathBreak) &&
             run.Elements().All(child => child.Name == WordprocessingNamespace + "rPr" ||
-                IsBreakOrNonPrintingMathControl(child) ||
-                allowCompanions && (child.Name == WordprocessingNamespace + "drawing" ||
-                    child.Name == WordprocessingNamespace + "t" && !child.HasElements ||
-                    DocxMathParser.TryReadSymbol(child, out _, out _))) &&
+                IsBreakOrNonPrintingMathControl(child)) &&
             HasOnlyWhitespaceRunText(run);
-    }
 
     private static bool HasOnlyWhitespaceRunText(XElement run) =>
         run.Nodes().OfType<XText>().All(text => string.IsNullOrWhiteSpace(text.Value));

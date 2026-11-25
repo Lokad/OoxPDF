@@ -486,7 +486,7 @@ internal sealed partial class DocxReader
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 XElement equation = source.Element;
-                if (!IsEquationPayload(equation))
+                if (!IsEquationPayload(equation, cancellationToken))
                 {
                     var inlineSource = IsDisplayMathRun(equation) ? AsParagraphRun(equation) : equation;
                     AddSourceContainerChild(inlineSource, source.Revision, source.RemoveDeletedText);
