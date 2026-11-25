@@ -35,11 +35,7 @@ internal static partial class DocxMathParser
                 continue;
             }
             bool revisionSource = item.RevisionOwner is null && includeRevision is not null &&
-                DocxSourceXml.IsRevisionContainer(element) &&
-                (name is not ("moveFrom" or "moveTo") ||
-                    OoxXml.NormalizeDecimalId((string?)element.Attribute(WordprocessingNamespace + "id")) is { } id &&
-                    (moveOwners ??= DocxSourceXml.ReadPairedMoveOwnerIds(equation, authoredStory, cancellationToken))
-                        .Contains((element.Name, id)));
+                DocxSourceXml.IsAdmittedMathRevisionOwner(element, equation, authoredStory, ref moveOwners, cancellationToken);
             XElement[]? revisionChildren = revisionSource ? ReadRevisionChildren(element, cancellationToken).ToArray() : null;
             bool deleting = element.Name == deletion;
             bool revisionRow = revisionChildren is not null && IsReadableRevision(revisionChildren, deleting);

@@ -182,6 +182,77 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
+    public static void DocxPairedMathMovesKeepLinkedDrawingCompanions()
+    {
+        foreach (var (mode, count) in new[]
+        {
+            (OoxPdfDocxMarkupMode.Final, 1),
+            (OoxPdfDocxMarkupMode.Original, 1),
+            (OoxPdfDocxMarkupMode.AllMarkup, 2)
+        })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var document = ReadMove(mode, paired: true, diagnostics);
+            var page = PictureRangeRenderer(mode).RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().Single();
+            string text = DocxPageFootnoteNumberingTests.DecodeText(page);
+            foreach (string label in new[] { "314", "793", "QA", "\u03a9" })
+                TestAssert.Equal(count, text.Split(label, StringSplitOptions.None).Length - 1);
+            foreach (string neighbor in new[] { "17", "28" })
+                TestAssert.Equal(2, text.Split(neighbor, StringSplitOptions.None).Length - 1);
+            TestAssert.True(diagnostics.All(item => item.Id != "DOCX_UNSUPPORTED_EQUATION"), "Both paired owners use native math.");
+
+            var pictures = ReadPictureBounds(page).ToArray();
+            TestAssert.Equal(count, pictures.Length);
+            TestAssert.Equal(count, page.Annotations.Count);
+            foreach (var picture in pictures)
+            {
+                var bounds = picture.Bounds;
+                TestAssert.True(page.Annotations.Any(link => link.Destination is { PageIndex: 0 } &&
+                    bounds.X >= link.X - .01d && bounds.Y >= link.Y - .01d &&
+                    bounds.X + bounds.Width <= link.X + link.Width + .01d &&
+                    bounds.Y + bounds.Height <= link.Y + link.Height + .01d),
+                    "Each selected picture retains its link to the heading.");
+            }
+        }
+
+        const OoxPdfDocxMarkupMode review = OoxPdfDocxMarkupMode.AllMarkup;
+        var unsupported = new List<OoxPdfDiagnostic>();
+        var unpaired = PictureRangeRenderer(review).RenderPagesAsync(ReadMove(review, paired: false, unsupported),
+            unsupported.Add, default).ToBlockingEnumerable().Single();
+        TestAssert.Equal(0, ReadPictureBounds(unpaired).Count());
+        TestAssert.True(unsupported.Any(item => item.Id == "DOCX_UNSUPPORTED_EQUATION"), "Unpaired move owners retain the fallback.");
+
+        static DocxDocument ReadMove(OoxPdfDocxMarkupMode mode, bool paired, List<OoxPdfDiagnostic> diagnostics) =>
+            ReadMutation("CompositionProbes/math-display-image-body-between", mode, false, false, (xml, w, m) =>
+            {
+                const string target = "PairedMoveDrawingTarget";
+                var heading = xml.Descendants(w + "p").First().Elements(w + "r").First();
+                heading.AddBeforeSelf(new XElement(w + "bookmarkStart", new XAttribute(w + "id", "615"), new XAttribute(w + "name", target)));
+                heading.AddAfterSelf(new XElement(w + "bookmarkEnd", new XAttribute(w + "id", "615")));
+                var display = xml.Descendants(m + "oMathPara").First();
+                var paragraph = display.Parent!;
+                var pictureRun = paragraph.Elements(w + "r").Single();
+                var drawing = pictureRun.Element(w + "drawing")!;
+                var mixed = new XElement(m + "r", new XElement(m + "t", "314"),
+                    new XElement(w + "t", "QA"), new XElement(w + "sym", new XAttribute(w + "font", "Arial"), new XAttribute(w + "char", "03A9")),
+                    drawing, new XElement(m + "t", "793"));
+                pictureRun.Remove();
+                var from = MathOperandMove(mixed, "moveFrom", "610", "611");
+                var to = MathOperandMove(mixed, "moveTo", "620", "621");
+                to[1].Descendants(WordprocessingDrawingNamespace + "docPr").Single().SetAttributeValue("id", "626");
+                if (!paired)
+                    to[0].SetAttributeValue(w + "name", "UnpairedDestination");
+
+                XElement Frame(XElement[] move) => new(m + "oMath",
+                    new XElement(m + "r", new XElement(m + "t", "17")),
+                    new XElement(w + "hyperlink", new XAttribute(w + "anchor", target), move),
+                    new XElement(m + "r", new XElement(m + "t", "28")));
+
+                paragraph.AddAfterSelf(new XElement(w + "p", Frame(to)));
+                display.ReplaceWith(Frame(from));
+            }, diagnosticSink: diagnostics.Add);
+    }
+
     private static DocxDocument ReadMovedOperands(OoxPdfDocxMarkupMode mode, bool pageBreak,
         Action<OoxPdfDiagnostic> diagnostics, Action<XElement[]>? changeDestinationMove = null,
         bool equivalentDecimalIds = false) =>

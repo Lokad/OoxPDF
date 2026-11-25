@@ -140,7 +140,7 @@ internal sealed partial class DocxReader
     // Paragraph layout owns inline drawings. Each contiguous group of math
     // remains one equation fragment, including inside a display.
     private static int? CountDrawingEquationFragments(XElement equation, OoxPdfDocxMarkupMode mode, CancellationToken token,
-        bool removeDeletedText = false)
+        bool removeDeletedText = false, XElement? authoredStory = null)
     {
         if (!(HasDisplayMathParagraphOwner(equation) || HasInlineEquationParagraph(equation, token)) ||
             equation.Attributes().Any(attribute => !attribute.IsNamespaceDeclaration) ||
@@ -150,7 +150,7 @@ internal sealed partial class DocxReader
         bool inMath = false;
         int count = 0;
         DrawingEquationScope lastScope = default;
-        foreach (var source in EnumerateDrawingEquationSources(equation, mode, token))
+        foreach (var source in EnumerateDrawingEquationSources(equation, mode, token, authoredStory))
         {
             XElement child = source.Element;
             if (IsMathRangeBoundary(child) || DocxMathParser.IsNonPrintingSourceMarker(child)) continue;
@@ -192,10 +192,11 @@ internal sealed partial class DocxReader
     }
 
     private static IEnumerable<DrawingEquationSource> EnumerateDrawingEquationSources(
-        XElement equation, OoxPdfDocxMarkupMode mode, CancellationToken token)
+        XElement equation, OoxPdfDocxMarkupMode mode, CancellationToken token, XElement? authoredStory)
     {
         bool? hasOuterRevision = null;
         bool? hasOuterLink = null;
+        IReadOnlySet<(XName Name, string Id)>? moveOwners = null;
         var pending = new Stack<DrawingEquationSource>();
         PushChildren(equation, new(null, null, true, false));
         while (pending.TryPop(out var source))
@@ -214,8 +215,9 @@ internal sealed partial class DocxReader
             {
                 PushChildren(child, scope with { Hyperlink = child });
             }
-            else if ((child.Name == WordprocessingNamespace + "ins" || child.Name == WordprocessingNamespace + "del") &&
-                scope.Revision is null && !(hasOuterRevision ??= equation.Ancestors().Any(DocxSourceXml.IsRevisionContainer)) &&
+            else if (scope.Revision is null &&
+                DocxSourceXml.IsAdmittedMathRevisionOwner(child, equation, authoredStory, ref moveOwners, token) &&
+                !(hasOuterRevision ??= equation.Ancestors().Any(DocxSourceXml.IsRevisionContainer)) &&
                 HasOnlyWhitespaceRunText(child))
             {
                 bool included = IsIncludedRevisionContainer(child, mode);
@@ -236,12 +238,12 @@ internal sealed partial class DocxReader
     }
 
     private static IEnumerable<DrawingEquationSource> SplitEquationAtDrawings(
-        XElement equation, OoxPdfDocxMarkupMode mode, CancellationToken token)
+        XElement equation, OoxPdfDocxMarkupMode mode, CancellationToken token, XElement? authoredStory)
     {
         XElement? group = null;
         DrawingEquationScope scope = default;
         List<XElement>? boundaries = null;
-        foreach (var source in EnumerateDrawingEquationSources(equation, mode, token))
+        foreach (var source in EnumerateDrawingEquationSources(equation, mode, token, authoredStory))
         {
             XElement child = source.Element;
             if (DocxMathParser.IsNonPrintingSourceMarker(child)) continue;
@@ -372,15 +374,15 @@ internal sealed partial class DocxReader
              attribute.Name == WordprocessingNamespace + "clear" && attribute.Value is "none" or "left" or "right" or "all"));
 
     private readonly record struct MathParagraphSource(XElement Element, bool IsEquation, DocxRevisionInfo? Revision,
-        bool RemoveDeletedText, XElement? Hyperlink = null);
+        bool RemoveDeletedText, XElement? Hyperlink = null, bool ProjectsMathMove = false);
 
     private static IEnumerable<MathParagraphSource> EnumerateMathParagraphSources(
         XElement container, DocxRevisionInfo? inheritedRevision, bool removeDeletedText,
-        OoxPdfDocxMarkupMode mode, CancellationToken token)
+        OoxPdfDocxMarkupMode mode, CancellationToken token, XElement? authoredStory)
     {
         if (container.Name == MathNamespace + "oMath")
         {
-            foreach (var part in ReadEquationCompanions(container, inheritedRevision, removeDeletedText, mode, token))
+            foreach (var part in ReadEquationCompanions(container, inheritedRevision, removeDeletedText, mode, token, authoredStory))
                 yield return part;
             yield break;
         }
@@ -410,7 +412,7 @@ internal sealed partial class DocxReader
             }
             if (source.Element.Name == MathNamespace + "oMath")
             {
-                foreach (var part in ReadEquationCompanions(source.Element, source.Revision, source.RemoveDeletedText, mode, token))
+                foreach (var part in ReadEquationCompanions(source.Element, source.Revision, source.RemoveDeletedText, mode, token, authoredStory))
                     yield return part;
                 continue;
             }
@@ -440,17 +442,18 @@ internal sealed partial class DocxReader
     }
 
     private static IEnumerable<MathParagraphSource> ReadEquationCompanions(
-        XElement equation, DocxRevisionInfo? revision, bool removeDeletedText, OoxPdfDocxMarkupMode mode, CancellationToken token)
+        XElement equation, DocxRevisionInfo? revision, bool removeDeletedText, OoxPdfDocxMarkupMode mode, CancellationToken token,
+        XElement? authoredStory)
     {
         token.ThrowIfCancellationRequested();
-        if (CountDrawingEquationFragments(equation, mode, token) is null)
+        if (CountDrawingEquationFragments(equation, mode, token, authoredStory: authoredStory) is null)
         {
             yield return new(equation, true, revision, removeDeletedText);
             yield break;
         }
         XElement? owner = null;
         DocxRevisionInfo? fragmentRevision = revision;
-        foreach (var fragment in SplitEquationAtDrawings(equation, mode, token))
+        foreach (var fragment in SplitEquationAtDrawings(equation, mode, token, authoredStory))
         {
             if (owner != fragment.Scope.Revision)
             {
@@ -459,7 +462,7 @@ internal sealed partial class DocxReader
             }
             bool remove = removeDeletedText || fragment.Scope.RemovesDeletedText;
             yield return new(fragment.Element, fragment.Element.Name == MathNamespace + "oMath", fragmentRevision,
-                remove, remove ? null : fragment.Scope.Hyperlink);
+                remove, remove ? null : fragment.Scope.Hyperlink, owner?.Name.LocalName is "moveFrom" or "moveTo");
         }
     }
 }

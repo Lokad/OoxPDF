@@ -484,7 +484,8 @@ internal sealed partial class DocxReader
             DocxRevisionInfo? equationRevision = revision;
             XElement? projectedLink = null;
             (int SourceRun, int TextRun, int InlineItem) linkStart = default;
-            foreach (var source in EnumerateMathParagraphSources(container, revision, removeDeletedText, markupMode, cancellationToken))
+            var authoredStory = paragraph.Annotation<DocxSourceXml.StoryOrigin>()?.Story;
+            foreach (var source in EnumerateMathParagraphSources(container, revision, removeDeletedText, markupMode, cancellationToken, authoredStory))
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 if (source.Hyperlink != projectedLink)
@@ -523,7 +524,7 @@ internal sealed partial class DocxReader
                     }, readHyperlink: source.RemoveDeletedText ? null : hyperlink =>
                         AddHyperlinkSpan(hyperlink, sourceRunIndex, 0, runs.Count, 0,
                             inlineItems!.Count, inlineItems.Count + 1, hyperlinkSpans, relationships, mathContent: true),
-                    authoredStory: paragraph.Annotation<DocxSourceXml.StoryOrigin>()?.Story,
+                    authoredStory: authoredStory,
                     equationHasDeletionOwner: source.RemoveDeletedText || equationRevision?.Kind == DocxRevisionKind.Deletion,
                     trailingBreaks: firstTrailingBreak);
                 if (source.RemoveDeletedText)
@@ -532,9 +533,11 @@ internal sealed partial class DocxReader
                     if (DocxMathLayout.RemoveDeletedLiteralMathText(deletedEquation, cancellationToken) is not { } empty) continue;
                     content = empty;
                 }
+                // A projected move still belongs to its individual math runs.
+                // The paired inline owner must not become an outer equation revision.
                 equations.Add(new DocxEquation(
                     content,
-                    runs.Count, sourceRunIndex, display, alignment, equationRevision)
+                    runs.Count, sourceRunIndex, display, alignment, source.ProjectsMathMove ? null : equationRevision)
                 {
                     ParentFontSize = ResolveRunProperties(null, paragraphStyleId, null, styles, tableCellStyle?.Run, out _).FontSize
                         ?? DocxDefaults.UnstyledRunFontSizePoints,

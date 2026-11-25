@@ -3654,6 +3654,7 @@
   "docx-math-revision-boundaries": [
     "=PortableRenderingPackedMathRunRevisionsKeepEquivalentPaint",
     "=DocxDisplayRowKeepsDrawingCompanionsInTrackedChanges",
+    "=DocxPairedMathMovesKeepLinkedDrawingCompanions",
     "DocxEmptyMoveRangesPreserveMixedContentAcrossStories",
     "DocxMoveRangesRetainUnknownContentOpenAndLegacyFallbacks",
     "DocxInlineCompositionControlRevisions",

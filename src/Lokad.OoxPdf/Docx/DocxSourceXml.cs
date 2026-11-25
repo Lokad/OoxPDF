@@ -61,6 +61,13 @@ internal static class DocxSourceXml
         return story is null ? CollectPairedMoveOwners(equation, token).Ids : GetPairedMoveOwners(story, token).Ids;
     }
 
+    public static bool IsAdmittedMathRevisionOwner(XElement element, XElement equation, XElement? authoredStory,
+        ref IReadOnlySet<(XName Name, string Id)>? moveOwners, CancellationToken token) =>
+        IsRevisionContainer(element) &&
+        (element.Name.LocalName is not ("moveFrom" or "moveTo") ||
+            OoxXml.NormalizeDecimalId((string?)element.Attribute(WordprocessingNamespace + "id")) is { } id &&
+            (moveOwners ??= ReadPairedMoveOwnerIds(equation, authoredStory, token)).Contains((element.Name, id)));
+
     public static bool IsPairedMathMoveSource(XElement element, CancellationToken token) =>
         IsInEquation(element) && FindStoryRoot(element) is { } story &&
         GetPairedMoveOwners(story, token).MathSources.Contains(element);
