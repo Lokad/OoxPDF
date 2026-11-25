@@ -1038,8 +1038,7 @@ internal sealed partial class DocxLayoutEngine
         ref double cursorTop,
         DocxRelatedStoryLayout storyLayout,
         int sourceBlockIndex,
-        bool insertContinuationAfterActivePage, 
-        Func<DocxLayoutPage, int, int, double>? headerKeepOut = null)
+        bool insertContinuationAfterActivePage)
     {
         double remainingHeight = Math.Max(0d, storyLayout.ContentHeight);
         double storyTopOffset = 0d;
@@ -1054,7 +1053,7 @@ internal sealed partial class DocxLayoutEngine
                     ref activePage,
                     ref activePlacedStories,
                     ref cursorTop,
-                    insertContinuationAfterActivePage, headerKeepOut);
+                    insertContinuationAfterActivePage);
                 availableHeight = Math.Max(0d, cursorTop - activePage.MarginBottom);
             }
 
@@ -1086,7 +1085,7 @@ internal sealed partial class DocxLayoutEngine
                     ref activePage,
                     ref activePlacedStories,
                     ref cursorTop,
-                    insertContinuationAfterActivePage, headerKeepOut);
+                    insertContinuationAfterActivePage);
             }
         }
     }
