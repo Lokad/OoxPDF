@@ -68,7 +68,43 @@ if ($LASTEXITCODE -ne 0 -or (Get-Content -LiteralPath $noFailLog -Raw) -notmatch
     throw 'NoFail must report the delta and return success in-process.'
 }
 
+$extra = New-CandRun 200 20 'Candidate only' 12
+$extra | Add-Member -NotePropertyMembers @{
+    SourceRunIndex = 7
+    ParagraphBulletKind = 'AutoNumber'
+    ParagraphAutoNumberType = 'arabicPeriod'
+    ParagraphAutoNumberStartAt = 9
+}
+$candidatePath = Write-Ops 'unmatched-candidate' @($c1, $extra)
+foreach ($includeText in @($false, $true)) {
+    $rowsPath = Join-Path $scratch "unmatched-rows-$includeText.json"
+    $summaryPath = Join-Path $scratch "unmatched-summary-$includeText.json"
+    & $tool -ReferenceTextOperations $referencePath -CandidateGlyphRuns $candidatePath -MatchByTextThenPosition -IncludeText:$includeText `
+        -OutputJson $rowsPath -OutputSummaryJson $summaryPath *> (Join-Path $scratch "unmatched-$includeText.log")
+    if ($LASTEXITCODE -ne 1) { throw 'Unmatched runs must fail the comparison.' }
+    $rows = Get-Content -LiteralPath $rowsPath -Raw | ConvertFrom-Json
+    $unmatched = @($rows | Where-Object Status -eq 'missing')
+    $candidateOnly = $unmatched | Where-Object { $null -eq $_.RefPageNumber }
+    $referenceOnly = $unmatched | Where-Object { $null -eq $_.CandSlide }
+    if ($rows.Count -ne 3 -or $unmatched.Count -ne 2 -or
+        $candidateOnly.CandSourceRunIndex -ne 7 -or $candidateOnly.CandParagraphBulletKind -cne 'AutoNumber' -or
+        $candidateOnly.CandParagraphAutoNumberType -cne 'arabicPeriod' -or $candidateOnly.CandParagraphAutoNumberStartAt -ne 9 -or
+        $null -ne $candidateOnly.DeltaX -or $referenceOnly.RefPageNumber -ne 1 -or
+        $null -ne $referenceOnly.CandSourceRunIndex -or $null -ne $referenceOnly.CandParagraphAutoNumberStartAt) {
+        throw 'Unmatched rows must preserve available source ownership and leave the missing side null.'
+    }
+    $expectedText = if ($includeText) { 'Candidate only' }
+    if ($candidateOnly.CandText -cne $expectedText -or
+        (!$includeText -and @($rows | Where-Object { $null -ne $_.RefText -or $null -ne $_.CandText }).Count)) {
+        throw 'Unmatched row text must respect IncludeText.'
+    }
+    $summary = Get-Content -LiteralPath $summaryPath -Raw | ConvertFrom-Json
+    if (@($summary.BySourceRunIndexAndBranch | Where-Object { $_.Key -ceq '7|(missing)' -and $_.Count -eq 1 }).Count -ne 1) {
+        throw 'The source summary must count the unmatched candidate under its authored run index.'
+    }
+}
+
 if ($failures.Count -ne 0) {
     throw ("Emission comparison adversarial checks failed: " + ($failures -join "; "))
 }
-Write-Host "Emission comparison adversarial checks passed (9 cases)."
+Write-Host "Emission comparison adversarial checks passed (11 cases)."
