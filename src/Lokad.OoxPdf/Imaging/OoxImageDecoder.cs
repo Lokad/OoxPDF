@@ -31,13 +31,15 @@ internal static class OoxImageDecoder
         cancellationToken.ThrowIfCancellationRequested();
         if (IsJpegContentType(contentType))
         {
-            JpegInfo info = JpegInfo.Read(bytes);
-            return PdfImageXObject.Jpeg(info.Width, info.Height, bytes, info.ComponentCount, info.BitsPerComponent, info.InvertedCmyk);
+            return CreateJpegPassthrough(bytes, JpegInfo.Read(bytes));
         }
 
         using DecodedPixels decoded = DecodePixelsOwned(contentType, bytes, cancellationToken);
         return PdfImageXObject.RgbPng(decoded.Width, decoded.Height, decoded.Rgb, decoded.Alpha, cancellationToken);
     }
+
+    public static PdfImageXObject CreateJpegPassthrough(byte[] bytes, JpegInfo info) =>
+        PdfImageXObject.Jpeg(info.Width, info.Height, bytes, info.ComponentCount, info.BitsPerComponent, info.InvertedCmyk);
 
     public static DecodedPixels DecodePixelsOwned(string contentType, byte[] bytes, CancellationToken cancellationToken = default)
     {

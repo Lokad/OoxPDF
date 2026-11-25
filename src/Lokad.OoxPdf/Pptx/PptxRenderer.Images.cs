@@ -387,9 +387,7 @@ internal sealed partial class PptxRenderer
                 {
                     try
                     {
-                        using DecodedPixels recolorSource = OoxImageDecoder.DecodePixelsOwned(contentType, bytes, cancellationToken);
-                        RecolorOwnedPixels(recolorSource.Rgb, recolor, cancellationToken);
-                        return PdfImageXObject.RgbPng(recolorSource.Width, recolorSource.Height, recolorSource.Rgb, alpha: null, cancellationToken);
+                        return RecolorImage();
                     }
                     catch (Exception ex) when (ex is InvalidDataException or NotSupportedException or IndexOutOfRangeException)
                     {
@@ -399,15 +397,10 @@ internal sealed partial class PptxRenderer
                 ReportUnsupportedImageRecolor(diagnosticSink, partName, slideIndex,
                     $"PPTX {ImageRecolorKindName()} image recolor could not be applied to {contentType} {info.FrameProfileName} image data and was ignored.");
 
-                return PdfImageXObject.Jpeg(info.Width, info.Height, bytes, info.ComponentCount, info.BitsPerComponent, info.InvertedCmyk);
+                return OoxImageDecoder.CreateJpegPassthrough(bytes, info);
             }
 
-            // PNG/BMP share the common pixel decoder with the recolor map applied;
-            // unknown types throw with the same message the explicit branch used to
-            // emit, so the catch below reports byte-identical diagnostics.
-            using DecodedPixels decoded = OoxImageDecoder.DecodePixelsOwned(contentType, bytes, cancellationToken);
-            RecolorOwnedPixels(decoded.Rgb, recolor, cancellationToken);
-            return PdfImageXObject.RgbPng(decoded.Width, decoded.Height, decoded.Rgb, decoded.Alpha, cancellationToken);
+            return RecolorImage();
         }
         catch (Exception ex) when (ex is InvalidDataException or NotSupportedException)
         {
@@ -423,6 +416,13 @@ internal sealed partial class PptxRenderer
         }
 
         return null;
+
+        PdfImageXObject RecolorImage()
+        {
+            using DecodedPixels decoded = OoxImageDecoder.DecodePixelsOwned(contentType, bytes, cancellationToken);
+            RecolorOwnedPixels(decoded.Rgb, recolor, cancellationToken);
+            return PdfImageXObject.RgbPng(decoded.Width, decoded.Height, decoded.Rgb, decoded.Alpha, cancellationToken);
+        }
 
         string ImageRecolorKindName()
         {
