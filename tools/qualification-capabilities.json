@@ -19819,6 +19819,7 @@
   "docx-math-center-group": [
     "=DocxEquationZonesKeepDrawingsWithoutMathOperands",
     "=DocxEquationDrawingCompanionsKeepInnerRevisionOwners",
+    "=DocxEquationDrawingCompanionsKeepInnerHyperlinkCoverage",
     "=DocxDisplayRowKeepsCommentRangeThroughDrawing",
     "=DocxInlineEquationKeepsDrawingCompanionsBetweenTextRuns",
     "=DocxDisplayRowKeepsDrawingCompanionsInTrackedChanges",

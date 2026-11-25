@@ -177,16 +177,20 @@ internal sealed partial class DocxReader
     private static IEnumerable<DrawingEquationSource> EnumerateDrawingEquationSources(
         XElement equation, OoxPdfDocxMarkupMode mode, CancellationToken token)
     {
-        bool? hasOuterOwner = null;
+        bool? hasOuterRevision = null;
+        bool? hasOuterLink = null;
         foreach (XElement child in equation.Elements())
         {
             token.ThrowIfCancellationRequested();
-            // The projected paragraph items carry one insertion or deletion
-            // owner. The math parser still handles pure equations and moves.
-            if ((child.Name == WordprocessingNamespace + "ins" || child.Name == WordprocessingNamespace + "del") &&
-                HasOnlyWhitespaceRunText(child) && !(hasOuterOwner ??= equation.Ancestors().Any(DocxSourceXml.IsRevisionContainer)))
+            bool link = child.Name == WordprocessingNamespace + "hyperlink" &&
+                !(hasOuterLink ??= equation.Ancestors(WordprocessingNamespace + "hyperlink").Any());
+            bool revision = (child.Name == WordprocessingNamespace + "ins" || child.Name == WordprocessingNamespace + "del") &&
+                !(hasOuterRevision ??= equation.Ancestors().Any(DocxSourceXml.IsRevisionContainer));
+            // Split at the authored inline owner so the paragraph can handle
+            // its annotations. Nested scopes stay on the diagnosed fallback.
+            if ((link || revision) && HasOnlyWhitespaceRunText(child))
             {
-                bool included = IsIncludedRevisionContainer(child, mode);
+                bool included = link || IsIncludedRevisionContainer(child, mode);
                 bool remove = !included && RetainsDeletedMathStructure(child, mode);
                 foreach (XElement nested in child.Elements())
                 {
@@ -373,7 +377,7 @@ internal sealed partial class DocxReader
             }
             if (source.Element.Name == MathNamespace + "oMath")
             {
-                foreach (var part in ReadEquationCompanions(source.Element, source.Revision, source.RemoveDeletedText, mode, token))
+                foreach (var part in ReadEquationCompanions(source.Element, source.Revision, source.RemoveDeletedText, mode, token, container))
                     yield return part;
                 continue;
             }
@@ -403,7 +407,8 @@ internal sealed partial class DocxReader
     }
 
     private static IEnumerable<(XElement Element, bool IsEquation, DocxRevisionInfo? Revision, bool RemoveDeletedText)> ReadEquationCompanions(
-        XElement equation, DocxRevisionInfo? revision, bool removeDeletedText, OoxPdfDocxMarkupMode mode, CancellationToken token)
+        XElement equation, DocxRevisionInfo? revision, bool removeDeletedText, OoxPdfDocxMarkupMode mode, CancellationToken token,
+        XElement? display = null)
     {
         token.ThrowIfCancellationRequested();
         if (CountDrawingEquationFragments(equation, mode, token) is null)
@@ -412,16 +417,31 @@ internal sealed partial class DocxReader
             yield break;
         }
         XElement? owner = null;
+        XElement? link = null;
+        XElement? linkedContent = null;
         DocxRevisionInfo? fragmentRevision = revision;
         foreach (var fragment in SplitEquationAtDrawings(equation, mode, token))
         {
             if (owner != fragment.Owner)
             {
+                if (link is not null) yield return (link, false, revision, false);
                 owner = fragment.Owner;
-                fragmentRevision = owner is null ? revision : fragment.Included ? CreateRevisionInfo(owner) : null;
+                fragmentRevision = fragment.Included ? (owner is null ? null : CreateRevisionInfo(owner)) ?? revision : null;
+                link = null;
+                linkedContent = null;
+                if (!removeDeletedText && owner?.Name == WordprocessingNamespace + "hyperlink")
+                {
+                    link = new XElement(owner.Name, owner.Attributes());
+                    linkedContent = display is null ? link : new XElement(display.Name, display.Element(MathNamespace + "oMathParaPr"));
+                    if (display is not null) link.Add(linkedContent);
+                }
             }
-            yield return (fragment.Element, fragment.Element.Name == MathNamespace + "oMath", fragmentRevision,
-                removeDeletedText || fragment.RemovesDeletedText);
+            if (linkedContent is not null)
+                linkedContent.Add(fragment.Element);
+            else
+                yield return (fragment.Element, fragment.Element.Name == MathNamespace + "oMath", fragmentRevision,
+                    removeDeletedText || fragment.RemovesDeletedText);
         }
+        if (link is not null) yield return (link, false, revision, false);
     }
 }

@@ -190,6 +190,89 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
+    public static void DocxEquationDrawingCompanionsKeepInnerHyperlinkCoverage()
+    {
+        foreach ((string container, bool display) in new[] { ("body", false), ("cell", false), ("cell", true) })
+        foreach (bool partial in new[] { false, true })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var expected = Render(inner: false);
+            var actual = Render(inner: true);
+            TestAssert.Equal(expected.Page.Content, actual.Page.Content);
+            TestAssert.Equal(expected.Equations, actual.Equations);
+            TestAssert.True(expected.Diagnostics.SequenceEqual(actual.Diagnostics) &&
+                !actual.Diagnostics.Contains("DOCX_UNSUPPORTED_EQUATION"), "Moving a link across the equation wrapper preserves every visible item.");
+
+            var link = actual.Page.Annotations.Single();
+            var outer = expected.Page.Annotations.Single();
+            TestAssert.Equal((outer.X, outer.Y, outer.Width, outer.Height), (link.X, link.Y, link.Width, link.Height));
+            TestAssert.Equal(outer.Destination, link.Destination);
+            TestAssert.True(link.Destination is { PageIndex: 0, Left: not null, Top: not null }, "The link goes to the authored heading.");
+            var picture = ReadPictureBounds(actual.Page).Single().Bounds;
+            TestAssert.True(picture.X >= link.X - .01d && picture.Y >= link.Y - .01d &&
+                picture.X + picture.Width <= link.X + link.Width + .01d && picture.Y + picture.Height <= link.Y + link.Height + .01d,
+                "The link covers the full picture.");
+            foreach (string label in new[] { "17", "314", "793", "28" })
+            {
+                var glyphs = PortableRenderingTests.ReadPaintedSourceLabel(actual.Page, label, mathOnly: true);
+                TestAssert.Equal(label.Length, glyphs.Count);
+                bool linked = !partial || label is "314" or "793";
+                // The ordinary link pads the hit area at its ends. Use the
+                // operand center and keep the exact rectangle comparison above.
+                double center = (glyphs.Min(glyph => glyph.Ink.X) + glyphs.Max(glyph => glyph.Ink.X + glyph.Ink.Width)) / 2d;
+                TestAssert.True(linked == (center >= link.X && center <= link.X + link.Width),
+                    $"The link keeps the authored ownership of operand {label} ({container}, display={display}, partial={partial}, {mode}).");
+            }
+            TestAssert.Equal(2, PortableRenderingTests.ReadPaintedSourceLabel(actual.Page, "QA").Count);
+            TestAssert.Equal(1, PortableRenderingTests.ReadPaintedSourceLabel(actual.Page, "Ω").Count);
+
+            (PdfPage Page, int Equations, List<string> Diagnostics) Render(bool inner)
+            {
+                var diagnostics = new List<string>();
+                void Record(Lokad.OoxPdf.Diagnostics.OoxPdfDiagnostic item) => diagnostics.Add(item.Id);
+                var source = ReadMutation("CompositionProbes/math-display-image-" + container + "-between", mode,
+                    false, false, (xml, w, m) =>
+                    {
+                        const string target = "InnerLinkDestination";
+                        var headingRun = xml.Descendants(w + "p").First().Elements(w + "r").First();
+                        headingRun.AddBeforeSelf(new XElement(w + "bookmarkStart", new XAttribute(w + "id", "529"), new XAttribute(w + "name", target)));
+                        headingRun.AddAfterSelf(new XElement(w + "bookmarkEnd", new XAttribute(w + "id", "529")));
+                        var displayRow = xml.Descendants(m + "oMathPara").First();
+                        var pictureRun = displayRow.Parent!.Elements(w + "r").Single();
+                        var inlinePicture = pictureRun.Element(w + "drawing")!;
+                        pictureRun.Remove();
+                        var left = MathRun("17");
+                        var right = MathRun("28");
+                        var mixed = new XElement(m + "r", new XElement(m + "t", "314"),
+                            new XElement(w + "t", "QA"),
+                            new XElement(w + "sym", new XAttribute(w + "font", "Arial"), new XAttribute(w + "char", "03A9")),
+                            inlinePicture, new XElement(m + "t", "793"));
+                        var owner = new XElement(w + "hyperlink", new XAttribute(w + "anchor", target));
+                        var properties = new XElement(m + "oMathParaPr", new XElement(m + "jc", new XAttribute(m + "val", "left")));
+                        XElement Frame(params object?[] items)
+                        {
+                            var math = new XElement(m + "oMath", items);
+                            return display ? new XElement(m + "oMathPara", properties, math) : math;
+                        }
+                        if (inner)
+                        {
+                            owner.Add(partial ? null : left, mixed, partial ? null : right);
+                            displayRow.AddAfterSelf(Frame(partial ? left : null, owner, partial ? right : null));
+                        }
+                        else
+                        {
+                            owner.Add(Frame(partial ? null : left, mixed, partial ? null : right));
+                            displayRow.AddAfterSelf(partial ? Frame(left) : null, owner, partial ? Frame(right) : null);
+                        }
+
+                        XElement MathRun(string text) => new(m + "r", new XElement(m + "t", text));
+                    }, diagnosticSink: Record);
+                var page = PictureRangeRenderer(mode).RenderPagesAsync(source, Record, default).ToBlockingEnumerable().Single();
+                return (page, source.EquationParts.Sum(part => part.SourceCount), diagnostics);
+            }
+        }
+    }
+
     public static void DocxDisplayRowKeepsCommentRangeThroughDrawing()
     {
         foreach (string container in new[] { "body", "cell" })
