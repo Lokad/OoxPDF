@@ -29,7 +29,10 @@ internal sealed partial class DocxReader
             if (equations == 0)
             {
                 hasDisplaySource = true;
-                if (element.Descendants().Any(child => CountEquationPayloads(child, token) != 0)) continue;
+                // Every explicit equation supplies a payload. Counting its
+                // fragments belongs to the main pass over that element.
+                if (element.Descendants().Any(child => child.Name == MathNamespace + "oMath" ||
+                    IsDisplayMathRun(child) && ClassifyDisplayMathRun(child, token).EquationCount != 0)) continue;
                 equations = 1;
             }
             bool included = true;

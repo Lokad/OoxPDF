@@ -18,6 +18,65 @@ internal static partial class DocxInlineCompositionTests
     public static void DocxDisplayRowKeepsBookmarkAcrossDrawingCompanions() =>
         CheckDisplayDrawingCompanions(withBreak: false, explicitRow: true, withBookmark: true);
 
+    public static void DocxDisplayRowKeepsCommentRangeThroughDrawing()
+    {
+        foreach (string container in new[] { "body", "cell" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var expected = Render(inside: false);
+            var actual = Render(inside: true);
+            TestAssert.Equal(expected.Page.Content, actual.Page.Content);
+            TestAssert.Equal(1, actual.Page.Images.Count);
+            TestAssert.Equal(3, PortableRenderingTests.ReadPaintedSourceLabel(actual.Page, "314", mathOnly: true).Count);
+            TestAssert.Equal(3, PortableRenderingTests.ReadPaintedSourceLabel(actual.Page, "793", mathOnly: true).Count);
+            TestAssert.Equal(2, PortableRenderingTests.ReadPaintedSourceLabel(actual.Page, "QA").Count);
+            TestAssert.True(expected.Diagnostics.SequenceEqual(actual.Diagnostics) &&
+                !actual.Diagnostics.Contains("DOCX_UNSUPPORTED_EQUATION"), "Range metadata does not drop any equation fragments.");
+            string text = DocxPageFootnoteNumberingTests.DecodeText(actual.Page);
+            TestAssert.Equal(mode == OoxPdfDocxMarkupMode.AllMarkup, text.Contains("Check printed geometry.", StringComparison.Ordinal));
+
+            (PdfPage Page, List<string> Diagnostics) Render(bool inside)
+            {
+                var diagnostics = new List<string>();
+                void Record(Lokad.OoxPdf.Diagnostics.OoxPdfDiagnostic item) => diagnostics.Add(item.Id);
+                var document = ReadMutation("CompositionProbes/math-display-image-" + container + "-between", mode,
+                    false, false, (xml, w, m) =>
+                    {
+                        var display = xml.Descendants(m + "oMathPara").First();
+                        var originalPicture = display.Parent!.Elements(w + "r").Single();
+                        var drawing = originalPicture.Element(w + "drawing")!;
+                        var start = xml.Descendants(w + "commentRangeStart").Single();
+                        var end = xml.Descendants(w + "commentRangeEnd").Single();
+                        var referenceRun = xml.Descendants(w + "commentReference").Single().Parent!;
+                        start.Remove();
+                        end.Remove();
+                        referenceRun.Remove();
+                        var picture = new XElement((inside ? m : w) + "r", new XElement(w + "t", "QA"), drawing);
+                        originalPicture.Remove();
+                        if (inside)
+                            display.Add(new XElement(m + "oMath", start, MathRun("314"), picture, end, MathRun("793")));
+                        else
+                            display.Add(new XElement(m + "oMath", start, MathRun("314")), picture, end,
+                                new XElement(m + "oMath", MathRun("793")));
+                        display.AddAfterSelf(referenceRun);
+
+                        XElement MathRun(string text) => new(m + "r", new XElement(m + "t", text));
+                    }, diagnosticSink: Record);
+                var paragraph = DocxBlockTraversal.EnumerateBodyParagraphs(document).Single(p => p.Images.Count != 0);
+                var range = paragraph.CommentRanges.Single();
+                var items = TestAssert.NotNull(paragraph.InlineContent);
+                int start = range.StartInlineItemIndex!.Value;
+                int end = range.EndInlineItemIndex!.Value;
+                TestAssert.True(items[start] is DocxInlineEquation { Equation.Content.Children: [DocxMathRun { Text.Text: "314" }] } &&
+                    items[end - 1] is DocxInlinePicture &&
+                    items[end] is DocxInlineEquation { Equation.Content.Children: [DocxMathRun { Text.Text: "793" }] },
+                    "The range closes after the picture and before the following operand.");
+                var page = PictureRangeRenderer(mode).RenderPagesAsync(document, Record, default).ToBlockingEnumerable().Single();
+                return (page, diagnostics);
+            }
+        }
+    }
+
     private static void CheckDisplayDrawingCompanions(bool withBreak, bool explicitRow, bool withBookmark = false)
     {
         foreach (string container in new[] { "body", "cell" })

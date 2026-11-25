@@ -44,13 +44,15 @@ internal sealed partial class DocxReader
 
         static bool IsBoundary(XElement element) =>
             DocxMathParser.IsNonPrintingSourceMarker(element) ||
-            DocxMathParser.IsBookmarkMarker(element) ||
-            DocxMathParser.IsCommentBoundary(element) ||
+            IsMathRangeBoundary(element) ||
             (element.Name == MathNamespace + "r" &&
              element.Attributes().All(attribute => attribute.IsNamespaceDeclaration) &&
              element.Elements().All(DocxSourceXml.IsNonPrintingMathRunControl) &&
              HasOnlyWhitespaceRunText(element));
     }
+
+    private static bool IsMathRangeBoundary(XElement element) =>
+        DocxMathParser.IsBookmarkMarker(element) || DocxMathParser.IsCommentBoundary(element);
 
     private static DisplayMathRunLayout ClassifyDisplayMathRun(XElement run, CancellationToken token, bool insideEquation = false)
     {
@@ -120,7 +122,7 @@ internal sealed partial class DocxReader
         foreach (var child in equation.Elements())
         {
             token.ThrowIfCancellationRequested();
-            if (DocxMathParser.IsBookmarkMarker(child) || DocxMathParser.IsNonPrintingSourceMarker(child)) continue;
+            if (IsMathRangeBoundary(child) || DocxMathParser.IsNonPrintingSourceMarker(child)) continue;
             if (child.Name == MathNamespace + "r" && child.Element(WordprocessingNamespace + "drawing") is not null)
             {
                 var layout = ClassifyDisplayMathRun(child, token, insideEquation: true);
@@ -141,14 +143,23 @@ internal sealed partial class DocxReader
     private static IEnumerable<XElement> SplitDisplayDrawingRow(XElement equation, CancellationToken token)
     {
         XElement? group = null;
-        List<XElement>? bookmarks = null;
+        List<XElement>? boundaries = null;
         foreach (var child in equation.Elements())
         {
             token.ThrowIfCancellationRequested();
             if (DocxMathParser.IsNonPrintingSourceMarker(child)) continue;
-            if (DocxMathParser.IsBookmarkMarker(child))
+            if (IsMathRangeBoundary(child))
             {
-                (bookmarks ??= []).Add(child);
+                // A comment ending just after Wordprocessing content closes
+                // at that inline boundary, before a later math group begins.
+                if (group is null && child.Name == WordprocessingNamespace + "commentRangeEnd")
+                {
+                    foreach (var boundary in TakeBoundaries())
+                        yield return boundary;
+                    yield return child;
+                }
+                else
+                    (boundaries ??= []).Add(child);
                 continue;
             }
             if (child.Name != MathNamespace + "r" || child.Element(WordprocessingNamespace + "drawing") is null)
@@ -168,40 +179,40 @@ internal sealed partial class DocxReader
                     yield return group;
                     group = null;
                 }
-                foreach (var bookmark in TakeBookmarks())
-                    yield return bookmark;
+                foreach (var boundary in TakeBoundaries())
+                    yield return boundary;
                 yield return part;
             }
         }
         if (group is not null)
         {
-            group.Add(TakeBookmarks());
+            group.Add(TakeBoundaries());
             yield return group;
         }
         else
         {
-            foreach (var bookmark in TakeBookmarks())
-                yield return bookmark;
+            foreach (var boundary in TakeBoundaries())
+                yield return boundary;
         }
 
         void AddMath(XElement element)
         {
             group ??= new XElement(equation.Name, equation.Attributes());
-            group.Add(TakeBookmarks());
+            group.Add(TakeBoundaries());
             group.Add(element);
         }
 
-        // A bookmark before another atom retains its offset in the grouped
-        // math. A bookmark before a drawing belongs to the inline boundary.
-        IEnumerable<XElement> TakeBookmarks()
+        // Boundaries between atoms retain their position in the group.
+        // Boundaries adjacent to Wordprocessing content use paragraph order.
+        IEnumerable<XElement> TakeBoundaries()
         {
-            if (bookmarks is null) yield break;
-            foreach (var bookmark in bookmarks)
+            if (boundaries is null) yield break;
+            foreach (var boundary in boundaries)
             {
                 token.ThrowIfCancellationRequested();
-                yield return bookmark;
+                yield return boundary;
             }
-            bookmarks.Clear();
+            boundaries.Clear();
         }
     }
 
