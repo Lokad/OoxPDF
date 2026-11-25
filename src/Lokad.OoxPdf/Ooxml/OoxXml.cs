@@ -8,6 +8,26 @@ namespace Lokad.OoxPdf.Ooxml;
 // the caller's default. Boolean readers delegate to the shared OOXML vocabulary.
 internal static class OoxXml
 {
+    // Numeric identities compare by their integer value. Opaque identifiers
+    // have separate comparison rules, and malformed decimal spellings stay intact.
+    public static string? NormalizeDecimalId(string? value)
+    {
+        if (value is null) return null;
+        ReadOnlySpan<char> number = value.AsSpan().Trim();
+        int first = !number.IsEmpty && number[0] is '+' or '-' ? 1 : 0;
+        if (first == number.Length) return value;
+        for (int index = first; index < number.Length; index++)
+        {
+            if (number[index] is < '0' or > '9') return value;
+        }
+        bool negative = number[0] == '-';
+        while (first < number.Length - 1 && number[first] == '0') first++;
+        ReadOnlySpan<char> digits = number[first..];
+        if (digits.Length == 1 && digits[0] == '0') return "0";
+        if (number.Length == value.Length && first == (negative ? 1 : 0)) return value;
+        return negative ? "-" + digits.ToString() : digits.ToString();
+    }
+
     public static string? ReadDrawingSvgRelationshipId(XElement? blip, CancellationToken cancellationToken)
     {
         // Only a direct extension of the selected drawing blip owns the SVG relationship.

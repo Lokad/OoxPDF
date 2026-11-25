@@ -36,7 +36,7 @@ internal static partial class DocxMathParser
             bool revisionSource = item.RevisionOwner is null && includeRevision is not null &&
                 DocxSourceXml.IsRevisionContainer(element) &&
                 (name is not ("moveFrom" or "moveTo") ||
-                    (string?)element.Attribute(WordprocessingNamespace + "id") is { } id &&
+                    OoxXml.NormalizeDecimalId((string?)element.Attribute(WordprocessingNamespace + "id")) is { } id &&
                     (moveOwners ??= DocxSourceXml.ReadPairedMoveOwnerIds(equation, authoredStory, cancellationToken))
                         .Contains((element.Name, id)));
             XElement[]? revisionChildren = revisionSource ? ReadRevisionChildren(element, cancellationToken).ToArray() : null;

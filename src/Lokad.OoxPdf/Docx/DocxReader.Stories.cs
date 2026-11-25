@@ -264,7 +264,7 @@ internal sealed partial class DocxReader
         HashSet<string> registeredSeparators = (settings?.Root?
             .Element(WordprocessingNamespace + (storyElementName + "Pr"))?
             .Elements(WordprocessingNamespace + storyElementName)
-            .Select(reference => NormalizeDecimalId((string?)reference.Attribute(WordprocessingNamespace + "id")))
+            .Select(reference => OoxXml.NormalizeDecimalId((string?)reference.Attribute(WordprocessingNamespace + "id")))
             .OfType<string>() ?? []).ToHashSet(StringComparer.Ordinal);
         IEnumerable<(XElement Story, int Index)> sourceStories =
             (partXml.Root?.Elements(WordprocessingNamespace + storyElementName) ?? [])
@@ -278,7 +278,7 @@ internal sealed partial class DocxReader
             foreach (var source in sourceStories)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (NormalizeDecimalId((string?)source.Story.Attribute(WordprocessingNamespace + "id")) is { } id &&
+                if (OoxXml.NormalizeDecimalId((string?)source.Story.Attribute(WordprocessingNamespace + "id")) is { } id &&
                     literalTargetIds.Contains(id) && !seen.Add(id)) literalTargetIds.Remove(id);
             }
         }
@@ -292,7 +292,7 @@ internal sealed partial class DocxReader
                 cancellationToken.ThrowIfCancellationRequested();
                 XElement story = source.Story;
                 return (string?)story.Attribute(WordprocessingNamespace + "type") is null or "normal" &&
-                    NormalizeDecimalId((string?)story.Attribute(WordprocessingNamespace + "id")) is { } id &&
+                    OoxXml.NormalizeDecimalId((string?)story.Attribute(WordprocessingNamespace + "id")) is { } id &&
                     noteReferences.TryGetValue((kind, id), out var reference)
                         ? reference.Order : int.MaxValue;
             });
@@ -304,7 +304,7 @@ internal sealed partial class DocxReader
             XElement storyElement = sourceStory;
             if (kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote &&
                 (string?)storyElement.Attribute(WordprocessingNamespace + "type") is null or "normal" &&
-                NormalizeDecimalId((string?)storyElement.Attribute(WordprocessingNamespace + "id")) is { } id &&
+                OoxXml.NormalizeDecimalId((string?)storyElement.Attribute(WordprocessingNamespace + "id")) is { } id &&
                 noteReferences is not null && noteReferences.TryGetValue((kind, id), out var noteReference) &&
                 !string.IsNullOrEmpty(noteReference.Label))
             {
@@ -323,7 +323,7 @@ internal sealed partial class DocxReader
             XElement effectiveStory = storyElement;
             bool usesDefaultSeparator = kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote &&
                 (string?)storyElement.Attribute(WordprocessingNamespace + "type") is "separator" or "continuationSeparator" &&
-                NormalizeDecimalId((string?)storyElement.Attribute(WordprocessingNamespace + "id")) is { } separatorId &&
+                OoxXml.NormalizeDecimalId((string?)storyElement.Attribute(WordprocessingNamespace + "id")) is { } separatorId &&
                 !registeredSeparators.Contains(separatorId);
             if (usesDefaultSeparator)
             {
@@ -468,7 +468,7 @@ internal sealed partial class DocxReader
             ? metadata
             : null;
         int sourceEquationCount = InspectEquationSources(story, markupMode, cancellationToken).Count;
-        string? storyId = NormalizeDecimalId((string?)story.Attribute(WordprocessingNamespace + "id"));
+        string? storyId = OoxXml.NormalizeDecimalId((string?)story.Attribute(WordprocessingNamespace + "id"));
         return new DocxRelatedStory(
             kind,
             partName,

@@ -64,7 +64,7 @@ internal sealed partial class DocxReader
             foreach (var bookmark in leadingBookmarks)
             {
                 token.ThrowIfCancellationRequested();
-                bookmarkStarts.TryAdd(NormalizeDecimalId(bookmark.Id)!, bookmark);
+                bookmarkStarts.TryAdd(OoxXml.NormalizeDecimalId(bookmark.Id)!, bookmark);
             }
         }
         Dictionary<string, DocxTableColumnBookmark>? columnStarts = null;
@@ -74,7 +74,7 @@ internal sealed partial class DocxReader
             foreach (var bookmark in leadingColumnBookmarks)
             {
                 token.ThrowIfCancellationRequested();
-                columnStarts.TryAdd(NormalizeDecimalId(bookmark.Anchor.Id)!, bookmark);
+                columnStarts.TryAdd(OoxXml.NormalizeDecimalId(bookmark.Anchor.Id)!, bookmark);
             }
         }
         foreach (var scope in EnumerateRevisionScopedChildren(elements, mode, token, includedNames, inheritedRevision))
@@ -88,7 +88,7 @@ internal sealed partial class DocxReader
             if (scope.Element.Name == bookmarkStartName)
             {
                 var anchor = ReadBookmarkAnchor(scope.Element, 0, 0, 0, 0);
-                if (NormalizeDecimalId(anchor.Id) is not { Length: > 0 } id || string.IsNullOrEmpty(anchor.Name))
+                if (OoxXml.NormalizeDecimalId(anchor.Id) is not { Length: > 0 } id || string.IsNullOrEmpty(anchor.Name))
                     continue;
                 XName firstColumn = WordprocessingNamespace + "colFirst";
                 XName lastColumn = WordprocessingNamespace + "colLast";
@@ -105,7 +105,7 @@ internal sealed partial class DocxReader
             if (scope.Element.Name == bookmarkEndName)
             {
                 if ((bookmarkStarts is not null || columnStarts is not null || recordBookmarkEnd is not null) &&
-                    NormalizeDecimalId((string?)scope.Element.Attribute(WordprocessingNamespace + "id")) is { } id)
+                    OoxXml.NormalizeDecimalId((string?)scope.Element.Attribute(WordprocessingNamespace + "id")) is { } id)
                 {
                     bookmarkStarts?.Remove(id);
                     columnStarts?.Remove(id);

@@ -271,7 +271,7 @@ internal sealed partial class DocxReader
 
             string? ReadCommentAnchorId(XElement element)
             {
-                return NormalizeDecimalId((string?)element.Attribute(WordprocessingNamespace + "id"));
+                return OoxXml.NormalizeDecimalId((string?)element.Attribute(WordprocessingNamespace + "id"));
             }
 
         XElement[] anchors = document

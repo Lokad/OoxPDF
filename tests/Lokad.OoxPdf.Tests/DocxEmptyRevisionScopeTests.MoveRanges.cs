@@ -28,7 +28,8 @@ internal static partial class DocxEmptyRevisionScopeTests
                 var expected = renderer.RenderPagesAsync(control, null, default).ToBlockingEnumerable().ToArray();
                 foreach (string kind in new[] { "moveFrom", "moveTo" })
                 {
-                    var document = ReadMoveRange(source, mode, kind, payload, carrier);
+                    var document = ReadMoveRange(source, mode, kind, payload, carrier,
+                        equivalentEndId: carrier == "direct");
                     var diagnostics = new List<OoxPdfDiagnostic>();
                     var actual = renderer.RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
                     AssertPaint(expected, actual, source.Fixture + "/" + kind + "/" + payload + "/" + carrier + "/" + mode);
@@ -82,14 +83,15 @@ internal static partial class DocxEmptyRevisionScopeTests
     }
 
     private static DocxDocument ReadMoveRange((string Fixture, string Part) source, OoxPdfDocxMarkupMode mode,
-        string kind, string payload, string carrier = "direct", bool includeRange = true) =>
+        string kind, string payload, string carrier = "direct", bool includeRange = true,
+        bool equivalentEndId = false) =>
         DocxInlineCompositionTests.ReadMutation(source.Fixture, mode, false, false, (xml, w, math) =>
         {
             var equation = xml.Descendants(math + "oMath").First();
             var start = new XElement(w + (kind + "RangeStart"), new XAttribute(w + "id", "961"),
                 new XAttribute(w + "name", "EmptyMoveRange"), new XAttribute(w + "author", "Public reviewer"),
                 new XAttribute(w + "date", "2026-11-13T00:00:00Z"));
-            var end = new XElement(w + (kind + "RangeEnd"), new XAttribute(w + "id", "961"));
+            var end = new XElement(w + (kind + "RangeEnd"), new XAttribute(w + "id", equivalentEndId ? "+00961" : "961"));
             XElement[] content = payload switch
             {
                 "bookmark" => [new XElement(w + "bookmarkStart", new XAttribute(w + "id", "962"),

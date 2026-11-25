@@ -251,7 +251,7 @@ internal sealed partial class DocxReader
         foreach (XElement abstractNum in numberingXml.Root?.Elements(WordprocessingNamespace + "abstractNum") ?? [])
         {
             cancellationToken.ThrowIfCancellationRequested();
-            string? abstractId = NormalizeDecimalId((string?)abstractNum.Attribute(WordprocessingNamespace + "abstractNumId"));
+            string? abstractId = OoxXml.NormalizeDecimalId((string?)abstractNum.Attribute(WordprocessingNamespace + "abstractNumId"));
             if (abstractId is null)
             {
                 continue;
@@ -284,8 +284,8 @@ internal sealed partial class DocxReader
         foreach (XElement num in numberingXml.Root?.Elements(WordprocessingNamespace + "num") ?? [])
         {
             cancellationToken.ThrowIfCancellationRequested();
-            string? numId = NormalizeDecimalId((string?)num.Attribute(WordprocessingNamespace + "numId"));
-            string? abstractId = NormalizeDecimalId((string?)num.Element(WordprocessingNamespace + "abstractNumId")?.Attribute(WordprocessingNamespace + "val"));
+            string? numId = OoxXml.NormalizeDecimalId((string?)num.Attribute(WordprocessingNamespace + "numId"));
+            string? abstractId = OoxXml.NormalizeDecimalId((string?)num.Element(WordprocessingNamespace + "abstractNumId")?.Attribute(WordprocessingNamespace + "val"));
             if (numId is not null && abstractId is not null)
             {
                 numToAbstract[numId] = canonicalAbstractIds.GetValueOrDefault(abstractId, abstractId);

@@ -528,7 +528,7 @@ internal sealed partial class DocxReader
             foreach (XElement marker in markers)
             {
                 token.ThrowIfCancellationRequested();
-                if (NormalizeDecimalId((string?)marker.Attribute(WordprocessingNamespace + "id")) is { Length: > 0 } id)
+                if (OoxXml.NormalizeDecimalId((string?)marker.Attribute(WordprocessingNamespace + "id")) is { Length: > 0 } id)
                     (boundaries ??= []).Add(new(paragraphBoundary, id, marker.Name == WordprocessingNamespace + "commentRangeStart"));
             }
             return null;

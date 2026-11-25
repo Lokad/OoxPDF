@@ -318,7 +318,7 @@ internal sealed partial class DocxReader
             ReadOnOff(wordWrap),
             (string?)wordWrap?.Attribute(WordprocessingNamespace + "val"))
         {
-            NumberingId = NormalizeDecimalId((string?)numbering?.Element(WordprocessingNamespace + "numId")?.Attribute(WordprocessingNamespace + "val")),
+            NumberingId = OoxXml.NormalizeDecimalId((string?)numbering?.Element(WordprocessingNamespace + "numId")?.Attribute(WordprocessingNamespace + "val")),
             // Paragraph styles select their associated abstract level through
             // pStyle. A style's own ilvl is not a direct paragraph override.
             NumberingLevel = includeNumberingLevel && numbering?.Element(WordprocessingNamespace + "ilvl")?

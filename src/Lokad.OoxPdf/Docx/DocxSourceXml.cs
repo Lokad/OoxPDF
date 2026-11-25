@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Xml.Linq;
+using Lokad.OoxPdf.Ooxml;
 using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
 
 namespace Lokad.OoxPdf.Docx;
@@ -82,11 +83,11 @@ internal static class DocxSourceXml
             token.ThrowIfCancellationRequested();
             if (IsStoryRoot(child)) continue;
             foreach (var item in StoredChildren(child).Reverse()) pending.Push(item);
-            if ((string?)child.Attribute(WordprocessingNamespace + "id") is not { Length: > 0 } id) continue;
+            if ((string?)child.Attribute(WordprocessingNamespace + "id") is not { Length: > 0 } authoredId) continue;
 
             if (TryResolveRevisionRangeMarker(child, out var kind, out bool isStart))
             {
-                var key = (kind.Value, id);
+                var key = (kind.Value, OoxXml.NormalizeDecimalId(authoredId)!);
                 bool boundary = IsNonPrintingRevisionRangeBoundary(child);
                 if (isStart)
                 {
@@ -106,7 +107,7 @@ internal static class DocxSourceXml
             }
             else if (child.Name == WordprocessingNamespace + "moveFrom" || child.Name == WordprocessingNamespace + "moveTo")
             {
-                var owner = (child.Name, id);
+                var owner = OwnerId(child);
                 if (!declaredIds.Add(owner)) duplicateIds.Add(owner);
                 if (open.Count != 1) continue;
                 var range = open.First();
@@ -143,7 +144,7 @@ internal static class DocxSourceXml
         bool HasUniqueOwners(MoveRange range) =>
             range.Owners.Count != 0 && !range.Owners.Select(OwnerId).Any(duplicateIds.Contains);
         static (XName Name, string Id) OwnerId(XElement owner) =>
-            (owner.Name, owner.Attribute(WordprocessingNamespace + "id")!.Value);
+            (owner.Name, OoxXml.NormalizeDecimalId(owner.Attribute(WordprocessingNamespace + "id")!.Value)!);
         static bool IsMathRange((MoveRange Range, XElement End) move) =>
             IsInEquation(move.Range.Start) && IsInEquation(move.End) && move.Range.Owners.All(IsInEquation);
         void AddMathSources((MoveRange Range, XElement End) move)

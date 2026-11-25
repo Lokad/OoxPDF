@@ -705,7 +705,7 @@ internal sealed partial class DocxReader
             !DocxSourceXml.IsNonPrintingRevisionRangeBoundary(child))
             return false;
 
-        var marker = (kind.Value, child.Attribute(WordprocessingNamespace + "id")!.Value);
+        var marker = (kind.Value, OoxXml.NormalizeDecimalId(child.Attribute(WordprocessingNamespace + "id")!.Value)!);
         open ??= [];
         return isStart ? open.Add(marker) : open.Remove(marker);
     }

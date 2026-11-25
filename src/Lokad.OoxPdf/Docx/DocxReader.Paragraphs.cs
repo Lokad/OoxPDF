@@ -152,7 +152,7 @@ internal sealed partial class DocxReader
                     RelativeRunTextOffset(runs, sourceRunIndex), GetInlineItemCount());
                 if (cellBookmarks is { } scope &&
                     ReadTableColumnBookmark(child, anchor) is { } bookmark && bookmark.First >= scope.EndColumn &&
-                    NormalizeDecimalId(anchor.Id) is { Length: > 0 } && !string.IsNullOrEmpty(anchor.Name))
+                    OoxXml.NormalizeDecimalId(anchor.Id) is { Length: > 0 } && !string.IsNullOrEmpty(anchor.Name))
                 {
                     scope.Defer(bookmark with { Anchor = ReadBookmarkAnchor(child, 0, 0, 0, 0) });
                 }
@@ -165,7 +165,7 @@ internal sealed partial class DocxReader
             else if (child.Name == WordprocessingNamespace + "bookmarkEnd")
             {
                 if (cellBookmarks is { } scope &&
-                    NormalizeDecimalId((string?)child.Attribute(WordprocessingNamespace + "id")) is { } id)
+                    OoxXml.NormalizeDecimalId((string?)child.Attribute(WordprocessingNamespace + "id")) is { } id)
                     scope.RecordEnd(id);
                 return false;
             }
@@ -1529,7 +1529,7 @@ internal sealed partial class DocxReader
         int inlineItemIndex)
     {
         openCommentRanges.Add(new DocxCommentRangeStart(
-            NormalizeDecimalId((string?)rangeStart.Attribute(WordprocessingNamespace + "id")),
+            OoxXml.NormalizeDecimalId((string?)rangeStart.Attribute(WordprocessingNamespace + "id")),
             sourceRunIndex,
             RelativeRunTextOffset(runs, sourceRunIndex))
         {
@@ -1547,7 +1547,7 @@ internal sealed partial class DocxReader
         List<DocxTextRun> runs,
         int inlineItemIndex)
     {
-        string? id = NormalizeDecimalId((string?)rangeEnd.Attribute(WordprocessingNamespace + "id"));
+        string? id = OoxXml.NormalizeDecimalId((string?)rangeEnd.Attribute(WordprocessingNamespace + "id"));
         int startIndex = openCommentRanges.FindLastIndex(start => string.Equals(start.Id, id, StringComparison.Ordinal));
         DocxCommentRangeStart? start = startIndex < 0 ? null : openCommentRanges[startIndex];
         if (startIndex >= 0)
@@ -1607,9 +1607,10 @@ internal sealed partial class DocxReader
         }
 
         string? id = (string?)marker.Attribute(WordprocessingNamespace + "id");
+        string? decimalId = OoxXml.NormalizeDecimalId(id);
         int startIndex = openRevisionRanges.FindLastIndex(start =>
             start.Kind == kind &&
-            string.Equals(start.Id, id, StringComparison.Ordinal));
+            string.Equals(OoxXml.NormalizeDecimalId(start.Id), decimalId, StringComparison.Ordinal));
         DocxRevisionRangeStart? startRange = startIndex < 0 ? null : openRevisionRanges[startIndex];
         if (startIndex >= 0)
         {
@@ -1785,7 +1786,7 @@ internal sealed partial class DocxReader
             ? (string?)child.Attribute(WordprocessingNamespace + "customMarkFollows")
             : null;
         string? displayText = ResolveInlineReferenceDisplayText(kind, customMarkFollows);
-        string? referenceId = NormalizeDecimalId((string?)child.Attribute(WordprocessingNamespace + "id"));
+        string? referenceId = OoxXml.NormalizeDecimalId((string?)child.Attribute(WordprocessingNamespace + "id"));
         inlineReferences.Add(new DocxInlineReference(
             kind,
             referenceId,

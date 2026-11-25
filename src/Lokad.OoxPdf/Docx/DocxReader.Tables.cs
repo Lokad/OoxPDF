@@ -420,7 +420,7 @@ internal sealed partial class DocxReader
             // intersecting authored cell, including a cell that spans the start.
             if (bookmark.Last < startColumn) continue;
             if (endBoundaries is not null &&
-                endBoundaries.TryGetValue(NormalizeDecimalId(bookmark.Anchor.Id)!, out int beforeCell) &&
+                endBoundaries.TryGetValue(OoxXml.NormalizeDecimalId(bookmark.Anchor.Id)!, out int beforeCell) &&
                 beforeCell <= cellIndex) continue;
             result ??= leadingBookmarks is null ? [] : [.. leadingBookmarks];
             result.Add(bookmark.Anchor);

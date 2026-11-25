@@ -112,7 +112,7 @@ internal static partial class DocxInlineCompositionTests
         })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
-            var document = ReadMovedOperands(mode, pageBreak, diagnostics.Add);
+            var document = ReadMovedOperands(mode, pageBreak, diagnostics.Add, equivalentDecimalIds: pageBreak);
             var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true), mode,
                 mode == OoxPdfDocxMarkupMode.AllMarkup ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
                     : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
@@ -172,15 +172,19 @@ internal static partial class DocxInlineCompositionTests
         var unrelated = new XElement(WordprocessingNamespace + "moveTo", new XAttribute(WordprocessingNamespace + "id", "80"),
             new XElement(WordprocessingNamespace + "r", new XElement(WordprocessingNamespace + "t", "Independent")));
         paired.Add(new XElement(WordprocessingNamespace + "p", unrelated));
-        var ambiguous = new XElement(paired);
-        ambiguous.Elements().Last().Element(WordprocessingNamespace + "moveTo")!
-            .SetAttributeValue(WordprocessingNamespace + "id", "44");
         TestAssert.Equal(2, DocxSourceXml.ReadPairedMoveOwnerIds(paired.Descendants(MathNamespace + "oMath").First(), null, default).Count);
-        TestAssert.Equal(0, DocxSourceXml.ReadPairedMoveOwnerIds(ambiguous.Descendants(MathNamespace + "oMath").First(), null, default).Count);
+        foreach (string duplicateId in new[] { "44", "+0044" })
+        {
+            var ambiguous = new XElement(paired);
+            ambiguous.Elements().Last().Element(WordprocessingNamespace + "moveTo")!
+                .SetAttributeValue(WordprocessingNamespace + "id", duplicateId);
+            TestAssert.Equal(0, DocxSourceXml.ReadPairedMoveOwnerIds(ambiguous.Descendants(MathNamespace + "oMath").First(), null, default).Count);
+        }
     }
 
     private static DocxDocument ReadMovedOperands(OoxPdfDocxMarkupMode mode, bool pageBreak,
-        Action<OoxPdfDiagnostic> diagnostics, Action<XElement[]>? changeDestinationMove = null) =>
+        Action<OoxPdfDiagnostic> diagnostics, Action<XElement[]>? changeDestinationMove = null,
+        bool equivalentDecimalIds = false) =>
         ReadMutation("docx-omml-normal-fraction-inline-arial-normal", mode, false, false, (xml, w, m) =>
         {
             XElement source = xml.Descendants(m + "oMath").Single().Parent!;
@@ -191,9 +195,16 @@ internal static partial class DocxInlineCompositionTests
             firstNumerator.Element(m + "r")!.Element(m + "t")!.Value = "2";
             lastNumerator.Element(m + "r")!.Element(m + "t")!.Value = "3";
             destination.Descendants(m + "den").Single().Element(m + "r")!.Element(m + "t")!.Value = "cost";
-            firstNumerator.AddFirst(MathOperandMove(rate, "moveFrom", "41", "42"));
+            var sourceMove = MathOperandMove(rate, "moveFrom", "41", "42");
+            firstNumerator.AddFirst(sourceMove);
             var destinationMove = MathOperandMove(rate, "moveTo", "43", "44");
             lastNumerator.Add(destinationMove);
+            if (equivalentDecimalIds)
+            {
+                sourceMove[2].SetAttributeValue(w + "id", "+0041");
+                destinationMove[1].SetAttributeValue(w + "id", "+0044");
+                destinationMove[2].SetAttributeValue(w + "id", "00043");
+            }
             changeDestinationMove?.Invoke(destinationMove);
             if (pageBreak)
             {
