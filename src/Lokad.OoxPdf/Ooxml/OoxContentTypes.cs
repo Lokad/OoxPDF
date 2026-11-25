@@ -25,29 +25,26 @@ internal sealed class OoxContentTypes
             cancellationToken.ThrowIfCancellationRequested();
             if (element.Name == OoxNamespaces.ContentTypesNamespace + "Default")
             {
-                string extension = RequiredAttribute(element, "Extension");
-                string defaultKey = extension.TrimStart('.');
-                if (defaults.TryGetValue(defaultKey, out string? existingDefault) && existingDefault != RequiredAttribute(element, "ContentType"))
-                {
-                    throw new InvalidDataException("OOXML package declares conflicting content types.");
-                }
-
-                defaults[defaultKey] = RequiredAttribute(element, "ContentType");
+                string extension = RequiredAttribute(element, "Extension").TrimStart('.');
+                AddDeclaration(defaults, extension, element);
             }
             else if (element.Name == OoxNamespaces.ContentTypesNamespace + "Override")
             {
                 string partName = OoxPath.NormalizePartName(RequiredAttribute(element, "PartName"));
-                string overrideType = RequiredAttribute(element, "ContentType");
-                if (overrides.TryGetValue(partName, out string? existingOverride) && existingOverride != overrideType)
-                {
-                    throw new InvalidDataException("OOXML package declares conflicting content types.");
-                }
-
-                overrides[partName] = overrideType;
+                AddDeclaration(overrides, partName, element);
             }
         }
 
         return new OoxContentTypes(defaults, overrides);
+    }
+
+    private static void AddDeclaration(Dictionary<string, string> declarations, string key, XElement element)
+    {
+        string contentType = RequiredAttribute(element, "ContentType");
+        if (!declarations.TryAdd(key, contentType) && declarations[key] != contentType)
+        {
+            throw new InvalidDataException("OOXML package declares conflicting content types.");
+        }
     }
 
     // The package reader validates and canonicalizes each name before lookup.

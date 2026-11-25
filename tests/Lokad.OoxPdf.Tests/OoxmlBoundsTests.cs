@@ -54,31 +54,43 @@ internal static class OoxmlBoundsTests
         TestAssert.Throws<InvalidDataException>(() => OoxPackage.Open(stream, CancellationToken.None));
     }
 
-    public static void RejectsConflictingContentTypeOverrides()
+    public static void RejectsConflictingContentTypeDeclarations()
     {
-        using MemoryStream packageStream = TestFixtures.CreateZipPackage(new Dictionary<string, string>
+        foreach (string types in new[]
         {
-            ["[Content_Types].xml"] = TestContentTypes(
+            TestContentTypes(
                 "<Override PartName=\"/word/document.xml\" ContentType=\"application/a\"/>",
-                "<Override PartName=\"/word/document.xml\" ContentType=\"application/b\"/>"),
-        });
-
-        TestAssert.Throws<InvalidDataException>(() => OoxPackage.Open(packageStream, CancellationToken.None));
+                "<Override PartName=\"/WORD/document.xml\" ContentType=\"application/b\"/>"),
+            TestContentTypes(
+                "<Default Extension=\"xml\" ContentType=\"application/a\"/>",
+                "<Default Extension=\".XML\" ContentType=\"application/b\"/>")
+        })
+        {
+            using MemoryStream packageStream = TestFixtures.CreateZipPackage(new Dictionary<string, string>
+            {
+                ["[Content_Types].xml"] = types
+            });
+            var error = TestAssert.Throws<InvalidDataException>(() => OoxPackage.Open(packageStream, CancellationToken.None));
+            TestAssert.Contains("conflicting content types", error.Message);
+        }
     }
 
-    public static void ToleratesIdenticalContentTypeOverrides()
+    public static void ToleratesIdenticalContentTypeDeclarationsAndPrefersOverrides()
     {
         using MemoryStream packageStream = TestFixtures.CreateZipPackage(new Dictionary<string, string>
         {
             ["[Content_Types].xml"] = TestContentTypes(
                 "<Default Extension=\"xml\" ContentType=\"application/xml\"/>",
-                "<Override PartName=\"/word/document.xml\" ContentType=\"application/xml\"/>",
-                "<Override PartName=\"/word/document.xml\" ContentType=\"application/xml\"/>"),
+                "<Default Extension=\".XML\" ContentType=\"application/xml\"/>",
+                "<Override PartName=\"/word/document.xml\" ContentType=\"application/main+xml\"/>",
+                "<Override PartName=\"/WORD/document.xml\" ContentType=\"application/main+xml\"/>"),
             ["word/document.xml"] = "<w:document/>",
+            ["word/styles.XML"] = "<w:styles/>"
         });
 
-        OoxPackage package = OoxPackage.Open(packageStream, CancellationToken.None);
-        TestAssert.NotNull(package.GetPart("/word/document.xml"));
+        using OoxPackage package = OoxPackage.Open(packageStream, CancellationToken.None);
+        TestAssert.Equal("application/main+xml", TestAssert.NotNull(package.GetPart("/word/document.xml")).ContentType);
+        TestAssert.Equal("application/xml", TestAssert.NotNull(package.GetPart("/word/styles.XML")).ContentType);
     }
 
     public static void RejectsDuplicateRelationshipIds()
