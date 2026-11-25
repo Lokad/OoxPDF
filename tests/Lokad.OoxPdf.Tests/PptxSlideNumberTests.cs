@@ -42,6 +42,10 @@ internal static class PptxSlideNumberTests
             var pages = new PptxRenderer(new PortableRenderingTests.PinnedResolver())
                 .RenderPagesAsync(document, package, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(2, pages.Length);
+            // Only the slide shape has this label. The inherited shapes and
+            // table also render the number, with no surrounding text.
+            PortableRenderingTests.ReadPaintedSourceLabel(pages[0], "Slide 10 end");
+            PortableRenderingTests.ReadPaintedSourceLabel(pages[1], "Slide 12 end");
             TestAssert.Equal(1, pages[0].Annotations.Single(annotation => annotation.IsDestination).Destination!.Value.PageIndex);
             var warning = diagnostics.Single(item => item.Id == "PPTX_UNSUPPORTED_CALLOUT");
             TestAssert.Equal(2, warning.SlideIndex);
@@ -147,11 +151,15 @@ internal static class PptxSlideNumberTests
         const string a = "http://schemas.openxmlformats.org/drawingml/2006/main";
         const string r = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
         const string ns = "xmlns:p=\""+p+"\" xmlns:a=\""+a+"\" xmlns:r=\""+r+"\"";
-        string Field() => "<a:p><a:fld id=\"{00000000-0000-0000-0000-000000000001}\" type=\"slidenum\"><a:rPr sz=\"1200\"><a:latin typeface=\"Arial\"/></a:rPr><a:t>99</a:t></a:fld></a:p>";
-        string Shape(bool linked = false, bool unsupported = false) =>
+        const string numberStyle = "<a:rPr sz=\"1200\"><a:latin typeface=\"Arial\"/></a:rPr>";
+        string Field(bool slideLabel = false) => "<a:p>" + (slideLabel ? Run("Slide ") : "") +
+            "<a:fld id=\"{00000000-0000-0000-0000-000000000001}\" type=\"slidenum\">" + numberStyle +
+            "<a:t>99</a:t></a:fld>" + (slideLabel ? Run(" end") : "") + "</a:p>";
+        string Run(string text) => "<a:r>" + numberStyle + "<a:t xml:space=\"preserve\">" + text + "</a:t></a:r>";
+        string Shape(bool linked = false, bool unsupported = false, bool slideLabel = false) =>
             "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"Number\">"+(linked ? "<a:hlinkClick r:id=\"jump\" action=\"ppaction://hlinksldjump\"/>" : "")+
             "</p:cNvPr><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"914400\" y=\"914400\"/><a:ext cx=\"1828800\" cy=\"914400\"/></a:xfrm><a:prstGeom prst=\""+
-            (unsupported ? "wedgeRoundRectCallout" : "rect")+"\"/></p:spPr><p:txBody><a:bodyPr/><a:lstStyle/>"+Field()+"</p:txBody></p:sp>";
+            (unsupported ? "wedgeRoundRectCallout" : "rect")+"\"/></p:spPr><p:txBody><a:bodyPr/><a:lstStyle/>"+Field(slideLabel)+"</p:txBody></p:sp>";
         string Table() => "<p:graphicFrame><p:xfrm><a:off x=\"914400\" y=\"2743200\"/><a:ext cx=\"1828800\" cy=\"914400\"/></p:xfrm><a:graphic><a:graphicData uri=\""+a.Replace("/main","/table")+"\"><a:tbl><a:tblPr/><a:tblGrid><a:gridCol w=\"1828800\"/></a:tblGrid><a:tr h=\"914400\"><a:tc><a:txBody><a:bodyPr/><a:lstStyle/>"+Field()+"</a:txBody><a:tcPr/></a:tc></a:tr></a:tbl></a:graphicData></a:graphic></p:graphicFrame>";
         string Rel(string id, string kind, string target) => "<Relationship Id=\""+id+"\" Type=\""+r+"/"+kind+"\" Target=\""+target+"\"/>";
         string Rels(string contents) => "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">"+contents+"</Relationships>";
@@ -167,7 +175,10 @@ internal static class PptxSlideNumberTests
             ["ppt/slideMasters/slideMaster1.xml"]=Story("sldMaster",Shape())
         };
         for (int i=1;i<=3;i++) {
-            parts["ppt/slides/slide"+i+".xml"]=Story("sld",Shape(i==1,unsupportedLast && i==3)+(tableForSlide?.Invoke(i) ?? Table())).Replace("<p:sld ","<p:sld show=\""+(hidden && i==2 ? "0" : "1")+"\" ");
+            string slideContent = Shape(linked: i == 1, unsupported: unsupportedLast && i == 3, slideLabel: true) +
+                (tableForSlide?.Invoke(i) ?? Table());
+            parts["ppt/slides/slide"+i+".xml"] = Story("sld", slideContent)
+                .Replace("<p:sld ", "<p:sld show=\"" + (hidden && i == 2 ? "0" : "1") + "\" ");
             parts["ppt/slides/_rels/slide"+i+".xml.rels"]=Rels(Rel("layout","slideLayout","../slideLayouts/slideLayout1.xml")+Rel("jump","slide","slide3.xml"));
         }
         string path=TestFixtures.WriteTempPackage(".pptx",parts);

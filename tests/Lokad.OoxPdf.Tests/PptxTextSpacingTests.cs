@@ -38,9 +38,13 @@ internal static class PptxTextSpacingTests
         AssertTabPosition(page, 144d);
     }
 
-    public static void PptxSyntheticTextBoxIgnoresStandaloneExplicitTabStops()
+    public static void PptxSyntheticTextBoxIgnoresStandaloneTabElements() => AssertStandaloneTabPaint("");
+
+    public static void PptxSyntheticTextBoxIgnoresStandaloneExplicitTabStops() => AssertStandaloneTabPaint(ExplicitTabStop);
+
+    private static void AssertStandaloneTabPaint(string paragraphProperties)
     {
-        string before = ExplicitTabStop + TabProbeRun("A");
+        string before = paragraphProperties + TabProbeRun("A");
         string after = TabProbeRun("B");
         var expected = PortableRenderingTests.ReadPaintedSourceLabel(RenderTabProbe(before + after), "AB");
         var actual = PortableRenderingTests.ReadPaintedSourceLabel(RenderTabProbe(before + "<a:tab/>" + after), "AB");

@@ -18610,7 +18610,7 @@
     "PptxSyntheticTextBoxRendersAutoNumberedBullets",
     "PptxSyntheticTextBoxRendersBaselineShiftWithOfficeScale",
     "PptxSyntheticTextBoxRendersBulletCharacters",
-    "PptxSyntheticTextBoxRendersFieldText",
+    "=PptxSlideNumbersKeepOutputDiagnosticsAndNavigation",
     "PptxSyntheticTextBoxRendersRomanAutoNumberedBullets",
     "PptxSyntheticTextBoxRendersSmallCapsAsScaledUppercaseRuns",
     "PptxSyntheticTextBoxRendersStrikethrough",
