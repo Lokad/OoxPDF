@@ -273,6 +273,94 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
+    public static void DocxEquationDrawingCompanionsKeepCombinedLinkAndRevisionScopes()
+    {
+        foreach ((string container, bool display, string revisionName) in new[] { ("body", false, "ins"), ("cell", true, "del") })
+        foreach (bool linkOutside in new[] { false, true })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.Original, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            bool visible = mode == OoxPdfDocxMarkupMode.AllMarkup ||
+                mode == (revisionName == "ins" ? OoxPdfDocxMarkupMode.Final : OoxPdfDocxMarkupMode.Original);
+            var expected = Render(inner: false);
+            var actual = Render(inner: true);
+            TestAssert.True(expected.Page.Content == actual.Page.Content,
+                $"Packed and split paint agree for {container}, {revisionName}, linkOutside={linkOutside}, {mode}.");
+            TestAssert.Equal(expected.Equations, actual.Equations);
+            TestAssert.True(!actual.Diagnostics.Contains("DOCX_UNSUPPORTED_EQUATION"), "Visible fragments and omitted revisions are counted by their source scopes.");
+            if (visible)
+                TestAssert.True(expected.Diagnostics.SequenceEqual(actual.Diagnostics), "The visible owners retain the split control's diagnostics.");
+            TestAssert.True(expected.Page.Annotations.SequenceEqual(actual.Page.Annotations), "The hyperlink keeps the split control's destination and hit area.");
+            TestAssert.Equal(visible || linkOutside ? 1 : 0, actual.Page.Annotations.Count);
+            TestAssert.Equal(visible ? 1 : 0, actual.Page.Images.Count);
+            string painted = DocxPageFootnoteNumberingTests.DecodeText(actual.Page);
+            foreach (string label in new[] { "17", "314", "793", "28", "QA", "Ω" })
+            {
+                bool neighbor = label is "17" or "28";
+                if (visible || linkOutside && neighbor)
+                    TestAssert.Equal(label.Length, PortableRenderingTests.ReadPaintedSourceLabel(actual.Page, label, mathOnly: label is not ("QA" or "Ω")).Count);
+                else
+                    TestAssert.DoesNotContain(label, painted);
+            }
+            if (visible)
+            {
+                var link = actual.Page.Annotations.Single();
+                var picture = ReadPictureBounds(actual.Page).Single().Bounds;
+                TestAssert.True(link.Destination is { PageIndex: 0 } && picture.X >= link.X - .01d &&
+                    picture.X + picture.Width <= link.X + link.Width + .01d && picture.Y >= link.Y - .01d &&
+                    picture.Y + picture.Height <= link.Y + link.Height + .01d,
+                    "The revised picture retains full link coverage and the original target.");
+            }
+
+            (PdfPage Page, int Equations, List<string> Diagnostics) Render(bool inner)
+            {
+                var diagnostics = new List<string>();
+                void Record(Lokad.OoxPdf.Diagnostics.OoxPdfDiagnostic item) => diagnostics.Add(item.Id);
+                var source = ReadMutation("CompositionProbes/math-display-image-" + container + "-between", mode,
+                    false, false, (xml, w, m) =>
+                    {
+                        const string target = "LinkedRevisionTarget";
+                        var heading = xml.Descendants(w + "p").First().Elements(w + "r").First();
+                        heading.AddBeforeSelf(new XElement(w + "bookmarkStart", new XAttribute(w + "id", "534"), new XAttribute(w + "name", target)));
+                        heading.AddAfterSelf(new XElement(w + "bookmarkEnd", new XAttribute(w + "id", "534")));
+                        var displayRow = xml.Descendants(m + "oMathPara").First();
+                        var pictureRun = displayRow.Parent!.Elements(w + "r").Single();
+                        var drawing = pictureRun.Element(w + "drawing")!;
+                        pictureRun.Remove();
+
+                        var link = new XElement(w + "hyperlink", new XAttribute(w + "anchor", target));
+                        var revision = new XElement(w + revisionName, new XAttribute(w + "id", "535"), new XAttribute(w + "author", "QA Reviewer"));
+                        var caption = new XElement(w + (revisionName == "del" ? "delText" : "t"), "QA");
+                        var symbol = new XElement(w + "sym", new XAttribute(w + "font", "Arial"), new XAttribute(w + "char", "03A9"));
+                        XElement MathRun(string text) => new(m + "r", new XElement(m + "t", text));
+                        XElement Frame(params XElement[] children)
+                        {
+                            var math = new XElement(m + "oMath", children);
+                            return display ? new XElement(m + "oMathPara", math) : math;
+                        }
+
+                        if (!inner && !visible)
+                        {
+                            if (linkOutside)
+                                displayRow.AddAfterSelf(new XElement(link.Name, link.Attributes(), Frame(MathRun("17"), MathRun("28"))));
+                            return;
+                        }
+
+                        XElement first = MathRun("17"), last = MathRun("28");
+                        XElement[] middle = inner
+                            ? [new XElement(m + "r", new XElement(m + "t", "314"), caption, symbol, drawing, new XElement(m + "t", "793"))]
+                            : [Frame(MathRun("314")), new XElement(w + "r", caption, symbol, drawing), Frame(MathRun("793"))];
+                        XElement innerOwner = linkOutside ? revision : link;
+                        XElement outerOwner = linkOutside ? link : revision;
+                        innerOwner.Add(middle);
+                        outerOwner.Add(inner ? first : Frame(first), innerOwner, inner ? last : Frame(last));
+                        displayRow.AddAfterSelf(inner ? Frame(outerOwner) : outerOwner);
+                    }, diagnosticSink: Record);
+                var page = PictureRangeRenderer(mode).RenderPagesAsync(source, Record, default).ToBlockingEnumerable().Single();
+                return (page, source.EquationParts.Sum(part => part.SourceCount), diagnostics);
+            }
+        }
+    }
+
     public static void DocxDisplayRowKeepsCommentRangeThroughDrawing()
     {
         foreach (string container in new[] { "body", "cell" })

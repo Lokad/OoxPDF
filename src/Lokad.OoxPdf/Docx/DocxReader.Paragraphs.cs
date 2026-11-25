@@ -482,9 +482,17 @@ internal sealed partial class DocxReader
             Dictionary<XElement, DocxRevisionInfo>? mathRunRevisions = null;
             bool hasMathRunRevisions = false;
             DocxRevisionInfo? equationRevision = revision;
+            XElement? projectedLink = null;
+            (int SourceRun, int TextRun, int InlineItem) linkStart = default;
             foreach (var source in EnumerateMathParagraphSources(container, revision, removeDeletedText, markupMode, cancellationToken))
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                if (source.Hyperlink != projectedLink)
+                {
+                    PublishProjectedLink();
+                    projectedLink = source.Hyperlink;
+                    linkStart = (sourceRunIndex, runs.Count, inlineItems!.Count);
+                }
                 XElement equation = source.Element;
                 if (!source.IsEquation)
                 {
@@ -550,6 +558,15 @@ internal sealed partial class DocxReader
                         AddSourceContainerChild(inlineSource, source.Revision, removeDeletedText: false);
                     }
                 }
+            }
+            PublishProjectedLink();
+
+            void PublishProjectedLink()
+            {
+                if (projectedLink is not null)
+                    AddHyperlinkSpan(projectedLink, linkStart.SourceRun, sourceRunIndex - linkStart.SourceRun,
+                        linkStart.TextRun, runs.Count - linkStart.TextRun, linkStart.InlineItem, inlineItems!.Count,
+                        hyperlinkSpans, relationships);
             }
 
             DocxTextRun ReadMathRun(XElement run, string text)

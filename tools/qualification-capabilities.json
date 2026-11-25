@@ -19820,6 +19820,7 @@
     "=DocxEquationZonesKeepDrawingsWithoutMathOperands",
     "=DocxEquationDrawingCompanionsKeepInnerRevisionOwners",
     "=DocxEquationDrawingCompanionsKeepInnerHyperlinkCoverage",
+    "=DocxEquationDrawingCompanionsKeepCombinedLinkAndRevisionScopes",
     "=DocxDisplayRowKeepsCommentRangeThroughDrawing",
     "=DocxInlineEquationKeepsDrawingCompanionsBetweenTextRuns",
     "=DocxDisplayRowKeepsDrawingCompanionsInTrackedChanges",

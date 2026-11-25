@@ -119,6 +119,7 @@ internal static class TestCatalog
         .. FromType(name => name is nameof(DocxInlineCompositionTests.DocxEquationZonesKeepDrawingsWithoutMathOperands)
             or nameof(DocxInlineCompositionTests.DocxEquationDrawingCompanionsKeepInnerRevisionOwners)
             or nameof(DocxInlineCompositionTests.DocxEquationDrawingCompanionsKeepInnerHyperlinkCoverage)
+            or nameof(DocxInlineCompositionTests.DocxEquationDrawingCompanionsKeepCombinedLinkAndRevisionScopes)
             ? "docx-math-portable" : "docx-math", typeof(DocxInlineCompositionTests)),
         .. FromType("docx-math", typeof(DocxTableMathTests)),
         .. FromType(name => name.StartsWith("MathFont", StringComparison.Ordinal) ? "fonts" : "docx-math", typeof(DocxMathBoxTests)),
