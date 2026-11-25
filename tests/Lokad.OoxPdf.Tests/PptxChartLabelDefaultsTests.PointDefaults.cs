@@ -44,10 +44,9 @@ internal static partial class PptxChartLabelDefaultsTests
         {
             var (chart, plot) = PointDefaultsSource(kind, PointDefaultsDisabledFlags, point);
             TestAssert.Equal(1, chart.Plots[0].DataLabels.Overrides.Count);
-            object options = Read(chart);
-            TestAssert.True(!Flag(options, "HasVisibleContent"), "A fully disabled Cartesian plot does not admit its point requests.");
-            TestAssert.True(!Flag(Invoke("ResolveChartDataLabelOptions", options, 0), "HasVisibleContent"),
-                "The ignored point does not re-enable the resolved rendering options.");
+            object resolved = Invoke("ResolveChartDataLabelOptions", Read(chart), 0);
+            TestAssert.True(!Flag(resolved, "HasVisibleText") && !Flag(resolved, "ShowLegendKey"),
+                "A fully disabled Cartesian plot leaves the point's text and key disabled.");
         }
     }
 
@@ -56,9 +55,7 @@ internal static partial class PptxChartLabelDefaultsTests
         foreach (string kind in new[] { "pieChart", "doughnutChart" })
         {
             var (chart, plot) = PointDefaultsSource(kind, PointDefaultsDisabledFlags, "<c:showVal val=\"0\"/>");
-            object options = Read(chart);
-            TestAssert.True(Flag(options, "HasVisibleContent"), "Sector points have independent label scope.");
-            object point = Invoke("ResolveChartDataLabelOptions", options, 0);
+            object point = Invoke("ResolveChartDataLabelOptions", Read(chart), 0);
             foreach (var component in Components)
                 TestAssert.Equal(component.Property != "ShowValue", Flag(point, component.Property));
         }
@@ -164,14 +161,14 @@ internal static partial class PptxChartLabelDefaultsTests
             object merged = Invoke("ResolveChartDataLabelOptionsForSeries", options, perSeries, 0);
             if (series == "<c:dLbls/>")
             {
-                TestAssert.True(Flag(Invoke("ResolveChartDataLabelOptions", merged, 0), "HasVisibleContent"),
+                TestAssert.True(Flag(Invoke("ResolveChartDataLabelOptions", merged, 0), "ShowValue"),
                     "A defined empty series does not inherit the plot's point deletion.");
                 TestAssert.True(Flag(Invoke("ResolveChartDataLabelOptions", merged, 2), "ShowValue"),
                     "The plot point's explicit false does not leak into the new series scope.");
             }
             else
             {
-                TestAssert.True(!Flag(Invoke("ResolveChartDataLabelOptions", merged, 2), "HasVisibleContent"),
+                TestAssert.True(!Flag(Invoke("ResolveChartDataLabelOptions", merged, 2), "HasVisibleText"),
                     "A disabled series does not inherit another plot point's default components.");
                 if (series.Contains("<c:dLbl>", StringComparison.Ordinal))
                 {

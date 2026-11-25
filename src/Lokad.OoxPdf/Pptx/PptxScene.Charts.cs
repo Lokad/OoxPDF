@@ -220,6 +220,8 @@ internal sealed partial class PptxSceneBuilder
             }
 
             PptxSceneChartNumberFormat numberFormat = ReadChartNumberFormat(label);
+            XElement? text = label.Element(ChartNamespace + "tx");
+            string position = ReadChartElementValue(label, "dLblPos");
             overrides.Add(new PptxSceneChartDataLabelOverride(
                 index,
                 ReadOptionalChartBoolean(label, "delete"),
@@ -231,10 +233,10 @@ internal sealed partial class PptxSceneBuilder
                 ReadOptionalChartBoolean(label, "showLegendKey"),
                 ReadOptionalChartBoolean(label, "showBubbleSize"),
                 ReadChartLeaderLines(label, theme, colorMap),
-                ReadChartText(label.Element(ChartNamespace + "tx"), false) ?? string.Empty,
-                ReadChartTextRuns(label.Element(ChartNamespace + "tx"), theme, colorMap),
-                ParseChartDataLabelPosition(ReadChartElementValue(label, "dLblPos")),
-                ReadChartElementValue(label, "dLblPos"),
+                ReadChartText(text, false) ?? string.Empty,
+                ReadChartTextRuns(text, theme, colorMap),
+                ParseChartDataLabelPosition(position),
+                position,
                 label.Element(ChartNamespace + "separator")?.Value ?? string.Empty,
                 numberFormat.FormatCode,
                 numberFormat,

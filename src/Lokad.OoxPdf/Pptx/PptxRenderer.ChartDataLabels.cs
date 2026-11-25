@@ -137,41 +137,20 @@ internal sealed partial class PptxRenderer
 
     private static ChartDataLabelOptions ResolveChartDataLabelOptions(ChartDataLabelOptions options, int index)
     {
-        if (!options.Overrides.TryGetValue(index, out ChartDataLabelOverride dataLabel))
+        if (!options.Overrides.TryGetValue(index, out ChartDataLabelOptions point))
         {
             return options with { Overrides = EmptyChartDataLabelOverrides };
         }
 
-        if (dataLabel.IsDeleted == true)
+        if (point.IsDeleted == true)
         {
             return ChartDataLabelOptions.None;
         }
 
-        // A defined point supplies its own component defaults. Leader lines inherit.
-        return options with
+        return point.WithFallback(options) with
         {
             IsDeleted = false,
-            ShowValue = dataLabel.ShowValue ?? true,
-            ShowPercent = dataLabel.ShowPercent ?? true,
-            ShowCategoryName = dataLabel.ShowCategoryName ?? true,
-            ShowSeriesName = dataLabel.ShowSeriesName ?? true,
-            LeaderLinesEnabled = dataLabel.ShowLeaderLines ?? options.LeaderLinesEnabled,
-            ShowLegendKey = dataLabel.ShowLegendKey ?? true,
-            ShowBubbleSize = dataLabel.ShowBubbleSize ?? true,
-            LeaderLines = dataLabel.LeaderLines.IsDefined ? dataLabel.LeaderLines : options.LeaderLines,
-            CustomText = string.IsNullOrEmpty(dataLabel.CustomText) ? options.CustomText : dataLabel.CustomText,
-            CustomTextRuns = dataLabel.CustomTextRuns.Count == 0 ? options.CustomTextRuns : dataLabel.CustomTextRuns,
-            PositionKind = string.IsNullOrEmpty(dataLabel.Position) ? options.PositionKind : dataLabel.PositionKind,
-            Position = string.IsNullOrEmpty(dataLabel.Position) ? options.Position : dataLabel.Position,
-            Separator = string.IsNullOrEmpty(dataLabel.Separator) ? options.Separator : dataLabel.Separator,
-            NumberFormat = string.IsNullOrEmpty(dataLabel.NumberFormat) ? options.NumberFormat : dataLabel.NumberFormat,
-            NumberFormatInfo = dataLabel.NumberFormatInfo.IsDefined ? dataLabel.NumberFormatInfo : options.NumberFormatInfo,
-            Layout = dataLabel.Layout.HasLayout ? dataLabel.Layout : options.Layout,
-            TextStyle = dataLabel.TextStyle,
-            TextScope = dataLabel.TextScope,
-            TextBodyProperties = IsChartTextBodyPropertiesEmpty(dataLabel.TextBodyProperties) ? options.TextBodyProperties : dataLabel.TextBodyProperties,
-            ShapeStyle = dataLabel.ShapeStyle.IsEmpty ? options.ShapeStyle : dataLabel.ShapeStyle,
-            Overrides = EmptyChartDataLabelOverrides
+            IsDefined = options.IsDefined
         };
     }
 
@@ -182,36 +161,7 @@ internal sealed partial class PptxRenderer
             return plotOptions;
         }
 
-        ChartDataLabelOptions series = seriesOptions[seriesIndex];
-        // The active series owns its components and point requests. Each
-        // component already has its default from the source container.
-        return plotOptions with
-        {
-            IsDeleted = series.IsDeleted,
-            ShowValue = series.ShowValue,
-            ShowPercent = series.ShowPercent,
-            ShowCategoryName = series.ShowCategoryName,
-            ShowSeriesName = series.ShowSeriesName,
-            LeaderLinesEnabled = series.LeaderLinesEnabled ?? plotOptions.LeaderLinesEnabled,
-            ShowLegendKey = series.ShowLegendKey,
-            ShowBubbleSize = series.ShowBubbleSize,
-            LeaderLines = series.LeaderLines.IsDefined ? series.LeaderLines : plotOptions.LeaderLines,
-            CustomText = string.IsNullOrEmpty(series.CustomText) ? plotOptions.CustomText : series.CustomText,
-            CustomTextRuns = series.CustomTextRuns.Count == 0 ? plotOptions.CustomTextRuns : series.CustomTextRuns,
-            PositionKind = string.IsNullOrEmpty(series.Position) ? plotOptions.PositionKind : series.PositionKind,
-            Position = string.IsNullOrEmpty(series.Position) ? plotOptions.Position : series.Position,
-            Separator = string.IsNullOrEmpty(series.Separator) ? plotOptions.Separator : series.Separator,
-            NumberFormat = string.IsNullOrEmpty(series.NumberFormat) ? plotOptions.NumberFormat : series.NumberFormat,
-            NumberFormatInfo = series.NumberFormatInfo.IsDefined ? series.NumberFormatInfo : plotOptions.NumberFormatInfo,
-            Layout = series.Layout.HasLayout ? series.Layout : plotOptions.Layout,
-            // Each defined container already owns chart defaults plus its local
-            // style. Missing properties request those defaults, not plot style.
-            TextStyle = series.TextStyle,
-            TextBodyProperties = IsChartTextBodyPropertiesEmpty(series.TextBodyProperties) ? plotOptions.TextBodyProperties : series.TextBodyProperties,
-            ShapeStyle = series.ShapeStyle.IsEmpty ? plotOptions.ShapeStyle : series.ShapeStyle,
-            Overrides = series.Overrides,
-            IsDefined = true
-        };
+        return seriesOptions[seriesIndex].WithFallback(plotOptions);
     }
 
     private static bool IsChartTextBodyPropertiesEmpty(PptxSceneChartTextBodyProperties properties)
@@ -514,12 +464,12 @@ internal sealed partial class PptxRenderer
         // A disabled Cartesian component set suppresses its point requests.
         // Deletion hides default labels while retaining defined point scope.
         // Series and sector plots also have independent point-label scope.
-        return independentPoints || options.HasVisibleContent || labels.IsDeleted == true
+        return independentPoints || options.HasLabelComponents || labels.IsDeleted == true
             ? options with { Overrides = ToChartDataLabelOverrides(labels.Overrides, defaults, containerStyle) }
             : options;
     }
 
-    private static IReadOnlyDictionary<int, ChartDataLabelOverride> ToChartDataLabelOverrides(IReadOnlyList<PptxSceneChartDataLabelOverride> overrides,
+    private static IReadOnlyDictionary<int, ChartDataLabelOptions> ToChartDataLabelOverrides(IReadOnlyList<PptxSceneChartDataLabelOverride> overrides,
         PptxSceneChartTextStyleOverride defaults, PptxSceneChartTextStyleOverride containerStyle)
     {
         if (overrides.Count == 0)
@@ -527,7 +477,7 @@ internal sealed partial class PptxRenderer
             return EmptyChartDataLabelOverrides;
         }
 
-        var result = new Dictionary<int, ChartDataLabelOverride>(overrides.Count);
+        var result = new Dictionary<int, ChartDataLabelOptions>(overrides.Count);
         foreach (PptxSceneChartDataLabelOverride dataLabel in overrides)
         {
             PptxSceneChartTextStyleOverride sourceDefaults = dataLabel.TextScope switch
@@ -538,15 +488,15 @@ internal sealed partial class PptxRenderer
                 PptxSceneChartPointTextScope.Chart => defaults,
                 _ => containerStyle
             };
-            result[dataLabel.Index] = new ChartDataLabelOverride(
-                dataLabel.IsDeleted,
-                dataLabel.ShowValue,
-                dataLabel.ShowPercent,
-                dataLabel.ShowCategoryName,
-                dataLabel.ShowSeriesName,
+            // A defined point supplies its own component defaults.
+            result[dataLabel.Index] = new ChartDataLabelOptions(
+                dataLabel.ShowValue ?? true,
+                dataLabel.ShowPercent ?? true,
+                dataLabel.ShowCategoryName ?? true,
+                dataLabel.ShowSeriesName ?? true,
                 dataLabel.ShowLeaderLines,
-                dataLabel.ShowLegendKey,
-                dataLabel.ShowBubbleSize,
+                dataLabel.ShowLegendKey ?? true,
+                dataLabel.ShowBubbleSize ?? true,
                 ToChartDataLabelLeaderLines(dataLabel.LeaderLines),
                 dataLabel.CustomText,
                 ToChartTextRuns(dataLabel.CustomTextRuns),
@@ -560,7 +510,10 @@ internal sealed partial class PptxRenderer
                 // raw nullable formatting remains an independent declaration.
                 ToChartTextStyleOverride(PptxSceneBuilder.MergeChartTextStyleOverride(sourceDefaults, dataLabel.TextStyle)),
                 dataLabel.TextBodyProperties,
-                ToChartShapeStyle(dataLabel.ShapeStyle)) { TextScope = dataLabel.TextScope };
+                ToChartShapeStyle(dataLabel.ShapeStyle),
+                EmptyChartDataLabelOverrides,
+                IsDefined: true,
+                IsDeleted: dataLabel.IsDeleted) { TextScope = dataLabel.TextScope };
         }
 
         return result;

@@ -67,7 +67,8 @@ internal static partial class PptxChartLabelDefaultsTests
                 TestAssert.True(Flag(point, "ShowSeriesName"), "The point's explicit true overrides an inherited false.");
                 TestAssert.True(Flag(point, "ShowValue"), "A defined point takes its own missing-component defaults.");
                 object deleted = Invoke("ResolveChartDataLabelOptions", merged, 1);
-                TestAssert.True(!Flag(deleted, "HasVisibleContent"), "Deleted labels remain absent.");
+                TestAssert.True(Components.All(component => !Flag(deleted, component.Property)),
+                    "A deleted point resolves to no label components.");
             }
         }
         foreach (bool deleted in new[] { false, true })
@@ -77,7 +78,7 @@ internal static partial class PptxChartLabelDefaultsTests
             object options = Read(chart);
             object perSeries = Invoke("ReadSceneSeriesDataLabelOptions", chart, chart.Plots[0]);
             object merged = Invoke("ResolveChartDataLabelOptionsForSeries", options, perSeries, 0);
-            TestAssert.Equal(!deleted, Flag(merged, "HasVisibleContent"));
+            TestAssert.Equal(!deleted, Flag(Invoke("ResolveChartDataLabelOptions", merged, 0), "ShowValue"));
         }
 
         foreach ((string Series, string Point, bool WantsSeries, bool WantsPoint) example in new[]
