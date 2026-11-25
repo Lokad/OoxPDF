@@ -61,7 +61,8 @@ internal sealed partial class DocxReader
         void Emit(string id, string feature, string diagnosticPartName = "", string fallback = "Ignored")
         {
             cancellationToken.ThrowIfCancellationRequested();
-            string key = id is "DOCX_UNSUPPORTED_EQUATION" or "DOCX_UNSUPPORTED_SYMBOL" ? id + "\0" + diagnosticPartName : id;
+            string key = id is "DOCX_UNSUPPORTED_EQUATION" or "DOCX_UNSUPPORTED_SYMBOL" or "DOCX_INLINE_BIDI_APPROXIMATION"
+                ? id + "\0" + diagnosticPartName : id;
             if (!emitted.Add(key))
             {
                 return;
@@ -70,7 +71,7 @@ internal sealed partial class DocxReader
             diagnosticSink(new OoxPdfDiagnostic(
                 id,
                 OoxPdfSeverity.Warning,
-                fallback == "Approximated"
+                fallback is "Approximated" or "Source order"
                     ? $"DOCX feature '{feature}' was detected and approximated."
                     : $"Unsupported DOCX feature '{feature}' was detected and ignored or approximated.",
                 diagnosticPartName.Length == 0 ? partName : diagnosticPartName,
@@ -89,6 +90,20 @@ internal sealed partial class DocxReader
                 if (symbol.Parent?.Name == WordprocessingNamespace + "r" && !TryReadSymbol(symbol, out _, out _))
                 {
                     Emit("DOCX_UNSUPPORTED_SYMBOL", "malformed or nonprinting symbol payload", probePartName, "Replacement character");
+                    break;
+                }
+            }
+            var directionalScopes = EnumerateDrawingPayload(probeDocument, WordprocessingNamespace + "dir", cancellationToken)
+                .Concat(EnumerateDrawingPayload(probeDocument, WordprocessingNamespace + "bdo", cancellationToken));
+            foreach (XElement source in directionalScopes)
+            {
+                if (source.HasElements &&
+                    source.Ancestors().FirstOrDefault(owner => !IsVisibleRunContainer(owner, revisionFilteringMarkupMode))?.Name ==
+                        WordprocessingNamespace + "p" &&
+                    !IsInsideExcludedRevisionContainer(source, revisionFilteringMarkupMode) &&
+                    !source.Ancestors(WordprocessingNamespace + "tr").Any(row => !IsIncludedTableRow(row, revisionFilteringMarkupMode, cancellationToken)))
+                {
+                    Emit("DOCX_INLINE_BIDI_APPROXIMATION", "inline bidirectional direction", probePartName, "Source order");
                     break;
                 }
             }

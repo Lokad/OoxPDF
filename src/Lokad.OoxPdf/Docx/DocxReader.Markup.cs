@@ -95,13 +95,12 @@ internal sealed partial class DocxReader
                 continue;
             }
 
-            bool transparent = DocxSourceXml.IsTransparentInlineContainer(element);
             // Drawing lookup follows stored runs through their inline wrappers.
             // A nested field's runs still belong to its own result for formatting.
             if (inlineContent
-                ? transparent || element.Name == WordprocessingNamespace + "hyperlink" ||
+                ? DocxSourceXml.IsInlineContentContainer(element) || element.Name == WordprocessingNamespace + "hyperlink" ||
                     includeNestedFieldResults && element.Name == WordprocessingNamespace + "fldSimple"
-                : transparent && element.Name != WordprocessingNamespace + "smartTag")
+                : DocxSourceXml.IsTransparentInlineContainer(element) && element.Name != WordprocessingNamespace + "smartTag")
             {
                 foreach (DocxRevisionScopedElement child in EnumerateRevisionScopedChildren(
                     DocxSourceXml.StoredChildren(element), markupMode, cancellationToken, includedNames, inheritedRevision,

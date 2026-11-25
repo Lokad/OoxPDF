@@ -678,7 +678,7 @@ internal sealed partial class DocxReader
         {
             foreach (XElement child in content)
             {
-                if (DocxSourceXml.IsTransparentInlineContainer(child))
+                if (DocxSourceXml.IsInlineContentContainer(child))
                 {
                     if (!Visit(DocxSourceXml.StoredChildren(child))) return false;
                     continue;
@@ -802,7 +802,7 @@ internal sealed partial class DocxReader
             (HasSimpleFieldPlaceholder(child) || child.Nodes().OfType<XText>().Any(text => !string.IsNullOrWhiteSpace(text.Value))))
             return true;
 
-        if (isRevision || isStoredField || isHyperlink || DocxSourceXml.IsTransparentInlineContainer(child))
+        if (isRevision || isStoredField || isHyperlink || DocxSourceXml.IsInlineContentContainer(child))
         {
             return DocxSourceXml.StoredChildren(child)
                 .Any(nested => HasBreakSplitPayload(nested, isHiddenBreak, markupMode, preserveRevisionRuns || isRevision, keepEmptyFields));
@@ -951,7 +951,7 @@ internal sealed partial class DocxReader
 
     private static bool IsVisibleRunContainer(XElement element, OoxPdfDocxMarkupMode markupMode)
     {
-        return DocxSourceXml.IsTransparentInlineContainer(element) || element.Name == WordprocessingNamespace + "fldSimple" ||
+        return DocxSourceXml.IsInlineContentContainer(element) || element.Name == WordprocessingNamespace + "fldSimple" ||
             element.Name == WordprocessingNamespace + "hyperlink" ||
             IsIncludedRevisionContainer(element, markupMode);
     }

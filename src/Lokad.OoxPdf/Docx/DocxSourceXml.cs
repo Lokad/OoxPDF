@@ -164,6 +164,14 @@ internal static class DocxSourceXml
         IsInlineMetadataContainer(element) || element.Name == WordprocessingNamespace + "sdt" ||
         element.Name == WordprocessingNamespace + "sdtContent";
 
+    public static bool IsDirectionalInlineContainer(XElement element) =>
+        element.Name.Namespace == WordprocessingNamespace && element.Name.LocalName is "dir" or "bdo";
+
+    // Directional markup retains stored content through the source-order fallback.
+    // Only transparent wrappers carry structural math through an excluded deletion.
+    public static bool IsInlineContentContainer(XElement element) =>
+        IsTransparentInlineContainer(element) || IsDirectionalInlineContainer(element);
+
     // Editing boundaries and stored math pagination positions have no payload.
     // Content-bearing, unknown and misplaced children retain their source owner.
     public static bool IsNonPrintingMarker(XElement element) =>

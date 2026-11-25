@@ -8676,6 +8676,8 @@
   ],
   "docx-inline-metadata-wrappers": [
     "DocxInlineMetadataWrappers",
+    "=DocxDirectionalWrappersRetainPictureTextAndMath",
+    "=DocxDirectionalWrappersKeepHardBreaksAndExcludedRevisions",
     "=DocxInlineMetadataLeadingBreaksKeepBookmarkOnThePaintedTarget",
     "PortableRenderingInlineMetadataWrappersRetainParentFrames",
     "DocxComplexFieldWithCachedResultInsideInlineContentControlDoesNotEmitUnsupportedDiagnostic",

@@ -126,7 +126,8 @@ internal sealed partial class DocxReader
                 AddEquation(child, revision, removeDeletedText);
                 return true;
             }
-            else if (DocxSourceXml.IsTransparentInlineContainer(child))
+            else if (removeDeletedText ? DocxSourceXml.IsTransparentInlineContainer(child) :
+                DocxSourceXml.IsInlineContentContainer(child))
             {
                 return AddVisibleRunContainer(child, revision, removeDeletedText);
             }
