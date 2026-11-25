@@ -245,6 +245,8 @@ internal static partial class DocxMathParser
         {
             "noProof" or "webHidden" => HasBooleanValue(value),
             "outline" or "shadow" or "emboss" or "imprint" => OoxBoolean.IsOff(value),
+            "effect" or "em" or "u" or "highlight" => value == "none",
+            "bdr" => value is "none" or "nil",
             _ => false
         };
         return neutral && property.Attributes().All(a => a.IsNamespaceDeclaration || a.Name == WordprocessingNamespace + "val");

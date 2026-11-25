@@ -663,6 +663,8 @@ internal static partial class DocxMathTests
             (literal + "<m:ctrlPr><w:rPr><w:outline w:val='false'/></w:rPr></m:ctrlPr>", true, null),
             (literal + "<m:ctrlPr><w:rPr><w:outline/></w:rPr></m:ctrlPr>", false, null),
             (literal + "<m:ctrlPr><w:rPr><w:outline w:val='false' w:other='1'/></w:rPr></m:ctrlPr>", false, null),
+            (literal + "<m:ctrlPr><w:rPr><w:effect/></w:rPr></m:ctrlPr>", false, null),
+            (literal + "<m:ctrlPr><w:rPr><w:bdr w:val='none' w:other='1'/></w:rPr></m:ctrlPr>", false, null),
             (literal + "<m:ctrlPr><w:rPr><w:color w:val='FF0000'/></w:rPr></m:ctrlPr>", false, null),
             (literal + "<m:ctrlPr><w:rPr><w:webHidden w:val='?'/></w:rPr></m:ctrlPr>", false, null),
             (literal + "<m:ctrlPr><w:rPr><w:noProof/><w:noProof/></w:rPr></m:ctrlPr>", false, null),

@@ -18,9 +18,13 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.True(owner == "header" || baseline.Page.Annotations.Any(annotation => annotation.IsDestination),
                 "The body fixture must emit formula destinations.");
 
-            (string Property, string Value)[] effects = owner == "cell"
-                ? [("shadow", "off"), ("outline", "false"), ("emboss", "0"), ("imprint", "false")]
-                : [("shadow", "off")];
+            (string Property, string Value)[] effects = owner switch
+            {
+                "cell" => [("shadow", "off"), ("outline", "false"), ("emboss", "0"), ("imprint", "false"),
+                    ("effect", "none"), ("em", "none"), ("bdr", "none"), ("bdr", "nil")],
+                "header" => [("shadow", "off"), ("effect", "none"), ("bdr", "none")],
+                _ => [("shadow", "off"), ("effect", "none"), ("u", "none"), ("highlight", "none")]
+            };
             foreach (var (property, value) in effects)
             {
                 var observed = Render(property, value);
@@ -31,15 +35,17 @@ internal static partial class DocxInlineCompositionTests
                     "A disabled visual effect preserves the control's diagnostic outcome.");
             }
 
-            var active = Render("shadow", null);
-            TestAssert.True(active.Diagnostics.Contains("DOCX_UNSUPPORTED_EQUATION") && CountMathGlyphs(active.Page) < glyphs,
-                "An active unsupported effect retains the equation fallback.");
-            if (owner == "cell")
+            (string Property, string? Value)[] fallbacks = owner switch
             {
-                var invalid = Render("shadow", "unrecognized");
-                TestAssert.Equal(active.Page.Content, invalid.Page.Content);
-                TestAssert.True(invalid.Diagnostics.SequenceEqual(active.Diagnostics),
-                    "An invalid value is excluded from the print-neutral rule.");
+                "cell" => [("shadow", null), ("shadow", "unrecognized"), ("effect", "lights"), ("em", "dot"), ("bdr", "single")],
+                "header" => [("shadow", null)],
+                _ => [("shadow", null), ("u", "single"), ("highlight", "yellow")]
+            };
+            foreach (var (property, value) in fallbacks)
+            {
+                var fallback = Render(property, value);
+                TestAssert.True(fallback.Diagnostics.Contains("DOCX_UNSUPPORTED_EQUATION") && CountMathGlyphs(fallback.Page) < glyphs,
+                    $"The unsupported {property} declaration retains the equation fallback.");
             }
 
             (PdfPage Page, List<string> Diagnostics) Render(string? property, string? value)
@@ -58,7 +64,8 @@ internal static partial class DocxInlineCompositionTests
                         var control = holder.Element(m + "ctrlPr") ?? Add(holder, new(m + "ctrlPr"));
                         var run = control.Element(w + "rPr") ?? Add(control, new(w + "rPr"));
                         var flag = new XElement(w + property, value is null ? null : new XAttribute(w + "val", value));
-                        if (run.Element(w + "sz") is { } size) size.AddBeforeSelf(flag);
+                        if (property is "outline" or "shadow" or "emboss" or "imprint" && run.Element(w + "sz") is { } size)
+                            size.AddBeforeSelf(flag);
                         else run.Add(flag);
                     }, partOverride: owner == "header" ? "word/header1.xml" : "word/document.xml", diagnosticSink: Record);
                 return (renderer.RenderPagesAsync(source, Record, default).ToBlockingEnumerable().Single(), diagnostics);
