@@ -67,6 +67,8 @@ internal static partial class DocxNoteClippingTests
 
     internal readonly record struct PhysicalPaintFrame(string Block, PdfRectangle Clip, Matrix3x2 Transform)
     {
+        public int ContentOffset { get; init; }
+
         // Only normal fill text without a soft mask is qualified here. Geometry
         // callers can still inspect other paint; visibility callers must retain unknowns.
         public bool? VisibleTextPaint { get; init; }
@@ -129,10 +131,10 @@ internal static partial class DocxNoteClippingTests
                     3 => false,
                     _ => null
                 };
-                yield return new(block, clip, transform) { VisibleTextPaint = visible };
+                yield return new(block, clip, transform) { ContentOffset = operation.Index, VisibleTextPaint = visible };
             }
             else if (!operation.Groups["fill"].Success || (!paint.Mask && paint.FillVisible is true))
-                yield return new(operation.Value.TrimEnd('\r'), clip, transform);
+                yield return new(operation.Value.TrimEnd('\r'), clip, transform) { ContentOffset = operation.Index };
         }
         TestAssert.Equal(0, saved.Count);
 

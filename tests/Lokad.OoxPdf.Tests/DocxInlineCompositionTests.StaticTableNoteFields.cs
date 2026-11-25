@@ -58,10 +58,76 @@ internal static partial class DocxInlineCompositionTests
                     TestAssert.Equal(literal[page].Images.Count, counter[page].Images.Count);
                     if (shape is "math-picture" or "standalone") TestAssert.Equal("ratetime",
                         NormalizeNoteMathFieldText(string.Concat(StaticNoteMathShows(counter[page], true).Select(g => g.Text))));
+                    AssertStaticNoteTablePaint(literal[page], footer, shape, context);
+                    AssertStaticNoteTablePaint(counter[page], footer, shape, context);
                     PdfContentValidator.ValidatePage(counter[page], page, default);
                 }
                 TestAssert.Equal("ratetimeratetime", NormalizeNoteMathFieldText(noteText.ToString()));
+                if (position == "docEnd" && !direct && !footer && mode == OoxPdfDocxMarkupMode.Final && shape == "math-picture")
+                {
+                    var sharedPage = counter.First(page =>
+                        ReadPictureBounds(page).Any(picture => !InStaticNoteMargin(page, footer, picture.Bounds)));
+                    AssertStaticNoteTablePaintRejectsOmissions(sharedPage);
+                }
             }
+        }
+    }
+
+    private static void AssertStaticNoteTablePaint(PdfPage page, bool footer, string shape, string context)
+    {
+        if (shape == "standalone") return;
+        AssertLabel("Public margin story");
+        if (shape == "two-rows") AssertLabel("Public margin row two");
+        if (shape != "math-picture") return;
+
+        var pictures = ReadPictureBounds(page).Where(picture => InStaticNoteMargin(page, footer, picture.Bounds)).ToArray();
+        TestAssert.True(pictures.Length == 1, "The static table paints exactly one margin picture: " + context);
+        var (bounds, clip) = pictures[0];
+        TestAssert.True(bounds.Width > 0d && bounds.Height > 0d && Math.Abs(bounds.Width * 2d - bounds.Height * 3d) < .01d &&
+            bounds.X >= clip.X - .01d && bounds.X + bounds.Width <= clip.X + clip.Width + .01d &&
+            bounds.Y >= clip.Y - .01d && bounds.Y + bounds.Height <= clip.Y + clip.Height + .01d,
+            "The complete margin picture fits within its paint clip: " + context);
+
+        void AssertLabel(string label)
+        {
+            var glyphs = PortableRenderingTests.ReadPaintedSourceLabel(page, label);
+            TestAssert.True(glyphs.All(glyph => InStaticNoteMargin(page, footer, glyph.Ink)),
+                "Every source label glyph paints in the selected margin: " + context + "/" + label);
+        }
+    }
+
+    private static bool InStaticNoteMargin(PdfPage page, bool footer, PdfRectangle ink) => footer
+        ? ink.Y >= 0d && ink.Y + ink.Height <= 72d
+        : ink.Y >= page.Height - 72d && ink.Y + ink.Height <= page.Height;
+
+    private static void AssertStaticNoteTablePaintRejectsOmissions(PdfPage page)
+    {
+        var frames = DocxNoteClippingTests.ReadPhysicalPaintFrames(page).ToArray();
+        var text = frames.Single(frame => DocxCommentsTests.ReadEmbeddedGlyphTextShows(
+            new PdfPage(page.Width, page.Height, frame.Block, page.Fonts))
+            .Any(show => show.Text.Contains("Public margin story", StringComparison.Ordinal)));
+        var picture = frames.Single(frame => frame.Block.EndsWith(" Do", StringComparison.Ordinal) &&
+            frame.Transform.M32 >= page.Height - 72d);
+
+        PdfPage noText = WithoutPaint(text);
+        TestAssert.Contains("Each complete source label paints once", TestAssert.Throws<InvalidOperationException>(
+            () => AssertStaticNoteTablePaint(noText, false, "math-picture", "removed prose")).Message);
+        PdfPage noPicture = WithoutPaint(picture);
+        TestAssert.Contains("exactly one margin picture", TestAssert.Throws<InvalidOperationException>(
+            () => AssertStaticNoteTablePaint(noPicture, false, "math-picture", "removed picture")).Message);
+        TestAssert.True(ReadPictureBounds(noPicture).Any(draw => !InStaticNoteMargin(noPicture, false, draw.Bounds)),
+            "The note's picture remains independently painted.");
+
+        PdfPage WithoutPaint(DocxNoteClippingTests.PhysicalPaintFrame frame)
+        {
+            var result = page with { Content = page.Content.Remove(frame.ContentOffset, frame.Block.Length) };
+            TestAssert.True(ReferenceEquals(page.Images, result.Images) &&
+                page.Annotations.SequenceEqual(result.Annotations) &&
+                StaticNoteMathShows(page, false).SequenceEqual(StaticNoteMathShows(result, false)) &&
+                StaticNoteMathShows(page, true).SequenceEqual(StaticNoteMathShows(result, true)),
+                "The mutation preserves image resources, navigation and both formula stories.");
+            PdfContentValidator.ValidatePage(result, 0, default);
+            return result;
         }
     }
 
@@ -95,7 +161,7 @@ internal static partial class DocxInlineCompositionTests
         var margins = new DocxTableCellMargins(0d, 0d, 0d, 0d, "0", "0", "0", "0");
         DocxTableCell Cell(DocxParagraph p) => new([p], null, null, null, "top", [], margins);
         var row = new DocxTableRow([Cell(paragraph)], null);
-        if (shape == "two-rows") return new("fixed", [468d], [row, new([Cell(paragraph with { })], null)]);
+        if (shape == "two-rows") return new("fixed", [468d], [row, new([Cell(PlainNoteMathStaticParagraph("Public margin row two"))], null)]);
         if (shape == "nested")
         {
             var inner = new DocxTable("fixed", [468d], [row]);

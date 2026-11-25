@@ -198,8 +198,8 @@ internal static partial class DocxInlineCompositionTests
             paragraph.Add(Run("Public margin story ")); Field("PAGE"); paragraph.Add(Run(" of ")); Field("NUMPAGES");
         }).Paragraphs.First();
 
-    private static DocxParagraph PlainNoteMathStaticParagraph() =>
-        DocxTests.CreateDocxLayoutParagraph("Public margin story", 12d, 14d) with { LineSpacingPoints = null };
+    private static DocxParagraph PlainNoteMathStaticParagraph(string text = "Public margin story") =>
+        DocxTests.CreateDocxLayoutParagraph(text, 12d, 14d) with { LineSpacingPoints = null };
 
     private static DocxDocument WithNoteMathStaticStory(DocxDocument source, bool footer, DocxParagraph paragraph, double distance = 36d)
         => WithNoteMathStaticBlocks(source, footer, [new DocxParagraphElement(paragraph)], distance);
