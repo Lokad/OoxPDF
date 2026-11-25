@@ -1610,6 +1610,44 @@ internal static partial class SvgTextTests
         TestAssert.Contains("unresolvable gradient tile", diagnostics.Single().Message);
     }
 
+    public static void SvgMetadataAndForeignPaintServersPreserveFallbackInBothFormats()
+    {
+        string Control(string fill, string stroke, string label) => $"""
+            <rect x="20" y="20" width="30" height="30" fill="{fill}"/>
+            <line x1="40" y1="80" x2="80" y2="80" fill="none" stroke="{stroke}" stroke-width="4"/>
+            <text x="20" y="120" font-size="24" fill="{label}">I</text>
+            """;
+        string Servers(string prefix) => $"""
+            <{prefix}pattern id="area"/>
+            <{prefix}linearGradient id="outline">
+              <{prefix}stop offset="0" stop-color="yellow"/>
+            </{prefix}linearGradient>
+            <{prefix}radialGradient id="caption"/>
+            """;
+        const string foreignNamespace = """xmlns:author="urn:authoring-metadata" """;
+        string content = Control("url(#area) red", "url(#outline) blue", "url(#caption) #112233");
+        string foreign = Servers("author:");
+        AssertSvgPaintInBothFormats(Svg(Control("red", "blue", "#112233")),
+            [Svg($"<metadata {foreignNamespace}>{foreign}</metadata>" + content),
+             Svg($"<defs {foreignNamespace}>{foreign}</defs>" + content),
+             Svg("<metadata>" + Servers("") + "</metadata>" + content)],
+            pdf => TestAssert.Equal(1, LabelPaths(pdf)),
+            "1 0 0 rg", "0 0 1 RG");
+
+        const string stops = """
+            <stop offset="0" stop-color="blue"/><stop offset="1" stop-color="yellow"/>
+            """;
+        string Gradient(string extraStops) => Svg(
+            $"<defs {foreignNamespace}><linearGradient id=\"real\">{extraStops}{stops}</linearGradient></defs>" +
+            Control("url(#real) red", "blue", "#112233"));
+        string authored = Gradient("");
+        AssertSvgPaintInBothFormats(authored,
+            [Gradient("""<author:stop offset=".7" stop-color="red"/>"""),
+             authored.Replace(" xmlns=\"http://www.w3.org/2000/svg\"", "", StringComparison.Ordinal)],
+            pdf => TestAssert.Equal(1, LabelPaths(pdf)),
+            "0 0 1 RG");
+    }
+
     private static void AssertEquivalentSvgPaint(PdfGraphicsBuilder expected, PdfGraphicsBuilder actual, string reason)
     {
         TestAssert.Equal(expected.ToString(), actual.ToString());

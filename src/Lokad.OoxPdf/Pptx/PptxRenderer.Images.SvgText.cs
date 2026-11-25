@@ -48,7 +48,7 @@ internal sealed partial class PptxRenderer
             if (HasSvgStylesheet(svg) ||
                 !TryReadSvgSourceFrame(svg.Root, out _, out _, out double viewWidth, out double viewHeight) ||
                 viewWidth <= 0d || viewHeight <= 0d) continue;
-            var paintServerIds = CreateSvgPaintServerIdLookup(svg, cancellationToken);
+            var paintServerIds = CreateSvgPaintServerIdLookup(EnumerateSvgPaintServers(svg, cancellationToken), cancellationToken);
             foreach (XElement element in svg.Descendants().Where(e => e.Name.LocalName == "text"))
             {
                 cancellationToken.ThrowIfCancellationRequested();

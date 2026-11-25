@@ -650,6 +650,7 @@
     "=SvgUnsetInheritedPropertiesPreservePaintAndVisibilityInBothFormats",
     "=PptxSvgGradientStopColorsUseLocalDeclarationsAndCurrentColor",
     "SvgMissingPaintServersUseAuthoredFallback",
+    "=SvgMetadataAndForeignPaintServersPreserveFallbackInBothFormats",
     "SvgCurrentColorUsesEachPaintedElementsColor",
     "SvgPrimitivePixelUnitsMatchUserCoordinates",
     "=SvgUserSpaceGradientLengthsMatchUserCoordinates",

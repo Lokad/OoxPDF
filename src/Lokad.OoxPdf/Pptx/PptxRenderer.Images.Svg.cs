@@ -158,9 +158,10 @@ internal sealed partial class PptxRenderer
             return true;
         }
 
-        var (gradients, radialGradients) = ReadSvgGradients(svg, viewWidth, viewHeight, cancellationToken);
+        var paintServers = EnumerateSvgPaintServers(svg, cancellationToken).ToArray();
+        var (gradients, radialGradients) = ReadSvgGradients(paintServers, viewWidth, viewHeight, cancellationToken);
         double strokePercentageBasis = GetSvgNormalizedDiagonal(viewWidth, viewHeight);
-        var paintServerIds = CreateSvgPaintServerIdLookup(svg, cancellationToken);
+        var paintServerIds = CreateSvgPaintServerIdLookup(paintServers, cancellationToken);
         var paintedText = new HashSet<XElement>();
         bool hasStylesheet = HasSvgStylesheet(svg);
         var unsupportedCommands = new SortedSet<char>();
@@ -1210,29 +1211,25 @@ internal sealed partial class PptxRenderer
     }
 
     private static (Dictionary<string, SvgGradient> Linear, Dictionary<string, SvgRadialGradient> Radial)
-        ReadSvgGradients(XDocument svg, double viewWidth, double viewHeight, CancellationToken cancellationToken)
+        ReadSvgGradients(IReadOnlyList<(string Id, XElement Element)> paintServers,
+            double viewWidth, double viewHeight, CancellationToken cancellationToken)
     {
         var linear = new Dictionary<string, SvgGradient>(StringComparer.Ordinal);
         var radial = new Dictionary<string, SvgRadialGradient>(StringComparer.Ordinal);
-        var sources = new List<(string Id, XElement Element)>();
         var byId = new Dictionary<string, XElement>(StringComparer.Ordinal);
-        foreach (XElement element in svg.Descendants())
+        foreach (var (id, element) in paintServers)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (element.Name.LocalName is not ("linearGradient" or "radialGradient")) continue;
-            string? id = (string?)element.Attribute("id");
-            if (!string.IsNullOrWhiteSpace(id))
-            {
-                sources.Add((id, element));
+            if (element.Name.LocalName != "pattern")
                 byId.TryAdd(id, element);
-            }
         }
 
         var resolved = new Dictionary<XElement, SvgGradientDefinition?>();
         var chain = new List<XElement>();
-        foreach ((string id, XElement element) in sources)
+        foreach (var (id, element) in paintServers)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            if (element.Name.LocalName == "pattern") continue;
             SvgGradientDefinition definition = ResolveSvgGradientDefinition(element, byId, resolved, chain, cancellationToken);
             if (definition.Ramp is not { Stops.Length: > 0 } ramp || definition.Transform is not { } transform)
             {
@@ -1379,10 +1376,11 @@ internal sealed partial class PptxRenderer
         bool hasUniformOpacity = true;
         bool hasHardStops = false;
         int fallbackOpacityCount = 0;
+        XName stopName = gradient.Name.Namespace + "stop";
         foreach (XElement stop in gradient.Elements())
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (stop.Name.LocalName != "stop") continue;
+            if (stop.Name != stopName) continue;
             stops ??= new List<SvgGradientStop>();
             IReadOnlyDictionary<string, string> style = ReadSvgStyleDeclarations(stop);
             bool hasPaint = TryReadSvgStopPaint(stop, style, out double offset, out RgbColor color, out double colorOpacity);
@@ -1762,16 +1760,37 @@ internal sealed partial class PptxRenderer
         return new SvgStroke(color, width, opacity, lineCap, lineJoin, dash, offset, miterLimit, strokeGradient, gradientId);
     }
 
-    private static Lazy<HashSet<string>> CreateSvgPaintServerIdLookup(XDocument svg, CancellationToken cancellationToken) =>
+    private static IEnumerable<(string Id, XElement Element)> EnumerateSvgPaintServers(
+        XDocument svg, CancellationToken cancellationToken)
+    {
+        if (svg.Root is not { } root) yield break;
+        XNamespace ns = root.Name.Namespace;
+        if (ns != XNamespace.None && ns.NamespaceName != "http://www.w3.org/2000/svg") yield break;
+
+        // The SVG namespace, or the namespace-free form used by older inputs,
+        // owns definitions. Descriptive metadata and foreign subtrees are data.
+        foreach (XElement element in root.Descendants())
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (element.Name.Namespace != ns ||
+                element.Name.LocalName is not ("linearGradient" or "radialGradient" or "pattern") ||
+                (string?)element.Attribute("id") is not { } id || string.IsNullOrWhiteSpace(id) ||
+                element.Ancestors().Any(parent => parent.Name.Namespace != ns ||
+                    IsSvgMetadataElement(parent) || parent.Name.LocalName == "foreignObject"))
+                continue;
+            yield return (id, element);
+        }
+    }
+
+    private static Lazy<HashSet<string>> CreateSvgPaintServerIdLookup(
+        IEnumerable<(string Id, XElement Element)> paintServers, CancellationToken cancellationToken) =>
         new(() =>
         {
             var ids = new HashSet<string>(StringComparer.Ordinal);
-            foreach (XElement element in svg.Descendants())
+            foreach (var (id, _) in paintServers)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if ((element.Name.LocalName is "linearGradient" or "radialGradient" or "pattern") &&
-                    (string?)element.Attribute("id") is { } id)
-                    ids.Add(id);
+                ids.Add(id);
             }
             return ids;
         });
