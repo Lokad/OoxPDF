@@ -58,13 +58,14 @@ internal static partial class DocxInlineCompositionTests
 
                 var paragraph = DocxBlockTraversal.EnumerateBodyParagraphs(source).Single(p => p.Images.Count != 0);
                 var items = TestAssert.NotNull(paragraph.InlineContent).ToArray();
-                var lastTwo = paragraph.Equations.TakeLast(2).ToArray();
-                TestAssert.Equal(2, lastTwo.Length);
-                int first = Array.FindIndex(items, item => item is DocxInlineEquation math && ReferenceEquals(math.Equation, lastTwo[0]));
+                int first = Array.FindIndex(items, item =>
+                    item is DocxInlineEquation { Equation.Content.Children: [DocxMathRun { Text.Text: "314" }] });
                 int picture = Array.FindIndex(items, item => item is DocxInlinePicture);
-                int last = Array.FindIndex(items, item => item is DocxInlineEquation math && ReferenceEquals(math.Equation, lastTwo[1]));
+                int last = Array.FindIndex(items, item =>
+                    item is DocxInlineEquation { Equation.Content.Children: [DocxMathRun { Text.Text: "793" }] });
                 TestAssert.True(first >= 0 && first < picture && picture < last,
                     "Both operands and the drawing retain their source order in the paragraph.");
+                TestAssert.Equal(withBreak, items[(first + 1)..picture].Any(item => item is DocxInlineBreak));
                 var page = PictureRangeRenderer(mode).RenderPagesAsync(source, Record, default).ToBlockingEnumerable().Single();
                 return (page, diagnostics, source.EquationParts.Sum(part => part.SourceCount));
             }
