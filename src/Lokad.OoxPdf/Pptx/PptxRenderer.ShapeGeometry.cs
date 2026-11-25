@@ -77,8 +77,8 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<double> dashPattern,
         int? lineCap,
         int? lineJoin,
-        LineEndStyle headEnd,
-        LineEndStyle tailEnd,
+        PptxSceneLineEnd headEnd,
+        PptxSceneLineEnd tailEnd,
         CancellationToken cancellationToken)
     {
         if (hasFill)
@@ -133,7 +133,7 @@ internal sealed partial class PptxRenderer
 
             bool hasMarkers = !headEnd.IsNone || !tailEnd.IsNone;
             bool useFilledTail = !hasDash && lineCap is null && lineJoin is null && headEnd.IsNone &&
-                tailEnd.Kind is LineEndKind.Triangle or LineEndKind.Arrow or LineEndKind.Stealth;
+                tailEnd.Kind is PptxSceneLineEndKind.Triangle or PptxSceneLineEndKind.Arrow or PptxSceneLineEndKind.Stealth;
             foreach (PptxSceneCustomPath path in customGeometry.Paths.Where(path => path.AllowsStroke))
             {
                 List<BezierSegment>? markerSegments = null;

@@ -19461,6 +19461,7 @@
     "PptxBubbleChart"
   ],
   "pptx-connector-operator-portability": [
+    "=PptxConnectorEndpointsInheritThemeOutlineProperties",
     "=PptxStraightConnectorStrokeRetainsAuthoredEndMarkers",
     "PptxSyntheticCurvedConnectorRendersCurve",
     "PptxSyntheticCurvedConnector2RendersCurve",

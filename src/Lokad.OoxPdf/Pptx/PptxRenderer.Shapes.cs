@@ -109,8 +109,8 @@ internal sealed partial class PptxRenderer
             ToGlow(shape.Shape.Glow),
             ToOuterShadow(shape.Shape.OuterShadow),
             ToLineStyle(shape.Shape.Line),
-            ToLineEndStyle(shape.Shape.HeadEnd),
-            ToLineEndStyle(shape.Shape.TailEnd),
+            shape.Shape.HeadEnd,
+            shape.Shape.TailEnd,
             cancellationToken);
     }
 
@@ -135,8 +135,8 @@ internal sealed partial class PptxRenderer
         Glow? glowOverride,
         OuterShadow? outerShadowOverride,
         LineStyle line,
-        LineEndStyle headEnd,
-        LineEndStyle tailEnd,
+        PptxSceneLineEnd headEnd,
+        PptxSceneLineEnd tailEnd,
         CancellationToken cancellationToken)
     {
         ShapeBounds bounds = groupTransform.Apply(rawBounds);
@@ -262,7 +262,7 @@ internal sealed partial class PptxRenderer
                 double y2 = document.SlideHeightPoints - yTop - height;
                 bool hasHeadArrow = IsFilledTriangleArrow(headEnd);
                 bool hasTailArrow = IsFilledTriangleArrow(tailEnd);
-                bool hasStealthEnd = headEnd.Kind == LineEndKind.Stealth || tailEnd.Kind == LineEndKind.Stealth;
+                bool hasStealthEnd = headEnd.Kind == PptxSceneLineEndKind.Stealth || tailEnd.Kind == PptxSceneLineEndKind.Stealth;
                 double triangleHalfWidthFactor = preset == "straightConnector1"
                     ? OfficeStraightConnectorTriangleLineEndHalfWidthFactor
                     : OfficeStraightTriangleLineEndHalfWidthFactor;
@@ -273,15 +273,15 @@ internal sealed partial class PptxRenderer
                     rawBounds.FlipHorizontal ||
                     rawBounds.FlipVertical ||
                     (string.Equals(preset, "straightConnector1", StringComparison.Ordinal) && !transformed);
-                if (hasStealthEnd && useFilledStealthBody && headEnd.Kind is LineEndKind.None or LineEndKind.Stealth && tailEnd.Kind is LineEndKind.None or LineEndKind.Stealth && !hasDash && lineCap is null)
+                if (hasStealthEnd && useFilledStealthBody && headEnd.Kind is PptxSceneLineEndKind.None or PptxSceneLineEndKind.Stealth && tailEnd.Kind is PptxSceneLineEndKind.None or PptxSceneLineEndKind.Stealth && !hasDash && lineCap is null)
                 {
                     graphics.SetFillRgb(stroke.Red, stroke.Green, stroke.Blue);
                     FillStealthEndedLine(graphics, x1, y1, x2, y2, lineWidth, headEnd, tailEnd);
                 }
-                else if ((hasHeadArrow || hasTailArrow) && headEnd.Kind is LineEndKind.None or LineEndKind.Triangle or LineEndKind.Arrow && tailEnd.Kind is LineEndKind.None or LineEndKind.Triangle or LineEndKind.Arrow && !hasDash && lineCap is null)
+                else if ((hasHeadArrow || hasTailArrow) && headEnd.Kind is PptxSceneLineEndKind.None or PptxSceneLineEndKind.Triangle or PptxSceneLineEndKind.Arrow && tailEnd.Kind is PptxSceneLineEndKind.None or PptxSceneLineEndKind.Triangle or PptxSceneLineEndKind.Arrow && !hasDash && lineCap is null)
                 {
                     graphics.SetFillRgb(stroke.Red, stroke.Green, stroke.Blue);
-                    bool usesOfficeArrowType = headEnd.Kind == LineEndKind.Arrow || tailEnd.Kind == LineEndKind.Arrow;
+                    bool usesOfficeArrowType = headEnd.Kind == PptxSceneLineEndKind.Arrow || tailEnd.Kind == PptxSceneLineEndKind.Arrow;
                     FillStraightArrowedLine(graphics, x1, y1, x2, y2, lineWidth,
                         hasHeadArrow, hasTailArrow, usesOfficeArrowType, triangleHalfWidthFactor);
                 }
@@ -357,7 +357,7 @@ internal sealed partial class PptxRenderer
                 if (!hasDash &&
                     lineCap is null &&
                     headEnd.IsNone &&
-                    tailEnd.Kind is LineEndKind.Triangle or LineEndKind.Arrow or LineEndKind.Stealth)
+                    tailEnd.Kind is PptxSceneLineEndKind.Triangle or PptxSceneLineEndKind.Arrow or PptxSceneLineEndKind.Stealth)
                 {
                     graphics.SetFillRgb(stroke.Red, stroke.Green, stroke.Blue);
                     if (!TryFillCurvedConnectorPreset(
@@ -521,7 +521,7 @@ internal sealed partial class PptxRenderer
                     !hasDash &&
                     lineCap is null &&
                     headEnd.IsNone &&
-                    tailEnd.Kind is LineEndKind.Triangle or LineEndKind.Arrow or LineEndKind.Stealth;
+                    tailEnd.Kind is PptxSceneLineEndKind.Triangle or PptxSceneLineEndKind.Arrow or PptxSceneLineEndKind.Stealth;
                 if (useFilledLineEndOutline)
                 {
                     graphics.SetFillRgb(stroke.Red, stroke.Green, stroke.Blue);

@@ -9,7 +9,7 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static void FillLineEndMarker(PdfGraphicsBuilder graphics, LineEndStyle style, double tipX, double tipY,
+    private static void FillLineEndMarker(PdfGraphicsBuilder graphics, PptxSceneLineEnd style, double tipX, double tipY,
         (double X, double Y) outward, double lineWidth, double? straightTriangleHalfWidthFactor = null)
     {
         if (style.IsNone)
@@ -28,14 +28,14 @@ internal sealed partial class PptxRenderer
         double nx = -uy;
         double ny = ux;
 
-        if (style.Kind == LineEndKind.Arrow)
+        if (style.Kind == PptxSceneLineEndKind.Arrow)
         {
             AppendOfficeArrowHeadPath(graphics, tipX, tipY, -ux, -uy, -nx, -ny, lineWidth, false);
             graphics.FillCurrentPath();
             return;
         }
 
-        if (style.Kind == LineEndKind.Triangle)
+        if (style.Kind == PptxSceneLineEndKind.Triangle)
         {
             double size = straightTriangleHalfWidthFactor.HasValue
                 ? lineWidth * OfficeStraightTriangleLineEndLengthFactor
@@ -48,10 +48,10 @@ internal sealed partial class PptxRenderer
             return;
         }
 
-        double markerLength = style.Kind == LineEndKind.Stealth
+        double markerLength = style.Kind == PptxSceneLineEndKind.Stealth
             ? GetStraightStealthLineEndLength(lineWidth, style)
             : Math.Max(6.5d, lineWidth * 4d) * style.LengthScale;
-        double markerWidth = style.Kind == LineEndKind.Stealth
+        double markerWidth = style.Kind == PptxSceneLineEndKind.Stealth
             ? GetStraightStealthLineEndWidth(lineWidth, style)
             : Math.Max(5d, lineWidth * 3.2d) * style.WidthScale;
 
@@ -62,7 +62,7 @@ internal sealed partial class PptxRenderer
 
         switch (style.Kind)
         {
-            case LineEndKind.Stealth:
+            case PptxSceneLineEndKind.Stealth:
                 graphics.FillPolygon(
                 [
                     (tipX, tipY),
@@ -71,7 +71,7 @@ internal sealed partial class PptxRenderer
                     Point(markerLength, -markerWidth / 2d)
                 ]);
                 break;
-            case LineEndKind.Diamond:
+            case PptxSceneLineEndKind.Diamond:
                 graphics.FillPolygon(
                 [
                     (tipX, tipY),
@@ -80,14 +80,14 @@ internal sealed partial class PptxRenderer
                     Point(markerLength / 2d, -markerWidth / 2d)
                 ]);
                 break;
-            case LineEndKind.Oval:
+            case PptxSceneLineEndKind.Oval:
                 (double X, double Y) center = Point(markerLength / 2d, 0d);
                 graphics.FillEllipse(center.X - markerLength / 2d, center.Y - markerWidth / 2d, markerLength, markerWidth);
                 break;
         }
     }
 
-    private static void FillStealthEndedLine(PdfGraphicsBuilder graphics, double x1, double y1, double x2, double y2, double lineWidth, LineEndStyle headEnd, LineEndStyle tailEnd)
+    private static void FillStealthEndedLine(PdfGraphicsBuilder graphics, double x1, double y1, double x2, double y2, double lineWidth, PptxSceneLineEnd headEnd, PptxSceneLineEnd tailEnd)
     {
         double dx = x2 - x1;
         double dy = y2 - y1;
@@ -105,10 +105,10 @@ internal sealed partial class PptxRenderer
         // 6pt marker polygons (compact ops: 1pt body rect plus marker quad, not a 6pt
         // body); union bboxes misled once here, compare subpaths instead.
         double half = lineWidth / 2d;
-        double headInset = headEnd.Kind == LineEndKind.Stealth
+        double headInset = headEnd.Kind == PptxSceneLineEndKind.Stealth
             ? GetStraightStealthLineEndLength(lineWidth, headEnd) * OfficeStraightStealthLineEndNotchFactor
             : 0d;
-        double tailInset = tailEnd.Kind == LineEndKind.Stealth
+        double tailInset = tailEnd.Kind == PptxSceneLineEndKind.Stealth
             ? GetStraightStealthLineEndLength(lineWidth, tailEnd) * OfficeStraightStealthLineEndNotchFactor
             : 0d;
         double startX = x1 + ux * headInset;
@@ -127,12 +127,12 @@ internal sealed partial class PptxRenderer
             ]);
         }
 
-        if (headEnd.Kind == LineEndKind.Stealth)
+        if (headEnd.Kind == PptxSceneLineEndKind.Stealth)
         {
             AppendStealthLineEndMarker(graphics, headEnd, x1, y1, x1 - x2, y1 - y2, lineWidth);
         }
 
-        if (tailEnd.Kind == LineEndKind.Stealth)
+        if (tailEnd.Kind == PptxSceneLineEndKind.Stealth)
         {
             AppendStealthLineEndMarker(graphics, tailEnd, x2, y2, x2 - x1, y2 - y1, lineWidth);
         }
@@ -140,7 +140,7 @@ internal sealed partial class PptxRenderer
         graphics.FillCurrentPath();
     }
 
-    private static void AppendStealthLineEndMarker(PdfGraphicsBuilder graphics, LineEndStyle style, double tipX, double tipY, double directionX, double directionY, double lineWidth)
+    private static void AppendStealthLineEndMarker(PdfGraphicsBuilder graphics, PptxSceneLineEnd style, double tipX, double tipY, double directionX, double directionY, double lineWidth)
     {
         double length = Math.Sqrt(directionX * directionX + directionY * directionY);
         if (length <= 0.001d)
@@ -169,12 +169,12 @@ internal sealed partial class PptxRenderer
         ]);
     }
 
-    private static double GetStraightStealthLineEndLength(double lineWidth, LineEndStyle style)
+    private static double GetStraightStealthLineEndLength(double lineWidth, PptxSceneLineEnd style)
     {
         return Math.Max(OfficeStraightStealthLineEndMinimumSize, lineWidth * OfficeStraightStealthLineEndLengthFactor) * style.LengthScale;
     }
 
-    private static double GetStraightStealthLineEndWidth(double lineWidth, LineEndStyle style)
+    private static double GetStraightStealthLineEndWidth(double lineWidth, PptxSceneLineEnd style)
     {
         return Math.Max(OfficeStraightStealthLineEndMinimumSize, lineWidth * OfficeStraightStealthLineEndWidthFactor) * style.WidthScale;
     }
@@ -341,8 +341,8 @@ internal sealed partial class PptxRenderer
         double slideHeight,
         RgbColor stroke,
         double lineWidth,
-        LineEndStyle headEnd,
-        LineEndStyle tailEnd,
+        PptxSceneLineEnd headEnd,
+        PptxSceneLineEnd tailEnd,
         IReadOnlyDictionary<string, double>? presetAdjustments)
     {
         List<BezierSegment> segments = preset switch
@@ -378,7 +378,7 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static void FillBezierEndpointMarker(PdfGraphicsBuilder graphics, LineEndStyle style,
+    private static void FillBezierEndpointMarker(PdfGraphicsBuilder graphics, PptxSceneLineEnd style,
         BezierSegment segment, bool atStart, double lineWidth)
     {
         if (style.IsNone) return;
@@ -405,7 +405,7 @@ internal sealed partial class PptxRenderer
         double height,
         double slideHeight,
         double lineWidth,
-        LineEndStyle tailEnd,
+        PptxSceneLineEnd tailEnd,
         IReadOnlyDictionary<string, double>? presetAdjustments)
     {
         List<BezierSegment> segments = preset switch
@@ -426,12 +426,12 @@ internal sealed partial class PptxRenderer
         PdfGraphicsBuilder graphics,
         IReadOnlyList<BezierSegment> segments,
         double lineWidth,
-        LineEndStyle tailEnd)
+        PptxSceneLineEnd tailEnd)
     {
         int samplesPerSegment = tailEnd.Kind switch
         {
-            LineEndKind.Arrow => OfficeArrowTailConnectorSamplesPerSegment,
-            LineEndKind.Stealth => OfficeStealthTailConnectorSamplesPerSegment,
+            PptxSceneLineEndKind.Arrow => OfficeArrowTailConnectorSamplesPerSegment,
+            PptxSceneLineEndKind.Stealth => OfficeStealthTailConnectorSamplesPerSegment,
             _ => OfficeTriangleTailConnectorSamplesPerSegment
         };
         List<CurveSample> samples = SampleBezierSegments(segments, samplesPerSegment);
@@ -439,7 +439,7 @@ internal sealed partial class PptxRenderer
     }
 
     private static bool TryFillSampledCurveLineEndOutline(PdfGraphicsBuilder graphics,
-        IReadOnlyList<CurveSample> samples, double lineWidth, LineEndStyle tailEnd)
+        IReadOnlyList<CurveSample> samples, double lineWidth, PptxSceneLineEnd tailEnd)
     {
         if (samples.Count < 2)
         {
@@ -449,8 +449,8 @@ internal sealed partial class PptxRenderer
         double[] cumulativeLengths = BuildCumulativeSampleLengths(samples, out double totalLength);
         double markerLength = tailEnd.Kind switch
         {
-            LineEndKind.Arrow => lineWidth * OfficeArrowheadLengthFactor * tailEnd.LengthScale,
-            LineEndKind.Stealth => lineWidth * OfficeStraightStealthLineEndLengthFactor * tailEnd.LengthScale,
+            PptxSceneLineEndKind.Arrow => lineWidth * OfficeArrowheadLengthFactor * tailEnd.LengthScale,
+            PptxSceneLineEndKind.Stealth => lineWidth * OfficeStraightStealthLineEndLengthFactor * tailEnd.LengthScale,
             _ => Math.Max(OfficeTriangleTailMinimumLength, lineWidth * OfficeTriangleTailLengthFactor) * tailEnd.LengthScale
         };
         double baseDistance = Math.Max(0d, totalLength - markerLength);
@@ -485,7 +485,7 @@ internal sealed partial class PptxRenderer
         AppendClosedLinePath(graphics, points, explicitClosingLine: true);
         (double X, double Y) tip = (samples[^1].X, samples[^1].Y);
         (double X, double Y) normalAtBase = (-direction.Y, direction.X);
-        if (tailEnd.Kind == LineEndKind.Arrow)
+        if (tailEnd.Kind == PptxSceneLineEndKind.Arrow)
         {
             AppendOfficeArrowHeadPath(
                 graphics,
@@ -498,7 +498,7 @@ internal sealed partial class PptxRenderer
                 lineWidth,
                 splitTrailingCurve: true);
         }
-        else if (tailEnd.Kind == LineEndKind.Stealth)
+        else if (tailEnd.Kind == PptxSceneLineEndKind.Stealth)
         {
             double markerWidth = lineWidth * OfficeStraightStealthLineEndWidthFactor * tailEnd.WidthScale;
             AppendClosedLinePath(graphics,

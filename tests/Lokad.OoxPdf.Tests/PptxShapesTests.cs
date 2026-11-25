@@ -1099,17 +1099,7 @@ internal static partial class PptxShapesTests
     {
         const string slidePart = "ppt/slides/slide1.xml";
         const string themePart = "ppt/theme/theme1.xml";
-        string fixture = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..",
-            "Cases", "pptx-ladder-06-round-join-rect.pptx"));
-        using var archive = ZipFile.OpenRead(fixture);
-        var parts = new Dictionary<string, byte[]>(StringComparer.Ordinal);
-        foreach (ZipArchiveEntry entry in archive.Entries)
-        {
-            using Stream source = entry.Open();
-            using var copy = new MemoryStream();
-            source.CopyTo(copy);
-            parts.Add(entry.FullName, copy.ToArray());
-        }
+        var parts = ReadThemeOutlineFixture();
 
         XNamespace p = OoxNamespaces.PresentationNamespace;
         XNamespace a = OoxNamespaces.DrawingNamespace;
@@ -1184,6 +1174,91 @@ internal static partial class PptxShapesTests
             OoxPdfConverter.Convert(input, output, new OoxPdfOptions { InputKind = OoxPdfInputKind.Pptx });
             return output.ToArray();
         }
+    }
+
+    public static void PptxConnectorEndpointsInheritThemeOutlineProperties()
+    {
+        const string slidePart = "ppt/slides/slide1.xml";
+        const string themePart = "ppt/theme/theme1.xml";
+        var parts = ReadThemeOutlineFixture();
+        XNamespace p = OoxNamespaces.PresentationNamespace;
+        XNamespace a = OoxNamespaces.DrawingNamespace;
+        XDocument slide = XDocument.Parse(Encoding.UTF8.GetString(parts[slidePart]));
+        XDocument theme = XDocument.Parse(Encoding.UTF8.GetString(parts[themePart]));
+        XElement shape = slide.Descendants(p + "sp").Single();
+        XElement style = shape.Element(p + "style")!;
+        int lineIndex = (int)style.Element(a + "lnRef")!.Attribute("idx")!;
+        XElement Head(string type, string width, string length) => new(a + "headEnd",
+            new XAttribute("type", type), new XAttribute("w", width), new XAttribute("len", length));
+        XElement Tail(string length) => new(a + "tailEnd",
+            new XAttribute("type", "stealth"), new XAttribute("w", "sm"), new XAttribute("len", length));
+        XElement Outline(int width, params XElement[] ends) => new(a + "ln", new XAttribute("w", width),
+            new XElement(a + "solidFill", new XElement(a + "srgbClr", new XAttribute("val", "0070C0"))),
+            new XElement(a + "prstDash", new XAttribute("val", "dash")), ends);
+
+        const int width = 57150;
+        const int wider = 76200;
+        XElement outline = Outline(width, Head("diamond", "lg", "sm"), Tail("lg"));
+        theme.Descendants(a + "lnStyleLst").Single().Elements(a + "ln").ElementAt(lineIndex - 1)
+            .ReplaceWith(new XElement(outline));
+        parts[themePart] = TestFixtures.Utf8(theme.ToString(SaveOptions.DisableFormatting));
+
+        XElement frame = new(p + "spPr",
+            new XElement(a + "xfrm",
+                new XElement(a + "off", new XAttribute("x", 1828800), new XAttribute("y", 3429000)),
+                new XElement(a + "ext", new XAttribute("cx", 5486400), new XAttribute("cy", 0))),
+            new XElement(a + "prstGeom", new XAttribute("prst", "straightConnector1")));
+        shape.ReplaceWith(new XElement(p + "cxnSp",
+            new XElement(p + "nvCxnSpPr", new XElement(shape.Element(p + "nvSpPr")!.Element(p + "cNvPr")!),
+                new XElement(p + "cNvCxnSpPr"), new XElement(p + "nvPr")),
+            frame, new XElement(style)));
+
+        string direct = Render(outline);
+        TestAssert.Contains("[18 13.5 ] 0 d", direct);
+        TestAssert.Contains("144 270 m 576 270 l S", direct);
+        TestAssert.Contains("144 270 m\n", direct);
+        TestAssert.Contains("576 270 m\n", direct);
+        TestAssert.Equal(direct, Render(null));
+        TestAssert.Equal(Render(Outline(wider, Head("diamond", "lg", "sm"), Tail("lg"))),
+            Render(new XElement(a + "ln", new XAttribute("w", wider))));
+        string resized = Render(Outline(width, Head("diamond", "sm", "sm"), Tail("sm")));
+        TestAssert.True(!string.Equals(direct, resized, StringComparison.Ordinal), "Endpoint dimensions affect painted geometry.");
+        TestAssert.Equal(resized, Render(new XElement(a + "ln",
+            new XElement(a + "headEnd", new XAttribute("w", "sm")),
+            new XElement(a + "tailEnd", new XAttribute("len", "sm")))));
+
+        string tailOnly = Render(new XElement(a + "ln", new XElement(a + "headEnd", new XAttribute("type", "none"))));
+        TestAssert.DoesNotContain("144 270 m\n", tailOnly);
+        TestAssert.Contains("576 270 m\n", tailOnly);
+        string noLine = Render(new XElement(a + "ln", new XElement(a + "noFill")));
+        TestAssert.DoesNotContain("144 270 m", noLine);
+        TestAssert.DoesNotContain("576 270 m", noLine);
+
+        string Render(XElement? localLine)
+        {
+            frame.Element(a + "ln")?.Remove();
+            if (localLine is not null)
+                frame.Add(new XElement(localLine));
+            parts[slidePart] = TestFixtures.Utf8(slide.ToString(SaveOptions.DisableFormatting));
+            using MemoryStream input = TestFixtures.CreateZipPackage(parts);
+            using var output = new MemoryStream();
+            OoxPdfConverter.Convert(input, output, new OoxPdfOptions { InputKind = OoxPdfInputKind.Pptx });
+            return Encoding.ASCII.GetString(output.ToArray()).ReplaceLineEndings("\n");
+        }
+    }
+
+    private static Dictionary<string, byte[]> ReadThemeOutlineFixture()
+    {
+        using var archive = ZipFile.OpenRead(TestFixtures.PublicCasePath("pptx-ladder-06-round-join-rect.pptx"));
+        var parts = new Dictionary<string, byte[]>(StringComparer.Ordinal);
+        foreach (ZipArchiveEntry entry in archive.Entries)
+        {
+            using Stream source = entry.Open();
+            using var copy = new MemoryStream();
+            source.CopyTo(copy);
+            parts.Add(entry.FullName, copy.ToArray());
+        }
+        return parts;
     }
 
     public static void PptxSyntheticShapeStrokeDashCapAndJoinRender()

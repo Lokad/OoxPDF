@@ -205,7 +205,6 @@ internal sealed record PptxSceneShape(
     PptxFormatSchemeReference FillReference,
     PptxFormatSchemeReference LineReference,
     bool NoFill,
-    bool LineNoFill,
     PptxSceneFillStyle Fill,
     PptxSceneGradientFill GradientFill,
     PptxScenePatternFill PatternFill,
@@ -356,11 +355,8 @@ internal enum PptxSceneLineEndKind
 
 internal readonly record struct PptxSceneLineEnd(
     PptxSceneLineEndKind Kind,
-    string? TypeValue,
     double WidthScale,
-    string? WidthValue,
-    double LengthScale,
-    string? LengthValue)
+    double LengthScale)
 {
     public bool IsNone => Kind == PptxSceneLineEndKind.None;
 }

@@ -335,7 +335,7 @@ internal sealed partial class PptxRenderer
         double width,
         double height,
         double lineWidth,
-        LineEndStyle tailEnd,
+        PptxSceneLineEnd tailEnd,
         IReadOnlyDictionary<string, double>? presetAdjustments)
     {
         if (width <= 0d || height <= 0d || lineWidth <= 0d)

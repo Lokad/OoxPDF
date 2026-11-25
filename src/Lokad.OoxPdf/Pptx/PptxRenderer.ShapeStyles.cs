@@ -38,9 +38,9 @@ internal sealed partial class PptxRenderer
             : null;
     }
 
-    private static bool IsFilledTriangleArrow(LineEndStyle style)
+    private static bool IsFilledTriangleArrow(PptxSceneLineEnd style)
     {
-        return style.Kind is LineEndKind.Arrow or LineEndKind.Triangle;
+        return style.Kind is PptxSceneLineEndKind.Arrow or PptxSceneLineEndKind.Triangle;
     }
 
     private static bool TryCreatePresetPolygonPoints(string preset, double x, double y, double width, double height, out (double X, double Y)[] points)
@@ -485,21 +485,6 @@ internal sealed partial class PptxRenderer
         WordArtVerticalRightToLeft
     }
 
-    private enum LineEndKind
-    {
-        None,
-        Triangle,
-        Arrow,
-        Stealth,
-        Diamond,
-        Oval
-    }
-
-    private readonly record struct LineEndStyle(LineEndKind Kind, double WidthScale, double LengthScale)
-    {
-        public bool IsNone => Kind == LineEndKind.None;
-    }
-
     private readonly record struct LineStyle(bool HasLine, RgbColor Color, double Width, double Alpha, IReadOnlyList<double> DashPattern, int? Cap, int? Join)
     {
         public bool HasDash => DashPattern is { Count: > 0 };
@@ -569,22 +554,6 @@ internal sealed partial class PptxRenderer
         public double CenterX => (MinX + MaxX) / 2d;
 
         public double CenterY => (MinY + MaxY) / 2d;
-    }
-
-    private static LineEndStyle ToLineEndStyle(PptxSceneLineEnd lineEnd)
-    {
-        return new LineEndStyle(
-            lineEnd.Kind switch
-            {
-                PptxSceneLineEndKind.Triangle => LineEndKind.Triangle,
-                PptxSceneLineEndKind.Arrow => LineEndKind.Arrow,
-                PptxSceneLineEndKind.Stealth => LineEndKind.Stealth,
-                PptxSceneLineEndKind.Diamond => LineEndKind.Diamond,
-                PptxSceneLineEndKind.Oval => LineEndKind.Oval,
-                _ => LineEndKind.None
-            },
-            lineEnd.WidthScale,
-            lineEnd.LengthScale);
     }
 
     private static LineStyle ToLineStyle(PptxSceneLineStyle line)

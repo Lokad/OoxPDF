@@ -6,13 +6,12 @@ namespace Lokad.OoxPdf.Pptx;
 internal sealed partial class PptxSceneBuilder
 {
     private static PptxSceneLineStyle ReadShapeLine(
-        XElement? shapeProperties,
+        XElement? explicitLine,
         PptxTheme theme,
         PptxColorMap colorMap,
         PptxFormatSchemeReference lineReference,
         bool widthSpecifiedByDefault)
     {
-        XElement? explicitLine = shapeProperties?.Element(DrawingNamespace + "ln");
         if (explicitLine?.Element(DrawingNamespace + "noFill") is not null)
         {
             return default;
@@ -116,21 +115,15 @@ internal sealed partial class PptxSceneBuilder
             owner?.Element(DrawingNamespace + "miter") is not null ? (0, "miter") : null;
     }
 
-    private static PptxSceneLineEnd ReadLineEnd(XElement? shapeProperties, string elementName)
+    private static PptxSceneLineEnd ReadLineEnd(XElement? line, XElement? themeLine, string elementName)
     {
-        XElement? end = shapeProperties
-            ?.Element(DrawingNamespace + "ln")
-            ?.Element(DrawingNamespace + elementName);
-        string? type = (string?)end?.Attribute("type");
-        string? width = (string?)end?.Attribute("w");
-        string? length = (string?)end?.Attribute("len");
+        XName name = DrawingNamespace + elementName;
+        XElement? end = line?.Element(name);
+        XElement? themeEnd = themeLine?.Element(name);
         return new PptxSceneLineEnd(
-            ReadLineEndKind(type),
-            type,
-            ReadLineEndScale(width),
-            width,
-            ReadLineEndScale(length),
-            length);
+            ReadLineEndKind((string?)(end?.Attribute("type") ?? themeEnd?.Attribute("type"))),
+            ReadLineEndScale((string?)(end?.Attribute("w") ?? themeEnd?.Attribute("w"))),
+            ReadLineEndScale((string?)(end?.Attribute("len") ?? themeEnd?.Attribute("len"))));
     }
 
     private static PptxSceneLineEndKind ReadLineEndKind(string? type)

@@ -53,7 +53,8 @@ internal sealed partial class PptxSceneBuilder
             TryReadInheritedGroupFill(shape, theme, colorMap, out fillColor, out fillAlpha)
                 ? new PptxSceneFillStyle(true, fillColor, fillAlpha)
                 : default;
-        PptxSceneLineStyle line = ReadShapeLine(shapeProperties, theme, colorMap, lineReference, widthSpecifiedByDefault: true);
+        XElement? explicitLine = shapeProperties?.Element(DrawingNamespace + "ln");
+        PptxSceneLineStyle line = ReadShapeLine(explicitLine, theme, colorMap, lineReference, widthSpecifiedByDefault: true);
         return new PptxSceneShape(
             ReadPresetGeometry(shapeProperties),
             ReadPresetAdjustments(shapeProperties),
@@ -62,7 +63,6 @@ internal sealed partial class PptxSceneBuilder
             fillReference,
             lineReference,
             shapeProperties?.Element(DrawingNamespace + "noFill") is not null,
-            shapeProperties?.Element(DrawingNamespace + "ln")?.Element(DrawingNamespace + "noFill") is not null,
             fill,
             ReadLinearGradientFill(shapeProperties, theme, colorMap),
             ReadShapePatternFill(shapeProperties, theme, colorMap),
@@ -72,8 +72,8 @@ internal sealed partial class PptxSceneBuilder
             TryReadOuterShadow(shapeProperties, theme, colorMap, out PptxSceneOuterShadow outerShadow) ? outerShadow : default,
             ReadEffects(shapeProperties),
             line,
-            ReadLineEnd(shapeProperties, "headEnd"),
-            ReadLineEnd(shapeProperties, "tailEnd"));
+            ReadLineEnd(explicitLine, lineReference.Style, "headEnd"),
+            ReadLineEnd(explicitLine, lineReference.Style, "tailEnd"));
     }
 
     internal static bool HasUnsupportedAlpha(XContainer? container, Func<XElement, bool>? includeColor = null)

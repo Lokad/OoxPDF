@@ -455,7 +455,8 @@ internal sealed partial class PptxSceneBuilder
             ?? svgRelationshipId;
         string? targetPartName = ResolveRelationshipTarget(relationshipId, relationships);
         XElement? shapeProperties = picture.Element(PresentationNamespace + "spPr");
-        PptxSceneLineStyle line = ReadShapeLine(shapeProperties, theme, colorMap, default, widthSpecifiedByDefault: false);
+        PptxSceneLineStyle line = ReadShapeLine(shapeProperties?.Element(DrawingNamespace + "ln"),
+            theme, colorMap, default, widthSpecifiedByDefault: false);
         return new PptxScenePicture(
             relationshipId,
             targetPartName,
