@@ -1,4 +1,5 @@
 # Exercise frozen CLI diagnostics publication without a build or Office.
+# The Separate case covers successful diagnostics publication on conversion failure.
 # Direct library link checks live in PublicApiTests.PublicationLinks.cs and run
 # under the library TFM, independently of the PowerShell host runtime.
 [CmdletBinding()]

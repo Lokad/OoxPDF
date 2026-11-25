@@ -8481,7 +8481,6 @@
     "CliRejectsDiagnosticsPathEqualToOutput",
     "CliRejectsEarlyFailureDiagnosticsAliasingInput",
     "CliRejectsEarlyFailureDiagnosticsAliasingOutput",
-    "CliWritesSeparateDiagnosticsForUnsupportedInputWithoutChangingFiles",
     "ConvertAsyncCapturesPathsBeforeHostCallbacks",
     "ConvertAsyncKeepsValidationAndCancellationOnReturnedTask"
   ],

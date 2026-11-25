@@ -307,26 +307,6 @@ internal static class CliTests
         finally { Directory.Delete(directory, recursive: true); }
     }
 
-    public static void CliWritesSeparateDiagnosticsForUnsupportedInputWithoutChangingFiles()
-    {
-        string directory = Path.Combine(Path.GetTempPath(), "ooxpdf-cli-failure-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(directory);
-        try
-        {
-            string input = Path.Combine(directory, "unsupported.txt");
-            string output = Path.Combine(directory, "output.pdf");
-            string diagnostics = Path.Combine(directory, "diagnostics.json");
-            File.WriteAllText(input, "original input");
-            File.WriteAllText(output, "original destination");
-            TestToolResult result = RunCli("convert", input, output, "--diagnostics", diagnostics);
-            TestAssert.Equal(1, result.ExitCode);
-            TestAssert.Equal("original input", File.ReadAllText(input));
-            TestAssert.Equal("original destination", File.ReadAllText(output));
-            TestAssert.Contains("OOXML_CONVERSION_FAILED", File.ReadAllText(diagnostics));
-        }
-        finally { Directory.Delete(directory, recursive: true); }
-    }
-
     private static string WriteMalformedNumericDocx()
     {
         return TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
