@@ -1,6 +1,4 @@
-using System.Globalization;
 using System.Xml.Linq;
-using Lokad.OoxPdf.Ooxml;
 using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
 
 namespace Lokad.OoxPdf.Pptx;
@@ -15,39 +13,23 @@ internal sealed partial class PptxSceneBuilder
         bool widthSpecifiedByDefault)
     {
         XElement? explicitLine = shapeProperties?.Element(DrawingNamespace + "ln");
-        if (explicitLine is null)
-        {
-            return lineReference.Style is not null &&
-                TryReadThemeLineReference(lineReference, theme, colorMap, out PptxSceneLineStyle themed)
-                ? themed
-                : default;
-        }
-
-        if (explicitLine.Element(DrawingNamespace + "noFill") is not null)
+        if (explicitLine?.Element(DrawingNamespace + "noFill") is not null)
         {
             return default;
         }
 
-        XElement? style = lineReference.Style;
-        double? styleLineWidth = style?.Attribute("w") is { } inheritedWidth
-            ? OoxUnits.EmuToPoints(long.Parse(inheritedWidth.Value, CultureInfo.InvariantCulture))
-            : null;
-        bool hasLocalWidth = explicitLine.Attribute("w") is not null;
-        bool widthSpecified = widthSpecifiedByDefault || hasLocalWidth;
-        if (PptxLineStyleReader.TryReadLineWithAlpha(explicitLine, theme, colorMap, out RgbColor color,
-                out double lineWidth, out double alpha, styleLineWidth) ||
-            (hasLocalWidth && style is not null &&
-                PptxColorResolver.TryReadSolidColorWithAlpha(style, theme, colorMap, lineReference.Reference, out color, out alpha)))
+        XElement? themeLine = lineReference.Style;
+        double? localWidth = PptxLineStyleReader.ReadWidth(explicitLine);
+        bool hasLocalColor = PptxColorResolver.TryReadSolidColorWithAlpha(explicitLine, theme, colorMap, out RgbColor color, out double alpha);
+        if (!hasLocalColor && !TryReadThemeLineColor(themeLine, lineReference.Reference, theme, colorMap, out color, out alpha))
         {
-            return ReadSceneLineStyle(explicitLine, color, lineWidth, alpha, widthSpecified);
+            return default;
         }
 
-        if (style is not null && TryReadThemeLineReference(lineReference, theme, colorMap, out PptxSceneLineStyle inherited))
-        {
-            return ReadSceneLineStyle(explicitLine, inherited.Color, inherited.Width, inherited.Alpha, widthSpecified);
-        }
-
-        return default;
+        double lineWidth = localWidth ?? PptxLineStyleReader.ReadWidth(themeLine) ??
+            (hasLocalColor ? PptxLineStyleReader.OfficeDefaultLineWidthPoints : 1d);
+        return ReadSceneLineStyle(explicitLine, color, lineWidth, alpha,
+            widthSpecifiedByDefault || localWidth.HasValue, themeLine);
     }
 
     private static bool TryReadThemeLineReference(PptxFormatSchemeReference lineReference, PptxTheme theme, PptxColorMap colorMap, out PptxSceneLineStyle line)
@@ -60,25 +42,41 @@ internal sealed partial class PptxSceneBuilder
             lineStyle = resolvedLineStyle;
         }
 
-        if (lineStyle is null ||
-            lineStyle.Element(DrawingNamespace + "noFill") is not null ||
-            !PptxColorResolver.TryReadSolidColorWithAlpha(lineStyle, theme, colorMap, lineReference.Reference, out RgbColor color, out double alpha))
+        if (!TryReadThemeLineColor(lineStyle, lineReference.Reference, theme, colorMap, out RgbColor color, out double alpha))
         {
             line = default;
             return false;
         }
 
-        double lineWidth = lineStyle.Attribute("w") is { } widthAttribute
-            ? OoxUnits.EmuToPoints(long.Parse(widthAttribute.Value, CultureInfo.InvariantCulture))
-            : 1d;
+        double lineWidth = PptxLineStyleReader.ReadWidth(lineStyle) ?? 1d;
         line = ReadSceneLineStyle(lineStyle, color, lineWidth, alpha, widthSpecified: true);
         return true;
     }
 
-    private static PptxSceneLineStyle ReadSceneLineStyle(
-        XElement line, RgbColor color, double lineWidth, double alpha, bool widthSpecified)
+    private static bool TryReadThemeLineColor(XElement? line, XElement? reference, PptxTheme theme, PptxColorMap colorMap,
+        out RgbColor color, out double alpha)
     {
-        string? presetDash = (string?)line.Element(DrawingNamespace + "prstDash")?.Attribute("val");
+        if (line?.Element(DrawingNamespace + "noFill") is not null)
+        {
+            color = default;
+            alpha = 0d;
+            return false;
+        }
+
+        return PptxColorResolver.TryReadSolidColorWithAlpha(line, theme, colorMap, reference, out color, out alpha);
+    }
+
+    private static PptxSceneLineStyle ReadSceneLineStyle(
+        XElement? line, RgbColor color, double lineWidth, double alpha, bool widthSpecified, XElement? themeLine = null)
+    {
+        // Resolve the dash choice before scaling its segments to the effective width.
+        XElement? dash = line?.Element(DrawingNamespace + "prstDash");
+        if (dash is null && line?.Element(DrawingNamespace + "custDash") is null)
+        {
+            dash = themeLine?.Element(DrawingNamespace + "prstDash");
+        }
+
+        string? presetDash = (string?)dash?.Attribute("val");
         double w = Math.Max(lineWidth, MinimumStrokeWidth);
         IReadOnlyList<double> dashPattern = presetDash switch
         {
@@ -90,7 +88,7 @@ internal sealed partial class PptxSceneBuilder
             "lgDashDotDot" or "sysDashDotDot" => [w * 8d, w * 3d, w, w * 3d, w, w * 3d],
             _ => []
         };
-        string? compoundValue = (string?)line.Attribute("cmpd");
+        string? compoundValue = (string?)(line?.Attribute("cmpd") ?? themeLine?.Attribute("cmpd"));
         PptxSceneLineCompound? compound = compoundValue switch
         {
             "sng" => PptxSceneLineCompound.Single,
@@ -100,20 +98,22 @@ internal sealed partial class PptxSceneBuilder
             "tri" => PptxSceneLineCompound.Triple,
             _ => null
         };
-        string? capValue = (string?)line.Attribute("cap");
+        string? capValue = (string?)(line?.Attribute("cap") ?? themeLine?.Attribute("cap"));
         int? cap = capValue switch
         {
             "rnd" => 1,
             "sq" => 2,
             _ => null
         };
-        (int? Number, string? Token) join =
-            line.Element(DrawingNamespace + "round") is not null ? (1, "round") :
-            line.Element(DrawingNamespace + "bevel") is not null ? (2, "bevel") :
-            line.Element(DrawingNamespace + "miter") is not null ? (0, "miter") : (null, null);
+        var join = ReadJoin(line) ?? ReadJoin(themeLine);
 
         return new PptxSceneLineStyle(true, color, lineWidth, alpha, dashPattern, presetDash,
-            compound, compoundValue, cap, capValue, join.Number, join.Token, widthSpecified);
+            compound, compoundValue, cap, capValue, join?.Number, join?.Token, widthSpecified);
+
+        static (int Number, string Token)? ReadJoin(XElement? owner) =>
+            owner?.Element(DrawingNamespace + "round") is not null ? (1, "round") :
+            owner?.Element(DrawingNamespace + "bevel") is not null ? (2, "bevel") :
+            owner?.Element(DrawingNamespace + "miter") is not null ? (0, "miter") : null;
     }
 
     private static PptxSceneLineEnd ReadLineEnd(XElement? shapeProperties, string elementName)

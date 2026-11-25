@@ -1134,9 +1134,47 @@ internal static partial class PptxShapesTests
         TestAssert.Contains("1 j", pdf);
         TestAssert.True(inherited.AsSpan().SequenceEqual(direct), "The theme reference and the equivalent direct outline paint identically.");
 
-        shapeProperties.Element(a + "noFill")!.AddAfterSelf(new XElement(a + "ln", new XElement(a + "noFill")));
-        string suppressed = Encoding.ASCII.GetString(ConvertSlide());
+        byte[] empty = ConvertWithOutline(new XElement(a + "ln"));
+        TestAssert.True(empty.AsSpan().SequenceEqual(inherited), "An empty local outline preserves every inherited line property.");
+
+        var fullWidthOverride = new XElement(outline);
+        fullWidthOverride.SetAttributeValue("w", "152400");
+        byte[] widthOnly = ConvertWithOutline(new XElement(a + "ln", new XAttribute("w", "152400")));
+        TestAssert.True(widthOnly.AsSpan().SequenceEqual(ConvertWithOutline(fullWidthOverride)),
+            "Changing only the width preserves the inherited stroke properties.");
+        TestAssert.Contains("[48 36 ] 0 d", Encoding.ASCII.GetString(widthOnly));
+
+        var fillOverride = new XElement(a + "solidFill", new XElement(a + "srgbClr", new XAttribute("val", "1759BB")));
+        var fullColorOverride = new XElement(outline);
+        fullColorOverride.Element(a + "solidFill")!.ReplaceWith(new XElement(fillOverride));
+        byte[] colorOnly = ConvertWithOutline(new XElement(a + "ln", fillOverride));
+        TestAssert.True(colorOnly.AsSpan().SequenceEqual(ConvertWithOutline(fullColorOverride)),
+            "Changing only the color preserves the inherited stroke geometry.");
+        TestAssert.Contains("0.09 0.349 0.733 RG", Encoding.ASCII.GetString(colorOnly));
+
+        var solid = new XElement(a + "prstDash", new XAttribute("val", "solid"));
+        var fullStrokeOverride = new XElement(outline);
+        fullStrokeOverride.Element(a + "prstDash")!.ReplaceWith(new XElement(solid));
+        fullStrokeOverride.SetAttributeValue("cap", "flat");
+        fullStrokeOverride.Element(a + "round")!.ReplaceWith(new XElement(a + "bevel"));
+        byte[] strokeOnly = ConvertWithOutline(new XElement(a + "ln", new XAttribute("cap", "flat"), solid, new XElement(a + "bevel")));
+        TestAssert.True(strokeOnly.AsSpan().SequenceEqual(ConvertWithOutline(fullStrokeOverride)),
+            "Local solid, flat cap and bevel choices override the theme without changing its width or color.");
+        string strokePdf = Encoding.ASCII.GetString(strokeOnly);
+        TestAssert.DoesNotContain("[96 72 ] 0 d", strokePdf);
+        TestAssert.DoesNotContain("1 J", strokePdf);
+        TestAssert.Contains("2 j", strokePdf);
+
+        string suppressed = Encoding.ASCII.GetString(ConvertWithOutline(new XElement(a + "ln", new XElement(a + "noFill"))));
         TestAssert.True(!suppressed.Contains("24 w", StringComparison.Ordinal), "A direct noFill suppresses the themed stroke.");
+
+        byte[] ConvertWithOutline(XElement line)
+        {
+            shapeProperties.Add(line);
+            byte[] result = ConvertSlide();
+            line.Remove();
+            return result;
+        }
 
         byte[] ConvertSlide()
         {
