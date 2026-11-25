@@ -20,31 +20,10 @@ internal static partial class DocxCommentsTests
             const string prefix = "Review ";
             string word = supplementary ? string.Concat(Enumerable.Repeat("a\U0001F600", 36)) : new string('a', 72);
             string tail = "ok. " + word + " ending.";
-            DocxParagraph anchor = DocxTests.CreateCommentMarkerParagraph("Body anchor", "1") with
-            {
-                Runs = [new DocxTextRun("Body anchor", 12d, null, false, false, false, null, "AnchorFace")]
-            };
-            DocxParagraph comment = DocxTests.CreateDocxLayoutParagraph(prefix + tail, 12d, 14d) with
-            {
-                Runs = [new DocxTextRun(prefix, 12d, null, false, false, false, null, "OtherCommentFace"),
-                    new DocxTextRun(tail, 12d, null, false, false, false, null, "CommentFace")],
-                ParagraphMarkRun = new DocxTextRun(" ", 18d, null, false, false, false, null, "AnchorFace")
-            };
-            DocxRelatedStory story = new(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1",
-                [new DocxParagraphElement(comment)], null)
-            {
-                CommentMetadata = new DocxCommentMetadata("Reviewer", "RV", null, null, null, null, null)
-            };
-            DocxDocument document = new(612d, 792d, 72d, rightMargin, 72d, 72d, DocxPageSettings.Empty,
-                [], [], [], [new DocxParagraphElement(anchor)])
-            {
-                RelatedStories = [story], MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
-            };
+            DocxDocument document = CreateMixedTailBalloonDocument(prefix, tail, rightMargin);
             var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodyLineGap: 450),
                 OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-            var balloon = renderer.InspectMarkupBalloons(document).Single();
-            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single())
-                .Where(show => show.X >= balloon.X && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
+            var (balloon, shows) = InspectMixedTailBalloon(document, renderer);
             TestAssert.Equal(prefix, shows[0].Text);
             TestAssert.Equal(900, (int)shows[0].Font.Font.GetAdvanceWidth(shows[0].Font.Font.MapCodePoint('R')));
             TestAssert.Equal(prefix + tail + " ", string.Concat(shows.Select(show => show.Text)));
@@ -78,31 +57,10 @@ internal static partial class DocxCommentsTests
             const string prefix = "Review";
             string word = supplementary ? string.Concat(Enumerable.Repeat("a\U0001F600", 36)) : new string('a', 72);
             string tail = word + " ending.";
-            DocxParagraph anchor = DocxTests.CreateCommentMarkerParagraph("Body anchor", "1") with
-            {
-                Runs = [new DocxTextRun("Body anchor", 12d, null, false, false, false, null, "AnchorFace")]
-            };
-            DocxParagraph comment = DocxTests.CreateDocxLayoutParagraph(prefix + tail, 12d, 14d) with
-            {
-                Runs = [new DocxTextRun(prefix, 12d, null, false, false, false, null, "OtherCommentFace"),
-                    new DocxTextRun(tail, 12d, null, false, false, false, null, "CommentFace")],
-                ParagraphMarkRun = new DocxTextRun(" ", 18d, null, false, false, false, null, "AnchorFace")
-            };
-            DocxRelatedStory story = new(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1",
-                [new DocxParagraphElement(comment)], null)
-            {
-                CommentMetadata = new DocxCommentMetadata("Reviewer", "RV", null, null, null, null, null)
-            };
-            DocxDocument document = new(612d, 792d, 72d, rightMargin, 72d, 72d, DocxPageSettings.Empty,
-                [], [], [], [new DocxParagraphElement(anchor)])
-            {
-                RelatedStories = [story], MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
-            };
+            DocxDocument document = CreateMixedTailBalloonDocument(prefix, tail, rightMargin);
             var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodyLineGap: 450),
                 OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-            var balloon = renderer.InspectMarkupBalloons(document).Single();
-            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single())
-                .Where(show => show.X >= balloon.X && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
+            var (balloon, shows) = InspectMixedTailBalloon(document, renderer);
             TestAssert.Equal(prefix, shows[0].Text);
             TestAssert.Equal(900, (int)shows[0].Font.Font.GetAdvanceWidth(shows[0].Font.Font.MapCodePoint('R')));
             TestAssert.Equal(prefix + tail + " ", string.Concat(shows.Select(show => show.Text)));
@@ -129,12 +87,12 @@ internal static partial class DocxCommentsTests
                 "Height must include the joined word's source-face fragments.");
 
             const string composedPrefix = "Review table,";
+            DocxRelatedStory story = document.RelatedStories.Single();
+            DocxParagraph comment = story.Paragraphs.Single();
             DocxParagraph composed = comment with { Runs = [comment.Runs[0] with { Text = composedPrefix }, comment.Runs[1]] };
             DocxDocument fallback = document with { RelatedStories = [story with { BodyElements = [new DocxParagraphElement(composed)] }] };
-            var fallbackBalloon = renderer.InspectMarkupBalloons(fallback).Single();
-            var fallbackShows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(fallback, null, CancellationToken.None).ToBlockingEnumerable().Single())
-                .Where(show => show.X >= fallbackBalloon.X && !string.IsNullOrWhiteSpace(show.Text) &&
-                    !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
+            var (fallbackBalloon, bodyShows) = InspectMixedTailBalloon(fallback, renderer);
+            var fallbackShows = bodyShows.Where(show => !string.IsNullOrWhiteSpace(show.Text)).ToArray();
             TestAssert.True(fallbackShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
                 "A punctuated multi-word prefix retains the complete fallback path.");
             TestAssert.Equal(RemoveWhitespace(composedPrefix + tail),
@@ -153,31 +111,10 @@ internal static partial class DocxCommentsTests
             const string prefix = "Review ";
             string word = supplementary ? string.Concat(Enumerable.Repeat("a\U0001F600", 36)) : new string('a', 72);
             string tail = word + " ending.";
-            DocxParagraph anchor = DocxTests.CreateCommentMarkerParagraph("Body anchor", "1") with
-            {
-                Runs = [new DocxTextRun("Body anchor", 12d, null, false, false, false, null, "AnchorFace")]
-            };
-            DocxParagraph comment = DocxTests.CreateDocxLayoutParagraph(prefix + tail, 12d, 14d) with
-            {
-                Runs = [new DocxTextRun(prefix, 12d, null, false, false, false, null, "OtherCommentFace"),
-                    new DocxTextRun(tail, 12d, null, false, false, false, null, "CommentFace")],
-                ParagraphMarkRun = new DocxTextRun(" ", 18d, null, false, false, false, null, "AnchorFace")
-            };
-            DocxRelatedStory story = new(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1",
-                [new DocxParagraphElement(comment)], null)
-            {
-                CommentMetadata = new DocxCommentMetadata("Reviewer", "RV", null, null, null, null, null)
-            };
-            DocxDocument document = new(612d, 792d, 72d, rightMargin, 72d, 72d, DocxPageSettings.Empty,
-                [], [], [], [new DocxParagraphElement(anchor)])
-            {
-                RelatedStories = [story], MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
-            };
+            DocxDocument document = CreateMixedTailBalloonDocument(prefix, tail, rightMargin);
             var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodyLineGap: 450, bodyDescender: -350),
                 OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-            var balloon = renderer.InspectMarkupBalloons(document).Single();
-            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single())
-                .Where(show => show.X >= balloon.X && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
+            var (balloon, shows) = InspectMixedTailBalloon(document, renderer);
             TestAssert.Equal(prefix, shows[0].Text);
             TestAssert.Equal(900, (int)shows[0].Font.Font.GetAdvanceWidth(shows[0].Font.Font.MapCodePoint('R')));
             TestAssert.Equal(prefix + tail + " ", string.Concat(shows.Select(show => show.Text)));
@@ -203,6 +140,40 @@ internal static partial class DocxCommentsTests
             TestAssert.True(Math.Abs(balloon.Height - (12.61d + shows[0].Y - tailRows[^1].Y)) < 0.02d,
                 "Box height must include the distinct first transition and later tail steps.");
         }
+    }
+
+    private static DocxDocument CreateMixedTailBalloonDocument(string prefix, string tail, double rightMargin)
+    {
+        DocxParagraph anchor = DocxTests.CreateCommentMarkerParagraph("Body anchor", "1") with
+        {
+            Runs = [new DocxTextRun("Body anchor", 12d, null, false, false, false, null, "AnchorFace")]
+        };
+        DocxParagraph comment = DocxTests.CreateDocxLayoutParagraph(prefix + tail, 12d, 14d) with
+        {
+            Runs = [new DocxTextRun(prefix, 12d, null, false, false, false, null, "OtherCommentFace"),
+                new DocxTextRun(tail, 12d, null, false, false, false, null, "CommentFace")],
+            ParagraphMarkRun = new DocxTextRun(" ", 18d, null, false, false, false, null, "AnchorFace")
+        };
+        DocxRelatedStory story = new(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1",
+            [new DocxParagraphElement(comment)], null)
+        {
+            CommentMetadata = new DocxCommentMetadata("Reviewer", "RV", null, null, null, null, null)
+        };
+        return new DocxDocument(612d, 792d, 72d, rightMargin, 72d, 72d, DocxPageSettings.Empty,
+            [], [], [], [new DocxParagraphElement(anchor)])
+        {
+            RelatedStories = [story], MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+    }
+
+    private static (DocxMarkupBalloonPlacementSnapshot Balloon, (PdfEmbeddedFont Font, string Text, double Size, double X, double Y)[] Shows)
+        InspectMixedTailBalloon(DocxDocument document, DocxRenderer renderer)
+    {
+        var balloon = renderer.InspectMarkupBalloons(document).Single();
+        PdfPage page = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
+        var shows = ReadEmbeddedGlyphTextShows(page)
+            .Where(show => show.X >= balloon.X && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
+        return (balloon, shows);
     }
 
     public static void DocxWordCompatibleMixedBalloonComposesJoinedPrefixAcrossFontRows()
