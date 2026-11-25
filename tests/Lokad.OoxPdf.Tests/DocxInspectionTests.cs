@@ -1164,63 +1164,23 @@ TestAssert.True(layoutSnapshot.Pages.Sum(page => page.PlacedRelatedStoryCount) =
 
     public static void DocxTextEmissionSplitsUncoveredGlyphsAcrossFallbackFonts()
     {
-        var resolver = new WindowsFontResolver();
-        FontFaceResolution symbolResolution = resolver.Resolve(new FontRequest("Symbol"));
-        if (symbolResolution.IsFallback)
-        {
-            TestAssert.Skip("Environmental precondition not met: (symbolResolution.IsFallback)");
-        }
+        using var resolver = new WindowsFontResolver();
+        OpenTypeFont symbol = RequireInstalledSymbolBullet(resolver);
+        DocxDocument document = ReadSymbolFallbackParagraph(explicitSymbol: false);
+        DocxFontPlan plan = DocxFontPlan.Create(document, resolver, default);
+        DocxResolvedRunTypeface resolved = plan.Runs.Single(run => run.Run.Text.Contains('\uF0B7'));
+        OpenTypeFont? latin = resolved.Resolution is { } face ? FontProgramLoader.Load(face, default) : null;
+        if (latin is null || latin.MapCodePoint('\uF0B7') != 0 || latin.MapCodePoint('a') == 0 || latin.MapCodePoint('b') == 0)
+            TestAssert.Skip("The installed document face must cover the Latin letters and lack the Symbol bullet.");
 
-        OpenTypeFont? symbolFont = FontProgramLoader.Load(symbolResolution, CancellationToken.None);
-        if (symbolFont is null || symbolFont.MapCodePoint(0xF0B7) == 0)
-        {
-            TestAssert.Skip("Environmental precondition not met: (symbolFont is null || symbolFont.MapCodePoint(0xF0B7) == 0)");
-        }
-
-        string body = """
-            <?xml version="1.0" encoding="UTF-8"?>
-            <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-              <w:body>
-                <w:p><w:r><w:rPr><w:sz w:val="18"/></w:rPr><w:t xml:space="preserve">a[BULLET]b</w:t></w:r></w:p>
-                <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
-              </w:body>
-            </w:document>
-            """.Replace("[BULLET]", ((char)0xF0B7).ToString());
-        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-                  <Default Extension="xml" ContentType="application/xml"/>
-                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
-                </Types>
-                """,
-            ["_rels/.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
-                </Relationships>
-                """,
-            ["word/document.xml"] = body
-        });
-        using FileStream stream = File.OpenRead(input);
-        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, markupMode: OoxPdfDocxMarkupMode.Final);
-        DocxFontPlan plan = DocxFontPlan.Create(document, resolver, CancellationToken.None);
-        DocxResolvedRunTypeface resolved = plan.Runs.Single(run => run.Run.Text.IndexOf((char)0xF0B7) >= 0);
-        OpenTypeFont? primaryFont = resolved.Resolution is FontFaceResolution primaryResolution ? FontProgramLoader.Load(primaryResolution, CancellationToken.None) : null;
-        if (primaryFont is null || primaryFont.MapCodePoint(0xF0B7) != 0)
-        {
-            TestAssert.Skip("Environmental precondition not met: (primaryFont is null || primaryFont.MapCodePoint(0xF0B7) != 0)");
-        }
-
-        var renderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
-        DocxTextEmissionSnapshot emission = renderer.InspectTextEmission(document);
-        DocxTextEmissionLineSnapshot line = emission.Lines.Single();
-        DocxTextEmissionSegmentSnapshot[] segments = line.Segments.Where(snapshot => !snapshot.IsTerminalLineSpace).ToArray();
-        TestAssert.Equal(3, segments.Length);
-        TestAssert.Equal(3, segments.Sum(snapshot => snapshot.TextLength));
-        TestAssert.Equal(2, segments.Select(snapshot => snapshot.FontResourceName).Distinct().Count());
+        const double size = 9d;
+        var measurer = DocxFontPlanTextMeasurer.CreateAsync(plan, null, default, resolver).GetAwaiter().GetResult();
+        double latinAdvance = (latin!.GetAdvanceWidth(latin.MapCodePoint('a')) + latin.GetAdvanceWidth(latin.MapCodePoint('b'))) * size / latin.UnitsPerEm;
+        double bulletAdvance = symbol.GetAdvanceWidth(symbol.MapCodePoint('\uF0B7')) * size / symbol.UnitsPerEm;
+        double actualAdvance = measurer.MeasureText(resolved.Run, resolved.Run.Text, size);
+        TestAssert.True(Math.Abs(actualAdvance - (latinAdvance + bulletAdvance)) < .000001d,
+            "Measurement uses the document face for the letters and Symbol for the bullet.");
+        CheckSymbolGlyphOwners(document, resolver, symbol, latin);
     }
     public static void DocxTextEmissionFallsBackForFamilyLessNumberingBullets()
     {
@@ -1308,63 +1268,64 @@ TestAssert.True(layoutSnapshot.Pages.Sum(page => page.PlacedRelatedStoryCount) =
     }
     public static void DocxTextEmissionFallsBackForExplicitSymbolLatinRuns()
     {
-        var resolver = new WindowsFontResolver();
-        FontFaceResolution symbolResolution = resolver.Resolve(new FontRequest("Symbol"));
-        if (symbolResolution.IsFallback)
-        {
-            TestAssert.Skip("Environmental precondition not met: (symbolResolution.IsFallback)");
-        }
+        using var resolver = new WindowsFontResolver();
+        OpenTypeFont symbol = RequireInstalledSymbolBullet(resolver);
+        if (symbol.MapCodePoint('a') != 0 || symbol.MapCodePoint('b') != 0)
+            TestAssert.Skip("The installed Symbol font must lack both Latin letters.");
 
-        OpenTypeFont? symbolFont = FontProgramLoader.Load(symbolResolution, CancellationToken.None);
-        if (symbolFont is null || symbolFont.MapCodePoint(0xF0B7) == 0)
-        {
-            TestAssert.Skip("Environmental precondition not met: (symbolFont is null || symbolFont.MapCodePoint(0xF0B7) == 0)");
-        }
+        DocxDocument document = ReadSymbolFallbackParagraph(explicitSymbol: true);
+        var resolved = DocxFontPlan.Create(document, resolver, default).Runs.Single(run => run.Run.Text.Contains('\uF0B7'));
+        TestAssert.True(string.Equals(resolved.ResolvedFamily, "Symbol", StringComparison.OrdinalIgnoreCase),
+            "The authored family must resolve to Symbol before splitting glyphs by coverage.");
+        CheckSymbolGlyphOwners(document, resolver, symbol);
+    }
 
-        string body = """
-            <?xml version="1.0" encoding="UTF-8"?>
-            <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-              <w:body>
-                <w:p><w:r><w:rPr><w:rFonts w:ascii="Symbol" w:hAnsi="Symbol"/><w:sz w:val="18"/></w:rPr><w:t xml:space="preserve">a[BULLET]b</w:t></w:r></w:p>
-                <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
-              </w:body>
-            </w:document>
-            """.Replace("[BULLET]", ((char)0xF0B7).ToString());
-        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+    private static OpenTypeFont RequireInstalledSymbolBullet(WindowsFontResolver resolver)
+    {
+        var face = resolver.Resolve(new FontRequest("Symbol"));
+        OpenTypeFont? font = face.IsFallback ? null : FontProgramLoader.Load(face, default);
+        if (font is null || !font.HasTrueTypeOutlines || font.MapCodePoint('\uF0B7') == 0)
+            TestAssert.Skip("An installed TrueType Symbol font with the authored bullet is required.");
+        return font!;
+    }
+
+    private static DocxDocument ReadSymbolFallbackParagraph(bool explicitSymbol)
+    {
+        string fonts = explicitSymbol ? """<w:rFonts w:ascii="Symbol" w:hAnsi="Symbol"/>""" : string.Empty;
+        using var input = TestFixtures.CreateZipPackage(new Dictionary<string, string>
         {
-            ["[Content_Types].xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-                  <Default Extension="xml" ContentType="application/xml"/>
-                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
-                </Types>
-                """,
-            ["_rels/.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
-                </Relationships>
-                """,
-            ["word/document.xml"] = body
+            ["[Content_Types].xml"] = TestFixtures.DocxContentTypes,
+            ["_rels/.rels"] = TestFixtures.DocxPackageRelationships,
+            ["word/document.xml"] = $$"""
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p><w:r><w:rPr>{{fonts}}<w:sz w:val="18"/></w:rPr><w:t>a&#xF0B7;b</w:t></w:r></w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
         });
-        using FileStream stream = File.OpenRead(input);
-        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, markupMode: OoxPdfDocxMarkupMode.Final);
-        DocxFontPlan plan = DocxFontPlan.Create(document, resolver, CancellationToken.None);
-        DocxResolvedRunTypeface resolved = plan.Runs.Single(run => run.Run.Text.IndexOf((char)0xF0B7) >= 0);
-        TestAssert.True(string.Equals(resolved.ResolvedFamily, "Symbol", StringComparison.OrdinalIgnoreCase), "Expected the run to resolve to the explicit Symbol face.");
-        OpenTypeFont? primaryFont = resolved.Resolution is FontFaceResolution primaryResolution ? FontProgramLoader.Load(primaryResolution, CancellationToken.None) : null;
-        if (primaryFont is null || primaryFont.MapCodePoint(0xF0B7) == 0 || primaryFont.MapCodePoint(97) != 0)
-        {
-            TestAssert.Skip("Environmental precondition not met: (primaryFont is null || primaryFont.MapCodePoint(0xF0B7) == 0 || primaryFont.MapCodePoint(97) != 0)");
-        }
+        return DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final);
+    }
 
-        var renderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
-        DocxTextEmissionSnapshot emission = renderer.InspectTextEmission(document);
-        DocxTextEmissionLineSnapshot line = emission.Lines.Single();
-        DocxTextEmissionSegmentSnapshot[] segments = line.Segments.Where(snapshot => !snapshot.IsTerminalLineSpace).ToArray();
-        TestAssert.Equal(3, segments.Length);
-        TestAssert.Equal(3, segments.Sum(snapshot => snapshot.TextLength));
-        TestAssert.Equal(2, segments.Select(snapshot => snapshot.FontResourceName).Distinct().Count());
+    private static void CheckSymbolGlyphOwners(DocxDocument document, WindowsFontResolver resolver,
+        OpenTypeFont symbol, OpenTypeFont? expectedLatin = null)
+    {
+        var renderer = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        PdfPage page = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
+        var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false, honorActualText: false)
+            .Where(show => show.Text.TrimEnd().Length > 0).ToArray();
+        TestAssert.Equal(3, shows.Length);
+        TestAssert.Equal("a|\uF0B7|b", string.Join("|", shows.Select(show => show.Text.TrimEnd())));
+        OpenTypeFont latin = shows[0].Font.Font;
+        TestAssert.True(shows[1].Font.Font.Bytes.Span.SequenceEqual(symbol.Bytes.Span),
+            "The bullet's PDF text show must use the installed Symbol program.");
+        TestAssert.True(!latin.Bytes.Span.SequenceEqual(symbol.Bytes.Span) &&
+            latin.Bytes.Span.SequenceEqual(shows[2].Font.Font.Bytes.Span) && latin.MapCodePoint('a') != 0 && latin.MapCodePoint('b') != 0,
+            "The two Latin letters must use the same non-Symbol program that covers both.");
+        if (expectedLatin is not null)
+            TestAssert.True(latin.Bytes.Span.SequenceEqual(expectedLatin.Bytes.Span),
+                "The implicit Latin letters must use the resolved document font.");
+        PdfContentValidator.ValidatePage(page, 0, default);
     }
 }
