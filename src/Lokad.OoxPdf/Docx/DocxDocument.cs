@@ -56,10 +56,10 @@ internal sealed record DocxRelatedStory(
     DocxRelatedStoryType? Type)
 {
     public IReadOnlyList<DocxFloatingDrawing> FloatingDrawings { get; init; } = [];
-    // RV06 absent-separator normalization: Word injects a default separator into
-    // separator-less endnote parts, so the reader synthesizes one (Id 0, empty
-    // paragraph resolved through the style cascade). Synthetic stories carry no
-    // source revisions or diagnostics provenance; tests exempt them explicitly.
+    // The reader supplies default separator content for unregistered footnote
+    // and endnote entries and retains their IDs. It also creates an ID 0
+    // separator when an endnote part lacks one. Layout uses this flag to
+    // distinguish default separator geometry from authored content.
     public bool IsSynthetic { get; init; }
     public int SourceEquationCount { get; init; }
     public bool IsNormalStoryType => Type is null || Type == DocxRelatedStoryType.Normal;
