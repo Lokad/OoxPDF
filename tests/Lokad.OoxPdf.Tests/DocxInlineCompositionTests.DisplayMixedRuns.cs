@@ -8,14 +8,27 @@ internal static partial class DocxInlineCompositionTests
 {
     public static void DocxDisplayMathKeepsOperandsAroundDrawingCompanions()
     {
+        foreach (bool withBreak in new[] { false, true })
+            CheckDisplayDrawingCompanions(withBreak, explicitRow: false);
+    }
+
+    public static void DocxDisplayRowKeepsAdjacentOperandsAroundDrawingCompanions() =>
+        CheckDisplayDrawingCompanions(withBreak: false, explicitRow: true);
+
+    private static void CheckDisplayDrawingCompanions(bool withBreak, bool explicitRow)
+    {
         foreach (string container in new[] { "body", "cell" })
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
-        foreach (bool withBreak in new[] { false, true })
         {
             var expected = Render(packed: false);
             var actual = Render(packed: true);
             TestAssert.Equal(3, PortableRenderingTests.ReadPaintedSourceLabel(actual.Page, "314", mathOnly: true).Count);
             TestAssert.Equal(3, PortableRenderingTests.ReadPaintedSourceLabel(actual.Page, "793", mathOnly: true).Count);
+            if (explicitRow)
+            {
+                TestAssert.Equal(2, PortableRenderingTests.ReadPaintedSourceLabel(actual.Page, "17", mathOnly: true).Count);
+                TestAssert.Equal(2, PortableRenderingTests.ReadPaintedSourceLabel(actual.Page, "28", mathOnly: true).Count);
+            }
             TestAssert.Equal(2, PortableRenderingTests.ReadPaintedSourceLabel(actual.Page, "QA").Count);
             TestAssert.Equal(1, PortableRenderingTests.ReadPaintedSourceLabel(actual.Page, "Ω").Count);
             TestAssert.Equal(1, actual.Page.Images.Count);
@@ -42,32 +55,43 @@ internal static partial class DocxInlineCompositionTests
                         var label = new XElement(w + "t", "QA");
                         var symbol = new XElement(w + "sym", new XAttribute(w + "font", "Arial"), new XAttribute(w + "char", "03A9"));
                         var lineBreak = withBreak ? new XElement(w + "br") : null;
+                        var leftNeighbor = explicitRow ? MathRun(new XElement(m + "t", "17")) : null;
+                        var rightNeighbor = explicitRow ? MathRun(new XElement(m + "t", "28")) : null;
                         if (packed)
                         {
-                            display.Add(new XElement(m + "r", mathProperties, wordProperties,
-                                leftOperand, lineBreak, label, symbol, drawing, rightOperand));
+                            var run = MathRun(leftOperand, lineBreak, label, symbol, drawing, rightOperand);
+                            display.Add(explicitRow ? new XElement(m + "oMath", leftNeighbor, run, rightNeighbor) : run);
                         }
                         else
                         {
-                            display.Add(new XElement(m + "r", mathProperties, wordProperties, leftOperand),
+                            var leftRun = MathRun(leftOperand);
+                            var rightRun = MathRun(rightOperand);
+                            display.Add(explicitRow ? new XElement(m + "oMath", leftNeighbor, leftRun) : leftRun,
                                 new XElement(w + "r", wordProperties, lineBreak, label, symbol, drawing),
-                                new XElement(m + "r", mathProperties, wordProperties, rightOperand));
+                                explicitRow ? new XElement(m + "oMath", rightRun, rightNeighbor) : rightRun);
                         }
                         originalPictureRun.Remove();
+
+                        XElement MathRun(params XElement?[] content) => new(m + "r",
+                            new XElement(mathProperties), new XElement(wordProperties), content);
                     }, diagnosticSink: Record);
 
                 var paragraph = DocxBlockTraversal.EnumerateBodyParagraphs(source).Single(p => p.Images.Count != 0);
                 var items = TestAssert.NotNull(paragraph.InlineContent).ToArray();
-                int first = Array.FindIndex(items, item =>
-                    item is DocxInlineEquation { Equation.Content.Children: [DocxMathRun { Text.Text: "314" }] });
+                string[] before = explicitRow ? ["17", "314"] : ["314"];
+                string[] after = explicitRow ? ["793", "28"] : ["793"];
+                int first = Array.FindIndex(items, item => Matches(item, before));
                 int picture = Array.FindIndex(items, item => item is DocxInlinePicture);
-                int last = Array.FindIndex(items, item =>
-                    item is DocxInlineEquation { Equation.Content.Children: [DocxMathRun { Text.Text: "793" }] });
+                int last = Array.FindIndex(items, item => Matches(item, after));
                 TestAssert.True(first >= 0 && first < picture && picture < last,
                     "Both operands and the drawing retain their source order in the paragraph.");
                 TestAssert.Equal(withBreak, items[(first + 1)..picture].Any(item => item is DocxInlineBreak));
                 var page = PictureRangeRenderer(mode).RenderPagesAsync(source, Record, default).ToBlockingEnumerable().Single();
                 return (page, diagnostics, source.EquationParts.Sum(part => part.SourceCount));
+
+                static bool Matches(DocxInlineItem item, string[] labels) => item is DocxInlineEquation math &&
+                    math.Equation.Content.Children.Count == labels.Length &&
+                    math.Equation.Content.Children.OfType<DocxMathRun>().Select(run => run.Text.Text).SequenceEqual(labels);
             }
         }
     }

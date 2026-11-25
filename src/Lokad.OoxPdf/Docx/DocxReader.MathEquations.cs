@@ -5,13 +5,18 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxReader
 {
+    private readonly record struct DisplayMathRunLayout(
+        bool UsesParagraphLayout, int EquationCount, bool StartsWithMath, bool EndsWithMath);
+
+    private static readonly DisplayMathRunLayout UnsplitMathRun = new(false, 1, true, true);
+
     private static bool IsDisplayMathRun(XElement element) =>
         element.Name == MathNamespace + "r" && element.Parent is { } owner &&
         (owner.Name == MathNamespace + "oMathPara" ||
          DocxSourceXml.IsRevisionContainer(owner) && owner.Parent?.Name == MathNamespace + "oMathPara");
 
     private static int CountEquationPayloads(XElement element, CancellationToken token) =>
-        element.Name == MathNamespace + "oMath" ? 1 :
+        element.Name == MathNamespace + "oMath" ? CountDisplayDrawingRow(element, token) ?? 1 :
         IsDisplayMathRun(element) ? ClassifyDisplayMathRun(element, token).EquationCount : 0;
 
     private static (XElement Run, XElement? FirstBreakInRun)? FindFirstTrailingDisplayMathBreak(
@@ -47,12 +52,14 @@ internal sealed partial class DocxReader
              HasOnlyWhitespaceRunText(element));
     }
 
-    private static (bool UsesParagraphLayout, int EquationCount) ClassifyDisplayMathRun(XElement run, CancellationToken token)
+    private static DisplayMathRunLayout ClassifyDisplayMathRun(XElement run, CancellationToken token, bool insideEquation = false)
     {
         // Only drawings and wrapping breaks require a direct run to use
         // paragraph layout. Its contiguous math operands keep math layout.
         bool usesParagraphLayout = false;
         bool inMath = false;
+        bool visitedContent = false;
+        bool startsWithMath = false;
         int equationCount = 0;
         foreach (var child in run.Elements())
         {
@@ -64,26 +71,105 @@ internal sealed partial class DocxReader
             {
                 if (!inMath) equationCount++;
                 inMath = true;
+                startsWithMath |= !visitedContent;
+                visitedContent = true;
                 continue;
             }
+            visitedContent = true;
             inMath = false;
-            if (child.Name == WordprocessingNamespace + "drawing" || IsDisplayMathBreak(child))
+            if (child.Name == WordprocessingNamespace + "drawing")
+            {
+                // A row can decompose around an inline drawing. Anchors still
+                // belong to the paragraph's floating-drawing source admission.
+                if (insideEquation && (child.Element(WordprocessingDrawingNamespace + "inline") is null ||
+                    child.Elements().Skip(1).Any())) return UnsplitMathRun;
+                usesParagraphLayout = true;
+            }
+            else if (!insideEquation && IsDisplayMathBreak(child))
             {
                 usesParagraphLayout = true;
             }
             else if (!(child.Name == WordprocessingNamespace + "t" && !child.HasElements) &&
                 !DocxMathParser.TryReadSymbol(child, out _, out _))
             {
-                return (false, 1);
+                return UnsplitMathRun;
             }
         }
-        if (!usesParagraphLayout || !HasOnlyWhitespaceRunText(run)) return (false, 1);
-        if (equationCount == 0)
-            return run.Element(MathNamespace + "rPr") is null ? (true, 0) : (false, 1);
+        if (!usesParagraphLayout || !HasOnlyWhitespaceRunText(run)) return UnsplitMathRun;
+        var layout = new DisplayMathRunLayout(true, equationCount, startsWithMath, inMath);
+        if (equationCount == 0 && !insideEquation)
+            return run.Element(MathNamespace + "rPr") is null ? layout : UnsplitMathRun;
         if (run.Attributes().Any(attribute => !attribute.IsNamespaceDeclaration) ||
             run.Elements(MathNamespace + "rPr").Skip(1).Any() ||
-            run.Elements(WordprocessingNamespace + "rPr").Skip(1).Any()) return (false, 1);
-        return (true, equationCount);
+            run.Elements(WordprocessingNamespace + "rPr").Skip(1).Any() ||
+            equationCount == 0 && run.Element(MathNamespace + "rPr") is not null) return UnsplitMathRun;
+        return layout;
+    }
+
+    // Keep consecutive mathematical atoms in one row on each side of an
+    // inline drawing. The existing trailing-break path still owns math breaks.
+    private static int? CountDisplayDrawingRow(XElement equation, CancellationToken token)
+    {
+        if (equation.Parent?.Name != MathNamespace + "oMathPara" ||
+            equation.Attributes().Any(attribute => !attribute.IsNamespaceDeclaration) ||
+            !HasOnlyWhitespaceRunText(equation)) return null;
+
+        bool hasDrawing = false;
+        bool inMath = false;
+        int count = 0;
+        foreach (var child in equation.Elements())
+        {
+            token.ThrowIfCancellationRequested();
+            if (child.Name == MathNamespace + "r" && child.Element(WordprocessingNamespace + "drawing") is not null)
+            {
+                var layout = ClassifyDisplayMathRun(child, token, insideEquation: true);
+                if (!layout.UsesParagraphLayout) return null;
+                count += layout.EquationCount - (inMath && layout.StartsWithMath ? 1 : 0);
+                inMath = layout.EndsWithMath;
+                hasDrawing = true;
+                continue;
+            }
+            if (child.Name != MathNamespace + "r" && !DocxMathParser.IsMathControl(child.Name) ||
+                child.Name == MathNamespace + "r" && child.Elements().Any(DocxSourceXml.IsTextWrappingBreak)) return null;
+            if (!inMath) count++;
+            inMath = true;
+        }
+        return hasDrawing && count != 0 ? count : null;
+    }
+
+    private static IEnumerable<XElement> SplitDisplayDrawingRow(XElement equation, CancellationToken token)
+    {
+        XElement? group = null;
+        foreach (var child in equation.Elements())
+        {
+            token.ThrowIfCancellationRequested();
+            if (child.Name != MathNamespace + "r" || child.Element(WordprocessingNamespace + "drawing") is null)
+            {
+                AddMath(child);
+                continue;
+            }
+            foreach (var part in SplitDisplayMathRun(child, token))
+            {
+                if (part.Name.Namespace == MathNamespace)
+                {
+                    AddMath(part);
+                    continue;
+                }
+                if (group is not null)
+                {
+                    yield return group;
+                    group = null;
+                }
+                yield return part;
+            }
+        }
+        if (group is not null) yield return group;
+
+        void AddMath(XElement element)
+        {
+            group ??= new XElement(equation.Name, equation.Attributes());
+            group.Add(element);
+        }
     }
 
     private static IEnumerable<XElement> SplitDisplayMathRun(XElement source, CancellationToken token)
@@ -100,15 +186,12 @@ internal sealed partial class DocxReader
             XName name = (math ? MathNamespace : WordprocessingNamespace) + "r";
             if (run?.Name != name)
             {
-                if (run is not null) yield return WrapMathRun(run);
+                if (run is not null) yield return run;
                 run = new XElement(name, math ? mathProperties : null, wordProperties);
             }
             run.Add(child);
         }
-        if (run is not null) yield return WrapMathRun(run);
-
-        static XElement WrapMathRun(XElement run) => run.Name.Namespace == MathNamespace
-            ? new XElement(MathNamespace + "oMath", run) : run;
+        if (run is not null) yield return run;
     }
 
     private static XElement AsParagraphRun(XElement run, XElement? firstChild = null) => new(WordprocessingNamespace + "r",
@@ -166,7 +249,17 @@ internal sealed partial class DocxReader
                     yield return (AsParagraphRun(source.Element), false, source.Revision, source.RemoveDeletedText);
                 else
                     foreach (var fragment in SplitDisplayMathRun(source.Element, token))
-                        yield return (fragment, fragment.Name == MathNamespace + "oMath", source.Revision, source.RemoveDeletedText);
+                    {
+                        bool math = fragment.Name.Namespace == MathNamespace;
+                        yield return (math ? new XElement(MathNamespace + "oMath", fragment) : fragment,
+                            math, source.Revision, source.RemoveDeletedText);
+                    }
+                continue;
+            }
+            if (source.Element.Name == MathNamespace + "oMath" && CountDisplayDrawingRow(source.Element, token) is not null)
+            {
+                foreach (var fragment in SplitDisplayDrawingRow(source.Element, token))
+                    yield return (fragment, fragment.Name == MathNamespace + "oMath", source.Revision, source.RemoveDeletedText);
                 continue;
             }
             if (source.Element.Name == MathNamespace + "oMath" ||

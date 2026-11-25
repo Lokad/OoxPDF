@@ -45,14 +45,14 @@ internal static partial class DocxMathParser
             bool revisionRow = revisionChildren is not null && IsReadableRevision(revisionChildren, deleting);
             bool included = !revisionRow || includeRevision!(element);
             bool retainDeletedFrame = revisionRow && preserveDeletedStructure && deleting && !included &&
-                revisionChildren!.Any(child => IsControl(child.Name.LocalName));
+                revisionChildren!.Any(child => IsMathControl(child.Name));
             if (revisionRow && !item.Expanded && !included && !retainDeletedFrame)
             {
                 nodes.Add(element, new DocxMathRow([]));
                 continue;
             }
             bool sourceContainer = IsSourceContainer(element);
-            if (!revisionRow && !sourceContainer && (element.Name.Namespace != MathNamespace || !IsContainer(name)))
+            if (!revisionRow && !sourceContainer && !IsContainer(element.Name))
             {
                 bool allowsDeletedText = item.RevisionOwner is null ? equationHasDeletionOwner : item.RevisionOwner == deletion;
                 XElement? firstBreakInRun = element == trailingBreaks?.Run ? trailingBreaks?.FirstBreakInRun : null;
@@ -254,7 +254,8 @@ internal static partial class DocxMathParser
     }
     // A single control has the same grammar inside an admitted revision wrapper.
     // Role rows and orphan matrix rows still require their actual source parent.
-    private static bool IsControl(string name) => name is "f" or "sSub" or "sSup" or "sSubSup" or "rad" or "d" or "nary" or "func" or "m";
+    internal static bool IsMathControl(XName name) => name.Namespace == MathNamespace &&
+        name.LocalName is "f" or "sSub" or "sSup" or "sSubSup" or "rad" or "d" or "nary" or "func" or "m";
 
     private static bool IsReadableRevision(XElement[] children, bool allowsDeletedText)
     {
@@ -272,7 +273,7 @@ internal static partial class DocxMathParser
     }
 
     private static bool IsRevisionContent(XElement element, bool allowsDeletedText) => element.Name.Namespace == MathNamespace &&
-        (IsControl(element.Name.LocalName) || element.Name.LocalName == "r" &&
+        (IsMathControl(element.Name) || element.Name.LocalName == "r" &&
             HasMathRunText(element.Elements(), allowsDeletedText));
 
     private static bool HasMathRunText(IEnumerable<XElement> children, bool allowsDeletedText) =>
@@ -300,7 +301,7 @@ internal static partial class DocxMathParser
          DocxSourceXml.IsDirectionalInlineContainer(element) ||
          element.Name == WordprocessingNamespace + "hyperlink" || element.Name == WordprocessingNamespace + "sdt" ||
          element.Name == WordprocessingNamespace + "sdtContent" && element.Parent?.Name == WordprocessingNamespace + "sdt");
-    private static bool IsContainer(string name) => IsRow(name) || IsControl(name) || name == "mr";
+    private static bool IsContainer(XName name) => IsMathRow(name) || IsMathControl(name) || name == MathNamespace + "mr";
     private static bool IsProperty(XElement element) => element.Name.Namespace == MathNamespace && element.Name.LocalName.EndsWith("Pr", StringComparison.Ordinal);
     internal static bool IsBookmarkMarker(XElement element) =>
         element.Name.Namespace == WordprocessingNamespace &&
