@@ -128,7 +128,7 @@ internal sealed partial class DocxRenderer
         foreach (var story in page.PlacedRelatedStories)
         {
             if (story.FloatingDrawings.Count == 0) continue;
-            var (_, _, storyClip, _) = ResolvePlacedStoryPaintFrame(story, markupContext, pageHeight);
+            var storyClip = ResolvePlacedStoryPaintFrame(story, markupContext, pageHeight).Clip;
             foreach (var (line, clip) in EnumerateMappedFloatingDrawingTextBoxTextLines(story.FloatingDrawings, markupContext,
                 pageHeight, storyClip, clipCellLinks, token))
                 yield return (line, DocxStoryId.Related(story.StoryLayout.Story.Kind), new(clip));

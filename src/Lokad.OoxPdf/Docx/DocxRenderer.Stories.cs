@@ -15,6 +15,7 @@ namespace Lokad.OoxPdf.Docx;
 internal sealed partial class DocxRenderer
 {
     private readonly record struct PlacedNoteTableFrame(IReadOnlyList<DocxLayoutItem> Items, PdfRectangle Clip);
+    private readonly record struct PlacedStoryPaintFrame(FloatingTextBoxEmissionMap? Map, PdfRectangle Clip, PdfRectangle TableClip);
 
     private static bool IsNormalNoteStory(DocxRelatedStory story) =>
         story.IsNormalStoryType && story.Kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote;
@@ -22,17 +23,16 @@ internal sealed partial class DocxRenderer
     private static PdfRectangle ResolvePlacedStoryDesignClip(DocxPlacedRelatedStoryLayout story) =>
         new(story.X, story.TopY - story.Height, story.Width, story.Height);
 
-    private static (bool Mapped, FloatingTextBoxEmissionMap Map, PdfRectangle Clip, PdfRectangle TableClip) ResolvePlacedStoryPaintFrame(
+    private static PlacedStoryPaintFrame ResolvePlacedStoryPaintFrame(
         DocxPlacedRelatedStoryLayout story, DocxMarkupContext context, double pageHeight)
     {
-        FloatingTextBoxEmissionMap map = default;
+        FloatingTextBoxEmissionMap? map = null;
         bool note = story.StoryLayout.Story.Kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote;
-        bool mapped = note &&
-            FloatingTextBoxEmissionMap.TryCreate(context, pageHeight, out map);
         PdfRectangle clip;
-        if (mapped)
+        if (note && FloatingTextBoxEmissionMap.TryCreate(context, pageHeight, out var mapping))
         {
-            var (x, y, width, height) = map.MapRectangle(story.X, story.TopY, story.Width, story.Height);
+            map = mapping;
+            var (x, y, width, height) = mapping.MapRectangle(story.X, story.TopY, story.Width, story.Height);
             clip = new PdfRectangle(x, y, width, height);
         }
         else clip = ResolvePlacedStoryDesignClip(story);
@@ -44,7 +44,7 @@ internal sealed partial class DocxRenderer
         PdfRectangle tableClip = note && story.StoryLayout.Story.IsNormalStoryType
             ? new PdfRectangle(clip.X, 0d, clip.Width, Math.Clamp(clip.Y + clip.Height, 0d, pageHeight))
             : clip;
-        return (mapped, map, clip, tableClip);
+        return new(map, clip, tableClip);
     }
 
     // Complete fitting note tables share their story's design-to-print map.
@@ -97,6 +97,7 @@ internal sealed partial class DocxRenderer
 
     private static PlacedNoteTableFrame? RenderPlacedRelatedStory(
         DocxPlacedRelatedStoryLayout story,
+        PlacedStoryPaintFrame frame,
         PdfGraphicsBuilder graphics,
         List<PdfImageResource> pageImages,
         DocxFontResources fontResources,
@@ -114,7 +115,7 @@ internal sealed partial class DocxRenderer
         // (WC first baseline 236.62 = affine-mapped design). Other stories keep
         // the body-shift path. Complete fitting table subtrees join this map;
         // their unsupported ownership/overflow cases retain the legacy frame.
-        var (mapStory, storyMap, clip, tableClip) = ResolvePlacedStoryPaintFrame(story, markupContext, navigation.Viewport.Height);
+        var (storyMap, clip, tableClip) = frame;
         bool normalNote = IsNormalNoteStory(story.StoryLayout.Story);
         var storyNavigation = navigation with
         {
@@ -124,27 +125,26 @@ internal sealed partial class DocxRenderer
         {
             graphics.SetFillRgb(0, 0, 0);
             graphics.FillRectangle(
-                mapStory ? storyMap.MapEmissionX(story.X) : story.X,
-                mapStory ? storyMap.MapEmissionY(separatorY) : separatorY,
-                Math.Min(mapStory ? storyMap.ScaleExtent(story.SeparatorWidth) : story.SeparatorWidth, mapStory ? storyMap.ScaleExtent(story.Width) : story.Width),
-                mapStory ? storyMap.ScaleExtent(story.SeparatorThickness) : story.SeparatorThickness);
+                storyMap?.MapEmissionX(story.X) ?? story.X,
+                storyMap?.MapEmissionY(separatorY) ?? separatorY,
+                Math.Min(storyMap?.ScaleExtent(story.SeparatorWidth) ?? story.SeparatorWidth,
+                    storyMap?.ScaleExtent(story.Width) ?? story.Width),
+                storyMap?.ScaleExtent(story.SeparatorThickness) ?? story.SeparatorThickness);
         }
 
         graphics.SaveState();
         graphics.ClipRectangle(clip.X, clip.Y, clip.Width, clip.Height);
 
-        // RV06 height-model probes (Word COM reference edge-endsepheight-text): Office
-        // drops non-mark separator text while drawing the rule. Skip text-bearing separator lines
-        // at emission (layout keeps them so placement boxes stay Office-true); endnotes only,
-        // footnotes keep legacy behavior until separately probed.
+        // The Word edge-endsepheight-text probe retains the separator line box.
+        // Paint its text as a mark space at the rule tab in endnote separators.
         bool suppressSeparatorText = story.StoryLayout.Story.Kind == DocxRelatedStoryKind.Endnote && story.StoryLayout.Story.Type == DocxRelatedStoryType.Separator;
         IEnumerable<DocxTextLineLayout> storyTextLines = suppressSeparatorText
             ? story.TextLines.Select(line => RewriteSeparatorTextLineAsMarkSpace(line, story, fontResources))
             : story.TextLines;
-        var items = (mapStory ? storyTextLines.Select(line => storyMap.PrecompensateLine(line, 0d, 0d)) : storyTextLines)
+        var items = (storyMap is { } map ? storyTextLines.Select(line => map.PrecompensateLine(line, 0d, 0d)) : storyTextLines)
             .Cast<DocxLayoutItem>()
-            .Concat(mapStory ? story.InlineImages.Select(image => storyMap.PrecompensateImage(image, pageNumber.Physical)) : story.InlineImages)
-            .Concat(story.TableRows.Select(row => ResolvePlacedStoryTablePaintFrame(story, row, mapStory ? storyMap : null, cancellationToken)))
+            .Concat(storyMap is { } imageMap ? story.InlineImages.Select(image => imageMap.PrecompensateImage(image, pageNumber.Physical)) : story.InlineImages)
+            .Concat(story.TableRows.Select(row => ResolvePlacedStoryTablePaintFrame(story, row, storyMap, cancellationToken)))
             .OrderByDescending(ResolveLayoutItemTop)
             .ToArray();
         RenderParagraphBackgrounds(items, graphics, markupContext, cancellationToken);
@@ -252,46 +252,15 @@ internal sealed partial class DocxRenderer
         CancellationToken cancellationToken,
         Dictionary<string, PdfImageXObject?> imageCache,
         ref int imageIndex,
-        PictureNavigation navigation)
+        PictureNavigation navigation,
+        PdfRectangle? storyClip = null,
+        FloatingTextBoxEmissionMap? storyMap = null)
     {
-        // R12: pageDrawings arrives pre-filtered by page/layer and pre-sorted by
-        // z-order from the once-per-render page index.
         foreach (DocxFloatingDrawingLayout drawing in pageDrawings)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            RenderFloatingDrawing(drawing, graphics, pageImages, fontResources, markupContext, pageNumber, pageCount, diagnosticSink, cancellationToken, imageCache, ref imageIndex, navigation);
-        }
-    }
-
-    private static void RenderPlacedRelatedStoryDrawings(
-        DocxPlacedRelatedStoryLayout story,
-        bool behindDocument,
-        PdfGraphicsBuilder graphics,
-        List<PdfImageResource> pageImages,
-        DocxFontResources fontResources,
-        DocxMarkupContext markupContext,
-        DocxPageNumber pageNumber,
-        int pageCount,
-        Action<OoxPdfDiagnostic>? diagnosticSink,
-        CancellationToken cancellationToken,
-        Dictionary<string, PdfImageXObject?> imageCache,
-        ref int imageIndex,
-        PictureNavigation navigation)
-    {
-        DocxFloatingDrawingLayout[] drawings = story.FloatingDrawings
-            .Where(drawing => IsBehindDocument(drawing.Drawing) == behindDocument)
-            .OrderBy(drawing => ReadZOrder(drawing.Drawing.RelativeHeightValue))
-            .ToArray();
-        if (drawings.Length == 0)
-        {
-            return;
-        }
-
-        var (mapped, map, clip, _) = ResolvePlacedStoryPaintFrame(story, markupContext, navigation.Viewport.Height);
-        foreach (DocxFloatingDrawingLayout drawing in drawings)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            RenderFloatingDrawing(drawing, graphics, pageImages, fontResources, markupContext, pageNumber, pageCount, diagnosticSink, cancellationToken, imageCache, ref imageIndex, navigation, clip, mapped ? map : null);
+            RenderFloatingDrawing(drawing, graphics, pageImages, fontResources, markupContext, pageNumber, pageCount,
+                diagnosticSink, cancellationToken, imageCache, ref imageIndex, navigation, storyClip, storyMap);
         }
     }
 

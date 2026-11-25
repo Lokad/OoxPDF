@@ -2,6 +2,24 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxRenderer
 {
+    private static (DocxFloatingDrawingLayout[] Behind, DocxFloatingDrawingLayout[] Ahead) OrderFloatingDrawingLayers(
+        IReadOnlyList<DocxFloatingDrawingLayout> drawings, CancellationToken token)
+    {
+        List<DocxFloatingDrawingLayout>? behind = null, ahead = null;
+        foreach (var drawing in drawings)
+        {
+            token.ThrowIfCancellationRequested();
+            if (IsBehindDocument(drawing.Drawing))
+                (behind ??= []).Add(drawing);
+            else
+                (ahead ??= []).Add(drawing);
+        }
+        return (OrderLayer(behind), OrderLayer(ahead));
+
+        static DocxFloatingDrawingLayout[] OrderLayer(List<DocxFloatingDrawingLayout>? layer) =>
+            layer is null ? [] : layer.OrderBy(drawing => ReadZOrder(drawing.Drawing.RelativeHeightValue)).ToArray();
+    }
+
     // R12: page drawing index built once per render pass. Both drawing lists were
     // filtered for every page (and layer), and each page re-sorted its matches by
     // z-order: O(pages x drawings) filtering plus repeated sorts. The index
@@ -68,10 +86,8 @@ internal sealed partial class DocxRenderer
             foreach ((int pageIndex, List<DocxFloatingDrawingLayout> list) in byPage)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                pages[pageIndex] = new PageDrawings(
-                    list.ToArray(),
-                    list.Where(drawing => IsBehindDocument(drawing.Drawing)).OrderBy(drawing => ReadZOrder(drawing.Drawing.RelativeHeightValue)).ToArray(),
-                    list.Where(drawing => !IsBehindDocument(drawing.Drawing)).OrderBy(drawing => ReadZOrder(drawing.Drawing.RelativeHeightValue)).ToArray());
+                var (behind, ahead) = OrderFloatingDrawingLayers(list, cancellationToken);
+                pages[pageIndex] = new PageDrawings(list.ToArray(), behind, ahead);
             }
 
             return new FloatingDrawingPageIndex(pages);

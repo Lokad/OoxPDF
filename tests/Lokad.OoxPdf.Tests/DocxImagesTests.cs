@@ -890,18 +890,39 @@ internal static class DocxImagesTests
         TestAssert.True(page.Annotations.All(annotation => annotation.Uri != uri),
             "The incomplete note viewport retains image paint without a link.");
 
+        string firstBehindUri = uri + "/first-behind";
+        string secondBehindUri = uri + "/second-behind";
+        var ahead = footnoteDrawing with { VerticalOffsetValue = "76200" };
+        var firstBehind = Behind("first", firstBehindUri, [60, 100, 90]);
+        var secondBehind = Behind("second", secondBehindUri, [100, 60, 90]);
         var fittingStory = footnoteStory with
         {
             BodyElements = [.. footnoteStory.BodyElements,
                 new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("More note text", 10d, 12d))],
-            FloatingDrawings = [footnoteDrawing with { VerticalOffsetValue = "76200" }]
+            FloatingDrawings = [ahead, firstBehind, secondBehind]
         };
         var fittingDocument = document with { RelatedStories = [fittingStory] };
         PdfPage fittingPage = renderer.RenderPagesAsync(fittingDocument, null, CancellationToken.None).ToBlockingEnumerable().Single();
-        TestAssert.Equal(1, fittingPage.Images.Count);
-        TestAssert.Contains("/Im1 Do", fittingPage.Content);
-        var link = fittingPage.Annotations.Single(annotation => annotation.Uri == uri);
-        TestAssert.Equal((46d, 18d, 9d), (link.X, link.Width, link.Height));
+        TestAssert.Equal(3, fittingPage.Images.Count);
+        var links = fittingPage.Annotations.Where(annotation => annotation.Uri is not null).ToArray();
+        TestAssert.True(links.Select(link => link.Uri).SequenceEqual([firstBehindUri, secondBehindUri, uri]),
+            "Behind-note images keep source order at equal z-order, followed by the ahead-note image.");
+        foreach (var link in links)
+            TestAssert.Equal((46d, 18d, 9d), (link.X, link.Width, link.Height));
+        TestAssert.True(links.All(link => link.Y == links[0].Y), "The three anchors overlap in the same note frame.");
+        var paints = fittingPage.Images.Select(image =>
+            fittingPage.Content.IndexOf("/" + image.ResourceName + " Do", StringComparison.Ordinal)).ToArray();
+        TestAssert.True(paints[0] >= 0 && paints[0] < paints[1] && paints[1] < paints[2],
+            "Each image paints in link and resource order.");
+        TestAssert.Contains("BT", fittingPage.Content[paints[1]..paints[2]]);
+
+        DocxFloatingDrawing Behind(string suffix, string target, byte[] color) => ahead with
+        {
+            BehindDocumentValue = "1",
+            ImageRelationshipId = "rIdFootnoteImage-" + suffix,
+            Image = new DocxInlineImage(18d, 9d, "image/png", TestFixtures.CreateRgbPng(1, 1, color),
+                "/word/media/footnote-anchor-" + suffix + ".png") { ClickTarget = target }
+        };
     }
 
     public static void DocxRelatedStoryLayoutOwnsInlineImages()

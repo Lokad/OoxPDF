@@ -397,7 +397,7 @@ internal sealed partial class DocxRenderer
             // Notes expose physical row bounds to both marker painters. Only
             // balloon-anchor resolution subsequently consumes the body Y offset.
             // Keep that adapter explicit, sharing the row painter's fitting proof.
-            FloatingTextBoxEmissionMap? map = frame.Mapped ? frame.Map with { XOffset = 0d, YOffset = 0d } : null;
+            FloatingTextBoxEmissionMap? map = frame.Map is { } mapping ? mapping with { XOffset = 0d, YOffset = 0d } : null;
             foreach (DocxTableRowLayout row in story.TableRows)
             {
                 var painted = ResolvePlacedStoryTablePaintFrame(story, row, map, cancellationToken);

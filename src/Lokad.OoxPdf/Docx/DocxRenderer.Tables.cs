@@ -39,13 +39,13 @@ internal sealed partial class DocxRenderer
                 story.StoryLayout.Story.Kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote;
             if (!hasNoteRows && story.FloatingDrawings.Count == 0)
                 continue;
-            var (mapped, map, boxViewport, clip) = ResolvePlacedStoryPaintFrame(story, context, page.Height);
+            var (map, boxViewport, clip) = ResolvePlacedStoryPaintFrame(story, context, page.Height);
             if (hasNoteRows)
             {
                 var storyClip = new DocxTableCellClipSnapshot(true, clip.X, clip.Y, clip.Width, clip.Height);
                 foreach (var row in story.TableRows)
                     if (HasTarget(row))
-                        AddTargets(ResolvePlacedStoryTablePaintFrame(story, row, mapped ? map : null, token), storyClip);
+                        AddTargets(ResolvePlacedStoryTablePaintFrame(story, row, map, token), storyClip);
             }
             if (story.FloatingDrawings.Count > 0)
             {

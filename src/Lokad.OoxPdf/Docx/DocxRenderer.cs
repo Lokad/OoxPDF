@@ -1084,14 +1084,18 @@ internal sealed partial class DocxRenderer
             {
                 var story = layoutPage.PlacedRelatedStories[storyIndex];
                 cancellationToken.ThrowIfCancellationRequested();
-                RenderPlacedRelatedStoryDrawings(story, behindDocument: true, graphics, pageImages, fontResources, markupContext, pageNumber, layout.Pages.Count, diagnosticSink, cancellationToken, imageCache, ref imageIndex, navigation);
-                if (RenderPlacedRelatedStory(story, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, layout.Pages.Count,
+                var frame = ResolvePlacedStoryPaintFrame(story, markupContext, navigation.Viewport.Height);
+                var (behind, ahead) = OrderFloatingDrawingLayers(story.FloatingDrawings, cancellationToken);
+                RenderFloatingDrawings(behind, graphics, pageImages, fontResources, markupContext, pageNumber, layout.Pages.Count,
+                    diagnosticSink, cancellationToken, imageCache, ref imageIndex, navigation, frame.Clip, frame.Map);
+                if (RenderPlacedRelatedStory(story, frame, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, layout.Pages.Count,
                     cancellationToken, imageCache, ref imageIndex, navigation) is { } noteTable)
                 {
                     noteTables ??= new PlacedNoteTableFrame?[layoutPage.PlacedRelatedStories.Count];
                     noteTables[storyIndex] = noteTable;
                 }
-                RenderPlacedRelatedStoryDrawings(story, behindDocument: false, graphics, pageImages, fontResources, markupContext, pageNumber, layout.Pages.Count, diagnosticSink, cancellationToken, imageCache, ref imageIndex, navigation);
+                RenderFloatingDrawings(ahead, graphics, pageImages, fontResources, markupContext, pageNumber, layout.Pages.Count,
+                    diagnosticSink, cancellationToken, imageCache, ref imageIndex, navigation, frame.Clip, frame.Map);
             }
 
             RenderFloatingDrawings(

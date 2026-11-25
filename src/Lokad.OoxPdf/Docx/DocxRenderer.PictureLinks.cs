@@ -107,17 +107,17 @@ internal sealed partial class DocxRenderer
         {
             token.ThrowIfCancellationRequested();
             if (!IsNormalNoteStory(story.StoryLayout.Story)) continue;
-            var (mapped, map, clip, tableClip) = ResolvePlacedStoryPaintFrame(story, context, page.Height);
+            var (map, clip, tableClip) = ResolvePlacedStoryPaintFrame(story, context, page.Height);
             foreach (var image in story.InlineImages)
             {
                 token.ThrowIfCancellationRequested();
                 if (select(image.Image))
-                    yield return (PlaceInlineImageForPaint(mapped ? map.PrecompensateImage(image, pageNumber) : image, context), clip);
+                    yield return (PlaceInlineImageForPaint(map?.PrecompensateImage(image, pageNumber) ?? image, context), clip);
             }
             // Drawing URI targets follow the row's chosen physical paint frame.
             foreach (var row in story.TableRows)
                 foreach (var image in CellImages(ResolvePlacedStoryTablePaintFrame(
-                    story, row, mapped ? map : null, token), tableClip)) yield return image;
+                    story, row, map, token), tableClip)) yield return image;
         }
 
         IEnumerable<(DocxInlineImageLayout Image, PdfRectangle Clip)> CellImages(DocxTableRowLayout row, PdfRectangle parent)
