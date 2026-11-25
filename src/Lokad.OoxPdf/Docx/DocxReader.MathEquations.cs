@@ -19,8 +19,21 @@ internal sealed partial class DocxReader
          DocxSourceXml.IsRevisionContainer(owner) && owner.Parent?.Name == MathNamespace + "oMathPara");
 
     private static int CountEquationPayloads(XElement element, CancellationToken token) =>
-        element.Name == MathNamespace + "oMath" ? CountDisplayDrawingRow(element, token) ?? 1 :
+        element.Name == MathNamespace + "oMath" ? CountDrawingEquationFragments(element, token) ?? 1 :
         IsDisplayMathRun(element) ? ClassifyDisplayMathRun(element, token).EquationCount : 0;
+
+    private static bool HasInlineEquationParagraph(XElement equation, CancellationToken token)
+    {
+        foreach (var owner in equation.Ancestors())
+        {
+            token.ThrowIfCancellationRequested();
+            if (owner.Name == WordprocessingNamespace + "p") return true;
+            if (!DocxSourceXml.IsInlineContentContainer(owner) && !DocxSourceXml.IsRevisionContainer(owner) &&
+                owner.Name != WordprocessingNamespace + "hyperlink" &&
+                owner.Name != WordprocessingNamespace + "fldSimple") return false;
+        }
+        return false;
+    }
 
     private static (XElement Run, XElement? FirstBreakInRun)? FindFirstTrailingDisplayMathBreak(
         XElement equation, bool allowsDeletedText, CancellationToken cancellationToken)
@@ -117,11 +130,11 @@ internal sealed partial class DocxReader
          element.Name == WordprocessingNamespace + "delText" &&
          run.Ancestors().FirstOrDefault(DocxSourceXml.IsRevisionContainer)?.Name == WordprocessingNamespace + "del");
 
-    // Keep consecutive mathematical atoms in one row on each side of an
-    // inline drawing. The existing trailing-break path still owns math breaks.
-    private static int? CountDisplayDrawingRow(XElement equation, CancellationToken token)
+    // Paragraph layout owns inline drawings. Each contiguous group of math
+    // remains one equation fragment, including inside a display.
+    private static int? CountDrawingEquationFragments(XElement equation, CancellationToken token)
     {
-        if (!HasDisplayMathParagraphOwner(equation) ||
+        if (!(HasDisplayMathParagraphOwner(equation) || HasInlineEquationParagraph(equation, token)) ||
             equation.Attributes().Any(attribute => !attribute.IsNamespaceDeclaration) ||
             !HasOnlyWhitespaceRunText(equation)) return null;
 
@@ -149,7 +162,7 @@ internal sealed partial class DocxReader
         return hasDrawing && count != 0 ? count : null;
     }
 
-    private static IEnumerable<XElement> SplitDisplayDrawingRow(XElement equation, CancellationToken token)
+    private static IEnumerable<XElement> SplitEquationAtDrawings(XElement equation, CancellationToken token)
     {
         XElement? group = null;
         List<XElement>? boundaries = null;
@@ -281,8 +294,8 @@ internal sealed partial class DocxReader
     {
         if (container.Name == MathNamespace + "oMath")
         {
-            token.ThrowIfCancellationRequested();
-            yield return (container, true, inheritedRevision, removeDeletedText);
+            foreach (var part in ReadEquationCompanions(container, inheritedRevision, removeDeletedText, token))
+                yield return part;
             yield break;
         }
         var pending = new Stack<(XElement Element, DocxRevisionInfo? Revision, bool RemoveDeletedText, bool HasWrapper)>();
@@ -309,20 +322,19 @@ internal sealed partial class DocxReader
                     }
                 continue;
             }
-            if (source.Element.Name == MathNamespace + "oMath" && CountDisplayDrawingRow(source.Element, token) is not null)
+            if (source.Element.Name == MathNamespace + "oMath")
             {
-                foreach (var fragment in SplitDisplayDrawingRow(source.Element, token))
-                    yield return (fragment, fragment.Name == MathNamespace + "oMath", source.Revision, source.RemoveDeletedText);
+                foreach (var part in ReadEquationCompanions(source.Element, source.Revision, source.RemoveDeletedText, token))
+                    yield return part;
                 continue;
             }
-            if (source.Element.Name == MathNamespace + "oMath" ||
-                source.Element.Name == WordprocessingNamespace + "r" ||
+            if (source.Element.Name == WordprocessingNamespace + "r" ||
                 source.Element.Name == WordprocessingNamespace + "bookmarkStart" ||
                 source.Element.Name == WordprocessingNamespace + "bookmarkEnd" ||
                 source.Element.Name == WordprocessingNamespace + "commentRangeStart" ||
                 source.Element.Name == WordprocessingNamespace + "commentRangeEnd")
             {
-                yield return (source.Element, source.Element.Name == MathNamespace + "oMath", source.Revision, source.RemoveDeletedText);
+                yield return (source.Element, false, source.Revision, source.RemoveDeletedText);
                 continue;
             }
             // One actual revision owner is supported. Unknown/nested wrapper
@@ -339,5 +351,18 @@ internal sealed partial class DocxReader
             foreach (var child in source.Element.Elements().Reverse())
                 pending.Push((child, revision, remove, true));
         }
+    }
+
+    private static IEnumerable<(XElement Element, bool IsEquation, DocxRevisionInfo? Revision, bool RemoveDeletedText)> ReadEquationCompanions(
+        XElement equation, DocxRevisionInfo? revision, bool removeDeletedText, CancellationToken token)
+    {
+        token.ThrowIfCancellationRequested();
+        if (CountDrawingEquationFragments(equation, token) is null)
+        {
+            yield return (equation, true, revision, removeDeletedText);
+            yield break;
+        }
+        foreach (var fragment in SplitEquationAtDrawings(equation, token))
+            yield return (fragment, fragment.Name == MathNamespace + "oMath", revision, removeDeletedText);
     }
 }

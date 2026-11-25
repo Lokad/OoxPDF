@@ -15,6 +15,9 @@ internal static partial class DocxInlineCompositionTests
     public static void DocxDisplayRowKeepsAdjacentOperandsAroundDrawingCompanions() =>
         CheckDisplayDrawingCompanions(withBreak: false, explicitRow: true);
 
+    public static void DocxInlineEquationKeepsDrawingCompanionsBetweenTextRuns() =>
+        CheckDisplayDrawingCompanions(withBreak: false, explicitRow: true, inlineEquation: true);
+
     public static void DocxDisplayRowKeepsBookmarkAcrossDrawingCompanions() =>
         CheckDisplayDrawingCompanions(withBreak: false, explicitRow: true, withBookmark: true);
 
@@ -84,7 +87,7 @@ internal static partial class DocxInlineCompositionTests
     }
 
     private static void CheckDisplayDrawingCompanions(bool withBreak, bool explicitRow, bool withBookmark = false,
-        DocxRevisionKind? revision = null)
+        DocxRevisionKind? revision = null, bool inlineEquation = false)
     {
         OoxPdfDocxMarkupMode[] modes = revision is null
             ? [OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup]
@@ -132,7 +135,13 @@ internal static partial class DocxInlineCompositionTests
             }
             TestAssert.Equal(2, PortableRenderingTests.ReadPaintedSourceLabel(actual.Page, "QA").Count);
             TestAssert.Equal(1, PortableRenderingTests.ReadPaintedSourceLabel(actual.Page, "Ω").Count);
+            if (inlineEquation)
+            {
+                TestAssert.Equal(6, PortableRenderingTests.ReadPaintedSourceLabel(actual.Page, "before").Count);
+                TestAssert.Equal(5, PortableRenderingTests.ReadPaintedSourceLabel(actual.Page, "after").Count);
+            }
             TestAssert.Equal(1, actual.Page.Images.Count);
+            TestAssert.Contains($"/{actual.Page.Images.Single().ResourceName} Do", actual.Page.Content);
             TestAssert.True(!actual.Diagnostics.Contains("DOCX_UNSUPPORTED_EQUATION"),
                 "Every projected equation fragment must have a matching source count.");
 
@@ -167,7 +176,7 @@ internal static partial class DocxInlineCompositionTests
                                 new XElement(w + "hyperlink", new XAttribute(w + "anchor", name),
                                     new XElement(w + "r", new XElement(w + "t", "Jump row"))));
                         }
-                        XElement owner = display;
+                        XElement owner = inlineEquation ? new XElement(w + "p") : display;
                         if (revision is not null)
                         {
                             owner = new XElement(w + (revision == DocxRevisionKind.Insertion ? "ins" : "del"),
@@ -189,6 +198,9 @@ internal static partial class DocxInlineCompositionTests
                                 explicitRow ? new XElement(m + "oMath", rightRun, rightNeighbor) : rightRun,
                                 bookmarkEnd);
                         }
+                        if (inlineEquation)
+                            display.AddAfterSelf(new XElement(w + "r", new XElement(w + "t", "Run before")),
+                                owner.Elements(), new XElement(w + "r", new XElement(w + "t", "Run after")));
                         originalPictureRun.Remove();
 
                         XElement MathRun(params XElement?[] content) => new(m + "r",

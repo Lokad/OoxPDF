@@ -19829,6 +19829,7 @@
   ],
   "docx-math-center-group": [
     "=DocxDisplayRowKeepsCommentRangeThroughDrawing",
+    "=DocxInlineEquationKeepsDrawingCompanionsBetweenTextRuns",
     "=DocxDisplayRowKeepsDrawingCompanionsInTrackedChanges",
     "=DocxDisplayRowKeepsBookmarkAcrossDrawingCompanions",
     "=DocxDisplayRowKeepsAdjacentOperandsAroundDrawingCompanions",
