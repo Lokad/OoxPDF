@@ -47,19 +47,19 @@ internal static partial class DocxMathNaryTests
             var settings = Settings(property);
             TestAssert.Equal(string.IsNullOrEmpty(value) ? null : value, settings.NaryValue);
             TestAssert.Equal(string.IsNullOrEmpty(value) ? null : value, settings.IntegralValue);
-            TestAssert.True(!settings.UnsupportedNary && !settings.UnsupportedIntegral && settings.PropertiesXml.Count == 1,
-                "Omitted versus present-default source remains retained without inventing authored values.");
+            TestAssert.True(!settings.UnsupportedNary && !settings.UnsupportedIntegral,
+                "Omitted and present-default properties use the same qualified defaults.");
         }
         foreach (string malformed in new[] { "<m:naryLim m:val='bad'/>", "<m:naryLim/><m:naryLim/>",
             "<m:naryLim extra='1'/>", "<m:naryLim>text</m:naryLim>", "<m:naryLim><m:future/></m:naryLim>", "<w:naryLim/>" })
         {
             var settings = Settings(malformed + "<m:intLim m:val='subSup'/>");
-            TestAssert.True(settings.UnsupportedNary && !settings.UnsupportedIntegral && settings.PropertiesXml[0].Contains("naryLim", StringComparison.Ordinal),
+            TestAssert.True(settings.UnsupportedNary && !settings.UnsupportedIntegral && settings.IntegralValue == "subSup",
                 "Malformed or duplicate n-ary defaults remain explicit without invalidating an independent integral setting.");
         }
         var duplicate = DocxMathLimitSettings.Read(XElement.Parse("<w:settings xmlns:w='http://schemas.openxmlformats.org/wordprocessingml/2006/main' xmlns:m='http://schemas.openxmlformats.org/officeDocument/2006/math'><m:mathPr/><m:mathPr/></w:settings>"), CancellationToken.None);
-        TestAssert.True(duplicate.UnsupportedNary && duplicate.UnsupportedIntegral && duplicate.PropertiesXml.Count == 2,
-            "Duplicate property owners retain their source and cannot silently choose one document default.");
+        TestAssert.True(duplicate.UnsupportedNary && duplicate.UnsupportedIntegral,
+            "Duplicate property owners cannot silently choose one document default.");
         using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
         TestAssert.Throws<OperationCanceledException>(() => DocxMathLimitSettings.Read(null, cancelled.Token));
     }
@@ -209,7 +209,7 @@ internal static partial class DocxMathNaryTests
         var resource = new PdfFontResource("Integral", PdfEmbeddedFont.CreateForGlyphMappings(font,
             new[] { ((ushort)130, 0x222B), (font.MapCodePoint('B'), (int)'B'), (font.MapCodePoint('C'), (int)'C') }, CancellationToken.None));
         var nary = Nary("\u222B") with { LimitLocationValue = null };
-        var equation = Equation(nary) with { Display = false, LimitSettings = new("bad", "undOvr", true, false, []) };
+        var equation = Equation(nary) with { Display = false, LimitSettings = new("bad", "undOvr", true, false) };
         TestAssert.True(DocxMathLayout.TryMeasure(equation, _ => resource, CancellationToken.None, out var box, out var reason), reason ?? "Expected qualified inline integral.");
         var measured = TestAssert.NotNull(box); var op = measured.Glyphs[0]; var upper = measured.Glyphs[2]; var lower = measured.Glyphs[3];
         TestAssert.True(op.OriginalGlyph == 130 && Math.Abs(upper.X - lower.X - 2.4d) < 1e-9,
@@ -221,7 +221,7 @@ internal static partial class DocxMathNaryTests
         TestAssert.True(!DocxMathLayout.TryMeasure(equation with { Display = true }, _ => resource,
             CancellationToken.None, out var missingDisplay, out _) && missingDisplay is null,
             "An unencoded display variant still retains complete fallback.");
-        var invalid = equation with { LimitSettings = new("undOvr", "bad", false, true, []) };
+        var invalid = equation with { LimitSettings = new("undOvr", "bad", false, true) };
         TestAssert.True(!DocxMathLayout.TryMeasure(invalid, _ => resource, CancellationToken.None, out var absent, out _) && absent is null,
             "Integral defaults retain independent ownership rather than consulting an unrelated n-ary setting.");
         TestAssert.True(DocxMathLayout.TryMeasure(invalid with { Content = new([nary with { LimitLocationValue = "subSup" }]) },

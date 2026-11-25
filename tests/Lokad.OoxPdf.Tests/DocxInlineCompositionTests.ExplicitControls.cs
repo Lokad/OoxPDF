@@ -23,9 +23,9 @@ internal static partial class DocxInlineCompositionTests
             bool supported = DocxMathLayout.TryGetRuns(equation, default, out var runs);
             var controls = DocxMathLayout.GetControlSources(equation, default);
             TestAssert.True(supported && controls.Count == 2 && controls[1].ControlText?.FontSize == size &&
-                controls[1].ControlFontFamily == "Cambria Math" && ((DocxMathNode)controls[1]).PropertiesXml.Count == 1 &&
+                controls[1].ControlFontFamily == "Cambria Math" &&
                 DocxMathLayout.GetMetricOnlyControls(equation, runs, default).Count == (paint == "empty" ? 1 : 0),
-                "The parsed child owns its actual authored metrics while raw properties and painted sources remain distinct.");
+                "The parsed child owns its authored metrics while metric-only controls and painted sources remain distinct.");
             if (paint != "empty" || size != 11) continue;
             foreach (string malformed in new[] { "unknown", "duplicate-control", "duplicate-owner", "attribute", "proofing-value" })
             {

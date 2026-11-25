@@ -23,7 +23,7 @@ internal static partial class DocxMathLayout
         foreach (var row in matrix.Rows)
         {
             token.ThrowIfCancellationRequested();
-            if (row.HasUnsupportedProperties || row.PropertiesXml.Count != 0 || row.Cells.Count != matrix.Rows[0].Cells.Count) { return null; }
+            if (row.HasUnsupportedProperties || row.Cells.Count != matrix.Rows[0].Cells.Count) { return null; }
         }
         return TryResolveMatrixColumns(matrix.ColumnGroups, matrix.Rows[0].Cells.Count, [], token) ? matrix : null;
     }

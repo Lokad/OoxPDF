@@ -904,7 +904,7 @@ internal static partial class DocxMathFractionTests
         var resource = Resource(TestFontBuilder.CreateMathFont(Constants()));
         var scripts = new DocxMathScripts(Row("B"), null, Row("C"));
         DocxEquation source = Fraction() with { Content = new([Row("A+"), scripts]) };
-        foreach (var content in new[] { new DocxMathRow([Row("A+"), scripts with { HasUnsupportedProperties = true, PropertiesXml = ["<m:sSupPr><m:future/></m:sSupPr>"] }]),
+        foreach (var content in new[] { new DocxMathRow([Row("A+"), scripts with { HasUnsupportedProperties = true }]),
             new DocxMathRow([Row("A+"), scripts with { Base = new([scripts]) }]) })
             TestAssert.True(!DocxMathLayout.TryGetRuns(source with { Content = content }, CancellationToken.None, out _) &&
                 !DocxMathLayout.TryMeasure(source with { Content = content }, _ => resource, CancellationToken.None, out var box, out _) && box is null,

@@ -20,8 +20,8 @@ internal static partial class DocxMathTests
             "<m:cSp m:val='12pt'/>", "<m:cGp m:val='-1'/>", "<m:cGpRule/><m:cGpRule/>", "<m:rSpRule m:val='1'/>" })
         {
             var rejected = Read(property);
-            TestAssert.True(rejected.HasUnsupportedProperties && rejected.PropertiesXml.Count == 1 && RowText(rejected.Rows[0].Cells[0]) == "x",
-                "Unsupported units, invalid/duplicate scalars and unqualified row spacing retain raw source and full fallback.");
+            TestAssert.True(rejected.HasUnsupportedProperties && RowText(rejected.Rows[0].Cells[0]) == "x",
+                "Unsupported units, invalid/duplicate scalars and unqualified row spacing retain the operand and full fallback.");
         }
     }
 
@@ -34,14 +34,13 @@ internal static partial class DocxMathTests
             var matrix = Read(value is null ? "<m:plcHide/>" : $"<m:plcHide m:val='{value}'/>");
             TestAssert.True(!matrix.HasUnsupportedProperties && matrix.HidePlaceholdersValue == hidden && matrix.Rows[0].Cells[0].Children.Count == 0,
                 "Known boolean values and val-less on preserve the explicit empty cell and authored visibility.");
-            TestAssert.Contains("plcHide", matrix.PropertiesXml.Single());
         }
         foreach (string property in new[] { "<m:plcHide m:val='future'/>", "<m:plcHide m:val=''/>", "<m:plcHide extra='1'/>",
             "<m:plcHide/><m:plcHide/>", "<m:plcHide>stray</m:plcHide>", "<m:plcHide><m:future/></m:plcHide>" })
         {
             var matrix = Read(property);
-            TestAssert.True(matrix.HasUnsupportedProperties && matrix.Rows[0].Cells.Count == 2 && matrix.PropertiesXml.Count == 1,
-                "Unknown, duplicate and malformed placeholder properties retain raw source and complete fallback.");
+            TestAssert.True(matrix.HasUnsupportedProperties && matrix.Rows[0].Cells.Count == 2,
+                "Unknown, duplicate and malformed placeholder properties retain both cells and complete fallback.");
         }
     }
 
@@ -56,7 +55,6 @@ internal static partial class DocxMathTests
                 var matrix = Read(property);
                 TestAssert.True(!matrix.HasUnsupportedProperties && RowText(matrix.Rows.Single().Cells.Single()) == "x",
                     "Equivalent zero scalar spellings and val-less defaults share existing spacing semantics.");
-                TestAssert.Contains(name, matrix.PropertiesXml.Single());
             }
             string unsupported = name switch { "rSp" or "rSpRule" => "1", "cGpRule" => "5", "cGp" => "65536", _ => "12pt" };
             foreach (string bad in new[] { $"<m:{name} m:val='{unsupported}'/>", $"<m:{name} m:val='-1'/>", $"<m:{name} m:val='4294967296'/>",
@@ -64,12 +62,12 @@ internal static partial class DocxMathTests
                 $"<m:{name}>stray</m:{name}>", $"<m:{name}/><m:{name}/>", $"<x:{name} xmlns:x='urn:future'/>" })
             {
                 var matrix = Read(bad);
-                TestAssert.True(matrix.HasUnsupportedProperties && RowText(matrix.Rows.Single().Cells.Single()) == "x" && matrix.PropertiesXml.Count == 1,
-                    "Unsupported row values/units, malformed, duplicate and foreign declarations retain raw source and complete fallback.");
+                TestAssert.True(matrix.HasUnsupportedProperties && RowText(matrix.Rows.Single().Cells.Single()) == "x",
+                    "Unsupported row values/units, malformed, duplicate and foreign declarations retain the operand and complete fallback.");
             }
         }
         var combined = Read("<m:cGpRule/><m:cGp m:val='0'/><m:cSp/><m:rSpRule m:val='0'/><m:rSp/>");
-        TestAssert.True(!combined.HasUnsupportedProperties && combined.PropertiesXml.Count == 1,
+        TestAssert.True(!combined.HasUnsupportedProperties && DocxMathLayout.TryGetRuns(new(new([combined]), 0, 0, true, null, null), default, out _),
             "All default declarations can coexist without introducing a second layout profile.");
     }
 
@@ -82,7 +80,6 @@ internal static partial class DocxMathTests
             var matrix = Read(property);
             TestAssert.True(!matrix.HasUnsupportedProperties && matrix.BaseJustificationValue == value,
                 "Known base values and val-less defaults remain typed without conflating source with painted cell formatting.");
-            TestAssert.Contains("baseJc", matrix.PropertiesXml.Single());
         }
         TestAssert.True(Read("").BaseJustificationValue is null && !Read("").HasUnsupportedProperties,
             "Omitted base justification retains the centered default.");
@@ -92,7 +89,6 @@ internal static partial class DocxMathTests
             var matrix = Read(bad);
             TestAssert.True(matrix.HasUnsupportedProperties && RowText(matrix.Rows.Single().Cells.Single()) == "x",
                 "Malformed and duplicate base declarations preserve every cell and complete fallback.");
-            TestAssert.Contains("baseJc", matrix.PropertiesXml.Single());
         }
     }
 
@@ -104,7 +100,6 @@ internal static partial class DocxMathTests
         TestAssert.True(!matrix.HasUnsupportedProperties && matrix.ColumnGroups is { Count: 2 } groups &&
             groups[0] is { CountValue: 2, JustificationValue: "left", HasUnsupportedProperties: false } && groups[1] is { CountValue: 1, JustificationValue: "right" },
             "Typed column groups retain source order, count and justification without expanding declared counts.");
-        TestAssert.Contains("mcs", matrix.PropertiesXml.Single());
         var defaults = Read("<m:mc/><m:mc><m:mcPr><m:count/><m:mcJc/></m:mcPr></m:mc><m:mc><m:mcPr/></m:mc>");
         TestAssert.True(!defaults.HasUnsupportedProperties && TestAssert.NotNull(defaults.ColumnGroups).All(g => g is { CountValue: null, JustificationValue: null, HasUnsupportedProperties: false }),
             "Absent and val-less count/justification declarations preserve default-source roles.");
@@ -116,7 +111,7 @@ internal static partial class DocxMathTests
         {
             var rejected = Read(bad);
             TestAssert.True(rejected.HasUnsupportedProperties && rejected.Rows.Single().Cells.Count == 3 && RowText(rejected.Rows[0].Cells[2]) == "c",
-                "Malformed/unqualified group properties preserve raw properties and every cell boundary.");
+                "Malformed/unqualified group properties preserve fallback and every cell boundary.");
         }
         var large = Read("<m:mc><m:mcPr><m:count m:val='255'/></m:mcPr></m:mc>");
         TestAssert.True(!large.HasUnsupportedProperties && large.ColumnGroups is [ { CountValue: 255 } ],
@@ -157,15 +152,14 @@ internal static partial class DocxMathTests
         var matrix = (DocxMathMatrix)source.Children.Single();
         TestAssert.True(!matrix.HasUnsupportedProperties && matrix.ControlText is { FontSize: 20d, ColorHex: "CC0000" } && matrix.ControlFontFamily == "Known",
             "The existing shared control validator retains caller-resolved source formatting.");
-        TestAssert.Contains("mPr", matrix.PropertiesXml.Single());
         foreach (string properties in new[] { "<m:mPr/><m:mPr/>", "<m:mPr extra='1'/>", "<m:mPr>stray</m:mPr>",
             "<m:mPr><m:future/></m:mPr>", "<m:mPr><m:ctrlPr/><m:ctrlPr/></m:mPr>", "<m:mPr><m:ctrlPr><w:ins/></m:ctrlPr></m:mPr>",
             "<m:mPr><m:ctrlPr><w:rPr><w:unknown/></w:rPr></m:ctrlPr></m:mPr>",
             "<m:mPr><m:mcs><m:mc><m:mcPr><m:count m:val='1'/><m:mcJc m:val='diagonal'/></m:mcPr></m:mc></m:mcs></m:mPr>" })
         {
             var parsed = (DocxMathMatrix)Parse(XElement.Parse($"<m:oMath xmlns:m='{MathNamespace}' xmlns:w='{WordprocessingNamespace}'><m:m>{properties}{cell}</m:m></m:oMath>")).Children.Single();
-            TestAssert.True(parsed.HasUnsupportedProperties && parsed.PropertiesXml.Count > 0 && RowText(parsed.Rows.Single().Cells.Single()) == "x",
-                "Duplicate, malformed and unqualified matrix properties preserve both raw properties and cell source.");
+            TestAssert.True(parsed.HasUnsupportedProperties && RowText(parsed.Rows.Single().Cells.Single()) == "x",
+                "Duplicate, malformed and unqualified matrix properties preserve fallback and cell source.");
         }
     }
 
@@ -179,12 +173,14 @@ internal static partial class DocxMathTests
         var orphan = Parse(XElement.Parse($"<m:oMath xmlns:m='{MathNamespace}'><m:mr><m:e><m:r><m:t>x</m:t></m:r></m:e></m:mr></m:oMath>"));
         TestAssert.True(orphan.Children.Single() is DocxMathUnsupported { ElementName: "mr", Children.Count: 1 },
             "A matrix row requires its matrix owner and cannot become an ordinary renderable sequence.");
-        foreach (string attributes in new[] { " extra='1'", "" })
+        foreach (var (attributes, extra) in new[] { (" extra='1'", ""), ("", "stray"), ("", "<m:futurePr/>") })
         {
-            string extra = attributes.Length == 0 ? "stray" : "";
-            var parsed = (DocxMathMatrix)Parse(XElement.Parse($"<m:oMath xmlns:m='{MathNamespace}'><m:m><m:mr{attributes}>{extra}<m:e/></m:mr></m:m></m:oMath>")).Children.Single();
-            TestAssert.True(parsed.HasUnsupportedProperties && parsed.Rows.Single().HasUnsupportedProperties,
-                "Unexpected row attributes/text remain explicit while retaining known cells.");
+            var row = Parse(XElement.Parse($"<m:oMath xmlns:m='{MathNamespace}'><m:m><m:mr{attributes}>{extra}<m:e><m:r><m:t>x</m:t></m:r></m:e></m:mr></m:m></m:oMath>"));
+            var parsed = (DocxMathMatrix)row.Children.Single();
+            TestAssert.True(parsed.HasUnsupportedProperties && parsed.Rows.Single().HasUnsupportedProperties &&
+                RowText(parsed.Rows.Single().Cells.Single()) == "x" &&
+                !DocxMathLayout.TryGetRuns(new(row, 0, 0, true, null, null), default, out _),
+                "Unexpected row attributes, text or properties keep cell source and the complete matrix fallback.");
         }
         var cell = (DocxMathMatrix)Parse(XElement.Parse($"<m:oMath xmlns:m='{MathNamespace}'><m:m><m:mr><m:e extra='1'/></m:mr></m:m></m:oMath>")).Children.Single();
         TestAssert.True(cell.HasUnsupportedProperties, "Unexpected cell role attributes cannot silently claim known matrix semantics.");
@@ -248,7 +244,6 @@ internal static partial class DocxMathTests
         TestAssert.True(!function.HasUnsupportedProperties && function.ControlText is { FontSize: 20d, ColorHex: "CC0000" } && function.ControlFontFamily == "Known",
             "Shared control validation retains callback-resolved formatting and explicit family without a function-name whitelist.");
         TestAssert.Equal("custom", RowText(function.Name)); TestAssert.Equal("x", RowText(function.Argument));
-        TestAssert.Contains("funcPr", function.PropertiesXml.Single());
     }
 
     public static void DocxMathFunctionMalformedPropertiesRolesAndUnknownChildrenStayExplicit()
@@ -260,7 +255,8 @@ internal static partial class DocxMathTests
             var row = Parse(XElement.Parse($"<m:oMath xmlns:m='{MathNamespace}' xmlns:w='{WordprocessingNamespace}'><m:func>" + properties +
                 "<m:fName><m:r><m:t>sin</m:t></m:r></m:fName><m:e><m:r><m:t>x</m:t></m:r></m:e></m:func></m:oMath>"));
             var function = (DocxMathFunction)row.Children.Single();
-            TestAssert.True(function.HasUnsupportedProperties && function.PropertiesXml.Count > 0, "Unknown or duplicate function properties stay explicit.");
+            TestAssert.True(function.HasUnsupportedProperties && !DocxMathLayout.TryGetRuns(new(row, 0, 0, true, null, null), default, out _),
+                "Unknown or duplicate function properties retain the complete fallback.");
             TestAssert.Equal("sin", RowText(function.Name)); TestAssert.Equal("x", RowText(function.Argument));
         }
         foreach (var (roles, childCount) in new[] { ("<m:e/>", 1), ("<m:fName/>", 1),
@@ -646,10 +642,8 @@ internal static partial class DocxMathTests
             TestAssert.Equal(eligible, row.HasSupportedProperties);
             TestAssert.Equal(eligible, DocxMathRowLayout.TryGetRenderCodePoints(row, CancellationToken.None, out _, out _));
             TestAssert.Equal("x", RowText(row));
-            if (properties.Length != 0) { TestAssert.True(row.PropertiesXml.Count != 0, "Raw authored controls remain available for fallback."); }
+            TestAssert.Equal(properties.Length != 0, row.ArgumentProperties is not null);
         }
-        TestAssert.True(!new DocxMathRow([]) { PropertiesXml = ["<unknown/>"] }.HasSupportedProperties,
-            "Unparsed synthetic properties cannot silently acquire neutral semantics.");
     }
 
     public static void DocxMathArgumentControlsRequireTrailingPrintNeutralProperties()
@@ -699,7 +693,7 @@ internal static partial class DocxMathTests
                 TestAssert.True(DocxMathLayout.TryGetRuns(equation, CancellationToken.None, out var runs),
                     "Neutral argument properties share the same literal/structured source discovery.");
                 TestAssert.True(runs.Count != 0, "Source meaning must remain discoverable.");
-                DocxMathRow unknown = row with { PropertiesXml = ["<unknown/>"], ArgumentProperties = null };
+                DocxMathRow unknown = row with { ArgumentProperties = new(null, true) };
                 TestAssert.True(!DocxMathLayout.TryGetRuns(equation with { Content = unknown }, CancellationToken.None, out _),
                     "Unknown root controls preserve the whole-equation fallback.");
             }
@@ -770,7 +764,6 @@ internal static partial class DocxMathTests
                 TestAssert.True(run.Text.Bold, "Direct math-run formatting must be retained.");
                 TestAssert.Equal("bi", run.MathStyleValue);
                 TestAssert.Equal("double-struck", run.ScriptValue);
-                TestAssert.Contains("double-struck", run.PropertiesXml.Single());
                 TestAssert.Equal(mode == OoxPdfDocxMarkupMode.Original ? "d" : "i", RowText(paragraph.Equations[2].Content));
                 TestAssert.NotNull(paragraph.Equations[2].Revision);
             }

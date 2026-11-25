@@ -35,8 +35,6 @@ internal sealed record DocxEquation(
 internal abstract record DocxMathNode
 {
     public DocxHyperlinkSpan? Hyperlink { get; init; }
-    // Preserve authored math properties until their layout semantics are supported.
-    public IReadOnlyList<string> PropertiesXml { get; init; } = [];
 }
 
 internal sealed record DocxMathArgumentProperties(int? Size, bool HasUnsupportedProperties);
@@ -47,8 +45,7 @@ internal sealed record DocxMathRow(IReadOnlyList<DocxMathNode> Children) : DocxM
     public IReadOnlyList<DocxMathBookmarkBoundary> Bookmarks { get; init; } = [];
     public DocxMathArgumentProperties? ArgumentProperties { get; init; }
     public bool HasKnownArgumentProperties => ArgumentProperties is { HasUnsupportedProperties: false };
-    public bool HasSupportedProperties => PropertiesXml.Count == 0 ||
-        ArgumentProperties is { HasUnsupportedProperties: false, Size: null or 0 };
+    public bool HasSupportedProperties => ArgumentProperties is null or { HasUnsupportedProperties: false, Size: null or 0 };
 }
 internal sealed record DocxMathRun(DocxTextRun Text, string? MathStyleValue, string? ScriptValue) : DocxMathNode
 {

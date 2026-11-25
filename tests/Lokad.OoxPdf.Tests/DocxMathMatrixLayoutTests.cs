@@ -239,7 +239,7 @@ internal static class DocxMathMatrixLayoutTests
                     "Known visibility settings preserve the independent Word-equivalent empty slots.");
             reference = box;
         }
-        foreach (var invalid in new[] { matrix with { Rows = [new([empty with { PropertiesXml = ["<future/>"] }, empty, literal])] } })
+        foreach (var invalid in new[] { matrix with { Rows = [new([empty with { ArgumentProperties = new(null, true) }, empty, literal])] } })
             TestAssert.True(!DocxMathLayout.TryGetRuns(Equation(invalid), CancellationToken.None, out _) &&
                 !DocxMathLayout.TryMeasure(Equation(invalid), _ => resource, CancellationToken.None, out var absent, out _, resolveControlMetrics: _ => font) && absent is null,
                 "Unknown empty-cell properties retain complete fallback.");

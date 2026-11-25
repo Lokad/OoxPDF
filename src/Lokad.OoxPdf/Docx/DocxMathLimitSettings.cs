@@ -5,9 +5,9 @@ namespace Lokad.OoxPdf.Docx;
 
 // One immutable document owner; authored node properties remain separate.
 internal sealed record DocxMathLimitSettings(string? NaryValue, string? IntegralValue,
-    bool UnsupportedNary, bool UnsupportedIntegral, IReadOnlyList<string> PropertiesXml)
+    bool UnsupportedNary, bool UnsupportedIntegral)
 {
-    public static DocxMathLimitSettings Empty { get; } = new(null, null, false, false, []);
+    public static DocxMathLimitSettings Empty { get; } = new(null, null, false, false);
 
     public static DocxMathLimitSettings Read(XElement? settings, CancellationToken token)
     {
@@ -15,14 +15,12 @@ internal sealed record DocxMathLimitSettings(string? NaryValue, string? Integral
         string? nary = null, integral = null;
         int owners = 0, naryCount = 0, integralCount = 0;
         bool unsupportedNary = false, unsupportedIntegral = false, unsupportedOwner = false;
-        var xml = new List<string>();
         if (settings is not null)
         foreach (var owner in settings.Elements(MathNamespace + "mathPr"))
         {
             token.ThrowIfCancellationRequested(); owners++;
             unsupportedOwner |= owner.Attributes().Any(a => !a.IsNamespaceDeclaration) ||
                 owner.Nodes().OfType<XText>().Any(t => !string.IsNullOrWhiteSpace(t.Value));
-            xml.Add(owner.ToString(SaveOptions.DisableFormatting));
             foreach (var property in owner.Elements())
             {
                 token.ThrowIfCancellationRequested();
@@ -36,6 +34,6 @@ internal sealed record DocxMathLimitSettings(string? NaryValue, string? Integral
         }
         if (owners == 0) { return Empty; }
         return new(nary, integral, unsupportedNary || unsupportedOwner || owners > 1 || naryCount > 1,
-            unsupportedIntegral || unsupportedOwner || owners > 1 || integralCount > 1, xml);
+            unsupportedIntegral || unsupportedOwner || owners > 1 || integralCount > 1);
     }
 }

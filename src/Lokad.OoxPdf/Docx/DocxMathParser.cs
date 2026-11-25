@@ -187,7 +187,7 @@ internal static partial class DocxMathParser
                 if (bookmarks is not null) node = sourceRow with { Bookmarks = bookmarks };
             }
             node = node with { Hyperlink = item.IncludeAnnotations && included ? item.Hyperlink : null };
-            nodes.Add(element, revisionRow ? node : node with { PropertiesXml = ReadProperties(element) });
+            nodes.Add(element, node);
         }
 
         return nodes[equation] as DocxMathRow ?? new DocxMathRow([nodes[equation]]);
@@ -327,9 +327,6 @@ internal static partial class DocxMathParser
     }
     private static string? PropertyValue(XElement? properties, string value) =>
         (string?)properties?.Element(MathNamespace + value)?.Attribute(MathNamespace + "val");
-    private static string[] ReadProperties(XElement element) => DocxSourceXml.StoredChildren(element).Where(IsProperty)
-        .Select(child => child.ToString(SaveOptions.DisableFormatting)).ToArray();
-
     private static DocxMathArgumentProperties? ReadArgumentProperties(XElement element)
     {
         XElement[] properties = element.Elements().Where(IsProperty).ToArray();
@@ -474,7 +471,6 @@ internal static partial class DocxMathParser
             ?? (string?)fonts?.Attribute(WordprocessingNamespace + "hAnsi");
         string? style = PropertyValue(mathProperties, "sty");
         string? script = PropertyValue(mathProperties, "scr");
-        var properties = ReadProperties(mathProperties?.Parent ?? owner);
         DocxTextRun? resolvedRun = null;
         if (symbols is null) return CreateRun(text, 0);
 
@@ -524,7 +520,6 @@ internal static partial class DocxMathParser
             {
                 Hyperlink = hyperlink,
                 WordJoinerOffsets = joinerOffsets is null ? [] : joinerOffsets,
-                PropertiesXml = properties,
                 NormalTextValue = symbolFont is not null ? true : normalText,
                 LiteralText = literalText,
                 ExplicitFontFamily = symbolFont ?? family,
