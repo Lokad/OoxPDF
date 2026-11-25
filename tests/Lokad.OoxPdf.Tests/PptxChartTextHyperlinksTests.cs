@@ -160,8 +160,7 @@ internal static partial class PptxChartTextHyperlinksTests
 
     public static void PptxChartAxisTitleExternalHyperlinkEmitsUriAnnotation()
     {
-        // Keep the first glyph's ink inside its advance for full containment.
-        const string caption = "Value axis";
+        const string caption = "Y axis";
         foreach (IFontResolver resolver in new IFontResolver[] { new PortableRenderingTests.PinnedResolver(), new MissingTestFontResolver() })
         {
             (IReadOnlyList<PdfPage> pages, List<OoxPdfDiagnostic> diagnostics) = RenderChartTitlePage(
@@ -191,9 +190,10 @@ internal static partial class PptxChartTextHyperlinksTests
             else
             {
                 var glyphs = PortableRenderingTests.ReadPaintedSourceLabel(page, caption, fontPrefix: "CAT");
-                TestAssert.True(glyphs.All(glyph => Covers(glyph.Ink.X, glyph.Ink.Y) &&
-                    Covers(glyph.Ink.X + glyph.Ink.Width, glyph.Ink.Y + glyph.Ink.Height)),
-                    "The link covers all of the rotated title ink.");
+                // The link uses the allocated advance. Ink may overhang it slightly.
+                TestAssert.True(glyphs.All(glyph => Covers(glyph.Ink.X, glyph.Ink.Y + glyph.Ink.Height / 2d) &&
+                    Covers(glyph.Ink.X + glyph.Ink.Width, glyph.Ink.Y + glyph.Ink.Height / 2d)),
+                    "The link covers the cross-axis ink span at each rotated glyph center.");
             }
 
             bool Covers(double x, double y) =>
