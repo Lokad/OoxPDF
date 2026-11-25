@@ -160,7 +160,8 @@ internal static partial class PptxChartTextHyperlinksTests
 
     public static void PptxChartAxisTitleExternalHyperlinkEmitsUriAnnotation()
     {
-        const string caption = "Y axis";
+        // Keep the first glyph's ink inside its advance for full containment.
+        const string caption = "Value axis";
         foreach (IFontResolver resolver in new IFontResolver[] { new PortableRenderingTests.PinnedResolver(), new MissingTestFontResolver() })
         {
             (IReadOnlyList<PdfPage> pages, List<OoxPdfDiagnostic> diagnostics) = RenderChartTitlePage(
