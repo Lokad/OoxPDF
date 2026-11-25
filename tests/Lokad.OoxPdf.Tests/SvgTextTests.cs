@@ -418,6 +418,31 @@ internal static partial class SvgTextTests
         TestAssert.Equal(0, diagnostics.Count);
     }
 
+    public static void SvgTextChildrenCanRepeatTheLabelLanguage()
+    {
+        static string Picture(string owner, string span) => Svg($"""
+            <g {owner}>
+              <text x="100" y="80" text-anchor="middle" font-size="24" fill="#112233">LA<tspan {span}>B</tspan>EL</text>
+            </g>
+            <rect x="200" y="100" width="20" height="10" fill="lime"/>
+            """);
+        const string xmlEnglish = "xml:lang=\"en-US\"";
+        AssertSvgPaintInBothFormats(Picture(xmlEnglish, ""),
+            [Picture(xmlEnglish, xmlEnglish), Picture("lang=\"en-US\"", "lang=\"EN-us\""),
+             Picture(xmlEnglish, "lang=\"en-us\" " + xmlEnglish)],
+            pdf => TestAssert.Equal(5, LabelPaths(pdf)), "0 1 0 rg");
+
+        foreach (string change in new[] { "lang=\"tr\"", "xml:lang=\"\"" })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            string paint = Paint(Picture(xmlEnglish, change), diagnostics).ToString();
+            TestAssert.DoesNotContain(LabelColor, paint);
+            TestAssert.Contains("0 1 0 rg", paint);
+            TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Fallback == "Partial" &&
+                d.Message.Contains("unsupported text element", StringComparison.Ordinal)), "A change in language keeps the existing fallback.");
+        }
+    }
+
     public static void SvgTextChildrenKeepInheritedFontAndFill()
     {
         string Picture(string north, string south, string northAttributes = "") => Svg($"""

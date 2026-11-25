@@ -290,6 +290,9 @@ internal sealed partial class PptxRenderer
         List<bool>? visibility = null;
         bool? pendingSpaceHidden = null;
         XName spaceName = XNamespace.Xml + "space";
+        XName xmlLanguageName = XNamespace.Xml + "lang";
+        XName languageName = "lang";
+        string? labelLanguage = null;
         bool preserve = element.AncestorsAndSelf().Select(e => (string?)e.Attribute(spaceName))
             .FirstOrDefault(value => value is not null) == "preserve";
         XName spanName = element.Name.Namespace + "tspan";
@@ -299,6 +302,9 @@ internal sealed partial class PptxRenderer
         text = characters.ToString();
         hiddenCharacters = visibility?.ToArray();
         return true;
+
+        string? DeclaredLanguage(XElement owner) =>
+            (string?)owner.Attribute(xmlLanguageName) ?? (string?)owner.Attribute(languageName);
 
         bool Append(XElement owner, bool ownerHidden, bool ownerTransparent, bool preserveSpace)
         {
@@ -350,6 +356,12 @@ internal sealed partial class PptxRenderer
 
         bool IsPlainChild(XElement child, IReadOnlyDictionary<string, string> style, bool isLink)
         {
+            if (DeclaredLanguage(child) is { } language)
+            {
+                labelLanguage ??= element.AncestorsAndSelf().Select(DeclaredLanguage).FirstOrDefault(value => value is not null) ?? string.Empty;
+                if (!string.Equals(language, labelLanguage, StringComparison.OrdinalIgnoreCase)) return false;
+            }
+
             bool? hasLabelFill = null;
             bool? hasLabelKerning = null;
             bool? hasStroke = null;
@@ -358,7 +370,8 @@ internal sealed partial class PptxRenderer
 
             bool IsPlainAttribute(XAttribute attribute)
             {
-                if (attribute.Name == spaceName || attribute.IsNamespaceDeclaration) return true;
+                if (attribute.Name == spaceName || attribute.Name == xmlLanguageName || attribute.Name == languageName ||
+                    attribute.IsNamespaceDeclaration) return true;
                 string name = attribute.Name.LocalName;
                 XNamespace ns = attribute.Name.Namespace;
                 bool isXLink = ns.NamespaceName == "http://www.w3.org/1999/xlink";
