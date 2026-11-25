@@ -443,6 +443,35 @@ internal static partial class SvgTextTests
         }
     }
 
+    public static void SvgTextChildrenKeepInitialFontDefaults()
+    {
+        static string Picture(string span, string labelFont = """font-family="serif" """) => Svg($"""
+            <text x="60" y="80" font-size="24" fill="#112233" {labelFont}>LA<tspan {span}>B</tspan>EL</text>
+            <rect x="200" y="100" width="20" height="10" fill="lime"/>
+            """);
+
+        AssertSvgPaintInBothFormats(Picture(""),
+            [Picture("""style="font-style:initial" """), Picture("""font-weight="initial" """),
+             Picture("""font-family="initial" """),
+             Picture("""font-style="italic" font-weight="bold" style="font-style: InItIaL; font-weight: initial" """)],
+            pdf => TestAssert.Equal(5, LabelPaths(pdf)), "0 1 0 rg");
+
+        foreach (var (span, font) in new[]
+        {
+            ("""style="font-style:initial" """, """font-style="italic" """),
+            ("""font-weight="initial" """, """font-weight="bold" """),
+            ("""font-family="initial" """, """font-family="DejaVu Sans" """)
+        })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            string paint = Paint(Picture(span, font), diagnostics).ToString();
+            TestAssert.DoesNotContain(LabelColor, paint);
+            TestAssert.Contains("0 1 0 rg", paint);
+            TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Fallback == "Partial" &&
+                d.Message.Contains("unsupported text element", StringComparison.Ordinal)), "A mixed face retains the existing fallback.");
+        }
+    }
+
     public static void SvgTextChildrenKeepInheritedFontAndFill()
     {
         string Picture(string north, string south, string northAttributes = "") => Svg($"""

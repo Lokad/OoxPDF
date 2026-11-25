@@ -122,10 +122,10 @@ internal sealed partial class PptxRenderer
         if (HasSvgTextStroke(element, style, paintServers)) return false;
         string anchor = Inherited("text-anchor")?.ToLowerInvariant() ?? "start";
         if (anchor is not ("start" or "middle" or "end")) return false;
-        string fontStyle = Inherited("font-style")?.ToLowerInvariant() ?? "normal";
+        string fontStyle = ResolveSvgTextFontValue(Inherited("font-style"), "normal").ToLowerInvariant();
         if (fontStyle is not ("normal" or "italic" or "oblique")) return false;
-        if (!TryReadSvgTextWeight(Inherited("font-weight") ?? "normal", out int weight)) return false;
-        string familyList = Inherited("font-family") ?? "serif";
+        if (!TryReadSvgTextWeight(Inherited("font-weight"), out int weight)) return false;
+        string familyList = ResolveSvgTextFontValue(Inherited("font-family"), "serif");
         double size = SvgInitialFontSize;
         foreach (XElement owner in element.AncestorsAndSelf().Reverse())
         {
@@ -204,9 +204,12 @@ internal sealed partial class PptxRenderer
             TryReadSvgLength(token, out double length, relativeSize: 1d, allowPercent: allowPercent) && length == 0d;
     }
 
-    private static bool TryReadSvgTextWeight(ReadOnlySpan<char> value, out int weight)
+    private static string ResolveSvgTextFontValue(string? value, string initial) =>
+        value is null || IsSvgInitialValue(value) ? initial : value.Trim();
+
+    private static bool TryReadSvgTextWeight(string? authoredValue, out int weight)
     {
-        value = value.Trim();
+        ReadOnlySpan<char> value = ResolveSvgTextFontValue(authoredValue, "normal");
         if (value.Equals("normal", StringComparison.OrdinalIgnoreCase))
         {
             weight = 400;
@@ -394,9 +397,9 @@ internal sealed partial class PptxRenderer
             {
                 "display" or "visibility" or "opacity" => true,
                 "font-family" => InheritsSvgPropertyValue(value) ||
-                    value.AsSpan().Trim().Equals(appearance.FamilyList, StringComparison.OrdinalIgnoreCase),
+                    ResolveSvgTextFontValue(value, "serif").Equals(appearance.FamilyList, StringComparison.OrdinalIgnoreCase),
                 "font-style" => InheritsSvgPropertyValue(value) ||
-                    value.AsSpan().Trim().Equals(appearance.Slant, StringComparison.OrdinalIgnoreCase),
+                    ResolveSvgTextFontValue(value, "normal").Equals(appearance.Slant, StringComparison.OrdinalIgnoreCase),
                 "font-weight" => InheritsSvgPropertyValue(value) ||
                     TryReadSvgTextWeight(value, out int weight) && weight == appearance.Weight,
                 "font-size" => TryResolveSvgFontSize(value, appearance.Size, out double size) && size == appearance.Size,
