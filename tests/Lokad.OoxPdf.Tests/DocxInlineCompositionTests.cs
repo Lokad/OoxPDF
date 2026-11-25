@@ -1539,8 +1539,9 @@ internal static partial class DocxInlineCompositionTests
             {
                 var wordRun = Render(nestedRuns: true, withCompanions: true, withBreak: withBreak);
                 var mathRun = Render(nestedRuns: true, withCompanions: true, withBreak: withBreak, mathContainer: true);
-                TestAssert.Equal("StoredcompanionΩ".Length,
-                    PortableRenderingTests.ReadPaintedSourceLabel(mathRun.Page, "Stored companionΩ").Count);
+                TestAssert.Equal("Storedcompanion".Length,
+                    PortableRenderingTests.ReadPaintedSourceLabel(mathRun.Page, "Stored companion").Count);
+                TestAssert.Equal(1, PortableRenderingTests.ReadPaintedSourceLabel(mathRun.Page, "Ω").Count);
                 TestAssert.Equal(1, mathRun.Page.Images.Count);
                 TestAssert.Equal(wordRun.Page.Content, mathRun.Page.Content);
                 TestAssert.True(wordRun.Diagnostics.SequenceEqual(mathRun.Diagnostics),
