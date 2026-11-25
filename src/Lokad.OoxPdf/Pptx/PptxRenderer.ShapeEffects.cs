@@ -62,74 +62,54 @@ internal sealed partial class PptxRenderer
         }
 
         double shadowExtent = shadow.BlurRadius * OfficeOuterShadowRasterExtentFactor;
-        double shadowX = x + shadow.OffsetX - shadowExtent;
-        double shadowY = y + shadow.OffsetY - shadowExtent;
-        double shadowWidth = width + 2d * shadowExtent;
-        double shadowHeight = height + 2d * shadowExtent;
-        int pixelWidth = Math.Clamp((int)Math.Ceiling(shadowWidth * OfficeGlowRasterPixelsPerPoint), 1, OfficeGlowRasterMaxPixelsPerSide);
-        int pixelHeight = Math.Clamp((int)Math.Ceiling(shadowHeight * OfficeGlowRasterPixelsPerPoint), 1, OfficeGlowRasterMaxPixelsPerSide);
-        double scaleX = pixelWidth / shadowWidth;
-        double scaleY = pixelHeight / shadowHeight;
+        var bounds = new PdfRectangle(x + shadow.OffsetX - shadowExtent, y + shadow.OffsetY - shadowExtent,
+            width + 2d * shadowExtent, height + 2d * shadowExtent);
         // The existing preset walker supplies a bounded closed polygon, shared
         // with picture masks and vector shadows. PDF Y points upward; image rows
         // run downward, so samples map back into that same geometry.
         TryCreatePresetPolygonPoints(preset, 0d, 0d, width, height, out var polygon);
 
-        using IMemoryReservation? storage = OoxMemory.Reserve(OoxConversionBudget.Current?.Memory,
-            checked((long)pixelWidth * pixelHeight * 4));
-        cancellationToken.ThrowIfCancellationRequested();
-        byte[] rgb = new byte[pixelWidth * pixelHeight * 3];
-        byte[] alpha = new byte[pixelWidth * pixelHeight];
-        for (int pixelY = 0; pixelY < pixelHeight; pixelY++)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            double localY = (pixelY + 0.5d) / scaleY - shadowExtent;
-            double dy = localY < 0d ? -localY : localY > height ? localY - height : 0d;
-            for (int pixelX = 0; pixelX < pixelWidth; pixelX++)
-            {
-                double localX = (pixelX + 0.5d) / scaleX - shadowExtent;
-                double dx = localX < 0d ? -localX : localX > width ? localX - width : 0d;
-                int pixel = pixelY * pixelWidth + pixelX;
-                int rgbOffset = pixel * 3;
-                rgb[rgbOffset] = shadow.Color.Red;
-                rgb[rgbOffset + 1] = shadow.Color.Green;
-                rgb[rgbOffset + 2] = shadow.Color.Blue;
+        DrawRasterShapeEffect(graphics, bounds, shadow.Color, shadow.Alpha, images, ref imageIndex, SampleShadow, cancellationToken);
 
-                double distance;
-                if (preset == "ellipse")
+        void SampleShadow(byte[] alpha, int pixelWidth, int pixelHeight, CancellationToken token)
+        {
+            double scaleX = pixelWidth / bounds.Width;
+            double scaleY = pixelHeight / bounds.Height;
+            for (int pixelY = 0; pixelY < pixelHeight; pixelY++)
+            {
+                token.ThrowIfCancellationRequested();
+                double localY = (pixelY + 0.5d) / scaleY - shadowExtent;
+                double dy = localY < 0d ? -localY : localY > height ? localY - height : 0d;
+                for (int pixelX = 0; pixelX < pixelWidth; pixelX++)
                 {
-                    double px = (localX - width / 2d) / (width / 2d);
-                    double py = (localY - height / 2d) / (height / 2d);
-                    double normalized = Math.Sqrt(px * px + py * py);
-                    // First-order distance along the ellipse normal. Exact on
-                    // both axes and at its boundary; no additional effect planes.
-                    double gradient = Math.Sqrt(px * px / (width * width / 4d) + py * py / (height * height / 4d));
-                    distance = normalized <= 1d ? 0d : normalized * (normalized - 1d) / gradient;
+                    double localX = (pixelX + 0.5d) / scaleX - shadowExtent;
+                    double dx = localX < 0d ? -localX : localX > width ? localX - width : 0d;
+                    double distance;
+                    if (preset == "ellipse")
+                    {
+                        double px = (localX - width / 2d) / (width / 2d);
+                        double py = (localY - height / 2d) / (height / 2d);
+                        double normalized = Math.Sqrt(px * px + py * py);
+                        // First-order distance along the ellipse normal. Exact on
+                        // both axes and at its boundary.
+                        double gradient = Math.Sqrt(px * px / (width * width / 4d) + py * py / (height * height / 4d));
+                        distance = normalized <= 1d ? 0d : normalized * (normalized - 1d) / gradient;
+                    }
+                    else if (preset == "roundRect")
+                    {
+                        double qx = Math.Abs(localX - width / 2d) - (width / 2d - cornerRadius);
+                        double qy = Math.Abs(localY - height / 2d) - (height / 2d - cornerRadius);
+                        double ox = Math.Max(qx, 0d), oy = Math.Max(qy, 0d);
+                        distance = Math.Max(0d, Math.Sqrt(ox * ox + oy * oy) + Math.Min(Math.Max(qx, qy), 0d) - cornerRadius);
+                    }
+                    else if (polygon.Length != 0)
+                        distance = DistanceToShadowPolygon(localX, height - localY, polygon);
+                    else distance = Math.Sqrt(dx * dx + dy * dy);
+                    double t = Math.Clamp(distance / shadow.BlurRadius, 0d, 1d);
+                    alpha[pixelY * pixelWidth + pixelX] = RasterEffectFalloff(t);
                 }
-                else if (preset == "roundRect")
-                {
-                    double qx = Math.Abs(localX - width / 2d) - (width / 2d - cornerRadius);
-                    double qy = Math.Abs(localY - height / 2d) - (height / 2d - cornerRadius);
-                    double ox = Math.Max(qx, 0d), oy = Math.Max(qy, 0d);
-                    distance = Math.Max(0d, Math.Sqrt(ox * ox + oy * oy) + Math.Min(Math.Max(qx, qy), 0d) - cornerRadius);
-                }
-                else if (polygon.Length != 0)
-                    distance = DistanceToShadowPolygon(localX, height - localY, polygon);
-                else distance = Math.Sqrt(dx * dx + dy * dy);
-                double t = Math.Clamp(distance / shadow.BlurRadius, 0d, 1d);
-                double falloff = (1d - t) * (1d - t);
-                alpha[pixel] = (byte)Math.Clamp((int)Math.Round(255d * falloff), 0, 255);
             }
         }
-
-        var image = PdfImageXObject.RgbPng(pixelWidth, pixelHeight, rgb, alpha, cancellationToken);
-        // RV10: admit retained bytes at creation like ordinary image producers.
-        string name = "Im" + imageIndex++;
-        graphics.SaveState();
-        graphics.SetAlpha(shadow.Alpha, 1d);
-        graphics.DrawImage(name, shadowX, shadowY, shadowWidth, shadowHeight);
-        graphics.RestoreState();
-        images.Add(new PdfImageResource(name, image));
     }
 
     private static double DistanceToShadowPolygon(double x, double y, ReadOnlySpan<(double X, double Y)> points)
@@ -218,58 +198,69 @@ internal sealed partial class PptxRenderer
             return;
         }
 
-        double glowX = x - glow.Radius;
-        double glowY = y - glow.Radius;
-        double glowWidth = width + 2d * glow.Radius;
-        double glowHeight = height + 2d * glow.Radius;
-        int pixelWidth = Math.Clamp((int)Math.Ceiling(glowWidth * OfficeGlowRasterPixelsPerPoint), 1, OfficeGlowRasterMaxPixelsPerSide);
-        int pixelHeight = Math.Clamp((int)Math.Ceiling(glowHeight * OfficeGlowRasterPixelsPerPoint), 1, OfficeGlowRasterMaxPixelsPerSide);
-        double scaleX = pixelWidth / glowWidth;
-        double scaleY = pixelHeight / glowHeight;
+        var bounds = new PdfRectangle(x - glow.Radius, y - glow.Radius, width + 2d * glow.Radius, height + 2d * glow.Radius);
+        DrawRasterShapeEffect(graphics, bounds, glow.Color, glow.Alpha, images, ref imageIndex, SampleGlow, cancellationToken);
 
-        using IMemoryReservation? storage = OoxMemory.Reserve(OoxConversionBudget.Current?.Memory,
-            checked((long)pixelWidth * pixelHeight * 4));
-        cancellationToken.ThrowIfCancellationRequested();
-        byte[] rgb = new byte[pixelWidth * pixelHeight * 3];
-        byte[] alpha = new byte[pixelWidth * pixelHeight];
-        for (int pixelY = 0; pixelY < pixelHeight; pixelY++)
+        void SampleGlow(byte[] alpha, int pixelWidth, int pixelHeight, CancellationToken token)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            double localY = (pixelY + 0.5d) / scaleY - glow.Radius;
-            double dy = localY < 0d ? -localY : localY > height ? localY - height : 0d;
-            for (int pixelX = 0; pixelX < pixelWidth; pixelX++)
+            double scaleX = pixelWidth / bounds.Width;
+            double scaleY = pixelHeight / bounds.Height;
+            for (int pixelY = 0; pixelY < pixelHeight; pixelY++)
             {
-                double localX = (pixelX + 0.5d) / scaleX - glow.Radius;
-                double dx = localX < 0d ? -localX : localX > width ? localX - width : 0d;
-                int pixel = pixelY * pixelWidth + pixelX;
-                int rgbOffset = pixel * 3;
-                rgb[rgbOffset] = glow.Color.Red;
-                rgb[rgbOffset + 1] = glow.Color.Green;
-                rgb[rgbOffset + 2] = glow.Color.Blue;
-
-                if (dx <= 0d && dy <= 0d)
+                token.ThrowIfCancellationRequested();
+                double localY = (pixelY + 0.5d) / scaleY - glow.Radius;
+                double dy = localY < 0d ? -localY : localY > height ? localY - height : 0d;
+                for (int pixelX = 0; pixelX < pixelWidth; pixelX++)
                 {
-                    continue;
-                }
+                    double localX = (pixelX + 0.5d) / scaleX - glow.Radius;
+                    double dx = localX < 0d ? -localX : localX > width ? localX - width : 0d;
+                    if (dx <= 0d && dy <= 0d) continue;
 
-                double distance = Math.Sqrt(dx * dx + dy * dy);
-                if (distance >= glow.Radius)
-                {
-                    continue;
+                    double distance = Math.Sqrt(dx * dx + dy * dy);
+                    if (distance >= glow.Radius) continue;
+                    alpha[pixelY * pixelWidth + pixelX] = RasterEffectFalloff(distance / glow.Radius);
                 }
-
-                double t = distance / glow.Radius;
-                double falloff = (1d - t) * (1d - t);
-                alpha[pixel] = (byte)Math.Clamp((int)Math.Round(255d * falloff), 0, 255);
             }
         }
+    }
 
+    private static byte RasterEffectFalloff(double t)
+    {
+        double falloff = (1d - t) * (1d - t);
+        return (byte)Math.Clamp((int)Math.Round(255d * falloff), 0, 255);
+    }
+
+    private static void DrawRasterShapeEffect(PdfGraphicsBuilder graphics, PdfRectangle bounds, RgbColor color, double opacity,
+        List<PdfImageResource> images, ref int imageIndex, Action<byte[], int, int, CancellationToken> sampleAlpha,
+        CancellationToken cancellationToken)
+    {
+        int pixelWidth = Math.Clamp((int)Math.Ceiling(bounds.Width * OfficeShapeEffectRasterPixelsPerPoint), 1, OfficeShapeEffectRasterMaxPixelsPerSide);
+        int pixelHeight = Math.Clamp((int)Math.Ceiling(bounds.Height * OfficeShapeEffectRasterPixelsPerPoint), 1, OfficeShapeEffectRasterMaxPixelsPerSide);
+        int pixelCount = pixelWidth * pixelHeight;
+        using IMemoryReservation? storage = OoxMemory.Reserve(OoxConversionBudget.Current?.Memory, 4L * pixelCount);
+        cancellationToken.ThrowIfCancellationRequested();
+        byte[] rgb = new byte[pixelCount * 3];
+        byte[] alpha = new byte[pixelCount];
+        int stride = pixelWidth * 3;
+        for (int offset = 0; offset < stride; offset += 3)
+        {
+            rgb[offset] = color.Red;
+            rgb[offset + 1] = color.Green;
+            rgb[offset + 2] = color.Blue;
+        }
+        ReadOnlySpan<byte> firstRow = rgb.AsSpan(0, stride);
+        for (int y = 1; y < pixelHeight; y++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            firstRow.CopyTo(rgb.AsSpan(y * stride, stride));
+        }
+
+        sampleAlpha(alpha, pixelWidth, pixelHeight, cancellationToken);
         var image = PdfImageXObject.RgbPng(pixelWidth, pixelHeight, rgb, alpha, cancellationToken);
-        // RV10: admit retained bytes at creation like ordinary image producers.
         string name = "Im" + imageIndex++;
         graphics.SaveState();
-        graphics.SetAlpha(glow.Alpha, 1d);
-        graphics.DrawImage(name, glowX, glowY, glowWidth, glowHeight);
+        graphics.SetAlpha(opacity, 1d);
+        graphics.DrawImage(name, bounds.X, bounds.Y, bounds.Width, bounds.Height);
         graphics.RestoreState();
         images.Add(new PdfImageResource(name, image));
     }

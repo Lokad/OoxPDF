@@ -152,6 +152,7 @@
     "PptxDrawingMlPresetFillsMatchNumericPaint",
     "PptxEffectColorFormsKeepPaintAcrossSupportedOwners",
     "PptxEffectColorFallbacksPreserveMissingPaintAndRecolorPolicy",
+    "=PptxEffectRasterStorageRefundsOnCompletionRefusalAndCancellation",
     "PptxSyntheticOuterShadowRendersOffsetShape",
     "PptxSyntheticShapeRectGlowUsesRasterSoftMask",
     "PptxSyntheticPngPictureOuterShadowUsesRasterSoftMask",

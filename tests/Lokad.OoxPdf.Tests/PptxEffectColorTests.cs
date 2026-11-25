@@ -130,7 +130,59 @@ internal static class PptxEffectColorTests
         TestAssert.Equal(PptxSceneImageRecolorKind.None, PptxSceneBuilder.ReadImageRecolor(recolor, PptxTheme.Empty, PptxColorMap.Default).Kind);
     }
 
-    private static PdfPage Render(string owner, string? color)
+    public static void PptxEffectRasterStorageRefundsOnCompletionRefusalAndCancellation()
+    {
+        const string color = "<a:srgbClr val=\"A627D6\"/>";
+        foreach (string owner in new[] { "shape-glow", "shape-shadow" })
+        {
+            PdfPage expected = Render(owner, color);
+            PdfImageXObject raster = expected.Images.Single().Image;
+            long rawBytes = 4L * raster.Width * raster.Height;
+
+            var admitted = new TestMemoryBudget();
+            IMemoryReservation? scratch = null;
+            admitted.ReservationCreated = reservation =>
+            {
+                if (reservation.Bytes == rawBytes) scratch = reservation;
+            };
+            using (OoxConversionBudget.BeginScope(null, admitted))
+            {
+                PdfPage page = Render(owner, color);
+                TestAssert.True(HasSamePaint(expected, page), "Host admission preserves image samples and paint order.");
+                TestAssert.Equal(0L, TestAssert.NotNull(scratch).Bytes);
+                TestAssert.True(admitted.Reserved >= raster.Bytes.Length + TestAssert.NotNull(raster.Alpha).Length,
+                    "Compressed image data stays funded through page emission.");
+            }
+            TestAssert.Equal(0L, admitted.Reserved);
+
+            foreach (bool cancel in new[] { false, true })
+            {
+                using var cancellation = new CancellationTokenSource();
+                var pool = new TestMemoryBudget();
+                bool reached = false;
+                pool.RefuseChange = (before, after) =>
+                {
+                    if (before != 0 || after != rawBytes) return false;
+                    reached = true;
+                    if (cancel) cancellation.Cancel();
+                    return !cancel;
+                };
+                using (OoxConversionBudget.BeginScope(null, pool))
+                {
+                    void RenderEffect() => Render(owner, color, cancellation.Token);
+                    if (cancel)
+                        TestAssert.Equal(cancellation.Token, TestAssert.Throws<OperationCanceledException>(RenderEffect).CancellationToken);
+                    else
+                        TestAssert.Equal(OoxPdfLimitKind.MemoryAdmission, TestAssert.Throws<OoxPdfLimitExceededException>(RenderEffect).Kind);
+                }
+                TestAssert.True(reached, "The failure reaches the actual effect raster admission.");
+                TestAssert.Equal(0L, pool.Reserved);
+                TestAssert.Equal(pool.ScopesCreated, pool.ScopesDisposed);
+            }
+        }
+    }
+
+    private static PdfPage Render(string owner, string? color, CancellationToken cancellationToken = default)
     {
         string effect = color is null ? "" : owner == "shape-glow"
             ? $"<a:effectLst><a:glow rad=\"38100\">{color}</a:glow></a:effectLst>"
@@ -150,10 +202,10 @@ internal static class PptxEffectColorTests
             ["ppt/media/image.png"] = TestFixtures.CreateRgbPng(1, 1, [0, 0, 255])
         };
         using var input = TestFixtures.CreateZipPackage(entries);
-        using var package = OoxPackage.Open(input, default);
+        using var package = OoxPackage.Open(input, cancellationToken);
         var diagnostics = new List<OoxPdfDiagnostic>();
         var page = new PptxRenderer(new PortableRenderingTests.PinnedResolver())
-            .RenderPagesAsync(new PptxReader().Read(package, default), package, diagnostics.Add, default).ToBlockingEnumerable().Single();
+            .RenderPagesAsync(new PptxReader().Read(package, cancellationToken), package, diagnostics.Add, cancellationToken).ToBlockingEnumerable().Single();
         TestAssert.Equal(0, diagnostics.Count);
         return page;
     }

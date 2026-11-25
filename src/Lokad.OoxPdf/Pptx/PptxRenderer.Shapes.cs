@@ -28,8 +28,8 @@ internal sealed partial class PptxRenderer
     private const double OfficePresetArcDefaultEndGuide = 0d;
     private const double OfficePresetArcFlatteningTolerance = 0.015d;
     private const double OfficePresetArcMaximumFlatteningDegrees = 4.5d;
-    private const double OfficeGlowRasterPixelsPerPoint = 1d;
-    private const int OfficeGlowRasterMaxPixelsPerSide = 2048;
+    private const double OfficeShapeEffectRasterPixelsPerPoint = 1d;
+    private const int OfficeShapeEffectRasterMaxPixelsPerSide = 2048;
     private const double OfficeOuterShadowRasterExtentFactor = 1.25d;
 
     private static void RenderBackground(PptxRenderContext context, PdfGraphicsBuilder graphics)
