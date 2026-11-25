@@ -1888,6 +1888,17 @@ internal static partial class PortableRenderingTests
     private static string Case(string relative) => Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,
         "..", "..", "..", "Cases", relative));
 
+    internal sealed class ObservingResolver(Action<FontRequest> observe) : IFontResolver
+    {
+        private readonly PinnedResolver inner = new();
+
+        public FontFaceResolution Resolve(FontRequest request)
+        {
+            observe(request);
+            return inner.Resolve(request);
+        }
+    }
+
     internal sealed class PinnedResolver : IFontResolver
     {
         private readonly FileFontProgramSource source;

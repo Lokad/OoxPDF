@@ -753,7 +753,7 @@ internal static partial class SvgTextTests
             });
             var diagnostics = new List<OoxPdfDiagnostic>();
             int requests = 0;
-            var resolver = new ObservingResolver(request => { if (request.FamilyName == family) requests++; });
+            var resolver = new PortableRenderingTests.ObservingResolver(request => { if (request.FamilyName == family) requests++; });
             using OoxPackage package = OoxPackage.Open(input, default);
             PdfPage page = new PptxRenderer(resolver).RenderPagesAsync(new PptxReader().Read(package, default),
                 package, diagnostics.Add, default).ToBlockingEnumerable().Single();
@@ -970,7 +970,7 @@ internal static partial class SvgTextTests
             byte[] prior = "UNCHANGED DESTINATION"u8.ToArray(); File.WriteAllBytes(output, prior);
             using var cancellation = new CancellationTokenSource();
             bool requested = false;
-            var resolver = new ObservingResolver(request => {
+            var resolver = new PortableRenderingTests.ObservingResolver(request => {
                 if (request.FamilyName != "LABEL-FONT") return;
                 requested = true;
                 if (cancel) cancellation.Cancel();
@@ -986,12 +986,6 @@ internal static partial class SvgTextTests
             TestAssert.Equal(0L, pool.Reserved);
             TestAssert.Equal(pool.ScopesCreated, pool.ScopesDisposed);
         }
-    }
-
-    private sealed class ObservingResolver(Action<FontRequest> observe) : IFontResolver
-    {
-        private readonly PortableRenderingTests.PinnedResolver inner = new();
-        public FontFaceResolution Resolve(FontRequest request) { observe(request); return inner.Resolve(request); }
     }
 
     private static PdfGraphicsBuilder Paint(string svg, List<OoxPdfDiagnostic>? diagnostics = null)

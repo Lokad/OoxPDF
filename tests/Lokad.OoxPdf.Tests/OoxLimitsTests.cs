@@ -1848,14 +1848,26 @@ internal static partial class OoxLimitsTests
 
     public static void SuppressedMasterShapesStayOutOfFontPreflight()
     {
-        (OoxPackage package, PptxDocument document) = W02Package();
-        PptxRenderContext context = W02Context(document, package);
-        string withMaster = SpanTexts(ReadSceneShapeTextSpansReflect(context, true));
-        string withoutMaster = SpanTexts(ReadSceneShapeTextSpansReflect(context, false));
-        TestAssert.True(withMaster.Contains("MasterText", StringComparison.Ordinal), "Default preflight must keep master spans. " + withMaster);
-        TestAssert.True(withMaster.Contains("SlideText", StringComparison.Ordinal), "Default preflight must keep slide spans. " + withMaster);
-        TestAssert.True(!withoutMaster.Contains("MasterText", StringComparison.Ordinal), "Suppressed master shapes must not feed font collection. " + withoutMaster);
-        TestAssert.True(withoutMaster.Contains("SlideText", StringComparison.Ordinal), "Slide spans must survive master suppression. " + withoutMaster);
+        foreach (bool showMaster in new[] { false, true })
+        {
+            string input = W02PackagePath(showMaster, observeFonts: true);
+            try
+            {
+                using var package = OoxPackage.Open(input, default);
+                var document = new PptxReader().Read(package, default);
+                var requests = new HashSet<string>(StringComparer.Ordinal);
+                var resolver = new PortableRenderingTests.ObservingResolver(request => requests.Add(request.FamilyName));
+                PdfPage page = new PptxRenderer(resolver).RenderPagesAsync(document, package, null, default)
+                    .ToBlockingEnumerable().Single();
+                TestAssert.Equal(showMaster, requests.Contains("MasterText Witness"));
+                TestAssert.True(requests.Contains("SlideText Witness"), "Slide font resolution survives master suppression.");
+                string text = DocxPageFootnoteNumberingTests.DecodeText(page);
+                TestAssert.Equal(showMaster, text.Contains("MasterText", StringComparison.Ordinal));
+                TestAssert.Contains("SlideText", text);
+                TestAssert.Contains("CellText", text);
+            }
+            finally { File.Delete(input); }
+        }
     }
 
     public static void TextLayoutComputedOncePerNode()
@@ -1934,23 +1946,24 @@ internal static partial class OoxLimitsTests
         TestAssert.Equal(1, diagnostics.Count(diagnostic => diagnostic.Id == "PPTX_UNSUPPORTED_TABLE_STYLE"));
     }
 
-    private static string W02SlideTextBox(string content)
+    private static string W02SlideTextBox(string content, bool observeFonts)
     {
+        string properties = observeFonts ? $"<a:rPr><a:latin typeface=\"{content} Witness\"/></a:rPr>" : "";
         return "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"Box\"/><p:nvPr/></p:nvSpPr>" +
             "<p:spPr><a:xfrm><a:off x=\"914400\" y=\"914400\"/><a:ext cx=\"1828800\" cy=\"914400\"/></a:xfrm><a:prstGeom prst=\"rect\"/></p:spPr>" +
-            "<p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>" + content + "</a:t></a:r></a:p></p:txBody></p:sp>";
+            "<p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r>" + properties + "<a:t>" + content + "</a:t></a:r></a:p></p:txBody></p:sp>";
     }
 
-    private static string W02PackagePath()
+    private static string W02PackagePath(bool showMaster = false, bool observeFonts = false)
     {
         const string pns = "http://schemas.openxmlformats.org/presentationml/2006/main";
         const string ans = "http://schemas.openxmlformats.org/drawingml/2006/main";
         const string rns = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
         const string pkns = "http://schemas.openxmlformats.org/package/2006/relationships";
         string slide = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
-            "<p:sld xmlns:p=\"" + pns + "\" xmlns:a=\"" + ans + "\" showMasterSp=\"0\">" +
+            "<p:sld xmlns:p=\"" + pns + "\" xmlns:a=\"" + ans + "\"" + (showMaster ? "" : " showMasterSp=\"0\"") + ">" +
             "<p:cSld><p:spTree>" +
-            W02SlideTextBox("SlideText") +
+            W02SlideTextBox("SlideText", observeFonts) +
             "<p:graphicFrame><p:xfrm><a:off x=\"914400\" y=\"2743200\"/><a:ext cx=\"3657600\" cy=\"1828800\"/></p:xfrm>" +
             "<a:graphic><a:graphicData uri=\"http://schemas.openxmlformats.org/drawingml/2006/table\"><a:tbl>" +
             "<a:tblPr><a:tableStyleId>{11111111-1111-1111-1111-111111111111}</a:tableStyleId></a:tblPr>" +
@@ -1970,7 +1983,7 @@ internal static partial class OoxLimitsTests
             "<Relationship Id=\"rId1\" Type=\"" + rns + "/slideMaster\" Target=\"../slideMasters/slideMaster1.xml\"/></Relationships>";
         string master = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
             "<p:sldMaster xmlns:p=\"" + pns + "\" xmlns:a=\"" + ans + "\"><p:cSld><p:spTree>" +
-            W02SlideTextBox("MasterText") +
+            W02SlideTextBox("MasterText", observeFonts) +
             "</p:spTree></p:cSld></p:sldMaster>";
         return TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
         {
@@ -1997,36 +2010,6 @@ internal static partial class OoxLimitsTests
     private static PptxRenderContext W02Context(PptxDocument document, OoxPackage package) =>
         TestAssert.NotNull(PptxRenderer.TryLoadTextInspectionContext(document, package, 0));
 
-    private static object ReadSceneShapeTextSpansReflect(PptxRenderContext context, bool includeMasterNodes)
-    {
-        MethodInfo read = typeof(PptxRenderer).GetMethod(
-            "ReadSceneShapeTextSpansAsync",
-            BindingFlags.NonPublic | BindingFlags.Static,
-            null,
-            [typeof(PptxRenderContext), typeof(bool)],
-            null) ?? throw new InvalidOperationException("Expected shape span preflight.");
-        try
-        {
-            return ((ValueTask<IReadOnlyList<PptxRenderer.PptxPositionedTextSpan>>)read.Invoke(null, [context, includeMasterNodes])!).GetAwaiter().GetResult();
-        }
-        catch (TargetInvocationException ex)
-        {
-            throw ex.InnerException ?? ex;
-        }
-    }
-
-    private static string SpanTexts(object spans)
-    {
-        var builder = new System.Text.StringBuilder();
-        foreach (object? span in (System.Collections.IEnumerable)spans)
-        {
-            object? run = span?.GetType().GetProperty("Run")?.GetValue(span);
-            builder.Append(run?.GetType().GetProperty("Text")?.GetValue(run));
-            builder.Append('|');
-        }
-
-        return builder.ToString();
-    }
 
     public static void SharedHeaderParsedOnceAcrossSections()
     {

@@ -83,7 +83,7 @@ internal static partial class SvgTextTests
         var diagnostics = new List<OoxPdfDiagnostic>();
         bool resolved = false, loaded = false;
         var bytes = Encoding.UTF8.GetBytes(svg);
-        var fonts = PptxRenderer.PrepareSvgTextFontsAsync([bytes], new ObservingResolver(_ => resolved = true),
+        var fonts = PptxRenderer.PrepareSvgTextFontsAsync([bytes], new PortableRenderingTests.ObservingResolver(_ => resolved = true),
             (_, _) => { loaded = true; return ValueTask.FromResult<OpenTypeFont?>(null); }, diagnostics.Add, default).GetAwaiter().GetResult();
         var graphics = new PdfGraphicsBuilder();
         TestAssert.True(PptxRenderer.TryRenderSvgImage(graphics, 0, 0, 400, 160, bytes, diagnostics.Add, 1, "public.svg", default, fonts), "Hidden payload is a valid empty picture.");
