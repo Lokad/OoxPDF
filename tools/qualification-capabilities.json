@@ -8198,6 +8198,8 @@
     "PptxUnsupportedPngImageEmitsDiagnostic"
   ],
   "markup-compatibility": [
+    "=IgnorableAttributesUseDeclarationScopeAndKeepKnownMetadata",
+    "=IgnorableAttributesPreserveInlineFractionsAndTheirDiagnostics",
     "IgnoredExtension",
     "AlternateContent",
     "MustUnderstand",

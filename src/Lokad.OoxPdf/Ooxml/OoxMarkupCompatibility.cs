@@ -9,7 +9,9 @@ namespace Lokad.OoxPdf.Ooxml;
 // Choice and Fallback content nor silently keep both. The first Choice whose
 // Requires prefixes all resolve to understood namespaces wins, else the Fallback,
 // else the block is removed. Declared ProcessContent wrappers expose their children
-// before format readers run. Other extension content keeps its existing fallback;
+// before format readers run. Declared ignorable attributes and the consumed
+// compatibility rules do not participate in rendering eligibility.
+// Other extension content keeps its existing fallback;
 // this is a bounded subset, not a complete MCE/schema processor.
 internal static class OoxMarkupCompatibility
 {
@@ -132,6 +134,7 @@ internal static class OoxMarkupCompatibility
             if (ignored && !processContent) { element.Remove(); return; }
             unrecognized |= HasUnrecognizedMustUnderstand(element);
             VisitChildren(element);
+            RemoveIgnoredAttributes(element, cancellationToken);
             if (element.Name == OoxNamespaces.WordprocessingNamespace + "drawing")
                 KeepLastWordDrawingPlacement(element, cancellationToken);
             if (ignored && processContent) { Unwrap(element, element); }
@@ -186,13 +189,7 @@ internal static class OoxMarkupCompatibility
         foreach (XElement scope in element.AncestorsAndSelf())
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (scope.Attribute(compatibility + "Ignorable") is XAttribute ignored)
-            {
-                foreach (string prefix in ignored.Value.Split([' ', '\t', '\r', '\n'], StringSplitOptions.RemoveEmptyEntries))
-                {
-                    ignorable |= scope.GetNamespaceOfPrefix(prefix)?.NamespaceName == element.Name.NamespaceName;
-                }
-            }
+            ignorable |= DeclaresIgnorableNamespace(scope, element.Name.Namespace);
             if (scope.Attribute(compatibility + "ProcessContent") is XAttribute content)
             {
                 foreach (string name in content.Value.Split([' ', '\t', '\r', '\n'], StringSplitOptions.RemoveEmptyEntries))
@@ -206,6 +203,62 @@ internal static class OoxMarkupCompatibility
             if (ignorable && processContent) { break; }
         }
         return ignorable;
+    }
+
+    private static bool DeclaresIgnorableNamespace(XElement scope, XNamespace xmlNamespace)
+    {
+        string? prefixes = (string?)scope.Attribute(OoxNamespaces.MarkupCompatibilityNamespace + "Ignorable");
+        if (prefixes is null) return false;
+        foreach (string prefix in prefixes.Split([' ', '\t', '\r', '\n'], StringSplitOptions.RemoveEmptyEntries))
+        {
+            if (scope.GetNamespaceOfPrefix(prefix) == xmlNamespace) return true;
+        }
+        return false;
+    }
+
+    private static void RemoveIgnoredAttributes(XElement element, CancellationToken cancellationToken)
+    {
+        // Descendants have been processed. The owner's Ignorable declaration
+        // still governs its other attributes regardless of source order.
+        XAttribute? ignorable = null;
+        for (XAttribute? attribute = element.FirstAttribute; attribute is not null;)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            XAttribute? next = attribute.NextAttribute;
+            XName name = attribute.Name;
+            if (name.Namespace == OoxNamespaces.MarkupCompatibilityNamespace)
+            {
+                if (name.LocalName == "Ignorable") ignorable = attribute;
+                else if (name.LocalName is "ProcessContent" or "MustUnderstand" or "PreserveAttributes" or "PreserveElements")
+                    attribute.Remove();
+            }
+            else if (!attribute.IsNamespaceDeclaration && IsIgnorableAttribute(element, name, cancellationToken))
+            {
+                attribute.Remove();
+            }
+            attribute = next;
+        }
+        ignorable?.Remove();
+    }
+
+    private static bool IsIgnorableAttribute(XElement element, XName name, CancellationToken cancellationToken)
+    {
+        XNamespace xmlNamespace = name.Namespace;
+        if (xmlNamespace == XNamespace.None || xmlNamespace == XNamespace.Xml ||
+            UnderstoodNamespaces.Contains(xmlNamespace.NamespaceName)) { return false; }
+
+        // Comment thread identifiers are understood individually. Their
+        // namespaces still use the existing AlternateContent fallback.
+        if (name == OoxNamespaces.Office2010WordNamespace + "paraId" ||
+            xmlNamespace == OoxNamespaces.Office2012WordNamespace && name.LocalName is "paraId" or "paraIdParent" or "done")
+            return false;
+
+        foreach (XElement scope in element.AncestorsAndSelf())
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (DeclaresIgnorableNamespace(scope, xmlNamespace)) return true;
+        }
+        return false;
     }
 
     private static void Unwrap(XElement wrapper, XElement content)

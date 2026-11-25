@@ -1,5 +1,7 @@
 using System.Text;
 using System.Xml.Linq;
+using Lokad.OoxPdf.Diagnostics;
+using Lokad.OoxPdf.Docx;
 using Lokad.OoxPdf.Ooxml;
 
 namespace Lokad.OoxPdf.Tests;
@@ -8,6 +10,93 @@ internal static partial class OoxMarkupCompatibilityTests
 {
     private const string Word = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
     private const string Mc = "http://schemas.openxmlformats.org/markup-compatibility/2006";
+
+    public static void IgnorableAttributesUseDeclarationScopeAndKeepKnownMetadata()
+    {
+        XNamespace e = "urn:first";
+        XNamespace rebound = "urn:second";
+        XNamespace compatibility = Mc;
+        XNamespace w14 = OoxNamespaces.Office2010WordNamespace;
+        XNamespace w15 = OoxNamespaces.Office2012WordNamespace;
+        XDocument document = Load($$"""
+            <w:document xmlns:w="{{Word}}" xmlns:mc="{{Mc}}" xmlns:e="{{e}}"
+                        xmlns:w14="{{w14}}" xmlns:w15="{{w15}}" mc:Ignorable="e w14 w15 w">
+              <w:p xmlns:e="{{rebound}}" xmlns:original="{{e}}" e:token="rebound"
+                   original:token="inherited" w:val="keep" xml:space="preserve"
+                   w14:paraId="10000001" w15:paraId="10000002" w15:paraIdParent="10000001"
+                   w15:done="1" w15:editingToken="drop"/>
+              <w:p xmlns:e="{{rebound}}" mc:Ignorable="e" e:token="local-first"/>
+              <w:p xmlns:e="{{rebound}}" e:token="local-last" mc:Ignorable="e"
+                   mc:MustUnderstand="e"/>
+            </w:document>
+            """);
+        XElement[] paragraphs = document.Descendants(XName.Get("p", Word)).ToArray();
+        TestAssert.Equal(3, paragraphs.Length);
+        TestAssert.Equal("rebound", (string?)paragraphs[0].Attribute(rebound + "token"));
+        TestAssert.Equal("keep", (string?)paragraphs[0].Attribute(XName.Get("val", Word)));
+        TestAssert.Equal("preserve", (string?)paragraphs[0].Attribute(XNamespace.Xml + "space"));
+        TestAssert.Equal("10000001", (string?)paragraphs[0].Attribute(w14 + "paraId"));
+        TestAssert.Equal("10000002", (string?)paragraphs[0].Attribute(w15 + "paraId"));
+        TestAssert.Equal("10000001", (string?)paragraphs[0].Attribute(w15 + "paraIdParent"));
+        TestAssert.Equal("1", (string?)paragraphs[0].Attribute(w15 + "done"));
+        TestAssert.True(paragraphs[0].Attribute(e + "token") is null && paragraphs[0].Attribute(w15 + "editingToken") is null,
+            "Remove only ignorable metadata at its declared scope.");
+        TestAssert.True(paragraphs.Skip(1).All(p => p.Attribute(rebound + "token") is null),
+            "Local declarations apply regardless of attribute order.");
+        TestAssert.True(document.Descendants().Attributes().All(a => a.Name.Namespace != compatibility),
+            "The processed rules are consumed before the renderer reads the tree.");
+        OoxMarkupCompatibility.Normalize(document);
+        TestAssert.True(OoxMarkupCompatibility.HasUnrecognizedMustUnderstand(document),
+            "Consuming the active rule must retain the diagnostic fact.");
+    }
+
+    public static void IgnorableAttributesPreserveInlineFractionsAndTheirDiagnostics()
+    {
+        XNamespace author = "urn:ooxpdf:authoring";
+        XNamespace compatibility = Mc;
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true), mode,
+                mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
+                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var baseline = Render(null);
+            string text = DocxPageFootnoteNumberingTests.DecodeText(baseline.Page).Normalize(NormalizationForm.FormKC);
+            TestAssert.Contains("Before formula:", text);
+            TestAssert.Contains("a+bc", text);
+            TestAssert.Contains("Following prose.", text);
+            TestAssert.Equal("DOCX_APPROXIMATED_EQUATION", baseline.Diagnostics.Single().Id);
+
+            foreach (string scope in new[] { "inherited", "local", "undeclared" })
+            {
+                var modified = Render((document, _, math) =>
+                {
+                    XElement root = document.Root!;
+                    root.SetAttributeValue(XNamespace.Xmlns + "author", author.NamespaceName);
+                    XElement fraction = root.Descendants(math + "f").Single();
+                    fraction.SetAttributeValue(author + "editToken", "17");
+                    XElement? declaration = scope == "inherited" ? root : scope == "local" ? fraction : null;
+                    declaration?.SetAttributeValue(compatibility + "Ignorable", "author");
+                });
+                if (scope == "undeclared")
+                {
+                    TestAssert.Equal("DOCX_UNSUPPORTED_EQUATION", modified.Diagnostics.Single().Id);
+                    continue;
+                }
+                TestAssert.Equal(baseline.Page.Content, modified.Page.Content);
+                TestAssert.True(baseline.Diagnostics.SequenceEqual(modified.Diagnostics),
+                    "Ignoring authoring metadata must preserve the complete fraction paint and diagnostics.");
+            }
+
+            (Pdf.PdfPage Page, List<OoxPdfDiagnostic> Diagnostics) Render(Action<XDocument, XNamespace, XNamespace>? change)
+            {
+                var diagnostics = new List<OoxPdfDiagnostic>();
+                var document = DocxInlineCompositionTests.ReadMutation("docx-omml-fraction-inline", mode,
+                    bookmark: false, split: false, change, diagnosticSink: diagnostics.Add);
+                var page = renderer.RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().Single();
+                return (page, diagnostics);
+            }
+        }
+    }
 
     public static void ProcessContentUsesDeclarationNamespaceScope()
     {
