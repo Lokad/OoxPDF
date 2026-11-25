@@ -23,7 +23,7 @@ internal sealed partial class DocxReader
         foreach (XElement element in source.Descendants())
         {
             token.ThrowIfCancellationRequested();
-            int equations = CountEquationPayloads(element, token);
+            int equations = CountEquationPayloads(element, mode, token);
             if (equations == 0 && element.Name != MathNamespace + "oMathPara") continue;
             hasSource = true;
             if (equations == 0)

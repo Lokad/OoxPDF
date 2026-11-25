@@ -105,6 +105,91 @@ internal static partial class DocxInlineCompositionTests
             CheckDisplayDrawingCompanions(withBreak: false, explicitRow: true, revision: revision);
     }
 
+    public static void DocxEquationDrawingCompanionsKeepInnerRevisionOwners()
+    {
+        foreach ((string container, bool display) in new[] { ("body", false), ("cell", true) })
+        foreach (bool partial in new[] { false, true })
+        foreach (bool deletion in new[] { false, true })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.Original, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            bool visible = mode == OoxPdfDocxMarkupMode.AllMarkup || mode ==
+                (deletion ? OoxPdfDocxMarkupMode.Original : OoxPdfDocxMarkupMode.Final);
+            var expected = Render(packed: false);
+            var actual = Render(packed: true);
+            TestAssert.Equal(expected.Page.Content, actual.Page.Content);
+            TestAssert.Equal(expected.Equations, actual.Equations);
+            if (visible)
+                TestAssert.True(expected.Diagnostics.SequenceEqual(actual.Diagnostics), "Equivalent revision owners report the same diagnostics.");
+            TestAssert.True(!actual.Diagnostics.Contains("DOCX_UNSUPPORTED_EQUATION"), "Every selected math fragment is accounted for.");
+            TestAssert.Equal(visible ? 1 : 0, actual.Page.Images.Count);
+            if (visible)
+            {
+                TestAssert.Contains($"/{actual.Page.Images.Single().ResourceName} Do", actual.Page.Content);
+                TestAssert.Equal(2, PortableRenderingTests.ReadPaintedSourceLabel(actual.Page, "QA").Count);
+                TestAssert.Equal(1, PortableRenderingTests.ReadPaintedSourceLabel(actual.Page, "Ω").Count);
+            }
+            string painted = DocxPageFootnoteNumberingTests.DecodeText(actual.Page);
+            foreach (string label in new[] { "17", "314", "793", "28" })
+            {
+                bool neighbor = label is "17" or "28";
+                if (visible || partial && neighbor)
+                    TestAssert.Equal(label.Length, PortableRenderingTests.ReadPaintedSourceLabel(actual.Page, label, mathOnly: true).Count);
+                else
+                    TestAssert.DoesNotContain(label, painted);
+            }
+            if (!visible)
+            {
+                TestAssert.DoesNotContain("QA", painted);
+                TestAssert.DoesNotContain("Ω", painted);
+            }
+
+            (PdfPage Page, int Equations, List<string> Diagnostics) Render(bool packed)
+            {
+                var diagnostics = new List<string>();
+                void Record(Lokad.OoxPdf.Diagnostics.OoxPdfDiagnostic item) => diagnostics.Add(item.Id);
+                var source = ReadMutation("CompositionProbes/math-display-image-" + container + "-between", mode,
+                    false, false, (xml, w, m) =>
+                    {
+                        var displayRow = xml.Descendants(m + "oMathPara").First();
+                        var picture = displayRow.Parent!.Elements(w + "r").Single();
+                        var drawing = picture.Element(w + "drawing")!;
+                        picture.Remove();
+                        var before = MathRun("17");
+                        var after = MathRun("28");
+                        var label = new XElement(w + (deletion ? "delText" : "t"), "QA");
+                        var symbol = new XElement(w + "sym", new XAttribute(w + "font", "Arial"), new XAttribute(w + "char", "03A9"));
+                        var owner = new XElement(w + (deletion ? "del" : "ins"), new XAttribute(w + "id", "528"),
+                            new XAttribute(w + "author", "QA Reviewer"));
+                        XElement[] items;
+                        if (packed)
+                        {
+                            owner.Add(partial ? null : before,
+                                new XElement(m + "r", new XElement(m + "t", "314"), label, symbol, drawing, new XElement(m + "t", "793")),
+                                partial ? null : after);
+                            items = [new XElement(m + "oMath", partial ? before : null, owner, partial ? after : null)];
+                        }
+                        else if (visible)
+                        {
+                            owner.Add(new XElement(m + "oMath", partial ? null : before, MathRun("314")),
+                                new XElement(w + "r", label, symbol, drawing),
+                                new XElement(m + "oMath", MathRun("793"), partial ? null : after));
+                            items = partial ? [new XElement(m + "oMath", before), owner, new XElement(m + "oMath", after)] : [owner];
+                        }
+                        else
+                        {
+                            items = partial ? [new XElement(m + "oMath", before, after)] : [];
+                        }
+                        if (display) displayRow.Add(items);
+                        else displayRow.AddAfterSelf(items);
+
+                        XElement MathRun(string text) => new(m + "r", new XElement(m + "t", text));
+                    }, diagnosticSink: Record);
+                var page = PictureRangeRenderer(mode).RenderPagesAsync(source, Record, default).ToBlockingEnumerable().Single();
+                return (page, source.EquationParts.Sum(part => part.SourceCount), diagnostics);
+            }
+        }
+    }
+
     public static void DocxDisplayRowKeepsCommentRangeThroughDrawing()
     {
         foreach (string container in new[] { "body", "cell" })
