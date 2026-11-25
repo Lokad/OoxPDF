@@ -80,7 +80,7 @@ internal static partial class DocxInlineCompositionTests
         {
             DocxDocument Read(bool insideEquation, bool mathRun, string? type = null, int breakCount = 1, bool proofing = false,
                 bool? bookmarkStartsAfterBreaks = null, string? paginationHint = null, bool packBreaks = false,
-                bool shareOperandRun = false) => ReadMutation(
+                bool shareOperandRun = false, bool trailingMoveRanges = false) => ReadMutation(
                 "CompositionProbes/math-explicit-display-same-group", mode, false, false, (xml, w, m) =>
                 {
                     var group = xml.Descendants(m + "oMathPara").Single();
@@ -130,6 +130,16 @@ internal static partial class DocxInlineCompositionTests
                             new XElement(w + "hyperlink", new XAttribute(w + "anchor", "MathBreakAnchor"),
                                 new XElement(w + "r", new XElement(w + "t", "Go to formula")))));
                     }
+                    if (trailingMoveRanges)
+                    {
+                        foreach (var (kind, id) in new[] { ("moveFrom", "12604"), ("moveTo", "12605") })
+                        {
+                            equations[0].Add(
+                                new XElement(w + (kind + "RangeStart"), new XAttribute(w + "id", id),
+                                    new XAttribute(w + "name", "MathBoundary"), new XAttribute(w + "author", "Editor")),
+                                new XElement(w + (kind + "RangeEnd"), new XAttribute(w + "id", "+0" + id)));
+                        }
+                    }
                 });
 
             var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true), mode,
@@ -157,7 +167,8 @@ internal static partial class DocxInlineCompositionTests
             foreach (bool startsAfterBreaks in new[] { false, true })
             {
                 var control = CheckMathBreaks(Read(false, false, breakCount: 2, bookmarkStartsAfterBreaks: startsAfterBreaks), expectedTwo);
-                var nested = CheckMathBreaks(Read(true, true, breakCount: 2, bookmarkStartsAfterBreaks: startsAfterBreaks), expectedTwo);
+                var nested = CheckMathBreaks(Read(true, true, breakCount: 2, bookmarkStartsAfterBreaks: startsAfterBreaks,
+                    trailingMoveRanges: startsAfterBreaks), expectedTwo);
                 var target = control.Annotations.Single(link => link.IsDestination);
                 TestAssert.Equal(target, nested.Annotations.Single(link => link.IsDestination));
                 if (startsAfterBreaks)
@@ -176,7 +187,8 @@ internal static partial class DocxInlineCompositionTests
                         TestAssert.Equal(target, packed.Annotations.Single(link => link.IsDestination));
                     }
                     var sharedOperand = CheckMathBreaks(Read(true, true, breakCount: 2,
-                        bookmarkStartsAfterBreaks: true, paginationHint: "inside", shareOperandRun: true), expectedTwo);
+                        bookmarkStartsAfterBreaks: true, paginationHint: "inside", shareOperandRun: true,
+                        trailingMoveRanges: true), expectedTwo);
                     TestAssert.True(control.Annotations.SequenceEqual(sharedOperand.Annotations),
                         "Terminal breaks sharing the operand run preserve the link and its destination.");
                 }

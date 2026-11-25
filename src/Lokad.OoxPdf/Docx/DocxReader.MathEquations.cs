@@ -38,7 +38,7 @@ internal sealed partial class DocxReader
             DocxMathParser.IsReadableRun(run, allowsDeletedText, split) ? (run, split) : null;
 
         static bool IsBoundary(XElement element) =>
-            DocxSourceXml.IsNonPrintingMarker(element) ||
+            DocxMathParser.IsNonPrintingSourceMarker(element) ||
             DocxMathParser.IsBookmarkMarker(element) ||
             DocxMathParser.IsCommentBoundary(element) ||
             (element.Name == MathNamespace + "r" &&

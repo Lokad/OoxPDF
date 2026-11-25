@@ -294,7 +294,7 @@ internal static partial class DocxMathParser
         element.Name.Namespace == WordprocessingNamespace &&
         element.Name.LocalName is "commentRangeStart" or "commentRangeEnd" &&
         !element.HasElements && string.IsNullOrWhiteSpace(element.Value);
-    private static bool IsNonPrintingSourceMarker(XElement element) =>
+    internal static bool IsNonPrintingSourceMarker(XElement element) =>
         DocxSourceXml.IsNonPrintingMarker(element) ||
         DocxSourceXml.TryResolveRevisionRangeMarker(element, out _, out _) &&
         DocxSourceXml.IsNonPrintingRevisionRangeBoundary(element);
