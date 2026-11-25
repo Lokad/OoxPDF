@@ -375,7 +375,13 @@ internal sealed partial class PptxRenderer
                 string name = attribute.Name.LocalName;
                 XNamespace ns = attribute.Name.Namespace;
                 bool isXLink = ns.NamespaceName == "http://www.w3.org/1999/xlink";
-                if (isLink && name == "href" && (ns == XNamespace.None || isXLink)) return true;
+                // Link attributes describe the action, not the label's paint.
+                // SVG link actions retain their separate diagnostic.
+                if (isLink && (isXLink
+                    ? name is "href" or "show" or "actuate" or "type" or "role" or "arcrole" or "title"
+                    : ns == XNamespace.None && name is ("href" or "target" or "download" or "ping" or
+                        "rel" or "hreflang" or "type" or "referrerpolicy")))
+                    return true;
                 // Unknown namespaced attributes carry no SVG presentation.
                 if (ns != XNamespace.None) return ns != XNamespace.Xml && !isXLink;
                 return name is "id" or "class" or "role" or "style" ||

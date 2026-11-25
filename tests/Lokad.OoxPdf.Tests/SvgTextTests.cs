@@ -617,14 +617,14 @@ internal static partial class SvgTextTests
             <rect id="marker" x="120" y="90" width="20" height="10" fill="lime"/>
             """);
         const string plainSouth = "&#160;SOUTH";
-        const string modern = """NO<a href="#marker"><tspan>RT</tspan></a><a display="none" transform="translate(200)">INVISIBLE</a>H""";
-        const string legacy = """&#160;SO<tspan><a xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#marker">UT</a></tspan>H""";
+        const string modern = """NO<a href="#marker" target="_blank" rel="noopener" hreflang="en" type="image/svg+xml"><tspan>RT</tspan></a><a display="none" transform="translate(200)">INVISIBLE</a>H""";
+        const string legacy = """&#160;SO<tspan><a xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#marker" xlink:show="new" xlink:actuate="onRequest" xlink:title="Marker">UT</a></tspan>H""";
         var expected = Paint(Picture("NORTH", plainSouth));
         TestAssert.Equal(5, LabelPaths(expected.ToString()));
         TestAssert.Equal(5, LabelPaths(expected.ToString(), "0.067 0.267 0.6 rg"));
         var diagnostics = new List<OoxPdfDiagnostic>();
         var linked = Paint(Picture(modern, legacy), diagnostics);
-        AssertEquivalentSvgPaint(expected, linked, "Plain links preserve their authored glyphs and advances.");
+        AssertEquivalentSvgPaint(expected, linked, "Link action attributes preserve authored glyphs and advances.");
         var warning = diagnostics.Single();
         TestAssert.Equal("SVG_UNSUPPORTED_CONTENT", warning.Id);
         TestAssert.Contains("2 unsupported a elements", warning.Message);
