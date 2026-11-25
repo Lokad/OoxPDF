@@ -622,7 +622,6 @@ internal sealed partial class DocxLayoutEngine
         DocxTableRowLayout row, DocxTableCellClipSnapshot? parent, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        if (row.FragmentCount != 1) yield break;
         foreach (var cell in row.Cells)
         {
             cancellationToken.ThrowIfCancellationRequested();

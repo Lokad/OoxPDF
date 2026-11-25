@@ -2384,6 +2384,23 @@ internal sealed partial class DocxLayoutEngine
             IReadOnlyList<DocxTextLineLayout> textLines = ownedLines
                 .Where(line => IsTextLineVisibleInCellFragmentGeometry(line, fragmentContentY, fragmentContentHeight, FragmentIndex, FragmentCount))
                 .ToArray();
+            if (FragmentCount > 1 && drawingAnchors.Count != 0)
+            {
+                // The first admitted line owns the drawing, even when the
+                // paragraph itself continues in another physical fragment.
+                var owners = new HashSet<DocxParagraphDrawingOwner>();
+                foreach (var line in textLines)
+                {
+                    tableContext.CancellationToken.ThrowIfCancellationRequested();
+                    if (line is { IsFirstParagraphLine: true, SourceParagraph: { } paragraph })
+                        owners.UnionWith(paragraph.DrawingOwners);
+                }
+                drawingAnchors = drawingAnchors.Where(anchor => owners.Contains(anchor.Owner)).Select(anchor =>
+                {
+                    var placed = anchor.TranslateY(fragmentBaselineCorrection);
+                    return placed with { Bottom = Math.Max(fragmentContentY, placed.Bottom) };
+                }).ToArray();
+            }
             IReadOnlyList<DocxInlineImageLayout> inlineImages = cellPlacedImages
                 .Where(image => VerticalOverlap(image.Y, image.Height, fragmentContentY, fragmentContentHeight) > 0.001d)
                 .ToArray();

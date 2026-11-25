@@ -722,6 +722,29 @@ internal static class DocxSectionNavigationTests
                 "Putting a 96-point row before the owning paragraph moves the box with it.");
             CheckBox(split[1], split[0], 1);
 
+            double earlyOffset = CheckFragment(ownerIndex: 1, pageIndex: 0);
+            double lateOffset = CheckFragment(ownerIndex: 13, pageIndex: 1);
+            double continuingOffset = CheckFragment(ownerIndex: 3, pageIndex: 0, lastOwnerLine: 14);
+            TestAssert.True(Math.Abs(earlyOffset - lateOffset) < .01d,
+                "The drawing keeps its offset from the owning paragraph across fragments of the same row.");
+            TestAssert.True(Math.Abs(earlyOffset - continuingOffset) < .01d,
+                "A paragraph that continues on the next page keeps its drawing with its first line.");
+
+            double CheckFragment(int ownerIndex, int pageIndex, int? lastOwnerLine = null)
+            {
+                PdfPage[] fragments = Render(ownerFirst: false, adjacentHeight: 0, fragmentOwnerIndex: ownerIndex, lastOwnerLine: lastOwnerLine);
+                TestAssert.Equal(2, fragments.Length);
+                TestAssert.Contains("ROW PARAGRAPH 00", Text(fragments[0]));
+                TestAssert.Contains("ROW PARAGRAPH 16", Text(fragments[1]));
+                if (lastOwnerLine is int line) TestAssert.Contains($"ROW PARAGRAPH {line:D2}", Text(fragments[1]));
+                TestAssert.DoesNotContain(ownerLabel, Text(fragments[1 - pageIndex]));
+                TestAssert.DoesNotContain(north, Text(fragments[1 - pageIndex]));
+                TestAssert.DoesNotContain("BOX TABLE SOUTH", Text(fragments[1 - pageIndex]));
+                PdfPage ownerPage = fragments[pageIndex];
+                float boxY = CheckBox(ownerPage, fragments[0], pageIndex);
+                return boxY - PortableRenderingTests.ReadPaintedSourceLabel(ownerPage, ownerLabel)[0].Origin.Y;
+            }
+
             float CheckBox(PdfPage boxPage, PdfPage jumpPage, int pageIndex)
             {
                 DocxInlineCompositionTests.AssertSourceLabelsPaint(boxPage, mode, [north, "BOX TABLE SOUTH"], "body cell");
@@ -733,7 +756,7 @@ internal static class DocxSectionNavigationTests
                 return ink[0].Origin.Y;
             }
 
-            PdfPage[] Render(bool ownerFirst, int adjacentHeight)
+            PdfPage[] Render(bool ownerFirst, int adjacentHeight, int? fragmentOwnerIndex = null, int? lastOwnerLine = null)
             {
                 PdfPage[]? pages = null;
                 WithDocumentMutation(fixture, (_, xml) =>
@@ -747,12 +770,33 @@ internal static class DocxSectionNavigationTests
                     position.Element(wp + "posOffset")!.SetValue(16 * 12700);
                     var owner = Paragraph(ownerLabel);
                     owner.Add(new XElement(anchor.Ancestors(W + "r").First()));
-                    XElement owningRow = Row(owner, 96);
-                    XElement adjacentRow = Row(Paragraph("ADJACENT ROW LABEL"), adjacentHeight);
                     var table = new XElement(W + "tbl",
                         new XElement(W + "tblPr", new XElement(W + "tblLayout", new XAttribute(W + "type", "fixed"))),
-                        new XElement(W + "tblGrid", new XElement(W + "gridCol", new XAttribute(W + "w", "6000"))),
-                        ownerFirst ? owningRow : adjacentRow, ownerFirst ? adjacentRow : owningRow);
+                        new XElement(W + "tblGrid", new XElement(W + "gridCol", new XAttribute(W + "w", "6000"))));
+                    if (fragmentOwnerIndex is int ownerIndex)
+                    {
+                        var cell = Cell();
+                        for (int index = 0; index < 17; index++)
+                        {
+                            if (index > ownerIndex && index <= lastOwnerLine)
+                            {
+                                owner.Add(new XElement(W + "r", new XElement(W + "br"), new XElement(W + "t", $"ROW PARAGRAPH {index:D2}")));
+                                continue;
+                            }
+                            XElement paragraph = index == ownerIndex ? owner : Paragraph($"ROW PARAGRAPH {index:D2}");
+                            paragraph.AddFirst(new XElement(W + "pPr", new XElement(W + "spacing",
+                                new XAttribute(W + "before", "0"), new XAttribute(W + "after", "0"),
+                                new XAttribute(W + "line", "400"), new XAttribute(W + "lineRule", "exact"))));
+                            cell.Add(paragraph);
+                        }
+                        table.Add(new XElement(W + "tr", cell));
+                    }
+                    else
+                    {
+                        XElement owningRow = Row(owner, 96);
+                        XElement adjacentRow = Row(Paragraph("ADJACENT ROW LABEL"), adjacentHeight);
+                        table.Add(ownerFirst ? owningRow : adjacentRow, ownerFirst ? adjacentRow : owningRow);
+                    }
                     body.ReplaceNodes(jump, table, new XElement(W + "sectPr",
                         new XElement(W + "pgSz", new XAttribute(W + "w", "12240"), new XAttribute(W + "h", "6000")),
                         new XElement(W + "pgMar", new XAttribute(W + "top", "480"), new XAttribute(W + "bottom", "480"),
@@ -765,8 +809,10 @@ internal static class DocxSectionNavigationTests
             static XElement Row(XElement paragraph, int height) => new(W + "tr",
                 new XElement(W + "trPr", new XElement(W + "cantSplit"),
                     new XElement(W + "trHeight", new XAttribute(W + "val", height * 20), new XAttribute(W + "hRule", "exact"))),
-                new XElement(W + "tc", new XElement(W + "tcPr",
-                    new XElement(W + "tcW", new XAttribute(W + "w", "6000"), new XAttribute(W + "type", "dxa"))), paragraph));
+                Cell(paragraph));
+
+            static XElement Cell(params XElement[] paragraphs) => new(W + "tc", new XElement(W + "tcPr",
+                new XElement(W + "tcW", new XAttribute(W + "w", "6000"), new XAttribute(W + "type", "dxa"))), paragraphs);
         }
     }
 
