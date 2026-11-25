@@ -98,7 +98,8 @@ internal static class PptxDiagnosticsTests
 
         PdfPage Render(string masterPart)
         {
-            using var input = CreatePlaceholderDeck(masterPart, EmptyPlaceholderSlide, EmptyPlaceholderSlide);
+            using var input = TestFixtures.CreateZipPackage(
+                PptxTests.InheritedShapePackageEntries(masterPart, EmptyPlaceholderSlide, EmptyPlaceholderSlide));
             using var package = OoxPackage.Open(input, default);
             var document = new PptxReader().Read(package, default);
             return renderer.RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().Single();
@@ -133,7 +134,7 @@ internal static class PptxDiagnosticsTests
             </p:sld>
             """;
         var resolver = new PortableRenderingTests.PinnedResolver();
-        using var input = CreatePlaceholderDeck(master, layout, slide);
+        using var input = TestFixtures.CreateZipPackage(PptxTests.InheritedShapePackageEntries(master, layout, slide));
         using var package = OoxPackage.Open(input, default);
         PptxDocument document = new PptxReader().Read(package, default);
         PdfPage page = new PptxRenderer(resolver).RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().Single();
@@ -155,40 +156,6 @@ internal static class PptxDiagnosticsTests
         <?xml version="1.0" encoding="UTF-8"?>
         <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:cSld><p:spTree/></p:cSld></p:sld>
         """;
-
-    private static MemoryStream CreatePlaceholderDeck(string master, string layout, string slide) =>
-        TestFixtures.CreateZipPackage(new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-                  <Default Extension="xml" ContentType="application/xml"/>
-                  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
-                  <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
-                  <Override PartName="/ppt/slideLayouts/slideLayout1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"/>
-                  <Override PartName="/ppt/slideMasters/slideMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"/>
-                </Types>
-                """,
-            ["_rels/.rels"] = PptxTests.PackageRelationship(),
-            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
-            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
-            ["ppt/slides/_rels/slide1.xml.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/>
-                </Relationships>
-                """,
-            ["ppt/slideLayouts/_rels/slideLayout1.xml.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="../slideMasters/slideMaster1.xml"/>
-                </Relationships>
-                """,
-            ["ppt/slideMasters/slideMaster1.xml"] = master,
-            ["ppt/slideLayouts/slideLayout1.xml"] = layout,
-            ["ppt/slides/slide1.xml"] = slide
-        });
 
     public static void PptxUnsupportedMediaDiagnosticsUseScenePictureState()
     {

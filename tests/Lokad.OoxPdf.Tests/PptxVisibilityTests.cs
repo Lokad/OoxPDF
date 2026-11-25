@@ -366,38 +366,10 @@ internal static class PptxVisibilityTests
             slide = slide.Replace("<p:sld ", "<p:sld showMasterSp=\"" + showMasterSp + "\" ");
         }
 
-        return TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-                  <Default Extension="xml" ContentType="application/xml"/>
-                  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
-                  <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
-                  <Override PartName="/ppt/slideLayouts/slideLayout1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"/>
-                  <Override PartName="/ppt/slideMasters/slideMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"/>
-                </Types>
-                """,
-            ["_rels/.rels"] = PptxTests.PackageRelationship(),
-            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
-            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
-            ["ppt/slides/_rels/slide1.xml.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/>
-                </Relationships>
-                """,
-            ["ppt/slideLayouts/_rels/slideLayout1.xml.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="../slideMasters/slideMaster1.xml"/>
-                </Relationships>
-                """,
-            ["ppt/slideMasters/slideMaster1.xml"] = AddText(PptxTests.InheritedShapePart("FF0000", 914400, 914400), "Master text"),
-            ["ppt/slideLayouts/slideLayout1.xml"] = AddText(PptxTests.InheritedShapePart("00FF00", 1828800, 1828800), "Layout text"),
-            ["ppt/slides/slide1.xml"] = AddText(slide, "Slide text")
-        });
+        return TestFixtures.WriteTempPackage(".pptx", PptxTests.InheritedShapePackageEntries(
+            AddText(PptxTests.InheritedShapePart("FF0000", 914400, 914400), "Master text"),
+            AddText(PptxTests.InheritedShapePart("00FF00", 1828800, 1828800), "Layout text"),
+            AddText(slide, "Slide text")));
 
         string AddText(string xml, string text) => withText
             ? xml.Replace("</p:spPr>", "</p:spPr><p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz=\"1200\"><a:latin typeface=\"Arial\"/></a:rPr><a:t>" + text + "</a:t></a:r></a:p></p:txBody>", StringComparison.Ordinal)
