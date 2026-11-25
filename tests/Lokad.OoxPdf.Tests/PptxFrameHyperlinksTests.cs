@@ -1,9 +1,6 @@
-using System.Text;
 using Lokad.OoxPdf.Diagnostics;
-using Lokad.OoxPdf.Fonts;
-using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pdf;
-using Lokad.OoxPdf.Pptx;
+using static Lokad.OoxPdf.Tests.PptxHyperlinksTests;
 
 namespace Lokad.OoxPdf.Tests;
 
@@ -11,25 +8,56 @@ internal static class PptxFrameHyperlinksTests
 {
     public static void PptxTableFrameHyperlinkSitsBelowCellRunLinks()
     {
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        string input = WriteLinkedCellTable(linkFrame: true);
+        var (pages, diagnostics) = RenderSlidePages(input, new PortableRenderingTests.PinnedResolver());
+
+        PdfPage page = pages.Single();
+        TestAssert.Equal(2, page.Annotations.Count);
+        var frame = page.Annotations[0];
+        TestAssert.Equal("https://example.invalid/table", frame.Uri);
+        TestAssert.Equal(72d, frame.X);
+        TestAssert.Equal(396d, frame.Y);
+        TestAssert.Equal(144d, frame.Width);
+        TestAssert.Equal(72d, frame.Height);
+
+        var cell = page.Annotations[1];
+        TestAssert.Equal("https://example.invalid/cell", cell.Uri);
+        TestAssert.True(cell.X >= frame.X && cell.X + cell.Width <= frame.X + frame.Width &&
+            cell.Y >= frame.Y && cell.Y + cell.Height <= frame.Y + frame.Height &&
+            cell.Width < frame.Width && cell.Height < frame.Height,
+            "The cell link occupies its own area within the frame link.");
+        var glyphs = PortableRenderingTests.ReadPaintedSourceLabel(page, "Cell");
+        TestAssert.Equal(4, glyphs.Count);
+        TestAssert.True(glyphs.All(glyph => glyph.Ink.X >= cell.X - .01d &&
+            glyph.Ink.X + glyph.Ink.Width <= cell.X + cell.Width + .01d &&
+            glyph.Ink.Y >= cell.Y - .01d && glyph.Ink.Y + glyph.Ink.Height <= cell.Y + cell.Height + .01d),
+            "The cell link covers all four painted letters.");
+        TestAssert.True(diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_HYPERLINK" && d.Id != "PPTX_UNSUPPORTED_HYPERLINK_ACTION"), "Resolvable frame and cell links should not emit hyperlink diagnostics.");
+    }
+
+    internal static string WriteLinkedCellTable(bool linkFrame)
+    {
+        const string frameRelationship = """<Relationship Id="rIdFrameLink" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.invalid/table" TargetMode="External"/>""";
+        const string frameProperties = """<p:nvGraphicFramePr><p:cNvPr id="6" name="LinkedTable"><a:hlinkClick r:id="rIdFrameLink"/></p:cNvPr><p:nvPr/></p:nvGraphicFramePr>""";
+        return TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
         {
             ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
             ["_rels/.rels"] = PptxTests.PackageRelationship(),
             ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
             ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
-            ["ppt/slides/_rels/slide1.xml.rels"] = """
+            ["ppt/slides/_rels/slide1.xml.rels"] = $$"""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rIdFrameLink" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.invalid/table" TargetMode="External"/>
+                  {{(linkFrame ? frameRelationship : "")}}
                   <Relationship Id="rIdCellLink" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.invalid/cell" TargetMode="External"/>
                 </Relationships>
                 """,
-            ["ppt/slides/slide1.xml"] = """
+            ["ppt/slides/slide1.xml"] = $$"""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
                   <p:cSld><p:spTree>
                     <p:graphicFrame>
-                      <p:nvGraphicFramePr><p:cNvPr id="6" name="LinkedTable"><a:hlinkClick r:id="rIdFrameLink"/></p:cNvPr><p:nvPr/></p:nvGraphicFramePr>
+                      {{(linkFrame ? frameProperties : "")}}
                       <p:xfrm><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="914400"/></p:xfrm>
                       <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table"><a:tbl>
                         <a:tblGrid><a:gridCol w="1828800"/></a:tblGrid>
@@ -43,18 +71,6 @@ internal static class PptxFrameHyperlinksTests
                 </p:sld>
                 """
         });
-
-        (List<PdfPage> pages, List<OoxPdfDiagnostic> diagnostics) = RenderSlidePages(input);
-
-        PdfLinkAnnotation[] annotations = pages.Single().Annotations.ToArray();
-        TestAssert.Equal(2, annotations.Length);
-        TestAssert.Equal("https://example.invalid/table", annotations[0].Uri);
-        TestAssert.Equal(72d, annotations[0].X);
-        TestAssert.Equal(396d, annotations[0].Y);
-        TestAssert.Equal(144d, annotations[0].Width);
-        TestAssert.Equal(72d, annotations[0].Height);
-        TestAssert.Equal("https://example.invalid/cell", annotations[1].Uri);
-        TestAssert.True(diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_HYPERLINK" && d.Id != "PPTX_UNSUPPORTED_HYPERLINK_ACTION"), "Resolvable frame and cell links should not emit hyperlink diagnostics.");
     }
 
     public static void PptxChartFrameHyperlinkEmitsUriAnnotation()
@@ -100,7 +116,7 @@ internal static class PptxFrameHyperlinksTests
                 """)
         });
 
-        (IReadOnlyList<PdfPage> pages, List<OoxPdfDiagnostic> diagnostics) = RenderSlidePages(input);
+        (IReadOnlyList<PdfPage> pages, List<OoxPdfDiagnostic> diagnostics) = RenderSlidePages(input, new TestFaceFontResolver());
 
         PdfLinkAnnotation annotation = pages.Single().Annotations.Single();
         TestAssert.Equal("https://example.invalid/chart", annotation.Uri);
@@ -139,7 +155,7 @@ internal static class PptxFrameHyperlinksTests
                 """
         });
 
-        (IReadOnlyList<PdfPage> pages, _) = RenderSlidePages(input);
+        (IReadOnlyList<PdfPage> pages, _) = RenderSlidePages(input, new TestFaceFontResolver());
 
         PdfLinkAnnotation annotation = pages.Single().Annotations.Single();
         TestAssert.Equal("https://example.invalid/frame", annotation.Uri);
@@ -147,30 +163,5 @@ internal static class PptxFrameHyperlinksTests
         TestAssert.Equal(396d, annotation.Y);
         TestAssert.Equal(144d, annotation.Width);
         TestAssert.Equal(72d, annotation.Height);
-    }
-
-    private sealed class LinkTestFontResolver : IFontResolver
-    {
-        private readonly byte[] fontBytes = TestFontBuilder.CreateTestFont();
-
-        public FontFaceResolution Resolve(FontRequest request)
-        {
-            return new FontFaceResolution(
-                request.FamilyName,
-                "LinkTestFont",
-                new FontStyleKey(request.Bold, request.Italic, request.Bold ? 700 : 400, 0, false),
-                new MemoryFontProgramSource("link-test-font", fontBytes),
-                IsFallback: false);
-        }
-    }
-
-    private static (List<PdfPage> Pages, List<OoxPdfDiagnostic> Diagnostics) RenderSlidePages(string input)
-    {
-        using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
-        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
-        var diagnostics = new List<OoxPdfDiagnostic>();
-        List<PdfPage> pages = new PptxRenderer(new LinkTestFontResolver()).RenderPagesAsync(document, package, diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().ToList();
-        return (pages, diagnostics);
     }
 }

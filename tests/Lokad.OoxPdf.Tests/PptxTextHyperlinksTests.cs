@@ -59,14 +59,14 @@ internal static partial class PptxTextHyperlinksTests
             paragraphXml: """<a:p><a:r><a:rPr sz="1800"><a:latin typeface="Link Sans"/><a:hlinkClick r:id="rIdRunLink"/></a:rPr><a:t>Link</a:t></a:r></a:p>""",
             slideRelsXml: """<Relationship Id="rIdRunLink" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.invalid/run" TargetMode="External"/>""");
 
-        foreach (IFontResolver resolver in new IFontResolver[] { new LinkTestFontResolver(), new MissingTestFontResolver() })
+        foreach (IFontResolver resolver in new IFontResolver[] { new TestFaceFontResolver(), new MissingTestFontResolver() })
         {
             (List<PdfPage> pages, List<OoxPdfDiagnostic> diagnostics) = RenderSlidePages(input, resolver);
 
             PdfLinkAnnotation annotation = pages.Single().Annotations.Single();
             TestAssert.Equal("https://example.invalid/run", annotation.Uri);
             TestAssert.True(annotation.Width > 0d, "Run hyperlink annotations should cover the linked text width.");
-            TestAssert.True(Math.Abs((resolver is LinkTestFontResolver ? 19.8d : 16.65d) - annotation.Height) < 1e-6d, $"Run hyperlink height should follow the emitted font ascent/descent box, got {annotation.Height}.");
+            TestAssert.True(Math.Abs((resolver is TestFaceFontResolver ? 19.8d : 16.65d) - annotation.Height) < 1e-6d, $"Run hyperlink height should follow the emitted font ascent/descent box, got {annotation.Height}.");
             TestAssert.True(annotation.X >= 72d && annotation.X + annotation.Width <= 72d + 432d, "Run hyperlink X extent should stay inside the shape bounds.");
             TestAssert.True(annotation.Y >= 396d && annotation.Y + annotation.Height <= 396d + 72d, "Run hyperlink Y extent should stay inside the shape bounds.");
             TestAssert.True(diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_HYPERLINK" && d.Id != "PPTX_UNSUPPORTED_HYPERLINK_ACTION"), "A resolvable run hyperlink should not emit hyperlink diagnostics.");
@@ -83,7 +83,7 @@ internal static partial class PptxTextHyperlinksTests
             slideRelsXml: """<Relationship Id="rIdLink1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.invalid/first" TargetMode="External"/>""" +
                 """<Relationship Id="rIdLink2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.invalid/second" TargetMode="External"/>""");
 
-        foreach (IFontResolver resolver in new IFontResolver[] { new LinkTestFontResolver(), new MissingTestFontResolver() })
+        foreach (IFontResolver resolver in new IFontResolver[] { new TestFaceFontResolver(), new MissingTestFontResolver() })
         {
             (IReadOnlyList<PdfPage> pages, _) = RenderSlidePages(input, resolver);
 
@@ -111,12 +111,12 @@ internal static partial class PptxTextHyperlinksTests
             </p:sp>
             """);
 
-        foreach (IFontResolver resolver in new IFontResolver[] { new LinkTestFontResolver(), new MissingTestFontResolver() })
+        foreach (IFontResolver resolver in new IFontResolver[] { new TestFaceFontResolver(), new MissingTestFontResolver() })
         {
             (IReadOnlyList<PdfPage> pages, List<OoxPdfDiagnostic> diagnostics) = RenderSlidePages(input, resolver);
 
             TestAssert.Equal(2, pages.Count);
-            if (resolver is LinkTestFontResolver)
+            if (resolver is TestFaceFontResolver)
                 TestAssert.True(pages[0].Fonts.Count > 0, "The embedded-font control must embed its linked text font.");
             PdfLinkAnnotation annotation = pages[0].Annotations.Single();
             TestAssert.True(annotation.Uri is null, "An internal run hyperlink should not carry a URI target.");
@@ -135,7 +135,7 @@ internal static partial class PptxTextHyperlinksTests
                 """<a:r><a:rPr sz="1800"><a:latin typeface="Link Sans"/><a:hlinkClick r:id="rIdMissing"/></a:rPr><a:t>C</a:t></a:r></a:p>""",
             slideRelsXml: string.Empty);
 
-        foreach (IFontResolver resolver in new IFontResolver[] { new LinkTestFontResolver(), new MissingTestFontResolver() })
+        foreach (IFontResolver resolver in new IFontResolver[] { new TestFaceFontResolver(), new MissingTestFontResolver() })
         {
             (IReadOnlyList<PdfPage> pages, List<OoxPdfDiagnostic> diagnostics) = RenderSlidePages(input, resolver);
 
@@ -147,45 +147,16 @@ internal static partial class PptxTextHyperlinksTests
 
     public static void PptxTableCellRunHyperlinkEmitsUriAnnotation()
     {
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
-            ["_rels/.rels"] = PptxTests.PackageRelationship(),
-            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
-            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
-            ["ppt/slides/_rels/slide1.xml.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rIdCellLink" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.invalid/cell" TargetMode="External"/>
-                </Relationships>
-                """,
-            ["ppt/slides/slide1.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-                  <p:cSld><p:spTree>
-                    <p:graphicFrame>
-                      <p:xfrm><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="914400"/></p:xfrm>
-                      <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table"><a:tbl>
-                        <a:tblGrid><a:gridCol w="1828800"/></a:tblGrid>
-                        <a:tr h="914400"><a:tc>
-                          <a:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="1800"><a:latin typeface="Link Sans"/><a:hlinkClick r:id="rIdCellLink"/></a:rPr><a:t>Cell</a:t></a:r></a:p></a:txBody>
-                          <a:tcPr/>
-                        </a:tc></a:tr>
-                      </a:tbl></a:graphicData></a:graphic>
-                    </p:graphicFrame>
-                  </p:spTree></p:cSld>
-                </p:sld>
-                """
-        });
+        string input = PptxFrameHyperlinksTests.WriteLinkedCellTable(linkFrame: false);
 
-        foreach (IFontResolver resolver in new IFontResolver[] { new LinkTestFontResolver(), new MissingTestFontResolver() })
+        foreach (IFontResolver resolver in new IFontResolver[] { new TestFaceFontResolver(), new MissingTestFontResolver() })
         {
             (IReadOnlyList<PdfPage> pages, List<OoxPdfDiagnostic> diagnostics) = RenderSlidePages(input, resolver);
 
             PdfLinkAnnotation annotation = pages.Single().Annotations.Single();
             TestAssert.Equal("https://example.invalid/cell", annotation.Uri);
             TestAssert.True(annotation.Width > 0d, "Table-cell hyperlink annotations should cover the linked text width.");
-            TestAssert.True(Math.Abs((resolver is LinkTestFontResolver ? 19.8d : 16.65d) - annotation.Height) < 1e-6d, $"Table-cell hyperlink height should follow the emitted font ascent/descent box, got {annotation.Height}.");
+            TestAssert.True(Math.Abs((resolver is TestFaceFontResolver ? 19.8d : 16.65d) - annotation.Height) < 1e-6d, $"Table-cell hyperlink height should follow the emitted font ascent/descent box, got {annotation.Height}.");
             TestAssert.True(annotation.X >= 72d && annotation.X + annotation.Width <= 72d + 144d, "Table-cell hyperlink X extent should stay inside the table frame.");
             TestAssert.True(diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_HYPERLINK" && d.Id != "PPTX_UNSUPPORTED_HYPERLINK_ACTION"), "A resolvable table-cell hyperlink should not emit hyperlink diagnostics.");
         }
@@ -197,7 +168,7 @@ internal static partial class PptxTextHyperlinksTests
             paragraphXml: """<a:p><a:r><a:rPr sz="1800"><a:latin typeface="Link Sans"/><a:hlinkClick action="ppaction://hlinkshowjump"/></a:rPr><a:t>Action</a:t></a:r></a:p>""",
             slideRelsXml: string.Empty);
 
-        foreach (IFontResolver resolver in new IFontResolver[] { new LinkTestFontResolver(), new MissingTestFontResolver() })
+        foreach (IFontResolver resolver in new IFontResolver[] { new TestFaceFontResolver(), new MissingTestFontResolver() })
         {
             (IReadOnlyList<PdfPage> pages, List<OoxPdfDiagnostic> diagnostics) = RenderSlidePages(input, resolver);
 
@@ -238,7 +209,7 @@ internal static partial class PptxTextHyperlinksTests
                 """
         });
 
-        foreach (IFontResolver resolver in new IFontResolver[] { new LinkTestFontResolver(), new MissingTestFontResolver() })
+        foreach (IFontResolver resolver in new IFontResolver[] { new TestFaceFontResolver(), new MissingTestFontResolver() })
         {
             (IReadOnlyList<PdfPage> pages, _) = RenderSlidePages(input, resolver);
 
@@ -285,21 +256,6 @@ internal static partial class PptxTextHyperlinksTests
                 </p:sld>
                 """
         };
-    }
-
-    private sealed class LinkTestFontResolver : IFontResolver
-    {
-        private readonly byte[] fontBytes = TestFontBuilder.CreateTestFont();
-
-        public FontFaceResolution Resolve(FontRequest request)
-        {
-            return new FontFaceResolution(
-                request.FamilyName,
-                "LinkTestFont",
-                new FontStyleKey(request.Bold, request.Italic, request.Bold ? 700 : 400, 0, false),
-                new MemoryFontProgramSource("link-test-font", fontBytes),
-                IsFallback: false);
-        }
     }
 
     private static (List<PdfPage> Pages, List<OoxPdfDiagnostic> Diagnostics) RenderSlidePages(string input, IFontResolver fontResolver)
