@@ -271,7 +271,7 @@ internal sealed partial class DocxLayoutEngine
         var images = new List<DocxInlineImageLayout>();
         var tableRows = new List<DocxTableRowLayout>();
         var boxes = new List<DocxInlineTextBoxLayout>();
-        Dictionary<DocxStaticDrawingOwner, DocxPlacedDrawingAnchor>? drawingAnchors = null;
+        Dictionary<DocxParagraphDrawingOwner, DocxPlacedDrawingAnchor>? drawingAnchors = null;
         double cursorY = startY;
         double pendingSpacingAfter = 0d;
         DocxParagraph? previousParagraph = null;
@@ -684,7 +684,7 @@ internal sealed partial class DocxLayoutEngine
 
             void RecordDrawingAnchor()
             {
-                foreach (var owner in paragraph.StaticDrawingOwners)
+                foreach (var owner in paragraph.DrawingOwners)
                     (drawingAnchors ??= new()).Add(owner, new(owner, paragraphTop, cursorY));
             }
         }

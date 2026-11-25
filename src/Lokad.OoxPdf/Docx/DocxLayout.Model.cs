@@ -364,7 +364,7 @@ internal sealed record DocxTableCellLayout(
             : Cell;
 }
 
-internal readonly record struct DocxPlacedDrawingAnchor(DocxStaticDrawingOwner Owner, double Top, double Bottom)
+internal readonly record struct DocxPlacedDrawingAnchor(DocxParagraphDrawingOwner Owner, double Top, double Bottom)
 {
     public DocxPlacedDrawingAnchor TranslateY(double delta) => new(Owner, Top + delta, Bottom + delta);
 

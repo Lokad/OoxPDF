@@ -492,12 +492,18 @@ internal sealed partial class DocxLayoutEngine
     {
         var layouts = new DocxFloatingDrawingLayout[drawings.Count];
         IReadOnlyDictionary<int, DocxLayoutSourceBlockBounds>? sourceBlocks = null;
+        Dictionary<DocxParagraphDrawingOwner, DocxLayoutSourceBlockBounds>? cellAnchors = null;
         for (int i = 0; i < drawings.Count; i++)
         {
             cancellationToken.ThrowIfCancellationRequested();
             DocxFloatingDrawing drawing = drawings[i];
             DocxLayoutSourceBlockBounds? sourceBlock = null;
-            if ((drawing.LayoutBlockIndex ?? drawing.SourceBlockIndex) is { } blockIndex)
+            if (drawing.ParagraphOwner is { } owner)
+            {
+                cellAnchors ??= IndexBodyCellDrawingAnchors(pages, cancellationToken);
+                cellAnchors.TryGetValue(owner, out sourceBlock);
+            }
+            if (sourceBlock is null && (drawing.LayoutBlockIndex ?? drawing.SourceBlockIndex) is { } blockIndex)
             {
                 sourceBlocks ??= BuildSourceBlockIndex(pages, cancellationToken);
                 sourceBlocks.TryGetValue(blockIndex, out sourceBlock);
@@ -526,6 +532,26 @@ internal sealed partial class DocxLayoutEngine
         return layouts;
     }
 
+    private static Dictionary<DocxParagraphDrawingOwner, DocxLayoutSourceBlockBounds> IndexBodyCellDrawingAnchors(
+        IReadOnlyList<DocxLayoutPage> pages, CancellationToken cancellationToken)
+    {
+        var anchors = new Dictionary<DocxParagraphDrawingOwner, DocxLayoutSourceBlockBounds>();
+        for (int pageIndex = 0; pageIndex < pages.Count; pageIndex++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var page = pages[pageIndex];
+            foreach (var item in page.Items)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (item is not DocxTableRowLayout row) continue;
+                int? column = ResolveItemColumnIndex(page, row);
+                foreach (var (anchor, _, _) in EnumerateCellDrawingAnchors(row, null, cancellationToken))
+                    anchors.TryAdd(anchor.Owner, new(pageIndex, pageIndex, column, column, anchor.Top, anchor.Bottom));
+            }
+        }
+        return anchors;
+    }
+
     private static IEnumerable<DocxFloatingDrawingLayout> CreateStaticFloatingDrawingLayouts(
         DocxSelectedStaticDrawings selectedDrawings,
         DocxStoryId story,
@@ -540,14 +566,14 @@ internal sealed partial class DocxLayoutEngine
         IDocxTextMeasurer? unscaledTextMeasurer,
         IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations)
     {
-        Dictionary<DocxStaticDrawingOwner, (DocxPlacedDrawingAnchor Anchor, DocxStaticAnchorY Frame, PdfRectangle Clip)>? cellAnchors = null;
+        Dictionary<DocxParagraphDrawingOwner, (DocxPlacedDrawingAnchor Anchor, DocxStaticAnchorY Frame, PdfRectangle Clip)>? cellAnchors = null;
         foreach (DocxFloatingDrawing drawing in selectedDrawings.Drawings)
         {
             cancellationToken.ThrowIfCancellationRequested();
             DocxLayoutSourceBlockBounds? sourceBlock = null;
             DocxStaticAnchorY? anchorY = null;
             PdfRectangle? cellClip = null;
-            if (drawing.StaticOwner is { } owner && placedStory is not null)
+            if (drawing.ParagraphOwner is { } owner && placedStory is not null)
             {
                 if (placedStory.DrawingAnchors is { } anchors && anchors.TryGetValue(owner, out var anchor))
                 {
@@ -559,7 +585,11 @@ internal sealed partial class DocxLayoutEngine
                     if (cellAnchors is null)
                     {
                         cellAnchors = new();
-                        IndexCellAnchors(placedStory.TableRows, null);
+                        foreach (var row in placedStory.TableRows)
+                        foreach (var (cellAnchor, clip, physicalY) in EnumerateCellDrawingAnchors(row, null, cancellationToken))
+                            cellAnchors.TryAdd(cellAnchor.Owner, (cellAnchor,
+                                physicalY ? DocxStaticAnchorY.Physical : DocxStaticAnchorY.Text,
+                                new(clip.X, clip.Y, clip.Width, clip.Height)));
                     }
                     if (cellAnchors.TryGetValue(owner, out var cell))
                     {
@@ -586,31 +616,29 @@ internal sealed partial class DocxLayoutEngine
                 unscaledTextMeasurer: unscaledTextMeasurer,
                 mathEquations: mathEquations) with { StaticAnchorY = anchorY, StaticCellClip = cellClip };
         }
+    }
 
-        void IndexCellAnchors(IReadOnlyList<DocxTableRowLayout> rows, DocxTableCellClipSnapshot? parent)
+    private static IEnumerable<(DocxPlacedDrawingAnchor Anchor, DocxTableCellClipSnapshot Clip, bool PhysicalY)> EnumerateCellDrawingAnchors(
+        DocxTableRowLayout row, DocxTableCellClipSnapshot? parent, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (row.FragmentCount != 1) yield break;
+        foreach (var cell in row.Cells)
         {
-            foreach (var row in rows)
+            cancellationToken.ThrowIfCancellationRequested();
+            if (cell.VisualOwnership != DocxTableCellVisualOwnership.OwnCell) continue;
+            var clip = DocxTableCellClipGeometry.Resolve(row, cell, parent);
+            if (!(clip.Width > 0d && clip.Height > 0d)) continue;
+            foreach (var anchor in cell.DrawingAnchors)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (row.FragmentCount != 1) continue;
-                foreach (var cell in row.Cells)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    if (cell.VisualOwnership != DocxTableCellVisualOwnership.OwnCell)
-                        continue;
-                    var clip = DocxTableCellClipGeometry.Resolve(row, cell, parent);
-                    if (!(clip.Width > 0d && clip.Height > 0d)) continue;
-                    var frame = row.StaticStoryUsesPhysicalY ? DocxStaticAnchorY.Physical : DocxStaticAnchorY.Text;
-                    var viewport = new PdfRectangle(clip.X, clip.Y, clip.Width, clip.Height);
-                    foreach (var anchor in cell.DrawingAnchors)
-                    {
-                        if (double.IsFinite(anchor.Top) && double.IsFinite(anchor.Bottom) && anchor.Top >= anchor.Bottom &&
-                            anchor.Top >= clip.Y - .000001d && anchor.Bottom <= clip.Y + clip.Height + .000001d)
-                            cellAnchors!.TryAdd(anchor.Owner, (anchor, frame, viewport));
-                    }
-                    IndexCellAnchors(cell.NestedRows, clip);
-                }
+                if (double.IsFinite(anchor.Top) && double.IsFinite(anchor.Bottom) && anchor.Top >= anchor.Bottom &&
+                    anchor.Top >= clip.Y - .000001d && anchor.Bottom <= clip.Y + clip.Height + .000001d)
+                    yield return (anchor, clip, row.StaticStoryUsesPhysicalY);
             }
+            foreach (var nested in cell.NestedRows)
+                foreach (var anchor in EnumerateCellDrawingAnchors(nested, clip, cancellationToken))
+                    yield return anchor;
         }
     }
 
@@ -1096,7 +1124,7 @@ internal sealed partial class DocxLayoutEngine
         public double? MappedFooterContentTop { get; init; }
         public double? PhysicalFooterFrameTop { get; init; }
         public double? PhysicalHeaderFrameBottom { get; init; }
-        public IReadOnlyDictionary<DocxStaticDrawingOwner, DocxPlacedDrawingAnchor>? DrawingAnchors { get; init; }
+        public IReadOnlyDictionary<DocxParagraphDrawingOwner, DocxPlacedDrawingAnchor>? DrawingAnchors { get; init; }
         public bool DrawingAnchorsUseDesignY { get; init; }
     }
 

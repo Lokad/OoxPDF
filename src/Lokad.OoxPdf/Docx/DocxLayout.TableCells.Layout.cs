@@ -404,7 +404,7 @@ internal sealed partial class DocxLayoutEngine
         // Nested frame admission depends on the available height. Ordinary
         // paragraph measurements remain reusable when only cell height changes.
         double nestedPageHeight = bodyElements.Any(element => element is DocxTableElement) ? cellHeight : 0d;
-        List<DocxPlacedDrawingAnchor>? anchors = paragraphs.Any(paragraph => paragraph.StaticDrawingOwners.Count > 0) ? [] : null;
+        List<DocxPlacedDrawingAnchor>? anchors = paragraphs.Any(paragraph => paragraph.DrawingOwners.Count > 0) ? [] : null;
         if (cellMemo is not null &&
             cellMemo.TryGetRelativeLines(cell, cellWidth, measurer, context.DefaultTabStopPoints, rowTopPadding, context.ParagraphSpacingScale, context.PageNumber, context.PageCount, dependencies,
                 out var cachedRelative, out var cachedPlaced, out var cachedBoxes, out double cachedUsedHeight,
@@ -936,7 +936,7 @@ internal sealed partial class DocxLayoutEngine
             void RecordDrawingAnchors()
             {
                 if (anchors is null) return;
-                foreach (var owner in paragraph.StaticDrawingOwners)
+                foreach (var owner in paragraph.DrawingOwners)
                     anchors.Add(new(owner, paragraphTop, cursorY + cellFirstBaselineInset));
             }
         }

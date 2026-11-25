@@ -8696,6 +8696,7 @@
     "=DocxSplitNotesKeepFloatingBoxesWithTheirSourceLines",
     "=DocxFloatingBoxMathSurvivesBodyAndStoryPlacement",
     "=DocxParagraphRelativeStaticBoxesFollowTheirSelectedStory",
+    "=DocxBodyCellFloatingBoxesFollowTheirParagraphAndPage",
     "=DocxStaticCellFloatingBoxesFollowTheirParagraphAndClip",
     "=DocxStaticCellFloatingBoxLinksKeepVisibleFragments",
     "=DocxBoxedPicturesLinkWithinTheirPaintedViewports",

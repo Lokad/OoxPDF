@@ -23,6 +23,7 @@ internal sealed partial class DocxReader
         XDocument document = package.LoadXml(documentPart, cancellationToken);
         IMemoryReservation? modelStorage = OoxMemory.ReserveModel(document, cancellationToken);
         DocxDocument? result = null;
+        List<XElement>? taggedDrawingOwners = null;
         try
         {
             IReadOnlyDictionary<string, OoxRelationship> relationships = package.GetRelationshipDictionary(documentPart.Name, cancellationToken);
@@ -78,7 +79,8 @@ internal sealed partial class DocxReader
             DocxSectionBreakElement? finalSectionBreak = sectionProperties is null
                 ? null
                 : ReadSectionBreak(sectionProperties, package, internalRelationships, styles, numbering, settings, revisionFilteringMarkupMode, cancellationToken, storyCache, null);
-            Dictionary<XElement, int>? floatingBlocks = CreateFloatingBlockMap(document, cancellationToken);
+            Dictionary<XElement, int>? floatingBlocks = TagParagraphDrawingOwners(document, cellOnly: true,
+                ref taggedDrawingOwners, cancellationToken) ? new(ReferenceEqualityComparer.Instance) : null;
             IReadOnlyList<DocxBodyElement> bodyElements = ReadBodyElements(document, styles, numbering, package, relationships, settings, documentSettings,
                 revisionFilteringMarkupMode, cancellationToken, storyCache, floatingBlocks,
                 projectCommentSelections: markupMode == OoxPdfDocxMarkupMode.AllMarkup && markupContext.DrawsCommentMarkers &&
@@ -186,6 +188,7 @@ internal sealed partial class DocxReader
         }
         finally
         {
+            ClearParagraphDrawingOwners(taggedDrawingOwners);
             if (result is null) modelStorage?.Dispose();
             else if (modelStorage is not null) OoxMemory.Resize(modelStorage, modelStorage.Bytes / 2);
         }
@@ -371,6 +374,39 @@ internal sealed partial class DocxReader
             ? new(ReferenceEqualityComparer.Instance)
             : null;
 
+    private static bool TagParagraphDrawingOwners(XContainer source, bool cellOnly, ref List<XElement>? tagged,
+        CancellationToken cancellationToken)
+    {
+        bool hasDrawings = false;
+        foreach (XElement anchor in EnumerateFloatingAnchors(source, cancellationToken))
+        {
+            hasDrawings = true;
+            if (!string.Equals((string?)anchor.Element(WordprocessingDrawingNamespace + "positionV")?.Attribute("relativeFrom"),
+                    "paragraph", StringComparison.OrdinalIgnoreCase) ||
+                anchor.Ancestors(WordprocessingNamespace + "txbxContent").Any() ||
+                anchor.Ancestors(WordprocessingNamespace + "p").FirstOrDefault() is not { } paragraph ||
+                cellOnly && !paragraph.Ancestors(WordprocessingNamespace + "tc").Any())
+                continue;
+            tagged ??= [];
+            if (paragraph.Annotation<DocxParagraphDrawingOwner>() is not { } owner)
+            {
+                owner = new DocxParagraphDrawingOwner();
+                paragraph.AddAnnotation(owner);
+                tagged.Add(paragraph);
+            }
+            anchor.AddAnnotation(owner);
+            tagged.Add(anchor);
+        }
+        return hasDrawings;
+    }
+
+    private static void ClearParagraphDrawingOwners(List<XElement>? tagged)
+    {
+        if (tagged is not null)
+            foreach (var element in tagged)
+                element.RemoveAnnotations<DocxParagraphDrawingOwner>();
+    }
+
     private static DocxFloatingDrawing ReadFloatingDrawing(
         XElement anchor,
         OoxPackage package,
@@ -447,7 +483,7 @@ internal sealed partial class DocxReader
             TextBoxStrokeColorHex: textBoxStrokeColorHex)
         {
             LayoutBlockIndex = layoutBlockIndex,
-            StaticOwner = anchor.Annotation<DocxStaticDrawingOwner>(),
+            ParagraphOwner = anchor.Annotation<DocxParagraphDrawingOwner>(),
             Revisions = RevisionList(revision),
             TextBoxBodyElements = textBoxBodyElements
         };

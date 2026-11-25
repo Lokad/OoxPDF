@@ -126,25 +126,10 @@ internal sealed partial class DocxReader
             {
                 IReadOnlyDictionary<string, OoxRelationship> partRelationships =
                     package.GetRelationshipDictionary(part.Name, cancellationToken);
-                var tagged = new List<XElement>();
+                List<XElement>? tagged = null;
                 try
                 {
-                    foreach (XElement anchor in EnumerateFloatingAnchors(parsed.Xml, cancellationToken))
-                    {
-                        if (!string.Equals((string?)anchor.Element(WordprocessingDrawingNamespace + "positionV")?.Attribute("relativeFrom"),
-                                "paragraph", StringComparison.OrdinalIgnoreCase) ||
-                            anchor.Ancestors(WordprocessingNamespace + "txbxContent").Any() ||
-                            anchor.Ancestors(WordprocessingNamespace + "p").FirstOrDefault() is not { } paragraph)
-                            continue;
-                        if (paragraph.Annotation<DocxStaticDrawingOwner>() is not { } owner)
-                        {
-                            owner = new DocxStaticDrawingOwner();
-                            paragraph.AddAnnotation(owner);
-                            tagged.Add(paragraph);
-                        }
-                        anchor.AddAnnotation(owner);
-                        tagged.Add(anchor);
-                    }
+                    TagParagraphDrawingOwners(parsed.Xml, cellOnly: false, ref tagged, cancellationToken);
                     parsed.BodyElements = ReadRelatedStoryBodyElements(parsed.Xml.Root?.Elements() ?? [], styles, numbering,
                         new DocxNumberingCounters(), package, partRelationships, storyCache.DocumentSettings, markupMode, cancellationToken);
                     parsed.Drawings = ReadFloatingDrawings(parsed.Xml, package, partRelationships, styles, numbering,
@@ -152,7 +137,7 @@ internal sealed partial class DocxReader
                 }
                 finally
                 {
-                    foreach (var element in tagged) element.RemoveAnnotations<DocxStaticDrawingOwner>();
+                    ClearParagraphDrawingOwners(tagged);
                 }
             }
 

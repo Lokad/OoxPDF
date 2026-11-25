@@ -694,6 +694,82 @@ internal static class DocxSectionNavigationTests
         }
     }
 
+    public static void DocxBodyCellFloatingBoxesFollowTheirParagraphAndPage()
+    {
+        const string ownerLabel = "BODY CELL OWNER";
+        const string north = "BOX TABLE NORTH";
+        string fixture = TestFixtures.PublicCasePath("TableGridOrigins/Containers/floating-table-ordered.docx");
+        var resolver = new PortableRenderingTests.PinnedResolver();
+        XNamespace wp = OoxNamespaces.WordprocessingDrawingNamespace;
+
+        foreach (var mode in Modes)
+        {
+            var geometry = mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout
+                : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup;
+            var renderer = new DocxRenderer(resolver, mode, geometry);
+            PdfPage first = Render(ownerFirst: true, adjacentHeight: 96).Single();
+            PdfPage second = Render(ownerFirst: false, adjacentHeight: 96).Single();
+            PdfPage[] split = Render(ownerFirst: false, adjacentHeight: 172);
+            TestAssert.Equal(2, split.Length);
+            TestAssert.DoesNotContain(ownerLabel, Text(split[0]));
+            TestAssert.DoesNotContain(north, Text(split[0]));
+            TestAssert.Contains(ownerLabel, Text(split[1]));
+            TestAssert.Contains("ADJACENT ROW LABEL", Text(split[0]));
+
+            float originalY = CheckBox(first, first, 0);
+            float shiftedY = CheckBox(second, second, 0);
+            TestAssert.True(Math.Abs(originalY - shiftedY - 96d) < .01d,
+                "Putting a 96-point row before the owning paragraph moves the box with it.");
+            CheckBox(split[1], split[0], 1);
+
+            float CheckBox(PdfPage boxPage, PdfPage jumpPage, int pageIndex)
+            {
+                DocxInlineCompositionTests.AssertSourceLabelsPaint(boxPage, mode, [north, "BOX TABLE SOUTH"], "body cell");
+                var target = jumpPage.Annotations.Single(link => link.Destination.HasValue).Destination!.Value;
+                TestAssert.Equal(pageIndex, target.PageIndex);
+                var ink = PortableRenderingTests.ReadPaintedSourceLabel(boxPage, north);
+                TestAssert.True(target.Top > ink[0].Origin.Y && target.Top < ink[0].Origin.Y + 30d,
+                    "The link reaches the painted row inside the floating box.");
+                return ink[0].Origin.Y;
+            }
+
+            PdfPage[] Render(bool ownerFirst, int adjacentHeight)
+            {
+                PdfPage[]? pages = null;
+                WithDocumentMutation(fixture, (_, xml) =>
+                {
+                    var body = xml.Descendants(W + "body").Single();
+                    var jump = body.Elements(W + "p").Single(p => p.Element(W + "hyperlink") is not null);
+                    var anchor = body.Descendants(wp + "anchor").Single();
+                    anchor.SetAttributeValue("layoutInCell", "0");
+                    var position = anchor.Element(wp + "positionV")!;
+                    position.SetAttributeValue("relativeFrom", "paragraph");
+                    position.Element(wp + "posOffset")!.SetValue(16 * 12700);
+                    var owner = Paragraph(ownerLabel);
+                    owner.Add(new XElement(anchor.Ancestors(W + "r").First()));
+                    XElement owningRow = Row(owner, 96);
+                    XElement adjacentRow = Row(Paragraph("ADJACENT ROW LABEL"), adjacentHeight);
+                    var table = new XElement(W + "tbl",
+                        new XElement(W + "tblPr", new XElement(W + "tblLayout", new XAttribute(W + "type", "fixed"))),
+                        new XElement(W + "tblGrid", new XElement(W + "gridCol", new XAttribute(W + "w", "6000"))),
+                        ownerFirst ? owningRow : adjacentRow, ownerFirst ? adjacentRow : owningRow);
+                    body.ReplaceNodes(jump, table, new XElement(W + "sectPr",
+                        new XElement(W + "pgSz", new XAttribute(W + "w", "12240"), new XAttribute(W + "h", "6000")),
+                        new XElement(W + "pgMar", new XAttribute(W + "top", "480"), new XAttribute(W + "bottom", "480"),
+                            new XAttribute(W + "left", "1440"), new XAttribute(W + "right", "1440"))));
+                }, path => pages = renderer.RenderPagesAsync(DocxTests.ReadDocx(path, mode), null, default)
+                    .ToBlockingEnumerable().ToArray());
+                return TestAssert.NotNull(pages);
+            }
+
+            static XElement Row(XElement paragraph, int height) => new(W + "tr",
+                new XElement(W + "trPr", new XElement(W + "cantSplit"),
+                    new XElement(W + "trHeight", new XAttribute(W + "val", height * 20), new XAttribute(W + "hRule", "exact"))),
+                new XElement(W + "tc", new XElement(W + "tcPr",
+                    new XElement(W + "tcW", new XAttribute(W + "w", "6000"), new XAttribute(W + "type", "dxa"))), paragraph));
+        }
+    }
+
     public static void DocxStaticCellFloatingBoxesFollowTheirParagraphAndClip()
     {
         string fixture = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases",

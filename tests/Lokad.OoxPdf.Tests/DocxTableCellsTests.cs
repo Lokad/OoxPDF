@@ -3773,8 +3773,8 @@ internal static class DocxTableCellsTests
         DocxParagraph[] paragraphs = Enumerable.Range(1, 8)
             .Select(index => DocxTests.CreateDocxLayoutParagraph("Line " + index.ToString(CultureInfo.InvariantCulture), 10d, 10d))
             .ToArray();
-        var owner = new DocxStaticDrawingOwner();
-        paragraphs[2] = paragraphs[2] with { StaticDrawingOwners = [owner] };
+        var owner = new DocxParagraphDrawingOwner();
+        paragraphs[2] = paragraphs[2] with { DrawingOwners = [owner] };
         var cell = new DocxTableCell(paragraphs, null, null, null, null, [], DocxTableCellMargins.Empty);
         var memo = new DocxLayoutEngine.DocxTableCellTextLinesMemo();
         var measurer = new DocxTests.FamilyWidthTextMeasurer();
