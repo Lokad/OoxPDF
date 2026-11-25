@@ -7,20 +7,34 @@ if (!$OutputDirectory) { $OutputDirectory=Join-Path (Split-Path $PSScriptRoot) (
 if (Test-Path -LiteralPath $OutputDirectory) { throw 'Use a fresh test directory' }
 $root=(New-Item -ItemType Directory -Path $OutputDirectory).FullName
 $checks=[Collections.Generic.List[object]]::new()
+$tool=Join-Path $PSScriptRoot 'ComparePdfTextLineStarts.ps1'
 function Op($X=72,$Y=700,$Page=1,$Text='Visible content') {
     [pscustomobject]@{PageNumber=$Page;X=$X;Y=$Y;DecodedText=$Text}
 }
-function Check([string] $Id,[object[]] $Reference,[object[]] $Candidate,[int] $Expected,[string[]] $Extra=@(),[switch] $GroupingOnly) {
+function Invoke-Comparison([hashtable] $Parameters,[string] $Log,[string] $ExpectedError) {
+    try {
+        & $tool @Parameters *> $Log
+        $status=$LASTEXITCODE
+    } catch {
+        if (!$ExpectedError -or $_.Exception.Message -cne $ExpectedError) { throw }
+        $_ | Out-String | Add-Content -LiteralPath $Log
+        return 1
+    }
+    if ($ExpectedError) { throw "Expected the comparison to reject with '$ExpectedError'." }
+    return $status
+}
+function Check([string] $Id,[object[]] $Reference,[object[]] $Candidate,[int] $Expected,
+    [switch] $GroupingOnly,[switch] $FirstStartOnly,[switch] $IgnoreWhitespaceOnlyOperations,[string] $ExpectedError) {
     foreach ($mode in @('indexed','position')) {
         $prefix=Join-Path $root ($mode+'-'+$Id)
         ConvertTo-Json -InputObject @($Reference) -Depth 4 | Set-Content ($prefix+'-ref.json')
         ConvertTo-Json -InputObject @($Candidate) -Depth 4 | Set-Content ($prefix+'-cand.json')
-        $arguments=@('-NoProfile','-File',(Join-Path $PSScriptRoot 'ComparePdfTextLineStarts.ps1'),
-            '-Reference',($prefix+'-ref.json'),'-Candidate',($prefix+'-cand.json'),'-StartTolerance','0.15','-LineTolerance','0.5')
-        if (!$GroupingOnly) { $arguments+=@('-BaselineTolerance','0.5') }
-        if ($mode -eq 'position') { $arguments+='-MatchByPosition' }
-        & pwsh @arguments @Extra *> ($prefix+'.log')
-        $actual=$LASTEXITCODE
+        $parameters=@{
+            Reference=$prefix+'-ref.json'; Candidate=$prefix+'-cand.json'; StartTolerance=0.15d; LineTolerance=0.5d
+            MatchByPosition=$mode -eq 'position'; FirstStartOnly=$FirstStartOnly; IgnoreWhitespaceOnlyOperations=$IgnoreWhitespaceOnlyOperations
+        }
+        if (!$GroupingOnly) { $parameters.BaselineTolerance=0.5d }
+        $actual=Invoke-Comparison $parameters ($prefix+'.log') $ExpectedError
         $checks.Add(@{Id=$Id;Mode=$mode;ExpectedExit=$Expected;ActualExit=$actual})
         if ($actual -ne $Expected) { throw ($mode+'/'+$Id+': unexpected exit '+$actual+'; inspect '+$prefix+'.log') }
     }
@@ -43,16 +57,17 @@ Check 'extra-line' @($same) @($same,(Op 72 600)) 1
 Check 'missing-operation' @($same,(Op 100 700)) @($same) 1
 Check 'source-order' @($same,(Op 72 600)) @((Op 72 600),$same) 0
 Check 'grouped-baselines' @($same,(Op 100 700.25)) @($same,(Op 100 700.25)) 0
-Check 'first-start-count' @($same,(Op 100 700)) @($same) 0 @('-FirstStartOnly')
-Check 'first-start-y-still-bounded' @($same,(Op 100 700)) @((Op 72 500)) 1 @('-FirstStartOnly')
+Check 'first-start-count' @($same,(Op 100 700)) @($same) 0 -FirstStartOnly
+Check 'first-start-y-still-bounded' @($same,(Op 100 700)) @((Op 72 500)) 1 -FirstStartOnly
 Check 'whitespace-default' @($same,(Op 72 600 1 ' ')) @($same) 1
-Check 'whitespace-ignored' @($same,(Op 72 600 1 ([string][char]0xA0))) @($same) 0 @('-IgnoreWhitespaceOnlyOperations')
+Check 'whitespace-ignored' @($same,(Op 72 600 1 ([string][char]0xA0))) @($same) 0 -IgnoreWhitespaceOnlyOperations
+$coordinateError='Text line-start coordinates must be present and finite.'
 foreach ($coordinate in @('X','Y')) {
     foreach ($value in @('NaN','Infinity','-Infinity',$null)) {
         $bad=Op; $bad.$coordinate=$value
         $label=if ($null -eq $value) {'missing'} else {$value.Replace('-','negative-')}
-        Check ('candidate-'+$coordinate+'-'+$label) @($same) @($bad) 1
-        Check ('reference-'+$coordinate+'-'+$label) @($bad) @($same) 1
+        Check ('candidate-'+$coordinate+'-'+$label) @($same) @($bad) 1 -ExpectedError $coordinateError
+        Check ('reference-'+$coordinate+'-'+$label) @($bad) @($same) 1 -ExpectedError $coordinateError
     }
 }
 foreach ($parameter in @('LineTolerance','StartTolerance','BaselineTolerance')) {
@@ -60,20 +75,20 @@ foreach ($parameter in @('LineTolerance','StartTolerance','BaselineTolerance')) 
         # Supply each argument once so binding itself cannot mask validation.
         $prefix=Join-Path $root ('invalid-'+$parameter+'-'+$value)
         ConvertTo-Json -InputObject @($same) | Set-Content ($prefix+'.json')
-        $arguments=@('-NoProfile','-File',(Join-Path $PSScriptRoot 'ComparePdfTextLineStarts.ps1'),'-Reference',($prefix+'.json'),'-Candidate',($prefix+'.json'),('-'+$parameter),$value)
-        & pwsh @arguments *> ($prefix+'.log')
-        $checks.Add(@{Id=$parameter+'-'+$value;ExpectedExit=1;ActualExit=$LASTEXITCODE})
-        if ($LASTEXITCODE -ne 1 -or (Get-Content ($prefix+'.log') -Raw) -notlike '*finite and non-negative*') { throw 'Invalid tolerance was not refused by the comparison boundary' }
+        $parameters=@{Reference=$prefix+'.json';Candidate=$prefix+'.json'}
+        $parameters[$parameter]=$value
+        $actual=Invoke-Comparison $parameters ($prefix+'.log') 'Line-start tolerances must be finite and non-negative.'
+        $checks.Add(@{Id=$parameter+'-'+$value;ExpectedExit=1;ActualExit=$actual})
     }
 }
-$tool = Join-Path $PSScriptRoot 'ComparePdfTextLineStarts.ps1'
+# Check command-line binding and process exit status through the real script entry point.
 $referencePath = Join-Path $root 'indexed-missing-line-ref.json'
-& $tool -Reference $referencePath -Candidate (Join-Path $root 'indexed-missing-line-cand.json') *> (Join-Path $root 'in-process-failure.log')
-$checks.Add(@{Id='in-process-failure';ExpectedExit=1;ActualExit=$LASTEXITCODE})
-if ($LASTEXITCODE -ne 1) { throw 'A missing line must report a failed in-process comparison.' }
-& $tool -Reference $referencePath -Candidate $referencePath *> (Join-Path $root 'in-process-recovery.log')
-$checks.Add(@{Id='in-process-recovery';ExpectedExit=0;ActualExit=$LASTEXITCODE})
-if ($LASTEXITCODE -ne 0) { throw 'An identical in-process comparison inherited the preceding failure.' }
+& pwsh -NoProfile -File $tool -Reference $referencePath -Candidate (Join-Path $root 'indexed-missing-line-cand.json') -MatchByPosition *> (Join-Path $root 'fresh-process-failure.log')
+$checks.Add(@{Id='fresh-process-failure';ExpectedExit=1;ActualExit=$LASTEXITCODE})
+if ($LASTEXITCODE -ne 1) { throw 'A missing line must report a failed command-line comparison.' }
+& pwsh -NoProfile -File $tool -Reference $referencePath -Candidate $referencePath -MatchByPosition *> (Join-Path $root 'fresh-process-success.log')
+$checks.Add(@{Id='fresh-process-success';ExpectedExit=0;ActualExit=$LASTEXITCODE})
+if ($LASTEXITCODE -ne 0) { throw 'An identical command-line comparison must pass.' }
 
 @{Checks=$checks;Builds=0;Conversions=0;OfficeExports=0} | ConvertTo-Json -Depth 5 |
     Set-Content (Join-Path $root 'evidence.json')
