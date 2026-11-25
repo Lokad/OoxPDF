@@ -87,10 +87,18 @@ internal static partial class PptxChartLabelDefaultsTests
         {
             var xml = ManualFrameSource(SizedFrameLayout(), false);
             xml.Descendants(C + "dLbls").Single().Add(XElement.Parse("<c:holder xmlns:c=\"" + C + "\" xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\">" + style + "</c:holder>").Elements());
-            return RenderChartPage(xml).Content;
+            var page = RenderChartPage(xml);
+            var ink = PortableRenderingTests.ReadPaintedSourceLabel(page, "3", fontPrefix: "CLD").Single().Ink;
+            var box = MarkerRectangles(page, new RgbColor(0, 255, 0)).Single();
+            TestAssert.True(ink.X >= box.X - .01d && ink.X + ink.Width <= box.X + box.Width + .01d &&
+                ink.Y >= box.Y - .01d && ink.Y + ink.Height <= box.Y + box.Height + .01d,
+                "The authored point value paints inside its green label frame.");
+            return page.Content;
         }
-        TestAssert.Equal(Render(""), Render(TextScopeParent));
-        TestAssert.Equal(Render(TextScopeParent), Render(TextScopeOtherParent));
+
+        string baseline = Render("");
+        TestAssert.Equal(baseline, Render(TextScopeParent));
+        TestAssert.Equal(baseline, Render(TextScopeOtherParent));
     }
 
     public static void PptxPointLabelOccupiedClearanceDoesNotScaleWithFont()
