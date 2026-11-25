@@ -340,6 +340,12 @@ internal static class DocxTextWrapTests
                       <w:pPr><w:tabs><w:tab w:val="decimal" w:pos="1440"/></w:tabs></w:pPr>
                       <w:r><w:t>A</w:t><w:tab/><w:t>12.3</w:t></w:r>
                     </w:p>
+                    <w:p>
+                      <w:pPr><w:tabs><w:tab w:val="decimal" w:pos="1440"/></w:tabs></w:pPr>
+                      <w:r><w:t>A</w:t><w:tab/></w:r>
+                      <w:r><w:rPr><w:spacing w:val="20"/></w:rPr><w:t>12</w:t></w:r>
+                      <w:r><w:t>,3</w:t></w:r>
+                    </w:p>
                     <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
                   </w:body>
                 </w:document>
@@ -350,18 +356,28 @@ internal static class DocxTextWrapTests
         OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
         DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
-        DocxTextLineLayout line = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+        var lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTextLineLayout>()
-            .Single();
+            .ToArray();
 
+        TestAssert.Equal(2, lines.Length);
+        var line = lines[0];
         TestAssert.Equal(2, line.Segments.Count);
         TestAssert.Equal("A", line.Segments[0].Text);
         TestAssert.Equal("12.3", line.Segments[1].Text);
         TestAssert.Equal(62d, line.Segments[1].X - line.X);
         TestAssert.Equal(82d, line.Width);
+
+        var split = lines[1];
+        TestAssert.Equal(3, split.Segments.Count);
+        TestAssert.Equal("12", split.Segments[1].Text);
+        TestAssert.Equal(",3", split.Segments[2].Text);
+        TestAssert.Equal(61d, split.Segments[1].X - split.X);
+        TestAssert.Equal(72d, split.Segments[2].X - split.X);
+        TestAssert.Equal(82d, split.Width);
     }
 
     public static void DocxParagraphLayoutRightAlignsDecimalTabsWithoutDecimalSeparator()

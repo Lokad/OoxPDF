@@ -113,8 +113,8 @@ internal sealed partial class DocxLayoutEngine
             }
 
             DocxResolvedTabStop tabStop = ResolveNextTabStop(currentWidth, tabStops, defaultTabStopPoints);
-            double fieldWidth = MeasureTextFieldSpans(field.Spans, fontSize, textMeasurer);
-            double? decimalAlignmentWidth = GetDecimalTabAlignmentWidth(tabStop, field.Spans, fontSize, textMeasurer);
+            var (fieldWidth, decimalAlignmentWidth) = MeasureTextFieldSpans(field.Spans, fontSize, textMeasurer,
+                alignDecimal: tabStop.Kind == DocxTabStopKind.Decimal);
             var (fieldStart, fieldEnd) = GetAlignedTabFieldBounds(tabStop, fieldWidth, decimalAlignmentWidth);
             AddTextFieldSegments(segments, field.Spans, lineX + fieldStart, fontSize, textMeasurer);
             currentWidth = fieldEnd;
@@ -136,15 +136,15 @@ internal sealed partial class DocxLayoutEngine
         double currentWidth = 0d;
         foreach (DocxTabField field in fields)
         {
-            double fieldWidth = MeasureTextFieldSpans(field.Spans, fontSize, textMeasurer);
             if (!field.StartsAfterTab)
             {
-                currentWidth += fieldWidth;
+                currentWidth += MeasureTextFieldSpans(field.Spans, fontSize, textMeasurer).Width;
                 continue;
             }
 
             DocxResolvedTabStop tabStop = ResolveNextTabStop(currentWidth, tabStops, defaultTabStopPoints);
-            double? decimalAlignmentWidth = GetDecimalTabAlignmentWidth(tabStop, field.Spans, fontSize, textMeasurer);
+            var (fieldWidth, decimalAlignmentWidth) = MeasureTextFieldSpans(field.Spans, fontSize, textMeasurer,
+                alignDecimal: tabStop.Kind == DocxTabStopKind.Decimal);
             currentWidth = GetAlignedTabFieldBounds(tabStop, fieldWidth, decimalAlignmentWidth).End;
         }
 
@@ -560,47 +560,23 @@ internal sealed partial class DocxLayoutEngine
         }
     }
 
-    private static double MeasureTextFieldSpans(
+    private static (double Width, double? DecimalAnchor) MeasureTextFieldSpans(
         IReadOnlyList<DocxTextSpan> spans,
         double fontSize,
-        IDocxTextMeasurer textMeasurer)
+        IDocxTextMeasurer textMeasurer,
+        bool alignDecimal = false)
     {
         double width = 0d;
+        double? decimalAnchor = null;
         for (int i = 0; i < spans.Count; i++)
         {
             DocxTextSpan span = spans[i];
             double spanFontSize = GetTextSpanFontSize(span, fontSize);
-            width += textMeasurer.MeasureText(span.StyleRun, span.Text, spanFontSize);
-            if (i + 1 < spans.Count)
+            if (alignDecimal && decimalAnchor is null)
             {
-                width += DocxTextSpacing.BoundarySpacing(span.StyleRun, span.Text, spans[i + 1].Text);
-            }
-        }
-
-        return width;
-    }
-
-    private static double? GetDecimalTabAlignmentWidth(
-        DocxResolvedTabStop tabStop,
-        IReadOnlyList<DocxTextSpan> spans,
-        double fontSize,
-        IDocxTextMeasurer textMeasurer)
-    {
-        if (tabStop.Kind != DocxTabStopKind.Decimal)
-        {
-            return null;
-        }
-
-        double width = 0d;
-        for (int i = 0; i < spans.Count; i++)
-        {
-            DocxTextSpan span = spans[i];
-            int decimalIndex = FindDecimalTabSeparator(span.Text);
-            double spanFontSize = GetTextSpanFontSize(span, fontSize);
-            if (decimalIndex >= 0)
-            {
-                width += textMeasurer.MeasureText(span.StyleRun, span.Text[..decimalIndex], spanFontSize);
-                return width;
+                int separator = FindDecimalTabSeparator(span.Text);
+                if (separator >= 0)
+                    decimalAnchor = width + textMeasurer.MeasureText(span.StyleRun, span.Text[..separator], spanFontSize);
             }
 
             width += textMeasurer.MeasureText(span.StyleRun, span.Text, spanFontSize);
@@ -610,7 +586,8 @@ internal sealed partial class DocxLayoutEngine
             }
         }
 
-        return width;
+        // A decimal field without a separator aligns its trailing edge.
+        return (width, alignDecimal ? decimalAnchor ?? width : null);
     }
 
     private static int FindDecimalTabSeparator(ReadOnlySpan<char> text) => text.IndexOfAny('.', ',');

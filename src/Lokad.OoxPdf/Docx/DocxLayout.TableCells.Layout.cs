@@ -1055,8 +1055,7 @@ internal sealed partial class DocxLayoutEngine
 
         var spans = lines[0].Spans;
         var stop = new DocxResolvedTabStop(position, DocxTabStopKind.Decimal);
-        double fieldWidth = MeasureTextFieldSpans(spans, fontSize, measurer);
-        double? anchor = GetDecimalTabAlignmentWidth(stop, spans, fontSize, measurer);
+        var (fieldWidth, anchor) = MeasureTextFieldSpans(spans, fontSize, measurer, alignDecimal: true);
         return TryFitAlignedTabField(stop, fieldWidth, anchor, 0d, width, out double start) ? start : null;
     }
 

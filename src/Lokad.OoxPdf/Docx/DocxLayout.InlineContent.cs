@@ -954,7 +954,7 @@ internal sealed partial class DocxLayoutEngine
                     if (separator >= 0)
                     {
                         var prefix = NormalizeHiddenBreakSpans([span with { Text = span.Text[..separator] }], false);
-                        decimalOffset = width + MeasureTextFieldSpans(prefix, fontSize, measurer);
+                        decimalOffset = width + MeasureTextFieldSpans(prefix, fontSize, measurer).Width;
                     }
                 }
                 width += fragment.Advance;
