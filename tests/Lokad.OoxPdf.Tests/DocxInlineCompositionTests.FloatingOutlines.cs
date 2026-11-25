@@ -207,9 +207,11 @@ internal static partial class DocxInlineCompositionTests
             var page = renderer.RenderPagesAsync(source, null, default).ToBlockingEnumerable().Single();
             string context = nested ? "nested body cell" : "body cell";
             AssertSourceLabelsPaint(page, mode, [owner, north, "BOX TABLE SOUTH"], context);
-            var fill = DocxParagraphShadingTests.ReadRectangles(page.Content).Single(rect => rect.Color == "DDEECC");
+            // One shaded strip can be emitted for each measured paragraph line.
+            double paragraphTop = DocxParagraphShadingTests.ReadRectangles(page.Content)
+                .Where(rect => rect.Color == "DDEECC").Max(rect => rect.Y + rect.Height);
             var outline = ReadFloatingOutline(page, 60d * scale, 216d * scale, .02d).Single().Bounds;
-            double residual = outline[1] + outline[3] - (fill.Y + fill.Height - offset * scale);
+            double residual = outline[1] + outline[3] - (paragraphTop - offset * scale);
             TestAssert.True(Math.Abs(residual) < .003d, $"The box follows its printed {context} paragraph. Residual: {residual} pt.");
             var target = page.Annotations.Single(link => link.Destination.HasValue).Destination!.Value;
             TestAssert.Equal(0, target.PageIndex);
