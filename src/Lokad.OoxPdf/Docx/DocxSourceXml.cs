@@ -173,6 +173,11 @@ internal static class DocxSourceXml
     public static bool IsInlineContentContainer(XElement element) =>
         IsTransparentInlineContainer(element) || IsDirectionalInlineContainer(element);
 
+    public static bool IsTextWrappingBreak(XElement element) =>
+        element.Name == WordprocessingNamespace + "cr" ||
+        element.Name == WordprocessingNamespace + "br" &&
+        (string?)element.Attribute(WordprocessingNamespace + "type") is null or "" or "textWrapping";
+
     // Editing boundaries and stored math pagination positions have no payload.
     // Content-bearing, unknown and misplaced children retain their source owner.
     public static bool IsNonPrintingMarker(XElement element) =>

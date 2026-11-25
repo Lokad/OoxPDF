@@ -545,7 +545,7 @@ internal sealed partial class DocxReader
                         // Route range markers at their actual position in the
                         // paragraph stream. Only authored breaks advance lines.
                         bool mathRun = item.Name == MathNamespace + "r";
-                        if (mathRun && item.Element(WordprocessingNamespace + "br") is null)
+                        if (mathRun && !item.Elements().Any(IsDisplayMathBreak))
                             continue;
                         var inlineSource = mathRun ? AsParagraphRun(item, item == trailing.Run ? trailing.FirstBreakInRun : null) : item;
                         AddSourceContainerChild(inlineSource, source.Revision, removeDeletedText: false);
@@ -2115,13 +2115,7 @@ internal sealed partial class DocxReader
             return "\u00AD";
         }
 
-        if (child.Name == WordprocessingNamespace + "cr")
-        {
-            return "\n";
-        }
-
-        if (child.Name == WordprocessingNamespace + "br" &&
-            ((string?)child.Attribute(WordprocessingNamespace + "type") is null or "" or "textWrapping"))
+        if (DocxSourceXml.IsTextWrappingBreak(child))
         {
             return "\n";
         }

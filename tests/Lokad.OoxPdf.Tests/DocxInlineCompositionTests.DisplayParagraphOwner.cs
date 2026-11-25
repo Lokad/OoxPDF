@@ -3,6 +3,7 @@ using System.Xml.Linq;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Docx;
 using Lokad.OoxPdf.Pdf;
+using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
 
 namespace Lokad.OoxPdf.Tests;
 
@@ -76,9 +77,14 @@ internal static partial class DocxInlineCompositionTests
 
     internal static void CheckDisplayMathRunBreak()
     {
+        XNamespace word = WordprocessingNamespace;
+        var wrappingBreak = new XElement(word + "br", new XAttribute(word + "type", "textWrapping"));
+        var clearingBreak = new XElement(word + "br", new XAttribute(word + "clear", "all"));
+        var carriageReturn = new XElement(word + "cr");
+        var pageBreak = new XElement(word + "br", new XAttribute(word + "type", "page"));
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
         {
-            DocxDocument Read(bool insideEquation, bool mathRun, string? type = null, int breakCount = 1, bool proofing = false,
+            DocxDocument Read(bool insideEquation, bool mathRun, XElement? firstBreak = null, int breakCount = 1, bool proofing = false,
                 bool? bookmarkStartsAfterBreaks = null, string? paginationHint = null, bool packBreaks = false,
                 bool shareOperandRun = false, bool trailingMoveRanges = false) => ReadMutation(
                 "CompositionProbes/math-explicit-display-same-group", mode, false, false, (xml, w, m) =>
@@ -88,8 +94,9 @@ internal static partial class DocxInlineCompositionTests
                     XElement? packedRun = null;
                     for (int index = 0; index < breakCount; index++)
                     {
-                        string? breakType = index == 0 ? type : "textWrapping";
-                        var lineBreak = new XElement(w + "br", breakType is null ? null : new XAttribute(w + "type", breakType));
+                        var lineBreak = index == 0
+                            ? firstBreak is null ? new XElement(w + "br") : new XElement(firstBreak)
+                            : new XElement(wrappingBreak);
                         if (packedRun is not null)
                         {
                             packedRun.Add(lineBreak);
@@ -150,9 +157,9 @@ internal static partial class DocxInlineCompositionTests
             var expected = MathShows(between);
             TestAssert.Equal("α+β=γδ+ε=ζ", string.Concat(expected.Select(show => show.Text)).Normalize(NormalizationForm.FormKC));
             TestAssert.Equal(2, expected.Select(show => show.Y).Distinct().Count());
-            foreach ((bool insideEquation, string? type) in new[] { (true, (string?)null), (true, "textWrapping"), (false, null) })
+            foreach ((bool insideEquation, XElement? firstBreak) in new[] { (true, (XElement?)null), (true, wrappingBreak), (false, null) })
             {
-                CheckMathBreaks(Read(insideEquation, mathRun: true, type), expected);
+                CheckMathBreaks(Read(insideEquation, mathRun: true, firstBreak), expected);
             }
 
             var betweenTwo = renderer.RenderPagesAsync(Read(false, false, breakCount: 2), null, default)
@@ -191,18 +198,29 @@ internal static partial class DocxInlineCompositionTests
                         trailingMoveRanges: true), expectedTwo);
                     TestAssert.True(control.Annotations.SequenceEqual(sharedOperand.Annotations),
                         "Terminal breaks sharing the operand run preserve the link and its destination.");
+                    foreach (XElement firstBreak in new[] { clearingBreak, carriageReturn })
+                    foreach (bool shareOperandRun in new[] { false, true })
+                    {
+                        var variant = CheckMathBreaks(Read(true, true, firstBreak, breakCount: 2,
+                            bookmarkStartsAfterBreaks: true, shareOperandRun: shareOperandRun), expectedTwo);
+                        TestAssert.True(control.Annotations.SequenceEqual(variant.Annotations),
+                            "Both break layouts must preserve the authored bookmark destination.");
+                    }
                 }
             }
 
-            foreach (var document in new[] { Read(true, true, type: "page"), Read(true, true, paginationHint: "malformed"),
-                Read(true, true, type: "page", breakCount: 2, packBreaks: true),
-                Read(true, true, type: "page", breakCount: 2, shareOperandRun: true) })
+            var invalidClear = new XElement(word + "br", new XAttribute(word + "clear", "future"));
+            var invalidReturn = new XElement(word + "cr", new XAttribute(word + "type", "textWrapping"));
+            foreach (var document in new[] { Read(true, true, pageBreak), Read(true, true, paginationHint: "malformed"),
+                Read(true, true, pageBreak, breakCount: 2, packBreaks: true),
+                Read(true, true, pageBreak, breakCount: 2, shareOperandRun: true),
+                Read(true, true, invalidClear), Read(true, true, invalidReturn) })
             {
                 var unsupported = new List<OoxPdfDiagnostic>();
                 var page = renderer.RenderPagesAsync(document, unsupported.Add, default).ToBlockingEnumerable().Single();
                 TestAssert.Equal("δ+ε=ζ", string.Concat(MathShows(page).Select(show => show.Text)).Normalize(NormalizationForm.FormKC));
                 TestAssert.True(unsupported.Any(d => d.Id == "DOCX_UNSUPPORTED_EQUATION"),
-                    "An authored page break or malformed hint keeps its diagnosed fallback.");
+                    "An authored page break or malformed control keeps its diagnosed fallback.");
             }
 
             PdfPage CheckMathBreaks(DocxDocument document, (string Text, double X, double Y, double Size)[] control)

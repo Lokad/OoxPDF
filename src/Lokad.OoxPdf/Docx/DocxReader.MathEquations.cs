@@ -33,7 +33,7 @@ internal sealed partial class DocxReader
         // A trailing break can share the last operand's run. Keep the
         // readable prefix under its original formatting owner.
         (XElement, XElement?)? ReadPackedBreak(XElement run) =>
-            run.Name == MathNamespace + "r" && run.Element(WordprocessingNamespace + "br") is { } split &&
+            run.Name == MathNamespace + "r" && run.Elements().FirstOrDefault(IsDisplayMathBreak) is { } split &&
             HasOnlyWhitespaceRunText(run) && split.ElementsAfterSelf().Prepend(split).All(IsBreakOrPaginationHint) &&
             DocxMathParser.IsReadableRun(run, allowsDeletedText, split) ? (run, split) : null;
 
@@ -52,7 +52,7 @@ internal sealed partial class DocxReader
         // Direct display runs can carry ordinary paragraph content alongside
         // a break. A run inside the equation can lift only its pure break.
         return run.Name == MathNamespace + "r" &&
-            run.Element(WordprocessingNamespace + "br") is not null &&
+            run.Elements().Any(IsDisplayMathBreak) &&
             run.Elements().All(child => child.Name == WordprocessingNamespace + "rPr" ||
                 IsBreakOrPaginationHint(child) ||
                 allowCompanions && (child.Name == WordprocessingNamespace + "drawing" ||
@@ -64,12 +64,17 @@ internal sealed partial class DocxReader
         run.Nodes().OfType<XText>().All(text => string.IsNullOrWhiteSpace(text.Value));
 
     private static bool IsBreakOrPaginationHint(XElement element) =>
-        DocxSourceXml.IsLastRenderedPageBreakHint(element) ||
-        element.Name == WordprocessingNamespace + "br" &&
+        DocxSourceXml.IsLastRenderedPageBreakHint(element) || IsDisplayMathBreak(element);
+
+    // Keep the authored break attributes when passing the control to paragraph
+    // layout. Only a recognized, empty source control can leave the math run.
+    private static bool IsDisplayMathBreak(XElement element) =>
+        DocxSourceXml.IsTextWrappingBreak(element) &&
         !element.HasElements && string.IsNullOrWhiteSpace(element.Value) &&
         element.Attributes().All(attribute => attribute.IsNamespaceDeclaration ||
-            attribute.Name == WordprocessingNamespace + "type" && attribute.Value == "textWrapping" ||
-            attribute.Name == WordprocessingNamespace + "clear" && attribute.Value == "none");
+            element.Name == WordprocessingNamespace + "br" &&
+            (attribute.Name == WordprocessingNamespace + "type" && attribute.Value == "textWrapping" ||
+             attribute.Name == WordprocessingNamespace + "clear" && attribute.Value is "none" or "left" or "right" or "all"));
 
     private static IEnumerable<(XElement Element, DocxRevisionInfo? Revision, bool RemoveDeletedText)> EnumerateMathParagraphSources(
         XElement container, DocxRevisionInfo? inheritedRevision, bool removeDeletedText,
