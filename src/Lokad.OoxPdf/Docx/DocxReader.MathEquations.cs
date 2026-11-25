@@ -56,7 +56,8 @@ internal sealed partial class DocxReader
             run.Elements().All(child => child.Name == WordprocessingNamespace + "rPr" ||
                 IsBreakOrNonPrintingMathControl(child) ||
                 allowCompanions && (child.Name == WordprocessingNamespace + "drawing" ||
-                    child.Name == WordprocessingNamespace + "t" && !child.HasElements)) &&
+                    child.Name == WordprocessingNamespace + "t" && !child.HasElements ||
+                    DocxMathParser.TryReadSymbol(child, out _, out _))) &&
             HasOnlyWhitespaceRunText(run);
     }
 

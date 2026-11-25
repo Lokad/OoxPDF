@@ -1537,14 +1537,18 @@ internal static partial class DocxInlineCompositionTests
 
             var wordRun = Render(nestedRuns: true, withBreak: true);
             var mathRun = Render(nestedRuns: true, withBreak: true, mathContainer: true);
-            TestAssert.Contains("Stored companion", DocxPageFootnoteNumberingTests.DecodeText(mathRun.Page));
+            TestAssert.Equal("StoredcompanionΩ".Length,
+                PortableRenderingTests.ReadPaintedSourceLabel(mathRun.Page, "Stored companionΩ").Count);
             TestAssert.Equal(1, mathRun.Page.Images.Count);
             TestAssert.Equal(wordRun.Page.Content, mathRun.Page.Content);
             TestAssert.True(wordRun.Diagnostics.SequenceEqual(mathRun.Diagnostics),
                 "An authored break and its WordprocessingML companions share paragraph paint and diagnostics.");
+            var malformed = Render(nestedRuns: true, withBreak: true, mathContainer: true, malformedSymbol: true);
+            TestAssert.True(malformed.Diagnostics.Any(diagnostic => diagnostic.Id == "DOCX_UNSUPPORTED_EQUATION"),
+                "A malformed symbol retains the diagnosed display-run fallback.");
 
             (PdfPage Page, List<OoxPdfDiagnostic> Diagnostics) Render(bool nestedRuns, bool withBreak = false,
-                bool mathContainer = false)
+                bool mathContainer = false, bool malformedSymbol = false)
             {
                 var document = ReadMutation(fixture, mode, false, false, (xml, w, m) =>
                 {
@@ -1552,7 +1556,9 @@ internal static partial class DocxInlineCompositionTests
                     var picture = display.Parent!.Elements(w + "r").Single();
                     if (withBreak)
                         picture.Element(w + "drawing")!.AddBeforeSelf(new XElement(w + "br"),
-                            new XElement(w + "t", "Stored companion"));
+                            new XElement(w + "t", "Stored companion"),
+                            new XElement(w + "sym", new XAttribute(w + "font", "Arial"),
+                                new XAttribute(w + "char", malformedSymbol ? "ZZZZ" : "03A9")));
                     if (mathContainer) picture.Name = m + "r";
                     var before = new XElement(w + "r", new XElement(w + "t", "CompanionBefore"));
                     var after = new XElement(w + "r", new XElement(w + "t", "CompanionAfter"));

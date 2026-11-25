@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Ooxml;
@@ -387,14 +388,7 @@ internal static partial class DocxMathParser
         symbolFont = null;
         if (element.Name == MathNamespace + "t") return element.Value;
         if (element.HasElements || element.Name.Namespace != WordprocessingNamespace) return null;
-        if (element.Name.LocalName == "sym" && string.IsNullOrWhiteSpace(element.Value) &&
-            element.Attributes().All(attribute => attribute.IsNamespaceDeclaration ||
-                attribute.Name == WordprocessingNamespace + "font" || attribute.Name == WordprocessingNamespace + "char") &&
-            DocxReader.TryReadSymbol(element, out string? font, out char symbol))
-        {
-            symbolFont = font;
-            return symbol.ToString();
-        }
+        if (TryReadSymbol(element, out symbolFont, out char symbol)) return symbol.ToString();
         return element.Name.LocalName switch
         {
             "t" => element.Value,
@@ -404,6 +398,17 @@ internal static partial class DocxMathParser
                 element.Name.LocalName == "noBreakHyphen" ? "\u2011" : "\u00AD",
             _ => null
         };
+    }
+
+    internal static bool TryReadSymbol(XElement element, [NotNullWhen(true)] out string? font, out char symbol)
+    {
+        font = null;
+        symbol = default;
+        return element.Name == WordprocessingNamespace + "sym" && !element.HasElements &&
+            string.IsNullOrWhiteSpace(element.Value) &&
+            element.Attributes().All(attribute => attribute.IsNamespaceDeclaration ||
+                attribute.Name == WordprocessingNamespace + "font" || attribute.Name == WordprocessingNamespace + "char") &&
+            DocxReader.TryReadSymbol(element, out font, out symbol);
     }
 
     private static XElement? ReadRunRevision(XElement run, CancellationToken token)
