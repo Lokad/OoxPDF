@@ -18,9 +18,16 @@ internal sealed partial class DocxReader
         (owner.Name == MathNamespace + "oMathPara" ||
          DocxSourceXml.IsRevisionContainer(owner) && owner.Parent?.Name == MathNamespace + "oMathPara");
 
-    private static int CountEquationPayloads(XElement element, OoxPdfDocxMarkupMode mode, CancellationToken token) =>
-        element.Name == MathNamespace + "oMath" ? CountDrawingEquationFragments(element, mode, token) ?? 1 :
-        IsDisplayMathRun(element) ? ClassifyDisplayMathRun(element, token).EquationCount : 0;
+    private static int CountEquationPayloads(XElement element, OoxPdfDocxMarkupMode mode, bool removeDeletedText, CancellationToken token)
+    {
+        if (element.Name == MathNamespace + "oMath")
+            return CountDrawingEquationFragments(element, mode, token, removeDeletedText) ??
+                (removeDeletedText && DocxMathParser.HasOnlyDeletedLiteralRuns(element, token) ? 0 : 1);
+
+        var layout = ClassifyDisplayMathRun(element, token);
+        return removeDeletedText && (layout.UsesParagraphLayout || DocxMathParser.IsReadableRun(element, allowsDeletedText: true))
+            ? 0 : layout.EquationCount;
+    }
 
     private static bool HasInlineEquationParagraph(XElement equation, CancellationToken token)
     {
@@ -132,7 +139,8 @@ internal sealed partial class DocxReader
 
     // Paragraph layout owns inline drawings. Each contiguous group of math
     // remains one equation fragment, including inside a display.
-    private static int? CountDrawingEquationFragments(XElement equation, OoxPdfDocxMarkupMode mode, CancellationToken token)
+    private static int? CountDrawingEquationFragments(XElement equation, OoxPdfDocxMarkupMode mode, CancellationToken token,
+        bool removeDeletedText = false)
     {
         if (!(HasDisplayMathParagraphOwner(equation) || HasInlineEquationParagraph(equation, token)) ||
             equation.Attributes().Any(attribute => !attribute.IsNamespaceDeclaration) ||
@@ -153,16 +161,23 @@ internal sealed partial class DocxReader
                 hasDrawing = true;
                 if (!source.Scope.Included) continue;
                 inMath &= lastScope == source.Scope;
-                count += layout.EquationCount - (inMath && layout.StartsWithMath ? 1 : 0);
-                inMath = layout.EndsWithMath;
+                if (!removeDeletedText)
+                    count += layout.EquationCount - (inMath && layout.StartsWithMath ? 1 : 0);
+                // A drawing partitions the groups, but its adjoining literal
+                // fragments cannot retain structural paint after deletion.
+                inMath = !removeDeletedText && layout.EndsWithMath;
                 lastScope = source.Scope;
                 continue;
             }
             if (child.Name != MathNamespace + "r" && !DocxMathParser.IsMathControl(child.Name) ||
                 child.Name == MathNamespace + "r" && child.Elements().Any(DocxSourceXml.IsTextWrappingBreak)) return null;
             if (!source.KeepsMath) continue;
-            if (!inMath || lastScope != source.Scope) count++;
-            inMath = true;
+            inMath &= lastScope == source.Scope;
+            if (!removeDeletedText || !DocxMathParser.IsReadableRun(child, allowsDeletedText: true))
+            {
+                if (!inMath) count++;
+                inMath = true;
+            }
             lastScope = source.Scope;
         }
         // A drawing can be the only content of the equation zone.

@@ -375,6 +375,9 @@ internal static partial class DocxMathParser
     internal static bool IsReadableRun(XElement element, bool allowsDeletedText, XElement? firstBreakInRun = null) =>
         element.Name == MathNamespace + "r" && HasReadableRunChildren(RunContent(element, firstBreakInRun), allowsDeletedText);
 
+    internal static bool HasOnlyDeletedLiteralRuns(XElement equation, CancellationToken token) =>
+        ReadRevisionChildren(equation, token).All(child => IsReadableRun(child, allowsDeletedText: true));
+
     private static bool HasReadableRunChildren(IEnumerable<XElement> children, bool allowsDeletedText) =>
         children.All(child =>
             ReadLiteralRunText(child, allowsDeletedText, out _) is not null ||

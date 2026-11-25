@@ -23,33 +23,38 @@ internal sealed partial class DocxReader
         foreach (XElement element in source.Descendants())
         {
             token.ThrowIfCancellationRequested();
-            int equations = CountEquationPayloads(element, mode, token);
-            if (equations == 0 && element.Name != MathNamespace + "oMathPara") continue;
-            hasSource = true;
-            if (equations == 0)
+            bool display = element.Name == MathNamespace + "oMathPara";
+            if (display)
             {
-                hasDisplaySource = true;
-                // Explicit zones are classified separately, including when
-                // they supply only paragraph companions.
-                if (element.Descendants().Any(child => child.Name == MathNamespace + "oMath" ||
-                    IsDisplayMathRun(child) && ClassifyDisplayMathRun(child, token).EquationCount != 0)) continue;
-                equations = 1;
+                hasSource = hasDisplaySource = true;
+                // Equations and direct math runs count themselves, including
+                // when they project only paragraph companions.
+                if (element.Descendants().Any(child => child.Name == MathNamespace + "oMath" || IsDisplayMathRun(child))) continue;
             }
+            else if (element.Name != MathNamespace + "oMath" && !IsDisplayMathRun(element)) continue;
+
             bool included = true;
             bool retainsDeletedStructure = true;
+            bool removeDeletedText = false;
             foreach (XElement ancestor in element.Ancestors())
             {
                 token.ThrowIfCancellationRequested();
-                if (DocxSourceXml.IsRevisionContainer(ancestor) && !IsIncludedRevisionContainer(ancestor, mode) &&
-                        !(retainsDeletedStructure && RetainsDeletedMathStructure(ancestor, mode)) ||
-                    ancestor.Name == WordprocessingNamespace + "tr" && !IsIncludedTableRow(ancestor, mode, token))
+                if (ancestor.Name == WordprocessingNamespace + "tr" && !IsIncludedTableRow(ancestor, mode, token))
                 { included = false; break; }
+                if (DocxSourceXml.IsRevisionContainer(ancestor) && !IsIncludedRevisionContainer(ancestor, mode))
+                {
+                    if (!retainsDeletedStructure || !RetainsDeletedMathStructure(ancestor, mode))
+                    { included = false; break; }
+                    removeDeletedText = true;
+                }
                 // Deleted math may cross its metadata wrappers, not a paragraph,
                 // drawing run or a second revision boundary. Those owners are
                 // omitted before paragraph-level math reading occurs.
                 retainsDeletedStructure &= ancestor.Name == MathNamespace + "oMathPara" ||
                     DocxSourceXml.IsTransparentInlineContainer(ancestor);
             }
+            int equations = display ? 1 : CountEquationPayloads(element, mode, removeDeletedText, token);
+            hasSource |= equations != 0;
             if (included) count += equations;
         }
         return (count, hasSource, hasDisplaySource);

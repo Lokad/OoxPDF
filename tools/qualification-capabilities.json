@@ -19821,6 +19821,7 @@
     "=DocxEquationDrawingCompanionsKeepInnerRevisionOwners",
     "=DocxEquationDrawingCompanionsKeepInnerHyperlinkCoverage",
     "=DocxEquationDrawingCompanionsKeepCombinedLinkAndRevisionScopes",
+    "=DocxEquationWarningsIgnoreRemovedLiteralsAndRetainStructure",
     "=DocxDisplayRowKeepsCommentRangeThroughDrawing",
     "=DocxInlineEquationKeepsDrawingCompanionsBetweenTextRuns",
     "=DocxDisplayRowKeepsDrawingCompanionsInTrackedChanges",
