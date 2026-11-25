@@ -56,7 +56,12 @@ internal static partial class DocxInlineCompositionTests
                 TestAssert.True(a.SequenceEqual(b) && a.SequenceEqual(c), "Independent static content preserves every note math frame: " + context);
                 mathText.Append(string.Concat(c.Select(glyph => glyph.Text)));
                 TestAssert.Equal(literal[page].Images.Count, counter[page].Images.Count);
-                TestAssert.True(!staticPictures || counter[page].Images.Count > 0, "The selected static picture renders on every page.");
+                if (staticPictures)
+                {
+                    string frame = $"{context}/page={page + 1}";
+                    TestAssert.Equal(ReadStaticNoteMarginPicture(literal[page], footer, frame),
+                        ReadStaticNoteMarginPicture(counter[page], footer, frame));
+                }
                 TestAssert.True(baseline[page].Annotations.SequenceEqual(counter[page].Annotations), "Navigation follows the unchanged note geometry: " + context);
                 PdfContentValidator.ValidatePage(counter[page], page, default);
             }

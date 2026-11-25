@@ -78,15 +78,7 @@ internal static partial class DocxInlineCompositionTests
         if (shape == "standalone") return;
         AssertLabel("Public margin story");
         if (shape == "two-rows") AssertLabel("Public margin row two");
-        if (shape != "math-picture") return;
-
-        var pictures = ReadPictureBounds(page).Where(picture => InStaticNoteMargin(page, footer, picture.Bounds)).ToArray();
-        TestAssert.True(pictures.Length == 1, "The static table paints exactly one margin picture: " + context);
-        var (bounds, clip) = pictures[0];
-        TestAssert.True(bounds.Width > 0d && bounds.Height > 0d && Math.Abs(bounds.Width * 2d - bounds.Height * 3d) < .01d &&
-            bounds.X >= clip.X - .01d && bounds.X + bounds.Width <= clip.X + clip.Width + .01d &&
-            bounds.Y >= clip.Y - .01d && bounds.Y + bounds.Height <= clip.Y + clip.Height + .01d,
-            "The complete margin picture fits within its paint clip: " + context);
+        if (shape == "math-picture") ReadStaticNoteMarginPicture(page, footer, context);
 
         void AssertLabel(string label)
         {
@@ -94,6 +86,18 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.True(glyphs.All(glyph => InStaticNoteMargin(page, footer, glyph.Ink)),
                 "Every source label glyph paints in the selected margin: " + context + "/" + label);
         }
+    }
+
+    private static (PdfRectangle Bounds, PdfRectangle Clip) ReadStaticNoteMarginPicture(PdfPage page, bool footer, string context)
+    {
+        var pictures = ReadPictureBounds(page).Where(picture => InStaticNoteMargin(page, footer, picture.Bounds)).ToArray();
+        TestAssert.True(pictures.Length == 1, "The static story paints exactly one margin picture: " + context);
+        var (bounds, clip) = pictures[0];
+        TestAssert.True(bounds.Width > 0d && bounds.Height > 0d && Math.Abs(bounds.Width * 2d - bounds.Height * 3d) < .01d &&
+            bounds.X >= clip.X - .01d && bounds.X + bounds.Width <= clip.X + clip.Width + .01d &&
+            bounds.Y >= clip.Y - .01d && bounds.Y + bounds.Height <= clip.Y + clip.Height + .01d,
+            "The complete margin picture fits within its paint clip: " + context);
+        return (bounds, clip);
     }
 
     private static bool InStaticNoteMargin(PdfPage page, bool footer, PdfRectangle ink) => footer

@@ -58,6 +58,12 @@ internal static partial class DocxInlineCompositionTests
                     TestAssert.True(margin.SequenceEqual(StaticNoteMathShows(literal[page], true)), "Literal and field sources keep every margin math frame.");
                     TestAssert.True(literal[page].Annotations.SequenceEqual(counter[page].Annotations), "Source-equivalent counters preserve all navigation.");
                     TestAssert.Equal(literal[page].Images.Count, counter[page].Images.Count);
+                    if (footer && !standalone)
+                    {
+                        string frame = $"{context}/page={page + 1}";
+                        TestAssert.Equal(ReadStaticNoteMarginPicture(literal[page], footer, frame),
+                            ReadStaticNoteMarginPicture(counter[page], footer, frame));
+                    }
                     PdfContentValidator.ValidatePage(counter[page], page, default);
                 }
                 TestAssert.Equal("ratetimeratetime", NormalizeNoteMathFieldText(noteText.ToString()));
