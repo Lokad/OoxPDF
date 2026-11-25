@@ -120,6 +120,7 @@ internal sealed partial class DocxReader
         foreach (var child in equation.Elements())
         {
             token.ThrowIfCancellationRequested();
+            if (DocxMathParser.IsBookmarkMarker(child) || DocxMathParser.IsNonPrintingSourceMarker(child)) continue;
             if (child.Name == MathNamespace + "r" && child.Element(WordprocessingNamespace + "drawing") is not null)
             {
                 var layout = ClassifyDisplayMathRun(child, token, insideEquation: true);
@@ -140,9 +141,16 @@ internal sealed partial class DocxReader
     private static IEnumerable<XElement> SplitDisplayDrawingRow(XElement equation, CancellationToken token)
     {
         XElement? group = null;
+        List<XElement>? bookmarks = null;
         foreach (var child in equation.Elements())
         {
             token.ThrowIfCancellationRequested();
+            if (DocxMathParser.IsNonPrintingSourceMarker(child)) continue;
+            if (DocxMathParser.IsBookmarkMarker(child))
+            {
+                (bookmarks ??= []).Add(child);
+                continue;
+            }
             if (child.Name != MathNamespace + "r" || child.Element(WordprocessingNamespace + "drawing") is null)
             {
                 AddMath(child);
@@ -160,15 +168,40 @@ internal sealed partial class DocxReader
                     yield return group;
                     group = null;
                 }
+                foreach (var bookmark in TakeBookmarks())
+                    yield return bookmark;
                 yield return part;
             }
         }
-        if (group is not null) yield return group;
+        if (group is not null)
+        {
+            group.Add(TakeBookmarks());
+            yield return group;
+        }
+        else
+        {
+            foreach (var bookmark in TakeBookmarks())
+                yield return bookmark;
+        }
 
         void AddMath(XElement element)
         {
             group ??= new XElement(equation.Name, equation.Attributes());
+            group.Add(TakeBookmarks());
             group.Add(element);
+        }
+
+        // A bookmark before another atom retains its offset in the grouped
+        // math. A bookmark before a drawing belongs to the inline boundary.
+        IEnumerable<XElement> TakeBookmarks()
+        {
+            if (bookmarks is null) yield break;
+            foreach (var bookmark in bookmarks)
+            {
+                token.ThrowIfCancellationRequested();
+                yield return bookmark;
+            }
+            bookmarks.Clear();
         }
     }
 

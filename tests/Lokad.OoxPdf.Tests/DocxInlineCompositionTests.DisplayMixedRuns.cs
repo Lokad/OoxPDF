@@ -15,7 +15,10 @@ internal static partial class DocxInlineCompositionTests
     public static void DocxDisplayRowKeepsAdjacentOperandsAroundDrawingCompanions() =>
         CheckDisplayDrawingCompanions(withBreak: false, explicitRow: true);
 
-    private static void CheckDisplayDrawingCompanions(bool withBreak, bool explicitRow)
+    public static void DocxDisplayRowKeepsBookmarkAcrossDrawingCompanions() =>
+        CheckDisplayDrawingCompanions(withBreak: false, explicitRow: true, withBookmark: true);
+
+    private static void CheckDisplayDrawingCompanions(bool withBreak, bool explicitRow, bool withBookmark = false)
     {
         foreach (string container in new[] { "body", "cell" })
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
@@ -33,6 +36,8 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.Equal(1, PortableRenderingTests.ReadPaintedSourceLabel(actual.Page, "Ω").Count);
             TestAssert.Equal(1, actual.Page.Images.Count);
             TestAssert.Equal(expected.Page.Content, actual.Page.Content);
+            if (withBookmark)
+                TestAssert.Equal(expected.Page.Annotations.Single(), actual.Page.Annotations.Single());
             TestAssert.True(expected.Diagnostics.SequenceEqual(actual.Diagnostics) &&
                 !actual.Diagnostics.Contains("DOCX_UNSUPPORTED_EQUATION"),
                 "Every projected equation fragment must have a matching source count.");
@@ -57,18 +62,32 @@ internal static partial class DocxInlineCompositionTests
                         var lineBreak = withBreak ? new XElement(w + "br") : null;
                         var leftNeighbor = explicitRow ? MathRun(new XElement(m + "t", "17")) : null;
                         var rightNeighbor = explicitRow ? MathRun(new XElement(m + "t", "28")) : null;
+                        XElement? bookmarkStart = null;
+                        XElement? bookmarkEnd = null;
+                        if (withBookmark)
+                        {
+                            const string name = "EquationDrawing";
+                            bookmarkStart = new XElement(w + "bookmarkStart", new XAttribute(w + "id", "412"), new XAttribute(w + "name", name));
+                            bookmarkEnd = new XElement(w + "bookmarkEnd", new XAttribute(w + "id", "412"));
+                            xml.Descendants(w + "p").First().Add(
+                                new XElement(w + "r", new XElement(w + "t", new XAttribute(XNamespace.Xml + "space", "preserve"), " ")),
+                                new XElement(w + "hyperlink", new XAttribute(w + "anchor", name),
+                                    new XElement(w + "r", new XElement(w + "t", "Jump row"))));
+                        }
                         if (packed)
                         {
                             var run = MathRun(leftOperand, lineBreak, label, symbol, drawing, rightOperand);
-                            display.Add(explicitRow ? new XElement(m + "oMath", leftNeighbor, run, rightNeighbor) : run);
+                            display.Add(explicitRow ? new XElement(m + "oMath", bookmarkStart, leftNeighbor, run, rightNeighbor, bookmarkEnd) : run);
                         }
                         else
                         {
                             var leftRun = MathRun(leftOperand);
                             var rightRun = MathRun(rightOperand);
-                            display.Add(explicitRow ? new XElement(m + "oMath", leftNeighbor, leftRun) : leftRun,
+                            display.Add(bookmarkStart,
+                                explicitRow ? new XElement(m + "oMath", leftNeighbor, leftRun) : leftRun,
                                 new XElement(w + "r", wordProperties, lineBreak, label, symbol, drawing),
-                                explicitRow ? new XElement(m + "oMath", rightRun, rightNeighbor) : rightRun);
+                                explicitRow ? new XElement(m + "oMath", rightRun, rightNeighbor) : rightRun,
+                                bookmarkEnd);
                         }
                         originalPictureRun.Remove();
 

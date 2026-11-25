@@ -19827,6 +19827,7 @@
     "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "docx-math-center-group": [
+    "=DocxDisplayRowKeepsBookmarkAcrossDrawingCompanions",
     "=DocxDisplayRowKeepsAdjacentOperandsAroundDrawingCompanions",
     "=DocxDisplayMathRetainsCompanionRunsAndPictures",
     "=DocxDisplayMathRetainsDirectMathRuns",
