@@ -8,6 +8,53 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class PortableRenderingTests
 {
+    public static void PortableRenderingPackedMathRunRevisionsKeepEquivalentPaint()
+    {
+        foreach (var (story, part) in new[] { ("body", "word/document.xml"), ("header", "word/header1.xml") })
+        foreach (string kind in new[] { "ins", "del" })
+        foreach (var mode in Enum.GetValues<OoxPdfDocxMarkupMode>())
+        {
+            var beforeDiagnostics = new List<OoxPdfDiagnostic>();
+            var afterDiagnostics = new List<OoxPdfDiagnostic>();
+            var before = Render(packed: false, beforeDiagnostics);
+            var after = Render(packed: true, afterDiagnostics);
+            string expected = RevisionBodyEquationText(kind, mode);
+            TestAssert.Equal(expected, ReadPortableEquationGlyphs(before));
+            TestAssert.Equal(expected, ReadPortableEquationGlyphs(after));
+            TestAssert.Equal(before.Content, after.Content);
+            TestAssert.True(before.Annotations.SequenceEqual(after.Annotations),
+                "Moving the revision boundary keeps the same navigation.");
+            TestAssert.True(beforeDiagnostics.SequenceEqual(afterDiagnostics),
+                "Moving the revision boundary keeps the same equation and review diagnostics.");
+            PdfContentValidator.ValidatePage(after, 0, default);
+
+            PdfPage Render(bool packed, List<OoxPdfDiagnostic> diagnostics)
+            {
+                var document = DocxInlineCompositionTests.ReadMutation($"CompositionProbes/math-run-revision-{story}-{kind}",
+                    mode, false, false, (xml, w, m) =>
+                    {
+                        XElement revision = xml.Descendants(w + kind).Single();
+                        XElement run = revision.Element(m + "r")!;
+                        run.AddFirst(new XElement(m + "rPr", new XElement(m + "sty", new XAttribute(m + "val", "p"))),
+                            new XElement(w + "rPr", new XElement(w + "color", new XAttribute(w + "val", "1840A0"))));
+                        if (!packed) return;
+
+                        if (kind == "del") run.Element(m + "t")!.Name = w + "delText";
+                        var content = run.Nodes().ToArray();
+                        run.RemoveNodes();
+                        run.Remove();
+                        revision.ReplaceWith(run);
+                        revision.Add(content);
+                        run.Add(revision);
+                    }, partOverride: part, diagnosticSink: diagnostics.Add);
+                var renderer = new DocxRenderer(new PinnedResolver(mathFont: true), mode,
+                    mode == OoxPdfDocxMarkupMode.AllMarkup ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup :
+                        OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+                return renderer.RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().Single();
+            }
+        }
+    }
+
     public static void PortableRenderingDeletedMathTextRetainsRevisionPaint()
     {
         foreach (string kind in new[] { "math-run-revision", "equation-revision" })

@@ -30,6 +30,16 @@ internal static partial class DocxInlineCompositionTests
             (xml, w, m) => xml.Descendants(w + "ins").Single().Descendants(m + "t").Single().Value = string.Empty);
         TestAssert.True(!DocxMathLayout.TryGetRuns(empty.Paragraphs.First().Equations.Single(), default, out _),
             "Unqualified empty inner revision wrappers retain their existing fallback.");
+        var mixed = ReadMutation("CompositionProbes/math-run-revision-body-ins", OoxPdfDocxMarkupMode.AllMarkup, false, false,
+            (xml, w, m) =>
+            {
+                XElement revision = xml.Descendants(w + "ins").Single();
+                var mixedRun = new XElement(m + "r", new XElement(m + "t", "u"),
+                    new XElement(w + "ins", revision.Attributes(), new XElement(m + "t", "x+2")));
+                revision.ReplaceWith(mixedRun);
+            });
+        TestAssert.True(!DocxMathLayout.TryGetRuns(mixed.Paragraphs.First().Equations.Single(), default, out _),
+            "An unchanged literal and a revision cannot be merged under the same owner.");
         var deleted = ReadMutation("CompositionProbes/math-run-revision-body-del", OoxPdfDocxMarkupMode.Final, false, false);
         var visible = deleted.Paragraphs.First();
         TestAssert.True(visible.Revisions.Count == 0 && !visible.Equations.Single().HasRunRevisions &&

@@ -55,7 +55,8 @@ internal static partial class DocxMathParser
             {
                 bool allowsDeletedText = item.RevisionOwner is null ? equationHasDeletionOwner : item.RevisionOwner == deletion;
                 XElement? firstBreakInRun = element == trailingBreaks?.Run ? trailingBreaks?.FirstBreakInRun : null;
-                nodes.Add(element, ReadLeaf(element, readRun, allowsDeletedText, firstBreakInRun, cancellationToken) with
+                var readRevision = item.RevisionOwner is null ? includeRevision : null;
+                nodes.Add(element, ReadLeaf(element, readRun, allowsDeletedText, firstBreakInRun, readRevision, cancellationToken) with
                     { Hyperlink = item.IncludeAnnotations ? item.Hyperlink : null });
                 continue;
             }
@@ -260,7 +261,10 @@ internal static partial class DocxMathParser
 
     private static bool IsRevisionContent(XElement element, bool allowsDeletedText) => element.Name.Namespace == MathNamespace &&
         (IsControl(element.Name.LocalName) || element.Name.LocalName == "r" &&
-            element.Elements().Any(text => ReadLiteralRunText(text, allowsDeletedText)?.Any(IsMathLiteralCharacter) == true));
+            HasMathRunText(element.Elements(), allowsDeletedText));
+
+    private static bool HasMathRunText(IEnumerable<XElement> children, bool allowsDeletedText) =>
+        children.Any(child => ReadLiteralRunText(child, allowsDeletedText)?.Any(IsMathLiteralCharacter) == true);
 
     private static bool IsMathLiteralCharacter(char value) => !OoxTextBreakRules.IsNonPrintingBreakControl(value);
     // Revision admission and structural retention see the same stored content
@@ -359,7 +363,10 @@ internal static partial class DocxMathParser
     // Visible unknown payloads retain their former deferred fallback; an empty
     // unknown payload cannot become a supported revision owner.
     internal static bool IsReadableRun(XElement element, bool allowsDeletedText, XElement? firstBreakInRun = null) =>
-        element.Name == MathNamespace + "r" && RunContent(element, firstBreakInRun).All(child =>
+        element.Name == MathNamespace + "r" && HasReadableRunChildren(RunContent(element, firstBreakInRun), allowsDeletedText);
+
+    private static bool HasReadableRunChildren(IEnumerable<XElement> children, bool allowsDeletedText) =>
+        children.All(child =>
             ReadLiteralRunText(child, allowsDeletedText) is not null ||
             child.Name == MathNamespace + "rPr" || child.Name == WordprocessingNamespace + "rPr" ||
             DocxSourceXml.IsNonPrintingMarker(child));
@@ -382,44 +389,58 @@ internal static partial class DocxMathParser
         };
     }
 
-    private static DocxMathNode ReadLeaf(XElement element, Func<XElement, string, DocxTextRun> readRun, bool allowsDeletedText,
-        XElement? firstBreakInRun, CancellationToken token)
+    private static XElement? ReadRunRevision(XElement run)
     {
-        if (IsReadableRun(element, allowsDeletedText, firstBreakInRun))
+        // Word may put the run's properties and text directly inside its
+        // single insertion or deletion. Mixed owners still need separate layout.
+        XElement? child = run.Elements().FirstOrDefault();
+        return child is not null && child.Name.Namespace == WordprocessingNamespace &&
+            child.Name.LocalName is ("ins" or "del") && !child.ElementsAfterSelf().Any() &&
+            HasOnlyWhitespaceText(run) && HasOnlyWhitespaceText(child) ? child : null;
+    }
+
+    private static DocxMathNode ReadLeaf(XElement element, Func<XElement, string, DocxTextRun> readRun, bool allowsDeletedText,
+        XElement? firstBreakInRun, Func<XElement, bool>? includeRevision, CancellationToken token)
+    {
+        if (element.Name != MathNamespace + "r") return new DocxMathUnsupported(element.Name.LocalName, element.Name.NamespaceName, []);
+        XElement? revision = includeRevision is not null && firstBreakInRun is null ? ReadRunRevision(element) : null;
+        XElement owner = revision ?? element;
+        if (revision is not null) allowsDeletedText = revision.Name == WordprocessingNamespace + "del";
+        var children = RunContent(owner, firstBreakInRun);
+        if (!HasReadableRunChildren(children, allowsDeletedText) || revision is not null && !HasMathRunText(children, allowsDeletedText))
+            return new DocxMathUnsupported(element.Name.LocalName, element.Name.NamespaceName, []);
+        if (revision is not null && !includeRevision!(revision)) return new DocxMathRow([]);
+
+        // Optional breaks carry no ink in math. Word joiners also carry
+        // no ink, and protect their boundaries from an operator break.
+        string text = string.Concat(children.Select(child => ReadLiteralRunText(child, allowsDeletedText)));
+        List<int>? joinerOffsets = null;
+        if (text.Any(character => !IsMathLiteralCharacter(character)))
         {
-            // Optional breaks carry no ink in math. Word joiners also carry
-            // no ink, and protect their boundaries from an operator break.
-            string text = string.Concat(RunContent(element, firstBreakInRun).Select(child => ReadLiteralRunText(child, allowsDeletedText)));
-            List<int>? joinerOffsets = null;
-            if (text.Any(character => !IsMathLiteralCharacter(character)))
+            var literal = new StringBuilder(text.Length);
+            foreach (char character in text)
             {
-                var literal = new StringBuilder(text.Length);
-                foreach (char character in text)
-                {
-                    token.ThrowIfCancellationRequested();
-                    if (IsMathLiteralCharacter(character))
-                        literal.Append(character);
-                    else if (OoxTextBreakRules.IsWordJoiner(character) &&
-                        (joinerOffsets is null || joinerOffsets[^1] != literal.Length))
-                        (joinerOffsets ??= []).Add(literal.Length);
-                }
-                text = literal.ToString();
+                token.ThrowIfCancellationRequested();
+                if (IsMathLiteralCharacter(character))
+                    literal.Append(character);
+                else if (OoxTextBreakRules.IsWordJoiner(character) &&
+                    (joinerOffsets is null || joinerOffsets[^1] != literal.Length))
+                    (joinerOffsets ??= []).Add(literal.Length);
             }
-            var (normalText, literalText, supported) = ReadRunProperties(element, text);
-            return new DocxMathRun(
-                readRun(element, text),
-                PropertyValue(element, "rPr", "sty"), PropertyValue(element, "rPr", "scr"))
-            {
-                WordJoinerOffsets = joinerOffsets is null ? [] : joinerOffsets,
-                PropertiesXml = ReadProperties(element),
-                NormalTextValue = normalText,
-                LiteralText = literalText,
-                ExplicitFontFamily = (string?)element.Element(WordprocessingNamespace + "rPr")?.Element(WordprocessingNamespace + "rFonts")?.Attribute(WordprocessingNamespace + "ascii")
-                    ?? (string?)element.Element(WordprocessingNamespace + "rPr")?.Element(WordprocessingNamespace + "rFonts")?.Attribute(WordprocessingNamespace + "hAnsi"),
-                HasUnsupportedProperties = !supported
-            };
+            text = literal.ToString();
         }
-        return new DocxMathUnsupported(element.Name.LocalName, element.Name.NamespaceName, []);
+        var (normalText, literalText, supported) = ReadRunProperties(owner, text);
+        var fonts = owner.Element(WordprocessingNamespace + "rPr")?.Element(WordprocessingNamespace + "rFonts");
+        return new DocxMathRun(readRun(owner, text), PropertyValue(owner, "rPr", "sty"), PropertyValue(owner, "rPr", "scr"))
+        {
+            WordJoinerOffsets = joinerOffsets is null ? [] : joinerOffsets,
+            PropertiesXml = ReadProperties(owner),
+            NormalTextValue = normalText,
+            LiteralText = literalText,
+            ExplicitFontFamily = (string?)fonts?.Attribute(WordprocessingNamespace + "ascii")
+                ?? (string?)fonts?.Attribute(WordprocessingNamespace + "hAnsi"),
+            HasUnsupportedProperties = !supported
+        };
     }
 
     private static (bool? NormalText, bool LiteralText, bool Supported) ReadRunProperties(XElement run, string text = "")

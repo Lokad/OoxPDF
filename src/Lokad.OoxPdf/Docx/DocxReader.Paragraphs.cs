@@ -561,7 +561,7 @@ internal sealed partial class DocxReader
             {
                 DocxRevisionInfo? owner = equationRevision;
                 XElement? wrapper = IsDisplayMathRun(run) ? null :
-                    run.Ancestors().TakeWhile(parent => parent.Name != MathNamespace + "oMath")
+                    run.AncestorsAndSelf().TakeWhile(parent => parent.Name != MathNamespace + "oMath")
                     .FirstOrDefault(DocxSourceXml.IsRevisionContainer);
                 if (wrapper is not null && !IsIncludedRevisionContainer(wrapper, markupMode)) owner = null;
                 else if (wrapper is not null)

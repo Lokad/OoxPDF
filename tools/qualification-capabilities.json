@@ -3653,6 +3653,7 @@
     "PortableRenderingExactCommentFramesKeepAuthoredBoundsAndNeutralSourceTransforms"
   ],
   "docx-math-revision-boundaries": [
+    "=PortableRenderingPackedMathRunRevisionsKeepEquivalentPaint",
     "DocxEmptyMoveRangesPreserveMixedContentAcrossStories",
     "DocxMoveRangesRetainUnknownContentOpenAndLegacyFallbacks",
     "DocxInlineCompositionControlRevisions",
@@ -20524,6 +20525,7 @@
     "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "docx-math-run-metadata": [
+    "=PortableRenderingPackedMathRunRevisionsKeepEquivalentPaint",
     "=DocxDirectionalMathWrappersRetainFractionsAndDiagnostics",
     "=MathLiteralOperatorsKeepGlyphsAndUseOrdinarySpacing",
     "=DocxMathRunAlignmentAdmitsDisabledFlags",
