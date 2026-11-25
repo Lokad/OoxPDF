@@ -29,15 +29,27 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.Equal(3, PortableRenderingTests.ReadPaintedSourceLabel(actual.Page, "793", mathOnly: true).Count);
             if (explicitRow)
             {
-                TestAssert.Equal(2, PortableRenderingTests.ReadPaintedSourceLabel(actual.Page, "17", mathOnly: true).Count);
+                var leading = PortableRenderingTests.ReadPaintedSourceLabel(actual.Page, "17", mathOnly: true);
+                TestAssert.Equal(2, leading.Count);
                 TestAssert.Equal(2, PortableRenderingTests.ReadPaintedSourceLabel(actual.Page, "28", mathOnly: true).Count);
+                if (withBookmark)
+                {
+                    var link = actual.Page.Annotations.Single();
+                    var outer = expected.Page.Annotations.Single();
+                    TestAssert.Equal((outer.X, outer.Y, outer.Width, outer.Height),
+                        (link.X, link.Y, link.Width, link.Height));
+                    var ink = leading[0].Ink;
+                    TestAssert.True(link.Destination is { PageIndex: 0, Left: double left, Top: double top } &&
+                        outer.Destination is { Left: double outerLeft, Top: double outerTop } &&
+                        Math.Abs(left - outerLeft) < .002d &&
+                        top >= ink.Y + ink.Height - .002d && top <= outerTop + .002d,
+                        "The inner bookmark opens above the first operand, within the containing line's viewport.");
+                }
             }
             TestAssert.Equal(2, PortableRenderingTests.ReadPaintedSourceLabel(actual.Page, "QA").Count);
             TestAssert.Equal(1, PortableRenderingTests.ReadPaintedSourceLabel(actual.Page, "Ω").Count);
             TestAssert.Equal(1, actual.Page.Images.Count);
             TestAssert.Equal(expected.Page.Content, actual.Page.Content);
-            if (withBookmark)
-                TestAssert.Equal(expected.Page.Annotations.Single(), actual.Page.Annotations.Single());
             TestAssert.True(expected.Diagnostics.SequenceEqual(actual.Diagnostics) &&
                 !actual.Diagnostics.Contains("DOCX_UNSUPPORTED_EQUATION"),
                 "Every projected equation fragment must have a matching source count.");
@@ -105,6 +117,14 @@ internal static partial class DocxInlineCompositionTests
                 TestAssert.True(first >= 0 && first < picture && picture < last,
                     "Both operands and the drawing retain their source order in the paragraph.");
                 TestAssert.Equal(withBreak, items[(first + 1)..picture].Any(item => item is DocxInlineBreak));
+                if (withBookmark && packed)
+                {
+                    var owner = ((DocxInlineEquation)items[first]).Equation.Content.Bookmarks.Single();
+                    TestAssert.Equal(0, owner.ChildIndex);
+                    var anchor = paragraph.BookmarkAnchors.Single(bookmark => bookmark.Name == "EquationDrawing");
+                    TestAssert.True(ReferenceEquals(anchor.MathSource, owner.Source),
+                        "The original bookmark remains bound to the mathematical source before the drawing.");
+                }
                 var page = PictureRangeRenderer(mode).RenderPagesAsync(source, Record, default).ToBlockingEnumerable().Single();
                 return (page, diagnostics, source.EquationParts.Sum(part => part.SourceCount));
 
