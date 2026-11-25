@@ -1,7 +1,6 @@
 using System.Xml.Linq;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Fonts;
-using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Pptx;
 
@@ -10,7 +9,7 @@ internal sealed record PptxRenderContext(
     PptxSlide Slide,
     PptxSceneSlide SceneSlide,
     PresentationFontResolver FontResolver,
-    Dictionary<string, PdfImageXObject?>? ImageCache,
+    Dictionary<string, PptxRenderer.RasterPicture>? ImageCache,
     Action<OoxPdfDiagnostic>? DiagnosticSink,
     CancellationToken CancellationToken,
     // R16: caches ride as typed dictionaries with explicit null-negative contracts

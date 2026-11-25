@@ -1,5 +1,6 @@
 using System.Buffers.Binary;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Fonts;
@@ -18,6 +19,7 @@ internal static partial class PptxPictureRecoveryTests
         {
             byte[] control = ConvertFallback(FallbackParts("svg-only", cropped: cropped), new RecoveryFontResolver(), out var controlDiagnostics);
             TestAssert.Equal(0, controlDiagnostics.Count);
+            AssertRedSvgPicture(control);
             foreach (string variant in new[] { "relationship", "missing", "malformed", "payload" })
             {
                 byte[] actual = ConvertFallback(FallbackParts(variant, cropped: cropped), new RecoveryFontResolver(), out var diagnostics);
@@ -32,6 +34,89 @@ internal static partial class PptxPictureRecoveryTests
         ConvertFallback(FallbackParts("both-missing"), new RecoveryFontResolver(), out var missing);
         TestAssert.Equal("Ignored", missing.Single().Fallback);
         TestAssert.Equal(OoxPdfSeverity.Error, missing.Single().Severity);
+    }
+
+    public static void PptxPictureRecoveryUsesTheSvgExtensionOwnedByThePictureBlip()
+    {
+        var parts = FallbackParts("missing");
+        var slide = XDocument.Parse(Encoding.UTF8.GetString(parts["ppt/slides/slide1.xml"]));
+        XElement blip = slide.Descendants(A + "blip").Single();
+        blip.Attribute(R + "embed")!.Remove();
+        XElement extensions = blip.Element(A + "extLst")!;
+        XNamespace foreign = "urn:picture-metadata";
+        var imageRelationships = XDocument.Parse(Encoding.UTF8.GetString(parts["ppt/slides/_rels/slide1.xml.rels"]));
+        imageRelationships.Root!.Add(new XElement(imageRelationships.Root.Name.Namespace + "Relationship",
+            new XAttribute("Id", "blue"), new XAttribute("Type", R.NamespaceName + "/image"),
+            new XAttribute("Target", "../media/blue.svg")));
+        parts["ppt/slides/_rels/slide1.xml.rels"] = TestFixtures.Utf8(imageRelationships.ToString());
+        parts["ppt/media/blue.svg"] = TestFixtures.Utf8(
+            Encoding.UTF8.GetString(parts["ppt/media/vector.svg"]).Replace("#ff0000", "#0000ff", StringComparison.Ordinal));
+
+        parts["ppt/slides/slide1.xml"] = TestFixtures.Utf8(slide.ToString());
+        byte[] authored = ConvertFallback(parts, new RecoveryFontResolver(), out var authoredDiagnostics);
+        TestAssert.Equal(0, authoredDiagnostics.Count);
+        AssertRedSvgPicture(authored);
+        XName svgBlip = extensions.Elements().Single().Elements().Single().Name;
+        foreach (XElement metadata in new[] {
+            new XElement(foreign + "svgBlip", new XAttribute(R + "embed", "blue")),
+            new XElement(foreign + "svgBlip", new XAttribute(R + "embed", "unresolved")),
+            new XElement(foreign + "metadata", new XElement(svgBlip, new XAttribute(R + "embed", "blue")))
+        })
+        {
+            var unrelatedExtension = new XElement(A + "ext", new XAttribute("uri", foreign.NamespaceName), metadata);
+            extensions.AddFirst(unrelatedExtension);
+            parts["ppt/slides/slide1.xml"] = TestFixtures.Utf8(slide.ToString());
+            byte[] actual = ConvertFallback(parts, new RecoveryFontResolver(), out var diagnostics);
+            TestAssert.Equal(0, diagnostics.Count);
+            TestAssert.True(authored.AsSpan().SequenceEqual(actual), "An unrelated extension must leave the authored red picture intact.");
+            unrelatedExtension.Remove();
+        }
+    }
+
+    public static void PptxPictureRecoverySharedPreviewKeepsDiagnosticsOnBothSlides()
+    {
+        foreach (bool cropped in new[] { false, true })
+        foreach (bool recoveryFirst in new[] { true, false })
+        {
+            var parts = FallbackParts("payload", cropped: cropped);
+            byte[] recovering = parts["ppt/slides/slide1.xml"];
+            var slide = XDocument.Parse(Encoding.UTF8.GetString(recovering));
+            slide.Descendants(A + "extLst").Single().Remove();
+            byte[] ordinary = TestFixtures.Utf8(slide.ToString());
+            AddSecondPictureSlide(parts);
+            parts["ppt/slides/slide1.xml"] = recoveryFirst ? recovering : ordinary;
+            parts["ppt/slides/slide2.xml"] = recoveryFirst ? ordinary : recovering;
+
+            byte[] pdf = ConvertFallback(parts, new RecoveryFontResolver(), out var diagnostics);
+            AssertRedSvgPicture(pdf);
+            TestAssert.Equal(cropped ? 3 : 2, diagnostics.Count);
+            int recoveredSlide = recoveryFirst ? 1 : 2;
+            int omittedSlide = recoveryFirst ? 2 : 1;
+            var recovered = diagnostics.Single(d => d.Fallback == "Embedded SVG");
+            TestAssert.Equal("IMAGE_UNSUPPORTED_FORMAT", recovered.Id);
+            TestAssert.Equal(OoxPdfSeverity.Warning, recovered.Severity);
+            TestAssert.Equal(recoveredSlide, recovered.SlideIndex);
+            var omitted = diagnostics.Single(d => d.Fallback == "Ignored");
+            TestAssert.Equal("IMAGE_UNSUPPORTED_FORMAT", omitted.Id);
+            TestAssert.Equal(OoxPdfSeverity.Error, omitted.Severity);
+            TestAssert.Equal(omittedSlide, omitted.SlideIndex);
+            if (cropped)
+            {
+                var clip = diagnostics.Single(d => d.Id == "IMAGE_CROP_UNSUPPORTED_FORMAT");
+                TestAssert.Equal(omittedSlide, clip.SlideIndex);
+                TestAssert.Contains($"on slide {omittedSlide};", clip.Message);
+            }
+        }
+    }
+
+    private static void AssertRedSvgPicture(byte[] pdf)
+    {
+        string content = Encoding.Latin1.GetString(pdf).Replace("\r", "", StringComparison.Ordinal);
+        // Bind the authored red to the complete filled rectangle, including in the cropped control.
+        const string linePoint = @"[-.0-9]+ [-.0-9]+";
+        string redRectangle = $"1 0 0 rg\n{linePoint} m\n({linePoint} l\n){{3}}h\nf\n";
+        TestAssert.Equal(1, Regex.Matches(content, redRectangle, RegexOptions.CultureInvariant).Count);
+        TestAssert.DoesNotContain("/Subtype /Image", content);
     }
 
     public static void PptxPictureRecoverySvgFontsFollowTheSelectedRepresentation()
@@ -107,18 +192,8 @@ internal static partial class PptxPictureRecoveryTests
     {
         var parts = FallbackParts("valid");
         parts["ppt/media/preview.png"] = TestFixtures.CreateRgbPng(512, 512, new byte[512 * 512 * 3]);
-        parts["ppt/slides/slide2.xml"] = parts["ppt/slides/slide1.xml"];
-        parts["ppt/slides/_rels/slide2.xml.rels"] = parts["ppt/slides/_rels/slide1.xml.rels"];
+        AddSecondPictureSlide(parts);
         parts["ppt/slides/slide1.xml"] = TestFixtures.Utf8(PptxTests.InheritedShapePart("000000", 0, 0));
-        var presentation = XDocument.Parse(Encoding.UTF8.GetString(parts["ppt/presentation.xml"]));
-        presentation.Descendants(P + "sldIdLst").Single().Add(new XElement(P + "sldId", new XAttribute("id", 257), new XAttribute(R + "id", "second")));
-        parts["ppt/presentation.xml"] = TestFixtures.Utf8(presentation.ToString());
-        var relationships = XDocument.Parse(Encoding.UTF8.GetString(parts["ppt/_rels/presentation.xml.rels"]));
-        relationships.Root!.Add(new XElement(relationships.Root.Name.Namespace + "Relationship", new XAttribute("Id", "second"), new XAttribute("Type", R.NamespaceName + "/slide"), new XAttribute("Target", "slides/slide2.xml")));
-        parts["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8(relationships.ToString());
-        var types = XDocument.Parse(Encoding.UTF8.GetString(parts["[Content_Types].xml"]));
-        types.Root!.Add(new XElement(types.Root.Name.Namespace + "Override", new XAttribute("PartName", "/ppt/slides/slide2.xml"), new XAttribute("ContentType", "application/vnd.openxmlformats-officedocument.presentationml.slide+xml")));
-        parts["[Content_Types].xml"] = TestFixtures.Utf8(types.ToString());
         var pool = new TestMemoryBudget(); var storage = new RecoveryRefusalStorage(pool); var diagnostics = new List<OoxPdfDiagnostic>();
         using var input = TestFixtures.CreateZipPackage(parts); using var output = new MemoryStream();
         var error = TestAssert.Throws<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(input, output,
@@ -129,6 +204,21 @@ internal static partial class PptxPictureRecoveryTests
         TestAssert.True(!diagnostics.Any(d => d.Fallback == "Embedded SVG"), "Host refusal cannot select image recovery.");
         TestAssert.Equal(0L, output.Length); TestAssert.Equal(0L, pool.Reserved);
         TestAssert.Equal(pool.ScopesCreated, pool.ScopesDisposed);
+    }
+
+    private static void AddSecondPictureSlide(Dictionary<string, byte[]> parts)
+    {
+        parts["ppt/slides/slide2.xml"] = parts["ppt/slides/slide1.xml"];
+        parts["ppt/slides/_rels/slide2.xml.rels"] = parts["ppt/slides/_rels/slide1.xml.rels"];
+        var presentation = XDocument.Parse(Encoding.UTF8.GetString(parts["ppt/presentation.xml"]));
+        presentation.Descendants(P + "sldIdLst").Single().Add(new XElement(P + "sldId", new XAttribute("id", 257), new XAttribute(R + "id", "second")));
+        parts["ppt/presentation.xml"] = TestFixtures.Utf8(presentation.ToString());
+        var relationships = XDocument.Parse(Encoding.UTF8.GetString(parts["ppt/_rels/presentation.xml.rels"]));
+        relationships.Root!.Add(new XElement(relationships.Root.Name.Namespace + "Relationship", new XAttribute("Id", "second"), new XAttribute("Type", R.NamespaceName + "/slide"), new XAttribute("Target", "slides/slide2.xml")));
+        parts["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8(relationships.ToString());
+        var types = XDocument.Parse(Encoding.UTF8.GetString(parts["[Content_Types].xml"]));
+        types.Root!.Add(new XElement(types.Root.Name.Namespace + "Override", new XAttribute("PartName", "/ppt/slides/slide2.xml"), new XAttribute("ContentType", "application/vnd.openxmlformats-officedocument.presentationml.slide+xml")));
+        parts["[Content_Types].xml"] = TestFixtures.Utf8(types.ToString());
     }
 
     private static Dictionary<string, byte[]> FallbackParts(string variant, bool text = false, bool cropped = false)

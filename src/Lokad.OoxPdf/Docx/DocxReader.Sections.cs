@@ -239,7 +239,7 @@ internal sealed partial class DocxReader
             return null;
         }
         XElement? previewBlip = FindDrawingOwnedBlip(drawing, cancellationToken);
-        string? vectorId = ReadDrawingSvgRelationshipId(previewBlip, cancellationToken);
+        string? vectorId = OoxXml.ReadDrawingSvgRelationshipId(previewBlip, cancellationToken);
         string? previewId = (string?)previewBlip?.Attribute(RelationshipsNamespace + "embed") ?? vectorId;
         if (previewId is null) return null;
         OoxPart? previewPart = ResolvePart(previewId);
@@ -299,20 +299,7 @@ internal sealed partial class DocxReader
     private static string? ReadDrawingImageRelationshipId(XElement drawing, CancellationToken token)
     {
         XElement? blip = FindDrawingOwnedBlip(drawing, token);
-        return (string?)blip?.Attribute(RelationshipsNamespace + "embed") ?? ReadDrawingSvgRelationshipId(blip, token);
-    }
-
-    private static string? ReadDrawingSvgRelationshipId(XElement? blip, CancellationToken token)
-    {
-        // The SVG relationship is a direct extension of the picture's blip.
-        // Drawing-level preview metadata has no authority over that picture.
-        foreach (XElement extension in blip?.Element(DrawingNamespace + "extLst")?.Elements(DrawingNamespace + "ext") ?? [])
-        {
-            token.ThrowIfCancellationRequested();
-            if (extension.Element(XName.Get("svgBlip", "http://schemas.microsoft.com/office/drawing/2016/SVG/main")) is { } svgBlip)
-                return (string?)svgBlip.Attribute(RelationshipsNamespace + "embed");
-        }
-        return null;
+        return (string?)blip?.Attribute(RelationshipsNamespace + "embed") ?? OoxXml.ReadDrawingSvgRelationshipId(blip, token);
     }
 
     // A child textbox has its own runs and drawing frames. Descendant pictures

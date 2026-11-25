@@ -63,7 +63,7 @@ internal sealed partial class PptxRenderer
         int slideIndex,
         GroupTransform transform,
         List<PdfImageResource> images,
-        Dictionary<string, PdfImageXObject?>? imageCache,
+        Dictionary<string, RasterPicture>? imageCache,
         ref int index,
         string targetPartName,
         PptxSceneImageResource? imageResource,
@@ -113,8 +113,8 @@ internal sealed partial class PptxRenderer
         if (imageResource.ContentType.Equals("image/svg+xml", StringComparison.OrdinalIgnoreCase))
         {
             if (recolor.Kind != PptxSceneImageRecolorKind.None && alpha > 0d)
-                ReportUnsupportedImageRecolor(diagnosticSink, targetPartName, slideIndex,
-                    "PPTX image recolor cannot be applied to embedded SVG; its original vector colors are retained.");
+                diagnosticSink?.Invoke(UnsupportedImageRecolor(targetPartName, slideIndex,
+                    "PPTX image recolor cannot be applied to embedded SVG; its original vector colors are retained."));
             bool rendered = TryRenderSvgPicture(graphics, document, transformedBounds, imageResource.Bytes, crop, fillRect, diagnosticSink, slideIndex, targetPartName, cancellationToken, preset, geometry.PresetAdjustments, svgTextFonts, alpha);
             StrokePictureFrame(document, graphics, transformedBounds, x, y, width, height, line, hasTransform, preset, geometry.PresetAdjustments);
             return rendered || line.HasLine;
@@ -344,40 +344,36 @@ internal sealed partial class PptxRenderer
         return new FillRect(rect.Left, rect.Top, rect.Right, rect.Bottom);
     }
 
-    private static PdfImageXObject? GetOrCreateImage(
+    private static RasterPicture GetOrCreateImage(
         PptxSceneImageResource imageResource,
         PptxSceneImageRecolor recolor,
-        Dictionary<string, PdfImageXObject?>? imageCache,
-        Action<OoxPdfDiagnostic>? diagnosticSink,
-        int slideIndex,
+        Dictionary<string, RasterPicture>? imageCache,
         CancellationToken cancellationToken)
     {
         string cacheKey = imageResource.PartName + "\u001f" + ImageRecolorCacheKey(recolor);
-        if (imageCache is not null && imageCache.TryGetValue(cacheKey, out PdfImageXObject? cached))
+        if (imageCache is not null && imageCache.TryGetValue(cacheKey, out RasterPicture? cached))
         {
             return cached;
         }
 
-        PdfImageXObject? image = CreateImage(imageResource.PartName, imageResource.ContentType, imageResource.Bytes,
-            recolor, diagnosticSink, slideIndex, cancellationToken);
+        RasterPicture image = DecodeRasterPicture(imageResource.PartName, imageResource.ContentType, imageResource.Bytes,
+            recolor, cancellationToken);
         imageCache?.TryAdd(cacheKey, image);
         return image;
     }
 
-    private static PdfImageXObject? CreateImage(
+    private static RasterPicture DecodeRasterPicture(
         string partName,
         string contentType,
         byte[] bytes,
         PptxSceneImageRecolor recolor,
-        Action<OoxPdfDiagnostic>? diagnosticSink,
-        int slideIndex,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         try
         {
             if (IsNoImageRecolor(recolor))
             {
-                return OoxImageDecoder.Decode(contentType, bytes, cancellationToken);
+                return new(OoxImageDecoder.Decode(contentType, bytes, cancellationToken));
             }
 
             if (OoxImageDecoder.IsJpegContentType(contentType))
@@ -387,35 +383,33 @@ internal sealed partial class PptxRenderer
                 {
                     try
                     {
-                        return RecolorImage();
+                        return new(RecolorImage());
                     }
                     catch (Exception ex) when (ex is InvalidDataException or NotSupportedException or IndexOutOfRangeException)
                     {
                     }
                 }
 
-                ReportUnsupportedImageRecolor(diagnosticSink, partName, slideIndex,
-                    $"PPTX {ImageRecolorKindName()} image recolor could not be applied to {contentType} {info.FrameProfileName} image data and was ignored.");
-
-                return OoxImageDecoder.CreateJpegPassthrough(bytes, info);
+                string message = $"PPTX {ImageRecolorKindName()} image recolor could not be applied to {contentType} {info.FrameProfileName} image data and was ignored.";
+                return new(OoxImageDecoder.CreateJpegPassthrough(bytes, info),
+                    slideIndex => UnsupportedImageRecolor(partName, slideIndex, message));
             }
 
-            return RecolorImage();
+            return new(RecolorImage());
         }
         catch (Exception ex) when (ex is InvalidDataException or NotSupportedException)
         {
-            diagnosticSink?.Invoke(new OoxPdfDiagnostic(
+            string message = $"Image '{contentType}' could not be rendered and was ignored: {ex.Message}";
+            return new(null, slideIndex => new OoxPdfDiagnostic(
                 "IMAGE_UNSUPPORTED_FORMAT",
                 OoxPdfSeverity.Error,
-                $"Image '{contentType}' could not be rendered and was ignored: {ex.Message}",
+                message,
                 partName,
                 PageIndex: null,
                 SlideIndex: slideIndex,
                 Feature: contentType,
                 Fallback: "Ignored"));
         }
-
-        return null;
 
         PdfImageXObject RecolorImage()
         {
@@ -572,9 +566,9 @@ internal sealed partial class PptxRenderer
         return recolor.Kind == PptxSceneImageRecolorKind.None;
     }
 
-    private static void ReportUnsupportedImageRecolor(Action<OoxPdfDiagnostic>? sink, string? partName, int slideIndex, string message) =>
-        sink?.Invoke(new OoxPdfDiagnostic("PPTX_UNSUPPORTED_IMAGE_RECOLOR", OoxPdfSeverity.Warning,
-            message, partName, SlideIndex: slideIndex, Feature: "image recolor", Fallback: "Original image"));
+    private static OoxPdfDiagnostic UnsupportedImageRecolor(string? partName, int slideIndex, string message) =>
+        new("PPTX_UNSUPPORTED_IMAGE_RECOLOR", OoxPdfSeverity.Warning,
+            message, partName, SlideIndex: slideIndex, Feature: "image recolor", Fallback: "Original image");
 
     private static string ImageRecolorCacheKey(PptxSceneImageRecolor recolor)
     {
@@ -597,7 +591,7 @@ internal sealed partial class PptxRenderer
         ShapePictureFill fill,
         Action<OoxPdfDiagnostic>? diagnosticSink,
         int slideIndex,
-        Dictionary<string, PdfImageXObject?>? imageCache,
+        Dictionary<string, RasterPicture>? imageCache,
         ref int imageIndex,
         CancellationToken cancellationToken)
     {
@@ -615,8 +609,9 @@ internal sealed partial class PptxRenderer
             return null;
         }
 
-        PdfImageXObject? image = GetOrCreateImage(fill.Resource, fill.Recolor, imageCache, diagnosticSink, slideIndex, cancellationToken);
-        return image is null ? null : new PdfImageResource("Im" + imageIndex++, image);
+        RasterPicture result = GetOrCreateImage(fill.Resource, fill.Recolor, imageCache, cancellationToken);
+        result.ReportDiagnostic(diagnosticSink, slideIndex);
+        return result.Image is { } image ? new PdfImageResource("Im" + imageIndex++, image) : null;
     }
 
     private static bool CanRenderPictureFillPreset(string preset)

@@ -73,7 +73,7 @@ internal sealed partial class PptxRenderer
         int slideIndex,
         GroupTransform groupTransform,
         List<PdfImageResource>? images,
-        Dictionary<string, PdfImageXObject?>? imageCache,
+        Dictionary<string, RasterPicture>? imageCache,
         ref int imageIndex,
         CancellationToken cancellationToken)
     {
@@ -121,7 +121,7 @@ internal sealed partial class PptxRenderer
         int slideIndex,
         GroupTransform groupTransform,
         List<PdfImageResource>? images,
-        Dictionary<string, PdfImageXObject?>? imageCache,
+        Dictionary<string, RasterPicture>? imageCache,
         ref int imageIndex,
         ShapeBounds rawBounds,
         string preset,

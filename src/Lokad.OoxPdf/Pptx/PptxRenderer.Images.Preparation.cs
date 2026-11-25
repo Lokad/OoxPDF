@@ -7,8 +7,22 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
+    // Keep decode results across picture owners. A speculative raster preview
+    // can select SVG without consuming the decode diagnostic.
+    internal sealed class RasterPicture(PdfImageXObject? image, Func<int, OoxPdfDiagnostic>? pendingDiagnostic = null)
+    {
+        public PdfImageXObject? Image { get; } = image;
+
+        public void ReportDiagnostic(Action<OoxPdfDiagnostic>? sink, int slideIndex)
+        {
+            if (sink is null || pendingDiagnostic is not { } create) return;
+            pendingDiagnostic = null;
+            sink(create(slideIndex));
+        }
+    }
+
     private static PptxSceneSlide PreparePictureSources(PptxSceneSlide slide,
-        Dictionary<string, PdfImageXObject?> cache, Action<OoxPdfDiagnostic>? diagnostics, int slideNumber, CancellationToken token)
+        Dictionary<string, RasterPicture> cache, Action<OoxPdfDiagnostic>? diagnostics, int slideNumber, CancellationToken token)
     {
         var master = slide.ShowMasterShapes ? Nodes(slide.MasterNodes, false, slide.MasterPartName) : slide.MasterNodes;
         var layout = Nodes(slide.LayoutNodes, false, slide.LayoutPartName);
@@ -42,15 +56,12 @@ internal sealed partial class PptxRenderer
         {
             if (picture.SvgFallback is not { } svg || !svg.ContentType.Equals("image/svg+xml", StringComparison.OrdinalIgnoreCase) ||
                 picture.Resource?.ContentType.Equals("image/svg+xml", StringComparison.OrdinalIgnoreCase) == true) return picture;
-            var failures = new List<OoxPdfDiagnostic>();
             if (picture.Resource is { } preferred)
             {
                 var crop = ToCropRect(picture.Crop);
-                if (PrepareRasterPicture(preferred, picture.Recolor, cache, failures.Add, slideNumber, token, ref crop) is not null)
-                {
-                    foreach (var diagnostic in failures) diagnostics?.Invoke(diagnostic);
+                if (PrepareRasterPicture(preferred, picture.Recolor, cache, diagnostics, slideNumber, token,
+                    ref crop, selectingPreview: true) is not null)
                     return picture;
-                }
             }
             token.ThrowIfCancellationRequested();
             string id = picture.Resource is not null ? "IMAGE_UNSUPPORTED_FORMAT"
@@ -64,57 +75,67 @@ internal sealed partial class PptxRenderer
     }
 
     private static PdfImageXObject? PrepareRasterPicture(PptxSceneImageResource resource,
-        PptxSceneImageRecolor recolor, Dictionary<string, PdfImageXObject?>? cache,
-        Action<OoxPdfDiagnostic>? diagnostics, int slideIndex, CancellationToken token, ref CropRect crop)
+        PptxSceneImageRecolor recolor, Dictionary<string, RasterPicture>? cache,
+        Action<OoxPdfDiagnostic>? diagnostics, int slideIndex, CancellationToken token, ref CropRect crop,
+        bool selectingPreview = false)
     {
-        PdfImageXObject? image = null;
+        RasterPicture? cropped = null;
         if (!crop.IsEmpty)
         {
-            image = GetOrCreateCroppedImage(resource, recolor, cache, diagnostics, slideIndex, token, crop);
-            if (image is not null) crop = default;
+            cropped = GetOrCreateCroppedImage(resource, recolor, cache, token, crop);
+            if (cropped.Image is { } image)
+            {
+                crop = default;
+                return image;
+            }
+            if (!selectingPreview)
+                cropped.ReportDiagnostic(diagnostics, slideIndex);
         }
-        return image ?? GetOrCreateImage(resource, recolor, cache, diagnostics, slideIndex, token);
+
+        RasterPicture original = GetOrCreateImage(resource, recolor, cache, token);
+        if (selectingPreview && original.Image is not null)
+            cropped?.ReportDiagnostic(diagnostics, slideIndex);
+        if (!selectingPreview || original.Image is not null)
+            original.ReportDiagnostic(diagnostics, slideIndex);
+        return original.Image;
     }
 
-    private static PdfImageXObject? GetOrCreateCroppedImage(
+    private static RasterPicture GetOrCreateCroppedImage(
         PptxSceneImageResource imageResource, PptxSceneImageRecolor recolor,
-        Dictionary<string, PdfImageXObject?>? imageCache, Action<OoxPdfDiagnostic>? diagnosticSink,
-        int slideIndex, CancellationToken cancellationToken, CropRect crop)
+        Dictionary<string, RasterPicture>? imageCache, CancellationToken cancellationToken, CropRect crop)
     {
         string cacheKey = imageResource.PartName + "\u001f" + ImageRecolorCacheKey(recolor) + "\u001fcrop:" +
             crop.Left.ToString("R", CultureInfo.InvariantCulture) + "," +
             crop.Top.ToString("R", CultureInfo.InvariantCulture) + "," +
             crop.Right.ToString("R", CultureInfo.InvariantCulture) + "," +
             crop.Bottom.ToString("R", CultureInfo.InvariantCulture);
-        if (imageCache is not null && imageCache.TryGetValue(cacheKey, out PdfImageXObject? cached))
+        if (imageCache is not null && imageCache.TryGetValue(cacheKey, out RasterPicture? cached))
         {
             return cached;
         }
 
-        PdfImageXObject? croppedImage = CreateCroppedImage(
-            imageResource.PartName,
-            imageResource.ContentType,
-            imageResource.Bytes);
+        RasterPicture croppedImage = CreateCroppedImage();
         imageCache?.TryAdd(cacheKey, croppedImage);
         return croppedImage;
 
-        PdfImageXObject? CreateCroppedImage(string partName, string contentType, byte[] bytes)
+        RasterPicture CreateCroppedImage()
         {
             try
             {
                 // D02: shared pixel decoding; unsupported types keep the silent
                 // PDF-clipping fallback (no diagnostic), exactly as before.
-                if (!OoxImageDecoder.IsSupportedContentType(contentType))
+                if (!OoxImageDecoder.IsSupportedContentType(imageResource.ContentType))
                 {
-                    return null;
+                    return new(null);
                 }
 
-                using DecodedPixels decoded = OoxImageDecoder.DecodePixelsOwned(contentType, bytes, cancellationToken);
-                return CreateCroppedRgbImage(decoded.Width, decoded.Height, decoded.Rgb, decoded.Alpha, recolor, crop, cancellationToken);
+                using DecodedPixels decoded = OoxImageDecoder.DecodePixelsOwned(imageResource.ContentType, imageResource.Bytes, cancellationToken);
+                return new(CreateCroppedRgbImage(decoded.Width, decoded.Height, decoded.Rgb, decoded.Alpha, recolor, crop, cancellationToken));
             }
             catch (Exception ex) when (ex is InvalidDataException or NotSupportedException or IndexOutOfRangeException)
             {
-                diagnosticSink?.Invoke(new OoxPdfDiagnostic(
+                string partName = imageResource.PartName;
+                return new(null, slideIndex => new OoxPdfDiagnostic(
                     "IMAGE_CROP_UNSUPPORTED_FORMAT",
                     OoxPdfSeverity.Warning,
                     $"Image '{partName}' could not be decoded for Office-style cropped image embedding on slide {slideIndex}; falling back to PDF clipping.",
@@ -124,8 +145,6 @@ internal sealed partial class PptxRenderer
                     Feature: "image crop",
                     Fallback: "PDF clipping"));
             }
-
-            return null;
         }
     }
 }

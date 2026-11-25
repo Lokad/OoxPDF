@@ -294,7 +294,7 @@ internal sealed partial class PptxSceneBuilder
                 ReadBounds(child),
                 kind is PptxSceneNodeKind.Shape or PptxSceneNodeKind.Connector ? ReadShape(child, theme, colorMap, package, relationships) : null,
                 ReadTextBody(child, placeholderSources, defaultTextStyle),
-                kind == PptxSceneNodeKind.Picture ? ReadPicture(child, theme, colorMap, package, relationships) : null,
+                kind == PptxSceneNodeKind.Picture ? ReadPicture(child, theme, colorMap, package, relationships, cancellationToken) : null,
                 kind == PptxSceneNodeKind.Table ? ReadTable(child, theme, colorMap) : null,
                 kind == PptxSceneNodeKind.Chart ? ReadChart(child, package, theme, colorMap, relationships, cancellationToken) : null,
                 kind == PptxSceneNodeKind.Group ? ReadGroupTransform(child) : PptxSceneGroupTransform.Identity,
@@ -438,29 +438,19 @@ internal sealed partial class PptxSceneBuilder
             OoxXml.ReadBool(transform, "flipV"));
     }
 
-    internal static string? ReadPictureRelationshipId(XElement picture)
-    {
-        XElement? blip = picture
-            .Element(PresentationNamespace + "blipFill")
-            ?.Element(DrawingNamespace + "blip");
-        return (string?)blip?.Attribute(RelationshipsNamespace + "embed") ?? ReadSvgPictureRelationshipId(picture);
-    }
-
-    private static string? ReadSvgPictureRelationshipId(XElement picture) =>
-            ReadPictureBlip(picture)?.Descendants()
-                .FirstOrDefault(element => element.Name.LocalName == "svgBlip")
-                ?.Attribute(RelationshipsNamespace + "embed")
-                ?.Value;
-
     private static PptxScenePicture ReadPicture(
         XElement picture,
         PptxTheme theme,
         PptxColorMap colorMap,
         OoxPackage package,
-        IReadOnlyDictionary<string, OoxRelationship> relationships)
+        IReadOnlyDictionary<string, OoxRelationship> relationships,
+        CancellationToken cancellationToken)
     {
-        string? relationshipId = ReadPictureRelationshipId(picture);
-        string? svgRelationshipId = ReadSvgPictureRelationshipId(picture);
+        XElement? presentationFill = picture.Element(PresentationNamespace + "blipFill");
+        XElement? blip = (presentationFill ?? picture.Element(DrawingNamespace + "blipFill"))?.Element(DrawingNamespace + "blip");
+        string? svgRelationshipId = OoxXml.ReadDrawingSvgRelationshipId(blip, cancellationToken);
+        string? relationshipId = (presentationFill is null ? null : (string?)blip?.Attribute(RelationshipsNamespace + "embed"))
+            ?? svgRelationshipId;
         string? targetPartName = ResolveRelationshipTarget(relationshipId, relationships);
         XElement? shapeProperties = picture.Element(PresentationNamespace + "spPr");
         PptxSceneLineStyle line = ReadShapeLine(shapeProperties, theme, colorMap, default, widthSpecifiedByDefault: false);

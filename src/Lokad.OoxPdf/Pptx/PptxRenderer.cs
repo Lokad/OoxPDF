@@ -27,7 +27,7 @@ internal sealed partial class PptxRenderer
         var fontResolver = new PresentationFontResolver(primaryFonts ??
             await WindowsFontResolver.CreateAsync(cancellationToken).ConfigureAwait(false), cancellationToken);
         PptxScene scene = new PptxSceneBuilder().Build(document, package, cancellationToken);
-        var imageCache = new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase);
+        var imageCache = new Dictionary<string, RasterPicture>(StringComparer.OrdinalIgnoreCase);
         // one bounded workbook model per embedded part, shared by every chart
         // frame of this conversion (like the image cache above). Each model is already
         // capped (workbook totals, range unions); the dictionary itself is bounded by

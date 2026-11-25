@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Xml.Linq;
+using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
 
 namespace Lokad.OoxPdf.Ooxml;
 
@@ -7,6 +8,19 @@ namespace Lokad.OoxPdf.Ooxml;
 // the caller's default. Boolean readers delegate to the shared OOXML vocabulary.
 internal static class OoxXml
 {
+    public static string? ReadDrawingSvgRelationshipId(XElement? blip, CancellationToken cancellationToken)
+    {
+        // Only a direct extension of the selected drawing blip owns the SVG relationship.
+        foreach (XElement extension in blip?.Element(DrawingNamespace + "extLst")?.Elements(DrawingNamespace + "ext") ?? [])
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (extension.Element(DrawingSvgNamespace + "svgBlip") is { } svgBlip)
+                return (string?)svgBlip.Attribute(RelationshipsNamespace + "embed");
+        }
+
+        return null;
+    }
+
     // DrawingML accepts thousandths of a percent or a decimal percent literal.
     // Keep the existing Int32 policy for strict/try readers; color channels and
     // transforms below retain their existing Int64 fallback policy separately.
