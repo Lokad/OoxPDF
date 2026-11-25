@@ -10,64 +10,58 @@ internal static partial class DocxInlineCompositionTests
         foreach (string position in new[] { "docEnd", "sectEnd" })
         foreach (bool direct in new[] { false, true })
         foreach (bool footer in new[] { false, true })
-        foreach (bool standalone in new[] { false, true })
         foreach (string instruction in new[] { "PAGE", "NUMPAGES" })
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
         {
             int count = footer ? 3 : 2, reference = footer ? 2 : 1;
             string value = (instruction == "PAGE" ? reference : count).ToString(System.Globalization.CultureInfo.InvariantCulture);
-            DocxDocument Source(string? field, string cached, bool marginMath)
-            {
-                var source = ReadNoteMathField("endnote", mode, field, cached, direct);
-                source = source with
-                {
-                    Settings = source.Settings with { EndnoteReferenceSettings =
-                        source.Settings.EndnoteReferenceSettings with { PositionValue = position } },
-                    BodyElements = footer
-                        ? [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Public earlier page", 12d, 14d)),
-                            new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null), .. source.BodyElements]
-                        : source.BodyElements
-                };
-                if (!marginMath) return source;
-                var paragraph = StaticNoteEquationParagraph(source, mode, standalone);
-                if (footer && !standalone)
-                {
-                    paragraph = NoteMathStaticPictureParagraph(source, paragraph, false);
-                    var equation = paragraph.Equations[0] with { SourceRunIndex = paragraph.Runs.Max(run => run.SourceRunIndex) + 1 };
-                    paragraph = paragraph with { Equations = [equation], InlineContent =
-                        [.. paragraph.InlineContent!, new DocxInlineEquation(equation)] };
-                }
-                return WithStaticNoteEquation(source, footer, paragraph);
-            }
             var renderer = PictureRangeRenderer(mode);
-            var baseline = renderer.RenderPagesAsync(Source(null, value, false), null, default).ToBlockingEnumerable().ToArray();
-            var literal = renderer.RenderPagesAsync(Source(null, value, true), null, default).ToBlockingEnumerable().ToArray();
-            var source = Source(instruction, "9", true);
-            var runs = NoteMathFieldParagraph(source).Runs.Select(run => (run.Text, run.FieldKind)).ToArray();
-            var diagnostics = new List<Lokad.OoxPdf.Diagnostics.OoxPdfDiagnostic>();
-            var counter = renderer.RenderPagesAsync(source, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
-            string context = $"{position}/direct={direct}/footer={footer}/standalone={standalone}/{instruction}/{mode}";
-            TestAssert.Equal(count, counter.Length); TestAssert.Equal(count, literal.Length); TestAssert.Equal(count, baseline.Length);
-            TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"), "Supported static and note formulas coexist: " + context);
-            TestAssert.True(runs.SequenceEqual(NoteMathFieldParagraph(source).Runs.Select(run => (run.Text, run.FieldKind))),
-                "Binding preserves the cached note source.");
-            var noteText = new System.Text.StringBuilder();
-            for (int page = 0; page < count; page++)
+            var baseline = renderer.RenderPagesAsync(ReadEndnoteFieldSource(position, direct, footer, mode, null, value),
+                null, default).ToBlockingEnumerable().ToArray();
+            TestAssert.Equal(count, baseline.Length);
+            foreach (bool standalone in new[] { false, true })
             {
-                TestAssert.Equal(NormalizeNoteMathFieldText(DocxPageFootnoteNumberingTests.DecodeText(literal[page])),
-                    NormalizeNoteMathFieldText(DocxPageFootnoteNumberingTests.DecodeText(counter[page])));
-                var a = StaticNoteMathShows(baseline[page], false); var b = StaticNoteMathShows(literal[page], false);
-                var c = StaticNoteMathShows(counter[page], false);
-                TestAssert.True(a.SequenceEqual(b) && a.SequenceEqual(c), "Static math preserves each note glyph frame: " + context);
-                noteText.Append(string.Concat(c.Select(glyph => glyph.Text)));
-                var margin = StaticNoteMathShows(counter[page], true);
-                TestAssert.Equal("ratetime", NormalizeNoteMathFieldText(string.Concat(margin.Select(glyph => glyph.Text))));
-                TestAssert.True(margin.SequenceEqual(StaticNoteMathShows(literal[page], true)), "Literal and field sources keep every margin math frame.");
-                TestAssert.True(literal[page].Annotations.SequenceEqual(counter[page].Annotations), "Source-equivalent counters preserve all navigation.");
-                TestAssert.Equal(literal[page].Images.Count, counter[page].Images.Count);
-                PdfContentValidator.ValidatePage(counter[page], page, default);
+                DocxDocument Source(string? field, string cached)
+                {
+                    var source = ReadEndnoteFieldSource(position, direct, footer, mode, field, cached);
+                    var paragraph = StaticNoteEquationParagraph(source, mode, standalone);
+                    if (footer && !standalone)
+                    {
+                        paragraph = NoteMathStaticPictureParagraph(source, paragraph, false);
+                        var equation = paragraph.Equations[0] with { SourceRunIndex = paragraph.Runs.Max(run => run.SourceRunIndex) + 1 };
+                        paragraph = paragraph with { Equations = [equation], InlineContent =
+                            [.. paragraph.InlineContent!, new DocxInlineEquation(equation)] };
+                    }
+                    return WithStaticNoteEquation(source, footer, paragraph);
+                }
+                var literal = renderer.RenderPagesAsync(Source(null, value), null, default).ToBlockingEnumerable().ToArray();
+                var source = Source(instruction, "9");
+                var runs = NoteMathFieldParagraph(source).Runs.Select(run => (run.Text, run.FieldKind)).ToArray();
+                var diagnostics = new List<Lokad.OoxPdf.Diagnostics.OoxPdfDiagnostic>();
+                var counter = renderer.RenderPagesAsync(source, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
+                string context = $"{position}/direct={direct}/footer={footer}/standalone={standalone}/{instruction}/{mode}";
+                TestAssert.Equal(count, counter.Length); TestAssert.Equal(count, literal.Length);
+                TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"), "Supported static and note formulas coexist: " + context);
+                TestAssert.True(runs.SequenceEqual(NoteMathFieldParagraph(source).Runs.Select(run => (run.Text, run.FieldKind))),
+                    "Binding preserves the cached note source.");
+                var noteText = new System.Text.StringBuilder();
+                for (int page = 0; page < count; page++)
+                {
+                    TestAssert.Equal(NormalizeNoteMathFieldText(DocxPageFootnoteNumberingTests.DecodeText(literal[page])),
+                        NormalizeNoteMathFieldText(DocxPageFootnoteNumberingTests.DecodeText(counter[page])));
+                    var a = StaticNoteMathShows(baseline[page], false); var b = StaticNoteMathShows(literal[page], false);
+                    var c = StaticNoteMathShows(counter[page], false);
+                    TestAssert.True(a.SequenceEqual(b) && a.SequenceEqual(c), "Static math preserves each note glyph frame: " + context);
+                    noteText.Append(string.Concat(c.Select(glyph => glyph.Text)));
+                    var margin = StaticNoteMathShows(counter[page], true);
+                    TestAssert.Equal("ratetime", NormalizeNoteMathFieldText(string.Concat(margin.Select(glyph => glyph.Text))));
+                    TestAssert.True(margin.SequenceEqual(StaticNoteMathShows(literal[page], true)), "Literal and field sources keep every margin math frame.");
+                    TestAssert.True(literal[page].Annotations.SequenceEqual(counter[page].Annotations), "Source-equivalent counters preserve all navigation.");
+                    TestAssert.Equal(literal[page].Images.Count, counter[page].Images.Count);
+                    PdfContentValidator.ValidatePage(counter[page], page, default);
+                }
+                TestAssert.Equal("ratetimeratetime", NormalizeNoteMathFieldText(noteText.ToString()));
             }
-            TestAssert.Equal("ratetimeratetime", NormalizeNoteMathFieldText(noteText.ToString()));
         }
     }
 

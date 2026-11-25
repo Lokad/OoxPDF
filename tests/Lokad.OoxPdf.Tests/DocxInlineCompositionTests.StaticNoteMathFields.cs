@@ -27,16 +27,7 @@ internal static partial class DocxInlineCompositionTests
             string value = (instruction == "PAGE" ? referencePage : pageCount).ToString(System.Globalization.CultureInfo.InvariantCulture);
             DocxDocument Source(string? field, string cached, bool withStatic)
             {
-                var source = ReadNoteMathField("endnote", mode, field, cached, direct);
-                source = source with
-                {
-                    Settings = source.Settings with { EndnoteReferenceSettings =
-                        source.Settings.EndnoteReferenceSettings with { PositionValue = position } },
-                    BodyElements = footer
-                        ? [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Public earlier page", 12d, 14d)),
-                            new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null), .. source.BodyElements]
-                        : source.BodyElements
-                };
+                var source = ReadEndnoteFieldSource(position, direct, footer, mode, field, cached);
                 if (!withStatic) return source;
                 var paragraph = staticCounters ? ReadNoteMathStaticCounters(mode, complex: footer) : PlainNoteMathStaticParagraph();
                 if (staticPictures) paragraph = NoteMathStaticPictureParagraph(source, paragraph, pictureOnly) with
@@ -78,6 +69,21 @@ internal static partial class DocxInlineCompositionTests
                     fontResourceFilter: name => name.StartsWith("Eq", StringComparison.Ordinal))
                     .Select(glyph => (glyph.Text, glyph.X, glyph.Y, glyph.Size)).ToArray();
         }
+    }
+
+    private static DocxDocument ReadEndnoteFieldSource(string position, bool direct, bool footer,
+        OoxPdfDocxMarkupMode mode, string? instruction, string cached)
+    {
+        var source = ReadNoteMathField("endnote", mode, instruction, cached, direct);
+        return source with
+        {
+            Settings = source.Settings with { EndnoteReferenceSettings =
+                source.Settings.EndnoteReferenceSettings with { PositionValue = position } },
+            BodyElements = footer
+                ? [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Public earlier page", 12d, 14d)),
+                    new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null), .. source.BodyElements]
+                : source.BodyElements
+        };
     }
 
     public static void DocxNoteMathFieldsStaticFrameCompletenessSeparatesIntrusionFromUnknownBounds()
