@@ -7,6 +7,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 import pymupdf as fitz
 
@@ -74,6 +75,28 @@ class PdfInkTests(unittest.TestCase):
         self.assertIn(clipped["FontProgramSha256"], result["Pages"][0]["FontPrograms"])
         self.assertEqual(1, len(clipped["CutGlyphs"]))
         self.assertTrue(clipped["CutGlyphs"][0]["FullyHidden"])
+
+    def test_shared_font_object_keeps_page_local_resource_names(self):
+        font = (FONT_DIRECTORY / "DejaVuSans.ttf").read_bytes()
+        with fitz.open() as document:
+            xrefs = []
+            for resource in ("First", "Second"):
+                page = document.new_page(width=220, height=160)
+                xrefs.append(page.insert_font(fontname=resource, fontbuffer=font))
+                page.insert_text((20, 50), "A", fontname=resource, fontsize=24)
+            self.assertEqual(xrefs[0], xrefs[1])
+            document.save(self.pdf, deflate=True)
+
+        with patch.object(fitz.Document, "extract_font", autospec=True,
+                          side_effect=fitz.Document.extract_font) as extract_font:
+            result = analyze_pdf(self.pdf, text_witnesses=[(1, "A"), (2, "A")])
+        self.assertEqual([xrefs[0]], [call.args[1] for call in extract_font.call_args_list])
+        self.assertEqual(2, result["GlyphsMeasured"])
+        digest = hashlib.sha256(font).hexdigest().upper()
+        self.assertEqual([{digest: ["First"]}, {digest: ["Second"]}],
+                         [page["FontResourceBindings"] for page in result["Pages"]])
+        self.assertEqual([("UnclippedInk", digest)] * 2,
+                         [(row["Status"], row["FontProgramSha256"]) for row in result["TextWitnesses"]])
 
     def test_quarter_turn_clip_is_qualified(self):
         write_pdf(self.pdf, b"q\n0 1 -1 0 150 0 cm\n0 0 160 160 re W n\n")

@@ -137,6 +137,7 @@ def analyze_pdf(path, expected_sha256=None, include_trace_bounds=False, text_wit
         result["TextWitnesses"] = witnesses
     document = fitz.open(path)
     try:
+        embedded_digests = {}
         for page in document:
             page_witnesses = [witness for witness in witnesses if witness["Page"] == page.number + 1]
             device = FontPaints()
@@ -145,9 +146,13 @@ def analyze_pdf(path, expected_sha256=None, include_trace_bounds=False, text_wit
             fitz.mupdf.fz_close_device(device)
             embedded = {}
             for entry in page.get_fonts(full=True):
-                data = document.extract_font(entry[0])[3]
-                if data:
-                    embedded.setdefault(sha256(data), []).append(entry[4])
+                xref = entry[0]
+                if xref not in embedded_digests:
+                    data = document.extract_font(xref)[3]
+                    embedded_digests[xref] = sha256(data) if data else None
+                program_digest = embedded_digests[xref]
+                if program_digest is not None:
+                    embedded.setdefault(program_digest, []).append(entry[4])
             fonts = {}
             for identity, data in device.programs.items():
                 if identity in embedded:
