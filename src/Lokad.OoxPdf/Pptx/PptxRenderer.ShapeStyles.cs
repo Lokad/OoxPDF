@@ -20,7 +20,7 @@ internal sealed partial class PptxRenderer
     private static ShapePictureFill? ToShapePictureFill(PptxSceneShapePictureFill fill)
     {
         return fill.HasPicture
-            ? new ShapePictureFill(fill.RelationshipId, fill.TargetPartName, fill.Resource, ToCropRect(fill.Crop), ToFillRect(fill.Fill), fill.Alpha, fill.Recolor)
+            ? new ShapePictureFill(fill.TargetPartName, fill.Resource, ToCropRect(fill.Crop), ToFillRect(fill.Fill), fill.Alpha, fill.Recolor)
             : null;
     }
 
@@ -514,11 +514,16 @@ internal sealed partial class PptxRenderer
         public bool IsEmpty => Left == 0d && Top == 0d && Right == 0d && Bottom == 0d;
     }
 
-    private readonly record struct FillRect(double Left, double Top, double Right, double Bottom);
-
+    private readonly record struct FillRect(double Left, double Top, double Right, double Bottom)
+    {
+        public (double X, double Y, double Width, double Height) ResolveDestination(double x, double y, double width, double height) =>
+            (x + Left * width,
+             y + Bottom * height,
+             Math.Max(0.001d, width * (1d - Left - Right)),
+             Math.Max(0.001d, height * (1d - Top - Bottom)));
+    }
 
     private readonly record struct ShapePictureFill(
-        string RelationshipId,
         string? TargetPartName,
         PptxSceneImageResource? Resource,
         CropRect Crop,

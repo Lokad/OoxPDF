@@ -94,10 +94,7 @@ internal sealed partial class PptxRenderer
         }
 
 
-        double imageX = x + fillRect.Left * width;
-        double imageY = y + fillRect.Bottom * height;
-        double imageWidth = Math.Max(0.001d, width * (1d - fillRect.Left - fillRect.Right));
-        double imageHeight = Math.Max(0.001d, height * (1d - fillRect.Top - fillRect.Bottom));
+        var (imageX, imageY, imageWidth, imageHeight) = fillRect.ResolveDestination(x, y, width, height);
         double sourceLeft = Math.Clamp(crop.Left, 0d, 0.999d);
         double sourceTop = Math.Clamp(crop.Top, 0d, 0.999d);
         double sourceRight = Math.Clamp(crop.Right, 0d, 0.999d);

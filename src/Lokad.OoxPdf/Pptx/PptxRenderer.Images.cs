@@ -128,10 +128,7 @@ internal sealed partial class PptxRenderer
         }
 
         string name = "Im" + index++;
-        double imageX = x + fillRect.Left * width;
-        double imageY = y + fillRect.Bottom * height;
-        double imageWidth = Math.Max(0.001d, width * (1d - fillRect.Left - fillRect.Right));
-        double imageHeight = Math.Max(0.001d, height * (1d - fillRect.Top - fillRect.Bottom));
+        var (imageX, imageY, imageWidth, imageHeight) = fillRect.ResolveDestination(x, y, width, height);
         bool transparent = alpha < 0.999d;
         if (hasTransform)
         {
@@ -630,11 +627,7 @@ internal sealed partial class PptxRenderer
         IReadOnlyDictionary<string, double>? adjustments,
         (PptxSceneCustomGeometry Geometry, PptxSceneCustomPath Path)? customMask = null)
     {
-        FillRect fillRect = fill.Fill;
-        double imageX = x + fillRect.Left * width;
-        double imageY = y + fillRect.Bottom * height;
-        double imageWidth = Math.Max(0.001d, width * (1d - fillRect.Left - fillRect.Right));
-        double imageHeight = Math.Max(0.001d, height * (1d - fillRect.Top - fillRect.Bottom));
+        var (imageX, imageY, imageWidth, imageHeight) = fill.Fill.ResolveDestination(x, y, width, height);
         bool transparent = fill.Alpha < 0.999d;
         if (transparent)
         {
