@@ -729,6 +729,36 @@ internal static partial class SvgTextTests
         }
     }
 
+    public static void SvgForeignTextAttributesKeepAuthoredLabelsInBothFormats()
+    {
+        const string rectangle = """<rect x="5" y="5" width="40" height="30" fill="red"/>""";
+        const string attributes = """x="60" y="85" font-size="20" fill="#112233" """;
+        const string ns = """xmlns:author="urn:authoring-metadata" """;
+        string control = Svg(rectangle + $"<text {attributes}>NORTH</text>");
+        string foreignText = Svg(rectangle + $"""
+            <text {attributes} {ns} author:rotate="15" author:textLength="40" author:lengthAdjust="spacing">NORTH</text>
+            """);
+        string foreignSpan = Svg(rectangle + $"""
+            <text {attributes} {ns}>NO<tspan author:x="15" author:baseline="source">RTH</tspan></text>
+            """);
+        AssertSvgPaintInBothFormats(control, [foreignText, foreignSpan],
+            pdf => TestAssert.Equal(5, LabelPaths(pdf)), "1 0 0 rg");
+
+        foreach (string positioned in new[]
+        {
+            $"""<text {attributes} rotate="15">NORTH</text>""",
+            $"""<text {attributes}>NO<tspan x="15">RTH</tspan></text>"""
+        })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            string paint = Paint(Svg(rectangle + positioned), diagnostics).ToString();
+            TestAssert.Contains("1 0 0 rg", paint);
+            TestAssert.DoesNotContain(LabelColor, paint);
+            TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Fallback == "Partial"),
+                "Authored positioning retains the existing SVG fallback.");
+        }
+    }
+
     public static void SvgLabelsRejectUnsupportedPositioningAndNonFinitePaintWithoutLosingShapes()
     {
         var diagnostics = new List<OoxPdfDiagnostic>();

@@ -97,7 +97,8 @@ internal sealed partial class PptxRenderer
     {
         label = null;
         if (element.AncestorsAndSelf().Any(e => ReadSvgStyleDeclarations(e).ContainsKey("font")) ||
-            element.Attributes().Any(a => a.Name.LocalName is "rotate" or "textLength" or "lengthAdjust")) return false;
+            element.Attributes().Any(attribute => attribute.Name.Namespace == XNamespace.None &&
+                attribute.Name.LocalName is "rotate" or "textLength" or "lengthAdjust")) return false;
         var style = ReadSvgStyleDeclarations(element);
         string? Inherited(string name) => ReadSvgInheritedAttribute(element, style, name)?.Trim();
         bool PreservesTextStyle(string name) => IsNeutralSvgTextStyle(name, Inherited(name));
@@ -335,15 +336,20 @@ internal sealed partial class PptxRenderer
             return child.Attributes().All(IsPlainAttribute) &&
                 style.All(declaration => RetainsLabelStyle(declaration.Key.ToLowerInvariant(), declaration.Value));
 
-            bool IsPlainAttribute(XAttribute attribute) =>
-                attribute.Name == spaceName || attribute.IsNamespaceDeclaration ||
-                (isLink && attribute.Name.LocalName == "href" &&
-                 (attribute.Name.Namespace == XNamespace.None || attribute.Name.NamespaceName == "http://www.w3.org/1999/xlink")) ||
-                attribute.Name.Namespace == XNamespace.None &&
-                (attribute.Name.LocalName is "id" or "class" or "role" or "style" ||
-                 attribute.Name.LocalName.StartsWith("aria-", StringComparison.Ordinal) ||
-                 attribute.Name.LocalName.StartsWith("data-", StringComparison.Ordinal) ||
-                 RetainsLabelStyle(attribute.Name.LocalName, style.GetValueOrDefault(attribute.Name.LocalName, attribute.Value)));
+            bool IsPlainAttribute(XAttribute attribute)
+            {
+                if (attribute.Name == spaceName || attribute.IsNamespaceDeclaration) return true;
+                string name = attribute.Name.LocalName;
+                XNamespace ns = attribute.Name.Namespace;
+                bool isXLink = ns.NamespaceName == "http://www.w3.org/1999/xlink";
+                if (isLink && name == "href" && (ns == XNamespace.None || isXLink)) return true;
+                // Unknown namespaced attributes carry no SVG presentation.
+                if (ns != XNamespace.None) return ns != XNamespace.Xml && !isXLink;
+                return name is "id" or "class" or "role" or "style" ||
+                    name.StartsWith("aria-", StringComparison.Ordinal) ||
+                    name.StartsWith("data-", StringComparison.Ordinal) ||
+                    RetainsLabelStyle(name, style.GetValueOrDefault(name, attribute.Value));
+            }
 
             bool RetainsLabelStyle(string name, string value) => name switch
             {

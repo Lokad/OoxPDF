@@ -20618,6 +20618,7 @@
     "SvgLabelOpacityGroupsRemainVectorOnlyAndKeepUnsupportedSiblingsExplicit",
     "SvgLabelsPreserveWhitespaceAndDoNotRevealHiddenText",
     "SvgLabelsKeepHarmlessAttributesAndNonRenderingMetadata",
+    "=SvgForeignTextAttributesKeepAuthoredLabelsInBothFormats",
     "SvgLabelsRejectUnsupportedPositioningAndNonFinitePaintWithoutLosingShapes",
     "SvgLabelFontPreparationRefundsScratchOnRefusalAndCancellation",
     "SvgLabelPreparationFailurePreservesDestinationAndCleansTemporaryFiles",
