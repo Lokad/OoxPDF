@@ -1515,7 +1515,24 @@ internal static class PptxChartRenderingTests
 
     private static void AssertLegendKeyOnlyDataLabels(string chartXml, RgbColor labelColor, bool expectPlotClip = false)
     {
-        // Keep the frame of the original bar and scatter probes.
+        PdfPage page = RenderLegendKeyOnlyChart(chartXml);
+        var rectangles = PptxComposedPaletteTests.ReadFilledRectangles(page).ToArray();
+        var labels = rectangles.Where(rect => rect.Color == labelColor).ToArray();
+        TestAssert.Equal(2, labels.Length);
+        RgbColor seriesColor = new(0x44, 0x72, 0xC4);
+        var swatches = rectangles.Where(rect => rect.Color == seriesColor &&
+            rect.Width > 0d && Math.Abs(rect.Width - rect.Height) <= .001d).ToArray();
+        TestAssert.Equal(2, swatches.Length);
+        var enclosed = labels.Select(label => swatches.Single(swatch => swatch.X >= label.X && swatch.Y >= label.Y &&
+            swatch.X + swatch.Width <= label.X + label.Width && swatch.Y + swatch.Height <= label.Y + label.Height));
+        TestAssert.Equal(2, enclosed.Distinct().Count());
+        if (expectPlotClip)
+            TestAssert.Contains(" re W* n", page.Content);
+    }
+
+    private static PdfPage RenderLegendKeyOnlyChart(string chartXml)
+    {
+        // Keep the authored probe frame for all three chart families.
         const string slide = """
             <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
                    xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
@@ -1536,21 +1553,10 @@ internal static class PptxChartRenderingTests
         PdfPage page = new PptxRenderer(fontResolver: null).RenderPagesAsync(new PptxReader().Read(package, default),
             package, diagnostics.Add, default).ToBlockingEnumerable().Single();
 
-        var rectangles = PptxComposedPaletteTests.ReadFilledRectangles(page).ToArray();
-        var labels = rectangles.Where(rect => rect.Color == labelColor).ToArray();
-        TestAssert.Equal(2, labels.Length);
-        RgbColor seriesColor = new(0x44, 0x72, 0xC4);
-        var swatches = rectangles.Where(rect => rect.Color == seriesColor &&
-            rect.Width > 0d && Math.Abs(rect.Width - rect.Height) <= .001d).ToArray();
-        TestAssert.Equal(2, swatches.Length);
-        var enclosed = labels.Select(label => swatches.Single(swatch => swatch.X >= label.X && swatch.Y >= label.Y &&
-            swatch.X + swatch.Width <= label.X + label.Width && swatch.Y + swatch.Height <= label.Y + label.Height));
-        TestAssert.Equal(2, enclosed.Distinct().Count());
-        if (expectPlotClip)
-            TestAssert.Contains(" re W* n", page.Content);
         TestAssert.True(diagnostics.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"),
             "Legend-key-only labels are supported for these chart families.");
         PdfContentValidator.ValidatePage(page, 0, default);
+        return page;
     }
 
     private static Dictionary<string, byte[]> ThemedBarChartPackage(string chartXml)
@@ -3110,30 +3116,7 @@ internal static class PptxChartRenderingTests
 
     public static void PptxSyntheticLineChartOmitsLegendKeyOnlyDataLabels()
     {
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
-        {
-            ["[Content_Types].xml"] = TestFixtures.Utf8(PptxTests.BasicContentTypes()),
-            ["_rels/.rels"] = TestFixtures.Utf8(PptxTests.PackageRelationship()),
-            ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8(PptxTests.PresentationRelationship()),
-            ["ppt/presentation.xml"] = TestFixtures.Utf8(PptxTests.BasicPresentation()),
-            ["ppt/slides/_rels/slide1.xml.rels"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
-                </Relationships>
-                """),
-            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
-                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
-                       xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
-                       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-                  <p:cSld><p:spTree>
-                    <p:graphicFrame><p:xfrm><a:off x="914400" y="914400"/><a:ext cx="5486400" cy="3657600"/></p:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic></p:graphicFrame>
-                  </p:spTree></p:cSld>
-                </p:sld>
-                """),
-            ["ppt/charts/chart1.xml"] = TestFixtures.Utf8("""
+        PdfPage page = RenderLegendKeyOnlyChart("""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:chart><c:plotArea><c:lineChart>
                   <c:grouping val="standard"/>
@@ -3147,16 +3130,23 @@ internal static class PptxChartRenderingTests
                   </c:ser>
                   <c:axId val="10"/><c:axId val="20"/>
                 </c:lineChart><c:catAx><c:axId val="10"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="b"/><c:tickLblPos val="none"/><c:crossAx val="20"/></c:catAx><c:valAx><c:axId val="20"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="l"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:valAx></c:plotArea></c:chart></c:chartSpace>
-                """)
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-        var collector = new DiagnosticCollector();
+                """);
 
-        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = collector.Add });
+        RgbColor labelBackground = new(0x24, 0x68, 0xAC);
+        TestAssert.True(!PptxChartPaletteTests.ReadColoredPaints(page.Content).Contains(labelBackground),
+            "A legend key alone does not paint the authored label background.");
 
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.True(!pdf.Contains("0.141 0.408 0.675 rg", StringComparison.Ordinal), "A legend key alone does not create a label background.");
-        TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"), "Line charts with legend-key-only labels should not emit unsupported chart diagnostics.");
+        RgbColor seriesColor = new(0xC0, 0, 0);
+        var operations = new List<string>();
+        var strokes = PptxChartPaletteTests.ReadColoredPaints(page.Content, operations.Add, strokes: true).ToArray();
+        string[] seriesPaths = strokes.Zip(operations).Where(pair => pair.First == seriesColor)
+            .Select(pair => pair.Second).ToArray();
+        TestAssert.Equal(1, seriesPaths.Length);
+        string[] segment = seriesPaths[0].Split(' ');
+        TestAssert.True(segment is [_, _, "m", _, _, "l", "S"], "The authored line series paints a segment.");
+        TestAssert.True(double.Parse(segment[3], CultureInfo.InvariantCulture) - double.Parse(segment[0], CultureInfo.InvariantCulture) > 108d &&
+            double.Parse(segment[4], CultureInfo.InvariantCulture) > double.Parse(segment[1], CultureInfo.InvariantCulture),
+            "The series connects the two rising values across the plot.");
     }
 
     public static void PptxSyntheticLineChartSeriesLineWithoutWidthUsesOfficeDefault()
