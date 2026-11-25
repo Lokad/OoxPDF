@@ -1,3 +1,4 @@
+using System.Text;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Docx;
@@ -6,6 +7,55 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class DocxInlineCompositionTests
 {
+    public static void DocxDirectionalMathWrappersRetainFractionsAndDiagnostics()
+    {
+        var resolver = new PortableRenderingTests.PinnedResolver(mathFont: true);
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var renderer = new DocxRenderer(resolver, mode, CachedMathGeometry(mode));
+            var (expected, directWarnings) = Render(null);
+            var (readable, fallbackWarnings) = Render("nested");
+            string text = DocxPageFootnoteNumberingTests.DecodeText(readable).Normalize(NormalizationForm.FormKC);
+            TestAssert.Contains("Before formula:", text);
+            TestAssert.Contains("a+bc", text);
+            TestAssert.Contains("Following prose.", text);
+            TestAssert.Equal(expected.Content, readable.Content);
+            var warning = fallbackWarnings.Single(item => item.Id == "DOCX_INLINE_BIDI_APPROXIMATION");
+            TestAssert.Equal("Source order", warning.Fallback);
+            TestAssert.Equal("/word/document.xml", warning.PartName);
+            TestAssert.Equal("DOCX_APPROXIMATED_EQUATION", directWarnings.Single().Id);
+            TestAssert.True(directWarnings.SequenceEqual(fallbackWarnings.Where(item => item != warning)),
+                "Directional math keeps the existing equation diagnostic.");
+
+            foreach (string unsupported in new[] { "foreign", "role" })
+            {
+                var (page, diagnostics) = Render(unsupported);
+                TestAssert.Equal("", ReadEquationText([page]));
+                TestAssert.Equal("DOCX_UNSUPPORTED_EQUATION", diagnostics.Single().Id);
+                TestAssert.Contains("Following prose.", DocxPageFootnoteNumberingTests.DecodeText(page));
+            }
+
+            (Pdf.PdfPage Page, List<OoxPdfDiagnostic> Diagnostics) Render(string? variant)
+            {
+                var diagnostics = new List<OoxPdfDiagnostic>();
+                var document = ReadMutation("docx-omml-fraction-inline", mode, false, false, (xml, w, m) =>
+                {
+                    if (variant is null) return;
+                    XElement fraction = xml.Descendants(m + "f").Single();
+                    XElement source = variant == "role" ? fraction.Element(m + "num")! : fraction;
+                    XNamespace ns = variant == "foreign" ? "urn:fixture:foreign-direction" : w;
+                    var embedding = new XElement(ns + "dir", new XAttribute(w + "val", "ltr"));
+                    source.ReplaceWith(embedding);
+                    embedding.Add(variant == "nested"
+                        ? new XElement(w + "bdo", new XAttribute(w + "val", "rtl"), source)
+                        : source);
+                }, diagnosticSink: diagnostics.Add);
+                var page = renderer.RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().Single();
+                return (page, diagnostics);
+            }
+        }
+    }
+
     public static void DocxDirectionalWrappersRetainPictureTextAndMath()
     {
         var resolver = new PortableRenderingTests.PinnedResolver(mathFont: true);

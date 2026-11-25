@@ -20521,6 +20521,7 @@
     "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "docx-math-run-metadata": [
+    "=DocxDirectionalMathWrappersRetainFractionsAndDiagnostics",
     "=MathLiteralOperatorsKeepGlyphsAndUseOrdinarySpacing",
     "=DocxMathRunAlignmentAdmitsDisabledFlags",
     "=PortableRenderingDisabledMathAlignmentKeepsComposedFractions",

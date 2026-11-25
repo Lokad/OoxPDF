@@ -31,7 +31,8 @@ fallbacks, but visible content and geometry must also be checked independently.
 Supported inline text, equations and pictures retain source order through body,
 table and supported static-story containers. Bookmarks, links and supported
 revision metadata preserve their owners. Inline bidirectional embeddings and
-overrides retain supported children in source order with an approximation warning.
+overrides retain supported children in source order with an approximation warning,
+including when Word writes the wrapper inside an equation.
 Other combinations of supported objects can still have layout limitations.
 
 Symbol runs retain printable BMP character codes and their declared font.

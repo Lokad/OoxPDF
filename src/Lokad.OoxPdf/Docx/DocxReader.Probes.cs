@@ -97,9 +97,9 @@ internal sealed partial class DocxReader
                 .Concat(EnumerateDrawingPayload(probeDocument, WordprocessingNamespace + "bdo", cancellationToken));
             foreach (XElement source in directionalScopes)
             {
-                if (source.HasElements &&
-                    source.Ancestors().FirstOrDefault(owner => !IsVisibleRunContainer(owner, revisionFilteringMarkupMode))?.Name ==
-                        WordprocessingNamespace + "p" &&
+                if (!source.HasElements) continue;
+                XName? owner = source.Ancestors().FirstOrDefault(ancestor => !IsVisibleRunContainer(ancestor, revisionFilteringMarkupMode))?.Name;
+                if ((owner == WordprocessingNamespace + "p" || DocxMathParser.IsMathRow(owner)) &&
                     !IsInsideExcludedRevisionContainer(source, revisionFilteringMarkupMode) &&
                     !source.Ancestors(WordprocessingNamespace + "tr").Any(row => !IsIncludedTableRow(row, revisionFilteringMarkupMode, cancellationToken)))
                 {

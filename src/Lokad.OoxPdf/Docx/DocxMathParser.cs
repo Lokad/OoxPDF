@@ -215,6 +215,7 @@ internal static partial class DocxMathParser
     }
 
     private static bool IsRow(string name) => name is "oMath" or "e" or "sub" or "sup" or "num" or "den" or "deg" or "fName";
+    internal static bool IsMathRow(XName? name) => name is not null && name.Namespace == MathNamespace && IsRow(name.LocalName);
     private static bool HasKnownControlProperty(XElement property)
     {
         if (property.Name == WordprocessingNamespace + "rPrChange")
@@ -279,6 +280,7 @@ internal static partial class DocxMathParser
     private static bool IsSourceContainer(XElement? element) =>
         element is not null &&
         (DocxSourceXml.IsInlineMetadataContainer(element) ||
+         DocxSourceXml.IsDirectionalInlineContainer(element) ||
          element.Name == WordprocessingNamespace + "hyperlink" || element.Name == WordprocessingNamespace + "sdt" ||
          element.Name == WordprocessingNamespace + "sdtContent" && element.Parent?.Name == WordprocessingNamespace + "sdt");
     private static bool IsContainer(string name) => IsRow(name) || IsControl(name) || name == "mr";
