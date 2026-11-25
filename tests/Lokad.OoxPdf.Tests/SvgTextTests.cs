@@ -717,15 +717,34 @@ internal static partial class SvgTextTests
             TestAssert.Equal(13, LabelPaths(graphics.ToString()));
             TestAssert.Equal(0, diagnostics.Count);
         }
-        foreach (string stylesheet in new[] {
-            Svg("<style>.source-label{fill:red}</style>" + text),
-            "<?xml-stylesheet href=\"unavailable.css\" type=\"text/css\"?>" + Svg(text) })
+        var stylesheetDiagnostics = new List<OoxPdfDiagnostic>();
+        var styled = Paint(Svg("<style>.source-label{fill:red}</style>" + text), stylesheetDiagnostics);
+        TestAssert.True(stylesheetDiagnostics.Any(d => d.Fallback == "Partial" && d.Message.Contains("text", StringComparison.Ordinal)),
+            "An actual unsupported stylesheet remains distinct from harmless class metadata.");
+        TestAssert.DoesNotContain(LabelColor, styled.ToString());
+    }
+
+    public static void SvgNestedStylesheetInstructionsDoNotSuppressLabels()
+    {
+        const string instruction = """<?xml-stylesheet href="unavailable.css" type="text/css"?>""";
+        const string artwork = """
+            <rect width="40" height="30" fill="red"/>
+            <text x="60" y="85" fill="#112233">NORTH</text>
+            """;
+        string control = Svg(artwork);
+        AssertSvgPaintInBothFormats(control, [Svg(artwork + instruction), Svg(artwork + "<g>" + instruction + "</g>")],
+            pdf => TestAssert.Equal(5, LabelPaths(pdf)), "1 0 0 rg");
+
+        foreach (string stylesheet in new[] { instruction + control, control + instruction })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
-            var graphics = Paint(stylesheet, diagnostics);
-            TestAssert.True(diagnostics.Any(d => d.Fallback == "Partial" && d.Message.Contains("text", StringComparison.Ordinal)),
-                "An actual unsupported stylesheet remains distinct from harmless class metadata.");
-            TestAssert.True(!graphics.ToString().Contains(LabelColor, StringComparison.Ordinal), "Do not claim stylesheet-driven glyph paint without implementing its styles.");
+            string paint = Paint(stylesheet, diagnostics).ToString();
+            var diagnostic = diagnostics.Single();
+            TestAssert.Equal("SVG_UNSUPPORTED_CONTENT", diagnostic.Id);
+            TestAssert.Equal("Partial", diagnostic.Fallback);
+            TestAssert.Contains("unsupported text", diagnostic.Message);
+            TestAssert.Contains("1 0 0 rg", paint);
+            TestAssert.DoesNotContain(LabelColor, paint);
         }
     }
 

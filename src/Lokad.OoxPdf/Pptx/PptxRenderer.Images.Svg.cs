@@ -1783,7 +1783,7 @@ internal sealed partial class PptxRenderer
                     continue;
                 }
             }
-            else if (node is XProcessingInstruction)
+            else if (node is XProcessingInstruction { Parent: null })
             {
                 yield return node;
             }
