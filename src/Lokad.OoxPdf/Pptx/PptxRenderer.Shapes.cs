@@ -235,7 +235,8 @@ internal sealed partial class PptxRenderer
                 lineCap,
                 lineJoin,
                 headEnd,
-                tailEnd);
+                tailEnd,
+                cancellationToken);
             if (transformed)
             {
                 graphics.RestoreState();

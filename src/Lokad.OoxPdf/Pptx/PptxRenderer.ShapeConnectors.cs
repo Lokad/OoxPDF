@@ -368,26 +368,32 @@ internal sealed partial class PptxRenderer
         if (!headEnd.IsNone)
         {
             graphics.SetFillRgb(stroke.Red, stroke.Green, stroke.Blue);
-            FillLineEndMarker(
-                graphics,
-                headEnd,
-                first.StartX,
-                first.StartY,
-                ResolveEndpointDirection(first.StartX, first.StartY, first.Control1X, first.Control1Y, first.Control2X, first.Control2Y),
-                lineWidth);
+            FillBezierEndpointMarker(graphics, headEnd, first, atStart: true, lineWidth);
         }
 
         if (!tailEnd.IsNone)
         {
             graphics.SetFillRgb(stroke.Red, stroke.Green, stroke.Blue);
-            FillLineEndMarker(
-                graphics,
-                tailEnd,
-                last.EndX,
-                last.EndY,
-                ResolveEndpointDirection(last.EndX, last.EndY, last.Control2X, last.Control2Y, last.Control1X, last.Control1Y),
-                lineWidth);
+            FillBezierEndpointMarker(graphics, tailEnd, last, atStart: false, lineWidth);
         }
+    }
+
+    private static void FillBezierEndpointMarker(PdfGraphicsBuilder graphics, LineEndStyle style,
+        BezierSegment segment, bool atStart, double lineWidth)
+    {
+        if (style.IsNone) return;
+
+        double tipX = atStart ? segment.StartX : segment.EndX;
+        double tipY = atStart ? segment.StartY : segment.EndY;
+        (double X, double Y) outward = atStart
+            ? ResolveEndpointDirection(tipX, tipY, segment.Control1X, segment.Control1Y, segment.Control2X, segment.Control2Y)
+            : ResolveEndpointDirection(tipX, tipY, segment.Control2X, segment.Control2Y, segment.Control1X, segment.Control1Y);
+        if (outward.X * outward.X + outward.Y * outward.Y <= 0.000001d)
+        {
+            // A cubic can start or end with both controls at the tip.
+            outward = atStart ? (tipX - segment.EndX, tipY - segment.EndY) : (tipX - segment.StartX, tipY - segment.StartY);
+        }
+        FillLineEndMarker(graphics, style, tipX, tipY, outward, lineWidth);
     }
 
     private static bool TryFillCurvedConnectorPreset(

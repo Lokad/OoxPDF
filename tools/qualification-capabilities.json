@@ -282,6 +282,7 @@
     "=PptxStraightConnectorStrokeRetainsAuthoredEndMarkers",
     "PptxSyntheticCurvedConnectorArrowTailUsesFilledOutline",
     "PptxSyntheticCustomGeometryOpenCubicStealthTailUsesFilledOutline",
+    "=PptxCustomGeometryStrokeRetainsAuthoredEndMarkers",
     "PptxSyntheticFullyUnsupportedCustomGeometryFallsBackToRectangle",
     "PptxSyntheticPresetArcStealthTailUsesFilledOutline",
     "PptxSyntheticShapeStrokeDashCapAndJoinRender",
@@ -19466,6 +19467,7 @@
     "PptxSyntheticCurvedConnector2TriangleTailUsesOfficeSeparateMarkerSubpath",
     "PptxSyntheticCurvedConnectorArrowTailUsesFilledOutline",
     "PptxSyntheticCustomGeometryOpenCubicStealthTailUsesFilledOutline",
+    "=PptxCustomGeometryStrokeRetainsAuthoredEndMarkers",
     "PptxSyntheticCustomGeometryCubicPathRendersCurve",
     "PptxSyntheticCustomGeometryArcPathRendersCurve",
     "=PdfCrossReferencesAndStreamLengthsMatchFileContents"

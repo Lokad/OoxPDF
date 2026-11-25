@@ -795,6 +795,76 @@ internal static partial class PptxShapesTests
         TestAssert.DoesNotContain(" c" + Environment.NewLine + "S", pdf);
     }
 
+    public static void PptxCustomGeometryStrokeRetainsAuthoredEndMarkers()
+    {
+        const string head = """<a:headEnd type="diamond"/>""";
+        const string tail = """<a:tailEnd type="triangle"/>""";
+        const string close = "<a:close/>";
+        const string secondSubpath = """
+            <a:moveTo><a:pt x="0" y="0"/></a:moveTo>
+            <a:lnTo><a:pt x="1000" y="1000"/></a:lnTo>
+            """;
+        using var input = TestFixtures.CreateZipPackage(new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
+            ["_rels/.rels"] = PptxTests.PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
+            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = $$"""
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree>
+                    {{Shape(1, head)}}
+                    {{Shape(2, head + tail)}}
+                    {{Shape(3, tail, dashed: true)}}
+                    {{Shape(4, head + tail, suffix: close)}}
+                    {{Shape(5, head + tail, suffix: secondSubpath)}}
+                  </p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+        using var output = new MemoryStream();
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions
+        {
+            InputKind = OoxPdfInputKind.Pptx,
+            DiagnosticSink = diagnostics.Add
+        });
+
+        TestAssert.Equal(0, diagnostics.Count);
+        string pdf = Encoding.ASCII.GetString(output.ToArray()).ReplaceLineEndings("\n");
+        foreach (int row in new[] { 1, 2, 3 })
+        {
+            int start = 522 - 72 * row, end = 486 - 72 * row;
+            TestAssert.Contains(FormattableString.Invariant($"72 {start} m\n108 {start} 180 {end} 216 {end} c\nS\n"), pdf);
+            if (row <= 2)
+                TestAssert.Contains(FormattableString.Invariant($"72 {start} m\n76 {start - 3.2} l\n80 {start} l\n76 {start + 3.2} l\nh\nf\n"), pdf);
+            if (row >= 2)
+                TestAssert.Contains(FormattableString.Invariant($"216 {end} m\n209 {end + 3.15} l\n209 {end - 3.15} l\nh\nf\n"), pdf);
+        }
+        TestAssert.Contains("216 198 c\nh\nS\n", pdf);
+        TestAssert.Contains("216 126 c\n72 180 m\n", pdf);
+        TestAssert.Equal(4, Regex.Matches(pdf, @"(?m)^f$").Count);
+        TestAssert.Equal(1, Regex.Matches(pdf, @"(?m)^\[[\d .]+\] 0 d$").Count);
+        TestAssert.Contains("[] 0 d\n", pdf);
+
+        static string Shape(int row, string markers, bool dashed = false, string suffix = "")
+        {
+            string dash = dashed ? """<a:prstDash val="dash"/>""" : "";
+            return FormattableString.Invariant($$"""
+                <p:sp><p:spPr>
+                  <a:xfrm><a:off x="914400" y="{{row * 914400}}"/><a:ext cx="1828800" cy="914400"/></a:xfrm>
+                  <a:custGeom><a:pathLst><a:path w="21600" h="10800" fill="none">
+                    <a:moveTo><a:pt x="0" y="2700"/></a:moveTo>
+                    <a:cubicBezTo><a:pt x="5400" y="2700"/><a:pt x="16200" y="8100"/><a:pt x="21600" y="8100"/></a:cubicBezTo>
+                    {{suffix}}
+                  </a:path></a:pathLst></a:custGeom>
+                  <a:noFill/>
+                  <a:ln w="25400"><a:solidFill><a:srgbClr val="008000"/></a:solidFill>{{dash}}{{markers}}</a:ln>
+                </p:spPr></p:sp>
+                """);
+        }
+    }
+
     public static void PptxSyntheticCustomGeometryArcPathRendersCurve()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -838,10 +908,9 @@ internal static partial class PptxShapesTests
 
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
 
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("0 0.502 0 RG", pdf);
-        TestAssert.Contains("216 432 m", pdf);
-        TestAssert.Contains(" c", pdf);
+        string pdf = File.ReadAllText(output, Encoding.ASCII).ReplaceLineEndings("\n");
+        TestAssert.True(Regex.IsMatch(pdf, @"(?m)^0 0\.502 0 RG\n0 0\.502 0 rg\n2 w\n216 432 m\n[^\n]+ 144 396 c\n[^\n]+ 72 432 c\nS$"),
+            "The green arc must sweep below its chord in source coordinates, through (144, 396) in PDF coordinates.");
         TestAssert.True(diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CUSTOM_GEOMETRY"), "Renderable custom arc geometry should not emit the unsupported diagnostic.");
     }
 

@@ -78,7 +78,8 @@ internal sealed partial class PptxRenderer
         int? lineCap,
         int? lineJoin,
         LineEndStyle headEnd,
-        LineEndStyle tailEnd)
+        LineEndStyle tailEnd,
+        CancellationToken cancellationToken)
     {
         if (hasFill)
         {
@@ -130,29 +131,28 @@ internal sealed partial class PptxRenderer
                 graphics.SetLineJoin(join);
             }
 
+            bool hasMarkers = !headEnd.IsNone || !tailEnd.IsNone;
+            bool useFilledTail = !hasDash && lineCap is null && lineJoin is null && headEnd.IsNone &&
+                tailEnd.Kind is LineEndKind.Triangle or LineEndKind.Arrow or LineEndKind.Stealth;
             foreach (PptxSceneCustomPath path in customGeometry.Paths.Where(path => path.AllowsStroke))
             {
-                if (TryFillCustomGeometryOpenLineEndPath(
-                    graphics,
-                    customGeometry,
-                    path,
-                    x,
-                    y,
-                    width,
-                    height,
-                    hasFill,
-                    lineWidth,
-                    hasDash,
-                    lineCap,
-                    lineJoin,
-                    headEnd,
-                    tailEnd))
+                List<BezierSegment>? markerSegments = null;
+                if (hasMarkers && TryCreateCustomGeometryBezierSegments(customGeometry, path, x, y, width, height, cancellationToken, out var segments))
                 {
-                    continue;
+                    if (useFilledTail && !(hasFill && path.AllowsFill) && TryFillBezierConnectorPath(graphics, segments, lineWidth, tailEnd))
+                    {
+                        continue;
+                    }
+                    markerSegments = segments;
                 }
 
                 AppendCustomGeometryPath(graphics, customGeometry, path, x, y, width, height);
                 graphics.StrokeCurrentPath();
+                if (markerSegments is not null)
+                {
+                    FillBezierEndpointMarker(graphics, headEnd, markerSegments[0], atStart: true, lineWidth);
+                    FillBezierEndpointMarker(graphics, tailEnd, markerSegments[^1], atStart: false, lineWidth);
+                }
             }
 
             if (hasDash)
@@ -177,40 +177,6 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static bool TryFillCustomGeometryOpenLineEndPath(
-        PdfGraphicsBuilder graphics,
-        PptxSceneCustomGeometry geometry,
-        PptxSceneCustomPath path,
-        double x,
-        double y,
-        double width,
-        double height,
-        bool hasFill,
-        double lineWidth,
-        bool hasDash,
-        int? lineCap,
-        int? lineJoin,
-        LineEndStyle headEnd,
-        LineEndStyle tailEnd)
-    {
-        if (hasDash ||
-            lineCap is not null ||
-            lineJoin is not null ||
-            !headEnd.IsNone ||
-            tailEnd.Kind is not (LineEndKind.Triangle or LineEndKind.Arrow or LineEndKind.Stealth) ||
-            hasFill && path.AllowsFill)
-        {
-            return false;
-        }
-
-        if (!TryCreateCustomGeometryBezierSegments(geometry, path, x, y, width, height, out List<BezierSegment> segments))
-        {
-            return false;
-        }
-
-        return TryFillBezierConnectorPath(graphics, segments, lineWidth, tailEnd);
-    }
-
     private static bool TryCreateCustomGeometryBezierSegments(
         PptxSceneCustomGeometry geometry,
         PptxSceneCustomPath path,
@@ -218,6 +184,7 @@ internal sealed partial class PptxRenderer
         double y,
         double width,
         double height,
+        CancellationToken cancellationToken,
         out List<BezierSegment> segments)
     {
         double coordinateWidth = Math.Max(1d, path.Width);
@@ -232,6 +199,7 @@ internal sealed partial class PptxRenderer
 
         foreach (PptxSceneCustomCommand command in path.Commands)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (command.Kind == PptxSceneCustomCommandKind.MoveTo)
             {
                 if (hasMove)
@@ -348,16 +316,9 @@ internal sealed partial class PptxRenderer
                 List<(double X, double Y)> points = ReadCustomGeometryPoints(command, x, y, width, height, coordinateWidth, coordinateHeight, guides);
                 if (points.Count == 2 && current is { } start)
                 {
-                    (double X, double Y) control = points[0];
-                    (double X, double Y) end = points[1];
-                    graphics.CurveTo(
-                        start.X + (2d / 3d) * (control.X - start.X),
-                        start.Y + (2d / 3d) * (control.Y - start.Y),
-                        end.X + (2d / 3d) * (control.X - end.X),
-                        end.Y + (2d / 3d) * (control.Y - end.Y),
-                        end.X,
-                        end.Y);
-                    current = end;
+                    BezierSegment segment = CreateQuadraticBezierSegment(start, points[0], points[1]);
+                    graphics.CurveTo(segment.Control1X, segment.Control1Y, segment.Control2X, segment.Control2Y, segment.EndX, segment.EndY);
+                    current = points[1];
                 }
             }
             else if (command.Kind == PptxSceneCustomCommandKind.ArcTo && current is { } arcStart)
