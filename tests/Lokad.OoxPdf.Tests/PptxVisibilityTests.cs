@@ -18,13 +18,16 @@ internal static class PptxVisibilityTests
         // A hidden group must exclude descendants before preflight, just as a
         // hidden leaf excludes its own text, picture or table resources.
         foreach (string kind in new[] { "shape", "picture", "table", "group" })
-        foreach (string hidden in new[] { "", "0", "false", "1", "true", " true ", " 1 " })
+        foreach (bool visible in new[] { true, false })
         {
-            bool visible = hidden is not ("1" or "true" or " true " or " 1 ");
-            string flag = hidden.Length == 0 ? "" : " hidden=\"" + hidden + "\"";
+            // The group covers application of an XML-padded Boolean. The
+            // shared OOXML reader tests own the remaining token spellings.
+            string flag = visible ? "" : kind == "group" ? " hidden=\" true \"" : " hidden=\"1\"";
+            const string target = "https://example.invalid/visible";
+            const string visibleText = "Visible text";
             const string link = "<a:hlinkClick r:id=\"rIdLink\"/>";
             const string transform = "<a:xfrm><a:off x=\"914400\" y=\"914400\"/><a:ext cx=\"2743200\" cy=\"914400\"/></a:xfrm>";
-            const string text = "<a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz=\"1200\"><a:latin typeface=\"Arial\"/></a:rPr><a:t>Visible text</a:t></a:r></a:p>";
+            const string text = "<a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz=\"1200\"><a:latin typeface=\"Arial\"/></a:rPr><a:t>" + visibleText + "</a:t></a:r></a:p>";
             string shape = "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"Text\"" + (kind == "shape" ? flag : "") + ">" + link + "</p:cNvPr><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr>" + transform + "<a:prstGeom prst=\"rect\"/><a:solidFill><a:srgbClr val=\"FF0000\"/></a:solidFill></p:spPr><p:txBody>" + text + "</p:txBody></p:sp>";
             string node = kind switch
             {
@@ -40,7 +43,7 @@ internal static class PptxVisibilityTests
                 ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8(PptxTests.PresentationRelationship()),
                 ["ppt/presentation.xml"] = TestFixtures.Utf8(PptxTests.BasicPresentation()),
                 ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("<p:sld xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\" xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><p:cSld><p:spTree>" + node + "</p:spTree></p:cSld></p:sld>"),
-                ["ppt/slides/_rels/slide1.xml.rels"] = TestFixtures.Utf8("<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rIdLink\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink\" Target=\"https://example.invalid/visible\" TargetMode=\"External\"/><Relationship Id=\"rIdImage\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/image\" Target=\"../media/image.png\"/></Relationships>"),
+                ["ppt/slides/_rels/slide1.xml.rels"] = TestFixtures.Utf8("<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rIdLink\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink\" Target=\"" + target + "\" TargetMode=\"External\"/><Relationship Id=\"rIdImage\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/image\" Target=\"../media/image.png\"/></Relationships>"),
                 ["ppt/media/image.png"] = TestFixtures.CreateTinyStoredRgbPng()
             });
             using OoxPackage package = OoxPackage.Open(input, default);
@@ -50,15 +53,33 @@ internal static class PptxVisibilityTests
             TestAssert.Equal(visible && kind == "picture" ? 1 : 0, page.Images.Count);
             TestAssert.Equal(visible && kind != "picture", page.Fonts.Count > 0);
             TestAssert.Equal(visible && kind is "shape" or "group", page.Content.Contains("1 0 0 rg", StringComparison.Ordinal));
-            if (!visible)
+            TestAssert.Equal(visible && kind != "picture" ? visibleText : string.Empty,
+                DocxPageFootnoteNumberingTests.DecodeText(page));
+            if (visible)
             {
-                TestAssert.Equal(0, PptxRenderer.InspectTextGlyphRuns(document, package, 0).Count);
-                if (kind is "shape" or "group")
+                TestAssert.Equal(target, page.Annotations.Single().Uri);
+                if (kind == "picture")
                 {
-                    TestAssert.Equal(0, PptxRenderer.InspectTextFrameModels(document, package, 0).Count);
-                    TestAssert.Equal(0, PptxRenderer.InspectTextLayout(document, package, 0).Frames.Count);
-                    TestAssert.Equal(0, PptxRenderer.InspectTextFlow(document, package, 0).Frames.Count);
+                    PdfImageResource picture = page.Images.Single();
+                    TestAssert.Contains($"/{picture.ResourceName} Do", page.Content);
+                    TestAssert.Equal((2, 1), (picture.Image.Width, picture.Image.Height));
+                    using var compressed = new MemoryStream(picture.Image.Bytes);
+                    using var pixels = new ZLibStream(compressed, CompressionMode.Decompress);
+                    byte[] rgb = new byte[6];
+                    pixels.ReadExactly(rgb);
+                    TestAssert.Equal(-1, pixels.ReadByte());
+                    TestAssert.True(rgb.AsSpan().SequenceEqual(new byte[] { 255, 0, 0, 0, 0, 255 }),
+                        "The placed picture must paint the authored red and blue samples.");
                 }
+            }
+            else if (kind == "group")
+            {
+                var context = TestAssert.NotNull(PptxRenderer.TryLoadTextInspectionContext(document, package, 0));
+                var (models, layout) = PptxRenderer.InspectShapeText(context);
+                TestAssert.Equal(0, models.Count);
+                TestAssert.Equal(0, layout.Frames.Count);
+                TestAssert.Equal(0, PptxRenderer.InspectTextGlyphRuns(context).Count);
+                TestAssert.Equal(0, PptxRenderer.InspectTextFlow(document, package, 0).Frames.Count);
             }
         }
     }
