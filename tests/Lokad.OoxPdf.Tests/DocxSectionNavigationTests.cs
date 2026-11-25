@@ -700,15 +700,16 @@ internal static class DocxSectionNavigationTests
             "TableGridOrigins", "Containers", "floating-table-ordered.docx"));
         var resolver = new PortableRenderingTests.PinnedResolver();
         XNamespace wp = OoxNamespaces.WordprocessingDrawingNamespace;
-        foreach (var (story, height, exact, wrap) in new[]
+        foreach (var (story, height, exact, wrap, nestedAnchor) in new[]
         {
-            ("header", 0, false, false), ("footer", 0, false, false),
-            ("header", 2400, false, true), ("header", 300, true, true)
+            ("header", 0, false, false, false), ("footer", 0, false, false, false),
+            ("header", 2400, false, true, false), ("header", 300, true, true, false),
+            ("header", 2400, false, true, true), ("footer", 2400, false, true, true)
         })
         foreach (var mode in Modes)
         {
             int offset = story == "footer" ? -62 : 30;
-            string context = $"{story}/{height}/{mode}";
+            string context = $"{story}/{height}/{mode}, nested anchor = {nestedAnchor}";
             WithDocumentMutation(fixture, (parts, xml) =>
             {
                 var body = xml.Descendants(W + "body").Single();
@@ -725,7 +726,7 @@ internal static class DocxSectionNavigationTests
                 targetProperties.Element(W + "shd")?.Remove();
                 targetProperties.Add(new XElement(W + "shd", new XAttribute(W + "fill", "CC9944")));
 
-                var paragraph = Paragraph("STATIC CELL OWNER");
+                var paragraph = nestedAnchor ? new XElement(W + "p") : Paragraph("STATIC CELL OWNER");
                 paragraph.AddFirst(new XElement(W + "pPr",
                     new XElement(W + "spacing", new XAttribute(W + "before", "0"), new XAttribute(W + "after", "0"))));
                 paragraph.Add(new XElement(anchor.Ancestors(W + "r").First()));
@@ -733,6 +734,10 @@ internal static class DocxSectionNavigationTests
                 var cell = new XElement(W + "tc", new XElement(W + "tcPr",
                     new XElement(W + "tcW", new XAttribute(W + "w", "6000"), new XAttribute(W + "type", "dxa"))), paragraph);
                 if (!exact) paragraph.AddBeforeSelf(Paragraph("EARLIER CELL PARAGRAPH"));
+                if (nestedAnchor)
+                    paragraph.AddBeforeSelf(new XElement(W + "tbl", new XElement(W + "tblPr"),
+                        new XElement(W + "tblGrid", new XElement(W + "gridCol", new XAttribute(W + "w", "4800"))),
+                        new XElement(W + "tr", new XElement(W + "tc", Paragraph("NESTED CELL CONTENT")))));
                 var row = new XElement(W + "tr", cell);
                 if (height != 0) row.AddFirst(new XElement(W + "trPr", new XElement(W + "trHeight",
                     new XAttribute(W + "val", height), new XAttribute(W + "hRule", exact ? "exact" : "atLeast"))));
@@ -752,7 +757,7 @@ internal static class DocxSectionNavigationTests
                 if (!exact)
                 {
                     DocxInlineCompositionTests.AssertSourceLabelsPaint(page, mode,
-                        ["BOX TABLE NORTH", "BOX TABLE SOUTH", "STATIC CELL OWNER"], context);
+                        ["BOX TABLE NORTH", "BOX TABLE SOUTH", nestedAnchor ? "NESTED CELL CONTENT" : "STATIC CELL OWNER"], context);
                     var target = DocxParagraphShadingTests.ReadRectangles(page.Content).Single(rect => rect.Color == "CC9944");
                     TestAssert.True(page.Annotations.Any(link => link.Destination is { PageIndex: 0, Left: double x, Top: double y } &&
                         Math.Abs(x - target.X) < .002d && Math.Abs(y - target.Y - target.Height) < .002d),
