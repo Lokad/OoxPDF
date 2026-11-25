@@ -1,6 +1,3 @@
-using System.Security.Cryptography;
-using System.Text;
-using System.Text.Json;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Docx;
@@ -98,35 +95,9 @@ internal static partial class DocxInlineCompositionTests
             "An incomplete result boundary retains its unsupported-field diagnostic.");
     }
 
-    public static void DocxEmptyStoredResultsMatchIndependentWordContentAndOrigins()
-    {
-        if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
-            TestAssert.Skip("Installed Cambria Math is required for independent empty-field Word origins.");
-        string cases = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes"));
-        using var gold = JsonDocument.Parse(File.ReadAllText(Path.Combine(cases, "empty-field-results-office.json")));
-        foreach (var row in gold.RootElement.GetProperty("Rows").EnumerateArray())
-        {
-            string input = Path.Combine(cases, row.GetProperty("Input").GetString()!);
-            TestAssert.Equal(row.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(input))));
-            var mode = row.GetProperty("Mode").GetString() == "final-preserve" ? OoxPdfDocxMarkupMode.Final : OoxPdfDocxMarkupMode.AllMarkup;
-            var pages = new DocxRenderer(null, mode, CachedMathGeometry(mode)).RenderPagesAsync(DocxTests.ReadDocx(input, mode), null, default)
-                .ToBlockingEnumerable().ToArray();
-            TestAssert.Equal(1, pages.Length);
-            var math = DocxCommentsTests.ReadEmbeddedGlyphTextShows(pages[0], true).Where(show => pages[0].Fonts.Any(f =>
-                f.ResourceName.StartsWith("Eq", StringComparison.Ordinal) && ReferenceEquals(f.Font, show.Font))).ToArray();
-            TestAssert.Equal("ratetimeratetime", string.Concat(math.Select(show => show.Text)).Normalize(NormalizationForm.FormKC));
-            TestAssert.Equal(16, math.Length);
-            var anchors = row.GetProperty("MathOrigins").EnumerateArray().ToArray();
-            for (int index = 0; index < anchors.Length; index++)
-            {
-                var actual = math[4 * index]; var expected = anchors[index];
-                TestAssert.Equal(expected.GetProperty("Text").GetString(), actual.Text.Normalize(NormalizationForm.FormKC));
-                TestAssert.True(Math.Abs(actual.X - expected.GetProperty("X").GetDouble()) < 1d &&
-                    Math.Abs(actual.Y - expected.GetProperty("Y").GetDouble()) < 1d,
-                    "An empty result retains neighboring formula origins inside the existing one-point Word gate.");
-            }
-        }
-    }
+    public static void DocxEmptyStoredResultsMatchIndependentWordContentAndOrigins() =>
+        CheckIndependentRateTimeOrigins("empty-field-results-office.json",
+            ["empty-field-simple-empty.docx", "empty-field-complex-empty.docx"]);
 
     private static DocxDocument ReadEmptyStoredResult(string container, bool complex, OoxPdfDocxMarkupMode mode, bool baseline = false,
         Action<OoxPdfDiagnostic>? diagnosticSink = null) =>

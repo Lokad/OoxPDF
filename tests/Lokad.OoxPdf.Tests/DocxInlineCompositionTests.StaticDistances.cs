@@ -1,7 +1,4 @@
 using System.Globalization;
-using System.Security.Cryptography;
-using System.Text;
-using System.Text.Json;
 using Lokad.OoxPdf.Docx;
 
 namespace Lokad.OoxPdf.Tests;
@@ -55,46 +52,10 @@ internal static partial class DocxInlineCompositionTests
         TestAssert.Equal(0L, output.Length);
     }
 
-    public static void DocxDefaultStaticDistancesMatchIndependentWordMathAndBodyOrigins()
-    {
-        if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
-            TestAssert.Skip("Installed Cambria Math is required for the independent default header/footer-distance origins.");
-        string folder = Path.GetDirectoryName(DefaultStaticDistanceCase("header", 36))!;
-        using var gold = JsonDocument.Parse(File.ReadAllText(Path.Combine(folder, "static-default-distances-office.json")));
-        foreach (var row in gold.RootElement.GetProperty("Rows").EnumerateArray())
-        {
-            string input = Path.Combine(folder, row.GetProperty("Input").GetString()!);
-            TestAssert.Equal(row.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(input))));
-            var mode = row.GetProperty("Mode").GetString() == "final-preserve" ? OoxPdfDocxMarkupMode.Final : OoxPdfDocxMarkupMode.AllMarkup;
-            var pages = new DocxRenderer(null, mode, CachedMathGeometry(mode)).RenderPagesAsync(DocxTests.ReadDocx(input, mode), null, default)
-                .ToBlockingEnumerable().ToArray();
-            TestAssert.Equal(1, pages.Length);
-            var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(pages[0], true).ToArray();
-            var math = shows.Where(show => pages[0].Fonts.Any(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal) &&
-                ReferenceEquals(font.Font, show.Font))).ToArray();
-            TestAssert.Equal("ratetimeratetime", string.Concat(math.Select(show => show.Text)).Normalize(NormalizationForm.FormKC));
-            TestAssert.Equal(16, math.Length);
-            var anchors = row.GetProperty("MathOrigins").EnumerateArray().ToArray();
-            for (int index = 0; index < anchors.Length; index++)
-            {
-                var actual = math[4 * index]; var expected = anchors[index];
-                TestAssert.Equal(expected.GetProperty("Text").GetString(), actual.Text.Normalize(NormalizationForm.FormKC));
-                TestAssert.True(Math.Abs(actual.X - expected.GetProperty("X").GetDouble()) < 1d &&
-                    Math.Abs(actual.Y - expected.GetProperty("Y").GetDouble()) < 1d,
-                    "Missing header/footer distances retain the existing one-point Word origin gate.");
-            }
-            // Identify the body line by its visible source text, independently
-            // of PDF operation grouping or matching field fragments in the header.
-            var bodyLine = shows.GroupBy(show => Math.Round(show.Y, 3)).Single(line =>
-                string.Concat(string.Concat(line.OrderBy(show => show.X).Select(show => show.Text))
-                    .Normalize(NormalizationForm.FormKC).Where(c => !char.IsWhiteSpace(c))) == "NorthSouth");
-            double bodyX = bodyLine.Min(show => show.X), bodyY = bodyLine.First().Y;
-            var expectedBody = row.GetProperty("BodyOrigin");
-            TestAssert.True(Math.Abs(bodyX - expectedBody.GetProperty("X").GetDouble()) < 1d &&
-                Math.Abs(bodyY - expectedBody.GetProperty("Y").GetDouble()) < 1d,
-                "The same source default also preserves Word's body admission beside the static story.");
-        }
-    }
+    public static void DocxDefaultStaticDistancesMatchIndependentWordMathAndBodyOrigins() =>
+        CheckIndependentRateTimeOrigins("static-default-distances-office.json",
+            ["static-default-header36.docx", "static-default-header108.docx",
+                "static-default-footer36.docx", "static-default-footer108.docx"], checkBodyOrigin: true);
 
     private static string DefaultStaticDistanceCase(string story, int margin) => Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,
         "..", "..", "..", "Cases", "CompositionProbes", "static-default-" + story + margin + ".docx"));

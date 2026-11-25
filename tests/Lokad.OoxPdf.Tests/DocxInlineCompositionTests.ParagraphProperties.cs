@@ -1,6 +1,4 @@
-using System.Security.Cryptography;
 using System.Text;
-using System.Text.Json;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Docx;
@@ -111,35 +109,10 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
-    public static void DocxParagraphPropertyMathMatchesIndependentWordOrigins()
-    {
-        if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
-            TestAssert.Skip("Installed Cambria Math is required for independent paragraph-property Word origins.");
-        string cases = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes"));
-        using var gold = JsonDocument.Parse(File.ReadAllText(Path.Combine(cases, "paragraph-property-math-office.json")));
-        foreach (var row in gold.RootElement.GetProperty("Rows").EnumerateArray())
-        {
-            string input = Path.Combine(cases, row.GetProperty("Input").GetString()!);
-            TestAssert.Equal(row.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(input))));
-            var mode = row.GetProperty("Mode").GetString() == "final-preserve" ? OoxPdfDocxMarkupMode.Final : OoxPdfDocxMarkupMode.AllMarkup;
-            var pages = new DocxRenderer(null, mode, CachedMathGeometry(mode)).RenderPagesAsync(DocxTests.ReadDocx(input, mode), null, default)
-                .ToBlockingEnumerable().ToArray();
-            TestAssert.Equal(1, pages.Length);
-            var math = DocxCommentsTests.ReadEmbeddedGlyphTextShows(pages[0], true).Where(show => pages[0].Fonts.Any(font =>
-                font.ResourceName.StartsWith("Eq", StringComparison.Ordinal) && ReferenceEquals(font.Font, show.Font))).ToArray();
-            TestAssert.Equal("ratetimeratetime", string.Concat(math.Select(show => show.Text)).Normalize(NormalizationForm.FormKC));
-            TestAssert.Equal(16, math.Length);
-            var anchors = row.GetProperty("MathOrigins").EnumerateArray().ToArray();
-            for (int index = 0; index < anchors.Length; index++)
-            {
-                var actual = math[4 * index]; var expected = anchors[index];
-                TestAssert.Equal(expected.GetProperty("Text").GetString(), actual.Text.Normalize(NormalizationForm.FormKC));
-                TestAssert.True(Math.Abs(actual.X - expected.GetProperty("X").GetDouble()) < 1d &&
-                    Math.Abs(actual.Y - expected.GetProperty("Y").GetDouble()) < 1d,
-                    "Resolved paragraph history retains the existing one-point Word math-origin gate: " + input + "/" + mode);
-            }
-        }
-    }
+    public static void DocxParagraphPropertyMathMatchesIndependentWordOrigins() =>
+        CheckIndependentRateTimeOrigins("paragraph-property-math-office.json",
+            ["paragraph-property-math-body.docx", "paragraph-property-math-neighbor.docx",
+                "paragraph-property-math-cell.docx", "paragraph-property-math-header.docx", "paragraph-property-math-footer.docx"]);
 
     private static DocxDocument ReadParagraphPropertyMath(string container, OoxPdfDocxMarkupMode mode,
         bool baseline = false, bool noOp = false, bool duplicate = false, bool navigation = false, bool? joinMathFirst = null) =>
