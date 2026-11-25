@@ -264,19 +264,7 @@ internal sealed partial class DocxRenderer
             seen |= OoxComplexScript.DetectNeeds(resolved.Run.Text);
         }
 
-        foreach (OoxComplexScriptKind kind in new[]
-        {
-            OoxComplexScriptKind.Joining,
-            OoxComplexScriptKind.Reordering,
-            OoxComplexScriptKind.Bidirectional,
-            OoxComplexScriptKind.CombiningMark
-        })
-        {
-            if (seen.HasFlag(kind))
-            {
-                diagnosticSink(OoxComplexScript.CreateApproximationDiagnostic(kind));
-            }
-        }
+        OoxComplexScript.ReportApproximations(seen, diagnosticSink);
     }
 
     // RV01: runs with text but no usable embedded resource render with the diagnosed

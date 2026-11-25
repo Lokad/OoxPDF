@@ -267,7 +267,7 @@ internal sealed partial class PptxRenderer
     }
 
     // RV02: complex-script runs render without shaping; report each behavior family
-    // once per conversion (the resolver set dedups across slide and chart preparation).
+    // once per conversion across slide and chart preparation.
     private static void ReportComplexScriptApproximation(
         IReadOnlyList<TextFontUse> uses,
         PresentationFontResolver fontResolver,
@@ -286,19 +286,9 @@ internal sealed partial class PptxRenderer
             seen |= OoxComplexScript.DetectCodepoints(use.CodePoints);
         }
 
-        foreach (OoxComplexScriptKind kind in new[]
-        {
-            OoxComplexScriptKind.Joining,
-            OoxComplexScriptKind.Reordering,
-            OoxComplexScriptKind.Bidirectional,
-            OoxComplexScriptKind.CombiningMark
-        })
-        {
-            if (seen.HasFlag(kind) && fontResolver.ReportedMissingFontDiagnostics.Add("script:" + kind))
-            {
-                diagnosticSink(OoxComplexScript.CreateApproximationDiagnostic(kind));
-            }
-        }
+        OoxComplexScriptKind unreported = seen & ~fontResolver.ReportedComplexScripts;
+        fontResolver.ReportedComplexScripts |= seen;
+        OoxComplexScript.ReportApproximations(unreported, diagnosticSink);
     }
 
     // RV01: slide preparation passes includeFallbackFaces: false and covers split-run

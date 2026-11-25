@@ -100,7 +100,23 @@ internal static class OoxComplexScript
         return kinds;
     }
 
-    public static OoxPdfDiagnostic CreateApproximationDiagnostic(OoxComplexScriptKind kind)
+    public static void ReportApproximations(OoxComplexScriptKind kinds, Action<OoxPdfDiagnostic> diagnosticSink)
+    {
+        ReadOnlySpan<OoxComplexScriptKind> order =
+        [
+            OoxComplexScriptKind.Joining,
+            OoxComplexScriptKind.Reordering,
+            OoxComplexScriptKind.Bidirectional,
+            OoxComplexScriptKind.CombiningMark
+        ];
+        foreach (OoxComplexScriptKind kind in order)
+        {
+            if ((kinds & kind) != 0)
+                diagnosticSink(CreateApproximationDiagnostic(kind));
+        }
+    }
+
+    private static OoxPdfDiagnostic CreateApproximationDiagnostic(OoxComplexScriptKind kind)
     {
         string feature;
         string behavior;

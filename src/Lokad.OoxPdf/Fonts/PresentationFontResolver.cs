@@ -1,3 +1,4 @@
+using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Fonts;
@@ -13,6 +14,8 @@ internal sealed class PresentationFontResolver : IFontResolver
     // RV01: per-conversion record of diagnosed missing-font families and glyph sets,
     // so per-slide and per-chart preparation reports each family once.
     public HashSet<string> ReportedMissingFontDiagnostics { get; } = new(StringComparer.Ordinal);
+
+    public OoxComplexScriptKind ReportedComplexScripts { get; set; }
 
     public CancellationToken CancellationToken { get; }
 
