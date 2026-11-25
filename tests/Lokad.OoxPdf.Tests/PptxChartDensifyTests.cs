@@ -495,27 +495,6 @@ internal static class PptxChartDensifyTests
         TestAssert.True(!index.ContainsKey(5), "Out-of-range indices stay absent.");
     }
 
-    public static void ValueOnlyLabelsSkipCategoryLookup()
-    {
-        // RV14: value-only labels must not touch the category lookup at all.
-        Type optionsType = typeof(PptxRenderer).GetNestedType("ChartDataLabelOptions", BindingFlags.NonPublic)
-            ?? throw new InvalidOperationException("Expected label options type.");
-        object options = Activator.CreateInstance(optionsType)!;
-        MethodInfo format = typeof(PptxRenderer).GetMethod("FormatCartesianDataLabel", BindingFlags.NonPublic | BindingFlags.Static)
-            ?? throw new InvalidOperationException("Expected cartesian label formatter.");
-        string label;
-        try
-        {
-            label = (string)format.Invoke(null, [1.5, 0, 0, null, null, null, options, new ThrowingCategoryIndex(), Array.Empty<string>()])!;
-        }
-        catch (TargetInvocationException ex)
-        {
-            throw new InvalidOperationException("Value-only labels must not consult the category lookup.", ex.InnerException ?? ex);
-        }
-
-        TestAssert.Equal("", label);
-    }
-
     // Explicit sparse-slot expectations cover holes, null values, last-wins
     // duplicates, negative indexes and the declared slot count.
     public static void DenseNumberValueViewPreservesSparseSlots()
@@ -616,25 +595,6 @@ internal static class PptxChartDensifyTests
                 yield return point;
             }
         }
-
-        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
-    }
-
-    private sealed class ThrowingCategoryIndex : IReadOnlyDictionary<int, string>
-    {
-        public string this[int key] => throw new InvalidOperationException("Category lookup must be lazy.");
-
-        public IEnumerable<int> Keys => throw new InvalidOperationException("Category lookup must be lazy.");
-
-        public IEnumerable<string> Values => throw new InvalidOperationException("Category lookup must be lazy.");
-
-        public int Count => throw new InvalidOperationException("Category lookup must be lazy.");
-
-        public bool ContainsKey(int key) => throw new InvalidOperationException("Category lookup must be lazy.");
-
-        public bool TryGetValue(int key, out string value) => throw new InvalidOperationException("Category lookup must be lazy.");
-
-        public IEnumerator<KeyValuePair<int, string>> GetEnumerator() => throw new InvalidOperationException("Category lookup must be lazy.");
 
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
     }

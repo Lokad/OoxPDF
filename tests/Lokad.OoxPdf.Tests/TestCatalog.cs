@@ -241,6 +241,7 @@ internal static class TestCatalog
         .. FromType(name => name is nameof(PptxChartNumberFormatsTests.PptxChartNumberMetadataKeepsConditionalAxisAndDataLabelContent)
             or nameof(PptxChartNumberFormatsTests.PptxChartNumberFractionLabelsKeepLargeMagnitudes)
             or nameof(PptxChartNumberFormatsTests.PptxChartNumberBubbleLabelsKeepSourceDateContext)
+            or nameof(PptxChartNumberFormatsTests.PptxChartNumberLabelFormatsKeepCodeAndWorkbookLinkOwners)
             ? "rendering-portable" : "pptx-charts", typeof(PptxChartNumberFormatsTests)),
         .. FromType("pptx-charts", typeof(PptxChartPlotOptionsAgreementTests)),
         .. FromType("pptx-typography", typeof(PptxTypographyTests)),

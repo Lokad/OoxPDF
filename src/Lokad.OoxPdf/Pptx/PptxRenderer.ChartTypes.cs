@@ -447,11 +447,11 @@ internal sealed partial class PptxRenderer
         bool ShowValue, bool ShowPercent, bool ShowCategoryName, bool ShowSeriesName, bool? LeaderLinesEnabled,
         bool ShowLegendKey, bool ShowBubbleSize, ChartDataLabelLeaderLines LeaderLines, string CustomText,
         IReadOnlyList<ChartTextRunOverride> CustomTextRuns, PptxSceneChartDataLabelPosition PositionKind, string Position,
-        string Separator, string NumberFormat, ChartNumberFormat NumberFormatInfo, PptxSceneChartManualLayout Layout,
+        string Separator, ChartNumberFormat NumberFormat, PptxSceneChartManualLayout Layout,
         ChartTextStyleOverride TextStyle, PptxSceneChartTextBodyProperties TextBodyProperties, ChartShapeStyle ShapeStyle,
         IReadOnlyDictionary<int, ChartDataLabelOptions> Overrides, bool IsDefined, bool Date1904 = false, bool? IsDeleted = null)
     {
-        public static ChartDataLabelOptions None { get; } = new(ShowValue: false, ShowPercent: false, ShowCategoryName: false, ShowSeriesName: false, LeaderLinesEnabled: null, ShowLegendKey: false, ShowBubbleSize: false, LeaderLines: ChartDataLabelLeaderLines.Empty, CustomText: string.Empty, CustomTextRuns: [], PositionKind: PptxSceneChartDataLabelPosition.Unknown, Position: string.Empty, Separator: string.Empty, NumberFormat: string.Empty, NumberFormatInfo: default, Layout: default, TextStyle: ChartTextStyleOverride.Empty, TextBodyProperties: default, ShapeStyle: ChartShapeStyle.Empty, Overrides: EmptyChartDataLabelOverrides, IsDefined: false);
+        public static ChartDataLabelOptions None { get; } = new(ShowValue: false, ShowPercent: false, ShowCategoryName: false, ShowSeriesName: false, LeaderLinesEnabled: null, ShowLegendKey: false, ShowBubbleSize: false, LeaderLines: ChartDataLabelLeaderLines.Empty, CustomText: string.Empty, CustomTextRuns: [], PositionKind: PptxSceneChartDataLabelPosition.Unknown, Position: string.Empty, Separator: string.Empty, NumberFormat: default, Layout: default, TextStyle: ChartTextStyleOverride.Empty, TextBodyProperties: default, ShapeStyle: ChartShapeStyle.Empty, Overrides: EmptyChartDataLabelOverrides, IsDefined: false);
 
         public PptxSceneChartPointTextScope TextScope { get; init; }
 
@@ -484,8 +484,7 @@ internal sealed partial class PptxRenderer
                 PositionKind = inheritPosition ? parent.PositionKind : PositionKind,
                 Position = inheritPosition ? parent.Position : Position,
                 Separator = string.IsNullOrEmpty(Separator) ? parent.Separator : Separator,
-                NumberFormat = string.IsNullOrEmpty(NumberFormat) ? parent.NumberFormat : NumberFormat,
-                NumberFormatInfo = NumberFormatInfo.IsDefined ? NumberFormatInfo : parent.NumberFormatInfo,
+                NumberFormat = NumberFormat.WithFallback(parent.NumberFormat),
                 Layout = Layout.HasLayout ? Layout : parent.Layout,
                 TextBodyProperties = IsChartTextBodyPropertiesEmpty(TextBodyProperties) ? parent.TextBodyProperties : TextBodyProperties,
                 ShapeStyle = ShapeStyle.IsEmpty ? parent.ShapeStyle : ShapeStyle,
@@ -506,7 +505,15 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct ChartTextRunLayout(string Text, ChartTextStyle Style, double Width, string? HyperlinkClickId = null, string? HyperlinkClickAction = null);
 
-    private readonly record struct ChartNumberFormat(bool IsDefined, string FormatCode, bool? SourceLinked, string SourceLinkedValue);
+    private readonly record struct ChartNumberFormat(bool IsDefined, string? FormatCode, bool? SourceLinked)
+    {
+        public ChartNumberFormat WithFallback(ChartNumberFormat parent)
+        {
+            // An empty declaration inherits the format code and owns the workbook link decision.
+            if (!IsDefined) return parent;
+            return string.IsNullOrEmpty(FormatCode) ? this with { FormatCode = parent.FormatCode } : this;
+        }
+    }
 
     private readonly record struct ChartLegendEntry(string Name, ChartSeriesFill? Fill, ChartSeriesStroke? Stroke,
         ChartMarkerStyle? Marker, bool IsSeriesKey, bool LineHidden, int? ChartStyleId = null, RgbColor? MarkerColor = null);

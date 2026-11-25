@@ -363,8 +363,6 @@ internal sealed record PptxSceneChartDataLabels
 
     public string Separator { get; }
 
-    public string NumberFormat { get; }
-
     public PptxSceneChartNumberFormat NumberFormatInfo { get; }
 
     public PptxSceneChartManualLayout Layout { get; }
@@ -391,7 +389,6 @@ internal sealed record PptxSceneChartDataLabels
         PptxSceneChartDataLabelPosition positionKind,
         string position,
         string separator,
-        string numberFormat,
         PptxSceneChartNumberFormat numberFormatInfo,
         PptxSceneChartManualLayout layout,
         PptxSceneChartTextStyleOverride textStyle,
@@ -413,7 +410,6 @@ internal sealed record PptxSceneChartDataLabels
         PositionKind = positionKind;
         Position = position;
         Separator = separator;
-        NumberFormat = numberFormat;
         NumberFormatInfo = numberFormatInfo;
         Layout = layout;
         TextStyle = textStyle;
@@ -434,7 +430,6 @@ internal sealed record PptxSceneChartDataLabels
         PptxSceneChartLeaderLines leaderLines,
         string position,
         string separator,
-        string numberFormat,
         PptxSceneChartNumberFormat numberFormatInfo,
         PptxSceneChartManualLayout layout,
         PptxSceneChartTextStyleOverride textStyle,
@@ -456,7 +451,6 @@ internal sealed record PptxSceneChartDataLabels
             PptxSceneBuilder.ParseChartDataLabelPosition(position),
             position,
             separator,
-            numberFormat,
             numberFormatInfo,
             layout,
             textStyle,
@@ -486,7 +480,6 @@ internal sealed record PptxSceneChartDataLabelOverride(
     PptxSceneChartDataLabelPosition PositionKind,
     string Position,
     string Separator,
-    string NumberFormat,
     PptxSceneChartNumberFormat NumberFormatInfo,
     PptxSceneChartManualLayout Layout,
     PptxSceneChartTextStyleOverride TextStyle,

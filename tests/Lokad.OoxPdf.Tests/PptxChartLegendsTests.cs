@@ -1225,7 +1225,6 @@ internal static partial class PptxChartLegendsTests
             """);
 
         PptxSceneChartDataLabels labels = chart?.Plots[0].DataLabels ?? throw new InvalidOperationException("Expected plot data labels.");
-        TestAssert.Equal("#,##0.00", labels.NumberFormat);
         TestAssert.True(labels.NumberFormatInfo.IsDefined, "Expected plot data-label number format metadata to be explicit.");
         TestAssert.Equal("#,##0.00", labels.NumberFormatInfo.FormatCode);
         TestAssert.True(labels.NumberFormatInfo.SourceLinked == false, "Expected sourceLinked=false to survive data-label parsing.");
@@ -1233,7 +1232,6 @@ internal static partial class PptxChartLegendsTests
 
         PptxSceneChartDataLabelOverride label = labels.Overrides[0];
         TestAssert.Equal(1, label.Index);
-        TestAssert.Equal("0%", label.NumberFormat);
         TestAssert.True(label.NumberFormatInfo.IsDefined, "Expected per-label number format metadata to be explicit.");
         TestAssert.Equal("0%", label.NumberFormatInfo.FormatCode);
         TestAssert.True(label.NumberFormatInfo.SourceLinked == true, "Expected sourceLinked=true to survive data-label override parsing.");
@@ -1250,38 +1248,6 @@ internal static partial class PptxChartLegendsTests
         TestAssert.Equal("0.0%", valueAxis.NumberFormatInfo.FormatCode);
         TestAssert.True(valueAxis.NumberFormatInfo.SourceLinked == false, "Expected sourceLinked=false to survive value-axis parsing.");
         TestAssert.Equal("0", valueAxis.NumberFormatInfo.SourceLinkedValue);
-
-        Type numberFormatType = typeof(PptxRenderer).GetNestedType(
-            "ChartNumberFormat",
-            System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected renderer chart number-format bridge.");
-        object typedNumberFormat = Activator.CreateInstance(numberFormatType, [true, "#,##0.00", false, "0"]) ?? throw new InvalidOperationException("Expected typed number format.");
-        System.Reflection.MethodInfo formatDataLabelValue = typeof(PptxRenderer).GetMethod(
-            "FormatChartDataLabelValue",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static,
-            binder: null,
-            types: [typeof(double), numberFormatType, typeof(string), typeof(string), typeof(bool)],
-            modifiers: null) ?? throw new InvalidOperationException("Expected typed data-label formatter.");
-        string typedFormatted = (string?)formatDataLabelValue.Invoke(null, [1234.5d, typedNumberFormat, string.Empty, null, false]) ?? string.Empty;
-        TestAssert.Equal("1,234.50", typedFormatted);
-        object emptyNumberFormat = Activator.CreateInstance(numberFormatType, [false, string.Empty, null, string.Empty]) ?? throw new InvalidOperationException("Expected empty number format.");
-        string sourceFormatted = (string?)formatDataLabelValue.Invoke(null, [1234.5d, emptyNumberFormat, string.Empty, "#,##0.0", false]) ?? string.Empty;
-        TestAssert.Equal("1,234.5", sourceFormatted);
-        string explicitFormatWins = (string?)formatDataLabelValue.Invoke(null, [1234.5d, typedNumberFormat, string.Empty, "0", false]) ?? string.Empty;
-        TestAssert.Equal("1,234.50", explicitFormatWins);
-
-        object sourceLinkedNumberFormat = Activator.CreateInstance(numberFormatType, [true, "0", true, "1"]) ?? throw new InvalidOperationException("Expected source-linked number format.");
-        System.Reflection.MethodInfo resolveSourceLinkedFormat = typeof(PptxRenderer).GetMethod(
-            "ResolveSourceLinkedChartNumberFormatCode",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static,
-            binder: null,
-            types: [numberFormatType, typeof(string), typeof(bool?)],
-            modifiers: null) ?? throw new InvalidOperationException("Expected source-linked format resolver.");
-        string linkedFormat = (string?)resolveSourceLinkedFormat.Invoke(null, [sourceLinkedNumberFormat, "#,##0.0", true]) ?? string.Empty;
-        TestAssert.Equal("#,##0.0", linkedFormat);
-        object? ignoredUnlinkedFormat = resolveSourceLinkedFormat.Invoke(null, [typedNumberFormat, "#,##0.0", true]);
-        TestAssert.True(ignoredUnlinkedFormat is null, "Expected workbook number format to be ignored when the chart format is not source-linked.");
-        string linkedDateFormat = (string?)resolveSourceLinkedFormat.Invoke(null, [sourceLinkedNumberFormat, "m/d/yy", true]) ?? string.Empty;
-        TestAssert.Equal("m/d/yy", linkedDateFormat);
     }
 
     public static void PptxScenePreservesChartTitleAndLegendBooleanTokens()

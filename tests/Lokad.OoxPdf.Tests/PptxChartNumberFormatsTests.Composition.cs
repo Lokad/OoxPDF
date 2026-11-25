@@ -51,9 +51,64 @@ internal static partial class PptxChartNumberFormatsTests
         }
     }
 
-    private static IReadOnlyList<string> NumberChartLabels(string xml, string fontPrefix)
+    public static void PptxChartNumberLabelFormatsKeepCodeAndWorkbookLinkOwners()
     {
-        using var input = PptxTests.CreateSingleChartPackageStream(xml);
+        var workbookParts = new Dictionary<string, byte[]>
+        {
+            ["[Content_Types].xml"] = TestFixtures.Utf8(PptxTests.BasicContentTypes().Replace("</Types>", """
+                  <Default Extension="xlsx" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"/>
+                </Types>
+                """, StringComparison.Ordinal)),
+            ["ppt/embeddings/format-source.xlsx"] = PptxTests.EmbeddedChartWorkbook(),
+            ["ppt/charts/_rels/chart1.xml.rels"] = TestFixtures.Utf8("""
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdBook" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/package"
+                    Target="../embeddings/format-source.xlsx"/>
+                </Relationships>
+                """)
+        };
+        const string componentFlags = """
+            <c:showVal val="1"/><c:showPercent val="0"/><c:showCatName val="0"/><c:showSerName val="0"/>
+            <c:showLegendKey val="0"/><c:showBubbleSize val="0"/>
+            """;
+        foreach (var (date1904, date) in new[] { ("0", "3/15/23"), ("1", "3/16/27") })
+        foreach (var (seriesFormat, pointFormat, expected) in new[]
+        {
+            ("", "", date),
+            (Format("", "0"), "", "45000.000"),
+            (Format("", "0"), Format("", "1"), date),
+            (Format("", "0"), Format("General", "0"), "45000.00"),
+            (Format("0.0", "0"), Format("", "0"), "45000.0"),
+            (Format("0.0", "0"), Format("0.0000", "0"), "45000.0000")
+        })
+        {
+            string chart = $$"""
+                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+                    xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                  <c:date1904 val="{{date1904}}"/><c:chart><c:plotVisOnly val="0"/><c:plotArea>
+                    <c:barChart><c:barDir val="col"/><c:grouping val="clustered"/>
+                      <c:ser><c:idx val="0"/><c:order val="0"/>
+                        <c:dLbls><c:dLbl><c:idx val="0"/>{{pointFormat}}{{componentFlags}}</c:dLbl>
+                          {{seriesFormat}}{{componentFlags}}</c:dLbls>
+                        <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat>
+                        <c:val><c:numRef><c:f>Sheet1!$B$2</c:f><c:numCache><c:formatCode>0.00</c:formatCode>
+                          <c:ptCount val="1"/><c:pt idx="0"><c:v>45000</c:v></c:pt>
+                        </c:numCache></c:numRef></c:val>
+                      </c:ser>
+                      <c:dLbls><c:numFmt formatCode="0.000" sourceLinked="1"/>{{componentFlags}}</c:dLbls>
+                    </c:barChart></c:plotArea></c:chart><c:externalData r:id="rIdBook"/>
+                </c:chartSpace>
+                """;
+            TestAssert.Equal(expected, string.Concat(NumberChartLabels(chart, "CBD", workbookParts)));
+        }
+
+        static string Format(string code, string linked) => $"""<c:numFmt formatCode="{code}" sourceLinked="{linked}"/>""";
+    }
+
+    private static IReadOnlyList<string> NumberChartLabels(string xml, string fontPrefix,
+        IReadOnlyDictionary<string, byte[]>? additionalParts = null)
+    {
+        using var input = PptxTests.CreateSingleChartPackageStream(xml, additionalParts);
         using var package = OoxPackage.Open(input, default);
         var diagnostics = new List<OoxPdfDiagnostic>();
         var page = new PptxRenderer(new PortableRenderingTests.PinnedResolver())

@@ -451,7 +451,6 @@ internal sealed partial class PptxRenderer
             labels.PositionKind,
             labels.Position,
             labels.Separator,
-            labels.NumberFormat,
             ToChartNumberFormat(labels.NumberFormatInfo),
             labels.Layout,
             ToChartTextStyleOverride(containerStyle),
@@ -503,7 +502,6 @@ internal sealed partial class PptxRenderer
                 dataLabel.PositionKind,
                 dataLabel.Position,
                 dataLabel.Separator,
-                dataLabel.NumberFormat,
                 ToChartNumberFormat(dataLabel.NumberFormatInfo),
                 dataLabel.Layout,
                 // Source scope is shared by typography and key measurement;
@@ -522,7 +520,7 @@ internal sealed partial class PptxRenderer
     private static ChartNumberFormat ToChartNumberFormat(PptxSceneChartNumberFormat numberFormat)
     {
         return numberFormat.IsDefined
-            ? new ChartNumberFormat(numberFormat.IsDefined, numberFormat.FormatCode, numberFormat.SourceLinked, numberFormat.SourceLinkedValue)
+            ? new ChartNumberFormat(true, numberFormat.FormatCode, numberFormat.SourceLinked)
             : default;
     }
 
@@ -627,58 +625,22 @@ internal sealed partial class PptxRenderer
 
     private static string FormatChartDataLabelValue(double value, ChartDataLabelOptions options, ChartIndexedNumberPoint? sourcePoint, string? sourceFormatCode)
     {
-        if (ResolveSourceLinkedChartNumberFormatCode(options.NumberFormatInfo, sourcePoint) is { } sourceFormat)
+        ChartNumberFormat numberFormat = options.NumberFormat;
+        if (numberFormat.SourceLinked == true && sourcePoint is { } point &&
+            point.WorkbookCell is { StyleAppliesNumberFormat: not false } cell &&
+            IsRenderableChartFormatCode(cell.StyleNumberFormatCode))
         {
-            return FormatChartNumber(value, sourceFormat, options.Date1904);
+            return FormatChartNumber(value, cell.StyleNumberFormatCode, options.Date1904);
         }
 
-        return FormatChartDataLabelValue(value, options.NumberFormatInfo, options.NumberFormat, sourceFormatCode, options.Date1904);
-    }
-
-    private static string FormatChartDataLabelValue(double value, ChartNumberFormat numberFormat, string legacyNumberFormat, string? sourceFormatCode, bool date1904 = false)
-    {
-        if (IsRenderableChartNumberFormat(numberFormat))
+        if (IsRenderableChartFormatCode(numberFormat.FormatCode))
         {
-            return FormatChartNumber(value, numberFormat.FormatCode, date1904);
+            return FormatChartNumber(value, numberFormat.FormatCode, options.Date1904);
         }
 
-        return !string.IsNullOrWhiteSpace(legacyNumberFormat) &&
-            !string.Equals(legacyNumberFormat, "General", StringComparison.OrdinalIgnoreCase)
-            ? FormatChartNumber(value, legacyNumberFormat, date1904)
-            : IsRenderableChartFormatCode(sourceFormatCode)
-                ? FormatChartNumber(value, sourceFormatCode!, date1904)
+        return IsRenderableChartFormatCode(sourceFormatCode)
+            ? FormatChartNumber(value, sourceFormatCode, options.Date1904)
             : FormatGeneralChartNumber(value);
-    }
-
-    private static string? ResolveSourceLinkedChartNumberFormatCode(ChartNumberFormat numberFormat, ChartIndexedNumberPoint? sourcePoint)
-    {
-        if (sourcePoint is null)
-        {
-            return null;
-        }
-
-        ChartWorkbookRangeCell cell = sourcePoint.Value.WorkbookCell;
-        return ResolveSourceLinkedChartNumberFormatCode(
-            numberFormat,
-            cell.StyleNumberFormatCode,
-            cell.StyleAppliesNumberFormat);
-    }
-
-    private static string? ResolveSourceLinkedChartNumberFormatCode(
-        ChartNumberFormat numberFormat,
-        string? workbookFormatCode,
-        bool? workbookAppliesNumberFormat)
-    {
-        // Date-like workbook codes flow through since date serial rendering is explicit
-        // (S04); the shared formatter renders them with the chart date system.
-        if (numberFormat.SourceLinked != true ||
-            workbookAppliesNumberFormat == false ||
-            !IsRenderableChartFormatCode(workbookFormatCode))
-        {
-            return null;
-        }
-
-        return workbookFormatCode;
     }
 
     private static string GetChartDataLabelSeparator(ChartDataLabelOptions options)

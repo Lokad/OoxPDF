@@ -168,7 +168,6 @@ internal sealed partial class PptxSceneBuilder
                 leaderLines: default,
                 position: string.Empty,
                 separator: string.Empty,
-                numberFormat: string.Empty,
                 numberFormatInfo: default,
                 layout: default,
                 textStyle: new PptxSceneChartTextStyleOverride(null, null, null, null, null, null, null, null),
@@ -178,7 +177,6 @@ internal sealed partial class PptxSceneBuilder
                 isDefined: false);
         }
 
-        PptxSceneChartNumberFormat numberFormat = ReadChartNumberFormat(labels);
         return PptxSceneChartDataLabels.Defined(
                 ReadOptionalChartBoolean(labels, "showVal"),
                 ReadOptionalChartBoolean(labels, "showPercent"),
@@ -190,8 +188,7 @@ internal sealed partial class PptxSceneBuilder
                 ReadChartLeaderLines(labels, theme, colorMap),
                 ReadChartElementValue(labels, "dLblPos"),
                 labels.Element(ChartNamespace + "separator")?.Value ?? string.Empty,
-                numberFormat.FormatCode,
-                numberFormat,
+                ReadChartNumberFormat(labels),
                 ReadChartManualLayout(labels),
                 ReadChartTextStyleOverride(labels, theme, colorMap),
                 ReadChartTextBodyProperties(labels),
@@ -219,7 +216,6 @@ internal sealed partial class PptxSceneBuilder
                 continue;
             }
 
-            PptxSceneChartNumberFormat numberFormat = ReadChartNumberFormat(label);
             XElement? text = label.Element(ChartNamespace + "tx");
             string position = ReadChartElementValue(label, "dLblPos");
             overrides.Add(new PptxSceneChartDataLabelOverride(
@@ -238,8 +234,7 @@ internal sealed partial class PptxSceneBuilder
                 ParseChartDataLabelPosition(position),
                 position,
                 label.Element(ChartNamespace + "separator")?.Value ?? string.Empty,
-                numberFormat.FormatCode,
-                numberFormat,
+                ReadChartNumberFormat(label),
                 ReadChartManualLayout(label),
                 ReadChartTextStyleOverride(label, theme, colorMap),
                 ReadChartTextBodyProperties(label),

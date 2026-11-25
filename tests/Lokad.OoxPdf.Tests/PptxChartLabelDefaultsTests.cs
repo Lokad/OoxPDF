@@ -18,6 +18,22 @@ internal static partial class PptxChartLabelDefaultsTests
         ("showLegendKey", "ShowLegendKey"), ("showBubbleSize", "ShowBubbleSize")
     ];
 
+    public static void ValueOnlyLabelsSkipCategoryLookup()
+    {
+        const string labels = """
+            <c:dLbls><c:showVal val="1"/><c:showPercent val="0"/><c:showCatName val="0"/>
+              <c:showSerName val="0"/><c:showLegendKey val="0"/><c:showBubbleSize val="0"/></c:dLbls>
+            """;
+        var (value, _) = Source(labels);
+        var (categoryAndValue, _) = Source(labels.Replace("showCatName val=\"0\"", "showCatName val=\"1\"", StringComparison.Ordinal));
+        TestAssert.Equal("1.5", Format(value, new ThrowingCategoryIndex()));
+        TestAssert.Equal("W1, 1.5", Format(categoryAndValue, new Dictionary<int, string> { [0] = "W1" }));
+
+        static string Format(PptxSceneChart chart, IReadOnlyDictionary<int, string> categories) =>
+            (string)Invoke("FormatCartesianDataLabel", 1.5, 0, 0, default(PptxRenderer.ChartIndexedNumberPoint), null,
+                null, Read(chart), categories, Array.Empty<string>());
+    }
+
     public static void PptxDefinedLabelsUseIndependentOfficeComponentDefaults()
     {
         // Native controls cover line, column, area, scatter, pie/doughnut and
@@ -240,4 +256,17 @@ internal static partial class PptxChartLabelDefaultsTests
         (bool?)source.GetType().GetProperty(property)!.GetValue(source);
 
     private static bool Flag(object value, string name) => (bool)value.GetType().GetProperty(name)!.GetValue(value)!;
+
+    private sealed class ThrowingCategoryIndex : IReadOnlyDictionary<int, string>
+    {
+        private const string Message = "Value-only labels must not consult the category index.";
+        public string this[int key] => throw new InvalidOperationException(Message);
+        public IEnumerable<int> Keys => throw new InvalidOperationException(Message);
+        public IEnumerable<string> Values => throw new InvalidOperationException(Message);
+        public int Count => throw new InvalidOperationException(Message);
+        public bool ContainsKey(int key) => throw new InvalidOperationException(Message);
+        public bool TryGetValue(int key, out string value) => throw new InvalidOperationException(Message);
+        public IEnumerator<KeyValuePair<int, string>> GetEnumerator() => throw new InvalidOperationException(Message);
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
+    }
 }

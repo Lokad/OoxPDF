@@ -619,7 +619,7 @@ internal static class PptxModelTests
         TestAssert.Equal("sq", slide.SlideNodes[4].Chart?.Plots[0].DataLabels.LeaderLines.Line.CapValue ?? string.Empty);
         TestAssert.Equal("outEnd", slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Position ?? string.Empty);
         TestAssert.Equal("; ", slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Separator ?? string.Empty);
-        TestAssert.Equal("#,##0.0", slide.SlideNodes[4].Chart?.Plots[0].DataLabels.NumberFormat ?? string.Empty);
+        TestAssert.Equal("#,##0.0", slide.SlideNodes[4].Chart?.Plots[0].DataLabels.NumberFormatInfo.FormatCode ?? string.Empty);
         TestAssert.Equal("Arial", slide.SlideNodes[4].Chart?.Plots[0].DataLabels.TextStyle.FontFamily ?? string.Empty);
         TestAssert.Equal("Arial", slide.SlideNodes[4].Chart?.Plots[0].DataLabels.TextStyle.RequestedTypeface ?? string.Empty);
         TestAssert.Equal(PptxThemeTypefaceSource.Direct, slide.SlideNodes[4].Chart?.Plots[0].DataLabels.TextStyle.TypefaceSource ?? default);
@@ -662,7 +662,7 @@ internal static class PptxModelTests
         TestAssert.Equal(0.1d, slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].Layout.Width ?? 0d);
         TestAssert.Equal(0.08d, slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].Layout.Height ?? 0d);
         TestAssert.Equal(" / ", slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].Separator ?? string.Empty);
-        TestAssert.Equal("0%", slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].NumberFormat ?? string.Empty);
+        TestAssert.Equal("0%", slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].NumberFormatInfo.FormatCode ?? string.Empty);
         TestAssert.Equal("Calibri", slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].TextStyle.FontFamily ?? string.Empty);
         TestAssert.Equal(9d, slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].TextStyle.FontSize ?? 0d);
         TestAssert.Equal(new RgbColor(51, 68, 85), slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].TextStyle.Color ?? default);

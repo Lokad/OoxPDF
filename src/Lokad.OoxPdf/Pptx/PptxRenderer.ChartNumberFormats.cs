@@ -23,21 +23,14 @@ internal sealed partial class PptxRenderer
 
     private static string FormatSceneChartAxisLabel(double value, PptxSceneChartAxis? sceneAxis, bool date1904, string? defaultNumberFormat)
     {
-        ChartNumberFormat numberFormat = sceneAxis is null ? default : ToChartNumberFormat(sceneAxis.NumberFormatInfo);
-        if (IsRenderableChartNumberFormat(numberFormat))
+        if (sceneAxis?.NumberFormatInfo is { IsDefined: true } format && IsRenderableChartFormatCode(format.FormatCode))
         {
-            return FormatChartNumber(value, numberFormat.FormatCode, date1904);
+            return FormatChartNumber(value, format.FormatCode, date1904);
         }
 
         return !string.IsNullOrWhiteSpace(defaultNumberFormat)
             ? FormatChartNumber(value, defaultNumberFormat)
             : FormatGeneralChartNumber(value);
-    }
-
-    private static bool IsRenderableChartNumberFormat(ChartNumberFormat numberFormat)
-    {
-        return numberFormat.IsDefined &&
-            IsRenderableChartFormatCode(numberFormat.FormatCode);
     }
 
     private static bool IsRenderableChartFormatCode([System.Diagnostics.CodeAnalysis.NotNullWhen(true)] string? formatCode)
