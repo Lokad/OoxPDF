@@ -600,9 +600,6 @@ internal sealed partial class DocxReader
             bool hasCachedResult = ownsCounter && FieldHasCachedResultContent(fragment?.Source ?? field);
             if (placeholder is not null)
             {
-                using var storedRuns = EnumerateRevisionScopedChildren(field.Elements(), markupMode, cancellationToken,
-                    [WordprocessingNamespace + "r"], revision, inlineContent: true).GetEnumerator();
-                bool hasStoredRun = storedRuns.MoveNext();
                 // Bare computed values inherit their instruction's paragraph-style
                 // formatting, rather than stale cached-result formatting. Explicit
                 // MERGEFORMAT and unqualified switches keep the cached-style fallback.
@@ -612,9 +609,9 @@ internal sealed partial class DocxReader
                     XElement? formattingRun = null;
                     if (!UsesDefaultDynamicFieldFormatting(instruction, kind))
                     {
-                        formattingRun = fragment is null ? (hasStoredRun ? storedRuns.Current.Element : null) :
-                            EnumerateRevisionScopedChildren(fragment.Source.Elements(), markupMode, cancellationToken,
-                                [WordprocessingNamespace + "r"], revision, inlineContent: true).FirstOrDefault()?.Element;
+                        formattingRun = EnumerateRevisionScopedChildren((fragment?.Source ?? field).Elements(), markupMode,
+                            cancellationToken, [WordprocessingNamespace + "r"], revision, inlineContent: true)
+                            .FirstOrDefault()?.Element;
                     }
                     AddFieldPlaceholderRun(formattingRun ?? new XElement(WordprocessingNamespace + "r"), placeholder, fieldSourceRunIndex, revision, kind);
                 }
@@ -626,10 +623,10 @@ internal sealed partial class DocxReader
                 int resultTextOffset = 0, resultDrawingOrder = 0;
                 int pendingRun = fieldTextRunIndex, pendingImage = fieldImageIndex, pendingBox = fieldBoxIndex;
                 bool hasVmlStory = false;
-                for (; hasStoredRun; hasStoredRun = storedRuns.MoveNext())
+                foreach (var storedScope in EnumerateRevisionScopedChildren(field.Elements(), markupMode, cancellationToken,
+                    [WordprocessingNamespace + "r"], revision, inlineContent: true, includeNestedFieldResults: true))
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    var storedScope = storedRuns.Current;
                     XElement resultRun = storedScope.Element;
                     var resultStyle = ResolveRunProperties(resultRun.Element(WordprocessingNamespace + "rPr"),
                         paragraphStyleId, ReadCharacterStyleId(resultRun), styles, tableCellStyle?.Run, out var resultResolution);
@@ -676,7 +673,8 @@ internal sealed partial class DocxReader
                         rendersCachedResult: false,
                         usesPlaceholder: publishesCounter, hasSeparate: false, nestingDepth: 0, instructionRunCount: 0, resultRunCount: 0,
                         fieldReferences: fieldReferences,
-                        runs: runs);
+                        runs: runs,
+                        counterReplacedByOuterField: !publishesCounter);
                 }
                 PublishInlineRunItems(pendingRun, pendingImage, pendingBox);
                 return ownsCounter || hasVmlStory || images.Count != fieldImageIndex || inlineTextBoxes.Count != fieldBoxIndex;
@@ -1316,6 +1314,7 @@ internal sealed partial class DocxReader
                     HasSeparate = field.HasSeparate,
                     HasCachedResult = field.HasCachedResult,
                     RendersCachedResult = field.RendersCachedResult,
+                    CounterReplacedByOuterField = field.CounterReplacedByOuterField,
                     InstructionRunCount = field.InstructionRunCount
                 };
                 return;
@@ -1344,7 +1343,8 @@ internal sealed partial class DocxReader
                 field.InstructionRunCount,
                 field.ResultRunCount,
                 fieldReferences: fieldReferences,
-                runs: runs);
+                runs: runs,
+                counterReplacedByOuterField: field.CounterReplacedByOuterField);
         }
 
         void AddComplexFieldInstruction(
@@ -1390,7 +1390,11 @@ internal sealed partial class DocxReader
         {
             if (field.PendingPlaceholder is not { } pending) return;
             field.PendingPlaceholder = null;
-            if (HasReplacingFieldResult(field.NestingDepth)) return;
+            if (HasReplacingFieldResult(field.NestingDepth))
+            {
+                field.CounterReplacedByOuterField = true;
+                return;
+            }
             if (pending.SourceRunIndex < 0)
             {
                 pending = pending with
@@ -1649,7 +1653,8 @@ internal sealed partial class DocxReader
         int instructionRunCount,
         int resultRunCount,
         List<DocxFieldReference> fieldReferences,
-        List<DocxTextRun> runs)
+        List<DocxTextRun> runs,
+        bool counterReplacedByOuterField = false)
     {
         fieldReferences.Add(new DocxFieldReference(
             kind,
@@ -1665,6 +1670,7 @@ internal sealed partial class DocxReader
             HasCachedResult = hasCachedResult,
             RendersCachedResult = rendersCachedResult,
             UsesPlaceholder = usesPlaceholder,
+            CounterReplacedByOuterField = counterReplacedByOuterField,
             NestingDepth = nestingDepth,
             InstructionRunCount = instructionRunCount,
             ResultRunCount = resultRunCount

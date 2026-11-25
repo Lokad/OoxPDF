@@ -94,6 +94,64 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
+    public static void DocxNestedFieldResultsRetainPictureAndNeighboringEquationInk()
+    {
+        var resolver = new PortableRenderingTests.PinnedResolver(mathFont: true);
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        foreach (bool complexOuter in new[] { false, true })
+        {
+            var renderer = new DocxRenderer(resolver, mode, CachedMathGeometry(mode));
+            var baselineDiagnostics = new List<OoxPdfDiagnostic>();
+            var control = renderer.RenderPagesAsync(Read(null, false, false), baselineDiagnostics.Add, default)
+                .ToBlockingEnumerable().Single();
+            TestAssert.Equal(1, control.Images.Count);
+            var mathFonts = control.Fonts.Where(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal))
+                .Select(font => font.Font).ToHashSet();
+            string math = string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(control, true)
+                .Where(show => mathFonts.Contains(show.Font)).Select(show => show.Text)).Normalize(NormalizationForm.FormKC);
+            TestAssert.Equal("ratetimeratetime", math);
+            TestAssert.Contains("1", DocxPageFootnoteNumberingTests.DecodeText(control));
+
+            foreach ((string instruction, bool complex, bool locked) in new[]
+            {
+                ("REF StoredPicture", false, false),
+                ("NUMPAGES", false, true),
+                ("NUMPAGES", false, false),
+                ("NUMPAGES", true, false)
+            })
+            {
+                var document = Read(instruction, complex, locked);
+                var paragraph = PictureResultParagraph(document);
+                TestAssert.Equal(1, paragraph.Images.Count);
+                TestAssert.Equal(DocxFieldKind.Page, paragraph.Runs.Single(run => run.FieldKind is not null).FieldKind);
+                TestAssert.Equal(2, paragraph.Equations.Count);
+                if (complexOuter && instruction == "NUMPAGES" && !locked)
+                    TestAssert.True(paragraph.FieldReferences.Single(field => field.Kind == DocxFieldKind.NumPages)
+                        .CounterReplacedByOuterField, "A suppressed counter remains inspectable without becoming a layout dependency.");
+
+                var diagnostics = new List<OoxPdfDiagnostic>();
+                var actual = renderer.RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().Single();
+                TestAssert.Equal(control.Content, actual.Content);
+                TestAssert.Equal(1, actual.Images.Count);
+                TestAssert.True(control.Images[0].Image.HasIdenticalContent(actual.Images[0].Image),
+                    "The nested cache retains the authored picture pixels.");
+                TestAssert.True(control.Annotations.SequenceEqual(actual.Annotations),
+                    "A nested cache does not change the paragraph's navigation.");
+                TestAssert.True(baselineDiagnostics.Select(item => item.Id).SequenceEqual(diagnostics.Select(item => item.Id)),
+                    "Nested field metadata preserves the picture, neighboring equations and diagnostics.");
+            }
+
+            DocxDocument Read(string? instruction, bool complex, bool locked) =>
+                ReadMutation("CompositionProbes/math-picture-first-table-single-cell", mode, false, false, (xml, w, _) =>
+                {
+                    var pictureRun = xml.Descendants(w + "drawing").Single().Parent!;
+                    XElement[] cache = instruction is null ? [new XElement(pictureRun)] :
+                        CachedMathField(w, new XElement(pictureRun), complex, instruction, locked);
+                    pictureRun.ReplaceWith(CachedMathField(w, cache, complexOuter, "PAGE", locked: false));
+                });
+        }
+    }
+
     public static void DocxCachedPictureResultsUseExactPackedFieldBoundaries()
     {
         foreach (bool vml in new[] { false, true })

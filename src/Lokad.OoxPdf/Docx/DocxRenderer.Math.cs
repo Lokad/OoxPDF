@@ -197,8 +197,7 @@ internal sealed partial class DocxRenderer
             // NUMPAGES in flow content needs finalized pagination. Discover it while
             // traversing the existing candidates, without loading unused math fonts.
             if (pageCount is null && owner.NeedsFinalCount &&
-                (paragraph.Runs.Any(run => run.FieldKind == DocxFieldKind.NumPages) ||
-                 paragraph.FieldReferences.Any(field => field.Kind == DocxFieldKind.NumPages)))
+                paragraph.Runs.Any(run => run.FieldKind == DocxFieldKind.NumPages))
             {
                 deferredPageCountEquations.AddRange(sourceEquations);
                 continue;

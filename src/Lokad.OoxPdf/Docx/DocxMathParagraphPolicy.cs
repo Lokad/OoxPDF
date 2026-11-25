@@ -339,8 +339,7 @@ internal static class DocxMathParagraphPolicy
     // Body/cell placement supplies PAGE; total counts remain unavailable there.
     public static bool UsesOnlyPageNumberCounters(DocxParagraph paragraph) =>
         paragraph.Runs.Any(run => run.FieldKind == DocxFieldKind.Page) &&
-        paragraph.Runs.All(run => run.FieldKind != DocxFieldKind.NumPages) &&
-        paragraph.FieldReferences.All(field => field.Kind != DocxFieldKind.NumPages);
+        paragraph.Runs.All(run => run.FieldKind != DocxFieldKind.NumPages);
 
     public static DocxMathDisplayAlignment? ResolveDisplayAlignment(IEnumerable<DocxEquation> equations, CancellationToken token)
     {

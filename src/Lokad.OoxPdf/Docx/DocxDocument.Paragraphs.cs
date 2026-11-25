@@ -284,6 +284,7 @@ internal sealed record DocxFieldReference(
     public bool HasCachedResult { get; init; }
     public bool RendersCachedResult { get; init; }
     public bool UsesPlaceholder { get; init; }
+    public bool CounterReplacedByOuterField { get; init; }
     public int NestingDepth { get; init; }
     public int InstructionRunCount { get; init; }
     public int ResultRunCount { get; init; }

@@ -2841,6 +2841,7 @@
     "DocxNoteMathFieldsRetainUnsupportedAndCachedFallbacks"
   ],
   "docx-cached-picture-results": [
+    "=DocxNestedFieldResultsRetainPictureAndNeighboringEquationInk",
     "DocxComputedFieldBoxes",
     "DocxPictureRevisionEligibilityRequiresActualImageOwnership",
     "DocxCellColumnsRetainParagraphMarksAndRealPageBreaks",

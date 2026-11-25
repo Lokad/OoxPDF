@@ -119,7 +119,7 @@ internal static class DocxInlineContent
 
     public static bool HasSourceFieldResults(IReadOnlyList<DocxFieldReference> fields,
         IReadOnlyList<DocxTextRun> runs) => fields.All(field =>
-            HasStoredFieldResult(field) ||
+            field.CounterReplacedByOuterField || HasStoredFieldResult(field) ||
             field.Kind.IsDynamic() && field.UsesPlaceholder && !field.RendersCachedResult &&
                 field.Placeholder == DocxFieldText.Placeholder(field.Kind)) &&
         runs.All(run => run.FieldKind is null || run.FieldKind is { } kind && kind.IsDynamic() &&
@@ -139,7 +139,7 @@ internal static class DocxInlineContent
     // Stored results already own their resolved content. Computed page/count
     // placeholders still need their separate dynamic layout path.
     public static bool HasMaterializedFieldResults(IReadOnlyList<DocxFieldReference> fields,
-        IReadOnlyList<DocxTextRun> runs) => fields.All(HasStoredFieldResult) &&
+        IReadOnlyList<DocxTextRun> runs) => fields.All(field => field.CounterReplacedByOuterField || HasStoredFieldResult(field)) &&
         runs.All(run => run.FieldKind is null);
 
     public static bool HasSupportedReferences(IReadOnlyList<DocxInlineReference> references,

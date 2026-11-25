@@ -82,7 +82,8 @@ internal sealed partial class DocxReader
         CancellationToken cancellationToken,
         XName[] includedNames,
         DocxRevisionInfo? inheritedRevision = null,
-        bool inlineContent = false)
+        bool inlineContent = false,
+        bool includeNestedFieldResults = false)
     {
         cancellationToken.ThrowIfCancellationRequested();
         foreach (XElement element in elements)
@@ -95,14 +96,16 @@ internal sealed partial class DocxReader
             }
 
             bool transparent = DocxSourceXml.IsTransparentInlineContainer(element);
-            // The cached run projection keeps drawing payloads inside hyperlinks.
-            // The paragraph reader owns hyperlink spans for the computed result.
+            // Drawing lookup follows stored runs through their inline wrappers.
+            // A nested field's runs still belong to its own result for formatting.
             if (inlineContent
-                ? transparent || element.Name == WordprocessingNamespace + "hyperlink"
+                ? transparent || element.Name == WordprocessingNamespace + "hyperlink" ||
+                    includeNestedFieldResults && element.Name == WordprocessingNamespace + "fldSimple"
                 : transparent && element.Name != WordprocessingNamespace + "smartTag")
             {
                 foreach (DocxRevisionScopedElement child in EnumerateRevisionScopedChildren(
-                    DocxSourceXml.StoredChildren(element), markupMode, cancellationToken, includedNames, inheritedRevision, inlineContent))
+                    DocxSourceXml.StoredChildren(element), markupMode, cancellationToken, includedNames, inheritedRevision,
+                    inlineContent, includeNestedFieldResults))
                 {
                     yield return child;
                 }
@@ -117,7 +120,7 @@ internal sealed partial class DocxReader
 
             DocxRevisionInfo? revision = CreateRevisionInfo(element) ?? inheritedRevision;
             foreach (DocxRevisionScopedElement child in EnumerateRevisionScopedChildren(
-                element.Elements(), markupMode, cancellationToken, includedNames, revision, inlineContent))
+                element.Elements(), markupMode, cancellationToken, includedNames, revision, inlineContent, includeNestedFieldResults))
             {
                 yield return child;
             }
