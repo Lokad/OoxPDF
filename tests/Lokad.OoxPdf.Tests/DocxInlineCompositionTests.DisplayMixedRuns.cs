@@ -18,6 +18,38 @@ internal static partial class DocxInlineCompositionTests
     public static void DocxInlineEquationKeepsDrawingCompanionsBetweenTextRuns() =>
         CheckDisplayDrawingCompanions(withBreak: false, explicitRow: true, inlineEquation: true);
 
+    public static void DocxStaticInlineEquationKeepsDrawingCompanions()
+    {
+        foreach (string story in new[] { "header", "footer" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            string fixture = "static-inline-ordinary-" + story + "-picture";
+            var source = ReadMutation("InlineBoxMath/" + fixture, mode, false, false, (xml, w, m) =>
+            {
+                var paragraph = xml.Root!.Element(w + "p")!;
+                var drawing = paragraph.Elements(w + "r").Select(run => run.Element(w + "drawing")).OfType<XElement>().First();
+                paragraph.ReplaceNodes(
+                    new XElement(w + "r", new XElement(w + "t", "Static before")),
+                    new XElement(m + "oMath", new XElement(m + "r",
+                        new XElement(m + "t", "314"), new XElement(w + "t", "QA"), drawing, new XElement(m + "t", "793"))),
+                    new XElement(w + "r", new XElement(w + "t", "Static after")));
+            }, partOverride: "word/" + fixture + ".xml");
+            var page = PictureRangeRenderer(mode).RenderPagesAsync(source, null, default).ToBlockingEnumerable().Single();
+            foreach (string label in new[] { "Static before", "314", "QA", "793", "Static after" })
+            {
+                var glyphs = PortableRenderingTests.ReadPaintedSourceLabel(page, label, mathOnly: label is "314" or "793");
+                TestAssert.True(glyphs.All(glyph => InStory(glyph.Ink)), $"'{label}' must paint in the {story}.");
+            }
+            var (picture, clip) = ReadPictureBounds(page).Single();
+            TestAssert.True(InStory(picture) && picture.X >= clip.X - .01d && picture.Y >= clip.Y - .01d &&
+                picture.X + picture.Width <= clip.X + clip.Width + .01d && picture.Y + picture.Height <= clip.Y + clip.Height + .01d,
+                $"The complete picture must paint inside its {story} clip.");
+
+            bool InStory(PdfRectangle bounds) => story == "header" ? bounds.Y > page.Height / 2d :
+                bounds.Y + bounds.Height < page.Height / 2d;
+        }
+    }
+
     public static void DocxDisplayRowKeepsBookmarkAcrossDrawingCompanions() =>
         CheckDisplayDrawingCompanions(withBreak: false, explicitRow: true, withBookmark: true);
 

@@ -17499,6 +17499,7 @@
     "DocxInlineCompositionSourceViewRetainsPrefixOrderAndCancellation"
   ],
   "docx-ordinary-static-inline": [
+    "=DocxStaticInlineEquationKeepsDrawingCompanions",
     "DocxComposedInlineFrameReportRetainsIndependentWordPagesAndContent",
     "PortableRenderingComposedInlineFrameReportRetainsRepeatedStaticOwners",
     "DocxInlineBoxOutlineEnvelopeAdmitsCompleteFrames",
@@ -20198,6 +20199,7 @@
     "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "docx-fixed-static-frames": [
+    "=DocxStaticInlineEquationKeepsDrawingCompanions",
     "DocxBuiltInFallbackKeepsPageLocalNotePaintsAndWarnings",
     "DocxActiveMarginStoriesKeepPageLocalNotePaints",
     "DocxStaticPageCountersRequireCompleteStableOwners",
