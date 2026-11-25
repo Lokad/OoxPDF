@@ -95,6 +95,32 @@ internal static partial class SvgTextTests
             "A visible unsupported element retains its diagnostic.");
     }
 
+    public static void SvgNonDisplayedTextPathsLeaveTheVisibleLabelIntact()
+    {
+        static string Picture(string child = "") => Svg($"""
+            <defs><path id="track" d="M20 45 H185"/></defs>
+            <text x="100" y="82" text-anchor="middle" font-size="24" fill="#112233">LA{child}BEL</text>
+            <rect x="200" y="100" width="20" height="10" fill="lime"/>
+            """);
+
+        static string PathText(string attributes) => $"""<textPath href="#track" {attributes}>PATH</textPath>""";
+
+        AssertSvgPaintInBothFormats(Picture(),
+            [Picture(PathText("display=\"none\"")), Picture(PathText("display=\"inline\" style=\"display: none\""))],
+            pdf => TestAssert.Equal(5, LabelPaths(pdf)), "0 1 0 rg");
+
+        // These children still require path layout, even when they have no ink.
+        foreach (string attributes in new[] { "display=\"none\" style=\"display: inline\"", "visibility=\"hidden\"" })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            string paint = Paint(Picture(PathText(attributes)), diagnostics).ToString();
+            TestAssert.DoesNotContain(LabelColor, paint);
+            TestAssert.Contains("0 1 0 rg", paint);
+            TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Fallback == "Partial" &&
+                d.Message.Contains("unsupported text element", StringComparison.Ordinal)), "Path layout retains its diagnostic.");
+        }
+    }
+
     public static void SvgHiddenGraphicsMatchRemovedPayloadInBothDocumentContainers()
     {
         foreach (bool docx in new[] { false, true })

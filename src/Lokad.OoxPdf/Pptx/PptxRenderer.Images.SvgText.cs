@@ -329,10 +329,10 @@ internal sealed partial class PptxRenderer
                 }
                 if (node is not XElement child || child.Name.Namespace != owner.Name.Namespace ||
                     IsSvgMetadataElement(child)) continue;
-                bool isLink = child.Name == linkName;
-                if (child.Name != spanName && !isLink) return false;
                 var style = ReadSvgStyleDeclarations(child);
                 if (IsSvgDisplayNone(child, style)) continue;
+                bool isLink = child.Name == linkName;
+                if (child.Name != spanName && !isLink) return false;
                 string? localSpace = (string?)child.Attribute(spaceName);
                 if (localSpace is not (null or "default" or "preserve") ||
                     !IsPlainChild(child, style, isLink)) return false;
