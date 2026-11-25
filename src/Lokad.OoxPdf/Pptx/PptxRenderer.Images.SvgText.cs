@@ -73,7 +73,16 @@ internal sealed partial class PptxRenderer
     private sealed record SvgTextLabel(string Text, bool[]? HiddenCharacters, FontRequest Font, double FontSize, double X, double Y,
         string Anchor, RgbColor? Color, double Opacity, bool Kerning)
     {
-        public bool HasVisibleText => Text.Length != 0 && (HiddenCharacters is null || HiddenCharacters.AsSpan().Contains(false));
+        public bool HasVisibleText
+        {
+            get
+            {
+                for (int i = 0; i < Text.Length; i++)
+                    if (!OoxTextBreakRules.IsNonPrintingBreakControl(Text[i]) && HiddenCharacters?[i] != true)
+                        return true;
+                return false;
+            }
+        }
     }
 
     private readonly record struct SvgTextPaint(RgbColor? Color, double Alpha);
@@ -412,6 +421,9 @@ internal sealed partial class PptxRenderer
             cancellationToken.ThrowIfCancellationRequested();
             bool hidden = label.HiddenCharacters?[characterIndex] ?? false;
             characterIndex += rune.Utf16SequenceLength;
+            // This label has no soft wraps. Keep its source whitespace and
+            // visibility, with no advance or outline for a break control.
+            if (OoxTextBreakRules.IsNonPrintingBreakControl(rune.Value)) continue;
             ushort glyph = font.MapCodePoint(rune.Value);
             // Hidden text still takes space. An unmapped hidden character uses
             // the face's missing-glyph advance and needs no outline.

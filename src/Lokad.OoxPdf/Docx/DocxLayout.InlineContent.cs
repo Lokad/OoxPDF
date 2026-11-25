@@ -392,9 +392,9 @@ internal sealed partial class DocxLayoutEngine
                     while (start < end)
                     {
                         token.ThrowIfCancellationRequested();
-                        bool space = DocxTextBreakRules.IsBreakableWhitespaceChar(text.Run.Text[start]);
+                        bool space = OoxTextBreakRules.IsBreakableWhitespaceChar(text.Run.Text[start]);
                         int stop = start + 1;
-                        while (stop < end && DocxTextBreakRules.IsBreakableWhitespaceChar(text.Run.Text[stop]) == space)
+                        while (stop < end && OoxTextBreakRules.IsBreakableWhitespaceChar(text.Run.Text[stop]) == space)
                         {
                             if ((stop & 255) == 0) token.ThrowIfCancellationRequested();
                             stop++;
@@ -1018,13 +1018,13 @@ internal sealed partial class DocxLayoutEngine
                 }
                 spaceRunBreaks = spaceRunEnd == measured.Count ||
                     measured[spaceRunEnd].Source is not DocxInlineText { Length: > 0 } next ||
-                    !DocxTextBreakRules.IsWordJoiner(next.Run.Text[next.Start]);
+                    !OoxTextBreakRules.IsWordJoiner(next.Run.Text[next.Start]);
             }
             return spaceRunBreaks;
         }
 
         static bool IsSpace(DocxMeasuredInlineFragment fragment) => fragment.Source is DocxInlineText { Length: > 0 } text &&
-            DocxTextBreakRules.IsBreakableWhitespaceChar(text.Run.Text[text.Start]);
+            OoxTextBreakRules.IsBreakableWhitespaceChar(text.Run.Text[text.Start]);
         double InlineBoundaryAdvance(DocxMeasuredInlineFragment left, DocxMeasuredInlineFragment right)
         {
             if (ReferenceEquals(left.Source, right.Source) && right.MathContinuationAdvance is { } mathGap)

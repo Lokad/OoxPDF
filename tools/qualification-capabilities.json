@@ -20617,6 +20617,7 @@
   ],
   "svg-text-labels": [
     "SvgLabelsRetainEveryGlyphInDocxAndPptxPictures",
+    "=SvgLabelsKeepNonPrintingBreakControlsOutOfGlyphs",
     "=SvgLabelsReuseConstantGradientPaintInBothFormats",
     "=SvgTextChildrenKeepMixedWhitespacePolicies",
     "=SvgTextChildrenKeepInheritedFontAndFill",

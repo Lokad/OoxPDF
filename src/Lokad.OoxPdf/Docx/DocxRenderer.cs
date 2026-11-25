@@ -1892,13 +1892,13 @@ internal sealed partial class DocxRenderer
         {
             token.ThrowIfCancellationRequested();
             if (!IsBookmarkBreakMarker(text.Run, index) &&
-                !DocxTextBreakRules.IsBreakableWhitespaceChar(text.Run.Text[index])) return false;
+                !OoxTextBreakRules.IsBreakableWhitespaceChar(text.Run.Text[index])) return false;
         }
         return true;
     }
 
     private static bool IsBookmarkBreakMarker(DocxTextRun run, int index) =>
-        DocxTextBreakRules.IsOptionalBreakMarker(run.Text[index]) &&
+        OoxTextBreakRules.IsOptionalBreakMarker(run.Text[index]) &&
         run.LiteralNoteMarkerOffset != run.SourceTextOffsetInRun + index;
 
     private static bool TryResolveBookmarkDestinationSegment(

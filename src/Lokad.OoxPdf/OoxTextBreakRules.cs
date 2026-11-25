@@ -1,13 +1,16 @@
-namespace Lokad.OoxPdf.Docx;
+namespace Lokad.OoxPdf;
 
 /// <summary>
 /// Character break rules shared by layout, its counters, and source navigation.
 /// </summary>
-internal static class DocxTextBreakRules
+internal static class OoxTextBreakRules
 {
-    internal static bool IsOptionalBreakMarker(char value) => value is '\u00AD' or '\u200B';
+    internal static bool IsOptionalBreakMarker(int value) => value is '\u00AD' or '\u200B';
 
-    internal static bool IsWordJoiner(char value) => value is '\u2060' or '\uFEFF';
+    internal static bool IsWordJoiner(int value) => value is '\u2060' or '\uFEFF';
+
+    internal static bool IsNonPrintingBreakControl(int value) =>
+        IsOptionalBreakMarker(value) || IsWordJoiner(value);
 
     internal static int EndOfBreakableSpaces(string text, int start, int end)
     {

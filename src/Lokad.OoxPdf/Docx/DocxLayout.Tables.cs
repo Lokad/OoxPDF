@@ -1703,10 +1703,10 @@ internal sealed partial class DocxLayoutEngine
             int start = 0;
             for (int index = 0; index < text.Length; index++)
             {
-                if (DocxTextBreakRules.IsBreakableWhitespaceChar(text[index]))
+                if (OoxTextBreakRules.IsBreakableWhitespaceChar(text[index]))
                 {
-                    int afterSpaces = DocxTextBreakRules.EndOfBreakableSpaces(text, index, text.Length);
-                    if (afterSpaces == text.Length || !DocxTextBreakRules.IsWordJoiner(text[afterSpaces]))
+                    int afterSpaces = OoxTextBreakRules.EndOfBreakableSpaces(text, index, text.Length);
+                    if (afterSpaces == text.Length || !OoxTextBreakRules.IsWordJoiner(text[afterSpaces]))
                     {
                         MeasureWord(index, false);
                         start = afterSpaces;

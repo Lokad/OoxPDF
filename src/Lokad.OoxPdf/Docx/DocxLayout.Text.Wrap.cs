@@ -465,10 +465,10 @@ internal sealed partial class DocxLayoutEngine
 
         if (before == '\u2011' ||
             after == '\u2011' ||
-            DocxTextBreakRules.IsWordJoiner(before) ||
-            DocxTextBreakRules.IsWordJoiner(after) ||
-            DocxTextBreakRules.IsNoBreakWhitespaceChar(before) ||
-            DocxTextBreakRules.IsNoBreakWhitespaceChar(after))
+            OoxTextBreakRules.IsWordJoiner(before) ||
+            OoxTextBreakRules.IsWordJoiner(after) ||
+            OoxTextBreakRules.IsNoBreakWhitespaceChar(before) ||
+            OoxTextBreakRules.IsNoBreakWhitespaceChar(after))
         {
             return false;
         }
@@ -953,7 +953,7 @@ internal sealed partial class DocxLayoutEngine
 
     private static bool IsHiddenBreakCharacter(char value, bool preserveTerminalSoftHyphen)
     {
-        return DocxTextBreakRules.IsOptionalBreakMarker(value) &&
+        return OoxTextBreakRules.IsOptionalBreakMarker(value) &&
             (value != '\u00AD' || !preserveTerminalSoftHyphen);
     }
 
@@ -965,16 +965,16 @@ internal sealed partial class DocxLayoutEngine
         for (int index = start; index < end;)
         {
             int next;
-            bool space = DocxTextBreakRules.IsBreakableWhitespaceChar(text[index]);
+            bool space = OoxTextBreakRules.IsBreakableWhitespaceChar(text[index]);
             if (space)
             {
-                next = DocxTextBreakRules.EndOfBreakableSpaces(text, index, end);
-                space = next == end || !DocxTextBreakRules.IsWordJoiner(text[next]);
+                next = OoxTextBreakRules.EndOfBreakableSpaces(text, index, end);
+                space = next == end || !OoxTextBreakRules.IsWordJoiner(text[next]);
             }
             else
             {
                 next = index + 1;
-                while (next < end && !DocxTextBreakRules.IsBreakableWhitespaceChar(text[next])) next++;
+                while (next < end && !OoxTextBreakRules.IsBreakableWhitespaceChar(text[next])) next++;
             }
 
             if (tokens.Count > 0 && tokens[^1].IsBreakableWhitespace == space)
@@ -1015,7 +1015,7 @@ internal sealed partial class DocxLayoutEngine
             char before = text[boundary - 1];
             // An explicit zero-width space takes precedence over a word joiner.
             return Characters.Contains(before) &&
-                (before == '\u200B' || boundary == text.Length || !DocxTextBreakRules.IsWordJoiner(text[boundary]));
+                (before == '\u200B' || boundary == text.Length || !OoxTextBreakRules.IsWordJoiner(text[boundary]));
         }
 
         public static bool ContainsOpportunity(string text) => text.AsSpan().ContainsAny(Characters);

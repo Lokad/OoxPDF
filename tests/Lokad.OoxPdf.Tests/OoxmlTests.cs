@@ -898,6 +898,7 @@ internal static partial class OoxmlTests
     public static void ComplexScriptDetectsJoiningScripts()
     {
         TestAssert.Equal(OoxComplexScriptKind.Joining, OoxComplexScript.DetectNeeds("\u0645\u0631\u062D\u0628\u0627"));
+        TestAssert.Equal(OoxComplexScriptKind.Joining, OoxComplexScript.DetectNeeds("\uFEFB"));
     }
 
     public static void ComplexScriptDetectsRightToLeftScripts()
@@ -924,6 +925,8 @@ internal static partial class OoxmlTests
     {
         TestAssert.Equal(OoxComplexScriptKind.None, OoxComplexScript.DetectNeeds("Hello 123"));
         TestAssert.Equal(OoxComplexScriptKind.None, OoxComplexScript.DetectNeeds("\u65E5\u672C\u8A9E"));
+        TestAssert.Equal(OoxComplexScriptKind.None, OoxComplexScript.DetectNeeds("A\u2060B\uFEFFC"));
+        TestAssert.Equal(OoxComplexScriptKind.None, OoxComplexScript.DetectCodepoints(new[] { 0x2060, 0xFEFF }));
         TestAssert.Equal(OoxComplexScriptKind.None, OoxComplexScript.DetectNeeds(""));
         TestAssert.Equal(OoxComplexScriptKind.None, OoxComplexScript.DetectNeeds(null));
     }

@@ -61,7 +61,9 @@ internal static class OoxComplexScript
     private static OoxComplexScriptKind ClassifyScalar(int value, UnicodeCategory category)
     {
         OoxComplexScriptKind kinds = OoxComplexScriptKind.None;
-        if (IsJoiningScript(value))
+        // U+FEFF lies inside the presentation-forms block and acts as a
+        // zero-width no-break space in stored text.
+        if (IsJoiningScript(value) && !OoxTextBreakRules.IsWordJoiner(value))
         {
             kinds |= OoxComplexScriptKind.Joining;
         }

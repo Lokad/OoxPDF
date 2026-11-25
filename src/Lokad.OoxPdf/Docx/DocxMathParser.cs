@@ -262,8 +262,7 @@ internal static partial class DocxMathParser
         (IsControl(element.Name.LocalName) || element.Name.LocalName == "r" &&
             element.Elements().Any(text => ReadLiteralRunText(text, allowsDeletedText)?.Any(IsMathLiteralCharacter) == true));
 
-    private static bool IsMathLiteralCharacter(char value) =>
-        !DocxTextBreakRules.IsOptionalBreakMarker(value) && !DocxTextBreakRules.IsWordJoiner(value);
+    private static bool IsMathLiteralCharacter(char value) => !OoxTextBreakRules.IsNonPrintingBreakControl(value);
     // Revision admission and structural retention see the same stored content
     // through metadata containers; role nodes still need their actual parent.
     private static IEnumerable<XElement> ReadRevisionChildren(XElement source, CancellationToken token)
@@ -401,7 +400,7 @@ internal static partial class DocxMathParser
                     token.ThrowIfCancellationRequested();
                     if (IsMathLiteralCharacter(character))
                         literal.Append(character);
-                    else if (DocxTextBreakRules.IsWordJoiner(character) &&
+                    else if (OoxTextBreakRules.IsWordJoiner(character) &&
                         (joinerOffsets is null || joinerOffsets[^1] != literal.Length))
                         (joinerOffsets ??= []).Add(literal.Length);
                 }

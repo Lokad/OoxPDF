@@ -662,14 +662,29 @@ internal static partial class SvgTextTests
         }
     }
 
+    public static void SvgLabelsKeepNonPrintingBreakControlsOutOfGlyphs()
+    {
+        const string hiddenPrefix = """<tspan visibility="hidden">H</tspan>""";
+        string Picture(string contents, string neighbor = "") => Svg($"""
+            <rect width="35" height="25" fill="green"/>
+            <text x="200" y="80" text-anchor="middle" fill="#112233">{contents}</text>
+            {neighbor}
+            """);
+        string direct = Picture(hiddenPrefix + "LABEL");
+        string marked = Picture(hiddenPrefix + "L\u2060A<tspan>\uFEFF\u200B</tspan>B\u00ADEL",
+            "<text font-family=\"LABEL-FONT\">\u2060\uFEFF\u200B\u00AD</text>");
+        AssertSvgPaintInBothFormats(direct, marked, pdf => TestAssert.Equal(5, LabelPaths(pdf)), "0 0.502 0 rg");
+    }
+
     public static void SvgLabelsPrepareFontsOnlyForVisiblePictureUses()
     {
         const string family = "LABEL-FONT";
-        string svg = Svg($"<text x=\"20\" y=\"80\" font-family=\"{family}\" font-weight=\"bold\" fill=\"#112233\">{Label}</text>");
         XNamespace p = "http://schemas.openxmlformats.org/presentationml/2006/main";
         XNamespace a = "http://schemas.openxmlformats.org/drawingml/2006/main";
-        foreach (var (transparent, secondVisible) in new[] { (false, false), (true, false), (true, true) })
+        foreach (var (text, transparent, secondVisible) in new[] {
+            (Label, false, false), (Label, true, false), (Label, true, true), ("\u2060\uFEFF\u200B\u00AD", false, false) })
         {
+            string svg = Svg($"<text x=\"20\" y=\"80\" font-family=\"{family}\" font-weight=\"bold\" fill=\"#112233\">{text}</text>");
             string input = Input(false, svg, picture =>
             {
                 if (secondVisible)
@@ -689,7 +704,7 @@ internal static partial class SvgTextTests
             PdfPage page = new PptxRenderer(resolver).RenderPagesAsync(new PptxReader().Read(package, default),
                 package, diagnostics.Add, default).ToBlockingEnumerable().Single();
 
-            bool paintsLabel = !transparent || secondVisible;
+            bool paintsLabel = text == Label && (!transparent || secondVisible);
             TestAssert.Equal(paintsLabel ? 1 : 0, requests);
             TestAssert.Equal(paintsLabel ? 1 : 0, diagnostics.Count(d => d.Fallback == "SubstitutedFont" &&
                 d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains(family, StringComparison.Ordinal)));

@@ -226,7 +226,7 @@ internal static partial class PortableRenderingTests
                 fontResourceFilter: name => name.StartsWith("Eq", StringComparison.Ordinal)));
             string text = string.Concat(shows.Select(show => show.Text));
             TestAssert.Equal(3 * numerator.Count(character => character == '\u2011'), text.Count(character => character == '\u2011'));
-            TestAssert.True(!text.Any(c => DocxTextBreakRules.IsOptionalBreakMarker(c) || DocxTextBreakRules.IsWordJoiner(c)),
+            TestAssert.True(!text.Any(c => OoxTextBreakRules.IsNonPrintingBreakControl(c)),
                 "Nonprinting break controls must stay out of the painted glyph stream.");
             string expected = numerator.Normalize(NormalizationForm.FormKC) + "y";
             TestAssert.Equal(3, text.Normalize(NormalizationForm.FormKC).Split(expected, StringSplitOptions.None).Length - 1);

@@ -929,14 +929,14 @@ internal sealed partial record DocxLayoutSnapshot(
         int current = 0;
         foreach (char value in text)
         {
-            if (DocxTextBreakRules.IsBreakableWhitespaceChar(value))
+            if (OoxTextBreakRules.IsBreakableWhitespaceChar(value))
             {
                 longest = Math.Max(longest, current);
                 current = 0;
                 continue;
             }
 
-            if (DocxTextBreakRules.IsOptionalBreakMarker(value))
+            if (OoxTextBreakRules.IsOptionalBreakMarker(value))
             {
                 longest = Math.Max(longest, current);
                 current = 0;
