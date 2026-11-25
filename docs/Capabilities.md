@@ -46,7 +46,8 @@ ordinary spacing. Supported equations also render in placed floating
 text boxes, within their authored and ancestor clips. Placement, baselines, line breaks, large operators
 and font-dependent geometry remain approximate. Unsupported constructs/placements
 are diagnosed and can be omitted. Discretionary hyphens inside equations stay
-invisible. Equation wrapping uses the existing supported operator breaks. Math
+invisible. Word joiners stay invisible and suppress adjacent operator breaks
+within an equation. Math
 fonts and coverage matter.
 
 Floating charts, SmartArt, OLE, macros, external images and general Word field

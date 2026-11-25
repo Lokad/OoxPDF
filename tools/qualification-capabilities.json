@@ -20555,6 +20555,8 @@
     "=PortableRenderingDeletedMathTextRetainsRevisionPaint",
     "=PortableRenderingMathDiscretionaryHyphensKeepUnbrokenFractions",
     "=PortableRenderingMathZeroWidthBreaksKeepUnbrokenFractions",
+    "=PortableRenderingMathWordJoinersKeepUnbrokenFractions",
+    "=DocxMathBoxJoinersSuppressOnlyTheirOperatorBoundary",
     "=PortableRenderingMathEmptyRunFormattingKeepsComposedFractions",
     "PortableRenderingEmptyRevisedMathRunsKeepFractions",
     "PortableRenderingMathRunPaginationHintsKeepComposedContent",

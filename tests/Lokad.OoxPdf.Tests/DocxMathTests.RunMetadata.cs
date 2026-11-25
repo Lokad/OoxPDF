@@ -93,20 +93,21 @@ internal static partial class DocxMathTests
     public static void DocxMathOptionalBreaksKeepOrderedInkAndEmptyRevisionRules()
     {
         XName marker = WordprocessingNamespace + "softHyphen";
-        foreach (var optionalBreak in new[] { new XElement(marker), new XElement(MathNamespace + "t", "\u00AD"),
-            new XElement(MathNamespace + "t", "\u200B"), new XElement(WordprocessingNamespace + "t", "\u00AD\u200B") })
+        foreach (var breakControl in new[] { new XElement(marker), new XElement(MathNamespace + "t", "\u00AD"),
+            new XElement(MathNamespace + "t", "\u200B"), new XElement(WordprocessingNamespace + "t", "\u00AD\u200B"),
+            new XElement(MathNamespace + "t", "\u2060"), new XElement(WordprocessingNamespace + "t", "\uFEFF") })
         {
             var equation = EditingMarkerFraction();
-            equation.Descendants(MathNamespace + "r").First().Add(optionalBreak, new XElement(WordprocessingNamespace + "t", "z"));
+            equation.Descendants(MathNamespace + "r").First().Add(breakControl, new XElement(WordprocessingNamespace + "t", "z"));
             TestAssert.Equal("az+b", RowText(((DocxMathFraction)Parse(equation).Children.Single()).Numerator));
 
             var revised = EditingMarkerFraction();
             var first = revised.Descendants(MathNamespace + "r").First();
-            first.ReplaceNodes(new XElement(optionalBreak));
+            first.ReplaceNodes(new XElement(breakControl));
             first.ReplaceWith(new XElement(WordprocessingNamespace + "ins", new XElement(first)));
             var math = DocxMathParser.Read(revised, (_, text) => PlainRun(text), default, _ => true);
             TestAssert.True(((DocxMathFraction)math.Children.Single()).Numerator.Children[0] is DocxMathUnsupported,
-                "An optional break alone does not supply a visible revision operand.");
+                "A nonprinting break control alone supplies no visible revision operand.");
         }
 
         var malformed = EditingMarkerFraction();

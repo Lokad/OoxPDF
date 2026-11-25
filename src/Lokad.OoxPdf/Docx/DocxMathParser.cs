@@ -1,3 +1,4 @@
+using System.Text;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Ooxml;
 using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
@@ -54,7 +55,7 @@ internal static partial class DocxMathParser
             {
                 bool allowsDeletedText = item.RevisionOwner is null ? equationHasDeletionOwner : item.RevisionOwner == deletion;
                 XElement? firstBreakInRun = element == trailingBreaks?.Run ? trailingBreaks?.FirstBreakInRun : null;
-                nodes.Add(element, ReadLeaf(element, readRun, allowsDeletedText, firstBreakInRun) with
+                nodes.Add(element, ReadLeaf(element, readRun, allowsDeletedText, firstBreakInRun, cancellationToken) with
                     { Hyperlink = item.IncludeAnnotations ? item.Hyperlink : null });
                 continue;
             }
@@ -261,7 +262,8 @@ internal static partial class DocxMathParser
         (IsControl(element.Name.LocalName) || element.Name.LocalName == "r" &&
             element.Elements().Any(text => ReadLiteralRunText(text, allowsDeletedText)?.Any(IsMathLiteralCharacter) == true));
 
-    private static bool IsMathLiteralCharacter(char value) => !DocxTextBreakRules.IsOptionalBreakMarker(value);
+    private static bool IsMathLiteralCharacter(char value) =>
+        !DocxTextBreakRules.IsOptionalBreakMarker(value) && !DocxTextBreakRules.IsWordJoiner(value);
     // Revision admission and structural retention see the same stored content
     // through metadata containers; role nodes still need their actual parent.
     private static IEnumerable<XElement> ReadRevisionChildren(XElement source, CancellationToken token)
@@ -382,20 +384,34 @@ internal static partial class DocxMathParser
     }
 
     private static DocxMathNode ReadLeaf(XElement element, Func<XElement, string, DocxTextRun> readRun, bool allowsDeletedText,
-        XElement? firstBreakInRun)
+        XElement? firstBreakInRun, CancellationToken token)
     {
         if (IsReadableRun(element, allowsDeletedText, firstBreakInRun))
         {
             var (normalText, literalText, supported) = ReadRunProperties(element);
-            // Native equations wrap at operator boundaries. Optional break
-            // markers contribute neither ink nor advance to the unbroken text.
+            // Optional breaks carry no ink in math. Word joiners also carry
+            // no ink, and protect their boundaries from an operator break.
             string text = string.Concat(RunContent(element, firstBreakInRun).Select(child => ReadLiteralRunText(child, allowsDeletedText)));
-            if (text.Any(DocxTextBreakRules.IsOptionalBreakMarker))
-                text = new string(text.Where(IsMathLiteralCharacter).ToArray());
+            List<int>? joinerOffsets = null;
+            if (text.Any(character => !IsMathLiteralCharacter(character)))
+            {
+                var literal = new StringBuilder(text.Length);
+                foreach (char character in text)
+                {
+                    token.ThrowIfCancellationRequested();
+                    if (IsMathLiteralCharacter(character))
+                        literal.Append(character);
+                    else if (DocxTextBreakRules.IsWordJoiner(character) &&
+                        (joinerOffsets is null || joinerOffsets[^1] != literal.Length))
+                        (joinerOffsets ??= []).Add(literal.Length);
+                }
+                text = literal.ToString();
+            }
             return new DocxMathRun(
                 readRun(element, text),
                 PropertyValue(element, "rPr", "sty"), PropertyValue(element, "rPr", "scr"))
             {
+                WordJoinerOffsets = joinerOffsets is null ? [] : joinerOffsets,
                 PropertiesXml = ReadProperties(element),
                 NormalTextValue = normalText,
                 LiteralText = literalText,

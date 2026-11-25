@@ -13,7 +13,7 @@ internal static partial class DocxMathRowLayout
     internal enum AtomKind { Ordinary, Binary, Relation, Open, Close, Punctuation, LargeOperator, Inner }
     internal readonly record struct Neighbors(AtomKind? Before = null, AtomKind? After = null);
     internal sealed record RowEdges(AtomKind First, AtomKind Last, bool FirstNormalText);
-    private sealed record Atom(DocxMathRun Run, Rune Source, Rune Render, AtomKind Kind);
+    private sealed record Atom(DocxMathRun Run, Rune Source, Rune Render, AtomKind Kind, bool BlocksBreakBefore);
 
     public static bool TryMeasure(DocxMathRow row, Func<DocxMathRun, PdfFontResource?> resolveFont,
         CancellationToken token, out DocxMathBox? box, out string? fallback, int scriptLevel = 0, bool exportFontSize = false,
@@ -73,7 +73,7 @@ internal static partial class DocxMathRowLayout
                     balancedDelimiters = false;
             }
             if (scriptLevel == 0 && !atom.Run.NormalText &&
-                kind is AtomKind.Binary or AtomKind.Relation && i > 0 && i + 1 < atoms.Count)
+                kind is AtomKind.Binary or AtomKind.Relation && i > 0 && i + 1 < atoms.Count && !atoms[i + 1].BlocksBreakBefore)
                 inlineBreaks.Add(i + 1);
             if (i != 0)
             {
@@ -139,6 +139,7 @@ internal static partial class DocxMathRowLayout
         bool allowArgumentSize = false)
     {
         atoms = []; bookmarks = null; fallback = null;
+        bool blocksBreakBefore = false;
         foreach (var (node, bookmark) in EnumerateItems(row, token, allowArgumentSize))
         {
             token.ThrowIfCancellationRequested();
@@ -148,15 +149,25 @@ internal static partial class DocxMathRowLayout
             }
             else if (node is DocxMathRun run && HasSupportedStyle(run))
             {
+                int offset = 0, nextJoiner = 0;
                 foreach (Rune rune in run.Text.Text.EnumerateRunes())
                 {
                     token.ThrowIfCancellationRequested();
+                    if (nextJoiner < run.WordJoinerOffsets.Count && run.WordJoinerOffsets[nextJoiner] == offset)
+                    {
+                        blocksBreakBefore = true;
+                        nextJoiner++;
+                    }
                     int rendered = run.NormalText || run.LiteralText && rune.Value == '-'
                         ? rune.Value : RenderCodePoint(rune.Value, run.MathStyleValue);
                     if (rendered < 0) { fallback = "UnsupportedMathAlphabet"; return false; }
                     AtomKind kind = run.NormalText || run.LiteralText ? AtomKind.Ordinary : Kind(rune.Value);
-                    atoms.Add(new(run, rune, new Rune(rendered), kind));
+                    atoms.Add(new(run, rune, new Rune(rendered), kind, blocksBreakBefore));
+                    blocksBreakBefore = false;
+                    offset += rune.Utf16SequenceLength;
                 }
+                // A run can end with a joiner or consist entirely of joiners.
+                blocksBreakBefore |= nextJoiner < run.WordJoinerOffsets.Count;
             }
             else { fallback = node is DocxMathUnsupported unsupported ? "UnsupportedMathNode:" + unsupported.ElementName : "UnsupportedMathStructureOrStyle"; return false; }
         }

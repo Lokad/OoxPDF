@@ -52,6 +52,8 @@ internal sealed record DocxMathRow(IReadOnlyList<DocxMathNode> Children) : DocxM
 }
 internal sealed record DocxMathRun(DocxTextRun Text, string? MathStyleValue, string? ScriptValue) : DocxMathNode
 {
+    // UTF-16 boundaries in the printable run, including the start and end.
+    public IReadOnlyList<int> WordJoinerOffsets { get; init; } = [];
     public bool? NormalTextValue { get; init; }
     public bool NormalText => NormalTextValue == true;
     public bool LiteralText { get; init; }

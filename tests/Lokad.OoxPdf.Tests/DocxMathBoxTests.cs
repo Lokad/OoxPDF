@@ -79,6 +79,36 @@ internal static class DocxMathBoxTests
         TestAssert.Equal("A+B=C", string.Concat(measured.Glyphs.Select(g => new System.Text.Rune(g.RenderCodePoint).ToString())));
     }
 
+    public static void DocxMathBoxJoinersSuppressOnlyTheirOperatorBoundary()
+    {
+        var font = Resource(TestFontBuilder.LoadTestFont(), "A+B=C");
+        var control = Measure(Plain("A+B=C"));
+        TestAssert.True(control.InlineBreakAfterGlyphs.SequenceEqual(new[] { 2, 4 }), "The control permits both operator breaks.");
+        var cases = new[]
+        {
+            new DocxMathRow([new DocxMathRun(Run("A+B=C"), "p", null) { WordJoinerOffsets = [2] }]),
+            new DocxMathRow([new DocxMathRun(Run("A+"), "p", null) { WordJoinerOffsets = [2] },
+                new DocxMathRun(Run("B=C"), "p", null)]),
+            new DocxMathRow([new DocxMathRun(Run("A+"), "p", null),
+                new DocxMathRun(Run(""), "p", null) { WordJoinerOffsets = [0] },
+                new DocxMathRun(Run("B=C"), "p", null)])
+        };
+        foreach (DocxMathRow row in cases)
+        {
+            var box = Measure(row);
+            TestAssert.True(box.InlineBreakAfterGlyphs.SequenceEqual(new[] { 4 }), "Only the joined operator boundary is blocked.");
+            TestAssert.Equal(control.AdvanceWidth, box.AdvanceWidth);
+            TestAssert.True(control.Glyphs.SequenceEqual(box.Glyphs), "Joiners preserve all glyphs and their geometry.");
+        }
+
+        DocxMathBox Measure(DocxMathRow row)
+        {
+            TestAssert.True(DocxMathRowLayout.TryMeasure(row, _ => font, CancellationToken.None, out var box, out _),
+                "The joiner must need no glyph in the font.");
+            return TestAssert.NotNull(box);
+        }
+    }
+
     public static void DocxMathBoxVariantSymbolsKeepTheirSourceIdentityAndDistinctStyleGlyphs()
     {
         int[] source = [0x2202, 0x03F5, 0x03D1, 0x03F0, 0x03D5, 0x03F1, 0x03D6];

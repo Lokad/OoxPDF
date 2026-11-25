@@ -155,6 +155,16 @@ internal static partial class PortableRenderingTests
                 new XElement(m + "r", new XElement(m + "t", "2")));
         });
 
+    public static void PortableRenderingMathWordJoinersKeepUnbrokenFractions() =>
+        CheckComposedMathRunContent("x+2", (numerators, w, m) =>
+        {
+            numerators[0].Value = "x+\u20602";
+            numerators[1].ReplaceWith(new XElement(w + "t", "x+\uFEFF2"));
+            numerators[2].Value = "x+";
+            numerators[2].Parent!.AddAfterSelf(new XElement(m + "r", new XElement(m + "t", "\u2060")),
+                new XElement(m + "r", new XElement(m + "t", "2")));
+        });
+
     public static void PortableRenderingMathEmptyRunFormattingKeepsComposedFractions() =>
         CheckComposedMathRunContent("x2", (numerators, w, m) =>
         {
@@ -216,8 +226,8 @@ internal static partial class PortableRenderingTests
                 fontResourceFilter: name => name.StartsWith("Eq", StringComparison.Ordinal)));
             string text = string.Concat(shows.Select(show => show.Text));
             TestAssert.Equal(3 * numerator.Count(character => character == '\u2011'), text.Count(character => character == '\u2011'));
-            TestAssert.True(!text.Any(DocxTextBreakRules.IsOptionalBreakMarker),
-                "Unbroken optional breaks must stay out of the painted glyph stream.");
+            TestAssert.True(!text.Any(c => DocxTextBreakRules.IsOptionalBreakMarker(c) || DocxTextBreakRules.IsWordJoiner(c)),
+                "Nonprinting break controls must stay out of the painted glyph stream.");
             string expected = numerator.Normalize(NormalizationForm.FormKC) + "y";
             TestAssert.Equal(3, text.Normalize(NormalizationForm.FormKC).Split(expected, StringSplitOptions.None).Length - 1);
             TestAssert.Equal(before.Length, after.Length);
