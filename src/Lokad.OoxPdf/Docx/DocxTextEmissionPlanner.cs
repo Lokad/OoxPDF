@@ -50,11 +50,7 @@ internal readonly record struct DocxTextEmissionAdvanceProfile(
     double PlannedEmittedAdvance,
     double LayoutWidth,
     double LayoutToNaturalResidual,
-    double LayoutToRoundedResidual,
-    double PlannedEmittedToLayoutResidual,
-    double? UniformResidualPerGap,
-    double? RoundedResidualPerGap,
-    double? PlannedEmittedResidualPerGap)
+    double LayoutToRoundedResidual)
 {
     public double NominalAdvanceAdjustmentTotal { get; init; }
     public double PairAdvanceAdjustmentTotal { get; init; }
@@ -264,10 +260,6 @@ internal static class DocxTextEmissionPlanner
             textStateCharacterSpacingGapTotal + nominalAdjustment + pairAdjustment;
         double naturalResidual = layoutWidth - naturalPdfWidth;
         double roundedResidual = layoutWidth - roundedPdfWidth;
-        double plannedEmittedResidual = layoutWidth - plannedEmittedAdvance;
-        double? naturalResidualPerGap = glyphGapCount == 0 ? null : naturalResidual / glyphGapCount;
-        double? roundedResidualPerGap = glyphGapCount == 0 ? null : roundedResidual / glyphGapCount;
-        double? plannedEmittedResidualPerGap = glyphGapCount == 0 ? null : plannedEmittedResidual / glyphGapCount;
         return new(
             glyphCount,
             glyphGapCount,
@@ -280,11 +272,7 @@ internal static class DocxTextEmissionPlanner
             plannedEmittedAdvance,
             layoutWidth,
             naturalResidual,
-            roundedResidual,
-            plannedEmittedResidual,
-            naturalResidualPerGap,
-            roundedResidualPerGap,
-            plannedEmittedResidualPerGap)
+            roundedResidual)
         {
             NominalAdvanceAdjustmentTotal = nominalAdjustment,
             PairAdvanceAdjustmentTotal = pairAdjustment
@@ -427,11 +415,6 @@ internal static class DocxTextEmissionPlanner
         double textStateCharacterSpacingGapTotal = plan.PdfCharacterSpacing * glyphGapCount;
         double plannedEmittedAdvance = fallbackPointsWidth + positioningCharacterSpacingGapTotal + textStateCharacterSpacingGapTotal;
         double naturalResidual = layoutWidth - fallbackPointsWidth;
-        double roundedResidual = layoutWidth - fallbackPointsWidth;
-        double plannedEmittedResidual = layoutWidth - plannedEmittedAdvance;
-        double? naturalResidualPerGap = glyphGapCount == 0 ? null : naturalResidual / glyphGapCount;
-        double? roundedResidualPerGap = glyphGapCount == 0 ? null : roundedResidual / glyphGapCount;
-        double? plannedEmittedResidualPerGap = glyphGapCount == 0 ? null : plannedEmittedResidual / glyphGapCount;
         return new(
             glyphCount,
             glyphGapCount,
@@ -444,11 +427,7 @@ internal static class DocxTextEmissionPlanner
             plannedEmittedAdvance,
             layoutWidth,
             naturalResidual,
-            roundedResidual,
-            plannedEmittedResidual,
-            naturalResidualPerGap,
-            roundedResidualPerGap,
-            plannedEmittedResidualPerGap);
+            naturalResidual);
     }
 
     public static IReadOnlyList<DocxTextEmissionPart> SplitOfficeTextOperationParts(

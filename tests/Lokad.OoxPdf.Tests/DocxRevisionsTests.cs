@@ -892,9 +892,6 @@ internal static class DocxRevisionsTests
             spacedSegment.AdvanceProfile.KerningAdjustmentTotal +
             spacedSegment.AdvanceProfile.PositioningCharacterSpacingGapTotal +
             spacedSegment.AdvanceProfile.TextStateCharacterSpacingGapTotal)) < 0.0001d, "Planned emitted advance should be decomposed into width-array, kerning, positioning, and Tc terms.");
-        TestAssert.True(spacedSegment.AdvanceProfile.UniformResidualPerGap is not null, "Multi-glyph operations should expose residual per glyph gap.");
-        TestAssert.True(spacedSegment.AdvanceProfile.RoundedResidualPerGap is not null, "Multi-glyph operations should expose rounded-PDF residual per glyph gap.");
-        TestAssert.True(spacedSegment.AdvanceProfile.PlannedEmittedResidualPerGap is not null, "Multi-glyph operations should expose planned emitted residual per glyph gap.");
         TestAssert.True(Math.Abs(spacedSegment.LayoutCharacterSpacing - 1.25d) < 0.0001d, "Snapshot should preserve authored run character spacing.");
         TestAssert.True(Math.Abs(spacedSegment.PdfCharacterSpacing) < 0.0001d, "Normal DOCX run spacing should stay in positioned glyph advances.");
         TestAssert.Equal("None", spacedSegment.PdfCharacterSpacingSource);
@@ -939,8 +936,6 @@ internal static class DocxRevisionsTests
         TestAssert.Equal(0d, labelSegment.GlyphAdvanceSignature.PairLeftAdvanceMaxEm);
         TestAssert.Equal(0d, labelSegment.GlyphAdvanceSignature.PairRightAdvanceMinEm);
         TestAssert.Equal(0d, labelSegment.GlyphAdvanceSignature.PairRightAdvanceMaxEm);
-        TestAssert.True(labelSegment.AdvanceProfile.UniformResidualPerGap is null, "Single-glyph operations should not report a per-gap residual.");
-        TestAssert.True(labelSegment.AdvanceProfile.RoundedResidualPerGap is null, "Single-glyph operations should not report a rounded-PDF per-gap residual.");
         TestAssert.True(Math.Abs(labelSegment.PdfCharacterSpacing - 0.04d) < 0.0001d, "Numbering labels should expose their PDF text-state character spacing.");
         TestAssert.Equal("ListLabel", labelSegment.PdfCharacterSpacingSource);
         TestAssert.True(Math.Abs(labelSegment.PositioningCharacterSpacing) < 0.0001d, "Numbering PDF text-state spacing should not be double-counted in glyph positioning.");
