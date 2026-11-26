@@ -866,7 +866,7 @@ internal static partial class SvgTextTests
         TestAssert.Equal("Partial", warning.Fallback);
     }
 
-    public static void SvgZeroPositioningKeepsLabelsWithoutOverridingRootOffsets()
+    public static void SvgZeroPositioningKeepsLabelsWithNaturalGeometry()
     {
         static string Picture(string root, string label) => Svg($"""
             <text x="104" y="45" font-size="24" text-anchor="middle" fill="#112233" {root}>{label}</text>
@@ -882,7 +882,7 @@ internal static partial class SvgTextTests
 
         foreach (string unsupported in new[]
         {
-            Picture("""dx="20" """, """<tspan dx="0">NO</tspan>RTH"""),
+            Picture("", """NO<tspan dx="12">RT</tspan>H"""),
             Picture("", """NO<tspan rotate="0,">RT</tspan>H""")
         })
         {
@@ -894,6 +894,39 @@ internal static partial class SvgTextTests
             TestAssert.Equal("SVG_UNSUPPORTED_CONTENT", warning.Id);
             TestAssert.Equal("Partial", warning.Fallback);
         }
+    }
+
+    public static void SvgSpanOffsetsFollowTheFirstAddressableCharacter()
+    {
+        static string Picture(string root, string label) => Svg($"""
+            <text x="104" y="45" font-size="24" text-anchor="middle" fill="#112233" {root}>{label}</text>
+            <rect x="200" y="88" width="20" height="10" fill="lime"/>
+            """);
+
+        const string shiftX = """dx="20" """;
+        const string shiftY = """dy="8" """;
+        const string resetX = """<tspan dx="0">NO</tspan>RTH""";
+        static void FullLabel(string paint) => TestAssert.Equal(5, LabelPaths(paint));
+
+        AssertSvgPaintInBothFormats(Picture("", "NORTH"),
+            [Picture(shiftX, resetX), Picture(shiftX, "\u00AD " + resetX)], FullLabel, "0 1 0 rg");
+        AssertSvgPaintInBothFormats(Picture(shiftX, "NORTH"),
+            [
+                Picture(shiftX, """NO<tspan dx="0">RT</tspan>H"""),
+                Picture(shiftX + shiftY, """<tspan dy="0%">NO</tspan>RTH""")
+            ], FullLabel, "0 1 0 rg");
+        AssertSvgPaintInBothFormats(Picture(shiftY, "NORTH"),
+            Picture(shiftX + shiftY, """  <tspan display="none">IGNORED</tspan><tspan dx="0"><tspan>NO</tspan></tspan>RTH"""),
+            FullLabel, "0 1 0 rg");
+
+        const string hiddenPrefix = """<tspan visibility="hidden">NO</tspan>""";
+        AssertSvgPaintInBothFormats(Picture(shiftX, hiddenPrefix + "RTH"),
+            Picture(shiftX, hiddenPrefix + """<tspan dx="0">RT</tspan>H"""),
+            paint => TestAssert.Equal(3, LabelPaths(paint)), "0 1 0 rg");
+
+        const string preserved = """xml:space="preserve" """;
+        AssertSvgPaintInBothFormats(Picture(shiftX + preserved, " NORTH"),
+            Picture(shiftX + preserved, " " + resetX), FullLabel, "0 1 0 rg");
     }
 
     public static void SvgInlineLinkTextKeepsPaintAndDiagnosesActions()

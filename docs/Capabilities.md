@@ -144,10 +144,11 @@ within a label preserve its glyphs and advances. Transform declarations on
 plain text descendants leave the label's geometry intact. Those descendants
 keep their paint with `tabindex` or `pointer-events`. Embedded SVG link
 actions retain an unsupported-content diagnostic. SVG labels keep their natural
-spacing for a standalone `lengthAdjust` attribute. Zero rotation and span
-offsets preserve label paint when they leave the effective geometry intact.
-Explicit `textLength` requests keep the diagnosed fallback. Numeric opacity on SVG roots,
-groups and link wrappers composes their children as a group for both presentation
+spacing for a standalone `lengthAdjust` attribute. All-zero rotations preserve
+label paint. A zero span offset replaces the label's offset on the same axis
+when its span owns the first addressable character. Explicit `textLength`
+requests keep the diagnosed fallback. Numeric opacity on SVG roots, groups
+and link wrappers composes their children as a group for both presentation
 attributes and inline style. Numeric and percentage opacity values clamp to the
 fully transparent and fully opaque endpoints.
 Explicit `inherit` on a shape, label or container uses its parent's opacity.

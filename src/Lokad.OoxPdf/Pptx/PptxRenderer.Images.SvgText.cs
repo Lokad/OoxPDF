@@ -127,11 +127,13 @@ internal sealed partial class PptxRenderer
             !TryReadPosition("y", viewHeight, out double y) ||
             !TryReadPosition("dx", viewWidth, out double dx) ||
             !TryReadPosition("dy", viewHeight, out double dy)) return false;
-        x += dx; y += dy;
-        if (!double.IsFinite(x) || !double.IsFinite(y)) return false;
         if (!TryReadPlainSvgText(element, style, rootMetrics, paintServers, IsSvgVisibilityHidden(Inherited("visibility")), whitespace,
-                initialAnchor, dx, dy, cancellationToken, out string valueText, out bool[]? hiddenCharacters, out string anchor,
+                initialAnchor, cancellationToken, out string valueText, out bool[]? hiddenCharacters, out string anchor,
+                out var firstZeroOffset,
                 out SvgTextPaint paint, out SvgTextMetrics metrics)) return false;
+        if (!firstZeroOffset.X) x += dx;
+        if (!firstZeroOffset.Y) y += dy;
+        if (!double.IsFinite(x) || !double.IsFinite(y)) return false;
         if (OoxComplexScript.DetectNeeds(valueText) != OoxComplexScriptKind.None ||
             valueText.EnumerateRunes().Any(r => Rune.IsControl(r))) return false;
         string family = metrics.FamilyList.Split(',')[0].Trim().Trim('\'', '"');
@@ -355,12 +357,13 @@ internal sealed partial class PptxRenderer
     // share one effective fill.
     private static bool TryReadPlainSvgText(XElement element, IReadOnlyDictionary<string, string> elementStyle, SvgTextMetrics rootMetrics,
         SvgPaintServers paintServers, bool hidden, SvgTextWhitespace whitespace, string initialAnchor,
-        double rootDx, double rootDy, CancellationToken cancellationToken, out string text, out bool[]? hiddenCharacters, out string anchor,
-        out SvgTextPaint paint, out SvgTextMetrics metrics)
+        CancellationToken cancellationToken, out string text, out bool[]? hiddenCharacters, out string anchor,
+        out (bool X, bool Y) firstZeroOffset, out SvgTextPaint paint, out SvgTextMetrics metrics)
     {
         text = string.Empty;
         hiddenCharacters = null;
         anchor = initialAnchor;
+        firstZeroOffset = default;
         paint = default;
         metrics = rootMetrics;
         SvgTextPaint? commonPaint = null;
@@ -369,16 +372,18 @@ internal sealed partial class PptxRenderer
         List<bool>? visibility = null;
         (bool Hidden, string Anchor, SvgTextMetrics Metrics)? pendingSpace = null;
         string? chunkAnchor = null;
+        (bool X, bool Y) firstOffsets = default;
         XName xmlLanguageName = XNamespace.Xml + "lang";
         XName languageName = "lang";
         string? labelLanguage = null;
         XName spanName = element.Name.Namespace + "tspan";
         XName linkName = element.Name.Namespace + "a";
-        if (!Append(element, elementStyle, rootMetrics, hidden, ownerTransparent: false, whitespace, initialAnchor)) return false;
+        if (!Append(element, elementStyle, rootMetrics, hidden, ownerTransparent: false, whitespace, initialAnchor, default)) return false;
 
         text = characters.ToString();
         hiddenCharacters = visibility?.ToArray();
         anchor = chunkAnchor ?? initialAnchor;
+        firstZeroOffset = firstOffsets;
         paint = commonPaint.GetValueOrDefault();
         metrics = commonMetrics.GetValueOrDefault(rootMetrics);
         return true;
@@ -387,7 +392,7 @@ internal sealed partial class PptxRenderer
             (string?)owner.Attribute(xmlLanguageName) ?? (string?)owner.Attribute(languageName);
 
         bool Append(XElement owner, IReadOnlyDictionary<string, string> ownerStyle, SvgTextMetrics ownerMetrics,
-            bool ownerHidden, bool ownerTransparent, SvgTextWhitespace space, string ownerAnchor)
+            bool ownerHidden, bool ownerTransparent, SvgTextWhitespace space, string ownerAnchor, (bool X, bool Y) zeroOffset)
         {
             bool preserveSpace = space is SvgTextWhitespace.XmlPreserve or SvgTextWhitespace.CssPreserve;
             bool hideOutlines = ownerHidden || ownerTransparent;
@@ -411,7 +416,7 @@ internal sealed partial class PptxRenderer
                         if (!preserveSpace && character == ' ')
                         {
                             // Hold a collapsed space until there is content on both sides.
-                            if (characters.Length != 0) pendingSpace ??= (hideOutlines, ownerAnchor, ownerMetrics);
+                            if (commonMetrics is not null) pendingSpace ??= (hideOutlines, ownerAnchor, ownerMetrics);
                             continue;
                         }
                         bool characterHidden = hideOutlines;
@@ -427,10 +432,10 @@ internal sealed partial class PptxRenderer
                         }
                         if (pendingSpace is { } pending)
                         {
-                            if (!AppendCharacter(' ', pending.Hidden, pending.Anchor, pending.Metrics)) return false;
+                            if (!AppendCharacter(' ', pending.Hidden, pending.Anchor, pending.Metrics, zeroOffset)) return false;
                             pendingSpace = null;
                         }
-                        if (!AppendCharacter(character, characterHidden, ownerAnchor, ownerMetrics)) return false;
+                        if (!AppendCharacter(character, characterHidden, ownerAnchor, ownerMetrics, zeroOffset)) return false;
                     }
                     continue;
                 }
@@ -450,12 +455,14 @@ internal sealed partial class PptxRenderer
                 double? opacity = authoredOpacity is null ? 1d : ParseSvgOpacity(authoredOpacity);
                 if (opacity is not double localOpacity || localOpacity is > 0d and < 1d) return false;
                 bool childTransparent = ownerTransparent || localOpacity == 0d;
+                var childZeroOffset = isLink ? zeroOffset :
+                    (zeroOffset.X || child.Attribute("dx") is not null, zeroOffset.Y || child.Attribute("dy") is not null);
                 string? childAnchor = ResolveSvgTextAnchor(ReadSvgPresentationAttribute(child, style, "text-anchor"), ownerAnchor);
                 if (childAnchor is null ||
                     !TryResolveSvgFontSize(ReadSvgPresentationAttribute(child, style, "font-size"), ownerMetrics.Size, out double childSize) ||
                     !TryReadSvgTextMetrics(child, style, childSize, out var childMetrics) ||
                     !Append(child, style, childMetrics, childHidden, childTransparent,
-                        ResolveSvgTextWhitespace(child, style, space), childAnchor)) return false;
+                        ResolveSvgTextWhitespace(child, style, space), childAnchor, childZeroOffset)) return false;
             }
             return true;
         }
@@ -505,10 +512,8 @@ internal sealed partial class PptxRenderer
                     return true;
                 // Unknown namespaced attributes carry no SVG presentation.
                 if (ns != XNamespace.None) return ns != XNamespace.Xml && !isXLink;
-                // A descendant's offset can replace a nonzero offset from the label.
                 if (name is "dx" or "dy")
-                    return (name == "dx" ? rootDx : rootDy) == 0d &&
-                        IsZeroSvgTextPositionList(attribute.Value, allowLengths: true, cancellationToken);
+                    return IsZeroSvgTextPositionList(attribute.Value, allowLengths: true, cancellationToken);
                 if (name == "rotate") return IsZeroSvgTextPositionList(attribute.Value, allowLengths: false, cancellationToken);
                 return name is "id" or "class" or "role" or "style" or "tabindex" or "lengthAdjust" ||
                     name.StartsWith("aria-", StringComparison.Ordinal) ||
@@ -532,13 +537,19 @@ internal sealed partial class PptxRenderer
             };
         }
 
-        bool AppendCharacter(char character, bool characterHidden, string ownerAnchor, SvgTextMetrics ownerMetrics)
+        bool AppendCharacter(char character, bool characterHidden, string ownerAnchor, SvgTextMetrics ownerMetrics, (bool X, bool Y) offsets)
         {
             if (!OoxTextBreakRules.IsNonPrintingBreakControl(character))
             {
                 if (commonMetrics is { } existing && !ownerMetrics.Matches(existing)) return false;
-                commonMetrics ??= ownerMetrics;
-                chunkAnchor ??= ownerAnchor;
+                if (commonMetrics is null)
+                {
+                    commonMetrics = ownerMetrics;
+                    chunkAnchor = ownerAnchor;
+                    // A root scalar applies to the first addressable character. Any
+                    // zero offset on that character's span path owns its own axis.
+                    firstOffsets = offsets;
+                }
             }
             if (characterHidden && visibility is null) visibility = [.. Enumerable.Repeat(false, characters.Length)];
             characters.Append(character);
