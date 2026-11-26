@@ -260,7 +260,8 @@ internal sealed partial class DocxLayoutEngine
         double paragraphWidth = Math.Max(1d, bodyWidth - textStartOffset - GetParagraphRightInset(paragraph, fixedScale));
         double continuationParagraphWidth = Math.Max(1d, bodyWidth - continuationTextStartOffset - GetParagraphRightInset(paragraph, fixedScale));
         DocxTextRun firstRun = paragraph.Runs[0];
-        DocxWrappedTextLine[] lines = WrapTextLines(textSpans, paragraphWidth, continuationParagraphWidth, fontSize, textMeasurer, ScaleTabStopPositions(effective.TabStops, fixedScale), defaultTabStopPoints * fixedScale, allowOverwideTokenBreaks: ShouldAllowCharacterLevelWordWrap(paragraph), dynamicFieldPageNumber: pageNumber, inlineImageWidths: ResolveInlineImageWrapWidths(paragraph, textSpans), sourceParagraph: paragraph).ToArray();
+        var storyTabStops = ScaleTabStopPositions(effective.TabStops, fixedScale);
+        DocxWrappedTextLine[] lines = WrapTextLines(textSpans, paragraphWidth, continuationParagraphWidth, fontSize, textMeasurer, storyTabStops, defaultTabStopPoints * fixedScale, allowOverwideTokenBreaks: ShouldAllowCharacterLevelWordWrap(paragraph), dynamicFieldPageNumber: pageNumber, inlineImageWidths: ResolveInlineImageWrapWidths(paragraph, textSpans), sourceParagraph: paragraph).ToArray();
         // Auto insets take max(hheaAscender, 0.94em) for footnote/endnote stories
         // (Word 16.0 endnote grids); comment stories keep legacy (unprobed).
         // RV06 shape probes (Word 16.0, eighteen families) plus take battery (a12
@@ -347,14 +348,14 @@ internal sealed partial class DocxLayoutEngine
                 }
             }
             double lineHeight = activeProfile.LineHeight;
-            double lineWidth = MeasureTextSpansForLayout(line.Spans, fontSize, textMeasurer, ScaleTabStopPositions(effective.TabStops, fixedScale), defaultTabStopPoints * fixedScale, pageNumber) + (storyMidLinePlan?.LineImageWidths[lineIndex] ?? 0d);
+            double lineWidth = MeasureTextSpansForLayout(line.Spans, fontSize, textMeasurer, storyTabStops, defaultTabStopPoints * fixedScale, pageNumber) + (storyMidLinePlan?.LineImageWidths[lineIndex] ?? 0d);
             // RV05 calibration (Word 16.0): image top pins to the natural line top.
             double extraAbove = IsExactLineSpacing(paragraph.EffectiveProperties) ? 0d : (storyMidLinePlan?.ShiftAboveHeights[lineIndex] ?? 0d);
             cursorY -= extraAbove;
             // RV06 footnote-align probe: Office centers/rights drawable related-story
             // text too, letting trailing spaces overflow past the edge.
             double lineAlignWidth = effective.Alignment is DocxTextAlignment.Center or DocxTextAlignment.Right
-                ? MeasureDrawableTextSpansForLayout(line.Spans, fontSize, textMeasurer, ScaleTabStopPositions(effective.TabStops, fixedScale), defaultTabStopPoints * fixedScale, pageNumber) + (storyMidLinePlan?.LineImageWidths[lineIndex] ?? 0d)
+                ? MeasureDrawableTextSpansForLayout(line.Spans, fontSize, textMeasurer, storyTabStops, defaultTabStopPoints * fixedScale, pageNumber) + (storyMidLinePlan?.LineImageWidths[lineIndex] ?? 0d)
                 : lineWidth;
             double lineX = effective.Alignment switch
             {
@@ -390,7 +391,7 @@ internal sealed partial class DocxLayoutEngine
                 paragraphWidth,
                 fontSize,
                 textMeasurer,
-                ScaleTabStopPositions(effective.TabStops, fixedScale),
+                storyTabStops,
                 defaultTabStopPoints * fixedScale,
                 pageNumber, storyMidLinePlan?.LineImageWidths[lineIndex] ?? 0d);
             IReadOnlyList<DocxTextSegmentLayout> emissionSegments = lineShape.Segments;
@@ -399,8 +400,23 @@ internal sealed partial class DocxLayoutEngine
                 var imageShifts = new List<(double BoundaryX, double Shift)>();
                 foreach (DocxMidLineImage placed in storyMidLinePlan.ImagesByLine[lineIndex])
                 {
-                    double shiftBeforeWidth = MeasureMidLineBeforeWidth(line.Spans, placed.LineCharOffset, paragraph, firstLine, lineIndex == lines.Length - 1, paragraphWidth, fontSize, textMeasurer, ScaleTabStopPositions(effective.TabStops, fixedScale), defaultTabStopPoints * fixedScale, pageNumber, storyMidLinePlan?.LineImageWidths[lineIndex] ?? 0d);
-                    imageShifts.Add((shiftBeforeWidth, placed.Width));
+                    double beforeWidth = MeasureMidLineBeforeWidth(line.Spans, placed.LineCharOffset, paragraph, firstLine, lineIndex == lines.Length - 1, paragraphWidth, fontSize, textMeasurer, storyTabStops, defaultTabStopPoints * fixedScale, pageNumber, storyMidLinePlan.LineImageWidths[lineIndex]);
+                    imageShifts.Add((beforeWidth, placed.Width));
+                    placedImages.Add(new DocxInlineImageLayout(
+                        placed.Image,
+                        lineX + beforeWidth + placed.AdvanceBefore,
+                        // RV05 calibration (Word 16.0 fnimg probe): Office footnote image bottoms sit
+                        // at the text baseline (image cm bottom 85.7 against baseline 85.584), so
+                        // related-story midline images anchor by the line baseline like cells.
+                        cursorY - baselineOffset,
+                        placed.Width,
+                        placed.Height,
+                        PageIndex: 0,
+                        SourceBlockIndex: sourceBlockIndex,
+                        SourceParagraphIndex: sourceParagraphIndex,
+                        Story: null)
+                    { SourceLineIndex = lineIndex,
+                        LineFrame = DocxPictureLineFrame.FromLine(cursorY, lineHeight, extraAbove, lineIndex == lines.Length - 1 ? spacingProfile.ParagraphAfterSpacing : 0d) });
                 }
 
                 emissionSegments = ShiftSegmentsPastMidLineImages(lineShape.Segments, line.Spans, paragraph, firstLine, lineX, imageShifts);
@@ -438,28 +454,6 @@ internal sealed partial class DocxLayoutEngine
                 baselineOffset + extraAbove, lineHeight + extraAbove, fixedScale,
                 lineIndex == lines.Length - 1 ? spacingProfile.ParagraphAfterSpacing : 0d,
                 lineIndex == 0 ? beforeSpacing : 0d) });
-            if (storyMidLinePlan is not null)
-            {
-                foreach (DocxMidLineImage placed in storyMidLinePlan.ImagesByLine[lineIndex])
-                {
-                    double beforeWidth = MeasureMidLineBeforeWidth(line.Spans, placed.LineCharOffset, paragraph, firstLine, lineIndex == lines.Length - 1, paragraphWidth, fontSize, textMeasurer, ScaleTabStopPositions(effective.TabStops, fixedScale), defaultTabStopPoints * fixedScale, pageNumber, storyMidLinePlan?.LineImageWidths[lineIndex] ?? 0d);
-                    placedImages.Add(new DocxInlineImageLayout(
-                        placed.Image,
-                        lineX + beforeWidth + placed.AdvanceBefore,
-                        // RV05 calibration (Word 16.0 fnimg probe): Office footnote image bottoms sit
-                        // at the text baseline (image cm bottom 85.7 against baseline 85.584), so
-                        // related-story midline images anchor by the line baseline like cells.
-                        cursorY - baselineOffset,
-                        placed.Width,
-                        placed.Height,
-                        PageIndex: 0,
-                        SourceBlockIndex: sourceBlockIndex,
-                        SourceParagraphIndex: sourceParagraphIndex,
-                        Story: null)
-                    { SourceLineIndex = lineIndex,
-                        LineFrame = DocxPictureLineFrame.FromLine(cursorY, lineHeight, extraAbove, lineIndex == lines.Length - 1 ? spacingProfile.ParagraphAfterSpacing : 0d) });
-                }
-            }
             firstLine = false;
             paragraphX = continuationTextStartOffset;
             paragraphWidth = Math.Max(1d, bodyWidth - continuationTextStartOffset - GetParagraphRightInset(paragraph, fixedScale));

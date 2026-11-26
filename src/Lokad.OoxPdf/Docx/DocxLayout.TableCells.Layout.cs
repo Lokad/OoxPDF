@@ -746,8 +746,25 @@ internal sealed partial class DocxLayoutEngine
                             var imageShifts = new List<(double BoundaryX, double Shift)>();
                             foreach (DocxMidLineImage placed in midLinePlan.ImagesByLine[lineIndex])
                             {
-                                double shiftBeforeWidth = MeasureMidLineBeforeWidth(line.Spans, placed.LineCharOffset, paragraph, firstLine, lineIndex == wrappedLines.Length - 1, paragraphWidth, fontSize, measurer, tabStops, defaultTabStop, context.PageNumber, midLinePlan?.LineImageWidths[lineIndex] ?? 0d);
-                                imageShifts.Add((shiftBeforeWidth, placed.Width));
+                                double beforeWidth = MeasureMidLineBeforeWidth(line.Spans, placed.LineCharOffset, paragraph, firstLine, lineIndex == wrappedLines.Length - 1, paragraphWidth, fontSize, measurer, tabStops, defaultTabStop, context.PageNumber, midLinePlan.LineImageWidths[lineIndex]);
+                                imageShifts.Add((beforeWidth, placed.Width));
+                                // RV06 cellmidline size matrix (Word 16.0, blue-bounds raster measurement):
+                                // Office cell image bottoms sit at the text baseline (medium bounds 679.0
+                                // against baseline 678.82 both families, all sizes within 0.5), so midline
+                                // images anchor by the line baseline instead of hanging a full height below it.
+                                placedImages.Add(new DocxInlineImageLayout(
+                                    placed.Image,
+                                    lineX + beforeWidth + placed.AdvanceBefore,
+                                    cursorY - lineBaselineTransition,
+                                    placed.Width,
+                                    placed.Height,
+                                    pageIndex,
+                                    SourceBlockIndex: null,
+                                    SourceParagraphIndex: paragraphIndex,
+                                    Story: null)
+                                // Cell cursors originate at the first baseline; the
+                                // drawable line frame originates at the line top.
+                                { LineFrame = DocxPictureLineFrame.FromLine(cursorY + cellFirstBaselineInset, lineHeight, extraAbove, lineIndex == wrappedLines.Length - 1 ? spacingProfile.ParagraphAfterSpacing : 0d) });
                             }
 
                             emissionSegments = ShiftSegmentsPastMidLineImages(lineShape.Segments, line.Spans, paragraph, firstLine, lineX, imageShifts);
@@ -795,30 +812,6 @@ internal sealed partial class DocxLayoutEngine
                             // just like the scaled line height and transition.
                             OccupiedLineBox = new(lineHeight + extraAbove + extraBelow,
                                 cellFirstBaselineInset * context.ParagraphSpacingScale + lineBaselineTransition + extraAbove) });
-                        if (midLinePlan is not null)
-                        {
-                            foreach (DocxMidLineImage placed in midLinePlan.ImagesByLine[lineIndex])
-                            {
-                                double beforeWidth = MeasureMidLineBeforeWidth(line.Spans, placed.LineCharOffset, paragraph, firstLine, lineIndex == wrappedLines.Length - 1, paragraphWidth, fontSize, measurer, tabStops, defaultTabStop, context.PageNumber, midLinePlan?.LineImageWidths[lineIndex] ?? 0d);
-                                // RV06 cellmidline size matrix (Word 16.0, blue-bounds raster measurement):
-                                // Office cell image bottoms sit at the text baseline (medium bounds 679.0
-                                // against baseline 678.82 both families, all sizes within 0.5), so midline
-                                // images anchor by the line baseline instead of hanging a full height below it.
-                                placedImages.Add(new DocxInlineImageLayout(
-                                    placed.Image,
-                                    lineX + beforeWidth + placed.AdvanceBefore,
-                                    cursorY - lineBaselineTransition,
-                                    placed.Width,
-                                    placed.Height,
-                                    pageIndex,
-                                    SourceBlockIndex: null,
-                                    SourceParagraphIndex: paragraphIndex,
-                                    Story: null)
-                                // Cell cursors originate at the first baseline; the
-                                // drawable line frame originates at the line top.
-                                { LineFrame = DocxPictureLineFrame.FromLine(cursorY + cellFirstBaselineInset, lineHeight, extraAbove, lineIndex == wrappedLines.Length - 1 ? spacingProfile.ParagraphAfterSpacing : 0d) });
-                            }
-                        }
                         firstLine = false;
                         paragraphX = cellX + paddingLeft + continuationTextStartOffset;
                         paragraphWidth = Math.Max(1d, textWidth - continuationTextStartOffset - GetParagraphRightInset(paragraph, context.ParagraphSpacingScale));
