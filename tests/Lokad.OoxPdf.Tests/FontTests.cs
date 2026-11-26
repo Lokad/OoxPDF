@@ -790,7 +790,7 @@ internal static partial class FontTests
         }
 
         PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, "The scale".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
-        string positioning = TestAssert.NotNull(embedded.EncodeGlyphPositioningArray("The scale", 0d, 18d, forcePositioningArray: true, kerningEnabled: true));
+        string positioning = TestAssert.NotNull(embedded.EncodeGlyphText("The scale", 0d, 18d, forcePositioningArray: true, kerningEnabled: true).Operand);
         string widths = PdfWriterTests.ReadWidthArray(embedded);
         string encodedGlyph = embedded.EncodeGlyphHex("h");
         TestAssert.True(encodedGlyph.Length == 4, "Expected a single encoded CID for 'h'.");

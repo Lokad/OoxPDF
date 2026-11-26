@@ -93,22 +93,20 @@ internal sealed partial class DocxRenderer
         // Office balloon text carries no tracking: the shared encoder applies pair
         // kerning like the body path and yields plain glyph shows when the face has
         // no kerns for the line.
-        string? positioningArray = resource.Embedded.EncodeGlyphPositioningArray(
+        var (operand, isPositioned) = resource.Embedded.EncodeGlyphText(
             text,
             0d,
             fontSize,
             forcePositioningArray: false,
             kerningEnabled: true);
-        if (positioningArray is not null)
+        if (operand is null) return;
+        if (isPositioned)
         {
-            graphics.DrawGlyphPositionedText(resource.Name, fontSize, x, baselineY, red, green, blue, positioningArray, italic: false, characterSpacing: 0d, textRenderingMode: 0, strokeRed: 0, strokeGreen: 0, strokeBlue: 0, strokeWidth: 0d);
-            return;
+            graphics.DrawGlyphPositionedText(resource.Name, fontSize, x, baselineY, red, green, blue, operand, italic: false, characterSpacing: 0d, textRenderingMode: 0, strokeRed: 0, strokeGreen: 0, strokeBlue: 0, strokeWidth: 0d);
         }
-
-        string glyphHex = resource.Embedded.EncodeGlyphHex(text);
-        if (glyphHex.Length != 0)
+        else
         {
-            graphics.DrawGlyphText(resource.Name, fontSize, x, baselineY, red, green, blue, glyphHex, italic: false, characterSpacing: 0d, textRenderingMode: 0, strokeRed: 0, strokeGreen: 0, strokeBlue: 0, strokeWidth: 0d);
+            graphics.DrawGlyphText(resource.Name, fontSize, x, baselineY, red, green, blue, operand, italic: false, characterSpacing: 0d, textRenderingMode: 0, strokeRed: 0, strokeGreen: 0, strokeBlue: 0, strokeWidth: 0d);
         }
     }
 

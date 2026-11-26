@@ -24,20 +24,12 @@ internal sealed partial class DocxRenderer
         bool syntheticItalic)
     {
         string emissionText = SubstituteUncoveredGlyphs(resource.Embedded, text);
-        string? positioningArray = resource.Embedded.EncodeGlyphPositioningArray(emissionText, plan.PositioningCharacterSpacing, plan.PdfFontSize, forcePositioningArray: true, kerningEnabled: plan.PairKerningEnabled, nominalAdvanceFontSize: plan.NominalAdvanceFontSize);
+        var (positioningArray, _) = resource.Embedded.EncodeGlyphText(emissionText, plan.PositioningCharacterSpacing,
+            plan.PdfFontSize, forcePositioningArray: true, kerningEnabled: plan.PairKerningEnabled, nominalAdvanceFontSize: plan.NominalAdvanceFontSize);
         if (positioningArray is not null)
         {
             graphics.DrawGlyphPositionedText(resource.Name, plan.PdfFontSize, x, baselineY, color.Red, color.Green, color.Blue, positioningArray, syntheticItalic, plan.PdfCharacterSpacing, textRenderingMode: 0, strokeRed: 0, strokeGreen: 0, strokeBlue: 0, strokeWidth: 0d);
-            return;
         }
-
-        string glyphHex = resource.Embedded.EncodeGlyphHex(emissionText);
-        if (glyphHex.Length == 0)
-        {
-            return;
-        }
-
-        graphics.DrawGlyphText(resource.Name, plan.PdfFontSize, x, baselineY, color.Red, color.Green, color.Blue, glyphHex, syntheticItalic, plan.PdfCharacterSpacing, textRenderingMode: 0, strokeRed: 0, strokeGreen: 0, strokeBlue: 0, strokeWidth: 0d);
     }
 
     // RV01: runes with no glyph in the emitting face render as question mark so

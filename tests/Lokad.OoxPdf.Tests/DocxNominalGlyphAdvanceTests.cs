@@ -16,12 +16,12 @@ internal static class DocxNominalGlyphAdvanceTests
     {
         var font = OpenTypeFont.Load(TestFontBuilder.CreateTestFont());
         var embedded = PdfEmbeddedFont.Create(font, "AB".EnumerateRunes().Select(r => r.Value), CancellationToken.None);
-        string original = embedded.EncodeGlyphPositioningArray("AB", 0, 11.04, true, false)!;
-        string explicitDefault = embedded.EncodeGlyphPositioningArray("AB", 0, 11.04, true, false, null)!;
+        string original = embedded.EncodeGlyphText("AB", 0, 11.04, true, false).Operand!;
+        string explicitDefault = embedded.EncodeGlyphText("AB", 0, 11.04, true, false, null).Operand!;
         TestAssert.Equal(original, explicitDefault);
         foreach (double spacing in new[] { 0d, .5d })
         {
-            string payload = embedded.EncodeGlyphPositioningArray("AB", spacing, 11.04, true, false, 11)!;
+            string payload = embedded.EncodeGlyphText("AB", spacing, 11.04, true, false, 11).Operand!;
             double adjustment = Regex.Matches(payload, @"(?<= )-?(?:\d+(?:\.\d*)?|\.\d+)(?= )")
                 .Sum(m => double.Parse(m.Value, CultureInfo.InvariantCulture));
             // The independently authored face has A=.600em and B=.620em.
@@ -31,7 +31,7 @@ internal static class DocxNominalGlyphAdvanceTests
         }
         Near(-.024d, embedded.MeasureNominalAdvanceAdjustmentPoints("AB", 11.04, 11), "Inspection accounts for the actual inter-glyph correction.");
         Near(0, embedded.MeasureNominalAdvanceAdjustmentPoints("A", 11.04, 11), "A single glyph keeps its complete natural width.");
-        TestAssert.Equal(embedded.EncodeGlyphPositioningArray("A", 0, 11.04, true, false), embedded.EncodeGlyphPositioningArray("A", 0, 11.04, true, false, 11));
+        TestAssert.Equal(embedded.EncodeGlyphText("A", 0, 11.04, true, false).Operand, embedded.EncodeGlyphText("A", 0, 11.04, true, false, 11).Operand);
     }
 
     public static void DocxNominalGlyphAdvanceUsesSourceAdvancesAndPreservesLayoutPurposes()

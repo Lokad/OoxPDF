@@ -17,7 +17,7 @@ internal static class DocxMetGlyphAdvanceTests
         var embedded = PdfEmbeddedFont.Create(font, "AB".EnumerateRunes().Select(r => r.Value), CancellationToken.None);
         foreach (double spacing in new[] { 0d, .5d })
         {
-            string payload = embedded.EncodeGlyphPositioningArray("AB", spacing, 11.04, true, true, 11)!;
+            string payload = embedded.EncodeGlyphText("AB", spacing, 11.04, true, true, 11).Operand!;
             double adjustment = Regex.Matches(payload, @"(?<= )-?(?:\d+(?:\.\d*)?|\.\d+)(?= )").Sum(m => double.Parse(m.Value, CultureInfo.InvariantCulture));
             double actual = 1.220d * 11.04d - adjustment * 11.04d / 1000d;
             Near(.600d * 11d - .050d * 11d + .620d * 11.04d + spacing, actual, "Actual TJ uses logical A/pair advances and keeps the final B physical width.");
@@ -28,7 +28,7 @@ internal static class DocxMetGlyphAdvanceTests
         var profile = DocxTextEmissionPlanner.MeasureAdvanceProfile("AB", embedded, 1.170d * 11d, plan);
         Near(.002d, profile.PairAdvanceAdjustmentTotal, "The logical pair adjustment is separately accounted for.");
         Near(12.8948d, profile.PlannedEmittedAdvance, "Inspection predicts actual coupled emission.");
-        TestAssert.Equal(embedded.EncodeGlyphPositioningArray("A", 0, 11.04, true, true), embedded.EncodeGlyphPositioningArray("A", 0, 11.04, true, true, 11));
+        TestAssert.Equal(embedded.EncodeGlyphText("A", 0, 11.04, true, true).Operand, embedded.EncodeGlyphText("A", 0, 11.04, true, true, 11).Operand);
     }
 
     public static void DocxMetGlyphAdvanceKeepsRawThresholdPolicyAndRelatedStories()

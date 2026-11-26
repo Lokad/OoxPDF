@@ -104,7 +104,7 @@ internal static partial class DocxFootnotesTests
             var plan = DocxTextEmissionPlanner.Create(style, nominal, 0d, false, DocxTextStateCharacterSpacingSource.None);
             TestAssert.Equal(physical, plan.PdfFontSize);
             TestAssert.Equal(nominal, plan.NominalAdvanceFontSize!.Value);
-            string payload = embedded.EncodeGlyphPositioningArray("AB", 0d, plan.PdfFontSize, true, pairs, plan.NominalAdvanceFontSize)!;
+            string payload = embedded.EncodeGlyphText("AB", 0d, plan.PdfFontSize, true, pairs, plan.NominalAdvanceFontSize).Operand!;
             double adjustment = System.Text.RegularExpressions.Regex.Matches(payload, @"(?<= )-?(?:\d+(?:\.\d*)?|\.\d+)(?= )")
                 .Sum(m => double.Parse(m.Value, CultureInfo.InvariantCulture));
             double expected = .600d * nominal - (pairs ? .050d * nominal : 0d) + .620d * physical;

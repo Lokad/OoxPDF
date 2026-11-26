@@ -38,7 +38,13 @@ internal static class PdfUnicodeIdentityTests
             string expected = string.Concat(cids.Select(cid => cid.ToString("X4", CultureInfo.InvariantCulture)));
             TestAssert.Equal(expected, embedded.EncodeGlyphHex(AliasedText));
             TestAssert.Equal(expected, reversed.EncodeGlyphHex(AliasedText));
-            TestAssert.Equal("[<" + expected + ">]", embedded.EncodeGlyphPositioningArray(AliasedText, 0, 24, true, false));
+            TestAssert.Equal((expected, false), embedded.EncodeGlyphText(AliasedText, 0, 24,
+                forcePositioningArray: false, kerningEnabled: false));
+            TestAssert.Equal(("[<" + expected + ">]", true), embedded.EncodeGlyphText(AliasedText, 0, 24,
+                forcePositioningArray: true, kerningEnabled: false));
+            var unencoded = embedded.EncodeGlyphText("\U0010FFFF", 0, 24,
+                forcePositioningArray: true, kerningEnabled: true);
+            TestAssert.True(unencoded.Operand is null && !unencoded.IsPositioned, "An unencoded rune has no paint operand.");
             byte[] map = ReadGlyphMap(embedded);
             TestAssert.Equal(embedded.CidToGidMapLength, map.Length);
             string widths = PdfWriterTests.ReadWidthArray(embedded);

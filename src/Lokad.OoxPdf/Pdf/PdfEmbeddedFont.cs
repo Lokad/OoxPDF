@@ -410,42 +410,31 @@ internal sealed partial class PdfEmbeddedFont
         return TryGetCid(originalGlyph, out cid);
     }
 
-    public string? EncodeGlyphPositioningArray(string text, double characterSpacingPoints, double fontSize, bool forcePositioningArray, bool kerningEnabled, double? nominalAdvanceFontSize = null)
+    public (string? Operand, bool IsPositioned) EncodeGlyphText(string text, double characterSpacingPoints, double fontSize,
+        bool forcePositioningArray, bool kerningEnabled, double? nominalAdvanceFontSize = null)
     {
-        var glyphs = new List<EncodedGlyph>();
-        foreach (Rune rune in text.EnumerateRunes())
-        {
-            ushort glyph = Font.MapCodePoint(rune.Value);
-            if (glyph != 0 && TryGetEncodedCid(glyph, rune.Value, out ushort cid))
-            {
-                glyphs.Add(new EncodedGlyph(glyph, cid));
-            }
-        }
-
-        if (glyphs.Count == 0)
-        {
-            return null;
-        }
-
         double trackingAdjustment = Math.Abs(characterSpacingPoints) <= 0.001d || fontSize <= 0d
             ? 0d
             : -characterSpacingPoints * 1000d / fontSize;
-        bool hasPositioning = false;
-        var builder = new StringBuilder("[");
+        StringBuilder? positioning = null;
         var glyphChunk = new StringBuilder();
-        for (int i = 0; i < glyphs.Count; i++)
+        ushort previousGlyph = 0;
+        foreach (Rune rune in text.EnumerateRunes())
         {
-            if (i > 0)
+            ushort glyph = Font.MapCodePoint(rune.Value);
+            if (glyph == 0 || !TryGetEncodedCid(glyph, rune.Value, out ushort cid)) continue;
+
+            if (previousGlyph != 0)
             {
                 double adjustment = trackingAdjustment;
                 if (nominalAdvanceFontSize is { } nominalSize && fontSize > 0d)
                 {
-                    double advanceEm = Font.GetAdvanceWidth(glyphs[i - 1].OriginalGlyph) / (double)Font.UnitsPerEm;
+                    double advanceEm = Font.GetAdvanceWidth(previousGlyph) / (double)Font.UnitsPerEm;
                     // Keep the physical glyph size; adjust only its advance before
                     // the following glyph. The final natural glyph width stays intact.
                     adjustment += Math.Round(advanceEm * 1000d) - advanceEm * nominalSize * 1000d / fontSize;
                 }
-                short kerning = kerningEnabled ? Font.GetKerning(glyphs[i - 1].OriginalGlyph, glyphs[i].OriginalGlyph) : (short)0;
+                short kerning = kerningEnabled ? Font.GetKerning(previousGlyph, glyph) : (short)0;
                 if (kerning != 0)
                 {
                     double pairScale = nominalAdvanceFontSize is { } pairSize && fontSize > 0d ? pairSize / fontSize : 1d;
@@ -454,29 +443,25 @@ internal sealed partial class PdfEmbeddedFont
 
                 if (Math.Abs(adjustment) > 0.001d)
                 {
-                    AppendGlyphChunk(builder, glyphChunk);
-                    builder.Append(' ').Append(adjustment.ToString("0.###", CultureInfo.InvariantCulture)).Append(' ');
-                    hasPositioning = true;
+                    positioning ??= new StringBuilder("[");
+                    positioning.Append('<').Append(glyphChunk).Append("> ")
+                        .Append(adjustment.ToString("0.###", CultureInfo.InvariantCulture)).Append(' ');
+                    glyphChunk.Clear();
                 }
             }
 
-            glyphChunk.Append(glyphs[i].Cid.ToString("X4", CultureInfo.InvariantCulture));
+            glyphChunk.Append(cid.ToString("X4", CultureInfo.InvariantCulture));
+            previousGlyph = glyph;
         }
 
-        AppendGlyphChunk(builder, glyphChunk);
-        builder.Append(']');
-        return hasPositioning || forcePositioningArray ? builder.ToString() : null;
-    }
-
-    private static void AppendGlyphChunk(StringBuilder builder, StringBuilder glyphChunk)
-    {
-        if (glyphChunk.Length == 0)
+        if (previousGlyph == 0) return default;
+        if (positioning is null && !forcePositioningArray)
         {
-            return;
+            return (glyphChunk.ToString(), false);
         }
 
-        builder.Append('<').Append(glyphChunk).Append('>');
-        glyphChunk.Clear();
+        positioning ??= new StringBuilder("[");
+        return (positioning.Append('<').Append(glyphChunk).Append(">]").ToString(), true);
     }
 
     private IReadOnlyDictionary<ushort, int> BuildUnicodeByCid()
@@ -563,5 +548,4 @@ internal sealed partial class PdfEmbeddedFont
         return builder.Length == 0 ? "Font" : builder.ToString();
     }
 
-    private readonly record struct EncodedGlyph(ushort OriginalGlyph, ushort Cid);
 }
