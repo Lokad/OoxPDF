@@ -1789,28 +1789,24 @@ internal sealed partial class DocxLayoutEngine
         double? placementHeightOverride = null,
         double ruleFirstBearingPoints = 0d)
     {
-        double separatorHeight = ResolvePlacedStoryHeight(separatorLayout, page);
-        if (useSizeDrivenPlacementHeight)
-        {
-            separatorHeight = ResolveSizeDrivenSeparatorHeight(separatorLayout, page, separatorMeasurer, contentStoriesForHhea);
-        }
-        separatorHeight = placementHeightOverride ?? separatorHeight;
+        double separatorHeight = placementHeightOverride ?? (useSizeDrivenPlacementHeight
+            ? ResolveSizeDrivenSeparatorHeight(separatorLayout, page, separatorMeasurer, contentStoriesForHhea)
+            : ResolvePlacedStoryHeight(separatorLayout, page));
         double separatorBottom = separatorTop - separatorHeight;
         // After-space belongs below the separator line. It advances the content
         // cursor without moving the rule or its paragraph-mark baseline.
         double ruleBaseline = separatorBottom + ResolveEndnoteSeparatorAfterSpacing(separatorLayout);
         (DocxTextRun? markRun, double markFontSizePoints) = FindSeparatorMarkFont(separatorLayout.TextLines);
         (double ruleBottomOffsetPoints, double ruleThicknessPoints) = ResolveSeparatorRuleGeometry(separatorLayout.Story.Kind, markRun, markFontSizePoints, separatorMeasurer);
-        DocxPlacedRelatedStoryLayout placedSeparator = PlaceRelatedStoryAtTop(page, pageIndex, separatorLayout, sourceBlockIndex, separatorTop, separatorY: ruleBaseline + ruleBottomOffsetPoints - ruleFirstBearingPoints);
-        if (placementHeightOverride.HasValue)
+        DocxPlacedRelatedStoryLayout placedSeparator = PlaceRelatedStoryAtTop(page, pageIndex, separatorLayout,
+            sourceBlockIndex, separatorTop, storyTopOffset: 0d, storyHeight: separatorHeight,
+            separatorY: ruleBaseline + ruleBottomOffsetPoints - ruleFirstBearingPoints);
+        placedSeparator = placedSeparator with
         {
-            placedSeparator = placedSeparator with { Height = separatorHeight };
-        }
-        placedSeparator = placedSeparator with { SeparatorThickness = ruleThicknessPoints };
-        if (useSizeDrivenPlacementHeight)
-        {
-            placedSeparator = placedSeparator with { Height = separatorHeight };
-        }
+            // Measured separator charges can extend beyond the source content.
+            Height = placementHeightOverride.HasValue || useSizeDrivenPlacementHeight ? separatorHeight : placedSeparator.Height,
+            SeparatorThickness = ruleThicknessPoints,
+        };
         placedSeparator = ShiftSeparatorStoryToBaseline(placedSeparator, ruleBaseline);
         if (placedSeparator.TextLines.Count == 1 &&
             placedSeparator.TextLines[0].Segments.Count == 1 &&
