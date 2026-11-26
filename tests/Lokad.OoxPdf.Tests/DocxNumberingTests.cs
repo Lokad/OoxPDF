@@ -401,79 +401,16 @@ internal static partial class DocxNumberingTests
 
     public static void DocxReaderUsesTwelvePointsForAnUnsizedListLabel()
     {
-        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-                  <Default Extension="xml" ContentType="application/xml"/>
-                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
-                  <Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/>
-                  <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
-                </Types>
-                """,
-            ["_rels/.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
-                </Relationships>
-                """,
-            ["word/_rels/document.xml.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rIdNumbering" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering" Target="numbering.xml"/>
-                  <Relationship Id="rIdStyles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
-                </Relationships>
-                """,
-            ["word/styles.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-                  <w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/></w:style>
-                </w:styles>
-                """,
-            ["word/numbering.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-                  <w:abstractNum w:abstractNumId="0">
-                    <w:lvl w:ilvl="0"><w:numFmt w:val="bullet"/><w:lvlText w:val="&#xF0B7;"/></w:lvl>
-                  </w:abstractNum>
-                  <w:num w:numId="7"><w:abstractNumId w:val="0"/></w:num>
-                </w:numbering>
-                """,
-            ["word/document.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-                  <w:body>
-                    <w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="7"/></w:numPr></w:pPr><w:r><w:rPr><w:sz w:val="36"/></w:rPr><w:t>Capped</w:t></w:r></w:p>
-                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
-                  </w:body>
-                </w:document>
-                """
-        });
-
-        using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
-        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
-
-        // With no size anywhere in the chain, oversized body runs cap the bullet at 12pt (bullet-chain probes 2026-09-06).
-        TestAssert.Equal(12d, document.Paragraphs.Single().ListLabel?.Style.FontSize ?? 0d);
+        DocxDocument document = ReadBulletSizeDocument(BulletSizeParagraph("Capped", 36), normalProperties: "");
+        DocxParagraph paragraph = document.Paragraphs.Single();
+        TestAssert.Equal("Capped", paragraph.Runs.Single().Text);
+        TestAssert.Equal(12d, paragraph.ListLabel?.Style.FontSize ?? 0d);
     }
 
     public static void DocxLayoutEmitsListLabelAtResolvedSize()
     {
-        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = """<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>""",
-            ["_rels/.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>""",
-            ["word/_rels/document.xml.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdNumbering" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering" Target="numbering.xml"/><Relationship Id="rIdStyles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>""",
-            ["word/styles.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:docDefaults><w:rPrDefault><w:rPr><w:sz w:val="40"/></w:rPr></w:rPrDefault></w:docDefaults><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/></w:style></w:styles>""",
-            ["word/numbering.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:abstractNum w:abstractNumId="0"><w:lvl w:ilvl="0"><w:numFmt w:val="bullet"/><w:lvlText w:val="&#xF0B7;"/></w:lvl></w:abstractNum><w:num w:numId="7"><w:abstractNumId w:val="0"/></w:num></w:numbering>""",
-            ["word/document.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="7"/></w:numPr></w:pPr><w:r><w:rPr><w:sz w:val="28"/></w:rPr><w:t>Sized</w:t></w:r></w:p><w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:body></w:document>""",
-        });
-        using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
-        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
+        DocxDocument document = ReadBulletSizeDocument(BulletSizeParagraph("Sized", 28),
+            normalProperties: "", runDefaults: """<w:sz w:val="40"/>""");
         DocxLayoutPage page = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None).Pages.Single();
         DocxTextLineLayout line = page.Items.OfType<DocxTextLineLayout>().Single();
         DocxTextSegmentLayout label = line.Segments[0];
@@ -481,70 +418,108 @@ internal static partial class DocxNumberingTests
         TestAssert.Equal(20d, label.FontSize ?? 0d);
     }
 
-
     public static void DocxReaderFallsBackToTwelvePointsForUnstyledCellLabels()
     {
-        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = """<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/></Types>""",
-            ["_rels/.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>""",
-            ["word/_rels/document.xml.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdNumbering" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering" Target="numbering.xml"/></Relationships>""",
-            ["word/numbering.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:abstractNum w:abstractNumId="0"><w:lvl w:ilvl="0"><w:numFmt w:val="bullet"/><w:lvlText w:val="&#xF0B7;"/><w:rPr><w:rFonts w:ascii="Symbol" w:hAnsi="Symbol"/></w:rPr></w:lvl></w:abstractNum><w:num w:numId="7"><w:abstractNumId w:val="0"/></w:num></w:numbering>""",
-            ["word/document.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:tbl><w:tblGrid><w:gridCol w:w="2160"/></w:tblGrid><w:tr><w:tc><w:tcPr><w:tcW w:w="2160" w:type="dxa"/></w:tcPr><w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="7"/></w:numPr></w:pPr><w:r><w:rPr><w:sz w:val="18"/></w:rPr><w:t>Cell</w:t></w:r></w:p></w:tc></w:tr></w:tbl><w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="7"/></w:numPr></w:pPr><w:r><w:rPr><w:sz w:val="18"/></w:rPr><w:t>Body</w:t></w:r></w:p><w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:body></w:document>""",
-        });
-        using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
-        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
-        DocxParagraph cellParagraph = document.Tables.Single().Rows.Single().Cells.Single().Paragraphs.Single(p => p.Runs.Any(r => r.Text == "Cell"));
-        DocxParagraph bodyParagraph = document.Paragraphs.Single(p => p.Runs.Any(r => r.Text == "Body"));
-        TestAssert.Equal(12d, cellParagraph.ListLabel?.Style.FontSize ?? 0d);
-        // Office A/B 2026-09-07 (labsize/nosize probes): unresolvable style and defaults emit flat 12pt labels
-        // at direct 9/14/18pt for family-less and Symbol lvls alike, so direct size never refines the label.
-        TestAssert.Equal(12d, bodyParagraph.ListLabel?.Style.FontSize ?? 0d);
-    }
-    public static void DocxReaderFallsBackToTwelvePointsWithoutStyleOrDefaultSize()
-    {
-        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = """<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>""",
-            ["_rels/.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>""",
-            ["word/_rels/document.xml.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdNumbering" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering" Target="numbering.xml"/><Relationship Id="rIdStyles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>""",
-            ["word/styles.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr></w:style></w:styles>""",
-            ["word/numbering.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:abstractNum w:abstractNumId="0"><w:lvl w:ilvl="0"><w:numFmt w:val="bullet"/><w:lvlText w:val="[BULLET]"/></w:lvl></w:abstractNum><w:num w:numId="7"><w:abstractNumId w:val="0"/></w:num></w:numbering>""".Replace("[BULLET]", ((char)0xF0B7).ToString()),
-            ["word/document.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="7"/></w:numPr></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="18"/></w:rPr><w:t>Nine</w:t></w:r></w:p><w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="7"/></w:numPr></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="28"/></w:rPr><w:t>Fourteen</w:t></w:r></w:p><w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:body></w:document>""",
-        });
-        using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
-        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
-        // Office A/B 2026-09-07 (probe-labsize nosize-styles-nodocdef): direct 9/14pt bodies emit flat 12pt labels
-        // when neither the style chain nor document defaults resolve a size.
-        foreach (DocxParagraph paragraph in document.Paragraphs)
-        {
-            TestAssert.Equal(12d, paragraph.ListLabel?.Style.FontSize ?? 0d);
-        }
+        DocxDocument document = ReadBulletSizeDocument(
+            BulletSizeCell(BulletSizeParagraph("Cell", 18)) + BulletSizeParagraph("Body", 18),
+            numberingProperties: """<w:rPr><w:rFonts w:ascii="Symbol" w:hAnsi="Symbol"/></w:rPr>""");
+        DocxParagraph cell = document.Tables.Single().Rows.Single().Cells.Single().Paragraphs.Single();
+        DocxParagraph body = document.Paragraphs.Single();
+        TestAssert.Equal("Cell", cell.Runs.Single().Text);
+        TestAssert.Equal("Body", body.Runs.Single().Text);
+        TestAssert.Equal(12d, cell.ListLabel?.Style.FontSize ?? 0d);
+        TestAssert.Equal(12d, body.ListLabel?.Style.FontSize ?? 0d);
     }
 
+    public static void DocxReaderFallsBackToTwelvePointsWithoutStyleOrDefaultSize()
+    {
+        DocxDocument document = ReadBulletSizeDocument(
+            BulletSizeParagraph("Nine", 18, CalibriBulletFonts) + BulletSizeParagraph("Fourteen", 28, CalibriBulletFonts),
+            normalProperties: $"<w:rPr>{CalibriBulletFonts}</w:rPr>");
+        // The Office fallback is 12pt with both 9pt and 14pt authored body runs.
+        TestAssert.Equal(2, document.Paragraphs.Count);
+        TestAssert.Equal("Nine", document.Paragraphs[0].Runs.Single().Text);
+        TestAssert.Equal("Fourteen", document.Paragraphs[1].Runs.Single().Text);
+        TestAssert.Equal(12d, document.Paragraphs[0].ListLabel?.Style.FontSize ?? 0d);
+        TestAssert.Equal(12d, document.Paragraphs[1].ListLabel?.Style.FontSize ?? 0d);
+    }
 
     public static void DocxReaderPrefersDocumentDefaultsOverUnstyledCellFallback()
     {
-        // Office A/B 2026-09-07 (probe-celldef): docDefaults 8pt wins over the unstyled-cell 12pt fallback
-        // at direct 9/14pt bodies.
-        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = """<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>""",
-            ["_rels/.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>""",
-            ["word/_rels/document.xml.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdNumbering" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering" Target="numbering.xml"/><Relationship Id="rIdStyles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>""",
-            ["word/styles.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="16"/><w:szCs w:val="16"/></w:rPr></w:rPrDefault></w:docDefaults><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr></w:style></w:styles>""",
-            ["word/numbering.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:abstractNum w:abstractNumId="0"><w:lvl w:ilvl="0"><w:numFmt w:val="bullet"/><w:lvlText w:val="[BULLET]"/></w:lvl></w:abstractNum><w:num w:numId="7"><w:abstractNumId w:val="0"/></w:num></w:numbering>""".Replace("[BULLET]", ((char)0xF0B7).ToString()),
-            ["word/document.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:tbl><w:tblGrid><w:gridCol w:w="2160"/></w:tblGrid><w:tr><w:tc><w:tcPr><w:tcW w:w="2160" w:type="dxa"/></w:tcPr><w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="7"/></w:numPr></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="18"/></w:rPr><w:t>Cell</w:t></w:r></w:p></w:tc></w:tr></w:tbl><w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:body></w:document>""",
-        });
-        using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
-        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
-        DocxParagraph cellParagraph = document.Tables.Single().Rows.Single().Cells.Single().Paragraphs.Single(p => p.Runs.Any(r => r.Text == "Cell"));
-        TestAssert.Equal(8d, cellParagraph.ListLabel?.Style.FontSize ?? 0d);
+        DocxDocument document = ReadBulletSizeDocument(BulletSizeCell(BulletSizeParagraph("Cell", 18)),
+            normalProperties: $"<w:rPr>{CalibriBulletFonts}</w:rPr>",
+            runDefaults: CalibriBulletFonts + """<w:sz w:val="16"/><w:szCs w:val="16"/>""");
+        DocxParagraph cell = document.Tables.Single().Rows.Single().Cells.Single().Paragraphs.Single();
+        TestAssert.Equal("Cell", cell.Runs.Single().Text);
+        TestAssert.Equal(8d, cell.ListLabel?.Style.FontSize ?? 0d);
     }
 
+    private const string CalibriBulletFonts = """<w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/>""";
+
+    private static string BulletSizeParagraph(string text, int size, string fonts = "") =>
+        FormattableString.Invariant($$"""
+            <w:p>
+              <w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="7"/></w:numPr></w:pPr>
+              <w:r><w:rPr>{{fonts}}<w:sz w:val="{{size}}"/></w:rPr><w:t>{{text}}</w:t></w:r>
+            </w:p>
+            """);
+
+    private static string BulletSizeCell(string paragraph) => $$"""
+        <w:tbl>
+          <w:tblGrid><w:gridCol w:w="2160"/></w:tblGrid>
+          <w:tr><w:tc><w:tcPr><w:tcW w:w="2160" w:type="dxa"/></w:tcPr>{{paragraph}}</w:tc></w:tr>
+        </w:tbl>
+        """;
+
+    private static DocxDocument ReadBulletSizeDocument(string content, string? normalProperties = null,
+        string? runDefaults = null, string numberingProperties = "")
+    {
+        var entries = new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = TestFixtures.DocxContentTypes.Replace("</Types>",
+                """<Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/></Types>""",
+                StringComparison.Ordinal),
+            ["_rels/.rels"] = TestFixtures.DocxPackageRelationships,
+            ["word/_rels/document.xml.rels"] = """
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdNumbering" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering" Target="numbering.xml"/>
+                </Relationships>
+                """,
+            ["word/numbering.xml"] = $$"""
+                <w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:abstractNum w:abstractNumId="0">
+                    <w:lvl w:ilvl="0"><w:numFmt w:val="bullet"/><w:lvlText w:val="&#xF0B7;"/>{{numberingProperties}}</w:lvl>
+                  </w:abstractNum>
+                  <w:num w:numId="7"><w:abstractNumId w:val="0"/></w:num>
+                </w:numbering>
+                """,
+            ["word/document.xml"] = $$"""
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>{{content}}<w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:body>
+                </w:document>
+                """
+        };
+        if (normalProperties is not null)
+        {
+            string defaults = runDefaults is null ? "" : $"<w:docDefaults><w:rPrDefault><w:rPr>{runDefaults}</w:rPr></w:rPrDefault></w:docDefaults>";
+            entries["word/styles.xml"] = $$"""
+                <w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  {{defaults}}
+                  <w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/>{{normalProperties}}</w:style>
+                </w:styles>
+                """;
+            entries["[Content_Types].xml"] = entries["[Content_Types].xml"].Replace("</Types>",
+                """<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>""",
+                StringComparison.Ordinal);
+            entries["word/_rels/document.xml.rels"] = entries["word/_rels/document.xml.rels"].Replace("</Relationships>",
+                """<Relationship Id="rIdStyles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>""",
+                StringComparison.Ordinal);
+        }
+
+        using var input = TestFixtures.CreateZipPackage(entries);
+        using OoxPackage package = OoxPackage.Open(input, CancellationToken.None);
+        return new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
+    }
 
     public static void DocxReaderPreservesNumberingFormatTokens()
     {
