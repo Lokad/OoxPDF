@@ -2919,17 +2919,23 @@ internal static class DocxTableCellsTests
 
     public static void DocxSyntheticTableCellPatternShadingUsesPdfTilingPattern()
     {
-        string[] shadingValues =
+        // Each expected mask is one 8-by-8 period, most significant bit on the left.
+        (string Value, string ForegroundRows)[] stripes =
         [
-            "horzStripe",
-            "thinHorzStripe",
-            "vertStripe",
-            "thinVertStripe",
-            "diagStripe",
-            "thinDiagStripe",
-            "reverseDiagStripe",
-            "thinReverseDiagStripe"
+            ("horzStripe",             "000000000000FFFF"),
+            ("thinHorzStripe",         "00000000000000FF"),
+            ("vertStripe",             "0303030303030303"),
+            ("thinVertStripe",         "0101010101010101"),
+            ("diagStripe",             "0303C0C030300C0C"),
+            ("thinDiagStripe",         "0101404010100404"),
+            ("reverseDiagStripe",      "03030C0C3030C0C0"),
+            ("thinReverseDiagStripe",  "0101040410104040")
         ];
+        string cells = string.Concat(stripes.Select((stripe, index) => $"""
+            <w:tc><w:tcPr><w:shd w:val="{stripe.Value}" w:color="112233" w:fill="D9EAD3"/></w:tcPr>
+              <w:p><w:r><w:t>{index + 1}</w:t></w:r></w:p>
+            </w:tc>
+            """));
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
         {
             ["[Content_Types].xml"] = """
@@ -2946,7 +2952,7 @@ internal static class DocxTableCellsTests
                   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
                 </Relationships>
                 """,
-            ["word/document.xml"] = """
+            ["word/document.xml"] = $"""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
                   <w:body>
@@ -2955,16 +2961,7 @@ internal static class DocxTableCellsTests
                         <w:gridCol w:w="720"/><w:gridCol w:w="720"/><w:gridCol w:w="720"/><w:gridCol w:w="720"/>
                         <w:gridCol w:w="720"/><w:gridCol w:w="720"/><w:gridCol w:w="720"/><w:gridCol w:w="720"/>
                       </w:tblGrid>
-                      <w:tr>
-                        <w:tc><w:tcPr><w:shd w:val="horzStripe" w:color="112233" w:fill="D9EAD3"/></w:tcPr><w:p><w:r><w:t>1</w:t></w:r></w:p></w:tc>
-                        <w:tc><w:tcPr><w:shd w:val="thinHorzStripe" w:color="112233" w:fill="D9EAD3"/></w:tcPr><w:p><w:r><w:t>2</w:t></w:r></w:p></w:tc>
-                        <w:tc><w:tcPr><w:shd w:val="vertStripe" w:color="112233" w:fill="D9EAD3"/></w:tcPr><w:p><w:r><w:t>3</w:t></w:r></w:p></w:tc>
-                        <w:tc><w:tcPr><w:shd w:val="thinVertStripe" w:color="112233" w:fill="D9EAD3"/></w:tcPr><w:p><w:r><w:t>4</w:t></w:r></w:p></w:tc>
-                        <w:tc><w:tcPr><w:shd w:val="diagStripe" w:color="112233" w:fill="D9EAD3"/></w:tcPr><w:p><w:r><w:t>5</w:t></w:r></w:p></w:tc>
-                        <w:tc><w:tcPr><w:shd w:val="thinDiagStripe" w:color="112233" w:fill="D9EAD3"/></w:tcPr><w:p><w:r><w:t>6</w:t></w:r></w:p></w:tc>
-                        <w:tc><w:tcPr><w:shd w:val="reverseDiagStripe" w:color="112233" w:fill="D9EAD3"/></w:tcPr><w:p><w:r><w:t>7</w:t></w:r></w:p></w:tc>
-                        <w:tc><w:tcPr><w:shd w:val="thinReverseDiagStripe" w:color="112233" w:fill="D9EAD3"/></w:tcPr><w:p><w:r><w:t>8</w:t></w:r></w:p></w:tc>
-                      </w:tr>
+                      <w:tr>{cells}</w:tr>
                     </w:tbl>
                     <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
                   </w:body>
@@ -2975,11 +2972,35 @@ internal static class DocxTableCellsTests
 
         OoxPdfConverter.Convert(input, output);
 
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("/PatternType 1", pdf);
-        TestAssert.Contains("/Pattern cs", pdf);
-        TestAssert.Contains("/ImPattern", pdf);
-        TestAssert.True(pdf.AsSpan().Count("/PatternType 1") >= shadingValues.Length, "Each supported DOCX stripe family should have a distinct tiling pattern resource.");
+        string pdf = Encoding.Latin1.GetString(File.ReadAllBytes(output));
+        string page = PdfWriterTests.ReadObject(pdf, Regex.Match(pdf, @"/Type /Pages /Count 1 /Kids \[(\d+) 0 R\]").Groups[1].Value);
+        string content = PdfWriterTests.ReadObject(pdf, Regex.Match(page, @"/Contents (\d+) 0 R").Groups[1].Value);
+        string bindings = Regex.Match(page, @"/Pattern << ([^>]*) >>").Groups[1].Value;
+        var fills = Regex.Matches(content, @"(?m)^/Pattern cs /(P\d+) scn\r?\n([-\d.]+) [-\d.]+ [\d.]+ [\d.]+ re f\r?$")
+            .Select(fill => (Name: fill.Groups[1].Value, X: double.Parse(fill.Groups[2].Value, CultureInfo.InvariantCulture)))
+            .OrderBy(fill => fill.X).ToArray();
+        TestAssert.Equal(stripes.Length, fills.Length);
+        TestAssert.Equal(stripes.Length, fills.Select(fill => fill.X).Distinct().Count());
+
+        ReadOnlySpan<byte> foreground = [0x11, 0x22, 0x33];
+        ReadOnlySpan<byte> background = [0xD9, 0xEA, 0xD3];
+        for (int index = 0; index < stripes.Length; index++)
+        {
+            string pattern = PdfWriterTests.ReadObject(pdf, Regex.Match(bindings, $@"/{fills[index].Name} (\d+) 0 R").Groups[1].Value);
+            string image = PdfWriterTests.ReadObject(pdf, Regex.Match(pattern, @"/ImPattern (\d+) 0 R").Groups[1].Value);
+            TestAssert.Contains("/Width 16 /Height 16", image);
+            TestAssert.Contains("/ColorSpace /DeviceRGB /BitsPerComponent 8", image);
+            byte[] samples = PdfWriterTests.ReadFlateImagePayload(image);
+            TestAssert.Equal(16 * 16 * 3, samples.Length);
+            byte[] rowMasks = Convert.FromHexString(stripes[index].ForegroundRows);
+            for (int y = 0; y < 16; y++)
+            for (int x = 0; x < 16; x++)
+            {
+                bool isForeground = (rowMasks[y % 8] & (0x80 >> (x % 8))) != 0;
+                TestAssert.True(samples.AsSpan((16 * y + x) * 3, 3).SequenceEqual(isForeground ? foreground : background),
+                    $"Cell {index + 1} must paint {stripes[index].Value} at tile pixel ({x}, {y}).");
+            }
+        }
     }
 
     public static void DocxReaderTableCellPreservesParagraphModel()

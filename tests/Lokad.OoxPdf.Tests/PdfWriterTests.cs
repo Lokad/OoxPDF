@@ -475,7 +475,7 @@ internal static partial class PdfWriterTests
         }
     }
 
-    private static byte[] ReadFlateImagePayload(string image)
+    internal static byte[] ReadFlateImagePayload(string image)
     {
         TestAssert.Contains("/Filter /FlateDecode", image);
         var stream = Regex.Match(image, @"/Length (\d+) >>\r?\nstream\r?\n");
