@@ -97,7 +97,8 @@ internal sealed partial class PptxRenderer
     {
         label = null;
         // lengthAdjust selects the adjustment method for an authored textLength.
-        if (element.Attribute("rotate") is not null || element.Attribute("textLength") is not null) return false;
+        if (element.Attribute("textLength") is not null ||
+            (element.Attribute("rotate") is { } rotation && !IsZeroSvgTextPositionList(rotation.Value, allowLengths: false, cancellationToken))) return false;
         var style = ReadSvgStyleDeclarations(element);
         string? Inherited(string name) => ReadSvgInheritedAttribute(element, style, name)?.Trim();
         bool PreservesTextStyle(string name) => IsNeutralSvgTextStyle(name, Inherited(name));
@@ -129,7 +130,7 @@ internal sealed partial class PptxRenderer
         x += dx; y += dy;
         if (!double.IsFinite(x) || !double.IsFinite(y)) return false;
         if (!TryReadPlainSvgText(element, style, rootMetrics, paintServers, IsSvgVisibilityHidden(Inherited("visibility")), whitespace,
-                initialAnchor, cancellationToken, out string valueText, out bool[]? hiddenCharacters, out string anchor,
+                initialAnchor, dx, dy, cancellationToken, out string valueText, out bool[]? hiddenCharacters, out string anchor,
                 out SvgTextPaint paint, out SvgTextMetrics metrics)) return false;
         if (OoxComplexScript.DetectNeeds(valueText) != OoxComplexScriptKind.None ||
             valueText.EnumerateRunes().Any(r => Rune.IsControl(r))) return false;
@@ -148,6 +149,25 @@ internal sealed partial class PptxRenderer
                 ? TryReadSvgViewportLength(element, text, percentageBasis, out value)
                 : TryReadSvgLength(text, out value, relativeSize: size);
         }
+    }
+
+    private static bool IsZeroSvgTextPositionList(ReadOnlySpan<char> values, bool allowLengths, CancellationToken cancellationToken)
+    {
+        values = values.Trim();
+        while (!values.IsEmpty)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            int separator = values.IndexOfAny(" ,\t\r\n");
+            ReadOnlySpan<char> token = separator < 0 ? values : values[..separator];
+            bool valid = allowLengths
+                ? TryReadSvgLength(token, out double value, relativeSize: 1d, allowPercent: true)
+                : double.TryParse(token, NumberStyles.Float, CultureInfo.InvariantCulture, out value);
+            if (!valid || value != 0d) return false;
+            if (separator < 0) return true;
+            values = values[separator..].TrimStart();
+            if (values.StartsWith(",")) values = values[1..].TrimStart();
+        }
+        return false;
     }
 
     private static bool TryReadSvgTextMetrics(XElement element, IReadOnlyDictionary<string, string> style,
@@ -335,7 +355,7 @@ internal sealed partial class PptxRenderer
     // share one effective fill.
     private static bool TryReadPlainSvgText(XElement element, IReadOnlyDictionary<string, string> elementStyle, SvgTextMetrics rootMetrics,
         SvgPaintServers paintServers, bool hidden, SvgTextWhitespace whitespace, string initialAnchor,
-        CancellationToken cancellationToken, out string text, out bool[]? hiddenCharacters, out string anchor,
+        double rootDx, double rootDy, CancellationToken cancellationToken, out string text, out bool[]? hiddenCharacters, out string anchor,
         out SvgTextPaint paint, out SvgTextMetrics metrics)
     {
         text = string.Empty;
@@ -485,6 +505,11 @@ internal sealed partial class PptxRenderer
                     return true;
                 // Unknown namespaced attributes carry no SVG presentation.
                 if (ns != XNamespace.None) return ns != XNamespace.Xml && !isXLink;
+                // A descendant's offset can replace a nonzero offset from the label.
+                if (name is "dx" or "dy")
+                    return (name == "dx" ? rootDx : rootDy) == 0d &&
+                        IsZeroSvgTextPositionList(attribute.Value, allowLengths: true, cancellationToken);
+                if (name == "rotate") return IsZeroSvgTextPositionList(attribute.Value, allowLengths: false, cancellationToken);
                 return name is "id" or "class" or "role" or "style" or "tabindex" or "lengthAdjust" ||
                     name.StartsWith("aria-", StringComparison.Ordinal) ||
                     name.StartsWith("data-", StringComparison.Ordinal) ||

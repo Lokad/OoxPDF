@@ -866,6 +866,36 @@ internal static partial class SvgTextTests
         TestAssert.Equal("Partial", warning.Fallback);
     }
 
+    public static void SvgZeroPositioningKeepsLabelsWithoutOverridingRootOffsets()
+    {
+        static string Picture(string root, string label) => Svg($"""
+            <text x="104" y="45" font-size="24" text-anchor="middle" fill="#112233" {root}>{label}</text>
+            <rect x="200" y="88" width="20" height="10" fill="lime"/>
+            """);
+
+        AssertSvgPaintInBothFormats(Picture("", "NORTH"),
+            [
+                Picture("""rotate="0, -0 0.0" """, "NORTH"),
+                Picture("", """NO<tspan rotate="0.0 0">RT</tspan>H"""),
+                Picture("", """NO<tspan dx="0%, -0" dy="0em">RT</tspan>H""")
+            ], pdf => TestAssert.Equal(5, LabelPaths(pdf)), "0 1 0 rg");
+
+        foreach (string unsupported in new[]
+        {
+            Picture("""dx="20" """, """<tspan dx="0">NO</tspan>RTH"""),
+            Picture("", """NO<tspan rotate="0,">RT</tspan>H""")
+        })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            string paint = Paint(unsupported, diagnostics).ToString();
+            TestAssert.DoesNotContain(LabelColor, paint);
+            TestAssert.Contains("0 1 0 rg", paint);
+            var warning = diagnostics.Single(d => d.Message == "SVG picture omits 1 unsupported text element.");
+            TestAssert.Equal("SVG_UNSUPPORTED_CONTENT", warning.Id);
+            TestAssert.Equal("Partial", warning.Fallback);
+        }
+    }
+
     public static void SvgInlineLinkTextKeepsPaintAndDiagnosesActions()
     {
         string Picture(string north, string south) => Svg($"""
