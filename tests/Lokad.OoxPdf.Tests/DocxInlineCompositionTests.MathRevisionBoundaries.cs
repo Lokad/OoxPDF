@@ -180,6 +180,18 @@ internal static partial class DocxInlineCompositionTests
                 .SetAttributeValue(WordprocessingNamespace + "id", duplicateId);
             TestAssert.Equal(0, DocxSourceXml.ReadPairedMoveOwnerIds(ambiguous.Descendants(MathNamespace + "oMath").First(), null, default).Count);
         }
+
+        foreach (var (container, expected) in new[]
+                 { ("customXml", DocxInlineMoveOwnership.Complete), ("hyperlink", DocxInlineMoveOwnership.Unresolved) })
+        {
+            var source = MathOperandMove(run, "moveFrom", "41", "42");
+            var end = new XElement(WordprocessingNamespace + container, source[2],
+                new XElement(WordprocessingNamespace + "r", new XElement(WordprocessingNamespace + "t", "After")));
+            var story = new XElement(WordprocessingNamespace + "body", new XElement(WordprocessingNamespace + "p",
+                source[0], source[1], end, new XElement(to)));
+            TestAssert.Equal(expected, DocxSourceXml.GetInlineMoveOwnership(source[0], source[2],
+                DocxRevisionKind.MoveFrom, story, default));
+        }
     }
 
     public static void DocxPairedMathMovesKeepLinkedDrawingCompanions()
@@ -260,12 +272,16 @@ internal static partial class DocxInlineCompositionTests
             (OoxPdfDocxMarkupMode.Original, 1),
             (OoxPdfDocxMarkupMode.AllMarkup, 2)
         })
-        foreach (var (includesUnownedEquation, rangeCarrier) in new (bool, string?)[]
-                 { (false, null), (true, null), (false, "customXml"), (true, "sdt") })
+        foreach (var (includesUnownedEquation, rangeCarrier, boundaryInCarrier) in new (bool, string?, string?)[]
+        {
+            (false, null, null), (true, null, null), (false, "customXml", null), (true, "sdt", null),
+            (false, "customXml", "start"), (true, "sdt", "end")
+        })
         {
             unsupported.Clear();
             var document = ReadMove(mode, packed: false, paired: true, unsupported,
-                hasOtherRangeContent: true, includesUnownedEquation: includesUnownedEquation, rangeCarrier: rangeCarrier);
+                hasOtherRangeContent: true, includesUnownedEquation: includesUnownedEquation,
+                rangeCarrier: rangeCarrier, boundaryInCarrier: boundaryInCarrier);
             var ranges = MoveRanges(document);
             TestAssert.Equal(2, ranges.Length);
             TestAssert.True(ranges.All(range =>
@@ -300,7 +316,7 @@ internal static partial class DocxInlineCompositionTests
 
         static DocxDocument ReadMove(OoxPdfDocxMarkupMode mode, bool packed, bool paired, List<OoxPdfDiagnostic> diagnostics,
             bool hasOtherRangeContent = false, bool splitOwners = false, bool annotated = false,
-            bool includesUnownedEquation = false, string? rangeCarrier = null) =>
+            bool includesUnownedEquation = false, string? rangeCarrier = null, string? boundaryInCarrier = null) =>
             ReadMutation("CompositionProbes/math-display-image-body-between", mode, false, false, (xml, w, m) =>
             {
                 const string target = "PairedMoveDrawingTarget";
@@ -372,6 +388,17 @@ internal static partial class DocxInlineCompositionTests
                         var wrapper = MathSourceContainer(scope, w, rangeCarrier);
                         wrapper.Element(w + "sdtPr")?.Element(w + "id")?.SetAttributeValue(w + "val", (string?)move[0].Attribute(w + "id"));
                         move[0].AddAfterSelf(wrapper);
+                        var carrier = wrapper.Element(w + "sdtContent") ?? wrapper;
+                        if (boundaryInCarrier == "start")
+                        {
+                            move[0].Remove();
+                            scope[0].AddBeforeSelf(move[0]);
+                        }
+                        else if (boundaryInCarrier == "end")
+                        {
+                            move[2].Remove();
+                            carrier.Add(move[2]);
+                        }
                     }
                     return [Equation("17"), link, Equation("28")];
                 }

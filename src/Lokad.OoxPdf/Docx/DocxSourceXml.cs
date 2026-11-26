@@ -80,45 +80,74 @@ internal static class DocxSourceXml
         XElement? authoredStory, CancellationToken token)
     {
         var name = WordprocessingNamespace + (kind == DocxRevisionKind.MoveFrom ? "moveFrom" : "moveTo");
-        if (!ReferenceEquals(start.Parent, end.Parent)) return DocxInlineMoveOwnership.Unresolved;
+        XElement? scope = FindInlineMoveScope(start, token);
+        if (scope is null || !ReferenceEquals(scope, FindInlineMoveScope(end, token)))
+            return DocxInlineMoveOwnership.Unresolved;
         IReadOnlySet<(XName Name, string Id)>? pairedOwners = null;
-        Stack<XElement>? stored = null;
         bool hasOwner = false, hasOtherContent = false;
         // A partial pair establishes local boundaries and explicit source
         // owners. Other content still has unresolved range ownership.
-        foreach (var sibling in start.ElementsAfterSelf())
+        foreach (var child in FollowingInlinePayload(start, scope, token))
         {
-            token.ThrowIfCancellationRequested();
-            if (ReferenceEquals(sibling, end))
+            if (ReferenceEquals(child, end))
                 return !hasOwner ? DocxInlineMoveOwnership.Unresolved :
                     hasOtherContent ? DocxInlineMoveOwnership.Partial : DocxInlineMoveOwnership.Complete;
+            if (IsNonPrintingMarker(child) || IsBookmarkMarker(child) || IsCommentBoundary(child)) continue;
 
-            // Use the parser's stored payload rule for metadata inside the
-            // range. Only actual move wrappers can prove revision ownership.
-            XElement child = sibling;
-            while (true)
-            {
-                token.ThrowIfCancellationRequested();
-                if (IsTransparentInlineContainer(child))
-                {
-                    stored ??= new();
-                    foreach (var payload in StoredChildren(child))
-                    {
-                        token.ThrowIfCancellationRequested();
-                        stored.Push(payload);
-                    }
-                }
-                else if (!(IsNonPrintingMarker(child) || IsBookmarkMarker(child) || IsCommentBoundary(child)))
-                {
-                    if (child.Name == name && IsPairedMoveOwner(child, start, authoredStory, ref pairedOwners, token))
-                        hasOwner = true;
-                    else hasOtherContent = true;
-                }
-                if (stored is null || !stored.TryPop(out var next)) break;
-                child = next;
-            }
+            if (child.Name == name && IsPairedMoveOwner(child, start, authoredStory, ref pairedOwners, token))
+                hasOwner = true;
+            else hasOtherContent = true;
         }
         return DocxInlineMoveOwnership.Unresolved;
+    }
+
+    private static IEnumerable<XElement> FollowingInlinePayload(XElement start, XElement scope, CancellationToken token)
+    {
+        Stack<XElement>? stored = null;
+        // Walk in reader order so the end marker can terminate the range
+        // inside a metadata container, before later payload.
+        for (XElement position = start; !ReferenceEquals(position, scope); position = position.Parent!)
+        {
+            token.ThrowIfCancellationRequested();
+            foreach (var sibling in position.ElementsAfterSelf())
+            {
+                token.ThrowIfCancellationRequested();
+                if (!IsStoredChild(position.Parent!, sibling)) continue;
+
+                XElement child = sibling;
+                while (true)
+                {
+                    token.ThrowIfCancellationRequested();
+                    if (IsTransparentInlineContainer(child))
+                    {
+                        stored ??= new();
+                        foreach (var payload in StoredChildren(child).Reverse())
+                        {
+                            token.ThrowIfCancellationRequested();
+                            stored.Push(payload);
+                        }
+                    }
+                    else yield return child;
+                    if (stored is null || !stored.TryPop(out var next)) break;
+                    child = next;
+                }
+            }
+        }
+    }
+
+    private static XElement? FindInlineMoveScope(XElement marker, CancellationToken token)
+    {
+        // Formatting and revision owners remain boundaries. Only stored
+        // content in transparent containers shares the surrounding scope.
+        XElement? scope = marker.Parent;
+        while (scope is not null && IsTransparentInlineContainer(scope))
+        {
+            token.ThrowIfCancellationRequested();
+            if (!IsStoredChild(scope, marker)) return null;
+            marker = scope;
+            scope = marker.Parent;
+        }
+        return scope;
     }
 
     private static bool IsInEquation(XElement element) => element.Ancestors(MathNamespace + "oMath").Any();
@@ -276,11 +305,15 @@ internal static class DocxSourceXml
     // Container properties describe the source, not stored inline payload.
     // Ignore only the property's actual owner; unknown/misplaced children stay.
     public static IEnumerable<XElement> StoredChildren(XElement element) =>
-        element.Name == WordprocessingNamespace + "sdt"
-            ? element.Elements(WordprocessingNamespace + "sdtContent")
-            : element.Name == WordprocessingNamespace + "customXml"
-                ? element.Elements().Where(child => child.Name != WordprocessingNamespace + "customXmlPr")
-                : element.Name == WordprocessingNamespace + "smartTag"
-                    ? element.Elements().Where(child => child.Name != WordprocessingNamespace + "smartTagPr")
-                    : element.Elements();
+        IsTransparentInlineContainer(element)
+            ? element.Elements().Where(child => IsStoredChild(element, child))
+            : element.Elements();
+
+    private static bool IsStoredChild(XElement owner, XElement child)
+    {
+        if (owner.Name == WordprocessingNamespace + "sdt")
+            return child.Name == WordprocessingNamespace + "sdtContent";
+        return !(owner.Name == WordprocessingNamespace + "customXml" && child.Name == WordprocessingNamespace + "customXmlPr") &&
+               !(owner.Name == WordprocessingNamespace + "smartTag" && child.Name == WordprocessingNamespace + "smartTagPr");
+    }
 }
