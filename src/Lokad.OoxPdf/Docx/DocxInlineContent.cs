@@ -390,7 +390,7 @@ internal static class DocxInlineContent
             }
             bool hasEquationMoveOwner = revision.Kind is DocxRevisionKind.MoveFrom or DocxRevisionKind.MoveTo &&
                 equationOwners?.Contains(revision) == true;
-            if (!hasEquationMoveOwner &&
+            if (!revision.IsPairedInlineMove && !hasEquationMoveOwner &&
                 revision.Kind is not (DocxRevisionKind.Insertion or DocxRevisionKind.Deletion or DocxRevisionKind.RunPropertiesChange)) return false;
             remaining.Add(revision);
         }
@@ -426,9 +426,9 @@ internal static class DocxInlineContent
                 foreach (var item in owner.Revisions)
                 { token.ThrowIfCancellationRequested(); remaining.Remove(item); }
             }
-        // A placed picture can own deleted content without emitting text.
-        // Insertions additionally need the authored run style for Review ink.
-        // The remaining set binds both kinds by revision reference identity.
+        // A placed picture can own deleted or paired moved content without
+        // emitting text. Insertions need the authored run style for Review ink.
+        // The remaining set binds the picture to the actual revision reference.
         if (images is not null)
             foreach (var image in images)
             {
@@ -437,7 +437,7 @@ internal static class DocxInlineContent
                 foreach (var revision in image.Revisions)
                 {
                     token.ThrowIfCancellationRequested();
-                    if (revision.Kind == DocxRevisionKind.Deletion ||
+                    if (revision.Kind == DocxRevisionKind.Deletion || revision.IsPairedInlineMove ||
                         revision.Kind == DocxRevisionKind.Insertion &&
                         image.SourceRunStyle is { } owner && owner.SourceRunIndex == image.SourceRunIndex &&
                         (ReferenceEquals(owner.Revision, revision) || owner.Revisions.Any(item => ReferenceEquals(item, revision))))

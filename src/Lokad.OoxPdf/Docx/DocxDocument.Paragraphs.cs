@@ -269,7 +269,7 @@ internal sealed record DocxRevisionRange(
     // Legacy/synthetic ranges remain conservative, even at equal text offsets.
     public bool HasContentSource { get; init; } = true;
 
-    // A closed, paired range can duplicate the ownership of one inline move.
+    // A closed, paired range can duplicate the ownership of its inline moves.
     public bool IsOwnedByInlineMove { get; init; }
 }
 
@@ -710,6 +710,9 @@ internal sealed record DocxRevisionInfo
     public IReadOnlyList<string> PropertyElementNames { get; init; }
 
     public DocxRunFormattingChange? RunFormattingChange { get; init; }
+
+    // The source reader verified this inline wrapper in a story-local move pair.
+    public bool IsPairedInlineMove { get; init; }
 }
 
 // Resolved before/after values, independent of source token spelling and layout.

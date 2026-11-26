@@ -184,7 +184,7 @@ internal static partial class DocxInlineCompositionTests
 
     public static void DocxPairedMathMovesKeepLinkedDrawingCompanions()
     {
-        foreach (bool packed in new[] { true, false })
+        foreach (var (packed, splitOwners) in new[] { (true, false), (false, false), (false, true) })
         foreach (var (mode, count) in new[]
         {
             (OoxPdfDocxMarkupMode.Final, 1),
@@ -193,7 +193,7 @@ internal static partial class DocxInlineCompositionTests
         })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
-            var document = ReadMove(mode, packed, paired: true, diagnostics);
+            var document = ReadMove(mode, packed, paired: true, diagnostics, splitOwners: splitOwners);
             if (!packed)
             {
                 var ranges = MoveRanges(document);
@@ -246,7 +246,7 @@ internal static partial class DocxInlineCompositionTests
             .SelectMany(element => element.Paragraph.RevisionRanges).ToArray();
 
         static DocxDocument ReadMove(OoxPdfDocxMarkupMode mode, bool packed, bool paired, List<OoxPdfDiagnostic> diagnostics,
-            bool hasOtherRangeContent = false) =>
+            bool hasOtherRangeContent = false, bool splitOwners = false) =>
             ReadMutation("CompositionProbes/math-display-image-body-between", mode, false, false, (xml, w, m) =>
             {
                 const string target = "PairedMoveDrawingTarget";
@@ -276,7 +276,28 @@ internal static partial class DocxInlineCompositionTests
                     if (hasOtherRangeContent)
                         move[2].AddBeforeSelf(new XElement(w + "r", new XElement(w + "t", "adjacent")));
                     var run = move[1].Element(m + "r")!;
-                    run.ReplaceWith(Equation("314"), new XElement(w + "r", run.Elements().Where(child => child.Name != m + "t")), Equation("793"));
+                    var companions = run.Elements().Where(child => child.Name != m + "t").ToArray();
+                    if (splitOwners)
+                    {
+                        var picture = companions.Single(child => child.Name == w + "drawing");
+                        XElement[] payload =
+                        [
+                            Equation("314"),
+                            new XElement(w + "r", companions.Where(child => child != picture)),
+                            new XElement(w + "r", picture),
+                            Equation("793")
+                        ];
+                        int id = (int)move[1].Attribute(w + "id")!;
+                        for (int index = 0; index < payload.Length; index++)
+                        {
+                            var owner = new XElement(move[1].Name, move[1].Attributes(), payload[index]);
+                            owner.SetAttributeValue(w + "id", id * 10 + index);
+                            move[1].AddBeforeSelf(owner);
+                        }
+                        move[1].Remove();
+                    }
+                    else
+                        run.ReplaceWith(Equation("314"), new XElement(w + "r", companions), Equation("793"));
                     return [Equation("17"), link, Equation("28")];
                 }
 

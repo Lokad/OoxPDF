@@ -90,6 +90,7 @@ internal sealed partial class DocxReader
         long contentSourcePosition = 0;
         HashSet<DocxRevisionInfo>? nonOwningRangeMarkers = null;
         var authoredStory = paragraph.Annotation<DocxSourceXml.StoryOrigin>()?.Story;
+        IReadOnlySet<(XName Name, string Id)>? inlineMoveOwners = null;
         if (leadingInlineCommentBoundaries is not null)
         {
             foreach (XElement marker in leadingInlineCommentBoundaries)
@@ -236,6 +237,9 @@ internal sealed partial class DocxReader
             }
 
             DocxRevisionInfo? revision = CreateRevisionInfo(container) ?? inheritedRevision;
+            if (revision is { Kind: DocxRevisionKind.MoveFrom or DocxRevisionKind.MoveTo } &&
+                DocxSourceXml.IsPairedMoveOwner(container, paragraph, authoredStory, ref inlineMoveOwners, cancellationToken))
+                revision = revision with { IsPairedInlineMove = true };
             int revisionIndex = paragraphRevisions.Count;
             if (revision is not null)
             {
@@ -485,12 +489,6 @@ internal sealed partial class DocxReader
             DocxRevisionInfo? equationRevision = revision;
             XElement? projectedLink = null;
             (int SourceRun, int TextRun, int InlineItem) linkStart = default;
-            IReadOnlySet<(XName Name, string Id)>? moveOwners = null;
-            bool pairedOuterMove = revision is { Kind: DocxRevisionKind.MoveFrom or DocxRevisionKind.MoveTo, Id: not null } &&
-                container.Ancestors().FirstOrDefault(DocxSourceXml.IsRevisionContainer) is { } wrapper &&
-                wrapper.Name.LocalName == revision.SourceElement &&
-                (string?)wrapper.Attribute(WordprocessingNamespace + "id") == revision.Id &&
-                DocxSourceXml.IsAdmittedMathRevisionOwner(wrapper, container, authoredStory, ref moveOwners, cancellationToken);
             foreach (var source in EnumerateMathParagraphSources(container, revision, removeDeletedText, markupMode, cancellationToken, authoredStory))
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -542,7 +540,8 @@ internal sealed partial class DocxReader
                 // Verified moves retain their individual math run owners through placement.
                 equations.Add(new DocxEquation(
                     content,
-                    runs.Count, sourceRunIndex, display, alignment, pairedOuterMove || source.ProjectsMathMove ? null : equationRevision)
+                    runs.Count, sourceRunIndex, display, alignment,
+                    equationRevision?.IsPairedInlineMove == true || source.ProjectsMathMove ? null : equationRevision)
                 {
                     ParentFontSize = ResolveRunProperties(null, paragraphStyleId, null, styles, tableCellStyle?.Run, out _).FontSize
                         ?? DocxDefaults.UnstyledRunFontSizePoints,

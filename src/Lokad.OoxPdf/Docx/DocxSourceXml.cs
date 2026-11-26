@@ -65,8 +65,12 @@ internal static class DocxSourceXml
         ref IReadOnlySet<(XName Name, string Id)>? moveOwners, CancellationToken token) =>
         IsRevisionContainer(element) &&
         (element.Name.LocalName is not ("moveFrom" or "moveTo") ||
-            OoxXml.NormalizeDecimalId((string?)element.Attribute(WordprocessingNamespace + "id")) is { } id &&
-            (moveOwners ??= ReadPairedMoveOwnerIds(equation, authoredStory, token)).Contains((element.Name, id)));
+            IsPairedMoveOwner(element, equation, authoredStory, ref moveOwners, token));
+
+    public static bool IsPairedMoveOwner(XElement owner, XElement source, XElement? authoredStory,
+        ref IReadOnlySet<(XName Name, string Id)>? moveOwners, CancellationToken token) =>
+        OoxXml.NormalizeDecimalId((string?)owner.Attribute(WordprocessingNamespace + "id")) is { } id &&
+        (moveOwners ??= ReadPairedMoveOwnerIds(source, authoredStory, token)).Contains((owner.Name, id));
 
     public static bool IsPairedMathMoveSource(XElement element, CancellationToken token) =>
         IsInEquation(element) && FindStoryRoot(element) is { } story &&
@@ -76,13 +80,19 @@ internal static class DocxSourceXml
         XElement? authoredStory, CancellationToken token)
     {
         var name = WordprocessingNamespace + (kind == DocxRevisionKind.MoveFrom ? "moveFrom" : "moveTo");
-        if (start.ElementsAfterSelf().FirstOrDefault() is not { } owner || owner.Name != name ||
-            !ReferenceEquals(owner.ElementsAfterSelf().FirstOrDefault(), end)) return false;
-
-        // The range and the inline owner describe the same payload. Verify
-        // the authored pair as well as this fragment's local boundaries.
-        return OoxXml.NormalizeDecimalId((string?)owner.Attribute(WordprocessingNamespace + "id")) is { } id &&
-            ReadPairedMoveOwnerIds(owner, authoredStory, token).Contains((name, id));
+        if (!ReferenceEquals(start.Parent, end.Parent)) return false;
+        IReadOnlySet<(XName Name, string Id)>? pairedOwners = null;
+        bool hasOwner = false;
+        // Every sibling inside the local boundaries must belong to the
+        // authored pair. Unowned content still needs its separate range.
+        foreach (var child in start.ElementsAfterSelf())
+        {
+            token.ThrowIfCancellationRequested();
+            if (ReferenceEquals(child, end)) return hasOwner;
+            if (child.Name != name || !IsPairedMoveOwner(child, start, authoredStory, ref pairedOwners, token)) return false;
+            hasOwner = true;
+        }
+        return false;
     }
 
     private static bool IsInEquation(XElement element) => element.Ancestors(MathNamespace + "oMath").Any();
