@@ -989,21 +989,16 @@ internal sealed partial class PptxRenderer
         return sections.ToArray();
     }
 
-    // One numeric-section walk owns the syntax view and literal text. Quoted and
-    // escaped %/$ retain their position and multiplicity without acting as syntax.
-    // Escaped _/* keep the existing spacing fallback.
-    // Unquoted letter/space/digit runs are weak literals that Excel also renders beside
-    // digit placeholders; a weak run holding e/E/digits is dropped instead of partially
-    // emitted, runs strictly inside the placeholder span (for example the fraction gap
-    // in "# ?/?") are dropped, and bracket spans, cushion/fill runs, and other unquoted
-    // syntax (including positional $/%) stay out of scope.
+    // Mask quoted and escaped text in the syntax view and record literal slices
+    // in source order. Bare letter/space runs qualify beside the digit span.
+    // Runs containing e/E or nonzero digits remain syntax only, as do bare
+    // runs inside the span (such as the gap in "# ?/?").
     private static string ReadChartNumberSection(string section, out string prefix, out string suffix, out bool hasDigitPlaceholders)
     {
         var view = new StringBuilder(section.Length);
-        StringBuilder? leading = null;
-        StringBuilder? trailing = null;
-        List<(int Start, int End, int StartPlaceholders)>? pendingWeak = null;
-        int placeholders = 0;
+        List<(int Start, int Length, bool Bare)>? literals = null;
+        int firstPlaceholder = -1;
+        int lastPlaceholder = -1;
         bool inQuotes = false;
         for (int i = 0; i < section.Length; i++)
         {
@@ -1017,7 +1012,7 @@ internal sealed partial class PptxRenderer
                     continue;
                 }
 
-                AppendLiteral(escaped);
+                (literals ??= []).Add((i, 1, false));
                 continue;
             }
 
@@ -1026,7 +1021,7 @@ internal sealed partial class PptxRenderer
                 view.Append('\0');
                 if (inQuotes && i + 1 < section.Length && section[i + 1] == '"')
                 {
-                    AppendLiteral('"');
+                    (literals ??= []).Add((i, 1, false));
                     view.Append('\0');
                     i++;
                     continue;
@@ -1038,8 +1033,12 @@ internal sealed partial class PptxRenderer
 
             if (inQuotes)
             {
-                view.Append('\0');
-                AppendLiteral(c);
+                int closingQuote = section.IndexOf('"', i);
+                int end = closingQuote < 0 ? section.Length : closingQuote;
+                int length = end - i;
+                view.Append('\0', length);
+                (literals ??= []).Add((i, length, false));
+                i = end - 1;
                 continue;
             }
 
@@ -1070,7 +1069,8 @@ internal sealed partial class PptxRenderer
             if (c is '0' or '#' or '?')
             {
                 view.Append(c);
-                placeholders++;
+                if (firstPlaceholder < 0) firstPlaceholder = i;
+                lastPlaceholder = i;
                 continue;
             }
 
@@ -1088,13 +1088,12 @@ internal sealed partial class PptxRenderer
                     i++;
                 }
 
-                int runEnd = i - 1;
-                view.Append(section, runStart, runEnd - runStart + 1);
+                int length = i - runStart;
+                view.Append(section, runStart, length);
                 i--;
                 if (!poisoned)
                 {
-                    pendingWeak ??= new();
-                    pendingWeak.Add((runStart, runEnd, placeholders));
+                    (literals ??= []).Add((runStart, length, true));
                 }
 
                 continue;
@@ -1102,41 +1101,26 @@ internal sealed partial class PptxRenderer
             view.Append(c);
         }
 
-        hasDigitPlaceholders = placeholders > 0;
-        if (pendingWeak is not null && hasDigitPlaceholders)
+        hasDigitPlaceholders = firstPlaceholder >= 0;
+        StringBuilder? leading = null;
+        StringBuilder? trailing = null;
+        if (literals is not null)
         {
-            foreach ((int start, int end, int startPlaceholders) in pendingWeak)
+            foreach ((int start, int length, bool bare) in literals)
             {
-                if (startPlaceholders == 0)
-                {
-                    leading ??= new StringBuilder();
-                    leading.Append(section, start, end - start + 1);
-                }
-                else if (startPlaceholders == placeholders)
-                {
-                    trailing ??= new StringBuilder();
-                    trailing.Append(section, start, end - start + 1);
-                }
+                if (bare && (!hasDigitPlaceholders || start > firstPlaceholder && start < lastPlaceholder))
+                    continue;
+
+                StringBuilder target = !hasDigitPlaceholders || start < firstPlaceholder
+                    ? leading ??= new StringBuilder()
+                    : trailing ??= new StringBuilder();
+                target.Append(section, start, length);
             }
         }
 
         prefix = leading?.ToString() ?? string.Empty;
         suffix = trailing?.ToString() ?? string.Empty;
         return view.ToString();
-
-        void AppendLiteral(char value)
-        {
-            if (placeholders == 0)
-            {
-                leading ??= new StringBuilder();
-                leading.Append(value);
-            }
-            else
-            {
-                trailing ??= new StringBuilder();
-                trailing.Append(value);
-            }
-        }
     }
 
     // Unsupported-construct inventory for one chart number-format code (S04). The IDs

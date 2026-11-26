@@ -60,6 +60,13 @@ internal static partial class PptxChartNumberFormatsTests
         TestAssert.Equal("%%-2", FormatChartNumber(-2d, "\"%%\"0"));
         TestAssert.Equal("2$", FormatChartNumber(-2d, "0;0\"$\""));
         TestAssert.Equal("0$", FormatChartNumber(0d, "0;0;0\"$\""));
+        TestAssert.Equal(" USD2", FormatChartNumber(2d, " \"USD\"0"));
+        TestAssert.Equal("2 kg", FormatChartNumber(2d, "0 \"kg\""));
+        TestAssert.Equal("a\"b2 kg", FormatChartNumber(2d, "\"a\"\"b\"0 \"kg\""));
+        TestAssert.Equal("kg", FormatChartNumber(2d, " \"kg\" "));
+        TestAssert.Equal("1 1/2 kg", FormatChartNumber(1.5d, "# ?/? \"kg\""));
+        TestAssert.Equal("2.0E+00 V", FormatChartNumber(2d, "0.0E+00 \"V\""));
+        TestAssert.Equal("2 kg", FormatChartNumber(2d, "[>=1]0 \"kg\";0 \"g\""));
     }
 
     public static void PptxChartNumberOptionalFractionalDigitsKeepTheirMeaning()
