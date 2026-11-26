@@ -29,7 +29,7 @@ internal static partial class DocxMathParser
             cancellationToken.ThrowIfCancellationRequested();
             XElement element = item.Element;
             string name = element.Name.LocalName;
-            if (IsCommentBoundary(element))
+            if (DocxSourceXml.IsCommentBoundary(element))
             {
                 if (item.IncludeAnnotations) readCommentBoundary?.Invoke(element);
                 continue;
@@ -169,7 +169,7 @@ internal static partial class DocxMathParser
                 foreach (var child in WithoutTrailingBreaks(element, DocxSourceXml.StoredChildren(element)))
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    if (IsBookmarkMarker(child))
+                    if (DocxSourceXml.IsBookmarkMarker(child))
                     {
                         if (child.Name.LocalName == "bookmarkStart")
                         {
@@ -179,7 +179,7 @@ internal static partial class DocxMathParser
                             readBookmark?.Invoke(bookmark);
                         }
                     }
-                    else if (!IsProperty(child) && !IsNonPrintingSourceMarker(child) && !IsCommentBoundary(child)) childIndex++;
+                    else if (!IsProperty(child) && !IsNonPrintingSourceMarker(child) && !DocxSourceXml.IsCommentBoundary(child)) childIndex++;
                 }
                 if (bookmarks is not null) node = sourceRow with { Bookmarks = bookmarks };
             }
@@ -301,23 +301,15 @@ internal static partial class DocxMathParser
         element is not null && (IsMathStoredContentContainer(element) || element.Name == WordprocessingNamespace + "hyperlink");
     private static bool IsContainer(XName name) => IsMathRow(name) || IsMathControl(name) || name == MathNamespace + "mr";
     private static bool IsProperty(XElement element) => element.Name.Namespace == MathNamespace && element.Name.LocalName.EndsWith("Pr", StringComparison.Ordinal);
-    internal static bool IsBookmarkMarker(XElement element) =>
-        element.Name.Namespace == WordprocessingNamespace &&
-        element.Name.LocalName is "bookmarkStart" or "bookmarkEnd" &&
-        !element.HasElements && string.IsNullOrWhiteSpace(element.Value);
-    internal static bool IsCommentBoundary(XElement element) =>
-        element.Name.Namespace == WordprocessingNamespace &&
-        element.Name.LocalName is "commentRangeStart" or "commentRangeEnd" &&
-        !element.HasElements && string.IsNullOrWhiteSpace(element.Value);
     internal static bool IsNonPrintingSourceMarker(XElement element) =>
         DocxSourceXml.IsNonPrintingMarker(element) ||
         DocxSourceXml.TryResolveRevisionRangeMarker(element, out _, out _) &&
         DocxSourceXml.IsNonPrintingRevisionRangeBoundary(element);
 
     private static IEnumerable<XElement> TraversalChildren(XElement element) =>
-        DocxSourceXml.StoredChildren(element).Where(child => !IsProperty(child) && !IsNonPrintingSourceMarker(child) && !IsBookmarkMarker(child));
+        DocxSourceXml.StoredChildren(element).Where(child => !IsProperty(child) && !IsNonPrintingSourceMarker(child) && !DocxSourceXml.IsBookmarkMarker(child));
     private static IEnumerable<XElement> NonMarkerChildren(XElement element) =>
-        DocxSourceXml.StoredChildren(element).Where(child => !IsNonPrintingSourceMarker(child) && !IsBookmarkMarker(child) && !IsCommentBoundary(child));
+        DocxSourceXml.StoredChildren(element).Where(child => !IsNonPrintingSourceMarker(child) && !DocxSourceXml.IsBookmarkMarker(child) && !DocxSourceXml.IsCommentBoundary(child));
     private static IEnumerable<XElement> ContentChildren(XElement element) =>
         NonMarkerChildren(element).Where(child => !IsProperty(child));
     private static bool HasOnlyRoles(XElement element, params string[] roles)

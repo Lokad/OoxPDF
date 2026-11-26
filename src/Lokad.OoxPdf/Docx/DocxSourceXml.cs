@@ -83,12 +83,13 @@ internal static class DocxSourceXml
         if (!ReferenceEquals(start.Parent, end.Parent)) return false;
         IReadOnlySet<(XName Name, string Id)>? pairedOwners = null;
         bool hasOwner = false;
-        // Every sibling inside the local boundaries must belong to the
-        // authored pair. Unowned content still needs its separate range.
+        // The authored pair must own every payload inside the local
+        // boundaries. Editing and annotation markers keep their own anchors.
         foreach (var child in start.ElementsAfterSelf())
         {
             token.ThrowIfCancellationRequested();
             if (ReferenceEquals(child, end)) return hasOwner;
+            if (IsNonPrintingMarker(child) || IsBookmarkMarker(child) || IsCommentBoundary(child)) continue;
             if (child.Name != name || !IsPairedMoveOwner(child, start, authoredStory, ref pairedOwners, token)) return false;
             hasOwner = true;
         }
@@ -232,6 +233,16 @@ internal static class DocxSourceXml
         element.Name == WordprocessingNamespace + "lastRenderedPageBreak" &&
         (element.Parent?.Name == WordprocessingNamespace + "r" || element.Parent?.Name == MathNamespace + "r") &&
         IsEmptyRunControl(element);
+
+    public static bool IsBookmarkMarker(XElement element) =>
+        element.Name.Namespace == WordprocessingNamespace &&
+        element.Name.LocalName is "bookmarkStart" or "bookmarkEnd" &&
+        !element.HasElements && string.IsNullOrWhiteSpace(element.Value);
+
+    public static bool IsCommentBoundary(XElement element) =>
+        element.Name.Namespace == WordprocessingNamespace &&
+        element.Name.LocalName is "commentRangeStart" or "commentRangeEnd" &&
+        !element.HasElements && string.IsNullOrWhiteSpace(element.Value);
 
     private static bool IsEmptyRunControl(XElement element) =>
         !element.HasElements && string.IsNullOrWhiteSpace(element.Value) &&

@@ -184,7 +184,8 @@ internal static partial class DocxInlineCompositionTests
 
     public static void DocxPairedMathMovesKeepLinkedDrawingCompanions()
     {
-        foreach (var (packed, splitOwners) in new[] { (true, false), (false, false), (false, true) })
+        foreach (var (packed, splitOwners, annotated) in new[]
+            { (true, false, false), (false, false, false), (false, true, false), (false, true, true) })
         foreach (var (mode, count) in new[]
         {
             (OoxPdfDocxMarkupMode.Final, 1),
@@ -193,13 +194,26 @@ internal static partial class DocxInlineCompositionTests
         })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
-            var document = ReadMove(mode, packed, paired: true, diagnostics, splitOwners: splitOwners);
+            var document = ReadMove(mode, packed, paired: true, diagnostics, splitOwners: splitOwners, annotated: annotated);
             if (!packed)
             {
                 var ranges = MoveRanges(document);
                 TestAssert.Equal(2, ranges.Length);
                 TestAssert.True(ranges.All(range => range.HasContentSource && range.IsOwnedByInlineMove),
                     "The authored ranges remain inspectable and refer to their inline owners.");
+            }
+            if (annotated)
+            {
+                var paragraphs = document.BodyElements.OfType<DocxParagraphElement>()
+                    .Select(element => element.Paragraph).Where(paragraph => paragraph.Images.Count != 0).ToArray();
+                TestAssert.Equal(count, paragraphs.Length);
+                foreach (var paragraph in paragraphs)
+                {
+                    var bookmark = paragraph.BookmarkAnchors.Single(anchor => anchor.Name?.StartsWith("MovedPicture", StringComparison.Ordinal) == true);
+                    TestAssert.True(bookmark.InlineItemIndex is int index &&
+                        paragraph.InlineContent![index] is DocxInlinePicture item && ReferenceEquals(item.Image, paragraph.Images.Single()),
+                        "The bookmark still targets the selected picture's source position.");
+                }
             }
             var page = PictureRangeRenderer(mode).RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().Single();
             string text = DocxPageFootnoteNumberingTests.DecodeText(page);
@@ -246,7 +260,7 @@ internal static partial class DocxInlineCompositionTests
             .SelectMany(element => element.Paragraph.RevisionRanges).ToArray();
 
         static DocxDocument ReadMove(OoxPdfDocxMarkupMode mode, bool packed, bool paired, List<OoxPdfDiagnostic> diagnostics,
-            bool hasOtherRangeContent = false, bool splitOwners = false) =>
+            bool hasOtherRangeContent = false, bool splitOwners = false, bool annotated = false) =>
             ReadMutation("CompositionProbes/math-display-image-body-between", mode, false, false, (xml, w, m) =>
             {
                 const string target = "PairedMoveDrawingTarget";
@@ -293,6 +307,17 @@ internal static partial class DocxInlineCompositionTests
                             var owner = new XElement(move[1].Name, move[1].Attributes(), payload[index]);
                             owner.SetAttributeValue(w + "id", id * 10 + index);
                             move[1].AddBeforeSelf(owner);
+                            if (annotated && index == 2)
+                            {
+                                owner.AddBeforeSelf(
+                                    new XElement(w + "proofErr", new XAttribute(w + "type", "spellStart")),
+                                    new XElement(w + "bookmarkStart", new XAttribute(w + "id", id), new XAttribute(w + "name", $"MovedPicture{id}")),
+                                    new XElement(w + "commentRangeStart", new XAttribute(w + "id", id)));
+                                owner.AddAfterSelf(
+                                    new XElement(w + "commentRangeEnd", new XAttribute(w + "id", id)),
+                                    new XElement(w + "bookmarkEnd", new XAttribute(w + "id", id)),
+                                    new XElement(w + "proofErr", new XAttribute(w + "type", "spellEnd")));
+                            }
                         }
                         move[1].Remove();
                     }

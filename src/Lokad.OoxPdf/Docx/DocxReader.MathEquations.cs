@@ -75,7 +75,7 @@ internal sealed partial class DocxReader
     }
 
     private static bool IsMathRangeBoundary(XElement element) =>
-        DocxMathParser.IsBookmarkMarker(element) || DocxMathParser.IsCommentBoundary(element);
+        DocxSourceXml.IsBookmarkMarker(element) || DocxSourceXml.IsCommentBoundary(element);
 
     private static DisplayMathRunLayout ClassifyDisplayMathRun(XElement run, CancellationToken token, bool insideEquation = false)
     {
