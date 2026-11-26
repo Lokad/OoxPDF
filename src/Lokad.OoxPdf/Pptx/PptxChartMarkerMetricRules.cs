@@ -70,19 +70,11 @@ internal static class PptxChartMarkerMetricRules
         return PptxSceneBuilder.ParseChartMarkerSymbol(AutoLineChartMarkerSymbols[seriesIndex % AutoLineChartMarkerSymbols.Length]);
     }
 
-    public static string ResolveDefaultSymbol(PptxSceneChartPlotKind plotKind, bool chartMarkersEnabled, int seriesIndex)
+    public static string ResolveDefaultSymbol(PptxSceneChartPlotKind plotKind, int seriesIndex)
     {
-        if (plotKind == PptxSceneChartPlotKind.Line)
-        {
-            return chartMarkersEnabled ? AutoLineChartMarkerSymbols[seriesIndex % AutoLineChartMarkerSymbols.Length] : "none";
-        }
-
-        // Scatter shares the line auto-symbol order (cached Office refs show diamond,
-        // square, triangle, x across series 0-3) unconditionally: scatter files without a
-        // plot-level marker switch still render markers on both sides, so gating on
-        // chartMarkersEnabled would newly suppress them. Bubble keeps the circle below
-        // since its markers render as data-sized ellipses with the symbol unused.
-        if (plotKind == PptxSceneChartPlotKind.Scatter)
+        // Office line and scatter charts use the same automatic series symbols
+        // regardless of the plot's marker switch. Series symbols take precedence.
+        if (plotKind is PptxSceneChartPlotKind.Line or PptxSceneChartPlotKind.Scatter)
         {
             return AutoLineChartMarkerSymbols[seriesIndex % AutoLineChartMarkerSymbols.Length];
         }
@@ -90,7 +82,7 @@ internal static class PptxChartMarkerMetricRules
         return "circle";
     }
 
-    public static double ResolveSize(string? sizeValue, PptxSceneChartPlotKind plotKind, bool chartMarkersEnabled, bool markerDefined, bool hasShapeProperties, int scatterPointCount, bool symbolDefined)
+    public static double ResolveSize(string? sizeValue, PptxSceneChartPlotKind plotKind, bool markerDefined, bool hasShapeProperties, int scatterPointCount, bool symbolDefined)
     {
         if (sizeValue is not null &&
             double.TryParse(sizeValue, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed))
@@ -116,7 +108,7 @@ internal static class PptxChartMarkerMetricRules
             return UnsetMarkerSize;
         }
 
-        if (plotKind != PptxSceneChartPlotKind.Line || !chartMarkersEnabled)
+        if (plotKind != PptxSceneChartPlotKind.Line)
         {
             return DefaultChartMarkerSize;
         }

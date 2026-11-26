@@ -16,7 +16,7 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class PptxChartRenderingTests
 {
-    public static void PptxSceneLineChartMarkerDefaultsUsePlotMarkerState()
+    public static void PptxSceneLineChartMarkerDefaultsPreserveSeriesOverrides()
     {
         PptxSceneChart? chart = PptxTests.BuildSingleChartScene("""
             <?xml version="1.0" encoding="UTF-8"?>
@@ -34,7 +34,6 @@ internal static class PptxChartRenderingTests
             """);
 
         PptxSceneChartPlot plot = chart?.Plots[0] ?? throw new InvalidOperationException("Expected line-chart plot.");
-        TestAssert.True(plot.MarkersEnabled == true, "Expected chart-level marker enablement to survive in the scene model.");
         TestAssert.True(plot.Series[0].Marker.IsDefined == false, "Expected an automatically enabled marker to remain distinct from series marker XML.");
         TestAssert.Equal("diamond", plot.Series[0].Marker.Symbol);
         TestAssert.Equal(7d, plot.Series[0].Marker.Size);

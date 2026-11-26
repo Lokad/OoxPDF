@@ -230,8 +230,6 @@ internal sealed record PptxSceneChartPlot
 
     public PptxSceneChartRadarStyle RadarStyleKind { get; }
 
-    public bool? MarkersEnabled { get; }
-
     public bool? VaryColors { get; }
 
     public double? GapWidth { get; }
@@ -255,7 +253,6 @@ internal sealed record PptxSceneChartPlot
         string barDirection,
         string scatterStyle,
         string radarStyle,
-        bool? markersEnabled,
         bool? varyColors,
         double? gapWidth,
         double? overlap,
@@ -276,7 +273,6 @@ internal sealed record PptxSceneChartPlot
         BubbleSizeRepresents = PptxSceneBuilder.ReadChartElementValue(source, "sizeRepresents");
         ShowNegativeBubblesValue = PptxSceneBuilder.ReadChartElementValue(source, "showNegBubbles");
         RadarStyleKind = PptxSceneBuilder.ParseChartRadarStyle(radarStyle);
-        MarkersEnabled = markersEnabled;
         VaryColors = varyColors;
         GapWidth = gapWidth;
         Overlap = overlap;

@@ -123,7 +123,6 @@ internal sealed partial class PptxSceneBuilder
             string barDirection = ReadChartElementValue(plot, "barDir");
             string scatterStyle = ReadChartElementValue(plot, "scatterStyle");
             string radarStyle = ReadChartElementValue(plot, "radarStyle");
-            bool? markersEnabled = ReadOptionalChartBoolean(plot, "marker");
             PptxSceneChartPlotKind plotKind = ParseChartPlotKind(kind);
             string[] axisIds = plot
                 .Elements(ChartNamespace + "axId")
@@ -134,12 +133,11 @@ internal sealed partial class PptxSceneBuilder
                 plotKind,
                 kind,
                 axisIds,
-                ReadChartSeries(plot, theme, colorMap, plotKind, markersEnabled == true),
+                ReadChartSeries(plot, theme, colorMap, plotKind),
                 grouping,
                 barDirection,
                 scatterStyle,
                 radarStyle,
-                markersEnabled,
                 ReadOptionalChartBoolean(plot, "varyColors"),
                 ReadChartElementDoubleWithValue(plot, "gapWidth").Value,
                 ReadChartElementDoubleWithValue(plot, "overlap").Value,

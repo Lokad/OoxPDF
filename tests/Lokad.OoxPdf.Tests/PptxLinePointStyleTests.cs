@@ -172,26 +172,25 @@ internal static class PptxLinePointStyleTests
         }
     }
 
-    public static void PptxLineAutomaticMarkersRetainSeriesNoneAndParsedPlotSwitch()
+    public static void PptxLineAutomaticMarkersRetainSeriesNoneAcrossPlotSwitches()
     {
-        (string Xml, bool? Enabled)[] samples =
+        string[] switches =
         [
-            ("", null),
-            ("<c:marker val=\"0\"/>", false),
-            ("<c:marker val=\"1\"/>", true),
-            ("<c:marker/>", true),
-            ("<c:marker val=\"bogus\"/>", false)
+            "",
+            "<c:marker val=\"0\"/>",
+            "<c:marker val=\"1\"/>",
+            "<c:marker/>",
+            "<c:marker val=\"bogus\"/>"
         ];
-        foreach (var sample in samples)
+        foreach (string plotSwitch in switches)
         {
             var chart = PptxTests.BuildSingleChartScene($$"""
                 <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart><c:plotArea><c:lineChart>
-                  {{sample.Xml}}
+                  {{plotSwitch}}
                   <c:ser/><c:ser><c:marker><c:symbol val="none"/></c:marker></c:ser>
                 </c:lineChart></c:plotArea></c:chart></c:chartSpace>
                 """)!;
             var plot = chart.Plots.Single();
-            TestAssert.Equal(sample.Enabled, plot.MarkersEnabled);
             TestAssert.Equal(PptxSceneChartMarkerSymbol.Diamond, plot.Series[0].Marker.SymbolKind);
             TestAssert.Equal(7d, plot.Series[0].Marker.Size);
             TestAssert.True(!plot.Series[0].Marker.IsDefined && plot.Series[1].Marker.IsDefined, "Keep source marker provenance.");

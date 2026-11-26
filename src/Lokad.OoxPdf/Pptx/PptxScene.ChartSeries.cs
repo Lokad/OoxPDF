@@ -7,7 +7,7 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxSceneBuilder
 {
-    internal static IReadOnlyList<PptxSceneChartSeries> ReadChartSeries(XElement plot, PptxTheme theme, PptxColorMap colorMap, PptxSceneChartPlotKind plotKind, bool chartMarkersEnabled)
+    internal static IReadOnlyList<PptxSceneChartSeries> ReadChartSeries(XElement plot, PptxTheme theme, PptxColorMap colorMap, PptxSceneChartPlotKind plotKind)
     {
         var sources = plot.Elements(ChartNamespace + "ser").Select(element =>
         {
@@ -29,7 +29,7 @@ internal sealed partial class PptxSceneBuilder
             (int? index, string indexValue) = ReadChartElementIntWithValue(seriesElement, "idx");
             (double? explosion, string explosionValue) = ReadChartElementDoubleWithValue(seriesElement, "explosion");
             XElement? shapeProperties = seriesElement.Element(ChartNamespace + "spPr");
-            PptxSceneChartMarker seriesMarker = ReadChartMarker(seriesElement, theme, colorMap, plotKind, chartMarkersEnabled, seriesIndex);
+            PptxSceneChartMarker seriesMarker = ReadChartMarker(seriesElement, theme, colorMap, plotKind, seriesIndex);
             series.Add(new PptxSceneChartSeries(
                 index,
                 indexValue,
@@ -112,15 +112,13 @@ internal sealed partial class PptxSceneBuilder
         return ReadPatternFill(patternFill, (string?)patternFill.Attribute("prst") ?? "pct50", theme, colorMap);
     }
 
-    private static PptxSceneChartMarker ReadChartMarker(XElement series, PptxTheme theme, PptxColorMap colorMap, PptxSceneChartPlotKind plotKind, bool chartMarkersEnabled, int seriesIndex)
+    private static PptxSceneChartMarker ReadChartMarker(XElement series, PptxTheme theme, PptxColorMap colorMap, PptxSceneChartPlotKind plotKind, int seriesIndex)
     {
-        // Office line charts infer automatic markers from the series. The
-        // plot-level marker switch does not suppress them; a series symbol=none
-        // does. Keep the raw plot spelling separately in the scene.
-        chartMarkersEnabled |= plotKind == PptxSceneChartPlotKind.Line;
         XElement? marker = series.Element(ChartNamespace + "marker");
-        string symbol = ReadOptionalChartValueAttribute(marker?.Element(ChartNamespace + "symbol")) ??
-            ReadDefaultChartMarkerSymbol(plotKind, chartMarkersEnabled, seriesIndex);
+        XElement? symbolElement = marker?.Element(ChartNamespace + "symbol");
+        XElement? shapeProperties = marker?.Element(ChartNamespace + "spPr");
+        string symbol = ReadOptionalChartValueAttribute(symbolElement) ??
+            PptxChartMarkerMetricRules.ResolveDefaultSymbol(plotKind, seriesIndex);
         string? sizeValue = ReadOptionalChartValueAttribute(marker?.Element(ChartNamespace + "size"));
         int scatterPointCount = plotKind == PptxSceneChartPlotKind.Scatter
             ? Math.Max(ReadChartSeriesPointCount(series, "xVal") ?? 0, ReadChartSeriesPointCount(series, "yVal") ?? 0)
@@ -128,24 +126,17 @@ internal sealed partial class PptxSceneBuilder
         double size = PptxChartMarkerMetricRules.ResolveSize(
             sizeValue,
             plotKind,
-            chartMarkersEnabled,
             marker is not null,
-            marker?.Element(ChartNamespace + "spPr") is not null,
+            shapeProperties is not null,
             scatterPointCount,
-            marker?.Element(ChartNamespace + "symbol") is not null);
-        XElement? shapeProperties = marker?.Element(ChartNamespace + "spPr");
+            symbolElement is not null);
         PptxSceneFillStyle fill = PptxColorResolver.TryReadSolidColorWithAlpha(shapeProperties, theme, colorMap, out RgbColor fillColor, out double fillAlpha)
             ? new PptxSceneFillStyle(true, fillColor, fillAlpha)
             : default;
         return new PptxSceneChartMarker(marker is not null, ParseChartMarkerSymbol(symbol), symbol, sizeValue, size, fill, ReadChartLine(shapeProperties, theme, colorMap))
         {
-            SymbolSpecified = marker?.Element(ChartNamespace + "symbol") is not null
+            SymbolSpecified = symbolElement is not null
         };
-    }
-
-    private static string ReadDefaultChartMarkerSymbol(PptxSceneChartPlotKind plotKind, bool chartMarkersEnabled, int seriesIndex)
-    {
-        return PptxChartMarkerMetricRules.ResolveDefaultSymbol(plotKind, chartMarkersEnabled, seriesIndex);
     }
 
     private static IReadOnlyList<PptxSceneChartPointStyle> ReadChartPointStyles(XElement series, PptxTheme theme, PptxColorMap colorMap, PptxSceneChartPlotKind plotKind, int seriesIndex, PptxSceneChartMarker seriesMarker)
@@ -160,7 +151,7 @@ internal sealed partial class PptxSceneBuilder
 
             XElement? shapeProperties = point.Element(ChartNamespace + "spPr");
             XElement? markerElement = point.Element(ChartNamespace + "marker");
-            PptxSceneChartMarker? marker = markerElement is null ? null : ReadChartMarker(point, theme, colorMap, plotKind, true, seriesIndex);
+            PptxSceneChartMarker? marker = markerElement is null ? null : ReadChartMarker(point, theme, colorMap, plotKind, seriesIndex);
             if (marker is not null)
             {
                 marker = marker with

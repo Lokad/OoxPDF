@@ -37,7 +37,7 @@ internal static partial class OoxMarkupCompatibilityTests
             TestAssert.Equal(variant == "processed" ? "VISIBLEEXTRA" : "VISIBLE",
                 PptxSceneBuilder.ReadChartText(normalized.Descendants(c + "title").Single().Element(c + "tx"), false));
             var series = PptxSceneBuilder.ReadChartSeries(normalized.Descendants(c + "barChart").Single(),
-                PptxTheme.Empty, PptxColorMap.Default, PptxSceneChartPlotKind.Bar, false).Single();
+                PptxTheme.Empty, PptxColorMap.Default, PptxSceneChartPlotKind.Bar).Single();
             TestAssert.Equal(variant == "processed" ? 2 : 1, series.ValuePoints.Count);
             TestAssert.Equal(2d, series.ValuePoints[0].Value!.Value);
             if (variant == "processed") TestAssert.Equal(3d, series.ValuePoints[1].Value!.Value);

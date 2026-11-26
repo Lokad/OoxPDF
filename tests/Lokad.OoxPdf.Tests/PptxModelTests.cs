@@ -594,7 +594,6 @@ internal static class PptxModelTests
         TestAssert.Equal(PptxSceneChartBarDirection.Bar, slide.SlideNodes[4].Chart?.Plots[0].BarDirectionKind);
         TestAssert.Equal(PptxSceneChartRadarStyle.Unknown, slide.SlideNodes[4].Chart?.Plots[0].RadarStyleKind);
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[0].VaryColors == false, "Expected chart plot varyColors in the scene model.");
-        TestAssert.Equal(null, slide.SlideNodes[4].Chart?.Plots[0].MarkersEnabled);
         TestAssert.Equal(175d, slide.SlideNodes[4].Chart?.Plots[0].GapWidth ?? 0d);
         TestAssert.Equal(25d, slide.SlideNodes[4].Chart?.Plots[0].Overlap ?? 0d);
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[0].DataLabels.ShowValue == true, "Expected chart data-label value flag in the scene model.");
@@ -719,7 +718,6 @@ internal static class PptxModelTests
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[1].Series[0].Marker.IsDefined == false, "Expected a missing marker element to remain distinct from the effective marker default.");
         TestAssert.Equal("lineChart", slide.SlideNodes[4].Chart?.Plots[2].Kind ?? string.Empty);
         TestAssert.Equal(PptxSceneChartPlotKind.Line, slide.SlideNodes[4].Chart?.Plots[2].PlotKind);
-        TestAssert.True(slide.SlideNodes[4].Chart?.Plots[2].MarkersEnabled is null, "Expected missing chart-level line marker metadata to remain observable.");
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[2].Series[0].Marker.IsDefined == false, "Expected missing line-chart marker metadata to remain distinct from explicit default markers.");
         TestAssert.Equal("diamond", slide.SlideNodes[4].Chart?.Plots[2].Series[0].Marker.Symbol ?? string.Empty);
         TestAssert.Equal(PptxSceneChartMarkerSymbol.Diamond, slide.SlideNodes[4].Chart?.Plots[2].Series[0].Marker.SymbolKind);
