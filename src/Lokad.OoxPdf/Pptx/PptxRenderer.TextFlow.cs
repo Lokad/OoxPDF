@@ -177,16 +177,14 @@ internal sealed partial class PptxRenderer
     }
 
     private static (XElement? Element, string Mode, PptxTextBodyPropertySource Source) ReadTextAutofit(
-        XElement textBody,
-        XElement? inheritedTextBody)
+        XElement? bodyProperties,
+        XElement? inheritedBodyProperties)
     {
-        XElement? bodyProperties = textBody.Element(DrawingNamespace + "bodyPr");
         if (TryReadTextAutofit(bodyProperties) is { } directAutofit)
         {
             return (directAutofit.Element, directAutofit.Mode, PptxTextBodyPropertySource.DirectBodyPr);
         }
 
-        XElement? inheritedBodyProperties = inheritedTextBody?.Element(DrawingNamespace + "bodyPr");
         if (TryReadTextAutofit(inheritedBodyProperties) is { } inheritedAutofit)
         {
             return (inheritedAutofit.Element, inheritedAutofit.Mode, PptxTextBodyPropertySource.InheritedBodyPr);

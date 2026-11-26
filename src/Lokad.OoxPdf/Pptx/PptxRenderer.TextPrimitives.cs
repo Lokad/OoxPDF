@@ -64,75 +64,6 @@ internal sealed partial class PptxRenderer
                 : null;
     }
 
-    private static (
-        int Count,
-        double Spacing,
-        PptxTextBodyPropertySource CountSource,
-        PptxTextBodyPropertySource SpacingSource,
-        string? CountValue,
-        string? SpacingValue) ReadTextColumns(XElement textBody, XElement? inheritedTextBody)
-    {
-        XElement? bodyProperties = textBody.Element(DrawingNamespace + "bodyPr");
-        XElement? inheritedBodyProperties = inheritedTextBody?.Element(DrawingNamespace + "bodyPr");
-        (int count, PptxTextBodyPropertySource countSource, string? countValue) = ReadTextColumnCount(bodyProperties, inheritedBodyProperties);
-        (double spacing, PptxTextBodyPropertySource spacingSource, string? spacingValue) = ReadTextColumnSpacing(bodyProperties, inheritedBodyProperties);
-        return (count, spacing, countSource, spacingSource, countValue, spacingValue);
-    }
-
-    private static (int Count, PptxTextBodyPropertySource Source, string? Value) ReadTextColumnCount(
-        XElement? bodyProperties,
-        XElement? inheritedBodyProperties)
-    {
-        if (bodyProperties?.Attribute("numCol") is { } directAttribute)
-        {
-            if (int.TryParse(directAttribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int directCount))
-            {
-                return (Math.Clamp(directCount, 1, 16), PptxTextBodyPropertySource.DirectBodyPr, directAttribute.Value);
-            }
-
-            return (1, PptxTextBodyPropertySource.DirectBodyPr, directAttribute.Value);
-        }
-
-        if (inheritedBodyProperties?.Attribute("numCol") is { } inheritedAttribute)
-        {
-            if (int.TryParse(inheritedAttribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int inheritedCount))
-            {
-                return (Math.Clamp(inheritedCount, 1, 16), PptxTextBodyPropertySource.InheritedBodyPr, inheritedAttribute.Value);
-            }
-
-            return (1, PptxTextBodyPropertySource.InheritedBodyPr, inheritedAttribute.Value);
-        }
-
-        return (1, PptxTextBodyPropertySource.DefaultValue, null);
-    }
-
-    private static (double Spacing, PptxTextBodyPropertySource Source, string? Value) ReadTextColumnSpacing(
-        XElement? bodyProperties,
-        XElement? inheritedBodyProperties)
-    {
-        if (bodyProperties?.Attribute("spcCol") is { } directAttribute)
-        {
-            if (long.TryParse(directAttribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long directSpacing))
-            {
-                return (Math.Max(0d, OoxUnits.EmuToPoints(directSpacing)), PptxTextBodyPropertySource.DirectBodyPr, directAttribute.Value);
-            }
-
-            return (0d, PptxTextBodyPropertySource.DirectBodyPr, directAttribute.Value);
-        }
-
-        if (inheritedBodyProperties?.Attribute("spcCol") is { } inheritedAttribute)
-        {
-            if (long.TryParse(inheritedAttribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long inheritedSpacing))
-            {
-                return (Math.Max(0d, OoxUnits.EmuToPoints(inheritedSpacing)), PptxTextBodyPropertySource.InheritedBodyPr, inheritedAttribute.Value);
-            }
-
-            return (0d, PptxTextBodyPropertySource.InheritedBodyPr, inheritedAttribute.Value);
-        }
-
-        return (0d, PptxTextBodyPropertySource.DefaultValue, null);
-    }
-
     private static double NormalizeRotationDegrees(double rotationDegrees)
     {
         double normalized = rotationDegrees % 360d;
@@ -230,13 +161,8 @@ internal sealed partial class PptxRenderer
         string attributeName,
         long defaultEmu)
     {
-        string? value = (string?)bodyProperties?.Attribute(attributeName);
-        PptxTextBodyPropertySource source = PptxTextBodyPropertySource.DirectBodyPr;
-        if (value is null)
-        {
-            value = (string?)inheritedBodyProperties?.Attribute(attributeName);
-            source = value is null ? PptxTextBodyPropertySource.DefaultValue : PptxTextBodyPropertySource.InheritedBodyPr;
-        }
+        (string? value, PptxTextBodyPropertySource source) =
+            ReadTextBodyAttributeWithSource(bodyProperties, inheritedBodyProperties, attributeName);
 
         long inset = long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long emu) ? emu : defaultEmu;
         return (OoxUnits.EmuToPoints(inset), source, value);

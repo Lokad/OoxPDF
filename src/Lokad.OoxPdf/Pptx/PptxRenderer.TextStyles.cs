@@ -299,11 +299,9 @@ internal sealed partial class PptxRenderer
     }
 
     private static (TextInsets Insets, TextInsetSources Sources, TextInsetValues Values) ReadTextInsets(
-        XElement textBody,
-        XElement? inheritedTextBody)
+        XElement? bodyProperties,
+        XElement? inheritedBodyProperties)
     {
-        XElement? bodyProperties = textBody.Element(DrawingNamespace + "bodyPr");
-        XElement? inheritedBodyProperties = inheritedTextBody?.Element(DrawingNamespace + "bodyPr");
         (double left, PptxTextBodyPropertySource leftSource, string? leftValue) = ReadInset(
             bodyProperties, inheritedBodyProperties, "lIns", 91440);
         (double right, PptxTextBodyPropertySource rightSource, string? rightValue) = ReadInset(

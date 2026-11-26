@@ -11,21 +11,29 @@ internal sealed partial class PptxRenderer
 {
     private static PptxTextBodyProperties ReadTextBodyProperties(XElement textBody, XElement? inheritedTextBody)
     {
-        (int columnCount, double columnSpacing, PptxTextBodyPropertySource columnCountSource, PptxTextBodyPropertySource columnSpacingSource, string? columnCountValue, string? columnSpacingValue) =
-            ReadTextColumns(textBody, inheritedTextBody);
-        PptxTextBodyPropertySource columnSource = MergeTextBodyPropertySources(columnCountSource, columnSpacingSource);
-        (TextInsets insets, TextInsetSources insetSources, TextInsetValues insetValues) = ReadTextInsets(textBody, inheritedTextBody);
-        (XElement? autofit, string autofitMode, PptxTextBodyPropertySource autofitModeSource) = ReadTextAutofit(textBody, inheritedTextBody);
+        XElement? bodyProperties = textBody.Element(DrawingNamespace + "bodyPr");
+        XElement? inheritedBodyProperties = inheritedTextBody?.Element(DrawingNamespace + "bodyPr");
+        (string? columnCountValue, PptxTextBodyPropertySource columnCountSource) =
+            ReadTextBodyAttributeWithSource(bodyProperties, inheritedBodyProperties, "numCol");
+        (string? columnSpacingValue, PptxTextBodyPropertySource columnSpacingSource) =
+            ReadTextBodyAttributeWithSource(bodyProperties, inheritedBodyProperties, "spcCol");
+        int columnCount = int.TryParse(columnCountValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out int count)
+            ? Math.Clamp(count, 1, 16) : 1;
+        double columnSpacing = long.TryParse(columnSpacingValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out long spacing)
+            ? Math.Max(0d, OoxUnits.EmuToPoints(spacing)) : 0d;
+        PptxTextBodyPropertySource columnSource = MergeColumnSources(columnCountSource, columnSpacingSource);
+        (TextInsets insets, TextInsetSources insetSources, TextInsetValues insetValues) = ReadTextInsets(bodyProperties, inheritedBodyProperties);
+        (XElement? autofit, string autofitMode, PptxTextBodyPropertySource autofitModeSource) = ReadTextAutofit(bodyProperties, inheritedBodyProperties);
         (double fontScale, PptxTextBodyPropertySource fontScaleSource, string? fontScaleValue) = ReadNormAutofitFontScale(autofit, autofitModeSource);
         (double lineSpacingScale, PptxTextBodyPropertySource lineSpacingScaleSource, string? lineSpacingReductionValue) = ReadNormAutofitLineSpacingScale(autofit, autofitModeSource);
-        (string? orientation, PptxTextBodyPropertySource orientationSource) = ReadTextBodyAttributeWithSource(textBody, inheritedTextBody, "vert", inherit: true);
-        (string? verticalAnchor, PptxTextBodyPropertySource verticalAnchorSource) = ReadTextBodyAttributeWithSource(textBody, inheritedTextBody, "anchor", inherit: true);
-        (string? anchorCenter, PptxTextBodyPropertySource anchorCenterSource) = ReadTextBodyAttributeWithSource(textBody, inheritedTextBody, "anchorCtr", inherit: true);
-        (string? wrap, PptxTextBodyPropertySource wrapSource) = ReadTextBodyAttributeWithSource(textBody, inheritedTextBody, "wrap", inherit: true);
-        (string? verticalOverflow, PptxTextBodyPropertySource verticalOverflowSource) = ReadTextBodyAttributeWithSource(textBody, inheritedTextBody, "vertOverflow", inherit: true);
-        (string? horizontalOverflow, _) = ReadTextBodyAttributeWithSource(textBody, inheritedTextBody, "horzOverflow", inherit: true);
-        (string? compatibleLineSpacing, PptxTextBodyPropertySource compatibleLineSpacingSource) = ReadTextBodyAttributeWithSource(textBody, inheritedTextBody, "compatLnSpc", inherit: true);
-        (string? rotation, PptxTextBodyPropertySource rotationSource) = ReadTextBodyAttributeWithSource(textBody, inheritedTextBody, "rot", inherit: true);
+        (string? orientation, PptxTextBodyPropertySource orientationSource) = ReadTextBodyAttributeWithSource(bodyProperties, inheritedBodyProperties, "vert");
+        (string? verticalAnchor, PptxTextBodyPropertySource verticalAnchorSource) = ReadTextBodyAttributeWithSource(bodyProperties, inheritedBodyProperties, "anchor");
+        (string? anchorCenter, PptxTextBodyPropertySource anchorCenterSource) = ReadTextBodyAttributeWithSource(bodyProperties, inheritedBodyProperties, "anchorCtr");
+        (string? wrap, PptxTextBodyPropertySource wrapSource) = ReadTextBodyAttributeWithSource(bodyProperties, inheritedBodyProperties, "wrap");
+        (string? verticalOverflow, PptxTextBodyPropertySource verticalOverflowSource) = ReadTextBodyAttributeWithSource(bodyProperties, inheritedBodyProperties, "vertOverflow");
+        (string? horizontalOverflow, _) = ReadTextBodyAttributeWithSource(bodyProperties, inheritedBodyProperties, "horzOverflow");
+        (string? compatibleLineSpacing, PptxTextBodyPropertySource compatibleLineSpacingSource) = ReadTextBodyAttributeWithSource(bodyProperties, inheritedBodyProperties, "compatLnSpc");
+        (string? rotation, PptxTextBodyPropertySource rotationSource) = ReadTextBodyAttributeWithSource(bodyProperties, inheritedBodyProperties, "rot");
         return new PptxTextBodyProperties(
             insets,
             insetSources,
@@ -71,49 +79,31 @@ internal sealed partial class PptxRenderer
             ClipsHorizontalOverflow = string.Equals(horizontalOverflow, "clip", StringComparison.OrdinalIgnoreCase) ? true :
                 string.Equals(horizontalOverflow, "overflow", StringComparison.OrdinalIgnoreCase) ? false : null
         };
+    }
 
-        static PptxTextBodyPropertySource MergeTextBodyPropertySources(
-            PptxTextBodyPropertySource first,
-            PptxTextBodyPropertySource second)
+    private static PptxTextBodyPropertySource MergeColumnSources(PptxTextBodyPropertySource count, PptxTextBodyPropertySource spacing)
+    {
+        if (count == PptxTextBodyPropertySource.DirectBodyPr || spacing == PptxTextBodyPropertySource.DirectBodyPr)
         {
-            if (first == second)
-            {
-                return first;
-            }
-
-            if (first == PptxTextBodyPropertySource.DirectBodyPr || second == PptxTextBodyPropertySource.DirectBodyPr)
-            {
-                return PptxTextBodyPropertySource.DirectBodyPr;
-            }
-
-            if (first == PptxTextBodyPropertySource.InheritedBodyPr || second == PptxTextBodyPropertySource.InheritedBodyPr)
-            {
-                return PptxTextBodyPropertySource.InheritedBodyPr;
-            }
-
-            if (first == PptxTextBodyPropertySource.TableCellStyle || second == PptxTextBodyPropertySource.TableCellStyle)
-            {
-                return PptxTextBodyPropertySource.TableCellStyle;
-            }
-
-            return PptxTextBodyPropertySource.DefaultValue;
+            return PptxTextBodyPropertySource.DirectBodyPr;
         }
+
+        return count == PptxTextBodyPropertySource.InheritedBodyPr || spacing == PptxTextBodyPropertySource.InheritedBodyPr
+            ? PptxTextBodyPropertySource.InheritedBodyPr
+            : PptxTextBodyPropertySource.DefaultValue;
     }
 
     private static (string? Value, PptxTextBodyPropertySource Source) ReadTextBodyAttributeWithSource(
-        XElement textBody,
-        XElement? inheritedTextBody,
-        string attributeName,
-        bool inherit)
+        XElement? bodyProperties,
+        XElement? inheritedBodyProperties,
+        string attributeName)
     {
-        XElement? bodyPr = textBody.Element(DrawingNamespace + "bodyPr");
-        if (bodyPr?.Attribute(attributeName) is { } directAttribute)
+        if (bodyProperties?.Attribute(attributeName) is { } directAttribute)
         {
             return (directAttribute.Value, PptxTextBodyPropertySource.DirectBodyPr);
         }
 
-        XElement? inheritedBodyPr = inheritedTextBody?.Element(DrawingNamespace + "bodyPr");
-        if (inherit && inheritedBodyPr?.Attribute(attributeName) is { } inheritedAttribute)
+        if (inheritedBodyProperties?.Attribute(attributeName) is { } inheritedAttribute)
         {
             return (inheritedAttribute.Value, PptxTextBodyPropertySource.InheritedBodyPr);
         }
