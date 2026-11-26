@@ -505,10 +505,7 @@ internal sealed class PdfGraphicsBuilder
         RegisterFontUse(fontResourceName);
 
         builder.AppendLine("BT");
-        if (!TryAppendFillGray(red, green, blue))
-        {
-            builder.Append(PdfDocumentWriter.FormatColor(red)).Append(" ").Append(PdfDocumentWriter.FormatColor(green)).Append(" ").Append(PdfDocumentWriter.FormatColor(blue)).AppendLine(" rg");
-        }
+        SetFillRgb(red, green, blue);
 
         builder.Append("/").Append(name).Append(" ").Append(size).AppendLine(" Tf");
         builder.AppendLine("0 Tc");
@@ -553,18 +550,11 @@ internal sealed class PdfGraphicsBuilder
             xPosition.Length + yPosition.Length + stroke.Length + shear.Length);
         RegisterFontUse(fontResourceName);
         builder.AppendLine("BT");
-        if (!TryAppendFillGray(red, green, blue))
-        {
-            builder.Append(PdfDocumentWriter.FormatColor(red)).Append(' ').Append(PdfDocumentWriter.FormatColor(green)).Append(' ').Append(PdfDocumentWriter.FormatColor(blue)).AppendLine(" rg");
-        }
+        SetFillRgb(red, green, blue);
 
         if (textRenderingMode is 1 or 2)
         {
-            if (!TryAppendStrokeGray(strokeRed, strokeGreen, strokeBlue))
-            {
-                builder.Append(PdfDocumentWriter.FormatColor(strokeRed)).Append(' ').Append(PdfDocumentWriter.FormatColor(strokeGreen)).Append(' ').Append(PdfDocumentWriter.FormatColor(strokeBlue)).AppendLine(" RG");
-            }
-
+            SetStrokeRgb(strokeRed, strokeGreen, strokeBlue);
             builder.Append(stroke).AppendLine(" w");
             builder.Append(textRenderingMode.ToString(CultureInfo.InvariantCulture)).AppendLine(" Tr");
         }
