@@ -305,7 +305,11 @@ internal sealed partial class PptxRenderer
                     ChartAxisSource lineValueAxisSource = ReadChartValueAxesForPlot(sceneChart, linePlot).FirstOrDefault();
                     PptxSceneChartAxis? lineValueSceneAxis = lineValueAxisSource.SceneAxis;
                     ChartLinePlotOptions lineOptions = ReadSceneChartLineOptions(sceneChart, linePlot, PptxSceneChartGrouping.Standard);
-                    ChartValueExtents lineValueExtents = sharedValueAxis ? valueExtents : ReadPercentStackedAwareValueAxisExtents(lineValueSceneAxis, GetSharedLineChartValueExtents(linePlot, lineOptions.Stacked, lineOptions.PercentStacked, workbook, plotVisibleOnly), lineOptions.PercentStacked, useNearMaximumHeadroom: !lineOptions.PercentStacked, nearMaximumHeadroomRatio: PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
+                    ChartValueExtents lineValueExtents = sharedValueAxis ? valueExtents : ReadPercentStackedAwareValueAxisExtents(
+                        lineValueSceneAxis, GetSharedLineChartValueExtents(
+                            linePlot, lineOptions.Stacked, lineOptions.PercentStacked, workbook, plotVisibleOnly, lineSeriesVectors),
+                        lineOptions.PercentStacked, useNearMaximumHeadroom: !lineOptions.PercentStacked,
+                        nearMaximumHeadroomRatio: PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
                     ChartValueAxisRenderOptions lineValueAxisOptions = ReadSceneChartValueAxisRenderOptions(lineValueSceneAxis, lineValueExtents, lineOptions.PercentStacked);
                     IReadOnlyList<ChartSeriesStroke?> lineSeriesStrokes = ReadSceneSeriesStrokes(linePlot, ResolveLineKindInheritedStrokeWidth(barStyleId));
                     IReadOnlyList<ChartMarkerStyle> lineMarkerStyles = ReadSceneMarkerStyles(linePlot);

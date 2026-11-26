@@ -445,19 +445,15 @@ internal sealed partial class PptxRenderer
         bool stacked,
         bool percentStacked,
         ChartWorkbookData? workbook,
-        bool plotVisibleOnly)
+        bool plotVisibleOnly,
+        IReadOnlyList<ChartIndexedNumberVector>? seriesVectors = null)
     {
-        if (workbook is null)
-        {
-            return GetCartesianChartDataExtents(ReadSceneChartSeriesVectors(plot, workbook, plotVisibleOnly), stacked, percentStacked);
-        }
+        return workbook is null
+            ? GetExtents()
+            : workbook.GetOrAddLineValueExtents(plot, stacked, percentStacked, plotVisibleOnly, GetExtents);
 
-        return workbook.GetOrAddLineValueExtents(
-            plot,
-            stacked,
-            percentStacked,
-            plotVisibleOnly,
-            () => GetCartesianChartDataExtents(ReadSharedChartSeriesVectors(plot, workbook, plotVisibleOnly), stacked, percentStacked));
+        ChartValueExtents GetExtents() => GetCartesianChartDataExtents(
+            seriesVectors ?? ReadSharedChartSeriesVectors(plot, workbook, plotVisibleOnly), stacked, percentStacked);
     }
 
     // Called after shared-axis ownership is established. Preserve the existing

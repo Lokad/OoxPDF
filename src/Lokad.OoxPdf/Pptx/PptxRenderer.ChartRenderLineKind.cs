@@ -47,9 +47,8 @@ internal sealed partial class PptxRenderer
                 ChartShapeStyle plotAreaStyle = ToChartShapeStyle(sceneChart.PlotAreaStyle);
                 ChartAxisSource valueAxis = ReadChartValueAxesForPlot(sceneChart, linePlot).FirstOrDefault();
                 bool categoryPointsOnTickMarks = ResolveSceneCategoryAxisLabelsOnTickMarks(valueAxis.SceneAxis);
-                ChartValueExtents dataExtents = workbook is null
-                    ? GetCartesianChartDataExtents(lineSeriesVectors, lineOptions.Stacked, lineOptions.PercentStacked)
-                    : GetSharedLineChartValueExtents(linePlot, lineOptions.Stacked, lineOptions.PercentStacked, workbook, plotVisibleOnly);
+                ChartValueExtents dataExtents = GetSharedLineChartValueExtents(
+                    linePlot, lineOptions.Stacked, lineOptions.PercentStacked, workbook, plotVisibleOnly, lineSeriesVectors);
                 ChartValueExtents valueExtents = ReadCartesianChartValueAxisExtents(sceneChart, valueAxis.SceneAxis, dataExtents,
                     lineOptions.PercentStacked, useNearMaximumHeadroom: !lineOptions.PercentStacked,
                     nearMaximumHeadroomRatio: PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
