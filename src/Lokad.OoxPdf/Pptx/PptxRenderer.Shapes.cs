@@ -492,11 +492,16 @@ internal sealed partial class PptxRenderer
                 }
             }
 
+            bool useFilledLineEndOutline = preset == "arc" &&
+                !hasDash &&
+                lineCap is null &&
+                headEnd.IsNone &&
+                tailEnd.Kind is PptxSceneLineEndKind.Triangle or PptxSceneLineEndKind.Arrow or PptxSceneLineEndKind.Stealth;
             bool transparentStroke = strokeAlpha < 0.999d;
             if (transparentStroke)
             {
                 graphics.SaveState();
-                graphics.SetAlpha(1d, strokeAlpha);
+                graphics.SetAlpha(useFilledLineEndOutline ? strokeAlpha : 1d, strokeAlpha);
             }
 
             graphics.SetStrokeRgb(stroke.Red, stroke.Green, stroke.Blue);
@@ -519,11 +524,6 @@ internal sealed partial class PptxRenderer
 
             if (preset == "arc")
             {
-                bool useFilledLineEndOutline =
-                    !hasDash &&
-                    lineCap is null &&
-                    headEnd.IsNone &&
-                    tailEnd.Kind is PptxSceneLineEndKind.Triangle or PptxSceneLineEndKind.Arrow or PptxSceneLineEndKind.Stealth;
                 if (useFilledLineEndOutline)
                 {
                     graphics.SetFillRgb(stroke.Red, stroke.Green, stroke.Blue);

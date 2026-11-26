@@ -948,7 +948,7 @@ internal static partial class PptxShapesTests
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
 
         string pdf = File.ReadAllText(output, Encoding.ASCII).ReplaceLineEndings("\n");
-        TestAssert.True(Regex.IsMatch(pdf, @"(?m)^0 0\.502 0 RG\n0 0\.502 0 rg\n2 w\n216 432 m\n[^\n]+ 144 396 c\n[^\n]+ 72 432 c\nS$"),
+        TestAssert.True(Regex.IsMatch(pdf, @"(?m)^0 0\.502 0 RG\n2 w\n216 432 m\n[^\n]+ 144 396 c\n[^\n]+ 72 432 c\nS$"),
             "The green arc must sweep below its chord in source coordinates, through (144, 396) in PDF coordinates.");
         TestAssert.True(diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CUSTOM_GEOMETRY"), "Renderable custom arc geometry should not emit the unsupported diagnostic.");
     }
@@ -1025,10 +1025,9 @@ internal static partial class PptxShapesTests
 
         OoxPdfConverter.Convert(input, output);
 
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("0.267 G", pdf);
-        TestAssert.Contains(" c", pdf);
-        TestAssert.DoesNotContain("72 396 72 72 re S", pdf);
+        string pdf = File.ReadAllText(output, Encoding.ASCII).ReplaceLineEndings("\n");
+        TestAssert.True(Regex.IsMatch(pdf, @"(?m)^0\.267 G\n1 w\n\[4 3 *\] 0 d\n144 432 m\n[^\n]+ 108 396 c\nS$"),
+            "The dashed gray stroke must follow the quarter arc within the authored frame.");
     }
 
     public static void PptxSyntheticPresetArcConvertsVisualAnglesOnEllipse()
@@ -1067,12 +1066,17 @@ internal static partial class PptxShapesTests
             """<a:gd name="adj1" fmla="val 16200000"/><a:gd name="adj2" fmla="val 19500000"/>""",
             flipVertical: true, expectedTip: "185.841 461.297");
 
-    public static void PptxSyntheticPresetArcUsesOfficeDefaultAdjustments() =>
-        CheckPresetArcStealthTail(guides: "", flipVertical: false, expectedTip: "216 432");
+    public static void PptxSyntheticPresetArcUsesOfficeDefaultAdjustments()
+    {
+        foreach (int alpha in new[] { 100000, 50000, 0 })
+            CheckPresetArcStealthTail(guides: "", flipVertical: false, expectedTip: "216 432", alpha: alpha);
+    }
 
-    private static void CheckPresetArcStealthTail(string guides, bool flipVertical, string expectedTip)
+    private static void CheckPresetArcStealthTail(string guides, bool flipVertical, string expectedTip, int alpha = 100000)
     {
         string flip = flipVertical ? " flipV=\"1\"" : "";
+        string color = alpha == 100000 ? """<a:srgbClr val="444444"/>""" :
+            FormattableString.Invariant($$"""<a:srgbClr val="444444"><a:alpha val="{{alpha}}"/></a:srgbClr>""");
         using var input = TestFixtures.CreateZipPackage(new Dictionary<string, string>
         {
             ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
@@ -1086,18 +1090,26 @@ internal static partial class PptxShapesTests
                     <p:spPr>
                       <a:xfrm{{flip}}><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="914400"/></a:xfrm>
                       <a:prstGeom prst="arc"><a:avLst>{{guides}}</a:avLst></a:prstGeom>
-                      <a:ln w="19050"><a:solidFill><a:srgbClr val="444444"/></a:solidFill><a:tailEnd type="stealth"/></a:ln>
+                      <a:ln w="19050"><a:solidFill>{{color}}</a:solidFill><a:tailEnd type="stealth"/></a:ln>
                     </p:spPr>
                   </p:sp></p:spTree></p:cSld>
                 </p:sld>
                 """
         });
-        string content = PptxTests.RenderSingleSlideContent(input);
+        PdfPage page = PptxTests.RenderSingleSlidePage(input);
+        string content = page.Content.ReplaceLineEndings("\n");
         // The ellipse starts at its top midpoint, with half the 1.5pt line width on either side.
         // The second closed contour is the four-vertex stealth tail at the end angle.
         const string line = @"[-\d.]+ [-\d.]+ l\s+";
-        string outline = $@"(?m)^0\.267 g\s+144 468\.75 m\s+(?:{line})+144 467\.25 l\s+144 468\.75 l\s+h\s+"
+        string outline = $@"0\.267 g\s+144 468\.75 m\s+(?:{line})+144 467\.25 l\s+144 468\.75 l\s+h\s+"
             + $@"{Regex.Escape(expectedTip)} m\s+(?:{line}){{3}}h\s+f\*?(?:\s|$)";
+        if (alpha != 100000)
+        {
+            PdfExtGStateResource state = page.ExtGStates.Single();
+            TestAssert.Equal(alpha / 100000d, state.FillAlpha);
+            TestAssert.Equal(alpha / 100000d, state.StrokeAlpha);
+            outline = $@"q\n/{Regex.Escape(state.ResourceName)} gs\n0\.267 G\n1\.5 w\n" + outline + "Q";
+        }
         TestAssert.True(Regex.IsMatch(content, outline),
             $"Expected the filled arc band and the stealth tail with tip at {expectedTip}.");
         TestAssert.True(!Regex.IsMatch(content, @"(?:^|\s)[Ss](?:\s|$)"), "The arc and tail share one filled outline.");

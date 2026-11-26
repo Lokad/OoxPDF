@@ -536,11 +536,14 @@ internal static class PptxTests
         return File.ReadAllText(output, Encoding.ASCII);
     }
 
-    internal static string RenderSingleSlideContent(Stream input, IFontResolver? fontResolver = null)
+    internal static string RenderSingleSlideContent(Stream input, IFontResolver? fontResolver = null) =>
+        RenderSingleSlidePage(input, fontResolver).Content;
+
+    internal static PdfPage RenderSingleSlidePage(Stream input, IFontResolver? fontResolver = null)
     {
         using var package = OoxPackage.Open(input, default);
         return new PptxRenderer(fontResolver).RenderPagesAsync(
-            new PptxReader().Read(package, default), package, null, default).ToBlockingEnumerable().Single().Content;
+            new PptxReader().Read(package, default), package, null, default).ToBlockingEnumerable().Single();
     }
 
     internal static PptxTextFrameModelSnapshot InspectPlaceholderBodyProperties(string layoutXml, string slideXml, string? masterXml = null)

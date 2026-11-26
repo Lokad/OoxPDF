@@ -112,8 +112,12 @@ internal sealed partial class PptxRenderer
                 graphics.SetAlpha(strokeAlpha, strokeAlpha);
             }
 
+            bool hasMarkers = !headEnd.IsNone || !tailEnd.IsNone;
             graphics.SetStrokeRgb(stroke.Red, stroke.Green, stroke.Blue);
-            graphics.SetFillRgb(stroke.Red, stroke.Green, stroke.Blue);
+            if (hasMarkers)
+            {
+                graphics.SetFillRgb(stroke.Red, stroke.Green, stroke.Blue);
+            }
             graphics.SetLineWidth(lineWidth);
             if (hasDash)
             {
@@ -131,7 +135,6 @@ internal sealed partial class PptxRenderer
                 graphics.SetLineJoin(join);
             }
 
-            bool hasMarkers = !headEnd.IsNone || !tailEnd.IsNone;
             bool useFilledTail = !hasDash && lineCap is null && lineJoin is null && headEnd.IsNone &&
                 tailEnd.Kind is PptxSceneLineEndKind.Triangle or PptxSceneLineEndKind.Arrow or PptxSceneLineEndKind.Stealth;
             foreach (PptxSceneCustomPath path in customGeometry.Paths.Where(path => path.AllowsStroke))
