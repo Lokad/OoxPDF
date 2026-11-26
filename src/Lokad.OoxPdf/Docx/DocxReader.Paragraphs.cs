@@ -60,6 +60,8 @@ internal sealed partial class DocxReader
         var inlineReferences = new List<DocxInlineReference>();
         var commentRanges = new List<DocxCommentRange>();
         var openCommentRanges = new List<DocxCommentRangeStart>();
+        XName commentStartName = WordprocessingNamespace + "commentRangeStart";
+        XName commentEndName = WordprocessingNamespace + "commentRangeEnd";
         var revisionRanges = new List<DocxRevisionRange>();
         var openRevisionRanges = new List<DocxRevisionRangeStart>();
         var fieldReferences = new List<DocxFieldReference>();
@@ -172,16 +174,9 @@ internal sealed partial class DocxReader
             {
                 return AddHyperlinkContainer(child, revision, AddInlineContainerChild, GetInlineItemCount, ref sourceRunIndex, runs, hyperlinkSpans, relationships);
             }
-            else if (child.Name == WordprocessingNamespace + "commentRangeStart")
+            else if (child.Name == commentStartName || child.Name == commentEndName)
             {
-                EnsureInlineContent();
-                AddCommentRangeStart(child, openCommentRanges, sourceRunIndex, runs, inlineItems!.Count);
-                return false;
-            }
-            else if (child.Name == WordprocessingNamespace + "commentRangeEnd")
-            {
-                EnsureInlineContent();
-                AddCommentRangeEnd(child, openCommentRanges, commentRanges, sourceRunIndex, runs, inlineItems!.Count);
+                RecordCommentBoundary(child, sourceRunIndex, GetInlineItemCount());
                 return false;
             }
             else if (IsRevisionMarkerElement(child))
@@ -243,6 +238,14 @@ internal sealed partial class DocxReader
             if (cellBookmarks is { } scope &&
                 OoxXml.NormalizeDecimalId((string?)end.Attribute(WordprocessingNamespace + "id")) is { } id)
                 scope.RecordEnd(id);
+        }
+
+        void RecordCommentBoundary(XElement marker, int sourceIndex, int itemIndex, int? textOffset = null)
+        {
+            if (marker.Name == commentStartName)
+                AddCommentRangeStart(marker, openCommentRanges, sourceIndex, runs, itemIndex, textOffset);
+            else
+                AddCommentRangeEnd(marker, openCommentRanges, commentRanges, sourceIndex, runs, itemIndex, textOffset);
         }
 
         bool AddRevisionRunContainer(XElement container, DocxRevisionInfo? inheritedRevision)
@@ -495,12 +498,15 @@ internal sealed partial class DocxReader
             // pictures and boxes together without duplicating current items.
             if (inlineItems is null && (images.Count > firstImage ||
                 firstBox is int boxStart && inlineTextBoxes.Count > boxStart))
-                inlineItems = DocxInlineContent.FromPrefix(runs.Take(firstRun).ToArray(), images.Take(firstImage).ToArray(), cancellationToken,
-                    inlineTextBoxes.Take(firstBox ?? inlineTextBoxes.Count).ToArray());
+                EnsureInlinePrefix(firstRun, firstImage, firstBox ?? inlineTextBoxes.Count);
             if (inlineItems is not null)
                 DocxInlineContent.AppendRun(inlineItems, runs.Skip(firstRun), images.Skip(firstImage), cancellationToken,
                     inlineTextBoxes.Skip(firstBox ?? inlineTextBoxes.Count));
         }
+
+        void EnsureInlinePrefix(int firstRun, int firstImage, int firstBox) =>
+            inlineItems ??= DocxInlineContent.FromPrefix(runs.Take(firstRun).ToArray(), images.Take(firstImage).ToArray(),
+                cancellationToken, inlineTextBoxes.Take(firstBox).ToArray());
 
         int GetInlineItemCount()
         {
@@ -690,10 +696,11 @@ internal sealed partial class DocxReader
                 bool hasVmlStory = false;
                 XName bookmarkStartName = WordprocessingNamespace + "bookmarkStart";
                 XName bookmarkEndName = WordprocessingNamespace + "bookmarkEnd";
-                // Bind visible cached bookmarks to the computed result and keep
-                // cell boundaries in source order.
+                bool sawStoredContent = false;
+                List<XElement>? trailingCommentBoundaries = null;
                 foreach (var storedScope in EnumerateRevisionScopedChildren(field.Elements(), markupMode, cancellationToken,
-                    [WordprocessingNamespace + "r", bookmarkStartName, bookmarkEndName], revision, inlineContent: true, includeNestedFieldResults: true))
+                    [WordprocessingNamespace + "r", bookmarkStartName, bookmarkEndName, commentStartName, commentEndName],
+                    revision, inlineContent: true, includeNestedFieldResults: true))
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     if (storedScope.Element.Name == bookmarkStartName)
@@ -705,6 +712,20 @@ internal sealed partial class DocxReader
                     if (storedScope.Element.Name == bookmarkEndName)
                     {
                         RecordCellBookmarkEnd(storedScope.Element);
+                        continue;
+                    }
+                    if (storedScope.Element.Name == commentStartName || storedScope.Element.Name == commentEndName)
+                    {
+                        if (!publishesCounter) continue;
+                        if (sawStoredContent)
+                        {
+                            (trailingCommentBoundaries ??= []).Add(storedScope.Element);
+                        }
+                        else
+                        {
+                            EnsureInlinePrefix(fieldTextRunIndex, fieldImageIndex, fieldBoxIndex);
+                            RecordCommentBoundary(storedScope.Element, fieldSourceRunIndex, fieldItemIndex ?? inlineItems!.Count, textOffset: 0);
+                        }
                         continue;
                     }
                     XElement resultRun = storedScope.Element;
@@ -732,6 +753,7 @@ internal sealed partial class DocxReader
                             resultTextOffset = 0;
                             resultDrawingOrder = 0;
                             hasVmlStory = true;
+                            NoteStoredContent();
                         }
                         else
                         {
@@ -757,7 +779,20 @@ internal sealed partial class DocxReader
                         counterReplacedByOuterField: !publishesCounter);
                 }
                 PublishInlineRunItems(pendingRun, pendingImage, pendingBox);
+                if (trailingCommentBoundaries is not null)
+                    foreach (XElement marker in trailingCommentBoundaries)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        RecordCommentBoundary(marker, sourceRunIndex, GetInlineItemCount());
+                    }
                 return ownsCounter || hasVmlStory || images.Count != fieldImageIndex || inlineTextBoxes.Count != fieldBoxIndex;
+
+                void NoteStoredContent()
+                {
+                    sawStoredContent = true;
+                    // An interior boundary belongs to the discarded cached content.
+                    trailingCommentBoundaries?.Clear();
+                }
 
                 void AddCachedDrawings(XElement resultRun, DocxRevisionInfo? runRevision,
                     DocxResolvedRunProperties resultStyle, DocxRunStyleResolution resultResolution)
@@ -766,6 +801,7 @@ internal sealed partial class DocxReader
                     RunDrawings stored = ReadRunDrawings(resultRun, ownerIndex, resultStyle.Hidden == true, runRevision);
                     if (stored.Pictures.Count != 0 || stored.TextBoxes.Count != 0)
                     {
+                        NoteStoredContent();
                         RetainDrawingRevision(runRevision);
                         drawingSourceIndex ??= sourceRunIndex++;
                         DocxTextRun? pictureOwner = null;
@@ -795,7 +831,9 @@ internal sealed partial class DocxReader
                                 });
                         }
                     }
-                    resultTextOffset += ReadRunText(resultRun).Length;
+                    int storedTextLength = ReadRunText(resultRun).Length;
+                    if (storedTextLength != 0) NoteStoredContent();
+                    resultTextOffset += storedTextLength;
                 }
 
                 void RetainDrawingRevision(DocxRevisionInfo? drawingRevision)
@@ -1605,12 +1643,13 @@ internal sealed partial class DocxReader
         List<DocxCommentRangeStart> openCommentRanges,
         int sourceRunIndex,
         List<DocxTextRun> runs,
-        int inlineItemIndex)
+        int inlineItemIndex,
+        int? textOffset = null)
     {
         openCommentRanges.Add(new DocxCommentRangeStart(
             OoxXml.NormalizeDecimalId((string?)rangeStart.Attribute(WordprocessingNamespace + "id")),
             sourceRunIndex,
-            RelativeRunTextOffset(runs, sourceRunIndex))
+            textOffset ?? RelativeRunTextOffset(runs, sourceRunIndex))
         {
             InlineItemIndex = inlineItemIndex,
             FractionNumerator = rangeStart.Parent is { } parent && parent.Name == MathNamespace + "num" &&
@@ -1624,7 +1663,8 @@ internal sealed partial class DocxReader
         List<DocxCommentRange> commentRanges,
         int sourceRunIndex,
         List<DocxTextRun> runs,
-        int inlineItemIndex)
+        int inlineItemIndex,
+        int? textOffset = null)
     {
         string? id = OoxXml.NormalizeDecimalId((string?)rangeEnd.Attribute(WordprocessingNamespace + "id"));
         int startIndex = openCommentRanges.FindLastIndex(start => string.Equals(start.Id, id, StringComparison.Ordinal));
@@ -1639,7 +1679,7 @@ internal sealed partial class DocxReader
             start?.SourceRunIndex,
             start?.TextOffset,
             sourceRunIndex,
-            RelativeRunTextOffset(runs, sourceRunIndex),
+            textOffset ?? RelativeRunTextOffset(runs, sourceRunIndex),
             ReferenceSourceRunIndex: null,
             ReferenceTextOffset: null)
         {

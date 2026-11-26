@@ -3344,6 +3344,7 @@
     "StagedPageMemory"
   ],
   "docx-comment-endpoints": [
+    "=DocxComputedSimpleFieldCommentsKeepVisibleRange",
     "DocxCommentEndpoint",
     "DocxCommentUnknownEndpoints",
     "DocxWordCompatiblePrintScale",
@@ -17656,6 +17657,7 @@
     "DocxMarkupModesFilterHyperlinkAndFieldRevisionsBeforeLayout"
   ],
   "docx-dynamic-field-composition-neighbors": [
+    "=DocxComputedSimpleFieldCommentsKeepVisibleRange",
     "DocxCellPageBreakAdmissionUsesComputedContentInsteadOfFieldCache",
     "DocxFieldTextCounterInputsRemainIndependent",
     "DocxInlineCompositionCounterAtomsMeasureOnlyTheirOwnedInputs",

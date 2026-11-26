@@ -60,6 +60,45 @@ internal static class DocxFieldsTests
         }
     }
 
+    public static void DocxComputedSimpleFieldCommentsKeepVisibleRange()
+    {
+        const OoxPdfDocxMarkupMode mode = OoxPdfDocxMarkupMode.AllMarkup;
+        var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(), mode,
+            OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        var control = ReadField(startInside: false, endInside: false);
+        var expectedRange = control.Paragraphs.Single().CommentRanges.Single();
+        PdfPage expectedPage = Render(control);
+        TestAssert.Equal(1, DocxTests.CountWordCompatibleCommentRangeFills(expectedPage.Content));
+        string painted = string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(expectedPage, usePageCoordinates: true,
+            honorActualText: false).Select(show => show.Text));
+        TestAssert.Contains("Before 1 After", painted);
+
+        foreach (var (startInside, endInside) in new[] { (true, false), (false, true), (true, true) })
+        {
+            var document = ReadField(startInside, endInside);
+            TestAssert.Equal(expectedRange, document.Paragraphs.Single().CommentRanges.Single());
+            TestAssert.Equal(expectedPage.Content, Render(document).Content);
+        }
+
+        PdfPage Render(DocxDocument document) => renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
+
+        static DocxDocument ReadField(bool startInside, bool endInside) =>
+            DocxInlineCompositionTests.ReadMutation("docx-markup-comment-unresolved", mode, false, false, (xml, w, _) =>
+            {
+                var body = xml.Root!.Element(w + "body")!;
+                var section = body.Element(w + "sectPr")!;
+                var start = Marker("commentRangeStart");
+                var end = Marker("commentRangeEnd");
+                var field = new XElement(w + "fldSimple", new XAttribute(w + "instr", " PAGE "),
+                    startInside ? start : null, Run("7"), Run("3"), endInside ? end : null);
+                body.ReplaceNodes(new XElement(w + "p", Run("Before "), startInside ? null : start, field,
+                    endInside ? null : end, new XElement(w + "r", Marker("commentReference")), Run(" After")), section);
+
+                XElement Marker(string name) => new(w + name, new XAttribute(w + "id", "1"));
+                XElement Run(string value) => new(w + "r", new XElement(w + "t", new XAttribute(XNamespace.Xml + "space", "preserve"), value));
+            });
+    }
+
     private static DocxDocument ReadComputedFieldLink(string kind, int cachedRuns, OoxPdfDocxMarkupMode mode) =>
         DocxInlineCompositionTests.ReadMutation("Composition/report", mode, false, false, (xml, w, _) =>
         {
