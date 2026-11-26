@@ -16,7 +16,8 @@ internal sealed partial class PptxRenderer
         string? sourcePartName,
         GroupTransform transform,
         List<PdfLinkAnnotation> annotations,
-        HashSet<string> reportedIds)
+        HashSet<string> reportedIds,
+        PdfRectangle? paintedStrokeBounds = null)
     {
         if (!node.HyperlinkClick.IsDefined ||
             node.Kind is PptxSceneNodeKind.Unknown)
@@ -24,46 +25,10 @@ internal sealed partial class PptxRenderer
             return;
         }
 
-        ShapeBounds? sourceBounds = node.Bounds is { } bounds ? ToShapeBounds(bounds)
-            : node.Kind == PptxSceneNodeKind.Shape
-                ? ReadShapeBounds(node.Source, FindInheritedPlaceholderShapes(node.Source, context.InheritedXml), out _)
-                : null;
-        if (sourceBounds is null) return;
-        ShapeBounds mapped = transform.Apply(sourceBounds.Value);
-        double x = OoxUnits.EmuToPoints(mapped.X);
-        double yTop = OoxUnits.EmuToPoints(mapped.Y);
-        double width = OoxUnits.EmuToPoints(mapped.Width);
-        double height = OoxUnits.EmuToPoints(mapped.Height);
-        double y = context.Document.SlideHeightPoints - yTop - height;
-        var frame = new PdfRectangle(x, y, width, height);
-        if (width <= 0d || height <= 0d)
-        {
-            if (width < 0d || height < 0d || width == height ||
-                node.Shape is not { Preset: "line" or "straightConnector1", HasCustomGeometry: false,
-                    Line: { HasLine: true, Width: > 0d, Alpha: > 0d } line })
-            {
-                return;
-            }
-
-            // An axis-aligned line can have a zero-area source frame. Its
-            // painted stroke still provides a clickable area before rotation.
-            double halfStroke = line.Width / 2d;
-            double endCap = line.Cap is 1 or 2 ? halfStroke : 0d;
-            double padX = width == 0d ? halfStroke : endCap;
-            double padY = height == 0d ? halfStroke : endCap;
-            frame = new PdfRectangle(x - padX, y - padY, width + 2d * padX, height + 2d * padY);
-        }
-
-        // Chart/table frame painters retain an unrotated frame fallback. Keep
-        // navigation on their actual paint; only shape-based owners use this matrix.
-        if (node.Kind is PptxSceneNodeKind.Shape or PptxSceneNodeKind.Connector or PptxSceneNodeKind.Picture or PptxSceneNodeKind.Group &&
-            (Math.Abs(mapped.RotationDegrees) > 0.001d || mapped.FlipHorizontal || mapped.FlipVertical))
-        {
-            frame = TransformedRectangleBounds(frame, ShapeTransformMatrix(x, y, width, height, mapped));
-        }
-
-        if (!TryIntersectWithSlideBounds(frame.X, frame.Y, frame.Width, frame.Height, context.Document,
-            out x, out y, out width, out height))
+        PdfRectangle? candidate = paintedStrokeBounds ?? GetNodeLinkFrame(node, context, transform);
+        if (candidate is not { } frame ||
+            !TryIntersectWithSlideBounds(frame.X, frame.Y, frame.Width, frame.Height, context.Document,
+                out double x, out double y, out double width, out double height))
         {
             return;
         }
@@ -72,6 +37,36 @@ internal sealed partial class PptxRenderer
         var resolution = ResolveHyperlink(context, sourcePartName, click.RelationshipId, click.Action, reportedIds);
         if (resolution.Resolved)
             annotations.Add(resolution.CreateAnnotation(x, y, width, height));
+    }
+
+    private static PdfRectangle? GetNodeLinkFrame(PptxSceneNode node, PptxRenderContext context, GroupTransform transform)
+    {
+        ShapeBounds? sourceBounds = node.Bounds is { } bounds ? ToShapeBounds(bounds)
+            : node.Kind == PptxSceneNodeKind.Shape
+                ? ReadShapeBounds(node.Source, FindInheritedPlaceholderShapes(node.Source, context.InheritedXml), out _)
+                : null;
+        if (sourceBounds is null) return null;
+        ShapeBounds mapped = transform.Apply(sourceBounds.Value);
+        double x = OoxUnits.EmuToPoints(mapped.X);
+        double yTop = OoxUnits.EmuToPoints(mapped.Y);
+        double width = OoxUnits.EmuToPoints(mapped.Width);
+        double height = OoxUnits.EmuToPoints(mapped.Height);
+        if (width <= 0d || height <= 0d)
+        {
+            return null;
+        }
+
+        double y = context.Document.SlideHeightPoints - yTop - height;
+        var frame = new PdfRectangle(x, y, width, height);
+        // Chart/table frame painters retain an unrotated frame fallback. Keep
+        // navigation on their actual paint; only shape-based owners use this matrix.
+        if (node.Kind is PptxSceneNodeKind.Shape or PptxSceneNodeKind.Connector or PptxSceneNodeKind.Picture or PptxSceneNodeKind.Group &&
+            (Math.Abs(mapped.RotationDegrees) > 0.001d || mapped.FlipHorizontal || mapped.FlipVertical))
+        {
+            frame = TransformedRectangleBounds(frame, ShapeTransformMatrix(x, y, width, height, mapped));
+        }
+
+        return frame;
     }
 
     // Each authored title, axis or label link covers the resolved glyph

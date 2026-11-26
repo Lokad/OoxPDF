@@ -304,6 +304,9 @@ internal static class PptxHyperlinksTests
                     {{Connector(13, 60, 90, 60, 0, cap: "rnd")}}
                     {{Connector(14, 72, 240, 144, 0, visible: false)}}
                     {{Connector(15, -100, 310, 50, 0)}}
+                    {{Connector(16, 72, 340, 144, 0, preset: "curvedConnector2")}}
+                    {{Connector(17, 290, 350, 0, 108, preset: "curvedConnector3")}}
+                    {{Connector(18, 72, 480, 100, 0, preset: "bentConnector2")}}
                   </p:spTree></p:cSld>
                 </p:sld>
                 """
@@ -315,7 +318,8 @@ internal static class PptxHyperlinksTests
         PdfRectangle[] expected =
         [
             new(72d, 396d, 144d, 72d), new(72d, 379d, 144d, 2d), new(289d, 324d, 2d, 108d),
-            new(439d, 320d, 2d, 80d), new(0d, 200d, 1d, 90d), new(59d, 449d, 62d, 2d)
+            new(439d, 320d, 2d, 80d), new(0d, 200d, 1d, 90d), new(59d, 449d, 62d, 2d),
+            new(72d, 199d, 144d, 2d), new(289d, 82d, 2d, 108d), new(72d, 59d, 100d, 2d)
         ];
         TestAssert.Equal(expected.Length, annotations.Count);
         for (int index = 0; index < expected.Length; index++)
@@ -325,11 +329,11 @@ internal static class PptxHyperlinksTests
             TestAssert.Equal("https://example.invalid/connector", link.Uri);
             TestAssert.True(Math.Abs(bounds.X - link.X) < .001d && Math.Abs(bounds.Y - link.Y) < .001d &&
                 Math.Abs(bounds.Width - link.Width) < .001d && Math.Abs(bounds.Height - link.Height) < .001d,
-                $"Connector {index + 8} has the expected clickable rectangle.");
+                $"Clickable rectangle {index + 1} covers its painted connector.");
         }
 
         static string Connector(int id, int x, int y, int width, int height,
-            int rotation = 0, string cap = "flat", bool visible = true)
+            int rotation = 0, string cap = "flat", bool visible = true, string preset = "line")
         {
             string fill = visible ? """<a:solidFill><a:srgbClr val="000000"/></a:solidFill>""" : "<a:noFill/>";
             return $$"""
@@ -337,7 +341,7 @@ internal static class PptxHyperlinksTests
                   <p:nvCxnSpPr><p:cNvPr id="{{id}}" name="LinkedConnector{{id}}"><a:hlinkClick r:id="rIdCxnLink"/></p:cNvPr><p:cNvCxnSpPr/><p:nvPr/></p:nvCxnSpPr>
                   <p:spPr>
                     <a:xfrm rot="{{rotation * 60000}}"><a:off x="{{x * 12700}}" y="{{y * 12700}}"/><a:ext cx="{{width * 12700}}" cy="{{height * 12700}}"/></a:xfrm>
-                    <a:prstGeom prst="line"><a:avLst/></a:prstGeom>
+                    <a:prstGeom prst="{{preset}}"><a:avLst/></a:prstGeom>
                     <a:ln w="25400" cap="{{cap}}">{{fill}}</a:ln>
                   </p:spPr>
                 </p:cxnSp>

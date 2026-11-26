@@ -665,7 +665,8 @@ internal sealed partial class PptxRenderer
         images.Add(resource);
     }
 
-    private static void StrokePresetShape(PdfGraphicsBuilder graphics, string preset,
+    // Returns true for a stroked rectangular frame.
+    private static bool StrokePresetShape(PdfGraphicsBuilder graphics, string preset,
         double x, double y, double width, double height, IReadOnlyDictionary<string, double>? adjustments)
     {
         if (preset == "ellipse") graphics.StrokeEllipse(x, y, width, height);
@@ -673,7 +674,13 @@ internal sealed partial class PptxRenderer
             graphics.StrokeRoundedRectangle(x, y, width, height, ReadRoundRectangleRadius(adjustments, width, height));
         else if (TryCreatePresetPolygonPoints(preset, x, y, width, height, out (double X, double Y)[] points))
             graphics.StrokePolygon(points);
-        else graphics.StrokeRectangle(x, y, width, height);
+        else
+        {
+            graphics.StrokeRectangle(x, y, width, height);
+            return true;
+        }
+
+        return false;
     }
 
     private static void ClipToPresetShape(

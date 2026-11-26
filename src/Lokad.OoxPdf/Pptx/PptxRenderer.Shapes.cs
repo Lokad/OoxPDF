@@ -65,7 +65,7 @@ internal sealed partial class PptxRenderer
         graphics.RestoreState();
     }
 
-    private static void RenderShape(
+    private static PdfRectangle? RenderShape(
         PptxSceneNode shape,
         PptxDocument document,
         PdfGraphicsBuilder graphics,
@@ -79,16 +79,16 @@ internal sealed partial class PptxRenderer
     {
         if (shape.Shape is null || shape.Bounds is null)
         {
-            return;
+            return null;
         }
 
         cancellationToken.ThrowIfCancellationRequested();
         if (shape.Source.Element(PresentationNamespace + "spPr") is null)
         {
-            return;
+            return null;
         }
 
-        RenderShape(
+        return RenderShape(
             document,
             graphics,
             diagnosticSink,
@@ -111,10 +111,11 @@ internal sealed partial class PptxRenderer
             ToLineStyle(shape.Shape.Line),
             shape.Shape.HeadEnd,
             shape.Shape.TailEnd,
+            shape.HyperlinkClick.IsDefined,
             cancellationToken);
     }
 
-    private static void RenderShape(
+    private static PdfRectangle? RenderShape(
         PptxDocument document,
         PdfGraphicsBuilder graphics,
         Action<OoxPdfDiagnostic>? diagnosticSink,
@@ -137,6 +138,7 @@ internal sealed partial class PptxRenderer
         LineStyle line,
         PptxSceneLineEnd headEnd,
         PptxSceneLineEnd tailEnd,
+        bool hasHyperlink,
         CancellationToken cancellationToken)
     {
         ShapeBounds bounds = groupTransform.Apply(rawBounds);
@@ -242,7 +244,7 @@ internal sealed partial class PptxRenderer
                 graphics.RestoreState();
             }
 
-            return;
+            return null;
         }
 
         if (preset is "line" or "straightConnector1")
@@ -327,7 +329,7 @@ internal sealed partial class PptxRenderer
                 graphics.RestoreState();
             }
 
-            return;
+            return CollapsedStrokeLinkBounds(lineCap);
         }
 
         if (preset is "curvedConnector2" or "curvedConnector3")
@@ -426,7 +428,7 @@ internal sealed partial class PptxRenderer
                 graphics.RestoreState();
             }
 
-            return;
+            return CollapsedStrokeLinkBounds(lineCap);
         }
 
         bool repeatSlideClipBeforeFill = hasStroke && hasFill && !transformed;
@@ -473,6 +475,7 @@ internal sealed partial class PptxRenderer
             }
         }
 
+        bool strokedFrame = false;
         if (hasStroke)
         {
             if (hasFill && !repeatSlideClipBeforeFill)
@@ -535,7 +538,7 @@ internal sealed partial class PptxRenderer
             }
             else
             {
-                StrokePresetShape(graphics, preset, x, y, width, height, presetAdjustments);
+                strokedFrame = StrokePresetShape(graphics, preset, x, y, width, height, presetAdjustments);
             }
 
             if (hasDash)
@@ -562,6 +565,26 @@ internal sealed partial class PptxRenderer
         if (transformed)
         {
             graphics.RestoreState();
+        }
+
+        return strokedFrame ? CollapsedStrokeLinkBounds(cap: null) : null;
+
+        PdfRectangle? CollapsedStrokeLinkBounds(int? cap)
+        {
+            if (!hasHyperlink || !hasStroke || strokeAlpha <= 0d || lineWidth <= 0d ||
+                !((width == 0d && height > 0d) || (width > 0d && height == 0d)))
+            {
+                return null;
+            }
+
+            // A stroke supplies area around the collapsed frame. Use the
+            // original frame as the pivot for the paint and link transforms.
+            double halfStroke = lineWidth / 2d;
+            double endCap = cap is 1 or 2 ? halfStroke : 0d;
+            double padX = width == 0d ? halfStroke : endCap;
+            double padY = height == 0d ? halfStroke : endCap;
+            var frame = new PdfRectangle(x - padX, y - padY, width + 2d * padX, height + 2d * padY);
+            return transformed ? TransformedRectangleBounds(frame, ShapeTransformMatrix(x, y, width, height, bounds)) : frame;
         }
     }
 }

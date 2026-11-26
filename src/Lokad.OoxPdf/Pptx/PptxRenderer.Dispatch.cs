@@ -160,13 +160,10 @@ internal sealed partial class PptxRenderer
             case PptxSceneNodeKind.Shape:
                 if (ShouldRenderSceneNode(node, renderPlaceholders))
                 {
-                    if (HasDrawableShape())
-                    {
-                        PaintClippedShape(ref imageIndex);
-                    }
+                    var shapeLinkBounds = HasDrawableShape() ? PaintClippedShape(ref imageIndex) : null;
 
                     // Node-level links go first so run-level links sit above them.
-                    AddNodeHyperlinkAnnotation(node, context, sourcePartName, transform, linkAnnotations, reportedHyperlinkIds);
+                    AddNodeHyperlinkAnnotation(node, context, sourcePartName, transform, linkAnnotations, reportedHyperlinkIds, shapeLinkBounds);
                     RenderTextNode(
                         node,
                         context,
@@ -182,8 +179,8 @@ internal sealed partial class PptxRenderer
 
                 break;
             case PptxSceneNodeKind.Connector:
-                PaintClippedShape(ref imageIndex);
-                AddNodeHyperlinkAnnotation(node, context, sourcePartName, transform, linkAnnotations, reportedHyperlinkIds);
+                var connectorLinkBounds = PaintClippedShape(ref imageIndex);
+                AddNodeHyperlinkAnnotation(node, context, sourcePartName, transform, linkAnnotations, reportedHyperlinkIds, connectorLinkBounds);
                 break;
             case PptxSceneNodeKind.Picture:
                 if (TryRenderPicture(
@@ -214,10 +211,10 @@ internal sealed partial class PptxRenderer
 
         }
 
-        void PaintClippedShape(ref int nextImageIndex)
+        PdfRectangle? PaintClippedShape(ref int nextImageIndex)
         {
             BeginSlideNodeClip(context, graphics);
-            RenderShape(
+            PdfRectangle? linkBounds = RenderShape(
                 node,
                 context.Document,
                 graphics,
@@ -229,6 +226,7 @@ internal sealed partial class PptxRenderer
                 ref nextImageIndex,
                 cancellationToken);
             EndSlideNodeClip(graphics);
+            return linkBounds;
         }
 
         bool HasDrawableShape()
