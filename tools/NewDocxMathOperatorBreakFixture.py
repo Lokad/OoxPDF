@@ -22,16 +22,36 @@ w = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
 m = "{http://schemas.openxmlformats.org/officeDocument/2006/math}"
 ET.register_namespace("w", w[1:-1])
 ET.register_namespace("m", m[1:-1])
+
+
+def bind_manifest(manifest, identifier, output):
+    path = output.relative_to(repo).as_posix()
+    digest = hashlib.sha256(output.read_bytes()).hexdigest().upper()
+    if manifest.exists():
+        pin = json.loads(manifest.read_text(encoding="utf-8"))[0]
+        assert pin["Input"] == path
+        assert pin["SourceSha256"] == source_sha
+        assert pin["Sha256"] == digest
+        return
+    manifest.write_text(json.dumps([{
+        "Id": identifier, "Input": path, "SourceSha256": source_sha, "Sha256": digest,
+        "HeldOut": False, "ExpectedEquationCount": 0 if args.plain else 1, "ExpectedInlineImageCount": 0,
+        "ExpectedText": ["Before formula:", "after formula.", "Following prose."]
+    }], indent=2) + "\n", encoding="utf-8")
+
+
 for setting in (("default", "before", "after", "repeat") if args.story == "body" and args.line is None else ("default",)):
     for upright in (False, True):
         identifier = "math-literal-inline-break-" + setting + ("-" + args.story if args.story != "body" else "")
         identifier += ("-plain" if args.plain else "") + ("-line" + str(args.line) if args.line is not None else "") + ("-upright" if upright else "")
         output = cases / ("PortableFonts" if upright else "CompositionProbes") / (identifier + ".docx")
         manifest = output.with_suffix(".json")
+        if not upright and setting == "default" and args.story == "body" and args.line is None and not args.plain:
+            output = source
+        elif upright and args.plain and args.story != "body" and args.line is None:
+            output = cases / "CompositionProbes" / (identifier.removesuffix("-upright") + ".docx")
         if output.exists():
-            pin = json.loads(manifest.read_text(encoding="utf-8"))[0]
-            assert pin["SourceSha256"] == source_sha
-            assert pin["Sha256"] == hashlib.sha256(output.read_bytes()).hexdigest().upper()
+            bind_manifest(manifest, identifier, output)
             continue
         with ZipFile(source) as parent:
             entries = {name: parent.read(name) for name in parent.namelist()}
@@ -100,9 +120,4 @@ for setting in (("default", "before", "after", "repeat") if args.story == "body"
         with ZipFile(output, "w", ZIP_DEFLATED) as result:
             for name, data in entries.items():
                 result.writestr(name, data)
-        manifest.write_text(json.dumps([{
-            "Id": identifier, "Input": output.relative_to(repo).as_posix(), "SourceSha256": source_sha,
-            "Sha256": hashlib.sha256(output.read_bytes()).hexdigest().upper(),
-            "HeldOut": False, "ExpectedEquationCount": 0 if args.plain else 1, "ExpectedInlineImageCount": 0,
-            "ExpectedText": ["Before formula:", "after formula.", "Following prose."]
-        }], indent=2) + "\n", encoding="utf-8")
+        bind_manifest(manifest, identifier, output)

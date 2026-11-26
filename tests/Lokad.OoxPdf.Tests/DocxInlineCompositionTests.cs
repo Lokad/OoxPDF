@@ -2359,7 +2359,9 @@ internal static partial class DocxInlineCompositionTests
         foreach (string setting in new[] { "default", "before", "after", "repeat" })
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
         {
-            var document = ReadMutation("CompositionProbes/math-literal-inline-break-" + setting, mode, true, true);
+            string fixture = setting == "default" ? "docx-omml-inline-overfull12"
+                : "CompositionProbes/math-literal-inline-break-" + setting;
+            var document = ReadMutation(fixture, mode, true, true);
             var renderer = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var diagnostics = new List<OoxPdfDiagnostic>();
