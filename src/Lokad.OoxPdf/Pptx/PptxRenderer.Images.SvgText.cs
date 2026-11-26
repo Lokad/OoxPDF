@@ -146,8 +146,19 @@ internal sealed partial class PptxRenderer
 
         bool TryReadPosition(string name, double percentageBasis, out double value)
         {
-            string text = ((string?)element.Attribute(name) ?? "0").Trim();
-            return text.EndsWith('%')
+            ReadOnlySpan<char> text = ((string?)element.Attribute(name) ?? "0").AsSpan().Trim();
+            if (name is "dx" or "dy")
+            {
+                // Only the first value can shift the whole label. Later zero
+                // values leave each character's natural position intact.
+                if (!TryReadSvgTextPositionToken(text, out text, out ReadOnlySpan<char> remaining) ||
+                    (!remaining.IsEmpty && !IsZeroSvgTextPositionList(remaining, allowLengths: true, cancellationToken)))
+                {
+                    value = 0d;
+                    return false;
+                }
+            }
+            return text.EndsWith("%", StringComparison.Ordinal)
                 ? TryReadSvgViewportLength(element, text, percentageBasis, out value)
                 : TryReadSvgLength(text, out value, relativeSize: size);
         }
@@ -156,20 +167,28 @@ internal sealed partial class PptxRenderer
     private static bool IsZeroSvgTextPositionList(ReadOnlySpan<char> values, bool allowLengths, CancellationToken cancellationToken)
     {
         values = values.Trim();
+        if (values.IsEmpty) return false;
         while (!values.IsEmpty)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            int separator = values.IndexOfAny(" ,\t\r\n");
-            ReadOnlySpan<char> token = separator < 0 ? values : values[..separator];
+            if (!TryReadSvgTextPositionToken(values, out ReadOnlySpan<char> token, out values)) return false;
             bool valid = allowLengths
                 ? TryReadSvgLength(token, out double value, relativeSize: 1d, allowPercent: true)
                 : double.TryParse(token, NumberStyles.Float, CultureInfo.InvariantCulture, out value);
             if (!valid || value != 0d) return false;
-            if (separator < 0) return true;
-            values = values[separator..].TrimStart();
-            if (values.StartsWith(",")) values = values[1..].TrimStart();
         }
-        return false;
+        return true;
+    }
+
+    private static bool TryReadSvgTextPositionToken(ReadOnlySpan<char> values, out ReadOnlySpan<char> token,
+        out ReadOnlySpan<char> remaining)
+    {
+        int separator = values.IndexOfAny(" ,\t\r\n");
+        token = separator < 0 ? values : values[..separator];
+        remaining = separator < 0 ? default : values[separator..].TrimStart();
+        if (!remaining.StartsWith(",")) return !token.IsEmpty;
+        remaining = remaining[1..].TrimStart();
+        return !token.IsEmpty && !remaining.IsEmpty;
     }
 
     private static bool TryReadSvgTextMetrics(XElement element, IReadOnlyDictionary<string, string> style,

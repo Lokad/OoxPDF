@@ -164,7 +164,9 @@ An SVG `font-size` reset restores the default for the label and its relative des
 Basic shape geometry, stroke widths, dash lengths and dash offsets accept viewport percentages.
 These lengths and fixed viewport dimensions also accept absolute CSS units.
 Supported SVG labels accept viewport percentages, em and absolute units in
-single-value x, y, dx and dy attributes. Absolute units also work in font size.
+single-value x, y, dx and dy attributes. A dx or dy list can supply one initial
+offset followed by zeros. Later nonzero offsets retain the diagnosed fallback.
+Absolute units also work in font size.
 Plain spans retain the label when their explicit kerning settings preserve its
 kerning behavior. Mixed kerning within a label remains unsupported.
 The same language may be repeated on a plain span with `lang` or `xml:lang`.

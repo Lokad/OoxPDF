@@ -896,6 +896,38 @@ internal static partial class SvgTextTests
         }
     }
 
+    public static void SvgRootRelativeOffsetsKeepLabelsWithZeroTails()
+    {
+        static string Picture(string attributes, string label = "NO<tspan>RT</tspan>H") => Svg($"""
+            <text {attributes} x="104" y="45" font-size="24" text-anchor="middle" fill="#112233">{label}</text>
+            <rect x="200" y="88" width="20" height="10" fill="lime"/>
+            """);
+
+        static void FullLabel(string paint) => TestAssert.Equal(5, LabelPaths(paint));
+        AssertSvgPaintInBothFormats(Picture(""),
+            Picture("""dx="0 -0 0" dy="0 0" """), FullLabel, "0 1 0 rg");
+        const string shift = """dx="20" dy="8" """;
+        AssertSvgPaintInBothFormats(Picture(shift),
+            [Picture("""dx="20 0 0" dy="8 0" """), Picture("""dx="20px, 0em -0%" dy="8,0px" """)],
+            FullLabel, "0 1 0 rg");
+        AssertSvgPaintInBothFormats(Picture("""dy="8" """),
+            Picture("""dx="20 0" dy="8 0" """, """<tspan dx="0">NO</tspan>RTH"""),
+            FullLabel, "0 1 0 rg");
+
+        foreach (string attributes in new[] { """dx="0 20" """, """dy="8 4" """, """dx="0, 0," """, """dy="8,,0" """ })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            string paint = Paint(Picture(attributes), diagnostics).ToString();
+            TestAssert.DoesNotContain(LabelColor, paint);
+            TestAssert.Contains("0 1 0 rg", paint);
+            TestAssert.True(diagnostics.Any(diagnostic => diagnostic is
+            {
+                Id: "SVG_UNSUPPORTED_CONTENT", Fallback: "Partial",
+                Message: "SVG picture omits 1 unsupported text element."
+            }), "Relative positioning beyond a single label shift retains its text diagnostic.");
+        }
+    }
+
     public static void SvgSpanOffsetsFollowTheFirstAddressableCharacter()
     {
         static string Picture(string root, string label) => Svg($"""

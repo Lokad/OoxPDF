@@ -20655,6 +20655,7 @@
     "=SvgLengthAdjustUsesNaturalWidthWithoutTextLength",
     "=SvgTextInteractionKeepsStaticLabelPaint",
     "=SvgZeroPositioningKeepsLabelsWithNaturalGeometry",
+    "=SvgRootRelativeOffsetsKeepLabelsWithZeroTails",
     "=SvgSpanOffsetsFollowTheFirstAddressableCharacter",
     "=SvgTextChildrenIgnoreTransformDeclarations",
     "=SvgInlineLinkTextKeepsPaintAndDiagnosesActions",
