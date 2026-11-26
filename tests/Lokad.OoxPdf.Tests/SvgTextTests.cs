@@ -669,8 +669,18 @@ internal static partial class SvgTextTests
             pdf => TestAssert.Equal(5, LabelPaths(pdf)), "0 1 0 rg");
         AssertSvgPaintInBothFormats(Picture("""<tspan visibility="hidden">AB</tspan>LABEL"""),
             [Picture("AB" + child, """fill="none" """),
-                Picture("""<tspan style="fill-opacity:0">AB</tspan>LABEL""")],
+                Picture("""<tspan style="fill-opacity:0">AB</tspan>LABEL"""),
+                Picture("""<tspan fill="url(#unused)" fill-opacity="0">AB</tspan>LABEL"""),
+                Picture("""<tspan fill-opacity="0"><tspan fill="url(#unused)">AB</tspan></tspan>LABEL"""),
+                Picture("""AB<tspan fill="#112233" fill-opacity="1">LABEL</tspan>""",
+                    """fill="url(#unused)" fill-opacity="0" """)],
             pdf => TestAssert.Equal(5, LabelPaths(pdf)), "0 1 0 rg");
+
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        string stroked = Paint(Picture("""<tspan fill="url(#unused)" fill-opacity="0" stroke="red">AB</tspan>LABEL"""), diagnostics).ToString();
+        TestAssert.DoesNotContain(LabelColor, stroked);
+        TestAssert.Contains("0 1 0 rg", stroked);
+        TestAssert.Contains("unsupported text element", diagnostics.Single().Message);
         AssertSvgPaintInBothFormats(Picture("LABEL", """fill="#112233" fill-opacity=".375" """),
             Picture("""<tspan fill="rgba(17,34,51,.5)" fill-opacity=".75">LABEL</tspan>""",
                 """fill="#112233" fill-opacity=".25" """),

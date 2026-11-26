@@ -437,10 +437,12 @@ internal sealed partial class PptxRenderer
         bool TryAdmitOwnerFill(XElement owner, IReadOnlyDictionary<string, string> ownerStyle, out bool paintsGlyph)
         {
             paintsGlyph = false;
-            if (HasSvgTextStroke(owner, ownerStyle, paintServers) ||
-                !TryReadSvgTextFill(owner, ownerStyle, paintServers, out var fill)) return false;
+            if (HasSvgTextStroke(owner, ownerStyle, paintServers)) return false;
+            double fillOpacity = ReadSvgOpacityValue(ReadSvgInheritedAttribute(owner, ownerStyle, "fill-opacity"));
+            if (fillOpacity == 0d) return true;
+            if (!TryReadSvgTextFill(owner, ownerStyle, paintServers, out var fill)) return false;
 
-            double alpha = fill.Alpha * ReadSvgOpacityValue(ReadSvgInheritedAttribute(owner, ownerStyle, "fill-opacity"));
+            double alpha = fill.Alpha * fillOpacity;
             if (fill.Color is null || alpha == 0d) return true;
 
             var effective = new SvgTextPaint(fill.Color, alpha);
