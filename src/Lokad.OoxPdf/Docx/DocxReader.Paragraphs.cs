@@ -151,18 +151,8 @@ internal sealed partial class DocxReader
             }
             else if (child.Name == WordprocessingNamespace + "bookmarkStart")
             {
-                var anchor = ReadBookmarkAnchor(child, sourceRunIndex, runs.Count,
+                RecordBookmarkStart(child, sourceRunIndex, runs.Count,
                     RelativeRunTextOffset(runs, sourceRunIndex), GetInlineItemCount());
-                if (cellBookmarks is { } scope &&
-                    ReadTableColumnBookmark(child, anchor) is { } bookmark && bookmark.First >= scope.EndColumn &&
-                    OoxXml.NormalizeDecimalId(anchor.Id) is { Length: > 0 } && !string.IsNullOrEmpty(anchor.Name))
-                {
-                    scope.Defer(bookmark with { Anchor = ReadBookmarkAnchor(child, 0, 0, 0, 0) });
-                }
-                else
-                {
-                    bookmarkAnchors.Add(anchor);
-                }
                 return false;
             }
             else if (child.Name == WordprocessingNamespace + "bookmarkEnd")
@@ -228,6 +218,21 @@ internal sealed partial class DocxReader
                 hasSource |= AddSourceContainerChild(containerChild, revision, removeDeletedText);
             }
             return hasSource;
+        }
+
+        void RecordBookmarkStart(XElement start, int sourceIndex, int textIndex, int textOffset, int? itemIndex)
+        {
+            var anchor = ReadBookmarkAnchor(start, sourceIndex, textIndex, textOffset, itemIndex);
+            if (cellBookmarks is { } scope &&
+                ReadTableColumnBookmark(start, anchor) is { } bookmark && bookmark.First >= scope.EndColumn &&
+                OoxXml.NormalizeDecimalId(anchor.Id) is { Length: > 0 } && !string.IsNullOrEmpty(anchor.Name))
+            {
+                scope.Defer(bookmark with { Anchor = ReadBookmarkAnchor(start, 0, 0, 0, 0) });
+            }
+            else
+            {
+                bookmarkAnchors.Add(anchor);
+            }
         }
 
         void RecordCellBookmarkEnd(XElement end)
@@ -648,6 +653,7 @@ internal sealed partial class DocxReader
             bool hasCachedResult = ownsCounter && FieldHasCachedResultContent(fragment?.Source ?? field);
             if (placeholder is not null)
             {
+                int? fieldItemIndex = inlineItems?.Count;
                 // Bare computed values inherit their instruction's paragraph-style
                 // formatting, rather than stale cached-result formatting. Explicit
                 // MERGEFORMAT and unqualified switches keep the cached-style fallback.
@@ -671,12 +677,20 @@ internal sealed partial class DocxReader
                 int resultTextOffset = 0, resultDrawingOrder = 0;
                 int pendingRun = fieldTextRunIndex, pendingImage = fieldImageIndex, pendingBox = fieldBoxIndex;
                 bool hasVmlStory = false;
+                XName bookmarkStartName = WordprocessingNamespace + "bookmarkStart";
                 XName bookmarkEndName = WordprocessingNamespace + "bookmarkEnd";
-                // Replacing the cached text preserves its visible cell boundaries.
+                // Bind visible cached bookmarks to the computed result and keep
+                // cell boundaries in source order.
                 foreach (var storedScope in EnumerateRevisionScopedChildren(field.Elements(), markupMode, cancellationToken,
-                    [WordprocessingNamespace + "r", bookmarkEndName], revision, inlineContent: true, includeNestedFieldResults: true))
+                    [WordprocessingNamespace + "r", bookmarkStartName, bookmarkEndName], revision, inlineContent: true, includeNestedFieldResults: true))
                 {
                     cancellationToken.ThrowIfCancellationRequested();
+                    if (storedScope.Element.Name == bookmarkStartName)
+                    {
+                        if (publishesCounter)
+                            RecordBookmarkStart(storedScope.Element, fieldSourceRunIndex, fieldTextRunIndex, 0, fieldItemIndex);
+                        continue;
+                    }
                     if (storedScope.Element.Name == bookmarkEndName)
                     {
                         RecordCellBookmarkEnd(storedScope.Element);
@@ -1546,7 +1560,7 @@ internal sealed partial class DocxReader
         int sourceRunIndex,
         int textRunIndex,
         int textOffset,
-        int inlineItemIndex)
+        int? inlineItemIndex)
     {
         return new DocxBookmarkAnchor(
             (string?)bookmarkStart.Attribute(WordprocessingNamespace + "id"),

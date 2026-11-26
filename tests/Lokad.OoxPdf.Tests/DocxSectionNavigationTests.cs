@@ -1746,6 +1746,27 @@ internal static class DocxSectionNavigationTests
                 PdfPage[] locked = RenderColumn("field-locked", spanned, mode);
                 TestAssert.Contains("FIRST CELL9999", Text(locked[1]));
                 TestAssert.Equal(0, locked[0].Annotations.Count);
+
+                PdfPage[] columnStart = RenderColumn("field-start-before", spanned, mode);
+                var columnLink = columnStart[0].Annotations.Single();
+                TestAssert.Equal(fieldOpen[0].Annotations.Single(), columnLink);
+                foreach (string variant in new[] { "field-start-inside", "field-start-in-control", "field-start-closed" })
+                {
+                    PdfPage[] fieldPages = RenderColumn(variant, spanned, mode);
+                    TestAssert.True(columnStart.Select(page => page.Content).SequenceEqual(fieldPages.Select(page => page.Content)),
+                        "A column bookmark start in a cached result keeps the generated digit and both cells.");
+                    if (variant == "field-start-closed") TestAssert.Equal(0, fieldPages[0].Annotations.Count);
+                    else TestAssert.Equal(columnLink, fieldPages[0].Annotations.Single());
+                }
+
+                PdfPage[] ordinaryStart = RenderColumn("field-start-ordinary-before", spanned, mode);
+                PdfPage[] ordinaryInside = RenderColumn("field-start-ordinary-inside", spanned, mode);
+                var ordinaryLink = ordinaryStart[0].Annotations.Single();
+                TestAssert.True(ordinaryLink.Destination?.Left < columnLink.Destination?.Left,
+                    "An ordinary field bookmark targets the digit in the first cell.");
+                TestAssert.Equal(ordinaryLink, ordinaryInside[0].Annotations.Single());
+                TestAssert.True(ordinaryStart.Select(page => page.Content).SequenceEqual(ordinaryInside.Select(page => page.Content)),
+                    "The ordinary result bookmark retains the same page paint as the field boundary.");
             }
         }
 
@@ -1863,16 +1884,35 @@ internal static class DocxSectionNavigationTests
                         var field = new XElement(W + "fldSimple", new XAttribute(W + "instr", " PAGE "),
                             new XElement(W + "r", new XElement(W + "t", "9999")));
                         var control = new XElement(W + "sdtContent");
-                        if (variant == "field-inside-control")
+                        if (variant is "field-inside-control" or "field-start-in-control")
                             field.Add(new XElement(W + "sdt", control));
                         if (variant == "field-locked")
                             field.SetAttributeValue(W + "fldLock", "1");
-                        paragraph.AddFirst(start);
                         paragraph.Add(field);
+                        switch (variant)
+                        {
+                            case "field-start-inside" or "field-start-closed" or "field-start-ordinary-inside":
+                                field.AddFirst(start);
+                                break;
+                            case "field-start-in-control":
+                                control.Add(start);
+                                break;
+                            case "field-start-before" or "field-start-ordinary-before":
+                                field.AddBeforeSelf(start);
+                                break;
+                            default:
+                                paragraph.AddFirst(start);
+                                break;
+                        }
+                        if (variant is "field-start-ordinary-before" or "field-start-ordinary-inside")
+                        {
+                            start.SetAttributeValue(W + "colFirst", null);
+                            start.SetAttributeValue(W + "colLast", null);
+                        }
                         XElement endOwner = variant switch
                         {
-                            "field-after-result" => paragraph,
-                            "field-after-target" => second.Element(W + "p")!,
+                            "field-after-result" or "field-start-ordinary-before" or "field-start-ordinary-inside" => paragraph,
+                            "field-after-target" or "field-start-before" or "field-start-inside" or "field-start-in-control" => second.Element(W + "p")!,
                             "field-inside-control" => control,
                             _ => field
                         };
