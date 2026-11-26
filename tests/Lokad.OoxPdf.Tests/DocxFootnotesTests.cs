@@ -1207,6 +1207,12 @@ internal static partial class DocxFootnotesTests
             DocxLayout first = engine.Create(source, measurer, default);
             TestAssert.True(DocxNoteKerning.TryCreateJointDocument(source, first, out DocxDocument adjusted, out var owners, default),
                 "Both admitted note kinds share one source-threshold adjustment plan.");
+            var separators = source.RelatedStories.Zip(adjusted.RelatedStories)
+                .Where(pair => pair.First.Type is DocxRelatedStoryType.Separator or DocxRelatedStoryType.ContinuationSeparator)
+                .ToArray();
+            TestAssert.Equal(4, separators.Length);
+            TestAssert.True(separators.All(pair => ReferenceEquals(pair.First, pair.Second)),
+                "Both note kinds retain their original separator stories through the joint rewrite.");
             TestAssert.True(owners is not null && owners.Footnotes.ContainsKey("37") && owners.Endnotes.ContainsKey("37"),
                 "Coincident numeric IDs retain separate typed owners.");
             TestAssert.True(ReferenceEquals(source.BodyElements, adjusted.BodyElements), "The plan preserves all body and inline-reference objects.");

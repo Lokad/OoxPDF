@@ -15,10 +15,11 @@ internal sealed class DocxParagraphReplacements(
         RelatedStories = document.RelatedStories.Select(Replace).ToArray()
     };
 
-    internal DocxRelatedStory Replace(DocxRelatedStory story) => story with
+    internal DocxRelatedStory Replace(DocxRelatedStory story)
     {
-        BodyElements = ReplaceElements(story.BodyElements)
-    };
+        var bodyElements = ReplaceElements(story.BodyElements);
+        return ReferenceEquals(bodyElements, story.BodyElements) ? story : story with { BodyElements = bodyElements };
+    }
 
     internal IReadOnlyList<DocxBodyElement> ReplaceElements(IReadOnlyList<DocxBodyElement> elements)
     {
