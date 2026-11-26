@@ -3056,84 +3056,54 @@ internal static partial class PptxChartsTests
 
     public static void PptxSyntheticChartValueAxisReversedOrientationStacksColumnSegmentsByValue()
     {
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
-        {
-            ["[Content_Types].xml"] = TestFixtures.Utf8(PptxTests.BasicContentTypes()),
-            ["_rels/.rels"] = TestFixtures.Utf8(PptxTests.PackageRelationship()),
-            ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8(PptxTests.PresentationRelationship()),
-            ["ppt/presentation.xml"] = TestFixtures.Utf8(PptxTests.BasicPresentation()),
-            ["ppt/slides/_rels/slide1.xml.rels"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
-                </Relationships>
-                """),
-            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
-                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
-                       xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
-                       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-                  <p:cSld><p:spTree>
-                    <p:graphicFrame>
-                      <p:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="2743200"/></p:xfrm>
-                      <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic>
-                    </p:graphicFrame>
-                  </p:spTree></p:cSld>
-                </p:sld>
-                """),
-            ["ppt/charts/chart1.xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
-                              xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <c:chart><c:plotArea>
-                  <c:barChart>
-                    <c:barDir val="col"/>
-                    <c:grouping val="stacked"/>
-                    <c:ser><c:val><c:numLit><c:pt idx="0"><c:v>10</c:v></c:pt></c:numLit></c:val></c:ser>
-                    <c:ser><c:val><c:numLit><c:pt idx="0"><c:v>20</c:v></c:pt></c:numLit></c:val></c:ser>
-                    <c:axId val="1"/><c:axId val="2"/>
-                  </c:barChart>
-                  <c:catAx>
-                    <c:axId val="1"/><c:axPos val="b"/><c:tickLblPos val="none"/>
-                  </c:catAx>
-                  <c:valAx>
-                    <c:axId val="2"/><c:axPos val="l"/><c:tickLblPos val="none"/>
-                    <c:scaling><c:orientation val="maxMin"/><c:min val="0"/><c:max val="30"/></c:scaling>
-                  </c:valAx>
-                  </c:plotArea></c:chart>
-                </c:chartSpace>
-                """)
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, output);
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        var segmentRectangles = Regex.Matches(pdf, @"(?<x1>[0-9.]+) (?<y1>[0-9.]+) m\s+(?<x2>[0-9.]+) (?<y2>[0-9.]+) l\s+(?<x3>[0-9.]+) (?<y3>[0-9.]+) l\s+(?<x4>[0-9.]+) (?<y4>[0-9.]+) l\s+h\s+f")
-            .Cast<Match>()
-            .Select(match =>
-            {
-                double x1 = double.Parse(match.Groups["x1"].Value, CultureInfo.InvariantCulture);
-                double x2 = double.Parse(match.Groups["x2"].Value, CultureInfo.InvariantCulture);
-                double x3 = double.Parse(match.Groups["x3"].Value, CultureInfo.InvariantCulture);
-                double x4 = double.Parse(match.Groups["x4"].Value, CultureInfo.InvariantCulture);
-                double y1 = double.Parse(match.Groups["y1"].Value, CultureInfo.InvariantCulture);
-                double y2 = double.Parse(match.Groups["y2"].Value, CultureInfo.InvariantCulture);
-                double y3 = double.Parse(match.Groups["y3"].Value, CultureInfo.InvariantCulture);
-                double y4 = double.Parse(match.Groups["y4"].Value, CultureInfo.InvariantCulture);
-                return new
-                {
-                    Y = new[] { y1, y2, y3, y4 }.Min(),
-                    Width = new[] { x1, x2, x3, x4 }.Max() - new[] { x1, x2, x3, x4 }.Min(),
-                    Height = new[] { y1, y2, y3, y4 }.Max() - new[] { y1, y2, y3, y4 }.Min()
-                };
-            })
+        var rectangles = RenderReversedStack("col", categorySide: "b", valueSide: "l")
             .Where(rectangle => rectangle.Width > 10d && rectangle.Width < 220d && rectangle.Height > 20d && rectangle.Height < 220d)
             .ToArray();
-        TestAssert.True(segmentRectangles.Length >= 2, "Expected two filled stacked column segment paths.");
-        TestAssert.True(segmentRectangles[1].Y < segmentRectangles[0].Y,
+        TestAssert.True(rectangles.Length >= 2, "Expected two filled stacked column segment paths.");
+        TestAssert.True(rectangles[1].Y < rectangles[0].Y,
             "Stacked column segments should accumulate through mapped value intervals when the value axis is maxMin.");
+    }
+
+    private static IEnumerable<(double X, double Y, double Width, double Height)> RenderReversedStack(
+        string direction, string categorySide, string valueSide)
+    {
+        string chart = $$"""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+                          xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <c:chart><c:plotArea>
+              <c:barChart>
+                <c:barDir val="{{direction}}"/>
+                <c:grouping val="stacked"/>
+                <c:ser><c:val><c:numLit><c:pt idx="0"><c:v>10</c:v></c:pt></c:numLit></c:val></c:ser>
+                <c:ser><c:val><c:numLit><c:pt idx="0"><c:v>20</c:v></c:pt></c:numLit></c:val></c:ser>
+                <c:axId val="1"/><c:axId val="2"/>
+              </c:barChart>
+              <c:catAx>
+                <c:axId val="1"/><c:axPos val="{{categorySide}}"/><c:tickLblPos val="none"/>
+              </c:catAx>
+              <c:valAx>
+                <c:axId val="2"/><c:axPos val="{{valueSide}}"/><c:tickLblPos val="none"/>
+                <c:scaling><c:orientation val="maxMin"/><c:min val="0"/><c:max val="30"/></c:scaling>
+              </c:valAx>
+              </c:plotArea></c:chart>
+            </c:chartSpace>
+            """;
+        using MemoryStream input = PptxTests.CreateSingleChartPackageStream(chart);
+        using var output = new MemoryStream();
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { InputKind = OoxPdfInputKind.Pptx });
+
+        string pdf = Encoding.ASCII.GetString(output.ToArray());
+        foreach (Match match in Regex.Matches(pdf, @"(?<x1>[0-9.]+) (?<y1>[0-9.]+) m\s+(?<x2>[0-9.]+) (?<y2>[0-9.]+) l\s+(?<x3>[0-9.]+) (?<y3>[0-9.]+) l\s+(?<x4>[0-9.]+) (?<y4>[0-9.]+) l\s+h\s+f"))
+        {
+            double[] x = [ReadCoordinate("x1"), ReadCoordinate("x2"), ReadCoordinate("x3"), ReadCoordinate("x4")];
+            double[] y = [ReadCoordinate("y1"), ReadCoordinate("y2"), ReadCoordinate("y3"), ReadCoordinate("y4")];
+            double left = x.Min();
+            double bottom = y.Min();
+            yield return (left, bottom, x.Max() - left, y.Max() - bottom);
+
+            double ReadCoordinate(string name) => double.Parse(match.Groups[name].Value, CultureInfo.InvariantCulture);
+        }
     }
 
     public static void PptxSyntheticChartStackedColumnDataLabelsUseStackSegmentGeometry()
@@ -3211,83 +3181,11 @@ internal static partial class PptxChartsTests
 
     public static void PptxSyntheticChartValueAxisReversedOrientationStacksHorizontalBarSegmentsByValue()
     {
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
-        {
-            ["[Content_Types].xml"] = TestFixtures.Utf8(PptxTests.BasicContentTypes()),
-            ["_rels/.rels"] = TestFixtures.Utf8(PptxTests.PackageRelationship()),
-            ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8(PptxTests.PresentationRelationship()),
-            ["ppt/presentation.xml"] = TestFixtures.Utf8(PptxTests.BasicPresentation()),
-            ["ppt/slides/_rels/slide1.xml.rels"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
-                </Relationships>
-                """),
-            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
-                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
-                       xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
-                       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-                  <p:cSld><p:spTree>
-                    <p:graphicFrame>
-                      <p:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="2743200"/></p:xfrm>
-                      <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic>
-                    </p:graphicFrame>
-                  </p:spTree></p:cSld>
-                </p:sld>
-                """),
-            ["ppt/charts/chart1.xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
-                              xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <c:chart><c:plotArea>
-                  <c:barChart>
-                    <c:barDir val="bar"/>
-                    <c:grouping val="stacked"/>
-                    <c:ser><c:val><c:numLit><c:pt idx="0"><c:v>10</c:v></c:pt></c:numLit></c:val></c:ser>
-                    <c:ser><c:val><c:numLit><c:pt idx="0"><c:v>20</c:v></c:pt></c:numLit></c:val></c:ser>
-                    <c:axId val="1"/><c:axId val="2"/>
-                  </c:barChart>
-                  <c:catAx>
-                    <c:axId val="1"/><c:axPos val="l"/><c:tickLblPos val="none"/>
-                  </c:catAx>
-                  <c:valAx>
-                    <c:axId val="2"/><c:axPos val="b"/><c:tickLblPos val="none"/>
-                    <c:scaling><c:orientation val="maxMin"/><c:min val="0"/><c:max val="30"/></c:scaling>
-                  </c:valAx>
-                  </c:plotArea></c:chart>
-                </c:chartSpace>
-                """)
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, output);
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        var segmentRectangles = Regex.Matches(pdf, @"(?<x1>[0-9.]+) (?<y1>[0-9.]+) m\s+(?<x2>[0-9.]+) (?<y2>[0-9.]+) l\s+(?<x3>[0-9.]+) (?<y3>[0-9.]+) l\s+(?<x4>[0-9.]+) (?<y4>[0-9.]+) l\s+h\s+f")
-            .Cast<Match>()
-            .Select(match =>
-            {
-                double x1 = double.Parse(match.Groups["x1"].Value, CultureInfo.InvariantCulture);
-                double x2 = double.Parse(match.Groups["x2"].Value, CultureInfo.InvariantCulture);
-                double x3 = double.Parse(match.Groups["x3"].Value, CultureInfo.InvariantCulture);
-                double x4 = double.Parse(match.Groups["x4"].Value, CultureInfo.InvariantCulture);
-                double y1 = double.Parse(match.Groups["y1"].Value, CultureInfo.InvariantCulture);
-                double y2 = double.Parse(match.Groups["y2"].Value, CultureInfo.InvariantCulture);
-                double y3 = double.Parse(match.Groups["y3"].Value, CultureInfo.InvariantCulture);
-                double y4 = double.Parse(match.Groups["y4"].Value, CultureInfo.InvariantCulture);
-                return new
-                {
-                    X = new[] { x1, x2, x3, x4 }.Min(),
-                    Width = new[] { x1, x2, x3, x4 }.Max() - new[] { x1, x2, x3, x4 }.Min(),
-                    Height = new[] { y1, y2, y3, y4 }.Max() - new[] { y1, y2, y3, y4 }.Min()
-                };
-            })
+        var rectangles = RenderReversedStack("bar", categorySide: "l", valueSide: "b")
             .Where(rectangle => rectangle.Width > 20d && rectangle.Width < 220d && rectangle.Height > 10d && rectangle.Height < 220d)
             .ToArray();
-        TestAssert.True(segmentRectangles.Length >= 2, "Expected two filled stacked horizontal bar segment paths.");
-        TestAssert.True(segmentRectangles[1].X < segmentRectangles[0].X,
+        TestAssert.True(rectangles.Length >= 2, "Expected two filled stacked horizontal bar segment paths.");
+        TestAssert.True(rectangles[1].X < rectangles[0].X,
             "Stacked horizontal bar segments should accumulate through mapped value intervals when the value axis is maxMin.");
     }
 
