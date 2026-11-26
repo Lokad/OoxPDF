@@ -1628,44 +1628,8 @@ internal static class DocxPageTests
 
     public static void DocxSectionBreakPageSettingsOwnPrecedingLayoutSection()
     {
-        DocxParagraph first = DocxTests.CreateDocxLayoutParagraph("First", fontSize: 10d, lineSpacingPoints: 10d);
-        DocxParagraph second = DocxTests.CreateDocxLayoutParagraph("Second", fontSize: 10d, lineSpacingPoints: 10d);
-        var firstSectionSettings = DocxPageSettings.Empty with
-        {
-            WidthValue = "4000",
-            HeightValue = "4000",
-            MarginTopValue = "360",
-            MarginRightValue = "360",
-            MarginBottomValue = "360",
-            MarginLeftValue = "360"
-        };
-        var finalSectionSettings = DocxPageSettings.Empty with
-        {
-            WidthValue = "6000",
-            HeightValue = "6000",
-            MarginTopValue = "1440",
-            MarginRightValue = "1440",
-            MarginBottomValue = "1440",
-            MarginLeftValue = "1440"
-        };
-        var document = new DocxDocument(
-            300d,
-            300d,
-            72d,
-            72d,
-            72d,
-            72d,
-            finalSectionSettings,
-            [],
-            [],
-            [],
-            [
-                new DocxParagraphElement(first),
-                new DocxSectionBreakElement(firstSectionSettings, DocxSectionBreakType.NextPage, "2", "1", "720", []),
-                new DocxParagraphElement(second)
-            ]);
-
-        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+        DocxLayout layout = LayoutTwoSectionDocument(DocxSectionBreakType.NextPage,
+            columnCount: "2", columnEqualWidth: "1", columnSpacing: "720");
 
         TestAssert.Equal(2, layout.Pages.Count);
         TestAssert.Equal(200d, layout.Pages[0].Width);
@@ -1704,45 +1668,8 @@ internal static class DocxPageTests
 
     public static void DocxContinuousSectionBreakOnEmptyPageAppliesFollowingSectionGeometry()
     {
-        DocxParagraph first = DocxTests.CreateDocxLayoutParagraph("First", fontSize: 10d, lineSpacingPoints: 10d);
-        DocxParagraph second = DocxTests.CreateDocxLayoutParagraph("Second", fontSize: 10d, lineSpacingPoints: 10d);
-        var firstSectionSettings = DocxPageSettings.Empty with
-        {
-            WidthValue = "4000",
-            HeightValue = "4000",
-            MarginTopValue = "360",
-            MarginRightValue = "360",
-            MarginBottomValue = "360",
-            MarginLeftValue = "360"
-        };
-        var finalSectionSettings = DocxPageSettings.Empty with
-        {
-            WidthValue = "6000",
-            HeightValue = "6000",
-            MarginTopValue = "1440",
-            MarginRightValue = "1440",
-            MarginBottomValue = "1440",
-            MarginLeftValue = "1440"
-        };
-        var document = new DocxDocument(
-            300d,
-            300d,
-            72d,
-            72d,
-            72d,
-            72d,
-            finalSectionSettings,
-            [],
-            [],
-            [],
-            [
-                new DocxParagraphElement(first),
-                new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null),
-                new DocxSectionBreakElement(firstSectionSettings, DocxSectionBreakType.Continuous, null, null, null, []),
-                new DocxParagraphElement(second)
-            ]);
-
-        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+        DocxLayout layout = LayoutTwoSectionDocument(DocxSectionBreakType.Continuous,
+            pageBreak: new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null));
 
         TestAssert.Equal(2, layout.Pages.Count);
         TestAssert.Equal(200d, layout.Pages[0].Width);
@@ -1756,8 +1683,22 @@ internal static class DocxPageTests
 
     public static void DocxOddPageSectionBreakInsertsBlankParityPage()
     {
-        DocxParagraph first = DocxTests.CreateDocxLayoutParagraph("First", fontSize: 10d, lineSpacingPoints: 10d);
-        DocxParagraph second = DocxTests.CreateDocxLayoutParagraph("Second", fontSize: 10d, lineSpacingPoints: 10d);
+        DocxLayout layout = LayoutTwoSectionDocument(DocxSectionBreakType.OddPage);
+
+        TestAssert.Equal(3, layout.Pages.Count);
+        TestAssert.Equal("First", layout.Pages[0].Items.OfType<DocxTextLineLayout>().Single().Text);
+        TestAssert.Equal(0, layout.Pages[1].Items.Count);
+        TestAssert.Equal(200d, layout.Pages[1].Width);
+        TestAssert.Equal("oddPage", layout.Pages[1].SectionProperties.BreakTypeValue ?? string.Empty);
+        TestAssert.Equal("Second", layout.Pages[2].Items.OfType<DocxTextLineLayout>().Single().Text);
+        TestAssert.Equal(300d, layout.Pages[2].Width);
+        TestAssert.True(layout.Pages[2].SectionProperties.BreakTypeValue is null, "Following section should start after the inserted parity page.");
+    }
+
+    private static DocxLayout LayoutTwoSectionDocument(DocxSectionBreakType breakType,
+        string? columnCount = null, string? columnEqualWidth = null, string? columnSpacing = null,
+        DocxPageBreakElement? pageBreak = null)
+    {
         var firstSectionSettings = DocxPageSettings.Empty with
         {
             WidthValue = "4000",
@@ -1776,33 +1717,19 @@ internal static class DocxPageTests
             MarginBottomValue = "1440",
             MarginLeftValue = "1440"
         };
-        var document = new DocxDocument(
-            300d,
-            300d,
-            72d,
-            72d,
-            72d,
-            72d,
-            finalSectionSettings,
-            [],
-            [],
-            [],
-            [
-                new DocxParagraphElement(first),
-                new DocxSectionBreakElement(firstSectionSettings, DocxSectionBreakType.OddPage, null, null, null, []),
-                new DocxParagraphElement(second)
-            ]);
+        DocxParagraph first = DocxTests.CreateDocxLayoutParagraph("First", fontSize: 10d, lineSpacingPoints: 10d);
+        DocxParagraph second = DocxTests.CreateDocxLayoutParagraph("Second", fontSize: 10d, lineSpacingPoints: 10d);
+        var elements = new List<DocxBodyElement> { new DocxParagraphElement(first) };
+        if (pageBreak is not null)
+        {
+            elements.Add(pageBreak);
+        }
+        elements.Add(new DocxSectionBreakElement(firstSectionSettings, breakType, columnCount, columnEqualWidth, columnSpacing, []));
+        elements.Add(new DocxParagraphElement(second));
 
-        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
-
-        TestAssert.Equal(3, layout.Pages.Count);
-        TestAssert.Equal("First", layout.Pages[0].Items.OfType<DocxTextLineLayout>().Single().Text);
-        TestAssert.Equal(0, layout.Pages[1].Items.Count);
-        TestAssert.Equal(200d, layout.Pages[1].Width);
-        TestAssert.Equal("oddPage", layout.Pages[1].SectionProperties.BreakTypeValue ?? string.Empty);
-        TestAssert.Equal("Second", layout.Pages[2].Items.OfType<DocxTextLineLayout>().Single().Text);
-        TestAssert.Equal(300d, layout.Pages[2].Width);
-        TestAssert.True(layout.Pages[2].SectionProperties.BreakTypeValue is null, "Following section should start after the inserted parity page.");
+        var document = new DocxDocument(300d, 300d, 72d, 72d, 72d, 72d, finalSectionSettings, [], [], [], elements);
+        return new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
     }
 
     public static void DocxSectionBreakCustomColumnsCreatePageOwnedFrames()
