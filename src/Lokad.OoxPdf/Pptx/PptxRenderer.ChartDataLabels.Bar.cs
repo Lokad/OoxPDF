@@ -107,10 +107,6 @@ internal sealed partial class PptxRenderer
         // linear-scanning per rendered label below.
         Dictionary<int, ChartIndexedNumberPoint>[] workbookIndexes = series.Select(BuildWorkbookPointIndex).ToArray();
 
-        // RV20: index dense-slot provenance once per series (last-wins, like
-        // DensePoints) instead of materializing dense arrays per label below.
-        Dictionary<int, ChartIndexedNumberPoint>[] densePointIndexes = series.Select(BuildDensePointIndex).ToArray();
-
         // RV14: index category labels once per frame instead of linear-scanning
         // per rendered label below.
         Dictionary<int, string> categoryLabelIndex = BuildCategoryLabelIndex(categoryLabels);
@@ -176,8 +172,8 @@ internal sealed partial class PptxRenderer
                             onTickMarks: false, reversed: true,
                             slotOffset: categoryHeight * (PptxChartMetricRules.BarDataLabelCategoryInsetRatio - 0.5d) +
                                 seriesIndex * barSlot + barSlot * PptxChartMetricRules.HorizontalBarDataLabelSlotCenterRatio) - labelHeight / 2d;
-                    ChartIndexedNumberPoint point = densePointIndexes[seriesIndex].TryGetValue(category, out ChartIndexedNumberPoint densePoint) ? densePoint : default;
-                    string label = FormatCartesianDataLabel(value, seriesIndex, category, point, (workbookIndexes[seriesIndex].TryGetValue(point.Index, out ChartIndexedNumberPoint workbookPoint) ? workbookPoint : null), series[seriesIndex].FormatCode, effectiveOptions, categoryLabelIndex, seriesNames);
+                    string label = FormatCartesianDataLabel(value, seriesIndex, category, workbookIndexes[seriesIndex],
+                        series[seriesIndex].FormatCode, effectiveOptions, categoryLabelIndex, seriesNames);
                     if (!string.IsNullOrEmpty(label))
                     {
                         ChartSeriesFill? keyFill = effectiveOptions.ShowLegendKey
@@ -292,8 +288,8 @@ internal sealed partial class PptxRenderer
                         // bottom-pad law (other positions and plain labels keep legacy 1.0).
                         y = barEndY + ComputeBarLegendKeyOutEndGap(fontSize);
                     }
-                    ChartIndexedNumberPoint point = densePointIndexes[seriesIndex].TryGetValue(category, out ChartIndexedNumberPoint densePoint) ? densePoint : default;
-                    string label = FormatCartesianDataLabel(value, seriesIndex, category, point, (workbookIndexes[seriesIndex].TryGetValue(point.Index, out ChartIndexedNumberPoint workbookPoint) ? workbookPoint : null), series[seriesIndex].FormatCode, effectiveOptions, categoryLabelIndex, seriesNames);
+                    string label = FormatCartesianDataLabel(value, seriesIndex, category, workbookIndexes[seriesIndex],
+                        series[seriesIndex].FormatCode, effectiveOptions, categoryLabelIndex, seriesNames);
                     if (!string.IsNullOrEmpty(label))
                     {
                         if (outsideEndAboveBase && CanMeasurePlainChartLabelFrame(effectiveOptions))

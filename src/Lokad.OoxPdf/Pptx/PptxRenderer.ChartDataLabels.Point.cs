@@ -53,10 +53,6 @@ internal sealed partial class PptxRenderer
         // linear-scanning per rendered label below.
         Dictionary<int, ChartIndexedNumberPoint>[] workbookIndexes = series.Select(BuildWorkbookPointIndex).ToArray();
 
-        // RV20: index dense-slot provenance once per series (last-wins, like
-        // DensePoints) instead of materializing dense arrays per label below.
-        Dictionary<int, ChartIndexedNumberPoint>[] densePointIndexes = series.Select(BuildDensePointIndex).ToArray();
-
         // RV14: index category labels once per frame instead of linear-scanning
         // per rendered label below.
         Dictionary<int, string> categoryLabelIndex = BuildCategoryLabelIndex(categoryLabels);
@@ -131,8 +127,8 @@ internal sealed partial class PptxRenderer
                 double descent = lineBox.Height - lineBox.Ascent;
                 double labelHeight = edgeSize
                     ? fontSize * PptxChartMetricRules.CartesianDataLabelHeightFactor : lineBox.Height;
-                bool hasPoint = densePointIndexes[seriesIndex].TryGetValue(i, out ChartIndexedNumberPoint point);
-                string label = FormatCartesianDataLabel(value, seriesIndex, i, point, (workbookIndexes[seriesIndex].TryGetValue(hasPoint ? point.Index : i, out ChartIndexedNumberPoint workbookPoint) ? workbookPoint : null), series[seriesIndex].FormatCode, effectiveOptions, categoryLabelIndex, seriesNames);
+                string label = FormatCartesianDataLabel(value, seriesIndex, i, workbookIndexes[seriesIndex],
+                    series[seriesIndex].FormatCode, effectiveOptions, categoryLabelIndex, seriesNames);
                 if (!string.IsNullOrEmpty(label))
                 {
                     bool measured = areaOptions is null && CanMeasurePlainChartLabelFrame(effectiveOptions);

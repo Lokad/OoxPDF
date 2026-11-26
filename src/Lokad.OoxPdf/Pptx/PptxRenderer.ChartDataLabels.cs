@@ -560,14 +560,14 @@ internal sealed partial class PptxRenderer
         double value,
         int seriesIndex,
         int categoryIndex,
-        ChartIndexedNumberPoint point,
-        ChartIndexedNumberPoint? workbookPoint,
+        IReadOnlyDictionary<int, ChartIndexedNumberPoint> workbookPoints,
         string? valueFormatCode,
         ChartDataLabelOptions options,
         IReadOnlyDictionary<int, string> categoryLabelIndex,
         IReadOnlyList<string> seriesNames)
     {
-        var parts = FormatCategoryDataLabelParts(value, seriesIndex, categoryIndex, workbookPoint ?? point,
+        ChartIndexedNumberPoint? workbookPoint = workbookPoints.TryGetValue(categoryIndex, out var point) ? point : null;
+        var parts = FormatCategoryDataLabelParts(value, seriesIndex, categoryIndex, workbookPoint,
             valueFormatCode, options, categoryLabelIndex, seriesNames);
         return string.Join(GetChartDataLabelSeparator(options), parts);
     }
