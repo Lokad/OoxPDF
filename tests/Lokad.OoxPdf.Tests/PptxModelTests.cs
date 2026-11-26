@@ -25,13 +25,6 @@ internal static class PptxModelTests
         PptxSceneChartExternalData definedExternal = PptxSceneChartExternalData.Defined("rId9", "/xl/embed.xlsx", null);
         TestAssert.True(definedExternal.IsDefined, "Defined external data must set the flag.");
 
-        PptxSceneChartColorStyle undefinedColor = PptxSceneChartColorStyle.Undefined(null);
-        TestAssert.True(!undefinedColor.IsDefined, "Undefined color style must clear the flag.");
-        TestAssert.Equal(0, undefinedColor.Colors.Count);
-        PptxSceneChartColorStyle targetedColor = PptxSceneChartColorStyle.Undefined("/ppt/colors.xml");
-        TestAssert.Equal("/ppt/colors.xml", targetedColor.PartName);
-        TestAssert.Throws<ArgumentNullException>(() => PptxSceneChartColorStyle.Defined(null!, string.Empty, string.Empty, [], 0, [], [], []));
-
         PptxSceneChartStyle undefinedStyle = PptxSceneChartStyle.Undefined(null);
         TestAssert.True(!undefinedStyle.IsDefined, "Undefined style part must clear the flag.");
         TestAssert.Equal(0, undefinedStyle.Entries.Count);
@@ -467,21 +460,10 @@ internal static class PptxModelTests
         TestAssert.True(slide.SlideNodes[4].Chart?.Options.Date1904 == true, "Expected chart date-system flag ownership in the scene model.");
         TestAssert.True(slide.SlideNodes[4].Chart?.Options.PlotVisibleOnly == false, "Expected plot-visible-only flag ownership in the scene model.");
         TestAssert.Equal(PptxSceneChartDisplayBlanksAs.Span, slide.SlideNodes[4].Chart?.Options.DisplayBlanksAsKind);
-        TestAssert.True(slide.SlideNodes[4].Chart?.ColorStyle.IsDefined == true, "Expected chart color-style ownership in the scene model.");
-        TestAssert.Equal("/ppt/charts/colors1.xml", slide.SlideNodes[4].Chart?.ColorStyle.PartName ?? string.Empty);
-        TestAssert.Equal("cycle", slide.SlideNodes[4].Chart?.ColorStyle.Method ?? string.Empty);
-        TestAssert.Equal("10", slide.SlideNodes[4].Chart?.ColorStyle.Id ?? string.Empty);
-        TestAssert.Equal(new RgbColor(1, 2, 3), slide.SlideNodes[4].Chart?.ColorStyle.Colors[0] ?? default);
-        TestAssert.Equal(1, slide.SlideNodes[4].Chart?.ColorStyle.Declarations.Count ?? 0);
-        TestAssert.Equal("srgbClr", slide.SlideNodes[4].Chart?.ColorStyle.Declarations[0].Kind ?? string.Empty);
-        TestAssert.Equal("010203", slide.SlideNodes[4].Chart?.ColorStyle.Declarations[0].Value ?? string.Empty);
-        TestAssert.True(slide.SlideNodes[4].Chart?.ColorStyle.Declarations[0].IsResolved == true, "Expected typed chart color-style declaration resolution state.");
         var chart = TestAssert.NotNull(slide.SlideNodes[4].Chart);
         TestAssert.Equal(3, chart.Plots.Count);
         TestAssert.Equal(2, chart.Axes.Count);
-        TestAssert.Equal(new RgbColor(1, 2, 3), chart.ColorStyle.Colors.Single());
-        TestAssert.Equal(0, chart.ColorStyle.VariationCount);
-        TestAssert.Equal("srgbClr", chart.ColorStyle.RootDeclarations.Single().Kind);
+        TestAssert.Equal(new RgbColor(1, 2, 3), chart.PaletteColors.Single());
         TestAssert.True(slide.SlideNodes[4].Chart?.StylePart.IsDefined == true, "Expected chart style-part ownership in the scene model.");
         TestAssert.Equal("/ppt/charts/style1.xml", slide.SlideNodes[4].Chart?.StylePart.PartName ?? string.Empty);
         TestAssert.Equal("10", slide.SlideNodes[4].Chart?.StylePart.Id ?? string.Empty);
@@ -1647,11 +1629,6 @@ internal static class PptxModelTests
             .SelectMany(plot => plot.Series)
             .ToArray();
         IReadOnlyList<PptxSceneChartTextBodyProperties> chartTextBodyProperties = ReadChartTextBodyProperties(node.Chart);
-        IReadOnlyList<PptxSceneChartColorDeclaration> chartColorDeclarations =
-            node.Chart?.ColorStyle.Declarations ?? [];
-        IReadOnlyList<string> chartColorDeclarationKinds = chartColorDeclarations
-            .Select(declaration => declaration.Kind)
-            .ToArray();
         IReadOnlyList<PptxSceneChartStyleEntry> chartStyleEntries = node.Chart?.StylePart.Entries ?? [];
         IReadOnlyList<string> chartStyleEntryRoles = chartStyleEntries
             .Select(entry => entry.Role)
@@ -1710,14 +1687,7 @@ internal static class PptxModelTests
                 chartSeries.Sum(series => series.DataLabels.Overrides.Count(label => label.Layout.HasLayout)),
             ChartTextBodyOrientationCount = chartTextBodyProperties.Count(properties => !string.IsNullOrWhiteSpace(properties.OrientationValue)),
             ChartTextBodyVerticalOverflowCount = chartTextBodyProperties.Count(properties => !string.IsNullOrWhiteSpace(properties.VerticalOverflowValue)),
-            HasChartColorStyle = node.Chart?.ColorStyle.IsDefined ?? false,
-            ChartColorStyleMethod = node.Chart?.ColorStyle.Method ?? string.Empty,
-            ChartColorStyleColorCount = node.Chart?.ColorStyle.Colors.Count ?? 0,
-            ChartColorStyleVariationCount = node.Chart?.ColorStyle.VariationCount ?? 0,
-            ChartColorStyleDeclarationCount = chartColorDeclarations.Count,
-            ChartColorStyleRootDeclarationCount = node.Chart?.ColorStyle.RootDeclarations.Count ?? 0,
-            ChartColorStyleResolvedDeclarationCount = chartColorDeclarations.Count(declaration => declaration.IsResolved),
-            ChartColorStyleDeclarationKinds = chartColorDeclarationKinds,
+            ChartPaletteColorCount = node.Chart?.PaletteColors.Count ?? 0,
             HasChartStylePart = node.Chart?.StylePart.IsDefined ?? false,
             ChartStyleEntryCount = chartStyleEntries.Count,
             ChartStyleEntryRoles = chartStyleEntryRoles,
@@ -2227,10 +2197,8 @@ internal static class PptxModelTests
         TestAssert.Equal(new RgbColor(17, 34, 51), chart.Axes[0].TextStyle.Color ?? default);
         TestAssert.Equal(new RgbColor(68, 85, 102), chart.Axes[0].Title.ShapeStyle.Fill.Color);
         TestAssert.Equal(new RgbColor(17, 34, 51), chart.Axes[0].Title.TextStyle.Color ?? default);
-        TestAssert.Equal(new RgbColor(17, 34, 51), chart.ColorStyle.Colors[0]);
-        TestAssert.Equal(new RgbColor(68, 85, 102), chart.ColorStyle.Colors[1]);
-        TestAssert.Equal(new RgbColor(17, 34, 51), chart.ColorStyle.Declarations[0].Color ?? default);
-        TestAssert.Equal(new RgbColor(68, 85, 102), chart.ColorStyle.Declarations[1].Color ?? default);
+        TestAssert.Equal(new RgbColor(17, 34, 51), chart.PaletteColors[0]);
+        TestAssert.Equal(new RgbColor(68, 85, 102), chart.PaletteColors[1]);
         PptxSceneChartStyleEntry titleStyle = chart.StylePart.Entries.First(entry => entry.Role == "title");
         TestAssert.Equal(new RgbColor(17, 34, 51), titleStyle.ShapeStyle.Fill.Color);
         TestAssert.Equal(new RgbColor(68, 85, 102), titleStyle.ShapeStyle.Line.Color);

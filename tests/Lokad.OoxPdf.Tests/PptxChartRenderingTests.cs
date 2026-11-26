@@ -3469,7 +3469,7 @@ internal static class PptxChartRenderingTests
         }
     }
 
-    public static void PptxScenePreservesChartColorStyleDeclarations()
+    public static void PptxSceneResolvesRootChartPaletteInSourceOrder()
     {
         const string chartXml = """
             <?xml version="1.0" encoding="UTF-8"?>
@@ -3496,42 +3496,22 @@ internal static class PptxChartRenderingTests
                                meth="cycle" id="77">
                   <a:srgbClr val="FF00CC"/>
                   <a:schemeClr val="accent1"/>
+                  <a:srgbClr val="239B57"/>
                   <cs:variation>
                     <a:srgbClr val="112233"><a:alpha val="50000"/><a:alphaMod val="50000"/><a:alphaOff val="2500"/></a:srgbClr>
                   </cs:variation>
                 </cs:colorStyle>
                 """)
         });
-        PptxSceneChart chart = new PptxSceneBuilder().Build(document, package, CancellationToken.None).Slides[0].SlideNodes[0].Chart
-            ?? throw new InvalidOperationException("Expected chart scene.");
+        using (package)
+        {
+            PptxSceneChart chart = new PptxSceneBuilder().Build(document, package, CancellationToken.None).Slides[0].SlideNodes[0].Chart
+                ?? throw new InvalidOperationException("Expected chart scene.");
 
-        TestAssert.Equal("/ppt/charts/colors1.xml", chart.ColorStyle.PartName);
-        TestAssert.Equal(1, chart.ColorStyle.VariationCount);
-        TestAssert.Equal(3, chart.ColorStyle.Declarations.Count);
-        TestAssert.Equal(2, chart.ColorStyle.RootDeclarations.Count);
-        TestAssert.Equal("srgbClr", chart.ColorStyle.Declarations[0].Kind);
-        TestAssert.Equal("FF00CC", chart.ColorStyle.Declarations[0].Value);
-        TestAssert.Equal(null, chart.ColorStyle.Declarations[0].VariationIndex);
-        TestAssert.Equal(new RgbColor(255, 0, 204), chart.ColorStyle.Declarations[0].Color ?? default);
-        TestAssert.Equal("schemeClr", chart.ColorStyle.Declarations[1].Kind);
-        TestAssert.Equal("accent1", chart.ColorStyle.Declarations[1].Value);
-        TestAssert.Equal(null, chart.ColorStyle.Declarations[1].VariationIndex);
-        TestAssert.Equal("srgbClr", chart.ColorStyle.RootDeclarations[0].Kind);
-        TestAssert.Equal("schemeClr", chart.ColorStyle.RootDeclarations[1].Kind);
-        TestAssert.Equal("srgbClr", chart.ColorStyle.Declarations[2].Kind);
-        TestAssert.Equal("112233", chart.ColorStyle.Declarations[2].Value);
-        TestAssert.Equal(0, chart.ColorStyle.Declarations[2].VariationIndex ?? -1);
-        TestAssert.Equal(1, chart.ColorStyle.Variations.Count);
-        TestAssert.Equal(0, chart.ColorStyle.Variations[0].Index);
-        TestAssert.Equal(1, chart.ColorStyle.Variations[0].Declarations.Count);
-        TestAssert.Equal("112233", chart.ColorStyle.Variations[0].Declarations[0].Value);
-        TestAssert.Equal(new RgbColor(17, 34, 51), chart.ColorStyle.Variations[0].Colors[0]);
-        TestAssert.True(Math.Abs(chart.ColorStyle.Declarations[2].Alpha - 0.275d) < 0.000001d,
-            "Direct color declarations must apply alpha transforms in source order.");
-        TestAssert.True(chart.ColorStyle.Declarations[0].IsResolved, "Expected direct RGB color-style declaration to resolve.");
-        TestAssert.True(!chart.ColorStyle.Declarations[1].IsResolved, "Expected unresolved scheme color-style declaration to remain observable.");
-        TestAssert.Equal(1, chart.ColorStyle.Colors.Count);
-        TestAssert.Equal(2, chart.ColorStyle.Declarations.Count(declaration => declaration.IsResolved));
+            TestAssert.True(chart.PaletteColors.SequenceEqual(
+                new[] { new RgbColor(255, 0, 204), new RgbColor(35, 155, 87) }),
+                "The palette retains resolved root colors in order and skips unresolved and nested declarations.");
+        }
     }
 
     public static void PptxScenePreservesChartStyleUnderlineStrikeOnlyTextRoles()

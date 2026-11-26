@@ -37,9 +37,9 @@ internal sealed partial class PptxSceneBuilder
                 ? default
                 : ReadChartExternalData(package, chartRelationships, chartXml, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
-            PptxSceneChartColorStyle colorStyle = chartPart is null
-                ? PptxSceneChartColorStyle.Undefined(null)
-                : ReadChartColorStyle(package, chartRelationships, theme, colorMap, cancellationToken);
+            IReadOnlyList<RgbColor> paletteColors = chartPart is null
+                ? []
+                : ReadChartPaletteColors(package, chartRelationships, theme, colorMap, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
             PptxSceneChartStyle stylePart = chartPart is null
                 ? PptxSceneChartStyle.Undefined(null)
@@ -70,7 +70,7 @@ internal sealed partial class PptxSceneBuilder
                 colorMap,
                 externalData,
                 ReadChartOptions(chartXml),
-                colorStyle,
+                paletteColors,
                 stylePart,
                 legacyStyleValue,
                 galleryStyle,

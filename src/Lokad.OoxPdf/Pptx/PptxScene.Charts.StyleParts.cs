@@ -35,7 +35,7 @@ internal sealed partial class PptxSceneBuilder
             targetPartName is null ? null : package.GetPart(targetPartName));
     }
 
-    private static PptxSceneChartColorStyle ReadChartColorStyle(
+    private static IReadOnlyList<RgbColor> ReadChartPaletteColors(
         OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships,
         PptxTheme theme,
@@ -47,94 +47,24 @@ internal sealed partial class PptxSceneBuilder
             .FirstOrDefault(relationship => !relationship.IsExternal &&
                 relationship.Type == ChartColorStyleRelationshipType &&
                 relationship.ResolvedTarget is not null);
-        if (colorRelationship?.ResolvedTarget is null)
-        {
-            return PptxSceneChartColorStyle.Undefined(null);
-        }
-
-        OoxPart? colorPart = package.GetPart(colorRelationship.ResolvedTarget);
-        if (colorPart is null)
-        {
-            return PptxSceneChartColorStyle.Undefined(colorRelationship.ResolvedTarget);
-        }
-
-        XDocument document = package.LoadXml(colorPart, cancellationToken);
-        IReadOnlyList<PptxSceneChartColorDeclaration> rootDeclarations = ReadChartColorStyleRootDeclarations(document, theme, colorMap, cancellationToken);
-        IReadOnlyList<PptxSceneChartColorVariation> variations = ReadChartColorStyleVariations(document, theme, colorMap, cancellationToken);
-        PptxSceneChartColorDeclaration[] declarations = rootDeclarations
-            .Concat(variations.SelectMany(variation => variation.Declarations)).ToArray();
-        // Painting consumes resolved root colors; unsupported method/variation
-        // semantics remain available in the source and inspection declarations.
-        RgbColor[] colors = rootDeclarations.Select(declaration => declaration.Color).OfType<RgbColor>().ToArray();
-
-        return PptxSceneChartColorStyle.Defined(
-            colorPart.Name,
-            (string?)document.Root?.Attribute("meth") ?? string.Empty,
-            (string?)document.Root?.Attribute("id") ?? string.Empty,
-            colors,
-            variations.Count,
-            declarations,
-            rootDeclarations,
-            variations);
-    }
-
-    private static IReadOnlyList<PptxSceneChartColorDeclaration> ReadChartColorStyleRootDeclarations(XDocument document, PptxTheme theme, PptxColorMap colorMap, CancellationToken cancellationToken)
-    {
-        if (document.Root is null)
-        {
+        if (colorRelationship?.ResolvedTarget is not { } target || package.GetPart(target) is not { } part)
             return [];
-        }
 
-        return document.Root.Elements()
-            .Where(PptxColorResolver.IsDrawingColorElement)
-            .Select(colorElement => ReadChartColorStyleDeclaration(colorElement, theme, colorMap, variationIndex: null, cancellationToken))
-            .ToArray();
-    }
-
-    private static IReadOnlyList<PptxSceneChartColorVariation> ReadChartColorStyleVariations(XDocument document, PptxTheme theme, PptxColorMap colorMap, CancellationToken cancellationToken)
-    {
-        if (document.Root is null)
-        {
+        XDocument document = package.LoadXml(part, cancellationToken);
+        if (document.Root is not { } root)
             return [];
-        }
 
-        var variations = new List<PptxSceneChartColorVariation>();
-        int variationIndex = 0;
-        foreach (XElement variation in document.Root.Elements().Where(IsChartColorStyleVariationElement))
+        // The palette uses resolved root colors and skips chart color-style variation transforms.
+        var colors = new List<RgbColor>();
+        foreach (XElement element in root.Elements())
         {
             cancellationToken.ThrowIfCancellationRequested();
-            IReadOnlyList<PptxSceneChartColorDeclaration> declarations = variation
-                .Descendants()
-                .Where(PptxColorResolver.IsDrawingColorElement)
-                .Select(colorElement => ReadChartColorStyleDeclaration(colorElement, theme, colorMap, variationIndex, cancellationToken))
-                .ToArray();
-            variations.Add(new PptxSceneChartColorVariation(
-                variationIndex,
-                declarations,
-                declarations.Where(declaration => declaration.IsResolved).Select(declaration => declaration.Color).OfType<RgbColor>()
-                    .ToArray()));
-            variationIndex++;
+            if (PptxColorResolver.IsDrawingColorElement(element) &&
+                PptxColorResolver.TryReadColorDeclarationWithAlpha(element, theme, colorMap, out RgbColor color, out _))
+                colors.Add(color);
         }
 
-        return variations;
-    }
-
-    private static PptxSceneChartColorDeclaration ReadChartColorStyleDeclaration(XElement colorElement, PptxTheme theme, PptxColorMap colorMap, int? variationIndex, CancellationToken cancellationToken)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-        bool isResolved = PptxColorResolver.TryReadColorDeclarationWithAlpha(colorElement, theme, colorMap, out RgbColor color, out double alpha);
-        return new PptxSceneChartColorDeclaration(
-            colorElement.Name.LocalName,
-            (string?)colorElement.Attribute("val") ?? string.Empty,
-            variationIndex,
-            isResolved,
-            isResolved ? color : null,
-            isResolved ? alpha : 1d);
-    }
-
-    private static bool IsChartColorStyleVariationElement(XElement element)
-    {
-        return element.Name.LocalName == "variation";
+        return colors;
     }
 
     private static PptxSceneChartStyle ReadChartStylePart(

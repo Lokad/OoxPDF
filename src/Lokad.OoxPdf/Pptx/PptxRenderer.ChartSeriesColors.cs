@@ -25,7 +25,7 @@ internal sealed partial class PptxRenderer
                 indexSpan = Math.Max(indexSpan, (long)index + 1L);
             else declaredIndices = false;
         }
-        if (chart.ColorStyle.Colors is { Count: > 0 } colors) { return new(colors, null, seriesCount); }
+        if (chart.PaletteColors is { Count: > 0 } colors) { return new(colors, null, seriesCount); }
 
         if (chart.GalleryStyle is int style)
         {

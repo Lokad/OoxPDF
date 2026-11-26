@@ -12,7 +12,7 @@ internal sealed record PptxSceneChart(
     PptxColorMap ColorMap,
     PptxSceneChartExternalData ExternalData,
     PptxSceneChartOptions Options,
-    PptxSceneChartColorStyle ColorStyle,
+    IReadOnlyList<RgbColor> PaletteColors,
     PptxSceneChartStyle StylePart,
     string LegacyStyleValue,
     int? GalleryStyle,
@@ -68,86 +68,6 @@ internal enum PptxSceneChartDisplayBlanksAs
     Zero
 }
 
-// T02: defined color styles always resolve a part (producers pass the loaded part
-// name); undefined carries an optional known target for diagnostics. Both states build
-// only through the factories, so three drifting hand-built undefined literals collapse
-// to one spelling.
-internal readonly record struct PptxSceneChartColorStyle
-{
-    public bool IsDefined { get; }
-
-    public string? PartName { get; }
-
-    public string Method { get; }
-
-    public string Id { get; }
-
-    public IReadOnlyList<RgbColor> Colors { get; }
-
-    public int VariationCount { get; }
-
-    public IReadOnlyList<PptxSceneChartColorDeclaration> Declarations { get; }
-
-    public IReadOnlyList<PptxSceneChartColorDeclaration> RootDeclarations { get; }
-
-    public IReadOnlyList<PptxSceneChartColorVariation> Variations { get; }
-
-    private PptxSceneChartColorStyle(
-        bool isDefined,
-        string? partName,
-        string method,
-        string id,
-        IReadOnlyList<RgbColor> colors,
-        int variationCount,
-        IReadOnlyList<PptxSceneChartColorDeclaration> declarations,
-        IReadOnlyList<PptxSceneChartColorDeclaration> rootDeclarations,
-        IReadOnlyList<PptxSceneChartColorVariation> variations)
-    {
-        IsDefined = isDefined;
-        PartName = partName;
-        Method = method;
-        Id = id;
-        Colors = colors;
-        VariationCount = variationCount;
-        Declarations = declarations;
-        RootDeclarations = rootDeclarations;
-        Variations = variations;
-    }
-
-    public static PptxSceneChartColorStyle Undefined(string? partName)
-    {
-        return new PptxSceneChartColorStyle(false, partName, string.Empty, string.Empty, [], 0, [], [], []);
-    }
-
-    public static PptxSceneChartColorStyle Defined(
-        string partName,
-        string method,
-        string id,
-        IReadOnlyList<RgbColor> colors,
-        int variationCount,
-        IReadOnlyList<PptxSceneChartColorDeclaration> declarations,
-        IReadOnlyList<PptxSceneChartColorDeclaration> rootDeclarations,
-        IReadOnlyList<PptxSceneChartColorVariation> variations)
-    {
-        ArgumentNullException.ThrowIfNull(partName);
-        return new PptxSceneChartColorStyle(true, partName, method, id, colors, variationCount, declarations, rootDeclarations, variations);
-    }
-}
-
-internal readonly record struct PptxSceneChartColorVariation(
-    int Index,
-    IReadOnlyList<PptxSceneChartColorDeclaration> Declarations,
-    IReadOnlyList<RgbColor> Colors);
-
-internal readonly record struct PptxSceneChartColorDeclaration(
-    string Kind,
-    string Value,
-    int? VariationIndex,
-    bool IsResolved,
-    RgbColor? Color,
-    double Alpha);
-
-// T02: same defined/undefined discipline as the color style above.
 internal sealed record PptxSceneChartStyle
 {
     public bool IsDefined { get; }
