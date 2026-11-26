@@ -82,22 +82,15 @@ internal sealed partial class PptxSceneBuilder
         bool supported = PptxBuiltInTableStyles.TryGet(styleId, out PptxBuiltInTableStyle style);
         return new PptxSceneTableStyle(
             styleId,
-            supported ? style.Name : string.Empty,
             supported ? style.Kind : PptxBuiltInTableStyleKind.Unknown,
             supported ? style.Accent : string.Empty,
             supported,
             ReadTablePropertyFlag(tableProperties, "firstRow"),
-            ReadTablePropertyFlagValue(tableProperties, "firstRow"),
             ReadTablePropertyFlag(tableProperties, "lastRow"),
-            ReadTablePropertyFlagValue(tableProperties, "lastRow"),
             ReadTablePropertyFlag(tableProperties, "firstCol"),
-            ReadTablePropertyFlagValue(tableProperties, "firstCol"),
             ReadTablePropertyFlag(tableProperties, "lastCol"),
-            ReadTablePropertyFlagValue(tableProperties, "lastCol"),
             ReadTablePropertyFlag(tableProperties, "bandRow"),
-            ReadTablePropertyFlagValue(tableProperties, "bandRow"),
-            ReadTablePropertyFlag(tableProperties, "bandCol"),
-            ReadTablePropertyFlagValue(tableProperties, "bandCol"));
+            ReadTablePropertyFlag(tableProperties, "bandCol"));
     }
 
     private static bool ReadTablePropertyFlag(XElement? tableProperties, string name)
@@ -113,11 +106,6 @@ internal sealed partial class PptxSceneBuilder
         }
 
         return tableProperties.Element(DrawingNamespace + name) is not null;
-    }
-
-    private static string ReadTablePropertyFlagValue(XElement? tableProperties, string name)
-    {
-        return (string?)tableProperties?.Attribute(name) ?? string.Empty;
     }
 
     internal static PptxSceneTableCell ReadTableCell(XElement cell, PptxTheme theme, PptxColorMap colorMap, PptxSceneTableStyle tableStyle, int rowIndex, int columnIndex, int rowCount, int columnCount)

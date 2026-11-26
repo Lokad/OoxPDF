@@ -386,15 +386,12 @@ internal static class PptxModelTests
         TestAssert.Equal(1, slide.SlideNodes[2].Table?.RowHeights.Count ?? 0);
         TestAssert.Equal(914400d, slide.SlideNodes[2].Table?.RowHeights[0] ?? 0d);
         TestAssert.True(slide.SlideNodes[2].Table?.Style.IsSupported == true, "Expected built-in table style lookup in the scene model.");
-        TestAssert.Equal("Medium-Style-2", slide.SlideNodes[2].Table?.Style.Name ?? string.Empty);
         TestAssert.Equal(PptxBuiltInTableStyleKind.MediumStyle2, slide.SlideNodes[2].Table?.Style.Kind ?? PptxBuiltInTableStyleKind.Unknown);
         TestAssert.Equal("accent6", slide.SlideNodes[2].Table?.Style.Accent ?? string.Empty);
         TestAssert.True(slide.SlideNodes[2].Table?.Style.FirstRow == true, "Expected table first-row flag in the scene model.");
         TestAssert.True(slide.SlideNodes[2].Table?.Style.BandRow == true, "Expected table band-row flag in the scene model.");
         var table = TestAssert.NotNull(slide.SlideNodes[2].Table);
         TestAssert.Equal("{93296810-A885-4BE3-A3E7-6D5BEEA58F35}", table.Style.StyleId);
-        TestAssert.Equal("1", table.Style.FirstRowValue);
-        TestAssert.Equal("1", table.Style.BandRowValue);
         var cells = table.Rows.Single().Cells;
         TestAssert.Equal(2, cells.Count);
         TestAssert.True(cells.All(cell => cell.StyleFill.HasFill && cell.StyleText.Color is not null && cell.StyleText.Bold),
@@ -872,7 +869,7 @@ internal static class PptxModelTests
 
     }
 
-    public static void PptxSceneTableStylePreservesConditionalFormatFlagTokens()
+    public static void PptxSceneTableStyleResolvesConditionalFlags()
     {
         XElement table = XElement.Parse("""
             <a:tbl xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
@@ -884,18 +881,23 @@ internal static class PptxModelTests
 
         PptxSceneTableStyle style = PptxSceneBuilder.ReadTableStyle(table);
 
-        TestAssert.True(!style.FirstRow, "Expected parsed false first-row flag.");
-        TestAssert.Equal("false", style.FirstRowValue);
-        TestAssert.True(style.LastRow, "Expected numeric true last-row flag.");
-        TestAssert.Equal("1", style.LastRowValue);
-        TestAssert.True(!style.FirstColumn, "Expected numeric false first-column flag.");
-        TestAssert.Equal("0", style.FirstColumnValue);
-        TestAssert.True(style.LastColumn, "Expected textual true last-column flag.");
-        TestAssert.Equal("true", style.LastColumnValue);
-        TestAssert.True(!style.BandRow, "Expected parsed false band-row flag.");
-        TestAssert.Equal("false", style.BandRowValue);
-        TestAssert.True(style.BandColumn, "Expected numeric true band-column flag.");
-        TestAssert.Equal("1", style.BandColumnValue);
+        TestAssert.Equal((false, true, false, true, false, true),
+            (style.FirstRow, style.LastRow, style.FirstColumn, style.LastColumn, style.BandRow, style.BandColumn));
+
+        XElement fallbackTable = XElement.Parse("""
+            <a:tbl xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <a:tblPr lastRow="unknown" lastCol="false">
+                <a:lastRow/>
+                <a:firstCol/>
+                <a:lastCol/>
+              </a:tblPr>
+            </a:tbl>
+            """);
+        PptxSceneTableStyle fallback = PptxSceneBuilder.ReadTableStyle(fallbackTable);
+
+        TestAssert.True(!fallback.FirstRow && !fallback.BandRow && !fallback.BandColumn, "Absent flags default off.");
+        TestAssert.True(fallback.FirstColumn, "The existing child fallback applies without an attribute.");
+        TestAssert.True(!fallback.LastRow && !fallback.LastColumn, "Authored attributes take precedence over children.");
     }
 
     public static void PptxPlaceholderMatchingPrefersExactThenIndex()
