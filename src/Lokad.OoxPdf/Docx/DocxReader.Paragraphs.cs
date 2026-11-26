@@ -91,6 +91,7 @@ internal sealed partial class DocxReader
         HashSet<DocxRevisionInfo>? nonOwningRangeMarkers = null;
         var authoredStory = paragraph.Annotation<DocxSourceXml.StoryOrigin>()?.Story;
         IReadOnlySet<(XName Name, string Id)>? inlineMoveOwners = null;
+        HashSet<int>? pairedMoveEquations = null;
         if (leadingInlineCommentBoundaries is not null)
         {
             foreach (XElement marker in leadingInlineCommentBoundaries)
@@ -197,10 +198,10 @@ internal sealed partial class DocxReader
             }
             else if (IsRevisionMarkerElement(child))
             {
-                int? firstExcluded = AddRevisionMarker(child, paragraphRevisions, openRevisionRanges, revisionRanges,
+                int? firstInRange = AddRevisionMarker(child, paragraphRevisions, openRevisionRanges, revisionRanges,
                     sourceRunIndex, runs, equations.Count, contentSourcePosition, authoredStory, cancellationToken,
                     ref nonOwningRangeMarkers);
-                if (firstExcluded is int first && first < equations.Count)
+                if (firstInRange is int first && first < equations.Count)
                 {
                     // Both collections publish the same equation objects. Use
                     // their insertion order because formulas can share run indices.
@@ -209,8 +210,10 @@ internal sealed partial class DocxReader
                     {
                         cancellationToken.ThrowIfCancellationRequested();
                         if (inlineItems[itemIndex] is not DocxInlineEquation math) continue;
-                        var excluded = math.Equation with { IsInsidePartialMoveRange = true };
-                        equations[equationIndex--] = excluded;
+                        int index = equationIndex--;
+                        if (pairedMoveEquations?.Contains(index) == true) continue;
+                        var excluded = math.Equation with { HasUnresolvedMoveOwnership = true };
+                        equations[index] = excluded;
                         inlineItems[itemIndex] = new DocxInlineEquation(excluded);
                     }
                 }
@@ -553,10 +556,13 @@ internal sealed partial class DocxReader
                     content = empty;
                 }
                 // Verified moves retain their individual math run owners through placement.
+                bool hasPairedMoveOwner = equationRevision?.IsPairedInlineMove == true || source.ProjectsMathMove;
+                if (hasPairedMoveOwner && openRevisionRanges.Count != 0)
+                    (pairedMoveEquations ??= []).Add(equations.Count);
                 equations.Add(new DocxEquation(
                     content,
                     runs.Count, sourceRunIndex, display, alignment,
-                    equationRevision?.IsPairedInlineMove == true || source.ProjectsMathMove ? null : equationRevision)
+                    hasPairedMoveOwner ? null : equationRevision)
                 {
                     ParentFontSize = ResolveRunProperties(null, paragraphStyleId, null, styles, tableCellStyle?.Run, out _).FontSize
                         ?? DocxDefaults.UnstyledRunFontSizePoints,

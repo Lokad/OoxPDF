@@ -273,7 +273,7 @@ internal static class DocxMathParagraphPolicy
             {
                 case DocxInlineText { Length: 0 }:
                 case DocxInlineTab tab when tab.Run.EffectiveProperties.Hidden:
-                case DocxInlineEquation { Equation.IsInsidePartialMoveRange: true }:
+                case DocxInlineEquation { Equation.HasUnresolvedMoveOwnership: true }:
                     break;
                 case DocxInlineEquation math:
                     row.Add(math.Equation);
@@ -370,7 +370,7 @@ internal static class DocxMathParagraphPolicy
     public static DocxMathDisplayAlignment? ResolveParagraphDisplayAlignment(DocxParagraph paragraph, CancellationToken token)
     {
         // Known source values remain required even when a row is measured inline.
-        var fallback = ResolveDisplayAlignment(GetEquationsOutsidePartialMoves(paragraph), token);
+        var fallback = ResolveDisplayAlignment(GetEquationsWithResolvedMoveOwnership(paragraph), token);
         if (fallback is null || paragraph.InlineContent is not { } items) return fallback;
         // The first effective display row owns paragraph justification. Inline
         // rows retain their source properties without governing later display.
@@ -405,7 +405,7 @@ internal static class DocxMathParagraphPolicy
         {
             token.ThrowIfCancellationRequested();
             if (item is DocxInlineEquation math && displayRows.Contains(math.Equation) || item is DocxInlineBreak ||
-                item is DocxInlineEquation { Equation.IsInsidePartialMoveRange: true } ||
+                item is DocxInlineEquation { Equation.HasUnresolvedMoveOwnership: true } ||
                 item is DocxInlineText text && (text.Run.EffectiveProperties.Hidden || text.Run.Text.AsSpan(text.Start, text.Length).IsWhiteSpace())) continue;
             return false;
         }
@@ -425,7 +425,7 @@ internal static class DocxMathParagraphPolicy
             !(DocxPlainBodyFrame.HasContentDrivenLineFlow(paragraph) || DocxPlainBodyFrame.HasFixedLineFlow(paragraph))) return [];
         // Source rows own resolved style: Word measures explicit formulas inline
         // beside visible text/pictures; math-only rows retain display measurement/alignment.
-        var equations = GetEquationsOutsidePartialMoves(paragraph);
+        var equations = GetEquationsWithResolvedMoveOwnership(paragraph);
         var displayRows = equations.Any(equation => equation.Display)
             ? GetDisplaySourceEquations(paragraph, token) : null;
         var mixedRows = displayRows is not null ? GetMixedSourceEquations(paragraph, token) : null;
@@ -449,8 +449,8 @@ internal static class DocxMathParagraphPolicy
         paragraph.Equations.Count != 0 &&
         DocxInlineContent.HasSupportedSourceOwner(paragraph, hasPageInputs, token, allowPartialMoveRanges: true);
 
-    private static IReadOnlyList<DocxEquation> GetEquationsOutsidePartialMoves(DocxParagraph paragraph) =>
+    private static IReadOnlyList<DocxEquation> GetEquationsWithResolvedMoveOwnership(DocxParagraph paragraph) =>
         paragraph.RevisionRanges.Any(range => range.InlineMoveOwnership == DocxInlineMoveOwnership.Partial)
-            ? paragraph.Equations.Where(equation => !equation.IsInsidePartialMoveRange).ToArray()
+            ? paragraph.Equations.Where(equation => !equation.HasUnresolvedMoveOwnership).ToArray()
             : paragraph.Equations;
 }

@@ -21,7 +21,8 @@ internal sealed record DocxEquation(
 {
     // Discovery hint only; eligibility still verifies actual retained source owners.
     public bool HasRunRevisions { get; init; }
-    public bool IsInsidePartialMoveRange { get; init; }
+    // A finite partial range contains this formula without an explicit paired owner.
+    public bool HasUnresolvedMoveOwnership { get; init; }
     public double? ParentFontSize { get; init; }
     public bool Cramped { get; init; }
     public DocxMathLimitSettings LimitSettings { get; init; } = DocxMathLimitSettings.Empty;

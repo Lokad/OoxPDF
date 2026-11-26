@@ -260,9 +260,11 @@ internal static partial class DocxInlineCompositionTests
             (OoxPdfDocxMarkupMode.Original, 1),
             (OoxPdfDocxMarkupMode.AllMarkup, 2)
         })
+        foreach (bool includesUnownedEquation in new[] { false, true })
         {
             unsupported.Clear();
-            var document = ReadMove(mode, packed: false, paired: true, unsupported, hasOtherRangeContent: true);
+            var document = ReadMove(mode, packed: false, paired: true, unsupported,
+                hasOtherRangeContent: true, includesUnownedEquation: includesUnownedEquation);
             var ranges = MoveRanges(document);
             TestAssert.Equal(2, ranges.Length);
             TestAssert.True(ranges.All(range =>
@@ -272,10 +274,10 @@ internal static partial class DocxInlineCompositionTests
             string text = DocxPageFootnoteNumberingTests.DecodeText(page);
             foreach (string neighbor in new[] { "17", "28", "adjacent" })
                 TestAssert.Equal(2, text.Split(neighbor, StringSplitOptions.None).Length - 1);
-            TestAssert.DoesNotContain("314", text);
-            TestAssert.DoesNotContain("793", text);
-            TestAssert.True(unsupported.Any(item => item.Id == "DOCX_UNSUPPORTED_EQUATION"),
-                "Mathematics inside the partial range still uses the diagnosed fallback.");
+            foreach (string moved in new[] { "314", "793", "QA", "\u03a9" })
+                TestAssert.Equal(count, text.Split(moved, StringSplitOptions.None).Length - 1);
+            TestAssert.DoesNotContain("526", text);
+            TestAssert.Equal(includesUnownedEquation, unsupported.Any(item => item.Id == "DOCX_UNSUPPORTED_EQUATION"));
             var pictures = ReadPictureBounds(page).ToArray();
             TestAssert.Equal(count, pictures.Length);
             TestAssert.Equal(2, page.Annotations.Count);
@@ -296,7 +298,8 @@ internal static partial class DocxInlineCompositionTests
             .SelectMany(element => element.Paragraph.RevisionRanges).ToArray();
 
         static DocxDocument ReadMove(OoxPdfDocxMarkupMode mode, bool packed, bool paired, List<OoxPdfDiagnostic> diagnostics,
-            bool hasOtherRangeContent = false, bool splitOwners = false, bool annotated = false) =>
+            bool hasOtherRangeContent = false, bool splitOwners = false, bool annotated = false,
+            bool includesUnownedEquation = false) =>
             ReadMutation("CompositionProbes/math-display-image-body-between", mode, false, false, (xml, w, m) =>
             {
                 const string target = "PairedMoveDrawingTarget";
@@ -325,6 +328,8 @@ internal static partial class DocxInlineCompositionTests
 
                     if (hasOtherRangeContent)
                         move[2].AddBeforeSelf(new XElement(w + "r", new XElement(w + "t", "adjacent")));
+                    if (includesUnownedEquation)
+                        move[2].AddBeforeSelf(Equation("526"));
                     var run = move[1].Element(m + "r")!;
                     var companions = run.Elements().Where(child => child.Name != m + "t").ToArray();
                     if (splitOwners)

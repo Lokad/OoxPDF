@@ -84,7 +84,7 @@ internal static class DocxSourceXml
         IReadOnlySet<(XName Name, string Id)>? pairedOwners = null;
         bool hasOwner = false, hasOtherContent = false;
         // A partial pair establishes local boundaries and explicit source
-        // owners. Equations within it retain the diagnosed fallback.
+        // owners. Other content still has unresolved range ownership.
         foreach (var child in start.ElementsAfterSelf())
         {
             token.ThrowIfCancellationRequested();
