@@ -1022,37 +1022,59 @@ internal static partial class PdfWriterTests
     public static void TruncatedContentMarkRewindsPaintAndResources()
     {
         var graphics = new PdfGraphicsBuilder();
+        PdfShadingStop[] stops = [new(0d, 255, 0, 0), new(1d, 0, 0, 255)];
+        var retainedShading = new PdfAxialShading(0, 0, 40, 40, stops);
+        var discardedShading = new PdfRadialShading(stops);
+        var retainedPattern = new PdfTilingPattern(8d, 8d, 8d, 8d, null, 1, "0 0 m 8 8 l S\n", []);
+        var discardedPattern = new PdfTilingPattern(4d, 4d, 4d, 4d, null, 1, "0 0 m 4 4 l S\n", []);
         graphics.SetFillRgb(255, 0, 0);
         graphics.FillRectangle(10, 20, 30, 40);
-        int survivingLength = graphics.ToString().Length;
+        graphics.SetAlpha(0.25d, 0.75d);
+        graphics.PaintShading(retainedShading);
+        graphics.FillRectangleWithTilingPattern(1, 2, 3, 4, retainedPattern);
+        string before = graphics.ToString();
         PdfGraphicsBuilder.ContentMark mark = graphics.MarkContent();
 
         graphics.SetFillRgb(0, 0, 255);
         graphics.FillRectangle(50, 60, 70, 80);
         graphics.SaveState();
         graphics.SetAlpha(0.5d, 0.5d);
-        graphics.PaintAxialShading(0, 0, 100, 100, [new(0d, 255, 0, 0), new(1d, 0, 0, 255)]);
-        graphics.PaintShading(new PdfRadialShading([new(0d, 255, 0, 0), new(1d, 0, 0, 255)]));
-        var pattern = new PdfTilingPattern(4d, 4d, 4d, 4d, null, 1, "0 0 m 4 4 l S\n", []);
-        graphics.FillRectangleWithTilingPattern(1, 2, 3, 4, pattern);
-        TestAssert.Equal(2, graphics.Shadings.Count);
+        graphics.PaintAxialShading(0, 0, 100, 100, stops);
+        graphics.PaintShading(discardedShading);
+        graphics.FillRectangleWithTilingPattern(1, 2, 3, 4, discardedPattern);
+        TestAssert.Equal(3, graphics.Shadings.Count);
 
         graphics.TruncateContent(mark);
 
         string content = graphics.ToString();
-        TestAssert.Equal(survivingLength, content.Length);
+        TestAssert.Equal(before, content);
         TestAssert.Contains("1 0 0 rg", content);
         TestAssert.Contains("10 20 30 40 re f", content);
         TestAssert.DoesNotContain("0 0 1 rg", content);
         TestAssert.DoesNotContain("50 60 70 80 re f", content);
-        TestAssert.Equal(0, graphics.ExtGStates.Count);
-        TestAssert.Equal(0, graphics.Shadings.Count);
-        TestAssert.Equal(0, graphics.Patterns.Count);
         TestAssert.Equal(0, graphics.StateDepth);
-        graphics.PaintShading(new PdfRadialShading([new(0d, 255, 0, 0), new(1d, 0, 0, 255)]));
-        TestAssert.Equal(1, graphics.Shadings.Count);
-        TestAssert.Equal("Sh1", graphics.Shadings[0].ResourceName);
-        TestAssert.Contains("/Sh1 sh", graphics.ToString());
+
+        graphics.SetAlpha(0.25d, 0.75d);
+        graphics.PaintShading(retainedShading);
+        graphics.FillRectangleWithTilingPattern(1, 2, 3, 4, retainedPattern);
+        TestAssert.Equal("GS25000F75000S", graphics.ExtGStates.Single().ResourceName);
+        TestAssert.Equal("Sh1", graphics.Shadings.Single().ResourceName);
+        TestAssert.Equal("P1", graphics.Patterns.Single().ResourceName);
+
+        graphics.SetAlpha(0.5d, 0.5d);
+        graphics.PaintShading(discardedShading);
+        graphics.FillRectangleWithTilingPattern(1, 2, 3, 4, discardedPattern);
+        TestAssert.Equal(2, graphics.ExtGStates.Count);
+        TestAssert.Equal(2, graphics.Shadings.Count);
+        TestAssert.Equal(2, graphics.Patterns.Count);
+        TestAssert.Equal("GS50000F50000S", graphics.ExtGStates[1].ResourceName);
+        TestAssert.Equal("Sh2", graphics.Shadings[1].ResourceName);
+        TestAssert.Equal("P2", graphics.Patterns[1].ResourceName);
+        var page = new PdfPage(100d, 100d, graphics.ToString(), extGStates: graphics.ExtGStates, shadings: graphics.Shadings,
+            patterns: graphics.Patterns);
+        string pdf = WritePdfText([page]);
+        TestAssert.Contains("/Sh2 sh", pdf);
+        TestAssert.Contains("/Pattern cs /P2 scn", pdf);
     }
 
     public static void TruncatedContentMarksNestAcrossNodes()

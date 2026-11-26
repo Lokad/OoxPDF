@@ -15,10 +15,9 @@ internal sealed class PdfGraphicsBuilder
     private readonly List<PdfTransparencyGroupResource> groups = [];
     private readonly HashSet<string> usedFontResourceNames = new(StringComparer.Ordinal);
     private readonly List<string> fontUseOrder = [];
-    // R10: registration indexes mirroring the append-only resource lists. Dictionary
-    // lookups replace per-call linear scans so distinct-state registration is O(1);
-    // TruncateContent rebuilds them so rolled-back entries never dangle.
-    private readonly Dictionary<string, int> extGStateIndex = new(StringComparer.Ordinal);
+    // Each registration key belongs to one resource entry. Rolling back the
+    // appended entries keeps the keys and slot numbers of surviving resources.
+    private readonly HashSet<string> extGStateNames = new(StringComparer.Ordinal);
     private readonly Dictionary<string, int> shadingIndex = new(StringComparer.Ordinal);
     private readonly Dictionary<string, int> patternIndex = new(StringComparer.Ordinal);
     private readonly Dictionary<string, int> shadingPatternIndex = new(StringComparer.Ordinal);
@@ -95,7 +94,7 @@ internal sealed class PdfGraphicsBuilder
     {
         string groupName = RegisterTransparencyGroup(child, bounds);
         string stateName = "GSV" + (extGStates.Count + 1).ToString(CultureInfo.InvariantCulture);
-        extGStateIndex[stateName] = extGStates.Count;
+        extGStateNames.Add(stateName);
         extGStates.Add(new PdfExtGStateResource(stateName, Math.Clamp(fillAlpha, 0d, 1d), Math.Clamp(strokeAlpha, 0d, 1d), groupName));
         builder.Append('/').Append(stateName).AppendLine(" gs");
     }
@@ -199,9 +198,8 @@ internal sealed class PdfGraphicsBuilder
         fillAlpha = Math.Clamp(fillAlpha, 0d, 1d);
         strokeAlpha = Math.Clamp(strokeAlpha, 0d, 1d);
         string resourceName = "GS" + AlphaResourceComponent(fillAlpha) + "F" + AlphaResourceComponent(strokeAlpha) + "S";
-        if (!extGStateIndex.TryGetValue(resourceName, out _))
+        if (extGStateNames.Add(resourceName))
         {
-            extGStateIndex[resourceName] = extGStates.Count;
             extGStates.Add(new PdfExtGStateResource(resourceName, fillAlpha, strokeAlpha));
         }
 
@@ -656,16 +654,19 @@ internal sealed class PdfGraphicsBuilder
 
         while (extGStates.Count > mark.ExtGStateCount)
         {
+            extGStateNames.Remove(extGStates[^1].ResourceName);
             extGStates.RemoveAt(extGStates.Count - 1);
         }
 
         while (shadings.Count > mark.ShadingCount)
         {
+            shadingIndex.Remove(shadings[^1].Shading.ResourceKey);
             shadings.RemoveAt(shadings.Count - 1);
         }
 
         while (patterns.Count > mark.PatternCount)
         {
+            patternIndex.Remove(patterns[^1].Pattern.ResourceKey);
             patterns.RemoveAt(patterns.Count - 1);
         }
 
@@ -676,12 +677,12 @@ internal sealed class PdfGraphicsBuilder
 
         while (shadingPatterns.Count > mark.ShadingPatternCount)
         {
+            shadingPatternIndex.Remove(shadingPatterns[^1].Pattern.ResourceKey);
             shadingPatterns.RemoveAt(shadingPatterns.Count - 1);
         }
 
         stateDepth = Math.Max(0, mark.StateDepth);
         actualTextOpen = mark.ActualTextOpen;
-        RebuildResourceIndexes();
     }
 
     private void RegisterFontUse(string resourceName)
@@ -689,32 +690,6 @@ internal sealed class PdfGraphicsBuilder
         if (usedFontResourceNames.Add(resourceName)) { fontUseOrder.Add(resourceName); }
     }
 
-    private void RebuildResourceIndexes()
-    {
-        extGStateIndex.Clear();
-        shadingIndex.Clear();
-        patternIndex.Clear();
-        shadingPatternIndex.Clear();
-        for (int i = 0; i < shadingPatterns.Count; i++)
-        {
-            shadingPatternIndex[shadingPatterns[i].Pattern.ResourceKey] = i;
-        }
-        for (int i = 0; i < shadings.Count; i++)
-        {
-            shadingIndex[shadings[i].Shading.ResourceKey] = i;
-        }
-
-        for (int i = 0; i < patterns.Count; i++)
-        {
-            patternIndex[patterns[i].Pattern.ResourceKey] = i;
-        }
-
-        for (int i = 0; i < extGStates.Count; i++)
-        {
-            PdfExtGStateResource state = extGStates[i];
-            extGStateIndex[state.ResourceName] = i;
-        }
-    }
     public override string ToString()
     {
         if (actualTextOpen) throw new InvalidOperationException("PDF content leaves an ActualText span open.");

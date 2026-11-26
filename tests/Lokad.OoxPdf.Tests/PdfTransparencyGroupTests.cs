@@ -503,6 +503,9 @@ internal static class PdfTransparencyGroupTests
         string pdf = Encoding.ASCII.GetString(Write([Page(parent), GroupPage(snapshot)]));
         TestAssert.DoesNotContain("/Matrix [50 0 0 50", pdf);
         TestAssert.Contains("/Matrix [25 0 0 25", pdf);
+        parent.SetFillShadingPattern(StrokePattern(50));
+        TestAssert.Equal("Ps3", parent.ShadingPatterns[2].ResourceName);
+        TestAssert.Contains("/Pattern cs /Ps3 scn", parent.ToString());
     }
 
     public static void ShadingPatternsRejectMissingAndAmbiguousLocalBindings()
