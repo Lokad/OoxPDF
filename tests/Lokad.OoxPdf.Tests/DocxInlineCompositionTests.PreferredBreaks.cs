@@ -218,12 +218,16 @@ internal static partial class DocxInlineCompositionTests
             })
             {
                 PdfPage control = PaintPictureTabField(renderer, mode, alignment, ["12.34"], body);
+                var field = PortableRenderingTests.ReadPaintedSourceLabel(control, "12.34");
+                TestAssert.Equal(5, field.Count);
+                PdfRectangle rule = ReadPictureFractionRule(control);
+                var picture = ReadPaintedPictureFrame(control);
                 foreach (string leader in leaders)
                 {
                     PdfPage actual = PaintPictureTabField(renderer, mode, alignment, ["12.34"], body, leader: leader);
                     TestAssert.Equal(control.Content, actual.Content);
-                    TestAssert.Equal(ReadPictureFractionRule(control), ReadPictureFractionRule(actual));
-                    TestAssert.Equal(ReadPaintedPictureFrame(control), ReadPaintedPictureFrame(actual));
+                    TestAssert.Equal(rule, ReadPictureFractionRule(actual));
+                    TestAssert.Equal(picture, ReadPaintedPictureFrame(actual));
                 }
             }
         }
