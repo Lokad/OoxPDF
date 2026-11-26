@@ -96,8 +96,8 @@ internal sealed partial class PptxRenderer
         double viewWidth, double viewHeight, CancellationToken cancellationToken, [NotNullWhen(true)] out SvgTextLabel? label)
     {
         label = null;
-        if (element.Attributes().Any(attribute => attribute.Name.Namespace == XNamespace.None &&
-                attribute.Name.LocalName is "rotate" or "textLength" or "lengthAdjust")) return false;
+        // lengthAdjust selects the adjustment method for an authored textLength.
+        if (element.Attribute("rotate") is not null || element.Attribute("textLength") is not null) return false;
         var style = ReadSvgStyleDeclarations(element);
         string? Inherited(string name) => ReadSvgInheritedAttribute(element, style, name)?.Trim();
         bool PreservesTextStyle(string name) => IsNeutralSvgTextStyle(name, Inherited(name));
@@ -485,7 +485,7 @@ internal sealed partial class PptxRenderer
                     return true;
                 // Unknown namespaced attributes carry no SVG presentation.
                 if (ns != XNamespace.None) return ns != XNamespace.Xml && !isXLink;
-                return name is "id" or "class" or "role" or "style" ||
+                return name is "id" or "class" or "role" or "style" or "lengthAdjust" ||
                     name.StartsWith("aria-", StringComparison.Ordinal) ||
                     name.StartsWith("data-", StringComparison.Ordinal) ||
                     RetainsLabelStyle(name, style.GetValueOrDefault(name, attribute.Value));

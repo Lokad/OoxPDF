@@ -796,6 +796,32 @@ internal static partial class SvgTextTests
         }
     }
 
+    public static void SvgLengthAdjustUsesNaturalWidthWithoutTextLength()
+    {
+        static string Picture(string label, string span) => Svg($"""
+            <text x="104" y="45" font-size="24" text-anchor="middle" fill="#112233" {label}>NO<tspan {span}>RT</tspan>H</text>
+            <rect x="200" y="88" width="20" height="10" fill="lime"/>
+            """);
+
+        const string spacing = """lengthAdjust="spacing" """;
+        const string spacingAndGlyphs = """lengthAdjust="spacingAndGlyphs" """;
+        AssertSvgPaintInBothFormats(Picture("", ""),
+            [Picture(spacing, ""), Picture("", spacingAndGlyphs)],
+            pdf => TestAssert.Equal(5, LabelPaths(pdf)), "0 1 0 rg");
+
+        const string length = """textLength="100" lengthAdjust="spacingAndGlyphs" """;
+        foreach (string explicitLength in new[] { Picture(length, ""), Picture("", length) })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            string paint = Paint(explicitLength, diagnostics).ToString();
+            TestAssert.Equal(0, LabelPaths(paint));
+            TestAssert.Contains("0 1 0 rg", paint);
+            var warning = diagnostics.Single();
+            TestAssert.Equal("SVG_UNSUPPORTED_CONTENT", warning.Id);
+            TestAssert.Equal("SVG picture omits 1 unsupported text element.", warning.Message);
+        }
+    }
+
     public static void SvgTextChildrenIgnoreTransformDeclarations()
     {
         static string Picture(string north, string west, string east) => Svg($"""

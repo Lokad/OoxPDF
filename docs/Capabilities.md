@@ -142,7 +142,9 @@ Missing or wrong-type local paint references use the authored fallback color or 
 SVG link wrappers preserve transforms on their shapes and text. Plain links
 within a label preserve its glyphs and advances. Transform declarations on
 plain text descendants leave the label's geometry intact. Embedded SVG link
-actions retain an unsupported-content diagnostic. Numeric opacity on SVG roots,
+actions retain an unsupported-content diagnostic. SVG labels keep their natural
+spacing for a standalone `lengthAdjust` attribute. Explicit `textLength`
+requests keep the diagnosed fallback. Numeric opacity on SVG roots,
 groups and link wrappers composes their children as a group for both presentation
 attributes and inline style. Numeric and percentage opacity values clamp to the
 fully transparent and fully opaque endpoints.

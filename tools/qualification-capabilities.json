@@ -20643,6 +20643,7 @@
     "=SvgLabelsUseMetricsFromAdvancingGlyphOwners",
     "=SvgTextChildrenKeepEffectiveKerning",
     "=SvgTextChildrenKeepNeutralEffects",
+    "=SvgLengthAdjustUsesNaturalWidthWithoutTextLength",
     "=SvgTextChildrenIgnoreTransformDeclarations",
     "=SvgInlineLinkTextKeepsPaintAndDiagnosesActions",
     "SvgLabelsPrepareFontsOnlyForVisiblePictureUses",
