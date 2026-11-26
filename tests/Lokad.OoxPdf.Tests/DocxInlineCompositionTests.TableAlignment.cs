@@ -1,5 +1,6 @@
 using System.Xml.Linq;
 using Lokad.OoxPdf.Docx;
+using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Tests;
 
@@ -51,6 +52,18 @@ internal static partial class DocxInlineCompositionTests
                 Close(before.X + shift, after.X);
                 Close(before.Y, after.Y);
             }
+            var beforeEquationFonts = EquationFonts(control);
+            var afterEquationFonts = EquationFonts(actual);
+            var beforeEquation = beforeText.Where(show => beforeEquationFonts.Contains(show.Font)).ToArray();
+            var afterEquation = afterText.Where(show => afterEquationFonts.Contains(show.Font)).ToArray();
+            TestAssert.Equal(4, beforeEquation.Length);
+            TestAssert.Equal(beforeEquation.Length, afterEquation.Length);
+            foreach (var (before, after) in beforeEquation.Zip(afterEquation))
+            {
+                TestAssert.Equal(before.Text, after.Text);
+                Close(before.X + shift, after.X);
+                Close(before.Y, after.Y);
+            }
             var beforeLink = control.Annotations.Single(link => link.Uri == "https://example.invalid/static-box-table");
             var afterLink = actual.Annotations.Single(link => link.Uri == beforeLink.Uri);
             Close(beforeLink.X + shift, afterLink.X);
@@ -66,6 +79,10 @@ internal static partial class DocxInlineCompositionTests
             void Close(double expected, double observed) => TestAssert.True(Math.Abs(expected - observed) < .004d,
                 $"{fixture}/{mode} expected {expected}pt, observed {observed}pt.");
         }
+
+        static HashSet<PdfEmbeddedFont> EquationFonts(PdfPage page) =>
+            page.Fonts.Where(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal))
+                .Select(font => font.Font).ToHashSet();
     }
 
     public static void DocxContainerTableGridsResolveAlignmentFromTableStyles()
