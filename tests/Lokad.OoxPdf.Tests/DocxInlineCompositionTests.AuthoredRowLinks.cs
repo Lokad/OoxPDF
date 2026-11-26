@@ -70,7 +70,7 @@ internal static partial class DocxInlineCompositionTests
                 TestAssert.True(positions.SequenceEqual(unlinked[preset]), "A link confined to the preceding text row preserves every mathematical origin and size.");
             if (variant != "unlinked")
             {
-                var annotation = page.Annotations.Single(item => item.IsDestination);
+                var annotation = page.Annotations.Single(item => item.Destination.HasValue);
                 if (variant == "linked-prose")
                     TestAssert.True(math.All(show => show.Y < annotation.Y), "The preceding text link cannot cover a separate mathematical row.");
                 else

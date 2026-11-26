@@ -51,7 +51,7 @@ internal static partial class DocxInlineCompositionTests
                             TestAssert.True(Math.Abs(rect[edge] - word[edge].GetDouble()) < 1d, "Final static URI bounds retain the original Word gate.");
                     }
                 }
-                TestAssert.Equal(before[index].Annotations.Count(link => link.IsUri), page.Annotations.Count(link => link.IsUri) - links.Length);
+                TestAssert.Equal(before[index].Annotations.Count(link => link.Uri is not null), page.Annotations.Count(link => link.Uri is not null) - links.Length);
             }
         }
     }

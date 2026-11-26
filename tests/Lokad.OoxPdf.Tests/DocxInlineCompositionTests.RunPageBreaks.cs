@@ -136,7 +136,7 @@ internal static partial class DocxInlineCompositionTests
                 TestAssert.Contains("Publiccalculationnote.", prose[0]);
                 TestAssert.True(!prose[^1].Contains("Publiccalculationnote.", StringComparison.Ordinal), "The note stays with its source marker.");
                 TestAssert.Contains("Followingprose.", prose[^1]);
-                var target = pages[^1].Annotations.Where(link => link.IsDestination).Single().Destination!.Value;
+                var target = pages[^1].Annotations.Where(link => link.Destination.HasValue).Single().Destination!.Value;
                 TestAssert.Equal(0, target.PageIndex);
                 TestAssert.True(pages[0].Annotations.Count(link => link.Destination == target) >= 2,
                     "The leading navigation and first linked formula retain the bookmark destination.");

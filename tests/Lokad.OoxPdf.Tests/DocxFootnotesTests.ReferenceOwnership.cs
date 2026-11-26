@@ -94,7 +94,7 @@ internal static partial class DocxFootnotesTests
                 PdfLinkAnnotation[] links = RenderCustomNoteLinks(document, geometry);
                 TestAssert.Equal(4, links.Length);
                 TestAssert.Equal(4, links.Select(l => l.Destination).Distinct().Count());
-                TestAssert.True(links.All(l => l.Width > 0 && l.Height > 0 && l.IsDestination), "Custom marks require actual measurable destinations.");
+                TestAssert.True(links.All(l => l.Width > 0 && l.Height > 0 && l.Destination.HasValue), "Custom marks require actual measurable destinations.");
                 TestAssert.True(document.Paragraphs[0].InlineReferences[0].DisplayText is null, "Custom marks keep authored text without an automatic label.");
                 TestAssert.Equal("iv", document.Paragraphs[1].InlineReferences[0].DisplayText!);
                 TestAssert.True(document.Paragraphs[0].Runs.Any(r => r.Text == mark), "The complete custom-mark text remains visible.");

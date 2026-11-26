@@ -170,7 +170,7 @@ internal static class DocxImageRecoveryTests
                     "Picture recovery must retain the neighboring link targets.");
                 if (linkedCell)
                 {
-                    TestAssert.True(survivingLinks.Any(link => link.IsDestination && link.Width > 0 && link.Height > 0),
+                    TestAssert.True(survivingLinks.Any(link => link.Destination.HasValue && link.Width > 0 && link.Height > 0),
                         "The authored cell hyperlink must retain a measurable destination after picture recovery.");
                 }
             });

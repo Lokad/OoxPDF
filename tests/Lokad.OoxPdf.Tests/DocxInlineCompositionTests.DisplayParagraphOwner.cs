@@ -177,22 +177,22 @@ internal static partial class DocxInlineCompositionTests
                 var control = CheckMathBreaks(Read(false, false, breakCount: 2, bookmarkStartsAfterBreaks: startsAfterBreaks), expectedTwo);
                 var nested = CheckMathBreaks(Read(true, true, breakCount: 2, bookmarkStartsAfterBreaks: startsAfterBreaks,
                     trailingMoveRanges: startsAfterBreaks), expectedTwo);
-                var target = control.Annotations.Single(link => link.IsDestination);
-                TestAssert.Equal(target, nested.Annotations.Single(link => link.IsDestination));
+                var target = control.Annotations.Single(link => link.Destination.HasValue);
+                TestAssert.Equal(target, nested.Annotations.Single(link => link.Destination.HasValue));
                 if (startsAfterBreaks)
                 {
                     foreach (string hint in new[] { "inside", "between" })
                     {
                         var withHint = CheckMathBreaks(Read(true, true, breakCount: 2,
                             bookmarkStartsAfterBreaks: true, paginationHint: hint), expectedTwo);
-                        TestAssert.Equal(target, withHint.Annotations.Single(link => link.IsDestination));
+                        TestAssert.Equal(target, withHint.Annotations.Single(link => link.Destination.HasValue));
                     }
                     foreach (bool insideEquation in new[] { false, true })
                     {
                         var packed = CheckMathBreaks(Read(insideEquation, mathRun: true, breakCount: 2,
                             bookmarkStartsAfterBreaks: true, paginationHint: insideEquation ? "inside" : null,
                             packBreaks: true), expectedTwo);
-                        TestAssert.Equal(target, packed.Annotations.Single(link => link.IsDestination));
+                        TestAssert.Equal(target, packed.Annotations.Single(link => link.Destination.HasValue));
                     }
                     var sharedOperand = CheckMathBreaks(Read(true, true, breakCount: 2,
                         bookmarkStartsAfterBreaks: true, paginationHint: "inside", shareOperandRun: true,

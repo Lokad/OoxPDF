@@ -289,7 +289,7 @@ internal static class DocxSectionNavigationTests
             PdfPage[] block = RenderTarget(container, blockMarkers: true, mode, tableTarget: true);
             TestAssert.True(inline.Select(page => page.Content).SequenceEqual(block.Select(page => page.Content)),
                 $"Moving the {container} table bookmark must retain the same page paint in {mode}.");
-            var links = block[0].Annotations.Where(annotation => annotation.IsDestination).ToArray();
+            var links = block[0].Annotations.Where(annotation => annotation.Destination.HasValue).ToArray();
             TestAssert.Equal(1, links.Length);
             PdfLinkDestination destination = links[0].Destination!.Value;
             PdfPage targetPage = block[destination.PageIndex];

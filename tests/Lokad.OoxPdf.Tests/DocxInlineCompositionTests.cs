@@ -1983,7 +1983,7 @@ internal static partial class DocxInlineCompositionTests
     private static void AssertTwoFormulaLinksCoverGlyphs(PdfPage page,
         IEnumerable<(PdfEmbeddedFont Font, string Text, double Size, double X, double Y)> glyphs, string context)
     {
-        var links = page.Annotations.Where(annotation => annotation.IsDestination).ToArray();
+        var links = page.Annotations.Where(annotation => annotation.Destination.HasValue).ToArray();
         TestAssert.Equal(2, links.Length);
         foreach (var glyph in glyphs)
             TestAssert.True(links.Any(link => link.X <= glyph.X + .01d && link.X + link.Width >= glyph.X - .01d &&
@@ -2152,7 +2152,7 @@ internal static partial class DocxInlineCompositionTests
                 TestAssert.True(math.Length != 0, "The source formula must remain visible.");
                 if (link)
                 {
-                    var annotations = page.Annotations.Where(annotation => annotation.IsDestination).ToArray();
+                    var annotations = page.Annotations.Where(annotation => annotation.Destination.HasValue).ToArray();
                     var rows = math.GroupBy(show => show.Y).ToArray();
                     TestAssert.Equal(rows.Length, annotations.Length);
                     foreach (var row in rows)
@@ -2204,7 +2204,7 @@ internal static partial class DocxInlineCompositionTests
         TestAssert.Equal("(α+β=γ)", string.Concat(glyphs.Select(show => show.Text)).Normalize(NormalizationForm.FormKC));
         var rows = glyphs.GroupBy(show => show.Y).ToArray();
         TestAssert.Equal(2, rows.Length);
-        var annotations = page.Annotations.Where(annotation => annotation.IsDestination).ToArray();
+        var annotations = page.Annotations.Where(annotation => annotation.Destination.HasValue).ToArray();
         TestAssert.Equal(rows.Length, annotations.Length);
         foreach (var row in rows)
             TestAssert.True(annotations.Any(annotation => annotation.Y <= row.Key && annotation.Y + annotation.Height >= row.Key &&
@@ -2321,7 +2321,7 @@ internal static partial class DocxInlineCompositionTests
             var math = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true)
                 .Where(show => mathFonts.Contains(show.Font)).ToArray();
             TestAssert.True(math.Length != 0, "The complete atomic formula must remain visible.");
-            var annotation = page.Annotations.Single(item => item.IsDestination);
+            var annotation = page.Annotations.Single(item => item.Destination.HasValue);
             TestAssert.True(math.All(show => annotation.X <= show.X + .01d && annotation.X + annotation.Width >= show.X - .01d &&
                 annotation.Y <= show.Y + .01d && annotation.Y + annotation.Height >= show.Y - .01d),
                 "A complete atomic formula's hyperlink must include every painted glyph in both presets.");
@@ -2651,7 +2651,7 @@ internal static partial class DocxInlineCompositionTests
                     TestAssert.True(Math.Abs(glyph.Size - anchor.GetProperty("FontSize").GetDouble()) < .1d,
                         "A linked explicit fraction uses independently observed inline argument sizing.");
             }
-            var link = page.Annotations.Single(annotation => annotation.IsDestination);
+            var link = page.Annotations.Single(annotation => annotation.Destination.HasValue);
             foreach (var glyph in math)
                 TestAssert.True(link.X <= glyph.X + .01d && link.X + link.Width >= glyph.X - .01d &&
                     link.Y <= glyph.Y + .01d && link.Y + link.Height >= glyph.Y - .01d,

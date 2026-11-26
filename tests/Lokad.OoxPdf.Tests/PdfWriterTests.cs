@@ -344,17 +344,19 @@ internal static partial class PdfWriterTests
 
     public static void LinkAnnotationFactoriesEnforceSingleTarget()
     {
-        // T02: normal builders cannot produce both/neither target combinations.
         PdfLinkAnnotation uri = PdfLinkAnnotation.ToUri(1, 2, 3, 4, "https://example.invalid");
-        TestAssert.True(uri.IsUri, "URI factory must set exactly the URI target.");
-        TestAssert.True(!uri.IsDestination, "URI factory must leave the destination target unset.");
         TestAssert.Equal("https://example.invalid", uri.Uri);
+        TestAssert.Equal<PdfLinkDestination?>(null, uri.Destination);
 
-        PdfLinkAnnotation destination = PdfLinkAnnotation.ToDestination(1, 2, 3, 4, new PdfLinkDestination(0, null, null, null));
-        TestAssert.True(destination.IsDestination, "Destination factory must set exactly the destination target.");
-        TestAssert.True(!destination.IsUri, "Destination factory must leave the URI target unset.");
+        var expected = new PdfLinkDestination(0, null, 180, null);
+        PdfLinkAnnotation destination = PdfLinkAnnotation.ToDestination(1, 2, 3, 4, expected);
+        TestAssert.Equal<PdfLinkDestination?>(expected, destination.Destination);
+        TestAssert.Equal<string?>(null, destination.Uri);
 
         TestAssert.Throws<ArgumentException>(() => PdfLinkAnnotation.ToUri(1, 2, 3, 4, string.Empty));
+        var targetlessPage = new PdfPage(200, 200, annotations: [default]);
+        var error = TestAssert.Throws<InvalidOperationException>(() => WritePdfText([targetlessPage]));
+        TestAssert.Contains("must have either a URI target or an internal destination target", error.Message);
     }
 
     public static void WritesInternalLinkDestinations()

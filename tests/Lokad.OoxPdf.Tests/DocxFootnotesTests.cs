@@ -1740,7 +1740,7 @@ internal static partial class DocxFootnotesTests
             PdfLinkAnnotation[] links = pages.SelectMany(page => page.Annotations).ToArray();
             int expected = fixture is "note-nav-two-footnotes" or "note-nav-mixed-notes" or "note-nav-numbered-ids" ? 2 : 1;
             TestAssert.Equal(expected, links.Length);
-            TestAssert.True(links.All(link => link.IsDestination && link.Width > 0d && link.Height > 0d),
+            TestAssert.True(links.All(link => link.Destination.HasValue && link.Width > 0d && link.Height > 0d),
                 "Every visible note marker must have a measurable internal link.");
             TestAssert.Equal(expected, links.Select(link => link.Destination).Distinct().Count());
             foreach (PdfLinkAnnotation link in links)

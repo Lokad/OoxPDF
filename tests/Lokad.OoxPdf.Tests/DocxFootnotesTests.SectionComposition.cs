@@ -238,7 +238,7 @@ internal static partial class DocxFootnotesTests
             var pages = SectionCompositionRenderer(mode).RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(content == "plain" ? 2 : 1, pages.Length);
             TestAssert.Contains("PUBLIC NOTE", string.Concat(pages.SelectMany(PhysicalSectionGlyphs).Select(x => x.Text)));
-            TestAssert.Equal(1, pages.SelectMany(page => page.Annotations).Count(link => link.IsDestination));
+            TestAssert.Equal(1, pages.SelectMany(page => page.Annotations).Count(link => link.Destination.HasValue));
         }
         foreach (string fallback in new[] { "margins", "columns", "header", "mirror", "unknown-final" })
         {

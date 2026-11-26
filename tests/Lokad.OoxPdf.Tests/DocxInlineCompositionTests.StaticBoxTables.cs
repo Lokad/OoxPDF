@@ -54,8 +54,8 @@ internal static partial class DocxInlineCompositionTests
             var paragraph = Render(range: false);
             var range = Render(range: true);
             TestAssert.True(paragraph.Content == range.Content, "Moving the bookmark keeps the same paint: " + context);
-            var previousLink = paragraph.Annotations.Single(link => link.IsDestination);
-            var rangeLinks = range.Annotations.Where(link => link.IsDestination).ToArray();
+            var previousLink = paragraph.Annotations.Single(link => link.Destination.HasValue);
+            var rangeLinks = range.Annotations.Where(link => link.Destination.HasValue).ToArray();
             TestAssert.True(rangeLinks.Length == 1, "The table range must retain its incoming link: " + context);
             var restoredLink = rangeLinks[0];
             TestAssert.Equal((previousLink.X, previousLink.Y, previousLink.Width, previousLink.Height),
@@ -177,7 +177,7 @@ internal static partial class DocxInlineCompositionTests
         var link = page.Annotations.Single(annotation => annotation.Uri == "https://example.invalid/static-box-table");
         TestAssert.True(Inside(link.X, link.Y) && Inside(link.X + link.Width, link.Y + link.Height),
             "The source link follows the painted table rather than the body emission origin.");
-        var destination = page.Annotations.Single(annotation => annotation.IsDestination).Destination!.Value;
+        var destination = page.Annotations.Single(annotation => annotation.Destination.HasValue).Destination!.Value;
         var target = shows.Single(show => show.Text.Trim() == "BOX TABLE NORTH");
         // A viewport can include ascender/context space above the box. Its top
         // must reveal the painted target, rather than hide it below the viewport.

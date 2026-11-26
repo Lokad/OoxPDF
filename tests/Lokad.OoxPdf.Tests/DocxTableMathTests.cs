@@ -81,7 +81,7 @@ internal static class DocxTableMathTests
             honorActualText: false, fontResourceFilter: name => name.StartsWith("Eq", StringComparison.Ordinal)).ToArray();
         TestAssert.True(glyphs.Length > 0 && glyphs.All(show => show.X >= 0d && show.X < page.Width),
             "The numeric control places the equation glyphs on paper.");
-        TestAssert.True(page.Annotations.Any(link => link.IsDestination),
+        TestAssert.True(page.Annotations.Any(link => link.Destination.HasValue),
             "The source fixture must retain its formula navigation.");
     }
 
@@ -190,7 +190,7 @@ internal static class DocxTableMathTests
             var baseline = Render(null);
             int glyphs = CountEquationGlyphs(baseline.Pages);
             TestAssert.True(glyphs > 0, "The source fixture must paint its formulas.");
-            int destinations = baseline.Pages.Sum(page => page.Annotations.Count(a => a.IsDestination));
+            int destinations = baseline.Pages.Sum(page => page.Annotations.Count(a => a.Destination.HasValue));
             TestAssert.True(!body || destinations > 0, "The body fixture must publish formula destinations.");
             foreach (string token in new[] { "lrTb", "tb", "tbRl", "TB", "LRTB" })
             {

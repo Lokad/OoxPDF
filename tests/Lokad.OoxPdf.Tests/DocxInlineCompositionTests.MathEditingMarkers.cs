@@ -15,7 +15,7 @@ internal static partial class DocxInlineCompositionTests
             var baseline = Render(null, null);
             int glyphs = CountMathGlyphs(baseline.Page);
             TestAssert.True(glyphs > 0, "The control must paint equations.");
-            TestAssert.True(owner == "header" || baseline.Page.Annotations.Any(annotation => annotation.IsDestination),
+            TestAssert.True(owner == "header" || baseline.Page.Annotations.Any(annotation => annotation.Destination.HasValue),
                 "The body fixture must emit formula destinations.");
 
             (string Property, string Value)[] effects = owner switch

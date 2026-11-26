@@ -79,7 +79,7 @@ internal static partial class DocxInlineCompositionTests
                 OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
             var page = renderer.RenderPagesAsync(source, null, default).ToBlockingEnumerable().Single();
             TestAssert.Equal(1, page.Images.Count);
-            TestAssert.Equal(0, page.Annotations.Count(link => link.IsUri));
+            TestAssert.Equal(0, page.Annotations.Count(link => link.Uri is not null));
             using var cancellation = new CancellationTokenSource(); cancellation.Cancel();
             TestAssert.Throws<OperationCanceledException>(() => renderer.RenderPagesAsync(source, null, cancellation.Token).ToBlockingEnumerable().ToArray());
         }
@@ -99,7 +99,7 @@ internal static partial class DocxInlineCompositionTests
             OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
         var page = renderer.RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().Single();
         TestAssert.Equal(0, page.Images.Count);
-        TestAssert.Equal(0, page.Annotations.Count(link => link.IsUri));
+        TestAssert.Equal(0, page.Annotations.Count(link => link.Uri is not null));
         TestAssert.Equal(1, diagnostics.Count(diagnostic => diagnostic.Id == "IMAGE_UNSUPPORTED_FORMAT"));
 
         var clipped = ReadMutation("InlineBoxMath/inline-picture-link-properties-cell", OoxPdfDocxMarkupMode.Final, false, false,
@@ -113,6 +113,6 @@ internal static partial class DocxInlineCompositionTests
             });
         var clippedPage = renderer.RenderPagesAsync(clipped, null, default).ToBlockingEnumerable().Single();
         TestAssert.Equal(1, clippedPage.Images.Count);
-        TestAssert.Equal(0, clippedPage.Annotations.Count(link => link.IsUri));
+        TestAssert.Equal(0, clippedPage.Annotations.Count(link => link.Uri is not null));
     }
 }

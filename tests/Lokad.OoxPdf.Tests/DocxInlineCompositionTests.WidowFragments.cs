@@ -59,7 +59,7 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.True(compact.Contains("ROW1" + (expected + 1), StringComparison.Ordinal),
                 "A deferred first fragment binds PAGE only to its admitted page: " + first);
             TestAssert.Equal(1, Regex.Matches(pages[expected].Content, @"/\w+\s+Do\b").Count);
-            var link = pages.SelectMany(page => page.Annotations).Single(annotation => annotation.IsDestination);
+            var link = pages.SelectMany(page => page.Annotations).Single(annotation => annotation.Destination.HasValue);
             TestAssert.Equal(expected, link.Destination!.Value.PageIndex);
         }
     }

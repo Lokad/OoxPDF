@@ -416,7 +416,7 @@ internal static partial class DocxFootnotesTests
             TestAssert.Equal(splits ? 2 : 1, pages.Length);
             PdfLinkAnnotation[] links = pages.SelectMany(p => p.Annotations).ToArray();
             TestAssert.Equal((first ? 2 : 0) + (second ? 2 : 0), links.Length);
-            TestAssert.True(links.All(l => l.IsDestination && l.Width > 0 && l.Height > 0), "Visible note markers remain linked.");
+            TestAssert.True(links.All(l => l.Destination.HasValue && l.Width > 0 && l.Height > 0), "Visible note markers remain linked.");
             if (splits && second)
             {
                 TestAssert.Equal(2, pages[0].Annotations.Count);

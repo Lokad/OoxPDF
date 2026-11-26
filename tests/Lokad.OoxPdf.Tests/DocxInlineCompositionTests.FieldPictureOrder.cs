@@ -58,7 +58,7 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.Equal(!computed, text.Contains(cache.Trim(), StringComparison.Ordinal));
             TestAssert.Equal(!computed, text.Contains("Nested value", StringComparison.Ordinal));
             TestAssert.Contains("after field", text);
-            TestAssert.True(actual.SelectMany(page => page.Annotations).Any(annotation => annotation.IsDestination),
+            TestAssert.True(actual.SelectMany(page => page.Annotations).Any(annotation => annotation.Destination.HasValue),
                 "The cached field and neighboring content retain internal links.");
             for (int index = 0; index < actual.Length; index++)
             {

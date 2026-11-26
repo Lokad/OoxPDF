@@ -46,7 +46,7 @@ internal static class PptxSlideNumberTests
             // table also render the number, with no surrounding text.
             PortableRenderingTests.ReadPaintedSourceLabel(pages[0], "Slide 10 end");
             PortableRenderingTests.ReadPaintedSourceLabel(pages[1], "Slide 12 end");
-            TestAssert.Equal(1, pages[0].Annotations.Single(annotation => annotation.IsDestination).Destination!.Value.PageIndex);
+            TestAssert.Equal(1, pages[0].Annotations.Single(annotation => annotation.Destination.HasValue).Destination!.Value.PageIndex);
             var warning = diagnostics.Single(item => item.Id == "PPTX_UNSUPPORTED_CALLOUT");
             TestAssert.Equal(2, warning.SlideIndex);
             TestAssert.Equal("/ppt/slides/slide3.xml", warning.PartName);

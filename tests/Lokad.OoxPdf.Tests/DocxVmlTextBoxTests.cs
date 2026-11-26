@@ -96,7 +96,7 @@ internal static class DocxVmlTextBoxTests
                     TestAssert.Equal(expected.Replace(" ", ""), string.Concat(text.Where(character => !char.IsWhiteSpace(character))));
                     TestAssert.Equal(1, page.Images.Count);
                     var link = page.Annotations.Single();
-                    TestAssert.True(link.IsDestination, "The stored link must resolve the surrounding bookmark.");
+                    TestAssert.True(link.Destination.HasValue, "The stored link must resolve the surrounding bookmark.");
                     TestAssert.Equal(0, link.Destination!.Value.PageIndex);
                     TestAssert.True(link.Width > 0 && link.Height > 0, "The stored link must have a visible source rectangle.");
                     if (baseline is { } direct)
@@ -229,7 +229,7 @@ internal static class DocxVmlTextBoxTests
                     else
                     {
                         var link = page.Annotations.Single();
-                        TestAssert.True(link.IsDestination, "The link must reach the placed second paragraph.");
+                        TestAssert.True(link.Destination.HasValue, "The link must reach the placed second paragraph.");
                         TestAssert.Equal(baseline.Value.Annotations.Single(), link);
                     }
                 });

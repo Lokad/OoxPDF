@@ -248,7 +248,7 @@ internal static partial class DocxFootnotesTests
             TestAssert.Equal(2, pages.Length);
             TestAssert.Equal(4, links.Length);
             TestAssert.Equal(4, links.Select(l => l.Destination).Distinct().Count());
-            TestAssert.True(links.All(l => l.IsDestination && l.Width > 0 && l.Height > 0), "Every note retains a measurable link.");
+            TestAssert.True(links.All(l => l.Destination.HasValue && l.Width > 0 && l.Height > 0), "Every note retains a measurable link.");
             for (int i = 0; i < links.Length; i++)
                 TestAssert.Equal(kind == "endnote" ? 1 : i / 2, links[i].Destination!.Value.PageIndex);
         }

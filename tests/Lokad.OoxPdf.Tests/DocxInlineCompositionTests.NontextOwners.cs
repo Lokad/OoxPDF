@@ -78,7 +78,7 @@ internal static partial class DocxInlineCompositionTests
         {
             string[] expectedUris = hasMethodLink ? ["https://example.org/method"] : [];
             var links = pages.SelectMany(page => page.Annotations).ToArray();
-            TestAssert.True(expectedUris.SequenceEqual(links.Where(link => link.IsUri).Select(link => link.Uri).Distinct()),
+            TestAssert.True(expectedUris.SequenceEqual(links.Where(link => link.Uri is not null).Select(link => link.Uri).Distinct()),
                 "The fixture's authored URI targets must survive independently: " + context);
             TestAssert.True(pages[0].Annotations.Any(link => link.Destination is { PageIndex: 0 }),
                 "The linked equation must reach its bookmark on physical page one: " + context);
@@ -86,7 +86,7 @@ internal static partial class DocxInlineCompositionTests
                 link.Width > 0d && link.Height > 0d && (link.Destination is not { } target ||
                     target.PageIndex >= 0 && target.PageIndex < pages.Length)),
                 "Navigation retains finite rectangles and admitted destination pages: " + context);
-            return links.Count(link => link.IsDestination);
+            return links.Count(link => link.Destination.HasValue);
         }
     }
 

@@ -30,7 +30,7 @@ internal static partial class DocxInlineCompositionTests
                 var page = new DocxRenderer(resolver, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
                     OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().Single();
                 TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"), "Linked mixed content retains its source formula.");
-                var links = page.Annotations.Where(link => link.IsDestination).OrderByDescending(link => link.Y + link.Height).ToArray();
+                var links = page.Annotations.Where(link => link.Destination.HasValue).OrderByDescending(link => link.Y + link.Height).ToArray();
                 TestAssert.True(links.Length > 0, "Supported source links produce clickable rectangles with either font resolver.");
                 var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true).ToArray();
                 var math = shows.Where(show => page.Fonts.Any(resource => resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal) &&

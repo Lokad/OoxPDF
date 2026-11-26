@@ -57,9 +57,8 @@ internal readonly record struct PdfPage
 
 internal readonly record struct PdfLinkDestination(int PageIndex, double? Left, double? Top, double? Zoom);
 
-// T02: exactly one target is always set. The constructor is private so the
-// both/neither combinations cannot be built through normal builders; only the
-// validated factories below can construct values.
+// The factories set exactly one target. Serialization also rejects the default
+// value, which has no target.
 internal readonly record struct PdfLinkAnnotation
 {
     public double X { get; }
@@ -73,10 +72,6 @@ internal readonly record struct PdfLinkAnnotation
     public string? Uri { get; }
 
     public PdfLinkDestination? Destination { get; }
-
-    public bool IsUri => Uri is not null && Destination is null;
-
-    public bool IsDestination => Destination is not null && Uri is null;
 
     private PdfLinkAnnotation(double x, double y, double width, double height, string? uri, PdfLinkDestination? destination)
     {

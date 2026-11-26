@@ -70,10 +70,10 @@ internal static partial class DocxInlineCompositionTests
                 // the existing source-pinned Office geometry assertions.
                 var expectedLinks = expected.SelectMany(page => page.Annotations).ToArray();
                 var links = actual.SelectMany(page => page.Annotations).ToArray();
-                TestAssert.True(expectedLinks.Where(link => link.IsUri).Select(link => link.Uri).Distinct()
-                    .Order().SequenceEqual(links.Where(link => link.IsUri).Select(link => link.Uri).Distinct().Order()),
+                TestAssert.True(expectedLinks.Where(link => link.Uri is not null).Select(link => link.Uri).Distinct()
+                    .Order().SequenceEqual(links.Where(link => link.Uri is not null).Select(link => link.Uri).Distinct().Order()),
                     "Every source URI target survives cache replacement.");
-                TestAssert.True(links.Count(link => link.IsDestination) >= expectedLinks.Count(link => link.IsDestination),
+                TestAssert.True(links.Count(link => link.Destination.HasValue) >= expectedLinks.Count(link => link.Destination.HasValue),
                     "Source bookmark links retain their painted fragments.");
                 TestAssert.True(links.All(link => double.IsFinite(link.X + link.Y + link.Width + link.Height) &&
                     link.Width > 0d && link.Height > 0d && (link.Destination is not { } target ||
