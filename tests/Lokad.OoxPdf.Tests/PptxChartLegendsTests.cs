@@ -80,11 +80,11 @@ internal static partial class PptxChartLegendsTests
         const string halfFill = "<a:solidFill><a:srgbClr val='2468AC'><a:alpha val='50000'/></a:srgbClr></a:solidFill>";
         const string clearFill = "<a:solidFill><a:srgbClr val='2468AC'><a:alpha val='0'/></a:srgbClr></a:solidFill>";
         const string noFill = "<a:noFill/>";
-        const string label = "Legend opacity";
+        const string label = "Styled Legend";
         var resolver = new PortableRenderingTests.PinnedResolver();
 
         PdfPage opaque = Render("");
-        AssertStyledChartLabels(opaque, "CL", 12d, "0.141 0.408 0.675", label);
+        AssertStyledChartLabels(opaque, "CL", 11.52d, "0.141 0.408 0.675", label);
         TestAssert.Equal(opaque.Content, Render(noFill, opaqueFill).Content);
 
         PdfPage clear = Render(noFill);
@@ -118,19 +118,19 @@ internal static partial class PptxChartLegendsTests
                 <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
                               xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
                   <c:chart>
-                    <c:plotArea><c:lineChart><c:ser>
+                    <c:legend><c:legendPos val="r"/>{{local}}</c:legend>
+                    <c:plotArea><c:lineChart><c:varyColors val="0"/><c:ser>
                       <c:tx><c:v>{{label}}</c:v></c:tx>
                       <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt></c:numLit></c:val>
                     </c:ser></c:lineChart></c:plotArea>
-                    <c:legend><c:legendPos val="b"/>{{local}}</c:legend>
                   </c:chart>
                 </c:chartSpace>
                 """;
             string role = $$"""
                 <cs:legend>
                   <cs:fontRef idx="minor"><a:srgbClr val="2468AC"/></cs:fontRef>
-                  <cs:defRPr sz="1200" u="sng" strike="sngStrike">
-                    {{rolePaint}}<a:latin typeface="DejaVu Sans"/>
+                  <cs:defRPr sz="1150" u="sng" strike="sngStrike">
+                    {{rolePaint}}<a:latin typeface="Arial"/>
                   </cs:defRPr>
                 </cs:legend>
                 """;
