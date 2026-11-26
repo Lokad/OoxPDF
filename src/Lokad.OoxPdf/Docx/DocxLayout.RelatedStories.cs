@@ -864,37 +864,29 @@ internal sealed partial class DocxLayoutEngine
             return 0d;
         }
 
-        (DocxTextRun? gapRun, double gapFontSizePoints) = FindSeparatorMarkFont(continuationLayout.TextLines);
-        double gapPoints = ResolveSeparatorGapPoints(gapRun, gapFontSizePoints, separatorMeasurer);
-        (double ruleBottomOffsetPoints, double ruleThicknessPoints) = ResolveSeparatorRuleGeometry(continuationLayout.Story.Kind, gapRun, gapFontSizePoints, separatorMeasurer);
-        double firstInsetPoints = Math.Max(0d, -continuationLayout.TextLines[0].BaselineY);
-        return gapPoints + Math.Max(firstInsetPoints, ruleBottomOffsetPoints + ruleThicknessPoints);
+        return MeasureContinuationSeparator(continuationLayout, separatorMeasurer).FrameOverhead;
     }
 
-    // RV06 take-battery probes (Word 16.0, after-spacing and Palatino takes): Office
-    // continuation takes lap the rule block into the top margin (cal9-a8 laps 0.72 and
-    // cal-pal laps 0.36 above the frame top) while a4 refuses the next line at lap 4.54,
-    // and the story-final line keeps its after-spacing so no constant full-block charge
-    // fits the battery; the take-side charge is the emitted rule ride (gap plus rule
-    // offset plus thickness; first-line insets never ride above content) net of a 2.1pt
-    // overflow tolerance, floored at zero so mark-less separators keep legacy takes.
-    private static double ContinuationTakeCharge(
-        DocxRelatedStoryLayout? continuationLayout,
-        IDocxTextMeasurer? separatorMeasurer,
-        bool hasPrecedingFragment = true)
+    private static ContinuationSeparatorMetrics MeasureContinuationSeparator(
+        DocxRelatedStoryLayout continuationLayout, IDocxTextMeasurer? separatorMeasurer)
     {
-        if (continuationLayout is null || continuationLayout.TextLines.Count == 0)
-        {
-            return 0d;
-        }
+        var (mark, size) = FindSeparatorMarkFont(continuationLayout.TextLines);
+        double gap = ResolveSeparatorGapPoints(mark, size, separatorMeasurer);
+        var (ruleBottom, thickness) = ResolveSeparatorRuleGeometry(continuationLayout.Story.Kind, mark, size, separatorMeasurer);
+        double firstInset = Math.Max(0d, -continuationLayout.TextLines[0].BaselineY);
+        return new ContinuationSeparatorMetrics(gap, firstInset, ruleBottom, thickness);
+    }
 
-        (DocxTextRun? takeGapRun, double takeGapFontSizePoints) = FindSeparatorMarkFont(continuationLayout.TextLines);
-        double takeGapPoints = ResolveSeparatorGapPoints(takeGapRun, takeGapFontSizePoints, separatorMeasurer);
-        (double takeRuleBottomOffsetPoints, double takeRuleThicknessPoints) = ResolveSeparatorRuleGeometry(continuationLayout.Story.Kind, takeGapRun, takeGapFontSizePoints, separatorMeasurer);
-        // The measured lap belongs to a continued tail. A deferred source head
-        // has no preceding fragment and must leave the complete rule ride clear.
-        return Math.Max(0d, takeGapPoints + takeRuleBottomOffsetPoints + takeRuleThicknessPoints -
-            (hasPrecedingFragment ? 2.1 : 0d));
+    private readonly record struct ContinuationSeparatorMetrics(
+        double Gap, double FirstInset, double RuleBottomOffset, double RuleThickness)
+    {
+        public double FrameOverhead => Gap + Math.Max(FirstInset, RuleBottomOffset + RuleThickness);
+
+        // The Word take probes let already-started tails overlap the top margin
+        // by up to 2.1pt. A deferred head clears the full rule. First insets do
+        // not contribute to this take charge.
+        public double TakeCharge(bool hasPrecedingFragment) =>
+            Math.Max(0d, Gap + RuleBottomOffset + RuleThickness - (hasPrecedingFragment ? 2.1d : 0d));
     }
 
     private static void PlaceRelatedStorySlices(
@@ -1177,8 +1169,7 @@ internal sealed partial class DocxLayoutEngine
             return cursorTop;
         }
 
-        (DocxTextRun? gapRun, double gapFontSizePoints) = FindSeparatorMarkFont(continuationSeparatorLayout.TextLines);
-        double separatorGapPoints = ResolveSeparatorGapPoints(gapRun, gapFontSizePoints, separatorMeasurer);
+        var metrics = MeasureContinuationSeparator(continuationSeparatorLayout, separatorMeasurer);
         double markBaselineY;
         if (continuationSeparatorLayout.Story.Kind == DocxRelatedStoryKind.Footnote)
         {
@@ -1202,9 +1193,8 @@ internal sealed partial class DocxLayoutEngine
             // an extra source line and the separator clip cross the frame top.
             // Deferred heads and legacy frames retain their qualified ride policy.
             double continuationOverhead = printScale >= 1d && !(frameBottom is not null && hasPrecedingFragment)
-                ? ContinuationTakeCharge(continuationSeparatorLayout, separatorMeasurer,
-                    frameBottom is null || hasPrecedingFragment)
-                : ContinuationRuleOverhead(continuationSeparatorLayout, separatorMeasurer);
+                ? metrics.TakeCharge(frameBottom is null || hasPrecedingFragment)
+                : metrics.FrameOverhead;
             double reservedTopSpace = Math.Max(0d, activePage.Height - activePage.MarginTop - cursorTop);
             double netOverhead = Math.Max(0d, continuationOverhead - reservedTopSpace);
             double bottom = frameBottom?.Invoke(activePage, activePageIndex + 1, outputPages.Count) ?? activePage.MarginBottom;
@@ -1219,22 +1209,19 @@ internal sealed partial class DocxLayoutEngine
                     hasPageContent, isFreshHead: bodyLineIndex == 0)
                 : TakeStoryLines(bodyLineBoxes, bodyLineIndex, remainingLines, capacity, printScale >= 1d ? null : bodyFitAfters);
             double contentTop = bottom + takeHeight;
-            markBaselineY = contentTop + separatorGapPoints;
+            markBaselineY = contentTop + metrics.Gap;
         }
         else
         {
-            double firstInsetPoints = Math.Max(0d, -continuationSeparatorLayout.TextLines[0].BaselineY);
-            markBaselineY = cursorTop - firstInsetPoints;
+            markBaselineY = cursorTop - metrics.FirstInset;
         }
 
-        (DocxPlacedRelatedStoryLayout placedSeparator, _) = PlaceContinuationSeparatorStory(
-            activePage, activePageIndex, continuationSeparatorLayout, sourceBlockIndex, markBaselineY, separatorMeasurer, printScale);
-        activePlacedStories.Add(placedSeparator);
-        outputPages[activePageIndex] = activePage with { PlacedRelatedStories = activePlacedStories.ToArray() };
+        AppendContinuationSeparator(outputPages, activePageIndex, activePage, activePlacedStories,
+            continuationSeparatorLayout, sourceBlockIndex, markBaselineY, metrics, printScale);
         // A registered empty endnote rule owns its measured trailing space.
         // Returning the content cursor here also charges it to the next take;
         // rich/unknown separators and footnotes retain their placement fallback.
-        return markBaselineY - separatorGapPoints - ResolveEndnoteSeparatorAfterSpacing(continuationSeparatorLayout);
+        return markBaselineY - metrics.Gap - ResolveEndnoteSeparatorAfterSpacing(continuationSeparatorLayout);
     }
 
     private static double ResolveContinuationRuleWidth(DocxLayoutPage page, double printScale)
@@ -1243,19 +1230,28 @@ internal sealed partial class DocxLayoutEngine
         return Math.Max(1d, page.Width - page.MarginLeft - page.MarginRight + reservedMarginPoints);
     }
 
-    private static (DocxPlacedRelatedStoryLayout Placed, double SeparatorBottom) PlaceContinuationSeparatorStory(
-        DocxLayoutPage page,
+    private static void AppendFootnoteContinuationSeparator(
+        List<DocxLayoutPage> pages, int pageIndex, DocxLayoutPage page,
+        List<DocxPlacedRelatedStoryLayout> placedStories, DocxRelatedStoryLayout continuationLayout,
+        int sourceBlockIndex, double contentTop, IDocxTextMeasurer? separatorMeasurer, double printScale)
+    {
+        var metrics = MeasureContinuationSeparator(continuationLayout, separatorMeasurer);
+        AppendContinuationSeparator(pages, pageIndex, page, placedStories, continuationLayout, sourceBlockIndex,
+            contentTop + metrics.Gap, metrics, printScale);
+    }
+
+    private static void AppendContinuationSeparator(
+        List<DocxLayoutPage> pages,
         int pageIndex,
+        DocxLayoutPage page,
+        List<DocxPlacedRelatedStoryLayout> placedStories,
         DocxRelatedStoryLayout continuationLayout,
         int sourceBlockIndex,
         double markBaselineY,
-        IDocxTextMeasurer? separatorMeasurer,
-        double printScale = 1d)
+        ContinuationSeparatorMetrics metrics,
+        double printScale)
     {
-        (DocxTextRun? markRun, double markFontSizePoints) = FindSeparatorMarkFont(continuationLayout.TextLines);
-        double firstInsetPoints = continuationLayout.TextLines.Count == 0 ? 0d : Math.Max(0d, -continuationLayout.TextLines[0].BaselineY);
-        double topY = markBaselineY + firstInsetPoints;
-        (double ruleBottomOffsetPoints, double ruleThicknessPoints) = ResolveSeparatorRuleGeometry(continuationLayout.Story.Kind, markRun, markFontSizePoints, separatorMeasurer);
+        double topY = markBaselineY + metrics.FirstInset;
         // RV06 wclong probe (Word 16.0): word-compatible continuation rules span the
         // full design body mapped once (Office 354.98 emitted). The layout body is
         // shrunk by the markup reserve for break equivalence, so the reserve joins
@@ -1264,10 +1260,12 @@ internal sealed partial class DocxLayoutEngine
         // bit-identically. The story widens with the rule so the emission clip
         // covers it.
         double ruleWidthPoints = ResolveContinuationRuleWidth(page, printScale);
-        DocxPlacedRelatedStoryLayout placedSeparator = PlaceRelatedStoryAtTop(page, pageIndex, continuationLayout, sourceBlockIndex, topY, storyTopOffset: 0d, storyHeight: ResolvePlacedStoryHeight(continuationLayout, page), separatorY: markBaselineY + ruleBottomOffsetPoints);
+        DocxPlacedRelatedStoryLayout placedSeparator = PlaceRelatedStoryAtTop(page, pageIndex, continuationLayout,
+            sourceBlockIndex, topY, storyTopOffset: 0d, storyHeight: ResolvePlacedStoryHeight(continuationLayout, page),
+            separatorY: markBaselineY + metrics.RuleBottomOffset);
         placedSeparator = placedSeparator with
         {
-            SeparatorThickness = ruleThicknessPoints,
+            SeparatorThickness = metrics.RuleThickness,
             SeparatorWidth = ruleWidthPoints,
             Width = Math.Max(placedSeparator.Width, ruleWidthPoints),
         };
@@ -1287,7 +1285,8 @@ internal sealed partial class DocxLayoutEngine
             };
         }
 
-        return (placedSeparator, markBaselineY);
+        placedStories.Add(placedSeparator);
+        pages[pageIndex] = page with { PlacedRelatedStories = placedStories.ToArray() };
     }
 
     private static void MoveToRelatedStoryContinuationPage(
@@ -2073,12 +2072,9 @@ internal sealed partial class DocxLayoutEngine
             if (trackedStory is not null && trackedStory.SeparatorPlaced && continuationSeparatorLayout is not null && continuationSeparatorLayout.TextLines.Count != 0 &&
                 (placementFooter is null || !sharedSeparatorPlaced))
             {
-                (DocxTextRun? continuationGapRun, double continuationGapFontSizePoints) = FindSeparatorMarkFont(continuationSeparatorLayout.TextLines);
-                double continuationGapPoints = ResolveSeparatorGapPoints(continuationGapRun, continuationGapFontSizePoints, separatorMeasurer);
-                (DocxPlacedRelatedStoryLayout placedContinuation, _) = PlaceContinuationSeparatorStory(activePage, activePageIndex, continuationSeparatorLayout, story.Location.SourceBlockIndex, contentTop + continuationGapPoints, separatorMeasurer, printScale);
-                activePlacedStories.Add(placedContinuation);
+                AppendFootnoteContinuationSeparator(outputPages, activePageIndex, activePage, activePlacedStories,
+                    continuationSeparatorLayout, story.Location.SourceBlockIndex, contentTop, separatorMeasurer, printScale);
                 sharedSeparatorPlaced = true;
-                outputPages[activePageIndex] = activePage with { PlacedRelatedStories = activePlacedStories.ToArray() };
             }
 
             if (contentTop - storyHeight >= frameBottom - 0.001d)
@@ -2213,11 +2209,8 @@ internal sealed partial class DocxLayoutEngine
             if (trackedStory is not null && trackedStory.SeparatorPlaced && continuationSeparatorLayout is not null && continuationSeparatorLayout.TextLines.Count != 0)
             {
                 needsContinuationRule = true;
-                (DocxTextRun? continuationGapRun, double continuationGapFontSizePoints) = FindSeparatorMarkFont(continuationSeparatorLayout.TextLines);
-                double continuationGapPoints = ResolveSeparatorGapPoints(continuationGapRun, continuationGapFontSizePoints, separatorMeasurer);
-                (DocxPlacedRelatedStoryLayout placedContinuation, _) = PlaceContinuationSeparatorStory(activePage, activePageIndex, continuationSeparatorLayout, story.Location.SourceBlockIndex, contentTop + continuationGapPoints, separatorMeasurer, printScale);
-                activePlacedStories.Add(placedContinuation);
-                outputPages[activePageIndex] = activePage with { PlacedRelatedStories = activePlacedStories.ToArray() };
+                AppendFootnoteContinuationSeparator(outputPages, activePageIndex, activePage, activePlacedStories,
+                    continuationSeparatorLayout, story.Location.SourceBlockIndex, contentTop, separatorMeasurer, printScale);
             }
 
             if (contentTop - storyHeight >= frameBottom - 0.001d)
