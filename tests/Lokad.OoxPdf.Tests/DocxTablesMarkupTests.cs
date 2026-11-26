@@ -1141,89 +1141,13 @@ internal static class DocxTablesMarkupTests
 
     public static void DocxWordCompatibleAllMarkupOmitsInventedMoveRevisionTrackingInTableCells()
     {
-        var deletionRevision = new DocxRevisionInfo(DocxRevisionKind.Deletion, "3", "Reviewer", "2026-06-10T00:00:00Z", "del", null, []);
-        var moveFromRevision = new DocxRevisionInfo(DocxRevisionKind.MoveFrom, "1", "Reviewer", "2026-06-10T00:00:00Z", "moveFrom", null, []);
-        var insertionRevision = new DocxRevisionInfo(DocxRevisionKind.Insertion, "4", "Reviewer", "2026-06-10T00:00:00Z", "ins", null, []);
-        var moveToRevision = new DocxRevisionInfo(DocxRevisionKind.MoveTo, "2", "Reviewer", "2026-06-10T00:00:00Z", "moveTo", null, []);
-        DocxTable table = new DocxTable(
-            null,
-            [170d],
-            [
-                new DocxTableRow([CreateCell(CreateRevisedParagraph("ChangedFrom", deletionRevision))], 24d),
-                new DocxTableRow([CreateCell(CreateRevisedParagraph("ChangedFrom", moveFromRevision))], 24d),
-                new DocxTableRow([CreateCell(CreateRevisedParagraph("ChangedTo", insertionRevision))], 24d),
-                new DocxTableRow([CreateCell(CreateRevisedParagraph("ChangedTo", moveToRevision))], 24d)
-            ]);
-        DocxDocument document = new(
-            612d,
-            792d,
-            72d,
-            207d,
-            72d,
-            72d,
-            DocxPageSettings.Empty,
-            [],
-            [],
-            [],
-            [new DocxTableElement(table)])
-        {
-            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
-        };
-
-        DocxTextEmissionLineSnapshot[] wordLines = new DocxRenderer(
-                fontResolver: null,
-                markupMode: OoxPdfDocxMarkupMode.AllMarkup,
-                markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-            .InspectTextEmission(document)
-            .Lines
+        DocxTableRow[] rows = DocxMarkupTests.CreateMoveTrackingParagraphs()
+            .Select(paragraph => new DocxTableRow(
+                [new DocxTableCell([paragraph], null, null, null, null, [], DocxTableCellMargins.Empty)],
+                24d))
             .ToArray();
-        DocxTextEmissionSegmentSnapshot wordDeletion = RevisionSegment(wordLines, "Deletion");
-        DocxTextEmissionSegmentSnapshot wordMoveFrom = RevisionSegment(wordLines, "MoveFrom");
-        DocxTextEmissionSegmentSnapshot wordInsertion = RevisionSegment(wordLines, "Insertion");
-        DocxTextEmissionSegmentSnapshot wordMoveTo = RevisionSegment(wordLines, "MoveTo");
-
-        // Office A/B (W5-K1): revision runs carry font kerning only, like body text.
-        TestAssert.True(Math.Abs(wordMoveFrom.PositioningCharacterSpacing) < 0.0001d, "Word-compatible moved-from table text should not invent deleted-text tracking.");
-        TestAssert.True(Math.Abs(wordMoveTo.PositioningCharacterSpacing) < 0.0001d, "Word-compatible moved-to table text should not invent inserted-text tracking.");
-        TestAssert.True(Math.Abs(wordMoveFrom.X - wordDeletion.X) < 0.001d, "Word-compatible moved-from table text should share the deleted-text X positioning branch.");
-        TestAssert.True(Math.Abs(wordMoveTo.X - wordInsertion.X) < 0.001d, "Word-compatible moved-to table text should share the inserted-text X positioning branch.");
-
-        static DocxTableCell CreateCell(DocxParagraph paragraph)
-        {
-            return new DocxTableCell([paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
-        }
-
-        static DocxParagraph CreateRevisedParagraph(string revisedText, DocxRevisionInfo revision)
-        {
-            return new DocxParagraph(
-                [
-                    new DocxTextRun("Prefix ", 10d, null, false, false, false, null, null),
-                    new DocxTextRun(revisedText, 10d, null, false, false, false, null, null)
-                    {
-                        Revision = revision
-                    }
-                ],
-                [],
-                null,
-                DocxTextAlignment.Left,
-                null,
-                0d,
-                0d,
-                1.2d,
-                null,
-                DocxParagraphSpacing.Empty,
-                DocxParagraphKeepRules.Empty,
-                null);
-        }
-
-        static DocxTextEmissionSegmentSnapshot RevisionSegment(
-            IEnumerable<DocxTextEmissionLineSnapshot> lines,
-            string revisionKind)
-        {
-            return lines
-                .SelectMany(line => line.Segments)
-                .Single(segment => segment.RevisionKind == revisionKind && !segment.IsTerminalLineSpace);
-        }
+        var table = new DocxTable(null, [170d], rows);
+        DocxMarkupTests.AssertMoveTrackingComparison([new DocxTableElement(table)], "TableCell");
     }
 
     public static void DocxWordCompatibleAllMarkupPaintsPageRevisionBarForTableRevisions()

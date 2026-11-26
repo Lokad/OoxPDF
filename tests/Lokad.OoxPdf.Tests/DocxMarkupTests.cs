@@ -1573,61 +1573,30 @@ internal static class DocxMarkupTests
 
     public static void DocxWordCompatibleAllMarkupOmitsInventedMoveRevisionTracking()
     {
-        var deletionRevision = new DocxRevisionInfo(DocxRevisionKind.Deletion, "3", "Reviewer", "2026-06-10T00:00:00Z", "del", null, []);
-        var moveFromRevision = new DocxRevisionInfo(DocxRevisionKind.MoveFrom, "1", "Reviewer", "2026-06-10T00:00:00Z", "moveFrom", null, []);
-        var insertionRevision = new DocxRevisionInfo(DocxRevisionKind.Insertion, "4", "Reviewer", "2026-06-10T00:00:00Z", "ins", null, []);
-        var moveToRevision = new DocxRevisionInfo(DocxRevisionKind.MoveTo, "2", "Reviewer", "2026-06-10T00:00:00Z", "moveTo", null, []);
-        DocxParagraph deletedParagraph = CreateRevisedParagraph("ChangedFrom", deletionRevision);
-        DocxParagraph movedFromParagraph = CreateRevisedParagraph("ChangedFrom", moveFromRevision);
-        DocxParagraph insertedParagraph = CreateRevisedParagraph("ChangedTo", insertionRevision);
-        DocxParagraph movedToParagraph = CreateRevisedParagraph("ChangedTo", moveToRevision);
-        DocxDocument document = new(
-            612d,
-            792d,
-            72d,
-            207d,
-            72d,
-            72d,
-            DocxPageSettings.Empty,
-            [],
-            [],
-            [],
-            [
-                new DocxParagraphElement(deletedParagraph),
-                new DocxParagraphElement(movedFromParagraph),
-                new DocxParagraphElement(insertedParagraph),
-                new DocxParagraphElement(movedToParagraph)
-            ])
-        {
-            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
-        };
-
-        DocxTextEmissionLineSnapshot[] wordLines = new DocxRenderer(
-                fontResolver: null,
-                markupMode: OoxPdfDocxMarkupMode.AllMarkup,
-                markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-            .InspectTextEmission(document)
-            .Lines
+        DocxBodyElement[] blocks = CreateMoveTrackingParagraphs()
+            .Select(paragraph => (DocxBodyElement)new DocxParagraphElement(paragraph))
             .ToArray();
-        DocxTextEmissionSegmentSnapshot wordDeletion = RevisionSegment(wordLines, "Deletion");
-        DocxTextEmissionSegmentSnapshot wordMoveFrom = RevisionSegment(wordLines, "MoveFrom");
-        DocxTextEmissionSegmentSnapshot wordInsertion = RevisionSegment(wordLines, "Insertion");
-        DocxTextEmissionSegmentSnapshot wordMoveTo = RevisionSegment(wordLines, "MoveTo");
+        AssertMoveTrackingComparison(blocks, "Body");
+    }
 
-        // Office A/B (W5-K1): revision runs carry font kerning only, like body text.
-        TestAssert.True(Math.Abs(wordMoveFrom.PositioningCharacterSpacing) < 0.0001d, "Word-compatible moved-from text should not invent deleted-text tracking.");
-        TestAssert.True(Math.Abs(wordMoveTo.PositioningCharacterSpacing) < 0.0001d, "Word-compatible moved-to text should not invent inserted-text tracking.");
-        TestAssert.True(Math.Abs(wordMoveFrom.X - wordDeletion.X) < 0.001d, "Word-compatible moved-from text should share the deleted-text X positioning branch.");
-        TestAssert.True(Math.Abs(wordMoveTo.X - wordInsertion.X) < 0.001d, "Word-compatible moved-to text should share the inserted-text X positioning branch.");
+    internal static DocxParagraph[] CreateMoveTrackingParagraphs()
+    {
+        return
+        [
+            CreateRevisedParagraph("ChangedFrom", DocxRevisionKind.Deletion, "3", "del"),
+            CreateRevisedParagraph("ChangedFrom", DocxRevisionKind.MoveFrom, "1", "moveFrom"),
+            CreateRevisedParagraph("ChangedTo", DocxRevisionKind.Insertion, "4", "ins"),
+            CreateRevisedParagraph("ChangedTo", DocxRevisionKind.MoveTo, "2", "moveTo")
+        ];
 
-        static DocxParagraph CreateRevisedParagraph(string revisedText, DocxRevisionInfo revision)
+        static DocxParagraph CreateRevisedParagraph(string text, DocxRevisionKind kind, string id, string tag)
         {
             return new DocxParagraph(
                 [
                     new DocxTextRun("Prefix ", 10d, null, false, false, false, null, null),
-                    new DocxTextRun(revisedText, 10d, null, false, false, false, null, null)
+                    new DocxTextRun(text, 10d, null, false, false, false, null, null)
                     {
-                        Revision = revision
+                        Revision = new DocxRevisionInfo(kind, id, "Reviewer", "2026-06-10T00:00:00Z", tag, null, [])
                     }
                 ],
                 [],
@@ -1642,15 +1611,48 @@ internal static class DocxMarkupTests
                 DocxParagraphKeepRules.Empty,
                 null);
         }
+    }
 
-        static DocxTextEmissionSegmentSnapshot RevisionSegment(
-            IEnumerable<DocxTextEmissionLineSnapshot> lines,
-            string revisionKind)
+    internal static void AssertMoveTrackingComparison(IReadOnlyList<DocxBodyElement> blocks, string expectedStoryKind)
+    {
+        DocxDocument document = new(
+            612d, 792d, 72d, 207d, 72d, 72d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            blocks)
         {
-            return lines
-                .SelectMany(line => line.Segments)
-                .Single(segment => segment.RevisionKind == revisionKind && !segment.IsTerminalLineSpace);
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+        DocxTextEmissionLineSnapshot[] revisedLines = new DocxRenderer(
+                fontResolver: null,
+                markupMode: OoxPdfDocxMarkupMode.AllMarkup,
+                markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+            .InspectTextEmission(document)
+            .Lines
+            .Where(line => line.RevisionSegmentCount != 0)
+            .ToArray();
+
+        TestAssert.Equal(4, revisedLines.Length);
+        foreach (DocxTextEmissionLineSnapshot line in revisedLines)
+        {
+            TestAssert.Equal(expectedStoryKind, line.StoryKind);
         }
+        DocxTextEmissionSegmentSnapshot deletion = RevisionSegment("Deletion");
+        DocxTextEmissionSegmentSnapshot moveFrom = RevisionSegment("MoveFrom");
+        DocxTextEmissionSegmentSnapshot insertion = RevisionSegment("Insertion");
+        DocxTextEmissionSegmentSnapshot moveTo = RevisionSegment("MoveTo");
+
+        // Word's revision runs use the same font kerning as ordinary text.
+        TestAssert.True(Math.Abs(moveFrom.PositioningCharacterSpacing) < 0.0001d, "Moved-from text should have no added tracking.");
+        TestAssert.True(Math.Abs(moveTo.PositioningCharacterSpacing) < 0.0001d, "Moved-to text should have no added tracking.");
+        TestAssert.True(Math.Abs(moveFrom.X - deletion.X) < 0.001d, "Moved-from text should share the deletion's horizontal origin.");
+        TestAssert.True(Math.Abs(moveTo.X - insertion.X) < 0.001d, "Moved-to text should share the insertion's horizontal origin.");
+
+        DocxTextEmissionSegmentSnapshot RevisionSegment(string kind) => revisedLines
+            .SelectMany(line => line.Segments)
+            .Single(segment => segment.RevisionKind == kind && !segment.IsTerminalLineSpace);
     }
 
     public static void DocxWordCompatibleAllMarkupOmitsInventedMoveRevisionTrackingAcrossTextFlows()
