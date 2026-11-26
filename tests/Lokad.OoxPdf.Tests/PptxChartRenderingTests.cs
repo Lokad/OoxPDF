@@ -267,7 +267,7 @@ internal static class PptxChartRenderingTests
             .First(chart => chart?.TargetPartName == "/ppt/charts/chart1.xml")!;
         PptxSceneChartAxis valueAxisScene = lineChartScene.Axes.First(axis => axis.Id == "20");
 
-        TestAssert.Equal("/ppt/charts/style1.xml", lineChartScene.StylePart.PartName ?? string.Empty);
+        TestAssert.True(lineChartScene.StylePart.IsDefined, "The line chart consumes the authored style part.");
         TestAssert.Equal("10,20", string.Join(",", lineChartScene.Plots.First(plot => plot.PlotKind == PptxSceneChartPlotKind.Line).AxisIds));
         TestAssert.True(!valueAxisScene.MajorGridlineLine.HasLine, "Expected the direct empty majorGridlines node to leave styling to chart-style fallback.");
         TestAssert.True(valueAxisScene.MajorGridlineStyleLine.HasLine, "Expected chart-style major gridline fallback in the scene axis.");

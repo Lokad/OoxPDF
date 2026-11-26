@@ -72,50 +72,26 @@ internal sealed record PptxSceneChartStyle
 {
     public bool IsDefined { get; }
 
-    public string? PartName { get; }
-
-    public string Id { get; }
-
     public IReadOnlyList<PptxSceneChartStyleEntry> Entries { get; }
 
-    private PptxSceneChartStyle(
-        bool isDefined,
-        string? partName,
-        string id,
-        IReadOnlyList<PptxSceneChartStyleEntry> entries)
+    private PptxSceneChartStyle(bool isDefined, IReadOnlyList<PptxSceneChartStyleEntry> entries)
     {
         IsDefined = isDefined;
-        PartName = partName;
-        Id = id;
         Entries = entries;
     }
 
-    public static PptxSceneChartStyle Undefined(string? partName)
-    {
-        return new PptxSceneChartStyle(false, partName, string.Empty, []);
-    }
+    public static PptxSceneChartStyle Undefined { get; } = new(false, []);
 
-    public static PptxSceneChartStyle Defined(
-        string partName,
-        string id,
-        IReadOnlyList<PptxSceneChartStyleEntry> entries)
+    public static PptxSceneChartStyle Defined(IReadOnlyList<PptxSceneChartStyleEntry> entries)
     {
-        ArgumentNullException.ThrowIfNull(partName);
         ArgumentNullException.ThrowIfNull(entries);
-        return new PptxSceneChartStyle(true, partName, id, entries);
+        return new PptxSceneChartStyle(true, entries);
     }
 }
 
 internal readonly record struct PptxSceneChartStyleEntry(
     string Role,
-    int SourceIndex,
-    string NamespaceUri,
-    int? LineReferenceIndex,
-    int? FillReferenceIndex,
-    PptxSceneFillStyle FillReferenceFill,
-    int? EffectReferenceIndex,
     PptxSceneEffectFamily EffectReferenceEffects,
-    string FontReferenceIndex,
     PptxSceneLineStyle Line,
     PptxSceneChartShapeStyle ShapeStyle,
     PptxSceneChartTextStyleOverride TextStyle);

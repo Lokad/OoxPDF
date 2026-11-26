@@ -19,16 +19,17 @@ internal static class PptxModelTests
     public static void PptxSceneChartPartRecordsEnforceDefinedUndefined()
     {
         // T02: chart part records build only through factories; the defined flag
-        // cannot disagree with construction and defined parts require identity.
+        // cannot disagree with construction and present style parts may be empty.
         PptxSceneChartExternalData undefinedExternal = default;
         TestAssert.True(!undefinedExternal.IsDefined, "Undefined external data must clear the flag.");
         PptxSceneChartExternalData definedExternal = PptxSceneChartExternalData.Defined("rId9", "/xl/embed.xlsx", null);
         TestAssert.True(definedExternal.IsDefined, "Defined external data must set the flag.");
 
-        PptxSceneChartStyle undefinedStyle = PptxSceneChartStyle.Undefined(null);
+        PptxSceneChartStyle undefinedStyle = PptxSceneChartStyle.Undefined;
         TestAssert.True(!undefinedStyle.IsDefined, "Undefined style part must clear the flag.");
         TestAssert.Equal(0, undefinedStyle.Entries.Count);
-        TestAssert.Throws<ArgumentNullException>(() => PptxSceneChartStyle.Defined(null!, string.Empty, []));
+        TestAssert.True(PptxSceneChartStyle.Defined([]).IsDefined, "A present empty style part remains defined.");
+        TestAssert.Throws<ArgumentNullException>(() => PptxSceneChartStyle.Defined(null!));
     }
 
     public static void PptxSceneNodeFactoriesRejectInvalidCombinations()
@@ -462,24 +463,11 @@ internal static class PptxModelTests
         TestAssert.Equal(2, chart.Axes.Count);
         TestAssert.Equal(new RgbColor(1, 2, 3), chart.PaletteColors.Single());
         TestAssert.True(slide.SlideNodes[4].Chart?.StylePart.IsDefined == true, "Expected chart style-part ownership in the scene model.");
-        TestAssert.Equal("/ppt/charts/style1.xml", slide.SlideNodes[4].Chart?.StylePart.PartName ?? string.Empty);
-        TestAssert.Equal("10", slide.SlideNodes[4].Chart?.StylePart.Id ?? string.Empty);
-        var entries = chart.StylePart.Entries;
-        TestAssert.True(entries.Select(entry => (entry.Role, entry.SourceIndex)).SequenceEqual(
-            new[] { ("gridlineMajor", 1), ("gridlineMinor", 2), ("title", 3) }),
-            "Chart style entries retain their ordered source positions.");
-        TestAssert.True(entries.All(entry => entry.NamespaceUri == "http://schemas.microsoft.com/office/drawing/2012/chartStyle"),
-            "Style entries retain their authored namespace.");
+        TestAssert.True(chart.StylePart.Entries.Select(entry => entry.Role).SequenceEqual(
+            new[] { "gridlineMajor", "gridlineMinor", "title" }),
+            "Resolved chart styles retain their role order.");
         PptxSceneChartStyleEntry majorGridlineStyle = slide.SlideNodes[4].Chart?.StylePart.Entries.FirstOrDefault(entry => entry.Role == "gridlineMajor") ?? default;
         TestAssert.Equal("gridlineMajor", majorGridlineStyle.Role ?? string.Empty);
-        TestAssert.Equal(1, majorGridlineStyle.SourceIndex);
-        TestAssert.Equal("http://schemas.microsoft.com/office/drawing/2012/chartStyle", majorGridlineStyle.NamespaceUri);
-        TestAssert.Equal(1, majorGridlineStyle.LineReferenceIndex ?? 0);
-        TestAssert.Equal(2, majorGridlineStyle.FillReferenceIndex ?? 0);
-        TestAssert.True(majorGridlineStyle.FillReferenceFill.HasFill, "Expected chart style fill-reference theme resolution in the scene model.");
-        TestAssert.Equal(new RgbColor(187, 221, 238), majorGridlineStyle.FillReferenceFill.Color);
-        TestAssert.Equal(0.65d, majorGridlineStyle.FillReferenceFill.Alpha);
-        TestAssert.Equal(1, majorGridlineStyle.EffectReferenceIndex ?? 0);
         TestAssert.True(majorGridlineStyle.EffectReferenceEffects.HasEffectList, "Expected chart style effect-reference theme resolution in the scene model.");
         TestAssert.Equal("blur", majorGridlineStyle.EffectReferenceEffects.UnsupportedEffectNames[0]);
         TestAssert.True(majorGridlineStyle.Line.HasLine, "Expected chart style-part line-reference ownership in the scene model.");
@@ -502,18 +490,11 @@ internal static class PptxModelTests
         TestAssert.Equal(new RgbColor(68, 85, 102), majorGridlineStyle.ShapeStyle.Fill.Color);
         TestAssert.Equal(0.75d, majorGridlineStyle.ShapeStyle.Fill.Alpha);
         PptxSceneChartStyleEntry minorGridlineStyle = slide.SlideNodes[4].Chart?.StylePart.Entries.FirstOrDefault(entry => entry.Role == "gridlineMinor") ?? default;
-        TestAssert.Equal(null, minorGridlineStyle.LineReferenceIndex);
-        TestAssert.Equal(null, minorGridlineStyle.FillReferenceIndex);
-        TestAssert.Equal(null, minorGridlineStyle.EffectReferenceIndex);
-        TestAssert.True(!minorGridlineStyle.Line.HasLine && !minorGridlineStyle.FillReferenceFill.HasFill &&
+        TestAssert.True(!minorGridlineStyle.Line.HasLine &&
             !minorGridlineStyle.EffectReferenceEffects.HasEffectList, "Invalid or zero references should leave theme paint unresolved.");
         TestAssert.True(minorGridlineStyle.ShapeStyle.Line.HasLine, "A zero line reference must preserve the role's explicit line.");
         PptxSceneChartStyleEntry titleStyle = slide.SlideNodes[4].Chart?.StylePart.Entries.FirstOrDefault(entry => entry.Role == "title") ?? default;
         TestAssert.Equal("title", titleStyle.Role ?? string.Empty);
-        TestAssert.Equal(null, titleStyle.LineReferenceIndex);
-        TestAssert.Equal(null, titleStyle.FillReferenceIndex);
-        TestAssert.Equal(null, titleStyle.EffectReferenceIndex);
-        TestAssert.Equal("major", titleStyle.FontReferenceIndex);
         TestAssert.Equal("Arial", titleStyle.TextStyle.FontFamily ?? string.Empty);
         TestAssert.Equal("+mj-lt", titleStyle.TextStyle.RequestedTypeface ?? string.Empty);
         TestAssert.Equal(PptxThemeTypefaceSource.MajorLatin, titleStyle.TextStyle.TypefaceSource ?? default);
@@ -1633,12 +1614,6 @@ internal static class PptxModelTests
         IReadOnlyList<string> chartStyleEntryRoles = chartStyleEntries
             .Select(entry => entry.Role)
             .ToArray();
-        IReadOnlyList<int> chartStyleEntrySourceIndexes = chartStyleEntries
-            .Select(entry => entry.SourceIndex)
-            .ToArray();
-        IReadOnlyList<string> chartStyleEntryNamespaceUris = chartStyleEntries
-            .Select(entry => entry.NamespaceUri)
-            .ToArray();
         return new
         {
             source,
@@ -1691,18 +1666,12 @@ internal static class PptxModelTests
             HasChartStylePart = node.Chart?.StylePart.IsDefined ?? false,
             ChartStyleEntryCount = chartStyleEntries.Count,
             ChartStyleEntryRoles = chartStyleEntryRoles,
-            ChartStyleEntrySourceIndexes = chartStyleEntrySourceIndexes,
-            ChartStyleEntryNamespaceUris = chartStyleEntryNamespaceUris,
             ChartStyleShapeStyleCount = chartStyleEntries.Count(entry => HasChartShapeStyle(entry.ShapeStyle)),
             ChartStyleShapeFillCount = chartStyleEntries.Count(entry => entry.ShapeStyle?.Fill.HasFill == true ||
                 entry.ShapeStyle?.PatternFill.HasPattern == true ||
                 entry.ShapeStyle?.GradientFill?.HasGradient == true),
-            ChartStyleFillReferenceCount = chartStyleEntries.Count(entry => entry.FillReferenceIndex is not null),
-            ChartStyleResolvedFillReferenceCount = chartStyleEntries.Count(entry => entry.FillReferenceFill.HasFill),
-            ChartStyleEffectReferenceCount = chartStyleEntries.Count(entry => entry.EffectReferenceIndex is not null),
             ChartStyleResolvedEffectReferenceCount = chartStyleEntries.Count(entry => entry.EffectReferenceEffects.HasEffectList ||
                 entry.EffectReferenceEffects.HasUnsupportedEffects),
-            ChartStyleFontReferenceCount = chartStyleEntries.Count(entry => !string.IsNullOrWhiteSpace(entry.FontReferenceIndex)),
             HasGroupTransform = node.Kind == PptxSceneNodeKind.Group
                 && node.Source.Element(OoxNamespaces.PresentationNamespace + "grpSpPr")
                     ?.Element(OoxNamespaces.DrawingNamespace + "xfrm") is not null

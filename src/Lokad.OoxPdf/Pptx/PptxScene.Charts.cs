@@ -42,7 +42,7 @@ internal sealed partial class PptxSceneBuilder
                 : ReadChartPaletteColors(package, chartRelationships, theme, colorMap, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
             PptxSceneChartStyle stylePart = chartPart is null
-                ? PptxSceneChartStyle.Undefined(null)
+                ? PptxSceneChartStyle.Undefined
                 : ReadChartStylePart(package, chartRelationships, theme, colorMap, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
             IReadOnlyList<PptxSceneChartPlot> plots = ReadChartPlots(chartXml, theme, colorMap);

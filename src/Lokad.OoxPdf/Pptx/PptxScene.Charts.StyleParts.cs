@@ -80,20 +80,17 @@ internal sealed partial class PptxSceneBuilder
                 relationship.ResolvedTarget is not null);
         if (styleRelationship?.ResolvedTarget is null)
         {
-            return PptxSceneChartStyle.Undefined(null);
+            return PptxSceneChartStyle.Undefined;
         }
 
         OoxPart? stylePart = package.GetPart(styleRelationship.ResolvedTarget);
         if (stylePart is null)
         {
-            return PptxSceneChartStyle.Undefined(styleRelationship.ResolvedTarget);
+            return PptxSceneChartStyle.Undefined;
         }
 
         XDocument document = package.LoadXml(stylePart, cancellationToken);
-        return PptxSceneChartStyle.Defined(
-            stylePart.Name,
-            (string?)document.Root?.Attribute("id") ?? string.Empty,
-            ReadChartStyleEntries(document, theme, colorMap));
+        return PptxSceneChartStyle.Defined(ReadChartStyleEntries(document, theme, colorMap));
     }
 
     private static IReadOnlyList<PptxSceneChartStyleEntry> ReadChartStyleEntries(XDocument document, PptxTheme theme, PptxColorMap colorMap)
@@ -104,7 +101,6 @@ internal sealed partial class PptxSceneBuilder
         }
 
         var entries = new List<PptxSceneChartStyleEntry>();
-        int sourceIndex = 0;
         foreach (XElement roleElement in document.Root.Elements())
         {
             XElement? lineReference = roleElement
@@ -114,17 +110,14 @@ internal sealed partial class PptxSceneBuilder
             XElement? fillReference = roleElement
                 .Elements()
                 .FirstOrDefault(element => element.Name.LocalName == "fillRef");
-            int fillReferenceIndex = PptxFormatSchemeResolver.ReadIndex(fillReference);
-            PptxSceneFillStyle fillReferenceFill = ReadChartStyleFillReference(fillReference, fillReferenceIndex, theme, colorMap);
             XElement? effectReference = roleElement
                 .Elements()
                 .FirstOrDefault(element => element.Name.LocalName == "effectRef");
             int effectReferenceIndex = PptxFormatSchemeResolver.ReadIndex(effectReference);
             PptxSceneEffectFamily effectReferenceEffects = ReadChartStyleEffectReference(effectReferenceIndex, theme);
-            string fontReferenceIndex = (string?)roleElement
+            XElement? fontReference = roleElement
                 .Elements()
-                .FirstOrDefault(element => element.Name.LocalName == "fontRef")
-                ?.Attribute("idx") ?? string.Empty;
+                .FirstOrDefault(element => element.Name.LocalName == "fontRef");
             PptxSceneLineStyle line = lineReferenceIndex > 0 &&
                 lineReference is not null &&
                 TryReadThemeLineReference(
@@ -143,32 +136,26 @@ internal sealed partial class PptxSceneBuilder
                     .FirstOrDefault(element => element.Name.LocalName == "spPr"),
                 theme,
                 colorMap);
-            PptxSceneChartTextStyleOverride textStyle = ReadChartStyleRoleTextStyle(roleElement, theme, colorMap);
+            XElement? defaultRunProperties = roleElement
+                .Elements()
+                .FirstOrDefault(element => element.Name.LocalName == "defRPr");
+            PptxSceneChartTextStyleOverride textStyle = ReadChartTextRunStyle(defaultRunProperties, theme, colorMap, fontReference);
             if (lineReference is null &&
                 fillReference is null &&
                 effectReference is null &&
-                string.IsNullOrWhiteSpace(fontReferenceIndex) &&
+                string.IsNullOrWhiteSpace((string?)fontReference?.Attribute("idx")) &&
                 !HasChartShapeStyle(shapeStyle) &&
                 !HasChartTextStyleOverride(textStyle))
             {
-                sourceIndex++;
                 continue;
             }
 
             entries.Add(new PptxSceneChartStyleEntry(
                 roleElement.Name.LocalName,
-                sourceIndex,
-                roleElement.Name.NamespaceName,
-                lineReferenceIndex > 0 ? lineReferenceIndex : null,
-                fillReferenceIndex > 0 ? fillReferenceIndex : null,
-                fillReferenceFill,
-                effectReferenceIndex > 0 ? effectReferenceIndex : null,
                 effectReferenceEffects,
-                fontReferenceIndex,
                 line,
                 shapeStyle,
                 textStyle));
-            sourceIndex++;
         }
 
         return entries;
@@ -187,27 +174,6 @@ internal sealed partial class PptxSceneBuilder
                 textStyle.Underline is not null ||
                 textStyle.Strike is not null;
         }
-    }
-
-    private static PptxSceneFillStyle ReadChartStyleFillReference(XElement? fillReference, int fillReferenceIndex,
-        PptxTheme theme, PptxColorMap colorMap)
-    {
-        XElement? fillStyle = null;
-        if (fillReferenceIndex > 0)
-        {
-            theme.TryGetFillStyle(fillReferenceIndex, out fillStyle);
-        }
-
-        if (fillStyle is not null &&
-            PptxColorResolver.TryReadSolidColorWithAlpha(fillStyle, theme, colorMap, fillReference, out RgbColor color, out double alpha))
-        {
-            return new PptxSceneFillStyle(true, color, alpha);
-        }
-
-        return fillReferenceIndex > 0 &&
-            PptxColorResolver.TryReadSolidColorWithAlpha(fillReference, theme, colorMap, out color, out alpha)
-            ? new PptxSceneFillStyle(true, color, alpha)
-            : default;
     }
 
     private static PptxSceneEffectFamily ReadChartStyleEffectReference(int effectReferenceIndex, PptxTheme theme)
@@ -229,16 +195,5 @@ internal sealed partial class PptxSceneBuilder
             style.Glow.HasGlow ||
             style.OuterShadow.HasShadow ||
             style.Effects.HasUnsupportedEffects;
-    }
-
-    private static PptxSceneChartTextStyleOverride ReadChartStyleRoleTextStyle(XElement roleElement, PptxTheme theme, PptxColorMap colorMap)
-    {
-        XElement? defaultRunProperties = roleElement
-            .Elements()
-            .FirstOrDefault(element => element.Name.LocalName == "defRPr");
-        XElement? fontReference = roleElement
-            .Elements()
-            .FirstOrDefault(element => element.Name.LocalName == "fontRef");
-        return ReadChartTextRunStyle(defaultRunProperties, theme, colorMap, fontReference);
     }
 }
