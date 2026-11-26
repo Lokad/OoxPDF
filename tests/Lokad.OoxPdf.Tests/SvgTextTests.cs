@@ -680,7 +680,9 @@ internal static partial class SvgTextTests
         string stroked = Paint(Picture("""<tspan fill="url(#unused)" fill-opacity="0" stroke="red">AB</tspan>LABEL"""), diagnostics).ToString();
         TestAssert.DoesNotContain(LabelColor, stroked);
         TestAssert.Contains("0 1 0 rg", stroked);
-        TestAssert.Contains("unsupported text element", diagnostics.Single().Message);
+        OoxPdfDiagnostic omittedText = diagnostics.Single(d => d.Message == "SVG picture omits 1 unsupported text element.");
+        TestAssert.Equal("SVG_UNSUPPORTED_CONTENT", omittedText.Id);
+        TestAssert.Equal("Partial", omittedText.Fallback);
         AssertSvgPaintInBothFormats(Picture("LABEL", """fill="#112233" fill-opacity=".375" """),
             Picture("""<tspan fill="rgba(17,34,51,.5)" fill-opacity=".75">LABEL</tspan>""",
                 """fill="#112233" fill-opacity=".25" """),
