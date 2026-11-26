@@ -5859,6 +5859,7 @@
     "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "pptx-line-defaults": [
+    "=PptxSyntheticChartSeriesLineUsesRoundCapsAndJoins",
     "LineStyle18UsesRawFivePointSeriesStroke",
     "LineStyle18KeepsExplicitSeriesStrokeWidth",
     "LineStyle18DrawsGradientGalleryMarkers",

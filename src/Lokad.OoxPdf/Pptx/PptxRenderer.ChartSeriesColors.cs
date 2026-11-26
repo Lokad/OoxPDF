@@ -51,9 +51,7 @@ internal sealed partial class PptxRenderer
     private static RgbColor ResolveSingleAccentColor(RgbColor color, int index, int count)
     {
         int percentage = (int)(140L * (index + 1L) / (count + 1L));
-        return percentage < 70
-            ? LinearLightColor.ShadeTowardBlack(color, (30 + percentage) / 100d)
-            : LinearLightColor.TintTowardWhite(color, (percentage - 70) / 100d);
+        return ApplyChartPalettePercentage(color, percentage);
     }
 
     private static ChartSeriesFill ChartSeriesColor(PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, int seriesIndex, IReadOnlyList<ChartSeriesFill?> seriesFills, double defaultAlpha)
@@ -155,10 +153,13 @@ internal sealed partial class PptxRenderer
     {
         const int accentCount = 6;
         int percentage = (int)(140L * (categoryIndex / accentCount + 1) / (valuePointCount / accentCount + 2));
-        return percentage < 70
+        return ApplyChartPalettePercentage(color, percentage);
+    }
+
+    private static RgbColor ApplyChartPalettePercentage(RgbColor color, int percentage) =>
+        percentage < 70
             ? LinearLightColor.ShadeTowardBlack(color, (30 + percentage) / 100d)
             : LinearLightColor.TintTowardWhite(color, (percentage - 70) / 100d);
-    }
 
     private static ChartSeriesFill ChartCategoryOrSeriesColor(PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, int seriesIndex, int categoryIndex, int seriesCount, bool varyColors, IReadOnlyList<ChartSeriesFill?> seriesFills, int valuePointCount)
     {

@@ -60,7 +60,7 @@ internal sealed partial class PptxRenderer
                     Size = styleId is 18 or 118 ? PptxChartMarkerMetricRules.StyleLineMarkerSize : PptxChartMarkerMetricRules.SmoothLineMarkerSize
                 };
             RgbColor markerColor = themeWidth is null && line.HasLine ? stroke.Color : baseColor;
-            RgbColor markerOutline = themeWidth is not null ? ResolveThemeLineColor(theme, colorMap, baseColor) :
+            RgbColor markerOutline = themeWidth is not null ? outline :
                 line.HasLine || palette.SingleAccent is not null || styleId is 18 or 118 || legacySmooth && !pointColors
                     ? markerColor : ApplyUnstyledLineStrokeTint(markerColor);
             double? markerWidth = themeWidth ?? (styleId is 18 or 118 || legacySmooth && !pointColors
