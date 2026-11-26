@@ -255,7 +255,13 @@ internal sealed partial class PptxRenderer
         }
         if (gradientId is not null)
         {
-            if (paintServers.FindGradient(gradientId).ConstantStop is { Opacity: double opacity } stop)
+            var (linear, radial, constantStop) = paintServers.FindGradient(gradientId);
+            if (linear?.UniformStopOpacity == 0d || radial?.UniformStopOpacity == 0d)
+            {
+                paint = new(null, 0d);
+                return true;
+            }
+            if (constantStop is { Opacity: double opacity } stop)
             {
                 paint = new(stop.Color, opacity);
                 return true;

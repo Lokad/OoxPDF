@@ -653,7 +653,12 @@ internal static partial class SvgTextTests
     public static void SvgLabelsUseFillFromVisibleGlyphOwners()
     {
         string Picture(string text, string paint = """fill="#112233" """, string space = "") => Svg($"""
-            <defs><linearGradient id="unused"><stop stop-color="red"/><stop offset="1" stop-color="orange"/></linearGradient></defs>
+            <defs>
+              <linearGradient id="unused"><stop stop-color="red"/><stop offset="1" stop-color="orange"/></linearGradient>
+              <linearGradient id="transparent-fill"><stop stop-color="red" stop-opacity="0"/><stop offset="1" stop-color="orange" stop-opacity="0"/></linearGradient>
+              <radialGradient id="transparent-stops"><stop stop-color="transparent"/><stop offset="1" stop-color="rgba(255,165,0,0)"/></radialGradient>
+              <radialGradient id="transparent-stroke" href="#transparent-stops"/>
+            </defs>
             <text x="120" y="80" font-size="20" text-anchor="middle" {space} {paint}>{text}</text>
             <rect x="120" y="90" width="20" height="10" fill="lime"/>
             """);
@@ -671,6 +676,8 @@ internal static partial class SvgTextTests
             [Picture("AB" + child, """fill="none" """),
                 Picture("""<tspan style="fill-opacity:0">AB</tspan>LABEL"""),
                 Picture("""<tspan fill="url(#unused)" fill-opacity="0">AB</tspan>LABEL"""),
+                Picture("""<tspan fill="url(#transparent-fill)">AB</tspan>LABEL"""),
+                Picture("""<tspan fill="none" stroke="url(#transparent-stroke)">AB</tspan>LABEL"""),
                 Picture("""<tspan fill-opacity="0"><tspan fill="url(#unused)">AB</tspan></tspan>LABEL"""),
                 Picture("""AB<tspan fill="#112233" fill-opacity="1">LABEL</tspan>""",
                     """fill="url(#unused)" fill-opacity="0" """)],
