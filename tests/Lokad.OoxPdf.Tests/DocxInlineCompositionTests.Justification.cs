@@ -1,7 +1,3 @@
-using System.Globalization;
-using System.Security.Cryptography;
-using System.Text;
-using System.Text.Json;
 using Lokad.OoxPdf.Docx;
 using Lokad.OoxPdf.Fonts;
 
@@ -15,51 +11,8 @@ internal static partial class DocxInlineCompositionTests
         CheckJustifiedMath(null);
     }
 
-    internal static void CheckJustifiedMath(IFontResolver? resolver)
-    {
-        using var gold = JsonDocument.Parse(File.ReadAllText(NestedMathCasePath("justified-math-office.json")));
-        foreach (var row in gold.RootElement.GetProperty("Rows").EnumerateArray())
-        {
-            string id = row.GetProperty("Id").GetString()!;
-            TestAssert.Equal(row.GetProperty("InputSha256").GetString(),
-                Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(NestedMathCasePath(id + ".docx")))));
-            bool final = row.GetProperty("Mode").GetString() == "final-preserve";
-            var mode = final ? OoxPdfDocxMarkupMode.Final : OoxPdfDocxMarkupMode.AllMarkup;
-            string? originalOrigins = null;
-            foreach (bool transformed in new[] { false, true })
-            {
-                var document = ReadMutation("CompositionProbes/" + id, mode, transformed, transformed);
-                var diagnostics = new List<Lokad.OoxPdf.Diagnostics.OoxPdfDiagnostic>();
-                var pages = new DocxRenderer(resolver, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
-                    OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
-                TestAssert.Equal(2, pages.Length);
-                TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"), "Justification cannot discard supported report formulas.");
-                var math = pages.SelectMany(page => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true)
-                    .Where(show => page.Fonts.Any(resource => resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal) &&
-                        ReferenceEquals(resource.Font, show.Font)))).ToArray();
-                TestAssert.Equal(row.GetProperty("MathGlyphCount").GetInt32(), math.Length);
-                string origins = string.Join("|", math.Select(show => show.X.ToString("R", CultureInfo.InvariantCulture) + "," +
-                    show.Y.ToString("R", CultureInfo.InvariantCulture)));
-                if (originalOrigins is not null) TestAssert.Equal(originalOrigins, origins);
-                originalOrigins = origins;
-                string prose = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText));
-                foreach (string text in new[] { "Quarterly operations report", "Inventory availability", "All quantities in this synthetic example are illustrative." })
-                    TestAssert.Contains(text, prose);
-                if (resolver is not null) continue;
-                double paragraphY = row.GetProperty("ParagraphY").GetDouble();
-                var target = math.Where(show => Math.Abs(show.Y - paragraphY) < 9d).ToArray();
-                TestAssert.Equal(row.GetProperty("TargetMathText").GetString(), string.Concat(target.Select(show => show.Text)));
-                TestAssert.Equal(row.GetProperty("MathAnchors").GetArrayLength(), target.Length);
-                double printScale = final ? 1d : DocxRenderer.ResolveWordCompatiblePrintScale(document,
-                    DocxMarkupContext.FromMode(mode, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup));
-                foreach (var pair in target.Zip(row.GetProperty("MathAnchors").EnumerateArray()))
-                    TestAssert.True(Math.Abs(pair.First.X - pair.Second.GetProperty("X").GetDouble()) < 1d &&
-                        Math.Abs(pair.First.Y - pair.Second.GetProperty("Y").GetDouble()) < 1d &&
-                        Math.Abs(pair.First.Size * printScale - pair.Second.GetProperty("Size").GetDouble()) < .1d,
-                        "Restored justified formulas retain independent Word origins and physical sizes in both presets.");
-            }
-        }
-    }
+    internal static void CheckJustifiedMath(IFontResolver? resolver) =>
+        CheckComposedMathReport("justified-math-office.json", resolver, exactLine: false);
 
     public static void DocxInlineCompositionJustificationOwnsWhitespaceAndContinuation()
     {

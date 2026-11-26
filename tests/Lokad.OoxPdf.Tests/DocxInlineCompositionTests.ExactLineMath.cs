@@ -21,9 +21,12 @@ internal static partial class DocxInlineCompositionTests
         CheckExactLineReport(null);
     }
 
-    internal static void CheckExactLineReport(IFontResolver? resolver)
+    internal static void CheckExactLineReport(IFontResolver? resolver) =>
+        CheckComposedMathReport("exact-line-math-report-office.json", resolver, exactLine: true);
+
+    private static void CheckComposedMathReport(string oracle, IFontResolver? resolver, bool exactLine)
     {
-        using var gold = JsonDocument.Parse(File.ReadAllText(NestedMathCasePath("exact-line-math-report-office.json")));
+        using var gold = JsonDocument.Parse(File.ReadAllText(NestedMathCasePath(oracle)));
         foreach (var row in gold.RootElement.GetProperty("Rows").EnumerateArray())
         {
             string id = row.GetProperty("Id").GetString()!;
@@ -35,15 +38,20 @@ internal static partial class DocxInlineCompositionTests
             foreach (bool transformed in new[] { false, true })
             {
                 var document = ReadMutation("CompositionProbes/" + id, mode, transformed, transformed);
-                var source = document.Paragraphs.First(p => p.Equations.Count != 0);
                 var diagnostics = new List<Lokad.OoxPdf.Diagnostics.OoxPdfDiagnostic>();
                 var pages = new DocxRenderer(resolver, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
                     OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
                 TestAssert.Equal(2, pages.Length);
-                TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"), "An exact slot must not omit its supported formula in the composed document.");
-                var math = pages.SelectMany(page => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true)
-                    .Where(show => page.Fonts.Any(resource => resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal) &&
-                        ReferenceEquals(resource.Font, show.Font)))).ToArray();
+                TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                    $"The composed report {id} must retain its supported formulas.");
+                var pageGlyphs = pages.Select(page =>
+                {
+                    var glyphs = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true).ToArray();
+                    var equations = glyphs.Where(show => page.Fonts.Any(resource =>
+                        resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal) && ReferenceEquals(resource.Font, show.Font))).ToArray();
+                    return (Glyphs: glyphs, Equations: equations);
+                }).ToArray();
+                var math = pageGlyphs.SelectMany(page => page.Equations).ToArray();
                 TestAssert.Equal(row.GetProperty("MathGlyphCount").GetInt32(), math.Length);
                 string origins = string.Join("|", math.Select(show => show.X.ToString("R", CultureInfo.InvariantCulture) + "," +
                     show.Y.ToString("R", CultureInfo.InvariantCulture)));
@@ -52,17 +60,29 @@ internal static partial class DocxInlineCompositionTests
                 string prose = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText));
                 foreach (string text in new[] { "Quarterly operations report", "Inventory availability", "All quantities in this synthetic example are illustrative." })
                     TestAssert.Contains(text, prose);
-                TestAssert.Equal(48d, source.LineSpacingPoints);
+                if (exactLine)
+                    TestAssert.Equal(48d, document.Paragraphs.First(p => p.Equations.Count != 0).LineSpacingPoints);
                 if (resolver is not null) continue;
-                var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(pages[0], usePageCoordinates: true).ToArray();
-                var summary = shows.GroupBy(show => show.Y).Select(line => line.OrderBy(show => show.X).ToArray())
-                    .First(line => string.Concat(line.Select(show => show.Text)).StartsWith("Summary:", StringComparison.Ordinal))[0];
-                TestAssert.True(Math.Abs(summary.Y - row.GetProperty("SummaryY").GetDouble()) < 1d,
-                    "Exact source baseline retains the independent one-point Word gate, including review scaling.");
-                var target = shows.Where(show => pages[0].Fonts.Any(resource => resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal) &&
-                    ReferenceEquals(resource.Font, show.Font)) && Math.Abs(show.Y - summary.Y) < summary.Size).ToArray();
+                double targetY;
+                double targetBand;
+                if (exactLine)
+                {
+                    var summary = pageGlyphs[0].Glyphs.GroupBy(show => show.Y).Select(line => line.OrderBy(show => show.X).ToArray())
+                        .First(line => string.Concat(line.Select(show => show.Text)).StartsWith("Summary:", StringComparison.Ordinal))[0];
+                    TestAssert.True(Math.Abs(summary.Y - row.GetProperty("SummaryY").GetDouble()) < 1d,
+                        "Exact source baseline retains the independent one-point Word gate, including review scaling.");
+                    targetY = summary.Y;
+                    targetBand = summary.Size;
+                }
+                else
+                {
+                    targetY = row.GetProperty("ParagraphY").GetDouble();
+                    targetBand = 9d;
+                }
+                var target = (exactLine ? pageGlyphs[0].Equations : math).Where(show => Math.Abs(show.Y - targetY) < targetBand).ToArray();
+                string targetText = string.Concat(target.Select(show => show.Text));
                 TestAssert.Equal(row.GetProperty("TargetMathText").GetString(),
-                    string.Concat(target.Select(show => show.Text)).Normalize(NormalizationForm.FormKC));
+                    exactLine ? targetText.Normalize(NormalizationForm.FormKC) : targetText);
                 TestAssert.Equal(row.GetProperty("MathAnchors").GetArrayLength(), target.Length);
                 // The glyph reader maps origins but intentionally retains raw Tf
                 // sizes. Compare Word's physical size after the page print map.
@@ -72,7 +92,7 @@ internal static partial class DocxInlineCompositionTests
                     TestAssert.True(Math.Abs(pair.First.X - pair.Second.GetProperty("X").GetDouble()) < 1d &&
                         Math.Abs(pair.First.Y - pair.Second.GetProperty("Y").GetDouble()) < 1d &&
                         Math.Abs(pair.First.Size * printScale - pair.Second.GetProperty("Size").GetDouble()) < .1d,
-                        "Restored formula glyphs keep independent Word geometry and authored size in both presets.");
+                        $"The composed report {id} retains independent Word glyph origins and physical sizes.");
             }
         }
     }
