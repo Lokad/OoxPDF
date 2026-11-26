@@ -1552,7 +1552,7 @@ internal sealed partial class PptxRenderer
 
         var declarations = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         HashSet<string>? importantNames = null;
-        foreach (string declaration in StripSvgCssComments(style).Split((char)59))
+        foreach (string declaration in EnumerateSvgStyleDeclarations(style))
         {
             int colon = declaration.IndexOf((char)58);
             if (colon <= 0)
@@ -1589,25 +1589,29 @@ internal sealed partial class PptxRenderer
         return declarations;
     }
 
-    private static string StripSvgCssComments(string style)
+    private static IEnumerable<string> EnumerateSvgStyleDeclarations(string style)
     {
-        if (!style.Contains("/*", StringComparison.Ordinal)) return style;
-
-        StringBuilder? result = null;
-        int copiedThrough = 0;
+        StringBuilder? declaration = null;
+        int segmentStart = 0;
+        int depth = 0;
         char quote = '\0';
         bool unquotedUrl = false;
-        for (int i = 0; i < style.Length; i++)
+        int i;
+        for (i = 0; i < style.Length; i++)
         {
             char token = style[i];
             if (token == '\\')
             {
-                i++;
+                if (i + 1 < style.Length) i++;
                 continue;
             }
             if (unquotedUrl)
             {
-                if (token == ')') unquotedUrl = false;
+                if (token == ')')
+                {
+                    unquotedUrl = false;
+                    depth--;
+                }
                 continue;
             }
             if (quote != '\0')
@@ -1620,21 +1624,37 @@ internal sealed partial class PptxRenderer
                 quote = token;
                 continue;
             }
-            if (token == '(' && IsUnquotedSvgCssUrl(style, i))
+            if (token is '(' or '[' or '{')
             {
-                unquotedUrl = true;
+                depth++;
+                unquotedUrl = token == '(' && IsUnquotedSvgCssUrl(style, i);
+                continue;
+            }
+            if (token is ')' or ']' or '}')
+            {
+                if (depth > 0) depth--;
+                continue;
+            }
+            if (token == ';' && depth == 0)
+            {
+                yield return FinishDeclaration(i);
+                declaration = null;
+                segmentStart = i + 1;
                 continue;
             }
             if (token != '/' || i + 1 >= style.Length || style[i + 1] != '*') continue;
 
             ReadOnlySpan<char> tail = style.AsSpan(i);
-            if (!TrySkipSvgCssComment(ref tail)) return style;
+            if (!TrySkipSvgCssComment(ref tail)) break;
             // Separate adjacent tokens across the removed comment.
-            (result ??= new StringBuilder()).Append(style.AsSpan(copiedThrough, i - copiedThrough)).Append(' ');
-            copiedThrough = style.Length - tail.Length;
-            i = copiedThrough - 1;
+            (declaration ??= new StringBuilder()).Append(style.AsSpan(segmentStart, i - segmentStart)).Append(' ');
+            segmentStart = style.Length - tail.Length;
+            i = segmentStart - 1;
         }
-        return result is null ? style : result.Append(style.AsSpan(copiedThrough)).ToString();
+        yield return FinishDeclaration(i);
+
+        string FinishDeclaration(int end) => declaration is null ? style[segmentStart..end] :
+            declaration.Append(style.AsSpan(segmentStart, end - segmentStart)).ToString();
     }
 
     private static bool IsUnquotedSvgCssUrl(string style, int openParen)

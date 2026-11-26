@@ -1331,6 +1331,30 @@ internal static partial class SvgTextTests
             pdf => TestAssert.Equal(5, LabelPaths(pdf)));
     }
 
+    public static void SvgInlineStyleSeparatorsKeepLiteralValuesTogether()
+    {
+        const string visible = """<text x="60" y="85" style="fill:#112233">NORTH</text>""";
+        const string hidden = """<text x="60" y="125" style="display:none;fill:#112233">SOUTH</text>""";
+        string control = Svg(visible + hidden);
+        string WithValue(string value) =>
+            Svg(visible.Replace("fill:", value + ";fill:", StringComparison.Ordinal) + hidden);
+        AssertSvgPaintInBothFormats(control,
+            [WithValue("--note:'begin;display:none;end'"),
+             WithValue("--note:{[begin;display:none;end]}"),
+             WithValue("--note:fn(begin;display:none;end)"),
+             Svg(visible + hidden.Replace("display:none", "display:none;--note:'begin;display:inline;end'",
+                 StringComparison.Ordinal)),
+             Svg(visible + hidden.Replace("display:none", "display:none;/* unfinished ;display:inline",
+                 StringComparison.Ordinal))],
+            pdf => TestAssert.Equal(5, LabelPaths(pdf)));
+
+        const string gradient = """<defs><linearGradient id="ink;key"><stop stop-color="#112233"/></linearGradient></defs>""";
+        AssertSvgPaintInBothFormats(Svg(visible),
+            [Svg(gradient + visible.Replace("#112233", "url('#ink;key')", StringComparison.Ordinal)),
+             Svg(gradient + visible.Replace("#112233", "url(#ink;key)", StringComparison.Ordinal))],
+            pdf => TestAssert.Equal(5, LabelPaths(pdf)));
+    }
+
     public static void SvgForeignTextAttributesKeepAuthoredLabelsInBothFormats()
     {
         const string rectangle = """<rect x="5" y="5" width="40" height="30" fill="red"/>""";
