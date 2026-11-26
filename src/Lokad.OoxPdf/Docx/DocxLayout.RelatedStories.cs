@@ -615,8 +615,7 @@ internal sealed partial class DocxLayoutEngine
         Dictionary<(int, int, int), double>? pictureFrames = null;
         foreach (var image in storyLayout.InlineImages)
         {
-            if (!TryGetSourceLineOwner(image.SourceBlockIndex, image.SourceParagraphIndex, image.SourceLineIndex, out var key) ||
-                image.LineFrame is not { IsUsable: true } frame) continue;
+            if (!TryGetStoryPictureFrame(image, out var key, out var frame)) continue;
             pictureFrames ??= new();
             pictureFrames[key] = Math.Max(pictureFrames.GetValueOrDefault(key), frame.ImageGrowth);
         }
@@ -624,8 +623,7 @@ internal sealed partial class DocxLayoutEngine
         for (int lineIndex = 0; lineIndex < heights.Length; lineIndex++)
         {
             DocxTextLineLayout line = storyLayout.TextLines[lineIndex];
-            double afterSpacing = ownedAfterSpacings?[lineIndex] ?? line.ParagraphAfterSpacing ?? line.PendingAfterSpacing ?? 0d;
-            heights[lineIndex] = ResolveStoryTextLineBoxHeight(line, afterSpacing);
+            heights[lineIndex] = ResolveStoryTextLineBoxHeight(line, ownedAfterSpacings?[lineIndex]);
             if (pictureFrames is not null && TryGetSourceLineOwner(line.SourceBlockIndex, line.SourceParagraphIndex,
                 line.SourceLineIndex, out var key) && pictureFrames.TryGetValue(key, out double pictureHeight))
             {
@@ -636,12 +634,21 @@ internal sealed partial class DocxLayoutEngine
         return heights;
     }
 
-    private static double ResolveStoryTextLineBoxHeight(DocxTextLineLayout line, double afterSpacing)
+    private static bool TryGetStoryPictureFrame(DocxInlineImageLayout image,
+        out (int Block, int Paragraph, int Line) owner, out DocxPictureLineFrame frame)
+    {
+        frame = image.LineFrame.GetValueOrDefault();
+        return TryGetSourceLineOwner(image.SourceBlockIndex, image.SourceParagraphIndex, image.SourceLineIndex, out owner) &&
+            frame.IsUsable;
+    }
+
+    private static double ResolveStoryTextLineBoxHeight(DocxTextLineLayout line, double? afterSpacing = null)
     {
         double boxHeight = line.LineHeight ?? line.SingleLineHeight ?? line.FontSize;
+        double after = afterSpacing ?? line.ParagraphAfterSpacing ?? line.PendingAfterSpacing ?? 0d;
         double beforeSpacing = line.IsFirstParagraphLine == true && line.ContextualSpacingSuppressed != true
             ? line.ParagraphBeforeSpacing ?? line.AppliedBeforeSpacing ?? 0d : 0d;
-        return Math.Max(0d, boxHeight) + Math.Max(0d, afterSpacing) + Math.Max(0d, beforeSpacing);
+        return Math.Max(0d, boxHeight) + Math.Max(0d, after) + Math.Max(0d, beforeSpacing);
     }
 
     private static double[] GetStoryLineAfterSpacings(DocxRelatedStoryLayout storyLayout, bool deferParagraphAfter = false)
@@ -2109,12 +2116,27 @@ internal sealed partial class DocxLayoutEngine
         return (footer, bottom, bottom + bodyHeight);
     }
 
-    private static double ResolveDefaultFootnoteSeparatorFlowHeight(DocxRelatedStoryLayout firstLayout,
-        IDocxTextMeasurer? measurer)
+    private static double ResolveFirstStoryLineHeight(DocxTextLineLayout firstLine,
+        IReadOnlyList<DocxInlineImageLayout> images, CancellationToken cancellationToken)
     {
-        if (firstLayout.TextLines.Count == 0) return 0d;
-        double firstBoxHeight = GetStoryTextLineBoxHeights(firstLayout)[0];
-        if (measurer is IDocxLineMetricsProvider && firstLayout.TextLines[0].SourceParagraph is { } paragraph)
+        double height = ResolveStoryTextLineBoxHeight(firstLine);
+        if (!TryGetSourceLineOwner(firstLine.SourceBlockIndex, firstLine.SourceParagraphIndex,
+            firstLine.SourceLineIndex, out var lineOwner)) return height;
+
+        double growth = 0d;
+        foreach (var image in images)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (TryGetStoryPictureFrame(image, out var owner, out var frame) && owner == lineOwner)
+                growth = Math.Max(growth, frame.ImageGrowth);
+        }
+        return height + growth;
+    }
+
+    private static double ResolveDefaultFootnoteSeparatorFlowHeight(DocxTextLineLayout? firstLine,
+        IDocxTextMeasurer? measurer, double measuredHeight)
+    {
+        if (measurer is IDocxLineMetricsProvider && firstLine?.SourceParagraph is { } paragraph)
         {
             // A default separator consumes a natural source-font line, without
             // authored paragraph minima or inline mathematical extents.
@@ -2125,9 +2147,9 @@ internal sealed partial class DocxLayoutEngine
                 Spacing = paragraph.Spacing with { LineRuleValue = "auto", LineValue = "240" }
             };
             double height = ResolveNoteContentLineHeightProfile(natural, GetParagraphFontSize(natural), measurer).LineHeight;
-            if (double.IsFinite(height) && height > 0d) firstBoxHeight = height;
+            if (double.IsFinite(height) && height > 0d) return height;
         }
-        return firstBoxHeight;
+        return measuredHeight;
     }
 
     // RV06 footlong probes: separator-less footnote blocks keep legacy whole
@@ -2168,11 +2190,14 @@ internal sealed partial class DocxLayoutEngine
             ? Math.Min(page.Height - page.MarginTop,
                 headerKeepOut?.Invoke(page, placementPageNumber, placementPageCount) ?? double.PositiveInfinity)
             : ResolveFootnoteClampBodyBottom(page, placementPageNumber, placementPageCount, firstLayout, headerKeepOut);
-        if (firstLayout.TextLines.Count != 0)
+        DocxTextLineLayout? firstLine = firstLayout.TextLines.Count == 0 ? null : firstLayout.TextLines[0];
+        double measuredFirstBoxHeight = 0d;
+        if (firstLine is not null)
         {
+            measuredFirstBoxHeight = ResolveFirstStoryLineHeight(firstLine, firstLayout.InlineImages, cancellationToken);
             double firstBoxHeight = ownedFrame
-                ? ResolveDefaultFootnoteSeparatorFlowHeight(firstLayout, separatorMeasurer)
-                : GetStoryTextLineBoxHeights(firstLayout)[0];
+                ? ResolveDefaultFootnoteSeparatorFlowHeight(firstLine, separatorMeasurer, measuredFirstBoxHeight)
+                : measuredFirstBoxHeight;
             storiesTop = Math.Min(cursorTop, clampBodyBottom - firstBoxHeight);
             if (sharedContentTop is not null)
             {
@@ -2187,7 +2212,7 @@ internal sealed partial class DocxLayoutEngine
             // The implied rule owns a natural source-font line on this path too.
             // Physical body/table occupancy is independent of math eligibility.
             storiesTop = Math.Min(storiesTop, bodyBottom -
-                ResolveDefaultFootnoteSeparatorFlowHeight(firstLayout, separatorMeasurer));
+                ResolveDefaultFootnoteSeparatorFlowHeight(firstLine, separatorMeasurer, measuredFirstBoxHeight));
         }
         if (ownedFrame || paragraphBodyFrame)
         {
