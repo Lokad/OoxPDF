@@ -1825,8 +1825,6 @@ internal static class DocxImagesTests
 
     // RV05: related-story (footnote) paragraphs place affined images mid-line like body text.
     // The footnote line sits below body text, so the test selects the lowest text line.
-    // Headers/footers keep the block path: they use the calibrated static-story metrics
-    // and are a separate slice.
     public static void DocxFootnoteInlineImageFollowsTextAdvanceAndBaseline()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, byte[]>

@@ -13,7 +13,8 @@ public sealed class OoxPdfOptions
     public OoxPdfDocxMarkupMode DocxMarkupMode { get; init; } = OoxPdfDocxMarkupMode.Final;
 
     /// <summary>
-    /// Selects whether DOCX markup balloons preserve the authored body layout or reserve a review margin. Ignored for PPTX inputs.
+    /// Selects authored DOCX layout, a reserved review margin, or the approximate Word
+    /// print-review profile. Ignored for PPTX inputs.
     /// </summary>
     public OoxPdfDocxMarkupGeometryMode DocxMarkupGeometryMode { get; init; } = OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout;
 
@@ -61,8 +62,8 @@ public sealed class OoxPdfOptions
     /// serialized PDF output, font/image payload and spilled-content byte totals.
     /// Font totals count uncompressed embedded programs, ToUnicode and CID-to-glyph maps before
     /// PDF stream compression, excluding dictionaries and Standard-14 ToUnicode maps.
-    /// Stream conversions report before serialization so observers can fail without
-    /// writing output; file conversions report before atomic publication.
+    /// Stream conversions report before serialization with zero PDF output, font and
+    /// image bytes. File conversions report after serialization and before atomic publication.
     /// This does not measure memory. Disabled by default.
     /// </summary>
     public bool ReportResourceUsage { get; init; }
