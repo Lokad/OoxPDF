@@ -47,15 +47,7 @@ internal sealed partial class DocxReader
 
         if (OoxMarkupCompatibility.HasUnrecognizedMustUnderstand(document))
         {
-            diagnosticSink(new OoxPdfDiagnostic(
-                "OOXML_MUST_UNDERSTAND",
-                OoxPdfSeverity.Warning,
-                "A must-understand declaration requires unsupported or unresolved namespaces; conversion continues with partial compatibility handling.",
-                partName,
-                SlideIndex: null,
-                PageIndex: null,
-                Feature: "must-understand",
-                Fallback: "Partial compatibility"));
+            diagnosticSink(OoxMarkupCompatibility.CreateMustUnderstandWarning(partName));
         }
 
         void Emit(string id, string feature, string diagnosticPartName = "", string fallback = "Ignored")

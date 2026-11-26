@@ -35,15 +35,7 @@ internal sealed class PptxReader
 
             if (diagnosticSink is not null && OoxMarkupCompatibility.HasUnrecognizedMustUnderstand(document))
             {
-                diagnosticSink(new OoxPdfDiagnostic(
-                    "OOXML_MUST_UNDERSTAND",
-                    OoxPdfSeverity.Warning,
-                    "A must-understand declaration requires unsupported or unresolved namespaces; conversion continues with partial compatibility handling.",
-                    presentationPart.Name,
-                    SlideIndex: null,
-                    PageIndex: null,
-                    Feature: "must-understand",
-                    Fallback: "Partial compatibility"));
+                diagnosticSink(OoxMarkupCompatibility.CreateMustUnderstandWarning(presentationPart.Name));
             }
 
             XElement? size = document.Root?.Element(PresentationNamespace + "sldSz");

@@ -248,7 +248,11 @@ internal static partial class OoxMarkupCompatibilityTests
             }, OoxPdfInputKind.Docx);
         }
         byte[] baseline = Convert(false);
-        TestAssert.True(baseline.Length > 1000 && baseline.SequenceEqual(Convert(true)), "Declared wrappers must preserve the entire DOCX PDF, including body, cell and header content.");
+        string text = OoxMissingFontTests.ExtractCidMappedText(Encoding.Latin1.GetString(baseline));
+        TestAssert.Contains("Body payload", text);
+        TestAssert.Contains("Cell payload", text);
+        TestAssert.Contains("Header payload", text);
+        TestAssert.True(baseline.SequenceEqual(Convert(true)), "Declared wrappers must preserve the entire DOCX PDF, including body, cell and header content.");
     }
 
     public static void ProcessContentPptxTextboxRendersIdentically()
@@ -272,7 +276,8 @@ internal static partial class OoxMarkupCompatibilityTests
                 """
         }, OoxPdfInputKind.Pptx);
         byte[] baseline = Convert(false);
-        TestAssert.True(baseline.Length > 1000 && baseline.SequenceEqual(Convert(true)), "A declared wrapper must preserve the complete textbox PDF.");
+        TestAssert.Contains("Visible payload", OoxMissingFontTests.ExtractCidMappedText(Encoding.Latin1.GetString(baseline)));
+        TestAssert.True(baseline.SequenceEqual(Convert(true)), "A declared wrapper must preserve the complete textbox PDF.");
     }
 
     private static XDocument Load(string xml)

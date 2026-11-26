@@ -85,7 +85,11 @@ internal static class OoxMarkupCompatibility
             return;
         }
 
-        diagnosticSink(new OoxPdfDiagnostic(
+        diagnosticSink(CreateMustUnderstandWarning(partName, slideIndex));
+    }
+
+    public static OoxPdfDiagnostic CreateMustUnderstandWarning(string? partName, int? slideIndex = null) =>
+        new(
             "OOXML_MUST_UNDERSTAND",
             OoxPdfSeverity.Warning,
             "A must-understand declaration requires unsupported or unresolved namespaces; conversion continues with partial compatibility handling.",
@@ -93,8 +97,7 @@ internal static class OoxMarkupCompatibility
             SlideIndex: slideIndex,
             PageIndex: null,
             Feature: "must-understand",
-            Fallback: "Partial compatibility"));
-    }
+            Fallback: "Partial compatibility");
 
     public static void Normalize(XDocument? document, CancellationToken cancellationToken = default)
     {
