@@ -796,6 +796,30 @@ internal static partial class SvgTextTests
         }
     }
 
+    public static void SvgTextChildrenIgnoreTransformDeclarations()
+    {
+        static string Picture(string north, string west, string east) => Svg($"""
+            <g transform="translate(5 2)">
+              <text x="20" y="40" font-size="24" fill="#112233">{north}</text>
+              <text x="20" y="80" font-size="24" fill="#2254b4">{west}</text>
+              <text x="20" y="120" font-size="24" fill="#a02a20">{east}</text>
+            </g>
+            <rect x="200" y="100" width="20" height="10" fill="lime"/>
+            """);
+
+        string control = Picture("NORTH", "WEST", "EAST");
+        string variant = Picture(
+            """NO<tspan transform="translate(24)">RT</tspan>H""",
+            """WE<tspan transform="translate(8 -3) translate(-8 3)">S</tspan>T""",
+            """E<tspan style="transform: translateX(24px); transform-origin: center; transform-box: fill-box">AS</tspan>T""");
+        AssertSvgPaintInBothFormats(control, variant, pdf =>
+        {
+            TestAssert.Equal(5, LabelPaths(pdf));
+            TestAssert.Equal(4, LabelPaths(pdf, "0.133 0.329 0.706 rg"));
+            TestAssert.Equal(4, LabelPaths(pdf, "0.627 0.165 0.125 rg"));
+        }, "0 1 0 rg");
+    }
+
     public static void SvgInlineLinkTextKeepsPaintAndDiagnosesActions()
     {
         string Picture(string north, string south) => Svg($"""
@@ -826,10 +850,10 @@ internal static partial class SvgTextTests
 
         diagnostics.Clear();
         var transformed = Paint(Picture("""NO<a href="#marker" transform="translate(20)">RT</a>H""", plainSouth), diagnostics);
-        TestAssert.DoesNotContain(LabelColor, transformed.ToString());
-        TestAssert.Equal(5, LabelPaths(transformed.ToString(), "0.067 0.267 0.6 rg"));
-        TestAssert.True(diagnostics.Any(d => d.Message.Contains("unsupported text element", StringComparison.Ordinal)),
-            "A link requiring separate layout keeps the label fallback.");
+        AssertEquivalentSvgPaint(expected, transformed, "Transforms on inline text links leave the label intact.");
+        var transformedWarning = diagnostics.Single();
+        TestAssert.Equal("SVG_UNSUPPORTED_CONTENT", transformedWarning.Id);
+        TestAssert.Contains("1 unsupported a element", transformedWarning.Message);
     }
 
     public static void SvgLabelsRetainVisibilityAndHiddenAdvances()

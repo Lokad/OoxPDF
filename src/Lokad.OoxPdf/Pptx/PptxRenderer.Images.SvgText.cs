@@ -494,6 +494,8 @@ internal sealed partial class PptxRenderer
             bool RetainsLabelStyle(string name, string value) => name switch
             {
                 "display" or "visibility" or "opacity" or "white-space" or "text-anchor" => true,
+                // Descendants of SVG text content are not transformable (CSS Transforms §2).
+                "transform" or "transform-origin" or "transform-box" => true,
                 "font-family" or "font-style" or "font-weight" or "font-size" or "font-kerning" or "kerning" => true,
                 // Effective paint is checked where the glyphs are owned.
                 "fill" or "color" or "stroke" or "stroke-opacity" or "stroke-width" or "stroke-linecap" or "stroke-linejoin" or
