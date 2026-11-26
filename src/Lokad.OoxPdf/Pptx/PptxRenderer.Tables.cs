@@ -6,9 +6,6 @@ using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Pptx;
 
-// table font collection rebuilds fills, borders, row metrics, frames, and
-// spans that painting rebuilds again. Keyed by node identity, resolved frame bounds,
-// and color map; the layout computation is a pure function of those inputs.
 internal readonly record struct PptxTableFrameMemoKey(PptxSceneNode Node, PptxRenderer.ShapeBounds? Bounds, PptxColorMap ColorMap);
 
 internal sealed class PptxTableFrameMemoKeyComparer : IEqualityComparer<PptxTableFrameMemoKey>
@@ -40,7 +37,7 @@ internal sealed partial class PptxRenderer
 
     internal sealed record TableFrameLayout(
         IReadOnlyList<PptxPositionedTextSpan> TextSpans,
-        IReadOnlyList<PptxTableCellTextFrame> TextFrames,
+        IReadOnlyList<PptxTextFrameModelSnapshot> TextFrameSnapshots,
         IReadOnlyList<TableCellFill> CellFills,
         double X,
         double YTop,
@@ -166,7 +163,7 @@ internal sealed partial class PptxRenderer
     private static async ValueTask<TableFrameLayout?> BuildTableFrameLayoutAsync(PptxRenderContext context, ShapeBounds? bounds, PptxSceneTable? sceneTable, PptxColorMap colorMap)
     {
         var textSpans = new List<PptxPositionedTextSpan>();
-        var textFrames = new List<PptxTableCellTextFrame>();
+        List<PptxTextFrameModelSnapshot>? textFrames = context.CaptureTableTextFrames ? [] : null;
         var cellFills = new List<TableCellFill>();
         if (bounds is null || sceneTable is not { } table)
         {
@@ -297,10 +294,10 @@ internal sealed partial class PptxRenderer
                 if (BuildTableCellTextFrame(sceneCell, rowIndex, columnIndex, rowSpan, columnSpan, declaredRowHeight, declaredRowSpanHeight,
                     declaredTableHeight, tableHeightSlackFactor, cellX, cellBottom, columnWidth, cellHeight, colorMap, sceneCell.StyleText) is { } tableTextFrame)
                 {
-                    textFrames.Add(tableTextFrame);
                     TableCellTextMeasurement? measured = textMeasurements is not null &&
                         textMeasurements.Remove(tableTextFrame.TextBody, out TableCellTextMeasurement cellMeasurement) ? cellMeasurement : null;
                     PptxTextFrameModel model = await BuildTableCellTextFrameModelAsync(tableTextFrame, context, measurement: measured).ConfigureAwait(false);
+                    textFrames?.Add(ToSnapshot(model));
                     textSpans.AddRange(await BuildTableCellTextSpansAsync(model, context).ConfigureAwait(false));
                 }
                 cellX += columnWidth;
@@ -324,10 +321,10 @@ internal sealed partial class PptxRenderer
                 rows.Count,
                 skippedVerticalGridSegments,
                 skippedHorizontalGridSegments);
-            return new TableFrameLayout(textSpans, textFrames, cellFills, frameX, frameTop, frameWidth, frameHeight, defaultGrid, []);
+            return new TableFrameLayout(textSpans, textFrames ?? [], cellFills, frameX, frameTop, frameWidth, frameHeight, defaultGrid, []);
         }
 
-        return new TableFrameLayout(textSpans, textFrames, cellFills, frameX, frameTop, frameWidth, frameHeight, DefaultGrid: null, explicitBorders);
+        return new TableFrameLayout(textSpans, textFrames ?? [], cellFills, frameX, frameTop, frameWidth, frameHeight, DefaultGrid: null, explicitBorders);
 
         void AddTableCellBorders(PptxSceneTableCellBorders cellBorders, double x, double y, double width, double height)
         {

@@ -149,7 +149,10 @@ internal sealed partial class PptxRenderer
         return new PptxRenderContext(document, slide, sceneSlide, inspectionFonts ?? new PresentationFontResolver(null),
             ImageCache: null, DiagnosticSink: null, CancellationToken: CancellationToken.None,
             TextSpanMemo: new(PptxTextSpanMemoKeyComparer.Instance),
-            TableFrameMemo: new(PptxTableFrameMemoKeyComparer.Instance));
+            TableFrameMemo: new(PptxTableFrameMemoKeyComparer.Instance))
+        {
+            CaptureTableTextFrames = true
+        };
     }
 
     private static ShapeBounds? ReadShapeBounds(XElement shape, IReadOnlyList<XElement> inheritedPlaceholders,

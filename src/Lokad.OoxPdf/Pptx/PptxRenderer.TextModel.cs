@@ -42,9 +42,7 @@ internal sealed partial class PptxRenderer
     internal static IReadOnlyList<PptxTextFrameModelSnapshot> InspectTableTextFrameModels(PptxRenderContext context)
     {
         return ReadSceneTableLayoutsAsync(context).ToBlockingEnumerable()
-            .SelectMany(layout => layout.TextFrames)
-            .Select(tableFrame => BuildTableCellTextFrameModelAsync(tableFrame, context).GetAwaiter().GetResult())
-            .Select(ToSnapshot)
+            .SelectMany(layout => layout.TextFrameSnapshots)
             .ToArray();
     }
 
