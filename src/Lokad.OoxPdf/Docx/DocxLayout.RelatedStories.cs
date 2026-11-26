@@ -2099,16 +2099,7 @@ internal sealed partial class DocxLayoutEngine
             }
         }
 
-        if (inFlightNotes is not null)
-        {
-            foreach (DocxReferencedRelatedStoryLayout story in footnoteStories)
-            {
-                if (story.Location.Reference.Id is not null && inFlightNotes.TryGetValue((story.Location.Reference.Kind, story.Location.Reference.Id), out InFlightRelatedStory? fresh) && !fresh.SeparatorPlaced)
-                {
-                    fresh.SeparatorPlaced = true;
-                }
-            }
-        }
+        MarkFootnoteSeparatorsPlaced(footnoteStories, inFlightNotes);
     }
 
     private static (Func<DocxLayoutPage, int, int, double>? Footer, double Bottom, double Top)
@@ -2274,14 +2265,22 @@ internal sealed partial class DocxLayoutEngine
             firstStory = false;
         }
 
-        if (inFlightNotes is not null)
+        MarkFootnoteSeparatorsPlaced(footnoteStories, inFlightNotes);
+    }
+
+    private static void MarkFootnoteSeparatorsPlaced(
+        IReadOnlyList<DocxReferencedRelatedStoryLayout> footnoteStories,
+        Dictionary<(DocxRelatedStoryKind Kind, string Id), InFlightRelatedStory>? inFlightNotes)
+    {
+        if (inFlightNotes is null) return;
+
+        // During placement each story still needs the progress from the previous batch.
+        foreach (DocxReferencedRelatedStoryLayout story in footnoteStories)
         {
-            foreach (DocxReferencedRelatedStoryLayout story in footnoteStories)
+            var reference = story.Location.Reference;
+            if (reference.Id is { } id && inFlightNotes.TryGetValue((reference.Kind, id), out InFlightRelatedStory? tracked))
             {
-                if (story.Location.Reference.Id is not null && inFlightNotes.TryGetValue((story.Location.Reference.Kind, story.Location.Reference.Id), out InFlightRelatedStory? fresh) && !fresh.SeparatorPlaced)
-                {
-                    fresh.SeparatorPlaced = true;
-                }
+                tracked.SeparatorPlaced = true;
             }
         }
     }
