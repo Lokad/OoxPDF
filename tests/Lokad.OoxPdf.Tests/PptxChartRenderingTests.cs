@@ -1086,9 +1086,6 @@ internal static class PptxChartRenderingTests
 
     public static void PptxChartIndexedVectorsPreserveWorkbookSidecarPoints()
     {
-        Type workbookType = typeof(PptxRenderer).GetNestedType(
-            "ChartWorkbookData",
-            System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart workbook data type.");
         var sheets = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase)
         {
             ["Sheet1"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)

@@ -1306,12 +1306,16 @@ internal static class DocxMarkupTests
 
         DocxTextEmissionSegmentSnapshot[] preserveSegments = preserve.Lines.Single().Segments.ToArray();
         DocxTextEmissionSegmentSnapshot[] wordSegments = wordCompatible.Lines.Single().Segments.ToArray();
-        double preserveVisibleFontSize = preserveSegments.Where(segment => !segment.IsTerminalLineSpace).Max(segment => segment.PdfFontSize);
+        DocxTextEmissionSegmentSnapshot[] preserveVisibleSegments = preserveSegments
+            .Where(segment => !segment.IsTerminalLineSpace).ToArray();
         double wordVisibleFontSize = wordSegments.Where(segment => !segment.IsTerminalLineSpace).Max(segment => segment.PdfFontSize);
         DocxTextEmissionSegmentSnapshot preserveTerminal = preserveSegments.Single(segment => segment.IsTerminalLineSpace);
         DocxTextEmissionSegmentSnapshot wordTerminal = wordSegments.Single(segment => segment.IsTerminalLineSpace);
         DocxTextEmissionSegmentSnapshot lastVisibleSegment = wordSegments.Last(segment => !segment.IsTerminalLineSpace);
 
+        TestAssert.Equal(22d, preserveVisibleSegments.Max(segment => segment.FontSize));
+        TestAssert.True(Math.Abs(preserveVisibleSegments.Max(segment => segment.PdfFontSize) - 21.96d) < 0.000001d,
+            "Preserve Document Layout should emit the authored 22pt size rounded to the Word PDF export grid.");
         TestAssert.True(
             Math.Abs(wordVisibleFontSize - (22d * scale)) < 0.05d,
             $"Word-compatible all-markup should scale oversized body text at the full print scale. Word={wordVisibleFontSize}, Scale={scale}.");

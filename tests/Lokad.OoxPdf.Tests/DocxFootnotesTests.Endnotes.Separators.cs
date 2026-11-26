@@ -294,8 +294,9 @@ internal static partial class DocxFootnotesTests
         // box slope would separate 10pt and 20pt marks by a full line box per 10pt;
         // the size-driven placement height separates them by one first inset.
         // Pre-fix the placed heights differ by the laid-out box slope.
-        double shortHeight = LayoutEndnoteSeparatorHeightWithMarkSize(20);
-        double tallHeight = LayoutEndnoteSeparatorHeightWithMarkSize(40);
+        var measurer = new DocxTests.FamilyWidthTextMeasurer();
+        double shortHeight = LayoutEndnoteSeparatorHeight(ReadEndnoteSeparatorMetricDocument(20), measurer);
+        double tallHeight = LayoutEndnoteSeparatorHeight(ReadEndnoteSeparatorMetricDocument(40), measurer);
         TestAssert.True(Math.Abs((tallHeight - shortHeight) - 9.4d) < 0.000001d, "Document-end separator placement height must grow by one first inset per 10pt.");
     }
 
@@ -307,17 +308,21 @@ internal static partial class DocxFootnotesTests
         // yet place about 0.7pt lower at 12pt, which no laid-out box spread explains. A synthetic
         // 1.15em mark must stand 0.84 times the 0.0707 deficit times 12pt above the anchored
         // height. Pre-fix both heights are equal.
-        double calHeight = LayoutEndnoteSeparatorHeightWithSingleLineEm(24, 1.2207d);
-        double lowHeight = LayoutEndnoteSeparatorHeightWithSingleLineEm(24, 1.15d);
+        DocxDocument document = ReadEndnoteSeparatorMetricDocument(24);
+        var measurer = new DocxTests.FamilyWidthTextMeasurer();
+        double calHeight = LayoutEndnoteSeparatorHeight(document, new SingleLineEmTextMeasurer(measurer, 1.2207d));
+        double lowHeight = LayoutEndnoteSeparatorHeight(document, new SingleLineEmTextMeasurer(measurer, 1.15d));
         TestAssert.True(Math.Abs((lowHeight - calHeight) - 0.71d) < 0.01d, "Document-end separator height must correct the singleLine deficit; observed shift=" + (lowHeight - calHeight).ToString(CultureInfo.InvariantCulture) + ".");
     }
 
     public static void DocxEndnoteSeparatorHeightAddsHheaAscenderExcess()
     {
         // RV06 endnote block-shift probes (Word COM references: five-family mark axis on pinned Tahoma content plus Tahoma-mark size sweep, genuine embeds both sides): Office document-end separator totals run about 0.8 taller on Tahoma/Verdana marks, flat across 8/10/14pt marks, while Calibri/Times/Georgia/Arial and the other probed families sit inside 0.25. The excess keys on hhea ascender over the auto-inset floor. A synthetic 1.005em mark on 1.005em content must stand (1.005 minus 0.94) times 1.27 times 10pt above the anchored height (mark and content terms meet in the minimum), while a 0.89em mark matches the 0.90em control exactly (gated at the floor). Pre-fix all three heights are equal.
-        double controlHeight = LayoutEndnoteSeparatorHeightWithHheaAscender(20, 0.90d);
-        double gatedHeight = LayoutEndnoteSeparatorHeightWithHheaAscender(20, 0.89d);
-        double bigHeight = LayoutEndnoteSeparatorHeightWithHheaAscender(20, 1.005d);
+        DocxDocument document = ReadEndnoteSeparatorMetricDocument(20);
+        var measurer = new DocxTests.FamilyWidthTextMeasurer();
+        double controlHeight = LayoutEndnoteSeparatorHeight(document, new HheaAscenderTextMeasurer(measurer, 0.90d));
+        double gatedHeight = LayoutEndnoteSeparatorHeight(document, new HheaAscenderTextMeasurer(measurer, 0.89d));
+        double bigHeight = LayoutEndnoteSeparatorHeight(document, new HheaAscenderTextMeasurer(measurer, 1.005d));
         TestAssert.True(Math.Abs((bigHeight - controlHeight) - 0.83d) < 0.01d, "Document-end separator height must add the hhea ascender excess; observed shift=" + (bigHeight - controlHeight).ToString(CultureInfo.InvariantCulture) + ".");
         TestAssert.True(Math.Abs(gatedHeight - controlHeight) < 0.000001d, "Document-end separator height must gate the hhea excess at the auto-inset floor.");
     }
@@ -355,8 +360,10 @@ internal static partial class DocxFootnotesTests
 
     public static void DocxEndnoteSeparatorHeightAddsSmallAscSupplement()
     {
-        double control = LayoutEndnoteSeparatorHeightWithWindowsAscender(16, 0.9521d);
-        double small = LayoutEndnoteSeparatorHeightWithWindowsAscender(16, 0.89d);
+        DocxDocument document = ReadEndnoteSeparatorMetricDocument(16);
+        var measurer = new DocxTests.FamilyWidthTextMeasurer();
+        double control = LayoutEndnoteSeparatorHeight(document, new WindowsAscenderTextMeasurer(measurer, 0.9521d));
+        double small = LayoutEndnoteSeparatorHeight(document, new WindowsAscenderTextMeasurer(measurer, 0.89d));
         TestAssert.True(Math.Abs((small - control) - 0.50d) < 0.01d, "Document-end separator height must add the small ascender supplement; observed shift=" + (small - control).ToString(CultureInfo.InvariantCulture) + ".");
     }
 
