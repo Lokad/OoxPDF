@@ -82,19 +82,41 @@ internal static class DocxSourceXml
         var name = WordprocessingNamespace + (kind == DocxRevisionKind.MoveFrom ? "moveFrom" : "moveTo");
         if (!ReferenceEquals(start.Parent, end.Parent)) return DocxInlineMoveOwnership.Unresolved;
         IReadOnlySet<(XName Name, string Id)>? pairedOwners = null;
+        Stack<XElement>? stored = null;
         bool hasOwner = false, hasOtherContent = false;
         // A partial pair establishes local boundaries and explicit source
         // owners. Other content still has unresolved range ownership.
-        foreach (var child in start.ElementsAfterSelf())
+        foreach (var sibling in start.ElementsAfterSelf())
         {
             token.ThrowIfCancellationRequested();
-            if (ReferenceEquals(child, end))
+            if (ReferenceEquals(sibling, end))
                 return !hasOwner ? DocxInlineMoveOwnership.Unresolved :
                     hasOtherContent ? DocxInlineMoveOwnership.Partial : DocxInlineMoveOwnership.Complete;
-            if (IsNonPrintingMarker(child) || IsBookmarkMarker(child) || IsCommentBoundary(child)) continue;
-            if (child.Name == name && IsPairedMoveOwner(child, start, authoredStory, ref pairedOwners, token))
-                hasOwner = true;
-            else hasOtherContent = true;
+
+            // Use the parser's stored payload rule for metadata inside the
+            // range. Only actual move wrappers can prove revision ownership.
+            XElement child = sibling;
+            while (true)
+            {
+                token.ThrowIfCancellationRequested();
+                if (IsTransparentInlineContainer(child))
+                {
+                    stored ??= new();
+                    foreach (var payload in StoredChildren(child))
+                    {
+                        token.ThrowIfCancellationRequested();
+                        stored.Push(payload);
+                    }
+                }
+                else if (!(IsNonPrintingMarker(child) || IsBookmarkMarker(child) || IsCommentBoundary(child)))
+                {
+                    if (child.Name == name && IsPairedMoveOwner(child, start, authoredStory, ref pairedOwners, token))
+                        hasOwner = true;
+                    else hasOtherContent = true;
+                }
+                if (stored is null || !stored.TryPop(out var next)) break;
+                child = next;
+            }
         }
         return DocxInlineMoveOwnership.Unresolved;
     }

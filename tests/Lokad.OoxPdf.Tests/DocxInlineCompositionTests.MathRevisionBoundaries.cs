@@ -260,11 +260,12 @@ internal static partial class DocxInlineCompositionTests
             (OoxPdfDocxMarkupMode.Original, 1),
             (OoxPdfDocxMarkupMode.AllMarkup, 2)
         })
-        foreach (bool includesUnownedEquation in new[] { false, true })
+        foreach (var (includesUnownedEquation, rangeCarrier) in new (bool, string?)[]
+                 { (false, null), (true, null), (false, "customXml"), (true, "sdt") })
         {
             unsupported.Clear();
             var document = ReadMove(mode, packed: false, paired: true, unsupported,
-                hasOtherRangeContent: true, includesUnownedEquation: includesUnownedEquation);
+                hasOtherRangeContent: true, includesUnownedEquation: includesUnownedEquation, rangeCarrier: rangeCarrier);
             var ranges = MoveRanges(document);
             TestAssert.Equal(2, ranges.Length);
             TestAssert.True(ranges.All(range =>
@@ -299,7 +300,7 @@ internal static partial class DocxInlineCompositionTests
 
         static DocxDocument ReadMove(OoxPdfDocxMarkupMode mode, bool packed, bool paired, List<OoxPdfDiagnostic> diagnostics,
             bool hasOtherRangeContent = false, bool splitOwners = false, bool annotated = false,
-            bool includesUnownedEquation = false) =>
+            bool includesUnownedEquation = false, string? rangeCarrier = null) =>
             ReadMutation("CompositionProbes/math-display-image-body-between", mode, false, false, (xml, w, m) =>
             {
                 const string target = "PairedMoveDrawingTarget";
@@ -364,6 +365,14 @@ internal static partial class DocxInlineCompositionTests
                     }
                     else
                         run.ReplaceWith(Equation("314"), new XElement(w + "r", companions), Equation("793"));
+                    if (rangeCarrier is not null)
+                    {
+                        var scope = move[0].ElementsAfterSelf().TakeWhile(child => child != move[2]).ToArray();
+                        foreach (var child in scope) child.Remove();
+                        var wrapper = MathSourceContainer(scope, w, rangeCarrier);
+                        wrapper.Element(w + "sdtPr")?.Element(w + "id")?.SetAttributeValue(w + "val", (string?)move[0].Attribute(w + "id"));
+                        move[0].AddAfterSelf(wrapper);
+                    }
                     return [Equation("17"), link, Equation("28")];
                 }
 
