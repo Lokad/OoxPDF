@@ -765,6 +765,9 @@ internal static partial class SvgTextTests
         const string explicitVisibility = """A<tspan visibility="visible">B</tspan>C D""";
         const string inheritedVisibility = """  A<tspan visibility="collapse">B<tspan style="visibility:initial !important;visibility:hidden">C</tspan></tspan>  D  """;
         const string transparentB = """A<tspan opacity="0"><tspan opacity="1" visibility="visible">B</tspan></tspan>C D""";
+        const string hiddenPaint = """A<tspan visibility="hidden" fill="red" stroke="orange">B</tspan>C D""";
+        const string transparentPaint = """A<tspan opacity="0" fill="red"><tspan visibility="visible" stroke="orange">B</tspan></tspan>C D""";
+        const string revealedPaint = """A<tspan visibility="collapse" fill="red">B<tspan visibility="visible" fill="#112233">C</tspan></tspan> D""";
         const string unitOpacity = """A<tspan opacity="100%"><tspan opacity="inherit">B</tspan></tspan>C D""";
         const string resetOpacity = """A<tspan opacity=".3" style="opacity:initial !important;opacity:.5">B</tspan>C D""";
         string Picture(string value, string attributes = "") => Svg($"""
@@ -783,12 +786,19 @@ internal static partial class SvgTextTests
         TestAssert.Equal(complete[2], Glyphs(Paint(revealed, diagnostics).ToString()).Single());
         TestAssert.Equal(0, diagnostics.Count);
 
-        AssertSvgPaintInBothFormats(Picture(hiddenB), [Picture(inheritedVisibility), Picture(transparentB)],
+        AssertSvgPaintInBothFormats(Picture(hiddenB),
+            [Picture(inheritedVisibility), Picture(transparentB), Picture(hiddenPaint), Picture(transparentPaint), Picture(revealedPaint)],
             pdf => TestAssert.Equal(3, LabelPaths(pdf)), "0 1 0 rg");
         AssertSvgPaintInBothFormats(Picture("ABC D"), Picture(unitOpacity),
             pdf => TestAssert.Equal(4, LabelPaths(pdf)), "0 1 0 rg");
         AssertSvgPaintInBothFormats(Picture("ABC D", """opacity=".8" """), Picture(resetOpacity, """opacity=".8" """),
             pdf => TestAssert.Equal(4, LabelPaths(pdf)), "0 1 0 rg");
+
+        var mixedFill = Paint(Picture("""A<tspan visibility="hidden" fill="red">B<tspan visibility="visible">C</tspan></tspan> D"""), diagnostics).ToString();
+        TestAssert.DoesNotContain(LabelColor, mixedFill);
+        TestAssert.Contains("0 1 0 rg", mixedFill);
+        TestAssert.True(diagnostics.Any(d => d.Message.Contains("unsupported text element", StringComparison.Ordinal)),
+            "A revealed span using a different fill keeps the mixed-paint fallback.");
 
         static string[] Glyphs(string content)
         {

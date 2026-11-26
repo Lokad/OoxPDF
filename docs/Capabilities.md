@@ -121,6 +121,7 @@ for font family, size, style, weight, color, fill and fill opacity.
 They can restate the same font family list, slant, weight, resolved size, solid fill or fill opacity.
 Local color declarations preserve labels when the resolved fill stays the same and the stroke stays nonpainting.
 Nested spans preserve labels when the text owners restore the label's fill and fill opacity.
+Hidden and fully transparent spans retain their text advance regardless of fill or stroke.
 Nonpainting strokes preserve the glyph fill, including when a span resets
 an inherited stroke or declares stroke styling without painting a stroke.
 Plain spans can also use default spacing, font variant, font stretch, text decoration,

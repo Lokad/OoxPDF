@@ -380,8 +380,8 @@ internal sealed partial class PptxRenderer
                             if (characters.Length != 0) pendingSpace ??= (hideOutlines, ownerAnchor);
                             continue;
                         }
-                        // A container can pass down paint that its descendants override.
-                        if (!(preservesPaint ??= OwnerPreservesPaint()) &&
+                        // Hidden outlines keep their advances without using the owner's paint.
+                        if (!hideOutlines && !(preservesPaint ??= OwnerPreservesPaint()) &&
                             !OoxTextBreakRules.IsNonPrintingBreakControl(character))
                             return false;
                         if (pendingSpace is { } pending)
@@ -421,7 +421,7 @@ internal sealed partial class PptxRenderer
 
             bool OwnerPreservesPaint()
             {
-                if (!hideOutlines && HasSvgTextStroke(owner, ownerStyle, paintServers)) return false;
+                if (HasSvgTextStroke(owner, ownerStyle, paintServers)) return false;
                 return !fillMayDiffer ||
                     TryReadSvgTextFill(owner, ownerStyle, paintServers, out var fill) && fill == appearance.Fill &&
                     ReadSvgOpacityValue(ReadSvgInheritedAttribute(owner, ownerStyle, "fill-opacity")) == appearance.FillOpacity;
