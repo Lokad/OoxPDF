@@ -39,8 +39,16 @@ internal static partial class DocxMathParser
         Func<XElement, string, DocxTextRun> readRun, CancellationToken token)
     {
         bool valid = ReadPropertyOwner(element, element.Name.LocalName + "Pr", out XElement? owner, out XElement[] children);
+        bool paired = element.Name == MathNamespace + "sSubSup";
         foreach (XElement property in children)
-        { token.ThrowIfCancellationRequested(); valid &= property.Name == MathNamespace + "ctrlPr" && HasKnownControl(property); }
+        {
+            token.ThrowIfCancellationRequested();
+            // Explicitly disabled script alignment uses the same base-relative
+            // placement as the omitted property.
+            valid &= property.Name == MathNamespace + "ctrlPr" ? HasKnownControl(property) :
+                paired && property.Name == MathNamespace + "alnScr" && HasKnownValueProperty(property) &&
+                OoxBoolean.IsOff((string?)property.Attribute(MathNamespace + "val"));
+        }
         XElement? control = owner?.Element(MathNamespace + "ctrlPr");
         DocxTextRun text = readRun(control ?? element, string.Empty);
         return new(basis, subscript, superscript)

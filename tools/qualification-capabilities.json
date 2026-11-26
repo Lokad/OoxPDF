@@ -8668,6 +8668,7 @@
   "docx-math-editing-markers": [
     "DocxMathEditingMarkers",
     "=DocxDisabledMathEffectsKeepControlAndArgumentPaint",
+    "=DocxPairedScriptsKeepPaintWhenAlignmentIsDisabled",
     "=DocxMathSymbolsKeepFontFractionInkAndNavigation",
     "DocxMathParserUsesIterativeTraversalAndObservesCancellation",
     "DocxMathMatrixMalformedAndOrphanRowsRetainTraversedSource",
