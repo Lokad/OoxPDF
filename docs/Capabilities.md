@@ -35,6 +35,10 @@ overrides retain supported children in source order with an approximation warnin
 including when Word writes the wrapper inside an equation.
 Other combinations of supported objects can still have layout limitations.
 
+Table-wide center and right alignment use the owning container for ordinary
+left-to-right tables. Direct properties override table styles. Mixed row
+alignment, joined table fragments and right-to-left table layout remain approximate.
+
 Symbol runs retain printable BMP character codes and their declared font.
 Malformed or nonprinting symbol payloads use a diagnosed replacement character;
 font/glyph availability still controls whether the authored symbol can be painted.

@@ -1202,7 +1202,8 @@ internal sealed partial class DocxLayoutEngine
         // scale) so the uniform shift-composition maps frames like body text. Percent and
         // auto widths key off the already-scaled available width and need no change.
         // fixedScale reuses the layout spacing scale: identical in every mode (WC: s, else 1).
-        double indentPoints = (table.IndentPoints ?? 0d) * fixedScale;
+        bool alignToLeading = table.Alignment is not (DocxTextAlignment.Center or DocxTextAlignment.Right);
+        double indentPoints = alignToLeading ? (table.IndentPoints ?? 0d) * fixedScale : 0d;
         double tableX = x + indentPoints;
         // Grid origin by regime (Office A/B w62-w72/m1-m14 probes; reader notes on
         // UseLegacyTableGrid/PinTextToMargin): compat aligns the outer border edge at
@@ -1213,7 +1214,7 @@ internal sealed partial class DocxLayoutEngine
         // A shared grid shift keeps rows, images and annotations in one frame.
         // Bare tables with unset margins retain their existing fallback.
         double gridX = tableX;
-        if (table.Rows.FirstOrDefault()?.Cells.FirstOrDefault() is { } firstCell)
+        if (alignToLeading && table.Rows.FirstOrDefault()?.Cells.FirstOrDefault() is { } firstCell)
         {
             if (table.UseLegacyTableGrid)
             {
@@ -1292,6 +1293,14 @@ internal sealed partial class DocxLayoutEngine
         }
 
         double targetTableWidth = ResolveTargetTableWidth();
+        // Center and right align the resolved grid in the owning container.
+        // Table indentation only applies at the leading edge.
+        gridX = table.Alignment switch
+        {
+            DocxTextAlignment.Center => x + (availableWidth - targetTableWidth) / 2d,
+            DocxTextAlignment.Right => x + availableWidth - targetTableWidth,
+            _ => gridX
+        };
         IReadOnlyList<double> effectiveColumns = GetEffectiveTableColumnWidths(targetTableWidth);
         double rawTableWidth = effectiveColumns.Sum();
         double scale = rawTableWidth <= 0d ? 1d : targetTableWidth / rawTableWidth;

@@ -66,7 +66,9 @@ internal sealed partial class DocxReader
         string? CellSpacingValue,
         string? CellSpacingType,
         int? RowBandSize,
-        int? ColumnBandSize)
+        int? ColumnBandSize,
+        DocxTextAlignment? Alignment = null,
+        bool? VisualRightToLeft = null)
     {
         public static DocxTableStyleProperties Empty { get; } = new(null, null, null, null, null, null, null, null, null, null);
 
@@ -82,7 +84,9 @@ internal sealed partial class DocxReader
                 other.CellSpacingValue ?? CellSpacingValue,
                 other.CellSpacingType ?? CellSpacingType,
                 other.RowBandSize ?? RowBandSize,
-                other.ColumnBandSize ?? ColumnBandSize);
+                other.ColumnBandSize ?? ColumnBandSize,
+                other.Alignment ?? Alignment,
+                other.VisualRightToLeft ?? VisualRightToLeft);
         }
     }
 
@@ -194,8 +198,14 @@ internal sealed partial class DocxReader
             (string?)tableCellSpacing?.Attribute(WordprocessingNamespace + "w"),
             (string?)tableCellSpacing?.Attribute(WordprocessingNamespace + "type"),
             ReadNonNegativeIntAttribute(tableProperties?.Element(WordprocessingNamespace + "tblStyleRowBandSize"), WordprocessingNamespace + "val"),
-            ReadNonNegativeIntAttribute(tableProperties?.Element(WordprocessingNamespace + "tblStyleColBandSize"), WordprocessingNamespace + "val"));
+            ReadNonNegativeIntAttribute(tableProperties?.Element(WordprocessingNamespace + "tblStyleColBandSize"), WordprocessingNamespace + "val"),
+            ReadAlignment(ReadAlignmentValue(tableProperties)),
+            ReadTableVisualDirection(tableProperties));
     }
+
+    private static bool? ReadTableVisualDirection(XElement? properties) =>
+        properties?.Element(WordprocessingNamespace + "bidiVisual") is { } direction
+            ? OoxBoolean.ParseElement(direction, true, WordprocessingNamespace + "val") : null;
 
     private static IReadOnlyDictionary<string, DocxTableStyle> ResolveTableStyles(IReadOnlyDictionary<string, DocxTableStyle> tableStyles)
     {

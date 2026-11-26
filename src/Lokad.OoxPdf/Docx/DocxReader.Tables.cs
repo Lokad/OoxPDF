@@ -50,6 +50,13 @@ internal sealed partial class DocxReader
             ? parsedTableStyle
             : styles.DefaultTableStyle;
         DocxTableStyle tableStyle = resolvedStyle ?? DocxTableStyle.Empty;
+        DocxTextAlignment alignment = ReadAlignment(ReadAlignmentValue(tableProperties)) ??
+            tableStyle.Table.Alignment ?? DocxTextAlignment.Left;
+        // The flow still owns one left-to-right grid for the complete table.
+        // Joined fragments and bidiVisual tables retain their established placement.
+        if (alignment is not (DocxTextAlignment.Center or DocxTextAlignment.Right) || fragments is { Count: > 1 } ||
+            (ReadTableVisualDirection(tableProperties) ?? tableStyle.Table.VisualRightToLeft) == true)
+            alignment = DocxTextAlignment.Left;
         bool isCustomStyle = resolvedStyle is { HasCompleteInheritance: true, UsesTableNormal: false };
         bool hasAuthoredIndent = tableIndent is not null || tableStyle.Table.IndentValue is not null;
         bool anchorsStyleGrid = isCustomStyle && !hasAuthoredIndent;
@@ -118,6 +125,10 @@ internal sealed partial class DocxReader
                 DocxTableLook rowLook = ReadRowTableLook(row, part.Properties);
                 IReadOnlyList<DocxTableCellBorder> rowTableBorders = ReadTableBorders(rowExceptions);
                 XElement? rowProperties = row.Element(WordprocessingNamespace + "trPr");
+                if (alignment is DocxTextAlignment.Center or DocxTextAlignment.Right &&
+                    ReadAlignment(ReadAlignmentValue(rowProperties) ?? ReadAlignmentValue(rowExceptions)) is { } rowAlignment &&
+                    rowAlignment != alignment)
+                    alignment = DocxTextAlignment.Left;
                 var rowRevisions = new List<DocxRevisionInfo>();
                 AddRevision(rowRevisions, rowElement.Revision);
                 AddRevisions(rowRevisions, ReadPropertyChangeRevisions(rowProperties));
@@ -382,7 +393,8 @@ internal sealed partial class DocxReader
             hasExplicitGrid,
             useLegacyTableGrid)
         {
-            Revisions = tableRevisions
+            Revisions = tableRevisions,
+            Alignment = alignment
         };
     }
 

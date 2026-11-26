@@ -29,6 +29,7 @@ internal sealed record DocxTable(
     {
     }
     public IReadOnlyList<DocxRevisionInfo> Revisions { get; init; } = [];
+    public DocxTextAlignment Alignment { get; init; }
 
     public DocxTableWidthKind PreferredWidthKind => ParseTableWidthKind(PreferredWidthType, PreferredWidthValue);
 
