@@ -417,20 +417,21 @@ internal static class PptxChartPlotOptionsAgreementTests
 
     public static void ParsedAxisNumericOptionsKeepUnitsAndOrientation()
     {
-        (string Xml, double? Major, double? Minor, bool Reversed)[] cases =
+        (string Xml, double? Major, double? Minor, PptxSceneChartAxisOrientation Orientation, bool Reversed)[] cases =
         [
-            ("", null, null, false),
-            ("<c:majorUnit val=\"10\"/>", 10, null, false),
-            ("<c:minorUnit val=\"5\"/>", null, 5, false),
-            ("<c:majorUnit val=\"bogus\"/><c:minorUnit val=\"0\"/>", null, null, false),
-            ("<c:majorUnit val=\"-2\"/>", null, null, false),
-            ("<c:scaling><c:orientation val=\"maxMin\"/></c:scaling>", null, null, true),
-            ("<c:scaling><c:orientation val=\"minMax\"/></c:scaling>", null, null, false),
-            ("<c:scaling><c:orientation val=\"bogus\"/></c:scaling>", null, null, false)
+            ("", null, null, PptxSceneChartAxisOrientation.Unknown, false),
+            ("<c:majorUnit val=\"10\"/>", 10, null, PptxSceneChartAxisOrientation.Unknown, false),
+            ("<c:minorUnit val=\"5\"/>", null, 5, PptxSceneChartAxisOrientation.Unknown, false),
+            ("<c:majorUnit val=\"bogus\"/><c:minorUnit val=\"0\"/>", null, null, PptxSceneChartAxisOrientation.Unknown, false),
+            ("<c:majorUnit val=\"-2\"/>", null, null, PptxSceneChartAxisOrientation.Unknown, false),
+            ("<c:scaling><c:orientation val=\"maxMin\"/></c:scaling>", null, null, PptxSceneChartAxisOrientation.MaximumMinimum, true),
+            ("<c:scaling><c:orientation val=\"minMax\"/></c:scaling>", null, null, PptxSceneChartAxisOrientation.MinimumMaximum, false),
+            ("<c:scaling><c:orientation val=\"bogus\"/></c:scaling>", null, null, PptxSceneChartAxisOrientation.Unknown, false)
         ];
         foreach (var test in cases)
         {
             var axis = LoadAxis(test.Xml);
+            TestAssert.Equal(test.Orientation, axis.OrientationKind);
             object units = TestAssert.NotNull(Invoke("ReadSceneChartValueAxisUnits", [typeof(PptxSceneChartAxis)], [axis]));
             TestAssert.Equal(test.Major, (double?)units.GetType().GetProperty("MajorUnit")!.GetValue(units));
             TestAssert.Equal(test.Minor, (double?)units.GetType().GetProperty("MinorUnit")!.GetValue(units));
@@ -453,6 +454,34 @@ internal static class PptxChartPlotOptionsAgreementTests
         }
     }
 
+    public static void ParsedValueAxisCrossingKeepsAuthoredPrecedence()
+    {
+        (string Xml, PptxSceneChartAxisCrosses Crosses, double? CrossesAt, double Crossing)[] cases =
+        [
+            ("<c:crosses val=\"bogus\"/>", PptxSceneChartAxisCrosses.Unknown, null, 0d),
+            ("<c:crosses val=\"max\"/>", PptxSceneChartAxisCrosses.Maximum, null, 5d),
+            ("<c:crosses val=\"max\"/><c:crossesAt val=\"futureCross\"/>", PptxSceneChartAxisCrosses.Maximum, null, 5d),
+            ("<c:crosses val=\"max\"/><c:crossesAt val=\"2\"/>", PptxSceneChartAxisCrosses.Maximum, 2d, 2d)
+        ];
+        var extents = new PptxRenderer.ChartValueExtents(-5d, 5d);
+        foreach (var test in cases)
+        {
+            var axis = LoadAxis(test.Xml);
+            TestAssert.True(axis.HasCrossesValue, "An authored crossing token retains its presence.");
+            TestAssert.Equal(test.Crosses, axis.CrossesKind);
+            TestAssert.Equal(test.CrossesAt, axis.CrossesAt);
+            TestAssert.Equal(test.Crossing, (double)TestAssert.NotNull(Invoke("ReadSceneValueAxisCrossingValue",
+                [typeof(PptxSceneChartAxis), typeof(PptxRenderer.ChartValueExtents)], [axis, extents])));
+        }
+    }
+
+    public static void ParsedPercentStackedAxisUsesAutomaticTenth()
+    {
+        object options = ReadValueAxisRenderOptions(LoadAxis(""), percentStacked: true);
+        object units = TestAssert.NotNull(options.GetType().GetProperty("Units")!.GetValue(options));
+        TestAssert.Equal(0.1d, (double?)units.GetType().GetProperty("MajorUnit")!.GetValue(units));
+    }
+
     public static void ParsedAxisGridlineOptionsKeepVisibilityAndStroke()
     {
         (string Xml, bool Major, bool Minor, bool MajorElement)[] cases =
@@ -466,26 +495,23 @@ internal static class PptxChartPlotOptionsAgreementTests
             ("<c:scaling><c:orientation val=\"bogus\"/></c:scaling>", false, false, false),
             ("<c:majorUnit val=\"bogus\"/><c:numFmt formatCode=\"0.0\"/>", false, false, false)
         ];
-        var extents = new PptxRenderer.ChartValueExtents(-5d, 5d);
-        object Options(PptxSceneChartAxis? axis) => TestAssert.NotNull(Invoke("ReadSceneChartValueAxisRenderOptions",
-            [typeof(PptxSceneChartAxis), typeof(PptxRenderer.ChartValueExtents), typeof(bool)], [axis, extents, false]));
         object? Property(object value, string name) => value.GetType().GetProperty(name)!.GetValue(value);
         foreach (var test in cases)
         {
-            object options = Options(LoadAxis(test.Xml));
+            object options = ReadValueAxisRenderOptions(LoadAxis(test.Xml));
             TestAssert.Equal(test.Major, (bool)Property(options, "MajorGridlines")!);
             TestAssert.Equal(test.Minor, (bool)Property(options, "MinorGridlines")!);
             TestAssert.Equal(test.MajorElement, (bool)Property(options, "HasMajorGridlineElement")!);
         }
         foreach (string kind in new[] { "major", "minor" })
         {
-            object options = Options(LoadAxis($"<c:{kind}Gridlines><c:spPr><a:ln w=\"25400\"><a:solidFill><a:srgbClr val=\"FF0000\"/></a:solidFill></a:ln></c:spPr></c:{kind}Gridlines>"));
+            object options = ReadValueAxisRenderOptions(LoadAxis($"<c:{kind}Gridlines><c:spPr><a:ln w=\"25400\"><a:solidFill><a:srgbClr val=\"FF0000\"/></a:solidFill></a:ln></c:spPr></c:{kind}Gridlines>"));
             object style = TestAssert.NotNull(Property(options, "GridlineStyle"));
             object stroke = TestAssert.NotNull(Property(style, kind == "major" ? "Major" : "Minor"));
             TestAssert.Equal(new RgbColor(255, 0, 0), (RgbColor)Property(stroke, "Color")!);
             TestAssert.Equal(2d, (double)Property(stroke, "Width")!);
         }
-        object missing = Options(null);
+        object missing = ReadValueAxisRenderOptions(null);
         TestAssert.Equal(false, (bool)Property(missing, "MajorGridlines")!);
         TestAssert.Equal(false, (bool)Property(missing, "MinorGridlines")!);
         TestAssert.Equal(false, (bool)Property(missing, "HasMajorGridlineElement")!);
@@ -493,6 +519,11 @@ internal static class PptxChartPlotOptionsAgreementTests
         TestAssert.Equal(null, Property(emptyStyle, "Major"));
         TestAssert.Equal(null, Property(emptyStyle, "Minor"));
     }
+
+    private static object ReadValueAxisRenderOptions(PptxSceneChartAxis? axis, bool percentStacked = false) =>
+        TestAssert.NotNull(Invoke("ReadSceneChartValueAxisRenderOptions",
+            [typeof(PptxSceneChartAxis), typeof(PptxRenderer.ChartValueExtents), typeof(bool)],
+            [axis, new PptxRenderer.ChartValueExtents(-5d, 5d), percentStacked]));
 
     public static void ParsedAxisVisibilityKeepsAbsentDeletedAndUnknownDefaults()
     {
@@ -504,13 +535,15 @@ internal static class PptxChartPlotOptionsAgreementTests
         TestAssert.Equal(false, ExplicitValue(null));
         TestAssert.Equal(true, ExplicitValue(LoadAxis("")));
         TestAssert.Equal(false, ExplicitValue(LoadAxis("<c:delete val=\"1\"/>")));
+        var unknownCategoryLabel = LoadAxis("<c:tickLblPos val=\"bogus\"/>", "catAx");
+        TestAssert.Equal(PptxSceneChartTickLabelPosition.Unknown, unknownCategoryLabel.TickLabelPositionKind);
+        TestAssert.True(Visible(unknownCategoryLabel), "Unknown label positions use the visible default.");
         foreach (var test in new[]
         {
             (Xml: "", Expected: true),
             (Xml: "<c:delete val=\"1\"/>", Expected: false),
             (Xml: "<c:delete val=\"0\"/>", Expected: true),
             (Xml: "<c:tickLblPos val=\"none\"/>", Expected: false),
-            (Xml: "<c:tickLblPos val=\"bogus\"/>", Expected: true),
             (Xml: "<c:delete val=\"1\"/><c:tickLblPos val=\"high\"/>", Expected: false)
         })
             TestAssert.Equal(test.Expected, Visible(LoadAxis(test.Xml)));
@@ -557,9 +590,18 @@ internal static class PptxChartPlotOptionsAgreementTests
         }
     }
 
-    private static PptxSceneChartAxis LoadAxis(string axisInner)
+    private static PptxSceneChartAxis LoadAxis(string axisInner, string axisKind = "valAx")
     {
-        string xml = ChartSpace("<c:barChart><c:ser><c:cat><c:strLit><c:pt idx=\"0\"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx=\"0\"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser><c:axId val=\"10\"/><c:axId val=\"20\"/></c:barChart><c:valAx><c:axId val=\"10\"/>" + axisInner + "</c:valAx>", "");
+        string xml = ChartSpace($$"""
+            <c:barChart>
+              <c:ser>
+                <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat>
+                <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val>
+              </c:ser>
+              <c:axId val="10"/><c:axId val="20"/>
+            </c:barChart>
+            <c:{{axisKind}}><c:axId val="10"/>{{axisInner}}</c:{{axisKind}}>
+            """, "");
         PptxSceneChart sceneChart = TestAssert.NotNull(PptxTests.BuildSingleChartScene(xml));
         TestAssert.Equal(1, sceneChart.Axes.Count);
         return sceneChart.Axes[0];
