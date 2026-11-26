@@ -429,26 +429,8 @@ internal sealed partial class PptxRenderer
                         }
                     }
 
-                    PptxSceneChartAxisTickMark valueTickMark = ReadSceneChartAxisMajorTickMark(valueSceneAxis);
-                    if (axesStyle.ValueAxisVisible && valueTickMark != PptxSceneChartAxisTickMark.None)
-                    {
-                        ChartSeriesStroke valueTickStroke = axesStyle.ValueAxis ?? ChartAxisDefaultStroke;
-                        if (valueTickStroke.Alpha > 0.001d)
-                        {
-                            ChartTextStyle valueTickStyle = ReadSceneChartTextStyle(theme, sceneChart, valueSceneAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
-                            IReadOnlyList<double> tickValues = GetChartAxisTickValuesCore(valueExtents, valueAxisOptions.Units.MajorUnit, includeEndpoints: true, GetValueAxisAutoTickTargetCount(horizontalBars: false, valueAxisLabelsVisible: valueAxisLabelsVisible, manualPlotLayoutApplied: chartLayout.ManualPlotLayoutApplied), valueAxisOptions.TickPolicy, context: context);
-                            double[] tickEdges = new double[tickValues.Count];
-                            for (int tickIndex = 0; tickIndex < tickValues.Count; tickIndex++)
-                            {
-                                tickEdges[tickIndex] = ChartValueToPlotCoordinate(valueExtents, tickValues[tickIndex], plotBox.Y, plotBox.Height, valueAxisOptions.Reversed);
-                            }
-
-                            bool valueLabelsRightSide = ResolveSceneValueAxisLabelsRightSide(sceneChart, valueSceneAxis, axesStyle.ValueAxisRightSide);
-                            double valueAxisX = axesStyle.ValueAxisRightSide ? plotBox.X + plotBox.Width : plotBox.X;
-                            SetChartStroke(graphics, valueTickStroke);
-                            StrokeMajorTickSegments(graphics, tickEdges, valueAxisX, verticalSegments: false, outwardIsLowSide: !valueLabelsRightSide, valueTickMark, valueTickStyle.FontSize * PptxChartMetricRules.ChartAxisMajorTickLengthFactor);
-                        }
-                    }
+                    DrawVerticalChartValueAxisMajorTicks(graphics, theme, sceneChart, valueSceneAxis,
+                        plotBox, valueExtents, valueAxisOptions, axesStyle, context);
                 }
                 // Major tick marks for horizontal bars (Office honors out/in/cross at value
                 // gridlines and category slot boundaries; lengths share the 0.315fs law).

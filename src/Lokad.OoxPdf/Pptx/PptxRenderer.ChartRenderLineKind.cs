@@ -101,30 +101,8 @@ internal sealed partial class PptxRenderer
                 }
                 await RenderSecondaryChartValueAxisLabelsAsync(theme, graphics, plotBox, sceneChart, dataExtents,
                     fontResolver, chartFonts: fonts, primarySceneAxis: valueAxis.SceneAxis, context: context).ConfigureAwait(false);
-                // Major value tick marks (Office honors out/in/cross at value gridlines).
-                if (axesStyle.ValueAxisVisible)
-                {
-                    PptxSceneChartAxisTickMark lineValueTickMark = ReadSceneChartAxisMajorTickMark(valueAxis.SceneAxis);
-                    if (lineValueTickMark != PptxSceneChartAxisTickMark.None)
-                    {
-                        ChartSeriesStroke lineValueTickStroke = axesStyle.ValueAxis ?? ChartAxisDefaultStroke;
-                        if (lineValueTickStroke.Alpha > 0.001d)
-                        {
-                            ChartTextStyle lineValueTickStyle = ReadSceneChartTextStyle(theme, sceneChart, valueAxis.SceneAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
-                            IReadOnlyList<double> lineTickValues = GetChartAxisTickValuesCore(valueExtents, valueAxisOptions.Units.MajorUnit, includeEndpoints: true, GetValueAxisAutoTickTargetCount(horizontalBars: false, valueAxisLabelsVisible: IsSceneChartAxisLabelVisible(valueAxis.SceneAxis), manualPlotLayoutApplied: chartLayout.ManualPlotLayoutApplied), valueAxisOptions.TickPolicy, context: context);
-                            double[] lineTickEdges = new double[lineTickValues.Count];
-                            for (int lineTickIndex = 0; lineTickIndex < lineTickValues.Count; lineTickIndex++)
-                            {
-                                lineTickEdges[lineTickIndex] = ChartValueToPlotCoordinate(valueExtents, lineTickValues[lineTickIndex], plotBox.Y, plotBox.Height, valueAxisOptions.Reversed);
-                            }
-
-                            bool lineValueLabelsRightSide = ResolveSceneValueAxisLabelsRightSide(sceneChart, valueAxis.SceneAxis, axesStyle.ValueAxisRightSide);
-                            double lineValueAxisX = axesStyle.ValueAxisRightSide ? plotBox.X + plotBox.Width : plotBox.X;
-                            SetChartStroke(graphics, lineValueTickStroke);
-                            StrokeMajorTickSegments(graphics, lineTickEdges, lineValueAxisX, verticalSegments: false, outwardIsLowSide: !lineValueLabelsRightSide, lineValueTickMark, lineValueTickStyle.FontSize * PptxChartMetricRules.ChartAxisMajorTickLengthFactor);
-                        }
-                    }
-                }
+                DrawVerticalChartValueAxisMajorTicks(graphics, theme, sceneChart, valueAxis.SceneAxis,
+                    plotBox, valueExtents, valueAxisOptions, axesStyle, context);
                 await RenderDefaultChartAxisTitlesAsync(theme, graphics, chartLayout, sceneChart, fontResolver, fonts, context, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false);
                 await RenderChartLegendAsync(graphics, chartLayout.Frame, plotBox, legendEntries, chartLayout.Legend,
                     legendTextStyle, fontResolver, ChartLegendPlacement.Default, chartFonts: fonts,

@@ -115,27 +115,8 @@ internal sealed partial class PptxRenderer
                     }
                 }
 
-                PptxSceneChartAxisTickMark areaValueTickMark = ReadSceneChartAxisMajorTickMark(valueAxis.SceneAxis);
-                if (axesStyle.ValueAxisVisible && areaValueTickMark != PptxSceneChartAxisTickMark.None)
-                {
-                    ChartSeriesStroke areaValueTickStroke = axesStyle.ValueAxis ?? ChartAxisDefaultStroke;
-                    if (areaValueTickStroke.Alpha > 0.001d)
-                    {
-                        ChartTextStyle areaValueTickStyle = ReadSceneChartTextStyle(theme, sceneChart, valueAxis.SceneAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
-                        bool areaValueLabelsVisible = IsSceneChartAxisLabelVisible(valueAxis.SceneAxis);
-                        IReadOnlyList<double> areaTickValues = GetChartAxisTickValuesCore(valueExtents, valueAxisOptions.Units.MajorUnit, includeEndpoints: true, GetValueAxisAutoTickTargetCount(horizontalBars: false, valueAxisLabelsVisible: areaValueLabelsVisible, manualPlotLayoutApplied: chartLayout.ManualPlotLayoutApplied), valueAxisOptions.TickPolicy, context: context);
-                        double[] areaValueEdges = new double[areaTickValues.Count];
-                        for (int areaValueTickIndex = 0; areaValueTickIndex < areaTickValues.Count; areaValueTickIndex++)
-                        {
-                            areaValueEdges[areaValueTickIndex] = ChartValueToPlotCoordinate(valueExtents, areaTickValues[areaValueTickIndex], plotBox.Y, plotBox.Height, valueAxisOptions.Reversed);
-                        }
-
-                        bool areaValueLabelsRightSide = ResolveSceneValueAxisLabelsRightSide(sceneChart, valueAxis.SceneAxis, axesStyle.ValueAxisRightSide);
-                        double areaValueAxisX = axesStyle.ValueAxisRightSide ? plotBox.X + plotBox.Width : plotBox.X;
-                        SetChartStroke(graphics, areaValueTickStroke);
-                        StrokeMajorTickSegments(graphics, areaValueEdges, areaValueAxisX, verticalSegments: false, outwardIsLowSide: !areaValueLabelsRightSide, areaValueTickMark, areaValueTickStyle.FontSize * PptxChartMetricRules.ChartAxisMajorTickLengthFactor);
-                    }
-                }
+                DrawVerticalChartValueAxisMajorTicks(graphics, theme, sceneChart, valueAxis.SceneAxis,
+                    plotBox, valueExtents, valueAxisOptions, axesStyle, context);
                 await RenderDefaultChartAxisTitlesAsync(theme, graphics, chartLayout, sceneChart, fontResolver, fonts, context, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false);
                 await RenderChartLegendAsync(graphics, chartLayout.Frame, plotBox, legendEntries, chartLayout.Legend, legendTextStyle, fontResolver, ChartLegendPlacement.AreaRightLegend, fonts, preparedBox: preparedLegendBox).ConfigureAwait(false);
                 await RenderCategoryPointDataLabelsAsync(

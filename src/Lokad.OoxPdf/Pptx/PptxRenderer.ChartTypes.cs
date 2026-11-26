@@ -273,6 +273,31 @@ internal sealed partial class PptxRenderer
         StrokeMajorTickSegments(graphics, edges, axisY, verticalSegments: true, outwardIsLowSide: !topSide, majorTickMark, tickFontSize * PptxChartMetricRules.ChartAxisMajorTickLengthFactor);
     }
 
+    private static void DrawVerticalChartValueAxisMajorTicks(PdfGraphicsBuilder graphics, PptxTheme theme,
+        PptxSceneChart chart, PptxSceneChartAxis? axis, ChartPlotBox plot, ChartValueExtents extents,
+        ChartValueAxisRenderOptions options, ChartAxesStyle axesStyle, PptxRenderContext context)
+    {
+        PptxSceneChartAxisTickMark tickMark = ReadSceneChartAxisMajorTickMark(axis);
+        ChartSeriesStroke stroke = axesStyle.ValueAxis ?? ChartAxisDefaultStroke;
+        if (!axesStyle.ValueAxisVisible || tickMark == PptxSceneChartAxisTickMark.None || stroke.Alpha is not > 0.001d)
+            return;
+
+        ChartTextStyle tickStyle = ReadSceneChartTextStyle(theme, chart, axis,
+            fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
+        IReadOnlyList<double> values = GetChartAxisTickValuesCore(extents, options.Units.MajorUnit,
+            includeEndpoints: true, PptxChartMetricRules.AxisNiceVerticalValueTickTargetCount, options.TickPolicy,
+            context: context);
+        double[] edges = new double[values.Count];
+        for (int i = 0; i < values.Count; i++)
+            edges[i] = ChartValueToPlotCoordinate(extents, values[i], plot.Y, plot.Height, options.Reversed);
+
+        bool labelsRight = ResolveSceneValueAxisLabelsRightSide(chart, axis, axesStyle.ValueAxisRightSide);
+        double axisX = axesStyle.ValueAxisRightSide ? plot.X + plot.Width : plot.X;
+        SetChartStroke(graphics, stroke);
+        StrokeMajorTickSegments(graphics, edges, axisX, verticalSegments: false, outwardIsLowSide: !labelsRight,
+            tickMark, tickStyle.FontSize * PptxChartMetricRules.ChartAxisMajorTickLengthFactor);
+    }
+
     // Shared cartesian major-tick segments for category slot boundaries and value
     // gridlines: Office honors out/inside/cross on every cartesian axis with the same
     // font-relative length. outwardIsLowSide selects the out side for bottom/left
