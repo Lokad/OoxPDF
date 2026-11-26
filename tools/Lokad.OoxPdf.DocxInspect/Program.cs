@@ -674,8 +674,8 @@ static object CreateMarkupSummary(
         },
         StyleSpacing = new
         {
-            ParagraphStyleUsageCount = structure.StyleUsages.Count(usage => usage.Kind == "Paragraph"),
-            StyledParagraphCount = structure.StyleUsages.Where(usage => usage.Kind == "Paragraph").Sum(usage => usage.ParagraphCount),
+            ParagraphStyleUsageCount = paragraphStyleUsages.Length,
+            StyledParagraphCount = paragraphStyleUsages.Sum(usage => usage.StyleId is null ? 0 : usage.ParagraphCount),
             BeforeSpacingTokenParagraphCount = structure.StyleUsages.Sum(usage => usage.BeforeSpacingTokenParagraphCount),
             AfterSpacingTokenParagraphCount = structure.StyleUsages.Sum(usage => usage.AfterSpacingTokenParagraphCount),
             BeforeAutoSpacingParagraphCount = structure.StyleUsages.Sum(usage => usage.BeforeAutoSpacingParagraphCount),
