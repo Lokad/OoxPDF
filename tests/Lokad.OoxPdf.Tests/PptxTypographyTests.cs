@@ -38,7 +38,7 @@ internal static class PptxTypographyTests
                         <p:txBody>
                           <a:bodyPr/>
                           <a:lstStyle/>
-                          <a:p><a:r><a:rPr lang="en-US" sz="2400"><a:latin typeface="Arial"/></a:rPr><a:t>resolver probe</a:t></a:r></a:p>
+                          <a:p><a:r><a:rPr lang="en-US" sz="2400"><a:latin typeface="ResolverProbe"/></a:rPr><a:t>resolver probe</a:t></a:r></a:p>
                         </p:txBody>
                       </p:sp>
                     </p:spTree>
@@ -46,12 +46,7 @@ internal static class PptxTypographyTests
                 </p:sld>
                 """
         });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-        var resolver = new CountingFontResolver();
-
-        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { FontResolver = resolver });
-
-        TestAssert.True(resolver.ResolveCalls > 0, "PPTX conversion should use the supplied font resolver for text layout and embedding.");
+        PublicApiTests.AssertCustomFontRenders(input, "resolver probe");
     }
 
     // Office drops out-of-frame clip lines whole (anchor-overflow reference:

@@ -49,7 +49,7 @@ internal static partial class PptxChartsTests
                 <?xml version="1.0" encoding="UTF-8"?>
                 <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
                   <c:chart>
-                    <c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="1800"><a:latin typeface="Arial"/></a:rPr><a:t>Chart resolver probe</a:t></a:r></a:p></c:rich></c:tx></c:title>
+                    <c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="1800"><a:latin typeface="ResolverProbe"/></a:rPr><a:t>Chart resolver probe</a:t></a:r></a:p></c:rich></c:tx></c:title>
                     <c:plotArea>
                       <c:barChart>
                         <c:barDir val="col"/>
@@ -69,12 +69,7 @@ internal static partial class PptxChartsTests
                 </c:chartSpace>
                 """
         });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-        var resolver = new CountingFontResolver();
-
-        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { FontResolver = resolver });
-
-        TestAssert.True(resolver.ResolveCalls > 0, "PPTX chart text conversion should use the supplied font resolver.");
+        PublicApiTests.AssertCustomFontRenders(input, "Chart resolver probe");
     }
 
     public static void PptxChartSeriesLineNoFillSuppressesBarOutlines()

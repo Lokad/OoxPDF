@@ -146,18 +146,26 @@ internal static partial class PublicApiTests
                 <?xml version="1.0" encoding="UTF-8"?>
                 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
                   <w:body>
-                    <w:p><w:r><w:t>resolver probe</w:t></w:r></w:p>
+                    <w:p><w:r><w:rPr><w:rFonts w:ascii="ResolverProbe" w:hAnsi="ResolverProbe"/></w:rPr><w:t>resolver probe</w:t></w:r></w:p>
                     <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
                   </w:body>
                 </w:document>
                 """
         });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-        var resolver = new CountingFontResolver();
+        AssertCustomFontRenders(input, "resolver probe");
+    }
 
+    internal static void AssertCustomFontRenders(string input, string caption)
+    {
+        bool requested = false;
+        var resolver = new TestFaceFontResolver(request => requested |= request.FamilyName == "ResolverProbe");
+        string output = TestFixtures.NewTemporaryPath(".pdf");
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { FontResolver = resolver });
 
-        TestAssert.True(resolver.ResolveCalls > 0, "DOCX conversion should use the supplied font resolver for text embedding.");
+        string pdf = File.ReadAllText(output, Encoding.Latin1);
+        TestAssert.True(requested, "Conversion must request the authored ResolverProbe family.");
+        TestAssert.Contains("+TestFont", pdf);
+        TestAssert.Contains(caption, OoxMissingFontTests.ExtractCidMappedText(pdf));
     }
 
     public static void RepeatedConversionsReuseRetainedFontBytes()
