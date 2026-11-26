@@ -1836,7 +1836,7 @@ internal static partial class DocxInlineCompositionTests
         }
         foreach (var stop in new[] { new DocxTabStop(720d, null, "right", null), new(720d, null, "center", null),
             new(720d, null, "decimal", null), new(72d, null, "num", null), new(72d, null, "unknown", null),
-            new(72d, null, "left", "dot") })
+            new(72d, null, "left", "not-a-leader") })
             TestAssert.True(!Measure(paragraph with { TabStops = [stop] }, 300d, 1d, out _),
                 "Out-of-frame aligned fields and selected unsupported stops retain explicit fallback.");
         TestAssert.True(!Measure(paragraph with { TabStops = [new(400d, null, "left", null)] }, 100d, 1d, out _), "An out-of-frame stop retains fallback.");

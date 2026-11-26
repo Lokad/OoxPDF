@@ -1066,6 +1066,7 @@
     "=DocxImplicitDecimalCellTabsMatchExplicitFieldPlacement",
     "=DocxLogicalTabsPreserveComposedFractionsAndFieldPlacement",
     "=DocxTabLeadersPreserveComposedFields",
+    "=DocxInlineCompositionLeftTabMeasurementRetainsWrapAndFallbackContracts",
     "=DocxLogicalParagraphEdgesMatchPhysicalAlignment",
     "=DocxInlineCompositionPreferredBreakKeepsTailInsideExactCell",
     "=DocxHangingContinuationKeepsPrecedingFractionAndPicture",
