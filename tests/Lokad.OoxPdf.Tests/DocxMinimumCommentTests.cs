@@ -36,18 +36,30 @@ internal static class DocxMinimumCommentTests
 
     public static void DocxMinimumCommentsKeepParagraphPaintAndHyperlinkFrames()
     {
-        var expected = Render(Read(false, false, decorate: true));
-        var actual = Render(Read(true, false, decorate: true));
+        const string authoredColor = "D8E4F0";
+        var expected = Render(Read(false, false, paragraphFill: authoredColor));
+        var actual = Render(Read(true, false, paragraphFill: authoredColor));
         EqualTextFrames(expected, actual);
         TestAssert.Equal(1, expected.Sum(page => page.Annotations.Count));
         TestAssert.True(expected.SelectMany(page => page.Annotations).SequenceEqual(actual.SelectMany(page => page.Annotations)),
             "Comment metadata must not replace the hyperlink's placed text frame.");
-        // The filled paragraph rectangle is a semantic paint result, separate
-        // from source run grouping and PDF font/object identities.
-        var rectangles = new System.Text.RegularExpressions.Regex(@"([-\d.]+) ([-\d.]+) ([-\d.]+) ([-\d.]+) re");
-        var a = expected.SelectMany(page => rectangles.Matches(page.Content).Select(match => match.Value)).ToArray();
-        var b = actual.SelectMany(page => rectangles.Matches(page.Content).Select(match => match.Value)).ToArray();
-        TestAssert.True(a.Length > 0 && a.SequenceEqual(b), "Natural-line shading and occupied paragraph slots retain their geometry.");
+        TestAssert.Equal(CheckParagraphFill(expected[0]), CheckParagraphFill(actual[0]));
+
+        var retinted = Render(Read(true, false, paragraphFill: "F0E4D8"));
+        EqualTextFrames(actual, retinted);
+        var error = TestAssert.Throws<InvalidOperationException>(() => CheckParagraphFill(retinted[0]));
+        TestAssert.Contains("Expected D8E4F0, got F0E4D8", error.Message);
+
+        static PdfRectangle CheckParagraphFill(PdfPage page)
+        {
+            var fill = DocxParagraphShadingTests.ReadRectangles(page.Content).Single();
+            var first = Shows([page]).First(show => !string.IsNullOrWhiteSpace(show.Text));
+            TestAssert.True(first.Text.StartsWith("Public", StringComparison.Ordinal) &&
+                first.X >= fill.X && first.X < fill.X + fill.Width && first.Y >= fill.Y && first.Y < fill.Y + fill.Height,
+                "The filled frame backs the first authored paragraph.");
+            TestAssert.Equal(authoredColor, fill.Color);
+            return new PdfRectangle(fill.X, fill.Y, fill.Width, fill.Height);
+        }
     }
 
     public static void DocxMinimumCommentsKeepRealNoteMarkerSlotsAndCompactFallback()
@@ -122,7 +134,7 @@ internal static class DocxMinimumCommentTests
         OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
         .RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
 
-    private static DocxDocument Read(bool annotate, bool empty, bool arial12 = false, bool decorate = false, bool note = false, int minimum = 400)
+    private static DocxDocument Read(bool annotate, bool empty, bool arial12 = false, string? paragraphFill = null, bool note = false, int minimum = 400)
     {
         var parts = new Dictionary<string, string>();
         using (var archive = ZipFile.OpenRead(Case("minimum-navigation-ordinary11-control.docx")))
@@ -158,9 +170,9 @@ internal static class DocxMinimumCommentTests
             AddPart("footnotes", "footnotes", new XElement(W + "footnotes", new XElement(W + "footnote", new XAttribute(W + "id", "5"),
                 new XElement(W + "p", new XElement(W + "r", new XElement(W + "footnoteRef"), new XElement(W + "t", "Public note."))))));
         }
-        if (decorate)
+        if (paragraphFill is not null)
         {
-            paragraph.Element(W + "pPr")!.Add(new XElement(W + "shd", new XAttribute(W + "fill", "D8E4F0")));
+            paragraph.Element(W + "pPr")!.Add(new XElement(W + "shd", new XAttribute(W + "fill", paragraphFill)));
             var run = paragraph.Elements(W + "r").First();
             run.ReplaceWith(new XElement(W + "hyperlink", new XAttribute(R + "id", "publicLink"), new XElement(run)));
             relationships.Root!.Add(new XElement(Rel + "Relationship", new XAttribute("Id", "publicLink"),
