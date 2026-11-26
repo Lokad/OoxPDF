@@ -116,7 +116,7 @@ internal static class PdfContentValidator
             pattern.Pattern.Content,
             context,
             new HashSet<string>(StringComparer.Ordinal),
-            new HashSet<string>(pattern.Pattern.Images.Select(image => PdfEmbeddedFont.SanitizeName(image.ResourceName)), StringComparer.Ordinal),
+            IndexResourceNames(pattern.Pattern.Images.Select(image => image.ResourceName), "pattern XObject", pageIndex),
             new HashSet<string>(StringComparer.Ordinal),
             new HashSet<string>(StringComparer.Ordinal),
             new HashSet<string>(StringComparer.Ordinal),

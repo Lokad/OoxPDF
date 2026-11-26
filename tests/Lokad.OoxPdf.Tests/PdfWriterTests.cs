@@ -741,6 +741,25 @@ internal static partial class PdfWriterTests
         TestAssert.Contains("/Im1 Do", pdf);
     }
 
+    public static void RejectsDuplicatePatternImageResourceNamesBeforeWriting()
+    {
+        PdfImageXObject red = PdfImageXObject.RgbPng(1, 1, [255, 0, 0], null);
+        PdfImageXObject blue = PdfImageXObject.RgbPng(1, 1, [0, 0, 255], null);
+        foreach (string secondName in new[] { "Tile-1", "Tile_1" })
+        {
+            var pattern = new PdfTilingPattern(4, 4, 4, 4, null, 2, "q 1 0 0 1 0 0 cm /Tile-1 Do Q\n",
+                [new PdfImageResource("Tile-1", red), new PdfImageResource(secondName, blue)]);
+            var page = new PdfPage(200, 200, "/Pattern cs /P1 scn\n",
+                patterns: [new PdfTilingPatternResource("P1", pattern)]);
+            using var output = new MemoryStream();
+            InvalidDataException error = TestAssert.Throws<InvalidDataException>(() =>
+                PdfDocumentWriter.WriteStagedAsync(output, new[] { page }.ToAsyncEnumerable(), new OoxConversionLimits(),
+                    diagnosticSink: null, CancellationToken.None).GetAwaiter().GetResult());
+            TestAssert.Contains("duplicate pattern XObject resource name 'Tile-1'", error.Message);
+            TestAssert.Equal(0L, output.Length);
+        }
+    }
+
     public static void RejectsNonAsciiPageContent()
     {
         var page = new PdfPage(200, 200, "q Q\n% caf\u00e9\n");
@@ -1089,9 +1108,7 @@ internal static partial class PdfWriterTests
         {
             var graphics = new PdfGraphicsBuilder();
             graphics.DrawGlyphText("F1", 24d, 100d, 200d, 0, 0, 0, "0041", false, 0d, 0, 0, 0, 0, 0d, quarterTurns);
-            System.Reflection.FieldInfo? field = typeof(PdfGraphicsBuilder).GetField("builder", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            var content = (System.Text.StringBuilder?)field?.GetValue(graphics);
-            return content?.ToString() ?? throw new System.InvalidOperationException("Expected builder content.");
+            return graphics.ToString();
         }
     }
 
