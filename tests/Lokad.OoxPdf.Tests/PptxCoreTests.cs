@@ -30,12 +30,7 @@ internal static class PptxCoreTests
                   <Override PartName="/ppt/slides/slide2.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
                 </Types>
                 """,
-            ["_rels/.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/>
-                </Relationships>
-                """,
+            ["_rels/.rels"] = PptxTests.PackageRelationship(),
             ["ppt/_rels/presentation.xml.rels"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
@@ -48,21 +43,42 @@ internal static class PptxCoreTests
                 <p:presentation xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
                   <p:sldSz cx="12192000" cy="6858000"/>
                   <p:sldIdLst>
-                    <p:sldId id="256" r:id="rId1"/>
                     <p:sldId id="257" r:id="rId2"/>
+                    <p:sldId id="256" r:id="rId1"/>
                   </p:sldIdLst>
                 </p:presentation>
                 """,
-            ["ppt/slides/slide1.xml"] = "<p:sld xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"/>",
-            ["ppt/slides/slide2.xml"] = "<p:sld xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"/>"
+            ["ppt/slides/slide1.xml"] = SlideWithRectangle("1747A0"),
+            ["ppt/slides/slide2.xml"] = SlideWithRectangle("C83625")
         });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        string output = TestFixtures.NewTemporaryPath(".pdf");
 
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("<< /Type /Pages /Count 2 /Kids [3 0 R 5 0 R] >>", pdf);
-        TestAssert.Contains("/MediaBox [0 0 960 540]", pdf);
+        Match pages = Regex.Match(pdf, @"/Type /Pages /Count 2 /Kids \[(\d+) 0 R (\d+) 0 R\]");
+        TestAssert.True(pages.Success, "The presentation must produce two ordered PDF pages.");
+        string[] expectedFills = ["0.784 0.212 0.145", "0.09 0.278 0.627"];
+        for (int index = 0; index < expectedFills.Length; index++)
+        {
+            string page = PdfWriterTests.ReadObject(pdf, pages.Groups[index + 1].Value);
+            TestAssert.Contains("/MediaBox [0 0 960 540]", page);
+            string contentsId = Regex.Match(page, @"/Contents (\d+) 0 R").Groups[1].Value;
+            string paint = PdfWriterTests.ReadObject(pdf, contentsId);
+            MatchCollection rectangles = Regex.Matches(paint, @"(?m)^([\d.]+ [\d.]+ [\d.]+) rg\r?\n72 396 144 72 re f\*?\r?$");
+            TestAssert.True(rectangles.Count == 1 && rectangles[0].Groups[1].Value == expectedFills[index],
+                $"Page {index + 1} must paint exactly one rectangle with its slide's authored fill.");
+        }
+
+        static string SlideWithRectangle(string color) => $$"""
+            <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <p:cSld><p:spTree><p:sp><p:spPr>
+                <a:xfrm><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="914400"/></a:xfrm>
+                <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
+                <a:solidFill><a:srgbClr val="{{color}}"/></a:solidFill><a:ln><a:noFill/></a:ln>
+              </p:spPr></p:sp></p:spTree></p:cSld>
+            </p:sld>
+            """;
     }
 
     public static void PptxSyntheticLineEndPresetVariantsRender()
