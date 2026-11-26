@@ -403,15 +403,8 @@ internal sealed partial class DocxRenderer
         }
         graphics.ClipRectangle(clip.X, clip.Y, clip.Width, clip.Height);
         var items = PlaceFloatingTextBoxItems(textBoxLayout, paintFrame, drawing.AnchorPageIndex);
-        RenderParagraphBackgrounds(items, graphics, markupContext, cancellationToken);
-        for (int itemIndex = 0; itemIndex < items.Count; itemIndex++)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            DocxLayoutItem item = items[itemIndex];
-            DocxTableRowLayout? previousRow = itemIndex > 0 ? items[itemIndex - 1] as DocxTableRowLayout : null;
-            DocxTableRowLayout? nextRow = itemIndex + 1 < items.Count ? items[itemIndex + 1] as DocxTableRowLayout : null;
-            RenderLayoutItem(item, previousRow, nextRow, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, pageCount, cancellationToken, imageCache, ref imageIndex, boxNavigation);
-        }
+        RenderLayoutItems(items, graphics, pageImages, fontResources, markupContext, diagnosticSink,
+            pageNumber, pageCount, cancellationToken, imageCache, ref imageIndex, boxNavigation);
 
         graphics.RestoreState();
     }
@@ -520,15 +513,8 @@ internal sealed partial class DocxRenderer
         graphics.ClipRectangle(clip.X, clip.Y, clip.Width, clip.Height);
         var boxNavigation = navigation.EnterTextBox(clip);
         var items = GetInlineTextBoxPaintItems(box, markupContext);
-        RenderParagraphBackgrounds(items, graphics, markupContext, cancellationToken);
-        for (int itemIndex = 0; itemIndex < items.Count; itemIndex++)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            DocxLayoutItem item = items[itemIndex];
-            DocxTableRowLayout? previousRow = itemIndex > 0 ? items[itemIndex - 1] as DocxTableRowLayout : null;
-            DocxTableRowLayout? nextRow = itemIndex + 1 < items.Count ? items[itemIndex + 1] as DocxTableRowLayout : null;
-            RenderLayoutItem(item, previousRow, nextRow, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, pageCount, cancellationToken, imageCache, ref imageIndex, boxNavigation, background);
-        }
+        RenderLayoutItems(items, graphics, pageImages, fontResources, markupContext, diagnosticSink,
+            pageNumber, pageCount, cancellationToken, imageCache, ref imageIndex, boxNavigation, background);
 
         graphics.RestoreState();
     }

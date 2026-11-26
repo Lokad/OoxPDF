@@ -1045,25 +1045,10 @@ internal sealed partial class DocxRenderer
                 navigation);
 
             IReadOnlyList<DocxLayoutItem> staticItems = EnumerateStaticLayoutItems(layoutPage, markupContext).ToArray();
-            RenderParagraphBackgrounds(staticItems, graphics, markupContext, cancellationToken);
-            for (int itemIndex = 0; itemIndex < staticItems.Count; itemIndex++)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                DocxLayoutItem staticItem = staticItems[itemIndex];
-                DocxTableRowLayout? previousRow = itemIndex > 0 ? staticItems[itemIndex - 1] as DocxTableRowLayout : null;
-                DocxTableRowLayout? nextRow = itemIndex + 1 < staticItems.Count ? staticItems[itemIndex + 1] as DocxTableRowLayout : null;
-                RenderLayoutItem(staticItem, previousRow, nextRow, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, layout.Pages.Count, cancellationToken, imageCache, ref imageIndex, navigation);
-            }
-
-            RenderParagraphBackgrounds(layoutPage.Items, graphics, markupContext, cancellationToken);
-            for (int itemIndex = 0; itemIndex < layoutPage.Items.Count; itemIndex++)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                DocxLayoutItem item = layoutPage.Items[itemIndex];
-                DocxTableRowLayout? previousRow = itemIndex > 0 ? layoutPage.Items[itemIndex - 1] as DocxTableRowLayout : null;
-                DocxTableRowLayout? nextRow = itemIndex + 1 < layoutPage.Items.Count ? layoutPage.Items[itemIndex + 1] as DocxTableRowLayout : null;
-                RenderLayoutItem(item, previousRow, nextRow, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, layout.Pages.Count, cancellationToken, imageCache, ref imageIndex, navigation);
-            }
+            RenderLayoutItems(staticItems, graphics, pageImages, fontResources, markupContext, diagnosticSink,
+                pageNumber, layout.Pages.Count, cancellationToken, imageCache, ref imageIndex, navigation);
+            RenderLayoutItems(layoutPage.Items, graphics, pageImages, fontResources, markupContext, diagnosticSink,
+                pageNumber, layout.Pages.Count, cancellationToken, imageCache, ref imageIndex, navigation);
 
             RenderWordCompatibleRevisionBar(drawingPages, layoutPage, pageIndex, graphics, markupContext, cancellationToken);
             RenderMarkupBalloons(
@@ -2029,6 +2014,32 @@ internal sealed partial class DocxRenderer
         target = fallback;
         targetX = fallback.X;
         return true;
+    }
+
+    private static void RenderLayoutItems(
+        IReadOnlyList<DocxLayoutItem> items,
+        PdfGraphicsBuilder graphics,
+        List<PdfImageResource> pageImages,
+        DocxFontResources fontResources,
+        DocxMarkupContext markupContext,
+        Action<OoxPdfDiagnostic>? diagnosticSink,
+        DocxPageNumber pageNumber,
+        int pageCount,
+        CancellationToken cancellationToken,
+        Dictionary<string, PdfImageXObject?> imageCache,
+        ref int imageIndex,
+        PictureNavigation navigation,
+        RgbColor? background = null)
+    {
+        RenderParagraphBackgrounds(items, graphics, markupContext, cancellationToken);
+        for (int i = 0; i < items.Count; i++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            DocxTableRowLayout? previousRow = i > 0 ? items[i - 1] as DocxTableRowLayout : null;
+            DocxTableRowLayout? nextRow = i + 1 < items.Count ? items[i + 1] as DocxTableRowLayout : null;
+            RenderLayoutItem(items[i], previousRow, nextRow, graphics, pageImages, fontResources, markupContext,
+                diagnosticSink, pageNumber, pageCount, cancellationToken, imageCache, ref imageIndex, navigation, background);
+        }
     }
 
     private static void RenderLayoutItem(
