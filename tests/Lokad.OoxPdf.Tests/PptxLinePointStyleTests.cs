@@ -17,9 +17,15 @@ internal static class PptxLinePointStyleTests
         TestAssert.Equal("l", series.Operator);
         TestAssert.Equal(1, series.Cap);
         TestAssert.Equal(1, series.Join);
-        TestAssert.True(Math.Abs(series.Start.X - 163.45d) < 2d && Math.Abs(series.Start.Y - 367.07d) < 2d &&
-            Math.Abs(series.End.X - 287.15d) < 2d && Math.Abs(series.End.Y - 457d) < 2d,
-            "The stroke must join both series points inside the chart.");
+        PdfRectangle clip = series.Clip;
+        TestAssert.True(clip.X >= 72d && clip.Y >= 252d && clip.X + clip.Width <= 360.001d &&
+            clip.Y + clip.Height <= 468.001d && clip.Width > 0d && clip.Height > 0d,
+            "The stroke must be clipped to the plot inside the authored chart frame.");
+        TestAssert.True(Math.Abs(series.Start.X - (clip.X + clip.Width / 4d)) < .01d &&
+            Math.Abs(series.End.X - (clip.X + clip.Width * .75d)) < .01d &&
+            Math.Abs(series.Start.Y - (clip.Y + clip.Height / 2d)) < .01d &&
+            Math.Abs(series.End.Y - (clip.Y + clip.Height)) < .01d,
+            $"Expected the 2 and 4 values at the centers of the two category slots, found {series.Start} and {series.End} in {clip}.");
 
         const string decoy = """
             <p:sp><p:nvSpPr><p:cNvPr id="7" name="Decoy"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
@@ -47,7 +53,9 @@ internal static class PptxLinePointStyleTests
                       <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt></c:numLit></c:val>
                     </c:ser><c:axId val="10"/><c:axId val="20"/></c:lineChart>
                     <c:catAx><c:axId val="10"/><c:axPos val="b"/><c:crossAx val="20"/><c:tickLblPos val="none"/></c:catAx>
-                    <c:valAx><c:axId val="20"/><c:axPos val="l"/><c:crossAx val="10"/></c:valAx>
+                    <c:valAx><c:axId val="20"/><c:scaling><c:max val="4"/><c:min val="0"/></c:scaling>
+                      <c:axPos val="l"/><c:crossAx val="10"/>
+                    </c:valAx>
                   </c:plotArea></c:chart>
                 </c:chartSpace>
                 """, siblingShapes: sibling);
@@ -305,14 +313,14 @@ internal static class PptxLinePointStyleTests
             .Select(show => show.Text).ToArray();
     }
 
-    private readonly record struct StrokeState(RgbColor? Color, double Width, double Opacity, int Cap, int Join);
+    private readonly record struct StrokeState(RgbColor? Color, double Width, double Opacity, int Cap, int Join, PdfRectangle Clip);
 
     // These fixtures use segments over 40pt wide and shorter markers and keys.
     // Read the state of each painted plot segment from the generated PDF.
     private static IEnumerable<(RgbColor Color, double Width, string Operator, int Cap, int Join,
-        (double X, double Y) Start, (double X, double Y) End)> NativeSegments(PdfPage page)
+        (double X, double Y) Start, (double X, double Y) End, PdfRectangle Clip)> NativeSegments(PdfPage page)
     {
-        var stroke = new StrokeState(null, 1d, 1d, 0, 0);
+        var stroke = new StrokeState(null, 1d, 1d, 0, 0, new PdfRectangle(0d, 0d, page.Width, page.Height));
         var states = new Stack<StrokeState>();
         var edges = new List<(string Operator, (double X, double Y) Start, (double X, double Y) End)>();
         (double X, double Y) current = default;
@@ -338,6 +346,10 @@ internal static class PptxLinePointStyleTests
                 var resource = page.ExtGStates.Single(state => state.ResourceName == words[0][1..]);
                 stroke = stroke with { Opacity = resource.StrokeAlpha };
             }
+            else if (words.Length == 7 && words[4] == "re" && (words[5] is "W" or "W*") && op == "n")
+            {
+                stroke = stroke with { Clip = new PdfRectangle(N(0), N(1), N(2), N(3)) };
+            }
             else if (op == "m") current = (N(0), N(1));
             else if (op is "l" or "c")
             {
@@ -353,7 +365,7 @@ internal static class PptxLinePointStyleTests
                     AddEdge("l", (N(0), N(1)), (N(3), N(4)));
                 if (stroke.Opacity > 0d && stroke.Color is { } ink && (ink.Red != ink.Green || ink.Green != ink.Blue))
                     foreach (var edge in edges)
-                        yield return (ink, stroke.Width, edge.Operator, stroke.Cap, stroke.Join, edge.Start, edge.End);
+                        yield return (ink, stroke.Width, edge.Operator, stroke.Cap, stroke.Join, edge.Start, edge.End, stroke.Clip);
                 edges.Clear();
             }
             else if (op is "n" or "f" or "f*") edges.Clear();
