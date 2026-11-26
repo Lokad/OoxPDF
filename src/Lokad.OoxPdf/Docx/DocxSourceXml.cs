@@ -72,6 +72,19 @@ internal static class DocxSourceXml
         IsInEquation(element) && FindStoryRoot(element) is { } story &&
         GetPairedMoveOwners(story, token).MathSources.Contains(element);
 
+    public static bool IsPairedInlineMoveRange(XElement start, XElement end, DocxRevisionKind kind,
+        XElement? authoredStory, CancellationToken token)
+    {
+        var name = WordprocessingNamespace + (kind == DocxRevisionKind.MoveFrom ? "moveFrom" : "moveTo");
+        if (start.ElementsAfterSelf().FirstOrDefault() is not { } owner || owner.Name != name ||
+            !ReferenceEquals(owner.ElementsAfterSelf().FirstOrDefault(), end)) return false;
+
+        // The range and the inline owner describe the same payload. Verify
+        // the authored pair as well as this fragment's local boundaries.
+        return OoxXml.NormalizeDecimalId((string?)owner.Attribute(WordprocessingNamespace + "id")) is { } id &&
+            ReadPairedMoveOwnerIds(owner, authoredStory, token).Contains((name, id));
+    }
+
     private static bool IsInEquation(XElement element) => element.Ancestors(MathNamespace + "oMath").Any();
 
     private static PairedMoveOwners GetPairedMoveOwners(XElement story, CancellationToken token)

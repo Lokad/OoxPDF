@@ -184,6 +184,7 @@ internal static partial class DocxInlineCompositionTests
 
     public static void DocxPairedMathMovesKeepLinkedDrawingCompanions()
     {
+        foreach (bool packed in new[] { true, false })
         foreach (var (mode, count) in new[]
         {
             (OoxPdfDocxMarkupMode.Final, 1),
@@ -192,7 +193,14 @@ internal static partial class DocxInlineCompositionTests
         })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
-            var document = ReadMove(mode, paired: true, diagnostics);
+            var document = ReadMove(mode, packed, paired: true, diagnostics);
+            if (!packed)
+            {
+                var ranges = MoveRanges(document);
+                TestAssert.Equal(2, ranges.Length);
+                TestAssert.True(ranges.All(range => range.HasContentSource && range.IsOwnedByInlineMove),
+                    "The authored ranges remain inspectable and refer to their inline owners.");
+            }
             var page = PictureRangeRenderer(mode).RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().Single();
             string text = DocxPageFootnoteNumberingTests.DecodeText(page);
             foreach (string label in new[] { "314", "793", "QA", "\u03a9" })
@@ -217,12 +225,28 @@ internal static partial class DocxInlineCompositionTests
 
         const OoxPdfDocxMarkupMode review = OoxPdfDocxMarkupMode.AllMarkup;
         var unsupported = new List<OoxPdfDiagnostic>();
-        var unpaired = PictureRangeRenderer(review).RenderPagesAsync(ReadMove(review, paired: false, unsupported),
+        var unpaired = PictureRangeRenderer(review).RenderPagesAsync(ReadMove(review, packed: true, paired: false, unsupported),
             unsupported.Add, default).ToBlockingEnumerable().Single();
         TestAssert.Equal(0, ReadPictureBounds(unpaired).Count());
         TestAssert.True(unsupported.Any(item => item.Id == "DOCX_UNSUPPORTED_EQUATION"), "Unpaired move owners retain the fallback.");
 
-        static DocxDocument ReadMove(OoxPdfDocxMarkupMode mode, bool paired, List<OoxPdfDiagnostic> diagnostics) =>
+        foreach (bool paired in new[] { false, true })
+        {
+            unsupported.Clear();
+            var document = ReadMove(review, packed: false, paired, unsupported, hasOtherRangeContent: paired);
+            TestAssert.True(MoveRanges(document).Any(range => range.HasContentSource && !range.IsOwnedByInlineMove),
+                "An unpaired range or a range extending past its wrapper retains separate ownership.");
+            var page = PictureRangeRenderer(review).RenderPagesAsync(document, unsupported.Add, default).ToBlockingEnumerable().Single();
+            TestAssert.True(unsupported.Any(item => item.Id == "DOCX_UNSUPPORTED_EQUATION"),
+                "The separate range still uses the diagnosed fallback.");
+            TestAssert.Equal(2, ReadPictureBounds(page).Count());
+        }
+
+        static DocxRevisionRange[] MoveRanges(DocxDocument document) => document.BodyElements.OfType<DocxParagraphElement>()
+            .SelectMany(element => element.Paragraph.RevisionRanges).ToArray();
+
+        static DocxDocument ReadMove(OoxPdfDocxMarkupMode mode, bool packed, bool paired, List<OoxPdfDiagnostic> diagnostics,
+            bool hasOtherRangeContent = false) =>
             ReadMutation("CompositionProbes/math-display-image-body-between", mode, false, false, (xml, w, m) =>
             {
                 const string target = "PairedMoveDrawingTarget";
@@ -243,10 +267,21 @@ internal static partial class DocxInlineCompositionTests
                 if (!paired)
                     to[0].SetAttributeValue(w + "name", "UnpairedDestination");
 
-                XElement Frame(XElement[] move) => new(m + "oMath",
-                    new XElement(m + "r", new XElement(m + "t", "17")),
-                    new XElement(w + "hyperlink", new XAttribute(w + "anchor", target), move),
-                    new XElement(m + "r", new XElement(m + "t", "28")));
+                XElement[] Frame(XElement[] move)
+                {
+                    var link = new XElement(w + "hyperlink", new XAttribute(w + "anchor", target), move);
+                    if (packed)
+                        return [new XElement(m + "oMath", MathRun("17"), link, MathRun("28"))];
+
+                    if (hasOtherRangeContent)
+                        move[2].AddBeforeSelf(new XElement(w + "r", new XElement(w + "t", "adjacent")));
+                    var run = move[1].Element(m + "r")!;
+                    run.ReplaceWith(Equation("314"), new XElement(w + "r", run.Elements().Where(child => child.Name != m + "t")), Equation("793"));
+                    return [Equation("17"), link, Equation("28")];
+                }
+
+                XElement Equation(string text) => new(m + "oMath", MathRun(text));
+                XElement MathRun(string text) => new(m + "r", new XElement(m + "t", text));
 
                 paragraph.AddAfterSelf(new XElement(w + "p", Frame(to)));
                 display.ReplaceWith(Frame(from));

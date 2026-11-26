@@ -43,7 +43,7 @@ internal static class DocxInlineContent
         HasSupportedReferences(paragraph.InlineReferences, paragraph.Runs, token) &&
         (hasPageInputs ? HasSourceFieldResults(paragraph.FieldReferences, paragraph.Runs)
             : HasMaterializedFieldResults(paragraph.FieldReferences, paragraph.Runs)) &&
-        !HasContentRevisionRanges(paragraph);
+        !paragraph.RevisionRanges.Any(range => range.HasContentSource && !range.IsOwnedByInlineMove);
 
     public static bool HasContentRevisionRanges(DocxParagraph paragraph) =>
         paragraph.RevisionRanges.Any(range => range.HasContentSource);

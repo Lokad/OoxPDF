@@ -88,7 +88,8 @@ internal sealed partial class DocxReader
         bool startsInsideComputedField = isContinuationFragment && complexFieldStack.Any(field => field.PlaceholderEmitted);
         int sourceRunIndex = 0;
         long contentSourcePosition = 0;
-        HashSet<DocxRevisionInfo>? nonPrintingRangeMarkers = null;
+        HashSet<DocxRevisionInfo>? nonOwningRangeMarkers = null;
+        var authoredStory = paragraph.Annotation<DocxSourceXml.StoryOrigin>()?.Story;
         if (leadingInlineCommentBoundaries is not null)
         {
             foreach (XElement marker in leadingInlineCommentBoundaries)
@@ -100,8 +101,8 @@ internal sealed partial class DocxReader
         }
         // Normalize only after traversal: an endpoint can close a range outside
         // its immediate revision wrapper. Keep that wrapper's source indices stable.
-        if (nonPrintingRangeMarkers is not null)
-            paragraphRevisions.RemoveAll(nonPrintingRangeMarkers.Contains);
+        if (nonOwningRangeMarkers is not null)
+            paragraphRevisions.RemoveAll(nonOwningRangeMarkers.Contains);
 
         bool AddInlineContainerChild(XElement child, DocxRevisionInfo? revision)
             => AddSourceContainerChild(child, revision, removeDeletedText: false);
@@ -196,7 +197,7 @@ internal sealed partial class DocxReader
             else if (IsRevisionMarkerElement(child))
             {
                 AddRevisionMarker(child, paragraphRevisions, openRevisionRanges, revisionRanges,
-                    sourceRunIndex, runs, contentSourcePosition, ref nonPrintingRangeMarkers);
+                    sourceRunIndex, runs, contentSourcePosition, authoredStory, cancellationToken, ref nonOwningRangeMarkers);
                 if (!child.HasElements && string.IsNullOrWhiteSpace(child.Value)) return false;
             }
             return true;
@@ -484,7 +485,12 @@ internal sealed partial class DocxReader
             DocxRevisionInfo? equationRevision = revision;
             XElement? projectedLink = null;
             (int SourceRun, int TextRun, int InlineItem) linkStart = default;
-            var authoredStory = paragraph.Annotation<DocxSourceXml.StoryOrigin>()?.Story;
+            IReadOnlySet<(XName Name, string Id)>? moveOwners = null;
+            bool pairedOuterMove = revision is { Kind: DocxRevisionKind.MoveFrom or DocxRevisionKind.MoveTo, Id: not null } &&
+                container.Ancestors().FirstOrDefault(DocxSourceXml.IsRevisionContainer) is { } wrapper &&
+                wrapper.Name.LocalName == revision.SourceElement &&
+                (string?)wrapper.Attribute(WordprocessingNamespace + "id") == revision.Id &&
+                DocxSourceXml.IsAdmittedMathRevisionOwner(wrapper, container, authoredStory, ref moveOwners, cancellationToken);
             foreach (var source in EnumerateMathParagraphSources(container, revision, removeDeletedText, markupMode, cancellationToken, authoredStory))
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -533,11 +539,10 @@ internal sealed partial class DocxReader
                     if (DocxMathLayout.RemoveDeletedLiteralMathText(deletedEquation, cancellationToken) is not { } empty) continue;
                     content = empty;
                 }
-                // A projected move still belongs to its individual math runs.
-                // The paired inline owner must not become an outer equation revision.
+                // Verified moves retain their individual math run owners through placement.
                 equations.Add(new DocxEquation(
                     content,
-                    runs.Count, sourceRunIndex, display, alignment, source.ProjectsMathMove ? null : equationRevision)
+                    runs.Count, sourceRunIndex, display, alignment, pairedOuterMove || source.ProjectsMathMove ? null : equationRevision)
                 {
                     ParentFontSize = ResolveRunProperties(null, paragraphStyleId, null, styles, tableCellStyle?.Run, out _).FontSize
                         ?? DocxDefaults.UnstyledRunFontSizePoints,
@@ -1594,7 +1599,9 @@ internal sealed partial class DocxReader
         int sourceRunIndex,
         List<DocxTextRun> runs,
         long contentSourcePosition,
-        ref HashSet<DocxRevisionInfo>? nonPrintingRangeMarkers)
+        XElement? authoredStory,
+        CancellationToken cancellationToken,
+        ref HashSet<DocxRevisionInfo>? nonOwningRangeMarkers)
     {
         DocxRevisionInfo? markerRevision = CreateRevisionInfo(marker);
         AddRevision(paragraphRevisions, markerRevision);
@@ -1607,6 +1614,7 @@ internal sealed partial class DocxReader
         if (isStart)
         {
             openRevisionRanges.Add(new DocxRevisionRangeStart(
+                marker,
                 kind,
                 (string?)marker.Attribute(WordprocessingNamespace + "id"),
                 (string?)marker.Attribute(WordprocessingNamespace + "name"),
@@ -1634,9 +1642,12 @@ internal sealed partial class DocxReader
         }
 
         int textOffset = runs.Sum(run => run.Text.Length);
-        bool empty = startRange is { IsNonPrintingBoundary: true } && DocxSourceXml.IsNonPrintingRevisionRangeBoundary(marker) &&
-            startRange.SourceRunIndex == sourceRunIndex && startRange.TextOffset == textOffset &&
+        bool hasBoundaries = startRange is { IsNonPrintingBoundary: true } && DocxSourceXml.IsNonPrintingRevisionRangeBoundary(marker);
+        bool empty = hasBoundaries &&
+            startRange!.SourceRunIndex == sourceRunIndex && startRange.TextOffset == textOffset &&
             startRange.ContentSourcePosition == contentSourcePosition;
+        bool owned = hasBoundaries && !empty &&
+            DocxSourceXml.IsPairedInlineMoveRange(startRange!.Source, marker, kind, authoredStory, cancellationToken);
         revisionRanges.Add(new DocxRevisionRange(
             kind,
             id,
@@ -1646,10 +1657,10 @@ internal sealed partial class DocxReader
             startRange?.SourceRunIndex,
             startRange?.TextOffset,
             sourceRunIndex,
-            textOffset) { HasContentSource = !empty });
-        if (empty)
+            textOffset) { HasContentSource = !empty, IsOwnedByInlineMove = owned });
+        if (empty || owned)
         {
-            var markers = nonPrintingRangeMarkers ??= new(ReferenceEqualityComparer.Instance);
+            var markers = nonOwningRangeMarkers ??= new(ReferenceEqualityComparer.Instance);
             if (startRange!.MarkerRevision is { } startRevision) markers.Add(startRevision);
             if (markerRevision is not null) markers.Add(markerRevision);
         }

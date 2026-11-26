@@ -701,6 +701,7 @@ internal sealed partial class DocxReader
     }
 
     private sealed record DocxRevisionRangeStart(
+        XElement Source,
         DocxRevisionKind Kind,
         string? Id,
         string? Name,

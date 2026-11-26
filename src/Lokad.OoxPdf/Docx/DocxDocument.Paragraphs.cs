@@ -268,6 +268,9 @@ internal sealed record DocxRevisionRange(
     // Only the reader can prove a closed range contains no source payload.
     // Legacy/synthetic ranges remain conservative, even at equal text offsets.
     public bool HasContentSource { get; init; } = true;
+
+    // A closed, paired range can duplicate the ownership of one inline move.
+    public bool IsOwnedByInlineMove { get; init; }
 }
 
 internal sealed record DocxFieldReference(
