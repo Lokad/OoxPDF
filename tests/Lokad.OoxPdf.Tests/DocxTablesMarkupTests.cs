@@ -1271,9 +1271,7 @@ internal static class DocxTablesMarkupTests
             .RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable()
             .Single();
 
-        TestAssert.Contains("0 g", page.Content);
-        TestAssert.Contains("36 ", page.Content);
-        TestAssert.Contains(" 0.72 ", page.Content);
+        DocxPageMarkupTests.AssertWordCompatibleRevisionBar(page);
     }
 
     public static void DocxSimpleMarkupRendererDrawsTableRowChangeBars()

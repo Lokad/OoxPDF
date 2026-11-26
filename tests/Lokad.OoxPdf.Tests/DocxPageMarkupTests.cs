@@ -486,9 +486,7 @@ internal static class DocxPageMarkupTests
             .RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable()
             .Single();
 
-        TestAssert.Contains("0 g", page.Content);
-        TestAssert.Contains("36 ", page.Content);
-        TestAssert.Contains(" 0.72 ", page.Content);
+        AssertWordCompatibleRevisionBar(page);
         TestAssert.True(
             !page.Content.Contains(" 1.5 ", StringComparison.Ordinal),
             "Word-compatible all-markup should use a single page revision bar instead of legacy per-line change bars.");
@@ -532,9 +530,7 @@ internal static class DocxPageMarkupTests
             .RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable()
             .Single();
 
-        TestAssert.Contains("0 g", page.Content);
-        TestAssert.Contains("36 ", page.Content);
-        TestAssert.Contains(" 0.72 ", page.Content);
+        AssertWordCompatibleRevisionBar(page);
     }
 
     public static void DocxWordCompatibleAllMarkupPaintsPageRevisionBarForPlacedFootnoteRevisions()
@@ -589,9 +585,7 @@ internal static class DocxPageMarkupTests
             .RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable()
             .Single();
 
-        TestAssert.Contains("0 g", page.Content);
-        TestAssert.Contains("36 ", page.Content);
-        TestAssert.Contains(" 0.72 ", page.Content);
+        AssertWordCompatibleRevisionBar(page);
         TestAssert.True(
             !page.Content.Contains(" 1.5 ", StringComparison.Ordinal),
             "Word-compatible all-markup should keep placed footnote revisions on the shared page revision bar path.");
@@ -649,9 +643,7 @@ internal static class DocxPageMarkupTests
             .RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable()
             .Single();
 
-        TestAssert.Contains("0 g", page.Content);
-        TestAssert.Contains("36 ", page.Content);
-        TestAssert.Contains(" 0.72 ", page.Content);
+        AssertWordCompatibleRevisionBar(page);
         TestAssert.True(
             !page.Content.Contains(" 1.5 ", StringComparison.Ordinal),
             "Word-compatible all-markup should keep placed endnote revisions on the shared page revision bar path.");
@@ -696,9 +688,7 @@ internal static class DocxPageMarkupTests
             .RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable()
             .Single();
 
-        TestAssert.Contains("0 g", page.Content);
-        TestAssert.Contains("36 ", page.Content);
-        TestAssert.Contains(" 0.72 ", page.Content);
+        AssertWordCompatibleRevisionBar(page);
     }
 
     public static void DocxWordCompatibleAllMarkupPaintsPageRevisionBarForStaticFloatingTextBoxRunRevisions()
@@ -746,8 +736,16 @@ internal static class DocxPageMarkupTests
             .RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable()
             .Single();
 
-        TestAssert.Contains("0 g", page.Content);
-        TestAssert.Contains("36 ", page.Content);
-        TestAssert.Contains(" 0.72 ", page.Content);
+        AssertWordCompatibleRevisionBar(page);
+    }
+
+    internal static void AssertWordCompatibleRevisionBar(PdfPage page)
+    {
+        // These fixtures have a 72pt left margin and a single visible revised band.
+        MatchCollection bars = Regex.Matches(page.Content,
+            @"(?m)^0 g\r?\n36 -?\d+(?:\.\d+)? 0\.72 (?<height>\d+(?:\.\d+)?) re f\r?$");
+        TestAssert.Equal(1, bars.Count);
+        double height = double.Parse(bars[0].Groups["height"].Value, CultureInfo.InvariantCulture);
+        TestAssert.True(height > 0d, "The revision bar must have visible height.");
     }
 }
