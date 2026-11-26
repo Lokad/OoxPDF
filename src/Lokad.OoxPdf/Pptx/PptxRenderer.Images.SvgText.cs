@@ -238,8 +238,12 @@ internal sealed partial class PptxRenderer
             "letter-spacing" or "word-spacing" => reset ||
                 token.Equals("normal", StringComparison.OrdinalIgnoreCase) ||
                 IsZeroLength(token),
-            "font-variant" or "font-stretch" or "unicode-bidi" =>
+            "font-variant" or "unicode-bidi" =>
                 reset || token.Equals("normal", StringComparison.OrdinalIgnoreCase),
+            "font-stretch" => reset || token.Equals("normal", StringComparison.OrdinalIgnoreCase) ||
+                (token.EndsWith('%') &&
+                    double.TryParse(token[..^1], NumberStyles.Float & ~NumberStyles.AllowTrailingWhite,
+                        CultureInfo.InvariantCulture, out double widthPercent) && widthPercent == 100d),
             "text-decoration" or "clip-path" or "mask" or "filter" =>
                 reset || token.Equals("none", StringComparison.OrdinalIgnoreCase),
             "direction" => reset || token.Equals("ltr", StringComparison.OrdinalIgnoreCase),

@@ -613,6 +613,7 @@ internal static partial class SvgTextTests
         const string neutralSpacingNorth = """NO<tspan letter-spacing="0em">RT</tspan>H""";
         const string neutralSpacingSouth = """&#160;SO<tspan word-spacing="2px" style="word-spacing:0.0pt !important;word-spacing:3px">UT</tspan>H""";
         const string neutralTypographyNorth = """NO<tspan style="font-variant:normal;text-decoration:none"><tspan font-stretch="normal">RT</tspan></tspan>H""";
+        const string normalWidthSpan = """NO<tspan font-stretch="condensed" style="font-stretch:100% !important">RT</tspan>H""";
         const string neutralDirectionNorth = """NO<tspan direction="ltr" unicode-bidi="normal">RT</tspan>H""";
         const string neutralWritingSouth = """&#160;SO<tspan writing-mode="vertical-rl" style="writing-mode:horizontal-tb !important;writing-mode:vertical-lr">UT</tspan>H""";
         const string neutralBaselineNorth = """NO<tspan style="dominant-baseline:alphabetic;alignment-baseline:baseline"><tspan baseline-shift="0%">RT</tspan></tspan>H""";
@@ -631,6 +632,7 @@ internal static partial class SvgTextTests
                 Picture(restoredFillNorth, restoredOpacitySouth),
                 Picture(neutralSpacingNorth, neutralSpacingSouth, """style="letter-spacing:0mm;word-spacing:0em;baseline-shift:0pt" """),
                 Picture(neutralTypographyNorth, plainSouth),
+                Picture(normalWidthSpan, plainSouth, """font-stretch="100.0%" """),
                 Picture(neutralDirectionNorth, neutralWritingSouth), Picture(neutralBaselineNorth, plainSouth),
                 Picture(noStrokeNorth, noStrokeSouth), Picture(zeroWidthNorth, plainSouth, """stroke-width="0" """),
                 Picture(resetStrokeNorth, plainSouth, """stroke="red" """),
@@ -671,6 +673,8 @@ internal static partial class SvgTextTests
             ("""word-spacing="1px" """, ""),
             ("""font-variant="small-caps" """, ""),
             ("""font-stretch="condensed" """, ""),
+            ("""font-stretch="75%" """, ""),
+            ("""font-stretch="100 %" """, ""),
             ("""text-decoration="underline" """, ""),
             ("""direction="rtl" """, ""),
             ("""unicode-bidi="bidi-override" """, ""),
