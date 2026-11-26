@@ -2360,166 +2360,73 @@ internal static class DocxTablesTests
         TestAssert.DoesNotContain(" l S", pdf);
     }
 
-    public static void DocxSyntheticTableSharedVerticalBorderRendersOnceAndHonorsNil()
+    public static void DocxSyntheticTableSharedVerticalBorderRendersOnceAndHonorsNil() =>
+        AssertSharedTableBorderHonorsNil(vertical: true);
+
+    public static void DocxSyntheticTableSharedHorizontalBorderRendersOnceAndHonorsNil() =>
+        AssertSharedTableBorderHonorsNil(vertical: false);
+
+    private static void AssertSharedTableBorderHonorsNil(bool vertical)
     {
-        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        const string blue = "0 0 1 rg";
+        MatchCollection fills = Regex.Matches(Render(suppressed: false),
+            @"0 0 1 rg\s+([\d.]+) ([\d.]+) ([\d.]+) ([\d.]+) re f");
+        TestAssert.Equal(1, fills.Count);
+        Match fill = fills[0];
+        var bounds = new PdfRectangle(ReadCoordinate(1), ReadCoordinate(2), ReadCoordinate(3), ReadCoordinate(4));
+
+        // The table starts at (72, 720) in PDF coordinates. Its authored
+        // columns are 72pt wide and its rows are 24pt high.
+        if (vertical)
         {
-            ["[Content_Types].xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-                  <Default Extension="xml" ContentType="application/xml"/>
-                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
-                </Types>
-                """,
-            ["_rels/.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
-                </Relationships>
-                """,
-            ["word/document.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-                  <w:body>
-                    <w:tbl>
-                      <w:tblPr><w:tblBorders><w:insideV w:val="single" w:color="0000FF" w:sz="8"/></w:tblBorders></w:tblPr>
-                      <w:tblGrid><w:gridCol w:w="1440"/><w:gridCol w:w="1440"/></w:tblGrid>
-                      <w:tr>
-                        <w:tc><w:p/></w:tc>
-                        <w:tc><w:p/></w:tc>
-                      </w:tr>
-                    </w:tbl>
-                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
-                  </w:body>
-                </w:document>
-                """
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, output);
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Equal(1, pdf.Split("0 0 1 rg", StringSplitOptions.None).Length - 1);
-
-        string nilInput = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+            TestAssert.True(Math.Abs(bounds.X + bounds.Width / 2d - 144d) < .01d &&
+                bounds.Width is > 0d and < 2d && Math.Abs(bounds.Height - 24d) < .01d &&
+                Math.Abs(bounds.Y + bounds.Height - 720d) < .01d,
+                $"Expected a vertical strip along the shared column edge, got {bounds}.");
+        }
+        else
         {
-            ["[Content_Types].xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-                  <Default Extension="xml" ContentType="application/xml"/>
-                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
-                </Types>
-                """,
-            ["_rels/.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
-                </Relationships>
-                """,
-            ["word/document.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-                  <w:body>
-                    <w:tbl>
-                      <w:tblPr><w:tblBorders><w:insideV w:val="single" w:color="0000FF" w:sz="8"/></w:tblBorders></w:tblPr>
-                      <w:tblGrid><w:gridCol w:w="1440"/><w:gridCol w:w="1440"/></w:tblGrid>
-                      <w:tr>
-                        <w:tc><w:p/></w:tc>
-                        <w:tc><w:tcPr><w:tcBorders><w:left w:val="nil"/></w:tcBorders></w:tcPr><w:p/></w:tc>
-                      </w:tr>
-                    </w:tbl>
-                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
-                  </w:body>
-                </w:document>
-                """
-        });
-        string nilOutput = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+            TestAssert.True(Math.Abs(bounds.X - 72d) < .01d && Math.Abs(bounds.Width - 72d) < .01d &&
+                bounds.Height is > 0d and < 2d && Math.Abs(bounds.Y + bounds.Height / 2d - 696d) < 1d,
+                $"Expected a horizontal strip across the shared row edge, got {bounds}.");
+        }
 
-        OoxPdfConverter.Convert(nilInput, nilOutput);
+        TestAssert.DoesNotContain(blue, Render(suppressed: true));
 
-        string nilPdf = File.ReadAllText(nilOutput, Encoding.ASCII);
-        TestAssert.DoesNotContain("0 0 1 rg", nilPdf);
-    }
+        double ReadCoordinate(int group) => double.Parse(fill.Groups[group].Value, CultureInfo.InvariantCulture);
 
-    public static void DocxSyntheticTableSharedHorizontalBorderRendersOnceAndHonorsNil()
-    {
-        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        string Render(bool suppressed)
         {
-            ["[Content_Types].xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-                  <Default Extension="xml" ContentType="application/xml"/>
-                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
-                </Types>
-                """,
-            ["_rels/.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
-                </Relationships>
-                """,
-            ["word/document.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-                  <w:body>
-                    <w:tbl>
-                      <w:tblPr><w:tblBorders><w:insideH w:val="single" w:color="0000FF" w:sz="8"/></w:tblBorders></w:tblPr>
-                      <w:tblGrid><w:gridCol w:w="1440"/></w:tblGrid>
-                      <w:tr><w:tc><w:p/></w:tc></w:tr>
-                      <w:tr><w:tc><w:p/></w:tc></w:tr>
-                    </w:tbl>
-                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
-                  </w:body>
-                </w:document>
-                """
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, output);
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Equal(1, pdf.Split("0 0 1 rg", StringSplitOptions.None).Length - 1);
-
-        string nilInput = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-                  <Default Extension="xml" ContentType="application/xml"/>
-                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
-                </Types>
-                """,
-            ["_rels/.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
-                </Relationships>
-                """,
-            ["word/document.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-                  <w:body>
-                    <w:tbl>
-                      <w:tblPr><w:tblBorders><w:insideH w:val="single" w:color="0000FF" w:sz="8"/></w:tblBorders></w:tblPr>
-                      <w:tblGrid><w:gridCol w:w="1440"/></w:tblGrid>
-                      <w:tr><w:tc><w:p/></w:tc></w:tr>
-                      <w:tr><w:tc><w:tcPr><w:tcBorders><w:top w:val="nil"/></w:tcBorders></w:tcPr><w:p/></w:tc></w:tr>
-                    </w:tbl>
-                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
-                  </w:body>
-                </w:document>
-                """
-        });
-        string nilOutput = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(nilInput, nilOutput);
-
-        string nilPdf = File.ReadAllText(nilOutput, Encoding.ASCII);
-        TestAssert.DoesNotContain("0 0 1 rg", nilPdf);
+            string boundary = vertical ? "insideV" : "insideH";
+            string cellEdge = vertical ? "left" : "top";
+            string grid = vertical ? """<w:gridCol w:w="1440"/><w:gridCol w:w="1440"/>""" : """<w:gridCol w:w="1440"/>""";
+            const string firstCell = "<w:tc><w:p/></w:tc>";
+            string cellProperties = suppressed ? $"""<w:tcPr><w:tcBorders><w:{cellEdge} w:val="nil"/></w:tcBorders></w:tcPr>""" : "";
+            string secondCell = $"<w:tc>{cellProperties}<w:p/></w:tc>";
+            const string row = """<w:tr><w:trPr><w:trHeight w:val="480" w:hRule="exact"/></w:trPr>""";
+            string rows = vertical ? $"{row}{firstCell}{secondCell}</w:tr>" : $"{row}{firstCell}</w:tr>{row}{secondCell}</w:tr>";
+            string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+            {
+                ["[Content_Types].xml"] = TestFixtures.DocxContentTypes,
+                ["_rels/.rels"] = TestFixtures.DocxPackageRelationships,
+                ["word/document.xml"] = $"""
+                    <?xml version="1.0" encoding="UTF-8"?>
+                    <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                      <w:body>
+                        <w:tbl>
+                          <w:tblPr><w:tblBorders><w:{boundary} w:val="single" w:color="0000FF" w:sz="8"/></w:tblBorders></w:tblPr>
+                          <w:tblGrid>{grid}</w:tblGrid>
+                          {rows}
+                        </w:tbl>
+                        <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                      </w:body>
+                    </w:document>
+                    """
+            });
+            string output = TestFixtures.NewTemporaryPath(".pdf");
+            OoxPdfConverter.Convert(input, output);
+            return File.ReadAllText(output, Encoding.ASCII);
+        }
     }
 
     public static void DocxSyntheticTableSharedHorizontalBorderUsesOverlappingCells()
