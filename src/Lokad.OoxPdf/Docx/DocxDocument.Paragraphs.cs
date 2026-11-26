@@ -254,6 +254,8 @@ internal sealed class DocxSplitCommentRanges
     }
 }
 
+internal enum DocxInlineMoveOwnership { Unresolved, Complete, Partial }
+
 internal sealed record DocxRevisionRange(
     DocxRevisionKind Kind,
     string? Id,
@@ -269,8 +271,8 @@ internal sealed record DocxRevisionRange(
     // Legacy/synthetic ranges remain conservative, even at equal text offsets.
     public bool HasContentSource { get; init; } = true;
 
-    // A closed, paired range can duplicate the ownership of its inline moves.
-    public bool IsOwnedByInlineMove { get; init; }
+    // A closed, paired range can duplicate some or all of its explicit owners.
+    public DocxInlineMoveOwnership InlineMoveOwnership { get; init; }
 }
 
 internal sealed record DocxFieldReference(

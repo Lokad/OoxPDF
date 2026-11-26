@@ -273,6 +273,7 @@ internal static class DocxMathParagraphPolicy
             {
                 case DocxInlineText { Length: 0 }:
                 case DocxInlineTab tab when tab.Run.EffectiveProperties.Hidden:
+                case DocxInlineEquation { Equation.IsInsidePartialMoveRange: true }:
                     break;
                 case DocxInlineEquation math:
                     row.Add(math.Equation);
@@ -369,7 +370,7 @@ internal static class DocxMathParagraphPolicy
     public static DocxMathDisplayAlignment? ResolveParagraphDisplayAlignment(DocxParagraph paragraph, CancellationToken token)
     {
         // Known source values remain required even when a row is measured inline.
-        var fallback = ResolveDisplayAlignment(paragraph.Equations, token);
+        var fallback = ResolveDisplayAlignment(GetEquationsOutsidePartialMoves(paragraph), token);
         if (fallback is null || paragraph.InlineContent is not { } items) return fallback;
         // The first effective display row owns paragraph justification. Inline
         // rows retain their source properties without governing later display.
@@ -404,6 +405,7 @@ internal static class DocxMathParagraphPolicy
         {
             token.ThrowIfCancellationRequested();
             if (item is DocxInlineEquation math && displayRows.Contains(math.Equation) || item is DocxInlineBreak ||
+                item is DocxInlineEquation { Equation.IsInsidePartialMoveRange: true } ||
                 item is DocxInlineText text && (text.Run.EffectiveProperties.Hidden || text.Run.Text.AsSpan(text.Start, text.Length).IsWhiteSpace())) continue;
             return false;
         }
@@ -423,26 +425,32 @@ internal static class DocxMathParagraphPolicy
             !(DocxPlainBodyFrame.HasContentDrivenLineFlow(paragraph) || DocxPlainBodyFrame.HasFixedLineFlow(paragraph))) return [];
         // Source rows own resolved style: Word measures explicit formulas inline
         // beside visible text/pictures; math-only rows retain display measurement/alignment.
-        var displayRows = paragraph.Equations.Any(equation => equation.Display)
+        var equations = GetEquationsOutsidePartialMoves(paragraph);
+        var displayRows = equations.Any(equation => equation.Display)
             ? GetDisplaySourceEquations(paragraph, token) : null;
         var mixedRows = displayRows is not null ? GetMixedSourceEquations(paragraph, token) : null;
         if (displayRows is not null && ResolveParagraphDisplayAlignment(paragraph, token) is null) return [];
         if (!HasSupportedOrderedAlignment(paragraph) &&
             (displayRows is null || !DisplayRowsOwnParagraphAlignment(paragraph, displayRows, token))) return [];
-        foreach (var equation in paragraph.Equations)
+        foreach (var equation in equations)
         {
             token.ThrowIfCancellationRequested();
             if (equation.Display && (displayRows is null || !displayRows.Contains(equation)) &&
                 (mixedRows is null || !mixedRows.Contains(equation))) return [];
         }
-        return paragraph.Equations;
+        return equations;
     }
 
     private static bool HasSupportedOwner(DocxParagraph paragraph) =>
-        HasSupportedSourceOwner(paragraph) && paragraph.Equations.Count == 1 &&
+        paragraph.Equations.Count == 1 && DocxInlineContent.HasSupportedSourceOwner(paragraph) &&
         paragraph.Images.Count == 0 && paragraph.InlineTextBoxes.Count == 0;
 
-    private static bool HasSupportedSourceOwner(DocxParagraph paragraph, bool hasPageInputs = false,
-        CancellationToken token = default) =>
-        paragraph.Equations.Count != 0 && DocxInlineContent.HasSupportedSourceOwner(paragraph, hasPageInputs, token);
+    private static bool HasSupportedSourceOwner(DocxParagraph paragraph, bool hasPageInputs, CancellationToken token) =>
+        paragraph.Equations.Count != 0 &&
+        DocxInlineContent.HasSupportedSourceOwner(paragraph, hasPageInputs, token, allowPartialMoveRanges: true);
+
+    private static IReadOnlyList<DocxEquation> GetEquationsOutsidePartialMoves(DocxParagraph paragraph) =>
+        paragraph.RevisionRanges.Any(range => range.InlineMoveOwnership == DocxInlineMoveOwnership.Partial)
+            ? paragraph.Equations.Where(equation => !equation.IsInsidePartialMoveRange).ToArray()
+            : paragraph.Equations;
 }

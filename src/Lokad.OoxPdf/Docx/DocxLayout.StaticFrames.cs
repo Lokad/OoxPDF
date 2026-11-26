@@ -366,7 +366,7 @@ internal sealed partial class DocxLayoutEngine
         if (paragraph.Equations.Count != 0)
             return (TryGetStandaloneMath(paragraph, width, 1d, mathEquations, out _) ||
                 mathEquations is not null && paragraph.InlineContent is not null &&
-                DocxMathParagraphPolicy.GetPreparationEquations(paragraph, hasPageInputs: true).Count == paragraph.Equations.Count &&
+                DocxMathParagraphPolicy.GetPreparationEquations(paragraph, hasPageInputs: true, token).Count != 0 &&
                 // Unavailable math keeps its diagnosed fallback; the remaining
                 // ordered source items still own a static frame.
                 paragraph.Equations.All(equation => !mathEquations.TryGetValue(equation, out var math) || math.Box.AdvanceWidth <= width) &&

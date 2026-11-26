@@ -199,7 +199,7 @@ internal static partial class DocxInlineCompositionTests
             {
                 var ranges = MoveRanges(document);
                 TestAssert.Equal(2, ranges.Length);
-                TestAssert.True(ranges.All(range => range.HasContentSource && range.IsOwnedByInlineMove),
+                TestAssert.True(ranges.All(range => range.HasContentSource && range.InlineMoveOwnership == DocxInlineMoveOwnership.Complete),
                     "The authored ranges remain inspectable and refer to their inline owners.");
             }
             if (annotated)
@@ -244,16 +244,52 @@ internal static partial class DocxInlineCompositionTests
         TestAssert.Equal(0, ReadPictureBounds(unpaired).Count());
         TestAssert.True(unsupported.Any(item => item.Id == "DOCX_UNSUPPORTED_EQUATION"), "Unpaired move owners retain the fallback.");
 
-        foreach (bool paired in new[] { false, true })
+        unsupported.Clear();
+        var unresolved = ReadMove(review, packed: false, paired: false, unsupported);
+        TestAssert.True(MoveRanges(unresolved).Any(range =>
+            range.HasContentSource && range.InlineMoveOwnership == DocxInlineMoveOwnership.Unresolved),
+            "The unmatched source remains unresolved.");
+        var unresolvedPage = PictureRangeRenderer(review).RenderPagesAsync(unresolved, unsupported.Add, default).ToBlockingEnumerable().Single();
+        TestAssert.True(unsupported.Any(item => item.Id == "DOCX_UNSUPPORTED_EQUATION"),
+            "Unmatched ranges retain the diagnosed fallback.");
+        TestAssert.Equal(2, ReadPictureBounds(unresolvedPage).Count());
+
+        foreach (var (mode, count) in new[]
+        {
+            (OoxPdfDocxMarkupMode.Final, 1),
+            (OoxPdfDocxMarkupMode.Original, 1),
+            (OoxPdfDocxMarkupMode.AllMarkup, 2)
+        })
         {
             unsupported.Clear();
-            var document = ReadMove(review, packed: false, paired, unsupported, hasOtherRangeContent: paired);
-            TestAssert.True(MoveRanges(document).Any(range => range.HasContentSource && !range.IsOwnedByInlineMove),
-                "An unpaired range or a range extending past its wrapper retains separate ownership.");
-            var page = PictureRangeRenderer(review).RenderPagesAsync(document, unsupported.Add, default).ToBlockingEnumerable().Single();
+            var document = ReadMove(mode, packed: false, paired: true, unsupported, hasOtherRangeContent: true);
+            var ranges = MoveRanges(document);
+            TestAssert.Equal(2, ranges.Length);
+            TestAssert.True(ranges.All(range =>
+                range.HasContentSource && range.InlineMoveOwnership == DocxInlineMoveOwnership.Partial),
+                "The two ranges retain their partial ownership in every view.");
+            var page = PictureRangeRenderer(mode).RenderPagesAsync(document, unsupported.Add, default).ToBlockingEnumerable().Single();
+            string text = DocxPageFootnoteNumberingTests.DecodeText(page);
+            foreach (string neighbor in new[] { "17", "28", "adjacent" })
+                TestAssert.Equal(2, text.Split(neighbor, StringSplitOptions.None).Length - 1);
+            TestAssert.DoesNotContain("314", text);
+            TestAssert.DoesNotContain("793", text);
             TestAssert.True(unsupported.Any(item => item.Id == "DOCX_UNSUPPORTED_EQUATION"),
-                "The separate range still uses the diagnosed fallback.");
-            TestAssert.Equal(2, ReadPictureBounds(page).Count());
+                "Mathematics inside the partial range still uses the diagnosed fallback.");
+            var pictures = ReadPictureBounds(page).ToArray();
+            TestAssert.Equal(count, pictures.Length);
+            TestAssert.Equal(2, page.Annotations.Count);
+            TestAssert.True(page.Annotations.All(link => link.Destination is { PageIndex: 0 }),
+                "Both link spans still target the heading page.");
+            foreach (var picture in pictures)
+            {
+                var bounds = picture.Bounds;
+                TestAssert.True(page.Annotations.Any(link =>
+                    bounds.X >= link.X - .01d && bounds.Y >= link.Y - .01d &&
+                    bounds.X + bounds.Width <= link.X + link.Width + .01d &&
+                    bounds.Y + bounds.Height <= link.Y + link.Height + .01d),
+                    "Each selected picture retains its link to the heading.");
+            }
         }
 
         static DocxRevisionRange[] MoveRanges(DocxDocument document) => document.BodyElements.OfType<DocxParagraphElement>()

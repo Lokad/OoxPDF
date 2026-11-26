@@ -303,10 +303,11 @@ internal sealed partial class DocxLayoutEngine
         if (paragraph.Equations.Count != 0)
         {
             if (items is null || equations is null && !allowStaticFallback ||
-                allowStaticFallback && !supportedOrdinaryFlow ||
-                DocxMathParagraphPolicy.GetPreparationEquations(paragraph, hasActualFieldInputs, token).Count != paragraph.Equations.Count) return false;
+                allowStaticFallback && !supportedOrdinaryFlow) return false;
+            var sourceEquations = DocxMathParagraphPolicy.GetPreparationEquations(paragraph, hasActualFieldInputs, token);
+            if (sourceEquations.Count == 0) return false;
             if (!retainPreparedContent && equations is not null)
-                foreach (var equation in paragraph.Equations)
+                foreach (var equation in sourceEquations)
                 {
                     token.ThrowIfCancellationRequested();
                     if (equations.ContainsKey(equation)) { retainPreparedContent = true; break; }

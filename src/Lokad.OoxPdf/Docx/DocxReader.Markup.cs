@@ -708,7 +708,8 @@ internal sealed partial class DocxReader
         string? Author,
         string? Date,
         int SourceRunIndex,
-        int TextOffset)
+        int TextOffset,
+        int EquationIndex)
     {
         public long ContentSourcePosition { get; init; }
         public bool IsNonPrintingBoundary { get; init; }

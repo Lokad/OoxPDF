@@ -76,24 +76,27 @@ internal static class DocxSourceXml
         IsInEquation(element) && FindStoryRoot(element) is { } story &&
         GetPairedMoveOwners(story, token).MathSources.Contains(element);
 
-    public static bool IsPairedInlineMoveRange(XElement start, XElement end, DocxRevisionKind kind,
+    public static DocxInlineMoveOwnership GetInlineMoveOwnership(XElement start, XElement end, DocxRevisionKind kind,
         XElement? authoredStory, CancellationToken token)
     {
         var name = WordprocessingNamespace + (kind == DocxRevisionKind.MoveFrom ? "moveFrom" : "moveTo");
-        if (!ReferenceEquals(start.Parent, end.Parent)) return false;
+        if (!ReferenceEquals(start.Parent, end.Parent)) return DocxInlineMoveOwnership.Unresolved;
         IReadOnlySet<(XName Name, string Id)>? pairedOwners = null;
-        bool hasOwner = false;
-        // The authored pair must own every payload inside the local
-        // boundaries. Editing and annotation markers keep their own anchors.
+        bool hasOwner = false, hasOtherContent = false;
+        // A partial pair establishes local boundaries and explicit source
+        // owners. Equations within it retain the diagnosed fallback.
         foreach (var child in start.ElementsAfterSelf())
         {
             token.ThrowIfCancellationRequested();
-            if (ReferenceEquals(child, end)) return hasOwner;
+            if (ReferenceEquals(child, end))
+                return !hasOwner ? DocxInlineMoveOwnership.Unresolved :
+                    hasOtherContent ? DocxInlineMoveOwnership.Partial : DocxInlineMoveOwnership.Complete;
             if (IsNonPrintingMarker(child) || IsBookmarkMarker(child) || IsCommentBoundary(child)) continue;
-            if (child.Name != name || !IsPairedMoveOwner(child, start, authoredStory, ref pairedOwners, token)) return false;
-            hasOwner = true;
+            if (child.Name == name && IsPairedMoveOwner(child, start, authoredStory, ref pairedOwners, token))
+                hasOwner = true;
+            else hasOtherContent = true;
         }
-        return false;
+        return DocxInlineMoveOwnership.Unresolved;
     }
 
     private static bool IsInEquation(XElement element) => element.Ancestors(MathNamespace + "oMath").Any();

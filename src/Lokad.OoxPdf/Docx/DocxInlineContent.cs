@@ -18,8 +18,8 @@ internal static class DocxInlineContent
     // Source ownership is independent of whether a paragraph contains math.
     // Containers retain their own supported measurement and line-flow rules.
     public static bool HasSupportedSourceOwner(DocxParagraph paragraph, bool hasPageInputs = false,
-        CancellationToken token = default) =>
-        HasSupportedSourceMetadata(paragraph, hasPageInputs, token) &&
+        CancellationToken token = default, bool allowPartialMoveRanges = false) =>
+        HasSupportedSourceMetadata(paragraph, hasPageInputs, token, allowPartialMoveRanges) &&
         (paragraph.InlineTextBoxes.Count == 0 || HasOwnedInlineBoxes(paragraph, token));
 
     private static bool HasOwnedInlineBoxes(DocxParagraph paragraph, CancellationToken token)
@@ -38,12 +38,14 @@ internal static class DocxInlineContent
 
     // Source metadata validation is independent of measured inline-frame support.
     public static bool HasSupportedSourceMetadata(DocxParagraph paragraph, bool hasPageInputs = false,
-        CancellationToken token = default) =>
+        CancellationToken token = default, bool allowPartialMoveRanges = false) =>
         HasSupportedParagraphRevisionOwners(paragraph, token) &&
         HasSupportedReferences(paragraph.InlineReferences, paragraph.Runs, token) &&
         (hasPageInputs ? HasSourceFieldResults(paragraph.FieldReferences, paragraph.Runs)
             : HasMaterializedFieldResults(paragraph.FieldReferences, paragraph.Runs)) &&
-        !paragraph.RevisionRanges.Any(range => range.HasContentSource && !range.IsOwnedByInlineMove);
+        !paragraph.RevisionRanges.Any(range => range.HasContentSource &&
+            range.InlineMoveOwnership != DocxInlineMoveOwnership.Complete &&
+            !(allowPartialMoveRanges && range.InlineMoveOwnership == DocxInlineMoveOwnership.Partial));
 
     public static bool HasContentRevisionRanges(DocxParagraph paragraph) =>
         paragraph.RevisionRanges.Any(range => range.HasContentSource);

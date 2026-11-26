@@ -197,8 +197,23 @@ internal sealed partial class DocxReader
             }
             else if (IsRevisionMarkerElement(child))
             {
-                AddRevisionMarker(child, paragraphRevisions, openRevisionRanges, revisionRanges,
-                    sourceRunIndex, runs, contentSourcePosition, authoredStory, cancellationToken, ref nonOwningRangeMarkers);
+                int? firstExcluded = AddRevisionMarker(child, paragraphRevisions, openRevisionRanges, revisionRanges,
+                    sourceRunIndex, runs, equations.Count, contentSourcePosition, authoredStory, cancellationToken,
+                    ref nonOwningRangeMarkers);
+                if (firstExcluded is int first && first < equations.Count)
+                {
+                    // Both collections publish the same equation objects. Use
+                    // their insertion order because formulas can share run indices.
+                    int equationIndex = equations.Count - 1;
+                    for (int itemIndex = inlineItems!.Count - 1; equationIndex >= first; itemIndex--)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        if (inlineItems[itemIndex] is not DocxInlineEquation math) continue;
+                        var excluded = math.Equation with { IsInsidePartialMoveRange = true };
+                        equations[equationIndex--] = excluded;
+                        inlineItems[itemIndex] = new DocxInlineEquation(excluded);
+                    }
+                }
                 if (!child.HasElements && string.IsNullOrWhiteSpace(child.Value)) return false;
             }
             return true;
@@ -1590,13 +1605,14 @@ internal sealed partial class DocxReader
         });
     }
 
-    private static void AddRevisionMarker(
+    private static int? AddRevisionMarker(
         XElement marker,
         List<DocxRevisionInfo> paragraphRevisions,
         List<DocxRevisionRangeStart> openRevisionRanges,
         List<DocxRevisionRange> revisionRanges,
         int sourceRunIndex,
         List<DocxTextRun> runs,
+        int equationIndex,
         long contentSourcePosition,
         XElement? authoredStory,
         CancellationToken cancellationToken,
@@ -1607,7 +1623,7 @@ internal sealed partial class DocxReader
         if (!DocxSourceXml.TryResolveRevisionRangeMarker(marker, out DocxRevisionKind? resolvedKind, out bool isStart) ||
             resolvedKind is not { } kind)
         {
-            return;
+            return null;
         }
 
         if (isStart)
@@ -1620,13 +1636,14 @@ internal sealed partial class DocxReader
                 (string?)marker.Attribute(WordprocessingNamespace + "author"),
                 (string?)marker.Attribute(WordprocessingNamespace + "date"),
                 sourceRunIndex,
-                runs.Sum(run => run.Text.Length))
+                runs.Sum(run => run.Text.Length),
+                equationIndex)
             {
                 ContentSourcePosition = contentSourcePosition,
                 IsNonPrintingBoundary = DocxSourceXml.IsNonPrintingRevisionRangeBoundary(marker),
                 MarkerRevision = markerRevision
             });
-            return;
+            return null;
         }
 
         string? id = (string?)marker.Attribute(WordprocessingNamespace + "id");
@@ -1645,8 +1662,9 @@ internal sealed partial class DocxReader
         bool empty = hasBoundaries &&
             startRange!.SourceRunIndex == sourceRunIndex && startRange.TextOffset == textOffset &&
             startRange.ContentSourcePosition == contentSourcePosition;
-        bool owned = hasBoundaries && !empty &&
-            DocxSourceXml.IsPairedInlineMoveRange(startRange!.Source, marker, kind, authoredStory, cancellationToken);
+        DocxInlineMoveOwnership ownership = hasBoundaries && !empty
+            ? DocxSourceXml.GetInlineMoveOwnership(startRange!.Source, marker, kind, authoredStory, cancellationToken)
+            : DocxInlineMoveOwnership.Unresolved;
         revisionRanges.Add(new DocxRevisionRange(
             kind,
             id,
@@ -1656,13 +1674,14 @@ internal sealed partial class DocxReader
             startRange?.SourceRunIndex,
             startRange?.TextOffset,
             sourceRunIndex,
-            textOffset) { HasContentSource = !empty, IsOwnedByInlineMove = owned });
-        if (empty || owned)
+            textOffset) { HasContentSource = !empty, InlineMoveOwnership = ownership });
+        if (empty || ownership != DocxInlineMoveOwnership.Unresolved)
         {
             var markers = nonOwningRangeMarkers ??= new(ReferenceEqualityComparer.Instance);
             if (startRange!.MarkerRevision is { } startRevision) markers.Add(startRevision);
             if (markerRevision is not null) markers.Add(markerRevision);
         }
+        return ownership == DocxInlineMoveOwnership.Partial ? startRange!.EquationIndex : null;
     }
 
     private static void AddFieldReference(
