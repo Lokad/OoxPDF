@@ -814,7 +814,7 @@ internal static partial class SvgTextTests
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
             string paint = Paint(explicitLength, diagnostics).ToString();
-            TestAssert.Equal(0, LabelPaths(paint));
+            TestAssert.DoesNotContain(LabelColor, paint);
             TestAssert.Contains("0 1 0 rg", paint);
             var warning = diagnostics.Single();
             TestAssert.Equal("SVG_UNSUPPORTED_CONTENT", warning.Id);
