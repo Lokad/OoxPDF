@@ -7,8 +7,8 @@ namespace Lokad.OoxPdf.Docx;
 
 internal static partial class DocxMathParser
 {
-    private static DocxMathFraction ReadFraction(XElement element, DocxMathRow numerator, DocxMathRow denominator,
-        Func<XElement, string, DocxTextRun> readRun, CancellationToken token)
+    private static DocxMathNode ReadFraction(XElement element, DocxMathRow numerator, DocxMathRow denominator,
+        Func<XElement, string, DocxTextRun> readRun, DocxHyperlinkSpan? hyperlink, CancellationToken token)
     {
         bool valid = ReadPropertyOwner(element, "fPr", out XElement? owner, out XElement[] children);
         foreach (XElement property in children)
@@ -19,8 +19,16 @@ internal static partial class DocxMathParser
         }
         XElement? control = owner?.Element(MathNamespace + "ctrlPr");
         DocxTextRun text = readRun(control ?? element, string.Empty);
-        return new(numerator, denominator, PropertyValue(element.Element(MathNamespace + "fPr"), "type"))
-        { HasUnsupportedProperties = !valid, ControlText = text, ControlFontFamily = ControlFontFamily(control, text),
+        string? family = ControlFontFamily(control, text);
+        string? type = PropertyValue(owner, "type");
+        if (valid && type == "lin" && numerator.Children.Count != 0 && denominator.Children.Count != 0)
+        {
+            var separator = new DocxMathRun(text with { Text = "/" }, null, null)
+                { ExplicitFontFamily = family, Hyperlink = hyperlink };
+            return new DocxMathRow([numerator, separator, denominator]);
+        }
+        return new DocxMathFraction(numerator, denominator, type)
+        { HasUnsupportedProperties = !valid, ControlText = text, ControlFontFamily = family,
             ControlFontSize = control?.Element(WordprocessingNamespace + "rPr") is { } properties &&
                 (properties.Element(WordprocessingNamespace + "sz") is not null ||
                  properties.Element(WordprocessingNamespace + "rStyle") is not null &&

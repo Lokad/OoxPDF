@@ -118,7 +118,8 @@ internal static partial class DocxMathParser
             else if (name == "f" && Role(element, "num") is { } numerator && Role(element, "den") is { } denominator &&
                 HasOnlyRoles(element, "num", "den"))
             {
-                node = ReadFraction(element, numerator, denominator, readRun, cancellationToken);
+                node = ReadFraction(element, numerator, denominator, readRun,
+                    item.IncludeAnnotations && included ? item.Hyperlink : null, cancellationToken);
             }
             else if (name is "sSub" or "sSup" or "sSubSup" && Role(element, "e") is { } basis &&
                 (name == "sSup" || Role(element, "sub") is not null) &&

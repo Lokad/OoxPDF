@@ -39,8 +39,9 @@ Symbol runs retain printable BMP character codes and their declared font.
 Malformed or nonprinting symbol payloads use a diagnosed replacement character;
 font/glyph availability still controls whether the authored symbol can be painted.
 
-Native equations support bounded common OMML: runs, fractions, scripts, roots,
-accents/bars, delimiters, n-ary operators and supported arrays/matrices. Structural
+Native equations support bounded common OMML: runs, bar, skewed and linear
+fractions, no-bar stacks, scripts, roots, delimiters, n-ary operators and
+supported arrays/matrices. Standalone accents and bars are unsupported. Structural
 pieces can use PDF ActualText. Literal math operators keep their symbols and use
 ordinary spacing. Visible phantoms with transparent operator spacing and unchanged
 dimensions use the ordinary math layout. Supported equations also render in placed floating
