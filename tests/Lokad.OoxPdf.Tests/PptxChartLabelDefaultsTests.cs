@@ -30,7 +30,7 @@ internal static partial class PptxChartLabelDefaultsTests
         TestAssert.Equal("W1, 1.5", Format(categoryAndValue, new Dictionary<int, string> { [0] = "W1" }));
 
         static string Format(PptxSceneChart chart, IReadOnlyDictionary<int, string> categories) =>
-            (string)Invoke("FormatCartesianDataLabel", 1.5, 0, 0, default(PptxRenderer.ChartIndexedNumberPoint), null,
+            (string)Invoke("FormatCartesianDataLabel", 1.5, 0, 0, new Dictionary<int, PptxRenderer.ChartIndexedNumberPoint>(),
                 null, Read(chart), categories, Array.Empty<string>());
     }
 
