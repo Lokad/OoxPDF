@@ -816,9 +816,9 @@ internal static partial class SvgTextTests
             string paint = Paint(explicitLength, diagnostics).ToString();
             TestAssert.DoesNotContain(LabelColor, paint);
             TestAssert.Contains("0 1 0 rg", paint);
-            var warning = diagnostics.Single();
+            var warning = diagnostics.Single(d => d.Message == "SVG picture omits 1 unsupported text element.");
             TestAssert.Equal("SVG_UNSUPPORTED_CONTENT", warning.Id);
-            TestAssert.Equal("SVG picture omits 1 unsupported text element.", warning.Message);
+            TestAssert.Equal("Partial", warning.Fallback);
         }
     }
 
