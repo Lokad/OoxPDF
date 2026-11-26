@@ -19,7 +19,8 @@ internal static class OoxmlStrictDocxTests
               <w:body><w:p><w:pPr><w:spacing w:after="6pt"/><w:ind w:start="0.5in"/></w:pPr>
               <w:r><w:rPr><w:sz w:val="11pt"/></w:rPr><w:t>Literal 50% and 6pt</w:t></w:r>
               <w:hyperlink r:id="link"/><x:measure x:val="6pt"/></w:p>
-              <w:tbl><w:tblPr><w:tblW w:w="50%" w:type="pct"/></w:tblPr></w:tbl>
+              <w:tbl><w:tblPr><w:tblW w:w="50%" w:type="pct"/></w:tblPr>
+              <w:tblGrid><w:gridCol w:w="63.5mm"/><w:gridCol w:w="72.05pt"/><w:gridCol w:w="1440"/></w:tblGrid></w:tbl>
               <a:alpha val="63%" x:val="Literal 50%"/><a:latin typeface="Literal 50%"/>
               <mc:AlternateContent><mc:Choice Requires="w"><w:p>Chosen</w:p></mc:Choice><mc:Fallback><w:p>Rejected</w:p></mc:Fallback></mc:AlternateContent>
               </w:body></w:document>
@@ -34,6 +35,9 @@ internal static class OoxmlStrictDocxTests
         TestAssert.Equal("720", (string?)document.Descendants(w + "ind").Single().Attribute(w + "start"));
         TestAssert.Equal("22", (string?)document.Descendants(w + "sz").Single().Attribute(w + "val"));
         TestAssert.Equal("50%", (string?)document.Descendants(w + "tblW").Single().Attribute(w + "w"));
+        var gridWidths = document.Descendants(w + "gridCol").Select(column => (string?)column.Attribute(w + "w"));
+        TestAssert.True(gridWidths.SequenceEqual(new[] { "3600", "1441", "1440" }),
+            "Strict grid dimensions use the existing physical length conversion.");
         TestAssert.Equal("link", (string?)document.Descendants(w + "hyperlink").Single().Attribute(OoxNamespaces.RelationshipsNamespace + "id"));
         TestAssert.Equal("63000", (string?)document.Descendants(OoxNamespaces.DrawingNamespace + "alpha").Single().Attribute("val"));
         TestAssert.Equal("Literal 50%", (string?)document.Descendants(OoxNamespaces.DrawingNamespace + "alpha").Single().Attribute(XName.Get("val", "urn:unhandled")));

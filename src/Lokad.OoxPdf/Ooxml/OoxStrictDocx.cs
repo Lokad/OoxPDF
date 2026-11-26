@@ -99,6 +99,7 @@ internal static class OoxStrictDocx
             ("tab", "pos") => 20m,
             ("defaultTabStop" or "trHeight" or "fitText" or "hyphenationZone", "val") => 20m,
             ("framePr", "w" or "h" or "x" or "y" or "hSpace" or "vSpace") => 20m,
+            ("gridCol", "w") => 20m,
             (_, "w") when IsTableWidth(local) => 20m,
             _ => null
         };
