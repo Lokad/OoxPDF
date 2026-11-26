@@ -1969,9 +1969,11 @@ internal static partial class DocxCommentsTests
 
     public static void DocxMarkupBalloonLayoutSelectsSideStacksAnchorsAndHandlesOverflow()
     {
+        const int threadCount = 12;
+        const string date = "2026-06-10T00:00:00Z";
         var bodyElements = new List<DocxBodyElement>();
         var relatedStories = new List<DocxRelatedStory>();
-        for (int i = 0; i < 12; i++)
+        for (int i = 0; i < threadCount; i++)
         {
             string id = (i + 1).ToString(CultureInfo.InvariantCulture);
             DocxParagraph paragraph = DocxTests.CreateDocxLayoutParagraph("Anchor " + id, 10d, 12d) with
@@ -1992,12 +1994,25 @@ internal static partial class DocxCommentsTests
                 DocxRelatedStoryKind.Comment,
                 "/word/comments.xml",
                 id,
-                [new DocxParagraphElement(commentParagraph)], null));
+                [new DocxParagraphElement(commentParagraph)], null)
+            {
+                CommentMetadata = new DocxCommentMetadata("A", null, date, null, null, null, IsResolved: true)
+            });
+            for (int reply = 1; reply <= 3; reply++)
+            {
+                string replyId = (reply * threadCount + i + 1).ToString(CultureInfo.InvariantCulture);
+                relatedStories.Add(new DocxRelatedStory(
+                    DocxRelatedStoryKind.Comment,
+                    "/word/comments.xml",
+                    replyId,
+                    [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Reply", 10d, 12d))], null)
+                {
+                    CommentMetadata = new DocxCommentMetadata("B", null, date, null, null, id, IsResolved: reply < 3 ? false : null)
+                });
+            }
         }
 
-        // The page fits six 26pt balloons plus a 12pt overflow summary at the Office 0.87pt
-        // packing gap (tuned from the 3pt era); a fully overfull lane with no summary room
-        // is a separate queued hole (overflow candidates drop silently).
+        // The short page exercises both grouped placements and overflow summaries.
         var document = new DocxDocument(
             200d,
             200d,
@@ -2027,6 +2042,16 @@ internal static partial class DocxCommentsTests
         TestAssert.True(placements.Length < 24, "Overflow handling should suppress balloons that do not fit on the page.");
         TestAssert.True(placements.Where(placement => placement.IsOverflowSummary).All(placement => placement.CandidateCount > 0 && placement.OverflowStartIndex is not null && placement.OverflowEndIndex is not null), "Overflow summaries should expose private-safe continuation ranges.");
         TestAssert.Equal(24, placements.Sum(placement => placement.CandidateCount));
+        TestAssert.Equal(threadCount, placements.Sum(placement => placement.CommentCandidateCount));
+        foreach (DocxMarkupBalloonPlacementSnapshot placement in placements)
+        {
+            int parents = placement.CommentCandidateCount;
+            TestAssert.Equal(4 * parents, placement.CommentWithDateCount);
+            TestAssert.Equal(parents, placement.CommentResolvedCount);
+            TestAssert.Equal(2 * parents, placement.CommentOpenCount);
+            TestAssert.Equal(3 * parents, placement.CommentReplyCount);
+        }
+
         DocxMarkupBalloonPlacementSnapshot[] overflowSummaries = placements
             .Where(placement => placement.IsOverflowSummary)
             .OrderBy(placement => placement.OverflowStartIndex)

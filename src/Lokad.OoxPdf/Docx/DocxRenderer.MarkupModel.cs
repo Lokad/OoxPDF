@@ -53,10 +53,7 @@ internal sealed partial class DocxRenderer
         int CandidateCount,
         int CommentCandidateCount,
         int RevisionCandidateCount,
-        int CommentWithDateCount,
-        int CommentResolvedCount,
-        int CommentOpenCount,
-        int CommentReplyCount,
+        DocxCommentThreadBalloonMetrics ThreadMetrics,
         int BodySummaryPartCount,
         int WordCompatibleBodySummaryPartCount)
     {
@@ -72,7 +69,7 @@ internal sealed partial class DocxRenderer
                 caption.Palette.FillRgb, caption.Palette.StrokeRgb, caption.Palette.TitleRgb,
                 new DocxMarkupBalloonRgb(0, 0, 0),
                 CandidateCount: 1, CommentCandidateCount: 0, RevisionCandidateCount: 1,
-                CommentWithDateCount: 0, CommentResolvedCount: 0, CommentOpenCount: 0, CommentReplyCount: 0,
+                ThreadMetrics: default,
                 BodySummaryPartCount: caption.SummaryPartCount, WordCompatibleBodySummaryPartCount: caption.SummaryPartCount)
         {
         }
@@ -129,10 +126,7 @@ internal sealed partial class DocxRenderer
         int CandidateCount,
         int CommentCandidateCount,
         int RevisionCandidateCount,
-        int CommentWithDateCount,
-        int CommentResolvedCount,
-        int CommentOpenCount,
-        int CommentReplyCount,
+        DocxCommentThreadBalloonMetrics ThreadMetrics,
         int BodySummaryPartCount,
         int WordCompatibleBodySummaryPartCount,
         int? OverflowStartIndex,
@@ -166,10 +160,10 @@ internal sealed partial class DocxRenderer
                 CandidateCount,
                 CommentCandidateCount,
                 RevisionCandidateCount,
-                CommentWithDateCount,
-                CommentResolvedCount,
-                CommentOpenCount,
-                CommentReplyCount,
+                ThreadMetrics.WithDateCount,
+                ThreadMetrics.ResolvedCount,
+                ThreadMetrics.OpenCount,
+                ThreadMetrics.ReplyCount,
                 BodySummaryPartCount,
                 WordCompatibleBodySummaryPartCount,
                 0, // Reply metadata does not create printed separator lines.

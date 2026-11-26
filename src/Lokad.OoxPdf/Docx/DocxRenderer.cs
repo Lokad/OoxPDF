@@ -245,7 +245,8 @@ internal sealed partial class DocxRenderer
                 balloonLabelEmbedded,
                 balloonBodyEmbedded,
                 fontResources,
-                cancellationToken))
+                cancellationToken,
+                includeThreadMetrics: true))
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 snapshots.Add(placement.ToSnapshot(pageIndex));

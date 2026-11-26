@@ -484,7 +484,8 @@ internal sealed partial class DocxRenderer
         PdfEmbeddedFont? bodyEmbedded,
         DocxFontResources? fontResources = null,
         CancellationToken cancellationToken = default,
-        ISet<int>? revisionCodepoints = null)
+        ISet<int>? revisionCodepoints = null,
+        bool includeThreadMetrics = false)
     {
         if (!markupContext.RendersCommentBalloons && !markupContext.RendersRevisionBalloons)
         {
@@ -517,14 +518,14 @@ internal sealed partial class DocxRenderer
                     continue;
                 }
 
-                grouped.Add(MergeMarkupBalloonGroup(group, textWidth));
+                grouped.Add(MergeMarkupBalloonGroup(group, textWidth, includeThreadMetrics));
                 group.Clear();
                 group.Add(candidate);
             }
 
             if (group.Count != 0)
             {
-                grouped.Add(MergeMarkupBalloonGroup(group, textWidth));
+                grouped.Add(MergeMarkupBalloonGroup(group, textWidth, includeThreadMetrics));
             }
 
             return grouped;
@@ -615,10 +616,7 @@ internal sealed partial class DocxRenderer
                     candidate.CandidateCount,
                     candidate.CommentCandidateCount,
                     candidate.RevisionCandidateCount,
-                    candidate.CommentWithDateCount,
-                    candidate.CommentResolvedCount,
-                    candidate.CommentOpenCount,
-                    candidate.CommentReplyCount,
+                    candidate.ThreadMetrics,
                     candidate.BodySummaryPartCount,
                     candidate.WordCompatibleBodySummaryPartCount,
                     OverflowStartIndex: null, OverflowEndIndex: null, LaneBandIndex: laneBand.Index,
@@ -645,7 +643,8 @@ internal sealed partial class DocxRenderer
                 laneBand.Index,
                 laneBand.CandidateCount,
                 nextOverflowStartIndex,
-                placedBandCandidates);
+                placedBandCandidates,
+                includeThreadMetrics);
         }
 
         return placements;
@@ -779,7 +778,9 @@ internal sealed partial class DocxRenderer
                         commentRepliesByParentId.TryGetValue(reference.Id ?? string.Empty, out DocxRelatedStoryLayout[]? replies);
                         string commentBody = TrimBalloonText(BuildCommentBalloonPreview(storyLayout, replies ?? []), textWidth);
                         string wordCompatibleCommentBody = BuildWordCompatibleCommentBalloonPreview(storyLayout);
-                        DocxCommentThreadBalloonMetrics commentMetrics = CountCommentThreadBalloonMetrics(storyLayout, replies ?? []);
+                        DocxCommentThreadBalloonMetrics commentMetrics = includeThreadMetrics
+                            ? CountCommentThreadBalloonMetrics(storyLayout, replies ?? [])
+                            : default;
                         DocxTextLineLayout anchorLine = ResolveCommentAnchorLine(line, anchorTextLines, paragraph, reference, markupContext);
                         // RV06: Word-compatible comment balloons wear the first-seen
                         // author color; other profiles keep the legacy cream palette.
@@ -829,10 +830,7 @@ internal sealed partial class DocxRenderer
                             new DocxMarkupBalloonRgb(70, 70, 70),
                             new DocxMarkupBalloonRgb(0, 0, 0),
                             CandidateCount: 1, RevisionCandidateCount: 0, CommentCandidateCount: 1,
-                            CommentWithDateCount: commentMetrics.WithDateCount,
-                            CommentResolvedCount: commentMetrics.ResolvedCount,
-                            CommentOpenCount: commentMetrics.OpenCount,
-                            CommentReplyCount: commentMetrics.ReplyCount,
+                            ThreadMetrics: commentMetrics,
                             BodySummaryPartCount: CountBalloonSummaryPart(commentBody),
                             WordCompatibleBodySummaryPartCount: CountBalloonSummaryPart(wordCompatibleCommentBody))
                         {
@@ -1013,6 +1011,7 @@ internal sealed partial class DocxRenderer
                 Count(storyLayout?.Story.CommentMetadata);
                 foreach (DocxRelatedStoryLayout reply in replies)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     Count(reply.Story.CommentMetadata);
                 }
 
@@ -1234,7 +1233,8 @@ internal sealed partial class DocxRenderer
 
     private static DocxMarkupBalloonCandidate MergeMarkupBalloonGroup(
         IReadOnlyList<DocxMarkupBalloonCandidate> group,
-        double textWidth)
+        double textWidth,
+        bool includeThreadMetrics)
     {
         if (group.Count == 1)
         {
@@ -1294,10 +1294,7 @@ internal sealed partial class DocxRenderer
             CandidateCount = group.Sum(candidate => candidate.CandidateCount),
             CommentCandidateCount = group.Sum(candidate => candidate.CommentCandidateCount),
             RevisionCandidateCount = group.Sum(candidate => candidate.RevisionCandidateCount),
-            CommentWithDateCount = group.Sum(candidate => candidate.CommentWithDateCount),
-            CommentResolvedCount = group.Sum(candidate => candidate.CommentResolvedCount),
-            CommentOpenCount = group.Sum(candidate => candidate.CommentOpenCount),
-            CommentReplyCount = group.Sum(candidate => candidate.CommentReplyCount),
+            ThreadMetrics = includeThreadMetrics ? SumCommentThreadMetrics(group) : default,
             BodySummaryPartCount = bodyParts.Length,
             WordCompatibleBodySummaryPartCount = allRevisions ? bodyParts.Length : wordCompatibleBodyParts.Length
         };
@@ -1353,6 +1350,26 @@ internal sealed partial class DocxRenderer
         return string.IsNullOrWhiteSpace(body) ? 0 : 1;
     }
 
+    private static DocxCommentThreadBalloonMetrics SumCommentThreadMetrics(IReadOnlyList<DocxMarkupBalloonCandidate> candidates)
+    {
+        int withDateCount = 0;
+        int resolvedCount = 0;
+        int openCount = 0;
+        int replyCount = 0;
+        foreach (DocxMarkupBalloonCandidate candidate in candidates)
+        {
+            checked
+            {
+                withDateCount += candidate.ThreadMetrics.WithDateCount;
+                resolvedCount += candidate.ThreadMetrics.ResolvedCount;
+                openCount += candidate.ThreadMetrics.OpenCount;
+                replyCount += candidate.ThreadMetrics.ReplyCount;
+            }
+        }
+
+        return new DocxCommentThreadBalloonMetrics(withDateCount, resolvedCount, openCount, replyCount);
+    }
+
     private static (double NextTop, int NextOverflowStartIndex) AddOverflowContinuationPlacements(
         List<DocxMarkupBalloonCandidate> overflowCandidates,
         List<DocxMarkupBalloonPlacement> placements,
@@ -1362,7 +1379,8 @@ internal sealed partial class DocxRenderer
         int laneBandIndex,
         int laneBandCandidateCount,
         int nextOverflowStartIndex,
-        List<DocxMarkupBalloonCandidate> placedBandCandidates)
+        List<DocxMarkupBalloonCandidate> placedBandCandidates,
+        bool includeThreadMetrics)
     {
         if (overflowCandidates.Count == 0)
         {
@@ -1437,10 +1455,7 @@ internal sealed partial class DocxRenderer
                 CandidateCount: chunk.Sum(candidate => candidate.CandidateCount),
                 CommentCandidateCount: chunk.Sum(candidate => candidate.CommentCandidateCount),
                 RevisionCandidateCount: chunk.Sum(candidate => candidate.RevisionCandidateCount),
-                CommentWithDateCount: chunk.Sum(candidate => candidate.CommentWithDateCount),
-                CommentResolvedCount: chunk.Sum(candidate => candidate.CommentResolvedCount),
-                CommentOpenCount: chunk.Sum(candidate => candidate.CommentOpenCount),
-                CommentReplyCount: chunk.Sum(candidate => candidate.CommentReplyCount),
+                ThreadMetrics: includeThreadMetrics ? SumCommentThreadMetrics(chunk) : default,
                 BodySummaryPartCount: 0, WordCompatibleBodySummaryPartCount: 0, OverflowStartIndex: nextOverflowStartIndex + overflowIndex,
                 OverflowEndIndex: nextOverflowStartIndex + overflowIndex + chunk.Length - 1,
                 LaneBandIndex: laneBandIndex,
