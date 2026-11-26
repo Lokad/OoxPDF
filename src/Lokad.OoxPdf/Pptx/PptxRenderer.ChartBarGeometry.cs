@@ -11,6 +11,21 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
+    private static ChartValueExtents GetCartesianChartDataExtents(
+        IReadOnlyList<ChartIndexedNumberVector> series, bool stacked, bool percentStacked)
+    {
+        if (percentStacked)
+        {
+            return new ChartValueExtents(0d, 1d);
+        }
+
+        IReadOnlyList<IReadOnlyList<double?>> denseSeries = DensifyChartValueSeries(series);
+        (double min, double max) = stacked
+            ? GetStackedPointValueExtents(denseSeries)
+            : GetClusteredPointValueExtents(denseSeries);
+        return new ChartValueExtents(min, max);
+    }
+
     private static (double Min, double Max) GetClusteredPointValueExtents(IReadOnlyList<IReadOnlyList<double?>> series)
     {
         double maxValue = Math.Max(0d, series.SelectMany(values => values).OfType<double>().DefaultIfEmpty(0d).Max());
@@ -18,13 +33,9 @@ internal sealed partial class PptxRenderer
         return (minValue, maxValue);
     }
 
-    private static (double Min, double Max) GetStackedPointValueExtents(IReadOnlyList<IReadOnlyList<double?>> series, int categoryCount, bool percentStacked)
+    private static (double Min, double Max) GetStackedPointValueExtents(IReadOnlyList<IReadOnlyList<double?>> series)
     {
-        if (percentStacked)
-        {
-            return (0d, 1d);
-        }
-
+        int categoryCount = Math.Max(1, series.Max(values => values.Count));
         double minValue = 0d;
         double maxValue = 0d;
         for (int category = 0; category < categoryCount; category++)

@@ -48,7 +48,7 @@ internal sealed partial class PptxRenderer
                 ChartAxisSource valueAxis = ReadChartValueAxesForPlot(sceneChart, linePlot).FirstOrDefault();
                 bool categoryPointsOnTickMarks = ResolveSceneCategoryAxisLabelsOnTickMarks(valueAxis.SceneAxis);
                 ChartValueExtents dataExtents = workbook is null
-                    ? GetLineChartValueExtents(lineSeriesVectors, lineOptions.Stacked, lineOptions.PercentStacked)
+                    ? GetCartesianChartDataExtents(lineSeriesVectors, lineOptions.Stacked, lineOptions.PercentStacked)
                     : GetSharedLineChartValueExtents(linePlot, lineOptions.Stacked, lineOptions.PercentStacked, workbook, plotVisibleOnly);
                 ChartValueExtents valueExtents = ReadCartesianChartValueAxisExtents(sceneChart, valueAxis.SceneAxis, dataExtents,
                     lineOptions.PercentStacked, useNearMaximumHeadroom: !lineOptions.PercentStacked,

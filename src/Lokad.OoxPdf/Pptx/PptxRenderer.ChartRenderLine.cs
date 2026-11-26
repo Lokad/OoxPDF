@@ -867,16 +867,6 @@ internal sealed partial class PptxRenderer
         return new ChartValueExtents(minValue, maxValue);
     }
 
-    private static ChartValueExtents GetLineChartValueExtents(IReadOnlyList<ChartIndexedNumberVector> series, bool stacked, bool percentStacked)
-    {
-        IReadOnlyList<IReadOnlyList<double?>> denseSeries = DensifyChartValueSeries(series);
-        int pointCount = Math.Max(1, denseSeries.Max(values => values.Count));
-        (double minValue, double maxValue) = stacked
-            ? GetStackedPointValueExtents(denseSeries, pointCount, percentStacked)
-            : GetClusteredPointValueExtents(denseSeries);
-        return new ChartValueExtents(minValue, maxValue);
-    }
-
     private static bool IsSmoothSeries(int seriesIndex, IReadOnlyList<ChartSeriesSmoothing> smoothSeries)
     {
         return seriesIndex < smoothSeries.Count && smoothSeries[seriesIndex].Value;

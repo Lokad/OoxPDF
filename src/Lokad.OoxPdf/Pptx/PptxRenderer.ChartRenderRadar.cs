@@ -365,21 +365,6 @@ internal sealed partial class PptxRenderer
         graphics.PaintAxialShading(centerX, maxY, centerX, minY, stops);
     }
 
-    private static ChartValueExtents GetAreaChartValueExtents(IReadOnlyList<ChartIndexedNumberVector> series, bool stacked, bool percentStacked)
-    {
-        if (percentStacked)
-        {
-            return new ChartValueExtents(0d, 1d);
-        }
-
-        IReadOnlyList<IReadOnlyList<double?>> denseSeries = DensifyChartValueSeries(series);
-        int pointCount = Math.Max(1, denseSeries.Max(values => values.Count));
-        (double minValue, double maxValue) = stacked
-            ? GetStackedPointValueExtents(denseSeries, pointCount, percentStacked)
-            : GetClusteredPointValueExtents(denseSeries);
-        return new ChartValueExtents(minValue, maxValue);
-    }
-
     private static double GetRadarPointAngle(int index, int pointCount)
     {
         return Math.PI / 2d - index * Math.PI * 2d / pointCount;

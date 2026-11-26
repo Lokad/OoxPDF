@@ -1387,14 +1387,7 @@ internal sealed partial class PptxRenderer
 
     private static ChartValueExtents GetBarChartValueExtents(IReadOnlyList<ChartIndexedNumberVector> series, PptxSceneChartGrouping grouping)
     {
-        IReadOnlyList<IReadOnlyList<double?>> denseSeries = DensifyChartValueSeries(series);
-        int categoryCount = Math.Max(1, denseSeries.Max(values => values.Count));
-        bool stacked = IsStackedChartGrouping(grouping);
-        bool percentStacked = IsPercentStackedChartGrouping(grouping);
-        (double min, double max) = stacked
-            ? GetStackedPointValueExtents(denseSeries, categoryCount, percentStacked)
-            : GetClusteredPointValueExtents(denseSeries);
-        return new ChartValueExtents(min, max);
+        return GetCartesianChartDataExtents(series, IsStackedChartGrouping(grouping), IsPercentStackedChartGrouping(grouping));
     }
 
     private static bool IsStackedChartGrouping(PptxSceneChartGrouping grouping)

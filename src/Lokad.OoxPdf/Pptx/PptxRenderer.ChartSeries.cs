@@ -449,7 +449,7 @@ internal sealed partial class PptxRenderer
     {
         if (workbook is null)
         {
-            return GetLineChartValueExtents(ReadSceneChartSeriesVectors(plot, workbook, plotVisibleOnly), stacked, percentStacked);
+            return GetCartesianChartDataExtents(ReadSceneChartSeriesVectors(plot, workbook, plotVisibleOnly), stacked, percentStacked);
         }
 
         return workbook.GetOrAddLineValueExtents(
@@ -457,7 +457,7 @@ internal sealed partial class PptxRenderer
             stacked,
             percentStacked,
             plotVisibleOnly,
-            () => GetLineChartValueExtents(ReadSharedChartSeriesVectors(plot, workbook, plotVisibleOnly), stacked, percentStacked));
+            () => GetCartesianChartDataExtents(ReadSharedChartSeriesVectors(plot, workbook, plotVisibleOnly), stacked, percentStacked));
     }
 
     // Called after shared-axis ownership is established. Preserve the existing
@@ -475,7 +475,7 @@ internal sealed partial class PptxRenderer
             if (CountRenderableSeries(vectors) == 0) continue;
             var data = plot.PlotKind == PptxSceneChartPlotKind.Bar
                 ? GetBarChartValueExtents(vectors, plot.GroupingKind)
-                : GetLineChartValueExtents(vectors, stacked: false, percentStacked: false);
+                : GetCartesianChartDataExtents(vectors, stacked: false, percentStacked: false);
             minimum = Math.Min(minimum, data.Min);
             maximum = Math.Max(maximum, data.Max);
         }
