@@ -1700,6 +1700,19 @@ internal static class DocxSectionNavigationTests
                 TestAssert.Equal(links[2].Destination, links[1].Destination);
                 TestAssert.True(links.SequenceEqual(blockStarts[0].Annotations),
                     "Both cell-block starts and the ordinary bookmark reach the same authored cell.");
+
+                PdfPage[] open = RenderColumn("nested-after-target", spanned, mode);
+                TestAssert.Contains("NESTED", Text(open[1]));
+                TestAssert.Contains("TARGET PARAGRAPH", Text(open[1]));
+                TestAssert.True(open[0].Annotations.Single().Destination is { PageIndex: 1, Left: > 100d },
+                    "The open range reaches the selected column.");
+                foreach (string variant in new[] { "nested-before", "nested-in-paragraph", "nested-in-row", "nested-in-table" })
+                {
+                    PdfPage[] closed = RenderColumn(variant, spanned, mode);
+                    TestAssert.True(open.Select(page => page.Content).SequenceEqual(closed.Select(page => page.Content)),
+                        "The nested bookmark boundary preserves all page paint.");
+                    TestAssert.Equal(0, closed[0].Annotations.Count);
+                }
             }
         }
 
@@ -1778,7 +1791,22 @@ internal static class DocxSectionNavigationTests
                     int column = variant == "unoccupied" ? gridSize : spanned ? 4 : 1;
                     start.SetAttributeValue(W + "colFirst", column);
                     start.SetAttributeValue(W + "colLast", column);
-                    if (variant is "inline-start" or "trailing-start" or "inline-closed" or "trailing-closed")
+                    if (variant.StartsWith("nested-", StringComparison.Ordinal))
+                    {
+                        first.Element(W + "p")!.AddFirst(start);
+                        var nestedParagraph = Paragraph("NESTED");
+                        var nestedRow = new XElement(W + "tr", new XElement(W + "tc", nestedParagraph));
+                        var nested = new XElement(W + "tbl",
+                            new XElement(W + "tblPr", new XElement(W + "tblLayout", new XAttribute(W + "type", "fixed"))),
+                            new XElement(W + "tblGrid", new XElement(W + "gridCol", new XAttribute(W + "w", 1100))), nestedRow);
+                        first.Add(nested, Paragraph(string.Empty));
+                        if (variant == "nested-before") nested.AddBeforeSelf(end);
+                        else if (variant == "nested-in-paragraph") nestedParagraph.Add(end);
+                        else if (variant == "nested-in-row") nestedRow.Add(end);
+                        else if (variant == "nested-in-table") nested.Add(end);
+                        else second.Element(W + "p")!.Add(end);
+                    }
+                    else if (variant is "inline-start" or "trailing-start" or "inline-closed" or "trailing-closed")
                     {
                         XElement owner = variant.StartsWith("inline", StringComparison.Ordinal)
                             ? first.Element(W + "p")! : first;

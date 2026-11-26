@@ -188,7 +188,8 @@ internal sealed partial class DocxReader
         Dictionary<string, int>? BookmarkEndBoundaries);
 
     private static DocxTableSourceRow ReadTableSourceRow(DocxRevisionScopedElement row, XElement? properties,
-        OoxPdfDocxMarkupMode mode, CancellationToken token, bool joinedGrid = false)
+        OoxPdfDocxMarkupMode mode, CancellationToken token, bool joinedGrid = false,
+        Action<string>? recordContainingCellBookmarkEnd = null)
     {
         int firstColumn = ReadRowGridBefore(properties);
         int endColumn = firstColumn;
@@ -198,7 +199,11 @@ internal sealed partial class DocxReader
         foreach (var scope in EnumerateBookmarkedBlocks(row.Element.Elements(), mode, token,
             inheritedRevision: null, tableChildName: WordprocessingNamespace + "tc",
             readTableColumnBookmarks: true, leadingColumnBookmarks: row.LeadingColumnBookmarks,
-            recordBookmarkEnd: id => (bookmarkEndBoundaries ??= new(StringComparer.Ordinal)).TryAdd(id, cells.Count)))
+            recordBookmarkEnd: id =>
+            {
+                recordContainingCellBookmarkEnd?.Invoke(id);
+                (bookmarkEndBoundaries ??= new(StringComparer.Ordinal)).TryAdd(id, cells.Count);
+            }))
         {
             int span = ReadGridSpan(scope.Element.Element(WordprocessingNamespace + "tcPr"));
             endColumn += span;
@@ -209,7 +214,8 @@ internal sealed partial class DocxReader
     }
 
     private static (double[] Grid, DocxTableSourceRow[] Rows) CompleteJoinedTableGrid(double[] grid,
-        IReadOnlyList<DocxRevisionScopedElement> rows, OoxPdfDocxMarkupMode mode, CancellationToken token)
+        IReadOnlyList<DocxRevisionScopedElement> rows, OoxPdfDocxMarkupMode mode, CancellationToken token,
+        Action<string>? recordContainingCellBookmarkEnd)
     {
         int required = grid.Length;
         var sourceRows = new DocxTableSourceRow[rows.Count];
@@ -217,7 +223,7 @@ internal sealed partial class DocxReader
         {
             var row = rows[index];
             DocxTableSourceRow source = ReadTableSourceRow(row, row.Element.Element(WordprocessingNamespace + "trPr"),
-                mode, token, joinedGrid: true);
+                mode, token, joinedGrid: true, recordContainingCellBookmarkEnd: recordContainingCellBookmarkEnd);
             sourceRows[index] = source;
             required = Math.Max(required, source.EndColumn);
         }

@@ -22,7 +22,8 @@ internal sealed partial class DocxReader
         OoxPdfDocxMarkupMode markupMode,
         CancellationToken cancellationToken,
         IReadOnlyList<DocxRevisionScopedElement>? fragments = null,
-        bool projectCommentSelections = false)
+        bool projectCommentSelections = false,
+        Action<string>? recordContainingCellBookmarkEnd = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         XElement table = source.Element;
@@ -65,7 +66,8 @@ internal sealed partial class DocxReader
             LeadingBookmarks: ReferenceEquals(fragment.Element, table) ? source.LeadingBookmarks : fragment.LeadingBookmarks,
             Rows: EnumerateBookmarkedBlocks(fragment.Element.Elements(), markupMode, cancellationToken,
                 fragment.Revision == inheritedRevision ? null : fragment.Revision,
-                tableChildName: WordprocessingNamespace + "tr", readTableColumnBookmarks: true)
+                tableChildName: WordprocessingNamespace + "tr", readTableColumnBookmarks: true,
+                recordBookmarkEnd: recordContainingCellBookmarkEnd)
                 .Where(row => IsIncludedTableRow(row.Element, markupMode, cancellationToken)).ToArray())).ToArray();
         bool hasExplicitGrid = parts.Any(part => part.Grid.Length != 0);
         IReadOnlyList<double> columns = parts[0].Grid;
@@ -78,7 +80,7 @@ internal sealed partial class DocxReader
             for (int index = 0; index < parts.Length; index++)
             {
                 (grids[index], joinedRows[index]) = CompleteJoinedTableGrid(parts[index].Grid, parts[index].Rows,
-                    markupMode, cancellationToken);
+                    markupMode, cancellationToken, recordContainingCellBookmarkEnd);
             }
             var offsets = parts.Select(part => (ReadDxaWidth(part.Properties?.Element(WordprocessingNamespace + "tblInd"))
                 ?? tableStyle.Table.IndentPoints ?? 0d) - (resolvedTableIndentPoints ?? 0d)).ToArray();
@@ -121,7 +123,8 @@ internal sealed partial class DocxReader
                 if (sourceIndex != 0) AddRevisions(rowRevisions, ReadPropertyChangeRevisions(part.Properties));
                 var cells = new List<DocxTableCell>();
                 DocxTableSourceRow sourceRow = joinedRows is null
-                    ? ReadTableSourceRow(rowElement, rowProperties, markupMode, cancellationToken)
+                    ? ReadTableSourceRow(rowElement, rowProperties, markupMode, cancellationToken,
+                        recordContainingCellBookmarkEnd: recordContainingCellBookmarkEnd)
                     : joinedRows[sourceIndex][partRowIndex];
                 int sourceColumn = sourceRow.FirstColumn;
                 int gridBefore = gridMappings is null ? sourceColumn : gridMappings[sourceIndex][sourceColumn];
@@ -133,6 +136,8 @@ internal sealed partial class DocxReader
                 // later one. A bookmark already placed in this cell keeps its target.
                 Action<string> recordCellBookmarkEnd = id =>
                 {
+                    // Nested tables share the containing cell's source position.
+                    recordContainingCellBookmarkEnd?.Invoke(id);
                     bookmarkEndBoundaries ??= new(StringComparer.Ordinal);
                     if (!bookmarkEndBoundaries.TryGetValue(id, out int boundary) || followingCell < boundary)
                         bookmarkEndBoundaries[id] = followingCell;
@@ -597,7 +602,8 @@ internal sealed partial class DocxReader
                 if (child.Name == WordprocessingNamespace + "tbl")
                 {
                     DocxTable? nestedTable = ReadTable(scopedChild, styles, numbering, numberingCounters, package, relationships,
-                        inlineReferenceCounters, documentSettings, markupMode, cancellationToken, tableFragments, projectCommentSelections);
+                        inlineReferenceCounters, documentSettings, markupMode, cancellationToken, tableFragments,
+                        projectCommentSelections, recordContainingCellBookmarkEnd: recordBookmarkEnd);
                     if (nestedTable is not null)
                     {
                         elements.Add(DocxBodyElementFactory.CreateTable(nestedTable));
