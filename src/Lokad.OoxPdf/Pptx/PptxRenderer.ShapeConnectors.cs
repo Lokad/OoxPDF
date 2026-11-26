@@ -202,9 +202,8 @@ internal sealed partial class PptxRenderer
         double x2,
         double y2,
         double lineWidth,
-        bool headArrow,
-        bool tailArrow,
-        bool usesOfficeArrowType,
+        PptxSceneLineEndKind headKind,
+        PptxSceneLineEndKind tailKind,
         double triangleHalfWidthFactor)
     {
         double dx = x2 - x1;
@@ -221,13 +220,12 @@ internal sealed partial class PptxRenderer
         double ny = ux;
         double half = lineWidth / 2d;
         double arrowLength = lineWidth * OfficeStraightTriangleLineEndLengthFactor;
-        double shaftInset = usesOfficeArrowType
-            ? lineWidth * 0.99d
-            : Math.Max(0d, arrowLength - lineWidth * OfficeStraightTriangleLineEndOverlapFactor);
-        double startX = headArrow ? x1 + ux * shaftInset : x1;
-        double startY = headArrow ? y1 + uy * shaftInset : y1;
-        double endX = tailArrow ? x2 - ux * shaftInset : x2;
-        double endY = tailArrow ? y2 - uy * shaftInset : y2;
+        double headInset = ShaftInset(headKind);
+        double tailInset = ShaftInset(tailKind);
+        double startX = x1 + ux * headInset;
+        double startY = y1 + uy * headInset;
+        double endX = x2 - ux * tailInset;
+        double endY = y2 - uy * tailInset;
 
         graphics.MoveTo(startX + nx * half, startY + ny * half);
         graphics.LineTo(endX + nx * half, endY + ny * half);
@@ -235,23 +233,25 @@ internal sealed partial class PptxRenderer
         graphics.LineTo(startX - nx * half, startY - ny * half);
         graphics.ClosePath();
 
-        if (usesOfficeArrowType)
-        {
-            if (headArrow)
-                AppendOfficeArrowHeadPath(graphics, x1, y1, ux, uy, nx, ny, lineWidth, false);
-            if (tailArrow)
-                AppendOfficeArrowHeadPath(graphics, x2, y2, -ux, -uy, -nx, -ny, lineWidth, false);
-        }
-        else
-        {
-            double arrowHalfWidth = lineWidth * triangleHalfWidthFactor;
-            if (headArrow)
-                AppendTriangle(graphics, x1, y1, x1 + ux * arrowLength, y1 + uy * arrowLength, nx, ny, arrowHalfWidth);
-            if (tailArrow)
-                AppendTriangle(graphics, x2, y2, x2 - ux * arrowLength, y2 - uy * arrowLength, nx, ny, arrowHalfWidth);
-        }
-
+        AppendEnd(headKind, x1, y1, ux, uy);
+        AppendEnd(tailKind, x2, y2, -ux, -uy);
         graphics.FillCurrentPath();
+
+        double ShaftInset(PptxSceneLineEndKind kind) => kind switch
+        {
+            PptxSceneLineEndKind.Arrow => lineWidth * 0.99d,
+            PptxSceneLineEndKind.Triangle => Math.Max(0d, arrowLength - lineWidth * OfficeStraightTriangleLineEndOverlapFactor),
+            _ => 0d
+        };
+
+        void AppendEnd(PptxSceneLineEndKind kind, double tipX, double tipY, double inwardX, double inwardY)
+        {
+            if (kind == PptxSceneLineEndKind.Arrow)
+                AppendOfficeArrowHeadPath(graphics, tipX, tipY, inwardX, inwardY, -inwardY, inwardX, lineWidth, false);
+            else if (kind == PptxSceneLineEndKind.Triangle)
+                AppendTriangle(graphics, tipX, tipY, tipX + inwardX * arrowLength, tipY + inwardY * arrowLength,
+                    nx, ny, lineWidth * triangleHalfWidthFactor);
+        }
     }
 
     private static void AppendTriangle(PdfGraphicsBuilder graphics, double tipX, double tipY, double baseX, double baseY, double nx, double ny, double halfWidth)

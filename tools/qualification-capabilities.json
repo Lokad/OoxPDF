@@ -280,6 +280,7 @@
     "PptxSyntheticArrowAndConnectorShapesRender",
     "=PptxSyntheticTriangleConnectorsPaintTheirOfficeMarkerWidths",
     "=PptxStraightConnectorStrokeRetainsAuthoredEndMarkers",
+    "=PptxStraightConnectorFillRetainsDistinctAuthoredEndKinds",
     "PptxSyntheticCurvedConnectorArrowTailUsesFilledOutline",
     "PptxSyntheticCustomGeometryOpenCubicStealthTailUsesFilledOutline",
     "=PptxCustomGeometryStrokeRetainsAuthoredEndMarkers",
@@ -19466,6 +19467,7 @@
   "pptx-connector-operator-portability": [
     "=PptxConnectorEndpointsInheritThemeOutlineProperties",
     "=PptxStraightConnectorStrokeRetainsAuthoredEndMarkers",
+    "=PptxStraightConnectorFillRetainsDistinctAuthoredEndKinds",
     "PptxSyntheticCurvedConnectorRendersCurve",
     "PptxSyntheticCurvedConnector2RendersCurve",
     "PptxSyntheticCurvedConnector2LoopUsesQuarterTurnTangents",

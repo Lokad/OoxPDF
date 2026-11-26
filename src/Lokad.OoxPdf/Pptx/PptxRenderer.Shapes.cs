@@ -283,9 +283,8 @@ internal sealed partial class PptxRenderer
                 else if ((hasHeadArrow || hasTailArrow) && headEnd.Kind is PptxSceneLineEndKind.None or PptxSceneLineEndKind.Triangle or PptxSceneLineEndKind.Arrow && tailEnd.Kind is PptxSceneLineEndKind.None or PptxSceneLineEndKind.Triangle or PptxSceneLineEndKind.Arrow && !hasDash && lineCap is null)
                 {
                     graphics.SetFillRgb(stroke.Red, stroke.Green, stroke.Blue);
-                    bool usesOfficeArrowType = headEnd.Kind == PptxSceneLineEndKind.Arrow || tailEnd.Kind == PptxSceneLineEndKind.Arrow;
                     FillStraightArrowedLine(graphics, x1, y1, x2, y2, lineWidth,
-                        hasHeadArrow, hasTailArrow, usesOfficeArrowType, triangleHalfWidthFactor);
+                        headEnd.Kind, tailEnd.Kind, triangleHalfWidthFactor);
                 }
                 else
                 {

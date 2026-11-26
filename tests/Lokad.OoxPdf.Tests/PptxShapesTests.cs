@@ -511,6 +511,64 @@ internal static partial class PptxShapesTests
         }
     }
 
+    public static void PptxStraightConnectorFillRetainsDistinctAuthoredEndKinds()
+    {
+        var kinds = new[]
+        {
+            (Head: "triangle", Tail: "arrow"),
+            (Head: "arrow", Tail: "triangle"),
+            (Head: "triangle", Tail: "triangle"),
+            (Head: "arrow", Tail: "arrow")
+        };
+        string connectors = string.Join('\n', kinds.Select((pair, index) =>
+            FormattableString.Invariant($$"""
+                <p:cxnSp><p:spPr>
+                  <a:xfrm><a:off x="914400" y="{{(index + 1) * 914400}}"/><a:ext cx="1828800" cy="0"/></a:xfrm>
+                  <a:prstGeom prst="straightConnector1"/>
+                  <a:ln w="50800"><a:solidFill><a:srgbClr val="CC1133"/></a:solidFill>
+                    <a:headEnd type="{{pair.Head}}"/><a:tailEnd type="{{pair.Tail}}"/>
+                  </a:ln>
+                </p:spPr></p:cxnSp>
+                """)));
+        using var input = TestFixtures.CreateZipPackage(PptxTests.BasicSlidePackageEntries($$"""
+            <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <p:cSld><p:spTree>{{connectors}}</p:spTree></p:cSld>
+            </p:sld>
+            """));
+        using var output = new MemoryStream();
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions
+        {
+            InputKind = OoxPdfInputKind.Pptx,
+            DiagnosticSink = diagnostics.Add
+        });
+
+        TestAssert.Equal(0, diagnostics.Count);
+        string pdf = Encoding.ASCII.GetString(output.ToArray()).ReplaceLineEndings("\n");
+        for (int index = 0; index < kinds.Length; index++)
+        {
+            int y = 468 - index * 72;
+            string pattern = FormattableString.Invariant(
+                $@"(?m)^\S+ {y + 2} m\n\S+ {y + 2} l\n\S+ {y - 2} l\n\S+ {y - 2} l\nh\n(?<head>(?:[^\n]+ [mlc]\n)+h\n)(?<tail>(?:[^\n]+ [mlc]\n)+h\n)f$");
+            var body = Regex.Matches(pdf, pattern);
+            TestAssert.Equal(1, body.Count);
+            AssertEnd(kinds[index].Head, body[0].Groups["head"].Value, 72, 88, "71.99", y);
+            AssertEnd(kinds[index].Tail, body[0].Groups["tail"].Value, 216, 200, "216.01", y);
+        }
+
+        static void AssertEnd(string kind, string path, int tip, int baseX, string arrowTip, int y)
+        {
+            if (kind == "triangle")
+            {
+                TestAssert.Equal(FormattableString.Invariant($"{tip} {y} m\n{baseX} {y + 8} l\n{baseX} {y - 8} l\nh\n"), path);
+                return;
+            }
+
+            TestAssert.Contains(FormattableString.Invariant($"{arrowTip} {y} l\n"), path);
+            TestAssert.Equal(3, Regex.Matches(path, @" c\n").Count);
+        }
+    }
+
     public static void PptxSyntheticCurvedConnectorRendersCurve()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
