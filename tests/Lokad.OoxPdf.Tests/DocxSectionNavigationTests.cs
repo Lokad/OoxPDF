@@ -1982,6 +1982,80 @@ internal static class DocxSectionNavigationTests
         }
     }
 
+    public static void DocxColumnBookmarksCrossRowsWithOmittedCells()
+    {
+        foreach (var mode in Modes)
+        foreach (bool omitLeading in new[] { false, true })
+        {
+            var control = RenderRange("ordinary", omitLeading, mode);
+            TestAssert.Equal(2, control.Length);
+            var target = control[0].Annotations.Single();
+            TestAssert.True(target.Destination is { PageIndex: 1 }, "The control points to the later row on page two.");
+            TestAssert.Contains("LATER LEFT", Text(control[1]));
+            TestAssert.Contains("LATER RIGHT", Text(control[1]));
+
+            foreach (string variant in new[] { "open", "inline", "end-in-row", "end-between-rows", "end-before-cell", "end-outside-table" })
+            {
+                var pages = RenderRange(variant, omitLeading, mode);
+                TestAssert.True(control.Select(page => page.Content).SequenceEqual(pages.Select(page => page.Content)), variant);
+                if (variant is "open" or "inline")
+                    TestAssert.Equal(target, pages[0].Annotations.Single());
+                else
+                    TestAssert.Equal(0, pages[0].Annotations.Count);
+            }
+        }
+
+        static PdfPage[] RenderRange(string variant, bool omitLeading, OoxPdfDocxMarkupMode mode)
+        {
+            PdfPage[] pages = [];
+            WithMutation("bookmark-before", (_, xml) =>
+            {
+                var (start, end, target) = BookmarkSource(xml);
+                start.Remove();
+                end.Remove();
+                string grid = omitLeading ? "gridBefore" : "gridAfter";
+                var firstText = Paragraph("STARTING ROW");
+                var firstCell = new XElement(W + "tc", firstText);
+                var firstRow = new XElement(W + "tr", OmittedGrid(), firstCell);
+                var middle = new XElement(W + "tr", OmittedGrid(), new XElement(W + "tc", Paragraph("OMITTED AGAIN")));
+                var left = new XElement(W + "tc", Paragraph("LATER LEFT"));
+                var right = new XElement(W + "tc", Paragraph("LATER RIGHT"));
+                var later = new XElement(W + "tr", left, right);
+                var table = new XElement(W + "tbl",
+                    new XElement(W + "tblPr", new XElement(W + "tblLayout", new XAttribute(W + "type", "fixed"))),
+                    new XElement(W + "tblGrid", Enumerable.Range(0, 2).Select(_ => new XElement(W + "gridCol", new XAttribute(W + "w", 2400)))),
+                    firstRow, middle, later);
+                var selected = omitLeading ? left : right;
+                target.ReplaceWith(table);
+                if (variant == "ordinary")
+                {
+                    var paragraph = selected.Element(W + "p")!;
+                    paragraph.AddFirst(start);
+                    paragraph.Add(end);
+                }
+                else
+                {
+                    int column = omitLeading ? 0 : 1;
+                    start.SetAttributeValue(W + "colFirst", column);
+                    start.SetAttributeValue(W + "colLast", column);
+                    if (variant == "inline") firstText.AddFirst(start);
+                    else firstCell.AddFirst(start);
+                    switch (variant)
+                    {
+                        case "end-in-row": firstRow.Add(end); break;
+                        case "end-between-rows": firstRow.AddAfterSelf(end); break;
+                        case "end-before-cell": selected.AddBeforeSelf(end); break;
+                        case "end-outside-table": table.AddAfterSelf(end); break;
+                        default: later.Add(end); break;
+                    }
+                }
+
+                XElement OmittedGrid() => new(W + "trPr", new XElement(W + grid, new XAttribute(W + "val", 1)));
+            }, path => pages = Render(path, mode));
+            return pages;
+        }
+    }
+
     private static (XElement Start, XElement End, XElement Target) BookmarkSource(XDocument xml)
     {
         XElement start = xml.Descendants(W + "bookmarkStart").Single();

@@ -8702,6 +8702,7 @@
     "=DocxNestedRowBookmarksFollowThePaintedMergeRestart",
     "=DocxCellBoundaryBookmarksKeepThePaintedCellDestination",
     "=DocxColumnBookmarksFollowTheAuthoredTableGrid",
+    "=DocxColumnBookmarksCrossRowsWithOmittedCells",
     "=DocxBlockBookmarksFollowPaintedTableRowsAcrossStories",
     "=DocxStaticBoxTablesResolveRangeBookmarksOnPaintedRows",
     "=DocxFloatingBoxTableRangeBookmarksFollowPaintedRows",

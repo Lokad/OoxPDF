@@ -224,7 +224,7 @@ internal sealed partial class DocxReader
         bool TryDeferColumnBookmark(XElement start, DocxBookmarkAnchor anchor)
         {
             if (cellBookmarks is { } scope &&
-                ReadTableColumnBookmark(start, anchor) is { } bookmark && bookmark.First >= scope.EndColumn &&
+                ReadTableColumnBookmark(start, anchor) is { } bookmark && scope.Defers(bookmark) &&
                 OoxXml.NormalizeDecimalId(anchor.Id) is { Length: > 0 } && !string.IsNullOrEmpty(anchor.Name))
             {
                 scope.Defer(bookmark with { Anchor = new DocxBookmarkAnchor(anchor.Id, anchor.Name, 0, 0, 0) { InlineItemIndex = 0 } });
