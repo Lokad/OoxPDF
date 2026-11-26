@@ -569,6 +569,49 @@ internal static partial class SvgTextTests
         AssertSvgPaintInBothFormats(Svg(control), references, "0 1 0 rg");
     }
 
+    public static void SvgLocalShapeGroupsPreserveOrderAndInheritedPaint()
+    {
+        const string artwork = """
+            <g transform="translate(4 3)" opacity=".75">
+              <rect width="30" height="22" fill="currentColor"/>
+              <g transform="translate(12 8)" opacity=".8">
+                <ellipse cx="10" cy="10" rx="10" ry="8" fill="blue" visibility="visible"/>
+                <path d="M0 0H8V5H0Z" stroke="#112233"/>
+              </g>
+            </g>
+            """;
+        const string sibling = """<rect x="200" y="20" width="30" height="40" fill="lime"/>""";
+        string literal = Svg($"""
+            <g color="red" fill="red" opacity=".5" transform="scale(2) translate(40 10)">{artwork}</g>
+            {sibling}
+            <g color="yellow" fill="lime" visibility="hidden" transform="translate(285 20)">{artwork}</g>
+            """);
+        string reference = Svg($"""
+            <defs><g color="orange">
+              {artwork.Insert(2, """ id="badge" """)}
+            </g></defs>
+            <use href="#badge" x="10%" y="10" transform="scale(2)" color="red" fill="red" opacity=".5"/>
+            {sibling}
+            <use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#badge" x="285" y="20"
+                 color="yellow" fill="lime" visibility="hidden"/>
+            """);
+        AssertSvgPaintInBothFormats(literal, reference, "1 0 0 rg", "0 0 1 rg", "0 1 0 rg",
+            "/ca 0.5 /CA 0.5", "/ca 0.75 /CA 0.75", "/ca 0.8 /CA 0.8");
+
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        var unsupported = Paint(Svg(sibling + """
+            <defs>
+              <g id="chained"><rect width="30" height="20"/><use href="#chained"/></g>
+              <g id="masked"><g style="mask:url(#mask)"><rect width="30" height="20"/></g></g>
+              <symbol id="viewport"><rect width="30" height="20"/></symbol>
+            </defs>
+            <use href="#chained"/><use href="#masked"/><use href="#viewport"/>
+            """), diagnostics);
+        AssertEquivalentSvgPaint(Paint(Svg(sibling)), unsupported,
+            "Unsupported references leave the surrounding picture intact.");
+        TestAssert.Contains("3 unsupported use elements", diagnostics.Single().Message);
+    }
+
     public static void SvgDecreasingStopsKeepNativePaintAndOpacityInBothFormats()
     {
         string Picture(string last) => Svg($"""

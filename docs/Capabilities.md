@@ -142,9 +142,10 @@ Complex SVG text, filters, masks/blends and
 unsupported constructs retain limitations. TrueType outlines embed; CFF faces
 require an embeddable fallback. Missing glyphs use diagnosed replacement.
 Local SVG gradient templates reuse the authored stops and their source colors.
-Same-document SVG `use` references can reuse a direct shape with the placement
-and inherited paint at each use site. Group and symbol targets, external
-documents and chained references retain the diagnosed fallback.
+Same-document SVG `use` references can reuse a direct shape or a group
+containing supported shapes, with placement and inherited paint at each use
+site. Symbol targets, external documents and chained references retain the
+diagnosed fallback.
 Supported user-space linear and radial gradients accept absolute CSS lengths.
 Zero-radius radial gradients use the final stop's color and opacity.
 SVG labels accept gradients that resolve to a single color and opacity.

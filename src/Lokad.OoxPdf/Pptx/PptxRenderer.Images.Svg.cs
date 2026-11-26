@@ -230,7 +230,7 @@ internal sealed partial class PptxRenderer
             for (int i = shared; i < opacityGroups.Count; i++)
             {
                 var (container, opacity) = opacityGroups[i];
-                if (container.Parent?.Name.LocalName != "use") admittedContainers.Add(container);
+                if (!container.Ancestors().Any(ancestor => ancestor.Name.LocalName == "use")) admittedContainers.Add(container);
                 OpenGroup(container, opacity);
             }
             if (element.Name.LocalName == "text")
@@ -1893,9 +1893,9 @@ internal sealed partial class PptxRenderer
     private static IEnumerable<XElement> EnumerateSvgPaintElements(IEnumerable<XElement> elements, double viewWidth,
         double viewHeight, bool hasStylesheet, HashSet<XElement> admittedElements, CancellationToken cancellationToken)
     {
-        Dictionary<string, (XElement? Element, long Characters)>? byId = null;
+        Dictionary<string, (XElement? Element, long? Characters)>? byId = null;
         // Limit the total geometry materialized through references to the same
-        // input bound as literal SVG markup. Only one instance is live at a time.
+        // input bound as literal SVG markup. Only one instance is attached at a time.
         long remainingCharacters = SafeXml.DefaultMaxCharacters;
         foreach (XElement element in elements)
         {
@@ -1910,10 +1910,7 @@ internal sealed partial class PptxRenderer
             if (IsSvgDisplaySuppressed(element, style) ||
                 IsFullyTransparentSvgContainer(element, style) ||
                 ReadSvgFragmentReference(element) is not { } id ||
-                !IsNeutralSvgTextStyle("clip-path", ReadSvgPresentationAttribute(element, style, "clip-path")) ||
-                !IsNeutralSvgTextStyle("mask", ReadSvgPresentationAttribute(element, style, "mask")) ||
-                !IsNeutralSvgTextStyle("filter", ReadSvgPresentationAttribute(element, style, "filter")) ||
-                (style.TryGetValue("transform", out string? cssTransform) && !cssTransform.Equals("none", StringComparison.OrdinalIgnoreCase)) ||
+                !HasSupportedSvgReferenceEffects(element, style) ||
                 !TryReadSvgShapeCoordinate(element, "x", viewWidth, out double x, style) ||
                 !TryReadSvgShapeCoordinate(element, "y", viewHeight, out double y, style)) continue;
 
@@ -1924,30 +1921,76 @@ internal sealed partial class PptxRenderer
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     if ((string?)target.Attribute("id") is not { Length: > 0 } targetId) continue;
-                    XElement? geometry = IsSvgPaintableElement(target) ? target : null;
-                    long size = geometry?.Attributes().Sum(attribute => (long)attribute.Name.LocalName.Length + attribute.Value.Length + 4) ?? 0;
-                    if (!byId.TryAdd(targetId, (geometry, size))) byId[targetId] = default;
+                    XElement? geometry = IsSvgPaintableElement(target) || target.Name.LocalName == "g" ? target : null;
+                    if (!byId.TryAdd(targetId, (geometry, null))) byId[targetId] = default;
                 }
             }
 
             var (source, characters) = byId.GetValueOrDefault(id);
-            if (source is null || characters > remainingCharacters) continue;
-            remainingCharacters -= characters;
+            if (source is null) continue;
+            if (characters is null)
+            {
+                characters = MeasureSvgReferenceSource(source, cancellationToken);
+                byId[id] = characters.HasValue ? (source, characters) : default;
+            }
+            if (characters is not long size || size > remainingCharacters) continue;
+            remainingCharacters -= size;
 
             // The instance inherits at the use site, independently of the
             // definition's ancestors. It borrows the existing group painter.
-            var shape = new XElement(source.Name, source.Attributes());
-            var instance = new XElement(element.Name.Namespace + "g", element.Attributes(), shape);
+            var geometryRoot = source.Name.LocalName == "g"
+                ? new XElement(source)
+                : new XElement(source.Name, source.Attributes());
+            var instance = new XElement(element.Name.Namespace + "g", element.Attributes(), geometryRoot);
             if (x != 0d || y != 0d)
                 instance.SetAttributeValue("transform", $"{(string?)instance.Attribute("transform")} translate({SvgPathNumber(x)} {SvgPathNumber(y)})");
             element.Add(instance);
             try
             {
                 admittedElements.Add(element);
-                yield return shape;
+                foreach (var shape in geometryRoot.DescendantsAndSelf().Where(IsSvgPaintableElement))
+                    yield return shape;
             }
             finally { instance.Remove(); }
         }
+    }
+
+    private static bool HasSupportedSvgReferenceEffects(XElement element, IReadOnlyDictionary<string, string> style) =>
+        IsNeutralSvgTextStyle("clip-path", ReadSvgPresentationAttribute(element, style, "clip-path")) &&
+        IsNeutralSvgTextStyle("mask", ReadSvgPresentationAttribute(element, style, "mask")) &&
+        IsNeutralSvgTextStyle("filter", ReadSvgPresentationAttribute(element, style, "filter")) &&
+        (!style.TryGetValue("transform", out string? transform) || transform.Equals("none", StringComparison.OrdinalIgnoreCase));
+
+    private static long? MeasureSvgReferenceSource(XElement source, CancellationToken cancellationToken)
+    {
+        if (IsSvgPaintableElement(source)) return MeasureAttributes(source);
+
+        long size = 0;
+        foreach (XNode node in source.DescendantNodesAndSelf())
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            switch (node)
+            {
+                case XElement element when element.Name.Namespace == source.Name.Namespace &&
+                    (ReferenceEquals(element, source) || element.Parent?.Name.LocalName == "g") &&
+                    (element.Name.LocalName == "g" || IsSvgPaintableElement(element)) &&
+                    HasSupportedSvgReferenceEffects(element, ReadSvgStyleDeclarations(element)):
+                    size += 2L * element.Name.LocalName.Length + 5 + MeasureAttributes(element);
+                    break;
+                case XText text:
+                    size += text.Value.Length;
+                    break;
+                case XComment comment:
+                    size += comment.Value.Length + 7L;
+                    break;
+                default:
+                    return null;
+            }
+        }
+        return size;
+
+        static long MeasureAttributes(XElement element) =>
+            element.Attributes().Sum(attribute => (long)attribute.Name.LocalName.Length + attribute.Value.Length + 4);
     }
 
     private static string? ReadSvgFragmentReference(XElement element)
