@@ -110,18 +110,19 @@ internal sealed partial class DocxRenderer
         PictureNavigation navigation)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        // A resolved rotation uses the whole paragraph line frame, rather than
-        // the unrotated picture's baseline-to-top clip.
-        bool usesRotatedLineFrame = TryResolveRotatedPictureFrame(image.Image, image.X, image.Y,
-            image.Width, image.Height, image.LineFrame, requireLineFrame: true, out _);
+        // A resolved rotation uses the whole paragraph line frame.
+        var frame = new PdfRectangle(image.X, image.Y, image.Width, image.Height);
+        PdfRectangle? rotatedFrame = image.LineFrame is { IsUsable: true }
+            ? ResolveRotatedPictureFrame(image.Image, frame) : null;
+        bool usesRotatedLineFrame = rotatedFrame.HasValue;
         bool clipped = !usesRotatedLineFrame && image.ClipBounds.HasValue;
         if (clipped) graphics.SaveState();
         try
         {
             if (clipped && image.ClipBounds is { } clip) graphics.ClipRectangle(clip.X, clip.Y, clip.Width, clip.Height);
-            if (RenderImage(image.Image, image.X, image.Y, image.Width, image.Height, graphics, pageImages,
+            if (RenderImage(image.Image, frame, rotatedFrame, graphics, pageImages,
                 diagnosticSink, image.PageIndex, cancellationToken, imageCache, ref imageIndex, out var paintedFrame,
-                image.LineFrame, requireLineFrame: true, svgTextFonts: fontResources.SvgTextFonts))
+                image.LineFrame, svgTextFonts: fontResources.SvgTextFonts))
                 navigation.RecordInline(image, paintedFrame, clipped, usesRotatedLineFrame);
         }
         finally { if (clipped) graphics.RestoreState(); }

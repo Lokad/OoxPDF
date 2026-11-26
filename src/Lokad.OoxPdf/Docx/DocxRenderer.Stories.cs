@@ -305,10 +305,12 @@ internal sealed partial class DocxRenderer
             if (storyMap is null && drawing.StaticAnchorY is not null &&
                 FloatingTextBoxEmissionMap.TryCreate(markupContext, navigation.Viewport.Height, out var staticMap))
                 storyMap = staticMap;
-            var pictureFrame = storyMap is { } pictureMap
+            var (x, y, pictureWidth, pictureHeight) = storyMap is { } pictureMap
                 ? pictureMap.MapRectangle(placedX, placedTop, width, height)
                 : (X: placedX, Y: placedTop - height, Width: width, Height: height);
-            bool painted = RenderImage(image, pictureFrame.X, pictureFrame.Y, pictureFrame.Width, pictureFrame.Height, graphics, pageImages,
+            var pictureFrame = new PdfRectangle(x, y, pictureWidth, pictureHeight);
+            var rotatedFrame = ResolveRotatedPictureFrame(image, pictureFrame);
+            bool painted = RenderImage(image, pictureFrame, rotatedFrame, graphics, pageImages,
                 diagnosticSink, drawing.AnchorPageIndex ?? 0, cancellationToken, imageCache, ref imageIndex,
                 out PdfRectangle? axisAlignedFrame, svgTextFonts: fontResources.SvgTextFonts);
             if (drawingClip is not null) graphics.RestoreState();

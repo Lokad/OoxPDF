@@ -21,37 +21,33 @@ internal sealed partial class DocxRenderer
         return placed with { LineFrame = new DocxPictureLineFrame(clip.Y, clip.Height) };
     }
 
-    private static bool RenderImage(DocxInlineImage image, double x, double y, double width, double height,
+    private static bool RenderImage(DocxInlineImage image, PdfRectangle frame, PdfRectangle? rotatedFrame,
         PdfGraphicsBuilder graphics, List<PdfImageResource> pageImages, Action<OoxPdfDiagnostic>? diagnosticSink,
         int pageIndex, CancellationToken cancellationToken, Dictionary<string, PdfImageXObject?> imageCache, ref int imageIndex,
         out PdfRectangle? axisAlignedFrame,
-        DocxPictureLineFrame? lineFrame = null, bool requireLineFrame = false,
+        DocxPictureLineFrame? lineFrame = null,
         IReadOnlyDictionary<FontRequest, PptxRenderer.SvgTextFont?>? svgTextFonts = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         axisAlignedFrame = null;
         // A zero-area source frame still owns layout advance/height, but has
         // no image paint. Do not emit a singular image transform or resource.
+        var (x, y, width, height) = frame;
         if (width == 0d || height == 0d) return false;
         DocxPictureCrop crop = image.Crop;
         bool hasFlip = image.FlipHorizontal || image.FlipVertical;
-        bool rotates = image.RotationDegrees != 0d;
-        double paintX = x, paintY = y, paintWidth = width, paintHeight = height;
-        if (rotates)
+        bool rotates = rotatedFrame.HasValue;
+        PdfRectangle paintFrame = rotatedFrame ?? frame;
+        var (paintX, paintY, paintWidth, paintHeight) = paintFrame;
+        if (!rotates && image.RotationDegrees != 0d)
         {
-            bool resolved = TryResolveRotatedPictureFrame(image, x, y, width, height, lineFrame, requireLineFrame, out PdfRectangle frame);
-            if (resolved) { paintX = frame.X; paintY = frame.Y; paintWidth = frame.Width; paintHeight = frame.Height; }
-            if (!resolved)
-            {
-                diagnosticSink?.Invoke(new OoxPdfDiagnostic("DOCX_UNSUPPORTED_IMAGE_TRANSFORM", OoxPdfSeverity.Warning,
-                    "The picture rotation has no usable source or line frame; unrotated paint is retained.", image.PartName,
-                    PageIndex: pageIndex, Feature: "picture rotation", Fallback: "UnrotatedImage"));
-                rotates = false; paintY = y; paintWidth = width; paintHeight = height;
-            }
+            diagnosticSink?.Invoke(new OoxPdfDiagnostic("DOCX_UNSUPPORTED_IMAGE_TRANSFORM", OoxPdfSeverity.Warning,
+                "The picture rotation has no usable source or line frame; unrotated paint is retained.", image.PartName,
+                PageIndex: pageIndex, Feature: "picture rotation", Fallback: "UnrotatedImage"));
         }
         if (!rotates || image.RotationDegrees % 180d == 0d)
         {
-            axisAlignedFrame = new PdfRectangle(paintX, paintY, paintWidth, paintHeight);
+            axisAlignedFrame = paintFrame;
         }
         else if (image.RotationDegrees % 90d == 0d)
         {
@@ -107,20 +103,17 @@ internal sealed partial class DocxRenderer
         finally { graphics.RestoreState(); }
     }
 
-    private static bool TryResolveRotatedPictureFrame(DocxInlineImage image, double x, double y, double width, double height,
-        DocxPictureLineFrame? lineFrame, bool requireLineFrame, out PdfRectangle frame)
+    private static PdfRectangle? ResolveRotatedPictureFrame(DocxInlineImage image, PdfRectangle frame)
     {
-        frame = default;
         if (image.RotationDegrees == 0d || !double.IsFinite(image.RotationDegrees) ||
-            image.PictureFrame is not { IsUsable: true } source ||
-            (requireLineFrame && lineFrame is not { IsUsable: true })) return false;
+            image.PictureFrame is not { IsUsable: true } source) return null;
+        var (x, y, width, height) = frame;
         double scale = Math.Min(width / source.Width, height / source.Height);
         double paintWidth = source.Width * scale, paintHeight = source.Height * scale;
         double paintY = y + height - paintHeight;
         if (!double.IsFinite(x) || !double.IsFinite(paintY) || !double.IsFinite(paintWidth) ||
-            !double.IsFinite(paintHeight) || paintWidth <= 0d || paintHeight <= 0d) return false;
-        frame = new PdfRectangle(x, paintY, paintWidth, paintHeight);
-        return true;
+            !double.IsFinite(paintHeight) || paintWidth <= 0d || paintHeight <= 0d) return null;
+        return new PdfRectangle(x, paintY, paintWidth, paintHeight);
     }
 
     private static bool RenderImageCore(DocxInlineImage image, double x, double y, double width, double height,
