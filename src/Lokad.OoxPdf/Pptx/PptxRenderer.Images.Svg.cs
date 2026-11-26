@@ -744,8 +744,11 @@ internal sealed partial class PptxRenderer
         return true;
     }
 
-    private static bool IsFullyTransparentSvgContainer(XElement element) =>
-        ReadSvgContainerOpacity(element).IsTransparent;
+    // The synthetic instance group handles fractional opacity during paint.
+    private static bool IsFullyTransparentSvgContainer(XElement element, IReadOnlyDictionary<string, string>? style = null) =>
+        element.Name.LocalName == "use"
+            ? ParseSvgOpacity(ReadSvgElementOpacity(element, style ?? ReadSvgStyleDeclarations(element))) == 0d
+            : ReadSvgContainerOpacity(element).IsTransparent;
 
     private static bool IsInFullyTransparentSvgContainer(XElement element)
     {
@@ -1901,11 +1904,12 @@ internal sealed partial class PptxRenderer
                 yield return element;
                 continue;
             }
-            if (hasStylesheet || element.Name.LocalName != "use" || IsSvgDefinitionElement(element) ||
-                ReadSvgFragmentReference(element) is not { } id) continue;
+            if (hasStylesheet || element.Name.LocalName != "use" || IsSvgDefinitionElement(element)) continue;
 
             var style = ReadSvgStyleDeclarations(element);
             if (IsSvgDisplaySuppressed(element, style) ||
+                IsFullyTransparentSvgContainer(element, style) ||
+                ReadSvgFragmentReference(element) is not { } id ||
                 !IsNeutralSvgTextStyle("clip-path", ReadSvgPresentationAttribute(element, style, "clip-path")) ||
                 !IsNeutralSvgTextStyle("mask", ReadSvgPresentationAttribute(element, style, "mask")) ||
                 !IsNeutralSvgTextStyle("filter", ReadSvgPresentationAttribute(element, style, "filter")) ||

@@ -701,6 +701,7 @@
     "=SvgQuotedLocalPaintServersMatchUnquotedReferencesInBothFormats",
     "=SvgEncodedLocalFragmentsKeepGradientPaintAndFallbacks",
     "=SvgLocalShapeReferencesPreservePlacementAndPaint",
+    "=SvgZeroOpacityReferencesPreserveSurroundingPaintAndDiagnostics",
     "=SvgDecreasingStopsKeepNativePaintAndOpacityInBothFormats",
     "=SvgGradientTemplatesMatchExpandedPaintInBothFormats",
     "=SvgOpaqueRgbMatchesHexPaintInBothFormats",

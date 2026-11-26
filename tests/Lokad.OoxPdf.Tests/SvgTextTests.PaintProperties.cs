@@ -541,7 +541,8 @@ internal static partial class SvgTextTests
             <use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#tile" x="100" y="20" fill="yellow"/>
             <use href="#edge" x="140" fill="red"/>
             """);
-        AssertSvgPaintInBothFormats(literal, references, "1 0 0 rg", "0 1 0 rg", "1 1 0 rg", "0 0 1 RG", LabelColor);
+        AssertSvgPaintInBothFormats(literal, references, "1 0 0 rg", "0 1 0 rg", "1 1 0 rg", "0 0 1 RG", LabelColor,
+            "/ca 0.5 /CA 0.5");
 
         var diagnostics = new List<OoxPdfDiagnostic>();
         var unsupported = Paint(Svg(definitions + sibling + """
@@ -554,6 +555,18 @@ internal static partial class SvgTextTests
         AssertEquivalentSvgPaint(Paint(Svg(sibling)), unsupported,
             "Unresolved or unsupported references preserve the surrounding paint.");
         TestAssert.Contains("4 unsupported use elements", diagnostics.Single().Message);
+    }
+
+    public static void SvgZeroOpacityReferencesPreserveSurroundingPaintAndDiagnostics()
+    {
+        const string control = """<rect width="30" height="20" fill="lime"/>""";
+        string references = Svg(control + """
+            <defs><rect id="tile" width="30" height="20" fill="red"/></defs>
+            <use href="#tile" opacity="0"/>
+            <use href="#missing" opacity="0"/>
+            <use href="#missing" opacity="1" style="opacity:0% !important;opacity:1"/>
+            """);
+        AssertSvgPaintInBothFormats(Svg(control), references, "0 1 0 rg");
     }
 
     public static void SvgDecreasingStopsKeepNativePaintAndOpacityInBothFormats()
