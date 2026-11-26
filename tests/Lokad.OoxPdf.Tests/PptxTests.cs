@@ -536,10 +536,10 @@ internal static class PptxTests
         return File.ReadAllText(output, Encoding.ASCII);
     }
 
-    internal static string RenderSingleSlideContent(Stream input)
+    internal static string RenderSingleSlideContent(Stream input, IFontResolver? fontResolver = null)
     {
         using var package = OoxPackage.Open(input, default);
-        return new PptxRenderer(null).RenderPagesAsync(
+        return new PptxRenderer(fontResolver).RenderPagesAsync(
             new PptxReader().Read(package, default), package, null, default).ToBlockingEnumerable().Single().Content;
     }
 
