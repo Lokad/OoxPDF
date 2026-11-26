@@ -7,13 +7,12 @@ internal static partial class DocxInlineCompositionTests
 {
     public static void DocxContainerTableGridsAlignWholeTablesInBodyAndHeader()
     {
-        // The fixture is 11906 twips wide with two 1440-twip margins and a
-        // 3600-twip table. The established left-indent control anchors the
-        // first text rather than the grid, so include its 72-twip cell inset.
-        foreach (var (fixture, part, alignment, indent) in new[]
+        // A 595.3pt sheet with 72pt margins and a 180pt table places the
+        // centered grid at 207.65pt and the right-aligned grid at 343.3pt.
+        foreach (var (fixture, part, alignment, expectedLeft) in new[]
         {
-            ("body-zero", "word/document.xml", "center", 2785),
-            ("header-zero", "word/static-inline-ordinary-header-box.xml", "right", 5498)
+            ("body-zero", "word/document.xml", "center", 207.65d),
+            ("header-zero", "word/static-inline-ordinary-header-box.xml", "right", 343.3d)
         })
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
         {
@@ -26,12 +25,46 @@ internal static partial class DocxInlineCompositionTests
                 }, part);
 
             var renderer = MathContentControlRenderer(mode);
-            var expected = renderer.RenderPagesAsync(Source(null, indent), null, default).ToBlockingEnumerable().ToArray();
-            var actual = renderer.RenderPagesAsync(Source(alignment, 480), null, default).ToBlockingEnumerable().ToArray();
-            TestAssert.Equal(1, expected.Length);
-            TestAssert.True(expected[0].Annotations.Any(link => link.Uri == "https://example.invalid/static-box-table"),
-                "The offset control must retain its authored link.");
-            AssertMathContentControlPages(expected, actual);
+            var control = renderer.RenderPagesAsync(Source(null, 0), null, default).ToBlockingEnumerable().Single();
+            var actual = renderer.RenderPagesAsync(Source(alignment, 480), null, default).ToBlockingEnumerable().Single();
+            var controlFills = DocxParagraphShadingTests.ReadRectangles(control.Content).Where(fill => fill.Color == "DBEAFE").ToArray();
+            var actualFills = DocxParagraphShadingTests.ReadRectangles(actual.Content).Where(fill => fill.Color == "DBEAFE").ToArray();
+            TestAssert.Equal(2, controlFills.Length);
+            TestAssert.Equal(2, actualFills.Length);
+            double scale = controlFills[0].Width / 180d;
+            double shift = expectedLeft * scale - controlFills[0].X;
+            foreach (var (before, after) in controlFills.Zip(actualFills))
+            {
+                Close(expectedLeft * scale, after.X);
+                Close(before.Y, after.Y);
+                Close(before.Width, after.Width);
+                Close(before.Height, after.Height);
+            }
+            var beforeText = DocxCommentsTests.ReadEmbeddedGlyphTextShows(control, true).ToArray();
+            var afterText = DocxCommentsTests.ReadEmbeddedGlyphTextShows(actual, true).ToArray();
+            TestAssert.True(beforeText.Select(item => item.Text).SequenceEqual(afterText.Select(item => item.Text)),
+                "Alignment preserves all painted prose and equations in order.");
+            foreach (string label in new[] { "BOX TABLE NORTH", "BOX TABLE SOUTH" })
+            {
+                var before = beforeText.Single(item => item.Text.Trim() == label);
+                var after = afterText.Single(item => item.Text.Trim() == label);
+                Close(before.X + shift, after.X);
+                Close(before.Y, after.Y);
+            }
+            var beforeLink = control.Annotations.Single(link => link.Uri == "https://example.invalid/static-box-table");
+            var afterLink = actual.Annotations.Single(link => link.Uri == beforeLink.Uri);
+            Close(beforeLink.X + shift, afterLink.X);
+            Close(beforeLink.Y, afterLink.Y);
+            Close(beforeLink.Width, afterLink.Width);
+            Close(beforeLink.Height, afterLink.Height);
+            var beforeTarget = control.Annotations.Single(link => link.Destination.HasValue).Destination!.Value;
+            var afterTarget = actual.Annotations.Single(link => link.Destination.HasValue).Destination!.Value;
+            TestAssert.Equal(beforeTarget.PageIndex, afterTarget.PageIndex);
+            Close(beforeTarget.Left!.Value + shift, afterTarget.Left!.Value);
+            Close(beforeTarget.Top!.Value, afterTarget.Top!.Value);
+
+            void Close(double expected, double observed) => TestAssert.True(Math.Abs(expected - observed) < .004d,
+                $"{fixture}/{mode} expected {expected}pt, observed {observed}pt.");
         }
     }
 
