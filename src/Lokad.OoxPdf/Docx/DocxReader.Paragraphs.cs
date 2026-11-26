@@ -223,16 +223,19 @@ internal sealed partial class DocxReader
         void RecordBookmarkStart(XElement start, int sourceIndex, int textIndex, int textOffset, int? itemIndex)
         {
             var anchor = ReadBookmarkAnchor(start, sourceIndex, textIndex, textOffset, itemIndex);
+            if (!TryDeferColumnBookmark(start, anchor)) bookmarkAnchors.Add(anchor);
+        }
+
+        bool TryDeferColumnBookmark(XElement start, DocxBookmarkAnchor anchor)
+        {
             if (cellBookmarks is { } scope &&
                 ReadTableColumnBookmark(start, anchor) is { } bookmark && bookmark.First >= scope.EndColumn &&
                 OoxXml.NormalizeDecimalId(anchor.Id) is { Length: > 0 } && !string.IsNullOrEmpty(anchor.Name))
             {
-                scope.Defer(bookmark with { Anchor = ReadBookmarkAnchor(start, 0, 0, 0, 0) });
+                scope.Defer(bookmark with { Anchor = new DocxBookmarkAnchor(anchor.Id, anchor.Name, 0, 0, 0) { InlineItemIndex = 0 } });
+                return true;
             }
-            else
-            {
-                bookmarkAnchors.Add(anchor);
-            }
+            return false;
         }
 
         void RecordCellBookmarkEnd(XElement end)
@@ -559,7 +562,7 @@ internal sealed partial class DocxReader
                     authoredStory: authoredStory,
                     equationHasDeletionOwner: source.RemoveDeletedText || equationRevision?.Kind == DocxRevisionKind.Deletion,
                     trailingBreaks: firstTrailingBreak,
-                    readBookmarkEnd: source.RemoveDeletedText || cellBookmarks is null ? null : RecordCellBookmarkEnd);
+                    readCellBookmarkBoundary: source.RemoveDeletedText || cellBookmarks is null ? null : ReadMathCellBookmarkBoundary);
                 if (source.RemoveDeletedText)
                 {
                     var deletedEquation = new DocxEquation(content, runs.Count, sourceRunIndex, display, null, null);
@@ -606,6 +609,14 @@ internal sealed partial class DocxReader
                     AddHyperlinkSpan(projectedLink, linkStart.SourceRun, sourceRunIndex - linkStart.SourceRun,
                         linkStart.TextRun, runs.Count - linkStart.TextRun, linkStart.InlineItem, inlineItems!.Count,
                         hyperlinkSpans, relationships);
+            }
+
+            bool ReadMathCellBookmarkBoundary(XElement boundary)
+            {
+                if (boundary.Name == WordprocessingNamespace + "bookmarkStart")
+                    return TryDeferColumnBookmark(boundary, ReadBookmarkAnchor(boundary, 0, 0, 0, 0));
+                RecordCellBookmarkEnd(boundary);
+                return false;
             }
 
             DocxTextRun ReadMathRun(XElement run, string text)

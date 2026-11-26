@@ -1730,6 +1730,17 @@ internal static class DocxSectionNavigationTests
                         "Moving an end marker into the equation preserves all page paint.");
                     TestAssert.Equal(0, closed[0].Annotations.Count);
                 }
+                foreach (string variant in new[] { "math-start-in-numerator", "math-start-at-root",
+                             "math-start-before-numerator-end", "math-start-before-root-end" })
+                {
+                    PdfPage[] mathPages = RenderColumn(variant, spanned, mode, mathRenderer);
+                    TestAssert.True(mathOpen.Select(page => page.Content).SequenceEqual(mathPages.Select(page => page.Content)),
+                        "Moving a column bookmark start into a formula preserves both operands and the neighboring cells.");
+                    if (variant is "math-start-before-numerator-end" or "math-start-before-root-end")
+                        TestAssert.Equal(0, mathPages[0].Annotations.Count);
+                    else
+                        TestAssert.Equal(mathOpen[0].Annotations.Single(), mathPages[0].Annotations.Single());
+                }
 
                 PdfPage[] fieldOpen = RenderColumn("field-after-target", spanned, mode);
                 TestAssert.True(fieldOpen[0].Annotations.Single().Destination is { PageIndex: 1, Left: > 100d },
@@ -1867,13 +1878,18 @@ internal static class DocxSectionNavigationTests
                         var numerator = new XElement(math + "num", new XElement(math + "r", new XElement(math + "t", "7")));
                         var denominator = new XElement(math + "den", new XElement(math + "r", new XElement(math + "t", "3")));
                         var equation = new XElement(math + "oMath", new XElement(math + "f", numerator, denominator));
-                        paragraph.AddFirst(start);
                         paragraph.Add(equation);
+                        if (variant is "math-start-in-numerator" or "math-start-before-root-end")
+                            numerator.AddFirst(start);
+                        else if (variant is "math-start-at-root" or "math-start-before-numerator-end")
+                            equation.AddFirst(start);
+                        else
+                            paragraph.AddFirst(start);
                         XElement endOwner = variant switch
                         {
-                            "math-at-root" => equation,
-                            "math-in-numerator" => numerator,
-                            "math-after-target" => second.Element(W + "p")!,
+                            "math-at-root" or "math-start-before-root-end" => equation,
+                            "math-in-numerator" or "math-start-before-numerator-end" => numerator,
+                            "math-after-target" or "math-start-in-numerator" or "math-start-at-root" => second.Element(W + "p")!,
                             _ => paragraph
                         };
                         endOwner.Add(end);

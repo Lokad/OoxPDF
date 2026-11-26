@@ -18,10 +18,11 @@ internal static partial class DocxMathParser
         Action<XElement>? readCommentBoundary = null, Func<XElement, DocxHyperlinkSpan>? readHyperlink = null,
         XElement? authoredStory = null, bool equationHasDeletionOwner = false,
         (XElement Run, XElement? FirstBreakInRun)? trailingBreaks = null,
-        Action<XElement>? readBookmarkEnd = null)
+        Func<XElement, bool>? readCellBookmarkBoundary = null)
     {
         var pending = new Stack<(XElement Element, bool Expanded, XName? RevisionOwner, bool IncludeAnnotations, DocxHyperlinkSpan? Hyperlink)>();
         var nodes = new Dictionary<XElement, DocxMathNode>();
+        HashSet<XElement>? deferredBookmarkStarts = null;
         IReadOnlySet<(XName Name, string Id)>? moveOwners = null;
         XName deletion = WordprocessingNamespace + "del";
         pending.Push((equation, false, null, true, null));
@@ -33,6 +34,12 @@ internal static partial class DocxMathParser
             if (DocxSourceXml.IsCommentBoundary(element))
             {
                 if (item.IncludeAnnotations) readCommentBoundary?.Invoke(element);
+                continue;
+            }
+            if (DocxSourceXml.IsBookmarkMarker(element))
+            {
+                if (item.IncludeAnnotations && readCellBookmarkBoundary?.Invoke(element) == true)
+                    (deferredBookmarkStarts ??= []).Add(element);
                 continue;
             }
             bool revisionSource = item.RevisionOwner is null && includeRevision is not null &&
@@ -59,6 +66,9 @@ internal static partial class DocxMathParser
                 continue;
             }
 
+            bool mathRow = IsRow(name) && (name == "oMath" || !IsSourceContainer(element.Parent)) &&
+                (name != "deg" || element.Parent?.Name == MathNamespace + "rad") &&
+                (name != "fName" || element.Parent?.Name == MathNamespace + "func");
             if (!item.Expanded)
             {
                 DocxHyperlinkSpan? hyperlink = item.IncludeAnnotations && included ? item.Hyperlink : null;
@@ -66,9 +76,10 @@ internal static partial class DocxMathParser
                     hyperlink = readHyperlink?.Invoke(element);
                 pending.Push((element, true, item.RevisionOwner, item.IncludeAnnotations && included, hyperlink));
                 XName? revisionOwner = revisionRow ? element.Name : item.RevisionOwner;
-                // Comment ranges need source order, including boundaries in
-                // different nested rows. They are events, not math operands.
-                foreach (XElement child in WithoutTrailingBreaks(element, TraversalChildren(element)).Reverse())
+                // Range boundaries can cross nested rows. Visit them in source
+                // order before using the rows to assemble math geometry.
+                bool visitCellBookmarks = readCellBookmarkBoundary is not null && (revisionRow || sourceContainer || mathRow);
+                foreach (XElement child in WithoutTrailingBreaks(element, TraversalChildren(element, visitCellBookmarks)).Reverse())
                 {
                     pending.Push((child, false, revisionOwner,
                         item.IncludeAnnotations && included, hyperlink));
@@ -79,9 +90,7 @@ internal static partial class DocxMathParser
             DocxMathNode node;
             if (revisionRow || sourceContainer)
                 node = new DocxMathRow(ContentChildren(element).Select(child => nodes[child]).ToArray());
-            else if (IsRow(name) && (name == "oMath" || !IsSourceContainer(element.Parent)) &&
-                (name != "deg" || element.Parent?.Name == MathNamespace + "rad") &&
-                (name != "fName" || element.Parent?.Name == MathNamespace + "func"))
+            else if (mathRow)
             {
                 node = new DocxMathRow(WithoutTrailingBreaks(element, ContentChildren(element)).Select(child => nodes[child]).ToArray())
                 { ArgumentProperties = ReadArgumentProperties(element) };
@@ -172,16 +181,12 @@ internal static partial class DocxMathParser
                     cancellationToken.ThrowIfCancellationRequested();
                     if (DocxSourceXml.IsBookmarkMarker(child))
                     {
-                        if (child.Name.LocalName == "bookmarkStart")
+                        if (child.Name.LocalName == "bookmarkStart" && deferredBookmarkStarts?.Contains(child) != true)
                         {
                             var bookmark = new DocxMathBookmark((string?)child.Attribute(WordprocessingNamespace + "id"),
                                 (string?)child.Attribute(WordprocessingNamespace + "name"));
                             (bookmarks ??= []).Add(new(bookmark, childIndex));
                             readBookmark?.Invoke(bookmark);
-                        }
-                        else
-                        {
-                            readBookmarkEnd?.Invoke(child);
                         }
                     }
                     else if (!IsProperty(child) && !IsNonPrintingSourceMarker(child) && !DocxSourceXml.IsCommentBoundary(child)) childIndex++;
@@ -311,8 +316,9 @@ internal static partial class DocxMathParser
         DocxSourceXml.TryResolveRevisionRangeMarker(element, out _, out _) &&
         DocxSourceXml.IsNonPrintingRevisionRangeBoundary(element);
 
-    private static IEnumerable<XElement> TraversalChildren(XElement element) =>
-        DocxSourceXml.StoredChildren(element).Where(child => !IsProperty(child) && !IsNonPrintingSourceMarker(child) && !DocxSourceXml.IsBookmarkMarker(child));
+    private static IEnumerable<XElement> TraversalChildren(XElement element, bool visitCellBookmarks) =>
+        DocxSourceXml.StoredChildren(element).Where(child => !IsProperty(child) && !IsNonPrintingSourceMarker(child) &&
+            (visitCellBookmarks || !DocxSourceXml.IsBookmarkMarker(child)));
     private static IEnumerable<XElement> NonMarkerChildren(XElement element) =>
         DocxSourceXml.StoredChildren(element).Where(child => !IsNonPrintingSourceMarker(child) && !DocxSourceXml.IsBookmarkMarker(child) && !DocxSourceXml.IsCommentBoundary(child));
     private static IEnumerable<XElement> ContentChildren(XElement element) =>
