@@ -45,7 +45,7 @@ internal static partial class DocxInlineCompositionTests
                 string? part = row.TryGetProperty("Part", out var partValue) ? partValue.GetString() : null;
                 var document = ReadMutation("CompositionProbes/" + id, mode, transformed, transformed, partOverride: part);
                 var paragraphs = part?.StartsWith("word/header", StringComparison.Ordinal) == true
-                    ? DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(document, default).Select(owner => owner.Paragraph)
+                    ? DocxTests.EnumerateStaticMathCandidates(document, default).Select(owner => owner.Paragraph)
                     : DocxBlockTraversal.EnumerateBodyParagraphs(document.BodyElements);
                 var equations = paragraphs.SelectMany(p => p.Equations).ToArray();
                 TestAssert.Equal(row.TryGetProperty("EquationCount", out var count) ? count.GetInt32() : 1, equations.Length);

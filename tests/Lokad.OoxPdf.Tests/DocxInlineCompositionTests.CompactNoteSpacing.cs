@@ -45,7 +45,7 @@ internal static partial class DocxInlineCompositionTests
                     false, false, (xml, w, _) => xml.Descendants(w + "pgSz").Single()
                         .SetAttributeValue(w + "h", pageHeight.ToString(CultureInfo.InvariantCulture)));
                 var equations = DocxBlockTraversal.EnumerateBodyParagraphs(source).Concat(
-                        DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(source, default).Select(owner => owner.Paragraph))
+                        DocxTests.EnumerateStaticMathCandidates(source, default).Select(owner => owner.Paragraph))
                     .SelectMany(owner => owner.Equations).Distinct().ToDictionary(equation => equation,
                         equation => new DocxPreparedMathParagraph(equation, new(18d, 9d, 4d, []), 12d, 16d));
                 var layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)

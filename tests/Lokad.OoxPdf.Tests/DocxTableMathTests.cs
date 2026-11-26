@@ -828,14 +828,14 @@ internal static class DocxTableMathTests
                 PageSettings = guard == "note" ? DocxPageSettings.Empty : settings,
                 EquationParts = [new DocxEquationPartSource(guard == "note" ? "/word/footnotes.xml" : "/word/static.xml", 1, elements)]
             };
-            var candidates = DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(document, default).ToArray();
+            var candidates = DocxTests.EnumerateStaticMathCandidates(document, default).ToArray();
             TestAssert.Equal(guard is "plain" or "exact" or "nested" ? 1 : 0, candidates.Length);
             if (candidates.Length != 0)
                 TestAssert.True(ReferenceEquals(paragraph, candidates[0].Paragraph) && candidates[0].HasPageInputs,
                     "Shared variants prepare one original source owner with actual page inputs.");
             using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
             TestAssert.Throws<OperationCanceledException>(() =>
-                DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(document, cancelled.Token).ToArray());
+                DocxTests.EnumerateStaticMathCandidates(document, cancelled.Token).ToArray());
         }
     }
 

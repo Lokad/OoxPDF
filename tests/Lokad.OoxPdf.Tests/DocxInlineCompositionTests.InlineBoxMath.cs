@@ -30,7 +30,7 @@ internal static partial class DocxInlineCompositionTests
                 .SelectMany(paragraph => paragraph.InlineTextBoxes)
                 .SelectMany(box => DocxBlockTraversal.EnumerateBodyParagraphs(box.BodyElements))
                 .SelectMany(paragraph => paragraph.Equations), ReferenceEqualityComparer.Instance);
-            var actual = DocxMathParagraphPolicy.EnumerateInlineBoxPreparationCandidates(source, default)
+            var actual = DocxTests.EnumerateInlineBoxMathCandidates(source, default)
                 .SelectMany(paragraph => DocxMathParagraphPolicy.GetPreparationEquations(paragraph)).ToArray();
             TestAssert.Equal(row.GetProperty("BoxEquationCount").GetInt32(), actual.Length);
             TestAssert.Equal(expected.Count, actual.Length);
@@ -46,7 +46,7 @@ internal static partial class DocxInlineCompositionTests
     {
         var source = ReadMutation("InlineBoxMath/inline-box-mixed-source-report", OoxPdfDocxMarkupMode.Final, false, false);
         using var cancellation = new CancellationTokenSource();
-        using var candidates = DocxMathParagraphPolicy.EnumerateInlineBoxPreparationCandidates(source, cancellation.Token).GetEnumerator();
+        using var candidates = DocxTests.EnumerateInlineBoxMathCandidates(source, cancellation.Token).GetEnumerator();
         TestAssert.True(candidates.MoveNext(), "The mixed frame has multiple source children.");
         cancellation.Cancel();
         TestAssert.Throws<OperationCanceledException>(() => candidates.MoveNext());

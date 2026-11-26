@@ -182,12 +182,13 @@ internal sealed partial class DocxRenderer
             Dictionary<ushort, int> AssemblyParts, HashSet<int> Characters)>(ReferenceEqualityComparer.Instance);
         var controlKeys = new Dictionary<IDocxMathControl, (string StableId, int FaceIndex)>(ReferenceEqualityComparer.Instance);
         var unavailableControlFaces = new HashSet<OpenTypeFont>(ReferenceEqualityComparer.Instance);
+        var staticSources = DocxBlockTraversal.EnumerateStaticStorySources(document, token).ToArray();
         foreach (var owner in DocxMathParagraphPolicy.EnumeratePreparationCandidates(document, token, includePageCountDependencies: true)
             .Select(paragraph => (Paragraph: paragraph, HasPageInputs: true, NeedsFinalCount: true))
-            .Concat(DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(document, token)
+            .Concat(DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(document, staticSources, token)
                 .Select(owner => (owner.Paragraph, owner.HasPageInputs, NeedsFinalCount: false)))
-            .Concat(DocxMathParagraphPolicy.EnumerateInlineBoxPreparationCandidates(document, token)
-                .Concat(DocxMathParagraphPolicy.EnumerateFloatingBoxPreparationCandidates(document, token))
+            .Concat(DocxMathParagraphPolicy.EnumerateInlineBoxPreparationCandidates(document, staticSources, token)
+                .Concat(DocxMathParagraphPolicy.EnumerateFloatingBoxPreparationCandidates(document, staticSources, token))
                 .Select(paragraph => (Paragraph: paragraph, HasPageInputs: true, NeedsFinalCount: true))))
         {
             token.ThrowIfCancellationRequested();

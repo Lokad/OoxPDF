@@ -18,7 +18,7 @@ internal static partial class DocxInlineCompositionTests
             var document = ReadMutation("CompositionProbes/" + row.GetProperty("Id").GetString(),
                 OoxPdfDocxMarkupMode.Final, false, false);
             var owners = DocxMathParagraphPolicy.EnumeratePreparationCandidates(document, default)
-                .Concat(DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(document, default).Select(owner => owner.Paragraph))
+                .Concat(DocxTests.EnumerateStaticMathCandidates(document, default).Select(owner => owner.Paragraph))
                 .Where(paragraph => paragraph.Equations.Count != 0).ToArray();
             TestAssert.Equal(row.GetProperty("ExpectedEquationCount").GetInt32(), owners.Sum(paragraph => paragraph.Equations.Count));
             var math = owners.SelectMany(paragraph => paragraph.Equations).ToDictionary(equation => equation,

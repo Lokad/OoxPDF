@@ -90,7 +90,7 @@ internal static partial class DocxInlineCompositionTests
                     { ["default"] = [new DocxTableElement(changedTable)] },
                 EquationParts = [new DocxEquationPartSource("/word/header1.xml", 1, [new DocxTableElement(changedTable)])]
             };
-            var staticCandidates = DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(staticSource, default).ToArray();
+            var staticCandidates = DocxTests.EnumerateStaticMathCandidates(staticSource, default).ToArray();
             TestAssert.Equal(variant == "restart" ? 1 : 0, staticCandidates.Length);
             if (staticCandidates.Length != 0)
                 TestAssert.True(ReferenceEquals(paragraph, staticCandidates[0].Paragraph), "Static preparation shares the same visible merge source.");

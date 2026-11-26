@@ -19,7 +19,7 @@ internal static partial class DocxInlineCompositionTests
             var source = ReadMutation("CompositionProbes/mixed-note-" + kind + "-table", mode, false, false);
             var story = source.RelatedStories.Single(story => story.Id == "37");
             var paragraph = DocxBlockTraversal.EnumerateBodyParagraphs(story).Single(paragraph => paragraph.Equations.Count != 0);
-            var owner = DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(source, default)
+            var owner = DocxTests.EnumerateStaticMathCandidates(source, default)
                 .Single(item => ReferenceEquals(item.Paragraph, paragraph));
             TestAssert.True(owner.HasPageInputs, "Normal note preparation retains the counter-input owner; placement supplies the actual values.");
             TestAssert.Equal(2, DocxMathParagraphPolicy.GetPreparationEquations(paragraph).Count);
@@ -72,7 +72,7 @@ internal static partial class DocxInlineCompositionTests
                         _ => new XElement(w + "textDirection", new XAttribute(w + "val", "tbRl"))
                     });
                 }, partOverride: "word/" + kind + "s.xml");
-            var candidates = DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(source, default).ToArray();
+            var candidates = DocxTests.EnumerateStaticMathCandidates(source, default).ToArray();
             TestAssert.Equal(variant == "merge-restart" ? 2 : 0,
                 candidates.Sum(candidate => candidate.Paragraph.Equations.Count));
         }
@@ -80,7 +80,7 @@ internal static partial class DocxInlineCompositionTests
         cancellation.Cancel();
         var control = ReadMutation("CompositionProbes/mixed-note-footnote-table", OoxPdfDocxMarkupMode.Final, false, false);
         TestAssert.Throws<OperationCanceledException>(() =>
-            DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(control, cancellation.Token).ToArray());
+            DocxTests.EnumerateStaticMathCandidates(control, cancellation.Token).ToArray());
     }
 
     public static void DocxInlineCompositionNoteTablesKeepIndependentContentThroughSourceSplitting()

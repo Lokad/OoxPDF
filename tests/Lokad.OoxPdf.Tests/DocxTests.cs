@@ -348,6 +348,15 @@ internal static class DocxTests
         return new DocxReader().Read(OoxPackage.Open(input, CancellationToken.None), null, CancellationToken.None, mode, includeStyleCatalog);
     }
 
+    internal static IEnumerable<(DocxParagraph Paragraph, bool HasPageInputs)> EnumerateStaticMathCandidates(
+        DocxDocument document, CancellationToken token) =>
+        DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(document,
+            DocxBlockTraversal.EnumerateStaticStorySources(document, token).ToArray(), token);
+
+    internal static IEnumerable<DocxParagraph> EnumerateInlineBoxMathCandidates(DocxDocument document, CancellationToken token) =>
+        DocxMathParagraphPolicy.EnumerateInlineBoxPreparationCandidates(document,
+            DocxBlockTraversal.EnumerateStaticStorySources(document, token).ToArray(), token);
+
     internal static DocxTable ReadSingleTable(string input, OoxPdfDocxMarkupMode mode)
     {
         return ReadDocx(input, mode).BodyElements.OfType<DocxTableElement>().Single().Table;

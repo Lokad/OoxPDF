@@ -119,6 +119,6 @@ internal static partial class DocxInlineCompositionTests
 
         static IEnumerable<DocxParagraph> Owners(DocxDocument document) =>
             DocxMathParagraphPolicy.EnumeratePreparationCandidates(document, default, true).Concat(
-                DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(document, default).Select(owner => owner.Paragraph));
+                DocxTests.EnumerateStaticMathCandidates(document, default).Select(owner => owner.Paragraph));
     }
 }

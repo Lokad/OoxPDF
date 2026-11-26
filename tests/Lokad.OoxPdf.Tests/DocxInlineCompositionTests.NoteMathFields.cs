@@ -16,7 +16,7 @@ internal static partial class DocxInlineCompositionTests
         {
             var document = ReadNoteMathField(kind, mode, instruction, "2", direct);
             var paragraph = NoteMathFieldParagraph(document);
-            var owner = DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(document, default)
+            var owner = DocxTests.EnumerateStaticMathCandidates(document, default)
                 .Single(item => ReferenceEquals(item.Paragraph, paragraph));
             TestAssert.True(owner.HasPageInputs, "Normal note placement supplies actual counter inputs independently of math preparation.");
             TestAssert.Equal(2, DocxMathParagraphPolicy.GetPreparationEquations(paragraph, owner.HasPageInputs).Count);
@@ -24,7 +24,7 @@ internal static partial class DocxInlineCompositionTests
                 "Preparing equation boxes must not materialize a guessed field value.");
             using var cancellation = new CancellationTokenSource(); cancellation.Cancel();
             TestAssert.Throws<OperationCanceledException>(() =>
-                DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(document, cancellation.Token).ToArray());
+                DocxTests.EnumerateStaticMathCandidates(document, cancellation.Token).ToArray());
         }
     }
 
@@ -78,7 +78,7 @@ internal static partial class DocxInlineCompositionTests
         {
             var cached = ReadNoteMathField(kind, OoxPdfDocxMarkupMode.Final, "AUTHOR", "1", false);
             var paragraph = NoteMathFieldParagraph(cached);
-            TestAssert.True(DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(cached, default)
+            TestAssert.True(DocxTests.EnumerateStaticMathCandidates(cached, default)
                 .Any(item => ReferenceEquals(item.Paragraph, paragraph)), "An ordinary cached field keeps its existing literal fallback.");
             foreach (bool unknownStory in new[] { false, true })
             {
@@ -86,7 +86,7 @@ internal static partial class DocxInlineCompositionTests
                     includeResult: unknownStory, storyType: unknownStory ? "unregistered" : null);
                 var source = NoteMathFieldParagraph(unsupported);
                 TestAssert.Equal(2, source.Equations.Count);
-                TestAssert.Equal(!unknownStory, DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(unsupported, default)
+                TestAssert.Equal(!unknownStory, DocxTests.EnumerateStaticMathCandidates(unsupported, default)
                     .Any(item => ReferenceEquals(item.Paragraph, source)));
                 // A complete simple field can own an empty stored result;
                 // unregistered note owners still retain their staged fallback.

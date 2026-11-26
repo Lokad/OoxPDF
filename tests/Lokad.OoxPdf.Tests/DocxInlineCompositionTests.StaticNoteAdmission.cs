@@ -41,7 +41,7 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.True(paragraph.Runs.All(run => !run.IsAutomaticNoteStoryMarker) && paragraph.Runs[0].Text.StartsWith("All quantities", StringComparison.Ordinal),
                 "The plain target has no authored number; admission must not manufacture one.");
             var equations = DocxBlockTraversal.EnumerateBodyParagraphs(source).Concat(
-                    DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(source, default).Select(owner => owner.Paragraph))
+                    DocxTests.EnumerateStaticMathCandidates(source, default).Select(owner => owner.Paragraph))
                 .SelectMany(owner => owner.Equations).Distinct().ToDictionary(equation => equation,
                     equation => new DocxPreparedMathParagraph(equation, new(18d, 9d, 4d, []), 12d, 16d));
             var layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)

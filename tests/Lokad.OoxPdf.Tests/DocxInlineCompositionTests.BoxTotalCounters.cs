@@ -52,7 +52,7 @@ internal static partial class DocxInlineCompositionTests
                 new XElement(w + "fldSimple", new XAttribute(w + "instr", "PAGE"),
                     new XElement(w + "r", new XElement(w + "t", "1")))));
         var parent = document.Paragraphs.Single(paragraph => paragraph.InlineTextBoxes.Count != 0);
-        var child = DocxMathParagraphPolicy.EnumerateInlineBoxPreparationCandidates(document, default).Single();
+        var child = DocxTests.EnumerateInlineBoxMathCandidates(document, default).Single();
         var equations = child.Equations.ToDictionary(equation => equation,
             equation => new DocxPreparedMathParagraph(equation, new(18d, 10d, 4d, []), 10d, 16d));
         TestAssert.Equal(DocxCounterDependencies.PageNumber | DocxCounterDependencies.PageCount,

@@ -150,7 +150,7 @@ internal static class DocxCellMemoTests
             "inline-box-child-total-counter.docx"));
         var document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final);
         var paragraph = document.Paragraphs.Single(paragraph => paragraph.InlineTextBoxes.Count != 0);
-        var child = DocxMathParagraphPolicy.EnumerateInlineBoxPreparationCandidates(document, default).Single();
+        var child = DocxTests.EnumerateInlineBoxMathCandidates(document, default).Single();
         var math = child.Equations.ToDictionary(equation => equation,
             equation => new DocxPreparedMathParagraph(equation, new(18d, 10d, 4d, []), 10d, 16d));
         var cell = new DocxTableCell([paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);

@@ -112,7 +112,7 @@ internal static partial class DocxInlineCompositionTests
                 .SelectMany(paragraph => paragraph.InlineTextBoxes)
                 .SelectMany(box => DocxBlockTraversal.EnumerateBodyParagraphs(box.BodyElements))
                 .SelectMany(paragraph => paragraph.Equations), ReferenceEqualityComparer.Instance);
-            var actual = DocxMathParagraphPolicy.EnumerateInlineBoxPreparationCandidates(document, default)
+            var actual = DocxTests.EnumerateInlineBoxMathCandidates(document, default)
                 .SelectMany(paragraph => DocxMathParagraphPolicy.GetPreparationEquations(paragraph)).ToArray();
             TestAssert.Equal(1, expected.Count);
             TestAssert.Equal(1, actual.Length);

@@ -59,7 +59,7 @@ internal static class DocxNativeMathTests
         DocxDocument document = NamedFixture("docx-omml-static-guard-shared-variants");
         var part = document.EquationParts.Single(p => p.PartName == "/word/header1.xml");
         TestAssert.Equal(1, part.SourceCount);
-        var candidates = DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(document, default).ToArray();
+        var candidates = DocxTests.EnumerateStaticMathCandidates(document, default).ToArray();
         TestAssert.Equal(1, candidates.Length);
         TestAssert.True(new[] { "default", "first" }.All(variant => ReferenceEquals(candidates[0].Paragraph,
                 DocxBlockTraversal.EnumerateDirectParagraphs(document.HeaderBodyElementsByType[variant]).First())),
@@ -67,9 +67,9 @@ internal static class DocxNativeMathTests
         TestAssert.True(document.EquationDiagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_EQUATION" && d.PartName == part.PartName),
             "A later renderer retains the source warning even when reading had no diagnostic sink and no body equation.");
         DocxDocument mixed = NamedFixture("docx-omml-static-guard-mixed-fallback");
-        TestAssert.Equal(1, DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(mixed, default).Count());
+        TestAssert.Equal(1, DocxTests.EnumerateStaticMathCandidates(mixed, default).Count());
         using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
-        TestAssert.Throws<OperationCanceledException>(() => DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(document, cancelled.Token).ToArray());
+        TestAssert.Throws<OperationCanceledException>(() => DocxTests.EnumerateStaticMathCandidates(document, cancelled.Token).ToArray());
     }
 
     public static void DocxNativeStaticMathRetainsStoryFlowAndPerPartDiagnosticScope()

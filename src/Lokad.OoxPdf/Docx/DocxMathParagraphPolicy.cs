@@ -61,10 +61,11 @@ internal static class DocxMathParagraphPolicy
     // independently of whether the enclosing paragraph contains mathematics.
     // Note tables use the same inline box placement as other table cells.
     // Nested boxes retain their existing staged placement paths.
-    public static IEnumerable<DocxParagraph> EnumerateInlineBoxPreparationCandidates(DocxDocument document, CancellationToken token)
+    public static IEnumerable<DocxParagraph> EnumerateInlineBoxPreparationCandidates(DocxDocument document,
+        IReadOnlyList<DocxStaticStorySource> staticSources, CancellationToken token)
     {
         var parents = DocxBlockTraversal.EnumerateBodyParagraphs(document)
-            .Concat(DocxBlockTraversal.EnumerateStaticStorySources(document, token)
+            .Concat(staticSources
                 .Where(story => DocxLayoutEngine.IsStaticStoryVariantEnabled(story.Settings, story.Variant))
                 .SelectMany(story => DocxBlockTraversal.EnumerateBodyParagraphs(story.BodyElements)))
             .Concat(document.RelatedStories
@@ -93,10 +94,11 @@ internal static class DocxMathParagraphPolicy
         }
     }
 
-    public static IEnumerable<DocxParagraph> EnumerateFloatingBoxPreparationCandidates(DocxDocument document, CancellationToken token)
+    public static IEnumerable<DocxParagraph> EnumerateFloatingBoxPreparationCandidates(DocxDocument document,
+        IReadOnlyList<DocxStaticStorySource> staticSources, CancellationToken token)
     {
         var drawings = document.FloatingDrawings
-            .Concat(DocxBlockTraversal.EnumerateStaticStorySources(document, token)
+            .Concat(staticSources
                 .Where(story => DocxLayoutEngine.IsStaticStoryVariantEnabled(story.Settings, story.Variant))
                 .SelectMany(story => story.Drawings))
             .Concat(document.RelatedStories
@@ -143,10 +145,10 @@ internal static class DocxMathParagraphPolicy
             propertiesKind == DocxRevisionKind.TableRowPropertiesChange && revision.Kind == DocxRevisionKind.Deletion ||
             propertiesKind == DocxRevisionKind.TableCellPropertiesChange && revision.Kind.IsCellStructureRevision());
 
-    public static IEnumerable<(DocxParagraph Paragraph, bool HasPageInputs)> EnumerateStaticPreparationCandidates(DocxDocument document, CancellationToken token)
+    public static IEnumerable<(DocxParagraph Paragraph, bool HasPageInputs)> EnumerateStaticPreparationCandidates(DocxDocument document,
+        IReadOnlyList<DocxStaticStorySource> staticSources, CancellationToken token)
     {
         var fieldInputOwners = new HashSet<DocxParagraph>(ReferenceEqualityComparer.Instance);
-        var staticSources = DocxBlockTraversal.EnumerateStaticStorySources(document, token).ToArray();
         var disabledBodies = new HashSet<IReadOnlyList<DocxBodyElement>>(staticSources
             .Where(story => story.BodyElements.Count != 0).Select(story => story.BodyElements), ReferenceEqualityComparer.Instance);
         disabledBodies.ExceptWith(staticSources

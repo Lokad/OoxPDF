@@ -125,7 +125,7 @@ internal static partial class DocxInlineCompositionTests
             12d, 9d, 16d, 1d, default, out _), "A page-dependent child cannot measure without its page input.");
         var source = ReadMutation("InlineBoxMath/inline-box-child-page-counter", OoxPdfDocxMarkupMode.Final, false, false,
             (xml, w, _) => xml.Descendants(w + "fldSimple").Single().SetAttributeValue(w + "instr", "NUMPAGES"));
-        var child = DocxMathParagraphPolicy.EnumerateInlineBoxPreparationCandidates(source, default).Single();
+        var child = DocxTests.EnumerateInlineBoxMathCandidates(source, default).Single();
         TestAssert.True(!DocxMathParagraphPolicy.UsesOnlyPageNumberCounters(child) &&
             DocxMathParagraphPolicy.GetPreparationEquations(child).Count == 0, "Total counts keep their existing unavailable-input preparation fallback.");
     }
@@ -135,7 +135,7 @@ internal static partial class DocxInlineCompositionTests
     {
         var document = ReadMutation("InlineBoxMath/" + fixture, OoxPdfDocxMarkupMode.Final, false, false);
         var parent = document.Paragraphs.Single(paragraph => paragraph.InlineTextBoxes.Count != 0);
-        var child = DocxMathParagraphPolicy.EnumerateInlineBoxPreparationCandidates(document, default).Single();
+        var child = DocxTests.EnumerateInlineBoxMathCandidates(document, default).Single();
         var equations = child.Equations.ToDictionary(equation => equation,
             equation => new DocxPreparedMathParagraph(equation, new(18d, 10d, 4d, []), 10d, 16d));
         return (document, parent, equations);

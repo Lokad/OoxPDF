@@ -1,5 +1,11 @@
 namespace Lokad.OoxPdf.Docx;
 
+internal readonly record struct DocxStaticStorySource(
+    DocxPageSettings Settings,
+    string Variant,
+    IReadOnlyList<DocxBodyElement> BodyElements,
+    IReadOnlyList<DocxFloatingDrawing> Drawings);
+
 internal static class DocxBlockTraversal
 {
     // All-source inspection and review-author ordering include unprinted stories.
@@ -30,9 +36,7 @@ internal static class DocxBlockTraversal
 
     // Resource discovery uses the same effective inheritance and variant rules
     // as placement. Enabled variants remain possible before pagination.
-    public static IEnumerable<(DocxPageSettings Settings, string Variant,
-        IReadOnlyList<DocxBodyElement> BodyElements, IReadOnlyList<DocxFloatingDrawing> Drawings)>
-        EnumerateStaticStorySources(DocxDocument document, CancellationToken token)
+    public static IEnumerable<DocxStaticStorySource> EnumerateStaticStorySources(DocxDocument document, CancellationToken token)
     {
         var sections = DocxLayoutEngine.BuildEffectiveSectionSettings(document, out var final, token);
         foreach (var settings in sections.Values.Select(section => section.PageSettings).Prepend(final.PageSettings))
@@ -45,7 +49,7 @@ internal static class DocxBlockTraversal
                 foreach (string variant in bodies.Keys.Concat(drawings.Keys).Distinct(StringComparer.OrdinalIgnoreCase))
                 {
                     token.ThrowIfCancellationRequested();
-                    yield return (settings, variant, bodies.GetValueOrDefault(variant, []),
+                    yield return new DocxStaticStorySource(settings, variant, bodies.GetValueOrDefault(variant, []),
                         drawings.TryGetValue(variant, out var selected) ? selected : []);
                 }
             }

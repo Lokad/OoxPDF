@@ -541,7 +541,7 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.True(part.BodyElements.OfType<DocxParagraphElement>().Any(element => ReferenceEquals(element.Paragraph, paragraph)),
                 "Math diagnostics and preparation retain the parsed note paragraph identity.");
             TestAssert.Equal(2, DocxMathParagraphPolicy.GetPreparationEquations(paragraph).Count);
-            TestAssert.Equal(2, DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(document, default)
+            TestAssert.Equal(2, DocxTests.EnumerateStaticMathCandidates(document, default)
                 .Where(owner => ReferenceEquals(owner.Paragraph, paragraph)).SelectMany(owner => owner.Paragraph.Equations).Count());
         }
     }
@@ -688,7 +688,7 @@ internal static partial class DocxInlineCompositionTests
                 foreach (var run in xml.Descendants(w + "r").Where(run => run.Element(w + "instrText") is not null).ToArray())
                     run.ElementsAfterSelf(w + "r").First().Element(w + "t")!.Value = " 2026 ";
             }, partOverride: "word/math-fields-header.xml");
-            var paragraph = DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(document, default).Single().Paragraph;
+            var paragraph = DocxTests.EnumerateStaticMathCandidates(document, default).Single().Paragraph;
             TestAssert.Equal(2, paragraph.Runs.Count(run => run.Text == " 2026 "));
             TestAssert.Equal(2, paragraph.InlineContent!.OfType<DocxInlineText>().Count(item => item.Run.Text == " 2026 "));
             TestAssert.True(paragraph.FieldReferences.All(field => !field.RendersCachedResult && field.UsesPlaceholder),
@@ -916,7 +916,7 @@ internal static partial class DocxInlineCompositionTests
     public static void DocxInlineCompositionSourceCursorMatchesWholeParagraphWrapping()
     {
         var document = ReadPlacedComposition(OoxPdfDocxMarkupMode.Final, "math-page-fields-simple-header");
-        var paragraph = DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(document, default).Single().Paragraph;
+        var paragraph = DocxTests.EnumerateStaticMathCandidates(document, default).Single().Paragraph;
         var equations = paragraph.Equations.ToDictionary(equation => equation,
             equation => new DocxPreparedMathParagraph(equation, new(18d, 10d, 4d, []), 10d, 16d));
         TestAssert.True(DocxLayoutEngine.TryMeasureOrderedInlineAtoms(paragraph, equations, new TrackingMeasurer(),
@@ -957,7 +957,7 @@ internal static partial class DocxInlineCompositionTests
             {
                 foreach (var field in xml.Descendants(w + "fldSimple")) field.SetAttributeValue(w + "instr", " PAGE ");
             }, "word/math-fields-header.xml");
-        var paragraph = DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(document, default).Single().Paragraph;
+        var paragraph = DocxTests.EnumerateStaticMathCandidates(document, default).Single().Paragraph;
         var equations = paragraph.Equations.ToDictionary(equation => equation,
             equation => new DocxPreparedMathParagraph(equation, new(18d, 10d, 4d, []), 10d, 16d));
         TestAssert.True(DocxLayoutEngine.TryMeasureOrderedInlineAtoms(paragraph, equations, new TrackingMeasurer(),
@@ -1029,7 +1029,7 @@ internal static partial class DocxInlineCompositionTests
             {
                 foreach (var field in xml.Descendants(w + "fldSimple")) field.SetAttributeValue(w + "instr", " PAGE ");
             }, "word/math-fields-header.xml");
-        var paragraph = DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(document, default).Single().Paragraph;
+        var paragraph = DocxTests.EnumerateStaticMathCandidates(document, default).Single().Paragraph;
         var equations = paragraph.Equations.ToDictionary(equation => equation,
             equation => new DocxPreparedMathParagraph(equation, new(18d, 10d, 4d, []), 10d, 16d));
         TestAssert.True(DocxLayoutEngine.TryMeasureOrderedInlineAtoms(paragraph, equations, new TrackingMeasurer(),
@@ -1058,7 +1058,7 @@ internal static partial class DocxInlineCompositionTests
     public static void DocxInlineCompositionMeasuredAtomsRebindOnlyCounters()
     {
         var document = ReadPlacedComposition(OoxPdfDocxMarkupMode.Final, "math-page-fields-simple-header");
-        var paragraph = DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(document, default).Single().Paragraph;
+        var paragraph = DocxTests.EnumerateStaticMathCandidates(document, default).Single().Paragraph;
         var equations = paragraph.Equations.ToDictionary(equation => equation,
             equation => new DocxPreparedMathParagraph(equation, new(18d, 10d, 4d, []), 10d, 16d));
         var measurer = new CountingMeasurer();
@@ -1181,7 +1181,7 @@ internal static partial class DocxInlineCompositionTests
         foreach (string story in new[] { "header", "footer" })
         {
             var document = ReadPlacedComposition(OoxPdfDocxMarkupMode.Final, "math-page-fields-" + form + "-" + story);
-            var owner = DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(document, default).Single();
+            var owner = DocxTests.EnumerateStaticMathCandidates(document, default).Single();
             TestAssert.True(owner.HasPageInputs, "The referenced header/footer owns per-page field inputs.");
             var paragraph = owner.Paragraph;
             TestAssert.Equal(0, DocxMathParagraphPolicy.GetPreparationEquations(paragraph).Count);
@@ -2594,7 +2594,7 @@ internal static partial class DocxInlineCompositionTests
         {
             var document = ReadPlacedComposition(OoxPdfDocxMarkupMode.Final, "math-explicit-display-linked-" + kind);
             var paragraph = DocxMathParagraphPolicy.EnumeratePreparationCandidates(document, default)
-                .Concat(DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(document, default).Select(owner => owner.Paragraph))
+                .Concat(DocxTests.EnumerateStaticMathCandidates(document, default).Select(owner => owner.Paragraph))
                 .Single(value => value.Equations.Count != 0);
             var linked = TestAssert.NotNull(DocxInlineContent.GetHyperlinkedEquations(paragraph, default));
             TestAssert.True(paragraph.Equations.All(equation => equation.Display && linked.Contains(equation)),
@@ -2802,7 +2802,7 @@ internal static partial class DocxInlineCompositionTests
         {
             var document = DocxTests.ReadDocx(path, mode);
             var paragraphs = DocxMathParagraphPolicy.EnumeratePreparationCandidates(document, default)
-                .Concat(DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(document, default).Select(owner => owner.Paragraph))
+                .Concat(DocxTests.EnumerateStaticMathCandidates(document, default).Select(owner => owner.Paragraph))
                 .Where(paragraph => paragraph.Equations.Count == 2).ToArray();
             TestAssert.Equal(4, paragraphs.Length);
             foreach (var paragraph in paragraphs)
