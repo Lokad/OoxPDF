@@ -157,9 +157,6 @@ internal sealed partial class DocxRenderer
             : null;
     }
 
-    // Mapped legs translate by the inset content origin (like the renderer) and
-    // pre-compensate design coordinates into body-layout space on scaled WC pages; every
-    // other mode keeps the legacy frame-origin translation bit-identically.
     // Box-only walk for comment suppression: unlike EnumerateTableRowTextLines it yields
     // no regular cell lines, so body-cell comments keep ballooning while box-anchored
     // ones suppress by paragraph identity.
@@ -195,11 +192,6 @@ internal sealed partial class DocxRenderer
                     foreach (DocxTextLineLayout boxCellLine in EnumerateTableRowTextLines(boxRow))
                     {
                         yield return boxCellLine;
-                    }
-
-                    foreach (DocxTextLineLayout nestedBoxLine in EnumerateTableRowTextBoxLines(boxRow))
-                    {
-                        yield return nestedBoxLine;
                     }
                 }
             }
@@ -529,10 +521,11 @@ internal sealed partial class DocxRenderer
         }
     }
 
-    private static IEnumerable<DocxTextLineLayout> EnumerateFloatingDrawingTextBoxTextLines(DocxFloatingDrawingLayout drawing)
+    // Suppression uses paragraph identity from placed boxes without mapping coordinates.
+    private static IEnumerable<DocxTextLineLayout> EnumerateFloatingDrawingTextBoxSourceLines(DocxFloatingDrawingLayout drawing)
     {
-        if (drawing.PlacedX is not { } placedX ||
-            drawing.PlacedTop is not { } placedTop ||
+        if (drawing.PlacedX is null ||
+            drawing.PlacedTop is null ||
             drawing.TextBoxLayout is not { } textBoxLayout)
         {
             yield break;
@@ -540,14 +533,14 @@ internal sealed partial class DocxRenderer
 
         foreach (DocxTextLineLayout line in textBoxLayout.TextLines)
         {
-            yield return line.Translate(placedX, placedTop);
+            yield return line;
         }
 
         foreach (DocxTableRowLayout row in textBoxLayout.TableRows)
         {
             foreach (DocxTextLineLayout cellLine in EnumerateTableRowTextLines(row))
             {
-                yield return cellLine.Translate(placedX, placedTop);
+                yield return cellLine;
             }
         }
     }

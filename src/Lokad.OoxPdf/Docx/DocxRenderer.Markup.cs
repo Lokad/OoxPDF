@@ -741,10 +741,10 @@ internal sealed partial class DocxRenderer
             // (unprobed).
             HashSet<DocxParagraph> textBoxParagraphs = UsesWordCompatibleAllMarkupTextProfile(markupContext)
                 ? floatingDrawings
-                    .SelectMany(EnumerateFloatingDrawingTextBoxTextLines)
+                    .SelectMany(EnumerateFloatingDrawingTextBoxSourceLines)
                     .Select(line => line.SourceParagraph)
                     .Concat(EnumerateInlineTextBoxTextLines(page).Select(line => line.SourceParagraph))
-                    .Concat(page.PlacedRelatedStories.SelectMany(story => story.FloatingDrawings.SelectMany(EnumerateFloatingDrawingTextBoxTextLines)).Select(line => line.SourceParagraph))
+                    .Concat(page.PlacedRelatedStories.SelectMany(story => story.FloatingDrawings.SelectMany(EnumerateFloatingDrawingTextBoxSourceLines)).Select(line => line.SourceParagraph))
                     .Concat(EnumerateTableRowTextBoxLines(page).Select(line => line.SourceParagraph))
                     .Concat(EnumerateStaticTextBoxLines(page).Select(line => line.SourceParagraph))
                     .OfType<DocxParagraph>()

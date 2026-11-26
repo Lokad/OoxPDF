@@ -4288,102 +4288,84 @@ internal static partial class DocxCommentsTests
 
     public static void DocxWordCompatibleAllMarkupSkipsTableCellInlineTextBoxCommentBalloons()
     {
-        // Office A/B (w6-tablebox probe, Word-COM rendered): Word balloons the cell-box
-        // revision but never the cell-box comment, so a cell-box-only comment sustains
-        // no Word-compatible balloon and reserves no lane.
-        DocxParagraph textBoxParagraph = DocxTests.CreateCommentMarkerParagraph("Cell box review anchor", "5");
-        var textBox = new DocxInlineTextBox("1371600", "457200")
-        {
-            BodyElements = [new DocxParagraphElement(textBoxParagraph)]
-        };
-        DocxParagraph hostParagraph = DocxTests.CreateDocxLayoutParagraph("Cell host", 10d, 12d) with
-        {
-            InlineTextBoxes = [textBox]
-        };
-        var cell = new DocxTableCell([hostParagraph], null, null, null, null, [], DocxTableCellMargins.Empty);
-        var table = new DocxTable(null, [200d], [new DocxTableRow([cell], null)]);
-        DocxRelatedStory commentStory = new(
-            DocxRelatedStoryKind.Comment,
-            "/word/comments.xml",
-            "5",
-            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Cell box comment body", 10d, 12d))], null);
-        DocxDocument document = new(
-            612d,
-            792d,
-            72d,
-            72d,
-            72d,
-            72d,
-            DocxPageSettings.Empty,
-            [],
-            [],
-            [],
-            [new DocxTableElement(table)])
-        {
-            RelatedStories = [commentStory],
-            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
-        };
+        // The w6-tablebox Word reference suppresses cell-box comments.
+        // A comment by itself should leave the ordinary print frame intact.
+        DocxDocument document = CreateCellInlineTextBoxReviewDocument();
+        var renderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
 
-        DocxMarkupBalloonPlacementSnapshot[] commentBalloons = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-            .InspectMarkupBalloons(document)
-            .Where(placement => placement.Kind == "Comment")
-            .ToArray();
-
-        TestAssert.Equal(0, commentBalloons.Length);
+        TestAssert.Equal(0, renderer.InspectMarkupBalloons(document).Count);
         DocxMarkupContext context = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
         TestAssert.Equal(1d, DocxRenderer.ResolveWordCompatiblePrintScale(document, context));
     }
 
     public static void DocxAllMarkupRendererPlacesTableCellInlineTextBoxMarkupBalloons()
     {
-        // Companion: revisions anchored in cell-box content keep balloon candidates
-        // anchored from box lines (Office: the w6-tablebox probe balloons the box revision).
-        DocxParagraph textBoxParagraph = DocxTests.CreateCommentMarkerParagraph("Cell box review anchor", "5") with
+        var resolver = new PortableRenderingTests.PinnedResolver();
+        DocxDocument boxOnlyDocument = CreateCellInlineTextBoxReviewDocument(includeRevision: true);
+        var preserved = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        var grouped = preserved.InspectMarkupBalloons(boxOnlyDocument).Single();
+        TestAssert.Equal("Markup", grouped.Kind);
+        TestAssert.Equal(1, grouped.CommentCandidateCount);
+        TestAssert.Equal(1, grouped.RevisionCandidateCount);
+
+        // In Word's mixed view formatting changes still balloon. An ordinary
+        // cell comment also survives alongside the suppressed box comment.
+        DocxDocument document = CreateCellInlineTextBoxReviewDocument(includeRevision: true, includeOrdinaryComment: true);
+        var wordCompatible = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        var placements = wordCompatible.InspectMarkupBalloons(document).ToArray();
+        TestAssert.Equal(1, placements.Sum(placement => placement.CommentCandidateCount));
+        TestAssert.Equal(1, placements.Sum(placement => placement.RevisionCandidateCount));
+        PdfPage page = wordCompatible.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
+        string text = string.Concat(ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true).Select(show => show.Text));
+        TestAssert.Contains("Cell box text", text);
+        TestAssert.Contains("Ordinary cell text", text);
+        TestAssert.Contains("Ordinary comment", text);
+        TestAssert.Contains("Font: Bold", text);
+        TestAssert.True(!text.Contains("Box comment", StringComparison.Ordinal), "The cell-box comment must stay out of the painted output.");
+    }
+
+    private static DocxDocument CreateCellInlineTextBoxReviewDocument(bool includeRevision = false, bool includeOrdinaryComment = false)
+    {
+        DocxParagraph boxParagraph = DocxTests.CreateCommentMarkerParagraph("Cell box text", "5");
+        if (includeRevision)
         {
-            Revisions =
-            [
-                new DocxRevisionInfo(DocxRevisionKind.Insertion, "5", "Reviewer", "2026-06-10T00:00:00Z", "ins", null, [])
-            ]
+            var revision = new DocxRevisionInfo(DocxRevisionKind.RunPropertiesChange, "9", "Reviewer", null, "rPrChange", null, ["b"])
+            {
+                RunFormattingChange = new(Bold: true, Italic: null)
+            };
+            boxParagraph = boxParagraph with
+            {
+                Revisions = [revision],
+                Runs = [boxParagraph.Runs.Single() with { Bold = true, Revisions = [revision] }]
+            };
+        }
+
+        var box = new DocxInlineTextBox("1371600", "457200")
+        {
+            BodyElements = [new DocxParagraphElement(boxParagraph)]
         };
-        var textBox = new DocxInlineTextBox("1371600", "457200")
+        DocxParagraph host = DocxTests.CreateDocxLayoutParagraph("Cell host", 10d, 12d) with { InlineTextBoxes = [box] };
+        var rows = new List<DocxTableRow> { Row(host) };
+        var stories = new List<DocxRelatedStory> { Comment("5", "Box comment") };
+        if (includeOrdinaryComment)
         {
-            BodyElements = [new DocxParagraphElement(textBoxParagraph)]
-        };
-        DocxParagraph hostParagraph = DocxTests.CreateDocxLayoutParagraph("Cell host", 10d, 12d) with
+            rows.Add(Row(DocxTests.CreateCommentMarkerParagraph("Ordinary cell text", "6")));
+            stories.Add(Comment("6", "Ordinary comment"));
+        }
+
+        return new DocxDocument(612d, 792d, 72d, 72d, 72d, 72d, DocxPageSettings.Empty,
+            [], [], [], [new DocxTableElement(new DocxTable(null, [200d], rows))])
         {
-            InlineTextBoxes = [textBox]
-        };
-        var cell = new DocxTableCell([hostParagraph], null, null, null, null, [], DocxTableCellMargins.Empty);
-        var table = new DocxTable(null, [200d], [new DocxTableRow([cell], null)]);
-        DocxRelatedStory commentStory = new(
-            DocxRelatedStoryKind.Comment,
-            "/word/comments.xml",
-            "5",
-            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Cell box comment body", 10d, 12d))], null);
-        DocxDocument document = new(
-            300d,
-            300d,
-            30d,
-            90d,
-            30d,
-            30d,
-            DocxPageSettings.Empty,
-            [],
-            [],
-            [],
-            [new DocxTableElement(table)])
-        {
-            RelatedStories = [commentStory],
+            RelatedStories = stories,
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
 
-        DocxMarkupBalloonPlacementSnapshot[] placements = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-            .InspectMarkupBalloons(document)
-            .ToArray();
+        static DocxTableRow Row(DocxParagraph paragraph) =>
+            new([new DocxTableCell([paragraph], null, null, null, null, [], DocxTableCellMargins.Empty)], null);
 
-        TestAssert.True(
-            placements.Any(placement => placement.Kind == "Markup" && placement.CandidateCount >= 2),
-            "All-markup comment and revision balloon candidates should be anchored from cell text-box lines before same-anchor grouping.");
+        static DocxRelatedStory Comment(string id, string text) =>
+            new(DocxRelatedStoryKind.Comment, "/word/comments.xml", id,
+                [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph(text, 10d, 12d))], null);
     }
 
     public static void DocxWordCompatibleAllMarkupSkipsStaticInlineTextBoxCommentBalloons()
