@@ -83,6 +83,20 @@ internal static partial class DocxMathParser
             runProperties.Elements().All(IsPrintNeutralControlProperty) &&
             !runProperties.Elements().GroupBy(property => property.Name).Any(group => group.Skip(1).Any()));
 
+    private static bool HasDefaultBoxBehavior(XElement element, CancellationToken token)
+    {
+        if (!ReadPropertyOwner(element, "boxPr", out _, out XElement[] children)) return false;
+        foreach (var property in children)
+        {
+            token.ThrowIfCancellationRequested();
+            bool neutral = property.Name == MathNamespace + "ctrlPr" ? HasPrintNeutralControl(property) :
+                HasKnownValueProperty(property) && property.Name.LocalName is "opEmu" or "noBreak" or "diff" or "aln" &&
+                OoxBoolean.IsOff((string?)property.Attribute(MathNamespace + "val"));
+            if (!neutral) return false;
+        }
+        return true;
+    }
+
     private static bool IsVisibleTransparentPhantom(XElement element, CancellationToken token)
     {
         if (!ReadPropertyOwner(element, "phantPr", out XElement? owner, out XElement[] children) ||

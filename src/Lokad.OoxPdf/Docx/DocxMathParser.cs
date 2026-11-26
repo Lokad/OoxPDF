@@ -56,10 +56,12 @@ internal static partial class DocxMathParser
                 continue;
             }
             bool sourceContainer = IsSourceContainer(element);
-            bool phantom = element.Name == MathNamespace + "phant";
-            bool unsupportedPhantom = phantom && !item.Expanded &&
-                (!HasOnlyRoles(element, "e") || !IsVisibleTransparentPhantom(element, cancellationToken));
-            if (!revisionRow && !sourceContainer && (!IsContainer(element.Name) || unsupportedPhantom))
+            bool mathWrapper = element.Name.Namespace == MathNamespace && name is "phant" or "box";
+            bool unsupportedWrapper = mathWrapper && !item.Expanded &&
+                (!HasOnlyRoles(element, "e") || !(name == "phant"
+                    ? IsVisibleTransparentPhantom(element, cancellationToken)
+                    : HasDefaultBoxBehavior(element, cancellationToken)));
+            if (!revisionRow && !sourceContainer && (!IsContainer(element.Name) || unsupportedWrapper))
             {
                 bool allowsDeletedText = item.RevisionOwner is null ? equationHasDeletionOwner : item.RevisionOwner == deletion;
                 XElement? firstBreakInRun = element == trailingBreaks?.Run ? trailingBreaks?.FirstBreakInRun : null;
@@ -81,7 +83,7 @@ internal static partial class DocxMathParser
                 XName? revisionOwner = revisionRow ? element.Name : item.RevisionOwner;
                 // Range boundaries can cross nested rows. Visit them in source
                 // order before using the rows to assemble math geometry.
-                bool visitCellBookmarks = readCellBookmarkBoundary is not null && (revisionRow || sourceContainer || mathRow || phantom);
+                bool visitCellBookmarks = readCellBookmarkBoundary is not null && (revisionRow || sourceContainer || mathRow || mathWrapper);
                 foreach (XElement child in WithoutTrailingBreaks(element, TraversalChildren(element, visitCellBookmarks)).Reverse())
                 {
                     pending.Push((child, false, revisionOwner,
@@ -98,7 +100,7 @@ internal static partial class DocxMathParser
                 node = new DocxMathRow(WithoutTrailingBreaks(element, ContentChildren(element)).Select(child => nodes[child]).ToArray())
                 { ArgumentProperties = ReadArgumentProperties(element) };
             }
-            else if (phantom && Role(element, "e") is { } visibleBase)
+            else if (mathWrapper && Role(element, "e") is { } visibleBase)
             {
                 node = new DocxMathRow([visibleBase]);
             }
@@ -269,7 +271,7 @@ internal static partial class DocxMathParser
     // A single control has the same grammar inside an admitted revision wrapper.
     // Role rows and orphan matrix rows still require their actual source parent.
     internal static bool IsMathControl(XName name) => name.Namespace == MathNamespace &&
-        name.LocalName is "f" or "sSub" or "sSup" or "sSubSup" or "rad" or "d" or "nary" or "func" or "m" or "phant";
+        name.LocalName is "f" or "sSub" or "sSup" or "sSubSup" or "rad" or "d" or "nary" or "func" or "m" or "phant" or "box";
 
     private static bool IsReadableRevision(XElement[] children, bool allowsDeletedText)
     {

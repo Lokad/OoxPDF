@@ -20564,6 +20564,8 @@
     "=PortableRenderingNeutralMathArgumentControlsKeepComposedFractions",
     "=DocxMathPhantomsWithNonNeutralPropertiesKeepFallback",
     "=PortableRenderingVisibleTransparentPhantomsKeepComposedFractions",
+    "=DocxMathBoxesWithActiveOrMalformedPropertiesKeepFallback",
+    "=PortableRenderingDefaultMathBoxesKeepComposedFractions",
     "=PortableRenderingMathControlFormattingHistoryKeepsCurrentFractions",
     "=PortableRenderingMathSmartTagsPreserveRevisedFractions",
     "DocxDeletedMathMetadataDoesNotReviveOtherDeletedContent",

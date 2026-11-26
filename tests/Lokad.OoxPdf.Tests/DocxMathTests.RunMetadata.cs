@@ -38,6 +38,35 @@ internal static partial class DocxMathTests
         }
     }
 
+    public static void DocxMathBoxesWithActiveOrMalformedPropertiesKeepFallback()
+    {
+        XNamespace m = MathNamespace;
+        XNamespace w = WordprocessingNamespace;
+        foreach (var properties in new[]
+        {
+            new XElement(m + "boxPr", new XElement(m + "opEmu")),
+            new XElement(m + "boxPr", new XElement(m + "noBreak")),
+            new XElement(m + "boxPr", new XElement(m + "diff")),
+            new XElement(m + "boxPr", new XElement(m + "aln")),
+            new XElement(m + "boxPr", new XElement(m + "brk")),
+            new XElement(m + "boxPr", new XElement(m + "aln", new XAttribute(m + "val", "invalid"))),
+            new XElement(m + "boxPr", new XElement(m + "ctrlPr", new XElement(w + "rPr", new XElement(w + "b"))))
+        })
+        {
+            var equation = EditingMarkerFraction();
+            var run = equation.Descendants(m + "r").First();
+            var bookmark = new XElement(w + "bookmarkStart",
+                new XAttribute(w + "id", "8"), new XAttribute(w + "name", "BoxMark"));
+            run.ReplaceWith(new XElement(m + "box", properties, new XElement(m + "e", bookmark, new XElement(run))));
+            var bookmarks = new List<DocxMathBookmark>();
+            var parsed = DocxMathParser.Read(equation, (_, text) => PlainRun(text), default, readBookmark: bookmarks.Add);
+            var fraction = (DocxMathFraction)parsed.Children.Single();
+            TestAssert.True(fraction.Numerator.Children[0] is DocxMathUnsupported { ElementName: "box" },
+                $"Expected the box with {properties.Elements().Single().Name.LocalName} to retain the unsupported fallback.");
+            TestAssert.Equal(0, bookmarks.Count);
+        }
+    }
+
     public static void DocxMathDeletedTextRequiresDeletionOwner()
     {
         foreach (string? wrapper in new[] { null, "ins", "del" })
