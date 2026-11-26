@@ -5,6 +5,7 @@ using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pdf;
 using System.Collections.ObjectModel;
 using System.Globalization;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
@@ -1551,7 +1552,7 @@ internal sealed partial class PptxRenderer
 
         var declarations = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         HashSet<string>? importantNames = null;
-        foreach (string declaration in style.Split((char)59))
+        foreach (string declaration in StripSvgCssComments(style).Split((char)59))
         {
             int colon = declaration.IndexOf((char)58);
             if (colon <= 0)
@@ -1586,6 +1587,76 @@ internal sealed partial class PptxRenderer
         }
 
         return declarations;
+    }
+
+    private static string StripSvgCssComments(string style)
+    {
+        if (!style.Contains("/*", StringComparison.Ordinal)) return style;
+
+        StringBuilder? result = null;
+        int copiedThrough = 0;
+        char quote = '\0';
+        bool unquotedUrl = false;
+        for (int i = 0; i < style.Length; i++)
+        {
+            char token = style[i];
+            if (token == '\\')
+            {
+                i++;
+                continue;
+            }
+            if (unquotedUrl)
+            {
+                if (token == ')') unquotedUrl = false;
+                continue;
+            }
+            if (quote != '\0')
+            {
+                if (token == quote) quote = '\0';
+                continue;
+            }
+            if (token is '"' or '\'')
+            {
+                quote = token;
+                continue;
+            }
+            if (token == '(' && IsUnquotedSvgCssUrl(style, i))
+            {
+                unquotedUrl = true;
+                continue;
+            }
+            if (token != '/' || i + 1 >= style.Length || style[i + 1] != '*') continue;
+
+            ReadOnlySpan<char> tail = style.AsSpan(i);
+            if (!TrySkipSvgCssComment(ref tail)) return style;
+            // Separate adjacent tokens across the removed comment.
+            (result ??= new StringBuilder()).Append(style.AsSpan(copiedThrough, i - copiedThrough)).Append(' ');
+            copiedThrough = style.Length - tail.Length;
+            i = copiedThrough - 1;
+        }
+        return result is null ? style : result.Append(style.AsSpan(copiedThrough)).ToString();
+    }
+
+    private static bool IsUnquotedSvgCssUrl(string style, int openParen)
+    {
+        int start = openParen - 3;
+        if (start < 0 || !style.AsSpan(start, 3).Equals("url", StringComparison.OrdinalIgnoreCase)) return false;
+        if (start > 0)
+        {
+            char preceding = style[start - 1];
+            if (char.IsAsciiLetterOrDigit(preceding) || preceding is '_' or '-' || preceding >= '\u0080') return false;
+        }
+        ReadOnlySpan<char> argument = style.AsSpan(openParen + 1).TrimStart();
+        return argument.IsEmpty || argument[0] is not ('"' or '\'');
+    }
+
+    private static bool TrySkipSvgCssComment(ref ReadOnlySpan<char> css)
+    {
+        if (!css.StartsWith("/*", StringComparison.Ordinal)) return false;
+        int end = css[2..].IndexOf("*/", StringComparison.Ordinal);
+        if (end < 0) return false;
+        css = css[(end + 4)..];
+        return true;
     }
 
     private static double ReadSvgOpacityValue(string? text) => ParseSvgOpacity(text) ?? 1d;

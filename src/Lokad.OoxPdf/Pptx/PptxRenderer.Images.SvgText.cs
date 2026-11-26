@@ -99,10 +99,7 @@ internal sealed partial class PptxRenderer
         while (!(css = css.TrimStart()).IsEmpty)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (!css.StartsWith("/*", StringComparison.Ordinal)) return true;
-            int end = css[2..].IndexOf("*/", StringComparison.Ordinal);
-            if (end < 0) return true;
-            css = css[(end + 4)..];
+            if (!TrySkipSvgCssComment(ref css)) return true;
         }
         return false;
     }
