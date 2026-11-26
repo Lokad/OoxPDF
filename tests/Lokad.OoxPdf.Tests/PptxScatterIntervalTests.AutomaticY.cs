@@ -1,5 +1,4 @@
 using System.Text.Json;
-using System.Xml.Linq;
 using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pdf;
 using Lokad.OoxPdf.Pptx;
@@ -26,11 +25,10 @@ internal static partial class PptxScatterIntervalTests
     {
         foreach (RangeCase sample in AutomaticYCases())
         {
-            var (extents, options) = ResolveRange(sample);
+            var (extents, majorUnit, tickPolicy) = ResolveRange(sample);
             TestAssert.Equal(new PptxRenderer.ChartValueExtents(sample.ExpectedMinimum, sample.ExpectedMaximum), extents);
-            object units = options.GetType().GetProperty("Units")!.GetValue(options)!;
-            TestAssert.Equal(sample.ExpectedUnit, (double?)units.GetType().GetProperty("MajorUnit")!.GetValue(units));
-            TestAssert.Equal("SourceMinimumIntervals", options.GetType().GetProperty("TickPolicy")!.GetValue(options)!.ToString());
+            TestAssert.Equal(sample.ExpectedUnit, majorUnit);
+            TestAssert.Equal("SourceMinimumIntervals", tickPolicy);
         }
     }
 
@@ -42,50 +40,45 @@ internal static partial class PptxScatterIntervalTests
             double unit = sample.ExpectedUnit!.Value;
             double[] values = Enumerable.Range(0, (int)Math.Round((sample.ExpectedMaximum - sample.ExpectedMinimum) / unit) + 1)
                 .Select(i => sample.ExpectedMinimum + unit * i).ToArray();
-            string[] labels = AutoLabels(page);
-            TestAssert.Equal("0,1,2,3,4,5,6,7,8,9," + string.Join(",", values), string.Join(",", labels));
-            var axes = Axes(page);
-            double Y(double value) => axes.Bottom + (value - sample.ExpectedMinimum) /
-                (sample.ExpectedMaximum - sample.ExpectedMinimum) * (axes.Top - axes.Bottom);
-            var lines = PptxColumnIntervalTests.Lines(page).Where(line => line.Color == new RgbColor(0, 0, 255) &&
-                Math.Abs(line.V[1] - line.V[3]) < .001d).ToArray();
-            double[] ticks = lines.Where(line => Math.Abs(line.V[0] - line.V[2]) < 20d).Select(line => line.V[1]).ToArray();
-            double[] grids = lines.Where(line => Math.Abs(line.V[0] - line.V[2]) > 100d).Select(line => line.V[1]).ToArray();
-            Check(ticks, values.Select(Y).ToArray());
-            Check(grids, values.Where(value => value != 0d).Select(Y).ToArray());
+            AssertPaintedYIntervals(page, sample.ExpectedMinimum, sample.ExpectedMaximum, values);
         }
+    }
+
+    private static void AssertPaintedYIntervals(PdfPage page, double minimum, double maximum, double[] values)
+    {
+        TestAssert.Equal("0,1,2,3,4,5,6,7,8,9," + string.Join(",", values), string.Join(",", AutoLabels(page)));
+        var axes = Axes(page);
+        double Y(double value) => axes.Bottom + (value - minimum) / (maximum - minimum) * (axes.Top - axes.Bottom);
+        var lines = PptxColumnIntervalTests.Lines(page).Where(line => line.Color == new RgbColor(0, 0, 255) &&
+            Math.Abs(line.V[1] - line.V[3]) < .001d).ToArray();
+        double[] ticks = lines.Where(line => Math.Abs(line.V[0] - line.V[2]) < 20d).Select(line => line.V[1]).ToArray();
+        double[] grids = lines.Where(line => Math.Abs(line.V[0] - line.V[2]) > 100d).Select(line => line.V[1]).ToArray();
+        Check(ticks, values.Select(Y).ToArray());
+        Check(grids, values.Where(value => value != 0d).Select(Y).ToArray());
 
         static void Check(double[] actual, double[] expected) => TestAssert.True(actual.Length == expected.Length &&
             actual.Zip(expected).All(pair => Math.Abs(pair.First - pair.Second) < .002d),
-            "Inferred Y intervals must agree in painted coordinates: " + string.Join(",", actual));
+            "Y intervals must agree in painted coordinates: " + string.Join(",", actual));
     }
 
     public static void PptxScatterAutomaticYRetainsSceneFallbackAndCancellationOwnership()
     {
         RangeCase sample = AutomaticYCases().Single(c => c.Id == "range-scatter-103-auto");
-        TestAssert.Equal(new PptxRenderer.ChartValueExtents(-17d, 103d), ResolveRange(sample).Extents);
-        foreach (RangeCase rejected in new[] { sample with { MajorUnit = double.NaN }, sample with { MajorUnit = -1d },
-            sample with { MajorUnit = double.PositiveInfinity }, sample with { Minimum = double.NaN } })
-            CheckFallback(rejected);
-        CheckFallback(sample, logarithmic: true);
-        CheckFallback(sample, bubble: true);
+        AssertFallbackRange(sample with { MajorUnit = double.NaN }, minimum: 0d, maximum: 103d, majorUnit: 20d);
+        AssertFallbackRange(sample with { MajorUnit = -1d }, minimum: 0d, maximum: 103d, majorUnit: 20d);
+        AssertFallbackRange(sample with { Minimum = double.NaN }, minimum: 0d, maximum: 79d, majorUnit: 10d);
+        AssertFallbackRange(sample, minimum: 0d, maximum: 103d, majorUnit: 20d, logarithmic: true);
+        AssertFallbackRange(sample, minimum: 0d, maximum: 103d, majorUnit: 20d, bubble: true);
+        AssertFallbackRange(sample, minimum: 0d, maximum: 79d, majorUnit: 10d, includeScaling: false);
 
-        var legacy = (PptxRenderer.ChartValueExtents)CurveInvoke("ReadSceneBubbleChartValueAxisExtents", null,
-            new PptxRenderer.ChartValueExtents(1d, 79d), 5d, true);
-        TestAssert.Equal(legacy, ResolveRange(sample, includeScaling: false).Extents);
+        // Emission selects an effective finite interval even when the scene
+        // carries the authored infinite unit.
+        RangeCase infiniteUnit = sample with { MajorUnit = double.PositiveInfinity };
+        AssertFallbackRange(infiniteUnit, minimum: 0d, maximum: 103d, majorUnit: null);
+        AssertPaintedYIntervals(RenderRange(infiniteUnit), 0d, 103d, [0d, 20d, 40d, 60d, 80d, 100d, 103d]);
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();
         TestAssert.Throws<OperationCanceledException>(() => ResolveRange(sample, cancellationToken: cancellation.Token));
-
-        static void CheckFallback(RangeCase source, bool logarithmic = false, bool bubble = false)
-        {
-            string xml = RangeChart(source, logarithmic);
-            var scene = PptxTests.BuildSingleChartScene(xml)!;
-            var axis = scene.Axes.Single(a => a.PositionKind == PptxSceneChartAxisPosition.Left);
-            var expected = (PptxRenderer.ChartValueExtents)CurveInvoke("ReadSceneBubbleChartValueAxisExtents", axis,
-                new PptxRenderer.ChartValueExtents(1d, 79d), 5d, true);
-            TestAssert.Equal(expected, ResolveRange(source, logarithmic: logarithmic, bubble: bubble).Extents);
-        }
     }
 
     private static RangeCase[] AutomaticYCases()

@@ -14,7 +14,7 @@ internal static partial class PptxScatterIntervalTests
     {
         foreach (RangeCase sample in RangeCases())
         {
-            var (actual, _) = ResolveRange(sample);
+            var actual = ResolveRange(sample).Extents;
             TestAssert.True(Math.Abs(actual.Min - sample.ExpectedMinimum) < 1e-9d &&
                 Math.Abs(actual.Max - sample.ExpectedMaximum) < 1e-9d,
                 sample.Id + ": expected " + sample.ExpectedMinimum + ".." + sample.ExpectedMaximum + ", got " + actual);
@@ -47,25 +47,21 @@ internal static partial class PptxScatterIntervalTests
         TestAssert.True(Labels(original with { LineHidden = true }).All(text => !text.StartsWith("-", StringComparison.Ordinal)), "Hidden connections retain point-only bounds.");
     }
 
-    public static void PptxScatterFixedUnitFallbacksKeepSceneAuthorityAndCancellation()
+    public static void PptxScatterFixedUnitFallbacksRetainBoundsAndUnit()
     {
         RangeCase sample = RangeCases().Single(c => c.Id == "range-fine-positive103");
-        var (owned, _) = ResolveRange(sample);
-        TestAssert.Equal(new PptxRenderer.ChartValueExtents(-10d, 103d), owned);
-        foreach (bool logarithmic in new[] { false, true })
-        {
-            RangeCase source = logarithmic ? sample : sample with { Minimum = double.NaN };
-            string xml = RangeChart(source, logarithmic);
-            var chart = PptxTests.BuildSingleChartScene(xml)!;
-            var axis = chart.Axes.Single(a => a.PositionKind == PptxSceneChartAxisPosition.Left);
-            var (actual, _) = ResolveRange(source, logarithmic: logarithmic);
-            var legacy = (PptxRenderer.ChartValueExtents)CurveInvoke("ReadSceneBubbleChartValueAxisExtents", axis,
-                new PptxRenderer.ChartValueExtents(1d, 79d), 5d, true);
-            TestAssert.Equal(legacy, actual);
-        }
-        using var cancellation = new CancellationTokenSource();
-        cancellation.Cancel();
-        TestAssert.Throws<OperationCanceledException>(() => ResolveRange(sample, cancellationToken: cancellation.Token));
+        AssertFallbackRange(sample with { Minimum = double.NaN }, minimum: 0d, maximum: 79d, majorUnit: 1d);
+        AssertFallbackRange(sample, minimum: 0d, maximum: 103d, majorUnit: 1d, logarithmic: true);
+    }
+
+    private static void AssertFallbackRange(RangeCase sample, double minimum, double maximum, double? majorUnit,
+        bool logarithmic = false, bool bubble = false, bool includeScaling = true)
+    {
+        var actual = ResolveRange(sample, logarithmic, bubble: bubble, includeScaling: includeScaling);
+        TestAssert.Equal(new PptxRenderer.ChartValueExtents(minimum, maximum), actual.Extents);
+        TestAssert.Equal("ZeroAlignedWithEndpoints", actual.TickPolicy);
+        if (majorUnit is { } unit)
+            TestAssert.Equal((double?)unit, actual.MajorUnit);
     }
 
     private static readonly XNamespace CurveC = "http://schemas.openxmlformats.org/drawingml/2006/chart";
@@ -79,17 +75,16 @@ internal static partial class PptxScatterIntervalTests
         return JsonSerializer.Deserialize<RangeCase[]>(document.RootElement.GetProperty("Cases").GetRawText())!;
     }
 
-    private static (PptxRenderer.ChartValueExtents Extents, object Options) ResolveRange(RangeCase sample,
-        bool logarithmic = false, CancellationToken cancellationToken = default, bool bubble = false, bool includeScaling = true)
+    private static (PptxRenderer.ChartValueExtents Extents, double? MajorUnit, string TickPolicy) ResolveRange(
+        RangeCase sample, bool logarithmic = false, CancellationToken cancellationToken = default,
+        bool bubble = false, bool includeScaling = true)
     {
-        // Exercise the live scene parser; missing-source controls change XML
-        // before parsing. Divergent XML below remains provenance only.
+        // Missing-source controls remove scaling before the scene is built.
         string side = sample.Axis == "X" ? "b" : "l";
         XDocument xml = XDocument.Parse(RangeChart(sample, logarithmic));
         XElement element = xml.Descendants(CurveC + "valAx").Single(a => (string?)a.Element(CurveC + "axPos")?.Attribute("val") == side);
         if (!includeScaling) element.Element(CurveC + "scaling")?.Remove();
         var chart = PptxTests.BuildSingleChartScene(xml.ToString())!;
-        XElement plot = xml.Descendants(CurveC + "scatterChart").Single();
         object series = CurveInvoke("ReadSceneScatterSeries", chart.Plots.Single(), false, null, true);
         object options = CurveInvoke("ReadSceneChartScatterOptions", chart.Plots.Single());
         object hidden = CurveInvoke("ReadSceneSeriesLineHidden", chart.Plots.Single());
@@ -101,7 +96,12 @@ internal static partial class PptxScatterIntervalTests
         Type sourceType = typeof(PptxRenderer).GetNestedType("ChartAxisSource", BindingFlags.NonPublic)!;
         object source = Activator.CreateInstance(sourceType, [axis, chart.Options.Date1904 == true])!;
         object scale = CurveInvoke("ReadChartPointValueAxisScale", source, data, occupied, bubble, coordinate == 1, null);
-        return ((PptxRenderer.ChartValueExtents)scale.GetType().GetField("Item1")!.GetValue(scale)!, scale.GetType().GetField("Item2")!.GetValue(scale)!);
+        var extents = (PptxRenderer.ChartValueExtents)scale.GetType().GetField("Item1")!.GetValue(scale)!;
+        object axisOptions = scale.GetType().GetField("Item2")!.GetValue(scale)!;
+        object units = axisOptions.GetType().GetProperty("Units")!.GetValue(axisOptions)!;
+        var majorUnit = (double?)units.GetType().GetProperty("MajorUnit")!.GetValue(units);
+        string tickPolicy = axisOptions.GetType().GetProperty("TickPolicy")!.GetValue(axisOptions)!.ToString()!;
+        return (extents, majorUnit, tickPolicy);
     }
 
     private static object CurveInvoke(string name, params object?[] arguments)
