@@ -1713,6 +1713,19 @@ internal static class DocxSectionNavigationTests
                         "The nested bookmark boundary preserves all page paint.");
                     TestAssert.Equal(0, closed[0].Annotations.Count);
                 }
+
+                PdfPage[] mathOpen = RenderColumn("math-after-target", spanned, mode);
+                TestAssert.Equal(open[0].Annotations.Single().Destination?.Left, mathOpen[0].Annotations.Single().Destination?.Left);
+                TestAssert.Contains("TARGET PARAGRAPH", Text(mathOpen[1]));
+                TestAssert.Contains("7", Text(mathOpen[1]));
+                TestAssert.Contains("3", Text(mathOpen[1]));
+                foreach (string variant in new[] { "math-after-equation", "math-at-root", "math-in-numerator" })
+                {
+                    PdfPage[] closed = RenderColumn(variant, spanned, mode);
+                    TestAssert.True(mathOpen.Select(page => page.Content).SequenceEqual(closed.Select(page => page.Content)),
+                        "Moving an end marker into the equation preserves all page paint.");
+                    TestAssert.Equal(0, closed[0].Annotations.Count);
+                }
             }
         }
 
@@ -1805,6 +1818,24 @@ internal static class DocxSectionNavigationTests
                         else if (variant == "nested-in-row") nestedRow.Add(end);
                         else if (variant == "nested-in-table") nested.Add(end);
                         else second.Element(W + "p")!.Add(end);
+                    }
+                    else if (variant.StartsWith("math-", StringComparison.Ordinal))
+                    {
+                        XNamespace math = OoxNamespaces.MathNamespace;
+                        XElement paragraph = first.Element(W + "p")!;
+                        var numerator = new XElement(math + "num", new XElement(math + "r", new XElement(math + "t", "7")));
+                        var denominator = new XElement(math + "den", new XElement(math + "r", new XElement(math + "t", "3")));
+                        var equation = new XElement(math + "oMath", new XElement(math + "f", numerator, denominator));
+                        paragraph.AddFirst(start);
+                        paragraph.Add(equation);
+                        XElement endOwner = variant switch
+                        {
+                            "math-at-root" => equation,
+                            "math-in-numerator" => numerator,
+                            "math-after-target" => second.Element(W + "p")!,
+                            _ => paragraph
+                        };
+                        endOwner.Add(end);
                     }
                     else if (variant is "inline-start" or "trailing-start" or "inline-closed" or "trailing-closed")
                     {

@@ -167,9 +167,7 @@ internal sealed partial class DocxReader
             }
             else if (child.Name == WordprocessingNamespace + "bookmarkEnd")
             {
-                if (cellBookmarks is { } scope &&
-                    OoxXml.NormalizeDecimalId((string?)child.Attribute(WordprocessingNamespace + "id")) is { } id)
-                    scope.RecordEnd(id);
+                RecordCellBookmarkEnd(child);
                 return false;
             }
             else if (child.Name == WordprocessingNamespace + "fldSimple")
@@ -230,6 +228,13 @@ internal sealed partial class DocxReader
                 hasSource |= AddSourceContainerChild(containerChild, revision, removeDeletedText);
             }
             return hasSource;
+        }
+
+        void RecordCellBookmarkEnd(XElement end)
+        {
+            if (cellBookmarks is { } scope &&
+                OoxXml.NormalizeDecimalId((string?)end.Attribute(WordprocessingNamespace + "id")) is { } id)
+                scope.RecordEnd(id);
         }
 
         bool AddRevisionRunContainer(XElement container, DocxRevisionInfo? inheritedRevision)
@@ -548,7 +553,8 @@ internal sealed partial class DocxReader
                             inlineItems!.Count, inlineItems.Count + 1, hyperlinkSpans, relationships, mathContent: true),
                     authoredStory: authoredStory,
                     equationHasDeletionOwner: source.RemoveDeletedText || equationRevision?.Kind == DocxRevisionKind.Deletion,
-                    trailingBreaks: firstTrailingBreak);
+                    trailingBreaks: firstTrailingBreak,
+                    readBookmarkEnd: source.RemoveDeletedText || cellBookmarks is null ? null : RecordCellBookmarkEnd);
                 if (source.RemoveDeletedText)
                 {
                     var deletedEquation = new DocxEquation(content, runs.Count, sourceRunIndex, display, null, null);

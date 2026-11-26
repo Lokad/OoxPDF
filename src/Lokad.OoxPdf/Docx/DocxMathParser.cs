@@ -17,7 +17,8 @@ internal static partial class DocxMathParser
         bool preserveDeletedStructure = false, Action<DocxMathBookmark>? readBookmark = null,
         Action<XElement>? readCommentBoundary = null, Func<XElement, DocxHyperlinkSpan>? readHyperlink = null,
         XElement? authoredStory = null, bool equationHasDeletionOwner = false,
-        (XElement Run, XElement? FirstBreakInRun)? trailingBreaks = null)
+        (XElement Run, XElement? FirstBreakInRun)? trailingBreaks = null,
+        Action<XElement>? readBookmarkEnd = null)
     {
         var pending = new Stack<(XElement Element, bool Expanded, XName? RevisionOwner, bool IncludeAnnotations, DocxHyperlinkSpan? Hyperlink)>();
         var nodes = new Dictionary<XElement, DocxMathNode>();
@@ -177,6 +178,10 @@ internal static partial class DocxMathParser
                                 (string?)child.Attribute(WordprocessingNamespace + "name"));
                             (bookmarks ??= []).Add(new(bookmark, childIndex));
                             readBookmark?.Invoke(bookmark);
+                        }
+                        else
+                        {
+                            readBookmarkEnd?.Invoke(child);
                         }
                     }
                     else if (!IsProperty(child) && !IsNonPrintingSourceMarker(child) && !DocxSourceXml.IsCommentBoundary(child)) childIndex++;
