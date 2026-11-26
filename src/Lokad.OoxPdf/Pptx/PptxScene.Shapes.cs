@@ -60,8 +60,6 @@ internal sealed partial class PptxSceneBuilder
             ReadPresetAdjustments(shapeProperties),
             shapeProperties?.Element(DrawingNamespace + "custGeom") is not null,
             ReadCustomGeometry(shapeProperties),
-            fillReference,
-            lineReference,
             shapeProperties?.Element(DrawingNamespace + "noFill") is not null,
             fill,
             ReadLinearGradientFill(shapeProperties, theme, colorMap),

@@ -854,86 +854,67 @@ internal static class PptxSceneTextAgreementTests
 
     public static void TableStyleTextAgreesBetweenSceneAndSpans()
     {
-        // Source text and live rendering retain the declared formatting.
-        string theme = """
-            <?xml version="1.0" encoding="UTF-8"?>
+        const string theme = """
             <a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="TableTheme">
               <a:themeElements>
                 <a:clrScheme name="TableTheme">
                   <a:dk1><a:srgbClr val="000000"/></a:dk1>
-                  <a:lt1><a:srgbClr val="FFFFFF"/></a:lt1>
+                  <a:lt1><a:srgbClr val="F2E6C9"/></a:lt1>
                   <a:accent6><a:srgbClr val="336699"/></a:accent6>
                 </a:clrScheme>
                 <a:fontScheme name="TableTheme"><a:majorFont/><a:minorFont/></a:fontScheme>
               </a:themeElements>
             </a:theme>
             """;
-        string presentationRels = """
-            <?xml version="1.0" encoding="UTF-8"?>
-            <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-              <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/>
-              <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/>
-            </Relationships>
-            """;
-        string types = """
-            <?xml version="1.0" encoding="UTF-8"?>
-            <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-              <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-              <Default Extension="xml" ContentType="application/xml"/>
-              <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
-              <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
-              <Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>
-            </Types>
-            """;
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = types,
-            ["_rels/.rels"] = PptxTests.PackageRelationship(),
-            ["ppt/_rels/presentation.xml.rels"] = presentationRels,
-            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
-            ["ppt/theme/theme1.xml"] = theme,
-            ["ppt/slides/slide1.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <p:cSld><p:spTree>
-                    <p:graphicFrame>
-                      <p:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="1828800"/></p:xfrm>
-                      <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table">
-                        <a:tbl>
-                          <a:tblPr firstRow="1"><a:tableStyleId>{93296810-A885-4BE3-A3E7-6D5BEEA58F35}</a:tableStyleId></a:tblPr>
-                          <a:tblGrid><a:gridCol w="1828800"/><a:gridCol w="1828800"/></a:tblGrid>
-                          <a:tr h="914400">
-                            <a:tc><a:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>Head</a:t></a:r></a:p></a:txBody><a:tcPr/></a:tc>
-                            <a:tc><a:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="1400"/><a:t>Body</a:t></a:r></a:p></a:txBody><a:tcPr/></a:tc>
-                          </a:tr>
-                        </a:tbl>
-                      </a:graphicData></a:graphic>
-                    </p:graphicFrame>
-                  </p:spTree></p:cSld>
-                </p:sld>
-                """
-        });
+        using var input = PptxTests.CreateThemedSlidePackage(theme, """
+            <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <p:cSld><p:spTree>
+                <p:graphicFrame>
+                  <p:xfrm><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="1828800"/></p:xfrm>
+                  <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table">
+                    <a:tbl>
+                      <a:tblPr firstRow="1"><a:tableStyleId>{93296810-A885-4BE3-A3E7-6D5BEEA58F35}</a:tableStyleId></a:tblPr>
+                      <a:tblGrid><a:gridCol w="1828800"/></a:tblGrid>
+                      <a:tr h="914400">
+                        <a:tc><a:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>Head</a:t></a:r></a:p></a:txBody><a:tcPr/></a:tc>
+                      </a:tr>
+                      <a:tr h="914400">
+                        <a:tc><a:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="1400"/><a:t>Body</a:t></a:r></a:p></a:txBody><a:tcPr/></a:tc>
+                      </a:tr>
+                    </a:tbl>
+                  </a:graphicData></a:graphic>
+                </p:graphicFrame>
+              </p:spTree></p:cSld>
+            </p:sld>
+            """);
 
-        using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        using OoxPackage package = OoxPackage.Open(input, CancellationToken.None);
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
         PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
-        PptxSceneNode tableNode = scene.Slides[0].SlideNodes[0];
-        TestAssert.Equal(PptxSceneNodeKind.Table, tableNode.Kind);
-        PptxSceneTable table = TestAssert.NotNull(tableNode.Table);
-        PptxSceneTableCell headerCell = table.Rows[0].Cells[0];
-        PptxSceneTableCell bodyCell = table.Rows[0].Cells[1];
-        var context = TestAssert.NotNull(PptxRenderer.TryLoadTextInspectionContext(document, package, 0, scene,
-            CreateCannedPresentationResolver("memory:r14-tablestyle")));
-        PptxRenderer.PptxTextRunModel[] cellRuns = ReadTableCellRuns(context);
-        TestAssert.Equal(2, cellRuns.Length);
-        TestAssert.Equal("Head", cellRuns[0].Text);
-        TestAssert.Equal("Body", cellRuns[1].Text);
-        TestAssert.Equal(headerCell.StyleText.Color, cellRuns[0].Style.Color);
-        TestAssert.Equal(headerCell.StyleText.Bold, cellRuns[0].Style.Bold);
-        TestAssert.Equal(bodyCell.StyleText.Color, cellRuns[1].Style.Color);
-        TestAssert.True(headerCell.StyleText.Color.HasValue || headerCell.StyleText.Bold, "Expected the table style to resolve header text styling.");
-        TestAssert.Equal(bodyCell.StyleText.Bold, cellRuns[1].Style.Bold);
+        PptxSceneTable table = TestAssert.NotNull(scene.Slides.Single().SlideNodes.Single().Table);
+        TestAssert.Equal(2, table.Rows.Count);
+        var headerStyle = table.Rows[0].Cells.Single().StyleText;
+        var bodyStyle = table.Rows[1].Cells.Single().StyleText;
+        var headerColor = new RgbColor(242, 230, 201);
+        TestAssert.Equal(new PptxSceneTableCellTextStyle(headerColor, true), headerStyle);
+        TestAssert.Equal(default(PptxSceneTableCellTextStyle), bodyStyle);
+
+        var fonts = new PresentationFontResolver(new PortableRenderingTests.PinnedResolver());
+        var context = TestAssert.NotNull(PptxRenderer.TryLoadTextInspectionContext(document, package, 0, scene, fonts));
+        var spans = PptxRenderer.ReadSceneTableLayoutsAsync(context).ToBlockingEnumerable().Single().TextSpans;
+        TestAssert.Equal(2, spans.Count);
+        AssertRow(spans[0], 0, "Head", headerColor, true);
+        AssertRow(spans[1], 1, "Body", new RgbColor(0, 0, 0), false);
+        TestAssert.Equal(14d, TestAssert.NotNull(spans[1].SourceRun).Style.NominalFontSize);
+
+        static void AssertRow(PptxRenderer.PptxPositionedTextSpan span, int row, string text, RgbColor color, bool bold)
+        {
+            TestAssert.Equal((int?)row, span.TableRowIndex);
+            TestAssert.Equal((int?)0, span.TableColumnIndex);
+            TestAssert.Equal(text, span.Run.Text);
+            TestAssert.Equal(color, span.Run.Color);
+            TestAssert.Equal(bold, span.Run.Bold);
+        }
     }
 
     private static PptxRenderer.PptxTextRunModel[] ReadTableCellRuns(PptxRenderContext context) =>

@@ -202,8 +202,6 @@ internal sealed record PptxSceneShape(
     IReadOnlyDictionary<string, double> PresetAdjustments,
     bool HasCustomGeometry,
     PptxSceneCustomGeometry CustomGeometry,
-    PptxFormatSchemeReference FillReference,
-    PptxFormatSchemeReference LineReference,
     bool NoFill,
     PptxSceneFillStyle Fill,
     PptxSceneGradientFill GradientFill,

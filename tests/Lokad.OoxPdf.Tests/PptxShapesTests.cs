@@ -133,85 +133,66 @@ internal static partial class PptxShapesTests
 
     public static void PptxSyntheticShapeExplicitLineColorInheritsStyleLineWidth()
     {
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
-            ["_rels/.rels"] = PptxTests.PackageRelationship(),
-            ["ppt/_rels/presentation.xml.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/>
-                  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/>
-                </Relationships>
-                """,
-            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
-            ["ppt/theme/theme1.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="LineWidthTheme">
-                  <a:themeElements>
-                    <a:clrScheme name="LineWidthTheme">
-                      <a:dk1><a:srgbClr val="000000"/></a:dk1>
-                      <a:lt1><a:srgbClr val="FFFFFF"/></a:lt1>
-                      <a:accent1><a:srgbClr val="4472C4"/></a:accent1>
-                    </a:clrScheme>
-                    <a:fontScheme name="LineWidthTheme"><a:majorFont/><a:minorFont/></a:fontScheme>
-                    <a:fmtScheme name="LineWidthTheme">
-                      <a:fillStyleLst/>
-                      <a:lnStyleLst>
-                        <a:ln w="12700"><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:ln>
-                        <a:ln w="19050"><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:ln>
-                      </a:lnStyleLst>
-                      <a:effectStyleLst/>
-                      <a:bgFillStyleLst/>
-                    </a:fmtScheme>
-                  </a:themeElements>
-                </a:theme>
-                """,
-            ["ppt/slides/slide1.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <p:cSld>
-                    <p:spTree>
-                      <p:sp>
-                        <p:style>
-                          <a:lnRef idx="2"><a:schemeClr val="accent1"/></a:lnRef>
-                          <a:fillRef idx="0"><a:schemeClr val="accent1"/></a:fillRef>
-                          <a:effectRef idx="0"><a:schemeClr val="accent1"/></a:effectRef>
-                          <a:fontRef idx="minor"><a:schemeClr val="dk1"/></a:fontRef>
-                        </p:style>
-                        <p:spPr>
-                          <a:xfrm><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="914400"/></a:xfrm>
-                          <a:prstGeom prst="rect"/>
-                          <a:noFill/>
-                          <a:ln><a:solidFill><a:srgbClr val="C00000"/></a:solidFill></a:ln>
-                        </p:spPr>
-                      </p:sp>
-                    </p:spTree>
-                  </p:cSld>
-                </p:sld>
-                """
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        const string theme = """
+            <a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="LineWidthTheme">
+              <a:themeElements>
+                <a:clrScheme name="LineWidthTheme">
+                  <a:dk1><a:srgbClr val="000000"/></a:dk1>
+                  <a:lt1><a:srgbClr val="FFFFFF"/></a:lt1>
+                  <a:accent1><a:srgbClr val="4472C4"/></a:accent1>
+                </a:clrScheme>
+                <a:fontScheme name="LineWidthTheme"><a:majorFont/><a:minorFont/></a:fontScheme>
+                <a:fmtScheme name="LineWidthTheme">
+                  <a:fillStyleLst><a:solidFill><a:srgbClr val="1234AB"/></a:solidFill></a:fillStyleLst>
+                  <a:lnStyleLst>
+                    <a:ln w="12700"><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:ln>
+                    <a:ln w="19050"><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:ln>
+                  </a:lnStyleLst>
+                  <a:effectStyleLst/>
+                  <a:bgFillStyleLst/>
+                </a:fmtScheme>
+              </a:themeElements>
+            </a:theme>
+            """;
+        using var input = PptxTests.CreateThemedSlidePackage(theme, $$"""
+            <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <p:cSld><p:spTree>
+                {{Shape(914400, 0, "")}}
+                {{Shape(3657600, 1, "<a:noFill/>")}}
+                {{Shape(6400800, 1, "")}}
+              </p:spTree></p:cSld>
+            </p:sld>
+            """);
+        using var output = new MemoryStream();
 
-        OoxPdfConverter.Convert(input, output);
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { InputKind = OoxPdfInputKind.Pptx });
 
-        using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
-        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
-        PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
-        PptxSceneNode shapeNode = scene.Slides[0].SlideNodes[0];
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.True(shapeNode.Shape?.NoFill == true, "Expected explicit shape noFill provenance in the scene model.");
-        TestAssert.True(shapeNode.Shape?.Fill.HasFill == false, "Expected explicit shape noFill to suppress scene solid fill resolution.");
-        TestAssert.Equal(0, shapeNode.Shape?.FillReference.Index ?? -1);
-        TestAssert.True(shapeNode.Shape?.FillReference.Reference is not null, "Expected fillRef provenance even when idx=0 does not resolve a theme style.");
-        TestAssert.True(shapeNode.Shape?.FillReference.Style is null, "Expected idx=0 fillRef to remain unresolved against the theme fill style list.");
-        TestAssert.Equal(2, shapeNode.Shape?.LineReference.Index ?? 0);
-        TestAssert.True(shapeNode.Shape?.LineReference.Reference is not null, "Expected line reference XML ownership in the shape scene model.");
-        TestAssert.True(shapeNode.Shape?.LineReference.Style is not null, "Expected line reference to resolve through the theme line style list.");
+        string pdf = Encoding.ASCII.GetString(output.ToArray()).ReplaceLineEndings("\n");
         TestAssert.Contains("1.5 w", pdf);
         TestAssert.Contains("0.753 0 0 RG", pdf);
         TestAssert.Contains("72 396 144 72 re S", pdf);
+        TestAssert.Contains("288 396 144 72 re S", pdf);
+        TestAssert.Contains("504 396 144 72 re S", pdf);
+        TestAssert.DoesNotContain("72 396 144 72 re f", pdf);
+        TestAssert.DoesNotContain("288 396 144 72 re f", pdf);
+        TestAssert.Contains("504 396 144 72 re f", pdf);
+
+        static string Shape(int left, int fillIndex, string fillProperty) => FormattableString.Invariant($$"""
+            <p:sp>
+              <p:spPr>
+                <a:xfrm><a:off x="{{left}}" y="914400"/><a:ext cx="1828800" cy="914400"/></a:xfrm>
+                <a:prstGeom prst="rect"/>
+                {{fillProperty}}
+                <a:ln><a:solidFill><a:srgbClr val="C00000"/></a:solidFill></a:ln>
+              </p:spPr>
+              <p:style>
+                <a:lnRef idx="2"><a:schemeClr val="accent1"/></a:lnRef>
+                <a:fillRef idx="{{fillIndex}}"><a:schemeClr val="accent1"/></a:fillRef>
+                <a:effectRef idx="0"><a:schemeClr val="accent1"/></a:effectRef>
+                <a:fontRef idx="minor"><a:schemeClr val="dk1"/></a:fontRef>
+              </p:style>
+            </p:sp>
+            """);
     }
 
     public static void PptxSyntheticShapeExplicitLineWithoutWidthUsesOfficeDefault()
