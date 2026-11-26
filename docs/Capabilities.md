@@ -118,7 +118,9 @@ Unmapped characters in hidden spans retain the selected face's missing-glyph
 advance while visible neighbors still paint.
 Plain spans and links also retain glyph paint with explicit `inherit` or `unset`
 for font family, size, style, weight, color, fill and fill opacity.
-They can restate the same font family list, slant, weight, resolved size, solid fill or fill opacity.
+A label can take its font and size from a span that supplies its advancing
+characters. Relative sizes follow the parent font size. Hidden characters
+still take space, and mixed advance metrics retain the diagnosed fallback.
 The glyph owners supply one shared effective fill for the label. Unpainted glyphs
 retain their advances, and a span can supply all visible ink. Active strokes and
 different visible fills retain the diagnosed fallback.

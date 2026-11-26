@@ -677,6 +677,33 @@ internal static partial class SvgTextTests
             pdf => TestAssert.Equal(5, LabelPaths(pdf)), "0 1 0 rg");
     }
 
+    public static void SvgLabelsUseMetricsFromAdvancingGlyphOwners()
+    {
+        string Picture(string text, string metrics = """font-size="20" """, string x = "120") => Svg($"""
+            <text x="{x}" y="80" text-anchor="middle" fill="#112233" {metrics}>{text}</text>
+            <rect x="120" y="90" width="20" height="10" fill="lime"/>
+            """);
+
+        const string child = """<tspan font-size="20">LABEL</tspan>""";
+        AssertSvgPaintInBothFormats(Picture("LABEL"),
+            [Picture(child, """font-size="10" """), Picture(child, """font-size="10" """, x: "12em"),
+                Picture("""<tspan font-family="DejaVu Sans">LABEL</tspan>""", """font-size="20" font-family="Courier New" """),
+                Picture("""<tspan font-size="50%"><tspan style="font-size:2em">LABEL</tspan></tspan>""")],
+            pdf => TestAssert.Equal(5, LabelPaths(pdf)), "0 1 0 rg");
+        AssertSvgPaintInBothFormats(Picture("LABEL", """font-size="16" """),
+            Picture("""<tspan style="font-size:initial">LABEL</tspan>"""),
+            pdf => TestAssert.Equal(5, LabelPaths(pdf)), "0 1 0 rg");
+        AssertSvgPaintInBothFormats(Picture("""<tspan visibility="hidden">AB</tspan>LABEL"""),
+            Picture("""<tspan visibility="hidden" font-size="20">AB</tspan>""" + child, """font-size="10" """),
+            pdf => TestAssert.Equal(5, LabelPaths(pdf)), "0 1 0 rg");
+
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        string mixed = Paint(Picture("""<tspan visibility="hidden" font-size="10">AB</tspan>LABEL"""), diagnostics).ToString();
+        TestAssert.DoesNotContain(LabelColor, mixed);
+        TestAssert.Contains("0 1 0 rg", mixed);
+        TestAssert.Contains("unsupported text element", diagnostics.Single().Message);
+    }
+
     public static void SvgTextChildrenKeepEffectiveKerning()
     {
         static string Picture(string defaultLabel, string disabledLabel, string legacyLabel) => Svg($"""

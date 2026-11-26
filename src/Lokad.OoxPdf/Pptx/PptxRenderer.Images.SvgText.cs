@@ -73,7 +73,12 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct SvgTextPaint(RgbColor? Color, double Alpha);
 
-    private readonly record struct SvgTextAppearance(string FamilyList, string Slant, int Weight, double Size, bool Kerning);
+    private readonly record struct SvgTextMetrics(string FamilyList, string Slant, int Weight, double Size, bool Kerning)
+    {
+        public bool Matches(SvgTextMetrics other) =>
+            Size == other.Size && Slant == other.Slant && Weight == other.Weight && Kerning == other.Kerning &&
+            FamilyList.Equals(other.FamilyList, StringComparison.OrdinalIgnoreCase);
+    }
 
     private static bool HasSvgStylesheet(IEnumerable<XNode> content) =>
         content.Any(node => node switch
@@ -101,14 +106,10 @@ internal sealed partial class PptxRenderer
             !PreservesTextStyle("alignment-baseline") || !PreservesTextStyle("baseline-shift") ||
             !PreservesTextStyle("font-variant") || !PreservesTextStyle("font-stretch") ||
             !PreservesTextStyle("letter-spacing") || !PreservesTextStyle("word-spacing") ||
-            !PreservesTextStyle("text-decoration") || !TryReadSvgTextKerning(element, style, out bool kerning) ||
+            !PreservesTextStyle("text-decoration") ||
             !PreservesTextStyle("clip-path") || !PreservesTextStyle("mask") || !PreservesTextStyle("filter")) return false;
         string? initialAnchor = ResolveSvgTextAnchor(Inherited("text-anchor"), "start");
         if (initialAnchor is null) return false;
-        string fontStyle = ResolveSvgTextFontValue(Inherited("font-style"), "normal").ToLowerInvariant();
-        if (fontStyle is not ("normal" or "italic" or "oblique")) return false;
-        if (!TryReadSvgTextWeight(Inherited("font-weight"), out int weight)) return false;
-        string familyList = ResolveSvgTextFontValue(Inherited("font-family"), "serif");
         double size = SvgInitialFontSize;
         SvgTextWhitespace whitespace = SvgTextWhitespace.XmlDefault;
         foreach (XElement owner in element.AncestorsAndSelf().Reverse())
@@ -120,23 +121,24 @@ internal sealed partial class PptxRenderer
             if (!TryResolveSvgFontSize(value, size, out size)) return false;
             whitespace = ResolveSvgTextWhitespace(owner, declarations, whitespace);
         }
-        if (size <= 0d || !TryReadPosition("x", viewWidth, out double x) ||
+        if (!TryReadSvgTextMetrics(element, style, size, out var rootMetrics) ||
+            !TryReadPosition("x", viewWidth, out double x) ||
             !TryReadPosition("y", viewHeight, out double y) ||
             !TryReadPosition("dx", viewWidth, out double dx) ||
             !TryReadPosition("dy", viewHeight, out double dy)) return false;
         x += dx; y += dy;
         if (!double.IsFinite(x) || !double.IsFinite(y)) return false;
-        var appearance = new SvgTextAppearance(familyList, fontStyle, weight, size, kerning);
-        if (!TryReadPlainSvgText(element, style, appearance, paintServers, IsSvgVisibilityHidden(Inherited("visibility")), whitespace,
+        if (!TryReadPlainSvgText(element, style, rootMetrics, paintServers, IsSvgVisibilityHidden(Inherited("visibility")), whitespace,
                 initialAnchor, cancellationToken, out string valueText, out bool[]? hiddenCharacters, out string anchor,
-                out SvgTextPaint paint)) return false;
+                out SvgTextPaint paint, out SvgTextMetrics metrics)) return false;
         if (OoxComplexScript.DetectNeeds(valueText) != OoxComplexScriptKind.None ||
             valueText.EnumerateRunes().Any(r => Rune.IsControl(r))) return false;
-        string family = familyList.Split(',')[0].Trim().Trim('\'', '"');
+        string family = metrics.FamilyList.Split(',')[0].Trim().Trim('\'', '"');
         family = family.ToLowerInvariant() switch { "serif" => "Times New Roman", "sans-serif" => "Arial", "monospace" => "Courier New", _ => family };
         if (family.Length == 0) return false;
         double opacity = paint.Alpha * ReadSvgOpacityValue(ReadSvgElementOpacity(element, style));
-        label = new(valueText, hiddenCharacters, new FontRequest(family, weight >= 600, fontStyle != "normal"), size, x, y, anchor, paint.Color, opacity, kerning);
+        label = new(valueText, hiddenCharacters, new FontRequest(family, metrics.Weight >= 600, metrics.Slant != "normal"),
+            metrics.Size, x, y, anchor, paint.Color, opacity, metrics.Kerning);
         return true;
 
         bool TryReadPosition(string name, double percentageBasis, out double value)
@@ -146,6 +148,20 @@ internal sealed partial class PptxRenderer
                 ? TryReadSvgViewportLength(element, text, percentageBasis, out value)
                 : TryReadSvgLength(text, out value, relativeSize: size);
         }
+    }
+
+    private static bool TryReadSvgTextMetrics(XElement element, IReadOnlyDictionary<string, string> style,
+        double size, out SvgTextMetrics metrics)
+    {
+        metrics = default;
+        if (!double.IsFinite(size) || size <= 0d) return false;
+        string slant = ResolveSvgTextFontValue(ReadSvgInheritedAttribute(element, style, "font-style"), "normal").ToLowerInvariant();
+        if (slant is not ("normal" or "italic" or "oblique") ||
+            !TryReadSvgTextWeight(ReadSvgInheritedAttribute(element, style, "font-weight"), out int weight) ||
+            !TryReadSvgTextKerning(element, style, out bool kerning)) return false;
+        string family = ResolveSvgTextFontValue(ReadSvgInheritedAttribute(element, style, "font-family"), "serif");
+        metrics = new(family, slant, weight, size, kerning);
+        return true;
     }
 
     private static bool TryReadSvgTextKerning(XElement element, IReadOnlyDictionary<string, string> style, out bool enabled)
@@ -309,39 +325,43 @@ internal sealed partial class PptxRenderer
         };
     }
 
-    // Plain spans and links share the label's metrics. Glyphs without visible
-    // paint retain their advances, and painted glyphs share one effective fill.
-    private static bool TryReadPlainSvgText(XElement element, IReadOnlyDictionary<string, string> elementStyle, SvgTextAppearance appearance,
+    // Advancing characters share one font and size. Painted glyphs also
+    // share one effective fill.
+    private static bool TryReadPlainSvgText(XElement element, IReadOnlyDictionary<string, string> elementStyle, SvgTextMetrics rootMetrics,
         SvgPaintServers paintServers, bool hidden, SvgTextWhitespace whitespace, string initialAnchor,
-        CancellationToken cancellationToken, out string text, out bool[]? hiddenCharacters, out string anchor, out SvgTextPaint paint)
+        CancellationToken cancellationToken, out string text, out bool[]? hiddenCharacters, out string anchor,
+        out SvgTextPaint paint, out SvgTextMetrics metrics)
     {
         text = string.Empty;
         hiddenCharacters = null;
         anchor = initialAnchor;
         paint = default;
+        metrics = rootMetrics;
         SvgTextPaint? commonPaint = null;
+        SvgTextMetrics? commonMetrics = null;
         var characters = new StringBuilder();
         List<bool>? visibility = null;
-        (bool Hidden, string Anchor)? pendingSpace = null;
+        (bool Hidden, string Anchor, SvgTextMetrics Metrics)? pendingSpace = null;
         string? chunkAnchor = null;
         XName xmlLanguageName = XNamespace.Xml + "lang";
         XName languageName = "lang";
         string? labelLanguage = null;
         XName spanName = element.Name.Namespace + "tspan";
         XName linkName = element.Name.Namespace + "a";
-        if (!Append(element, elementStyle, hidden, ownerTransparent: false, whitespace, initialAnchor)) return false;
+        if (!Append(element, elementStyle, rootMetrics, hidden, ownerTransparent: false, whitespace, initialAnchor)) return false;
 
         text = characters.ToString();
         hiddenCharacters = visibility?.ToArray();
         anchor = chunkAnchor ?? initialAnchor;
         paint = commonPaint.GetValueOrDefault();
+        metrics = commonMetrics.GetValueOrDefault(rootMetrics);
         return true;
 
         string? DeclaredLanguage(XElement owner) =>
             (string?)owner.Attribute(xmlLanguageName) ?? (string?)owner.Attribute(languageName);
 
-        bool Append(XElement owner, IReadOnlyDictionary<string, string> ownerStyle, bool ownerHidden, bool ownerTransparent,
-            SvgTextWhitespace space, string ownerAnchor)
+        bool Append(XElement owner, IReadOnlyDictionary<string, string> ownerStyle, SvgTextMetrics ownerMetrics,
+            bool ownerHidden, bool ownerTransparent, SvgTextWhitespace space, string ownerAnchor)
         {
             bool preserveSpace = space is SvgTextWhitespace.XmlPreserve or SvgTextWhitespace.CssPreserve;
             bool hideOutlines = ownerHidden || ownerTransparent;
@@ -365,7 +385,7 @@ internal sealed partial class PptxRenderer
                         if (!preserveSpace && character == ' ')
                         {
                             // Hold a collapsed space until there is content on both sides.
-                            if (characters.Length != 0) pendingSpace ??= (hideOutlines, ownerAnchor);
+                            if (characters.Length != 0) pendingSpace ??= (hideOutlines, ownerAnchor, ownerMetrics);
                             continue;
                         }
                         bool characterHidden = hideOutlines;
@@ -381,10 +401,10 @@ internal sealed partial class PptxRenderer
                         }
                         if (pendingSpace is { } pending)
                         {
-                            AppendCharacter(' ', pending.Hidden, pending.Anchor);
+                            if (!AppendCharacter(' ', pending.Hidden, pending.Anchor, pending.Metrics)) return false;
                             pendingSpace = null;
                         }
-                        AppendCharacter(character, characterHidden, ownerAnchor);
+                        if (!AppendCharacter(character, characterHidden, ownerAnchor, ownerMetrics)) return false;
                     }
                     continue;
                 }
@@ -405,8 +425,11 @@ internal sealed partial class PptxRenderer
                 if (opacity is not double localOpacity || localOpacity is > 0d and < 1d) return false;
                 bool childTransparent = ownerTransparent || localOpacity == 0d;
                 string? childAnchor = ResolveSvgTextAnchor(ReadSvgPresentationAttribute(child, style, "text-anchor"), ownerAnchor);
-                if (childAnchor is null || !Append(child, style, childHidden, childTransparent,
-                    ResolveSvgTextWhitespace(child, style, space), childAnchor)) return false;
+                if (childAnchor is null ||
+                    !TryResolveSvgFontSize(ReadSvgPresentationAttribute(child, style, "font-size"), ownerMetrics.Size, out double childSize) ||
+                    !TryReadSvgTextMetrics(child, style, childSize, out var childMetrics) ||
+                    !Append(child, style, childMetrics, childHidden, childTransparent,
+                        ResolveSvgTextWhitespace(child, style, space), childAnchor)) return false;
             }
             return true;
         }
@@ -435,7 +458,6 @@ internal sealed partial class PptxRenderer
                 if (!string.Equals(language, labelLanguage, StringComparison.OrdinalIgnoreCase)) return false;
             }
 
-            bool? hasLabelKerning = null;
             return child.Attributes().All(IsPlainAttribute) &&
                 style.All(declaration => RetainsLabelStyle(declaration.Key.ToLowerInvariant(), declaration.Value));
 
@@ -464,31 +486,27 @@ internal sealed partial class PptxRenderer
             bool RetainsLabelStyle(string name, string value) => name switch
             {
                 "display" or "visibility" or "opacity" or "white-space" or "text-anchor" => true,
-                "font-family" => InheritsSvgPropertyValue(value) ||
-                    ResolveSvgTextFontValue(value, "serif").Equals(appearance.FamilyList, StringComparison.OrdinalIgnoreCase),
-                "font-style" => InheritsSvgPropertyValue(value) ||
-                    ResolveSvgTextFontValue(value, "normal").Equals(appearance.Slant, StringComparison.OrdinalIgnoreCase),
-                "font-weight" => InheritsSvgPropertyValue(value) ||
-                    TryReadSvgTextWeight(value, out int weight) && weight == appearance.Weight,
-                "font-size" => TryResolveSvgFontSize(value, appearance.Size, out double size) && size == appearance.Size,
+                "font-family" or "font-style" or "font-weight" or "font-size" or "font-kerning" or "kerning" => true,
                 // Effective paint is checked where the glyphs are owned.
                 "fill" or "color" or "stroke" or "stroke-opacity" or "stroke-width" or "stroke-linecap" or "stroke-linejoin" or
                     "stroke-miterlimit" or "stroke-dasharray" or "stroke-dashoffset" or "paint-order" => true,
                 "fill-opacity" => InheritsSvgPropertyValue(value) || ParseSvgOpacity(value) is not null,
-                "font-kerning" or "kerning" =>
-                    (hasLabelKerning ??= TryReadSvgTextKerning(child, style, out bool kerning) && kerning == appearance.Kerning) == true,
                 _ => IsNeutralSvgTextStyle(name, value),
             };
         }
 
-        void AppendCharacter(char character, bool characterHidden, string ownerAnchor)
+        bool AppendCharacter(char character, bool characterHidden, string ownerAnchor, SvgTextMetrics ownerMetrics)
         {
-            // Plain children share one chunk. Its first positioned character supplies the anchor.
-            if (chunkAnchor is null && !OoxTextBreakRules.IsNonPrintingBreakControl(character))
-                chunkAnchor = ownerAnchor;
+            if (!OoxTextBreakRules.IsNonPrintingBreakControl(character))
+            {
+                if (commonMetrics is { } existing && !ownerMetrics.Matches(existing)) return false;
+                commonMetrics ??= ownerMetrics;
+                chunkAnchor ??= ownerAnchor;
+            }
             if (characterHidden && visibility is null) visibility = [.. Enumerable.Repeat(false, characters.Length)];
             characters.Append(character);
             visibility?.Add(characterHidden);
+            return true;
         }
     }
 
