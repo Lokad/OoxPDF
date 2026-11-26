@@ -2827,231 +2827,103 @@ internal static partial class PptxChartsTests
 
     public static void PptxSyntheticChartValueAxisReversedOrientationMovesLineDataLabels()
     {
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
-        {
-            ["[Content_Types].xml"] = TestFixtures.Utf8(PptxTests.BasicContentTypes()),
-            ["_rels/.rels"] = TestFixtures.Utf8(PptxTests.PackageRelationship()),
-            ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8(PptxTests.PresentationRelationship()),
-            ["ppt/presentation.xml"] = TestFixtures.Utf8(PptxTests.BasicPresentation()),
-            ["ppt/slides/_rels/slide1.xml.rels"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
-                </Relationships>
-                """),
-            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
-                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
-                       xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
-                       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-                  <p:cSld><p:spTree>
-                    <p:graphicFrame>
-                      <p:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="2743200"/></p:xfrm>
-                      <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic>
-                    </p:graphicFrame>
-                  </p:spTree></p:cSld>
-                </p:sld>
-                """),
-            ["ppt/charts/chart1.xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
-                              xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <c:chart><c:plotArea>
-                  <c:lineChart>
-                    <c:ser>
-                      <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
-                      <c:val><c:numLit><c:pt idx="0"><c:v>0</c:v></c:pt><c:pt idx="1"><c:v>30</c:v></c:pt></c:numLit></c:val>
-                    </c:ser>
-                    <c:dLbls><c:showVal val="1"/><c:showLegendKey val="0"/><c:showCatName val="0"/><c:showSerName val="0"/><c:showPercent val="0"/><c:showBubbleSize val="0"/><c:dLblPos val="t"/></c:dLbls>
-                    <c:axId val="1"/><c:axId val="2"/>
-                  </c:lineChart>
-                  <c:catAx>
-                    <c:axId val="1"/><c:axPos val="b"/><c:tickLblPos val="none"/>
-                  </c:catAx>
-                  <c:valAx>
-                    <c:axId val="2"/><c:axPos val="l"/><c:tickLblPos val="none"/>
-                    <c:scaling><c:orientation val="maxMin"/><c:min val="0"/><c:max val="30"/></c:scaling>
-                  </c:valAx>
-                  </c:plotArea></c:chart>
-                </c:chartSpace>
-                """)
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { FontResolver = new TestFaceFontResolver() });
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        var labelMatrices = Regex.Matches(pdf, @"1 0 0 1 (?<x>[0-9.]+) (?<y>[0-9.]+) Tm")
-            .Cast<Match>()
-            .Select(match => new
-            {
-                X = double.Parse(match.Groups["x"].Value, CultureInfo.InvariantCulture),
-                Y = double.Parse(match.Groups["y"].Value, CultureInfo.InvariantCulture)
-            })
-            .OrderBy(matrix => matrix.X)
-            .ToArray();
-        TestAssert.Equal(2, labelMatrices.Length);
-        TestAssert.True(labelMatrices[0].Y > labelMatrices[1].Y,
-            "Line data-label anchors should follow maxMin value-axis orientation.");
+        const string chart = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+                          xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <c:chart><c:plotArea>
+              <c:lineChart>
+                <c:ser>
+                  <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
+                  <c:val><c:numLit><c:pt idx="0"><c:v>0</c:v></c:pt><c:pt idx="1"><c:v>30</c:v></c:pt></c:numLit></c:val>
+                </c:ser>
+                <c:dLbls><c:showVal val="1"/><c:showLegendKey val="0"/><c:showCatName val="0"/><c:showSerName val="0"/><c:showPercent val="0"/><c:showBubbleSize val="0"/><c:dLblPos val="t"/></c:dLbls>
+                <c:axId val="1"/><c:axId val="2"/>
+              </c:lineChart>
+              <c:catAx>
+                <c:axId val="1"/><c:axPos val="b"/><c:tickLblPos val="none"/>
+              </c:catAx>
+              <c:valAx>
+                <c:axId val="2"/><c:axPos val="l"/><c:tickLblPos val="none"/>
+                <c:scaling><c:orientation val="maxMin"/><c:min val="0"/><c:max val="30"/></c:scaling>
+              </c:valAx>
+              </c:plotArea></c:chart>
+            </c:chartSpace>
+            """;
+        PdfPage page = RenderReversedAxisLabelChart(chart);
+        var labels = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false, honorActualText: false)
+            .OrderBy(show => show.X).ToArray();
+        TestAssert.Equal(2, labels.Length);
+        TestAssert.Equal("0", labels[0].Text);
+        TestAssert.Equal("30", labels[1].Text);
+        TestAssert.True(labels[0].X < labels[1].X && labels[0].Y > labels[1].Y,
+            "The zero label at the first category must sit above the 30 label on the reversed value axis.");
     }
 
     public static void PptxSyntheticChartValueAxisReversedOrientationMovesBarDataLabels()
     {
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
-        {
-            ["[Content_Types].xml"] = TestFixtures.Utf8(PptxTests.BasicContentTypes()),
-            ["_rels/.rels"] = TestFixtures.Utf8(PptxTests.PackageRelationship()),
-            ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8(PptxTests.PresentationRelationship()),
-            ["ppt/presentation.xml"] = TestFixtures.Utf8(PptxTests.BasicPresentation()),
-            ["ppt/slides/_rels/slide1.xml.rels"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
-                </Relationships>
-                """),
-            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
-                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
-                       xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
-                       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-                  <p:cSld><p:spTree>
-                    <p:graphicFrame>
-                      <p:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="2743200"/></p:xfrm>
-                      <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic>
-                    </p:graphicFrame>
-                  </p:spTree></p:cSld>
-                </p:sld>
-                """),
-            ["ppt/charts/chart1.xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
-                              xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <c:chart><c:plotArea>
-                  <c:barChart>
-                    <c:barDir val="col"/>
-                    <c:ser>
-                      <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
-                      <c:val><c:numLit><c:pt idx="0"><c:v>10</c:v></c:pt><c:pt idx="1"><c:v>30</c:v></c:pt></c:numLit></c:val>
-                    </c:ser>
-                    <c:dLbls><c:showVal val="1"/><c:dLblPos val="ctr"/></c:dLbls>
-                    <c:axId val="1"/><c:axId val="2"/>
-                  </c:barChart>
-                  <c:catAx>
-                    <c:axId val="1"/><c:axPos val="b"/><c:tickLblPos val="none"/>
-                  </c:catAx>
-                  <c:valAx>
-                    <c:axId val="2"/><c:axPos val="l"/><c:tickLblPos val="none"/>
-                    <c:scaling><c:orientation val="maxMin"/><c:min val="0"/><c:max val="30"/></c:scaling>
-                  </c:valAx>
-                  </c:plotArea></c:chart>
-                </c:chartSpace>
-                """)
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { FontResolver = new TestFaceFontResolver() });
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        var labelMatrices = Regex.Matches(pdf, @"1 0 0 1 (?<x>[0-9.]+) (?<y>[0-9.]+) Tm")
-            .Cast<Match>()
-            .Select(match => new
-            {
-                X = double.Parse(match.Groups["x"].Value, CultureInfo.InvariantCulture),
-                Y = double.Parse(match.Groups["y"].Value, CultureInfo.InvariantCulture)
-            })
-            .OrderBy(matrix => matrix.X)
-            .ToArray();
-        TestAssert.True(labelMatrices.Length >= 2, "Expected two bar data-label text matrices.");
-        TestAssert.True(labelMatrices[0].Y > labelMatrices[1].Y,
-            "Bar data-label anchors should follow maxMin value-axis orientation.");
+        PdfPage page = RenderReversedAxisBarLabels("col", categorySide: "b", valueSide: "l");
+        var labels = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false, honorActualText: false)
+            .OrderBy(show => show.X).ToArray();
+        TestAssert.Equal(2, labels.Length);
+        TestAssert.Equal("Series 1, A, 10", labels[0].Text);
+        TestAssert.Equal("Series 1, B, 30", labels[1].Text);
+        TestAssert.True(labels[0].X < labels[1].X && labels[0].Y > labels[1].Y,
+            "Category A's smaller value must sit above category B's label on the reversed value axis.");
     }
 
     public static void PptxSyntheticChartValueAxisReversedOrientationMovesHorizontalBarsAndLabels()
     {
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
-        {
-            ["[Content_Types].xml"] = TestFixtures.Utf8(PptxTests.BasicContentTypes()),
-            ["_rels/.rels"] = TestFixtures.Utf8(PptxTests.PackageRelationship()),
-            ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8(PptxTests.PresentationRelationship()),
-            ["ppt/presentation.xml"] = TestFixtures.Utf8(PptxTests.BasicPresentation()),
-            ["ppt/slides/_rels/slide1.xml.rels"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
-                </Relationships>
-                """),
-            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
-                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
-                       xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
-                       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-                  <p:cSld><p:spTree>
-                    <p:graphicFrame>
-                      <p:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="2743200"/></p:xfrm>
-                      <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic>
-                    </p:graphicFrame>
-                  </p:spTree></p:cSld>
-                </p:sld>
-                """),
-            ["ppt/charts/chart1.xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
-                              xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <c:chart><c:plotArea>
-                  <c:barChart>
-                    <c:barDir val="bar"/>
-                    <c:ser>
-                      <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
-                      <c:val><c:numLit><c:pt idx="0"><c:v>10</c:v></c:pt><c:pt idx="1"><c:v>30</c:v></c:pt></c:numLit></c:val>
-                    </c:ser>
-                    <c:dLbls><c:showVal val="1"/><c:dLblPos val="ctr"/></c:dLbls>
-                    <c:axId val="1"/><c:axId val="2"/>
-                  </c:barChart>
-                  <c:catAx>
-                    <c:axId val="1"/><c:axPos val="l"/><c:tickLblPos val="none"/>
-                  </c:catAx>
-                  <c:valAx>
-                    <c:axId val="2"/><c:axPos val="b"/><c:tickLblPos val="none"/>
-                    <c:scaling><c:orientation val="maxMin"/><c:min val="0"/><c:max val="30"/></c:scaling>
-                  </c:valAx>
-                  </c:plotArea></c:chart>
-                </c:chartSpace>
-                """)
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        PdfPage page = RenderReversedAxisBarLabels("bar", categorySide: "l", valueSide: "b");
+        var bars = PptxComposedPaletteTests.ReadFilledRectangles(page)
+            .Where(bar => bar.Width > 50d && bar.Height is > 5d and < 80d)
+            .OrderBy(bar => bar.Width).ToArray();
+        TestAssert.True(bars.Length >= 2, "Expected two filled horizontal bars.");
+        TestAssert.True(bars[^1].X < bars[0].X,
+            "The max value horizontal bar should extend left of the smaller value on the reversed value axis.");
 
-        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { FontResolver = new TestFaceFontResolver() });
+        var labels = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false, honorActualText: false)
+            .OrderBy(show => show.Y).ToArray();
+        TestAssert.Equal(2, labels.Length);
+        TestAssert.Equal("Series 1, A, 10", labels[0].Text);
+        TestAssert.Equal("Series 1, B, 30", labels[1].Text);
+        TestAssert.True(labels[0].Y < labels[1].Y && labels[0].X > labels[1].X,
+            "Category A's smaller value must sit to the right of category B's label on the reversed value axis.");
+    }
 
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        var barRectangles = Regex.Matches(pdf, @"(?<x>[0-9.]+) (?<y>[0-9.]+) (?<w>[0-9.]+) (?<h>[0-9.]+) re\s+f")
-            .Cast<Match>()
-            .Select(match => new
-            {
-                X = double.Parse(match.Groups["x"].Value, CultureInfo.InvariantCulture),
-                Width = double.Parse(match.Groups["w"].Value, CultureInfo.InvariantCulture),
-                Height = double.Parse(match.Groups["h"].Value, CultureInfo.InvariantCulture)
-            })
-            .Where(rectangle => rectangle.Width > 50d && rectangle.Height > 5d && rectangle.Height < 80d)
-            .OrderBy(rectangle => rectangle.Width)
-            .ToArray();
-        TestAssert.True(barRectangles.Length >= 2, "Expected two filled horizontal bar rectangles.");
-        TestAssert.True(barRectangles[^1].X < barRectangles[0].X,
-            "The max value horizontal bar should extend left of the smaller value when the value axis is maxMin.");
+    private static PdfPage RenderReversedAxisBarLabels(string direction, string categorySide, string valueSide) =>
+        RenderReversedAxisLabelChart($$"""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+                          xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <c:chart><c:plotArea>
+              <c:barChart>
+                <c:barDir val="{{direction}}"/>
+                <c:ser>
+                  <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
+                  <c:val><c:numLit><c:pt idx="0"><c:v>10</c:v></c:pt><c:pt idx="1"><c:v>30</c:v></c:pt></c:numLit></c:val>
+                </c:ser>
+                <c:dLbls><c:showVal val="1"/><c:dLblPos val="ctr"/></c:dLbls>
+                <c:axId val="1"/><c:axId val="2"/>
+              </c:barChart>
+              <c:catAx>
+                <c:axId val="1"/><c:axPos val="{{categorySide}}"/><c:tickLblPos val="none"/>
+              </c:catAx>
+              <c:valAx>
+                <c:axId val="2"/><c:axPos val="{{valueSide}}"/><c:tickLblPos val="none"/>
+                <c:scaling><c:orientation val="maxMin"/><c:min val="0"/><c:max val="30"/></c:scaling>
+              </c:valAx>
+              </c:plotArea></c:chart>
+            </c:chartSpace>
+            """);
 
-        var labelMatrices = Regex.Matches(pdf, @"1 0 0 1 (?<x>[0-9.]+) (?<y>[0-9.]+) Tm")
-            .Cast<Match>()
-            .Select(match => new
-            {
-                X = double.Parse(match.Groups["x"].Value, CultureInfo.InvariantCulture),
-                Y = double.Parse(match.Groups["y"].Value, CultureInfo.InvariantCulture)
-            })
-            .ToArray();
-        TestAssert.True(labelMatrices.Length >= 2, "Expected two horizontal bar data-label text matrices.");
-        TestAssert.True(labelMatrices[0].X > labelMatrices[1].X,
-            "Horizontal bar geometry and data-label anchors should follow maxMin value-axis orientation.");
+    private static PdfPage RenderReversedAxisLabelChart(string chart)
+    {
+        using MemoryStream input = PptxTests.CreateSingleChartPackageStream(chart);
+        using OoxPackage package = OoxPackage.Open(input, default);
+        PptxDocument document = new PptxReader().Read(package, default);
+        return new PptxRenderer(new TestFaceFontResolver()).RenderPagesAsync(document, package, null, default)
+            .ToBlockingEnumerable().Single();
     }
 
     public static void PptxSyntheticChartValueAxisReversedOrientationStacksColumnSegmentsByValue()
