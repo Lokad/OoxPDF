@@ -597,9 +597,13 @@ internal static partial class SvgTextTests
         AssertSvgPaintInBothFormats(Picture("normal"),
             [Picture("400.0"), Picture("normal", """style="font-weight:400.000" """), Picture("4.0e+2")],
             pdf => TestAssert.Equal(5, LabelPaths(pdf)), "0 1 0 rg");
-        AssertSvgPaintInBothFormats(Picture("bold"),
-            [Picture("700.0"), Picture("bold", """font-weight="700.000" """)],
-            pdf => TestAssert.Equal(5, LabelPaths(pdf)), "0 1 0 rg");
+        // The pinned portable resolver supplies regular outlines for all requests.
+        // Compare bold admission at the SVG painter without its substitution diagnostic.
+        PdfGraphicsBuilder bold = Paint(Picture("bold"));
+        TestAssert.Equal(5, LabelPaths(bold.ToString()));
+        AssertEquivalentSvgPaint(bold, Paint(Picture("700.0")), "An integer-equivalent weight keeps the bold label.");
+        AssertEquivalentSvgPaint(bold, Paint(Picture("bold", """font-weight="700.000" """)),
+            "A span with the same numeric weight keeps the complete bold label.");
 
         foreach (string rejected in new[] { "700.", "700.5", "700%", "901", "NaN" })
         {
