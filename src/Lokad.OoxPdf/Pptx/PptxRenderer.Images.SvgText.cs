@@ -104,8 +104,7 @@ internal sealed partial class PptxRenderer
         double viewWidth, double viewHeight, CancellationToken cancellationToken, [NotNullWhen(true)] out SvgTextLabel? label)
     {
         label = null;
-        if (element.AncestorsAndSelf().Any(e => ReadSvgStyleDeclarations(e).ContainsKey("font")) ||
-            element.Attributes().Any(attribute => attribute.Name.Namespace == XNamespace.None &&
+        if (element.Attributes().Any(attribute => attribute.Name.Namespace == XNamespace.None &&
                 attribute.Name.LocalName is "rotate" or "textLength" or "lengthAdjust")) return false;
         var style = ReadSvgStyleDeclarations(element);
         string? Inherited(string name) => ReadSvgInheritedAttribute(element, style, name)?.Trim();
@@ -125,10 +124,15 @@ internal sealed partial class PptxRenderer
         if (!TryReadSvgTextWeight(Inherited("font-weight"), out int weight)) return false;
         string familyList = ResolveSvgTextFontValue(Inherited("font-family"), "serif");
         double size = SvgInitialFontSize;
+        SvgTextWhitespace whitespace = SvgTextWhitespace.XmlDefault;
         foreach (XElement owner in element.AncestorsAndSelf().Reverse())
         {
-            string? value = ReadSvgPresentationAttribute(owner, ReadSvgStyleDeclarations(owner), "font-size");
+            cancellationToken.ThrowIfCancellationRequested();
+            var declarations = ReferenceEquals(owner, element) ? style : ReadSvgStyleDeclarations(owner);
+            if (declarations.ContainsKey("font")) return false;
+            string? value = ReadSvgPresentationAttribute(owner, declarations, "font-size");
             if (!TryResolveSvgFontSize(value, size, out size)) return false;
+            whitespace = ResolveSvgTextWhitespace(owner, declarations, whitespace);
         }
         if (size <= 0d || !TryReadPosition("x", viewWidth, out double x) ||
             !TryReadPosition("y", viewHeight, out double y) ||
@@ -139,7 +143,7 @@ internal sealed partial class PptxRenderer
         if (!TryReadSvgTextFill(element, style, paintServers, out var paint)) return false;
         double fillOpacity = ReadSvgOpacityValue(Inherited("fill-opacity"));
         var appearance = new SvgTextAppearance(familyList, fontStyle, weight, size, paint, fillOpacity, kerning);
-        if (!TryReadPlainSvgText(element, appearance, paintServers, IsSvgVisibilityHidden(Inherited("visibility")), cancellationToken,
+        if (!TryReadPlainSvgText(element, appearance, paintServers, IsSvgVisibilityHidden(Inherited("visibility")), whitespace, cancellationToken,
                 out string valueText, out bool[]? hiddenCharacters)) return false;
         if (OoxComplexScript.DetectNeeds(valueText) != OoxComplexScriptKind.None ||
             valueText.EnumerateRunes().Any(r => Rune.IsControl(r))) return false;
@@ -279,10 +283,40 @@ internal sealed partial class PptxRenderer
             paint.Color is not null && paint.Alpha > 0d;
     }
 
+    private static readonly XName SvgXmlSpace = XNamespace.Xml + "space";
+
+    private enum SvgTextWhitespace
+    {
+        XmlDefault,
+        XmlPreserve,
+        CssCollapse,
+        CssPreserve,
+        CssPreLine
+    }
+
+    private static SvgTextWhitespace ResolveSvgTextWhitespace(XElement owner, IReadOnlyDictionary<string, string> declarations,
+        SvgTextWhitespace inherited)
+    {
+        // Local CSS takes precedence over the legacy XML declaration.
+        return ReadSvgPresentationAttribute(owner, declarations, "white-space")?.Trim().ToLowerInvariant() switch
+        {
+            "inherit" or "unset" => inherited,
+            "initial" or "normal" or "nowrap" => SvgTextWhitespace.CssCollapse,
+            "pre" or "pre-wrap" or "break-spaces" => SvgTextWhitespace.CssPreserve,
+            "pre-line" => SvgTextWhitespace.CssPreLine,
+            _ => (string?)owner.Attribute(SvgXmlSpace) switch
+            {
+                null => inherited,
+                "preserve" => SvgTextWhitespace.XmlPreserve,
+                _ => SvgTextWhitespace.XmlDefault
+            }
+        };
+    }
+
     // Plain spans and link text share the label's metrics. Visibility and
     // zero opacity suppress outlines while retaining the glyph advances.
     private static bool TryReadPlainSvgText(XElement element, SvgTextAppearance appearance,
-        SvgPaintServers paintServers, bool hidden, CancellationToken cancellationToken,
+        SvgPaintServers paintServers, bool hidden, SvgTextWhitespace whitespace, CancellationToken cancellationToken,
         out string text, out bool[]? hiddenCharacters)
     {
         text = string.Empty;
@@ -290,15 +324,12 @@ internal sealed partial class PptxRenderer
         var characters = new StringBuilder();
         List<bool>? visibility = null;
         bool? pendingSpaceHidden = null;
-        XName spaceName = XNamespace.Xml + "space";
         XName xmlLanguageName = XNamespace.Xml + "lang";
         XName languageName = "lang";
         string? labelLanguage = null;
-        bool preserve = element.AncestorsAndSelf().Select(e => (string?)e.Attribute(spaceName))
-            .FirstOrDefault(value => value is not null) == "preserve";
         XName spanName = element.Name.Namespace + "tspan";
         XName linkName = element.Name.Namespace + "a";
-        if (!Append(element, hidden, ownerTransparent: false, preserve)) return false;
+        if (!Append(element, hidden, ownerTransparent: false, whitespace)) return false;
 
         text = characters.ToString();
         hiddenCharacters = visibility?.ToArray();
@@ -307,8 +338,9 @@ internal sealed partial class PptxRenderer
         string? DeclaredLanguage(XElement owner) =>
             (string?)owner.Attribute(xmlLanguageName) ?? (string?)owner.Attribute(languageName);
 
-        bool Append(XElement owner, bool ownerHidden, bool ownerTransparent, bool preserveSpace)
+        bool Append(XElement owner, bool ownerHidden, bool ownerTransparent, SvgTextWhitespace space)
         {
+            bool preserveSpace = space is SvgTextWhitespace.XmlPreserve or SvgTextWhitespace.CssPreserve;
             foreach (XNode node in owner.Nodes())
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -317,7 +349,14 @@ internal sealed partial class PptxRenderer
                     bool hideOutlines = ownerHidden || ownerTransparent;
                     foreach (char source in content.Value)
                     {
-                        if (!preserveSpace && source is '\r' or '\n') continue;
+                        if (source is '\r' or '\n')
+                        {
+                            if (space == SvgTextWhitespace.XmlDefault) continue;
+                            // Forced lines need their own geometry.
+                            if (space is SvgTextWhitespace.CssPreserve or SvgTextWhitespace.CssPreLine) return false;
+                        }
+                        // A preserved CSS tab advances to a tab stop.
+                        if (source == '\t' && space == SvgTextWhitespace.CssPreserve) return false;
                         char character = source is '\r' or '\n' or '\t' ? ' ' : source;
                         if (!preserveSpace && character == ' ')
                         {
@@ -340,7 +379,7 @@ internal sealed partial class PptxRenderer
                 if (IsSvgDisplayNone(child, style)) continue;
                 bool isLink = child.Name == linkName;
                 if (child.Name != spanName && !isLink) return false;
-                string? localSpace = (string?)child.Attribute(spaceName);
+                string? localSpace = (string?)child.Attribute(SvgXmlSpace);
                 if (localSpace is not (null or "default" or "preserve") ||
                     !IsPlainChild(child, style, isLink)) return false;
                 string? localVisibility = ReadSvgPresentationAttribute(child, style, "visibility");
@@ -350,7 +389,7 @@ internal sealed partial class PptxRenderer
                 double? opacity = authoredOpacity is null ? 1d : ParseSvgOpacity(authoredOpacity);
                 if (opacity is not double localOpacity || localOpacity is > 0d and < 1d) return false;
                 bool childTransparent = ownerTransparent || localOpacity == 0d;
-                if (!Append(child, childHidden, childTransparent, localSpace is null ? preserveSpace : localSpace == "preserve")) return false;
+                if (!Append(child, childHidden, childTransparent, ResolveSvgTextWhitespace(child, style, space))) return false;
             }
             return true;
         }
@@ -371,7 +410,7 @@ internal sealed partial class PptxRenderer
 
             bool IsPlainAttribute(XAttribute attribute)
             {
-                if (attribute.Name == spaceName || attribute.Name == xmlLanguageName || attribute.Name == languageName ||
+                if (attribute.Name == SvgXmlSpace || attribute.Name == xmlLanguageName || attribute.Name == languageName ||
                     attribute.IsNamespaceDeclaration) return true;
                 string name = attribute.Name.LocalName;
                 XNamespace ns = attribute.Name.Namespace;
@@ -393,7 +432,7 @@ internal sealed partial class PptxRenderer
 
             bool RetainsLabelStyle(string name, string value) => name switch
             {
-                "display" or "visibility" or "opacity" => true,
+                "display" or "visibility" or "opacity" or "white-space" => true,
                 "font-family" => InheritsSvgPropertyValue(value) ||
                     ResolveSvgTextFontValue(value, "serif").Equals(appearance.FamilyList, StringComparison.OrdinalIgnoreCase),
                 "font-style" => InheritsSvgPropertyValue(value) ||

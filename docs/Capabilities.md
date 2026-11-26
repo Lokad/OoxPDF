@@ -107,8 +107,10 @@ Plain spans with hidden visibility retain their advances. Descendant visibility
 can restore ink at its original placement.
 Full-opacity spans keep their glyphs. Zero-opacity spans retain their advances
 and suppress all descendant ink.
-Plain spans follow their nearest `xml:space` declaration. Preserved spaces
-and no-break spaces retain their advance at label edges.
+Plain labels and spans follow inherited `xml:space` and single-line CSS
+`white-space` declarations. Local CSS takes precedence. Preserved spaces
+and no-break spaces retain their advance at label edges. CSS forced lines
+and preserved tab stops remain unsupported.
 Soft break markers and word joiners add no ink or advance to single-line SVG labels.
 Unmapped characters in hidden spans retain the selected face's missing-glyph
 advance while visible neighbors still paint.

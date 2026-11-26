@@ -418,6 +418,50 @@ internal static partial class SvgTextTests
         TestAssert.Equal(0, diagnostics.Count);
     }
 
+    public static void SvgCssWhitespaceKeepsSingleLineTextAndAdvances()
+    {
+        static string Picture(string content, string label = "", string group = "") => Svg($"""
+            <g {group}><text x="145" y="80" text-anchor="end" font-size="20" fill="#112233" {label}>{content}</text></g>
+            <rect x="155" y="90" width="20" height="10" fill="lime"/>
+            """);
+        static void CheckLabel(string pdf) => TestAssert.Equal(9, LabelPaths(pdf));
+
+        string collapsed = Picture("North Star");
+        AssertSvgPaintInBothFormats(collapsed,
+            [Picture("""North<tspan style="white-space:normal">   Star</tspan>"""),
+             Picture("  North\n  Star  ", """xml:space="preserve" white-space="pre" style="white-space:normal !important;white-space:pre" """),
+             Picture("""North<tspan style="white-space:initial">   Star  </tspan>""", group: """style="white-space:pre" """)],
+            CheckLabel, "0 1 0 rg");
+
+        string spaced = Picture("North   Star", """xml:space="preserve" """);
+        AssertSvgPaintInBothFormats(spaced,
+            [Picture("North   Star", """style="white-space:pre" """),
+             Picture("""North<tspan xml:space="default" style="white-space:inherit">   Star</tspan>""",
+                 group: """white-space="pre-wrap" """),
+             Picture("""North<tspan style="white-space:break-spaces">   Star</tspan>""")],
+            CheckLabel, "0 1 0 rg");
+        TestAssert.True(Paint(collapsed).ToString() != Paint(spaced).ToString(),
+            "The authored spaces must change the end-anchored label's glyph positions.");
+
+        string preLine = Picture("North\t  Star", """style="white-space:pre-line" """);
+        TestAssert.Equal(Paint(collapsed).ToString(), Paint(preLine).ToString());
+        foreach (var (value, style) in new[]
+        {
+            ("North\nStar", "pre"),
+            ("North\nStar", "pre-line"),
+            ("North\tStar", "pre")
+        })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            string paint = Paint(Picture(value, $"""style="white-space:{style}" """), diagnostics).ToString();
+            TestAssert.Contains("0 1 0 rg", paint);
+            TestAssert.True(!paint.Contains(LabelColor, StringComparison.Ordinal),
+                "Unsupported preserved lines and tabs must not produce incorrectly positioned glyphs.");
+            TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT"),
+                "A label requiring forced lines or tab stops must report its fallback.");
+        }
+    }
+
     public static void SvgTextChildrenCanRepeatTheLabelLanguage()
     {
         static string Picture(string owner, string span) => Svg($"""
