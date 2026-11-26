@@ -61,6 +61,40 @@ internal static partial class DocxMathParser
             !p.Elements(WordprocessingNamespace + "rPrChange").Skip(1).Any() &&
             p.Elements().All(HasKnownControlProperty));
 
+    private static bool HasPrintNeutralControl(XElement control) =>
+        HasKnownControl(control) &&
+        (control.Element(WordprocessingNamespace + "rPr") is not { } runProperties ||
+            runProperties.Elements().All(IsPrintNeutralControlProperty) &&
+            !runProperties.Elements().GroupBy(property => property.Name).Any(group => group.Skip(1).Any()));
+
+    private static bool IsVisibleTransparentPhantom(XElement element, CancellationToken token)
+    {
+        if (!ReadPropertyOwner(element, "phantPr", out XElement? owner, out XElement[] children) ||
+            owner?.Element(MathNamespace + "transp") is null) return false;
+
+        // The base can join the surrounding math row when its glyphs, dimensions
+        // and operator spacing all participate in the ordinary layout.
+        foreach (XElement property in children)
+        {
+            token.ThrowIfCancellationRequested();
+            if (property.Name == MathNamespace + "ctrlPr")
+            {
+                if (!HasPrintNeutralControl(property)) return false;
+                continue;
+            }
+            string? value = (string?)property.Attribute(MathNamespace + "val");
+            if (!HasKnownValueProperty(property) || !HasBooleanValue(value)) return false;
+            bool enabled = value is null || OoxBoolean.IsTrue(value);
+            if (!(property.Name.LocalName switch
+                {
+                    "show" or "transp" => enabled,
+                    "zeroWid" or "zeroAsc" or "zeroDesc" => !enabled,
+                    _ => false
+                })) return false;
+        }
+        return true;
+    }
+
     private static bool HasOnlyWhitespaceText(XElement element) =>
         string.IsNullOrWhiteSpace(string.Concat(element.Nodes().OfType<XText>().Select(t => t.Value)));
 

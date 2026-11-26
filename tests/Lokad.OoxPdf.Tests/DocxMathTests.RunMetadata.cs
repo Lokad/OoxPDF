@@ -6,6 +6,38 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class DocxMathTests
 {
+    public static void DocxMathPhantomsWithNonNeutralPropertiesKeepFallback()
+    {
+        XNamespace m = MathNamespace;
+        foreach (var extra in new[]
+        {
+            new XElement(m + "show", new XAttribute(m + "val", "0")),
+            new XElement(m + "zeroWid"),
+            new XElement(m + "zeroAsc"),
+            new XElement(m + "zeroDesc"),
+            new XElement(m + "transp"),
+            new XElement(m + "show", new XAttribute(m + "val", "invalid")),
+            new XElement(m + "ctrlPr", new XElement(WordprocessingNamespace + "rPr", new XElement(WordprocessingNamespace + "b")))
+        })
+        {
+            var equation = EditingMarkerFraction();
+            var run = equation.Descendants(m + "r").First();
+            var bookmark = new XElement(WordprocessingNamespace + "bookmarkStart",
+                new XAttribute(WordprocessingNamespace + "id", "8"), new XAttribute(WordprocessingNamespace + "name", "PhantomMark"));
+            var transparency = new XElement(m + "transp");
+            var properties = extra.Name == m + "ctrlPr"
+                ? new XElement(m + "phantPr", transparency, extra)
+                : new XElement(m + "phantPr", extra, transparency);
+            run.ReplaceWith(new XElement(m + "phant", properties, new XElement(m + "e", bookmark, new XElement(run))));
+            var bookmarks = new List<DocxMathBookmark>();
+            var parsed = DocxMathParser.Read(equation, (_, text) => PlainRun(text), default, readBookmark: bookmarks.Add);
+            var fraction = (DocxMathFraction)parsed.Children.Single();
+            TestAssert.True(fraction.Numerator.Children[0] is DocxMathUnsupported { ElementName: "phant" },
+                $"Expected the phantom with {extra.Name.LocalName} to retain the unsupported fallback.");
+            TestAssert.Equal(0, bookmarks.Count);
+        }
+    }
+
     public static void DocxMathDeletedTextRequiresDeletionOwner()
     {
         foreach (string? wrapper in new[] { null, "ins", "del" })

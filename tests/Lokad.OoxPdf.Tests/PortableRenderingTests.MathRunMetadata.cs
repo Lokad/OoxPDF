@@ -296,6 +296,28 @@ internal static partial class PortableRenderingTests
                 new XElement(w + "rPr", new XElement(w + "webHidden", new XAttribute(w + "val", "1")))));
         });
 
+    public static void PortableRenderingVisibleTransparentPhantomsKeepComposedFractions() =>
+        CheckComposedMathRunContent("x+2", (numerators, w, m) =>
+        {
+            for (int index = 0; index < numerators.Length; index++)
+            {
+                XElement run = numerators[index].Parent!;
+                var transparency = new XElement(m + "transp");
+                if (index == 1) transparency.SetAttributeValue(m + "val", "true");
+                var properties = new XElement(m + "phantPr", transparency);
+                if (index == 1)
+                    properties.AddFirst(new XElement(m + "show", new XAttribute(m + "val", "1")));
+                if (index == 2)
+                {
+                    transparency.AddBeforeSelf(new XElement(m + "zeroWid", new XAttribute(m + "val", "0")),
+                        new XElement(m + "zeroAsc", new XAttribute(m + "val", "false")),
+                        new XElement(m + "zeroDesc", new XAttribute(m + "val", "0")));
+                    properties.Add(new XElement(m + "ctrlPr", new XElement(w + "rPr", new XElement(w + "noProof"))));
+                }
+                run.ReplaceWith(new XElement(m + "phant", properties, new XElement(m + "e", new XElement(run))));
+            }
+        });
+
     private static void CheckComposedMathRunContent(string numerator, Action<XElement[], XNamespace, XNamespace> rewrite)
     {
         const string fixture = "CompositionProbes/composed-static-svg-report";

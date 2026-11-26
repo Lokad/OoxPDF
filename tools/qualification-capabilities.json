@@ -20550,6 +20550,8 @@
     "=PortableRenderingLiteralMathRunBreakKeepsComposedFractions",
     "=DocxMathArgumentControlsRequireTrailingPrintNeutralProperties",
     "=PortableRenderingNeutralMathArgumentControlsKeepComposedFractions",
+    "=DocxMathPhantomsWithNonNeutralPropertiesKeepFallback",
+    "=PortableRenderingVisibleTransparentPhantomsKeepComposedFractions",
     "=PortableRenderingMathControlFormattingHistoryKeepsCurrentFractions",
     "=PortableRenderingMathSmartTagsPreserveRevisedFractions",
     "DocxDeletedMathMetadataDoesNotReviveOtherDeletedContent",
