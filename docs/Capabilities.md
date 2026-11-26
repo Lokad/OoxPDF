@@ -107,6 +107,8 @@ Spans with `display:none` contribute neither glyphs nor spacing.
 Visible display declarations preserve plain span layout.
 Plain spans with hidden visibility retain their advances. Descendant visibility
 can restore ink at its original placement.
+Equivalent quoting and spacing in font-family lists preserve a single label.
+Different family lists across visible characters retain the diagnosed fallback.
 Full-opacity spans keep their glyphs. Zero-opacity spans retain their advances
 and suppress all descendant ink.
 Plain labels and spans follow inherited `xml:space` and single-line CSS

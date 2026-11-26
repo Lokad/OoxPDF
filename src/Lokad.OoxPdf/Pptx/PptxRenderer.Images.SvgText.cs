@@ -75,11 +75,11 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct SvgTextPosition(double X, double Y, double Dx, double Dy);
 
-    private readonly record struct SvgTextMetrics(string FamilyList, string Slant, int Weight, double Size, bool Kerning)
+    private readonly record struct SvgTextMetrics(string FamilyName, string FamilyKey, string Slant, int Weight, double Size, bool Kerning)
     {
         public bool Matches(SvgTextMetrics other) =>
             Size == other.Size && Slant == other.Slant && Weight == other.Weight && Kerning == other.Kerning &&
-            FamilyList.Equals(other.FamilyList, StringComparison.OrdinalIgnoreCase);
+            FamilyKey.Equals(other.FamilyKey, StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool HasSvgStylesheet(IEnumerable<XNode> content) =>
@@ -124,7 +124,7 @@ internal sealed partial class PptxRenderer
             if (!TryResolveSvgFontSize(value, size, out size)) return false;
             whitespace = ResolveSvgTextWhitespace(owner, declarations, whitespace);
         }
-        if (!TryReadSvgTextMetrics(element, style, size, out var rootMetrics) ||
+        if (!TryReadSvgTextMetrics(element, style, size, cancellationToken, out var rootMetrics) ||
             !TryReadSvgTextPosition(element, default, viewWidth, viewHeight, size, startsLabel: true,
                 cancellationToken, out var initialPosition)) return false;
         if (!TryReadPlainSvgText(element, style, rootMetrics, paintServers, IsSvgVisibilityHidden(Inherited("visibility")), whitespace,
@@ -136,8 +136,7 @@ internal sealed partial class PptxRenderer
         if (!double.IsFinite(x) || !double.IsFinite(y)) return false;
         if (OoxComplexScript.DetectNeeds(valueText) != OoxComplexScriptKind.None ||
             valueText.EnumerateRunes().Any(r => Rune.IsControl(r))) return false;
-        string family = metrics.FamilyList.Split(',')[0].Trim().Trim('\'', '"');
-        family = family.ToLowerInvariant() switch { "serif" => "Times New Roman", "sans-serif" => "Arial", "monospace" => "Courier New", _ => family };
+        string family = metrics.FamilyName;
         if (family.Length == 0) return false;
         double textOpacity = ReadSvgOpacityValue(ReadSvgElementOpacity(element, style));
         bool isolate = scopeOpacity < 1d;
@@ -203,7 +202,7 @@ internal sealed partial class PptxRenderer
     }
 
     private static bool TryReadSvgTextMetrics(XElement element, IReadOnlyDictionary<string, string> style,
-        double size, out SvgTextMetrics metrics)
+        double size, CancellationToken cancellationToken, out SvgTextMetrics metrics)
     {
         metrics = default;
         if (!double.IsFinite(size) || size <= 0d) return false;
@@ -211,10 +210,87 @@ internal sealed partial class PptxRenderer
         if (slant is not ("normal" or "italic" or "oblique") ||
             !TryReadSvgTextWeight(ReadSvgInheritedAttribute(element, style, "font-weight"), out int weight) ||
             !TryReadSvgTextKerning(element, style, out bool kerning)) return false;
-        string family = ResolveSvgTextFontValue(ReadSvgInheritedAttribute(element, style, "font-family"), "serif");
-        metrics = new(family, slant, weight, size, kerning);
+        string list = ResolveSvgTextFontValue(ReadSvgInheritedAttribute(element, style, "font-family"), "serif");
+        var (family, key) = ReadSvgFontFamilies(list, cancellationToken);
+        metrics = new(family, key, slant, weight, size, kerning);
         return true;
     }
+
+    private static (string Preferred, string Key) ReadSvgFontFamilies(string list, CancellationToken cancellationToken)
+    {
+        ReadOnlySpan<char> remaining = list;
+        if (TryReadSvgFontFamily(ref remaining, out string name, out bool quoted))
+        {
+            string preferred = quoted ? name : ResolveSvgGenericFontFamily(name);
+            string first = FontFamilyKey(name, quoted);
+            if (remaining.IsEmpty) return (preferred, first);
+            var key = new StringBuilder(first);
+            while (!remaining.IsEmpty)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (!TryReadSvgFontFamily(ref remaining, out name, out quoted)) break;
+                key.Append('\0').Append(FontFamilyKey(name, quoted));
+                if (remaining.IsEmpty) return (preferred, key.ToString());
+            }
+        }
+
+        // Retain existing first-face substitution for syntax outside this subset.
+        int comma = list.IndexOf(',');
+        string previous = (comma < 0 ? list : list[..comma]).Trim().Trim('\'', '"');
+        return (ResolveSvgGenericFontFamily(previous), '\u0002' + list);
+
+        // XML excludes these separators, so a family name cannot collide with a
+        // family-list boundary or a literal spelling of a generic family.
+        static string FontFamilyKey(string name, bool quoted) =>
+            quoted && IsSvgGenericFontFamily(name) ? '\u0001' + name : name;
+    }
+
+    private static bool TryReadSvgFontFamily(ref ReadOnlySpan<char> remaining, out string name, out bool quoted)
+    {
+        const string whitespace = " \t\r\n\f";
+        name = string.Empty;
+        quoted = false;
+        remaining = remaining.Trim(whitespace);
+        if (remaining.IsEmpty) return false;
+
+        ReadOnlySpan<char> value;
+        if (remaining[0] is '\'' or '"')
+        {
+            quoted = true;
+            int close = remaining[1..].IndexOf(remaining[0]);
+            if (close < 0) return false;
+            value = remaining.Slice(1, close);
+            remaining = remaining[(close + 2)..].TrimStart(whitespace);
+            if (!remaining.IsEmpty && remaining[0] != ',') return false;
+        }
+        else
+        {
+            int comma = remaining.IndexOf(',');
+            value = (comma < 0 ? remaining : remaining[..comma]).TrimEnd(whitespace);
+            remaining = comma < 0 ? default : remaining[comma..];
+            if (value.IndexOfAny('\'', '"') >= 0) return false;
+        }
+        if (value.IsEmpty || value.Contains('\\')) return false;
+        if (!remaining.IsEmpty)
+        {
+            remaining = remaining[1..].TrimStart(whitespace);
+            if (remaining.IsEmpty) return false;
+        }
+        // Quoted CSS strings preserve whitespace. A sequence of identifiers uses one space.
+        name = !quoted && (value.Contains("  ", StringComparison.Ordinal) || value.IndexOfAny("\t\r\n\f") >= 0)
+            ? string.Join(' ', value.ToString().Split([' ', '\t', '\r', '\n', '\f'], StringSplitOptions.RemoveEmptyEntries))
+            : value.ToString();
+        return true;
+    }
+
+    private static bool IsSvgGenericFontFamily(string name) => name.ToLowerInvariant() is
+        "serif" or "sans-serif" or "monospace" or "cursive" or "fantasy" or "system-ui" or
+        "ui-serif" or "ui-sans-serif" or "ui-monospace" or "ui-rounded" or "math" or "emoji" or "fangsong";
+
+    private static string ResolveSvgGenericFontFamily(string name) => name.ToLowerInvariant() switch
+    {
+        "serif" => "Times New Roman", "sans-serif" => "Arial", "monospace" => "Courier New", _ => name
+    };
 
     private static bool TryReadSvgTextKerning(XElement element, IReadOnlyDictionary<string, string> style, out bool enabled)
     {
@@ -503,7 +579,7 @@ internal sealed partial class PptxRenderer
                 string? childAnchor = ResolveSvgTextAnchor(ReadSvgPresentationAttribute(child, style, "text-anchor"), ownerAnchor);
                 if (childAnchor is null ||
                     !TryResolveSvgFontSize(ReadSvgPresentationAttribute(child, style, "font-size"), ownerMetrics.Size, out double childSize) ||
-                    !TryReadSvgTextMetrics(child, style, childSize, out var childMetrics) ||
+                    !TryReadSvgTextMetrics(child, style, childSize, cancellationToken, out var childMetrics) ||
                     (!isLink && !TryReadSvgTextPosition(child, ownerPosition, viewWidth, viewHeight, childSize,
                         commonMetrics is null, cancellationToken, out childPosition)) ||
                     !Append(child, style, childMetrics, childHidden, childOpacity,

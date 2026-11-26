@@ -616,6 +616,29 @@ internal static partial class SvgTextTests
         }
     }
 
+    public static void SvgLabelsKeepEquivalentFontFamilyLists()
+    {
+        static string Picture(string label) => Svg($"""
+            <text x="60" y="80" font-family="DejaVu Sans, serif" font-size="24" fill="#112233">{label}</text>
+            <rect x="200" y="100" width="20" height="10" fill="lime"/>
+            """);
+
+        AssertSvgPaintInBothFormats(Picture("LABEL"),
+            [Picture("""LA<tspan font-family="'DejaVu Sans',serif">B</tspan>EL"""),
+             Picture("""<tspan style="font-family:DejaVu   Sans , serif">LA</tspan>BEL""")],
+            pdf => TestAssert.Equal(5, LabelPaths(pdf)), "0 1 0 rg");
+
+        foreach (string families in new[] { "DejaVu Sans,monospace", "DejaVu Sans,'serif'", "serif,DejaVu Sans", "'DejaVu  Sans',serif" })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            string paint = Paint(Picture($"""LA<tspan font-family="{families}">B</tspan>EL"""), diagnostics).ToString();
+            TestAssert.DoesNotContain(LabelColor, paint);
+            TestAssert.Contains("0 1 0 rg", paint);
+            TestAssert.True(diagnostics.Any(diagnostic => diagnostic.Message.Contains("unsupported text element", StringComparison.Ordinal)),
+                $"A different family list '{families}' must retain the fallback.");
+        }
+    }
+
     public static void SvgTextChildrenKeepInheritedFontAndFill()
     {
         string Picture(string north, string south, string northAttributes = "") => Svg($"""
