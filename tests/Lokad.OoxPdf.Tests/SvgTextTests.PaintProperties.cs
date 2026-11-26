@@ -517,6 +517,45 @@ internal static partial class SvgTextTests
         AssertSvgPaintInBothFormats(expected, [actual, cssEscaped], null, "1 0 0 rg", "0 0 1 RG", "1 1 0 rg", "0 1 0 rg", LabelColor);
     }
 
+    public static void SvgLocalShapeReferencesPreservePlacementAndPaint()
+    {
+        const string shape = """<rect width="20" height="12" stroke="blue" transform="translate(1 2)"/>""";
+        const string path = """<path d="M0 0H14V6H0Z" fill="#112233"/>""";
+        const string sibling = """<rect x="200" y="20" width="30" height="40" fill="lime"/>""";
+        string literal = Svg($"""
+            <g transform="scale(2) translate(40 10)" opacity=".5" fill="red">{shape}</g>
+            {sibling}
+            <g transform="translate(100 20)" fill="yellow">{shape}</g>
+            <g transform="translate(140 0)">{path}</g>
+            """);
+        string definitions = $"""
+            <defs><g fill="orange">
+              {shape.Replace("<rect", """<rect id="tile" """, StringComparison.Ordinal)}
+              {path.Replace("<path", """<path id="edge" """, StringComparison.Ordinal)}
+            </g></defs>
+            """;
+        string references = Svg($"""
+            {definitions}
+            <use href="#t%69le" transform="scale(2)" x="10%" style="y:10px;fill:red;opacity:.5"/>
+            {sibling}
+            <use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#tile" x="100" y="20" fill="yellow"/>
+            <use href="#edge" x="140" fill="red"/>
+            """);
+        AssertSvgPaintInBothFormats(literal, references, "1 0 0 rg", "0 1 0 rg", "1 1 0 rg", "0 0 1 RG", LabelColor);
+
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        var unsupported = Paint(Svg(definitions + sibling + """
+            <use href="#absent"/>
+            <use href="other.svg#tile"/>
+            <use id="cycle" href="#cycle"/>
+            <use href="#tile" mask="url(#mask)"/>
+            <use href="#absent" display="none"/>
+            """), diagnostics);
+        AssertEquivalentSvgPaint(Paint(Svg(sibling)), unsupported,
+            "Unresolved or unsupported references preserve the surrounding paint.");
+        TestAssert.Contains("4 unsupported use elements", diagnostics.Single().Message);
+    }
+
     public static void SvgDecreasingStopsKeepNativePaintAndOpacityInBothFormats()
     {
         string Picture(string last) => Svg($"""

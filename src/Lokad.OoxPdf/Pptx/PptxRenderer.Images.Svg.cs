@@ -160,7 +160,7 @@ internal sealed partial class PptxRenderer
         var elements = content.OfType<XElement>();
         var paintServers = new SvgPaintServers(elements, viewWidth, viewHeight, cancellationToken);
         double strokePercentageBasis = GetSvgNormalizedDiagonal(viewWidth, viewHeight);
-        var paintedText = new HashSet<XElement>();
+        var admittedElements = new HashSet<XElement>();
         bool hasStylesheet = HasSvgStylesheet(content, cancellationToken);
         var unsupportedCommands = new SortedSet<char>();
         int unreadablePaths = 0;
@@ -205,7 +205,7 @@ internal sealed partial class PptxRenderer
             graphics = entry.Parent;
             graphics.DrawTransparencyGroup(entry.Child, paintBounds ?? pictureFrame, entry.Opacity);
         }
-        foreach (XElement element in elements.Where(candidate => IsSvgPaintableElement(candidate) || candidate.Name.LocalName == "text"))
+        foreach (XElement element in EnumerateSvgPaintElements(elements, viewWidth, viewHeight, hasStylesheet, admittedElements, cancellationToken))
         {
             cancellationToken.ThrowIfCancellationRequested();
             // RV07-D2: definition descendants supply reusable paint resources;
@@ -230,7 +230,7 @@ internal sealed partial class PptxRenderer
             for (int i = shared; i < opacityGroups.Count; i++)
             {
                 var (container, opacity) = opacityGroups[i];
-                admittedContainers.Add(container);
+                if (container.Parent?.Name.LocalName != "use") admittedContainers.Add(container);
                 OpenGroup(container, opacity);
             }
             if (element.Name.LocalName == "text")
@@ -239,7 +239,7 @@ internal sealed partial class PptxRenderer
                     TryPaintSvgText(graphics, element, paintServers, textFonts, textTransform, viewWidth, viewHeight, sourceMinX, sourceMinY,
                         imageX, imageY, imageWidth, imageHeight, scaleX, scaleY, isolation.Count < PdfTransparencyGroup.MaxDepth,
                         AdmitSamples, cancellationToken))
-                    paintedText.Add(element);
+                    admittedElements.Add(element);
                 continue;
             }
             string? data = ConvertSvgShapeToPathData(element, viewWidth, viewHeight);
@@ -594,7 +594,7 @@ internal sealed partial class PptxRenderer
             if (objectFrame.HasValue) { CloseGroup(objectFrame); }
         }
         while (isolation.Count > 0) { CloseGroup(); }
-        ReportUnsupportedSvgElements(elements, diagnosticSink, slideIndex, partName, paintedText);
+        ReportUnsupportedSvgElements(elements, diagnosticSink, slideIndex, partName, admittedElements);
         ReportSkippedSvgPaths(unsupportedCommands, unreadablePaths, missingGradients, unpaintablePaths, unsupportedTransforms, gradientStrokes, unpaintableStrokes, invalidStrokePresentations, vectorEffectStrokes, focalRadialGradients, nonFiniteGradientPaths, diagnosticSink, slideIndex, partName);
         ReportIgnoredSvgOpacity(elements, paintServers, usedGradientIds, admittedContainers,
             admittedGradientAlpha, fallbackGradientAlpha, diagnosticSink, slideIndex, partName, cancellationToken);
@@ -608,7 +608,7 @@ internal sealed partial class PptxRenderer
     // restricted to paintable content outside definitions (inert definitions
     // are correctly skipped).
     private static void ReportUnsupportedSvgElements(IEnumerable<XElement> elements, Action<OoxPdfDiagnostic>? diagnosticSink, int slideIndex, string? partName,
-        HashSet<XElement> paintedText)
+        HashSet<XElement> admittedElements)
     {
         if (diagnosticSink is null)
         {
@@ -619,8 +619,8 @@ internal sealed partial class PptxRenderer
         foreach (XElement element in elements)
         {
             string name = element.Name.LocalName;
-            if (IsSupportedSvgElement(name) || paintedText.Contains(element) ||
-                name == "tspan" && element.Ancestors().Any(paintedText.Contains) || IsSvgDefinitionElement(element) ||
+            if (IsSupportedSvgElement(name) || admittedElements.Contains(element) ||
+                name == "tspan" && element.Ancestors().Any(admittedElements.Contains) || IsSvgDefinitionElement(element) ||
                 IsInFullyTransparentSvgContainer(element) || IsHiddenSvgElement(element))
             {
                 continue;
@@ -1280,11 +1280,7 @@ internal sealed partial class PptxRenderer
         {
             cancellationToken.ThrowIfCancellationRequested();
             chain.Add(current);
-            string? href = ((string?)current.Attribute("href") ??
-                (string?)current.Attribute(XName.Get("href", "http://www.w3.org/1999/xlink")))?.Trim();
-            current = href is { Length: > 1 } && href[0] == '#'
-                ? byId.GetValueOrDefault(DecodeSvgFragmentId(href[1..]))
-                : null;
+            current = ReadSvgFragmentReference(current) is { } id ? byId.GetValueOrDefault(id) : null;
         }
 
         int index = chain.Count - 1;
@@ -1876,7 +1872,7 @@ internal sealed partial class PptxRenderer
             if (node is XElement element && element.Name.Namespace == ns && !IsSvgMetadataElement(element))
             {
                 if (!ReferenceEquals(element, root)) yield return element;
-                if (element.Name.LocalName is not ("style" or "foreignObject") && element.FirstNode is { } child)
+                if (element.Name.LocalName is not ("style" or "foreignObject" or "use") && element.FirstNode is { } child)
                 {
                     node = child;
                     continue;
@@ -1889,6 +1885,72 @@ internal sealed partial class PptxRenderer
             while (node.NextNode is null && node.Parent is { } parent) node = parent;
             node = node.NextNode;
         }
+    }
+
+    private static IEnumerable<XElement> EnumerateSvgPaintElements(IEnumerable<XElement> elements, double viewWidth,
+        double viewHeight, bool hasStylesheet, HashSet<XElement> admittedElements, CancellationToken cancellationToken)
+    {
+        Dictionary<string, (XElement? Element, long Characters)>? byId = null;
+        // Limit the total geometry materialized through references to the same
+        // input bound as literal SVG markup. Only one instance is live at a time.
+        long remainingCharacters = SafeXml.DefaultMaxCharacters;
+        foreach (XElement element in elements)
+        {
+            if (IsSvgPaintableElement(element) || element.Name.LocalName == "text")
+            {
+                yield return element;
+                continue;
+            }
+            if (hasStylesheet || element.Name.LocalName != "use" || IsSvgDefinitionElement(element) ||
+                ReadSvgFragmentReference(element) is not { } id) continue;
+
+            var style = ReadSvgStyleDeclarations(element);
+            if (IsSvgDisplaySuppressed(element, style) ||
+                !IsNeutralSvgTextStyle("clip-path", ReadSvgPresentationAttribute(element, style, "clip-path")) ||
+                !IsNeutralSvgTextStyle("mask", ReadSvgPresentationAttribute(element, style, "mask")) ||
+                !IsNeutralSvgTextStyle("filter", ReadSvgPresentationAttribute(element, style, "filter")) ||
+                (style.TryGetValue("transform", out string? cssTransform) && !cssTransform.Equals("none", StringComparison.OrdinalIgnoreCase)) ||
+                !TryReadSvgShapeCoordinate(element, "x", viewWidth, out double x, style) ||
+                !TryReadSvgShapeCoordinate(element, "y", viewHeight, out double y, style)) continue;
+
+            if (byId is null)
+            {
+                byId = new(StringComparer.Ordinal);
+                foreach (XElement target in elements)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if ((string?)target.Attribute("id") is not { Length: > 0 } targetId) continue;
+                    XElement? geometry = IsSvgPaintableElement(target) ? target : null;
+                    long size = geometry?.Attributes().Sum(attribute => (long)attribute.Name.LocalName.Length + attribute.Value.Length + 4) ?? 0;
+                    if (!byId.TryAdd(targetId, (geometry, size))) byId[targetId] = default;
+                }
+            }
+
+            var (source, characters) = byId.GetValueOrDefault(id);
+            if (source is null || characters > remainingCharacters) continue;
+            remainingCharacters -= characters;
+
+            // The instance inherits at the use site, independently of the
+            // definition's ancestors. It borrows the existing group painter.
+            var shape = new XElement(source.Name, source.Attributes());
+            var instance = new XElement(element.Name.Namespace + "g", element.Attributes(), shape);
+            if (x != 0d || y != 0d)
+                instance.SetAttributeValue("transform", $"{(string?)instance.Attribute("transform")} translate({SvgPathNumber(x)} {SvgPathNumber(y)})");
+            element.Add(instance);
+            try
+            {
+                admittedElements.Add(element);
+                yield return shape;
+            }
+            finally { instance.Remove(); }
+        }
+    }
+
+    private static string? ReadSvgFragmentReference(XElement element)
+    {
+        string? href = ((string?)element.Attribute("href") ??
+            (string?)element.Attribute(XName.Get("href", "http://www.w3.org/1999/xlink")))?.Trim();
+        return href is { Length: > 1 } && href[0] == '#' ? DecodeSvgFragmentId(href[1..]) : null;
     }
 
     private static IEnumerable<(string Id, XElement Element)> EnumerateSvgPaintServers(IEnumerable<XElement> elements)
@@ -3139,9 +3201,10 @@ internal sealed partial class PptxRenderer
             _ => (string?)element.Attribute("d"),
         };
     }
-    private static bool TryReadSvgShapeCoordinate(XElement element, string name, double percentageBasis, out double value)
+    private static bool TryReadSvgShapeCoordinate(XElement element, string name, double percentageBasis, out double value,
+        IReadOnlyDictionary<string, string>? style = null)
     {
-        string? text = (string?)element.Attribute(name);
+        string? text = style is null ? (string?)element.Attribute(name) : ReadSvgPresentationAttribute(element, style, name);
         if (string.IsNullOrWhiteSpace(text))
         {
             value = 0d;

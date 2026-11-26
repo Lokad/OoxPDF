@@ -700,6 +700,7 @@
     "=SvgLabelsReuseConstantGradientPaintInBothFormats",
     "=SvgQuotedLocalPaintServersMatchUnquotedReferencesInBothFormats",
     "=SvgEncodedLocalFragmentsKeepGradientPaintAndFallbacks",
+    "=SvgLocalShapeReferencesPreservePlacementAndPaint",
     "=SvgDecreasingStopsKeepNativePaintAndOpacityInBothFormats",
     "=SvgGradientTemplatesMatchExpandedPaintInBothFormats",
     "=SvgOpaqueRgbMatchesHexPaintInBothFormats",
