@@ -111,28 +111,15 @@ internal sealed partial class DocxReader
                         revisions: inheritedRevision is null ? [] : [inheritedRevision]));
                 }
 
-                if (isPageBreakOnly)
+                if (isPageBreakOnly || isColumnBreakOnly)
                 {
                     DocxParagraph? breakParagraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, tableCellStyle: null, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken,
                         leadingBookmarks: leadingBookmarks, flowFields: flowFields, retainUnmatchedCommentStarts: projectCommentSelections);
-                    int breakCount = element.Elements().SelectMany(child => EnumerateVisibleRunBreaks(child, VisiblePageBreak, markupMode)).Count();
-                    elements.Add(DocxBodyElementFactory.CreatePageBreak(DocxBreakSourceKind.RunBreak, "page", breakParagraph, null, breakCount));
-                    comments?.TrackParagraph(breakParagraph, cancellationToken);
-                    XElement? breakParagraphSectionProperties = paragraphProperties?.Element(WordprocessingNamespace + "sectPr");
-                    if (breakParagraphSectionProperties is not null)
-                    {
-                        elements.Add(ReadSectionBreak(breakParagraphSectionProperties, package, relationships, styles, numbering, settings, markupMode, cancellationToken, storyCache, inheritedRevision));
-                    }
-
-                    continue;
-                }
-
-                if (isColumnBreakOnly)
-                {
-                    DocxParagraph? breakParagraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, tableCellStyle: null, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken,
-                        leadingBookmarks: leadingBookmarks, flowFields: flowFields, retainUnmatchedCommentStarts: projectCommentSelections);
-                    int breakCount = element.Elements().SelectMany(child => EnumerateVisibleRunBreaks(child, VisibleColumnBreak, markupMode)).Count();
-                    elements.Add(DocxBodyElementFactory.CreateManualBreak(DocxBreakSourceKind.RunBreak, "column", breakParagraph, breakCount));
+                    Func<XElement, bool> isVisibleBreak = isPageBreakOnly ? VisiblePageBreak : VisibleColumnBreak;
+                    int breakCount = element.Elements().SelectMany(child => EnumerateVisibleRunBreaks(child, isVisibleBreak, markupMode)).Count();
+                    elements.Add(isPageBreakOnly
+                        ? DocxBodyElementFactory.CreatePageBreak(DocxBreakSourceKind.RunBreak, "page", breakParagraph, null, breakCount)
+                        : DocxBodyElementFactory.CreateManualBreak(DocxBreakSourceKind.RunBreak, "column", breakParagraph, breakCount));
                     comments?.TrackParagraph(breakParagraph, cancellationToken);
                     XElement? breakParagraphSectionProperties = paragraphProperties?.Element(WordprocessingNamespace + "sectPr");
                     if (breakParagraphSectionProperties is not null)
