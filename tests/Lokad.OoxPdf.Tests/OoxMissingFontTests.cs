@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Lokad.OoxPdf;
 using Lokad.OoxPdf.Diagnostics;
+using Lokad.OoxPdf.Docx;
 using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pdf;
@@ -479,18 +480,31 @@ internal static class OoxMissingFontTests
         var resolver = new FixedBytesResolver(TestFontBuilder.CreateTestFont());
         const string missing = "\U0001F9EA";
         string input = WriteCommentBalloonDocx("Start" + missing + "End", "Agent" + missing + "Name");
-        var (preserved, preserveDiagnostics) = ConvertDocxMarkup(input, resolver);
-        var (review, reviewDiagnostics) = ConvertDocxWordCompatibleMarkup(input, resolver);
+        var (preserved, preserveDiagnostics) = Render(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        var (review, reviewDiagnostics) = Render(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
 
-        TestAssert.Contains("Start?End", ExtractCidMappedText(preserved));
-        TestAssert.Contains("Start?End", ExtractCidMappedText(review));
-        TestAssert.Contains("Agent?Name", ExtractCidMappedText(preserved));
+        TestAssert.Contains("Start?End", preserved);
+        TestAssert.Contains("Start?End", review);
+        TestAssert.Contains("Agent?Name", preserved);
         TestAssert.Contains("U+1F9EA", preserveDiagnostics.Single(d => d.Id == "DOCX_BALLOON_TITLE_MISSING_GLYPHS").Message);
         TestAssert.True(reviewDiagnostics.All(d => d.Id != "DOCX_BALLOON_TITLE_MISSING_GLYPHS"),
             "The hidden author name does not contribute a missing title glyph.");
         foreach (var diagnostics in new[] { preserveDiagnostics, reviewDiagnostics })
         {
             TestAssert.Contains("U+1F9EA", diagnostics.Single(d => d.Id == "FONT_MISSING_GLYPHS").Message);
+        }
+
+        (string Text, List<OoxPdfDiagnostic> Diagnostics) Render(OoxPdfDocxMarkupGeometryMode geometry)
+        {
+            using var stream = File.OpenRead(input);
+            using var package = OoxPackage.Open(stream, default);
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            const OoxPdfDocxMarkupMode mode = OoxPdfDocxMarkupMode.AllMarkup;
+            var document = new DocxReader().Read(package, diagnostics.Add, default, mode);
+            PdfPage page = new DocxRenderer(resolver, mode, geometry).RenderPagesAsync(document, diagnostics.Add, default)
+                .ToBlockingEnumerable().Single();
+            string text = string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).Select(show => show.Text));
+            return (text, diagnostics);
         }
     }
 
