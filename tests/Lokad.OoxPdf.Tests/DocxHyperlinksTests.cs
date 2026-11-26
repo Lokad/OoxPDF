@@ -1222,9 +1222,9 @@ internal static class DocxHyperlinksTests
         };
         DocxPageSettings pageSettings = DocxPageSettings.Empty with
         {
-            HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
             {
-                ["default"] = [header]
+                ["default"] = DocxTests.CreateParagraphBlocks(header)
             }
         };
         var document = new DocxDocument(

@@ -168,8 +168,8 @@ internal static partial class DocxFootnotesTests
                 run with { Text = " OF " }, run with { Text = "{NUMPAGES}", FieldKind = DocxFieldKind.NumPages }] };
             var settings = source.PageSettings with
             {
-                HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>> { ["default"] = [header] },
-                FooterParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>> { ["default"] = [footer] }
+                HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>> { ["default"] = DocxTests.CreateParagraphBlocks(header) },
+                FooterBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>> { ["default"] = DocxTests.CreateParagraphBlocks(footer) }
             };
             var document = source with { PageSettings = settings, FinalSectionBreak = source.FinalSectionBreak! with { PageSettings = settings } };
             var pages = SectionCompositionRenderer(mode).RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();

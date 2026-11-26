@@ -33,10 +33,8 @@ internal sealed partial class DocxLayoutEngine
         IReadOnlyList<DocxFloatingDrawing> HeaderDrawings,
         IReadOnlyList<DocxFloatingDrawing> FooterDrawings)
         GetStaticFrameSources(DocxPageSettings settings, string variant) =>
-        (DocxBlockTraversal.FindStaticStoryBodyElements(variant,
-             settings.HeaderBodyElementsByType, settings.HeaderParagraphsByType) ?? [],
-         DocxBlockTraversal.FindStaticStoryBodyElements(variant,
-             settings.FooterBodyElementsByType, settings.FooterParagraphsByType) ?? [],
+        (settings.HeaderBodyElementsByType.GetValueOrDefault(variant, []),
+         settings.FooterBodyElementsByType.GetValueOrDefault(variant, []),
          settings.HeaderFloatingDrawingsByType.GetValueOrDefault(variant, []),
          settings.FooterFloatingDrawingsByType.GetValueOrDefault(variant, []));
 
@@ -45,10 +43,10 @@ internal sealed partial class DocxLayoutEngine
         // Office A/B (w52 title-page plus w53 even-pages probes, Word-COM rendered):
         // a selected-but-undefined first/even story renders empty on its pages; Word
         // does not fall back to the default story there.
-        IReadOnlyList<DocxBodyElement>? selected = DocxBlockTraversal.FindStaticStoryBodyElements(variant,
-            header ? settings.HeaderBodyElementsByType : settings.FooterBodyElementsByType,
-            header ? settings.HeaderParagraphsByType : settings.FooterParagraphsByType);
-        return selected is null ? new DocxSelectedStaticStory([], null) : new DocxSelectedStaticStory(selected, variant);
+        var bodiesByType = header ? settings.HeaderBodyElementsByType : settings.FooterBodyElementsByType;
+        return bodiesByType.TryGetValue(variant, out IReadOnlyList<DocxBodyElement>? selected)
+            ? new DocxSelectedStaticStory(selected, variant)
+            : new DocxSelectedStaticStory([], null);
     }
 
     private sealed record DocxSelectedStaticStory(IReadOnlyList<DocxBodyElement> BodyElements, string? VariantType);
@@ -79,10 +77,6 @@ internal sealed partial class DocxLayoutEngine
         CancellationToken cancellationToken = default)
     {
         var sectionSettingsByElementIndex = new Dictionary<int, DocxEffectiveSectionSettings>();
-        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> inheritedHeadersByType =
-            new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase);
-        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> inheritedFootersByType =
-            new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase);
         IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> inheritedHeaderBodyElementsByType =
             new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase);
         IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> inheritedFooterBodyElementsByType =
@@ -102,8 +96,6 @@ internal sealed partial class DocxLayoutEngine
 
             DocxPageSettings effectiveSettings = ResolveEffectiveSectionSettings(
                 sectionBreak.PageSettings,
-                inheritedHeadersByType,
-                inheritedFootersByType,
                 inheritedHeaderBodyElementsByType,
                 inheritedFooterBodyElementsByType,
                 inheritedHeaderDrawingsByType,
@@ -111,8 +103,6 @@ internal sealed partial class DocxLayoutEngine
             sectionSettingsByElementIndex[elementIndex] = new DocxEffectiveSectionSettings(
                 effectiveSettings,
                 CreateSectionLayoutProperties(sectionBreak));
-            inheritedHeadersByType = effectiveSettings.HeaderParagraphsByType;
-            inheritedFootersByType = effectiveSettings.FooterParagraphsByType;
             inheritedHeaderBodyElementsByType = effectiveSettings.HeaderBodyElementsByType;
             inheritedFooterBodyElementsByType = effectiveSettings.FooterBodyElementsByType;
             inheritedHeaderDrawingsByType = effectiveSettings.HeaderFloatingDrawingsByType;
@@ -122,8 +112,6 @@ internal sealed partial class DocxLayoutEngine
         finalSectionSettings = new DocxEffectiveSectionSettings(
             ResolveEffectiveSectionSettings(
                 BuildFinalSectionSettings(),
-                inheritedHeadersByType,
-                inheritedFootersByType,
                 inheritedHeaderBodyElementsByType,
                 inheritedFooterBodyElementsByType,
                 inheritedHeaderDrawingsByType,
@@ -136,45 +124,27 @@ internal sealed partial class DocxLayoutEngine
         DocxPageSettings BuildFinalSectionSettings()
         {
             DocxPageSettings settings = document.PageSettings;
-            IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> headersByType = settings.HeaderParagraphsByType.Count == 0 && document.HeaderParagraphsByType.Count > 0
-                ? document.HeaderParagraphsByType
-                : settings.HeaderParagraphsByType;
-            IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> footersByType = settings.FooterParagraphsByType.Count == 0 && document.FooterParagraphsByType.Count > 0
-                ? document.FooterParagraphsByType
-                : settings.FooterParagraphsByType;
-            IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> headerBodyElementsByType = settings.HeaderBodyElementsByType.Count == 0 && document.HeaderBodyElementsByType.Count > 0
-                ? document.HeaderBodyElementsByType
-                : settings.HeaderBodyElementsByType;
-            IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> footerBodyElementsByType = settings.FooterBodyElementsByType.Count == 0 && document.FooterBodyElementsByType.Count > 0
-                ? document.FooterBodyElementsByType
-                : settings.FooterBodyElementsByType;
-
-            // Paragraph-only inputs can supply a default. A body map already
-            // owns its variants, including explicit empty stories and tables.
-            if (headerBodyElementsByType.Count == 0 && headersByType.Count == 0 && document.HeaderParagraphs.Count > 0)
-            {
-                headersByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
-                {
-                    ["default"] = document.HeaderParagraphs
-                };
-                headerBodyElementsByType = ToStaticBodyElementsByType(headersByType);
-            }
-
-            if (footerBodyElementsByType.Count == 0 && footersByType.Count == 0 && document.FooterParagraphs.Count > 0)
-            {
-                footersByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
-                {
-                    ["default"] = document.FooterParagraphs
-                };
-                footerBodyElementsByType = ToStaticBodyElementsByType(footersByType);
-            }
-
             return settings with
             {
-                HeaderParagraphsByType = headersByType,
-                FooterParagraphsByType = footersByType,
-                HeaderBodyElementsByType = headerBodyElementsByType.Count == 0 ? ToStaticBodyElementsByType(headersByType) : headerBodyElementsByType,
-                FooterBodyElementsByType = footerBodyElementsByType.Count == 0 ? ToStaticBodyElementsByType(footersByType) : footerBodyElementsByType
+                HeaderBodyElementsByType = ResolveFinalStaticBodies(settings.HeaderBodyElementsByType,
+                    document.HeaderBodyElementsByType, document.HeaderParagraphs),
+                FooterBodyElementsByType = ResolveFinalStaticBodies(settings.FooterBodyElementsByType,
+                    document.FooterBodyElementsByType, document.FooterParagraphs)
+            };
+        }
+
+        static IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> ResolveFinalStaticBodies(
+            IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> section,
+            IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> document,
+            IReadOnlyList<DocxParagraph> defaultParagraphs)
+        {
+            // A block map owns its variants, including explicitly empty stories.
+            if (section.Count != 0) return section;
+            if (document.Count != 0) return document;
+            if (defaultParagraphs.Count == 0) return section;
+            return new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = defaultParagraphs.Select(DocxBodyElementFactory.CreateParagraph).ToArray()
             };
         }
     }
@@ -199,36 +169,18 @@ internal sealed partial class DocxLayoutEngine
 
     private static DocxPageSettings ResolveEffectiveSectionSettings(
         DocxPageSettings settings,
-        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> inheritedHeadersByType,
-        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> inheritedFootersByType,
         IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> inheritedHeaderBodyElementsByType,
         IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> inheritedFooterBodyElementsByType,
         IReadOnlyDictionary<string, IReadOnlyList<DocxFloatingDrawing>> inheritedHeaderDrawingsByType,
         IReadOnlyDictionary<string, IReadOnlyList<DocxFloatingDrawing>> inheritedFooterDrawingsByType)
     {
-        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> headersByType = MergeInheritedStaticItems(inheritedHeadersByType, settings.HeaderParagraphsByType);
-        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> footersByType = MergeInheritedStaticItems(inheritedFootersByType, settings.FooterParagraphsByType);
-        IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> headerBodyElementsByType = MergeInheritedStaticItems(inheritedHeaderBodyElementsByType, settings.HeaderBodyElementsByType);
-        IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> footerBodyElementsByType = MergeInheritedStaticItems(inheritedFooterBodyElementsByType, settings.FooterBodyElementsByType);
-
         return settings with
         {
-            HeaderParagraphsByType = headersByType,
-            FooterParagraphsByType = footersByType,
-            HeaderBodyElementsByType = headerBodyElementsByType.Count == 0 ? ToStaticBodyElementsByType(headersByType) : headerBodyElementsByType,
-            FooterBodyElementsByType = footerBodyElementsByType.Count == 0 ? ToStaticBodyElementsByType(footersByType) : footerBodyElementsByType,
+            HeaderBodyElementsByType = MergeInheritedStaticItems(inheritedHeaderBodyElementsByType, settings.HeaderBodyElementsByType),
+            FooterBodyElementsByType = MergeInheritedStaticItems(inheritedFooterBodyElementsByType, settings.FooterBodyElementsByType),
             HeaderFloatingDrawingsByType = MergeInheritedStaticItems(inheritedHeaderDrawingsByType, settings.HeaderFloatingDrawingsByType),
             FooterFloatingDrawingsByType = MergeInheritedStaticItems(inheritedFooterDrawingsByType, settings.FooterFloatingDrawingsByType)
         };
-    }
-
-    private static IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> ToStaticBodyElementsByType(
-        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> paragraphsByType)
-    {
-        return paragraphsByType.ToDictionary(
-            pair => pair.Key,
-            pair => (IReadOnlyList<DocxBodyElement>)pair.Value.Select(DocxBodyElementFactory.CreateParagraph).Cast<DocxBodyElement>().ToArray(),
-            StringComparer.OrdinalIgnoreCase);
     }
 
     // The reader supplies a key even for an explicitly empty story. Replacing

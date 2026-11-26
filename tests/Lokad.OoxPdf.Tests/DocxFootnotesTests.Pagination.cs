@@ -147,14 +147,13 @@ internal static partial class DocxFootnotesTests
         for (int pageHeight = 220; pageHeight <= 792 && control is null; pageHeight++)
         {
             DocxDocument candidate = WithEndnoteWidowControl(ReadWrappedFootnoteFlowFixture(40), false);
-            var paragraphs = new Dictionary<string, IReadOnlyList<DocxParagraph>> { ["default"] = [footer] };
             var elements = new Dictionary<string, IReadOnlyList<DocxBodyElement>> { ["default"] = [new DocxParagraphElement(footer)] };
             var settings = candidate.PageSettings with { FooterDistancePoints = 36d,
                 HeightValue = (pageHeight * 20).ToString(CultureInfo.InvariantCulture),
-                FooterParagraphsByType = paragraphs, FooterBodyElementsByType = elements };
+                FooterBodyElementsByType = elements };
             candidate = candidate with { PageHeightPoints = pageHeight, PageSettings = settings,
                 FinalSectionBreak = candidate.FinalSectionBreak! with { PageSettings = settings },
-                FooterParagraphs = [footer], FooterParagraphsByType = paragraphs, FooterBodyElementsByType = elements };
+                FooterParagraphs = [footer], FooterBodyElementsByType = elements };
             DocxLayout layout = engine.Create(candidate, measurer, default);
             var placements = layout.Pages.SelectMany((p, i) => p.PlacedRelatedStories
                 .Where(s => s.StoryLayout.Story.IsNormalStoryType && s.StoryLayout.Story.Id == "4").Select(s => (Story: s, Page: i))).ToArray();

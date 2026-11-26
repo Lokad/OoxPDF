@@ -141,8 +141,7 @@ internal static class DocxPlainBodyFrame
         // section dictionaries. Its absence is unproven, so keep the existing
         // conservative frame admission rather than silently discarding it.
         if (document.HeaderParagraphs.Count != 0 || document.FooterParagraphs.Count != 0 ||
-            document.HeaderParagraphsByType.Keys.Concat(document.FooterParagraphsByType.Keys)
-                .Concat(document.HeaderBodyElementsByType.Keys).Concat(document.FooterBodyElementsByType.Keys)
+            document.HeaderBodyElementsByType.Keys.Concat(document.FooterBodyElementsByType.Keys)
                 .Concat(document.HeaderFloatingDrawingsByType.Keys).Concat(document.FooterFloatingDrawingsByType.Keys)
                 .Any(variant => !DocxLayoutEngine.IsStaticStoryVariantKnownDisabled(document.PageSettings, variant))) return false;
 
@@ -158,7 +157,6 @@ internal static class DocxPlainBodyFrame
 
     internal static bool HasNoStaticStories(DocxDocument document) =>
         document.HeaderParagraphs.Count == 0 && document.FooterParagraphs.Count == 0 &&
-        document.HeaderParagraphsByType.Count == 0 && document.FooterParagraphsByType.Count == 0 &&
         document.HeaderBodyElementsByType.Count == 0 && document.FooterBodyElementsByType.Count == 0 &&
         document.HeaderFloatingDrawingsByType.Count == 0 && document.FooterFloatingDrawingsByType.Count == 0;
 

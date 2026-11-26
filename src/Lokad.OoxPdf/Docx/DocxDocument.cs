@@ -20,10 +20,6 @@ internal sealed record DocxDocument(
     public IReadOnlyList<Diagnostics.OoxPdfDiagnostic> EquationDiagnostics { get; init; } = [];
     public DocxFontCatalog FontCatalog { get; init; } = DocxFontCatalog.Empty;
     public DocxStyleCatalog StyleCatalog { get; init; } = DocxStyleCatalog.Empty;
-    public IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> HeaderParagraphsByType { get; init; } =
-        ReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>>.Empty;
-    public IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> FooterParagraphsByType { get; init; } =
-        ReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>>.Empty;
     public IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> HeaderBodyElementsByType { get; init; } =
         ReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>>.Empty;
     public IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> FooterBodyElementsByType { get; init; } =

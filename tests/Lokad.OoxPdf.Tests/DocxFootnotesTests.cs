@@ -115,12 +115,11 @@ internal static partial class DocxFootnotesTests
             LineSpacingPoints = null, LineSpacingFactor = 1d,
             Spacing = DocxParagraphSpacing.Empty with { LineRuleValue = "auto", LineValue = "240" },
         };
-        var paragraphs = new Dictionary<string, IReadOnlyList<DocxParagraph>> { ["default"] = [header] };
         var elements = new Dictionary<string, IReadOnlyList<DocxBodyElement>> { ["default"] = [new DocxParagraphElement(header)] };
         var settings = source.PageSettings with { HeaderDistancePoints = 36d,
-            HeaderParagraphsByType = paragraphs, HeaderBodyElementsByType = elements };
+            HeaderBodyElementsByType = elements };
         return source with { PageSettings = settings, FinalSectionBreak = source.FinalSectionBreak! with { PageSettings = settings },
-            HeaderParagraphs = [header], HeaderParagraphsByType = paragraphs, HeaderBodyElementsByType = elements };
+            HeaderParagraphs = [header], HeaderBodyElementsByType = elements };
     }
 
     private static DocxDocument WithPlainFootnoteTestFooter(DocxDocument source, int count = 1, bool? alternating = null)
@@ -130,18 +129,17 @@ internal static partial class DocxFootnotesTests
             LineSpacingPoints = null,
             Spacing = DocxParagraphSpacing.Empty with { BeforeValue = "0", AfterValue = "0", LineValue = "240", LineRuleValue = "auto" },
         };
-        var paragraphs = new Dictionary<string, IReadOnlyList<DocxParagraph>>
+        var paragraphs = Enumerable.Repeat(footer, count).ToArray();
+        var elements = new Dictionary<string, IReadOnlyList<DocxBodyElement>>
         {
-            ["default"] = Enumerable.Repeat(footer, count).ToArray()
+            ["default"] = DocxTests.CreateParagraphBlocks(paragraphs)
         };
-        if (alternating == true) paragraphs["even"] = [footer];
-        var elements = paragraphs.ToDictionary(pair => pair.Key,
-            pair => (IReadOnlyList<DocxBodyElement>)pair.Value.Select(paragraph => (DocxBodyElement)new DocxParagraphElement(paragraph)).ToArray());
+        if (alternating == true) elements["even"] = DocxTests.CreateParagraphBlocks(footer);
         var settings = source.PageSettings with { FooterDistancePoints = 36d,
             EvenAndOddHeaders = alternating ?? source.PageSettings.EvenAndOddHeaders,
-            FooterParagraphsByType = paragraphs, FooterBodyElementsByType = elements };
+            FooterBodyElementsByType = elements };
         return source with { PageSettings = settings, FinalSectionBreak = source.FinalSectionBreak! with { PageSettings = settings },
-            FooterParagraphs = paragraphs["default"], FooterParagraphsByType = paragraphs, FooterBodyElementsByType = elements };
+            FooterParagraphs = paragraphs, FooterBodyElementsByType = elements };
     }
 
     public static void DocxAutomaticNoteMarkerSizeDoesNotInflateContentPitchOrInset()
@@ -1358,18 +1356,14 @@ internal static partial class DocxFootnotesTests
             LineSpacingPoints = null, Spacing = DocxParagraphSpacing.Empty with { BeforeValue = "0", AfterValue = "0", LineValue = "240", LineRuleValue = "auto" },
         };
         var paragraphs = Enumerable.Repeat(paragraph, count).ToArray();
-        var headers = new Dictionary<string, IReadOnlyList<DocxParagraph>>();
-        var footers = new Dictionary<string, IReadOnlyList<DocxParagraph>>();
-        if (header) headers["default"] = paragraphs;
-        if (footer) footers["default"] = paragraphs;
-        var headerElements = headers.ToDictionary(p => p.Key, p => (IReadOnlyList<DocxBodyElement>)p.Value.Select(v => (DocxBodyElement)new DocxParagraphElement(v)).ToArray());
-        var footerElements = footers.ToDictionary(p => p.Key, p => (IReadOnlyList<DocxBodyElement>)p.Value.Select(v => (DocxBodyElement)new DocxParagraphElement(v)).ToArray());
+        var headerElements = new Dictionary<string, IReadOnlyList<DocxBodyElement>>();
+        var footerElements = new Dictionary<string, IReadOnlyList<DocxBodyElement>>();
+        if (header) headerElements["default"] = DocxTests.CreateParagraphBlocks(paragraphs);
+        if (footer) footerElements["default"] = DocxTests.CreateParagraphBlocks(paragraphs);
         var settings = source.PageSettings with { HeaderDistancePoints = 36d, FooterDistancePoints = 36d,
-            HeaderParagraphsByType = headers, FooterParagraphsByType = footers,
             HeaderBodyElementsByType = headerElements, FooterBodyElementsByType = footerElements };
         return source with { PageSettings = settings, FinalSectionBreak = source.FinalSectionBreak! with { PageSettings = settings },
             HeaderParagraphs = header ? paragraphs : [], FooterParagraphs = footer ? paragraphs : [],
-            HeaderParagraphsByType = headers, FooterParagraphsByType = footers,
             HeaderBodyElementsByType = headerElements, FooterBodyElementsByType = footerElements };
     }
 

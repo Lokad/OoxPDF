@@ -22,7 +22,6 @@ internal sealed partial record DocxStructureSnapshot
 
         foreach (DocxRevisionInfo revision in EnumerateStaticStoryRevisions(
             document.HeaderBodyElementsByType,
-            document.HeaderParagraphsByType,
             document.HeaderFloatingDrawingsByType))
         {
             yield return revision;
@@ -30,7 +29,6 @@ internal sealed partial record DocxStructureSnapshot
 
         foreach (DocxRevisionInfo revision in EnumerateStaticStoryRevisions(
             document.FooterBodyElementsByType,
-            document.FooterParagraphsByType,
             document.FooterFloatingDrawingsByType))
         {
             yield return revision;
@@ -79,7 +77,6 @@ internal sealed partial record DocxStructureSnapshot
     {
         foreach (DocxRevisionInfo revision in EnumerateStaticStoryRevisions(
             settings.HeaderBodyElementsByType,
-            settings.HeaderParagraphsByType,
             settings.HeaderFloatingDrawingsByType))
         {
             yield return revision;
@@ -87,7 +84,6 @@ internal sealed partial record DocxStructureSnapshot
 
         foreach (DocxRevisionInfo revision in EnumerateStaticStoryRevisions(
             settings.FooterBodyElementsByType,
-            settings.FooterParagraphsByType,
             settings.FooterFloatingDrawingsByType))
         {
             yield return revision;
@@ -96,27 +92,13 @@ internal sealed partial record DocxStructureSnapshot
 
     private static IEnumerable<DocxRevisionInfo> EnumerateStaticStoryRevisions(
         IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> bodyElementsByType,
-        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> fallbackParagraphsByType,
         IReadOnlyDictionary<string, IReadOnlyList<DocxFloatingDrawing>> floatingDrawingsByType)
     {
-        if (bodyElementsByType.Count == 0)
+        foreach (IReadOnlyList<DocxBodyElement> bodyElements in bodyElementsByType.Values)
         {
-            foreach (DocxParagraph paragraph in fallbackParagraphsByType.Values.SelectMany(paragraphs => paragraphs))
+            foreach (DocxRevisionInfo revision in EnumerateBodyElementRevisions(bodyElements))
             {
-                foreach (DocxRevisionInfo revision in paragraph.Revisions)
-                {
-                    yield return revision;
-                }
-            }
-        }
-        else
-        {
-            foreach (IReadOnlyList<DocxBodyElement> bodyElements in bodyElementsByType.Values)
-            {
-                foreach (DocxRevisionInfo revision in EnumerateBodyElementRevisions(bodyElements))
-                {
-                    yield return revision;
-                }
+                yield return revision;
             }
         }
 

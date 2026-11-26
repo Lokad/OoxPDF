@@ -48,13 +48,13 @@ internal static partial class DocxHeaderFooterTests
         {
             HeaderDistancePoints = 12d,
             FooterDistancePoints = 12d,
-            HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
             {
-                ["default"] = [header]
+                ["default"] = DocxTests.CreateParagraphBlocks(header)
             },
-            FooterParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            FooterBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
             {
-                ["default"] = [footer]
+                ["default"] = DocxTests.CreateParagraphBlocks(footer)
             }
         };
         DocxDocument document = new(
@@ -118,9 +118,9 @@ internal static partial class DocxHeaderFooterTests
             DocxParagraph body = DocxTests.CreateDocxLayoutParagraph("Body", 10d, 10d);
             DocxPageSettings settings = DocxPageSettings.Empty with
             {
-                HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+                HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
                 {
-                    ["default"] = [SizedLine("Alpha", 12d), SizedLine("Beta", 15d), SizedLine("Gamma", 12d)]
+                    ["default"] = DocxTests.CreateParagraphBlocks(SizedLine("Alpha", 12d), SizedLine("Beta", 15d), SizedLine("Gamma", 12d))
                 }
             };
             DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)]);
@@ -385,14 +385,14 @@ internal static partial class DocxHeaderFooterTests
         {
             TitlePage = true,
             EvenAndOddHeaders = true,
-            HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
             {
-                ["default"] = [defaultHeader],
-                ["first"] = [firstHeader]
+                ["default"] = DocxTests.CreateParagraphBlocks(defaultHeader),
+                ["first"] = DocxTests.CreateParagraphBlocks(firstHeader)
             },
-            FooterParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            FooterBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
             {
-                ["even"] = [evenFooter]
+                ["even"] = DocxTests.CreateParagraphBlocks(evenFooter)
             }
         };
         DocxDocument document = new(
@@ -436,9 +436,9 @@ internal static partial class DocxHeaderFooterTests
         DocxParagraph body = DocxTests.CreateDocxLayoutParagraph("Body", 10d, 10d);
         DocxPageSettings settings = DocxPageSettings.Empty with
         {
-            HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
             {
-                ["default"] = [header]
+                ["default"] = DocxTests.CreateParagraphBlocks(header)
             }
         };
         DocxDocument document = new(
@@ -488,9 +488,9 @@ internal static partial class DocxHeaderFooterTests
         {
             HeaderDistancePoints = 12d,
             FooterDistancePoints = 12d,
-            HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
             {
-                ["default"] = [header]
+                ["default"] = DocxTests.CreateParagraphBlocks(header)
             }
         };
         DocxDocument document = new(
@@ -573,9 +573,9 @@ internal static partial class DocxHeaderFooterTests
         {
             HeaderDistancePoints = 12d,
             FooterDistancePoints = 12d,
-            HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
             {
-                ["default"] = [first, second]
+                ["default"] = DocxTests.CreateParagraphBlocks(first, second)
             }
         };
         DocxDocument document = new(
@@ -786,8 +786,6 @@ internal static partial class DocxHeaderFooterTests
             "The document and section references share the parsed header blocks.");
         var header = DocxBlockTraversal.EnumerateDirectParagraphs(headerBlocks).Single();
         TestAssert.Equal("Selected header", string.Concat(header.Runs.Select(run => run.Text)));
-        TestAssert.Equal(0, document.HeaderParagraphsByType.Count);
-        TestAssert.Equal(0, document.PageSettings.HeaderParagraphsByType.Count);
         DocxFloatingDrawing drawing = document.HeaderFloatingDrawingsByType["default"].Single();
         TestAssert.Equal(1, document.PageSettings.HeaderFloatingDrawingsByType["default"].Count);
         TestAssert.Equal("rIdHeaderImage1", drawing.ImageRelationshipId ?? string.Empty);
@@ -1047,9 +1045,9 @@ internal static partial class DocxHeaderFooterTests
         {
             HeaderDistancePoints = 20d,
             FooterDistancePoints = 20d,
-            FooterParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            FooterBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
             {
-                ["default"] = [StaticPara("Fa"), StaticPara("Fb")]
+                ["default"] = DocxTests.CreateParagraphBlocks(StaticPara("Fa"), StaticPara("Fb"))
             }
         };
         DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)]);
@@ -1082,9 +1080,9 @@ internal static partial class DocxHeaderFooterTests
         {
             HeaderDistancePoints = 10d,
             FooterDistancePoints = 10d,
-            FooterParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            FooterBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
             {
-                ["default"] = [StaticPara("F")]
+                ["default"] = DocxTests.CreateParagraphBlocks(StaticPara("F"))
             }
         };
         DocxDocument document = new(100d, 100d, 10d, 10d, 10d, 10d, settings, [], [], [], [new DocxParagraphElement(first), new DocxParagraphElement(second)]);
@@ -1133,9 +1131,9 @@ internal static partial class DocxHeaderFooterTests
             {
                 HeaderDistancePoints = 20d,
                 FooterDistancePoints = 20d,
-                FooterParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+                FooterBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
                 {
-                    ["default"] = [FootPara()]
+                    ["default"] = DocxTests.CreateParagraphBlocks(FootPara())
                 }
             };
             DocxParagraph body = BodyPara(bodyAfterPoints, bodyAfterValue);
@@ -1172,9 +1170,9 @@ internal static partial class DocxHeaderFooterTests
             {
                 HeaderDistancePoints = 20d,
                 FooterDistancePoints = 20d,
-                FooterParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+                FooterBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
                 {
-                    ["default"] = [FootPara(beforePoints, beforeValue)]
+                    ["default"] = DocxTests.CreateParagraphBlocks(FootPara(beforePoints, beforeValue))
                 }
             };
             DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)]);
@@ -1247,9 +1245,9 @@ internal static partial class DocxHeaderFooterTests
             TitlePage = true,
             HeaderDistancePoints = 20d,
             FooterDistancePoints = 20d,
-            HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
             {
-                ["default"] = [StaticPara("H")]
+                ["default"] = DocxTests.CreateParagraphBlocks(StaticPara("H"))
             }
         };
         DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)]);
@@ -1293,9 +1291,9 @@ internal static partial class DocxHeaderFooterTests
             EvenAndOddHeaders = true,
             HeaderDistancePoints = 10d,
             FooterDistancePoints = 10d,
-            HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
             {
-                ["default"] = [StaticPara("H")]
+                ["default"] = DocxTests.CreateParagraphBlocks(StaticPara("H"))
             }
         };
         DocxDocument document = new(100d, 100d, 10d, 10d, 10d, 10d, settings, [], [], [], [new DocxParagraphElement(body)]);
@@ -1328,9 +1326,9 @@ internal static partial class DocxHeaderFooterTests
         {
             HeaderDistancePoints = 20d,
             FooterDistancePoints = 20d,
-            HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
             {
-                ["default"] = [StaticPara("Ha"), StaticPara("Hb"), StaticPara("Hc")]
+                ["default"] = DocxTests.CreateParagraphBlocks(StaticPara("Ha"), StaticPara("Hb"), StaticPara("Hc"))
             }
         };
         DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)]);
@@ -1374,9 +1372,9 @@ internal static partial class DocxHeaderFooterTests
         {
             HeaderDistancePoints = 20d,
             FooterDistancePoints = 20d,
-            HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
             {
-                ["default"] = [StaticPara("Ha"), StaticPara("Hb"), StaticPara("Hc")]
+                ["default"] = DocxTests.CreateParagraphBlocks(StaticPara("Ha"), StaticPara("Hb"), StaticPara("Hc"))
             }
         };
         DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)]);
@@ -1423,9 +1421,9 @@ internal static partial class DocxHeaderFooterTests
         {
             HeaderDistancePoints = 20d,
             FooterDistancePoints = 20d,
-            HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
             {
-                ["default"] = [HeaderPara("Ha", 0d, "0"), HeaderPara("Hb", 24d, "480")]
+                ["default"] = DocxTests.CreateParagraphBlocks(HeaderPara("Ha", 0d, "0"), HeaderPara("Hb", 24d, "480"))
             }
         };
         DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)]);
@@ -1503,9 +1501,9 @@ internal static partial class DocxHeaderFooterTests
         {
             HeaderDistancePoints = 10d,
             FooterDistancePoints = 10d,
-            HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
             {
-                ["default"] = [StaticPara("H")]
+                ["default"] = DocxTests.CreateParagraphBlocks(StaticPara("H"))
             }
         };
         DocxDocument document = new(100d, 100d, 10d, 10d, 10d, 10d, settings, [], [], [], [new DocxParagraphElement(body)]);
@@ -1541,9 +1539,9 @@ internal static partial class DocxHeaderFooterTests
         {
             HeaderDistancePoints = 20d,
             FooterDistancePoints = 20d,
-            HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
             {
-                ["default"] = [StaticPara("Ha"), StaticPara("Hb")]
+                ["default"] = DocxTests.CreateParagraphBlocks(StaticPara("Ha"), StaticPara("Hb"))
             }
         };
         DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)]);
@@ -1580,9 +1578,9 @@ internal static partial class DocxHeaderFooterTests
         {
             HeaderDistancePoints = 20d,
             FooterDistancePoints = 20d,
-            FooterParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            FooterBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
             {
-                ["default"] = [StaticPara("Fa"), StaticPara("Fb")]
+                ["default"] = DocxTests.CreateParagraphBlocks(StaticPara("Fa"), StaticPara("Fb"))
             }
         };
         DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)]);
@@ -1618,9 +1616,9 @@ internal static partial class DocxHeaderFooterTests
         {
             HeaderDistancePoints = 20d,
             FooterDistancePoints = 20d,
-            FooterParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            FooterBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
             {
-                ["default"] = [StaticPara("Fa", 10d), StaticPara("Fb", 16d)]
+                ["default"] = DocxTests.CreateParagraphBlocks(StaticPara("Fa", 10d), StaticPara("Fb", 16d))
             }
         };
         DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)]);
@@ -1657,9 +1655,9 @@ internal static partial class DocxHeaderFooterTests
         {
             HeaderDistancePoints = 20d,
             FooterDistancePoints = 20d,
-            HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
             {
-                ["default"] = [StaticPara("Ha"), StaticPara("Hb")]
+                ["default"] = DocxTests.CreateParagraphBlocks(StaticPara("Ha"), StaticPara("Hb"))
             }
         };
         DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)]);
@@ -1700,9 +1698,9 @@ internal static partial class DocxHeaderFooterTests
         {
             HeaderDistancePoints = 20d,
             FooterDistancePoints = 20d,
-            HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
             {
-                ["default"] = [StaticPara("Ha"), StaticPara("Hb")]
+                ["default"] = DocxTests.CreateParagraphBlocks(StaticPara("Ha"), StaticPara("Hb"))
             }
         };
         DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)]);
@@ -1756,9 +1754,9 @@ internal static partial class DocxHeaderFooterTests
         DocxPageSettings settings = DocxPageSettings.Empty with
         {
             HeaderDistancePoints = 18d, // This control measures hhea metrics, independently of source-default distance.
-            HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
             {
-                ["default"] = [header]
+                ["default"] = DocxTests.CreateParagraphBlocks(header)
             }
         };
         DocxDocument document = new(200d, 200d, 10d, 10d, 10d, 10d, settings, [], [], [], [new DocxParagraphElement(body)]);

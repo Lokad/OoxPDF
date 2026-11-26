@@ -214,9 +214,9 @@ internal static class DocxPageTests
         };
         DocxPageSettings pageSettings = DocxPageSettings.Empty with
         {
-            HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
             {
-                ["default"] = [header]
+                ["default"] = DocxTests.CreateParagraphBlocks(header)
             }
         };
         DocxParagraph body = DocxTests.CreateDocxLayoutParagraph("Body", 10d, 12d);
@@ -269,9 +269,9 @@ internal static class DocxPageTests
         };
         DocxPageSettings pageSettings = DocxPageSettings.Empty with
         {
-            FooterParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            FooterBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
             {
-                ["default"] = [footer]
+                ["default"] = DocxTests.CreateParagraphBlocks(footer)
             }
         };
         DocxParagraph body = DocxTests.CreateDocxLayoutParagraph("Body", 10d, 12d);
@@ -320,13 +320,13 @@ internal static class DocxPageTests
         });
         DocxPageSettings sectionSettings = DocxPageSettings.Empty with
         {
-            HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
             {
-                ["default"] = [sectionHeader]
+                ["default"] = DocxTests.CreateParagraphBlocks(sectionHeader)
             },
-            FooterParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            FooterBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
             {
-                ["default"] = [sectionFooter]
+                ["default"] = DocxTests.CreateParagraphBlocks(sectionFooter)
             }
         };
         var document = new DocxDocument(
@@ -342,14 +342,14 @@ internal static class DocxPageTests
             [],
             [new DocxSectionBreakElement(sectionSettings, DocxSectionBreakType.NextPage, null, null, null, [])])
         {
-            HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
             {
-                ["default"] = [defaultHeader],
-                ["first"] = [firstHeader]
+                ["default"] = DocxTests.CreateParagraphBlocks(defaultHeader),
+                ["first"] = DocxTests.CreateParagraphBlocks(firstHeader)
             },
-            FooterParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            FooterBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
             {
-                ["even"] = [evenFooter]
+                ["even"] = DocxTests.CreateParagraphBlocks(evenFooter)
             }
         };
         var resolver = new MapFontResolver(["Default Sans", "First Sans", "Even Sans", "Section Sans", "Section Footer Sans"], "Resolver Fallback");

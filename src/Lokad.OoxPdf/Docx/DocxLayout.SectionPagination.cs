@@ -41,8 +41,7 @@ internal sealed partial class DocxLayoutEngine
         Math.Abs(next.Width - current.Width) < 0.001d && Math.Abs(next.Height - current.Height) < 0.001d;
 
     private static bool HasStaticSectionContent(DocxPageSettings settings) =>
-        settings.HeaderParagraphsByType.Keys.Concat(settings.FooterParagraphsByType.Keys)
-            .Concat(settings.HeaderBodyElementsByType.Keys).Concat(settings.FooterBodyElementsByType.Keys)
+        settings.HeaderBodyElementsByType.Keys.Concat(settings.FooterBodyElementsByType.Keys)
             .Concat(settings.HeaderFloatingDrawingsByType.Keys).Concat(settings.FooterFloatingDrawingsByType.Keys)
             .Any(variant => !IsStaticStoryVariantKnownDisabled(settings, variant));
 }

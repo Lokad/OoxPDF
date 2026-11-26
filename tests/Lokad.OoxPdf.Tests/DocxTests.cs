@@ -2152,6 +2152,9 @@ internal static class DocxTests
             [new DocxTableRow([new DocxTableCell(paragraphs, null, null, null, null, [], DocxTableCellMargins.Empty)], rowHeight)]);
     }
 
+    internal static DocxBodyElement[] CreateParagraphBlocks(params DocxParagraph[] paragraphs) =>
+        paragraphs.Select(DocxBodyElementFactory.CreateParagraph).ToArray();
+
     internal static DocxDocument CreateLayoutTestDocument(IReadOnlyList<DocxBodyElement> bodyElements)
     {
         return new DocxDocument(

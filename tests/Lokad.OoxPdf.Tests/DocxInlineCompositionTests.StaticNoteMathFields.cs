@@ -132,14 +132,11 @@ internal static partial class DocxInlineCompositionTests
             source = WithNoteMathStaticStory(source, footer, paragraph);
             if (variant == "earlier-rotated") source = source with
             {
-                HeaderParagraphs = [], FooterParagraphs = [], HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(),
-                FooterParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(),
+                HeaderParagraphs = [], FooterParagraphs = [],
                 HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(),
                 FooterBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(),
                 PageSettings = source.PageSettings with
                 {
-                    HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(),
-                    FooterParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(),
                     HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(),
                     FooterBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>()
                 }
@@ -212,17 +209,14 @@ internal static partial class DocxInlineCompositionTests
     private static DocxDocument WithNoteMathStaticBlocks(DocxDocument source, bool footer, IReadOnlyList<DocxBodyElement> blocks, double distance = 36d)
     {
         var content = DocxBlockTraversal.EnumerateBodyParagraphs(blocks).ToArray();
-        var paragraphs = new Dictionary<string, IReadOnlyList<DocxParagraph>> { ["default"] = content };
         var elements = new Dictionary<string, IReadOnlyList<DocxBodyElement>> { ["default"] = blocks };
         DocxPageSettings Settings(DocxPageSettings settings) => footer
-            ? settings with { FooterDistancePoints = distance, FooterParagraphsByType = paragraphs, FooterBodyElementsByType = elements }
-            : settings with { HeaderDistancePoints = distance, HeaderParagraphsByType = paragraphs, HeaderBodyElementsByType = elements };
+            ? settings with { FooterDistancePoints = distance, FooterBodyElementsByType = elements }
+            : settings with { HeaderDistancePoints = distance, HeaderBodyElementsByType = elements };
         return source with
         {
             HeaderParagraphs = footer ? source.HeaderParagraphs : content,
             FooterParagraphs = footer ? content : source.FooterParagraphs,
-            HeaderParagraphsByType = footer ? source.HeaderParagraphsByType : paragraphs,
-            FooterParagraphsByType = footer ? paragraphs : source.FooterParagraphsByType,
             HeaderBodyElementsByType = footer ? source.HeaderBodyElementsByType : elements,
             FooterBodyElementsByType = footer ? elements : source.FooterBodyElementsByType,
             PageSettings = Settings(source.PageSettings),

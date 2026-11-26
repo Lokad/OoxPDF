@@ -493,9 +493,9 @@ internal static partial class DocxCommentsTests
         DocxParagraph headerParagraph = DocxTests.CreateCommentMarkerParagraph("Header review anchor", "1");
         DocxPageSettings pageSettings = DocxPageSettings.Empty with
         {
-            HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
             {
-                ["default"] = [headerParagraph]
+                ["default"] = DocxTests.CreateParagraphBlocks(headerParagraph)
             }
         };
         DocxRelatedStory commentStory = new(

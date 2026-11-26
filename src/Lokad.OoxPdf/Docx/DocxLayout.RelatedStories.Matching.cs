@@ -404,9 +404,7 @@ internal sealed partial class DocxLayoutEngine
             document.FooterFloatingDrawingsByType.Values.Any(v => v.Count != 0) ||
             settings.HeaderFloatingDrawingsByType.Values.Any(v => v.Count != 0) ||
             settings.FooterFloatingDrawingsByType.Values.Any(v => v.Count != 0)) return false;
-        var paragraphs = document.HeaderParagraphs.Concat(document.FooterParagraphs)
-            .Concat(settings.HeaderParagraphsByType.Values.SelectMany(v => v))
-            .Concat(settings.FooterParagraphsByType.Values.SelectMany(v => v));
+        var paragraphs = document.HeaderParagraphs.Concat(document.FooterParagraphs);
         foreach (DocxParagraph paragraph in paragraphs)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -600,9 +598,7 @@ internal sealed partial class DocxLayoutEngine
         IDocxTextMeasurer? measurer, double printScale, CancellationToken cancellationToken)
     {
         if (page.ColumnFrames.Count > 1 ||
-            !page.PageSettings.HeaderParagraphsByType.Values.Any(v => v.Count != 0) &&
             !page.PageSettings.HeaderBodyElementsByType.Values.Any(v => v.Count != 0) &&
-            !page.PageSettings.FooterParagraphsByType.Values.Any(v => v.Count != 0) &&
             !page.PageSettings.FooterBodyElementsByType.Values.Any(v => v.Count != 0) ||
             !HasPlainNoteFlowSources(document, DocxRelatedStoryKind.Endnote, cancellationToken, out _, requirePlainParagraph: true) ||
             !HasPlainStaticNoteStories(document, page, measurer, printScale, cancellationToken)) return false;

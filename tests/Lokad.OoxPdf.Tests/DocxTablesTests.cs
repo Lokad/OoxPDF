@@ -345,9 +345,9 @@ internal static class DocxTablesTests
         DocxParagraph sectionHeader = DocxTests.CreateDocxLayoutParagraph("Section", fontSize: 9d, lineSpacingPoints: 10d);
         DocxPageSettings sectionSettings = DocxPageSettings.Empty with
         {
-            HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
             {
-                ["first"] = [sectionHeader]
+                ["first"] = DocxTests.CreateParagraphBlocks(sectionHeader)
             }
         };
         var sectionBreak = new DocxSectionBreakElement(sectionSettings, DocxSectionBreakType.NextPage, "2", "1", "720", []);
@@ -390,13 +390,13 @@ internal static class DocxTablesTests
                 sectionBreak
             ])
         {
-            HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
             {
-                ["default"] = [documentHeader]
+                ["default"] = DocxTests.CreateParagraphBlocks(documentHeader)
             },
-            FooterParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+            FooterBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
             {
-                ["even"] = [documentFooter]
+                ["even"] = DocxTests.CreateParagraphBlocks(documentFooter)
             }
         };
 

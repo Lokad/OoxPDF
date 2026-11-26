@@ -189,9 +189,7 @@ internal static partial class DocxInlineCompositionTests
             var settings = source.PageSettings with
             {
                 TitlePage = true,
-                HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>> { ["first"] = [header] },
                 HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>> { ["first"] = [new DocxParagraphElement(header)] },
-                FooterParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>> { ["first"] = [footer] },
                 FooterBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>> { ["first"] = [new DocxParagraphElement(footer)] }
             };
             var renderer = PictureRangeRenderer(mode);

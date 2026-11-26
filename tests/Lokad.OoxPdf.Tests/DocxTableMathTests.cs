@@ -264,15 +264,15 @@ internal static class DocxTableMathTests
             var first = DocxTests.CreateDocxLayoutParagraph("First static row.", 10d, minimum) with
             { Spacing = DocxParagraphSpacing.Empty with { LineRuleValue = declaredRule } };
             var last = first with { Runs = [first.Runs[0] with { Text = "Last static row." }] };
-            var paragraphs = new Dictionary<string, IReadOnlyList<DocxParagraph>> { ["default"] = [first, last] };
+            var blocks = new Dictionary<string, IReadOnlyList<DocxBodyElement>> { ["default"] = DocxTests.CreateParagraphBlocks(first, last) };
             var document = DocxTests.CreateLayoutTestDocument(
                 [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Body.", 10d, 10d))]) with
             {
                 PageSettings = DocxPageSettings.Empty with
                 {
                     HeaderDistancePoints = 12d, FooterDistancePoints = 12d,
-                    HeaderParagraphsByType = header ? paragraphs : new Dictionary<string, IReadOnlyList<DocxParagraph>>(),
-                    FooterParagraphsByType = header ? new Dictionary<string, IReadOnlyList<DocxParagraph>>() : paragraphs
+                    HeaderBodyElementsByType = header ? blocks : new Dictionary<string, IReadOnlyList<DocxBodyElement>>(),
+                    FooterBodyElementsByType = header ? new Dictionary<string, IReadOnlyList<DocxBodyElement>>() : blocks
                 }
             };
             DocxLayout Layout(DocxDocument source, double factor) => new DocxLayoutEngine(
@@ -297,8 +297,11 @@ internal static class DocxTableMathTests
             }
             foreach (string rule in new[] { "exact", "future" })
             {
-                paragraphs["default"] = [first with { LineSpacingPoints = rule == "exact" ? 0d : minimum,
-                    Spacing = first.Spacing with { LineRuleValue = rule } }];
+                blocks["default"] = DocxTests.CreateParagraphBlocks(first with
+                {
+                    LineSpacingPoints = rule == "exact" ? 0d : minimum,
+                    Spacing = first.Spacing with { LineRuleValue = rule }
+                });
                 TestAssert.True(Layout(document, scale).Pages.Single().StaticTextLines.All(line => !line.StaticStoryUsesPhysicalY),
                     "Unresolved zero fixed-height and unknown line rules retain their coordinate fallback.");
             }
@@ -598,14 +601,14 @@ internal static class DocxTableMathTests
     {
         var (paragraph, math) = Prepared(20d);
         DocxParagraph following = DocxTests.CreateDocxLayoutParagraph("Following static prose.", 10d, 10d);
-        var sources = new Dictionary<string, IReadOnlyList<DocxParagraph>> { ["default"] = [paragraph, following] };
+        var sources = new Dictionary<string, IReadOnlyList<DocxBodyElement>> { ["default"] = DocxTests.CreateParagraphBlocks(paragraph, following) };
         foreach (bool header in new[] { true, false })
         {
             DocxPageSettings settings = DocxPageSettings.Empty with
             {
                 HeaderDistancePoints = 12d, FooterDistancePoints = 12d,
-                HeaderParagraphsByType = header ? sources : new Dictionary<string, IReadOnlyList<DocxParagraph>>(),
-                FooterParagraphsByType = header ? new Dictionary<string, IReadOnlyList<DocxParagraph>>() : sources
+                HeaderBodyElementsByType = header ? sources : new Dictionary<string, IReadOnlyList<DocxBodyElement>>(),
+                FooterBodyElementsByType = header ? new Dictionary<string, IReadOnlyList<DocxBodyElement>>() : sources
             };
             DocxDocument document = DocxTests.CreateLayoutTestDocument(
                 [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Body.", 10d, 10d))]) with { PageSettings = settings };
@@ -634,15 +637,15 @@ internal static class DocxTableMathTests
         const double scale = .75d;
         var (paragraph, prepared) = Prepared(20d);
         DocxParagraph following = DocxTests.CreateDocxLayoutParagraph("Following static prose.", 10d, 10d) with { LineSpacingPoints = null };
-        var paragraphs = new Dictionary<string, IReadOnlyList<DocxParagraph>> { ["default"] = [paragraph, following] };
+        var blocks = new Dictionary<string, IReadOnlyList<DocxBodyElement>> { ["default"] = DocxTests.CreateParagraphBlocks(paragraph, following) };
         var measurer = new DocxTests.FamilyWidthTextMeasurer();
         foreach (bool header in new[] { true, false })
         {
             DocxPageSettings settings = DocxPageSettings.Empty with
             {
                 HeaderDistancePoints = 12d, FooterDistancePoints = 12d,
-                HeaderParagraphsByType = header ? paragraphs : new Dictionary<string, IReadOnlyList<DocxParagraph>>(),
-                FooterParagraphsByType = header ? new Dictionary<string, IReadOnlyList<DocxParagraph>>() : paragraphs
+                HeaderBodyElementsByType = header ? blocks : new Dictionary<string, IReadOnlyList<DocxBodyElement>>(),
+                FooterBodyElementsByType = header ? new Dictionary<string, IReadOnlyList<DocxBodyElement>>() : blocks
             };
             DocxDocument document = DocxTests.CreateLayoutTestDocument(
                 [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Body.", 10d, 10d))]) with { PageSettings = settings };
@@ -682,8 +685,8 @@ internal static class DocxTableMathTests
             if (guard != "declared") footer = footer with { LineSpacingPoints = null };
             DocxPageSettings settings = DocxPageSettings.Empty with
             {
-                HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>> { ["default"] = [paragraph] },
-                FooterParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>> { ["default"] = [footer] }
+                HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>> { ["default"] = DocxTests.CreateParagraphBlocks(paragraph) },
+                FooterBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>> { ["default"] = DocxTests.CreateParagraphBlocks(footer) }
             };
             var cell = new DocxTableCell([footer], null, null, null, null, [], DocxTableCellMargins.Empty);
             DocxDocument document = guard == "table-first" ? TableDocument(new DocxTableRow([cell], null)) :
@@ -719,7 +722,7 @@ internal static class DocxTableMathTests
             TestAssert.True(DocxPlainBodyFrame.HasPlainTextContent(paragraph), "Alignment does not change plain content ownership.");
             TestAssert.Equal(alignment == DocxTextAlignment.Left, DocxPlainBodyFrame.IsPlainParagraph(paragraph));
             DocxPageSettings settings = DocxPageSettings.Empty with
-            { HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>> { ["default"] = [paragraph] } };
+            { HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>> { ["default"] = DocxTests.CreateParagraphBlocks(paragraph) } };
             DocxDocument document = DocxTests.CreateLayoutTestDocument(
                 [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Body.", 10d, 10d))]) with { PageSettings = settings };
             DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, .75d)

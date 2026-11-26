@@ -270,8 +270,8 @@ internal sealed partial record DocxStructureSnapshot(
                 null)
         };
 
-        AddStaticStories(stories, DocxStoryKind.Header, "document", null, document.HeaderBodyElementsByType, document.HeaderParagraphsByType, document.HeaderFloatingDrawingsByType, relatedStories);
-        AddStaticStories(stories, DocxStoryKind.Footer, "document", null, document.FooterBodyElementsByType, document.FooterParagraphsByType, document.FooterFloatingDrawingsByType, relatedStories);
+        AddStaticStories(stories, DocxStoryKind.Header, "document", null, document.HeaderBodyElementsByType, document.HeaderFloatingDrawingsByType, relatedStories);
+        AddStaticStories(stories, DocxStoryKind.Footer, "document", null, document.FooterBodyElementsByType, document.FooterFloatingDrawingsByType, relatedStories);
         AddRelatedStories(stories, relatedStories);
         for (int blockIndex = 0; blockIndex < document.BodyElements.Count; blockIndex++)
         {
@@ -281,8 +281,8 @@ internal sealed partial record DocxStructureSnapshot(
             }
 
             string scope = "section@" + blockIndex.ToString(CultureInfo.InvariantCulture);
-            AddStaticStories(stories, DocxStoryKind.Header, scope, blockIndex, sectionBreak.PageSettings.HeaderBodyElementsByType, sectionBreak.PageSettings.HeaderParagraphsByType, sectionBreak.PageSettings.HeaderFloatingDrawingsByType, relatedStories);
-            AddStaticStories(stories, DocxStoryKind.Footer, scope, blockIndex, sectionBreak.PageSettings.FooterBodyElementsByType, sectionBreak.PageSettings.FooterParagraphsByType, sectionBreak.PageSettings.FooterFloatingDrawingsByType, relatedStories);
+            AddStaticStories(stories, DocxStoryKind.Header, scope, blockIndex, sectionBreak.PageSettings.HeaderBodyElementsByType, sectionBreak.PageSettings.HeaderFloatingDrawingsByType, relatedStories);
+            AddStaticStories(stories, DocxStoryKind.Footer, scope, blockIndex, sectionBreak.PageSettings.FooterBodyElementsByType, sectionBreak.PageSettings.FooterFloatingDrawingsByType, relatedStories);
         }
 
         return stories;
@@ -294,19 +294,17 @@ internal sealed partial record DocxStructureSnapshot(
         string scope,
         int? sectionBreakBlockIndex,
         IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> bodyElementsByType,
-        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> paragraphsByType,
         IReadOnlyDictionary<string, IReadOnlyList<DocxFloatingDrawing>> drawingsByType,
         RelatedStoryIndex relatedStories)
     {
         string[] variantTypes = bodyElementsByType.Keys
-            .Concat(paragraphsByType.Keys)
             .Concat(drawingsByType.Keys)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(type => type, StringComparer.OrdinalIgnoreCase)
             .ToArray();
         foreach (string variantType in variantTypes)
         {
-            IReadOnlyList<DocxBodyElement> bodyElements = DocxBlockTraversal.FindStaticStoryBodyElements(variantType, bodyElementsByType, paragraphsByType) ?? [];
+            IReadOnlyList<DocxBodyElement> bodyElements = bodyElementsByType.GetValueOrDefault(variantType, []);
             int drawingCount = drawingsByType.TryGetValue(variantType, out var drawings) ? drawings.Count : 0;
             stories.Add(CreateParagraphStorySnapshot(kind.ToKindString(), scope, sectionBreakBlockIndex, variantType,
                 bodyElements, DocxBlockTraversal.EnumerateBodyParagraphs(bodyElements),
@@ -700,8 +698,8 @@ internal sealed partial record DocxStructureSnapshot(
     {
         // The reader shares one parsed static part across document, section
         // and variant references. Count each source paragraph once in aggregates.
-        var staticParagraphs = DocxBlockTraversal.EnumerateStaticStoryParagraphs(document.HeaderBodyElementsByType, document.HeaderParagraphsByType)
-            .Concat(DocxBlockTraversal.EnumerateStaticStoryParagraphs(document.FooterBodyElementsByType, document.FooterParagraphsByType))
+        var staticParagraphs = document.HeaderBodyElementsByType.Values.Concat(document.FooterBodyElementsByType.Values)
+            .SelectMany(DocxBlockTraversal.EnumerateBodyParagraphs)
             .Concat(DocxBlockTraversal.EnumerateStaticStoryParagraphs(document.PageSettings))
             .Concat(document.BodyElements
                 .OfType<DocxSectionBreakElement>()

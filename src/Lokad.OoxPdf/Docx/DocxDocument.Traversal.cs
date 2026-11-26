@@ -13,8 +13,8 @@ internal static class DocxBlockTraversal
     private static IEnumerable<DocxParagraph> EnumerateStoryParagraphs(DocxDocument document)
     {
         return DocxBlockTraversal.EnumerateBodyParagraphs(document)
-            .Concat(DocxBlockTraversal.EnumerateReferencedStaticStoryParagraphs(document.HeaderBodyElementsByType, document.HeaderParagraphsByType, document.HeaderParagraphs))
-            .Concat(DocxBlockTraversal.EnumerateReferencedStaticStoryParagraphs(document.FooterBodyElementsByType, document.FooterParagraphsByType, document.FooterParagraphs))
+            .Concat(EnumerateReferencedStaticStoryParagraphs(document.HeaderBodyElementsByType, document.HeaderParagraphs))
+            .Concat(EnumerateReferencedStaticStoryParagraphs(document.FooterBodyElementsByType, document.FooterParagraphs))
             .Concat(DocxBlockTraversal.EnumerateStaticStoryParagraphs(document.PageSettings))
             .Concat(document.BodyElements
                 .OfType<DocxSectionBreakElement>()
@@ -41,12 +41,11 @@ internal static class DocxBlockTraversal
             for (int side = 0; side < 2; side++)
             {
                 var bodies = side == 0 ? settings.HeaderBodyElementsByType : settings.FooterBodyElementsByType;
-                var paragraphs = side == 0 ? settings.HeaderParagraphsByType : settings.FooterParagraphsByType;
                 var drawings = side == 0 ? settings.HeaderFloatingDrawingsByType : settings.FooterFloatingDrawingsByType;
-                foreach (string variant in bodies.Keys.Concat(paragraphs.Keys).Concat(drawings.Keys).Distinct(StringComparer.OrdinalIgnoreCase))
+                foreach (string variant in bodies.Keys.Concat(drawings.Keys).Distinct(StringComparer.OrdinalIgnoreCase))
                 {
                     token.ThrowIfCancellationRequested();
-                    yield return (settings, variant, FindStaticStoryBodyElements(variant, bodies, paragraphs) ?? [],
+                    yield return (settings, variant, bodies.GetValueOrDefault(variant, []),
                         drawings.TryGetValue(variant, out var selected) ? selected : []);
                 }
             }
@@ -136,50 +135,19 @@ internal static class DocxBlockTraversal
         return EnumerateBodyParagraphs(story.BodyElements);
     }
 
-    public static IEnumerable<DocxParagraph> EnumerateStaticStoryParagraphs(
-        IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> bodyElementsByType,
-        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> fallbackParagraphsByType)
-    {
-        return bodyElementsByType.Count == 0
-            ? fallbackParagraphsByType.Values.SelectMany(paragraphs => paragraphs)
-            : bodyElementsByType.Values.SelectMany(EnumerateBodyParagraphs);
-    }
-
     public static IEnumerable<DocxParagraph> EnumerateStaticStoryParagraphs(DocxPageSettings settings)
     {
-        return EnumerateStaticStoryParagraphs(settings.HeaderBodyElementsByType, settings.HeaderParagraphsByType)
-            .Concat(EnumerateStaticStoryParagraphs(settings.FooterBodyElementsByType, settings.FooterParagraphsByType));
+        return settings.HeaderBodyElementsByType.Values.Concat(settings.FooterBodyElementsByType.Values)
+            .SelectMany(EnumerateBodyParagraphs);
     }
 
     public static IEnumerable<DocxParagraph> EnumerateReferencedStaticStoryParagraphs(
         IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> bodyElementsByType,
-        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> paragraphsByType,
         IReadOnlyList<DocxParagraph> fallbackParagraphs)
     {
-        if (bodyElementsByType.Count != 0)
-        {
-            return bodyElementsByType.Values.SelectMany(EnumerateBodyParagraphs);
-        }
-
-        return paragraphsByType.Count == 0
+        return bodyElementsByType.Count == 0
             ? fallbackParagraphs
-            : paragraphsByType.Values.SelectMany(paragraphs => paragraphs);
-    }
-
-    // A defined empty story still owns its variant. Null means it is absent.
-    public static IReadOnlyList<DocxBodyElement>? FindStaticStoryBodyElements(
-        string variantType,
-        IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> bodyElementsByType,
-        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> fallbackParagraphsByType)
-    {
-        if (bodyElementsByType.TryGetValue(variantType, out IReadOnlyList<DocxBodyElement>? bodyElements))
-        {
-            return bodyElements;
-        }
-
-        return fallbackParagraphsByType.TryGetValue(variantType, out IReadOnlyList<DocxParagraph>? paragraphs)
-            ? paragraphs.Select(DocxBodyElementFactory.CreateParagraph).Cast<DocxBodyElement>().ToArray()
-            : null;
+            : bodyElementsByType.Values.SelectMany(EnumerateBodyParagraphs);
     }
 
     public static IEnumerable<DocxParagraph> EnumerateBodyParagraphs(IEnumerable<DocxBodyElement> bodyElements)

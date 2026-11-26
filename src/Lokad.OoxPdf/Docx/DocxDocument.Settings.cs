@@ -70,12 +70,6 @@ internal sealed record DocxPageSettings(
     public DocxNoteReferenceSettings FootnoteReferenceSettings { get; init; } = DocxNoteReferenceSettings.Empty;
     public DocxNoteReferenceSettings EndnoteReferenceSettings { get; init; } = DocxNoteReferenceSettings.Empty;
 
-    public IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> HeaderParagraphsByType { get; init; } =
-        ReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>>.Empty;
-
-    public IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> FooterParagraphsByType { get; init; } =
-        ReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>>.Empty;
-
     public IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> HeaderBodyElementsByType { get; init; } =
         ReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>>.Empty;
 

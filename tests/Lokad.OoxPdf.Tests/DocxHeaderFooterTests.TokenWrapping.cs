@@ -23,8 +23,8 @@ internal static partial class DocxHeaderFooterTests
             var settings = DocxPageSettings.Empty with
             {
                 HeaderDistancePoints = 12, FooterDistancePoints = 12,
-                HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>> { ["default"] = [paragraph] },
-                FooterParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>> { ["default"] = [paragraph] }
+                HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>> { ["default"] = DocxTests.CreateParagraphBlocks(paragraph) },
+                FooterBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>> { ["default"] = DocxTests.CreateParagraphBlocks(paragraph) }
             };
             var document = new DocxDocument(160, 1000, 10, 10, 300, 300, settings, [], [], [],
                 [new DocxParagraphElement(paragraph)]);

@@ -339,18 +339,14 @@ internal static partial class DocxFootnotesTests
         {
             DocxDocument bodySource = body ?? plain;
             var paragraphs = Enumerable.Repeat(paragraph, count).ToArray();
-            var headers = new Dictionary<string, IReadOnlyList<DocxParagraph>>();
-            var footers = new Dictionary<string, IReadOnlyList<DocxParagraph>>();
-            if (header) headers["default"] = paragraphs;
-            if (footer) footers["default"] = paragraphs;
-            var headerElements = headers.ToDictionary(p => p.Key, p => (IReadOnlyList<DocxBodyElement>)p.Value.Select(v => (DocxBodyElement)new DocxParagraphElement(v)).ToArray());
-            var footerElements = footers.ToDictionary(p => p.Key, p => (IReadOnlyList<DocxBodyElement>)p.Value.Select(v => (DocxBodyElement)new DocxParagraphElement(v)).ToArray());
+            var headerElements = new Dictionary<string, IReadOnlyList<DocxBodyElement>>();
+            var footerElements = new Dictionary<string, IReadOnlyList<DocxBodyElement>>();
+            if (header) headerElements["default"] = DocxTests.CreateParagraphBlocks(paragraphs);
+            if (footer) footerElements["default"] = DocxTests.CreateParagraphBlocks(paragraphs);
             var settings = bodySource.PageSettings with { HeaderDistancePoints = 36d, FooterDistancePoints = 36d,
-                HeaderParagraphsByType = headers, FooterParagraphsByType = footers,
                 HeaderBodyElementsByType = headerElements, FooterBodyElementsByType = footerElements };
             return bodySource with { PageSettings = settings, FinalSectionBreak = bodySource.FinalSectionBreak! with { PageSettings = settings },
                 HeaderParagraphs = header ? paragraphs : [], FooterParagraphs = footer ? paragraphs : [],
-                HeaderParagraphsByType = headers, FooterParagraphsByType = footers,
                 HeaderBodyElementsByType = headerElements, FooterBodyElementsByType = footerElements };
         }
         var measurer = new LogicalBoundaryTextMeasurer();
@@ -388,14 +384,14 @@ internal static partial class DocxFootnotesTests
                 "Fixed-height or dynamic static stories retain their explicitly unqualified frame policy.");
         }
         DocxDocument variant = Compose(true, false, staticParagraph);
-        var variantParagraphs = variant.PageSettings.HeaderParagraphsByType.ToDictionary(p => p.Key, p => p.Value);
-        variantParagraphs["even"] = Enumerable.Repeat(staticParagraph, 100).ToArray();
-        var variantElements = variantParagraphs.ToDictionary(p => p.Key,
-            p => (IReadOnlyList<DocxBodyElement>)p.Value.Select(v => (DocxBodyElement)new DocxParagraphElement(v)).ToArray());
+        var variantElements = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(variant.PageSettings.HeaderBodyElementsByType)
+        {
+            ["even"] = DocxTests.CreateParagraphBlocks(Enumerable.Repeat(staticParagraph, 100).ToArray())
+        };
         var variantSettings = variant.PageSettings with { EvenAndOddHeaders = true,
-            HeaderParagraphsByType = variantParagraphs, HeaderBodyElementsByType = variantElements };
+            HeaderBodyElementsByType = variantElements };
         variant = variant with { PageSettings = variantSettings, FinalSectionBreak = variant.FinalSectionBreak! with { PageSettings = variantSettings },
-            HeaderParagraphsByType = variantParagraphs, HeaderBodyElementsByType = variantElements };
+            HeaderBodyElementsByType = variantElements };
         TestAssert.True(!DocxNoteKerning.TryCreateDocument(variant, engine.Create(variant, measurer, default), out _, out _, default),
             "A fitting default story does not admit a consumed frame on a reachable even continuation page.");
         DocxDocument mixedBody = ReadDocumentEndnoteFlowFixture(0, 0);

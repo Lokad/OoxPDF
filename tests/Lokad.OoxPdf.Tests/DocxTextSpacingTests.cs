@@ -535,7 +535,7 @@ internal static class DocxTextSpacingTests
         {
             PageSettings = DocxPageSettings.Empty with
             {
-                HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>> { ["default"] = [previous, current] }
+                HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>> { ["default"] = DocxTests.CreateParagraphBlocks(previous, current) }
             }
         };
         DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
@@ -546,8 +546,11 @@ internal static class DocxTextSpacingTests
         {
             PageSettings = document.PageSettings with
             {
-                HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>
-                { ["default"] = [previous with { SpacingAfterPoints = 0d }, current with { SpacingBeforePoints = 0d }] }
+                HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>
+                {
+                    ["default"] = DocxTests.CreateParagraphBlocks(
+                        previous with { SpacingAfterPoints = 0d }, current with { SpacingBeforePoints = 0d })
+                }
             }
         };
         DocxTextLineLayout[] controlLines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)

@@ -767,42 +767,27 @@ internal static class DocxCoreTests
     public static void DocxBlockTraversalNormalizesStaticStoryBodyFallbacks()
     {
         DocxParagraph legacyFallback = DocxTests.CreateDocxLayoutParagraph("Legacy", 12d, 12d);
-        DocxParagraph paragraphFallback = DocxTests.CreateDocxLayoutParagraph("ParagraphMap", 12d, 12d);
         DocxParagraph bodyParagraph = DocxTests.CreateDocxLayoutParagraph("BodyMap", 12d, 12d);
         var bodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
         {
             ["default"] = [new DocxParagraphElement(bodyParagraph)],
             ["even"] = []
         };
-        var paragraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["default"] = [paragraphFallback],
-            ["even"] = [paragraphFallback]
-        };
-
         IReadOnlyList<DocxParagraph> referenced = DocxBlockTraversal
-            .EnumerateReferencedStaticStoryParagraphs(bodyElementsByType, paragraphsByType, [legacyFallback])
-            .ToArray();
-        var selectedBodyElements = DocxBlockTraversal.FindStaticStoryBodyElements("default", bodyElementsByType, paragraphsByType);
-        var selectedFallbackElements = DocxBlockTraversal.FindStaticStoryBodyElements(
-            "default",
-            new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase),
-            paragraphsByType);
-        IReadOnlyList<DocxParagraph> legacyOnly = DocxBlockTraversal
-            .EnumerateReferencedStaticStoryParagraphs(
-                new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase),
-                new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase),
-                [legacyFallback])
-            .ToArray();
+            .EnumerateReferencedStaticStoryParagraphs(bodyElementsByType, [legacyFallback]).ToArray();
+        DocxDocument legacyOnly = DocxTests.CreateLayoutTestDocument([]) with { HeaderParagraphs = [legacyFallback] };
+        DocxDocument withBlocks = legacyOnly with { HeaderBodyElementsByType = bodyElementsByType };
+        DocxLayoutEngine.BuildEffectiveSectionSettings(withBlocks, out var selected);
+        DocxLayoutEngine.BuildEffectiveSectionSettings(legacyOnly, out var fallback);
 
         TestAssert.Equal("BodyMap", referenced.Single().Runs.Single().Text);
-        TestAssert.Equal("BodyMap", ((DocxParagraphElement)TestAssert.NotNull(selectedBodyElements).Single()).Paragraph.Runs.Single().Text);
-        TestAssert.Equal("ParagraphMap", ((DocxParagraphElement)TestAssert.NotNull(selectedFallbackElements).Single()).Paragraph.Runs.Single().Text);
-        var emptyStory = DocxBlockTraversal.FindStaticStoryBodyElements("even", bodyElementsByType, paragraphsByType);
-        TestAssert.Equal(0, TestAssert.NotNull(emptyStory, "An explicitly empty story must retain ownership.").Count);
-        TestAssert.True(DocxBlockTraversal.FindStaticStoryBodyElements("first", bodyElementsByType, paragraphsByType) is null,
+        TestAssert.Equal("BodyMap", DocxBlockTraversal.EnumerateDirectParagraphs(
+            selected.PageSettings.HeaderBodyElementsByType["default"]).Single().Runs.Single().Text);
+        TestAssert.Equal(0, selected.PageSettings.HeaderBodyElementsByType["even"].Count);
+        TestAssert.True(!selected.PageSettings.HeaderBodyElementsByType.ContainsKey("first"),
             "An undefined variant has no story owner.");
-        TestAssert.Equal("Legacy", legacyOnly.Single().Runs.Single().Text);
+        TestAssert.Equal("Legacy", DocxBlockTraversal.EnumerateDirectParagraphs(
+            fallback.PageSettings.HeaderBodyElementsByType["default"]).Single().Runs.Single().Text);
     }
 
     public static void DocxDocumentCompatibilityInventoriesDeriveFromBodyElements()

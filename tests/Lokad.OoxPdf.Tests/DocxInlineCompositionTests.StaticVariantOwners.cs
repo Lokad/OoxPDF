@@ -100,9 +100,7 @@ internal static partial class DocxInlineCompositionTests
         // The final section activates its predecessor's first story without
         // defining another reference. This exercises layout's inheritance.
         final = final with { HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(),
-            FooterBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(),
-            HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(),
-            FooterParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>() };
+            FooterBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>() };
         return WithStaticVariantSettings(source, final) with
         { BodyElements = source.BodyElements.Select(element => ReferenceEquals(element, first) ? earlier : element).ToArray() };
     }

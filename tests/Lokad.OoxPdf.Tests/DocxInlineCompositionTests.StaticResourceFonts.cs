@@ -72,8 +72,7 @@ internal static partial class DocxInlineCompositionTests
         paragraph = paragraph with { Images = [image], InlineContent = [new DocxInlinePicture(image)] };
         var settings = source.PageSettings with
         {
-            HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>> { ["first"] = [new DocxParagraphElement(paragraph)] },
-            HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>> { ["first"] = [paragraph] }
+            HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>> { ["first"] = DocxTests.CreateParagraphBlocks(paragraph) }
         };
         source = WithStaticVariantSettings(source, settings) with { EquationParts = [], EquationDiagnostics = [] };
         var resolver = new StaticFontRequestResolver("Consolas");

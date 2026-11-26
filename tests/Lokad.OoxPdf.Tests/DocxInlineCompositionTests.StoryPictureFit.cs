@@ -51,14 +51,12 @@ internal static partial class DocxInlineCompositionTests
             var original = source.Paragraphs.Single();
             var image = original.Images.Single() with { SourceRunIndex = -1 };
             var paragraph = original with { Runs = [], Images = [image], InlineContent = null };
-            var paragraphs = new Dictionary<string, IReadOnlyList<DocxParagraph>> { ["default"] = [paragraph] };
             var elements = new Dictionary<string, IReadOnlyList<DocxBodyElement>> { ["default"] = [new DocxParagraphElement(paragraph)] };
-            var settings = header ? source.PageSettings with { HeaderParagraphsByType = paragraphs, HeaderBodyElementsByType = elements }
-                : source.PageSettings with { FooterParagraphsByType = paragraphs, FooterBodyElementsByType = elements };
+            var settings = header ? source.PageSettings with { HeaderBodyElementsByType = elements }
+                : source.PageSettings with { FooterBodyElementsByType = elements };
             var body = DocxTests.CreateDocxLayoutParagraph("Body survives.", 12d, 14d);
             source = source with { PageSettings = settings, FinalSectionBreak = source.FinalSectionBreak! with { PageSettings = settings },
                 BodyElements = [new DocxParagraphElement(body)], HeaderParagraphs = header ? [paragraph] : [], FooterParagraphs = header ? [] : [paragraph],
-                HeaderParagraphsByType = settings.HeaderParagraphsByType, FooterParagraphsByType = settings.FooterParagraphsByType,
                 HeaderBodyElementsByType = settings.HeaderBodyElementsByType, FooterBodyElementsByType = settings.FooterBodyElementsByType };
             var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
             var page = engine.Create(source, new DocxTests.FamilyWidthTextMeasurer(), default).Pages.Single();
