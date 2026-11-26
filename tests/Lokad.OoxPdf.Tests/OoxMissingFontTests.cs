@@ -480,8 +480,8 @@ internal static class OoxMissingFontTests
         var resolver = new FixedBytesResolver(TestFontBuilder.CreateTestFont());
         const string missing = "\U0001F9EA";
         string input = WriteCommentBalloonDocx("Start" + missing + "End", "Agent" + missing + "Name");
-        var (preserved, preserveDiagnostics) = Render(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
-        var (review, reviewDiagnostics) = Render(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        var (preserved, preserveDiagnostics) = RenderEmbeddedCommentBalloon(input, resolver, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        var (review, reviewDiagnostics) = RenderEmbeddedCommentBalloon(input, resolver, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
 
         TestAssert.Contains("Start?End", preserved);
         TestAssert.Contains("Start?End", review);
@@ -494,21 +494,41 @@ internal static class OoxMissingFontTests
             TestAssert.Contains("U+1F9EA", diagnostics.Single(d => d.Id == "FONT_MISSING_GLYPHS").Message);
         }
 
-        (string Text, List<OoxPdfDiagnostic> Diagnostics) Render(OoxPdfDocxMarkupGeometryMode geometry)
+    }
+
+    public static void BalloonPreviewTruncatesAtTextElementBoundary()
+    {
+        var resolver = new FixedBytesResolver(TestFontBuilder.CreateTestFont());
+        const string margins = """<w:pgMar w:top="1440" w:left="1440" w:bottom="1440" w:right="2880"/>""";
+        const string suffix = "XYZ tail text";
+        string boundary = new('i', 34);
+        string fits = new('i', 33);
+        foreach (string grapheme in new[] { "\U0001F600", "A\u0301" })
+        foreach (var (prefix, expected) in new[] { (boundary, boundary), (fits, fits + grapheme) })
         {
-            using var stream = File.OpenRead(input);
-            using var package = OoxPackage.Open(stream, default);
-            var diagnostics = new List<OoxPdfDiagnostic>();
-            const OoxPdfDocxMarkupMode mode = OoxPdfDocxMarkupMode.AllMarkup;
-            var document = new DocxReader().Read(package, diagnostics.Add, default, mode);
-            PdfPage page = new DocxRenderer(resolver, mode, geometry).RenderPagesAsync(document, diagnostics.Add, default)
-                .ToBlockingEnumerable().Single();
-            string text = string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).Select(show => show.Text));
-            return (text, diagnostics);
+            string input = WriteCommentBalloonDocx(prefix + grapheme + suffix, pageMargins: margins);
+            var (text, diagnostics) = RenderEmbeddedCommentBalloon(input, resolver, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+            TestAssert.True(text.EndsWith(expected + "...", StringComparison.Ordinal), "The preview keeps complete text elements within the existing cut.");
+            TestAssert.DoesNotContain("\uFFFD", text);
+            TestAssert.True(diagnostics.All(d => d.Id != "FONT_MISSING_GLYPHS"), "All authored characters have glyphs in the pinned face.");
         }
     }
 
-    private static string WriteCommentBalloonDocx(string body = "Balloon words here", string author = "Reviewer")
+    private static (string Text, List<OoxPdfDiagnostic> Diagnostics) RenderEmbeddedCommentBalloon(
+        string input, IFontResolver resolver, OoxPdfDocxMarkupGeometryMode geometry)
+    {
+        using var stream = File.OpenRead(input);
+        using var package = OoxPackage.Open(stream, default);
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        const OoxPdfDocxMarkupMode mode = OoxPdfDocxMarkupMode.AllMarkup;
+        var document = new DocxReader().Read(package, diagnostics.Add, default, mode);
+        PdfPage page = new DocxRenderer(resolver, mode, geometry).RenderPagesAsync(document, diagnostics.Add, default)
+            .ToBlockingEnumerable().Single();
+        string text = string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).Select(show => show.Text));
+        return (text, diagnostics);
+    }
+
+    private static string WriteCommentBalloonDocx(string body = "Balloon words here", string author = "Reviewer", string pageMargins = "")
     {
         return TestFixtures.WriteTempPackage(".docx", new Dictionary<string, byte[]>()
         {
@@ -534,7 +554,7 @@ internal static class OoxMissingFontTests
                 "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
                 + "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">"
                 + "<w:body><w:p><w:commentRangeStart w:id=\"1\"/><w:r><w:t>Anchored</w:t></w:r><w:commentRangeEnd w:id=\"1\"/><w:r><w:commentReference w:id=\"1\"/></w:r></w:p>"
-                + "<w:sectPr><w:pgSz w:w=\"12240\" w:h=\"15840\"/></w:sectPr>"
+                + "<w:sectPr><w:pgSz w:w=\"12240\" w:h=\"15840\"/>" + pageMargins + "</w:sectPr>"
                 + "</w:body></w:document>"),
             ["word/comments.xml"] = TestFixtures.Utf8(
                 "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"

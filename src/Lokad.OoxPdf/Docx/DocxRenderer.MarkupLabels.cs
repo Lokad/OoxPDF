@@ -46,9 +46,18 @@ internal sealed partial class DocxRenderer
 
         int maxLength = Math.Max(8, (int)Math.Floor(Math.Max(42d, marginRight - 8d) / 2.8d));
         string normalized = text.Trim();
-        return normalized.Length <= maxLength
-            ? normalized
-            : normalized[..Math.Max(0, maxLength - 3)] + "...";
+        if (normalized.Length <= maxLength) return normalized;
+
+        int prefixLimit = maxLength - 3;
+        int end = 0;
+        while (end < prefixLimit)
+        {
+            int next = end + StringInfo.GetNextTextElementLength(normalized.AsSpan(end));
+            if (next > prefixLimit) break;
+            end = next;
+        }
+
+        return normalized[..end] + "...";
     }
 
     // Single source for the Word-compatible balloon body wrap shared by text
