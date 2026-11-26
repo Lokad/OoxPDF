@@ -1016,22 +1016,8 @@ internal static class PptxTablesTests
             TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
-        {
-            ["[Content_Types].xml"] = TestFixtures.Utf8(PptxTests.BasicContentTypes().Replace(
-                "</Types>",
-                "  <Override PartName=\"/ppt/theme/theme1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.theme+xml\"/>\r\n</Types>",
-                StringComparison.Ordinal)),
-            ["_rels/.rels"] = TestFixtures.Utf8(PptxTests.PackageRelationship()),
-            ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/>
-                  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/>
-                </Relationships>
-                """),
-            ["ppt/presentation.xml"] = TestFixtures.Utf8(PptxTests.BasicPresentation()),
-            ["ppt/theme/theme1.xml"] = TestFixtures.Utf8("""
+        using MemoryStream stream = PptxTests.CreateThemedSlidePackage(
+            theme: """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="TableTheme">
                   <a:themeElements>
@@ -1043,8 +1029,8 @@ internal static class PptxTablesTests
                     <a:fontScheme name="TableTheme"><a:majorFont/><a:minorFont/></a:fontScheme>
                   </a:themeElements>
                 </a:theme>
-                """),
-            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
+                """,
+            slide: """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
                   <p:cSld><p:spTree>
@@ -1067,11 +1053,8 @@ internal static class PptxTablesTests
                     </p:graphicFrame>
                   </p:spTree></p:cSld>
                 </p:sld>
-                """)
-        });
-
-        using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+                """);
+        using OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextGlyphRunSnapshot[] glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0)

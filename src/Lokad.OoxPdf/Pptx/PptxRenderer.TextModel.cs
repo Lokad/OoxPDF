@@ -800,7 +800,7 @@ internal sealed partial class PptxRenderer
         long slideNumber,
         bool includePlaceholders,
         IReadOnlyList<XDocument> placeholderSources,
-        PresentationFontResolver? fontResolver,
+        PresentationFontResolver fontResolver,
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -811,7 +811,6 @@ internal sealed partial class PptxRenderer
             return [];
         }
 
-        fontResolver ??= new PresentationFontResolver(await WindowsFontResolver.CreateAsync(cancellationToken).ConfigureAwait(false), cancellationToken);
         PptxTextFrameModel? frameModel = await BuildTextFrameModelAsync(node.Source, document, theme, colorMap,
             slideNumber, includePlaceholders, placeholderSources, fontResolver, cancellationToken,
             prepareSceneFrame: true).ConfigureAwait(false);

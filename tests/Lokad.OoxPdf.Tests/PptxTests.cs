@@ -643,6 +643,28 @@ internal static class PptxTests
             """;
     }
 
+    internal static Dictionary<string, string> BasicSlidePackageEntries(string slide) => new()
+    {
+        ["[Content_Types].xml"] = BasicContentTypes(),
+        ["_rels/.rels"] = PackageRelationship(),
+        ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+        ["ppt/presentation.xml"] = BasicPresentation(),
+        ["ppt/slides/slide1.xml"] = slide
+    };
+
+    internal static MemoryStream CreateThemedSlidePackage(string theme, string slide)
+    {
+        var entries = BasicSlidePackageEntries(slide);
+        entries["[Content_Types].xml"] = entries["[Content_Types].xml"].Replace("</Types>",
+            "  <Override PartName=\"/ppt/theme/theme1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.theme+xml\"/>\r\n</Types>",
+            StringComparison.Ordinal);
+        entries["ppt/_rels/presentation.xml.rels"] = entries["ppt/_rels/presentation.xml.rels"].Replace("</Relationships>",
+            "  <Relationship Id=\"rId2\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme\" Target=\"theme/theme1.xml\"/>\r\n</Relationships>",
+            StringComparison.Ordinal);
+        entries["ppt/theme/theme1.xml"] = theme;
+        return TestFixtures.CreateZipPackage(entries);
+    }
+
     internal static Dictionary<string, string> InheritedShapePackageEntries(string master, string layout, string slide) =>
         new()
         {
