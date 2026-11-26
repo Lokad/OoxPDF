@@ -470,12 +470,14 @@ internal sealed partial class PptxRenderer
     private readonly record struct ChartDataLabelOptions(
         bool ShowValue, bool ShowPercent, bool ShowCategoryName, bool ShowSeriesName, bool? LeaderLinesEnabled,
         bool ShowLegendKey, bool ShowBubbleSize, ChartDataLabelLeaderLines LeaderLines, string CustomText,
-        IReadOnlyList<ChartTextRunOverride> CustomTextRuns, PptxSceneChartDataLabelPosition PositionKind, string Position,
+        IReadOnlyList<ChartTextRunOverride> CustomTextRuns, PptxSceneChartDataLabelPosition? Position,
         string Separator, ChartNumberFormat NumberFormat, PptxSceneChartManualLayout Layout,
         ChartTextStyleOverride TextStyle, PptxSceneChartTextBodyProperties TextBodyProperties, ChartShapeStyle ShapeStyle,
         IReadOnlyDictionary<int, ChartDataLabelOptions> Overrides, bool IsDefined, bool Date1904 = false, bool? IsDeleted = null)
     {
-        public static ChartDataLabelOptions None { get; } = new(ShowValue: false, ShowPercent: false, ShowCategoryName: false, ShowSeriesName: false, LeaderLinesEnabled: null, ShowLegendKey: false, ShowBubbleSize: false, LeaderLines: ChartDataLabelLeaderLines.Empty, CustomText: string.Empty, CustomTextRuns: [], PositionKind: PptxSceneChartDataLabelPosition.Unknown, Position: string.Empty, Separator: string.Empty, NumberFormat: default, Layout: default, TextStyle: ChartTextStyleOverride.Empty, TextBodyProperties: default, ShapeStyle: ChartShapeStyle.Empty, Overrides: EmptyChartDataLabelOverrides, IsDefined: false);
+        public static ChartDataLabelOptions None { get; } = new(ShowValue: false, ShowPercent: false, ShowCategoryName: false, ShowSeriesName: false, LeaderLinesEnabled: null, ShowLegendKey: false, ShowBubbleSize: false, LeaderLines: ChartDataLabelLeaderLines.Empty, CustomText: string.Empty, CustomTextRuns: [], Position: null, Separator: string.Empty, NumberFormat: default, Layout: default, TextStyle: ChartTextStyleOverride.Empty, TextBodyProperties: default, ShapeStyle: ChartShapeStyle.Empty, Overrides: EmptyChartDataLabelOverrides, IsDefined: false);
+
+        public PptxSceneChartDataLabelPosition PositionKind => Position ?? PptxSceneChartDataLabelPosition.Unknown;
 
         public PptxSceneChartPointTextScope TextScope { get; init; }
 
@@ -498,15 +500,13 @@ internal sealed partial class PptxRenderer
         // The child owns component defaults, text style, and its point declarations.
         public ChartDataLabelOptions WithFallback(ChartDataLabelOptions parent)
         {
-            bool inheritPosition = string.IsNullOrEmpty(Position);
             return this with
             {
                 LeaderLinesEnabled = LeaderLinesEnabled ?? parent.LeaderLinesEnabled,
                 LeaderLines = LeaderLines.IsDefined ? LeaderLines : parent.LeaderLines,
                 CustomText = string.IsNullOrEmpty(CustomText) ? parent.CustomText : CustomText,
                 CustomTextRuns = CustomTextRuns.Count == 0 ? parent.CustomTextRuns : CustomTextRuns,
-                PositionKind = inheritPosition ? parent.PositionKind : PositionKind,
-                Position = inheritPosition ? parent.Position : Position,
+                Position = Position ?? parent.Position,
                 Separator = string.IsNullOrEmpty(Separator) ? parent.Separator : Separator,
                 NumberFormat = NumberFormat.WithFallback(parent.NumberFormat),
                 Layout = Layout.HasLayout ? Layout : parent.Layout,

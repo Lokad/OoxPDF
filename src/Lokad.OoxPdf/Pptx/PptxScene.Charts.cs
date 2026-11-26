@@ -155,27 +155,27 @@ internal sealed partial class PptxSceneBuilder
         XElement? labels = plot.Element(ChartNamespace + "dLbls");
         if (labels is null)
         {
-            return PptxSceneChartDataLabels.Defined(
-                showValue: null,
-                showPercent: null,
-                showCategoryName: null,
-                showSeriesName: null,
-                showLeaderLines: null,
-                showLegendKey: null,
-                showBubbleSize: null,
-                leaderLines: default,
-                position: string.Empty,
-                separator: string.Empty,
-                numberFormatInfo: default,
-                layout: default,
-                textStyle: new PptxSceneChartTextStyleOverride(null, null, null, null, null, null, null, null),
-                textBodyProperties: default,
-                shapeStyle: new PptxSceneChartShapeStyle(false, default, default, default, default, default, default, default, default),
-                overrides: [],
-                isDefined: false);
+            return new PptxSceneChartDataLabels(
+                ShowValue: null,
+                ShowPercent: null,
+                ShowCategoryName: null,
+                ShowSeriesName: null,
+                ShowLeaderLines: null,
+                ShowLegendKey: null,
+                ShowBubbleSize: null,
+                LeaderLines: default,
+                Position: null,
+                Separator: string.Empty,
+                NumberFormatInfo: default,
+                Layout: default,
+                TextStyle: new PptxSceneChartTextStyleOverride(null, null, null, null, null, null, null, null),
+                TextBodyProperties: default,
+                ShapeStyle: new PptxSceneChartShapeStyle(false, default, default, default, default, default, default, default, default),
+                Overrides: [],
+                IsDefined: false);
         }
 
-        return PptxSceneChartDataLabels.Defined(
+        return new PptxSceneChartDataLabels(
                 ReadOptionalChartBoolean(labels, "showVal"),
                 ReadOptionalChartBoolean(labels, "showPercent"),
                 ReadOptionalChartBoolean(labels, "showCatName"),
@@ -184,7 +184,7 @@ internal sealed partial class PptxSceneBuilder
                 ReadOptionalChartBoolean(labels, "showLegendKey"),
                 ReadOptionalChartBoolean(labels, "showBubbleSize"),
                 ReadChartLeaderLines(labels, theme, colorMap),
-                ReadChartElementValue(labels, "dLblPos"),
+                ParseChartDataLabelPosition(ReadChartElementValue(labels, "dLblPos")),
                 labels.Element(ChartNamespace + "separator")?.Value ?? string.Empty,
                 ReadChartNumberFormat(labels),
                 ReadChartManualLayout(labels),
@@ -192,8 +192,8 @@ internal sealed partial class PptxSceneBuilder
                 ReadChartTextBodyProperties(labels),
                 ReadChartShapeStyle(labels.Element(ChartNamespace + "spPr"), theme, colorMap),
                 ReadChartDataLabelOverrides(labels, theme, colorMap),
-                isDefined: true,
-                isDeleted: ReadOptionalChartBoolean(labels, "delete"));
+                IsDefined: true,
+                IsDeleted: ReadOptionalChartBoolean(labels, "delete"));
     }
 
     private static PptxSceneChartLeaderLines ReadChartLeaderLines(XElement labels, PptxTheme theme, PptxColorMap colorMap)
@@ -215,7 +215,6 @@ internal sealed partial class PptxSceneBuilder
             }
 
             XElement? text = label.Element(ChartNamespace + "tx");
-            string position = ReadChartElementValue(label, "dLblPos");
             overrides.Add(new PptxSceneChartDataLabelOverride(
                 index,
                 ReadOptionalChartBoolean(label, "delete"),
@@ -229,8 +228,7 @@ internal sealed partial class PptxSceneBuilder
                 ReadChartLeaderLines(label, theme, colorMap),
                 ReadChartText(text, false) ?? string.Empty,
                 ReadChartTextRuns(text, theme, colorMap),
-                ParseChartDataLabelPosition(position),
-                position,
+                ParseChartDataLabelPosition(ReadChartElementValue(label, "dLblPos")),
                 label.Element(ChartNamespace + "separator")?.Value ?? string.Empty,
                 ReadChartNumberFormat(label),
                 ReadChartManualLayout(label),

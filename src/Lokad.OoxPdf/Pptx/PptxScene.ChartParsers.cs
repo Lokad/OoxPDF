@@ -71,28 +71,21 @@ internal sealed partial class PptxSceneBuilder
         };
     }
 
-    internal static PptxSceneChartDataLabelPosition ParseChartDataLabelPosition(string? position)
+    private static PptxSceneChartDataLabelPosition? ParseChartDataLabelPosition(string position)
     {
+        // An empty value inherits. An explicit unknown selects the plot's default.
         return position switch
         {
-            "bestFit" => PptxSceneChartDataLabelPosition.BestFit,
-            "b" => PptxSceneChartDataLabelPosition.Bottom,
-            "ctr" => PptxSceneChartDataLabelPosition.Center,
-            "inBase" => PptxSceneChartDataLabelPosition.InsideBase,
-            "inEnd" => PptxSceneChartDataLabelPosition.InsideEnd,
-            "l" => PptxSceneChartDataLabelPosition.Left,
-            "outEnd" => PptxSceneChartDataLabelPosition.OutsideEnd,
-            "r" => PptxSceneChartDataLabelPosition.Right,
-            "t" => PptxSceneChartDataLabelPosition.Top,
-            _ when position?.Equals("bestFit", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartDataLabelPosition.BestFit,
-            _ when position?.Equals("b", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartDataLabelPosition.Bottom,
-            _ when position?.Equals("ctr", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartDataLabelPosition.Center,
-            _ when position?.Equals("inBase", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartDataLabelPosition.InsideBase,
-            _ when position?.Equals("inEnd", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartDataLabelPosition.InsideEnd,
-            _ when position?.Equals("l", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartDataLabelPosition.Left,
-            _ when position?.Equals("outEnd", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartDataLabelPosition.OutsideEnd,
-            _ when position?.Equals("r", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartDataLabelPosition.Right,
-            _ when position?.Equals("t", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartDataLabelPosition.Top,
+            "" => null,
+            _ when position.Equals("bestFit", StringComparison.OrdinalIgnoreCase) => PptxSceneChartDataLabelPosition.BestFit,
+            _ when position.Equals("b", StringComparison.OrdinalIgnoreCase) => PptxSceneChartDataLabelPosition.Bottom,
+            _ when position.Equals("ctr", StringComparison.OrdinalIgnoreCase) => PptxSceneChartDataLabelPosition.Center,
+            _ when position.Equals("inBase", StringComparison.OrdinalIgnoreCase) => PptxSceneChartDataLabelPosition.InsideBase,
+            _ when position.Equals("inEnd", StringComparison.OrdinalIgnoreCase) => PptxSceneChartDataLabelPosition.InsideEnd,
+            _ when position.Equals("l", StringComparison.OrdinalIgnoreCase) => PptxSceneChartDataLabelPosition.Left,
+            _ when position.Equals("outEnd", StringComparison.OrdinalIgnoreCase) => PptxSceneChartDataLabelPosition.OutsideEnd,
+            _ when position.Equals("r", StringComparison.OrdinalIgnoreCase) => PptxSceneChartDataLabelPosition.Right,
+            _ when position.Equals("t", StringComparison.OrdinalIgnoreCase) => PptxSceneChartDataLabelPosition.Top,
             _ => PptxSceneChartDataLabelPosition.Unknown
         };
     }

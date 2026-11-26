@@ -854,26 +854,58 @@ internal static class PptxChartAxesTests
 
     public static void PptxChartUnknownDataLabelPositionResolvesThroughExplicitDefault()
     {
-        PptxSceneChart chart = PptxTests.BuildSingleChartScene("""
-            <?xml version="1.0" encoding="UTF-8"?>
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
-              <c:chart><c:plotArea>
-                <c:lineChart>
-                  <c:dLbls><c:showVal val="1"/><c:dLblPos val="bogus"/></c:dLbls>
-                  <c:ser><c:tx><c:v>Line Series</c:v></c:tx><c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser>
-                </c:lineChart>
-              </c:plotArea></c:chart>
-            </c:chartSpace>
-            """) ?? throw new InvalidOperationException("Expected chart scene.");
-        TestAssert.Equal(PptxSceneChartDataLabelPosition.Unknown, chart.Plots[0].DataLabels.PositionKind);
-        TestAssert.Equal("bogus", chart.Plots[0].DataLabels.Position);
+        var center = Paint(pointPosition: null);
+        var outside = Paint("bogus");
+        var insideBase = Paint(pointPosition: null, seriesPosition: "inBase");
+        TestAssert.Equal(center, Paint("CTR"));
+        TestAssert.Equal(center, Paint(""));
+        TestAssert.Equal(outside, Paint("outEnd"));
+        TestAssert.Equal(insideBase, Paint("inBase", seriesPosition: "inBase"));
+        TestAssert.True(insideBase.X < center.X && center.X < outside.X,
+            "The complete label distinguishes the two inherited positions from the explicit unknown fallback.");
 
-        System.Reflection.MethodInfo resolvePosition = typeof(PptxRenderer).GetMethod(
-            "ResolveChartDataLabelPosition",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected data-label position resolver.");
-        object position = resolvePosition.Invoke(null, [PptxSceneChartDataLabelPosition.Unknown]) ?? throw new InvalidOperationException("Expected resolved data-label position.");
-
-        TestAssert.Equal(PptxSceneChartDataLabelPosition.OutsideEnd, (PptxSceneChartDataLabelPosition)position);
+        static (double X, double Y) Paint(string? pointPosition, string? seriesPosition = null)
+        {
+            const string label = "Position Witness";
+            string Position(string value) => $"""<c:dLblPos val="{value}"/>""";
+            const string otherFlags = """
+                <c:showLegendKey val="0"/><c:showCatName val="0"/><c:showSerName val="0"/>
+                <c:showPercent val="0"/><c:showBubbleSize val="0"/>
+                """;
+            string point = $$"""
+                <c:dLbl><c:idx val="0"/><c:tx><c:rich><a:bodyPr/><a:lstStyle/>
+                  <a:p><a:r><a:t>{{label}}</a:t></a:r></a:p></c:rich></c:tx>
+                  {{(pointPosition is null ? "" : Position(pointPosition))}}<c:showVal val="0"/>{{otherFlags}}</c:dLbl>
+                """;
+            string seriesLabels = seriesPosition is null ? "" :
+                $"<c:dLbls>{point}{Position(seriesPosition)}<c:showVal val=\"0\"/>{otherFlags}</c:dLbls>";
+            string plotPoint = seriesPosition is null ? point : "";
+            string chart = $$"""
+                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+                    xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <c:chart><c:autoTitleDeleted val="1"/><c:plotArea>
+                    <c:barChart><c:barDir val="bar"/><c:grouping val="clustered"/>
+                      <c:ser><c:idx val="0"/><c:order val="0"/>
+                        {{seriesLabels}}
+                        <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat>
+                        <c:val><c:numLit><c:pt idx="0"><c:v>60</c:v></c:pt></c:numLit></c:val></c:ser>
+                      <c:dLbls>{{plotPoint}}<c:dLblPos val="ctr"/><c:showVal val="1"/>{{otherFlags}}</c:dLbls>
+                      <c:axId val="1"/><c:axId val="2"/>
+                    </c:barChart>
+                    <c:catAx><c:axId val="1"/><c:axPos val="l"/><c:crossAx val="2"/></c:catAx>
+                    <c:valAx><c:axId val="2"/><c:scaling><c:min val="0"/><c:max val="100"/></c:scaling>
+                      <c:axPos val="b"/><c:crossAx val="1"/></c:valAx>
+                  </c:plotArea></c:chart>
+                </c:chartSpace>
+                """;
+            using var stream = PptxTests.CreateSingleChartPackageStream(chart);
+            using var package = OoxPackage.Open(stream, default);
+            var document = new PptxReader().Read(package, default);
+            var page = new PptxRenderer(new PortableRenderingTests.PinnedResolver())
+                .RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().Single();
+            var show = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).Single(show => show.Text == label);
+            return (show.X, show.Y);
+        }
     }
 
     public static void PptxChartUnknownGroupingUsesSceneAuthoritativeDefault()

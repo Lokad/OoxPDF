@@ -251,132 +251,25 @@ internal enum PptxSceneChartPlotKind
     Unknown
 }
 
-// T02: the position enum derives from its raw spelling inside Defined, so labels
-// cannot carry a position enum that disagrees with the stored spelling.
-internal sealed record PptxSceneChartDataLabels
-{
-    public bool? IsDeleted { get; }
-
-    public bool? ShowValue { get; }
-
-    public bool? ShowPercent { get; }
-
-    public bool? ShowCategoryName { get; }
-
-    public bool? ShowSeriesName { get; }
-
-    public bool? ShowLeaderLines { get; }
-
-    public bool? ShowLegendKey { get; }
-
-    public bool? ShowBubbleSize { get; }
-
-    public PptxSceneChartLeaderLines LeaderLines { get; }
-
-    public PptxSceneChartDataLabelPosition PositionKind { get; }
-
-    public string Position { get; }
-
-    public string Separator { get; }
-
-    public PptxSceneChartNumberFormat NumberFormatInfo { get; }
-
-    public PptxSceneChartManualLayout Layout { get; }
-
-    public PptxSceneChartTextStyleOverride TextStyle { get; }
-
-    public PptxSceneChartTextBodyProperties TextBodyProperties { get; }
-
-    public PptxSceneChartShapeStyle ShapeStyle { get; }
-
-    public IReadOnlyList<PptxSceneChartDataLabelOverride> Overrides { get; }
-
-    public bool IsDefined { get; }
-
-    private PptxSceneChartDataLabels(
-        bool? showValue,
-        bool? showPercent,
-        bool? showCategoryName,
-        bool? showSeriesName,
-        bool? showLeaderLines,
-        bool? showLegendKey,
-        bool? showBubbleSize,
-        PptxSceneChartLeaderLines leaderLines,
-        PptxSceneChartDataLabelPosition positionKind,
-        string position,
-        string separator,
-        PptxSceneChartNumberFormat numberFormatInfo,
-        PptxSceneChartManualLayout layout,
-        PptxSceneChartTextStyleOverride textStyle,
-        PptxSceneChartTextBodyProperties textBodyProperties,
-        PptxSceneChartShapeStyle shapeStyle,
-        IReadOnlyList<PptxSceneChartDataLabelOverride> overrides,
-        bool isDefined,
-        bool? isDeleted)
-    {
-        IsDeleted = isDeleted;
-        ShowValue = showValue;
-        ShowPercent = showPercent;
-        ShowCategoryName = showCategoryName;
-        ShowSeriesName = showSeriesName;
-        ShowLeaderLines = showLeaderLines;
-        ShowLegendKey = showLegendKey;
-        ShowBubbleSize = showBubbleSize;
-        LeaderLines = leaderLines;
-        PositionKind = positionKind;
-        Position = position;
-        Separator = separator;
-        NumberFormatInfo = numberFormatInfo;
-        Layout = layout;
-        TextStyle = textStyle;
-        TextBodyProperties = textBodyProperties;
-        ShapeStyle = shapeStyle;
-        Overrides = overrides;
-        IsDefined = isDefined;
-    }
-
-    public static PptxSceneChartDataLabels Defined(
-        bool? showValue,
-        bool? showPercent,
-        bool? showCategoryName,
-        bool? showSeriesName,
-        bool? showLeaderLines,
-        bool? showLegendKey,
-        bool? showBubbleSize,
-        PptxSceneChartLeaderLines leaderLines,
-        string position,
-        string separator,
-        PptxSceneChartNumberFormat numberFormatInfo,
-        PptxSceneChartManualLayout layout,
-        PptxSceneChartTextStyleOverride textStyle,
-        PptxSceneChartTextBodyProperties textBodyProperties,
-        PptxSceneChartShapeStyle shapeStyle,
-        IReadOnlyList<PptxSceneChartDataLabelOverride> overrides,
-        bool isDefined,
-        bool? isDeleted = null)
-    {
-        return new PptxSceneChartDataLabels(
-            showValue,
-            showPercent,
-            showCategoryName,
-            showSeriesName,
-            showLeaderLines,
-            showLegendKey,
-            showBubbleSize,
-            leaderLines,
-            PptxSceneBuilder.ParseChartDataLabelPosition(position),
-            position,
-            separator,
-            numberFormatInfo,
-            layout,
-            textStyle,
-            textBodyProperties,
-            shapeStyle,
-            overrides,
-            isDefined,
-            isDeleted);
-    }
-}
+internal sealed record PptxSceneChartDataLabels(
+    bool? ShowValue,
+    bool? ShowPercent,
+    bool? ShowCategoryName,
+    bool? ShowSeriesName,
+    bool? ShowLeaderLines,
+    bool? ShowLegendKey,
+    bool? ShowBubbleSize,
+    PptxSceneChartLeaderLines LeaderLines,
+    PptxSceneChartDataLabelPosition? Position,
+    string Separator,
+    PptxSceneChartNumberFormat NumberFormatInfo,
+    PptxSceneChartManualLayout Layout,
+    PptxSceneChartTextStyleOverride TextStyle,
+    PptxSceneChartTextBodyProperties TextBodyProperties,
+    PptxSceneChartShapeStyle ShapeStyle,
+    IReadOnlyList<PptxSceneChartDataLabelOverride> Overrides,
+    bool IsDefined,
+    bool? IsDeleted = null);
 
 internal enum PptxSceneChartPointTextScope { Container, Chart, ImplicitTextBody }
 
@@ -393,8 +286,7 @@ internal sealed record PptxSceneChartDataLabelOverride(
     PptxSceneChartLeaderLines LeaderLines,
     string CustomText,
     IReadOnlyList<PptxSceneChartTextRun> CustomTextRuns,
-    PptxSceneChartDataLabelPosition PositionKind,
-    string Position,
+    PptxSceneChartDataLabelPosition? Position,
     string Separator,
     PptxSceneChartNumberFormat NumberFormatInfo,
     PptxSceneChartManualLayout Layout,

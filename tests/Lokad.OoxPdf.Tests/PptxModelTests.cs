@@ -591,7 +591,7 @@ internal static class PptxModelTests
         TestAssert.Equal("dash", slide.SlideNodes[4].Chart?.Plots[0].DataLabels.LeaderLines.Line.DashPreset ?? string.Empty);
         TestAssert.Equal(2, slide.SlideNodes[4].Chart?.Plots[0].DataLabels.LeaderLines.Line.Cap ?? 0);
         TestAssert.Equal("sq", slide.SlideNodes[4].Chart?.Plots[0].DataLabels.LeaderLines.Line.CapValue ?? string.Empty);
-        TestAssert.Equal("outEnd", slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Position ?? string.Empty);
+        TestAssert.Equal(PptxSceneChartDataLabelPosition.OutsideEnd, slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Position);
         TestAssert.Equal("; ", slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Separator ?? string.Empty);
         TestAssert.Equal("#,##0.0", slide.SlideNodes[4].Chart?.Plots[0].DataLabels.NumberFormatInfo.FormatCode ?? string.Empty);
         TestAssert.Equal("Arial", slide.SlideNodes[4].Chart?.Plots[0].DataLabels.TextStyle.FontFamily ?? string.Empty);
@@ -628,8 +628,7 @@ internal static class PptxModelTests
         TestAssert.Equal("Arial", slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].CustomTextRuns[1].TextStyle.RequestedTypeface ?? string.Empty);
         TestAssert.Equal(PptxThemeTypefaceSource.Direct, slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].CustomTextRuns[1].TextStyle.TypefaceSource ?? default);
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].CustomTextRuns[1].TextStyle.Italic == true, "Expected second custom label rich-text run italic style in the scene model.");
-        TestAssert.Equal("ctr", slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].Position ?? string.Empty);
-        TestAssert.Equal(PptxSceneChartDataLabelPosition.Center, slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].PositionKind);
+        TestAssert.Equal(PptxSceneChartDataLabelPosition.Center, slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].Position);
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].Layout.HasLayout == true, "Expected per-label manual layout in the scene model.");
         TestAssert.Equal(0.44d, slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].Layout.X ?? 0d);
         TestAssert.Equal(0.28d, slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].Layout.Y ?? 0d);
@@ -651,8 +650,7 @@ internal static class PptxModelTests
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[0].Series[0].DataLabels.IsDefined == true, "Expected series-level data-label options to be preserved separately from plot-level labels.");
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[0].Series[0].DataLabels.ShowValue == true, "Expected series-level show-value flag in the scene model.");
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[0].Series[0].DataLabels.ShowPercent is null, "Expected missing series-level show-percent flag to remain distinct from an explicit disable.");
-        TestAssert.Equal("t", slide.SlideNodes[4].Chart?.Plots[0].Series[0].DataLabels.Position ?? string.Empty);
-        TestAssert.Equal(PptxSceneChartDataLabelPosition.Top, slide.SlideNodes[4].Chart?.Plots[0].Series[0].DataLabels.PositionKind);
+        TestAssert.Equal(PptxSceneChartDataLabelPosition.Top, slide.SlideNodes[4].Chart?.Plots[0].Series[0].DataLabels.Position);
         TestAssert.Equal(" + ", slide.SlideNodes[4].Chart?.Plots[0].Series[0].DataLabels.Separator ?? string.Empty);
         TestAssert.Equal(12.5d, slide.SlideNodes[4].Chart?.Plots[0].Series[0].ValuePoints[0].Value ?? 0d);
         TestAssert.Equal("South", slide.SlideNodes[4].Chart?.Plots[0].Series[0].CategoryPoints[1].Text ?? string.Empty);
