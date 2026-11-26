@@ -569,6 +569,8 @@ internal static partial class SvgTextTests
         const string sameColorNorth = """NO<tspan color="red" style="color:rgb(17,34,51) !important;color:green">RT</tspan>H""";
         const string literalColorNorth = """NO<tspan color="green" fill="#112233"><tspan color="blue">RT</tspan></tspan>H""";
         const string literalColorSouth = """&#160;SO<tspan color="red">UT</tspan>H""";
+        const string restoredFillNorth = """NO<tspan fill="red" color="green"><tspan fill="currentColor" color="#112233">RT</tspan></tspan>H""";
+        const string restoredOpacitySouth = """&#160;SO<tspan fill-opacity=".25"><tspan style="fill-opacity:75%">UT</tspan></tspan>H""";
         const string neutralSpacingNorth = """NO<tspan letter-spacing="0em">RT</tspan>H""";
         const string neutralSpacingSouth = """&#160;SO<tspan word-spacing="2px" style="word-spacing:0.0pt !important;word-spacing:3px">UT</tspan>H""";
         const string neutralTypographyNorth = """NO<tspan style="font-variant:normal;text-decoration:none"><tspan font-stretch="normal">RT</tspan></tspan>H""";
@@ -587,6 +589,7 @@ internal static partial class SvgTextTests
                 Picture(sameFillNorth, sameFillSouth), Picture(sameTypefaceNorth, sameTypefaceSouth),
                 Picture(sameOpacityNorth, sameOpacitySouth),
                 Picture(sameColorNorth, literalColorSouth), Picture(literalColorNorth, plainSouth),
+                Picture(restoredFillNorth, restoredOpacitySouth),
                 Picture(neutralSpacingNorth, neutralSpacingSouth, """style="letter-spacing:0mm;word-spacing:0em;baseline-shift:0pt" """),
                 Picture(neutralTypographyNorth, plainSouth),
                 Picture(neutralDirectionNorth, neutralWritingSouth), Picture(neutralBaselineNorth, plainSouth),

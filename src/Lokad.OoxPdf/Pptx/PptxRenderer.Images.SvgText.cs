@@ -342,7 +342,7 @@ internal sealed partial class PptxRenderer
         string? labelLanguage = null;
         XName spanName = element.Name.Namespace + "tspan";
         XName linkName = element.Name.Namespace + "a";
-        if (!Append(element, elementStyle, hidden, ownerTransparent: false, whitespace, initialAnchor)) return false;
+        if (!Append(element, elementStyle, hidden, ownerTransparent: false, whitespace, initialAnchor, fillMayDiffer: false)) return false;
 
         text = characters.ToString();
         hiddenCharacters = visibility?.ToArray();
@@ -353,11 +353,11 @@ internal sealed partial class PptxRenderer
             (string?)owner.Attribute(xmlLanguageName) ?? (string?)owner.Attribute(languageName);
 
         bool Append(XElement owner, IReadOnlyDictionary<string, string> ownerStyle, bool ownerHidden, bool ownerTransparent,
-            SvgTextWhitespace space, string ownerAnchor)
+            SvgTextWhitespace space, string ownerAnchor, bool fillMayDiffer)
         {
             bool preserveSpace = space is SvgTextWhitespace.XmlPreserve or SvgTextWhitespace.CssPreserve;
             bool hideOutlines = ownerHidden || ownerTransparent;
-            bool? paintsStroke = null;
+            bool? preservesPaint = null;
             foreach (XNode node in owner.Nodes())
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -380,9 +380,8 @@ internal sealed partial class PptxRenderer
                             if (characters.Length != 0) pendingSpace ??= (hideOutlines, ownerAnchor);
                             continue;
                         }
-                        // Check the element that owns this glyph. A descendant
-                        // of a stroked container can disable the inherited stroke.
-                        if (!hideOutlines && (paintsStroke ??= HasSvgTextStroke(owner, ownerStyle, paintServers)) &&
+                        // A container can pass down paint that its descendants override.
+                        if (!(preservesPaint ??= OwnerPreservesPaint()) &&
                             !OoxTextBreakRules.IsNonPrintingBreakControl(character))
                             return false;
                         if (pendingSpace is { } pending)
@@ -411,10 +410,22 @@ internal sealed partial class PptxRenderer
                 if (opacity is not double localOpacity || localOpacity is > 0d and < 1d) return false;
                 bool childTransparent = ownerTransparent || localOpacity == 0d;
                 string? childAnchor = ResolveSvgTextAnchor(ReadSvgPresentationAttribute(child, style, "text-anchor"), ownerAnchor);
+                bool childFillMayDiffer = fillMayDiffer ||
+                    ReadSvgPresentationAttribute(child, style, "fill") is not null ||
+                    ReadSvgPresentationAttribute(child, style, "color") is not null ||
+                    ReadSvgPresentationAttribute(child, style, "fill-opacity") is not null;
                 if (childAnchor is null || !Append(child, style, childHidden, childTransparent,
-                    ResolveSvgTextWhitespace(child, style, space), childAnchor)) return false;
+                    ResolveSvgTextWhitespace(child, style, space), childAnchor, childFillMayDiffer)) return false;
             }
             return true;
+
+            bool OwnerPreservesPaint()
+            {
+                if (!hideOutlines && HasSvgTextStroke(owner, ownerStyle, paintServers)) return false;
+                return !fillMayDiffer ||
+                    TryReadSvgTextFill(owner, ownerStyle, paintServers, out var fill) && fill == appearance.Fill &&
+                    ReadSvgOpacityValue(ReadSvgInheritedAttribute(owner, ownerStyle, "fill-opacity")) == appearance.FillOpacity;
+            }
         }
 
         bool IsPlainChild(XElement child, IReadOnlyDictionary<string, string> style, bool isLink)
@@ -425,7 +436,6 @@ internal sealed partial class PptxRenderer
                 if (!string.Equals(language, labelLanguage, StringComparison.OrdinalIgnoreCase)) return false;
             }
 
-            bool? hasLabelFill = null;
             bool? hasLabelKerning = null;
             return child.Attributes().All(IsPlainAttribute) &&
                 style.All(declaration => RetainsLabelStyle(declaration.Key.ToLowerInvariant(), declaration.Value));
@@ -462,13 +472,10 @@ internal sealed partial class PptxRenderer
                 "font-weight" => InheritsSvgPropertyValue(value) ||
                     TryReadSvgTextWeight(value, out int weight) && weight == appearance.Weight,
                 "font-size" => TryResolveSvgFontSize(value, appearance.Size, out double size) && size == appearance.Size,
-                "fill" or "color" =>
-                    (hasLabelFill ??= TryReadSvgTextFill(child, style, paintServers, out var fill) &&
-                        fill == appearance.Fill) == true,
-                "fill-opacity" => InheritsSvgPropertyValue(value) || ParseSvgOpacity(value) == appearance.FillOpacity,
-                // Effective stroke paint is checked where the glyphs are owned.
-                "stroke" or "stroke-opacity" or "stroke-width" or "stroke-linecap" or "stroke-linejoin" or
+                // Effective paint is checked where the glyphs are owned.
+                "fill" or "color" or "stroke" or "stroke-opacity" or "stroke-width" or "stroke-linecap" or "stroke-linejoin" or
                     "stroke-miterlimit" or "stroke-dasharray" or "stroke-dashoffset" or "paint-order" => true,
+                "fill-opacity" => InheritsSvgPropertyValue(value) || ParseSvgOpacity(value) is not null,
                 "font-kerning" or "kerning" =>
                     (hasLabelKerning ??= TryReadSvgTextKerning(child, style, out bool kerning) && kerning == appearance.Kerning) == true,
                 _ => IsNeutralSvgTextStyle(name, value),
