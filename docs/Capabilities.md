@@ -111,6 +111,8 @@ Plain labels and spans follow inherited `xml:space` and single-line CSS
 `white-space` declarations. Local CSS takes precedence. Preserved spaces
 and no-break spaces retain their advance at label edges. CSS forced lines
 and preserved tab stops remain unsupported.
+One plain label uses the text anchor of its first positioned character.
+Plain spans can supply that anchor without introducing a new text chunk.
 Soft break markers and word joiners add no ink or advance to single-line SVG labels.
 Unmapped characters in hidden spans retain the selected face's missing-glyph
 advance while visible neighbors still paint.

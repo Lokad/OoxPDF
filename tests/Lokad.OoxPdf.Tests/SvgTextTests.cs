@@ -462,6 +462,38 @@ internal static partial class SvgTextTests
         }
     }
 
+    public static void SvgPlainSpansShareTheAnchorOfTheFirstPositionedCharacter()
+    {
+        static string Picture(string content, string anchor) => Svg($"""
+            <text x="145" y="80" text-anchor="{anchor}" font-size="20" fill="#112233">{content}</text>
+            <rect x="155" y="90" width="20" height="10" fill="lime"/>
+            """);
+        static void CheckLabel(string pdf) => TestAssert.Equal(9, LabelPaths(pdf));
+        const string label = "North Star";
+
+        string middle = Picture(label, "middle");
+        AssertSvgPaintInBothFormats(middle,
+            [Picture("""North <tspan text-anchor="middle">Star</tspan>""", "middle"),
+             Picture("""North <tspan style="text-anchor:end">Star</tspan>""", "middle")],
+            CheckLabel, "0 1 0 rg");
+
+        string end = Picture(label, "end");
+        AssertSvgPaintInBothFormats(end,
+            [Picture("""  <tspan text-anchor="start" style="text-anchor:end">North</tspan> Star""", "middle"),
+             Picture("""<tspan text-anchor="end"><tspan style="text-anchor:inherit">North</tspan></tspan> Star""", "middle"),
+             Picture("""<tspan text-anchor="start">&#173;</tspan><tspan text-anchor="end">North</tspan> Star""", "middle")],
+            CheckLabel, "0 1 0 rg");
+        TestAssert.True(Paint(middle).ToString() != Paint(end).ToString(),
+            "The middle and end controls must place their complete labels at different coordinates.");
+
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        string positioned = Paint(Picture("""North <tspan x="140" text-anchor="end">Star</tspan>""", "middle"),
+            diagnostics).ToString();
+        TestAssert.Contains("0 1 0 rg", positioned);
+        TestAssert.True(!positioned.Contains(LabelColor, StringComparison.Ordinal) &&
+            diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT"), "Explicit span positions still require separate chunks.");
+    }
+
     public static void SvgTextChildrenCanRepeatTheLabelLanguage()
     {
         static string Picture(string owner, string span) => Svg($"""
