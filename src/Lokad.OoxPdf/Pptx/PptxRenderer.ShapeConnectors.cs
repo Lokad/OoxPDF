@@ -48,12 +48,15 @@ internal sealed partial class PptxRenderer
             return;
         }
 
-        double markerLength = style.Kind == PptxSceneLineEndKind.Stealth
-            ? GetStraightStealthLineEndLength(lineWidth, style)
-            : Math.Max(6.5d, lineWidth * 4d) * style.LengthScale;
-        double markerWidth = style.Kind == PptxSceneLineEndKind.Stealth
-            ? GetStraightStealthLineEndWidth(lineWidth, style)
-            : Math.Max(5d, lineWidth * 3.2d) * style.WidthScale;
+        if (style.Kind == PptxSceneLineEndKind.Stealth)
+        {
+            AppendStealthLineEndMarker(graphics, style, tipX, tipY, ux, uy, lineWidth);
+            graphics.FillCurrentPath();
+            return;
+        }
+
+        double markerLength = Math.Max(6.5d, lineWidth * 4d) * style.LengthScale;
+        double markerWidth = Math.Max(5d, lineWidth * 3.2d) * style.WidthScale;
 
         (double X, double Y) Point(double along, double normal)
         {
@@ -62,15 +65,6 @@ internal sealed partial class PptxRenderer
 
         switch (style.Kind)
         {
-            case PptxSceneLineEndKind.Stealth:
-                graphics.FillPolygon(
-                [
-                    (tipX, tipY),
-                    Point(markerLength, markerWidth / 2d),
-                    Point(markerLength * OfficeStraightStealthLineEndNotchFactor, 0d),
-                    Point(markerLength, -markerWidth / 2d)
-                ]);
-                break;
             case PptxSceneLineEndKind.Diamond:
                 graphics.FillPolygon(
                 [
@@ -118,7 +112,7 @@ internal sealed partial class PptxRenderer
 
         if (Distance(startX, startY, endX, endY) > 0.001d)
         {
-            AppendClosedPolygon(graphics,
+            graphics.AppendPolygonPath(
             [
                 (startX + nx * half, startY + ny * half),
                 (endX + nx * half, endY + ny * half),
@@ -129,27 +123,20 @@ internal sealed partial class PptxRenderer
 
         if (headEnd.Kind == PptxSceneLineEndKind.Stealth)
         {
-            AppendStealthLineEndMarker(graphics, headEnd, x1, y1, x1 - x2, y1 - y2, lineWidth);
+            AppendStealthLineEndMarker(graphics, headEnd, x1, y1, -ux, -uy, lineWidth);
         }
 
         if (tailEnd.Kind == PptxSceneLineEndKind.Stealth)
         {
-            AppendStealthLineEndMarker(graphics, tailEnd, x2, y2, x2 - x1, y2 - y1, lineWidth);
+            AppendStealthLineEndMarker(graphics, tailEnd, x2, y2, ux, uy, lineWidth);
         }
 
         graphics.FillCurrentPath();
     }
 
-    private static void AppendStealthLineEndMarker(PdfGraphicsBuilder graphics, PptxSceneLineEnd style, double tipX, double tipY, double directionX, double directionY, double lineWidth)
+    private static void AppendStealthLineEndMarker(PdfGraphicsBuilder graphics, PptxSceneLineEnd style,
+        double tipX, double tipY, double ux, double uy, double lineWidth)
     {
-        double length = Math.Sqrt(directionX * directionX + directionY * directionY);
-        if (length <= 0.001d)
-        {
-            return;
-        }
-
-        double ux = directionX / length;
-        double uy = directionY / length;
         double nx = -uy;
         double ny = ux;
         double markerLength = GetStraightStealthLineEndLength(lineWidth, style);
@@ -160,7 +147,7 @@ internal sealed partial class PptxRenderer
             return (tipX - ux * along + nx * normal, tipY - uy * along + ny * normal);
         }
 
-        AppendClosedPolygon(graphics,
+        graphics.AppendPolygonPath(
         [
             (tipX, tipY),
             Point(markerLength, markerWidth / 2d),
@@ -177,22 +164,6 @@ internal sealed partial class PptxRenderer
     private static double GetStraightStealthLineEndWidth(double lineWidth, PptxSceneLineEnd style)
     {
         return Math.Max(OfficeStraightStealthLineEndMinimumSize, lineWidth * OfficeStraightStealthLineEndWidthFactor) * style.WidthScale;
-    }
-
-    private static void AppendClosedPolygon(PdfGraphicsBuilder graphics, IReadOnlyList<(double X, double Y)> points)
-    {
-        if (points.Count == 0)
-        {
-            return;
-        }
-
-        graphics.MoveTo(points[0].X, points[0].Y);
-        for (int i = 1; i < points.Count; i++)
-        {
-            graphics.LineTo(points[i].X, points[i].Y);
-        }
-
-        graphics.ClosePath();
     }
 
     private static void FillStraightArrowedLine(

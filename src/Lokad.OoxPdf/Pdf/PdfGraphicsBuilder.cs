@@ -780,7 +780,7 @@ internal sealed class PdfGraphicsBuilder
         builder.AppendLine("h");
     }
 
-    private void AppendPolygonPath((double X, double Y)[] points)
+    internal void AppendPolygonPath((double X, double Y)[] points)
     {
         if (points.Length == 0)
         {
