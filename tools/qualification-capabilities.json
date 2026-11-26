@@ -20653,6 +20653,7 @@
     "=SvgTextChildrenKeepEffectiveKerning",
     "=SvgTextChildrenKeepNeutralEffects",
     "=SvgLengthAdjustUsesNaturalWidthWithoutTextLength",
+    "=SvgTextInteractionKeepsStaticLabelPaint",
     "=SvgTextChildrenIgnoreTransformDeclarations",
     "=SvgInlineLinkTextKeepsPaintAndDiagnosesActions",
     "SvgLabelsPrepareFontsOnlyForVisiblePictureUses",

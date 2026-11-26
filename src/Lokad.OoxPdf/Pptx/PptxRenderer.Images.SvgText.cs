@@ -485,7 +485,7 @@ internal sealed partial class PptxRenderer
                     return true;
                 // Unknown namespaced attributes carry no SVG presentation.
                 if (ns != XNamespace.None) return ns != XNamespace.Xml && !isXLink;
-                return name is "id" or "class" or "role" or "style" or "lengthAdjust" ||
+                return name is "id" or "class" or "role" or "style" or "tabindex" or "lengthAdjust" ||
                     name.StartsWith("aria-", StringComparison.Ordinal) ||
                     name.StartsWith("data-", StringComparison.Ordinal) ||
                     RetainsLabelStyle(name, style.GetValueOrDefault(name, attribute.Value));
@@ -494,6 +494,8 @@ internal sealed partial class PptxRenderer
             bool RetainsLabelStyle(string name, string value) => name switch
             {
                 "display" or "visibility" or "opacity" or "white-space" or "text-anchor" => true,
+                // Pointer hit-testing leaves static text paint intact.
+                "pointer-events" => true,
                 // Descendants of SVG text content are not transformable (CSS Transforms §2).
                 "transform" or "transform-origin" or "transform-box" => true,
                 "font-family" or "font-style" or "font-weight" or "font-size" or "font-kerning" or "kerning" => true,

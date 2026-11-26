@@ -846,6 +846,26 @@ internal static partial class SvgTextTests
         }, "0 1 0 rg");
     }
 
+    public static void SvgTextInteractionKeepsStaticLabelPaint()
+    {
+        static string Picture(string attributes) => Svg($"""
+            <text x="104" y="45" font-size="24" text-anchor="middle" fill="#112233">NO<tspan {attributes}>RT</tspan>H</text>
+            <rect x="200" y="88" width="20" height="10" fill="lime"/>
+            """);
+
+        AssertSvgPaintInBothFormats(Picture(""),
+            [Picture("""tabindex="0" """), Picture("""pointer-events="none" """), Picture("""style="pointer-events: none" """)],
+            pdf => TestAssert.Equal(5, LabelPaths(pdf)), "0 1 0 rg");
+
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        string rotated = Paint(Picture("""rotate="18" """), diagnostics).ToString();
+        TestAssert.DoesNotContain(LabelColor, rotated);
+        TestAssert.Contains("0 1 0 rg", rotated);
+        var warning = diagnostics.Single(d => d.Message == "SVG picture omits 1 unsupported text element.");
+        TestAssert.Equal("SVG_UNSUPPORTED_CONTENT", warning.Id);
+        TestAssert.Equal("Partial", warning.Fallback);
+    }
+
     public static void SvgInlineLinkTextKeepsPaintAndDiagnosesActions()
     {
         string Picture(string north, string south) => Svg($"""
@@ -854,7 +874,7 @@ internal static partial class SvgTextTests
             <rect id="marker" x="120" y="90" width="20" height="10" fill="lime"/>
             """);
         const string plainSouth = "&#160;SOUTH";
-        const string modern = """NO<a href="#marker" target="_blank" rel="noopener" hreflang="en" type="image/svg+xml"><tspan>RT</tspan></a><a display="none" transform="translate(200)">INVISIBLE</a>H""";
+        const string modern = """NO<a href="#marker" target="_blank" rel="noopener" hreflang="en" type="image/svg+xml" tabindex="0" style="pointer-events: all"><tspan>RT</tspan></a><a display="none" transform="translate(200)">INVISIBLE</a>H""";
         const string legacy = """&#160;SO<tspan><a xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#marker" xlink:show="new" xlink:actuate="onRequest" xlink:title="Marker">UT</a></tspan>H""";
         var expected = Paint(Picture("NORTH", plainSouth));
         TestAssert.Equal(5, LabelPaths(expected.ToString()));
