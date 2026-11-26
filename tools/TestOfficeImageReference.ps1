@@ -26,7 +26,10 @@ function Save-Metadata([string] $Directory, $Metadata) {
 $valid=New-Control 'valid'
 $null=Test-OfficeImageReference $valid $hash
 $checks+='valid reference'
-foreach ($fault in @('page-bytes','dimensions','page-index','extra-page','secondary-pdf','input','kind','emf-path')) {
+$observedPdfSha256=(Get-FileHash -LiteralPath (Join-Path $valid 'reference.pdf')).Hash
+$null=Test-OfficeImageReference $valid $hash -ObservedPdfSha256 $observedPdfSha256
+$checks+='valid shared PDF observation'
+foreach ($fault in @('page-bytes','dimensions','page-index','extra-page','secondary-pdf','secondary-pin','input','kind','emf-path')) {
     $directory=New-Control $fault
     $metadata=Get-Content (Join-Path $directory 'reference-image-metadata.json') -Raw | ConvertFrom-Json -AsHashtable
     switch ($fault) {
@@ -35,13 +38,20 @@ foreach ($fault in @('page-bytes','dimensions','page-index','extra-page','second
         'page-index' {$metadata.Capture.Pages[0].Page=2}
         'extra-page' {[IO.File]::WriteAllBytes((Join-Path $directory 'page-002.png'),$png)}
         'secondary-pdf' {[IO.File]::AppendAllText((Join-Path $directory 'reference.pdf'),'changed')}
+        'secondary-pin' {$metadata.SecondaryPdfSha256='B'*64}
         'input' {$metadata.InputSha256='B'*64}
         'kind' {$metadata.ReferenceKind='OfficePdf'}
         'emf-path' {$metadata.Capture.Pages[0].Emf='../unowned.emf'}
     }
     Save-Metadata $directory $metadata
+    $observation=@{}
+    if ($fault -eq 'secondary-pin') {$observation.ObservedPdfSha256=$observedPdfSha256}
     $rejected=$false
-    try {$null=Test-OfficeImageReference $directory $hash} catch {$rejected=$true}
+    try {$null=Test-OfficeImageReference $directory $hash @observation}
+    catch {
+        if ($fault -eq 'secondary-pin' -and $_.Exception.Message -cne 'Office image secondary PDF hash differs') {throw}
+        $rejected=$true
+    }
     if (!$rejected) {throw ('Image reference accepted '+$fault)}
     $checks+=$fault
 }

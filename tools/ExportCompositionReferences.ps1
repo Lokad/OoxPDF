@@ -27,7 +27,7 @@ foreach ($document in @(Get-Content -LiteralPath $Manifest -Raw | ConvertFrom-Js
         if (Test-Path -LiteralPath $identity) {
             $reference = Read-CompositionReference $folder $document.Id $mode $document.Sha256 $ReferenceKind
             if ($ReferenceKind -eq 'OfficeImage') {
-                $capture = Test-OfficeImageReference $folder $document.Sha256
+                $capture = Test-OfficeImageReference $folder $document.Sha256 -ObservedPdfSha256 $reference.Hash
                 if ((Get-FileHash (Join-Path $folder 'reference-image-metadata.json')).Hash -ne $reference.Pin.ImageMetadataSha256 -or
                     $capture.Dpi -ne $Dpi -or $capture.FontIdentity -ne $FontIdentity) { throw 'Cached image capture settings differ' }
             }

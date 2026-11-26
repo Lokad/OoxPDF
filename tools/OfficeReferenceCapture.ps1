@@ -1,12 +1,17 @@
 # Office/EMF capture belongs to validation tooling, never the shipped library.
-function Test-OfficeImageReference([string] $Directory, [string] $InputSha256) {
+function Test-OfficeImageReference([string] $Directory, [string] $InputSha256, [string] $ObservedPdfSha256) {
     $path=Join-Path $Directory 'reference-image-metadata.json'
     $metadata=Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
     if ($metadata.Schema -ne 1 -or $metadata.ReferenceKind -ne 'OfficeImage' -or
-        $metadata.InputSha256 -ne $InputSha256 -or !$metadata.OfficeBuild -or !$metadata.Capture.Method -or
-        (Get-FileHash (Join-Path $Directory 'reference.pdf')).Hash -ne $metadata.SecondaryPdfSha256) {
+        $metadata.InputSha256 -ne $InputSha256 -or !$metadata.OfficeBuild -or !$metadata.Capture.Method) {
         throw 'Office image reference provenance differs'
     }
+    # Reuse a digest observed in this preflight. Standalone and post-tool
+    # validation read the current file.
+    if (!$ObservedPdfSha256) {
+        $ObservedPdfSha256=(Get-FileHash -LiteralPath (Join-Path $Directory 'reference.pdf')).Hash
+    }
+    if ($ObservedPdfSha256 -ne $metadata.SecondaryPdfSha256) { throw 'Office image secondary PDF hash differs' }
     $pages=@($metadata.Capture.Pages)
     if (!$pages.Count -or @(Get-ChildItem -LiteralPath $Directory -File -Filter 'page-*.png').Count -ne $pages.Count) {
         throw 'Office image reference page count differs'

@@ -167,7 +167,7 @@ $jobs = @(foreach ($row in $outcomes.Rows) {
         $reference = Read-CompositionReference $source $row.Id $row.Mode $row.InputSha256 $ReferenceKind
         $imagePath = $null; $imageHash = ''; $imagePages = 0; $dpi = 144; $calibration = 'PDF-backed bootstrap'
         if ($ReferenceKind -eq 'OfficeImage') {
-            $image = Test-OfficeImageReference $source $row.InputSha256
+            $image = Test-OfficeImageReference $source $row.InputSha256 -ObservedPdfSha256 $reference.Hash
             $imagePath = Join-Path $source 'reference-image-metadata.json'
             $imageHash = (Get-FileHash -LiteralPath $imagePath).Hash
             if ($imageHash -ne $reference.Pin.ImageMetadataSha256) { throw ('Image reference metadata differs: ' + $id) }
