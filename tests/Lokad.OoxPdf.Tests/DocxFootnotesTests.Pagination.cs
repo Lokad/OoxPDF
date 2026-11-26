@@ -244,6 +244,7 @@ internal static partial class DocxFootnotesTests
         var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
         var measurer = new NoteContentMetricMeasurer();
         int middlePages = 0;
+        int emptyCustomMarkerMiddlePages = 0;
         foreach (bool custom in new[] { true, false })
         foreach (bool widow in new[] { true, false })
         for (int repeats = 100; repeats <= 140; repeats++)
@@ -267,8 +268,9 @@ internal static partial class DocxFootnotesTests
                 string.Concat(feet.SelectMany(s => s.Story.StoryLayout.TextLines).Select(l => l.Text)));
             TestAssert.True(canonical.Story.Paragraphs.All(p => p.KeepRules.WidowControl == widow),
                 "Frame capacity preserves authored widow metadata rather than replacing paragraph policy.");
-            foreach (var foot in feet.Skip(1))
+            for (int continuationIndex = 1; continuationIndex < feet.Length; continuationIndex++)
             {
+                var foot = feet[continuationIndex];
                 DocxLayoutPage page = layout.Pages[foot.Page];
                 DocxPlacedRelatedStoryLayout separator = page.PlacedRelatedStories.Single(s =>
                     s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote && s.StoryLayout.Story.Type == DocxRelatedStoryType.ContinuationSeparator);
@@ -276,51 +278,18 @@ internal static partial class DocxFootnotesTests
                     "An admitted continuation charges the complete separator inset before choosing a source take.");
                 TestAssert.True(foot.Story.TextLines.All(l => ReferenceEquals(l.SourceParagraph, canonical.Story.Paragraphs[0])),
                     "The capacity correction retains complete canonical paragraph ownership.");
-                if (foot != feet[^1]) middlePages++;
-            }
-        }
-        TestAssert.True(middlePages > 0, "Both marker and widow states exercise middle continuation capacity boundaries.");
-    }
-
-    public static void DocxMiddleFootnoteContinuationAnchorsActualWidowAwareTakeAtFooter()
-    {
-        var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
-        var measurer = new NoteContentMetricMeasurer();
-        int middlePages = 0;
-        foreach (bool widow in new[] { true, false })
-        for (int repeats = 100; repeats <= 140; repeats++)
-        {
-            DocxDocument source = WithMixedNoteStaticFrame(ReadMixedNoteRetryFixture(true, 32, repeats), false, true, 6);
-            source = source with { RelatedStories = source.RelatedStories.Select(s =>
-                s.IsNormalStoryType && s.Kind == DocxRelatedStoryKind.Footnote ? s with
-                {
-                    BodyElements = s.Paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p with
-                    {
-                        KeepRules = p.KeepRules with { WidowControl = widow, WidowControlValue = widow ? "1" : "0" },
-                    })).ToArray(),
-                } : s).ToArray() };
-            DocxLayout layout = engine.Create(source, measurer, default);
-            var feet = layout.Pages.SelectMany((p, index) => p.PlacedRelatedStories
-                .Where(s => s.StoryLayout.Story.IsNormalStoryType && s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote)
-                .Select(s => (Page: index, Story: s))).ToArray();
-            DocxRelatedStoryLayout canonical = layout.RelatedStories.Single(s => s.Story.IsNormalStoryType &&
-                s.Story.Kind == DocxRelatedStoryKind.Footnote);
-            TestAssert.Equal(string.Concat(canonical.TextLines.Select(l => l.Text)),
-                string.Concat(feet.SelectMany(s => s.Story.StoryLayout.TextLines).Select(l => l.Text)));
-            foreach (var foot in feet.Skip(1).SkipLast(1))
-            {
-                DocxLayoutPage page = layout.Pages[foot.Page];
-                if (page.Items.Count != 0) continue;
+                if (continuationIndex == feet.Length - 1) continue;
                 middlePages++;
+                if (!custom || page.Items.Count != 0) continue;
+                emptyCustomMarkerMiddlePages++;
                 double bottom = Math.Max(page.MarginBottom, layout.FooterContentTopByPage[foot.Page]);
                 TestAssert.True(Math.Abs(foot.Story.TopY - foot.Story.Height - bottom) < .000001d,
                     "An occupied middle continuation anchors its actual slice at the selected footer edge, including widow-tail adjustments.");
-                TestAssert.True(foot.Story.TextLines.All(l => ReferenceEquals(l.SourceParagraph, canonical.Story.Paragraphs[0])),
-                    "Every line retains the complete original canonical paragraph owner.");
                 TestAssert.Equal(1, page.PlacedRelatedStories.Count(s => s.SeparatorY is not null));
             }
         }
-        TestAssert.True(middlePages > 0, "The boundary sweep exercises actual empty middle continuation pages.");
+        TestAssert.True(middlePages > 0, "The capacity sweep reaches middle continuation pages.");
+        TestAssert.True(emptyCustomMarkerMiddlePages > 0, "The anchor check reaches empty middle continuation pages.");
     }
 
     public static void DocxScaledFootnoteExactAdvanceMatchesIndependentOffice()
