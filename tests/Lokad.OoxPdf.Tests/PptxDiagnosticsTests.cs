@@ -533,7 +533,7 @@ internal static class PptxDiagnosticsTests
 
     public static void PptxUnsupportedCustomGeometryDiagnosticsUseSceneUnsupportedFlag()
     {
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        using var input = TestFixtures.CreateZipPackage(new Dictionary<string, string>
         {
             ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
             ["_rels/.rels"] = PptxTests.PackageRelationship(),
@@ -545,33 +545,33 @@ internal static class PptxDiagnosticsTests
                        xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
                   <p:cSld><p:spTree>
                     <p:sp><p:spPr>
+                      <a:xfrm><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="914400"/></a:xfrm>
                       <a:custGeom>
                         <a:pathLst>
-                          <a:path><a:moveTo><a:pt x="0" y="0"/></a:moveTo><a:lnTo><a:pt x="21600" y="21600"/></a:lnTo></a:path>
-                          <a:path><a:unknownPathCommand/></a:path>
+                          <a:path><a:moveTo x="0" y="0"/><a:lnTo><a:pt x="21600" y="21600"/><a:pt x="0" y="0"/></a:lnTo></a:path>
+                          <a:path><a:moveTo x="10800" y="10800"/><a:unknownPathCommand/><a:lnTo x="21600" y="21600"/></a:path>
+                          <a:path/>
+                          <a:path><a:moveTo x="0" y="21600"/><a:lnTo x="21600" y="0"/></a:path>
                         </a:pathLst>
                       </a:custGeom>
+                      <a:noFill/>
+                      <a:ln w="25400"><a:solidFill><a:srgbClr val="008000"/></a:solidFill></a:ln>
                     </p:spPr></p:sp>
                   </p:spTree></p:cSld>
                 </p:sld>
                 """
         });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
         var diagnostics = new List<OoxPdfDiagnostic>();
-
-        using (FileStream stream = File.OpenRead(input))
-        {
-            OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
-            PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
-            PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
-            PptxSceneShape shape = scene.Slides[0].SlideNodes[0].Shape ?? throw new InvalidOperationException("Expected shape scene node.");
-            TestAssert.True(shape.CustomGeometry.HasGeometry, "Expected the supported custom path to remain parsed.");
-            TestAssert.True(shape.CustomGeometry.HasUnsupportedGeometry, "Expected unsupported custom path provenance to remain scene-owned.");
-        }
-
-        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
-
-        TestAssert.True(diagnostics.Any(d => d.Id == "PPTX_UNSUPPORTED_CUSTOM_GEOMETRY"), "Unsupported custom geometry should be diagnostic-covered from scene-owned geometry provenance.");
+        using var package = OoxPackage.Open(input, default);
+        PptxDocument document = new PptxReader().Read(package, default);
+        PdfPage page = new PptxRenderer(null).RenderPagesAsync(document, package, diagnostics.Add, default)
+            .ToBlockingEnumerable().Single();
+        string content = page.Content.Replace("\r\n", "\n", StringComparison.Ordinal);
+        int first = content.IndexOf("72 468 m\n216 396 l\nS", StringComparison.Ordinal);
+        int second = content.IndexOf("72 396 m\n216 468 l\nS", StringComparison.Ordinal);
+        TestAssert.True(first >= 0 && second > first, "Both supported paths stroke in source order with their first authored points.");
+        TestAssert.True(!content.Contains("144 432 m", StringComparison.Ordinal), "The path containing an unsupported command is omitted as a unit.");
+        TestAssert.Equal(1, diagnostics.Count(d => d.Id == "PPTX_UNSUPPORTED_CUSTOM_GEOMETRY"));
     }
 
     public static void PptxChartNumberFormatFallbackIsDiagnosedOncePerChart()
