@@ -1714,14 +1714,18 @@ internal static class DocxSectionNavigationTests
                     TestAssert.Equal(0, closed[0].Annotations.Count);
                 }
 
-                PdfPage[] mathOpen = RenderColumn("math-after-target", spanned, mode);
-                TestAssert.Equal(open[0].Annotations.Single().Destination?.Left, mathOpen[0].Annotations.Single().Destination?.Left);
+                var mathRenderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true), mode,
+                    mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout
+                        : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+                PdfPage[] mathOpen = RenderColumn("math-after-target", spanned, mode, mathRenderer);
+                TestAssert.True(mathOpen[0].Annotations.Single().Destination is { PageIndex: 1, Left: > 100d },
+                    "The open range still reaches the selected column beside the fraction.");
                 TestAssert.Contains("TARGET PARAGRAPH", Text(mathOpen[1]));
                 TestAssert.Contains("7", Text(mathOpen[1]));
                 TestAssert.Contains("3", Text(mathOpen[1]));
                 foreach (string variant in new[] { "math-after-equation", "math-at-root", "math-in-numerator" })
                 {
-                    PdfPage[] closed = RenderColumn(variant, spanned, mode);
+                    PdfPage[] closed = RenderColumn(variant, spanned, mode, mathRenderer);
                     TestAssert.True(mathOpen.Select(page => page.Content).SequenceEqual(closed.Select(page => page.Content)),
                         "Moving an end marker into the equation preserves all page paint.");
                     TestAssert.Equal(0, closed[0].Annotations.Count);
@@ -1729,7 +1733,7 @@ internal static class DocxSectionNavigationTests
             }
         }
 
-        static PdfPage[] RenderColumn(string variant, bool spanned, OoxPdfDocxMarkupMode mode)
+        static PdfPage[] RenderColumn(string variant, bool spanned, OoxPdfDocxMarkupMode mode, DocxRenderer? renderer = null)
         {
             PdfPage[] pages = [];
             WithMutation("bookmark-before", (_, xml) => {
@@ -1880,7 +1884,7 @@ internal static class DocxSectionNavigationTests
                     }
                 }
                 target.ReplaceWith(table);
-            }, path => pages = Render(path, mode));
+            }, path => pages = Render(path, mode, renderer));
             return pages;
         }
     }
@@ -1899,8 +1903,8 @@ internal static class DocxSectionNavigationTests
         target.AddAfterSelf(end);
     }
 
-    private static PdfPage[] Render(string path, OoxPdfDocxMarkupMode mode) =>
-        Renderer(mode).RenderPagesAsync(DocxTests.ReadDocx(path, mode), null, default).ToBlockingEnumerable().ToArray();
+    private static PdfPage[] Render(string path, OoxPdfDocxMarkupMode mode, DocxRenderer? renderer = null) =>
+        (renderer ?? Renderer(mode)).RenderPagesAsync(DocxTests.ReadDocx(path, mode), null, default).ToBlockingEnumerable().ToArray();
 
     private static void CheckFinalTextDestination(string path, OoxPdfDocxMarkupMode mode, bool expectMultiplePages,
         bool exactEndpoint = true)
