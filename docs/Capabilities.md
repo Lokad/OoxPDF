@@ -119,8 +119,9 @@ advance while visible neighbors still paint.
 Plain spans and links also retain glyph paint with explicit `inherit` or `unset`
 for font family, size, style, weight, color, fill and fill opacity.
 They can restate the same font family list, slant, weight, resolved size, solid fill or fill opacity.
-Local color declarations preserve labels when the resolved fill stays the same and the stroke stays nonpainting.
-Nested spans preserve labels when the text owners restore the label's fill and fill opacity.
+The glyph owners supply one shared effective fill for the label. Unpainted glyphs
+retain their advances, and a span can supply all visible ink. Active strokes and
+different visible fills retain the diagnosed fallback.
 Hidden and fully transparent spans retain their text advance regardless of fill or stroke.
 Nonpainting strokes preserve the glyph fill, including when a span resets
 an inherited stroke or declares stroke styling without painting a stroke.

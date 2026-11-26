@@ -650,6 +650,33 @@ internal static partial class SvgTextTests
         }
     }
 
+    public static void SvgLabelsUseFillFromVisibleGlyphOwners()
+    {
+        string Picture(string text, string paint = """fill="#112233" """, string space = "") => Svg($"""
+            <defs><linearGradient id="unused"><stop stop-color="red"/><stop offset="1" stop-color="orange"/></linearGradient></defs>
+            <text x="120" y="80" font-size="20" text-anchor="middle" {space} {paint}>{text}</text>
+            <rect x="120" y="90" width="20" height="10" fill="lime"/>
+            """);
+
+        const string child = """<tspan fill="#112233">LABEL</tspan>""";
+        const string preserved = """xml:space="preserve" """;
+        AssertSvgPaintInBothFormats(Picture("LABEL"),
+            [Picture(child, """fill="red" """), Picture(child, """fill="none" """),
+                Picture(child, """fill="url(#unused)" """)],
+            pdf => TestAssert.Equal(5, LabelPaths(pdf)), "0 1 0 rg");
+        AssertSvgPaintInBothFormats(Picture(" LABEL ", space: preserved),
+            Picture(" " + child + " ", """fill="red" """, preserved),
+            pdf => TestAssert.Equal(5, LabelPaths(pdf)), "0 1 0 rg");
+        AssertSvgPaintInBothFormats(Picture("""<tspan visibility="hidden">AB</tspan>LABEL"""),
+            [Picture("AB" + child, """fill="none" """),
+                Picture("""<tspan style="fill-opacity:0">AB</tspan>LABEL""")],
+            pdf => TestAssert.Equal(5, LabelPaths(pdf)), "0 1 0 rg");
+        AssertSvgPaintInBothFormats(Picture("LABEL", """fill="#112233" fill-opacity=".375" """),
+            Picture("""<tspan fill="rgba(17,34,51,.5)" fill-opacity=".75">LABEL</tspan>""",
+                """fill="#112233" fill-opacity=".25" """),
+            pdf => TestAssert.Equal(5, LabelPaths(pdf)), "0 1 0 rg");
+    }
+
     public static void SvgTextChildrenKeepEffectiveKerning()
     {
         static string Picture(string defaultLabel, string disabledLabel, string legacyLabel) => Svg($"""
