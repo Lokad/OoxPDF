@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Ooxml;
 using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
@@ -138,12 +137,6 @@ internal sealed partial class PptxSceneBuilder
                     out PptxSceneLineStyle resolvedLine)
                     ? resolvedLine
                     : default;
-            PptxSceneLineStyle shapeLine = ReadChartLine(
-                roleElement
-                    .Elements()
-                    .FirstOrDefault(element => element.Name.LocalName == "spPr"),
-                theme,
-                colorMap);
             PptxSceneChartShapeStyle shapeStyle = ReadChartShapeStyle(
                 roleElement
                     .Elements()
@@ -156,7 +149,6 @@ internal sealed partial class PptxSceneBuilder
                 effectReference is null &&
                 string.IsNullOrWhiteSpace(fontReferenceIndex) &&
                 !HasChartShapeStyle(shapeStyle) &&
-                !shapeLine.HasLine &&
                 !HasChartTextStyleOverride(textStyle))
             {
                 sourceIndex++;
@@ -175,7 +167,6 @@ internal sealed partial class PptxSceneBuilder
                 fontReferenceIndex,
                 line,
                 shapeStyle,
-                shapeLine,
                 textStyle));
             sourceIndex++;
         }
@@ -248,48 +239,6 @@ internal sealed partial class PptxSceneBuilder
         XElement? fontReference = roleElement
             .Elements()
             .FirstOrDefault(element => element.Name.LocalName == "fontRef");
-        string? typeface = (string?)defaultRunProperties?.Element(DrawingNamespace + "latin")?.Attribute("typeface") ??
-            (string?)defaultRunProperties?.Element(DrawingNamespace + "ea")?.Attribute("typeface") ??
-            (string?)defaultRunProperties?.Element(DrawingNamespace + "cs")?.Attribute("typeface");
-        if (string.IsNullOrWhiteSpace(typeface))
-        {
-            typeface = (string?)fontReference?.Attribute("idx") switch
-            {
-                "major" => "+mj-lt",
-                "minor" => "+mn-lt",
-                _ => null
-            };
-        }
-
-        PptxThemeTypefaceResolution typefaceResolution = string.IsNullOrWhiteSpace(typeface)
-            ? default
-            : theme.ResolveTypefaceWithSource(typeface);
-        string? fontFamily = typefaceResolution.Typeface;
-        double? fontSize = defaultRunProperties?.Attribute("sz") is { } sizeAttribute &&
-            int.TryParse(sizeAttribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int sizeHundredths) &&
-            sizeHundredths > 0
-                ? sizeHundredths / 100d
-                : null;
-        double? characterSpacing = PptxRunTextAttributeReaders.ReadOptionalCharacterSpacing(defaultRunProperties);
-        RgbColor? color = PptxColorResolver.TryReadSolidColorWithAlpha(defaultRunProperties?.Element(DrawingNamespace + "solidFill"), theme, colorMap, out RgbColor parsedColor, out double alpha) ||
-            PptxColorResolver.TryReadSolidColorWithAlpha(fontReference, theme, colorMap, out parsedColor, out alpha)
-                ? parsedColor
-                : null;
-        bool? bold = defaultRunProperties is null ? null : ReadOptionalOoxmlBooleanAttribute(defaultRunProperties, "b");
-        bool? italic = defaultRunProperties is null ? null : ReadOptionalOoxmlBooleanAttribute(defaultRunProperties, "i");
-        bool? underline = defaultRunProperties is null ? null : ReadChartUnderline(defaultRunProperties);
-        bool? strike = defaultRunProperties is null ? null : ReadChartStrike(defaultRunProperties);
-        return new PptxSceneChartTextStyleOverride(
-            fontFamily,
-            typefaceResolution.RequestedTypeface,
-            typefaceResolution.RequestedTypeface is null ? null : typefaceResolution.Source,
-            fontSize,
-            characterSpacing,
-            color,
-            color is null ? null : alpha,
-            bold,
-            italic,
-            underline,
-            strike);
+        return ReadChartTextRunStyle(defaultRunProperties, theme, colorMap, fontReference);
     }
 }

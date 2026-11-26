@@ -423,12 +423,7 @@ internal sealed partial class PptxSceneBuilder
     private static PptxSceneLineStyle ReadChartStyleRoleLine(PptxSceneChartStyle stylePart, string role)
     {
         PptxSceneChartStyleEntry entry = stylePart.Entries.FirstOrDefault(item => item.Role == role);
-        if (entry.ShapeLine.HasLine)
-        {
-            return entry.ShapeLine;
-        }
-
-        return entry.Line;
+        return entry.ShapeStyle?.Line is { HasLine: true } inlineLine ? inlineLine : entry.Line;
     }
 
     private static PptxSceneLineStyle ReadChartAxisLine(XElement axis, PptxTheme theme, PptxColorMap colorMap, PptxSceneLineStyle inheritedLine)

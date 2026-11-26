@@ -490,14 +490,14 @@ internal static class PptxModelTests
         TestAssert.Equal(PptxSceneLineCompound.Double, majorGridlineStyle.Line.Compound);
         TestAssert.Equal("sq", majorGridlineStyle.Line.CapValue ?? string.Empty);
         TestAssert.Equal(1, majorGridlineStyle.Line.Join);
-        TestAssert.True(majorGridlineStyle.ShapeLine.HasLine, "Expected chart style-part role shape-line ownership in the scene model.");
-        TestAssert.Equal(new RgbColor(16, 32, 48), majorGridlineStyle.ShapeLine.Color);
-        TestAssert.Equal(1d, majorGridlineStyle.ShapeLine.Width);
-        TestAssert.Equal(0.8d, majorGridlineStyle.ShapeLine.Alpha);
-        TestAssert.Equal("dash", majorGridlineStyle.ShapeLine.DashPreset ?? string.Empty);
-        TestAssert.Equal(PptxSceneLineCompound.ThickThin, majorGridlineStyle.ShapeLine.Compound);
-        TestAssert.Equal("rnd", majorGridlineStyle.ShapeLine.CapValue ?? string.Empty);
-        TestAssert.Equal(2, majorGridlineStyle.ShapeLine.Join);
+        TestAssert.True(majorGridlineStyle.ShapeStyle.Line.HasLine, "Expected chart style-part role shape-line ownership in the scene model.");
+        TestAssert.Equal(new RgbColor(16, 32, 48), majorGridlineStyle.ShapeStyle.Line.Color);
+        TestAssert.Equal(1d, majorGridlineStyle.ShapeStyle.Line.Width);
+        TestAssert.Equal(0.8d, majorGridlineStyle.ShapeStyle.Line.Alpha);
+        TestAssert.Equal("dash", majorGridlineStyle.ShapeStyle.Line.DashPreset ?? string.Empty);
+        TestAssert.Equal(PptxSceneLineCompound.ThickThin, majorGridlineStyle.ShapeStyle.Line.Compound);
+        TestAssert.Equal("rnd", majorGridlineStyle.ShapeStyle.Line.CapValue ?? string.Empty);
+        TestAssert.Equal(2, majorGridlineStyle.ShapeStyle.Line.Join);
         TestAssert.True(majorGridlineStyle.ShapeStyle.Fill.HasFill, "Expected chart style role-local shape fill ownership in the scene model.");
         TestAssert.Equal(new RgbColor(68, 85, 102), majorGridlineStyle.ShapeStyle.Fill.Color);
         TestAssert.Equal(0.75d, majorGridlineStyle.ShapeStyle.Fill.Alpha);
@@ -507,7 +507,7 @@ internal static class PptxModelTests
         TestAssert.Equal(null, minorGridlineStyle.EffectReferenceIndex);
         TestAssert.True(!minorGridlineStyle.Line.HasLine && !minorGridlineStyle.FillReferenceFill.HasFill &&
             !minorGridlineStyle.EffectReferenceEffects.HasEffectList, "Invalid or zero references should leave theme paint unresolved.");
-        TestAssert.True(minorGridlineStyle.ShapeLine.HasLine, "A zero line reference must preserve the role's explicit line.");
+        TestAssert.True(minorGridlineStyle.ShapeStyle.Line.HasLine, "A zero line reference must preserve the role's explicit line.");
         PptxSceneChartStyleEntry titleStyle = slide.SlideNodes[4].Chart?.StylePart.Entries.FirstOrDefault(entry => entry.Role == "title") ?? default;
         TestAssert.Equal("title", titleStyle.Role ?? string.Empty);
         TestAssert.Equal(null, titleStyle.LineReferenceIndex);

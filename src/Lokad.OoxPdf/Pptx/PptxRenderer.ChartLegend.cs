@@ -333,6 +333,8 @@ internal sealed partial class PptxRenderer
                 }
             }
 
+            if (style.Alpha <= 0d) continue;
+
             // The entry stride includes padding or an equal-cell allocation. The
             // text run only owns the advance measured for its name.
             double textWidth = automaticHorizontal ? textAdvance :
@@ -351,7 +353,7 @@ internal sealed partial class PptxRenderer
                 style.CharacterSpacing,
                 0d,
                 style.Color,
-                1d,
+                style.Alpha,
                 null,
                 Bold: style.Bold,
                 Italic: style.Italic,

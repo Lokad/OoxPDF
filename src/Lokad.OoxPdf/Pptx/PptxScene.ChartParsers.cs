@@ -331,7 +331,7 @@ internal sealed partial class PptxSceneBuilder
             : (IsOoxmlBooleanElementEnabled(element), (string?)element.Attribute("val") ?? string.Empty);
     }
 
-    private static bool? ReadOptionalOoxmlBooleanAttribute(XElement element, string attributeName)
+    private static bool? ReadOptionalOoxmlBooleanAttribute(XElement? element, string attributeName)
     {
         return OoxBoolean.ParseOptionalAttribute(element, attributeName);
     }

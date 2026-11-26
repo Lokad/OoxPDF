@@ -74,6 +74,70 @@ internal static partial class PptxChartLegendsTests
         AssertStyledChartLabels(page, "CL", 11.52d, "0.141 0.408 0.675", caption);
     }
 
+    public static void PptxChartLegendTextOpacityRespectsStyleAndLocalPaint()
+    {
+        const string opaqueFill = "<a:solidFill><a:srgbClr val='2468AC'/></a:solidFill>";
+        const string halfFill = "<a:solidFill><a:srgbClr val='2468AC'><a:alpha val='50000'/></a:srgbClr></a:solidFill>";
+        const string clearFill = "<a:solidFill><a:srgbClr val='2468AC'><a:alpha val='0'/></a:srgbClr></a:solidFill>";
+        const string noFill = "<a:noFill/>";
+        const string label = "Legend opacity";
+        var resolver = new PortableRenderingTests.PinnedResolver();
+
+        PdfPage opaque = Render("");
+        AssertStyledChartLabels(opaque, "CL", 12d, "0.141 0.408 0.675", label);
+        TestAssert.Equal(opaque.Content, Render(noFill, opaqueFill).Content);
+
+        PdfPage clear = Render(noFill);
+        TestAssert.Equal(clear.Content, Render("", noFill).Content);
+        TestAssert.Equal(clear.Content, Render(clearFill).Content);
+        TestAssert.Equal(clear.Content, Render("", clearFill).Content);
+        TestAssert.True(!clear.Fonts.Any(font => font.ResourceName.StartsWith("CL", StringComparison.Ordinal)),
+            "Fully transparent captions should emit neither glyphs nor their font resource.");
+
+        PdfPage translucent = Render(halfFill);
+        TestAssert.Equal(translucent.Content, Render("", halfFill).Content);
+        var alpha = translucent.ExtGStates.Single(state => state.FillAlpha == 0.5d);
+        TestAssert.Contains($"/{alpha.ResourceName} gs", translucent.Content);
+
+        string[] keyStrokes = LineStrokes(opaque);
+        TestAssert.True(keyStrokes.Length > 0, "Expected a painted legend line key.");
+        TestAssert.True(keyStrokes.SequenceEqual(LineStrokes(clear)),
+            "Transparent text leaves the same painted key strokes.");
+        TestAssert.True(keyStrokes.SequenceEqual(LineStrokes(translucent)),
+            "Translucent text leaves the same painted key strokes.");
+
+        static string[] LineStrokes(PdfPage page) =>
+            Regex.Matches(page.Content, @"(?m)^[-0-9. ]+ m\r?\n[-0-9. ]+ l\r?\nS\r?$")
+                .Select(match => match.Value).ToArray();
+
+        PdfPage Render(string rolePaint, string? localPaint = null)
+        {
+            string local = localPaint is null ? "" :
+                $"<c:txPr><a:bodyPr/><a:p><a:pPr><a:defRPr>{localPaint}</a:defRPr></a:pPr></a:p></c:txPr>";
+            string chart = $$"""
+                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+                              xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <c:chart>
+                    <c:plotArea><c:lineChart><c:ser>
+                      <c:tx><c:v>{{label}}</c:v></c:tx>
+                      <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt></c:numLit></c:val>
+                    </c:ser></c:lineChart></c:plotArea>
+                    <c:legend><c:legendPos val="b"/>{{local}}</c:legend>
+                  </c:chart>
+                </c:chartSpace>
+                """;
+            string role = $$"""
+                <cs:legend>
+                  <cs:fontRef idx="minor"><a:srgbClr val="2468AC"/></cs:fontRef>
+                  <cs:defRPr sz="1200" u="sng" strike="sngStrike">
+                    {{rolePaint}}<a:latin typeface="DejaVu Sans"/>
+                  </cs:defRPr>
+                </cs:legend>
+                """;
+            return RenderStyledChart(chart, 78, role, resolver);
+        }
+    }
+
     public static void PptxSyntheticChartStyleDataLabelDefaultsDriveDataLabelRendering()
     {
         const string first = "Series 1, 2";

@@ -113,35 +113,43 @@ internal sealed partial class PptxSceneBuilder
             : null;
     }
 
-    private static PptxSceneChartTextStyleOverride ReadChartTextRunStyle(XElement? runProperties, PptxTheme theme, PptxColorMap colorMap)
+    private static PptxSceneChartTextStyleOverride ReadChartTextRunStyle(
+        XElement? runProperties, PptxTheme theme, PptxColorMap colorMap, XElement? fontReference = null)
     {
-        if (runProperties is null)
+        if (runProperties is null && fontReference is null)
         {
             return default;
         }
 
-        string? typeface = (string?)runProperties.Element(DrawingNamespace + "latin")?.Attribute("typeface") ??
-            (string?)runProperties.Element(DrawingNamespace + "ea")?.Attribute("typeface") ??
-            (string?)runProperties.Element(DrawingNamespace + "cs")?.Attribute("typeface");
+        string? typeface = (string?)runProperties?.Element(DrawingNamespace + "latin")?.Attribute("typeface") ??
+            (string?)runProperties?.Element(DrawingNamespace + "ea")?.Attribute("typeface") ??
+            (string?)runProperties?.Element(DrawingNamespace + "cs")?.Attribute("typeface");
+        if (string.IsNullOrWhiteSpace(typeface))
+        {
+            typeface = (string?)fontReference?.Attribute("idx") switch
+            {
+                "major" => "+mj-lt",
+                "minor" => "+mn-lt",
+                _ => null
+            };
+        }
+
         PptxThemeTypefaceResolution typefaceResolution = string.IsNullOrWhiteSpace(typeface)
             ? default
             : theme.ResolveTypefaceWithSource(typeface);
         string? fontFamily = typefaceResolution.Typeface;
-        double? fontSize = runProperties.Attribute("sz") is { } sizeAttribute &&
+        double? fontSize = runProperties?.Attribute("sz") is { } sizeAttribute &&
             int.TryParse(sizeAttribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int sizeHundredths) &&
             sizeHundredths > 0
                 ? sizeHundredths / 100d
                 : null;
         double? characterSpacing = PptxRunTextAttributeReaders.ReadOptionalCharacterSpacing(runProperties);
         bool noFill = PptxRunTextAttributeReaders.HasTextNoFill(runProperties);
-        double alpha = 1d;
+        double alpha = 0d;
         RgbColor? color = noFill ? new RgbColor(0, 0, 0)
-            : PptxColorResolver.TryReadSolidColorWithAlpha(runProperties.Element(DrawingNamespace + "solidFill"), theme, colorMap, out RgbColor parsedColor, out alpha)
+            : PptxColorResolver.TryReadSolidColorWithAlpha(runProperties?.Element(DrawingNamespace + "solidFill"), theme, colorMap, out RgbColor parsedColor, out alpha) ||
+              PptxColorResolver.TryReadSolidColorWithAlpha(fontReference, theme, colorMap, out parsedColor, out alpha)
                 ? parsedColor : null;
-        bool? bold = ReadOptionalOoxmlBooleanAttribute(runProperties, "b");
-        bool? italic = ReadOptionalOoxmlBooleanAttribute(runProperties, "i");
-        bool? underline = ReadChartUnderline(runProperties);
-        bool? strike = ReadChartStrike(runProperties);
         return new PptxSceneChartTextStyleOverride(
             fontFamily,
             typefaceResolution.RequestedTypeface,
@@ -149,22 +157,22 @@ internal sealed partial class PptxSceneBuilder
             fontSize,
             characterSpacing,
             color,
-            noFill ? 0d : color is null ? null : alpha,
-            bold,
-            italic,
-            underline,
-            strike);
+            color is null ? null : alpha,
+            ReadOptionalOoxmlBooleanAttribute(runProperties, "b"),
+            ReadOptionalOoxmlBooleanAttribute(runProperties, "i"),
+            ReadChartUnderline(runProperties),
+            ReadChartStrike(runProperties));
     }
 
-    private static bool? ReadChartUnderline(XElement runProperties)
+    private static bool? ReadChartUnderline(XElement? runProperties)
     {
-        string? value = (string?)runProperties.Attribute("u");
+        string? value = (string?)runProperties?.Attribute("u");
         return value is null ? null : !value.Equals("none", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static bool? ReadChartStrike(XElement runProperties)
+    private static bool? ReadChartStrike(XElement? runProperties)
     {
-        string? value = (string?)runProperties.Attribute("strike");
+        string? value = (string?)runProperties?.Attribute("strike");
         return value is null ? null : !value.Equals("noStrike", StringComparison.OrdinalIgnoreCase);
     }
 }

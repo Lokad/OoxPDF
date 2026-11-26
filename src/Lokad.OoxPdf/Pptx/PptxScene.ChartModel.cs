@@ -118,7 +118,6 @@ internal readonly record struct PptxSceneChartStyleEntry(
     string FontReferenceIndex,
     PptxSceneLineStyle Line,
     PptxSceneChartShapeStyle ShapeStyle,
-    PptxSceneLineStyle ShapeLine,
     PptxSceneChartTextStyleOverride TextStyle);
 
 internal sealed record PptxSceneChartPlot
