@@ -46,7 +46,7 @@ internal sealed partial class PptxRenderer
             XElement? root = ReadSvgRoot(svg);
             if (root is null || !TryReadSvgSourceFrame(root, out _, out _, out double viewWidth, out double viewHeight)) continue;
             var content = EnumerateSvgContent(root, cancellationToken);
-            if (HasSvgStylesheet(content)) continue;
+            if (HasSvgStylesheet(content, cancellationToken)) continue;
             var elements = content.OfType<XElement>();
             var paintServers = new SvgPaintServers(elements, viewWidth, viewHeight, cancellationToken);
             foreach (XElement element in elements.Where(e => e.Name.LocalName == "text"))
@@ -82,14 +82,30 @@ internal sealed partial class PptxRenderer
             FamilyKey.Equals(other.FamilyKey, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static bool HasSvgStylesheet(IEnumerable<XNode> content) =>
+    private static bool HasSvgStylesheet(IEnumerable<XNode> content, CancellationToken cancellationToken) =>
         content.Any(node => node switch
         {
             XProcessingInstruction instruction => instruction.Target == "xml-stylesheet",
             XElement element => element.Name.LocalName == "style" &&
-                element.Nodes().OfType<XText>().Any(text => !string.IsNullOrWhiteSpace(text.Value)),
+                HasSvgStylesheetContent(element, cancellationToken),
             _ => false
         });
+
+    private static bool HasSvgStylesheetContent(XElement element, CancellationToken cancellationToken)
+    {
+        // Direct text and CDATA form one stylesheet. Complete CSS comments
+        // carry no rules, even when a delimiter crosses an XML text boundary.
+        ReadOnlySpan<char> css = string.Concat(element.Nodes().OfType<XText>().Select(text => text.Value));
+        while (!(css = css.TrimStart()).IsEmpty)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!css.StartsWith("/*", StringComparison.Ordinal)) return true;
+            int end = css[2..].IndexOf("*/", StringComparison.Ordinal);
+            if (end < 0) return true;
+            css = css[(end + 4)..];
+        }
+        return false;
+    }
 
     private static bool IsSvgMetadataElement(XElement element) =>
         element.Name.LocalName is "title" or "desc" or "metadata";

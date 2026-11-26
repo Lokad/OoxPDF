@@ -1284,6 +1284,29 @@ internal static partial class SvgTextTests
         }
     }
 
+    public static void SvgCommentOnlyStylesheetsPreserveVisibleLabels()
+    {
+        const string artwork = """
+            <rect width="40" height="30" fill="red"/>
+            <text class="caption" x="60" y="85" fill="#112233">NORTH</text>
+            """;
+        AssertSvgPaintInBothFormats(Svg(artwork),
+            [Svg("<style> /* .caption { display: none } */\n/* @import 'unused.css'; */ </style>" + artwork),
+             Svg("<style>/<![CDATA[* .caption { fill: red } *]]>/</style>" + artwork)],
+            pdf => TestAssert.Equal(5, LabelPaths(pdf)), "1 0 0 rg");
+
+        foreach (string css in new[] { "/* comment */ .caption { display: none }", "/* unfinished comment" })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            string paint = Paint(Svg($"<style>{css}</style>" + artwork), diagnostics).ToString();
+            OoxPdfDiagnostic diagnostic = diagnostics.Single();
+            TestAssert.Equal("SVG_UNSUPPORTED_CONTENT", diagnostic.Id);
+            TestAssert.Contains("unsupported text", diagnostic.Message);
+            TestAssert.Contains("1 0 0 rg", paint);
+            TestAssert.DoesNotContain(LabelColor, paint);
+        }
+    }
+
     public static void SvgForeignTextAttributesKeepAuthoredLabelsInBothFormats()
     {
         const string rectangle = """<rect x="5" y="5" width="40" height="30" fill="red"/>""";

@@ -160,7 +160,7 @@ internal sealed partial class PptxRenderer
         var paintServers = new SvgPaintServers(elements, viewWidth, viewHeight, cancellationToken);
         double strokePercentageBasis = GetSvgNormalizedDiagonal(viewWidth, viewHeight);
         var paintedText = new HashSet<XElement>();
-        bool hasStylesheet = HasSvgStylesheet(content);
+        bool hasStylesheet = HasSvgStylesheet(content, cancellationToken);
         var unsupportedCommands = new SortedSet<char>();
         int unreadablePaths = 0;
         var missingGradients = new SortedSet<string>(StringComparer.Ordinal);
